@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # 如果您在電腦上使用 buildx 構建並推送到 armv7 裝置，可以保留此行
+      # 如果直接在 armv7 裝置上 build，這行確保最終 image 標記正確
+    image: church-staff-pwa:latest
+    container_name: church_staff_pwa
+    restart: unless-stopped
+    ports:
+      - "8787:80"
