@@ -1,6 +1,7 @@
-# Stage 1: 建置環境 (使用 x64 以確保 Flutter SDK 相容性與編譯速度)
+# Stage 1: 建置環境 (使用 build host 以確保 Flutter SDK 相容性與編譯速度)
 # 我們產出的是靜態 HTML/JS，所以在哪裡編譯都沒關係
-FROM --platform=linux/amd64 ubuntu:22.04 AS builder
+ARG BUILDPLATFORM
+FROM --platform=$BUILDPLATFORM ubuntu:22.04 AS builder
 
 # 安裝 Flutter 依賴
 RUN apt-get update && apt-get install -y \

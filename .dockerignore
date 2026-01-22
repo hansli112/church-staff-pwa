@@ -1,0 +1,8 @@
+.dart_tool/
+.pub-cache/
+build/
+.idea/
+.git/
+.metadata
+.flutter-plugins-dependencies
+church_staff_pwa.iml
