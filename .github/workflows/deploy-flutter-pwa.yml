@@ -1,0 +1,42 @@
+name: Deploy Flutter PWA
+on:
+  push:
+    branches: [ main, dev ] # 當你 push 到 main 或 dev 時會觸發
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. 檢出程式碼
+      - uses: actions/checkout@v4
+
+      # 2. 安裝 Flutter 環境 (GitHub 支援，Cloudflare 不支援)
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      # 3. 取得 Flutter 套件
+      - run: flutter pub get
+
+      # 4. 編譯 Web (根據分支區分環境)
+      - name: Build Web
+        run: |
+          if [ "${{ github.ref_name }}" == "main" ]; then
+            # 正式環境編譯
+            flutter build web --release --base-href "/"
+          else
+            # 開發環境編譯 (如果你有不同的 base-href 可以在這改)
+            flutter build web --release --base-href "/"
+          fi
+
+      # 5. 部署到 Cloudflare Pages
+      - name: Publish to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: church-staff-pwa  # 務必與你 Cloudflare 上的專案名稱一致
+          directory: build/web          # 指定編譯後的產出目錄
+          # 關鍵：推送到 main 會更新 Production，推送到 dev 會產生 Preview 網址
+          branch: ${{ github.ref_name }}
