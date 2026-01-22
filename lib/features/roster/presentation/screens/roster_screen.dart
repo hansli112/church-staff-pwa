@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/service_roster.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/roster_provider.dart';
 import '../widgets/roster_card.dart';
+import 'role_settings_screen.dart';
 
 class RosterScreen extends StatefulWidget {
   const RosterScreen({super.key});
@@ -16,26 +18,59 @@ class _RosterScreenState extends State<RosterScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<RosterProvider>();
-      if (provider.rosters.isEmpty) {
-        provider.fetchRosters();
+      final rosterProvider = context.read<RosterProvider>();
+      final authProvider = context.read<AuthProvider>();
+
+      if (rosterProvider.rosters.isEmpty) {
+        rosterProvider.fetchInitialData();
+      }
+
+      // Ensure edit mode is disabled if not an admin (safety check)
+      if (!authProvider.isAdmin && rosterProvider.isEditMode) {
+        rosterProvider.toggleEditMode();
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final isAdmin = context.select<AuthProvider, bool>((auth) => auth.isAdmin);
+
     return DefaultTabController(
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('本季服事表'),
+          title: Consumer<RosterProvider>(
+            builder: (context, provider, child) {
+              return Text(provider.isEditMode ? '編輯服事表' : '本季服事表');
+            },
+          ),
           centerTitle: true,
           actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: () => context.read<RosterProvider>().fetchRosters(),
-            ),
+            if (isAdmin) ...[
+              Consumer<RosterProvider>(
+                builder: (context, provider, child) {
+                  if (!provider.isEditMode) return const SizedBox.shrink();
+                  return IconButton(
+                    icon: const Icon(Icons.settings),
+                    tooltip: '服事項目設定',
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const RoleSettingsScreen()),
+                    ),
+                  );
+                },
+              ),
+              Consumer<RosterProvider>(
+                builder: (context, provider, child) {
+                  return IconButton(
+                    icon: Icon(provider.isEditMode ? Icons.view_list : Icons.edit),
+                    tooltip: provider.isEditMode ? '切換至檢視模式' : '切換至編輯模式',
+                    onPressed: () => provider.toggleEditMode(),
+                  );
+                },
+              ),
+            ],
           ],
           bottom: const TabBar(
             tabs: [
@@ -112,12 +147,13 @@ class _RosterListState extends State<_RosterList> with AutomaticKeepAliveClientM
     return ListView.builder(
       padding: const EdgeInsets.only(top: 12, bottom: 20),
       itemCount: widget.rosters.length,
-      itemBuilder: (context, index) {
-        return RosterCard(
-          roster: widget.rosters[index],
-          initiallyExpanded: index == 0,
-        );
-      },
-    );
+              itemBuilder: (context, index) {
+                final roster = widget.rosters[index];
+                return RosterCard(
+                  key: ValueKey(roster.id),
+                  roster: roster,
+                  initiallyExpanded: index == 0,
+                );
+              },    );
   }
 }

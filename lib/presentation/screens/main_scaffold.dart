@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../features/roster/presentation/screens/roster_screen.dart';
+import '../../features/auth/presentation/screens/profile_screen.dart';
 
 class MainScaffold extends StatefulWidget {
   const MainScaffold({super.key});
@@ -15,7 +16,7 @@ class _MainScaffoldState extends State<MainScaffold> {
   final List<Widget> _screens = [
     const DashboardScreen(),
     const RosterScreen(),
-    const Center(child: Text('個人中心 (開發中)')), // Placeholder for Profile
+    const ProfileScreen(),
   ];
 
   void _onItemTapped(int index) {

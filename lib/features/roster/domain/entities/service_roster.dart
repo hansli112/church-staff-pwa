@@ -19,9 +19,19 @@ extension ServiceTypeExtension on ServiceType {
 
 class RosterEntry {
   final String role;
-  final String personName;
+  final List<String> people;
 
-  RosterEntry({required this.role, required this.personName});
+  RosterEntry({required this.role, required this.people});
+
+  RosterEntry copyWith({
+    String? role,
+    List<String>? people,
+  }) {
+    return RosterEntry(
+      role: role ?? this.role,
+      people: people ?? this.people,
+    );
+  }
 }
 
 class ServiceRoster {
@@ -38,4 +48,20 @@ class ServiceRoster {
     required this.serviceName,
     required this.duties,
   });
+
+  ServiceRoster copyWith({
+    String? id,
+    DateTime? date,
+    ServiceType? type,
+    String? serviceName,
+    List<RosterEntry>? duties,
+  }) {
+    return ServiceRoster(
+      id: id ?? this.id,
+      date: date ?? this.date,
+      type: type ?? this.type,
+      serviceName: serviceName ?? this.serviceName,
+      duties: duties ?? this.duties,
+    );
+  }
 }
