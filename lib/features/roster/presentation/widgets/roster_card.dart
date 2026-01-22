@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/service_roster.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/roster_provider.dart';
 
 class RosterCard extends StatelessWidget {
@@ -108,42 +109,23 @@ class RosterCard extends StatelessWidget {
 
   Future<void> _showAddDutyDialog(BuildContext context) async {
     final TextEditingController roleController = TextEditingController();
-    final TextEditingController nameController = TextEditingController(text: '待定');
+    final Future<List<String>> peopleFuture =
+        _loadSelectablePeople(context, roster.type, const []);
+    final roleOptions =
+        context.read<RosterProvider>().templates[roster.type] ?? const <String>[];
     
     return showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('新增服事項目'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: roleController,
-                decoration: const InputDecoration(labelText: '職位名稱 (如: 領會)'),
-                autofocus: true,
-              ),
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: '人員姓名 (第一位)'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('取消'),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (roleController.text.isNotEmpty) {
-                  _addDuty(context, roleController.text, [nameController.text]);
-                }
-                Navigator.of(context).pop();
-              },
-              child: const Text('新增'),
-            ),
-          ],
+        return _RosterPeopleDialog(
+          title: '新增服事項目',
+          roleController: roleController,
+          roleOptions: roleOptions,
+          initialRole: roleOptions.isNotEmpty ? roleOptions.first : null,
+          peopleFuture: peopleFuture,
+          initialPeople: const ['待定'],
+          onSubmit: (role, people) => _addDuty(context, role, people),
+          submitLabel: '新增',
         );
       },
     );
@@ -166,72 +148,22 @@ class RosterCard extends StatelessWidget {
   }
 
   Future<void> _showEditDialog(BuildContext context, int index, RosterEntry duty) async {
-    // 建立一個可變的 List 來操作狀態
-    List<String> editingPeople = List.from(duty.people);
+    final Future<List<String>> peopleFuture =
+        _loadSelectablePeople(context, roster.type, duty.people);
 
     await showDialog(
       context: context,
       builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text('編輯 ${duty.role}'),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: editingPeople.length + 1,
-                  itemBuilder: (context, pIndex) {
-                    if (pIndex == editingPeople.length) {
-                      return ListTile(
-                        leading: const Icon(Icons.add),
-                        title: const Text('新增人員'),
-                        onTap: () {
-                          setState(() {
-                            editingPeople.add('待定');
-                          });
-                        },
-                      );
-                    }
-                    return ListTile(
-                      title: TextFormField(
-                        initialValue: editingPeople[pIndex],
-                        decoration: InputDecoration(
-                          labelText: '人員 ${pIndex + 1}',
-                        ),
-                        onChanged: (val) {
-                          editingPeople[pIndex] = val;
-                        },
-                      ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () {
-                          setState(() {
-                            editingPeople.removeAt(pIndex);
-                          });
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('取消'),
-                ),
-                FilledButton(
-                  onPressed: () {
-                    // 過濾掉空白的輸入
-                    final finalPeople = editingPeople.where((s) => s.trim().isNotEmpty).toList();
-                    _updateDuty(context, index, finalPeople.isEmpty ? ['待定'] : finalPeople);
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('儲存'),
-                ),
-              ],
-            );
-          },
+        return _RosterPeopleDialog(
+          title: '編輯 ${duty.role}',
+          roleController: TextEditingController(text: duty.role),
+          roleOptions: const [],
+          initialRole: duty.role,
+          peopleFuture: peopleFuture,
+          initialPeople: duty.people.isEmpty ? const ['待定'] : duty.people,
+          onSubmit: (role, people) => _updateDuty(context, index, people),
+          submitLabel: '儲存',
+          roleEditable: false,
         );
       },
     );
@@ -243,5 +175,195 @@ class RosterCard extends StatelessWidget {
     
     final newRoster = roster.copyWith(duties: newDuties);
     context.read<RosterProvider>().updateRoster(newRoster);
+  }
+
+  Future<List<String>> _loadSelectablePeople(
+    BuildContext context,
+    ServiceType rosterType,
+    List<String> extras,
+  ) async {
+    final users = await context.read<AuthProvider>().getUsers();
+    final names = users
+        .where((u) => u.zones.any((zone) => zone.serviceType == rosterType))
+        .map((u) => u.name.trim())
+        .where((n) => n.isNotEmpty)
+        .toList();
+    names.sort();
+    final Set<String> merged = {...names, ...extras.map((e) => e.trim()).where((e) => e.isNotEmpty)};
+    final List<String> result = ['待定'];
+    result.addAll(merged.where((name) => name != '待定'));
+    return result;
+  }
+}
+
+class _RosterPeopleDialog extends StatefulWidget {
+  final String title;
+  final TextEditingController roleController;
+  final List<String> roleOptions;
+  final String? initialRole;
+  final Future<List<String>> peopleFuture;
+  final List<String> initialPeople;
+  final void Function(String role, List<String> people) onSubmit;
+  final String submitLabel;
+  final bool roleEditable;
+
+  const _RosterPeopleDialog({
+    required this.title,
+    required this.roleController,
+    required this.roleOptions,
+    required this.initialRole,
+    required this.peopleFuture,
+    required this.initialPeople,
+    required this.onSubmit,
+    required this.submitLabel,
+    this.roleEditable = true,
+  });
+
+  @override
+  State<_RosterPeopleDialog> createState() => _RosterPeopleDialogState();
+}
+
+class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
+  late Set<String> _selectedPeople;
+  List<String> _options = const ['待定'];
+  String? _selectedRole;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedPeople = widget.initialPeople.map((e) => e.trim()).where((e) => e.isNotEmpty).toSet();
+    if (_selectedPeople.isEmpty) {
+      _selectedPeople = {'待定'};
+    }
+    _selectedRole = widget.initialRole;
+  }
+
+  void _toggleSelection(String name) {
+    setState(() {
+      if (_selectedPeople.contains(name)) {
+        _selectedPeople.remove(name);
+      } else {
+        _selectedPeople.add(name);
+      }
+
+      if (name == '待定' && _selectedPeople.contains('待定')) {
+        _selectedPeople
+          ..clear()
+          ..add('待定');
+      } else if (_selectedPeople.length > 1 && _selectedPeople.contains('待定')) {
+        _selectedPeople.remove('待定');
+      }
+    });
+  }
+
+  List<String> _buildSelectedPeople(List<String> options) {
+    final selected = options.where(_selectedPeople.contains).toList();
+    if (selected.isEmpty) {
+      return ['待定'];
+    }
+    return selected;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canSelectRole = widget.roleEditable && widget.roleOptions.isNotEmpty;
+    final roleMissing = widget.roleEditable && widget.roleOptions.isEmpty;
+    return AlertDialog(
+      title: Text(widget.title),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!widget.roleEditable)
+              TextField(
+                controller: widget.roleController,
+                decoration: const InputDecoration(labelText: '職位名稱'),
+                enabled: false,
+              ),
+            if (canSelectRole)
+              DropdownButtonFormField<String>(
+                value: _selectedRole,
+                decoration: const InputDecoration(labelText: '服事項目'),
+                items: widget.roleOptions.map((role) {
+                  return DropdownMenuItem(
+                    value: role,
+                    child: Text(role),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _selectedRole = value);
+                  }
+                },
+              ),
+            if (roleMissing)
+              const Text(
+                '請先到「服事項目設定」新增項目',
+                style: TextStyle(color: Colors.redAccent),
+              ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                '選擇同工',
+                style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 280,
+              child: FutureBuilder<List<String>>(
+                future: widget.peopleFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('載入同工名單失敗: ${snapshot.error}'));
+                  }
+
+                  _options = snapshot.data ?? const ['待定'];
+                  return ListView.builder(
+                    itemCount: _options.length,
+                    itemBuilder: (context, index) {
+                      final name = _options[index];
+                      final checked = _selectedPeople.contains(name);
+                      return CheckboxListTile(
+                        title: Text(name),
+                        value: checked,
+                        onChanged: (_) => _toggleSelection(name),
+                        controlAffinity: ListTileControlAffinity.leading,
+                        dense: true,
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: roleMissing
+              ? null
+              : () {
+            final role = widget.roleEditable
+                ? (_selectedRole ?? '').trim()
+                : widget.roleController.text.trim();
+            if (role.isEmpty) return;
+            final selected = _buildSelectedPeople(_options);
+            widget.onSubmit(role, selected);
+            Navigator.of(context).pop();
+          },
+          child: Text(widget.submitLabel),
+        ),
+      ],
+    );
   }
 }

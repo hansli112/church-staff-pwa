@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/service_roster.dart';
 import '../providers/roster_provider.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 
 class RoleSettingsScreen extends StatefulWidget {
   const RoleSettingsScreen({super.key});
@@ -56,6 +57,7 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
               icon: const Icon(Icons.check),
               onPressed: () async {
                 await context.read<RosterProvider>().updateTemplates(_editingTemplates);
+                await context.read<AuthProvider>().cleanupUserMinistries(_editingTemplates);
                 if (mounted) Navigator.pop(context);
               },
             ),

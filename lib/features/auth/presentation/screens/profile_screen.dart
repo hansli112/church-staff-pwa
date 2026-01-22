@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'user_management_screen.dart';
+import 'group_settings_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -64,6 +65,18 @@ class ProfileScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const UserManagementScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.groups),
+              title: const Text('小組管理'),
+              subtitle: const Text('設定各牧區小組清單'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const GroupSettingsScreen()),
                 );
               },
             ),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/user.dart';
 import '../../../roster/domain/entities/service_roster.dart';
+import '../../../roster/presentation/providers/roster_provider.dart';
+import '../providers/group_settings_provider.dart';
 import '../providers/auth_provider.dart';
 
 class UserEditorScreen extends StatefulWidget {
@@ -58,6 +60,12 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
   }
 
   Future<void> _save() async {
+    if (_zones.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('請至少設定一個牧區')),
+      );
+      return;
+    }
     if (_formKey.currentState!.validate()) {
       final authProvider = context.read<AuthProvider>();
       
@@ -252,6 +260,11 @@ class _ZoneEditorCardState extends State<_ZoneEditorCard> {
 
   @override
   Widget build(BuildContext context) {
+    final templates = context.watch<RosterProvider>().templates;
+    final ministryOptions = templates[_selectedType] ?? const <String>[];
+    final groupTemplates = context.watch<GroupSettingsProvider>().templates;
+    final groupOptions = groupTemplates[_selectedType] ?? const <String>[];
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
@@ -273,7 +286,14 @@ class _ZoneEditorCardState extends State<_ZoneEditorCard> {
                     }).toList(),
                     onChanged: (value) {
                       if (value != null) {
-                        setState(() => _selectedType = value);
+                        final newOptions = context.read<RosterProvider>().templates[value] ?? [];
+                        final newGroupOptions =
+                            context.read<GroupSettingsProvider>().templates[value] ?? [];
+                        setState(() {
+                          _selectedType = value;
+                          _ministries = _ministries.where(newOptions.contains).toList();
+                          _groups = _groups.where(newGroupOptions.contains).toList();
+                        });
                         _notifyUpdate();
                       }
                     },
@@ -287,23 +307,27 @@ class _ZoneEditorCardState extends State<_ZoneEditorCard> {
             ),
             const SizedBox(height: 12),
             
-            _StringListEditor(
+            _OptionListSelector(
               title: '所屬小組',
-              items: _groups,
+              options: groupOptions,
+              selected: _groups,
               onChanged: (newGroups) {
                 _groups = newGroups;
                 _notifyUpdate();
               },
+              emptyText: '尚未設定小組清單',
             ),
             const SizedBox(height: 12),
             
-            _StringListEditor(
+            _OptionListSelector(
               title: '參與服事',
-              items: _ministries,
+              options: ministryOptions,
+              selected: _ministries,
               onChanged: (newMinistries) {
                 _ministries = newMinistries;
                 _notifyUpdate();
               },
+              emptyText: '尚未設定服事項目',
             ),
           ],
         ),
@@ -312,73 +336,54 @@ class _ZoneEditorCardState extends State<_ZoneEditorCard> {
   }
 }
 
-class _StringListEditor extends StatefulWidget {
+class _OptionListSelector extends StatelessWidget {
   final String title;
-  final List<String> items;
+  final List<String> options;
+  final List<String> selected;
   final ValueChanged<List<String>> onChanged;
+  final String emptyText;
 
-  const _StringListEditor({
+  const _OptionListSelector({
     required this.title,
-    required this.items,
+    required this.options,
+    required this.selected,
     required this.onChanged,
+    required this.emptyText,
   });
 
   @override
-  State<_StringListEditor> createState() => _StringListEditorState();
-}
-
-class _StringListEditorState extends State<_StringListEditor> {
-  final _controller = TextEditingController();
-
-  void _add() {
-    if (_controller.text.isNotEmpty) {
-      final newItems = List<String>.from(widget.items)..add(_controller.text);
-      widget.onChanged(newItems);
-      _controller.clear();
-    }
-  }
-
-  void _remove(int index) {
-    final newItems = List<String>.from(widget.items)..removeAt(index);
-    widget.onChanged(newItems);
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final sortedOptions = List<String>.from(options)..sort();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(widget.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+        Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
         const SizedBox(height: 4),
-        Wrap(
-          spacing: 8,
-          children: widget.items.asMap().entries.map((entry) {
-            return Chip(
-              label: Text(entry.value),
-              deleteIcon: const Icon(Icons.close, size: 16),
-              onDeleted: () => _remove(entry.key),
-            );
-          }).toList(),
-        ),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _controller,
-                decoration: InputDecoration(
-                  hintText: '新增${widget.title}...',
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                ),
-                onSubmitted: (_) => _add(),
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.add_circle_outline),
-              onPressed: _add,
-            ),
-          ],
-        ),
+        if (sortedOptions.isEmpty)
+          Text(emptyText, style: const TextStyle(color: Colors.grey)),
+        if (sortedOptions.isNotEmpty)
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: sortedOptions.map((option) {
+              final isSelected = selected.contains(option);
+              return FilterChip(
+                label: Text(option),
+                selected: isSelected,
+                onSelected: (value) {
+                  final updated = List<String>.from(selected);
+                  if (value) {
+                    if (!updated.contains(option)) {
+                      updated.add(option);
+                    }
+                  } else {
+                    updated.remove(option);
+                  }
+                  onChanged(updated);
+                },
+              );
+            }).toList(),
+          ),
       ],
     );
   }

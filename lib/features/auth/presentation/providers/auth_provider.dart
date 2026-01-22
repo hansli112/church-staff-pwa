@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../domain/entities/user.dart';
+import '../../../roster/domain/entities/service_roster.dart';
 import '../../domain/repositories/auth_repository.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -96,6 +97,56 @@ class AuthProvider extends ChangeNotifier {
   Future<void> deleteUser(String id) async {
     if (!isAdmin) throw Exception('Permission denied');
     await _repository.deleteUser(id);
+    notifyListeners();
+  }
+
+  Future<void> cleanupUserMinistries(
+    Map<ServiceType, List<String>> templates,
+  ) async {
+    if (!isAdmin) throw Exception('Permission denied');
+
+    final users = await _repository.getUsers();
+    for (final user in users) {
+      bool changed = false;
+      final updatedZones = user.zones.map((zone) {
+        final allowed = templates[zone.serviceType] ?? const <String>[];
+        final filtered = zone.ministries.where(allowed.contains).toList();
+        if (filtered.length != zone.ministries.length) {
+          changed = true;
+        }
+        return zone.copyWith(ministries: filtered);
+      }).toList();
+
+      if (changed) {
+        await _repository.updateUser(user.copyWith(zones: updatedZones));
+      }
+    }
+
+    notifyListeners();
+  }
+
+  Future<void> cleanupUserGroups(
+    Map<ServiceType, List<String>> templates,
+  ) async {
+    if (!isAdmin) throw Exception('Permission denied');
+
+    final users = await _repository.getUsers();
+    for (final user in users) {
+      bool changed = false;
+      final updatedZones = user.zones.map((zone) {
+        final allowed = templates[zone.serviceType] ?? const <String>[];
+        final filtered = zone.smallGroups.where(allowed.contains).toList();
+        if (filtered.length != zone.smallGroups.length) {
+          changed = true;
+        }
+        return zone.copyWith(smallGroups: filtered);
+      }).toList();
+
+      if (changed) {
+        await _repository.updateUser(user.copyWith(zones: updatedZones));
+      }
+    }
+
     notifyListeners();
   }
 }

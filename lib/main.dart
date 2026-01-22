@@ -6,7 +6,9 @@ import 'firebase_options.dart';
 import 'features/roster/data/repositories/firestore_roster_repository.dart';
 import 'features/roster/presentation/providers/roster_provider.dart';
 import 'features/auth/data/repositories/firebase_auth_repository.dart';
+import 'features/auth/data/repositories/firestore_group_settings_repository.dart';
 import 'features/auth/presentation/providers/auth_provider.dart';
+import 'features/auth/presentation/providers/group_settings_provider.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
 import 'presentation/screens/main_scaffold.dart';
 
@@ -33,9 +35,12 @@ class ChurchApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => AuthProvider(FirebaseAuthRepository()),
         ),
+        ChangeNotifierProvider(
+          create: (_) => GroupSettingsProvider(FirestoreGroupSettingsRepository()),
+        ),
       ],
       child: MaterialApp(
-        title: '教會同工助手',
+        title: '竹圍靈糧福音中心 服事小幫手',
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(
