@@ -66,6 +66,7 @@ class AuthProvider extends ChangeNotifier {
     String email,
     String username, 
     UserRole role, {
+    required String password,
     List<UserZoneInfo> zones = const [],
   }) async {
     if (!isAdmin) throw Exception('Permission denied');
@@ -78,8 +79,7 @@ class AuthProvider extends ChangeNotifier {
       role: role,
       zones: zones,
     );
-    // For mock purposes, setting a default password
-    await _repository.addUser(newUser, '${username}123');
+    await _repository.addUser(newUser, password);
     notifyListeners(); // Notify to update user lists if listening
   }
 

@@ -20,6 +20,7 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
   late TextEditingController _nameController;
   late TextEditingController _emailController;
   late TextEditingController _usernameController;
+  late TextEditingController _passwordController;
   late UserRole _selectedRole;
   late List<UserZoneInfo> _zones;
 
@@ -29,6 +30,7 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
     _nameController = TextEditingController(text: widget.user?.name ?? '');
     _emailController = TextEditingController(text: widget.user?.email ?? '');
     _usernameController = TextEditingController(text: widget.user?.username ?? '');
+    _passwordController = TextEditingController();
     _selectedRole = widget.user?.role ?? UserRole.member;
     _zones = List.from(widget.user?.zones ?? []);
   }
@@ -38,6 +40,7 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _usernameController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -76,6 +79,7 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
             _emailController.text,
             _usernameController.text,
             _selectedRole,
+            password: _passwordController.text.trim(),
             zones: _zones,
           );
         } else {
@@ -162,6 +166,24 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
                       ),
                       validator: (v) => v?.isEmpty == true ? '請輸入帳號 ID' : null,
                     ),
+                    if (widget.user == null) ...[
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _passwordController,
+                        decoration: const InputDecoration(
+                          labelText: '密碼',
+                          border: OutlineInputBorder(),
+                        ),
+                        obscureText: true,
+                        textInputAction: TextInputAction.done,
+                        validator: (v) {
+                          if (v?.trim().isEmpty == true) {
+                            return '請輸入密碼';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     DropdownButtonFormField<UserRole>(
                       value: _selectedRole,
