@@ -32,22 +32,22 @@ class MockAuthRepository implements AuthRepository {
       ],
     ),
   ];
+  final Map<String, String> _passwords = {
+    'admin': 'admin123',
+    'staff': 'staff123',
+  };
 
   @override
   Future<User?> login(String username, String password) async {
     await Future.delayed(const Duration(seconds: 1));
 
-    if (username == 'admin' && password == 'admin123') {
-      return _users.firstWhere((u) => u.username == 'admin');
-    } else if (username == 'staff' && password == 'staff123') {
-      return _users.firstWhere((u) => u.username == 'staff');
-    } else {
-        try {
-            final user = _users.firstWhere((u) => u.username == username);
-            if (password == '${username}123') {
-                return user;
-            }
-        } catch (_) {}
+    try {
+      final user = _users.firstWhere((u) => u.username == username);
+      if (_passwords[username] == password) {
+        return user;
+      }
+    } catch (_) {
+      return null;
     }
 
     return null;
@@ -68,6 +68,7 @@ class MockAuthRepository implements AuthRepository {
   Future<void> addUser(User user, String password) async {
     await Future.delayed(const Duration(milliseconds: 500));
     _users.add(user);
+    _passwords[user.username] = password;
   }
 
   @override
@@ -75,13 +76,25 @@ class MockAuthRepository implements AuthRepository {
     await Future.delayed(const Duration(milliseconds: 500));
     final index = _users.indexWhere((u) => u.id == user.id);
     if (index != -1) {
+      final oldUsername = _users[index].username;
       _users[index] = user;
+      if (oldUsername != user.username) {
+        final existing = _passwords.remove(oldUsername);
+        if (existing != null) {
+          _passwords[user.username] = existing;
+        }
+      }
     }
   }
 
   @override
   Future<void> deleteUser(String id) async {
     await Future.delayed(const Duration(milliseconds: 500));
-    _users.removeWhere((u) => u.id == id);
+    final index = _users.indexWhere((u) => u.id == id);
+    if (index != -1) {
+      final username = _users[index].username;
+      _users.removeAt(index);
+      _passwords.remove(username);
+    }
   }
 }
