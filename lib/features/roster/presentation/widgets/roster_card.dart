@@ -51,43 +51,40 @@ class RosterCard extends StatelessWidget {
                 final RosterEntry duty = entry.value;
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        width: 80,
-                        child: Text(
-                          duty.role,
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontWeight: FontWeight.w500,
+                  child: InkWell(
+                    onTap: isEditMode ? () => _showEditDialog(context, index, duty) : null,
+                    borderRadius: BorderRadius.circular(8),
+                    splashColor: Theme.of(context).colorScheme.primary.withOpacity(0.08),
+                    highlightColor: Theme.of(context).colorScheme.primary.withOpacity(0.04),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 80,
+                          child: Text(
+                            duty.role,
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
-                      ),
-                      Expanded(
-                        child: Text(
-                          duty.people.join('、'),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                        Expanded(
+                          child: Text(
+                            duty.people.join('、'),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                      ),
-                      if (isEditMode)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit_outlined, size: 20),
-                              onPressed: () => _showEditDialog(context, index, duty),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
-                              onPressed: () => _removeDuty(context, index),
-                            ),
-                          ],
-                        ),
-                    ],
+                        if (isEditMode)
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
+                            onPressed: () => _confirmRemoveDuty(context, index, duty.role),
+                          ),
+                      ],
+                    ),
                   ),
                 );
               }).toList()..addAll(isEditMode ? [
@@ -145,6 +142,30 @@ class RosterCard extends StatelessWidget {
     
     final newRoster = roster.copyWith(duties: newDuties);
     context.read<RosterProvider>().updateRoster(newRoster);
+  }
+
+  Future<void> _confirmRemoveDuty(BuildContext context, int index, String role) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('確認刪除'),
+        content: Text('確定要刪除「$role」嗎？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('刪除'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      _removeDuty(context, index);
+    }
   }
 
   Future<void> _showEditDialog(BuildContext context, int index, RosterEntry duty) async {

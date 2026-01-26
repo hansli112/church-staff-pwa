@@ -142,16 +142,6 @@ class RosterProvider with ChangeNotifier {
       ));
     }
 
-    if (existing.isNotEmpty) {
-      normalized.addAll(existing.entries.map((entry) {
-        final people = entry.value;
-        return RosterEntry(
-          role: entry.key,
-          people: people.isEmpty ? ['待定'] : people,
-        );
-      }));
-    }
-
     return normalized;
   }
 

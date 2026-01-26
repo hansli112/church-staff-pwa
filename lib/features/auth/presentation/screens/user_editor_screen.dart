@@ -8,8 +8,9 @@ import '../providers/auth_provider.dart';
 
 class UserEditorScreen extends StatefulWidget {
   final User? user; // If null, it's add mode
+  final bool isDialog;
 
-  const UserEditorScreen({super.key, this.user});
+  const UserEditorScreen({super.key, this.user, this.isDialog = false});
 
   @override
   State<UserEditorScreen> createState() => _UserEditorScreenState();
@@ -45,8 +46,16 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
   }
 
   void _addZone() {
+    final usedTypes = _zones.map((zone) => zone.serviceType).toSet();
+    final availableTypes = ServiceType.values.where((type) => !usedTypes.contains(type)).toList();
+    if (availableTypes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('已新增所有牧區')),
+      );
+      return;
+    }
     setState(() {
-      _zones.add(const UserZoneInfo(serviceType: ServiceType.sundayService, smallGroups: [], ministries: []));
+      _zones.add(UserZoneInfo(serviceType: availableTypes.first, smallGroups: [], ministries: []));
     });
   }
 
@@ -114,6 +123,12 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.user == null ? '新增帳號' : '編輯帳號'),
+        leading: widget.isDialog
+            ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
         actions: [
           IconButton(
             icon: const Icon(Icons.check),
@@ -232,6 +247,7 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
               return _ZoneEditorCard(
                 key: ValueKey('zone_$index'),
                 zone: zone,
+                usedTypes: _zones.map((z) => z.serviceType).toSet(),
                 onRemove: () => _removeZone(index),
                 onUpdate: (newZone) => _updateZone(index, newZone),
               );
@@ -245,12 +261,14 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
 
 class _ZoneEditorCard extends StatefulWidget {
   final UserZoneInfo zone;
+  final Set<ServiceType> usedTypes;
   final VoidCallback onRemove;
   final ValueChanged<UserZoneInfo> onUpdate;
 
   const _ZoneEditorCard({
     super.key,
     required this.zone,
+    required this.usedTypes,
     required this.onRemove,
     required this.onUpdate,
   });
@@ -280,6 +298,30 @@ class _ZoneEditorCardState extends State<_ZoneEditorCard> {
     ));
   }
 
+  Future<void> _confirmRemoveZone() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('確認刪除'),
+        content: const Text('確定要刪除此牧區嗎？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('刪除'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      widget.onRemove();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final templates = context.watch<RosterProvider>().templates;
@@ -301,9 +343,17 @@ class _ZoneEditorCardState extends State<_ZoneEditorCard> {
                     value: _selectedType,
                     decoration: const InputDecoration(labelText: '牧區'),
                     items: ServiceType.values.map((type) {
+                      final isUsed = widget.usedTypes.contains(type);
+                      final isCurrent = type == _selectedType;
                       return DropdownMenuItem(
                         value: type,
-                        child: Text(type.label),
+                        enabled: !isUsed || isCurrent,
+                        child: Text(
+                          type.label,
+                          style: TextStyle(
+                            color: !isUsed || isCurrent ? null : Colors.grey,
+                          ),
+                        ),
                       );
                     }).toList(),
                     onChanged: (value) {
@@ -323,7 +373,7 @@ class _ZoneEditorCardState extends State<_ZoneEditorCard> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  onPressed: widget.onRemove,
+                  onPressed: _confirmRemoveZone,
                 ),
               ],
             ),
@@ -375,19 +425,18 @@ class _OptionListSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sortedOptions = List<String>.from(options)..sort();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
         const SizedBox(height: 4),
-        if (sortedOptions.isEmpty)
+        if (options.isEmpty)
           Text(emptyText, style: const TextStyle(color: Colors.grey)),
-        if (sortedOptions.isNotEmpty)
+        if (options.isNotEmpty)
           Wrap(
             spacing: 8,
             runSpacing: 4,
-            children: sortedOptions.map((option) {
+            children: options.map((option) {
               final isSelected = selected.contains(option);
               return FilterChip(
                 label: Text(option),
@@ -401,7 +450,8 @@ class _OptionListSelector extends StatelessWidget {
                   } else {
                     updated.remove(option);
                   }
-                  onChanged(updated);
+                  final ordered = options.where(updated.contains).toList();
+                  onChanged(ordered);
                 },
               );
             }).toList(),

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../domain/entities/user.dart';
 import '../../../roster/domain/entities/service_roster.dart';
 import '../providers/auth_provider.dart';
+import '../providers/group_settings_provider.dart';
 import 'user_editor_screen.dart';
 
 class UserManagementScreen extends StatefulWidget {
@@ -14,6 +15,7 @@ class UserManagementScreen extends StatefulWidget {
 
 class _UserManagementScreenState extends State<UserManagementScreen> {
   late Future<List<User>> _usersFuture;
+  String _nameFilter = '';
 
   @override
   void initState() {
@@ -28,9 +30,22 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   }
 
   Future<void> _openEditor([User? user]) async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => UserEditorScreen(user: user)),
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        final size = MediaQuery.of(context).size;
+        final width = size.width < 640 ? size.width - 32 : 600.0;
+        final height = size.height < 720 ? size.height - 32 : 700.0;
+        return Dialog(
+          insetPadding: const EdgeInsets.all(16),
+          child: SizedBox(
+            width: width,
+            height: height,
+            child: UserEditorScreen(user: user, isDialog: true),
+          ),
+        );
+      },
     );
     _refreshUsers();
   }
@@ -56,68 +71,95 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           }
 
           final users = snapshot.data ?? [];
+          final filter = _nameFilter.trim().toLowerCase();
+          final filteredUsers = filter.isEmpty
+              ? users
+              : users.where((user) => user.name.toLowerCase().contains(filter)).toList();
+          final groupTemplates = context.watch<GroupSettingsProvider>().templates;
+          final sortedUsers = List<User>.from(filteredUsers)
+            ..sort((a, b) {
+              UserZoneInfo? primaryZone(User user) {
+                if (user.zones.isEmpty) return null;
+                final zones = List<UserZoneInfo>.from(user.zones)
+                  ..sort((z1, z2) => ServiceType.values
+                      .indexOf(z1.serviceType)
+                      .compareTo(ServiceType.values.indexOf(z2.serviceType)));
+                return zones.first;
+              }
 
-          return ListView.builder(
-            itemCount: users.length,
-            itemBuilder: (context, index) {
-              final user = users[index];
-              final zoneText = user.zones.map((z) => z.serviceType.label).join(', ');
+              int roleIndex(User user) {
+                return UserRole.values.indexOf(user.role);
+              }
 
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: ExpansionTile(
-                  leading: CircleAvatar(
-                    child: Text(user.name[0]),
+              int zoneIndex(User user) {
+                final zone = primaryZone(user);
+                if (zone == null) return 999;
+                return ServiceType.values.indexOf(zone.serviceType);
+              }
+
+              int groupIndex(User user) {
+                final zone = primaryZone(user);
+                if (zone == null || zone.smallGroups.isEmpty) return 999;
+                final groupOrder = groupTemplates[zone.serviceType] ?? const <String>[];
+                final groupName = zone.smallGroups.first;
+                final index = groupOrder.indexOf(groupName);
+                return index == -1 ? 999 : index;
+              }
+
+              final roleCompare = roleIndex(a).compareTo(roleIndex(b));
+              if (roleCompare != 0) return roleCompare;
+
+              final zoneCompare = zoneIndex(a).compareTo(zoneIndex(b));
+              if (zoneCompare != 0) return zoneCompare;
+
+              final groupCompare = groupIndex(a).compareTo(groupIndex(b));
+              if (groupCompare != 0) return groupCompare;
+
+              return a.name.compareTo(b.name);
+            });
+
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: TextField(
+                  decoration: const InputDecoration(
+                    labelText: '搜尋姓名',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.search),
                   ),
-                  title: Text('${user.name} (@${user.username})'),
-                  subtitle: Text(
-                    '${user.role.label} ${zoneText.isNotEmpty ? ' | $zoneText' : ''}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (user.zones.isEmpty)
-                             const Text('無牧區資料', style: TextStyle(color: Colors.grey)),
-                          
-                          ...user.zones.map((zone) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  zone.serviceType.label, 
-                                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)
-                                ),
-                                const SizedBox(height: 4),
-                                Text('小組: ${zone.smallGroups.isEmpty ? '無' : zone.smallGroups.join('、')}'),
-                                Text('服事: ${zone.ministries.isEmpty ? '無' : zone.ministries.join('、')}'),
-                              ],
-                            ),
-                          )),
-                          
-                          const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              TextButton.icon(
-                                icon: const Icon(Icons.edit),
-                                label: const Text('編輯'),
-                                onPressed: () => _openEditor(user),
+                  onChanged: (value) => setState(() => _nameFilter = value),
+                ),
+              ),
+              Expanded(
+                child: sortedUsers.isEmpty
+                    ? const Center(child: Text('沒有符合的帳號'))
+                    : ListView.builder(
+                        itemCount: sortedUsers.length,
+                        itemBuilder: (context, index) {
+                          final user = sortedUsers[index];
+                          final zoneText = user.zones.map((z) => z.serviceType.label).join(', ');
+
+                          return Card(
+                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                child: Text(user.name[0]),
                               ),
-                              const SizedBox(width: 8),
-                              TextButton.icon(
+                              title: Text('${user.name} (@${user.username})'),
+                              subtitle: Text(
+                                '${user.role.label} ${zoneText.isNotEmpty ? ' | $zoneText' : ''}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              onTap: () => _openEditor(user),
+                              trailing: IconButton(
                                 icon: const Icon(Icons.delete, color: Colors.red),
-                                label: const Text('刪除', style: TextStyle(color: Colors.red)),
                                 onPressed: () async {
                                   final confirm = await showDialog<bool>(
                                     context: context,
                                     builder: (context) => AlertDialog(
-                                      title: const Text('刪除確認'),
+                                      title: const Text('確認刪除'),
                                       content: Text('確定要刪除 ${user.name} 嗎？'),
                                       actions: [
                                         TextButton(
@@ -139,15 +181,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                   }
                                 },
                               ),
-                            ],
-                          )
-                        ],
+                            ),
+                          );
+                        },
                       ),
-                    ),
-                  ],
-                ),
-              );
-            },
+              ),
+            ],
           );
         },
       ),
