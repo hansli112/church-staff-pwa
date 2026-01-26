@@ -80,12 +80,14 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
     }
     if (_formKey.currentState!.validate()) {
       final authProvider = context.read<AuthProvider>();
-      
+      final email = _emailController.text.trim();
+      final hadEmail = widget.user?.email.isNotEmpty ?? false;
+      final shouldCreateAuth = widget.user != null && !hadEmail && email.isNotEmpty;
       try {
         if (widget.user == null) {
           await authProvider.addUser(
             _nameController.text,
-            _emailController.text,
+            email,
             _usernameController.text,
             _selectedRole,
             password: _passwordController.text.trim(),
@@ -94,12 +96,15 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
         } else {
           final updatedUser = widget.user!.copyWith(
             name: _nameController.text,
-            email: _emailController.text,
+            email: email,
             username: _usernameController.text,
             role: _selectedRole,
             zones: _zones,
           );
-          await authProvider.updateUser(updatedUser);
+          await authProvider.updateUser(
+            updatedUser,
+            password: shouldCreateAuth ? _passwordController.text.trim() : null,
+          );
         }
 
         if (mounted) {
@@ -120,6 +125,10 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final canEditEmail = widget.user == null || (widget.user?.email.isEmpty ?? false);
+    final hadEmail = widget.user?.email.isNotEmpty ?? false;
+    final shouldPromptPassword = widget.user == null ||
+        (!hadEmail && _emailController.text.trim().isNotEmpty);
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.user == null ? '新增帳號' : '編輯帳號'),
@@ -161,13 +170,15 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
                     TextFormField(
                       controller: _emailController,
                       decoration: const InputDecoration(
-                        labelText: 'Email',
+                        labelText: 'Email (選填)',
                         border: OutlineInputBorder(),
                         hintText: 'example@gmail.com',
+                        helperText: '補上後會建立登入帳號並需要設定密碼',
                       ),
-                      enabled: widget.user == null,
+                      enabled: canEditEmail,
+                      onChanged: canEditEmail ? (_) => setState(() {}) : null,
                       validator: (v) {
-                        if (v == null || v.isEmpty) return '請輸入 Email';
+                        if (v == null || v.isEmpty) return null;
                         if (!v.contains('@')) return '請輸入有效的 Email';
                         return null;
                       },
@@ -178,21 +189,36 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
                       decoration: const InputDecoration(
                         labelText: '顯示帳號 (ID)',
                         border: OutlineInputBorder(),
+                        helperText: '未建立登入帳號時可留空',
                       ),
-                      validator: (v) => v?.isEmpty == true ? '請輸入帳號 ID' : null,
+                      validator: (v) {
+                        if (_emailController.text.trim().isEmpty) {
+                          return null;
+                        }
+                        return v?.isEmpty == true ? '請輸入帳號 ID' : null;
+                      },
                     ),
-                    if (widget.user == null) ...[
+                    if (shouldPromptPassword) ...[
+                      if (!hadEmail && _emailController.text.trim().isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        const Text(
+                          '補上 Email 後會建立登入帳號，請設定可登入的密碼',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ],
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _passwordController,
                         decoration: const InputDecoration(
                           labelText: '密碼',
                           border: OutlineInputBorder(),
+                          helperText: '建立登入帳號用',
                         ),
                         obscureText: true,
                         textInputAction: TextInputAction.done,
                         validator: (v) {
-                          if (v?.trim().isEmpty == true) {
+                          if (_emailController.text.trim().isNotEmpty &&
+                              v?.trim().isEmpty == true) {
                             return '請輸入密碼';
                           }
                           return null;

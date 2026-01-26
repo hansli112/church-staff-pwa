@@ -61,6 +61,10 @@ class FirebaseAuthRepository implements AuthRepository {
 
   @override
   Future<void> addUser(User user, String password) async {
+    if (user.email.trim().isEmpty) {
+      await _usersCollection.doc(user.id).set(user.toJson());
+      return;
+    }
     FirebaseApp? secondaryApp;
     try {
       secondaryApp = await Firebase.initializeApp(
@@ -90,7 +94,37 @@ class FirebaseAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> updateUser(User user) async {
+  Future<void> updateUser(User user, {String? password}) async {
+    final email = user.email.trim();
+    if (email.isNotEmpty && password != null) {
+      FirebaseApp? secondaryApp;
+      try {
+        secondaryApp = await Firebase.initializeApp(
+          name: 'SecondaryApp',
+          options: Firebase.app().options,
+        );
+
+        final secondaryAuth = firebase_auth.FirebaseAuth.instanceFor(app: secondaryApp);
+        final credential = await secondaryAuth.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+
+        final uid = credential.user!.uid;
+        final newUser = user.copyWith(id: uid);
+        await _usersCollection.doc(uid).set(newUser.toJson());
+        if (uid != user.id) {
+          await _usersCollection.doc(user.id).delete();
+        }
+        return;
+      } catch (e) {
+        print('Update User Error: $e');
+        throw Exception('無法建立登入帳號: $e');
+      } finally {
+        await secondaryApp?.delete();
+      }
+    }
+
     await _usersCollection.doc(user.id).update(user.toJson());
   }
 

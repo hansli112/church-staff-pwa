@@ -8,6 +8,7 @@ class MockAuthRepository implements AuthRepository {
     const User(
       id: '1',
       name: '管理員',
+      email: '',
       username: 'admin',
       role: UserRole.admin,
       zones: [
@@ -21,6 +22,7 @@ class MockAuthRepository implements AuthRepository {
     const User(
       id: '2',
       name: '一般同工',
+      email: '',
       username: 'staff',
       role: UserRole.staff,
       zones: [
@@ -81,7 +83,7 @@ class MockAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> updateUser(User user) async {
+  Future<void> updateUser(User user, {String? password}) async {
     await Future.delayed(const Duration(milliseconds: 500));
     final index = _users.indexWhere((u) => u.id == user.id);
     if (index != -1) {

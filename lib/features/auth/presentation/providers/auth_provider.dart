@@ -99,9 +99,9 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners(); // Notify to update user lists if listening
   }
 
-  Future<void> updateUser(User user) async {
+  Future<void> updateUser(User user, {String? password}) async {
     if (!isAdmin) throw Exception('Permission denied');
-    await _repository.updateUser(user);
+    await _repository.updateUser(user, password: password);
     
     // If updating self, refresh local user data
     if (_currentUser?.id == user.id) {

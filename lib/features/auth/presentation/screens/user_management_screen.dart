@@ -146,7 +146,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                               leading: CircleAvatar(
                                 child: Text(user.name[0]),
                               ),
-                              title: Text('${user.name} (@${user.username})'),
+                              title: Text(
+                                user.username.isEmpty
+                                    ? '${user.name}（無帳號）'
+                                    : '${user.name} (@${user.username})',
+                              ),
                               subtitle: Text(
                                 '${user.role.label} ${zoneText.isNotEmpty ? ' | $zoneText' : ''}',
                                 maxLines: 1,

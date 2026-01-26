@@ -6,6 +6,6 @@ abstract class AuthRepository {
   Future<void> logout();
   Future<List<User>> getUsers();
   Future<void> addUser(User user, String password);
-  Future<void> updateUser(User user);
+  Future<void> updateUser(User user, {String? password});
   Future<void> deleteUser(String id);
 }
