@@ -40,7 +40,7 @@ class ChurchApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        title: '竹圍靈糧福音中心 服事小幫手',
+        title: '竹圍靈糧福音中心',
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(
