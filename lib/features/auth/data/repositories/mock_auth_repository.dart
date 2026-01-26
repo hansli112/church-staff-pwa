@@ -36,6 +36,7 @@ class MockAuthRepository implements AuthRepository {
     'admin': 'admin123',
     'staff': 'staff123',
   };
+  User? _currentUser;
 
   @override
   Future<User?> login(String username, String password) async {
@@ -44,6 +45,7 @@ class MockAuthRepository implements AuthRepository {
     try {
       final user = _users.firstWhere((u) => u.username == username);
       if (_passwords[username] == password) {
+        _currentUser = user;
         return user;
       }
     } catch (_) {
@@ -54,8 +56,15 @@ class MockAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<User?> getCurrentUser() async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    return _currentUser;
+  }
+
+  @override
   Future<void> logout() async {
     await Future.delayed(const Duration(milliseconds: 500));
+    _currentUser = null;
   }
 
   @override

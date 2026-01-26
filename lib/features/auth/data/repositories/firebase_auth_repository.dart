@@ -28,6 +28,13 @@ class FirebaseAuthRepository implements AuthRepository {
     }
   }
 
+  @override
+  Future<User?> getCurrentUser() async {
+    final current = await _auth.authStateChanges().first;
+    if (current == null) return null;
+    return await _fetchUserFromFirestore(current.uid);
+  }
+
   Future<User?> _fetchUserFromFirestore(String uid) async {
     try {
       final doc = await _usersCollection.doc(uid).get();

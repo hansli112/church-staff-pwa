@@ -8,15 +8,30 @@ class AuthProvider extends ChangeNotifier {
   
   User? _currentUser;
   bool _isLoading = false;
+  bool _isRestoring = true;
   String? _error;
 
-  AuthProvider(this._repository);
+  AuthProvider(this._repository) {
+    _restoreSession();
+  }
 
   User? get currentUser => _currentUser;
   bool get isAuthenticated => _currentUser != null;
   bool get isLoading => _isLoading;
+  bool get isRestoring => _isRestoring;
   String? get error => _error;
   bool get isAdmin => _currentUser?.isAdmin ?? false;
+
+  Future<void> _restoreSession() async {
+    try {
+      _currentUser = await _repository.getCurrentUser();
+    } catch (e) {
+      _error = '讀取登入狀態失敗: $e';
+    } finally {
+      _isRestoring = false;
+      notifyListeners();
+    }
+  }
 
   Future<bool> login(String username, String password) async {
     _isLoading = true;
@@ -50,6 +65,7 @@ class AuthProvider extends ChangeNotifier {
     
     await _repository.logout();
     _currentUser = null;
+    _isRestoring = false;
     
     _isLoading = false;
     notifyListeners();
