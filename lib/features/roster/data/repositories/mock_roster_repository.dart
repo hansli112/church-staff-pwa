@@ -33,7 +33,13 @@ class MockRosterRepository implements RosterRepository {
     final today = DateTime(now.year, now.month, now.day);
 
     final quarterStartMonth = ((now.month - 1) ~/ 3) * 3 + 1;
-    final quarterEndMonth = quarterStartMonth + 2;
+    final isLastMonthOfQuarter = now.month == (quarterStartMonth + 2);
+    final targetEndMonthRaw = isLastMonthOfQuarter
+        ? quarterStartMonth + 5
+        : quarterStartMonth + 2;
+    final targetEndYear = now.year + ((targetEndMonthRaw - 1) ~/ 12);
+    final targetEndMonth = ((targetEndMonthRaw - 1) % 12) + 1;
+    final targetEndDate = DateTime(targetEndYear, targetEndMonth + 1, 0);
 
     List<ServiceRoster> allRosters = [];
     
@@ -43,7 +49,7 @@ class MockRosterRepository implements RosterRepository {
     }
 
     int idCounter = 1;
-    while (cursor.month <= quarterEndMonth && cursor.year == now.year) {
+    while (!cursor.isAfter(targetEndDate)) {
       // 針對每一週，產生三種聚會的資料
       allRosters.add(_generateRoster(idCounter++, cursor, ServiceType.sundayService));
       allRosters.add(_generateRoster(idCounter++, cursor, ServiceType.youth));

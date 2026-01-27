@@ -10,18 +10,24 @@ class FirestoreRosterRepository implements RosterRepository {
 
   @override
   Future<List<ServiceRoster>> getUpcomingRosters() async {
-    // 取得當前日期，只撈取未來或今天的服事表 (例如前後三個月)
-    // 這裡為了簡單，先撈取所有資料，之後可以優化成只撈本季
+    // 取得當前日期，只撈取未來或今天的服事表 (例如本季到下一季)
+    // 這裡為了簡單，先撈取所有資料，之後可以優化成只撈需要的區間
     try {
       final snapshot = await _rostersCollection
           .orderBy('date') // 依照日期排序
           .get();
 
       if (snapshot.docs.isNotEmpty) {
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        final endDate = _nextQuarterEndDate(now);
+
         return snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return _fromFirestore(data, doc.id);
-      }).toList();
+          final data = doc.data() as Map<String, dynamic>;
+          return _fromFirestore(data, doc.id);
+        }).where((roster) {
+          return !roster.date.isBefore(today) && !roster.date.isAfter(endDate);
+        }).toList();
       }
 
       final templates = await getServiceTemplates();
@@ -157,7 +163,7 @@ class FirestoreRosterRepository implements RosterRepository {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final quarterStartMonth = ((now.month - 1) ~/ 3) * 3 + 1;
-    final quarterEndMonth = quarterStartMonth + 2;
+    final targetEndDate = _nextQuarterEndDate(now);
 
     DateTime cursor = DateTime(now.year, quarterStartMonth, 1);
     while (cursor.weekday != DateTime.sunday) {
@@ -165,7 +171,7 @@ class FirestoreRosterRepository implements RosterRepository {
     }
 
     final List<ServiceRoster> allRosters = [];
-    while (cursor.month <= quarterEndMonth && cursor.year == now.year) {
+    while (!cursor.isAfter(targetEndDate)) {
       for (final type in ServiceType.values) {
         final roles = templates[type] ?? [];
         final duties = roles
@@ -183,5 +189,16 @@ class FirestoreRosterRepository implements RosterRepository {
     }
 
     return allRosters.where((r) => !r.date.isBefore(today)).toList();
+  }
+
+  DateTime _nextQuarterEndDate(DateTime now) {
+    final quarterStartMonth = ((now.month - 1) ~/ 3) * 3 + 1;
+    final isLastMonthOfQuarter = now.month == (quarterStartMonth + 2);
+    final targetEndMonthRaw = isLastMonthOfQuarter
+        ? quarterStartMonth + 5
+        : quarterStartMonth + 2;
+    final targetEndYear = now.year + ((targetEndMonthRaw - 1) ~/ 12);
+    final targetEndMonth = ((targetEndMonthRaw - 1) % 12) + 1;
+    return DateTime(targetEndYear, targetEndMonth + 1, 0);
   }
 }

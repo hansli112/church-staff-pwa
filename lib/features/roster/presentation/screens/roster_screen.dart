@@ -42,11 +42,15 @@ class _RosterScreenState extends State<RosterScreen> {
         : ServiceType.values
             .where((type) => userZones.any((zone) => zone.serviceType == type))
             .toList();
+    final now = DateTime.now();
+    final quarterStartMonth = ((now.month - 1) ~/ 3) * 3 + 1;
+    final isLastMonthOfQuarter = now.month == (quarterStartMonth + 2);
+    final titleText = isLastMonthOfQuarter ? '本季/下季服事表' : '本季服事表';
 
     final appBar = AppBar(
       title: Consumer<RosterProvider>(
         builder: (context, provider, child) {
-          return Text(provider.isEditMode ? '編輯服事表' : '本季服事表');
+          return Text(provider.isEditMode ? '編輯服事表' : titleText);
         },
       ),
       centerTitle: true,
