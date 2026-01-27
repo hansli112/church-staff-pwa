@@ -34,56 +34,70 @@ class _RosterScreenState extends State<RosterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isAdmin = context.select<AuthProvider, bool>((auth) => auth.isAdmin);
+    final authProvider = context.watch<AuthProvider>();
+    final isAdmin = authProvider.isAdmin;
+    final userZones = authProvider.currentUser?.zones ?? const [];
+    final allowedTypes = isAdmin
+        ? ServiceType.values
+        : ServiceType.values
+            .where((type) => userZones.any((zone) => zone.serviceType == type))
+            .toList();
 
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Consumer<RosterProvider>(
+    final appBar = AppBar(
+      title: Consumer<RosterProvider>(
+        builder: (context, provider, child) {
+          return Text(provider.isEditMode ? '編輯服事表' : '本季服事表');
+        },
+      ),
+      centerTitle: true,
+      actions: [
+        if (isAdmin) ...[
+          Consumer<RosterProvider>(
             builder: (context, provider, child) {
-              return Text(provider.isEditMode ? '編輯服事表' : '本季服事表');
+              if (!provider.isEditMode) return const SizedBox.shrink();
+              return IconButton(
+                icon: const Icon(Icons.settings),
+                tooltip: '服事項目設定',
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RoleSettingsScreen()),
+                ),
+              );
             },
           ),
-          centerTitle: true,
-          actions: [
-            if (isAdmin) ...[
-              Consumer<RosterProvider>(
-                builder: (context, provider, child) {
-                  if (!provider.isEditMode) return const SizedBox.shrink();
-                  return IconButton(
-                    icon: const Icon(Icons.settings),
-                    tooltip: '服事項目設定',
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const RoleSettingsScreen()),
-                    ),
-                  );
-                },
-              ),
-              Consumer<RosterProvider>(
-                builder: (context, provider, child) {
-                  return IconButton(
-                    icon: Icon(provider.isEditMode ? Icons.view_list : Icons.edit),
-                    tooltip: provider.isEditMode ? '切換至檢視模式' : '切換至編輯模式',
-                    onPressed: () => provider.toggleEditMode(),
-                  );
-                },
-              ),
-            ],
-          ],
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: '主日'),
-              Tab(text: '青崇'),
-              Tab(text: '兒主'),
-            ],
-            indicatorSize: TabBarIndicatorSize.label,
-            // 讓切換時的動畫更平滑
-            splashFactory: NoSplash.splashFactory,
-            overlayColor: WidgetStatePropertyAll(Colors.transparent),
+          Consumer<RosterProvider>(
+            builder: (context, provider, child) {
+              return IconButton(
+                icon: Icon(provider.isEditMode ? Icons.view_list : Icons.edit),
+                tooltip: provider.isEditMode ? '切換至檢視模式' : '切換至編輯模式',
+                onPressed: () => provider.toggleEditMode(),
+              );
+            },
           ),
-        ),
+        ],
+      ],
+      bottom: allowedTypes.isEmpty
+          ? null
+          : TabBar(
+              tabs: allowedTypes.map((type) => Tab(text: type.label)).toList(),
+              indicatorSize: TabBarIndicatorSize.label,
+              // 讓切換時的動畫更平滑
+              splashFactory: NoSplash.splashFactory,
+              overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+            ),
+    );
+
+    if (allowedTypes.isEmpty) {
+      return Scaffold(
+        appBar: appBar,
+        body: const Center(child: Text('尚未設定可檢視的牧區')),
+      );
+    }
+
+    return DefaultTabController(
+      length: allowedTypes.length,
+      child: Scaffold(
+        appBar: appBar,
         body: Consumer<RosterProvider>(
           builder: (context, provider, child) {
             if (provider.isLoading) {
@@ -100,20 +114,12 @@ class _RosterScreenState extends State<RosterScreen> {
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ),
-              children: [
-                _RosterList(
-                  key: const PageStorageKey('sunday'),
-                  rosters: provider.getRostersByType(ServiceType.sundayService),
-                ),
-                _RosterList(
-                  key: const PageStorageKey('youth'),
-                  rosters: provider.getRostersByType(ServiceType.youth),
-                ),
-                _RosterList(
-                  key: const PageStorageKey('children'),
-                  rosters: provider.getRostersByType(ServiceType.children),
-                ),
-              ],
+              children: allowedTypes.map((type) {
+                return _RosterList(
+                  key: PageStorageKey(type.toString()),
+                  rosters: provider.getRostersByType(type),
+                );
+              }).toList(),
             );
           },
         ),
