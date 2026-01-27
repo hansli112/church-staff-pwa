@@ -209,11 +209,13 @@ class RosterCard extends StatelessWidget {
 
   Future<void> _showAddDutyDialog(BuildContext context) async {
     final TextEditingController roleController = TextEditingController();
-    final Future<List<String>> peopleFuture = _loadSelectablePeople(
-      context,
-      roster.type,
-      const [],
-    );
+    final Future<List<String>> Function(String? role) peopleLoader = (role) =>
+        _loadSelectablePeople(
+          context,
+          roster.type,
+          const [],
+          role,
+        );
     final roleOptions =
         context.read<RosterProvider>().templates[roster.type] ??
         const <String>[];
@@ -226,7 +228,7 @@ class RosterCard extends StatelessWidget {
           roleController: roleController,
           roleOptions: roleOptions,
           initialRole: roleOptions.isNotEmpty ? roleOptions.first : null,
-          peopleFuture: peopleFuture,
+          peopleLoader: peopleLoader,
           initialPeople: const ['待定'],
           onSubmit: (role, people) => _addDuty(context, role, people),
           submitLabel: '新增',
@@ -284,11 +286,13 @@ class RosterCard extends StatelessWidget {
     int index,
     RosterEntry duty,
   ) async {
-    final Future<List<String>> peopleFuture = _loadSelectablePeople(
-      context,
-      roster.type,
-      duty.people,
-    );
+    final Future<List<String>> Function(String? role) peopleLoader = (role) =>
+        _loadSelectablePeople(
+          context,
+          roster.type,
+          duty.people,
+          role ?? duty.role,
+        );
 
     await showDialog(
       context: context,
@@ -298,7 +302,7 @@ class RosterCard extends StatelessWidget {
           roleController: TextEditingController(text: duty.role),
           roleOptions: const [],
           initialRole: duty.role,
-          peopleFuture: peopleFuture,
+          peopleLoader: peopleLoader,
           initialPeople: duty.people.isEmpty ? const ['待定'] : duty.people,
           onSubmit: (role, people) => _updateDuty(context, index, people),
           submitLabel: '儲存',
@@ -410,10 +414,19 @@ class RosterCard extends StatelessWidget {
     BuildContext context,
     ServiceType rosterType,
     List<String> extras,
+    String? role,
   ) async {
     final users = await context.read<AuthProvider>().getUsers();
     final names = users
-        .where((u) => u.zones.any((zone) => zone.serviceType == rosterType))
+        .where(
+          (u) => u.zones.any(
+            (zone) =>
+                zone.serviceType == rosterType &&
+                (role != null && role.trim().isNotEmpty
+                    ? zone.ministries.contains(role.trim())
+                    : false),
+          ),
+        )
         .map((u) => u.name.trim())
         .where((n) => n.isNotEmpty)
         .toList();
@@ -433,7 +446,7 @@ class _RosterPeopleDialog extends StatefulWidget {
   final TextEditingController roleController;
   final List<String> roleOptions;
   final String? initialRole;
-  final Future<List<String>> peopleFuture;
+  final Future<List<String>> Function(String? role) peopleLoader;
   final List<String> initialPeople;
   final void Function(String role, List<String> people) onSubmit;
   final String submitLabel;
@@ -444,7 +457,7 @@ class _RosterPeopleDialog extends StatefulWidget {
     required this.roleController,
     required this.roleOptions,
     required this.initialRole,
-    required this.peopleFuture,
+    required this.peopleLoader,
     required this.initialPeople,
     required this.onSubmit,
     required this.submitLabel,
@@ -546,7 +559,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
             SizedBox(
               height: 280,
               child: FutureBuilder<List<String>>(
-                future: widget.peopleFuture,
+                future: widget.peopleLoader(_selectedRole),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
