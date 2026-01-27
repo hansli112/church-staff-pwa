@@ -1,12 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../domain/entities/event_option.dart';
 import '../../domain/entities/service_roster.dart';
 import '../../domain/repositories/roster_repository.dart';
 
 class FirestoreRosterRepository implements RosterRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  CollectionReference get _rostersCollection => _firestore.collection('rosters');
-  DocumentReference get _templatesDoc => _firestore.collection('settings').doc('roster_templates');
+  CollectionReference get _rostersCollection =>
+      _firestore.collection('rosters');
+  DocumentReference get _templatesDoc =>
+      _firestore.collection('settings').doc('roster_templates');
+  DocumentReference get _eventOptionsDoc =>
+      _firestore.collection('settings').doc('event_options');
 
   @override
   Future<List<ServiceRoster>> getUpcomingRosters() async {
@@ -22,12 +27,16 @@ class FirestoreRosterRepository implements RosterRepository {
         final today = DateTime(now.year, now.month, now.day);
         final endDate = _nextQuarterEndDate(now);
 
-        return snapshot.docs.map((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          return _fromFirestore(data, doc.id);
-        }).where((roster) {
-          return !roster.date.isBefore(today) && !roster.date.isAfter(endDate);
-        }).toList();
+        return snapshot.docs
+            .map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              return _fromFirestore(data, doc.id);
+            })
+            .where((roster) {
+              return !roster.date.isBefore(today) &&
+                  !roster.date.isAfter(endDate);
+            })
+            .toList();
       }
 
       final templates = await getServiceTemplates();
@@ -93,7 +102,9 @@ class FirestoreRosterRepository implements RosterRepository {
   }
 
   @override
-  Future<void> updateServiceTemplates(Map<ServiceType, List<String>> templates) async {
+  Future<void> updateServiceTemplates(
+    Map<ServiceType, List<String>> templates,
+  ) async {
     try {
       final data = templates.map((key, value) {
         return MapEntry(key.toString().split('.').last, value);
@@ -105,16 +116,71 @@ class FirestoreRosterRepository implements RosterRepository {
     }
   }
 
+  @override
+  Future<List<EventOption>> getEventOptions() async {
+    try {
+      final doc = await _eventOptionsDoc.get();
+      if (!doc.exists) {
+        return const [
+          EventOption(name: '聖餐', color: 0xFFF39C12),
+          EventOption(name: '愛餐', color: 0xFFF39C12),
+        ];
+      }
+
+      final data = doc.data() as Map<String, dynamic>;
+      final events = data['events'];
+      if (events is List) {
+        return events
+            .map((item) {
+              if (item is String) {
+                return EventOption(name: item, color: 0xFFF39C12);
+              }
+              if (item is Map) {
+                return EventOption.fromJson(Map<String, dynamic>.from(item));
+              }
+              return const EventOption(name: '', color: 0xFFF39C12);
+            })
+            .where((e) => e.name.trim().isNotEmpty)
+            .toList();
+      }
+      return const [
+        EventOption(name: '聖餐', color: 0xFFF39C12),
+        EventOption(name: '愛餐', color: 0xFFF39C12),
+      ];
+    } catch (e) {
+      print('Get Event Options Error: $e');
+      return const [
+        EventOption(name: '聖餐', color: 0xFFF39C12),
+        EventOption(name: '愛餐', color: 0xFFF39C12),
+      ];
+    }
+  }
+
+  @override
+  Future<void> updateEventOptions(List<EventOption> options) async {
+    try {
+      final cleaned = options
+          .map((e) => e.copyWith(name: e.name.trim()))
+          .where((e) => e.name.isNotEmpty)
+          .map((e) => e.toJson())
+          .toList();
+      await _eventOptionsDoc.set({'events': cleaned});
+    } catch (e) {
+      print('Update Event Options Error: $e');
+      throw Exception('更新事件選項失敗: $e');
+    }
+  }
+
   // Helper: Convert ServiceRoster to Map for Firestore
   Map<String, dynamic> _toFirestore(ServiceRoster roster) {
     return {
       'date': Timestamp.fromDate(roster.date),
       'type': roster.type.toString().split('.').last,
       'serviceName': roster.serviceName,
-      'duties': roster.duties.map((d) => {
-        'role': d.role,
-        'people': d.people,
-      }).toList(),
+      'specialEvents': roster.specialEvents,
+      'duties': roster.duties
+          .map((d) => {'role': d.role, 'people': d.people})
+          .toList(),
     };
   }
 
@@ -128,13 +194,16 @@ class FirestoreRosterRepository implements RosterRepository {
         orElse: () => ServiceType.sundayService,
       ),
       serviceName: data['serviceName'] as String? ?? '',
-      duties: (data['duties'] as List<dynamic>?)?.map((item) {
-        final d = item as Map<String, dynamic>;
-        return RosterEntry(
-          role: d['role'] as String,
-          people: List<String>.from(d['people'] ?? []),
-        );
-      }).toList() ?? [],
+      specialEvents: List<String>.from(data['specialEvents'] ?? const []),
+      duties:
+          (data['duties'] as List<dynamic>?)?.map((item) {
+            final d = item as Map<String, dynamic>;
+            return RosterEntry(
+              role: d['role'] as String,
+              people: List<String>.from(d['people'] ?? []),
+            );
+          }).toList() ??
+          [],
     );
   }
 
@@ -177,13 +246,17 @@ class FirestoreRosterRepository implements RosterRepository {
         final duties = roles
             .map((role) => RosterEntry(role: role, people: ['待定']))
             .toList();
-        allRosters.add(ServiceRoster(
-          id: _makeRosterId(cursor, type),
-          date: cursor,
-          type: type,
-          serviceName: _serviceNameForType(type),
-          duties: duties,
-        ));
+        final events = _defaultEventsForDate(cursor, type);
+        allRosters.add(
+          ServiceRoster(
+            id: _makeRosterId(cursor, type),
+            date: cursor,
+            type: type,
+            serviceName: _serviceNameForType(type),
+            duties: duties,
+            specialEvents: events,
+          ),
+        );
       }
       cursor = cursor.add(const Duration(days: 7));
     }
@@ -200,5 +273,31 @@ class FirestoreRosterRepository implements RosterRepository {
     final targetEndYear = now.year + ((targetEndMonthRaw - 1) ~/ 12);
     final targetEndMonth = ((targetEndMonthRaw - 1) % 12) + 1;
     return DateTime(targetEndYear, targetEndMonth + 1, 0);
+  }
+
+  List<String> _defaultEventsForDate(DateTime date, ServiceType type) {
+    final firstSunday = _firstSundayOfMonth(date);
+    final week = 1 + (date.difference(firstSunday).inDays ~/ 7);
+    if (week == 1) {
+      if (type == ServiceType.sundayService || type == ServiceType.youth) {
+        return const ['聖餐'];
+      }
+      return const [];
+    }
+    if (week == 4) {
+      if (type == ServiceType.sundayService) {
+        return const ['愛餐'];
+      }
+      return const [];
+    }
+    return const [];
+  }
+
+  DateTime _firstSundayOfMonth(DateTime date) {
+    var cursor = DateTime(date.year, date.month, 1);
+    while (cursor.weekday != DateTime.sunday) {
+      cursor = cursor.add(const Duration(days: 1));
+    }
+    return cursor;
   }
 }

@@ -4,6 +4,7 @@ import '../../domain/entities/service_roster.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/roster_provider.dart';
 import '../widgets/roster_card.dart';
+import 'event_settings_screen.dart';
 import 'role_settings_screen.dart';
 
 class RosterScreen extends StatefulWidget {
@@ -40,8 +41,10 @@ class _RosterScreenState extends State<RosterScreen> {
     final allowedTypes = isAdmin
         ? ServiceType.values
         : ServiceType.values
-            .where((type) => userZones.any((zone) => zone.serviceType == type))
-            .toList();
+              .where(
+                (type) => userZones.any((zone) => zone.serviceType == type),
+              )
+              .toList();
     final now = DateTime.now();
     final quarterStartMonth = ((now.month - 1) ~/ 3) * 3 + 1;
     final isLastMonthOfQuarter = now.month == (quarterStartMonth + 2);
@@ -56,6 +59,21 @@ class _RosterScreenState extends State<RosterScreen> {
       centerTitle: true,
       actions: [
         if (isAdmin) ...[
+          Consumer<RosterProvider>(
+            builder: (context, provider, child) {
+              if (!provider.isEditMode) return const SizedBox.shrink();
+              return IconButton(
+                icon: const Icon(Icons.event),
+                tooltip: '事件選項設定',
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const EventSettingsScreen(),
+                  ),
+                ),
+              );
+            },
+          ),
           Consumer<RosterProvider>(
             builder: (context, provider, child) {
               if (!provider.isEditMode) return const SizedBox.shrink();
@@ -142,14 +160,15 @@ class _RosterList extends StatefulWidget {
 }
 
 // 使用 AutomaticKeepAliveClientMixin 來保持滑動位置
-class _RosterListState extends State<_RosterList> with AutomaticKeepAliveClientMixin {
+class _RosterListState extends State<_RosterList>
+    with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true; // 告訴 Flutter 保持這個頁面的狀態
 
   @override
   Widget build(BuildContext context) {
     super.build(context); // 必須呼叫 super.build
-    
+
     if (widget.rosters.isEmpty) {
       return const Center(child: Text('此類別目前沒有服事資訊'));
     }
@@ -157,13 +176,14 @@ class _RosterListState extends State<_RosterList> with AutomaticKeepAliveClientM
     return ListView.builder(
       padding: const EdgeInsets.only(top: 12, bottom: 20),
       itemCount: widget.rosters.length,
-              itemBuilder: (context, index) {
-                final roster = widget.rosters[index];
-                return RosterCard(
-                  key: ValueKey(roster.id),
-                  roster: roster,
-                  initiallyExpanded: index == 0,
-                );
-              },    );
+      itemBuilder: (context, index) {
+        final roster = widget.rosters[index];
+        return RosterCard(
+          key: ValueKey(roster.id),
+          roster: roster,
+          initiallyExpanded: index == 0,
+        );
+      },
+    );
   }
 }

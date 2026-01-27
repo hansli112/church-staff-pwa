@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../domain/entities/event_option.dart';
 import '../../domain/entities/service_roster.dart';
 import '../../domain/repositories/roster_repository.dart';
 
@@ -7,6 +8,7 @@ class RosterProvider with ChangeNotifier {
 
   List<ServiceRoster> _allRosters = []; // 儲存所有原始資料
   Map<ServiceType, List<String>> _templates = {};
+  List<EventOption> _eventOptions = [];
   bool _isLoading = false;
   bool _isEditMode = false;
   String? _error;
@@ -17,6 +19,14 @@ class RosterProvider with ChangeNotifier {
   bool get isEditMode => _isEditMode;
   String? get error => _error;
   Map<ServiceType, List<String>> get templates => _templates;
+  List<EventOption> get eventOptions => List.unmodifiable(_eventOptions);
+  int eventColorFor(String name) {
+    final option = _eventOptions.firstWhere(
+      (e) => e.name == name,
+      orElse: () => const EventOption(name: '', color: 0xFFF39C12),
+    );
+    return option.color;
+  }
 
   void toggleEditMode() {
     _isEditMode = !_isEditMode;
@@ -27,7 +37,7 @@ class RosterProvider with ChangeNotifier {
   List<ServiceRoster> getRostersByType(ServiceType type) {
     return _allRosters.where((r) => r.type == type).toList();
   }
-  
+
   // 為了相容性，如果有人直接 call rosters (雖然目前沒人用)，回傳全部
   List<ServiceRoster> get rosters => _allRosters;
 
@@ -40,9 +50,11 @@ class RosterProvider with ChangeNotifier {
       final results = await Future.wait([
         _repository.getUpcomingRosters(),
         _repository.getServiceTemplates(),
+        _repository.getEventOptions(),
       ]);
       _allRosters = results[0] as List<ServiceRoster>;
       _templates = results[1] as Map<ServiceType, List<String>>;
+      _eventOptions = results[2] as List<EventOption>;
       await _seedEmptyRostersFromTemplates();
     } catch (e) {
       _error = '無法取得資料，請稍後再試';
@@ -82,7 +94,9 @@ class RosterProvider with ChangeNotifier {
     }
   }
 
-  Future<void> updateTemplates(Map<ServiceType, List<String>> newTemplates) async {
+  Future<void> updateTemplates(
+    Map<ServiceType, List<String>> newTemplates,
+  ) async {
     try {
       await _repository.updateServiceTemplates(newTemplates);
       _templates = Map.from(newTemplates);
@@ -90,6 +104,17 @@ class RosterProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _error = '更新設定失敗: $e';
+      notifyListeners();
+    }
+  }
+
+  Future<void> updateEventOptions(List<EventOption> options) async {
+    try {
+      await _repository.updateEventOptions(options);
+      _eventOptions = List<EventOption>.from(options);
+      notifyListeners();
+    } catch (e) {
+      _error = '更新事件選項失敗: $e';
       notifyListeners();
     }
   }
@@ -128,7 +153,10 @@ class RosterProvider with ChangeNotifier {
     }
   }
 
-  List<RosterEntry> _normalizeDuties(List<RosterEntry> duties, List<String> roles) {
+  List<RosterEntry> _normalizeDuties(
+    List<RosterEntry> duties,
+    List<String> roles,
+  ) {
     final Map<String, List<String>> existing = {
       for (final duty in duties) duty.role: List<String>.from(duty.people),
     };
@@ -136,10 +164,9 @@ class RosterProvider with ChangeNotifier {
     final List<RosterEntry> normalized = [];
     for (final role in roles) {
       final people = existing.remove(role) ?? [];
-      normalized.add(RosterEntry(
-        role: role,
-        people: people.isEmpty ? ['待定'] : people,
-      ));
+      normalized.add(
+        RosterEntry(role: role, people: people.isEmpty ? ['待定'] : people),
+      );
     }
 
     return normalized;

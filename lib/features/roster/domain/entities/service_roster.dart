@@ -1,7 +1,7 @@
 enum ServiceType {
   sundayService, // 主日
-  youth,         // 青崇
-  children       // 兒主
+  youth, // 青崇
+  children, // 兒主
 }
 
 extension ServiceTypeExtension on ServiceType {
@@ -23,14 +23,8 @@ class RosterEntry {
 
   RosterEntry({required this.role, required this.people});
 
-  RosterEntry copyWith({
-    String? role,
-    List<String>? people,
-  }) {
-    return RosterEntry(
-      role: role ?? this.role,
-      people: people ?? this.people,
-    );
+  RosterEntry copyWith({String? role, List<String>? people}) {
+    return RosterEntry(role: role ?? this.role, people: people ?? this.people);
   }
 }
 
@@ -40,6 +34,7 @@ class ServiceRoster {
   final ServiceType type; // 新增類別
   final String serviceName;
   final List<RosterEntry> duties;
+  final List<String> specialEvents;
 
   ServiceRoster({
     required this.id,
@@ -47,6 +42,7 @@ class ServiceRoster {
     required this.type, // Required
     required this.serviceName,
     required this.duties,
+    this.specialEvents = const [],
   });
 
   ServiceRoster copyWith({
@@ -55,6 +51,7 @@ class ServiceRoster {
     ServiceType? type,
     String? serviceName,
     List<RosterEntry>? duties,
+    List<String>? specialEvents,
   }) {
     return ServiceRoster(
       id: id ?? this.id,
@@ -62,6 +59,7 @@ class ServiceRoster {
       type: type ?? this.type,
       serviceName: serviceName ?? this.serviceName,
       duties: duties ?? this.duties,
+      specialEvents: specialEvents ?? this.specialEvents,
     );
   }
 }

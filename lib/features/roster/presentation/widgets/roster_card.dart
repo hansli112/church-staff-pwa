@@ -10,7 +10,7 @@ class RosterCard extends StatelessWidget {
   final bool initiallyExpanded;
 
   const RosterCard({
-    super.key, 
+    super.key,
     required this.roster,
     this.initiallyExpanded = false,
   });
@@ -18,85 +18,188 @@ class RosterCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('yyyy/MM/dd (E)', 'zh_TW');
-    final isEditMode = context.watch<RosterProvider>().isEditMode;
-    
+    final rosterProvider = context.watch<RosterProvider>();
+    final isEditMode = rosterProvider.isEditMode;
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       elevation: isEditMode ? 4.0 : 2.0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: isEditMode 
-          ? BorderSide(color: Theme.of(context).colorScheme.primary, width: 2.0)
-          : BorderSide.none,
+        side: isEditMode
+            ? BorderSide(
+                color: Theme.of(context).colorScheme.primary,
+                width: 2.0,
+              )
+            : BorderSide.none,
       ),
       child: ExpansionTile(
         key: PageStorageKey(roster.id),
         initiallyExpanded: initiallyExpanded,
         leading: Icon(
-          isEditMode ? Icons.edit_note : Icons.event_note, 
-          color: isEditMode ? Theme.of(context).colorScheme.primary : Colors.blueAccent,
+          isEditMode ? Icons.edit_note : Icons.event_note,
+          color: isEditMode
+              ? Theme.of(context).colorScheme.primary
+              : Colors.blueAccent,
         ),
         title: Text(
           dateFormat.format(roster.date),
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        subtitle: Text(roster.serviceName),
+        subtitle: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(roster.serviceName),
+            if (roster.specialEvents.isNotEmpty || isEditMode)
+              const SizedBox(width: 8),
+            if (roster.specialEvents.isNotEmpty || isEditMode)
+              Expanded(
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 2,
+                  children: [
+                    ...roster.specialEvents.map((event) {
+                      final colorValue = rosterProvider.eventColorFor(event);
+                      final color = Color(colorValue);
+                      final label = Text(
+                        event,
+                        style: TextStyle(
+                          color: color,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      );
+                      if (!isEditMode) {
+                        return Chip(
+                          label: label,
+                          backgroundColor: color.withOpacity(0.12),
+                          side: BorderSide(color: color.withOpacity(0.4)),
+                          padding: EdgeInsets.zero,
+                          labelPadding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 0,
+                          ),
+                          visualDensity: const VisualDensity(
+                            horizontal: -2,
+                            vertical: -3,
+                          ),
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                        );
+                      }
+                      return InputChip(
+                        label: label,
+                        backgroundColor: color.withOpacity(0.12),
+                        side: BorderSide(color: color.withOpacity(0.4)),
+                        onDeleted: () => _removeSpecialEvent(context, event),
+                        deleteIcon: const Icon(Icons.close, size: 16),
+                        padding: EdgeInsets.zero,
+                        labelPadding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 0,
+                        ),
+                        visualDensity: const VisualDensity(
+                          horizontal: -2,
+                          vertical: -3,
+                        ),
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      );
+                    }),
+                    if (isEditMode)
+                      ActionChip(
+                        label: const Text('新增事件'),
+                        onPressed: () => _showAddSpecialEventDialog(context),
+                        padding: EdgeInsets.zero,
+                        labelPadding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 0,
+                        ),
+                        visualDensity: const VisualDensity(
+                          horizontal: -2,
+                          vertical: -3,
+                        ),
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        labelStyle: TextStyle(
+                          color: Colors.orange[800],
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+          ],
+        ),
         trailing: isEditMode ? const Icon(Icons.drag_handle) : null,
         children: [
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: Column(
-              children: roster.duties.asMap().entries.map((entry) {
-                final int index = entry.key;
-                final RosterEntry duty = entry.value;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: InkWell(
-                    onTap: isEditMode ? () => _showEditDialog(context, index, duty) : null,
-                    borderRadius: BorderRadius.circular(8),
-                    splashColor: Theme.of(context).colorScheme.primary.withOpacity(0.08),
-                    highlightColor: Theme.of(context).colorScheme.primary.withOpacity(0.04),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          width: 80,
-                          child: Text(
-                            duty.role,
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontWeight: FontWeight.w500,
+              children: [
+                ...roster.duties.asMap().entries.map((entry) {
+                  final int index = entry.key;
+                  final RosterEntry duty = entry.value;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: InkWell(
+                      onTap: isEditMode
+                          ? () => _showEditDialog(context, index, duty)
+                          : null,
+                      borderRadius: BorderRadius.circular(8),
+                      splashColor: Theme.of(
+                        context,
+                      ).colorScheme.primary.withOpacity(0.08),
+                      highlightColor: Theme.of(
+                        context,
+                      ).colorScheme.primary.withOpacity(0.04),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 80,
+                            child: Text(
+                              duty.role,
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            duty.people.join('、'),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                          Expanded(
+                            child: Text(
+                              duty.people.join('、'),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                        ),
-                        if (isEditMode)
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
-                            onPressed: () => _confirmRemoveDuty(context, index, duty.role),
-                          ),
-                      ],
+                          if (isEditMode)
+                            IconButton(
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                size: 20,
+                                color: Colors.redAccent,
+                              ),
+                              onPressed: () =>
+                                  _confirmRemoveDuty(context, index, duty.role),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+                if (isEditMode) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: TextButton.icon(
+                      icon: const Icon(Icons.add),
+                      label: const Text('新增服事項目'),
+                      onPressed: () => _showAddDutyDialog(context),
                     ),
                   ),
-                );
-              }).toList()..addAll(isEditMode ? [
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: TextButton.icon(
-                    icon: const Icon(Icons.add),
-                    label: const Text('新增服事項目'),
-                    onPressed: () => _showAddDutyDialog(context),
-                  ),
-                )
-              ] : []),
+                ],
+              ],
             ),
           ),
         ],
@@ -106,11 +209,15 @@ class RosterCard extends StatelessWidget {
 
   Future<void> _showAddDutyDialog(BuildContext context) async {
     final TextEditingController roleController = TextEditingController();
-    final Future<List<String>> peopleFuture =
-        _loadSelectablePeople(context, roster.type, const []);
+    final Future<List<String>> peopleFuture = _loadSelectablePeople(
+      context,
+      roster.type,
+      const [],
+    );
     final roleOptions =
-        context.read<RosterProvider>().templates[roster.type] ?? const <String>[];
-    
+        context.read<RosterProvider>().templates[roster.type] ??
+        const <String>[];
+
     return showDialog(
       context: context,
       builder: (context) {
@@ -131,7 +238,7 @@ class RosterCard extends StatelessWidget {
   void _addDuty(BuildContext context, String role, List<String> people) {
     final newDuties = List<RosterEntry>.from(roster.duties);
     newDuties.add(RosterEntry(role: role, people: people));
-    
+
     final newRoster = roster.copyWith(duties: newDuties);
     context.read<RosterProvider>().updateRoster(newRoster);
   }
@@ -139,12 +246,16 @@ class RosterCard extends StatelessWidget {
   void _removeDuty(BuildContext context, int index) {
     final newDuties = List<RosterEntry>.from(roster.duties);
     newDuties.removeAt(index);
-    
+
     final newRoster = roster.copyWith(duties: newDuties);
     context.read<RosterProvider>().updateRoster(newRoster);
   }
 
-  Future<void> _confirmRemoveDuty(BuildContext context, int index, String role) async {
+  Future<void> _confirmRemoveDuty(
+    BuildContext context,
+    int index,
+    String role,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -168,9 +279,16 @@ class RosterCard extends StatelessWidget {
     }
   }
 
-  Future<void> _showEditDialog(BuildContext context, int index, RosterEntry duty) async {
-    final Future<List<String>> peopleFuture =
-        _loadSelectablePeople(context, roster.type, duty.people);
+  Future<void> _showEditDialog(
+    BuildContext context,
+    int index,
+    RosterEntry duty,
+  ) async {
+    final Future<List<String>> peopleFuture = _loadSelectablePeople(
+      context,
+      roster.type,
+      duty.people,
+    );
 
     await showDialog(
       context: context,
@@ -193,9 +311,99 @@ class RosterCard extends StatelessWidget {
   void _updateDuty(BuildContext context, int index, List<String> newPeople) {
     final newDuties = List<RosterEntry>.from(roster.duties);
     newDuties[index] = newDuties[index].copyWith(people: newPeople);
-    
+
     final newRoster = roster.copyWith(duties: newDuties);
     context.read<RosterProvider>().updateRoster(newRoster);
+  }
+
+  Future<void> _showAddSpecialEventDialog(BuildContext context) async {
+    final provider = context.read<RosterProvider>();
+    final existing = roster.specialEvents.toSet();
+    final options = provider.eventOptions
+        .where((e) => e.name.trim().isNotEmpty)
+        .toList();
+    final selected = <String>{};
+
+    final result = await showDialog<List<String>>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: const Text('新增事件'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: options.isEmpty
+                  ? const Text('尚未設定可選事件')
+                  : ListView(
+                      shrinkWrap: true,
+                      children: options.map((option) {
+                        final isExisting = existing.contains(option.name);
+                        return CheckboxListTile(
+                          value: isExisting
+                              ? true
+                              : selected.contains(option.name),
+                          onChanged: isExisting
+                              ? null
+                              : (checked) {
+                                  setState(() {
+                                    if (checked == true) {
+                                      selected.add(option.name);
+                                    } else {
+                                      selected.remove(option.name);
+                                    }
+                                  });
+                                },
+                          title: Text(option.name),
+                          secondary: Container(
+                            width: 14,
+                            height: 14,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Color(option.color),
+                              border: Border.all(
+                                color: Color(option.color).withOpacity(0.6),
+                              ),
+                            ),
+                          ),
+                          dense: true,
+                        );
+                      }).toList(),
+                    ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('取消'),
+              ),
+              TextButton(
+                onPressed: selected.isEmpty
+                    ? null
+                    : () => Navigator.pop(context, selected.toList()),
+                child: const Text('新增'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (result == null || result.isEmpty) return;
+    final events = List<String>.from(roster.specialEvents);
+    for (final event in result) {
+      if (!events.contains(event)) {
+        events.add(event);
+      }
+    }
+    context.read<RosterProvider>().updateRoster(
+      roster.copyWith(specialEvents: events),
+    );
+  }
+
+  void _removeSpecialEvent(BuildContext context, String event) {
+    final events = List<String>.from(roster.specialEvents)..remove(event);
+    context.read<RosterProvider>().updateRoster(
+      roster.copyWith(specialEvents: events),
+    );
   }
 
   Future<List<String>> _loadSelectablePeople(
@@ -210,7 +418,10 @@ class RosterCard extends StatelessWidget {
         .where((n) => n.isNotEmpty)
         .toList();
     names.sort();
-    final Set<String> merged = {...names, ...extras.map((e) => e.trim()).where((e) => e.isNotEmpty)};
+    final Set<String> merged = {
+      ...names,
+      ...extras.map((e) => e.trim()).where((e) => e.isNotEmpty),
+    };
     final List<String> result = ['待定'];
     result.addAll(merged.where((name) => name != '待定'));
     return result;
@@ -252,7 +463,10 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
   @override
   void initState() {
     super.initState();
-    _selectedPeople = widget.initialPeople.map((e) => e.trim()).where((e) => e.isNotEmpty).toSet();
+    _selectedPeople = widget.initialPeople
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toSet();
     if (_selectedPeople.isEmpty) {
       _selectedPeople = {'待定'};
     }
@@ -307,10 +521,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
                 value: _selectedRole,
                 decoration: const InputDecoration(labelText: '服事項目'),
                 items: widget.roleOptions.map((role) {
-                  return DropdownMenuItem(
-                    value: role,
-                    child: Text(role),
-                  );
+                  return DropdownMenuItem(value: role, child: Text(role));
                 }).toList(),
                 onChanged: (value) {
                   if (value != null) {
@@ -374,14 +585,14 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
           onPressed: roleMissing
               ? null
               : () {
-            final role = widget.roleEditable
-                ? (_selectedRole ?? '').trim()
-                : widget.roleController.text.trim();
-            if (role.isEmpty) return;
-            final selected = _buildSelectedPeople(_options);
-            widget.onSubmit(role, selected);
-            Navigator.of(context).pop();
-          },
+                  final role = widget.roleEditable
+                      ? (_selectedRole ?? '').trim()
+                      : widget.roleController.text.trim();
+                  if (role.isEmpty) return;
+                  final selected = _buildSelectedPeople(_options);
+                  widget.onSubmit(role, selected);
+                  Navigator.of(context).pop();
+                },
           child: Text(widget.submitLabel),
         ),
       ],

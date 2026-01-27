@@ -1,3 +1,4 @@
+import '../../domain/entities/event_option.dart';
 import '../../domain/entities/service_roster.dart';
 import '../../domain/repositories/roster_repository.dart';
 
@@ -8,6 +9,10 @@ class MockRosterRepository implements RosterRepository {
     ServiceType.youth: ['敬拜主領', '吉他', '木箱鼓', 'PPT', '小組長'],
     ServiceType.children: ['合班老師', '司琴', '分班(大)', '分班(小)', '點心'],
   };
+  List<EventOption> _eventOptions = const [
+    EventOption(name: '聖餐', color: 0xFFF39C12),
+    EventOption(name: '愛餐', color: 0xFFF39C12),
+  ];
 
   @override
   Future<Map<ServiceType, List<String>>> getServiceTemplates() async {
@@ -16,15 +21,32 @@ class MockRosterRepository implements RosterRepository {
   }
 
   @override
-  Future<void> updateServiceTemplates(Map<ServiceType, List<String>> templates) async {
+  Future<void> updateServiceTemplates(
+    Map<ServiceType, List<String>> templates,
+  ) async {
     await Future.delayed(const Duration(milliseconds: 300));
     _templates = Map.from(templates);
   }
 
   @override
+  Future<List<EventOption>> getEventOptions() async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    return List<EventOption>.from(_eventOptions);
+  }
+
+  @override
+  Future<void> updateEventOptions(List<EventOption> options) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    _eventOptions = options
+        .map((e) => e.copyWith(name: e.name.trim()))
+        .where((e) => e.name.isNotEmpty)
+        .toList();
+  }
+
+  @override
   Future<List<ServiceRoster>> getUpcomingRosters() async {
     await Future.delayed(const Duration(milliseconds: 500));
-    
+
     if (_cachedRosters.isNotEmpty) {
       return _cachedRosters;
     }
@@ -42,7 +64,7 @@ class MockRosterRepository implements RosterRepository {
     final targetEndDate = DateTime(targetEndYear, targetEndMonth + 1, 0);
 
     List<ServiceRoster> allRosters = [];
-    
+
     DateTime cursor = DateTime(now.year, quarterStartMonth, 1);
     while (cursor.weekday != DateTime.sunday) {
       cursor = cursor.add(const Duration(days: 1));
@@ -51,15 +73,21 @@ class MockRosterRepository implements RosterRepository {
     int idCounter = 1;
     while (!cursor.isAfter(targetEndDate)) {
       // 針對每一週，產生三種聚會的資料
-      allRosters.add(_generateRoster(idCounter++, cursor, ServiceType.sundayService));
+      allRosters.add(
+        _generateRoster(idCounter++, cursor, ServiceType.sundayService),
+      );
       allRosters.add(_generateRoster(idCounter++, cursor, ServiceType.youth));
-      allRosters.add(_generateRoster(idCounter++, cursor, ServiceType.children));
-      
+      allRosters.add(
+        _generateRoster(idCounter++, cursor, ServiceType.children),
+      );
+
       cursor = cursor.add(const Duration(days: 7));
     }
 
     // Filter and cache
-    _cachedRosters = allRosters.where((roster) => !roster.date.isBefore(today)).toList();
+    _cachedRosters = allRosters
+        .where((roster) => !roster.date.isBefore(today))
+        .toList();
     return _cachedRosters;
   }
 
@@ -77,22 +105,32 @@ class MockRosterRepository implements RosterRepository {
   ServiceRoster _generateRoster(int id, DateTime date, ServiceType type) {
     String serviceName = '';
     switch (type) {
-      case ServiceType.sundayService: serviceName = '主日崇拜'; break;
-      case ServiceType.youth: serviceName = '青年崇拜'; break;
-      case ServiceType.children: serviceName = '兒童主日學'; break;
+      case ServiceType.sundayService:
+        serviceName = '主日崇拜';
+        break;
+      case ServiceType.youth:
+        serviceName = '青年崇拜';
+        break;
+      case ServiceType.children:
+        serviceName = '兒童主日學';
+        break;
     }
 
     // 如果模板存在，使用模板產生空白名單
     if (_templates.containsKey(type)) {
       final roles = _templates[type] ?? [];
-      final duties = roles.map((role) => RosterEntry(role: role, people: ['待定'])).toList();
-      
+      final duties = roles
+          .map((role) => RosterEntry(role: role, people: ['待定']))
+          .toList();
+      final events = _defaultEventsForDate(date, type);
+
       return ServiceRoster(
         id: id.toString(),
         date: date,
         type: type,
         serviceName: serviceName,
         duties: duties,
+        specialEvents: events,
       );
     }
 
@@ -135,6 +173,33 @@ class MockRosterRepository implements RosterRepository {
       type: type,
       serviceName: serviceName,
       duties: duties,
+      specialEvents: _defaultEventsForDate(date, type),
     );
+  }
+
+  List<String> _defaultEventsForDate(DateTime date, ServiceType type) {
+    final firstSunday = _firstSundayOfMonth(date);
+    final week = 1 + (date.difference(firstSunday).inDays ~/ 7);
+    if (week == 1) {
+      if (type == ServiceType.sundayService || type == ServiceType.youth) {
+        return const ['聖餐'];
+      }
+      return const [];
+    }
+    if (week == 4) {
+      if (type == ServiceType.sundayService) {
+        return const ['愛餐'];
+      }
+      return const [];
+    }
+    return const [];
+  }
+
+  DateTime _firstSundayOfMonth(DateTime date) {
+    var cursor = DateTime(date.year, date.month, 1);
+    while (cursor.weekday != DateTime.sunday) {
+      cursor = cursor.add(const Duration(days: 1));
+    }
+    return cursor;
   }
 }
