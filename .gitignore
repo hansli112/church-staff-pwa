@@ -55,3 +55,4 @@ app.*.map.json
 
 # AI Agent Context
 GEMINI.md
+AGENTS.md

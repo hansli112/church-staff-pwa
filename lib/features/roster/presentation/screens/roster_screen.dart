@@ -426,7 +426,12 @@ class _RosterListState extends State<_RosterList>
       buffer.writeln('');
       buffer.writeln('未勾選該服事：');
       for (final name in result.roleMismatchNames) {
-        buffer.writeln('- $name');
+        final roles = result.roleMismatchDetails[name];
+        if (roles == null || roles.isEmpty) {
+          buffer.writeln('- $name');
+        } else {
+          buffer.writeln('- $name：${roles.join('、')}');
+        }
       }
     }
     if (result.otherNames.isNotEmpty) {
@@ -503,6 +508,7 @@ class _RosterListState extends State<_RosterList>
     final List<String> duplicateDates = [];
     final List<String> notInRosterNames = [];
     final List<String> roleMismatchNames = [];
+    final Map<String, Set<String>> roleMismatchDetails = {};
     final List<String> otherNames = [];
     for (var i = 0; i < decoded.length; i++) {
       final item = decoded[i];
@@ -550,7 +556,12 @@ class _RosterListState extends State<_RosterList>
                 case _NameMatchStatus.matched:
                   return result.name;
                 case _NameMatchStatus.roleMismatch:
-                  roleMismatchNames.add(name);
+                  roleMismatchNames.add(result.name);
+                  _addRoleMismatch(
+                    roleMismatchDetails,
+                    result.name,
+                    roleValue.trim(),
+                  );
                   return null;
                 case _NameMatchStatus.notInList:
                   notInRosterNames.add(name);
@@ -603,6 +614,7 @@ class _RosterListState extends State<_RosterList>
         missingDates: missingDates,
         notInRosterNames: _uniqueNames(notInRosterNames),
         roleMismatchNames: _uniqueNames(roleMismatchNames),
+        roleMismatchDetails: _normalizeRoleMismatch(roleMismatchDetails),
         otherNames: _uniqueNames(otherNames),
       );
     }
@@ -617,6 +629,7 @@ class _RosterListState extends State<_RosterList>
       missingDates: missingDates,
       notInRosterNames: _uniqueNames(notInRosterNames),
       roleMismatchNames: _uniqueNames(roleMismatchNames),
+      roleMismatchDetails: _normalizeRoleMismatch(roleMismatchDetails),
       otherNames: _uniqueNames(otherNames),
     );
   }
@@ -679,6 +692,30 @@ class _RosterListState extends State<_RosterList>
     return result;
   }
 
+  void _addRoleMismatch(
+    Map<String, Set<String>> bucket,
+    String name,
+    String role,
+  ) {
+    final trimmedName = name.trim();
+    final trimmedRole = role.trim();
+    if (trimmedName.isEmpty || trimmedRole.isEmpty) return;
+    bucket.putIfAbsent(trimmedName, () => <String>{});
+    bucket[trimmedName]!.add(trimmedRole);
+  }
+
+  Map<String, List<String>> _normalizeRoleMismatch(
+    Map<String, Set<String>> raw,
+  ) {
+    if (raw.isEmpty) return const {};
+    final result = <String, List<String>>{};
+    for (final entry in raw.entries) {
+      final roles = entry.value.toList()..sort();
+      result[entry.key] = roles;
+    }
+    return result;
+  }
+
   Map<String, Set<String>> _buildAllowedByRole(List<User> users) {
     final Map<String, Set<String>> allowed = {};
     for (final user in users) {
@@ -716,6 +753,7 @@ class _JsonImportResult {
   final List<String> missingDates;
   final List<String> notInRosterNames;
   final List<String> roleMismatchNames;
+  final Map<String, List<String>> roleMismatchDetails;
   final List<String> otherNames;
   final String? error;
 
@@ -724,6 +762,7 @@ class _JsonImportResult {
     this.missingDates = const [],
     this.notInRosterNames = const [],
     this.roleMismatchNames = const [],
+    this.roleMismatchDetails = const {},
     this.otherNames = const [],
     this.error,
   });
