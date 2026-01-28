@@ -209,7 +209,7 @@ class RosterCard extends StatelessWidget {
 
   Future<void> _showAddDutyDialog(BuildContext context) async {
     final TextEditingController roleController = TextEditingController();
-    final Future<List<String>> Function(String? role) peopleLoader = (role) =>
+    final Future<_PeopleOptions> Function(String? role) peopleLoader = (role) =>
         _loadSelectablePeople(
           context,
           roster.type,
@@ -225,6 +225,7 @@ class RosterCard extends StatelessWidget {
       builder: (context) {
         return _RosterPeopleDialog(
           title: '新增服事項目',
+          rosterType: roster.type,
           roleController: roleController,
           roleOptions: roleOptions,
           initialRole: roleOptions.isNotEmpty ? roleOptions.first : null,
@@ -286,7 +287,7 @@ class RosterCard extends StatelessWidget {
     int index,
     RosterEntry duty,
   ) async {
-    final Future<List<String>> Function(String? role) peopleLoader = (role) =>
+    final Future<_PeopleOptions> Function(String? role) peopleLoader = (role) =>
         _loadSelectablePeople(
           context,
           roster.type,
@@ -299,6 +300,7 @@ class RosterCard extends StatelessWidget {
       builder: (context) {
         return _RosterPeopleDialog(
           title: '編輯 ${duty.role}',
+          rosterType: roster.type,
           roleController: TextEditingController(text: duty.role),
           roleOptions: const [],
           initialRole: duty.role,
@@ -410,20 +412,40 @@ class RosterCard extends StatelessWidget {
     );
   }
 
-  Future<List<String>> _loadSelectablePeople(
+  Future<_PeopleOptions> _loadSelectablePeople(
     BuildContext context,
     ServiceType rosterType,
     List<String> extras,
     String? role,
   ) async {
+    final provider = context.read<RosterProvider>();
     final users = await context.read<AuthProvider>().getUsers();
+    final roleKey = role?.trim();
+    final allUserNames = users
+        .map((u) => u.name.trim())
+        .where((name) => name.isNotEmpty)
+        .toSet();
+    final extrasSet = extras
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toSet();
+    final rosterPeople = roleKey == null || roleKey.isEmpty
+        ? <String>{}
+        : provider
+            .getRostersByType(rosterType)
+            .expand((roster) => roster.duties)
+            .where((duty) => duty.role.trim() == roleKey)
+            .expand((duty) => duty.people)
+            .map((name) => name.trim())
+            .where((name) => name.isNotEmpty && name != '待定')
+            .toSet();
     final names = users
         .where(
           (u) => u.zones.any(
             (zone) =>
                 zone.serviceType == rosterType &&
-                (role != null && role.trim().isNotEmpty
-                    ? zone.ministries.contains(role.trim())
+                (roleKey != null && roleKey.isNotEmpty
+                    ? zone.ministries.contains(roleKey)
                     : false),
           ),
         )
@@ -433,20 +455,29 @@ class RosterCard extends StatelessWidget {
     names.sort();
     final Set<String> merged = {
       ...names,
-      ...extras.map((e) => e.trim()).where((e) => e.isNotEmpty),
+      ...rosterPeople,
+      ...extrasSet,
     };
     final List<String> result = ['待定'];
     result.addAll(merged.where((name) => name != '待定'));
-    return result;
+    return _PeopleOptions(options: result, allUserNames: allUserNames);
   }
+}
+
+class _PeopleOptions {
+  final List<String> options;
+  final Set<String> allUserNames;
+
+  const _PeopleOptions({required this.options, required this.allUserNames});
 }
 
 class _RosterPeopleDialog extends StatefulWidget {
   final String title;
+  final ServiceType rosterType;
   final TextEditingController roleController;
   final List<String> roleOptions;
   final String? initialRole;
-  final Future<List<String>> Function(String? role) peopleLoader;
+  final Future<_PeopleOptions> Function(String? role) peopleLoader;
   final List<String> initialPeople;
   final void Function(String role, List<String> people) onSubmit;
   final String submitLabel;
@@ -454,6 +485,7 @@ class _RosterPeopleDialog extends StatefulWidget {
 
   const _RosterPeopleDialog({
     required this.title,
+    required this.rosterType,
     required this.roleController,
     required this.roleOptions,
     required this.initialRole,
@@ -470,12 +502,17 @@ class _RosterPeopleDialog extends StatefulWidget {
 
 class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
   late Set<String> _selectedPeople;
+  late Set<String> _customNames;
+  final Set<String> _removedCustomNames = {};
   List<String> _options = const ['待定'];
+  Set<String> _allUserNames = const {};
   String? _selectedRole;
+  late final TextEditingController _customController;
 
   @override
   void initState() {
     super.initState();
+    _customController = TextEditingController();
     _selectedPeople = widget.initialPeople
         .map((e) => e.trim())
         .where((e) => e.isNotEmpty)
@@ -483,7 +520,17 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
     if (_selectedPeople.isEmpty) {
       _selectedPeople = {'待定'};
     }
+    _customNames = widget.initialPeople
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty && e != '待定')
+        .toSet();
     _selectedRole = widget.initialRole;
+  }
+
+  @override
+  void dispose() {
+    _customController.dispose();
+    super.dispose();
   }
 
   void _toggleSelection(String name) {
@@ -504,12 +551,178 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
     });
   }
 
+  void _addCustomName([String? raw]) {
+    final name = (raw ?? _customController.text).trim();
+    if (name.isEmpty) return;
+    setState(() {
+      if (name == '待定') {
+        _selectedPeople
+          ..clear()
+          ..add('待定');
+      } else {
+        _selectedPeople.add(name);
+        _customNames.add(name);
+        _selectedPeople.remove('待定');
+      }
+    });
+    _customController.clear();
+  }
+
+  void _removeCustomName(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    setState(() {
+      _customNames.remove(trimmed);
+      _selectedPeople.remove(trimmed);
+      _removedCustomNames.add(trimmed);
+      _options = _options.where((option) => option != trimmed).toList();
+      if (_selectedPeople.isEmpty) {
+        _selectedPeople.add('待定');
+      }
+    });
+  }
+
+  Future<void> _removeCustomNameAcrossRosters(String name, String role) async {
+    final trimmed = name.trim();
+    final roleKey = role.trim();
+    if (trimmed.isEmpty || roleKey.isEmpty) return;
+    final provider = context.read<RosterProvider>();
+    final rosters = provider.getRostersByType(widget.rosterType);
+    for (final roster in rosters) {
+      var changed = false;
+      final updatedDuties = roster.duties.map((duty) {
+        if (duty.role.trim() != roleKey) return duty;
+        if (!duty.people.contains(trimmed)) return duty;
+        final people = duty.people.where((p) => p != trimmed).toList();
+        changed = true;
+        if (people.isEmpty) {
+          return duty.copyWith(people: const ['待定']);
+        }
+        return duty.copyWith(people: people);
+      }).toList();
+      if (changed) {
+        await provider.updateRoster(roster.copyWith(duties: updatedDuties));
+      }
+    }
+  }
+
+  Future<void> _confirmRemoveCustomName(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('確認刪除'),
+        content: Text('確定要刪除「$trimmed」嗎？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('刪除'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      final role = (_selectedRole ?? widget.initialRole ?? '').trim();
+      _removeCustomName(trimmed);
+      await _removeCustomNameAcrossRosters(trimmed, role);
+    }
+  }
+
+  Future<void> _showCustomInputSheet() async {
+    _customController.clear();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+        return Padding(
+          padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomInset),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '新增名單以外的人員',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _customController,
+                decoration: InputDecoration(
+                  hintText: '例：外請講員',
+                  isDense: true,
+                  filled: true,
+                  fillColor: Theme.of(context)
+                      .colorScheme
+                      .surfaceVariant
+                      .withOpacity(0.35),
+                  hintStyle: TextStyle(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.35),
+                  ),
+                ),
+                textInputAction: TextInputAction.done,
+                onSubmitted: (value) {
+                  _addCustomName(value);
+                  Navigator.of(context).pop();
+                },
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton(
+                  onPressed: () {
+                    _addCustomName();
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('加入'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   List<String> _buildSelectedPeople(List<String> options) {
     final selected = options.where(_selectedPeople.contains).toList();
     if (selected.isEmpty) {
       return ['待定'];
     }
     return selected;
+  }
+
+  List<String> _mergeOptions(List<String> baseOptions) {
+    final merged = <String>{};
+    for (final name in baseOptions) {
+      final trimmed = name.trim();
+      if (trimmed.isNotEmpty) merged.add(trimmed);
+    }
+    for (final name in _selectedPeople) {
+      final trimmed = name.trim();
+      if (trimmed.isNotEmpty) merged.add(trimmed);
+    }
+    for (final name in _customNames) {
+      final trimmed = name.trim();
+      if (trimmed.isNotEmpty) merged.add(trimmed);
+    }
+    merged.remove('待定');
+    final sorted = merged.toList()..sort();
+    return ['待定', ...sorted];
   }
 
   @override
@@ -520,9 +733,10 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
       title: Text(widget.title),
       content: SizedBox(
         width: double.maxFinite,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             if (!widget.roleEditable)
               TextField(
                 controller: widget.roleController,
@@ -558,7 +772,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
             const SizedBox(height: 8),
             SizedBox(
               height: 280,
-              child: FutureBuilder<List<String>>(
+              child: FutureBuilder<_PeopleOptions>(
                 future: widget.peopleLoader(_selectedRole),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -568,16 +782,34 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
                     return Center(child: Text('載入同工名單失敗: ${snapshot.error}'));
                   }
 
-                  _options = snapshot.data ?? const ['待定'];
+                  final data = snapshot.data;
+                  _options = _mergeOptions(
+                    data?.options ?? const ['待定'],
+                  );
+                  if (_removedCustomNames.isNotEmpty) {
+                    _options = _options
+                        .where((name) => !_removedCustomNames.contains(name))
+                        .toList();
+                  }
+                  _allUserNames = data?.allUserNames ?? const {};
                   return ListView.builder(
                     itemCount: _options.length,
                     itemBuilder: (context, index) {
                       final name = _options[index];
                       final checked = _selectedPeople.contains(name);
+                      final isCustom =
+                          name != '待定' && !_allUserNames.contains(name);
                       return CheckboxListTile(
                         title: Text(name),
                         value: checked,
                         onChanged: (_) => _toggleSelection(name),
+                        secondary: isCustom
+                            ? IconButton(
+                                tooltip: '刪除自訂項目',
+                                icon: const Icon(Icons.close, size: 18),
+                                onPressed: () => _confirmRemoveCustomName(name),
+                              )
+                            : null,
                         controlAffinity: ListTileControlAffinity.leading,
                         dense: true,
                       );
@@ -586,7 +818,17 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
                 },
               ),
             ),
-          ],
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: _showCustomInputSheet,
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('新增名單以外的人員'),
+              ),
+            ),
+            ],
+          ),
         ),
       ),
       actions: [

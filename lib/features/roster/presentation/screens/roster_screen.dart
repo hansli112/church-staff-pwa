@@ -275,7 +275,7 @@ class _RosterListState extends State<_RosterList>
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
-                              .withOpacity(0.45),
+                              .withOpacity(0.35),
                         ),
                         border: const OutlineInputBorder(),
                       ),

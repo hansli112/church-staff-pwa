@@ -27,6 +27,10 @@ class ChurchApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: Colors.blue,
+      brightness: Brightness.light,
+    );
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(
@@ -43,9 +47,11 @@ class ChurchApp extends StatelessWidget {
         title: '竹圍靈糧福音中心',
         theme: ThemeData(
           useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.blue,
-            brightness: Brightness.light,
+          colorScheme: colorScheme,
+          inputDecorationTheme: InputDecorationTheme(
+            hintStyle: TextStyle(
+              color: colorScheme.onSurface.withOpacity(0.35),
+            ),
           ),
           appBarTheme: const AppBarTheme(
             centerTitle: true,
