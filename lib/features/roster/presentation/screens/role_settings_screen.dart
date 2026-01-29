@@ -85,9 +85,15 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
     required TextEditingController controller,
     required List<String> existing,
     String? currentName,
-  }) {
-    return showDialog<String>(
+  }) async {
+    controller.selection = TextSelection.collapsed(
+      offset: controller.text.length,
+    );
+    final result = await showModalBottomSheet<String>(
       context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      useSafeArea: true,
       builder: (context) {
         String? errorText;
         String? validateValue(String value) {
@@ -100,7 +106,7 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
           return null;
         }
 
-        void submit() {
+        void submit(StateSetter setState) {
           final value = controller.text;
           final validation = validateValue(value);
           if (validation != null) {
@@ -111,33 +117,72 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
         }
 
         return StatefulBuilder(
-          builder: (context, setState) => AlertDialog(
-            title: Text(title),
-            content: TextField(
-              controller: controller,
-              autofocus: true,
-              decoration: InputDecoration(
-                labelText: '服事項目名稱',
-                border: const OutlineInputBorder(),
-                errorText: errorText,
+          builder: (context, setState) {
+            final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+            final maxHeight = MediaQuery.sizeOf(context).height * 0.85;
+            return Padding(
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomInset),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: maxHeight),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Flexible(
+                      fit: FlexFit.loose,
+                      child: SingleChildScrollView(
+                        child: TextField(
+                          controller: controller,
+                          decoration: InputDecoration(
+                            labelText: '服事項目名稱',
+                            hintText: '例：敬拜主領',
+                            hintStyle: TextStyle(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.35),
+                            ),
+                            floatingLabelBehavior: FloatingLabelBehavior.always,
+                            border: const OutlineInputBorder(),
+                            errorText: errorText,
+                          ),
+                          onChanged: (value) =>
+                              setState(() => errorText = validateValue(value)),
+                          onSubmitted: (_) => submit(setState),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('取消'),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton(
+                          onPressed: () => submit(setState),
+                          child: const Text('儲存'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              onChanged: (value) => setState(() => errorText = validateValue(value)),
-              onSubmitted: (_) => submit(),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: submit,
-                child: const Text('儲存'),
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
+    return result;
   }
 
   void _updateRole(ServiceType type, int index, String value) {

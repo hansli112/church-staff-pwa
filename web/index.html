@@ -31,6 +31,28 @@
 
   <title>竹圍靈糧福音中心</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    /* Remove the browser focus ring on Flutter's HTML text editing element. */
+    .flt-text-editing,
+    .flt-text-editing * {
+      outline: none !important;
+      box-shadow: none !important;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-appearance: none;
+      border: none !important;
+      background: transparent !important;
+      color: transparent !important;
+      caret-color: transparent;
+    }
+
+    .flt-text-editing:focus,
+    .flt-text-editing:focus-within,
+    .flt-text-editing textarea:focus,
+    .flt-text-editing input:focus {
+      outline: none !important;
+      box-shadow: none !important;
+    }
+  </style>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

@@ -505,6 +505,7 @@ class _RosterPeopleDialog extends StatefulWidget {
   final void Function(String role, List<String> people) onSubmit;
   final String submitLabel;
   final bool roleEditable;
+  final bool useBottomSheet;
 
   const _RosterPeopleDialog({
     required this.title,
@@ -517,6 +518,7 @@ class _RosterPeopleDialog extends StatefulWidget {
     required this.onSubmit,
     required this.submitLabel,
     this.roleEditable = true,
+    this.useBottomSheet = false,
   });
 
   @override
@@ -747,107 +749,158 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
   Widget build(BuildContext context) {
     final canSelectRole = widget.roleEditable && widget.roleOptions.isNotEmpty;
     final roleMissing = widget.roleEditable && widget.roleOptions.isEmpty;
-    return AlertDialog(
-      title: Text(widget.title),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: SingleChildScrollView(
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (!widget.roleEditable)
+          TextField(
+            controller: widget.roleController,
+            decoration: const InputDecoration(labelText: '職位名稱'),
+            enabled: false,
+          ),
+        if (canSelectRole)
+          DropdownButtonFormField<String>(
+            value: _selectedRole,
+            decoration: const InputDecoration(labelText: '服事項目'),
+            items: widget.roleOptions.map((role) {
+              return DropdownMenuItem(value: role, child: Text(role));
+            }).toList(),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() => _selectedRole = value);
+              }
+            },
+          ),
+        if (roleMissing)
+          const Text(
+            '請先到「服事項目設定」新增項目',
+            style: TextStyle(color: Colors.redAccent),
+          ),
+        const SizedBox(height: 12),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            '選擇同工',
+            style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 280,
+          child: FutureBuilder<_PeopleOptions>(
+            future: widget.peopleLoader(_selectedRole),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(child: Text('載入同工名單失敗: ${snapshot.error}'));
+              }
+
+              final data = snapshot.data;
+              _options = _mergeOptions(data?.options ?? const ['待定']);
+              if (_removedCustomNames.isNotEmpty) {
+                _options = _options
+                    .where((name) => !_removedCustomNames.contains(name))
+                    .toList();
+              }
+              _allUserNames = data?.allUserNames ?? const {};
+              return ListView.builder(
+                itemCount: _options.length,
+                itemBuilder: (context, index) {
+                  final name = _options[index];
+                  final checked = _selectedPeople.contains(name);
+                  final isCustom =
+                      name != '待定' && !_allUserNames.contains(name);
+                  return CheckboxListTile(
+                    title: Text(name),
+                    value: checked,
+                    onChanged: (_) => _toggleSelection(name),
+                    secondary: isCustom
+                        ? IconButton(
+                            tooltip: '刪除自訂項目',
+                            icon: const Icon(Icons.close, size: 18),
+                            onPressed: () => _confirmRemoveCustomName(name),
+                          )
+                        : null,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    dense: true,
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: _showCustomInputSheet,
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('新增名單以外的人員'),
+          ),
+        ),
+      ],
+    );
+
+    final actions = Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('取消'),
+        ),
+        const SizedBox(width: 8),
+        FilledButton(
+          onPressed: roleMissing
+              ? null
+              : () {
+                  final role = widget.roleEditable
+                      ? (_selectedRole ?? '').trim()
+                      : widget.roleController.text.trim();
+                  if (role.isEmpty) return;
+                  final selected = _buildSelectedPeople(_options);
+                  widget.onSubmit(role, selected);
+                  Navigator.of(context).pop();
+                },
+          child: Text(widget.submitLabel),
+        ),
+      ],
+    );
+
+    if (widget.useBottomSheet) {
+      final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+      final maxHeight = MediaQuery.sizeOf(context).height * 0.85;
+      return Padding(
+        padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomInset),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (!widget.roleEditable)
-                TextField(
-                  controller: widget.roleController,
-                  decoration: const InputDecoration(labelText: '職位名稱'),
-                  enabled: false,
-                ),
-              if (canSelectRole)
-                DropdownButtonFormField<String>(
-                  value: _selectedRole,
-                  decoration: const InputDecoration(labelText: '服事項目'),
-                  items: widget.roleOptions.map((role) {
-                    return DropdownMenuItem(value: role, child: Text(role));
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() => _selectedRole = value);
-                    }
-                  },
-                ),
-              if (roleMissing)
-                const Text(
-                  '請先到「服事項目設定」新增項目',
-                  style: TextStyle(color: Colors.redAccent),
-                ),
-              const SizedBox(height: 12),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  '選擇同工',
-                  style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
+                  widget.title,
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 280,
-                child: FutureBuilder<_PeopleOptions>(
-                  future: widget.peopleLoader(_selectedRole),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (snapshot.hasError) {
-                      return Center(child: Text('載入同工名單失敗: ${snapshot.error}'));
-                    }
-
-                    final data = snapshot.data;
-                    _options = _mergeOptions(data?.options ?? const ['待定']);
-                    if (_removedCustomNames.isNotEmpty) {
-                      _options = _options
-                          .where((name) => !_removedCustomNames.contains(name))
-                          .toList();
-                    }
-                    _allUserNames = data?.allUserNames ?? const {};
-                    return ListView.builder(
-                      itemCount: _options.length,
-                      itemBuilder: (context, index) {
-                        final name = _options[index];
-                        final checked = _selectedPeople.contains(name);
-                        final isCustom =
-                            name != '待定' && !_allUserNames.contains(name);
-                        return CheckboxListTile(
-                          title: Text(name),
-                          value: checked,
-                          onChanged: (_) => _toggleSelection(name),
-                          secondary: isCustom
-                              ? IconButton(
-                                  tooltip: '刪除自訂項目',
-                                  icon: const Icon(Icons.close, size: 18),
-                                  onPressed: () =>
-                                      _confirmRemoveCustomName(name),
-                                )
-                              : null,
-                          controlAffinity: ListTileControlAffinity.leading,
-                          dense: true,
-                        );
-                      },
-                    );
-                  },
-                ),
+              const SizedBox(height: 12),
+              Flexible(
+                fit: FlexFit.loose,
+                child: SingleChildScrollView(child: content),
               ),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: _showCustomInputSheet,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('新增名單以外的人員'),
-                ),
-              ),
+              const SizedBox(height: 12),
+              actions,
             ],
           ),
         ),
-      ),
+      );
+    }
+
+    return AlertDialog(
+      title: Text(widget.title),
+      content: SizedBox(width: double.maxFinite, child: content),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
