@@ -8,7 +8,7 @@ class RosterProvider with ChangeNotifier {
 
   List<ServiceRoster> _allRosters = []; // 儲存所有原始資料
   Map<ServiceType, List<String>> _templates = {};
-  List<EventOption> _eventOptions = [];
+  Map<ServiceType, List<EventOption>> _eventOptionsByType = {};
   bool _isLoading = false;
   bool _isEditMode = false;
   String? _error;
@@ -19,20 +19,34 @@ class RosterProvider with ChangeNotifier {
   bool get isEditMode => _isEditMode;
   String? get error => _error;
   Map<ServiceType, List<String>> get templates => _templates;
-  List<EventOption> get eventOptions => List.unmodifiable(_eventOptions);
-  int eventColorFor(String name) {
-    final option = _eventOptions.firstWhere(
+  Map<ServiceType, List<EventOption>> get eventOptionsByType => Map.fromEntries(
+    _eventOptionsByType.entries.map(
+      (entry) => MapEntry(entry.key, List<EventOption>.from(entry.value)),
+    ),
+  );
+  List<EventOption> eventOptionsFor(ServiceType type) =>
+      List.unmodifiable(_eventOptionsByType[type] ?? const <EventOption>[]);
+  int eventColorFor(ServiceType type, String name) {
+    final options = _eventOptionsByType[type] ?? const <EventOption>[];
+    final direct = options.firstWhere(
       (e) => e.name == name,
       orElse: () => const EventOption(name: '', color: 0xFFF39C12),
     );
-    return option.color;
+    if (direct.name.isNotEmpty) return direct.color;
+    for (final list in _eventOptionsByType.values) {
+      final found = list.firstWhere(
+        (e) => e.name == name,
+        orElse: () => const EventOption(name: '', color: 0xFFF39C12),
+      );
+      if (found.name.isNotEmpty) return found.color;
+    }
+    return 0xFFF39C12;
   }
 
   void toggleEditMode() {
     _isEditMode = !_isEditMode;
     notifyListeners();
   }
-
 
   // 取得特定類別的服事表
   List<ServiceRoster> getRostersByType(ServiceType type) {
@@ -55,7 +69,7 @@ class RosterProvider with ChangeNotifier {
       ]);
       _allRosters = results[0] as List<ServiceRoster>;
       _templates = results[1] as Map<ServiceType, List<String>>;
-      _eventOptions = results[2] as List<EventOption>;
+      _eventOptionsByType = results[2] as Map<ServiceType, List<EventOption>>;
       await _seedEmptyRostersFromTemplates();
     } catch (e) {
       _error = '無法取得資料，請稍後再試';
@@ -109,10 +123,16 @@ class RosterProvider with ChangeNotifier {
     }
   }
 
-  Future<void> updateEventOptions(List<EventOption> options) async {
+  Future<void> updateEventOptions(
+    Map<ServiceType, List<EventOption>> options,
+  ) async {
     try {
       await _repository.updateEventOptions(options);
-      _eventOptions = List<EventOption>.from(options);
+      _eventOptionsByType = Map.fromEntries(
+        options.entries.map(
+          (entry) => MapEntry(entry.key, List<EventOption>.from(entry.value)),
+        ),
+      );
       notifyListeners();
     } catch (e) {
       _error = '更新事件選項失敗: $e';

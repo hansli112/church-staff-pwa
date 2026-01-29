@@ -59,7 +59,10 @@ class RosterCard extends StatelessWidget {
                   runSpacing: 2,
                   children: [
                     ...roster.specialEvents.map((event) {
-                      final colorValue = rosterProvider.eventColorFor(event);
+                      final colorValue = rosterProvider.eventColorFor(
+                        roster.type,
+                        event,
+                      );
                       final color = Color(colorValue);
                       final label = Text(
                         event,
@@ -91,7 +94,8 @@ class RosterCard extends StatelessWidget {
                         label: label,
                         backgroundColor: color.withOpacity(0.12),
                         side: BorderSide(color: color.withOpacity(0.4)),
-                        onDeleted: () => _removeSpecialEvent(context, event),
+                        onDeleted: () =>
+                            _confirmRemoveSpecialEvent(context, event),
                         deleteIcon: const Icon(Icons.close, size: 16),
                         padding: EdgeInsets.zero,
                         labelPadding: const EdgeInsets.symmetric(
@@ -210,12 +214,7 @@ class RosterCard extends StatelessWidget {
   Future<void> _showAddDutyDialog(BuildContext context) async {
     final TextEditingController roleController = TextEditingController();
     final Future<_PeopleOptions> Function(String? role) peopleLoader = (role) =>
-        _loadSelectablePeople(
-          context,
-          roster.type,
-          const [],
-          role,
-        );
+        _loadSelectablePeople(context, roster.type, const [], role);
     final roleOptions =
         context.read<RosterProvider>().templates[roster.type] ??
         const <String>[];
@@ -325,7 +324,8 @@ class RosterCard extends StatelessWidget {
   Future<void> _showAddSpecialEventDialog(BuildContext context) async {
     final provider = context.read<RosterProvider>();
     final existing = roster.specialEvents.toSet();
-    final options = provider.eventOptions
+    final options = provider
+        .eventOptionsFor(roster.type)
         .where((e) => e.name.trim().isNotEmpty)
         .toList();
     final selected = <String>{};
@@ -412,6 +412,33 @@ class RosterCard extends StatelessWidget {
     );
   }
 
+  Future<void> _confirmRemoveSpecialEvent(
+    BuildContext context,
+    String event,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('確認刪除'),
+        content: Text('確定要刪除「$event」嗎？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('刪除'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      _removeSpecialEvent(context, event);
+    }
+  }
+
   Future<_PeopleOptions> _loadSelectablePeople(
     BuildContext context,
     ServiceType rosterType,
@@ -432,13 +459,13 @@ class RosterCard extends StatelessWidget {
     final rosterPeople = roleKey == null || roleKey.isEmpty
         ? <String>{}
         : provider
-            .getRostersByType(rosterType)
-            .expand((roster) => roster.duties)
-            .where((duty) => duty.role.trim() == roleKey)
-            .expand((duty) => duty.people)
-            .map((name) => name.trim())
-            .where((name) => name.isNotEmpty && name != '待定')
-            .toSet();
+              .getRostersByType(rosterType)
+              .expand((roster) => roster.duties)
+              .where((duty) => duty.role.trim() == roleKey)
+              .expand((duty) => duty.people)
+              .map((name) => name.trim())
+              .where((name) => name.isNotEmpty && name != '待定')
+              .toSet();
     final names = users
         .where(
           (u) => u.zones.any(
@@ -453,11 +480,7 @@ class RosterCard extends StatelessWidget {
         .where((n) => n.isNotEmpty)
         .toList();
     names.sort();
-    final Set<String> merged = {
-      ...names,
-      ...rosterPeople,
-      ...extrasSet,
-    };
+    final Set<String> merged = {...names, ...rosterPeople, ...extrasSet};
     final List<String> result = ['待定'];
     result.addAll(merged.where((name) => name != '待定'));
     return _PeopleOptions(options: result, allUserNames: allUserNames);
@@ -652,10 +675,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '新增名單以外的人員',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+              Text('新增名單以外的人員', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 14),
               TextField(
                 controller: _customController,
@@ -663,15 +683,13 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
                   hintText: '例：外請講員',
                   isDense: true,
                   filled: true,
-                  fillColor: Theme.of(context)
-                      .colorScheme
-                      .surfaceVariant
-                      .withOpacity(0.35),
+                  fillColor: Theme.of(
+                    context,
+                  ).colorScheme.surfaceVariant.withOpacity(0.35),
                   hintStyle: TextStyle(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withOpacity(0.35),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.35),
                   ),
                 ),
                 textInputAction: TextInputAction.done,
@@ -737,96 +755,95 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-            if (!widget.roleEditable)
-              TextField(
-                controller: widget.roleController,
-                decoration: const InputDecoration(labelText: '職位名稱'),
-                enabled: false,
+              if (!widget.roleEditable)
+                TextField(
+                  controller: widget.roleController,
+                  decoration: const InputDecoration(labelText: '職位名稱'),
+                  enabled: false,
+                ),
+              if (canSelectRole)
+                DropdownButtonFormField<String>(
+                  value: _selectedRole,
+                  decoration: const InputDecoration(labelText: '服事項目'),
+                  items: widget.roleOptions.map((role) {
+                    return DropdownMenuItem(value: role, child: Text(role));
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => _selectedRole = value);
+                    }
+                  },
+                ),
+              if (roleMissing)
+                const Text(
+                  '請先到「服事項目設定」新增項目',
+                  style: TextStyle(color: Colors.redAccent),
+                ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '選擇同工',
+                  style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
+                ),
               ),
-            if (canSelectRole)
-              DropdownButtonFormField<String>(
-                value: _selectedRole,
-                decoration: const InputDecoration(labelText: '服事項目'),
-                items: widget.roleOptions.map((role) {
-                  return DropdownMenuItem(value: role, child: Text(role));
-                }).toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() => _selectedRole = value);
-                  }
-                },
-              ),
-            if (roleMissing)
-              const Text(
-                '請先到「服事項目設定」新增項目',
-                style: TextStyle(color: Colors.redAccent),
-              ),
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                '選擇同工',
-                style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
-              ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 280,
-              child: FutureBuilder<_PeopleOptions>(
-                future: widget.peopleLoader(_selectedRole),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return Center(child: Text('載入同工名單失敗: ${snapshot.error}'));
-                  }
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 280,
+                child: FutureBuilder<_PeopleOptions>(
+                  future: widget.peopleLoader(_selectedRole),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      return Center(child: Text('載入同工名單失敗: ${snapshot.error}'));
+                    }
 
-                  final data = snapshot.data;
-                  _options = _mergeOptions(
-                    data?.options ?? const ['待定'],
-                  );
-                  if (_removedCustomNames.isNotEmpty) {
-                    _options = _options
-                        .where((name) => !_removedCustomNames.contains(name))
-                        .toList();
-                  }
-                  _allUserNames = data?.allUserNames ?? const {};
-                  return ListView.builder(
-                    itemCount: _options.length,
-                    itemBuilder: (context, index) {
-                      final name = _options[index];
-                      final checked = _selectedPeople.contains(name);
-                      final isCustom =
-                          name != '待定' && !_allUserNames.contains(name);
-                      return CheckboxListTile(
-                        title: Text(name),
-                        value: checked,
-                        onChanged: (_) => _toggleSelection(name),
-                        secondary: isCustom
-                            ? IconButton(
-                                tooltip: '刪除自訂項目',
-                                icon: const Icon(Icons.close, size: 18),
-                                onPressed: () => _confirmRemoveCustomName(name),
-                              )
-                            : null,
-                        controlAffinity: ListTileControlAffinity.leading,
-                        dense: true,
-                      );
-                    },
-                  );
-                },
+                    final data = snapshot.data;
+                    _options = _mergeOptions(data?.options ?? const ['待定']);
+                    if (_removedCustomNames.isNotEmpty) {
+                      _options = _options
+                          .where((name) => !_removedCustomNames.contains(name))
+                          .toList();
+                    }
+                    _allUserNames = data?.allUserNames ?? const {};
+                    return ListView.builder(
+                      itemCount: _options.length,
+                      itemBuilder: (context, index) {
+                        final name = _options[index];
+                        final checked = _selectedPeople.contains(name);
+                        final isCustom =
+                            name != '待定' && !_allUserNames.contains(name);
+                        return CheckboxListTile(
+                          title: Text(name),
+                          value: checked,
+                          onChanged: (_) => _toggleSelection(name),
+                          secondary: isCustom
+                              ? IconButton(
+                                  tooltip: '刪除自訂項目',
+                                  icon: const Icon(Icons.close, size: 18),
+                                  onPressed: () =>
+                                      _confirmRemoveCustomName(name),
+                                )
+                              : null,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          dense: true,
+                        );
+                      },
+                    );
+                  },
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: _showCustomInputSheet,
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('新增名單以外的人員'),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _showCustomInputSheet,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('新增名單以外的人員'),
+                ),
               ),
-            ),
             ],
           ),
         ),

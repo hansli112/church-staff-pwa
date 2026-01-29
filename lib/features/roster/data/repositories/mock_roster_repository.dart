@@ -9,10 +9,11 @@ class MockRosterRepository implements RosterRepository {
     ServiceType.youth: ['敬拜主領', '吉他', '木箱鼓', 'PPT', '小組長'],
     ServiceType.children: ['合班老師', '司琴', '分班(大)', '分班(小)', '點心'],
   };
-  List<EventOption> _eventOptions = const [
-    EventOption(name: '聖餐', color: 0xFFF39C12),
-    EventOption(name: '愛餐', color: 0xFFF39C12),
-  ];
+  Map<ServiceType, List<EventOption>> _eventOptionsByType = const {
+    ServiceType.sundayService: [],
+    ServiceType.youth: [],
+    ServiceType.children: [],
+  };
 
   @override
   Future<Map<ServiceType, List<String>>> getServiceTemplates() async {
@@ -29,18 +30,27 @@ class MockRosterRepository implements RosterRepository {
   }
 
   @override
-  Future<List<EventOption>> getEventOptions() async {
+  Future<Map<ServiceType, List<EventOption>>> getEventOptions() async {
     await Future.delayed(const Duration(milliseconds: 200));
-    return List<EventOption>.from(_eventOptions);
+    return Map.fromEntries(
+      _eventOptionsByType.entries.map(
+        (entry) => MapEntry(entry.key, List<EventOption>.from(entry.value)),
+      ),
+    );
   }
 
   @override
-  Future<void> updateEventOptions(List<EventOption> options) async {
+  Future<void> updateEventOptions(
+    Map<ServiceType, List<EventOption>> options,
+  ) async {
     await Future.delayed(const Duration(milliseconds: 200));
-    _eventOptions = options
-        .map((e) => e.copyWith(name: e.name.trim()))
-        .where((e) => e.name.isNotEmpty)
-        .toList();
+    _eventOptionsByType = options.map((key, value) {
+      final cleaned = value
+          .map((e) => e.copyWith(name: e.name.trim()))
+          .where((e) => e.name.isNotEmpty)
+          .toList();
+      return MapEntry(key, cleaned);
+    });
   }
 
   @override
@@ -192,30 +202,7 @@ class MockRosterRepository implements RosterRepository {
   }
 
   List<String> _defaultEventsForDate(DateTime date, ServiceType type) {
-    final baseDate = _eventWeekBaseDate(date, type);
-    final firstSunday = _firstSundayOfMonth(baseDate);
-    final week = 1 + (baseDate.difference(firstSunday).inDays ~/ 7);
-    if (week == 1) {
-      if (type == ServiceType.sundayService || type == ServiceType.youth) {
-        return const ['聖餐'];
-      }
-      return const [];
-    }
-    if (week == 4) {
-      if (type == ServiceType.sundayService) {
-        return const ['愛餐'];
-      }
-      return const [];
-    }
     return const [];
-  }
-
-  DateTime _firstSundayOfMonth(DateTime date) {
-    var cursor = DateTime(date.year, date.month, 1);
-    while (cursor.weekday != DateTime.sunday) {
-      cursor = cursor.add(const Duration(days: 1));
-    }
-    return cursor;
   }
 
   DateTime _serviceDate(DateTime sunday, ServiceType type) {
@@ -223,12 +210,5 @@ class MockRosterRepository implements RosterRepository {
       return sunday.subtract(const Duration(days: 1));
     }
     return sunday;
-  }
-
-  DateTime _eventWeekBaseDate(DateTime date, ServiceType type) {
-    if (type == ServiceType.youth) {
-      return date.add(const Duration(days: 1));
-    }
-    return date;
   }
 }

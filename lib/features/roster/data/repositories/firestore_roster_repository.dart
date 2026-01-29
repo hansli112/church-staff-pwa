@@ -48,12 +48,8 @@ class FirestoreRosterRepository implements RosterRepository {
           await batch.commit();
         }
 
-        final combined = [
-          ...existingRosters,
-          ...missing,
-        ].where((roster) {
-          return !roster.date.isBefore(today) &&
-              !roster.date.isAfter(endDate);
+        final combined = [...existingRosters, ...missing].where((roster) {
+          return !roster.date.isBefore(today) && !roster.date.isAfter(endDate);
         }).toList();
 
         combined.sort((a, b) {
@@ -143,58 +139,68 @@ class FirestoreRosterRepository implements RosterRepository {
   }
 
   @override
-  Future<List<EventOption>> getEventOptions() async {
+  Future<Map<ServiceType, List<EventOption>>> getEventOptions() async {
     try {
       final doc = await _eventOptionsDoc.get();
       if (!doc.exists) {
-        return const [
-          EventOption(name: '聖餐', color: 0xFFF39C12),
-          EventOption(name: '愛餐', color: 0xFFF39C12),
-        ];
+        return _defaultEventOptions();
       }
 
       final data = doc.data() as Map<String, dynamic>;
-      final events = data['events'];
-      if (events is List) {
-        return events
-            .map((item) {
-              if (item is String) {
-                return EventOption(name: item, color: 0xFFF39C12);
-              }
-              if (item is Map) {
-                return EventOption.fromJson(Map<String, dynamic>.from(item));
-              }
-              return const EventOption(name: '', color: 0xFFF39C12);
-            })
-            .where((e) => e.name.trim().isNotEmpty)
-            .toList();
+      final Map<ServiceType, List<EventOption>> result = {};
+      for (final type in ServiceType.values) {
+        final key = type.toString().split('.').last;
+        final rawList = data[key];
+        if (rawList is List) {
+          result[type] = _parseEventOptionsList(rawList);
+        } else {
+          result[type] = const <EventOption>[];
+        }
       }
-      return const [
-        EventOption(name: '聖餐', color: 0xFFF39C12),
-        EventOption(name: '愛餐', color: 0xFFF39C12),
-      ];
+      return result;
     } catch (e) {
       print('Get Event Options Error: $e');
-      return const [
-        EventOption(name: '聖餐', color: 0xFFF39C12),
-        EventOption(name: '愛餐', color: 0xFFF39C12),
-      ];
+      return _defaultEventOptions();
     }
   }
 
   @override
-  Future<void> updateEventOptions(List<EventOption> options) async {
+  Future<void> updateEventOptions(
+    Map<ServiceType, List<EventOption>> options,
+  ) async {
     try {
-      final cleaned = options
-          .map((e) => e.copyWith(name: e.name.trim()))
-          .where((e) => e.name.isNotEmpty)
-          .map((e) => e.toJson())
-          .toList();
-      await _eventOptionsDoc.set({'events': cleaned});
+      final data = options.map((key, value) {
+        final cleaned = value
+            .map((e) => e.copyWith(name: e.name.trim()))
+            .where((e) => e.name.isNotEmpty)
+            .map((e) => e.toJson())
+            .toList();
+        return MapEntry(key.toString().split('.').last, cleaned);
+      });
+      await _eventOptionsDoc.set(data);
     } catch (e) {
       print('Update Event Options Error: $e');
       throw Exception('更新事件選項失敗: $e');
     }
+  }
+
+  Map<ServiceType, List<EventOption>> _defaultEventOptions() {
+    return {for (final type in ServiceType.values) type: const <EventOption>[]};
+  }
+
+  List<EventOption> _parseEventOptionsList(List<dynamic> items) {
+    return items
+        .map((item) {
+          if (item is String) {
+            return EventOption(name: item, color: 0xFFF39C12);
+          }
+          if (item is Map) {
+            return EventOption.fromJson(Map<String, dynamic>.from(item));
+          }
+          return const EventOption(name: '', color: 0xFFF39C12);
+        })
+        .where((e) => e.name.trim().isNotEmpty)
+        .toList();
   }
 
   // Helper: Convert ServiceRoster to Map for Firestore
@@ -303,30 +309,7 @@ class FirestoreRosterRepository implements RosterRepository {
   }
 
   List<String> _defaultEventsForDate(DateTime date, ServiceType type) {
-    final baseDate = _eventWeekBaseDate(date, type);
-    final firstSunday = _firstSundayOfMonth(baseDate);
-    final week = 1 + (baseDate.difference(firstSunday).inDays ~/ 7);
-    if (week == 1) {
-      if (type == ServiceType.sundayService || type == ServiceType.youth) {
-        return const ['聖餐'];
-      }
-      return const [];
-    }
-    if (week == 4) {
-      if (type == ServiceType.sundayService) {
-        return const ['愛餐'];
-      }
-      return const [];
-    }
     return const [];
-  }
-
-  DateTime _firstSundayOfMonth(DateTime date) {
-    var cursor = DateTime(date.year, date.month, 1);
-    while (cursor.weekday != DateTime.sunday) {
-      cursor = cursor.add(const Duration(days: 1));
-    }
-    return cursor;
   }
 
   DateTime _serviceDate(DateTime sunday, ServiceType type) {
@@ -334,12 +317,5 @@ class FirestoreRosterRepository implements RosterRepository {
       return sunday.subtract(const Duration(days: 1));
     }
     return sunday;
-  }
-
-  DateTime _eventWeekBaseDate(DateTime date, ServiceType type) {
-    if (type == ServiceType.youth) {
-      return date.add(const Duration(days: 1));
-    }
-    return date;
   }
 }
