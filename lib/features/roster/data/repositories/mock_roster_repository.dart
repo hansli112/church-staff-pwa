@@ -74,11 +74,25 @@ class MockRosterRepository implements RosterRepository {
     while (!cursor.isAfter(targetEndDate)) {
       // 針對每一週，產生三種聚會的資料
       allRosters.add(
-        _generateRoster(idCounter++, cursor, ServiceType.sundayService),
+        _generateRoster(
+          idCounter++,
+          _serviceDate(cursor, ServiceType.sundayService),
+          ServiceType.sundayService,
+        ),
       );
-      allRosters.add(_generateRoster(idCounter++, cursor, ServiceType.youth));
       allRosters.add(
-        _generateRoster(idCounter++, cursor, ServiceType.children),
+        _generateRoster(
+          idCounter++,
+          _serviceDate(cursor, ServiceType.youth),
+          ServiceType.youth,
+        ),
+      );
+      allRosters.add(
+        _generateRoster(
+          idCounter++,
+          _serviceDate(cursor, ServiceType.children),
+          ServiceType.children,
+        ),
       );
 
       cursor = cursor.add(const Duration(days: 7));
@@ -178,8 +192,9 @@ class MockRosterRepository implements RosterRepository {
   }
 
   List<String> _defaultEventsForDate(DateTime date, ServiceType type) {
-    final firstSunday = _firstSundayOfMonth(date);
-    final week = 1 + (date.difference(firstSunday).inDays ~/ 7);
+    final baseDate = _eventWeekBaseDate(date, type);
+    final firstSunday = _firstSundayOfMonth(baseDate);
+    final week = 1 + (baseDate.difference(firstSunday).inDays ~/ 7);
     if (week == 1) {
       if (type == ServiceType.sundayService || type == ServiceType.youth) {
         return const ['聖餐'];
@@ -201,5 +216,19 @@ class MockRosterRepository implements RosterRepository {
       cursor = cursor.add(const Duration(days: 1));
     }
     return cursor;
+  }
+
+  DateTime _serviceDate(DateTime sunday, ServiceType type) {
+    if (type == ServiceType.youth) {
+      return sunday.subtract(const Duration(days: 1));
+    }
+    return sunday;
+  }
+
+  DateTime _eventWeekBaseDate(DateTime date, ServiceType type) {
+    if (type == ServiceType.youth) {
+      return date.add(const Duration(days: 1));
+    }
+    return date;
   }
 }

@@ -27,16 +27,42 @@ class FirestoreRosterRepository implements RosterRepository {
         final today = DateTime(now.year, now.month, now.day);
         final endDate = _nextQuarterEndDate(now);
 
-        return snapshot.docs
-            .map((doc) {
-              final data = doc.data() as Map<String, dynamic>;
-              return _fromFirestore(data, doc.id);
-            })
-            .where((roster) {
-              return !roster.date.isBefore(today) &&
-                  !roster.date.isAfter(endDate);
-            })
+        final existingRosters = snapshot.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          return _fromFirestore(data, doc.id);
+        }).toList();
+        final existingIds = existingRosters.map((r) => r.id).toSet();
+
+        final templates = await getServiceTemplates();
+        final generated = _generateQuarterRosters(templates);
+        final missing = generated
+            .where((roster) => !existingIds.contains(roster.id))
             .toList();
+
+        if (missing.isNotEmpty) {
+          final batch = _firestore.batch();
+          for (final roster in missing) {
+            final docRef = _rostersCollection.doc(roster.id);
+            batch.set(docRef, _toFirestore(roster));
+          }
+          await batch.commit();
+        }
+
+        final combined = [
+          ...existingRosters,
+          ...missing,
+        ].where((roster) {
+          return !roster.date.isBefore(today) &&
+              !roster.date.isAfter(endDate);
+        }).toList();
+
+        combined.sort((a, b) {
+          final dateCompare = a.date.compareTo(b.date);
+          if (dateCompare != 0) return dateCompare;
+          return a.type.toString().compareTo(b.type.toString());
+        });
+
+        return combined;
       }
 
       final templates = await getServiceTemplates();
@@ -246,11 +272,12 @@ class FirestoreRosterRepository implements RosterRepository {
         final duties = roles
             .map((role) => RosterEntry(role: role, people: ['待定']))
             .toList();
-        final events = _defaultEventsForDate(cursor, type);
+        final serviceDate = _serviceDate(cursor, type);
+        final events = _defaultEventsForDate(serviceDate, type);
         allRosters.add(
           ServiceRoster(
-            id: _makeRosterId(cursor, type),
-            date: cursor,
+            id: _makeRosterId(serviceDate, type),
+            date: serviceDate,
             type: type,
             serviceName: _serviceNameForType(type),
             duties: duties,
@@ -276,8 +303,9 @@ class FirestoreRosterRepository implements RosterRepository {
   }
 
   List<String> _defaultEventsForDate(DateTime date, ServiceType type) {
-    final firstSunday = _firstSundayOfMonth(date);
-    final week = 1 + (date.difference(firstSunday).inDays ~/ 7);
+    final baseDate = _eventWeekBaseDate(date, type);
+    final firstSunday = _firstSundayOfMonth(baseDate);
+    final week = 1 + (baseDate.difference(firstSunday).inDays ~/ 7);
     if (week == 1) {
       if (type == ServiceType.sundayService || type == ServiceType.youth) {
         return const ['聖餐'];
@@ -299,5 +327,19 @@ class FirestoreRosterRepository implements RosterRepository {
       cursor = cursor.add(const Duration(days: 1));
     }
     return cursor;
+  }
+
+  DateTime _serviceDate(DateTime sunday, ServiceType type) {
+    if (type == ServiceType.youth) {
+      return sunday.subtract(const Duration(days: 1));
+    }
+    return sunday;
+  }
+
+  DateTime _eventWeekBaseDate(DateTime date, ServiceType type) {
+    if (type == ServiceType.youth) {
+      return date.add(const Duration(days: 1));
+    }
+    return date;
   }
 }
