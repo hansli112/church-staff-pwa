@@ -344,6 +344,7 @@ class RosterCard extends StatelessWidget {
                       shrinkWrap: true,
                       children: options.map((option) {
                         final isExisting = existing.contains(option.name);
+                        final dotColor = Color(option.color);
                         return CheckboxListTile(
                           value: isExisting
                               ? true
@@ -359,17 +360,22 @@ class RosterCard extends StatelessWidget {
                                     }
                                   });
                                 },
-                          title: Text(option.name),
-                          secondary: Container(
-                            width: 14,
-                            height: 14,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Color(option.color),
-                              border: Border.all(
-                                color: Color(option.color).withOpacity(0.6),
+                          title: Row(
+                            children: [
+                              Container(
+                                width: 14,
+                                height: 14,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: dotColor,
+                                  border: Border.all(
+                                    color: dotColor.withOpacity(0.6),
+                                  ),
+                                ),
                               ),
-                            ),
+                              const SizedBox(width: 12),
+                              Expanded(child: Text(option.name)),
+                            ],
                           ),
                           dense: true,
                         );
