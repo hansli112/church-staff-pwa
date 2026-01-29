@@ -237,12 +237,15 @@ class _EventSettingsScreenState extends State<EventSettingsScreen> {
                         key: ValueKey(
                           'event_${type.name}_${index}_${options[index].name}',
                         ),
-                        title: Text(options[index].name),
-                        onTap: () => _promptEditEvent(type, index),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                        ),
+                        horizontalTitleGap: 12,
+                        minLeadingWidth: 24,
+                        leading: SizedBox(
+                          width: 24,
+                          child: Center(
+                            child: Container(
                               width: 14,
                               height: 14,
                               decoration: BoxDecoration(
@@ -255,12 +258,26 @@ class _EventSettingsScreenState extends State<EventSettingsScreen> {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 12),
+                          ),
+                        ),
+                        title: Text(options[index].name),
+                        onTap: () => _promptEditEvent(type, index),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
                             IconButton(
                               icon: const Icon(Icons.delete_outline),
                               onPressed: () => _confirmRemoveEvent(type, index),
                             ),
-                            const Icon(Icons.drag_handle),
+                            ReorderableDragStartListener(
+                              index: index,
+                              child: const SizedBox(
+                                width: 24,
+                                child: Center(
+                                  child: Icon(Icons.drag_handle),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       );

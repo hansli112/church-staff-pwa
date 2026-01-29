@@ -215,26 +215,53 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
         body: TabBarView(
           children: ServiceType.values.map((type) {
             final roles = _editingTemplates[type] ?? [];
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: roles.length + 1,
-              itemBuilder: (context, index) {
-                if (index == roles.length) {
-                  return ListTile(
+            return Column(
+              children: [
+                Expanded(
+                  child: ReorderableListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: roles.length,
+                    onReorder: (oldIndex, newIndex) {
+                      setState(() {
+                        if (newIndex > oldIndex) {
+                          newIndex -= 1;
+                        }
+                        final item = roles.removeAt(oldIndex);
+                        roles.insert(newIndex, item);
+                        _editingTemplates[type] = List<String>.from(roles);
+                      });
+                    },
+                    itemBuilder: (context, index) {
+                      return ListTile(
+                        key: ValueKey('role_${type.name}_${roles[index]}'),
+                        title: Text(roles[index]),
+                        onTap: () => _promptEditRole(type, index),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline),
+                              onPressed: () => _confirmRemoveRole(type, index),
+                            ),
+                            ReorderableDragStartListener(
+                              index: index,
+                              child: const Icon(Icons.drag_handle),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                SafeArea(
+                  top: false,
+                  child: ListTile(
                     leading: const Icon(Icons.add),
                     title: const Text('新增項目'),
                     onTap: () => _promptAddRole(type),
-                  );
-                }
-                return ListTile(
-                  title: Text(roles[index]),
-                  onTap: () => _promptEditRole(type, index),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete_outline),
-                    onPressed: () => _confirmRemoveRole(type, index),
                   ),
-                );
-              },
+                ),
+              ],
             );
           }).toList(),
         ),
