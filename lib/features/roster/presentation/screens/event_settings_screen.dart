@@ -14,6 +14,7 @@ class EventSettingsScreen extends StatefulWidget {
 
 class _EventSettingsScreenState extends State<EventSettingsScreen> {
   late Map<ServiceType, List<EventOption>> _editingOptions;
+  late final Map<ServiceType, ScrollController> _scrollControllers;
   final List<int> _palette = const [
     0xFFF39C12, // amber
     0xFF27AE60, // green
@@ -32,9 +33,20 @@ class _EventSettingsScreenState extends State<EventSettingsScreen> {
         (entry) => MapEntry(entry.key, List<EventOption>.from(entry.value)),
       ),
     );
+    _scrollControllers = {
+      for (final type in ServiceType.values) type: ScrollController(),
+    };
     for (final type in ServiceType.values) {
       _editingOptions.putIfAbsent(type, () => <EventOption>[]);
     }
+  }
+
+  @override
+  void dispose() {
+    for (final controller in _scrollControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
   }
 
   Future<void> _promptAddEvent(ServiceType type) async {
@@ -228,72 +240,83 @@ class _EventSettingsScreenState extends State<EventSettingsScreen> {
         body: TabBarView(
           children: ServiceType.values.map((type) {
             final options = _editingOptions[type] ?? const <EventOption>[];
+            final scrollController = _scrollControllers[type]!;
             return Column(
               children: [
                 Expanded(
-                  child: ReorderableListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: options.length,
-                    onReorder: (oldIndex, newIndex) {
-                      setState(() {
-                        if (newIndex > oldIndex) {
-                          newIndex -= 1;
-                        }
-                        final item = options.removeAt(oldIndex);
-                        options.insert(newIndex, item);
-                        _editingOptions[type] = List<EventOption>.from(options);
-                      });
-                    },
-                    itemBuilder: (context, index) {
-                      return ListTile(
-                        key: ValueKey(
-                          'event_${type.name}_${index}_${options[index].name}',
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                        ),
-                        horizontalTitleGap: 12,
-                        minLeadingWidth: 24,
-                        leading: SizedBox(
-                          width: 24,
-                          child: Center(
-                            child: Container(
-                              width: 14,
-                              height: 14,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Color(options[index].color),
-                                border: Border.all(
-                                  color: Color(
-                                    options[index].color,
-                                  ).withOpacity(0.6),
+                  child: Scrollbar(
+                    controller: scrollController,
+                    thumbVisibility: true,
+                    trackVisibility: true,
+                    child: PrimaryScrollController(
+                      controller: scrollController,
+                      child: ReorderableListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: options.length,
+                        onReorder: (oldIndex, newIndex) {
+                          setState(() {
+                            if (newIndex > oldIndex) {
+                              newIndex -= 1;
+                            }
+                            final item = options.removeAt(oldIndex);
+                            options.insert(newIndex, item);
+                            _editingOptions[type] =
+                                List<EventOption>.from(options);
+                          });
+                        },
+                        itemBuilder: (context, index) {
+                          return ListTile(
+                            key: ValueKey(
+                              'event_${type.name}_${index}_${options[index].name}',
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                            ),
+                            horizontalTitleGap: 12,
+                            minLeadingWidth: 24,
+                            leading: SizedBox(
+                              width: 24,
+                              child: Center(
+                                child: Container(
+                                  width: 14,
+                                  height: 14,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Color(options[index].color),
+                                    border: Border.all(
+                                      color: Color(
+                                        options[index].color,
+                                      ).withOpacity(0.6),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ),
-                        title: Text(options[index].name),
-                        onTap: () => _promptEditEvent(type, index),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline),
-                              onPressed: () => _confirmRemoveEvent(type, index),
-                            ),
-                            ReorderableDragStartListener(
-                              index: index,
-                              child: const SizedBox(
-                                width: 24,
-                                child: Center(
-                                  child: Icon(Icons.drag_handle),
+                            title: Text(options[index].name),
+                            onTap: () => _promptEditEvent(type, index),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline),
+                                  onPressed: () =>
+                                      _confirmRemoveEvent(type, index),
                                 ),
-                              ),
+                                ReorderableDragStartListener(
+                                  index: index,
+                                  child: const SizedBox(
+                                    width: 24,
+                                    child: Center(
+                                      child: Icon(Icons.drag_handle),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      );
-                    },
+                          );
+                        },
+                      ),
+                    ),
                   ),
                 ),
                 SafeArea(

@@ -330,6 +330,7 @@ class RosterCard extends StatelessWidget {
         .where((e) => e.name.trim().isNotEmpty)
         .toList();
     final selected = <String>{};
+    final scrollController = ScrollController();
 
     final result = await showDialog<List<String>>(
       context: context,
@@ -341,46 +342,52 @@ class RosterCard extends StatelessWidget {
               width: double.maxFinite,
               child: options.isEmpty
                   ? const Text('尚未設定可選事件')
-                  : ListView(
-                      shrinkWrap: true,
-                      children: options.map((option) {
-                        final isExisting = existing.contains(option.name);
-                        final dotColor = Color(option.color);
-                        return CheckboxListTile(
-                          value: isExisting
-                              ? true
-                              : selected.contains(option.name),
-                          onChanged: isExisting
-                              ? null
-                              : (checked) {
-                                  setState(() {
-                                    if (checked == true) {
-                                      selected.add(option.name);
-                                    } else {
-                                      selected.remove(option.name);
-                                    }
-                                  });
-                                },
-                          title: Row(
-                            children: [
-                              Container(
-                                width: 14,
-                                height: 14,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: dotColor,
-                                  border: Border.all(
-                                    color: dotColor.withOpacity(0.6),
+                  : Scrollbar(
+                      controller: scrollController,
+                      thumbVisibility: true,
+                      trackVisibility: true,
+                      child: ListView(
+                        controller: scrollController,
+                        shrinkWrap: true,
+                        children: options.map((option) {
+                          final isExisting = existing.contains(option.name);
+                          final dotColor = Color(option.color);
+                          return CheckboxListTile(
+                            value: isExisting
+                                ? true
+                                : selected.contains(option.name),
+                            onChanged: isExisting
+                                ? null
+                                : (checked) {
+                                    setState(() {
+                                      if (checked == true) {
+                                        selected.add(option.name);
+                                      } else {
+                                        selected.remove(option.name);
+                                      }
+                                    });
+                                  },
+                            title: Row(
+                              children: [
+                                Container(
+                                  width: 14,
+                                  height: 14,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: dotColor,
+                                    border: Border.all(
+                                      color: dotColor.withOpacity(0.6),
+                                    ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(child: Text(option.name)),
-                            ],
-                          ),
-                          dense: true,
-                        );
-                      }).toList(),
+                                const SizedBox(width: 12),
+                                Expanded(child: Text(option.name)),
+                              ],
+                            ),
+                            dense: true,
+                          );
+                        }).toList(),
+                      ),
                     ),
             ),
             actions: [
@@ -399,6 +406,7 @@ class RosterCard extends StatelessWidget {
         );
       },
     );
+    scrollController.dispose();
 
     if (result == null || result.isEmpty) return;
     final events = List<String>.from(roster.specialEvents);
@@ -540,11 +548,13 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
   Set<String> _allUserNames = const {};
   String? _selectedRole;
   late final TextEditingController _customController;
+  late final ScrollController _peopleScrollController;
 
   @override
   void initState() {
     super.initState();
     _customController = TextEditingController();
+    _peopleScrollController = ScrollController();
     _selectedPeople = widget.initialPeople
         .map((e) => e.trim())
         .where((e) => e.isNotEmpty)
@@ -562,6 +572,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
   @override
   void dispose() {
     _customController.dispose();
+    _peopleScrollController.dispose();
     super.dispose();
   }
 
@@ -797,28 +808,34 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
                     .toList();
               }
               _allUserNames = data?.allUserNames ?? const {};
-              return ListView.builder(
-                itemCount: _options.length,
-                itemBuilder: (context, index) {
-                  final name = _options[index];
-                  final checked = _selectedPeople.contains(name);
-                  final isCustom =
-                      name != '待定' && !_allUserNames.contains(name);
-                  return CheckboxListTile(
-                    title: Text(name),
-                    value: checked,
-                    onChanged: (_) => _toggleSelection(name),
-                    secondary: isCustom
-                        ? IconButton(
-                            tooltip: '刪除自訂項目',
-                            icon: const Icon(Icons.close, size: 18),
-                            onPressed: () => _confirmRemoveCustomName(name),
-                          )
-                        : null,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    dense: true,
-                  );
-                },
+              return Scrollbar(
+                controller: _peopleScrollController,
+                thumbVisibility: true,
+                trackVisibility: true,
+                child: ListView.builder(
+                  controller: _peopleScrollController,
+                  itemCount: _options.length,
+                  itemBuilder: (context, index) {
+                    final name = _options[index];
+                    final checked = _selectedPeople.contains(name);
+                    final isCustom =
+                        name != '待定' && !_allUserNames.contains(name);
+                    return CheckboxListTile(
+                      title: Text(name),
+                      value: checked,
+                      onChanged: (_) => _toggleSelection(name),
+                      secondary: isCustom
+                          ? IconButton(
+                              tooltip: '刪除自訂項目',
+                              icon: const Icon(Icons.close, size: 18),
+                              onPressed: () => _confirmRemoveCustomName(name),
+                            )
+                          : null,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      dense: true,
+                    );
+                  },
+                ),
               );
             },
           ),

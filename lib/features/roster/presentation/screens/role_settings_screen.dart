@@ -14,6 +14,7 @@ class RoleSettingsScreen extends StatefulWidget {
 
 class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
   late Map<ServiceType, List<String>> _editingTemplates;
+  late final Map<ServiceType, ScrollController> _scrollControllers;
 
   @override
   void initState() {
@@ -23,6 +24,17 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
       provider.templates.keys,
       provider.templates.values.map((list) => List<String>.from(list)),
     );
+    _scrollControllers = {
+      for (final type in ServiceType.values) type: ScrollController(),
+    };
+  }
+
+  @override
+  void dispose() {
+    for (final controller in _scrollControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
   }
 
   Future<void> _promptAddRole(ServiceType type) async {
@@ -179,42 +191,52 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
         body: TabBarView(
           children: ServiceType.values.map((type) {
             final roles = _editingTemplates[type] ?? [];
+            final scrollController = _scrollControllers[type]!;
             return Column(
               children: [
                 Expanded(
-                  child: ReorderableListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: roles.length,
-                    onReorder: (oldIndex, newIndex) {
-                      setState(() {
-                        if (newIndex > oldIndex) {
-                          newIndex -= 1;
-                        }
-                        final item = roles.removeAt(oldIndex);
-                        roles.insert(newIndex, item);
-                        _editingTemplates[type] = List<String>.from(roles);
-                      });
-                    },
-                    itemBuilder: (context, index) {
-                      return ListTile(
-                        key: ValueKey('role_${type.name}_${roles[index]}'),
-                        title: Text(roles[index]),
-                        onTap: () => _promptEditRole(type, index),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline),
-                              onPressed: () => _confirmRemoveRole(type, index),
+                  child: Scrollbar(
+                    controller: scrollController,
+                    thumbVisibility: true,
+                    trackVisibility: true,
+                    child: PrimaryScrollController(
+                      controller: scrollController,
+                      child: ReorderableListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: roles.length,
+                        onReorder: (oldIndex, newIndex) {
+                          setState(() {
+                            if (newIndex > oldIndex) {
+                              newIndex -= 1;
+                            }
+                            final item = roles.removeAt(oldIndex);
+                            roles.insert(newIndex, item);
+                            _editingTemplates[type] = List<String>.from(roles);
+                          });
+                        },
+                        itemBuilder: (context, index) {
+                          return ListTile(
+                            key: ValueKey('role_${type.name}_${roles[index]}'),
+                            title: Text(roles[index]),
+                            onTap: () => _promptEditRole(type, index),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline),
+                                  onPressed: () =>
+                                      _confirmRemoveRole(type, index),
+                                ),
+                                ReorderableDragStartListener(
+                                  index: index,
+                                  child: const Icon(Icons.drag_handle),
+                                ),
+                              ],
                             ),
-                            ReorderableDragStartListener(
-                              index: index,
-                              child: const Icon(Icons.drag_handle),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                          );
+                        },
+                      ),
+                    ),
                   ),
                 ),
                 SafeArea(
