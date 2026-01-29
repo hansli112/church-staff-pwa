@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../domain/entities/service_roster.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/roster_provider.dart';
+import '../../../../core/widgets/settings_bottom_sheet.dart';
 
 class RosterCard extends StatelessWidget {
   final ServiceRoster roster;
@@ -676,48 +677,33 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) {
-        final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-        return Padding(
-          padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomInset),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('新增名單以外的人員', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 14),
-              TextField(
-                controller: _customController,
-                decoration: InputDecoration(
-                  hintText: '例：外請講員',
-                  isDense: true,
-                  filled: true,
-                  fillColor: Theme.of(
-                    context,
-                  ).colorScheme.surfaceVariant.withOpacity(0.35),
-                  hintStyle: TextStyle(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withOpacity(0.35),
-                  ),
-                ),
-                textInputAction: TextInputAction.done,
-                onSubmitted: (value) {
-                  _addCustomName(value);
-                  Navigator.of(context).pop();
-                },
+        return SettingsBottomSheet(
+          title: '新增名單以外的人員',
+          submitLabel: '加入',
+          onSubmit: () {
+            _addCustomName();
+            Navigator.of(context).pop();
+          },
+          child: TextField(
+            controller: _customController,
+            decoration: InputDecoration(
+              hintText: '例：外請講員',
+              isDense: true,
+              filled: true,
+              fillColor: Theme.of(
+                context,
+              ).colorScheme.surfaceVariant.withOpacity(0.35),
+              hintStyle: TextStyle(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withOpacity(0.35),
               ),
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: FilledButton(
-                  onPressed: () {
-                    _addCustomName();
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('加入'),
-                ),
-              ),
-            ],
+            ),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (value) {
+              _addCustomName(value);
+              Navigator.of(context).pop();
+            },
           ),
         );
       },

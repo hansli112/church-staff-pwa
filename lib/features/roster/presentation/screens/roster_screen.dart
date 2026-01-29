@@ -6,6 +6,7 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../providers/roster_provider.dart';
 import '../widgets/roster_card.dart';
+import '../../../../core/widgets/settings_bottom_sheet.dart';
 import 'event_settings_screen.dart';
 import 'role_settings_screen.dart';
 
@@ -261,137 +262,96 @@ class _RosterListState extends State<_RosterList>
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
-            final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-            final maxHeight = MediaQuery.sizeOf(context).height * 0.85;
-            return Padding(
-              padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomInset),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: maxHeight),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'JSON 匯入（${widget.type.label}）',
-                        style: Theme.of(context).textTheme.titleMedium,
+            return SettingsBottomSheet(
+              title: 'JSON 匯入（${widget.type.label}）',
+              submitLabel: '匯入',
+              submitChild: isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('匯入'),
+              onSubmit: isSubmitting
+                  ? null
+                  : () async {
+                      setState(() {
+                        errorText = null;
+                        isSubmitting = true;
+                      });
+                      final result = await _applyJsonImport(
+                        context,
+                        controller.text,
+                      );
+                      if (!mounted) return;
+                      if (result.error != null) {
+                        setState(() {
+                          errorText = result.error;
+                          isSubmitting = false;
+                        });
+                        return;
+                      }
+                      Navigator.of(context).pop();
+                      if (result.missingDates.isNotEmpty ||
+                          result.notInRosterNames.isNotEmpty ||
+                          result.roleMismatchNames.isNotEmpty ||
+                          result.otherNames.isNotEmpty) {
+                        await _showImportSummaryDialog(
+                          context,
+                          result,
+                        );
+                      } else {
+                        final message = _buildResultMessage(result);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(message)),
+                        );
+                      }
+                    },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: controller,
+                    maxLines: 12,
+                    decoration: InputDecoration(
+                      hintText:
+                          '[\n  {\n    "date": "2026-01-04",\n    "duties": [\n      {"people": ["芳伶"], "role": "敬拜主領"}\n    ]\n  }\n]',
+                      hintStyle: TextStyle(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.35),
                       ),
+                      border: const OutlineInputBorder(),
                     ),
-                    const SizedBox(height: 12),
-                    Flexible(
-                      fit: FlexFit.loose,
+                  ),
+                  if (errorText != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      constraints: const BoxConstraints(maxHeight: 160),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.redAccent),
+                      ),
                       child: SingleChildScrollView(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            TextField(
-                              controller: controller,
-                              maxLines: 12,
-                              decoration: InputDecoration(
-                                hintText:
-                                    '[\n  {\n    "date": "2026-01-04",\n    "duties": [\n      {"people": ["芳伶"], "role": "敬拜主領"}\n    ]\n  }\n]',
-                                hintStyle: TextStyle(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withOpacity(0.35),
-                                ),
-                                border: const OutlineInputBorder(),
-                              ),
-                            ),
-                            if (errorText != null) ...[
-                              const SizedBox(height: 8),
-                              Container(
-                                constraints:
-                                    const BoxConstraints(maxHeight: 160),
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.withOpacity(0.06),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.redAccent),
-                                ),
-                                child: SingleChildScrollView(
-                                  child: SelectableText(
-                                    errorText!,
-                                    style: const TextStyle(
-                                      color: Colors.redAccent,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 8),
-                            const Text(
-                              '格式需為 JSON 陣列，每筆含 date 與 duties',
-                              style:
-                                  TextStyle(fontSize: 12, color: Colors.grey),
-                            ),
-                          ],
+                        child: SelectableText(
+                          errorText!,
+                          style: const TextStyle(
+                            color: Colors.redAccent,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: isSubmitting
-                              ? null
-                              : () => Navigator.of(context).pop(),
-                          child: const Text('取消'),
-                        ),
-                        const SizedBox(width: 8),
-                        FilledButton(
-                          onPressed: isSubmitting
-                              ? null
-                              : () async {
-                                  setState(() {
-                                    errorText = null;
-                                    isSubmitting = true;
-                                  });
-                                  final result = await _applyJsonImport(
-                                    context,
-                                    controller.text,
-                                  );
-                                  if (!mounted) return;
-                                  if (result.error != null) {
-                                    setState(() {
-                                      errorText = result.error;
-                                      isSubmitting = false;
-                                    });
-                                    return;
-                                  }
-                                  Navigator.of(context).pop();
-                                  if (result.missingDates.isNotEmpty ||
-                                      result.notInRosterNames.isNotEmpty ||
-                                      result.roleMismatchNames.isNotEmpty ||
-                                      result.otherNames.isNotEmpty) {
-                                    await _showImportSummaryDialog(
-                                      context,
-                                      result,
-                                    );
-                                  } else {
-                                    final message = _buildResultMessage(result);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text(message)),
-                                    );
-                                  }
-                                },
-                          child: isSubmitting
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Text('匯入'),
-                        ),
-                      ],
                     ),
                   ],
-                ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '格式需為 JSON 陣列，每筆含 date 與 duties',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
               ),
             );
           },

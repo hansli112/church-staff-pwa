@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../domain/entities/event_option.dart';
 import '../../domain/entities/service_roster.dart';
 import '../providers/roster_provider.dart';
+import '../../../../core/widgets/settings_bottom_sheet.dart';
 
 class EventSettingsScreen extends StatefulWidget {
   const EventSettingsScreen({super.key});
@@ -132,105 +133,66 @@ class _EventSettingsScreenState extends State<EventSettingsScreen> {
 
         return StatefulBuilder(
           builder: (context, setState) {
-            final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-            final maxHeight = MediaQuery.sizeOf(context).height * 0.85;
-            return Padding(
-              padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomInset),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: maxHeight),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        title,
-                        style: Theme.of(context).textTheme.titleMedium,
+            return SettingsBottomSheet(
+              title: title,
+              onSubmit: () => submit(setState),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: controller,
+                    decoration: InputDecoration(
+                      labelText: '事件名稱',
+                      hintText: '例：聖餐主日',
+                      hintStyle: TextStyle(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.35),
                       ),
+                      floatingLabelBehavior: FloatingLabelBehavior.always,
+                      border: const OutlineInputBorder(),
+                      errorText: errorText,
                     ),
-                    const SizedBox(height: 12),
-                    Flexible(
-                      fit: FlexFit.loose,
-                      child: SingleChildScrollView(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            TextField(
-                              controller: controller,
-                              decoration: InputDecoration(
-                                labelText: '事件名稱',
-                                hintText: '例：聖餐主日',
-                                hintStyle: TextStyle(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withOpacity(0.35),
-                                ),
-                                floatingLabelBehavior:
-                                    FloatingLabelBehavior.always,
-                                border: const OutlineInputBorder(),
-                                errorText: errorText,
-                              ),
-                              onChanged: (value) =>
-                                  setState(() => errorText = validateValue(value)),
-                              onSubmitted: (_) => submit(setState),
-                            ),
-                            const SizedBox(height: 16),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                '標籤顏色',
-                                style: TextStyle(color: Colors.grey.shade700),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: _palette.map((colorValue) {
-                                final isSelected = selectedColor == colorValue;
-                                return InkWell(
-                                  onTap: () =>
-                                      setState(() => selectedColor = colorValue),
-                                  borderRadius: BorderRadius.circular(999),
-                                  child: Container(
-                                    width: 26,
-                                    height: 26,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Color(colorValue),
-                                      border: Border.all(
-                                        color: isSelected
-                                            ? Colors.black54
-                                            : Colors.white,
-                                        width: isSelected ? 2 : 1,
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ],
-                        ),
-                      ),
+                    onChanged: (value) =>
+                        setState(() => errorText = validateValue(value)),
+                    onSubmitted: (_) => submit(setState),
+                  ),
+                  const SizedBox(height: 16),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '標籤顏色',
+                      style: TextStyle(color: Colors.grey.shade700),
                     ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('取消'),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _palette.map((colorValue) {
+                      final isSelected = selectedColor == colorValue;
+                      return InkWell(
+                        onTap: () => setState(() => selectedColor = colorValue),
+                        borderRadius: BorderRadius.circular(999),
+                        child: Container(
+                          width: 26,
+                          height: 26,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Color(colorValue),
+                            border: Border.all(
+                              color: isSelected
+                                  ? Colors.black54
+                                  : Colors.white,
+                              width: isSelected ? 2 : 1,
+                            ),
+                          ),
                         ),
-                        const SizedBox(width: 8),
-                        FilledButton(
-                          onPressed: () => submit(setState),
-                          child: const Text('儲存'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                      );
+                    }).toList(),
+                  ),
+                ],
               ),
             );
           },
