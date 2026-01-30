@@ -7,207 +7,215 @@ import '../providers/roster_provider.dart';
 import '../../../../core/widgets/settings_bottom_sheet.dart';
 
 class RosterCard extends StatelessWidget {
+  static final DateFormat _dateFormat = DateFormat('yyyy/MM/dd (E)', 'zh_TW');
+
   final ServiceRoster roster;
   final bool initiallyExpanded;
+  final bool isEditMode;
+  final int Function(ServiceType type, String name) eventColorFor;
 
   const RosterCard({
     super.key,
     required this.roster,
     this.initiallyExpanded = false,
+    required this.isEditMode,
+    required this.eventColorFor,
   });
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('yyyy/MM/dd (E)', 'zh_TW');
-    final rosterProvider = context.watch<RosterProvider>();
-    final isEditMode = rosterProvider.isEditMode;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: isEditMode ? 4.0 : 2.0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: isEditMode
-            ? BorderSide(
-                color: Theme.of(context).colorScheme.primary,
-                width: 2.0,
-              )
-            : BorderSide.none,
-      ),
-      child: ExpansionTile(
-        key: PageStorageKey(roster.id),
-        initiallyExpanded: initiallyExpanded,
-        leading: Icon(
-          isEditMode ? Icons.edit_note : Icons.event_note,
-          color: isEditMode
-              ? Theme.of(context).colorScheme.primary
-              : Colors.blueAccent,
+    return RepaintBoundary(
+      child: Card(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        elevation: isEditMode ? 4.0 : 2.0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: isEditMode
+              ? BorderSide(color: colorScheme.primary, width: 2.0)
+              : BorderSide.none,
         ),
-        title: Text(
-          dateFormat.format(roster.date),
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text(roster.serviceName),
-            if (roster.specialEvents.isNotEmpty || isEditMode)
-              const SizedBox(width: 8),
-            if (roster.specialEvents.isNotEmpty || isEditMode)
-              Expanded(
-                child: Wrap(
-                  spacing: 6,
-                  runSpacing: 2,
-                  children: [
-                    ...roster.specialEvents.map((event) {
-                      final colorValue = rosterProvider.eventColorFor(
-                        roster.type,
-                        event,
-                      );
-                      final color = Color(colorValue);
-                      final label = Text(
-                        event,
-                        style: TextStyle(
-                          color: color,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      );
-                      if (!isEditMode) {
-                        return Chip(
-                          label: label,
-                          backgroundColor: color.withOpacity(0.12),
-                          side: BorderSide(color: color.withOpacity(0.4)),
-                          padding: EdgeInsets.zero,
-                          labelPadding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 0,
-                          ),
-                          visualDensity: const VisualDensity(
-                            horizontal: -2,
-                            vertical: -3,
-                          ),
-                          materialTapTargetSize:
-                              MaterialTapTargetSize.shrinkWrap,
-                        );
-                      }
-                      return InputChip(
-                        label: label,
-                        backgroundColor: color.withOpacity(0.12),
-                        side: BorderSide(color: color.withOpacity(0.4)),
-                        onDeleted: () =>
-                            _confirmRemoveSpecialEvent(context, event),
-                        deleteIcon: const Icon(Icons.close, size: 16),
-                        padding: EdgeInsets.zero,
-                        labelPadding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 0,
-                        ),
-                        visualDensity: const VisualDensity(
-                          horizontal: -2,
-                          vertical: -3,
-                        ),
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      );
-                    }),
-                    if (isEditMode)
-                      ActionChip(
-                        label: const Text('新增事件'),
-                        onPressed: () => _showAddSpecialEventDialog(context),
-                        padding: EdgeInsets.zero,
-                        labelPadding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 0,
-                        ),
-                        visualDensity: const VisualDensity(
-                          horizontal: -2,
-                          vertical: -3,
-                        ),
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        labelStyle: TextStyle(
-                          color: Colors.orange[800],
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-        trailing: isEditMode ? const Icon(Icons.drag_handle) : null,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: Column(
-              children: [
-                ...roster.duties.asMap().entries.map((entry) {
-                  final int index = entry.key;
-                  final RosterEntry duty = entry.value;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: InkWell(
-                      onTap: isEditMode
-                          ? () => _showEditDialog(context, index, duty)
-                          : null,
-                      borderRadius: BorderRadius.circular(8),
-                      splashColor: Theme.of(
-                        context,
-                      ).colorScheme.primary.withOpacity(0.08),
-                      highlightColor: Theme.of(
-                        context,
-                      ).colorScheme.primary.withOpacity(0.04),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: 80,
-                            child: Text(
-                              duty.role,
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontWeight: FontWeight.w500,
+        child: ExpansionTile(
+          key: PageStorageKey(roster.id),
+          initiallyExpanded: initiallyExpanded,
+          leading: Icon(
+            isEditMode ? Icons.edit_note : Icons.event_note,
+            color: isEditMode ? colorScheme.primary : Colors.blueAccent,
+          ),
+          title: Text(
+            _dateFormat.format(roster.date),
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          subtitle: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(roster.serviceName),
+              if (roster.specialEvents.isNotEmpty || isEditMode)
+                const SizedBox(width: 8),
+              if (roster.specialEvents.isNotEmpty || isEditMode)
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        ...roster.specialEvents.map((event) {
+                          final colorValue = eventColorFor(roster.type, event);
+                          final color = Color(colorValue);
+                          final label = Text(
+                            event,
+                            style: TextStyle(
+                              color: color,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          );
+                          if (!isEditMode) {
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: Chip(
+                                label: label,
+                                backgroundColor: color.withOpacity(0.12),
+                                side: BorderSide(color: color.withOpacity(0.4)),
+                                padding: EdgeInsets.zero,
+                                labelPadding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 0,
+                                ),
+                                visualDensity: const VisualDensity(
+                                  horizontal: -2,
+                                  vertical: -3,
+                                ),
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
                               ),
+                            );
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: InputChip(
+                              label: label,
+                              backgroundColor: color.withOpacity(0.12),
+                              side: BorderSide(color: color.withOpacity(0.4)),
+                              onDeleted: () =>
+                                  _confirmRemoveSpecialEvent(context, event),
+                              deleteIcon: const Icon(Icons.close, size: 16),
+                              padding: EdgeInsets.zero,
+                              labelPadding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 0,
+                              ),
+                              visualDensity: const VisualDensity(
+                                horizontal: -2,
+                                vertical: -3,
+                              ),
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                            ),
+                          );
+                        }),
+                        if (isEditMode)
+                          ActionChip(
+                            label: const Text('新增事件'),
+                            onPressed: () =>
+                                _showAddSpecialEventDialog(context),
+                            padding: EdgeInsets.zero,
+                            labelPadding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 0,
+                            ),
+                            visualDensity: const VisualDensity(
+                              horizontal: -2,
+                              vertical: -3,
+                            ),
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            labelStyle: TextStyle(
+                              color: Colors.orange[800],
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          Expanded(
-                            child: Text(
-                              duty.people.join('、'),
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          if (isEditMode)
-                            IconButton(
-                              icon: const Icon(
-                                Icons.delete_outline,
-                                size: 20,
-                                color: Colors.redAccent,
-                              ),
-                              onPressed: () =>
-                                  _confirmRemoveDuty(context, index, duty.role),
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-                if (isEditMode) ...[
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: TextButton.icon(
-                      icon: const Icon(Icons.add),
-                      label: const Text('新增服事項目'),
-                      onPressed: () => _showAddDutyDialog(context),
+                      ],
                     ),
                   ),
-                ],
-              ],
-            ),
+                ),
+            ],
           ),
-        ],
+          trailing: isEditMode ? const Icon(Icons.drag_handle) : null,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Column(
+                children: [
+                  ...roster.duties.asMap().entries.map((entry) {
+                    final int index = entry.key;
+                    final RosterEntry duty = entry.value;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: InkWell(
+                        onTap: isEditMode
+                            ? () => _showEditDialog(context, index, duty)
+                            : null,
+                        borderRadius: BorderRadius.circular(8),
+                        splashColor: colorScheme.primary.withOpacity(0.08),
+                        highlightColor: colorScheme.primary.withOpacity(0.04),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 80,
+                              child: Text(
+                                duty.role,
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                duty.people.join('、'),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            if (isEditMode)
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  size: 20,
+                                  color: Colors.redAccent,
+                                ),
+                                onPressed: () => _confirmRemoveDuty(
+                                  context,
+                                  index,
+                                  duty.role,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                  if (isEditMode) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: TextButton.icon(
+                        icon: const Icon(Icons.add),
+                        label: const Text('新增服事項目'),
+                        onPressed: () => _showAddDutyDialog(context),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
