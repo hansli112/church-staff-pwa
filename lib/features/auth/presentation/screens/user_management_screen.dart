@@ -24,6 +24,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   int _visibleCount = _pageSize;
   final ScrollController _scrollController = ScrollController();
   bool _loadingMore = false;
+  double _restoreOffset = 0;
+  bool _pendingRestore = false;
+  List<User> _lastUsers = const [];
+  bool _isRefreshing = false;
+  bool _hasLoaded = false;
 
   @override
   void initState() {
@@ -33,10 +38,31 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   }
 
   void _refreshUsers() {
+    if (_scrollController.hasClients) {
+      _restoreOffset = _scrollController.offset;
+      _pendingRestore = true;
+    }
+    final future = context.read<AuthProvider>().getUsers();
     setState(() {
-      _usersFuture = context.read<AuthProvider>().getUsers();
-      _visibleCount = _pageSize;
+      _usersFuture = future;
+      _visibleCount = _visibleCount < _pageSize ? _pageSize : _visibleCount;
+      _isRefreshing = true;
     });
+    future
+        .then((users) {
+          if (!mounted) return;
+          setState(() {
+            _lastUsers = users;
+            _isRefreshing = false;
+            _hasLoaded = true;
+          });
+        })
+        .catchError((_) {
+          if (!mounted) return;
+          setState(() {
+            _isRefreshing = false;
+          });
+        });
   }
 
   @override
@@ -101,14 +127,15 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       body: FutureBuilder<List<User>>(
         future: _usersFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !_hasLoaded) {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
 
-          final users = snapshot.data ?? [];
+          final users = snapshot.data ?? _lastUsers;
           _ensureSortedUsers(users, groupTemplates);
           final filter = _nameFilter.trim().toLowerCase();
           final filteredUsers = filter.isEmpty
@@ -121,10 +148,37 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           } else if (filteredUsers.length < _pageSize) {
             _visibleCount = filteredUsers.length;
           }
+          if (_pendingRestore && filteredUsers.isNotEmpty) {
+            final indexAtOffset = (_restoreOffset / 88).floor();
+            final minNeeded = (indexAtOffset + _pageSize);
+            if (_visibleCount < minNeeded) {
+              _visibleCount = minNeeded > filteredUsers.length
+                  ? filteredUsers.length
+                  : minNeeded;
+            }
+          }
           final visibleUsers = filteredUsers.take(_visibleCount).toList();
+
+          if (_pendingRestore && _scrollController.hasClients) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted || !_scrollController.hasClients) return;
+              final maxOffset = _scrollController.position.maxScrollExtent;
+              if (maxOffset <= 0 && _restoreOffset > 0) {
+                return;
+              }
+              final target = _restoreOffset > maxOffset
+                  ? maxOffset
+                  : _restoreOffset;
+              if (target >= 0) {
+                _scrollController.jumpTo(target);
+              }
+              _pendingRestore = false;
+            });
+          }
 
           return Column(
             children: [
+              if (_isRefreshing) const LinearProgressIndicator(minHeight: 2),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                 child: TextField(
@@ -133,13 +187,22 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.search),
                   ),
-                  onChanged: (value) => setState(() => _nameFilter = value),
+                  onChanged: (value) {
+                    setState(() {
+                      _nameFilter = value;
+                      _visibleCount = _pageSize;
+                    });
+                    if (_scrollController.hasClients) {
+                      _scrollController.jumpTo(0);
+                    }
+                  },
                 ),
               ),
               Expanded(
                 child: visibleUsers.isEmpty
                     ? const Center(child: Text('沒有符合的帳號'))
                     : ListView.builder(
+                        key: const PageStorageKey('user_management_list'),
                         controller: _scrollController,
                         itemExtent: 88,
                         itemCount: visibleUsers.length + 1,
