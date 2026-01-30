@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/user.dart';
@@ -16,17 +17,32 @@ class UserManagementScreen extends StatefulWidget {
 class _UserManagementScreenState extends State<UserManagementScreen> {
   late Future<List<User>> _usersFuture;
   String _nameFilter = '';
+  List<_UserListItemData> _sortedUsers = const [];
+  int _usersSignature = 0;
+  int _templatesSignature = 0;
+  static const int _pageSize = 60;
+  int _visibleCount = _pageSize;
+  final ScrollController _scrollController = ScrollController();
+  bool _loadingMore = false;
 
   @override
   void initState() {
     super.initState();
     _refreshUsers();
+    _scrollController.addListener(_onScroll);
   }
 
   void _refreshUsers() {
     setState(() {
       _usersFuture = context.read<AuthProvider>().getUsers();
+      _visibleCount = _pageSize;
     });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _openEditor([User? user]) async {
@@ -50,12 +66,34 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     _refreshUsers();
   }
 
+  void _onScroll() {
+    if (!_scrollController.hasClients || _loadingMore) return;
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 240) {
+      _loadMore();
+    }
+  }
+
+  void _loadMore() {
+    setState(() {
+      _loadingMore = true;
+      _visibleCount = (_visibleCount + _pageSize);
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() => _loadingMore = false);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final groupTemplates = context
+        .select<GroupSettingsProvider, Map<ServiceType, List<String>>>(
+          (provider) => provider.templates,
+        );
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('帳號管理'),
-      ),
+      appBar: AppBar(title: const Text('帳號管理')),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _openEditor(),
         child: const Icon(Icons.add),
@@ -71,52 +109,19 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           }
 
           final users = snapshot.data ?? [];
+          _ensureSortedUsers(users, groupTemplates);
           final filter = _nameFilter.trim().toLowerCase();
           final filteredUsers = filter.isEmpty
-              ? users
-              : users.where((user) => user.name.toLowerCase().contains(filter)).toList();
-          final groupTemplates = context.watch<GroupSettingsProvider>().templates;
-          final sortedUsers = List<User>.from(filteredUsers)
-            ..sort((a, b) {
-              UserZoneInfo? primaryZone(User user) {
-                if (user.zones.isEmpty) return null;
-                final zones = List<UserZoneInfo>.from(user.zones)
-                  ..sort((z1, z2) => ServiceType.values
-                      .indexOf(z1.serviceType)
-                      .compareTo(ServiceType.values.indexOf(z2.serviceType)));
-                return zones.first;
-              }
-
-              int roleIndex(User user) {
-                return UserRole.values.indexOf(user.role);
-              }
-
-              int zoneIndex(User user) {
-                final zone = primaryZone(user);
-                if (zone == null) return 999;
-                return ServiceType.values.indexOf(zone.serviceType);
-              }
-
-              int groupIndex(User user) {
-                final zone = primaryZone(user);
-                if (zone == null || zone.smallGroups.isEmpty) return 999;
-                final groupOrder = groupTemplates[zone.serviceType] ?? const <String>[];
-                final groupName = zone.smallGroups.first;
-                final index = groupOrder.indexOf(groupName);
-                return index == -1 ? 999 : index;
-              }
-
-              final roleCompare = roleIndex(a).compareTo(roleIndex(b));
-              if (roleCompare != 0) return roleCompare;
-
-              final zoneCompare = zoneIndex(a).compareTo(zoneIndex(b));
-              if (zoneCompare != 0) return zoneCompare;
-
-              final groupCompare = groupIndex(a).compareTo(groupIndex(b));
-              if (groupCompare != 0) return groupCompare;
-
-              return a.name.compareTo(b.name);
-            });
+              ? _sortedUsers
+              : _sortedUsers
+                    .where((item) => item.nameLower.contains(filter))
+                    .toList();
+          if (_visibleCount > filteredUsers.length) {
+            _visibleCount = filteredUsers.length;
+          } else if (filteredUsers.length < _pageSize) {
+            _visibleCount = filteredUsers.length;
+          }
+          final visibleUsers = filteredUsers.take(_visibleCount).toList();
 
           return Column(
             children: [
@@ -132,58 +137,103 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 ),
               ),
               Expanded(
-                child: sortedUsers.isEmpty
+                child: visibleUsers.isEmpty
                     ? const Center(child: Text('沒有符合的帳號'))
                     : ListView.builder(
-                        itemCount: sortedUsers.length,
+                        controller: _scrollController,
+                        itemExtent: 88,
+                        itemCount: visibleUsers.length + 1,
                         itemBuilder: (context, index) {
-                          final user = sortedUsers[index];
-                          final zoneText = user.zones.map((z) => z.serviceType.label).join(', ');
+                          if (index == visibleUsers.length) {
+                            if (visibleUsers.length >= filteredUsers.length) {
+                              return const SizedBox.shrink();
+                            }
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 12),
+                              child: Center(
+                                child: SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                          final data = visibleUsers[index];
 
-                          return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                child: Text(user.name[0]),
+                          return RepaintBoundary(
+                            child: Card(
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
                               ),
-                              title: Text(
-                                user.username.isEmpty
-                                    ? '${user.name}（無帳號）'
-                                    : '${user.name} (@${user.username})',
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: BorderSide(
+                                  color: Theme.of(
+                                    context,
+                                  ).dividerColor.withOpacity(0.6),
+                                ),
                               ),
-                              subtitle: Text(
-                                '${user.role.label} ${zoneText.isNotEmpty ? ' | $zoneText' : ''}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              onTap: () => _openEditor(user),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red),
-                                onPressed: () async {
-                                  final confirm = await showDialog<bool>(
-                                    context: context,
-                                    builder: (context) => AlertDialog(
-                                      title: const Text('確認刪除'),
-                                      content: Text('確定要刪除 ${user.name} 嗎？'),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(context, false),
-                                          child: const Text('取消'),
+                              child: ListTile(
+                                leading: const CircleAvatar(
+                                  child: Icon(Icons.person, size: 18),
+                                ),
+                                title: Text(
+                                  data.displayName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                subtitle: Text(
+                                  data.subtitle,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                onTap: () => _openEditor(data.user),
+                                trailing: IconButton(
+                                  icon: const Icon(
+                                    Icons.delete,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () async {
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('確認刪除'),
+                                        content: Text(
+                                          '確定要刪除 ${data.user.name} 嗎？',
                                         ),
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(context, true),
-                                          child: const Text('刪除',
-                                              style: TextStyle(color: Colors.red)),
-                                        ),
-                                      ],
-                                    ),
-                                  );
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context, false),
+                                            child: const Text('取消'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context, true),
+                                            child: const Text(
+                                              '刪除',
+                                              style: TextStyle(
+                                                color: Colors.red,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
 
-                                  if (confirm == true && mounted) {
-                                    await context.read<AuthProvider>().deleteUser(user.id);
-                                    _refreshUsers();
-                                  }
-                                },
+                                    if (confirm == true && mounted) {
+                                      await context
+                                          .read<AuthProvider>()
+                                          .deleteUser(data.user.id);
+                                      _refreshUsers();
+                                    }
+                                  },
+                                ),
                               ),
                             ),
                           );
@@ -196,4 +246,129 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       ),
     );
   }
+
+  void _ensureSortedUsers(
+    List<User> users,
+    Map<ServiceType, List<String>> groupTemplates,
+  ) {
+    final usersSignature = _usersSignatureFor(users);
+    final templatesSignature = _templatesSignatureFor(groupTemplates);
+    if (usersSignature == _usersSignature &&
+        templatesSignature == _templatesSignature) {
+      return;
+    }
+    _usersSignature = usersSignature;
+    _templatesSignature = templatesSignature;
+    _sortedUsers = _buildSortedUsers(users, groupTemplates);
+  }
+
+  int _usersSignatureFor(List<User> users) {
+    var hash = 17;
+    for (final user in users) {
+      var zonesHash = 17;
+      for (final zone in user.zones) {
+        zonesHash = Object.hash(
+          zonesHash,
+          zone.serviceType.index,
+          Object.hashAll(zone.smallGroups),
+        );
+      }
+      final userHash = Object.hash(
+        user.id,
+        user.name,
+        user.username,
+        user.role.index,
+        zonesHash,
+      );
+      hash = Object.hash(hash, userHash);
+    }
+    return hash;
+  }
+
+  int _templatesSignatureFor(Map<ServiceType, List<String>> templates) {
+    var hash = 17;
+    final entries = templates.entries.toList()
+      ..sort((a, b) => a.key.index.compareTo(b.key.index));
+    for (final entry in entries) {
+      hash = Object.hash(hash, entry.key.index, Object.hashAll(entry.value));
+    }
+    return hash;
+  }
+}
+
+class _UserListItemData {
+  final User user;
+  final String displayName;
+  final String subtitle;
+  final String initial;
+  final String nameLower;
+  final int roleOrder;
+  final int zoneOrder;
+  final int groupOrder;
+
+  const _UserListItemData({
+    required this.user,
+    required this.displayName,
+    required this.subtitle,
+    required this.initial,
+    required this.nameLower,
+    required this.roleOrder,
+    required this.zoneOrder,
+    required this.groupOrder,
+  });
+}
+
+List<_UserListItemData> _buildSortedUsers(
+  List<User> users,
+  Map<ServiceType, List<String>> groupTemplates,
+) {
+  final result = <_UserListItemData>[];
+  for (final user in users) {
+    UserZoneInfo? primaryZone;
+    var minIndex = 999;
+    for (final zone in user.zones) {
+      final idx = ServiceType.values.indexOf(zone.serviceType);
+      if (idx < minIndex) {
+        minIndex = idx;
+        primaryZone = zone;
+      }
+    }
+    final zoneOrder = primaryZone == null ? 999 : minIndex;
+    final roleOrder = UserRole.values.indexOf(user.role);
+    var groupOrder = 999;
+    if (primaryZone != null && primaryZone.smallGroups.isNotEmpty) {
+      final groupOrderList =
+          groupTemplates[primaryZone.serviceType] ?? const <String>[];
+      final groupName = primaryZone.smallGroups.first;
+      final idx = groupOrderList.indexOf(groupName);
+      if (idx != -1) {
+        groupOrder = idx;
+      }
+    }
+    final zoneText = user.zones.map((z) => z.serviceType.label).join(', ');
+    final displayName = user.username.isEmpty ? '${user.name}（無帳號）' : user.name;
+    final subtitle =
+        '${user.role.label}${zoneText.isNotEmpty ? ' | $zoneText' : ''}';
+    result.add(
+      _UserListItemData(
+        user: user,
+        displayName: displayName,
+        subtitle: subtitle,
+        initial: user.name.isEmpty ? '?' : user.name[0],
+        nameLower: user.name.toLowerCase(),
+        roleOrder: roleOrder,
+        zoneOrder: zoneOrder,
+        groupOrder: groupOrder,
+      ),
+    );
+  }
+
+  result.sort((a, b) {
+    if (a.roleOrder != b.roleOrder) return a.roleOrder - b.roleOrder;
+    if (a.zoneOrder != b.zoneOrder) return a.zoneOrder - b.zoneOrder;
+    if (a.groupOrder != b.groupOrder) return a.groupOrder - b.groupOrder;
+    return a.user.name.compareTo(b.user.name);
+  });
+
+  return result;
 }
