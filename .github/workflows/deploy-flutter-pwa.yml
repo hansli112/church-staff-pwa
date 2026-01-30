@@ -24,10 +24,10 @@ jobs:
         run: |
           if [ "${{ github.ref_name }}" == "main" ]; then
             # 正式環境編譯
-            flutter build web --release --base-href "/"
+            flutter build web --release --base-href "/" --wasm
           else
             # 開發環境編譯 (如果你有不同的 base-href 可以在這改)
-            flutter build web --release --base-href "/"
+            flutter build web --release --base-href "/" --wasm
           fi
 
       # 5. 部署到 Cloudflare Pages
