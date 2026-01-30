@@ -56,28 +56,57 @@ class RosterCard extends StatelessWidget {
                 const SizedBox(width: 8),
               if (roster.specialEvents.isNotEmpty || isEditMode)
                 Expanded(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        ...roster.specialEvents.map((event) {
-                          final colorValue = eventColorFor(roster.type, event);
-                          final color = Color(colorValue);
-                          final label = Text(
-                            event,
-                            style: TextStyle(
-                              color: color,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          );
-                          if (!isEditMode) {
+                  child: RepaintBoundary(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          ...roster.specialEvents.map((event) {
+                            final colorValue = eventColorFor(
+                              roster.type,
+                              event,
+                            );
+                            final color = Color(colorValue);
+                            final label = Text(
+                              event,
+                              style: TextStyle(
+                                color: color,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            );
+                            if (!isEditMode) {
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 6),
+                                child: Chip(
+                                  label: label,
+                                  backgroundColor: color.withOpacity(0.12),
+                                  side: BorderSide(
+                                    color: color.withOpacity(0.4),
+                                  ),
+                                  padding: EdgeInsets.zero,
+                                  labelPadding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 0,
+                                  ),
+                                  visualDensity: const VisualDensity(
+                                    horizontal: -2,
+                                    vertical: -3,
+                                  ),
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                              );
+                            }
                             return Padding(
                               padding: const EdgeInsets.only(right: 6),
-                              child: Chip(
+                              child: InputChip(
                                 label: label,
                                 backgroundColor: color.withOpacity(0.12),
                                 side: BorderSide(color: color.withOpacity(0.4)),
+                                onDeleted: () =>
+                                    _confirmRemoveSpecialEvent(context, event),
+                                deleteIcon: const Icon(Icons.close, size: 16),
                                 padding: EdgeInsets.zero,
                                 labelPadding: const EdgeInsets.symmetric(
                                   horizontal: 8,
@@ -91,16 +120,12 @@ class RosterCard extends StatelessWidget {
                                     MaterialTapTargetSize.shrinkWrap,
                               ),
                             );
-                          }
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: InputChip(
-                              label: label,
-                              backgroundColor: color.withOpacity(0.12),
-                              side: BorderSide(color: color.withOpacity(0.4)),
-                              onDeleted: () =>
-                                  _confirmRemoveSpecialEvent(context, event),
-                              deleteIcon: const Icon(Icons.close, size: 16),
+                          }),
+                          if (isEditMode)
+                            ActionChip(
+                              label: const Text('新增事件'),
+                              onPressed: () =>
+                                  _showAddSpecialEventDialog(context),
                               padding: EdgeInsets.zero,
                               labelPadding: const EdgeInsets.symmetric(
                                 horizontal: 8,
@@ -112,32 +137,14 @@ class RosterCard extends StatelessWidget {
                               ),
                               materialTapTargetSize:
                                   MaterialTapTargetSize.shrinkWrap,
+                              labelStyle: TextStyle(
+                                color: Colors.orange[800],
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          );
-                        }),
-                        if (isEditMode)
-                          ActionChip(
-                            label: const Text('新增事件'),
-                            onPressed: () =>
-                                _showAddSpecialEventDialog(context),
-                            padding: EdgeInsets.zero,
-                            labelPadding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 0,
-                            ),
-                            visualDensity: const VisualDensity(
-                              horizontal: -2,
-                              vertical: -3,
-                            ),
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
-                            labelStyle: TextStyle(
-                              color: Colors.orange[800],
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -147,71 +154,73 @@ class RosterCard extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: Column(
-                children: [
-                  ...roster.duties.asMap().entries.map((entry) {
-                    final int index = entry.key;
-                    final RosterEntry duty = entry.value;
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: InkWell(
-                        onTap: isEditMode
-                            ? () => _showEditDialog(context, index, duty)
-                            : null,
-                        borderRadius: BorderRadius.circular(8),
-                        splashColor: colorScheme.primary.withOpacity(0.08),
-                        highlightColor: colorScheme.primary.withOpacity(0.04),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            SizedBox(
-                              width: 80,
-                              child: Text(
-                                duty.role,
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: Text(
-                                duty.people.join('、'),
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            if (isEditMode)
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete_outline,
-                                  size: 20,
-                                  color: Colors.redAccent,
-                                ),
-                                onPressed: () => _confirmRemoveDuty(
-                                  context,
-                                  index,
+              child: RepaintBoundary(
+                child: Column(
+                  children: [
+                    ...roster.duties.asMap().entries.map((entry) {
+                      final int index = entry.key;
+                      final RosterEntry duty = entry.value;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: InkWell(
+                          onTap: isEditMode
+                              ? () => _showEditDialog(context, index, duty)
+                              : null,
+                          borderRadius: BorderRadius.circular(8),
+                          splashColor: colorScheme.primary.withOpacity(0.08),
+                          highlightColor: colorScheme.primary.withOpacity(0.04),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 80,
+                                child: Text(
                                   duty.role,
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                               ),
-                          ],
+                              Expanded(
+                                child: Text(
+                                  duty.people.join('、'),
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              if (isEditMode)
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    size: 20,
+                                    color: Colors.redAccent,
+                                  ),
+                                  onPressed: () => _confirmRemoveDuty(
+                                    context,
+                                    index,
+                                    duty.role,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                    if (isEditMode) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: TextButton.icon(
+                          icon: const Icon(Icons.add),
+                          label: const Text('新增服事項目'),
+                          onPressed: () => _showAddDutyDialog(context),
                         ),
                       ),
-                    );
-                  }).toList(),
-                  if (isEditMode) ...[
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: TextButton.icon(
-                        icon: const Icon(Icons.add),
-                        label: const Text('新增服事項目'),
-                        onPressed: () => _showAddDutyDialog(context),
-                      ),
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ],

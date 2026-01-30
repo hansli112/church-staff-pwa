@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/service_roster.dart';
@@ -143,7 +144,6 @@ class _RosterScreenState extends State<RosterScreen> {
                 return _RosterList(
                   key: PageStorageKey(type.toString()),
                   type: type,
-                  rosters: provider.getRostersByType(type),
                 );
               }).toList(),
             );
@@ -156,12 +156,18 @@ class _RosterScreenState extends State<RosterScreen> {
 
 class _RosterList extends StatefulWidget {
   final ServiceType type;
-  final List<ServiceRoster> rosters;
 
-  const _RosterList({super.key, required this.type, required this.rosters});
+  const _RosterList({super.key, required this.type});
 
   @override
   State<_RosterList> createState() => _RosterListState();
+}
+
+class _RosterListData {
+  final List<ServiceRoster> rosters;
+  final bool isEditMode;
+
+  const _RosterListData({required this.rosters, required this.isEditMode});
 }
 
 // 使用 AutomaticKeepAliveClientMixin 來保持滑動位置
@@ -173,44 +179,55 @@ class _RosterListState extends State<_RosterList>
   @override
   Widget build(BuildContext context) {
     super.build(context); // 必須呼叫 super.build
-    final rosterProvider = context.read<RosterProvider>();
-    final isEditMode = context.watch<RosterProvider>().isEditMode;
 
-    if (widget.rosters.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('此類別目前沒有服事資訊'),
-            if (isEditMode) ...[
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: () => _showImportJsonDialog(context),
-                icon: const Icon(Icons.data_object),
-                label: const Text('JSON 匯入'),
-              ),
-            ],
-          ],
-        ),
-      );
-    }
-
-    final showImport = isEditMode;
-    return ListView.builder(
-      padding: const EdgeInsets.only(top: 12, bottom: 20),
-      itemCount: widget.rosters.length + (showImport ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (showImport && index == 0) {
-          return _buildImportCard(context);
+    return Selector<RosterProvider, _RosterListData>(
+      selector: (_, provider) => _RosterListData(
+        rosters: provider.getRostersByType(widget.type),
+        isEditMode: provider.isEditMode,
+      ),
+      shouldRebuild: (prev, next) {
+        if (prev.isEditMode != next.isEditMode) return true;
+        return !listEquals(prev.rosters, next.rosters);
+      },
+      builder: (context, data, child) {
+        final rosterProvider = context.read<RosterProvider>();
+        if (data.rosters.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('此類別目前沒有服事資訊'),
+                if (data.isEditMode) ...[
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => _showImportJsonDialog(context),
+                    icon: const Icon(Icons.data_object),
+                    label: const Text('JSON 匯入'),
+                  ),
+                ],
+              ],
+            ),
+          );
         }
-        final rosterIndex = index - (showImport ? 1 : 0);
-        final roster = widget.rosters[rosterIndex];
-        return RosterCard(
-          key: ValueKey(roster.id),
-          roster: roster,
-          initiallyExpanded: rosterIndex == 0,
-          isEditMode: isEditMode,
-          eventColorFor: rosterProvider.eventColorFor,
+
+        final showImport = data.isEditMode;
+        return ListView.builder(
+          padding: const EdgeInsets.only(top: 12, bottom: 20),
+          itemCount: data.rosters.length + (showImport ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (showImport && index == 0) {
+              return _buildImportCard(context);
+            }
+            final rosterIndex = index - (showImport ? 1 : 0);
+            final roster = data.rosters[rosterIndex];
+            return RosterCard(
+              key: ValueKey(roster.id),
+              roster: roster,
+              initiallyExpanded: rosterIndex == 0,
+              isEditMode: data.isEditMode,
+              eventColorFor: rosterProvider.eventColorFor,
+            );
+          },
         );
       },
     );
@@ -590,7 +607,10 @@ class _RosterListState extends State<_RosterList>
     }
 
     final rosterByDate = <String, ServiceRoster>{
-      for (final roster in widget.rosters) _dateKey(roster.date): roster,
+      for (final roster in context.read<RosterProvider>().getRostersByType(
+        widget.type,
+      ))
+        _dateKey(roster.date): roster,
     };
     final updates = <ServiceRoster>[];
     final missingDates = <String>[];
