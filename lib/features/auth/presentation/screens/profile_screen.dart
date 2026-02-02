@@ -1,11 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import 'user_management_screen.dart';
-import 'group_settings_screen.dart';
+import 'user_management_screen.dart' deferred as user_management_screen;
+import 'group_settings_screen.dart' deferred as group_settings_screen;
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
+
+  Future<void> _loadAndPush(
+    BuildContext context,
+    Future<void> Function() loadLibrary,
+    Widget Function() builder,
+  ) async {
+    var dialogShown = true;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+    try {
+      await loadLibrary();
+      if (!context.mounted) return;
+      if (dialogShown) {
+        Navigator.of(context, rootNavigator: true).pop();
+        dialogShown = false;
+      }
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => builder()),
+      );
+    } catch (error) {
+      if (context.mounted) {
+        if (dialogShown) {
+          Navigator.of(context, rootNavigator: true).pop();
+          dialogShown = false;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('載入失敗: $error')),
+        );
+      }
+    } finally {
+      if (dialogShown && context.mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,24 +100,22 @@ class ProfileScreen extends StatelessWidget {
               title: const Text('帳號管理'),
               subtitle: const Text('新增、刪除或修改同工權限'),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const UserManagementScreen()),
-                );
-              },
+              onTap: () => _loadAndPush(
+                context,
+                user_management_screen.loadLibrary,
+                () => user_management_screen.UserManagementScreen(),
+              ),
             ),
             ListTile(
               leading: const Icon(Icons.groups),
               title: const Text('小組管理'),
               subtitle: const Text('設定各牧區小組清單'),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const GroupSettingsScreen()),
-                );
-              },
+              onTap: () => _loadAndPush(
+                context,
+                group_settings_screen.loadLibrary,
+                () => group_settings_screen.GroupSettingsScreen(),
+              ),
             ),
           ],
 
