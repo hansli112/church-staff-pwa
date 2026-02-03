@@ -211,7 +211,13 @@ class FirestoreRosterRepository implements RosterRepository {
       'serviceName': roster.serviceName,
       'specialEvents': roster.specialEvents,
       'duties': roster.duties
-          .map((d) => {'role': d.role, 'people': d.people})
+          .map(
+            (d) => {
+              'role': d.role,
+              'people': d.people,
+              'peopleOrder': d.peopleOrder,
+            },
+          )
           .toList(),
     };
   }
@@ -233,6 +239,7 @@ class FirestoreRosterRepository implements RosterRepository {
             return RosterEntry(
               role: d['role'] as String,
               people: List<String>.from(d['people'] ?? []),
+              peopleOrder: List<String>.from(d['peopleOrder'] ?? const []),
             );
           }).toList() ??
           [],

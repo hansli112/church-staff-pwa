@@ -20,11 +20,24 @@ extension ServiceTypeExtension on ServiceType {
 class RosterEntry {
   final String role;
   final List<String> people;
+  final List<String> peopleOrder;
 
-  RosterEntry({required this.role, required this.people});
+  RosterEntry({
+    required this.role,
+    required this.people,
+    this.peopleOrder = const [],
+  });
 
-  RosterEntry copyWith({String? role, List<String>? people}) {
-    return RosterEntry(role: role ?? this.role, people: people ?? this.people);
+  RosterEntry copyWith({
+    String? role,
+    List<String>? people,
+    List<String>? peopleOrder,
+  }) {
+    return RosterEntry(
+      role: role ?? this.role,
+      people: people ?? this.people,
+      peopleOrder: peopleOrder ?? this.peopleOrder,
+    );
   }
 }
 

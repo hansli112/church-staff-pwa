@@ -588,6 +588,7 @@ class _RosterListState extends State<_RosterList>
           RosterEntry(
             role: roleValue.trim(),
             people: people.isEmpty ? const ['待定'] : people,
+            peopleOrder: people.isEmpty ? const [] : List<String>.from(people),
           ),
         );
       }

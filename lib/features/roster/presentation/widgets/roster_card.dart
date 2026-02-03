@@ -229,18 +229,27 @@ class RosterCard extends StatelessWidget {
           roleController: roleController,
           roleOptions: roleOptions,
           initialRole: roleOptions.isNotEmpty ? roleOptions.first : null,
+          initialOrder: const [],
           peopleLoader: peopleLoader,
           initialPeople: const ['待定'],
-          onSubmit: (role, people) => _addDuty(context, role, people),
+          onSubmit: (role, people, order) =>
+              _addDuty(context, role, people, order),
           submitLabel: '新增',
         );
       },
     );
   }
 
-  void _addDuty(BuildContext context, String role, List<String> people) {
+  void _addDuty(
+    BuildContext context,
+    String role,
+    List<String> people,
+    List<String> peopleOrder,
+  ) {
     final newDuties = List<RosterEntry>.from(roster.duties);
-    newDuties.add(RosterEntry(role: role, people: people));
+    newDuties.add(
+      RosterEntry(role: role, people: people, peopleOrder: peopleOrder),
+    );
 
     final newRoster = roster.copyWith(duties: newDuties);
     context.read<RosterProvider>().updateRoster(newRoster);
@@ -304,9 +313,11 @@ class RosterCard extends StatelessWidget {
           roleController: TextEditingController(text: duty.role),
           roleOptions: const [],
           initialRole: duty.role,
+          initialOrder: duty.peopleOrder,
           peopleLoader: peopleLoader,
           initialPeople: duty.people.isEmpty ? const ['待定'] : duty.people,
-          onSubmit: (role, people) => _updateDuty(context, index, people),
+          onSubmit: (role, people, order) =>
+              _updateDuty(context, index, people, order),
           submitLabel: '儲存',
           roleEditable: false,
         );
@@ -314,9 +325,17 @@ class RosterCard extends StatelessWidget {
     );
   }
 
-  void _updateDuty(BuildContext context, int index, List<String> newPeople) {
+  void _updateDuty(
+    BuildContext context,
+    int index,
+    List<String> newPeople,
+    List<String> peopleOrder,
+  ) {
     final newDuties = List<RosterEntry>.from(roster.duties);
-    newDuties[index] = newDuties[index].copyWith(people: newPeople);
+    newDuties[index] = newDuties[index].copyWith(
+      people: newPeople,
+      peopleOrder: peopleOrder,
+    );
 
     final newRoster = roster.copyWith(duties: newDuties);
     context.read<RosterProvider>().updateRoster(newRoster);
@@ -515,9 +534,11 @@ class _RosterPeopleDialog extends StatefulWidget {
   final TextEditingController roleController;
   final List<String> roleOptions;
   final String? initialRole;
+  final List<String> initialOrder;
   final Future<_PeopleOptions> Function(String? role) peopleLoader;
   final List<String> initialPeople;
-  final void Function(String role, List<String> people) onSubmit;
+  final void Function(String role, List<String> people, List<String> order)
+      onSubmit;
   final String submitLabel;
   final bool roleEditable;
   final bool useBottomSheet;
@@ -528,6 +549,7 @@ class _RosterPeopleDialog extends StatefulWidget {
     required this.roleController,
     required this.roleOptions,
     required this.initialRole,
+    required this.initialOrder,
     required this.peopleLoader,
     required this.initialPeople,
     required this.onSubmit,
@@ -545,8 +567,10 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
   late Set<String> _customNames;
   final Set<String> _removedCustomNames = {};
   List<String> _options = const ['待定'];
+  bool _optionsInitialized = false;
   Set<String> _allUserNames = const {};
   String? _selectedRole;
+  late Future<_PeopleOptions> _peopleFuture;
   late final TextEditingController _customController;
   late final ScrollController _peopleScrollController;
 
@@ -567,6 +591,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
         .where((e) => e.isNotEmpty && e != '待定')
         .toSet();
     _selectedRole = widget.initialRole;
+    _peopleFuture = widget.peopleLoader(_selectedRole);
   }
 
   @override
@@ -588,8 +613,12 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
         _selectedPeople
           ..clear()
           ..add('待定');
-      } else if (_selectedPeople.length > 1 && _selectedPeople.contains('待定')) {
+                } else if (_selectedPeople.length > 1 && _selectedPeople.contains('待定')) {
         _selectedPeople.remove('待定');
+      }
+
+      if (_selectedPeople.isEmpty) {
+        _selectedPeople.add('待定');
       }
     });
   }
@@ -637,11 +666,12 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
         if (duty.role.trim() != roleKey) return duty;
         if (!duty.people.contains(trimmed)) return duty;
         final people = duty.people.where((p) => p != trimmed).toList();
+        final order = duty.peopleOrder.where((p) => p != trimmed).toList();
         changed = true;
         if (people.isEmpty) {
-          return duty.copyWith(people: const ['待定']);
+          return duty.copyWith(people: const ['待定'], peopleOrder: order);
         }
-        return duty.copyWith(people: people);
+        return duty.copyWith(people: people, peopleOrder: order);
       }).toList();
       if (changed) {
         await provider.updateRoster(roster.copyWith(duties: updatedDuties));
@@ -743,9 +773,41 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
       final trimmed = name.trim();
       if (trimmed.isNotEmpty) merged.add(trimmed);
     }
+    final result = <String>[];
+    if (merged.contains('待定') || baseOptions.contains('待定')) {
+      result.add('待定');
+    }
+    final baseOrdered = (widget.initialOrder.isNotEmpty
+            ? widget.initialOrder
+            : baseOptions)
+        .map((name) => name.trim())
+        .where((name) => name.isNotEmpty && name != '待定')
+        .toList();
+    final baseSet = baseOrdered.toSet();
+    result.addAll(baseOrdered);
+
     merged.remove('待定');
-    final sorted = merged.toList()..sort();
-    return ['待定', ...sorted];
+    final remaining = merged.where((name) => !baseSet.contains(name)).toList()
+      ..sort();
+    result.addAll(remaining);
+    return result;
+  }
+
+  void _syncOptions(List<String> baseOptions) {
+    if (!_optionsInitialized) {
+      _options = _mergeOptions(baseOptions);
+      _optionsInitialized = true;
+      return;
+    }
+
+    final merged = _mergeOptions(baseOptions).toSet();
+    _options = _options.where(merged.contains).toList();
+    final existing = _options.toSet();
+    final missing = merged.where((name) => !existing.contains(name)).toList()
+      ..sort();
+    if (missing.isNotEmpty) {
+      _options = [..._options, ...missing];
+    }
   }
 
   @override
@@ -770,7 +832,10 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
             }).toList(),
             onChanged: (value) {
               if (value != null) {
-                setState(() => _selectedRole = value);
+                setState(() {
+                  _selectedRole = value;
+                  _peopleFuture = widget.peopleLoader(_selectedRole);
+                });
               }
             },
           ),
@@ -791,7 +856,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
         SizedBox(
           height: 280,
           child: FutureBuilder<_PeopleOptions>(
-            future: widget.peopleLoader(_selectedRole),
+            future: _peopleFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -801,7 +866,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
               }
 
               final data = snapshot.data;
-              _options = _mergeOptions(data?.options ?? const ['待定']);
+              _syncOptions(data?.options ?? const ['待定']);
               if (_removedCustomNames.isNotEmpty) {
                 _options = _options
                     .where((name) => !_removedCustomNames.contains(name))
@@ -812,25 +877,52 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
                 controller: _peopleScrollController,
                 thumbVisibility: true,
                 trackVisibility: true,
-                child: ListView.builder(
-                  controller: _peopleScrollController,
+                child: ReorderableListView.builder(
+                  scrollController: _peopleScrollController,
                   itemCount: _options.length,
+                  buildDefaultDragHandles: true,
+                  onReorder: (oldIndex, newIndex) {
+                    final name = _options[oldIndex];
+                    if (name == '待定') {
+                      return;
+                    }
+                    setState(() {
+                      if (newIndex > oldIndex) {
+                        newIndex -= 1;
+                      }
+                      final moved = _options.removeAt(oldIndex);
+                      _options.insert(newIndex, moved);
+                    });
+                  },
                   itemBuilder: (context, index) {
                     final name = _options[index];
                     final checked = _selectedPeople.contains(name);
                     final isCustom =
                         name != '待定' && !_allUserNames.contains(name);
+                    final canDrag = name != '待定';
                     return CheckboxListTile(
+                      key: ValueKey('option-$name'),
                       title: Text(name),
                       value: checked,
                       onChanged: (_) => _toggleSelection(name),
-                      secondary: isCustom
-                          ? IconButton(
+                      secondary: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isCustom)
+                            IconButton(
                               tooltip: '刪除自訂項目',
                               icon: const Icon(Icons.close, size: 18),
                               onPressed: () => _confirmRemoveCustomName(name),
-                            )
-                          : null,
+                            ),
+                          Icon(
+                            Icons.drag_handle,
+                            size: 18,
+                            color: canDrag
+                                ? Colors.grey.shade600
+                                : Colors.grey.shade300,
+                          ),
+                        ],
+                      ),
                       controlAffinity: ListTileControlAffinity.leading,
                       dense: true,
                     );
@@ -869,7 +961,9 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
                       : widget.roleController.text.trim();
                   if (role.isEmpty) return;
                   final selected = _buildSelectedPeople(_options);
-                  widget.onSubmit(role, selected);
+                  final order =
+                      _options.where((name) => name != '待定').toList();
+                  widget.onSubmit(role, selected, order);
                   Navigator.of(context).pop();
                 },
           child: Text(widget.submitLabel),
@@ -924,7 +1018,9 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
                       : widget.roleController.text.trim();
                   if (role.isEmpty) return;
                   final selected = _buildSelectedPeople(_options);
-                  widget.onSubmit(role, selected);
+                  final order =
+                      _options.where((name) => name != '待定').toList();
+                  widget.onSubmit(role, selected, order);
                   Navigator.of(context).pop();
                 },
           child: Text(widget.submitLabel),
