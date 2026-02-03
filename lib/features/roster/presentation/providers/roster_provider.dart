@@ -70,7 +70,6 @@ class RosterProvider with ChangeNotifier {
       _allRosters = results[0] as List<ServiceRoster>;
       _templates = results[1] as Map<ServiceType, List<String>>;
       _eventOptionsByType = results[2] as Map<ServiceType, List<EventOption>>;
-      await _seedEmptyRostersFromTemplates();
     } catch (e) {
       _error = '無法取得資料，請稍後再試';
     } finally {
@@ -115,7 +114,6 @@ class RosterProvider with ChangeNotifier {
     try {
       await _repository.updateServiceTemplates(newTemplates);
       _templates = Map.from(newTemplates);
-      await _seedEmptyRostersFromTemplates();
       notifyListeners();
     } catch (e) {
       _error = '更新設定失敗: $e';
@@ -140,70 +138,4 @@ class RosterProvider with ChangeNotifier {
     }
   }
 
-  Future<void> _seedEmptyRostersFromTemplates() async {
-    if (_templates.isEmpty || _allRosters.isEmpty) return;
-
-    final List<ServiceRoster> updates = [];
-    for (final roster in _allRosters) {
-      final roles = _templates[roster.type] ?? [];
-      if (roles.isEmpty) continue;
-      final normalized = _normalizeDuties(roster.duties, roles);
-      if (_dutiesEqual(roster.duties, normalized)) continue;
-      updates.add(roster.copyWith(duties: normalized));
-    }
-
-    if (updates.isEmpty) return;
-
-    for (final updated in updates) {
-      final index = _allRosters.indexWhere((r) => r.id == updated.id);
-      if (index != -1) {
-        _allRosters[index] = updated;
-      }
-    }
-    notifyListeners();
-
-    for (final updated in updates) {
-      try {
-        await _repository.updateRoster(updated);
-      } catch (e) {
-        _error = '更新失敗: $e';
-      }
-    }
-    if (_error != null) {
-      notifyListeners();
-    }
-  }
-
-  List<RosterEntry> _normalizeDuties(
-    List<RosterEntry> duties,
-    List<String> roles,
-  ) {
-    final Map<String, List<String>> existing = {
-      for (final duty in duties) duty.role: List<String>.from(duty.people),
-    };
-
-    final List<RosterEntry> normalized = [];
-    for (final role in roles) {
-      final people = existing.remove(role) ?? [];
-      normalized.add(
-        RosterEntry(role: role, people: people.isEmpty ? ['待定'] : people),
-      );
-    }
-
-    return normalized;
-  }
-
-  bool _dutiesEqual(List<RosterEntry> a, List<RosterEntry> b) {
-    if (a.length != b.length) return false;
-    for (var i = 0; i < a.length; i++) {
-      final dutyA = a[i];
-      final dutyB = b[i];
-      if (dutyA.role != dutyB.role) return false;
-      if (dutyA.people.length != dutyB.people.length) return false;
-      for (var j = 0; j < dutyA.people.length; j++) {
-        if (dutyA.people[j] != dutyB.people[j]) return false;
-      }
-    }
-    return true;
-  }
 }
