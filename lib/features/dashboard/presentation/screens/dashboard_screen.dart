@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../roster/domain/entities/service_roster.dart';
 import '../../../roster/presentation/providers/roster_provider.dart';
+import '../../../calendar/presentation/screens/calendar_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -56,6 +57,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
               title: '行事曆',
               description: '教會年度活動一覽',
               color: Colors.purpleAccent,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const CalendarScreen(),
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 20),
             _buildSeasonServiceSection(context, fullName: fullName),
@@ -271,6 +279,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required String title,
     required String description,
     required Color color,
+    VoidCallback? onTap,
   }) {
     return Card(
       elevation: 2,
@@ -282,11 +291,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text(description),
-        onTap: () {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('此功能即將推出！')));
-        },
+        onTap:
+            onTap ??
+            () {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('此功能即將推出！')));
+            },
       ),
     );
   }

@@ -8,7 +8,9 @@ import '../widgets/roster_view_card.dart';
 import 'roster_edit_screen.dart' deferred as roster_edit_screen;
 
 class RosterScreen extends StatefulWidget {
-  const RosterScreen({super.key});
+  const RosterScreen({super.key, this.allowEdit = true});
+
+  final bool allowEdit;
 
   @override
   State<RosterScreen> createState() => _RosterScreenState();
@@ -115,6 +117,7 @@ class _RosterScreenState extends State<RosterScreen>
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
     final isAdmin = authProvider.isAdmin;
+    final canEdit = isAdmin && widget.allowEdit;
     final userZones = authProvider.currentUser?.zones ?? const <UserZoneInfo>[];
     final allowedTypes = isAdmin
         ? ServiceType.values
@@ -131,7 +134,7 @@ class _RosterScreenState extends State<RosterScreen>
 
     _updateTabController(allowedTypes.length);
 
-    if (isEditMode && _editReady) {
+    if (isEditMode && _editReady && canEdit) {
       return roster_edit_screen.RosterEditScreen(
         onExit: _exitEditMode,
         tabController: _tabController,
@@ -143,7 +146,7 @@ class _RosterScreenState extends State<RosterScreen>
       title: Text(titleText),
       centerTitle: true,
       actions: [
-        if (isAdmin)
+        if (canEdit)
           IconButton(
             icon: const Icon(Icons.edit),
             tooltip: '切換至編輯模式',
