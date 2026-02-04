@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../roster/domain/entities/service_roster.dart';
 import '../../../roster/presentation/providers/roster_provider.dart';
-import '../../../calendar/presentation/screens/calendar_screen.dart';
+import '../../../calendar/presentation/screens/calendar_screen.dart' deferred as calendar;
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -14,6 +14,8 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  bool _isLoadingCalendar = false;
+
   @override
   void initState() {
     super.initState();
@@ -57,13 +59,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               title: '行事曆',
               description: '教會年度活動一覽',
               color: Colors.purpleAccent,
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const CalendarScreen(),
-                  ),
-                );
-              },
+              onTap: _openCalendar,
             ),
             const SizedBox(height: 20),
             _buildSeasonServiceSection(context, fullName: fullName),
@@ -91,6 +87,51 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     return name;
+  }
+
+  Future<void> _openCalendar() async {
+    if (_isLoadingCalendar) return;
+    setState(() {
+      _isLoadingCalendar = true;
+    });
+
+    var dialogVisible = true;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      await calendar.loadLibrary();
+      if (!mounted) return;
+      if (dialogVisible) {
+        Navigator.of(context, rootNavigator: true).pop();
+        dialogVisible = false;
+      }
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => calendar.CalendarScreen(),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      if (dialogVisible) {
+        Navigator.of(context, rootNavigator: true).pop();
+        dialogVisible = false;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('載入失敗: $error')),
+      );
+    } finally {
+      if (!mounted) return;
+      if (dialogVisible) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+      setState(() {
+        _isLoadingCalendar = false;
+      });
+    }
   }
 
   Widget _buildSeasonServiceSection(
