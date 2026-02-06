@@ -1,7 +1,3 @@
-/*
-  Cross-Origin-Opener-Policy: same-origin
-  Cross-Origin-Embedder-Policy: require-corp
-
 /index.html
   Cache-Control: no-cache, no-store, must-revalidate
   Pragma: no-cache
