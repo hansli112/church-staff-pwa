@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 import 'features/roster/data/repositories/firestore_roster_repository.dart';
 import 'features/roster/presentation/providers/roster_provider.dart';
@@ -17,6 +18,9 @@ void main() async {
   await initializeDateFormatting('zh_TW', null);
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
+  );
+  FirebaseFirestore.instance.settings = const Settings(
+    webExperimentalForceLongPolling: true,
   );
   
   runApp(const ChurchApp());
