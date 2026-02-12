@@ -109,11 +109,53 @@ class RosterProvider with ChangeNotifier {
   }
 
   Future<void> updateTemplates(
-    Map<ServiceType, List<String>> newTemplates,
-  ) async {
+    Map<ServiceType, List<String>> newTemplates, {
+    Map<ServiceType, Map<String, String>> renamedRolesByType = const {},
+  }) async {
     try {
       await _repository.updateServiceTemplates(newTemplates);
       _templates = Map.from(newTemplates);
+
+      if (renamedRolesByType.isNotEmpty) {
+        final updatedRosters = <ServiceRoster>[];
+        for (final roster in _allRosters) {
+          final renameMap = renamedRolesByType[roster.type];
+          if (renameMap == null || renameMap.isEmpty) {
+            continue;
+          }
+
+          var hasChanges = false;
+          final updatedDuties = roster.duties.map((duty) {
+            final renamedRole = renameMap[duty.role];
+            if (renamedRole == null || renamedRole == duty.role) {
+              return duty;
+            }
+            hasChanges = true;
+            return duty.copyWith(role: renamedRole);
+          }).toList();
+
+          if (!hasChanges) {
+            continue;
+          }
+
+          final updated = roster.copyWith(duties: updatedDuties);
+          updatedRosters.add(updated);
+        }
+
+        if (updatedRosters.isNotEmpty) {
+          await Future.wait(
+            updatedRosters.map((roster) => _repository.updateRoster(roster)),
+          );
+
+          final updatedById = {
+            for (final roster in updatedRosters) roster.id: roster,
+          };
+          _allRosters = _allRosters
+              .map((roster) => updatedById[roster.id] ?? roster)
+              .toList();
+        }
+      }
+
       notifyListeners();
     } catch (e) {
       _error = '更新設定失敗: $e';
@@ -122,8 +164,9 @@ class RosterProvider with ChangeNotifier {
   }
 
   Future<void> updateEventOptions(
-    Map<ServiceType, List<EventOption>> options,
-  ) async {
+    Map<ServiceType, List<EventOption>> options, {
+    Map<ServiceType, Map<String, String>> renamedEventsByType = const {},
+  }) async {
     try {
       await _repository.updateEventOptions(options);
       _eventOptionsByType = Map.fromEntries(
@@ -131,11 +174,51 @@ class RosterProvider with ChangeNotifier {
           (entry) => MapEntry(entry.key, List<EventOption>.from(entry.value)),
         ),
       );
+
+      if (renamedEventsByType.isNotEmpty) {
+        final updatedRosters = <ServiceRoster>[];
+        for (final roster in _allRosters) {
+          final renameMap = renamedEventsByType[roster.type];
+          if (renameMap == null || renameMap.isEmpty) {
+            continue;
+          }
+
+          var hasChanges = false;
+          final updatedEvents = roster.specialEvents.map((event) {
+            final renamedEvent = renameMap[event];
+            if (renamedEvent == null || renamedEvent == event) {
+              return event;
+            }
+            hasChanges = true;
+            return renamedEvent;
+          }).toList();
+
+          if (!hasChanges) {
+            continue;
+          }
+
+          final updated = roster.copyWith(specialEvents: updatedEvents);
+          updatedRosters.add(updated);
+        }
+
+        if (updatedRosters.isNotEmpty) {
+          await Future.wait(
+            updatedRosters.map((roster) => _repository.updateRoster(roster)),
+          );
+
+          final updatedById = {
+            for (final roster in updatedRosters) roster.id: roster,
+          };
+          _allRosters = _allRosters
+              .map((roster) => updatedById[roster.id] ?? roster)
+              .toList();
+        }
+      }
+
       notifyListeners();
     } catch (e) {
       _error = '更新事件選項失敗: $e';
       notifyListeners();
     }
   }
-
 }

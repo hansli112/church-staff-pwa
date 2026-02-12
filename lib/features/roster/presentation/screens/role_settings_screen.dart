@@ -14,6 +14,7 @@ class RoleSettingsScreen extends StatefulWidget {
 
 class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
   late Map<ServiceType, List<String>> _editingTemplates;
+  late Map<ServiceType, Map<String, String>> _renamedRolesByType;
   late final Map<ServiceType, ScrollController> _scrollControllers;
 
   @override
@@ -24,6 +25,9 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
       provider.templates.keys,
       provider.templates.values.map((list) => List<String>.from(list)),
     );
+    _renamedRolesByType = {
+      for (final type in ServiceType.values) type: <String, String>{},
+    };
     _scrollControllers = {
       for (final type in ServiceType.values) type: ScrollController(),
     };
@@ -66,7 +70,30 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
       currentName: current,
     );
     if (name == null) return;
+    _trackRoleRename(type, current, name);
     _updateRole(type, index, name);
+  }
+
+  void _trackRoleRename(ServiceType type, String oldName, String newName) {
+    final from = oldName.trim();
+    final to = newName.trim();
+    if (from.isEmpty || to.isEmpty || from == to) return;
+
+    final mapping = _renamedRolesByType[type]!;
+    var original = from;
+    for (final entry in mapping.entries) {
+      if (entry.value == from) {
+        original = entry.key;
+        break;
+      }
+    }
+
+    mapping.remove(from);
+    if (original == to) {
+      mapping.remove(original);
+      return;
+    }
+    mapping[original] = to;
   }
 
   Future<void> _confirmRemoveRole(ServiceType type, int index) async {
@@ -185,7 +212,10 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
               onPressed: () async {
                 final rosterProvider = context.read<RosterProvider>();
                 final authProvider = context.read<AuthProvider>();
-                await rosterProvider.updateTemplates(_editingTemplates);
+                await rosterProvider.updateTemplates(
+                  _editingTemplates,
+                  renamedRolesByType: _renamedRolesByType,
+                );
                 await authProvider.cleanupUserMinistries(_editingTemplates);
                 if (!context.mounted) return;
                 Navigator.pop(context);

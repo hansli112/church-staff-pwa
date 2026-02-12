@@ -14,6 +14,7 @@ class EventSettingsScreen extends StatefulWidget {
 
 class _EventSettingsScreenState extends State<EventSettingsScreen> {
   late Map<ServiceType, List<EventOption>> _editingOptions;
+  late Map<ServiceType, Map<String, String>> _renamedEventsByType;
   late final Map<ServiceType, ScrollController> _scrollControllers;
   final List<int> _palette = const [
     0xFFF39C12, // amber
@@ -33,6 +34,9 @@ class _EventSettingsScreenState extends State<EventSettingsScreen> {
         (entry) => MapEntry(entry.key, List<EventOption>.from(entry.value)),
       ),
     );
+    _renamedEventsByType = {
+      for (final type in ServiceType.values) type: <String, String>{},
+    };
     _scrollControllers = {
       for (final type in ServiceType.values) type: ScrollController(),
     };
@@ -73,7 +77,30 @@ class _EventSettingsScreenState extends State<EventSettingsScreen> {
       initialColor: current.color,
     );
     if (result == null) return;
+    _trackEventRename(type, current.name, result.name);
     setState(() => _editingOptions[type]?[index] = result);
+  }
+
+  void _trackEventRename(ServiceType type, String oldName, String newName) {
+    final from = oldName.trim();
+    final to = newName.trim();
+    if (from.isEmpty || to.isEmpty || from == to) return;
+
+    final mapping = _renamedEventsByType[type]!;
+    var original = from;
+    for (final entry in mapping.entries) {
+      if (entry.value == from) {
+        original = entry.key;
+        break;
+      }
+    }
+
+    mapping.remove(from);
+    if (original == to) {
+      mapping.remove(original);
+      return;
+    }
+    mapping[original] = to;
   }
 
   Future<void> _confirmRemoveEvent(ServiceType type, int index) async {
@@ -227,7 +254,10 @@ class _EventSettingsScreenState extends State<EventSettingsScreen> {
               icon: const Icon(Icons.check),
               onPressed: () async {
                 final rosterProvider = context.read<RosterProvider>();
-                await rosterProvider.updateEventOptions(_editingOptions);
+                await rosterProvider.updateEventOptions(
+                  _editingOptions,
+                  renamedEventsByType: _renamedEventsByType,
+                );
                 if (!context.mounted) return;
                 Navigator.pop(context);
               },
