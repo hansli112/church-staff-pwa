@@ -76,8 +76,8 @@ class RosterCard extends StatelessWidget {
                       if (!isEditMode) {
                         return Chip(
                           label: label,
-                          backgroundColor: color.withOpacity(0.12),
-                          side: BorderSide(color: color.withOpacity(0.4)),
+                          backgroundColor: color.withValues(alpha: 0.12),
+                          side: BorderSide(color: color.withValues(alpha: 0.4)),
                           padding: EdgeInsets.zero,
                           labelPadding: const EdgeInsets.symmetric(
                             horizontal: 8,
@@ -93,8 +93,8 @@ class RosterCard extends StatelessWidget {
                       }
                       return InputChip(
                         label: label,
-                        backgroundColor: color.withOpacity(0.12),
-                        side: BorderSide(color: color.withOpacity(0.4)),
+                        backgroundColor: color.withValues(alpha: 0.12),
+                        side: BorderSide(color: color.withValues(alpha: 0.4)),
                         onDeleted: () =>
                             _confirmRemoveSpecialEvent(context, event),
                         deleteIcon: const Icon(Icons.close, size: 16),
@@ -153,10 +153,10 @@ class RosterCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                       splashColor: Theme.of(
                         context,
-                      ).colorScheme.primary.withOpacity(0.08),
+                      ).colorScheme.primary.withValues(alpha: 0.08),
                       highlightColor: Theme.of(
                         context,
-                      ).colorScheme.primary.withOpacity(0.04),
+                      ).colorScheme.primary.withValues(alpha: 0.04),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
@@ -193,7 +193,7 @@ class RosterCard extends StatelessWidget {
                       ),
                     ),
                   );
-                }).toList(),
+                }),
                 if (isEditMode) ...[
                   Padding(
                     padding: const EdgeInsets.only(top: 8.0),
@@ -214,7 +214,7 @@ class RosterCard extends StatelessWidget {
 
   Future<void> _showAddDutyDialog(BuildContext context) async {
     final TextEditingController roleController = TextEditingController();
-    final Future<_PeopleOptions> Function(String? role) peopleLoader = (role) =>
+    Future<_PeopleOptions> peopleLoader(String? role) =>
         _loadSelectablePeople(context, roster.type, const [], role);
     final roleOptions =
         context.read<RosterProvider>().templates[roster.type] ??
@@ -287,6 +287,7 @@ class RosterCard extends StatelessWidget {
       ),
     );
 
+    if (!context.mounted) return;
     if (confirmed == true) {
       _removeDuty(context, index);
     }
@@ -297,13 +298,12 @@ class RosterCard extends StatelessWidget {
     int index,
     RosterEntry duty,
   ) async {
-    final Future<_PeopleOptions> Function(String? role) peopleLoader = (role) =>
-        _loadSelectablePeople(
-          context,
-          roster.type,
-          duty.people,
-          role ?? duty.role,
-        );
+    Future<_PeopleOptions> peopleLoader(String? role) => _loadSelectablePeople(
+      context,
+      roster.type,
+      duty.people,
+      role ?? duty.role,
+    );
 
     await showDialog(
       context: context,
@@ -397,7 +397,7 @@ class RosterCard extends StatelessWidget {
                                     shape: BoxShape.circle,
                                     color: dotColor,
                                     border: Border.all(
-                                      color: dotColor.withOpacity(0.6),
+                                      color: dotColor.withValues(alpha: 0.6),
                                     ),
                                   ),
                                 ),
@@ -429,6 +429,7 @@ class RosterCard extends StatelessWidget {
     );
     scrollController.dispose();
 
+    if (!context.mounted) return;
     if (result == null || result.isEmpty) return;
     final events = List<String>.from(roster.specialEvents);
     for (final event in result) {
@@ -470,6 +471,7 @@ class RosterCard extends StatelessWidget {
       ),
     );
 
+    if (!context.mounted) return;
     if (confirmed == true) {
       _removeSpecialEvent(context, event);
     }
@@ -540,7 +542,7 @@ class _RosterPeopleDialog extends StatefulWidget {
   final Future<_PeopleOptions> Function(String? role) peopleLoader;
   final List<String> initialPeople;
   final void Function(String role, List<String> people, List<String> order)
-      onSubmit;
+  onSubmit;
   final String submitLabel;
   final bool roleEditable;
   final bool useBottomSheet;
@@ -615,7 +617,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
         _selectedPeople
           ..clear()
           ..add('待定');
-                } else if (_selectedPeople.length > 1 && _selectedPeople.contains('待定')) {
+      } else if (_selectedPeople.length > 1 && _selectedPeople.contains('待定')) {
         _selectedPeople.remove('待定');
       }
 
@@ -735,11 +737,11 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
               filled: true,
               fillColor: Theme.of(
                 context,
-              ).colorScheme.surfaceVariant.withOpacity(0.35),
+              ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
               hintStyle: TextStyle(
                 color: Theme.of(
                   context,
-                ).colorScheme.onSurface.withOpacity(0.35),
+                ).colorScheme.onSurface.withValues(alpha: 0.35),
               ),
             ),
             textInputAction: TextInputAction.done,
@@ -779,12 +781,11 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
     if (merged.contains('待定') || baseOptions.contains('待定')) {
       result.add('待定');
     }
-    final baseOrdered = (widget.initialOrder.isNotEmpty
-            ? widget.initialOrder
-            : baseOptions)
-        .map((name) => name.trim())
-        .where((name) => name.isNotEmpty && name != '待定')
-        .toList();
+    final baseOrdered =
+        (widget.initialOrder.isNotEmpty ? widget.initialOrder : baseOptions)
+            .map((name) => name.trim())
+            .where((name) => name.isNotEmpty && name != '待定')
+            .toList();
     final baseSet = baseOrdered.toSet();
     result.addAll(baseOrdered);
 
@@ -827,7 +828,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
           ),
         if (canSelectRole)
           DropdownButtonFormField<String>(
-            value: _selectedRole,
+            initialValue: _selectedRole,
             decoration: const InputDecoration(labelText: '服事項目'),
             items: widget.roleOptions.map((role) {
               return DropdownMenuItem(value: role, child: Text(role));
@@ -963,8 +964,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
                       : widget.roleController.text.trim();
                   if (role.isEmpty) return;
                   final selected = _buildSelectedPeople(_options);
-                  final order =
-                      _options.where((name) => name != '待定').toList();
+                  final order = _options.where((name) => name != '待定').toList();
                   widget.onSubmit(role, selected, order);
                   Navigator.of(context).pop();
                 },
@@ -1020,8 +1020,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
                       : widget.roleController.text.trim();
                   if (role.isEmpty) return;
                   final selected = _buildSelectedPeople(_options);
-                  final order =
-                      _options.where((name) => name != '待定').toList();
+                  final order = _options.where((name) => name != '待定').toList();
                   widget.onSubmit(role, selected, order);
                   Navigator.of(context).pop();
                 },

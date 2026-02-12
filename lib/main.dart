@@ -16,13 +16,11 @@ import 'presentation/screens/main_scaffold.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('zh_TW', null);
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   FirebaseFirestore.instance.settings = const Settings(
     webExperimentalForceLongPolling: true,
   );
-  
+
   runApp(const ChurchApp());
 }
 
@@ -44,7 +42,8 @@ class ChurchApp extends StatelessWidget {
           create: (_) => AuthProvider(FirebaseAuthRepository()),
         ),
         ChangeNotifierProvider(
-          create: (_) => GroupSettingsProvider(FirestoreGroupSettingsRepository()),
+          create: (_) =>
+              GroupSettingsProvider(FirestoreGroupSettingsRepository()),
         ),
       ],
       child: MaterialApp(
@@ -54,13 +53,10 @@ class ChurchApp extends StatelessWidget {
           colorScheme: colorScheme,
           inputDecorationTheme: InputDecorationTheme(
             hintStyle: TextStyle(
-              color: colorScheme.onSurface.withOpacity(0.35),
+              color: colorScheme.onSurface.withValues(alpha: 0.35),
             ),
           ),
-          appBarTheme: const AppBarTheme(
-            centerTitle: true,
-            elevation: 0,
-          ),
+          appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
         ),
         locale: const Locale('zh', 'TW'),
         home: const AuthWrapper(),
@@ -79,9 +75,7 @@ class AuthWrapper extends StatelessWidget {
       builder: (context, auth, _) {
         if (auth.isRestoring) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
         if (!auth.isAuthenticated) {

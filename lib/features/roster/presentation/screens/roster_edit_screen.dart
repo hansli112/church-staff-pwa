@@ -45,19 +45,16 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
         Navigator.of(context, rootNavigator: true).pop();
         dialogShown = false;
       }
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => builder()),
-      );
+      Navigator.push(context, MaterialPageRoute(builder: (_) => builder()));
     } catch (error) {
       if (context.mounted) {
         if (dialogShown) {
           Navigator.of(context, rootNavigator: true).pop();
           dialogShown = false;
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('載入失敗: $error')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('載入失敗: $error')));
       }
     } finally {
       if (dialogShown && context.mounted) {
@@ -73,9 +70,9 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
       final authProvider = context.read<AuthProvider>();
 
       if (!authProvider.isAdmin) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('沒有權限進入編輯模式')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('沒有權限進入編輯模式')));
         widget.onExit();
         return;
       }
@@ -299,7 +296,7 @@ class _RosterListState extends State<_RosterList>
                         context,
                         controller.text,
                       );
-                      if (!mounted) return;
+                      if (!context.mounted) return;
                       if (result.error != null) {
                         setState(() {
                           errorText = result.error;
@@ -312,15 +309,14 @@ class _RosterListState extends State<_RosterList>
                           result.notInRosterNames.isNotEmpty ||
                           result.roleMismatchNames.isNotEmpty ||
                           result.otherNames.isNotEmpty) {
-                        await _showImportSummaryDialog(
-                          context,
-                          result,
-                        );
+                        if (!context.mounted) return;
+                        await _showImportSummaryDialog(context, result);
                       } else {
                         final message = _buildResultMessage(result);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(message)),
-                        );
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text(message)));
                       }
                     },
               child: Column(
@@ -333,10 +329,9 @@ class _RosterListState extends State<_RosterList>
                       hintText:
                           '[\n  {\n    "date": "2026-01-04",\n    "duties": [\n      {"people": ["芳伶"], "role": "敬拜主領"}\n    ]\n  }\n]',
                       hintStyle: TextStyle(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withOpacity(0.35),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.35),
                       ),
                       border: const OutlineInputBorder(),
                     ),
@@ -347,7 +342,7 @@ class _RosterListState extends State<_RosterList>
                       constraints: const BoxConstraints(maxHeight: 160),
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.06),
+                        color: Colors.red.withValues(alpha: 0.06),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Colors.redAccent),
                       ),
@@ -467,9 +462,7 @@ class _RosterListState extends State<_RosterList>
           title: const Text('匯入完成（含未匹配）'),
           content: SizedBox(
             width: double.maxFinite,
-            child: SingleChildScrollView(
-              child: SelectableText(details),
-            ),
+            child: SingleChildScrollView(child: SelectableText(details)),
           ),
           actions: [
             FilledButton(
@@ -486,6 +479,8 @@ class _RosterListState extends State<_RosterList>
     BuildContext context,
     String raw,
   ) async {
+    final authProvider = context.read<AuthProvider>();
+    final rosterProvider = context.read<RosterProvider>();
     if (raw.trim().isEmpty) {
       return const _JsonImportResult(error: '請貼上 JSON 內容');
     }
@@ -493,11 +488,9 @@ class _RosterListState extends State<_RosterList>
     final List<String> candidateNames;
     final Map<String, Set<String>> allowedByRole;
     try {
-      final users = await context.read<AuthProvider>().getUsers();
+      final users = await authProvider.getUsers();
       candidateNames = [
-        ...users
-            .map((u) => u.name.trim())
-            .where((name) => name.isNotEmpty),
+        ...users.map((u) => u.name.trim()).where((name) => name.isNotEmpty),
       ];
       allowedByRole = _buildAllowedByRole(users);
     } catch (_) {
@@ -542,15 +535,21 @@ class _RosterListState extends State<_RosterList>
       for (var j = 0; j < dutiesValue.length; j++) {
         final duty = dutiesValue[j];
         if (duty is! Map) {
-          return _JsonImportResult(error: '第 ${i + 1} 筆 duties 第 ${j + 1} 筆不是物件');
+          return _JsonImportResult(
+            error: '第 ${i + 1} 筆 duties 第 ${j + 1} 筆不是物件',
+          );
         }
         final roleValue = duty['role'];
         if (roleValue is! String || roleValue.trim().isEmpty) {
-          return _JsonImportResult(error: '第 ${i + 1} 筆 duties 第 ${j + 1} 筆 role 缺失');
+          return _JsonImportResult(
+            error: '第 ${i + 1} 筆 duties 第 ${j + 1} 筆 role 缺失',
+          );
         }
         final peopleValue = duty['people'];
         if (peopleValue is! List) {
-          return _JsonImportResult(error: '第 ${i + 1} 筆 duties 第 ${j + 1} 筆 people 格式錯誤');
+          return _JsonImportResult(
+            error: '第 ${i + 1} 筆 duties 第 ${j + 1} 筆 people 格式錯誤',
+          );
         }
         final people = peopleValue
             .whereType<String>()
@@ -631,9 +630,8 @@ class _RosterListState extends State<_RosterList>
       );
     }
 
-    final provider = context.read<RosterProvider>();
     for (final roster in updates) {
-      await provider.updateRoster(roster);
+      await rosterProvider.updateRoster(roster);
     }
 
     return _JsonImportResult(
@@ -788,14 +786,13 @@ class _NameMatchResult {
 
   const _NameMatchResult(this.status, this.name);
 
-  const _NameMatchResult.matched(this.name)
-      : status = _NameMatchStatus.matched;
+  const _NameMatchResult.matched(this.name) : status = _NameMatchStatus.matched;
 
   const _NameMatchResult.notInList(this.name)
-      : status = _NameMatchStatus.notInList;
+    : status = _NameMatchStatus.notInList;
 
   const _NameMatchResult.roleMismatch(this.name)
-      : status = _NameMatchStatus.roleMismatch;
+    : status = _NameMatchStatus.roleMismatch;
 
   const _NameMatchResult.other(this.name) : status = _NameMatchStatus.other;
 }

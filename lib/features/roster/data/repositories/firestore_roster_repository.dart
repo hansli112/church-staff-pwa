@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/entities/event_option.dart';
 import '../../domain/entities/service_roster.dart';
@@ -79,7 +81,7 @@ class FirestoreRosterRepository implements RosterRepository {
         return r.copyWith(id: id);
       }).toList();
     } catch (e) {
-      print('Get Rosters Error: $e');
+      log('Get Rosters Error: $e');
       return [];
     }
   }
@@ -90,7 +92,7 @@ class FirestoreRosterRepository implements RosterRepository {
       // 確保將 id 寫入 document id
       await _rostersCollection.doc(roster.id).set(_toFirestore(roster));
     } catch (e) {
-      print('Update Roster Error: $e');
+      log('Update Roster Error: $e');
       throw Exception('更新服事表失敗: $e');
     }
   }
@@ -118,7 +120,7 @@ class FirestoreRosterRepository implements RosterRepository {
         return MapEntry(type, List<String>.from(value));
       });
     } catch (e) {
-      print('Get Templates Error: $e');
+      log('Get Templates Error: $e');
       return {};
     }
   }
@@ -133,7 +135,7 @@ class FirestoreRosterRepository implements RosterRepository {
       });
       await _templatesDoc.set(data);
     } catch (e) {
-      print('Update Templates Error: $e');
+      log('Update Templates Error: $e');
       throw Exception('更新樣板失敗: $e');
     }
   }
@@ -159,7 +161,7 @@ class FirestoreRosterRepository implements RosterRepository {
       }
       return result;
     } catch (e) {
-      print('Get Event Options Error: $e');
+      log('Get Event Options Error: $e');
       return _defaultEventOptions();
     }
   }
@@ -179,7 +181,7 @@ class FirestoreRosterRepository implements RosterRepository {
       });
       await _eventOptionsDoc.set(data);
     } catch (e) {
-      print('Update Event Options Error: $e');
+      log('Update Event Options Error: $e');
       throw Exception('更新事件選項失敗: $e');
     }
   }
@@ -251,7 +253,7 @@ class FirestoreRosterRepository implements RosterRepository {
     final m = date.month.toString().padLeft(2, '0');
     final d = date.day.toString().padLeft(2, '0');
     final typeKey = type.toString().split('.').last;
-    return '${y}${m}${d}_$typeKey';
+    return '$y$m${d}_$typeKey';
   }
 
   String _serviceNameForType(ServiceType type) {

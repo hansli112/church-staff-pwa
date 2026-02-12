@@ -185,9 +185,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
             padding: const EdgeInsets.fromLTRB(2, 4, 2, 4),
             decoration: BoxDecoration(
               color: isSelected
-                  ? Theme.of(context).colorScheme.primary.withOpacity(0.12)
+                  ? Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.12)
                   : isToday
-                  ? Theme.of(context).colorScheme.secondary.withOpacity(0.12)
+                  ? Theme.of(
+                      context,
+                    ).colorScheme.secondary.withValues(alpha: 0.12)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
             ),
@@ -243,7 +247,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       margin: const EdgeInsets.only(bottom: 3),
       padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 2),
       decoration: BoxDecoration(
-        color: colorScheme.primaryContainer.withOpacity(0.8),
+        color: colorScheme.primaryContainer.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
@@ -390,10 +394,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
         });
       }
     } finally {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 }

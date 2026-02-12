@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -23,7 +25,7 @@ class FirebaseAuthRepository implements AuthRepository {
 
       return await _fetchUserFromFirestore(credential.user!.uid);
     } catch (e) {
-      print('Firebase Login Error: $e');
+      log('Firebase Login Error: $e');
       return null;
     }
   }
@@ -41,7 +43,7 @@ class FirebaseAuthRepository implements AuthRepository {
       if (!doc.exists) return null;
       return User.fromJson(doc.data() as Map<String, dynamic>);
     } catch (e) {
-      print('Fetch User Error: $e');
+      log('Fetch User Error: $e');
       return null;
     }
   }
@@ -72,8 +74,10 @@ class FirebaseAuthRepository implements AuthRepository {
         options: Firebase.app().options,
       );
 
-      final secondaryAuth = firebase_auth.FirebaseAuth.instanceFor(app: secondaryApp);
-      
+      final secondaryAuth = firebase_auth.FirebaseAuth.instanceFor(
+        app: secondaryApp,
+      );
+
       // 使用 User 物件中攜帶的完整 Email
       final credential = await secondaryAuth.createUserWithEmailAndPassword(
         email: user.email.trim(),
@@ -84,9 +88,8 @@ class FirebaseAuthRepository implements AuthRepository {
 
       final newUser = user.copyWith(id: uid);
       await _usersCollection.doc(uid).set(newUser.toJson());
-
     } catch (e) {
-      print('Add User Error: $e');
+      log('Add User Error: $e');
       throw Exception('無法新增使用者: $e');
     } finally {
       await secondaryApp?.delete();
@@ -104,7 +107,9 @@ class FirebaseAuthRepository implements AuthRepository {
           options: Firebase.app().options,
         );
 
-        final secondaryAuth = firebase_auth.FirebaseAuth.instanceFor(app: secondaryApp);
+        final secondaryAuth = firebase_auth.FirebaseAuth.instanceFor(
+          app: secondaryApp,
+        );
         final credential = await secondaryAuth.createUserWithEmailAndPassword(
           email: email,
           password: password,
@@ -118,7 +123,7 @@ class FirebaseAuthRepository implements AuthRepository {
         }
         return;
       } catch (e) {
-        print('Update User Error: $e');
+        log('Update User Error: $e');
         throw Exception('無法建立登入帳號: $e');
       } finally {
         await secondaryApp?.delete();

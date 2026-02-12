@@ -57,8 +57,8 @@ class RosterViewCard extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        backgroundColor: color.withOpacity(0.12),
-                        side: BorderSide(color: color.withOpacity(0.4)),
+                        backgroundColor: color.withValues(alpha: 0.12),
+                        side: BorderSide(color: color.withValues(alpha: 0.4)),
                         padding: EdgeInsets.zero,
                         labelPadding: const EdgeInsets.symmetric(
                           horizontal: 8,
@@ -68,8 +68,7 @@ class RosterViewCard extends StatelessWidget {
                           horizontal: -2,
                           vertical: -3,
                         ),
-                        materialTapTargetSize:
-                            MaterialTapTargetSize.shrinkWrap,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       );
                     }),
                   ],
@@ -111,7 +110,7 @@ class RosterViewCard extends StatelessWidget {
                       ],
                     ),
                   );
-                }).toList(),
+                }),
               ],
             ),
           ),

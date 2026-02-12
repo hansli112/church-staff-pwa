@@ -4,7 +4,8 @@ import 'package:provider/provider.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../roster/domain/entities/service_roster.dart';
 import '../../../roster/presentation/providers/roster_provider.dart';
-import '../../../calendar/presentation/screens/calendar_screen.dart' deferred as calendar;
+import '../../../calendar/presentation/screens/calendar_screen.dart'
+    deferred as calendar;
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -109,28 +110,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Navigator.of(context, rootNavigator: true).pop();
         dialogVisible = false;
       }
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => calendar.CalendarScreen(),
-        ),
-      );
+      await Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => calendar.CalendarScreen()));
     } catch (error) {
       if (!mounted) return;
       if (dialogVisible) {
         Navigator.of(context, rootNavigator: true).pop();
         dialogVisible = false;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('載入失敗: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('載入失敗: $error')));
     } finally {
-      if (!mounted) return;
-      if (dialogVisible) {
-        Navigator.of(context, rootNavigator: true).pop();
+      if (mounted) {
+        if (dialogVisible) {
+          Navigator.of(context, rootNavigator: true).pop();
+        }
+        setState(() {
+          _isLoadingCalendar = false;
+        });
       }
-      setState(() {
-        _isLoadingCalendar = false;
-      });
     }
   }
 
@@ -180,7 +180,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Scrollbar(
               child: ListView.separated(
                 itemCount: assignments.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                separatorBuilder: (_, itemIndex) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final assignment = assignments[index];
                   final dateText = DateFormat(
@@ -327,7 +327,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: color.withOpacity(0.2),
+          backgroundColor: color.withValues(alpha: 0.2),
           child: Icon(icon, color: color),
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),

@@ -113,7 +113,8 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
           final trimmed = value.trim();
           if (trimmed.isEmpty) return '請輸入名稱';
           final isDuplicate = existing.any(
-            (name) => name.trim() == trimmed && name.trim() != currentName?.trim(),
+            (name) =>
+                name.trim() == trimmed && name.trim() != currentName?.trim(),
           );
           if (isDuplicate) return '名稱已存在';
           return null;
@@ -140,10 +141,9 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
                   labelText: '服事項目名稱',
                   hintText: '例：敬拜主領',
                   hintStyle: TextStyle(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withOpacity(0.35),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.35),
                   ),
                   floatingLabelBehavior: FloatingLabelBehavior.always,
                   border: const OutlineInputBorder(),
@@ -175,15 +175,20 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
         appBar: AppBar(
           title: const Text('服事項目設定'),
           bottom: TabBar(
-            tabs: ServiceType.values.map((type) => Tab(text: type.label)).toList(),
+            tabs: ServiceType.values
+                .map((type) => Tab(text: type.label))
+                .toList(),
           ),
           actions: [
             IconButton(
               icon: const Icon(Icons.check),
               onPressed: () async {
-                await context.read<RosterProvider>().updateTemplates(_editingTemplates);
-                await context.read<AuthProvider>().cleanupUserMinistries(_editingTemplates);
-                if (mounted) Navigator.pop(context);
+                final rosterProvider = context.read<RosterProvider>();
+                final authProvider = context.read<AuthProvider>();
+                await rosterProvider.updateTemplates(_editingTemplates);
+                await authProvider.cleanupUserMinistries(_editingTemplates);
+                if (!context.mounted) return;
+                Navigator.pop(context);
               },
             ),
           ],

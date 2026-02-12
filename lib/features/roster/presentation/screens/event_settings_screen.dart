@@ -157,10 +157,9 @@ class _EventSettingsScreenState extends State<EventSettingsScreen> {
                       labelText: '事件名稱',
                       hintText: '例：聖餐主日',
                       hintStyle: TextStyle(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withOpacity(0.35),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.35),
                       ),
                       floatingLabelBehavior: FloatingLabelBehavior.always,
                       border: const OutlineInputBorder(),
@@ -194,9 +193,7 @@ class _EventSettingsScreenState extends State<EventSettingsScreen> {
                             shape: BoxShape.circle,
                             color: Color(colorValue),
                             border: Border.all(
-                              color: isSelected
-                                  ? Colors.black54
-                                  : Colors.white,
+                              color: isSelected ? Colors.black54 : Colors.white,
                               width: isSelected ? 2 : 1,
                             ),
                           ),
@@ -229,10 +226,10 @@ class _EventSettingsScreenState extends State<EventSettingsScreen> {
             IconButton(
               icon: const Icon(Icons.check),
               onPressed: () async {
-                await context.read<RosterProvider>().updateEventOptions(
-                  _editingOptions,
-                );
-                if (mounted) Navigator.pop(context);
+                final rosterProvider = context.read<RosterProvider>();
+                await rosterProvider.updateEventOptions(_editingOptions);
+                if (!context.mounted) return;
+                Navigator.pop(context);
               },
             ),
           ],
@@ -260,8 +257,9 @@ class _EventSettingsScreenState extends State<EventSettingsScreen> {
                             }
                             final item = options.removeAt(oldIndex);
                             options.insert(newIndex, item);
-                            _editingOptions[type] =
-                                List<EventOption>.from(options);
+                            _editingOptions[type] = List<EventOption>.from(
+                              options,
+                            );
                           });
                         },
                         itemBuilder: (context, index) {
@@ -286,7 +284,7 @@ class _EventSettingsScreenState extends State<EventSettingsScreen> {
                                     border: Border.all(
                                       color: Color(
                                         options[index].color,
-                                      ).withOpacity(0.6),
+                                      ).withValues(alpha: 0.6),
                                     ),
                                   ),
                                 ),
