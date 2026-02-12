@@ -235,6 +235,7 @@ class RosterCard extends StatelessWidget {
           onSubmit: (role, people, order) =>
               _addDuty(context, role, people, order),
           submitLabel: '新增',
+          useBottomSheet: false,
         );
       },
     );
@@ -320,6 +321,7 @@ class RosterCard extends StatelessWidget {
               _updateDuty(context, index, people, order),
           submitLabel: '儲存',
           roleEditable: false,
+          useBottomSheet: false,
         );
       },
     );

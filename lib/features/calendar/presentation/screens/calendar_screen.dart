@@ -15,7 +15,6 @@ class CalendarScreen extends StatefulWidget {
 }
 
 class _CalendarScreenState extends State<CalendarScreen> {
-  static const bool _debug = false;
   late DateTime _focusedMonth;
   DateTime? _selectedDay;
   List<_CalendarEvent> _events = [];
