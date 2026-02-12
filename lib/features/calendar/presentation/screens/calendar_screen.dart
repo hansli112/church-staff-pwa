@@ -15,37 +15,76 @@ class CalendarScreen extends StatefulWidget {
 }
 
 class _CalendarScreenState extends State<CalendarScreen> {
+  static const int _initialMonthPage = 12000;
+  static const Duration _monthSwitchDuration = Duration(milliseconds: 260);
+  static const double _calendarMainAxisSpacing = 6;
+
+  late final DateTime _anchorMonth;
+  late final PageController _monthPageController;
+  int _currentMonthPage = _initialMonthPage;
+
   late DateTime _focusedMonth;
   DateTime? _selectedDay;
-  List<_CalendarEvent> _events = [];
-  bool _isLoading = false;
-  String? _error;
+  final Map<String, List<_CalendarEvent>> _eventsByMonth = {};
+  final Set<String> _loadingMonths = {};
+  final Map<String, String?> _errorsByMonth = {};
 
   @override
   void initState() {
     super.initState();
     final now = DateTime.now();
-    _focusedMonth = DateTime(now.year, now.month, 1);
+    _anchorMonth = DateTime(now.year, now.month, 1);
+    _focusedMonth = _anchorMonth;
     _selectedDay = DateUtils.dateOnly(now);
-    _loadCachedEventsForMonth();
-    _loadEventsForMonth();
+
+    _monthPageController = PageController(initialPage: _initialMonthPage);
+
+    _loadMonthBundle(_focusedMonth);
+    _loadMonthBundle(_monthFromPage(_initialMonthPage - 1));
+    _loadMonthBundle(_monthFromPage(_initialMonthPage + 1));
+  }
+
+  @override
+  void dispose() {
+    _monthPageController.dispose();
+    super.dispose();
+  }
+
+  DateTime _monthFromPage(int page) {
+    final delta = page - _initialMonthPage;
+    return DateTime(_anchorMonth.year, _anchorMonth.month + delta, 1);
   }
 
   void _changeMonth(int offset) {
+    final targetPage = _currentMonthPage + offset;
+    _monthPageController.animateToPage(
+      targetPage,
+      duration: _monthSwitchDuration,
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  void _onMonthPageChanged(int page) {
+    final month = _monthFromPage(page);
     setState(() {
-      _focusedMonth = DateTime(
-        _focusedMonth.year,
-        _focusedMonth.month + offset,
-        1,
-      );
+      _currentMonthPage = page;
+      _focusedMonth = month;
       final now = DateTime.now();
-      final inSameMonth =
-          _focusedMonth.year == now.year && _focusedMonth.month == now.month;
+      final inSameMonth = month.year == now.year && month.month == now.month;
       _selectedDay = inSameMonth ? DateUtils.dateOnly(now) : null;
     });
-    _loadCachedEventsForMonth();
-    _loadEventsForMonth();
+
+    _loadMonthBundle(month);
+    _loadMonthBundle(_monthFromPage(page - 1));
+    _loadMonthBundle(_monthFromPage(page + 1));
   }
+
+  void _loadMonthBundle(DateTime month) {
+    _loadCachedEventsForMonth(month);
+    _loadEventsForMonth(month);
+  }
+
+  String? get _focusedError => _errorsByMonth[_cacheKeyForMonth(_focusedMonth)];
 
   @override
   Widget build(BuildContext context) {
@@ -68,9 +107,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   children: [
                     _buildMonthHeader(),
                     const SizedBox(height: 8),
-                    if (_error != null) ...[
+                    if (_focusedError != null) ...[
                       Text(
-                        _error!,
+                        _focusedError!,
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.error,
                           fontSize: 12,
@@ -80,7 +119,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     const SizedBox(height: 12),
                     _buildWeekdayHeader(),
                     const SizedBox(height: 8),
-                    _buildCalendarGrid(),
+                    _buildMonthPager(),
                   ],
                 ),
               ),
@@ -127,7 +166,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               child: Center(
                 child: Text(
                   label,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     color: Colors.black87,
                   ),
@@ -139,20 +178,42 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildCalendarGrid() {
-    final year = _focusedMonth.year;
-    final month = _focusedMonth.month;
+  Widget _buildMonthPager() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cellWidth = constraints.maxWidth / 7;
+        final cellHeight = cellWidth / 0.5;
+        final gridHeight = (cellHeight * 6) + (_calendarMainAxisSpacing * 5);
+
+        return SizedBox(
+          height: gridHeight,
+          child: PageView.builder(
+            controller: _monthPageController,
+            onPageChanged: _onMonthPageChanged,
+            itemBuilder: (context, index) {
+              final month = _monthFromPage(index);
+              return _buildCalendarGrid(month);
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCalendarGrid(DateTime displayedMonth) {
+    final year = displayedMonth.year;
+    final month = displayedMonth.month;
     final firstDay = DateTime(year, month, 1);
     final totalDays = DateUtils.getDaysInMonth(year, month);
     final startOffset = firstDay.weekday % 7;
-    final totalCells = 42;
+    const totalCells = 42;
 
     return GridView.builder(
-      shrinkWrap: true,
+      key: ValueKey<String>(_cacheKeyForMonth(displayedMonth)),
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 7,
-        mainAxisSpacing: 6,
+        mainAxisSpacing: _calendarMainAxisSpacing,
         crossAxisSpacing: 0,
         childAspectRatio: 0.5,
       ),
@@ -166,7 +227,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
         final date = DateTime(year, month, dayNumber);
         final dateOnly = DateUtils.dateOnly(date);
-        final isSelected = _selectedDay == dateOnly;
+        final isSelected = DateUtils.isSameDay(_selectedDay, dateOnly);
         final isToday = DateUtils.isSameDay(dateOnly, DateTime.now());
 
         final events = _eventsForDay(dateOnly);
@@ -265,7 +326,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   List<_CalendarEvent> _eventsForDay(DateTime date) {
-    return _events
+    final key = _cacheKeyForMonth(DateTime(date.year, date.month, 1));
+    final monthEvents = _eventsByMonth[key] ?? const <_CalendarEvent>[];
+    return monthEvents
         .where((event) => DateUtils.isSameDay(event.startTime, date))
         .toList()
       ..sort((a, b) => a.startTime.compareTo(b.startTime));
@@ -275,11 +338,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return 'calendar_events_${month.year}_${month.month.toString().padLeft(2, '0')}';
   }
 
-  Future<void> _loadCachedEventsForMonth() async {
+  Future<void> _loadCachedEventsForMonth(DateTime month) async {
     final prefs = await SharedPreferences.getInstance();
-    final key = _cacheKeyForMonth(_focusedMonth);
+    final key = _cacheKeyForMonth(month);
     final cached = prefs.getString(key);
     if (cached == null || cached.isEmpty) return;
+
     try {
       final data = jsonDecode(cached) as List<dynamic>;
       final events = data
@@ -287,31 +351,36 @@ class _CalendarScreenState extends State<CalendarScreen> {
           .toList();
       if (!mounted) return;
       setState(() {
-        _events = events;
+        _eventsByMonth[key] = events;
       });
     } catch (_) {
       // Ignore corrupted cache.
     }
   }
 
-  Future<void> _saveCachedEventsForMonth(List<_CalendarEvent> events) async {
+  Future<void> _saveCachedEventsForMonth(
+    DateTime month,
+    List<_CalendarEvent> events,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
-    final key = _cacheKeyForMonth(_focusedMonth);
+    final key = _cacheKeyForMonth(month);
     final payload = jsonEncode(events.map((e) => e.toJson()).toList());
     await prefs.setString(key, payload);
   }
 
-  Future<void> _loadEventsForMonth() async {
-    if (_isLoading) return;
+  Future<void> _loadEventsForMonth(DateTime month) async {
+    final key = _cacheKeyForMonth(month);
+    if (_loadingMonths.contains(key)) return;
+
     setState(() {
-      _isLoading = true;
-      _error = null;
+      _loadingMonths.add(key);
+      _errorsByMonth.remove(key);
     });
 
-    final monthStart = DateTime.utc(_focusedMonth.year, _focusedMonth.month, 1);
+    final monthStart = DateTime.utc(month.year, month.month, 1);
     final monthEnd = DateTime.utc(
-      _focusedMonth.year,
-      _focusedMonth.month + 1,
+      month.year,
+      month.month + 1,
       1,
     ).subtract(const Duration(seconds: 1));
 
@@ -337,6 +406,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     try {
       final response = await http.get(uri).timeout(const Duration(seconds: 10));
       if (!mounted) return;
+
       if (response.statusCode != 200) {
         String? message;
         try {
@@ -346,7 +416,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   as String?;
         } catch (_) {}
         setState(() {
-          _error = message == null || message.isEmpty
+          _errorsByMonth[key] = message == null || message.isEmpty
               ? '載入失敗（${response.statusCode}）'
               : '載入失敗（${response.statusCode}）：$message';
         });
@@ -375,28 +445,28 @@ class _CalendarScreenState extends State<CalendarScreen> {
         } catch (_) {}
       }
 
-      await _saveCachedEventsForMonth(events);
+      await _saveCachedEventsForMonth(month, events);
       if (!mounted) return;
       setState(() {
-        _events = events;
+        _eventsByMonth[key] = events;
       });
     } catch (_) {
       if (!mounted) return;
       final prefs = await SharedPreferences.getInstance();
-      final cached = prefs.getString(_cacheKeyForMonth(_focusedMonth));
+      final cached = prefs.getString(key);
       if (cached == null) {
         setState(() {
-          _error = '離線或連線逾時，且沒有快取資料';
+          _errorsByMonth[key] = '離線或連線逾時，且沒有快取資料';
         });
       } else {
         setState(() {
-          _error = null;
+          _errorsByMonth[key] = null;
         });
       }
     } finally {
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          _loadingMonths.remove(key);
         });
       }
     }
