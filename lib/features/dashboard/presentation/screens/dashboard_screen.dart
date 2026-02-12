@@ -1,7 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../../core/config/google_calendar_config.dart';
 import '../../../roster/domain/entities/service_roster.dart';
 import '../../../roster/presentation/providers/roster_provider.dart';
 import '../../../calendar/presentation/screens/calendar_screen.dart'
@@ -16,6 +21,9 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   bool _isLoadingCalendar = false;
+  bool _isLoadingRecentActivities = false;
+  String? _recentActivitiesError;
+  List<_DashboardCalendarEvent> _recentActivities = const [];
 
   @override
   void initState() {
@@ -26,6 +34,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         rosterProvider.fetchInitialData();
       }
     });
+    _loadRecentActivities();
   }
 
   @override
@@ -54,14 +63,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               color: Colors.orangeAccent,
             ),
             const SizedBox(height: 16),
-            _buildFeatureCard(
-              context,
-              icon: Icons.calendar_month,
-              title: '行事曆',
-              description: '教會年度活動一覽',
-              color: Colors.purpleAccent,
-              onTap: _openCalendar,
-            ),
+            _buildCalendarFeatureCard(context),
             const SizedBox(height: 20),
             _buildSeasonServiceSection(context, fullName: fullName),
           ],
@@ -132,6 +134,265 @@ class _DashboardScreenState extends State<DashboardScreen> {
         });
       }
     }
+  }
+
+  Future<void> _loadRecentActivities() async {
+    if (mounted) {
+      setState(() {
+        _isLoadingRecentActivities = true;
+        _recentActivitiesError = null;
+      });
+    }
+
+    final now = DateTime.now();
+    final months = <DateTime>[
+      DateTime(now.year, now.month, 1),
+      DateTime(now.year, now.month + 1, 1),
+    ];
+
+    final cachedByMonth = await Future.wait(
+      months.map(_loadCachedEventsForMonth),
+    );
+    final cachedUpcoming = _mergeUpcomingEvents(
+      cachedByMonth.expand((events) => events).toList(),
+    );
+
+    if (mounted && cachedUpcoming.isNotEmpty) {
+      setState(() {
+        _recentActivities = cachedUpcoming;
+      });
+    }
+
+    try {
+      final fetchedByMonth = await Future.wait(
+        months.map(_fetchEventsForMonth),
+      );
+      for (var i = 0; i < months.length; i++) {
+        await _saveCachedEventsForMonth(months[i], fetchedByMonth[i]);
+      }
+      final fetchedUpcoming = _mergeUpcomingEvents(
+        fetchedByMonth.expand((events) => events).toList(),
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _recentActivities = fetchedUpcoming;
+        _recentActivitiesError = null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      if (cachedUpcoming.isEmpty) {
+        setState(() {
+          _recentActivitiesError = '近期活動載入失敗';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingRecentActivities = false;
+        });
+      }
+    }
+  }
+
+  List<_DashboardCalendarEvent> _mergeUpcomingEvents(
+    List<_DashboardCalendarEvent> events,
+  ) {
+    final today = DateUtils.dateOnly(DateTime.now());
+    final merged =
+        events
+            .where(
+              (event) => event.isAllDay
+                  ? !DateUtils.dateOnly(event.startTime).isBefore(today)
+                  : !event.startTime.isBefore(DateTime.now()),
+            )
+            .toList()
+          ..sort((a, b) => a.startTime.compareTo(b.startTime));
+
+    if (merged.length <= 3) return merged;
+    return merged.take(3).toList();
+  }
+
+  String _cacheKeyForMonth(DateTime month) {
+    return 'calendar_events_${month.year}_${month.month.toString().padLeft(2, '0')}';
+  }
+
+  Future<List<_DashboardCalendarEvent>> _loadCachedEventsForMonth(
+    DateTime month,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = _cacheKeyForMonth(month);
+    final cached = prefs.getString(key);
+    if (cached == null || cached.isEmpty) return const [];
+
+    try {
+      final data = jsonDecode(cached) as List<dynamic>;
+      return data.map((raw) => _DashboardCalendarEvent.fromJson(raw)).toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<void> _saveCachedEventsForMonth(
+    DateTime month,
+    List<_DashboardCalendarEvent> events,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = _cacheKeyForMonth(month);
+    final payload = jsonEncode(events.map((event) => event.toJson()).toList());
+    await prefs.setString(key, payload);
+  }
+
+  Future<List<_DashboardCalendarEvent>> _fetchEventsForMonth(
+    DateTime month,
+  ) async {
+    final monthStart = DateTime.utc(month.year, month.month, 1);
+    final monthEnd = DateTime.utc(
+      month.year,
+      month.month + 1,
+      1,
+    ).subtract(const Duration(seconds: 1));
+
+    final uri =
+        Uri.https('www.googleapis.com', '', {
+          'key': GoogleCalendarConfig.apiKey,
+          'singleEvents': 'true',
+          'orderBy': 'startTime',
+          'maxResults': '250',
+          'timeMin': monthStart.toIso8601String(),
+          'timeMax': monthEnd.toIso8601String(),
+          'timeZone': GoogleCalendarConfig.timeZone,
+        }).replace(
+          pathSegments: [
+            'calendar',
+            'v3',
+            'calendars',
+            GoogleCalendarConfig.calendarId,
+            'events',
+          ],
+        );
+
+    final response = await http.get(uri).timeout(const Duration(seconds: 10));
+    if (response.statusCode != 200) {
+      throw Exception('calendar_fetch_failed_${response.statusCode}');
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final items = data['items'] as List<dynamic>? ?? [];
+    final events = <_DashboardCalendarEvent>[];
+
+    for (var i = 0; i < items.length; i++) {
+      try {
+        final raw = items[i] as Map<String, dynamic>;
+        if (raw['status'] == 'cancelled') continue;
+        final start = raw['start'] as Map<String, dynamic>?;
+        final dateTimeRaw = start?['dateTime'];
+        final dateRaw = start?['date'];
+        final startRaw = dateTimeRaw ?? dateRaw;
+        if (startRaw is! String) continue;
+        final title = (raw['summary'] as String?)?.trim();
+        events.add(
+          _DashboardCalendarEvent(
+            startTime: DateTime.parse(startRaw).toLocal(),
+            title: title == null || title.isEmpty ? '未命名活動' : title,
+            isAllDay: dateTimeRaw == null && dateRaw is String,
+          ),
+        );
+      } catch (_) {}
+    }
+
+    return events;
+  }
+
+  Widget _buildCalendarFeatureCard(BuildContext context) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Column(
+        children: [
+          ListTile(
+            leading: CircleAvatar(
+              backgroundColor: Colors.purpleAccent.withValues(alpha: 0.2),
+              child: const Icon(
+                Icons.calendar_month,
+                color: Colors.purpleAccent,
+              ),
+            ),
+            title: const Text(
+              '行事曆',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: const Text('教會年度活動一覽'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _openCalendar,
+          ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            child: _buildRecentActivitiesContent(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentActivitiesContent() {
+    if (_isLoadingRecentActivities && _recentActivities.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 4),
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+
+    if (_recentActivitiesError != null && _recentActivities.isEmpty) {
+      return Text(
+        _recentActivitiesError!,
+        style: TextStyle(color: Theme.of(context).colorScheme.error),
+      );
+    }
+
+    if (_recentActivities.isEmpty) {
+      return const Text('近期暫無活動');
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('近期活動', style: TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        ..._recentActivities.map((event) {
+          final dateText = event.isAllDay
+              ? DateFormat('MM/dd (E)', 'zh_TW').format(event.startTime)
+              : DateFormat('MM/dd (E) HH:mm', 'zh_TW').format(event.startTime);
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 110,
+                  child: Text(
+                    dateText,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    event.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
   }
 
   Widget _buildSeasonServiceSection(
@@ -349,4 +610,31 @@ class _UserServiceAssignment {
   final List<String> roles;
 
   const _UserServiceAssignment({required this.roster, required this.roles});
+}
+
+class _DashboardCalendarEvent {
+  final DateTime startTime;
+  final String title;
+  final bool isAllDay;
+
+  const _DashboardCalendarEvent({
+    required this.startTime,
+    required this.title,
+    required this.isAllDay,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'startTime': startTime.toIso8601String(),
+    'title': title,
+    'isAllDay': isAllDay,
+  };
+
+  factory _DashboardCalendarEvent.fromJson(dynamic raw) {
+    final json = raw as Map<String, dynamic>;
+    return _DashboardCalendarEvent(
+      startTime: DateTime.parse(json['startTime'] as String).toLocal(),
+      title: json['title'] as String,
+      isAllDay: json['isAllDay'] as bool? ?? false,
+    );
+  }
 }
