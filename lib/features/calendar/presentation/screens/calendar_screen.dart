@@ -34,10 +34,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   void _changeMonth(int offset) {
     setState(() {
-      _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month + offset, 1);
+      _focusedMonth = DateTime(
+        _focusedMonth.year,
+        _focusedMonth.month + offset,
+        1,
+      );
       final now = DateTime.now();
-      final inSameMonth = _focusedMonth.year == now.year &&
-          _focusedMonth.month == now.month;
+      final inSameMonth =
+          _focusedMonth.year == now.year && _focusedMonth.month == now.month;
       _selectedDay = inSameMonth ? DateUtils.dateOnly(now) : null;
     });
     _loadCachedEventsForMonth();
@@ -184,7 +188,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               color: isSelected
                   ? Theme.of(context).colorScheme.primary.withOpacity(0.12)
                   : isToday
-                      ? Theme.of(context).colorScheme.secondary.withOpacity(0.12)
+                  ? Theme.of(context).colorScheme.secondary.withOpacity(0.12)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
             ),
@@ -207,7 +211,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: visibleEvents
-                          .map((event) => _buildEventLine(event, maxLinesPerEvent))
+                          .map(
+                            (event) => _buildEventLine(event, maxLinesPerEvent),
+                          )
                           .toList(),
                     ),
                   ),
@@ -232,17 +238,24 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildEventLine(_CalendarEvent event, int maxLines) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 3),
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 2),
+      decoration: BoxDecoration(
+        color: colorScheme.primaryContainer.withOpacity(0.8),
+        borderRadius: BorderRadius.circular(4),
+      ),
       child: Text(
         event.title,
         maxLines: maxLines,
         softWrap: true,
-        overflow: TextOverflow.visible,
-        style: const TextStyle(
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w500,
-          color: Colors.black87,
+          color: colorScheme.onPrimaryContainer,
         ),
       ),
     );
@@ -267,9 +280,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     try {
       final data = jsonDecode(cached) as List<dynamic>;
       final events = data
-          .map(
-            (raw) => _CalendarEvent.fromJson(raw as Map<String, dynamic>),
-          )
+          .map((raw) => _CalendarEvent.fromJson(raw as Map<String, dynamic>))
           .toList();
       if (!mounted) return;
       setState(() {
@@ -301,31 +312,27 @@ class _CalendarScreenState extends State<CalendarScreen> {
       1,
     ).subtract(const Duration(seconds: 1));
 
-    final uri = Uri.https(
-      'www.googleapis.com',
-      '',
-      {
-        'key': GoogleCalendarConfig.apiKey,
-        'singleEvents': 'true',
-        'orderBy': 'startTime',
-        'maxResults': '250',
-        'timeMin': monthStart.toIso8601String(),
-        'timeMax': monthEnd.toIso8601String(),
-        'timeZone': GoogleCalendarConfig.timeZone,
-      },
-    ).replace(
-      pathSegments: [
-        'calendar',
-        'v3',
-        'calendars',
-        GoogleCalendarConfig.calendarId,
-        'events',
-      ],
-    );
+    final uri =
+        Uri.https('www.googleapis.com', '', {
+          'key': GoogleCalendarConfig.apiKey,
+          'singleEvents': 'true',
+          'orderBy': 'startTime',
+          'maxResults': '250',
+          'timeMin': monthStart.toIso8601String(),
+          'timeMax': monthEnd.toIso8601String(),
+          'timeZone': GoogleCalendarConfig.timeZone,
+        }).replace(
+          pathSegments: [
+            'calendar',
+            'v3',
+            'calendars',
+            GoogleCalendarConfig.calendarId,
+            'events',
+          ],
+        );
 
     try {
-      final response =
-          await http.get(uri).timeout(const Duration(seconds: 10));
+      final response = await http.get(uri).timeout(const Duration(seconds: 10));
       if (!mounted) return;
       if (response.statusCode != 200) {
         String? message;
@@ -396,15 +403,12 @@ class _CalendarEvent {
   final DateTime startTime;
   final String title;
 
-  const _CalendarEvent({
-    required this.startTime,
-    required this.title,
-  });
+  const _CalendarEvent({required this.startTime, required this.title});
 
   Map<String, dynamic> toJson() => {
-        'startTime': startTime.toIso8601String(),
-        'title': title,
-      };
+    'startTime': startTime.toIso8601String(),
+    'title': title,
+  };
 
   factory _CalendarEvent.fromJson(Map<String, dynamic> json) {
     return _CalendarEvent(
