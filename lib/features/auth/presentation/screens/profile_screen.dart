@@ -188,7 +188,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           SwitchListTile(
             secondary: const Icon(Icons.notifications_active),
             title: const Text('服事通知'),
-            subtitle: Text(_isPushEnabled ? '已開啟' : '已關閉'),
+            subtitle: Text(
+              '${_isPushEnabled ? '已開啟' : '已關閉'} ・每週一 19:00 提醒本週服事',
+            ),
             value: _isPushEnabled,
             onChanged: _isPushLoading ? null : _togglePush,
           ),
