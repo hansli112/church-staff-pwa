@@ -52,9 +52,123 @@
       outline: none !important;
       box-shadow: none !important;
     }
+
+    #app-loading {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      background: #ffffff;
+      color: #1f2937;
+      font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      z-index: 9999;
+    }
+
+    #app-loading .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid #d1d5db;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    #app-loading .title {
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    #app-loading .subtitle {
+      font-size: 14px;
+      color: #4b5563;
+      text-align: center;
+      line-height: 1.5;
+      max-width: 320px;
+      padding: 0 16px;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
   </style>
 </head>
 <body>
+  <div id="app-loading" role="status" aria-live="polite">
+    <div class="spinner" aria-hidden="true"></div>
+    <div class="title">載入中</div>
+    <div class="subtitle" id="app-loading-message">首次開啟或有更新時會需要較久時間，請稍候。</div>
+  </div>
+
+  <script>
+    let isUpdateInProgress = false;
+
+    function setLoadingMessage(text) {
+      const message = document.getElementById('app-loading-message');
+      if (message) {
+        message.textContent = text;
+      }
+    }
+
+    function hideLoadingScreen() {
+      const loading = document.getElementById('app-loading');
+      if (loading) {
+        loading.remove();
+      }
+    }
+
+    window.addEventListener('flutter-first-frame', hideLoadingScreen);
+
+    setTimeout(function () {
+      if (!isUpdateInProgress) {
+        setLoadingMessage('正在下載最新內容，請保持網路連線並稍候。');
+      }
+    }, 7000);
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        isUpdateInProgress = false;
+      });
+
+      navigator.serviceWorker.ready
+        .then(function (registration) {
+          registration.addEventListener('updatefound', function () {
+            const newWorker = registration.installing;
+            if (!newWorker) {
+              return;
+            }
+
+            isUpdateInProgress = true;
+            setLoadingMessage('發現新版本，正在下載更新...');
+
+            newWorker.addEventListener('statechange', function () {
+              if (newWorker.state === 'installed') {
+                if (navigator.serviceWorker.controller) {
+                  setLoadingMessage('更新下載完成，正在套用新版本...');
+                } else {
+                  isUpdateInProgress = false;
+                }
+              } else if (newWorker.state === 'redundant') {
+                isUpdateInProgress = false;
+                setLoadingMessage('更新失敗，請重新整理後再試。');
+              }
+            });
+          });
+        })
+        .catch(function () {
+          // Ignore service worker readiness errors.
+        });
+
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('firebase-messaging-sw.js');
+      });
+    }
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
