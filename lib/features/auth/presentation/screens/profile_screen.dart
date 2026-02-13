@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../../core/services/push_notification_service.dart';
 import '../providers/auth_provider.dart';
 import 'user_management_screen.dart' deferred as user_management_screen;
 import 'group_settings_screen.dart' deferred as group_settings_screen;
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  String? _statusUserId;
+  bool _isPushEnabled = false;
+  bool _isPushLoading = false;
 
   Future<void> _loadAndPush(
     BuildContext context,
@@ -25,23 +35,77 @@ class ProfileScreen extends StatelessWidget {
         Navigator.of(context, rootNavigator: true).pop();
         dialogShown = false;
       }
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => builder()),
-      );
+      Navigator.push(context, MaterialPageRoute(builder: (_) => builder()));
     } catch (error) {
       if (context.mounted) {
         if (dialogShown) {
           Navigator.of(context, rootNavigator: true).pop();
           dialogShown = false;
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('載入失敗: $error')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('載入失敗: $error')));
       }
     } finally {
       if (dialogShown && context.mounted) {
         Navigator.of(context, rootNavigator: true).pop();
+      }
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final userId = context.read<AuthProvider>().currentUser?.id;
+    if (_statusUserId == userId) return;
+    _statusUserId = userId;
+    _refreshPushStatus();
+  }
+
+  Future<void> _refreshPushStatus() async {
+    final userId = _statusUserId;
+    if (userId == null) return;
+    setState(() => _isPushLoading = true);
+    try {
+      final pushService = context.read<PushNotificationService>();
+      final enabled = await pushService.isNotificationEnabledForUser(userId);
+      if (!mounted || _statusUserId != userId) return;
+      setState(() => _isPushEnabled = enabled);
+    } catch (_) {
+      if (!mounted || _statusUserId != userId) return;
+      setState(() => _isPushEnabled = false);
+    } finally {
+      if (mounted && _statusUserId == userId) {
+        setState(() => _isPushLoading = false);
+      }
+    }
+  }
+
+  Future<void> _togglePush(bool value) async {
+    final userId = context.read<AuthProvider>().currentUser?.id;
+    if (userId == null) return;
+    setState(() => _isPushLoading = true);
+    try {
+      final pushService = context.read<PushNotificationService>();
+      final enabled = await pushService.setNotificationEnabled(
+        userId: userId,
+        enabled: value,
+      );
+      if (!mounted) return;
+      setState(() => _isPushEnabled = enabled);
+      if (value && !enabled) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('通知未啟用，請確認瀏覽器通知權限設定。')));
+      }
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('更新通知設定失敗: $error')));
+    } finally {
+      if (mounted) {
+        setState(() => _isPushLoading = false);
       }
     }
   }
@@ -54,9 +118,7 @@ class ProfileScreen extends StatelessWidget {
     if (user == null) return const SizedBox.shrink();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('個人中心'),
-      ),
+      appBar: AppBar(title: const Text('個人中心')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -78,14 +140,16 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 Text(
                   '@${user.username}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
                 ),
                 const SizedBox(height: 8),
                 Chip(
                   label: Text(user.role.label),
-                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer,
                 ),
               ],
             ),
@@ -120,7 +184,17 @@ class ProfileScreen extends StatelessWidget {
           ],
 
           const Divider(),
-          
+
+          SwitchListTile(
+            secondary: const Icon(Icons.notifications_active),
+            title: const Text('服事通知'),
+            subtitle: Text(_isPushEnabled ? '已開啟' : '已關閉'),
+            value: _isPushEnabled,
+            onChanged: _isPushLoading ? null : _togglePush,
+          ),
+
+          const Divider(),
+
           // Logout Button
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
@@ -138,7 +212,10 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(context, true),
-                      child: const Text('登出', style: TextStyle(color: Colors.red)),
+                      child: const Text(
+                        '登出',
+                        style: TextStyle(color: Colors.red),
+                      ),
                     ),
                   ],
                 ),

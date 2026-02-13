@@ -42,6 +42,7 @@ class ChurchApp extends StatelessWidget {
     );
     return MultiProvider(
       providers: [
+        Provider<PushNotificationService>.value(value: pushNotificationService),
         ChangeNotifierProvider(
           create: (_) => RosterProvider(FirestoreRosterRepository()),
         ),

@@ -61,7 +61,10 @@ class PushNotificationService {
       }
 
       if (userId == null) return;
-      final permissionGranted = await _ensureNotificationPermission();
+      final settings = await _messaging.getNotificationSettings();
+      final permissionGranted =
+          settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional;
       if (!permissionGranted) return;
 
       const vapidKey = String.fromEnvironment('FCM_WEB_VAPID_KEY');
@@ -81,6 +84,70 @@ class PushNotificationService {
       log('FCM token sync failed: $e', stackTrace: st);
       return;
     }
+  }
+
+  Future<bool> isNotificationEnabledForUser(String? userId) async {
+    if (!kIsWeb || !_initialized || userId == null) return false;
+
+    final settings = await _messaging.getNotificationSettings();
+    final granted =
+        settings.authorizationStatus == AuthorizationStatus.authorized ||
+        settings.authorizationStatus == AuthorizationStatus.provisional;
+    if (!granted) return false;
+
+    const vapidKey = String.fromEnvironment('FCM_WEB_VAPID_KEY');
+    if (vapidKey.isEmpty) return false;
+
+    final token = await _messaging.getToken(vapidKey: vapidKey);
+    if (token == null || token.isEmpty) return false;
+
+    _lastRegisteredToken = token;
+    final doc = await _firestore.collection('users').doc(userId).get();
+    final data = doc.data();
+    if (data == null) return false;
+
+    final fcm = data['fcm'];
+    if (fcm is! Map<String, dynamic>) return false;
+    final tokens = fcm['webTokens'];
+    if (tokens is! List) return false;
+
+    return tokens.whereType<String>().contains(token);
+  }
+
+  Future<bool> setNotificationEnabled({
+    required String userId,
+    required bool enabled,
+  }) async {
+    if (!kIsWeb || !_initialized) return false;
+    _currentUserId = userId;
+
+    const vapidKey = String.fromEnvironment('FCM_WEB_VAPID_KEY');
+    if (vapidKey.isEmpty) {
+      log(
+        'Missing FCM_WEB_VAPID_KEY. Run with '
+        '--dart-define=FCM_WEB_VAPID_KEY=<PUBLIC_VAPID_KEY>.',
+      );
+      return false;
+    }
+
+    if (enabled) {
+      final granted = await _ensureNotificationPermission();
+      if (!granted) return false;
+
+      final token = await _messaging.getToken(vapidKey: vapidKey);
+      if (token == null || token.isEmpty) return false;
+      await _saveToken(userId, token);
+      return true;
+    }
+
+    final token =
+        _lastRegisteredToken ?? await _messaging.getToken(vapidKey: vapidKey);
+    if (token != null && token.isNotEmpty) {
+      await _removeToken(userId, token);
+    }
+    await _messaging.deleteToken();
+    _lastRegisteredToken = null;
+    return false;
   }
 
   Future<void> _saveToken(String userId, String token) async {
