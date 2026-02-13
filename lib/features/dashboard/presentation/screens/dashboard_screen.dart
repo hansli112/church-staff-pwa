@@ -20,6 +20,9 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  static const int _recentActivitiesLimit = 3;
+  static const int _recentActivitiesFetchMax = 20;
+
   bool _isLoadingCalendar = false;
   bool _isLoadingRecentActivities = false;
   String? _recentActivitiesError;
@@ -144,18 +147,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       });
     }
 
-    final now = DateTime.now();
-    final months = <DateTime>[
-      DateTime(now.year, now.month, 1),
-      DateTime(now.year, now.month + 1, 1),
-    ];
-
-    final cachedByMonth = await Future.wait(
-      months.map(_loadCachedEventsForMonth),
-    );
-    final cachedUpcoming = _mergeUpcomingEvents(
-      cachedByMonth.expand((events) => events).toList(),
-    );
+    final cached = await _loadCachedRecentActivities();
+    final cachedUpcoming = _mergeUpcomingEvents(cached);
 
     if (mounted && cachedUpcoming.isNotEmpty) {
       setState(() {
@@ -164,15 +157,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     try {
-      final fetchedByMonth = await Future.wait(
-        months.map(_fetchEventsForMonth),
-      );
-      for (var i = 0; i < months.length; i++) {
-        await _saveCachedEventsForMonth(months[i], fetchedByMonth[i]);
-      }
-      final fetchedUpcoming = _mergeUpcomingEvents(
-        fetchedByMonth.expand((events) => events).toList(),
-      );
+      final fetched = await _fetchRecentActivities();
+      final fetchedUpcoming = _mergeUpcomingEvents(fetched);
+      await _saveCachedRecentActivities(fetchedUpcoming);
 
       if (!mounted) return;
       setState(() {
@@ -209,19 +196,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
             .toList()
           ..sort((a, b) => a.startTime.compareTo(b.startTime));
 
-    if (merged.length <= 3) return merged;
-    return merged.take(3).toList();
+    if (merged.length <= _recentActivitiesLimit) return merged;
+    return merged.take(_recentActivitiesLimit).toList();
   }
 
-  String _cacheKeyForMonth(DateTime month) {
-    return 'calendar_events_${month.year}_${month.month.toString().padLeft(2, '0')}';
+  String _cacheKeyForRecentActivities() {
+    return 'dashboard_recent_activities_v1';
   }
 
-  Future<List<_DashboardCalendarEvent>> _loadCachedEventsForMonth(
-    DateTime month,
-  ) async {
+  Future<List<_DashboardCalendarEvent>> _loadCachedRecentActivities() async {
     final prefs = await SharedPreferences.getInstance();
-    final key = _cacheKeyForMonth(month);
+    final key = _cacheKeyForRecentActivities();
     final cached = prefs.getString(key);
     if (cached == null || cached.isEmpty) return const [];
 
@@ -233,35 +218,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  Future<void> _saveCachedEventsForMonth(
-    DateTime month,
+  Future<void> _saveCachedRecentActivities(
     List<_DashboardCalendarEvent> events,
   ) async {
     final prefs = await SharedPreferences.getInstance();
-    final key = _cacheKeyForMonth(month);
+    final key = _cacheKeyForRecentActivities();
     final payload = jsonEncode(events.map((event) => event.toJson()).toList());
     await prefs.setString(key, payload);
   }
 
-  Future<List<_DashboardCalendarEvent>> _fetchEventsForMonth(
-    DateTime month,
-  ) async {
-    final monthStart = DateTime.utc(month.year, month.month, 1);
-    final monthEnd = DateTime.utc(
-      month.year,
-      month.month + 1,
-      1,
-    ).subtract(const Duration(seconds: 1));
+  Future<List<_DashboardCalendarEvent>> _fetchRecentActivities() async {
+    final now = DateTime.now();
+    final todayStart = DateUtils.dateOnly(now).toUtc();
 
     final uri =
         Uri.https('www.googleapis.com', '', {
           'key': GoogleCalendarConfig.apiKey,
           'singleEvents': 'true',
           'orderBy': 'startTime',
-          'maxResults': '250',
-          'timeMin': monthStart.toIso8601String(),
-          'timeMax': monthEnd.toIso8601String(),
+          'maxResults': _recentActivitiesFetchMax.toString(),
+          'timeMin': todayStart.toIso8601String(),
           'timeZone': GoogleCalendarConfig.timeZone,
+          'fields': 'items(status,start,summary)',
         }).replace(
           pathSegments: [
             'calendar',
