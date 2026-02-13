@@ -57,7 +57,8 @@ flutter run -d chrome
 產生用於部署的靜態檔案（適用於 GitHub Pages、Firebase Hosting 等）：
 
 ```bash
-flutter build web --release --base-href /
+flutter build web --release --base-href / \
+  --dart-define=FCM_WEB_VAPID_KEY=<PUBLIC_VAPID_KEY>
 ```
 
 ## 💻 開發規範

@@ -166,7 +166,13 @@
         });
 
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('firebase-messaging-sw.js');
+        navigator.serviceWorker
+          .register('firebase-messaging-sw.js', {
+            scope: 'firebase-cloud-messaging-push-scope',
+          })
+          .catch(function (error) {
+            console.error('Firebase messaging SW registration failed:', error);
+          });
       });
     }
   </script>
