@@ -88,44 +88,107 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final viewportWidth = MediaQuery.sizeOf(context).width;
+    final isDesktopLayout = viewportWidth >= 900;
+    final maxContentWidth = viewportWidth >= 900
+        ? (viewportWidth * 0.94).clamp(1100.0, 1600.0)
+        : double.infinity;
+
     return Scaffold(
       appBar: AppBar(title: const Text('行事曆'), centerTitle: true, elevation: 0),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          if (isDesktopLayout) {
+            return Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxContentWidth),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 16,
+                  ),
+                  child: Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildMonthHeader(),
+                          const SizedBox(height: 8),
+                          if (_focusedError != null) ...[
+                            Text(
+                              _focusedError!,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 12),
+                          _buildWeekdayHeader(),
+                          const SizedBox(height: 8),
+                          Expanded(child: _buildMonthPager()),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
+            );
+          }
+
+          return Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxContentWidth),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 6,
+                  vertical: 16,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildMonthHeader(),
-                    const SizedBox(height: 8),
-                    if (_focusedError != null) ...[
-                      Text(
-                        _focusedError!,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                          fontSize: 12,
+                    Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildMonthHeader(),
+                            const SizedBox(height: 8),
+                            if (_focusedError != null) ...[
+                              Text(
+                                _focusedError!,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 12),
+                            _buildWeekdayHeader(),
+                            const SizedBox(height: 8),
+                            _buildMonthPager(),
+                          ],
                         ),
                       ),
-                    ],
-                    const SizedBox(height: 12),
-                    _buildWeekdayHeader(),
-                    const SizedBox(height: 8),
-                    _buildMonthPager(),
+                    ),
                   ],
                 ),
               ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -181,8 +244,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget _buildMonthPager() {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final cellAspectRatio = _calendarAspectRatioForWidth(
+          constraints.maxWidth,
+          availableHeight: constraints.hasBoundedHeight
+              ? constraints.maxHeight
+              : null,
+        );
         final cellWidth = constraints.maxWidth / 7;
-        final cellHeight = cellWidth / 0.5;
+        final cellHeight = cellWidth / cellAspectRatio;
         final gridHeight = (cellHeight * 6) + (_calendarMainAxisSpacing * 5);
 
         return SizedBox(
@@ -192,7 +261,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             onPageChanged: _onMonthPageChanged,
             itemBuilder: (context, index) {
               final month = _monthFromPage(index);
-              return _buildCalendarGrid(month);
+              return _buildCalendarGrid(month, cellAspectRatio, cellHeight);
             },
           ),
         );
@@ -200,7 +269,37 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildCalendarGrid(DateTime displayedMonth) {
+  double _calendarAspectRatioForWidth(double width, {double? availableHeight}) {
+    if (availableHeight != null && availableHeight > 0) {
+      final targetGridHeight = (availableHeight - 1).clamp(220.0, 800.0);
+      final targetCellHeight =
+          (targetGridHeight - (_calendarMainAxisSpacing * 5)) / 6;
+      final cellWidth = width / 7;
+      return (cellWidth / targetCellHeight).clamp(0.8, 2.6);
+    }
+
+    if (width >= 1200) return 1.3;
+    if (width >= 900) return 1.0;
+    if (width >= 700) return 0.75;
+    return 0.5;
+  }
+
+  int _maxVisibleEventsForCellHeight(double cellHeight) {
+    const reservedHeaderHeight = 24.0;
+    const overflowIndicatorHeight = 14.0;
+    const eventRowHeight = 19.0;
+
+    final usableHeight =
+        cellHeight - reservedHeaderHeight - overflowIndicatorHeight;
+    final estimatedCount = (usableHeight / eventRowHeight).floor();
+    return estimatedCount.clamp(1, 6).toInt();
+  }
+
+  Widget _buildCalendarGrid(
+    DateTime displayedMonth,
+    double cellAspectRatio,
+    double cellHeight,
+  ) {
     final year = displayedMonth.year;
     final month = displayedMonth.month;
     final firstDay = DateTime(year, month, 1);
@@ -211,11 +310,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return GridView.builder(
       key: ValueKey<String>(_cacheKeyForMonth(displayedMonth)),
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 7,
         mainAxisSpacing: _calendarMainAxisSpacing,
         crossAxisSpacing: 0,
-        childAspectRatio: 0.5,
+        childAspectRatio: cellAspectRatio,
       ),
       itemCount: totalCells,
       itemBuilder: (context, index) {
@@ -231,9 +330,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
         final isToday = DateUtils.isSameDay(dateOnly, DateTime.now());
 
         final events = _eventsForDay(dateOnly);
-        final visibleEvents = events.take(2).toList();
+        final maxVisibleEvents = _maxVisibleEventsForCellHeight(cellHeight);
+        final visibleEvents = events.take(maxVisibleEvents).toList();
         final overflowCount = events.length - visibleEvents.length;
-        final maxLinesPerEvent = visibleEvents.length > 1 ? 2 : 3;
+        const maxLinesPerEvent = 2;
 
         return InkWell(
           onTap: () {
