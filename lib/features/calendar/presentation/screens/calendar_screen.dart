@@ -336,7 +336,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         final maxVisibleEvents = _maxVisibleEventsForCellHeight(cellHeight);
         final visibleEvents = daySegments.take(maxVisibleEvents).toList();
         final overflowCount = daySegments.length - visibleEvents.length;
-        const maxLinesPerEvent = 1;
+        const maxLinesPerEvent = 2;
 
         return InkWell(
           onTap: () {
@@ -434,8 +434,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
     final textWidget = Text(
       segment.event.title,
-      maxLines: maxLines,
-      softWrap: false,
+      maxLines: isMultiDay ? 1 : maxLines,
+      softWrap: !isMultiDay,
       overflow: isMultiDay ? TextOverflow.visible : TextOverflow.ellipsis,
       style: textStyle,
     );
