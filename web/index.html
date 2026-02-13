@@ -108,6 +108,8 @@
 
   <script>
     let isUpdateInProgress = false;
+    const APP_VERSION_KEY = 'church_staff_pwa_app_version';
+    const APP_RELOAD_MARK_KEY = 'church_staff_pwa_app_version_reload_mark';
 
     function setLoadingMessage(text) {
       const message = document.getElementById('app-loading-message');
@@ -124,6 +126,42 @@
     }
 
     window.addEventListener('flutter-first-frame', hideLoadingScreen);
+
+    async function checkAndApplyVersionUpdate() {
+      try {
+        const response = await fetch(`version.json?t=${Date.now()}`, {
+          cache: 'no-store',
+        });
+        if (!response.ok) return;
+
+        const data = await response.json();
+        const nextVersion = `${data.version ?? ''}|${data.build_number ?? ''}`;
+        if (!nextVersion || nextVersion === '|') return;
+
+        const currentVersion = localStorage.getItem(APP_VERSION_KEY);
+        if (!currentVersion) {
+          localStorage.setItem(APP_VERSION_KEY, nextVersion);
+          localStorage.removeItem(APP_RELOAD_MARK_KEY);
+          return;
+        }
+
+        if (currentVersion !== nextVersion) {
+          localStorage.setItem(APP_VERSION_KEY, nextVersion);
+          const alreadyReloaded = localStorage.getItem(APP_RELOAD_MARK_KEY);
+          if (alreadyReloaded !== nextVersion) {
+            localStorage.setItem(APP_RELOAD_MARK_KEY, nextVersion);
+            setLoadingMessage('偵測到新版本，正在重新載入...');
+            window.location.reload();
+          } else {
+            localStorage.removeItem(APP_RELOAD_MARK_KEY);
+          }
+        } else {
+          localStorage.removeItem(APP_RELOAD_MARK_KEY);
+        }
+      } catch (_) {
+        // Ignore version check errors.
+      }
+    }
 
     setTimeout(function () {
       if (!isUpdateInProgress) {
@@ -165,7 +203,8 @@
           // Ignore service worker readiness errors.
         });
 
-      window.addEventListener('load', function () {
+      window.addEventListener('load', async function () {
+        await checkAndApplyVersionUpdate();
         navigator.serviceWorker
           .register('firebase-messaging-sw.js', {
             scope: 'firebase-cloud-messaging-push-scope',

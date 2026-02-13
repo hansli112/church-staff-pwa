@@ -29,13 +29,21 @@ jobs:
           fi
           if [ "${{ github.ref_name }}" == "main" ]; then
             # 正式環境編譯
-            flutter build web --release --base-href "/" --wasm \
+            flutter build web --release --base-href "/" \
               --dart-define=FCM_WEB_VAPID_KEY="$FCM_WEB_VAPID_KEY"
           else
             # 開發環境編譯 (如果你有不同的 base-href 可以在這改)
-            flutter build web --release --base-href "/" --wasm \
+            flutter build web --release --base-href "/" \
               --dart-define=FCM_WEB_VAPID_KEY="$FCM_WEB_VAPID_KEY"
           fi
+          cat <<EOF > build/web/version.json
+          {
+            "version": "${{ github.sha }}",
+            "build_number": "${{ github.run_number }}",
+            "branch": "${{ github.ref_name }}",
+            "generated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
 
       # 5. 部署到 Cloudflare Pages
       - name: Publish to Cloudflare Pages
