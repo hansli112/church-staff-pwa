@@ -305,7 +305,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final firstDay = DateTime(year, month, 1);
     final totalDays = DateUtils.getDaysInMonth(year, month);
     final startOffset = firstDay.weekday % 7;
+    final cellWidth = cellHeight * cellAspectRatio;
     const totalCells = 42;
+    final eventSegmentsByDay = _buildMonthEventLayout(displayedMonth);
 
     return GridView.builder(
       key: ValueKey<String>(_cacheKeyForMonth(displayedMonth)),
@@ -329,11 +331,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
         final isSelected = DateUtils.isSameDay(_selectedDay, dateOnly);
         final isToday = DateUtils.isSameDay(dateOnly, DateTime.now());
 
-        final events = _eventsForDay(dateOnly);
+        final daySegments =
+            eventSegmentsByDay[_dayKey(dateOnly)] ?? const <_DayEventSegment>[];
         final maxVisibleEvents = _maxVisibleEventsForCellHeight(cellHeight);
-        final visibleEvents = events.take(maxVisibleEvents).toList();
-        final overflowCount = events.length - visibleEvents.length;
-        const maxLinesPerEvent = 2;
+        final visibleEvents = daySegments.take(maxVisibleEvents).toList();
+        final overflowCount = daySegments.length - visibleEvents.length;
+        const maxLinesPerEvent = 1;
 
         return InkWell(
           onTap: () {
@@ -343,7 +346,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           },
           borderRadius: BorderRadius.circular(8),
           child: Container(
-            padding: const EdgeInsets.fromLTRB(2, 4, 2, 4),
+            padding: const EdgeInsets.symmetric(vertical: 4),
             decoration: BoxDecoration(
               color: isSelected
                   ? Theme.of(
@@ -359,27 +362,32 @@ class _CalendarScreenState extends State<CalendarScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '$dayNumber',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 11,
-                    color: isSelected
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.black87,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: Text(
+                    '$dayNumber',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 11,
+                      color: isSelected
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.black87,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 4),
                 Expanded(
-                  child: ClipRect(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: visibleEvents
-                          .map(
-                            (event) => _buildEventLine(event, maxLinesPerEvent),
-                          )
-                          .toList(),
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: visibleEvents
+                        .map(
+                          (segment) => _buildEventLine(
+                            segment,
+                            maxLinesPerEvent,
+                            cellWidth,
+                          ),
+                        )
+                        .toList(),
                   ),
                 ),
                 if (overflowCount > 0)
@@ -401,37 +409,203 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildEventLine(_CalendarEvent event, int maxLines) {
+  Widget _buildEventLine(
+    _DayEventSegment segment,
+    int maxLines,
+    double cellWidth,
+  ) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isMultiDay = segment.event.spansMultipleDays;
+    final textStyle = TextStyle(
+      fontSize: 10,
+      fontWeight: FontWeight.w500,
+      color: colorScheme.onPrimaryContainer,
+    );
+    final leadingInset = segment.continuesLeft ? 0.0 : 2.0;
+    final trailingInset = segment.continuesRight ? 0.0 : 2.0;
+    final leftTextInset = segment.continuesLeft ? 0.0 : 1.0;
+    final rightTextInset = segment.continuesRight ? 0.0 : 1.0;
+    final currentTextInset = leadingInset + leftTextInset;
+    final borderRadius = BorderRadius.only(
+      topLeft: Radius.circular(segment.continuesLeft ? 0 : 4),
+      bottomLeft: Radius.circular(segment.continuesLeft ? 0 : 4),
+      topRight: Radius.circular(segment.continuesRight ? 0 : 4),
+      bottomRight: Radius.circular(segment.continuesRight ? 0 : 4),
+    );
+    final textWidget = Text(
+      segment.event.title,
+      maxLines: maxLines,
+      softWrap: false,
+      overflow: isMultiDay ? TextOverflow.visible : TextOverflow.ellipsis,
+      style: textStyle,
+    );
+    final shouldShowTitle = segment.showTitle || isMultiDay;
+
+    Widget content;
+    if (shouldShowTitle) {
+      if (isMultiDay) {
+        final shift =
+            (cellWidth * segment.titleShiftDays) +
+            currentTextInset -
+            segment.startTextInset;
+        content = ClipRect(
+          child: Transform.translate(
+            offset: Offset(-shift, 0),
+            child: textWidget,
+          ),
+        );
+      } else {
+        content = textWidget;
+      }
+    } else {
+      content = Opacity(opacity: 0, child: textWidget);
+    }
+
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 3),
-      padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 2),
+      margin: EdgeInsets.only(
+        left: leadingInset,
+        right: trailingInset,
+        bottom: 3,
+      ),
+      padding: EdgeInsets.fromLTRB(leftTextInset, 2, rightTextInset, 2),
       decoration: BoxDecoration(
         color: colorScheme.primaryContainer.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: borderRadius,
       ),
-      child: Text(
-        event.title,
-        maxLines: maxLines,
-        softWrap: true,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w500,
-          color: colorScheme.onPrimaryContainer,
-        ),
-      ),
+      child: content,
     );
   }
 
-  List<_CalendarEvent> _eventsForDay(DateTime date) {
-    final key = _cacheKeyForMonth(DateTime(date.year, date.month, 1));
-    final monthEvents = _eventsByMonth[key] ?? const <_CalendarEvent>[];
-    return monthEvents
-        .where((event) => DateUtils.isSameDay(event.startTime, date))
-        .toList()
-      ..sort((a, b) => a.startTime.compareTo(b.startTime));
+  int _dayKey(DateTime date) =>
+      (date.year * 10000) + (date.month * 100) + date.day;
+
+  Map<int, List<_DayEventSegment>> _buildMonthEventLayout(DateTime month) {
+    final year = month.year;
+    final monthValue = month.month;
+    final firstDay = DateTime(year, monthValue, 1);
+    final totalDays = DateUtils.getDaysInMonth(year, monthValue);
+    final monthStart = DateUtils.dateOnly(firstDay);
+    final monthEnd = DateUtils.dateOnly(DateTime(year, monthValue, totalDays));
+    final monthEvents = _eventsByMonth[_cacheKeyForMonth(firstDay)] ?? [];
+    final overlappingEvents =
+        monthEvents
+            .where((event) => !event.endDay.isBefore(monthStart))
+            .where((event) => !event.startDay.isAfter(monthEnd))
+            .toList()
+          ..sort((a, b) {
+            final byStart = a.startTime.compareTo(b.startTime);
+            if (byStart != 0) return byStart;
+            return a.title.compareTo(b.title);
+          });
+
+    final firstLabelDayByEvent = <String, DateTime>{};
+    for (final event in overlappingEvents) {
+      final firstVisible = event.startDay.isBefore(monthStart)
+          ? monthStart
+          : event.startDay;
+      firstLabelDayByEvent[event.identity] = firstVisible;
+    }
+
+    final result = <int, List<_DayEventSegment>>{};
+    final firstWeekOffset = firstDay.weekday % 7;
+    final weekCount = ((firstWeekOffset + totalDays) / 7).ceil();
+
+    for (var week = 0; week < weekCount; week++) {
+      final weekDays = List<DateTime?>.generate(7, (weekday) {
+        final dayNumber = week * 7 + weekday - firstWeekOffset + 1;
+        if (dayNumber < 1 || dayNumber > totalDays) return null;
+        return DateUtils.dateOnly(DateTime(year, monthValue, dayNumber));
+      });
+
+      final weekSegments = <_WeekEventSegment>[];
+      for (final event in overlappingEvents) {
+        int? startIndex;
+        int? endIndex;
+        for (var i = 0; i < 7; i++) {
+          final day = weekDays[i];
+          if (day == null || !event.occursOnDate(day)) continue;
+          startIndex ??= i;
+          endIndex = i;
+        }
+        if (startIndex == null || endIndex == null) continue;
+        weekSegments.add(
+          _WeekEventSegment(
+            event: event,
+            startIndex: startIndex,
+            endIndex: endIndex,
+          ),
+        );
+      }
+
+      final laneOccupancy = <List<bool>>[];
+      weekSegments.sort((a, b) {
+        final byStart = a.startIndex.compareTo(b.startIndex);
+        if (byStart != 0) return byStart;
+        final byEnd = b.endIndex.compareTo(a.endIndex);
+        if (byEnd != 0) return byEnd;
+        return a.event.startTime.compareTo(b.event.startTime);
+      });
+
+      for (final segment in weekSegments) {
+        final segmentStartDay = weekDays[segment.startIndex];
+        final segmentStartPrevDay = segment.startIndex > 0
+            ? weekDays[segment.startIndex - 1]
+            : null;
+        final segmentStartsFromPreviousDay =
+            segmentStartDay != null &&
+            segmentStartPrevDay != null &&
+            segment.event.occursOnDate(segmentStartPrevDay);
+        final startLeadingInset = segmentStartsFromPreviousDay ? 0.0 : 2.0;
+        final startTextInset =
+            startLeadingInset + (segmentStartsFromPreviousDay ? 0.0 : 1.0);
+
+        var lane = 0;
+        while (true) {
+          if (lane == laneOccupancy.length) {
+            laneOccupancy.add(List<bool>.filled(7, false));
+          }
+          final occupied = laneOccupancy[lane];
+          final hasConflict = occupied
+              .sublist(segment.startIndex, segment.endIndex + 1)
+              .any((value) => value);
+          if (!hasConflict) break;
+          lane++;
+        }
+
+        for (var i = segment.startIndex; i <= segment.endIndex; i++) {
+          laneOccupancy[lane][i] = true;
+          final day = weekDays[i];
+          if (day == null) continue;
+          final dayKey = _dayKey(day);
+          result.putIfAbsent(dayKey, () => []);
+          final previousDay = i > 0 ? weekDays[i - 1] : null;
+          final nextDay = i < 6 ? weekDays[i + 1] : null;
+          result[dayKey]!.add(
+            _DayEventSegment(
+              event: segment.event,
+              lane: lane,
+              showTitle: DateUtils.isSameDay(
+                day,
+                firstLabelDayByEvent[segment.event.identity],
+              ),
+              titleShiftDays: i - segment.startIndex,
+              startTextInset: startTextInset,
+              continuesLeft:
+                  previousDay != null &&
+                  segment.event.occursOnDate(previousDay),
+              continuesRight:
+                  nextDay != null && segment.event.occursOnDate(nextDay),
+            ),
+          );
+        }
+      }
+    }
+
+    for (final segments in result.values) {
+      segments.sort((a, b) => a.lane.compareTo(b.lane));
+    }
+    return result;
   }
 
   String _cacheKeyForMonth(DateTime month) {
@@ -532,13 +706,28 @@ class _CalendarScreenState extends State<CalendarScreen> {
           final raw = items[i] as Map<String, dynamic>;
           if (raw['status'] == 'cancelled') continue;
           final start = raw['start'] as Map<String, dynamic>?;
+          final end = raw['end'] as Map<String, dynamic>?;
           final startRaw = start?['dateTime'] ?? start?['date'];
           if (startRaw is! String) continue;
+          final endRaw = end?['dateTime'] ?? end?['date'];
           final startTime = DateTime.parse(startRaw).toLocal();
+          final endTime = endRaw is String
+              ? DateTime.parse(endRaw).toLocal()
+              : startTime;
+          final isAllDay =
+              start?['dateTime'] == null &&
+              start?['date'] is String &&
+              end?['dateTime'] == null;
           final title = (raw['summary'] as String?)?.trim();
+          final eventId = (raw['id'] as String?)?.trim();
           events.add(
             _CalendarEvent(
+              id: eventId == null || eventId.isEmpty
+                  ? 'fallback_${i}_${startTime.toIso8601String()}_${title ?? ''}'
+                  : eventId,
               startTime: startTime,
+              endTime: endTime,
+              isAllDay: isAllDay,
               title: title == null || title.isEmpty ? '未命名活動' : title,
             ),
           );
@@ -574,20 +763,92 @@ class _CalendarScreenState extends State<CalendarScreen> {
 }
 
 class _CalendarEvent {
+  final String id;
   final DateTime startTime;
+  final DateTime endTime;
+  final bool isAllDay;
   final String title;
 
-  const _CalendarEvent({required this.startTime, required this.title});
+  const _CalendarEvent({
+    required this.id,
+    required this.startTime,
+    required this.endTime,
+    required this.isAllDay,
+    required this.title,
+  });
+
+  String get identity => '$id|${startTime.toIso8601String()}';
+
+  DateTime get startDay => DateUtils.dateOnly(startTime);
+
+  DateTime get endDay {
+    final normalizedEnd = endTime.isBefore(startTime) ? startTime : endTime;
+    final adjustedEnd = normalizedEnd.subtract(const Duration(microseconds: 1));
+    final endDayOnly = DateUtils.dateOnly(adjustedEnd);
+    return endDayOnly.isBefore(startDay) ? startDay : endDayOnly;
+  }
+
+  bool get spansMultipleDays => endDay.isAfter(startDay);
+
+  bool occursOnDate(DateTime date) {
+    final day = DateUtils.dateOnly(date);
+    if (day.isBefore(startDay)) return false;
+    return !day.isAfter(endDay);
+  }
 
   Map<String, dynamic> toJson() => {
+    'id': id,
     'startTime': startTime.toIso8601String(),
+    'endTime': endTime.toIso8601String(),
+    'isAllDay': isAllDay,
     'title': title,
   };
 
   factory _CalendarEvent.fromJson(Map<String, dynamic> json) {
+    final start = DateTime.parse(json['startTime'] as String).toLocal();
+    final endRaw = json['endTime'];
+    final end = endRaw is String ? DateTime.parse(endRaw).toLocal() : start;
+    final idRaw = json['id'];
     return _CalendarEvent(
-      startTime: DateTime.parse(json['startTime'] as String),
+      id: idRaw is String && idRaw.isNotEmpty
+          ? idRaw
+          : 'legacy_${start.toIso8601String()}_${json['title'] as String? ?? ''}',
+      startTime: start,
+      endTime: end,
+      isAllDay: json['isAllDay'] as bool? ?? false,
       title: json['title'] as String,
     );
   }
+}
+
+class _DayEventSegment {
+  final _CalendarEvent event;
+  final int lane;
+  final bool showTitle;
+  final int titleShiftDays;
+  final double startTextInset;
+  final bool continuesLeft;
+  final bool continuesRight;
+
+  const _DayEventSegment({
+    required this.event,
+    required this.lane,
+    required this.showTitle,
+    required this.titleShiftDays,
+    required this.startTextInset,
+    required this.continuesLeft,
+    required this.continuesRight,
+  });
+}
+
+class _WeekEventSegment {
+  final _CalendarEvent event;
+  final int startIndex;
+  final int endIndex;
+
+  const _WeekEventSegment({
+    required this.event,
+    required this.startIndex,
+    required this.endIndex,
+  });
 }
