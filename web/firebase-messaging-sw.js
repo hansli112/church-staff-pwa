@@ -15,12 +15,13 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
+  const data = payload.data || {};
   const notification = payload.notification || {};
-  const title = notification.title || '教會同工助手';
+  const title = data.title || notification.title || '教會同工助手';
   const options = {
-    body: notification.body || '',
+    body: data.body || notification.body || '',
     icon: '/icons/Icon-192.png',
-    data: payload.data || {},
+    data: data,
   };
 
   self.registration.showNotification(title, options);
