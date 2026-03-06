@@ -232,8 +232,9 @@ class RosterCard extends StatelessWidget {
           initialOrder: const [],
           peopleLoader: peopleLoader,
           initialPeople: const ['待定'],
-          onSubmit: (role, people, order) =>
-              _addDuty(context, role, people, order),
+          initialPersonIdsByName: const {},
+          onSubmit: (role, people, order, personIdsByName) =>
+              _addDuty(context, role, people, order, personIdsByName),
           submitLabel: '新增',
           useBottomSheet: false,
         );
@@ -246,10 +247,16 @@ class RosterCard extends StatelessWidget {
     String role,
     List<String> people,
     List<String> peopleOrder,
+    Map<String, String> personIdsByName,
   ) {
     final newDuties = List<RosterEntry>.from(roster.duties);
     newDuties.add(
-      RosterEntry(role: role, people: people, peopleOrder: peopleOrder),
+      RosterEntry(
+        role: role,
+        people: people,
+        peopleOrder: peopleOrder,
+        personIdsByName: personIdsByName,
+      ),
     );
 
     final newRoster = roster.copyWith(duties: newDuties);
@@ -317,8 +324,9 @@ class RosterCard extends StatelessWidget {
           initialOrder: duty.peopleOrder,
           peopleLoader: peopleLoader,
           initialPeople: duty.people.isEmpty ? const ['待定'] : duty.people,
-          onSubmit: (role, people, order) =>
-              _updateDuty(context, index, people, order),
+          initialPersonIdsByName: duty.personIdsByName,
+          onSubmit: (role, people, order, personIdsByName) =>
+              _updateDuty(context, index, people, order, personIdsByName),
           submitLabel: '儲存',
           roleEditable: false,
           useBottomSheet: false,
@@ -332,11 +340,13 @@ class RosterCard extends StatelessWidget {
     int index,
     List<String> newPeople,
     List<String> peopleOrder,
+    Map<String, String> personIdsByName,
   ) {
     final newDuties = List<RosterEntry>.from(roster.duties);
     newDuties[index] = newDuties[index].copyWith(
       people: newPeople,
       peopleOrder: peopleOrder,
+      personIdsByName: personIdsByName,
     );
 
     final newRoster = roster.copyWith(duties: newDuties);
@@ -521,15 +531,31 @@ class RosterCard extends StatelessWidget {
     final Set<String> merged = {...names, ...rosterPeople, ...extrasSet};
     final List<String> result = ['待定'];
     result.addAll(merged.where((name) => name != '待定'));
-    return _PeopleOptions(options: result, allUserNames: allUserNames);
+    final userIdsByName = <String, String>{};
+    for (final user in users) {
+      final name = user.name.trim();
+      final uid = user.id.trim();
+      if (name.isEmpty || uid.isEmpty) continue;
+      userIdsByName.putIfAbsent(name, () => uid);
+    }
+    return _PeopleOptions(
+      options: result,
+      allUserNames: allUserNames,
+      userIdsByName: userIdsByName,
+    );
   }
 }
 
 class _PeopleOptions {
   final List<String> options;
   final Set<String> allUserNames;
+  final Map<String, String> userIdsByName;
 
-  const _PeopleOptions({required this.options, required this.allUserNames});
+  const _PeopleOptions({
+    required this.options,
+    required this.allUserNames,
+    required this.userIdsByName,
+  });
 }
 
 class _RosterPeopleDialog extends StatefulWidget {
@@ -541,7 +567,13 @@ class _RosterPeopleDialog extends StatefulWidget {
   final List<String> initialOrder;
   final Future<_PeopleOptions> Function(String? role) peopleLoader;
   final List<String> initialPeople;
-  final void Function(String role, List<String> people, List<String> order)
+  final Map<String, String> initialPersonIdsByName;
+  final void Function(
+    String role,
+    List<String> people,
+    List<String> order,
+    Map<String, String> personIdsByName,
+  )
   onSubmit;
   final String submitLabel;
   final bool roleEditable;
@@ -556,6 +588,7 @@ class _RosterPeopleDialog extends StatefulWidget {
     required this.initialOrder,
     required this.peopleLoader,
     required this.initialPeople,
+    this.initialPersonIdsByName = const {},
     required this.onSubmit,
     required this.submitLabel,
     this.roleEditable = true,
@@ -573,6 +606,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
   List<String> _options = const ['待定'];
   bool _optionsInitialized = false;
   Set<String> _allUserNames = const {};
+  Map<String, String> _userIdsByName = const {};
   String? _selectedRole;
   late Future<_PeopleOptions> _peopleFuture;
   late final TextEditingController _customController;
@@ -671,11 +705,21 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
         if (!duty.people.contains(trimmed)) return duty;
         final people = duty.people.where((p) => p != trimmed).toList();
         final order = duty.peopleOrder.where((p) => p != trimmed).toList();
+        final personIdsByName = Map<String, String>.from(duty.personIdsByName)
+          ..remove(trimmed);
         changed = true;
         if (people.isEmpty) {
-          return duty.copyWith(people: const ['待定'], peopleOrder: order);
+          return duty.copyWith(
+            people: const ['待定'],
+            peopleOrder: order,
+            personIdsByName: personIdsByName,
+          );
         }
-        return duty.copyWith(people: people, peopleOrder: order);
+        return duty.copyWith(
+          people: people,
+          peopleOrder: order,
+          personIdsByName: personIdsByName,
+        );
       }).toList();
       if (changed) {
         await provider.updateRoster(roster.copyWith(duties: updatedDuties));
@@ -761,6 +805,24 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
       return ['待定'];
     }
     return selected;
+  }
+
+  List<String> _buildSelectedOrder(
+    List<String> options,
+    List<String> selected,
+  ) {
+    final selectedSet = selected.where((name) => name != '待定').toSet();
+    if (selectedSet.isEmpty) return const [];
+
+    final ordered = options
+        .where((name) => name != '待定' && selectedSet.contains(name))
+        .toList();
+    final existing = ordered.toSet();
+    for (final name in selected) {
+      if (name == '待定' || existing.contains(name)) continue;
+      ordered.add(name);
+    }
+    return ordered;
   }
 
   List<String> _mergeOptions(List<String> baseOptions) {
@@ -876,6 +938,10 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
                     .toList();
               }
               _allUserNames = data?.allUserNames ?? const {};
+              _userIdsByName = {
+                ...widget.initialPersonIdsByName,
+                ...(data?.userIdsByName ?? const <String, String>{}),
+              };
               return Scrollbar(
                 controller: _peopleScrollController,
                 thumbVisibility: true,
@@ -964,8 +1030,19 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
                       : widget.roleController.text.trim();
                   if (role.isEmpty) return;
                   final selected = _buildSelectedPeople(_options);
-                  final order = _options.where((name) => name != '待定').toList();
-                  widget.onSubmit(role, selected, order);
+                  final order = _buildSelectedOrder(_options, selected);
+                  final selectedPersonIdsByName = <String, String>{};
+                  for (final name in selected) {
+                    final uid = _userIdsByName[name];
+                    if (uid == null || uid.trim().isEmpty) continue;
+                    selectedPersonIdsByName[name] = uid;
+                  }
+                  widget.onSubmit(
+                    role,
+                    selected,
+                    order,
+                    selectedPersonIdsByName,
+                  );
                   Navigator.of(context).pop();
                 },
           child: Text(widget.submitLabel),
@@ -1020,8 +1097,19 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
                       : widget.roleController.text.trim();
                   if (role.isEmpty) return;
                   final selected = _buildSelectedPeople(_options);
-                  final order = _options.where((name) => name != '待定').toList();
-                  widget.onSubmit(role, selected, order);
+                  final order = _buildSelectedOrder(_options, selected);
+                  final selectedPersonIdsByName = <String, String>{};
+                  for (final name in selected) {
+                    final uid = _userIdsByName[name];
+                    if (uid == null || uid.trim().isEmpty) continue;
+                    selectedPersonIdsByName[name] = uid;
+                  }
+                  widget.onSubmit(
+                    role,
+                    selected,
+                    order,
+                    selectedPersonIdsByName,
+                  );
                   Navigator.of(context).pop();
                 },
           child: Text(widget.submitLabel),

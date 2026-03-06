@@ -87,16 +87,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _isPushLoading = true);
     try {
       final pushService = context.read<PushNotificationService>();
-      final enabled = await pushService.setNotificationEnabled(
+      final result = await pushService.setNotificationEnabled(
         userId: userId,
         enabled: value,
       );
+      final enabled = result.enabled;
       if (!mounted) return;
       setState(() => _isPushEnabled = enabled);
       if (value && !enabled) {
+        final reasonMessage = switch (result.failureReason) {
+          PushToggleFailureReason.missingVapidKey => '系統設定缺少推播金鑰，請聯絡管理員。',
+          PushToggleFailureReason.permissionDenied => '通知權限未開啟，請到 iPhone 設定允許此 App 通知。',
+          PushToggleFailureReason.tokenUnavailable => '目前裝置無法取得推播識別碼，請重新開啟 App 後再試。',
+          PushToggleFailureReason.saveTokenFailed => '已取得識別碼，但儲存失敗，請稍後再試。',
+          PushToggleFailureReason.savePreferenceFailed => '通知偏好儲存失敗，請稍後再試。',
+          PushToggleFailureReason.notInitialized => '推播服務尚未初始化完成，請重整後再試。',
+          PushToggleFailureReason.notWeb => '目前環境不支援網頁推播。',
+          null => '通知未啟用，請確認瀏覽器通知權限設定。',
+        };
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('通知未啟用，請確認瀏覽器通知權限設定。')));
+        ).showSnackBar(SnackBar(content: Text(reasonMessage)));
       }
     } catch (error) {
       if (!mounted) return;
@@ -187,8 +198,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           SwitchListTile(
             secondary: const Icon(Icons.notifications_active),
-            title: const Text('服事通知'),
-            subtitle: const Text('每週一 19:00 發送提醒'),
+            title: const Text('服事提醒'),
+            subtitle: const Text('每週一晚間發送提醒'),
             value: _isPushEnabled,
             onChanged: _isPushLoading ? null : _togglePush,
           ),

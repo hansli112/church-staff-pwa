@@ -1,0 +1,8 @@
+{
+  "name": "church-staff-pwa-scripts",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "firebase-admin": "^13.5.0"
+  }
+}

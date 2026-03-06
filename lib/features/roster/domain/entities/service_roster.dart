@@ -21,23 +21,39 @@ class RosterEntry {
   final String role;
   final List<String> people;
   final List<String> peopleOrder;
+  final Map<String, String> personIdsByName;
 
   RosterEntry({
     required this.role,
     required this.people,
     this.peopleOrder = const [],
+    this.personIdsByName = const {},
   });
 
   RosterEntry copyWith({
     String? role,
     List<String>? people,
     List<String>? peopleOrder,
+    Map<String, String>? personIdsByName,
   }) {
     return RosterEntry(
       role: role ?? this.role,
       people: people ?? this.people,
       peopleOrder: peopleOrder ?? this.peopleOrder,
+      personIdsByName: personIdsByName ?? this.personIdsByName,
     );
+  }
+
+  List<String> get assignedUserIds {
+    final seen = <String>{};
+    final ids = <String>[];
+    for (final id in personIdsByName.values) {
+      final trimmed = id.trim();
+      if (trimmed.isEmpty || seen.contains(trimmed)) continue;
+      seen.add(trimmed);
+      ids.add(trimmed);
+    }
+    return ids;
   }
 }
 

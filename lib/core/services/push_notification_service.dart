@@ -5,6 +5,26 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 
+enum PushToggleFailureReason {
+  notWeb,
+  notInitialized,
+  missingVapidKey,
+  permissionDenied,
+  tokenUnavailable,
+  saveTokenFailed,
+  savePreferenceFailed,
+}
+
+class PushToggleResult {
+  const PushToggleResult({
+    required this.enabled,
+    this.failureReason,
+  });
+
+  final bool enabled;
+  final PushToggleFailureReason? failureReason;
+}
+
 class PushNotificationService {
   PushNotificationService({
     FirebaseMessaging? messaging,
@@ -21,7 +41,6 @@ class PushNotificationService {
   bool _initialized = false;
   bool _notificationPermissionRequested = false;
   String? _currentUserId;
-  String? _lastRegisteredToken;
 
   Future<void> initialize() async {
     if (!kIsWeb || _initialized) return;
@@ -50,17 +69,9 @@ class PushNotificationService {
       if (!kIsWeb || !_initialized) return;
       if (_currentUserId == userId) return;
 
-      final previousUserId = _currentUserId;
-      final previousToken = _lastRegisteredToken;
       _currentUserId = userId;
-
-      if (previousUserId != null &&
-          previousToken != null &&
-          previousUserId != userId) {
-        await _removeToken(previousUserId, previousToken);
-      }
-
       if (userId == null) return;
+
       final settings = await _messaging.getNotificationSettings();
       final permissionGranted =
           settings.authorizationStatus == AuthorizationStatus.authorized ||
@@ -89,6 +100,9 @@ class PushNotificationService {
   Future<bool> isNotificationEnabledForUser(String? userId) async {
     if (!kIsWeb || !_initialized || userId == null) return false;
 
+    final preference = await _getWeeklyRosterReminderPreference(userId);
+    if (preference == false) return false;
+
     final settings = await _messaging.getNotificationSettings();
     final granted =
         settings.authorizationStatus == AuthorizationStatus.authorized ||
@@ -101,7 +115,6 @@ class PushNotificationService {
     final token = await _messaging.getToken(vapidKey: vapidKey);
     if (token == null || token.isEmpty) return false;
 
-    _lastRegisteredToken = token;
     final doc = await _firestore.collection('users').doc(userId).get();
     final data = doc.data();
     if (data == null) return false;
@@ -111,14 +124,30 @@ class PushNotificationService {
     final tokens = fcm['webTokens'];
     if (tokens is! List) return false;
 
-    return tokens.whereType<String>().contains(token);
+    final hasToken = tokens.whereType<String>().contains(token);
+    if (preference == null) {
+      // Backward compatibility: old users only tracked token existence.
+      return hasToken;
+    }
+    return preference && hasToken;
   }
 
-  Future<bool> setNotificationEnabled({
+  Future<PushToggleResult> setNotificationEnabled({
     required String userId,
     required bool enabled,
   }) async {
-    if (!kIsWeb || !_initialized) return false;
+    if (!kIsWeb) {
+      return const PushToggleResult(
+        enabled: false,
+        failureReason: PushToggleFailureReason.notWeb,
+      );
+    }
+    if (!_initialized) {
+      return const PushToggleResult(
+        enabled: false,
+        failureReason: PushToggleFailureReason.notInitialized,
+      );
+    }
     _currentUserId = userId;
 
     const vapidKey = String.fromEnvironment('FCM_WEB_VAPID_KEY');
@@ -127,30 +156,64 @@ class PushNotificationService {
         'Missing FCM_WEB_VAPID_KEY. Run with '
         '--dart-define=FCM_WEB_VAPID_KEY=<PUBLIC_VAPID_KEY>.',
       );
-      return false;
+      return const PushToggleResult(
+        enabled: false,
+        failureReason: PushToggleFailureReason.missingVapidKey,
+      );
     }
 
     if (enabled) {
       final granted = await _ensureNotificationPermission();
-      if (!granted) return false;
+      if (!granted) {
+        await _setWeeklyRosterReminderPreference(userId, enabled: false);
+        return const PushToggleResult(
+          enabled: false,
+          failureReason: PushToggleFailureReason.permissionDenied,
+        );
+      }
 
       final token = await _messaging.getToken(vapidKey: vapidKey);
-      if (token == null || token.isEmpty) return false;
-      await _saveToken(userId, token);
-      return true;
+      if (token == null || token.isEmpty) {
+        await _setWeeklyRosterReminderPreference(userId, enabled: false);
+        return const PushToggleResult(
+          enabled: false,
+          failureReason: PushToggleFailureReason.tokenUnavailable,
+        );
+      }
+      final saveTokenSuccess = await _saveToken(userId, token);
+      if (!saveTokenSuccess) {
+        return const PushToggleResult(
+          enabled: false,
+          failureReason: PushToggleFailureReason.saveTokenFailed,
+        );
+      }
+      final savePreferenceSuccess = await _setWeeklyRosterReminderPreference(
+        userId,
+        enabled: true,
+      );
+      if (!savePreferenceSuccess) {
+        return const PushToggleResult(
+          enabled: false,
+          failureReason: PushToggleFailureReason.savePreferenceFailed,
+        );
+      }
+      return const PushToggleResult(enabled: true);
     }
 
-    final token =
-        _lastRegisteredToken ?? await _messaging.getToken(vapidKey: vapidKey);
-    if (token != null && token.isNotEmpty) {
-      await _removeToken(userId, token);
+    final savePreferenceSuccess = await _setWeeklyRosterReminderPreference(
+      userId,
+      enabled: false,
+    );
+    if (!savePreferenceSuccess) {
+      return const PushToggleResult(
+        enabled: false,
+        failureReason: PushToggleFailureReason.savePreferenceFailed,
+      );
     }
-    await _messaging.deleteToken();
-    _lastRegisteredToken = null;
-    return false;
+    return const PushToggleResult(enabled: false);
   }
 
-  Future<void> _saveToken(String userId, String token) async {
+  Future<bool> _saveToken(String userId, String token) async {
     try {
       await _firestore.collection('users').doc(userId).set({
         'fcm': {
@@ -158,23 +221,44 @@ class PushNotificationService {
           'lastUpdatedAt': FieldValue.serverTimestamp(),
         },
       }, SetOptions(merge: true));
-
-      _lastRegisteredToken = token;
+      return true;
     } catch (e, st) {
       log('Save FCM token failed: $e', stackTrace: st);
+      return false;
     }
   }
 
-  Future<void> _removeToken(String userId, String token) async {
+  Future<bool> _setWeeklyRosterReminderPreference(
+    String userId, {
+    required bool enabled,
+  }) async {
     try {
       await _firestore.collection('users').doc(userId).set({
-        'fcm': {
-          'webTokens': FieldValue.arrayRemove([token]),
-          'lastUpdatedAt': FieldValue.serverTimestamp(),
+        'notificationPrefs': {
+          'weeklyRosterReminder': enabled,
+          'updatedAt': FieldValue.serverTimestamp(),
         },
       }, SetOptions(merge: true));
+      return true;
     } catch (e, st) {
-      log('Remove FCM token failed: $e', stackTrace: st);
+      log('Save notification preference failed: $e', stackTrace: st);
+      return false;
+    }
+  }
+
+  Future<bool?> _getWeeklyRosterReminderPreference(String userId) async {
+    try {
+      final doc = await _firestore.collection('users').doc(userId).get();
+      final data = doc.data();
+      if (data == null) return null;
+      final prefs = data['notificationPrefs'];
+      if (prefs is! Map<String, dynamic>) return null;
+      final raw = prefs['weeklyRosterReminder'];
+      if (raw is bool) return raw;
+      return null;
+    } catch (e, st) {
+      log('Read notification preference failed: $e', stackTrace: st);
+      return null;
     }
   }
 

@@ -218,6 +218,8 @@ class FirestoreRosterRepository implements RosterRepository {
               'role': d.role,
               'people': d.people,
               'peopleOrder': d.peopleOrder,
+              'personIdsByName': d.personIdsByName,
+              'assignedUserIds': d.assignedUserIds,
             },
           )
           .toList(),
@@ -225,6 +227,20 @@ class FirestoreRosterRepository implements RosterRepository {
   }
 
   // Helper: Convert Map from Firestore to ServiceRoster
+
+  Map<String, String> _parsePersonIdsByName(dynamic raw) {
+    if (raw is! Map) return const {};
+    final result = <String, String>{};
+    raw.forEach((key, value) {
+      if (key is! String || value is! String) return;
+      final name = key.trim();
+      final uid = value.trim();
+      if (name.isEmpty || uid.isEmpty) return;
+      result[name] = uid;
+    });
+    return result;
+  }
+
   ServiceRoster _fromFirestore(Map<String, dynamic> data, String id) {
     return ServiceRoster(
       id: id,
@@ -242,6 +258,7 @@ class FirestoreRosterRepository implements RosterRepository {
               role: d['role'] as String,
               people: List<String>.from(d['people'] ?? []),
               peopleOrder: List<String>.from(d['peopleOrder'] ?? const []),
+              personIdsByName: _parsePersonIdsByName(d['personIdsByName']),
             );
           }).toList() ??
           [],
