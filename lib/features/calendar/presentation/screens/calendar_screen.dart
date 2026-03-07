@@ -333,16 +333,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
         final daySegments =
             eventSegmentsByDay[_dayKey(dateOnly)] ?? const <_DayEventSegment>[];
+        final hasEvents = daySegments.isNotEmpty;
         final maxVisibleEvents = _maxVisibleEventsForCellHeight(cellHeight);
         final visibleEvents = daySegments.take(maxVisibleEvents).toList();
         final overflowCount = daySegments.length - visibleEvents.length;
         const maxLinesPerEvent = 2;
 
         return InkWell(
-          onTap: () {
+          onTap: () async {
             setState(() {
               _selectedDay = dateOnly;
             });
+            if (hasEvents && MediaQuery.sizeOf(context).width < 900) {
+              await _showSelectedDayEventsSheet(dateOnly);
+            }
           },
           borderRadius: BorderRadius.circular(8),
           child: Container(
@@ -461,20 +465,279 @@ class _CalendarScreenState extends State<CalendarScreen> {
       content = Opacity(opacity: 0, child: textWidget);
     }
 
-    return Container(
-      width: double.infinity,
-      margin: EdgeInsets.only(
-        left: leadingInset,
-        right: trailingInset,
-        bottom: 3,
-      ),
-      padding: EdgeInsets.fromLTRB(leftTextInset, 2, rightTextInset, 2),
-      decoration: BoxDecoration(
-        color: colorScheme.primaryContainer.withValues(alpha: 0.8),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: borderRadius,
+        onTap: () => _showEventDetails(segment.event),
+        child: Container(
+          width: double.infinity,
+          margin: EdgeInsets.only(
+            left: leadingInset,
+            right: trailingInset,
+            bottom: 3,
+          ),
+          padding: EdgeInsets.fromLTRB(leftTextInset, 2, rightTextInset, 2),
+          decoration: BoxDecoration(
+            color: colorScheme.primaryContainer.withValues(alpha: 0.8),
+            borderRadius: borderRadius,
+          ),
+          child: content,
+        ),
       ),
-      child: content,
     );
+  }
+
+  Future<void> _showEventDetails(_CalendarEvent event) async {
+    setState(() {
+      _selectedDay = event.startDay;
+    });
+
+    final colorScheme = Theme.of(context).colorScheme;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              8,
+              20,
+              20 + MediaQuery.viewInsetsOf(context).bottom,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  event.title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _EventDetailRow(
+                  icon: Icons.schedule,
+                  label: '時間',
+                  value: _formatEventDateTime(event),
+                ),
+                if (event.location != null && event.location!.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  _EventDetailRow(
+                    icon: Icons.place_outlined,
+                    label: '地點',
+                    value: event.location!,
+                  ),
+                ],
+                if (event.description != null &&
+                    event.description!.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    '說明',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest.withValues(
+                        alpha: 0.45,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      event.description!,
+                      style: const TextStyle(fontSize: 14, height: 1.5),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  List<_CalendarEvent>? _eventsForDay(DateTime? day) {
+    if (day == null) return null;
+
+    final monthEvents = _eventsByMonth[_cacheKeyForMonth(day)] ?? const [];
+    final events =
+        monthEvents.where((event) => event.occursOnDate(day)).toList()
+          ..sort((a, b) {
+            if (a.isAllDay != b.isAllDay) {
+              return a.isAllDay ? -1 : 1;
+            }
+            final byStart = a.startTime.compareTo(b.startTime);
+            if (byStart != 0) return byStart;
+            return a.title.compareTo(b.title);
+          });
+    return events;
+  }
+
+  Future<void> _showSelectedDayEventsSheet(DateTime day) async {
+    final events = _eventsForDay(day) ?? const <_CalendarEvent>[];
+    final title = DateFormat('yyyy/MM/dd (E)', 'zh_TW').format(day);
+    final colorScheme = Theme.of(context).colorScheme;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              8,
+              20,
+              20 + MediaQuery.viewInsetsOf(sheetContext).bottom,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '當天活動 ${events.length} 筆',
+                  style: TextStyle(fontSize: 13, color: colorScheme.primary),
+                ),
+                const SizedBox(height: 12),
+                if (events.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 12),
+                    child: Text('當天沒有活動'),
+                  )
+                else
+                  Flexible(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: events.length,
+                      separatorBuilder: (_, index) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final event = events[index];
+                        return Material(
+                          color: colorScheme.surfaceContainerHighest.withValues(
+                            alpha: 0.32,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () async {
+                              Navigator.of(sheetContext).pop();
+                              await _showEventDetails(event);
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    event.title,
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _formatEventTimeSummary(event),
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                  if (event.location != null &&
+                                      event.location!.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      event.location!,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.black54,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _formatEventDateTime(_CalendarEvent event) {
+    if (event.isAllDay) {
+      final startText = DateFormat(
+        'yyyy/MM/dd (E)',
+        'zh_TW',
+      ).format(event.startDay);
+      if (!event.spansMultipleDays) {
+        return '全天 | $startText';
+      }
+      final endText = DateFormat(
+        'yyyy/MM/dd (E)',
+        'zh_TW',
+      ).format(event.endDay);
+      return '全天 | $startText - $endText';
+    }
+
+    final sameDay = DateUtils.isSameDay(event.startTime, event.endTime);
+    final startText = DateFormat(
+      'yyyy/MM/dd (E) HH:mm',
+      'zh_TW',
+    ).format(event.startTime);
+    if (sameDay) {
+      final endText = DateFormat('HH:mm', 'zh_TW').format(event.endTime);
+      return '$startText - $endText';
+    }
+
+    final endText = DateFormat(
+      'yyyy/MM/dd (E) HH:mm',
+      'zh_TW',
+    ).format(event.endTime);
+    return '$startText - $endText';
+  }
+
+  String _formatEventTimeSummary(_CalendarEvent event) {
+    if (event.isAllDay) {
+      return event.spansMultipleDays ? '全天，多日活動' : '全天';
+    }
+
+    final sameDay = DateUtils.isSameDay(event.startTime, event.endTime);
+    if (sameDay) {
+      final startText = DateFormat('HH:mm', 'zh_TW').format(event.startTime);
+      final endText = DateFormat('HH:mm', 'zh_TW').format(event.endTime);
+      return '$startText - $endText';
+    }
+
+    final startText = DateFormat(
+      'MM/dd HH:mm',
+      'zh_TW',
+    ).format(event.startTime);
+    final endText = DateFormat('MM/dd HH:mm', 'zh_TW').format(event.endTime);
+    return '$startText - $endText';
   }
 
   int _dayKey(DateTime date) =>
@@ -719,6 +982,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
               start?['date'] is String &&
               end?['dateTime'] == null;
           final title = (raw['summary'] as String?)?.trim();
+          final location = (raw['location'] as String?)?.trim();
+          final description = (raw['description'] as String?)?.trim();
           final eventId = (raw['id'] as String?)?.trim();
           events.add(
             _CalendarEvent(
@@ -729,6 +994,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
               endTime: endTime,
               isAllDay: isAllDay,
               title: title == null || title.isEmpty ? '未命名活動' : title,
+              location: location == null || location.isEmpty ? null : location,
+              description: description == null || description.isEmpty
+                  ? null
+                  : description,
             ),
           );
         } catch (_) {}
@@ -768,6 +1037,8 @@ class _CalendarEvent {
   final DateTime endTime;
   final bool isAllDay;
   final String title;
+  final String? location;
+  final String? description;
 
   const _CalendarEvent({
     required this.id,
@@ -775,6 +1046,8 @@ class _CalendarEvent {
     required this.endTime,
     required this.isAllDay,
     required this.title,
+    this.location,
+    this.description,
   });
 
   String get identity => '$id|${startTime.toIso8601String()}';
@@ -802,6 +1075,8 @@ class _CalendarEvent {
     'endTime': endTime.toIso8601String(),
     'isAllDay': isAllDay,
     'title': title,
+    'location': location,
+    'description': description,
   };
 
   factory _CalendarEvent.fromJson(Map<String, dynamic> json) {
@@ -817,6 +1092,52 @@ class _CalendarEvent {
       endTime: end,
       isAllDay: json['isAllDay'] as bool? ?? false,
       title: json['title'] as String,
+      location: (json['location'] as String?)?.trim(),
+      description: (json['description'] as String?)?.trim(),
+    );
+  }
+}
+
+class _EventDetailRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _EventDetailRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 1),
+          child: Icon(icon, size: 18, color: colorScheme.primary),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(value, style: const TextStyle(fontSize: 14, height: 1.45)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
