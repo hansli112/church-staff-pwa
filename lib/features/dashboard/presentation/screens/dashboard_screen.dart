@@ -250,47 +250,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _normalizeBibleRange(String? raw) {
     if (raw == null || raw.isEmpty) return '';
 
-    final normalizedPunctuation = raw.replaceAll('：', ':').replaceAll('，', ',');
-    final parts = normalizedPunctuation.split(':');
-    if (parts.length < 2) return normalizedPunctuation;
+    final normalizedPunctuation = raw
+        .replaceAll('：', ':')
+        .replaceAll('，', ',')
+        .trim();
+    final singleRangePattern = RegExp(
+      r'^(.+?)([零一二三四五六七八九十百千兩〇]+):(\d+)-([零一二三四五六七八九十百千兩〇]+):(\d+)$',
+    );
+    final singleChapterPattern = RegExp(
+      r'^(.+?)([零一二三四五六七八九十百千兩〇]+):(\d+)-(\d+)$',
+    );
 
-    final book = parts.first;
-    final verseRange = parts.sublist(1).join(':');
-    final chapterMatch = RegExp(
-      r'^(.*?)([零一二三四五六七八九十百千兩〇]+)$',
-    ).firstMatch(book);
+    final singleRangeMatch = singleRangePattern.firstMatch(
+      normalizedPunctuation,
+    );
+    if (singleRangeMatch != null) {
+      final book = singleRangeMatch.group(1)!;
+      final startChapter = _chineseNumberToArabic(singleRangeMatch.group(2)!);
+      final startVerse = singleRangeMatch.group(3)!;
+      final endChapter = _chineseNumberToArabic(singleRangeMatch.group(4)!);
+      final endVerse = singleRangeMatch.group(5)!;
 
-    final normalizedBook = chapterMatch == null
-        ? book
-        : '${chapterMatch.group(1)}${_chineseNumberToArabic(chapterMatch.group(2)!)}';
+      if (startChapter == endChapter) {
+        return '$book$startChapter:$startVerse-$endVerse';
+      }
+      return '$book$startChapter:$startVerse-$endChapter:$endVerse';
+    }
 
-    final normalizedVerseRange = verseRange.replaceAllMapped(
+    final singleChapterMatch = singleChapterPattern.firstMatch(
+      normalizedPunctuation,
+    );
+    if (singleChapterMatch != null) {
+      final book = singleChapterMatch.group(1)!;
+      final chapter = _chineseNumberToArabic(singleChapterMatch.group(2)!);
+      final startVerse = singleChapterMatch.group(3)!;
+      final endVerse = singleChapterMatch.group(4)!;
+      return '$book$chapter:$startVerse-$endVerse';
+    }
+
+    return normalizedPunctuation.replaceAllMapped(
       RegExp(r'[零一二三四五六七八九十百千兩〇]+'),
       (match) => _chineseNumberToArabic(match.group(0)!),
     );
-
-    final compressedVerseRange = _compressBibleRange(normalizedVerseRange);
-    return '$normalizedBook:$compressedVerseRange';
-  }
-
-  String _compressBibleRange(String verseRange) {
-    if (RegExp(r'[,;、，；~～]').hasMatch(verseRange)) {
-      return verseRange;
-    }
-
-    final match = RegExp(r'^(\d+):(\d+)-(\d+):(\d+)$').firstMatch(verseRange);
-    if (match == null) return verseRange;
-
-    final startChapter = match.group(1);
-    final startVerse = match.group(2);
-    final endChapter = match.group(3);
-    final endVerse = match.group(4);
-
-    if (startChapter == endChapter) {
-      return '$startChapter:$startVerse-$endVerse';
-    }
-
-    return verseRange;
   }
 
   String _chineseNumberToArabic(String value) {
