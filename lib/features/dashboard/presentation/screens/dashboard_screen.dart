@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../core/config/google_calendar_config.dart';
+import '../../../../core/services/external_link_service.dart';
 import '../../../roster/domain/entities/service_roster.dart';
 import '../../../roster/presentation/providers/roster_provider.dart';
 import '../../../calendar/presentation/screens/calendar_screen.dart'
@@ -22,9 +23,14 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   static const int _recentActivitiesLimit = 3;
   static const int _recentActivitiesFetchMax = 20;
+  static const String _dailyBreadUrl =
+      'https://www.breadoflife.taipei/news/daily-bible/';
+  static const _dailyBreadRangeFallback = '查看今日經文範圍';
 
   bool _isLoadingCalendar = false;
+  bool _isLoadingDailyBreadRange = false;
   bool _isLoadingRecentActivities = false;
+  String? _dailyBreadRange;
   String? _recentActivitiesError;
   List<_DashboardCalendarEvent> _recentActivities = const [];
 
@@ -37,6 +43,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         rosterProvider.fetchInitialData();
       }
     });
+    _loadDailyBreadRange();
     _loadRecentActivities();
   }
 
@@ -60,10 +67,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 20),
             _buildFeatureCard(
               context,
-              icon: Icons.notifications_active,
-              title: '最新公告',
-              description: '查看教會本週重要事項',
+              icon: Icons.menu_book_rounded,
+              title: '每日靈糧',
+              description: _dailyBreadDescription,
               color: Colors.orangeAccent,
+              onTap: _openDailyBread,
             ),
             const SizedBox(height: 16),
             _buildCalendarFeatureCard(context),
@@ -137,6 +145,194 @@ class _DashboardScreenState extends State<DashboardScreen> {
         });
       }
     }
+  }
+
+  Future<void> _openDailyBread() async {
+    final launched = await openExternalLink(_dailyBreadUrl);
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('無法開啟每日靈糧頁面')));
+    }
+  }
+
+  String get _dailyBreadDescription {
+    final range = _dailyBreadRange?.trim();
+    if (range != null && range.isNotEmpty) {
+      return range;
+    }
+    if (_isLoadingDailyBreadRange) {
+      return '載入今日經文範圍中...';
+    }
+    return _dailyBreadRangeFallback;
+  }
+
+  Future<void> _loadDailyBreadRange() async {
+    if (mounted) {
+      setState(() {
+        _isLoadingDailyBreadRange = true;
+      });
+    }
+
+    final cached = await _loadCachedDailyBreadRange();
+    if (mounted && cached != null && cached.isNotEmpty) {
+      setState(() {
+        _dailyBreadRange = cached;
+      });
+    }
+
+    try {
+      final fetched = await _fetchDailyBreadRange();
+      if (fetched != null && fetched.isNotEmpty) {
+        await _saveCachedDailyBreadRange(fetched);
+      }
+      if (!mounted) return;
+      setState(() {
+        _dailyBreadRange = fetched ?? _dailyBreadRange;
+      });
+    } catch (_) {
+      // Keep cached or fallback text when the source cannot be reached.
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingDailyBreadRange = false;
+        });
+      }
+    }
+  }
+
+  String _cacheKeyForDailyBreadRange() {
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    return 'dashboard_daily_bread_range_$today';
+  }
+
+  Future<String?> _loadCachedDailyBreadRange() async {
+    final prefs = await SharedPreferences.getInstance();
+    final cached = prefs.getString(_cacheKeyForDailyBreadRange());
+    if (cached == null || cached.isEmpty) return null;
+    return cached;
+  }
+
+  Future<void> _saveCachedDailyBreadRange(String range) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_cacheKeyForDailyBreadRange(), range);
+  }
+
+  Future<String?> _fetchDailyBreadRange() async {
+    final response = await http
+        .get(Uri.parse(_dailyBreadUrl))
+        .timeout(const Duration(seconds: 10));
+    if (response.statusCode != 200) {
+      throw Exception('daily_bread_fetch_failed_${response.statusCode}');
+    }
+
+    return _parseDailyBreadRange(response.body);
+  }
+
+  String? _parseDailyBreadRange(String html) {
+    final pattern = RegExp(
+      r'(\d{4}-\d{2}-\d{2})\s*<span>\|</span>\s*<span>\s*([^<]+?)\s*</span>',
+      caseSensitive: false,
+      dotAll: true,
+    );
+    final match = pattern.firstMatch(html);
+    if (match == null) return null;
+
+    final dateText = match.group(1)?.trim();
+    final rangeText = _normalizeBibleRange(match.group(2)?.trim());
+    if (dateText == null || rangeText.isEmpty) return null;
+
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    if (dateText != today) return rangeText;
+    return rangeText;
+  }
+
+  String _normalizeBibleRange(String? raw) {
+    if (raw == null || raw.isEmpty) return '';
+
+    final normalizedPunctuation = raw.replaceAll('：', ':').replaceAll('，', ',');
+    final parts = normalizedPunctuation.split(':');
+    if (parts.length < 2) return normalizedPunctuation;
+
+    final book = parts.first;
+    final verseRange = parts.sublist(1).join(':');
+    final chapterMatch = RegExp(
+      r'^(.*?)([零一二三四五六七八九十百千兩〇]+)$',
+    ).firstMatch(book);
+
+    final normalizedBook = chapterMatch == null
+        ? book
+        : '${chapterMatch.group(1)}${_chineseNumberToArabic(chapterMatch.group(2)!)}';
+
+    final normalizedVerseRange = verseRange.replaceAllMapped(
+      RegExp(r'[零一二三四五六七八九十百千兩〇]+'),
+      (match) => _chineseNumberToArabic(match.group(0)!),
+    );
+
+    final compressedVerseRange = _compressBibleRange(normalizedVerseRange);
+    return '$normalizedBook:$compressedVerseRange';
+  }
+
+  String _compressBibleRange(String verseRange) {
+    if (RegExp(r'[,;、，；~～]').hasMatch(verseRange)) {
+      return verseRange;
+    }
+
+    final match = RegExp(r'^(\d+):(\d+)-(\d+):(\d+)$').firstMatch(verseRange);
+    if (match == null) return verseRange;
+
+    final startChapter = match.group(1);
+    final startVerse = match.group(2);
+    final endChapter = match.group(3);
+    final endVerse = match.group(4);
+
+    if (startChapter == endChapter) {
+      return '$startChapter:$startVerse-$endVerse';
+    }
+
+    return verseRange;
+  }
+
+  String _chineseNumberToArabic(String value) {
+    const digitMap = {
+      '零': 0,
+      '〇': 0,
+      '一': 1,
+      '二': 2,
+      '兩': 2,
+      '三': 3,
+      '四': 4,
+      '五': 5,
+      '六': 6,
+      '七': 7,
+      '八': 8,
+      '九': 9,
+    };
+    const unitMap = {'十': 10, '百': 100, '千': 1000};
+
+    var result = 0;
+    var section = 0;
+    var number = 0;
+
+    for (final rune in value.runes) {
+      final char = String.fromCharCode(rune);
+      final digit = digitMap[char];
+      if (digit != null) {
+        number = digit;
+        continue;
+      }
+
+      final unit = unitMap[char];
+      if (unit != null) {
+        section += (number == 0 ? 1 : number) * unit;
+        number = 0;
+      }
+    }
+
+    result += section + number;
+    return result == 0 && !value.contains('零') && !value.contains('〇')
+        ? value
+        : result.toString();
   }
 
   Future<void> _loadRecentActivities() async {
