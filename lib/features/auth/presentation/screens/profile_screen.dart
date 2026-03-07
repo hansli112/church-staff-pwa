@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+import '../../../../core/services/app_version_service.dart';
 import '../../../../core/services/push_notification_service.dart';
 import '../providers/auth_provider.dart';
 import 'user_management_screen.dart' deferred as user_management_screen;
@@ -13,9 +15,13 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  static const AppVersionService _appVersionService = AppVersionService();
+
   String? _statusUserId;
   bool _isPushEnabled = false;
   bool _isPushLoading = false;
+  late final Future<AppVersionInfo?> _versionInfoFuture = _appVersionService
+      .fetchVersionInfo();
 
   Future<void> _loadAndPush(
     BuildContext context,
@@ -97,8 +103,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (value && !enabled) {
         final reasonMessage = switch (result.failureReason) {
           PushToggleFailureReason.missingVapidKey => '系統設定缺少推播金鑰，請聯絡管理員。',
-          PushToggleFailureReason.permissionDenied => '通知權限未開啟，請到 iPhone 設定允許此 App 通知。',
-          PushToggleFailureReason.tokenUnavailable => '目前裝置無法取得推播識別碼，請重新開啟 App 後再試。',
+          PushToggleFailureReason.permissionDenied =>
+            '通知權限未開啟，請到 iPhone 設定允許此 App 通知。',
+          PushToggleFailureReason.tokenUnavailable =>
+            '目前裝置無法取得推播識別碼，請重新開啟 App 後再試。',
           PushToggleFailureReason.saveTokenFailed => '已取得識別碼，但儲存失敗，請稍後再試。',
           PushToggleFailureReason.savePreferenceFailed => '通知偏好儲存失敗，請稍後再試。',
           PushToggleFailureReason.notInitialized => '推播服務尚未初始化完成，請重整後再試。',
@@ -204,8 +212,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onChanged: _isPushLoading ? null : _togglePush,
           ),
 
-          const Divider(),
-
           // Logout Button
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
@@ -237,8 +243,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
               }
             },
           ),
+          FutureBuilder<AppVersionInfo?>(
+            future: _versionInfoFuture,
+            builder: (context, snapshot) {
+              final info = snapshot.data;
+              if (info == null) {
+                return const SizedBox.shrink();
+              }
+
+              return Padding(
+                padding: const EdgeInsets.only(top: 20, bottom: 8),
+                child: Center(
+                  child: Text(
+                    '更新於 ${_buildVersionDateText(info)}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
         ],
       ),
     );
+  }
+
+  String _buildVersionDateText(AppVersionInfo? info) {
+    return DateFormat('yyyy/MM/dd HH:mm').format(info!.generatedAt);
   }
 }
