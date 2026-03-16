@@ -18,4 +18,5 @@
 /*.eot /:splat.eot 200
 /*.woff /:splat.woff 200
 /*.woff2 /:splat.woff2 200
+/proxy/daily-bible/ https://www.breadoflife.taipei/news/daily-bible/ 200
 /* /index.html 200
