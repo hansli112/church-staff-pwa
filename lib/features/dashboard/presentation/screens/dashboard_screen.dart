@@ -23,7 +23,9 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   static const int _recentActivitiesLimit = 3;
   static const int _recentActivitiesFetchMax = 20;
-  static const String _dailyBreadUrl = '/proxy/daily-bible/';
+  static const String _dailyBreadProxyUrl = '/proxy/daily-bible/';
+  static const String _dailyBreadUrl =
+      'https://www.breadoflife.taipei/news/daily-bible/';
   static const _dailyBreadRangeFallback = '查看今日經文範圍';
 
   bool _isLoadingCalendar = false;
@@ -219,7 +221,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<String?> _fetchDailyBreadRange() async {
     final response = await http
-        .get(Uri.parse(_dailyBreadUrl))
+        .get(Uri.parse(_dailyBreadProxyUrl))
         .timeout(const Duration(seconds: 10));
     if (response.statusCode != 200) {
       throw Exception('daily_bread_fetch_failed_${response.statusCode}');
