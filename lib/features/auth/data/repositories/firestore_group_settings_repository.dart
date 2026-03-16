@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/repositories/group_settings_repository.dart';
 import '../../../roster/domain/entities/service_roster.dart';
@@ -29,7 +31,7 @@ class FirestoreGroupSettingsRepository implements GroupSettingsRepository {
         return MapEntry(type, List<String>.from(value));
       });
     } catch (e) {
-      print('Get Small Groups Error: $e');
+      log('Get Small Groups Error: $e');
       return {};
     }
   }
@@ -44,7 +46,7 @@ class FirestoreGroupSettingsRepository implements GroupSettingsRepository {
       });
       await _templatesDoc.set(data);
     } catch (e) {
-      print('Update Small Groups Error: $e');
+      log('Update Small Groups Error: $e');
       throw Exception('更新小組設定失敗: $e');
     }
   }

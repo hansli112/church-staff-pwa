@@ -33,8 +33,12 @@ RUN flutter pub get
 # 複製其餘原始碼
 COPY . .
 
+# Web Push 的公開 VAPID Key（建置時注入）
+ARG FCM_WEB_VAPID_KEY=""
+
 # 編譯 Web 版本 (Release Mode)
-RUN flutter build web --release --base-href /
+RUN flutter build web --release --base-href / \
+    --dart-define=FCM_WEB_VAPID_KEY=${FCM_WEB_VAPID_KEY}
 
 # Stage 2: 執行環境 (目標架構 armv7)
 # Nginx Alpine 版本支援多架構，包括 linux/arm/v7

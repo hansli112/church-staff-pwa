@@ -14,6 +14,7 @@ class RoleSettingsScreen extends StatefulWidget {
 
 class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
   late Map<ServiceType, List<String>> _editingTemplates;
+  late Map<ServiceType, Map<String, String>> _renamedRolesByType;
   late final Map<ServiceType, ScrollController> _scrollControllers;
 
   @override
@@ -24,6 +25,9 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
       provider.templates.keys,
       provider.templates.values.map((list) => List<String>.from(list)),
     );
+    _renamedRolesByType = {
+      for (final type in ServiceType.values) type: <String, String>{},
+    };
     _scrollControllers = {
       for (final type in ServiceType.values) type: ScrollController(),
     };
@@ -66,7 +70,30 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
       currentName: current,
     );
     if (name == null) return;
+    _trackRoleRename(type, current, name);
     _updateRole(type, index, name);
+  }
+
+  void _trackRoleRename(ServiceType type, String oldName, String newName) {
+    final from = oldName.trim();
+    final to = newName.trim();
+    if (from.isEmpty || to.isEmpty || from == to) return;
+
+    final mapping = _renamedRolesByType[type]!;
+    var original = from;
+    for (final entry in mapping.entries) {
+      if (entry.value == from) {
+        original = entry.key;
+        break;
+      }
+    }
+
+    mapping.remove(from);
+    if (original == to) {
+      mapping.remove(original);
+      return;
+    }
+    mapping[original] = to;
   }
 
   Future<void> _confirmRemoveRole(ServiceType type, int index) async {
@@ -113,7 +140,8 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
           final trimmed = value.trim();
           if (trimmed.isEmpty) return '請輸入名稱';
           final isDuplicate = existing.any(
-            (name) => name.trim() == trimmed && name.trim() != currentName?.trim(),
+            (name) =>
+                name.trim() == trimmed && name.trim() != currentName?.trim(),
           );
           if (isDuplicate) return '名稱已存在';
           return null;
@@ -140,10 +168,9 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
                   labelText: '服事項目名稱',
                   hintText: '例：敬拜主領',
                   hintStyle: TextStyle(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withOpacity(0.35),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.35),
                   ),
                   floatingLabelBehavior: FloatingLabelBehavior.always,
                   border: const OutlineInputBorder(),
@@ -175,15 +202,23 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
         appBar: AppBar(
           title: const Text('服事項目設定'),
           bottom: TabBar(
-            tabs: ServiceType.values.map((type) => Tab(text: type.label)).toList(),
+            tabs: ServiceType.values
+                .map((type) => Tab(text: type.label))
+                .toList(),
           ),
           actions: [
             IconButton(
               icon: const Icon(Icons.check),
               onPressed: () async {
-                await context.read<RosterProvider>().updateTemplates(_editingTemplates);
-                await context.read<AuthProvider>().cleanupUserMinistries(_editingTemplates);
-                if (mounted) Navigator.pop(context);
+                final rosterProvider = context.read<RosterProvider>();
+                final authProvider = context.read<AuthProvider>();
+                await rosterProvider.updateTemplates(
+                  _editingTemplates,
+                  renamedRolesByType: _renamedRolesByType,
+                );
+                await authProvider.cleanupUserMinistries(_editingTemplates);
+                if (!context.mounted) return;
+                Navigator.pop(context);
               },
             ),
           ],

@@ -21,14 +21,29 @@ jobs:
 
       # 4. 編譯 Web (根據分支區分環境)
       - name: Build Web
+        env:
+          FCM_WEB_VAPID_KEY: ${{ secrets.FCM_WEB_VAPID_KEY }}
         run: |
+          if [ -z "$FCM_WEB_VAPID_KEY" ]; then
+            echo "::warning::Missing FCM_WEB_VAPID_KEY secret. Web push token will not be generated."
+          fi
           if [ "${{ github.ref_name }}" == "main" ]; then
             # 正式環境編譯
-            flutter build web --release --base-href "/" --wasm
+            flutter build web --release --base-href "/" \
+              --dart-define=FCM_WEB_VAPID_KEY="$FCM_WEB_VAPID_KEY"
           else
             # 開發環境編譯 (如果你有不同的 base-href 可以在這改)
-            flutter build web --release --base-href "/" --wasm
+            flutter build web --release --base-href "/" \
+              --dart-define=FCM_WEB_VAPID_KEY="$FCM_WEB_VAPID_KEY"
           fi
+          cat <<EOF > build/web/version.json
+          {
+            "version": "${{ github.sha }}",
+            "build_number": "${{ github.run_number }}",
+            "branch": "${{ github.ref_name }}",
+            "generated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
 
       # 5. 部署到 Cloudflare Pages
       - name: Publish to Cloudflare Pages
@@ -40,3 +55,4 @@ jobs:
           directory: build/web          # 指定編譯後的產出目錄
           # 關鍵：推送到 main 會更新 Production，推送到 dev 會產生 Preview 網址
           branch: ${{ github.ref_name }}
+          functionsDirectory: functions

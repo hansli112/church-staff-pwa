@@ -30,7 +30,9 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
     super.initState();
     _nameController = TextEditingController(text: widget.user?.name ?? '');
     _emailController = TextEditingController(text: widget.user?.email ?? '');
-    _usernameController = TextEditingController(text: widget.user?.username ?? '');
+    _usernameController = TextEditingController(
+      text: widget.user?.username ?? '',
+    );
     _passwordController = TextEditingController();
     _selectedRole = widget.user?.role ?? UserRole.member;
     _zones = List.from(widget.user?.zones ?? []);
@@ -47,15 +49,23 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
 
   void _addZone() {
     final usedTypes = _zones.map((zone) => zone.serviceType).toSet();
-    final availableTypes = ServiceType.values.where((type) => !usedTypes.contains(type)).toList();
+    final availableTypes = ServiceType.values
+        .where((type) => !usedTypes.contains(type))
+        .toList();
     if (availableTypes.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('已新增所有牧區')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('已新增所有牧區')));
       return;
     }
     setState(() {
-      _zones.add(UserZoneInfo(serviceType: availableTypes.first, smallGroups: [], ministries: []));
+      _zones.add(
+        UserZoneInfo(
+          serviceType: availableTypes.first,
+          smallGroups: [],
+          ministries: [],
+        ),
+      );
     });
   }
 
@@ -73,16 +83,17 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
 
   Future<void> _save() async {
     if (_zones.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('請至少設定一個牧區')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('請至少設定一個牧區')));
       return;
     }
     if (_formKey.currentState!.validate()) {
       final authProvider = context.read<AuthProvider>();
       final email = _emailController.text.trim();
       final hadEmail = widget.user?.email.isNotEmpty ?? false;
-      final shouldCreateAuth = widget.user != null && !hadEmail && email.isNotEmpty;
+      final shouldCreateAuth =
+          widget.user != null && !hadEmail && email.isNotEmpty;
       try {
         if (widget.user == null) {
           await authProvider.addUser(
@@ -108,16 +119,16 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
         }
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('儲存成功')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('儲存成功')));
           Navigator.pop(context);
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('錯誤: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('錯誤: $e')));
         }
       }
     }
@@ -125,9 +136,11 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final canEditEmail = widget.user == null || (widget.user?.email.isEmpty ?? false);
+    final canEditEmail =
+        widget.user == null || (widget.user?.email.isEmpty ?? false);
     final hadEmail = widget.user?.email.isNotEmpty ?? false;
-    final shouldPromptPassword = widget.user == null ||
+    final shouldPromptPassword =
+        widget.user == null ||
         (!hadEmail && _emailController.text.trim().isNotEmpty);
     return Scaffold(
       appBar: AppBar(
@@ -138,12 +151,7 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
                 onPressed: () => Navigator.pop(context),
               )
             : null,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.check),
-            onPressed: _save,
-          ),
-        ],
+        actions: [IconButton(icon: const Icon(Icons.check), onPressed: _save)],
       ),
       body: Form(
         key: _formKey,
@@ -156,7 +164,10 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('基本資料', style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                      '基本資料',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _nameController,
@@ -199,7 +210,8 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
                       },
                     ),
                     if (shouldPromptPassword) ...[
-                      if (!hadEmail && _emailController.text.trim().isNotEmpty) ...[
+                      if (!hadEmail &&
+                          _emailController.text.trim().isNotEmpty) ...[
                         const SizedBox(height: 8),
                         const Text(
                           '補上 Email 後會建立登入帳號，請設定可登入的密碼',
@@ -227,7 +239,7 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
                     ],
                     const SizedBox(height: 16),
                     DropdownButtonFormField<UserRole>(
-                      value: _selectedRole,
+                      initialValue: _selectedRole,
                       decoration: const InputDecoration(
                         labelText: '角色',
                         border: OutlineInputBorder(),
@@ -265,7 +277,9 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
             if (_zones.isEmpty)
               const Padding(
                 padding: EdgeInsets.all(16.0),
-                child: Center(child: Text('尚無牧區資料', style: TextStyle(color: Colors.grey))),
+                child: Center(
+                  child: Text('尚無牧區資料', style: TextStyle(color: Colors.grey)),
+                ),
               ),
             ..._zones.asMap().entries.map((entry) {
               final index = entry.key;
@@ -317,11 +331,13 @@ class _ZoneEditorCardState extends State<_ZoneEditorCard> {
   }
 
   void _notifyUpdate() {
-    widget.onUpdate(widget.zone.copyWith(
-      serviceType: _selectedType,
-      smallGroups: _groups,
-      ministries: _ministries,
-    ));
+    widget.onUpdate(
+      widget.zone.copyWith(
+        serviceType: _selectedType,
+        smallGroups: _groups,
+        ministries: _ministries,
+      ),
+    );
   }
 
   Future<void> _confirmRemoveZone() async {
@@ -366,7 +382,7 @@ class _ZoneEditorCardState extends State<_ZoneEditorCard> {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<ServiceType>(
-                    value: _selectedType,
+                    initialValue: _selectedType,
                     decoration: const InputDecoration(labelText: '牧區'),
                     items: ServiceType.values.map((type) {
                       final isUsed = widget.usedTypes.contains(type);
@@ -384,13 +400,22 @@ class _ZoneEditorCardState extends State<_ZoneEditorCard> {
                     }).toList(),
                     onChanged: (value) {
                       if (value != null) {
-                        final newOptions = context.read<RosterProvider>().templates[value] ?? [];
+                        final newOptions =
+                            context.read<RosterProvider>().templates[value] ??
+                            [];
                         final newGroupOptions =
-                            context.read<GroupSettingsProvider>().templates[value] ?? [];
+                            context
+                                .read<GroupSettingsProvider>()
+                                .templates[value] ??
+                            [];
                         setState(() {
                           _selectedType = value;
-                          _ministries = _ministries.where(newOptions.contains).toList();
-                          _groups = _groups.where(newGroupOptions.contains).toList();
+                          _ministries = _ministries
+                              .where(newOptions.contains)
+                              .toList();
+                          _groups = _groups
+                              .where(newGroupOptions.contains)
+                              .toList();
                         });
                         _notifyUpdate();
                       }
@@ -404,7 +429,7 @@ class _ZoneEditorCardState extends State<_ZoneEditorCard> {
               ],
             ),
             const SizedBox(height: 12),
-            
+
             _OptionListSelector(
               title: '所屬小組',
               options: groupOptions,
@@ -416,7 +441,7 @@ class _ZoneEditorCardState extends State<_ZoneEditorCard> {
               emptyText: '尚未設定小組清單',
             ),
             const SizedBox(height: 12),
-            
+
             _OptionListSelector(
               title: '參與服事',
               options: ministryOptions,
@@ -454,7 +479,10 @@ class _OptionListSelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+        Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+        ),
         const SizedBox(height: 4),
         if (options.isEmpty)
           Text(emptyText, style: const TextStyle(color: Colors.grey)),

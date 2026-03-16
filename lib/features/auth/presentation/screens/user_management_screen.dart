@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/user.dart';
@@ -238,7 +237,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                 side: BorderSide(
                                   color: Theme.of(
                                     context,
-                                  ).dividerColor.withOpacity(0.6),
+                                  ).dividerColor.withValues(alpha: 0.6),
                                 ),
                               ),
                               child: ListTile(
@@ -262,6 +261,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                     color: Colors.red,
                                   ),
                                   onPressed: () async {
+                                    final authProvider = context
+                                        .read<AuthProvider>();
                                     final confirm = await showDialog<bool>(
                                       context: context,
                                       builder: (context) => AlertDialog(
@@ -289,12 +290,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                       ),
                                     );
 
-                                    if (confirm == true && mounted) {
-                                      await context
-                                          .read<AuthProvider>()
-                                          .deleteUser(data.user.id);
-                                      _refreshUsers();
-                                    }
+                                    if (confirm != true) return;
+                                    await authProvider.deleteUser(data.user.id);
+                                    if (!context.mounted) return;
+                                    _refreshUsers();
                                   },
                                 ),
                               ),

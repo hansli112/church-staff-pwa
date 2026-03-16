@@ -108,7 +108,8 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
           final trimmed = value.trim();
           if (trimmed.isEmpty) return '請輸入名稱';
           final isDuplicate = existing.any(
-            (name) => name.trim() == trimmed && name.trim() != currentName?.trim(),
+            (name) =>
+                name.trim() == trimmed && name.trim() != currentName?.trim(),
           );
           if (isDuplicate) return '名稱已存在';
           return null;
@@ -135,7 +136,8 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
                 border: const OutlineInputBorder(),
                 errorText: errorText,
               ),
-              onChanged: (value) => setState(() => errorText = validateValue(value)),
+              onChanged: (value) =>
+                  setState(() => errorText = validateValue(value)),
               onSubmitted: (_) => submit(),
             ),
             actions: [
@@ -143,10 +145,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
                 onPressed: () => Navigator.pop(context),
                 child: const Text('取消'),
               ),
-              TextButton(
-                onPressed: submit,
-                child: const Text('儲存'),
-              ),
+              TextButton(onPressed: submit, child: const Text('儲存')),
             ],
           ),
         );
@@ -182,15 +181,20 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
         appBar: AppBar(
           title: const Text('小組設定'),
           bottom: TabBar(
-            tabs: ServiceType.values.map((type) => Tab(text: type.label)).toList(),
+            tabs: ServiceType.values
+                .map((type) => Tab(text: type.label))
+                .toList(),
           ),
           actions: [
             IconButton(
               icon: const Icon(Icons.check),
               onPressed: () async {
-                await context.read<GroupSettingsProvider>().updateTemplates(_editingTemplates);
-                await context.read<AuthProvider>().cleanupUserGroups(_editingTemplates);
-                if (mounted) Navigator.pop(context);
+                final settingsProvider = context.read<GroupSettingsProvider>();
+                final authProvider = context.read<AuthProvider>();
+                await settingsProvider.updateTemplates(_editingTemplates);
+                await authProvider.cleanupUserGroups(_editingTemplates);
+                if (!context.mounted) return;
+                Navigator.pop(context);
               },
             ),
           ],
