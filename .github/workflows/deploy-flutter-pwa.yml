@@ -45,7 +45,11 @@ jobs:
           }
           EOF
 
-      # 5. 部署到 Cloudflare Pages
+      # 5. 將 Pages Functions 複製到產出目錄（Cloudflare 只看 build/web/functions/）
+      - name: Copy Pages Functions
+        run: cp -r functions build/web/functions
+
+      # 6. 部署到 Cloudflare Pages
       - name: Publish to Cloudflare Pages
         uses: cloudflare/pages-action@v1
         with:
