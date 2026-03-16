@@ -55,3 +55,4 @@ jobs:
           directory: build/web          # 指定編譯後的產出目錄
           # 關鍵：推送到 main 會更新 Production，推送到 dev 會產生 Preview 網址
           branch: ${{ github.ref_name }}
+          functionsDirectory: functions
