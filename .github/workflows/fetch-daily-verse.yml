@@ -1,0 +1,72 @@
+name: Fetch Daily Verse
+
+on:
+  schedule:
+    - cron: '0 17 * * *'  # 01:00 Taiwan time (UTC+8)
+  workflow_dispatch:       # 允許手動觸發
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch and parse daily verse
+        run: |
+          cat << 'EOF' > /tmp/fetch-verse.js
+          const https = require('https');
+          const fs   = require('fs');
+
+          function fetchUrl(url, depth = 0) {
+            return new Promise((resolve, reject) => {
+              if (depth > 5) return reject(new Error('Too many redirects'));
+              const req = https.get(url, {
+                headers: {
+                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                  'Accept-Language': 'zh-TW,zh;q=0.9,en;q=0.8',
+                },
+              }, (res) => {
+                if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
+                  res.resume();
+                  return resolve(fetchUrl(res.headers.location, depth + 1));
+                }
+                const chunks = [];
+                res.on('data', chunk => chunks.push(chunk));
+                res.on('end', () => resolve({ status: res.statusCode, body: Buffer.concat(chunks).toString('utf8') }));
+              });
+              req.on('error', reject);
+            });
+          }
+
+          (async () => {
+            const { status, body } = await fetchUrl('https://www.breadoflife.taipei/news/daily-bible/');
+            if (status !== 200) { console.error('HTTP ' + status); process.exit(1); }
+
+            const match = body.match(/(\d{4}-\d{2}-\d{2})\s*<span>\|<\/span>\s*<span>\s*([^<]+?)\s*<\/span>/s);
+            if (!match) {
+              console.error('Pattern not found. HTML length: ' + body.length);
+              console.error('Snippet: ' + body.substring(0, 500));
+              process.exit(1);
+            }
+
+            const data = { date: match[1], rawRange: match[2].trim(), fetchedAt: new Date().toISOString() };
+            fs.writeFileSync('web/daily-verse.json', JSON.stringify(data, null, 2) + '\n');
+            console.log('Fetched:', JSON.stringify(data));
+          })().catch(err => { console.error(err); process.exit(1); });
+          EOF
+          node /tmp/fetch-verse.js
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add web/daily-verse.json
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update daily verse $(date -u +%Y-%m-%d)"
+            git push
+          fi
