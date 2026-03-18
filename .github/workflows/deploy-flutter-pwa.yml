@@ -2,6 +2,7 @@ name: Deploy Flutter PWA
 on:
   push:
     branches: [ main, dev ] # 當你 push 到 main 或 dev 時會觸發
+  workflow_dispatch: # 允許手動觸發
 
 jobs:
   build-and-deploy:
