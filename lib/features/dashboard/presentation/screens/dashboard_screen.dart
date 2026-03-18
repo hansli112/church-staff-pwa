@@ -23,7 +23,8 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   static const int _recentActivitiesLimit = 3;
   static const int _recentActivitiesFetchMax = 20;
-  static const String _dailyVerseJsonUrl = '/daily-verse.json';
+  static const String _dailyVerseJsonUrl =
+      'https://raw.githubusercontent.com/hansli112/church-staff-pwa/data/daily-verse.json';
   static const String _dailyBreadUrl =
       'https://www.breadoflife.taipei/news/daily-bible/';
   static const _dailyBreadRangeFallback = '查看今日經文範圍';

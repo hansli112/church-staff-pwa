@@ -29,9 +29,6 @@
 /version.json
   Cache-Control: no-cache, no-store, must-revalidate
 
-/daily-verse.json
-  Cache-Control: no-cache, no-store, must-revalidate
-
 /assets/AssetManifest.bin.json
   Cache-Control: no-cache, must-revalidate
 
