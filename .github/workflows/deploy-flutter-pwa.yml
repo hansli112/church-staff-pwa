@@ -22,20 +22,39 @@ jobs:
       # 4. 編譯 Web (根據分支區分環境)
       - name: Build Web
         env:
+          # Secrets (sensitive)
           FCM_WEB_VAPID_KEY: ${{ secrets.FCM_WEB_VAPID_KEY }}
+          GOOGLE_CALENDAR_API_KEY: ${{ secrets.GOOGLE_CALENDAR_API_KEY }}
+          # Variables (non-sensitive, visible in repo settings)
+          FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
+          FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_APP_ID: ${{ vars.FIREBASE_APP_ID }}
+          FIREBASE_MEASUREMENT_ID: ${{ vars.FIREBASE_MEASUREMENT_ID }}
+          GOOGLE_CALENDAR_ID: ${{ vars.GOOGLE_CALENDAR_ID }}
         run: |
           if [ -z "$FCM_WEB_VAPID_KEY" ]; then
             echo "::warning::Missing FCM_WEB_VAPID_KEY secret. Web push token will not be generated."
           fi
-          if [ "${{ github.ref_name }}" == "main" ]; then
-            # 正式環境編譯
-            flutter build web --release --base-href "/" \
-              --dart-define=FCM_WEB_VAPID_KEY="$FCM_WEB_VAPID_KEY"
-          else
-            # 開發環境編譯 (如果你有不同的 base-href 可以在這改)
-            flutter build web --release --base-href "/" \
-              --dart-define=FCM_WEB_VAPID_KEY="$FCM_WEB_VAPID_KEY"
+          if [ -z "$FIREBASE_API_KEY" ]; then
+            echo "::error::Missing FIREBASE_API_KEY secret. Build will produce a non-functional app."
+            exit 1
           fi
+          DART_DEFINES=(
+            --dart-define=FCM_WEB_VAPID_KEY="$FCM_WEB_VAPID_KEY"
+            --dart-define=FIREBASE_API_KEY="$FIREBASE_API_KEY"
+            --dart-define=FIREBASE_AUTH_DOMAIN="$FIREBASE_AUTH_DOMAIN"
+            --dart-define=FIREBASE_PROJECT_ID="$FIREBASE_PROJECT_ID"
+            --dart-define=FIREBASE_STORAGE_BUCKET="$FIREBASE_STORAGE_BUCKET"
+            --dart-define=FIREBASE_MESSAGING_SENDER_ID="$FIREBASE_MESSAGING_SENDER_ID"
+            --dart-define=FIREBASE_APP_ID="$FIREBASE_APP_ID"
+            --dart-define=FIREBASE_MEASUREMENT_ID="$FIREBASE_MEASUREMENT_ID"
+            --dart-define=GOOGLE_CALENDAR_API_KEY="$GOOGLE_CALENDAR_API_KEY"
+            --dart-define=GOOGLE_CALENDAR_ID="$GOOGLE_CALENDAR_ID"
+          )
+          flutter build web --release --base-href "/" "${DART_DEFINES[@]}"
           cat <<EOF > build/web/version.json
           {
             "version": "${{ github.sha }}",
@@ -45,7 +64,28 @@ jobs:
           }
           EOF
 
-      # 5. 部署到 Cloudflare Pages
+      # 5. 將 Firebase 設定注入 service worker
+      - name: Inject Firebase config into service worker
+        env:
+          FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
+          FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_APP_ID: ${{ vars.FIREBASE_APP_ID }}
+          FIREBASE_MEASUREMENT_ID: ${{ vars.FIREBASE_MEASUREMENT_ID }}
+        run: |
+          sed -i \
+            -e "s|__FIREBASE_API_KEY__|$FIREBASE_API_KEY|g" \
+            -e "s|__FIREBASE_AUTH_DOMAIN__|$FIREBASE_AUTH_DOMAIN|g" \
+            -e "s|__FIREBASE_PROJECT_ID__|$FIREBASE_PROJECT_ID|g" \
+            -e "s|__FIREBASE_STORAGE_BUCKET__|$FIREBASE_STORAGE_BUCKET|g" \
+            -e "s|__FIREBASE_MESSAGING_SENDER_ID__|$FIREBASE_MESSAGING_SENDER_ID|g" \
+            -e "s|__FIREBASE_APP_ID__|$FIREBASE_APP_ID|g" \
+            -e "s|__FIREBASE_MEASUREMENT_ID__|$FIREBASE_MEASUREMENT_ID|g" \
+            build/web/firebase-messaging-sw.js
+
+      # 6. 部署到 Cloudflare Pages
       - name: Publish to Cloudflare Pages
         uses: cloudflare/pages-action@v1
         with:

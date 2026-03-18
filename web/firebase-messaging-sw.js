@@ -3,13 +3,13 @@ importScripts('https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js
 importScripts('https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-compat.js');
 
 firebase.initializeApp({
-  apiKey: 'AIzaSyDmxsNwAosSggaB-NvCyv2DS5OPbsTzRb8',
-  authDomain: 'church-staff-pwa.firebaseapp.com',
-  projectId: 'church-staff-pwa',
-  storageBucket: 'church-staff-pwa.firebasestorage.app',
-  messagingSenderId: '190764228437',
-  appId: '1:190764228437:web:2e21123171fd47065819dc',
-  measurementId: 'G-XVHTMHB7BV',
+  apiKey: '__FIREBASE_API_KEY__',
+  authDomain: '__FIREBASE_AUTH_DOMAIN__',
+  projectId: '__FIREBASE_PROJECT_ID__',
+  storageBucket: '__FIREBASE_STORAGE_BUCKET__',
+  messagingSenderId: '__FIREBASE_MESSAGING_SENDER_ID__',
+  appId: '__FIREBASE_APP_ID__',
+  measurementId: '__FIREBASE_MEASUREMENT_ID__',
 });
 
 const messaging = firebase.messaging();

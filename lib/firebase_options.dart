@@ -1,4 +1,3 @@
-// File generated manually based on user input
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -13,12 +12,12 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: "AIzaSyDmxsNwAosSggaB-NvCyv2DS5OPbsTzRb8",
-    authDomain: "church-staff-pwa.firebaseapp.com",
-    projectId: "church-staff-pwa",
-    storageBucket: "church-staff-pwa.firebasestorage.app",
-    messagingSenderId: "190764228437",
-    appId: "1:190764228437:web:2e21123171fd47065819dc",
-    measurementId: "G-XVHTMHB7BV",
+    apiKey: String.fromEnvironment('FIREBASE_API_KEY'),
+    authDomain: String.fromEnvironment('FIREBASE_AUTH_DOMAIN'),
+    projectId: String.fromEnvironment('FIREBASE_PROJECT_ID'),
+    storageBucket: String.fromEnvironment('FIREBASE_STORAGE_BUCKET'),
+    messagingSenderId: String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID'),
+    appId: String.fromEnvironment('FIREBASE_APP_ID'),
+    measurementId: String.fromEnvironment('FIREBASE_MEASUREMENT_ID'),
   );
 }
