@@ -220,14 +220,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<String?> _fetchDailyBreadRange() async {
-    final response = await http
-        .get(Uri.parse(_dailyVerseJsonUrl))
-        .timeout(const Duration(seconds: 10));
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final uri = Uri.parse(_dailyVerseJsonUrl).replace(
+      queryParameters: {'d': today},
+    );
+    final response = await http.get(uri).timeout(const Duration(seconds: 10));
     if (response.statusCode != 200) {
       throw Exception('daily_verse_fetch_failed_${response.statusCode}');
     }
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
+    if ((data['date'] as String?) != today) return null;
     final raw = data['rawRange'] as String?;
     if (raw == null || raw.isEmpty) return null;
     return _normalizeBibleRange(raw);
