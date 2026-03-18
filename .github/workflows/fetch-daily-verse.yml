@@ -33,7 +33,9 @@ jobs:
             console.error('Snippet: ' + html.substring(0, 500));
             process.exit(1);
           }
-          const data = { date: match[1], rawRange: match[2].trim(), fetchedAt: new Date().toISOString() };
+          const now = new Date();
+          const fetchedAt = new Date(now.getTime() + 8 * 3600000).toISOString().replace('Z', '+08:00');
+          const data = { date: match[1], rawRange: match[2].trim(), fetchedAt };
           fs.writeFileSync('daily-verse.json', JSON.stringify(data, null, 2) + '\n');
           console.log('Fetched:', JSON.stringify(data));
           SCRIPT
