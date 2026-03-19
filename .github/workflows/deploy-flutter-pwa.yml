@@ -55,8 +55,8 @@ jobs:
             --dart-define=GOOGLE_CALENDAR_API_KEY="$GOOGLE_CALENDAR_API_KEY"
             --dart-define=GOOGLE_CALENDAR_ID="$GOOGLE_CALENDAR_ID"
           )
-          flutter build web --release --base-href "/" "${DART_DEFINES[@]}"
-          cat <<EOF > build/web/version.json
+          mkdir -p web
+          cat <<EOF > web/version.json
           {
             "version": "${{ github.sha }}",
             "build_number": "${{ github.run_number }}",
@@ -64,6 +64,7 @@ jobs:
             "generated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           }
           EOF
+          flutter build web --release --base-href "/" "${DART_DEFINES[@]}"
 
       # 5. 將 Firebase 設定注入 service worker
       - name: Inject Firebase config into service worker
