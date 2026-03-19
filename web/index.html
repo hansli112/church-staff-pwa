@@ -134,10 +134,13 @@
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.addEventListener('controllerchange', function () {
         isUpdateInProgress = false;
+        window.location.reload();
       });
 
       navigator.serviceWorker.ready
         .then(function (registration) {
+          registration.update();
+
           registration.addEventListener('updatefound', function () {
             const newWorker = registration.installing;
             if (!newWorker) {
@@ -151,6 +154,7 @@
               if (newWorker.state === 'installed') {
                 if (navigator.serviceWorker.controller) {
                   setLoadingMessage('更新下載完成，正在套用新版本...');
+                  newWorker.postMessage({ type: 'SKIP_WAITING' });
                 } else {
                   isUpdateInProgress = false;
                 }

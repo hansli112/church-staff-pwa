@@ -13,18 +13,14 @@ class AppVersionService {
   const AppVersionService();
 
   Future<AppVersionInfo?> fetchVersionInfo() async {
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
     final candidates = [
-      Uri.base.resolve('version.json?t=$timestamp'),
-      Uri.base.resolve('/version.json?t=$timestamp'),
+      Uri.base.resolve('version.json'),
+      Uri.base.resolve('/version.json'),
     ];
 
     for (final uri in candidates) {
       try {
-        final response = await http.get(
-          uri,
-          headers: const {'cache-control': 'no-cache'},
-        );
+        final response = await http.get(uri);
         if (response.statusCode != 200) {
           continue;
         }
