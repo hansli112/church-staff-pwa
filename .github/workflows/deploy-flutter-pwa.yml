@@ -66,7 +66,17 @@ jobs:
           EOF
           flutter build web --release --base-href "/" "${DART_DEFINES[@]}"
 
-      # 5. 將 Firebase 設定注入 service worker
+      # 5. 讓 service worker 支援 skipWaiting（iOS PWA 更新用）
+      - name: Inject skipWaiting into Flutter service worker
+        run: |
+          echo '
+          self.addEventListener("message", function(event) {
+            if (event.data && event.data.type === "SKIP_WAITING") {
+              self.skipWaiting();
+            }
+          });' >> build/web/flutter_service_worker.js
+
+      # 6. 將 Firebase 設定注入 messaging service worker
       - name: Inject Firebase config into service worker
         env:
           FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
@@ -87,7 +97,7 @@ jobs:
             -e "s|__FIREBASE_MEASUREMENT_ID__|$FIREBASE_MEASUREMENT_ID|g" \
             build/web/firebase-messaging-sw.js
 
-      # 6. 部署到 Cloudflare Pages
+      # 7. 部署到 Cloudflare Pages
       - name: Publish to Cloudflare Pages
         uses: cloudflare/pages-action@v1
         with:
