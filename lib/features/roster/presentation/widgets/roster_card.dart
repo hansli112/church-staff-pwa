@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../domain/entities/event_option.dart';
 import '../../domain/entities/service_roster.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/roster_provider.dart';
@@ -360,84 +361,14 @@ class RosterCard extends StatelessWidget {
         .eventOptionsFor(roster.type)
         .where((e) => e.name.trim().isNotEmpty)
         .toList();
-    final selected = <String>{};
-    final scrollController = ScrollController();
 
     final result = await showDialog<List<String>>(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) => AlertDialog(
-            title: const Text('新增事件'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: options.isEmpty
-                  ? const Text('尚未設定可選事件')
-                  : Scrollbar(
-                      controller: scrollController,
-                      thumbVisibility: true,
-                      trackVisibility: true,
-                      child: ListView(
-                        controller: scrollController,
-                        shrinkWrap: true,
-                        children: options.map((option) {
-                          final isExisting = existing.contains(option.name);
-                          final dotColor = Color(option.color);
-                          return CheckboxListTile(
-                            value: isExisting
-                                ? true
-                                : selected.contains(option.name),
-                            onChanged: isExisting
-                                ? null
-                                : (checked) {
-                                    setState(() {
-                                      if (checked == true) {
-                                        selected.add(option.name);
-                                      } else {
-                                        selected.remove(option.name);
-                                      }
-                                    });
-                                  },
-                            title: Row(
-                              children: [
-                                Container(
-                                  width: 14,
-                                  height: 14,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: dotColor,
-                                    border: Border.all(
-                                      color: dotColor.withValues(alpha: 0.6),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(child: Text(option.name)),
-                              ],
-                            ),
-                            dense: true,
-                          );
-                        }).toList(),
-                      ),
-                    ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: selected.isEmpty
-                    ? null
-                    : () => Navigator.pop(context, selected.toList()),
-                child: const Text('新增'),
-              ),
-            ],
-          ),
-        );
-      },
+      builder: (context) => _SpecialEventDialog(
+        options: options,
+        existing: existing,
+      ),
     );
-    scrollController.dispose();
 
     if (!context.mounted) return;
     if (result == null || result.isEmpty) return;
@@ -1113,6 +1044,215 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
                   Navigator.of(context).pop();
                 },
           child: Text(widget.submitLabel),
+        ),
+      ],
+    );
+  }
+}
+
+class _SpecialEventDialog extends StatefulWidget {
+  final List<EventOption> options;
+  final Set<String> existing;
+
+  const _SpecialEventDialog({
+    required this.options,
+    required this.existing,
+  });
+
+  @override
+  State<_SpecialEventDialog> createState() => _SpecialEventDialogState();
+}
+
+class _SpecialEventDialogState extends State<_SpecialEventDialog> {
+  late final Set<String> _selected;
+  late final Set<String> _customEvents;
+  late final TextEditingController _customController;
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = {};
+    _customEvents = {};
+    _customController = TextEditingController();
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _customController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _addCustomEvent([String? raw]) {
+    final name = (raw ?? _customController.text).trim();
+    if (name.isEmpty) return;
+    setState(() {
+      _customEvents.add(name);
+      _selected.add(name);
+    });
+    _customController.clear();
+  }
+
+  void _removeCustomEvent(String name) {
+    setState(() {
+      _customEvents.remove(name);
+      _selected.remove(name);
+    });
+  }
+
+  Future<void> _showCustomInputSheet() async {
+    _customController.clear();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return SettingsBottomSheet(
+          title: '新增選項以外的事件',
+          submitLabel: '加入',
+          onSubmit: () {
+            _addCustomEvent();
+            Navigator.of(context).pop();
+          },
+          child: TextField(
+            controller: _customController,
+            decoration: InputDecoration(
+              hintText: '例：特別奉獻',
+              isDense: true,
+              filled: true,
+              fillColor: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+              hintStyle: TextStyle(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.35),
+              ),
+            ),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (value) {
+              _addCustomEvent(value);
+              Navigator.of(context).pop();
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasOptions = widget.options.isNotEmpty || _customEvents.isNotEmpty;
+    final hasSelection = _selected.isNotEmpty;
+
+    return AlertDialog(
+      title: const Text('新增事件'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (hasOptions)
+              Flexible(
+                child: Scrollbar(
+                  controller: _scrollController,
+                  thumbVisibility: true,
+                  trackVisibility: true,
+                  child: ListView(
+                    controller: _scrollController,
+                    shrinkWrap: true,
+                    children: [
+                      ...widget.options.map((option) {
+                        final isExisting =
+                            widget.existing.contains(option.name);
+                        final dotColor = Color(option.color);
+                        return CheckboxListTile(
+                          value: isExisting || _selected.contains(option.name),
+                          onChanged: isExisting
+                              ? null
+                              : (checked) {
+                                  setState(() {
+                                    if (checked == true) {
+                                      _selected.add(option.name);
+                                    } else {
+                                      _selected.remove(option.name);
+                                    }
+                                  });
+                                },
+                          title: Row(
+                            children: [
+                              Container(
+                                width: 14,
+                                height: 14,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: dotColor,
+                                  border: Border.all(
+                                    color: dotColor.withValues(alpha: 0.6),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(child: Text(option.name)),
+                            ],
+                          ),
+                          dense: true,
+                        );
+                      }),
+                      ..._customEvents.map((name) {
+                        return CheckboxListTile(
+                          value: _selected.contains(name),
+                          onChanged: (checked) {
+                            setState(() {
+                              if (checked == true) {
+                                _selected.add(name);
+                              } else {
+                                _selected.remove(name);
+                              }
+                            });
+                          },
+                          title: Text(name),
+                          secondary: IconButton(
+                            tooltip: '刪除自訂項目',
+                            icon: const Icon(Icons.close, size: 18),
+                            onPressed: () => _removeCustomEvent(name),
+                          ),
+                          controlAffinity: ListTileControlAffinity.leading,
+                          dense: true,
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+              ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: _showCustomInputSheet,
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('新增選項以外的事件'),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('取消'),
+        ),
+        TextButton(
+          onPressed: hasSelection
+              ? () => Navigator.pop(context, _selected.toList())
+              : null,
+          child: const Text('新增'),
         ),
       ],
     );
