@@ -212,6 +212,7 @@ class FirestoreRosterRepository implements RosterRepository {
       'type': roster.type.toString().split('.').last,
       'serviceName': roster.serviceName,
       'specialEvents': roster.specialEvents,
+      'customEventColors': Map<String, dynamic>.from(roster.customEventColors),
       'duties': roster.duties
           .map(
             (d) => {
@@ -251,6 +252,15 @@ class FirestoreRosterRepository implements RosterRepository {
       ),
       serviceName: data['serviceName'] as String? ?? '',
       specialEvents: List<String>.from(data['specialEvents'] ?? const []),
+      customEventColors: () {
+        final raw = data['customEventColors'];
+        if (raw is! Map) return <String, int>{};
+        return Map<String, int>.fromEntries(
+          raw.entries
+              .where((e) => e.key is String && e.value is num)
+              .map((e) => MapEntry(e.key as String, (e.value as num).toInt())),
+        );
+      }(),
       duties:
           (data['duties'] as List<dynamic>?)?.map((item) {
             final d = item as Map<String, dynamic>;

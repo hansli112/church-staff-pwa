@@ -193,11 +193,25 @@ class RosterProvider with ChangeNotifier {
             return renamedEvent;
           }).toList();
 
+          final newColors = Map<String, int>.from(roster.customEventColors);
+          for (final entry in renameMap.entries) {
+            final oldName = entry.key;
+            final newName = entry.value;
+            if (oldName == newName) continue;
+            if (newColors.containsKey(oldName)) {
+              newColors[newName] = newColors.remove(oldName)!;
+              hasChanges = true;
+            }
+          }
+
           if (!hasChanges) {
             continue;
           }
 
-          final updated = roster.copyWith(specialEvents: updatedEvents);
+          final updated = roster.copyWith(
+            specialEvents: updatedEvents,
+            customEventColors: newColors,
+          );
           updatedRosters.add(updated);
         }
 

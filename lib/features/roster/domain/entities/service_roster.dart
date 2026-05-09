@@ -64,6 +64,7 @@ class ServiceRoster {
   final String serviceName;
   final List<RosterEntry> duties;
   final List<String> specialEvents;
+  final Map<String, int> customEventColors; // key: event name, value: ARGB int
 
   ServiceRoster({
     required this.id,
@@ -72,6 +73,7 @@ class ServiceRoster {
     required this.serviceName,
     required this.duties,
     this.specialEvents = const [],
+    this.customEventColors = const {},
   });
 
   ServiceRoster copyWith({
@@ -81,6 +83,7 @@ class ServiceRoster {
     String? serviceName,
     List<RosterEntry>? duties,
     List<String>? specialEvents,
+    Map<String, int>? customEventColors,
   }) {
     return ServiceRoster(
       id: id ?? this.id,
@@ -89,6 +92,7 @@ class ServiceRoster {
       serviceName: serviceName ?? this.serviceName,
       duties: duties ?? this.duties,
       specialEvents: specialEvents ?? this.specialEvents,
+      customEventColors: customEventColors ?? this.customEventColors,
     );
   }
 }

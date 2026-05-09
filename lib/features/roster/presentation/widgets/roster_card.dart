@@ -61,10 +61,11 @@ class RosterCard extends StatelessWidget {
                   runSpacing: 2,
                   children: [
                     ...roster.specialEvents.map((event) {
-                      final colorValue = rosterProvider.eventColorFor(
-                        roster.type,
-                        event,
-                      );
+                      final colorValue = roster.customEventColors[event] ??
+                          rosterProvider.eventColorFor(
+                            roster.type,
+                            event,
+                          );
                       final color = Color(colorValue);
                       final label = Text(
                         event,
@@ -362,7 +363,7 @@ class RosterCard extends StatelessWidget {
         .where((e) => e.name.trim().isNotEmpty)
         .toList();
 
-    final result = await showDialog<List<String>>(
+    final result = await showDialog<_SpecialEventDialogResult>(
       context: context,
       builder: (context) => _SpecialEventDialog(
         options: options,
@@ -371,22 +372,28 @@ class RosterCard extends StatelessWidget {
     );
 
     if (!context.mounted) return;
-    if (result == null || result.isEmpty) return;
+    if (result == null || result.events.isEmpty) return;
     final events = List<String>.from(roster.specialEvents);
-    for (final event in result) {
+    for (final event in result.events) {
       if (!events.contains(event)) {
         events.add(event);
       }
     }
+    final mergedColors = {
+      ...roster.customEventColors,
+      ...result.customColors,
+    };
     context.read<RosterProvider>().updateRoster(
-      roster.copyWith(specialEvents: events),
+      roster.copyWith(specialEvents: events, customEventColors: mergedColors),
     );
   }
 
   void _removeSpecialEvent(BuildContext context, String event) {
     final events = List<String>.from(roster.specialEvents)..remove(event);
+    final colors = Map<String, int>.from(roster.customEventColors)
+      ..remove(event);
     context.read<RosterProvider>().updateRoster(
-      roster.copyWith(specialEvents: events),
+      roster.copyWith(specialEvents: events, customEventColors: colors),
     );
   }
 
@@ -1050,6 +1057,12 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
   }
 }
 
+class _SpecialEventDialogResult {
+  final List<String> events;
+  final Map<String, int> customColors;
+  const _SpecialEventDialogResult(this.events, this.customColors);
+}
+
 class _SpecialEventDialog extends StatefulWidget {
   final List<EventOption> options;
   final Set<String> existing;
@@ -1066,10 +1079,20 @@ class _SpecialEventDialog extends StatefulWidget {
 class _SpecialEventDialogState extends State<_SpecialEventDialog> {
   late final Set<String> _selected;
   late final Set<String> _customEvents;
+  final Map<String, int> _customEventColors = {};
+  static const int _defaultCustomColor = 0xFFF39C12;
+  int _pendingCustomColor = _defaultCustomColor;
   late final TextEditingController _customController;
   late final ScrollController _scrollController;
 
-  static const _customDotColor = Color(0xFF9E9E9E); // grey for custom events
+  static const _colorPalette = [
+    0xFFF39C12,
+    0xFF27AE60,
+    0xFF3498DB,
+    0xFF9B59B6,
+    0xFFE74C3C,
+    0xFF7F8C8D,
+  ];
 
   @override
   void initState() {
@@ -1094,14 +1117,17 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
     setState(() {
       _customEvents.add(name);
       _selected.add(name);
+      _customEventColors[name] = _pendingCustomColor;
     });
     _customController.clear();
+    _pendingCustomColor = _defaultCustomColor;
   }
 
   void _removeCustomEvent(String name) {
     setState(() {
       _customEvents.remove(name);
       _selected.remove(name);
+      _customEventColors.remove(name);
     });
   }
 
@@ -1133,6 +1159,7 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
 
   Future<void> _showCustomInputSheet() async {
     _customController.clear();
+    _pendingCustomColor = _defaultCustomColor;
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -1141,35 +1168,83 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (context) {
-        return SettingsBottomSheet(
-          title: '新增選項以外的事件',
-          submitLabel: '加入',
-          onSubmit: () {
-            _addCustomEvent();
-            Navigator.of(context).pop();
-          },
-          child: TextField(
-            controller: _customController,
-            decoration: InputDecoration(
-              hintText: '例：特別奉獻',
-              isDense: true,
-              filled: true,
-              fillColor: Theme.of(
-                context,
-              ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-              hintStyle: TextStyle(
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.35),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (sheetContext, setSheetState) {
+            return SettingsBottomSheet(
+              title: '新增選項以外的事件',
+              submitLabel: '加入',
+              onSubmit: () {
+                _addCustomEvent();
+                Navigator.of(sheetContext).pop();
+              },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: _customController,
+                    decoration: InputDecoration(
+                      hintText: '例：特別奉獻',
+                      isDense: true,
+                      filled: true,
+                      fillColor: Theme.of(
+                        sheetContext,
+                      ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                      hintStyle: TextStyle(
+                        color: Theme.of(
+                          sheetContext,
+                        ).colorScheme.onSurface.withValues(alpha: 0.35),
+                      ),
+                    ),
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (value) {
+                      _addCustomEvent(value);
+                      Navigator.of(sheetContext).pop();
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '標籤顏色',
+                    style: TextStyle(
+                      color: Colors.grey.shade700,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _colorPalette.map((colorValue) {
+                      final isSelected = _pendingCustomColor == colorValue;
+                      return InkWell(
+                        onTap: () {
+                          setSheetState(() {
+                            _pendingCustomColor = colorValue;
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(13),
+                        child: Container(
+                          width: 26,
+                          height: 26,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Color(colorValue),
+                            border: isSelected
+                                ? Border.all(
+                                    color: Colors.black54,
+                                    width: 2,
+                                  )
+                                : null,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
               ),
-            ),
-            textInputAction: TextInputAction.done,
-            onSubmitted: (value) {
-              _addCustomEvent(value);
-              Navigator.of(context).pop();
-            },
-          ),
+            );
+          },
         );
       },
     );
@@ -1255,9 +1330,12 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
                         );
                       }),
                       ..._customEvents.map((name) {
+                        final customColor = Color(
+                          _customEventColors[name] ?? _defaultCustomColor,
+                        );
                         return _buildEventTile(
                           name: name,
-                          dotColor: _customDotColor,
+                          dotColor: customColor,
                           isExisting: false,
                           isSelected: _selected.contains(name),
                           onChanged: (checked) {
@@ -1294,7 +1372,18 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
         ),
         TextButton(
           onPressed: hasSelection
-              ? () => Navigator.pop(context, _selected.toList())
+              ? () {
+                  final selectedList = _selected.toList();
+                  final filteredColors = Map<String, int>.fromEntries(
+                    _customEventColors.entries.where(
+                      (e) => selectedList.contains(e.key),
+                    ),
+                  );
+                  Navigator.pop(
+                    context,
+                    _SpecialEventDialogResult(selectedList, filteredColors),
+                  );
+                }
               : null,
           child: const Text('新增'),
         ),
