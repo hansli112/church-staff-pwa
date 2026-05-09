@@ -1069,6 +1069,8 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
   late final TextEditingController _customController;
   late final ScrollController _scrollController;
 
+  static const _customDotColor = Color(0xFF9E9E9E); // grey for custom events
+
   @override
   void initState() {
     super.initState();
@@ -1088,6 +1090,7 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
   void _addCustomEvent([String? raw]) {
     final name = (raw ?? _customController.text).trim();
     if (name.isEmpty) return;
+    if (widget.options.any((o) => o.name == name)) return;
     setState(() {
       _customEvents.add(name);
       _selected.add(name);
@@ -1100,6 +1103,32 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
       _customEvents.remove(name);
       _selected.remove(name);
     });
+  }
+
+  Future<void> _confirmRemoveCustomEvent(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('確認刪除'),
+        content: Text('確定要刪除「$trimmed」嗎？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('刪除'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    if (confirmed == true) {
+      _removeCustomEvent(trimmed);
+    }
   }
 
   Future<void> _showCustomInputSheet() async {
@@ -1146,9 +1175,46 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
     );
   }
 
+  Widget _buildEventTile({
+    required String name,
+    required Color dotColor,
+    required bool isExisting,
+    required bool isSelected,
+    required ValueChanged<bool?> onChanged,
+    VoidCallback? onRemove,
+  }) {
+    return CheckboxListTile(
+      value: isExisting || isSelected,
+      onChanged: isExisting ? null : onChanged,
+      title: Row(
+        children: [
+          Container(
+            width: 14,
+            height: 14,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: dotColor,
+              border: Border.all(color: dotColor.withValues(alpha: 0.6)),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Text(name)),
+        ],
+      ),
+      controlAffinity: ListTileControlAffinity.leading,
+      secondary: onRemove != null
+          ? IconButton(
+              tooltip: '刪除自訂項目',
+              icon: const Icon(Icons.close, size: 18),
+              onPressed: onRemove,
+            )
+          : null,
+      dense: true,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final hasOptions = widget.options.isNotEmpty || _customEvents.isNotEmpty;
     final hasSelection = _selected.isNotEmpty;
 
     return AlertDialog(
@@ -1159,7 +1225,7 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (hasOptions)
+            if (widget.options.isNotEmpty || _customEvents.isNotEmpty)
               Flexible(
                 child: Scrollbar(
                   controller: _scrollController,
@@ -1172,43 +1238,28 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
                       ...widget.options.map((option) {
                         final isExisting =
                             widget.existing.contains(option.name);
-                        final dotColor = Color(option.color);
-                        return CheckboxListTile(
-                          value: isExisting || _selected.contains(option.name),
-                          onChanged: isExisting
-                              ? null
-                              : (checked) {
-                                  setState(() {
-                                    if (checked == true) {
-                                      _selected.add(option.name);
-                                    } else {
-                                      _selected.remove(option.name);
-                                    }
-                                  });
-                                },
-                          title: Row(
-                            children: [
-                              Container(
-                                width: 14,
-                                height: 14,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: dotColor,
-                                  border: Border.all(
-                                    color: dotColor.withValues(alpha: 0.6),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(child: Text(option.name)),
-                            ],
-                          ),
-                          dense: true,
+                        return _buildEventTile(
+                          name: option.name,
+                          dotColor: Color(option.color),
+                          isExisting: isExisting,
+                          isSelected: _selected.contains(option.name),
+                          onChanged: (checked) {
+                            setState(() {
+                              if (checked == true) {
+                                _selected.add(option.name);
+                              } else {
+                                _selected.remove(option.name);
+                              }
+                            });
+                          },
                         );
                       }),
                       ..._customEvents.map((name) {
-                        return CheckboxListTile(
-                          value: _selected.contains(name),
+                        return _buildEventTile(
+                          name: name,
+                          dotColor: _customDotColor,
+                          isExisting: false,
+                          isSelected: _selected.contains(name),
                           onChanged: (checked) {
                             setState(() {
                               if (checked == true) {
@@ -1218,14 +1269,7 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
                               }
                             });
                           },
-                          title: Text(name),
-                          secondary: IconButton(
-                            tooltip: '刪除自訂項目',
-                            icon: const Icon(Icons.close, size: 18),
-                            onPressed: () => _removeCustomEvent(name),
-                          ),
-                          controlAffinity: ListTileControlAffinity.leading,
-                          dense: true,
+                          onRemove: () => _confirmRemoveCustomEvent(name),
                         );
                       }),
                     ],
