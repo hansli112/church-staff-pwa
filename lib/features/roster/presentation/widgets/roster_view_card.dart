@@ -43,10 +43,11 @@ class RosterViewCard extends StatelessWidget {
                   runSpacing: 2,
                   children: [
                     ...roster.specialEvents.map((event) {
-                      final colorValue = rosterProvider.eventColorFor(
-                        roster.type,
-                        event,
-                      );
+                      final colorValue = roster.customEventColors[event] ??
+                          rosterProvider.eventColorFor(
+                            roster.type,
+                            event,
+                          );
                       final color = Color(colorValue);
                       return Chip(
                         label: Text(

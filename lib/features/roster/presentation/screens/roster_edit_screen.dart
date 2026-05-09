@@ -487,12 +487,18 @@ class _RosterListState extends State<_RosterList>
 
     final List<String> candidateNames;
     final Map<String, Set<String>> allowedByRole;
+    final Map<String, String> nameToIdMap;
     try {
       final users = await authProvider.getUsers();
       candidateNames = [
         ...users.map((u) => u.name.trim()).where((name) => name.isNotEmpty),
       ];
       allowedByRole = _buildAllowedByRole(users);
+      nameToIdMap = {
+        for (final u in users)
+          if (u.name.trim().isNotEmpty && u.id.trim().isNotEmpty)
+            u.name.trim(): u.id.trim(),
+      };
     } catch (_) {
       return const _JsonImportResult(error: '無法載入同工名單');
     }
@@ -583,11 +589,16 @@ class _RosterListState extends State<_RosterList>
             })
             .whereType<String>()
             .toList();
+        final personIdsByName = <String, String>{
+          for (final name in people)
+            if (nameToIdMap.containsKey(name)) name: nameToIdMap[name]!,
+        };
         duties.add(
           RosterEntry(
             role: roleValue.trim(),
             people: people.isEmpty ? const ['待定'] : people,
             peopleOrder: people.isEmpty ? const [] : List<String>.from(people),
+            personIdsByName: personIdsByName,
           ),
         );
       }
@@ -610,13 +621,25 @@ class _RosterListState extends State<_RosterList>
     final updates = <ServiceRoster>[];
     final missingDates = <String>[];
 
+    final templateRoles = rosterProvider.templates[widget.type] ?? const [];
+    final roleOrder = {
+      for (var i = 0; i < templateRoles.length; i++) templateRoles[i]: i,
+    };
+
     for (final entry in importMap.entries) {
       final roster = rosterByDate[entry.key];
       if (roster == null) {
         missingDates.add(entry.key);
         continue;
       }
-      updates.add(roster.copyWith(duties: entry.value));
+      final sortedDuties = List<RosterEntry>.from(entry.value)
+        ..sort((a, b) {
+          final ai = roleOrder[a.role] ?? templateRoles.length;
+          final bi = roleOrder[b.role] ?? templateRoles.length;
+          if (ai != bi) return ai.compareTo(bi);
+          return entry.value.indexOf(a).compareTo(entry.value.indexOf(b));
+        });
+      updates.add(roster.copyWith(duties: sortedDuties));
     }
 
     if (updates.isEmpty) {
