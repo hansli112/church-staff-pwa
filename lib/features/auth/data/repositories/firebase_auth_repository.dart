@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
@@ -31,9 +32,13 @@ class FirebaseAuthRepository implements AuthRepository {
     // Time-bound the auth-state lookup. authStateChanges().first can hang on
     // Safari Private Mode (no IndexedDB) or when Firebase init fails — without
     // this, AuthProvider stays stuck in the restoring shell forever.
+    // Throw on timeout (don't return null) so AuthProvider can distinguish
+    // "no session persisted" from "we couldn't tell" and surface a message.
     final current = await _auth.authStateChanges().first.timeout(
       const Duration(seconds: 10),
-      onTimeout: () => null,
+      onTimeout: () => throw TimeoutException(
+        'Auth state restore timed out after 10s',
+      ),
     );
     if (current == null) return null;
     return await _fetchUserFromFirestore(current.uid);
