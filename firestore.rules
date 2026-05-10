@@ -1,0 +1,73 @@
+rules_version = '2';
+
+// Firestore security rules for church_staff_pwa.
+//
+// Data model (see lib/features/**/data/repositories/*.dart):
+//   users/{uid}                              - user profile, includes role/fcm/notificationPrefs
+//   rosters/{rosterId}                       - service rosters
+//   settings/roster_templates                - admin-managed templates
+//   settings/event_options                   - admin-managed event options
+//   settings/small_group_templates           - admin-managed small group templates
+//
+// Threat model:
+//   - Auth-only client-side checks can be bypassed by calling Firestore directly
+//     with the public web SDK. These rules are the real enforcement boundary.
+//   - The most dangerous path is self privilege-escalation by writing role=admin
+//     to users/{uid}. This is blocked by selfUpdateOnlyTouches().
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // True iff the update only changes fields in `allowed`.
+    // Used to block self-promotion to admin.
+    function selfUpdateOnlyTouches(allowed) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowed);
+    }
+
+    match /users/{uid} {
+      // Any signed-in user can read user docs (people picker in roster needs this).
+      allow read: if isSignedIn();
+
+      // Only admin creates new user docs (via SecondaryApp flow in user_editor_screen).
+      allow create: if isAdmin();
+
+      // Updates:
+      //   - admin: full control over any user doc
+      //   - self : only fcm and notificationPrefs (no role/email/zones changes)
+      allow update: if isAdmin()
+        || (isSelf(uid)
+            && selfUpdateOnlyTouches(['fcm', 'notificationPrefs']));
+
+      allow delete: if isAdmin();
+    }
+
+    match /rosters/{rosterId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /settings/{doc} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Default deny for any other collection.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
