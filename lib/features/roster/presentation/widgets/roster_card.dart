@@ -8,6 +8,8 @@ import '../providers/roster_provider.dart';
 import '../../../../core/widgets/settings_bottom_sheet.dart';
 
 class RosterCard extends StatelessWidget {
+  static final _dateFormat = DateFormat('yyyy/MM/dd (E)', 'zh_TW');
+
   final ServiceRoster roster;
   final bool initiallyExpanded;
 
@@ -19,7 +21,6 @@ class RosterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('yyyy/MM/dd (E)', 'zh_TW');
     final rosterProvider = context.watch<RosterProvider>();
     final isEditMode = rosterProvider.isEditMode;
 
@@ -45,7 +46,7 @@ class RosterCard extends StatelessWidget {
               : Colors.blueAccent,
         ),
         title: Text(
-          dateFormat.format(roster.date),
+          _dateFormat.format(roster.date),
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Row(
@@ -215,7 +216,6 @@ class RosterCard extends StatelessWidget {
   }
 
   Future<void> _showAddDutyDialog(BuildContext context) async {
-    final TextEditingController roleController = TextEditingController();
     Future<_PeopleOptions> peopleLoader(String? role) =>
         _loadSelectablePeople(context, roster.type, const [], role);
     final roleOptions =
@@ -228,7 +228,6 @@ class RosterCard extends StatelessWidget {
         return _RosterPeopleDialog(
           title: '新增服事項目',
           rosterType: roster.type,
-          roleController: roleController,
           roleOptions: roleOptions,
           initialRole: roleOptions.isNotEmpty ? roleOptions.first : null,
           initialOrder: const [],
@@ -320,7 +319,7 @@ class RosterCard extends StatelessWidget {
         return _RosterPeopleDialog(
           title: '編輯 ${duty.role}',
           rosterType: roster.type,
-          roleController: TextEditingController(text: duty.role),
+          initialRoleText: duty.role,
           roleOptions: const [],
           initialRole: duty.role,
           initialOrder: duty.peopleOrder,
@@ -499,7 +498,7 @@ class _PeopleOptions {
 class _RosterPeopleDialog extends StatefulWidget {
   final String title;
   final ServiceType rosterType;
-  final TextEditingController roleController;
+  final String? initialRoleText;
   final List<String> roleOptions;
   final String? initialRole;
   final List<String> initialOrder;
@@ -520,7 +519,7 @@ class _RosterPeopleDialog extends StatefulWidget {
   const _RosterPeopleDialog({
     required this.title,
     required this.rosterType,
-    required this.roleController,
+    this.initialRoleText,
     required this.roleOptions,
     required this.initialRole,
     required this.initialOrder,
@@ -548,12 +547,14 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
   String? _selectedRole;
   late Future<_PeopleOptions> _peopleFuture;
   late final TextEditingController _customController;
+  late final TextEditingController _roleController;
   late final ScrollController _peopleScrollController;
 
   @override
   void initState() {
     super.initState();
     _customController = TextEditingController();
+    _roleController = TextEditingController(text: widget.initialRoleText ?? '');
     _peopleScrollController = ScrollController();
     _selectedPeople = widget.initialPeople
         .map((e) => e.trim())
@@ -573,6 +574,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
   @override
   void dispose() {
     _customController.dispose();
+    _roleController.dispose();
     _peopleScrollController.dispose();
     super.dispose();
   }
@@ -822,7 +824,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
       children: [
         if (!widget.roleEditable)
           TextField(
-            controller: widget.roleController,
+            controller: _roleController,
             decoration: const InputDecoration(labelText: '職位名稱'),
             enabled: false,
           ),
@@ -965,7 +967,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
               : () {
                   final role = widget.roleEditable
                       ? (_selectedRole ?? '').trim()
-                      : widget.roleController.text.trim();
+                      : _roleController.text.trim();
                   if (role.isEmpty) return;
                   final selected = _buildSelectedPeople(_options);
                   final order = _buildSelectedOrder(_options, selected);
@@ -1032,7 +1034,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
               : () {
                   final role = widget.roleEditable
                       ? (_selectedRole ?? '').trim()
-                      : widget.roleController.text.trim();
+                      : _roleController.text.trim();
                   if (role.isEmpty) return;
                   final selected = _buildSelectedPeople(_options);
                   final order = _buildSelectedOrder(_options, selected);
