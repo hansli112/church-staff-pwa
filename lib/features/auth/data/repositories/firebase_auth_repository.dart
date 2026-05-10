@@ -14,38 +14,35 @@ class FirebaseAuthRepository implements AuthRepository {
 
   @override
   Future<User?> login(String email, String password) async {
-    try {
-      // 直接使用傳入的完整 Email 登入
-      final credential = await _auth.signInWithEmailAndPassword(
-        email: email.trim(),
-        password: password,
-      );
-
-      if (credential.user == null) return null;
-
-      return await _fetchUserFromFirestore(credential.user!.uid);
-    } catch (e) {
-      log('Firebase Login Error: $e');
-      return null;
-    }
+    // Don't catch — let FirebaseAuthException propagate so AuthProvider can
+    // map it to a user-friendly message. Returning null here would erase the
+    // distinction between "wrong password" and "network unreachable" and
+    // make every failure look like '帳號或密碼錯誤'.
+    final credential = await _auth.signInWithEmailAndPassword(
+      email: email.trim(),
+      password: password,
+    );
+    if (credential.user == null) return null;
+    return await _fetchUserFromFirestore(credential.user!.uid);
   }
 
   @override
   Future<User?> getCurrentUser() async {
-    final current = await _auth.authStateChanges().first;
+    // Time-bound the auth-state lookup. authStateChanges().first can hang on
+    // Safari Private Mode (no IndexedDB) or when Firebase init fails — without
+    // this, AuthProvider stays stuck in the restoring shell forever.
+    final current = await _auth.authStateChanges().first.timeout(
+      const Duration(seconds: 10),
+      onTimeout: () => null,
+    );
     if (current == null) return null;
     return await _fetchUserFromFirestore(current.uid);
   }
 
   Future<User?> _fetchUserFromFirestore(String uid) async {
-    try {
-      final doc = await _usersCollection.doc(uid).get();
-      if (!doc.exists) return null;
-      return User.fromJson(doc.data() as Map<String, dynamic>);
-    } catch (e) {
-      log('Fetch User Error: $e');
-      return null;
-    }
+    final doc = await _usersCollection.doc(uid).get();
+    if (!doc.exists) return null;
+    return User.fromJson(doc.data() as Map<String, dynamic>);
   }
 
   @override
