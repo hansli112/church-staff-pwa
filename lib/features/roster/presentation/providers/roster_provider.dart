@@ -112,20 +112,44 @@ class RosterProvider with ChangeNotifier {
     }
   }
 
-  /// Batch-update rosters in parallel. Throws if any write fails so the caller
-  /// can surface the error (e.g. JSON import flow needs partial-failure
-  /// awareness instead of silently writing some and dropping the rest).
+  /// Batch-update rosters in parallel. On partial failure we still sync the
+  /// successful writes into local state (so the UI matches Firestore truth)
+  /// and then throw a summary so the caller can surface the partial error.
+  /// Plain `Future.wait` would also have written the same rows to Firestore
+  /// but left local state empty, drifting the UI from the server.
   Future<void> updateRosters(List<ServiceRoster> rosters) async {
     if (rosters.isEmpty) return;
-    await Future.wait(rosters.map(_repository.updateRoster));
-    // All writes succeeded; sync local state in one notify pass.
-    for (final roster in rosters) {
-      final index = _allRosters.indexWhere((r) => r.id == roster.id);
+    final results = await Future.wait(
+      rosters.map((roster) async {
+        try {
+          await _repository.updateRoster(roster);
+          return (roster: roster, error: null as Object?);
+        } catch (e) {
+          return (roster: roster, error: e as Object?);
+        }
+      }),
+    );
+
+    final successes = results.where((r) => r.error == null).toList();
+    for (final r in successes) {
+      final index = _allRosters.indexWhere((x) => x.id == r.roster.id);
       if (index != -1) {
-        _allRosters[index] = roster;
+        _allRosters[index] = r.roster;
       }
     }
     notifyListeners();
+
+    final failures = results.where((r) => r.error != null).toList();
+    if (failures.isNotEmpty) {
+      // Surface a representative cause + counts so the caller can map it
+      // through error_messages and tell the user how many succeeded.
+      final firstError = failures.first.error!;
+      throw PartialUpdateException(
+        successCount: successes.length,
+        failureCount: failures.length,
+        cause: firstError,
+      );
+    }
   }
 
   Future<void> updateTemplates(
@@ -257,4 +281,20 @@ class RosterProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+}
+
+class PartialUpdateException implements Exception {
+  final int successCount;
+  final int failureCount;
+  final Object cause;
+
+  PartialUpdateException({
+    required this.successCount,
+    required this.failureCount,
+    required this.cause,
+  });
+
+  @override
+  String toString() =>
+      '$successCount 筆寫入成功，$failureCount 筆失敗（首個錯誤：$cause）';
 }

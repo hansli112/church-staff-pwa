@@ -662,7 +662,12 @@ class _RosterListState extends State<_RosterList>
       await rosterProvider.updateRosters(updates);
     } catch (e, st) {
       log('匯入過程寫入 Firestore 失敗', error: e, stackTrace: st);
-      return _JsonImportResult(error: '匯入過程寫入 Firestore 失敗：${mapErrorToUserMessage(e)}');
+      // PartialUpdateException 自帶 success/failure counts，比 generic
+      // mapper 訊息更精確；其他例外仍走 mapper。
+      final msg = e is PartialUpdateException
+          ? '${e.successCount} 筆已寫入、${e.failureCount} 筆失敗，請重新整理確認'
+          : mapErrorToUserMessage(e);
+      return _JsonImportResult(error: '匯入過程寫入失敗：$msg');
     }
 
     return _JsonImportResult(
