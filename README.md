@@ -1,68 +1,235 @@
 # 教會同工助手 (Church Staff PWA)
 
-這是一個基於 **Flutter** 開發的全方位 **漸進式網路應用程式 (PWA)**，旨在為教會同工與志工提供一個集中的管理平台。專案採用 **Feature-First (功能優先)** 架構，方便未來輕鬆擴展模組。
+這是一個基於 **Flutter Web** 開發的全方位 **漸進式網路應用程式 (PWA)**，旨在為教會同工與志工提供集中的管理平台。專案採用 **Feature-First (功能優先)** 架構搭配 **Clean Architecture**，方便未來輕鬆擴展模組。
 
-## 🌟 核心功能
+## 核心功能
 
-*   **集中式儀表板**：快速存取核心工具與關鍵資訊。
-*   **服事表管理**：管理服事行程與志工安排（目前使用模擬數據）。
-*   **模組化設計**：可輕鬆添加新功能，如「請假申請」、「場地預約」或「公告系統」。
-*   **PWA 優化**：針對行動裝置進行優化，提供類原生 App 的使用體驗。
-*   **在地化支持**：完整支援繁體中文 (`zh_TW`)。
+- **集中式儀表板**：快速存取核心工具與關鍵資訊
+- **服事表管理**：管理服事行程與志工安排
+- **模組化設計**：可輕鬆添加新功能（如請假申請、場地預約、公告系統）
+- **PWA 優化**：針對行動裝置進行優化，提供類原生 App 體驗
+- **推播通知**：Firebase Cloud Messaging 整合
+- **在地化支持**：完整支援繁體中文 (`zh_TW`)
 
-## 🛠 技術棧
+## 技術棧
 
-*   **框架**：Flutter (Web Channel)
-*   **語言**：Dart
-*   **狀態管理**：`provider`
-*   **導覽**：標準 Flutter 導覽配合 `NavigationBar`
-*   **在地化**：`intl` 套件
-*   **UI 風格**：Material Design 3
+| 層級 | 技術 |
+|------|------|
+| **框架** | Flutter (Web Channel) |
+| **語言** | Dart |
+| **狀態管理** | Provider |
+| **後端服務** | Firebase (Auth, Firestore, Messaging) |
+| **導覽** | Material Navigation Bar |
+| **在地化** | intl package (`zh_TW`) |
+| **UI 設計** | Material Design 3 |
 
-## 🏗 架構設計
+## 架構設計
 
-專案採用 **Feature-First** 模式。每個功能（Feature）都是一個獨立的微型模組，並包含其自身的 Clean Architecture 層次。
+專案採用 **Feature-First** 模式，結合 **Clean Architecture** 原則：
 
-### 目錄結構
-
-```text
+```
 lib/
-├── core/               # 共享資源（主題、通用組件）
-├── features/           # 獨立功能模組
-│   ├── dashboard/      # 儀表板功能
-│   └── roster/         # 服事表管理功能
-│       ├── data/       # 資料庫實作與數據源
-│       ├── domain/     # 實體 (Entities) 與儲存庫介面
-│       └── presentation/ # UI 介面與 Provider 狀態
-└── presentation/       # 應用層 UI 編排 (Main Scaffold)
+├── core/                          # 共享資源
+│   ├── config/                    # 環境設定（Firebase、Google Calendar key）
+│   ├── services/                  # 跨 feature 服務（推播、外部連結、版本資訊）
+│   └── widgets/                   # 共用 UI 組件
+├── features/                      # 獨立功能模組
+│   ├── auth/                      # 登入、使用者管理
+│   │   ├── domain/                # Entity & Repository Interface
+│   │   ├── data/                  # Firebase 實作
+│   │   └── presentation/          # 登入頁、使用者管理、Provider
+│   ├── calendar/                  # 教會行事曆（目前僅 presentation 層）
+│   │   └── presentation/
+│   ├── dashboard/                 # 儀表板（目前僅 presentation 層）
+│   │   └── presentation/
+│   └── roster/                    # 服事表管理
+│       ├── domain/
+│       ├── data/
+│       └── presentation/
+├── presentation/                  # 應用層 UI 編排
+│   └── screens/main_scaffold.dart # 主 Shell (Bottom Navigation Bar)
+├── firebase_options.dart          # Firebase 平台設定
+└── main.dart                      # 進入點與 Provider 樹組裝
 ```
 
-## 🚀 快速入門
+## 快速入門
 
 ### 前置準備
 
-*   已安裝 [Flutter SDK](https://flutter.dev/docs/get-started/install)。
-*   網頁瀏覽器（建議使用 Chrome 進行調試）。
+- 已安裝 [Flutter SDK](https://flutter.dev/docs/get-started/install)（版本 ≥ 3.10.7）
+- 已安裝 [Git](https://git-scm.com/)
+- 網頁瀏覽器（建議使用 Chrome）
 
-### 本地開發
+### 本地開發設定
 
-在 Chrome 中以開發模式執行：
+1. **安裝依賴**
+   ```bash
+   flutter pub get
+   ```
+
+2. **在 Chrome 中以開發模式執行**
+   ```bash
+   flutter run -d chrome
+   ```
+
+3. **執行靜態分析**
+   ```bash
+   flutter analyze
+   ```
+
+4. **執行測試**
+   ```bash
+   flutter test
+   ```
+
+## 構建與部署
+
+### 開發環境變數
+
+create `.env` file from `.env.example`：
 
 ```bash
-flutter run -d chrome
+# Firebase (非敏感資訊，可公開)
+FIREBASE_API_KEY=<value>
+FIREBASE_AUTH_DOMAIN=<value>
+FIREBASE_PROJECT_ID=<value>
+FIREBASE_STORAGE_BUCKET=<value>
+FIREBASE_MESSAGING_SENDER_ID=<value>
+FIREBASE_APP_ID=<value>
+FIREBASE_MEASUREMENT_ID=<value>
+
+# Google Calendar
+GOOGLE_CALENDAR_ID=<value>
+
+# 敏感資訊（GitHub Secrets）
+GOOGLE_CALENDAR_API_KEY=<value>
+FCM_WEB_VAPID_KEY=<value>
 ```
 
 ### 生產環境構建
 
-產生用於部署的靜態檔案（適用於 GitHub Pages、Firebase Hosting 等）：
+產生用於部署的靜態檔案：
 
 ```bash
 flutter build web --release --base-href / \
-  --dart-define=FCM_WEB_VAPID_KEY=<PUBLIC_VAPID_KEY>
+  --dart-define=FCM_WEB_VAPID_KEY=<PUBLIC_VAPID_KEY> \
+  --dart-define=FIREBASE_API_KEY=<API_KEY> \
+  --dart-define=FIREBASE_AUTH_DOMAIN=<AUTH_DOMAIN> \
+  --dart-define=FIREBASE_PROJECT_ID=<PROJECT_ID> \
+  --dart-define=FIREBASE_STORAGE_BUCKET=<STORAGE_BUCKET> \
+  --dart-define=FIREBASE_MESSAGING_SENDER_ID=<SENDER_ID> \
+  --dart-define=FIREBASE_APP_ID=<APP_ID> \
+  --dart-define=FIREBASE_MEASUREMENT_ID=<MEASUREMENT_ID> \
+  --dart-define=GOOGLE_CALENDAR_API_KEY=<CALENDAR_API_KEY> \
+  --dart-define=GOOGLE_CALENDAR_ID=<CALENDAR_ID>
 ```
 
-## 💻 開發規範
+編譯產出位於 `build/web/`。
 
-*   **命名慣例**：檔案與資料夾使用 `snake_case`，類別名稱使用 `PascalCase`。
-*   **狀態管理**：使用 `Provider`。盡可能將 Provider 的作用域限制在特定功能模組內；僅在全域共享資料時才在 `main.dart` 定義。
-*   **UI 設計**：嚴格遵守 Material Design 3 設計指南。
+### 部署方式
+
+#### Cloudflare Pages（推薦）
+
+GitHub Actions 會自動構建並推送到 Cloudflare Pages：
+- `main` 分支 → Production
+- `dev` 分支 → Preview
+
+詳見 `.github/workflows/deploy-flutter-pwa.yml`。
+
+#### Docker + nginx（本地或自託管）
+
+亦可將 `build/web/` 內容部署至 Docker 容器或 nginx 服務器。
+
+## 開發規範
+
+### 命名慣例
+
+- **檔案與資料夾**：使用 `snake_case`（如 `main_scaffold.dart`、`roster_provider.dart`）
+- **類別與介面**：使用 `PascalCase`（如 `RosterProvider`、`RosterRepository`）
+- **常數**：使用 `camelCase`（如 `appTitle = 'Church Staff'`）
+
+### 狀態管理
+
+- 使用 `Provider`，盡可能將作用域限制在特定功能模組內
+- 跨功能共享的全域資料（如認證狀態）定義在 `lib/main.dart`
+- 避免過度耦合，保持 Provider 樹的清晰
+
+### 測試規範
+
+- 使用 `flutter_test` 框架
+- 測試檔案位於 `test/` 目錄，命名為 `<feature>_<unit>_test.dart`（如 `roster_provider_test.dart`）
+- 執行所有測試後再提交 Pull Request
+
+### 代碼風格
+
+- **縮進**：2 個空格
+- **格式化**：使用 Dart formatter（`dart format lib test`）
+- **分析**：遵守 `analysis_options.yaml` 與 `flutter_lints` 規則
+
+更多詳細的開發規範與 commit 風格，請參考 [`AGENTS.md`](./AGENTS.md)。
+
+## 常見命令
+
+```bash
+# 依賴管理
+flutter pub get              # 安裝依賴
+flutter pub upgrade          # 升級依賴
+
+# 開發與調試
+flutter run -d chrome        # 在 Chrome 中執行
+flutter run -d chrome --debug # 調試模式
+
+# 代碼品質
+flutter analyze              # 靜態分析
+flutter test                 # 執行測試
+dart format lib test         # 格式化代碼
+
+# 構建
+flutter build web --release --base-href /  # 生產構建（不含 dart-define）
+# 詳見上述「生產環境構建」段落，包含完整 dart-define 參數
+```
+
+## 項目結構簡述
+
+### `lib/core/`
+共享的主題、通用 UI 組件、工具函數。
+
+### `lib/features/<feature>/`
+每個功能模組包含：
+- `domain/`: Entities（實體）、Repository 介面、Use Cases（使用情景）
+- `data/`: Repository 實現、Data Sources（遠端/本地）
+- `presentation/`: Screens（頁面）、Providers（狀態）、Widgets（組件）
+
+### `lib/presentation/`
+應用層 UI 編排，如 `main_scaffold.dart` 包含 Bottom Navigation Bar。
+
+### `web/`
+PWA 資源（manifest、icon、`index.html`）。
+
+## 故障排除
+
+### Flutter 版本相容性
+
+若遇到依賴版本衝突，嘗試：
+
+```bash
+flutter clean
+flutter pub get
+flutter analyze
+```
+
+### Firebase 設定問題
+
+確認 `lib/firebase_options.dart` 已包含正確的 Firebase 配置。生產構建時務必提供 `--dart-define` 參數。
+
+### PWA 離線功能
+
+Service Worker 由 Flutter 自動管理；確保 `web/manifest.json` 正確配置，並在生產環境啟用 HTTPS。
+
+## 貢獻指南
+
+歡迎提交 Issue 與 Pull Request！詳見 [`AGENTS.md`](./AGENTS.md) 了解提交規範。
+
+## 許可證
+
+（待補充）
