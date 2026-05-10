@@ -41,7 +41,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       _restoreOffset = _scrollController.offset;
       _pendingRestore = true;
     }
-    final future = context.read<AuthProvider>().getUsers();
+    // 管理畫面 pull-to-refresh / initial load 一律拉最新，避開 cache。
+    final future = context.read<AuthProvider>().getUsers(forceRefresh: true);
     setState(() {
       _usersFuture = future;
       _visibleCount = _visibleCount < _pageSize ? _pageSize : _visibleCount;

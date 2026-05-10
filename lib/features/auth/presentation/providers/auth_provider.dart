@@ -5,11 +5,15 @@ import '../../domain/repositories/auth_repository.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthRepository _repository;
-  
+
   User? _currentUser;
   bool _isLoading = false;
   bool _isRestoring = true;
   String? _error;
+
+  // 同工選擇 dialog 每次開啟都要列全部使用者，避免重複打 Firestore。
+  // 任何 admin 寫操作（addUser/updateUser/deleteUser）或登出後會清掉。
+  List<User>? _cachedUsers;
 
   AuthProvider(this._repository) {
     _restoreSession();
@@ -62,19 +66,25 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     _isLoading = true;
     notifyListeners();
-    
+
     await _repository.logout();
     _currentUser = null;
     _isRestoring = false;
-    
+    _cachedUsers = null;
+
     _isLoading = false;
     notifyListeners();
   }
 
   // Admin features
-  Future<List<User>> getUsers() async {
+  Future<List<User>> getUsers({bool forceRefresh = false}) async {
     if (!isAdmin) throw Exception('Permission denied');
-    return await _repository.getUsers();
+    if (!forceRefresh && _cachedUsers != null) {
+      return _cachedUsers!;
+    }
+    final users = await _repository.getUsers();
+    _cachedUsers = users;
+    return users;
   }
 
   Future<void> addUser(
@@ -96,23 +106,26 @@ class AuthProvider extends ChangeNotifier {
       zones: zones,
     );
     await _repository.addUser(newUser, password);
+    _cachedUsers = null;
     notifyListeners(); // Notify to update user lists if listening
   }
 
   Future<void> updateUser(User user, {String? password}) async {
     if (!isAdmin) throw Exception('Permission denied');
     await _repository.updateUser(user, password: password);
-    
+
     // If updating self, refresh local user data
     if (_currentUser?.id == user.id) {
       _currentUser = user;
     }
+    _cachedUsers = null;
     notifyListeners();
   }
 
   Future<void> deleteUser(String id) async {
     if (!isAdmin) throw Exception('Permission denied');
     await _repository.deleteUser(id);
+    _cachedUsers = null;
     notifyListeners();
   }
 
@@ -138,6 +151,7 @@ class AuthProvider extends ChangeNotifier {
       }
     }
 
+    _cachedUsers = null;
     notifyListeners();
   }
 
@@ -163,6 +177,7 @@ class AuthProvider extends ChangeNotifier {
       }
     }
 
+    _cachedUsers = null;
     notifyListeners();
   }
 }
