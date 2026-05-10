@@ -13,6 +13,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -94,12 +95,25 @@ class _LoginScreenState extends State<LoginScreen> {
                               const SizedBox(height: 16),
                               TextFormField(
                                 controller: _passwordController,
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   labelText: '密碼',
-                                  border: OutlineInputBorder(),
-                                  prefixIcon: Icon(Icons.lock),
+                                  border: const OutlineInputBorder(),
+                                  prefixIcon: const Icon(Icons.lock),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility_off
+                                          : Icons.visibility,
+                                    ),
+                                    tooltip: _obscurePassword ? '顯示密碼' : '隱藏密碼',
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscurePassword = !_obscurePassword;
+                                      });
+                                    },
+                                  ),
                                 ),
-                                obscureText: true,
+                                obscureText: _obscurePassword,
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
                                     return '請輸入密碼';

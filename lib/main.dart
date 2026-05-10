@@ -25,6 +25,10 @@ void main() async {
     Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform),
   ]);
 
+  // Force long polling on web instead of WebSocket. WebSocket transport is
+  // unstable on Safari (iOS + macOS), causing dropped Firestore subscriptions
+  // for our iPhone users. Long polling is slightly slower but reliable across
+  // browsers. See commit 7d6b4e2.
   FirebaseFirestore.instance.settings = const Settings(
     webExperimentalForceLongPolling: true,
   );
@@ -123,15 +127,55 @@ class _AuthWrapperState extends State<AuthWrapper> {
     return Consumer<AuthProvider>(
       builder: (context, auth, _) {
         if (auth.isRestoring) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const _AuthRestoringShell();
         }
         if (!auth.isAuthenticated) {
           return const LoginScreen();
         }
         return const MainScaffold();
       },
+    );
+  }
+}
+
+/// Shown while AuthProvider is awaiting Firebase Auth state from IndexedDB on
+/// app start. Faster perceived load than a blank screen + spinner: the user
+/// sees the church branding immediately and a quiet spinner below it.
+class _AuthRestoringShell extends StatelessWidget {
+  const _AuthRestoringShell();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '竹圍靈糧福音中心',
+                style: theme.textTheme.headlineMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '服事小幫手',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              const SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(strokeWidth: 3),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
