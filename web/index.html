@@ -54,6 +54,9 @@
       box-shadow: none !important;
     }
 
+    /* 對齊 Flutter MaterialApp 內 _AuthRestoringShell 的視覺：
+       headlineMedium 標題 + 8px gap + titleMedium 副標 + 32px gap + 28px spinner。
+       overlay 移除時跟 Flutter shell 幾乎無感過渡。 */
     #app-loading {
       position: fixed;
       inset: 0;
@@ -61,35 +64,36 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 12px;
       background: #ffffff;
       color: #1f2937;
       font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
       z-index: 9999;
     }
 
+    #app-loading .title {
+      font-size: 28px;
+      font-weight: 500;
+      line-height: 1.4;
+      text-align: center;
+    }
+
+    #app-loading .subtitle {
+      margin-top: 8px;
+      font-size: 16px;
+      font-weight: 400;
+      color: rgba(31, 41, 55, 0.7);
+      text-align: center;
+      line-height: 1.5;
+    }
+
     #app-loading .spinner {
-      width: 36px;
-      height: 36px;
+      margin-top: 32px;
+      width: 28px;
+      height: 28px;
       border: 3px solid #d1d5db;
       border-top-color: #2563eb;
       border-radius: 50%;
       animation: spin 1s linear infinite;
-    }
-
-    #app-loading .title {
-      font-size: 18px;
-      font-weight: 600;
-      line-height: 1.4;
-    }
-
-    #app-loading .subtitle {
-      font-size: 14px;
-      color: #4b5563;
-      text-align: center;
-      line-height: 1.5;
-      max-width: 320px;
-      padding: 0 16px;
     }
 
     @keyframes spin {
@@ -101,9 +105,9 @@
 </head>
 <body>
   <div id="app-loading" role="status" aria-live="polite">
+    <div class="title">竹圍靈糧福音中心</div>
+    <div class="subtitle">服事小幫手</div>
     <div class="spinner" aria-hidden="true"></div>
-    <div class="title">載入中</div>
-    <div class="subtitle" id="app-loading-message">首次開啟或有更新時會需要較久時間，請稍候。</div>
   </div>
 
   <script>
