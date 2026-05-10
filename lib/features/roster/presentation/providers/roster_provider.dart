@@ -108,6 +108,22 @@ class RosterProvider with ChangeNotifier {
     }
   }
 
+  /// Batch-update rosters in parallel. Throws if any write fails so the caller
+  /// can surface the error (e.g. JSON import flow needs partial-failure
+  /// awareness instead of silently writing some and dropping the rest).
+  Future<void> updateRosters(List<ServiceRoster> rosters) async {
+    if (rosters.isEmpty) return;
+    await Future.wait(rosters.map(_repository.updateRoster));
+    // All writes succeeded; sync local state in one notify pass.
+    for (final roster in rosters) {
+      final index = _allRosters.indexWhere((r) => r.id == roster.id);
+      if (index != -1) {
+        _allRosters[index] = roster;
+      }
+    }
+    notifyListeners();
+  }
+
   Future<void> updateTemplates(
     Map<ServiceType, List<String>> newTemplates, {
     Map<ServiceType, Map<String, String>> renamedRolesByType = const {},

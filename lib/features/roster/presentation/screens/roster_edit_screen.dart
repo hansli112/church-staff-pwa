@@ -67,6 +67,7 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final authProvider = context.read<AuthProvider>();
 
       if (!authProvider.isAdmin) {
@@ -653,8 +654,10 @@ class _RosterListState extends State<_RosterList>
       );
     }
 
-    for (final roster in updates) {
-      await rosterProvider.updateRoster(roster);
+    try {
+      await rosterProvider.updateRosters(updates);
+    } catch (e) {
+      return _JsonImportResult(error: '匯入過程寫入 Firestore 失敗：$e');
     }
 
     return _JsonImportResult(
