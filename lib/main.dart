@@ -18,13 +18,21 @@ import 'presentation/screens/main_scaffold.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('zh_TW', null);
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Run independent inits in parallel to shave startup latency.
+  await Future.wait([
+    initializeDateFormatting('zh_TW', null),
+    Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform),
+  ]);
+
   FirebaseFirestore.instance.settings = const Settings(
     webExperimentalForceLongPolling: true,
   );
+
+  // PushNotificationService.initialize only registers stream listeners; we
+  // don't need to block runApp on it.
   final pushNotificationService = PushNotificationService();
-  await pushNotificationService.initialize();
+  unawaited(pushNotificationService.initialize());
 
   runApp(ChurchApp(pushNotificationService: pushNotificationService));
 }
