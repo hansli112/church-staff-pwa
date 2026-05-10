@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -8,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../core/config/google_calendar_config.dart';
 import '../../../../core/services/external_link_service.dart';
+import '../../../../core/utils/error_messages.dart';
 import '../../../roster/domain/entities/service_roster.dart';
 import '../../../roster/presentation/providers/roster_provider.dart';
 import '../../../calendar/presentation/screens/calendar_screen.dart'
@@ -129,7 +131,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       await Navigator.of(
         context,
       ).push(MaterialPageRoute(builder: (_) => calendar.CalendarScreen()));
-    } catch (error) {
+    } catch (error, st) {
+      log('載入行事曆畫面失敗', error: error, stackTrace: st);
       if (!mounted) return;
       if (dialogVisible) {
         Navigator.of(context, rootNavigator: true).pop();
@@ -137,7 +140,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('載入失敗: $error')));
+      ).showSnackBar(SnackBar(content: Text('載入失敗：${mapErrorToUserMessage(error)}')));
     } finally {
       if (mounted) {
         if (dialogVisible) {

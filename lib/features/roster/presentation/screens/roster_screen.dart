@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/service_roster.dart';
@@ -5,6 +7,8 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../providers/roster_provider.dart';
 import '../widgets/roster_view_card.dart';
+import '../../../../core/utils/error_messages.dart';
+import '../../../../core/widgets/empty_state.dart';
 import 'roster_edit_screen.dart' deferred as roster_edit_screen;
 
 class RosterScreen extends StatefulWidget {
@@ -48,14 +52,15 @@ class _RosterScreenState extends State<RosterScreen>
       if (!rosterProvider.isEditMode) {
         rosterProvider.toggleEditMode();
       }
-    } catch (error) {
+    } catch (error, st) {
+      log('載入編輯模式失敗', error: error, stackTrace: st);
       if (context.mounted) {
         if (dialogShown) {
           Navigator.of(context, rootNavigator: true).pop();
           dialogShown = false;
         }
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('載入失敗: $error')),
+          SnackBar(content: Text('載入失敗：${mapErrorToUserMessage(error)}')),
         );
       }
     } finally {
@@ -168,7 +173,11 @@ class _RosterScreenState extends State<RosterScreen>
     if (allowedTypes.isEmpty) {
       return Scaffold(
         appBar: appBar,
-        body: const Center(child: Text('尚未設定可檢視的牧區')),
+        body: const EmptyState(
+          icon: Icons.folder_off_outlined,
+          message: '尚未設定可檢視的牧區',
+          hint: '請聯絡管理員為您加入服事牧區',
+        ),
       );
     }
 
@@ -226,7 +235,11 @@ class _RosterViewListState extends State<_RosterViewList>
     super.build(context);
 
     if (widget.rosters.isEmpty) {
-      return const Center(child: Text('此類別目前沒有服事資訊'));
+      return const EmptyState(
+        icon: Icons.event_busy_outlined,
+        message: '此類別目前沒有服事資訊',
+        hint: '管理員建立後會在這裡顯示',
+      );
     }
 
     return ListView.builder(

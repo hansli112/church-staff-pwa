@@ -1,6 +1,9 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import '../../../roster/domain/entities/service_roster.dart';
 import '../../domain/repositories/group_settings_repository.dart';
+import '../../../../core/utils/error_messages.dart';
 
 class GroupSettingsProvider extends ChangeNotifier {
   final GroupSettingsRepository _repository;
@@ -48,8 +51,9 @@ class GroupSettingsProvider extends ChangeNotifier {
       await _repository.updateSmallGroupTemplates(newTemplates);
       _templates = Map.from(newTemplates);
       notifyListeners();
-    } catch (e) {
-      _error = '更新小組設定失敗: $e';
+    } catch (e, st) {
+      log('更新小組設定失敗', error: e, stackTrace: st);
+      _error = '更新小組設定失敗：${mapErrorToUserMessage(e)}';
       notifyListeners();
     }
   }

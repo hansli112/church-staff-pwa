@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/service_roster.dart';
@@ -6,6 +7,8 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../providers/roster_provider.dart';
 import '../widgets/roster_card.dart';
+import '../../../../core/utils/error_messages.dart';
+import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/settings_bottom_sheet.dart';
 import 'event_settings_screen.dart' deferred as event_settings_screen;
 import 'role_settings_screen.dart' deferred as role_settings_screen;
@@ -46,7 +49,8 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
         dialogShown = false;
       }
       Navigator.push(context, MaterialPageRoute(builder: (_) => builder()));
-    } catch (error) {
+    } catch (error, st) {
+      log('載入設定畫面失敗', error: error, stackTrace: st);
       if (context.mounted) {
         if (dialogShown) {
           Navigator.of(context, rootNavigator: true).pop();
@@ -54,7 +58,7 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
         }
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('載入失敗: $error')));
+        ).showSnackBar(SnackBar(content: Text('載入失敗：${mapErrorToUserMessage(error)}')));
       }
     } finally {
       if (dialogShown && context.mounted) {
@@ -131,7 +135,11 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
     if (allowedTypes.isEmpty) {
       return Scaffold(
         appBar: appBar,
-        body: const Center(child: Text('尚未設定可檢視的牧區')),
+        body: const EmptyState(
+          icon: Icons.folder_off_outlined,
+          message: '尚未設定可檢視的牧區',
+          hint: '請先到使用者管理為您指派服事牧區',
+        ),
       );
     }
 
@@ -190,21 +198,17 @@ class _RosterListState extends State<_RosterList>
     final isEditMode = context.watch<RosterProvider>().isEditMode;
 
     if (widget.rosters.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('此類別目前沒有服事資訊'),
-            if (isEditMode) ...[
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
+      return EmptyState(
+        icon: Icons.event_busy_outlined,
+        message: '此類別目前沒有服事資訊',
+        hint: isEditMode ? '可使用 JSON 匯入快速建立' : '管理員建立後會在這裡顯示',
+        action: isEditMode
+            ? OutlinedButton.icon(
                 onPressed: () => _showImportJsonDialog(context),
                 icon: const Icon(Icons.data_object),
                 label: const Text('JSON 匯入'),
-              ),
-            ],
-          ],
-        ),
+              )
+            : null,
       );
     }
 
@@ -656,8 +660,9 @@ class _RosterListState extends State<_RosterList>
 
     try {
       await rosterProvider.updateRosters(updates);
-    } catch (e) {
-      return _JsonImportResult(error: '匯入過程寫入 Firestore 失敗：$e');
+    } catch (e, st) {
+      log('匯入過程寫入 Firestore 失敗', error: e, stackTrace: st);
+      return _JsonImportResult(error: '匯入過程寫入 Firestore 失敗：${mapErrorToUserMessage(e)}');
     }
 
     return _JsonImportResult(

@@ -1,7 +1,10 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import '../../domain/entities/event_option.dart';
 import '../../domain/entities/service_roster.dart';
 import '../../domain/repositories/roster_repository.dart';
+import '../../../../core/utils/error_messages.dart';
 
 class RosterProvider with ChangeNotifier {
   final RosterRepository _repository;
@@ -102,8 +105,9 @@ class RosterProvider with ChangeNotifier {
         _allRosters[index] = roster;
         notifyListeners();
       }
-    } catch (e) {
-      _error = '更新失敗: $e';
+    } catch (e, st) {
+      log('更新 roster 失敗', error: e, stackTrace: st);
+      _error = '更新失敗：${mapErrorToUserMessage(e)}';
       notifyListeners();
     }
   }
@@ -173,8 +177,9 @@ class RosterProvider with ChangeNotifier {
       }
 
       notifyListeners();
-    } catch (e) {
-      _error = '更新設定失敗: $e';
+    } catch (e, st) {
+      log('更新服事表樣板失敗', error: e, stackTrace: st);
+      _error = '更新設定失敗：${mapErrorToUserMessage(e)}';
       notifyListeners();
     }
   }
@@ -246,8 +251,9 @@ class RosterProvider with ChangeNotifier {
       }
 
       notifyListeners();
-    } catch (e) {
-      _error = '更新事件選項失敗: $e';
+    } catch (e, st) {
+      log('更新事件選項失敗', error: e, stackTrace: st);
+      _error = '更新事件選項失敗：${mapErrorToUserMessage(e)}';
       notifyListeners();
     }
   }

@@ -1,7 +1,10 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import '../../domain/entities/user.dart';
 import '../../../roster/domain/entities/service_roster.dart';
 import '../../domain/repositories/auth_repository.dart';
+import '../../../../core/utils/error_messages.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthRepository _repository;
@@ -29,8 +32,9 @@ class AuthProvider extends ChangeNotifier {
   Future<void> _restoreSession() async {
     try {
       _currentUser = await _repository.getCurrentUser();
-    } catch (e) {
-      _error = '讀取登入狀態失敗: $e';
+    } catch (e, st) {
+      log('讀取登入狀態失敗', error: e, stackTrace: st);
+      _error = '讀取登入狀態失敗：${mapErrorToUserMessage(e)}';
     } finally {
       _isRestoring = false;
       notifyListeners();
@@ -55,8 +59,9 @@ class AuthProvider extends ChangeNotifier {
         notifyListeners();
         return false;
       }
-    } catch (e) {
-      _error = '登入失敗: $e';
+    } catch (e, st) {
+      log('登入失敗', error: e, stackTrace: st);
+      _error = '登入失敗：${mapErrorToUserMessage(e)}';
       _isLoading = false;
       notifyListeners();
       return false;
