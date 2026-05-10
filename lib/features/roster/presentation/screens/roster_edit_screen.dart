@@ -303,13 +303,7 @@ class _RosterListState extends State<_RosterList>
             return SettingsBottomSheet(
               title: 'JSON 匯入（${widget.type.label}）',
               submitLabel: '匯入',
-              submitChild: isSubmitting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('匯入'),
+              isSubmitting: isSubmitting,
               onSubmit: isSubmitting
                   ? null
                   : () async {

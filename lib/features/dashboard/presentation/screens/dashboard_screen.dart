@@ -534,6 +534,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   flex: 2,
                   child: Text(
                     dateText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,

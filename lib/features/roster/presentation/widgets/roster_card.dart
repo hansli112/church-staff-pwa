@@ -163,8 +163,8 @@ class RosterCard extends StatelessWidget {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 88),
+                          SizedBox(
+                            width: 88,
                             child: Text(
                               duty.role,
                               maxLines: 2,
@@ -1031,15 +1031,19 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   widget.title,
-                  style: Theme.of(context).textTheme.titleMedium,
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
               ),
+              const SizedBox(height: 8),
+              const Divider(height: 1),
               const SizedBox(height: 12),
               Flexible(
                 fit: FlexFit.loose,
                 child: SingleChildScrollView(child: content),
               ),
               const SizedBox(height: 12),
+              const Divider(height: 1),
+              const SizedBox(height: 8),
               actions,
             ],
           ),

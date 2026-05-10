@@ -7,7 +7,8 @@ class SettingsBottomSheet extends StatelessWidget {
   final String submitLabel;
   final String cancelLabel;
   final Widget? submitChild;
-  /// 當 onSubmit 為 null 且此為 true 時，顯示「儲存中…」提示
+  /// 為 true 時，按鈕顯示 spinner + `${submitLabel}中…`（例：'匯入中…'）。
+  /// 呼叫端應確保 submitLabel 是可組合的動詞。
   final bool isSubmitting;
 
   const SettingsBottomSheet({
@@ -65,16 +66,16 @@ class SettingsBottomSheet extends StatelessWidget {
                           ? Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const SizedBox(
+                                SizedBox(
                                   width: 16,
                                   height: 16,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: Colors.white,
+                                    color: theme.colorScheme.onPrimary,
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                const Text('儲存中…'),
+                                Text('$submitLabel中…'),
                               ],
                             )
                           : Text(submitLabel)),

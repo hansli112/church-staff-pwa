@@ -89,8 +89,8 @@ class RosterViewCard extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 88),
+                        SizedBox(
+                          width: 88,
                           child: Text(
                             duty.role,
                             maxLines: 2,

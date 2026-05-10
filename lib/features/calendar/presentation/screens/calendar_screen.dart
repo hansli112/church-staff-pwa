@@ -345,7 +345,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             setState(() {
               _selectedDay = dateOnly;
             });
-            if (hasEvents && MediaQuery.sizeOf(context).width < 900) {
+            if (hasEvents) {
               await _showSelectedDayEventsSheet(dateOnly);
             }
           },
@@ -423,13 +423,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
   ) {
     final colorScheme = Theme.of(context).colorScheme;
     final isMultiDay = segment.event.spansMultipleDays;
-    final textStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+    final textStyle = Theme.of(context).textTheme.labelSmall!.copyWith(
           fontWeight: FontWeight.w500,
           color: colorScheme.onPrimaryContainer,
-        ) ??
-        const TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w500,
         );
     final leadingInset = segment.continuesLeft ? 0.0 : 2.0;
     final trailingInset = segment.continuesRight ? 0.0 : 2.0;
