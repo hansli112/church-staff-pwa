@@ -86,8 +86,8 @@ class FirestoreRosterRepository implements RosterRepository {
         final id = _makeRosterId(r.date, r.type);
         return r.copyWith(id: id);
       }).toList();
-    } catch (e) {
-      log('Get Rosters Error: $e');
+    } catch (e, st) {
+      log('Get rosters failed', error: e, stackTrace: st);
       return [];
     }
   }
@@ -97,8 +97,8 @@ class FirestoreRosterRepository implements RosterRepository {
     try {
       // 確保將 id 寫入 document id
       await _rostersCollection.doc(roster.id).set(_toFirestore(roster));
-    } catch (e) {
-      log('Update Roster Error: $e');
+    } catch (e, st) {
+      log('Update roster failed', error: e, stackTrace: st);
       throw Exception('更新服事表失敗: $e');
     }
   }
@@ -125,8 +125,8 @@ class FirestoreRosterRepository implements RosterRepository {
         );
         return MapEntry(type, List<String>.from(value));
       });
-    } catch (e) {
-      log('Get Templates Error: $e');
+    } catch (e, st) {
+      log('Get service templates failed', error: e, stackTrace: st);
       return {};
     }
   }
@@ -140,8 +140,8 @@ class FirestoreRosterRepository implements RosterRepository {
         return MapEntry(key.toString().split('.').last, value);
       });
       await _templatesDoc.set(data);
-    } catch (e) {
-      log('Update Templates Error: $e');
+    } catch (e, st) {
+      log('Update service templates failed', error: e, stackTrace: st);
       throw Exception('更新樣板失敗: $e');
     }
   }
@@ -166,8 +166,8 @@ class FirestoreRosterRepository implements RosterRepository {
         }
       }
       return result;
-    } catch (e) {
-      log('Get Event Options Error: $e');
+    } catch (e, st) {
+      log('Get event options failed', error: e, stackTrace: st);
       return _defaultEventOptions();
     }
   }
@@ -186,8 +186,8 @@ class FirestoreRosterRepository implements RosterRepository {
         return MapEntry(key.toString().split('.').last, cleaned);
       });
       await _eventOptionsDoc.set(data);
-    } catch (e) {
-      log('Update Event Options Error: $e');
+    } catch (e, st) {
+      log('Update event options failed', error: e, stackTrace: st);
       throw Exception('更新事件選項失敗: $e');
     }
   }
