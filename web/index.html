@@ -137,39 +137,41 @@
         window.location.reload();
       });
 
-      navigator.serviceWorker.ready
-        .then(function (registration) {
-          registration.update();
-
-          registration.addEventListener('updatefound', function () {
-            const newWorker = registration.installing;
-            if (!newWorker) {
-              return;
-            }
-
-            isUpdateInProgress = true;
-            setLoadingMessage('發現新版本，正在下載更新...');
-
-            newWorker.addEventListener('statechange', function () {
-              if (newWorker.state === 'installed') {
-                if (navigator.serviceWorker.controller) {
-                  setLoadingMessage('更新下載完成，正在套用新版本...');
-                  newWorker.postMessage({ type: 'SKIP_WAITING' });
-                } else {
-                  isUpdateInProgress = false;
-                }
-              } else if (newWorker.state === 'redundant') {
-                isUpdateInProgress = false;
-                setLoadingMessage('更新失敗，請重新整理後再試。');
-              }
-            });
-          });
-        })
-        .catch(function () {
-          // Ignore service worker readiness errors.
-        });
-
+      // 註冊我們自己的 cache-first SW（Flutter 3.27+ 內建 flutter_service_worker.js
+      // 是自我登出型的，沒有 caching；不再使用）。
       window.addEventListener('load', function () {
+        navigator.serviceWorker
+          .register('cache_sw.js')
+          .then(function (registration) {
+            registration.update();
+
+            registration.addEventListener('updatefound', function () {
+              const newWorker = registration.installing;
+              if (!newWorker) return;
+
+              isUpdateInProgress = true;
+              setLoadingMessage('發現新版本，正在下載更新...');
+
+              newWorker.addEventListener('statechange', function () {
+                if (newWorker.state === 'installed') {
+                  if (navigator.serviceWorker.controller) {
+                    setLoadingMessage('更新下載完成，正在套用新版本...');
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                  } else {
+                    isUpdateInProgress = false;
+                  }
+                } else if (newWorker.state === 'redundant') {
+                  isUpdateInProgress = false;
+                  setLoadingMessage('更新失敗，請重新整理後再試。');
+                }
+              });
+            });
+          })
+          .catch(function (error) {
+            console.error('Cache SW registration failed:', error);
+          });
+
+        // Firebase Cloud Messaging 推播 SW 走自己的 scope。
         navigator.serviceWorker
           .register('firebase-messaging-sw.js', {
             scope: 'firebase-cloud-messaging-push-scope',
