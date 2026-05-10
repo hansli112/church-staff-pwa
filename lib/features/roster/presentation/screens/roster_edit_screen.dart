@@ -662,11 +662,24 @@ class _RosterListState extends State<_RosterList>
       await rosterProvider.updateRosters(updates);
     } catch (e, st) {
       log('匯入過程寫入 Firestore 失敗', error: e, stackTrace: st);
-      // PartialUpdateException 自帶 success/failure counts，比 generic
-      // mapper 訊息更精確；其他例外仍走 mapper。
-      final msg = e is PartialUpdateException
-          ? '${e.successCount} 筆已寫入、${e.failureCount} 筆失敗，請重新整理確認'
-          : mapErrorToUserMessage(e);
+      String msg;
+      if (e is PartialUpdateException) {
+        // Log the underlying cause's stack too so future Sentry has the
+        // real Firestore error, not just the wrapping exception's stack.
+        log(
+          '匯入部分失敗的代表性 cause',
+          error: e.cause,
+          stackTrace: e.causeStackTrace,
+        );
+        final failedDates = e.failedRosters
+            .map((r) => _dateKey(r.date))
+            .join('、');
+        msg =
+            '${e.successCount} 筆已寫入、${e.failureCount} 筆失敗。'
+            '失敗日期：$failedDates。請重新整理確認狀態後重試';
+      } else {
+        msg = mapErrorToUserMessage(e);
+      }
       return _JsonImportResult(error: '匯入過程寫入失敗：$msg');
     }
 

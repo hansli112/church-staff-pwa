@@ -114,18 +114,27 @@ class RosterProvider with ChangeNotifier {
 
   /// Batch-update rosters in parallel. On partial failure we still sync the
   /// successful writes into local state (so the UI matches Firestore truth)
-  /// and then throw a summary so the caller can surface the partial error.
-  /// Plain `Future.wait` would also have written the same rows to Firestore
-  /// but left local state empty, drifting the UI from the server.
+  /// and then throw a summary so the caller can surface the partial error
+  /// and offer "retry only failed". Plain `Future.wait` would also have
+  /// written the same rows to Firestore but left local state empty,
+  /// drifting the UI from the server.
   Future<void> updateRosters(List<ServiceRoster> rosters) async {
     if (rosters.isEmpty) return;
     final results = await Future.wait(
       rosters.map((roster) async {
         try {
           await _repository.updateRoster(roster);
-          return (roster: roster, error: null as Object?);
-        } catch (e) {
-          return (roster: roster, error: e as Object?);
+          return (
+            roster: roster,
+            error: null as Object?,
+            stackTrace: null as StackTrace?,
+          );
+        } catch (e, st) {
+          return (
+            roster: roster,
+            error: e as Object?,
+            stackTrace: st as StackTrace?,
+          );
         }
       }),
     );
@@ -141,13 +150,12 @@ class RosterProvider with ChangeNotifier {
 
     final failures = results.where((r) => r.error != null).toList();
     if (failures.isNotEmpty) {
-      // Surface a representative cause + counts so the caller can map it
-      // through error_messages and tell the user how many succeeded.
-      final firstError = failures.first.error!;
       throw PartialUpdateException(
         successCount: successes.length,
         failureCount: failures.length,
-        cause: firstError,
+        failedRosters: failures.map((r) => r.roster).toList(),
+        cause: failures.first.error!,
+        causeStackTrace: failures.first.stackTrace,
       );
     }
   }
@@ -286,12 +294,16 @@ class RosterProvider with ChangeNotifier {
 class PartialUpdateException implements Exception {
   final int successCount;
   final int failureCount;
+  final List<ServiceRoster> failedRosters;
   final Object cause;
+  final StackTrace? causeStackTrace;
 
   PartialUpdateException({
     required this.successCount,
     required this.failureCount,
+    required this.failedRosters,
     required this.cause,
+    this.causeStackTrace,
   });
 
   @override
