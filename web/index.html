@@ -132,7 +132,16 @@
     }, 7000);
 
     if ('serviceWorker' in navigator) {
+      // 第一次裝 SW 時，瀏覽器會把 controller 從 null 切到新 SW，
+      // 也會觸發 controllerchange。若無條件 reload，使用者第一次造訪
+      // 就會看到「載入中」兩次（reload 把載入流程打掉重來）。
+      // 只在已經有 controller 時的「升級」情境才 reload。
+      var hadInitialController = !!navigator.serviceWorker.controller;
       navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (!hadInitialController) {
+          hadInitialController = true;
+          return;
+        }
         isUpdateInProgress = false;
         window.location.reload();
       });
