@@ -72,7 +72,7 @@ class RosterCard extends StatelessWidget {
                         event,
                         style: TextStyle(
                           color: color,
-                          fontSize: 11,
+                          fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
                       );
@@ -129,7 +129,7 @@ class RosterCard extends StatelessWidget {
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         labelStyle: TextStyle(
                           color: Colors.orange[800],
-                          fontSize: 11,
+                          fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -168,7 +168,7 @@ class RosterCard extends StatelessWidget {
                             child: Text(
                               duty.role,
                               style: TextStyle(
-                                color: Colors.grey[600],
+                                color: Colors.grey[700],
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -184,6 +184,11 @@ class RosterCard extends StatelessWidget {
                           ),
                           if (isEditMode)
                             IconButton(
+                              tooltip: '刪除服事項目',
+                              constraints: const BoxConstraints(
+                                minWidth: 48,
+                                minHeight: 48,
+                              ),
                               icon: const Icon(
                                 Icons.delete_outline,
                                 size: 20,
@@ -854,7 +859,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
           alignment: Alignment.centerLeft,
           child: Text(
             '選擇同工',
-            style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
+            style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
           ),
         ),
         const SizedBox(height: 8),
@@ -920,6 +925,10 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
                           if (isCustom)
                             IconButton(
                               tooltip: '刪除自訂項目',
+                              constraints: const BoxConstraints(
+                                minWidth: 48,
+                                minHeight: 48,
+                              ),
                               icon: const Icon(Icons.close, size: 18),
                               onPressed: () => _confirmRemoveCustomName(name),
                             ),
@@ -927,7 +936,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
                             Icons.drag_handle,
                             size: 18,
                             color: canDrag
-                                ? Colors.grey.shade600
+                                ? Colors.grey.shade700
                                 : Colors.grey.shade300,
                           ),
                         ],
@@ -1210,7 +1219,7 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
                     '標籤顏色',
                     style: TextStyle(
                       color: Colors.grey.shade700,
-                      fontSize: 12,
+                      fontSize: 13,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1282,6 +1291,10 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
       secondary: onRemove != null
           ? IconButton(
               tooltip: '刪除自訂項目',
+              constraints: const BoxConstraints(
+                minWidth: 48,
+                minHeight: 48,
+              ),
               icon: const Icon(Icons.close, size: 18),
               onPressed: onRemove,
             )
