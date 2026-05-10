@@ -17,15 +17,21 @@ class FirestoreRosterRepository implements RosterRepository {
 
   @override
   Future<List<ServiceRoster>> getUpcomingRosters() async {
-    // 取得當前日期，只撈取未來或今天的服事表 (例如本季到下一季)
-    // 這裡為了簡單，先撈取所有資料，之後可以優化成只撈需要的區間
+    // 只撈取「今天往前推 7 天」到「下一季末」的 roster，避免全表掃描。
+    // 保留 7 天歷史是為了讓 dashboard 不會因為跨週邊界出現顯示斷層，
+    // client-side 仍會再做 today/endDate 過濾後才呈現給 UI。
     try {
+      final now = DateTime.now();
+      final fetchFrom = DateTime(now.year, now.month, now.day)
+          .subtract(const Duration(days: 7));
+      final fetchFromTimestamp = Timestamp.fromDate(fetchFrom);
+
       final snapshot = await _rostersCollection
+          .where('date', isGreaterThanOrEqualTo: fetchFromTimestamp)
           .orderBy('date') // 依照日期排序
           .get();
 
       if (snapshot.docs.isNotEmpty) {
-        final now = DateTime.now();
         final today = DateTime(now.year, now.month, now.day);
         final endDate = _nextQuarterEndDate(now);
 
