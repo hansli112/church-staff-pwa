@@ -16,10 +16,15 @@
 //     those must always be live
 //
 // Cache invalidation: CI replaces __BUILD_VERSION__ with the deploy SHA so
-// each release produces a unique cache name. The activate handler then deletes
-// any cache whose key doesn't match the current version. If CI doesn't run
-// the substitution (local dev), we fall back to a literal so the SW still
-// installs and behaves consistently.
+// each release produces a unique cache name. The activate handler then
+// deletes any cache whose key doesn't match the current version.
+//
+// Local builds keep the literal '__BUILD_VERSION__'. That's intentionally
+// fine: `flutter run -d chrome` bypasses SWs, and for hand-served
+// `flutter build web` you'd clear DevTools storage between iterations
+// anyway. The only place per-deploy invalidation actually matters is
+// production, and the deploy workflow is fail-fast if the placeholder
+// isn't substituted.
 
 const CACHE_VERSION = '__BUILD_VERSION__';
 const CACHE_NAME = `church-staff-pwa-${CACHE_VERSION}`;
