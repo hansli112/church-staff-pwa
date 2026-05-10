@@ -158,14 +158,6 @@ class _AuthRestoringShell extends StatelessWidget {
                 style: theme.textTheme.headlineMedium,
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
-              Text(
-                '服事小幫手',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                ),
-                textAlign: TextAlign.center,
-              ),
               const SizedBox(height: 32),
               const SizedBox(
                 width: 28,

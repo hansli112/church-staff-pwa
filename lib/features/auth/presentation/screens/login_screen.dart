@@ -71,12 +71,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                 style: Theme.of(context).textTheme.headlineMedium,
                                 textAlign: TextAlign.center,
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '服事小幫手',
-                                style: Theme.of(context).textTheme.headlineMedium,
-                                textAlign: TextAlign.center,
-                              ),
                               const SizedBox(height: 32),
                               TextFormField(
                                 controller: _usernameController,
