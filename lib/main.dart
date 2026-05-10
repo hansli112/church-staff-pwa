@@ -140,7 +140,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
 /// Shown while AuthProvider is awaiting Firebase Auth state from IndexedDB on
 /// app start. Faster perceived load than a blank screen + spinner: the user
-/// sees the church branding immediately and a quiet spinner below it.
+/// sees the church branding immediately and an inline status row below it.
 class _AuthRestoringShell extends StatelessWidget {
   const _AuthRestoringShell();
 
@@ -159,10 +159,17 @@ class _AuthRestoringShell extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
-              const SizedBox(
-                width: 28,
-                height: 28,
-                child: CircularProgressIndicator(strokeWidth: 3),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2.5),
+                  ),
+                  const SizedBox(width: 12),
+                  Text('載入中…', style: theme.textTheme.titleMedium),
+                ],
               ),
             ],
           ),

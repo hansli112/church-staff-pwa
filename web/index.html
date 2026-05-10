@@ -55,7 +55,7 @@
     }
 
     /* 對齊 Flutter MaterialApp 內 _AuthRestoringShell 的視覺：
-       headlineMedium 標題 + 8px gap + titleMedium 副標 + 32px gap + 28px spinner。
+       headlineMedium 標題 + 32px gap + (spinner + 12px + titleMedium '載入中…') 並排。
        overlay 移除時跟 Flutter shell 幾乎無感過渡。 */
     #app-loading {
       position: fixed;
@@ -77,14 +77,27 @@
       text-align: center;
     }
 
-    #app-loading .spinner {
+    #app-loading .status {
       margin-top: 32px;
-      width: 28px;
-      height: 28px;
-      border: 3px solid #d1d5db;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    #app-loading .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2.5px solid #d1d5db;
       border-top-color: #2563eb;
       border-radius: 50%;
       animation: spin 1s linear infinite;
+    }
+
+    #app-loading .caption {
+      font-size: 16px;
+      font-weight: 500;
+      color: rgba(31, 41, 55, 0.7);
+      line-height: 1.5;
     }
 
     @keyframes spin {
@@ -97,7 +110,10 @@
 <body>
   <div id="app-loading" role="status" aria-live="polite">
     <div class="title">竹圍靈糧福音中心</div>
-    <div class="spinner" aria-hidden="true"></div>
+    <div class="status">
+      <div class="spinner" aria-hidden="true"></div>
+      <div class="caption">載入中…</div>
+    </div>
   </div>
 
   <script>
