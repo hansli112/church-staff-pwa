@@ -205,8 +205,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
           child: Text(
             text,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 20,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
               letterSpacing: 0.6,
             ),
@@ -370,9 +371,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 2),
                   child: Text(
                     '$dayNumber',
-                    style: TextStyle(
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       fontWeight: FontWeight.w600,
-                      fontSize: 11,
                       color: isSelected
                           ? Theme.of(context).colorScheme.primary
                           : Colors.black87,
@@ -399,8 +401,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
                       '+$overflowCount',
-                      style: const TextStyle(
-                        fontSize: 10,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: Colors.black54,
                       ),
                     ),
@@ -420,11 +423,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
   ) {
     final colorScheme = Theme.of(context).colorScheme;
     final isMultiDay = segment.event.spansMultipleDays;
-    final textStyle = TextStyle(
-      fontSize: 10,
-      fontWeight: FontWeight.w500,
-      color: colorScheme.onPrimaryContainer,
-    );
+    final textStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+          fontWeight: FontWeight.w500,
+          color: colorScheme.onPrimaryContainer,
+        ) ??
+        const TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
+        );
     final leadingInset = segment.continuesLeft ? 0.0 : 2.0;
     final trailingInset = segment.continuesRight ? 0.0 : 2.0;
     final leftTextInset = segment.continuesLeft ? 0.0 : 1.0;

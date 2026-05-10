@@ -206,22 +206,26 @@ class _EventSettingsScreenState extends State<EventSettingsScreen> {
                   ),
                   const SizedBox(height: 8),
                   Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+                    spacing: 0,
+                    runSpacing: 0,
                     children: _palette.map((colorValue) {
                       final isSelected = selectedColor == colorValue;
                       return InkWell(
                         onTap: () => setState(() => selectedColor = colorValue),
                         borderRadius: BorderRadius.circular(999),
-                        child: Container(
-                          width: 26,
-                          height: 26,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Color(colorValue),
-                            border: Border.all(
-                              color: isSelected ? Colors.black54 : Colors.white,
-                              width: isSelected ? 2 : 1,
+                        child: Padding(
+                          padding: const EdgeInsets.all(11),
+                          child: Container(
+                            width: 26,
+                            height: 26,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Color(colorValue),
+                              border: Border.all(
+                                color:
+                                    isSelected ? Colors.black54 : Colors.white,
+                                width: isSelected ? 2 : 1,
+                              ),
                             ),
                           ),
                         ),
@@ -306,15 +310,15 @@ class _EventSettingsScreenState extends State<EventSettingsScreen> {
                               width: 24,
                               child: Center(
                                 child: Container(
-                                  width: 14,
-                                  height: 14,
+                                  width: 20,
+                                  height: 20,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: Color(options[index].color),
                                     border: Border.all(
                                       color: Color(
                                         options[index].color,
-                                      ).withValues(alpha: 0.6),
+                                      ).withValues(alpha: 0.8),
                                     ),
                                   ),
                                 ),

@@ -188,11 +188,31 @@ class _RosterScreenState extends State<RosterScreen>
         body: Consumer<RosterProvider>(
           builder: (context, provider, child) {
             if (provider.isLoading) {
-              return const Center(child: CircularProgressIndicator());
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 12),
+                    Text(
+                      '載入服事資訊中…',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              );
             }
 
             if (provider.error != null) {
-              return Center(child: Text(provider.error!));
+              return EmptyState(
+                icon: Icons.error_outline,
+                message: provider.error ?? '無法載入',
+                action: FilledButton.icon(
+                  onPressed: () => provider.fetchInitialData(),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('重試'),
+                ),
+              );
             }
 
             return TabBarView(

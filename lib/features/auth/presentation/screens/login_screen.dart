@@ -79,6 +79,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   border: OutlineInputBorder(),
                                   prefixIcon: Icon(Icons.person),
                                 ),
+                                textInputAction: TextInputAction.next,
+                                onFieldSubmitted: (_) =>
+                                    FocusScope.of(context).nextFocus(),
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
                                     return '請輸入帳號';
@@ -108,6 +111,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                                 obscureText: _obscurePassword,
+                                textInputAction: TextInputAction.done,
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
                                     return '請輸入密碼';

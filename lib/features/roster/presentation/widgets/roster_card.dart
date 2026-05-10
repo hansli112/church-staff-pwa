@@ -43,7 +43,7 @@ class RosterCard extends StatelessWidget {
           isEditMode ? Icons.edit_note : Icons.event_note,
           color: isEditMode
               ? Theme.of(context).colorScheme.primary
-              : Colors.blueAccent,
+              : Theme.of(context).colorScheme.primary,
         ),
         title: Text(
           _dateFormat.format(roster.date),
@@ -161,12 +161,14 @@ class RosterCard extends StatelessWidget {
                         context,
                       ).colorScheme.primary.withValues(alpha: 0.04),
                       child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SizedBox(
-                            width: 80,
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 88),
                             child: Text(
                               duty.role,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: Colors.grey[700],
                                 fontWeight: FontWeight.w500,
@@ -189,10 +191,10 @@ class RosterCard extends StatelessWidget {
                                 minWidth: 48,
                                 minHeight: 48,
                               ),
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.delete_outline,
                                 size: 20,
-                                color: Colors.redAccent,
+                                color: Theme.of(context).colorScheme.error,
                               ),
                               onPressed: () =>
                                   _confirmRemoveDuty(context, index, duty.role),
@@ -227,8 +229,14 @@ class RosterCard extends StatelessWidget {
         context.read<RosterProvider>().templates[roster.type] ??
         const <String>[];
 
-    return showDialog(
+    return showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (context) {
         return _RosterPeopleDialog(
           title: '新增服事項目',
@@ -242,7 +250,7 @@ class RosterCard extends StatelessWidget {
           onSubmit: (role, people, order, personIdsByName) =>
               _addDuty(context, role, people, order, personIdsByName),
           submitLabel: '新增',
-          useBottomSheet: false,
+          useBottomSheet: true,
         );
       },
     );
@@ -318,8 +326,14 @@ class RosterCard extends StatelessWidget {
       role ?? duty.role,
     );
 
-    await showDialog(
+    await showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (context) {
         return _RosterPeopleDialog(
           title: '編輯 ${duty.role}',
@@ -335,7 +349,7 @@ class RosterCard extends StatelessWidget {
               _updateDuty(context, index, people, order, personIdsByName),
           submitLabel: '儲存',
           roleEditable: false,
-          useBottomSheet: false,
+          useBottomSheet: true,
         );
       },
     );
@@ -850,9 +864,13 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
             },
           ),
         if (roleMissing)
-          const Text(
-            '請先到「服事項目設定」新增項目',
-            style: TextStyle(color: Colors.redAccent),
+          Builder(
+            builder: (context) => Text(
+              '請先到「服事項目設定」新增項目',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+              ),
+            ),
           ),
         const SizedBox(height: 12),
         Align(
@@ -1224,8 +1242,8 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
                   ),
                   const SizedBox(height: 8),
                   Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+                    spacing: 0,
+                    runSpacing: 0,
                     children: _colorPalette.map((colorValue) {
                       final isSelected = _pendingCustomColor == colorValue;
                       return InkWell(
@@ -1234,19 +1252,22 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
                             _pendingCustomColor = colorValue;
                           });
                         },
-                        borderRadius: BorderRadius.circular(13),
-                        child: Container(
-                          width: 26,
-                          height: 26,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Color(colorValue),
-                            border: isSelected
-                                ? Border.all(
-                                    color: Colors.black54,
-                                    width: 2,
-                                  )
-                                : null,
+                        borderRadius: BorderRadius.circular(999),
+                        child: Padding(
+                          padding: const EdgeInsets.all(11),
+                          child: Container(
+                            width: 26,
+                            height: 26,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Color(colorValue),
+                              border: isSelected
+                                  ? Border.all(
+                                      color: Colors.black54,
+                                      width: 2,
+                                    )
+                                  : null,
+                            ),
                           ),
                         ),
                       );
@@ -1275,12 +1296,12 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
       title: Row(
         children: [
           Container(
-            width: 14,
-            height: 14,
+            width: 20,
+            height: 20,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: dotColor,
-              border: Border.all(color: dotColor.withValues(alpha: 0.6)),
+              border: Border.all(color: dotColor.withValues(alpha: 0.8)),
             ),
           ),
           const SizedBox(width: 12),

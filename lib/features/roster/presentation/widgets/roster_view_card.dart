@@ -26,7 +26,7 @@ class RosterViewCard extends StatelessWidget {
       child: ExpansionTile(
         key: PageStorageKey(roster.id),
         initiallyExpanded: initiallyExpanded,
-        leading: const Icon(Icons.event_note, color: Colors.blueAccent),
+        leading: Icon(Icons.event_note, color: Theme.of(context).colorScheme.primary),
         title: Text(
           dateFormat.format(roster.date),
           style: const TextStyle(fontWeight: FontWeight.bold),
@@ -87,12 +87,14 @@ class RosterViewCard extends StatelessWidget {
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SizedBox(
-                          width: 80,
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 88),
                           child: Text(
                             duty.role,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: Colors.grey[600],
                               fontWeight: FontWeight.w500,

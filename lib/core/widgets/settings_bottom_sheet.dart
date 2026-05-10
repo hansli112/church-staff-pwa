@@ -7,6 +7,8 @@ class SettingsBottomSheet extends StatelessWidget {
   final String submitLabel;
   final String cancelLabel;
   final Widget? submitChild;
+  /// 當 onSubmit 為 null 且此為 true 時，顯示「儲存中…」提示
+  final bool isSubmitting;
 
   const SettingsBottomSheet({
     super.key,
@@ -16,10 +18,12 @@ class SettingsBottomSheet extends StatelessWidget {
     this.submitLabel = '儲存',
     this.cancelLabel = '取消',
     this.submitChild,
+    this.isSubmitting = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
     final maxHeight = MediaQuery.sizeOf(context).height * 0.85;
     return Padding(
@@ -33,15 +37,19 @@ class SettingsBottomSheet extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: Text(
                 title,
-                style: Theme.of(context).textTheme.titleMedium,
+                style: theme.textTheme.titleLarge,
               ),
             ),
+            const SizedBox(height: 8),
+            const Divider(height: 1),
             const SizedBox(height: 12),
             Flexible(
               fit: FlexFit.loose,
               child: SingleChildScrollView(child: child),
             ),
             const SizedBox(height: 12),
+            const Divider(height: 1),
+            const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -52,7 +60,24 @@ class SettingsBottomSheet extends StatelessWidget {
                 const SizedBox(width: 8),
                 FilledButton(
                   onPressed: onSubmit,
-                  child: submitChild ?? Text(submitLabel),
+                  child: submitChild ??
+                      (isSubmitting
+                          ? Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                const Text('儲存中…'),
+                              ],
+                            )
+                          : Text(submitLabel)),
                 ),
               ],
             ),

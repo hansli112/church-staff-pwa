@@ -97,7 +97,7 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
       centerTitle: true,
       actions: [
         IconButton(
-          icon: const Icon(Icons.event),
+          icon: const Icon(Icons.palette_outlined),
           tooltip: '事件選項設定',
           onPressed: () => _loadAndPush(
             context,
@@ -106,7 +106,7 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.settings),
+          icon: const Icon(Icons.list_alt_outlined),
           tooltip: '服事項目設定',
           onPressed: () => _loadAndPush(
             context,
@@ -148,11 +148,31 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
       body: Consumer<RosterProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 12),
+                  Text(
+                    '載入服事資訊中…',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+            );
           }
 
           if (provider.error != null) {
-            return Center(child: Text(provider.error!));
+            return EmptyState(
+              icon: Icons.error_outline,
+              message: provider.error ?? '無法載入',
+              action: FilledButton.icon(
+                onPressed: () => provider.fetchInitialData(),
+                icon: const Icon(Icons.refresh),
+                label: const Text('重試'),
+              ),
+            );
           }
 
           // TabBarView 預設支援左右滑動

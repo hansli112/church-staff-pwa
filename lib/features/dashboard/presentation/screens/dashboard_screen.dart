@@ -59,7 +59,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
     final fullName = context.watch<AuthProvider>().currentUser?.name ?? '';
     return Scaffold(
-      appBar: AppBar(title: const Text('教會同工中心'), centerTitle: true),
+      appBar: AppBar(title: const Text('首頁'), centerTitle: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -114,38 +114,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _isLoadingCalendar = true;
     });
 
-    var dialogVisible = true;
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
-    );
-
     try {
       await calendar.loadLibrary();
       if (!mounted) return;
-      if (dialogVisible) {
-        Navigator.of(context, rootNavigator: true).pop();
-        dialogVisible = false;
-      }
       await Navigator.of(
         context,
       ).push(MaterialPageRoute(builder: (_) => calendar.CalendarScreen()));
     } catch (error, st) {
       log('載入行事曆畫面失敗', error: error, stackTrace: st);
       if (!mounted) return;
-      if (dialogVisible) {
-        Navigator.of(context, rootNavigator: true).pop();
-        dialogVisible = false;
-      }
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('載入失敗：${mapErrorToUserMessage(error)}')));
     } finally {
       if (mounted) {
-        if (dialogVisible) {
-          Navigator.of(context, rootNavigator: true).pop();
-        }
         setState(() {
           _isLoadingCalendar = false;
         });
@@ -495,7 +477,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             subtitle: const Text('教會年度活動一覽'),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: _isLoadingCalendar
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.chevron_right),
+            enabled: !_isLoadingCalendar,
             onTap: _openCalendar,
           ),
           const Divider(height: 1),
@@ -541,8 +530,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(
-                  width: 110,
+                Flexible(
+                  flex: 2,
                   child: Text(
                     dateText,
                     style: const TextStyle(
@@ -551,7 +540,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                 ),
-                Expanded(
+                const SizedBox(width: 8),
+                Flexible(
+                  flex: 3,
                   child: Text(
                     event.title,
                     maxLines: 1,
@@ -577,9 +568,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           return _buildSectionCard(
             title: '本季服事',
             icon: Icons.volunteer_activism,
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Center(child: CircularProgressIndicator()),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Center(child: CircularProgressIndicator()),
+                  const SizedBox(height: 12),
+                  Text(
+                    '載入近期活動中…',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
             ),
           );
         }
@@ -588,7 +589,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
           return _buildSectionCard(
             title: '本季服事',
             icon: Icons.volunteer_activism,
-            child: Text(provider.error!),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  provider.error!,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  onPressed: () => provider.fetchInitialData(),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('重試'),
+                ),
+              ],
+            ),
           );
         }
 
