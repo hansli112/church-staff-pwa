@@ -158,8 +158,14 @@
               const newWorker = registration.installing;
               if (!newWorker) return;
 
-              isUpdateInProgress = true;
-              setLoadingMessage('發現新版本，正在下載更新...');
+              // updatefound 在首次安裝也會觸發（新加 SW 也算）。
+              // 沒有 controller 表示這是首次安裝，不該顯示「發現新版本」訊息
+              // ——使用者眼中沒有「舊版」可以更新。
+              var isUpgrade = !!navigator.serviceWorker.controller;
+              if (isUpgrade) {
+                isUpdateInProgress = true;
+                setLoadingMessage('發現新版本，正在下載更新...');
+              }
 
               newWorker.addEventListener('statechange', function () {
                 if (newWorker.state === 'installed') {
@@ -169,7 +175,7 @@
                   } else {
                     isUpdateInProgress = false;
                   }
-                } else if (newWorker.state === 'redundant') {
+                } else if (newWorker.state === 'redundant' && isUpgrade) {
                   isUpdateInProgress = false;
                   setLoadingMessage('更新失敗，請重新整理後再試。');
                 }
