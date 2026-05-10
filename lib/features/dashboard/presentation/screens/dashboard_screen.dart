@@ -40,6 +40,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final rosterProvider = context.read<RosterProvider>();
       if (rosterProvider.rosters.isEmpty && !rosterProvider.isLoading) {
         rosterProvider.fetchInitialData();
@@ -463,7 +464,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             isAllDay: dateTimeRaw == null && dateRaw is String,
           ),
         );
-      } catch (_) {}
+      } catch (e, st) {
+        debugPrint('Skipping malformed calendar item #$i: $e');
+        debugPrintStack(stackTrace: st);
+      }
     }
 
     return events;

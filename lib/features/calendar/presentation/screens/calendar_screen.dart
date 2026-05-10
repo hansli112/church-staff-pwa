@@ -1000,7 +1000,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   : description,
             ),
           );
-        } catch (_) {}
+        } catch (e, st) {
+          debugPrint('Skipping malformed calendar item #$i: $e');
+          debugPrintStack(stackTrace: st);
+        }
       }
 
       await _saveCachedEventsForMonth(month, events);
