@@ -237,24 +237,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return _normalizeBibleRange(raw);
   }
 
-  String? _parseDailyBreadRange(String html) {
-    final pattern = RegExp(
-      r'(\d{4}-\d{2}-\d{2})\s*<span>\|</span>\s*<span>\s*([^<]+?)\s*</span>',
-      caseSensitive: false,
-      dotAll: true,
-    );
-    final match = pattern.firstMatch(html);
-    if (match == null) return null;
-
-    final dateText = match.group(1)?.trim();
-    final rangeText = _normalizeBibleRange(match.group(2)?.trim());
-    if (dateText == null || rangeText.isEmpty) return null;
-
-    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    if (dateText != today) return rangeText;
-    return rangeText;
-  }
-
   String _normalizeBibleRange(String? raw) {
     if (raw == null || raw.isEmpty) return '';
 
