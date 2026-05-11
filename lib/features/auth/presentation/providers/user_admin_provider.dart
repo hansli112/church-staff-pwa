@@ -44,6 +44,10 @@ class UserAdminProvider extends ChangeNotifier {
       return _cachedUsers!;
     }
     final users = await _repository.getUsers();
+    // 若 fetch 進行中 session 已切換（登出或換帳號），不寫入 cache 以免污染新 session。
+    if (_session.currentUser == null || !_session.isAdmin) {
+      return users;
+    }
     _cachedUsers = users;
     return users;
   }

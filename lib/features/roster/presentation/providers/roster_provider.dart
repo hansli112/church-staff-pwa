@@ -20,6 +20,10 @@ class RosterProvider with ChangeNotifier {
   // 追蹤上一次 session userId，用來判斷帳號是否真的換了。
   String? _lastSessionUserId;
 
+  // Fetch generation counter：每次 session 變動或主動觸發 fetch 時遞增。
+  // fetch 完成後比對 token，若不一致代表已過期，直接 drop 結果。
+  int _fetchToken = 0;
+
   RosterProvider(this._repository);
 
   bool get isLoading => _isLoading;
@@ -61,6 +65,7 @@ class RosterProvider with ChangeNotifier {
     if (userId == _lastSessionUserId) return;
     _lastSessionUserId = userId;
 
+    _fetchToken++; // 讓進行中的 fetch 過期
     _allRosters = [];
     _templates = {};
     _eventOptionsByType = {};
@@ -85,6 +90,7 @@ class RosterProvider with ChangeNotifier {
   List<ServiceRoster> get rosters => _allRosters;
 
   Future<void> fetchInitialData() async {
+    final token = ++_fetchToken;
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -95,31 +101,41 @@ class RosterProvider with ChangeNotifier {
         _repository.getServiceTemplates(),
         _repository.getEventOptions(),
       ]);
+      if (token != _fetchToken) return; // stale fetch，丟棄結果
       _allRosters = results[0] as List<ServiceRoster>;
       _templates = results[1] as Map<ServiceType, List<String>>;
       _eventOptionsByType = results[2] as Map<ServiceType, List<EventOption>>;
     } catch (e, st) {
+      if (token != _fetchToken) return; // stale fetch，丟棄錯誤
       log('載入服事表資料失敗', error: e, stackTrace: st);
       _error = '載入失敗:${mapErrorToUserMessage(e)}';
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (token == _fetchToken) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
   Future<void> fetchRosters() async {
+    final token = ++_fetchToken;
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      _allRosters = await _repository.getUpcomingRosters();
+      final rosters = await _repository.getUpcomingRosters();
+      if (token != _fetchToken) return; // stale fetch，丟棄結果
+      _allRosters = rosters;
     } catch (e, st) {
+      if (token != _fetchToken) return; // stale fetch，丟棄錯誤
       log('載入服事表失敗', error: e, stackTrace: st);
       _error = '載入失敗:${mapErrorToUserMessage(e)}';
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (token == _fetchToken) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 

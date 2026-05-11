@@ -19,21 +19,24 @@ class GroupSettingsProvider extends ChangeNotifier {
   // 追蹤上一次 session userId，用來判斷帳號是否真的換了。
   String? _lastSessionUserId;
 
-  GroupSettingsProvider(this._repository) {
-    fetchTemplates();
-  }
+  // Fetch generation counter：每次 session 變動時遞增，讓過期 fetch 的結果被丟棄。
+  int _fetchToken = 0;
+
+  GroupSettingsProvider(this._repository);
 
   Map<ServiceType, List<String>> get templates => _templates;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
   Future<void> fetchTemplates() async {
+    final token = ++_fetchToken;
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
       final result = await _repository.getSmallGroupTemplates();
+      if (token != _fetchToken) return; // stale fetch，丟棄結果
       _templates = result.isEmpty
           ? {
               ServiceType.sundayService: [],
@@ -42,11 +45,14 @@ class GroupSettingsProvider extends ChangeNotifier {
             }
           : result;
     } catch (e, st) {
+      if (token != _fetchToken) return; // stale fetch，丟棄錯誤
       log('載入小組設定失敗', error: e, stackTrace: st);
       _error = '載入失敗:${mapErrorToUserMessage(e)}';
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (token == _fetchToken) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -56,6 +62,7 @@ class GroupSettingsProvider extends ChangeNotifier {
     if (userId == _lastSessionUserId) return;
     _lastSessionUserId = userId;
 
+    _fetchToken++; // 讓進行中的 fetch 過期
     _templates = {
       ServiceType.sundayService: [],
       ServiceType.youth: [],

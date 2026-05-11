@@ -117,8 +117,8 @@ void main() {
       expect(repo.fetchRostersCallCount, greaterThanOrEqualTo(1));
     });
 
-    test('切換帳號時舊的 rosters 先被清空（fetch 前 provider.rosters 為空）', () async {
-      // 讓第一次 fetch 有資料
+    test('切換帳號時舊的 rosters 先被同步清空，fetch 完成後回填 user-B 資料', () async {
+      // user-A 有一筆資料
       repo.rostersToReturn = [
         ServiceRoster(
           id: 'r1',
@@ -132,14 +132,31 @@ void main() {
       await _drainAsync();
       expect(provider.rosters, isNotEmpty);
 
-      // 切換帳號，cache 應先清空，下一批資料還沒回來
-      repo.rostersToReturn = [];
+      // user-B 有不同的非空資料
+      repo.rostersToReturn = [
+        ServiceRoster(
+          id: 'r2',
+          date: DateTime(2026, 3, 8),
+          type: ServiceType.youth,
+          serviceName: '青年崇拜',
+          duties: const [],
+        ),
+        ServiceRoster(
+          id: 'r3',
+          date: DateTime(2026, 3, 15),
+          type: ServiceType.youth,
+          serviceName: '青年崇拜',
+          duties: const [],
+        ),
+      ];
+
+      // 切換帳號後【不 await】，同步確認 cache 已被清空
       provider.onSessionChanged('user-B');
-      // 在 fetch 完成前（但 onSessionChanged 已清空 cache），rosters 應為空
-      // 注意：此時 fetch 可能還在進行，所以先確認清除動作有發生
-      // 等待 fetch 完成後，rosters 對應 repo 回傳的空列表
+      expect(provider.rosters, isEmpty); // 同步清空，fetch 尚未完成
+
+      // 等待 fetch 完成後，應回填 user-B 的 2 筆資料
       await _drainAsync();
-      expect(provider.rosters, isEmpty);
+      expect(provider.rosters, hasLength(2));
     });
 
     test('onSessionChanged(null)（登出）→ cache 清空、不觸發 fetch', () async {

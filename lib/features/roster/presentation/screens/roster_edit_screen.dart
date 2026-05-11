@@ -74,9 +74,9 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final authProvider = context.read<SessionProvider>();
+      final session = context.read<SessionProvider>();
 
-      if (!authProvider.isAdmin) {
+      if (!session.isAdmin) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('沒有權限進入編輯模式')));

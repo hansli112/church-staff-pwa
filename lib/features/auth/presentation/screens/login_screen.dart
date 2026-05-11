@@ -24,15 +24,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
-      final authProvider = context.read<SessionProvider>();
-      final success = await authProvider.login(
+      final session = context.read<SessionProvider>();
+      final success = await session.login(
         _usernameController.text,
         _passwordController.text,
       );
-      
+
       if (!success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(authProvider.error ?? '登入失敗')),
+          SnackBar(content: Text(session.error ?? '登入失敗')),
         );
       }
     }
@@ -40,7 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<SessionProvider>();
+    final session = context.watch<SessionProvider>();
 
     return Scaffold(
       body: SafeArea(
@@ -126,8 +126,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 height: 48,
                                 child: FilledButton(
                                   onPressed:
-                                      authProvider.isLoading ? null : _handleLogin,
-                                  child: authProvider.isLoading
+                                      session.isLoading ? null : _handleLogin,
+                                  child: session.isLoading
                                       ? const SizedBox(
                                           height: 24,
                                           width: 24,
@@ -139,10 +139,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                       : const Text('登入'),
                                 ),
                               ),
-                              if (authProvider.error != null) ...[
+                              if (session.error != null) ...[
                                 const SizedBox(height: 16),
                                 Text(
-                                  authProvider.error!,
+                                  session.error!,
                                   style: TextStyle(
                                     color: Theme.of(context).colorScheme.error,
                                   ),

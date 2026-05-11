@@ -121,10 +121,10 @@ class _RosterScreenState extends State<RosterScreen>
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<SessionProvider>();
-    final isAdmin = authProvider.isAdmin;
+    final session = context.watch<SessionProvider>();
+    final isAdmin = session.isAdmin;
     final canEdit = isAdmin && widget.allowEdit;
-    final userZones = authProvider.currentUser?.zones ?? const <UserZoneInfo>[];
+    final userZones = session.currentUser?.zones ?? const <UserZoneInfo>[];
     final allowedTypes = isAdmin
         ? ServiceType.values
         : ServiceType.values

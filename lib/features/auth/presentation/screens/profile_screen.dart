@@ -136,8 +136,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<SessionProvider>();
-    final user = authProvider.currentUser;
+    final session = context.watch<SessionProvider>();
+    final user = session.currentUser;
 
     if (user == null) return const SizedBox.shrink();
 
@@ -181,7 +181,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 32),
 
           // Admin Actions
-          if (authProvider.isAdmin) ...[
+          if (session.isAdmin) ...[
             const Divider(),
             ListTile(
               leading: const Icon(Icons.manage_accounts),
@@ -244,7 +244,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               );
 
               if (confirm == true) {
-                await authProvider.logout();
+                await session.logout();
               }
             },
           ),
