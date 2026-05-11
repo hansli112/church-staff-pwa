@@ -1,7 +1,7 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
-import '../../../roster/domain/entities/service_roster.dart';
+import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../domain/repositories/group_settings_repository.dart';
 import '../../../../core/utils/error_messages.dart';
 

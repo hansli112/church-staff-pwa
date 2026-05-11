@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../roster/domain/entities/service_roster.dart';
+import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../providers/group_settings_provider.dart';
 import '../providers/auth_provider.dart';
 

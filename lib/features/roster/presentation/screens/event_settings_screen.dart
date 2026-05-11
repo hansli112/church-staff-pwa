@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/event_option.dart';
-import '../../domain/entities/service_roster.dart';
+import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../providers/roster_provider.dart';
 import '../../../../core/widgets/settings_bottom_sheet.dart';
 

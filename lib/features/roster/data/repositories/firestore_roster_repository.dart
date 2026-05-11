@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/entities/event_option.dart';
 import '../../domain/entities/service_roster.dart';
+import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../domain/repositories/roster_repository.dart';
 
 class FirestoreRosterRepository implements RosterRepository {

@@ -1,4 +1,4 @@
-import '../../../roster/domain/entities/service_roster.dart';
+import 'package:church_staff_pwa/core/types/service_type.dart';
 
 abstract class GroupSettingsRepository {
   Future<Map<ServiceType, List<String>>> getSmallGroupTemplates();

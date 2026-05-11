@@ -6,6 +6,10 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/config/google_calendar_config.dart';
+import '../widgets/_calendar_models.dart';
+import '../widgets/_day_cell.dart';
+import '../widgets/_day_events_sheet.dart';
+import '../widgets/_event_detail_sheet.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -25,7 +29,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   late DateTime _focusedMonth;
   DateTime? _selectedDay;
-  final Map<String, List<_CalendarEvent>> _eventsByMonth = {};
+  final Map<String, List<CalendarEvent>> _eventsByMonth = {};
   final Set<String> _loadingMonths = {};
   final Map<String, String?> _errorsByMonth = {};
 
@@ -331,16 +335,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
         final dateOnly = DateUtils.dateOnly(date);
         final isSelected = DateUtils.isSameDay(_selectedDay, dateOnly);
         final isToday = DateUtils.isSameDay(dateOnly, DateTime.now());
-
         final daySegments =
-            eventSegmentsByDay[_dayKey(dateOnly)] ?? const <_DayEventSegment>[];
+            eventSegmentsByDay[_dayKey(dateOnly)] ?? const <DayEventSegment>[];
         final hasEvents = daySegments.isNotEmpty;
         final maxVisibleEvents = _maxVisibleEventsForCellHeight(cellHeight);
-        final visibleEvents = daySegments.take(maxVisibleEvents).toList();
-        final overflowCount = daySegments.length - visibleEvents.length;
-        const maxLinesPerEvent = 2;
 
-        return InkWell(
+        return DayCell(
+          dayNumber: dayNumber,
+          date: dateOnly,
+          isSelected: isSelected,
+          isToday: isToday,
+          segments: daySegments,
+          maxVisibleEvents: maxVisibleEvents,
+          cellWidth: cellWidth,
           onTap: () async {
             setState(() {
               _selectedDay = dateOnly;
@@ -349,227 +356,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
               await _showSelectedDayEventsSheet(dateOnly);
             }
           },
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? Theme.of(
-                      context,
-                    ).colorScheme.primary.withValues(alpha: 0.12)
-                  : isToday
-                  ? Theme.of(
-                      context,
-                    ).colorScheme.secondary.withValues(alpha: 0.12)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  child: Text(
-                    '$dayNumber',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.black87,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: visibleEvents
-                        .map(
-                          (segment) => _buildEventLine(
-                            segment,
-                            maxLinesPerEvent,
-                            cellWidth,
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ),
-                if (overflowCount > 0)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      '+$overflowCount',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Colors.black54,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
+          onEventTap: (event) => _showEventDetails(event),
         );
       },
     );
   }
 
-  Widget _buildEventLine(
-    _DayEventSegment segment,
-    int maxLines,
-    double cellWidth,
-  ) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isMultiDay = segment.event.spansMultipleDays;
-    final textStyle = Theme.of(context).textTheme.labelSmall!.copyWith(
-          fontWeight: FontWeight.w500,
-          color: colorScheme.onPrimaryContainer,
-        );
-    final leadingInset = segment.continuesLeft ? 0.0 : 2.0;
-    final trailingInset = segment.continuesRight ? 0.0 : 2.0;
-    final leftTextInset = segment.continuesLeft ? 0.0 : 1.0;
-    final rightTextInset = segment.continuesRight ? 0.0 : 1.0;
-    final currentTextInset = leadingInset + leftTextInset;
-    final borderRadius = BorderRadius.only(
-      topLeft: Radius.circular(segment.continuesLeft ? 0 : 4),
-      bottomLeft: Radius.circular(segment.continuesLeft ? 0 : 4),
-      topRight: Radius.circular(segment.continuesRight ? 0 : 4),
-      bottomRight: Radius.circular(segment.continuesRight ? 0 : 4),
-    );
-    final textWidget = Text(
-      segment.event.title,
-      maxLines: isMultiDay ? 1 : maxLines,
-      softWrap: !isMultiDay,
-      overflow: isMultiDay ? TextOverflow.visible : TextOverflow.ellipsis,
-      style: textStyle,
-    );
-    final shouldShowTitle = segment.showTitle || isMultiDay;
-
-    Widget content;
-    if (shouldShowTitle) {
-      if (isMultiDay) {
-        final shift =
-            (cellWidth * segment.titleShiftDays) +
-            currentTextInset -
-            segment.startTextInset;
-        content = ClipRect(
-          child: Transform.translate(
-            offset: Offset(-shift, 0),
-            child: textWidget,
-          ),
-        );
-      } else {
-        content = textWidget;
-      }
-    } else {
-      content = Opacity(opacity: 0, child: textWidget);
-    }
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: borderRadius,
-        onTap: () => _showEventDetails(segment.event),
-        child: Container(
-          width: double.infinity,
-          margin: EdgeInsets.only(
-            left: leadingInset,
-            right: trailingInset,
-            bottom: 3,
-          ),
-          padding: EdgeInsets.fromLTRB(leftTextInset, 2, rightTextInset, 2),
-          decoration: BoxDecoration(
-            color: colorScheme.primaryContainer.withValues(alpha: 0.8),
-            borderRadius: borderRadius,
-          ),
-          child: content,
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showEventDetails(_CalendarEvent event) async {
+  Future<void> _showEventDetails(CalendarEvent event) async {
     setState(() {
       _selectedDay = event.startDay;
     });
-
-    final colorScheme = Theme.of(context).colorScheme;
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              20,
-              8,
-              20,
-              20 + MediaQuery.viewInsetsOf(context).bottom,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  event.title,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _EventDetailRow(
-                  icon: Icons.schedule,
-                  label: '時間',
-                  value: _formatEventDateTime(event),
-                ),
-                if (event.location != null && event.location!.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  _EventDetailRow(
-                    icon: Icons.place_outlined,
-                    label: '地點',
-                    value: event.location!,
-                  ),
-                ],
-                if (event.description != null &&
-                    event.description!.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    '說明',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest.withValues(
-                        alpha: 0.45,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      event.description!,
-                      style: const TextStyle(fontSize: 14, height: 1.5),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
-      },
-    );
+    if (!mounted) return;
+    await showEventDetailSheet(context, event);
   }
 
-  List<_CalendarEvent>? _eventsForDay(DateTime? day) {
+  List<CalendarEvent>? _eventsForDay(DateTime? day) {
     if (day == null) return null;
 
     final monthEvents = _eventsByMonth[_cacheKeyForMonth(day)] ?? const [];
@@ -587,165 +388,24 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Future<void> _showSelectedDayEventsSheet(DateTime day) async {
-    final events = _eventsForDay(day) ?? const <_CalendarEvent>[];
-    final title = DateFormat('yyyy/MM/dd (E)', 'zh_TW').format(day);
-    final colorScheme = Theme.of(context).colorScheme;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (sheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              20,
-              8,
-              20,
-              20 + MediaQuery.viewInsetsOf(sheetContext).bottom,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '當天活動 ${events.length} 筆',
-                  style: TextStyle(fontSize: 13, color: colorScheme.primary),
-                ),
-                const SizedBox(height: 12),
-                if (events.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 12),
-                    child: Text('當天沒有活動'),
-                  )
-                else
-                  Flexible(
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: events.length,
-                      separatorBuilder: (_, index) => const SizedBox(height: 8),
-                      itemBuilder: (context, index) {
-                        final event = events[index];
-                        return Material(
-                          color: colorScheme.surfaceContainerHighest.withValues(
-                            alpha: 0.32,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(12),
-                            onTap: () async {
-                              Navigator.of(sheetContext).pop();
-                              await _showEventDetails(event);
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    event.title,
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _formatEventTimeSummary(event),
-                                    style: const TextStyle(fontSize: 13),
-                                  ),
-                                  if (event.location != null &&
-                                      event.location!.isNotEmpty) ...[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      event.location!,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.black54,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        );
+    final events = _eventsForDay(day) ?? const <CalendarEvent>[];
+    if (!mounted) return;
+    await showDayEventsSheet(
+      context,
+      day: day,
+      events: events,
+      onSelectDay: (selectedDay) {
+        setState(() {
+          _selectedDay = selectedDay;
+        });
       },
     );
-  }
-
-  String _formatEventDateTime(_CalendarEvent event) {
-    if (event.isAllDay) {
-      final startText = DateFormat(
-        'yyyy/MM/dd (E)',
-        'zh_TW',
-      ).format(event.startDay);
-      if (!event.spansMultipleDays) {
-        return '全天 | $startText';
-      }
-      final endText = DateFormat(
-        'yyyy/MM/dd (E)',
-        'zh_TW',
-      ).format(event.endDay);
-      return '全天 | $startText - $endText';
-    }
-
-    final sameDay = DateUtils.isSameDay(event.startTime, event.endTime);
-    final startText = DateFormat(
-      'yyyy/MM/dd (E) HH:mm',
-      'zh_TW',
-    ).format(event.startTime);
-    if (sameDay) {
-      final endText = DateFormat('HH:mm', 'zh_TW').format(event.endTime);
-      return '$startText - $endText';
-    }
-
-    final endText = DateFormat(
-      'yyyy/MM/dd (E) HH:mm',
-      'zh_TW',
-    ).format(event.endTime);
-    return '$startText - $endText';
-  }
-
-  String _formatEventTimeSummary(_CalendarEvent event) {
-    if (event.isAllDay) {
-      return event.spansMultipleDays ? '全天，多日活動' : '全天';
-    }
-
-    final sameDay = DateUtils.isSameDay(event.startTime, event.endTime);
-    if (sameDay) {
-      final startText = DateFormat('HH:mm', 'zh_TW').format(event.startTime);
-      final endText = DateFormat('HH:mm', 'zh_TW').format(event.endTime);
-      return '$startText - $endText';
-    }
-
-    final startText = DateFormat(
-      'MM/dd HH:mm',
-      'zh_TW',
-    ).format(event.startTime);
-    final endText = DateFormat('MM/dd HH:mm', 'zh_TW').format(event.endTime);
-    return '$startText - $endText';
   }
 
   int _dayKey(DateTime date) =>
       (date.year * 10000) + (date.month * 100) + date.day;
 
-  Map<int, List<_DayEventSegment>> _buildMonthEventLayout(DateTime month) {
+  Map<int, List<DayEventSegment>> _buildMonthEventLayout(DateTime month) {
     final year = month.year;
     final monthValue = month.month;
     final firstDay = DateTime(year, monthValue, 1);
@@ -772,7 +432,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       firstLabelDayByEvent[event.identity] = firstVisible;
     }
 
-    final result = <int, List<_DayEventSegment>>{};
+    final result = <int, List<DayEventSegment>>{};
     final firstWeekOffset = firstDay.weekday % 7;
     final weekCount = ((firstWeekOffset + totalDays) / 7).ceil();
 
@@ -783,7 +443,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         return DateUtils.dateOnly(DateTime(year, monthValue, dayNumber));
       });
 
-      final weekSegments = <_WeekEventSegment>[];
+      final weekSegments = <WeekEventSegment>[];
       for (final event in overlappingEvents) {
         int? startIndex;
         int? endIndex;
@@ -795,7 +455,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         }
         if (startIndex == null || endIndex == null) continue;
         weekSegments.add(
-          _WeekEventSegment(
+          WeekEventSegment(
             event: event,
             startIndex: startIndex,
             endIndex: endIndex,
@@ -847,7 +507,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           final previousDay = i > 0 ? weekDays[i - 1] : null;
           final nextDay = i < 6 ? weekDays[i + 1] : null;
           result[dayKey]!.add(
-            _DayEventSegment(
+            DayEventSegment(
               event: segment.event,
               lane: lane,
               showTitle: DateUtils.isSameDay(
@@ -886,7 +546,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     try {
       final data = jsonDecode(cached) as List<dynamic>;
       final events = data
-          .map((raw) => _CalendarEvent.fromJson(raw as Map<String, dynamic>))
+          .map((raw) => CalendarEvent.fromJson(raw as Map<String, dynamic>))
           .toList();
       if (!mounted) return;
       setState(() {
@@ -899,7 +559,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Future<void> _saveCachedEventsForMonth(
     DateTime month,
-    List<_CalendarEvent> events,
+    List<CalendarEvent> events,
   ) async {
     final prefs = await SharedPreferences.getInstance();
     final key = _cacheKeyForMonth(month);
@@ -964,7 +624,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final items = data['items'] as List<dynamic>? ?? [];
-      final events = <_CalendarEvent>[];
+      final events = <CalendarEvent>[];
 
       for (var i = 0; i < items.length; i++) {
         try {
@@ -988,7 +648,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           final description = (raw['description'] as String?)?.trim();
           final eventId = (raw['id'] as String?)?.trim();
           events.add(
-            _CalendarEvent(
+            CalendarEvent(
               id: eventId == null || eventId.isEmpty
                   ? 'fallback_${i}_${startTime.toIso8601String()}_${title ?? ''}'
                   : eventId,
@@ -1034,147 +694,4 @@ class _CalendarScreenState extends State<CalendarScreen> {
       }
     }
   }
-}
-
-class _CalendarEvent {
-  final String id;
-  final DateTime startTime;
-  final DateTime endTime;
-  final bool isAllDay;
-  final String title;
-  final String? location;
-  final String? description;
-
-  const _CalendarEvent({
-    required this.id,
-    required this.startTime,
-    required this.endTime,
-    required this.isAllDay,
-    required this.title,
-    this.location,
-    this.description,
-  });
-
-  String get identity => '$id|${startTime.toIso8601String()}';
-
-  DateTime get startDay => DateUtils.dateOnly(startTime);
-
-  DateTime get endDay {
-    final normalizedEnd = endTime.isBefore(startTime) ? startTime : endTime;
-    final adjustedEnd = normalizedEnd.subtract(const Duration(microseconds: 1));
-    final endDayOnly = DateUtils.dateOnly(adjustedEnd);
-    return endDayOnly.isBefore(startDay) ? startDay : endDayOnly;
-  }
-
-  bool get spansMultipleDays => endDay.isAfter(startDay);
-
-  bool occursOnDate(DateTime date) {
-    final day = DateUtils.dateOnly(date);
-    if (day.isBefore(startDay)) return false;
-    return !day.isAfter(endDay);
-  }
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'startTime': startTime.toIso8601String(),
-    'endTime': endTime.toIso8601String(),
-    'isAllDay': isAllDay,
-    'title': title,
-    'location': location,
-    'description': description,
-  };
-
-  factory _CalendarEvent.fromJson(Map<String, dynamic> json) {
-    final start = DateTime.parse(json['startTime'] as String).toLocal();
-    final endRaw = json['endTime'];
-    final end = endRaw is String ? DateTime.parse(endRaw).toLocal() : start;
-    final idRaw = json['id'];
-    return _CalendarEvent(
-      id: idRaw is String && idRaw.isNotEmpty
-          ? idRaw
-          : 'legacy_${start.toIso8601String()}_${json['title'] as String? ?? ''}',
-      startTime: start,
-      endTime: end,
-      isAllDay: json['isAllDay'] as bool? ?? false,
-      title: json['title'] as String,
-      location: (json['location'] as String?)?.trim(),
-      description: (json['description'] as String?)?.trim(),
-    );
-  }
-}
-
-class _EventDetailRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _EventDetailRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 1),
-          child: Icon(icon, size: 18, color: colorScheme.primary),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: colorScheme.primary,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(value, style: const TextStyle(fontSize: 14, height: 1.45)),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _DayEventSegment {
-  final _CalendarEvent event;
-  final int lane;
-  final bool showTitle;
-  final int titleShiftDays;
-  final double startTextInset;
-  final bool continuesLeft;
-  final bool continuesRight;
-
-  const _DayEventSegment({
-    required this.event,
-    required this.lane,
-    required this.showTitle,
-    required this.titleShiftDays,
-    required this.startTextInset,
-    required this.continuesLeft,
-    required this.continuesRight,
-  });
-}
-
-class _WeekEventSegment {
-  final _CalendarEvent event;
-  final int startIndex;
-  final int endIndex;
-
-  const _WeekEventSegment({
-    required this.event,
-    required this.startIndex,
-    required this.endIndex,
-  });
 }

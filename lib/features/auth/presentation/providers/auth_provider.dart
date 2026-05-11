@@ -2,7 +2,7 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import '../../domain/entities/user.dart';
-import '../../../roster/domain/entities/service_roster.dart';
+import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../../../core/utils/error_messages.dart';
 
