@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../providers/roster_provider.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../auth/presentation/providers/user_admin_provider.dart';
 import '../../../../core/widgets/settings_bottom_sheet.dart';
 
 class RoleSettingsScreen extends StatefulWidget {
@@ -211,12 +211,14 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
               icon: const Icon(Icons.check),
               onPressed: () async {
                 final rosterProvider = context.read<RosterProvider>();
-                final authProvider = context.read<AuthProvider>();
+                final userAdminProvider = context.read<UserAdminProvider>();
                 await rosterProvider.updateTemplates(
                   _editingTemplates,
                   renamedRolesByType: _renamedRolesByType,
                 );
-                await authProvider.cleanupUserMinistries(_editingTemplates);
+                await userAdminProvider.cleanupUserMinistries(
+                  _editingTemplates,
+                );
                 if (!context.mounted) return;
                 Navigator.pop(context);
               },

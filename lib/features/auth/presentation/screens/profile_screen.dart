@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/services/app_version_service.dart';
 import '../../../../core/services/push_notification_service.dart';
 import '../../../../core/utils/error_messages.dart';
-import '../providers/auth_provider.dart';
+import '../providers/session_provider.dart';
 import 'user_management_screen.dart' deferred as user_management_screen;
 import 'group_settings_screen.dart' deferred as group_settings_screen;
 
@@ -66,7 +66,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final userId = context.read<AuthProvider>().currentUser?.id;
+    final userId = context.read<SessionProvider>().currentUser?.id;
     if (_statusUserId == userId) return;
     _statusUserId = userId;
     _refreshPushStatus();
@@ -92,7 +92,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _togglePush(bool value) async {
-    final userId = context.read<AuthProvider>().currentUser?.id;
+    final userId = context.read<SessionProvider>().currentUser?.id;
     if (userId == null) return;
     setState(() => _isPushLoading = true);
     try {
@@ -136,7 +136,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<AuthProvider>();
+    final authProvider = context.watch<SessionProvider>();
     final user = authProvider.currentUser;
 
     if (user == null) return const SizedBox.shrink();

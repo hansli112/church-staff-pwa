@@ -16,6 +16,9 @@ class GroupSettingsProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
+  // 追蹤上一次 session userId，用來判斷帳號是否真的換了。
+  String? _lastSessionUserId;
+
   GroupSettingsProvider(this._repository) {
     fetchTemplates();
   }
@@ -38,10 +41,31 @@ class GroupSettingsProvider extends ChangeNotifier {
               ServiceType.children: [],
             }
           : result;
-    } catch (e) {
-      _error = '無法取得小組設定';
+    } catch (e, st) {
+      log('載入小組設定失敗', error: e, stackTrace: st);
+      _error = '載入失敗:${mapErrorToUserMessage(e)}';
     } finally {
       _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// 由 ChangeNotifierProxyProvider 在 SessionProvider.currentUser 變動時呼叫。
+  /// 當 userId 真的改變，清掉 cache 並重抓資料。
+  void onSessionChanged(String? userId) {
+    if (userId == _lastSessionUserId) return;
+    _lastSessionUserId = userId;
+
+    _templates = {
+      ServiceType.sundayService: [],
+      ServiceType.youth: [],
+      ServiceType.children: [],
+    };
+    _error = null;
+
+    if (userId != null) {
+      fetchTemplates();
+    } else {
       notifyListeners();
     }
   }
@@ -53,7 +77,7 @@ class GroupSettingsProvider extends ChangeNotifier {
       notifyListeners();
     } catch (e, st) {
       log('更新小組設定失敗', error: e, stackTrace: st);
-      _error = '更新小組設定失敗：${mapErrorToUserMessage(e)}';
+      _error = '更新失敗:${mapErrorToUserMessage(e)}';
       notifyListeners();
     }
   }

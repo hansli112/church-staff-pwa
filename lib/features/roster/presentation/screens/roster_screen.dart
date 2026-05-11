@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/service_roster.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../auth/presentation/providers/session_provider.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../providers/roster_provider.dart';
 import '../widgets/roster_view_card.dart';
@@ -121,7 +121,7 @@ class _RosterScreenState extends State<RosterScreen>
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<AuthProvider>();
+    final authProvider = context.watch<SessionProvider>();
     final isAdmin = authProvider.isAdmin;
     final canEdit = isAdmin && widget.allowEdit;
     final userZones = authProvider.currentUser?.zones ?? const <UserZoneInfo>[];

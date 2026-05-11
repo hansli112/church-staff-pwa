@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../domain/entities/event_option.dart';
 import '../../domain/entities/service_roster.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../auth/presentation/providers/user_admin_provider.dart';
 import '../providers/roster_provider.dart';
 import '../../../../core/widgets/settings_bottom_sheet.dart';
 
@@ -454,7 +454,7 @@ class RosterCard extends StatelessWidget {
     String? role,
   ) async {
     final provider = context.read<RosterProvider>();
-    final users = await context.read<AuthProvider>().getUsers();
+    final users = await context.read<UserAdminProvider>().getUsers();
     final roleKey = role?.trim();
     final allUserNames = users
         .map((u) => u.name.trim())

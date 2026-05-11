@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/service_roster.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../auth/presentation/providers/session_provider.dart';
+import '../../../auth/presentation/providers/user_admin_provider.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../providers/roster_provider.dart';
 import '../widgets/roster_card.dart';
@@ -73,7 +74,7 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final authProvider = context.read<AuthProvider>();
+      final authProvider = context.read<SessionProvider>();
 
       if (!authProvider.isAdmin) {
         ScaffoldMessenger.of(
@@ -499,7 +500,7 @@ class _RosterListState extends State<_RosterList>
     BuildContext context,
     String raw,
   ) async {
-    final authProvider = context.read<AuthProvider>();
+    final userAdminProvider = context.read<UserAdminProvider>();
     final rosterProvider = context.read<RosterProvider>();
     if (raw.trim().isEmpty) {
       return const _JsonImportResult(error: '請貼上 JSON 內容');
@@ -509,7 +510,7 @@ class _RosterListState extends State<_RosterList>
     final Map<String, Set<String>> allowedByRole;
     final Map<String, String> nameToIdMap;
     try {
-      final users = await authProvider.getUsers();
+      final users = await userAdminProvider.getUsers();
       candidateNames = [
         ...users.map((u) => u.name.trim()).where((name) => name.isNotEmpty),
       ];

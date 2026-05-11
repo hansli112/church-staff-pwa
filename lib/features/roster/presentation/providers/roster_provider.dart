@@ -17,6 +17,9 @@ class RosterProvider with ChangeNotifier {
   bool _isEditMode = false;
   String? _error;
 
+  // 追蹤上一次 session userId，用來判斷帳號是否真的換了。
+  String? _lastSessionUserId;
+
   RosterProvider(this._repository);
 
   bool get isLoading => _isLoading;
@@ -52,6 +55,27 @@ class RosterProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// 由 ChangeNotifierProxyProvider 在 SessionProvider.currentUser 變動時呼叫。
+  /// 當 userId 真的改變（含登出 → null 或切換帳號），清掉全部 cache 並重抓資料。
+  void onSessionChanged(String? userId) {
+    if (userId == _lastSessionUserId) return;
+    _lastSessionUserId = userId;
+
+    _allRosters = [];
+    _templates = {};
+    _eventOptionsByType = {};
+    _error = null;
+    _isEditMode = false;
+
+    if (userId != null) {
+      // 有新使用者，重抓資料。
+      fetchInitialData();
+    } else {
+      // 登出，僅清除並通知 UI。
+      notifyListeners();
+    }
+  }
+
   // 取得特定類別的服事表
   List<ServiceRoster> getRostersByType(ServiceType type) {
     return _allRosters.where((r) => r.type == type).toList();
@@ -74,8 +98,9 @@ class RosterProvider with ChangeNotifier {
       _allRosters = results[0] as List<ServiceRoster>;
       _templates = results[1] as Map<ServiceType, List<String>>;
       _eventOptionsByType = results[2] as Map<ServiceType, List<EventOption>>;
-    } catch (e) {
-      _error = '無法取得資料，請稍後再試';
+    } catch (e, st) {
+      log('載入服事表資料失敗', error: e, stackTrace: st);
+      _error = '載入失敗:${mapErrorToUserMessage(e)}';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -89,8 +114,9 @@ class RosterProvider with ChangeNotifier {
 
     try {
       _allRosters = await _repository.getUpcomingRosters();
-    } catch (e) {
-      _error = '無法取得服事表，請稍後再試';
+    } catch (e, st) {
+      log('載入服事表失敗', error: e, stackTrace: st);
+      _error = '載入失敗:${mapErrorToUserMessage(e)}';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -108,7 +134,7 @@ class RosterProvider with ChangeNotifier {
       }
     } catch (e, st) {
       log('更新 roster 失敗', error: e, stackTrace: st);
-      _error = '更新失敗：${mapErrorToUserMessage(e)}';
+      _error = '更新失敗:${mapErrorToUserMessage(e)}';
       notifyListeners();
     }
   }
@@ -212,7 +238,7 @@ class RosterProvider with ChangeNotifier {
       notifyListeners();
     } catch (e, st) {
       log('更新服事表樣板失敗', error: e, stackTrace: st);
-      _error = '更新設定失敗：${mapErrorToUserMessage(e)}';
+      _error = '更新失敗:${mapErrorToUserMessage(e)}';
       notifyListeners();
     }
   }
@@ -286,7 +312,7 @@ class RosterProvider with ChangeNotifier {
       notifyListeners();
     } catch (e, st) {
       log('更新事件選項失敗', error: e, stackTrace: st);
-      _error = '更新事件選項失敗：${mapErrorToUserMessage(e)}';
+      _error = '更新失敗:${mapErrorToUserMessage(e)}';
       notifyListeners();
     }
   }

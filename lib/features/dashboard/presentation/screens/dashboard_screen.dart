@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../auth/presentation/providers/session_provider.dart';
 import '../../../../core/config/google_calendar_config.dart';
 import '../../../../core/services/external_link_service.dart';
 import '../../../../core/utils/error_messages.dart';
@@ -38,26 +38,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String? _recentActivitiesError;
   List<_DashboardCalendarEvent> _recentActivities = const [];
 
+  // 追蹤上一次的 userId，用來在 didChangeDependencies 偵測帳號切換。
+  String? _lastUserId;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final rosterProvider = context.read<RosterProvider>();
-      if (rosterProvider.rosters.isEmpty && !rosterProvider.isLoading) {
-        rosterProvider.fetchInitialData();
-      }
-    });
     _loadDailyBreadRange();
     _loadRecentActivities();
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final userId = context.read<SessionProvider>().currentUser?.id;
+    if (userId == _lastUserId) return;
+    _lastUserId = userId;
+
+    if (userId != null) {
+      // 登入或切換帳號：refetch 近期活動（RosterProvider cache 已由 ProxyProvider 清掉）。
+      _loadRecentActivities();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final displayName = _displayName(
-      context.watch<AuthProvider>().currentUser?.name,
+      context.watch<SessionProvider>().currentUser?.name,
     );
-    final fullName = context.watch<AuthProvider>().currentUser?.name ?? '';
+    final fullName = context.watch<SessionProvider>().currentUser?.name ?? '';
     return Scaffold(
       appBar: AppBar(title: const Text('首頁'), centerTitle: true),
       body: SingleChildScrollView(
