@@ -2,7 +2,7 @@ import 'dart:developer';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/repositories/group_settings_repository.dart';
-import '../../../roster/domain/entities/service_roster.dart';
+import 'package:church_staff_pwa/core/types/service_type.dart';
 
 class FirestoreGroupSettingsRepository implements GroupSettingsRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;

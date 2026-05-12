@@ -1,11 +1,16 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/service_roster.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
+import 'package:church_staff_pwa/core/types/service_type.dart';
+import '../../../auth/presentation/providers/session_provider.dart';
+import '../../../auth/presentation/providers/user_admin_provider.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../providers/roster_provider.dart';
 import '../widgets/roster_card.dart';
+import '../../../../core/utils/error_messages.dart';
+import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/settings_bottom_sheet.dart';
 import 'event_settings_screen.dart' deferred as event_settings_screen;
 import 'role_settings_screen.dart' deferred as role_settings_screen;
@@ -46,7 +51,8 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
         dialogShown = false;
       }
       Navigator.push(context, MaterialPageRoute(builder: (_) => builder()));
-    } catch (error) {
+    } catch (error, st) {
+      log('載入設定畫面失敗', error: error, stackTrace: st);
       if (context.mounted) {
         if (dialogShown) {
           Navigator.of(context, rootNavigator: true).pop();
@@ -54,7 +60,7 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
         }
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('載入失敗: $error')));
+        ).showSnackBar(SnackBar(content: Text('載入失敗：${mapErrorToUserMessage(error)}')));
       }
     } finally {
       if (dialogShown && context.mounted) {
@@ -67,9 +73,10 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authProvider = context.read<AuthProvider>();
+      if (!mounted) return;
+      final session = context.read<SessionProvider>();
 
-      if (!authProvider.isAdmin) {
+      if (!session.isAdmin) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('沒有權限進入編輯模式')));
@@ -92,7 +99,7 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
       centerTitle: true,
       actions: [
         IconButton(
-          icon: const Icon(Icons.event),
+          icon: const Icon(Icons.palette_outlined),
           tooltip: '事件選項設定',
           onPressed: () => _loadAndPush(
             context,
@@ -101,7 +108,7 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.settings),
+          icon: const Icon(Icons.list_alt_outlined),
           tooltip: '服事項目設定',
           onPressed: () => _loadAndPush(
             context,
@@ -130,7 +137,11 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
     if (allowedTypes.isEmpty) {
       return Scaffold(
         appBar: appBar,
-        body: const Center(child: Text('尚未設定可檢視的牧區')),
+        body: const EmptyState(
+          icon: Icons.folder_off_outlined,
+          message: '尚未設定可檢視的牧區',
+          hint: '請先到使用者管理為您指派服事牧區',
+        ),
       );
     }
 
@@ -139,11 +150,31 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
       body: Consumer<RosterProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 12),
+                  Text(
+                    '載入服事資訊中…',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+            );
           }
 
           if (provider.error != null) {
-            return Center(child: Text(provider.error!));
+            return EmptyState(
+              icon: Icons.error_outline,
+              message: provider.error ?? '無法載入',
+              action: FilledButton.icon(
+                onPressed: () => provider.fetchInitialData(),
+                icon: const Icon(Icons.refresh),
+                label: const Text('重試'),
+              ),
+            );
           }
 
           // TabBarView 預設支援左右滑動
@@ -189,21 +220,17 @@ class _RosterListState extends State<_RosterList>
     final isEditMode = context.watch<RosterProvider>().isEditMode;
 
     if (widget.rosters.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('此類別目前沒有服事資訊'),
-            if (isEditMode) ...[
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
+      return EmptyState(
+        icon: Icons.event_busy_outlined,
+        message: '此類別目前沒有服事資訊',
+        hint: isEditMode ? '可使用 JSON 匯入快速建立' : '管理員建立後會在這裡顯示',
+        action: isEditMode
+            ? OutlinedButton.icon(
                 onPressed: () => _showImportJsonDialog(context),
                 icon: const Icon(Icons.data_object),
                 label: const Text('JSON 匯入'),
-              ),
-            ],
-          ],
-        ),
+              )
+            : null,
       );
     }
 
@@ -278,13 +305,7 @@ class _RosterListState extends State<_RosterList>
             return SettingsBottomSheet(
               title: 'JSON 匯入（${widget.type.label}）',
               submitLabel: '匯入',
-              submitChild: isSubmitting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('匯入'),
+              isSubmitting: isSubmitting,
               onSubmit: isSubmitting
                   ? null
                   : () async {
@@ -479,7 +500,7 @@ class _RosterListState extends State<_RosterList>
     BuildContext context,
     String raw,
   ) async {
-    final authProvider = context.read<AuthProvider>();
+    final userAdminProvider = context.read<UserAdminProvider>();
     final rosterProvider = context.read<RosterProvider>();
     if (raw.trim().isEmpty) {
       return const _JsonImportResult(error: '請貼上 JSON 內容');
@@ -489,7 +510,7 @@ class _RosterListState extends State<_RosterList>
     final Map<String, Set<String>> allowedByRole;
     final Map<String, String> nameToIdMap;
     try {
-      final users = await authProvider.getUsers();
+      final users = await userAdminProvider.getUsers();
       candidateNames = [
         ...users.map((u) => u.name.trim()).where((name) => name.isNotEmpty),
       ];
@@ -653,8 +674,29 @@ class _RosterListState extends State<_RosterList>
       );
     }
 
-    for (final roster in updates) {
-      await rosterProvider.updateRoster(roster);
+    try {
+      await rosterProvider.updateRosters(updates);
+    } catch (e, st) {
+      log('匯入過程寫入 Firestore 失敗', error: e, stackTrace: st);
+      String msg;
+      if (e is PartialUpdateException) {
+        // Log the underlying cause's stack too so future Sentry has the
+        // real Firestore error, not just the wrapping exception's stack.
+        log(
+          '匯入部分失敗的代表性 cause',
+          error: e.cause,
+          stackTrace: e.causeStackTrace,
+        );
+        final failedDates = e.failedRosters
+            .map((r) => _dateKey(r.date))
+            .join('、');
+        msg =
+            '${e.successCount} 筆已寫入、${e.failureCount} 筆失敗。'
+            '失敗日期：$failedDates。請重新整理確認狀態後重試';
+      } else {
+        msg = mapErrorToUserMessage(e);
+      }
+      return _JsonImportResult(error: '匯入過程寫入失敗：$msg');
     }
 
     return _JsonImportResult(

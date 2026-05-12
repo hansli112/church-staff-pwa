@@ -11,20 +11,33 @@ import 'features/roster/data/repositories/firestore_roster_repository.dart';
 import 'features/roster/presentation/providers/roster_provider.dart';
 import 'features/auth/data/repositories/firebase_auth_repository.dart';
 import 'features/auth/data/repositories/firestore_group_settings_repository.dart';
-import 'features/auth/presentation/providers/auth_provider.dart';
+import 'features/auth/presentation/providers/session_provider.dart';
+import 'features/auth/presentation/providers/user_admin_provider.dart';
 import 'features/auth/presentation/providers/group_settings_provider.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
 import 'presentation/screens/main_scaffold.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('zh_TW', null);
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Run independent inits in parallel to shave startup latency.
+  await Future.wait([
+    initializeDateFormatting('zh_TW', null),
+    Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform),
+  ]);
+
+  // Force long polling on web instead of WebSocket. WebSocket transport is
+  // unstable on Safari (iOS + macOS), causing dropped Firestore subscriptions
+  // for our iPhone users. Long polling is slightly slower but reliable across
+  // browsers. See commit 7d6b4e2.
   FirebaseFirestore.instance.settings = const Settings(
     webExperimentalForceLongPolling: true,
   );
+
+  // PushNotificationService.initialize only registers stream listeners; we
+  // don't need to block runApp on it.
   final pushNotificationService = PushNotificationService();
-  await pushNotificationService.initialize();
+  unawaited(pushNotificationService.initialize());
 
   runApp(ChurchApp(pushNotificationService: pushNotificationService));
 }
@@ -43,15 +56,45 @@ class ChurchApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         Provider<PushNotificationService>.value(value: pushNotificationService),
+
+        // SessionProvider — 管理登入狀態，最上游。
         ChangeNotifierProvider(
+          create: (_) => SessionProvider(FirebaseAuthRepository()),
+        ),
+
+        // UserAdminProvider — 依賴 SessionProvider。
+        // 使用 ChangeNotifierProxyProvider 注入 session，讓它在登出時自動清 cache。
+        ChangeNotifierProxyProvider<SessionProvider, UserAdminProvider>(
+          create: (ctx) => UserAdminProvider(
+            FirebaseAuthRepository(),
+            ctx.read<SessionProvider>(),
+          ),
+          update: (_, session, prev) {
+            // prev 不會是 null（create 已建立）；update 僅在依賴變動時呼叫。
+            // UserAdminProvider 自己監聽 session，此處不需額外操作。
+            return prev!;
+          },
+        ),
+
+        // RosterProvider — session 變動時清 cache 並重抓。
+        ChangeNotifierProxyProvider<SessionProvider, RosterProvider>(
           create: (_) => RosterProvider(FirestoreRosterRepository()),
+          update: (_, session, prev) {
+            prev ??= RosterProvider(FirestoreRosterRepository());
+            prev.onSessionChanged(session.currentUser?.id);
+            return prev;
+          },
         ),
-        ChangeNotifierProvider(
-          create: (_) => AuthProvider(FirebaseAuthRepository()),
-        ),
-        ChangeNotifierProvider(
+
+        // GroupSettingsProvider — session 變動時清 cache 並重抓。
+        ChangeNotifierProxyProvider<SessionProvider, GroupSettingsProvider>(
           create: (_) =>
               GroupSettingsProvider(FirestoreGroupSettingsRepository()),
+          update: (_, session, prev) {
+            prev ??= GroupSettingsProvider(FirestoreGroupSettingsRepository());
+            prev.onSessionChanged(session.currentUser?.id);
+            return prev;
+          },
         ),
       ],
       child: MaterialApp(
@@ -84,46 +127,85 @@ class AuthWrapper extends StatefulWidget {
 }
 
 class _AuthWrapperState extends State<AuthWrapper> {
-  AuthProvider? _authProvider;
+  SessionProvider? _sessionProvider;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final nextAuthProvider = context.read<AuthProvider>();
-    if (_authProvider == nextAuthProvider) return;
+    final nextSessionProvider = context.read<SessionProvider>();
+    if (_sessionProvider == nextSessionProvider) return;
 
-    _authProvider?.removeListener(_onAuthChanged);
-    _authProvider = nextAuthProvider;
-    _authProvider!.addListener(_onAuthChanged);
-    _onAuthChanged();
+    _sessionProvider?.removeListener(_onSessionChanged);
+    _sessionProvider = nextSessionProvider;
+    _sessionProvider!.addListener(_onSessionChanged);
+    _onSessionChanged();
   }
 
   @override
   void dispose() {
-    _authProvider?.removeListener(_onAuthChanged);
+    _sessionProvider?.removeListener(_onSessionChanged);
     unawaited(widget.pushNotificationService.dispose());
     super.dispose();
   }
 
-  void _onAuthChanged() {
-    final userId = _authProvider?.currentUser?.id;
+  void _onSessionChanged() {
+    final userId = _sessionProvider?.currentUser?.id;
     unawaited(widget.pushNotificationService.syncTokenForUser(userId));
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AuthProvider>(
-      builder: (context, auth, _) {
-        if (auth.isRestoring) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+    return Consumer<SessionProvider>(
+      builder: (context, session, _) {
+        if (session.isRestoring) {
+          return const _AuthRestoringShell();
         }
-        if (!auth.isAuthenticated) {
+        if (!session.isAuthenticated) {
           return const LoginScreen();
         }
         return const MainScaffold();
       },
+    );
+  }
+}
+
+/// Shown while SessionProvider is awaiting Firebase Auth state from IndexedDB on
+/// app start. Faster perceived load than a blank screen + spinner: the user
+/// sees the church branding immediately and an inline status row below it.
+class _AuthRestoringShell extends StatelessWidget {
+  const _AuthRestoringShell();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '竹圍靈糧福音中心',
+                style: theme.textTheme.headlineMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2.5),
+                  ),
+                  const SizedBox(width: 12),
+                  Text('載入中…', style: theme.textTheme.titleMedium),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

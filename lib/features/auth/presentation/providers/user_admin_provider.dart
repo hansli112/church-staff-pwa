@@ -1,92 +1,59 @@
 import 'package:flutter/material.dart';
 import '../../domain/entities/user.dart';
-import '../../../roster/domain/entities/service_roster.dart';
+import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../domain/repositories/auth_repository.dart';
+import 'session_provider.dart';
 
-class AuthProvider extends ChangeNotifier {
+class UserAdminProvider extends ChangeNotifier {
   final AuthRepository _repository;
-  
-  User? _currentUser;
-  bool _isLoading = false;
-  bool _isRestoring = true;
-  String? _error;
+  final SessionProvider _session;
 
-  AuthProvider(this._repository) {
-    _restoreSession();
+  // 同工選擇 dialog 每次開啟都要列全部使用者，避免重複打 Firestore。
+  // 任何 admin 寫操作（addUser/updateUser/deleteUser）或登出後會清掉。
+  List<User>? _cachedUsers;
+
+  UserAdminProvider(this._repository, this._session) {
+    // 當 session currentUser 變成 null（登出），自動清掉 cache。
+    _session.addListener(_onSessionChanged);
   }
 
-  User? get currentUser => _currentUser;
-  bool get isAuthenticated => _currentUser != null;
-  bool get isLoading => _isLoading;
-  bool get isRestoring => _isRestoring;
-  String? get error => _error;
-  bool get isAdmin => _currentUser?.isAdmin ?? false;
-
-  Future<void> _restoreSession() async {
-    try {
-      _currentUser = await _repository.getCurrentUser();
-    } catch (e) {
-      _error = '讀取登入狀態失敗: $e';
-    } finally {
-      _isRestoring = false;
+  void _onSessionChanged() {
+    if (_session.currentUser == null && _cachedUsers != null) {
+      _cachedUsers = null;
       notifyListeners();
     }
   }
 
-  Future<bool> login(String username, String password) async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
+  @override
+  void dispose() {
+    _session.removeListener(_onSessionChanged);
+    super.dispose();
+  }
 
-    try {
-      final user = await _repository.login(username, password);
-      if (user != null) {
-        _currentUser = user;
-        _isLoading = false;
-        notifyListeners();
-        return true;
-      } else {
-        _error = '帳號或密碼錯誤';
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-    } catch (e) {
-      _error = '登入失敗: $e';
-      _isLoading = false;
-      notifyListeners();
-      return false;
+  Future<List<User>> getUsers({bool forceRefresh = false}) async {
+    if (!_session.isAdmin) throw Exception('Permission denied');
+    if (!forceRefresh && _cachedUsers != null) {
+      return _cachedUsers!;
     }
-  }
-
-  Future<void> logout() async {
-    _isLoading = true;
-    notifyListeners();
-    
-    await _repository.logout();
-    _currentUser = null;
-    _isRestoring = false;
-    
-    _isLoading = false;
-    notifyListeners();
-  }
-
-  // Admin features
-  Future<List<User>> getUsers() async {
-    if (!isAdmin) throw Exception('Permission denied');
-    return await _repository.getUsers();
+    final users = await _repository.getUsers();
+    // 若 fetch 進行中 session 已切換（登出或換帳號），不寫入 cache 以免污染新 session。
+    if (_session.currentUser == null || !_session.isAdmin) {
+      return users;
+    }
+    _cachedUsers = users;
+    return users;
   }
 
   Future<void> addUser(
-    String name, 
+    String name,
     String email,
-    String username, 
+    String username,
     UserRole role, {
     required String password,
     List<UserZoneInfo> zones = const [],
   }) async {
-    if (!isAdmin) throw Exception('Permission denied');
-    
+    if (!_session.isAdmin) throw Exception('Permission denied');
+
     final newUser = User(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: name,
@@ -96,30 +63,32 @@ class AuthProvider extends ChangeNotifier {
       zones: zones,
     );
     await _repository.addUser(newUser, password);
-    notifyListeners(); // Notify to update user lists if listening
+    _cachedUsers = null;
+    notifyListeners();
   }
 
   Future<void> updateUser(User user, {String? password}) async {
-    if (!isAdmin) throw Exception('Permission denied');
+    if (!_session.isAdmin) throw Exception('Permission denied');
     await _repository.updateUser(user, password: password);
-    
-    // If updating self, refresh local user data
-    if (_currentUser?.id == user.id) {
-      _currentUser = user;
-    }
+
+    // 若是管理員在修改自己的資料，通知 SessionProvider 更新 currentUser。
+    _session.refreshCurrentUser(user);
+
+    _cachedUsers = null;
     notifyListeners();
   }
 
   Future<void> deleteUser(String id) async {
-    if (!isAdmin) throw Exception('Permission denied');
+    if (!_session.isAdmin) throw Exception('Permission denied');
     await _repository.deleteUser(id);
+    _cachedUsers = null;
     notifyListeners();
   }
 
   Future<void> cleanupUserMinistries(
     Map<ServiceType, List<String>> templates,
   ) async {
-    if (!isAdmin) throw Exception('Permission denied');
+    if (!_session.isAdmin) throw Exception('Permission denied');
 
     final users = await _repository.getUsers();
     for (final user in users) {
@@ -138,13 +107,14 @@ class AuthProvider extends ChangeNotifier {
       }
     }
 
+    _cachedUsers = null;
     notifyListeners();
   }
 
   Future<void> cleanupUserGroups(
     Map<ServiceType, List<String>> templates,
   ) async {
-    if (!isAdmin) throw Exception('Permission denied');
+    if (!_session.isAdmin) throw Exception('Permission denied');
 
     final users = await _repository.getUsers();
     for (final user in users) {
@@ -163,6 +133,7 @@ class AuthProvider extends ChangeNotifier {
       }
     }
 
+    _cachedUsers = null;
     notifyListeners();
   }
 }

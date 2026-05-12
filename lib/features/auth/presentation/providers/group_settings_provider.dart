@@ -1,6 +1,9 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
-import '../../../roster/domain/entities/service_roster.dart';
+import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../domain/repositories/group_settings_repository.dart';
+import '../../../../core/utils/error_messages.dart';
 
 class GroupSettingsProvider extends ChangeNotifier {
   final GroupSettingsRepository _repository;
@@ -13,21 +16,27 @@ class GroupSettingsProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
-  GroupSettingsProvider(this._repository) {
-    fetchTemplates();
-  }
+  // 追蹤上一次 session userId，用來判斷帳號是否真的換了。
+  String? _lastSessionUserId;
+
+  // Fetch generation counter：每次 session 變動時遞增，讓過期 fetch 的結果被丟棄。
+  int _fetchToken = 0;
+
+  GroupSettingsProvider(this._repository);
 
   Map<ServiceType, List<String>> get templates => _templates;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
   Future<void> fetchTemplates() async {
+    final token = ++_fetchToken;
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
       final result = await _repository.getSmallGroupTemplates();
+      if (token != _fetchToken) return; // stale fetch，丟棄結果
       _templates = result.isEmpty
           ? {
               ServiceType.sundayService: [],
@@ -35,10 +44,35 @@ class GroupSettingsProvider extends ChangeNotifier {
               ServiceType.children: [],
             }
           : result;
-    } catch (e) {
-      _error = '無法取得小組設定';
+    } catch (e, st) {
+      if (token != _fetchToken) return; // stale fetch，丟棄錯誤
+      log('載入小組設定失敗', error: e, stackTrace: st);
+      _error = '載入失敗:${mapErrorToUserMessage(e)}';
     } finally {
-      _isLoading = false;
+      if (token == _fetchToken) {
+        _isLoading = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  /// 由 ChangeNotifierProxyProvider 在 SessionProvider.currentUser 變動時呼叫。
+  /// 當 userId 真的改變，清掉 cache 並重抓資料。
+  void onSessionChanged(String? userId) {
+    if (userId == _lastSessionUserId) return;
+    _lastSessionUserId = userId;
+
+    _fetchToken++; // 讓進行中的 fetch 過期
+    _templates = {
+      ServiceType.sundayService: [],
+      ServiceType.youth: [],
+      ServiceType.children: [],
+    };
+    _error = null;
+
+    if (userId != null) {
+      fetchTemplates();
+    } else {
       notifyListeners();
     }
   }
@@ -48,8 +82,9 @@ class GroupSettingsProvider extends ChangeNotifier {
       await _repository.updateSmallGroupTemplates(newTemplates);
       _templates = Map.from(newTemplates);
       notifyListeners();
-    } catch (e) {
-      _error = '更新小組設定失敗: $e';
+    } catch (e, st) {
+      log('更新小組設定失敗', error: e, stackTrace: st);
+      _error = '更新失敗:${mapErrorToUserMessage(e)}';
       notifyListeners();
     }
   }

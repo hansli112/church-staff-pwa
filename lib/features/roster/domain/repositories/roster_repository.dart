@@ -1,5 +1,6 @@
 import '../entities/event_option.dart';
 import '../entities/service_roster.dart';
+import 'package:church_staff_pwa/core/types/service_type.dart';
 
 abstract class RosterRepository {
   Future<List<ServiceRoster>> getUpcomingRosters();

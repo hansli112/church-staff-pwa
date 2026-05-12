@@ -54,6 +54,9 @@
       box-shadow: none !important;
     }
 
+    /* 對齊 Flutter MaterialApp 內 _AuthRestoringShell 的視覺：
+       headlineMedium 標題 + 32px gap + (spinner + 12px + titleMedium '載入中…') 並排。
+       overlay 移除時跟 Flutter shell 幾乎無感過渡。 */
     #app-loading {
       position: fixed;
       inset: 0;
@@ -61,35 +64,40 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 12px;
       background: #ffffff;
       color: #1f2937;
       font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
       z-index: 9999;
     }
 
+    #app-loading .title {
+      font-size: 28px;
+      font-weight: 500;
+      line-height: 1.4;
+      text-align: center;
+    }
+
+    #app-loading .status {
+      margin-top: 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
     #app-loading .spinner {
-      width: 36px;
-      height: 36px;
-      border: 3px solid #d1d5db;
+      width: 20px;
+      height: 20px;
+      border: 2.5px solid #d1d5db;
       border-top-color: #2563eb;
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
 
-    #app-loading .title {
-      font-size: 18px;
-      font-weight: 600;
-      line-height: 1.4;
-    }
-
-    #app-loading .subtitle {
-      font-size: 14px;
-      color: #4b5563;
-      text-align: center;
+    #app-loading .caption {
+      font-size: 16px;
+      font-weight: 500;
+      color: rgba(31, 41, 55, 0.7);
       line-height: 1.5;
-      max-width: 320px;
-      padding: 0 16px;
     }
 
     @keyframes spin {
@@ -101,21 +109,14 @@
 </head>
 <body>
   <div id="app-loading" role="status" aria-live="polite">
-    <div class="spinner" aria-hidden="true"></div>
-    <div class="title">載入中</div>
-    <div class="subtitle" id="app-loading-message">首次開啟或有更新時會需要較久時間，請稍候。</div>
+    <div class="title">竹圍靈糧福音中心</div>
+    <div class="status">
+      <div class="spinner" aria-hidden="true"></div>
+      <div class="caption">載入中…</div>
+    </div>
   </div>
 
   <script>
-    let isUpdateInProgress = false;
-
-    function setLoadingMessage(text) {
-      const message = document.getElementById('app-loading-message');
-      if (message) {
-        message.textContent = text;
-      }
-    }
-
     function hideLoadingScreen() {
       const loading = document.getElementById('app-loading');
       if (loading) {
@@ -125,51 +126,54 @@
 
     window.addEventListener('flutter-first-frame', hideLoadingScreen);
 
-    setTimeout(function () {
-      if (!isUpdateInProgress) {
-        setLoadingMessage('正在下載最新內容，請保持網路連線並稍候。');
-      }
-    }, 7000);
-
     if ('serviceWorker' in navigator) {
+      // 第一次裝 SW 時，瀏覽器會把 controller 從 null 切到新 SW，
+      // 也會觸發 controllerchange。若無條件 reload，使用者第一次造訪
+      // 就會看到「載入中」兩次（reload 把載入流程打掉重來）。
+      // 只在已經有 controller 時的「升級」情境才 reload。
+      var hadInitialController = !!navigator.serviceWorker.controller;
       navigator.serviceWorker.addEventListener('controllerchange', function () {
-        isUpdateInProgress = false;
+        if (!hadInitialController) {
+          hadInitialController = true;
+          return;
+        }
         window.location.reload();
       });
 
-      navigator.serviceWorker.ready
-        .then(function (registration) {
-          registration.update();
-
-          registration.addEventListener('updatefound', function () {
-            const newWorker = registration.installing;
-            if (!newWorker) {
-              return;
-            }
-
-            isUpdateInProgress = true;
-            setLoadingMessage('發現新版本，正在下載更新...');
-
-            newWorker.addEventListener('statechange', function () {
-              if (newWorker.state === 'installed') {
-                if (navigator.serviceWorker.controller) {
-                  setLoadingMessage('更新下載完成，正在套用新版本...');
-                  newWorker.postMessage({ type: 'SKIP_WAITING' });
-                } else {
-                  isUpdateInProgress = false;
-                }
-              } else if (newWorker.state === 'redundant') {
-                isUpdateInProgress = false;
-                setLoadingMessage('更新失敗，請重新整理後再試。');
-              }
-            });
-          });
-        })
-        .catch(function () {
-          // Ignore service worker readiness errors.
-        });
-
+      // 註冊我們自己的 cache-first SW（Flutter 3.27+ 內建 flutter_service_worker.js
+      // 是自我登出型的，沒有 caching；不再使用）。
+      // SW 升級流程刻意不更動 loading 訊息：每次 deploy cache_sw.js 都
+      // 產生新 bytes，使用者每次 refresh 都會偵測到 updatefound，若每次都
+      // 改文字就會看到「載入中」下方訊息一直跳。讓升級在背景靜默進行，
+      // 直到 controllerchange 才 reload 一次。
       window.addEventListener('load', function () {
+        navigator.serviceWorker
+          .register('cache_sw.js')
+          .then(function (registration) {
+            registration.update();
+
+            registration.addEventListener('updatefound', function () {
+              const newWorker = registration.installing;
+              if (!newWorker) return;
+
+              newWorker.addEventListener('statechange', function () {
+                // 只在升級情境（已有 controller）才告訴新 SW 跳過 waiting，
+                // 觸發 controllerchange 進而 reload 套用新版。首次安裝
+                // 會自然 activate，無需介入。
+                if (
+                  newWorker.state === 'installed' &&
+                  navigator.serviceWorker.controller
+                ) {
+                  newWorker.postMessage({ type: 'SKIP_WAITING' });
+                }
+              });
+            });
+          })
+          .catch(function (error) {
+            console.error('Cache SW registration failed:', error);
+          });
+
+        // Firebase Cloud Messaging 推播 SW 走自己的 scope。
         navigator.serviceWorker
           .register('firebase-messaging-sw.js', {
             scope: 'firebase-cloud-messaging-push-scope',

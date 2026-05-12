@@ -1,13 +1,15 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../auth/presentation/providers/session_provider.dart';
 import '../../../../core/config/google_calendar_config.dart';
 import '../../../../core/services/external_link_service.dart';
+import '../../../../core/utils/error_messages.dart';
 import '../../../roster/domain/entities/service_roster.dart';
 import '../../../roster/presentation/providers/roster_provider.dart';
 import '../../../calendar/presentation/screens/calendar_screen.dart'
@@ -36,27 +38,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String? _recentActivitiesError;
   List<_DashboardCalendarEvent> _recentActivities = const [];
 
+  // 追蹤上一次的 userId，用來在 didChangeDependencies 偵測帳號切換。
+  String? _lastUserId;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final rosterProvider = context.read<RosterProvider>();
-      if (rosterProvider.rosters.isEmpty && !rosterProvider.isLoading) {
-        rosterProvider.fetchInitialData();
-      }
-    });
     _loadDailyBreadRange();
     _loadRecentActivities();
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final userId = context.read<SessionProvider>().currentUser?.id;
+    if (userId == _lastUserId) return;
+    _lastUserId = userId;
+
+    if (userId != null) {
+      // 登入或切換帳號：refetch 近期活動（RosterProvider cache 已由 ProxyProvider 清掉）。
+      _loadRecentActivities();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final displayName = _displayName(
-      context.watch<AuthProvider>().currentUser?.name,
+      context.watch<SessionProvider>().currentUser?.name,
     );
-    final fullName = context.watch<AuthProvider>().currentUser?.name ?? '';
+    final fullName = context.watch<SessionProvider>().currentUser?.name ?? '';
     return Scaffold(
-      appBar: AppBar(title: const Text('教會同工中心'), centerTitle: true),
+      appBar: AppBar(title: const Text('首頁'), centerTitle: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -111,37 +123,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _isLoadingCalendar = true;
     });
 
-    var dialogVisible = true;
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
-    );
-
     try {
       await calendar.loadLibrary();
       if (!mounted) return;
-      if (dialogVisible) {
-        Navigator.of(context, rootNavigator: true).pop();
-        dialogVisible = false;
-      }
       await Navigator.of(
         context,
       ).push(MaterialPageRoute(builder: (_) => calendar.CalendarScreen()));
-    } catch (error) {
+    } catch (error, st) {
+      log('載入行事曆畫面失敗', error: error, stackTrace: st);
       if (!mounted) return;
-      if (dialogVisible) {
-        Navigator.of(context, rootNavigator: true).pop();
-        dialogVisible = false;
-      }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('載入失敗: $error')));
+      ).showSnackBar(SnackBar(content: Text('載入失敗：${mapErrorToUserMessage(error)}')));
     } finally {
       if (mounted) {
-        if (dialogVisible) {
-          Navigator.of(context, rootNavigator: true).pop();
-        }
         setState(() {
           _isLoadingCalendar = false;
         });
@@ -235,24 +230,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final raw = data['rawRange'] as String?;
     if (raw == null || raw.isEmpty) return null;
     return _normalizeBibleRange(raw);
-  }
-
-  String? _parseDailyBreadRange(String html) {
-    final pattern = RegExp(
-      r'(\d{4}-\d{2}-\d{2})\s*<span>\|</span>\s*<span>\s*([^<]+?)\s*</span>',
-      caseSensitive: false,
-      dotAll: true,
-    );
-    final match = pattern.firstMatch(html);
-    if (match == null) return null;
-
-    final dateText = match.group(1)?.trim();
-    final rangeText = _normalizeBibleRange(match.group(2)?.trim());
-    if (dateText == null || rangeText.isEmpty) return null;
-
-    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    if (dateText != today) return rangeText;
-    return rangeText;
   }
 
   String _normalizeBibleRange(String? raw) {
@@ -481,7 +458,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             isAllDay: dateTimeRaw == null && dateRaw is String,
           ),
         );
-      } catch (_) {}
+      } catch (e, st) {
+        debugPrint('Skipping malformed calendar item #$i: $e');
+        debugPrintStack(stackTrace: st);
+      }
     }
 
     return events;
@@ -506,7 +486,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             subtitle: const Text('教會年度活動一覽'),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: _isLoadingCalendar
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.chevron_right),
+            enabled: !_isLoadingCalendar,
             onTap: _openCalendar,
           ),
           const Divider(height: 1),
@@ -552,17 +539,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(
-                  width: 110,
+                Flexible(
+                  flex: 2,
                   child: Text(
                     dateText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-                Expanded(
+                const SizedBox(width: 8),
+                Flexible(
+                  flex: 3,
                   child: Text(
                     event.title,
                     maxLines: 1,
@@ -588,9 +579,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           return _buildSectionCard(
             title: '本季服事',
             icon: Icons.volunteer_activism,
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Center(child: CircularProgressIndicator()),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Center(child: CircularProgressIndicator()),
+                  const SizedBox(height: 12),
+                  Text(
+                    '載入近期活動中…',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
             ),
           );
         }
@@ -599,7 +600,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
           return _buildSectionCard(
             title: '本季服事',
             icon: Icons.volunteer_activism,
-            child: Text(provider.error!),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  provider.error!,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  onPressed: () => provider.fetchInitialData(),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('重試'),
+                ),
+              ],
+            ),
           );
         }
 

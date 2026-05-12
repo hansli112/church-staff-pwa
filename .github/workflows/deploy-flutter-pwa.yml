@@ -66,15 +66,23 @@ jobs:
           EOF
           flutter build web --release --base-href "/" "${DART_DEFINES[@]}"
 
-      # 5. 讓 service worker 支援 skipWaiting（iOS PWA 更新用）
-      - name: Inject skipWaiting into Flutter service worker
+      # 5. 將 build SHA 注入 cache_sw.js 作為 CACHE_VERSION
+      # 每次 deploy 產生不同的 cache name，舊版資產才會在 SW activate
+      # 時被清掉，使用者下一次 reload 不會卡在舊的 main.dart.js 快取。
+      # fail-fast 防止 placeholder 已被替換或不存在時 silently no-op。
+      - name: Inject build version into cache_sw.js
         run: |
-          echo '
-          self.addEventListener("message", function(event) {
-            if (event.data && event.data.type === "SKIP_WAITING") {
-              self.skipWaiting();
-            }
-          });' >> build/web/flutter_service_worker.js
+          set -euo pipefail
+          if ! grep -q '__BUILD_VERSION__' build/web/cache_sw.js; then
+            echo "::error::__BUILD_VERSION__ placeholder not found in build/web/cache_sw.js"
+            exit 1
+          fi
+          BUILD_VERSION="${GITHUB_SHA::8}-${{ github.run_number }}"
+          sed -i "s|__BUILD_VERSION__|${BUILD_VERSION}|g" build/web/cache_sw.js
+          if ! grep -q "${BUILD_VERSION}" build/web/cache_sw.js; then
+            echo "::error::sed substitution did not produce expected version"
+            exit 1
+          fi
 
       # 6. 將 Firebase 設定注入 messaging service worker
       - name: Inject Firebase config into service worker

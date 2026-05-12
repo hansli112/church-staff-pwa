@@ -1,3 +1,9 @@
+/*
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
 /
   Cache-Control: no-cache, no-store, must-revalidate
   Pragma: no-cache
@@ -18,6 +24,9 @@
   Cache-Control: no-cache, must-revalidate
 
 /flutter_service_worker.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/cache_sw.js
   Cache-Control: no-cache, no-store, must-revalidate
 
 /firebase-messaging-sw.js

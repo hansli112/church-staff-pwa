@@ -1,10 +1,13 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/user.dart';
-import '../../../roster/domain/entities/service_roster.dart';
+import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../../roster/presentation/providers/roster_provider.dart';
 import '../providers/group_settings_provider.dart';
-import '../providers/auth_provider.dart';
+import '../providers/user_admin_provider.dart';
+import '../../../../core/utils/error_messages.dart';
 
 class UserEditorScreen extends StatefulWidget {
   final User? user; // If null, it's add mode
@@ -89,7 +92,7 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
       return;
     }
     if (_formKey.currentState!.validate()) {
-      final authProvider = context.read<AuthProvider>();
+      final authProvider = context.read<UserAdminProvider>();
       final email = _emailController.text.trim();
       final hadEmail = widget.user?.email.isNotEmpty ?? false;
       final shouldCreateAuth =
@@ -124,11 +127,12 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
           ).showSnackBar(const SnackBar(content: Text('儲存成功')));
           Navigator.pop(context);
         }
-      } catch (e) {
+      } catch (e, st) {
+        log('儲存使用者資料失敗', error: e, stackTrace: st);
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text('錯誤: $e')));
+          ).showSnackBar(SnackBar(content: Text('錯誤：${mapErrorToUserMessage(e)}')));
         }
       }
     }

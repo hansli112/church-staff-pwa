@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/user.dart';
-import '../../../roster/domain/entities/service_roster.dart';
-import '../providers/auth_provider.dart';
+import 'package:church_staff_pwa/core/types/service_type.dart';
+import '../providers/user_admin_provider.dart';
 import '../providers/group_settings_provider.dart';
 import 'user_editor_screen.dart';
 
@@ -41,7 +41,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       _restoreOffset = _scrollController.offset;
       _pendingRestore = true;
     }
-    final future = context.read<AuthProvider>().getUsers();
+    // 管理畫面 pull-to-refresh / initial load 一律拉最新，避開 cache。
+    final future = context.read<UserAdminProvider>().getUsers(forceRefresh: true);
     setState(() {
       _usersFuture = future;
       _visibleCount = _visibleCount < _pageSize ? _pageSize : _visibleCount;
@@ -262,7 +263,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                   ),
                                   onPressed: () async {
                                     final authProvider = context
-                                        .read<AuthProvider>();
+                                        .read<UserAdminProvider>();
                                     final confirm = await showDialog<bool>(
                                       context: context,
                                       builder: (context) => AlertDialog(

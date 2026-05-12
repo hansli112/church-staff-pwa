@@ -13,15 +13,22 @@ class MainScaffold extends StatefulWidget {
 class _MainScaffoldState extends State<MainScaffold> {
   int _selectedIndex = 0;
 
-  final List<Widget> _screens = [
-    const DashboardScreen(),
-    const RosterScreen(),
-    const ProfileScreen(),
+  // Lazy tabs: only build a tab the first time the user visits it. Otherwise
+  // every tab's initState fires on app launch (Profile's push status query,
+  // Roster's roster fetch, etc.) — wasted work and Firestore reads when the
+  // user only opens the dashboard.
+  final Set<int> _visitedIndices = {0};
+
+  static const List<Widget> _screens = [
+    DashboardScreen(),
+    RosterScreen(),
+    ProfileScreen(),
   ];
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
+      _visitedIndices.add(index);
     });
   }
 
@@ -30,7 +37,13 @@ class _MainScaffoldState extends State<MainScaffold> {
     return Scaffold(
       body: IndexedStack(
         index: _selectedIndex,
-        children: _screens,
+        children: List<Widget>.generate(_screens.length, (i) {
+          // Once visited, the screen stays in the tree so its state survives
+          // tab switches.
+          return _visitedIndices.contains(i)
+              ? _screens[i]
+              : const SizedBox.shrink();
+        }),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,

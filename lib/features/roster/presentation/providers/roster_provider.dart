@@ -1,7 +1,11 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import '../../domain/entities/event_option.dart';
 import '../../domain/entities/service_roster.dart';
+import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../domain/repositories/roster_repository.dart';
+import '../../../../core/utils/error_messages.dart';
 
 class RosterProvider with ChangeNotifier {
   final RosterRepository _repository;
@@ -12,6 +16,13 @@ class RosterProvider with ChangeNotifier {
   bool _isLoading = false;
   bool _isEditMode = false;
   String? _error;
+
+  // 追蹤上一次 session userId，用來判斷帳號是否真的換了。
+  String? _lastSessionUserId;
+
+  // Fetch generation counter：每次 session 變動或主動觸發 fetch 時遞增。
+  // fetch 完成後比對 token，若不一致代表已過期，直接 drop 結果。
+  int _fetchToken = 0;
 
   RosterProvider(this._repository);
 
@@ -48,6 +59,28 @@ class RosterProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// 由 ChangeNotifierProxyProvider 在 SessionProvider.currentUser 變動時呼叫。
+  /// 當 userId 真的改變（含登出 → null 或切換帳號），清掉全部 cache 並重抓資料。
+  void onSessionChanged(String? userId) {
+    if (userId == _lastSessionUserId) return;
+    _lastSessionUserId = userId;
+
+    _fetchToken++; // 讓進行中的 fetch 過期
+    _allRosters = [];
+    _templates = {};
+    _eventOptionsByType = {};
+    _error = null;
+    _isEditMode = false;
+
+    if (userId != null) {
+      // 有新使用者，重抓資料。
+      fetchInitialData();
+    } else {
+      // 登出，僅清除並通知 UI。
+      notifyListeners();
+    }
+  }
+
   // 取得特定類別的服事表
   List<ServiceRoster> getRostersByType(ServiceType type) {
     return _allRosters.where((r) => r.type == type).toList();
@@ -57,6 +90,7 @@ class RosterProvider with ChangeNotifier {
   List<ServiceRoster> get rosters => _allRosters;
 
   Future<void> fetchInitialData() async {
+    final token = ++_fetchToken;
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -67,29 +101,41 @@ class RosterProvider with ChangeNotifier {
         _repository.getServiceTemplates(),
         _repository.getEventOptions(),
       ]);
+      if (token != _fetchToken) return; // stale fetch，丟棄結果
       _allRosters = results[0] as List<ServiceRoster>;
       _templates = results[1] as Map<ServiceType, List<String>>;
       _eventOptionsByType = results[2] as Map<ServiceType, List<EventOption>>;
-    } catch (e) {
-      _error = '無法取得資料，請稍後再試';
+    } catch (e, st) {
+      if (token != _fetchToken) return; // stale fetch，丟棄錯誤
+      log('載入服事表資料失敗', error: e, stackTrace: st);
+      _error = '載入失敗:${mapErrorToUserMessage(e)}';
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (token == _fetchToken) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
   Future<void> fetchRosters() async {
+    final token = ++_fetchToken;
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      _allRosters = await _repository.getUpcomingRosters();
-    } catch (e) {
-      _error = '無法取得服事表，請稍後再試';
+      final rosters = await _repository.getUpcomingRosters();
+      if (token != _fetchToken) return; // stale fetch，丟棄結果
+      _allRosters = rosters;
+    } catch (e, st) {
+      if (token != _fetchToken) return; // stale fetch，丟棄錯誤
+      log('載入服事表失敗', error: e, stackTrace: st);
+      _error = '載入失敗:${mapErrorToUserMessage(e)}';
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (token == _fetchToken) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -102,9 +148,58 @@ class RosterProvider with ChangeNotifier {
         _allRosters[index] = roster;
         notifyListeners();
       }
-    } catch (e) {
-      _error = '更新失敗: $e';
+    } catch (e, st) {
+      log('更新 roster 失敗', error: e, stackTrace: st);
+      _error = '更新失敗:${mapErrorToUserMessage(e)}';
       notifyListeners();
+    }
+  }
+
+  /// Batch-update rosters in parallel. On partial failure we still sync the
+  /// successful writes into local state (so the UI matches Firestore truth)
+  /// and then throw a summary so the caller can surface the partial error
+  /// and offer "retry only failed". Plain `Future.wait` would also have
+  /// written the same rows to Firestore but left local state empty,
+  /// drifting the UI from the server.
+  Future<void> updateRosters(List<ServiceRoster> rosters) async {
+    if (rosters.isEmpty) return;
+    final results = await Future.wait(
+      rosters.map((roster) async {
+        try {
+          await _repository.updateRoster(roster);
+          return (
+            roster: roster,
+            error: null as Object?,
+            stackTrace: null as StackTrace?,
+          );
+        } catch (e, st) {
+          return (
+            roster: roster,
+            error: e as Object?,
+            stackTrace: st as StackTrace?,
+          );
+        }
+      }),
+    );
+
+    final successes = results.where((r) => r.error == null).toList();
+    for (final r in successes) {
+      final index = _allRosters.indexWhere((x) => x.id == r.roster.id);
+      if (index != -1) {
+        _allRosters[index] = r.roster;
+      }
+    }
+    notifyListeners();
+
+    final failures = results.where((r) => r.error != null).toList();
+    if (failures.isNotEmpty) {
+      throw PartialUpdateException(
+        successCount: successes.length,
+        failureCount: failures.length,
+        failedRosters: failures.map((r) => r.roster).toList(),
+        cause: failures.first.error!,
+        causeStackTrace: failures.first.stackTrace,
+      );
     }
   }
 
@@ -157,8 +252,9 @@ class RosterProvider with ChangeNotifier {
       }
 
       notifyListeners();
-    } catch (e) {
-      _error = '更新設定失敗: $e';
+    } catch (e, st) {
+      log('更新服事表樣板失敗', error: e, stackTrace: st);
+      _error = '更新失敗:${mapErrorToUserMessage(e)}';
       notifyListeners();
     }
   }
@@ -230,9 +326,30 @@ class RosterProvider with ChangeNotifier {
       }
 
       notifyListeners();
-    } catch (e) {
-      _error = '更新事件選項失敗: $e';
+    } catch (e, st) {
+      log('更新事件選項失敗', error: e, stackTrace: st);
+      _error = '更新失敗:${mapErrorToUserMessage(e)}';
       notifyListeners();
     }
   }
+}
+
+class PartialUpdateException implements Exception {
+  final int successCount;
+  final int failureCount;
+  final List<ServiceRoster> failedRosters;
+  final Object cause;
+  final StackTrace? causeStackTrace;
+
+  PartialUpdateException({
+    required this.successCount,
+    required this.failureCount,
+    required this.failedRosters,
+    required this.cause,
+    this.causeStackTrace,
+  });
+
+  @override
+  String toString() =>
+      '$successCount 筆寫入成功，$failureCount 筆失敗（首個錯誤：$cause）';
 }

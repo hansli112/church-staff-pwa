@@ -3,11 +3,17 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/event_option.dart';
 import '../../domain/entities/service_roster.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
+import 'package:church_staff_pwa/core/types/service_type.dart';
+import '../../../auth/presentation/providers/user_admin_provider.dart';
 import '../providers/roster_provider.dart';
 import '../../../../core/widgets/settings_bottom_sheet.dart';
 
+part '_roster_people_dialog.dart';
+part '_special_event_dialog.dart';
+
 class RosterCard extends StatelessWidget {
+  static final _dateFormat = DateFormat('yyyy/MM/dd (E)', 'zh_TW');
+
   final ServiceRoster roster;
   final bool initiallyExpanded;
 
@@ -19,7 +25,6 @@ class RosterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('yyyy/MM/dd (E)', 'zh_TW');
     final rosterProvider = context.watch<RosterProvider>();
     final isEditMode = rosterProvider.isEditMode;
 
@@ -42,10 +47,10 @@ class RosterCard extends StatelessWidget {
           isEditMode ? Icons.edit_note : Icons.event_note,
           color: isEditMode
               ? Theme.of(context).colorScheme.primary
-              : Colors.blueAccent,
+              : Theme.of(context).colorScheme.primary,
         ),
         title: Text(
-          dateFormat.format(roster.date),
+          _dateFormat.format(roster.date),
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Row(
@@ -71,7 +76,7 @@ class RosterCard extends StatelessWidget {
                         event,
                         style: TextStyle(
                           color: color,
-                          fontSize: 11,
+                          fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
                       );
@@ -128,7 +133,7 @@ class RosterCard extends StatelessWidget {
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         labelStyle: TextStyle(
                           color: Colors.orange[800],
-                          fontSize: 11,
+                          fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -160,14 +165,16 @@ class RosterCard extends StatelessWidget {
                         context,
                       ).colorScheme.primary.withValues(alpha: 0.04),
                       child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           SizedBox(
-                            width: 80,
+                            width: 88,
                             child: Text(
                               duty.role,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                color: Colors.grey[600],
+                                color: Colors.grey[700],
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -183,10 +190,15 @@ class RosterCard extends StatelessWidget {
                           ),
                           if (isEditMode)
                             IconButton(
-                              icon: const Icon(
+                              tooltip: '刪除服事項目',
+                              constraints: const BoxConstraints(
+                                minWidth: 48,
+                                minHeight: 48,
+                              ),
+                              icon: Icon(
                                 Icons.delete_outline,
                                 size: 20,
-                                color: Colors.redAccent,
+                                color: Theme.of(context).colorScheme.error,
                               ),
                               onPressed: () =>
                                   _confirmRemoveDuty(context, index, duty.role),
@@ -215,20 +227,24 @@ class RosterCard extends StatelessWidget {
   }
 
   Future<void> _showAddDutyDialog(BuildContext context) async {
-    final TextEditingController roleController = TextEditingController();
     Future<_PeopleOptions> peopleLoader(String? role) =>
         _loadSelectablePeople(context, roster.type, const [], role);
     final roleOptions =
         context.read<RosterProvider>().templates[roster.type] ??
         const <String>[];
 
-    return showDialog(
+    return showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (context) {
         return _RosterPeopleDialog(
           title: '新增服事項目',
           rosterType: roster.type,
-          roleController: roleController,
           roleOptions: roleOptions,
           initialRole: roleOptions.isNotEmpty ? roleOptions.first : null,
           initialOrder: const [],
@@ -238,7 +254,7 @@ class RosterCard extends StatelessWidget {
           onSubmit: (role, people, order, personIdsByName) =>
               _addDuty(context, role, people, order, personIdsByName),
           submitLabel: '新增',
-          useBottomSheet: false,
+          useBottomSheet: true,
         );
       },
     );
@@ -314,13 +330,19 @@ class RosterCard extends StatelessWidget {
       role ?? duty.role,
     );
 
-    await showDialog(
+    await showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (context) {
         return _RosterPeopleDialog(
           title: '編輯 ${duty.role}',
           rosterType: roster.type,
-          roleController: TextEditingController(text: duty.role),
+          initialRoleText: duty.role,
           roleOptions: const [],
           initialRole: duty.role,
           initialOrder: duty.peopleOrder,
@@ -331,7 +353,7 @@ class RosterCard extends StatelessWidget {
               _updateDuty(context, index, people, order, personIdsByName),
           submitLabel: '儲存',
           roleEditable: false,
-          useBottomSheet: false,
+          useBottomSheet: true,
         );
       },
     );
@@ -432,7 +454,7 @@ class RosterCard extends StatelessWidget {
     String? role,
   ) async {
     final provider = context.read<RosterProvider>();
-    final users = await context.read<AuthProvider>().getUsers();
+    final users = await context.read<UserAdminProvider>().getUsers();
     final roleKey = role?.trim();
     final allUserNames = users
         .map((u) => u.name.trim())
@@ -480,914 +502,6 @@ class RosterCard extends StatelessWidget {
       options: result,
       allUserNames: allUserNames,
       userIdsByName: userIdsByName,
-    );
-  }
-}
-
-class _PeopleOptions {
-  final List<String> options;
-  final Set<String> allUserNames;
-  final Map<String, String> userIdsByName;
-
-  const _PeopleOptions({
-    required this.options,
-    required this.allUserNames,
-    required this.userIdsByName,
-  });
-}
-
-class _RosterPeopleDialog extends StatefulWidget {
-  final String title;
-  final ServiceType rosterType;
-  final TextEditingController roleController;
-  final List<String> roleOptions;
-  final String? initialRole;
-  final List<String> initialOrder;
-  final Future<_PeopleOptions> Function(String? role) peopleLoader;
-  final List<String> initialPeople;
-  final Map<String, String> initialPersonIdsByName;
-  final void Function(
-    String role,
-    List<String> people,
-    List<String> order,
-    Map<String, String> personIdsByName,
-  )
-  onSubmit;
-  final String submitLabel;
-  final bool roleEditable;
-  final bool useBottomSheet;
-
-  const _RosterPeopleDialog({
-    required this.title,
-    required this.rosterType,
-    required this.roleController,
-    required this.roleOptions,
-    required this.initialRole,
-    required this.initialOrder,
-    required this.peopleLoader,
-    required this.initialPeople,
-    this.initialPersonIdsByName = const {},
-    required this.onSubmit,
-    required this.submitLabel,
-    this.roleEditable = true,
-    this.useBottomSheet = false,
-  });
-
-  @override
-  State<_RosterPeopleDialog> createState() => _RosterPeopleDialogState();
-}
-
-class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
-  late Set<String> _selectedPeople;
-  late Set<String> _customNames;
-  final Set<String> _removedCustomNames = {};
-  List<String> _options = const ['待定'];
-  bool _optionsInitialized = false;
-  Set<String> _allUserNames = const {};
-  Map<String, String> _userIdsByName = const {};
-  String? _selectedRole;
-  late Future<_PeopleOptions> _peopleFuture;
-  late final TextEditingController _customController;
-  late final ScrollController _peopleScrollController;
-
-  @override
-  void initState() {
-    super.initState();
-    _customController = TextEditingController();
-    _peopleScrollController = ScrollController();
-    _selectedPeople = widget.initialPeople
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toSet();
-    if (_selectedPeople.isEmpty) {
-      _selectedPeople = {'待定'};
-    }
-    _customNames = widget.initialPeople
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty && e != '待定')
-        .toSet();
-    _selectedRole = widget.initialRole;
-    _peopleFuture = widget.peopleLoader(_selectedRole);
-  }
-
-  @override
-  void dispose() {
-    _customController.dispose();
-    _peopleScrollController.dispose();
-    super.dispose();
-  }
-
-  void _toggleSelection(String name) {
-    setState(() {
-      if (_selectedPeople.contains(name)) {
-        _selectedPeople.remove(name);
-      } else {
-        _selectedPeople.add(name);
-      }
-
-      if (name == '待定' && _selectedPeople.contains('待定')) {
-        _selectedPeople
-          ..clear()
-          ..add('待定');
-      } else if (_selectedPeople.length > 1 && _selectedPeople.contains('待定')) {
-        _selectedPeople.remove('待定');
-      }
-
-      if (_selectedPeople.isEmpty) {
-        _selectedPeople.add('待定');
-      }
-    });
-  }
-
-  void _addCustomName([String? raw]) {
-    final name = (raw ?? _customController.text).trim();
-    if (name.isEmpty) return;
-    setState(() {
-      if (name == '待定') {
-        _selectedPeople
-          ..clear()
-          ..add('待定');
-      } else {
-        _selectedPeople.add(name);
-        _customNames.add(name);
-        _selectedPeople.remove('待定');
-      }
-    });
-    _customController.clear();
-  }
-
-  void _removeCustomName(String name) {
-    final trimmed = name.trim();
-    if (trimmed.isEmpty) return;
-    setState(() {
-      _customNames.remove(trimmed);
-      _selectedPeople.remove(trimmed);
-      _removedCustomNames.add(trimmed);
-      _options = _options.where((option) => option != trimmed).toList();
-      if (_selectedPeople.isEmpty) {
-        _selectedPeople.add('待定');
-      }
-    });
-  }
-
-  Future<void> _removeCustomNameAcrossRosters(String name, String role) async {
-    final trimmed = name.trim();
-    final roleKey = role.trim();
-    if (trimmed.isEmpty || roleKey.isEmpty) return;
-    final provider = context.read<RosterProvider>();
-    final rosters = provider.getRostersByType(widget.rosterType);
-    for (final roster in rosters) {
-      var changed = false;
-      final updatedDuties = roster.duties.map((duty) {
-        if (duty.role.trim() != roleKey) return duty;
-        if (!duty.people.contains(trimmed)) return duty;
-        final people = duty.people.where((p) => p != trimmed).toList();
-        final order = duty.peopleOrder.where((p) => p != trimmed).toList();
-        final personIdsByName = Map<String, String>.from(duty.personIdsByName)
-          ..remove(trimmed);
-        changed = true;
-        if (people.isEmpty) {
-          return duty.copyWith(
-            people: const ['待定'],
-            peopleOrder: order,
-            personIdsByName: personIdsByName,
-          );
-        }
-        return duty.copyWith(
-          people: people,
-          peopleOrder: order,
-          personIdsByName: personIdsByName,
-        );
-      }).toList();
-      if (changed) {
-        await provider.updateRoster(roster.copyWith(duties: updatedDuties));
-      }
-    }
-  }
-
-  Future<void> _confirmRemoveCustomName(String name) async {
-    final trimmed = name.trim();
-    if (trimmed.isEmpty) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('確認刪除'),
-        content: Text('確定要刪除「$trimmed」嗎？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('刪除'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      final role = (_selectedRole ?? widget.initialRole ?? '').trim();
-      _removeCustomName(trimmed);
-      await _removeCustomNameAcrossRosters(trimmed, role);
-    }
-  }
-
-  Future<void> _showCustomInputSheet() async {
-    _customController.clear();
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) {
-        return SettingsBottomSheet(
-          title: '新增名單以外的人員',
-          submitLabel: '加入',
-          onSubmit: () {
-            _addCustomName();
-            Navigator.of(context).pop();
-          },
-          child: TextField(
-            controller: _customController,
-            decoration: InputDecoration(
-              hintText: '例：外請講員',
-              isDense: true,
-              filled: true,
-              fillColor: Theme.of(
-                context,
-              ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-              hintStyle: TextStyle(
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.35),
-              ),
-            ),
-            textInputAction: TextInputAction.done,
-            onSubmitted: (value) {
-              _addCustomName(value);
-              Navigator.of(context).pop();
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  List<String> _buildSelectedPeople(List<String> options) {
-    final selected = options.where(_selectedPeople.contains).toList();
-    if (selected.isEmpty) {
-      return ['待定'];
-    }
-    return selected;
-  }
-
-  List<String> _buildSelectedOrder(
-    List<String> options,
-    List<String> selected,
-  ) {
-    final selectedSet = selected.where((name) => name != '待定').toSet();
-    if (selectedSet.isEmpty) return const [];
-
-    final ordered = options
-        .where((name) => name != '待定' && selectedSet.contains(name))
-        .toList();
-    final existing = ordered.toSet();
-    for (final name in selected) {
-      if (name == '待定' || existing.contains(name)) continue;
-      ordered.add(name);
-    }
-    return ordered;
-  }
-
-  List<String> _mergeOptions(List<String> baseOptions) {
-    final merged = <String>{};
-    for (final name in baseOptions) {
-      final trimmed = name.trim();
-      if (trimmed.isNotEmpty) merged.add(trimmed);
-    }
-    for (final name in _selectedPeople) {
-      final trimmed = name.trim();
-      if (trimmed.isNotEmpty) merged.add(trimmed);
-    }
-    for (final name in _customNames) {
-      final trimmed = name.trim();
-      if (trimmed.isNotEmpty) merged.add(trimmed);
-    }
-    final result = <String>[];
-    if (merged.contains('待定') || baseOptions.contains('待定')) {
-      result.add('待定');
-    }
-    final baseOrdered =
-        (widget.initialOrder.isNotEmpty ? widget.initialOrder : baseOptions)
-            .map((name) => name.trim())
-            .where((name) => name.isNotEmpty && name != '待定')
-            .toList();
-    final baseSet = baseOrdered.toSet();
-    result.addAll(baseOrdered);
-
-    merged.remove('待定');
-    final remaining = merged.where((name) => !baseSet.contains(name)).toList()
-      ..sort();
-    result.addAll(remaining);
-    return result;
-  }
-
-  void _syncOptions(List<String> baseOptions) {
-    if (!_optionsInitialized) {
-      _options = _mergeOptions(baseOptions);
-      _optionsInitialized = true;
-      return;
-    }
-
-    final merged = _mergeOptions(baseOptions).toSet();
-    _options = _options.where(merged.contains).toList();
-    final existing = _options.toSet();
-    final missing = merged.where((name) => !existing.contains(name)).toList()
-      ..sort();
-    if (missing.isNotEmpty) {
-      _options = [..._options, ...missing];
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final canSelectRole = widget.roleEditable && widget.roleOptions.isNotEmpty;
-    final roleMissing = widget.roleEditable && widget.roleOptions.isEmpty;
-    final content = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (!widget.roleEditable)
-          TextField(
-            controller: widget.roleController,
-            decoration: const InputDecoration(labelText: '職位名稱'),
-            enabled: false,
-          ),
-        if (canSelectRole)
-          DropdownButtonFormField<String>(
-            initialValue: _selectedRole,
-            decoration: const InputDecoration(labelText: '服事項目'),
-            items: widget.roleOptions.map((role) {
-              return DropdownMenuItem(value: role, child: Text(role));
-            }).toList(),
-            onChanged: (value) {
-              if (value != null) {
-                setState(() {
-                  _selectedRole = value;
-                  _peopleFuture = widget.peopleLoader(_selectedRole);
-                });
-              }
-            },
-          ),
-        if (roleMissing)
-          const Text(
-            '請先到「服事項目設定」新增項目',
-            style: TextStyle(color: Colors.redAccent),
-          ),
-        const SizedBox(height: 12),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            '選擇同工',
-            style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
-          ),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 280,
-          child: FutureBuilder<_PeopleOptions>(
-            future: _peopleFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (snapshot.hasError) {
-                return Center(child: Text('載入同工名單失敗: ${snapshot.error}'));
-              }
-
-              final data = snapshot.data;
-              _syncOptions(data?.options ?? const ['待定']);
-              if (_removedCustomNames.isNotEmpty) {
-                _options = _options
-                    .where((name) => !_removedCustomNames.contains(name))
-                    .toList();
-              }
-              _allUserNames = data?.allUserNames ?? const {};
-              _userIdsByName = {
-                ...widget.initialPersonIdsByName,
-                ...(data?.userIdsByName ?? const <String, String>{}),
-              };
-              return Scrollbar(
-                controller: _peopleScrollController,
-                thumbVisibility: true,
-                trackVisibility: true,
-                child: ReorderableListView.builder(
-                  scrollController: _peopleScrollController,
-                  itemCount: _options.length,
-                  buildDefaultDragHandles: true,
-                  onReorder: (oldIndex, newIndex) {
-                    final name = _options[oldIndex];
-                    if (name == '待定') {
-                      return;
-                    }
-                    setState(() {
-                      if (newIndex > oldIndex) {
-                        newIndex -= 1;
-                      }
-                      final moved = _options.removeAt(oldIndex);
-                      _options.insert(newIndex, moved);
-                    });
-                  },
-                  itemBuilder: (context, index) {
-                    final name = _options[index];
-                    final checked = _selectedPeople.contains(name);
-                    final isCustom =
-                        name != '待定' && !_allUserNames.contains(name);
-                    final canDrag = name != '待定';
-                    return CheckboxListTile(
-                      key: ValueKey('option-$name'),
-                      title: Text(name),
-                      value: checked,
-                      onChanged: (_) => _toggleSelection(name),
-                      secondary: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (isCustom)
-                            IconButton(
-                              tooltip: '刪除自訂項目',
-                              icon: const Icon(Icons.close, size: 18),
-                              onPressed: () => _confirmRemoveCustomName(name),
-                            ),
-                          Icon(
-                            Icons.drag_handle,
-                            size: 18,
-                            color: canDrag
-                                ? Colors.grey.shade600
-                                : Colors.grey.shade300,
-                          ),
-                        ],
-                      ),
-                      controlAffinity: ListTileControlAffinity.leading,
-                      dense: true,
-                    );
-                  },
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 8),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton.icon(
-            onPressed: _showCustomInputSheet,
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text('新增名單以外的人員'),
-          ),
-        ),
-      ],
-    );
-
-    final actions = Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
-        ),
-        const SizedBox(width: 8),
-        FilledButton(
-          onPressed: roleMissing
-              ? null
-              : () {
-                  final role = widget.roleEditable
-                      ? (_selectedRole ?? '').trim()
-                      : widget.roleController.text.trim();
-                  if (role.isEmpty) return;
-                  final selected = _buildSelectedPeople(_options);
-                  final order = _buildSelectedOrder(_options, selected);
-                  final selectedPersonIdsByName = <String, String>{};
-                  for (final name in selected) {
-                    final uid = _userIdsByName[name];
-                    if (uid == null || uid.trim().isEmpty) continue;
-                    selectedPersonIdsByName[name] = uid;
-                  }
-                  widget.onSubmit(
-                    role,
-                    selected,
-                    order,
-                    selectedPersonIdsByName,
-                  );
-                  Navigator.of(context).pop();
-                },
-          child: Text(widget.submitLabel),
-        ),
-      ],
-    );
-
-    if (widget.useBottomSheet) {
-      final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-      final maxHeight = MediaQuery.sizeOf(context).height * 0.85;
-      return Padding(
-        padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomInset),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: maxHeight),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  widget.title,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Flexible(
-                fit: FlexFit.loose,
-                child: SingleChildScrollView(child: content),
-              ),
-              const SizedBox(height: 12),
-              actions,
-            ],
-          ),
-        ),
-      );
-    }
-
-    return AlertDialog(
-      title: Text(widget.title),
-      content: SizedBox(width: double.maxFinite, child: content),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
-        ),
-        FilledButton(
-          onPressed: roleMissing
-              ? null
-              : () {
-                  final role = widget.roleEditable
-                      ? (_selectedRole ?? '').trim()
-                      : widget.roleController.text.trim();
-                  if (role.isEmpty) return;
-                  final selected = _buildSelectedPeople(_options);
-                  final order = _buildSelectedOrder(_options, selected);
-                  final selectedPersonIdsByName = <String, String>{};
-                  for (final name in selected) {
-                    final uid = _userIdsByName[name];
-                    if (uid == null || uid.trim().isEmpty) continue;
-                    selectedPersonIdsByName[name] = uid;
-                  }
-                  widget.onSubmit(
-                    role,
-                    selected,
-                    order,
-                    selectedPersonIdsByName,
-                  );
-                  Navigator.of(context).pop();
-                },
-          child: Text(widget.submitLabel),
-        ),
-      ],
-    );
-  }
-}
-
-class _SpecialEventDialogResult {
-  final List<String> events;
-  final Map<String, int> customColors;
-  const _SpecialEventDialogResult(this.events, this.customColors);
-}
-
-class _SpecialEventDialog extends StatefulWidget {
-  final List<EventOption> options;
-  final Set<String> existing;
-
-  const _SpecialEventDialog({
-    required this.options,
-    required this.existing,
-  });
-
-  @override
-  State<_SpecialEventDialog> createState() => _SpecialEventDialogState();
-}
-
-class _SpecialEventDialogState extends State<_SpecialEventDialog> {
-  late final Set<String> _selected;
-  late final Set<String> _customEvents;
-  final Map<String, int> _customEventColors = {};
-  static const int _defaultCustomColor = 0xFFF39C12;
-  int _pendingCustomColor = _defaultCustomColor;
-  late final TextEditingController _customController;
-  late final ScrollController _scrollController;
-
-  static const _colorPalette = [
-    0xFFF39C12,
-    0xFF27AE60,
-    0xFF3498DB,
-    0xFF9B59B6,
-    0xFFE74C3C,
-    0xFF7F8C8D,
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _selected = {};
-    _customEvents = {};
-    _customController = TextEditingController();
-    _scrollController = ScrollController();
-  }
-
-  @override
-  void dispose() {
-    _customController.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _addCustomEvent([String? raw]) {
-    final name = (raw ?? _customController.text).trim();
-    if (name.isEmpty) return;
-    if (widget.options.any((o) => o.name == name)) return;
-    setState(() {
-      _customEvents.add(name);
-      _selected.add(name);
-      _customEventColors[name] = _pendingCustomColor;
-    });
-    _customController.clear();
-    _pendingCustomColor = _defaultCustomColor;
-  }
-
-  void _removeCustomEvent(String name) {
-    setState(() {
-      _customEvents.remove(name);
-      _selected.remove(name);
-      _customEventColors.remove(name);
-    });
-  }
-
-  Future<void> _confirmRemoveCustomEvent(String name) async {
-    final trimmed = name.trim();
-    if (trimmed.isEmpty) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('確認刪除'),
-        content: Text('確定要刪除「$trimmed」嗎？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('刪除'),
-          ),
-        ],
-      ),
-    );
-    if (!mounted) return;
-    if (confirmed == true) {
-      _removeCustomEvent(trimmed);
-    }
-  }
-
-  Future<void> _showCustomInputSheet() async {
-    _customController.clear();
-    _pendingCustomColor = _defaultCustomColor;
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (sheetContext, setSheetState) {
-            return SettingsBottomSheet(
-              title: '新增選項以外的事件',
-              submitLabel: '加入',
-              onSubmit: () {
-                _addCustomEvent();
-                Navigator.of(sheetContext).pop();
-              },
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: _customController,
-                    decoration: InputDecoration(
-                      hintText: '例：特別奉獻',
-                      isDense: true,
-                      filled: true,
-                      fillColor: Theme.of(
-                        sheetContext,
-                      ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-                      hintStyle: TextStyle(
-                        color: Theme.of(
-                          sheetContext,
-                        ).colorScheme.onSurface.withValues(alpha: 0.35),
-                      ),
-                    ),
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (value) {
-                      _addCustomEvent(value);
-                      Navigator.of(sheetContext).pop();
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    '標籤顏色',
-                    style: TextStyle(
-                      color: Colors.grey.shade700,
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _colorPalette.map((colorValue) {
-                      final isSelected = _pendingCustomColor == colorValue;
-                      return InkWell(
-                        onTap: () {
-                          setSheetState(() {
-                            _pendingCustomColor = colorValue;
-                          });
-                        },
-                        borderRadius: BorderRadius.circular(13),
-                        child: Container(
-                          width: 26,
-                          height: 26,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Color(colorValue),
-                            border: isSelected
-                                ? Border.all(
-                                    color: Colors.black54,
-                                    width: 2,
-                                  )
-                                : null,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildEventTile({
-    required String name,
-    required Color dotColor,
-    required bool isExisting,
-    required bool isSelected,
-    required ValueChanged<bool?> onChanged,
-    VoidCallback? onRemove,
-  }) {
-    return CheckboxListTile(
-      value: isExisting || isSelected,
-      onChanged: isExisting ? null : onChanged,
-      title: Row(
-        children: [
-          Container(
-            width: 14,
-            height: 14,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: dotColor,
-              border: Border.all(color: dotColor.withValues(alpha: 0.6)),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(child: Text(name)),
-        ],
-      ),
-      controlAffinity: ListTileControlAffinity.leading,
-      secondary: onRemove != null
-          ? IconButton(
-              tooltip: '刪除自訂項目',
-              icon: const Icon(Icons.close, size: 18),
-              onPressed: onRemove,
-            )
-          : null,
-      dense: true,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final hasSelection = _selected.isNotEmpty;
-
-    return AlertDialog(
-      title: const Text('新增事件'),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (widget.options.isNotEmpty || _customEvents.isNotEmpty)
-              Flexible(
-                child: Scrollbar(
-                  controller: _scrollController,
-                  thumbVisibility: true,
-                  trackVisibility: true,
-                  child: ListView(
-                    controller: _scrollController,
-                    shrinkWrap: true,
-                    children: [
-                      ...widget.options.map((option) {
-                        final isExisting =
-                            widget.existing.contains(option.name);
-                        return _buildEventTile(
-                          name: option.name,
-                          dotColor: Color(option.color),
-                          isExisting: isExisting,
-                          isSelected: _selected.contains(option.name),
-                          onChanged: (checked) {
-                            setState(() {
-                              if (checked == true) {
-                                _selected.add(option.name);
-                              } else {
-                                _selected.remove(option.name);
-                              }
-                            });
-                          },
-                        );
-                      }),
-                      ..._customEvents.map((name) {
-                        final customColor = Color(
-                          _customEventColors[name] ?? _defaultCustomColor,
-                        );
-                        return _buildEventTile(
-                          name: name,
-                          dotColor: customColor,
-                          isExisting: false,
-                          isSelected: _selected.contains(name),
-                          onChanged: (checked) {
-                            setState(() {
-                              if (checked == true) {
-                                _selected.add(name);
-                              } else {
-                                _selected.remove(name);
-                              }
-                            });
-                          },
-                          onRemove: () => _confirmRemoveCustomEvent(name),
-                        );
-                      }),
-                    ],
-                  ),
-                ),
-              ),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: _showCustomInputSheet,
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('新增選項以外的事件'),
-              ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('取消'),
-        ),
-        TextButton(
-          onPressed: hasSelection
-              ? () {
-                  final selectedList = _selected.toList();
-                  final filteredColors = Map<String, int>.fromEntries(
-                    _customEventColors.entries.where(
-                      (e) => selectedList.contains(e.key),
-                    ),
-                  );
-                  Navigator.pop(
-                    context,
-                    _SpecialEventDialogResult(selectedList, filteredColors),
-                  );
-                }
-              : null,
-          child: const Text('新增'),
-        ),
-      ],
     );
   }
 }

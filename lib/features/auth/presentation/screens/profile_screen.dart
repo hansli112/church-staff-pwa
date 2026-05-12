@@ -1,9 +1,12 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/services/app_version_service.dart';
 import '../../../../core/services/push_notification_service.dart';
-import '../providers/auth_provider.dart';
+import '../../../../core/utils/error_messages.dart';
+import '../providers/session_provider.dart';
 import 'user_management_screen.dart' deferred as user_management_screen;
 import 'group_settings_screen.dart' deferred as group_settings_screen;
 
@@ -42,7 +45,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         dialogShown = false;
       }
       Navigator.push(context, MaterialPageRoute(builder: (_) => builder()));
-    } catch (error) {
+    } catch (error, st) {
+      log('載入畫面失敗', error: error, stackTrace: st);
       if (context.mounted) {
         if (dialogShown) {
           Navigator.of(context, rootNavigator: true).pop();
@@ -50,7 +54,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('載入失敗: $error')));
+        ).showSnackBar(SnackBar(content: Text('載入失敗：${mapErrorToUserMessage(error)}')));
       }
     } finally {
       if (dialogShown && context.mounted) {
@@ -62,7 +66,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final userId = context.read<AuthProvider>().currentUser?.id;
+    final userId = context.read<SessionProvider>().currentUser?.id;
     if (_statusUserId == userId) return;
     _statusUserId = userId;
     _refreshPushStatus();
@@ -88,7 +92,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _togglePush(bool value) async {
-    final userId = context.read<AuthProvider>().currentUser?.id;
+    final userId = context.read<SessionProvider>().currentUser?.id;
     if (userId == null) return;
     setState(() => _isPushLoading = true);
     try {
@@ -117,11 +121,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           context,
         ).showSnackBar(SnackBar(content: Text(reasonMessage)));
       }
-    } catch (error) {
+    } catch (error, st) {
+      log('更新通知設定失敗', error: error, stackTrace: st);
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('更新通知設定失敗: $error')));
+      ).showSnackBar(SnackBar(content: Text('更新通知設定失敗：${mapErrorToUserMessage(error)}')));
     } finally {
       if (mounted) {
         setState(() => _isPushLoading = false);
@@ -131,8 +136,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<AuthProvider>();
-    final user = authProvider.currentUser;
+    final session = context.watch<SessionProvider>();
+    final user = session.currentUser;
 
     if (user == null) return const SizedBox.shrink();
 
@@ -176,7 +181,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 32),
 
           // Admin Actions
-          if (authProvider.isAdmin) ...[
+          if (session.isAdmin) ...[
             const Divider(),
             ListTile(
               leading: const Icon(Icons.manage_accounts),
@@ -239,7 +244,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               );
 
               if (confirm == true) {
-                await authProvider.logout();
+                await session.logout();
               }
             },
           ),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
@@ -14,38 +15,39 @@ class FirebaseAuthRepository implements AuthRepository {
 
   @override
   Future<User?> login(String email, String password) async {
-    try {
-      // 直接使用傳入的完整 Email 登入
-      final credential = await _auth.signInWithEmailAndPassword(
-        email: email.trim(),
-        password: password,
-      );
-
-      if (credential.user == null) return null;
-
-      return await _fetchUserFromFirestore(credential.user!.uid);
-    } catch (e) {
-      log('Firebase Login Error: $e');
-      return null;
-    }
+    // Don't catch — let FirebaseAuthException propagate so SessionProvider can
+    // map it to a user-friendly message. Returning null here would erase the
+    // distinction between "wrong password" and "network unreachable" and
+    // make every failure look like '帳號或密碼錯誤'.
+    final credential = await _auth.signInWithEmailAndPassword(
+      email: email.trim(),
+      password: password,
+    );
+    if (credential.user == null) return null;
+    return await _fetchUserFromFirestore(credential.user!.uid);
   }
 
   @override
   Future<User?> getCurrentUser() async {
-    final current = await _auth.authStateChanges().first;
+    // Time-bound the auth-state lookup. authStateChanges().first can hang on
+    // Safari Private Mode (no IndexedDB) or when Firebase init fails — without
+    // this, SessionProvider stays stuck in the restoring shell forever.
+    // Throw on timeout (don't return null) so SessionProvider can distinguish
+    // "no session persisted" from "we couldn't tell" and surface a message.
+    final current = await _auth.authStateChanges().first.timeout(
+      const Duration(seconds: 10),
+      onTimeout: () => throw TimeoutException(
+        'Auth state restore timed out after 10s',
+      ),
+    );
     if (current == null) return null;
     return await _fetchUserFromFirestore(current.uid);
   }
 
   Future<User?> _fetchUserFromFirestore(String uid) async {
-    try {
-      final doc = await _usersCollection.doc(uid).get();
-      if (!doc.exists) return null;
-      return User.fromJson(doc.data() as Map<String, dynamic>);
-    } catch (e) {
-      log('Fetch User Error: $e');
-      return null;
-    }
+    final doc = await _usersCollection.doc(uid).get();
+    if (!doc.exists) return null;
+    return User.fromJson(doc.data() as Map<String, dynamic>);
   }
 
   @override

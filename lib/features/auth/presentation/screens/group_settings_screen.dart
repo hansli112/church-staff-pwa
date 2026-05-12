@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../roster/domain/entities/service_roster.dart';
+import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../providers/group_settings_provider.dart';
-import '../providers/auth_provider.dart';
+import '../providers/user_admin_provider.dart';
 
 class GroupSettingsScreen extends StatefulWidget {
   const GroupSettingsScreen({super.key});
@@ -190,9 +190,9 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
               icon: const Icon(Icons.check),
               onPressed: () async {
                 final settingsProvider = context.read<GroupSettingsProvider>();
-                final authProvider = context.read<AuthProvider>();
+                final userAdminProvider = context.read<UserAdminProvider>();
                 await settingsProvider.updateTemplates(_editingTemplates);
-                await authProvider.cleanupUserGroups(_editingTemplates);
+                await userAdminProvider.cleanupUserGroups(_editingTemplates);
                 if (!context.mounted) return;
                 Navigator.pop(context);
               },

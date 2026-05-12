@@ -1,21 +1,4 @@
-enum ServiceType {
-  sundayService, // 主日
-  youth, // 青崇
-  children, // 兒主
-}
-
-extension ServiceTypeExtension on ServiceType {
-  String get label {
-    switch (this) {
-      case ServiceType.sundayService:
-        return '主日';
-      case ServiceType.youth:
-        return '青崇';
-      case ServiceType.children:
-        return '兒主';
-    }
-  }
-}
+import 'package:church_staff_pwa/core/types/service_type.dart';
 
 class RosterEntry {
   final String role;
