@@ -32,20 +32,25 @@ lib/
 ├── core/                          # 共享資源
 │   ├── config/                    # 環境設定（Firebase、Google Calendar key）
 │   ├── services/                  # 跨 feature 服務（推播、外部連結、版本資訊）
+│   ├── types/                     # 共用型別定義（service_type.dart）
 │   └── widgets/                   # 共用 UI 組件
 ├── features/                      # 獨立功能模組
 │   ├── auth/                      # 登入、使用者管理
 │   │   ├── domain/                # Entity & Repository Interface
 │   │   ├── data/                  # Firebase 實作
-│   │   └── presentation/          # 登入頁、使用者管理、Provider
-│   ├── calendar/                  # 教會行事曆（目前僅 presentation 層）
+│   │   └── presentation/          # 登入頁、使用者管理
+│   │       └── providers/         # SessionProvider（登入狀態）、UserAdminProvider（使用者 CRUD）
+│   ├── calendar/                  # 教會行事曆
 │   │   └── presentation/
+│   │       ├── screens/           # calendar_screen.dart
+│   │       └── widgets/           # _calendar_models.dart、_day_cell.dart、_day_events_sheet.dart、_event_detail_sheet.dart、_event_segment_bar.dart
 │   ├── dashboard/                 # 儀表板（目前僅 presentation 層）
 │   │   └── presentation/
 │   └── roster/                    # 服事表管理
 │       ├── domain/
 │       ├── data/
 │       └── presentation/
+│           └── widgets/           # roster_card.dart、roster_view_card.dart、_roster_people_dialog.dart、_special_event_dialog.dart
 ├── presentation/                  # 應用層 UI 編排
 │   └── screens/main_scaffold.dart # 主 Shell (Bottom Navigation Bar)
 ├── firebase_options.dart          # Firebase 平台設定
@@ -152,6 +157,7 @@ GitHub Actions 會自動構建並推送到 Cloudflare Pages：
 
 - 使用 `Provider`，盡可能將作用域限制在特定功能模組內
 - 跨功能共享的全域資料（如認證狀態）定義在 `lib/main.dart`
+- 認證狀態拆分為兩個 Provider：`SessionProvider`（登入 / 登出 / session restore）與 `UserAdminProvider`（使用者 CRUD、cache 管理）
 - 避免過度耦合，保持 Provider 樹的清晰
 
 ### 測試規範

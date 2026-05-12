@@ -227,7 +227,6 @@ class FirestoreRosterRepository implements RosterRepository {
               'people': d.people,
               'peopleOrder': d.peopleOrder,
               'personIdsByName': d.personIdsByName,
-              'assignedUserIds': d.assignedUserIds,
             },
           )
           .toList(),

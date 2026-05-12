@@ -25,16 +25,10 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
       final session = context.read<SessionProvider>();
-      final success = await session.login(
+      await session.login(
         _usernameController.text,
         _passwordController.text,
       );
-
-      if (!success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(session.error ?? '登入失敗')),
-        );
-      }
     }
   }
 

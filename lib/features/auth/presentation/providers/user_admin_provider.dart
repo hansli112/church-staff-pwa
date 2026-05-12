@@ -30,14 +30,6 @@ class UserAdminProvider extends ChangeNotifier {
     super.dispose();
   }
 
-  /// 清除 cache（供外部在需要時呼叫，例如 ProxyProvider reset）。
-  void clearCache() {
-    if (_cachedUsers != null) {
-      _cachedUsers = null;
-      notifyListeners();
-    }
-  }
-
   Future<List<User>> getUsers({bool forceRefresh = false}) async {
     if (!_session.isAdmin) throw Exception('Permission denied');
     if (!forceRefresh && _cachedUsers != null) {

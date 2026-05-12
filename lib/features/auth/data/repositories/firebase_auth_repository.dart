@@ -15,7 +15,7 @@ class FirebaseAuthRepository implements AuthRepository {
 
   @override
   Future<User?> login(String email, String password) async {
-    // Don't catch — let FirebaseAuthException propagate so AuthProvider can
+    // Don't catch — let FirebaseAuthException propagate so SessionProvider can
     // map it to a user-friendly message. Returning null here would erase the
     // distinction between "wrong password" and "network unreachable" and
     // make every failure look like '帳號或密碼錯誤'.
@@ -31,8 +31,8 @@ class FirebaseAuthRepository implements AuthRepository {
   Future<User?> getCurrentUser() async {
     // Time-bound the auth-state lookup. authStateChanges().first can hang on
     // Safari Private Mode (no IndexedDB) or when Firebase init fails — without
-    // this, AuthProvider stays stuck in the restoring shell forever.
-    // Throw on timeout (don't return null) so AuthProvider can distinguish
+    // this, SessionProvider stays stuck in the restoring shell forever.
+    // Throw on timeout (don't return null) so SessionProvider can distinguish
     // "no session persisted" from "we couldn't tell" and surface a message.
     final current = await _auth.authStateChanges().first.timeout(
       const Duration(seconds: 10),
