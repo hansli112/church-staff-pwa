@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
@@ -24,8 +25,39 @@ class SessionProvider extends ChangeNotifier {
   String? get error => _error;
   bool get isAdmin => _currentUser?.isAdmin ?? false;
 
+  /// Two-phase session restore:
+  ///
+  /// Phase 1 (~10 ms) — read the locally cached [User] from SharedPreferences.
+  ///   If a cached user exists AND Firebase Auth still shows a logged-in
+  ///   session, set [isRestoring] to false immediately so the UI can render
+  ///   MainScaffold without waiting for Firestore.
+  ///
+  /// Phase 2 (background, ~300–1000 ms) — fetch the fresh Firestore profile in
+  ///   [_refreshUserInBackground] to pick up role/zone changes.  If the
+  ///   background fetch returns null the session is treated as expired and the
+  ///   user is signed out.
+  ///
+  /// Fallback — if there is no cache, fall through to the original full
+  ///   [getCurrentUser] path (Firebase Auth stream + Firestore) so the first
+  ///   load after a fresh install still works correctly.
   Future<void> _restoreSession() async {
     try {
+      final cached = await _repository.getCachedUser();
+
+      if (cached != null) {
+        // Optimistic path: we have a cached profile.
+        // Set the user immediately so the UI can proceed to MainScaffold.
+        _currentUser = cached;
+        _isRestoring = false;
+        notifyListeners();
+
+        // Kick off background refresh without blocking the UI.
+        unawaited(_refreshUserInBackground());
+        return;
+      }
+
+      // No cache — cold start or first login after install.
+      // Wait for the full Firestore fetch before dismissing the loading shell.
       _currentUser = await _repository.getCurrentUser();
     } catch (e, st) {
       log('讀取登入狀態失敗', error: e, stackTrace: st);
@@ -33,6 +65,38 @@ class SessionProvider extends ChangeNotifier {
     } finally {
       _isRestoring = false;
       notifyListeners();
+    }
+  }
+
+  /// Fetches a fresh user profile from Firestore in the background.
+  ///
+  /// - If the fetch succeeds: update [currentUser] with the fresh data so any
+  ///   role or zone changes are reflected immediately.
+  /// - If the fetch returns null: the Firebase Auth session has been revoked or
+  ///   the Firestore document was deleted — treat as logout.
+  /// - If the fetch throws: keep the cached user in place so the current
+  ///   session is not disrupted; the next user-initiated action that hits
+  ///   Firestore will surface the real error.
+  Future<void> _refreshUserInBackground() async {
+    try {
+      final fresh = await _repository.getCurrentUser();
+
+      if (fresh == null) {
+        // Session expired or account removed.
+        _currentUser = null;
+        notifyListeners();
+        return;
+      }
+
+      // Always update with the freshest data, regardless of whether the id
+      // matches the cached user.  In the extremely rare case where a stale
+      // cache holds a different user's id, the fresh data takes precedence.
+      _currentUser = fresh;
+      notifyListeners();
+    } catch (e, st) {
+      log('背景更新使用者資料失敗', error: e, stackTrace: st);
+      // Retain cached user — do not surface an error or sign the user out here,
+      // as connectivity blips should not disrupt an active session.
     }
   }
 

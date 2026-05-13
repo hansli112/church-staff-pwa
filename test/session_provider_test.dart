@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:church_staff_pwa/features/auth/domain/entities/user.dart';
@@ -17,6 +19,15 @@ class _FakeAuthRepository implements AuthRepository {
   /// `getCurrentUser` 回傳值（模擬 session restore）。
   User? currentUserResult;
 
+  /// 若不為 null，`getCurrentUser` 會 throw 此例外。
+  Object? getCurrentUserException;
+
+  /// `getCachedUser` 回傳值（模擬快取 user）。
+  User? cachedUserResult;
+
+  /// 若 true，`getCurrentUser` 會永不完成（用於測試 optimistic path）。
+  bool getCurrentUserBlocks = false;
+
   bool logoutCalled = false;
 
   @override
@@ -26,7 +37,17 @@ class _FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<User?> getCurrentUser() async => currentUserResult;
+  Future<User?> getCurrentUser() async {
+    if (getCurrentUserBlocks) {
+      // Never completes — simulates a slow/hanging network call.
+      await Completer<void>().future;
+    }
+    if (getCurrentUserException != null) throw getCurrentUserException!;
+    return currentUserResult;
+  }
+
+  @override
+  Future<User?> getCachedUser() async => cachedUserResult;
 
   @override
   Future<void> logout() async {
@@ -74,12 +95,17 @@ void main() {
       repo = _FakeAuthRepository();
     });
 
-    // 等 _restoreSession 完成的輔助方法
+    // 等 _restoreSession Phase 1 完成（isRestoring 變 false）的輔助方法。
+    //
+    // 無 cache 路徑需要兩個連續 async hop（getCachedUser + getCurrentUser），
+    // 所以等多個 microtask cycle 直到 isRestoring 變 false。
     Future<SessionProvider> createAndWait({User? currentUser}) async {
       repo.currentUserResult = currentUser;
       final provider = SessionProvider(repo);
-      // _restoreSession 是 async；等一個 microtask cycle 讓它跑完
-      await Future.microtask(() {});
+      // pump microtasks until isRestoring is false (up to a reasonable limit)
+      for (var i = 0; i < 10 && provider.isRestoring; i++) {
+        await Future.microtask(() {});
+      }
       return provider;
     }
 
@@ -227,6 +253,105 @@ void main() {
     test('isAdmin：未登入時回傳 false', () async {
       final provider = await createAndWait();
       expect(provider.isAdmin, false);
+    });
+
+    // ── Level 2: getCachedUser optimistic path ─────────────────────────────
+
+    test(
+        'cache 有資料 → isRestoring 立刻變 false，currentUser 為 cached user'
+        '（即使 getCurrentUser 永不完成）',
+        () async {
+      // Arrange: cache 有 alpha；getCurrentUser 永遠卡住不回來
+      repo.cachedUserResult = _userAlpha;
+      repo.getCurrentUserBlocks = true;
+
+      final provider = SessionProvider(repo);
+
+      // Phase 1 只需要 getCachedUser() 的 async hop（trivial），
+      // pump 直到 isRestoring 變 false（Phase 2 永不完成，不會干擾）。
+      for (var i = 0; i < 10 && provider.isRestoring; i++) {
+        await Future.microtask(() {});
+      }
+
+      // Phase 1 應已完成：isRestoring = false，currentUser = cached
+      expect(provider.isRestoring, false);
+      expect(provider.currentUser, _userAlpha);
+    });
+
+    // 等背景 Phase 2 完成的輔助：pump microtask 直到 currentUser 更新或達上限。
+    Future<void> pumpUntilPhase2Done(
+      SessionProvider provider,
+      User? expected,
+    ) async {
+      for (var i = 0; i < 10; i++) {
+        await Future.microtask(() {});
+        if (provider.currentUser == expected) break;
+      }
+    }
+
+    test('背景 fetch 成功（同 id）→ currentUser 更新為 fresh user', () async {
+      // Arrange: cache 有 alpha；background getCurrentUser 也回傳 alpha（可有欄位更新）
+      final freshAlpha = _userAlpha.copyWith(name: 'Alpha Fresh');
+      repo.cachedUserResult = _userAlpha;
+      repo.currentUserResult = freshAlpha;
+
+      final provider = SessionProvider(repo);
+
+      // 等 Phase 1（cache read）完成
+      for (var i = 0; i < 10 && provider.isRestoring; i++) {
+        await Future.microtask(() {});
+      }
+      expect(provider.currentUser, _userAlpha); // 先是 cached
+
+      // 等 Phase 2（background getCurrentUser）完成
+      await pumpUntilPhase2Done(provider, freshAlpha);
+
+      expect(provider.currentUser, freshAlpha);
+    });
+
+    test('背景 fetch 回 null → currentUser 變 null（session 失效）', () async {
+      // Arrange: cache 有 alpha；background fetch 回 null（帳號被刪）
+      repo.cachedUserResult = _userAlpha;
+      repo.currentUserResult = null;
+
+      final provider = SessionProvider(repo);
+
+      // Phase 1
+      for (var i = 0; i < 10 && provider.isRestoring; i++) {
+        await Future.microtask(() {});
+      }
+      expect(provider.currentUser, _userAlpha);
+
+      // Phase 2
+      await pumpUntilPhase2Done(provider, null);
+
+      expect(provider.currentUser, isNull);
+      expect(provider.isAuthenticated, false);
+    });
+
+    test('背景 fetch throw → 保留 cached user，不爆 error、不登出', () async {
+      // Arrange: cache 有 alpha；background fetch 拋例外（例如網路斷線）
+      repo.cachedUserResult = _userAlpha;
+      repo.getCurrentUserException = Exception('network error');
+
+      final provider = SessionProvider(repo);
+
+      // Phase 1
+      for (var i = 0; i < 10 && provider.isRestoring; i++) {
+        await Future.microtask(() {});
+      }
+      expect(provider.currentUser, _userAlpha);
+
+      // Phase 2 (background throws, should be swallowed)
+      // pump a few microtasks to let the background Future run and throw
+      for (var i = 0; i < 5; i++) {
+        await Future.microtask(() {});
+      }
+
+      // Cached user must still be present; error field must be null
+      expect(provider.currentUser, _userAlpha);
+      expect(provider.error, isNull);
+      expect(provider.isAuthenticated, true);
     });
   });
 }
