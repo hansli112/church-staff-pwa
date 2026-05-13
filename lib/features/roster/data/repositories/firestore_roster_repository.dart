@@ -73,7 +73,14 @@ class FirestoreRosterRepository implements RosterRepository {
       final generated = _generateQuarterRosters(templates);
       if (generated.isEmpty) return;
 
-      final snapshot = await _rostersCollection.get();
+      // Scope the existence check to the current quarter onwards so that
+      // historical data does not cause a full-collection scan.
+      final now = DateTime.now();
+      final quarterStartMonth = ((now.month - 1) ~/ 3) * 3 + 1;
+      final quarterStart = DateTime(now.year, quarterStartMonth, 1);
+      final snapshot = await _rostersCollection
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(quarterStart))
+          .get();
       final existingIds = snapshot.docs.map((d) => d.id).toSet();
 
       final missing =

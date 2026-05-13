@@ -154,7 +154,11 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
       appBar: appBar,
       body: Consumer<RosterProvider>(
         builder: (context, provider, child) {
-          if (provider.isLoading) {
+          // stale-while-revalidate: only block the UI with a spinner when
+          // there is truly no data to show yet.  If we already have cached
+          // rosters the TabBarView renders immediately while the background
+          // server fetch runs silently.
+          if (provider.isLoading && provider.rosters.isEmpty) {
             return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,

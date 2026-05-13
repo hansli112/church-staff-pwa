@@ -59,12 +59,19 @@ class FirebaseAuthRepository implements AuthRepository {
   @override
   Future<User?> getCachedUser() => _cachedUserStorage.read();
 
+  @override
+  Future<void> writeCachedUser(User user) => _cachedUserStorage.write(user);
+
   Future<User?> _fetchUserFromFirestore(String uid) async {
     final doc = await _usersCollection.doc(uid).get();
     if (!doc.exists) return null;
     final user = User.fromJson(doc.data() as Map<String, dynamic>);
-    // Keep the local cache fresh every time we successfully fetch from Firestore.
-    await _cachedUserStorage.write(user);
+    // Cache write is intentionally NOT done here to avoid the user-switch
+    // race: if a logout + login-B happens while this await is in flight, the
+    // stale A data must not overwrite the B session in local storage.
+    // The caller (login or SessionProvider._refreshUserInBackground) is
+    // responsible for writing the cache only after verifying the session is
+    // still valid.
     return user;
   }
 

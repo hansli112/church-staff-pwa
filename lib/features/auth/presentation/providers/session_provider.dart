@@ -77,9 +77,21 @@ class SessionProvider extends ChangeNotifier {
   /// - If the fetch throws: keep the cached user in place so the current
   ///   session is not disrupted; the next user-initiated action that hits
   ///   Firestore will surface the real error.
+  ///
+  /// An [expectedId] guard is captured before the await so that a
+  /// logout + login-B that occurs while the network call is in flight does
+  /// not overwrite B's session with A's stale data.
   Future<void> _refreshUserInBackground() async {
+    // Snapshot the identity we are refreshing for.  If the session changes
+    // while we are waiting for Firestore we must discard the result.
+    final expectedId = _currentUser?.id;
+
     try {
       final fresh = await _repository.getCurrentUser();
+
+      // Session was replaced (logout / account switch) while the fetch was
+      // in flight — discard this stale result entirely.
+      if (_currentUser?.id != expectedId) return;
 
       if (fresh == null) {
         // Session expired or account removed.
@@ -88,10 +100,10 @@ class SessionProvider extends ChangeNotifier {
         return;
       }
 
-      // Always update with the freshest data, regardless of whether the id
-      // matches the cached user.  In the extremely rare case where a stale
-      // cache holds a different user's id, the fresh data takes precedence.
       _currentUser = fresh;
+      // Write through to local cache only now that the guard has passed,
+      // so stale A data can never overwrite an already-switched B session.
+      await _repository.writeCachedUser(fresh);
       notifyListeners();
     } catch (e, st) {
       log('背景更新使用者資料失敗', error: e, stackTrace: st);
