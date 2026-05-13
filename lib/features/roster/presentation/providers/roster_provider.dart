@@ -91,6 +91,23 @@ class RosterProvider with ChangeNotifier {
 
   Future<void> fetchInitialData() async {
     final token = ++_fetchToken;
+
+    // Phase 1: cache-first — 從 IndexedDB 讀取（~50-150ms），有資料就先渲染。
+    // isLoading 維持 true，但 UI 改成「isLoading && rosters.isEmpty」才顯示
+    // spinner，所以有 stale data 時畫面不再卡白。
+    try {
+      final cached = await _repository.getUpcomingRostersFromCache();
+      if (token != _fetchToken) return; // stale token，丟棄
+      if (cached.isNotEmpty) {
+        _allRosters = cached;
+        notifyListeners(); // 先渲染 stale data
+      }
+    } catch (e, st) {
+      log('讀取 roster cache 失敗（不影響後續 server fetch）', error: e, stackTrace: st);
+      // cache 失敗不影響繼續走 server，silent
+    }
+
+    // Phase 2: server fetch — 拿到最新資料後覆蓋。
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -108,7 +125,12 @@ class RosterProvider with ChangeNotifier {
     } catch (e, st) {
       if (token != _fetchToken) return; // stale fetch，丟棄錯誤
       log('載入服事表資料失敗', error: e, stackTrace: st);
-      _error = '載入失敗:${mapErrorToUserMessage(e)}';
+      // 若 Phase 1 已拿到 cache 資料，就不設 _error（讓 UI 顯示 stale data 而非錯誤）
+      if (_allRosters.isEmpty) {
+        _error = '載入失敗:${mapErrorToUserMessage(e)}';
+      } else {
+        log('Server fetch 失敗，UI 繼續顯示 cache 資料', error: e, stackTrace: st);
+      }
     } finally {
       if (token == _fetchToken) {
         _isLoading = false;
@@ -119,6 +141,20 @@ class RosterProvider with ChangeNotifier {
 
   Future<void> fetchRosters() async {
     final token = ++_fetchToken;
+
+    // Phase 1: cache-first — 先顯示 stale data 避免白屏。
+    try {
+      final cached = await _repository.getUpcomingRostersFromCache();
+      if (token != _fetchToken) return;
+      if (cached.isNotEmpty) {
+        _allRosters = cached;
+        notifyListeners();
+      }
+    } catch (e, st) {
+      log('讀取 roster cache 失敗（不影響後續 server fetch）', error: e, stackTrace: st);
+    }
+
+    // Phase 2: server fetch。
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -130,12 +166,29 @@ class RosterProvider with ChangeNotifier {
     } catch (e, st) {
       if (token != _fetchToken) return; // stale fetch，丟棄錯誤
       log('載入服事表失敗', error: e, stackTrace: st);
-      _error = '載入失敗:${mapErrorToUserMessage(e)}';
+      if (_allRosters.isEmpty) {
+        _error = '載入失敗:${mapErrorToUserMessage(e)}';
+      } else {
+        log('Server fetch 失敗，UI 繼續顯示 cache 資料', error: e, stackTrace: st);
+      }
     } finally {
       if (token == _fetchToken) {
         _isLoading = false;
         notifyListeners();
       }
+    }
+  }
+
+  /// 只有 admin 才可呼叫。確保本季 + 下季的所有預定 roster 都已存在於 Firestore。
+  /// 背景執行，失敗僅 log，不影響 UI。完成後觸發 fetchInitialData 讓新建的 roster 出現。
+  Future<void> ensureQuarterRostersIfAdmin() async {
+    try {
+      await _repository.ensureQuarterRosters();
+      // backfill 後重抓，讓新補的 roster 出現在清單。
+      await fetchInitialData();
+    } catch (e, st) {
+      log('ensureQuarterRosters 失敗', error: e, stackTrace: st);
+      // 靜默失敗，不 disrupt UI。
     }
   }
 

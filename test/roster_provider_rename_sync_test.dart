@@ -23,6 +23,13 @@ class _FakeRosterRepository implements RosterRepository {
       List<ServiceRoster>.from(_rosters);
 
   @override
+  Future<List<ServiceRoster>> getUpcomingRostersFromCache() async =>
+      const []; // cache miss（stub 預設空）
+
+  @override
+  Future<void> ensureQuarterRosters() async {} // stub：no-op
+
+  @override
   Future<void> updateRoster(ServiceRoster roster) async {
     final index = _rosters.indexWhere((r) => r.id == roster.id);
     if (index == -1) {

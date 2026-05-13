@@ -18,9 +18,8 @@ class FirestoreRosterRepository implements RosterRepository {
 
   @override
   Future<List<ServiceRoster>> getUpcomingRosters() async {
-    // 只撈取「今天往前推 7 天」到「下一季末」的 roster，避免全表掃描。
-    // 保留 7 天歷史是為了讓 dashboard 不會因為跨週邊界出現顯示斷層，
-    // client-side 仍會再做 today/endDate 過濾後才呈現給 UI。
+    // 純讀路徑。不執行任何 backfill 寫入。
+    // backfill 已移至 ensureQuarterRosters()，只由 admin 在進入編輯畫面時觸發。
     try {
       final now = DateTime.now();
       final fetchFrom = DateTime(now.year, now.month, now.day)
@@ -29,68 +28,96 @@ class FirestoreRosterRepository implements RosterRepository {
 
       final snapshot = await _rostersCollection
           .where('date', isGreaterThanOrEqualTo: fetchFromTimestamp)
-          .orderBy('date') // 依照日期排序
+          .orderBy('date')
           .get();
 
-      if (snapshot.docs.isNotEmpty) {
-        final today = DateTime(now.year, now.month, now.day);
-        final endDate = _nextQuarterEndDate(now);
-
-        final existingRosters = snapshot.docs.map((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          return _fromFirestore(data, doc.id);
-        }).toList();
-        final existingIds = existingRosters.map((r) => r.id).toSet();
-
-        final templates = await getServiceTemplates();
-        final generated = _generateQuarterRosters(templates);
-        final missing = generated
-            .where((roster) => !existingIds.contains(roster.id))
-            .toList();
-
-        if (missing.isNotEmpty) {
-          final batch = _firestore.batch();
-          for (final roster in missing) {
-            final docRef = _rostersCollection.doc(roster.id);
-            batch.set(docRef, _toFirestore(roster));
-          }
-          await batch.commit();
-        }
-
-        final combined = [...existingRosters, ...missing].where((roster) {
-          return !roster.date.isBefore(today) && !roster.date.isAfter(endDate);
-        }).toList();
-
-        combined.sort((a, b) {
-          final dateCompare = a.date.compareTo(b.date);
-          if (dateCompare != 0) return dateCompare;
-          return a.type.toString().compareTo(b.type.toString());
-        });
-
-        return combined;
-      }
-
-      final templates = await getServiceTemplates();
-      final generated = _generateQuarterRosters(templates);
-      if (generated.isEmpty) {
-        return [];
-      }
-
-      final batch = _firestore.batch();
-      for (final roster in generated) {
-        final docId = _makeRosterId(roster.date, roster.type);
-        final docRef = _rostersCollection.doc(docId);
-        batch.set(docRef, _toFirestore(roster.copyWith(id: docId)));
-      }
-      await batch.commit();
-      return generated.map((r) {
-        final id = _makeRosterId(r.date, r.type);
-        return r.copyWith(id: id);
-      }).toList();
+      return _filterAndSortRosters(snapshot.docs, now);
     } catch (e, st) {
       log('Get rosters failed', error: e, stackTrace: st);
       return [];
     }
+  }
+
+  @override
+  Future<List<ServiceRoster>> getUpcomingRostersFromCache() async {
+    // 從 IndexedDB 讀取。不打網路，約 50-150ms。
+    // 若 cache 尚未建立（首次開啟），SDK 丟 unavailable / failed-precondition，
+    // catch 後回傳空 list，讓呼叫端降級到 server fetch。
+    try {
+      final now = DateTime.now();
+      final fetchFrom = DateTime(now.year, now.month, now.day)
+          .subtract(const Duration(days: 7));
+      final fetchFromTimestamp = Timestamp.fromDate(fetchFrom);
+
+      final snapshot = await _rostersCollection
+          .where('date', isGreaterThanOrEqualTo: fetchFromTimestamp)
+          .orderBy('date')
+          .get(const GetOptions(source: Source.cache));
+
+      return _filterAndSortRosters(snapshot.docs, now);
+    } on FirebaseException catch (e) {
+      if (e.code == 'unavailable' || e.code == 'failed-precondition') {
+        // cache-miss 或持久化尚未就緒：視為空
+        return const [];
+      }
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> ensureQuarterRosters() async {
+    // 確保本季 + 下季的所有預定 roster 都已存在於 Firestore（缺的補寫）。
+    // 此方法只應由 admin 呼叫；Firestore Rules 會擋未授權寫入。
+    try {
+      final templates = await getServiceTemplates();
+      final generated = _generateQuarterRosters(templates);
+      if (generated.isEmpty) return;
+
+      final snapshot = await _rostersCollection.get();
+      final existingIds = snapshot.docs.map((d) => d.id).toSet();
+
+      final missing =
+          generated.where((r) => !existingIds.contains(r.id)).toList();
+      if (missing.isEmpty) return;
+
+      final batch = _firestore.batch();
+      for (final roster in missing) {
+        batch.set(_rostersCollection.doc(roster.id), _toFirestore(roster));
+      }
+      await batch.commit();
+    } catch (e, st) {
+      log('ensureQuarterRosters failed', error: e, stackTrace: st);
+      rethrow;
+    }
+  }
+
+  /// 共用的 snapshot → filter → sort 邏輯（供 getUpcomingRosters 與
+  /// getUpcomingRostersFromCache 兩個讀路徑重用）。
+  List<ServiceRoster> _filterAndSortRosters(
+    List<QueryDocumentSnapshot<Object?>> docs,
+    DateTime now,
+  ) {
+    if (docs.isEmpty) return const [];
+    final today = DateTime(now.year, now.month, now.day);
+    final endDate = _nextQuarterEndDate(now);
+
+    final rosters = docs
+        .map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          return _fromFirestore(data, doc.id);
+        })
+        .where(
+          (r) => !r.date.isBefore(today) && !r.date.isAfter(endDate),
+        )
+        .toList();
+
+    rosters.sort((a, b) {
+      final dateCompare = a.date.compareTo(b.date);
+      if (dateCompare != 0) return dateCompare;
+      return a.type.toString().compareTo(b.type.toString());
+    });
+
+    return rosters;
   }
 
   @override

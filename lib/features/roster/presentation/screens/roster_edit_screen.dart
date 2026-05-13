@@ -83,6 +83,11 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
         widget.onExit();
         return;
       }
+
+      // Admin 進入編輯模式時，背景補齊本季 + 下季的 roster（backfill）。
+      // 在非 admin 路徑下已 return，此處一定是 admin。
+      // 失敗靜默處理（ensureQuarterRostersIfAdmin 內部 catch），不影響 UI。
+      context.read<RosterProvider>().ensureQuarterRostersIfAdmin();
     });
   }
 
