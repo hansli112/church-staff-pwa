@@ -267,6 +267,8 @@ class _RosterViewListState extends State<_RosterViewList>
       );
     }
 
+    final rosterProvider = context.read<RosterProvider>();
+
     return ListView.builder(
       padding: const EdgeInsets.only(top: 12, bottom: 20),
       itemCount: widget.rosters.length,
@@ -276,6 +278,8 @@ class _RosterViewListState extends State<_RosterViewList>
           key: ValueKey(roster.id),
           roster: roster,
           initiallyExpanded: index == 0,
+          resolveEventColor: (event) =>
+              rosterProvider.eventColorFor(widget.type, event),
         );
       },
     );

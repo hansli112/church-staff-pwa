@@ -63,10 +63,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = _displayName(
-      context.watch<SessionProvider>().currentUser?.name,
-    );
-    final fullName = context.watch<SessionProvider>().currentUser?.name ?? '';
+    final user = context.watch<SessionProvider>().currentUser;
+    final fullName = user?.name ?? '';
+    final displayName = _displayName(fullName);
     return Scaffold(
       appBar: AppBar(title: const Text('首頁'), centerTitle: true),
       body: SingleChildScrollView(

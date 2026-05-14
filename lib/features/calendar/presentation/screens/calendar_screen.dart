@@ -28,7 +28,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   int _currentMonthPage = _initialMonthPage;
 
   late DateTime _focusedMonth;
-  DateTime? _selectedDay;
+  final ValueNotifier<DateTime?> _selectedDay = ValueNotifier<DateTime?>(null);
   final Map<String, List<CalendarEvent>> _eventsByMonth = {};
   final Set<String> _loadingMonths = {};
   final Map<String, String?> _errorsByMonth = {};
@@ -39,7 +39,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final now = DateTime.now();
     _anchorMonth = DateTime(now.year, now.month, 1);
     _focusedMonth = _anchorMonth;
-    _selectedDay = DateUtils.dateOnly(now);
+    _selectedDay.value = DateUtils.dateOnly(now);
 
     _monthPageController = PageController(initialPage: _initialMonthPage);
 
@@ -51,6 +51,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   void dispose() {
     _monthPageController.dispose();
+    _selectedDay.dispose();
     super.dispose();
   }
 
@@ -73,10 +74,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
     setState(() {
       _currentMonthPage = page;
       _focusedMonth = month;
-      final now = DateTime.now();
-      final inSameMonth = month.year == now.year && month.month == now.month;
-      _selectedDay = inSameMonth ? DateUtils.dateOnly(now) : null;
     });
+    final now = DateTime.now();
+    final inSameMonth = month.year == now.year && month.month == now.month;
+    _selectedDay.value = inSameMonth ? DateUtils.dateOnly(now) : null;
 
     _loadMonthBundle(month);
     _loadMonthBundle(_monthFromPage(page - 1));
@@ -333,39 +334,40 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
         final date = DateTime(year, month, dayNumber);
         final dateOnly = DateUtils.dateOnly(date);
-        final isSelected = DateUtils.isSameDay(_selectedDay, dateOnly);
         final isToday = DateUtils.isSameDay(dateOnly, DateTime.now());
         final daySegments =
             eventSegmentsByDay[_dayKey(dateOnly)] ?? const <DayEventSegment>[];
         final hasEvents = daySegments.isNotEmpty;
         final maxVisibleEvents = _maxVisibleEventsForCellHeight(cellHeight);
 
-        return DayCell(
-          dayNumber: dayNumber,
-          date: dateOnly,
-          isSelected: isSelected,
-          isToday: isToday,
-          segments: daySegments,
-          maxVisibleEvents: maxVisibleEvents,
-          cellWidth: cellWidth,
-          onTap: () async {
-            setState(() {
-              _selectedDay = dateOnly;
-            });
-            if (hasEvents) {
-              await _showSelectedDayEventsSheet(dateOnly);
-            }
+        return ValueListenableBuilder<DateTime?>(
+          valueListenable: _selectedDay,
+          builder: (context, selectedDay, _) {
+            final isSelected = DateUtils.isSameDay(selectedDay, dateOnly);
+            return DayCell(
+              dayNumber: dayNumber,
+              date: dateOnly,
+              isSelected: isSelected,
+              isToday: isToday,
+              segments: daySegments,
+              maxVisibleEvents: maxVisibleEvents,
+              cellWidth: cellWidth,
+              onTap: () async {
+                _selectedDay.value = dateOnly;
+                if (hasEvents) {
+                  await _showSelectedDayEventsSheet(dateOnly);
+                }
+              },
+              onEventTap: (event) => _showEventDetails(event),
+            );
           },
-          onEventTap: (event) => _showEventDetails(event),
         );
       },
     );
   }
 
   Future<void> _showEventDetails(CalendarEvent event) async {
-    setState(() {
-      _selectedDay = event.startDay;
-    });
+    _selectedDay.value = event.startDay;
     if (!mounted) return;
     await showEventDetailSheet(context, event);
   }
@@ -395,9 +397,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       day: day,
       events: events,
       onSelectDay: (selectedDay) {
-        setState(() {
-          _selectedDay = selectedDay;
-        });
+        _selectedDay.value = selectedDay;
       },
     );
   }
