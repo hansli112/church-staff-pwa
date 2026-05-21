@@ -1,23 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 import '../../domain/entities/service_roster.dart';
-import '../providers/roster_provider.dart';
 
 class RosterViewCard extends StatelessWidget {
   final ServiceRoster roster;
   final bool initiallyExpanded;
+  final int Function(String event) resolveEventColor;
 
   const RosterViewCard({
     super.key,
     required this.roster,
+    required this.resolveEventColor,
     this.initiallyExpanded = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('yyyy/MM/dd (E)', 'zh_TW');
-    final rosterProvider = context.watch<RosterProvider>();
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -43,11 +42,8 @@ class RosterViewCard extends StatelessWidget {
                   runSpacing: 2,
                   children: [
                     ...roster.specialEvents.map((event) {
-                      final colorValue = roster.customEventColors[event] ??
-                          rosterProvider.eventColorFor(
-                            roster.type,
-                            event,
-                          );
+                      final colorValue =
+                          roster.customEventColors[event] ?? resolveEventColor(event);
                       final color = Color(colorValue);
                       return Chip(
                         label: Text(

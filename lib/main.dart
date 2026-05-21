@@ -32,6 +32,9 @@ void main() async {
   // browsers. See commit 7d6b4e2.
   FirebaseFirestore.instance.settings = const Settings(
     webExperimentalForceLongPolling: true,
+    // persistenceEnabled 預設為 true（IndexedDB），明示以確保行為清晰。
+    // cacheSizeBytes 維持預設 40MB，對本應用來說足夠。
+    persistenceEnabled: true,
   );
 
   // PushNotificationService.initialize only registers stream listeners; we

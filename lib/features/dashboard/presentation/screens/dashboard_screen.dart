@@ -63,10 +63,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = _displayName(
-      context.watch<SessionProvider>().currentUser?.name,
-    );
-    final fullName = context.watch<SessionProvider>().currentUser?.name ?? '';
+    final user = context.watch<SessionProvider>().currentUser;
+    final fullName = user?.name ?? '';
+    final displayName = _displayName(fullName);
     return Scaffold(
       appBar: AppBar(title: const Text('首頁'), centerTitle: true),
       body: SingleChildScrollView(
@@ -575,7 +574,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }) {
     return Consumer<RosterProvider>(
       builder: (context, provider, child) {
-        if (provider.isLoading) {
+        // 僅在 isLoading 且 cache 尚無資料時顯示 spinner（stale-while-revalidate）。
+        // 若 IndexedDB cache 已有 roster，isLoading 仍可能為 true，但直接顯示卡內容。
+        if (provider.isLoading && provider.rosters.isEmpty) {
           return _buildSectionCard(
             title: '本季服事',
             icon: Icons.volunteer_activism,

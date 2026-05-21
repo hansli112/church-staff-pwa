@@ -30,6 +30,12 @@ class _FakeAuthRepository implements AuthRepository {
   Future<User?> getCurrentUser() async => currentUserResult;
 
   @override
+  Future<User?> getCachedUser() async => null;
+
+  @override
+  Future<void> writeCachedUser(User user) async {}
+
+  @override
   Future<void> logout() async {
     currentUserResult = null;
   }
@@ -79,8 +85,11 @@ Future<SessionProvider> _makeSession(
 }) async {
   repo.currentUserResult = currentUser;
   final session = SessionProvider(repo);
-  // 等 _restoreSession 完成
-  await Future.microtask(() {});
+  // _restoreSession 現在有兩個連續 async hop（getCachedUser + getCurrentUser），
+  // 需要 pump 多個 microtask cycle 直到 isRestoring 變 false。
+  for (var i = 0; i < 10 && session.isRestoring; i++) {
+    await Future.microtask(() {});
+  }
   return session;
 }
 

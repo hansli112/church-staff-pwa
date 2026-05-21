@@ -6,10 +6,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/repositories/auth_repository.dart';
+import '../cached_user_storage.dart';
 
 class FirebaseAuthRepository implements AuthRepository {
   final firebase_auth.FirebaseAuth _auth = firebase_auth.FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final CachedUserStorage _cachedUserStorage;
+
+  FirebaseAuthRepository({CachedUserStorage? cachedUserStorage})
+      : _cachedUserStorage = cachedUserStorage ?? CachedUserStorage();
 
   CollectionReference get _usersCollection => _firestore.collection('users');
 
@@ -24,17 +29,24 @@ class FirebaseAuthRepository implements AuthRepository {
       password: password,
     );
     if (credential.user == null) return null;
-    return await _fetchUserFromFirestore(credential.user!.uid);
+    final user = await _fetchUserFromFirestore(credential.user!.uid);
+    if (user != null) await _cachedUserStorage.write(user);
+    return user;
   }
 
   @override
   Future<User?> getCurrentUser() async {
-    // Time-bound the auth-state lookup. authStateChanges().first can hang on
-    // Safari Private Mode (no IndexedDB) or when Firebase init fails — without
-    // this, SessionProvider stays stuck in the restoring shell forever.
-    // Throw on timeout (don't return null) so SessionProvider can distinguish
-    // "no session persisted" from "we couldn't tell" and surface a message.
-    final current = await _auth.authStateChanges().first.timeout(
+    // Level 1 optimization: Firebase.initializeApp() has already been awaited
+    // in main(), which means the SDK has read IndexedDB and populated
+    // _auth.currentUser synchronously. Prefer the synchronous getter to skip
+    // the IndexedDB stream round-trip (~50-200 ms).
+    //
+    // Fallback: if currentUser is null we still await authStateChanges().first
+    // to handle Safari Private Mode (no IndexedDB) or other edge cases where
+    // the synchronous cache hasn't been populated yet, which would cause the
+    // SDK to emit the real state on the stream shortly after init.
+    var current = _auth.currentUser;
+    current ??= await _auth.authStateChanges().first.timeout(
       const Duration(seconds: 10),
       onTimeout: () => throw TimeoutException(
         'Auth state restore timed out after 10s',
@@ -44,14 +56,28 @@ class FirebaseAuthRepository implements AuthRepository {
     return await _fetchUserFromFirestore(current.uid);
   }
 
+  @override
+  Future<User?> getCachedUser() => _cachedUserStorage.read();
+
+  @override
+  Future<void> writeCachedUser(User user) => _cachedUserStorage.write(user);
+
   Future<User?> _fetchUserFromFirestore(String uid) async {
     final doc = await _usersCollection.doc(uid).get();
     if (!doc.exists) return null;
-    return User.fromJson(doc.data() as Map<String, dynamic>);
+    final user = User.fromJson(doc.data() as Map<String, dynamic>);
+    // Cache write is intentionally NOT done here to avoid the user-switch
+    // race: if a logout + login-B happens while this await is in flight, the
+    // stale A data must not overwrite the B session in local storage.
+    // The caller (login or SessionProvider._refreshUserInBackground) is
+    // responsible for writing the cache only after verifying the session is
+    // still valid.
+    return user;
   }
 
   @override
   Future<void> logout() async {
+    await _cachedUserStorage.clear();
     await _auth.signOut();
   }
 

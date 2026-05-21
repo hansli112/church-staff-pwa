@@ -18,6 +18,13 @@ class _PartialFailRosterRepository implements RosterRepository {
   Future<List<ServiceRoster>> getUpcomingRosters() async => [];
 
   @override
+  Future<List<ServiceRoster>> getUpcomingRostersFromCache() async =>
+      const []; // stub：no-op
+
+  @override
+  Future<void> ensureQuarterRosters() async {} // stub：no-op
+
+  @override
   Future<void> updateRoster(ServiceRoster roster) async {
     if (failureRosterIds.contains(roster.id)) {
       throw Exception('Firestore write failed for ${roster.id}');

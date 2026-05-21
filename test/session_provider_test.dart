@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:church_staff_pwa/features/auth/domain/entities/user.dart';
@@ -17,7 +19,24 @@ class _FakeAuthRepository implements AuthRepository {
   /// `getCurrentUser` 回傳值（模擬 session restore）。
   User? currentUserResult;
 
+  /// 若不為 null，`getCurrentUser` 會 throw 此例外。
+  Object? getCurrentUserException;
+
+  /// `getCachedUser` 回傳值（模擬快取 user）。
+  User? cachedUserResult;
+
+  /// 若 true，`getCurrentUser` 會永不完成（用於測試 optimistic path）。
+  bool getCurrentUserBlocks = false;
+
   bool logoutCalled = false;
+
+  /// Records every user passed to [writeCachedUser] in call order.
+  final List<User> writeCachedUserCalls = [];
+
+  /// When non-null, [getCurrentUser] waits for this completer before
+  /// returning [currentUserResult].  Allows tests to control exactly when the
+  /// background fetch resolves.
+  Completer<void>? getCurrentUserCompleter;
 
   @override
   Future<User?> login(String username, String password) async {
@@ -26,7 +45,25 @@ class _FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<User?> getCurrentUser() async => currentUserResult;
+  Future<User?> getCurrentUser() async {
+    if (getCurrentUserBlocks) {
+      // Never completes — simulates a slow/hanging network call.
+      await Completer<void>().future;
+    }
+    if (getCurrentUserCompleter != null) {
+      await getCurrentUserCompleter!.future;
+    }
+    if (getCurrentUserException != null) throw getCurrentUserException!;
+    return currentUserResult;
+  }
+
+  @override
+  Future<User?> getCachedUser() async => cachedUserResult;
+
+  @override
+  Future<void> writeCachedUser(User user) async {
+    writeCachedUserCalls.add(user);
+  }
 
   @override
   Future<void> logout() async {
@@ -74,12 +111,17 @@ void main() {
       repo = _FakeAuthRepository();
     });
 
-    // 等 _restoreSession 完成的輔助方法
+    // 等 _restoreSession Phase 1 完成（isRestoring 變 false）的輔助方法。
+    //
+    // 無 cache 路徑需要兩個連續 async hop（getCachedUser + getCurrentUser），
+    // 所以等多個 microtask cycle 直到 isRestoring 變 false。
     Future<SessionProvider> createAndWait({User? currentUser}) async {
       repo.currentUserResult = currentUser;
       final provider = SessionProvider(repo);
-      // _restoreSession 是 async；等一個 microtask cycle 讓它跑完
-      await Future.microtask(() {});
+      // pump microtasks until isRestoring is false (up to a reasonable limit)
+      for (var i = 0; i < 10 && provider.isRestoring; i++) {
+        await Future.microtask(() {});
+      }
       return provider;
     }
 
@@ -228,5 +270,241 @@ void main() {
       final provider = await createAndWait();
       expect(provider.isAdmin, false);
     });
+
+    // ── Level 2: getCachedUser optimistic path ─────────────────────────────
+
+    test(
+        'cache 有資料 → isRestoring 立刻變 false，currentUser 為 cached user'
+        '（即使 getCurrentUser 永不完成）',
+        () async {
+      // Arrange: cache 有 alpha；getCurrentUser 永遠卡住不回來
+      repo.cachedUserResult = _userAlpha;
+      repo.getCurrentUserBlocks = true;
+
+      final provider = SessionProvider(repo);
+
+      // Phase 1 只需要 getCachedUser() 的 async hop（trivial），
+      // pump 直到 isRestoring 變 false（Phase 2 永不完成，不會干擾）。
+      for (var i = 0; i < 10 && provider.isRestoring; i++) {
+        await Future.microtask(() {});
+      }
+
+      // Phase 1 應已完成：isRestoring = false，currentUser = cached
+      expect(provider.isRestoring, false);
+      expect(provider.currentUser, _userAlpha);
+    });
+
+    // 等背景 Phase 2 完成的輔助：pump microtask 直到 currentUser 更新或達上限。
+    Future<void> pumpUntilPhase2Done(
+      SessionProvider provider,
+      User? expected,
+    ) async {
+      for (var i = 0; i < 10; i++) {
+        await Future.microtask(() {});
+        if (provider.currentUser == expected) break;
+      }
+    }
+
+    test('背景 fetch 成功（同 id）→ currentUser 更新為 fresh user', () async {
+      // Arrange: cache 有 alpha；background getCurrentUser 也回傳 alpha（可有欄位更新）
+      final freshAlpha = _userAlpha.copyWith(name: 'Alpha Fresh');
+      repo.cachedUserResult = _userAlpha;
+      repo.currentUserResult = freshAlpha;
+
+      final provider = SessionProvider(repo);
+
+      // 等 Phase 1（cache read）完成
+      for (var i = 0; i < 10 && provider.isRestoring; i++) {
+        await Future.microtask(() {});
+      }
+      expect(provider.currentUser, _userAlpha); // 先是 cached
+
+      // 等 Phase 2（background getCurrentUser）完成
+      await pumpUntilPhase2Done(provider, freshAlpha);
+
+      expect(provider.currentUser, freshAlpha);
+    });
+
+    test('背景 fetch 回 null → currentUser 變 null（session 失效）', () async {
+      // Arrange: cache 有 alpha；background fetch 回 null（帳號被刪）
+      repo.cachedUserResult = _userAlpha;
+      repo.currentUserResult = null;
+
+      final provider = SessionProvider(repo);
+
+      // Phase 1
+      for (var i = 0; i < 10 && provider.isRestoring; i++) {
+        await Future.microtask(() {});
+      }
+      expect(provider.currentUser, _userAlpha);
+
+      // Phase 2
+      await pumpUntilPhase2Done(provider, null);
+
+      expect(provider.currentUser, isNull);
+      expect(provider.isAuthenticated, false);
+    });
+
+    test('背景 fetch throw → 保留 cached user，不爆 error、不登出', () async {
+      // Arrange: cache 有 alpha；background fetch 拋例外（例如網路斷線）
+      repo.cachedUserResult = _userAlpha;
+      repo.getCurrentUserException = Exception('network error');
+
+      final provider = SessionProvider(repo);
+
+      // Phase 1
+      for (var i = 0; i < 10 && provider.isRestoring; i++) {
+        await Future.microtask(() {});
+      }
+      expect(provider.currentUser, _userAlpha);
+
+      // Phase 2 (background throws, should be swallowed)
+      // pump a few microtasks to let the background Future run and throw
+      for (var i = 0; i < 5; i++) {
+        await Future.microtask(() {});
+      }
+
+      // Cached user must still be present; error field must be null
+      expect(provider.currentUser, _userAlpha);
+      expect(provider.error, isNull);
+      expect(provider.isAuthenticated, true);
+    });
+
+    // ── user-switch race (#1 / #4) ────────────────────────────────────────
+
+    test(
+      '背景 fetch 進行中 logout → late-arriving fresh 不覆蓋 null（expectedId guard）',
+      () async {
+        // Arrange: cache 有 alpha；background fetch 用 Completer 卡住。
+        final completer = Completer<void>();
+        repo.cachedUserResult = _userAlpha;
+        repo.getCurrentUserCompleter = completer;
+        // fresh result that will eventually come back — should be discarded
+        repo.currentUserResult = _userAlpha.copyWith(name: 'Alpha Stale Fresh');
+
+        final provider = SessionProvider(repo);
+
+        // Phase 1 完成
+        for (var i = 0; i < 10 && provider.isRestoring; i++) {
+          await Future.microtask(() {});
+        }
+        expect(provider.currentUser, _userAlpha);
+
+        // 使用者在 background fetch 完成前登出
+        await provider.logout();
+        expect(provider.currentUser, isNull);
+
+        // 放行 background fetch（late-arriving）
+        completer.complete();
+        // pump 讓背景 Future 執行完畢
+        for (var i = 0; i < 10; i++) {
+          await Future.microtask(() {});
+        }
+
+        // late-arriving fetch 不應把 currentUser 從 null 改回 alpha
+        expect(provider.currentUser, isNull);
+        expect(provider.isAuthenticated, false);
+      },
+    );
+
+    test(
+      '背景 fetch 進行中切換帳號（login B）→ late-arriving A fresh 不覆蓋 B',
+      () async {
+        // Arrange: cache 有 alpha；background fetch 用 Completer 卡住。
+        final completer = Completer<void>();
+        repo.cachedUserResult = _userAlpha;
+        repo.getCurrentUserCompleter = completer;
+        repo.currentUserResult = _userAlpha.copyWith(name: 'Alpha Stale Fresh');
+
+        final provider = SessionProvider(repo);
+
+        // Phase 1 完成
+        for (var i = 0; i < 10 && provider.isRestoring; i++) {
+          await Future.microtask(() {});
+        }
+        expect(provider.currentUser, _userAlpha);
+
+        // 帳號切換：先登出，再登入 beta
+        await provider.logout();
+        // 停止卡住後的 getCurrentUser 直接回傳（不再卡）
+        repo.getCurrentUserCompleter = null;
+        repo.loginResult = _userBeta;
+        await provider.login('beta', 'pass');
+        expect(provider.currentUser, _userBeta);
+
+        // 放行原本卡住的 alpha background fetch
+        completer.complete();
+        for (var i = 0; i < 10; i++) {
+          await Future.microtask(() {});
+        }
+
+        // currentUser 應仍是 beta，不被 alpha stale data 覆蓋
+        expect(provider.currentUser, _userBeta);
+        expect(provider.currentUser?.id, 'uid-beta');
+      },
+    );
+
+    test(
+      '背景 fetch 進行中切換帳號 → stale A 的 writeCachedUser 不被呼叫',
+      () async {
+        // Arrange: cache 有 alpha；background fetch 用 Completer 卡住。
+        final completer = Completer<void>();
+        repo.cachedUserResult = _userAlpha;
+        repo.getCurrentUserCompleter = completer;
+        repo.currentUserResult = _userAlpha.copyWith(name: 'Alpha Stale Fresh');
+
+        final provider = SessionProvider(repo);
+
+        // Phase 1 完成
+        for (var i = 0; i < 10 && provider.isRestoring; i++) {
+          await Future.microtask(() {});
+        }
+
+        // 登出，切換到 beta
+        await provider.logout();
+        repo.getCurrentUserCompleter = null;
+        repo.loginResult = _userBeta;
+        await provider.login('beta', 'pass');
+
+        // 清除 login 產生的 writeCachedUser 紀錄（login 直接寫 cache 是正確的）
+        // 注意：login 走 repository.login → _cachedUserStorage.write 那條，
+        // 不走 writeCachedUser，所以 writeCachedUserCalls 此時應仍為空。
+        expect(repo.writeCachedUserCalls, isEmpty);
+
+        // 放行 stale alpha fetch
+        completer.complete();
+        for (var i = 0; i < 10; i++) {
+          await Future.microtask(() {});
+        }
+
+        // stale alpha 的 writeCachedUser 不應被呼叫（guard 擋住了）
+        expect(repo.writeCachedUserCalls, isEmpty);
+      },
+    );
+
+    test(
+      '背景 fetch 正常完成（無切換）→ writeCachedUser 被呼叫一次且帶 fresh user',
+      () async {
+        // Arrange: cache 有 alpha；background fetch 正常回傳 freshAlpha
+        final freshAlpha = _userAlpha.copyWith(name: 'Alpha Fresh');
+        repo.cachedUserResult = _userAlpha;
+        repo.currentUserResult = freshAlpha;
+
+        final provider = SessionProvider(repo);
+
+        // Phase 1
+        for (var i = 0; i < 10 && provider.isRestoring; i++) {
+          await Future.microtask(() {});
+        }
+
+        // Phase 2
+        await pumpUntilPhase2Done(provider, freshAlpha);
+
+        expect(provider.currentUser, freshAlpha);
+        // writeCachedUser 應被呼叫一次，帶 freshAlpha
+        expect(repo.writeCachedUserCalls.length, 1);
+        expect(repo.writeCachedUserCalls.first, freshAlpha);
+      },
+    );
   });
 }
