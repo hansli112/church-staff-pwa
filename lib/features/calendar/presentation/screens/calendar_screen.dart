@@ -22,6 +22,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   static const int _initialMonthPage = 12000;
   static const Duration _monthSwitchDuration = Duration(milliseconds: 260);
   static const double _calendarMainAxisSpacing = 6;
+  static final _monthHeaderFormat = DateFormat('yyyy年MM月', 'zh_TW');
 
   late final DateTime _anchorMonth;
   late final PageController _monthPageController;
@@ -199,7 +200,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildMonthHeader() {
-    final text = DateFormat('yyyy年MM月', 'zh_TW').format(_focusedMonth);
+    final text = _monthHeaderFormat.format(_focusedMonth);
     return Row(
       children: [
         IconButton(

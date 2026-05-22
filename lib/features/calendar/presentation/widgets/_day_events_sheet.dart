@@ -4,6 +4,10 @@ import 'package:intl/intl.dart';
 import '_calendar_models.dart';
 import '_event_detail_sheet.dart';
 
+final _titleFormat = DateFormat('yyyy/MM/dd (E)', 'zh_TW');
+final _timeFormat = DateFormat('HH:mm', 'zh_TW');
+final _dateTimeFormat = DateFormat('MM/dd HH:mm', 'zh_TW');
+
 /// Bottom sheet that lists all events on a given [day].
 ///
 /// Tapping an event row closes this sheet then opens [showEventDetailSheet].
@@ -14,7 +18,7 @@ Future<void> showDayEventsSheet(
   required List<CalendarEvent> events,
   required void Function(DateTime selectedDay) onSelectDay,
 }) async {
-  final title = DateFormat('yyyy/MM/dd (E)', 'zh_TW').format(day);
+  final title = _titleFormat.format(day);
   final colorScheme = Theme.of(context).colorScheme;
 
   await showModalBottomSheet<void>(
@@ -124,12 +128,12 @@ String _formatEventTimeSummary(CalendarEvent event) {
 
   final sameDay = DateUtils.isSameDay(event.startTime, event.endTime);
   if (sameDay) {
-    final startText = DateFormat('HH:mm', 'zh_TW').format(event.startTime);
-    final endText = DateFormat('HH:mm', 'zh_TW').format(event.endTime);
+    final startText = _timeFormat.format(event.startTime);
+    final endText = _timeFormat.format(event.endTime);
     return '$startText - $endText';
   }
 
-  final startText = DateFormat('MM/dd HH:mm', 'zh_TW').format(event.startTime);
-  final endText = DateFormat('MM/dd HH:mm', 'zh_TW').format(event.endTime);
+  final startText = _dateTimeFormat.format(event.startTime);
+  final endText = _dateTimeFormat.format(event.endTime);
   return '$startText - $endText';
 }

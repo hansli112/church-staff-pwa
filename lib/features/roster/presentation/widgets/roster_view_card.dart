@@ -14,9 +14,10 @@ class RosterViewCard extends StatelessWidget {
     this.initiallyExpanded = false,
   });
 
+  static final _dateFormat = DateFormat('yyyy/MM/dd (EEEEE)', 'zh_TW');
+
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('yyyy/MM/dd (E)', 'zh_TW');
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -27,7 +28,7 @@ class RosterViewCard extends StatelessWidget {
         initiallyExpanded: initiallyExpanded,
         leading: Icon(Icons.event_note, color: Theme.of(context).colorScheme.primary),
         title: Text(
-          dateFormat.format(roster.date),
+          _dateFormat.format(roster.date),
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Row(

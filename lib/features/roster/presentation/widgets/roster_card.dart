@@ -12,7 +12,7 @@ part '_roster_people_dialog.dart';
 part '_special_event_dialog.dart';
 
 class RosterCard extends StatelessWidget {
-  static final _dateFormat = DateFormat('yyyy/MM/dd (E)', 'zh_TW');
+  static final _dateFormat = DateFormat('yyyy/MM/dd (EEEEE)', 'zh_TW');
 
   final ServiceRoster roster;
   final bool initiallyExpanded;
