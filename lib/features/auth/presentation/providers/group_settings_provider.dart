@@ -24,6 +24,10 @@ class GroupSettingsProvider extends ChangeNotifier {
 
   GroupSettingsProvider(this._repository);
 
+  /// 故意回傳 raw reference（不做 defensive copy），讓消費端可以用 `identical()`
+  /// 廉價偵測「templates 是否真的換過一份」— 例如 user_management_screen 用這個
+  /// 判斷要不要重新排序。改成 `Map.from(_templates)` 會讓 identical 永遠 false，
+  /// 默默退化使用端的優化。
   Map<ServiceType, List<String>> get templates => _templates;
   bool get isLoading => _isLoading;
   String? get error => _error;

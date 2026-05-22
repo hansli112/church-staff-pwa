@@ -31,6 +31,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       'https://www.breadoflife.taipei/news/daily-bible/';
   static const _dailyBreadRangeFallback = '查看今日經文範圍';
 
+  static final _whitespaceRe = RegExp(r'\s+');
+  static final _latinRe = RegExp(r'[A-Za-z]');
+  static final _cjkRe = RegExp(r'[一-鿿]');
+
   bool _isLoadingCalendar = false;
   bool _isLoadingDailyBreadRange = false;
   bool _isLoadingRecentActivities = false;
@@ -101,15 +105,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (name.isEmpty) return '同工';
 
     final parts = name
-        .split(RegExp(r'\s+'))
+        .split(_whitespaceRe)
         .where((p) => p.isNotEmpty)
         .toList();
-    final hasLatin = RegExp(r'[A-Za-z]').hasMatch(name);
+    final hasLatin = _latinRe.hasMatch(name);
     if (parts.length > 1) {
       return hasLatin ? parts.first : parts.last;
     }
 
-    if (RegExp(r'[\u4E00-\u9FFF]').hasMatch(name)) {
+    if (_cjkRe.hasMatch(name)) {
       return name.length > 1 ? name.substring(1) : name;
     }
 
@@ -531,14 +535,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const SizedBox(height: 8),
         ..._recentActivities.map((event) {
           final dateText = event.isAllDay
-              ? DateFormat('MM/dd (E)', 'zh_TW').format(event.startTime)
-              : DateFormat('MM/dd (E) HH:mm', 'zh_TW').format(event.startTime);
+              ? DateFormat('MM/dd (EEEEE)', 'zh_TW').format(event.startTime)
+              : DateFormat('MM/dd (EEEEE) HH:mm', 'zh_TW').format(event.startTime);
           return Padding(
             padding: const EdgeInsets.only(bottom: 6),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Flexible(
+                // 用 Expanded（tight fit）固定欄寬比例，避免「全日 / 有時間」兩種
+                // dateText 自然寬度不同，造成標題起始 x 錯位。
+                Expanded(
                   flex: 2,
                   child: Text(
                     dateText,
@@ -551,7 +557,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Flexible(
+                Expanded(
                   flex: 3,
                   child: Text(
                     event.title,
@@ -646,7 +652,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 itemBuilder: (context, index) {
                   final assignment = assignments[index];
                   final dateText = DateFormat(
-                    'MM/dd (E)',
+                    'MM/dd (EEEEE)',
                     'zh_TW',
                   ).format(assignment.roster.date);
                   final roleText = assignment.roles.join('、');

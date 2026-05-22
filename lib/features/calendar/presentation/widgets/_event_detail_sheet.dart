@@ -3,6 +3,10 @@ import 'package:intl/intl.dart';
 
 import '_calendar_models.dart';
 
+final _dateFormat = DateFormat('yyyy/MM/dd (E)', 'zh_TW');
+final _dateTimeFormat = DateFormat('yyyy/MM/dd (E) HH:mm', 'zh_TW');
+final _timeFormat = DateFormat('HH:mm', 'zh_TW');
+
 /// Bottom sheet content for a single calendar event's detail view.
 ///
 /// Call via [showEventDetailSheet] which wraps [showModalBottomSheet].
@@ -87,30 +91,22 @@ Future<void> showEventDetailSheet(
 /// Formats a full date-time string for the detail view.
 String formatEventDateTime(CalendarEvent event) {
   if (event.isAllDay) {
-    final startText = DateFormat('yyyy/MM/dd (E)', 'zh_TW').format(
-      event.startDay,
-    );
+    final startText = _dateFormat.format(event.startDay);
     if (!event.spansMultipleDays) {
       return '全天 | $startText';
     }
-    final endText = DateFormat('yyyy/MM/dd (E)', 'zh_TW').format(event.endDay);
+    final endText = _dateFormat.format(event.endDay);
     return '全天 | $startText - $endText';
   }
 
   final sameDay = DateUtils.isSameDay(event.startTime, event.endTime);
-  final startText = DateFormat(
-    'yyyy/MM/dd (E) HH:mm',
-    'zh_TW',
-  ).format(event.startTime);
+  final startText = _dateTimeFormat.format(event.startTime);
   if (sameDay) {
-    final endText = DateFormat('HH:mm', 'zh_TW').format(event.endTime);
+    final endText = _timeFormat.format(event.endTime);
     return '$startText - $endText';
   }
 
-  final endText = DateFormat(
-    'yyyy/MM/dd (E) HH:mm',
-    'zh_TW',
-  ).format(event.endTime);
+  final endText = _dateTimeFormat.format(event.endTime);
   return '$startText - $endText';
 }
 

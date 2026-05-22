@@ -14,15 +14,18 @@ class UserManagementScreen extends StatefulWidget {
 }
 
 class _UserManagementScreenState extends State<UserManagementScreen> {
+  // Change 3: hoist constant allocations out of itemBuilder
+  static const _cardRadius = BorderRadius.all(Radius.circular(12));
+  static const _cardMargin = EdgeInsets.symmetric(horizontal: 16, vertical: 8);
+
   late Future<List<User>> _usersFuture;
   String _nameFilter = '';
   List<_UserListItemData> _sortedUsers = const [];
-  int _usersSignature = 0;
-  int _templatesSignature = 0;
-  static const int _pageSize = 60;
-  int _visibleCount = _pageSize;
+
+  // Change 2: replace O(N) signature mechanism with a single reference check
+  Map<ServiceType, List<String>>? _lastTemplates;
+
   final ScrollController _scrollController = ScrollController();
-  bool _loadingMore = false;
   double _restoreOffset = 0;
   bool _pendingRestore = false;
   List<User> _lastUsers = const [];
@@ -33,7 +36,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   void initState() {
     super.initState();
     _refreshUsers();
-    _scrollController.addListener(_onScroll);
+    // pagination listener removed (ListView.builder lazy build is sufficient)
   }
 
   void _refreshUsers() {
@@ -45,14 +48,19 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     final future = context.read<UserAdminProvider>().getUsers(forceRefresh: true);
     setState(() {
       _usersFuture = future;
-      _visibleCount = _visibleCount < _pageSize ? _pageSize : _visibleCount;
+      // visibleCount field removed (no UI pagination)
       _isRefreshing = true;
     });
     future
         .then((users) {
           if (!mounted) return;
+          // Change 2: re-sort after data arrives, using a one-shot context.read
+          final templates =
+              context.read<GroupSettingsProvider>().templates;
           setState(() {
             _lastUsers = users;
+            _sortedUsers = _buildSortedUsers(users, templates);
+            _lastTemplates = templates;
             _isRefreshing = false;
             _hasLoaded = true;
           });
@@ -92,32 +100,28 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     _refreshUsers();
   }
 
-  void _onScroll() {
-    if (!_scrollController.hasClients || _loadingMore) return;
-    final position = _scrollController.position;
-    if (position.pixels >= position.maxScrollExtent - 240) {
-      _loadMore();
-    }
-  }
-
-  void _loadMore() {
-    setState(() {
-      _loadingMore = true;
-      _visibleCount = (_visibleCount + _pageSize);
-    });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        setState(() => _loadingMore = false);
-      }
-    });
-  }
+  // scroll pagination methods removed
 
   @override
   Widget build(BuildContext context) {
+    // Change 2: context.select still drives rebuild when templates change;
+    // we compare by reference to decide whether to re-sort.
     final groupTemplates = context
         .select<GroupSettingsProvider, Map<ServiceType, List<String>>>(
           (provider) => provider.templates,
         );
+
+    // Re-sort only when the templates reference differs AND we have data.
+    if (!identical(groupTemplates, _lastTemplates) && _lastUsers.isNotEmpty) {
+      _sortedUsers = _buildSortedUsers(_lastUsers, groupTemplates);
+      _lastTemplates = groupTemplates;
+    }
+
+    // Change 3: hoist BorderSide allocation (theme-dependent, so stays in build)
+    final cardBorderSide = BorderSide(
+      color: Theme.of(context).dividerColor.withValues(alpha: 0.6),
+    );
+
     return Scaffold(
       appBar: AppBar(title: const Text('帳號管理')),
       floatingActionButton: FloatingActionButton(
@@ -135,30 +139,18 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
 
-          final users = snapshot.data ?? _lastUsers;
-          _ensureSortedUsers(users, groupTemplates);
+          // _sortedUsers is up-to-date: either from _refreshUsers callback
+          // or the reference-check block in build().
           final filter = _nameFilter.trim().toLowerCase();
           final filteredUsers = filter.isEmpty
               ? _sortedUsers
               : _sortedUsers
                     .where((item) => item.nameLower.contains(filter))
                     .toList();
-          if (_visibleCount > filteredUsers.length) {
-            _visibleCount = filteredUsers.length;
-          } else if (filteredUsers.length < _pageSize) {
-            _visibleCount = filteredUsers.length;
-          }
-          if (_pendingRestore && filteredUsers.isNotEmpty) {
-            final indexAtOffset = (_restoreOffset / 88).floor();
-            final minNeeded = (indexAtOffset + _pageSize);
-            if (_visibleCount < minNeeded) {
-              _visibleCount = minNeeded > filteredUsers.length
-                  ? filteredUsers.length
-                  : minNeeded;
-            }
-          }
-          final visibleUsers = filteredUsers.take(_visibleCount).toList();
 
+          // visibleCount clamp removed; filteredUsers used directly below.
+
+          // KEPT: scroll-position restore (0c178a5 fix)
           if (_pendingRestore && _scrollController.hasClients) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (!mounted || !_scrollController.hasClients) return;
@@ -190,7 +182,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   onChanged: (value) {
                     setState(() {
                       _nameFilter = value;
-                      _visibleCount = _pageSize;
+                      // reset scroll position on new search
                     });
                     if (_scrollController.hasClients) {
                       _scrollController.jumpTo(0);
@@ -199,47 +191,27 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 ),
               ),
               Expanded(
-                child: visibleUsers.isEmpty
+                // Change 1: use filteredUsers directly; removed visibleUsers alias
+                child: filteredUsers.isEmpty
                     ? const Center(child: Text('沒有符合的帳號'))
                     : ListView.builder(
                         key: const PageStorageKey('user_management_list'),
                         controller: _scrollController,
                         itemExtent: 88,
-                        itemCount: visibleUsers.length + 1,
+                        // Change 1: itemCount = filteredUsers.length (no +1 trailer)
+                        itemCount: filteredUsers.length,
                         itemBuilder: (context, index) {
-                          if (index == visibleUsers.length) {
-                            if (visibleUsers.length >= filteredUsers.length) {
-                              return const SizedBox.shrink();
-                            }
-                            return const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 12),
-                              child: Center(
-                                child: SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                              ),
-                            );
-                          }
-                          final data = visibleUsers[index];
+                          // Change 1: trailer loader block deleted
+                          final data = filteredUsers[index];
 
                           return RepaintBoundary(
                             child: Card(
-                              margin: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
+                              // Change 3: reuse hoisted constants
+                              margin: _cardMargin,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                side: BorderSide(
-                                  color: Theme.of(
-                                    context,
-                                  ).dividerColor.withValues(alpha: 0.6),
-                                ),
+                                borderRadius: _cardRadius,
+                                side: cardBorderSide,
                               ),
                               child: ListTile(
                                 leading: const CircleAvatar(
@@ -310,53 +282,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
   }
 
-  void _ensureSortedUsers(
-    List<User> users,
-    Map<ServiceType, List<String>> groupTemplates,
-  ) {
-    final usersSignature = _usersSignatureFor(users);
-    final templatesSignature = _templatesSignatureFor(groupTemplates);
-    if (usersSignature == _usersSignature &&
-        templatesSignature == _templatesSignature) {
-      return;
-    }
-    _usersSignature = usersSignature;
-    _templatesSignature = templatesSignature;
-    _sortedUsers = _buildSortedUsers(users, groupTemplates);
-  }
-
-  int _usersSignatureFor(List<User> users) {
-    var hash = 17;
-    for (final user in users) {
-      var zonesHash = 17;
-      for (final zone in user.zones) {
-        zonesHash = Object.hash(
-          zonesHash,
-          zone.serviceType.index,
-          Object.hashAll(zone.smallGroups),
-        );
-      }
-      final userHash = Object.hash(
-        user.id,
-        user.name,
-        user.username,
-        user.role.index,
-        zonesHash,
-      );
-      hash = Object.hash(hash, userHash);
-    }
-    return hash;
-  }
-
-  int _templatesSignatureFor(Map<ServiceType, List<String>> templates) {
-    var hash = 17;
-    final entries = templates.entries.toList()
-      ..sort((a, b) => a.key.index.compareTo(b.key.index));
-    for (final entry in entries) {
-      hash = Object.hash(hash, entry.key.index, Object.hashAll(entry.value));
-    }
-    return hash;
-  }
+  // O(N) signature mechanism removed; replaced by reference-equality check in build()
 }
 
 class _UserListItemData {
