@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +6,7 @@ import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../../auth/presentation/providers/session_provider.dart';
 import '../../../auth/presentation/providers/user_admin_provider.dart';
 import '../../../auth/domain/entities/user.dart';
+import '../../domain/entities/event_option.dart';
 import '../providers/roster_provider.dart';
 import '../widgets/roster_card.dart';
 import '../../../../core/utils/error_messages.dart';
@@ -14,6 +14,7 @@ import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/settings_bottom_sheet.dart';
 import 'event_settings_screen.dart' deferred as event_settings_screen;
 import 'role_settings_screen.dart' deferred as role_settings_screen;
+import 'roster_import_parser.dart';
 
 class RosterEditScreen extends StatefulWidget {
   final VoidCallback onExit;
@@ -338,7 +339,8 @@ class _RosterListState extends State<_RosterList>
                       if (result.missingDates.isNotEmpty ||
                           result.notInRosterNames.isNotEmpty ||
                           result.roleMismatchNames.isNotEmpty ||
-                          result.otherNames.isNotEmpty) {
+                          result.otherNames.isNotEmpty ||
+                          result.notInEventCatalog.isNotEmpty) {
                         if (!context.mounted) return;
                         await _showImportSummaryDialog(context, result);
                       } else {
@@ -357,7 +359,7 @@ class _RosterListState extends State<_RosterList>
                     maxLines: 12,
                     decoration: InputDecoration(
                       hintText:
-                          '[\n  {\n    "date": "2026-01-04",\n    "duties": [\n      {"people": ["芳伶"], "role": "敬拜主領"}\n    ]\n  }\n]',
+                          '[\n  {\n    "date": "2026-01-04",\n    "duties": [\n      {"people": ["芳伶"], "role": "敬拜主領"}\n    ],\n    "events": ["聖餐", {"name": "受洗禮", "color": "#F39C12"}]\n  }\n]',
                       hintStyle: TextStyle(
                         color: Theme.of(
                           context,
@@ -389,7 +391,7 @@ class _RosterListState extends State<_RosterList>
                   ],
                   const SizedBox(height: 8),
                   const Text(
-                    '格式需為 JSON 陣列，每筆含 date 與 duties',
+                    '格式需為 JSON 陣列，每筆含 date，並至少含 duties 或 events',
                     style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
@@ -402,13 +404,14 @@ class _RosterListState extends State<_RosterList>
   }
 
   String _buildResultMessage(_JsonImportResult result) {
-    if (result.updated == 0) {
+    if (result.updated == 0 && result.notInEventCatalog.isEmpty) {
       return '找不到可更新的日期';
     }
     if (result.missingDates.isEmpty &&
         result.notInRosterNames.isEmpty &&
         result.roleMismatchNames.isEmpty &&
-        result.otherNames.isEmpty) {
+        result.otherNames.isEmpty &&
+        result.notInEventCatalog.isEmpty) {
       return '已更新 ${result.updated} 筆服事表';
     }
     final missingPreview = result.missingDates.take(3).join(', ');
@@ -419,6 +422,8 @@ class _RosterListState extends State<_RosterList>
     final mismatchSuffix = result.roleMismatchNames.length > 3 ? '...' : '';
     final otherPreview = result.otherNames.take(3).join('、');
     final otherSuffix = result.otherNames.length > 3 ? '...' : '';
+    final catalogPreview = result.notInEventCatalog.take(3).join('、');
+    final catalogSuffix = result.notInEventCatalog.length > 3 ? '...' : '';
     final parts = <String>[];
     if (result.missingDates.isNotEmpty) {
       parts.add(
@@ -437,6 +442,11 @@ class _RosterListState extends State<_RosterList>
     }
     if (result.otherNames.isNotEmpty) {
       parts.add('${result.otherNames.length} 位其它：$otherPreview$otherSuffix');
+    }
+    if (result.notInEventCatalog.isNotEmpty) {
+      parts.add(
+        '${result.notInEventCatalog.length} 個不在事件選單：$catalogPreview$catalogSuffix',
+      );
     }
     return '已更新 ${result.updated} 筆，${parts.join('；')}';
   }
@@ -477,6 +487,13 @@ class _RosterListState extends State<_RosterList>
         buffer.writeln('- $name');
       }
     }
+    if (result.notInEventCatalog.isNotEmpty) {
+      buffer.writeln('');
+      buffer.writeln('不在事件選單：');
+      for (final name in result.notInEventCatalog) {
+        buffer.writeln('- $name');
+      }
+    }
     return buffer.toString().trim();
   }
 
@@ -511,9 +528,6 @@ class _RosterListState extends State<_RosterList>
   ) async {
     final userAdminProvider = context.read<UserAdminProvider>();
     final rosterProvider = context.read<RosterProvider>();
-    if (raw.trim().isEmpty) {
-      return const _JsonImportResult(error: '請貼上 JSON 內容');
-    }
 
     final List<String> candidateNames;
     final Map<String, Set<String>> allowedByRole;
@@ -533,117 +547,29 @@ class _RosterListState extends State<_RosterList>
       return const _JsonImportResult(error: '無法載入同工名單');
     }
 
-    dynamic decoded;
-    try {
-      decoded = jsonDecode(raw);
-    } catch (e) {
-      return const _JsonImportResult(error: 'JSON 格式錯誤');
+    // Build catalog map for the current service type.
+    final catalogByName = <String, EventOption>{
+      for (final opt in rosterProvider.eventOptionsFor(widget.type))
+        opt.name: opt,
+    };
+
+    final parsed = parseRosterImportJson(
+      input: raw,
+      candidateNames: candidateNames,
+      allowedByRole: allowedByRole,
+      catalogByName: catalogByName,
+      nameToIdMap: nameToIdMap,
+    );
+
+    if (parsed.error != null) {
+      return _JsonImportResult(error: parsed.error);
     }
 
-    if (decoded is! List) {
-      return const _JsonImportResult(error: 'JSON 最外層需為陣列');
-    }
-
-    final Map<String, List<RosterEntry>> importMap = {};
-    final List<String> duplicateDates = [];
-    final List<String> notInRosterNames = [];
-    final List<String> roleMismatchNames = [];
-    final Map<String, Set<String>> roleMismatchDetails = {};
-    final List<String> otherNames = [];
-    for (var i = 0; i < decoded.length; i++) {
-      final item = decoded[i];
-      if (item is! Map) {
-        return _JsonImportResult(error: '第 ${i + 1} 筆不是物件');
-      }
-      final dateValue = item['date'];
-      if (dateValue is! String) {
-        return _JsonImportResult(error: '第 ${i + 1} 筆缺少 date');
-      }
-      final parsedDate = _parseDateKey(dateValue);
-      if (parsedDate == null) {
-        return _JsonImportResult(error: '第 ${i + 1} 筆 date 格式錯誤');
-      }
-      final dutiesValue = item['duties'];
-      if (dutiesValue is! List) {
-        return _JsonImportResult(error: '第 ${i + 1} 筆 duties 格式錯誤');
-      }
-      final duties = <RosterEntry>[];
-      for (var j = 0; j < dutiesValue.length; j++) {
-        final duty = dutiesValue[j];
-        if (duty is! Map) {
-          return _JsonImportResult(
-            error: '第 ${i + 1} 筆 duties 第 ${j + 1} 筆不是物件',
-          );
-        }
-        final roleValue = duty['role'];
-        if (roleValue is! String || roleValue.trim().isEmpty) {
-          return _JsonImportResult(
-            error: '第 ${i + 1} 筆 duties 第 ${j + 1} 筆 role 缺失',
-          );
-        }
-        final peopleValue = duty['people'];
-        if (peopleValue is! List) {
-          return _JsonImportResult(
-            error: '第 ${i + 1} 筆 duties 第 ${j + 1} 筆 people 格式錯誤',
-          );
-        }
-        final people = peopleValue
-            .whereType<String>()
-            .map((name) => name.trim())
-            .where((name) => name.isNotEmpty)
-            .map((name) {
-              final result = _resolvePersonName(
-                name,
-                candidateNames,
-                roleValue.trim(),
-                allowedByRole,
-              );
-              switch (result.status) {
-                case _NameMatchStatus.matched:
-                  return result.name;
-                case _NameMatchStatus.roleMismatch:
-                  roleMismatchNames.add(result.name);
-                  _addRoleMismatch(
-                    roleMismatchDetails,
-                    result.name,
-                    roleValue.trim(),
-                  );
-                  return null;
-                case _NameMatchStatus.notInList:
-                  notInRosterNames.add(name);
-                  return null;
-                case _NameMatchStatus.other:
-                  otherNames.add(name);
-                  return null;
-              }
-            })
-            .whereType<String>()
-            .toList();
-        final personIdsByName = <String, String>{
-          for (final name in people)
-            if (nameToIdMap.containsKey(name)) name: nameToIdMap[name]!,
-        };
-        duties.add(
-          RosterEntry(
-            role: roleValue.trim(),
-            people: people.isEmpty ? const ['待定'] : people,
-            peopleOrder: people.isEmpty ? const [] : List<String>.from(people),
-            personIdsByName: personIdsByName,
-          ),
-        );
-      }
-      if (duties.isEmpty) {
-        return _JsonImportResult(error: '第 ${i + 1} 筆 duties 不可為空');
-      }
-      if (importMap.containsKey(parsedDate)) {
-        duplicateDates.add(parsedDate);
-      }
-      importMap[parsedDate] = duties;
-    }
-
-    if (duplicateDates.isNotEmpty) {
-      return _JsonImportResult(error: '重複日期：${duplicateDates.join(', ')}');
-    }
+    // Collect all dates that appear in either duties or events.
+    final allDates = <String>{
+      ...parsed.dutiesProvidedDates,
+      ...parsed.eventsProvidedDates,
+    };
 
     final rosterByDate = <String, ServiceRoster>{
       for (final roster in widget.rosters) _dateKey(roster.date): roster,
@@ -656,30 +582,59 @@ class _RosterListState extends State<_RosterList>
       for (var i = 0; i < templateRoles.length; i++) templateRoles[i]: i,
     };
 
-    for (final entry in importMap.entries) {
-      final roster = rosterByDate[entry.key];
+    for (final key in allDates) {
+      final roster = rosterByDate[key];
       if (roster == null) {
-        missingDates.add(entry.key);
+        missingDates.add(key);
         continue;
       }
-      final sortedDuties = List<RosterEntry>.from(entry.value)
-        ..sort((a, b) {
-          final ai = roleOrder[a.role] ?? templateRoles.length;
-          final bi = roleOrder[b.role] ?? templateRoles.length;
-          if (ai != bi) return ai.compareTo(bi);
-          return entry.value.indexOf(a).compareTo(entry.value.indexOf(b));
-        });
-      updates.add(roster.copyWith(duties: sortedDuties));
+
+      final hasDuties = parsed.dutiesProvidedDates.contains(key);
+      final hasEvents = parsed.eventsProvidedDates.contains(key);
+
+      List<RosterEntry> newDuties = roster.duties;
+      if (hasDuties) {
+        final rawDuties = parsed.dutiesByDate[key] ?? const [];
+        newDuties = List<RosterEntry>.from(rawDuties)
+          ..sort((a, b) {
+            final ai = roleOrder[a.role] ?? templateRoles.length;
+            final bi = roleOrder[b.role] ?? templateRoles.length;
+            if (ai != bi) return ai.compareTo(bi);
+            return rawDuties.indexOf(a).compareTo(rawDuties.indexOf(b));
+          });
+      }
+
+      final newEvents = hasEvents
+          ? (parsed.eventsByDate[key] ?? const <String>[])
+          : roster.specialEvents;
+      final newColors = hasEvents
+          ? (parsed.colorsByDate[key] ?? const <String, int>{})
+          : roster.customEventColors;
+
+      updates.add(
+        roster.copyWith(
+          duties: newDuties,
+          specialEvents: newEvents,
+          customEventColors: newColors,
+        ),
+      );
+    }
+
+    // Normalize role-mismatch details (Set → sorted List).
+    final normalizedMismatch = <String, List<String>>{};
+    for (final entry in parsed.roleMismatchDetails.entries) {
+      normalizedMismatch[entry.key] = entry.value.toList()..sort();
     }
 
     if (updates.isEmpty) {
       return _JsonImportResult(
         updated: 0,
         missingDates: missingDates,
-        notInRosterNames: _uniqueNames(notInRosterNames),
-        roleMismatchNames: _uniqueNames(roleMismatchNames),
-        roleMismatchDetails: _normalizeRoleMismatch(roleMismatchDetails),
-        otherNames: _uniqueNames(otherNames),
+        notInRosterNames: parsed.notInRosterNames,
+        roleMismatchNames: parsed.roleMismatchNames,
+        roleMismatchDetails: normalizedMismatch,
+        otherNames: parsed.otherNames,
+        notInEventCatalog: parsed.notInEventCatalog,
       );
     }
 
@@ -711,10 +666,11 @@ class _RosterListState extends State<_RosterList>
     return _JsonImportResult(
       updated: updates.length,
       missingDates: missingDates,
-      notInRosterNames: _uniqueNames(notInRosterNames),
-      roleMismatchNames: _uniqueNames(roleMismatchNames),
-      roleMismatchDetails: _normalizeRoleMismatch(roleMismatchDetails),
-      otherNames: _uniqueNames(otherNames),
+      notInRosterNames: parsed.notInRosterNames,
+      roleMismatchNames: parsed.roleMismatchNames,
+      roleMismatchDetails: normalizedMismatch,
+      otherNames: parsed.otherNames,
+      notInEventCatalog: parsed.notInEventCatalog,
     );
   }
 
@@ -723,81 +679,6 @@ class _RosterListState extends State<_RosterList>
     final m = date.month.toString().padLeft(2, '0');
     final d = date.day.toString().padLeft(2, '0');
     return '$y-$m-$d';
-  }
-
-  String? _parseDateKey(String raw) {
-    try {
-      final parsed = DateTime.parse(raw);
-      return _dateKey(DateTime(parsed.year, parsed.month, parsed.day));
-    } catch (_) {
-      return null;
-    }
-  }
-
-  _NameMatchResult _resolvePersonName(
-    String raw,
-    List<String> userNames,
-    String role,
-    Map<String, Set<String>> allowedByRole,
-  ) {
-    final name = raw.trim();
-    if (name.isEmpty || name == '待定') {
-      return const _NameMatchResult.matched('待定');
-    }
-    if (userNames.contains(name)) {
-      return _isAllowedForRole(name, role, allowedByRole)
-          ? _NameMatchResult.matched(name)
-          : _NameMatchResult.roleMismatch(name);
-    }
-    final matches = userNames
-        .where((full) => full.length > name.length && full.endsWith(name))
-        .toList();
-    if (matches.length == 1) {
-      final full = matches.first;
-      return _isAllowedForRole(full, role, allowedByRole)
-          ? _NameMatchResult.matched(full)
-          : _NameMatchResult.roleMismatch(full);
-    }
-    if (matches.length > 1) {
-      return _NameMatchResult.other(name);
-    }
-    return _NameMatchResult.notInList(name);
-  }
-
-  List<String> _uniqueNames(List<String> names) {
-    final seen = <String>{};
-    final result = <String>[];
-    for (final name in names) {
-      final trimmed = name.trim();
-      if (trimmed.isEmpty || seen.contains(trimmed)) continue;
-      seen.add(trimmed);
-      result.add(trimmed);
-    }
-    return result;
-  }
-
-  void _addRoleMismatch(
-    Map<String, Set<String>> bucket,
-    String name,
-    String role,
-  ) {
-    final trimmedName = name.trim();
-    final trimmedRole = role.trim();
-    if (trimmedName.isEmpty || trimmedRole.isEmpty) return;
-    bucket.putIfAbsent(trimmedName, () => <String>{});
-    bucket[trimmedName]!.add(trimmedRole);
-  }
-
-  Map<String, List<String>> _normalizeRoleMismatch(
-    Map<String, Set<String>> raw,
-  ) {
-    if (raw.isEmpty) return const {};
-    final result = <String, List<String>>{};
-    for (final entry in raw.entries) {
-      final roles = entry.value.toList()..sort();
-      result[entry.key] = roles;
-    }
-    return result;
   }
 
   Map<String, Set<String>> _buildAllowedByRole(List<User> users) {
@@ -818,18 +699,6 @@ class _RosterListState extends State<_RosterList>
 
     return allowed;
   }
-
-  bool _isAllowedForRole(
-    String name,
-    String role,
-    Map<String, Set<String>> allowedByRole,
-  ) {
-    final normalizedRole = role.trim();
-    if (normalizedRole.isEmpty) return false;
-    final allowed = allowedByRole[normalizedRole];
-    if (allowed == null || allowed.isEmpty) return false;
-    return allowed.contains(name);
-  }
 }
 
 class _JsonImportResult {
@@ -839,6 +708,7 @@ class _JsonImportResult {
   final List<String> roleMismatchNames;
   final Map<String, List<String>> roleMismatchDetails;
   final List<String> otherNames;
+  final List<String> notInEventCatalog;
   final String? error;
 
   const _JsonImportResult({
@@ -848,25 +718,7 @@ class _JsonImportResult {
     this.roleMismatchNames = const [],
     this.roleMismatchDetails = const {},
     this.otherNames = const [],
+    this.notInEventCatalog = const [],
     this.error,
   });
-}
-
-enum _NameMatchStatus { matched, notInList, roleMismatch, other }
-
-class _NameMatchResult {
-  final _NameMatchStatus status;
-  final String name;
-
-  const _NameMatchResult(this.status, this.name);
-
-  const _NameMatchResult.matched(this.name) : status = _NameMatchStatus.matched;
-
-  const _NameMatchResult.notInList(this.name)
-    : status = _NameMatchStatus.notInList;
-
-  const _NameMatchResult.roleMismatch(this.name)
-    : status = _NameMatchStatus.roleMismatch;
-
-  const _NameMatchResult.other(this.name) : status = _NameMatchStatus.other;
 }
