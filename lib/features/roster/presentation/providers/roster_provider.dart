@@ -41,17 +41,17 @@ class RosterProvider with ChangeNotifier {
     final options = _eventOptionsByType[type] ?? const <EventOption>[];
     final direct = options.firstWhere(
       (e) => e.name == name,
-      orElse: () => const EventOption(name: '', color: 0xFFF39C12),
+      orElse: () => const EventOption(name: '', color: 0xFF7F8C8D),
     );
     if (direct.name.isNotEmpty) return direct.color;
     for (final list in _eventOptionsByType.values) {
       final found = list.firstWhere(
         (e) => e.name == name,
-        orElse: () => const EventOption(name: '', color: 0xFFF39C12),
+        orElse: () => const EventOption(name: '', color: 0xFF7F8C8D),
       );
       if (found.name.isNotEmpty) return found.color;
     }
-    return 0xFFF39C12;
+    return 0xFF7F8C8D;
   }
 
   void toggleEditMode() {
