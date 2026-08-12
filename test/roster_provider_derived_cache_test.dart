@@ -241,6 +241,24 @@ void main() {
       expect(strings.toSet().length, strings.length);
     });
 
+    test('displayStrings 連續呼叫回傳同一個 instance', () {
+      // MainScaffold 用 context.select 訂閱這個 getter，比較方式是 ==（對
+      // List 就是 identity）。每次都回新 list 的話，任何一次 notifyListeners
+      // 都會讓 TextWarmup 以為資料換了而整批重新預熱。
+      final first = provider.displayStrings;
+      final second = provider.displayStrings;
+      expect(identical(first, second), isTrue);
+    });
+
+    test('登出後 displayStrings 要清空', () {
+      // 先讀一次灌熱快取，才測得到「清除」而不是「從空快取重算」。
+      expect(provider.displayStrings, isNotEmpty);
+
+      provider.onSessionChanged('uid-1');
+      provider.onSessionChanged(null);
+      expect(provider.displayStrings, isEmpty);
+    });
+
     test('資料變更後 displayStrings 要跟著失效', () async {
       // 先讀一次灌熱快取，才測得到失效而不是「從空快取重算」。
       expect(provider.displayStrings, isNot(contains('甲')));

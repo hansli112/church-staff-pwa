@@ -37,6 +37,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   bool _isRefreshing = false;
   bool _hasLoaded = false;
 
+  // Refresh generation counter：刪除、關閉編輯 dialog、初次載入都會各自發一次
+  // 請求，先發的不保證先回。沒有這個 token，晚回的舊請求會把新資料
+  // （_sortedUsers / _warmupStrings）蓋回舊的，畫面與 _usersFuture 對不起來。
+  int _refreshToken = 0;
+
   @override
   void initState() {
     super.initState();
@@ -48,6 +53,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       _restoreOffset = _scrollController.offset;
       _pendingRestore = true;
     }
+    final token = ++_refreshToken;
     // 管理畫面 pull-to-refresh / initial load 一律拉最新，避開 cache。
     final future = context.read<UserAdminProvider>().getUsers(
       forceRefresh: true,
@@ -58,7 +64,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     });
     future
         .then((users) {
-          if (!mounted) return;
+          if (!mounted || token != _refreshToken) return;
           // 資料回來才排序，用一次性的 context.read 取 templates。
           final templates = context.read<GroupSettingsProvider>().templates;
           setState(() {
@@ -75,7 +81,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           });
         })
         .catchError((_) {
-          if (!mounted) return;
+          if (!mounted || token != _refreshToken) return;
           setState(() {
             _isRefreshing = false;
           });

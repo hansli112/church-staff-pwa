@@ -80,5 +80,49 @@ void main() {
       await tester.pump();
       expect(find.byType(Text), findsNothing);
     });
+
+    testWidgets('預熱的字串對輔助科技隱形', (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(host(const ['王小明', '李大華']));
+      await tester.pump();
+
+      // 確實排版了 —— 否則下面的 findsNothing 只是因為樹上根本沒東西。
+      expect(find.text('王小明'), findsOneWidget);
+      // 但 VoiceOver／TalkBack 讀不到：這些字只是拿來逼引擎排版，
+      // 進了 semantics tree 就會變成整份名單被一個個念出來。
+      expect(find.bySemanticsLabel('王小明'), findsNothing);
+      expect(find.bySemanticsLabel('李大華'), findsNothing);
+
+      handle.dispose();
+    });
+
+    testWidgets('清單被就地改短也不會拋 RangeError', (tester) async {
+      final strings = [for (var i = 0; i < 60; i++) '名字$i'];
+      await tester.pumpWidget(host(strings));
+      await tester.pump();
+      await tester.pump(); // 已經排到第 48 個
+
+      // 就地砍短：identity 沒變，didUpdateWidget 不會重置，已排版位置就落在
+      // 界外。沒有夾住的話 sublist 會直接炸掉。
+      strings.removeRange(10, strings.length);
+      await tester.pumpWidget(host(strings));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('內容一樣的新 List 不會重新預熱', (tester) async {
+      await tester.pumpWidget(host(const ['王小明', '李大華']));
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 5));
+      expect(find.byType(Text), findsNothing);
+
+      // 呼叫端若在 build 裡現算清單，每次 rebuild 的 instance 都不同但內容
+      // 一樣。這時若重新預熱，就再也撤不掉，每一幀都白排一次版。
+      await tester.pumpWidget(host(['王小明', '李大華']));
+      await tester.pump();
+      expect(find.byType(Text), findsNothing);
+    });
   });
 }

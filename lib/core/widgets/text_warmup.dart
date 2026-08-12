@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
@@ -24,6 +25,10 @@ import 'package:flutter/scheduler.dart';
 ///
 /// 必須放在 [Stack] 裡：內容被放到可視範圍外，而 Stack 預設會裁切，所以不
 /// 會有實際的繪製成本，但 layout 一定會發生，這正是我們要的。
+///
+/// 對輔助科技完全隱形（[ExcludeSemantics]）：這些字只是拿來逼引擎排版的，
+/// 使用者看不到也不該聽到。少了這層，VoiceOver／TalkBack 會把整份名單的每
+/// 個名字都念出來。
 class TextWarmup extends StatefulWidget {
   const TextWarmup({super.key, required this.strings});
 
@@ -69,11 +74,22 @@ class _TextWarmupState extends State<TextWarmup> {
   void didUpdateWidget(TextWarmup oldWidget) {
     super.didUpdateWidget(oldWidget);
     // 資料換了（切換帳號、名單重抓）就重來一次。
-    if (!identical(oldWidget.strings, widget.strings)) {
+    //
+    // 不能只看 identity：呼叫端若在 build 裡現算 List，每次 rebuild 都會是
+    // 新 instance，光看 identity 會讓預熱永遠從頭來過 —— 那些 off-screen
+    // paragraph 就再也撤不掉，每一幀都白排一次版。內容一樣就當作沒變。
+    if (!identical(oldWidget.strings, widget.strings) &&
+        !listEquals(oldWidget.strings, widget.strings)) {
       _settleTimer?.cancel();
       _warmed = 0;
       _settled = false;
       _scheduleNextChunk();
+      return;
+    }
+    // identity 沒變不代表內容沒變：呼叫端就地改寫並縮短清單時，_warmed 會
+    // 停在界外。夾回長度內，讓排程與 build 都在合法區間運作。
+    if (_warmed > widget.strings.length) {
+      _warmed = widget.strings.length;
     }
   }
 
@@ -111,34 +127,37 @@ class _TextWarmupState extends State<TextWarmup> {
 
   @override
   Widget build(BuildContext context) {
-    if (_settled || widget.strings.isEmpty) return const SizedBox.shrink();
+    if (_settled) return const SizedBox.shrink();
 
     // 只放「這一批」：已經排版過的字串留在樹上沒有意義，那些成本已經付過了。
-    final start = (_warmed - TextWarmup._chunkSize).clamp(
-      0,
-      widget.strings.length,
-    );
-    final chunk = widget.strings.sublist(start, _warmed);
-    if (chunk.isEmpty) return const SizedBox.shrink();
+    //
+    // 結束點也要夾，不能只夾起點：清單被就地改短時 identity 不變，state 裡
+    // 的 _warmed 會超出長度，sublist 就會拋 RangeError。
+    final total = widget.strings.length;
+    final end = _warmed.clamp(0, total);
+    final start = (end - TextWarmup._chunkSize).clamp(0, total);
+    if (start == end) return const SizedBox.shrink();
 
     return Positioned(
       // 放在畫面外。Stack 預設 Clip.hardEdge，所以不會真的被畫出來。
       left: -100000,
       top: 0,
-      child: IgnorePointer(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (final text in chunk)
-              Text(
-                text,
-                softWrap: false,
-                maxLines: 1,
-                overflow: TextOverflow.clip,
-                // segmentation cache 以字串為 key，跟字級無關，所以用小字級。
-                style: const TextStyle(fontSize: 8),
-              ),
-          ],
+      child: ExcludeSemantics(
+        child: IgnorePointer(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final text in widget.strings.sublist(start, end))
+                Text(
+                  text,
+                  softWrap: false,
+                  maxLines: 1,
+                  overflow: TextOverflow.clip,
+                  // segmentation cache 以字串為 key，跟字級無關，所以用小字級。
+                  style: const TextStyle(fontSize: 8),
+                ),
+            ],
+          ),
         ),
       ),
     );
