@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/user.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
+import '../../../../core/widgets/glyph_warmup.dart';
 import '../providers/user_admin_provider.dart';
 import '../providers/group_settings_provider.dart';
 import 'user_editor_screen.dart';
@@ -25,6 +26,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   // GroupSettingsProvider.templates 刻意回傳同一份 reference，
   // 所以用 identical() 就能判斷要不要重排，不必逐項比對。
   Map<ServiceType, List<String>>? _lastTemplates;
+
+  // 名單裡會顯示的所有不重複字元，資料換了才重算。給 GlyphWarmup 用。
+  String _warmupCharacters = '';
 
   final ScrollController _scrollController = ScrollController();
   double _restoreOffset = 0;
@@ -60,6 +64,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           setState(() {
             _lastUsers = users;
             _sortedUsers = _buildSortedUsers(users, templates);
+            // 名單的姓名不見得都出現在服事表裡，所以這裡要另外預熱一次，
+            // 否則捲到只存在於帳號管理的名字時仍會觸發字型下載與重排。
+            _warmupCharacters = GlyphWarmup.uniqueCharactersOf(
+              users.expand((user) => [user.name, user.username, user.email]),
+            );
             _lastTemplates = templates;
             _isRefreshing = false;
             _hasLoaded = true;
@@ -126,150 +135,162 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         onPressed: () => _openEditor(),
         child: const Icon(Icons.add),
       ),
-      body: FutureBuilder<List<User>>(
-        future: _usersFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting &&
-              !_hasLoaded) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-
-          // _sortedUsers is up-to-date: either from _refreshUsers callback
-          // or the reference-check block in build().
-          final filter = _nameFilter.trim().toLowerCase();
-          final filteredUsers = filter.isEmpty
-              ? _sortedUsers
-              : _sortedUsers
-                    .where((item) => item.nameLower.contains(filter))
-                    .toList();
-
-          // KEPT: scroll-position restore (0c178a5 fix)
-          if (_pendingRestore && _scrollController.hasClients) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted || !_scrollController.hasClients) return;
-              final maxOffset = _scrollController.position.maxScrollExtent;
-              if (maxOffset <= 0 && _restoreOffset > 0) {
-                return;
+      body: Stack(
+        children: [
+          GlyphWarmup(characters: _warmupCharacters),
+          FutureBuilder<List<User>>(
+            future: _usersFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting &&
+                  !_hasLoaded) {
+                return const Center(child: CircularProgressIndicator());
               }
-              final target = _restoreOffset > maxOffset
-                  ? maxOffset
-                  : _restoreOffset;
-              if (target >= 0) {
-                _scrollController.jumpTo(target);
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
               }
-              _pendingRestore = false;
-            });
-          }
 
-          return Column(
-            children: [
-              if (_isRefreshing) const LinearProgressIndicator(minHeight: 2),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                child: TextField(
-                  decoration: const InputDecoration(
-                    labelText: '搜尋姓名',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.search),
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      _nameFilter = value;
-                      // reset scroll position on new search
-                    });
-                    if (_scrollController.hasClients) {
-                      _scrollController.jumpTo(0);
-                    }
-                  },
-                ),
-              ),
-              Expanded(
-                child: filteredUsers.isEmpty
-                    ? const Center(child: Text('沒有符合的帳號'))
-                    : ListView.builder(
-                        key: const PageStorageKey('user_management_list'),
-                        controller: _scrollController,
-                        itemExtent: 88,
-                        itemCount: filteredUsers.length,
-                        itemBuilder: (context, index) {
-                          final data = filteredUsers[index];
+              // _sortedUsers is up-to-date: either from _refreshUsers callback
+              // or the reference-check block in build().
+              final filter = _nameFilter.trim().toLowerCase();
+              final filteredUsers = filter.isEmpty
+                  ? _sortedUsers
+                  : _sortedUsers
+                        .where((item) => item.nameLower.contains(filter))
+                        .toList();
 
-                          return RepaintBoundary(
-                            child: Card(
-                              margin: _cardMargin,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: _cardRadius,
-                                side: cardBorderSide,
-                              ),
-                              child: ListTile(
-                                leading: const CircleAvatar(
-                                  child: Icon(Icons.person, size: 18),
-                                ),
-                                title: Text(
-                                  data.displayName,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                subtitle: Text(
-                                  data.subtitle,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                onTap: () => _openEditor(data.user),
-                                trailing: IconButton(
-                                  icon: const Icon(
-                                    Icons.delete,
-                                    color: Colors.red,
-                                  ),
-                                  onPressed: () async {
-                                    final authProvider = context
-                                        .read<UserAdminProvider>();
-                                    final confirm = await showDialog<bool>(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        title: const Text('確認刪除'),
-                                        content: Text(
-                                          '確定要刪除 ${data.user.name} 嗎？',
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.pop(context, false),
-                                            child: const Text('取消'),
-                                          ),
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.pop(context, true),
-                                            child: const Text(
-                                              '刪除',
-                                              style: TextStyle(
-                                                color: Colors.red,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
+              // KEPT: scroll-position restore (0c178a5 fix)
+              if (_pendingRestore && _scrollController.hasClients) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted || !_scrollController.hasClients) return;
+                  final maxOffset = _scrollController.position.maxScrollExtent;
+                  if (maxOffset <= 0 && _restoreOffset > 0) {
+                    return;
+                  }
+                  final target = _restoreOffset > maxOffset
+                      ? maxOffset
+                      : _restoreOffset;
+                  if (target >= 0) {
+                    _scrollController.jumpTo(target);
+                  }
+                  _pendingRestore = false;
+                });
+              }
 
-                                    if (confirm != true) return;
-                                    await authProvider.deleteUser(data.user.id);
-                                    if (!context.mounted) return;
-                                    _refreshUsers();
-                                  },
-                                ),
-                              ),
-                            ),
-                          );
-                        },
+              return Column(
+                children: [
+                  if (_isRefreshing)
+                    const LinearProgressIndicator(minHeight: 2),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    child: TextField(
+                      decoration: const InputDecoration(
+                        labelText: '搜尋姓名',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.search),
                       ),
-              ),
-            ],
-          );
-        },
+                      onChanged: (value) {
+                        setState(() {
+                          _nameFilter = value;
+                          // reset scroll position on new search
+                        });
+                        if (_scrollController.hasClients) {
+                          _scrollController.jumpTo(0);
+                        }
+                      },
+                    ),
+                  ),
+                  Expanded(
+                    child: filteredUsers.isEmpty
+                        ? const Center(child: Text('沒有符合的帳號'))
+                        : ListView.builder(
+                            key: const PageStorageKey('user_management_list'),
+                            controller: _scrollController,
+                            itemExtent: 88,
+                            itemCount: filteredUsers.length,
+                            itemBuilder: (context, index) {
+                              final data = filteredUsers[index];
+
+                              return RepaintBoundary(
+                                child: Card(
+                                  margin: _cardMargin,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: _cardRadius,
+                                    side: cardBorderSide,
+                                  ),
+                                  child: ListTile(
+                                    leading: const CircleAvatar(
+                                      child: Icon(Icons.person, size: 18),
+                                    ),
+                                    title: Text(
+                                      data.displayName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    subtitle: Text(
+                                      data.subtitle,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    onTap: () => _openEditor(data.user),
+                                    trailing: IconButton(
+                                      icon: const Icon(
+                                        Icons.delete,
+                                        color: Colors.red,
+                                      ),
+                                      onPressed: () async {
+                                        final authProvider = context
+                                            .read<UserAdminProvider>();
+                                        final confirm = await showDialog<bool>(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            title: const Text('確認刪除'),
+                                            content: Text(
+                                              '確定要刪除 ${data.user.name} 嗎？',
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(
+                                                  context,
+                                                  false,
+                                                ),
+                                                child: const Text('取消'),
+                                              ),
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(
+                                                  context,
+                                                  true,
+                                                ),
+                                                child: const Text(
+                                                  '刪除',
+                                                  style: TextStyle(
+                                                    color: Colors.red,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+
+                                        if (confirm != true) return;
+                                        await authProvider.deleteUser(
+                                          data.user.id,
+                                        );
+                                        if (!context.mounted) return;
+                                        _refreshUsers();
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
       ),
     );
   }
