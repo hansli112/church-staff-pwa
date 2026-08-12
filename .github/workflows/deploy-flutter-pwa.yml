@@ -74,13 +74,21 @@ jobs:
           FIREBASE_MEASUREMENT_ID: ${{ vars.FIREBASE_MEASUREMENT_ID }}
           GOOGLE_CALENDAR_ID: ${{ vars.GOOGLE_CALENDAR_ID }}
         run: |
+          set -eo pipefail
           if [ -z "$FCM_WEB_VAPID_KEY" ]; then
             echo "::warning::Missing FCM_WEB_VAPID_KEY secret. Web push token will not be generated."
           fi
-          if [ -z "$FIREBASE_API_KEY" ]; then
-            echo "::error::Missing FIREBASE_API_KEY secret. Build will produce a non-functional app."
-            exit 1
-          fi
+          # Firebase.initializeApp 少任何一個必填欄位，App 在瀏覽器裡就初始化
+          # 不了 —— 而且 build 會成功，要部署完打開才發現。只擋 API key 不夠。
+          # 這份清單刻意與 Dockerfile 的檢查一致：兩條部署路徑不能一邊擋、
+          # 一邊放行，否則自架版與 CI 版會編出行為不同的產物。
+          for required in FIREBASE_API_KEY FIREBASE_AUTH_DOMAIN FIREBASE_PROJECT_ID \
+                          FIREBASE_MESSAGING_SENDER_ID FIREBASE_APP_ID; do
+            if [ -z "${!required}" ]; then
+              echo "::error::Missing $required. Build would produce a non-functional app."
+              exit 1
+            fi
+          done
           DART_DEFINES=(
             --dart-define=FCM_WEB_VAPID_KEY="$FCM_WEB_VAPID_KEY"
             --dart-define=FIREBASE_API_KEY="$FIREBASE_API_KEY"
@@ -94,11 +102,14 @@ jobs:
             --dart-define=GOOGLE_CALENDAR_ID="$GOOGLE_CALENDAR_ID"
           )
           mkdir -p web
+          # 用 runner 內建的環境變數而不是 ${{ }} 插值：${{ }} 是在 shell 啟動
+          # 「之前」把值直接貼成腳本文字，分支名帶了 shell 特殊字元（workflow_dispatch
+          # 可以從任意分支觸發）就會被當成指令執行，帶了引號也會把 JSON 寫壞。
           cat <<EOF > web/version.json
           {
-            "version": "${{ github.sha }}",
-            "build_number": "${{ github.run_number }}",
-            "branch": "${{ github.ref_name }}",
+            "version": "$GITHUB_SHA",
+            "build_number": "$GITHUB_RUN_NUMBER",
+            "branch": "$GITHUB_REF_NAME",
             "generated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           }
           EOF
@@ -132,7 +143,7 @@ jobs:
               exit 1
             fi
           done
-          BUILD_VERSION="${GITHUB_SHA::8}-${{ github.run_number }}"
+          BUILD_VERSION="${GITHUB_SHA::8}-${GITHUB_RUN_NUMBER}"
           VENDOR_VERSION="flutter-${FLUTTER_VERSION}"
           sed -i \
             -e "s|__BUILD_VERSION__|${BUILD_VERSION}|g" \
@@ -146,6 +157,10 @@ jobs:
           done
 
       # 7. 將 Firebase 設定注入 messaging service worker
+      # 同樣要 fail-fast。這支 SW 的失敗特別安靜：placeholder 改名或 sed 沒對到
+      # 時 workflow 照樣全綠、App 也照常開，只是 initializeApp 拿到字面上的
+      # '__FIREBASE_API_KEY__'，背景推播整個死掉 —— 要等到真的推一則通知沒收到
+      # 才會有人發現。cache_sw.js 那步早就有這層保護，這裡不能少。
       - name: Inject Firebase config into service worker
         env:
           FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
@@ -156,6 +171,17 @@ jobs:
           FIREBASE_APP_ID: ${{ vars.FIREBASE_APP_ID }}
           FIREBASE_MEASUREMENT_ID: ${{ vars.FIREBASE_MEASUREMENT_ID }}
         run: |
+          set -euo pipefail
+          SW=build/web/firebase-messaging-sw.js
+          for placeholder in __FIREBASE_API_KEY__ __FIREBASE_AUTH_DOMAIN__ \
+                             __FIREBASE_PROJECT_ID__ __FIREBASE_STORAGE_BUCKET__ \
+                             __FIREBASE_MESSAGING_SENDER_ID__ __FIREBASE_APP_ID__ \
+                             __FIREBASE_MEASUREMENT_ID__; do
+            if ! grep -q "$placeholder" "$SW"; then
+              echo "::error::$placeholder placeholder not found in $SW"
+              exit 1
+            fi
+          done
           sed -i \
             -e "s|__FIREBASE_API_KEY__|$FIREBASE_API_KEY|g" \
             -e "s|__FIREBASE_AUTH_DOMAIN__|$FIREBASE_AUTH_DOMAIN|g" \
@@ -164,7 +190,14 @@ jobs:
             -e "s|__FIREBASE_MESSAGING_SENDER_ID__|$FIREBASE_MESSAGING_SENDER_ID|g" \
             -e "s|__FIREBASE_APP_ID__|$FIREBASE_APP_ID|g" \
             -e "s|__FIREBASE_MEASUREMENT_ID__|$FIREBASE_MEASUREMENT_ID|g" \
-            build/web/firebase-messaging-sw.js
+            "$SW"
+          # 收尾再掃一次。上面逐一比對的是「替換前有沒有」，這條抓的是「替換後
+          # 還有沒有殘留」—— 例如日後多加一個欄位卻忘了補 sed 規則。
+          # 印出來的是「沒被替換掉」的那幾行，內容就是 placeholder 本身，不會外洩設定值。
+          if grep -n '__FIREBASE_[A-Z_]*__' "$SW"; then
+            echo "::error::Placeholders remain in $SW after substitution"
+            exit 1
+          fi
 
       # 8. 部署到 Cloudflare Pages
       # cloudflare/pages-action@v1 已被官方 deprecate（repo 已封存），

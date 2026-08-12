@@ -150,7 +150,7 @@ self.addEventListener('fetch', (event) => {
   // 字型要擺在 never-cache 檢查之前：fonts.gstatic.com 也是 gstatic.com，
   // 會被下面那條規則掃到。
   if (FONT_HOSTNAMES.includes(url.hostname)) {
-    event.respondWith(cacheFirst(request, FONT_CACHE_NAME, trimFontCache));
+    event.respondWith(cacheFirst(event, FONT_CACHE_NAME, trimFontCache));
     return;
   }
 
@@ -168,22 +168,23 @@ self.addEventListener('fetch', (event) => {
   if (NEVER_INTERCEPT_PATHS.has(url.pathname)) return;
 
   if (NETWORK_FIRST_PATHS.has(url.pathname)) {
-    event.respondWith(networkFirst(request));
+    event.respondWith(networkFirst(event));
   } else if (VENDOR_PATH_PREFIXES.some((p) => url.pathname.startsWith(p))) {
     // Engine bytes survive app deploys — see the VENDOR_CACHE_NAME note above.
-    event.respondWith(cacheFirst(request, VENDOR_CACHE_NAME));
+    event.respondWith(cacheFirst(event, VENDOR_CACHE_NAME));
   } else {
-    event.respondWith(cacheFirst(request));
+    event.respondWith(cacheFirst(event));
   }
 });
 
-async function networkFirst(request) {
+async function networkFirst(event) {
+  const request = event.request;
   const cache = await caches.open(CACHE_NAME);
   try {
     const response = await fetch(request);
     if (response && response.ok) {
       // Clone before caching — Response bodies can only be consumed once.
-      cache.put(request, response.clone()).catch(() => {});
+      event.waitUntil(persist(cache, request, response.clone()));
     }
     return response;
   } catch (e) {
@@ -193,18 +194,39 @@ async function networkFirst(request) {
   }
 }
 
-async function cacheFirst(request, cacheName = CACHE_NAME, afterPut) {
+async function cacheFirst(event, cacheName = CACHE_NAME, afterPut) {
+  const request = event.request;
   const cache = await caches.open(cacheName);
   const cached = await cache.match(request);
   if (cached) return cached;
   const response = await fetch(request);
   if (response && response.ok) {
-    cache
-      .put(request, response.clone())
-      .then(() => (afterPut ? afterPut(cache) : undefined))
-      .catch(() => {});
+    // 只回應、不 await 寫入，讓使用者不必等 cache.put 才拿到 bytes。
+    event.waitUntil(persist(cache, request, response.clone(), afterPut));
   }
   return response;
+}
+
+// 寫入一定要包在 event.waitUntil 裡。respondWith 的 promise 一 resolve，
+// 這個 fetch event 就算處理完了，瀏覽器隨時可以把 service worker 收掉 ——
+// 沒被 waitUntil 追蹤的 cache.put 會跟著 SW 一起被砍，表現成「快取時有時無」，
+// 冷啟動一次抓進去好幾十個資產時特別容易中。
+//
+// put 失敗（iOS 上最常見的是配額爆掉）之後仍然要跑 afterPut：字型 cache 正是
+// 靠 trim 縮回上限內的，把 trim 綁在成功路徑上等於「一超過配額就再也修不回來」，
+// 剛好在最需要它的時候失效。
+async function persist(cache, request, response, afterPut) {
+  try {
+    await cache.put(request, response);
+  } catch (_) {
+    // 寫不進去就算了，下次請求會重新抓。
+  }
+  if (!afterPut) return;
+  try {
+    await afterPut(cache);
+  } catch (_) {
+    // trim 失敗不影響已經回給頁面的回應。
+  }
 }
 
 // 保留最新的 FONT_CACHE_MAX_ENTRIES 筆，其餘從最舊的開始刪。
