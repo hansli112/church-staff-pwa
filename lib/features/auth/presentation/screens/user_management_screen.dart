@@ -14,7 +14,7 @@ class UserManagementScreen extends StatefulWidget {
 }
 
 class _UserManagementScreenState extends State<UserManagementScreen> {
-  // Change 3: hoist constant allocations out of itemBuilder
+  // itemBuilder 會跑很多次，常數配置一次就好。
   static const _cardRadius = BorderRadius.all(Radius.circular(12));
   static const _cardMargin = EdgeInsets.symmetric(horizontal: 16, vertical: 8);
 
@@ -22,7 +22,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   String _nameFilter = '';
   List<_UserListItemData> _sortedUsers = const [];
 
-  // Change 2: replace O(N) signature mechanism with a single reference check
+  // GroupSettingsProvider.templates 刻意回傳同一份 reference，
+  // 所以用 identical() 就能判斷要不要重排，不必逐項比對。
   Map<ServiceType, List<String>>? _lastTemplates;
 
   final ScrollController _scrollController = ScrollController();
@@ -36,7 +37,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   void initState() {
     super.initState();
     _refreshUsers();
-    // pagination listener removed (ListView.builder lazy build is sufficient)
   }
 
   void _refreshUsers() {
@@ -45,18 +45,18 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       _pendingRestore = true;
     }
     // 管理畫面 pull-to-refresh / initial load 一律拉最新，避開 cache。
-    final future = context.read<UserAdminProvider>().getUsers(forceRefresh: true);
+    final future = context.read<UserAdminProvider>().getUsers(
+      forceRefresh: true,
+    );
     setState(() {
       _usersFuture = future;
-      // visibleCount field removed (no UI pagination)
       _isRefreshing = true;
     });
     future
         .then((users) {
           if (!mounted) return;
-          // Change 2: re-sort after data arrives, using a one-shot context.read
-          final templates =
-              context.read<GroupSettingsProvider>().templates;
+          // 資料回來才排序，用一次性的 context.read 取 templates。
+          final templates = context.read<GroupSettingsProvider>().templates;
           setState(() {
             _lastUsers = users;
             _sortedUsers = _buildSortedUsers(users, templates);
@@ -100,12 +100,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     _refreshUsers();
   }
 
-  // scroll pagination methods removed
-
   @override
   Widget build(BuildContext context) {
-    // Change 2: context.select still drives rebuild when templates change;
-    // we compare by reference to decide whether to re-sort.
+    // context.select 仍負責在 templates 變動時觸發 rebuild；
+    // 這裡用 reference 比較決定要不要重排。
     final groupTemplates = context
         .select<GroupSettingsProvider, Map<ServiceType, List<String>>>(
           (provider) => provider.templates,
@@ -117,7 +115,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       _lastTemplates = groupTemplates;
     }
 
-    // Change 3: hoist BorderSide allocation (theme-dependent, so stays in build)
+    // BorderSide 吃 theme，只能留在 build，但至少提到 itemBuilder 外面。
     final cardBorderSide = BorderSide(
       color: Theme.of(context).dividerColor.withValues(alpha: 0.6),
     );
@@ -147,8 +145,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               : _sortedUsers
                     .where((item) => item.nameLower.contains(filter))
                     .toList();
-
-          // visibleCount clamp removed; filteredUsers used directly below.
 
           // KEPT: scroll-position restore (0c178a5 fix)
           if (_pendingRestore && _scrollController.hasClients) {
@@ -191,22 +187,18 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 ),
               ),
               Expanded(
-                // Change 1: use filteredUsers directly; removed visibleUsers alias
                 child: filteredUsers.isEmpty
                     ? const Center(child: Text('沒有符合的帳號'))
                     : ListView.builder(
                         key: const PageStorageKey('user_management_list'),
                         controller: _scrollController,
                         itemExtent: 88,
-                        // Change 1: itemCount = filteredUsers.length (no +1 trailer)
                         itemCount: filteredUsers.length,
                         itemBuilder: (context, index) {
-                          // Change 1: trailer loader block deleted
                           final data = filteredUsers[index];
 
                           return RepaintBoundary(
                             child: Card(
-                              // Change 3: reuse hoisted constants
                               margin: _cardMargin,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
@@ -281,8 +273,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       ),
     );
   }
-
-  // O(N) signature mechanism removed; replaced by reference-equality check in build()
 }
 
 class _UserListItemData {
