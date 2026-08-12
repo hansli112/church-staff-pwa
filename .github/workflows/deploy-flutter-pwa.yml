@@ -107,13 +107,15 @@ jobs:
           # （gstatic.com 在 never-cache 名單裡），cache_sw.js 的 vendor cache
           # 也就永遠不會命中。改成自家來源後引擎才真的能離線與跨 deploy 重用。
           #
-          # --wasm：實測瓶頸在 UI thread，也就是執行 Dart 程式碼本身；dart2wasm
-          # 針對的正是這件事。同時會產出 JS 版，bootstrap 依瀏覽器能力自動挑，
-          # 不支援 WasmGC 的裝置會靜默退回 JS，所以沒有相容性風險。
-          # 代價：wasm 版 1.1 MB vs JS 版 896 KB（gzip），且兩份都要進 artifact。
-          # HUD（?perf=1）第三行會顯示實際跑到的是 WASM 還是 JS。
-          # 若量測結果不划算，移除這個旗標即可回到原狀。
-          flutter build web --release --base-href "/" --no-web-resources-cdn --wasm "${DART_DEFINES[@]}"
+          # 這裡刻意「不」加 --wasm。瓶頸雖然確實在 UI thread（執行 Dart 本身），
+          # 但 Flutter 的 wasm 版在 iOS 上根本跑不起來：Safari 18.2 起雖已支援
+          # WasmGC，WebKit 仍有一個 bug 擋住 Flutter 的 wasm 渲染器
+          # （https://bugs.webkit.org/show_bug.cgi?id=267291），而 iOS 上所有
+          # 瀏覽器都被規定使用 WebKit，換 Chrome 也一樣。實測 HUD 顯示 iPhone
+          # 上落回 JS 版，證實了這點。我們的使用者以 iPhone 為主，加了只會讓
+          # artifact 變兩份、CI 變慢，卻換不到任何東西。
+          # 上游修好之後把 --wasm 加回來即可（?perf=1 的 HUD 會顯示 WASM/JS）。
+          flutter build web --release --base-href "/" --no-web-resources-cdn "${DART_DEFINES[@]}"
 
       # 6. 將版本號注入 cache_sw.js
       # BUILD_VERSION（每次 deploy 都不同）→ App 資產 cache，確保使用者
