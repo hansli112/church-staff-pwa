@@ -18,10 +18,7 @@ class _SpecialEventDialog extends StatefulWidget {
   final List<EventOption> options;
   final Set<String> existing;
 
-  const _SpecialEventDialog({
-    required this.options,
-    required this.existing,
-  });
+  const _SpecialEventDialog({required this.options, required this.existing});
 
   @override
   State<_SpecialEventDialog> createState() => _SpecialEventDialogState();
@@ -139,9 +136,10 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
                       hintText: '例：特別奉獻',
                       isDense: true,
                       filled: true,
-                      fillColor: Theme.of(
-                        sheetContext,
-                      ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                      fillColor: Theme.of(sheetContext)
+                          .colorScheme
+                          .surfaceContainerHighest
+                          .withValues(alpha: 0.35),
                       hintStyle: TextStyle(
                         color: Theme.of(
                           sheetContext,
@@ -157,10 +155,7 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
                   const SizedBox(height: 16),
                   Text(
                     '標籤顏色',
-                    style: TextStyle(
-                      color: Colors.grey.shade700,
-                      fontSize: 13,
-                    ),
+                    style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
                   ),
                   const SizedBox(height: 8),
                   Wrap(
@@ -184,10 +179,7 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
                               shape: BoxShape.circle,
                               color: Color(colorValue),
                               border: isSelected
-                                  ? Border.all(
-                                      color: Colors.black54,
-                                      width: 2,
-                                    )
+                                  ? Border.all(color: Colors.black54, width: 2)
                                   : null,
                             ),
                           ),
@@ -234,10 +226,7 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
       secondary: onRemove != null
           ? IconButton(
               tooltip: '刪除自訂項目',
-              constraints: const BoxConstraints(
-                minWidth: 48,
-                minHeight: 48,
-              ),
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
               icon: const Icon(Icons.close, size: 18),
               onPressed: onRemove,
             )
@@ -269,8 +258,9 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
                     shrinkWrap: true,
                     children: [
                       ...widget.options.map((option) {
-                        final isExisting =
-                            widget.existing.contains(option.name);
+                        final isExisting = widget.existing.contains(
+                          option.name,
+                        );
                         return _buildEventTile(
                           name: option.name,
                           dotColor: Color(option.color),

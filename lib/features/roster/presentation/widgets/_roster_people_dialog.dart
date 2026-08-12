@@ -373,9 +373,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
           Builder(
             builder: (context) => Text(
               '請先到「服事項目設定」新增項目',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.error,
-              ),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ),
         const SizedBox(height: 12),

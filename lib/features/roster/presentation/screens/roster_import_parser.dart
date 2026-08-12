@@ -95,7 +95,11 @@ class EventParseOutcome {
   /// Only includes entries where the caller explicitly supplied a color.
   final Map<String, int> colorOverrides;
 
-  const EventParseOutcome({this.error, this.names = const [], this.colorOverrides = const {}});
+  const EventParseOutcome({
+    this.error,
+    this.names = const [],
+    this.colorOverrides = const {},
+  });
   const EventParseOutcome.err(String message)
     : error = message,
       names = const [],
@@ -338,14 +342,14 @@ EventParseOutcome parseEventsList(
     if (elem is String) {
       eventName = elem.trim();
       if (eventName.isEmpty) {
-        return EventParseOutcome.err(
-          '第 $rowIndex 筆 events 第 $elemNum 筆名稱不可為空',
-        );
+        return EventParseOutcome.err('第 $rowIndex 筆 events 第 $elemNum 筆名稱不可為空');
       }
     } else if (elem is Map) {
       final nameRaw = elem['name'];
       if (nameRaw == null) {
-        return EventParseOutcome.err('第 $rowIndex 筆 events 第 $elemNum 筆缺少 name');
+        return EventParseOutcome.err(
+          '第 $rowIndex 筆 events 第 $elemNum 筆缺少 name',
+        );
       }
       if (nameRaw is! String || nameRaw.trim().isEmpty) {
         return EventParseOutcome.err(
@@ -365,9 +369,7 @@ EventParseOutcome parseEventsList(
         explicitColor = parsed;
       }
     } else {
-      return EventParseOutcome.err(
-        '第 $rowIndex 筆 events 第 $elemNum 筆格式錯誤',
-      );
+      return EventParseOutcome.err('第 $rowIndex 筆 events 第 $elemNum 筆格式錯誤');
     }
 
     // Duplicate name check within the same day

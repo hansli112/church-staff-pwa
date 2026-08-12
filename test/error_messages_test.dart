@@ -96,10 +96,7 @@ void main() {
     });
 
     test('not-found → 資料不存在', () {
-      final e = FirebaseException(
-        plugin: 'cloud_firestore',
-        code: 'not-found',
-      );
+      final e = FirebaseException(plugin: 'cloud_firestore', code: 'not-found');
       expect(mapErrorToUserMessage(e), '資料不存在');
     });
 

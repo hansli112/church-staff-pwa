@@ -45,13 +45,9 @@ class DayCell extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 4),
         decoration: BoxDecoration(
           color: isSelected
-              ? Theme.of(
-                  context,
-                ).colorScheme.primary.withValues(alpha: 0.12)
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
               : isToday
-              ? Theme.of(
-                  context,
-                ).colorScheme.secondary.withValues(alpha: 0.12)
+              ? Theme.of(context).colorScheme.secondary.withValues(alpha: 0.12)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
@@ -95,9 +91,9 @@ class DayCell extends StatelessWidget {
                   '+$overflowCount',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Colors.black54,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelSmall?.copyWith(color: Colors.black54),
                 ),
               ),
           ],

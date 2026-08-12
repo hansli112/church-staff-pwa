@@ -16,7 +16,7 @@ class _TrackingRosterRepository implements RosterRepository {
   List<ServiceRoster> rostersToReturn;
 
   _TrackingRosterRepository({List<ServiceRoster>? rostersToReturn})
-      : rostersToReturn = rostersToReturn ?? [];
+    : rostersToReturn = rostersToReturn ?? [];
 
   @override
   Future<List<ServiceRoster>> getUpcomingRosters() async {
@@ -25,8 +25,7 @@ class _TrackingRosterRepository implements RosterRepository {
   }
 
   @override
-  Future<List<ServiceRoster>> getUpcomingRostersFromCache() async =>
-      const []; // cache miss（stub 預設空）
+  Future<List<ServiceRoster>> getUpcomingRostersFromCache() async => const []; // cache miss（stub 預設空）
 
   @override
   Future<void> ensureQuarterRosters() async {} // stub：no-op

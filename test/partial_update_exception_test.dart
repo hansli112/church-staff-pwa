@@ -18,8 +18,7 @@ class _PartialFailRosterRepository implements RosterRepository {
   Future<List<ServiceRoster>> getUpcomingRosters() async => [];
 
   @override
-  Future<List<ServiceRoster>> getUpcomingRostersFromCache() async =>
-      const []; // stub：no-op
+  Future<List<ServiceRoster>> getUpcomingRostersFromCache() async => const []; // stub：no-op
 
   @override
   Future<void> ensureQuarterRosters() async {} // stub：no-op
@@ -55,14 +54,18 @@ void main() {
       date: DateTime(2026, 3, 1),
       type: ServiceType.sundayService,
       serviceName: '主日崇拜',
-      duties: [RosterEntry(role: '領會', people: const ['A'])],
+      duties: [
+        RosterEntry(role: '領會', people: const ['A']),
+      ],
     );
     final roster2 = ServiceRoster(
       id: 'r2',
       date: DateTime(2026, 3, 8),
       type: ServiceType.youth,
       serviceName: '青年崇拜',
-      duties: [RosterEntry(role: '領會', people: const ['B'])],
+      duties: [
+        RosterEntry(role: '領會', people: const ['B']),
+      ],
     );
     final cause = Exception('Firestore write failed');
     final stackTrace = StackTrace.current;
@@ -148,21 +151,27 @@ void main() {
       date: DateTime(2026, 4, 1),
       type: ServiceType.sundayService,
       serviceName: '主日崇拜',
-      duties: [RosterEntry(role: '領會', people: const ['Alice'])],
+      duties: [
+        RosterEntry(role: '領會', people: const ['Alice']),
+      ],
     );
     final rosterB = ServiceRoster(
       id: 'b1',
       date: DateTime(2026, 4, 8),
       type: ServiceType.sundayService,
       serviceName: '主日崇拜',
-      duties: [RosterEntry(role: '講員', people: const ['Bob'])],
+      duties: [
+        RosterEntry(role: '講員', people: const ['Bob']),
+      ],
     );
     final rosterC = ServiceRoster(
       id: 'c1',
       date: DateTime(2026, 4, 15),
       type: ServiceType.youth,
       serviceName: '青年崇拜',
-      duties: [RosterEntry(role: '領會', people: const ['Carol'])],
+      duties: [
+        RosterEntry(role: '領會', people: const ['Carol']),
+      ],
     );
 
     test(
@@ -186,49 +195,40 @@ void main() {
         final ex = caughtError as PartialUpdateException;
         expect(ex.successCount, 1);
         expect(ex.failureCount, 2);
-        expect(
-          ex.failedRosters.map((r) => r.id).toSet(),
-          {'b1', 'c1'},
-        );
+        expect(ex.failedRosters.map((r) => r.id).toSet(), {'b1', 'c1'});
         expect(ex.cause, isA<Exception>());
       },
     );
 
-    test(
-      'updateRosters 全部失敗時 successCount=0、failureCount=3',
-      () async {
-        final repo = _PartialFailRosterRepository(
-          failureRosterIds: {'a1', 'b1', 'c1'},
-        );
-        final provider = RosterProvider(repo);
+    test('updateRosters 全部失敗時 successCount=0、failureCount=3', () async {
+      final repo = _PartialFailRosterRepository(
+        failureRosterIds: {'a1', 'b1', 'c1'},
+      );
+      final provider = RosterProvider(repo);
 
-        late Object caughtError;
-        try {
-          await provider.updateRosters([rosterA, rosterB, rosterC]);
-          fail('應拋出 PartialUpdateException');
-        } catch (e) {
-          caughtError = e;
-        }
+      late Object caughtError;
+      try {
+        await provider.updateRosters([rosterA, rosterB, rosterC]);
+        fail('應拋出 PartialUpdateException');
+      } catch (e) {
+        caughtError = e;
+      }
 
-        expect(caughtError, isA<PartialUpdateException>());
-        final ex = caughtError as PartialUpdateException;
-        expect(ex.successCount, 0);
-        expect(ex.failureCount, 3);
-        expect(ex.failedRosters.length, 3);
-      },
-    );
+      expect(caughtError, isA<PartialUpdateException>());
+      final ex = caughtError as PartialUpdateException;
+      expect(ex.successCount, 0);
+      expect(ex.failureCount, 3);
+      expect(ex.failedRosters.length, 3);
+    });
 
-    test(
-      'updateRosters 全部成功時不拋例外',
-      () async {
-        final repo = _PartialFailRosterRepository(failureRosterIds: {});
-        final provider = RosterProvider(repo);
+    test('updateRosters 全部成功時不拋例外', () async {
+      final repo = _PartialFailRosterRepository(failureRosterIds: {});
+      final provider = RosterProvider(repo);
 
-        await expectLater(
-          provider.updateRosters([rosterA, rosterB, rosterC]),
-          completes,
-        );
-      },
-    );
+      await expectLater(
+        provider.updateRosters([rosterA, rosterB, rosterC]),
+        completes,
+      );
+    });
   });
 }

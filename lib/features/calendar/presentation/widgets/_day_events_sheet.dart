@@ -61,8 +61,7 @@ Future<void> showDayEventsSheet(
                   child: ListView.separated(
                     shrinkWrap: true,
                     itemCount: events.length,
-                    separatorBuilder: (_, index) =>
-                        const SizedBox(height: 8),
+                    separatorBuilder: (_, index) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       final event = events[index];
                       return Material(

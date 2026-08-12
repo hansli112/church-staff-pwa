@@ -7,9 +7,7 @@ import 'package:church_staff_pwa/features/roster/presentation/screens/roster_imp
 
 /// Build a minimal catalog from a list of (name, color) pairs.
 Map<String, EventOption> _catalog(List<(String, int)> entries) {
-  return {
-    for (final e in entries) e.$1: EventOption(name: e.$1, color: e.$2),
-  };
+  return {for (final e in entries) e.$1: EventOption(name: e.$1, color: e.$2)};
 }
 
 /// Run the parser with sensible defaults so tests only need to supply
@@ -189,10 +187,7 @@ void main() {
     "events": [{"name": "聖餐", "color": "#000000"}]
   }
 ]''';
-        final result = _parse(
-          json,
-          catalog: _catalog([('聖餐', 0xFFAAAAAA)]),
-        );
+        final result = _parse(json, catalog: _catalog([('聖餐', 0xFFAAAAAA)]));
         expect(result.error, isNull);
         expect(result.colorsByDate['2026-01-04']?['聖餐'], equals(0xFF000000));
       },
@@ -281,11 +276,14 @@ void main() {
   // ══════════════════════════════════════════════════════════════════════════
 
   group('events wrong type', () {
-    test('15. "events": "聖餐" (string not array) → error: 第 1 筆 events 格式錯誤', () {
-      const json = '[{"date": "2026-01-04", "events": "聖餐"}]';
-      final result = _parse(json);
-      expect(result.error, equals('第 1 筆 events 格式錯誤'));
-    });
+    test(
+      '15. "events": "聖餐" (string not array) → error: 第 1 筆 events 格式錯誤',
+      () {
+        const json = '[{"date": "2026-01-04", "events": "聖餐"}]';
+        final result = _parse(json);
+        expect(result.error, equals('第 1 筆 events 格式錯誤'));
+      },
+    );
   });
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -354,15 +352,9 @@ void main() {
         expect(result.eventsProvidedDates, contains('2026-02-01'));
         expect(result.eventsByDate['2026-02-01'], equals(['聖餐', '受洗禮']));
         // 受洗禮 had explicit color in JSON
-        expect(
-          result.colorsByDate['2026-02-01']?['受洗禮'],
-          equals(0xFFF39C12),
-        );
+        expect(result.colorsByDate['2026-02-01']?['受洗禮'], equals(0xFFF39C12));
         // 聖餐 had no explicit color → not in colorsByDate
-        expect(
-          result.colorsByDate['2026-02-01']?.containsKey('聖餐'),
-          isFalse,
-        );
+        expect(result.colorsByDate['2026-02-01']?.containsKey('聖餐'), isFalse);
         // 受洗禮 not in catalog
         expect(result.notInEventCatalog, contains('受洗禮'));
         // 聖餐 IS in catalog
