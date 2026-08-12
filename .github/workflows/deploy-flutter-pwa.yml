@@ -10,11 +10,33 @@ env:
   FLUTTER_VERSION: '3.41.0'
 
 jobs:
+  # firestore.rules 是「繞過 App 直接打 Firestore」時唯一的防線，所以規則
+  # 有自己的一套 emulator 測試。刻意不擋 build-and-deploy：規則不在前端的
+  # 部署產物裡（要另外 firebase deploy --only firestore:rules），把兩件事綁
+  # 在一起只會讓前端部署平白變慢。測試紅了照樣看得見。
+  firestore-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: firestore-tests/package-lock.json
+
+      - run: npm ci
+        working-directory: firestore-tests
+
+      - name: Test firestore.rules against the emulator
+        run: npm test
+        working-directory: firestore-tests
+
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       # 1. 檢出程式碼
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # 2. 安裝 Flutter 環境 (GitHub 支援，Cloudflare 不支援)
       # 版本固定：跟著 stable 浮動的話，某天 Flutter 發版就可能無預警 build 壞掉。
