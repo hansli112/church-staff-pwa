@@ -7,6 +7,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 import 'core/services/push_notification_service.dart';
+import 'core/widgets/perf_hud.dart';
 import 'features/roster/data/repositories/firestore_roster_repository.dart';
 import 'features/roster/presentation/providers/roster_provider.dart';
 import 'features/auth/data/repositories/firebase_auth_repository.dart';
@@ -56,16 +57,13 @@ class ChurchApp extends StatelessWidget {
     brightness: Brightness.light,
   );
 
-  /// 用 `?perf=1` 開啟 Flutter 的 performance overlay。
+  /// 用 `?perf=1` 開啟畫面上的即時效能數字（[PerfHud]）。
   ///
-  /// 手機上的卡頓要先知道是哪一條 thread 在爆才有得修：UI thread（build /
-  /// layout，程式碼問題）還是 raster thread（實際繪製，通常是引擎與裝置的
-  /// 天花板）。iOS 上要接 Mac 開 Safari Web Inspector 才看得到 timeline，
-  /// 這個 overlay 直接畫在畫面上，開網址就能看。
+  /// 注意不能用 Flutter 內建的 `showPerformanceOverlay` —— 它在 Web 上是
+  /// 沒有實作的 no-op，引擎只會印一行警告，畫面上什麼都不會出現。
   ///
   /// 預設關閉，一般使用者不會遇到。
-  static final bool _showPerformanceOverlay =
-      Uri.base.queryParameters['perf'] == '1';
+  static final bool _showPerfHud = Uri.base.queryParameters['perf'] == '1';
 
   @override
   Widget build(BuildContext context) {
@@ -129,7 +127,9 @@ class ChurchApp extends StatelessWidget {
         locale: const Locale('zh', 'TW'),
         home: AuthWrapper(pushNotificationService: pushNotificationService),
         debugShowCheckedModeBanner: false,
-        showPerformanceOverlay: _showPerformanceOverlay,
+        builder: _showPerfHud
+            ? (context, child) => PerfHud(child: child ?? const SizedBox())
+            : null,
       ),
     );
   }
