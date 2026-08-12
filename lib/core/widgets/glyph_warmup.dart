@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 /// 把資料裡會用到的字先在畫面外排版一次，逼引擎提前把需要的字型抓下來。
@@ -12,11 +14,21 @@ import 'package:flutter/material.dart';
 ///
 /// 內容被塞在 [Stack] 的可視範圍外，而 Stack 預設會裁切，所以不會有實際的
 /// 繪製成本；但 layout 一定會發生，這正是我們要的。
-class GlyphWarmup extends StatelessWidget {
+///
+/// 用完就撤：字型下載是排版當下觸發的，之後這個 widget 留在樹上只會讓每一
+/// 幀多背一個幾百字的 paragraph，沒有任何好處。[_settleDuration] 給的是
+/// 「排版 → 下載 → 字型變更重排」跑完的餘裕。
+class GlyphWarmup extends StatefulWidget {
   const GlyphWarmup({super.key, required this.characters});
 
   /// 要預熱的字元（去重後的集合，順序無所謂）。
   final String characters;
+
+  /// 撤掉之前要等多久 —— 字型是非同步抓回來的，太早移除會來不及觸發重排。
+  static const Duration _settleDuration = Duration(seconds: 5);
+
+  @override
+  State<GlyphWarmup> createState() => _GlyphWarmupState();
 
   /// 從任意字串集合取出不重複的字元。
   ///
@@ -34,10 +46,45 @@ class GlyphWarmup extends StatelessWidget {
     }
     return buffer.toString();
   }
+}
+
+class _GlyphWarmupState extends State<GlyphWarmup> {
+  bool _settled = false;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleRemoval();
+  }
+
+  @override
+  void didUpdateWidget(GlyphWarmup oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 資料換了（例如切換帳號、名單重抓）就要再預熱一次。
+    if (oldWidget.characters != widget.characters) {
+      _settled = false;
+      _scheduleRemoval();
+    }
+  }
+
+  void _scheduleRemoval() {
+    _timer?.cancel();
+    _timer = Timer(GlyphWarmup._settleDuration, () {
+      if (mounted) setState(() => _settled = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (characters.isEmpty) return const SizedBox.shrink();
+    final characters = widget.characters;
+    if (_settled || characters.isEmpty) return const SizedBox.shrink();
 
     return Positioned(
       // 放在畫面外。Stack 預設 Clip.hardEdge，所以不會真的被畫出來。
