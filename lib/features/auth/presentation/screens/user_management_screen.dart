@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/user.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
-import '../../../../core/widgets/glyph_warmup.dart';
+import '../../../../core/widgets/text_warmup.dart';
 import '../providers/user_admin_provider.dart';
 import '../providers/group_settings_provider.dart';
 import 'user_editor_screen.dart';
@@ -27,8 +27,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   // 所以用 identical() 就能判斷要不要重排，不必逐項比對。
   Map<ServiceType, List<String>>? _lastTemplates;
 
-  // 名單裡會顯示的所有不重複字元，資料換了才重算。給 GlyphWarmup 用。
-  String _warmupCharacters = '';
+  // 名單裡會顯示的所有不重複字串，資料換了才重算。給 TextWarmup 用。
+  List<String> _warmupStrings = const [];
 
   final ScrollController _scrollController = ScrollController();
   double _restoreOffset = 0;
@@ -64,10 +64,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           setState(() {
             _lastUsers = users;
             _sortedUsers = _buildSortedUsers(users, templates);
-            // 名單的姓名不見得都出現在服事表裡，所以這裡要另外預熱一次，
-            // 否則捲到只存在於帳號管理的名字時仍會觸發字型下載與重排。
-            _warmupCharacters = GlyphWarmup.uniqueCharactersOf(
-              users.expand((user) => [user.name, user.username, user.email]),
+            // 預熱的是「列上真正會顯示的字串」：標題與副標。名單的人不見得
+            // 都出現在服事表裡，所以這裡要自己來一次。
+            _warmupStrings = TextWarmup.uniqueStringsOf(
+              _sortedUsers.expand((item) => [item.displayName, item.subtitle]),
             );
             _lastTemplates = templates;
             _isRefreshing = false;
@@ -137,7 +137,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       ),
       body: Stack(
         children: [
-          GlyphWarmup(characters: _warmupCharacters),
+          TextWarmup(strings: _warmupStrings),
           FutureBuilder<List<User>>(
             future: _usersFuture,
             builder: (context, snapshot) {

@@ -232,19 +232,18 @@ void main() {
       expect(identical(provider.rosters, before), isFalse);
     });
 
-    test('displayCharacters 收齊姓名/服事項目/事件的字，並且去重', () {
-      final chars = provider.displayCharacters;
-      // 服事名稱「崇拜」、服事項目「領會」、人名「A」都要在裡面
-      for (final expected in ['崇', '拜', '領', '會', 'A']) {
-        expect(chars.contains(expected), isTrue, reason: '缺少 $expected');
+    test('displayStrings 收齊姓名/服事項目/事件，並且去重', () {
+      final strings = provider.displayStrings;
+      for (final expected in ['崇拜', '領會', 'A']) {
+        expect(strings, contains(expected));
       }
-      // 去重：每個字元只出現一次
-      expect(chars.runes.toSet().length, chars.runes.length);
+      // 去重：同一個字串只會出現一次（三筆 roster 的 serviceName 都是「崇拜」）
+      expect(strings.toSet().length, strings.length);
     });
 
-    test('資料變更後 displayCharacters 要跟著失效', () async {
+    test('資料變更後 displayStrings 要跟著失效', () async {
       // 先讀一次灌熱快取，才測得到失效而不是「從空快取重算」。
-      expect(provider.displayCharacters.contains('甲'), isFalse);
+      expect(provider.displayStrings, isNot(contains('甲')));
 
       final target = provider.rosters.firstWhere((r) => r.id == 'sun-1');
       await provider.updateRoster(
@@ -255,7 +254,7 @@ void main() {
         ),
       );
 
-      expect(provider.displayCharacters.contains('甲'), isTrue);
+      expect(provider.displayStrings, contains('甲'));
     });
 
     test('eventColorFor：本 type 優先，其次跨 type，找不到給灰色', () {

@@ -6,7 +6,7 @@ import '../../domain/entities/service_roster.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../domain/repositories/roster_repository.dart';
 import '../../../../core/utils/error_messages.dart';
-import '../../../../core/widgets/glyph_warmup.dart';
+import '../../../../core/widgets/text_warmup.dart';
 
 class RosterProvider with ChangeNotifier {
   final RosterRepository _repository;
@@ -33,7 +33,7 @@ class RosterProvider with ChangeNotifier {
   // 改資料，才不會有人漏掉 invalidate。
   Map<ServiceType, List<ServiceRoster>>? _rostersByType;
   Map<String, int>? _eventColorIndex;
-  String? _displayCharacters;
+  List<String>? _displayStrings;
 
   // 事件選項的版本號。UI 想知道「顏色定義有沒有換過」時可以 select 這個值 ——
   // eventOptionsByType 每次呼叫都會產生新的 Map，拿來做相等比較永遠會是 true。
@@ -53,7 +53,7 @@ class RosterProvider with ChangeNotifier {
   void _replaceRosters(List<ServiceRoster> rosters) {
     _allRosters = rosters;
     _rostersByType = null;
-    _displayCharacters = null;
+    _displayStrings = null;
   }
 
   /// 換掉單筆 roster。刻意複製一份新 List 而不是 `_allRosters[index] = ...` ——
@@ -162,12 +162,12 @@ class RosterProvider with ChangeNotifier {
   // 為了相容性，如果有人直接 call rosters (雖然目前沒人用)，回傳全部
   List<ServiceRoster> get rosters => _allRosters;
 
-  /// 服事表裡會被顯示出來的所有不重複字元，給 GlyphWarmup 預熱字型用。
+  /// 服事表會顯示出來的所有不重複字串，給 [TextWarmup] 預熱用。
   ///
-  /// 捲動時遇到沒排版過的中文字會觸發字型下載與全域重排，都落在 UI thread
-  /// 上。提前把這些字排版一次就能把成本挪到載入階段。
-  String get displayCharacters {
-    final cached = _displayCharacters;
+  /// 是「字串」不是「字元」：引擎的排版快取以整個字串為 key，只預熱字元只
+  /// 會把字型抓下來，每個名字第一次排版的成本還是會落在捲動途中。
+  List<String> get displayStrings {
+    final cached = _displayStrings;
     if (cached != null) return cached;
 
     final sources = <String>[];
@@ -179,9 +179,9 @@ class RosterProvider with ChangeNotifier {
         sources.addAll(duty.people);
       }
     }
-    final characters = GlyphWarmup.uniqueCharactersOf(sources);
-    _displayCharacters = characters;
-    return characters;
+    final strings = TextWarmup.uniqueStringsOf(sources);
+    _displayStrings = strings;
+    return strings;
   }
 
   Future<void> fetchInitialData() async {
