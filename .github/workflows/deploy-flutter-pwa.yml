@@ -102,9 +102,14 @@ jobs:
             --dart-define=GOOGLE_CALENDAR_ID="$GOOGLE_CALENDAR_ID"
           )
           mkdir -p web
-          # 用 runner 內建的環境變數而不是 ${{ }} 插值：${{ }} 是在 shell 啟動
-          # 「之前」把值直接貼成腳本文字，分支名帶了 shell 特殊字元（workflow_dispatch
-          # 可以從任意分支觸發）就會被當成指令執行，帶了引號也會把 JSON 寫壞。
+          # 這裡刻意讀 runner 內建的環境變數，而不是用 GitHub 的表示式插值。
+          # 表示式是在 shell 啟動「之前」把值直接貼成腳本文字，分支名帶了 shell
+          # 特殊字元（workflow_dispatch 可以從任意分支觸發）就會被當成指令執行，
+          # 帶了引號也會把 JSON 寫壞。
+          #
+          # 註：這段註解本身不能寫出表示式的雙大括號語法 —— GitHub 會掃描整個
+          # 檔案（包含 run: 區塊內部）去解析表示式，空的一組就是語法錯誤，
+          # 整份 workflow 會載入失敗、零個 job 執行。
           cat <<EOF > web/version.json
           {
             "version": "$GITHUB_SHA",
