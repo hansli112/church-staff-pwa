@@ -4,6 +4,7 @@ import '../../domain/entities/event_option.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../providers/roster_provider.dart';
 import '../../../../core/widgets/settings_bottom_sheet.dart';
+import '../../../../core/widgets/text_controller_scope.dart';
 
 class EventSettingsScreen extends StatefulWidget {
   const EventSettingsScreen({super.key});
@@ -54,6 +55,7 @@ class _EventSettingsScreenState extends State<EventSettingsScreen> {
   }
 
   Future<void> _promptAddEvent(ServiceType type) async {
+    // controller 由 TextControllerScope 在 bottom sheet 子樹卸載時 dispose。
     final controller = TextEditingController();
     final result = await _showEventDialog(
       title: '新增事件',
@@ -170,72 +172,77 @@ class _EventSettingsScreenState extends State<EventSettingsScreen> {
           );
         }
 
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return SettingsBottomSheet(
-              title: title,
-              onSubmit: () => submit(setState),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: controller,
-                    decoration: InputDecoration(
-                      labelText: '事件名稱',
-                      hintText: '例：聖餐主日',
-                      hintStyle: TextStyle(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.35),
+        return TextControllerScope(
+          controller: controller,
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              return SettingsBottomSheet(
+                title: title,
+                onSubmit: () => submit(setState),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: controller,
+                      decoration: InputDecoration(
+                        labelText: '事件名稱',
+                        hintText: '例：聖餐主日',
+                        hintStyle: TextStyle(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.35),
+                        ),
+                        floatingLabelBehavior: FloatingLabelBehavior.always,
+                        border: const OutlineInputBorder(),
+                        errorText: errorText,
                       ),
-                      floatingLabelBehavior: FloatingLabelBehavior.always,
-                      border: const OutlineInputBorder(),
-                      errorText: errorText,
+                      onChanged: (value) =>
+                          setState(() => errorText = validateValue(value)),
+                      onSubmitted: (_) => submit(setState),
                     ),
-                    onChanged: (value) =>
-                        setState(() => errorText = validateValue(value)),
-                    onSubmitted: (_) => submit(setState),
-                  ),
-                  const SizedBox(height: 16),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      '標籤顏色',
-                      style: TextStyle(color: Colors.grey.shade700),
+                    const SizedBox(height: 16),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '標籤顏色',
+                        style: TextStyle(color: Colors.grey.shade700),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 0,
-                    runSpacing: 0,
-                    children: _palette.map((colorValue) {
-                      final isSelected = selectedColor == colorValue;
-                      return InkWell(
-                        onTap: () => setState(() => selectedColor = colorValue),
-                        borderRadius: BorderRadius.circular(999),
-                        child: Padding(
-                          padding: const EdgeInsets.all(11),
-                          child: Container(
-                            width: 26,
-                            height: 26,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Color(colorValue),
-                              border: Border.all(
-                                color:
-                                    isSelected ? Colors.black54 : Colors.white,
-                                width: isSelected ? 2 : 1,
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 0,
+                      runSpacing: 0,
+                      children: _palette.map((colorValue) {
+                        final isSelected = selectedColor == colorValue;
+                        return InkWell(
+                          onTap: () =>
+                              setState(() => selectedColor = colorValue),
+                          borderRadius: BorderRadius.circular(999),
+                          child: Padding(
+                            padding: const EdgeInsets.all(11),
+                            child: Container(
+                              width: 26,
+                              height: 26,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Color(colorValue),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? Colors.black54
+                                      : Colors.white,
+                                  width: isSelected ? 2 : 1,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
-            );
-          },
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         );
       },
     );

@@ -4,6 +4,7 @@ import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../providers/roster_provider.dart';
 import '../../../auth/presentation/providers/user_admin_provider.dart';
 import '../../../../core/widgets/settings_bottom_sheet.dart';
+import '../../../../core/widgets/text_controller_scope.dart';
 
 class RoleSettingsScreen extends StatefulWidget {
   const RoleSettingsScreen({super.key});
@@ -42,6 +43,7 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
   }
 
   Future<void> _promptAddRole(ServiceType type) async {
+    // controller 由 TextControllerScope 在 bottom sheet 子樹卸載時 dispose。
     final controller = TextEditingController();
     final name = await _showRoleNameDialog(
       title: '新增項目',
@@ -157,31 +159,34 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
           Navigator.pop(context, value.trim());
         }
 
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return SettingsBottomSheet(
-              title: title,
-              onSubmit: () => submit(setState),
-              child: TextField(
-                controller: controller,
-                decoration: InputDecoration(
-                  labelText: '服事項目名稱',
-                  hintText: '例：敬拜主領',
-                  hintStyle: TextStyle(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.35),
+        return TextControllerScope(
+          controller: controller,
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              return SettingsBottomSheet(
+                title: title,
+                onSubmit: () => submit(setState),
+                child: TextField(
+                  controller: controller,
+                  decoration: InputDecoration(
+                    labelText: '服事項目名稱',
+                    hintText: '例：敬拜主領',
+                    hintStyle: TextStyle(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.35),
+                    ),
+                    floatingLabelBehavior: FloatingLabelBehavior.always,
+                    border: const OutlineInputBorder(),
+                    errorText: errorText,
                   ),
-                  floatingLabelBehavior: FloatingLabelBehavior.always,
-                  border: const OutlineInputBorder(),
-                  errorText: errorText,
+                  onChanged: (value) =>
+                      setState(() => errorText = validateValue(value)),
+                  onSubmitted: (_) => submit(setState),
                 ),
-                onChanged: (value) =>
-                    setState(() => errorText = validateValue(value)),
-                onSubmitted: (_) => submit(setState),
-              ),
-            );
-          },
+              );
+            },
+          ),
         );
       },
     );
