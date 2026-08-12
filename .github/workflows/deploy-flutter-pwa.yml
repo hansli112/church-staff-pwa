@@ -4,6 +4,11 @@ on:
     branches: [ main, dev ] # 當你 push 到 main 或 dev 時會觸發
   workflow_dispatch: # 允許手動觸發
 
+env:
+  # 同時給 flutter-action 與 cache_sw.js 的 VENDOR_VERSION 使用。
+  # 改這個版本號 = 讓使用者重新下載 canvaskit 引擎，其餘 deploy 都不會。
+  FLUTTER_VERSION: '3.41.0'
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -12,15 +17,26 @@ jobs:
       - uses: actions/checkout@v4
 
       # 2. 安裝 Flutter 環境 (GitHub 支援，Cloudflare 不支援)
+      # 版本固定：跟著 stable 浮動的話，某天 Flutter 發版就可能無預警 build 壞掉。
+      # 升級時手動改這個號碼，並在本機先跑過 flutter analyze / flutter test。
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
 
       # 3. 取得 Flutter 套件
       - run: flutter pub get
 
-      # 4. 編譯 Web (根據分支區分環境)
+      # 4. 品質關卡：analyze / test 沒過就不部署
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      # 5. 編譯 Web (根據分支區分環境)
       - name: Build Web
         env:
           # Secrets (sensitive)
@@ -64,27 +80,41 @@ jobs:
             "generated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           }
           EOF
-          flutter build web --release --base-href "/" "${DART_DEFINES[@]}"
+          # --no-web-resources-cdn：把 CanvasKit 放進自己的 build/web/canvaskit/。
+          # 預設會從 www.gstatic.com 載入，那條路徑 service worker 不能快取
+          # （gstatic.com 在 never-cache 名單裡），cache_sw.js 的 vendor cache
+          # 也就永遠不會命中。改成自家來源後引擎才真的能離線與跨 deploy 重用。
+          flutter build web --release --base-href "/" --no-web-resources-cdn "${DART_DEFINES[@]}"
 
-      # 5. 將 build SHA 注入 cache_sw.js 作為 CACHE_VERSION
-      # 每次 deploy 產生不同的 cache name，舊版資產才會在 SW activate
-      # 時被清掉，使用者下一次 reload 不會卡在舊的 main.dart.js 快取。
+      # 6. 將版本號注入 cache_sw.js
+      # BUILD_VERSION（每次 deploy 都不同）→ App 資產 cache，確保使用者
+      #   下一次 reload 不會卡在舊的 main.dart.js。
+      # VENDOR_VERSION（只跟 Flutter 版本走）→ canvaskit 等引擎資產 cache，
+      #   讓 7 MB 的 canvaskit.wasm 不會每次 deploy 都被清掉重下載。
       # fail-fast 防止 placeholder 已被替換或不存在時 silently no-op。
-      - name: Inject build version into cache_sw.js
+      - name: Inject cache versions into cache_sw.js
         run: |
           set -euo pipefail
-          if ! grep -q '__BUILD_VERSION__' build/web/cache_sw.js; then
-            echo "::error::__BUILD_VERSION__ placeholder not found in build/web/cache_sw.js"
-            exit 1
-          fi
+          for placeholder in __BUILD_VERSION__ __VENDOR_VERSION__; do
+            if ! grep -q "$placeholder" build/web/cache_sw.js; then
+              echo "::error::$placeholder placeholder not found in build/web/cache_sw.js"
+              exit 1
+            fi
+          done
           BUILD_VERSION="${GITHUB_SHA::8}-${{ github.run_number }}"
-          sed -i "s|__BUILD_VERSION__|${BUILD_VERSION}|g" build/web/cache_sw.js
-          if ! grep -q "${BUILD_VERSION}" build/web/cache_sw.js; then
-            echo "::error::sed substitution did not produce expected version"
-            exit 1
-          fi
+          VENDOR_VERSION="flutter-${FLUTTER_VERSION}"
+          sed -i \
+            -e "s|__BUILD_VERSION__|${BUILD_VERSION}|g" \
+            -e "s|__VENDOR_VERSION__|${VENDOR_VERSION}|g" \
+            build/web/cache_sw.js
+          for expected in "${BUILD_VERSION}" "${VENDOR_VERSION}"; do
+            if ! grep -q "${expected}" build/web/cache_sw.js; then
+              echo "::error::sed substitution did not produce ${expected}"
+              exit 1
+            fi
+          done
 
-      # 6. 將 Firebase 設定注入 messaging service worker
+      # 7. 將 Firebase 設定注入 messaging service worker
       - name: Inject Firebase config into service worker
         env:
           FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
@@ -105,13 +135,17 @@ jobs:
             -e "s|__FIREBASE_MEASUREMENT_ID__|$FIREBASE_MEASUREMENT_ID|g" \
             build/web/firebase-messaging-sw.js
 
-      # 7. 部署到 Cloudflare Pages
+      # 8. 部署到 Cloudflare Pages
+      # cloudflare/pages-action@v1 已被官方 deprecate（repo 已封存），
+      # 改用 wrangler-action 跑 `pages deploy`。API token 權限需求相同
+      # （Cloudflare Pages: Edit）。
+      # 關鍵：推送到 main 會更新 Production，推送到 dev 會產生 Preview 網址
       - name: Publish to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: church-staff-pwa  # 務必與你 Cloudflare 上的專案名稱一致
-          directory: build/web          # 指定編譯後的產出目錄
-          # 關鍵：推送到 main 會更新 Production，推送到 dev 會產生 Preview 網址
-          branch: ${{ github.ref_name }}
+          command: >-
+            pages deploy build/web
+            --project-name=church-staff-pwa
+            --branch=${{ github.ref_name }}

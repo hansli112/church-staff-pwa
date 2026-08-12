@@ -13,9 +13,12 @@ RUN apt-get update && apt-get install -y \
     libglu1-mesa \
     && rm -rf /var/lib/apt/lists/*
 
-# 下載 Flutter SDK (Stable Channel)
+# 下載 Flutter SDK。版本固定，與 .github/workflows/deploy-flutter-pwa.yml
+# 的 FLUTTER_VERSION 保持一致；跟著 stable 浮動會讓 image 某天無預警壞掉。
+ARG FLUTTER_VERSION=3.41.0
 ENV FLUTTER_HOME="/usr/local/flutter"
-RUN git clone https://github.com/flutter/flutter.git -b stable $FLUTTER_HOME
+RUN git clone --depth 1 https://github.com/flutter/flutter.git \
+    -b ${FLUTTER_VERSION} $FLUTTER_HOME
 
 # 設定環境變數
 ENV PATH="$FLUTTER_HOME/bin:$FLUTTER_HOME/bin/cache/dart-sdk/bin:${PATH}"
@@ -33,12 +36,59 @@ RUN flutter pub get
 # 複製其餘原始碼
 COPY . .
 
-# Web Push 的公開 VAPID Key（建置時注入）
+# 建置時注入的設定。FIREBASE_* 少給的話，編出來的 App 連 Firebase 都
+# 初始化不了（原本這裡只傳了 VAPID key，等於產出不能用的 image）。
 ARG FCM_WEB_VAPID_KEY=""
+ARG FIREBASE_API_KEY=""
+ARG FIREBASE_AUTH_DOMAIN=""
+ARG FIREBASE_PROJECT_ID=""
+ARG FIREBASE_STORAGE_BUCKET=""
+ARG FIREBASE_MESSAGING_SENDER_ID=""
+ARG FIREBASE_APP_ID=""
+ARG FIREBASE_MEASUREMENT_ID=""
+ARG GOOGLE_CALENDAR_API_KEY=""
+ARG GOOGLE_CALENDAR_ID=""
 
 # 編譯 Web 版本 (Release Mode)
-RUN flutter build web --release --base-href / \
-    --dart-define=FCM_WEB_VAPID_KEY=${FCM_WEB_VAPID_KEY}
+# 每個 Firebase.initializeApp 必要的欄位都要檢查 —— 只擋 API key 的話，
+# 少給 projectId 一樣會編出一個在瀏覽器裡開不起來的 image。
+RUN for required in FIREBASE_API_KEY FIREBASE_AUTH_DOMAIN FIREBASE_PROJECT_ID \
+                    FIREBASE_MESSAGING_SENDER_ID FIREBASE_APP_ID; do \
+      eval "value=\${$required}"; \
+      if [ -z "$value" ]; then \
+        echo "ERROR: $required build-arg is empty; the image would be non-functional." >&2; \
+        exit 1; \
+      fi; \
+    done \
+ && flutter build web --release --base-href / --no-web-resources-cdn \
+    --dart-define=FCM_WEB_VAPID_KEY=${FCM_WEB_VAPID_KEY} \
+    --dart-define=FIREBASE_API_KEY=${FIREBASE_API_KEY} \
+    --dart-define=FIREBASE_AUTH_DOMAIN=${FIREBASE_AUTH_DOMAIN} \
+    --dart-define=FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID} \
+    --dart-define=FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET} \
+    --dart-define=FIREBASE_MESSAGING_SENDER_ID=${FIREBASE_MESSAGING_SENDER_ID} \
+    --dart-define=FIREBASE_APP_ID=${FIREBASE_APP_ID} \
+    --dart-define=FIREBASE_MEASUREMENT_ID=${FIREBASE_MEASUREMENT_ID} \
+    --dart-define=GOOGLE_CALENDAR_API_KEY=${GOOGLE_CALENDAR_API_KEY} \
+    --dart-define=GOOGLE_CALENDAR_ID=${GOOGLE_CALENDAR_ID}
+
+# 與 CI 相同：把版本號填進 cache_sw.js，並把 Firebase 設定填進推播 SW。
+# 少了這步，自架版的 SW cache 永遠不會失效，使用者會卡在第一次載入的版本。
+RUN set -eu; \
+    BUILD_VERSION="$(date -u +%Y%m%d%H%M%S)"; \
+    sed -i \
+      -e "s|__BUILD_VERSION__|${BUILD_VERSION}|g" \
+      -e "s|__VENDOR_VERSION__|flutter-${FLUTTER_VERSION}|g" \
+      build/web/cache_sw.js; \
+    sed -i \
+      -e "s|__FIREBASE_API_KEY__|${FIREBASE_API_KEY}|g" \
+      -e "s|__FIREBASE_AUTH_DOMAIN__|${FIREBASE_AUTH_DOMAIN}|g" \
+      -e "s|__FIREBASE_PROJECT_ID__|${FIREBASE_PROJECT_ID}|g" \
+      -e "s|__FIREBASE_STORAGE_BUCKET__|${FIREBASE_STORAGE_BUCKET}|g" \
+      -e "s|__FIREBASE_MESSAGING_SENDER_ID__|${FIREBASE_MESSAGING_SENDER_ID}|g" \
+      -e "s|__FIREBASE_APP_ID__|${FIREBASE_APP_ID}|g" \
+      -e "s|__FIREBASE_MEASUREMENT_ID__|${FIREBASE_MEASUREMENT_ID}|g" \
+      build/web/firebase-messaging-sw.js
 
 # Stage 2: 執行環境 (目標架構 armv7)
 # Nginx Alpine 版本支援多架構，包括 linux/arm/v7

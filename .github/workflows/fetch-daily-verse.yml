@@ -33,9 +33,23 @@ jobs:
             console.error('Snippet: ' + html.substring(0, 500));
             process.exit(1);
           }
+          // curl 走的是 --insecure（對方憑證鏈不完整），所以這份 HTML 沒有
+          // 傳輸層保證。內容會 commit 進 data 分支並直接顯示在 App 上，
+          // 這裡先做基本健檢，明顯不對的就讓 workflow 失敗而不是寫進去。
+          const rawRange = match[2].trim();
+          if (rawRange.length === 0 || rawRange.length > 60 || /[<>]/.test(rawRange)) {
+            console.error('Suspicious rawRange, refusing to write: ' + JSON.stringify(rawRange));
+            process.exit(1);
+          }
+          const todayTW = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
+          if (match[1] > todayTW) {
+            console.error('Parsed date is in the future: ' + match[1] + ' > ' + todayTW);
+            process.exit(1);
+          }
+
           const now = new Date();
           const fetchedAt = new Date(now.getTime() + 8 * 3600000).toISOString().replace('Z', '+08:00');
-          const data = { date: match[1], rawRange: match[2].trim(), fetchedAt };
+          const data = { date: match[1], rawRange, fetchedAt };
           fs.writeFileSync('daily-verse.json', JSON.stringify(data, null, 2) + '\n');
           console.log('Fetched:', JSON.stringify(data));
           SCRIPT

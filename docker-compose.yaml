@@ -1,12 +1,21 @@
-version: '3.8'
-
+# 建置參數從同目錄的 .env 讀（照 .env.example 建立）。
+# Firebase 設定必須在 build 時就注入，執行期沒有機會補。
 services:
   web:
     build:
       context: .
       dockerfile: Dockerfile
-      # 如果您在電腦上使用 buildx 構建並推送到 armv7 裝置，可以保留此行
-      # 如果直接在 armv7 裝置上 build，這行確保最終 image 標記正確
+      args:
+        FCM_WEB_VAPID_KEY: ${FCM_WEB_VAPID_KEY:-}
+        FIREBASE_API_KEY: ${FIREBASE_API_KEY:?FIREBASE_API_KEY is required}
+        FIREBASE_AUTH_DOMAIN: ${FIREBASE_AUTH_DOMAIN:-}
+        FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+        FIREBASE_STORAGE_BUCKET: ${FIREBASE_STORAGE_BUCKET:-}
+        FIREBASE_MESSAGING_SENDER_ID: ${FIREBASE_MESSAGING_SENDER_ID:-}
+        FIREBASE_APP_ID: ${FIREBASE_APP_ID:-}
+        FIREBASE_MEASUREMENT_ID: ${FIREBASE_MEASUREMENT_ID:-}
+        GOOGLE_CALENDAR_API_KEY: ${GOOGLE_CALENDAR_API_KEY:-}
+        GOOGLE_CALENDAR_ID: ${GOOGLE_CALENDAR_ID:-}
     image: church-staff-pwa:latest
     container_name: church_staff_pwa
     restart: unless-stopped
