@@ -11,6 +11,7 @@ import '../providers/roster_provider.dart';
 import '../widgets/roster_card.dart';
 import '../../../../core/utils/error_messages.dart';
 import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/utils/snappy_page_scroll_physics.dart';
 import '../../../../core/widgets/settings_bottom_sheet.dart';
 import '../../../../core/widgets/text_controller_scope.dart';
 import 'event_settings_screen.dart' deferred as event_settings_screen;
@@ -199,10 +200,8 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
 
           // TabBarView 預設支援左右滑動
           return TabBarView(
-            // 結合 BouncingScrollPhysics 產生彈性，同時保持分頁吸附感
-            physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics(),
-            ),
+            // 收尾動畫越久，「換完分頁馬上想往下滑卻沒反應」的窗口就越長。
+            physics: const SnappyPageScrollPhysics(),
             controller: widget.tabController,
             children: allowedTypes.map((type) {
               return _RosterList(

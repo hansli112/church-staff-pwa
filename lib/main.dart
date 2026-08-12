@@ -7,8 +7,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 import 'core/services/push_notification_service.dart';
-import 'core/widgets/perf_hud.dart';
-import 'core/widgets/scroll_bench_screen.dart';
 import 'features/roster/data/repositories/firestore_roster_repository.dart';
 import 'features/roster/presentation/providers/roster_provider.dart';
 import 'features/auth/data/repositories/firebase_auth_repository.dart';
@@ -57,18 +55,6 @@ class ChurchApp extends StatelessWidget {
     seedColor: Colors.blue,
     brightness: Brightness.light,
   );
-
-  /// 用 `?perf=1` 開啟畫面上的即時效能數字（[PerfHud]）。
-  ///
-  /// 注意不能用 Flutter 內建的 `showPerformanceOverlay` —— 它在 Web 上是
-  /// 沒有實作的 no-op，引擎只會印一行警告，畫面上什麼都不會出現。
-  ///
-  /// 預設關閉，一般使用者不會遇到。
-  static final bool _showPerfHud =
-      Uri.base.queryParameters['perf'] == '1' || _benchMode;
-
-  /// 用 `?bench=1` 進入捲動基準測試（不需要登入），並自動打開 HUD。
-  static final bool _benchMode = Uri.base.queryParameters['bench'] == '1';
 
   @override
   Widget build(BuildContext context) {
@@ -130,13 +116,8 @@ class ChurchApp extends StatelessWidget {
           appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
         ),
         locale: const Locale('zh', 'TW'),
-        home: _benchMode
-            ? const ScrollBenchScreen()
-            : AuthWrapper(pushNotificationService: pushNotificationService),
+        home: AuthWrapper(pushNotificationService: pushNotificationService),
         debugShowCheckedModeBanner: false,
-        builder: _showPerfHud
-            ? (context, child) => PerfHud(child: child ?? const SizedBox())
-            : null,
       ),
     );
   }

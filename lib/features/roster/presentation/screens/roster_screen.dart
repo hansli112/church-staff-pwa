@@ -10,6 +10,7 @@ import '../providers/roster_provider.dart';
 import '../widgets/roster_view_card.dart';
 import '../../../../core/utils/error_messages.dart';
 import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/utils/snappy_page_scroll_physics.dart';
 import 'roster_edit_screen.dart' deferred as roster_edit_screen;
 
 class RosterScreen extends StatefulWidget {
@@ -236,9 +237,8 @@ class _RosterScreenState extends State<RosterScreen>
             }
 
             return TabBarView(
-              physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics(),
-              ),
+              // 收尾動畫越久，「換完分頁馬上想往下滑卻沒反應」的窗口就越長。
+              physics: const SnappyPageScrollPhysics(),
               controller: _tabController,
               children: allowedTypes.map((type) {
                 return _RosterViewList(
