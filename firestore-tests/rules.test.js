@@ -4,6 +4,7 @@
 //
 // 規則是唯一擋得住「繞過 App、直接用公開 web SDK 打 Firestore」的東西，
 // 所以每一條授權判斷都要有對應的測試。
+import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { after, before, describe, it } from 'node:test';
 import {
@@ -12,14 +13,26 @@ import {
   initializeTestEnvironment,
 } from '@firebase/rules-unit-testing';
 import {
+  Timestamp,
+  arrayUnion,
+  collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
+  getDocs,
+  orderBy,
+  query,
+  serverTimestamp,
   setDoc,
   updateDoc,
+  where,
 } from 'firebase/firestore';
 
-const [host, port] = (process.env.FIRESTORE_EMULATOR_HOST ?? '127.0.0.1:8080').split(':');
+// 預設值要跟 firebase.json 的 emulators.firestore.port 一致。`npm test` 走
+// emulators:exec 會自己設好 FIRESTORE_EMULATOR_HOST，但手動起 emulator 再跑
+// `node --test rules.test.js` 時只剩這個預設值，寫錯 port 會變成連不上的怪錯誤。
+const [host, port] = (process.env.FIRESTORE_EMULATOR_HOST ?? '127.0.0.1:8181').split(':');
 
 let testEnv;
 
@@ -27,6 +40,7 @@ const ADMIN = 'admin-1';
 const MEMBER = 'member-1';
 const OTHER = 'member-2';
 const DELETED = 'deleted-1'; // 有 Auth token，但 users 文件已被管理員刪掉
+const LEGACY = 'legacy-1'; // 舊資料：users 文件存在但沒有 role 欄位
 
 function userDoc(id, role) {
   return {
@@ -49,13 +63,28 @@ before(async () => {
     },
   });
 
+  // 一定要先清空：`npm test` 每次都是全新 emulator 所以看不出來，但只要對著
+  // 長時間開著的 emulator 重跑，上一輪殘留的 users/new-staff 之類文件就會讓
+  // 「建立帳號」的測試變成在打 update 規則，create 那幾條就悄悄失去偵測力。
+  await testEnv.clearFirestore();
+
   await testEnv.withSecurityRulesDisabled(async (context) => {
     const db = context.firestore();
     await setDoc(doc(db, 'users', ADMIN), userDoc(ADMIN, 'admin'));
     await setDoc(doc(db, 'users', MEMBER), userDoc(MEMBER, 'member'));
     await setDoc(doc(db, 'users', OTHER), userDoc(OTHER, 'leader'));
     // 注意：DELETED 刻意沒有 users 文件。
+    const legacy = userDoc(LEGACY, 'member');
+    delete legacy.role;
+    await setDoc(doc(db, 'users', LEGACY), legacy);
+    // users 底下不該有任何子集合可讀寫，靠最後的 default deny 擋。
+    await setDoc(doc(db, 'users', MEMBER, 'private', 'secret'), { pin: '1234' });
     await setDoc(doc(db, 'rosters', 'r1'), { serviceName: '主日崇拜' });
+    // r2 專門給 list 查詢用：r1 會被「管理員可以改服事表」覆寫掉 date 欄位。
+    await setDoc(doc(db, 'rosters', 'r2'), {
+      serviceName: '青年崇拜',
+      date: Timestamp.fromDate(new Date('2030-01-05T00:00:00Z')),
+    });
     await setDoc(doc(db, 'settings', 'roster_templates'), {
       sundayService: ['領會'],
     });
@@ -96,6 +125,36 @@ describe('rosters / settings 讀取', () => {
 
   it('未登入讀不到服事表', async () => {
     await assertFails(getDoc(doc(asAnon(), 'rosters', 'r1')));
+  });
+
+  it('未登入讀不到 settings', async () => {
+    await assertFails(getDoc(doc(asAnon(), 'settings', 'roster_templates')));
+  });
+
+  // App 真正的讀取路徑是 collection query，不是單筆 getDoc
+  // （FirestoreRosterRepository.getUpcomingRosters）。只測 getDoc 的話，
+  // 把 rules 的 `allow read` 收窄成 `allow get` 也不會被抓到，但整個服事表
+  // 畫面會直接 permission-denied。
+  it('一般同工可以用 App 的查詢條件列出服事表', async () => {
+    const snapshot = await assertSucceeds(
+      getDocs(
+        query(
+          collection(asMember(), 'rosters'),
+          where('date', '>=', Timestamp.fromDate(new Date('2020-01-01Z'))),
+          orderBy('date'),
+        ),
+      ),
+    );
+    // 真的有讀到資料，而不是「查詢通過但結果為空」。
+    assert.ok(snapshot.size >= 1, '應該至少讀到一筆有 date 的 roster');
+  });
+
+  it('被刪掉的帳號不能列出服事表', async () => {
+    await assertFails(getDocs(collection(asDeleted(), 'rosters')));
+  });
+
+  it('未登入不能列出服事表', async () => {
+    await assertFails(getDocs(collection(asAnon(), 'rosters')));
   });
 });
 
@@ -141,6 +200,50 @@ describe('users 讀取', () => {
 
   it('被刪掉的帳號讀不到別人的資料', async () => {
     await assertFails(getDoc(doc(asDeleted(), 'users', MEMBER)));
+  });
+
+  it('未登入讀不到任何人的資料', async () => {
+    await assertFails(getDoc(doc(asAnon(), 'users', MEMBER)));
+  });
+
+  // 以下四條是「users 讀取收窄」真正的重點。收窄前後 getDoc 自己那筆都會成功，
+  // 差別只出現在 list：只測 getDoc 的話，有人加一條 `allow list: if isActiveUser()`
+  // 就等於把全體同工的 email 與 fcm token 重新對所有登入者開放，而測試全綠。
+  it('管理員可以列出整個 users collection（後台人員選擇器走這條）', async () => {
+    const snapshot = await assertSucceeds(
+      getDocs(collection(asAdmin(), 'users')),
+    );
+    assert.ok(snapshot.size >= 3, '管理員應該讀得到所有使用者');
+  });
+
+  it('一般同工不能列出 users collection', async () => {
+    await assertFails(getDocs(collection(asMember(), 'users')));
+  });
+
+  // 加上 where 條件也不行：rules 不是過濾器，list 一律整批拒絕。
+  it('一般同工不能用 where 條件迂迴列出 users', async () => {
+    await assertFails(
+      getDocs(query(collection(asMember(), 'users'), where('id', '==', MEMBER))),
+    );
+    await assertFails(
+      getDocs(
+        query(collection(asMember(), 'users'), where('role', '==', 'admin')),
+      ),
+    );
+  });
+
+  it('被刪掉的帳號不能列出 users collection', async () => {
+    await assertFails(getDocs(collection(asDeleted(), 'users')));
+  });
+
+  // users/{uid} 的 match 不涵蓋子集合，只靠最後的 default deny 擋。
+  it('users 底下的子集合連本人與管理員都讀不到', async () => {
+    await assertFails(
+      getDoc(doc(asMember(), 'users', MEMBER, 'private', 'secret')),
+    );
+    await assertFails(
+      getDoc(doc(asAdmin(), 'users', MEMBER, 'private', 'secret')),
+    );
   });
 });
 
@@ -192,6 +295,107 @@ describe('users 自我更新', () => {
       ),
     );
   });
+
+  // selfUpdateOnlyTouches 的重點在 hasOnly，不在「有沒有碰到 role」。
+  // 只寫 role 的攻擊上面已經測了，但那條測試擋不住 hasOnly 被寫成 hasAny：
+  // hasAny 之下「只寫 role」仍然會被拒絕（測試照樣綠），而「fcm + role 一起寫」
+  // 就會過關，一次請求把自己升成 admin。這幾條就是補那個洞。
+  it('不能把 role 夾帶在合法欄位裡一起寫入', async () => {
+    await assertFails(
+      setDoc(
+        doc(asMember(), 'users', MEMBER),
+        { fcm: { webTokens: ['token-evil'] }, role: 'admin' },
+        { merge: true },
+      ),
+    );
+    await assertFails(
+      setDoc(
+        doc(asMember(), 'users', MEMBER),
+        { notificationPrefs: { weeklyRosterReminder: true }, role: 'admin' },
+        { merge: true },
+      ),
+    );
+  });
+
+  it('不能把姓名夾帶在合法欄位裡一起寫入', async () => {
+    await assertFails(
+      updateDoc(doc(asMember(), 'users', MEMBER), {
+        fcm: { webTokens: ['token-evil'] },
+        name: '自己改的',
+      }),
+    );
+  });
+
+  // 同時寫兩個合法欄位要放行：App 的通知開關流程就是先寫 fcm 再寫
+  // notificationPrefs，若哪天合併成一次寫入也不該被擋。
+  it('可以一次寫入 fcm 與 notificationPrefs', async () => {
+    await assertSucceeds(
+      setDoc(
+        doc(asMember(), 'users', MEMBER),
+        {
+          fcm: { webTokens: ['token-both'] },
+          notificationPrefs: { weeklyRosterReminder: false },
+        },
+        { merge: true },
+      ),
+    );
+  });
+
+  // PushNotificationService._saveToken 的實際寫法：arrayUnion + serverTimestamp。
+  // 上面那條用的是普通陣列，擋不住「未來加了 fcm 欄位型別驗證卻沒考慮
+  // sentinel 值」而讓真正的 App 寫入失敗。
+  it('可以用 App 實際的 arrayUnion + serverTimestamp 寫法存 fcm token', async () => {
+    await assertSucceeds(
+      setDoc(
+        doc(asMember(), 'users', MEMBER),
+        {
+          fcm: {
+            webTokens: arrayUnion('token-real'),
+            lastUpdatedAt: serverTimestamp(),
+          },
+        },
+        { merge: true },
+      ),
+    );
+  });
+
+  // 管理員自己也會跑 _saveToken。這條走的是 update 規則的 isAdmin 分支，
+  // 而該分支帶著 hasValidRole()，所以要確認 merge 寫入不會被自己的驗證擋掉。
+  it('管理員也可以寫自己的 fcm token', async () => {
+    await assertSucceeds(
+      setDoc(
+        doc(asAdmin(), 'users', ADMIN),
+        {
+          fcm: {
+            webTokens: arrayUnion('admin-token'),
+            lastUpdatedAt: serverTimestamp(),
+          },
+        },
+        { merge: true },
+      ),
+    );
+  });
+
+  it('不能整份覆寫自己的文件（set 不帶 merge）', async () => {
+    await assertFails(
+      setDoc(doc(asMember(), 'users', MEMBER), userDoc(MEMBER, 'admin')),
+    );
+  });
+
+  // 被刪掉的帳號對自己的文件做 set(merge) 會落在 create 規則（文件不存在），
+  // 而 create 只開給管理員 —— 所以無法自己把自己救回來重新取得讀取權。
+  it('被刪掉的帳號不能用 set(merge) 把自己的文件寫回來', async () => {
+    await assertFails(
+      setDoc(
+        doc(asDeleted(), 'users', DELETED),
+        { fcm: { webTokens: ['revive'] } },
+        { merge: true },
+      ),
+    );
+    await assertFails(
+      setDoc(doc(asDeleted(), 'users', DELETED), userDoc(DELETED, 'member')),
+    );
+  });
 });
 
 describe('users 管理員操作與 role 驗證', () => {
@@ -232,8 +436,40 @@ describe('users 管理員操作與 role 驗證', () => {
     await assertFails(deleteDoc(doc(asMember(), 'users', OTHER)));
   });
 
+  // 自己準備要被刪的文件，不要依賴上面「管理員可以用合法 role 建立帳號」
+  // 留下來的 new-staff：那種隱性順序相依會讓單獨跑一條測試時整個爆掉。
   it('管理員可以刪帳號', async () => {
-    await assertSucceeds(deleteDoc(doc(asAdmin(), 'users', 'new-staff')));
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(
+        doc(context.firestore(), 'users', 'doomed-1'),
+        userDoc('doomed-1', 'member'),
+      );
+    });
+    await assertSucceeds(deleteDoc(doc(asAdmin(), 'users', 'doomed-1')));
+  });
+
+  // 舊資料可能沒有 role 欄位。hasValidRole() 讀的是「寫入後的完整文件」，
+  // 所以只改 name 會因為 role 不存在而被擋；管理員必須順手補上 role。
+  // 後台的 updateUser 走的是 user.toJson() 全欄位覆寫，一定帶 role，所以
+  // 正常操作不受影響 —— 這條是把這個邊界行為釘住，避免有人誤判成 rules 壞了。
+  it('沒有 role 欄位的舊資料：只改其他欄位會被擋，補上 role 才能改', async () => {
+    await assertFails(
+      updateDoc(doc(asAdmin(), 'users', LEGACY), { name: '只改名字' }),
+    );
+    await assertSucceeds(
+      updateDoc(doc(asAdmin(), 'users', LEGACY), {
+        name: '補上 role',
+        role: 'member',
+      }),
+    );
+  });
+
+  // role 欄位不能被刪掉：刪掉之後 hasValidRole() 會直接評估失敗，
+  // 該使用者的文件就再也不能用「只改一半欄位」的方式維護了。
+  it('管理員不能刪掉 role 欄位', async () => {
+    await assertFails(
+      updateDoc(doc(asAdmin(), 'users', OTHER), { role: deleteField() }),
+    );
   });
 });
 
