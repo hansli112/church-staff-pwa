@@ -24,7 +24,49 @@ class RosterProvider with ChangeNotifier {
   // fetch 完成後比對 token，若不一致代表已過期，直接 drop 結果。
   int _fetchToken = 0;
 
+  // ── 衍生資料快取 ────────────────────────────────────────────────────────
+  // UI 每次 rebuild 都會問「這個牧區有哪些 roster」「這個事件是什麼顏色」。
+  // 現算的話等於每個 frame 都掃一次全部資料，所以算一次存起來，
+  // 只在 _allRosters / _eventOptionsByType 真的變動時丟掉。
+  // 一律透過 _replaceRosters / _replaceRosterAt / _replaceEventOptions
+  // 改資料，才不會有人漏掉 invalidate。
+  Map<ServiceType, List<ServiceRoster>>? _rostersByType;
+  Map<String, int>? _eventColorIndex;
+
+  // 事件選項的版本號。UI 想知道「顏色定義有沒有換過」時可以 select 這個值 ——
+  // eventOptionsByType 每次呼叫都會產生新的 Map，拿來做相等比較永遠會是 true。
+  int _eventOptionsRevision = 0;
+
   RosterProvider(this._repository);
+
+  /// 事件選項的版本號，每次選項被替換就 +1。
+  /// widget 用 `context.select((p) => p.eventOptionsRevision)` 訂閱顏色變動。
+  int get eventOptionsRevision => _eventOptionsRevision;
+
+  /// 換掉整份 roster 清單。
+  ///
+  /// [rosters] 的 identity 本身就是「資料換過了」的訊號 —— 消費端（例如首頁
+  /// 的本季服事 memo）用 `identical()` 判斷要不要重算，所以任何內容變動都
+  /// **必須**換成新的 List instance，不能就地改寫。
+  void _replaceRosters(List<ServiceRoster> rosters) {
+    _allRosters = rosters;
+    _rostersByType = null;
+  }
+
+  /// 換掉單筆 roster。刻意複製一份新 List 而不是 `_allRosters[index] = ...` ——
+  /// 就地改寫會讓 `rosters` 的 identity 不變，靠 identity 判斷是否失效的
+  /// 消費端就會繼續用舊的計算結果。
+  void _replaceRosterAt(int index, ServiceRoster roster) {
+    final updated = List<ServiceRoster>.of(_allRosters);
+    updated[index] = roster;
+    _replaceRosters(updated);
+  }
+
+  void _replaceEventOptions(Map<ServiceType, List<EventOption>> options) {
+    _eventOptionsByType = options;
+    _eventColorIndex = null;
+    _eventOptionsRevision++;
+  }
 
   bool get isLoading => _isLoading;
   bool get isEditMode => _isEditMode;
@@ -37,21 +79,34 @@ class RosterProvider with ChangeNotifier {
   );
   List<EventOption> eventOptionsFor(ServiceType type) =>
       List.unmodifiable(_eventOptionsByType[type] ?? const <EventOption>[]);
+
+  /// 事件名稱 → 顏色。每張卡片的每個事件標籤在每次 rebuild 都會問一次，
+  /// 所以用一份攤平的索引，不要每次都線性掃過所有 ServiceType 的清單。
+  /// 同名事件以本 type 的定義優先，其次才是其他 type（維持原本語意）。
   int eventColorFor(ServiceType type, String name) {
-    final options = _eventOptionsByType[type] ?? const <EventOption>[];
-    final direct = options.firstWhere(
-      (e) => e.name == name,
-      orElse: () => const EventOption(name: '', color: 0xFF7F8C8D),
-    );
-    if (direct.name.isNotEmpty) return direct.color;
-    for (final list in _eventOptionsByType.values) {
-      final found = list.firstWhere(
-        (e) => e.name == name,
-        orElse: () => const EventOption(name: '', color: 0xFF7F8C8D),
-      );
-      if (found.name.isNotEmpty) return found.color;
+    final own = _eventOptionsByType[type];
+    if (own != null) {
+      for (final option in own) {
+        if (option.name == name) return option.color;
+      }
     }
-    return 0xFF7F8C8D;
+    return _colorIndex[name] ?? _fallbackEventColor;
+  }
+
+  static const int _fallbackEventColor = 0xFF7F8C8D;
+
+  Map<String, int> get _colorIndex {
+    final cached = _eventColorIndex;
+    if (cached != null) return cached;
+
+    final index = <String, int>{};
+    for (final list in _eventOptionsByType.values) {
+      for (final option in list) {
+        index.putIfAbsent(option.name, () => option.color);
+      }
+    }
+    _eventColorIndex = index;
+    return index;
   }
 
   void toggleEditMode() {
@@ -66,9 +121,9 @@ class RosterProvider with ChangeNotifier {
     _lastSessionUserId = userId;
 
     _fetchToken++; // 讓進行中的 fetch 過期
-    _allRosters = [];
+    _replaceRosters([]);
     _templates = {};
-    _eventOptionsByType = {};
+    _replaceEventOptions({});
     _error = null;
     _isEditMode = false;
 
@@ -81,9 +136,24 @@ class RosterProvider with ChangeNotifier {
     }
   }
 
-  // 取得特定類別的服事表
+  /// 取得特定類別的服事表。分組結果會快取 — UI 每次 rebuild 都會對三個
+  /// ServiceType 各問一次，現算等於每個 frame 掃三遍全部 roster 並配置三個
+  /// 新 List（也讓 ListView 每次都拿到不同的 list instance）。
   List<ServiceRoster> getRostersByType(ServiceType type) {
-    return _allRosters.where((r) => r.type == type).toList();
+    final grouped = _rostersByType ??= _groupByType(_allRosters);
+    return grouped[type] ?? const <ServiceRoster>[];
+  }
+
+  static Map<ServiceType, List<ServiceRoster>> _groupByType(
+    List<ServiceRoster> all,
+  ) {
+    final grouped = <ServiceType, List<ServiceRoster>>{
+      for (final type in ServiceType.values) type: <ServiceRoster>[],
+    };
+    for (final roster in all) {
+      grouped[roster.type]?.add(roster);
+    }
+    return grouped;
   }
 
   // 為了相容性，如果有人直接 call rosters (雖然目前沒人用)，回傳全部
@@ -99,7 +169,7 @@ class RosterProvider with ChangeNotifier {
       final cached = await _repository.getUpcomingRostersFromCache();
       if (token != _fetchToken) return; // stale token，丟棄
       if (cached.isNotEmpty) {
-        _allRosters = cached;
+        _replaceRosters(cached);
         notifyListeners(); // 先渲染 stale data
       }
     } catch (e, st) {
@@ -112,16 +182,24 @@ class RosterProvider with ChangeNotifier {
     _error = null;
     notifyListeners();
 
+    // 三個請求同時發，但只有 roster 是必要的：服事表沒有 templates /
+    // event options 一樣能顯示（那兩份只影響編輯用的選單與標籤顏色）。
+    // 全部塞進同一個 Future.wait 的話，任何一份 settings 讀取失敗都會把
+    // 已經成功抓到的 roster 一起丟掉，畫面變成「載入失敗」。
+    final rostersFuture = _repository.getUpcomingRosters();
+    final templatesFuture = _optional(
+      _repository.getServiceTemplates(),
+      '載入服事項目樣板失敗（不影響服事表顯示）',
+    );
+    final eventOptionsFuture = _optional(
+      _repository.getEventOptions(),
+      '載入事件選項失敗（不影響服事表顯示）',
+    );
+
     try {
-      final results = await Future.wait([
-        _repository.getUpcomingRosters(),
-        _repository.getServiceTemplates(),
-        _repository.getEventOptions(),
-      ]);
+      final rosters = await rostersFuture;
       if (token != _fetchToken) return; // stale fetch，丟棄結果
-      _allRosters = results[0] as List<ServiceRoster>;
-      _templates = results[1] as Map<ServiceType, List<String>>;
-      _eventOptionsByType = results[2] as Map<ServiceType, List<EventOption>>;
+      _replaceRosters(rosters);
     } catch (e, st) {
       if (token != _fetchToken) return; // stale fetch，丟棄錯誤
       log('載入服事表資料失敗', error: e, stackTrace: st);
@@ -132,11 +210,28 @@ class RosterProvider with ChangeNotifier {
         log('Server fetch 失敗，UI 繼續顯示 cache 資料', error: e, stackTrace: st);
       }
     } finally {
+      // settings 失敗時保留上一次的值，不覆蓋成空的。
+      final templates = await templatesFuture;
+      final eventOptions = await eventOptionsFuture;
       if (token == _fetchToken) {
+        if (templates != null) _templates = templates;
+        if (eventOptions != null) _replaceEventOptions(eventOptions);
         _isLoading = false;
         notifyListeners();
       }
     }
+  }
+
+  /// 把「有了更好、沒有也能動」的請求包成永遠不會 reject 的 future：
+  /// 失敗時 log 後回傳 null，讓呼叫端保留既有的值。
+  static Future<T?> _optional<T>(Future<T> future, String failureMessage) {
+    return future.then<T?>((value) => value).catchError((
+      Object e,
+      StackTrace st,
+    ) {
+      log(failureMessage, error: e, stackTrace: st);
+      return null;
+    });
   }
 
   Future<void> fetchRosters() async {
@@ -147,7 +242,7 @@ class RosterProvider with ChangeNotifier {
       final cached = await _repository.getUpcomingRostersFromCache();
       if (token != _fetchToken) return;
       if (cached.isNotEmpty) {
-        _allRosters = cached;
+        _replaceRosters(cached);
         notifyListeners();
       }
     } catch (e, st) {
@@ -162,7 +257,7 @@ class RosterProvider with ChangeNotifier {
     try {
       final rosters = await _repository.getUpcomingRosters();
       if (token != _fetchToken) return; // stale fetch，丟棄結果
-      _allRosters = rosters;
+      _replaceRosters(rosters);
     } catch (e, st) {
       if (token != _fetchToken) return; // stale fetch，丟棄錯誤
       log('載入服事表失敗', error: e, stackTrace: st);
@@ -184,12 +279,14 @@ class RosterProvider with ChangeNotifier {
   Future<void> ensureQuarterRostersIfAdmin() async {
     try {
       await _repository.ensureQuarterRosters();
-      // backfill 後重抓，讓新補的 roster 出現在清單。
-      await fetchInitialData();
     } catch (e, st) {
       log('ensureQuarterRosters 失敗', error: e, stackTrace: st);
       // 靜默失敗，不 disrupt UI。
     }
+    // backfill 成功與否都要重抓 —— backfill 只是「補齊缺的 roster」，
+    // 它失敗不代表現有資料讀不到。放在 try 裡的話，backfill 一拋例外就會
+    // 連重抓一起跳過，admin 進編輯模式時畫面停在舊資料且毫無提示。
+    await fetchInitialData();
   }
 
   Future<void> updateRoster(ServiceRoster roster) async {
@@ -198,7 +295,7 @@ class RosterProvider with ChangeNotifier {
       // Update local state
       final index = _allRosters.indexWhere((r) => r.id == roster.id);
       if (index != -1) {
-        _allRosters[index] = roster;
+        _replaceRosterAt(index, roster);
         notifyListeners();
       }
     } catch (e, st) {
@@ -236,11 +333,13 @@ class RosterProvider with ChangeNotifier {
     );
 
     final successes = results.where((r) => r.error == null).toList();
-    for (final r in successes) {
-      final index = _allRosters.indexWhere((x) => x.id == r.roster.id);
-      if (index != -1) {
-        _allRosters[index] = r.roster;
-      }
+    if (successes.isNotEmpty) {
+      // 一次算出新清單再換上去，不要逐筆呼叫 _replaceRosterAt（那會為每筆
+      // 成功的寫入各複製一份完整清單）。
+      final successById = {for (final r in successes) r.roster.id: r.roster};
+      _replaceRosters(
+        _allRosters.map((roster) => successById[roster.id] ?? roster).toList(),
+      );
     }
     notifyListeners();
 
@@ -298,9 +397,11 @@ class RosterProvider with ChangeNotifier {
           final updatedById = {
             for (final roster in updatedRosters) roster.id: roster,
           };
-          _allRosters = _allRosters
-              .map((roster) => updatedById[roster.id] ?? roster)
-              .toList();
+          _replaceRosters(
+            _allRosters
+                .map((roster) => updatedById[roster.id] ?? roster)
+                .toList(),
+          );
         }
       }
 
@@ -318,9 +419,11 @@ class RosterProvider with ChangeNotifier {
   }) async {
     try {
       await _repository.updateEventOptions(options);
-      _eventOptionsByType = Map.fromEntries(
-        options.entries.map(
-          (entry) => MapEntry(entry.key, List<EventOption>.from(entry.value)),
+      _replaceEventOptions(
+        Map.fromEntries(
+          options.entries.map(
+            (entry) => MapEntry(entry.key, List<EventOption>.from(entry.value)),
+          ),
         ),
       );
 
@@ -372,9 +475,11 @@ class RosterProvider with ChangeNotifier {
           final updatedById = {
             for (final roster in updatedRosters) roster.id: roster,
           };
-          _allRosters = _allRosters
-              .map((roster) => updatedById[roster.id] ?? roster)
-              .toList();
+          _replaceRosters(
+            _allRosters
+                .map((roster) => updatedById[roster.id] ?? roster)
+                .toList(),
+          );
         }
       }
 
@@ -403,6 +508,5 @@ class PartialUpdateException implements Exception {
   });
 
   @override
-  String toString() =>
-      '$successCount 筆寫入成功，$failureCount 筆失敗（首個錯誤：$cause）';
+  String toString() => '$successCount 筆寫入成功，$failureCount 筆失敗（首個錯誤：$cause）';
 }
