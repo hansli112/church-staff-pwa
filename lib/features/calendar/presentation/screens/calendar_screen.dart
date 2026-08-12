@@ -28,11 +28,24 @@ class _CalendarScreenState extends State<CalendarScreen> {
   late final PageController _monthPageController;
   int _currentMonthPage = _initialMonthPage;
 
+  /// 同一個月在這段時間內不重抓。沒有這道閘門的話，每次左右換頁都會對
+  /// 當月 + 前後月各打一次 Google Calendar API，來回滑幾次就燒掉配額。
+  static const Duration _monthFreshness = Duration(minutes: 10);
+
+  /// SharedPreferences 只保留距今前後這麼多個月的快取，避免 key 無限累積。
+  static const int _cacheKeepMonths = 12;
+  static const String _cacheKeyPrefix = 'calendar_events_';
+
   late DateTime _focusedMonth;
   final ValueNotifier<DateTime?> _selectedDay = ValueNotifier<DateTime?>(null);
   final Map<String, List<CalendarEvent>> _eventsByMonth = {};
   final Set<String> _loadingMonths = {};
   final Map<String, String?> _errorsByMonth = {};
+  final Map<String, DateTime> _fetchedAtByMonth = {};
+
+  // 每月的 segment 佈局是 O(事件數 × 42) 的計算，而 PageView 同時有 3 頁在
+  // 樹上，任何一次 setState 都會讓三頁重算。事件沒變就直接用上次的結果。
+  final Map<String, Map<int, List<DayEventSegment>>> _layoutCache = {};
 
   @override
   void initState() {
@@ -407,6 +420,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
       (date.year * 10000) + (date.month * 100) + date.day;
 
   Map<int, List<DayEventSegment>> _buildMonthEventLayout(DateTime month) {
+    final cacheKey = _cacheKeyForMonth(month);
+    final cachedLayout = _layoutCache[cacheKey];
+    if (cachedLayout != null) return cachedLayout;
+
+    final layout = _computeMonthEventLayout(month);
+    _layoutCache[cacheKey] = layout;
+    return layout;
+  }
+
+  Map<int, List<DayEventSegment>> _computeMonthEventLayout(DateTime month) {
     final year = month.year;
     final monthValue = month.month;
     final firstDay = DateTime(year, monthValue, 1);
@@ -539,8 +562,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Future<void> _loadCachedEventsForMonth(DateTime month) async {
-    final prefs = await SharedPreferences.getInstance();
     final key = _cacheKeyForMonth(month);
+    // 記憶體裡已經有這個月了就不要再讀 disk：重讀會 jsonDecode 整個月、
+    // setState、並清掉 layout 快取，等於每次換頁都把三個月的版面重算一次 ——
+    // 正是 layout 快取想消除的那段卡頓。
+    if (_eventsByMonth.containsKey(key)) return;
+
+    final prefs = await SharedPreferences.getInstance();
     final cached = prefs.getString(key);
     if (cached == null || cached.isEmpty) return;
 
@@ -552,6 +580,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       if (!mounted) return;
       setState(() {
         _eventsByMonth[key] = events;
+        _layoutCache.remove(key);
       });
     } catch (_) {
       // Ignore corrupted cache.
@@ -566,11 +595,39 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final key = _cacheKeyForMonth(month);
     final payload = jsonEncode(events.map((e) => e.toJson()).toList());
     await prefs.setString(key, payload);
+    await _pruneCachedMonths(prefs);
+  }
+
+  /// 每瀏覽一個新月份就多一筆 key，永遠不清的話 localStorage 會一直長大。
+  /// 只留距今 [_cacheKeepMonths] 個月內的月份，其餘刪掉。
+  Future<void> _pruneCachedMonths(SharedPreferences prefs) async {
+    final now = DateTime.now();
+    final nowIndex = now.year * 12 + now.month;
+
+    for (final key in prefs.getKeys().toList()) {
+      if (!key.startsWith(_cacheKeyPrefix)) continue;
+      final parts = key.substring(_cacheKeyPrefix.length).split('_');
+      if (parts.length != 2) continue;
+      final year = int.tryParse(parts[0]);
+      final month = int.tryParse(parts[1]);
+      if (year == null || month == null) continue;
+
+      final distance = (year * 12 + month) - nowIndex;
+      if (distance.abs() > _cacheKeepMonths) {
+        await prefs.remove(key);
+      }
+    }
   }
 
   Future<void> _loadEventsForMonth(DateTime month) async {
     final key = _cacheKeyForMonth(month);
     if (_loadingMonths.contains(key)) return;
+
+    final fetchedAt = _fetchedAtByMonth[key];
+    if (fetchedAt != null &&
+        DateTime.now().difference(fetchedAt) < _monthFreshness) {
+      return; // 這個月剛抓過，直接用記憶體裡的資料
+    }
 
     setState(() {
       _loadingMonths.add(key);
@@ -673,6 +730,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
       if (!mounted) return;
       setState(() {
         _eventsByMonth[key] = events;
+        _layoutCache.remove(key);
+        _fetchedAtByMonth[key] = DateTime.now();
       });
     } catch (_) {
       if (!mounted) return;
