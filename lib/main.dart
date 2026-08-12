@@ -56,6 +56,17 @@ class ChurchApp extends StatelessWidget {
     brightness: Brightness.light,
   );
 
+  /// 用 `?perf=1` 開啟 Flutter 的 performance overlay。
+  ///
+  /// 手機上的卡頓要先知道是哪一條 thread 在爆才有得修：UI thread（build /
+  /// layout，程式碼問題）還是 raster thread（實際繪製，通常是引擎與裝置的
+  /// 天花板）。iOS 上要接 Mac 開 Safari Web Inspector 才看得到 timeline，
+  /// 這個 overlay 直接畫在畫面上，開網址就能看。
+  ///
+  /// 預設關閉，一般使用者不會遇到。
+  static final bool _showPerformanceOverlay =
+      Uri.base.queryParameters['perf'] == '1';
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = _colorScheme;
@@ -118,6 +129,7 @@ class ChurchApp extends StatelessWidget {
         locale: const Locale('zh', 'TW'),
         home: AuthWrapper(pushNotificationService: pushNotificationService),
         debugShowCheckedModeBanner: false,
+        showPerformanceOverlay: _showPerformanceOverlay,
       ),
     );
   }
