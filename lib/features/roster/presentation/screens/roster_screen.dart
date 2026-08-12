@@ -136,7 +136,11 @@ class _RosterScreenState extends State<RosterScreen>
     final quarterStartMonth = ((now.month - 1) ~/ 3) * 3 + 1;
     final isLastMonthOfQuarter = now.month == (quarterStartMonth + 2);
     final titleText = isLastMonthOfQuarter ? '本季/下季服事表' : '本季服事表';
-    final isEditMode = context.watch<RosterProvider>().isEditMode;
+    // select 而非 watch：否則每次 fetch 的 loading 開關都會重建整個 Scaffold
+    // （含 AppBar / TabBar / TabController）。
+    final isEditMode = context.select<RosterProvider, bool>(
+      (provider) => provider.isEditMode,
+    );
 
     _updateTabController(allowedTypes.length);
 
@@ -186,13 +190,20 @@ class _RosterScreenState extends State<RosterScreen>
       length: allowedTypes.length,
       child: Scaffold(
         appBar: appBar,
-        body: Consumer<RosterProvider>(
-          builder: (context, provider, child) {
+        // 刻意不用 Consumer 包住整個 body：Consumer 會在每一次
+        // notifyListeners 重建整棵 TabBarView，連帶產生全新的 ListView 與
+        // 全新的卡片 widget，底下卡片再怎麼 select 也擋不住。改成只訂閱
+        // 「要不要顯示 spinner／錯誤」這兩個 bool，清單自己去訂閱自己那份資料。
+        body: Builder(
+          builder: (context) {
             // stale-while-revalidate: only block the UI with a spinner when
             // there is truly no data to show yet.  If we already have cached
             // rosters the TabBarView renders immediately while the background
             // server fetch runs silently.
-            if (provider.isLoading && provider.rosters.isEmpty) {
+            final showSpinner = context.select<RosterProvider, bool>(
+              (provider) => provider.isLoading && provider.rosters.isEmpty,
+            );
+            if (showSpinner) {
               return Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -208,12 +219,16 @@ class _RosterScreenState extends State<RosterScreen>
               );
             }
 
-            if (provider.error != null) {
+            final error = context.select<RosterProvider, String?>(
+              (provider) => provider.error,
+            );
+            if (error != null) {
               return EmptyState(
                 icon: Icons.error_outline,
-                message: provider.error ?? '無法載入',
+                message: error,
                 action: FilledButton.icon(
-                  onPressed: () => provider.fetchInitialData(),
+                  onPressed: () =>
+                      context.read<RosterProvider>().fetchInitialData(),
                   icon: const Icon(Icons.refresh),
                   label: const Text('重試'),
                 ),
@@ -229,7 +244,6 @@ class _RosterScreenState extends State<RosterScreen>
                 return _RosterViewList(
                   key: PageStorageKey(type.toString()),
                   type: type,
-                  rosters: provider.getRostersByType(type),
                 );
               }).toList(),
             );
@@ -242,9 +256,8 @@ class _RosterScreenState extends State<RosterScreen>
 
 class _RosterViewList extends StatefulWidget {
   final ServiceType type;
-  final List<ServiceRoster> rosters;
 
-  const _RosterViewList({super.key, required this.type, required this.rosters});
+  const _RosterViewList({super.key, required this.type});
 
   @override
   State<_RosterViewList> createState() => _RosterViewListState();
@@ -259,7 +272,13 @@ class _RosterViewListState extends State<_RosterViewList>
   Widget build(BuildContext context) {
     super.build(context);
 
-    if (widget.rosters.isEmpty) {
+    // 只訂閱這個牧區的清單。getRostersByType 有快取，資料沒變時回傳同一個
+    // List instance，所以其他牧區被編輯、或單純的 loading 開關都不會重建這頁。
+    final rosters = context.select<RosterProvider, List<ServiceRoster>>(
+      (provider) => provider.getRostersByType(widget.type),
+    );
+
+    if (rosters.isEmpty) {
       return const EmptyState(
         icon: Icons.event_busy_outlined,
         message: '此類別目前沒有服事資訊',
@@ -267,19 +286,25 @@ class _RosterViewListState extends State<_RosterViewList>
       );
     }
 
+    // 事件選項換過就要重建（標籤顏色是從 provider 查的，不在 roster 裡）。
+    context.select<RosterProvider, int>(
+      (provider) => provider.eventOptionsRevision,
+    );
     final rosterProvider = context.read<RosterProvider>();
+    // 一個 closure 重複用，不要在 itemBuilder 裡每張卡各配一個。
+    int resolveEventColor(String event) =>
+        rosterProvider.eventColorFor(widget.type, event);
 
     return ListView.builder(
       padding: const EdgeInsets.only(top: 12, bottom: 20),
-      itemCount: widget.rosters.length,
+      itemCount: rosters.length,
       itemBuilder: (context, index) {
-        final roster = widget.rosters[index];
+        final roster = rosters[index];
         return RosterViewCard(
           key: ValueKey(roster.id),
           roster: roster,
           initiallyExpanded: index == 0,
-          resolveEventColor: (event) =>
-              rosterProvider.eventColorFor(widget.type, event),
+          resolveEventColor: resolveEventColor,
         );
       },
     );
