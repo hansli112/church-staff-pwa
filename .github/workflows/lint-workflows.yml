@@ -1,0 +1,49 @@
+name: Lint workflows
+
+# 為什麼要獨立成一個檔案：workflow 一旦有語法錯誤，GitHub 就整份載入不了、
+# 零個 job 執行 —— 把檢查放在 deploy-flutter-pwa.yml 裡面等於自己壞掉時自己
+# 也不會跑。放在別的檔案，deploy 那份壞掉時這份還在，會紅燈報出原因。
+#
+# 實際發生過：deploy-flutter-pwa.yml 的一段中文註解裡寫出了表示式的雙大括號
+# 語法（在解釋「不要用表示式插值」），GitHub 掃描整份檔案（含 run: 區塊內部）
+# 解析表示式時遇到空的一組就是語法錯誤，整個 workflow 沒有載入。本機的
+# yaml.safe_load、bash -n、schema 檢查全部抓不到，因為那是 GitHub 的表示式層。
+# actionlint 抓得到。
+
+on:
+  push:
+    paths:
+      - '.github/workflows/**'
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+# 版本固定 + 對 checksum：這支 binary 會在能讀到 repo 的 runner 上執行，
+# 不驗證等於信任下載當下的 GitHub Releases 沒被動過手腳。
+env:
+  ACTIONLINT_VERSION: '1.7.12'
+  ACTIONLINT_SHA256: '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8'
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Run actionlint
+        run: |
+          set -euo pipefail
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -sSfL -o "$archive" \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}"
+          echo "${ACTIONLINT_SHA256}  ${archive}" | sha256sum -c -
+          tar xzf "$archive" actionlint
+          # 註解不能以 shellcheck 那個字當開頭 —— 那是它的指示詞語法，
+          # 會被當成 directive 去解析然後報 SC1072/SC1073。（這行原本就是
+          # 這樣寫壞的，正好被這支 linter 自己抓到。）
+          #
+          # runner 內建了 shellcheck，所以 actionlint 會連 run: 區塊裡的
+          # shell 一起檢查；本機沒裝時它是靜靜跳過而不是失敗，本機全綠不代表
+          # CI 會過。
+          ./actionlint -color
