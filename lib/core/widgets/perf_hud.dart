@@ -38,6 +38,13 @@ class _PerfHudState extends State<PerfHud> {
   static const int _maxFrames = 600;
   static const double _budgetMs = 16.0;
 
+  /// 實際跑起來的是 wasm 還是 dart2js。
+  ///
+  /// `flutter build web --wasm` 會同時產出 wasm 與 JS 兩份，由 bootstrap 在
+  /// 執行期依瀏覽器能力挑一份。不支援 WasmGC 的瀏覽器會靜默退回 JS —— 沒有
+  /// 這個標示的話，量到的數字根本不知道屬於哪一個版本。
+  static const bool _isWasm = bool.fromEnvironment('dart.tool.dart2wasm');
+
   final List<FrameTiming> _frames = <FrameTiming>[];
   Timer? _refreshTimer;
 
@@ -135,7 +142,8 @@ class _PerfHudState extends State<PerfHud> {
                       _row('UI', ui),
                       _row('RASTER', raster),
                       Text(
-                        '3s窗 ${_frames.length}幀 · >16ms $overBudget',
+                        '${_isWasm ? 'WASM' : 'JS'} · 3s窗 ${_frames.length}幀'
+                        ' · >16ms $overBudget',
                         style: _textStyle(
                           overBudget > 0
                               ? Colors.orangeAccent

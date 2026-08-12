@@ -106,7 +106,14 @@ jobs:
           # 預設會從 www.gstatic.com 載入，那條路徑 service worker 不能快取
           # （gstatic.com 在 never-cache 名單裡），cache_sw.js 的 vendor cache
           # 也就永遠不會命中。改成自家來源後引擎才真的能離線與跨 deploy 重用。
-          flutter build web --release --base-href "/" --no-web-resources-cdn "${DART_DEFINES[@]}"
+          #
+          # --wasm：實測瓶頸在 UI thread，也就是執行 Dart 程式碼本身；dart2wasm
+          # 針對的正是這件事。同時會產出 JS 版，bootstrap 依瀏覽器能力自動挑，
+          # 不支援 WasmGC 的裝置會靜默退回 JS，所以沒有相容性風險。
+          # 代價：wasm 版 1.1 MB vs JS 版 896 KB（gzip），且兩份都要進 artifact。
+          # HUD（?perf=1）第三行會顯示實際跑到的是 WASM 還是 JS。
+          # 若量測結果不划算，移除這個旗標即可回到原狀。
+          flutter build web --release --base-href "/" --no-web-resources-cdn --wasm "${DART_DEFINES[@]}"
 
       # 6. 將版本號注入 cache_sw.js
       # BUILD_VERSION（每次 deploy 都不同）→ App 資產 cache，確保使用者
