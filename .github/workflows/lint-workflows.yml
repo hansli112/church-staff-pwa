@@ -39,6 +39,11 @@ jobs:
             "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}"
           echo "${ACTIONLINT_SHA256}  ${archive}" | sha256sum -c -
           tar xzf "$archive" actionlint
-          # shellcheck 沒裝時 actionlint 會跳過 shell 檢查而不是失敗，
-          # 但 ubuntu-latest 內建了，所以 run: 區塊的 shell 也一併會被檢查。
+          # 註解不能以 shellcheck 那個字當開頭 —— 那是它的指示詞語法，
+          # 會被當成 directive 去解析然後報 SC1072/SC1073。（這行原本就是
+          # 這樣寫壞的，正好被這支 linter 自己抓到。）
+          #
+          # runner 內建了 shellcheck，所以 actionlint 會連 run: 區塊裡的
+          # shell 一起檢查；本機沒裝時它是靜靜跳過而不是失敗，本機全綠不代表
+          # CI 會過。
           ./actionlint -color
