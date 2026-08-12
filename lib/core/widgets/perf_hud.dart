@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'dart:ui' show FramePhase;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
@@ -24,8 +26,16 @@ class PerfHud extends StatefulWidget {
 }
 
 class _PerfHudState extends State<PerfHud> {
-  /// 約 3 秒的滑動視窗（60fps）。
-  static const int _windowSize = 180;
+  /// 統計視窗以「時間」為準，不能用幀數。
+  ///
+  /// Flutter 只在有事情發生時才畫幀，靜置時唯一的來源是這個 HUD 每 500ms
+  /// 的刷新 —— 也就是 2fps。用「最近 N 幀」切窗的話，靜置時那個視窗會涵蓋
+  /// 過去好幾十秒，剛才捲動的昂貴幀會一直留在平均值裡慢慢稀釋，看起來就像
+  /// 「靜置也要 14ms，然後慢慢降下來」。那是儀器的假象，不是真的成本。
+  static const Duration _window = Duration(seconds: 3);
+
+  /// 保底上限，避免高幀率時無限成長。
+  static const int _maxFrames = 600;
   static const double _budgetMs = 16.0;
 
   final List<FrameTiming> _frames = <FrameTiming>[];
@@ -38,7 +48,10 @@ class _PerfHudState extends State<PerfHud> {
     // 不在 callback 裡直接 setState：那會在每一幀結束時再排一幀，數字本身
     // 就會污染量測。改成固定間隔刷新。
     _refreshTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
-      if (mounted) setState(() {});
+      if (!mounted) return;
+      // 也在這裡裁窗：完全靜置時不會有新的 timings 進來，不裁的話畫面上會
+      // 一直停在最後一次操作的數字。
+      setState(_trim);
     });
   }
 
@@ -51,8 +64,20 @@ class _PerfHudState extends State<PerfHud> {
 
   void _onTimings(List<FrameTiming> timings) {
     _frames.addAll(timings);
-    if (_frames.length > _windowSize) {
-      _frames.removeRange(0, _frames.length - _windowSize);
+    _trim();
+  }
+
+  void _trim() {
+    if (_frames.isEmpty) return;
+    final newest = _frames.last.timestampInMicroseconds(
+      FramePhase.rasterFinish,
+    );
+    final cutoff = newest - _window.inMicroseconds;
+    _frames.removeWhere(
+      (f) => f.timestampInMicroseconds(FramePhase.rasterFinish) < cutoff,
+    );
+    if (_frames.length > _maxFrames) {
+      _frames.removeRange(0, _frames.length - _maxFrames);
     }
   }
 
@@ -110,7 +135,7 @@ class _PerfHudState extends State<PerfHud> {
                       _row('UI', ui),
                       _row('RASTER', raster),
                       Text(
-                        '>16ms $overBudget/${_frames.length} frames',
+                        '3s窗 ${_frames.length}幀 · >16ms $overBudget',
                         style: _textStyle(
                           overBudget > 0
                               ? Colors.orangeAccent
