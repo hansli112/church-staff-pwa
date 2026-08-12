@@ -1,0 +1,14 @@
+{
+  "name": "church-staff-pwa-firestore-tests",
+  "private": true,
+  "type": "module",
+  "description": "Security-rules tests for firestore.rules, run against the Firestore emulator.",
+  "scripts": {
+    "test": "firebase emulators:exec --only firestore --project demo-church-staff \"node --test rules.test.js\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "firebase": "^12.0.0",
+    "firebase-tools": "^14.0.0"
+  }
+}

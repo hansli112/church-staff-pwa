@@ -53,6 +53,9 @@ app.*.map.json
 # Environment variables
 .env
 
+# Firestore rules tests (Node)
+firestore-tests/node_modules/
+
 # AI Agent Context
 # AGENTS.md 是給協作者/agent 看的專案規範，要進版控，故不列入忽略。
 GEMINI.md
