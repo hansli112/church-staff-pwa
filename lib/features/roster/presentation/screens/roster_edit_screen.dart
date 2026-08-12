@@ -11,7 +11,9 @@ import '../providers/roster_provider.dart';
 import '../widgets/roster_card.dart';
 import '../../../../core/utils/error_messages.dart';
 import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/utils/snappy_page_scroll_physics.dart';
 import '../../../../core/widgets/settings_bottom_sheet.dart';
+import '../../../../core/widgets/text_controller_scope.dart';
 import 'event_settings_screen.dart' deferred as event_settings_screen;
 import 'role_settings_screen.dart' deferred as role_settings_screen;
 import 'roster_import_parser.dart';
@@ -59,9 +61,9 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
           Navigator.of(context, rootNavigator: true).pop();
           dialogShown = false;
         }
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('載入失敗：${mapErrorToUserMessage(error)}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('載入失敗：${mapErrorToUserMessage(error)}')),
+        );
       }
     } finally {
       if (dialogShown && context.mounted) {
@@ -153,13 +155,18 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
 
     return Scaffold(
       appBar: appBar,
-      body: Consumer<RosterProvider>(
-        builder: (context, provider, child) {
+      // 同 roster_screen：不要用 Consumer 包住整個 body，否則每次
+      // notifyListeners 都會重建整棵 TabBarView 與所有卡片。
+      body: Builder(
+        builder: (context) {
           // stale-while-revalidate: only block the UI with a spinner when
           // there is truly no data to show yet.  If we already have cached
           // rosters the TabBarView renders immediately while the background
           // server fetch runs silently.
-          if (provider.isLoading && provider.rosters.isEmpty) {
+          final showSpinner = context.select<RosterProvider, bool>(
+            (provider) => provider.isLoading && provider.rosters.isEmpty,
+          );
+          if (showSpinner) {
             return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -175,12 +182,16 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
             );
           }
 
-          if (provider.error != null) {
+          final error = context.select<RosterProvider, String?>(
+            (provider) => provider.error,
+          );
+          if (error != null) {
             return EmptyState(
               icon: Icons.error_outline,
-              message: provider.error ?? '無法載入',
+              message: error,
               action: FilledButton.icon(
-                onPressed: () => provider.fetchInitialData(),
+                onPressed: () =>
+                    context.read<RosterProvider>().fetchInitialData(),
                 icon: const Icon(Icons.refresh),
                 label: const Text('重試'),
               ),
@@ -189,16 +200,13 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
 
           // TabBarView 預設支援左右滑動
           return TabBarView(
-            // 結合 BouncingScrollPhysics 產生彈性，同時保持分頁吸附感
-            physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics(),
-            ),
+            // 收尾動畫越久，「換完分頁馬上想往下滑卻沒反應」的窗口就越長。
+            physics: const SnappyPageScrollPhysics(),
             controller: widget.tabController,
             children: allowedTypes.map((type) {
               return _RosterList(
                 key: PageStorageKey(type.toString()),
                 type: type,
-                rosters: provider.getRostersByType(type),
               );
             }).toList(),
           );
@@ -210,9 +218,8 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
 
 class _RosterList extends StatefulWidget {
   final ServiceType type;
-  final List<ServiceRoster> rosters;
 
-  const _RosterList({super.key, required this.type, required this.rosters});
+  const _RosterList({super.key, required this.type});
 
   @override
   State<_RosterList> createState() => _RosterListState();
@@ -227,9 +234,15 @@ class _RosterListState extends State<_RosterList>
   @override
   Widget build(BuildContext context) {
     super.build(context); // 必須呼叫 super.build
-    final isEditMode = context.watch<RosterProvider>().isEditMode;
+    final isEditMode = context.select<RosterProvider, bool>(
+      (provider) => provider.isEditMode,
+    );
+    // 只訂閱這個牧區的清單（getRostersByType 有快取，資料沒變時 identity 不變）。
+    final rosters = context.select<RosterProvider, List<ServiceRoster>>(
+      (provider) => provider.getRostersByType(widget.type),
+    );
 
-    if (widget.rosters.isEmpty) {
+    if (rosters.isEmpty) {
       return EmptyState(
         icon: Icons.event_busy_outlined,
         message: '此類別目前沒有服事資訊',
@@ -247,13 +260,13 @@ class _RosterListState extends State<_RosterList>
     final showImport = isEditMode;
     return ListView.builder(
       padding: const EdgeInsets.only(top: 12, bottom: 20),
-      itemCount: widget.rosters.length + (showImport ? 1 : 0),
+      itemCount: rosters.length + (showImport ? 1 : 0),
       itemBuilder: (context, index) {
         if (showImport && index == 0) {
           return _buildImportCard(context);
         }
         final rosterIndex = index - (showImport ? 1 : 0);
-        final roster = widget.rosters[rosterIndex];
+        final roster = rosters[rosterIndex];
         return RosterCard(
           key: ValueKey(roster.id),
           roster: roster,
@@ -300,6 +313,8 @@ class _RosterListState extends State<_RosterList>
   }
 
   Future<void> _showImportJsonDialog(BuildContext context) async {
+    // controller 由 TextControllerScope 在 bottom sheet 子樹卸載時 dispose ——
+    // sheet 的 future 在 pop 當下就完成，那時 TextField 還在退場動畫中。
     final controller = TextEditingController();
     String? errorText;
     bool isSubmitting = false;
@@ -310,94 +325,97 @@ class _RosterListState extends State<_RosterList>
       showDragHandle: true,
       useSafeArea: true,
       builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return SettingsBottomSheet(
-              title: 'JSON 匯入（${widget.type.label}）',
-              submitLabel: '匯入',
-              isSubmitting: isSubmitting,
-              onSubmit: isSubmitting
-                  ? null
-                  : () async {
-                      setState(() {
-                        errorText = null;
-                        isSubmitting = true;
-                      });
-                      final result = await _applyJsonImport(
-                        context,
-                        controller.text,
-                      );
-                      if (!context.mounted) return;
-                      if (result.error != null) {
+        return TextControllerScope(
+          controller: controller,
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              return SettingsBottomSheet(
+                title: 'JSON 匯入（${widget.type.label}）',
+                submitLabel: '匯入',
+                isSubmitting: isSubmitting,
+                onSubmit: isSubmitting
+                    ? null
+                    : () async {
                         setState(() {
-                          errorText = result.error;
-                          isSubmitting = false;
+                          errorText = null;
+                          isSubmitting = true;
                         });
-                        return;
-                      }
-                      Navigator.of(context).pop();
-                      if (result.missingDates.isNotEmpty ||
-                          result.notInRosterNames.isNotEmpty ||
-                          result.roleMismatchNames.isNotEmpty ||
-                          result.otherNames.isNotEmpty ||
-                          result.notInEventCatalog.isNotEmpty) {
-                        if (!context.mounted) return;
-                        await _showImportSummaryDialog(context, result);
-                      } else {
-                        final message = _buildResultMessage(result);
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(
+                        final result = await _applyJsonImport(
                           context,
-                        ).showSnackBar(SnackBar(content: Text(message)));
-                      }
-                    },
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: controller,
-                    maxLines: 12,
-                    decoration: InputDecoration(
-                      hintText:
-                          '[\n  {\n    "date": "2026-01-04",\n    "duties": [\n      {"people": ["芳伶"], "role": "敬拜主領"}\n    ],\n    "events": ["聖餐", {"name": "受洗禮", "color": "#F39C12"}]\n  }\n]',
-                      hintStyle: TextStyle(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.35),
+                          controller.text,
+                        );
+                        if (!context.mounted) return;
+                        if (result.error != null) {
+                          setState(() {
+                            errorText = result.error;
+                            isSubmitting = false;
+                          });
+                          return;
+                        }
+                        Navigator.of(context).pop();
+                        if (result.missingDates.isNotEmpty ||
+                            result.notInRosterNames.isNotEmpty ||
+                            result.roleMismatchNames.isNotEmpty ||
+                            result.otherNames.isNotEmpty ||
+                            result.notInEventCatalog.isNotEmpty) {
+                          if (!context.mounted) return;
+                          await _showImportSummaryDialog(context, result);
+                        } else {
+                          final message = _buildResultMessage(result);
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text(message)));
+                        }
+                      },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: controller,
+                      maxLines: 12,
+                      decoration: InputDecoration(
+                        hintText:
+                            '[\n  {\n    "date": "2026-01-04",\n    "duties": [\n      {"people": ["芳伶"], "role": "敬拜主領"}\n    ],\n    "events": ["聖餐", {"name": "受洗禮", "color": "#F39C12"}]\n  }\n]',
+                        hintStyle: TextStyle(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.35),
+                        ),
+                        border: const OutlineInputBorder(),
                       ),
-                      border: const OutlineInputBorder(),
                     ),
-                  ),
-                  if (errorText != null) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      constraints: const BoxConstraints(maxHeight: 160),
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.redAccent),
-                      ),
-                      child: SingleChildScrollView(
-                        child: SelectableText(
-                          errorText!,
-                          style: const TextStyle(
-                            color: Colors.redAccent,
-                            fontSize: 12,
+                    if (errorText != null) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        constraints: const BoxConstraints(maxHeight: 160),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.redAccent),
+                        ),
+                        child: SingleChildScrollView(
+                          child: SelectableText(
+                            errorText!,
+                            style: const TextStyle(
+                              color: Colors.redAccent,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
                       ),
+                    ],
+                    const SizedBox(height: 8),
+                    const Text(
+                      '格式需為 JSON 陣列，每筆含 date，並至少含 duties 或 events',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                   ],
-                  const SizedBox(height: 8),
-                  const Text(
-                    '格式需為 JSON 陣列，每筆含 date，並至少含 duties 或 events',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ],
-              ),
-            );
-          },
+                ),
+              );
+            },
+          ),
         );
       },
     );
@@ -572,7 +590,8 @@ class _RosterListState extends State<_RosterList>
     };
 
     final rosterByDate = <String, ServiceRoster>{
-      for (final roster in widget.rosters) _dateKey(roster.date): roster,
+      for (final roster in rosterProvider.getRostersByType(widget.type))
+        _dateKey(roster.date): roster,
     };
     final updates = <ServiceRoster>[];
     final missingDates = <String>[];
@@ -646,11 +665,7 @@ class _RosterListState extends State<_RosterList>
       if (e is PartialUpdateException) {
         // Log the underlying cause's stack too so future Sentry has the
         // real Firestore error, not just the wrapping exception's stack.
-        log(
-          '匯入部分失敗的代表性 cause',
-          error: e.cause,
-          stackTrace: e.causeStackTrace,
-        );
+        log('匯入部分失敗的代表性 cause', error: e.cause, stackTrace: e.causeStackTrace);
         final failedDates = e.failedRosters
             .map((r) => _dateKey(r.date))
             .join('、');

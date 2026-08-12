@@ -10,8 +10,7 @@ String mapErrorToUserMessage(Object? error) {
   // 1. FirebaseAuthException（登入/Auth 相關）
   if (error is FirebaseAuthException) {
     return switch (error.code) {
-      'user-not-found' || 'invalid-credential' || 'wrong-password' =>
-        '帳號或密碼錯誤',
+      'user-not-found' || 'invalid-credential' || 'wrong-password' => '帳號或密碼錯誤',
       'user-disabled' => '帳號已被停用，請聯絡管理員',
       'email-already-in-use' => '此電子郵件已被註冊',
       'weak-password' => '密碼強度不足，至少 6 個字元',

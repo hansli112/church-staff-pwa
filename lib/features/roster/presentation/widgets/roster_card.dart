@@ -25,8 +25,18 @@ class RosterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rosterProvider = context.watch<RosterProvider>();
-    final isEditMode = rosterProvider.isEditMode;
+    // 只訂閱 isEditMode。用 watch() 訂閱整個 provider 的話，任何一次
+    // notifyListeners（背景 refetch 的 loading 開關、其他日期被編輯…）
+    // 都會重建畫面上每一張卡片。
+    final isEditMode = context.select<RosterProvider, bool>(
+      (provider) => provider.isEditMode,
+    );
+    // 事件標籤顏色是從 provider 查的（不存在 roster 裡），所以選項換過時
+    // 這張卡片也要重建。訂閱版本號即可，不必訂閱整個 provider。
+    context.select<RosterProvider, int>(
+      (provider) => provider.eventOptionsRevision,
+    );
+    final rosterProvider = context.read<RosterProvider>();
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -66,11 +76,9 @@ class RosterCard extends StatelessWidget {
                   runSpacing: 2,
                   children: [
                     ...roster.specialEvents.map((event) {
-                      final colorValue = roster.customEventColors[event] ??
-                          rosterProvider.eventColorFor(
-                            roster.type,
-                            event,
-                          );
+                      final colorValue =
+                          roster.customEventColors[event] ??
+                          rosterProvider.eventColorFor(roster.type, event);
                       final color = Color(colorValue);
                       final label = Text(
                         event,
@@ -143,85 +151,10 @@ class RosterCard extends StatelessWidget {
           ],
         ),
         trailing: isEditMode ? const Icon(Icons.drag_handle) : null,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: Column(
-              children: [
-                ...roster.duties.asMap().entries.map((entry) {
-                  final int index = entry.key;
-                  final RosterEntry duty = entry.value;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: InkWell(
-                      onTap: isEditMode
-                          ? () => _showEditDialog(context, index, duty)
-                          : null,
-                      borderRadius: BorderRadius.circular(8),
-                      splashColor: Theme.of(
-                        context,
-                      ).colorScheme.primary.withValues(alpha: 0.08),
-                      highlightColor: Theme.of(
-                        context,
-                      ).colorScheme.primary.withValues(alpha: 0.04),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(
-                            width: 88,
-                            child: Text(
-                              duty.role,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: Colors.grey[700],
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              duty.people.join('、'),
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          if (isEditMode)
-                            IconButton(
-                              tooltip: '刪除服事項目',
-                              constraints: const BoxConstraints(
-                                minWidth: 48,
-                                minHeight: 48,
-                              ),
-                              icon: Icon(
-                                Icons.delete_outline,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.error,
-                              ),
-                              onPressed: () =>
-                                  _confirmRemoveDuty(context, index, duty.role),
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-                if (isEditMode) ...[
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: TextButton.icon(
-                      icon: const Icon(Icons.add),
-                      label: const Text('新增服事項目'),
-                      onPressed: () => _showAddDutyDialog(context),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
+        // 服事項目列表放在獨立 widget 裡。ExpansionTile 收合完成後會把 body
+        // 整個從樹上拿掉，所以收合狀態下這些列根本不會被 build —— 捲動時
+        // 每張卡片只配置一個 widget，而不是十幾列 Row/Text/IconButton。
+        children: [_RosterCardBody(card: this, isEditMode: isEditMode)],
       ),
     );
   }
@@ -387,10 +320,8 @@ class RosterCard extends StatelessWidget {
 
     final result = await showDialog<_SpecialEventDialogResult>(
       context: context,
-      builder: (context) => _SpecialEventDialog(
-        options: options,
-        existing: existing,
-      ),
+      builder: (context) =>
+          _SpecialEventDialog(options: options, existing: existing),
     );
 
     if (!context.mounted) return;
@@ -401,10 +332,7 @@ class RosterCard extends StatelessWidget {
         events.add(event);
       }
     }
-    final mergedColors = {
-      ...roster.customEventColors,
-      ...result.customColors,
-    };
+    final mergedColors = {...roster.customEventColors, ...result.customColors};
     context.read<RosterProvider>().updateRoster(
       roster.copyWith(specialEvents: events, customEventColors: mergedColors),
     );
@@ -502,6 +430,96 @@ class RosterCard extends StatelessWidget {
       options: result,
       allUserNames: allUserNames,
       userIdsByName: userIdsByName,
+    );
+  }
+}
+
+/// [RosterCard] 展開後的服事項目列表。
+///
+/// 刻意獨立成一個 widget：留在 RosterCard.build 裡的話，即使卡片是收合的，
+/// 每次 rebuild 仍然要配置整棵列表的 widget 物件。
+class _RosterCardBody extends StatelessWidget {
+  const _RosterCardBody({required this.card, required this.isEditMode});
+
+  final RosterCard card;
+  final bool isEditMode;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final roster = card.roster;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: Column(
+        children: [
+          ...roster.duties.asMap().entries.map((entry) {
+            final int index = entry.key;
+            final RosterEntry duty = entry.value;
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: InkWell(
+                onTap: isEditMode
+                    ? () => card._showEditDialog(context, index, duty)
+                    : null,
+                borderRadius: BorderRadius.circular(8),
+                splashColor: colorScheme.primary.withValues(alpha: 0.08),
+                highlightColor: colorScheme.primary.withValues(alpha: 0.04),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 88,
+                      child: Text(
+                        duty.role,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        duty.people.join('、'),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    if (isEditMode)
+                      IconButton(
+                        tooltip: '刪除服事項目',
+                        constraints: const BoxConstraints(
+                          minWidth: 48,
+                          minHeight: 48,
+                        ),
+                        icon: Icon(
+                          Icons.delete_outline,
+                          size: 20,
+                          color: colorScheme.error,
+                        ),
+                        onPressed: () =>
+                            card._confirmRemoveDuty(context, index, duty.role),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          }),
+          if (isEditMode)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: TextButton.icon(
+                icon: const Icon(Icons.add),
+                label: const Text('新增服事項目'),
+                onPressed: () => card._showAddDutyDialog(context),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

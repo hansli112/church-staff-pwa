@@ -18,7 +18,6 @@ class RosterViewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       elevation: 2.0,
@@ -26,7 +25,10 @@ class RosterViewCard extends StatelessWidget {
       child: ExpansionTile(
         key: PageStorageKey(roster.id),
         initiallyExpanded: initiallyExpanded,
-        leading: Icon(Icons.event_note, color: Theme.of(context).colorScheme.primary),
+        leading: Icon(
+          Icons.event_note,
+          color: Theme.of(context).colorScheme.primary,
+        ),
         title: Text(
           _dateFormat.format(roster.date),
           style: const TextStyle(fontWeight: FontWeight.bold),
@@ -44,7 +46,8 @@ class RosterViewCard extends StatelessWidget {
                   children: [
                     ...roster.specialEvents.map((event) {
                       final colorValue =
-                          roster.customEventColors[event] ?? resolveEventColor(event);
+                          roster.customEventColors[event] ??
+                          resolveEventColor(event);
                       final color = Color(colorValue);
                       return Chip(
                         label: Text(
@@ -74,47 +77,57 @@ class RosterViewCard extends StatelessWidget {
               ),
           ],
         ),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: Column(
+        // 收合狀態下 ExpansionTile 會把 body 從樹上移除，所以獨立成 widget
+        // 之後，看不到的服事列表就不會被 build。捲動時每張卡片只配置一個
+        // widget 物件，而不是十幾列 Row/Text。
+        children: [_RosterViewCardBody(roster: roster)],
+      ),
+    );
+  }
+}
+
+/// [RosterViewCard] 展開後的服事項目列表。
+class _RosterViewCardBody extends StatelessWidget {
+  const _RosterViewCardBody({required this.roster});
+
+  final ServiceRoster roster;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: Column(
+        children: roster.duties.map((duty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ...roster.duties.asMap().entries.map((entry) {
-                  final RosterEntry duty = entry.value;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          width: 88,
-                          child: Text(
-                            duty.role,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            duty.people.join('、'),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
+                SizedBox(
+                  width: 88,
+                  child: Text(
+                    duty.role,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
                     ),
-                  );
-                }),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    duty.people.join('、'),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               ],
             ),
-          ),
-        ],
+          );
+        }).toList(),
       ),
     );
   }

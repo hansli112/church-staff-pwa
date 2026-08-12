@@ -22,8 +22,11 @@ class FirestoreRosterRepository implements RosterRepository {
     // backfill 已移至 ensureQuarterRosters()，只由 admin 在進入編輯畫面時觸發。
     try {
       final now = DateTime.now();
-      final fetchFrom = DateTime(now.year, now.month, now.day)
-          .subtract(const Duration(days: 7));
+      final fetchFrom = DateTime(
+        now.year,
+        now.month,
+        now.day,
+      ).subtract(const Duration(days: 7));
       final fetchFromTimestamp = Timestamp.fromDate(fetchFrom);
 
       final snapshot = await _rostersCollection
@@ -33,8 +36,11 @@ class FirestoreRosterRepository implements RosterRepository {
 
       return _filterAndSortRosters(snapshot.docs, now);
     } catch (e, st) {
+      // 一定要往上丟：吞掉錯誤回傳空 list 的話，permission-denied 或離線
+      // 在畫面上會變成「此類別目前沒有服事資訊」，使用者看不到錯誤也沒有
+      // 重試鈕。要不要降級成 cache 資料由 RosterProvider 決定。
       log('Get rosters failed', error: e, stackTrace: st);
-      return [];
+      rethrow;
     }
   }
 
@@ -45,8 +51,11 @@ class FirestoreRosterRepository implements RosterRepository {
     // catch 後回傳空 list，讓呼叫端降級到 server fetch。
     try {
       final now = DateTime.now();
-      final fetchFrom = DateTime(now.year, now.month, now.day)
-          .subtract(const Duration(days: 7));
+      final fetchFrom = DateTime(
+        now.year,
+        now.month,
+        now.day,
+      ).subtract(const Duration(days: 7));
       final fetchFromTimestamp = Timestamp.fromDate(fetchFrom);
 
       final snapshot = await _rostersCollection
@@ -79,12 +88,16 @@ class FirestoreRosterRepository implements RosterRepository {
       final quarterStartMonth = ((now.month - 1) ~/ 3) * 3 + 1;
       final quarterStart = DateTime(now.year, quarterStartMonth, 1);
       final snapshot = await _rostersCollection
-          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(quarterStart))
+          .where(
+            'date',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(quarterStart),
+          )
           .get();
       final existingIds = snapshot.docs.map((d) => d.id).toSet();
 
-      final missing =
-          generated.where((r) => !existingIds.contains(r.id)).toList();
+      final missing = generated
+          .where((r) => !existingIds.contains(r.id))
+          .toList();
       if (missing.isEmpty) return;
 
       final batch = _firestore.batch();
@@ -113,9 +126,7 @@ class FirestoreRosterRepository implements RosterRepository {
           final data = doc.data() as Map<String, dynamic>;
           return _fromFirestore(data, doc.id);
         })
-        .where(
-          (r) => !r.date.isBefore(today) && !r.date.isAfter(endDate),
-        )
+        .where((r) => !r.date.isBefore(today) && !r.date.isAfter(endDate))
         .toList();
 
     rosters.sort((a, b) {
@@ -162,7 +173,7 @@ class FirestoreRosterRepository implements RosterRepository {
       });
     } catch (e, st) {
       log('Get service templates failed', error: e, stackTrace: st);
-      return {};
+      rethrow;
     }
   }
 
@@ -203,7 +214,7 @@ class FirestoreRosterRepository implements RosterRepository {
       return result;
     } catch (e, st) {
       log('Get event options failed', error: e, stackTrace: st);
-      return _defaultEventOptions();
+      rethrow;
     }
   }
 
@@ -355,7 +366,6 @@ class FirestoreRosterRepository implements RosterRepository {
             .map((role) => RosterEntry(role: role, people: ['待定']))
             .toList();
         final serviceDate = _serviceDate(cursor, type);
-        final events = _defaultEventsForDate(serviceDate, type);
         allRosters.add(
           ServiceRoster(
             id: _makeRosterId(serviceDate, type),
@@ -363,7 +373,6 @@ class FirestoreRosterRepository implements RosterRepository {
             type: type,
             serviceName: _serviceNameForType(type),
             duties: duties,
-            specialEvents: events,
           ),
         );
       }
@@ -382,10 +391,6 @@ class FirestoreRosterRepository implements RosterRepository {
     final targetEndYear = now.year + ((targetEndMonthRaw - 1) ~/ 12);
     final targetEndMonth = ((targetEndMonthRaw - 1) % 12) + 1;
     return DateTime(targetEndYear, targetEndMonth + 1, 0);
-  }
-
-  List<String> _defaultEventsForDate(DateTime date, ServiceType type) {
-    return const [];
   }
 
   DateTime _serviceDate(DateTime sunday, ServiceType type) {

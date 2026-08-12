@@ -1,5 +1,5 @@
 name: church_staff_pwa
-description: "A new Flutter project."
+description: "竹圍靈糧福音中心同工助手 — 服事表、行事曆與帳號管理的 Flutter Web PWA。"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev

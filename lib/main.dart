@@ -50,12 +50,15 @@ class ChurchApp extends StatelessWidget {
 
   final PushNotificationService pushNotificationService;
 
+  // fromSeed 會跑一整套 Material color 演算法，結果永遠一樣，算一次就好。
+  static final ColorScheme _colorScheme = ColorScheme.fromSeed(
+    seedColor: Colors.blue,
+    brightness: Brightness.light,
+  );
+
   @override
   Widget build(BuildContext context) {
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: Colors.blue,
-      brightness: Brightness.light,
-    );
+    final colorScheme = _colorScheme;
     return MultiProvider(
       providers: [
         Provider<PushNotificationService>.value(value: pushNotificationService),

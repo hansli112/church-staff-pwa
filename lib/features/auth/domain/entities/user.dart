@@ -92,7 +92,8 @@ class User {
         (e) => e.toString().split('.').last == json['role'],
         orElse: () => UserRole.member,
       ),
-      zones: (json['zones'] as List<dynamic>?)
+      zones:
+          (json['zones'] as List<dynamic>?)
               ?.map((e) => UserZoneInfo.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],

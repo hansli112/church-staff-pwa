@@ -111,6 +111,14 @@ GOOGLE_CALENDAR_API_KEY=<value>
 FCM_WEB_VAPID_KEY=<value>
 ```
 
+> **`GOOGLE_CALENDAR_API_KEY` 一定會出現在前端 bundle 裡**（Web 前端呼叫
+> Calendar API 沒有藏起來的方法）。請到 GCP Console → APIs & Services →
+> Credentials 對這把 key 設定：
+> - **Application restrictions**：HTTP referrers，只允許正式站與 preview 網域
+> - **API restrictions**：只勾 Google Calendar API
+>
+> 沒設限制的話，任何人都能抄走這把 key 去打你的配額。
+
 ### 生產環境構建
 
 產生用於部署的靜態檔案：
@@ -143,7 +151,25 @@ GitHub Actions 會自動構建並推送到 Cloudflare Pages：
 
 #### Docker + nginx（本地或自託管）
 
-亦可將 `build/web/` 內容部署至 Docker 容器或 nginx 服務器。
+先照 `.env.example` 在專案根目錄建立 `.env`，再：
+
+```bash
+docker compose build   # 讀 .env 當作 build args
+docker compose up -d   # http://localhost:8787
+```
+
+Firebase 設定必須在 **build 階段**注入（Flutter Web 是靜態檔，執行期沒機會補），
+所以少了 `FIREBASE_API_KEY` 會直接讓 build 失敗，而不是產出一個開不起來的 image。
+
+### Firestore 安全規則
+
+`firestore.rules` 需另外部署（`firebase deploy --only firestore:rules`）。
+重點行為：
+
+- 每條規則都要求 `isActiveUser()` — 也就是 `users/{uid}` 這份文件存在。
+  管理員在後台刪掉帳號後，該人的 Firebase Auth 帳號雖然還在（前端 SDK 無法
+  刪別人的 Auth 帳號），但因為 user 文件沒了，所有讀寫立刻失效。
+- `users` 只有本人與管理員讀得到，一般同工看不到別人的 email 與推播 token。
 
 ## 開發規範
 

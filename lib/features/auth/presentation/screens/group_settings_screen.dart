@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
+import '../../../../core/widgets/text_controller_scope.dart';
 import '../providers/group_settings_provider.dart';
 import '../providers/user_admin_provider.dart';
 
@@ -39,6 +40,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
   }
 
   Future<void> _promptAddGroup(ServiceType type) async {
+    // controller 由 TextControllerScope 在對話框子樹卸載時 dispose。
     final controller = TextEditingController();
     final name = await _showGroupNameDialog(
       title: '新增小組',
@@ -125,28 +127,31 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
           Navigator.pop(context, value.trim());
         }
 
-        return StatefulBuilder(
-          builder: (context, setState) => AlertDialog(
-            title: Text(title),
-            content: TextField(
-              controller: controller,
-              autofocus: true,
-              decoration: InputDecoration(
-                labelText: '小組名稱',
-                border: const OutlineInputBorder(),
-                errorText: errorText,
+        return TextControllerScope(
+          controller: controller,
+          child: StatefulBuilder(
+            builder: (context, setState) => AlertDialog(
+              title: Text(title),
+              content: TextField(
+                controller: controller,
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: '小組名稱',
+                  border: const OutlineInputBorder(),
+                  errorText: errorText,
+                ),
+                onChanged: (value) =>
+                    setState(() => errorText = validateValue(value)),
+                onSubmitted: (_) => submit(),
               ),
-              onChanged: (value) =>
-                  setState(() => errorText = validateValue(value)),
-              onSubmitted: (_) => submit(),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('取消'),
+                ),
+                TextButton(onPressed: submit, child: const Text('儲存')),
+              ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('取消'),
-              ),
-              TextButton(onPressed: submit, child: const Text('儲存')),
-            ],
           ),
         );
       },

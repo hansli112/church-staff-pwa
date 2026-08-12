@@ -49,7 +49,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _loadDailyBreadRange();
-    _loadRecentActivities();
+    // 近期活動不在這裡抓：didChangeDependencies 在第一次 build 前必定會跑，
+    // 且 _lastUserId 初始為 null，所以首次進畫面就會由它觸發一次。
+    // 兩邊都抓會讓每次開首頁都打兩次 Google Calendar API。
   }
 
   @override
@@ -60,7 +62,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _lastUserId = userId;
 
     if (userId != null) {
-      // 登入或切換帳號：refetch 近期活動（RosterProvider cache 已由 ProxyProvider 清掉）。
+      // 首次進畫面、登入或切換帳號：抓近期活動
+      //（RosterProvider cache 已由 ProxyProvider 清掉）。
       _loadRecentActivities();
     }
   }
@@ -93,7 +96,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 16),
             _buildCalendarFeatureCard(context),
             const SizedBox(height: 20),
-            _buildSeasonServiceSection(context, fullName: fullName),
+            _buildSeasonServiceSection(
+              context,
+              fullName: fullName,
+              userId: user?.id,
+            ),
           ],
         ),
       ),
@@ -104,10 +111,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final name = fullName?.trim() ?? '';
     if (name.isEmpty) return '同工';
 
-    final parts = name
-        .split(_whitespaceRe)
-        .where((p) => p.isNotEmpty)
-        .toList();
+    final parts = name.split(_whitespaceRe).where((p) => p.isNotEmpty).toList();
     final hasLatin = _latinRe.hasMatch(name);
     if (parts.length > 1) {
       return hasLatin ? parts.first : parts.last;
@@ -135,9 +139,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } catch (error, st) {
       log('載入行事曆畫面失敗', error: error, stackTrace: st);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('載入失敗：${mapErrorToUserMessage(error)}')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('載入失敗：${mapErrorToUserMessage(error)}')),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -201,9 +205,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  static const String _dailyBreadKeyPrefix = 'dashboard_daily_bread_range_';
+
   String _cacheKeyForDailyBreadRange() {
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    return 'dashboard_daily_bread_range_$today';
+    return '$_dailyBreadKeyPrefix$today';
+  }
+
+  /// key 帶日期，每天都會產生新的一筆。不清掉的話 localStorage 會無限長大，
+  /// 用久了可能撞到瀏覽器的 quota。寫新的時候順手把舊的刪掉。
+  Future<void> _pruneDailyBreadCache(
+    SharedPreferences prefs,
+    String currentKey,
+  ) async {
+    for (final key in prefs.getKeys().toList()) {
+      if (key.startsWith(_dailyBreadKeyPrefix) && key != currentKey) {
+        await prefs.remove(key);
+      }
+    }
   }
 
   Future<String?> _loadCachedDailyBreadRange() async {
@@ -215,14 +234,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _saveCachedDailyBreadRange(String range) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_cacheKeyForDailyBreadRange(), range);
+    final key = _cacheKeyForDailyBreadRange();
+    await prefs.setString(key, range);
+    await _pruneDailyBreadCache(prefs, key);
   }
 
   Future<String?> _fetchDailyBreadRange() async {
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final uri = Uri.parse(_dailyVerseJsonUrl).replace(
-      queryParameters: {'d': today},
-    );
+    final uri = Uri.parse(
+      _dailyVerseJsonUrl,
+    ).replace(queryParameters: {'d': today});
     final response = await http.get(uri).timeout(const Duration(seconds: 10));
     if (response.statusCode != 200) {
       throw Exception('daily_verse_fetch_failed_${response.statusCode}');
@@ -536,7 +557,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ..._recentActivities.map((event) {
           final dateText = event.isAllDay
               ? DateFormat('MM/dd (EEEEE)', 'zh_TW').format(event.startTime)
-              : DateFormat('MM/dd (EEEEE) HH:mm', 'zh_TW').format(event.startTime);
+              : DateFormat(
+                  'MM/dd (EEEEE) HH:mm',
+                  'zh_TW',
+                ).format(event.startTime);
           return Padding(
             padding: const EdgeInsets.only(bottom: 6),
             child: Row(
@@ -577,6 +601,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildSeasonServiceSection(
     BuildContext context, {
     required String fullName,
+    required String? userId,
   }) {
     return Consumer<RosterProvider>(
       builder: (context, provider, child) {
@@ -612,9 +637,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Text(
                   provider.error!,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.error,
-                  ),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
                 const SizedBox(height: 8),
                 FilledButton.icon(
@@ -630,6 +653,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final assignments = _seasonAssignments(
           rosters: provider.rosters,
           userName: fullName,
+          userId: userId,
         );
         if (assignments.isEmpty) {
           final emptyText = fullName.trim().isEmpty ? '尚未登入同工資料' : '本季尚無排到服事';
@@ -703,12 +727,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return (visibleCount * rowHeight) + ((visibleCount - 1) * separatorHeight);
   }
 
+  // 上一次算出來的本季服事，避免每次 setState（推播開關、每日靈糧載入…）
+  // 都重排一次全部 roster。RosterProvider 的 rosters 在資料沒變時是同一個
+  // reference，所以用 identical 判斷就夠。
+  List<ServiceRoster>? _assignmentsSourceRosters;
+  String? _assignmentsSourceKey;
+  List<_UserServiceAssignment> _cachedAssignments = const [];
+
   List<_UserServiceAssignment> _seasonAssignments({
     required List<ServiceRoster> rosters,
     required String userName,
+    required String? userId,
+  }) {
+    // key 必須含日期：季度區間是從 DateTime.now() 推導的，App 一直開著跨過
+    // 季末時，只看 rosters identity 的話會永遠回傳上一季的結果。
+    final today = DateUtils.dateOnly(DateTime.now());
+    final sourceKey = '$userId|$userName|${today.toIso8601String()}';
+    if (identical(rosters, _assignmentsSourceRosters) &&
+        sourceKey == _assignmentsSourceKey) {
+      return _cachedAssignments;
+    }
+
+    final computed = _computeSeasonAssignments(
+      rosters: rosters,
+      userName: userName,
+      userId: userId,
+    );
+    _assignmentsSourceRosters = rosters;
+    _assignmentsSourceKey = sourceKey;
+    _cachedAssignments = computed;
+    return computed;
+  }
+
+  List<_UserServiceAssignment> _computeSeasonAssignments({
+    required List<ServiceRoster> rosters,
+    required String userName,
+    required String? userId,
   }) {
     final normalizedName = _normalizeName(userName);
-    if (normalizedName.isEmpty) return [];
+    final normalizedId = userId?.trim() ?? '';
+    if (normalizedName.isEmpty && normalizedId.isEmpty) return [];
 
     final List<_UserServiceAssignment> results = [];
     final now = DateTime.now();
@@ -724,11 +782,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         continue;
       }
       final roles = roster.duties
-          .where(
-            (duty) => duty.people.any(
-              (person) => _normalizeName(person) == normalizedName,
-            ),
-          )
+          .where((duty) => _isAssignedTo(duty, normalizedId, normalizedName))
           .map((duty) => duty.role)
           .toList();
       if (roles.isEmpty) continue;
@@ -736,6 +790,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     return results;
+  }
+
+  /// 判斷這筆 duty 是否排到本人。
+  ///
+  /// uid 相符直接算數（改名之後照樣對得上）；uid 對不上時仍會退回姓名比對。
+  ///
+  /// 刻意不把 uid 當成唯一權威：roster 裡存的 uid 可能已經過期 —— 例如同工
+  /// 原本沒有 email、admin 後來補上時會建立全新的 Auth 帳號並換掉 user 文件
+  /// id，既有 roster 的 personIdsByName 仍指向舊 id。那種情況下若因為
+  /// 「有 uid 但不相符」就跳過姓名比對，本人會在首頁看到「本季尚無排到服事」，
+  /// 但服事表分頁明明列著他。漏掉自己的服事比同名誤判嚴重得多。
+  bool _isAssignedTo(
+    RosterEntry duty,
+    String normalizedId,
+    String normalizedName,
+  ) {
+    for (final person in duty.people) {
+      final trimmed = person.trim();
+      if (trimmed.isEmpty) continue;
+
+      final linkedId = duty.personIdsByName[trimmed]?.trim() ?? '';
+      if (normalizedId.isNotEmpty && linkedId == normalizedId) return true;
+
+      if (normalizedName.isNotEmpty &&
+          _normalizeName(trimmed) == normalizedName) {
+        return true;
+      }
+    }
+    return false;
   }
 
   String _normalizeName(String name) {

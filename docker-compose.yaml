@@ -1,12 +1,26 @@
-version: '3.8'
-
+# 建置參數從同目錄的 .env 讀（照 .env.example 建立）。
+# Firebase 設定必須在 build 時就注入，執行期沒有機會補。
+#
+# Firebase.initializeApp 的必填欄位在這裡就用 :? 擋掉，清單與 Dockerfile 內
+# 的檢查一致。Dockerfile 那道防線是最後保險，但它要等 clone Flutter SDK、
+# pub get、COPY 都跑完才輪到 —— 少填一個值卻要等好幾分鐘才看到錯誤訊息。
+# 在 compose 這層擋等於秒回。
 services:
   web:
     build:
       context: .
       dockerfile: Dockerfile
-      # 如果您在電腦上使用 buildx 構建並推送到 armv7 裝置，可以保留此行
-      # 如果直接在 armv7 裝置上 build，這行確保最終 image 標記正確
+      args:
+        FCM_WEB_VAPID_KEY: ${FCM_WEB_VAPID_KEY:-}
+        FIREBASE_API_KEY: ${FIREBASE_API_KEY:?FIREBASE_API_KEY is required}
+        FIREBASE_AUTH_DOMAIN: ${FIREBASE_AUTH_DOMAIN:?FIREBASE_AUTH_DOMAIN is required}
+        FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:?FIREBASE_PROJECT_ID is required}
+        FIREBASE_STORAGE_BUCKET: ${FIREBASE_STORAGE_BUCKET:-}
+        FIREBASE_MESSAGING_SENDER_ID: ${FIREBASE_MESSAGING_SENDER_ID:?FIREBASE_MESSAGING_SENDER_ID is required}
+        FIREBASE_APP_ID: ${FIREBASE_APP_ID:?FIREBASE_APP_ID is required}
+        FIREBASE_MEASUREMENT_ID: ${FIREBASE_MEASUREMENT_ID:-}
+        GOOGLE_CALENDAR_API_KEY: ${GOOGLE_CALENDAR_API_KEY:-}
+        GOOGLE_CALENDAR_ID: ${GOOGLE_CALENDAR_ID:-}
     image: church-staff-pwa:latest
     container_name: church_staff_pwa
     restart: unless-stopped

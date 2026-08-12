@@ -7,6 +7,7 @@ class SettingsBottomSheet extends StatelessWidget {
   final String submitLabel;
   final String cancelLabel;
   final Widget? submitChild;
+
   /// 為 true 時，按鈕顯示 spinner + `${submitLabel}中…`（例：'匯入中…'）。
   /// 呼叫端應確保 submitLabel 是可組合的動詞。
   final bool isSubmitting;
@@ -36,10 +37,7 @@ class SettingsBottomSheet extends StatelessWidget {
           children: [
             Align(
               alignment: Alignment.centerLeft,
-              child: Text(
-                title,
-                style: theme.textTheme.titleLarge,
-              ),
+              child: Text(title, style: theme.textTheme.titleLarge),
             ),
             const SizedBox(height: 8),
             const Divider(height: 1),
@@ -61,7 +59,8 @@ class SettingsBottomSheet extends StatelessWidget {
                 const SizedBox(width: 8),
                 FilledButton(
                   onPressed: onSubmit,
-                  child: submitChild ??
+                  child:
+                      submitChild ??
                       (isSubmitting
                           ? Row(
                               mainAxisSize: MainAxisSize.min,

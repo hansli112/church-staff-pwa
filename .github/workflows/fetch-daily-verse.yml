@@ -5,6 +5,12 @@ on:
     - cron: '0 17 * * *'  # 01:00 Taiwan time (UTC+8)
   workflow_dispatch:       # 允許手動觸發
 
+# 手動觸發撞上排程時，兩個 job 會各自 checkout data 分支再 push，
+# 後跑完的那個必然被 non-fast-forward 拒絕。排隊跑就不會有這個問題。
+concurrency:
+  group: fetch-daily-verse
+  cancel-in-progress: false
+
 jobs:
   fetch:
     runs-on: ubuntu-latest
@@ -18,7 +24,10 @@ jobs:
       - name: Fetch and parse daily verse
         run: |
           # curl --insecure bypasses the incomplete certificate chain on breadoflife.taipei
-          curl -s -L --insecure \
+          # --fail：對方回 5xx 時別把錯誤頁餵給 parser（HTML 長得夠像就可能誤判）。
+          # --max-time / --retry：對方掛住的話，沒有逾時就會一路占著 runner 到
+          #   job 的 6 小時上限才失敗；偶發的連線失敗則值得重試而不是直接紅。
+          curl -s -L --insecure --fail --retry 3 --retry-delay 5 --max-time 60 \
             -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
             -H "Accept: text/html,application/xhtml+xml" \
             -H "Accept-Language: zh-TW,zh;q=0.9,en;q=0.8" \
@@ -33,9 +42,23 @@ jobs:
             console.error('Snippet: ' + html.substring(0, 500));
             process.exit(1);
           }
+          // curl 走的是 --insecure（對方憑證鏈不完整），所以這份 HTML 沒有
+          // 傳輸層保證。內容會 commit 進 data 分支並直接顯示在 App 上，
+          // 這裡先做基本健檢，明顯不對的就讓 workflow 失敗而不是寫進去。
+          const rawRange = match[2].trim();
+          if (rawRange.length === 0 || rawRange.length > 60 || /[<>]/.test(rawRange)) {
+            console.error('Suspicious rawRange, refusing to write: ' + JSON.stringify(rawRange));
+            process.exit(1);
+          }
+          const todayTW = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
+          if (match[1] > todayTW) {
+            console.error('Parsed date is in the future: ' + match[1] + ' > ' + todayTW);
+            process.exit(1);
+          }
+
           const now = new Date();
           const fetchedAt = new Date(now.getTime() + 8 * 3600000).toISOString().replace('Z', '+08:00');
-          const data = { date: match[1], rawRange: match[2].trim(), fetchedAt };
+          const data = { date: match[1], rawRange, fetchedAt };
           fs.writeFileSync('daily-verse.json', JSON.stringify(data, null, 2) + '\n');
           console.log('Fetched:', JSON.stringify(data));
           SCRIPT

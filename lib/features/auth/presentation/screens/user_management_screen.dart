@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/user.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
+import '../../../../core/widgets/text_warmup.dart';
 import '../providers/user_admin_provider.dart';
 import '../providers/group_settings_provider.dart';
 import 'user_editor_screen.dart';
@@ -14,7 +15,7 @@ class UserManagementScreen extends StatefulWidget {
 }
 
 class _UserManagementScreenState extends State<UserManagementScreen> {
-  // Change 3: hoist constant allocations out of itemBuilder
+  // itemBuilder 會跑很多次，常數配置一次就好。
   static const _cardRadius = BorderRadius.all(Radius.circular(12));
   static const _cardMargin = EdgeInsets.symmetric(horizontal: 16, vertical: 8);
 
@@ -22,8 +23,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   String _nameFilter = '';
   List<_UserListItemData> _sortedUsers = const [];
 
-  // Change 2: replace O(N) signature mechanism with a single reference check
+  // GroupSettingsProvider.templates 刻意回傳同一份 reference，
+  // 所以用 identical() 就能判斷要不要重排，不必逐項比對。
   Map<ServiceType, List<String>>? _lastTemplates;
+
+  // 名單裡會顯示的所有不重複字串，資料換了才重算。給 TextWarmup 用。
+  List<String> _warmupStrings = const [];
 
   final ScrollController _scrollController = ScrollController();
   double _restoreOffset = 0;
@@ -32,11 +37,15 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   bool _isRefreshing = false;
   bool _hasLoaded = false;
 
+  // Refresh generation counter：刪除、關閉編輯 dialog、初次載入都會各自發一次
+  // 請求，先發的不保證先回。沒有這個 token，晚回的舊請求會把新資料
+  // （_sortedUsers / _warmupStrings）蓋回舊的，畫面與 _usersFuture 對不起來。
+  int _refreshToken = 0;
+
   @override
   void initState() {
     super.initState();
     _refreshUsers();
-    // pagination listener removed (ListView.builder lazy build is sufficient)
   }
 
   void _refreshUsers() {
@@ -44,29 +53,35 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       _restoreOffset = _scrollController.offset;
       _pendingRestore = true;
     }
+    final token = ++_refreshToken;
     // 管理畫面 pull-to-refresh / initial load 一律拉最新，避開 cache。
-    final future = context.read<UserAdminProvider>().getUsers(forceRefresh: true);
+    final future = context.read<UserAdminProvider>().getUsers(
+      forceRefresh: true,
+    );
     setState(() {
       _usersFuture = future;
-      // visibleCount field removed (no UI pagination)
       _isRefreshing = true;
     });
     future
         .then((users) {
-          if (!mounted) return;
-          // Change 2: re-sort after data arrives, using a one-shot context.read
-          final templates =
-              context.read<GroupSettingsProvider>().templates;
+          if (!mounted || token != _refreshToken) return;
+          // 資料回來才排序，用一次性的 context.read 取 templates。
+          final templates = context.read<GroupSettingsProvider>().templates;
           setState(() {
             _lastUsers = users;
             _sortedUsers = _buildSortedUsers(users, templates);
+            // 預熱的是「列上真正會顯示的字串」：標題與副標。名單的人不見得
+            // 都出現在服事表裡，所以這裡要自己來一次。
+            _warmupStrings = TextWarmup.uniqueStringsOf(
+              _sortedUsers.expand((item) => [item.displayName, item.subtitle]),
+            );
             _lastTemplates = templates;
             _isRefreshing = false;
             _hasLoaded = true;
           });
         })
         .catchError((_) {
-          if (!mounted) return;
+          if (!mounted || token != _refreshToken) return;
           setState(() {
             _isRefreshing = false;
           });
@@ -100,12 +115,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     _refreshUsers();
   }
 
-  // scroll pagination methods removed
-
   @override
   Widget build(BuildContext context) {
-    // Change 2: context.select still drives rebuild when templates change;
-    // we compare by reference to decide whether to re-sort.
+    // context.select 仍負責在 templates 變動時觸發 rebuild；
+    // 這裡用 reference 比較決定要不要重排。
     final groupTemplates = context
         .select<GroupSettingsProvider, Map<ServiceType, List<String>>>(
           (provider) => provider.templates,
@@ -117,7 +130,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       _lastTemplates = groupTemplates;
     }
 
-    // Change 3: hoist BorderSide allocation (theme-dependent, so stays in build)
+    // BorderSide 吃 theme，只能留在 build，但至少提到 itemBuilder 外面。
     final cardBorderSide = BorderSide(
       color: Theme.of(context).dividerColor.withValues(alpha: 0.6),
     );
@@ -128,161 +141,165 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         onPressed: () => _openEditor(),
         child: const Icon(Icons.add),
       ),
-      body: FutureBuilder<List<User>>(
-        future: _usersFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting &&
-              !_hasLoaded) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-
-          // _sortedUsers is up-to-date: either from _refreshUsers callback
-          // or the reference-check block in build().
-          final filter = _nameFilter.trim().toLowerCase();
-          final filteredUsers = filter.isEmpty
-              ? _sortedUsers
-              : _sortedUsers
-                    .where((item) => item.nameLower.contains(filter))
-                    .toList();
-
-          // visibleCount clamp removed; filteredUsers used directly below.
-
-          // KEPT: scroll-position restore (0c178a5 fix)
-          if (_pendingRestore && _scrollController.hasClients) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted || !_scrollController.hasClients) return;
-              final maxOffset = _scrollController.position.maxScrollExtent;
-              if (maxOffset <= 0 && _restoreOffset > 0) {
-                return;
+      body: Stack(
+        children: [
+          TextWarmup(strings: _warmupStrings),
+          FutureBuilder<List<User>>(
+            future: _usersFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting &&
+                  !_hasLoaded) {
+                return const Center(child: CircularProgressIndicator());
               }
-              final target = _restoreOffset > maxOffset
-                  ? maxOffset
-                  : _restoreOffset;
-              if (target >= 0) {
-                _scrollController.jumpTo(target);
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
               }
-              _pendingRestore = false;
-            });
-          }
 
-          return Column(
-            children: [
-              if (_isRefreshing) const LinearProgressIndicator(minHeight: 2),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                child: TextField(
-                  decoration: const InputDecoration(
-                    labelText: '搜尋姓名',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.search),
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      _nameFilter = value;
-                      // reset scroll position on new search
-                    });
-                    if (_scrollController.hasClients) {
-                      _scrollController.jumpTo(0);
-                    }
-                  },
-                ),
-              ),
-              Expanded(
-                // Change 1: use filteredUsers directly; removed visibleUsers alias
-                child: filteredUsers.isEmpty
-                    ? const Center(child: Text('沒有符合的帳號'))
-                    : ListView.builder(
-                        key: const PageStorageKey('user_management_list'),
-                        controller: _scrollController,
-                        itemExtent: 88,
-                        // Change 1: itemCount = filteredUsers.length (no +1 trailer)
-                        itemCount: filteredUsers.length,
-                        itemBuilder: (context, index) {
-                          // Change 1: trailer loader block deleted
-                          final data = filteredUsers[index];
+              // _sortedUsers is up-to-date: either from _refreshUsers callback
+              // or the reference-check block in build().
+              final filter = _nameFilter.trim().toLowerCase();
+              final filteredUsers = filter.isEmpty
+                  ? _sortedUsers
+                  : _sortedUsers
+                        .where((item) => item.nameLower.contains(filter))
+                        .toList();
 
-                          return RepaintBoundary(
-                            child: Card(
-                              // Change 3: reuse hoisted constants
-                              margin: _cardMargin,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: _cardRadius,
-                                side: cardBorderSide,
-                              ),
-                              child: ListTile(
-                                leading: const CircleAvatar(
-                                  child: Icon(Icons.person, size: 18),
-                                ),
-                                title: Text(
-                                  data.displayName,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                subtitle: Text(
-                                  data.subtitle,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                onTap: () => _openEditor(data.user),
-                                trailing: IconButton(
-                                  icon: const Icon(
-                                    Icons.delete,
-                                    color: Colors.red,
-                                  ),
-                                  onPressed: () async {
-                                    final authProvider = context
-                                        .read<UserAdminProvider>();
-                                    final confirm = await showDialog<bool>(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        title: const Text('確認刪除'),
-                                        content: Text(
-                                          '確定要刪除 ${data.user.name} 嗎？',
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.pop(context, false),
-                                            child: const Text('取消'),
-                                          ),
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.pop(context, true),
-                                            child: const Text(
-                                              '刪除',
-                                              style: TextStyle(
-                                                color: Colors.red,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
+              // KEPT: scroll-position restore (0c178a5 fix)
+              if (_pendingRestore && _scrollController.hasClients) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted || !_scrollController.hasClients) return;
+                  final maxOffset = _scrollController.position.maxScrollExtent;
+                  if (maxOffset <= 0 && _restoreOffset > 0) {
+                    return;
+                  }
+                  final target = _restoreOffset > maxOffset
+                      ? maxOffset
+                      : _restoreOffset;
+                  if (target >= 0) {
+                    _scrollController.jumpTo(target);
+                  }
+                  _pendingRestore = false;
+                });
+              }
 
-                                    if (confirm != true) return;
-                                    await authProvider.deleteUser(data.user.id);
-                                    if (!context.mounted) return;
-                                    _refreshUsers();
-                                  },
-                                ),
-                              ),
-                            ),
-                          );
-                        },
+              return Column(
+                children: [
+                  if (_isRefreshing)
+                    const LinearProgressIndicator(minHeight: 2),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    child: TextField(
+                      decoration: const InputDecoration(
+                        labelText: '搜尋姓名',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.search),
                       ),
-              ),
-            ],
-          );
-        },
+                      onChanged: (value) {
+                        setState(() {
+                          _nameFilter = value;
+                          // reset scroll position on new search
+                        });
+                        if (_scrollController.hasClients) {
+                          _scrollController.jumpTo(0);
+                        }
+                      },
+                    ),
+                  ),
+                  Expanded(
+                    child: filteredUsers.isEmpty
+                        ? const Center(child: Text('沒有符合的帳號'))
+                        : ListView.builder(
+                            key: const PageStorageKey('user_management_list'),
+                            controller: _scrollController,
+                            itemExtent: 88,
+                            itemCount: filteredUsers.length,
+                            itemBuilder: (context, index) {
+                              final data = filteredUsers[index];
+
+                              return RepaintBoundary(
+                                child: Card(
+                                  margin: _cardMargin,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: _cardRadius,
+                                    side: cardBorderSide,
+                                  ),
+                                  child: ListTile(
+                                    leading: const CircleAvatar(
+                                      child: Icon(Icons.person, size: 18),
+                                    ),
+                                    title: Text(
+                                      data.displayName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    subtitle: Text(
+                                      data.subtitle,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    onTap: () => _openEditor(data.user),
+                                    trailing: IconButton(
+                                      icon: const Icon(
+                                        Icons.delete,
+                                        color: Colors.red,
+                                      ),
+                                      onPressed: () async {
+                                        final authProvider = context
+                                            .read<UserAdminProvider>();
+                                        final confirm = await showDialog<bool>(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            title: const Text('確認刪除'),
+                                            content: Text(
+                                              '確定要刪除 ${data.user.name} 嗎？',
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(
+                                                  context,
+                                                  false,
+                                                ),
+                                                child: const Text('取消'),
+                                              ),
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(
+                                                  context,
+                                                  true,
+                                                ),
+                                                child: const Text(
+                                                  '刪除',
+                                                  style: TextStyle(
+                                                    color: Colors.red,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+
+                                        if (confirm != true) return;
+                                        await authProvider.deleteUser(
+                                          data.user.id,
+                                        );
+                                        if (!context.mounted) return;
+                                        _refreshUsers();
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
       ),
     );
   }
-
-  // O(N) signature mechanism removed; replaced by reference-equality check in build()
 }
 
 class _UserListItemData {

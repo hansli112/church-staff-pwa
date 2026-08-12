@@ -14,12 +14,24 @@ rules_version = '2';
 //     with the public web SDK. These rules are the real enforcement boundary.
 //   - The most dangerous path is self privilege-escalation by writing role=admin
 //     to users/{uid}. This is blocked by selfUpdateOnlyTouches().
+//   - Deleting a user from the admin UI only removes users/{uid}; the Firebase
+//     Auth account survives (client SDKs cannot delete other accounts), so a
+//     removed member keeps a valid ID token. Every rule therefore requires
+//     isActiveUser() — an existing users/{uid} doc — not just isSignedIn().
+//     Deleting the doc revokes all access immediately.
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
     function isSignedIn() {
       return request.auth != null;
+    }
+
+    // Signed in AND still a member (users/{uid} exists). This is the baseline
+    // for every collection: a deleted member holding an old token gets nothing.
+    function isActiveUser() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
     function isSelf(uid) {
@@ -32,6 +44,13 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    // Role must be one of the values UserRole knows how to parse. Blocks an
+    // admin (or a compromised admin session) from writing junk that
+    // User.fromJson would silently coerce to 'member'.
+    function hasValidRole() {
+      return request.resource.data.role in ['admin', 'leader', 'staff', 'member'];
+    }
+
     // True iff the update only changes fields in `allowed`.
     // Used to block self-promotion to admin.
     function selfUpdateOnlyTouches(allowed) {
@@ -39,29 +58,34 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      // Any signed-in user can read user docs (people picker in roster needs this).
-      allow read: if isSignedIn();
+      // Own profile (needed on every login) or admin. The roster people picker
+      // is admin-only in the UI — every getUsers() call goes through
+      // UserAdminProvider, which throws for non-admins — so ordinary members
+      // never need to list the collection. Keeping it narrow means member
+      // emails and FCM tokens are not readable by every signed-in account.
+      allow read: if isSelf(uid) || isAdmin();
 
       // Only admin creates new user docs (via SecondaryApp flow in user_editor_screen).
-      allow create: if isAdmin();
+      allow create: if isAdmin() && hasValidRole();
 
       // Updates:
       //   - admin: full control over any user doc
       //   - self : only fcm and notificationPrefs (no role/email/zones changes)
-      allow update: if isAdmin()
+      allow update: if (isAdmin() && hasValidRole())
         || (isSelf(uid)
+            && isActiveUser()
             && selfUpdateOnlyTouches(['fcm', 'notificationPrefs']));
 
       allow delete: if isAdmin();
     }
 
     match /rosters/{rosterId} {
-      allow read: if isSignedIn();
+      allow read: if isActiveUser();
       allow write: if isAdmin();
     }
 
     match /settings/{doc} {
-      allow read: if isSignedIn();
+      allow read: if isActiveUser();
       allow write: if isAdmin();
     }
 

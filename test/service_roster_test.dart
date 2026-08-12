@@ -51,10 +51,7 @@ void main() {
       final entry = RosterEntry(
         role: '領會',
         people: const ['Alice', 'Bob'],
-        personIdsByName: const {
-          'Alice': 'uid-a',
-          'Bob': 'uid-b',
-        },
+        personIdsByName: const {'Alice': 'uid-a', 'Bob': 'uid-b'},
       );
       expect(entry.assignedUserIds, ['uid-a', 'uid-b']);
     });
@@ -81,10 +78,7 @@ void main() {
     });
 
     test('assignedUserIds：personIdsByName 為空時回傳空列表', () {
-      final entry = RosterEntry(
-        role: '司琴',
-        people: const ['待定'],
-      );
+      final entry = RosterEntry(role: '司琴', people: const ['待定']);
       expect(entry.assignedUserIds, isEmpty);
     });
 
@@ -116,7 +110,8 @@ void main() {
         date: DateTime(2026, 3, 1),
         type: ServiceType.sundayService,
         serviceName: '主日崇拜',
-        duties: duties ??
+        duties:
+            duties ??
             [
               RosterEntry(role: '領會', people: const ['A']),
             ],
@@ -136,9 +131,7 @@ void main() {
     });
 
     test('customEventColors 有值時可正確讀取', () {
-      final roster = makeRoster(
-        customEventColors: {'復活節': 0xFFFFD700},
-      );
+      final roster = makeRoster(customEventColors: {'復活節': 0xFFFFD700});
       expect(roster.customEventColors['復活節'], 0xFFFFD700);
     });
 
@@ -155,9 +148,7 @@ void main() {
         specialEvents: const ['聖餐'],
         customEventColors: const {'舊事件': 0xFF000001},
       );
-      final updated = original.copyWith(
-        customEventColors: {'新事件': 0xFF000002},
-      );
+      final updated = original.copyWith(customEventColors: {'新事件': 0xFF000002});
       expect(updated.customEventColors, {'新事件': 0xFF000002});
       expect(updated.specialEvents, ['聖餐']);
       expect(updated.id, original.id);

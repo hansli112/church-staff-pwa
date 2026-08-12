@@ -118,40 +118,37 @@ void main() {
     // 情境 1：cache 有資料 → 先 set _allRosters，isLoading 仍 true，
     //         server 完成後覆蓋。
     // ────────────────────────────────────────────────────────────────────────
-    test(
-      'cache 有資料時先渲染 stale data，isLoading 仍 true，server 完成後覆蓋',
-      () async {
-        final staleRoster = _roster('stale-1', ServiceType.sundayService);
-        final freshRoster = _roster('fresh-1', ServiceType.youth);
+    test('cache 有資料時先渲染 stale data，isLoading 仍 true，server 完成後覆蓋', () async {
+      final staleRoster = _roster('stale-1', ServiceType.sundayService);
+      final freshRoster = _roster('fresh-1', ServiceType.youth);
 
-        // 用 Completer 讓 server fetch 先暫停，確認中間狀態
-        final serverPause = Completer<void>();
-        final repo = _FakeRepo(
-          cacheResult: [staleRoster],
-          serverResult: [freshRoster],
-          serverPause: serverPause,
-        );
-        final provider = RosterProvider(repo);
+      // 用 Completer 讓 server fetch 先暫停，確認中間狀態
+      final serverPause = Completer<void>();
+      final repo = _FakeRepo(
+        cacheResult: [staleRoster],
+        serverResult: [freshRoster],
+        serverPause: serverPause,
+      );
+      final provider = RosterProvider(repo);
 
-        final fetchFuture = provider.fetchInitialData();
+      final fetchFuture = provider.fetchInitialData();
 
-        // cache 快完成了，drain 一次讓 cache phase 跑完
-        await _drain();
+      // cache 快完成了，drain 一次讓 cache phase 跑完
+      await _drain();
 
-        // cache phase 完成：rosters 有 stale data，isLoading = true
-        expect(provider.rosters, contains(staleRoster));
-        expect(provider.isLoading, isTrue);
+      // cache phase 完成：rosters 有 stale data，isLoading = true
+      expect(provider.rosters, contains(staleRoster));
+      expect(provider.isLoading, isTrue);
 
-        // 放行 server
-        serverPause.complete();
-        await fetchFuture;
+      // 放行 server
+      serverPause.complete();
+      await fetchFuture;
 
-        // server 完成：stale 被覆蓋成 fresh
-        expect(provider.rosters, contains(freshRoster));
-        expect(provider.rosters, isNot(contains(staleRoster)));
-        expect(provider.isLoading, isFalse);
-      },
-    );
+      // server 完成：stale 被覆蓋成 fresh
+      expect(provider.rosters, contains(freshRoster));
+      expect(provider.rosters, isNot(contains(staleRoster)));
+      expect(provider.isLoading, isFalse);
+    });
 
     // ────────────────────────────────────────────────────────────────────────
     // 情境 2：cache miss → 直接走 server，行為與原本一樣。

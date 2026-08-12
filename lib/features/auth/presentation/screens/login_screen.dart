@@ -25,10 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
       final session = context.read<SessionProvider>();
-      await session.login(
-        _usernameController.text,
-        _passwordController.text,
-      );
+      await session.login(_usernameController.text, _passwordController.text);
     }
   }
 
@@ -62,7 +59,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             children: [
                               Text(
                                 '竹圍靈糧福音中心',
-                                style: Theme.of(context).textTheme.headlineMedium,
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.headlineMedium,
                                 textAlign: TextAlign.center,
                               ),
                               const SizedBox(height: 32),
@@ -119,8 +118,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 width: double.infinity,
                                 height: 48,
                                 child: FilledButton(
-                                  onPressed:
-                                      session.isLoading ? null : _handleLogin,
+                                  onPressed: session.isLoading
+                                      ? null
+                                      : _handleLogin,
                                   child: session.isLoading
                                       ? const SizedBox(
                                           height: 24,

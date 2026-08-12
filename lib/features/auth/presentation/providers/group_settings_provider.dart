@@ -81,7 +81,9 @@ class GroupSettingsProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> updateTemplates(Map<ServiceType, List<String>> newTemplates) async {
+  Future<void> updateTemplates(
+    Map<ServiceType, List<String>> newTemplates,
+  ) async {
     try {
       await _repository.updateSmallGroupTemplates(newTemplates);
       _templates = Map.from(newTemplates);

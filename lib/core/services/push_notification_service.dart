@@ -16,10 +16,7 @@ enum PushToggleFailureReason {
 }
 
 class PushToggleResult {
-  const PushToggleResult({
-    required this.enabled,
-    this.failureReason,
-  });
+  const PushToggleResult({required this.enabled, this.failureReason});
 
   final bool enabled;
   final PushToggleFailureReason? failureReason;

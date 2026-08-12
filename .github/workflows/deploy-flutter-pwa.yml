@@ -4,23 +4,61 @@ on:
     branches: [ main, dev ] # 當你 push 到 main 或 dev 時會觸發
   workflow_dispatch: # 允許手動觸發
 
+env:
+  # 同時給 flutter-action 與 cache_sw.js 的 VENDOR_VERSION 使用。
+  # 改這個版本號 = 讓使用者重新下載 canvaskit 引擎，其餘 deploy 都不會。
+  FLUTTER_VERSION: '3.41.0'
+
 jobs:
+  # firestore.rules 是「繞過 App 直接打 Firestore」時唯一的防線，所以規則
+  # 有自己的一套 emulator 測試。刻意不擋 build-and-deploy：規則不在前端的
+  # 部署產物裡（要另外 firebase deploy --only firestore:rules），把兩件事綁
+  # 在一起只會讓前端部署平白變慢。測試紅了照樣看得見。
+  firestore-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: firestore-tests/package-lock.json
+
+      - run: npm ci
+        working-directory: firestore-tests
+
+      - name: Test firestore.rules against the emulator
+        run: npm test
+        working-directory: firestore-tests
+
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       # 1. 檢出程式碼
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # 2. 安裝 Flutter 環境 (GitHub 支援，Cloudflare 不支援)
+      # 版本固定：跟著 stable 浮動的話，某天 Flutter 發版就可能無預警 build 壞掉。
+      # 升級時手動改這個號碼，並在本機先跑過 flutter analyze / flutter test。
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
 
       # 3. 取得 Flutter 套件
       - run: flutter pub get
 
-      # 4. 編譯 Web (根據分支區分環境)
+      # 4. 品質關卡：analyze / test 沒過就不部署
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      # 5. 編譯 Web (根據分支區分環境)
       - name: Build Web
         env:
           # Secrets (sensitive)
@@ -36,13 +74,21 @@ jobs:
           FIREBASE_MEASUREMENT_ID: ${{ vars.FIREBASE_MEASUREMENT_ID }}
           GOOGLE_CALENDAR_ID: ${{ vars.GOOGLE_CALENDAR_ID }}
         run: |
+          set -eo pipefail
           if [ -z "$FCM_WEB_VAPID_KEY" ]; then
             echo "::warning::Missing FCM_WEB_VAPID_KEY secret. Web push token will not be generated."
           fi
-          if [ -z "$FIREBASE_API_KEY" ]; then
-            echo "::error::Missing FIREBASE_API_KEY secret. Build will produce a non-functional app."
-            exit 1
-          fi
+          # Firebase.initializeApp 少任何一個必填欄位，App 在瀏覽器裡就初始化
+          # 不了 —— 而且 build 會成功，要部署完打開才發現。只擋 API key 不夠。
+          # 這份清單刻意與 Dockerfile 的檢查一致：兩條部署路徑不能一邊擋、
+          # 一邊放行，否則自架版與 CI 版會編出行為不同的產物。
+          for required in FIREBASE_API_KEY FIREBASE_AUTH_DOMAIN FIREBASE_PROJECT_ID \
+                          FIREBASE_MESSAGING_SENDER_ID FIREBASE_APP_ID; do
+            if [ -z "${!required}" ]; then
+              echo "::error::Missing $required. Build would produce a non-functional app."
+              exit 1
+            fi
+          done
           DART_DEFINES=(
             --dart-define=FCM_WEB_VAPID_KEY="$FCM_WEB_VAPID_KEY"
             --dart-define=FIREBASE_API_KEY="$FIREBASE_API_KEY"
@@ -56,35 +102,70 @@ jobs:
             --dart-define=GOOGLE_CALENDAR_ID="$GOOGLE_CALENDAR_ID"
           )
           mkdir -p web
+          # 這裡刻意讀 runner 內建的環境變數，而不是用 GitHub 的表示式插值。
+          # 表示式是在 shell 啟動「之前」把值直接貼成腳本文字，分支名帶了 shell
+          # 特殊字元（workflow_dispatch 可以從任意分支觸發）就會被當成指令執行，
+          # 帶了引號也會把 JSON 寫壞。
+          #
+          # 註：這段註解本身不能寫出表示式的雙大括號語法 —— GitHub 會掃描整個
+          # 檔案（包含 run: 區塊內部）去解析表示式，空的一組就是語法錯誤，
+          # 整份 workflow 會載入失敗、零個 job 執行。
           cat <<EOF > web/version.json
           {
-            "version": "${{ github.sha }}",
-            "build_number": "${{ github.run_number }}",
-            "branch": "${{ github.ref_name }}",
+            "version": "$GITHUB_SHA",
+            "build_number": "$GITHUB_RUN_NUMBER",
+            "branch": "$GITHUB_REF_NAME",
             "generated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           }
           EOF
-          flutter build web --release --base-href "/" "${DART_DEFINES[@]}"
+          # --no-web-resources-cdn：把 CanvasKit 放進自己的 build/web/canvaskit/。
+          # 預設會從 www.gstatic.com 載入，那條路徑 service worker 不能快取
+          # （gstatic.com 在 never-cache 名單裡），cache_sw.js 的 vendor cache
+          # 也就永遠不會命中。改成自家來源後引擎才真的能離線與跨 deploy 重用。
+          #
+          # 這裡刻意「不」加 --wasm。瓶頸雖然確實在 UI thread（執行 Dart 本身），
+          # 但 Flutter 的 wasm 版在 iOS 上根本跑不起來：Safari 18.2 起雖已支援
+          # WasmGC，WebKit 仍有一個 bug 擋住 Flutter 的 wasm 渲染器
+          # （https://bugs.webkit.org/show_bug.cgi?id=267291），而 iOS 上所有
+          # 瀏覽器都被規定使用 WebKit，換 Chrome 也一樣。實測 HUD 顯示 iPhone
+          # 上落回 JS 版，證實了這點。我們的使用者以 iPhone 為主，加了只會讓
+          # artifact 變兩份、CI 變慢，卻換不到任何東西。
+          # 上游修好之後把 --wasm 加回來即可（?perf=1 的 HUD 會顯示 WASM/JS）。
+          flutter build web --release --base-href "/" --no-web-resources-cdn "${DART_DEFINES[@]}"
 
-      # 5. 將 build SHA 注入 cache_sw.js 作為 CACHE_VERSION
-      # 每次 deploy 產生不同的 cache name，舊版資產才會在 SW activate
-      # 時被清掉，使用者下一次 reload 不會卡在舊的 main.dart.js 快取。
+      # 6. 將版本號注入 cache_sw.js
+      # BUILD_VERSION（每次 deploy 都不同）→ App 資產 cache，確保使用者
+      #   下一次 reload 不會卡在舊的 main.dart.js。
+      # VENDOR_VERSION（只跟 Flutter 版本走）→ canvaskit 等引擎資產 cache，
+      #   讓 7 MB 的 canvaskit.wasm 不會每次 deploy 都被清掉重下載。
       # fail-fast 防止 placeholder 已被替換或不存在時 silently no-op。
-      - name: Inject build version into cache_sw.js
+      - name: Inject cache versions into cache_sw.js
         run: |
           set -euo pipefail
-          if ! grep -q '__BUILD_VERSION__' build/web/cache_sw.js; then
-            echo "::error::__BUILD_VERSION__ placeholder not found in build/web/cache_sw.js"
-            exit 1
-          fi
-          BUILD_VERSION="${GITHUB_SHA::8}-${{ github.run_number }}"
-          sed -i "s|__BUILD_VERSION__|${BUILD_VERSION}|g" build/web/cache_sw.js
-          if ! grep -q "${BUILD_VERSION}" build/web/cache_sw.js; then
-            echo "::error::sed substitution did not produce expected version"
-            exit 1
-          fi
+          for placeholder in __BUILD_VERSION__ __VENDOR_VERSION__; do
+            if ! grep -q "$placeholder" build/web/cache_sw.js; then
+              echo "::error::$placeholder placeholder not found in build/web/cache_sw.js"
+              exit 1
+            fi
+          done
+          BUILD_VERSION="${GITHUB_SHA::8}-${GITHUB_RUN_NUMBER}"
+          VENDOR_VERSION="flutter-${FLUTTER_VERSION}"
+          sed -i \
+            -e "s|__BUILD_VERSION__|${BUILD_VERSION}|g" \
+            -e "s|__VENDOR_VERSION__|${VENDOR_VERSION}|g" \
+            build/web/cache_sw.js
+          for expected in "${BUILD_VERSION}" "${VENDOR_VERSION}"; do
+            if ! grep -q "${expected}" build/web/cache_sw.js; then
+              echo "::error::sed substitution did not produce ${expected}"
+              exit 1
+            fi
+          done
 
-      # 6. 將 Firebase 設定注入 messaging service worker
+      # 7. 將 Firebase 設定注入 messaging service worker
+      # 同樣要 fail-fast。這支 SW 的失敗特別安靜：placeholder 改名或 sed 沒對到
+      # 時 workflow 照樣全綠、App 也照常開，只是 initializeApp 拿到字面上的
+      # '__FIREBASE_API_KEY__'，背景推播整個死掉 —— 要等到真的推一則通知沒收到
+      # 才會有人發現。cache_sw.js 那步早就有這層保護，這裡不能少。
       - name: Inject Firebase config into service worker
         env:
           FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
@@ -95,6 +176,17 @@ jobs:
           FIREBASE_APP_ID: ${{ vars.FIREBASE_APP_ID }}
           FIREBASE_MEASUREMENT_ID: ${{ vars.FIREBASE_MEASUREMENT_ID }}
         run: |
+          set -euo pipefail
+          SW=build/web/firebase-messaging-sw.js
+          for placeholder in __FIREBASE_API_KEY__ __FIREBASE_AUTH_DOMAIN__ \
+                             __FIREBASE_PROJECT_ID__ __FIREBASE_STORAGE_BUCKET__ \
+                             __FIREBASE_MESSAGING_SENDER_ID__ __FIREBASE_APP_ID__ \
+                             __FIREBASE_MEASUREMENT_ID__; do
+            if ! grep -q "$placeholder" "$SW"; then
+              echo "::error::$placeholder placeholder not found in $SW"
+              exit 1
+            fi
+          done
           sed -i \
             -e "s|__FIREBASE_API_KEY__|$FIREBASE_API_KEY|g" \
             -e "s|__FIREBASE_AUTH_DOMAIN__|$FIREBASE_AUTH_DOMAIN|g" \
@@ -103,15 +195,26 @@ jobs:
             -e "s|__FIREBASE_MESSAGING_SENDER_ID__|$FIREBASE_MESSAGING_SENDER_ID|g" \
             -e "s|__FIREBASE_APP_ID__|$FIREBASE_APP_ID|g" \
             -e "s|__FIREBASE_MEASUREMENT_ID__|$FIREBASE_MEASUREMENT_ID|g" \
-            build/web/firebase-messaging-sw.js
+            "$SW"
+          # 收尾再掃一次。上面逐一比對的是「替換前有沒有」，這條抓的是「替換後
+          # 還有沒有殘留」—— 例如日後多加一個欄位卻忘了補 sed 規則。
+          # 印出來的是「沒被替換掉」的那幾行，內容就是 placeholder 本身，不會外洩設定值。
+          if grep -n '__FIREBASE_[A-Z_]*__' "$SW"; then
+            echo "::error::Placeholders remain in $SW after substitution"
+            exit 1
+          fi
 
-      # 7. 部署到 Cloudflare Pages
+      # 8. 部署到 Cloudflare Pages
+      # cloudflare/pages-action@v1 已被官方 deprecate（repo 已封存），
+      # 改用 wrangler-action 跑 `pages deploy`。API token 權限需求相同
+      # （Cloudflare Pages: Edit）。
+      # 關鍵：推送到 main 會更新 Production，推送到 dev 會產生 Preview 網址
       - name: Publish to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: church-staff-pwa  # 務必與你 Cloudflare 上的專案名稱一致
-          directory: build/web          # 指定編譯後的產出目錄
-          # 關鍵：推送到 main 會更新 Production，推送到 dev 會產生 Preview 網址
-          branch: ${{ github.ref_name }}
+          command: >-
+            pages deploy build/web
+            --project-name=church-staff-pwa
+            --branch=${{ github.ref_name }}

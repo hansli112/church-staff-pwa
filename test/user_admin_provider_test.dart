@@ -20,7 +20,7 @@ class _FakeAuthRepository implements AuthRepository {
   int getUsersCallCount = 0;
 
   _FakeAuthRepository({List<User>? usersToReturn})
-      : usersToReturn = usersToReturn ?? [];
+    : usersToReturn = usersToReturn ?? [];
 
   @override
   Future<User?> login(String username, String password) async =>
@@ -103,9 +103,7 @@ void main() {
 
     // 每個測試都用已登入的 admin session
     setUp(() async {
-      repo = _FakeAuthRepository(
-        usersToReturn: [_adminUser, _staffUser],
-      );
+      repo = _FakeAuthRepository(usersToReturn: [_adminUser, _staffUser]);
       session = await _makeSession(repo, currentUser: _adminUser);
       provider = UserAdminProvider(repo, session);
     });

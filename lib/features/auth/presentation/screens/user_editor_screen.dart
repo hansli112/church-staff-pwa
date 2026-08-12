@@ -130,9 +130,9 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
       } catch (e, st) {
         log('儲存使用者資料失敗', error: e, stackTrace: st);
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('錯誤：${mapErrorToUserMessage(e)}')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('錯誤：${mapErrorToUserMessage(e)}')),
+          );
         }
       }
     }
