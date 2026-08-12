@@ -52,9 +52,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Navigator.of(context, rootNavigator: true).pop();
           dialogShown = false;
         }
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('載入失敗：${mapErrorToUserMessage(error)}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('載入失敗：${mapErrorToUserMessage(error)}')),
+        );
       }
     } finally {
       if (dialogShown && context.mounted) {
@@ -124,9 +124,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (error, st) {
       log('更新通知設定失敗', error: error, stackTrace: st);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('更新通知設定失敗：${mapErrorToUserMessage(error)}')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('更新通知設定失敗：${mapErrorToUserMessage(error)}')),
+      );
     } finally {
       if (mounted) {
         setState(() => _isPushLoading = false);
@@ -153,7 +153,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 CircleAvatar(
                   radius: 40,
                   child: Text(
-                    user.name[0],
+                    _avatarLetter(user.name),
                     style: const TextStyle(fontSize: 32),
                   ),
                 ),
@@ -243,9 +243,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               );
 
-              if (confirm == true) {
-                await session.logout();
-              }
+              if (confirm != true) return;
+              await session.logout();
+              // 登出失敗時 session 會被保留（避免假登出），所以錯誤要在這裡
+              // 講清楚，否則使用者以為登出成功、畫面卻沒有變化。
+              final logoutError = session.error;
+              if (logoutError == null) return;
+              session.clearError();
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(logoutError)));
             },
           ),
           FutureBuilder<AppVersionInfo?>(
@@ -272,6 +280,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
+  }
+
+  /// 空字串直接取 [0] 會 RangeError（Firestore 上的 name 不保證非空）。
+  String _avatarLetter(String name) {
+    final trimmed = name.trim();
+    return trimmed.isEmpty ? '?' : trimmed[0];
   }
 
   String _buildVersionDateText(AppVersionInfo? info) {

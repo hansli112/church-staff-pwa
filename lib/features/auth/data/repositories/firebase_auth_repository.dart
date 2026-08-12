@@ -14,7 +14,7 @@ class FirebaseAuthRepository implements AuthRepository {
   final CachedUserStorage _cachedUserStorage;
 
   FirebaseAuthRepository({CachedUserStorage? cachedUserStorage})
-      : _cachedUserStorage = cachedUserStorage ?? CachedUserStorage();
+    : _cachedUserStorage = cachedUserStorage ?? CachedUserStorage();
 
   CollectionReference get _usersCollection => _firestore.collection('users');
 
@@ -48,9 +48,8 @@ class FirebaseAuthRepository implements AuthRepository {
     var current = _auth.currentUser;
     current ??= await _auth.authStateChanges().first.timeout(
       const Duration(seconds: 10),
-      onTimeout: () => throw TimeoutException(
-        'Auth state restore timed out after 10s',
-      ),
+      onTimeout: () =>
+          throw TimeoutException('Auth state restore timed out after 10s'),
     );
     if (current == null) return null;
     return await _fetchUserFromFirestore(current.uid);
@@ -77,8 +76,18 @@ class FirebaseAuthRepository implements AuthRepository {
 
   @override
   Future<void> logout() async {
-    await _cachedUserStorage.clear();
+    // signOut 先做：它才是真正終結 session 的那一步。反過來的話，本地快取
+    // 清除一失敗（例如儲存被瀏覽器封鎖）就會讓 signOut 根本不會執行，
+    // 而使用者已經看到自己回到登入畫面 —— 共用裝置上等於把帳號留給下一個人。
     await _auth.signOut();
+
+    // 本地快取清除屬於盡力而為：Auth session 已經沒了，就算這裡失敗，
+    // 下次啟動時的背景 profile 更新也會發現 session 失效並登出。
+    try {
+      await _cachedUserStorage.clear();
+    } catch (e, st) {
+      log('清除本地使用者快取失敗（session 已登出）', error: e, stackTrace: st);
+    }
   }
 
   @override

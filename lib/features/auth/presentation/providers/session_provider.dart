@@ -141,13 +141,32 @@ class SessionProvider extends ChangeNotifier {
 
   Future<void> logout() async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
 
-    await _repository.logout();
-    _currentUser = null;
-    _isRestoring = false;
+    try {
+      await _repository.logout();
+      _currentUser = null;
+      _isRestoring = false;
+    } catch (e, st) {
+      // 登出失敗時**不能**清掉 _currentUser：那會讓 App 跳回登入畫面、
+      // 使用者以為已經登出，但 Firebase Auth session 其實還活著 ——
+      // 共用裝置上下一個人重開就直接進到前一個人的帳號。
+      // 保留登入狀態並回報錯誤，讓使用者知道要再試一次。
+      log('登出失敗', error: e, stackTrace: st);
+      _error = '登出失敗:${mapErrorToUserMessage(e)}';
+    } finally {
+      // 不論成敗都要解除 loading，否則畫面卡在「登出中」。
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 
-    _isLoading = false;
+  /// 清掉目前的錯誤訊息（例如 UI 已經用 SnackBar 呈現過了）。
+  /// 沒有這個的話，登出失敗留下的 _error 會被登入畫面當成登入錯誤顯示。
+  void clearError() {
+    if (_error == null) return;
+    _error = null;
     notifyListeners();
   }
 
