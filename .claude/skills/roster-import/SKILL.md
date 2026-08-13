@@ -97,6 +97,22 @@ python3 scripts/build-import-prompt.py youth     # 只產生一個
 Read 產生出來的檔案，把 ```` 圍起來的本文原樣貼給使用者。
 **提醒他那份含真實姓名，不要貼進公開的地方。**
 
+## 使用者不在這台電腦前
+
+他人在手機上、或換了一台機器時，本機這條路走不了。產一份可以上傳到
+claude.ai 的獨立技能給他：
+
+```
+python3 scripts/build-claude-skill.py
+```
+
+產物 `.local/claude-skill/roster-import.zip` 上傳一次，之後在 claude.ai
+附照片就能轉。**那份含真實姓名**，要跟使用者確認可以送到 claude.ai。
+名單有異動時重跑再上傳覆蓋。
+
+那個版本沒有乾式匯入（claude.ai 上沒有 repo 也沒有 Firestore），
+錯誤要等 app 的匯入結果視窗才會浮現。人回到電腦前時，還是建議用本機這條。
+
 ## 只驗證現成的 JSON
 
 ```
