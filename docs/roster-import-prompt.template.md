@@ -7,6 +7,31 @@
 這個 repo 是公開的，所以同工姓名、綽號對照一律不寫在這裡。
 下面範例裡的人名都是虛構的。
 
+## 怎麼用
+
+服事表的照片轉 JSON 是在 claude.ai 上做的（手機也能用）。這個 repo 只負責
+產生那份技能，並在需要時驗證產出的 JSON。
+
+```
+python3 scripts/build-claude-skill.py
+```
+
+從 Firestore 抓現況，產生 `.local/claude-skill/roster-import.zip`，
+上傳到 claude.ai 的技能設定。之後在 claude.ai 附上服事表照片說「轉 json」，
+把結果貼進 app 匯入即可。
+
+**名單有異動時**重跑這支再上傳覆蓋。忘了也不會壞，見下一節。
+
+匯入前想先確認的話（人在這台機器前時）：
+
+```
+python3 scripts/preview-roster-import.py <崇拜類別> <json 檔>
+```
+
+這支會抓 Firestore 現況、產生一支暫時的 Dart 測試去呼叫 app 真正在用的
+`parseRosterImportJson`，印出按下匯入會看到的結果 —— 哪些名字對不上、
+哪幾天不在範圍內、每天的項目排序。跑完自動刪掉那支測試。
+
 ## 為什麼要把名單填進 prompt
 
 app 的姓名比對**沒有模糊比對**：先找一模一樣的，找不到就找「名單裡以這個
