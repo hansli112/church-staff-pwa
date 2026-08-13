@@ -161,6 +161,93 @@ docker compose up -d   # http://localhost:8787
 Firebase 設定必須在 **build 階段**注入（Flutter Web 是靜態檔，執行期沒機會補），
 所以少了 `FIREBASE_API_KEY` 會直接讓 build 失敗，而不是產出一個開不起來的 image。
 
+### 行事曆寫入（Cloudflare Pages Functions）
+
+管理員在 App 裡新增／編輯／刪除行事曆活動，會寫進**同一本 Google Calendar**，
+不是另存一份。
+
+為什麼需要伺服器端：前端讀行事曆用的是 `GOOGLE_CALENDAR_API_KEY`，而 **API key
+只能讀不能寫**。寫入需要 OAuth token 或 service account 憑證，兩者都不能放進
+瀏覽器。所以寫入走 `functions/api/calendar/`（Cloudflare Pages Functions，與
+App 同源，沒有 CORS 問題），憑證只存在於伺服器端。
+
+程式碼位置：
+
+| 路徑 | 作用 |
+|---|---|
+| `functions/api/calendar/events.js` | `POST` 新增 |
+| `functions/api/calendar/events/[id].js` | `PATCH` 編輯、`DELETE` 刪除 |
+| `worker/google_calendar.js` | 共用邏輯（身分驗證、簽 JWT、參數驗證） |
+| `functions-tests/` | `node --test`，CI 會擋部署 |
+
+`functions/` 放在 repo 根目錄，`wrangler pages deploy` 會自動一起上傳，
+不需要改部署方式。
+
+**權限怎麼驗**：拿呼叫者自己的 Firebase ID token 去讀 Firestore 的
+`users/{uid}`，看 `role` 是不是 `admin`。刻意不在 Worker 裡自己驗 RS256 —— 
+Firestore 會驗簽章、過期與 audience，而 `firestore.rules` 只准本人讀自己那份，
+所以少寫一段容易出錯的密碼學程式碼，service account 也不需要 Firestore 的
+IAM 權限。
+
+#### 一次性設定
+
+**1. 建立 service account 並下載金鑰**
+
+```bash
+PID=<你的 Firebase 專案 id>
+gcloud services enable calendar-json.googleapis.com --project="$PID"
+gcloud iam service-accounts create calendar-writer \
+  --display-name="Calendar writer" --project="$PID"
+gcloud iam service-accounts keys create .local/service-account.json \
+  --iam-account="calendar-writer@${PID}.iam.gserviceaccount.com" --project="$PID"
+chmod 600 .local/service-account.json
+```
+
+**不需要給它任何 IAM 角色** —— 它的權限完全來自下一步的日曆共用。
+金鑰放在 `.local/`（已 gitignore），這個 repo 是公開的，不要放別的地方。
+
+**2. 把日曆分享給它**
+
+Google 日曆 → 該日曆的設定 → 與特定使用者或群組共用 → 加入
+`calendar-writer@<專案id>.iam.gserviceaccount.com`，權限選 **「變更活動」**。
+
+只能用網頁操作：gcloud 的 token 拿不到 Calendar 的 scope（只允許
+cloud-platform / drive 那幾個），沒辦法用指令代勞。
+
+漏掉這步的話寫入會回 502「沒有權限寫入這本日曆」，Google 那邊的原因是
+`requiredAccessLevel`。
+
+**3. 驗證真的打得到**
+
+```bash
+node scripts/verify-calendar-writer.mjs
+```
+
+這支載入的是 `worker/google_calendar.js` **本人** —— 跟部署後跑的是同一份程式碼
+—— 拿真的金鑰去真的日曆上新增一筆 2099 年的測試活動、讀回來比對、再刪掉。
+單元測試裡的 Google 是假的，證明不了簽章、API 啟用與日曆共用；這支可以。
+
+**4. 設定 Cloudflare 執行期變數**
+
+```bash
+npx wrangler login            # 只有第一次，或 token 過期時
+bash scripts/push-calendar-secrets.sh
+```
+
+會把 `GOOGLE_SERVICE_ACCOUNT_JSON`、`GOOGLE_CALENDAR_ID`、`FIREBASE_PROJECT_ID`
+推到 Pages，**Production 與 Preview 各一次**（Preview 沒設的話 dev 分支的預覽
+站點會回「伺服器設定不完整」，而 production 看起來一切正常）。
+
+這三個是**執行期**變數，跟 build 階段的 `--dart-define` 是兩套。金鑰是多行
+JSON，用 dashboard 的輸入框貼很容易貼壞，所以走 CLI 從檔案直接送。
+
+設完要**重新部署一次**才生效，現有的 deployment 不會自動帶到新設定。
+
+---
+
+離線時寫入會直接失敗並提示重試，不會排隊 —— 一個小時後才默默出現的活動比
+當場拒絕更難處理。
+
 ### Firestore 安全規則
 
 `firestore.rules` 需另外部署（`firebase deploy --only firestore:rules`）。
@@ -215,6 +302,9 @@ flutter run -d chrome --debug # 調試模式
 flutter analyze              # 靜態分析
 flutter test                 # 執行測試
 dart format lib test         # 格式化代碼
+
+# 行事曆寫入 API（Pages Functions，無相依套件）
+npm test --prefix functions-tests
 
 # 構建
 flutter build web --release --base-href /  # 生產構建（不含 dart-define）
