@@ -3,16 +3,24 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/config/google_calendar_config.dart';
+import '../../../auth/presentation/providers/session_provider.dart';
+import '../../data/calendar_write_service.dart';
 import '../widgets/_calendar_models.dart';
 import '../widgets/_day_cell.dart';
 import '../widgets/_day_events_sheet.dart';
 import '../widgets/_event_detail_sheet.dart';
+import '../widgets/_event_form_sheet.dart';
 
 class CalendarScreen extends StatefulWidget {
-  const CalendarScreen({super.key});
+  /// Injected by tests. Left null in the app so the default service picks up
+  /// the same-origin endpoint and the real Firebase token.
+  final CalendarWriteService? writeService;
+
+  const CalendarScreen({super.key, this.writeService});
 
   @override
   State<CalendarScreen> createState() => _CalendarScreenState();
@@ -46,6 +54,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
   // 每月的 segment 佈局是 O(事件數 × 42) 的計算，而 PageView 同時有 3 頁在
   // 樹上，任何一次 setState 都會讓三頁重算。事件沒變就直接用上次的結果。
   final Map<String, Map<int, List<DayEventSegment>>> _layoutCache = {};
+
+  late final CalendarWriteService _writeService =
+      widget.writeService ?? CalendarWriteService();
 
   @override
   void initState() {
@@ -112,9 +123,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final maxContentWidth = viewportWidth >= 900
         ? (viewportWidth * 0.94).clamp(1100.0, 1600.0)
         : double.infinity;
+    final isAdmin = context.select<SessionProvider, bool>((s) => s.isAdmin);
 
     return Scaffold(
       appBar: AppBar(title: const Text('行事曆'), centerTitle: true, elevation: 0),
+      floatingActionButton: isAdmin
+          ? FloatingActionButton(
+              onPressed: () => _addEvent(_selectedDay.value ?? _focusedMonth),
+              tooltip: '新增活動',
+              child: const Icon(Icons.add),
+            )
+          : null,
       body: LayoutBuilder(
         builder: (context, constraints) {
           if (isDesktopLayout) {
@@ -151,7 +170,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           const SizedBox(height: 12),
                           _buildWeekdayHeader(),
                           const SizedBox(height: 8),
-                          Expanded(child: _buildMonthPager()),
+                          Expanded(child: _buildMonthPager(isAdmin)),
                         ],
                       ),
                     ),
@@ -197,7 +216,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             const SizedBox(height: 12),
                             _buildWeekdayHeader(),
                             const SizedBox(height: 8),
-                            _buildMonthPager(),
+                            _buildMonthPager(isAdmin),
                           ],
                         ),
                       ),
@@ -261,7 +280,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildMonthPager() {
+  Widget _buildMonthPager(bool isAdmin) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final cellAspectRatio = _calendarAspectRatioForWidth(
@@ -281,7 +300,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
             onPageChanged: _onMonthPageChanged,
             itemBuilder: (context, index) {
               final month = _monthFromPage(index);
-              return _buildCalendarGrid(month, cellAspectRatio, cellHeight);
+              return _buildCalendarGrid(
+                month,
+                cellAspectRatio,
+                cellHeight,
+                isAdmin,
+              );
             },
           ),
         );
@@ -319,6 +343,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     DateTime displayedMonth,
     double cellAspectRatio,
     double cellHeight,
+    bool isAdmin,
   ) {
     final year = displayedMonth.year;
     final month = displayedMonth.month;
@@ -368,7 +393,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
               cellWidth: cellWidth,
               onTap: () async {
                 _selectedDay.value = dateOnly;
-                if (hasEvents) {
+                // For a member an empty day has nothing to show, so tapping it
+                // only moves the selection. For an admin the empty sheet is the
+                // way in to "新增活動" on that exact day.
+                if (hasEvents || isAdmin) {
                   await _showSelectedDayEventsSheet(dateOnly);
                 }
               },
@@ -380,10 +408,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
+  bool get _isAdmin => context.read<SessionProvider>().isAdmin;
+
   Future<void> _showEventDetails(CalendarEvent event) async {
     _selectedDay.value = event.startDay;
     if (!mounted) return;
-    await showEventDetailSheet(context, event);
+    final isAdmin = _isAdmin;
+    await showEventDetailSheet(
+      context,
+      event,
+      onEdit: isAdmin ? _editEvent : null,
+      onDelete: isAdmin ? _deleteEvent : null,
+    );
   }
 
   List<CalendarEvent>? _eventsForDay(DateTime? day) {
@@ -410,10 +446,152 @@ class _CalendarScreenState extends State<CalendarScreen> {
       context,
       day: day,
       events: events,
-      onSelectDay: (selectedDay) {
-        _selectedDay.value = selectedDay;
+      onOpenEvent: _showEventDetails,
+      onAddEvent: _isAdmin ? _addEvent : null,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Admin writes
+  //
+  // The browser reads the calendar with a public API key, which cannot write.
+  // These go through the app's own same-origin /api/calendar endpoints, which
+  // hold the service account credential — see worker/google_calendar.js.
+  // ---------------------------------------------------------------------------
+
+  Future<void> _addEvent(DateTime day) async {
+    if (!mounted) return;
+    final saved = await showEventFormSheet(
+      context,
+      heading: '新增活動',
+      initial: CalendarEventDraft.forDay(day),
+      onSubmit: (draft) async {
+        final created = await _writeService.create(draft);
+        _applyLocalChange(added: created);
+        _refreshMonths(_monthsSpannedBy(created));
       },
     );
+    if (saved) _showMessage('已新增活動');
+  }
+
+  Future<void> _editEvent(CalendarEvent event) async {
+    if (!mounted) return;
+    final saved = await showEventFormSheet(
+      context,
+      heading: '編輯活動',
+      initial: CalendarEventDraft.fromEvent(event),
+      onSubmit: (draft) async {
+        final updated = await _writeService.update(event.id, draft);
+        _applyLocalChange(removed: event, added: updated);
+        // The old span matters too: moving an event out of a month has to
+        // refresh the month it left, not only the one it landed in.
+        _refreshMonths([
+          ..._monthsSpannedBy(event),
+          ..._monthsSpannedBy(updated),
+        ]);
+      },
+    );
+    if (saved) _showMessage('已更新活動');
+  }
+
+  Future<void> _deleteEvent(CalendarEvent event) async {
+    if (!mounted) return;
+    if (!await confirmDeleteEvent(context, event.title)) return;
+
+    try {
+      await _writeService.delete(event.id);
+    } catch (error) {
+      _showMessage(
+        error is CalendarWriteException ? error.message : '刪除失敗，請稍後再試',
+        isError: true,
+      );
+      return;
+    }
+
+    _applyLocalChange(removed: event);
+    _refreshMonths(_monthsSpannedBy(event));
+    _showMessage('已刪除活動');
+  }
+
+  void _showMessage(String message, {bool isError = false}) {
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Theme.of(context).colorScheme.error : null,
+      ),
+    );
+  }
+
+  /// Applies a confirmed write to what is already on screen.
+  ///
+  /// The server has already accepted the change at this point, so this is not
+  /// optimistic — it is here so the calendar updates in the same frame instead
+  /// of after the round trip in [_refreshMonthsForDays].
+  void _applyLocalChange({CalendarEvent? removed, CalendarEvent? added}) {
+    if (!mounted) return;
+    setState(() {
+      final touched = <String>{};
+
+      if (removed != null) {
+        // Scans every loaded month rather than only the ones the event spans:
+        // an edit that moves an event has to clear it out of wherever it used
+        // to sit, and that span is not always the span being passed in.
+        for (final entry in _eventsByMonth.entries) {
+          final before = entry.value.length;
+          entry.value.removeWhere((existing) => existing.id == removed.id);
+          if (entry.value.length != before) touched.add(entry.key);
+        }
+      }
+
+      if (added != null) {
+        for (final month in _monthsSpannedBy(added)) {
+          final key = _cacheKeyForMonth(month);
+          // A month that was never loaded has nothing to patch; it will fetch
+          // the event normally when the user pages to it.
+          final events = _eventsByMonth[key];
+          if (events == null) continue;
+          events.removeWhere((existing) => existing.id == added.id);
+          events.add(added);
+          touched.add(key);
+        }
+      }
+
+      for (final key in touched) {
+        _layoutCache.remove(key);
+      }
+    });
+  }
+
+  /// Refetches the given months from Google.
+  ///
+  /// Clearing the freshness stamp is the part that matters: without it
+  /// [_loadEventsForMonth] returns early for the next ten minutes and both the
+  /// in-memory list and the SharedPreferences copy stay stale until then.
+  void _refreshMonths(Iterable<DateTime> months) {
+    final byKey = <String, DateTime>{};
+    for (final month in months) {
+      byKey[_cacheKeyForMonth(month)] = DateTime(month.year, month.month, 1);
+    }
+    for (final entry in byKey.entries) {
+      _fetchedAtByMonth.remove(entry.key);
+      _loadEventsForMonth(entry.value);
+    }
+  }
+
+  /// Every month an event touches, so a span across a month boundary refreshes
+  /// both sides rather than only where it starts.
+  List<DateTime> _monthsSpannedBy(CalendarEvent event) {
+    final months = <DateTime>[];
+    var cursor = DateTime(event.startDay.year, event.startDay.month, 1);
+    final last = DateTime(event.endDay.year, event.endDay.month, 1);
+    while (!cursor.isAfter(last)) {
+      months.add(cursor);
+      cursor = DateTime(cursor.year, cursor.month + 1, 1);
+    }
+    return months;
   }
 
   int _dayKey(DateTime date) =>
@@ -686,40 +864,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
       for (var i = 0; i < items.length; i++) {
         try {
-          final raw = items[i] as Map<String, dynamic>;
-          if (raw['status'] == 'cancelled') continue;
-          final start = raw['start'] as Map<String, dynamic>?;
-          final end = raw['end'] as Map<String, dynamic>?;
-          final startRaw = start?['dateTime'] ?? start?['date'];
-          if (startRaw is! String) continue;
-          final endRaw = end?['dateTime'] ?? end?['date'];
-          final startTime = DateTime.parse(startRaw).toLocal();
-          final endTime = endRaw is String
-              ? DateTime.parse(endRaw).toLocal()
-              : startTime;
-          final isAllDay =
-              start?['dateTime'] == null &&
-              start?['date'] is String &&
-              end?['dateTime'] == null;
-          final title = (raw['summary'] as String?)?.trim();
-          final location = (raw['location'] as String?)?.trim();
-          final description = (raw['description'] as String?)?.trim();
-          final eventId = (raw['id'] as String?)?.trim();
-          events.add(
-            CalendarEvent(
-              id: eventId == null || eventId.isEmpty
-                  ? 'fallback_${i}_${startTime.toIso8601String()}_${title ?? ''}'
-                  : eventId,
-              startTime: startTime,
-              endTime: endTime,
-              isAllDay: isAllDay,
-              title: title == null || title.isEmpty ? '未命名活動' : title,
-              location: location == null || location.isEmpty ? null : location,
-              description: description == null || description.isEmpty
-                  ? null
-                  : description,
-            ),
+          final event = calendarEventFromGoogleItem(
+            items[i] as Map<String, dynamic>,
+            fallbackIndex: i,
           );
+          if (event != null) events.add(event);
         } catch (e, st) {
           debugPrint('Skipping malformed calendar item #$i: $e');
           debugPrintStack(stackTrace: st);

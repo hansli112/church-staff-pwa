@@ -1,0 +1,9 @@
+{
+  "name": "church-staff-pwa-functions-tests",
+  "private": true,
+  "type": "module",
+  "description": "Tests for the Cloudflare Pages Functions that write to Google Calendar.",
+  "scripts": {
+    "test": "node --test"
+  }
+}

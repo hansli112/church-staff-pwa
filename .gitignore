@@ -64,6 +64,12 @@ app.*.map.json
 # Firestore rules tests (Node)
 firestore-tests/node_modules/
 
+# Pages Functions tests（目前沒有相依套件，先擋著）
+functions-tests/node_modules/
+
+# wrangler 的本機快取，裡面有 account id
+.wrangler/
+
 # AI Agent Context
 # AGENTS.md 是給協作者/agent 看的專案規範，要進版控，故不列入忽略。
 GEMINI.md

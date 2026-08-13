@@ -32,7 +32,26 @@ jobs:
         run: npm test
         working-directory: firestore-tests
 
+  # functions/ 寫入 Google Calendar，是唯一一段跑在伺服器、拿得到 service
+  # account 憑證的程式碼。它跟前端在同一次 pages deploy 上去，所以這個 job
+  # 刻意「擋」build-and-deploy —— 跟 firestore-rules 不同，那份規則要另外
+  # firebase deploy，綁在一起只會平白拖慢前端部署。
+  # 沒有相依套件，所以不用 npm ci，也就沒有 lockfile 可以 cache。
+  functions-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Test the calendar write API
+        run: npm test
+        working-directory: functions-tests
+
   build-and-deploy:
+    needs: functions-tests
     runs-on: ubuntu-latest
     steps:
       # 1. 檢出程式碼

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '_calendar_models.dart';
-import '_event_detail_sheet.dart';
 
 final _titleFormat = DateFormat('yyyy/MM/dd (E)', 'zh_TW');
 final _timeFormat = DateFormat('HH:mm', 'zh_TW');
@@ -10,13 +9,19 @@ final _dateTimeFormat = DateFormat('MM/dd HH:mm', 'zh_TW');
 
 /// Bottom sheet that lists all events on a given [day].
 ///
-/// Tapping an event row closes this sheet then opens [showEventDetailSheet].
-/// Call via [showDayEventsSheet].
+/// Tapping an event row closes this sheet and hands the event back through
+/// [onOpenEvent]. It deliberately does not open the detail sheet itself: the
+/// caller decides what that sheet can do, and an admin's edit/delete buttons
+/// went missing when this widget short-circuited that.
+///
+/// [onAddEvent] is supplied for admins only; when it is null the sheet is the
+/// read-only list every member sees.
 Future<void> showDayEventsSheet(
   BuildContext context, {
   required DateTime day,
   required List<CalendarEvent> events,
-  required void Function(DateTime selectedDay) onSelectDay,
+  required Future<void> Function(CalendarEvent event) onOpenEvent,
+  Future<void> Function(DateTime day)? onAddEvent,
 }) async {
   final title = _titleFormat.format(day);
   final colorScheme = Theme.of(context).colorScheme;
@@ -73,8 +78,7 @@ Future<void> showDayEventsSheet(
                           borderRadius: BorderRadius.circular(12),
                           onTap: () async {
                             Navigator.of(sheetContext).pop();
-                            onSelectDay(event.startDay);
-                            await showEventDetailSheet(context, event);
+                            await onOpenEvent(event);
                           },
                           child: Padding(
                             padding: const EdgeInsets.all(12),
@@ -112,6 +116,22 @@ Future<void> showDayEventsSheet(
                     },
                   ),
                 ),
+              if (onAddEvent != null) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () async {
+                      // Close first: the form is itself a modal sheet, and
+                      // stacking two leaves the list visible behind it.
+                      Navigator.of(sheetContext).pop();
+                      await onAddEvent(day);
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('新增活動'),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
