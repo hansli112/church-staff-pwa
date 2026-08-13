@@ -17,6 +17,7 @@ import '../../../../core/widgets/text_controller_scope.dart';
 import 'event_settings_screen.dart' deferred as event_settings_screen;
 import 'role_settings_screen.dart' deferred as role_settings_screen;
 import 'roster_import_parser.dart';
+import 'roster_import_summary.dart';
 
 class RosterEditScreen extends StatefulWidget {
   final VoidCallback onExit;
@@ -353,13 +354,10 @@ class _RosterListState extends State<_RosterList>
                           return;
                         }
                         Navigator.of(context).pop();
-                        if (result.missingDates.isNotEmpty ||
-                            result.notInRosterNames.isNotEmpty ||
-                            result.roleMismatchNames.isNotEmpty ||
-                            result.otherNames.isNotEmpty ||
-                            result.notInEventCatalog.isNotEmpty) {
+                        final summary = result.toSummary();
+                        if (summary.hasIssues) {
                           if (!context.mounted) return;
-                          await _showImportSummaryDialog(context, result);
+                          await _showImportSummaryDialog(context, summary);
                         } else {
                           final message = _buildResultMessage(result);
                           if (!context.mounted) return;
@@ -421,120 +419,66 @@ class _RosterListState extends State<_RosterList>
     );
   }
 
+  /// 一切順利時的 snackbar 文字。
+  ///
+  /// 只有 `hasIssues` 為 false 時才會走到這裡 —— 有任何未匹配都改走匯入結果
+  /// 視窗，因為那裡才有補設定的按鈕。
   String _buildResultMessage(_JsonImportResult result) {
-    if (result.updated == 0 && result.notInEventCatalog.isEmpty) {
-      return '找不到可更新的日期';
-    }
-    if (result.missingDates.isEmpty &&
-        result.notInRosterNames.isEmpty &&
-        result.roleMismatchNames.isEmpty &&
-        result.otherNames.isEmpty &&
-        result.notInEventCatalog.isEmpty) {
-      return '已更新 ${result.updated} 筆服事表';
-    }
-    final missingPreview = result.missingDates.take(3).join(', ');
-    final missingSuffix = result.missingDates.length > 3 ? '...' : '';
-    final notInListPreview = result.notInRosterNames.take(3).join('、');
-    final notInListSuffix = result.notInRosterNames.length > 3 ? '...' : '';
-    final mismatchPreview = result.roleMismatchNames.take(3).join('、');
-    final mismatchSuffix = result.roleMismatchNames.length > 3 ? '...' : '';
-    final otherPreview = result.otherNames.take(3).join('、');
-    final otherSuffix = result.otherNames.length > 3 ? '...' : '';
-    final catalogPreview = result.notInEventCatalog.take(3).join('、');
-    final catalogSuffix = result.notInEventCatalog.length > 3 ? '...' : '';
-    final parts = <String>[];
-    if (result.missingDates.isNotEmpty) {
-      parts.add(
-        '${result.missingDates.length} 筆日期找不到：$missingPreview$missingSuffix',
-      );
-    }
-    if (result.notInRosterNames.isNotEmpty) {
-      parts.add(
-        '${result.notInRosterNames.length} 位不在名單：$notInListPreview$notInListSuffix',
-      );
-    }
-    if (result.roleMismatchNames.isNotEmpty) {
-      parts.add(
-        '${result.roleMismatchNames.length} 位未勾選該服事：$mismatchPreview$mismatchSuffix',
-      );
-    }
-    if (result.otherNames.isNotEmpty) {
-      parts.add('${result.otherNames.length} 位其它：$otherPreview$otherSuffix');
-    }
-    if (result.notInEventCatalog.isNotEmpty) {
-      parts.add(
-        '${result.notInEventCatalog.length} 個不在事件選單：$catalogPreview$catalogSuffix',
-      );
-    }
-    return '已更新 ${result.updated} 筆，${parts.join('；')}';
+    if (result.updated == 0) return '找不到可更新的日期';
+    return '已更新 ${result.updated} 筆服事表';
   }
 
-  String _buildResultDetails(_JsonImportResult result) {
-    final buffer = StringBuffer();
-    buffer.writeln('已更新 ${result.updated} 筆服事表');
-    if (result.missingDates.isNotEmpty) {
-      buffer.writeln('');
-      buffer.writeln('找不到的日期：');
-      for (final date in result.missingDates) {
-        buffer.writeln('- $date');
-      }
+  /// 依姓名把服事補進該同工的設定。
+  ///
+  /// 失敗一律丟 [ImportFixException]：這幾種原因使用者看得懂也處理得了，被
+  /// mapErrorToUserMessage 壓成「操作失敗，請稍後再試」的話就只剩重試可按。
+  Future<void> _addMinistryToUser(
+    UserAdminProvider userAdminProvider,
+    List<String> templateRoles,
+    String name,
+    List<String> roles,
+  ) async {
+    // 樣板裡沒有的服事寫進去也留不住：帳號管理的選單只渲染樣板內的項目，
+    // 看不到也刪不掉，而下次有人存檔服事項目設定時 cleanupUserMinistries 會
+    // 把它清掉 —— 使用者只會看到自己按過「已新增」的東西過陣子又被報一次。
+    // 與其讓它悄悄消失，不如當場說清楚。
+    final outside = roles.where((r) => !templateRoles.contains(r)).toList();
+    if (outside.isNotEmpty) {
+      throw ImportFixException(
+        '「${outside.join('、')}」不在服事項目樣板裡，加了也會被清掉。'
+        '請先到服事項目設定新增這個項目',
+      );
     }
-    if (result.notInRosterNames.isNotEmpty) {
-      buffer.writeln('');
-      buffer.writeln('不在名單：');
-      for (final name in result.notInRosterNames) {
-        buffer.writeln('- $name');
-      }
+
+    final users = await userAdminProvider.getUsers();
+    final matches = users.where((u) => u.name.trim() == name.trim()).toList();
+    if (matches.isEmpty) {
+      throw ImportFixException('找不到同工「$name」，可能已被刪除');
     }
-    if (result.roleMismatchNames.isNotEmpty) {
-      buffer.writeln('');
-      buffer.writeln('未勾選該服事：');
-      for (final name in result.roleMismatchNames) {
-        final roles = result.roleMismatchDetails[name];
-        if (roles == null || roles.isEmpty) {
-          buffer.writeln('- $name');
-        } else {
-          buffer.writeln('- $name：${roles.join('、')}');
-        }
-      }
+    // 同名同姓時刻意不猜：補錯人的設定沒有任何跡象，會一路錯到下次排班。
+    if (matches.length > 1) {
+      throw ImportFixException('有 ${matches.length} 位同工都叫「$name」，請到帳號管理手動設定');
     }
-    if (result.otherNames.isNotEmpty) {
-      buffer.writeln('');
-      buffer.writeln('其它：');
-      for (final name in result.otherNames) {
-        buffer.writeln('- $name');
-      }
-    }
-    if (result.notInEventCatalog.isNotEmpty) {
-      buffer.writeln('');
-      buffer.writeln('不在事件選單：');
-      for (final name in result.notInEventCatalog) {
-        buffer.writeln('- $name');
-      }
-    }
-    return buffer.toString().trim();
+    await userAdminProvider.updateUser(
+      addMinistriesToUser(matches.single, widget.type, roles),
+    );
   }
 
   Future<void> _showImportSummaryDialog(
     BuildContext context,
-    _JsonImportResult result,
+    RosterImportSummary summary,
   ) async {
-    final details = _buildResultDetails(result);
+    final userAdminProvider = context.read<UserAdminProvider>();
+    final templateRoles =
+        context.read<RosterProvider>().templates[widget.type] ?? const [];
     await showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('匯入完成（含未匹配）'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: SingleChildScrollView(child: SelectableText(details)),
-          ),
-          actions: [
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('關閉'),
-            ),
-          ],
+        return RosterImportSummaryDialog(
+          type: widget.type,
+          summary: summary,
+          onAddMinistry: (name, roles) =>
+              _addMinistryToUser(userAdminProvider, templateRoles, name, roles),
         );
       },
     );
@@ -583,6 +527,24 @@ class _RosterListState extends State<_RosterList>
       return _JsonImportResult(error: parsed.error);
     }
 
+    // 服事項目的順序完全由樣板決定，樣板不可靠就不能匯 —— 缺席時所有角色
+    // 並列，會退回 JSON 的順序寫進 Firestore，畫面上看不出哪裡不對。
+    //
+    // 只擋含 duties 的匯入：只帶 events 的 JSON 根本不排序，沒有理由一起擋。
+    //
+    // `templatesLoaded` 不夠：updateTemplates 寫入空樣板之後旗標也是 true，
+    // 但這個崇拜的鍵可能根本不存在。真正要問的是「這個崇拜的樣板拿得到嗎」。
+    if (parsed.dutiesProvidedDates.isNotEmpty) {
+      if (!rosterProvider.templatesLoaded) {
+        return const _JsonImportResult(error: '服事項目樣板尚未載入，順序會排錯。請重新整理後再匯入');
+      }
+      if (!rosterProvider.templates.containsKey(widget.type)) {
+        return _JsonImportResult(
+          error: '${widget.type.label}還沒有服事項目樣板，順序會排錯。請先到服事項目設定新增',
+        );
+      }
+    }
+
     // Collect all dates that appear in either duties or events.
     final allDates = <String>{
       ...parsed.dutiesProvidedDates,
@@ -597,9 +559,6 @@ class _RosterListState extends State<_RosterList>
     final missingDates = <String>[];
 
     final templateRoles = rosterProvider.templates[widget.type] ?? const [];
-    final roleOrder = {
-      for (var i = 0; i < templateRoles.length; i++) templateRoles[i]: i,
-    };
 
     for (final key in allDates) {
       final roster = rosterByDate[key];
@@ -613,14 +572,10 @@ class _RosterListState extends State<_RosterList>
 
       List<RosterEntry> newDuties = roster.duties;
       if (hasDuties) {
-        final rawDuties = parsed.dutiesByDate[key] ?? const [];
-        newDuties = List<RosterEntry>.from(rawDuties)
-          ..sort((a, b) {
-            final ai = roleOrder[a.role] ?? templateRoles.length;
-            final bi = roleOrder[b.role] ?? templateRoles.length;
-            if (ai != bi) return ai.compareTo(bi);
-            return rawDuties.indexOf(a).compareTo(rawDuties.indexOf(b));
-          });
+        newDuties = orderDutiesByTemplate(
+          parsed.dutiesByDate[key] ?? const [],
+          templateRoles,
+        );
       }
 
       final newEvents = hasEvents
@@ -736,4 +691,21 @@ class _JsonImportResult {
     this.notInEventCatalog = const [],
     this.error,
   });
+
+  /// 轉成報告用的資料。
+  ///
+  /// roleMismatchDetails 刻意從 roleMismatchNames 反向長出來，而不是直接沿用：
+  /// 報告只畫得出 details 裡的人，兩份清單若對不齊，對不齊的那個人會從報告上
+  /// 整個消失 —— 那正是這次要修掉的那種靜默失蹤。
+  RosterImportSummary toSummary() => RosterImportSummary(
+    updated: updated,
+    missingDates: missingDates,
+    notInRosterNames: notInRosterNames,
+    roleMismatchDetails: {
+      for (final name in roleMismatchNames)
+        name: roleMismatchDetails[name] ?? const [],
+    },
+    otherNames: otherNames,
+    notInEventCatalog: notInEventCatalog,
+  );
 }
