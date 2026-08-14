@@ -123,11 +123,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final maxContentWidth = viewportWidth >= 900
         ? (viewportWidth * 0.94).clamp(1100.0, 1600.0)
         : double.infinity;
-    final isAdmin = context.select<SessionProvider, bool>((s) => s.isAdmin);
+    final canEdit = context.select<SessionProvider, bool>(
+      (s) => s.canEditCalendar,
+    );
 
     return Scaffold(
       appBar: AppBar(title: const Text('行事曆'), centerTitle: true, elevation: 0),
-      floatingActionButton: isAdmin
+      floatingActionButton: canEdit
           ? FloatingActionButton(
               onPressed: () => _addEvent(_selectedDay.value ?? _focusedMonth),
               tooltip: '新增活動',
@@ -170,7 +172,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           const SizedBox(height: 12),
                           _buildWeekdayHeader(),
                           const SizedBox(height: 8),
-                          Expanded(child: _buildMonthPager(isAdmin)),
+                          Expanded(child: _buildMonthPager(canEdit)),
                         ],
                       ),
                     ),
@@ -216,7 +218,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             const SizedBox(height: 12),
                             _buildWeekdayHeader(),
                             const SizedBox(height: 8),
-                            _buildMonthPager(isAdmin),
+                            _buildMonthPager(canEdit),
                           ],
                         ),
                       ),
@@ -280,7 +282,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildMonthPager(bool isAdmin) {
+  Widget _buildMonthPager(bool canEdit) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final cellAspectRatio = _calendarAspectRatioForWidth(
@@ -304,7 +306,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 month,
                 cellAspectRatio,
                 cellHeight,
-                isAdmin,
+                canEdit,
               );
             },
           ),
@@ -343,7 +345,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     DateTime displayedMonth,
     double cellAspectRatio,
     double cellHeight,
-    bool isAdmin,
+    bool canEdit,
   ) {
     final year = displayedMonth.year;
     final month = displayedMonth.month;
@@ -394,9 +396,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
               onTap: () async {
                 _selectedDay.value = dateOnly;
                 // For a member an empty day has nothing to show, so tapping it
-                // only moves the selection. For an admin the empty sheet is the
-                // way in to "新增活動" on that exact day.
-                if (hasEvents || isAdmin) {
+                // only moves the selection. For an editor the empty sheet is
+                // the way in to "新增活動" on that exact day.
+                if (hasEvents || canEdit) {
                   await _showSelectedDayEventsSheet(dateOnly);
                 }
               },
@@ -408,17 +410,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  bool get _isAdmin => context.read<SessionProvider>().isAdmin;
+  bool get _canEdit => context.read<SessionProvider>().canEditCalendar;
 
   Future<void> _showEventDetails(CalendarEvent event) async {
     _selectedDay.value = event.startDay;
     if (!mounted) return;
-    final isAdmin = _isAdmin;
+    final canEdit = _canEdit;
     await showEventDetailSheet(
       context,
       event,
-      onEdit: isAdmin ? _editEvent : null,
-      onDelete: isAdmin ? _deleteEvent : null,
+      onEdit: canEdit ? _editEvent : null,
+      onDelete: canEdit ? _deleteEvent : null,
     );
   }
 
@@ -447,7 +449,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       day: day,
       events: events,
       onOpenEvent: _showEventDetails,
-      onAddEvent: _isAdmin ? _addEvent : null,
+      onAddEvent: _canEdit ? _addEvent : null,
     );
   }
 

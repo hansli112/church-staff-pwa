@@ -311,9 +311,10 @@ class RosterProvider with ChangeNotifier {
     }
   }
 
-  /// 只有 admin 才可呼叫。確保本季 + 下季的所有預定 roster 都已存在於 Firestore。
+  /// 只有具編輯權的人（admin / 負責人）才可呼叫。確保本季 + 下季的所有預定
+  /// roster 都已存在於 Firestore。
   /// 背景執行，失敗僅 log，不影響 UI。完成後觸發 fetchInitialData 讓新建的 roster 出現。
-  Future<void> ensureQuarterRostersIfAdmin() async {
+  Future<void> ensureQuarterRostersForEditor() async {
     try {
       await _repository.ensureQuarterRosters();
     } catch (e, st) {
@@ -322,7 +323,7 @@ class RosterProvider with ChangeNotifier {
     }
     // backfill 成功與否都要重抓 —— backfill 只是「補齊缺的 roster」，
     // 它失敗不代表現有資料讀不到。放在 try 裡的話，backfill 一拋例外就會
-    // 連重抓一起跳過，admin 進編輯模式時畫面停在舊資料且毫無提示。
+    // 連重抓一起跳過，進編輯模式時畫面停在舊資料且毫無提示。
     await fetchInitialData();
   }
 

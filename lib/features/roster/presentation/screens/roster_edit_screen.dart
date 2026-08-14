@@ -80,7 +80,7 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
       if (!mounted) return;
       final session = context.read<SessionProvider>();
 
-      if (!session.isAdmin) {
+      if (!session.canEditRoster) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('沒有權限進入編輯模式')));
@@ -88,16 +88,19 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
         return;
       }
 
-      // Admin 進入編輯模式時，背景補齊本季 + 下季的 roster（backfill）。
-      // 在非 admin 路徑下已 return，此處一定是 admin。
-      // 失敗靜默處理（ensureQuarterRostersIfAdmin 內部 catch），不影響 UI。
-      context.read<RosterProvider>().ensureQuarterRostersIfAdmin();
+      // 進入編輯模式時，背景補齊本季 + 下季的 roster（backfill）。
+      // 在無編輯權的路徑下已 return，此處一定有寫入權。
+      // 失敗靜默處理（ensureQuarterRosters 內部 catch），不影響 UI。
+      context.read<RosterProvider>().ensureQuarterRostersForEditor();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final allowedTypes = widget.allowedTypes;
+    // settings 的寫入權在 firestore.rules 裡是 admin only，所以非 admin 看到
+    // 這兩顆按鈕只會按下去然後失敗 —— 不如不要顯示。
+    final isAdmin = context.select<SessionProvider, bool>((s) => s.isAdmin);
     final now = DateTime.now();
     final quarterStartMonth = ((now.month - 1) ~/ 3) * 3 + 1;
     final isLastMonthOfQuarter = now.month == (quarterStartMonth + 2);
@@ -107,24 +110,26 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
       title: Text(titleText),
       centerTitle: true,
       actions: [
-        IconButton(
-          icon: const Icon(Icons.palette_outlined),
-          tooltip: '事件選項設定',
-          onPressed: () => _loadAndPush(
-            context,
-            event_settings_screen.loadLibrary,
-            () => event_settings_screen.EventSettingsScreen(),
+        if (isAdmin) ...[
+          IconButton(
+            icon: const Icon(Icons.palette_outlined),
+            tooltip: '事件選項設定',
+            onPressed: () => _loadAndPush(
+              context,
+              event_settings_screen.loadLibrary,
+              () => event_settings_screen.EventSettingsScreen(),
+            ),
           ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.list_alt_outlined),
-          tooltip: '服事項目設定',
-          onPressed: () => _loadAndPush(
-            context,
-            role_settings_screen.loadLibrary,
-            () => role_settings_screen.RoleSettingsScreen(),
+          IconButton(
+            icon: const Icon(Icons.list_alt_outlined),
+            tooltip: '服事項目設定',
+            onPressed: () => _loadAndPush(
+              context,
+              role_settings_screen.loadLibrary,
+              () => role_settings_screen.RoleSettingsScreen(),
+            ),
           ),
-        ),
+        ],
         IconButton(
           icon: const Icon(Icons.view_list),
           tooltip: '切換至檢視模式',
@@ -469,6 +474,9 @@ class _RosterListState extends State<_RosterList>
     RosterImportSummary summary,
   ) async {
     final userAdminProvider = context.read<UserAdminProvider>();
+    // 補設定寫的是 users/{uid}，firestore.rules 裡是 admin only。服事表編輯者
+    // 進得來匯入流程，但這一項補不了。
+    final canFixUsers = context.read<SessionProvider>().isAdmin;
     final templateRoles =
         context.read<RosterProvider>().templates[widget.type] ?? const [];
     await showDialog(
@@ -477,8 +485,14 @@ class _RosterListState extends State<_RosterList>
         return RosterImportSummaryDialog(
           type: widget.type,
           summary: summary,
-          onAddMinistry: (name, roles) =>
-              _addMinistryToUser(userAdminProvider, templateRoles, name, roles),
+          onAddMinistry: canFixUsers
+              ? (name, roles) => _addMinistryToUser(
+                  userAdminProvider,
+                  templateRoles,
+                  name,
+                  roles,
+                )
+              : null,
         );
       },
     );
@@ -540,7 +554,9 @@ class _RosterListState extends State<_RosterList>
       }
       if (!rosterProvider.templates.containsKey(widget.type)) {
         return _JsonImportResult(
-          error: '${widget.type.label}還沒有服事項目樣板，順序會排錯。請先到服事項目設定新增',
+          // 服事項目設定是 admin only，非 admin 連那顆按鈕都看不到，所以這裡
+          // 講「請管理員」而不是「請先到」—— 後者對他是一條走不通的路。
+          error: '${widget.type.label}還沒有服事項目樣板，順序會排錯。請管理員到服事項目設定新增',
         );
       }
     }

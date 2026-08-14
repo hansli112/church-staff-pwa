@@ -105,6 +105,25 @@ const _userBeta = User(
   role: UserRole.staff,
 );
 
+// 只被授予行事曆 group 的一般同工：權限跟 role 沒有關係，這是整個模型的重點。
+const _userCalendarEditor = User(
+  id: 'uid-cal',
+  name: 'Calendar Editor',
+  email: 'cal@example.com',
+  username: 'cal',
+  role: UserRole.staff,
+  groups: {UserGroup.calendarEditors},
+);
+
+// 反過來的例子：身分是小組長，但沒有被授予任何 group。
+const _userPlainLeader = User(
+  id: 'uid-leader',
+  name: 'Leader User',
+  email: 'leader@example.com',
+  username: 'leader',
+  role: UserRole.leader,
+);
+
 // ── Tests ──────────────────────────────────────────────────────────────────
 
 void main() {
@@ -302,6 +321,36 @@ void main() {
     test('isAdmin：未登入時回傳 false', () async {
       final provider = await createAndWait();
       expect(provider.isAdmin, false);
+    });
+
+    // ── 編輯權限（group）────────────────────────────────────────────────
+    //
+    // 這組測試釘的是「權限不看 role」：小組長沒有 group 就不能編，同工有
+    // group 就能編。把 canEditCalendar 寫回 role 判斷會整組變紅。
+
+    test('admin 隱含所有 group', () async {
+      final provider = await createAndWait(currentUser: _userAlpha);
+      expect(provider.canEditRoster, true);
+      expect(provider.canEditCalendar, true);
+    });
+
+    test('被授予行事曆 group 的同工可以編行事曆，但不能編服事表', () async {
+      final provider = await createAndWait(currentUser: _userCalendarEditor);
+      expect(provider.canEditCalendar, true);
+      expect(provider.canEditRoster, false);
+      expect(provider.isAdmin, false);
+    });
+
+    test('身分是小組長但沒有任何 group：兩項都不能編', () async {
+      final provider = await createAndWait(currentUser: _userPlainLeader);
+      expect(provider.canEditCalendar, false);
+      expect(provider.canEditRoster, false);
+    });
+
+    test('未登入時兩項都是 false', () async {
+      final provider = await createAndWait();
+      expect(provider.canEditCalendar, false);
+      expect(provider.canEditRoster, false);
     });
 
     // ── Level 2: getCachedUser optimistic path ─────────────────────────────

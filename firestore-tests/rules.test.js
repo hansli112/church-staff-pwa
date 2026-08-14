@@ -39,11 +39,20 @@ let testEnv;
 const ADMIN = 'admin-1';
 const MEMBER = 'member-1';
 const OTHER = 'member-2';
+// 編輯 group。刻意獨立於 OTHER：OTHER 的 role 會被「管理員可以調整別人的
+// role」那條測試改掉，借用它會讓這裡的斷言隨執行順序漂移。
+//
+// 三個人的 role 全都不是 admin，而且 ROSTER_EDITOR 的 role 比 PLAIN_LEADER 還
+// 低 —— 這是刻意的，用來釘住「權限看 group 不看 role」。
+const ROSTER_EDITOR = 'roster-editor-1';
+const CALENDAR_EDITOR = 'calendar-editor-1';
+const PLAIN_LEADER = 'plain-leader-1'; // 身分是小組長，但沒有任何 group
+const GRANTED = 'granted-1'; // 已經有 group，用來測收回
 const DELETED = 'deleted-1'; // 有 Auth token，但 users 文件已被管理員刪掉
 const LEGACY = 'legacy-1'; // 舊資料：users 文件存在但沒有 role 欄位
 
-function userDoc(id, role) {
-  return {
+function userDoc(id, role, groups) {
+  const document = {
     id,
     name: `姓名-${id}`,
     email: `${id}@example.com`,
@@ -51,6 +60,9 @@ function userDoc(id, role) {
     role,
     zones: [],
   };
+  // 不傳就完全不寫這個欄位 —— 既有使用者全都是這個形狀，規則必須撐得住。
+  if (groups !== undefined) document.groups = groups;
+  return document;
 }
 
 before(async () => {
@@ -73,6 +85,25 @@ before(async () => {
     await setDoc(doc(db, 'users', ADMIN), userDoc(ADMIN, 'admin'));
     await setDoc(doc(db, 'users', MEMBER), userDoc(MEMBER, 'member'));
     await setDoc(doc(db, 'users', OTHER), userDoc(OTHER, 'leader'));
+    await setDoc(
+      doc(db, 'users', ROSTER_EDITOR),
+      userDoc(ROSTER_EDITOR, 'staff', ['roster-editors']),
+    );
+    await setDoc(
+      doc(db, 'users', CALENDAR_EDITOR),
+      userDoc(CALENDAR_EDITOR, 'staff', ['calendar-editors']),
+    );
+    await setDoc(
+      doc(db, 'users', PLAIN_LEADER),
+      userDoc(PLAIN_LEADER, 'leader'),
+    );
+    // 「管理員可以把 group 收回成空陣列」要更新的對象。在這裡種下去而不是靠
+    // 前一條測試留下來的 —— clearFirestore() 只在 before() 跑一次，相依前一條
+    // 的話單獨執行那一條會 NOT_FOUND，看起來像 rules 壞了。
+    await setDoc(
+      doc(db, 'users', GRANTED),
+      userDoc(GRANTED, 'member', ['calendar-editors']),
+    );
     // 注意：DELETED 刻意沒有 users 文件。
     const legacy = userDoc(LEGACY, 'member');
     delete legacy.role;
@@ -97,6 +128,12 @@ after(async () => {
 
 const asAdmin = () => testEnv.authenticatedContext(ADMIN).firestore();
 const asMember = () => testEnv.authenticatedContext(MEMBER).firestore();
+const asRosterEditor = () =>
+  testEnv.authenticatedContext(ROSTER_EDITOR).firestore();
+const asCalendarEditor = () =>
+  testEnv.authenticatedContext(CALENDAR_EDITOR).firestore();
+const asPlainLeader = () =>
+  testEnv.authenticatedContext(PLAIN_LEADER).firestore();
 const asDeleted = () => testEnv.authenticatedContext(DELETED).firestore();
 const asAnon = () => testEnv.unauthenticatedContext().firestore();
 
@@ -171,9 +208,38 @@ describe('rosters / settings 寫入', () => {
     );
   });
 
+  // role 只有 staff，靠 group 放行。
+  it('roster-editors 可以改服事表', async () => {
+    await assertSucceeds(
+      setDoc(doc(asRosterEditor(), 'rosters', 'r1'), { serviceName: '主日崇拜' }),
+    );
+  });
+
+  // 反過來：身分是小組長但沒有 group，一樣不能改。少了這條，把 inGroup() 誤寫
+  // 回看 role 也不會有任何測試變紅。
+  it('沒有 group 的小組長不能改服事表', async () => {
+    await assertFails(
+      setDoc(doc(asPlainLeader(), 'rosters', 'r1'), { serviceName: '亂改' }),
+    );
+  });
+
+  // 兩個 group 正交：行事曆編輯者碰不到服事表。
+  it('calendar-editors 不能改服事表', async () => {
+    await assertFails(
+      setDoc(doc(asCalendarEditor(), 'rosters', 'r1'), { serviceName: '亂改' }),
+    );
+  });
+
   it('一般同工不能改 settings', async () => {
     await assertFails(
       setDoc(doc(asMember(), 'settings', 'roster_templates'), { x: 1 }),
+    );
+  });
+
+  // 範本是所有服事表的骨架，改壞會影響到每一個人，所以留在 admin。
+  it('roster-editors 不能改 settings', async () => {
+    await assertFails(
+      setDoc(doc(asRosterEditor(), 'settings', 'roster_templates'), { x: 1 }),
     );
   });
 
@@ -216,8 +282,24 @@ describe('users 讀取', () => {
     assert.ok(snapshot.size >= 3, '管理員應該讀得到所有使用者');
   });
 
+  // 服事表的人員選擇器走 getUsers()，所以 roster-editors 必須列得到整個
+  // collection。代價是他也看得到所有人的 email 與 fcm token —— Firestore rules
+  // 沒有欄位級讀取限制，開這個 group 就是連帶開這些。
+  it('roster-editors 可以列出整個 users collection（服事表人員選擇器走這條）', async () => {
+    const snapshot = await assertSucceeds(
+      getDocs(collection(asRosterEditor(), 'users')),
+    );
+    assert.ok(snapshot.size >= 3, 'roster-editors 應該讀得到所有使用者');
+  });
+
   it('一般同工不能列出 users collection', async () => {
     await assertFails(getDocs(collection(asMember(), 'users')));
+  });
+
+  // 只有行事曆權限的人沒有理由讀通訊錄，所以 users 讀取綁的是 roster-editors
+  // 而不是「任何 group」。
+  it('calendar-editors 不能列出 users collection', async () => {
+    await assertFails(getDocs(collection(asCalendarEditor(), 'users')));
   });
 
   // 加上 where 條件也不行：rules 不是過濾器，list 一律整批拒絕。
@@ -272,6 +354,24 @@ describe('users 自我更新', () => {
   it('不能把自己升成管理員', async () => {
     await assertFails(
       updateDoc(doc(asMember(), 'users', MEMBER), { role: 'admin' }),
+    );
+  });
+
+  // group 模型最關鍵的一條：能自己加 group 的話，整個授權模型就等於不存在。
+  it('不能把自己加進任何 group', async () => {
+    await assertFails(
+      updateDoc(doc(asMember(), 'users', MEMBER), {
+        groups: ['roster-editors'],
+      }),
+    );
+  });
+
+  // 已經在某個 group 裡的人也不能自己再多拿一個。
+  it('group 成員不能自己再加別的 group', async () => {
+    await assertFails(
+      updateDoc(doc(asCalendarEditor(), 'users', CALENDAR_EDITOR), {
+        groups: ['calendar-editors', 'roster-editors'],
+      }),
     );
   });
 
@@ -423,6 +523,31 @@ describe('users 管理員操作與 role 驗證', () => {
   it('管理員可以調整別人的 role', async () => {
     await assertSucceeds(
       updateDoc(doc(asAdmin(), 'users', OTHER), { role: 'staff' }),
+    );
+  });
+
+  it('管理員可以授予 group', async () => {
+    await assertSucceeds(
+      setDoc(
+        doc(asAdmin(), 'users', 'granted-new'),
+        userDoc('granted-new', 'member', ['calendar-editors']),
+      ),
+    );
+  });
+
+  // 名字打錯會變成一個看起來像授權、實際上什麼都不對應的欄位。
+  it('管理員不能寫入不存在的 group 名稱', async () => {
+    await assertFails(
+      setDoc(
+        doc(asAdmin(), 'users', 'granted-bogus'),
+        userDoc('granted-bogus', 'member', ['calendar-editor']),
+      ),
+    );
+  });
+
+  it('管理員可以把 group 收回成空陣列', async () => {
+    await assertSucceeds(
+      updateDoc(doc(asAdmin(), 'users', GRANTED), { groups: [] }),
     );
   });
 

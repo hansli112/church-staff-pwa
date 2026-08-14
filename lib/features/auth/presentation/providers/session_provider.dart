@@ -24,6 +24,8 @@ class SessionProvider extends ChangeNotifier {
   bool get isRestoring => _isRestoring;
   String? get error => _error;
   bool get isAdmin => _currentUser?.isAdmin ?? false;
+  bool get canEditRoster => _currentUser?.canEditRoster ?? false;
+  bool get canEditCalendar => _currentUser?.canEditCalendar ?? false;
 
   /// Two-phase session restore:
   ///

@@ -261,7 +261,7 @@ void main() {
       final service = _service(
         _Recorder().client(
           (_) => http.Response(
-            jsonEncode({'error': '只有管理員可以編輯行事曆'}),
+            jsonEncode({'error': '沒有編輯行事曆的權限'}),
             403,
             headers: {'content-type': 'application/json; charset=utf-8'},
           ),
@@ -274,7 +274,7 @@ void main() {
           isA<CalendarWriteException>().having(
             (e) => e.message,
             'message',
-            '只有管理員可以編輯行事曆',
+            '沒有編輯行事曆的權限',
           ),
         ),
       );

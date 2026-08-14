@@ -260,11 +260,11 @@ void main() {
       expect(repo.ensureCallCount, 0);
     });
 
-    test('ensureQuarterRostersIfAdmin 觸發 ensureQuarterRosters', () async {
+    test('ensureQuarterRostersForEditor 觸發 ensureQuarterRosters', () async {
       final repo = _FakeRepo();
       final provider = RosterProvider(repo);
 
-      await provider.ensureQuarterRostersIfAdmin();
+      await provider.ensureQuarterRostersForEditor();
       await _drainFully();
 
       expect(repo.ensureCallCount, 1);

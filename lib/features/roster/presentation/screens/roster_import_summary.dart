@@ -114,7 +114,11 @@ class RosterImportSummaryDialog extends StatefulWidget {
 
   final RosterImportSummary summary;
   final ServiceType type;
-  final AddMinistryToUser onAddMinistry;
+
+  /// null 表示這個人沒有改別人設定的權限（補設定寫的是 `users/{uid}`，那是
+  /// admin only）。服事表編輯者進得來這個匯入流程，但補不了設定 —— 與其給他
+  /// 一顆按下去必定失敗的按鈕，不如不要給，並且說清楚要找誰。
+  final AddMinistryToUser? onAddMinistry;
 
   @override
   State<RosterImportSummaryDialog> createState() =>
@@ -147,6 +151,10 @@ class _RosterImportSummaryDialogState extends State<RosterImportSummaryDialog> {
   static String _rowKey(String name, String role) => '$name\u0000$role';
 
   Future<void> _fix(String name, String role) async {
+    final onAddMinistry = widget.onAddMinistry;
+    // 沒有權限時按鈕根本不會渲染，走到這裡代表呼叫端搞錯了 —— 靜靜地什麼都
+    // 不做比拋 null 例外好，這是對話框不是後端。
+    if (onAddMinistry == null) return;
     final key = _rowKey(name, role);
     setState(() {
       _fixStates[key] = _FixState.running;
@@ -164,7 +172,7 @@ class _RosterImportSummaryDialogState extends State<RosterImportSummaryDialog> {
       //
       // 逾時不會取消已經送出的寫入，但補設定是冪等的（addMinistriesToUser
       // 不會重複加），重試安全。
-      await widget.onAddMinistry(name, [role]).timeout(fixTimeout);
+      await onAddMinistry(name, [role]).timeout(fixTimeout);
       if (mounted) setState(() => _fixStates[key] = _FixState.done);
     } catch (e, st) {
       log('新增服事至同工失敗', error: e, stackTrace: st);
@@ -216,6 +224,7 @@ class _RosterImportSummaryDialogState extends State<RosterImportSummaryDialog> {
               if (summary.roleMismatchDetails.isNotEmpty)
                 _Section(
                   title: '沒有設定這個服事',
+                  note: widget.onAddMinistry == null ? '要補進他的服事設定需要管理員。' : null,
                   // 一個服事一列。同一個人被排到兩項時，可能只有其中一項該
                   // 補進設定（另一項是臨時支援），綁在一起就只能全補或全不補。
                   children: [
@@ -233,7 +242,9 @@ class _RosterImportSummaryDialogState extends State<RosterImportSummaryDialog> {
                                 _fixStates[_rowKey(entry.key, role)] ??
                                 _FixState.idle,
                             error: _fixErrors[_rowKey(entry.key, role)],
-                            onFix: () => _fix(entry.key, role),
+                            onFix: widget.onAddMinistry == null
+                                ? null
+                                : () => _fix(entry.key, role),
                           ),
                   ],
                 ),
@@ -367,6 +378,10 @@ class _FixableRow extends StatelessWidget {
 
   final _FixState state;
   final String? error;
+
+  /// null 代表補不了：不是沒有具體服事（見 [role]），就是這個人沒有改別人設定
+  /// 的權限。兩種情況都只列出名字，不給按鈕 —— 給一顆按下去必定失敗的按鈕，
+  /// 使用者只會一直重試，而錯誤訊息是泛用的「操作失敗，請稍後再試」。
   final VoidCallback? onFix;
 
   @override
@@ -388,7 +403,7 @@ class _FixableRow extends StatelessWidget {
                   style: const TextStyle(fontSize: 13),
                 ),
               ),
-              if (role != null) ...[
+              if (role != null && onFix != null) ...[
                 const SizedBox(width: 8),
                 switch (state) {
                   _FixState.running => const SizedBox(

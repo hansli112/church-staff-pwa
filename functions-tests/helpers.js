@@ -9,6 +9,10 @@ export const CALENDAR_ID = 'church@group.calendar.google.com';
 export const PROJECT_ID = 'demo-church-staff';
 export const ADMIN_UID = 'admin-uid';
 export const MEMBER_UID = 'member-uid';
+/// role 是 staff，但被授予 calendar-editors —— 權限跟 role 無關。
+export const CALENDAR_EDITOR_UID = 'calendar-editor-uid';
+/// 只有 roster-editors：用來證明兩個 group 是正交的。
+export const ROSTER_EDITOR_UID = 'roster-editor-uid';
 
 function base64Url(bytes) {
   let binary = '';
@@ -76,7 +80,15 @@ export function request(method, { token = idToken(ADMIN_UID), body } = {}) {
 
 /// Routes the three upstreams the functions talk to. Every call is recorded so
 /// a test can assert what was actually sent to Google, not just what came back.
-export function fakeFetch({ roles = { [ADMIN_UID]: 'admin', [MEMBER_UID]: 'member' }, calendar } = {}) {
+export function fakeFetch({
+  users = {
+    [ADMIN_UID]: { role: 'admin' },
+    [MEMBER_UID]: { role: 'member' },
+    [CALENDAR_EDITOR_UID]: { role: 'staff', groups: ['calendar-editors'] },
+    [ROSTER_EDITOR_UID]: { role: 'staff', groups: ['roster-editors'] },
+  },
+  calendar,
+} = {}) {
   const calls = [];
 
   const impl = async (url, init = {}) => {
@@ -89,10 +101,21 @@ export function fakeFetch({ roles = { [ADMIN_UID]: 'admin', [MEMBER_UID]: 'membe
 
     if (target.startsWith('https://firestore.googleapis.com/')) {
       const uid = decodeURIComponent(target.split('/documents/users/')[1].split('?')[0]);
-      if (!(uid in roles)) return new Response('{}', { status: 404 });
-      const role = roles[uid];
-      if (role === null) return Response.json({ name: `users/${uid}`, fields: {} });
-      return Response.json({ name: `users/${uid}`, fields: { role: { stringValue: role } } });
+      if (!(uid in users)) return new Response('{}', { status: 404 });
+      const profile = users[uid];
+      // null = 文件存在但一個欄位都沒有（舊資料）。
+      if (profile === null) return Response.json({ name: `users/${uid}`, fields: {} });
+      const fields = {};
+      if (profile.role != null) fields.role = { stringValue: profile.role };
+      // Firestore 對空陣列回的是 { arrayValue: {} }，沒有 values —— 照抄真實形狀，
+      // 否則 hasCalendarAccess 對空陣列的處理就沒有被測到。
+      if (profile.groups != null) {
+        fields.groups =
+          profile.groups.length === 0
+            ? { arrayValue: {} }
+            : { arrayValue: { values: profile.groups.map((g) => ({ stringValue: g })) } };
+      }
+      return Response.json({ name: `users/${uid}`, fields });
     }
 
     if (target.startsWith('https://www.googleapis.com/calendar/')) {

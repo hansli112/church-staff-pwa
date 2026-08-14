@@ -136,6 +136,9 @@ void main() {
       WidgetTester tester,
       RosterImportSummary summary, {
       AddMinistryToUser? onAddMinistry,
+      // 補設定寫的是 users/{uid}，那是 admin only。服事表編輯者進得來匯入
+      // 流程，所以 onAddMinistry 可以是 null。
+      bool canFix = true,
     }) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -143,8 +146,9 @@ void main() {
             body: RosterImportSummaryDialog(
               summary: summary,
               type: ServiceType.youth,
-              onAddMinistry:
-                  onAddMinistry ?? (name, roles) async => Future.value(),
+              onAddMinistry: canFix
+                  ? (onAddMinistry ?? (name, roles) async => Future.value())
+                  : null,
             ),
           ),
         ),
@@ -161,6 +165,24 @@ void main() {
       otherNames: [],
       notInEventCatalog: [],
     );
+
+    // 沒有權限的人看到一顆按下去必定失敗的按鈕，比看不到還糟：他會一直重試，
+    // 而錯誤訊息只會是泛用的「操作失敗，請稍後再試」。
+    testWidgets('沒有補設定權限時不給按鈕，改說要找誰', (tester) async {
+      await pump(tester, mismatchOnly(), canFix: false);
+
+      expect(find.text('新增服事至同工'), findsNothing);
+      expect(find.text('要補進他的服事設定需要管理員。'), findsOneWidget);
+      // 名字還是要列出來 —— 匯入結果不能因為沒權限就少報一項。
+      expect(find.textContaining('王大明'), findsWidgets);
+    });
+
+    testWidgets('有補設定權限時不會冒出那句提示', (tester) async {
+      await pump(tester, mismatchOnly());
+
+      expect(find.text('新增服事至同工'), findsOneWidget);
+      expect(find.text('要補進他的服事設定需要管理員。'), findsNothing);
+    });
 
     testWidgets('未設定該服事的人有「新增服事至同工」按鈕，按下去帶著正確的姓名與服事', (tester) async {
       String? gotName;

@@ -123,10 +123,12 @@ class _RosterScreenState extends State<RosterScreen>
   @override
   Widget build(BuildContext context) {
     final session = context.watch<SessionProvider>();
-    final isAdmin = session.isAdmin;
-    final canEdit = isAdmin && widget.allowEdit;
+    // 服事表編輯者看得到全部聚會別 —— 要排別人的服事，只看自己所屬的聚會別
+    // 就排不了。
+    final canEditRoster = session.canEditRoster;
+    final canEdit = canEditRoster && widget.allowEdit;
     final userZones = session.currentUser?.zones ?? const <UserZoneInfo>[];
-    final allowedTypes = isAdmin
+    final allowedTypes = canEditRoster
         ? ServiceType.values
         : ServiceType.values
               .where(

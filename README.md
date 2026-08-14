@@ -163,8 +163,8 @@ Firebase 設定必須在 **build 階段**注入（Flutter Web 是靜態檔，執
 
 ### 行事曆寫入（Cloudflare Pages Functions）
 
-管理員在 App 裡新增／編輯／刪除行事曆活動，會寫進**同一本 Google Calendar**，
-不是另存一份。
+管理員與 `calendar-editors` 成員在 App 裡新增／編輯／刪除行事曆活動，會寫進
+**同一本 Google Calendar**，不是另存一份。
 
 為什麼需要伺服器端：前端讀行事曆用的是 `GOOGLE_CALENDAR_API_KEY`，而 **API key
 只能讀不能寫**。寫入需要 OAuth token 或 service account 憑證，兩者都不能放進
@@ -184,7 +184,8 @@ App 同源，沒有 CORS 問題），憑證只存在於伺服器端。
 不需要改部署方式。
 
 **權限怎麼驗**：拿呼叫者自己的 Firebase ID token 去讀 Firestore 的
-`users/{uid}`，看 `role` 是不是 `admin`。刻意不在 Worker 裡自己驗 RS256 —— 
+`users/{uid}`，看他是不是 admin 或屬於 `calendar-editors`。刻意不在 Worker 裡
+自己驗 RS256 —— 
 Firestore 會驗簽章、過期與 audience，而 `firestore.rules` 只准本人讀自己那份，
 所以少寫一段容易出錯的密碼學程式碼，service account 也不需要 Firestore 的
 IAM 權限。
@@ -256,7 +257,50 @@ JSON，用 dashboard 的輸入框貼很容易貼壞，所以走 CLI 從檔案直
 - 每條規則都要求 `isActiveUser()` — 也就是 `users/{uid}` 這份文件存在。
   管理員在後台刪掉帳號後，該人的 Firebase Auth 帳號雖然還在（前端 SDK 無法
   刪別人的 Auth 帳號），但因為 user 文件沒了，所有讀寫立刻失效。
-- `users` 只有本人與管理員讀得到，一般同工看不到別人的 email 與推播 token。
+- `users` 只有本人與 `roster-editors` 成員讀得到 —— 服事表的人員選擇器要靠它
+  列名單。代價要講清楚：Firestore rules 沒有欄位級的讀取限制，所以授予
+  `roster-editors` 就等於讓對方看得到全部人的 email 與推播 token。只有行事曆
+  權限的人讀不到，這是刻意綁 `roster-editors` 而不是「任何 group」的原因。
+
+### 權限模型
+
+編輯權限走 **group**，比照 Linux：一個人可以同時屬於多個，彼此正交（可以只給
+行事曆不給服事表），存在 `users/{uid}` 的 `groups` 陣列。`role` 回去單純表示
+身分，不決定權限 —— 唯一的例外是 `admin`，它等同 root，不必列在任何 group 裡
+就擁有全部。
+
+| | `admin` | `roster-editors` | `calendar-editors` | 沒有 group |
+|---|---|---|---|---|
+| 服事表 | 改 | 改 | 讀 | 讀 |
+| 行事曆活動 | 改 | 讀 | 改 | 讀 |
+| 列出使用者名單 | 可 | 可 | 不可 | 不可 |
+| 開帳號／改角色／授予 group／刪帳號 | 可 | **不可** | **不可** | 不可 |
+| `settings` 範本與活動選項 | 可 | **不可** | **不可** | 讀 |
+
+要放行一個人，就在後台的使用者編輯頁勾他需要的那幾項，一個一個給。group 成員
+不能授予任何人 group（包括自己），所以授權不會自己擴散 —— 只有管理員動手才會
+多一個人。
+
+**不需要資料遷移**：規則讀的是 `data.get('groups', [])`，既有使用者都沒有這個
+欄位，一律視為沒有任何 group。
+
+看得到權限的地方有三處：使用者編輯頁的「編輯權限」勾選框（管理員授權用）、
+使用者列表的副標尾端「可編輯：…」（管理員一眼掃全部人用；角色與牧區都是身分，
+排在前面）、以及個人頁角色標籤旁邊
+的權限標籤（本人自己看）。管理員三處都不列出個別 group —— 他隱含全部，逐項列出
+反而像是只被指定了那幾項。
+
+強制點有三個，改動時要一起改：
+
+| 檔案 | 東西 | 角色 |
+|---|---|---|
+| `firestore.rules` | `inGroup()` | 真正的防線（服事表、使用者名單） |
+| `worker/google_calendar.js` | `CALENDAR_GROUP` | 真正的防線（行事曆） |
+| `lib/features/auth/domain/entities/user.dart` | `UserGroup` | 只決定 UI 顯不顯示入口 |
+
+group 名稱字串是資料格式的一部分（存進 Firestore 的就是它），改名等於要遷移
+資料。`firestore.rules` 的 `hasValidGroups()` 會擋掉不在清單裡的名稱，避免打錯
+字變成一個看起來像授權、實際上什麼都不對應的欄位。
 
 ## 開發規範
 

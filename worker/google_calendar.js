@@ -109,12 +109,17 @@ export function uidFromIdToken(token) {
   return uid;
 }
 
-/// Rejects anyone who is not an admin, and returns their uid.
+/// The permission group that may write the calendar. Kept in sync with
+/// inGroup() in firestore.rules and UserGroup in the Flutter app — three
+/// enforcement points, one name. admin is root and holds it implicitly.
+const CALENDAR_GROUP = 'calendar-editors';
+
+/// Rejects anyone without calendar edit rights, and returns their uid.
 ///
 /// The role lives in Firestore, not in the token's custom claims, so this reads
 /// users/{uid} as the caller. Doing it that way also means the token is fully
 /// verified by Firestore and the service account needs no Firestore IAM grant.
-export async function requireAdmin(request, env, fetchImpl = fetch) {
+export async function requireEditor(request, env, fetchImpl = fetch) {
   const header = request.headers.get('Authorization') ?? '';
   if (!header.startsWith('Bearer ')) {
     throw new HttpError(401, '請先登入');
@@ -127,7 +132,7 @@ export async function requireAdmin(request, env, fetchImpl = fetch) {
   const url =
     `${FIRESTORE_API}/projects/${encodeURIComponent(projectId)}` +
     `/databases/(default)/documents/users/${encodeURIComponent(uid)}` +
-    '?mask.fieldPaths=role';
+    '?mask.fieldPaths=role&mask.fieldPaths=groups';
 
   const response = await fetchWithTimeout(fetchImpl, url, {
     headers: { Authorization: `Bearer ${token}` },
@@ -147,10 +152,25 @@ export async function requireAdmin(request, env, fetchImpl = fetch) {
   }
 
   const doc = await response.json();
-  if (doc?.fields?.role?.stringValue !== 'admin') {
-    throw new HttpError(403, '只有管理員可以編輯行事曆');
+  if (!hasCalendarAccess(doc)) {
+    throw new HttpError(403, '沒有編輯行事曆的權限');
   }
   return uid;
+}
+
+/// admin is root, otherwise membership of CALENDAR_GROUP.
+///
+/// Firestore's REST encoding is nested and every level is optional: a user
+/// created before the field existed has no `groups` at all, and an empty array
+/// comes back as `{ arrayValue: {} }` with no `values`. Anything unreadable
+/// must land on "no access" rather than throw — a shape surprise here would
+/// otherwise turn into a 500 on a request that should simply be refused.
+function hasCalendarAccess(doc) {
+  const fields = doc?.fields;
+  if (fields?.role?.stringValue === 'admin') return true;
+  const values = fields?.groups?.arrayValue?.values;
+  if (!Array.isArray(values)) return false;
+  return values.some((entry) => entry?.stringValue === CALENDAR_GROUP);
 }
 
 // ---------------------------------------------------------------------------

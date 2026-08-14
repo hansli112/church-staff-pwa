@@ -44,6 +44,30 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    // Permission groups, in the Linux sense: a user may hold several, they are
+    // orthogonal (calendar without roster is a valid grant), and admin is root
+    // — it holds every group without being listed in any.
+    //
+    // `data.get('groups', [])` is what makes this need no migration: every
+    // existing user document predates the field and reads as "no groups".
+    //
+    // A group never grants identity power. Creating accounts, changing anyone's
+    // role, granting groups, deleting users and writing settings/ templates all
+    // stay isAdmin(). That is the point of the split: a member of a group
+    // cannot add anyone to one, so the grant cannot spread without an admin.
+    function inGroup(name) {
+      return isAdmin()
+        || (isActiveUser()
+            && name in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('groups', []));
+    }
+
+    // Group names must be ones the app knows. A typo would otherwise sit in the
+    // document looking like a grant while matching nothing.
+    function hasValidGroups() {
+      return !('groups' in request.resource.data)
+        || request.resource.data.groups.hasOnly(['roster-editors', 'calendar-editors']);
+    }
+
     // Role must be one of the values UserRole knows how to parse. Blocks an
     // admin (or a compromised admin session) from writing junk that
     // User.fromJson would silently coerce to 'member'.
@@ -58,20 +82,25 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      // Own profile (needed on every login) or admin. The roster people picker
-      // is admin-only in the UI — every getUsers() call goes through
-      // UserAdminProvider, which throws for non-admins — so ordinary members
-      // never need to list the collection. Keeping it narrow means member
-      // emails and FCM tokens are not readable by every signed-in account.
-      allow read: if isSelf(uid) || isAdmin();
+      // Own profile (needed on every login), or roster-editors. The roster
+      // people picker calls getUsers(), so anyone who can edit a roster must be
+      // able to list this collection.
+      //
+      // Deliberately roster-editors and not "any group": someone who only
+      // manages calendar events has no reason to read the directory. Note the
+      // cost of the grant that remains — Firestore has no field-level read
+      // restriction, so a roster editor can see every member's email and FCM
+      // token. Everyone else still cannot list the collection at all.
+      allow read: if isSelf(uid) || inGroup('roster-editors');
 
       // Only admin creates new user docs (via SecondaryApp flow in user_editor_screen).
-      allow create: if isAdmin() && hasValidRole();
+      allow create: if isAdmin() && hasValidRole() && hasValidGroups();
 
       // Updates:
       //   - admin: full control over any user doc
-      //   - self : only fcm and notificationPrefs (no role/email/zones changes)
-      allow update: if (isAdmin() && hasValidRole())
+      //   - self : only fcm and notificationPrefs. Note what this excludes:
+      //             role AND groups, so nobody can grant themselves a group.
+      allow update: if (isAdmin() && hasValidRole() && hasValidGroups())
         || (isSelf(uid)
             && isActiveUser()
             && selfUpdateOnlyTouches(['fcm', 'notificationPrefs']));
@@ -81,9 +110,12 @@ service cloud.firestore {
 
     match /rosters/{rosterId} {
       allow read: if isActiveUser();
-      allow write: if isAdmin();
+      allow write: if inGroup('roster-editors');
     }
 
+    // Templates and event options stay admin-only on purpose: they are the
+    // shape every roster is built from, so a mistake here affects everyone,
+    // not just one roster.
     match /settings/{doc} {
       allow read: if isActiveUser();
       allow write: if isAdmin();

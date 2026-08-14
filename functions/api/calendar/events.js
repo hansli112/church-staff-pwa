@@ -10,12 +10,12 @@ import {
   handle,
   jsonResponse,
   readJsonBody,
-  requireAdmin,
+  requireEditor,
 } from '../../../worker/google_calendar.js';
 
 export const onRequestPost = ({ request, env }) =>
   handle(async () => {
-    await requireAdmin(request, env);
+    await requireEditor(request, env);
     const event = buildGoogleEvent(await readJsonBody(request));
     const response = await callCalendar(env, { method: 'POST', body: event });
     // The raw Google item is returned on purpose: the client parses it with the

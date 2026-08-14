@@ -8,7 +8,7 @@ import {
   HttpError,
   jsonResponse,
   readJsonBody,
-  requireAdmin,
+  requireEditor,
 } from '../../../../worker/google_calendar.js';
 
 function eventId(params) {
@@ -21,7 +21,7 @@ function eventId(params) {
 
 export const onRequestPatch = ({ request, env, params }) =>
   handle(async () => {
-    await requireAdmin(request, env);
+    await requireEditor(request, env);
     const id = eventId(params);
     const event = buildGoogleEvent(await readJsonBody(request), { forPatch: true });
     const response = await callCalendar(env, {
@@ -34,7 +34,7 @@ export const onRequestPatch = ({ request, env, params }) =>
 
 export const onRequestDelete = ({ request, env, params }) =>
   handle(async () => {
-    await requireAdmin(request, env);
+    await requireEditor(request, env);
     const id = eventId(params);
     // Google answers 204; the app only needs to know it worked.
     await callCalendar(env, { method: 'DELETE', eventId: id });

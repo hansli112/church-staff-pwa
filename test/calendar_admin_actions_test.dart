@@ -54,8 +54,14 @@ class _FakeAuthRepository implements AuthRepository {
   Future<void> deleteUser(String id) async {}
 }
 
-User _user(UserRole role) =>
-    User(id: 'u1', name: '測試者', email: 'a@b.c', username: 'tester', role: role);
+User _user(UserRole role, Set<UserGroup> groups) => User(
+  id: 'u1',
+  name: '測試者',
+  email: 'a@b.c',
+  username: 'tester',
+  role: role,
+  groups: groups,
+);
 
 /// Records the outgoing request so a test can assert on the body the form built.
 class _Recorder {
@@ -113,8 +119,9 @@ Finder _dayCell(int dayNumber) => find.byWidgetPredicate(
 
 Future<void> _pumpCalendar(
   WidgetTester tester, {
-  required UserRole role,
   required _Recorder recorder,
+  UserRole role = UserRole.member,
+  Set<UserGroup> groups = const {},
 }) async {
   final service = CalendarWriteService(
     client: recorder.client,
@@ -124,12 +131,12 @@ Future<void> _pumpCalendar(
 
   await tester.pumpWidget(
     ChangeNotifierProvider(
-      create: (_) => SessionProvider(_FakeAuthRepository(_user(role))),
+      create: (_) => SessionProvider(_FakeAuthRepository(_user(role, groups))),
       child: MaterialApp(home: CalendarScreen(writeService: service)),
     ),
   );
   // SessionProvider restores asynchronously, so the first frame still has
-  // isAdmin == false — without pumping, an "admin sees it" test would pass for
+  // no permissions — without pumping, an "admin sees it" test would pass for
   // the wrong reason. Settling also matters: the FAB appears via a scale
   // transition that ignores pointers until it finishes, so a tap mid-animation
   // silently lands on the calendar grid behind it.
@@ -158,9 +165,38 @@ void main() {
     expect(find.byType(FloatingActionButton), findsNothing);
   });
 
-  testWidgets('a leader is not treated as an admin', (tester) async {
+  // 權限看 group，不看 role：小組長沒有被授予就沒有入口。
+  testWidgets('a leader with no group sees no add button', (tester) async {
     final recorder = _Recorder();
     await _pumpCalendar(tester, role: UserRole.leader, recorder: recorder);
+
+    expect(find.byType(FloatingActionButton), findsNothing);
+  });
+
+  // 反過來：一般同工被授予行事曆 group 就看得到入口。
+  testWidgets('a staff member in calendar-editors gets an add button', (
+    tester,
+  ) async {
+    final recorder = _Recorder();
+    await _pumpCalendar(
+      tester,
+      role: UserRole.staff,
+      groups: {UserGroup.calendarEditors},
+      recorder: recorder,
+    );
+
+    expect(find.byType(FloatingActionButton), findsOneWidget);
+  });
+
+  // 兩個 group 是正交的：只有服事表權限的人碰不到行事曆。
+  testWidgets('a roster editor alone gets no add button', (tester) async {
+    final recorder = _Recorder();
+    await _pumpCalendar(
+      tester,
+      role: UserRole.staff,
+      groups: {UserGroup.rosterEditors},
+      recorder: recorder,
+    );
 
     expect(find.byType(FloatingActionButton), findsNothing);
   });
@@ -383,7 +419,7 @@ void main() {
   ) async {
     final recorder = _Recorder();
     recorder.respond = (_) => http.Response(
-      jsonEncode({'error': '只有管理員可以編輯行事曆'}),
+      jsonEncode({'error': '沒有編輯行事曆的權限'}),
       403,
       headers: {'content-type': 'application/json; charset=utf-8'},
     );
@@ -395,7 +431,7 @@ void main() {
     await tester.tap(find.text('儲存'));
     await tester.pumpAndSettle();
 
-    expect(find.text('只有管理員可以編輯行事曆'), findsOneWidget);
+    expect(find.text('沒有編輯行事曆的權限'), findsOneWidget);
     expect(find.text('新增活動'), findsOneWidget);
   });
 

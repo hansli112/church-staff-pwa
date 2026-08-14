@@ -197,7 +197,9 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
                 final settingsProvider = context.read<GroupSettingsProvider>();
                 final userAdminProvider = context.read<UserAdminProvider>();
                 await settingsProvider.updateTemplates(_editingTemplates);
-                await userAdminProvider.cleanupUserGroups(_editingTemplates);
+                await userAdminProvider.cleanupUserSmallGroups(
+                  _editingTemplates,
+                );
                 if (!context.mounted) return;
                 Navigator.pop(context);
               },

@@ -26,6 +26,7 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
   late TextEditingController _usernameController;
   late TextEditingController _passwordController;
   late UserRole _selectedRole;
+  late Set<UserGroup> _groups;
   late List<UserZoneInfo> _zones;
 
   @override
@@ -38,6 +39,7 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
     );
     _passwordController = TextEditingController();
     _selectedRole = widget.user?.role ?? UserRole.member;
+    _groups = Set.from(widget.user?.groups ?? const <UserGroup>{});
     _zones = List.from(widget.user?.zones ?? []);
   }
 
@@ -48,6 +50,47 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  /// 編輯權限，一項一項給。
+  ///
+  /// 管理員本來就隱含全部，所以那個情況下勾選框顯示為已勾且不可動 —— 讓它可勾
+  /// 只會讓人以為「取消勾選就能收回」，但實際上 role 才是決定權。
+  Widget _buildGroupSection() {
+    final isAdmin = _selectedRole == UserRole.admin;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('編輯權限', style: Theme.of(context).textTheme.labelLarge),
+        if (isAdmin)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              '管理員擁有全部編輯權限，不需要另外指定。',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        for (final group in UserGroup.values)
+          CheckboxListTile(
+            value: isAdmin || _groups.contains(group),
+            onChanged: isAdmin
+                ? null
+                : (checked) {
+                    setState(() {
+                      if (checked ?? false) {
+                        _groups.add(group);
+                      } else {
+                        _groups.remove(group);
+                      }
+                    });
+                  },
+            title: Text(group.label),
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+          ),
+      ],
+    );
   }
 
   void _addZone() {
@@ -106,6 +149,7 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
             _selectedRole,
             password: _passwordController.text.trim(),
             zones: _zones,
+            groups: _groups,
           );
         } else {
           final updatedUser = widget.user!.copyWith(
@@ -114,6 +158,7 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
             username: _usernameController.text,
             role: _selectedRole,
             zones: _zones,
+            groups: _groups,
           );
           await authProvider.updateUser(
             updatedUser,
@@ -260,6 +305,8 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
                         }
                       },
                     ),
+                    const SizedBox(height: 8),
+                    _buildGroupSection(),
                   ],
                 ),
               ),
