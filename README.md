@@ -280,8 +280,12 @@ JSON，用 dashboard 的輸入框貼很容易貼壞，所以走 CLI 從檔案直
 
 **設定**：`NOTIFY_WEBHOOK_URL` 和 `NOTIFY_WEBHOOK_SECRET`，任一沒設就整個關掉。
 `push-calendar-secrets.sh` 會從 `.local/n8n-notify-url` 和
-`.local/n8n-notify-secret` 讀，**只推 production** —— Preview 站點上的測試資料
-不該進真的群組。
+`.local/n8n-notify-secret` 讀，**Production 與 Preview 都推**。
+
+兩個環境發到同一個 LINE 群組，因為 n8n 那條 workflow 的群組 ID 是寫死的。
+日常操作就在 dev 的預覽站上，只設 production 的話平常用的站台反而沒有通知。
+真要讓預覽站發到別的地方，做法是在 n8n 依 query string 挑目標（`?to=test`
+之類），而不是把 Preview 的變數留空 —— 留空只會讓那個站台整個安靜。
 
 secret 要和 n8n Webhook node 的 Header Auth 憑證一致，header 名稱是
 `x-notify-secret`。n8n 那支 workflow 的範本在 `.local/n8n/`（含群組 ID，所以不
