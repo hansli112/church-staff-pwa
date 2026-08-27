@@ -6,6 +6,8 @@
 // far more slowly.
 
 export const CALENDAR_ID = 'church@group.calendar.google.com';
+export const NOTIFY_URL = 'https://n8n.example/webhook/notify';
+export const NOTIFY_SECRET = 'test-notify-secret';
 export const PROJECT_ID = 'demo-church-staff';
 export const ADMIN_UID = 'admin-uid';
 export const MEMBER_UID = 'member-uid';
@@ -65,6 +67,16 @@ export async function testEnv(overrides = {}) {
   };
 }
 
+/// testEnv() with the n8n notification switched on. Kept separate so the
+/// existing cases keep proving that no notification goes out when it is unset.
+export async function notifyingEnv(overrides = {}) {
+  return testEnv({
+    NOTIFY_WEBHOOK_URL: NOTIFY_URL,
+    NOTIFY_WEBHOOK_SECRET: NOTIFY_SECRET,
+    ...overrides,
+  });
+}
+
 export function request(method, { token = idToken(ADMIN_UID), body } = {}) {
   return new Request('https://app.example/api/calendar/events', {
     method,
@@ -88,6 +100,7 @@ export function fakeFetch({
     [ROSTER_EDITOR_UID]: { role: 'staff', groups: ['roster-editors'] },
   },
   calendar,
+  notify,
 } = {}) {
   const calls = [];
 
@@ -123,12 +136,27 @@ export function fakeFetch({
       return Response.json({ id: 'created-event-id', status: 'confirmed' }, { status: 200 });
     }
 
+    if (target === NOTIFY_URL) {
+      if (typeof notify === 'function') return notify(target, init);
+      return new Response(null, { status: 200 });
+    }
+
     throw new Error(`unexpected fetch to ${target}`);
   };
 
   impl.calls = calls;
   impl.calendarCalls = () =>
     calls.filter((call) => call.url.startsWith('https://www.googleapis.com/calendar/'));
+  impl.notifyCalls = () => calls.filter((call) => call.url === NOTIFY_URL);
+  /// The one notification body, already parsed. Fails loudly rather than
+  /// returning undefined when a test expected exactly one and got none.
+  impl.notifyPayload = () => {
+    const sent = impl.notifyCalls();
+    if (sent.length !== 1) {
+      throw new Error(`expected exactly one notify call, got ${sent.length}`);
+    }
+    return JSON.parse(sent[0].body);
+  };
   return impl;
 }
 

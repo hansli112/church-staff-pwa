@@ -10,15 +10,18 @@ import {
   resetAccessTokenCache,
   uidFromIdToken,
 } from '../worker/google_calendar.js';
+import { notifyPayload } from '../worker/line_notify.js';
 import {
   ADMIN_UID,
   CALENDAR_EDITOR_UID,
   CALENDAR_ID,
+  NOTIFY_SECRET,
   ROSTER_EDITOR_UID,
   MEMBER_UID,
   fakeFetch,
   idToken,
   muteConsoleError,
+  notifyingEnv,
   request,
   testEnv,
 } from './helpers.js';
@@ -580,5 +583,272 @@ describe('PATCH and DELETE /api/calendar/events/:id', () => {
 
     assert.equal(response.status, 400);
     assert.equal(fetchImpl.calendarCalls().length, 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+/// What Google actually answers a create with — note the `+08:00` offset on the
+/// timed form and the exclusive `end.date` on the all-day form. The payload sent
+/// to n8n is built from this shape, so the fixtures copy it rather than
+/// simplifying it.
+const CREATED_TIMED = {
+  id: 'evt-timed',
+  status: 'confirmed',
+  summary: '小組聚會',
+  location: '教會 2F',
+  description: '記得帶聖經',
+  htmlLink: 'https://calendar.google.com/event?eid=evt-timed',
+  start: { dateTime: '2026-09-01T19:00:00+08:00', timeZone: 'Asia/Taipei' },
+  end: { dateTime: '2026-09-01T21:00:00+08:00', timeZone: 'Asia/Taipei' },
+};
+
+const CREATED_ALL_DAY = {
+  id: 'evt-all-day',
+  status: 'confirmed',
+  summary: '教會大掃除',
+  htmlLink: 'https://calendar.google.com/event?eid=evt-all-day',
+  start: { date: '2026-09-05' },
+  end: { date: '2026-09-06' },
+};
+
+function creating(event) {
+  return fakeFetch({ calendar: () => Response.json(event, { status: 200 }) });
+}
+
+const CREATE_BODY = { title: '小組聚會', allDay: false, start: '2026-09-01T19:00' };
+
+describe('notifyPayload', () => {
+  test('flattens a timed event', () => {
+    assert.deepEqual(notifyPayload('created', CREATED_TIMED, ADMIN_UID), {
+      action: 'created',
+      source: 'pwa',
+      id: 'evt-timed',
+      title: '小組聚會',
+      allDay: false,
+      start: '2026-09-01T19:00:00+08:00',
+      end: '2026-09-01T21:00:00+08:00',
+      location: '教會 2F',
+      description: '記得帶聖經',
+      link: 'https://calendar.google.com/event?eid=evt-timed',
+      actorUid: ADMIN_UID,
+    });
+  });
+
+  test('reports the inclusive end date for an all-day event', () => {
+    // Google stores 9/6 for a single day on 9/5; the group must be told 9/5.
+    const payload = notifyPayload('created', CREATED_ALL_DAY, ADMIN_UID);
+    assert.equal(payload.allDay, true);
+    assert.equal(payload.start, '2026-09-05');
+    assert.equal(payload.end, '2026-09-05');
+  });
+
+  test('a multi-day all-day event keeps its span', () => {
+    const payload = notifyPayload(
+      'created',
+      { start: { date: '2026-10-10' }, end: { date: '2026-10-13' } },
+      ADMIN_UID,
+    );
+    assert.equal(payload.start, '2026-10-10');
+    assert.equal(payload.end, '2026-10-12');
+  });
+
+  test('missing optional fields become empty rather than undefined', () => {
+    // JSON.stringify drops undefined keys, which would make the n8n side see a
+    // different shape depending on what the event happened to carry.
+    const payload = notifyPayload('created', { id: 'x' }, ADMIN_UID);
+    assert.deepEqual(payload, {
+      action: 'created',
+      source: 'pwa',
+      id: 'x',
+      title: null,
+      allDay: false,
+      start: null,
+      end: null,
+      location: '',
+      description: '',
+      link: null,
+      actorUid: ADMIN_UID,
+    });
+  });
+});
+
+describe('POST /api/calendar/events — LINE notification', () => {
+  test('announces a created event to n8n', async () => {
+    const env = await notifyingEnv();
+    const fetchImpl = creating(CREATED_TIMED);
+    const response = await withFetch(fetchImpl, () =>
+      onRequestPost({ request: request('POST', { body: CREATE_BODY }), env }),
+    );
+
+    assert.equal(response.status, 201);
+    assert.deepEqual(fetchImpl.notifyPayload(), {
+      action: 'created',
+      source: 'pwa',
+      id: 'evt-timed',
+      title: '小組聚會',
+      allDay: false,
+      start: '2026-09-01T19:00:00+08:00',
+      end: '2026-09-01T21:00:00+08:00',
+      location: '教會 2F',
+      description: '記得帶聖經',
+      link: 'https://calendar.google.com/event?eid=evt-timed',
+      actorUid: ADMIN_UID,
+    });
+  });
+
+  test('sends the shared secret as a header', async () => {
+    const env = await notifyingEnv();
+    const fetchImpl = creating(CREATED_TIMED);
+    await withFetch(fetchImpl, () =>
+      onRequestPost({ request: request('POST', { body: CREATE_BODY }), env }),
+    );
+
+    const [call] = fetchImpl.notifyCalls();
+    assert.equal(call.method, 'POST');
+    assert.equal(call.init.headers['x-notify-secret'], NOTIFY_SECRET);
+    assert.equal(call.init.headers['content-type'], 'application/json');
+  });
+
+  test('records the editor who created it', async () => {
+    const env = await notifyingEnv();
+    const fetchImpl = creating(CREATED_TIMED);
+    await withFetch(fetchImpl, () =>
+      onRequestPost({
+        request: request('POST', { token: idToken(CALENDAR_EDITOR_UID), body: CREATE_BODY }),
+        env,
+      }),
+    );
+
+    assert.equal(fetchImpl.notifyPayload().actorUid, CALENDAR_EDITOR_UID);
+  });
+
+  test('stays quiet when the webhook is not configured', async () => {
+    const env = await testEnv();
+    const fetchImpl = creating(CREATED_TIMED);
+    const response = await withFetch(fetchImpl, () =>
+      onRequestPost({ request: request('POST', { body: CREATE_BODY }), env }),
+    );
+
+    assert.equal(response.status, 201);
+    assert.equal(fetchImpl.notifyCalls().length, 0);
+  });
+
+  test('stays quiet when the secret is missing', async () => {
+    // Half-configured must mean off, not "send it unauthenticated".
+    const env = await notifyingEnv({ NOTIFY_WEBHOOK_SECRET: '' });
+    const fetchImpl = creating(CREATED_TIMED);
+    const response = await withFetch(fetchImpl, () =>
+      onRequestPost({ request: request('POST', { body: CREATE_BODY }), env }),
+    );
+
+    assert.equal(response.status, 201);
+    assert.equal(fetchImpl.notifyCalls().length, 0);
+  });
+
+  test('a rejected notification still leaves the event created', async () => {
+    const restore = muteConsoleError();
+    try {
+      const env = await notifyingEnv();
+      const fetchImpl = fakeFetch({
+        calendar: () => Response.json(CREATED_TIMED, { status: 200 }),
+        notify: () => new Response('nope', { status: 401 }),
+      });
+      const response = await withFetch(fetchImpl, () =>
+        onRequestPost({ request: request('POST', { body: CREATE_BODY }), env }),
+      );
+
+      assert.equal(response.status, 201);
+      assert.equal((await response.json()).id, 'evt-timed');
+    } finally {
+      restore();
+    }
+  });
+
+  test('an unreachable n8n still leaves the event created', async () => {
+    const restore = muteConsoleError();
+    try {
+      const env = await notifyingEnv();
+      const fetchImpl = fakeFetch({
+        calendar: () => Response.json(CREATED_TIMED, { status: 200 }),
+        notify: () => {
+          throw new TypeError('connection refused');
+        },
+      });
+      const response = await withFetch(fetchImpl, () =>
+        onRequestPost({ request: request('POST', { body: CREATE_BODY }), env }),
+      );
+
+      assert.equal(response.status, 201);
+    } finally {
+      restore();
+    }
+  });
+
+  test('a failed create announces nothing', async () => {
+    const restore = muteConsoleError();
+    try {
+      const env = await notifyingEnv();
+      const fetchImpl = fakeFetch({
+        calendar: () => new Response('boom', { status: 500 }),
+      });
+      const response = await withFetch(fetchImpl, () =>
+        onRequestPost({ request: request('POST', { body: CREATE_BODY }), env }),
+      );
+
+      assert.notEqual(response.status, 201);
+      assert.equal(fetchImpl.notifyCalls().length, 0);
+    } finally {
+      restore();
+    }
+  });
+
+  test('a rejected caller announces nothing', async () => {
+    const env = await notifyingEnv();
+    const fetchImpl = creating(CREATED_TIMED);
+    const response = await withFetch(fetchImpl, () =>
+      onRequestPost({
+        request: request('POST', { token: idToken(MEMBER_UID), body: CREATE_BODY }),
+        env,
+      }),
+    );
+
+    assert.equal(response.status, 403);
+    assert.equal(fetchImpl.notifyCalls().length, 0);
+  });
+
+  test('the notification does not hold up the response', async () => {
+    const env = await notifyingEnv();
+    // n8n hangs until this is released. If the handler awaited the notification
+    // instead of handing it to waitUntil, the await below would never return.
+    let release;
+    const hung = new Promise((resolve) => {
+      release = resolve;
+    });
+    const fetchImpl = fakeFetch({
+      calendar: () => Response.json(CREATED_TIMED, { status: 200 }),
+      notify: async () => {
+        await hung;
+        return new Response(null, { status: 200 });
+      },
+    });
+    const background = [];
+
+    const response = await withFetch(fetchImpl, async () => {
+      const result = await onRequestPost({
+        request: request('POST', { body: CREATE_BODY }),
+        env,
+        waitUntil: (promise) => background.push(promise),
+      });
+      assert.equal(background.length, 1);
+      release();
+      // Drain inside withFetch: letting it settle after the real fetch is back
+      // would put this test on the network.
+      await Promise.all(background);
+      return result;
+    });
+
+    assert.equal(response.status, 201);
+    assert.equal(fetchImpl.notifyCalls().length, 1);
   });
 });

@@ -178,6 +178,7 @@ App 同源，沒有 CORS 問題），憑證只存在於伺服器端。
 | `functions/api/calendar/events.js` | `POST` 新增 |
 | `functions/api/calendar/events/[id].js` | `PATCH` 編輯、`DELETE` 刪除 |
 | `worker/google_calendar.js` | 共用邏輯（身分驗證、簽 JWT、參數驗證） |
+| `worker/line_notify.js` | 新增成功後通知 n8n 發 LINE 群組訊息（選用） |
 | `functions-tests/` | `node --test`，CI 會擋部署 |
 
 `functions/` 放在 repo 根目錄，`wrangler pages deploy` 會自動一起上傳，
@@ -243,6 +244,48 @@ bash scripts/push-calendar-secrets.sh
 JSON，用 dashboard 的輸入框貼很容易貼壞，所以走 CLI 從檔案直接送。
 
 設完要**重新部署一次**才生效，現有的 deployment 不會自動帶到新設定。
+
+#### LINE 群組通知（選用）
+
+在 App 裡**新增**活動成功後，會往 n8n 打一個 webhook，由 n8n 發訊息到 LINE
+群組。編輯和刪除不通知。
+
+為什麼不從 Cloudflare 直接打 LINE Messaging API：channel access token 和訊息
+排版都已經在 n8n（那邊還有一條「LINE 群組訊息 → 建事件 → 回覆」的既有流程）。
+再接一次等於把同一段排版邏輯養在兩個系統。`worker/line_notify.js` 只負責把
+「發生了什麼」講清楚，長什麼樣交給 n8n —— 改訊息格式不必重新部署 App。
+
+送出去的 payload 是攤平過的，n8n 那端不必知道 Google 用 `date` 表示全天、用
+`dateTime` 表示定時，也不必知道 `end.date` 是排他的：
+
+```json
+{
+  "action": "created",
+  "source": "pwa",
+  "id": "evt-timed",
+  "title": "小組聚會",
+  "allDay": false,
+  "start": "2026-09-01T19:00:00+08:00",
+  "end": "2026-09-01T21:00:00+08:00",
+  "location": "教會 2F",
+  "description": "記得帶聖經",
+  "link": "https://calendar.google.com/event?eid=evt-timed",
+  "actorUid": "..."
+}
+```
+
+**通知失敗不會讓新增失敗**。走到那一步時活動已經寫進 Google 了，回 500 只會
+讓人以為沒建成然後再按一次。失敗只留在 Cloudflare 的 log 裡。通知本身丟給
+`waitUntil` 在背景跑，使用者不必等 LINE。
+
+**設定**：`NOTIFY_WEBHOOK_URL` 和 `NOTIFY_WEBHOOK_SECRET`，任一沒設就整個關掉。
+`push-calendar-secrets.sh` 會從 `.local/n8n-notify-url` 和
+`.local/n8n-notify-secret` 讀，**只推 production** —— Preview 站點上的測試資料
+不該進真的群組。
+
+secret 要和 n8n Webhook node 的 Header Auth 憑證一致，header 名稱是
+`x-notify-secret`。n8n 那支 workflow 的範本在 `.local/n8n/`（含群組 ID，所以不
+進 repo）。
 
 ---
 

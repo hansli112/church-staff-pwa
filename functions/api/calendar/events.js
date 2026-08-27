@@ -12,13 +12,18 @@ import {
   readJsonBody,
   requireEditor,
 } from '../../../worker/google_calendar.js';
+import { notifyN8n, notifyPayload, scheduleNotify } from '../../../worker/line_notify.js';
 
-export const onRequestPost = ({ request, env }) =>
+export const onRequestPost = ({ request, env, waitUntil }) =>
   handle(async () => {
-    await requireEditor(request, env);
+    const uid = await requireEditor(request, env);
     const event = buildGoogleEvent(await readJsonBody(request));
     const response = await callCalendar(env, { method: 'POST', body: event });
     // The raw Google item is returned on purpose: the client parses it with the
     // same code that parses the month listing, so the two cannot drift.
-    return jsonResponse(await response.json(), 201);
+    const created = await response.json();
+    // 活動已經建好，通知成不成功都不改變這個回應。有 waitUntil 時它在背景跑完，
+    // 使用者不必等 LINE。
+    await scheduleNotify(waitUntil, notifyN8n(env, notifyPayload('created', created, uid)));
+    return jsonResponse(created, 201);
   });
