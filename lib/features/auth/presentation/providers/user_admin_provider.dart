@@ -30,14 +30,20 @@ class UserAdminProvider extends ChangeNotifier {
     super.dispose();
   }
 
+  /// 列出所有使用者。
+  ///
+  /// 這裡放寬到 canEditRoster 而非 isAdmin：服事表編輯的人員選擇器要靠它列
+  /// 名單（roster_edit_screen、roster_card），拿不到名單就編不了服事表。
+  /// 綁 roster 而非「任何 group」是刻意的 —— 只有行事曆權限的人不需要名單。
+  /// 其餘的 add/update/delete 全部維持 isAdmin —— 讀名單跟改身分是兩件事。
   Future<List<User>> getUsers({bool forceRefresh = false}) async {
-    if (!_session.isAdmin) throw Exception('Permission denied');
+    if (!_session.canEditRoster) throw Exception('Permission denied');
     if (!forceRefresh && _cachedUsers != null) {
       return _cachedUsers!;
     }
     final users = await _repository.getUsers();
     // 若 fetch 進行中 session 已切換（登出或換帳號），不寫入 cache 以免污染新 session。
-    if (_session.currentUser == null || !_session.isAdmin) {
+    if (_session.currentUser == null || !_session.canEditRoster) {
       return users;
     }
     _cachedUsers = users;
@@ -51,6 +57,7 @@ class UserAdminProvider extends ChangeNotifier {
     UserRole role, {
     required String password,
     List<UserZoneInfo> zones = const [],
+    Set<UserGroup> groups = const {},
   }) async {
     if (!_session.isAdmin) throw Exception('Permission denied');
 
@@ -61,6 +68,7 @@ class UserAdminProvider extends ChangeNotifier {
       username: username,
       role: role,
       zones: zones,
+      groups: groups,
     );
     await _repository.addUser(newUser, password);
     _cachedUsers = null;
@@ -111,7 +119,7 @@ class UserAdminProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> cleanupUserGroups(
+  Future<void> cleanupUserSmallGroups(
     Map<ServiceType, List<String>> templates,
   ) async {
     if (!_session.isAdmin) throw Exception('Permission denied');

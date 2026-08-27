@@ -10,6 +10,8 @@ import '../../../auth/presentation/providers/session_provider.dart';
 import '../../../../core/config/google_calendar_config.dart';
 import '../../../../core/services/external_link_service.dart';
 import '../../../../core/utils/error_messages.dart';
+import '../../domain/entities/recent_activity.dart';
+import '../widgets/recent_activity_row.dart';
 import '../../../roster/domain/entities/service_roster.dart';
 import '../../../roster/presentation/providers/roster_provider.dart';
 import '../../../calendar/presentation/screens/calendar_screen.dart'
@@ -40,7 +42,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _isLoadingRecentActivities = false;
   String? _dailyBreadRange;
   String? _recentActivitiesError;
-  List<_DashboardCalendarEvent> _recentActivities = const [];
+  List<RecentActivity> _recentActivities = const [];
 
   // 追蹤上一次的 userId，用來在 didChangeDependencies 偵測帳號切換。
   String? _lastUserId;
@@ -388,29 +390,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  List<_DashboardCalendarEvent> _mergeUpcomingEvents(
-    List<_DashboardCalendarEvent> events,
-  ) {
-    final today = DateUtils.dateOnly(DateTime.now());
-    final merged =
-        events
-            .where(
-              (event) => event.isAllDay
-                  ? !DateUtils.dateOnly(event.startTime).isBefore(today)
-                  : !event.startTime.isBefore(DateTime.now()),
-            )
-            .toList()
-          ..sort((a, b) => a.startTime.compareTo(b.startTime));
-
-    if (merged.length <= _recentActivitiesLimit) return merged;
-    return merged.take(_recentActivitiesLimit).toList();
-  }
+  List<RecentActivity> _mergeUpcomingEvents(List<RecentActivity> events) =>
+      selectRecentActivities(
+        events,
+        now: DateTime.now(),
+        limit: _recentActivitiesLimit,
+      );
 
   String _cacheKeyForRecentActivities() {
-    return 'dashboard_recent_activities_v1';
+    // v1 的內容沒有 endTime，跨日活動會被當成一日活動。升版讓舊快取自然作廢。
+    return 'dashboard_recent_activities_v2';
   }
 
-  Future<List<_DashboardCalendarEvent>> _loadCachedRecentActivities() async {
+  Future<List<RecentActivity>> _loadCachedRecentActivities() async {
     final prefs = await SharedPreferences.getInstance();
     final key = _cacheKeyForRecentActivities();
     final cached = prefs.getString(key);
@@ -418,22 +410,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     try {
       final data = jsonDecode(cached) as List<dynamic>;
-      return data.map((raw) => _DashboardCalendarEvent.fromJson(raw)).toList();
+      return data
+          .map((raw) => RecentActivity.fromJson(raw as Map<String, dynamic>))
+          .toList();
     } catch (_) {
       return const [];
     }
   }
 
-  Future<void> _saveCachedRecentActivities(
-    List<_DashboardCalendarEvent> events,
-  ) async {
+  Future<void> _saveCachedRecentActivities(List<RecentActivity> events) async {
     final prefs = await SharedPreferences.getInstance();
     final key = _cacheKeyForRecentActivities();
     final payload = jsonEncode(events.map((event) => event.toJson()).toList());
     await prefs.setString(key, payload);
   }
 
-  Future<List<_DashboardCalendarEvent>> _fetchRecentActivities() async {
+  Future<List<RecentActivity>> _fetchRecentActivities() async {
     final now = DateTime.now();
     final todayStart = DateUtils.dateOnly(now).toUtc();
 
@@ -445,7 +437,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           'maxResults': _recentActivitiesFetchMax.toString(),
           'timeMin': todayStart.toIso8601String(),
           'timeZone': GoogleCalendarConfig.timeZone,
-          'fields': 'items(status,start,summary)',
+          // 一定要拿 end：沒有它就無法判斷跨日活動是否仍在進行，
+          // 也無法顯示區間。timeMin 本來就是以 end 過濾，資料一直都在。
+          'fields': 'items(status,start,end,summary)',
         }).replace(
           pathSegments: [
             'calendar',
@@ -463,21 +457,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     final items = data['items'] as List<dynamic>? ?? [];
-    final events = <_DashboardCalendarEvent>[];
+    final events = <RecentActivity>[];
 
     for (var i = 0; i < items.length; i++) {
       try {
         final raw = items[i] as Map<String, dynamic>;
         if (raw['status'] == 'cancelled') continue;
         final start = raw['start'] as Map<String, dynamic>?;
+        final end = raw['end'] as Map<String, dynamic>?;
         final dateTimeRaw = start?['dateTime'];
         final dateRaw = start?['date'];
         final startRaw = dateTimeRaw ?? dateRaw;
         if (startRaw is! String) continue;
+        final startTime = DateTime.parse(startRaw).toLocal();
+        final endRaw = end?['dateTime'] ?? end?['date'];
         final title = (raw['summary'] as String?)?.trim();
         events.add(
-          _DashboardCalendarEvent(
-            startTime: DateTime.parse(startRaw).toLocal(),
+          RecentActivity(
+            startTime: startTime,
+            // end 缺漏或壞掉時退化成「當下就結束」，寧可少顯示也不要生出
+            // 一個不存在的區間。
+            endTime: endRaw is String
+                ? DateTime.parse(endRaw).toLocal()
+                : startTime.add(const Duration(minutes: 1)),
             title: title == null || title.isEmpty ? '未命名活動' : title,
             isAllDay: dateTimeRaw == null && dateRaw is String,
           ),
@@ -554,46 +556,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       children: [
         const Text('近期活動', style: TextStyle(fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
-        ..._recentActivities.map((event) {
-          final dateText = event.isAllDay
-              ? DateFormat('MM/dd (EEEEE)', 'zh_TW').format(event.startTime)
-              : DateFormat(
-                  'MM/dd (EEEEE) HH:mm',
-                  'zh_TW',
-                ).format(event.startTime);
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 用 Expanded（tight fit）固定欄寬比例，避免「全日 / 有時間」兩種
-                // dateText 自然寬度不同，造成標題起始 x 錯位。
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    dateText,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 3,
-                  child: Text(
-                    event.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }),
+        ..._recentActivities.map((event) => RecentActivityRow(activity: event)),
       ],
     );
   }
@@ -900,31 +863,4 @@ class _UserServiceAssignment {
   final List<String> roles;
 
   const _UserServiceAssignment({required this.roster, required this.roles});
-}
-
-class _DashboardCalendarEvent {
-  final DateTime startTime;
-  final String title;
-  final bool isAllDay;
-
-  const _DashboardCalendarEvent({
-    required this.startTime,
-    required this.title,
-    required this.isAllDay,
-  });
-
-  Map<String, dynamic> toJson() => {
-    'startTime': startTime.toIso8601String(),
-    'title': title,
-    'isAllDay': isAllDay,
-  };
-
-  factory _DashboardCalendarEvent.fromJson(dynamic raw) {
-    final json = raw as Map<String, dynamic>;
-    return _DashboardCalendarEvent(
-      startTime: DateTime.parse(json['startTime'] as String).toLocal(),
-      title: json['title'] as String,
-      isAllDay: json['isAllDay'] as bool? ?? false,
-    );
-  }
 }

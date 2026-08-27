@@ -161,6 +161,137 @@ docker compose up -d   # http://localhost:8787
 Firebase 設定必須在 **build 階段**注入（Flutter Web 是靜態檔，執行期沒機會補），
 所以少了 `FIREBASE_API_KEY` 會直接讓 build 失敗，而不是產出一個開不起來的 image。
 
+### 行事曆寫入（Cloudflare Pages Functions）
+
+管理員與 `calendar-editors` 成員在 App 裡新增／編輯／刪除行事曆活動，會寫進
+**同一本 Google Calendar**，不是另存一份。
+
+為什麼需要伺服器端：前端讀行事曆用的是 `GOOGLE_CALENDAR_API_KEY`，而 **API key
+只能讀不能寫**。寫入需要 OAuth token 或 service account 憑證，兩者都不能放進
+瀏覽器。所以寫入走 `functions/api/calendar/`（Cloudflare Pages Functions，與
+App 同源，沒有 CORS 問題），憑證只存在於伺服器端。
+
+程式碼位置：
+
+| 路徑 | 作用 |
+|---|---|
+| `functions/api/calendar/events.js` | `POST` 新增 |
+| `functions/api/calendar/events/[id].js` | `PATCH` 編輯、`DELETE` 刪除 |
+| `worker/google_calendar.js` | 共用邏輯（身分驗證、簽 JWT、參數驗證） |
+| `worker/line_notify.js` | 新增成功後通知 n8n 發 LINE 群組訊息（選用） |
+| `functions-tests/` | `node --test`，CI 會擋部署 |
+
+`functions/` 放在 repo 根目錄，`wrangler pages deploy` 會自動一起上傳，
+不需要改部署方式。
+
+**權限怎麼驗**：拿呼叫者自己的 Firebase ID token 去讀 Firestore 的
+`users/{uid}`，看他是不是 admin 或屬於 `calendar-editors`。刻意不在 Worker 裡
+自己驗 RS256 —— 
+Firestore 會驗簽章、過期與 audience，而 `firestore.rules` 只准本人讀自己那份，
+所以少寫一段容易出錯的密碼學程式碼，service account 也不需要 Firestore 的
+IAM 權限。
+
+#### 一次性設定
+
+**1. 建立 service account 並下載金鑰**
+
+```bash
+PID=<你的 Firebase 專案 id>
+gcloud services enable calendar-json.googleapis.com --project="$PID"
+gcloud iam service-accounts create calendar-writer \
+  --display-name="Calendar writer" --project="$PID"
+gcloud iam service-accounts keys create .local/service-account.json \
+  --iam-account="calendar-writer@${PID}.iam.gserviceaccount.com" --project="$PID"
+chmod 600 .local/service-account.json
+```
+
+**不需要給它任何 IAM 角色** —— 它的權限完全來自下一步的日曆共用。
+金鑰放在 `.local/`（已 gitignore），這個 repo 是公開的，不要放別的地方。
+
+**2. 把日曆分享給它**
+
+Google 日曆 → 該日曆的設定 → 與特定使用者或群組共用 → 加入
+`calendar-writer@<專案id>.iam.gserviceaccount.com`，權限選 **「變更活動」**。
+
+只能用網頁操作：gcloud 的 token 拿不到 Calendar 的 scope（只允許
+cloud-platform / drive 那幾個），沒辦法用指令代勞。
+
+漏掉這步的話寫入會回 502「沒有權限寫入這本日曆」，Google 那邊的原因是
+`requiredAccessLevel`。
+
+**3. 驗證真的打得到**
+
+```bash
+node scripts/verify-calendar-writer.mjs
+```
+
+這支載入的是 `worker/google_calendar.js` **本人** —— 跟部署後跑的是同一份程式碼
+—— 拿真的金鑰去真的日曆上新增一筆 2099 年的測試活動、讀回來比對、再刪掉。
+單元測試裡的 Google 是假的，證明不了簽章、API 啟用與日曆共用；這支可以。
+
+**4. 設定 Cloudflare 執行期變數**
+
+```bash
+npx wrangler login            # 只有第一次，或 token 過期時
+bash scripts/push-calendar-secrets.sh
+```
+
+會把 `GOOGLE_SERVICE_ACCOUNT_JSON`、`GOOGLE_CALENDAR_ID`、`FIREBASE_PROJECT_ID`
+推到 Pages，**Production 與 Preview 各一次**（Preview 沒設的話 dev 分支的預覽
+站點會回「伺服器設定不完整」，而 production 看起來一切正常）。
+
+這三個是**執行期**變數，跟 build 階段的 `--dart-define` 是兩套。金鑰是多行
+JSON，用 dashboard 的輸入框貼很容易貼壞，所以走 CLI 從檔案直接送。
+
+設完要**重新部署一次**才生效，現有的 deployment 不會自動帶到新設定。
+
+#### LINE 群組通知（選用）
+
+在 App 裡**新增**活動成功後，會往 n8n 打一個 webhook，由 n8n 發訊息到 LINE
+群組。編輯和刪除不通知。
+
+為什麼不從 Cloudflare 直接打 LINE Messaging API：channel access token 和訊息
+排版都已經在 n8n（那邊還有一條「LINE 群組訊息 → 建事件 → 回覆」的既有流程）。
+再接一次等於把同一段排版邏輯養在兩個系統。`worker/line_notify.js` 只負責把
+「發生了什麼」講清楚，長什麼樣交給 n8n —— 改訊息格式不必重新部署 App。
+
+送出去的 payload 是攤平過的，n8n 那端不必知道 Google 用 `date` 表示全天、用
+`dateTime` 表示定時，也不必知道 `end.date` 是排他的：
+
+```json
+{
+  "action": "created",
+  "source": "pwa",
+  "id": "evt-timed",
+  "title": "小組聚會",
+  "allDay": false,
+  "start": "2026-09-01T19:00:00+08:00",
+  "end": "2026-09-01T21:00:00+08:00",
+  "location": "教會 2F",
+  "description": "記得帶聖經",
+  "link": "https://calendar.google.com/event?eid=evt-timed",
+  "actorUid": "..."
+}
+```
+
+**通知失敗不會讓新增失敗**。走到那一步時活動已經寫進 Google 了，回 500 只會
+讓人以為沒建成然後再按一次。失敗只留在 Cloudflare 的 log 裡。通知本身丟給
+`waitUntil` 在背景跑，使用者不必等 LINE。
+
+**設定**：`NOTIFY_WEBHOOK_URL` 和 `NOTIFY_WEBHOOK_SECRET`，任一沒設就整個關掉。
+`push-calendar-secrets.sh` 會從 `.local/n8n-notify-url` 和
+`.local/n8n-notify-secret` 讀，**只推 production** —— Preview 站點上的測試資料
+不該進真的群組。
+
+secret 要和 n8n Webhook node 的 Header Auth 憑證一致，header 名稱是
+`x-notify-secret`。n8n 那支 workflow 的範本在 `.local/n8n/`（含群組 ID，所以不
+進 repo）。
+
+---
+
+離線時寫入會直接失敗並提示重試，不會排隊 —— 一個小時後才默默出現的活動比
+當場拒絕更難處理。
+
 ### Firestore 安全規則
 
 `firestore.rules` 需另外部署（`firebase deploy --only firestore:rules`）。
@@ -169,7 +300,50 @@ Firebase 設定必須在 **build 階段**注入（Flutter Web 是靜態檔，執
 - 每條規則都要求 `isActiveUser()` — 也就是 `users/{uid}` 這份文件存在。
   管理員在後台刪掉帳號後，該人的 Firebase Auth 帳號雖然還在（前端 SDK 無法
   刪別人的 Auth 帳號），但因為 user 文件沒了，所有讀寫立刻失效。
-- `users` 只有本人與管理員讀得到，一般同工看不到別人的 email 與推播 token。
+- `users` 只有本人與 `roster-editors` 成員讀得到 —— 服事表的人員選擇器要靠它
+  列名單。代價要講清楚：Firestore rules 沒有欄位級的讀取限制，所以授予
+  `roster-editors` 就等於讓對方看得到全部人的 email 與推播 token。只有行事曆
+  權限的人讀不到，這是刻意綁 `roster-editors` 而不是「任何 group」的原因。
+
+### 權限模型
+
+編輯權限走 **group**，比照 Linux：一個人可以同時屬於多個，彼此正交（可以只給
+行事曆不給服事表），存在 `users/{uid}` 的 `groups` 陣列。`role` 回去單純表示
+身分，不決定權限 —— 唯一的例外是 `admin`，它等同 root，不必列在任何 group 裡
+就擁有全部。
+
+| | `admin` | `roster-editors` | `calendar-editors` | 沒有 group |
+|---|---|---|---|---|
+| 服事表 | 改 | 改 | 讀 | 讀 |
+| 行事曆活動 | 改 | 讀 | 改 | 讀 |
+| 列出使用者名單 | 可 | 可 | 不可 | 不可 |
+| 開帳號／改角色／授予 group／刪帳號 | 可 | **不可** | **不可** | 不可 |
+| `settings` 範本與活動選項 | 可 | **不可** | **不可** | 讀 |
+
+要放行一個人，就在後台的使用者編輯頁勾他需要的那幾項，一個一個給。group 成員
+不能授予任何人 group（包括自己），所以授權不會自己擴散 —— 只有管理員動手才會
+多一個人。
+
+**不需要資料遷移**：規則讀的是 `data.get('groups', [])`，既有使用者都沒有這個
+欄位，一律視為沒有任何 group。
+
+看得到權限的地方有三處：使用者編輯頁的「編輯權限」勾選框（管理員授權用）、
+使用者列表的副標尾端「可編輯：…」（管理員一眼掃全部人用；角色與牧區都是身分，
+排在前面）、以及個人頁角色標籤旁邊
+的權限標籤（本人自己看）。管理員三處都不列出個別 group —— 他隱含全部，逐項列出
+反而像是只被指定了那幾項。
+
+強制點有三個，改動時要一起改：
+
+| 檔案 | 東西 | 角色 |
+|---|---|---|
+| `firestore.rules` | `inGroup()` | 真正的防線（服事表、使用者名單） |
+| `worker/google_calendar.js` | `CALENDAR_GROUP` | 真正的防線（行事曆） |
+| `lib/features/auth/domain/entities/user.dart` | `UserGroup` | 只決定 UI 顯不顯示入口 |
+
+group 名稱字串是資料格式的一部分（存進 Firestore 的就是它），改名等於要遷移
+資料。`firestore.rules` 的 `hasValidGroups()` 會擋掉不在清單裡的名稱，避免打錯
+字變成一個看起來像授權、實際上什麼都不對應的欄位。
 
 ## 開發規範
 
@@ -215,6 +389,9 @@ flutter run -d chrome --debug # 調試模式
 flutter analyze              # 靜態分析
 flutter test                 # 執行測試
 dart format lib test         # 格式化代碼
+
+# 行事曆寫入 API（Pages Functions，無相依套件）
+npm test --prefix functions-tests
 
 # 構建
 flutter build web --release --base-href /  # 生產構建（不含 dart-define）

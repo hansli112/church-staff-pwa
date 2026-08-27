@@ -10,10 +10,15 @@ final _timeFormat = DateFormat('HH:mm', 'zh_TW');
 /// Bottom sheet content for a single calendar event's detail view.
 ///
 /// Call via [showEventDetailSheet] which wraps [showModalBottomSheet].
+///
+/// [onEdit] and [onDelete] are supplied for admins only; without them this is
+/// the read-only view every member sees.
 Future<void> showEventDetailSheet(
   BuildContext context,
-  CalendarEvent event,
-) async {
+  CalendarEvent event, {
+  Future<void> Function(CalendarEvent event)? onEdit,
+  Future<void> Function(CalendarEvent event)? onDelete,
+}) async {
   final colorScheme = Theme.of(context).colorScheme;
   await showModalBottomSheet<void>(
     context: context,
@@ -78,6 +83,37 @@ Future<void> showEventDetailSheet(
                     event.description!,
                     style: const TextStyle(fontSize: 14, height: 1.5),
                   ),
+                ),
+              ],
+              if (onEdit != null || onDelete != null) ...[
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (onDelete != null)
+                      TextButton.icon(
+                        onPressed: () async {
+                          Navigator.of(context).pop();
+                          await onDelete(event);
+                        },
+                        icon: const Icon(Icons.delete_outline, size: 18),
+                        label: const Text('刪除'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: colorScheme.error,
+                        ),
+                      ),
+                    if (onEdit != null) ...[
+                      const SizedBox(width: 8),
+                      FilledButton.icon(
+                        onPressed: () async {
+                          Navigator.of(context).pop();
+                          await onEdit(event);
+                        },
+                        icon: const Icon(Icons.edit_outlined, size: 18),
+                        label: const Text('編輯'),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ],

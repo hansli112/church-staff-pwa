@@ -302,6 +302,27 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   }
 }
 
+/// 使用者列表的副標：`角色 | 牧區 | 可編輯：…`。
+///
+/// 角色與牧區都是身分，排在一起；編輯權是另一回事，接在後面。副標只有一行，
+/// 超出的部分會從尾端被 ellipsis 切掉 —— 牧區標籤只有「主日／青崇／兒主」這種
+/// 兩個字的短名，所以就算三個牧區都有，權限通常還是看得到。
+///
+/// 管理員本來就全有，role 標籤已經說完了，逐項列出反而像是被指定了那幾項。
+String userListSubtitle(User user, String zoneText) {
+  final groupText = user.isAdmin
+      ? ''
+      : [
+          for (final group in UserGroup.values)
+            if (user.groups.contains(group)) group.shortLabel,
+        ].join('、');
+  return [
+    user.role.label,
+    if (zoneText.isNotEmpty) zoneText,
+    if (groupText.isNotEmpty) '可編輯：$groupText',
+  ].join(' | ');
+}
+
 class _UserListItemData {
   final User user;
   final String displayName;
@@ -353,8 +374,7 @@ List<_UserListItemData> _buildSortedUsers(
     }
     final zoneText = user.zones.map((z) => z.serviceType.label).join(', ');
     final displayName = user.username.isEmpty ? '${user.name}（無帳號）' : user.name;
-    final subtitle =
-        '${user.role.label}${zoneText.isNotEmpty ? ' | $zoneText' : ''}';
+    final subtitle = userListSubtitle(user, zoneText);
     result.add(
       _UserListItemData(
         user: user,

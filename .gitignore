@@ -53,12 +53,22 @@ app.*.map.json
 # Environment variables
 .env
 
+# 本機專用：教會的真實同工名單、綽號對照、產生出來的 prompt。
+# repo 是公開的，這些個資一律不進版控。
+.local/
+
 # 部署流程在 build 前生出來的（CI 與 Dockerfile 都會寫），內容是當次 build 的
 # SHA / 時間戳，不該被任何人的本機執行結果蓋進版控。
 /web/version.json
 
 # Firestore rules tests (Node)
 firestore-tests/node_modules/
+
+# Pages Functions tests（目前沒有相依套件，先擋著）
+functions-tests/node_modules/
+
+# wrangler 的本機快取，裡面有 account id
+.wrangler/
 
 # AI Agent Context
 # AGENTS.md 是給協作者/agent 看的專案規範，要進版控，故不列入忽略。

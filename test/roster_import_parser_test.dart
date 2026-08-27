@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:church_staff_pwa/features/roster/domain/entities/event_option.dart';
+import 'package:church_staff_pwa/features/roster/domain/entities/service_roster.dart';
 import 'package:church_staff_pwa/features/roster/presentation/screens/roster_import_parser.dart';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -377,6 +378,236 @@ void main() {
     test('parseColor: "#" with wrong digit count → null', () {
       expect(parseColor('#FFF'), isNull);
       expect(parseColor('#FFFFF'), isNull);
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // 沒對到的名字一律照樣匯入
+  //
+  // 以前這三種都是直接丟掉，那格變成「待定」，同一格還有別人時甚至完全沒有
+  // 痕跡。臨時支援別的崇拜是正常狀況，不該被當成髒資料刪掉。
+  // ══════════════════════════════════════════════════════════════════════════
+
+  group('未匹配的名字照樣匯入', () {
+    const db = ['王大明', '李小華', '陳大明'];
+    // 王大明 只被設定為司琴，沒有招待。
+    const allowed = {
+      '司琴': {'王大明'},
+      '招待': {'李小華'},
+    };
+    const ids = {'王大明': 'uid-daming', '李小華': 'uid-xiaohua'};
+
+    RosterImportParseResult run(String people, {String role = '招待'}) => _parse(
+      '[{"date":"2026-01-04","duties":[{"role":"$role","people":$people}]}]',
+      candidates: db,
+      allowedByRole: allowed,
+      nameToId: ids,
+    );
+
+    RosterEntry dutyOf(RosterImportParseResult r) =>
+        r.dutiesByDate['2026-01-04']!.single;
+
+    test('沒設定該服事的人照樣排進去，uid 也留著', () {
+      final r = run('["王大明"]');
+      expect(dutyOf(r).people, ['王大明']);
+      expect(
+        dutyOf(r).personIdsByName['王大明'],
+        'uid-daming',
+        reason: '人是名單上的真人，uid 查得到就該帶上，否則收不到服事提醒',
+      );
+      expect(r.roleMismatchNames, ['王大明'], reason: '照樣匯入不等於不用報告');
+      expect(r.roleMismatchDetails['王大明'], contains('招待'));
+    });
+
+    test('不在名單的人以純文字排進去，但沒有 uid', () {
+      final r = run('["陳訪客"]');
+      expect(dutyOf(r).people, ['陳訪客']);
+      expect(dutyOf(r).personIdsByName, isEmpty);
+      expect(r.notInRosterNames, ['陳訪客']);
+    });
+
+    test('對到多個同名的人時保留原字串', () {
+      // 「大明」同時是 王大明 與 陳大明 的結尾，系統無從判斷。
+      final r = run('["大明"]', role: '司琴');
+      expect(dutyOf(r).people, ['大明']);
+      expect(dutyOf(r).personIdsByName, isEmpty);
+      expect(r.otherNames, ['大明']);
+    });
+
+    test('同一格混合時不會有人靜靜消失', () {
+      // 這格最容易出事：以前畫面只顯示「李小華」，看起來完全正常，
+      // 沒有任何跡象顯示少了一個人。
+      final r = run('["李小華","王大明"]');
+      expect(dutyOf(r).people, ['李小華', '王大明']);
+      expect(dutyOf(r).personIdsByName, {
+        '李小華': 'uid-xiaohua',
+        '王大明': 'uid-daming',
+      });
+    });
+
+    test('真的沒填人時才會是待定', () {
+      final r = run('[]');
+      expect(dutyOf(r).people, ['待定']);
+    });
+
+    test('非字串的元素會停下來說明是哪一筆，不會被靜靜濾掉', () {
+      // 以前 whereType<String>() 直接濾掉 null 與數字，既不寫進表也不進報告
+      // —— 牆上寫兩個人、app 顯示一個，比 roleMismatch 更難察覺。
+      expect(run('["李小華", null]').error, '第 1 筆 duties 第 1 筆 people 第 2 個不是文字');
+      expect(
+        run('["李小華", 12345]').error,
+        '第 1 筆 duties 第 1 筆 people 第 2 個不是文字',
+      );
+    });
+
+    test('空字串仍然略過（那不是名字）', () {
+      final r = run('["李小華", "", "  "]');
+      expect(r.error, isNull);
+      expect(dutyOf(r).people, ['李小華']);
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // orderDutiesByTemplate — 匯入後的排序規格
+  //
+  // 規格是「一律照樣板排」，JSON 自己的順序不算數。這一組就是這條規則的
+  // 白紙黑字，改動排序邏輯前先看這裡。
+  // ══════════════════════════════════════════════════════════════════════════
+
+  group('orderDutiesByTemplate（照樣板排）', () {
+    List<String> rolesOf(List<RosterEntry> duties) =>
+        duties.map((d) => d.role).toList();
+
+    List<RosterEntry> dutiesOf(List<String> roles) => [
+      for (final role in roles) RosterEntry(role: role, people: const ['待定']),
+    ];
+
+    test('JSON 順序不算數，一律照樣板排', () {
+      final sorted = orderDutiesByTemplate(dutiesOf(['領詩', '司琴', '主席']), const [
+        '主席',
+        '司琴',
+        '領詩',
+      ]);
+      expect(rolesOf(sorted), ['主席', '司琴', '領詩']);
+    });
+
+    test('樣板裡沒有的角色接在最後，彼此維持 JSON 的相對順序', () {
+      final sorted = orderDutiesByTemplate(
+        dutiesOf(['音控', '司琴', '招待', '主席']),
+        const ['主席', '司琴'],
+      );
+      expect(rolesOf(sorted), ['主席', '司琴', '音控', '招待']);
+    });
+
+    test('只排序，不會把樣板有、JSON 沒有的角色補進來', () {
+      final sorted = orderDutiesByTemplate(dutiesOf(['司琴']), const [
+        '主席',
+        '司琴',
+        '領詩',
+      ]);
+      expect(rolesOf(sorted), ['司琴']);
+    });
+
+    test('同一角色在 JSON 出現兩次時維持原本的先後（sort 不保證穩定，要自己 tie-break）', () {
+      // 用 people 分辨兩筆同名角色誰先誰後。
+      final duties = [
+        RosterEntry(role: '司琴', people: const ['第一筆']),
+        RosterEntry(role: '主席', people: const ['主席甲']),
+        RosterEntry(role: '司琴', people: const ['第二筆']),
+      ];
+      final sorted = orderDutiesByTemplate(duties, const ['主席', '司琴']);
+      expect(rolesOf(sorted), ['主席', '司琴', '司琴']);
+      expect(sorted[1].people, ['第一筆']);
+      expect(sorted[2].people, ['第二筆']);
+    });
+
+    test('項目數超過 32 時同名角色仍維持原順序（這裡才真的測到 tie-break）', () {
+      // 上面那條三筆的測試其實咬不到 tie-break：Dart 的 List.sort 在 32 個
+      // 元素以下走 insertion sort，本身就是穩定的。超過 32 才換成 dual-pivot
+      // quicksort，同分元素的相對順序這時才會被打亂。拿掉 tie-break 的話
+      // 只有這一條會紅。
+      const count = 40;
+      final duties = [
+        for (var i = 0; i < count; i++)
+          RosterEntry(role: i.isEven ? '司琴' : '主席', people: ['第$i筆']),
+      ];
+
+      final sorted = orderDutiesByTemplate(duties, const ['主席', '司琴']);
+
+      expect(rolesOf(sorted).toSet(), {'主席', '司琴'});
+      expect(sorted.take(count ~/ 2).map((d) => d.people.single), [
+        for (var i = 1; i < count; i += 2) '第$i筆',
+      ], reason: '主席應照原順序排在前半');
+      expect(sorted.skip(count ~/ 2).map((d) => d.people.single), [
+        for (var i = 0; i < count; i += 2) '第$i筆',
+      ], reason: '司琴應照原順序排在後半');
+    });
+
+    test('角色全部都不在樣板裡時，整份維持 JSON 順序', () {
+      final sorted = orderDutiesByTemplate(dutiesOf(['音控', '招待']), const [
+        '主席',
+      ]);
+      expect(rolesOf(sorted), ['音控', '招待']);
+    });
+
+    test('樣板為空時退回 JSON 順序 —— 呼叫端必須先擋掉這種情況', () {
+      // 這條不是「期望的行為」，是把後果寫下來：樣板沒載到就匯入會排出
+      // JSON 順序。roster_edit_screen 用 RosterProvider.templatesLoaded
+      // 在進到這裡之前就擋掉了。
+      final sorted = orderDutiesByTemplate(
+        dutiesOf(['領詩', '司琴']),
+        const <String>[],
+      );
+      expect(rolesOf(sorted), ['領詩', '司琴']);
+    });
+
+    test('樣板有重複角色時取第一次出現的位置', () {
+      final sorted = orderDutiesByTemplate(dutiesOf(['司琴', '主席']), const [
+        '司琴',
+        '主席',
+        '司琴',
+      ]);
+      expect(rolesOf(sorted), ['司琴', '主席']);
+    });
+
+    test('不會改動傳進來的 list', () {
+      final original = dutiesOf(['領詩', '主席']);
+      orderDutiesByTemplate(original, const ['主席', '領詩']);
+      expect(rolesOf(original), ['領詩', '主席']);
+    });
+
+    test('空輸入不會炸', () {
+      expect(orderDutiesByTemplate(const [], const ['主席']), isEmpty);
+    });
+
+    test('parser 保留 JSON 順序，重排是後面那一層的事', () {
+      // 兩層的分工：parser 忠實反映 JSON，orderDutiesByTemplate 才決定顯示
+      // 順序。parser 若自作主張排序，這裡會紅。
+      const json = '''
+[
+  {
+    "date": "2026-01-04",
+    "duties": [
+      {"role": "領詩", "people": ["王大明"]},
+      {"role": "主席", "people": ["李小華"]}
+    ]
+  }
+]
+''';
+      final result = _parse(
+        json,
+        candidates: const ['王大明', '李小華'],
+        allowedByRole: const {
+          '領詩': {'王大明'},
+          '主席': {'李小華'},
+        },
+      );
+      final parsed = result.dutiesByDate['2026-01-04']!;
+      expect(rolesOf(parsed), ['領詩', '主席']);
+      expect(rolesOf(orderDutiesByTemplate(parsed, const ['主席', '領詩'])), [
+        '主席',
+        '領詩',
+      ]);
     });
   });
 }

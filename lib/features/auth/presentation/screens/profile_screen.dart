@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/services/app_version_service.dart';
 import '../../../../core/services/push_notification_service.dart';
 import '../../../../core/utils/error_messages.dart';
+import '../../domain/entities/user.dart';
 import '../providers/session_provider.dart';
 import 'user_management_screen.dart' deferred as user_management_screen;
 import 'group_settings_screen.dart' deferred as group_settings_screen;
@@ -169,11 +170,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
                 ),
                 const SizedBox(height: 8),
-                Chip(
-                  label: Text(user.role.label),
-                  backgroundColor: Theme.of(
-                    context,
-                  ).colorScheme.primaryContainer,
+                // 角色是身分，group 是編輯權限 —— 兩種不同的東西，所以用不同
+                // 的底色，而不是排成一串看起來同質的標籤。
+                //
+                // 管理員不列 group：他隱含全部，逐項列出反而像是「被指定了這
+                // 幾項」，看起來比實際權限還小。Wrap 是為了窄螢幕會換行而不是
+                // 擠成一行溢出。
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    Chip(
+                      label: Text(user.role.label),
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.primaryContainer,
+                    ),
+                    if (!user.isAdmin)
+                      for (final group in UserGroup.values)
+                        if (user.groups.contains(group))
+                          Chip(
+                            label: Text(group.label),
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.secondaryContainer,
+                          ),
+                  ],
                 ),
               ],
             ),

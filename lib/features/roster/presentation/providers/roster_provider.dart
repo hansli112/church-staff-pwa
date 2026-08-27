@@ -13,6 +13,13 @@ class RosterProvider with ChangeNotifier {
 
   List<ServiceRoster> _allRosters = []; // 儲存所有原始資料
   Map<ServiceType, List<String>> _templates = {};
+
+  /// 樣板是否真的從伺服器讀回來過。
+  ///
+  /// 不能用 `_templates.isEmpty` 或 `templates[type] == null` 代替：讀取失敗、
+  /// 尚未讀取、與「這個類別本來就沒設定角色」在資料上長得一樣，但對匯入來說
+  /// 意義完全不同 —— 前兩者會讓匯入排出錯誤的順序。
+  bool _templatesLoaded = false;
   Map<ServiceType, List<EventOption>> _eventOptionsByType = {};
   bool _isLoading = false;
   bool _isEditMode = false;
@@ -75,6 +82,7 @@ class RosterProvider with ChangeNotifier {
   bool get isEditMode => _isEditMode;
   String? get error => _error;
   Map<ServiceType, List<String>> get templates => _templates;
+  bool get templatesLoaded => _templatesLoaded;
   Map<ServiceType, List<EventOption>> get eventOptionsByType => Map.fromEntries(
     _eventOptionsByType.entries.map(
       (entry) => MapEntry(entry.key, List<EventOption>.from(entry.value)),
@@ -126,6 +134,7 @@ class RosterProvider with ChangeNotifier {
     _fetchToken++; // 讓進行中的 fetch 過期
     _replaceRosters([]);
     _templates = {};
+    _templatesLoaded = false;
     _replaceEventOptions({});
     _error = null;
     _isEditMode = false;
@@ -239,7 +248,10 @@ class RosterProvider with ChangeNotifier {
       final templates = await templatesFuture;
       final eventOptions = await eventOptionsFuture;
       if (token == _fetchToken) {
-        if (templates != null) _templates = templates;
+        if (templates != null) {
+          _templates = templates;
+          _templatesLoaded = true;
+        }
         if (eventOptions != null) _replaceEventOptions(eventOptions);
         _isLoading = false;
         notifyListeners();
@@ -299,9 +311,10 @@ class RosterProvider with ChangeNotifier {
     }
   }
 
-  /// 只有 admin 才可呼叫。確保本季 + 下季的所有預定 roster 都已存在於 Firestore。
+  /// 只有具編輯權的人（admin / 負責人）才可呼叫。確保本季 + 下季的所有預定
+  /// roster 都已存在於 Firestore。
   /// 背景執行，失敗僅 log，不影響 UI。完成後觸發 fetchInitialData 讓新建的 roster 出現。
-  Future<void> ensureQuarterRostersIfAdmin() async {
+  Future<void> ensureQuarterRostersForEditor() async {
     try {
       await _repository.ensureQuarterRosters();
     } catch (e, st) {
@@ -310,7 +323,7 @@ class RosterProvider with ChangeNotifier {
     }
     // backfill 成功與否都要重抓 —— backfill 只是「補齊缺的 roster」，
     // 它失敗不代表現有資料讀不到。放在 try 裡的話，backfill 一拋例外就會
-    // 連重抓一起跳過，admin 進編輯模式時畫面停在舊資料且毫無提示。
+    // 連重抓一起跳過，進編輯模式時畫面停在舊資料且毫無提示。
     await fetchInitialData();
   }
 
@@ -387,6 +400,7 @@ class RosterProvider with ChangeNotifier {
     try {
       await _repository.updateServiceTemplates(newTemplates);
       _templates = Map.from(newTemplates);
+      _templatesLoaded = true;
 
       if (renamedRolesByType.isNotEmpty) {
         final updatedRosters = <ServiceRoster>[];

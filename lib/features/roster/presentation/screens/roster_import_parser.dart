@@ -196,9 +196,20 @@ RosterImportParseResult parseRosterImportJson({
             '第 $rowNum 筆 duties 第 $dutyNum 筆 people 格式錯誤',
           );
         }
+        // 非字串的元素（null、數字）以前被 whereType 靜靜濾掉 —— 跟這次要
+        // 消滅的「名字無聲失蹤」是同一件事，只是更難察覺：它連報告都不會進。
+        // 這種資料就是壞掉的，直接讓整份匯入停下來說明是哪一筆。
+        for (var k = 0; k < peopleValue.length; k++) {
+          if (peopleValue[k] is! String) {
+            return RosterImportParseResult.fatal(
+              '第 $rowNum 筆 duties 第 $dutyNum 筆 people 第 ${k + 1} 個不是文字',
+            );
+          }
+        }
         final people = peopleValue
-            .whereType<String>()
+            .cast<String>()
             .map((name) => name.trim())
+            // 空字串不是名字，跳過。這是唯一會被靜靜略過的東西。
             .where((name) => name.isNotEmpty)
             .map((name) {
               final result = resolvePersonName(
@@ -207,23 +218,35 @@ RosterImportParseResult parseRosterImportJson({
                 roleValue.trim(),
                 allowedByRole,
               );
+              // 沒對到的名字一律照樣寫進服事表，只記進報告，不丟掉。
+              //
+              // 以前是丟掉的，那格於是變成「待定」，同一格還有別人時甚至什麼
+              // 痕跡都沒有 —— 牆上的表寫著兩個人，app 顯示一個，肉眼分不出來。
+              // 臨時支援別的崇拜是正常狀況，不該被當成錯誤資料刪掉。
+              //
+              // 首頁的「我的服事」在 uid 對不上時會退回姓名比對，所以名字留著
+              // 本人就看得到自己被排到；名字刪掉才是真的把人弄丟。
               switch (result.status) {
                 case NameMatchStatus.matched:
                   return result.name;
                 case NameMatchStatus.roleMismatch:
+                  // 人是名單上的真人，uid 也查得到（下面的 personIdsByName
+                  // 會自動帶上），只是沒設定這個服事。
                   roleMismatchNames.add(result.name);
                   _addRoleMismatch(
                     roleMismatchDetails,
                     result.name,
                     roleValue.trim(),
                   );
-                  return null;
+                  return result.name;
                 case NameMatchStatus.notInList:
+                  // 名單上沒有這個人 —— 存純文字，沒有 uid，收不到通知。
                   notInRosterNames.add(name);
-                  return null;
+                  return name;
                 case NameMatchStatus.other:
+                  // 對到兩個以上同名的人，系統無從判斷是誰，原字串照留。
                   otherNames.add(name);
-                  return null;
+                  return name;
               }
             })
             .whereType<String>()
@@ -311,6 +334,45 @@ RosterImportParseResult parseRosterImportJson({
     otherNames: uniqueNames(otherNames),
     notInEventCatalog: notInEventCatalog,
   );
+}
+
+// ── orderDutiesByTemplate ───────────────────────────────────────────────────
+
+/// 依「服事項目樣板」的角色順序重排匯入進來的服事項目。
+///
+/// JSON 自己的順序刻意不採用。樣板是唯一的排序依據 —— 不管 JSON 是誰產生的、
+/// 用什麼順序寫，同一個類別的服事表在畫面上的項目順序都一致。
+///
+/// 樣板裡沒有的角色一律接在最後，彼此之間才維持 JSON 的相對順序。
+///
+/// [templateRoles] 為空時所有角色並列，等於整份退回 JSON 順序 —— 呼叫端必須
+/// 先確認樣板真的載入過再進來，否則同一份 JSON 匯入兩次會排出兩種結果。
+List<RosterEntry> orderDutiesByTemplate(
+  List<RosterEntry> duties,
+  List<String> templateRoles,
+) {
+  final roleOrder = <String, int>{};
+  for (var i = 0; i < templateRoles.length; i++) {
+    // 樣板理論上不會有重複角色（設定畫面擋掉了），真的有的話取第一次出現的
+    // 位置，跟人看樣板的直覺一致。
+    roleOrder.putIfAbsent(templateRoles[i], () => i);
+  }
+
+  // 先把 JSON 的原始索引綁上去再排。Dart 的 List.sort 不保證穩定，同一個角色
+  // 在 JSON 裡出現兩次時，不自己 tie-break 的話相對順序是未定義的。
+  // 用索引而不是 indexOf：indexOf 走的是 ==，將來 RosterEntry 若加上值相等，
+  // 兩個相等的項目會拿到同一個索引，tie-break 就失效了。
+  final indexed = <MapEntry<int, RosterEntry>>[
+    for (var i = 0; i < duties.length; i++) MapEntry(i, duties[i]),
+  ];
+  indexed.sort((a, b) {
+    final ai = roleOrder[a.value.role] ?? templateRoles.length;
+    final bi = roleOrder[b.value.role] ?? templateRoles.length;
+    if (ai != bi) return ai.compareTo(bi);
+    return a.key.compareTo(b.key);
+  });
+
+  return [for (final entry in indexed) entry.value];
 }
 
 // ── parseEventsList ─────────────────────────────────────────────────────────
