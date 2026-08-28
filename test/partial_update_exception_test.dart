@@ -31,6 +31,13 @@ class _PartialFailRosterRepository implements RosterRepository {
   }
 
   @override
+  Future<void> updateRostersAtomically(List<ServiceRoster> rosters) async {
+    for (final roster in rosters) {
+      await updateRoster(roster);
+    }
+  }
+
+  @override
   Future<Map<ServiceType, List<String>>> getServiceTemplates() async => {};
 
   @override

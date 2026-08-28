@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -6,10 +8,12 @@ import '../../domain/entities/service_roster.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../../auth/presentation/providers/user_admin_provider.dart';
 import '../providers/roster_provider.dart';
+import '../../../../core/utils/error_messages.dart';
 import '../../../../core/widgets/settings_bottom_sheet.dart';
 
 part '_roster_people_dialog.dart';
 part '_special_event_dialog.dart';
+part '_swap_duty_dialog.dart';
 
 class RosterCard extends StatelessWidget {
   static final _dateFormat = DateFormat('yyyy/MM/dd (EEEEE)', 'zh_TW');
@@ -249,6 +253,58 @@ class RosterCard extends StatelessWidget {
     if (confirmed == true) {
       _removeDuty(context, index);
     }
+  }
+
+  /// 開啟交換 sheet。
+  ///
+  /// 候選人只找同一個牧區、同一個服事項目 —— 跨項目的調動（破冰換成敬拜主領）
+  /// 不是交換而是重排，走原本的編輯流程比較不會換到對方沒受訓的項目上。
+  ///
+  /// 已經排在這一天同一個項目裡的人會先濾掉：換過來只會讓同一天出現兩次同名，
+  /// 而且對方那天反而少一個人。
+  Future<void> _showSwapDutyDialog(
+    BuildContext context,
+    int index,
+    RosterEntry duty,
+  ) async {
+    final provider = context.read<RosterProvider>();
+    final role = duty.role.trim();
+    final alreadyHere = duty.people.map((p) => p.trim()).toSet();
+
+    final candidates = <_SwapCandidate>[];
+    for (final other in provider.getRostersByType(roster.type)) {
+      if (other.id == roster.id) continue;
+      for (var i = 0; i < other.duties.length; i++) {
+        final otherDuty = other.duties[i];
+        if (otherDuty.role.trim() != role) continue;
+        final people = otherDuty.people.isEmpty
+            ? const [RosterProvider.placeholderPerson]
+            : otherDuty.people;
+        for (final person in people) {
+          if (alreadyHere.contains(person.trim())) continue;
+          candidates.add(
+            _SwapCandidate(roster: other, dutyIndex: i, person: person),
+          );
+        }
+      }
+    }
+
+    if (!context.mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => _SwapDutyDialog(
+        roster: roster,
+        dutyIndex: index,
+        duty: duty,
+        candidates: candidates,
+      ),
+    );
   }
 
   Future<void> _showEditDialog(
@@ -491,9 +547,24 @@ class _RosterCardBody extends StatelessWidget {
                     ),
                     if (isEditMode)
                       IconButton(
+                        tooltip: '與其他日期交換',
+                        constraints: const BoxConstraints(
+                          minWidth: 44,
+                          minHeight: 48,
+                        ),
+                        icon: Icon(
+                          Icons.swap_horiz,
+                          size: 20,
+                          color: colorScheme.primary,
+                        ),
+                        onPressed: () =>
+                            card._showSwapDutyDialog(context, index, duty),
+                      ),
+                    if (isEditMode)
+                      IconButton(
                         tooltip: '刪除服事項目',
                         constraints: const BoxConstraints(
-                          minWidth: 48,
+                          minWidth: 44,
                           minHeight: 48,
                         ),
                         icon: Icon(

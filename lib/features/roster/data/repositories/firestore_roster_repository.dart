@@ -152,6 +152,24 @@ class FirestoreRosterRepository implements RosterRepository {
   }
 
   @override
+  Future<void> updateRostersAtomically(List<ServiceRoster> rosters) async {
+    if (rosters.isEmpty) return;
+    try {
+      final batch = _firestore.batch();
+      for (final roster in rosters) {
+        batch.set(_rostersCollection.doc(roster.id), _toFirestore(roster));
+      }
+      await batch.commit();
+    } catch (e, st) {
+      log('Update rosters atomically failed', error: e, stackTrace: st);
+      // 刻意不像 updateRoster 那樣包成 Exception('更新服事表失敗: $e')：包過之後
+      // mapErrorToUserMessage 認不出 FirebaseException 的 code，permission-denied
+      // 會變成「操作失敗，請稍後再試」，使用者不知道是權限問題還是網路問題。
+      rethrow;
+    }
+  }
+
+  @override
   Future<Map<ServiceType, List<String>>> getServiceTemplates() async {
     try {
       final doc = await _templatesDoc.get();
