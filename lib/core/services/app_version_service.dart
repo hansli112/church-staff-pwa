@@ -12,6 +12,14 @@ class AppVersionInfo {
 class AppVersionService {
   const AppVersionService();
 
+  /// 個人頁「更新於」要回答的是「我手上這個 App 是哪一版」，不是「伺服器現在
+  /// 是哪一版」——後者對使用者沒有意義，而且會在「舊 bundle ＋ 新伺服器」時
+  /// 顯示成已更新。
+  ///
+  /// 所以這裡刻意不加 `?t=` 也不送 `cache-control: no-cache`：`version.json`
+  /// 跟著 bundle 一起進 service worker 那個以 build SHA 為名的快取
+  /// （`web/cache_sw.js` 走 cache-first），拿到的就是正在跑的那一版。加了
+  /// cache-bust 等於繞過快取去問伺服器，那行字就又變回伺服器的版本。
   Future<AppVersionInfo?> fetchVersionInfo() async {
     final candidates = [
       Uri.base.resolve('version.json'),

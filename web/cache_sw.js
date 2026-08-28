@@ -78,10 +78,24 @@ const VENDOR_PATH_PREFIXES = ['/canvaskit/'];
 
 // Same-origin paths that should be re-fetched from network when online so
 // users see updates promptly. Cached copy is the offline fallback.
+//
+// `/version.json` deliberately does NOT belong here — it falls through to
+// cacheFirst below. 個人頁的「更新於」讀的就是這份檔案，而那行字要回答的是
+// 「我手上這個 App 是哪一版」，不是「伺服器現在部署到哪一版」。CACHE_NAME 綁
+// build SHA，所以 cache-first 拿到的必定是「正在跑的那一版」隨 bundle 一起進
+// 快取的那份 —— 這正是 477ad89 的意圖（它把 version.json 的產生移到
+// `flutter build` 之前，就是為了讓它進得了這個快取）。
+//
+// 放進 network-first 會靜默撤銷那個修正：舊的 SW 還在服務舊的 main.dart.js，
+// version.json 卻是網路上最新的，畫面顯示「已更新」但跑的其實是舊 bundle ——
+// 一個裝置到底更新了沒有，就再也看不出來。實際踩過一次：一位使用者截圖顯示
+// 「更新於 10:51」，那正是伺服器部署完成的時間，跟他手機上跑的版本無關。
+//
+// 更新偵測不靠這個檔案，靠的是 SW 自己的 updatefound / SKIP_WAITING
+// （見 web/index.html），所以 cache-first 不會讓任何人卡在舊版。
 const NETWORK_FIRST_PATHS = new Set([
   '/',
   '/index.html',
-  '/version.json',
   '/manifest.json',
   '/flutter_bootstrap.js',
   '/flutter.js',

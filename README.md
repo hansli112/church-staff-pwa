@@ -434,6 +434,9 @@ dart format lib test         # 格式化代碼
 # 行事曆寫入 API（Pages Functions，無相依套件）
 npm test --prefix functions-tests
 
+# service worker 的快取策略（無相依套件）
+npm test --prefix web-tests
+
 # 構建
 flutter build web --release --base-href /  # 生產構建（不含 dart-define）
 # 詳見上述「生產環境構建」段落，包含完整 dart-define 參數
@@ -474,7 +477,29 @@ flutter analyze
 
 ### PWA 離線功能
 
-Service Worker 由 Flutter 自動管理；確保 `web/manifest.json` 正確配置，並在生產環境啟用 HTTPS。
+Service Worker 是自己的一份：`web/cache_sw.js`。Flutter 3.27+ 內建的那支在
+activate 時會把自己反註冊掉，沒有快取的話每次重新載入都要重抓 `main.dart.js`
+（約 3 MB）與 `canvaskit.wasm`（約 7 MB）。
+
+策略分三層：
+
+| 對象 | 策略 | 快取名 |
+|---|---|---|
+| `/`、`index.html`、`manifest.json`、`flutter_bootstrap.js`、`flutter.js` | network-first，快取只當離線 fallback | 綁 build SHA |
+| 其餘同源資產（含 `main.dart.js`、`version.json`） | cache-first | 綁 build SHA |
+| `/canvaskit/` | cache-first，跨 deploy 存活 | 綁 Flutter 版本 |
+| `fonts.gstatic.com` 的中文字型 subset | cache-first，上限 64 筆 | 不綁版本 |
+| Firestore／Auth／FCM／Calendar 等 API | 完全不攔截 | — |
+
+`version.json` **刻意** cache-first：個人頁的「更新於」要回答的是「我手上這個
+App 是哪一版」。放進 network-first 的話，舊 SW 還在服務舊 bundle、卻顯示伺服器
+最新的部署時間，一台裝置到底更新了沒就再也看不出來（實際踩過兩次）。更新偵測
+不靠它，靠的是 SW 的 `updatefound` / `SKIP_WAITING`（見 `web/index.html`）。
+
+`web-tests/` 用 `node:vm` 把 `web/cache_sw.js` 真的跑起來、餵假的 `caches` 與
+`fetch`，逐條驗這張表，CI 會擋部署。
+
+確保 `web/manifest.json` 正確配置，並在生產環境啟用 HTTPS。
 
 ## 貢獻指南
 

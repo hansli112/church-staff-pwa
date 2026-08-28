@@ -1,0 +1,9 @@
+{
+  "name": "church-staff-pwa-web-tests",
+  "private": true,
+  "type": "module",
+  "description": "Tests for web/cache_sw.js, the service worker that decides what is served from cache and what goes to the network.",
+  "scripts": {
+    "test": "node --test"
+  }
+}
