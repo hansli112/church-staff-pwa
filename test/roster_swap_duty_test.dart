@@ -557,6 +557,120 @@ void main() {
       expect(find.text('其他日期沒有可以交換的「破冰」'), findsOneWidget);
     });
 
+    // 上面那條的反方向。候選清單是按「來源這天已經有誰」濾的，濾不掉「對方那天
+    // 已經有要換過去的人」—— 那種交換會讓對方那天出現兩個同名，去重之後吃掉
+    // 一個，結果是那一天平白少一個人，而且畫面上完全看不出來。
+    testWidgets('對方那天已經有這個人時，那一天不會出現在候選清單裡', (tester) async {
+      final repo = _FakeRosterRepository(
+        rosters: [
+          _roster(
+            id: 'a',
+            day: 4,
+            duties: [
+              _duty(['芳伶']),
+            ],
+          ),
+          _roster(
+            id: 'b',
+            day: 11,
+            duties: [
+              _duty(['芳伶', '阿德']),
+            ],
+          ),
+        ],
+      );
+      await pumpCard(tester, repo);
+
+      await openSwapSheet(tester);
+
+      // 拿 1/4 的芳伶去換 1/11 的阿德：芳伶已經在 1/11 了，換完那天只剩芳伶
+      // 一個人。
+      expect(find.text('01/11 (日)'), findsNothing);
+      expect(find.text('其他日期沒有可以交換的「破冰」'), findsOneWidget);
+    });
+
+    testWidgets('換掉「要換誰」之後，候選清單跟著重算', (tester) async {
+      final repo = _FakeRosterRepository(
+        rosters: [
+          _roster(
+            id: 'a',
+            day: 4,
+            duties: [
+              _duty(['芳伶', '小明']),
+            ],
+          ),
+          _roster(
+            id: 'b',
+            day: 11,
+            duties: [
+              _duty(['小明', '阿德']),
+            ],
+          ),
+        ],
+      );
+      await pumpCard(tester, repo);
+
+      await openSwapSheet(tester);
+
+      // 預設要換的是芳伶，她不在 1/11，所以阿德可以選。
+      expect(find.text('01/11 (日)'), findsOneWidget);
+
+      // 改成換小明 —— 他已經在 1/11 了，同一個選項就不能再出現。
+      await tester.tap(find.widgetWithText(ChoiceChip, '小明'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('01/11 (日)'), findsNothing);
+      expect(find.text('其他日期沒有可以交換的「破冰」'), findsOneWidget);
+    });
+
+    testWidgets('選好之後才換「要換誰」，不會拿舊的索引去換錯人', (tester) async {
+      final repo = _FakeRosterRepository(
+        rosters: [
+          _roster(
+            id: 'a',
+            day: 4,
+            duties: [
+              _duty(['芳伶', '小明']),
+            ],
+          ),
+          _roster(
+            id: 'b',
+            day: 11,
+            duties: [
+              _duty(['阿德']),
+            ],
+          ),
+          _roster(
+            id: 'c',
+            day: 18,
+            duties: [
+              _duty(['小美']),
+            ],
+          ),
+        ],
+      );
+      await pumpCard(tester, repo);
+
+      await openSwapSheet(tester);
+
+      await tester.tap(find.text('01/18 (日)'));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('01/04 (日) 芳伶'),
+        findsOneWidget,
+        reason: '選好之後有預覽',
+      );
+
+      // 換人之後選取要清掉：清單可能重算，同一個索引指到的已經是別人了。
+      await tester.tap(find.widgetWithText(ChoiceChip, '小明'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('⇄'), findsNothing, reason: '沒有選取就不該有預覽');
+      await tester.tap(find.text('交換'));
+      await tester.pumpAndSettle();
+      expect(repo.atomicBatches, isEmpty, reason: '沒有選取就按不動');
+    });
+
     // 交換會重寫這一項的人，帶不過去 —— 但也不能就這樣把使用者剛勾的東西
     // 靜靜丟掉。
     testWidgets('編輯視窗有未存的改動時，去交換前先問一聲', (tester) async {

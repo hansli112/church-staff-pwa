@@ -57,6 +57,19 @@ class _SwapDutyDialogState extends State<_SwapDutyDialog> {
       ? const [RosterProvider.placeholderPerson]
       : widget.duty.people;
 
+  /// 可選的對象，濾掉「那一天的同一項已經有 [_sourcePerson]」的選項。
+  ///
+  /// 換過去會讓對方那天出現兩次同名，去重之後吃掉一個 —— 結果是那天平白少
+  /// 一個人。候選清單建立時只濾得掉「來源這天已經有的人」，反方向要等使用者
+  /// 選定要換誰才知道，所以濾在這裡，並隨 [_sourcePerson] 改變。
+  List<_SwapCandidate> get _visibleCandidates {
+    final source = _sourcePerson.trim();
+    return widget.candidates.where((candidate) {
+      final duty = candidate.roster.duties[candidate.dutyIndex];
+      return !duty.people.any((person) => person.trim() == source);
+    }).toList();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -65,8 +78,9 @@ class _SwapDutyDialogState extends State<_SwapDutyDialog> {
 
   Future<void> _submit() async {
     final index = _selectedIndex;
-    if (index == null) return;
-    final target = widget.candidates[index];
+    final candidates = _visibleCandidates;
+    if (index == null || index >= candidates.length) return;
+    final target = candidates[index];
 
     setState(() {
       _isSubmitting = true;
@@ -108,7 +122,8 @@ class _SwapDutyDialogState extends State<_SwapDutyDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final role = widget.duty.role;
-    final hasCandidates = widget.candidates.isNotEmpty;
+    final candidates = _visibleCandidates;
+    final hasCandidates = candidates.isNotEmpty;
 
     return SettingsBottomSheet(
       title: '交換服事',
@@ -142,7 +157,11 @@ class _SwapDutyDialogState extends State<_SwapDutyDialog> {
                   selected: _sourcePerson == person,
                   onSelected: _isSubmitting
                       ? null
-                      : (_) => setState(() => _sourcePerson = person),
+                      // 換了要換的人，可選對象也跟著變，舊的選取索引指到別人。
+                      : (_) => setState(() {
+                          _sourcePerson = person;
+                          _selectedIndex = null;
+                        }),
                 );
               }).toList(),
             ),
@@ -165,9 +184,9 @@ class _SwapDutyDialogState extends State<_SwapDutyDialog> {
             SizedBox(
               height: 280,
               child: ListView.builder(
-                itemCount: widget.candidates.length,
+                itemCount: candidates.length,
                 itemBuilder: (context, index) {
-                  final candidate = widget.candidates[index];
+                  final candidate = candidates[index];
                   final selected = _selectedIndex == index;
                   return ListTile(
                     dense: true,
@@ -193,7 +212,8 @@ class _SwapDutyDialogState extends State<_SwapDutyDialog> {
                 },
               ),
             ),
-          if (_selectedIndex != null) ...[
+          if (_selectedIndex != null &&
+              _selectedIndex! < candidates.length) ...[
             const SizedBox(height: 12),
             Container(
               width: double.infinity,
@@ -205,8 +225,8 @@ class _SwapDutyDialogState extends State<_SwapDutyDialog> {
               child: Text(
                 '${_shortDateFormat.format(widget.roster.date)} $_sourcePerson'
                 '   ⇄   '
-                '${_shortDateFormat.format(widget.candidates[_selectedIndex!].roster.date)}'
-                ' ${widget.candidates[_selectedIndex!].person}',
+                '${_shortDateFormat.format(candidates[_selectedIndex!].roster.date)}'
+                ' ${candidates[_selectedIndex!].person}',
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
