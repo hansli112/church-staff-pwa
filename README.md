@@ -318,7 +318,7 @@ secret 要和 n8n Webhook node 的 Header Auth 憑證一致，header 名稱是
 
 | | `admin` | `roster-editors` | `calendar-editors` | 沒有 group |
 |---|---|---|---|---|
-| 服事表 | 改 | 改 | 讀 | 讀 |
+| 服事表 | 改（全部聚會別） | 改（**只有自己的牧區**） | 讀 | 讀 |
 | 行事曆活動 | 改 | 讀 | 改 | 讀 |
 | 列出使用者名單 | 可 | 可 | 不可 | 不可 |
 | 開帳號／改角色／授予 group／刪帳號 | 可 | **不可** | **不可** | 不可 |
@@ -328,8 +328,45 @@ secret 要和 n8n Webhook node 的 Header Auth 憑證一致，header 名稱是
 不能授予任何人 group（包括自己），所以授權不會自己擴散 —— 只有管理員動手才會
 多一個人。
 
-**不需要資料遷移**：規則讀的是 `data.get('groups', [])`，既有使用者都沒有這個
-欄位，一律視為沒有任何 group。
+#### 服事表還有第二個軸：牧區
+
+group 決定「能不能改服事表」，`zones`（牧區）決定「能改哪一本」，兩個相乘。只
+屬於青崇與兒主的人被加進 `roster-editors` 之後，主日那本仍然只讀得到 —— 分頁不
+會出現，直接打 Firestore 也會被規則擋掉。要讓他碰主日，就得先把主日加進他的牧區。
+
+`admin` 一樣是 root：一個牧區都沒有也拿得到全部聚會別。反過來，`roster-editors`
+但沒有任何牧區的人什麼都改不動，服事表頁會顯示「尚未設定可檢視的牧區」。
+
+規則判斷讀的是 `users/{uid}.zoneTypes` —— `zones` 是一個 map 的 list，而 rules
+沒有迴圈也沒有 map/filter，讀不出裡面的 `serviceType`，所以 App 在寫入使用者
+文件時同時攤平出這個投影（見 `User.zoneTypes`）。來源仍然只有 `zones` 一份。
+
+**這一項需要資料遷移**：既有使用者文件都沒有 `zoneTypes`，會被讀成「沒有牧區」，
+於是所有非 admin 的服事表編輯者都會寫入失敗。**部署新規則前**先補：
+
+```bash
+node scripts/backfill-user-zone-types.mjs           # dry run，先看要改哪些人
+node scripts/backfill-user-zone-types.mjs --apply   # 確認後才寫入
+```
+
+憑證沿用部署規則本來就要登的那份 firebase CLI 登入（`FIREBASE_TOKEN`、firebase
+CLI、gcloud，由近到遠取第一個拿得到的），不必為了這支腳本另外登入。它同時會列出
+「有 `roster-editors` 但一個牧區都沒有」的人 —— 那些人補完之後會變成什麼都改不動，
+要先到後台把牧區加上去。
+
+同一支腳本也是 `zoneTypes` 的漂移檢查：
+
+```bash
+node scripts/backfill-user-zone-types.mjs --check   # 只稽核，有不一致就非 0 退出
+```
+
+走 App 的寫入漂不掉（`toJson()` 每次由 `zones` 重算），會漂的是繞過 App 直接改
+文件 —— Firebase console 手改、Admin SDK 腳本、遷移程式。那種漂移在畫面上看不
+出來（UI 讀的是 `zones`），只會表現成「某個人的服事表存不進去」。`--check` 隨時
+可以跑，也適合掛進排程。
+
+（`groups` 本身仍然不需要遷移：規則讀的是 `data.get('groups', [])`，既有使用者
+沒有這個欄位就一律視為沒有任何 group。）
 
 看得到權限的地方有三處：使用者編輯頁的「編輯權限」勾選框（管理員授權用）、
 使用者列表的副標尾端「可編輯：…」（管理員一眼掃全部人用；角色與牧區都是身分，

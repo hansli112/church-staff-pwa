@@ -129,6 +129,27 @@ class User {
   bool get canEditRoster => inGroup(UserGroup.rosterEditors);
   bool get canEditCalendar => inGroup(UserGroup.calendarEditors);
 
+  /// [zones] 攤平成聚會別清單，也就是寫進 Firestore 的 `zoneTypes` 欄位。
+  ///
+  /// 為什麼要冗餘存一份：`firestore.rules` 沒有迴圈也沒有 map/filter，讀不進
+  /// `zones`（一個 map 的 list）裡的 serviceType。規則要擋住「改別的牧區的服事
+  /// 表」就得有一個純字串陣列可以 `in`。來源仍然只有 zones 一個 —— 這裡每次由
+  /// zones 重算，不接受外部傳入，兩邊不會漂移。
+  ///
+  /// 順序跟著 [ServiceType.values]，理由同 groups：否則同樣的內容換個順序就是
+  /// 一筆沒有實質變化的 Firestore 寫入。
+  List<ServiceType> get zoneTypes => [
+    for (final type in ServiceType.values)
+      if (zones.any((zone) => zone.serviceType == type)) type,
+  ];
+
+  /// 服事表看得到、也改得動哪些聚會別。
+  ///
+  /// admin 等同 root，拿全部；其他人一律只有自己的牧區 —— 有 roster-editors 也
+  /// 不例外。編輯權決定「能不能改」，牧區決定「能改哪一本」，兩者相乘。
+  List<ServiceType> get allowedRosterTypes =>
+      isAdmin ? ServiceType.values : zoneTypes;
+
   /// 認不得的東西一律丟掉，絕不拋例外。
   ///
   /// `hasValidGroups()` 只擋得住經過 App 的寫入 —— Firebase console 手改、
@@ -173,6 +194,10 @@ class User {
       'username': username,
       'role': role.toString().split('.').last,
       'zones': zones.map((e) => e.toJson()).toList(),
+      // zones 的投影，給 firestore.rules 用。見 [zoneTypes]。
+      'zoneTypes': [
+        for (final type in zoneTypes) type.toString().split('.').last,
+      ],
       // 順序固定，否則每次存檔都會產生一筆沒有實質變化的 Firestore 寫入。
       'groups': [
         for (final group in UserGroup.values)

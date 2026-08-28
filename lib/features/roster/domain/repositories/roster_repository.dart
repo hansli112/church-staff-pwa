@@ -9,9 +9,12 @@ abstract class RosterRepository {
   /// 若 cache 尚未建立（首次開啟或 cache 已清除），回傳空 list。
   Future<List<ServiceRoster>> getUpcomingRostersFromCache();
 
-  /// 確保「本季 + 下季」的所有預定 roster 都在 Firestore 內（missing 的補寫）。
-  /// 只有 admin 可呼叫；Firestore Rules 會擋未授權呼叫，client 端也需自行加 guard。
-  Future<void> ensureQuarterRosters();
+  /// 確保「本季 + 下季」的預定 roster 都在 Firestore 內（missing 的補寫），
+  /// 範圍限制在 [allowedTypes] 這幾個聚會別。
+  ///
+  /// [allowedTypes] 是必填而不是預設全部：batch 是原子的，只要裡面混進一筆呼叫
+  /// 者無權寫入的聚會別，整批都會被 rules 打回，連他自己那本也補不出來。
+  Future<void> ensureQuarterRosters(List<ServiceType> allowedTypes);
 
   Future<void> updateRoster(ServiceRoster roster);
   Future<Map<ServiceType, List<String>>> getServiceTemplates();

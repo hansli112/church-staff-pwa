@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../../domain/entities/service_roster.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../../auth/presentation/providers/session_provider.dart';
-import '../../../auth/domain/entities/user.dart';
 import '../providers/roster_provider.dart';
 import '../widgets/roster_view_card.dart';
 import '../../../../core/utils/error_messages.dart';
@@ -123,18 +122,13 @@ class _RosterScreenState extends State<RosterScreen>
   @override
   Widget build(BuildContext context) {
     final session = context.watch<SessionProvider>();
-    // 服事表編輯者看得到全部聚會別 —— 要排別人的服事，只看自己所屬的聚會別
-    // 就排不了。
+    // 聚會別只看牧區，不看編輯權：給了 roster-editors 不等於多看得到別的牧區。
+    // 只有 admin 拿得到全部（見 [User.allowedRosterTypes]）。編輯權決定
+    // 「能不能改」，牧區決定「能改哪一本」。
     final canEditRoster = session.canEditRoster;
     final canEdit = canEditRoster && widget.allowEdit;
-    final userZones = session.currentUser?.zones ?? const <UserZoneInfo>[];
-    final allowedTypes = canEditRoster
-        ? ServiceType.values
-        : ServiceType.values
-              .where(
-                (type) => userZones.any((zone) => zone.serviceType == type),
-              )
-              .toList();
+    final allowedTypes =
+        session.currentUser?.allowedRosterTypes ?? const <ServiceType>[];
     final now = DateTime.now();
     final quarterStartMonth = ((now.month - 1) ~/ 3) * 3 + 1;
     final isLastMonthOfQuarter = now.month == (quarterStartMonth + 2);

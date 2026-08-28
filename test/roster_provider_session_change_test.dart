@@ -28,7 +28,7 @@ class _TrackingRosterRepository implements RosterRepository {
   Future<List<ServiceRoster>> getUpcomingRostersFromCache() async => const []; // cache miss（stub 預設空）
 
   @override
-  Future<void> ensureQuarterRosters() async {} // stub：no-op
+  Future<void> ensureQuarterRosters(List<ServiceType> allowedTypes) async {} // stub：no-op
 
   @override
   Future<void> updateRoster(ServiceRoster roster) async {}

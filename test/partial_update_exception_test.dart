@@ -21,7 +21,7 @@ class _PartialFailRosterRepository implements RosterRepository {
   Future<List<ServiceRoster>> getUpcomingRostersFromCache() async => const []; // stub：no-op
 
   @override
-  Future<void> ensureQuarterRosters() async {} // stub：no-op
+  Future<void> ensureQuarterRosters(List<ServiceType> allowedTypes) async {} // stub：no-op
 
   @override
   Future<void> updateRoster(ServiceRoster roster) async {

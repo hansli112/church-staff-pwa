@@ -44,14 +44,19 @@ const OTHER = 'member-2';
 //
 // 三個人的 role 全都不是 admin，而且 ROSTER_EDITOR 的 role 比 PLAIN_LEADER 還
 // 低 —— 這是刻意的，用來釘住「權限看 group 不看 role」。
-const ROSTER_EDITOR = 'roster-editor-1';
+const ROSTER_EDITOR = 'roster-editor-1'; // 三個牧區都有
+// 只屬於青崇與兒主的編輯者。整組「編輯權不等於全部聚會別」的斷言靠他。
+const YOUTH_EDITOR = 'youth-editor-1';
+// 有 roster-editors 但一個牧區都沒有 —— 也是所有既有帳號（沒有 zoneTypes
+// 欄位）的形狀，用來釘住「沒有牧區就什麼都改不動」。
+const ZONELESS_EDITOR = 'zoneless-editor-1';
 const CALENDAR_EDITOR = 'calendar-editor-1';
 const PLAIN_LEADER = 'plain-leader-1'; // 身分是小組長，但沒有任何 group
 const GRANTED = 'granted-1'; // 已經有 group，用來測收回
 const DELETED = 'deleted-1'; // 有 Auth token，但 users 文件已被管理員刪掉
 const LEGACY = 'legacy-1'; // 舊資料：users 文件存在但沒有 role 欄位
 
-function userDoc(id, role, groups) {
+function userDoc(id, role, groups, zoneTypes) {
   const document = {
     id,
     name: `姓名-${id}`,
@@ -62,6 +67,9 @@ function userDoc(id, role, groups) {
   };
   // 不傳就完全不寫這個欄位 —— 既有使用者全都是這個形狀，規則必須撐得住。
   if (groups !== undefined) document.groups = groups;
+  // zones 攤平出來的投影（見 User.zoneTypes）：規則語言沒有迴圈，讀不出 zones
+  // 那個 map list 裡的 serviceType，所以牧區的判斷一律看這個欄位。
+  if (zoneTypes !== undefined) document.zoneTypes = zoneTypes;
   return document;
 }
 
@@ -87,7 +95,20 @@ before(async () => {
     await setDoc(doc(db, 'users', OTHER), userDoc(OTHER, 'leader'));
     await setDoc(
       doc(db, 'users', ROSTER_EDITOR),
-      userDoc(ROSTER_EDITOR, 'staff', ['roster-editors']),
+      userDoc(ROSTER_EDITOR, 'staff', ['roster-editors'], [
+        'sundayService',
+        'youth',
+        'children',
+      ]),
+    );
+    await setDoc(
+      doc(db, 'users', YOUTH_EDITOR),
+      userDoc(YOUTH_EDITOR, 'staff', ['roster-editors'], ['youth', 'children']),
+    );
+    // zoneTypes 欄位完全不存在：既有帳號的形狀。
+    await setDoc(
+      doc(db, 'users', ZONELESS_EDITOR),
+      userDoc(ZONELESS_EDITOR, 'staff', ['roster-editors']),
     );
     await setDoc(
       doc(db, 'users', CALENDAR_EDITOR),
@@ -110,11 +131,31 @@ before(async () => {
     await setDoc(doc(db, 'users', LEGACY), legacy);
     // users 底下不該有任何子集合可讀寫，靠最後的 default deny 擋。
     await setDoc(doc(db, 'users', MEMBER, 'private', 'secret'), { pin: '1234' });
-    await setDoc(doc(db, 'rosters', 'r1'), { serviceName: '主日崇拜' });
+    await setDoc(doc(db, 'rosters', 'r1'), {
+      serviceName: '主日崇拜',
+      type: 'sundayService',
+    });
     // r2 專門給 list 查詢用：r1 會被「管理員可以改服事表」覆寫掉 date 欄位。
     await setDoc(doc(db, 'rosters', 'r2'), {
       serviceName: '青年崇拜',
+      type: 'youth',
       date: Timestamp.fromDate(new Date('2030-01-05T00:00:00Z')),
+    });
+    // 兒主那本，專門留給青崇編輯者寫（不跟 r1/r2 的斷言互相覆寫）。
+    await setDoc(doc(db, 'rosters', 'r3'), {
+      serviceName: '兒童主日學',
+      type: 'children',
+    });
+    // 沒有 type 欄位的舊資料：規則不該爆掉，而是只有 admin 動得了。
+    await setDoc(doc(db, 'rosters', 'legacy'), { serviceName: '沒有 type 的舊資料' });
+    // 刪除測試專用，一本一條，避免互相依賴執行順序。
+    await setDoc(doc(db, 'rosters', 'doomed-youth'), {
+      serviceName: '青年崇拜',
+      type: 'youth',
+    });
+    await setDoc(doc(db, 'rosters', 'doomed-sunday'), {
+      serviceName: '主日崇拜',
+      type: 'sundayService',
     });
     await setDoc(doc(db, 'settings', 'roster_templates'), {
       sundayService: ['領會'],
@@ -130,6 +171,10 @@ const asAdmin = () => testEnv.authenticatedContext(ADMIN).firestore();
 const asMember = () => testEnv.authenticatedContext(MEMBER).firestore();
 const asRosterEditor = () =>
   testEnv.authenticatedContext(ROSTER_EDITOR).firestore();
+const asYouthEditor = () =>
+  testEnv.authenticatedContext(YOUTH_EDITOR).firestore();
+const asZonelessEditor = () =>
+  testEnv.authenticatedContext(ZONELESS_EDITOR).firestore();
 const asCalendarEditor = () =>
   testEnv.authenticatedContext(CALENDAR_EDITOR).firestore();
 const asPlainLeader = () =>
@@ -198,20 +243,29 @@ describe('rosters / settings 讀取', () => {
 describe('rosters / settings 寫入', () => {
   it('一般同工不能改服事表', async () => {
     await assertFails(
-      setDoc(doc(asMember(), 'rosters', 'r1'), { serviceName: '亂改' }),
+      setDoc(doc(asMember(), 'rosters', 'r1'), {
+        serviceName: '亂改',
+        type: 'sundayService',
+      }),
     );
   });
 
   it('管理員可以改服事表', async () => {
     await assertSucceeds(
-      setDoc(doc(asAdmin(), 'rosters', 'r1'), { serviceName: '主日崇拜' }),
+      setDoc(doc(asAdmin(), 'rosters', 'r1'), {
+        serviceName: '主日崇拜',
+        type: 'sundayService',
+      }),
     );
   });
 
-  // role 只有 staff，靠 group 放行。
-  it('roster-editors 可以改服事表', async () => {
+  // role 只有 staff，靠 group 放行。牧區涵蓋主日，所以動得了 r1。
+  it('roster-editors 可以改自己牧區的服事表', async () => {
     await assertSucceeds(
-      setDoc(doc(asRosterEditor(), 'rosters', 'r1'), { serviceName: '主日崇拜' }),
+      setDoc(doc(asRosterEditor(), 'rosters', 'r1'), {
+        serviceName: '主日崇拜',
+        type: 'sundayService',
+      }),
     );
   });
 
@@ -219,14 +273,20 @@ describe('rosters / settings 寫入', () => {
   // 回看 role 也不會有任何測試變紅。
   it('沒有 group 的小組長不能改服事表', async () => {
     await assertFails(
-      setDoc(doc(asPlainLeader(), 'rosters', 'r1'), { serviceName: '亂改' }),
+      setDoc(doc(asPlainLeader(), 'rosters', 'r1'), {
+        serviceName: '亂改',
+        type: 'sundayService',
+      }),
     );
   });
 
   // 兩個 group 正交：行事曆編輯者碰不到服事表。
   it('calendar-editors 不能改服事表', async () => {
     await assertFails(
-      setDoc(doc(asCalendarEditor(), 'rosters', 'r1'), { serviceName: '亂改' }),
+      setDoc(doc(asCalendarEditor(), 'rosters', 'r1'), {
+        serviceName: '亂改',
+        type: 'sundayService',
+      }),
     );
   });
 
@@ -245,7 +305,107 @@ describe('rosters / settings 寫入', () => {
 
   it('被刪掉的帳號不能改服事表', async () => {
     await assertFails(
-      setDoc(doc(asDeleted(), 'rosters', 'r1'), { serviceName: '亂改' }),
+      setDoc(doc(asDeleted(), 'rosters', 'r1'), {
+        serviceName: '亂改',
+        type: 'sundayService',
+      }),
+    );
+  });
+});
+
+// 編輯權（group）與牧區（zoneTypes）是兩個軸：group 說「可以改服事表」，
+// zoneTypes 說「可以改哪一本」。兩個都要過。
+//
+// 這一組釘住的是實際發生過的問題：只屬於青崇與兒主的人被加進 roster-editors
+// 之後，連主日那本都動得了。
+describe('rosters 的牧區範圍', () => {
+  it('青崇編輯者改得動自己牧區的服事表', async () => {
+    await assertSucceeds(
+      setDoc(doc(asYouthEditor(), 'rosters', 'r3'), {
+        serviceName: '兒童主日學',
+        type: 'children',
+      }),
+    );
+  });
+
+  it('青崇編輯者改不動主日的服事表', async () => {
+    await assertFails(
+      setDoc(doc(asYouthEditor(), 'rosters', 'r1'), {
+        serviceName: '亂改',
+        type: 'sundayService',
+      }),
+    );
+  });
+
+  // 只檢查寫進去的 type 是不夠的：那樣可以把主日那本「改標成」青崇，一次寫入
+  // 就把它整本吃下來。舊的 type 也要在自己的牧區內。
+  it('青崇編輯者不能把主日那本改標成青崇', async () => {
+    await assertFails(
+      setDoc(doc(asYouthEditor(), 'rosters', 'r1'), {
+        serviceName: '偷天換日',
+        type: 'youth',
+      }),
+    );
+  });
+
+  it('青崇編輯者建得出新的青崇服事表', async () => {
+    await assertSucceeds(
+      setDoc(doc(asYouthEditor(), 'rosters', 'new-youth'), {
+        serviceName: '青年崇拜',
+        type: 'youth',
+      }),
+    );
+  });
+
+  it('青崇編輯者建不出新的主日服事表', async () => {
+    await assertFails(
+      setDoc(doc(asYouthEditor(), 'rosters', 'new-sunday'), {
+        serviceName: '主日崇拜',
+        type: 'sundayService',
+      }),
+    );
+  });
+
+  it('青崇編輯者刪得掉自己牧區的服事表', async () => {
+    await assertSucceeds(deleteDoc(doc(asYouthEditor(), 'rosters', 'doomed-youth')));
+  });
+
+  it('青崇編輯者刪不掉主日的服事表', async () => {
+    await assertFails(deleteDoc(doc(asYouthEditor(), 'rosters', 'doomed-sunday')));
+  });
+
+  // 既有帳號全都是這個形狀（沒有 zoneTypes 欄位）。`data.get('zoneTypes', [])`
+  // 讓它們讀成「沒有牧區」而不是規則報錯，結果是什麼都改不動 —— 所以上線前要
+  // 先跑 scripts/backfill-user-zone-types.mjs 把欄位補上。
+  it('沒有牧區的編輯者什麼都改不動', async () => {
+    await assertFails(
+      setDoc(doc(asZonelessEditor(), 'rosters', 'r3'), {
+        serviceName: '亂改',
+        type: 'children',
+      }),
+    );
+  });
+
+  it('編輯者動不了沒有 type 的舊資料', async () => {
+    await assertFails(
+      setDoc(doc(asRosterEditor(), 'rosters', 'legacy'), { serviceName: '亂改' }),
+    );
+  });
+
+  // admin 是 root：沒有 type 的舊資料要有人修得動，否則就沒人修得動了。
+  it('管理員動得了沒有 type 的舊資料', async () => {
+    await assertSucceeds(
+      setDoc(doc(asAdmin(), 'rosters', 'legacy'), { serviceName: '補上 type', type: 'youth' }),
+    );
+  });
+
+  // 一個牧區都沒有的 admin 照樣是 root。
+  it('管理員不必有牧區也改得動全部', async () => {
+    await assertSucceeds(
+      setDoc(doc(asAdmin(), 'rosters', 'r3'), {
+        serviceName: '兒童主日學',
+        type: 'children',
+      }),
     );
   });
 });
@@ -541,6 +701,25 @@ describe('users 管理員操作與 role 驗證', () => {
       setDoc(
         doc(asAdmin(), 'users', 'granted-bogus'),
         userDoc('granted-bogus', 'member', ['calendar-editor']),
+      ),
+    );
+  });
+
+  it('管理員可以授予牧區', async () => {
+    await assertSucceeds(
+      setDoc(
+        doc(asAdmin(), 'users', 'zoned-new'),
+        userDoc('zoned-new', 'member', ['roster-editors'], ['youth']),
+      ),
+    );
+  });
+
+  // 同 group：打錯的聚會別會變成一個看起來像授權、實際上對不到任何服事表的欄位。
+  it('管理員不能寫入不存在的聚會別', async () => {
+    await assertFails(
+      setDoc(
+        doc(asAdmin(), 'users', 'zoned-bogus'),
+        userDoc('zoned-bogus', 'member', ['roster-editors'], ['sunday']),
       ),
     );
   });

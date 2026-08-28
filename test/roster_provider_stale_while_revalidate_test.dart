@@ -21,6 +21,9 @@ ServiceRoster _roster(String id, ServiceType type) => ServiceRoster(
 // ── Configurable fake ───────────────────────────────────────────────────────
 
 class _FakeRepo implements RosterRepository {
+  /// ensureQuarterRosters 收到的聚會別範圍
+  List<ServiceType> ensureTypes = const [];
+
   /// cache phase 回傳什麼
   List<ServiceRoster> cacheResult;
 
@@ -65,8 +68,9 @@ class _FakeRepo implements RosterRepository {
   }
 
   @override
-  Future<void> ensureQuarterRosters() async {
+  Future<void> ensureQuarterRosters(List<ServiceType> allowedTypes) async {
     ensureCallCount++;
+    ensureTypes = allowedTypes;
   }
 
   @override
@@ -264,10 +268,13 @@ void main() {
       final repo = _FakeRepo();
       final provider = RosterProvider(repo);
 
-      await provider.ensureQuarterRostersForEditor();
+      await provider.ensureQuarterRostersForEditor(const [ServiceType.youth]);
       await _drainFully();
 
       expect(repo.ensureCallCount, 1);
+      // backfill 的範圍要跟著呼叫者的牧區走：batch 裡混進他無權寫的聚會別，
+      // 整批都會被 rules 拒絕，連他自己那本也補不出來。
+      expect(repo.ensureTypes, const [ServiceType.youth]);
     });
 
     // ────────────────────────────────────────────────────────────────────────
