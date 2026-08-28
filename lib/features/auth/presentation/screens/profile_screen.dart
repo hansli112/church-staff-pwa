@@ -16,23 +16,23 @@ class ProfileScreen extends StatefulWidget {
   const ProfileScreen({
     super.key,
     this.updateService = const AppUpdateService(),
+    this.versionService = const AppVersionService(),
   });
 
-  /// 注入點只是為了測試 —— 正式環境永遠是預設那個。
+  /// 這兩個注入點只是為了測試 —— 正式環境永遠是預設那個。
   final AppUpdateService updateService;
+  final AppVersionService versionService;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  static const AppVersionService _appVersionService = AppVersionService();
-
   String? _statusUserId;
   bool _isPushEnabled = false;
   bool _isPushLoading = false;
   bool _isCheckingUpdate = false;
-  late final Future<AppVersionInfo?> _versionInfoFuture = _appVersionService
+  late final Future<AppVersionInfo?> _versionInfoFuture = widget.versionService
       .fetchVersionInfo();
 
   /// 「檢查更新」。
@@ -332,18 +332,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   context,
                 ).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600);
 
-                return Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                // 兩行，各自置中。擠在同一行時「檢查更新」會把整組推得偏
+                // 左，看起來像沒對齊。
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     // 這是「這台裝置正在跑的版本」，不是伺服器的 ——
                     // version.json 跟著 bundle 一起進快取（見 AppVersionService）。
                     if (info != null)
                       Text(
                         '更新於 ${_buildVersionDateText(info)}',
+                        textAlign: TextAlign.center,
                         style: captionStyle,
                       ),
-                    if (info != null && widget.updateService.isSupported)
-                      Text('　·　', style: captionStyle),
                     if (widget.updateService.isSupported)
                       InkWell(
                         onTap: _isCheckingUpdate ? null : _checkForUpdate,
@@ -351,11 +352,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
                             vertical: 8,
-                            horizontal: 4,
+                            horizontal: 12,
                           ),
                           child: Text(
                             _isCheckingUpdate ? '檢查中…' : '檢查更新',
-                            // 顏色跟旁邊一樣，只用底線表示按得下去。
+                            textAlign: TextAlign.center,
+                            // 顏色跟上面那行一樣，只用底線表示按得下去。
                             style: captionStyle?.copyWith(
                               decoration: _isCheckingUpdate
                                   ? null

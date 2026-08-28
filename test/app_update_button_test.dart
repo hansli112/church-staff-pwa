@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:church_staff_pwa/core/services/app_update_service.dart';
+import 'package:church_staff_pwa/core/services/app_version_service.dart';
 import 'package:church_staff_pwa/features/auth/domain/entities/user.dart';
 import 'package:church_staff_pwa/features/auth/domain/repositories/auth_repository.dart';
 import 'package:church_staff_pwa/features/auth/presentation/providers/session_provider.dart';
@@ -44,6 +45,16 @@ class _FakeUpdateService implements AppUpdateService {
   }
 }
 
+/// 正式環境是去抓 version.json；測試裡直接給一個時間，才有「更新於 …」那行
+/// 可以量位置。
+class _FakeVersionService implements AppVersionService {
+  const _FakeVersionService();
+
+  @override
+  Future<AppVersionInfo?> fetchVersionInfo() async =>
+      AppVersionInfo(generatedAt: DateTime(2026, 8, 28, 16, 42));
+}
+
 const _user = User(
   id: 'u1',
   name: '測試者',
@@ -80,7 +91,12 @@ Future<void> _pumpProfile(
   await tester.pumpWidget(
     ChangeNotifierProvider(
       create: (_) => SessionProvider(_FakeAuthRepository()),
-      child: MaterialApp(home: ProfileScreen(updateService: updateService)),
+      child: MaterialApp(
+        home: ProfileScreen(
+          updateService: updateService,
+          versionService: const _FakeVersionService(),
+        ),
+      ),
     ),
   );
   await tester.pump();
@@ -161,6 +177,19 @@ void main() {
     ).textTheme.bodySmall;
     expect(label.style?.fontSize, caption?.fontSize);
     expect(label.style?.color, Colors.grey.shade600);
+  });
+
+  testWidgets('自己一行，跟版本資訊各自置中', (tester) async {
+    final service = _FakeUpdateService(result: AppUpdateResult.latest);
+    await _pumpProfile(tester, service);
+
+    final screenCentre = tester.getCenter(find.byType(Scaffold)).dx;
+    final version = tester.getCenter(find.textContaining('更新於'));
+    final link = tester.getCenter(find.text('檢查更新'));
+
+    expect(version.dx, moreOrLessEquals(screenCentre, epsilon: 1));
+    expect(link.dx, moreOrLessEquals(screenCentre, epsilon: 1));
+    expect(link.dy, greaterThan(version.dy), reason: '在版本資訊的下一行');
   });
 
   testWidgets('不支援的環境（非 web）不顯示按鈕', (tester) async {
