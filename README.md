@@ -485,7 +485,7 @@ activate 時會把自己反註冊掉，沒有快取的話每次重新載入都�
 
 | 對象 | 策略 | 快取名 |
 |---|---|---|
-| `/`、`index.html`、`manifest.json`、`flutter_bootstrap.js`、`flutter.js` | network-first，快取只當離線 fallback | 綁 build SHA |
+| `/`、`index.html`、`app_update.js`、`manifest.json`、`flutter_bootstrap.js`、`flutter.js` | network-first，快取只當離線 fallback | 綁 build SHA |
 | 其餘同源資產（含 `main.dart.js`、`version.json`） | cache-first | 綁 build SHA |
 | `/canvaskit/` | cache-first，跨 deploy 存活 | 綁 Flutter 版本 |
 | `fonts.gstatic.com` 的中文字型 subset | cache-first，上限 64 筆 | 不綁版本 |
@@ -496,8 +496,17 @@ App 是哪一版」。放進 network-first 的話，舊 SW 還在服務舊 bundl
 最新的部署時間，一台裝置到底更新了沒就再也看不出來（實際踩過兩次）。更新偵測
 不靠它，靠的是 SW 的 `updatefound` / `SKIP_WAITING`（見 `web/index.html`）。
 
-`web-tests/` 用 `node:vm` 把 `web/cache_sw.js` 真的跑起來、餵假的 `caches` 與
-`fetch`，逐條驗這張表，CI 會擋部署。
+換版交接在 `web/app_update.js`：新的 SW 裝好後會停在 `waiting`，要有人送
+`SKIP_WAITING` 才會 activate，activate 觸發 `controllerchange`，那時重載一次就
+換到新 bundle。它自己走 network-first —— 這段程式碼決定裝置能不能換到新版，被
+舊快取服務就再也救不回來。三個時機會去檢查：載入、切回前景（PWA 從多工列切回
+來不算 navigation，瀏覽器不會自己檢查）、以及個人頁的「檢查更新」按鈕。特別注
+意 `registration.waiting`：新版若在上一次造訪就裝好、停在 waiting，這一次載入
+不會再有 `updatefound`，只等那個事件的話裝置就永遠卡在舊版。
+
+`web-tests/` 用 `node:vm` 把 `web/cache_sw.js` 與 `web/app_update.js` 真的跑起
+來、餵假的 `caches` / `fetch` / `navigator.serviceWorker`，逐條驗這張表與上面
+那些時序，CI 會擋部署。
 
 確保 `web/manifest.json` 正確配置，並在生產環境啟用 HTTPS。
 

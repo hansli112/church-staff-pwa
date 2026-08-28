@@ -36,7 +36,14 @@ describe('版本資訊 version.json', () => {
 describe('進入點走 network-first', () => {
   // These are the files that must be able to point at a newer build; caching
   // them first would pin the app to whatever it loaded on day one.
-  for (const path of ['/', '/index.html', '/manifest.json', '/flutter_bootstrap.js', '/flutter.js']) {
+  for (const path of [
+    '/',
+    '/index.html',
+    '/app_update.js',
+    '/manifest.json',
+    '/flutter_bootstrap.js',
+    '/flutter.js',
+  ]) {
     test(`${path} 有網路時一律拿網路那份`, async () => {
       const sw = loadServiceWorker();
       sw.seed(BUILD_CACHE, `${ORIGIN}${path}`);

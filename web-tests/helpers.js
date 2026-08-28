@@ -148,3 +148,139 @@ export function loadServiceWorker({ hasActiveWorker = true } = {}) {
     },
   };
 }
+
+// ---------------------------------------------------------------------------
+// web/app_update.js —— SW 註冊與換版交接。
+//
+// 同樣在 vm 裡跑真正的檔案，把 navigator.serviceWorker / window / document 換
+// 成可以驅動的假物件：測試要能製造「有 worker 停在 waiting」「statechange 早
+// 於監聽器」這類時序，真的瀏覽器裡等不出來。
+// ---------------------------------------------------------------------------
+
+/// 一個假的 ServiceWorker。`posted` 收到的就是 SKIP_WAITING 那類訊息。
+export function fakeWorker(state = 'installing') {
+  const listeners = [];
+  return {
+    state,
+    posted: [],
+    postMessage(message) {
+      this.posted.push(message);
+    },
+    addEventListener(type, handler) {
+      if (type === 'statechange') listeners.push(handler);
+    },
+    /// 推進狀態並發出 statechange，跟瀏覽器一樣。
+    advanceTo(next) {
+      this.state = next;
+      for (const handler of [...listeners]) handler();
+    },
+  };
+}
+
+/// 一個假的 ServiceWorkerRegistration。
+export function fakeRegistration({ waiting = null, installing = null } = {}) {
+  const listeners = [];
+  return {
+    waiting,
+    installing,
+    updateCalls: 0,
+    /// 讓 update() 在被呼叫時做點事（例如放一顆 waiting 進來、或丟錯）。
+    onUpdate: null,
+    addEventListener(type, handler) {
+      if (type === 'updatefound') listeners.push(handler);
+    },
+    async update() {
+      this.updateCalls += 1;
+      if (this.onUpdate) await this.onUpdate(this);
+    },
+    /// 瀏覽器找到新版本時會做的事：擺上 installing 再發 updatefound。
+    fireUpdateFound(worker) {
+      this.installing = worker;
+      for (const handler of [...listeners]) handler();
+    },
+  };
+}
+
+/// 載入 web/app_update.js。
+///
+/// [hasController] 對應 `navigator.serviceWorker.controller`：false 是第一次
+/// 安裝（不該介入，也不該 reload），true 是升級。
+export function loadAppUpdate({
+  hasController = true,
+  registration = fakeRegistration(),
+  registerError = null,
+  noServiceWorker = false,
+} = {}) {
+  const source = readFileSync(path.join(ROOT, 'web', 'app_update.js'), 'utf8');
+
+  const containerListeners = {};
+  const windowListeners = {};
+  const documentListeners = {};
+  const registerCalls = [];
+  const reloads = [];
+
+  const document = {
+    visibilityState: 'visible',
+    addEventListener: (type, handler) => void (documentListeners[type] = handler),
+  };
+
+  const serviceWorker = {
+    controller: hasController ? {} : null,
+    addEventListener: (type, handler) => void (containerListeners[type] = handler),
+    register: async (url, options) => {
+      registerCalls.push({ url, options });
+      if (url === 'cache_sw.js' && registerError) throw registerError;
+      return registration;
+    },
+  };
+
+  // 舊瀏覽器（或關掉 SW 的環境）：整段程式碼要安靜地什麼都不做。
+  const navigator = noServiceWorker ? {} : { serviceWorker };
+
+  const context = {
+    navigator,
+    document,
+    window: {
+      addEventListener: (type, handler) => void (windowListeners[type] = handler),
+      location: { reload: () => void reloads.push(true) },
+    },
+    console: { error: () => {} },
+    Promise,
+  };
+  context.self = context;
+  context.globalThis = context;
+
+  vm.createContext(context);
+  vm.runInContext(source, context);
+
+  return {
+    registration,
+    registerCalls,
+    reloads,
+    /// 瀏覽器發出 load，也就是註冊真正發生的時候。
+    async load() {
+      windowListeners.load?.();
+      await flush();
+    },
+    async controllerChange() {
+      containerListeners.controllerchange?.();
+      await flush();
+    },
+    async visibilityChange(state = 'visible') {
+      document.visibilityState = state;
+      documentListeners.visibilitychange?.();
+      await flush();
+    },
+    /// 個人頁「檢查更新」按鈕呼叫的那個函式。
+    checkForUpdate: () => context.window.churchAppCheckForUpdate(),
+    hasCheckForUpdate: () => typeof context.window.churchAppCheckForUpdate === 'function',
+  };
+}
+
+/// 讓已經排進 queue 的 then/await 跑完。跑幾輪是因為註冊流程是好幾層
+/// promise 串起來的，只讓一輪會停在半路。
+export async function flush(rounds = 5) {
+  for (let i = 0; i < rounds; i += 1) {
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+}

@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/services/app_update_service.dart';
 import '../../../../core/services/app_version_service.dart';
 import '../../../../core/services/push_notification_service.dart';
 import '../../../../core/utils/error_messages.dart';
@@ -12,7 +13,13 @@ import 'user_management_screen.dart' deferred as user_management_screen;
 import 'group_settings_screen.dart' deferred as group_settings_screen;
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  const ProfileScreen({
+    super.key,
+    this.updateService = const AppUpdateService(),
+  });
+
+  /// 注入點只是為了測試 —— 正式環境永遠是預設那個。
+  final AppUpdateService updateService;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -24,8 +31,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? _statusUserId;
   bool _isPushEnabled = false;
   bool _isPushLoading = false;
+  bool _isCheckingUpdate = false;
   late final Future<AppVersionInfo?> _versionInfoFuture = _appVersionService
       .fetchVersionInfo();
+
+  /// 「檢查更新」。
+  ///
+  /// 找到新版的話 `web/app_update.js` 會把頁面重載，所以那條路徑上這裡什麼都
+  /// 不用收尾 —— 連 setState 都不必，widget 馬上就不在了。
+  Future<void> _checkForUpdate() async {
+    setState(() => _isCheckingUpdate = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final result = await widget.updateService.checkForUpdate();
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            result == AppUpdateResult.updating ? '找到新版本，正在更新…' : '已經是最新版本',
+          ),
+        ),
+      );
+    } catch (error, st) {
+      log('檢查更新失敗', error: error, stackTrace: st);
+      if (!mounted) return;
+      // 這個按鈕存在的理由就是使用者已經不相信畫面上的版本了，失敗要說出來，
+      // 不能讓它看起來像「檢查過了，沒事」。
+      messenger.showSnackBar(
+        SnackBar(content: Text('檢查更新失敗：${mapErrorToUserMessage(error)}')),
+      );
+    } finally {
+      if (mounted) setState(() => _isCheckingUpdate = false);
+    }
+  }
 
   Future<void> _loadAndPush(
     BuildContext context,
@@ -279,26 +317,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ).showSnackBar(SnackBar(content: Text(logoutError)));
             },
           ),
-          FutureBuilder<AppVersionInfo?>(
-            future: _versionInfoFuture,
-            builder: (context, snapshot) {
-              final info = snapshot.data;
-              if (info == null) {
-                return const SizedBox.shrink();
-              }
+          Padding(
+            padding: const EdgeInsets.only(top: 20, bottom: 8),
+            child: FutureBuilder<AppVersionInfo?>(
+              future: _versionInfoFuture,
+              builder: (context, snapshot) {
+                final info = snapshot.data;
+                // 頁尾的版本資訊。刻意都用同一個灰色小字：這裡是註腳，不是
+                // 功能入口 —— 平常載入與切回前景都會自己檢查更新，按鈕只是給
+                // 「我看起來還是舊版」的人一個不必被叫去滑掉 App 的出口。
+                // 一顆正常的 TextButton（主色、按鈕級字級）會比它上面那行還
+                // 搶眼，看起來像有什麼事該做。
+                final captionStyle = Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600);
 
-              return Padding(
-                padding: const EdgeInsets.only(top: 20, bottom: 8),
-                child: Center(
-                  child: Text(
-                    '更新於 ${_buildVersionDateText(info)}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                ),
-              );
-            },
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // 這是「這台裝置正在跑的版本」，不是伺服器的 ——
+                    // version.json 跟著 bundle 一起進快取（見 AppVersionService）。
+                    if (info != null)
+                      Text(
+                        '更新於 ${_buildVersionDateText(info)}',
+                        style: captionStyle,
+                      ),
+                    if (info != null && widget.updateService.isSupported)
+                      Text('　·　', style: captionStyle),
+                    if (widget.updateService.isSupported)
+                      InkWell(
+                        onTap: _isCheckingUpdate ? null : _checkForUpdate,
+                        // 字級小，靠 padding 把可點範圍撐到手指按得到。
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 8,
+                            horizontal: 4,
+                          ),
+                          child: Text(
+                            _isCheckingUpdate ? '檢查中…' : '檢查更新',
+                            // 顏色跟旁邊一樣，只用底線表示按得下去。
+                            style: captionStyle?.copyWith(
+                              decoration: _isCheckingUpdate
+                                  ? null
+                                  : TextDecoration.underline,
+                              decorationColor: Colors.grey.shade600,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
           ),
         ],
       ),
