@@ -41,6 +41,10 @@ class _RosterPeopleDialog extends StatefulWidget {
   final bool roleEditable;
   final bool useBottomSheet;
 
+  /// 有值時，視窗裡會多一顆「與其他日期交換」。編輯既有服事項目才給 ——
+  /// 還不存在的項目沒有東西可以拿去換。
+  final VoidCallback? onSwap;
+
   const _RosterPeopleDialog({
     required this.title,
     required this.rosterType,
@@ -55,6 +59,7 @@ class _RosterPeopleDialog extends StatefulWidget {
     required this.submitLabel,
     this.roleEditable = true,
     this.useBottomSheet = false,
+    this.onSwap,
   });
 
   @override
@@ -94,6 +99,58 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
         .toSet();
     _selectedRole = widget.initialRole;
     _peopleFuture = widget.peopleLoader(_selectedRole);
+    _initialSelection = Set<String>.from(_selectedPeople);
+  }
+
+  /// 進場時勾了誰。按「與其他日期交換」會關掉這張視窗，關掉之前要拿它比對
+  /// 有沒有還沒存的改動。
+  late final Set<String> _initialSelection;
+
+  /// 勾選或順序跟進場時不一樣了嗎。
+  ///
+  /// 順序只在原本就有存過順序時才比 —— 舊資料沒有 peopleOrder，拿現算的順序
+  /// 去比會每次都判定成「改過」，每次交換都跳一次沒必要的確認。
+  bool get _hasUnsavedChanges {
+    // 名單還沒載進來時 _options 只有一個「待定」，這時候算出來的勾選一定跟
+    // 進場時不一樣，會誤判成「改過」而多跳一次確認。
+    if (!_optionsInitialized) return false;
+    final selected = _buildSelectedPeople(_options);
+    // 「沒有人」在 _buildSelectedPeople 會被補成 ['待定']，而 _initialSelection
+    // 是原始勾選（可能是空的），兩邊都先把佔位符拿掉才比得準。
+    const placeholder = '待定';
+    final selectedSet = selected.where((n) => n != placeholder).toSet();
+    final initialSet = _initialSelection
+        .where((n) => n != placeholder)
+        .toSet();
+    if (!setEquals(selectedSet, initialSet)) return true;
+    if (widget.initialOrder.isEmpty) return false;
+    final order = _buildSelectedOrder(_options, selected);
+    final initialOrder = widget.initialOrder
+        .where((name) => selected.contains(name))
+        .toList();
+    return !listEquals(order, initialOrder);
+  }
+
+  /// 未存的改動要被丟掉時先問一聲。交換會重寫這一項的人，帶不過去。
+  Future<bool> _confirmDiscardChanges() async {
+    final discard = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('尚未儲存'),
+        content: const Text('這裡改的人員還沒儲存，去交換會丟掉這些改動。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('留在這裡'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('丟掉並交換'),
+          ),
+        ],
+      ),
+    );
+    return discard == true;
   }
 
   @override
@@ -374,6 +431,25 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
             builder: (context) => Text(
               '請先到「服事項目設定」新增項目',
               style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        // 換班的入口。原本是服事列上的一顆 ⇄，但那顆佔掉的 44px 讓名字欄只
+        // 剩 142px，三個名字就被擠成兩行 —— 名字才是這個畫面天天在看的東西。
+        if (widget.onSwap != null)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () async {
+                if (_hasUnsavedChanges && !await _confirmDiscardChanges()) {
+                  return;
+                }
+                if (!mounted) return;
+                // 先關掉這張 sheet：兩張疊著的話，換完回來的還是舊資料。
+                Navigator.of(this.context).pop();
+                widget.onSwap!();
+              },
+              icon: const Icon(Icons.swap_horiz, size: 18),
+              label: const Text('與其他日期交換'),
             ),
           ),
         const SizedBox(height: 12),

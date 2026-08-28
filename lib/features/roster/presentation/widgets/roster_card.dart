@@ -1,5 +1,6 @@
 import 'dart:developer';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +11,7 @@ import '../../../auth/presentation/providers/user_admin_provider.dart';
 import '../providers/roster_provider.dart';
 import '../../../../core/utils/error_messages.dart';
 import '../../../../core/widgets/settings_bottom_sheet.dart';
+import 'duty_row.dart';
 
 part '_roster_people_dialog.dart';
 part '_special_event_dialog.dart';
@@ -267,6 +269,9 @@ class RosterCard extends StatelessWidget {
     int index,
     RosterEntry duty,
   ) async {
+    // 從編輯視窗按進來時這張卡片可能已經不在樹上（例如那天被刪掉），
+    // read 之前先問，否則丟的是 ProviderNotFound 而不是安靜地不做事。
+    if (!context.mounted) return;
     final provider = context.read<RosterProvider>();
     final role = duty.role.trim();
     final alreadyHere = duty.people.map((p) => p.trim()).toSet();
@@ -327,7 +332,9 @@ class RosterCard extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (context) {
+      // 參數改名為 sheetContext，讓底下的 onSwap 明確地閉包在卡片的 context 上
+      // 而不是這張 sheet 的 —— sheet 被 pop 掉之後才輪到 onSwap 執行。
+      builder: (sheetContext) {
         return _RosterPeopleDialog(
           title: '編輯 ${duty.role}',
           rosterType: roster.type,
@@ -343,6 +350,7 @@ class RosterCard extends StatelessWidget {
           submitLabel: '儲存',
           roleEditable: false,
           useBottomSheet: true,
+          onSwap: () => _showSwapDutyDialog(context, index, duty),
         );
       },
     );
@@ -521,51 +529,17 @@ class _RosterCardBody extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 splashColor: colorScheme.primary.withValues(alpha: 0.08),
                 highlightColor: colorScheme.primary.withValues(alpha: 0.04),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 88,
-                      child: Text(
-                        duty.role,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.grey[700],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        duty.people.join('、'),
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    if (isEditMode)
-                      IconButton(
-                        tooltip: '與其他日期交換',
-                        constraints: const BoxConstraints(
-                          minWidth: 44,
-                          minHeight: 48,
-                        ),
-                        icon: Icon(
-                          Icons.swap_horiz,
-                          size: 20,
-                          color: colorScheme.primary,
-                        ),
-                        onPressed: () =>
-                            card._showSwapDutyDialog(context, index, duty),
-                      ),
+                child: DutyRow(
+                  role: duty.role,
+                  people: duty.people,
+                  roleColor: Colors.grey[700],
+                  trailing: [
                     if (isEditMode)
                       IconButton(
                         tooltip: '刪除服事項目',
                         constraints: const BoxConstraints(
                           minWidth: 44,
-                          minHeight: 48,
+                          minHeight: kDutyRowMinHeight,
                         ),
                         icon: Icon(
                           Icons.delete_outline,

@@ -11,6 +11,7 @@ import '../providers/roster_provider.dart';
 import '../widgets/roster_card.dart';
 import '../../../../core/utils/error_messages.dart';
 import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/utils/scroll_anchor.dart';
 import '../../../../core/utils/snappy_page_scroll_physics.dart';
 import '../../../../core/widgets/settings_bottom_sheet.dart';
 import '../../../../core/widgets/text_controller_scope.dart';
@@ -236,9 +237,34 @@ class _RosterList extends StatefulWidget {
 
 // 使用 AutomaticKeepAliveClientMixin 來保持滑動位置
 class _RosterListState extends State<_RosterList>
-    with AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin, ScrollAnchorSupport {
   @override
   bool get wantKeepAlive => true; // 告訴 Flutter 保持這個頁面的狀態
+
+  // dispose 期間 context 已經查不到 InheritedWidget，所以進場時就把 provider
+  // 抓在手上，撤銷登記時才有東西可用。
+  late final RosterProvider _provider;
+
+  @override
+  void initState() {
+    super.initState();
+    _provider = context.read<RosterProvider>();
+    _provider.registerScrollAnchorCapture(widget.type, captureScrollAnchor);
+    // 檢視模式切進來時，把當初頂端那一天挪回原本的位置：編輯清單多了一張匯入
+    // 卡、每列多了兩顆按鈕，同一個 pixel offset 在這裡指到的是別天。
+    final anchor = _provider.scrollAnchorFor(widget.type);
+    if (anchor != null) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => restoreScrollAnchor(anchor),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _provider.unregisterScrollAnchorCapture(widget.type, captureScrollAnchor);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -268,6 +294,8 @@ class _RosterListState extends State<_RosterList>
 
     final showImport = isEditMode;
     return ListView.builder(
+      key: anchorListKey,
+      controller: anchorController,
       padding: const EdgeInsets.only(top: 12, bottom: 20),
       itemCount: rosters.length + (showImport ? 1 : 0),
       itemBuilder: (context, index) {
@@ -276,10 +304,13 @@ class _RosterListState extends State<_RosterList>
         }
         final rosterIndex = index - (showImport ? 1 : 0);
         final roster = rosters[rosterIndex];
-        return RosterCard(
+        return ScrollAnchorItem(
           key: ValueKey(roster.id),
-          roster: roster,
-          initiallyExpanded: rosterIndex == 0,
+          id: roster.id,
+          child: RosterCard(
+            roster: roster,
+            initiallyExpanded: rosterIndex == 0,
+          ),
         );
       },
     );

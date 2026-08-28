@@ -3,6 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
+import 'package:church_staff_pwa/features/auth/domain/entities/user.dart';
+import 'package:church_staff_pwa/features/auth/domain/repositories/auth_repository.dart';
+import 'package:church_staff_pwa/features/auth/presentation/providers/session_provider.dart';
+import 'package:church_staff_pwa/features/auth/presentation/providers/user_admin_provider.dart';
 import 'package:church_staff_pwa/features/roster/domain/entities/event_option.dart';
 import 'package:church_staff_pwa/features/roster/domain/entities/service_roster.dart';
 import 'package:church_staff_pwa/features/roster/domain/repositories/roster_repository.dart';
@@ -79,6 +83,39 @@ class _FakeRosterRepository implements RosterRepository {
   Future<void> updateEventOptions(
     Map<ServiceType, List<EventOption>> options,
   ) async {}
+}
+
+/// 交換入口現在在「編輯服事項目」的視窗裡，而那個視窗會去 UserAdminProvider
+/// 撈同工名單 —— 所以這組 UI 測試得連 session 一起掛上。
+const _kEditor = User(
+  id: 'u1',
+  name: '編輯者',
+  email: 'a@b.c',
+  username: 'editor',
+  role: UserRole.admin,
+  groups: {},
+  zones: [],
+);
+
+class _FakeAuthRepository implements AuthRepository {
+  @override
+  Future<User?> getCachedUser() async => _kEditor;
+  @override
+  Future<User?> getCurrentUser() async => _kEditor;
+  @override
+  Future<void> writeCachedUser(User user) async {}
+  @override
+  Future<User?> login(String username, String password) async => _kEditor;
+  @override
+  Future<void> logout() async {}
+  @override
+  Future<List<User>> getUsers() async => const [_kEditor];
+  @override
+  Future<void> addUser(User user, String password) async {}
+  @override
+  Future<void> updateUser(User user, {String? password}) async {}
+  @override
+  Future<void> deleteUser(String id) async {}
 }
 
 ServiceRoster _roster({
@@ -399,9 +436,26 @@ void main() {
     ) async {
       final provider = await _providerWith(repo);
       provider.toggleEditMode();
+
+      // session 要先還原完，UserAdminProvider.getUsers() 才過得了 canEditRoster。
+      final session = SessionProvider(_FakeAuthRepository());
       await tester.pumpWidget(
-        ChangeNotifierProvider<RosterProvider>.value(
-          value: provider,
+        ChangeNotifierProvider<SessionProvider>.value(
+          value: session,
+          child: const MaterialApp(home: SizedBox.shrink()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<RosterProvider>.value(value: provider),
+            ChangeNotifierProvider<SessionProvider>.value(value: session),
+            ChangeNotifierProvider<UserAdminProvider>.value(
+              value: UserAdminProvider(_FakeAuthRepository(), session),
+            ),
+          ],
           child: MaterialApp(
             home: Scaffold(
               // 照 _RosterList 的做法從 provider 讀，卡片才會跟著新資料重建 ——
@@ -427,6 +481,16 @@ void main() {
       return provider;
     }
 
+    /// 走使用者真的會走的路徑：點服事列開編輯視窗，再按「與其他日期交換」。
+    /// ⇄ 不再直接掛在列上 —— 那顆按鈕佔掉的寬度會把三個名字擠成兩行。
+    Future<void> openSwapSheet(WidgetTester tester) async {
+      await tester.tap(find.text('破冰'));
+      await tester.pumpAndSettle();
+      expect(find.text('與其他日期交換'), findsOneWidget, reason: '編輯視窗裡要有交換入口');
+      await tester.tap(find.text('與其他日期交換'));
+      await tester.pumpAndSettle();
+    }
+
     testWidgets('選一天按下交換，兩筆一次寫完並回到卡片上', (tester) async {
       final repo = _FakeRosterRepository(
         rosters: [
@@ -448,8 +512,7 @@ void main() {
       );
       await pumpCard(tester, repo);
 
-      await tester.tap(find.byIcon(Icons.swap_horiz));
-      await tester.pumpAndSettle();
+      await openSwapSheet(tester);
 
       expect(find.text('交換服事'), findsOneWidget);
       // 候選清單是「日期 + 那天的人」，1/11 的小明應該在裡面。
@@ -487,12 +550,116 @@ void main() {
       );
       await pumpCard(tester, repo);
 
-      await tester.tap(find.byIcon(Icons.swap_horiz));
-      await tester.pumpAndSettle();
+      await openSwapSheet(tester);
 
       // 1/11 只排了小明，而小明本來就在 1/4，換過來只會變成同一天兩個小明。
       expect(find.text('01/11 (日)'), findsNothing);
       expect(find.text('其他日期沒有可以交換的「破冰」'), findsOneWidget);
+    });
+
+    // 交換會重寫這一項的人，帶不過去 —— 但也不能就這樣把使用者剛勾的東西
+    // 靜靜丟掉。
+    testWidgets('編輯視窗有未存的改動時，去交換前先問一聲', (tester) async {
+      final repo = _FakeRosterRepository(
+        rosters: [
+          _roster(
+            id: 'a',
+            day: 4,
+            duties: [
+              _duty(['芳伶']),
+            ],
+          ),
+          _roster(
+            id: 'b',
+            day: 11,
+            duties: [
+              _duty(['小明']),
+            ],
+          ),
+        ],
+      );
+      await pumpCard(tester, repo);
+
+      await tester.tap(find.text('破冰'));
+      await tester.pumpAndSettle();
+      // 勾掉原本的人 —— 這就是還沒存的改動。
+      await tester.tap(find.widgetWithText(CheckboxListTile, '芳伶'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('與其他日期交換'));
+      await tester.pumpAndSettle();
+      expect(find.text('尚未儲存'), findsOneWidget);
+
+      // 選擇留下：編輯視窗還在，改動也還在。
+      await tester.tap(find.text('留在這裡'));
+      await tester.pumpAndSettle();
+      expect(find.text('交換服事'), findsNothing);
+      expect(find.widgetWithText(FilledButton, '儲存'), findsOneWidget);
+
+      // 再按一次並確認丟掉，才進交換。
+      await tester.tap(find.text('與其他日期交換'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('丟掉並交換'));
+      await tester.pumpAndSettle();
+      expect(find.text('交換服事'), findsOneWidget);
+      // 丟掉的意思是真的沒寫進去。
+      expect(repo.singleWriteCount, 0);
+    });
+
+    testWidgets('沒改過就按交換，不會多跳一個確認', (tester) async {
+      final repo = _FakeRosterRepository(
+        rosters: [
+          _roster(
+            id: 'a',
+            day: 4,
+            duties: [
+              _duty(['芳伶']),
+            ],
+          ),
+          _roster(
+            id: 'b',
+            day: 11,
+            duties: [
+              _duty(['小明']),
+            ],
+          ),
+        ],
+      );
+      await pumpCard(tester, repo);
+
+      await openSwapSheet(tester);
+
+      expect(find.text('尚未儲存'), findsNothing);
+      expect(find.text('交換服事'), findsOneWidget);
+    });
+
+    // 待定是「還沒排人」的佔位符，不是使用者剛改的東西 —— 拿它當改動會讓
+    // 每個空的服事項目按交換都先被問一次。
+    testWidgets('還沒排人的項目按交換，不會被問有沒有未存的改動', (tester) async {
+      final repo = _FakeRosterRepository(
+        rosters: [
+          _roster(
+            id: 'a',
+            day: 4,
+            duties: [
+              _duty(['待定']),
+            ],
+          ),
+          _roster(
+            id: 'b',
+            day: 11,
+            duties: [
+              _duty(['小明']),
+            ],
+          ),
+        ],
+      );
+      await pumpCard(tester, repo);
+
+      await openSwapSheet(tester);
+
+      expect(find.text('尚未儲存'), findsNothing);
+      expect(find.text('交換服事'), findsOneWidget);
     });
 
     testWidgets('寫入失敗時留在 sheet 上顯示錯誤', (tester) async {
@@ -516,8 +683,7 @@ void main() {
       )..failAtomicWrites = true;
       await pumpCard(tester, repo);
 
-      await tester.tap(find.byIcon(Icons.swap_horiz));
-      await tester.pumpAndSettle();
+      await openSwapSheet(tester);
       await tester.tap(find.text('01/11 (日)'));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(FilledButton, '交換'));

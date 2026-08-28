@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../domain/entities/service_roster.dart';
+import 'duty_row.dart';
 
 class RosterViewCard extends StatelessWidget {
   final ServiceRoster roster;
@@ -100,32 +101,9 @@ class _RosterViewCardBody extends StatelessWidget {
         children: roster.duties.map((duty) {
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: 88,
-                  child: Text(
-                    duty.role,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    duty.people.join('、'),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            // 列高跟編輯模式綁在一起（見 [kDutyRowMinHeight]）：這裡沒有按鈕，
+            // 但高度一樣才不會在切換模式時整份清單前後位移。
+            child: DutyRow(role: duty.role, people: duty.people),
           );
         }).toList(),
       ),

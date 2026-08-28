@@ -6,6 +6,7 @@ import '../../domain/entities/service_roster.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../domain/repositories/roster_repository.dart';
 import '../../../../core/utils/error_messages.dart';
+import '../../../../core/utils/scroll_anchor.dart';
 import '../../../../core/widgets/text_warmup.dart';
 
 class RosterProvider with ChangeNotifier {
@@ -120,6 +121,48 @@ class RosterProvider with ChangeNotifier {
     return index;
   }
 
+  // ── 捲動位置錨點 ────────────────────────────────────────────────────────
+  // 檢視與編輯是兩棵不同的 widget 樹，切換的當下舊清單整個被拆掉，只有
+  // provider 活得夠久，所以「切之前看到哪」存在這裡。
+  //
+  // 刻意不 notifyListeners：這是純 UI 的暫存狀態，通知出去只會讓畫面上每張
+  // 卡片為了一個沒人顯示的數字白白重建一次。
+  final Map<ServiceType, ScrollAnchor> _scrollAnchors = {};
+  final Map<ServiceType, ScrollAnchor? Function()> _anchorCaptures = {};
+
+  /// 清單掛上時登記自己的取樣函式，[captureScrollAnchors] 會逐一呼叫。
+  void registerScrollAnchorCapture(
+    ServiceType type,
+    ScrollAnchor? Function() capture,
+  ) {
+    _anchorCaptures[type] = capture;
+  }
+
+  /// 卸載時撤銷登記。比對是不是同一個清單才移除：切換模式時新清單會先登記、
+  /// 舊清單才 dispose，直接 remove 會把剛登記好的新清單一起拔掉。
+  ///
+  /// 用 `==` 不是 `identical`：Dart 的 tear-off 每次取值都是新物件，
+  /// `identical(a.cap, a.cap)` 恆為 false，改用 `==` 才問得到「同一個 State 的
+  /// 同一個方法」（同 receiver 才相等）。
+  void unregisterScrollAnchorCapture(
+    ServiceType type,
+    ScrollAnchor? Function() capture,
+  ) {
+    if (_anchorCaptures[type] == capture) {
+      _anchorCaptures.remove(type);
+    }
+  }
+
+  ScrollAnchor? scrollAnchorFor(ServiceType type) => _scrollAnchors[type];
+
+  /// 在切換模式前呼叫：把目前每個分頁頂端的日期記下來。
+  void captureScrollAnchors() {
+    for (final entry in _anchorCaptures.entries) {
+      final anchor = entry.value();
+      if (anchor != null) _scrollAnchors[entry.key] = anchor;
+    }
+  }
+
   void toggleEditMode() {
     _isEditMode = !_isEditMode;
     notifyListeners();
@@ -138,6 +181,8 @@ class RosterProvider with ChangeNotifier {
     _replaceEventOptions({});
     _error = null;
     _isEditMode = false;
+    // 換人＝換整份資料，舊的日期錨點指到的卡片可能根本不存在了。
+    _scrollAnchors.clear();
 
     if (userId != null) {
       // 有新使用者，重抓資料。
