@@ -11,11 +11,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
-/// 檢視卡片與編輯卡片的服事列必須逐列等高。
+/// 服事列在兩個模式各自該有的高度。
 ///
-/// 不等高的話，切換模式時同一天的卡片長度不一樣，底下所有日期整段位移 ——
-/// 那正是「進到編輯服事表畫面就對不齊」的來源。編輯模式那兩顆按鈕的觸控目標
-/// 是 48（給長輩按的），所以是檢視跟著編輯走，不是反過來把按鈕縮小。
+/// 編輯模式撐到 48（刪除鈕的觸控目標，給長輩按的，不能縮）；檢視模式沒有按
+/// 鈕，列高跟著文字走 —— 這個畫面是拿來讀的，一頁看得到幾天比每列多 25px 留
+/// 白重要。切換模式的位移是靠錨定日期修的（見 roster_scroll_anchor_test），
+/// 不靠兩邊列高一樣。
 
 class _FakeRepo implements RosterRepository {
   @override
@@ -121,22 +122,33 @@ Future<Size> _peopleColumnSize(
 void main() {
   setUpAll(() async => initializeDateFormatting('zh_TW'));
 
-  testWidgets('檢視與編輯的服事列逐列等高', (tester) async {
+  testWidgets('編輯模式的服事列撐到按鈕的觸控目標', (tester) async {
+    final editHeights = await _rowHeights(tester, editMode: true);
+
+    expect(editHeights, hasLength(4));
+    expect(
+      editHeights.every((h) => h >= kDutyRowMinHeight),
+      isTrue,
+      reason: '列高低於 $kDutyRowMinHeight 的話刪除鈕就不好按了：$editHeights',
+    );
+  });
+
+  testWidgets('檢視模式的服事列跟著文字高度走', (tester) async {
     final viewHeights = await _rowHeights(tester, editMode: false);
     final editHeights = await _rowHeights(tester, editMode: true);
 
     expect(viewHeights, hasLength(4));
-    expect(editHeights, hasLength(4));
-    expect(
-      viewHeights,
-      editHeights,
-      reason: '兩邊列高一不同，切換模式時底下所有日期就會位移',
-    );
-    expect(
-      viewHeights.every((h) => h >= kDutyRowMinHeight),
-      isTrue,
-      reason: '列高不能低於按鈕的觸控目標',
-    );
+    // 前三列的名字都排得下一行，列高就該是一行文字的高度，不是 48。
+    for (final height in viewHeights.take(3)) {
+      expect(
+        height,
+        lessThan(kDutyRowMinHeight),
+        reason: '檢視模式又被撐高了（$viewHeights），一頁看得到的天數會變少',
+      );
+    }
+    // 第四列（音控，四個名字）會換行，本來就比一行高 —— 但仍不該吃到那個下限
+    // 才叫「跟著文字走」。
+    expect(viewHeights[3], lessThan(editHeights[3]));
   });
 
   // ⇄ 曾經直接掛在服事列上，名字欄因此只剩 142px，三個三字名字會被擠成兩行。

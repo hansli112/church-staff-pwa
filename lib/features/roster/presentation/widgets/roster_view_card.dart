@@ -101,9 +101,10 @@ class _RosterViewCardBody extends StatelessWidget {
         children: roster.duties.map((duty) {
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
-            // 列高跟編輯模式綁在一起（見 [kDutyRowMinHeight]）：這裡沒有按鈕，
-            // 但高度一樣才不會在切換模式時整份清單前後位移。
-            child: DutyRow(role: duty.role, people: duty.people),
+            // dense：這裡沒有按鈕要撐觸控目標，列高就跟著文字走，一頁多看
+            // 得到幾天。切換模式時的位移是靠錨定日期修的（見 [ScrollAnchor]），
+            // 不必為此把檢視模式撐到跟編輯模式一樣高。
+            child: DutyRow(role: duty.role, people: duty.people, dense: true),
           );
         }).toList(),
       ),
