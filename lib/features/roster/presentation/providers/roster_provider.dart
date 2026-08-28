@@ -311,12 +311,17 @@ class RosterProvider with ChangeNotifier {
     }
   }
 
-  /// 只有具編輯權的人（admin / 負責人）才可呼叫。確保本季 + 下季的所有預定
-  /// roster 都已存在於 Firestore。
+  /// 只有具編輯權的人（admin / 負責人）才可呼叫。確保本季 + 下季、[allowedTypes]
+  /// 範圍內的預定 roster 都已存在於 Firestore。
+  ///
+  /// [allowedTypes] 要傳呼叫者「改得動」的聚會別（[User.allowedRosterTypes]），
+  /// 不是畫面上顯示的全部：多一個他無權寫的聚會別，整個 batch 都會被 rules 拒。
   /// 背景執行，失敗僅 log，不影響 UI。完成後觸發 fetchInitialData 讓新建的 roster 出現。
-  Future<void> ensureQuarterRostersForEditor() async {
+  Future<void> ensureQuarterRostersForEditor(
+    List<ServiceType> allowedTypes,
+  ) async {
     try {
-      await _repository.ensureQuarterRosters();
+      await _repository.ensureQuarterRosters(allowedTypes);
     } catch (e, st) {
       log('ensureQuarterRosters 失敗', error: e, stackTrace: st);
       // 靜默失敗，不 disrupt UI。

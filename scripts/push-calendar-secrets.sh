@@ -16,7 +16,11 @@
 # 需要 .local/service-account.json（已 gitignore）。
 #
 # LINE 通知（選用）：另外再讀 .local/n8n-notify-url 和 .local/n8n-notify-secret，
-# 兩個都在才會推，而且只推 production —— Preview 站點不該把測試資料發進群組。
+# 兩個都在才會推，Production 與 Preview 都推。
+#
+# Preview 也推，是因為日常操作就在 dev 的預覽站上，而 n8n 那條 workflow 的
+# 群組是寫死的 —— 兩個環境本來就會發到同一個群組，把 Preview 關掉只會讓
+# 平常在用的站台收不到通知。
 
 set -euo pipefail
 
@@ -104,11 +108,13 @@ NOTIFY_SECRET="$(notify_secret)"
 
 echo
 if [[ -n "$NOTIFY_URL" && -n "$NOTIFY_SECRET" ]]; then
-  echo "── LINE 通知（production only）──"
-  printf '%s' "$NOTIFY_URL" | "${WRANGLER[@]}" pages secret put NOTIFY_WEBHOOK_URL \
-    --project-name "$PROJECT_NAME" --env production
-  printf '%s' "$NOTIFY_SECRET" | "${WRANGLER[@]}" pages secret put NOTIFY_WEBHOOK_SECRET \
-    --project-name "$PROJECT_NAME" --env production
+  for environment in production preview; do
+    echo "── LINE 通知：$environment ──"
+    printf '%s' "$NOTIFY_URL" | "${WRANGLER[@]}" pages secret put NOTIFY_WEBHOOK_URL \
+      --project-name "$PROJECT_NAME" --env "$environment"
+    printf '%s' "$NOTIFY_SECRET" | "${WRANGLER[@]}" pages secret put NOTIFY_WEBHOOK_SECRET \
+      --project-name "$PROJECT_NAME" --env "$environment"
+  done
 else
   echo "略過 LINE 通知：找不到 .local/n8n-notify-url 或 .local/n8n-notify-secret。"
 fi

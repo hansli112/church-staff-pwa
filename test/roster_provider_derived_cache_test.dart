@@ -26,7 +26,7 @@ class _FakeRosterRepository implements RosterRepository {
   Future<List<ServiceRoster>> getUpcomingRostersFromCache() async => const [];
 
   @override
-  Future<void> ensureQuarterRosters() async {}
+  Future<void> ensureQuarterRosters(List<ServiceType> allowedTypes) async {}
 
   @override
   Future<void> updateRoster(ServiceRoster roster) async {

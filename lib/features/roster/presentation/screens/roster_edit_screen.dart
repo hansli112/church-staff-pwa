@@ -89,9 +89,12 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
       }
 
       // 進入編輯模式時，背景補齊本季 + 下季的 roster（backfill）。
-      // 在無編輯權的路徑下已 return，此處一定有寫入權。
-      // 失敗靜默處理（ensureQuarterRosters 內部 catch），不影響 UI。
-      context.read<RosterProvider>().ensureQuarterRostersForEditor();
+      // 在無編輯權的路徑下已 return，此處一定有寫入權 —— 但只在自己的牧區內，
+      // 所以補的範圍限制在 allowedTypes（同一個 batch 混進別的聚會別會整批被
+      // rules 拒絕）。失敗靜默處理（ensureQuarterRosters 內部 catch），不影響 UI。
+      context.read<RosterProvider>().ensureQuarterRostersForEditor(
+        widget.allowedTypes,
+      );
     });
   }
 

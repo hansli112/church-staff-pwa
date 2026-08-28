@@ -68,6 +68,33 @@ service cloud.firestore {
         || request.resource.data.groups.hasOnly(['roster-editors', 'calendar-editors']);
     }
 
+    // Which service types (主日 / 青崇 / 兒主) this user may touch a roster for.
+    //
+    // zones on users/{uid} is a list of maps, and the rules language has no
+    // loops and no map/filter — there is no way to read serviceType out of it.
+    // So the app writes a flattened projection alongside it, `zoneTypes` (see
+    // User.zoneTypes). This reads that projection.
+    //
+    // The two can only drift if someone writes users/{uid} outside the app
+    // (console, Admin SDK), and only admin can write user docs at all. Drift is
+    // invisible in the UI, which reads zones — it shows up as a roster write
+    // that fails. `node scripts/backfill-user-zone-types.mjs --check` audits it.
+    //
+    // Being in roster-editors is not enough: the group says "may edit rosters",
+    // the zone says "which one". admin keeps every type without holding a zone.
+    function canEditRosterType(type) {
+      return isAdmin()
+        || (inGroup('roster-editors')
+            && type in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('zoneTypes', []));
+    }
+
+    // Same idea as hasValidGroups(): a typo'd service type would sit in the
+    // document looking like a grant while matching no roster.
+    function hasValidZoneTypes() {
+      return !('zoneTypes' in request.resource.data)
+        || request.resource.data.zoneTypes.hasOnly(['sundayService', 'youth', 'children']);
+    }
+
     // Role must be one of the values UserRole knows how to parse. Blocks an
     // admin (or a compromised admin session) from writing junk that
     // User.fromJson would silently coerce to 'member'.
@@ -94,13 +121,15 @@ service cloud.firestore {
       allow read: if isSelf(uid) || inGroup('roster-editors');
 
       // Only admin creates new user docs (via SecondaryApp flow in user_editor_screen).
-      allow create: if isAdmin() && hasValidRole() && hasValidGroups();
+      allow create: if isAdmin() && hasValidRole() && hasValidGroups()
+        && hasValidZoneTypes();
 
       // Updates:
       //   - admin: full control over any user doc
       //   - self : only fcm and notificationPrefs. Note what this excludes:
       //             role AND groups, so nobody can grant themselves a group.
-      allow update: if (isAdmin() && hasValidRole() && hasValidGroups())
+      allow update: if (isAdmin() && hasValidRole() && hasValidGroups()
+            && hasValidZoneTypes())
         || (isSelf(uid)
             && isActiveUser()
             && selfUpdateOnlyTouches(['fcm', 'notificationPrefs']));
@@ -109,8 +138,22 @@ service cloud.firestore {
     }
 
     match /rosters/{rosterId} {
+      // Read stays open to every member on purpose: the roster is the thing the
+      // whole church looks at. The write side is what the zone narrows.
       allow read: if isActiveUser();
-      allow write: if inGroup('roster-editors');
+
+      // On update both sides are checked: the incoming type must be in the
+      // editor's zones, and so must the type already on the document. Checking
+      // only the incoming one would let a 青崇 editor rewrite the 主日 roster by
+      // relabelling it 'youth' in the same write.
+      //
+      // `.get('type', '')` rather than `.type`: a document without the field
+      // (pre-ServiceType data, or a hand-written one) must be denied, not blow
+      // up the rule. '' matches no zone, so only admin gets through.
+      allow create: if canEditRosterType(request.resource.data.get('type', ''));
+      allow update: if canEditRosterType(request.resource.data.get('type', ''))
+        && canEditRosterType(resource.data.get('type', ''));
+      allow delete: if canEditRosterType(resource.data.get('type', ''));
     }
 
     // Templates and event options stay admin-only on purpose: they are the

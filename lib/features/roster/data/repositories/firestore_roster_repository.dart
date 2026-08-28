@@ -74,12 +74,14 @@ class FirestoreRosterRepository implements RosterRepository {
   }
 
   @override
-  Future<void> ensureQuarterRosters() async {
-    // 確保本季 + 下季的所有預定 roster 都已存在於 Firestore（缺的補寫）。
-    // 此方法只應由 admin 呼叫；Firestore Rules 會擋未授權寫入。
+  Future<void> ensureQuarterRosters(List<ServiceType> allowedTypes) async {
+    // 確保本季 + 下季的預定 roster 都已存在於 Firestore（缺的補寫）。
+    // 只補 allowedTypes 涵蓋的聚會別 —— 其餘的呼叫者無權寫，混進同一個 batch
+    // 會讓整批被 rules 拒絕。真正的強制點仍在 firestore.rules。
+    if (allowedTypes.isEmpty) return;
     try {
       final templates = await getServiceTemplates();
-      final generated = _generateQuarterRosters(templates);
+      final generated = _generateQuarterRosters(templates, allowedTypes);
       if (generated.isEmpty) return;
 
       // Scope the existence check to the current quarter onwards so that
@@ -347,6 +349,7 @@ class FirestoreRosterRepository implements RosterRepository {
 
   List<ServiceRoster> _generateQuarterRosters(
     Map<ServiceType, List<String>> templates,
+    List<ServiceType> allowedTypes,
   ) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -360,7 +363,7 @@ class FirestoreRosterRepository implements RosterRepository {
 
     final List<ServiceRoster> allRosters = [];
     while (!cursor.isAfter(targetEndDate)) {
-      for (final type in ServiceType.values) {
+      for (final type in allowedTypes) {
         final roles = templates[type] ?? [];
         final duties = roles
             .map((role) => RosterEntry(role: role, people: ['待定']))

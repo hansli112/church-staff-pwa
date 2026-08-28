@@ -9,6 +9,7 @@ import 'package:church_staff_pwa/features/roster/domain/entities/service_roster.
 import 'package:church_staff_pwa/features/roster/domain/repositories/roster_repository.dart';
 import 'package:church_staff_pwa/features/roster/presentation/providers/roster_provider.dart';
 import 'package:church_staff_pwa/features/roster/presentation/screens/roster_edit_screen.dart';
+import 'package:church_staff_pwa/features/roster/presentation/screens/roster_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -72,8 +73,13 @@ class _FakeRosterRepository implements RosterRepository {
   @override
   Future<List<ServiceRoster>> getUpcomingRosters() async => const [];
 
+  List<ServiceType> ensureTypes = const [];
+
   @override
-  Future<void> ensureQuarterRosters() async => ensureCallCount++;
+  Future<void> ensureQuarterRosters(List<ServiceType> allowedTypes) async {
+    ensureCallCount++;
+    ensureTypes = allowedTypes;
+  }
 
   @override
   Future<void> updateRoster(ServiceRoster roster) async {}
@@ -144,6 +150,42 @@ Future<int> _pumpRosterEdit(WidgetTester tester, {required User user}) async {
   );
   await tester.pumpAndSettle();
   return exitCalls;
+}
+
+/// 掛上唯讀的服事表畫面，回報 TabBar 上出現哪幾個聚會別。
+///
+/// 會顯示哪些分頁是這支測試的重點：它是「只屬於青崇／兒主的人卻看得到主日」
+/// 這個 bug 的迴歸點。session 一樣要先還原完再掛畫面（理由見 [_pumpRosterEdit]）。
+Future<List<String>> _pumpRosterTabs(
+  WidgetTester tester, {
+  required User user,
+}) async {
+  final session = SessionProvider(FakeAuthRepository(user));
+  final rosters = RosterProvider(_FakeRosterRepository());
+
+  await tester.pumpWidget(
+    ChangeNotifierProvider<SessionProvider>.value(
+      value: session,
+      child: const MaterialApp(home: SizedBox.shrink()),
+    ),
+  );
+  await tester.pumpAndSettle();
+
+  await tester.pumpWidget(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider<SessionProvider>.value(value: session),
+        ChangeNotifierProvider<RosterProvider>.value(value: rosters),
+      ],
+      child: const MaterialApp(home: RosterScreen()),
+    ),
+  );
+  await tester.pumpAndSettle();
+
+  return tester
+      .widgetList<Tab>(find.byType(Tab))
+      .map((tab) => (tab.text ?? ''))
+      .toList();
 }
 
 /// 個人頁不需要 PushNotificationService 才能 build（它只在按鈕的 handler 裡被
@@ -316,6 +358,108 @@ void main() {
       expect(find.byIcon(Icons.palette_outlined), findsNothing);
       expect(find.byIcon(Icons.list_alt_outlined), findsNothing);
       expect(find.byIcon(Icons.view_list), findsOneWidget);
+    });
+  });
+
+  // 編輯權（group）跟牧區（zones）是兩個軸：group 決定「能不能改」，牧區決定
+  // 「能改哪一本」。曾經給了 roster-editors 就整組聚會別全開 —— 只屬於青崇／
+  // 兒主的人因此看得到主日。
+  group('服事表的聚會別範圍', () {
+    test('一般人只拿到自己的牧區', () {
+      final user = _user(
+        role: UserRole.member,
+        zones: const [UserZoneInfo(serviceType: ServiceType.youth)],
+      );
+      expect(user.allowedRosterTypes, [ServiceType.youth]);
+    });
+
+    test('服事表編輯者一樣只拿到自己的牧區', () {
+      final user = _user(
+        role: UserRole.staff,
+        groups: {UserGroup.rosterEditors},
+        zones: const [
+          UserZoneInfo(serviceType: ServiceType.youth),
+          UserZoneInfo(serviceType: ServiceType.children),
+        ],
+      );
+      expect(user.allowedRosterTypes, [
+        ServiceType.youth,
+        ServiceType.children,
+      ]);
+      expect(
+        user.allowedRosterTypes,
+        isNot(contains(ServiceType.sundayService)),
+      );
+    });
+
+    // admin 等同 root：一個牧區都沒有也拿得到全部。
+    test('管理員沒有任何牧區也拿得到全部', () {
+      expect(
+        _user(role: UserRole.admin).allowedRosterTypes,
+        ServiceType.values,
+      );
+    });
+
+    test('沒有牧區的編輯者拿到空的', () {
+      final user = _user(
+        role: UserRole.staff,
+        groups: {UserGroup.rosterEditors},
+      );
+      expect(user.allowedRosterTypes, isEmpty);
+    });
+
+    // zoneTypes 是寫進 Firestore 給 firestore.rules 用的投影。順序跟著
+    // ServiceType.values，否則同樣的內容換個順序就是一筆多餘的寫入。
+    test('toJson 帶出 zoneTypes，順序固定', () {
+      final user = _user(
+        role: UserRole.staff,
+        zones: const [
+          UserZoneInfo(serviceType: ServiceType.children),
+          UserZoneInfo(serviceType: ServiceType.sundayService),
+        ],
+      );
+      expect(user.toJson()['zoneTypes'], ['sundayService', 'children']);
+    });
+
+    test('沒有牧區時 zoneTypes 是空陣列', () {
+      expect(_user(role: UserRole.member).toJson()['zoneTypes'], isEmpty);
+    });
+  });
+
+  group('服事表分頁只出現自己的牧區', () {
+    testWidgets('只屬於青崇與兒主的編輯者看不到主日', (tester) async {
+      final tabs = await _pumpRosterTabs(
+        tester,
+        user: _user(
+          role: UserRole.staff,
+          groups: {UserGroup.rosterEditors},
+          zones: const [
+            UserZoneInfo(serviceType: ServiceType.youth),
+            UserZoneInfo(serviceType: ServiceType.children),
+          ],
+        ),
+      );
+
+      expect(tabs, ['青崇', '兒主']);
+    });
+
+    testWidgets('管理員看得到全部', (tester) async {
+      final tabs = await _pumpRosterTabs(
+        tester,
+        user: _user(role: UserRole.admin),
+      );
+
+      expect(tabs, ['主日', '青崇', '兒主']);
+    });
+
+    testWidgets('沒有牧區的編輯者看到的是空狀態，不是全部', (tester) async {
+      final tabs = await _pumpRosterTabs(
+        tester,
+        user: _user(role: UserRole.staff, groups: {UserGroup.rosterEditors}),
+      );
+
+      expect(tabs, isEmpty);
+      expect(find.text('尚未設定可檢視的牧區'), findsOneWidget);
     });
   });
 
