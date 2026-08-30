@@ -46,13 +46,14 @@ class CalendarEventDraft {
     this.description = '',
   });
 
-  /// A blank draft for [day], defaulting to an all-day event because that is
-  /// what most church events are — one field to fill in and save.
+  /// A blank draft for [day], defaulting to a timed evening event: church
+  /// events almost always have a start and an end, and an all-day default made
+  /// people turn the switch off before they could enter one.
   factory CalendarEventDraft.forDay(DateTime day) {
     final date = DateUtils.dateOnly(day);
     return CalendarEventDraft(
       title: '',
-      allDay: true,
+      allDay: false,
       startDate: date,
       endDate: date,
       startTime: const TimeOfDay(hour: 19, minute: 0),
