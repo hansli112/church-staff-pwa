@@ -270,9 +270,15 @@ JSON，用 dashboard 的輸入框貼很容易貼壞，所以走 CLI 從檔案直
   "location": "教會 2F",
   "description": "記得帶聖經",
   "link": "https://calendar.google.com/event?eid=evt-timed",
-  "actorUid": "..."
+  "actorUid": "...",
+  "actorName": "王小明"
 }
 ```
+
+`actorName` 是新增者 `users/{uid}` 的 `name`，也就是群組訊息最後那行 `by 王小明`；
+權限檢查本來就要讀這份文件，順手多拿一個欄位。舊帳號沒有 `name` 時是 `null`，
+n8n 那端整行不印 —— 名字只影響訊息長什麼樣，不影響能不能新增。`actorUid` 也照
+舊送：名字會改、也可能重複，事後要追是誰做的還是得靠 uid。
 
 **通知失敗不會讓新增失敗**。走到那一步時活動已經寫進 Google 了，回 500 只會
 讓人以為沒建成然後再按一次。失敗只留在 Cloudflare 的 log 裡。通知本身丟給

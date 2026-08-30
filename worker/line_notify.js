@@ -16,7 +16,10 @@ const NOTIFY_TIMEOUT_MS = 5000;
 ///
 /// n8n 那端不必知道 Google 用 `date` 表示全天、用 `dateTime` 表示定時，也不必
 /// 知道 `end.date` 是排他的。那些差異在這裡一次弭平。
-export function notifyPayload(action, event, actorUid) {
+///
+/// [actor] 是 requireEditor() 回傳的 `{ uid, name }`。兩個都送：群組裡要看的是
+/// 名字，但名字會改、也可能重複，事後要追是誰做的還是得靠 uid。
+export function notifyPayload(action, event, actor) {
   const allDay = Boolean(event?.start?.date);
   return {
     action,
@@ -31,7 +34,9 @@ export function notifyPayload(action, event, actorUid) {
     location: event?.location ?? '',
     description: event?.description ?? '',
     link: event?.htmlLink ?? null,
-    actorUid,
+    actorUid: actor?.uid ?? null,
+    // 舊資料可能沒有 name 欄位，所以這裡可能是 null —— n8n 那端要能少這一行。
+    actorName: actor?.name ?? null,
   };
 }
 

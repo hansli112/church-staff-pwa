@@ -12,7 +12,9 @@ import {
 } from '../worker/google_calendar.js';
 import { notifyPayload } from '../worker/line_notify.js';
 import {
+  ADMIN_NAME,
   ADMIN_UID,
+  CALENDAR_EDITOR_NAME,
   CALENDAR_EDITOR_UID,
   CALENDAR_ID,
   NOTIFY_SECRET,
@@ -243,22 +245,53 @@ describe('requireEditor', () => {
     });
   });
 
-  test('accepts an admin and returns the uid', async () => {
+  test('accepts an admin and returns the uid and name', async () => {
     const env = await testEnv();
-    assert.equal(await requireEditor(request('POST'), env, fakeFetch()), ADMIN_UID);
+    assert.deepEqual(await requireEditor(request('POST'), env, fakeFetch()), {
+      uid: ADMIN_UID,
+      name: ADMIN_NAME,
+    });
   });
 
   // 權限看 group，不看 role：這個人的 role 只是 staff。
   test('accepts a member of calendar-editors regardless of role', async () => {
     const env = await testEnv();
-    assert.equal(
+    assert.deepEqual(
       await requireEditor(
         request('POST', { token: idToken(CALENDAR_EDITOR_UID) }),
         env,
         fakeFetch(),
       ),
-      CALENDAR_EDITOR_UID,
+      { uid: CALENDAR_EDITOR_UID, name: CALENDAR_EDITOR_NAME },
     );
+  });
+
+  // 沒有 name 的舊帳號照樣能編行事曆 —— 名字只影響通知長什麼樣。
+  test('accepts an editor whose document has no name', async () => {
+    const env = await testEnv();
+    const fetchImpl = fakeFetch({ users: { [ADMIN_UID]: { role: 'admin' } } });
+    assert.deepEqual(await requireEditor(request('POST'), env, fetchImpl), {
+      uid: ADMIN_UID,
+      name: null,
+    });
+  });
+
+  // 只有空白的名字等於沒有名字，否則通知裡會多出一行只有冒號的東西。
+  test('treats a blank name as no name', async () => {
+    const env = await testEnv();
+    const fetchImpl = fakeFetch({ users: { [ADMIN_UID]: { role: 'admin', name: '   ' } } });
+    assert.equal((await requireEditor(request('POST'), env, fetchImpl)).name, null);
+  });
+
+  // 遮罩少一個欄位就等於白跑一趟：名字拿不到，通知就永遠是匿名的。
+  test('asks Firestore for the name field', async () => {
+    const env = await testEnv();
+    const fetchImpl = fakeFetch();
+    await requireEditor(request('POST'), env, fetchImpl);
+    const [lookup] = fetchImpl.calls.filter((call) =>
+      call.url.startsWith('https://firestore.googleapis.com/'),
+    );
+    assert.match(lookup.url, /mask\.fieldPaths=name/);
   });
 
   // 兩個 group 正交：服事表編輯者碰不到行事曆。
@@ -618,9 +651,12 @@ function creating(event) {
 
 const CREATE_BODY = { title: '小組聚會', allDay: false, start: '2026-09-01T19:00' };
 
+/// requireEditor() 回傳的形狀，測 notifyPayload 時不必再跑一次權限檢查。
+const ADMIN_ACTOR = { uid: ADMIN_UID, name: ADMIN_NAME };
+
 describe('notifyPayload', () => {
   test('flattens a timed event', () => {
-    assert.deepEqual(notifyPayload('created', CREATED_TIMED, ADMIN_UID), {
+    assert.deepEqual(notifyPayload('created', CREATED_TIMED, ADMIN_ACTOR), {
       action: 'created',
       source: 'pwa',
       id: 'evt-timed',
@@ -632,12 +668,30 @@ describe('notifyPayload', () => {
       description: '記得帶聖經',
       link: 'https://calendar.google.com/event?eid=evt-timed',
       actorUid: ADMIN_UID,
+      actorName: ADMIN_NAME,
     });
+  });
+
+  // 名字是給群組看的，uid 是給事後追查用的 —— 少了任一個都補不回來。
+  test('carries both the uid and the name of the editor', () => {
+    const payload = notifyPayload('created', CREATED_TIMED, {
+      uid: CALENDAR_EDITOR_UID,
+      name: CALENDAR_EDITOR_NAME,
+    });
+    assert.equal(payload.actorUid, CALENDAR_EDITOR_UID);
+    assert.equal(payload.actorName, CALENDAR_EDITOR_NAME);
+  });
+
+  // 沒有名字時送 null 而不是省略，n8n 那端才看得到一致的形狀。
+  test('sends a null name for an editor without one', () => {
+    const payload = notifyPayload('created', CREATED_TIMED, { uid: ADMIN_UID, name: null });
+    assert.equal(payload.actorUid, ADMIN_UID);
+    assert.equal(payload.actorName, null);
   });
 
   test('reports the inclusive end date for an all-day event', () => {
     // Google stores 9/6 for a single day on 9/5; the group must be told 9/5.
-    const payload = notifyPayload('created', CREATED_ALL_DAY, ADMIN_UID);
+    const payload = notifyPayload('created', CREATED_ALL_DAY, ADMIN_ACTOR);
     assert.equal(payload.allDay, true);
     assert.equal(payload.start, '2026-09-05');
     assert.equal(payload.end, '2026-09-05');
@@ -647,7 +701,7 @@ describe('notifyPayload', () => {
     const payload = notifyPayload(
       'created',
       { start: { date: '2026-10-10' }, end: { date: '2026-10-13' } },
-      ADMIN_UID,
+      ADMIN_ACTOR,
     );
     assert.equal(payload.start, '2026-10-10');
     assert.equal(payload.end, '2026-10-12');
@@ -656,7 +710,7 @@ describe('notifyPayload', () => {
   test('missing optional fields become empty rather than undefined', () => {
     // JSON.stringify drops undefined keys, which would make the n8n side see a
     // different shape depending on what the event happened to carry.
-    const payload = notifyPayload('created', { id: 'x' }, ADMIN_UID);
+    const payload = notifyPayload('created', { id: 'x' }, ADMIN_ACTOR);
     assert.deepEqual(payload, {
       action: 'created',
       source: 'pwa',
@@ -669,6 +723,7 @@ describe('notifyPayload', () => {
       description: '',
       link: null,
       actorUid: ADMIN_UID,
+      actorName: ADMIN_NAME,
     });
   });
 });
@@ -694,6 +749,7 @@ describe('POST /api/calendar/events — LINE notification', () => {
       description: '記得帶聖經',
       link: 'https://calendar.google.com/event?eid=evt-timed',
       actorUid: ADMIN_UID,
+      actorName: ADMIN_NAME,
     });
   });
 
@@ -721,6 +777,8 @@ describe('POST /api/calendar/events — LINE notification', () => {
     );
 
     assert.equal(fetchImpl.notifyPayload().actorUid, CALENDAR_EDITOR_UID);
+    // 群組讀得懂的是名字，不是 uid。
+    assert.equal(fetchImpl.notifyPayload().actorName, CALENDAR_EDITOR_NAME);
   });
 
   test('stays quiet when the webhook is not configured', async () => {
