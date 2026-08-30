@@ -92,7 +92,7 @@ const VENDOR_PATH_PREFIXES = ['/canvaskit/'];
 // 「更新於 10:51」，那正是伺服器部署完成的時間，跟他手機上跑的版本無關。
 //
 // 更新偵測不靠這個檔案，靠的是 SW 自己的 updatefound / SKIP_WAITING
-// （見 web/index.html），所以 cache-first 不會讓任何人卡在舊版。
+// （見 web/app_update.js），所以 cache-first 不會讓任何人卡在舊版。
 // `/app_update.js` 同理但反過來：它是「換到新版」那段交接程式碼，被自己的舊
 // 快取服務的話，卡住的裝置就再也救不回來（修好的交接流程永遠載不進去）。
 const NETWORK_FIRST_PATHS = new Set([
