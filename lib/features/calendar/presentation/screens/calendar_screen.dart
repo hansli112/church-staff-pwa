@@ -187,10 +187,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: maxContentWidth),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 16,
-                ),
+                // Tight at the top on purpose: the AppBar already says 行事曆,
+                // so the month header does not need to be pushed away from it.
+                padding: const EdgeInsets.fromLTRB(6, 6, 6, 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -200,7 +199,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
