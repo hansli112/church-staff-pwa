@@ -290,6 +290,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget _buildMonthPager(bool canEdit) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        // Cell height is still derived from six rows so a cell is the same
+        // size in every month — only how many rows get drawn changes.
         final cellAspectRatio = _calendarAspectRatioForWidth(
           constraints.maxWidth,
           availableHeight: constraints.hasBoundedHeight
@@ -298,26 +300,67 @@ class _CalendarScreenState extends State<CalendarScreen> {
         );
         final cellWidth = constraints.maxWidth / 7;
         final cellHeight = cellWidth / cellAspectRatio;
-        final gridHeight = (cellHeight * 6) + (_calendarMainAxisSpacing * 5);
 
-        return SizedBox(
-          height: gridHeight,
-          child: PageView.builder(
-            controller: _monthPageController,
-            onPageChanged: _onMonthPageChanged,
-            itemBuilder: (context, index) {
-              final month = _monthFromPage(index);
-              return _buildCalendarGrid(
-                month,
-                cellAspectRatio,
-                cellHeight,
-                canEdit,
-              );
-            },
-          ),
+        final pager = PageView.builder(
+          controller: _monthPageController,
+          onPageChanged: _onMonthPageChanged,
+          itemBuilder: (context, index) {
+            final month = _monthFromPage(index);
+            return _buildCalendarGrid(
+              month,
+              cellAspectRatio,
+              cellHeight,
+              canEdit,
+            );
+          },
+        );
+
+        // Every page in a PageView gets the same height, so the box has to be
+        // as tall as the tallest month currently on screen — otherwise the
+        // six-row month sliding in from the side loses its last row mid-swipe.
+        // Once the swipe lands the two collapse to one month and the box
+        // animates down to exactly the rows that month needs.
+        return AnimatedBuilder(
+          animation: _monthPageController,
+          builder: (context, child) {
+            final rows = _rowsOnScreen();
+            final gridHeight =
+                (cellHeight * rows) + (_calendarMainAxisSpacing * (rows - 1));
+            return AnimatedSize(
+              duration: _monthSwitchDuration,
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.topCenter,
+              child: SizedBox(height: gridHeight, child: child),
+            );
+          },
+          child: pager,
         );
       },
     );
+  }
+
+  /// Rows needed by the month (or the two months mid-swipe) on screen.
+  ///
+  /// Reads the controller rather than [_focusedMonth] because onPageChanged
+  /// only fires once the swipe settles — during the drag both neighbours are
+  /// painted and the taller of the two is what has to fit.
+  int _rowsOnScreen() {
+    final position = _monthPageController.hasClients
+        ? _monthPageController.page
+        : null;
+    final page = position ?? _currentMonthPage.toDouble();
+    final first = _weekRowsForMonth(_monthFromPage(page.floor()));
+    final last = _weekRowsForMonth(_monthFromPage(page.ceil()));
+    return first > last ? first : last;
+  }
+
+  /// How many week rows a month occupies: the blanks before the 1st plus its
+  /// days, rounded up to whole weeks. Four for a February that starts on a
+  /// Sunday, six for a month like 2026/08.
+  static int _weekRowsForMonth(DateTime month) {
+    final startOffset = DateTime(month.year, month.month, 1).weekday % 7;
+    final totalDays = DateUtils.getDaysInMonth(month.year, month.month);
+    return ((startOffset + totalDays) / 7).ceil();
   }
 
   double _calendarAspectRatioForWidth(double width, {double? availableHeight}) {
@@ -358,7 +401,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final totalDays = DateUtils.getDaysInMonth(year, month);
     final startOffset = firstDay.weekday % 7;
     final cellWidth = cellHeight * cellAspectRatio;
-    const totalCells = 42;
+    final totalCells = _weekRowsForMonth(displayedMonth) * 7;
     final eventSegmentsByDay = _buildMonthEventLayout(displayedMonth);
 
     return GridView.builder(
