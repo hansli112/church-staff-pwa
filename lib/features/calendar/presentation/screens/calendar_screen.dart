@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -30,6 +31,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
   static const int _initialMonthPage = 12000;
   static const Duration _monthSwitchDuration = Duration(milliseconds: 260);
   static const double _calendarMainAxisSpacing = 6;
+
+  /// How much of the viewport the outgoing month may still cover while the
+  /// grid collapses onto the shorter month underneath it. Small on purpose:
+  /// the strip that loses its last row is on its way off screen.
+  static const double _rowCollapseWindow = 0.3;
   static final _monthHeaderFormat = DateFormat('yyyy年MM月', 'zh_TW');
 
   late final DateTime _anchorMonth;
@@ -315,44 +321,69 @@ class _CalendarScreenState extends State<CalendarScreen> {
           },
         );
 
-        // Every page in a PageView gets the same height, so the box has to be
-        // as tall as the tallest month currently on screen — otherwise the
-        // six-row month sliding in from the side loses its last row mid-swipe.
-        // Once the swipe lands the two collapse to one month and the box
-        // animates down to exactly the rows that month needs.
+        // Every page in a PageView is the same height, so the box is driven
+        // straight off the scroll position — see [_gridHeightForPage].
         return AnimatedBuilder(
           animation: _monthPageController,
-          builder: (context, child) {
-            final rows = _rowsOnScreen();
-            final gridHeight =
-                (cellHeight * rows) + (_calendarMainAxisSpacing * (rows - 1));
-            return AnimatedSize(
-              duration: _monthSwitchDuration,
-              curve: Curves.easeOutCubic,
-              alignment: Alignment.topCenter,
-              child: SizedBox(height: gridHeight, child: child),
-            );
-          },
+          builder: (context, child) => SizedBox(
+            height: _gridHeightForPage(cellHeight),
+            child: child,
+          ),
           child: pager,
         );
       },
     );
   }
 
-  /// Rows needed by the month (or the two months mid-swipe) on screen.
+  /// The height of the pager for wherever the swipe currently is.
   ///
-  /// Reads the controller rather than [_focusedMonth] because onPageChanged
-  /// only fires once the swipe settles — during the drag both neighbours are
-  /// painted and the taller of the two is what has to fit.
-  int _rowsOnScreen() {
-    final position = _monthPageController.hasClients
-        ? _monthPageController.page
-        : null;
-    final page = position ?? _currentMonthPage.toDouble();
-    final first = _weekRowsForMonth(_monthFromPage(page.floor()));
-    final last = _weekRowsForMonth(_monthFromPage(page.ceil()));
-    return first > last ? first : last;
+  /// Two months share the box mid-swipe and both have to fit, so the naive
+  /// answer is "as tall as the taller of the two, until the swipe lands".
+  /// That reads as a lag: the height only starts coming down once the page
+  /// animation has already finished, so switching months takes two animations
+  /// end to end rather than one.
+  ///
+  /// Instead the height follows the scroll position and lands exactly when the
+  /// page does — no second animation afterwards. The taller month gets the
+  /// full box for all but the last [_rowCollapseWindow] of its width, eased on
+  /// top of that, so the only thing ever short of a row is a narrow strip at
+  /// the edge of the screen — the tail of the month leaving, or the very first
+  /// sliver of a taller one arriving, which fills in as it comes in.
+  double _gridHeightForPage(double cellHeight) {
+    final page = _monthPageController.hasClients
+        ? (_monthPageController.page ?? _currentMonthPage.toDouble())
+        : _currentMonthPage.toDouble();
+
+    final nearestPage = page.round();
+    final nearestHeight = _gridHeightForRows(
+      _weekRowsForMonth(_monthFromPage(nearestPage)),
+      cellHeight,
+    );
+
+    final distance = (page - nearestPage).abs();
+    if (distance == 0) return nearestHeight;
+
+    final otherHeight = _gridHeightForRows(
+      _weekRowsForMonth(_monthFromPage(page > nearestPage
+          ? nearestPage + 1
+          : nearestPage - 1)),
+      cellHeight,
+    );
+    // The neighbour is the shorter one: it simply has room to spare, and the
+    // month taking over the screen gets its full height immediately.
+    if (otherHeight <= nearestHeight) return nearestHeight;
+
+    final progress =
+        ((_rowCollapseWindow - distance) / _rowCollapseWindow).clamp(0.0, 1.0);
+    return lerpDouble(
+      otherHeight,
+      nearestHeight,
+      Curves.easeInQuad.transform(progress),
+    )!;
   }
+
+  double _gridHeightForRows(int rows, double cellHeight) =>
+      (cellHeight * rows) + (_calendarMainAxisSpacing * (rows - 1));
 
   /// How many week rows a month occupies: the blanks before the 1st plus its
   /// days, rounded up to whole weeks. Four for a February that starts on a

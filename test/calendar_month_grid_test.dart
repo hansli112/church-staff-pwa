@@ -166,4 +166,51 @@ void main() {
     expect(_gridHeight(tester), closeTo(sixRowHeight, 0.5));
     expect(tester.takeException(), isNull);
   });
+  testWidgets('the grid starts collapsing before the swipe lands', (
+    tester,
+  ) async {
+    await _pumpCalendar(tester);
+
+    final now = DateTime.now();
+    final firstRows = _expectedRows(DateTime(now.year, now.month));
+    final cellHeight =
+        (_gridHeight(tester) - (_rowSpacing * (firstRows - 1))) / firstRows;
+    double heightForRows(int rows) =>
+        (cellHeight * rows) + (_rowSpacing * (rows - 1));
+
+    // Walk to a six-row month whose successor is shorter — that is the swipe
+    // that has to give the height back.
+    var offset = 0;
+    while (!(_expectedRows(DateTime(now.year, now.month + offset)) == 6 &&
+        _expectedRows(DateTime(now.year, now.month + offset + 1)) < 6)) {
+      offset++;
+      expect(offset, lessThan(24), reason: '兩年內找不到六列接五列的月份');
+      await tester.tap(find.byTooltip('下個月'));
+      await tester.pumpAndSettle();
+    }
+
+    final tallHeight = heightForRows(6);
+    final shortHeight = heightForRows(
+      _expectedRows(DateTime(now.year, now.month + offset + 1)),
+    );
+    expect(_gridHeight(tester), closeTo(tallHeight, 0.5));
+
+    await tester.tap(find.byTooltip('下個月'));
+    await tester.pump();
+    // Two thirds through the 260ms page animation the box is already on its
+    // way down, rather than waiting for the page to land and then animating.
+    await tester.pump(const Duration(milliseconds: 160));
+    final midHeight = _gridHeight(tester);
+    expect(midHeight, lessThan(tallHeight - 1));
+    expect(midHeight, greaterThan(shortHeight));
+
+    // And it is done when the page is done — no second animation trailing it.
+    await tester.pump(const Duration(milliseconds: 140));
+    expect(_gridHeight(tester), closeTo(shortHeight, 0.5));
+
+    await tester.pumpAndSettle();
+    expect(_gridHeight(tester), closeTo(shortHeight, 0.5));
+    expect(tester.takeException(), isNull);
+  });
+
 }
