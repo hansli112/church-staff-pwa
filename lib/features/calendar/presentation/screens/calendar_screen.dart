@@ -159,7 +159,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildMonthHeader(),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 4),
                           if (_focusedError != null) ...[
                             Text(
                               _focusedError!,
@@ -169,7 +169,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               ),
                             ),
                           ],
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 6),
                           _buildWeekdayHeader(),
                           const SizedBox(height: 8),
                           Expanded(child: _buildMonthPager(canEdit)),
@@ -205,7 +205,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildMonthHeader(),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 4),
                             if (_focusedError != null) ...[
                               Text(
                                 _focusedError!,
@@ -215,7 +215,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                 ),
                               ),
                             ],
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 6),
                             _buildWeekdayHeader(),
                             const SizedBox(height: 8),
                             _buildMonthPager(canEdit),
@@ -233,12 +233,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
+  /// Deliberately compact: on a phone a six-week month already runs past the
+  /// bottom of the screen, and the month label only needs to say which month
+  /// you are looking at — it does not need a full IconButton's worth of height
+  /// on either side of it.
   Widget _buildMonthHeader() {
     final text = _monthHeaderFormat.format(_focusedMonth);
     return Row(
       children: [
-        IconButton(
-          icon: const Icon(Icons.chevron_left),
+        _MonthArrow(
+          icon: Icons.chevron_left,
+          tooltip: '上個月',
           onPressed: () => _changeMonth(-1),
         ),
         Expanded(
@@ -247,14 +252,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.6,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.4,
             ),
           ),
         ),
-        IconButton(
-          icon: const Icon(Icons.chevron_right),
+        _MonthArrow(
+          icon: Icons.chevron_right,
+          tooltip: '下個月',
           onPressed: () => _changeMonth(1),
         ),
       ],
@@ -904,5 +910,32 @@ class _CalendarScreenState extends State<CalendarScreen> {
         });
       }
     }
+  }
+}
+
+/// A month-stepping chevron sized down from the 48px default. The tap target
+/// stays 40x36 — comfortable on a phone — instead of eating the header's height.
+class _MonthArrow extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  const _MonthArrow({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: Icon(icon),
+      iconSize: 22,
+      tooltip: tooltip,
+      padding: EdgeInsets.zero,
+      visualDensity: VisualDensity.compact,
+      constraints: const BoxConstraints(minWidth: 40, minHeight: 36),
+      onPressed: onPressed,
+    );
   }
 }
