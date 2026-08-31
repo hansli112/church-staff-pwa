@@ -114,11 +114,15 @@ export function uidFromIdToken(token) {
 /// enforcement points, one name. admin is root and holds it implicitly.
 const CALENDAR_GROUP = 'calendar-editors';
 
-/// Rejects anyone without calendar edit rights, and returns their uid.
+/// Rejects anyone without calendar edit rights, and returns `{ uid, name }`.
 ///
 /// The role lives in Firestore, not in the token's custom claims, so this reads
 /// users/{uid} as the caller. Doing it that way also means the token is fully
 /// verified by Firestore and the service account needs no Firestore IAM grant.
+///
+/// The display name comes along for the ride because the same document already
+/// has to be fetched for the permission check — the LINE notification wants to
+/// name the person, and a uid means nothing to the group.
 export async function requireEditor(request, env, fetchImpl = fetch) {
   const header = request.headers.get('Authorization') ?? '';
   if (!header.startsWith('Bearer ')) {
@@ -132,7 +136,7 @@ export async function requireEditor(request, env, fetchImpl = fetch) {
   const url =
     `${FIRESTORE_API}/projects/${encodeURIComponent(projectId)}` +
     `/databases/(default)/documents/users/${encodeURIComponent(uid)}` +
-    '?mask.fieldPaths=role&mask.fieldPaths=groups';
+    '?mask.fieldPaths=role&mask.fieldPaths=groups&mask.fieldPaths=name';
 
   const response = await fetchWithTimeout(fetchImpl, url, {
     headers: { Authorization: `Bearer ${token}` },
@@ -155,7 +159,20 @@ export async function requireEditor(request, env, fetchImpl = fetch) {
   if (!hasCalendarAccess(doc)) {
     throw new HttpError(403, '沒有編輯行事曆的權限');
   }
-  return uid;
+  return { uid, name: displayName(doc) };
+}
+
+/// The user's own `name` field, or null.
+///
+/// Not to be confused with the document's own `name` — that is the Firestore
+/// resource path (`projects/.../users/{uid}`) and sits one level up, outside
+/// `fields`. Anything missing or of another shape lands on null: a nameless
+/// notification is a worse message, not a failed request.
+function displayName(doc) {
+  const value = doc?.fields?.name?.stringValue;
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed === '' ? null : trimmed;
 }
 
 /// admin is root, otherwise membership of CALENDAR_GROUP.

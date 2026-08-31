@@ -6,6 +6,7 @@ import '../../domain/entities/service_roster.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../domain/repositories/roster_repository.dart';
 import '../../../../core/utils/error_messages.dart';
+import '../../../../core/utils/scroll_anchor.dart';
 import '../../../../core/widgets/text_warmup.dart';
 
 class RosterProvider with ChangeNotifier {
@@ -120,6 +121,48 @@ class RosterProvider with ChangeNotifier {
     return index;
   }
 
+  // ── 捲動位置錨點 ────────────────────────────────────────────────────────
+  // 檢視與編輯是兩棵不同的 widget 樹，切換的當下舊清單整個被拆掉，只有
+  // provider 活得夠久，所以「切之前看到哪」存在這裡。
+  //
+  // 刻意不 notifyListeners：這是純 UI 的暫存狀態，通知出去只會讓畫面上每張
+  // 卡片為了一個沒人顯示的數字白白重建一次。
+  final Map<ServiceType, ScrollAnchor> _scrollAnchors = {};
+  final Map<ServiceType, ScrollAnchor? Function()> _anchorCaptures = {};
+
+  /// 清單掛上時登記自己的取樣函式，[captureScrollAnchors] 會逐一呼叫。
+  void registerScrollAnchorCapture(
+    ServiceType type,
+    ScrollAnchor? Function() capture,
+  ) {
+    _anchorCaptures[type] = capture;
+  }
+
+  /// 卸載時撤銷登記。比對是不是同一個清單才移除：切換模式時新清單會先登記、
+  /// 舊清單才 dispose，直接 remove 會把剛登記好的新清單一起拔掉。
+  ///
+  /// 用 `==` 不是 `identical`：Dart 的 tear-off 每次取值都是新物件，
+  /// `identical(a.cap, a.cap)` 恆為 false，改用 `==` 才問得到「同一個 State 的
+  /// 同一個方法」（同 receiver 才相等）。
+  void unregisterScrollAnchorCapture(
+    ServiceType type,
+    ScrollAnchor? Function() capture,
+  ) {
+    if (_anchorCaptures[type] == capture) {
+      _anchorCaptures.remove(type);
+    }
+  }
+
+  ScrollAnchor? scrollAnchorFor(ServiceType type) => _scrollAnchors[type];
+
+  /// 在切換模式前呼叫：把目前每個分頁頂端的日期記下來。
+  void captureScrollAnchors() {
+    for (final entry in _anchorCaptures.entries) {
+      final anchor = entry.value();
+      if (anchor != null) _scrollAnchors[entry.key] = anchor;
+    }
+  }
+
   void toggleEditMode() {
     _isEditMode = !_isEditMode;
     notifyListeners();
@@ -138,6 +181,8 @@ class RosterProvider with ChangeNotifier {
     _replaceEventOptions({});
     _error = null;
     _isEditMode = false;
+    // 換人＝換整份資料，舊的日期錨點指到的卡片可能根本不存在了。
+    _scrollAnchors.clear();
 
     if (userId != null) {
       // 有新使用者，重抓資料。
@@ -346,6 +391,139 @@ class RosterProvider with ChangeNotifier {
       _error = '更新失敗:${mapErrorToUserMessage(e)}';
       notifyListeners();
     }
+  }
+
+  /// 服事表上代表「還沒排到人」的佔位字串。
+  ///
+  /// 它是佔位不是人，所以不能跟真名並存 —— 選人的 dialog 也是這樣處理的
+  /// （`_RosterPeopleDialog._toggleSelection`）。
+  static const String placeholderPerson = '待定';
+
+  /// 把 [duty] 裡的 [from] 換成 [to]，其他人與既有順序都不動。
+  ///
+  /// [toId] 是 [to] 在對方那筆 duty 上記的 uid（可能沒有，例如「外請講員」這種
+  /// 名單外的自訂名字）。要一起搬過來，否則推播就找不到這個人了。
+  ///
+  /// 兩個邊界：
+  ///   - 換進來的人本來就在這一天：不要留下兩個同名，直接把重複的那個吃掉。
+  ///     UI 已經先濾掉這種選項，這裡是第二道防線。
+  ///   - 換成「待定」而這一天還有別人：只把 [from] 拿掉，不補佔位符；全空了
+  ///     才補一個回去。
+  @visibleForTesting
+  static RosterEntry replaceDutyPerson(
+    RosterEntry duty,
+    String from,
+    String to, {
+    String? toId,
+  }) {
+    List<String> replaced(List<String> names) {
+      final result = <String>[];
+      for (final name in names) {
+        if (name == from) {
+          if (to != placeholderPerson && !result.contains(to)) result.add(to);
+          continue;
+        }
+        if (name == to || name == placeholderPerson) continue;
+        result.add(name);
+      }
+      return result;
+    }
+
+    // 沒有人的 duty 在 UI 上顯示成一個「待定」（見 _SwapDutyDialog），所以這裡
+    // 也要把空清單當成 ['待定']，否則以待定為交換對象時 from 找不到對應項目，
+    // 換過來的人會直接消失。
+    final currentPeople = duty.people.isEmpty
+        ? const [placeholderPerson]
+        : duty.people;
+
+    final people = replaced(currentPeople);
+    if (people.isEmpty) people.add(placeholderPerson);
+
+    // peopleOrder 是「people 去掉待定」的排列。舊資料（peopleOrder 這個欄位還
+    // 沒有的年代）是空的，這時就照 people 的順序補起來 —— 反正下次有人在
+    // dialog 按儲存也會寫成同一份。
+    final order = duty.peopleOrder.isEmpty
+        ? people.where((name) => name != placeholderPerson).toList()
+        : replaced(duty.peopleOrder);
+
+    final personIdsByName = Map<String, String>.from(duty.personIdsByName)
+      ..remove(from);
+    final trimmedToId = toId?.trim();
+    if (trimmedToId != null && trimmedToId.isNotEmpty && people.contains(to)) {
+      personIdsByName[to] = trimmedToId;
+    }
+    // 名字都不在這一天了，uid 留著只會在下次交換時被誤搬。
+    personIdsByName.removeWhere((name, _) => !people.contains(name));
+
+    return duty.copyWith(
+      people: people,
+      peopleOrder: order,
+      personIdsByName: personIdsByName,
+    );
+  }
+
+  /// 把兩張服事表上同一個服事項目的兩個人對調。
+  ///
+  /// 走 repository 的 batch 而不是兩次 [updateRoster]：交換的兩筆缺一不可，
+  /// 一邊成功一邊失敗會留下一個人被排兩天、另一個人的那天空著，而且畫面上
+  /// 兩邊看起來都換好了。
+  ///
+  /// 失敗往上丟，不吞進 [_error]：呼叫端的 sheet 要就地顯示錯誤讓人留在原地
+  /// 重試，而不是關掉之後在服事表某處看到一行紅字。
+  Future<void> swapDutyPeople({
+    required String sourceRosterId,
+    required int sourceDutyIndex,
+    required String sourcePerson,
+    required String targetRosterId,
+    required int targetDutyIndex,
+    required String targetPerson,
+  }) async {
+    final sourceIndex = _allRosters.indexWhere((r) => r.id == sourceRosterId);
+    final targetIndex = _allRosters.indexWhere((r) => r.id == targetRosterId);
+    if (sourceIndex < 0 || targetIndex < 0) {
+      throw StateError('找不到要交換的服事表，請重新整理後再試');
+    }
+    if (sourceIndex == targetIndex) {
+      throw ArgumentError('同一天的服事不需要交換');
+    }
+
+    final source = _allRosters[sourceIndex];
+    final target = _allRosters[targetIndex];
+    if (sourceDutyIndex < 0 ||
+        sourceDutyIndex >= source.duties.length ||
+        targetDutyIndex < 0 ||
+        targetDutyIndex >= target.duties.length) {
+      throw StateError('服事項目已變動，請重新整理後再試');
+    }
+
+    final sourceDuty = source.duties[sourceDutyIndex];
+    final targetDuty = target.duties[targetDutyIndex];
+
+    final newSourceDuties = List<RosterEntry>.of(source.duties);
+    newSourceDuties[sourceDutyIndex] = replaceDutyPerson(
+      sourceDuty,
+      sourcePerson,
+      targetPerson,
+      toId: targetDuty.personIdsByName[targetPerson],
+    );
+    final newTargetDuties = List<RosterEntry>.of(target.duties);
+    newTargetDuties[targetDutyIndex] = replaceDutyPerson(
+      targetDuty,
+      targetPerson,
+      sourcePerson,
+      toId: sourceDuty.personIdsByName[sourcePerson],
+    );
+
+    final newSource = source.copyWith(duties: newSourceDuties);
+    final newTarget = target.copyWith(duties: newTargetDuties);
+
+    await _repository.updateRostersAtomically([newSource, newTarget]);
+
+    final updated = List<ServiceRoster>.of(_allRosters);
+    updated[sourceIndex] = newSource;
+    updated[targetIndex] = newTarget;
+    _replaceRosters(updated);
+    notifyListeners();
   }
 
   /// Batch-update rosters in parallel. On partial failure we still sync the

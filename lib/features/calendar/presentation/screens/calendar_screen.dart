@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -30,6 +31,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
   static const int _initialMonthPage = 12000;
   static const Duration _monthSwitchDuration = Duration(milliseconds: 260);
   static const double _calendarMainAxisSpacing = 6;
+
+  /// How much of the viewport the outgoing month may still cover while the
+  /// grid collapses onto the shorter month underneath it. Small on purpose:
+  /// the strip that loses its last row is on its way off screen.
+  static const double _rowCollapseWindow = 0.3;
   static final _monthHeaderFormat = DateFormat('yyyy年MM月', 'zh_TW');
 
   late final DateTime _anchorMonth;
@@ -159,7 +165,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildMonthHeader(),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 4),
                           if (_focusedError != null) ...[
                             Text(
                               _focusedError!,
@@ -169,7 +175,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               ),
                             ),
                           ],
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 6),
                           _buildWeekdayHeader(),
                           const SizedBox(height: 8),
                           Expanded(child: _buildMonthPager(canEdit)),
@@ -187,10 +193,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: maxContentWidth),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 16,
-                ),
+                // Tight at the top on purpose: the AppBar already says 行事曆,
+                // so the month header does not need to be pushed away from it.
+                padding: const EdgeInsets.fromLTRB(6, 6, 6, 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -200,12 +205,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildMonthHeader(),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 4),
                             if (_focusedError != null) ...[
                               Text(
                                 _focusedError!,
@@ -215,7 +220,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                 ),
                               ),
                             ],
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 6),
                             _buildWeekdayHeader(),
                             const SizedBox(height: 8),
                             _buildMonthPager(canEdit),
@@ -233,12 +238,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
+  /// Deliberately compact: on a phone a six-week month already runs past the
+  /// bottom of the screen, and the month label only needs to say which month
+  /// you are looking at — it does not need a full IconButton's worth of height
+  /// on either side of it.
   Widget _buildMonthHeader() {
     final text = _monthHeaderFormat.format(_focusedMonth);
     return Row(
       children: [
-        IconButton(
-          icon: const Icon(Icons.chevron_left),
+        _MonthArrow(
+          icon: Icons.chevron_left,
+          tooltip: '上個月',
           onPressed: () => _changeMonth(-1),
         ),
         Expanded(
@@ -247,14 +257,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.6,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.4,
             ),
           ),
         ),
-        IconButton(
-          icon: const Icon(Icons.chevron_right),
+        _MonthArrow(
+          icon: Icons.chevron_right,
+          tooltip: '下個月',
           onPressed: () => _changeMonth(1),
         ),
       ],
@@ -285,6 +296,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget _buildMonthPager(bool canEdit) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        // Cell height is still derived from six rows so a cell is the same
+        // size in every month — only how many rows get drawn changes.
         final cellAspectRatio = _calendarAspectRatioForWidth(
           constraints.maxWidth,
           availableHeight: constraints.hasBoundedHeight
@@ -293,26 +306,92 @@ class _CalendarScreenState extends State<CalendarScreen> {
         );
         final cellWidth = constraints.maxWidth / 7;
         final cellHeight = cellWidth / cellAspectRatio;
-        final gridHeight = (cellHeight * 6) + (_calendarMainAxisSpacing * 5);
 
-        return SizedBox(
-          height: gridHeight,
-          child: PageView.builder(
-            controller: _monthPageController,
-            onPageChanged: _onMonthPageChanged,
-            itemBuilder: (context, index) {
-              final month = _monthFromPage(index);
-              return _buildCalendarGrid(
-                month,
-                cellAspectRatio,
-                cellHeight,
-                canEdit,
-              );
-            },
+        final pager = PageView.builder(
+          controller: _monthPageController,
+          onPageChanged: _onMonthPageChanged,
+          itemBuilder: (context, index) {
+            final month = _monthFromPage(index);
+            return _buildCalendarGrid(
+              month,
+              cellAspectRatio,
+              cellHeight,
+              canEdit,
+            );
+          },
+        );
+
+        // Every page in a PageView is the same height, so the box is driven
+        // straight off the scroll position — see [_gridHeightForPage].
+        return AnimatedBuilder(
+          animation: _monthPageController,
+          builder: (context, child) => SizedBox(
+            height: _gridHeightForPage(cellHeight),
+            child: child,
           ),
+          child: pager,
         );
       },
     );
+  }
+
+  /// The height of the pager for wherever the swipe currently is.
+  ///
+  /// Two months share the box mid-swipe and both have to fit, so the naive
+  /// answer is "as tall as the taller of the two, until the swipe lands".
+  /// That reads as a lag: the height only starts coming down once the page
+  /// animation has already finished, so switching months takes two animations
+  /// end to end rather than one.
+  ///
+  /// Instead the height follows the scroll position and lands exactly when the
+  /// page does — no second animation afterwards. The taller month gets the
+  /// full box for all but the last [_rowCollapseWindow] of its width, eased on
+  /// top of that, so the only thing ever short of a row is a narrow strip at
+  /// the edge of the screen — the tail of the month leaving, or the very first
+  /// sliver of a taller one arriving, which fills in as it comes in.
+  double _gridHeightForPage(double cellHeight) {
+    final page = _monthPageController.hasClients
+        ? (_monthPageController.page ?? _currentMonthPage.toDouble())
+        : _currentMonthPage.toDouble();
+
+    final nearestPage = page.round();
+    final nearestHeight = _gridHeightForRows(
+      _weekRowsForMonth(_monthFromPage(nearestPage)),
+      cellHeight,
+    );
+
+    final distance = (page - nearestPage).abs();
+    if (distance == 0) return nearestHeight;
+
+    final otherHeight = _gridHeightForRows(
+      _weekRowsForMonth(_monthFromPage(page > nearestPage
+          ? nearestPage + 1
+          : nearestPage - 1)),
+      cellHeight,
+    );
+    // The neighbour is the shorter one: it simply has room to spare, and the
+    // month taking over the screen gets its full height immediately.
+    if (otherHeight <= nearestHeight) return nearestHeight;
+
+    final progress =
+        ((_rowCollapseWindow - distance) / _rowCollapseWindow).clamp(0.0, 1.0);
+    return lerpDouble(
+      otherHeight,
+      nearestHeight,
+      Curves.easeInQuad.transform(progress),
+    )!;
+  }
+
+  double _gridHeightForRows(int rows, double cellHeight) =>
+      (cellHeight * rows) + (_calendarMainAxisSpacing * (rows - 1));
+
+  /// How many week rows a month occupies: the blanks before the 1st plus its
+  /// days, rounded up to whole weeks. Four for a February that starts on a
+  /// Sunday, six for a month like 2026/08.
+  static int _weekRowsForMonth(DateTime month) {
+    final startOffset = DateTime(month.year, month.month, 1).weekday % 7;
+    final totalDays = DateUtils.getDaysInMonth(month.year, month.month);
+    return ((startOffset + totalDays) / 7).ceil();
   }
 
   double _calendarAspectRatioForWidth(double width, {double? availableHeight}) {
@@ -353,7 +432,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final totalDays = DateUtils.getDaysInMonth(year, month);
     final startOffset = firstDay.weekday % 7;
     final cellWidth = cellHeight * cellAspectRatio;
-    const totalCells = 42;
+    final totalCells = _weekRowsForMonth(displayedMonth) * 7;
     final eventSegmentsByDay = _buildMonthEventLayout(displayedMonth);
 
     return GridView.builder(
@@ -904,5 +983,32 @@ class _CalendarScreenState extends State<CalendarScreen> {
         });
       }
     }
+  }
+}
+
+/// A month-stepping chevron sized down from the 48px default. The tap target
+/// stays 40x36 — comfortable on a phone — instead of eating the header's height.
+class _MonthArrow extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  const _MonthArrow({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: Icon(icon),
+      iconSize: 22,
+      tooltip: tooltip,
+      padding: EdgeInsets.zero,
+      visualDensity: VisualDensity.compact,
+      constraints: const BoxConstraints(minWidth: 40, minHeight: 36),
+      onPressed: onPressed,
+    );
   }
 }

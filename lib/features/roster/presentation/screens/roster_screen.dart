@@ -9,6 +9,7 @@ import '../providers/roster_provider.dart';
 import '../widgets/roster_view_card.dart';
 import '../../../../core/utils/error_messages.dart';
 import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/utils/scroll_anchor.dart';
 import '../../../../core/utils/snappy_page_scroll_physics.dart';
 import 'roster_edit_screen.dart' deferred as roster_edit_screen;
 
@@ -51,6 +52,8 @@ class _RosterScreenState extends State<RosterScreen>
       });
       final rosterProvider = context.read<RosterProvider>();
       if (!rosterProvider.isEditMode) {
+        // 先記下現在看到哪一天，編輯清單掛好後才換得回來。
+        rosterProvider.captureScrollAnchors();
         rosterProvider.toggleEditMode();
       }
     } catch (error, st) {
@@ -114,6 +117,7 @@ class _RosterScreenState extends State<RosterScreen>
   void _exitEditMode() {
     final rosterProvider = context.read<RosterProvider>();
     if (rosterProvider.isEditMode) {
+      rosterProvider.captureScrollAnchors();
       rosterProvider.toggleEditMode();
     }
     setState(() {});
@@ -260,9 +264,33 @@ class _RosterViewList extends StatefulWidget {
 }
 
 class _RosterViewListState extends State<_RosterViewList>
-    with AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin, ScrollAnchorSupport {
   @override
   bool get wantKeepAlive => true;
+
+  // dispose 期間 context 已經查不到 InheritedWidget，所以進場時就把 provider
+  // 抓在手上，撤銷登記時才有東西可用。
+  late final RosterProvider _provider;
+
+  @override
+  void initState() {
+    super.initState();
+    _provider = context.read<RosterProvider>();
+    _provider.registerScrollAnchorCapture(widget.type, captureScrollAnchor);
+    // 從編輯模式切回來時，把當初頂端那一天挪回原本的位置。
+    final anchor = _provider.scrollAnchorFor(widget.type);
+    if (anchor != null) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => restoreScrollAnchor(anchor),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _provider.unregisterScrollAnchorCapture(widget.type, captureScrollAnchor);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -292,15 +320,20 @@ class _RosterViewListState extends State<_RosterViewList>
         rosterProvider.eventColorFor(widget.type, event);
 
     return ListView.builder(
+      key: anchorListKey,
+      controller: anchorController,
       padding: const EdgeInsets.only(top: 12, bottom: 20),
       itemCount: rosters.length,
       itemBuilder: (context, index) {
         final roster = rosters[index];
-        return RosterViewCard(
+        return ScrollAnchorItem(
           key: ValueKey(roster.id),
-          roster: roster,
-          initiallyExpanded: index == 0,
-          resolveEventColor: resolveEventColor,
+          id: roster.id,
+          child: RosterViewCard(
+            roster: roster,
+            initiallyExpanded: index == 0,
+            resolveEventColor: resolveEventColor,
+          ),
         );
       },
     );

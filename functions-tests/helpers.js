@@ -15,6 +15,9 @@ export const MEMBER_UID = 'member-uid';
 export const CALENDAR_EDITOR_UID = 'calendar-editor-uid';
 /// 只有 roster-editors：用來證明兩個 group 是正交的。
 export const ROSTER_EDITOR_UID = 'roster-editor-uid';
+/// users/{uid} 的 name 欄位，也就是 LINE 通知裡出現的名字。
+export const ADMIN_NAME = '王管理';
+export const CALENDAR_EDITOR_NAME = '李同工';
 
 function base64Url(bytes) {
   let binary = '';
@@ -94,10 +97,14 @@ export function request(method, { token = idToken(ADMIN_UID), body } = {}) {
 /// a test can assert what was actually sent to Google, not just what came back.
 export function fakeFetch({
   users = {
-    [ADMIN_UID]: { role: 'admin' },
-    [MEMBER_UID]: { role: 'member' },
-    [CALENDAR_EDITOR_UID]: { role: 'staff', groups: ['calendar-editors'] },
-    [ROSTER_EDITOR_UID]: { role: 'staff', groups: ['roster-editors'] },
+    [ADMIN_UID]: { role: 'admin', name: ADMIN_NAME },
+    [MEMBER_UID]: { role: 'member', name: '路人' },
+    [CALENDAR_EDITOR_UID]: {
+      role: 'staff',
+      groups: ['calendar-editors'],
+      name: CALENDAR_EDITOR_NAME,
+    },
+    [ROSTER_EDITOR_UID]: { role: 'staff', groups: ['roster-editors'], name: '服事表同工' },
   },
   calendar,
   notify,
@@ -120,6 +127,9 @@ export function fakeFetch({
       if (profile === null) return Response.json({ name: `users/${uid}`, fields: {} });
       const fields = {};
       if (profile.role != null) fields.role = { stringValue: profile.role };
+      // 使用者自己的 name 欄位。文件外層那個 name 是 Firestore 的資源路徑，
+      // 兩者同名但不同層 —— displayName() 讀的是這一個。
+      if (profile.name != null) fields.name = { stringValue: profile.name };
       // Firestore 對空陣列回的是 { arrayValue: {} }，沒有 values —— 照抄真實形狀，
       // 否則 hasCalendarAccess 對空陣列的處理就沒有被測到。
       if (profile.groups != null) {

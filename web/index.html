@@ -126,64 +126,14 @@
 
     window.addEventListener('flutter-first-frame', hideLoadingScreen);
 
-    if ('serviceWorker' in navigator) {
-      // 第一次裝 SW 時，瀏覽器會把 controller 從 null 切到新 SW，
-      // 也會觸發 controllerchange。若無條件 reload，使用者第一次造訪
-      // 就會看到「載入中」兩次（reload 把載入流程打掉重來）。
-      // 只在已經有 controller 時的「升級」情境才 reload。
-      var hadInitialController = !!navigator.serviceWorker.controller;
-      navigator.serviceWorker.addEventListener('controllerchange', function () {
-        if (!hadInitialController) {
-          hadInitialController = true;
-          return;
-        }
-        window.location.reload();
-      });
-
-      // 註冊我們自己的 cache-first SW（Flutter 3.27+ 內建 flutter_service_worker.js
-      // 是自我登出型的，沒有 caching；不再使用）。
-      // SW 升級流程刻意不更動 loading 訊息：每次 deploy cache_sw.js 都
-      // 產生新 bytes，使用者每次 refresh 都會偵測到 updatefound，若每次都
-      // 改文字就會看到「載入中」下方訊息一直跳。讓升級在背景靜默進行，
-      // 直到 controllerchange 才 reload 一次。
-      window.addEventListener('load', function () {
-        navigator.serviceWorker
-          .register('cache_sw.js')
-          .then(function (registration) {
-            registration.update();
-
-            registration.addEventListener('updatefound', function () {
-              const newWorker = registration.installing;
-              if (!newWorker) return;
-
-              newWorker.addEventListener('statechange', function () {
-                // 只在升級情境（已有 controller）才告訴新 SW 跳過 waiting，
-                // 觸發 controllerchange 進而 reload 套用新版。首次安裝
-                // 會自然 activate，無需介入。
-                if (
-                  newWorker.state === 'installed' &&
-                  navigator.serviceWorker.controller
-                ) {
-                  newWorker.postMessage({ type: 'SKIP_WAITING' });
-                }
-              });
-            });
-          })
-          .catch(function (error) {
-            console.error('Cache SW registration failed:', error);
-          });
-
-        // Firebase Cloud Messaging 推播 SW 走自己的 scope。
-        navigator.serviceWorker
-          .register('firebase-messaging-sw.js', {
-            scope: 'firebase-cloud-messaging-push-scope',
-          })
-          .catch(function (error) {
-            console.error('Firebase messaging SW registration failed:', error);
-          });
-      });
-    }
   </script>
+  <!--
+    SW 註冊與換版交接在 app_update.js（刻意獨立成檔：那段程式碼決定裝置能不能
+    換到新版，被舊快取服務就再也救不回來，所以它自己要走 network-first）。
+    升級過程不動上面的「載入中」文字：每次 deploy 都會偵測到更新，訊息一直跳
+    反而吵；靜靜換完，controllerchange 時 reload 一次。
+  -->
+  <script src="app_update.js"></script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

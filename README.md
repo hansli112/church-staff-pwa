@@ -5,7 +5,7 @@
 ## 核心功能
 
 - **集中式儀表板**：快速存取核心工具與關鍵資訊
-- **服事表管理**：管理服事行程與志工安排
+- **服事表管理**：管理服事行程與志工安排，換班可在編輯模式直接交換（兩天一次寫入，不會半途卡住）
 - **模組化設計**：可輕鬆添加新功能（如請假申請、場地預約、公告系統）
 - **PWA 優化**：針對行動裝置進行優化，提供類原生 App 體驗
 - **推播通知**：Firebase Cloud Messaging 整合
@@ -270,9 +270,15 @@ JSON，用 dashboard 的輸入框貼很容易貼壞，所以走 CLI 從檔案直
   "location": "教會 2F",
   "description": "記得帶聖經",
   "link": "https://calendar.google.com/event?eid=evt-timed",
-  "actorUid": "..."
+  "actorUid": "...",
+  "actorName": "王小明"
 }
 ```
+
+`actorName` 是新增者 `users/{uid}` 的 `name`，也就是群組訊息裡那行 `新增者：王小明`；
+權限檢查本來就要讀這份文件，順手多拿一個欄位。舊帳號沒有 `name` 時是 `null`，
+n8n 那端整行不印 —— 名字只影響訊息長什麼樣，不影響能不能新增。`actorUid` 也照
+舊送：名字會改、也可能重複，事後要追是誰做的還是得靠 uid。
 
 **通知失敗不會讓新增失敗**。走到那一步時活動已經寫進 Google 了，回 500 只會
 讓人以為沒建成然後再按一次。失敗只留在 Cloudflare 的 log 裡。通知本身丟給
@@ -434,6 +440,9 @@ dart format lib test         # 格式化代碼
 # 行事曆寫入 API（Pages Functions，無相依套件）
 npm test --prefix functions-tests
 
+# service worker 的快取策略（無相依套件）
+npm test --prefix web-tests
+
 # 構建
 flutter build web --release --base-href /  # 生產構建（不含 dart-define）
 # 詳見上述「生產環境構建」段落，包含完整 dart-define 參數
@@ -474,7 +483,38 @@ flutter analyze
 
 ### PWA 離線功能
 
-Service Worker 由 Flutter 自動管理；確保 `web/manifest.json` 正確配置，並在生產環境啟用 HTTPS。
+Service Worker 是自己的一份：`web/cache_sw.js`。Flutter 3.27+ 內建的那支在
+activate 時會把自己反註冊掉，沒有快取的話每次重新載入都要重抓 `main.dart.js`
+（約 3 MB）與 `canvaskit.wasm`（約 7 MB）。
+
+策略分三層：
+
+| 對象 | 策略 | 快取名 |
+|---|---|---|
+| `/`、`index.html`、`app_update.js`、`manifest.json`、`flutter_bootstrap.js`、`flutter.js` | network-first，快取只當離線 fallback | 綁 build SHA |
+| 其餘同源資產（含 `main.dart.js`、`version.json`） | cache-first | 綁 build SHA |
+| `/canvaskit/` | cache-first，跨 deploy 存活 | 綁 Flutter 版本 |
+| `fonts.gstatic.com` 的中文字型 subset | cache-first，上限 64 筆 | 不綁版本 |
+| Firestore／Auth／FCM／Calendar 等 API | 完全不攔截 | — |
+
+`version.json` **刻意** cache-first：個人頁的「更新於」要回答的是「我手上這個
+App 是哪一版」。放進 network-first 的話，舊 SW 還在服務舊 bundle、卻顯示伺服器
+最新的部署時間，一台裝置到底更新了沒就再也看不出來（實際踩過兩次）。更新偵測
+不靠它，靠的是 SW 的 `updatefound` / `SKIP_WAITING`（見 `web/index.html`）。
+
+換版交接在 `web/app_update.js`：新的 SW 裝好後會停在 `waiting`，要有人送
+`SKIP_WAITING` 才會 activate，activate 觸發 `controllerchange`，那時重載一次就
+換到新 bundle。它自己走 network-first —— 這段程式碼決定裝置能不能換到新版，被
+舊快取服務就再也救不回來。三個時機會去檢查：載入、切回前景（PWA 從多工列切回
+來不算 navigation，瀏覽器不會自己檢查）、以及個人頁的「檢查更新」按鈕。特別注
+意 `registration.waiting`：新版若在上一次造訪就裝好、停在 waiting，這一次載入
+不會再有 `updatefound`，只等那個事件的話裝置就永遠卡在舊版。
+
+`web-tests/` 用 `node:vm` 把 `web/cache_sw.js` 與 `web/app_update.js` 真的跑起
+來、餵假的 `caches` / `fetch` / `navigator.serviceWorker`，逐條驗這張表與上面
+那些時序，CI 會擋部署。
+
+確保 `web/manifest.json` 正確配置，並在生產環境啟用 HTTPS。
 
 ## 貢獻指南
 

@@ -1,3 +1,6 @@
+import 'dart:developer';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -6,10 +9,13 @@ import '../../domain/entities/service_roster.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../../auth/presentation/providers/user_admin_provider.dart';
 import '../providers/roster_provider.dart';
+import '../../../../core/utils/error_messages.dart';
 import '../../../../core/widgets/settings_bottom_sheet.dart';
+import 'duty_row.dart';
 
 part '_roster_people_dialog.dart';
 part '_special_event_dialog.dart';
+part '_swap_duty_dialog.dart';
 
 class RosterCard extends StatelessWidget {
   static final _dateFormat = DateFormat('yyyy/MM/dd (EEEEE)', 'zh_TW');
@@ -251,6 +257,61 @@ class RosterCard extends StatelessWidget {
     }
   }
 
+  /// 開啟交換 sheet。
+  ///
+  /// 候選人只找同一個牧區、同一個服事項目 —— 跨項目的調動（破冰換成敬拜主領）
+  /// 不是交換而是重排，走原本的編輯流程比較不會換到對方沒受訓的項目上。
+  ///
+  /// 已經排在這一天同一個項目裡的人會先濾掉：換過來只會讓同一天出現兩次同名，
+  /// 而且對方那天反而少一個人。
+  Future<void> _showSwapDutyDialog(
+    BuildContext context,
+    int index,
+    RosterEntry duty,
+  ) async {
+    // 從編輯視窗按進來時這張卡片可能已經不在樹上（例如那天被刪掉），
+    // read 之前先問，否則丟的是 ProviderNotFound 而不是安靜地不做事。
+    if (!context.mounted) return;
+    final provider = context.read<RosterProvider>();
+    final role = duty.role.trim();
+    final alreadyHere = duty.people.map((p) => p.trim()).toSet();
+
+    final candidates = <_SwapCandidate>[];
+    for (final other in provider.getRostersByType(roster.type)) {
+      if (other.id == roster.id) continue;
+      for (var i = 0; i < other.duties.length; i++) {
+        final otherDuty = other.duties[i];
+        if (otherDuty.role.trim() != role) continue;
+        final people = otherDuty.people.isEmpty
+            ? const [RosterProvider.placeholderPerson]
+            : otherDuty.people;
+        for (final person in people) {
+          if (alreadyHere.contains(person.trim())) continue;
+          candidates.add(
+            _SwapCandidate(roster: other, dutyIndex: i, person: person),
+          );
+        }
+      }
+    }
+
+    if (!context.mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => _SwapDutyDialog(
+        roster: roster,
+        dutyIndex: index,
+        duty: duty,
+        candidates: candidates,
+      ),
+    );
+  }
+
   Future<void> _showEditDialog(
     BuildContext context,
     int index,
@@ -271,7 +332,9 @@ class RosterCard extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (context) {
+      // 參數改名為 sheetContext，讓底下的 onSwap 明確地閉包在卡片的 context 上
+      // 而不是這張 sheet 的 —— sheet 被 pop 掉之後才輪到 onSwap 執行。
+      builder: (sheetContext) {
         return _RosterPeopleDialog(
           title: '編輯 ${duty.role}',
           rosterType: roster.type,
@@ -287,6 +350,7 @@ class RosterCard extends StatelessWidget {
           submitLabel: '儲存',
           roleEditable: false,
           useBottomSheet: true,
+          onSwap: () => _showSwapDutyDialog(context, index, duty),
         );
       },
     );
@@ -465,36 +529,17 @@ class _RosterCardBody extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 splashColor: colorScheme.primary.withValues(alpha: 0.08),
                 highlightColor: colorScheme.primary.withValues(alpha: 0.04),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 88,
-                      child: Text(
-                        duty.role,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.grey[700],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        duty.people.join('、'),
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                child: DutyRow(
+                  role: duty.role,
+                  people: duty.people,
+                  roleColor: Colors.grey[700],
+                  trailing: [
                     if (isEditMode)
                       IconButton(
                         tooltip: '刪除服事項目',
                         constraints: const BoxConstraints(
-                          minWidth: 48,
-                          minHeight: 48,
+                          minWidth: 44,
+                          minHeight: kDutyRowMinHeight,
                         ),
                         icon: Icon(
                           Icons.delete_outline,

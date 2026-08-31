@@ -50,8 +50,27 @@ jobs:
         run: npm test
         working-directory: functions-tests
 
+  # web/cache_sw.js 決定每個檔案是從快取還是網路拿的，而它跟前端在同一次 pages
+  # deploy 上去 —— 所以跟 functions-tests 一樣擋 build-and-deploy。
+  # 這個 job 存在的理由：version.json 被改成 network-first 過兩次，兩次都讓個人頁
+  # 的「更新於」顯示伺服器的部署時間而不是這台裝置跑的版本，於是「他到底更新了
+  # 沒」變得無法從畫面判斷。壞掉的樣子很安靜，不測就看不出來。
+  # 沒有相依套件，所以不用 npm ci，也就沒有 lockfile 可以 cache。
+  web-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Test the service worker caching rules
+        run: npm test
+        working-directory: web-tests
+
   build-and-deploy:
-    needs: functions-tests
+    needs: [functions-tests, web-tests]
     runs-on: ubuntu-latest
     steps:
       # 1. 檢出程式碼

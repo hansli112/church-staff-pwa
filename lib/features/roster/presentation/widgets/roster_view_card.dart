@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../domain/entities/service_roster.dart';
+import 'duty_row.dart';
 
 class RosterViewCard extends StatelessWidget {
   final ServiceRoster roster;
@@ -100,32 +101,10 @@ class _RosterViewCardBody extends StatelessWidget {
         children: roster.duties.map((duty) {
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: 88,
-                  child: Text(
-                    duty.role,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    duty.people.join('、'),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            // dense：這裡沒有按鈕要撐觸控目標，列高就跟著文字走，一頁多看
+            // 得到幾天。切換模式時的位移是靠錨定日期修的（見 [ScrollAnchor]），
+            // 不必為此把檢視模式撐到跟編輯模式一樣高。
+            child: DutyRow(role: duty.role, people: duty.people, dense: true),
           );
         }).toList(),
       ),

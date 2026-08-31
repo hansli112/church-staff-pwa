@@ -16,7 +16,7 @@ import { notifyN8n, notifyPayload, scheduleNotify } from '../../../worker/line_n
 
 export const onRequestPost = ({ request, env, waitUntil }) =>
   handle(async () => {
-    const uid = await requireEditor(request, env);
+    const actor = await requireEditor(request, env);
     const event = buildGoogleEvent(await readJsonBody(request));
     const response = await callCalendar(env, { method: 'POST', body: event });
     // The raw Google item is returned on purpose: the client parses it with the
@@ -24,6 +24,6 @@ export const onRequestPost = ({ request, env, waitUntil }) =>
     const created = await response.json();
     // 活動已經建好，通知成不成功都不改變這個回應。有 waitUntil 時它在背景跑完，
     // 使用者不必等 LINE。
-    await scheduleNotify(waitUntil, notifyN8n(env, notifyPayload('created', created, uid)));
+    await scheduleNotify(waitUntil, notifyN8n(env, notifyPayload('created', created, actor)));
     return jsonResponse(created, 201);
   });

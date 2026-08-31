@@ -142,12 +142,16 @@ void main() {
       expect(valid.validate(), isNull);
     });
 
-    test('forDay defaults to a single all-day event on that day', () {
+    test('forDay defaults to a timed evening event on that day', () {
       final draft = CalendarEventDraft.forDay(DateTime(2026, 8, 20, 13, 45));
-      expect(draft.allDay, isTrue);
+      expect(draft.allDay, isFalse);
       expect(draft.startDate, DateTime(2026, 8, 20));
       expect(draft.endDate, DateTime(2026, 8, 20));
+      expect(draft.startTime, const TimeOfDay(hour: 19, minute: 0));
+      expect(draft.endTime, const TimeOfDay(hour: 21, minute: 0));
       expect(draft.title, isEmpty);
+      expect(draft.toJson()['start'], '2026-08-20T19:00');
+      expect(draft.toJson()['end'], '2026-08-20T21:00');
     });
 
     // Round-tripping an event through the edit form must not shift its dates.

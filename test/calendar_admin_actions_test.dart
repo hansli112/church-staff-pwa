@@ -364,7 +364,7 @@ void main() {
     expect(find.text('既有活動'), findsNothing);
   });
 
-  testWidgets('the form defaults to an all-day event and sends the title', (
+  testWidgets('the form defaults to a timed event and sends the title', (
     tester,
   ) async {
     final recorder = _Recorder();
@@ -372,9 +372,8 @@ void main() {
     await _openAddForm(tester);
 
     expect(find.text('新增活動'), findsOneWidget);
-    // All-day by default, so no time pickers are on screen to distract from
-    // the one field that has to be filled in.
-    expect(find.byIcon(Icons.schedule), findsNothing);
+    // Timed by default — one time picker for the start, one for the end.
+    expect(find.byIcon(Icons.schedule), findsNWidgets(2));
 
     await tester.enterText(find.byType(TextField).first, '青年小組');
     await tester.tap(find.text('儲存'));
@@ -383,21 +382,26 @@ void main() {
     expect(recorder.requests, hasLength(1));
     expect(recorder.requests.single.method, 'POST');
     expect(recorder.lastBody['title'], '青年小組');
-    expect(recorder.lastBody['allDay'], isTrue);
-    expect(recorder.lastBody['start'], recorder.lastBody['end']);
+    expect(recorder.lastBody['allDay'], isFalse);
+    // Same day, with the default evening window attached.
+    expect(recorder.lastBody['start'], endsWith('T19:00'));
+    expect(recorder.lastBody['end'], endsWith('T21:00'));
+    expect(
+      (recorder.lastBody['start'] as String).split('T').first,
+      (recorder.lastBody['end'] as String).split('T').first,
+    );
   });
 
-  testWidgets('turning off all-day reveals the time pickers', (tester) async {
+  testWidgets('turning on all-day hides the time pickers', (tester) async {
     final recorder = _Recorder();
     await _pumpCalendar(tester, role: UserRole.admin, recorder: recorder);
     await _openAddForm(tester);
 
-    expect(find.byIcon(Icons.schedule), findsNothing);
+    expect(find.byIcon(Icons.schedule), findsNWidgets(2));
     await tester.tap(find.byType(SwitchListTile));
     await tester.pumpAndSettle();
 
-    // One for the start, one for the end.
-    expect(find.byIcon(Icons.schedule), findsNWidgets(2));
+    expect(find.byIcon(Icons.schedule), findsNothing);
   });
 
   testWidgets('an empty title is refused without a round trip', (tester) async {
