@@ -325,10 +325,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         // straight off the scroll position — see [_gridHeightForPage].
         return AnimatedBuilder(
           animation: _monthPageController,
-          builder: (context, child) => SizedBox(
-            height: _gridHeightForPage(cellHeight),
-            child: child,
-          ),
+          builder: (context, child) =>
+              SizedBox(height: _gridHeightForPage(cellHeight), child: child),
           child: pager,
         );
       },
@@ -364,17 +362,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
     if (distance == 0) return nearestHeight;
 
     final otherHeight = _gridHeightForRows(
-      _weekRowsForMonth(_monthFromPage(page > nearestPage
-          ? nearestPage + 1
-          : nearestPage - 1)),
+      _weekRowsForMonth(
+        _monthFromPage(page > nearestPage ? nearestPage + 1 : nearestPage - 1),
+      ),
       cellHeight,
     );
     // The neighbour is the shorter one: it simply has room to spare, and the
     // month taking over the screen gets its full height immediately.
     if (otherHeight <= nearestHeight) return nearestHeight;
 
-    final progress =
-        ((_rowCollapseWindow - distance) / _rowCollapseWindow).clamp(0.0, 1.0);
+    final progress = ((_rowCollapseWindow - distance) / _rowCollapseWindow)
+        .clamp(0.0, 1.0);
     return lerpDouble(
       otherHeight,
       nearestHeight,
@@ -499,6 +497,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       context,
       event,
       onEdit: canEdit ? _editEvent : null,
+      onDuplicate: canEdit ? _duplicateEvent : null,
       onDelete: canEdit ? _deleteEvent : null,
     );
   }
@@ -540,12 +539,30 @@ class _CalendarScreenState extends State<CalendarScreen> {
   // hold the service account credential — see worker/google_calendar.js.
   // ---------------------------------------------------------------------------
 
-  Future<void> _addEvent(DateTime day) async {
+  Future<void> _addEvent(DateTime day) =>
+      _createEvent(heading: '新增活動', initial: CalendarEventDraft.forDay(day));
+
+  /// Same event again, at a different time.
+  ///
+  /// A repeating pattern belongs in a recurring event, but the common case here
+  /// is a handful of runs of the same thing at times that follow no rule — three
+  /// identical rehearsals, say. Retyping the title, location and description for
+  /// each one is where the typos come from, so this opens the *add* form with
+  /// everything already filled in and leaves the user only the time to change.
+  Future<void> _duplicateEvent(CalendarEvent event) => _createEvent(
+    heading: '複製活動',
+    initial: CalendarEventDraft.fromEvent(event),
+  );
+
+  Future<void> _createEvent({
+    required String heading,
+    required CalendarEventDraft initial,
+  }) async {
     if (!mounted) return;
     final saved = await showEventFormSheet(
       context,
-      heading: '新增活動',
-      initial: CalendarEventDraft.forDay(day),
+      heading: heading,
+      initial: initial,
       onSubmit: (draft) async {
         final created = await _writeService.create(draft);
         _applyLocalChange(added: created);

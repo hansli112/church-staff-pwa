@@ -172,7 +172,11 @@ class _EventFormSheetState extends State<_EventFormSheet> {
               const SizedBox(height: 16),
               TextField(
                 controller: _title,
-                autofocus: true,
+                // Only a blank form starts on the keyboard. When the title
+                // arrives filled in — an edit, or a copy whose whole point is
+                // to change the time — the keyboard would open over the
+                // pickers the user came here for.
+                autofocus: widget.initial.title.isEmpty,
                 enabled: !_submitting,
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(

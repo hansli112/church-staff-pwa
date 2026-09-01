@@ -274,9 +274,13 @@ void main() {
 
     expect(find.text('編輯'), findsNothing);
     expect(find.text('刪除'), findsNothing);
+    // 複製 writes a new event, so it is gated exactly like 編輯.
+    expect(find.text('複製'), findsNothing);
   });
 
-  testWidgets('an admin opening an event gets edit and delete', (tester) async {
+  testWidgets('an admin opening an event gets edit, copy and delete', (
+    tester,
+  ) async {
     _seedEventOn15th();
     final recorder = _Recorder();
     await _pumpCalendar(tester, role: UserRole.admin, recorder: recorder);
@@ -287,7 +291,39 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('編輯'), findsOneWidget);
+    expect(find.text('複製'), findsOneWidget);
     expect(find.text('刪除'), findsOneWidget);
+  });
+
+  // The point of the copy: several runs of the same event that differ only in
+  // when they happen. Everything carries over, and it POSTs a new event rather
+  // than touching the one it was copied from.
+  testWidgets('duplicating pre-fills the form and posts a new event', (
+    tester,
+  ) async {
+    _seedEventOn15th();
+    final recorder = _Recorder();
+    await _pumpCalendar(tester, role: UserRole.admin, recorder: recorder);
+
+    await tester.tap(_dayCell(15));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('既有活動').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('複製'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('複製活動'), findsOneWidget);
+    expect(find.widgetWithText(TextField, '既有活動'), findsOneWidget);
+    // The seeded event is all-day, and that carries over too.
+    expect(find.byIcon(Icons.schedule), findsNothing);
+
+    await tester.tap(find.text('儲存'));
+    await tester.pumpAndSettle();
+
+    expect(recorder.requests.single.method, 'POST');
+    expect(recorder.lastBody['title'], '既有活動');
+    expect(recorder.lastBody['allDay'], isTrue);
+    expect(find.text('已新增活動'), findsOneWidget);
   });
 
   testWidgets('editing pre-fills the form and patches by id', (tester) async {

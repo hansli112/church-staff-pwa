@@ -11,12 +11,13 @@ final _timeFormat = DateFormat('HH:mm', 'zh_TW');
 ///
 /// Call via [showEventDetailSheet] which wraps [showModalBottomSheet].
 ///
-/// [onEdit] and [onDelete] are supplied for admins only; without them this is
-/// the read-only view every member sees.
+/// [onEdit], [onDuplicate] and [onDelete] are supplied for admins only; without
+/// them this is the read-only view every member sees.
 Future<void> showEventDetailSheet(
   BuildContext context,
   CalendarEvent event, {
   Future<void> Function(CalendarEvent event)? onEdit,
+  Future<void> Function(CalendarEvent event)? onDuplicate,
   Future<void> Function(CalendarEvent event)? onDelete,
 }) async {
   final colorScheme = Theme.of(context).colorScheme;
@@ -85,35 +86,52 @@ Future<void> showEventDetailSheet(
                   ),
                 ),
               ],
-              if (onEdit != null || onDelete != null) ...[
+              if (onEdit != null ||
+                  onDuplicate != null ||
+                  onDelete != null) ...[
                 const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    if (onDelete != null)
-                      TextButton.icon(
-                        onPressed: () async {
-                          Navigator.of(context).pop();
-                          await onDelete(event);
-                        },
-                        icon: const Icon(Icons.delete_outline, size: 18),
-                        label: const Text('刪除'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: colorScheme.error,
+                // Three actions no longer fit a Row on the narrowest phones,
+                // and a right-aligned Wrap drops the extra one onto a second
+                // line instead of overflowing.
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (onDelete != null)
+                        TextButton.icon(
+                          onPressed: () async {
+                            Navigator.of(context).pop();
+                            await onDelete(event);
+                          },
+                          icon: const Icon(Icons.delete_outline, size: 18),
+                          label: const Text('刪除'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: colorScheme.error,
+                          ),
                         ),
-                      ),
-                    if (onEdit != null) ...[
-                      const SizedBox(width: 8),
-                      FilledButton.icon(
-                        onPressed: () async {
-                          Navigator.of(context).pop();
-                          await onEdit(event);
-                        },
-                        icon: const Icon(Icons.edit_outlined, size: 18),
-                        label: const Text('編輯'),
-                      ),
+                      if (onDuplicate != null)
+                        TextButton.icon(
+                          onPressed: () async {
+                            Navigator.of(context).pop();
+                            await onDuplicate(event);
+                          },
+                          icon: const Icon(Icons.copy_all_outlined, size: 18),
+                          label: const Text('複製'),
+                        ),
+                      if (onEdit != null)
+                        FilledButton.icon(
+                          onPressed: () async {
+                            Navigator.of(context).pop();
+                            await onEdit(event);
+                          },
+                          icon: const Icon(Icons.edit_outlined, size: 18),
+                          label: const Text('編輯'),
+                        ),
                     ],
-                  ],
+                  ),
                 ),
               ],
             ],
