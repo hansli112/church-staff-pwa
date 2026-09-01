@@ -254,7 +254,7 @@ class _EventFormSheetState extends State<_EventFormSheet> {
                 enabled: !_submitting,
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
-                  labelText: '地點（可不填）',
+                  labelText: '地點',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -264,7 +264,7 @@ class _EventFormSheetState extends State<_EventFormSheet> {
                 enabled: !_submitting,
                 maxLines: 3,
                 decoration: const InputDecoration(
-                  labelText: '說明（可不填）',
+                  labelText: '說明',
                   border: OutlineInputBorder(),
                   alignLabelWithHint: true,
                 ),
