@@ -219,7 +219,7 @@ void main() {
     await tester.tap(find.byTooltip('切換至編輯模式'));
     await tester.pumpAndSettle();
 
-    expect(find.text('JSON 匯入'), findsOneWidget, reason: '匯入卡應該看得到');
+    expect(find.text('匯入服事表'), findsOneWidget, reason: '匯入卡應該看得到');
     final listOffset = tester
         .widget<ListView>(find.byType(ListView))
         .controller!

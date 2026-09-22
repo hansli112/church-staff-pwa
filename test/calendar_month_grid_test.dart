@@ -212,5 +212,4 @@ void main() {
     expect(_gridHeight(tester), closeTo(shortHeight, 0.5));
     expect(tester.takeException(), isNull);
   });
-
 }

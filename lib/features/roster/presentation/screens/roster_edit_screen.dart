@@ -283,12 +283,14 @@ class _RosterListState extends State<_RosterList>
       return EmptyState(
         icon: Icons.event_busy_outlined,
         message: '此類別目前沒有服事資訊',
-        hint: isEditMode ? '可使用 JSON 匯入快速建立' : '管理員建立後會在這裡顯示',
+        hint: isEditMode
+            ? (canPickRosterPhotos ? '可以用服事表照片快速建立' : '可貼上 JSON 快速建立')
+            : '管理員建立後會在這裡顯示',
         action: isEditMode
             ? OutlinedButton.icon(
                 onPressed: () => _showImportJsonDialog(context),
-                icon: const Icon(Icons.data_object),
-                label: const Text('JSON 匯入'),
+                icon: const Icon(Icons.upload_file),
+                label: const Text('匯入服事表'),
               )
             : null,
       );
@@ -330,13 +332,12 @@ class _RosterListState extends State<_RosterList>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'JSON 匯入',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+                  Text('匯入服事表', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 4),
                   Text(
-                    '貼上陣列格式，依日期批次填入服事表',
+                    canPickRosterPhotos
+                        ? '用服事表照片辨識，依日期批次填入'
+                        : '貼上陣列格式，依日期批次填入服事表',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -796,7 +797,7 @@ class _ImportJsonSheetState extends State<_ImportJsonSheet> {
   Widget build(BuildContext context) {
     final busy = _isSubmitting || _isConverting;
     return SettingsBottomSheet(
-      title: 'JSON 匯入（${widget.type.label}）',
+      title: '匯入服事表（${widget.type.label}）',
       submitLabel: '匯入',
       isSubmitting: _isSubmitting,
       onSubmit: busy ? null : _submit,

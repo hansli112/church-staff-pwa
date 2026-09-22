@@ -119,9 +119,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
     // 是原始勾選（可能是空的），兩邊都先把佔位符拿掉才比得準。
     const placeholder = '待定';
     final selectedSet = selected.where((n) => n != placeholder).toSet();
-    final initialSet = _initialSelection
-        .where((n) => n != placeholder)
-        .toSet();
+    final initialSet = _initialSelection.where((n) => n != placeholder).toSet();
     if (!setEquals(selectedSet, initialSet)) return true;
     if (widget.initialOrder.isEmpty) return false;
     final order = _buildSelectedOrder(_options, selected);
