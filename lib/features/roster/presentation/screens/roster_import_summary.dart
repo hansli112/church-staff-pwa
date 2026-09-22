@@ -23,6 +23,7 @@ class RosterImportSummary {
     required this.notInRosterNames,
     required this.roleMismatchDetails,
     required this.otherNames,
+    required this.nearMatchSuggestions,
     required this.notInEventCatalog,
   });
 
@@ -34,6 +35,13 @@ class RosterImportSummary {
   final Map<String, List<String>> roleMismatchDetails;
 
   final List<String> otherNames;
+
+  /// 表上原字 → 名單裡跟它只差一個字的那幾位。**只是提示，沒有套用。**
+  ///
+  /// 這裡的名字同時在 [notInRosterNames] 裡（沒有 uid），所以不必另外算進
+  /// [hasIssues] —— 它跟著「名單裡沒有這個人」那一段一起顯示。
+  final Map<String, List<String>> nearMatchSuggestions;
+
   final List<String> notInEventCatalog;
 
   bool get hasIssues =>
@@ -255,7 +263,18 @@ class _RosterImportSummaryDialogState extends State<RosterImportSummaryDialog> {
                   note: '他收不到服事提醒。',
                   children: [
                     for (final name in summary.notInRosterNames)
-                      _PlainRow(text: name),
+                      // 名單裡有很像的就一起列出來。名字是照表上原文寫進去
+                      // 的，沒有自動換成候選那位 —— 還沒建帳號的新同工，
+                      // 名字常常跟某個真人只差一個字，自動換等於把他的服事
+                      // 記到別人頭上。要不要改是管理者看了才知道。
+                      _PlainRow(
+                        text: switch (summary.nearMatchSuggestions[name]) {
+                          null => name,
+                          final similar when similar.isEmpty => name,
+                          final similar =>
+                            '$name（名單裡有很像的：${similar.join('、')}）',
+                        },
+                      ),
                   ],
                 ),
 

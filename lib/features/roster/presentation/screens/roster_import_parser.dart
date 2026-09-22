@@ -39,6 +39,13 @@ class RosterImportParseResult {
   /// Names that matched more than one candidate (ambiguous suffix match).
   final List<String> otherNames;
 
+  /// 表上原字 → 名單裡跟它只差一個字的那幾位。**只是提示，沒有套用。**
+  ///
+  /// 這些名字一律照表上原文寫進服事表，沒有 uid —— 也就是同時會出現在
+  /// [notInRosterNames]。列出候選是為了讓管理者一眼看出「這是不是某位的
+  /// 別寫法」，該不該改由他決定。
+  final Map<String, List<String>> nearMatchSuggestions;
+
   /// Event names that were not found in the supplied catalog.
   final List<String> notInEventCatalog;
 
@@ -53,6 +60,7 @@ class RosterImportParseResult {
     this.roleMismatchNames = const [],
     this.roleMismatchDetails = const {},
     this.otherNames = const [],
+    this.nearMatchSuggestions = const {},
     this.notInEventCatalog = const [],
   });
 
@@ -68,6 +76,7 @@ class RosterImportParseResult {
       roleMismatchNames = const [],
       roleMismatchDetails = const {},
       otherNames = const [],
+      nearMatchSuggestions = const {},
       notInEventCatalog = const [];
 }
 
@@ -79,13 +88,30 @@ class NameMatchResult {
   final NameMatchStatus status;
   final String name;
 
-  const NameMatchResult(this.status, this.name);
-  const NameMatchResult.matched(this.name) : status = NameMatchStatus.matched;
-  const NameMatchResult.notInList(this.name)
+  /// 名單裡跟這個名字只差一個字的那幾位 —— **只是提示，沒有套用**。
+  ///
+  /// 只會跟 [NameMatchStatus.notInList] 一起出現：名字照表上原文寫進服事表，
+  /// uid 一個都不帶，這幾個候選只是列給人看的。
+  ///
+  /// 不自動接回去是量過之後的決定：名單內部互相拼錯一個字時，唯一對到「別的
+  /// 真人」的情況是 0 次；會落進這一層的幾乎都是**還沒有帳號的人**（新同工、
+  /// 外來講員），而他們的名字常常跟某個真人只差一個字（「陳志豪」對上名單裡
+  /// 的「陳志明」）。自動接的話那個人的服事會被記到別人頭上、連上別人的 uid，
+  /// 提醒發給錯的人，而原本那個名字從表上消失。提示看得到就夠了。
+  final List<String> suggestions;
+
+  const NameMatchResult(this.status, this.name, {this.suggestions = const []});
+  const NameMatchResult.matched(this.name)
+    : status = NameMatchStatus.matched,
+      suggestions = const [];
+  const NameMatchResult.notInList(this.name, {this.suggestions = const []})
     : status = NameMatchStatus.notInList;
   const NameMatchResult.roleMismatch(this.name)
-    : status = NameMatchStatus.roleMismatch;
-  const NameMatchResult.other(this.name) : status = NameMatchStatus.other;
+    : status = NameMatchStatus.roleMismatch,
+      suggestions = const [];
+  const NameMatchResult.other(this.name)
+    : status = NameMatchStatus.other,
+      suggestions = const [];
 }
 
 class EventParseOutcome {
@@ -148,6 +174,7 @@ RosterImportParseResult parseRosterImportJson({
   final roleMismatchNames = <String>[];
   final roleMismatchDetails = <String, Set<String>>{};
   final otherNames = <String>[];
+  final nearMatchSuggestions = <String, List<String>>{};
   final notInEventCatalog = <String>[];
 
   for (var i = 0; i < decoded.length; i++) {
@@ -226,6 +253,10 @@ RosterImportParseResult parseRosterImportJson({
               //
               // 首頁的「我的服事」在 uid 對不上時會退回姓名比對，所以名字留著
               // 本人就看得到自己被排到；名字刪掉才是真的把人弄丟。
+              if (result.suggestions.isNotEmpty) {
+                // 名單裡很像的那幾位。名字照原文寫進去了，這只是提示。
+                nearMatchSuggestions[name] = result.suggestions;
+              }
               switch (result.status) {
                 case NameMatchStatus.matched:
                   return result.name;
@@ -332,6 +363,7 @@ RosterImportParseResult parseRosterImportJson({
     roleMismatchNames: uniqueNames(roleMismatchNames),
     roleMismatchDetails: roleMismatchDetails,
     otherNames: uniqueNames(otherNames),
+    nearMatchSuggestions: nearMatchSuggestions,
     notInEventCatalog: notInEventCatalog,
   );
 }
@@ -545,7 +577,60 @@ NameMatchResult resolvePersonName(
   if (matches.length > 1) {
     return NameMatchResult.other(name);
   }
-  return NameMatchResult.notInList(name);
+  // 前兩層都是精確比對，錯一個字就是查無此人 —— 而中文名字的罕用字正是 OCR
+  // 最容易認錯的地方。這一層不改結果，只把名單裡差一個字的那幾位附上去，讓
+  // 管理者自己判斷是不是某位的別寫法。為什麼不自動接，見 [NameMatchResult]
+  // 的 suggestions。
+  return NameMatchResult.notInList(
+    name,
+    suggestions: _nearMatches(name, userNames),
+  );
+}
+
+/// 少於這麼多個字就不給形近字提示。
+///
+/// 一個字的輸入會對上半本名單，那種提示沒有意義。兩個字的照樣比 —— 結果只是
+/// 提示不會套用，所以「小明」順便對上「劉美玉」的代價只是多一行字，而漏掉
+/// 「雅亭」對上「黃雅婷」才是真的可惜。
+const int _minNearMatchRunes = 2;
+
+/// [a] 與 [b] 等長、而且逐位比對剛好只差一個字時回 true。
+///
+/// 位置對位置，不做插入／刪除 —— 形近字是替換，長度不變。改成編輯距離會
+/// 讓「王大明」對上「王大明峰」這種真的不同的名字。
+bool _differsByOneRune(List<int> a, List<int> b) {
+  if (a.length != b.length) return false;
+  var diff = 0;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] == b[i]) continue;
+    diff++;
+    if (diff > 1) return false;
+  }
+  return diff == 1;
+}
+
+/// 名單裡跟 [name] 只差一個字的全名。
+///
+/// 規則刻意收得很緊，因為猜錯的代價是把服事排到另一個真人身上：
+///
+/// - 只准差一個字，而且輸入至少要有 [_minNearMatchRunes] 個字。
+/// - 表上寫的常是去掉姓氏的簡稱，所以比的是名單那位的**同長度尾段**。
+/// - 回傳全部候選，讓呼叫端在「不唯一」時退回「不確定是哪一位」，不挑。
+///
+/// 用 runes 而不是 String 的字元索引：罕用字有些落在 BMP 之外（例如 CJK
+/// 擴充 B 區），那些字在 Dart 的 String 裡是兩個 code unit，逐 code unit
+/// 比會把一個字算成兩個位置。而罕用字正是這一層要救的東西。
+List<String> _nearMatches(String name, List<String> userNames) {
+  final target = name.runes.toList();
+  if (target.length < _minNearMatchRunes) return const [];
+  final matches = <String>[];
+  for (final full in userNames) {
+    final runes = full.runes.toList();
+    if (runes.length < target.length) continue;
+    final tail = runes.sublist(runes.length - target.length);
+    if (_differsByOneRune(target, tail)) matches.add(full);
+  }
+  return matches;
 }
 
 List<String> uniqueNames(List<String> names) {

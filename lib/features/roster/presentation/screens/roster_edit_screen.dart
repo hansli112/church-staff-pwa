@@ -7,6 +7,9 @@ import '../../../auth/presentation/providers/session_provider.dart';
 import '../../../auth/presentation/providers/user_admin_provider.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../../domain/entities/event_option.dart';
+import '../../data/roster_import_service.dart';
+import '../../data/roster_photo.dart';
+import '../../data/roster_photo_picker.dart';
 import '../providers/roster_provider.dart';
 import '../widgets/roster_card.dart';
 import '../../../../core/utils/error_messages.dart';
@@ -14,7 +17,6 @@ import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/utils/scroll_anchor.dart';
 import '../../../../core/utils/snappy_page_scroll_physics.dart';
 import '../../../../core/widgets/settings_bottom_sheet.dart';
-import '../../../../core/widgets/text_controller_scope.dart';
 import 'event_settings_screen.dart' deferred as event_settings_screen;
 import 'role_settings_screen.dart' deferred as role_settings_screen;
 import 'roster_import_parser.dart';
@@ -352,110 +354,34 @@ class _RosterListState extends State<_RosterList>
     );
   }
 
-  Future<void> _showImportJsonDialog(BuildContext context) async {
-    // controller 由 TextControllerScope 在 bottom sheet 子樹卸載時 dispose ——
-    // sheet 的 future 在 pop 當下就完成，那時 TextField 還在退場動畫中。
-    final controller = TextEditingController();
-    String? errorText;
-    bool isSubmitting = false;
+  /// 照片轉 JSON。建一次就好 —— 它沒有狀態，每次開 sheet 都新建一個
+  /// http.Client 只是多開連線池。
+  late final RosterImportService _importService = RosterImportService();
 
-    await showModalBottomSheet(
+  Future<void> _showImportJsonDialog(BuildContext context) async {
+    final result = await showModalBottomSheet<_JsonImportResult>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       useSafeArea: true,
-      builder: (context) {
-        return TextControllerScope(
-          controller: controller,
-          child: StatefulBuilder(
-            builder: (context, setState) {
-              return SettingsBottomSheet(
-                title: 'JSON 匯入（${widget.type.label}）',
-                submitLabel: '匯入',
-                isSubmitting: isSubmitting,
-                onSubmit: isSubmitting
-                    ? null
-                    : () async {
-                        setState(() {
-                          errorText = null;
-                          isSubmitting = true;
-                        });
-                        final result = await _applyJsonImport(
-                          context,
-                          controller.text,
-                        );
-                        if (!context.mounted) return;
-                        if (result.error != null) {
-                          setState(() {
-                            errorText = result.error;
-                            isSubmitting = false;
-                          });
-                          return;
-                        }
-                        Navigator.of(context).pop();
-                        final summary = result.toSummary();
-                        if (summary.hasIssues) {
-                          if (!context.mounted) return;
-                          await _showImportSummaryDialog(context, summary);
-                        } else {
-                          final message = _buildResultMessage(result);
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(
-                            context,
-                          ).showSnackBar(SnackBar(content: Text(message)));
-                        }
-                      },
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: controller,
-                      maxLines: 12,
-                      decoration: InputDecoration(
-                        hintText:
-                            '[\n  {\n    "date": "2026-01-04",\n    "duties": [\n      {"people": ["芳伶"], "role": "敬拜主領"}\n    ],\n    "events": ["聖餐", {"name": "受洗禮", "color": "#F39C12"}]\n  }\n]',
-                        hintStyle: TextStyle(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.35),
-                        ),
-                        border: const OutlineInputBorder(),
-                      ),
-                    ),
-                    if (errorText != null) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        constraints: const BoxConstraints(maxHeight: 160),
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.06),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.redAccent),
-                        ),
-                        child: SingleChildScrollView(
-                          child: SelectableText(
-                            errorText!,
-                            style: const TextStyle(
-                              color: Colors.redAccent,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 8),
-                    const Text(
-                      '格式需為 JSON 陣列，每筆含 date，並至少含 duties 或 events',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        );
-      },
+      builder: (sheetContext) => _ImportJsonSheet(
+        type: widget.type,
+        importService: _importService,
+        onSubmit: (raw) => _applyJsonImport(sheetContext, raw),
+      ),
     );
+    // sheet 自己關掉時才有結果。成功之後的報告留在這裡而不是 sheet 裡：
+    // 匯入結果視窗要活得比 sheet 久，掛在正在退場的那棵子樹上會被一起帶走。
+    if (result == null || !context.mounted) return;
+
+    final summary = result.toSummary();
+    if (summary.hasIssues) {
+      await _showImportSummaryDialog(context, summary);
+      return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(_buildResultMessage(result))));
   }
 
   /// 一切順利時的 snackbar 文字。
@@ -658,6 +584,7 @@ class _RosterListState extends State<_RosterList>
         roleMismatchNames: parsed.roleMismatchNames,
         roleMismatchDetails: normalizedMismatch,
         otherNames: parsed.otherNames,
+        nearMatchSuggestions: parsed.nearMatchSuggestions,
         notInEventCatalog: parsed.notInEventCatalog,
       );
     }
@@ -690,6 +617,7 @@ class _RosterListState extends State<_RosterList>
       roleMismatchNames: parsed.roleMismatchNames,
       roleMismatchDetails: normalizedMismatch,
       otherNames: parsed.otherNames,
+      nearMatchSuggestions: parsed.nearMatchSuggestions,
       notInEventCatalog: parsed.notInEventCatalog,
     );
   }
@@ -728,6 +656,7 @@ class _JsonImportResult {
   final List<String> roleMismatchNames;
   final Map<String, List<String>> roleMismatchDetails;
   final List<String> otherNames;
+  final Map<String, List<String>> nearMatchSuggestions;
   final List<String> notInEventCatalog;
   final String? error;
 
@@ -738,6 +667,7 @@ class _JsonImportResult {
     this.roleMismatchNames = const [],
     this.roleMismatchDetails = const {},
     this.otherNames = const [],
+    this.nearMatchSuggestions = const {},
     this.notInEventCatalog = const [],
     this.error,
   });
@@ -756,6 +686,206 @@ class _JsonImportResult {
         name: roleMismatchDetails[name] ?? const [],
     },
     otherNames: otherNames,
+    nearMatchSuggestions: nearMatchSuggestions,
     notInEventCatalog: notInEventCatalog,
   );
+}
+
+/// 匯入用的 bottom sheet。
+///
+/// 抽成獨立的 widget 而不是留在 `_showImportJsonDialog` 裡的 StatefulBuilder：
+/// 那個函式長到兩百行，而其中真正屬於畫面的狀態有四個（錯誤、送出中、辨識中、
+/// JSON 欄位開合），全靠閉包變數撐著。有了 State 之後 controller 也能自己
+/// dispose —— dispose 是在退場動畫結束後才跑的，不會像 sheet 的 future 那樣
+/// 在 pop 當下就把 TextField 底下的東西抽掉。
+class _ImportJsonSheet extends StatefulWidget {
+  const _ImportJsonSheet({
+    required this.type,
+    required this.importService,
+    required this.onSubmit,
+  });
+
+  final ServiceType type;
+  final RosterImportService importService;
+
+  /// 真正寫進 Firestore 的那一步。留在畫面外面是因為它要用到 provider 與
+  /// 服事表樣板，那些是 screen 的事，不是這張 sheet 的。
+  final Future<_JsonImportResult> Function(String raw) onSubmit;
+
+  @override
+  State<_ImportJsonSheet> createState() => _ImportJsonSheetState();
+}
+
+class _ImportJsonSheetState extends State<_ImportJsonSheet> {
+  final TextEditingController _controller = TextEditingController();
+  String? _errorText;
+  bool _isSubmitting = false;
+  bool _isConverting = false;
+
+  /// 有照片辨識可用時，貼 JSON 是備援而不是主要動作 —— 預設收起來。
+  /// 辨識完會自動展開，因為那時它變成「看一眼再匯入」的地方。
+  bool _showJsonField = !canPickRosterPhotos;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _convertFromPhotos() async {
+    setState(() => _errorText = null);
+    final List<RosterPhoto> photos;
+    try {
+      photos = await pickRosterPhotos();
+    } on RosterPhotoException catch (e) {
+      if (mounted) setState(() => _errorText = e.message);
+      return;
+    }
+    // 使用者按了取消。那不是錯誤，什麼都不做。
+    if (photos.isEmpty || !mounted) return;
+
+    setState(() => _isConverting = true);
+    try {
+      final json = await widget.importService.convert(
+        type: widget.type,
+        photos: photos,
+      );
+      if (!mounted) return;
+      _controller.text = json;
+      setState(() {
+        _isConverting = false;
+        _showJsonField = true;
+      });
+    } on RosterImportException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isConverting = false;
+        _errorText = e.message;
+      });
+    }
+  }
+
+  Future<void> _submit() async {
+    // 空白時 parser 只會說「請貼上 JSON 內容」，但這個畫面上根本沒有可以貼的
+    // 地方（文字框收著）—— 要講得出下一步在哪。
+    if (_controller.text.trim().isEmpty && canPickRosterPhotos) {
+      setState(() {
+        _errorText = '請先從照片辨識，或展開下面自己貼 JSON';
+        _showJsonField = true;
+      });
+      return;
+    }
+
+    setState(() {
+      _errorText = null;
+      _isSubmitting = true;
+    });
+    final result = await widget.onSubmit(_controller.text);
+    if (!mounted) return;
+    if (result.error != null) {
+      setState(() {
+        _errorText = result.error;
+        _isSubmitting = false;
+      });
+      return;
+    }
+    Navigator.of(context).pop(result);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final busy = _isSubmitting || _isConverting;
+    return SettingsBottomSheet(
+      title: 'JSON 匯入（${widget.type.label}）',
+      submitLabel: '匯入',
+      isSubmitting: _isSubmitting,
+      onSubmit: busy ? null : _submit,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 辨識結果填回下面那個文字框，不直接匯入：看一眼再按匯入是這個流程
+          // 唯一的把關，而按下匯入走的還是跟手動貼上完全一樣的那條路。
+          if (canPickRosterPhotos) ...[
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.tonalIcon(
+                onPressed: busy ? null : _convertFromPhotos,
+                icon: _isConverting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.photo_camera_outlined, size: 18),
+                label: Text(_isConverting ? '辨識中…' : '從照片辨識'),
+              ),
+            ),
+            const SizedBox(height: 4),
+            // 收合的理由不是版面好看，是這條路平常用不到：Gemini 掛掉、額度
+            // 用完、模型下架時，從別處轉好再貼進來是唯一還走得通的路，所以它
+            // 要在，但不該擋在前面。
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: _isSubmitting
+                    ? null
+                    : () => setState(() => _showJsonField = !_showJsonField),
+                icon: Icon(
+                  _showJsonField
+                      ? Icons.keyboard_arrow_down
+                      : Icons.keyboard_arrow_right,
+                  size: 18,
+                ),
+                label: const Text('自己貼 JSON'),
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+            ),
+          ],
+          if (_showJsonField)
+            TextField(
+              controller: _controller,
+              maxLines: 12,
+              decoration: InputDecoration(
+                hintText:
+                    '[\n  {\n    "date": "2026-01-04",\n    "duties": [\n      {"people": ["待定"], "role": "敬拜主領"}\n    ],\n    "events": ["聖餐", {"name": "受洗禮", "color": "#F39C12"}]\n  }\n]',
+                hintStyle: TextStyle(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.35),
+                ),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+          if (_errorText != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              constraints: const BoxConstraints(maxHeight: 160),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.redAccent),
+              ),
+              child: SingleChildScrollView(
+                child: SelectableText(
+                  _errorText!,
+                  style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Text(
+            canPickRosterPhotos
+                ? '可以直接選服事表照片辨識，或自己貼上 JSON。'
+                      '格式需為陣列，每筆含 date，並至少含 duties 或 events'
+                : '格式需為 JSON 陣列，每筆含 date，並至少含 duties 或 events',
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
 }

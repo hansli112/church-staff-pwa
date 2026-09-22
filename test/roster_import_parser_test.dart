@@ -468,6 +468,117 @@ void main() {
   });
 
   // ══════════════════════════════════════════════════════════════════════════
+  // 形近字提示 — 名單裡誰跟這個名字很像，只提示不套用
+  //
+  // 刻意不自動接回去。拿真實名單量過：名單內部互相拼錯一個字時，唯一對到
+  // 「別的真人」的次數是 0；而會落進這一層的幾乎都是**還沒建帳號的人**
+  // （新同工、外來講員），他們的名字常常跟某個真人只差一個字。自動接的話
+  // 那個人的服事會被記到別人頭上、連上別人的 uid，提醒發給錯的人，原本那個
+  // 名字還會從表上消失。改動這一層前先看這一組。
+  // ══════════════════════════════════════════════════════════════════════════
+
+  group('形近字提示', () {
+    const db = ['陳志明', '黃雅婷', '林淑芸', '陳佳蓉', '李小華'];
+    const allowed = {
+      '司琴': {'陳志明', '黃雅婷', '林淑芸', '陳佳蓉', '李小華'},
+    };
+    const ids = {'陳志明': 'uid-ziqian', '李小華': 'uid-xiaohua'};
+
+    RosterImportParseResult run(String people) => _parse(
+      '[{"date":"2026-01-04","duties":[{"role":"司琴","people":$people}]}]',
+      candidates: db,
+      allowedByRole: allowed,
+      nameToId: ids,
+    );
+
+    RosterEntry dutyOf(RosterImportParseResult r) =>
+        r.dutiesByDate['2026-01-04']!.single;
+
+    test('沒建帳號的人不會被接到名單上那個很像的人身上', () {
+      // 陳志豪還沒有帳號，名單裡有陳志明 —— 只差最後一個字。
+      final r = run('["陳志豪"]');
+      expect(dutyOf(r).people, ['陳志豪'], reason: '名字照表上原文寫進去，不可以換成陳志明');
+      expect(
+        dutyOf(r).personIdsByName,
+        isEmpty,
+        reason: '帶上陳志明的 uid 等於把服事記到他頭上，提醒也發給他',
+      );
+      expect(r.notInRosterNames, ['陳志豪']);
+      expect(r.nearMatchSuggestions, {
+        '陳志豪': ['陳志明'],
+      }, reason: '提示還是要給，管理者才知道可能是誰');
+    });
+
+    test('很像的有好幾位就全部列出來，不挑', () {
+      // 佳芸：跟「陳佳蓉」的梓吻合、跟「林淑芸」的妤吻合，兩邊都只差一個字。
+      final r = run('["佳芸"]');
+      expect(dutyOf(r).people, ['佳芸']);
+      expect(r.nearMatchSuggestions['佳芸'], unorderedEquals(['陳佳蓉', '林淑芸']));
+    });
+
+    test('兩個字的寫法也給提示', () {
+      // 「伃」在表上被寫成「仔」。提示不會套用，所以吵一點無所謂，
+      // 漏掉才可惜 —— 這種只能靠人看到之後加進綽號對照。
+      final r = run('["雅亭"]');
+      expect(dutyOf(r).people, ['雅亭']);
+      expect(r.nearMatchSuggestions['雅亭'], ['黃雅婷']);
+    });
+
+    test('一個字不比對（會對上半本名單）', () {
+      // 「揚」不是名單裡任何人的結尾，所以前兩層都不會接走。
+      final r = run('["揚"]');
+      expect(r.notInRosterNames, ['揚']);
+      expect(r.nearMatchSuggestions, isEmpty);
+    });
+
+    test('差兩個字不給提示', () {
+      final r = run('["王小揚"]');
+      expect(r.notInRosterNames, ['王小揚']);
+      expect(r.nearMatchSuggestions, isEmpty);
+    });
+
+    test('長度不一樣不給提示 —— 那是插入或刪除，不是認錯字', () {
+      final r = run('["陳志明明"]');
+      expect(r.notInRosterNames, ['陳志明明']);
+      expect(r.nearMatchSuggestions, isEmpty);
+    });
+
+    test('名單裡完全沒有像的就不給提示，也不留空清單', () {
+      final r = run('["阿寶"]');
+      expect(r.notInRosterNames, ['阿寶']);
+      expect(r.nearMatchSuggestions, isEmpty);
+    });
+
+    test('全等時不進提示，也不算對不到', () {
+      final r = run('["陳志明"]');
+      expect(dutyOf(r).people, ['陳志明']);
+      expect(dutyOf(r).personIdsByName['陳志明'], 'uid-ziqian');
+      expect(r.notInRosterNames, isEmpty);
+      expect(r.nearMatchSuggestions, isEmpty);
+    });
+
+    test('後綴對得上時不進提示', () {
+      final r = run('["小華"]');
+      expect(dutyOf(r).people, ['李小華']);
+      expect(dutyOf(r).personIdsByName['李小華'], 'uid-xiaohua');
+      expect(r.nearMatchSuggestions, isEmpty);
+    });
+
+    test('「待定」不會被拿去比對', () {
+      final r = run('["待定"]');
+      expect(dutyOf(r).people, ['待定']);
+      expect(r.nearMatchSuggestions, isEmpty);
+    });
+
+    test('同一格有人對得上、有人對不上時，兩個都留著', () {
+      final r = run('["李小華","陳志豪"]');
+      expect(dutyOf(r).people, ['李小華', '陳志豪']);
+      expect(dutyOf(r).personIdsByName, {'李小華': 'uid-xiaohua'});
+      expect(r.nearMatchSuggestions['陳志豪'], ['陳志明']);
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
   // orderDutiesByTemplate — 匯入後的排序規格
   //
   // 規格是「一律照樣板排」，JSON 自己的順序不算數。這一組就是這條規則的

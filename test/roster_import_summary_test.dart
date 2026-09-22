@@ -101,6 +101,7 @@ void main() {
       List<String> notInRoster = const [],
       Map<String, List<String>> mismatch = const {},
       List<String> other = const [],
+      Map<String, List<String>> nearMatched = const {},
       List<String> notInCatalog = const [],
     }) => RosterImportSummary(
       updated: 3,
@@ -108,6 +109,7 @@ void main() {
       notInRosterNames: notInRoster,
       roleMismatchDetails: mismatch,
       otherNames: other,
+      nearMatchSuggestions: nearMatched,
       notInEventCatalog: notInCatalog,
     );
 
@@ -117,7 +119,7 @@ void main() {
 
     test('任何一類非空都為 true', () {
       expect(summary(missingDates: ['2026-01-04']).hasIssues, isTrue);
-      expect(summary(notInRoster: ['郁苹']).hasIssues, isTrue);
+      expect(summary(notInRoster: ['雅婷']).hasIssues, isTrue);
       expect(
         summary(
           mismatch: {
@@ -126,8 +128,32 @@ void main() {
         ).hasIssues,
         isTrue,
       );
-      expect(summary(other: ['家訓']).hasIssues, isTrue);
+      expect(summary(other: ['志明']).hasIssues, isTrue);
       expect(summary(notInCatalog: ['遇火重生營會']).hasIssues, isTrue);
+    });
+
+    // 提示本身不是一類問題 —— 有提示就一定有「名單裡沒有這個人」，那一類才是
+    // 開視窗的理由。提示自己也算一類的話，同一件事會被算兩次。
+    test('只有形近字提示、沒有對不到的人時，不算問題', () {
+      expect(
+        summary(
+          nearMatched: {
+            '陳志豪': ['陳志明'],
+          },
+        ).hasIssues,
+        isFalse,
+      );
+    });
+
+    test('提示跟著「名單裡沒有這個人」一起出現時照樣算問題', () {
+      final s = summary(
+        notInRoster: ['陳志豪'],
+        nearMatched: {
+          '陳志豪': ['陳志明'],
+        },
+      );
+      expect(s.hasIssues, isTrue);
+      expect(s.hasUnmatchedNames, isTrue);
     });
   });
 
@@ -163,6 +189,7 @@ void main() {
         '王大明': ['招待'],
       },
       otherNames: [],
+      nearMatchSuggestions: {},
       notInEventCatalog: [],
     );
 
@@ -218,6 +245,7 @@ void main() {
             '李小華': ['司琴', '領詩'],
           },
           otherNames: [],
+          nearMatchSuggestions: {},
           notInEventCatalog: [],
         ),
         onAddMinistry: (name, roles) async => calls.add(roles),
@@ -255,6 +283,7 @@ void main() {
             '李小華': ['司琴', '領詩'],
           },
           otherNames: [],
+          nearMatchSuggestions: {},
           notInEventCatalog: [],
         ),
         onAddMinistry: (name, roles) async {
@@ -302,6 +331,7 @@ void main() {
             '李小華': ['司琴', '領詩'],
           },
           otherNames: [],
+          nearMatchSuggestions: {},
           notInEventCatalog: [],
         ),
         onAddMinistry: (name, roles) async {
@@ -348,15 +378,16 @@ void main() {
         const RosterImportSummary(
           updated: 13,
           missingDates: [],
-          notInRosterNames: ['郁苹'],
+          notInRosterNames: ['雅婷'],
           roleMismatchDetails: {},
-          otherNames: ['家訓'],
+          otherNames: ['志明'],
+          nearMatchSuggestions: {},
           notInEventCatalog: [],
         ),
       );
 
-      expect(find.text('・郁苹'), findsOneWidget);
-      expect(find.text('・家訓'), findsOneWidget);
+      expect(find.text('・雅婷'), findsOneWidget);
+      expect(find.text('・志明'), findsOneWidget);
       expect(find.text('新增服事至同工'), findsNothing);
     });
 
@@ -369,6 +400,7 @@ void main() {
           notInRosterNames: [],
           roleMismatchDetails: {'王大明': []},
           otherNames: [],
+          nearMatchSuggestions: {},
           notInEventCatalog: [],
         ),
       );
@@ -384,11 +416,12 @@ void main() {
         const RosterImportSummary(
           updated: 13,
           missingDates: [],
-          notInRosterNames: ['郁苹'],
+          notInRosterNames: ['雅婷'],
           roleMismatchDetails: {
             '王大明': ['招待'],
           },
-          otherNames: ['家訓'],
+          otherNames: ['志明'],
+          nearMatchSuggestions: {},
           notInEventCatalog: [],
         ),
       );
@@ -404,11 +437,12 @@ void main() {
         const RosterImportSummary(
           updated: 13,
           missingDates: ['2026-10-03'],
-          notInRosterNames: ['郁苹'],
+          notInRosterNames: ['雅婷'],
           roleMismatchDetails: {
             '王大明': ['招待'],
           },
-          otherNames: ['家訓'],
+          otherNames: ['志明'],
+          nearMatchSuggestions: {},
           notInEventCatalog: ['遇火重生營會'],
         ),
       );
@@ -427,6 +461,60 @@ void main() {
       }
     });
 
+    testWidgets('名單裡有很像的，附在那個名字後面，但沒有換掉它', (tester) async {
+      // 陳志豪還沒建帳號，而名單裡有陳志明 —— 只差最後一個字。自動換過去
+      // 等於把他的服事記到陳志明頭上、連上陳志明的 uid，提醒發給錯的人。
+      await pump(
+        tester,
+        const RosterImportSummary(
+          updated: 13,
+          missingDates: [],
+          notInRosterNames: ['陳志豪'],
+          roleMismatchDetails: {},
+          otherNames: [],
+          nearMatchSuggestions: {
+            '陳志豪': ['陳志明'],
+          },
+          notInEventCatalog: [],
+        ),
+      );
+      expect(find.text('・陳志豪（名單裡有很像的：陳志明）'), findsOneWidget);
+    });
+
+    testWidgets('很像的有好幾位就全部列出來，不挑一個', (tester) async {
+      await pump(
+        tester,
+        const RosterImportSummary(
+          updated: 13,
+          missingDates: [],
+          notInRosterNames: ['佳芸'],
+          roleMismatchDetails: {},
+          otherNames: [],
+          nearMatchSuggestions: {
+            '佳芸': ['陳佳蓉', '林淑芸'],
+          },
+          notInEventCatalog: [],
+        ),
+      );
+      expect(find.text('・佳芸（名單裡有很像的：陳佳蓉、林淑芸）'), findsOneWidget);
+    });
+
+    testWidgets('沒有很像的就只列名字，不留一個空括號', (tester) async {
+      await pump(
+        tester,
+        const RosterImportSummary(
+          updated: 13,
+          missingDates: [],
+          notInRosterNames: ['阿寶'],
+          roleMismatchDetails: {},
+          otherNames: [],
+          nearMatchSuggestions: {'阿寶': []},
+          notInEventCatalog: [],
+        ),
+      );
+      expect(find.text('・阿寶'), findsOneWidget);
+    });
+
     /// 完整比對整句，不用 textContaining 抓片段。
     ///
     /// 這條原本寫成 `find.textContaining('下面的人')`，但畫面上的字是
@@ -443,6 +531,7 @@ void main() {
           notInRosterNames: [],
           roleMismatchDetails: {},
           otherNames: [],
+          nearMatchSuggestions: {},
           notInEventCatalog: ['遇火重生營會'],
         ),
       );
@@ -460,6 +549,7 @@ void main() {
           notInRosterNames: ['陳訪客'],
           roleMismatchDetails: {},
           otherNames: [],
+          nearMatchSuggestions: {},
           notInEventCatalog: [],
         ),
       );
@@ -476,6 +566,7 @@ void main() {
           notInRosterNames: ['陳訪客'],
           roleMismatchDetails: {},
           otherNames: [],
+          nearMatchSuggestions: {},
           notInEventCatalog: [],
         ),
       );
@@ -492,6 +583,7 @@ void main() {
           notInRosterNames: [],
           roleMismatchDetails: {},
           otherNames: ['大明'],
+          nearMatchSuggestions: {},
           notInEventCatalog: [],
         ),
       );
@@ -531,6 +623,7 @@ void main() {
             '李小華': ['司琴', '領詩'],
           },
           otherNames: [],
+          nearMatchSuggestions: {},
           notInEventCatalog: [],
         ),
         onAddMinistry: (name, roles) {
@@ -562,11 +655,12 @@ void main() {
         const RosterImportSummary(
           updated: 13,
           missingDates: ['2026-10-03'],
-          notInRosterNames: ['郁苹'],
+          notInRosterNames: ['雅婷'],
           roleMismatchDetails: {
             '王大明': ['招待'],
           },
-          otherNames: ['家訓'],
+          otherNames: ['志明'],
+          nearMatchSuggestions: {},
           notInEventCatalog: ['遇火重生營會'],
         ),
       );
