@@ -159,8 +159,8 @@ void main() {
   group('replaceDutyPerson', () {
     test('換掉指定的人，其他人與順序不動', () {
       final result = RosterProvider.replaceDutyPerson(
-        _duty(['芳伶', '小明'], ids: {'芳伶': 'uid-fang', '小明': 'uid-ming'}),
-        '芳伶',
+        _duty(['美玉', '小明'], ids: {'美玉': 'uid-fang', '小明': 'uid-ming'}),
+        '美玉',
         '志豪',
         toId: 'uid-hao',
       );
@@ -172,8 +172,8 @@ void main() {
 
     test('換成待定：這一天還有別人時不補佔位符', () {
       final result = RosterProvider.replaceDutyPerson(
-        _duty(['芳伶', '小明']),
-        '芳伶',
+        _duty(['美玉', '小明']),
+        '美玉',
         '待定',
       );
 
@@ -183,8 +183,8 @@ void main() {
 
     test('換成待定：全空了才補回佔位符', () {
       final result = RosterProvider.replaceDutyPerson(
-        _duty(['芳伶'], ids: {'芳伶': 'uid-fang'}),
-        '芳伶',
+        _duty(['美玉'], ids: {'美玉': 'uid-fang'}),
+        '美玉',
         '待定',
       );
 
@@ -198,19 +198,19 @@ void main() {
       final result = RosterProvider.replaceDutyPerson(
         _duty(['待定']),
         '待定',
-        '芳伶',
+        '美玉',
         toId: 'uid-fang',
       );
 
-      expect(result.people, ['芳伶']);
-      expect(result.peopleOrder, ['芳伶']);
-      expect(result.personIdsByName, {'芳伶': 'uid-fang'});
+      expect(result.people, ['美玉']);
+      expect(result.peopleOrder, ['美玉']);
+      expect(result.personIdsByName, {'美玉': 'uid-fang'});
     });
 
     test('換進來的人本來就在這一天：不留下兩個同名', () {
       final result = RosterProvider.replaceDutyPerson(
-        _duty(['芳伶', '小明']),
-        '芳伶',
+        _duty(['美玉', '小明']),
+        '美玉',
         '小明',
       );
 
@@ -224,18 +224,18 @@ void main() {
       final result = RosterProvider.replaceDutyPerson(
         RosterEntry(role: '破冰', people: const []),
         '待定',
-        '芳伶',
+        '美玉',
         toId: 'uid-fang',
       );
 
-      expect(result.people, ['芳伶']);
-      expect(result.peopleOrder, ['芳伶']);
-      expect(result.personIdsByName, {'芳伶': 'uid-fang'});
+      expect(result.people, ['美玉']);
+      expect(result.peopleOrder, ['美玉']);
+      expect(result.personIdsByName, {'美玉': 'uid-fang'});
     });
 
     test('舊資料沒有 peopleOrder 時，照 people 的順序補起來', () {
-      final duty = RosterEntry(role: '破冰', people: ['芳伶', '小明']);
-      final result = RosterProvider.replaceDutyPerson(duty, '芳伶', '志豪');
+      final duty = RosterEntry(role: '破冰', people: ['美玉', '小明']);
+      final result = RosterProvider.replaceDutyPerson(duty, '美玉', '志豪');
 
       expect(result.people, ['志豪', '小明']);
       expect(result.peopleOrder, ['志豪', '小明']);
@@ -250,7 +250,7 @@ void main() {
             id: 'a',
             day: 4,
             duties: [
-              _duty(['芳伶'], ids: {'芳伶': 'uid-fang'}),
+              _duty(['美玉'], ids: {'美玉': 'uid-fang'}),
             ],
           ),
           _roster(
@@ -267,7 +267,7 @@ void main() {
       await provider.swapDutyPeople(
         sourceRosterId: 'a',
         sourceDutyIndex: 0,
-        sourcePerson: '芳伶',
+        sourcePerson: '美玉',
         targetRosterId: 'b',
         targetDutyIndex: 0,
         targetPerson: '小明',
@@ -279,8 +279,8 @@ void main() {
 
       expect(_dutyOf(provider, 'a').people, ['小明']);
       expect(_dutyOf(provider, 'a').personIdsByName, {'小明': 'uid-ming'});
-      expect(_dutyOf(provider, 'b').people, ['芳伶']);
-      expect(_dutyOf(provider, 'b').personIdsByName, {'芳伶': 'uid-fang'});
+      expect(_dutyOf(provider, 'b').people, ['美玉']);
+      expect(_dutyOf(provider, 'b').personIdsByName, {'美玉': 'uid-fang'});
     });
 
     test('rosters 換成新的 instance，衍生快取才會失效', () async {
@@ -290,7 +290,7 @@ void main() {
             id: 'a',
             day: 4,
             duties: [
-              _duty(['芳伶']),
+              _duty(['美玉']),
             ],
           ),
           _roster(
@@ -308,7 +308,7 @@ void main() {
       await provider.swapDutyPeople(
         sourceRosterId: 'a',
         sourceDutyIndex: 0,
-        sourcePerson: '芳伶',
+        sourcePerson: '美玉',
         targetRosterId: 'b',
         targetDutyIndex: 0,
         targetPerson: '小明',
@@ -326,7 +326,7 @@ void main() {
             id: 'a',
             day: 4,
             duties: [
-              _duty(['芳伶']),
+              _duty(['美玉']),
             ],
           ),
           _roster(
@@ -344,7 +344,7 @@ void main() {
         provider.swapDutyPeople(
           sourceRosterId: 'a',
           sourceDutyIndex: 0,
-          sourcePerson: '芳伶',
+          sourcePerson: '美玉',
           targetRosterId: 'b',
           targetDutyIndex: 0,
           targetPerson: '小明',
@@ -352,7 +352,7 @@ void main() {
         throwsA(isA<Exception>()),
       );
 
-      expect(_dutyOf(provider, 'a').people, ['芳伶']);
+      expect(_dutyOf(provider, 'a').people, ['美玉']);
       expect(_dutyOf(provider, 'b').people, ['小明']);
       // 交換失敗不該把服事表整個標成錯誤 —— 錯誤由 sheet 就地顯示。
       expect(provider.error, isNull);
@@ -365,7 +365,7 @@ void main() {
             id: 'a',
             day: 4,
             duties: [
-              _duty(['芳伶']),
+              _duty(['美玉']),
             ],
           ),
         ],
@@ -376,7 +376,7 @@ void main() {
         provider.swapDutyPeople(
           sourceRosterId: 'a',
           sourceDutyIndex: 0,
-          sourcePerson: '芳伶',
+          sourcePerson: '美玉',
           targetRosterId: 'missing',
           targetDutyIndex: 0,
           targetPerson: '小明',
@@ -393,7 +393,7 @@ void main() {
             id: 'a',
             day: 4,
             duties: [
-              _duty(['芳伶']),
+              _duty(['美玉']),
             ],
           ),
           _roster(
@@ -411,7 +411,7 @@ void main() {
         provider.swapDutyPeople(
           sourceRosterId: 'a',
           sourceDutyIndex: 0,
-          sourcePerson: '芳伶',
+          sourcePerson: '美玉',
           targetRosterId: 'b',
           targetDutyIndex: 5,
           targetPerson: '小明',
@@ -498,7 +498,7 @@ void main() {
             id: 'a',
             day: 4,
             duties: [
-              _duty(['芳伶']),
+              _duty(['美玉']),
             ],
           ),
           _roster(
@@ -536,7 +536,7 @@ void main() {
             id: 'a',
             day: 4,
             duties: [
-              _duty(['芳伶', '小明']),
+              _duty(['美玉', '小明']),
             ],
           ),
           _roster(
@@ -567,14 +567,14 @@ void main() {
             id: 'a',
             day: 4,
             duties: [
-              _duty(['芳伶']),
+              _duty(['美玉']),
             ],
           ),
           _roster(
             id: 'b',
             day: 11,
             duties: [
-              _duty(['芳伶', '阿德']),
+              _duty(['美玉', '阿德']),
             ],
           ),
         ],
@@ -583,7 +583,7 @@ void main() {
 
       await openSwapSheet(tester);
 
-      // 拿 1/4 的芳伶去換 1/11 的阿德：芳伶已經在 1/11 了，換完那天只剩芳伶
+      // 拿 1/4 的美玉去換 1/11 的阿德：美玉已經在 1/11 了，換完那天只剩美玉
       // 一個人。
       expect(find.text('01/11 (日)'), findsNothing);
       expect(find.text('其他日期沒有可以交換的「破冰」'), findsOneWidget);
@@ -596,7 +596,7 @@ void main() {
             id: 'a',
             day: 4,
             duties: [
-              _duty(['芳伶', '小明']),
+              _duty(['美玉', '小明']),
             ],
           ),
           _roster(
@@ -612,7 +612,7 @@ void main() {
 
       await openSwapSheet(tester);
 
-      // 預設要換的是芳伶，她不在 1/11，所以阿德可以選。
+      // 預設要換的是美玉，她不在 1/11，所以阿德可以選。
       expect(find.text('01/11 (日)'), findsOneWidget);
 
       // 改成換小明 —— 他已經在 1/11 了，同一個選項就不能再出現。
@@ -630,7 +630,7 @@ void main() {
             id: 'a',
             day: 4,
             duties: [
-              _duty(['芳伶', '小明']),
+              _duty(['美玉', '小明']),
             ],
           ),
           _roster(
@@ -656,7 +656,7 @@ void main() {
       await tester.tap(find.text('01/18 (日)'));
       await tester.pumpAndSettle();
       expect(
-        find.textContaining('01/04 (日) 芳伶'),
+        find.textContaining('01/04 (日) 美玉'),
         findsOneWidget,
         reason: '選好之後有預覽',
       );
@@ -680,7 +680,7 @@ void main() {
             id: 'a',
             day: 4,
             duties: [
-              _duty(['芳伶']),
+              _duty(['美玉']),
             ],
           ),
           _roster(
@@ -697,7 +697,7 @@ void main() {
       await tester.tap(find.text('破冰'));
       await tester.pumpAndSettle();
       // 勾掉原本的人 —— 這就是還沒存的改動。
-      await tester.tap(find.widgetWithText(CheckboxListTile, '芳伶'));
+      await tester.tap(find.widgetWithText(CheckboxListTile, '美玉'));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('與其他日期交換'));
@@ -727,7 +727,7 @@ void main() {
             id: 'a',
             day: 4,
             duties: [
-              _duty(['芳伶']),
+              _duty(['美玉']),
             ],
           ),
           _roster(
@@ -783,7 +783,7 @@ void main() {
             id: 'a',
             day: 4,
             duties: [
-              _duty(['芳伶']),
+              _duty(['美玉']),
             ],
           ),
           _roster(

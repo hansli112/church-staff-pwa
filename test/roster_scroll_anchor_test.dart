@@ -66,8 +66,9 @@ class _FakeRosterRepository implements RosterRepository {
   @override
   Future<void> updateRostersAtomically(List<ServiceRoster> rosters) async {}
   @override
-  Future<Map<ServiceType, List<String>>> getServiceTemplates() async =>
-      const {ServiceType.sundayService: ['敬拜主領', '司琴', '招待']};
+  Future<Map<ServiceType, List<String>>> getServiceTemplates() async => const {
+    ServiceType.sundayService: ['敬拜主領', '司琴', '招待'],
+  };
   @override
   Future<void> updateServiceTemplates(
     Map<ServiceType, List<String>> templates,
@@ -89,7 +90,7 @@ List<ServiceRoster> _buildRosters(int count) => List.generate(
     type: ServiceType.sundayService,
     serviceName: '主日崇拜',
     duties: [
-      RosterEntry(role: '敬拜主領', people: const ['芳伶']),
+      RosterEntry(role: '敬拜主領', people: const ['美玉']),
       RosterEntry(role: '司琴', people: const ['王小明', '李大華']),
       RosterEntry(role: '招待', people: const ['陳美麗']),
     ],
