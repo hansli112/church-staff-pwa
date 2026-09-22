@@ -26,23 +26,8 @@ import {
   notifyingEnv,
   request,
   testEnv,
+  withFetch,
 } from './helpers.js';
-
-/// The route handlers use the global fetch, so that is what gets swapped. This
-/// keeps the tests exercising the real wiring instead of a hand-passed seam the
-/// production code never uses.
-/// Must await before restoring: returning the pending promise from inside the
-/// try would put the real fetch back while the handler is still mid-flight, and
-/// the test would quietly talk to Google over the network.
-async function withFetch(impl, fn) {
-  const original = globalThis.fetch;
-  globalThis.fetch = impl;
-  try {
-    return await fn();
-  } finally {
-    globalThis.fetch = original;
-  }
-}
 
 beforeEach(() => resetAccessTokenCache());
 

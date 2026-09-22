@@ -80,8 +80,25 @@ export async function notifyingEnv(overrides = {}) {
   });
 }
 
-export function request(method, { token = idToken(ADMIN_UID), body } = {}) {
-  return new Request('https://app.example/api/calendar/events', {
+/// 換掉全域 fetch 跑一段，跑完一定換回來。
+///
+/// **一定要先 await 再還原**：從 try 裡把還沒完成的 promise 直接回傳出去，會
+/// 在 handler 還在飛的時候就把真的 fetch 裝回去，測試就默默地連上 Google 了。
+export async function withFetch(impl, fn) {
+  const original = globalThis.fetch;
+  globalThis.fetch = impl;
+  try {
+    return await fn();
+  } finally {
+    globalThis.fetch = original;
+  }
+}
+
+export function request(
+  method,
+  { token = idToken(ADMIN_UID), body, path = '/api/calendar/events' } = {},
+) {
+  return new Request(`https://app.example${path}`, {
     method,
     headers: {
       ...(token === null ? {} : { Authorization: `Bearer ${token}` }),
