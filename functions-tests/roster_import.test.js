@@ -522,6 +522,23 @@ describe('callGemini — 上游的各種回法', () => {
     }
   });
 
+  test('等太久是逾時，不是「連不上」', async () => {
+    // 真的 fetch 被 abort 時就是這樣：帶著 signal 的請求 reject。
+    const hang = (url, init) =>
+      new Promise((_, reject) => {
+        init.signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+      });
+    const restore = muteConsoleError();
+    try {
+      await assert.rejects(
+        () => callGemini(ENV, { prompt: 'x', images, fetchImpl: hang, timeoutMs: 5 }),
+        { status: 504, message: '辨識太久了，請把照片裁到只剩表格再試' },
+      );
+    } finally {
+      restore();
+    }
+  });
+
   test('沒設 GEMINI_API_KEY 就不會送出任何東西', async () => {
     const impl = fakeFetch();
     const restore = muteConsoleError();
@@ -567,11 +584,11 @@ describe('extractJson', () => {
   });
 
   // 截斷的輸出是最容易誤會的一種失敗：看起來像模型壞了，其實是表太大。
-  test('輸出被長度截斷時叫人分兩張拍', () => {
+  test('輸出被長度截斷時叫人裁成兩半分兩次', () => {
     const restore = muteConsoleError();
     try {
       assert.throws(() => extractJson({ candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [] } }] }), {
-        message: '服事表太大，請分成兩張照片再試',
+        message: '服事表太大，請把照片裁成上下兩半，分兩次辨識',
       });
     } finally {
       restore();

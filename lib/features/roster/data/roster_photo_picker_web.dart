@@ -9,23 +9,31 @@ import 'roster_photo.dart';
 
 const bool canPickRosterPhotos = true;
 
-/// 開一個檔案選擇器拿服事表照片。
+/// 開一個檔案選擇器拿一張服事表照片。
 ///
 /// 沒有用 image_picker 之類的套件：這是 PWA，`<input type="file">` 在手機上
 /// 本來就會跳出「相機／相簿」，多一個相依只是多一層。
-Future<List<RosterPhoto>> pickRosterPhotos() async {
+Future<RosterPhoto?> pickRosterPhoto() async {
   final input = web.HTMLInputElement()
     ..type = 'file'
     // accept 用 image/* 而不是列副檔名：手機相機拍出來的可能是 HEIC，
     // 列舉一定會漏。真正的把關在 worker 那邊。
-    ..accept = 'image/*'
-    ..multiple = true;
+    ..accept = 'image/*';
+  // 一定要掛進 DOM。沒掛上去的 input 在手機瀏覽器（iOS Safari、Android 開
+  // 相機時）常常不發 change，或在使用者選照片的期間就被回收 —— 症狀是選完
+  // 照片什麼都沒發生，沒有錯誤也沒有轉圈。
+  input.style
+    ..position = 'fixed'
+    ..left = '-10000px'
+    ..opacity = '0';
+  web.document.body?.append(input);
 
-  final completer = Completer<List<RosterPhoto>>();
+  final completer = Completer<RosterPhoto?>();
 
   input.onchange = (web.Event _) {
     if (completer.isCompleted) return;
-    completer.complete(_readAll(input.files));
+    final file = input.files?.item(0);
+    completer.complete(file == null ? null : _read(file));
   }.toJS;
 
   // 使用者按取消時瀏覽器只會發 cancel，不會發 change。沒有接這個事件的話
@@ -33,28 +41,16 @@ Future<List<RosterPhoto>> pickRosterPhotos() async {
   input.addEventListener(
     'cancel',
     (web.Event _) {
-      if (!completer.isCompleted) completer.complete(const []);
+      if (!completer.isCompleted) completer.complete(null);
     }.toJS,
   );
 
   input.click();
-  return completer.future;
-}
-
-Future<List<RosterPhoto>> _readAll(web.FileList? files) async {
-  final length = files?.length ?? 0;
-  if (files == null || length == 0) return const [];
-  if (length > maxRosterPhotos) {
-    throw RosterPhotoException('一次最多 $maxRosterPhotos 張照片');
+  try {
+    return await completer.future;
+  } finally {
+    input.remove();
   }
-
-  final photos = <RosterPhoto>[];
-  for (var i = 0; i < length; i++) {
-    final file = files.item(i);
-    if (file == null) continue;
-    photos.add(await _read(file));
-  }
-  return photos;
 }
 
 Future<RosterPhoto> _read(web.File file) async {

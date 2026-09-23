@@ -25,9 +25,9 @@ typedef IdTokenProvider = Future<String?> Function();
 /// `parseRosterImportJson` —— 跟手動貼上完全同一條路。辨識只是省掉打字，
 /// 不是另一條匯入流程。
 class RosterImportService {
-  /// 一張密密麻麻的服事表模型要跑一陣子。worker 那邊給上游 60 秒，這裡要留
+  /// 一張密密麻麻的服事表模型要跑一陣子。worker 那邊給上游 100 秒，這裡要留
   /// 得比它寬，否則使用者會先看到「逾時」，而那邊其實正要成功。
-  static const Duration _timeout = Duration(seconds: 90);
+  static const Duration _timeout = Duration(seconds: 130);
 
   final http.Client _client;
   final IdTokenProvider _idToken;
@@ -71,7 +71,7 @@ class RosterImportService {
       final streamed = await _client.send(request).timeout(_timeout);
       response = await http.Response.fromStream(streamed).timeout(_timeout);
     } on TimeoutException {
-      throw const RosterImportException('辨識逾時了。照片太大的話可以先縮小，或分成兩張再試');
+      throw const RosterImportException('辨識逾時了。請把照片裁到只剩表格，或裁成上下兩半分兩次辨識');
     } catch (_) {
       throw const RosterImportException('連線失敗，請檢查網路後再試一次');
     }

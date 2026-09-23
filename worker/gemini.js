@@ -20,10 +20,11 @@ const API_BASE = 'https://generativelanguage.googleapis.com/v1';
 /// way tomorrow.
 const DEFAULT_MODEL = 'gemini-3.6-flash';
 
-/// A dense roster table takes Gemini a while. The calendar calls use 10s; that
-/// is far too short here and would turn every successful conversion into a
-/// timeout.
-const UPSTREAM_TIMEOUT_MS = 60000;
+/// A dense roster table takes Gemini a while: a real quarter's table measured
+/// 52-68s, almost all of it generating ~3300 output tokens (lowering the
+/// thinking level did not help). The calendar calls use 10s; 60s was the first
+/// guess here and sat right on top of the measured times.
+const UPSTREAM_TIMEOUT_MS = 100000;
 
 /// One retry, then give up. 503 on this endpoint is usually a brief spike, but
 /// the caller is watching a spinner after already uploading a photo — a long
@@ -34,7 +35,7 @@ const MAX_OUTPUT_TOKENS = 16384;
 
 export async function callGemini(
   env,
-  { prompt, images, fetchImpl = fetch, retryDelayMs = RETRY_DELAY_MS },
+  { prompt, images, fetchImpl = fetch, retryDelayMs = RETRY_DELAY_MS, timeoutMs = UPSTREAM_TIMEOUT_MS },
 ) {
   const key = requireEnv(env, 'GEMINI_API_KEY');
   const model = (env?.GEMINI_MODEL ?? '').trim() || DEFAULT_MODEL;
@@ -60,10 +61,10 @@ export async function callGemini(
     },
   };
 
-  let response = await post(fetchImpl, model, key, body);
+  let response = await post(fetchImpl, model, key, body, timeoutMs);
   if (response.status === 503 || response.status === 429) {
     await sleep(retryDelayMs);
-    response = await post(fetchImpl, model, key, body);
+    response = await post(fetchImpl, model, key, body, timeoutMs);
   }
 
   if (!response.ok) {
@@ -105,7 +106,7 @@ export function extractJson(payload) {
     const reason = candidate.finishReason ?? 'unknown';
     console.error('gemini returned empty text', reason);
     if (reason === 'MAX_TOKENS') {
-      throw new HttpError(502, '服事表太大，請分成兩張照片再試');
+      throw new HttpError(502, '服事表太大，請把照片裁成上下兩半，分兩次辨識');
     }
     throw new HttpError(502, '辨識沒有產生結果，請換一張照片再試');
   }
@@ -134,10 +135,10 @@ function stripFence(text) {
   return fenced ? fenced[1].trim() : text;
 }
 
-async function post(fetchImpl, model, key, body) {
+async function post(fetchImpl, model, key, body, timeoutMs) {
   const url = `${API_BASE}/models/${encodeURIComponent(model)}:generateContent`;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetchImpl(url, {
       method: 'POST',
@@ -152,6 +153,12 @@ async function post(fetchImpl, model, key, body) {
     });
   } catch (error) {
     if (error instanceof HttpError) throw error;
+    if (controller.signal.aborted) {
+      // Our own timeout, not a network failure: "cannot connect" would send
+      // the caller checking their Wi-Fi when the fix is a smaller photo.
+      console.error('gemini request timed out', model, timeoutMs);
+      throw new HttpError(504, '辨識太久了，請把照片裁到只剩表格再試');
+    }
     console.error('gemini request failed', error);
     throw new HttpError(502, '無法連上辨識服務，請稍後再試');
   } finally {

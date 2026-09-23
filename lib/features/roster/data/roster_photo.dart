@@ -23,10 +23,6 @@ class RosterPhotoException implements Exception {
   String toString() => message;
 }
 
-/// 一次最多幾張。跟 functions/api/roster/import-image.js 的 MAX_IMAGES 一致 ——
-/// 兩邊都擋是因為這一邊擋得比較快，而那一邊才擋得住。
-const int maxRosterPhotos = 3;
-
 /// 單張上限，跟 worker 的 MAX_IMAGE_BYTES 一致。
 ///
 /// 在這裡先擋是為了讓使用者立刻知道，而不是等整張照片上傳完才收到 413。

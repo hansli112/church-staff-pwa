@@ -733,23 +733,26 @@ class _ImportJsonSheetState extends State<_ImportJsonSheet> {
     super.dispose();
   }
 
-  Future<void> _convertFromPhotos() async {
+  Future<void> _convertFromPhoto() async {
     setState(() => _errorText = null);
-    final List<RosterPhoto> photos;
+    final RosterPhoto? photo;
     try {
-      photos = await pickRosterPhotos();
+      photo = await pickRosterPhoto();
     } on RosterPhotoException catch (e) {
       if (mounted) setState(() => _errorText = e.message);
       return;
+    } catch (e, st) {
+      _reportUnexpected(e, st);
+      return;
     }
     // 使用者按了取消。那不是錯誤，什麼都不做。
-    if (photos.isEmpty || !mounted) return;
+    if (photo == null || !mounted) return;
 
     setState(() => _isConverting = true);
     try {
       final json = await widget.importService.convert(
         type: widget.type,
-        photos: photos,
+        photos: [photo],
       );
       if (!mounted) return;
       _controller.text = json;
@@ -763,7 +766,21 @@ class _ImportJsonSheetState extends State<_ImportJsonSheet> {
         _isConverting = false;
         _errorText = e.message;
       });
+    } catch (e, st) {
+      _reportUnexpected(e, st);
     }
+  }
+
+  /// 預期外的失敗（讀檔、拿登入 token 之類）也要讓畫面有反應。只接自己
+  /// 定義的例外的話，其他錯誤會被 async 吞掉 —— 使用者看到的就是「選完照片
+  /// 什麼都沒有」，連轉圈都沒有。
+  void _reportUnexpected(Object error, StackTrace stackTrace) {
+    debugPrint('roster photo import failed: $error\n$stackTrace');
+    if (!mounted) return;
+    setState(() {
+      _isConverting = false;
+      _errorText = '辨識失敗：$error';
+    });
   }
 
   Future<void> _submit() async {
@@ -810,7 +827,7 @@ class _ImportJsonSheetState extends State<_ImportJsonSheet> {
             SizedBox(
               width: double.infinity,
               child: FilledButton.tonalIcon(
-                onPressed: busy ? null : _convertFromPhotos,
+                onPressed: busy ? null : _convertFromPhoto,
                 icon: _isConverting
                     ? const SizedBox(
                         width: 16,

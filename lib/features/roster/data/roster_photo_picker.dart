@@ -9,5 +9,5 @@ import 'roster_photo_picker_stub.dart'
 /// 按下去必定失敗的按鈕比不給還糟。UI 靠這個決定要不要畫那顆按鈕。
 bool get canPickRosterPhotos => impl.canPickRosterPhotos;
 
-/// 開啟檔案選擇器。使用者取消就回空清單，不是丟例外 —— 取消不是錯誤。
-Future<List<RosterPhoto>> pickRosterPhotos() => impl.pickRosterPhotos();
+/// 開啟檔案選擇器選一張照片。使用者取消就回 null，不是丟例外 —— 取消不是錯誤。
+Future<RosterPhoto?> pickRosterPhoto() => impl.pickRosterPhoto();
