@@ -723,6 +723,12 @@ class _ImportJsonSheetState extends State<_ImportJsonSheet> {
   bool _isSubmitting = false;
   bool _isConverting = false;
 
+  /// 選照片的那段時間也要算「忙碌」。只在辨識開始後才鎖按鈕的話，iPhone 上
+  /// 一次點擊偶爾會觸發兩次，第二個選擇器排在第一個後面，選完一張又跳出一個。
+  /// 用欄位而不是 setState 判斷：第二次觸發跟第一次在同一個 frame 內，等不到
+  /// 重建按鈕就已經進來了。
+  bool _isPicking = false;
+
   /// 有照片辨識可用時，貼 JSON 是備援而不是主要動作 —— 預設收起來。
   /// 辨識完會自動展開，因為那時它變成「看一眼再匯入」的地方。
   bool _showJsonField = !canPickRosterPhotos;
@@ -734,6 +740,8 @@ class _ImportJsonSheetState extends State<_ImportJsonSheet> {
   }
 
   Future<void> _convertFromPhoto() async {
+    if (_isPicking || _isConverting) return;
+    _isPicking = true;
     setState(() => _errorText = null);
     final RosterPhoto? photo;
     try {
@@ -744,6 +752,8 @@ class _ImportJsonSheetState extends State<_ImportJsonSheet> {
     } catch (e, st) {
       _reportUnexpected(e, st);
       return;
+    } finally {
+      _isPicking = false;
     }
     // 使用者按了取消。那不是錯誤，什麼都不做。
     if (photo == null || !mounted) return;

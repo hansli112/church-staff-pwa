@@ -26,21 +26,40 @@ const DEFAULT_MODEL = 'gemini-3.6-flash';
 /// guess here and sat right on top of the measured times.
 const UPSTREAM_TIMEOUT_MS = 100000;
 
-/// Waits before each retry of a 503. Two retries, not one: on 2026-09-23 the
-/// model answered 503 twice in a row and succeeded on the third try, and a
-/// single retry would have sent the person back to press the button. A 503
-/// comes back fast, so the whole chain costs seconds on top of a conversion
-/// that takes a minute anyway.
+/// Waits before each retry of a 503, and when to stop starting new attempts.
+///
+/// On the free tier a 503 ("This model is currently experiencing high demand")
+/// is not a rare spike. On 2026-09-23 every flash model answered photo requests
+/// with 503 for stretches, while the same model answered a one-line text
+/// prompt at once. What got through was patience: the local script, backing
+/// off 5s/15s/40s, succeeded where the worker's one quick retry gave up.
+///
+/// A 503 comes back in 5-40s; a success takes 50-70s. So retries continue
+/// while there is still time for one full conversion to finish inside what the
+/// app waits (190s, see RosterImportService), and not after.
+///
+/// Falling back to a lite model was measured and rejected: both lite models
+/// answered in 15s and put the wrong person on ~50 duties of one quarter —
+/// the kind of error nobody spots before pressing import.
 ///
 /// 429 is not retried at all. The daily quota does not come back in seconds,
-/// and the per-minute one does not come back in two.
-const RETRY_DELAYS_MS = [2000, 5000];
+/// and the per-minute one does not come back in the few seconds waited here.
+const RETRY_DELAYS_MS = [2000, 5000, 10000, 15000, 20000];
+const LAST_ATTEMPT_START_MS = 75000;
 
 const MAX_OUTPUT_TOKENS = 16384;
 
 export async function callGemini(
   env,
-  { prompt, images, fetchImpl = fetch, retryDelaysMs = RETRY_DELAYS_MS, timeoutMs = UPSTREAM_TIMEOUT_MS },
+  {
+    prompt,
+    images,
+    fetchImpl = fetch,
+    retryDelaysMs = RETRY_DELAYS_MS,
+    lastAttemptStartMs = LAST_ATTEMPT_START_MS,
+    timeoutMs = UPSTREAM_TIMEOUT_MS,
+    now = Date.now,
+  },
 ) {
   const key = requireEnv(env, 'GEMINI_API_KEY');
   const model = (env?.GEMINI_MODEL ?? '').trim() || DEFAULT_MODEL;
@@ -66,9 +85,11 @@ export async function callGemini(
     },
   };
 
+  const started = now();
   let response = await post(fetchImpl, model, key, body, timeoutMs);
   for (const delay of retryDelaysMs) {
     if (response.status !== 503) break;
+    if (now() - started + delay > lastAttemptStartMs) break;
     await sleep(delay);
     response = await post(fetchImpl, model, key, body, timeoutMs);
   }
@@ -78,7 +99,9 @@ export async function callGemini(
     // past where a log line would be cut. Only the log is truncated.
     const detail = await safeText(response);
     console.error('gemini call failed', model, response.status, detail.slice(0, 500));
-    if (response.status === 503) throw new HttpError(503, '辨識服務忙碌中，請稍後再試一次');
+    if (response.status === 503) {
+      throw new HttpError(503, 'Gemini 免費版現在太多人用，過幾分鐘再試一次');
+    }
     if (response.status === 429) throw new HttpError(429, quotaMessage(detail));
     if (response.status === 404) {
       // The operator changed GEMINI_MODEL to something that does not exist, or

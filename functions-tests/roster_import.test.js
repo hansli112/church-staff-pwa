@@ -523,7 +523,7 @@ describe('callGemini — 上游的各種回法', () => {
       prompt: PUBLISHED_TEMPLATE,
       images,
       fetchImpl: impl,
-      // 正式環境會等 2 秒、5 秒；測試不必真的等。
+      // 正式環境會一路等 2 到 20 秒；測試不必真的等。
       retryDelaysMs: [0, 0],
     });
   }
@@ -538,12 +538,41 @@ describe('callGemini — 上游的各種回法', () => {
             attempts += 1;
             return new Response('busy', { status: 503 });
           }),
-        { status: 503, message: '辨識服務忙碌中，請稍後再試一次' },
+        { status: 503, message: 'Gemini 免費版現在太多人用，過幾分鐘再試一次' },
       );
     } finally {
       restore();
     }
     assert.equal(attempts, 3, '一次原始呼叫加兩次重試');
+  });
+
+  test('時間快用完就不再開始新的一次', async () => {
+    // 一次成功要一分鐘左右；太晚才開始的那一次，app 等不到它回來。
+    let clock = 0;
+    let attempts = 0;
+    const restore = muteConsoleError();
+    try {
+      await assert.rejects(
+        () =>
+          callGemini(ENV, {
+            prompt: 'x',
+            images,
+            retryDelaysMs: [0, 0, 0, 0],
+            lastAttemptStartMs: 75000,
+            now: () => clock,
+            fetchImpl: async () => {
+              attempts += 1;
+              clock += 30000; // 每次 503 都拖 30 秒
+              return new Response('busy', { status: 503 });
+            },
+          }),
+        { status: 503 },
+      );
+    } finally {
+      restore();
+    }
+    // 0 秒、30 秒、60 秒各開始一次；第 90 秒已經超過 75 秒，不再開始。
+    assert.equal(attempts, 3);
   });
 
   test('連兩次 503、第三次成功就當作成功', async () => {

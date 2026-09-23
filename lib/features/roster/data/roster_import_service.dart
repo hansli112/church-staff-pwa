@@ -25,9 +25,11 @@ typedef IdTokenProvider = Future<String?> Function();
 /// `parseRosterImportJson` —— 跟手動貼上完全同一條路。辨識只是省掉打字，
 /// 不是另一條匯入流程。
 class RosterImportService {
-  /// 一張密密麻麻的服事表模型要跑一陣子。worker 那邊給上游 100 秒，這裡要留
-  /// 得比它寬，否則使用者會先看到「逾時」，而那邊其實正要成功。
-  static const Duration _timeout = Duration(seconds: 130);
+  /// 一張密密麻麻的服事表模型要跑一陣子，而免費版忙碌時 worker 還會重試。
+  /// worker 最晚在第 75 秒開始最後一次、那一次最多給 100 秒（見
+  /// worker/gemini.js），這裡要留得比 175 秒寬，否則使用者會先看到「逾時」，
+  /// 而那邊其實正要成功。
+  static const Duration _timeout = Duration(seconds: 190);
 
   final http.Client _client;
   final IdTokenProvider _idToken;

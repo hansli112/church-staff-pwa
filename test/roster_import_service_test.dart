@@ -32,12 +32,12 @@ void main() {
     test('API 自己寫的訊息原樣顯示，不加狀態碼', () async {
       final message = await _errorFor(
         http.Response(
-          jsonEncode({'error': '辨識服務忙碌中，請稍後再試一次'}),
+          jsonEncode({'error': 'Gemini 免費版現在太多人用，過幾分鐘再試一次'}),
           503,
           headers: {'content-type': 'application/json; charset=utf-8'},
         ),
       );
-      expect(message, '辨識服務忙碌中，請稍後再試一次');
+      expect(message, 'Gemini 免費版現在太多人用，過幾分鐘再試一次');
     });
 
     test('不是 API 產生的回應會帶上狀態碼，跟上面那句分得出來', () async {
@@ -46,7 +46,7 @@ void main() {
         http.Response('<html>Worker exceeded resource limits</html>', 503),
       );
       expect(message, contains('（503）'));
-      expect(message, isNot('辨識服務忙碌中，請稍後再試一次'));
+      expect(message, isNot('Gemini 免費版現在太多人用，過幾分鐘再試一次'));
     });
   });
 
