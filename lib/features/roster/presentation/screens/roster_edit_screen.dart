@@ -490,7 +490,7 @@ class _RosterListState extends State<_RosterList>
     }
 
     try {
-      await rosterProvider.updateRosters(ready.updates);
+      await rosterProvider.applyRosterImport(widget.type, ready);
     } catch (e, st) {
       log('匯入過程寫入 Firestore 失敗', error: e, stackTrace: st);
       String msg;
@@ -505,7 +505,9 @@ class _RosterListState extends State<_RosterList>
             '${e.successCount} 筆已寫入、${e.failureCount} 筆失敗。'
             '失敗日期：$failedDates。請重新整理確認狀態後重試';
       } else {
-        msg = mapErrorToUserMessage(e);
+        // 服事表那一步失敗一律是 PartialUpdateException，走到這裡的是更早
+        // 的同工排序那一步 —— 服事表一張都還沒寫。
+        msg = '${mapErrorToUserMessage(e)}。服事表沒有動，可以直接重試';
       }
       return _JsonImportResult.failed('匯入過程寫入失敗：$msg');
     }

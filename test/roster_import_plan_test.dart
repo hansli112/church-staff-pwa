@@ -334,6 +334,70 @@ void main() {
     expect(offenders, isEmpty);
   });
 
+  group('同工排序', () {
+    test('照圖片上的先後學，只帶活動的日期不算', () {
+      final ready = _ready(
+        _plan(
+          [
+            {
+              'date': '2026-10-03',
+              'duties': [
+                {
+                  'role': '司琴',
+                  'people': ['郭子謙', '林書安'],
+                },
+              ],
+            },
+            // 只帶活動：那天的服事還是舊的（林書安在前），不能拿來學。
+            {
+              'date': '2026-10-10',
+              'events': ['聖餐'],
+            },
+          ],
+          rosters: [
+            _roster('2026-10-03'),
+            _roster(
+              '2026-10-10',
+              duties: [
+                RosterEntry(role: '司琴', people: ['林書安', '郭子謙']),
+              ],
+            ),
+          ],
+        ),
+      );
+      expect(ready.staffOrder.rankingOf('司琴'), ['郭子謙', '林書安']);
+    });
+
+    test('名單外的人不進排序', () {
+      final ready = _ready(
+        _plan([
+          {
+            'date': '2026-10-03',
+            'duties': [
+              {
+                'role': '司琴',
+                'people': ['外請甲', '郭子謙', '林書安'],
+              },
+            ],
+          },
+        ]),
+      );
+      expect(ready.staffOrder.rankingOf('司琴'), ['郭子謙', '林書安']);
+    });
+
+    test('只帶活動的匯入沒有東西可學', () {
+      final ready = _ready(
+        _plan([
+          {
+            'date': '2026-10-03',
+            'events': ['聖餐'],
+          },
+        ]),
+      );
+      expect(ready.staffOrder.isEmpty, isTrue);
+    });
+  });
+
   test('rosterDateKey 補零', () {
     expect(rosterDateKey(DateTime(2026, 1, 4)), '2026-01-04');
   });

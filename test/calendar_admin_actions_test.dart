@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:church_staff_pwa/features/auth/domain/entities/user.dart';
-import 'package:church_staff_pwa/features/auth/domain/repositories/auth_repository.dart';
 import 'package:church_staff_pwa/features/auth/presentation/providers/session_provider.dart';
 import 'package:church_staff_pwa/features/calendar/data/calendar_write_service.dart';
 import 'package:church_staff_pwa/features/calendar/presentation/screens/calendar_screen.dart';
@@ -14,6 +13,7 @@ import 'package:http/testing.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'support/signed_in_auth_repository.dart';
 
 /// The calendar is read-only for everyone except an admin, and the write path
 /// reaches a real Google calendar. These tests pin the gate: a member must not
@@ -21,38 +21,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 ///
 /// The month listing is stubbed with [_Listing] in place of the Google read, so
 /// a test decides what Google "has" and can change it when a write goes through.
-
-class _FakeAuthRepository implements AuthRepository {
-  final User? user;
-  _FakeAuthRepository(this.user);
-
-  @override
-  Future<User?> getCachedUser() async => user;
-
-  @override
-  Future<User?> getCurrentUser() async => user;
-
-  @override
-  Future<void> writeCachedUser(User user) async {}
-
-  @override
-  Future<User?> login(String username, String password) async => user;
-
-  @override
-  Future<void> logout() async {}
-
-  @override
-  Future<List<User>> getUsers() async => const [];
-
-  @override
-  Future<void> addUser(User user, String password) async {}
-
-  @override
-  Future<void> updateUser(User user, {String? password}) async {}
-
-  @override
-  Future<void> deleteUser(String id) async {}
-}
 
 User _user(UserRole role, Set<UserGroup> groups) => User(
   id: 'u1',
@@ -136,7 +104,9 @@ Future<void> _pumpCalendar(
 
   await tester.pumpWidget(
     ChangeNotifierProvider(
-      create: (_) => SessionProvider(_FakeAuthRepository(_user(role, groups))),
+      create: (_) => SessionProvider(
+        SignedInAuthRepository(_user(role, groups), users: const []),
+      ),
       child: MaterialApp(
         home: CalendarScreen(writeService: service, fetchMonth: listing.fetch),
       ),

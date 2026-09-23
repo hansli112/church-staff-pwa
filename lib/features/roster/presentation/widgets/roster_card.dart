@@ -14,6 +14,7 @@ import '../../../../core/widgets/settings_bottom_sheet.dart';
 import '../write_failure.dart';
 import 'duty_row.dart';
 import '../../domain/staff_directory.dart';
+import '../../domain/staff_order.dart';
 
 part '_roster_people_dialog.dart';
 part '_special_event_dialog.dart';
@@ -21,10 +22,16 @@ part '_swap_duty_dialog.dart';
 
 /// 寫一張服事表。失敗時就地跳 snackbar，不動整頁 —— provider 的寫入失敗
 /// 一律往上丟（見 [RosterProvider.updateRoster]），不會變成整頁的錯誤畫面。
-Future<void> _saveRoster(BuildContext context, ServiceRoster roster) async {
+///
+/// [ranking] 是選人視窗裡拖過的順序，provider 會先存它再存這一天。
+Future<void> _saveRoster(
+  BuildContext context,
+  ServiceRoster roster, {
+  StaffRanking? ranking,
+}) async {
   final messenger = ScaffoldMessenger.of(context);
   try {
-    await context.read<RosterProvider>().updateRoster(roster);
+    await context.read<RosterProvider>().updateRoster(roster, ranking: ranking);
   } catch (e) {
     showWriteFailure(messenger, '更新', e);
   }
@@ -198,12 +205,10 @@ class RosterCard extends StatelessWidget {
           rosterType: roster.type,
           roleOptions: roleOptions,
           initialRole: roleOptions.isNotEmpty ? roleOptions.first : null,
-          initialOrder: const [],
           peopleLoader: peopleLoader,
           initialPeople: const [placeholderPerson],
           initialPersonIdsByName: const {},
-          onSubmit: (role, people, order, personIdsByName) =>
-              _addDuty(context, role, people, order, personIdsByName),
+          onSubmit: (selection) => _addDuty(context, selection),
           submitLabel: '新增',
           useBottomSheet: true,
         );
@@ -211,25 +216,18 @@ class RosterCard extends StatelessWidget {
     );
   }
 
-  void _addDuty(
-    BuildContext context,
-    String role,
-    List<String> people,
-    List<String> peopleOrder,
-    Map<String, String> personIdsByName,
-  ) {
+  void _addDuty(BuildContext context, _PeopleSelection selection) {
     final newDuties = List<RosterEntry>.from(roster.duties);
     newDuties.add(
       RosterEntry(
-        role: role,
-        people: people,
-        peopleOrder: peopleOrder,
-        personIdsByName: personIdsByName,
+        role: selection.role,
+        people: selection.people,
+        personIdsByName: selection.personIdsByName,
       ),
     );
 
     final newRoster = roster.copyWith(duties: newDuties);
-    _saveRoster(context, newRoster);
+    _saveRoster(context, newRoster, ranking: selection.ranking);
   }
 
   void _removeDuty(BuildContext context, int index) {
@@ -353,14 +351,12 @@ class RosterCard extends StatelessWidget {
           initialRoleText: duty.role,
           roleOptions: const [],
           initialRole: duty.role,
-          initialOrder: duty.peopleOrder,
           peopleLoader: peopleLoader,
           initialPeople: duty.people.isEmpty
               ? const [placeholderPerson]
               : duty.people,
           initialPersonIdsByName: duty.personIdsByName,
-          onSubmit: (role, people, order, personIdsByName) =>
-              _updateDuty(context, index, people, order, personIdsByName),
+          onSubmit: (selection) => _updateDuty(context, index, selection),
           submitLabel: '儲存',
           roleEditable: false,
           useBottomSheet: true,
@@ -373,19 +369,16 @@ class RosterCard extends StatelessWidget {
   void _updateDuty(
     BuildContext context,
     int index,
-    List<String> newPeople,
-    List<String> peopleOrder,
-    Map<String, String> personIdsByName,
+    _PeopleSelection selection,
   ) {
     final newDuties = List<RosterEntry>.from(roster.duties);
     newDuties[index] = newDuties[index].copyWith(
-      people: newPeople,
-      peopleOrder: peopleOrder,
-      personIdsByName: personIdsByName,
+      people: selection.people,
+      personIdsByName: selection.personIdsByName,
     );
 
     final newRoster = roster.copyWith(duties: newDuties);
-    _saveRoster(context, newRoster);
+    _saveRoster(context, newRoster, ranking: selection.ranking);
   }
 
   Future<void> _showAddSpecialEventDialog(BuildContext context) async {
@@ -486,7 +479,15 @@ class RosterCard extends StatelessWidget {
         : staff.namesForRole(roleKey);
     final Set<String> merged = {...names, ...rosterPeople, ...extrasSet};
     final List<String> result = [placeholderPerson];
-    result.addAll(merged.where((name) => name != placeholderPerson));
+    // 照同工排序排：視窗裡的先後就是這一項服事每一週的先後，拖曳改的也是它。
+    result.addAll(
+      provider
+          .staffOrderFor(rosterType)
+          .sort(
+            roleKey,
+            merged.where((name) => name != placeholderPerson).toList(),
+          ),
+    );
     return _PeopleOptions(
       options: result,
       allUserNames: staff.names.toSet(),

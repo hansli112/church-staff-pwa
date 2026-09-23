@@ -8,6 +8,7 @@ rules_version = '2';
 //   settings/roster_templates                - admin-managed templates
 //   settings/event_options                   - admin-managed event options
 //   settings/small_group_templates           - admin-managed small group templates
+//   staff_orders/{serviceType}               - per-service staff ranking, zone editors
 //
 // Threat model:
 //   - Auth-only client-side checks can be bypassed by calling Firestore directly
@@ -88,11 +89,16 @@ service cloud.firestore {
             && type in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('zoneTypes', []));
     }
 
+    // 所有崇拜的 ServiceType 名稱。新增崇拜時只改這裡（還有 lib 裡的 enum）。
+    function serviceTypes() {
+      return ['sundayService', 'youth', 'children'];
+    }
+
     // Same idea as hasValidGroups(): a typo'd service type would sit in the
     // document looking like a grant while matching no roster.
     function hasValidZoneTypes() {
       return !('zoneTypes' in request.resource.data)
-        || request.resource.data.zoneTypes.hasOnly(['sundayService', 'youth', 'children']);
+        || request.resource.data.zoneTypes.hasOnly(serviceTypes());
     }
 
     // Role must be one of the values UserRole knows how to parse. Blocks an
@@ -154,6 +160,19 @@ service cloud.firestore {
       allow update: if canEditRosterType(request.resource.data.get('type', ''))
         && canEditRosterType(resource.data.get('type', ''));
       allow delete: if canEditRosterType(resource.data.get('type', ''));
+    }
+
+    // 同工排序：一個崇拜一份，文件 id 就是 ServiceType（見 StaffOrder）。
+    //
+    // 改得動那個崇拜服事表的人就改得動它的排序 —— 排序是在選人視窗裡拖出來
+    // 的，匯入時也會照圖片更新，這兩條路都是服事表編輯者在走。放在 settings/
+    // 底下的話只有 admin 寫得動，編輯者一拖就被擋。
+    //
+    // 先限定 id：admin 是 root，canEditRosterType 對任何字串都放行，打錯字的
+    // id 會留下一份沒有人讀的文件。
+    match /staff_orders/{type} {
+      allow read: if isActiveUser();
+      allow write: if type in serviceTypes() && canEditRosterType(type);
     }
 
     // Templates and event options stay admin-only on purpose: they are the

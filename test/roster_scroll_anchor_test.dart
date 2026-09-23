@@ -1,6 +1,5 @@
 import 'package:church_staff_pwa/core/types/service_type.dart';
 import 'package:church_staff_pwa/features/auth/domain/entities/user.dart';
-import 'package:church_staff_pwa/features/auth/domain/repositories/auth_repository.dart';
 import 'package:church_staff_pwa/features/auth/presentation/providers/session_provider.dart';
 import 'package:church_staff_pwa/features/auth/presentation/providers/user_admin_provider.dart';
 import 'package:church_staff_pwa/features/roster/domain/entities/service_roster.dart';
@@ -12,6 +11,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
 import 'support/in_memory_roster_repository.dart';
+import 'support/signed_in_auth_repository.dart';
 
 /// 快取與伺服器回同一份，樣板只有主日。
 InMemoryRosterRepository _repo(List<ServiceRoster> rosters) =>
@@ -39,27 +39,6 @@ const _kEditorUser = User(
   zones: [],
 );
 
-class _FakeAuthRepository implements AuthRepository {
-  @override
-  Future<User?> getCachedUser() async => _kEditorUser;
-  @override
-  Future<User?> getCurrentUser() async => _kEditorUser;
-  @override
-  Future<void> writeCachedUser(User user) async {}
-  @override
-  Future<User?> login(String username, String password) async => _kEditorUser;
-  @override
-  Future<void> logout() async {}
-  @override
-  Future<List<User>> getUsers() async => const [_kEditorUser];
-  @override
-  Future<void> addUser(User user, String password) async {}
-  @override
-  Future<void> updateUser(User user, {String? password}) async {}
-  @override
-  Future<void> deleteUser(String id) async {}
-}
-
 List<ServiceRoster> _buildRosters(int count) => List.generate(
   count,
   (i) => ServiceRoster(
@@ -77,9 +56,12 @@ List<ServiceRoster> _buildRosters(int count) => List.generate(
 
 /// 掛好畫面並等 session 還原完（理由同 permission_ui_test）。
 Future<RosterProvider> _pumpRosterScreen(WidgetTester tester) async {
-  final session = SessionProvider(_FakeAuthRepository());
+  final session = SessionProvider(SignedInAuthRepository(_kEditorUser));
   final rosters = RosterProvider(_repo(_buildRosters(24)));
-  final users = UserAdminProvider(_FakeAuthRepository(), session);
+  final users = UserAdminProvider(
+    SignedInAuthRepository(_kEditorUser),
+    session,
+  );
 
   await tester.pumpWidget(
     ChangeNotifierProvider<SessionProvider>.value(

@@ -4,6 +4,7 @@ import 'package:church_staff_pwa/core/types/service_type.dart';
 import 'package:church_staff_pwa/features/roster/domain/entities/event_option.dart';
 import 'package:church_staff_pwa/features/roster/domain/entities/service_roster.dart';
 import 'package:church_staff_pwa/features/roster/domain/repositories/roster_repository.dart';
+import 'package:church_staff_pwa/features/roster/domain/staff_order.dart';
 
 /// 測試共用的 [RosterRepository]：資料放在記憶體裡，讀寫照實做。
 ///
@@ -16,10 +17,12 @@ class InMemoryRosterRepository implements RosterRepository {
     List<ServiceRoster> cachedRosters = const [],
     Map<ServiceType, List<String>> templates = const {},
     Map<ServiceType, List<EventOption>> eventOptions = const {},
+    Map<ServiceType, StaffOrder> staffOrders = const {},
   }) : rosters = List.of(rosters),
        cachedRosters = List.of(cachedRosters),
        templates = Map.of(templates),
-       eventOptions = Map.of(eventOptions);
+       eventOptions = Map.of(eventOptions),
+       staffOrders = Map.of(staffOrders);
 
   /// 伺服器上的服事表。寫入會改到這裡。
   List<ServiceRoster> rosters;
@@ -29,6 +32,7 @@ class InMemoryRosterRepository implements RosterRepository {
 
   Map<ServiceType, List<String>> templates;
   Map<ServiceType, List<EventOption>> eventOptions;
+  Map<ServiceType, StaffOrder> staffOrders;
 
   // ── 故意出事 ──────────────────────────────────────────────────────────
 
@@ -49,6 +53,10 @@ class InMemoryRosterRepository implements RosterRepository {
   /// 寫樣板／活動清單時丟這個。
   Object? failTemplateWrite;
   Object? failEventOptionWrite;
+  Object? failStaffOrderWrite;
+
+  /// 讀同工排序時丟這個（例如 rules 還沒部署）。
+  Object? failStaffOrderRead;
 
   // ── 紀錄 ──────────────────────────────────────────────────────────────
 
@@ -66,6 +74,7 @@ class InMemoryRosterRepository implements RosterRepository {
   final List<List<ServiceRoster>> atomicBatches = [];
 
   int eventOptionWrites = 0;
+  int staffOrderWrites = 0;
 
   void resetCounts() {
     fetchRostersCallCount = 0;
@@ -141,6 +150,25 @@ class InMemoryRosterRepository implements RosterRepository {
     if (failEventOptionWrite case final error?) throw error;
     eventOptionWrites++;
     eventOptions = Map.of(options);
+  }
+
+  @override
+  Future<Map<ServiceType, StaffOrder>> getStaffOrders() async {
+    if (failStaffOrderRead case final error?) throw error;
+    return Map.of(staffOrders);
+  }
+
+  /// 照 Firestore 的 merge 寫入做：只動 [changes] 提到的服事項目。
+  @override
+  Future<void> updateStaffRankings(
+    ServiceType type,
+    Map<String, List<String>?> changes,
+  ) async {
+    if (failStaffOrderWrite case final error?) throw error;
+    staffOrderWrites++;
+    staffOrders[type] = (staffOrders[type] ?? StaffOrder()).withChanges(
+      changes,
+    );
   }
 
   void _store(ServiceRoster roster) {

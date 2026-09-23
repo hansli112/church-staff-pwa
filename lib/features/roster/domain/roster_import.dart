@@ -5,6 +5,7 @@ import 'entities/event_option.dart';
 import 'entities/service_roster.dart';
 import 'roster_import_parser.dart';
 import 'staff_directory.dart';
+import 'staff_order.dart';
 
 /// 一次匯入的結果：要嘛不能匯，要嘛是要寫的服事表加上寫完之後的報告。
 sealed class RosterImportPlan {
@@ -23,10 +24,22 @@ class RosterImportRejected extends RosterImportPlan {
 /// [summary] 是**假設 [updates] 全部寫成功**的報告 —— 寫入失敗時呼叫端改報
 /// 失敗，不顯示它。
 class RosterImportReady extends RosterImportPlan {
-  const RosterImportReady({required this.updates, required this.summary});
+  const RosterImportReady({
+    required this.updates,
+    required this.summary,
+    required this.staffOrder,
+  });
 
   final List<ServiceRoster> updates;
   final RosterImportSummary summary;
+
+  /// 從這次匯入的服事學到的同工排序：圖片上誰寫前面，誰就排前面。名單外
+  /// 的人（外請講員）不在裡面，見 [StaffOrder.where]。
+  ///
+  /// 要在 [updates] 之前寫（`RosterProvider.applyRosterImport` 照這個順序寫）：
+  /// 服事表寫入時照排序重排，先寫服事表的話，會照
+  /// 舊的排序把圖片上的順序打亂。只帶活動的匯入沒有東西可學，是空的。
+  final StaffOrder staffOrder;
 }
 
 /// 把貼上（或照片辨識出來）的 JSON 對到 [type] 現有的服事表上。
@@ -44,9 +57,10 @@ RosterImportPlan planRosterImport({
   required Map<ServiceType, List<String>>? templates,
   required List<EventOption> eventOptions,
 }) {
+  final staff = StaffDirectory.fromUsers(users, type);
   final parsed = parseRosterImportJson(
     input: input,
-    staff: StaffDirectory.fromUsers(users, type),
+    staff: staff,
     catalogByName: {for (final option in eventOptions) option.name: option},
   );
   if (parsed.error case final error?) return RosterImportRejected(error);
@@ -75,6 +89,8 @@ RosterImportPlan planRosterImport({
   };
   final updates = <ServiceRoster>[];
   final missingDates = <String>[];
+  // 只從這次真的有帶服事的日期學，只帶活動的那幾天還是舊的服事。
+  final importedDuties = <ServiceRoster>[];
 
   for (final key in {
     ...parsed.dutiesProvidedDates,
@@ -91,26 +107,28 @@ RosterImportPlan planRosterImport({
     // JSON 的活動與顏色：匯入是在重寫那一天，不是往上疊。
     final hasDuties = parsed.dutiesProvidedDates.contains(key);
     final hasEvents = parsed.eventsProvidedDates.contains(key);
-    updates.add(
-      roster.copyWith(
-        duties: hasDuties
-            ? orderDutiesByTemplate(
-                parsed.dutiesByDate[key] ?? const [],
-                templateRoles ?? const [],
-              )
-            : roster.duties,
-        specialEvents: hasEvents
-            ? (parsed.eventsByDate[key] ?? const <String>[])
-            : roster.specialEvents,
-        customEventColors: hasEvents
-            ? (parsed.colorsByDate[key] ?? const <String, int>{})
-            : roster.customEventColors,
-      ),
+    final updated = roster.copyWith(
+      duties: hasDuties
+          ? orderDutiesByTemplate(
+              parsed.dutiesByDate[key] ?? const [],
+              templateRoles ?? const [],
+            )
+          : roster.duties,
+      specialEvents: hasEvents
+          ? (parsed.eventsByDate[key] ?? const <String>[])
+          : roster.specialEvents,
+      customEventColors: hasEvents
+          ? (parsed.colorsByDate[key] ?? const <String, int>{})
+          : roster.customEventColors,
     );
+    updates.add(updated);
+    if (hasDuties) importedDuties.add(updated);
   }
 
+  importedDuties.sort((a, b) => a.date.compareTo(b.date));
   return RosterImportReady(
     updates: updates,
+    staffOrder: StaffOrder.learnFrom(importedDuties).where(staff.contains),
     summary: RosterImportSummary(
       updated: updates.length,
       missingDates: missingDates,

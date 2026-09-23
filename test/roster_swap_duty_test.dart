@@ -4,7 +4,6 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
 import 'package:church_staff_pwa/features/auth/domain/entities/user.dart';
-import 'package:church_staff_pwa/features/auth/domain/repositories/auth_repository.dart';
 import 'package:church_staff_pwa/features/auth/presentation/providers/session_provider.dart';
 import 'package:church_staff_pwa/features/auth/presentation/providers/user_admin_provider.dart';
 import 'package:church_staff_pwa/features/roster/domain/entities/service_roster.dart';
@@ -12,6 +11,7 @@ import 'package:church_staff_pwa/features/roster/presentation/providers/roster_p
 import 'package:church_staff_pwa/features/roster/presentation/widgets/roster_card.dart';
 
 import 'support/in_memory_roster_repository.dart';
+import 'support/signed_in_auth_repository.dart';
 
 /// 交換服事（「1/1 的破冰跟 1/8 換一下」）。
 ///
@@ -40,27 +40,6 @@ const _kEditor = User(
   zones: [],
 );
 
-class _FakeAuthRepository implements AuthRepository {
-  @override
-  Future<User?> getCachedUser() async => _kEditor;
-  @override
-  Future<User?> getCurrentUser() async => _kEditor;
-  @override
-  Future<void> writeCachedUser(User user) async {}
-  @override
-  Future<User?> login(String username, String password) async => _kEditor;
-  @override
-  Future<void> logout() async {}
-  @override
-  Future<List<User>> getUsers() async => const [_kEditor];
-  @override
-  Future<void> addUser(User user, String password) async {}
-  @override
-  Future<void> updateUser(User user, {String? password}) async {}
-  @override
-  Future<void> deleteUser(String id) async {}
-}
-
 ServiceRoster _roster({
   required String id,
   required int day,
@@ -80,12 +59,7 @@ RosterEntry _duty(
   String role = '破冰',
   Map<String, String> ids = const {},
 }) {
-  return RosterEntry(
-    role: role,
-    people: people,
-    peopleOrder: people.where((p) => p != '待定').toList(),
-    personIdsByName: ids,
-  );
+  return RosterEntry(role: role, people: people, personIdsByName: ids);
 }
 
 /// 直接把 provider 的內部狀態填好，不必跑完整的 fetch 流程。
@@ -109,7 +83,6 @@ void main() {
       );
 
       expect(result.people, ['志豪', '小明']);
-      expect(result.peopleOrder, ['志豪', '小明']);
       expect(result.personIdsByName, {'志豪': 'uid-hao', '小明': 'uid-ming'});
     });
 
@@ -121,7 +94,6 @@ void main() {
       );
 
       expect(result.people, ['小明']);
-      expect(result.peopleOrder, ['小明']);
     });
 
     test('換成待定：全空了才補回佔位符', () {
@@ -132,7 +104,6 @@ void main() {
       );
 
       expect(result.people, ['待定']);
-      expect(result.peopleOrder, isEmpty);
       // 名字都不在了，uid 不能留著 —— 下次交換會被誤搬。
       expect(result.personIdsByName, isEmpty);
     });
@@ -146,7 +117,6 @@ void main() {
       );
 
       expect(result.people, ['美玉']);
-      expect(result.peopleOrder, ['美玉']);
       expect(result.personIdsByName, {'美玉': 'uid-fang'});
     });
 
@@ -172,16 +142,7 @@ void main() {
       );
 
       expect(result.people, ['美玉']);
-      expect(result.peopleOrder, ['美玉']);
       expect(result.personIdsByName, {'美玉': 'uid-fang'});
-    });
-
-    test('舊資料沒有 peopleOrder 時，照 people 的順序補起來', () {
-      final duty = RosterEntry(role: '破冰', people: ['美玉', '小明']);
-      final result = RosterProvider.replaceDutyPerson(duty, '美玉', '志豪');
-
-      expect(result.people, ['志豪', '小明']);
-      expect(result.peopleOrder, ['志豪', '小明']);
     });
   });
 
@@ -381,7 +342,7 @@ void main() {
       provider.toggleEditMode();
 
       // session 要先還原完，UserAdminProvider.getUsers() 才過得了 canEditRoster。
-      final session = SessionProvider(_FakeAuthRepository());
+      final session = SessionProvider(SignedInAuthRepository(_kEditor));
       await tester.pumpWidget(
         ChangeNotifierProvider<SessionProvider>.value(
           value: session,
@@ -396,7 +357,10 @@ void main() {
             ChangeNotifierProvider<RosterProvider>.value(value: provider),
             ChangeNotifierProvider<SessionProvider>.value(value: session),
             ChangeNotifierProvider<UserAdminProvider>.value(
-              value: UserAdminProvider(_FakeAuthRepository(), session),
+              value: UserAdminProvider(
+                SignedInAuthRepository(_kEditor),
+                session,
+              ),
             ),
           ],
           child: MaterialApp(

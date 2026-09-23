@@ -68,7 +68,7 @@ class UserZoneInfo {
   factory UserZoneInfo.fromJson(Map<String, dynamic> json) {
     return UserZoneInfo(
       serviceType: ServiceType.values.firstWhere(
-        (e) => e.toString().split('.').last == json['serviceType'],
+        (e) => e.name == json['serviceType'],
         orElse: () => ServiceType.sundayService,
       ),
       smallGroups: List<String>.from(json['smallGroups'] ?? []),
@@ -78,7 +78,7 @@ class UserZoneInfo {
 
   Map<String, dynamic> toJson() {
     return {
-      'serviceType': serviceType.toString().split('.').last,
+      'serviceType': serviceType.name,
       'smallGroups': smallGroups,
       'ministries': ministries,
     };
@@ -174,7 +174,7 @@ class User {
       email: json['email'] as String? ?? '',
       username: json['username'] as String,
       role: UserRole.values.firstWhere(
-        (e) => e.toString().split('.').last == json['role'],
+        (e) => e.name == json['role'],
         orElse: () => UserRole.member,
       ),
       zones:
@@ -192,12 +192,10 @@ class User {
       'name': name,
       'email': email,
       'username': username,
-      'role': role.toString().split('.').last,
+      'role': role.name,
       'zones': zones.map((e) => e.toJson()).toList(),
       // zones 的投影，給 firestore.rules 用。見 [zoneTypes]。
-      'zoneTypes': [
-        for (final type in zoneTypes) type.toString().split('.').last,
-      ],
+      'zoneTypes': [for (final type in zoneTypes) type.name],
       // 順序固定，否則每次存檔都會產生一筆沒有實質變化的 Firestore 寫入。
       'groups': [
         for (final group in UserGroup.values)

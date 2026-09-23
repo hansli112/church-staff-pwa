@@ -289,7 +289,6 @@ RosterImportParseResult parseRosterImportJson({
           RosterEntry(
             role: roleValue.trim(),
             people: people.isEmpty ? const [placeholderPerson] : people,
-            peopleOrder: people.isEmpty ? const [] : List<String>.from(people),
             personIdsByName: staff.idsOf(people),
           ),
         );

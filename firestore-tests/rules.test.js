@@ -777,6 +777,65 @@ describe('users 管理員操作與 role 驗證', () => {
   });
 });
 
+describe('staff_orders 同工排序', () => {
+  const ranking = { roles: { 招待: ['甲', '乙'] } };
+
+  it('一般同工讀得到', async () => {
+    await assertSucceeds(getDoc(doc(asMember(), 'staff_orders', 'youth')));
+  });
+
+  it('被刪掉的帳號讀不到', async () => {
+    await assertFails(getDoc(doc(asDeleted(), 'staff_orders', 'youth')));
+  });
+
+  it('一般同工改不動', async () => {
+    await assertFails(setDoc(doc(asMember(), 'staff_orders', 'youth'), ranking));
+  });
+
+  // 排序是在選人視窗裡拖的，編輯者一定要寫得動自己牧區那份 —— 放在
+  // settings/ 底下就會卡在這裡。
+  it('青崇編輯者改得動青崇的排序', async () => {
+    await assertSucceeds(setDoc(doc(asYouthEditor(), 'staff_orders', 'youth'), ranking));
+  });
+
+  it('青崇編輯者改不動主日的排序', async () => {
+    await assertFails(
+      setDoc(doc(asYouthEditor(), 'staff_orders', 'sundayService'), ranking),
+    );
+  });
+
+  it('沒有牧區的編輯者什麼都改不動', async () => {
+    await assertFails(
+      setDoc(doc(asZonelessEditor(), 'staff_orders', 'children'), ranking),
+    );
+  });
+
+  it('管理員改得動任何崇拜的排序', async () => {
+    await assertSucceeds(setDoc(doc(asAdmin(), 'staff_orders', 'sundayService'), ranking));
+  });
+
+  // App 只寫有變的服事項目（merge），不整份覆寫：別人剛改過的其他項目不能
+  // 被蓋掉，拿掉的項目用 deleteField()。
+  it('merge 寫入只動提到的服事項目', async () => {
+    const ref = doc(asYouthEditor(), 'staff_orders', 'children');
+    await assertSucceeds(
+      setDoc(ref, { roles: { 招待: ['甲', '乙'], 司琴: ['丙'] } }),
+    );
+    await assertSucceeds(
+      setDoc(ref, { roles: { 招待: ['乙', '甲'], 司琴: deleteField() } }, { merge: true }),
+    );
+    await assertSucceeds(
+      setDoc(ref, { roles: { 敬拜: ['丁'] } }, { merge: true }),
+    );
+    const snapshot = await getDoc(ref);
+    assert.deepEqual(snapshot.data(), { roles: { 招待: ['乙', '甲'], 敬拜: ['丁'] } });
+  });
+
+  it('不是崇拜的文件 id 連管理員都寫不進去', async () => {
+    await assertFails(setDoc(doc(asAdmin(), 'staff_orders', 'sundaySevice'), ranking));
+  });
+});
+
 describe('預設拒絕', () => {
   it('未定義的 collection 一律拒絕，連管理員也是', async () => {
     await assertFails(getDoc(doc(asAdmin(), 'anything', 'x')));

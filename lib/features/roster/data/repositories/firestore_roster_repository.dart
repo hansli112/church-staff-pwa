@@ -6,6 +6,7 @@ import '../../domain/entities/service_roster.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../domain/repositories/roster_repository.dart';
 import '../../domain/staff_directory.dart';
+import '../../domain/staff_order.dart';
 
 class FirestoreRosterRepository implements RosterRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -16,6 +17,12 @@ class FirestoreRosterRepository implements RosterRepository {
       _firestore.collection('settings').doc('roster_templates');
   DocumentReference get _eventOptionsDoc =>
       _firestore.collection('settings').doc('event_options');
+
+  // 不放在 settings/ 底下：那裡只有 admin 能寫，而同工排序是各崇拜的編輯
+  // 者在選人視窗裡拖出來的。一個崇拜一份文件，rules 才能照文件 id 判斷是
+  // 不是他的牧區（見 firestore.rules 的 staff_orders）。
+  CollectionReference get _staffOrdersCollection =>
+      _firestore.collection('staff_orders');
 
   @override
   Future<List<ServiceRoster>> getUpcomingRosters() async {
@@ -187,7 +194,7 @@ class FirestoreRosterRepository implements RosterRepository {
       return data.map((key, value) {
         // key is string like 'sundayService', convert back to enum
         final type = ServiceType.values.firstWhere(
-          (e) => e.toString().split('.').last == key,
+          (e) => e.name == key,
           orElse: () => ServiceType.sundayService,
         );
         return MapEntry(type, List<String>.from(value));
@@ -204,7 +211,7 @@ class FirestoreRosterRepository implements RosterRepository {
   ) async {
     try {
       final data = templates.map((key, value) {
-        return MapEntry(key.toString().split('.').last, value);
+        return MapEntry(key.name, value);
       });
       await _templatesDoc.set(data);
     } catch (e, st) {
@@ -224,7 +231,7 @@ class FirestoreRosterRepository implements RosterRepository {
       final data = doc.data() as Map<String, dynamic>;
       final Map<ServiceType, List<EventOption>> result = {};
       for (final type in ServiceType.values) {
-        final key = type.toString().split('.').last;
+        final key = type.name;
         final rawList = data[key];
         if (rawList is List) {
           result[type] = _parseEventOptionsList(rawList);
@@ -250,7 +257,7 @@ class FirestoreRosterRepository implements RosterRepository {
             .where((e) => e.name.isNotEmpty)
             .map((e) => e.toJson())
             .toList();
-        return MapEntry(key.toString().split('.').last, cleaned);
+        return MapEntry(key.name, cleaned);
       });
       await _eventOptionsDoc.set(data);
     } catch (e, st) {
@@ -278,11 +285,54 @@ class FirestoreRosterRepository implements RosterRepository {
         .toList();
   }
 
+  @override
+  Future<Map<ServiceType, StaffOrder>> getStaffOrders() async {
+    try {
+      final snapshot = await _staffOrdersCollection.get();
+      final result = <ServiceType, StaffOrder>{};
+      for (final doc in snapshot.docs) {
+        final type = ServiceType.values
+            .where((e) => e.name == doc.id)
+            .firstOrNull;
+        if (type == null) continue;
+        result[type] = StaffOrder.fromJson(doc.data() as Map<String, dynamic>);
+      }
+      return result;
+    } catch (e, st) {
+      log('Get staff orders failed', error: e, stackTrace: st);
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> updateStaffRankings(
+    ServiceType type,
+    Map<String, List<String>?> changes,
+  ) async {
+    if (changes.isEmpty) return;
+    try {
+      // merge 寫入巢狀 map 只動提到的 key：別人剛改過的其他服事項目不會被
+      // 這台裝置手上那份舊的蓋回去。用 set 而不是 update，文件還不存在時
+      // 才建得出來；key 不經過欄位路徑解析，服事項目名稱有「.」也沒關係。
+      await _staffOrdersCollection.doc(type.name).set({
+        'roles': {
+          for (final entry in changes.entries)
+            entry.key: entry.value ?? FieldValue.delete(),
+        },
+      }, SetOptions(merge: true));
+    } catch (e, st) {
+      log('Update staff order failed', error: e, stackTrace: st);
+      // 不包成 Exception：包過之後 mapErrorToUserMessage 認不出
+      // permission-denied（見 updateRostersAtomically）。
+      rethrow;
+    }
+  }
+
   // Helper: Convert ServiceRoster to Map for Firestore
   Map<String, dynamic> _toFirestore(ServiceRoster roster) {
     return {
       'date': Timestamp.fromDate(roster.date),
-      'type': roster.type.toString().split('.').last,
+      'type': roster.type.name,
       'serviceName': roster.serviceName,
       'specialEvents': roster.specialEvents,
       'customEventColors': Map<String, dynamic>.from(roster.customEventColors),
@@ -291,7 +341,6 @@ class FirestoreRosterRepository implements RosterRepository {
             (d) => {
               'role': d.role,
               'people': d.people,
-              'peopleOrder': d.peopleOrder,
               'personIdsByName': d.personIdsByName,
             },
           )
@@ -319,7 +368,7 @@ class FirestoreRosterRepository implements RosterRepository {
       id: id,
       date: (data['date'] as Timestamp).toDate(),
       type: ServiceType.values.firstWhere(
-        (e) => e.toString().split('.').last == data['type'],
+        (e) => e.name == data['type'],
         orElse: () => ServiceType.sundayService,
       ),
       serviceName: data['serviceName'] as String? ?? '',
@@ -339,7 +388,6 @@ class FirestoreRosterRepository implements RosterRepository {
             return RosterEntry(
               role: d['role'] as String,
               people: List<String>.from(d['people'] ?? []),
-              peopleOrder: List<String>.from(d['peopleOrder'] ?? const []),
               personIdsByName: _parsePersonIdsByName(d['personIdsByName']),
             );
           }).toList() ??
@@ -351,7 +399,7 @@ class FirestoreRosterRepository implements RosterRepository {
     final y = date.year.toString().padLeft(4, '0');
     final m = date.month.toString().padLeft(2, '0');
     final d = date.day.toString().padLeft(2, '0');
-    final typeKey = type.toString().split('.').last;
+    final typeKey = type.name;
     return '$y$m${d}_$typeKey';
   }
 

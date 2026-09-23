@@ -86,13 +86,11 @@ void main() {
       final original = RosterEntry(
         role: '領會',
         people: const ['A'],
-        peopleOrder: const ['A'],
         personIdsByName: const {'A': 'uid-a'},
       );
       final updated = original.copyWith(role: '敬拜主領');
       expect(updated.role, '敬拜主領');
       expect(updated.people, ['A']);
-      expect(updated.peopleOrder, ['A']);
       expect(updated.personIdsByName, {'A': 'uid-a'});
     });
   });

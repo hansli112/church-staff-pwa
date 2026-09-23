@@ -7,6 +7,8 @@ import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../domain/repositories/roster_repository.dart';
 import '../../../../core/utils/error_messages.dart';
 import '../../domain/staff_directory.dart';
+import '../../domain/roster_import.dart';
+import '../../domain/staff_order.dart';
 import '../../../../core/utils/scroll_anchor.dart';
 import '../../../../core/widgets/text_warmup.dart';
 
@@ -23,6 +25,11 @@ class RosterProvider with ChangeNotifier {
   /// 意義完全不同 —— 前兩者會讓匯入排出錯誤的順序。
   bool _templatesLoaded = false;
   Map<ServiceType, List<EventOption>> _eventOptionsByType = {};
+
+  // 同工排序（見 [StaffOrderBook]）。學的那份只在從伺服器／快取讀進來時
+  // 重算，不在本機每次寫入後重算：寫入前已經照排序排好了，重算只會得到一
+  // 樣的東西，而且交換寫到一半的狀態不該回頭影響排序。
+  StaffOrderBook _staffOrders = StaffOrderBook();
   bool _isLoading = false;
   bool _isEditMode = false;
   String? _error;
@@ -59,18 +66,26 @@ class RosterProvider with ChangeNotifier {
   /// [rosters] 的 identity 本身就是「資料換過了」的訊號 —— 消費端（例如首頁
   /// 的本季服事 memo）用 `identical()` 判斷要不要重算，所以任何內容變動都
   /// **必須**換成新的 List instance，不能就地改寫。
-  void _replaceRosters(List<ServiceRoster> rosters) {
-    _allRosters = rosters;
+  ///
+  /// 每張都照同工排序排好才放進來 —— 畫面、首頁、寫回去的資料看到的都是排
+  /// 好的順序，不必各自再排。[relearn] 給「從外面讀進來」的資料用，見
+  /// [_staffOrders]。
+  void _replaceRosters(List<ServiceRoster> rosters, {bool relearn = false}) {
+    if (relearn) _staffOrders = _staffOrders.relearnedFrom(rosters);
+    _allRosters = [for (final roster in rosters) _staffOrders.sort(roster)];
     _rostersByType = null;
     _displayStrings = null;
   }
+
+  /// [type] 這個崇拜實際採用的同工排序。
+  StaffOrder staffOrderFor(ServiceType type) => _staffOrders.effectiveFor(type);
 
   /// 換掉單筆 roster。刻意複製一份新 List 而不是 `_allRosters[index] = ...` ——
   /// 就地改寫會讓 `rosters` 的 identity 不變，靠 identity 判斷是否失效的
   /// 消費端就會繼續用舊的計算結果。
   void _replaceRosterAt(int index, ServiceRoster roster) {
     final updated = List<ServiceRoster>.of(_allRosters);
-    updated[index] = roster;
+    updated[index] = _staffOrders.sort(roster);
     _replaceRosters(updated);
   }
 
@@ -188,6 +203,7 @@ class RosterProvider with ChangeNotifier {
     _templates = {};
     _templatesLoaded = false;
     _replaceEventOptions({});
+    _staffOrders = StaffOrderBook();
     _error = null;
     _isEditMode = false;
     // 換人＝換整份資料，舊的日期錨點指到的卡片可能根本不存在了。
@@ -257,7 +273,7 @@ class RosterProvider with ChangeNotifier {
       final cached = await _repository.getUpcomingRostersFromCache();
       if (token != _fetchToken) return; // stale token，丟棄
       if (cached.isNotEmpty) {
-        _replaceRosters(cached);
+        _replaceRosters(cached, relearn: true);
         notifyListeners(); // 先渲染 stale data
       }
     } catch (e, st) {
@@ -283,11 +299,16 @@ class RosterProvider with ChangeNotifier {
       _repository.getEventOptions(),
       '載入事件選項失敗（不影響服事表顯示）',
     );
+    // 讀不到就照學出來的順序排，一樣能看。
+    final staffOrdersFuture = _optional(
+      _repository.getStaffOrders(),
+      '載入同工排序失敗（改用服事表上的順序）',
+    );
 
     try {
       final rosters = await rostersFuture;
       if (token != _fetchToken) return; // stale fetch，丟棄結果
-      _replaceRosters(rosters);
+      _replaceRosters(rosters, relearn: true);
     } catch (e, st) {
       if (token != _fetchToken) return; // stale fetch，丟棄錯誤
       log('載入服事表資料失敗', error: e, stackTrace: st);
@@ -301,7 +322,12 @@ class RosterProvider with ChangeNotifier {
       // settings 失敗時保留上一次的值，不覆蓋成空的。
       final templates = await templatesFuture;
       final eventOptions = await eventOptionsFuture;
+      final staffOrders = await staffOrdersFuture;
       if (token == _fetchToken) {
+        if (staffOrders != null) {
+          _staffOrders = _staffOrders.withStored(staffOrders);
+          _replaceRosters(_allRosters);
+        }
         if (templates != null) {
           _templates = templates;
           _templatesLoaded = true;
@@ -333,7 +359,7 @@ class RosterProvider with ChangeNotifier {
       final cached = await _repository.getUpcomingRostersFromCache();
       if (token != _fetchToken) return;
       if (cached.isNotEmpty) {
-        _replaceRosters(cached);
+        _replaceRosters(cached, relearn: true);
         notifyListeners();
       }
     } catch (e, st) {
@@ -348,7 +374,7 @@ class RosterProvider with ChangeNotifier {
     try {
       final rosters = await _repository.getUpcomingRosters();
       if (token != _fetchToken) return; // stale fetch，丟棄結果
-      _replaceRosters(rosters);
+      _replaceRosters(rosters, relearn: true);
     } catch (e, st) {
       if (token != _fetchToken) return; // stale fetch，丟棄錯誤
       log('載入服事表失敗', error: e, stackTrace: st);
@@ -390,8 +416,21 @@ class RosterProvider with ChangeNotifier {
   ///
   /// 這個 provider 的寫入失敗**一律往上丟**，由呼叫端就地顯示；[error] 只留
   /// 給載入失敗。以前這裡把錯誤吞進 [error]，而編輯頁一看到 [error] 就把整頁
-  /// 換成錯誤畫面 —— 改錯一格，整本服事表從畫面上消失。
-  Future<void> updateRoster(ServiceRoster roster) async {
+  /// 換成錯誤畫面 —— 改錯一格，整本服事表從畫面上消失。例外只有服事項目
+  /// 改名時順帶搬同工排序那一步（見 [_renameStaffOrderRoles]）。
+  ///
+  /// 寫進去之前先照同工排序排好：存起來的就是畫面上的順序，不會因為下次
+  /// 重新學排序時學到一份沒排好的資料。
+  ///
+  /// [ranking] 是選人視窗裡拖過的順序，先存它再存這一天 —— 反過來的話這一天
+  /// 會照舊的排序排。排序存失敗就往上丟，這一天也不寫：跟匯入一樣，失敗時
+  /// 什麼都沒動，重按一次就好。
+  Future<void> updateRoster(
+    ServiceRoster roster, {
+    StaffRanking? ranking,
+  }) async {
+    if (ranking != null) await updateStaffRanking(roster.type, ranking);
+    roster = _staffOrders.sort(roster);
     try {
       await _repository.updateRoster(roster);
     } catch (e, st) {
@@ -445,13 +484,6 @@ class RosterProvider with ChangeNotifier {
     final people = replaced(currentPeople);
     if (people.isEmpty) people.add(placeholderPerson);
 
-    // peopleOrder 是「people 去掉待定」的排列。舊資料（peopleOrder 這個欄位還
-    // 沒有的年代）是空的，這時就照 people 的順序補起來 —— 反正下次有人在
-    // dialog 按儲存也會寫成同一份。
-    final order = duty.peopleOrder.isEmpty
-        ? people.where((name) => name != placeholderPerson).toList()
-        : replaced(duty.peopleOrder);
-
     final personIdsByName = Map<String, String>.from(duty.personIdsByName)
       ..remove(from);
     final trimmedToId = toId?.trim();
@@ -461,11 +493,7 @@ class RosterProvider with ChangeNotifier {
     // 名字都不在這一天了，uid 留著只會在下次交換時被誤搬。
     personIdsByName.removeWhere((name, _) => !people.contains(name));
 
-    return duty.copyWith(
-      people: people,
-      peopleOrder: order,
-      personIdsByName: personIdsByName,
-    );
+    return duty.copyWith(people: people, personIdsByName: personIdsByName);
   }
 
   /// 把兩張服事表上同一個服事項目的兩個人對調。
@@ -519,8 +547,14 @@ class RosterProvider with ChangeNotifier {
       toId: sourceDuty.personIdsByName[sourcePerson],
     );
 
-    final newSource = source.copyWith(duties: newSourceDuties);
-    final newTarget = target.copyWith(duties: newTargetDuties);
+    // 換進來的人就地頂替，位置交給同工排序決定：主要同工換到別天還是排第
+    // 一個，不會因為頂替的是第二個位置就跟著排第二。
+    final newSource = _staffOrders.sort(
+      source.copyWith(duties: newSourceDuties),
+    );
+    final newTarget = _staffOrders.sort(
+      target.copyWith(duties: newTargetDuties),
+    );
 
     await _repository.updateRostersAtomically([newSource, newTarget]);
 
@@ -539,6 +573,7 @@ class RosterProvider with ChangeNotifier {
   /// drifting the UI from the server.
   Future<void> updateRosters(List<ServiceRoster> rosters) async {
     if (rosters.isEmpty) return;
+    rosters = [for (final roster in rosters) _staffOrders.sort(roster)];
     final results = await Future.wait(
       rosters.map((roster) async {
         try {
@@ -621,6 +656,8 @@ class RosterProvider with ChangeNotifier {
           updatedRosters.add(updated);
         }
 
+        await _renameStaffOrderRoles(renamedRolesByType);
+
         // 走 updateRosters 而不是 Future.wait：後者一筆失敗就整批當作沒
         // 寫，成功的那幾天在畫面上還是舊名字。
         await updateRosters(updatedRosters);
@@ -631,6 +668,68 @@ class RosterProvider with ChangeNotifier {
       log('更新服事表樣板失敗', error: e, stackTrace: st);
       rethrow;
     }
+  }
+
+  /// 服事項目改名時把存下來的同工排序搬到新名字。
+  ///
+  /// 失敗只記 log、不往上丟 —— 這個 provider 寫入失敗一律往上丟的唯一例外：
+  /// 樣板已經寫進去了，這時報失敗會讓人以為改名沒成功。排序沒搬到的後果只
+  /// 是那一項退回從服事表學的順序，而服事表本來就照舊的排序存，學回來的是
+  /// 同一份。
+  Future<void> _renameStaffOrderRoles(
+    Map<ServiceType, Map<String, String>> renamedRolesByType,
+  ) async {
+    for (final entry in renamedRolesByType.entries) {
+      final type = entry.key;
+      try {
+        await _writeStaffOrder(
+          type,
+          _staffOrders.storedFor(type).withRolesRenamed(entry.value),
+        );
+      } catch (e, st) {
+        log('同工排序改名失敗（該項退回服事表上的順序）', error: e, stackTrace: st);
+      }
+    }
+  }
+
+  /// 把 [type] 存著的排序改成 [next]。只寫有變的服事項目（見
+  /// [StaffOrder.changesTo]），沒變就不寫。失敗往上丟，本機什麼都不動。
+  Future<void> _writeStaffOrder(ServiceType type, StaffOrder next) async {
+    final changes = _staffOrders.storedFor(type).changesTo(next);
+    if (changes.isEmpty) return;
+    await _repository.updateStaffRankings(type, changes);
+    _staffOrders = _staffOrders.withStoredFor(type, next);
+    _replaceRosters(_allRosters);
+    notifyListeners();
+  }
+
+  /// 在選人視窗拖過順序之後，把那個服事項目的排序換成 [ranking]。
+  ///
+  /// 換掉的是整個崇拜的這一項，不是這一天：畫面上每一天的這一項都會照新
+  /// 順序重排。失敗往上丟（見 [updateRoster]）。
+  Future<void> updateStaffRanking(ServiceType type, StaffRanking ranking) =>
+      _writeStaffOrder(
+        type,
+        _staffOrders.storedFor(type).withRanking(ranking.role, ranking.names),
+      );
+
+  /// 寫一次匯入：先把圖片上學到的排序併進存著的那份，再寫服事表。
+  ///
+  /// 順序不能反：服事表寫入時照排序重排，排序還是舊的就會把圖片上的順序打
+  /// 亂。圖片是負責人排好發出來的，比之前在這裡拖過的順序新，所以圖片上的
+  /// 人照圖片排；這次沒出現的人留在原位（見 [StaffOrder.mergedWith]）。
+  ///
+  /// 排序寫失敗時原樣往上丟，一張服事表都還沒動；服事表寫失敗時丟
+  /// [PartialUpdateException]（見 [updateRosters]）。
+  Future<void> applyRosterImport(
+    ServiceType type,
+    RosterImportReady ready,
+  ) async {
+    await _writeStaffOrder(
+      type,
+      _staffOrders.storedFor(type).mergedWith(ready.staffOrder),
+    );
+    await updateRosters(ready.updates);
   }
 
   /// 把一個活動加進 [type] 的活動清單，顏色自動挑（見 [pickEventColor]）。
