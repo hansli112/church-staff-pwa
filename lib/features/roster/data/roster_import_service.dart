@@ -104,7 +104,9 @@ class RosterImportService {
   /// 優先用 API 自己寫的訊息；沒有才退回依狀態碼猜。
   ///
   /// 沒有訊息通常代表回應不是這支函式產生的（Cloudflare 擋下、舊的 service
-  /// worker 接走），那時狀態碼是唯一的線索。
+  /// worker 接走），那時狀態碼是唯一的線索 —— 所以猜的訊息後面一律帶上狀態
+  /// 碼。實際踩過：Cloudflare 因為 CPU 超時回的 503，跟 Gemini 忙碌時 worker
+  /// 回的 503 顯示成同一句話，查了很久才分出是哪一層。
   String _errorMessage(http.Response response) {
     try {
       final decoded = jsonDecode(utf8.decode(response.bodyBytes));
@@ -117,14 +119,15 @@ class RosterImportService {
     } catch (_) {
       // 落到下面依狀態碼給訊息。
     }
-    return switch (response.statusCode) {
+    final status = response.statusCode;
+    final guess = switch (status) {
       401 => '請重新登入後再試一次',
       403 => '沒有編輯服事表的權限',
       413 => '照片太大了，請先縮小再試',
       429 => '辨識用量已達上限，請稍後再試',
-      503 => '辨識服務忙碌中，請稍後再試一次',
-      >= 500 => '伺服器忙碌中，請稍後再試',
+      >= 500 => '伺服器沒有處理完，請稍後再試',
       _ => '辨識失敗，請稍後再試',
     };
+    return '$guess（$status）';
   }
 }

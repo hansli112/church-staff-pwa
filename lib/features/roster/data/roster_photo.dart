@@ -23,7 +23,9 @@ class RosterPhotoException implements Exception {
   String toString() => message;
 }
 
-/// 單張上限，跟 worker 的 MAX_IMAGE_BYTES 一致。
+/// 縮小、轉成 JPEG 之後的單張上限，跟 worker 的 MAX_IMAGE_BYTES 一致。
 ///
-/// 在這裡先擋是為了讓使用者立刻知道，而不是等整張照片上傳完才收到 413。
-const int maxRosterPhotoBytes = 6 * 1024 * 1024;
+/// 會這麼小是因為 Cloudflare 免費方案每個請求只有 10ms CPU，照片越大 worker
+/// 解析越久，超過就被 Cloudflare 砍掉（詳見 import-image.js）。長邊 2400px
+/// 的 JPEG 一般不到 1MB，碰到這條線的只會是細節多到異常的照片。
+const int maxRosterPhotoBytes = 2 * 1024 * 1024;

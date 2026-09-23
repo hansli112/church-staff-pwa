@@ -26,16 +26,21 @@ const DEFAULT_MODEL = 'gemini-3.6-flash';
 /// guess here and sat right on top of the measured times.
 const UPSTREAM_TIMEOUT_MS = 100000;
 
-/// One retry, then give up. 503 on this endpoint is usually a brief spike, but
-/// the caller is watching a spinner after already uploading a photo — a long
-/// backoff chain is worse than telling them to press the button again.
-const RETRY_DELAY_MS = 2000;
+/// Waits before each retry of a 503. Two retries, not one: on 2026-09-23 the
+/// model answered 503 twice in a row and succeeded on the third try, and a
+/// single retry would have sent the person back to press the button. A 503
+/// comes back fast, so the whole chain costs seconds on top of a conversion
+/// that takes a minute anyway.
+///
+/// 429 is not retried at all. The daily quota does not come back in seconds,
+/// and the per-minute one does not come back in two.
+const RETRY_DELAYS_MS = [2000, 5000];
 
 const MAX_OUTPUT_TOKENS = 16384;
 
 export async function callGemini(
   env,
-  { prompt, images, fetchImpl = fetch, retryDelayMs = RETRY_DELAY_MS, timeoutMs = UPSTREAM_TIMEOUT_MS },
+  { prompt, images, fetchImpl = fetch, retryDelaysMs = RETRY_DELAYS_MS, timeoutMs = UPSTREAM_TIMEOUT_MS },
 ) {
   const key = requireEnv(env, 'GEMINI_API_KEY');
   const model = (env?.GEMINI_MODEL ?? '').trim() || DEFAULT_MODEL;
@@ -62,16 +67,19 @@ export async function callGemini(
   };
 
   let response = await post(fetchImpl, model, key, body, timeoutMs);
-  if (response.status === 503 || response.status === 429) {
-    await sleep(retryDelayMs);
+  for (const delay of retryDelaysMs) {
+    if (response.status !== 503) break;
+    await sleep(delay);
     response = await post(fetchImpl, model, key, body, timeoutMs);
   }
 
   if (!response.ok) {
+    // Read whole: the quota that ran out is named ~1000 characters into a 429,
+    // past where a log line would be cut. Only the log is truncated.
     const detail = await safeText(response);
-    console.error('gemini call failed', model, response.status, detail);
+    console.error('gemini call failed', model, response.status, detail.slice(0, 500));
     if (response.status === 503) throw new HttpError(503, '辨識服務忙碌中，請稍後再試一次');
-    if (response.status === 429) throw new HttpError(429, '辨識用量已達上限，請稍後再試');
+    if (response.status === 429) throw new HttpError(429, quotaMessage(detail));
     if (response.status === 404) {
       // The operator changed GEMINI_MODEL to something that does not exist, or
       // the pinned one was retired. Nothing the caller can do.
@@ -166,9 +174,21 @@ async function post(fetchImpl, model, key, body, timeoutMs) {
   }
 }
 
+/// The free tier allows 20 requests a day per model, and it also has a
+/// per-minute limit. "Try again later" is right for the second and wrong for
+/// the first: someone pressing the button every few minutes until tomorrow is
+/// exactly what that message invites. The 429 body names the quota that ran
+/// out, so say which one it was.
+function quotaMessage(detail) {
+  if (/PerDay/i.test(detail)) {
+    return '今天的免費辨識次數用完了，下午三點後再試（或先展開下面自己貼 JSON）';
+  }
+  return '辨識太頻繁了，等一分鐘再試';
+}
+
 async function safeText(response) {
   try {
-    return (await response.text()).slice(0, 500);
+    return await response.text();
   } catch {
     return '<unreadable>';
   }

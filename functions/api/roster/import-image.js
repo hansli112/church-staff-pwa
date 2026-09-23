@@ -37,13 +37,26 @@ const IMAGE_TYPES = new Set([
 
 const MAX_IMAGES = 3;
 
-/// Per-image ceiling, measured on the decoded bytes. A modern phone photo is
-/// 2-5MB; three of those already makes a large request, and the whole thing is
-/// held in memory while it is forwarded.
-const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
+/// Per-image ceiling, measured on the decoded bytes. Same as
+/// maxRosterPhotoBytes in the app, which shrinks every photo to a JPEG well
+/// under this before sending it.
+///
+/// Small on purpose, and the reason is CPU, not memory: on the free plan a
+/// request gets 10ms of CPU, and parsing the body plus re-serialising it for
+/// Gemini costs roughly 2-3ms per MB of base64. A raw 4.5MB phone photo measured
+/// 14-17ms for that alone — Cloudflare kills the worker and answers 503 on its
+/// own, which the app could only show as "busy".
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+
+/// The whole body, checked from Content-Length before anything reads it: by the
+/// time parseImportRequest could reject an oversized image, parsing it has
+/// already spent the CPU budget. One image at the limit is ~2.7MB of base64.
+const MAX_BODY_BYTES = 4 * 1024 * 1024;
 
 export const onRequestPost = ({ request, env }) =>
   handleWith('roster import function failed', async () => {
+    rejectOversizedBody(request);
+
     const { token, isAdmin, zoneTypes } = await requireGroupMember(
       request,
       env,
@@ -75,6 +88,19 @@ export const onRequestPost = ({ request, env }) =>
     });
     return jsonResponse({ entries });
   });
+
+/// Refuses a body that is too big to parse within the CPU limit, without
+/// reading it. Before the auth check too: verifying the token is cheap, but
+/// there is no reason to spend anything on a request that cannot succeed.
+///
+/// A missing Content-Length (a chunked upload) is let through to the per-image
+/// check; the app always sends one.
+export function rejectOversizedBody(request) {
+  const length = Number(request.headers.get('content-length'));
+  if (Number.isFinite(length) && length > MAX_BODY_BYTES) {
+    throw new HttpError(413, '照片太大了，請裁掉表格以外的部分再試');
+  }
+}
 
 /// Validates the request body and returns it in the shape callGemini wants.
 ///

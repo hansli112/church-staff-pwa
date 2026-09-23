@@ -8,7 +8,7 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
-import { onRequestPost, parseImportRequest } from '../functions/api/roster/import-image.js';
+import { onRequestPost, parseImportRequest, rejectOversizedBody } from '../functions/api/roster/import-image.js';
 import { callGemini, extractJson } from '../worker/gemini.js';
 import {
   ADMIN_UID,
@@ -21,6 +21,45 @@ import {
   request,
   withFetch,
 } from './helpers.js';
+
+/// Gemini 免費層每日額度用完時的回應，原樣。
+const REAL_DAILY_QUOTA_429 = {
+  "error": {
+    "code": 429,
+    "message": "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.6-flash\nPlease retry in 51s.",
+    "status": "RESOURCE_EXHAUSTED",
+    "details": [
+      {
+        "@type": "type.googleapis.com/google.rpc.Help",
+        "links": [
+          {
+            "description": "Learn more about Gemini API quotas",
+            "url": "https://ai.google.dev/gemini-api/docs/rate-limits"
+          }
+        ]
+      },
+      {
+        "@type": "type.googleapis.com/google.rpc.QuotaFailure",
+        "violations": [
+          {
+            "quotaMetric": "generativelanguage.googleapis.com/generate_content_free_tier_requests",
+            "quotaId": "GenerateRequestsPerDayPerProjectPerModel-FreeTier",
+            "quotaDimensions": {
+              "model": "gemini-3.6-flash",
+              "location": "global"
+            },
+            "quotaValue": "20"
+          }
+        ]
+      },
+      {
+        "@type": "type.googleapis.com/google.rpc.RetryInfo",
+        "retryDelay": "51s"
+      }
+    ]
+  }
+};
+
 
 const GEMINI_HOST = 'https://generativelanguage.googleapis.com/';
 
@@ -398,10 +437,26 @@ describe('POST /api/roster/import-image — 請求驗證', () => {
   }
 
   test('太大的照片擋在前面，不會先送上去才失敗', () => {
-    const tooBig = 'A'.repeat(9 * 1024 * 1024);
+    const tooBig = 'A'.repeat(3 * 1024 * 1024);
     assert.throws(() => parseImportRequest(validBody({ images: [{ mimeType: 'image/png', data: tooBig }] })), {
       status: 413,
     });
+  });
+
+  test('整個請求太大時不讀內容就擋掉', () => {
+    // 讀進來再擋就太晚了：解析一個幾 MB 的 body 本身就會用完 CPU 額度，
+    // Cloudflare 會先把 worker 砍掉，使用者只看得到「忙碌中」。
+    const big = new Request('https://app.example/api/roster/import-image', {
+      method: 'POST',
+      headers: { 'content-length': String(5 * 1024 * 1024) },
+    });
+    assert.throws(() => rejectOversizedBody(big), { status: 413 });
+
+    const small = new Request('https://app.example/api/roster/import-image', {
+      method: 'POST',
+      headers: { 'content-length': String(900 * 1024) },
+    });
+    assert.doesNotThrow(() => rejectOversizedBody(small));
   });
 
   test('多張時訊息會講是第幾張', () => {
@@ -468,12 +523,12 @@ describe('callGemini — 上游的各種回法', () => {
       prompt: PUBLISHED_TEMPLATE,
       images,
       fetchImpl: impl,
-      // 正式環境會等兩秒；測試不必真的等。
-      retryDelayMs: 0,
+      // 正式環境會等 2 秒、5 秒；測試不必真的等。
+      retryDelaysMs: [0, 0],
     });
   }
 
-  test('503 會重試一次就好，不會一直重試下去', async () => {
+  test('503 重試兩次就停，不會一直重試下去', async () => {
     let attempts = 0;
     const restore = muteConsoleError();
     try {
@@ -488,26 +543,67 @@ describe('callGemini — 上游的各種回法', () => {
     } finally {
       restore();
     }
-    assert.equal(attempts, 2, '一次原始呼叫加一次重試');
+    assert.equal(attempts, 3, '一次原始呼叫加兩次重試');
   });
 
-  test('第一次 503、第二次成功就當作成功', async () => {
+  test('連兩次 503、第三次成功就當作成功', async () => {
+    // 2026-09-23 實際碰到的就是這個順序。
     let attempts = 0;
     const rows = await call(() => {
       attempts += 1;
-      if (attempts === 1) return new Response('busy', { status: 503 });
+      if (attempts <= 2) return new Response('busy', { status: 503 });
       return Response.json({ candidates: [{ content: { parts: [{ text: JSON.stringify(ROWS) }] } }] });
     });
     assert.deepEqual(rows, ROWS);
   });
 
-  test('額度用完時說的是額度，不是通用錯誤', async () => {
+  test('每日額度用完時叫人明天再來，而不是「稍後」', async () => {
+    // Gemini 真的回的，2026-09-23 原樣貼上（retry 秒數除外，那個每次不同）。
+    // 要原樣：額度名稱在第一千個字左右，一份截短的假回應測不出「讀一半就判斷」。
+    const body = JSON.stringify(REAL_DAILY_QUOTA_429, null, 2);
+    assert.ok(body.indexOf('PerDay') > 500, '這份樣本要能測出截斷的問題');
     const restore = muteConsoleError();
     try {
-      await assert.rejects(() => call(() => new Response('quota', { status: 429 })), {
+      await assert.rejects(() => call(() => new Response(body, { status: 429 })), {
         status: 429,
-        message: '辨識用量已達上限，請稍後再試',
+        message: /今天的免費辨識次數用完了/,
       });
+    } finally {
+      restore();
+    }
+  });
+
+  test('429 不重試：額度不會在幾秒內回來，重試只是多打一次', async () => {
+    let attempts = 0;
+    const restore = muteConsoleError();
+    try {
+      await assert.rejects(
+        () =>
+          call(() => {
+            attempts += 1;
+            return new Response(JSON.stringify(REAL_DAILY_QUOTA_429), { status: 429 });
+          }),
+        { status: 429 },
+      );
+    } finally {
+      restore();
+    }
+    assert.equal(attempts, 1);
+  });
+
+  test('每分鐘的限制說等一下就好', async () => {
+    const restore = muteConsoleError();
+    try {
+      await assert.rejects(
+        () =>
+          call(
+            () =>
+              new Response(JSON.stringify({ error: { details: [{ violations: [{ quotaId: 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier' }] }] } }), {
+                status: 429,
+              }),
+          ),
+        { status: 429, message: '辨識太頻繁了，等一分鐘再試' },
+      );
     } finally {
       restore();
     }
