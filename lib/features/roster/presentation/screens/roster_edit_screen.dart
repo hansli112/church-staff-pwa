@@ -6,7 +6,6 @@ import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../../auth/presentation/providers/session_provider.dart';
 import '../../../auth/presentation/providers/user_admin_provider.dart';
 import '../../../auth/domain/entities/user.dart';
-import '../../domain/entities/event_option.dart';
 import '../../data/roster_import_service.dart';
 import '../../data/roster_photo.dart';
 import '../../data/roster_photo_picker.dart';
@@ -19,7 +18,7 @@ import '../../../../core/utils/snappy_page_scroll_physics.dart';
 import '../../../../core/widgets/settings_bottom_sheet.dart';
 import 'event_settings_screen.dart' deferred as event_settings_screen;
 import 'role_settings_screen.dart' deferred as role_settings_screen;
-import 'roster_import_parser.dart';
+import '../../domain/roster_import.dart';
 import 'roster_import_summary.dart';
 
 class RosterEditScreen extends StatefulWidget {
@@ -375,23 +374,15 @@ class _RosterListState extends State<_RosterList>
     // 匯入結果視窗要活得比 sheet 久，掛在正在退場的那棵子樹上會被一起帶走。
     if (result == null || !context.mounted) return;
 
-    final summary = result.toSummary();
+    final summary = result.summary;
+    if (summary == null) return;
     if (summary.hasIssues) {
       await _showImportSummaryDialog(context, summary);
       return;
     }
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(_buildResultMessage(result))));
-  }
-
-  /// 一切順利時的 snackbar 文字。
-  ///
-  /// 只有 `hasIssues` 為 false 時才會走到這裡 —— 有任何未匹配都改走匯入結果
-  /// 視窗，因為那裡才有補設定的按鈕。
-  String _buildResultMessage(_JsonImportResult result) {
-    if (result.updated == 0) return '找不到可更新的日期';
-    return '已更新 ${result.updated} 筆服事表';
+    ).showSnackBar(SnackBar(content: Text(importResultMessage(summary))));
   }
 
   /// 依姓名把服事補進該同工的設定。
@@ -435,18 +426,18 @@ class _RosterListState extends State<_RosterList>
     RosterImportSummary summary,
   ) async {
     final userAdminProvider = context.read<UserAdminProvider>();
-    // 補設定寫的是 users/{uid}，firestore.rules 裡是 admin only。服事表編輯者
-    // 進得來匯入流程，但這一項補不了。
-    final canFixUsers = context.read<SessionProvider>().isAdmin;
-    final templateRoles =
-        context.read<RosterProvider>().templates[widget.type] ?? const [];
+    // 補設定寫的是 users/{uid}、加活動寫的是 settings/，firestore.rules 裡
+    // 兩個都是 admin only。服事表編輯者進得來匯入流程，但這兩項都補不了。
+    final isAdmin = context.read<SessionProvider>().isAdmin;
+    final rosterProvider = context.read<RosterProvider>();
+    final templateRoles = rosterProvider.templates[widget.type] ?? const [];
     await showDialog(
       context: context,
       builder: (context) {
         return RosterImportSummaryDialog(
           type: widget.type,
           summary: summary,
-          onAddMinistry: canFixUsers
+          onAddMinistry: isAdmin
               ? (name, roles) => _addMinistryToUser(
                   userAdminProvider,
                   templateRoles,
@@ -454,11 +445,18 @@ class _RosterListState extends State<_RosterList>
                   roles,
                 )
               : null,
+          onAddEvent: isAdmin
+              ? (name) => rosterProvider.addEventOption(widget.type, name)
+              : null,
         );
       },
     );
   }
 
+  /// 讀現況、交給 [planRosterImport]、把它要寫的寫進去。
+  ///
+  /// 怎麼對名字、怎麼排順序、哪天要改什麼都在 planRosterImport 裡，這裡只剩
+  /// 它碰不到的兩件事：讀同工名單、寫 Firestore。
   Future<_JsonImportResult> _applyJsonImport(
     BuildContext context,
     String raw,
@@ -466,132 +464,33 @@ class _RosterListState extends State<_RosterList>
     final userAdminProvider = context.read<UserAdminProvider>();
     final rosterProvider = context.read<RosterProvider>();
 
-    final List<String> candidateNames;
-    final Map<String, Set<String>> allowedByRole;
-    final Map<String, String> nameToIdMap;
+    final List<User> users;
     try {
-      final users = await userAdminProvider.getUsers();
-      candidateNames = [
-        ...users.map((u) => u.name.trim()).where((name) => name.isNotEmpty),
-      ];
-      allowedByRole = _buildAllowedByRole(users);
-      nameToIdMap = {
-        for (final u in users)
-          if (u.name.trim().isNotEmpty && u.id.trim().isNotEmpty)
-            u.name.trim(): u.id.trim(),
-      };
+      users = await userAdminProvider.getUsers();
     } catch (_) {
-      return const _JsonImportResult(error: '無法載入同工名單');
+      return const _JsonImportResult.failed('無法載入同工名單');
     }
 
-    // Build catalog map for the current service type.
-    final catalogByName = <String, EventOption>{
-      for (final opt in rosterProvider.eventOptionsFor(widget.type))
-        opt.name: opt,
-    };
-
-    final parsed = parseRosterImportJson(
+    final plan = planRosterImport(
       input: raw,
-      candidateNames: candidateNames,
-      allowedByRole: allowedByRole,
-      catalogByName: catalogByName,
-      nameToIdMap: nameToIdMap,
+      type: widget.type,
+      users: users,
+      rosters: rosterProvider.getRostersByType(widget.type),
+      templates: rosterProvider.templatesLoaded
+          ? rosterProvider.templates
+          : null,
+      eventOptions: rosterProvider.eventOptionsFor(widget.type),
     );
-
-    if (parsed.error != null) {
-      return _JsonImportResult(error: parsed.error);
-    }
-
-    // 服事項目的順序完全由樣板決定，樣板不可靠就不能匯 —— 缺席時所有角色
-    // 並列，會退回 JSON 的順序寫進 Firestore，畫面上看不出哪裡不對。
-    //
-    // 只擋含 duties 的匯入：只帶 events 的 JSON 根本不排序，沒有理由一起擋。
-    //
-    // `templatesLoaded` 不夠：updateTemplates 寫入空樣板之後旗標也是 true，
-    // 但這個崇拜的鍵可能根本不存在。真正要問的是「這個崇拜的樣板拿得到嗎」。
-    if (parsed.dutiesProvidedDates.isNotEmpty) {
-      if (!rosterProvider.templatesLoaded) {
-        return const _JsonImportResult(error: '服事項目樣板尚未載入，順序會排錯。請重新整理後再匯入');
-      }
-      if (!rosterProvider.templates.containsKey(widget.type)) {
-        return _JsonImportResult(
-          // 服事項目設定是 admin only，非 admin 連那顆按鈕都看不到，所以這裡
-          // 講「請管理員」而不是「請先到」—— 後者對他是一條走不通的路。
-          error: '${widget.type.label}還沒有服事項目樣板，順序會排錯。請管理員到服事項目設定新增',
-        );
-      }
-    }
-
-    // Collect all dates that appear in either duties or events.
-    final allDates = <String>{
-      ...parsed.dutiesProvidedDates,
-      ...parsed.eventsProvidedDates,
-    };
-
-    final rosterByDate = <String, ServiceRoster>{
-      for (final roster in rosterProvider.getRostersByType(widget.type))
-        _dateKey(roster.date): roster,
-    };
-    final updates = <ServiceRoster>[];
-    final missingDates = <String>[];
-
-    final templateRoles = rosterProvider.templates[widget.type] ?? const [];
-
-    for (final key in allDates) {
-      final roster = rosterByDate[key];
-      if (roster == null) {
-        missingDates.add(key);
-        continue;
-      }
-
-      final hasDuties = parsed.dutiesProvidedDates.contains(key);
-      final hasEvents = parsed.eventsProvidedDates.contains(key);
-
-      List<RosterEntry> newDuties = roster.duties;
-      if (hasDuties) {
-        newDuties = orderDutiesByTemplate(
-          parsed.dutiesByDate[key] ?? const [],
-          templateRoles,
-        );
-      }
-
-      final newEvents = hasEvents
-          ? (parsed.eventsByDate[key] ?? const <String>[])
-          : roster.specialEvents;
-      final newColors = hasEvents
-          ? (parsed.colorsByDate[key] ?? const <String, int>{})
-          : roster.customEventColors;
-
-      updates.add(
-        roster.copyWith(
-          duties: newDuties,
-          specialEvents: newEvents,
-          customEventColors: newColors,
-        ),
-      );
-    }
-
-    // Normalize role-mismatch details (Set → sorted List).
-    final normalizedMismatch = <String, List<String>>{};
-    for (final entry in parsed.roleMismatchDetails.entries) {
-      normalizedMismatch[entry.key] = entry.value.toList()..sort();
-    }
-
-    if (updates.isEmpty) {
-      return _JsonImportResult(
-        updated: 0,
-        missingDates: missingDates,
-        notInRosterNames: parsed.notInRosterNames,
-        roleMismatchNames: parsed.roleMismatchNames,
-        roleMismatchDetails: normalizedMismatch,
-        otherNames: parsed.otherNames,
-        nearMatchSuggestions: parsed.nearMatchSuggestions,
-        notInEventCatalog: parsed.notInEventCatalog,
-      );
+    final RosterImportReady ready;
+    switch (plan) {
+      case RosterImportRejected(:final message):
+        return _JsonImportResult.failed(message);
+      case RosterImportReady():
+        ready = plan;
     }
 
     try {
-      await rosterProvider.updateRosters(updates);
+      await rosterProvider.updateRosters(ready.updates);
     } catch (e, st) {
       log('匯入過程寫入 Firestore 失敗', error: e, stackTrace: st);
       String msg;
@@ -600,7 +499,7 @@ class _RosterListState extends State<_RosterList>
         // real Firestore error, not just the wrapping exception's stack.
         log('匯入部分失敗的代表性 cause', error: e.cause, stackTrace: e.causeStackTrace);
         final failedDates = e.failedRosters
-            .map((r) => _dateKey(r.date))
+            .map((r) => rosterDateKey(r.date))
             .join('、');
         msg =
             '${e.successCount} 筆已寫入、${e.failureCount} 筆失敗。'
@@ -608,88 +507,20 @@ class _RosterListState extends State<_RosterList>
       } else {
         msg = mapErrorToUserMessage(e);
       }
-      return _JsonImportResult(error: '匯入過程寫入失敗：$msg');
+      return _JsonImportResult.failed('匯入過程寫入失敗：$msg');
     }
 
-    return _JsonImportResult(
-      updated: updates.length,
-      missingDates: missingDates,
-      notInRosterNames: parsed.notInRosterNames,
-      roleMismatchNames: parsed.roleMismatchNames,
-      roleMismatchDetails: normalizedMismatch,
-      otherNames: parsed.otherNames,
-      nearMatchSuggestions: parsed.nearMatchSuggestions,
-      notInEventCatalog: parsed.notInEventCatalog,
-    );
-  }
-
-  String _dateKey(DateTime date) {
-    final y = date.year.toString().padLeft(4, '0');
-    final m = date.month.toString().padLeft(2, '0');
-    final d = date.day.toString().padLeft(2, '0');
-    return '$y-$m-$d';
-  }
-
-  Map<String, Set<String>> _buildAllowedByRole(List<User> users) {
-    final Map<String, Set<String>> allowed = {};
-    for (final user in users) {
-      final userName = user.name.trim();
-      if (userName.isEmpty) continue;
-      for (final zone in user.zones) {
-        if (zone.serviceType != widget.type) continue;
-        for (final ministry in zone.ministries) {
-          final role = ministry.trim();
-          if (role.isEmpty) continue;
-          allowed.putIfAbsent(role, () => {});
-          allowed[role]!.add(userName);
-        }
-      }
-    }
-
-    return allowed;
+    return _JsonImportResult.done(ready.summary);
   }
 }
 
+/// sheet 交回來的東西：寫完的報告，或是要留在 sheet 上的錯誤。
 class _JsonImportResult {
-  final int updated;
-  final List<String> missingDates;
-  final List<String> notInRosterNames;
-  final List<String> roleMismatchNames;
-  final Map<String, List<String>> roleMismatchDetails;
-  final List<String> otherNames;
-  final Map<String, List<String>> nearMatchSuggestions;
-  final List<String> notInEventCatalog;
+  const _JsonImportResult.done(RosterImportSummary this.summary) : error = null;
+  const _JsonImportResult.failed(String this.error) : summary = null;
+
+  final RosterImportSummary? summary;
   final String? error;
-
-  const _JsonImportResult({
-    this.updated = 0,
-    this.missingDates = const [],
-    this.notInRosterNames = const [],
-    this.roleMismatchNames = const [],
-    this.roleMismatchDetails = const {},
-    this.otherNames = const [],
-    this.nearMatchSuggestions = const {},
-    this.notInEventCatalog = const [],
-    this.error,
-  });
-
-  /// 轉成報告用的資料。
-  ///
-  /// roleMismatchDetails 刻意從 roleMismatchNames 反向長出來，而不是直接沿用：
-  /// 報告只畫得出 details 裡的人，兩份清單若對不齊，對不齊的那個人會從報告上
-  /// 整個消失 —— 那正是這次要修掉的那種靜默失蹤。
-  RosterImportSummary toSummary() => RosterImportSummary(
-    updated: updated,
-    missingDates: missingDates,
-    notInRosterNames: notInRosterNames,
-    roleMismatchDetails: {
-      for (final name in roleMismatchNames)
-        name: roleMismatchDetails[name] ?? const [],
-    },
-    otherNames: otherNames,
-    nearMatchSuggestions: nearMatchSuggestions,
-    notInEventCatalog: notInEventCatalog,
-  );
 }
 
 /// 匯入用的 bottom sheet。

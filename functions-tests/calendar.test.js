@@ -3,12 +3,11 @@ import { beforeEach, describe, test } from 'node:test';
 
 import { onRequestPost } from '../functions/api/calendar/events.js';
 import { onRequestDelete, onRequestPatch } from '../functions/api/calendar/events/[id].js';
+import { uidFromIdToken } from '../worker/firebase_user.js';
 import {
   buildGoogleEvent,
   getAccessToken,
-  requireEditor,
   resetAccessTokenCache,
-  uidFromIdToken,
 } from '../worker/google_calendar.js';
 import { notifyPayload } from '../worker/line_notify.js';
 import {
@@ -18,7 +17,6 @@ import {
   CALENDAR_EDITOR_UID,
   CALENDAR_ID,
   NOTIFY_SECRET,
-  ROSTER_EDITOR_UID,
   MEMBER_UID,
   fakeFetch,
   idToken,
@@ -209,168 +207,6 @@ describe('uidFromIdToken', () => {
 
   test('rejects a payload with no subject', () => {
     assert.throws(() => uidFromIdToken(idToken(undefined)), { status: 401 });
-  });
-});
-
-// ---------------------------------------------------------------------------
-
-describe('requireEditor', () => {
-  test('rejects a request with no Authorization header', async () => {
-    const env = await testEnv();
-    await assert.rejects(requireEditor(request('POST', { token: null }), env, fakeFetch()), {
-      status: 401,
-      message: '請先登入',
-    });
-  });
-
-  test('rejects an empty bearer token', async () => {
-    const env = await testEnv();
-    await assert.rejects(requireEditor(request('POST', { token: '  ' }), env, fakeFetch()), {
-      status: 401,
-    });
-  });
-
-  test('accepts an admin and returns the uid and name', async () => {
-    const env = await testEnv();
-    assert.deepEqual(await requireEditor(request('POST'), env, fakeFetch()), {
-      uid: ADMIN_UID,
-      name: ADMIN_NAME,
-    });
-  });
-
-  // 權限看 group，不看 role：這個人的 role 只是 staff。
-  test('accepts a member of calendar-editors regardless of role', async () => {
-    const env = await testEnv();
-    assert.deepEqual(
-      await requireEditor(
-        request('POST', { token: idToken(CALENDAR_EDITOR_UID) }),
-        env,
-        fakeFetch(),
-      ),
-      { uid: CALENDAR_EDITOR_UID, name: CALENDAR_EDITOR_NAME },
-    );
-  });
-
-  // 沒有 name 的舊帳號照樣能編行事曆 —— 名字只影響通知長什麼樣。
-  test('accepts an editor whose document has no name', async () => {
-    const env = await testEnv();
-    const fetchImpl = fakeFetch({ users: { [ADMIN_UID]: { role: 'admin' } } });
-    assert.deepEqual(await requireEditor(request('POST'), env, fetchImpl), {
-      uid: ADMIN_UID,
-      name: null,
-    });
-  });
-
-  // 只有空白的名字等於沒有名字，否則通知裡會多出一行只有冒號的東西。
-  test('treats a blank name as no name', async () => {
-    const env = await testEnv();
-    const fetchImpl = fakeFetch({ users: { [ADMIN_UID]: { role: 'admin', name: '   ' } } });
-    assert.equal((await requireEditor(request('POST'), env, fetchImpl)).name, null);
-  });
-
-  // 遮罩少一個欄位就等於白跑一趟：名字拿不到，通知就永遠是匿名的。
-  test('asks Firestore for the name field', async () => {
-    const env = await testEnv();
-    const fetchImpl = fakeFetch();
-    await requireEditor(request('POST'), env, fetchImpl);
-    const [lookup] = fetchImpl.calls.filter((call) =>
-      call.url.startsWith('https://firestore.googleapis.com/'),
-    );
-    assert.match(lookup.url, /mask\.fieldPaths=name/);
-  });
-
-  // 兩個 group 正交：服事表編輯者碰不到行事曆。
-  test('rejects a member of a different group', async () => {
-    const env = await testEnv();
-    await assert.rejects(
-      requireEditor(request('POST', { token: idToken(ROSTER_EDITOR_UID) }), env, fakeFetch()),
-      { status: 403, message: '沒有編輯行事曆的權限' },
-    );
-  });
-
-  // 沒有 groups 欄位的舊帳號 —— 全部既有使用者都是這個形狀。
-  test('rejects a user document written before groups existed', async () => {
-    const env = await testEnv();
-    const fetchImpl = fakeFetch({ users: { [MEMBER_UID]: { role: 'leader' } } });
-    await assert.rejects(
-      requireEditor(request('POST', { token: idToken(MEMBER_UID) }), env, fetchImpl),
-      { status: 403 },
-    );
-  });
-
-  // Firestore 對空陣列回的是 { arrayValue: {} }，沒有 values。
-  test('rejects an empty groups array', async () => {
-    const env = await testEnv();
-    const fetchImpl = fakeFetch({ users: { [MEMBER_UID]: { role: 'staff', groups: [] } } });
-    await assert.rejects(
-      requireEditor(request('POST', { token: idToken(MEMBER_UID) }), env, fetchImpl),
-      { status: 403 },
-    );
-  });
-
-  // 名字打錯不能當成某種權限放行。
-  test('rejects an unknown group name', async () => {
-    const env = await testEnv();
-    const fetchImpl = fakeFetch({
-      users: { [MEMBER_UID]: { role: 'staff', groups: ['calendar-editor'] } },
-    });
-    await assert.rejects(
-      requireEditor(request('POST', { token: idToken(MEMBER_UID) }), env, fetchImpl),
-      { status: 403 },
-    );
-  });
-
-  test('rejects a non-admin member', async () => {
-    const env = await testEnv();
-    await assert.rejects(
-      requireEditor(request('POST', { token: idToken(MEMBER_UID) }), env, fakeFetch()),
-      { status: 403, message: '沒有編輯行事曆的權限' },
-    );
-  });
-
-  // A removed member keeps a valid Firebase Auth token but loses users/{uid}.
-  test('rejects a signed-in account with no user document', async () => {
-    const env = await testEnv();
-    await assert.rejects(
-      requireEditor(request('POST', { token: idToken('ghost') }), env, fakeFetch()),
-      { status: 403, message: '這個帳號沒有權限' },
-    );
-  });
-
-  test('rejects a user document with no role field', async () => {
-    const env = await testEnv();
-    const fetchImpl = fakeFetch({ users: { [ADMIN_UID]: null } });
-    await assert.rejects(requireEditor(request('POST'), env, fetchImpl), { status: 403 });
-  });
-
-  test('maps a Firestore rejection to a re-login prompt', async () => {
-    const env = await testEnv();
-    const fetchImpl = async () => new Response('{}', { status: 401 });
-    await assert.rejects(requireEditor(request('POST'), env, fetchImpl), {
-      status: 401,
-      message: '登入狀態已過期，請重新登入',
-    });
-  });
-
-  test('maps a Firestore outage to a retry prompt', async () => {
-    const restore = muteConsoleError();
-    try {
-      const env = await testEnv();
-      const fetchImpl = async () => new Response('boom', { status: 500 });
-      await assert.rejects(requireEditor(request('POST'), env, fetchImpl), { status: 502 });
-    } finally {
-      restore();
-    }
-  });
-
-  test('fails closed when the project id is not configured', async () => {
-    const restore = muteConsoleError();
-    try {
-      const env = await testEnv({ FIREBASE_PROJECT_ID: '' });
-      await assert.rejects(requireEditor(request('POST'), env, fakeFetch()), { status: 500 });
-    } finally {
-      restore();
-    }
   });
 });
 
@@ -636,7 +472,7 @@ function creating(event) {
 
 const CREATE_BODY = { title: '小組聚會', allDay: false, start: '2026-09-01T19:00' };
 
-/// requireEditor() 回傳的形狀，測 notifyPayload 時不必再跑一次權限檢查。
+/// authorize() 回傳值裡通知用得到的部分，測 notifyPayload 時不必再跑一次權限檢查。
 const ADMIN_ACTOR = { uid: ADMIN_UID, name: ADMIN_NAME };
 
 describe('notifyPayload', () => {

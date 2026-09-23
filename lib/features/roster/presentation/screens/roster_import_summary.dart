@@ -6,63 +6,22 @@ import 'package:flutter/material.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../../../../core/utils/error_messages.dart';
+import '../../domain/roster_import.dart';
 
-/// 匯入之後的結果報告。
+/// 一切順利時的 snackbar 文字。
 ///
-/// 沒對到的名字**已經照樣寫進服事表了**，列在這裡是讓你知道，不是要你回去
-/// 補打名字，也不是叫你去改設定 —— 臨時支援別的崇拜是常態，那些人一年可能
-/// 就來這麼一次，把他們設成固定班底反而會弄髒名單。
+/// 只有 [RosterImportSummary.hasIssues] 為 false 時才會用到 —— 有任何未匹配
+/// 都改開匯入結果視窗，因為那裡才有補設定的按鈕。
 ///
-/// 所以文案一律只陳述事實，不寫祈使句。「新增服事至同工」那顆按鈕是備著的，不是
-/// 建議的動作：真的多了一位固定班底時按一下省得跑一趟帳號管理，其餘時候
-/// 放著就好。
-class RosterImportSummary {
-  const RosterImportSummary({
-    required this.updated,
-    required this.missingDates,
-    required this.notInRosterNames,
-    required this.roleMismatchDetails,
-    required this.otherNames,
-    required this.nearMatchSuggestions,
-    required this.notInEventCatalog,
-  });
-
-  final int updated;
-  final List<String> missingDates;
-  final List<String> notInRosterNames;
-
-  /// 人名 → 他被排到、但設定裡沒有的服事。
-  final Map<String, List<String>> roleMismatchDetails;
-
-  final List<String> otherNames;
-
-  /// 表上原字 → 名單裡跟它只差一個字的那幾位。**只是提示，沒有套用。**
-  ///
-  /// 這裡的名字同時在 [notInRosterNames] 裡（沒有 uid），所以不必另外算進
-  /// [hasIssues] —— 它跟著「名單裡沒有這個人」那一段一起顯示。
-  final Map<String, List<String>> nearMatchSuggestions;
-
-  final List<String> notInEventCatalog;
-
-  bool get hasIssues =>
-      hasUnmatchedNames ||
-      missingDates.isNotEmpty ||
-      notInEventCatalog.isNotEmpty;
-
-  /// 有沒有「人」沒對到。日期與活動不算 —— 那兩類跟「這些人已經排進去了」
-  /// 那句安撫無關，不該一起把那句話帶出來。
-  bool get hasUnmatchedNames =>
-      notInRosterNames.isNotEmpty ||
-      roleMismatchDetails.isNotEmpty ||
-      otherNames.isNotEmpty;
-
-  /// 能不能講「下面的名字都已經排進表裡了」。
-  ///
-  /// 未匹配的名單是整份 JSON 的統計，但日期找不到的那幾筆根本沒寫進去 ——
-  /// 那些人名照樣會出現在清單上。只要有任何一天沒匯入，這句話就可能是假的；
-  /// 一筆都沒更新時更是徹底的謊話。寧可不講，也不要讓管理者以為排好了。
-  bool get canPromiseAllImported =>
-      hasUnmatchedNames && updated > 0 && missingDates.isEmpty;
+/// 外來講員不算問題、不會開匯入結果視窗，但名字要讓人看得到 —— 不然
+/// 「講員有沒有排上去」只能自己去翻服事表。
+String importResultMessage(RosterImportSummary summary) {
+  if (summary.updated == 0) return '找不到可更新的日期';
+  final guests = summary.guestSpeakerNames;
+  return [
+    '已更新 ${summary.updated} 筆服事表',
+    if (guests.isNotEmpty) '外來講員：${guests.join('、')}',
+  ].join('。');
 }
 
 /// 補設定失敗、而且原因是使用者看得懂也能處理的。
@@ -82,6 +41,9 @@ class ImportFixException implements Exception {
 /// 把某個服事加進某個人的服事設定。失敗時丟例外，由呼叫端顯示訊息。
 typedef AddMinistryToUser =
     Future<void> Function(String userName, List<String> roles);
+
+/// 把一個活動加進這個崇拜的活動清單（顏色自動挑）。失敗時丟例外。
+typedef AddEventOption = Future<void> Function(String eventName);
 
 /// 依姓名把服事加進該同工在 [type] 這個崇拜的服事設定。
 ///
@@ -118,6 +80,7 @@ class RosterImportSummaryDialog extends StatefulWidget {
     required this.summary,
     required this.type,
     required this.onAddMinistry,
+    this.onAddEvent,
   });
 
   final RosterImportSummary summary;
@@ -128,19 +91,30 @@ class RosterImportSummaryDialog extends StatefulWidget {
   /// 一顆按下去必定失敗的按鈕，不如不要給，並且說清楚要找誰。
   final AddMinistryToUser? onAddMinistry;
 
+  /// null 表示不能改活動清單（`settings/` 是 admin only），理由同上。
+  final AddEventOption? onAddEvent;
+
   @override
   State<RosterImportSummaryDialog> createState() =>
       _RosterImportSummaryDialogState();
 }
 
-enum _FixState { idle, running, done, failed }
+enum _ActionState { idle, running, done, failed }
+
+/// 匯入結果上可以按的是哪一種補救。
+enum _ActionKind { addMinistry, addEvent }
+
+/// 一列的身分。同一個人有多個服事，狀態要能分開記，所以 key 不能只用姓名；
+/// 活動跟人分開記，活動名稱剛好跟某個人名一樣也不會連動。用 record 而不是
+/// 把幾段字串接起來：接起來就得挑一個不會出現在名字裡的分隔符。
+typedef _RowKey = ({_ActionKind kind, String name, String? role});
 
 /// 單筆補設定的等待上限。公開出來讓測試不必真的等。
 const Duration fixTimeout = Duration(seconds: 20);
 
 class _RosterImportSummaryDialogState extends State<RosterImportSummaryDialog> {
-  final Map<String, _FixState> _fixStates = {};
-  final Map<String, String> _fixErrors = {};
+  final Map<_RowKey, _ActionState> _actionStates = {};
+  final Map<_RowKey, String> _actionErrors = {};
 
   /// 一次只跑一筆。每筆新增都是「讀出這個人 → 加一項 → 整份寫回」，同一個人
   /// 的兩個服事若同時送出，兩邊都會讀到修改前的資料，後寫的那筆會把先寫的
@@ -150,23 +124,37 @@ class _RosterImportSummaryDialogState extends State<RosterImportSummaryDialog> {
   /// 後面排隊的一起卡死。
   Future<void> _queue = Future<void>.value();
 
-  /// 同一個人有多個服事，狀態要能分開記，key 不能只用姓名。
-  ///
-  /// 分隔符用跳脫寫法的 NUL 而不是空格：姓名或服事名裡若含空格，
-  /// 「甲 乙」+「丙」會跟「甲」+「乙 丙」撞成同一個 key，兩列狀態就連動。
-  /// 寫成跳脫序列而不是把控制字元直接打進原始碼 —— 原始碼裡真的塞一個
-  /// NUL 會讓 file 判定成 binary，grep 從此靜靜地什麼都找不到。
-  static String _rowKey(String name, String role) => '$name\u0000$role';
+  static _RowKey _ministryKey(String name, String role) =>
+      (kind: _ActionKind.addMinistry, name: name, role: role);
+
+  static _RowKey _eventKey(String name) =>
+      (kind: _ActionKind.addEvent, name: name, role: null);
 
   Future<void> _fix(String name, String role) async {
     final onAddMinistry = widget.onAddMinistry;
     // 沒有權限時按鈕根本不會渲染，走到這裡代表呼叫端搞錯了 —— 靜靜地什麼都
     // 不做比拋 null 例外好，這是對話框不是後端。
     if (onAddMinistry == null) return;
-    final key = _rowKey(name, role);
+    await _runQueued(
+      _ministryKey(name, role),
+      () => onAddMinistry(name, [role]),
+    );
+  }
+
+  Future<void> _addEvent(String name) async {
+    final onAddEvent = widget.onAddEvent;
+    if (onAddEvent == null) return;
+    await _runQueued(_eventKey(name), () => onAddEvent(name));
+  }
+
+  /// 排進 [_queue] 跑一筆寫入，並把狀態記在 [key] 那一列。
+  ///
+  /// 活動也走同一條隊伍，理由跟補設定一樣：活動清單是整份文件寫回去的，
+  /// 兩個活動同時加，後寫的那筆會把先加的蓋掉。
+  Future<void> _runQueued(_RowKey key, Future<void> Function() write) async {
     setState(() {
-      _fixStates[key] = _FixState.running;
-      _fixErrors.remove(key);
+      _actionStates[key] = _ActionState.running;
+      _actionErrors.remove(key);
     });
 
     final previous = _queue;
@@ -178,16 +166,16 @@ class _RosterImportSummaryDialogState extends State<RosterImportSummaryDialog> {
       // 寫入 future 不會 resolve —— 沒有逾時的話 done 永遠不 complete，之後
       // 每一列都會卡在 await previous 上無限轉圈，連錯誤訊息都沒有。
       //
-      // 逾時不會取消已經送出的寫入，但補設定是冪等的（addMinistriesToUser
-      // 不會重複加），重試安全。
-      await onAddMinistry(name, [role]).timeout(fixTimeout);
-      if (mounted) setState(() => _fixStates[key] = _FixState.done);
+      // 逾時不會取消已經送出的寫入，但兩種寫入都是冪等的（補設定不會重複加，
+      // 同名活動已經在清單裡就不再寫），重試安全。
+      await write().timeout(fixTimeout);
+      if (mounted) setState(() => _actionStates[key] = _ActionState.done);
     } catch (e, st) {
-      log('新增服事至同工失敗', error: e, stackTrace: st);
+      log('匯入結果補設定失敗', error: e, stackTrace: st);
       if (mounted) {
         setState(() {
-          _fixStates[key] = _FixState.failed;
-          _fixErrors[key] = e is ImportFixException
+          _actionStates[key] = _ActionState.failed;
+          _actionErrors[key] = e is ImportFixException
               ? e.message
               : mapErrorToUserMessage(e);
         });
@@ -232,27 +220,31 @@ class _RosterImportSummaryDialogState extends State<RosterImportSummaryDialog> {
               if (summary.roleMismatchDetails.isNotEmpty)
                 _Section(
                   title: '沒有設定這個服事',
-                  note: widget.onAddMinistry == null ? '要補進他的服事設定需要管理員。' : null,
+                  note: widget.onAddMinistry == null ? '只有管理員能補進他的服事設定。' : null,
                   // 一個服事一列。同一個人被排到兩項時，可能只有其中一項該
                   // 補進設定（另一項是臨時支援），綁在一起就只能全補或全不補。
                   children: [
                     for (final entry in summary.roleMismatchDetails.entries)
                       if (entry.value.isEmpty)
                         // 沒有具體服事可補時仍然要列出來，不能讓這個人從
-                        // 報告上消失。
-                        _FixableRow(name: entry.key, state: _FixState.idle)
+                        // 報告上消失。沒有服事就沒有東西可補，所以不給按鈕
+                        // —— 按了也只是把同一份資料再寫一次。
+                        _ActionRow(text: entry.key)
                       else
                         for (final role in entry.value)
-                          _FixableRow(
-                            name: entry.key,
-                            role: role,
+                          _ActionRow(
+                            text: '${entry.key}：$role',
                             state:
-                                _fixStates[_rowKey(entry.key, role)] ??
-                                _FixState.idle,
-                            error: _fixErrors[_rowKey(entry.key, role)],
-                            onFix: widget.onAddMinistry == null
+                                _actionStates[_ministryKey(entry.key, role)] ??
+                                _ActionState.idle,
+                            error: _actionErrors[_ministryKey(entry.key, role)],
+                            action: widget.onAddMinistry == null
                                 ? null
-                                : () => _fix(entry.key, role),
+                                : _RowAction(
+                                    label: '新增服事至同工',
+                                    doneLabel: '已新增',
+                                    onPressed: () => _fix(entry.key, role),
+                                  ),
                           ),
                   ],
                 ),
@@ -276,6 +268,19 @@ class _RosterImportSummaryDialogState extends State<RosterImportSummaryDialog> {
                         },
                       ),
                   ],
+                ),
+
+              // 講員沒有帳號是常態，所以不用「名單裡沒有這個人」那種口氣，
+              // 也不拆成一人一行 —— 一行帶過，知道名字有寫進去就好。
+              if (summary.guestSpeakerNames.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Text(
+                    '外來講員：${summary.guestSpeakerNames.join('、')}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                 ),
 
               if (summary.otherNames.isNotEmpty)
@@ -304,9 +309,25 @@ class _RosterImportSummaryDialogState extends State<RosterImportSummaryDialog> {
               if (summary.notInEventCatalog.isNotEmpty)
                 _Section(
                   title: '活動沒有固定顏色',
+                  note: widget.onAddEvent == null
+                      ? '只有管理員能加進活動清單。'
+                      // 講清楚按下去會發生什麼：顏色是挑的，不是問的。
+                      : '加進活動清單後會自動配一個顏色，之後可以在活動設定改。',
                   children: [
                     for (final name in summary.notInEventCatalog)
-                      _PlainRow(text: name),
+                      _ActionRow(
+                        text: name,
+                        state:
+                            _actionStates[_eventKey(name)] ?? _ActionState.idle,
+                        error: _actionErrors[_eventKey(name)],
+                        action: widget.onAddEvent == null
+                            ? null
+                            : _RowAction(
+                                label: '加入活動清單',
+                                doneLabel: '已加入',
+                                onPressed: () => _addEvent(name),
+                              ),
+                      ),
                   ],
                 ),
             ],
@@ -380,34 +401,46 @@ class _PlainRow extends StatelessWidget {
   }
 }
 
-class _FixableRow extends StatelessWidget {
-  const _FixableRow({
-    required this.name,
-    this.role,
-    required this.state,
-    this.error,
-    this.onFix,
+/// 一列右邊那顆「補上」的按鈕：按鈕上的字、做完之後換成的字、按下去做什麼。
+/// 三個一定一起出現，所以包在一起，而不是三個各自可以是 null 的參數。
+class _RowAction {
+  const _RowAction({
+    required this.label,
+    required this.doneLabel,
+    required this.onPressed,
   });
 
-  final String name;
+  final String label;
 
-  /// null 代表這筆沒有具體的服事可補（實務上碰不到）。仍然列出來，但不給
-  /// 按鈕 —— 按了也只是把同一份資料再寫一次。
-  final String? role;
+  /// 做完之後那個位置顯示的字。同一行左邊已經寫著是誰、哪一項，所以短短
+  /// 一個「已新增」就夠。
+  final String doneLabel;
 
-  final _FixState state;
+  final VoidCallback onPressed;
+}
+
+/// 一列文字，右邊可能帶一顆「補上」的按鈕，按下去之後換成狀態。
+class _ActionRow extends StatelessWidget {
+  const _ActionRow({
+    required this.text,
+    this.state = _ActionState.idle,
+    this.error,
+    this.action,
+  });
+
+  final String text;
+  final _ActionState state;
   final String? error;
 
-  /// null 代表補不了：不是沒有具體服事（見 [role]），就是這個人沒有改別人設定
-  /// 的權限。兩種情況都只列出名字，不給按鈕 —— 給一顆按下去必定失敗的按鈕，
-  /// 使用者只會一直重試，而錯誤訊息是泛用的「操作失敗，請稍後再試」。
-  final VoidCallback? onFix;
+  /// null 代表補不了：不是沒有東西可補，就是這個人沒有權限。兩種情況都只列
+  /// 出文字，不給按鈕 —— 給一顆按下去必定失敗的按鈕，使用者只會一直重試，
+  /// 而錯誤訊息是泛用的「操作失敗，請稍後再試」。
+  final _RowAction? action;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // 一列只講一個人的一個服事，所以文字短，按鈕擺得下同一行。狀態文字用
-    // 「已新增」就好 —— 同一行左邊已經寫著是誰、哪個服事。
+    final action = this.action;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Column(
@@ -417,32 +450,31 @@ class _FixableRow extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  role == null ? '・$name' : '・$name：$role',
-                  style: const TextStyle(fontSize: 13),
-                ),
+                child: Text('・$text', style: const TextStyle(fontSize: 13)),
               ),
-              if (role != null && onFix != null) ...[
+              if (action != null) ...[
                 const SizedBox(width: 8),
                 switch (state) {
-                  _FixState.running => const SizedBox(
+                  _ActionState.running => const SizedBox(
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
-                  _FixState.done => Text(
-                    '已新增',
+                  _ActionState.done => Text(
+                    action.doneLabel,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.primary,
                     ),
                   ),
-                  _FixState.idle || _FixState.failed => TextButton(
-                    onPressed: onFix,
+                  _ActionState.idle || _ActionState.failed => TextButton(
+                    onPressed: action.onPressed,
                     style: TextButton.styleFrom(
                       visualDensity: VisualDensity.compact,
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                     ),
-                    child: Text(state == _FixState.failed ? '重試' : '新增服事至同工'),
+                    child: Text(
+                      state == _ActionState.failed ? '重試' : action.label,
+                    ),
                   ),
                 },
               ],

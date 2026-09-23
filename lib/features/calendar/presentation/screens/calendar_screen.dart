@@ -1,16 +1,14 @@
-import 'dart:convert';
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../../../core/config/google_calendar_config.dart';
 import '../../../auth/presentation/providers/session_provider.dart';
+import '../../data/calendar_month_store.dart';
 import '../../data/calendar_write_service.dart';
-import '../widgets/_calendar_models.dart';
+import '../../domain/entities/calendar_event.dart';
+import '../layout/month_event_layout.dart';
 import '../widgets/_day_cell.dart';
 import '../widgets/_day_events_sheet.dart';
 import '../widgets/_event_detail_sheet.dart';
@@ -21,7 +19,11 @@ class CalendarScreen extends StatefulWidget {
   /// the same-origin endpoint and the real Firebase token.
   final CalendarWriteService? writeService;
 
-  const CalendarScreen({super.key, this.writeService});
+  /// Injected by tests to stand in for the Google read. Left null in the app,
+  /// which reads Google with the public API key.
+  final CalendarMonthFetcher? fetchMonth;
+
+  const CalendarScreen({super.key, this.writeService, this.fetchMonth});
 
   @override
   State<CalendarScreen> createState() => _CalendarScreenState();
@@ -42,24 +44,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
   late final PageController _monthPageController;
   int _currentMonthPage = _initialMonthPage;
 
-  /// 同一個月在這段時間內不重抓。沒有這道閘門的話，每次左右換頁都會對
-  /// 當月 + 前後月各打一次 Google Calendar API，來回滑幾次就燒掉配額。
-  static const Duration _monthFreshness = Duration(minutes: 10);
-
-  /// SharedPreferences 只保留距今前後這麼多個月的快取，避免 key 無限累積。
-  static const int _cacheKeepMonths = 12;
-  static const String _cacheKeyPrefix = 'calendar_events_';
-
   late DateTime _focusedMonth;
   final ValueNotifier<DateTime?> _selectedDay = ValueNotifier<DateTime?>(null);
-  final Map<String, List<CalendarEvent>> _eventsByMonth = {};
-  final Set<String> _loadingMonths = {};
-  final Map<String, String?> _errorsByMonth = {};
-  final Map<String, DateTime> _fetchedAtByMonth = {};
 
-  // 每月的 segment 佈局是 O(事件數 × 42) 的計算，而 PageView 同時有 3 頁在
-  // 樹上，任何一次 setState 都會讓三頁重算。事件沒變就直接用上次的結果。
-  final Map<String, Map<int, List<DayEventSegment>>> _layoutCache = {};
+  late final CalendarMonthStore _months = CalendarMonthStore(
+    fetchMonth: widget.fetchMonth,
+  );
+
+  /// See [_layoutForMonth]. Keyed by the first of the month.
+  final Map<DateTime, ({List<CalendarEvent> events, MonthEventLayout layout})>
+  _layoutCache = {};
 
   late final CalendarWriteService _writeService =
       widget.writeService ?? CalendarWriteService();
@@ -74,6 +68,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     _monthPageController = PageController(initialPage: _initialMonthPage);
 
+    _months.addListener(_onMonthsChanged);
     _loadMonthBundle(_focusedMonth);
     _loadMonthBundle(_monthFromPage(_initialMonthPage - 1));
     _loadMonthBundle(_monthFromPage(_initialMonthPage + 1));
@@ -81,6 +76,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   @override
   void dispose() {
+    _months.removeListener(_onMonthsChanged);
+    _months.dispose();
     _monthPageController.dispose();
     _selectedDay.dispose();
     super.dispose();
@@ -116,11 +113,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   void _loadMonthBundle(DateTime month) {
-    _loadCachedEventsForMonth(month);
-    _loadEventsForMonth(month);
+    _months.ensureLoaded(month);
   }
 
-  String? get _focusedError => _errorsByMonth[_cacheKeyForMonth(_focusedMonth)];
+  void _onMonthsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  String? get _focusedError => _months.errorForMonth(_focusedMonth);
 
   @override
   Widget build(BuildContext context) {
@@ -354,7 +354,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     final nearestPage = page.round();
     final nearestHeight = _gridHeightForRows(
-      _weekRowsForMonth(_monthFromPage(nearestPage)),
+      MonthEventLayout.weekRowsFor(_monthFromPage(nearestPage)),
       cellHeight,
     );
 
@@ -362,7 +362,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     if (distance == 0) return nearestHeight;
 
     final otherHeight = _gridHeightForRows(
-      _weekRowsForMonth(
+      MonthEventLayout.weekRowsFor(
         _monthFromPage(page > nearestPage ? nearestPage + 1 : nearestPage - 1),
       ),
       cellHeight,
@@ -382,15 +382,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   double _gridHeightForRows(int rows, double cellHeight) =>
       (cellHeight * rows) + (_calendarMainAxisSpacing * (rows - 1));
-
-  /// How many week rows a month occupies: the blanks before the 1st plus its
-  /// days, rounded up to whole weeks. Four for a February that starts on a
-  /// Sunday, six for a month like 2026/08.
-  static int _weekRowsForMonth(DateTime month) {
-    final startOffset = DateTime(month.year, month.month, 1).weekday % 7;
-    final totalDays = DateUtils.getDaysInMonth(month.year, month.month);
-    return ((startOffset + totalDays) / 7).ceil();
-  }
 
   double _calendarAspectRatioForWidth(double width, {double? availableHeight}) {
     if (availableHeight != null && availableHeight > 0) {
@@ -430,11 +421,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final totalDays = DateUtils.getDaysInMonth(year, month);
     final startOffset = firstDay.weekday % 7;
     final cellWidth = cellHeight * cellAspectRatio;
-    final totalCells = _weekRowsForMonth(displayedMonth) * 7;
-    final eventSegmentsByDay = _buildMonthEventLayout(displayedMonth);
+    final totalCells = MonthEventLayout.weekRowsFor(displayedMonth) * 7;
+    final layout = _layoutForMonth(firstDay);
 
     return GridView.builder(
-      key: ValueKey<String>(_cacheKeyForMonth(displayedMonth)),
+      key: ValueKey<DateTime>(firstDay),
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 7,
@@ -453,8 +444,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         final date = DateTime(year, month, dayNumber);
         final dateOnly = DateUtils.dateOnly(date);
         final isToday = DateUtils.isSameDay(dateOnly, DateTime.now());
-        final daySegments =
-            eventSegmentsByDay[_dayKey(dateOnly)] ?? const <DayEventSegment>[];
+        final daySegments = layout.segmentsOn(dateOnly);
         final hasEvents = daySegments.isNotEmpty;
         final maxVisibleEvents = _maxVisibleEventsForCellHeight(cellHeight);
 
@@ -505,7 +495,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   List<CalendarEvent>? _eventsForDay(DateTime? day) {
     if (day == null) return null;
 
-    final monthEvents = _eventsByMonth[_cacheKeyForMonth(day)] ?? const [];
+    final monthEvents = _months.eventsForMonth(day) ?? const [];
     final events =
         monthEvents.where((event) => event.occursOnDate(day)).toList()
           ..sort((a, b) {
@@ -565,8 +555,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       initial: initial,
       onSubmit: (draft) async {
         final created = await _writeService.create(draft);
-        _applyLocalChange(added: created);
-        _refreshMonths(_monthsSpannedBy(created));
+        _months.applyWrite(added: created);
       },
     );
     if (saved) _showMessage('已新增活動');
@@ -580,13 +569,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       initial: CalendarEventDraft.fromEvent(event),
       onSubmit: (draft) async {
         final updated = await _writeService.update(event.id, draft);
-        _applyLocalChange(removed: event, added: updated);
-        // The old span matters too: moving an event out of a month has to
-        // refresh the month it left, not only the one it landed in.
-        _refreshMonths([
-          ..._monthsSpannedBy(event),
-          ..._monthsSpannedBy(updated),
-        ]);
+        _months.applyWrite(removed: event, added: updated);
       },
     );
     if (saved) _showMessage('已更新活動');
@@ -606,8 +589,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       return;
     }
 
-    _applyLocalChange(removed: event);
-    _refreshMonths(_monthsSpannedBy(event));
+    _months.applyWrite(removed: event);
     _showMessage('已刪除活動');
   }
 
@@ -623,383 +605,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  /// Applies a confirmed write to what is already on screen.
+  /// The month's bars, recomputed only when its event list is replaced.
   ///
-  /// The server has already accepted the change at this point, so this is not
-  /// optimistic — it is here so the calendar updates in the same frame instead
-  /// of after the round trip in [_refreshMonthsForDays].
-  void _applyLocalChange({CalendarEvent? removed, CalendarEvent? added}) {
-    if (!mounted) return;
-    setState(() {
-      final touched = <String>{};
-
-      if (removed != null) {
-        // Scans every loaded month rather than only the ones the event spans:
-        // an edit that moves an event has to clear it out of wherever it used
-        // to sit, and that span is not always the span being passed in.
-        for (final entry in _eventsByMonth.entries) {
-          final before = entry.value.length;
-          entry.value.removeWhere((existing) => existing.id == removed.id);
-          if (entry.value.length != before) touched.add(entry.key);
-        }
-      }
-
-      if (added != null) {
-        for (final month in _monthsSpannedBy(added)) {
-          final key = _cacheKeyForMonth(month);
-          // A month that was never loaded has nothing to patch; it will fetch
-          // the event normally when the user pages to it.
-          final events = _eventsByMonth[key];
-          if (events == null) continue;
-          events.removeWhere((existing) => existing.id == added.id);
-          events.add(added);
-          touched.add(key);
-        }
-      }
-
-      for (final key in touched) {
-        _layoutCache.remove(key);
-      }
-    });
-  }
-
-  /// Refetches the given months from Google.
-  ///
-  /// Clearing the freshness stamp is the part that matters: without it
-  /// [_loadEventsForMonth] returns early for the next ten minutes and both the
-  /// in-memory list and the SharedPreferences copy stay stale until then.
-  void _refreshMonths(Iterable<DateTime> months) {
-    final byKey = <String, DateTime>{};
-    for (final month in months) {
-      byKey[_cacheKeyForMonth(month)] = DateTime(month.year, month.month, 1);
+  /// 每月的 segment 佈局是 O(事件數 × 42) 的計算，而 PageView 同時有 3 頁在
+  /// 樹上，任何一次 setState 都會讓三頁重算。[CalendarMonthStore] 每次
+  /// 改動都換一份新 List，所以 identical() 就能判斷事件有沒有變。
+  MonthEventLayout _layoutForMonth(DateTime month) {
+    final events = _months.eventsForMonth(month) ?? const <CalendarEvent>[];
+    final cached = _layoutCache[month];
+    if (cached != null && identical(cached.events, events)) {
+      return cached.layout;
     }
-    for (final entry in byKey.entries) {
-      _fetchedAtByMonth.remove(entry.key);
-      _loadEventsForMonth(entry.value);
-    }
-  }
-
-  /// Every month an event touches, so a span across a month boundary refreshes
-  /// both sides rather than only where it starts.
-  List<DateTime> _monthsSpannedBy(CalendarEvent event) {
-    final months = <DateTime>[];
-    var cursor = DateTime(event.startDay.year, event.startDay.month, 1);
-    final last = DateTime(event.endDay.year, event.endDay.month, 1);
-    while (!cursor.isAfter(last)) {
-      months.add(cursor);
-      cursor = DateTime(cursor.year, cursor.month + 1, 1);
-    }
-    return months;
-  }
-
-  int _dayKey(DateTime date) =>
-      (date.year * 10000) + (date.month * 100) + date.day;
-
-  Map<int, List<DayEventSegment>> _buildMonthEventLayout(DateTime month) {
-    final cacheKey = _cacheKeyForMonth(month);
-    final cachedLayout = _layoutCache[cacheKey];
-    if (cachedLayout != null) return cachedLayout;
-
-    final layout = _computeMonthEventLayout(month);
-    _layoutCache[cacheKey] = layout;
+    final layout = MonthEventLayout.compute(month, events);
+    _layoutCache[month] = (events: events, layout: layout);
     return layout;
-  }
-
-  Map<int, List<DayEventSegment>> _computeMonthEventLayout(DateTime month) {
-    final year = month.year;
-    final monthValue = month.month;
-    final firstDay = DateTime(year, monthValue, 1);
-    final totalDays = DateUtils.getDaysInMonth(year, monthValue);
-    final monthStart = DateUtils.dateOnly(firstDay);
-    final monthEnd = DateUtils.dateOnly(DateTime(year, monthValue, totalDays));
-    final monthEvents = _eventsByMonth[_cacheKeyForMonth(firstDay)] ?? [];
-    final overlappingEvents =
-        monthEvents
-            .where((event) => !event.endDay.isBefore(monthStart))
-            .where((event) => !event.startDay.isAfter(monthEnd))
-            .toList()
-          ..sort((a, b) {
-            final byStart = a.startTime.compareTo(b.startTime);
-            if (byStart != 0) return byStart;
-            return a.title.compareTo(b.title);
-          });
-
-    final firstLabelDayByEvent = <String, DateTime>{};
-    for (final event in overlappingEvents) {
-      final firstVisible = event.startDay.isBefore(monthStart)
-          ? monthStart
-          : event.startDay;
-      firstLabelDayByEvent[event.identity] = firstVisible;
-    }
-
-    final result = <int, List<DayEventSegment>>{};
-    final firstWeekOffset = firstDay.weekday % 7;
-    final weekCount = ((firstWeekOffset + totalDays) / 7).ceil();
-
-    for (var week = 0; week < weekCount; week++) {
-      final weekDays = List<DateTime?>.generate(7, (weekday) {
-        final dayNumber = week * 7 + weekday - firstWeekOffset + 1;
-        if (dayNumber < 1 || dayNumber > totalDays) return null;
-        return DateUtils.dateOnly(DateTime(year, monthValue, dayNumber));
-      });
-
-      final weekSegments = <WeekEventSegment>[];
-      for (final event in overlappingEvents) {
-        int? startIndex;
-        int? endIndex;
-        for (var i = 0; i < 7; i++) {
-          final day = weekDays[i];
-          if (day == null || !event.occursOnDate(day)) continue;
-          startIndex ??= i;
-          endIndex = i;
-        }
-        if (startIndex == null || endIndex == null) continue;
-        weekSegments.add(
-          WeekEventSegment(
-            event: event,
-            startIndex: startIndex,
-            endIndex: endIndex,
-          ),
-        );
-      }
-
-      final laneOccupancy = <List<bool>>[];
-      weekSegments.sort((a, b) {
-        final byStart = a.startIndex.compareTo(b.startIndex);
-        if (byStart != 0) return byStart;
-        final byEnd = b.endIndex.compareTo(a.endIndex);
-        if (byEnd != 0) return byEnd;
-        return a.event.startTime.compareTo(b.event.startTime);
-      });
-
-      for (final segment in weekSegments) {
-        final segmentStartDay = weekDays[segment.startIndex];
-        final segmentStartPrevDay = segment.startIndex > 0
-            ? weekDays[segment.startIndex - 1]
-            : null;
-        final segmentStartsFromPreviousDay =
-            segmentStartDay != null &&
-            segmentStartPrevDay != null &&
-            segment.event.occursOnDate(segmentStartPrevDay);
-        final startLeadingInset = segmentStartsFromPreviousDay ? 0.0 : 2.0;
-        final startTextInset =
-            startLeadingInset + (segmentStartsFromPreviousDay ? 0.0 : 1.0);
-
-        var lane = 0;
-        while (true) {
-          if (lane == laneOccupancy.length) {
-            laneOccupancy.add(List<bool>.filled(7, false));
-          }
-          final occupied = laneOccupancy[lane];
-          final hasConflict = occupied
-              .sublist(segment.startIndex, segment.endIndex + 1)
-              .any((value) => value);
-          if (!hasConflict) break;
-          lane++;
-        }
-
-        for (var i = segment.startIndex; i <= segment.endIndex; i++) {
-          laneOccupancy[lane][i] = true;
-          final day = weekDays[i];
-          if (day == null) continue;
-          final dayKey = _dayKey(day);
-          result.putIfAbsent(dayKey, () => []);
-          final previousDay = i > 0 ? weekDays[i - 1] : null;
-          final nextDay = i < 6 ? weekDays[i + 1] : null;
-          result[dayKey]!.add(
-            DayEventSegment(
-              event: segment.event,
-              lane: lane,
-              showTitle: DateUtils.isSameDay(
-                day,
-                firstLabelDayByEvent[segment.event.identity],
-              ),
-              titleShiftDays: i - segment.startIndex,
-              startTextInset: startTextInset,
-              continuesLeft:
-                  previousDay != null &&
-                  segment.event.occursOnDate(previousDay),
-              continuesRight:
-                  nextDay != null && segment.event.occursOnDate(nextDay),
-            ),
-          );
-        }
-      }
-    }
-
-    for (final segments in result.values) {
-      segments.sort((a, b) => a.lane.compareTo(b.lane));
-    }
-    return result;
-  }
-
-  String _cacheKeyForMonth(DateTime month) {
-    return 'calendar_events_${month.year}_${month.month.toString().padLeft(2, '0')}';
-  }
-
-  Future<void> _loadCachedEventsForMonth(DateTime month) async {
-    final key = _cacheKeyForMonth(month);
-    // 記憶體裡已經有這個月了就不要再讀 disk：重讀會 jsonDecode 整個月、
-    // setState、並清掉 layout 快取，等於每次換頁都把三個月的版面重算一次 ——
-    // 正是 layout 快取想消除的那段卡頓。
-    if (_eventsByMonth.containsKey(key)) return;
-
-    final prefs = await SharedPreferences.getInstance();
-    final cached = prefs.getString(key);
-    if (cached == null || cached.isEmpty) return;
-
-    try {
-      final data = jsonDecode(cached) as List<dynamic>;
-      final events = data
-          .map((raw) => CalendarEvent.fromJson(raw as Map<String, dynamic>))
-          .toList();
-      if (!mounted) return;
-      setState(() {
-        _eventsByMonth[key] = events;
-        _layoutCache.remove(key);
-      });
-    } catch (_) {
-      // Ignore corrupted cache.
-    }
-  }
-
-  Future<void> _saveCachedEventsForMonth(
-    DateTime month,
-    List<CalendarEvent> events,
-  ) async {
-    final prefs = await SharedPreferences.getInstance();
-    final key = _cacheKeyForMonth(month);
-    final payload = jsonEncode(events.map((e) => e.toJson()).toList());
-    await prefs.setString(key, payload);
-    await _pruneCachedMonths(prefs);
-  }
-
-  /// 每瀏覽一個新月份就多一筆 key，永遠不清的話 localStorage 會一直長大。
-  /// 只留距今 [_cacheKeepMonths] 個月內的月份，其餘刪掉。
-  Future<void> _pruneCachedMonths(SharedPreferences prefs) async {
-    final now = DateTime.now();
-    final nowIndex = now.year * 12 + now.month;
-
-    for (final key in prefs.getKeys().toList()) {
-      if (!key.startsWith(_cacheKeyPrefix)) continue;
-      final parts = key.substring(_cacheKeyPrefix.length).split('_');
-      if (parts.length != 2) continue;
-      final year = int.tryParse(parts[0]);
-      final month = int.tryParse(parts[1]);
-      if (year == null || month == null) continue;
-
-      final distance = (year * 12 + month) - nowIndex;
-      if (distance.abs() > _cacheKeepMonths) {
-        await prefs.remove(key);
-      }
-    }
-  }
-
-  Future<void> _loadEventsForMonth(DateTime month) async {
-    final key = _cacheKeyForMonth(month);
-    if (_loadingMonths.contains(key)) return;
-
-    final fetchedAt = _fetchedAtByMonth[key];
-    if (fetchedAt != null &&
-        DateTime.now().difference(fetchedAt) < _monthFreshness) {
-      return; // 這個月剛抓過，直接用記憶體裡的資料
-    }
-
-    setState(() {
-      _loadingMonths.add(key);
-      _errorsByMonth.remove(key);
-    });
-
-    final monthStart = DateTime.utc(month.year, month.month, 1);
-    final monthEnd = DateTime.utc(
-      month.year,
-      month.month + 1,
-      1,
-    ).subtract(const Duration(seconds: 1));
-
-    final uri =
-        Uri.https('www.googleapis.com', '', {
-          'key': GoogleCalendarConfig.apiKey,
-          'singleEvents': 'true',
-          'orderBy': 'startTime',
-          'maxResults': '250',
-          'timeMin': monthStart.toIso8601String(),
-          'timeMax': monthEnd.toIso8601String(),
-          'timeZone': GoogleCalendarConfig.timeZone,
-        }).replace(
-          pathSegments: [
-            'calendar',
-            'v3',
-            'calendars',
-            GoogleCalendarConfig.calendarId,
-            'events',
-          ],
-        );
-
-    try {
-      final response = await http.get(uri).timeout(const Duration(seconds: 10));
-      if (!mounted) return;
-
-      if (response.statusCode != 200) {
-        String? message;
-        try {
-          final errorBody = jsonDecode(response.body) as Map<String, dynamic>;
-          message =
-              (errorBody['error'] as Map<String, dynamic>?)?['message']
-                  as String?;
-        } catch (_) {}
-        setState(() {
-          _errorsByMonth[key] = message == null || message.isEmpty
-              ? '載入失敗（${response.statusCode}）'
-              : '載入失敗（${response.statusCode}）：$message';
-        });
-        return;
-      }
-
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final items = data['items'] as List<dynamic>? ?? [];
-      final events = <CalendarEvent>[];
-
-      for (var i = 0; i < items.length; i++) {
-        try {
-          final event = calendarEventFromGoogleItem(
-            items[i] as Map<String, dynamic>,
-            fallbackIndex: i,
-          );
-          if (event != null) events.add(event);
-        } catch (e, st) {
-          debugPrint('Skipping malformed calendar item #$i: $e');
-          debugPrintStack(stackTrace: st);
-        }
-      }
-
-      await _saveCachedEventsForMonth(month, events);
-      if (!mounted) return;
-      setState(() {
-        _eventsByMonth[key] = events;
-        _layoutCache.remove(key);
-        _fetchedAtByMonth[key] = DateTime.now();
-      });
-    } catch (_) {
-      if (!mounted) return;
-      final prefs = await SharedPreferences.getInstance();
-      final cached = prefs.getString(key);
-      if (cached == null) {
-        setState(() {
-          _errorsByMonth[key] = '離線或連線逾時，且沒有快取資料';
-        });
-      } else {
-        setState(() {
-          _errorsByMonth[key] = null;
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _loadingMonths.remove(key);
-        });
-      }
-    }
   }
 }
 

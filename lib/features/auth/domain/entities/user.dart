@@ -30,7 +30,7 @@ enum UserRole {
 ///
 /// 存進 Firestore 的是 [name]（字串），所以這些字串是資料格式的一部分，改名
 /// 等於要遷移資料。三個強制點共用同一組名稱：這裡、`firestore.rules` 的
-/// `inGroup()`、`worker/google_calendar.js` 的 `CALENDAR_GROUP`。
+/// `inGroup()`、`worker/authorize.js` 的 `ACTIONS`。
 enum UserGroup {
   rosterEditors('roster-editors', '服事表編輯', '服事表'),
   calendarEditors('calendar-editors', '行事曆編輯', '行事曆');
@@ -123,7 +123,7 @@ class User {
   /// admin 等同 root：隱含所有 group，不必個別授予。
   ///
   /// UI 用這個決定顯不顯示編輯入口，真正的強制點在 `firestore.rules` 與
-  /// `worker/google_calendar.js` —— 前端擋不住直接打 Firestore 的人。
+  /// `worker/authorize.js` —— 前端擋不住直接打 Firestore 的人。
   bool inGroup(UserGroup group) => isAdmin || groups.contains(group);
 
   bool get canEditRoster => inGroup(UserGroup.rosterEditors);

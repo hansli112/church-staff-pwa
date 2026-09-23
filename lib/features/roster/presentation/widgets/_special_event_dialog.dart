@@ -28,19 +28,10 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
   late final Set<String> _selected;
   late final Set<String> _customEvents;
   final Map<String, int> _customEventColors = {};
-  static const int _defaultCustomColor = 0xFFF39C12;
+  static final int _defaultCustomColor = eventColorPalette.first;
   int _pendingCustomColor = _defaultCustomColor;
   late final TextEditingController _customController;
   late final ScrollController _scrollController;
-
-  static const _colorPalette = [
-    0xFFF39C12,
-    0xFF27AE60,
-    0xFF3498DB,
-    0xFF9B59B6,
-    0xFFE74C3C,
-    0xFF7F8C8D,
-  ];
 
   @override
   void initState() {
@@ -161,7 +152,7 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
                   Wrap(
                     spacing: 0,
                     runSpacing: 0,
-                    children: _colorPalette.map((colorValue) {
+                    children: eventColorPalette.map((colorValue) {
                       final isSelected = _pendingCustomColor == colorValue;
                       return InkWell(
                         onTap: () {

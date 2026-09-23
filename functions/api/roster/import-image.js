@@ -12,18 +12,11 @@
 // in parseRosterImportJson on the client, which is the same code path a pasted
 // JSON goes through. One place decides what an import means.
 
-import { requireGroupMember, readDocument, HttpError } from '../../../worker/firebase_user.js';
+import { authorize } from '../../../worker/authorize.js';
+import { readDocument, HttpError } from '../../../worker/firebase_user.js';
 import { handleWith, jsonResponse, readJsonBody } from '../../../worker/http.js';
 import { callGemini } from '../../../worker/gemini.js';
 import { fillPrompt, loadRosterContext } from '../../../worker/roster_prompt.js';
-
-/// Kept in sync with ServiceType in the Flutter app and the keys of
-/// settings/roster_templates.
-const TYPES = new Set(['sundayService', 'youth', 'children']);
-
-/// The permission group that may edit rosters. Same name as inGroup() in
-/// firestore.rules and UserGroup in the app.
-const ROSTER_GROUP = 'roster-editors';
 
 /// What a phone camera produces, plus the screenshot formats. Anything else is
 /// refused here rather than sent upstream to be refused there.
@@ -57,22 +50,11 @@ export const onRequestPost = ({ request, env }) =>
   handleWith('roster import function failed', async () => {
     rejectOversizedBody(request);
 
-    const { token, isAdmin, zoneTypes } = await requireGroupMember(
-      request,
-      env,
-      { group: ROSTER_GROUP, denied: '沒有編輯服事表的權限' },
-      fetch,
-    );
-
+    // Who and which group before the body is read; which roster after, since
+    // that is in the body. forRosterType also decides whether the type exists.
+    const permit = await authorize(request, env, { edit: 'roster' }, fetch);
     const { type, images } = parseImportRequest(await readJsonBody(request));
-
-    // The group says "may edit rosters", the zone says "which one" — the same
-    // split canEditRosterType() makes in firestore.rules. Without this a 青崇
-    // editor could not write the result, but could still spend the recognition
-    // quota on every other service type.
-    if (!isAdmin && !zoneTypes.includes(type)) {
-      throw new HttpError(403, '沒有編輯這個崇拜服事表的權限');
-    }
+    const token = permit.forRosterType(type);
 
     // The template says how to read this church's tables; the context is the
     // ministries, events and staff list as they are right now. Reading the
@@ -90,8 +72,8 @@ export const onRequestPost = ({ request, env }) =>
   });
 
 /// Refuses a body that is too big to parse within the CPU limit, without
-/// reading it. Before the auth check too: verifying the token is cheap, but
-/// there is no reason to spend anything on a request that cannot succeed.
+/// reading it. Runs even before authorize(): it costs nothing, and a request
+/// that cannot succeed is not worth a Firestore lookup either.
 ///
 /// A missing Content-Length (a chunked upload) is let through to the per-image
 /// check; the app always sends one.
@@ -104,14 +86,15 @@ export function rejectOversizedBody(request) {
 
 /// Validates the request body and returns it in the shape callGemini wants.
 ///
+/// [type] is passed through as sent: whether it names a real service type is
+/// forRosterType()'s call (see authorize.js), since the type is what the
+/// permission is about.
+///
 /// Exported for the tests: every rejection here is a message someone will see
 /// on a phone with a photo already picked, so they are worth asserting on
 /// directly rather than through a full round trip.
 export function parseImportRequest(body) {
   const type = body?.type;
-  if (typeof type !== 'string' || !TYPES.has(type)) {
-    throw new HttpError(400, '不知道這是哪一個崇拜的服事表');
-  }
 
   const images = body?.images;
   if (!Array.isArray(images) || images.length === 0) {

@@ -6,6 +6,7 @@ import '../../domain/entities/service_roster.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../domain/repositories/roster_repository.dart';
 import '../../../../core/utils/error_messages.dart';
+import '../../domain/staff_directory.dart';
 import '../../../../core/utils/scroll_anchor.dart';
 import '../../../../core/widgets/text_warmup.dart';
 
@@ -81,6 +82,9 @@ class RosterProvider with ChangeNotifier {
 
   bool get isLoading => _isLoading;
   bool get isEditMode => _isEditMode;
+
+  /// 載入失敗的訊息。寫入失敗不會出現在這裡 —— 寫入一律往上丟，見
+  /// [updateRoster]。
   String? get error => _error;
   Map<ServiceType, List<String>> get templates => _templates;
   bool get templatesLoaded => _templatesLoaded;
@@ -102,10 +106,15 @@ class RosterProvider with ChangeNotifier {
         if (option.name == name) return option.color;
       }
     }
-    return _colorIndex[name] ?? _fallbackEventColor;
+    return _colorIndex[name] ?? fallbackEventColor;
   }
 
-  static const int _fallbackEventColor = 0xFF7F8C8D;
+  /// 這一天的這個活動畫什麼顏色：這張服事表自己指定的 → 活動清單 → 灰色。
+  ///
+  /// 優先序只寫在這裡。以前每個畫活動標籤的地方各自串一次
+  /// `customEventColors[event] ?? eventColorFor(...)`，檢視與編輯各一份。
+  int eventColorOf(ServiceRoster roster, String event) =>
+      roster.customEventColors[event] ?? eventColorFor(roster.type, event);
 
   Map<String, int> get _colorIndex {
     final cached = _eventColorIndex;
@@ -377,27 +386,24 @@ class RosterProvider with ChangeNotifier {
     await fetchInitialData();
   }
 
+  /// 寫一張服事表。
+  ///
+  /// 這個 provider 的寫入失敗**一律往上丟**，由呼叫端就地顯示；[error] 只留
+  /// 給載入失敗。以前這裡把錯誤吞進 [error]，而編輯頁一看到 [error] 就把整頁
+  /// 換成錯誤畫面 —— 改錯一格，整本服事表從畫面上消失。
   Future<void> updateRoster(ServiceRoster roster) async {
     try {
       await _repository.updateRoster(roster);
-      // Update local state
-      final index = _allRosters.indexWhere((r) => r.id == roster.id);
-      if (index != -1) {
-        _replaceRosterAt(index, roster);
-        notifyListeners();
-      }
     } catch (e, st) {
       log('更新 roster 失敗', error: e, stackTrace: st);
-      _error = '更新失敗:${mapErrorToUserMessage(e)}';
+      rethrow;
+    }
+    final index = _allRosters.indexWhere((r) => r.id == roster.id);
+    if (index != -1) {
+      _replaceRosterAt(index, roster);
       notifyListeners();
     }
   }
-
-  /// 服事表上代表「還沒排到人」的佔位字串。
-  ///
-  /// 它是佔位不是人，所以不能跟真名並存 —— 選人的 dialog 也是這樣處理的
-  /// （`_RosterPeopleDialog._toggleSelection`）。
-  static const String placeholderPerson = '待定';
 
   /// 把 [duty] 裡的 [from] 換成 [to]，其他人與既有順序都不動。
   ///
@@ -468,8 +474,7 @@ class RosterProvider with ChangeNotifier {
   /// 一邊成功一邊失敗會留下一個人被排兩天、另一個人的那天空著，而且畫面上
   /// 兩邊看起來都換好了。
   ///
-  /// 失敗往上丟，不吞進 [_error]：呼叫端的 sheet 要就地顯示錯誤讓人留在原地
-  /// 重試，而不是關掉之後在服事表某處看到一行紅字。
+  /// 失敗往上丟（見 [updateRoster]），呼叫端的 sheet 就地顯示錯誤讓人重試。
   Future<void> swapDutyPeople({
     required String sourceRosterId,
     required int sourceDutyIndex,
@@ -576,6 +581,11 @@ class RosterProvider with ChangeNotifier {
     }
   }
 
+  /// 寫入服事項目樣板，並把改名的服事同步到現有的服事表。
+  ///
+  /// 失敗往上丟（見 [updateRoster]）。樣板寫成功、但有幾天的服事表沒改到名
+  /// 時丟 [PartialUpdateException] —— 再存一次就會補上，改過的那幾天已經沒有
+  /// 舊名字可以換了。
   Future<void> updateTemplates(
     Map<ServiceType, List<String>> newTemplates, {
     Map<ServiceType, Map<String, String>> renamedRolesByType = const {},
@@ -611,30 +621,51 @@ class RosterProvider with ChangeNotifier {
           updatedRosters.add(updated);
         }
 
-        if (updatedRosters.isNotEmpty) {
-          await Future.wait(
-            updatedRosters.map((roster) => _repository.updateRoster(roster)),
-          );
-
-          final updatedById = {
-            for (final roster in updatedRosters) roster.id: roster,
-          };
-          _replaceRosters(
-            _allRosters
-                .map((roster) => updatedById[roster.id] ?? roster)
-                .toList(),
-          );
-        }
+        // 走 updateRosters 而不是 Future.wait：後者一筆失敗就整批當作沒
+        // 寫，成功的那幾天在畫面上還是舊名字。
+        await updateRosters(updatedRosters);
       }
 
       notifyListeners();
     } catch (e, st) {
       log('更新服事表樣板失敗', error: e, stackTrace: st);
-      _error = '更新失敗:${mapErrorToUserMessage(e)}';
-      notifyListeners();
+      rethrow;
     }
   }
 
+  /// 把一個活動加進 [type] 的活動清單，顏色自動挑（見 [pickEventColor]）。
+  ///
+  /// 給匯入結果上的「加入活動清單」用。失敗往上丟，那顆按鈕在自己那一列
+  /// 顯示失敗。
+  ///
+  /// 已經有同名的就什麼都不寫，直接回那一筆 —— 重按、或兩個崇拜的匯入先後
+  /// 按到同一個活動，都不該多出一筆重複的。
+  ///
+  /// 先讀一份最新的再寫，而不是用這台裝置上的快取：活動清單是整份文件寫回
+  /// 去的，拿快取來寫，另一台裝置在這段期間改的活動設定會被靜靜蓋掉。剩下
+  /// 的空窗只有讀與寫之間那一下。
+  Future<EventOption> addEventOption(ServiceType type, String name) async {
+    final options = Map.of(await _repository.getEventOptions());
+    final list = List<EventOption>.from(options[type] ?? const []);
+    for (final option in list) {
+      if (option.name == name) {
+        // 別台裝置剛加過。什麼都不寫，但這台的快取也跟上，顏色才會出來。
+        _replaceEventOptions(options);
+        notifyListeners();
+        return option;
+      }
+    }
+    final added = EventOption(name: name, color: pickEventColor(list));
+    options[type] = [...list, added];
+    await _repository.updateEventOptions(options);
+    _replaceEventOptions(options);
+    notifyListeners();
+    return added;
+  }
+
+  /// 寫入活動清單，並把改名的活動（連同自訂顏色）同步到現有的服事表。
+  ///
+  /// 失敗往上丟，部分失敗的語意同 [updateTemplates]。
   Future<void> updateEventOptions(
     Map<ServiceType, List<EventOption>> options, {
     Map<ServiceType, Map<String, String>> renamedEventsByType = const {},
@@ -689,27 +720,13 @@ class RosterProvider with ChangeNotifier {
           updatedRosters.add(updated);
         }
 
-        if (updatedRosters.isNotEmpty) {
-          await Future.wait(
-            updatedRosters.map((roster) => _repository.updateRoster(roster)),
-          );
-
-          final updatedById = {
-            for (final roster in updatedRosters) roster.id: roster,
-          };
-          _replaceRosters(
-            _allRosters
-                .map((roster) => updatedById[roster.id] ?? roster)
-                .toList(),
-          );
-        }
+        await updateRosters(updatedRosters);
       }
 
       notifyListeners();
     } catch (e, st) {
       log('更新事件選項失敗', error: e, stackTrace: st);
-      _error = '更新失敗:${mapErrorToUserMessage(e)}';
-      notifyListeners();
+      rethrow;
     }
   }
 }

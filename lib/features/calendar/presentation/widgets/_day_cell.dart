@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../domain/entities/calendar_event.dart';
 import '_calendar_models.dart';
 import '_event_segment_bar.dart';
 

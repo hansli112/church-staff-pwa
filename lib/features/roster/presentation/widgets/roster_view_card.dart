@@ -6,7 +6,7 @@ import 'duty_row.dart';
 class RosterViewCard extends StatelessWidget {
   final ServiceRoster roster;
   final bool initiallyExpanded;
-  final int Function(String event) resolveEventColor;
+  final int Function(ServiceRoster roster, String event) resolveEventColor;
 
   const RosterViewCard({
     super.key,
@@ -46,10 +46,7 @@ class RosterViewCard extends StatelessWidget {
                   runSpacing: 2,
                   children: [
                     ...roster.specialEvents.map((event) {
-                      final colorValue =
-                          roster.customEventColors[event] ??
-                          resolveEventColor(event);
-                      final color = Color(colorValue);
+                      final color = Color(resolveEventColor(roster, event));
                       return Chip(
                         label: Text(
                           event,

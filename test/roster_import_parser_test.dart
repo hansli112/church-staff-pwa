@@ -2,7 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:church_staff_pwa/features/roster/domain/entities/event_option.dart';
 import 'package:church_staff_pwa/features/roster/domain/entities/service_roster.dart';
-import 'package:church_staff_pwa/features/roster/presentation/screens/roster_import_parser.dart';
+import 'package:church_staff_pwa/features/roster/domain/roster_import_parser.dart';
+import 'package:church_staff_pwa/features/roster/domain/staff_directory.dart';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -22,10 +23,12 @@ RosterImportParseResult _parse(
 }) {
   return parseRosterImportJson(
     input: json,
-    candidateNames: candidates,
-    allowedByRole: allowedByRole,
+    staff: StaffDirectory(
+      names: candidates,
+      idByName: nameToId,
+      namesByRole: allowedByRole,
+    ),
     catalogByName: catalog,
-    nameToIdMap: nameToId,
   );
 }
 
@@ -719,6 +722,116 @@ void main() {
         '主席',
         '領詩',
       ]);
+    });
+  });
+
+  group('外來講員', () {
+    // 名字一律照寫進服事表；這裡測的只是報告上歸到哪一段。
+    const json = '''
+[
+  {
+    "date": "2026-11-22",
+    "duties": [
+      {"role": "信息", "people": ["周慕恩"]},
+      {"role": "招待", "people": ["陳志明"]}
+    ]
+  },
+  {
+    "date": "2026-11-29",
+    "duties": [
+      {"role": "信息", "people": ["黃雅婷"]},
+      {"role": "招待", "people": ["黃雅婷"]}
+    ]
+  },
+  {
+    "date": "2026-12-06",
+    "duties": [{"role": "信息", "people": ["陳志豪"]}]
+  }
+]''';
+
+    RosterImportParseResult parse() => _parse(
+      json,
+      candidates: ['陳志明', '林淑芸'],
+      allowedByRole: {
+        '招待': {'陳志明'},
+      },
+      nameToId: {'陳志明': 'u1', '林淑芸': 'u2'},
+    );
+
+    test('只排在信息、名單裡沒有也沒有很像的人，歸到外來講員', () {
+      final result = parse();
+      expect(result.guestSpeakerNames, ['周慕恩']);
+      expect(result.notInRosterNames, isNot(contains('周慕恩')));
+    });
+
+    test('名字照樣寫進那一格，只是沒有 uid', () {
+      final duty = parse().dutiesByDate['2026-11-22']!.firstWhere(
+        (d) => d.role == '信息',
+      );
+      expect(duty.people, ['周慕恩']);
+      expect(duty.personIdsByName, isEmpty);
+    });
+
+    test('也排了別的服事的，多半是還沒開帳號的同工，留在警告裡', () {
+      final result = parse();
+      expect(result.notInRosterNames, contains('黃雅婷'));
+      expect(result.guestSpeakerNames, isNot(contains('黃雅婷')));
+    });
+
+    test('名單裡有很像的，多半是同工的名字被讀錯一個字，留在警告裡', () {
+      final result = parse();
+      expect(result.nearMatchSuggestions['陳志豪'], ['陳志明']);
+      expect(result.notInRosterNames, contains('陳志豪'));
+      expect(result.guestSpeakerNames, isNot(contains('陳志豪')));
+    });
+  });
+
+  group('帶自己日期的一次性活動', () {
+    test('認得出名稱後面帶的日期', () {
+      expect(isDatedOneOffEvent('感恩聚餐（12/26 六）'), isTrue);
+      expect(isDatedOneOffEvent('感恩聚餐(12/26六)'), isTrue);
+      expect(isDatedOneOffEvent('孩童奉獻禮'), isFalse);
+      // 名稱裡本來就有斜線的不算（合併格的「活動/地點」）。
+      expect(isDatedOneOffEvent('夏令營/營地'), isFalse);
+    });
+
+    test('不列進「活動沒有固定顏色」，但照樣寫進那天', () {
+      // 名字每次都不同，加進活動清單也永遠對不上下一次。
+      const json = '''
+[
+  {"date": "2026-12-27", "events": ["感恩聚餐（12/26 六）", "孩童奉獻禮"]}
+]''';
+      final result = _parse(json);
+      expect(result.notInEventCatalog, ['孩童奉獻禮']);
+      expect(result.eventsByDate['2026-12-27'], ['感恩聚餐（12/26 六）', '孩童奉獻禮']);
+    });
+  });
+
+  group('pickEventColor', () {
+    test('空的清單從色盤第一個開始', () {
+      expect(pickEventColor(const []), eventColorPalette.first);
+    });
+
+    test('挑目前用得最少的，連續加的幾個彼此分得開', () {
+      final existing = [
+        EventOption(name: '聖餐', color: eventColorPalette[0]),
+        EventOption(name: '愛餐', color: eventColorPalette[1]),
+      ];
+      expect(pickEventColor(existing), eventColorPalette[2]);
+    });
+
+    test('全部都用過一輪時，回到用得最少的那一個', () {
+      final existing = [
+        for (final color in eventColorPalette)
+          EventOption(name: '$color', color: color),
+        EventOption(name: '再一個', color: eventColorPalette[0]),
+      ];
+      expect(pickEventColor(existing), eventColorPalette[1]);
+    });
+
+    test('色盤外的顏色（手動設的舊資料）不影響挑選', () {
+      final existing = [const EventOption(name: '舊的', color: 0xFF000000)];
+      expect(pickEventColor(existing), eventColorPalette.first);
     });
   });
 }

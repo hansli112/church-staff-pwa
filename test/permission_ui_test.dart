@@ -4,9 +4,6 @@ import 'package:church_staff_pwa/features/auth/domain/repositories/auth_reposito
 import 'package:church_staff_pwa/features/auth/presentation/providers/session_provider.dart';
 import 'package:church_staff_pwa/features/auth/presentation/screens/profile_screen.dart';
 import 'package:church_staff_pwa/features/auth/presentation/screens/user_management_screen.dart';
-import 'package:church_staff_pwa/features/roster/domain/entities/event_option.dart';
-import 'package:church_staff_pwa/features/roster/domain/entities/service_roster.dart';
-import 'package:church_staff_pwa/features/roster/domain/repositories/roster_repository.dart';
 import 'package:church_staff_pwa/features/roster/presentation/providers/roster_provider.dart';
 import 'package:church_staff_pwa/features/roster/presentation/screens/roster_edit_screen.dart';
 import 'package:church_staff_pwa/features/roster/presentation/screens/roster_screen.dart';
@@ -14,8 +11,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
+import 'support/in_memory_roster_repository.dart';
+
 /// 權限的三個強制點裡，UI 只是最外層的一層 —— 真正擋住寫入的是
-/// `firestore.rules` 與 `worker/google_calendar.js`。但入口顯不顯示決定使用者
+/// `firestore.rules` 與 `worker/authorize.js`。但入口顯不顯示決定使用者
 /// 會不會撞到一個按了必定失敗的按鈕，所以這裡把「誰看得到什麼」釘住。
 
 User _user({
@@ -64,52 +63,6 @@ class FakeAuthRepository implements AuthRepository {
   Future<void> deleteUser(String id) async {}
 }
 
-class _FakeRosterRepository implements RosterRepository {
-  int ensureCallCount = 0;
-
-  @override
-  Future<List<ServiceRoster>> getUpcomingRostersFromCache() async => const [];
-
-  @override
-  Future<List<ServiceRoster>> getUpcomingRosters() async => const [];
-
-  List<ServiceType> ensureTypes = const [];
-
-  @override
-  Future<void> ensureQuarterRosters(List<ServiceType> allowedTypes) async {
-    ensureCallCount++;
-    ensureTypes = allowedTypes;
-  }
-
-  @override
-  Future<void> updateRoster(ServiceRoster roster) async {}
-
-  @override
-  Future<void> updateRostersAtomically(List<ServiceRoster> rosters) async {
-    for (final roster in rosters) {
-      await updateRoster(roster);
-    }
-  }
-
-  @override
-  Future<Map<ServiceType, List<String>>> getServiceTemplates() async =>
-      const {};
-
-  @override
-  Future<void> updateServiceTemplates(
-    Map<ServiceType, List<String>> templates,
-  ) async {}
-
-  @override
-  Future<Map<ServiceType, List<EventOption>>> getEventOptions() async =>
-      const {};
-
-  @override
-  Future<void> updateEventOptions(
-    Map<ServiceType, List<EventOption>> options,
-  ) async {}
-}
-
 /// 進入 RosterEditScreen，回報它有沒有把人踢出去。
 ///
 /// **Session 必須先還原完畢再掛畫面。** SessionProvider 是非同步還原的，而
@@ -124,7 +77,7 @@ class _FakeRosterRepository implements RosterRepository {
 /// TabController 與 roster 資料，但 AppBar 的 actions 照樣建出來。
 Future<int> _pumpRosterEdit(WidgetTester tester, {required User user}) async {
   final session = SessionProvider(FakeAuthRepository(user));
-  final rosters = RosterProvider(_FakeRosterRepository());
+  final rosters = RosterProvider(InMemoryRosterRepository());
 
   await tester.pumpWidget(
     ChangeNotifierProvider<SessionProvider>.value(
@@ -168,7 +121,7 @@ Future<List<String>> _pumpRosterTabs(
   required User user,
 }) async {
   final session = SessionProvider(FakeAuthRepository(user));
-  final rosters = RosterProvider(_FakeRosterRepository());
+  final rosters = RosterProvider(InMemoryRosterRepository());
 
   await tester.pumpWidget(
     ChangeNotifierProvider<SessionProvider>.value(

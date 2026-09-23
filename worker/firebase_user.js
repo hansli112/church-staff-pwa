@@ -1,13 +1,11 @@
-// Who is calling, and may they do this.
+// Who is calling, and Firestore read as them.
 //
 // Lives outside functions/ for the same reason google_calendar.js does:
 // everything under functions/ is routed by filename, and a helper module
 // accidentally becoming a public route is invisible until someone finds it.
 //
-// Split out of google_calendar.js when /api/roster/ needed the same check
-// against a different group. The group name is the only difference, and an
-// authorization check that exists in two copies is one that will be fixed in
-// one copy.
+// What the caller may *do* is not decided here — that is authorize.js, which
+// reads the profile identifyCaller() returns.
 
 const FIRESTORE_API = 'https://firestore.googleapis.com/v1';
 
@@ -33,7 +31,9 @@ export function requireEnv(env, key) {
   return value.trim();
 }
 
-function base64UrlToBytes(value) {
+/// Also decodes the service account key in google_calendar.js — the PEM body is
+/// plain base64, which this accepts as well.
+export function base64UrlToBytes(value) {
   const padded = value.replace(/-/g, '+').replace(/_/g, '/');
   const binary = atob(padded + '='.repeat((4 - (padded.length % 4)) % 4));
   const bytes = new Uint8Array(binary.length);
@@ -84,49 +84,25 @@ export function bearerToken(request) {
 /// resource path (`projects/.../users/{uid}`) and sits one level up, outside
 /// `fields`. Anything missing or of another shape lands on null: a nameless
 /// notification is a worse message, not a failed request.
-function displayName(doc) {
-  const value = doc?.fields?.name?.stringValue;
+function displayName(fields) {
+  const value = fields?.name?.stringValue;
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
   return trimmed === '' ? null : trimmed;
 }
 
-/// admin is root, otherwise membership of [group].
-///
-/// Firestore's REST encoding is nested and every level is optional: a user
-/// created before the field existed has no `groups` at all, and an empty array
-/// comes back as `{ arrayValue: {} }` with no `values`. Anything unreadable
-/// must land on "no access" rather than throw — a shape surprise here would
-/// otherwise turn into a 500 on a request that should simply be refused.
-function hasGroup(doc, group) {
-  const fields = doc?.fields;
-  if (fields?.role?.stringValue === 'admin') return true;
-  const values = fields?.groups?.arrayValue?.values;
-  if (!Array.isArray(values)) return false;
-  return values.some((entry) => entry?.stringValue === group);
-}
-
-/// Rejects anyone outside [group], and returns
-/// `{ uid, name, token, isAdmin, zoneTypes }`.
-///
-/// [zoneTypes] and [isAdmin] come back because group membership is only half
-/// the answer: canEditRosterType() in firestore.rules reads the group as "may
-/// edit rosters" and the zone as "which one". A caller who only has 青崇 must
-/// not be able to act on 主日 just because the group check passed.
+/// Rejects a caller who is not signed in or has no account, and returns
+/// `{ uid, name, token, role, groups, zoneTypes }` read from users/{uid}.
 ///
 /// The role lives in Firestore, not in the token's custom claims, so this reads
 /// users/{uid} as the caller. Doing it that way also means the token is fully
 /// verified by Firestore and the service account needs no Firestore IAM grant.
 ///
-/// [denied] is the message for someone who is signed in but lacks the group —
-/// it names the specific thing they cannot do, which is the only part a caller
-/// can act on.
-export async function requireGroupMember(
-  request,
-  env,
-  { group, denied },
-  fetchImpl = fetch,
-) {
+/// Firestore's REST encoding is nested and every level is optional: a user
+/// created before a field existed has no field at all. Anything unreadable
+/// comes back as null or an empty list — "no access" to authorize(), rather
+/// than a throw that would turn a refusal into a 500.
+export async function identifyCaller(request, env, fetchImpl = fetch) {
   const token = bearerToken(request);
   const projectId = requireEnv(env, 'FIREBASE_PROJECT_ID');
   const uid = uidFromIdToken(token);
@@ -151,14 +127,15 @@ export async function requireGroupMember(
     throw new HttpError(502, '無法確認權限，請稍後再試');
   }
 
-  const doc = await response.json();
-  if (!hasGroup(doc, group)) throw new HttpError(403, denied);
+  const fields = (await response.json())?.fields;
+  const role = fields?.role?.stringValue;
   return {
     uid,
-    name: displayName(doc),
+    name: displayName(fields),
     token,
-    isAdmin: doc?.fields?.role?.stringValue === 'admin',
-    zoneTypes: stringArrayField(doc?.fields?.zoneTypes),
+    role: typeof role === 'string' ? role : null,
+    groups: stringArrayField(fields?.groups),
+    zoneTypes: stringArrayField(fields?.zoneTypes),
   };
 }
 

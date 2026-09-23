@@ -4,19 +4,20 @@
 // the exported onRequest* methods are routed; every other verb gets a 405 from
 // the Pages runtime.
 
+import { authorize } from '../../../worker/authorize.js';
 import {
+  CALENDAR_LOG_LABEL,
   buildGoogleEvent,
   callCalendar,
-  handle,
-  jsonResponse,
-  readJsonBody,
-  requireEditor,
 } from '../../../worker/google_calendar.js';
+import { handleWith, jsonResponse, readJsonBody } from '../../../worker/http.js';
 import { notifyN8n, notifyPayload, scheduleNotify } from '../../../worker/line_notify.js';
 
 export const onRequestPost = ({ request, env, waitUntil }) =>
-  handle(async () => {
-    const actor = await requireEditor(request, env);
+  handleWith(CALENDAR_LOG_LABEL, async () => {
+    // Only uid and name go on to the notification — not the caller's token.
+    const { uid, name } = await authorize(request, env, { edit: 'calendar' });
+    const actor = { uid, name };
     const event = buildGoogleEvent(await readJsonBody(request));
     const response = await callCalendar(env, { method: 'POST', body: event });
     // The raw Google item is returned on purpose: the client parses it with the

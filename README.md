@@ -177,7 +177,8 @@ App 同源，沒有 CORS 問題），憑證只存在於伺服器端。
 |---|---|
 | `functions/api/calendar/events.js` | `POST` 新增 |
 | `functions/api/calendar/events/[id].js` | `PATCH` 編輯、`DELETE` 刪除 |
-| `worker/google_calendar.js` | 共用邏輯（身分驗證、簽 JWT、參數驗證） |
+| `worker/authorize.js` | 誰能做什麼（群組、牧區、admin 視同全部），每個 function 呼叫一次 |
+| `worker/google_calendar.js` | 簽 JWT、呼叫 Google Calendar、參數驗證 |
 | `worker/line_notify.js` | 新增成功後通知 n8n 發 LINE 群組訊息（選用） |
 | `functions-tests/` | `node --test`，CI 會擋部署 |
 
@@ -385,7 +386,7 @@ node scripts/backfill-user-zone-types.mjs --check   # 只稽核，有不一致�
 | 檔案 | 東西 | 角色 |
 |---|---|---|
 | `firestore.rules` | `inGroup()` | 真正的防線（服事表、使用者名單） |
-| `worker/google_calendar.js` | `CALENDAR_GROUP` | 真正的防線（行事曆） |
+| `worker/authorize.js` | `ACTIONS` | 真正的防線（行事曆、照片辨識） |
 | `lib/features/auth/domain/entities/user.dart` | `UserGroup` | 只決定 UI 顯不顯示入口 |
 
 group 名稱字串是資料格式的一部分（存進 Firestore 的就是它），改名等於要遷移

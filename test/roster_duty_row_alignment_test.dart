@@ -1,7 +1,5 @@
 import 'package:church_staff_pwa/core/types/service_type.dart';
-import 'package:church_staff_pwa/features/roster/domain/entities/event_option.dart';
 import 'package:church_staff_pwa/features/roster/domain/entities/service_roster.dart';
-import 'package:church_staff_pwa/features/roster/domain/repositories/roster_repository.dart';
 import 'package:church_staff_pwa/features/roster/presentation/providers/roster_provider.dart';
 import 'package:church_staff_pwa/features/roster/presentation/widgets/duty_row.dart';
 import 'package:church_staff_pwa/features/roster/presentation/widgets/roster_card.dart';
@@ -11,39 +9,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
+import 'support/in_memory_roster_repository.dart';
+
 /// 服事列在兩個模式各自該有的高度。
 ///
 /// 編輯模式撐到 48（刪除鈕的觸控目標，給長輩按的，不能縮）；檢視模式沒有按
 /// 鈕，列高跟著文字走 —— 這個畫面是拿來讀的，一頁看得到幾天比每列多 25px 留
 /// 白重要。切換模式的位移是靠錨定日期修的（見 roster_scroll_anchor_test），
 /// 不靠兩邊列高一樣。
-
-class _FakeRepo implements RosterRepository {
-  @override
-  Future<List<ServiceRoster>> getUpcomingRostersFromCache() async => const [];
-  @override
-  Future<List<ServiceRoster>> getUpcomingRosters() async => const [];
-  @override
-  Future<void> ensureQuarterRosters(List<ServiceType> allowedTypes) async {}
-  @override
-  Future<void> updateRoster(ServiceRoster roster) async {}
-  @override
-  Future<void> updateRostersAtomically(List<ServiceRoster> rosters) async {}
-  @override
-  Future<Map<ServiceType, List<String>>> getServiceTemplates() async =>
-      const {};
-  @override
-  Future<void> updateServiceTemplates(
-    Map<ServiceType, List<String>> templates,
-  ) async {}
-  @override
-  Future<Map<ServiceType, List<EventOption>>> getEventOptions() async =>
-      const {};
-  @override
-  Future<void> updateEventOptions(
-    Map<ServiceType, List<EventOption>> options,
-  ) async {}
-}
 
 ServiceRoster _roster() => ServiceRoster(
   id: 'r1',
@@ -67,7 +40,7 @@ Future<List<double>> _rowHeights(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
-  final provider = RosterProvider(_FakeRepo());
+  final provider = RosterProvider(InMemoryRosterRepository());
   if (editMode) provider.toggleEditMode();
 
   await tester.pumpWidget(
@@ -83,7 +56,7 @@ Future<List<double>> _rowHeights(
                 RosterViewCard(
                   roster: _roster(),
                   initiallyExpanded: true,
-                  resolveEventColor: (_) => 0xFF000000,
+                  resolveEventColor: (_, _) => 0xFF000000,
                 ),
             ],
           ),

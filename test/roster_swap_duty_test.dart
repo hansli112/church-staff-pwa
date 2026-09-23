@@ -7,11 +7,11 @@ import 'package:church_staff_pwa/features/auth/domain/entities/user.dart';
 import 'package:church_staff_pwa/features/auth/domain/repositories/auth_repository.dart';
 import 'package:church_staff_pwa/features/auth/presentation/providers/session_provider.dart';
 import 'package:church_staff_pwa/features/auth/presentation/providers/user_admin_provider.dart';
-import 'package:church_staff_pwa/features/roster/domain/entities/event_option.dart';
 import 'package:church_staff_pwa/features/roster/domain/entities/service_roster.dart';
-import 'package:church_staff_pwa/features/roster/domain/repositories/roster_repository.dart';
 import 'package:church_staff_pwa/features/roster/presentation/providers/roster_provider.dart';
 import 'package:church_staff_pwa/features/roster/presentation/widgets/roster_card.dart';
+
+import 'support/in_memory_roster_repository.dart';
 
 /// 交換服事（「1/1 的破冰跟 1/8 換一下」）。
 ///
@@ -20,70 +20,13 @@ import 'package:church_staff_pwa/features/roster/presentation/widgets/roster_car
 ///      被排兩天、另一個人的那天空著。
 ///   2. 寫失敗時本地狀態不能先被改掉 —— 否則畫面顯示已交換，Firestore 上卻
 ///      沒有，而且沒有任何提示。
-class _FakeRosterRepository implements RosterRepository {
-  _FakeRosterRepository({required List<ServiceRoster> rosters})
-    : _rosters = List<ServiceRoster>.from(rosters);
-
-  final List<ServiceRoster> _rosters;
-
-  /// 每次 updateRostersAtomically 收到的批次，用來驗證「兩筆同一批」。
-  final List<List<ServiceRoster>> atomicBatches = [];
-
-  /// 個別寫入的次數。交換不該用到這條路。
-  int singleWriteCount = 0;
-
-  bool failAtomicWrites = false;
-
-  @override
-  Future<List<ServiceRoster>> getUpcomingRosters() async =>
-      List<ServiceRoster>.from(_rosters);
-
-  @override
-  Future<List<ServiceRoster>> getUpcomingRostersFromCache() async => const [];
-
-  @override
-  Future<void> ensureQuarterRosters(List<ServiceType> allowedTypes) async {}
-
-  @override
-  Future<void> updateRoster(ServiceRoster roster) async {
-    singleWriteCount++;
-  }
-
-  @override
-  Future<void> updateRostersAtomically(List<ServiceRoster> rosters) async {
-    if (failAtomicWrites) {
-      throw Exception('batch commit failed');
-    }
-    atomicBatches.add(List<ServiceRoster>.from(rosters));
-    for (final roster in rosters) {
-      final index = _rosters.indexWhere((r) => r.id == roster.id);
-      if (index == -1) {
-        _rosters.add(roster);
-      } else {
-        _rosters[index] = roster;
-      }
-    }
-  }
-
-  @override
-  Future<Map<ServiceType, List<String>>> getServiceTemplates() async => {
-    ServiceType.sundayService: const ['破冰'],
-  };
-
-  @override
-  Future<void> updateServiceTemplates(
-    Map<ServiceType, List<String>> templates,
-  ) async {}
-
-  @override
-  Future<Map<ServiceType, List<EventOption>>> getEventOptions() async =>
-      const {};
-
-  @override
-  Future<void> updateEventOptions(
-    Map<ServiceType, List<EventOption>> options,
-  ) async {}
-}
+InMemoryRosterRepository _repo({required List<ServiceRoster> rosters}) =>
+    InMemoryRosterRepository(
+      rosters: rosters,
+      templates: const {
+        ServiceType.sundayService: ['破冰'],
+      },
+    );
 
 /// 交換入口現在在「編輯服事項目」的視窗裡，而那個視窗會去 UserAdminProvider
 /// 撈同工名單 —— 所以這組 UI 測試得連 session 一起掛上。
@@ -146,7 +89,7 @@ RosterEntry _duty(
 }
 
 /// 直接把 provider 的內部狀態填好，不必跑完整的 fetch 流程。
-Future<RosterProvider> _providerWith(_FakeRosterRepository repo) async {
+Future<RosterProvider> _providerWith(InMemoryRosterRepository repo) async {
   final provider = RosterProvider(repo);
   await provider.fetchRosters();
   return provider;
@@ -244,7 +187,7 @@ void main() {
 
   group('swapDutyPeople', () {
     test('兩筆走同一次 atomic 寫入，本地狀態也跟著換', () async {
-      final repo = _FakeRosterRepository(
+      final repo = _repo(
         rosters: [
           _roster(
             id: 'a',
@@ -284,7 +227,7 @@ void main() {
     });
 
     test('rosters 換成新的 instance，衍生快取才會失效', () async {
-      final repo = _FakeRosterRepository(
+      final repo = _repo(
         rosters: [
           _roster(
             id: 'a',
@@ -320,7 +263,7 @@ void main() {
     });
 
     test('寫入失敗時往上丟，且本地狀態不動', () async {
-      final repo = _FakeRosterRepository(
+      final repo = _repo(
         rosters: [
           _roster(
             id: 'a',
@@ -359,7 +302,7 @@ void main() {
     });
 
     test('找不到服事表時丟 StateError，不會靜默無事發生', () async {
-      final repo = _FakeRosterRepository(
+      final repo = _repo(
         rosters: [
           _roster(
             id: 'a',
@@ -387,7 +330,7 @@ void main() {
     });
 
     test('服事項目索引超出範圍時丟 StateError', () async {
-      final repo = _FakeRosterRepository(
+      final repo = _repo(
         rosters: [
           _roster(
             id: 'a',
@@ -432,7 +375,7 @@ void main() {
     /// 掛一張展開的服事表卡片，並且已經在編輯模式 —— 交換入口只在編輯模式出現。
     Future<RosterProvider> pumpCard(
       WidgetTester tester,
-      _FakeRosterRepository repo,
+      InMemoryRosterRepository repo,
     ) async {
       final provider = await _providerWith(repo);
       provider.toggleEditMode();
@@ -492,7 +435,7 @@ void main() {
     }
 
     testWidgets('選一天按下交換，兩筆一次寫完並回到卡片上', (tester) async {
-      final repo = _FakeRosterRepository(
+      final repo = _repo(
         rosters: [
           _roster(
             id: 'a',
@@ -530,7 +473,7 @@ void main() {
     });
 
     testWidgets('自己那天已經有的人不會出現在候選清單裡', (tester) async {
-      final repo = _FakeRosterRepository(
+      final repo = _repo(
         rosters: [
           _roster(
             id: 'a',
@@ -561,7 +504,7 @@ void main() {
     // 已經有要換過去的人」—— 那種交換會讓對方那天出現兩個同名，去重之後吃掉
     // 一個，結果是那一天平白少一個人，而且畫面上完全看不出來。
     testWidgets('對方那天已經有這個人時，那一天不會出現在候選清單裡', (tester) async {
-      final repo = _FakeRosterRepository(
+      final repo = _repo(
         rosters: [
           _roster(
             id: 'a',
@@ -590,7 +533,7 @@ void main() {
     });
 
     testWidgets('換掉「要換誰」之後，候選清單跟著重算', (tester) async {
-      final repo = _FakeRosterRepository(
+      final repo = _repo(
         rosters: [
           _roster(
             id: 'a',
@@ -624,7 +567,7 @@ void main() {
     });
 
     testWidgets('選好之後才換「要換誰」，不會拿舊的索引去換錯人', (tester) async {
-      final repo = _FakeRosterRepository(
+      final repo = _repo(
         rosters: [
           _roster(
             id: 'a',
@@ -674,7 +617,7 @@ void main() {
     // 交換會重寫這一項的人，帶不過去 —— 但也不能就這樣把使用者剛勾的東西
     // 靜靜丟掉。
     testWidgets('編輯視窗有未存的改動時，去交換前先問一聲', (tester) async {
-      final repo = _FakeRosterRepository(
+      final repo = _repo(
         rosters: [
           _roster(
             id: 'a',
@@ -721,7 +664,7 @@ void main() {
     });
 
     testWidgets('沒改過就按交換，不會多跳一個確認', (tester) async {
-      final repo = _FakeRosterRepository(
+      final repo = _repo(
         rosters: [
           _roster(
             id: 'a',
@@ -750,7 +693,7 @@ void main() {
     // 待定是「還沒排人」的佔位符，不是使用者剛改的東西 —— 拿它當改動會讓
     // 每個空的服事項目按交換都先被問一次。
     testWidgets('還沒排人的項目按交換，不會被問有沒有未存的改動', (tester) async {
-      final repo = _FakeRosterRepository(
+      final repo = _repo(
         rosters: [
           _roster(
             id: 'a',
@@ -777,7 +720,7 @@ void main() {
     });
 
     testWidgets('寫入失敗時留在 sheet 上顯示錯誤', (tester) async {
-      final repo = _FakeRosterRepository(
+      final repo = _repo(
         rosters: [
           _roster(
             id: 'a',

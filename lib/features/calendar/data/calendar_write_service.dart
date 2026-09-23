@@ -5,7 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-import '../presentation/widgets/_calendar_models.dart';
+import '../domain/entities/calendar_event.dart';
+import 'google_calendar_event.dart';
 
 /// A failure the user is meant to read. The message is already in Chinese —
 /// either straight from the API or mapped from a transport failure — so callers

@@ -1,82 +1,17 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:church_staff_pwa/core/types/service_type.dart';
-import 'package:church_staff_pwa/features/roster/domain/entities/event_option.dart';
 import 'package:church_staff_pwa/features/roster/domain/entities/service_roster.dart';
-import 'package:church_staff_pwa/features/roster/domain/repositories/roster_repository.dart';
 import 'package:church_staff_pwa/features/roster/presentation/providers/roster_provider.dart';
 
+import 'support/in_memory_roster_repository.dart';
+
+InMemoryRosterRepository _repo() => InMemoryRosterRepository(
+  templates: emptyForEveryType(),
+  eventOptions: emptyForEveryType(),
+);
+
 // ── Fake RosterRepository（記錄呼叫次數）──────────────────────────────────
-
-class _TrackingRosterRepository implements RosterRepository {
-  int fetchRostersCallCount = 0;
-  int fetchTemplatesCallCount = 0;
-  int fetchEventOptionsCallCount = 0;
-
-  List<ServiceRoster> rostersToReturn;
-
-  _TrackingRosterRepository({List<ServiceRoster>? rostersToReturn})
-    : rostersToReturn = rostersToReturn ?? [];
-
-  @override
-  Future<List<ServiceRoster>> getUpcomingRosters() async {
-    fetchRostersCallCount++;
-    return List<ServiceRoster>.from(rostersToReturn);
-  }
-
-  @override
-  Future<List<ServiceRoster>> getUpcomingRostersFromCache() async => const []; // cache miss（stub 預設空）
-
-  @override
-  Future<void> ensureQuarterRosters(List<ServiceType> allowedTypes) async {} // stub：no-op
-
-  @override
-  Future<void> updateRoster(ServiceRoster roster) async {}
-
-  @override
-  Future<void> updateRostersAtomically(List<ServiceRoster> rosters) async {
-    for (final roster in rosters) {
-      await updateRoster(roster);
-    }
-  }
-
-  @override
-  Future<Map<ServiceType, List<String>>> getServiceTemplates() async {
-    fetchTemplatesCallCount++;
-    return {
-      ServiceType.sundayService: const [],
-      ServiceType.youth: const [],
-      ServiceType.children: const [],
-    };
-  }
-
-  @override
-  Future<void> updateServiceTemplates(
-    Map<ServiceType, List<String>> templates,
-  ) async {}
-
-  @override
-  Future<Map<ServiceType, List<EventOption>>> getEventOptions() async {
-    fetchEventOptionsCallCount++;
-    return {
-      ServiceType.sundayService: const [],
-      ServiceType.youth: const [],
-      ServiceType.children: const [],
-    };
-  }
-
-  @override
-  Future<void> updateEventOptions(
-    Map<ServiceType, List<EventOption>> options,
-  ) async {}
-
-  /// 重置計數器（方便在同一 provider 上測多次呼叫）
-  void resetCounts() {
-    fetchRostersCallCount = 0;
-    fetchTemplatesCallCount = 0;
-    fetchEventOptionsCallCount = 0;
-  }
-}
 
 // ── 輔助：等待 provider 的非同步 fetch 跑完 ──────────────────────────────────
 
@@ -89,11 +24,11 @@ Future<void> _drainAsync() async {
 
 void main() {
   group('RosterProvider.onSessionChanged', () {
-    late _TrackingRosterRepository repo;
+    late InMemoryRosterRepository repo;
     late RosterProvider provider;
 
     setUp(() {
-      repo = _TrackingRosterRepository();
+      repo = _repo();
       provider = RosterProvider(repo);
     });
 
@@ -132,7 +67,7 @@ void main() {
 
     test('切換帳號時舊的 rosters 先被同步清空，fetch 完成後回填 user-B 資料', () async {
       // user-A 有一筆資料
-      repo.rostersToReturn = [
+      repo.rosters = [
         ServiceRoster(
           id: 'r1',
           date: DateTime(2026, 3, 1),
@@ -146,7 +81,7 @@ void main() {
       expect(provider.rosters, isNotEmpty);
 
       // user-B 有不同的非空資料
-      repo.rostersToReturn = [
+      repo.rosters = [
         ServiceRoster(
           id: 'r2',
           date: DateTime(2026, 3, 8),

@@ -110,6 +110,14 @@ export function request(
   });
 }
 
+/// Firestore 對空陣列回的是 { arrayValue: {} }，沒有 values —— 照抄真實形狀，
+/// 否則讀陣列欄位時對空陣列的處理就沒有被測到。
+function stringArray(list) {
+  return list.length === 0
+    ? { arrayValue: {} }
+    : { arrayValue: { values: list.map((value) => ({ stringValue: value })) } };
+}
+
 /// Routes the three upstreams the functions talk to. Every call is recorded so
 /// a test can assert what was actually sent to Google, not just what came back.
 export function fakeFetch({
@@ -147,14 +155,8 @@ export function fakeFetch({
       // 使用者自己的 name 欄位。文件外層那個 name 是 Firestore 的資源路徑，
       // 兩者同名但不同層 —— displayName() 讀的是這一個。
       if (profile.name != null) fields.name = { stringValue: profile.name };
-      // Firestore 對空陣列回的是 { arrayValue: {} }，沒有 values —— 照抄真實形狀，
-      // 否則 hasCalendarAccess 對空陣列的處理就沒有被測到。
-      if (profile.groups != null) {
-        fields.groups =
-          profile.groups.length === 0
-            ? { arrayValue: {} }
-            : { arrayValue: { values: profile.groups.map((g) => ({ stringValue: g })) } };
-      }
+      if (profile.groups != null) fields.groups = stringArray(profile.groups);
+      if (profile.zoneTypes != null) fields.zoneTypes = stringArray(profile.zoneTypes);
       return Response.json({ name: `users/${uid}`, fields });
     }
 

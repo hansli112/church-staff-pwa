@@ -97,6 +97,11 @@ const USERS = {
 
 const ROWS = [{ date: '2026-10-04', duties: [{ role: '敬拜主領', people: ['陳志明'] }] }];
 
+/// Gemini 辨識成功的回應：模型把 ROWS 當成 JSON 文字吐回來。
+function geminiOk() {
+  return Response.json({ candidates: [{ content: { parts: [{ text: JSON.stringify(ROWS) }] } }] });
+}
+
 /// Routes the two upstreams this function talks to and records every call, so a
 /// test can assert what actually went to Gemini rather than only what came back.
 function fakeFetch({
@@ -180,9 +185,7 @@ function fakeFetch({
 
     if (target.startsWith(GEMINI_HOST)) {
       if (typeof gemini === 'function') return gemini(target, init, calls);
-      return Response.json({
-        candidates: [{ content: { parts: [{ text: JSON.stringify(ROWS) }] } }],
-      });
+      return geminiOk();
     }
 
     throw new Error(`unexpected fetch to ${target}`);
@@ -211,6 +214,9 @@ async function post(impl, { env = ENV, body = validBody(), ...init } = {}) {
   );
 }
 
+// 誰可以轉哪一個崇拜，由 authorize.test.js 逐條測。這裡只證明這條路由真的有問、
+// 問的是照片上的那個崇拜、順序對（先認人，再讀 body，再問牧區），而且被擋下來
+// 的人不會花掉辨識額度。
 describe('POST /api/roster/import-image — 權限', () => {
   test('roster-editors 可以轉換', async () => {
     const impl = fakeFetch();
@@ -219,30 +225,6 @@ describe('POST /api/roster/import-image — 權限', () => {
     assert.deepEqual(await response.json(), { entries: ROWS });
   });
 
-  test('admin 也可以（admin 是 root）', async () => {
-    const impl = fakeFetch();
-    const response = await post(impl, { token: idToken(ADMIN_UID) });
-    assert.equal(response.status, 200);
-  });
-
-  // 兩個 group 是正交的：給了行事曆編輯權不等於能改服事表。
-  test('只有 calendar-editors 的人被擋下來，而且訊息講的是服事表', async () => {
-    const impl = fakeFetch();
-    const response = await post(impl, { token: idToken(CALENDAR_EDITOR_UID) });
-    assert.equal(response.status, 403);
-    assert.equal((await response.json()).error, '沒有編輯服事表的權限');
-    assert.equal(impl.geminiCalls().length, 0, '被擋下來的人不該花掉任何辨識額度');
-  });
-
-  test('一般會眾被擋下來', async () => {
-    const impl = fakeFetch();
-    const response = await post(impl, { token: idToken(MEMBER_UID) });
-    assert.equal(response.status, 403);
-  });
-
-  // group 說「可以改服事表」，zone 說「哪一個」—— 跟 firestore.rules 的
-  // canEditRosterType() 同一套。少了這道，青崇同工寫不進主日，卻照樣可以把
-  // 免費辨識額度花在主日上。
   test('有編輯權但沒有那個牧區的人被擋下來，而且不花額度', async () => {
     const impl = fakeFetch({ zones: ['youth'] });
     const response = await post(impl, { body: validBody({ type: 'sundayService' }) });
@@ -251,30 +233,28 @@ describe('POST /api/roster/import-image — 權限', () => {
     assert.equal(impl.geminiCalls().length, 0);
   });
 
-  test('自己牧區的照樣可以轉', async () => {
-    const impl = fakeFetch({ zones: ['youth'] });
-    assert.equal((await post(impl, { body: validBody({ type: 'youth' }) })).status, 200);
-  });
-
-  test('admin 不必持有牧區也能轉任何一個', async () => {
-    const impl = fakeFetch({ prompts: { sundayService: PUBLISHED_TEMPLATE } });
-    const response = await post(impl, {
-      token: idToken(ADMIN_UID),
-      body: validBody({ type: 'sundayService' }),
-    });
-    assert.equal(response.status, 200);
-  });
-
-  test('zoneTypes 欄位不存在時當作沒有牧區', async () => {
-    const impl = fakeFetch({ zones: [] });
-    assert.equal((await post(impl)).status, 403);
-  });
-
   test('沒帶 token 就是 401', async () => {
     const impl = fakeFetch();
     const response = await post(impl, { token: null });
     assert.equal(response.status, 401);
     assert.equal(impl.geminiCalls().length, 0);
+  });
+
+  // 先認人再讀 body：沒登入的人送什麼來都是 401，worker 也不替他解析 4MB 的 JSON。
+  test('沒登入又送壞掉的 body，一樣是 401 不是 400', async () => {
+    for (const body of ['{not json', validBody({ type: 'wedding', images: [] })]) {
+      const response = await post(fakeFetch(), { token: null, body });
+      assert.equal(response.status, 401);
+    }
+  });
+
+  test('不在 roster-editors 的人送壞掉的 body，是 403 不是 400', async () => {
+    const response = await post(fakeFetch(), {
+      token: idToken(CALENDAR_EDITOR_UID),
+      body: '{not json',
+    });
+    assert.equal(response.status, 403);
+    assert.equal((await response.json()).error, '沒有編輯服事表的權限');
   });
 });
 
@@ -411,8 +391,6 @@ describe('POST /api/roster/import-image — 名單是活的', () => {
 
 describe('POST /api/roster/import-image — 請求驗證', () => {
   const cases = [
-    ['沒有 type', { images: [{ mimeType: 'image/png', data: PIXEL }] }, 400, '不知道這是哪一個崇拜的服事表'],
-    ['type 不認得', validBody({ type: 'wedding' }), 400, '不知道這是哪一個崇拜的服事表'],
     ['沒有照片', validBody({ images: [] }), 400, '請先選一張服事表照片'],
     ['images 不是陣列', validBody({ images: 'nope' }), 400, '請先選一張服事表照片'],
     [
@@ -581,7 +559,7 @@ describe('callGemini — 上游的各種回法', () => {
     const rows = await call(() => {
       attempts += 1;
       if (attempts <= 2) return new Response('busy', { status: 503 });
-      return Response.json({ candidates: [{ content: { parts: [{ text: JSON.stringify(ROWS) }] } }] });
+      return geminiOk();
     });
     assert.deepEqual(rows, ROWS);
   });
@@ -602,22 +580,185 @@ describe('callGemini — 上游的各種回法', () => {
     }
   });
 
-  test('429 不重試：額度不會在幾秒內回來，重試只是多打一次', async () => {
-    let attempts = 0;
+  /// 從請求網址取出打的是哪個模型。
+  const modelOf = (url) => /models\/([^:]+):/.exec(url)[1];
+
+  test('429 不在同一個模型上重試，換下一個；全部用完才放棄', async () => {
+    const used = [];
     const restore = muteConsoleError();
     try {
       await assert.rejects(
         () =>
-          call(() => {
-            attempts += 1;
+          call((url) => {
+            used.push(modelOf(url));
             return new Response(JSON.stringify(REAL_DAILY_QUOTA_429), { status: 429 });
+          }),
+        { status: 429, message: /今天的免費辨識次數用完了/ },
+      );
+    } finally {
+      restore();
+    }
+    assert.deepEqual(used, ['gemini-3.6-flash', 'gemini-3.7-flash']);
+  });
+
+  test('第一個模型額度用完，第二個成功就當作成功', async () => {
+    // 2026-09-23 實際碰到的：3.6 回 429，3.7 一分鐘後辨識成功。
+    const restore = muteConsoleError();
+    try {
+      const rows = await call((url) =>
+        modelOf(url) === 'gemini-3.6-flash'
+          ? new Response(JSON.stringify(REAL_DAILY_QUOTA_429), { status: 429 })
+          : geminiOk(),
+      );
+      assert.deepEqual(rows, ROWS);
+    } finally {
+      restore();
+    }
+  });
+
+  test('503 重試時兩個模型輪流用', async () => {
+    const used = [];
+    const restore = muteConsoleError();
+    try {
+      await assert.rejects(
+        () =>
+          call((url) => {
+            used.push(modelOf(url));
+            return new Response('busy', { status: 503 });
+          }),
+        { status: 503 },
+      );
+    } finally {
+      restore();
+    }
+    assert.deepEqual(used, ['gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-3.6-flash']);
+  });
+
+  test('一個額度用完、另一個忙碌時，說的是忙碌', async () => {
+    // 忙碌過幾分鐘會好，額度要等到明天 —— 還有一個模型可能會好，就不要叫人等到明天。
+    const restore = muteConsoleError();
+    try {
+      await assert.rejects(
+        () =>
+          call((url) =>
+            modelOf(url) === 'gemini-3.6-flash'
+              ? new Response(JSON.stringify(REAL_DAILY_QUOTA_429), { status: 429 })
+              : new Response('busy', { status: 503 }),
+          ),
+        { status: 503, message: 'Gemini 免費版現在太多人用，過幾分鐘再試一次' },
+      );
+    } finally {
+      restore();
+    }
+  });
+
+  test('一個模型下架（404）時換下一個，不是整個放棄', async () => {
+    const used = [];
+    const restore = muteConsoleError();
+    try {
+      const rows = await call((url) => {
+        used.push(modelOf(url));
+        return modelOf(url) === 'gemini-3.6-flash'
+          ? new Response('', { status: 404 })
+          : geminiOk();
+      });
+      assert.deepEqual(rows, ROWS);
+    } finally {
+      restore();
+    }
+    assert.deepEqual(used, ['gemini-3.6-flash', 'gemini-3.7-flash']);
+  });
+
+  test('一個額度用完、另一個下架時，說的是額度，不是設定有誤', async () => {
+    // 最後一個回的是 404，但這次請求失敗的原因是額度 —— 叫人找管理員修設定是錯的方向。
+    const restore = muteConsoleError();
+    try {
+      await assert.rejects(
+        () =>
+          call((url) =>
+            modelOf(url) === 'gemini-3.6-flash'
+              ? new Response(JSON.stringify(REAL_DAILY_QUOTA_429), { status: 429 })
+              : new Response('', { status: 404 }),
+          ),
+        { status: 429, message: /今天的免費辨識次數用完了/ },
+      );
+    } finally {
+      restore();
+    }
+  });
+
+  test('換模型也受時間上限約束：過了就不再開始新的一次', async () => {
+    // 503 拖到第 80 秒，另一個模型就算還能用也來不及了。
+    let clock = 0;
+    const used = [];
+    const restore = muteConsoleError();
+    try {
+      await assert.rejects(
+        () =>
+          callGemini(ENV, {
+            prompt: 'x',
+            images,
+            retryDelaysMs: [0, 0],
+            lastAttemptStartMs: 75000,
+            now: () => clock,
+            fetchImpl: async (url) => {
+              used.push(modelOf(url));
+              clock += 80000;
+              return new Response(JSON.stringify(REAL_DAILY_QUOTA_429), { status: 429 });
+            },
           }),
         { status: 429 },
       );
     } finally {
       restore();
     }
-    assert.equal(attempts, 1);
+    assert.deepEqual(used, ['gemini-3.6-flash']);
+  });
+
+  test('三個模型時，拿掉一個之後其餘照順序輪，不會漏掉', async () => {
+    const used = [];
+    const impl = fakeFetch({
+      gemini: (url) => {
+        const model = modelOf(url);
+        used.push(model);
+        if (model === 'm-a') return new Response(JSON.stringify(REAL_DAILY_QUOTA_429), { status: 429 });
+        return new Response('busy', { status: 503 });
+      },
+    });
+    const restore = muteConsoleError();
+    try {
+      await assert.rejects(
+        () =>
+          callGemini(
+            { ...ENV, GEMINI_MODEL: 'm-a,m-b,m-c' },
+            { prompt: 'x', images, fetchImpl: impl, retryDelaysMs: [0, 0, 0] },
+          ),
+        { status: 503 },
+      );
+    } finally {
+      restore();
+    }
+    assert.deepEqual(used, ['m-a', 'm-b', 'm-c', 'm-b', 'm-c']);
+  });
+
+  test('GEMINI_MODEL 可以用逗號換掉整份清單', async () => {
+    const used = [];
+    const impl = fakeFetch({
+      gemini: (url) => {
+        used.push(modelOf(url));
+        return geminiOk();
+      },
+    });
+    const restore = muteConsoleError();
+    try {
+      await callGemini(
+        { ...ENV, GEMINI_MODEL: ' gemini-9-flash , gemini-8-flash ' },
+        { prompt: 'x', images, fetchImpl: impl, retryDelaysMs: [0, 0] },
+      );
+    } finally {
+      restore();
+    }
+    assert.deepEqual(used, ['gemini-9-flash']);
   });
 
   test('每分鐘的限制說等一下就好', async () => {

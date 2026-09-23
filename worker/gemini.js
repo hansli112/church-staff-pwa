@@ -12,13 +12,21 @@ import { HttpError, requireEnv } from './firebase_user.js';
 // which reads like "no such model" and sends you hunting for the wrong thing.
 const API_BASE = 'https://generativelanguage.googleapis.com/v1';
 
-/// Pinned, not an alias like `gemini-flash-latest`.
+/// Pinned, not an alias like `gemini-flash-latest`, and tried in this order.
 ///
 /// Aliases point at whatever is currently in fashion, which is also whatever is
 /// currently overloaded — the aliases were returning 503 while this exact model
 /// answered immediately. Pinning also means the same photo converts the same
 /// way tomorrow.
-const DEFAULT_MODEL = 'gemini-3.6-flash';
+///
+/// Two, because on the free tier one model is often busy or out of its daily
+/// 20 requests while another is not: on 2026-09-23 3.6 answered 429 and 3.7
+/// succeeded a minute later. Each has its own quota, so two models is also
+/// twice the requests per day. 3.7 is here because it was measured, not
+/// because it is newer: on the 主日 table it matched the 3.6 import in all 117
+/// cells. Do not add a model to this list without checking its output
+/// against a photo — see the lite models below.
+const DEFAULT_MODELS = ['gemini-3.6-flash', 'gemini-3.7-flash'];
 
 /// A dense roster table takes Gemini a while: a real quarter's table measured
 /// 52-68s, almost all of it generating ~3300 output tokens (lowering the
@@ -42,8 +50,13 @@ const UPSTREAM_TIMEOUT_MS = 100000;
 /// answered in 15s and put the wrong person on ~50 duties of one quarter —
 /// the kind of error nobody spots before pressing import.
 ///
-/// 429 is not retried at all. The daily quota does not come back in seconds,
-/// and the per-minute one does not come back in the few seconds waited here.
+/// Retries alternate between the models. A 503 on one says little about the
+/// other, and the failed attempt still counts against that model's daily 20
+/// (measured: 503s burned 3.6's quota), so spreading them also spreads that.
+///
+/// 429 is never retried on the same model: the daily quota does not come back
+/// in seconds. That model is dropped for the rest of the request and the next
+/// one is tried at once.
 const RETRY_DELAYS_MS = [2000, 5000, 10000, 15000, 20000];
 const LAST_ATTEMPT_START_MS = 75000;
 
@@ -62,7 +75,7 @@ export async function callGemini(
   },
 ) {
   const key = requireEnv(env, 'GEMINI_API_KEY');
-  const model = (env?.GEMINI_MODEL ?? '').trim() || DEFAULT_MODEL;
+  const models = modelList(env);
 
   const body = {
     contents: [
@@ -85,27 +98,61 @@ export async function callGemini(
     },
   };
 
+  // A queue, not an index: a model that answered 503 goes to the back, one
+  // that cannot answer today (429: out of quota; 404: retired) leaves it. An
+  // index modulo the remaining count skips a model once another is dropped.
+  const queue = [...models];
   const started = now();
-  let response = await post(fetchImpl, model, key, body, timeoutMs);
-  for (const delay of retryDelaysMs) {
-    if (response.status !== 503) break;
-    if (now() - started + delay > lastAttemptStartMs) break;
-    await sleep(delay);
+  let retries = 0;
+  let model;
+  let response;
+  // Kept across models: a quota that ran out on one model is still the reason
+  // the request failed if the next one then turns out to be retired.
+  let quotaDetail = null;
+  while (queue.length > 0) {
+    model = queue.shift();
     response = await post(fetchImpl, model, key, body, timeoutMs);
+    if (response.ok) break;
+
+    if (response.status === 429) {
+      quotaDetail = await safeText(response);
+      console.error('gemini quota exhausted', model, quotaDetail.slice(0, 500));
+    } else if (response.status === 404) {
+      // Retired, or a typo in GEMINI_MODEL. The other model may be fine.
+      console.error('gemini model not found', model);
+    } else if (response.status === 503) {
+      console.error('gemini busy', model, `retry ${retries}`);
+      queue.push(model);
+    } else {
+      break;
+    }
+    if (queue.length === 0) break;
+
+    // A model that cannot answer today is replaced at once; a busy one waits.
+    const delay = response.status === 503 ? retryDelaysMs[retries] : 0;
+    if (delay === undefined || now() - started + delay > lastAttemptStartMs) break;
+    if (response.status === 503) {
+      retries += 1;
+      await sleep(delay);
+    }
   }
 
-  if (!response.ok) {
+  if (response.ok) {
+    console.log('gemini ok', model, `retries ${retries}`);
+  } else {
     // Read whole: the quota that ran out is named ~1000 characters into a 429,
     // past where a log line would be cut. Only the log is truncated.
-    const detail = await safeText(response);
+    const detail = response.status === 429 ? quotaDetail : await safeText(response);
     console.error('gemini call failed', model, response.status, detail.slice(0, 500));
+    // Busy is checked first: it is the only one of these that goes away by
+    // itself within minutes, so it is the most useful thing to say.
     if (response.status === 503) {
       throw new HttpError(503, 'Gemini 免費版現在太多人用，過幾分鐘再試一次');
     }
-    if (response.status === 429) throw new HttpError(429, quotaMessage(detail));
+    if (quotaDetail !== null) throw new HttpError(429, quotaMessage(quotaDetail));
     if (response.status === 404) {
-      // The operator changed GEMINI_MODEL to something that does not exist, or
-      // the pinned one was retired. Nothing the caller can do.
+      // No model answered, and at least the last one does not exist — a typo in
+      // GEMINI_MODEL or a retired model. Nothing the caller can do.
       throw new HttpError(500, '辨識服務設定有誤，請聯絡管理員');
     }
     throw new HttpError(502, '辨識失敗，請稍後再試');
@@ -195,6 +242,17 @@ async function post(fetchImpl, model, key, body, timeoutMs) {
   } finally {
     clearTimeout(timer);
   }
+}
+
+/// GEMINI_MODEL overrides the list, comma-separated and in order. Only for when
+/// Google retires a model: see DEFAULT_MODELS for why a replacement has to be
+/// checked against a photo first.
+function modelList(env) {
+  const configured = (env?.GEMINI_MODEL ?? '')
+    .split(',')
+    .map((name) => name.trim())
+    .filter((name) => name !== '');
+  return configured.length > 0 ? configured : DEFAULT_MODELS;
 }
 
 /// The free tier allows 20 requests a day per model, and it also has a

@@ -5,6 +5,11 @@ import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../providers/roster_provider.dart';
 import '../../../../core/widgets/settings_bottom_sheet.dart';
 import '../../../../core/widgets/text_controller_scope.dart';
+import '../write_failure.dart';
+
+/// 部分失敗時接在後面的話：設定本身寫進去了，只有幾天的服事表沒同步到新
+/// 名稱。再存一次會補上 —— 改過的那幾天已經沒有舊名稱可以換，不會重複改。
+const _partialSaveNote = '設定本身已儲存，再按一次儲存會補上';
 
 class EventSettingsScreen extends StatefulWidget {
   const EventSettingsScreen({super.key});
@@ -17,14 +22,6 @@ class _EventSettingsScreenState extends State<EventSettingsScreen> {
   late Map<ServiceType, List<EventOption>> _editingOptions;
   late Map<ServiceType, Map<String, String>> _renamedEventsByType;
   late final Map<ServiceType, ScrollController> _scrollControllers;
-  final List<int> _palette = const [
-    0xFFF39C12, // amber
-    0xFF27AE60, // green
-    0xFF3498DB, // blue
-    0xFF9B59B6, // purple
-    0xFFE74C3C, // red
-    0xFF7F8C8D, // gray
-  ];
 
   @override
   void initState() {
@@ -212,7 +209,7 @@ class _EventSettingsScreenState extends State<EventSettingsScreen> {
                     Wrap(
                       spacing: 0,
                       runSpacing: 0,
-                      children: _palette.map((colorValue) {
+                      children: eventColorPalette.map((colorValue) {
                         final isSelected = selectedColor == colorValue;
                         return InkWell(
                           onTap: () =>
@@ -265,10 +262,22 @@ class _EventSettingsScreenState extends State<EventSettingsScreen> {
               icon: const Icon(Icons.check),
               onPressed: () async {
                 final rosterProvider = context.read<RosterProvider>();
-                await rosterProvider.updateEventOptions(
-                  _editingOptions,
-                  renamedEventsByType: _renamedEventsByType,
-                );
+                final messenger = ScaffoldMessenger.of(context);
+                try {
+                  await rosterProvider.updateEventOptions(
+                    _editingOptions,
+                    renamedEventsByType: _renamedEventsByType,
+                  );
+                } catch (e) {
+                  // 留在這頁：改到一半的設定還在，再按一次就能重送。
+                  showWriteFailure(
+                    messenger,
+                    '儲存',
+                    e,
+                    partialNote: _partialSaveNote,
+                  );
+                  return;
+                }
                 if (!context.mounted) return;
                 Navigator.pop(context);
               },

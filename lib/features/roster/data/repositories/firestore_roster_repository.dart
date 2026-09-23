@@ -5,6 +5,7 @@ import '../../domain/entities/event_option.dart';
 import '../../domain/entities/service_roster.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../domain/repositories/roster_repository.dart';
+import '../../domain/staff_directory.dart';
 
 class FirestoreRosterRepository implements RosterRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -384,7 +385,7 @@ class FirestoreRosterRepository implements RosterRepository {
       for (final type in allowedTypes) {
         final roles = templates[type] ?? [];
         final duties = roles
-            .map((role) => RosterEntry(role: role, people: ['待定']))
+            .map((role) => RosterEntry(role: role, people: [placeholderPerson]))
             .toList();
         final serviceDate = _serviceDate(cursor, type);
         allRosters.add(

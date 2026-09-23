@@ -1,7 +1,15 @@
+// 匯入的內部實作：把 JSON 讀成逐日的服事與活動，並記下哪些名字沒對上。
+//
+// app 裡只有 roster_import.dart（planRosterImport）用它 —— 對到現有服事表、
+// 樣板排序、報告都在那邊，直接呼叫這裡等於繞過那些檢查。
+// test/roster_import_plan_test.dart 有一個測試守著這件事。直接用它的只有它
+// 自己的測試，和 scripts/preview-roster-import.py（要逐日印出排序結果）。
+
 import 'dart:convert';
 
-import '../../domain/entities/event_option.dart';
-import '../../domain/entities/service_roster.dart';
+import 'entities/event_option.dart';
+import 'entities/service_roster.dart';
+import 'staff_directory.dart';
 
 // ── Public result type ──────────────────────────────────────────────────────
 
@@ -28,7 +36,16 @@ class RosterImportParseResult {
   final Map<String, Map<String, int>> colorsByDate;
 
   /// Names that did not appear in the candidate-name list.
+  ///
+  /// 不含 [guestSpeakerNames] —— 那些人另外列，不算問題。
   final List<String> notInRosterNames;
+
+  /// 只出現在「信息」這一格、名單裡沒有、也沒有很像的人：外來講員。
+  ///
+  /// 名字一樣照寫進服事表，只是報告上不把他們當成要處理的事。講員一年可能
+  /// 就來一次，沒有帳號是正常的；跟「新同工還沒開帳號」混在同一段，真正要
+  /// 注意的那幾個名字就被淹掉了。
+  final List<String> guestSpeakerNames;
 
   /// Names whose role assignment did not match the allowed-by-role map.
   final List<String> roleMismatchNames;
@@ -36,7 +53,8 @@ class RosterImportParseResult {
   /// Detail: role(s) that triggered the mismatch, keyed by person name.
   final Map<String, Set<String>> roleMismatchDetails;
 
-  /// Names that matched more than one candidate (ambiguous suffix match).
+  /// Names that matched more than one candidate: a suffix several people share,
+  /// or a full name two people on the list both have.
   final List<String> otherNames;
 
   /// 表上原字 → 名單裡跟它只差一個字的那幾位。**只是提示，沒有套用。**
@@ -57,6 +75,7 @@ class RosterImportParseResult {
     this.eventsProvidedDates = const {},
     this.colorsByDate = const {},
     this.notInRosterNames = const [],
+    this.guestSpeakerNames = const [],
     this.roleMismatchNames = const [],
     this.roleMismatchDetails = const {},
     this.otherNames = const [],
@@ -73,6 +92,7 @@ class RosterImportParseResult {
       eventsProvidedDates = const {},
       colorsByDate = const {},
       notInRosterNames = const [],
+      guestSpeakerNames = const [],
       roleMismatchNames = const [],
       roleMismatchDetails = const {},
       otherNames = const [],
@@ -80,39 +100,26 @@ class RosterImportParseResult {
       notInEventCatalog = const [];
 }
 
-// ── Helper types (public so tests can import them if needed) ────────────────
+/// 常由外面的人來擔任的服事。三個崇拜的講道在服事項目樣板裡都叫「信息」。
+///
+/// 只放這一項：其他服事由沒帳號的人擔任時，多半是新同工還沒開帳號，
+/// 那正是匯入報告要讓人看到的。
+///
+/// 寫死而不是做成設定：三個崇拜都叫這個名字，為一個不會變的值多做一個
+/// 設定畫面不划算。**服事項目設定裡把「信息」改名的話，這裡要跟著改**，
+/// 否則講員會回到「名單裡沒有這個人」—— 沒有測試會替你抓到這件事。
+const Set<String> guestSpeakerRoles = {'信息'};
 
-enum NameMatchStatus { matched, notInList, roleMismatch, other }
+/// 名稱裡帶著自己日期的活動，例如「感恩聚餐（12/26 六）」。
+///
+/// 主日的辨識規則會把「表旁邊寫在星期六」這種活動放到之後那個主日，名稱
+/// 後面帶上它真正的日期。這種活動一次性、名字每次都不同，**不該**進活動
+/// 清單：放進去也永遠對不上下一次的名稱。所以不列進「活動沒有固定顏色」，
+/// 也就不會有人對它按「加入活動清單」。
+bool isDatedOneOffEvent(String name) =>
+    RegExp(r'[（(]\s*\d{1,2}/\d{1,2}').hasMatch(name);
 
-class NameMatchResult {
-  final NameMatchStatus status;
-  final String name;
-
-  /// 名單裡跟這個名字只差一個字的那幾位 —— **只是提示，沒有套用**。
-  ///
-  /// 只會跟 [NameMatchStatus.notInList] 一起出現：名字照表上原文寫進服事表，
-  /// uid 一個都不帶，這幾個候選只是列給人看的。
-  ///
-  /// 不自動接回去是量過之後的決定：名單內部互相拼錯一個字時，唯一對到「別的
-  /// 真人」的情況是 0 次；會落進這一層的幾乎都是**還沒有帳號的人**（新同工、
-  /// 外來講員），而他們的名字常常跟某個真人只差一個字（「陳志豪」對上名單裡
-  /// 的「陳志明」）。自動接的話那個人的服事會被記到別人頭上、連上別人的 uid，
-  /// 提醒發給錯的人，而原本那個名字從表上消失。提示看得到就夠了。
-  final List<String> suggestions;
-
-  const NameMatchResult(this.status, this.name, {this.suggestions = const []});
-  const NameMatchResult.matched(this.name)
-    : status = NameMatchStatus.matched,
-      suggestions = const [];
-  const NameMatchResult.notInList(this.name, {this.suggestions = const []})
-    : status = NameMatchStatus.notInList;
-  const NameMatchResult.roleMismatch(this.name)
-    : status = NameMatchStatus.roleMismatch,
-      suggestions = const [];
-  const NameMatchResult.other(this.name)
-    : status = NameMatchStatus.other,
-      suggestions = const [];
-}
+// ── Helper types ────────────────────────────────────────────────────────────
 
 class EventParseOutcome {
   final String? error;
@@ -137,16 +144,12 @@ class EventParseOutcome {
 /// Parse the raw JSON string for roster import.
 ///
 /// [input]         — raw text from the text field.
-/// [candidateNames] — trimmed, non-empty names of all known users.
-/// [allowedByRole] — map of role → set of allowed user names.
+/// [staff]         — who is on the staff list and what they may serve.
 /// [catalogByName] — map of event name → EventOption (for the relevant type).
-/// [nameToIdMap]   — map of user name → user id.
 RosterImportParseResult parseRosterImportJson({
   required String input,
-  required List<String> candidateNames,
-  required Map<String, Set<String>> allowedByRole,
+  required StaffDirectory staff,
   required Map<String, EventOption> catalogByName,
-  required Map<String, String> nameToIdMap,
 }) {
   if (input.trim().isEmpty) {
     return const RosterImportParseResult.fatal('請貼上 JSON 內容');
@@ -171,6 +174,8 @@ RosterImportParseResult parseRosterImportJson({
   final duplicateDates = <String>[];
 
   final notInRosterNames = <String>[];
+  // 沒對到的人各自出現在哪些服事 —— 用來分出外來講員。
+  final notInRosterRoles = <String, Set<String>>{};
   final roleMismatchNames = <String>[];
   final roleMismatchDetails = <String, Set<String>>{};
   final otherNames = <String>[];
@@ -239,12 +244,7 @@ RosterImportParseResult parseRosterImportJson({
             // 空字串不是名字，跳過。這是唯一會被靜靜略過的東西。
             .where((name) => name.isNotEmpty)
             .map((name) {
-              final result = resolvePersonName(
-                name,
-                candidateNames,
-                roleValue.trim(),
-                allowedByRole,
-              );
+              final result = staff.resolve(name, roleValue.trim());
               // 沒對到的名字一律照樣寫進服事表，只記進報告，不丟掉。
               //
               // 以前是丟掉的，那格於是變成「待定」，同一格還有別人時甚至什麼
@@ -273,6 +273,9 @@ RosterImportParseResult parseRosterImportJson({
                 case NameMatchStatus.notInList:
                   // 名單上沒有這個人 —— 存純文字，沒有 uid，收不到通知。
                   notInRosterNames.add(name);
+                  notInRosterRoles
+                      .putIfAbsent(name, () => <String>{})
+                      .add(roleValue.trim());
                   return name;
                 case NameMatchStatus.other:
                   // 對到兩個以上同名的人，系統無從判斷是誰，原字串照留。
@@ -282,16 +285,12 @@ RosterImportParseResult parseRosterImportJson({
             })
             .whereType<String>()
             .toList();
-        final personIdsByName = <String, String>{
-          for (final name in people)
-            if (nameToIdMap.containsKey(name)) name: nameToIdMap[name]!,
-        };
         duties.add(
           RosterEntry(
             role: roleValue.trim(),
-            people: people.isEmpty ? const ['待定'] : people,
+            people: people.isEmpty ? const [placeholderPerson] : people,
             peopleOrder: people.isEmpty ? const [] : List<String>.from(people),
-            personIdsByName: personIdsByName,
+            personIdsByName: staff.idsOf(people),
           ),
         );
       }
@@ -317,6 +316,7 @@ RosterImportParseResult parseRosterImportJson({
       // Collect catalog misses
       for (final name in outcome.names) {
         if (!catalogByName.containsKey(name) &&
+            !isDatedOneOffEvent(name) &&
             !notInEventCatalog.contains(name)) {
           notInEventCatalog.add(name);
         }
@@ -353,13 +353,26 @@ RosterImportParseResult parseRosterImportJson({
     return RosterImportParseResult.fatal('重複日期：${duplicateDates.join(', ')}');
   }
 
+  final unmatched = uniqueNames(notInRosterNames);
+  bool isGuestSpeaker(String name) =>
+      notInRosterRoles[name]!.every(guestSpeakerRoles.contains) &&
+      // 名單裡有很像的，多半是某位同工的名字被讀錯一個字，不是外人。
+      (nearMatchSuggestions[name] ?? const []).isEmpty;
+
   return RosterImportParseResult(
     dutiesByDate: dutiesByDate,
     dutiesProvidedDates: dutiesProvidedDates,
     eventsByDate: eventsByDate,
     eventsProvidedDates: eventsProvidedDates,
     colorsByDate: colorsByDate,
-    notInRosterNames: uniqueNames(notInRosterNames),
+    notInRosterNames: [
+      for (final name in unmatched)
+        if (!isGuestSpeaker(name)) name,
+    ],
+    guestSpeakerNames: [
+      for (final name in unmatched)
+        if (isGuestSpeaker(name)) name,
+    ],
     roleMismatchNames: uniqueNames(roleMismatchNames),
     roleMismatchDetails: roleMismatchDetails,
     otherNames: uniqueNames(otherNames),
@@ -550,89 +563,6 @@ String? _parseDateKey(String raw) {
   }
 }
 
-NameMatchResult resolvePersonName(
-  String raw,
-  List<String> userNames,
-  String role,
-  Map<String, Set<String>> allowedByRole,
-) {
-  final name = raw.trim();
-  if (name.isEmpty || name == '待定') {
-    return const NameMatchResult.matched('待定');
-  }
-  if (userNames.contains(name)) {
-    return _isAllowedForRole(name, role, allowedByRole)
-        ? NameMatchResult.matched(name)
-        : NameMatchResult.roleMismatch(name);
-  }
-  final matches = userNames
-      .where((full) => full.length > name.length && full.endsWith(name))
-      .toList();
-  if (matches.length == 1) {
-    final full = matches.first;
-    return _isAllowedForRole(full, role, allowedByRole)
-        ? NameMatchResult.matched(full)
-        : NameMatchResult.roleMismatch(full);
-  }
-  if (matches.length > 1) {
-    return NameMatchResult.other(name);
-  }
-  // 前兩層都是精確比對，錯一個字就是查無此人 —— 而中文名字的罕用字正是 OCR
-  // 最容易認錯的地方。這一層不改結果，只把名單裡差一個字的那幾位附上去，讓
-  // 管理者自己判斷是不是某位的別寫法。為什麼不自動接，見 [NameMatchResult]
-  // 的 suggestions。
-  return NameMatchResult.notInList(
-    name,
-    suggestions: _nearMatches(name, userNames),
-  );
-}
-
-/// 少於這麼多個字就不給形近字提示。
-///
-/// 一個字的輸入會對上半本名單，那種提示沒有意義。兩個字的照樣比 —— 結果只是
-/// 提示不會套用，所以「小明」順便對上「劉美玉」的代價只是多一行字，而漏掉
-/// 「雅亭」對上「黃雅婷」才是真的可惜。
-const int _minNearMatchRunes = 2;
-
-/// [a] 與 [b] 等長、而且逐位比對剛好只差一個字時回 true。
-///
-/// 位置對位置，不做插入／刪除 —— 形近字是替換，長度不變。改成編輯距離會
-/// 讓「王大明」對上「王大明峰」這種真的不同的名字。
-bool _differsByOneRune(List<int> a, List<int> b) {
-  if (a.length != b.length) return false;
-  var diff = 0;
-  for (var i = 0; i < a.length; i++) {
-    if (a[i] == b[i]) continue;
-    diff++;
-    if (diff > 1) return false;
-  }
-  return diff == 1;
-}
-
-/// 名單裡跟 [name] 只差一個字的全名。
-///
-/// 規則刻意收得很緊，因為猜錯的代價是把服事排到另一個真人身上：
-///
-/// - 只准差一個字，而且輸入至少要有 [_minNearMatchRunes] 個字。
-/// - 表上寫的常是去掉姓氏的簡稱，所以比的是名單那位的**同長度尾段**。
-/// - 回傳全部候選，讓呼叫端在「不唯一」時退回「不確定是哪一位」，不挑。
-///
-/// 用 runes 而不是 String 的字元索引：罕用字有些落在 BMP 之外（例如 CJK
-/// 擴充 B 區），那些字在 Dart 的 String 裡是兩個 code unit，逐 code unit
-/// 比會把一個字算成兩個位置。而罕用字正是這一層要救的東西。
-List<String> _nearMatches(String name, List<String> userNames) {
-  final target = name.runes.toList();
-  if (target.length < _minNearMatchRunes) return const [];
-  final matches = <String>[];
-  for (final full in userNames) {
-    final runes = full.runes.toList();
-    if (runes.length < target.length) continue;
-    final tail = runes.sublist(runes.length - target.length);
-    if (_differsByOneRune(target, tail)) matches.add(full);
-  }
-  return matches;
-}
-
 List<String> uniqueNames(List<String> names) {
   final seen = <String>{};
   final result = <String>[];
@@ -655,16 +585,4 @@ void _addRoleMismatch(
   if (trimmedName.isEmpty || trimmedRole.isEmpty) return;
   bucket.putIfAbsent(trimmedName, () => <String>{});
   bucket[trimmedName]!.add(trimmedRole);
-}
-
-bool _isAllowedForRole(
-  String name,
-  String role,
-  Map<String, Set<String>> allowedByRole,
-) {
-  final normalizedRole = role.trim();
-  if (normalizedRole.isEmpty) return false;
-  final allowed = allowedByRole[normalizedRole];
-  if (allowed == null || allowed.isEmpty) return false;
-  return allowed.contains(name);
 }

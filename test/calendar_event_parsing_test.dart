@@ -1,4 +1,5 @@
-import 'package:church_staff_pwa/features/calendar/presentation/widgets/_calendar_models.dart';
+import 'package:church_staff_pwa/features/calendar/data/google_calendar_event.dart';
+import 'package:church_staff_pwa/features/calendar/domain/entities/calendar_event.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// The Google item shapes here are trimmed copies of real API responses. This

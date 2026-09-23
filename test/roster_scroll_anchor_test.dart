@@ -3,15 +3,25 @@ import 'package:church_staff_pwa/features/auth/domain/entities/user.dart';
 import 'package:church_staff_pwa/features/auth/domain/repositories/auth_repository.dart';
 import 'package:church_staff_pwa/features/auth/presentation/providers/session_provider.dart';
 import 'package:church_staff_pwa/features/auth/presentation/providers/user_admin_provider.dart';
-import 'package:church_staff_pwa/features/roster/domain/entities/event_option.dart';
 import 'package:church_staff_pwa/features/roster/domain/entities/service_roster.dart';
-import 'package:church_staff_pwa/features/roster/domain/repositories/roster_repository.dart';
 import 'package:church_staff_pwa/features/roster/presentation/providers/roster_provider.dart';
 import 'package:church_staff_pwa/features/roster/presentation/screens/roster_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
+
+import 'support/in_memory_roster_repository.dart';
+
+/// 快取與伺服器回同一份，樣板只有主日。
+InMemoryRosterRepository _repo(List<ServiceRoster> rosters) =>
+    InMemoryRosterRepository(
+      rosters: rosters,
+      cachedRosters: rosters,
+      templates: const {
+        ServiceType.sundayService: ['敬拜主領', '司琴', '招待'],
+      },
+    );
 
 /// 切換檢視／編輯模式時，畫面要停在同一天。
 ///
@@ -50,38 +60,6 @@ class _FakeAuthRepository implements AuthRepository {
   Future<void> deleteUser(String id) async {}
 }
 
-class _FakeRosterRepository implements RosterRepository {
-  _FakeRosterRepository(this.rosters);
-
-  final List<ServiceRoster> rosters;
-
-  @override
-  Future<List<ServiceRoster>> getUpcomingRostersFromCache() async => rosters;
-  @override
-  Future<List<ServiceRoster>> getUpcomingRosters() async => rosters;
-  @override
-  Future<void> ensureQuarterRosters(List<ServiceType> allowedTypes) async {}
-  @override
-  Future<void> updateRoster(ServiceRoster roster) async {}
-  @override
-  Future<void> updateRostersAtomically(List<ServiceRoster> rosters) async {}
-  @override
-  Future<Map<ServiceType, List<String>>> getServiceTemplates() async => const {
-    ServiceType.sundayService: ['敬拜主領', '司琴', '招待'],
-  };
-  @override
-  Future<void> updateServiceTemplates(
-    Map<ServiceType, List<String>> templates,
-  ) async {}
-  @override
-  Future<Map<ServiceType, List<EventOption>>> getEventOptions() async =>
-      const {};
-  @override
-  Future<void> updateEventOptions(
-    Map<ServiceType, List<EventOption>> options,
-  ) async {}
-}
-
 List<ServiceRoster> _buildRosters(int count) => List.generate(
   count,
   (i) => ServiceRoster(
@@ -100,7 +78,7 @@ List<ServiceRoster> _buildRosters(int count) => List.generate(
 /// 掛好畫面並等 session 還原完（理由同 permission_ui_test）。
 Future<RosterProvider> _pumpRosterScreen(WidgetTester tester) async {
   final session = SessionProvider(_FakeAuthRepository());
-  final rosters = RosterProvider(_FakeRosterRepository(_buildRosters(24)));
+  final rosters = RosterProvider(_repo(_buildRosters(24)));
   final users = UserAdminProvider(_FakeAuthRepository(), session);
 
   await tester.pumpWidget(

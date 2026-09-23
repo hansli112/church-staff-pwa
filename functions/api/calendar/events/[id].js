@@ -1,15 +1,14 @@
 // PATCH  /api/calendar/events/:id — edit an event
 // DELETE /api/calendar/events/:id — remove an event
 
+import { authorize } from '../../../../worker/authorize.js';
+import { HttpError } from '../../../../worker/firebase_user.js';
 import {
+  CALENDAR_LOG_LABEL,
   buildGoogleEvent,
   callCalendar,
-  handle,
-  HttpError,
-  jsonResponse,
-  readJsonBody,
-  requireEditor,
 } from '../../../../worker/google_calendar.js';
+import { handleWith, jsonResponse, readJsonBody } from '../../../../worker/http.js';
 
 function eventId(params) {
   const id = params?.id;
@@ -20,8 +19,8 @@ function eventId(params) {
 }
 
 export const onRequestPatch = ({ request, env, params }) =>
-  handle(async () => {
-    await requireEditor(request, env);
+  handleWith(CALENDAR_LOG_LABEL, async () => {
+    await authorize(request, env, { edit: 'calendar' });
     const id = eventId(params);
     const event = buildGoogleEvent(await readJsonBody(request), { forPatch: true });
     const response = await callCalendar(env, {
@@ -33,8 +32,8 @@ export const onRequestPatch = ({ request, env, params }) =>
   });
 
 export const onRequestDelete = ({ request, env, params }) =>
-  handle(async () => {
-    await requireEditor(request, env);
+  handleWith(CALENDAR_LOG_LABEL, async () => {
+    await authorize(request, env, { edit: 'calendar' });
     const id = eventId(params);
     // Google answers 204; the app only needs to know it worked.
     await callCalendar(env, { method: 'DELETE', eventId: id });

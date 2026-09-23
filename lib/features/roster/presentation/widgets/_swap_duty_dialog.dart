@@ -54,7 +54,7 @@ class _SwapDutyDialogState extends State<_SwapDutyDialog> {
   String? _errorText;
 
   List<String> get _sourcePeople => widget.duty.people.isEmpty
-      ? const [RosterProvider.placeholderPerson]
+      ? const [placeholderPerson]
       : widget.duty.people;
 
   /// 可選的對象，濾掉「那一天的同一項已經有 [_sourcePerson]」的選項。

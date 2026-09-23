@@ -11,22 +11,7 @@
 // admins do not need their own Google account on the calendar — but that
 // credential must never reach the browser, hence this server side.
 
-import {
-  HttpError,
-  requireEnv,
-  requireGroupMember,
-  uidFromIdToken,
-} from './firebase_user.js';
-import { errorResponse, handleWith, jsonResponse, readJsonBody } from './http.js';
-
-// 這些原本住在這裡，搬去 firebase_user.js 與 http.js 之後從這裡再匯出 ——
-// 呼叫端與測試沿用既有的 import 路徑，不必跟著搬。
-export { HttpError, uidFromIdToken, jsonResponse, errorResponse, readJsonBody };
-
-/// 行事曆路由專用的 handle，錯誤日誌帶上自己的名字。
-export function handle(fn) {
-  return handleWith('calendar function failed', fn);
-}
+import { HttpError, base64UrlToBytes, requireEnv } from './firebase_user.js';
 
 const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
 const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
@@ -40,42 +25,12 @@ const MAX_TITLE = 200;
 const MAX_LOCATION = 300;
 const MAX_DESCRIPTION = 4000;
 
+/// The handleWith() label for every /api/calendar/* route, so an unexpected
+/// error in any of them logs under one name.
+export const CALENDAR_LOG_LABEL = 'calendar function failed';
+
 /** Upstream call budget. Without it a hung Google request holds the request open. */
 const UPSTREAM_TIMEOUT_MS = 10000;
-
-// ---------------------------------------------------------------------------
-// Caller identity
-// ---------------------------------------------------------------------------
-
-function base64UrlToBytes(text) {
-  const padded = text.replace(/-/g, '+').replace(/_/g, '/');
-  const binary = atob(padded + '='.repeat((4 - (padded.length % 4)) % 4));
-  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
-}
-
-/// The permission group that may write the calendar. Kept in sync with
-/// inGroup() in firestore.rules and UserGroup in the Flutter app — three
-/// enforcement points, one name. admin is root and holds it implicitly.
-const CALENDAR_GROUP = 'calendar-editors';
-
-/// Rejects anyone without calendar edit rights, and returns `{ uid, name }`.
-///
-/// The lookup itself lives in firebase_user.js: /api/roster/ needs the same
-/// check against a different group, and an authorization check kept in two
-/// copies is one that gets fixed in one copy.
-///
-/// The display name comes along for the ride because the same document already
-/// has to be fetched for the permission check — the LINE notification wants to
-/// name the person, and a uid means nothing to the group.
-export async function requireEditor(request, env, fetchImpl = fetch) {
-  const { uid, name } = await requireGroupMember(
-    request,
-    env,
-    { group: CALENDAR_GROUP, denied: '沒有編輯行事曆的權限' },
-    fetchImpl,
-  );
-  return { uid, name };
-}
 
 // ---------------------------------------------------------------------------
 // Service account access token

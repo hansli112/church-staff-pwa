@@ -95,6 +95,11 @@ jobs:
 
       - name: Test
         run: flutter test
+        # 用使用者手機的時區跑。行事曆月份邊界那組測試在 UTC 下新舊程式都會
+        # 過（UTC 午夜剛好就是本地午夜），只有 +8 才抓得到「1 號清早的活動
+        # 被歸到上個月」那種 bug。
+        env:
+          TZ: Asia/Taipei
 
       # 5. 編譯 Web (根據分支區分環境)
       - name: Build Web

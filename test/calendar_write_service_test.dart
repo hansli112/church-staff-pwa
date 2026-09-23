@@ -1,7 +1,8 @@
 import 'dart:convert';
 
 import 'package:church_staff_pwa/features/calendar/data/calendar_write_service.dart';
-import 'package:church_staff_pwa/features/calendar/presentation/widgets/_calendar_models.dart';
+import 'package:church_staff_pwa/features/calendar/data/google_calendar_event.dart';
+import 'package:church_staff_pwa/features/calendar/domain/entities/calendar_event.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;

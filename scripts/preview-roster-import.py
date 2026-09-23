@@ -133,20 +133,23 @@ def main() -> None:
         f"""// 由 scripts/preview-roster-import.py 產生，跑完會自動刪掉。
 import 'package:flutter_test/flutter_test.dart';
 import 'package:church_staff_pwa/features/roster/domain/entities/event_option.dart';
-import 'package:church_staff_pwa/features/roster/presentation/screens/roster_import_parser.dart';
+import 'package:church_staff_pwa/features/roster/domain/roster_import_parser.dart';
+import 'package:church_staff_pwa/features/roster/domain/staff_directory.dart';
 
 void main() {{
   test('preview', () {{
     const input = r\"\"\"{raw}\"\"\";
     final result = parseRosterImportJson(
       input: input,
-      candidateNames: {dart_literal(candidate_names)},
-      allowedByRole: {dart_literal({k: v for k, v in allowed.items()})},
+      staff: StaffDirectory(
+        names: {dart_literal(candidate_names)},
+        idByName: {dart_literal(name_to_id)},
+        namesByRole: {dart_literal({k: v for k, v in allowed.items()})},
+      ),
       catalogByName: {{
         for (final name in {dart_literal(catalog)})
           name: EventOption(name: name, color: 0),
       }},
-      nameToIdMap: {dart_literal(name_to_id)},
     );
     if (result.error != null) {{
       print('OUT|error|${{result.error}}');
