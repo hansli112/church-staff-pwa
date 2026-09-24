@@ -108,7 +108,7 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('確認刪除'),
-        content: const Text('確定要刪除此服事項目嗎？'),
+        content: const Text('今天以後每一週的服事表都會拿掉這一項，已經排的人也會一起刪掉。已經過去的服事表不會動。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),

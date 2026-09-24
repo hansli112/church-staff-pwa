@@ -55,7 +55,11 @@ class RosterProvider with ChangeNotifier {
   // eventOptionsByType 每次呼叫都會產生新的 Map，拿來做相等比較永遠會是 true。
   int _eventOptionsRevision = 0;
 
-  RosterProvider(this._repository);
+  /// [now] 只給測試用：刪除服事項目時「今天以後」的界線要固定得住。
+  RosterProvider(this._repository, {DateTime Function()? now})
+    : _now = now ?? DateTime.now;
+
+  final DateTime Function() _now;
 
   /// 事件選項的版本號，每次選項被替換就 +1。
   /// widget 用 `context.select((p) => p.eventOptionsRevision)` 訂閱顏色變動。
@@ -417,7 +421,7 @@ class RosterProvider with ChangeNotifier {
   /// 這個 provider 的寫入失敗**一律往上丟**，由呼叫端就地顯示；[error] 只留
   /// 給載入失敗。以前這裡把錯誤吞進 [error]，而編輯頁一看到 [error] 就把整頁
   /// 換成錯誤畫面 —— 改錯一格，整本服事表從畫面上消失。例外只有服事項目
-  /// 改名時順帶搬同工排序那一步（見 [_renameStaffOrderRoles]）。
+  /// 改名或刪除時順帶同步同工排序那一步（見 [_syncStaffOrderRoles]）。
   ///
   /// 寫進去之前先照同工排序排好：存起來的就是畫面上的順序，不會因為下次
   /// 重新學排序時學到一份沒排好的資料。
@@ -621,42 +625,62 @@ class RosterProvider with ChangeNotifier {
   /// 失敗往上丟（見 [updateRoster]）。樣板寫成功、但有幾天的服事表沒改到名
   /// 時丟 [PartialUpdateException] —— 再存一次就會補上，改過的那幾天已經沒有
   /// 舊名字可以換了。
+  /// 寫入服事項目樣板，並把改名與刪除同步到服事表和同工排序。
+  ///
+  /// 改名套到每一張載入的服事表。刪除只套到今天以後的：已經過去的那幾週
+  /// 是紀錄，當時確實排了這一項。以前刪除完全不同步，樣板少了一項，每一
+  /// 週的服事表卻還掛著它，只能一週一週手動刪。
+  ///
+  /// [renamedRolesByType] 的 key 是改名前的名字，那些不算刪除。
   Future<void> updateTemplates(
     Map<ServiceType, List<String>> newTemplates, {
     Map<ServiceType, Map<String, String>> renamedRolesByType = const {},
   }) async {
     try {
+      // 樣板還沒載入過就不知道少了哪幾項，這時不刪任何東西。
+      final removedRolesByType = _templatesLoaded
+          ? _removedRoles(_templates, newTemplates, renamedRolesByType)
+          : const <ServiceType, Set<String>>{};
+
       await _repository.updateServiceTemplates(newTemplates);
       _templates = Map.from(newTemplates);
       _templatesLoaded = true;
 
-      if (renamedRolesByType.isNotEmpty) {
+      if (renamedRolesByType.isNotEmpty || removedRolesByType.isNotEmpty) {
+        final now = _now();
+        final today = DateTime(now.year, now.month, now.day);
         final updatedRosters = <ServiceRoster>[];
         for (final roster in _allRosters) {
-          final renameMap = renamedRolesByType[roster.type];
-          if (renameMap == null || renameMap.isEmpty) {
-            continue;
-          }
+          final renameMap = renamedRolesByType[roster.type] ?? const {};
+          final removed = roster.date.isBefore(today)
+              ? const <String>{}
+              : removedRolesByType[roster.type] ?? const <String>{};
+          if (renameMap.isEmpty && removed.isEmpty) continue;
 
           var hasChanges = false;
-          final updatedDuties = roster.duties.map((duty) {
+          final updatedDuties = <RosterEntry>[];
+          for (final duty in roster.duties) {
+            if (removed.contains(duty.role)) {
+              hasChanges = true;
+              continue;
+            }
             final renamedRole = renameMap[duty.role];
             if (renamedRole == null || renamedRole == duty.role) {
-              return duty;
+              updatedDuties.add(duty);
+              continue;
             }
             hasChanges = true;
-            return duty.copyWith(role: renamedRole);
-          }).toList();
+            updatedDuties.add(duty.copyWith(role: renamedRole));
+          }
 
           if (!hasChanges) {
             continue;
           }
 
-          final updated = roster.copyWith(duties: updatedDuties);
-          updatedRosters.add(updated);
+          updatedRosters.add(roster.copyWith(duties: updatedDuties));
         }
 
-        await _renameStaffOrderRoles(renamedRolesByType);
+        await _syncStaffOrderRoles(renamedRolesByType, removedRolesByType);
 
         // 走 updateRosters 而不是 Future.wait：後者一筆失敗就整批當作沒
         // 寫，成功的那幾天在畫面上還是舊名字。
@@ -670,24 +694,52 @@ class RosterProvider with ChangeNotifier {
     }
   }
 
-  /// 服事項目改名時把存下來的同工排序搬到新名字。
+  /// [before] 有、[after] 沒有、也不是改名前的名字的服事項目。
+  static Map<ServiceType, Set<String>> _removedRoles(
+    Map<ServiceType, List<String>> before,
+    Map<ServiceType, List<String>> after,
+    Map<ServiceType, Map<String, String>> renamedRolesByType,
+  ) {
+    final result = <ServiceType, Set<String>>{};
+    for (final entry in after.entries) {
+      final kept = entry.value.toSet();
+      final renamedFrom = renamedRolesByType[entry.key]?.keys.toSet() ?? {};
+      final removed = {
+        for (final role in before[entry.key] ?? const <String>[])
+          if (!kept.contains(role) && !renamedFrom.contains(role)) role,
+      };
+      if (removed.isNotEmpty) result[entry.key] = removed;
+    }
+    return result;
+  }
+
+  /// 服事項目改名時把存下來的同工排序搬到新名字，刪掉的項目連排序一起刪。
   ///
   /// 失敗只記 log、不往上丟 —— 這個 provider 寫入失敗一律往上丟的唯一例外：
   /// 樣板已經寫進去了，這時報失敗會讓人以為改名沒成功。排序沒搬到的後果只
   /// 是那一項退回從服事表學的順序，而服事表本來就照舊的排序存，學回來的是
-  /// 同一份。
-  Future<void> _renameStaffOrderRoles(
+  /// 同一份；沒刪到的只是留一筆沒人用的排序。
+  Future<void> _syncStaffOrderRoles(
     Map<ServiceType, Map<String, String>> renamedRolesByType,
+    Map<ServiceType, Set<String>> removedRolesByType,
   ) async {
-    for (final entry in renamedRolesByType.entries) {
-      final type = entry.key;
+    for (final type in {
+      ...renamedRolesByType.keys,
+      ...removedRolesByType.keys,
+    }) {
       try {
         await _writeStaffOrder(
           type,
-          _staffOrders.storedFor(type).withRolesRenamed(entry.value),
+          _staffOrders
+              .storedFor(type)
+              .withRolesRenamed(renamedRolesByType[type] ?? const {})
+              .withChanges({
+                for (final role in removedRolesByType[type] ?? const <String>{})
+                  role: null,
+              }),
         );
       } catch (e, st) {
-        log('同工排序改名失敗（該項退回服事表上的順序）', error: e, stackTrace: st);
+        log('同工排序同步失敗（該項退回服事表上的順序）', error: e, stackTrace: st);
       }
     }
   }

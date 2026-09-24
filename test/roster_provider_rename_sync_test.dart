@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
 import 'package:church_staff_pwa/features/roster/domain/entities/event_option.dart';
 import 'package:church_staff_pwa/features/roster/domain/entities/service_roster.dart';
+import 'package:church_staff_pwa/features/roster/domain/staff_order.dart';
 import 'package:church_staff_pwa/features/roster/presentation/providers/roster_provider.dart';
 
 import 'support/in_memory_roster_repository.dart';
@@ -100,6 +101,106 @@ void main() {
 
       expect(sunday.specialEvents, ['聖餐']);
       expect(youth.specialEvents, ['聖餐主日']);
+    });
+  });
+
+  group('RosterProvider 刪除服事項目', () {
+    ServiceRoster youth(String id, DateTime date) => ServiceRoster(
+      id: id,
+      date: date,
+      type: ServiceType.youth,
+      serviceName: '青年崇拜',
+      duties: [
+        RosterEntry(role: '領會', people: const ['Y']),
+        RosterEntry(role: '報告', people: const ['R']),
+      ],
+    );
+
+    late InMemoryRosterRepository repository;
+    late RosterProvider provider;
+
+    setUp(() async {
+      repository = InMemoryRosterRepository(
+        rosters: [
+          youth('last-week', DateTime(2026, 9, 19)),
+          youth('today', DateTime(2026, 9, 26)),
+          youth('next-week', DateTime(2026, 10, 3)),
+          ServiceRoster(
+            id: 'sunday',
+            date: DateTime(2026, 9, 27),
+            type: ServiceType.sundayService,
+            serviceName: '主日崇拜',
+            duties: [
+              RosterEntry(role: '報告', people: const ['S']),
+            ],
+          ),
+        ],
+        templates: {
+          ServiceType.sundayService: ['報告'],
+          ServiceType.youth: ['領會', '報告'],
+          ServiceType.children: const [],
+        },
+        staffOrders: {
+          ServiceType.youth: StaffOrder({
+            '領會': ['Y', 'Z'],
+            '報告': ['R', 'Q'],
+          }),
+        },
+      );
+      provider = RosterProvider(
+        repository,
+        now: () => DateTime(2026, 9, 26, 10),
+      );
+      await provider.fetchInitialData();
+    });
+
+    List<String> rolesOf(String id) => [
+      for (final d in repository.rosters.firstWhere((r) => r.id == id).duties)
+        d.role,
+    ];
+
+    Future<void> dropYouthReport() => provider.updateTemplates({
+      ServiceType.sundayService: ['報告'],
+      ServiceType.youth: ['領會'],
+      ServiceType.children: const [],
+    });
+
+    test('今天以後的服事表拿掉那一項，過去的不動', () async {
+      await dropYouthReport();
+
+      expect(rolesOf('last-week'), ['領會', '報告']);
+      expect(rolesOf('today'), ['領會']);
+      expect(rolesOf('next-week'), ['領會']);
+    });
+
+    test('只刪那個崇拜的：別的崇拜同名的項目還在', () async {
+      await dropYouthReport();
+
+      expect(rolesOf('sunday'), ['報告']);
+    });
+
+    test('存著的排序也刪掉那一項', () async {
+      await dropYouthReport();
+
+      final order = repository.staffOrders[ServiceType.youth]!;
+      expect(order.rankingOf('報告'), isEmpty);
+      expect(order.rankingOf('領會'), ['Y', 'Z']);
+    });
+
+    test('改名不算刪除：服事表上的人跟著新名字走', () async {
+      await provider.updateTemplates(
+        {
+          ServiceType.sundayService: ['報告'],
+          ServiceType.youth: ['領會', '宣布'],
+          ServiceType.children: const [],
+        },
+        renamedRolesByType: {
+          ServiceType.youth: {'報告': '宣布'},
+        },
+      );
+
+      expect(rolesOf('next-week'), ['領會', '宣布']);
+      expect(rolesOf('last-week'), ['領會', '宣布']);
     });
   });
 
