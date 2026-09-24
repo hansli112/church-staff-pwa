@@ -57,7 +57,14 @@ const UPSTREAM_TIMEOUT_MS = 100000;
 /// 429 is never retried on the same model: the daily quota does not come back
 /// in seconds. That model is dropped for the rest of the request and the next
 /// one is tried at once.
-const RETRY_DELAYS_MS = [2000, 5000, 10000, 15000, 20000];
+///
+/// Two retries, not five, because every 503 is also one of the day's 40 (20 per
+/// model). Five retries let one import during a busy spell spend six of them:
+/// on 2026-09-24 two imports like that finished off the day's quota. None of
+/// the five-retry chains measured on 2026-09-23 succeeded after the third
+/// attempt; the ones that got through did so on the first or third. Three
+/// attempts keeps the rescue and caps an import at three of the day's 40.
+export const RETRY_DELAYS_MS = [3000, 10000];
 const LAST_ATTEMPT_START_MS = 75000;
 
 const MAX_OUTPUT_TOKENS = 16384;
@@ -149,7 +156,7 @@ export async function callGemini(
     if (response.status === 503) {
       throw new HttpError(503, 'Gemini 免費版現在太多人用，過幾分鐘再試一次');
     }
-    if (quotaDetail !== null) throw new HttpError(429, quotaMessage(quotaDetail));
+    if (quotaDetail !== null) throw new HttpError(429, quotaMessage(quotaDetail, now()));
     if (response.status === 404) {
       // No model answered, and at least the last one does not exist — a typo in
       // GEMINI_MODEL or a retired model. Nothing the caller can do.
@@ -260,11 +267,47 @@ function modelList(env) {
 /// the first: someone pressing the button every few minutes until tomorrow is
 /// exactly what that message invites. The 429 body names the quota that ran
 /// out, so say which one it was.
-function quotaMessage(detail) {
+function quotaMessage(detail, nowMs) {
   if (/PerDay/i.test(detail)) {
-    return '今天的免費辨識次數用完了，下午三點後再試（或先展開下面自己貼 JSON）';
+    return `今天的免費辨識次數用完了，${quotaResetText(nowMs)}後再試（或先展開下面自己貼 JSON）`;
   }
   return '辨識太頻繁了，等一分鐘再試';
+}
+
+const PACIFIC_HOUR = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Los_Angeles',
+  hour: 'numeric',
+  hourCycle: 'h23',
+});
+
+/// When the daily quota comes back, in the words a Taiwanese user reads.
+///
+/// The free tier resets at midnight Pacific time. That is 15:00 in Taiwan while
+/// the US is on daylight saving time and 16:00 after it ends (early November),
+/// so a fixed "下午三點" is wrong for five months a year. Taiwan has no DST, so
+/// the reset is always 07:00 or 08:00 UTC: find the next of those instants that
+/// is midnight in Los Angeles.
+///
+/// Exported for the tests, which pin both sides of the DST switch.
+export function quotaResetText(nowMs) {
+  const TAIPEI_OFFSET_MS = 8 * 3600 * 1000;
+  const today = new Date(nowMs);
+  for (let day = 0; day < 3; day += 1) {
+    for (const utcHour of [7, 8]) {
+      const reset = Date.UTC(
+        today.getUTCFullYear(),
+        today.getUTCMonth(),
+        today.getUTCDate() + day,
+        utcHour,
+      );
+      if (reset <= nowMs || Number(PACIFIC_HOUR.format(reset)) !== 0) continue;
+      const taipeiDay = (ms) => Math.floor((ms + TAIPEI_OFFSET_MS) / 86400000);
+      const when = taipeiDay(reset) === taipeiDay(nowMs) ? '' : '明天';
+      return `${when}下午${utcHour === 7 ? '三' : '四'}點`;
+    }
+  }
+  // Unreachable while Los Angeles keeps a UTC-7/-8 offset.
+  return '明天';
 }
 
 async function safeText(response) {

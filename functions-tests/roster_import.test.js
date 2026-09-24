@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
 import { onRequestPost, parseImportRequest, rejectOversizedBody } from '../functions/api/roster/import-image.js';
-import { callGemini, extractJson } from '../worker/gemini.js';
+import { callGemini, extractJson, quotaResetText, RETRY_DELAYS_MS } from '../worker/gemini.js';
 import {
   ADMIN_UID,
   CALENDAR_EDITOR_UID,
@@ -578,6 +578,30 @@ describe('callGemini — 上游的各種回法', () => {
     } finally {
       restore();
     }
+  });
+
+  test('正式設定最多試三次：每次 503 都算一次每日額度', () => {
+    // 2026-09-24 兩次塞車的匯入各重試五、六次，把當天 40 次用完。
+    assert.equal(RETRY_DELAYS_MS.length, 2);
+  });
+
+  describe('額度重置時間（太平洋時間半夜）', () => {
+    const at = (iso) => Date.parse(iso);
+    test('夏令時間是台灣下午三點', () => {
+      assert.equal(quotaResetText(at('2026-09-24T02:15:00Z')), '下午三點'); // 台灣 10:15
+    });
+    test('過了三點就是明天', () => {
+      assert.equal(quotaResetText(at('2026-09-24T08:00:00Z')), '明天下午三點'); // 台灣 16:00
+    });
+    test('夏令時間結束當天還是三點，隔天起變四點', () => {
+      // 美國 2026-11-01 02:00 結束夏令時間；11/1 的半夜還是 PDT。
+      assert.equal(quotaResetText(at('2026-10-31T08:00:00Z')), '明天下午三點');
+      assert.equal(quotaResetText(at('2026-11-01T08:00:00Z')), '明天下午四點');
+      assert.equal(quotaResetText(at('2026-11-02T02:00:00Z')), '下午四點');
+    });
+    test('冬令時間跨年也照算', () => {
+      assert.equal(quotaResetText(at('2026-12-31T23:00:00Z')), '下午四點'); // 台灣 1/1 07:00
+    });
   });
 
   /// 從請求網址取出打的是哪個模型。
