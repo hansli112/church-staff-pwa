@@ -206,7 +206,46 @@ node scripts/prepare-deployment.mjs \
 
 產生器只複製 `icons` 指定的 PNG 至 `.local/deployment/web/<相對路徑>`，檢查檔案存在且不允許 realpath／symlink 逃出資產目錄。之後仍按照前述 `cp -R .local/deployment/web/. build/web/` 帶入，名稱、manifest、背景通知圖示和實際 PNG 必須來自同一份設定。`--assets` 未指定時就是 `web/`，不會默默下載任何外部圖片。
 
-CI 預設不會取得你的私有檔案；若用了客製素材，必須在 CI prepare 之前透過自己的私有資產來源準備同一套檔案，並設定 GitHub Variable `CHURCH_ASSETS_DIR` 為該 runner 目錄（預設 `web`，workflow 會傳給 `--assets`）。缺檔就應讓建置失敗，不回退成其他教會圖示。本文不提供私有素材儲存服務。檢查 192/512 尺寸、maskable 安全區及 favicon 後再上線。
+CI 預設不會取得你的私有檔案；若用了客製素材，必須在 CI prepare 之前透過自己的資產來源準備同一套檔案，或使用下節的固定 Git 版本還原。GitHub Variable `CHURCH_ASSETS_DIR` 指向該 runner 目錄（預設 `web`，workflow 會傳給 `--assets`）。缺檔就應讓建置失敗，不回退成其他教會圖示。本文不提供私有素材儲存服務。檢查 192/512 尺寸、maskable 安全區及 favicon 後再上線。
+
+#### 選用：從自己的 Git 歷史還原圖示
+
+**只適合素材已存在於自己的 Git 歷史，且你有權使用的情況。** 這不是從其他 repo 搬入私有素材的工具，也不會讓曾提交到公開 Git 的圖示變成私密。新素材不必為了使用此功能而提交；仍可採前述自行準備 assets 的方式。
+
+在 GitHub Actions Variables 設定：
+
+- `CHURCH_ASSETS_GIT_REF`：操作者明確選定的完整 **40 字元十六進位 commit SHA**，不是分支、tag、`HEAD` 或短 SHA；預設空白，不啟用此功能。
+- `CHURCH_ASSETS_DIR`：改為 repo 內已 gitignore 的 `.local/` **子目錄**，例如 `.local/branding`；啟用此功能時不得使用 `web` 或 `.local` 本身。
+
+CI 先驗證完整 ChurchConfig 與 SHA 格式，才以 `git fetch --no-tags origin "$CHURCH_ASSETS_GIT_REF"` 取得此 repo 的指定 commit。之後執行只讀本機 Git objects 的 helper，固定讀取五個來源：
+
+| 固定 Git 路徑 | ChurchConfig 目的欄位 |
+|---|---|
+| `web/favicon.png` | `icons.favicon` |
+| `web/icons/Icon-192.png` | `icons.icon192` |
+| `web/icons/Icon-512.png` | `icons.icon512` |
+| `web/icons/Icon-maskable-192.png` | `icons.maskable192` |
+| `web/icons/Icon-maskable-512.png` | `icons.maskable512` |
+
+例如 `icons.icon192` 為 `original/icons/Icon-192.png`，輸出就會是 `.local/branding/original/icons/Icon-192.png`，供既有 `prepare-deployment.mjs --assets .local/branding` 使用。**只取圖檔，不切換程式碼版本、不修改 tracked `web/`。** SHA 與目錄經環境變數及引用後的參數傳入，不當成 shell 程式碼。
+
+本機已有該 commit 時，可直接執行相同 helper（下方 SHA 佔位值需先替換）：
+
+```bash
+ASSET_COMMIT=REPLACE_WITH_FULL_40_HEX_COMMIT_SHA
+node scripts/restore-branding-from-git.mjs \
+  --config .local/church.json \
+  --ref "$ASSET_COMMIT" \
+  --out .local/branding
+node scripts/prepare-deployment.mjs \
+  --config .local/church.json \
+  --assets .local/branding \
+  --out .local/deployment
+```
+
+Helper 自己**不 fetch、不上傳、不讀憑證**，不接受其他 revision 表達式或任意來源路徑。它先驗證全部 PNG 的結構、CRC、解壓大小及尺寸（192/512 對應圖示；favicon 為 16–256 正方形，每檔最多 4 MiB），再寫入。缺檔、壞檔、非 commit、非 ignored 目錄或 symlink／路徑越界皆拒絕；既有檔案內容不同時拒絕覆寫，相同則可重複執行。要更換來源且內容不同，先自行核對並改用新的 `.local/` 子目錄，勿把錯誤當成可忽略的警告。
+
+`CHURCH_ASSETS_GIT_REF` 留空時，CI 不 fetch 圖示、不執行還原 helper，維持原本的中性／自行準備 assets 流程。
 
 Docker 的資產來源目前固定為 build context 中的 `web/`，且 `.local/` 已被 `.dockerignore` 排除；`CHURCH_ASSETS_DIR` 不是 Docker 的私有 context 功能。若使用受限 Docker 路線且需要客製圖示，可自行將有權使用的 PNG 放入 gitignored `web/private-icons/`，再把 `icons` 改為該相對路徑；不要提交這些教會素材。
 
@@ -219,6 +258,7 @@ GitHub Settings → Secrets and variables → Actions：
 - Variable `CLOUDFLARE_PAGES_PROJECT`；Secrets `CLOUDFLARE_ACCOUNT_ID`、`CLOUDFLARE_API_TOKEN`（最小所需 Pages 權限）。名稱及 Secret／Variable 位置需與 workflow 一致。
 - Secret 或 Variable `CHURCH_CONFIG_JSON`：自己的 `.local/church.json` 全文；secret 優先。雖不是 server secret，仍不要把真實部署檔提交到公開 source。
 - 選填 Variable `CHURCH_ASSETS_DIR`：runner 上已準備好的 PNG 目錄，預設 `web`。
+- 選填 Variable `CHURCH_ASSETS_GIT_REF`：依前節從自己的 Git 歷史還原五張圖示的完整 40hex commit SHA；啟用時 `CHURCH_ASSETS_DIR` 必須是 ignored `.local/` 子目錄。
 - Firebase Web 欄位；選用功能啟用才加 Calendar API key／calendar ID／FCM VAPID 公鑰。
 - Production／Preview 的執行期設定須**另外**放 Cloudflare，不是只填 build 用 GitHub 變數。
 

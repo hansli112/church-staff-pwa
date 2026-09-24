@@ -97,17 +97,32 @@ jobs:
         env:
           CHURCH_CONFIG_JSON: ${{ secrets.CHURCH_CONFIG_JSON || vars.CHURCH_CONFIG_JSON }}
           CHURCH_ASSETS_DIR: ${{ vars.CHURCH_ASSETS_DIR || 'web' }}
+          CHURCH_ASSETS_GIT_REF: ${{ vars.CHURCH_ASSETS_GIT_REF }}
           CLOUDFLARE_PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
         run: |
           set -euo pipefail
           node --input-type=module <<'JS'
           import fs from 'node:fs';
+          import { validateChurchConfig } from './worker/church_config.js';
+          import { validateGitRef } from './scripts/restore-branding-from-git.mjs';
           const raw = process.env.CHURCH_CONFIG_JSON;
           if (!raw?.trim()) throw new Error('CHURCH_CONFIG_JSON secret/variable is required; copy config/church.example.json and configure your deployment.');
+          validateChurchConfig(JSON.parse(raw));
+          if (process.env.CHURCH_ASSETS_GIT_REF) validateGitRef(process.env.CHURCH_ASSETS_GIT_REF);
           if (!/^[a-z0-9][a-z0-9-]{0,57}$/.test(process.env.CLOUDFLARE_PAGES_PROJECT || '')) throw new Error('Set CLOUDFLARE_PAGES_PROJECT to your Pages project name.');
           fs.mkdirSync('.local', { recursive: true });
           fs.writeFileSync('.local/church.json', raw);
           JS
+          if [[ -n "${CHURCH_ASSETS_GIT_REF:-}" ]]; then
+            # The Node preflight above accepts only a complete commit SHA.
+            # Restore from this repository's origin, never an arbitrary URL.
+            CHURCH_ASSETS_GIT_REF="${CHURCH_ASSETS_GIT_REF,,}"
+            git fetch --no-tags origin "$CHURCH_ASSETS_GIT_REF"
+            node scripts/restore-branding-from-git.mjs \
+              --config .local/church.json \
+              --ref "$CHURCH_ASSETS_GIT_REF" \
+              --out "$CHURCH_ASSETS_DIR"
+          fi
           node scripts/prepare-deployment.mjs --config .local/church.json --assets "$CHURCH_ASSETS_DIR" --out .local/deployment
 
       # 2. 安裝 Flutter 環境 (GitHub 支援，Cloudflare 不支援)
