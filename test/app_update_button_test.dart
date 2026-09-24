@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:church_staff_pwa/core/services/app_update_service.dart';
 import 'package:church_staff_pwa/core/services/app_version_service.dart';
 import 'package:church_staff_pwa/features/auth/domain/entities/user.dart';
-import 'package:church_staff_pwa/features/auth/domain/repositories/auth_repository.dart';
 import 'package:church_staff_pwa/features/auth/presentation/providers/session_provider.dart';
 import 'package:church_staff_pwa/features/auth/presentation/screens/profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'support/signed_in_auth_repository.dart';
 
 /// 個人頁的「檢查更新」。
 ///
@@ -63,34 +63,13 @@ const _user = User(
   role: UserRole.member,
 );
 
-class _FakeAuthRepository implements AuthRepository {
-  @override
-  Future<User?> getCachedUser() async => _user;
-  @override
-  Future<User?> getCurrentUser() async => _user;
-  @override
-  Future<void> writeCachedUser(User user) async {}
-  @override
-  Future<User?> login(String username, String password) async => _user;
-  @override
-  Future<void> logout() async {}
-  @override
-  Future<List<User>> getUsers() async => const [_user];
-  @override
-  Future<void> addUser(User user, String password) async {}
-  @override
-  Future<void> updateUser(User user, {String? password}) async {}
-  @override
-  Future<void> deleteUser(String id) async {}
-}
-
 Future<void> _pumpProfile(
   WidgetTester tester,
   _FakeUpdateService updateService,
 ) async {
   await tester.pumpWidget(
     ChangeNotifierProvider(
-      create: (_) => SessionProvider(_FakeAuthRepository()),
+      create: (_) => SessionProvider(SignedInAuthRepository(_user)),
       child: MaterialApp(
         home: ProfileScreen(
           updateService: updateService,

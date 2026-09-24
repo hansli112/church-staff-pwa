@@ -1,6 +1,7 @@
 import '../entities/event_option.dart';
 import '../entities/service_roster.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
+import '../staff_order.dart';
 
 abstract class RosterRepository {
   Future<List<ServiceRoster>> getUpcomingRosters();
@@ -30,4 +31,14 @@ abstract class RosterRepository {
   Future<void> updateServiceTemplates(Map<ServiceType, List<String>> templates);
   Future<Map<ServiceType, List<EventOption>>> getEventOptions();
   Future<void> updateEventOptions(Map<ServiceType, List<EventOption>> options);
+
+  /// 每個崇拜存過的同工排序。沒存過的崇拜不在回傳的 Map 裡。
+  Future<Map<ServiceType, StaffOrder>> getStaffOrders();
+
+  /// 改 [type] 的同工排序裡的幾個服事項目：有值的換成新的排序，null 的
+  /// 拿掉。沒提到的服事項目不動（見 [StaffOrder.changesTo]）。
+  Future<void> updateStaffRankings(
+    ServiceType type,
+    Map<String, List<String>?> changes,
+  );
 }

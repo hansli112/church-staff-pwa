@@ -1,0 +1,151 @@
+// POST /api/roster/import-image — turn a photo of the paper roster into the
+// JSON the import dialog already accepts.
+//
+// The conversion used to happen on claude.ai: generate a skill with the staff
+// list baked in, upload it, attach the photo there, copy the JSON back. That
+// meant the name list went stale every time someone joined, and it meant
+// leaving the app. This route does the same job against the prompt that
+// scripts/build-import-prompt.py publishes to Firestore.
+//
+// It returns the parsed rows and nothing else — validating them against the
+// roster, matching names to accounts and reporting what did not match all stay
+// in parseRosterImportJson on the client, which is the same code path a pasted
+// JSON goes through. One place decides what an import means.
+
+import { authorize } from '../../../worker/authorize.js';
+import { readDocument, HttpError } from '../../../worker/firebase_user.js';
+import { handleWith, jsonResponse, readJsonBody } from '../../../worker/http.js';
+import { callGemini } from '../../../worker/gemini.js';
+import { fillPrompt, loadRosterContext } from '../../../worker/roster_prompt.js';
+
+/// What a phone camera produces, plus the screenshot formats. Anything else is
+/// refused here rather than sent upstream to be refused there.
+const IMAGE_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+]);
+
+const MAX_IMAGES = 3;
+
+/// Per-image ceiling, measured on the decoded bytes. Same as
+/// maxRosterPhotoBytes in the app, which shrinks every photo to a JPEG well
+/// under this before sending it.
+///
+/// Small on purpose, and the reason is CPU, not memory: on the free plan a
+/// request gets 10ms of CPU, and parsing the body plus re-serialising it for
+/// Gemini costs roughly 2-3ms per MB of base64. A raw 4.5MB phone photo measured
+/// 14-17ms for that alone — Cloudflare kills the worker and answers 503 on its
+/// own, which the app could only show as "busy".
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+
+/// The whole body, checked from Content-Length before anything reads it: by the
+/// time parseImportRequest could reject an oversized image, parsing it has
+/// already spent the CPU budget. One image at the limit is ~2.7MB of base64.
+const MAX_BODY_BYTES = 4 * 1024 * 1024;
+
+export const onRequestPost = ({ request, env }) =>
+  handleWith('roster import function failed', async () => {
+    rejectOversizedBody(request);
+
+    // Who and which group before the body is read; which roster after, since
+    // that is in the body. forRosterType also decides whether the type exists.
+    const permit = await authorize(request, env, { edit: 'roster' }, fetch);
+    const { type, images } = parseImportRequest(await readJsonBody(request));
+    const token = permit.forRosterType(type);
+
+    // The template says how to read this church's tables; the context is the
+    // ministries, events and staff list as they are right now. Reading the
+    // second half live is what makes a volunteer who got an account this
+    // morning recognised this afternoon, with nobody re-running anything.
+    const [template, context] = await Promise.all([
+      loadTemplate(env, type, token),
+      loadRosterContext(env, type, token, fetch),
+    ]);
+    const entries = await callGemini(env, {
+      prompt: fillPrompt(template, context),
+      images,
+    });
+    return jsonResponse({ entries });
+  });
+
+/// Refuses a body that is too big to parse within the CPU limit, without
+/// reading it. Runs even before authorize(): it costs nothing, and a request
+/// that cannot succeed is not worth a Firestore lookup either.
+///
+/// A missing Content-Length (a chunked upload) is let through to the per-image
+/// check; the app always sends one.
+export function rejectOversizedBody(request) {
+  const length = Number(request.headers.get('content-length'));
+  if (Number.isFinite(length) && length > MAX_BODY_BYTES) {
+    throw new HttpError(413, '照片太大了，請裁掉表格以外的部分再試');
+  }
+}
+
+/// Validates the request body and returns it in the shape callGemini wants.
+///
+/// [type] is passed through as sent: whether it names a real service type is
+/// forRosterType()'s call (see authorize.js), since the type is what the
+/// permission is about.
+///
+/// Exported for the tests: every rejection here is a message someone will see
+/// on a phone with a photo already picked, so they are worth asserting on
+/// directly rather than through a full round trip.
+export function parseImportRequest(body) {
+  const type = body?.type;
+
+  const images = body?.images;
+  if (!Array.isArray(images) || images.length === 0) {
+    throw new HttpError(400, '請先選一張服事表照片');
+  }
+  if (images.length > MAX_IMAGES) {
+    throw new HttpError(400, `一次最多 ${MAX_IMAGES} 張照片`);
+  }
+
+  const parsed = images.map((image, index) => {
+    const at = images.length === 1 ? '照片' : `第 ${index + 1} 張照片`;
+    const mimeType = image?.mimeType;
+    if (typeof mimeType !== 'string' || !IMAGE_TYPES.has(mimeType)) {
+      throw new HttpError(400, `${at}的格式不支援，請用 JPG 或 PNG`);
+    }
+    const data = image?.data;
+    if (typeof data !== 'string' || data === '') {
+      throw new HttpError(400, `${at}讀不到內容，請重新選一次`);
+    }
+    // base64 inflates by 4/3, so the decoded size can be checked without
+    // decoding — which matters when the point of the check is not holding the
+    // decoded bytes in memory.
+    if (Math.floor((data.length * 3) / 4) > MAX_IMAGE_BYTES) {
+      throw new HttpError(
+        413,
+        `${at}太大了（上限 ${MAX_IMAGE_BYTES / 1024 / 1024}MB），請先縮小再試`,
+      );
+    }
+    return { mimeType, data };
+  });
+
+  return { type, images: parsed };
+}
+
+/// The published prompt *template* for this service type.
+///
+/// A template, not a finished prompt: the staff list and the ministry names are
+/// filled in by fillPrompt from live Firestore. What is published here is only
+/// the part a person wrote — how this church's tables are laid out.
+///
+/// Read as the caller, like every other Firestore read here, so a user who
+/// cannot read settings/ cannot reach it through this route either.
+async function loadTemplate(env, type, token) {
+  const doc = await readDocument(env, 'settings/import_prompts', token, fetch);
+  const prompt = doc?.fields?.[type]?.stringValue;
+  if (typeof prompt !== 'string' || prompt.trim() === '') {
+    // The operator has not run `scripts/build-import-prompt.py --publish`, or
+    // ran it before this service type existed. Nothing the caller can do about
+    // it, so the detail goes to the log and they get told who to ask.
+    console.error('no published import prompt', type);
+    throw new HttpError(500, '辨識設定還沒建立，請聯絡管理員');
+  }
+  return prompt;
+}

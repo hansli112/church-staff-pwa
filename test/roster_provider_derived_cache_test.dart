@@ -2,72 +2,25 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
 import 'package:church_staff_pwa/features/roster/domain/entities/event_option.dart';
 import 'package:church_staff_pwa/features/roster/domain/entities/service_roster.dart';
-import 'package:church_staff_pwa/features/roster/domain/repositories/roster_repository.dart';
 import 'package:church_staff_pwa/features/roster/presentation/providers/roster_provider.dart';
+
+import 'support/in_memory_roster_repository.dart';
 
 /// RosterProvider 對 getRostersByType / eventColorFor 的結果做了快取。
 /// 這組測試守的是「資料變了但快取沒丟」這個 bug — 那會讓畫面顯示舊資料，
 /// 而且不會有任何錯誤訊息。
-class _FakeRosterRepository implements RosterRepository {
-  _FakeRosterRepository({
-    required List<ServiceRoster> rosters,
-    required Map<ServiceType, List<EventOption>> eventOptions,
-  }) : _rosters = List<ServiceRoster>.from(rosters),
-       _eventOptions = Map<ServiceType, List<EventOption>>.from(eventOptions);
-
-  final List<ServiceRoster> _rosters;
-  Map<ServiceType, List<EventOption>> _eventOptions;
-
-  @override
-  Future<List<ServiceRoster>> getUpcomingRosters() async =>
-      List<ServiceRoster>.from(_rosters);
-
-  @override
-  Future<List<ServiceRoster>> getUpcomingRostersFromCache() async => const [];
-
-  @override
-  Future<void> ensureQuarterRosters(List<ServiceType> allowedTypes) async {}
-
-  @override
-  Future<void> updateRoster(ServiceRoster roster) async {
-    final index = _rosters.indexWhere((r) => r.id == roster.id);
-    if (index == -1) {
-      _rosters.add(roster);
-      return;
-    }
-    _rosters[index] = roster;
-  }
-
-  @override
-  Future<void> updateRostersAtomically(List<ServiceRoster> rosters) async {
-    for (final roster in rosters) {
-      await updateRoster(roster);
-    }
-  }
-
-  @override
-  Future<Map<ServiceType, List<String>>> getServiceTemplates() async => {
-    ServiceType.sundayService: const ['領會'],
-    ServiceType.youth: const ['領會'],
-    ServiceType.children: const [],
-  };
-
-  @override
-  Future<void> updateServiceTemplates(
-    Map<ServiceType, List<String>> templates,
-  ) async {}
-
-  @override
-  Future<Map<ServiceType, List<EventOption>>> getEventOptions() async =>
-      Map<ServiceType, List<EventOption>>.from(_eventOptions);
-
-  @override
-  Future<void> updateEventOptions(
-    Map<ServiceType, List<EventOption>> options,
-  ) async {
-    _eventOptions = Map<ServiceType, List<EventOption>>.from(options);
-  }
-}
+InMemoryRosterRepository _repo({
+  required List<ServiceRoster> rosters,
+  required Map<ServiceType, List<EventOption>> eventOptions,
+}) => InMemoryRosterRepository(
+  rosters: rosters,
+  templates: const {
+    ServiceType.sundayService: ['領會'],
+    ServiceType.youth: ['領會'],
+    ServiceType.children: [],
+  },
+  eventOptions: eventOptions,
+);
 
 ServiceRoster _roster({
   required String id,
@@ -87,11 +40,11 @@ ServiceRoster _roster({
 
 void main() {
   group('RosterProvider 衍生資料快取', () {
-    late _FakeRosterRepository repository;
+    late InMemoryRosterRepository repository;
     late RosterProvider provider;
 
     setUp(() async {
-      repository = _FakeRosterRepository(
+      repository = _repo(
         rosters: [
           _roster(id: 'sun-1', type: ServiceType.sundayService),
           _roster(id: 'sun-2', type: ServiceType.sundayService),
@@ -296,6 +249,15 @@ void main() {
         provider.eventColorFor(ServiceType.sundayService, '不存在的事件'),
         0xFF7F8C8D,
       );
+    });
+
+    test('eventColorOf：服事表自己指定的顏色優先於活動清單', () {
+      final roster = provider.rosters
+          .firstWhere((r) => r.type == ServiceType.sundayService)
+          .copyWith(customEventColors: const {'聖餐主日': 0xFF123456});
+      expect(provider.eventColorOf(roster, '聖餐主日'), 0xFF123456);
+      expect(provider.eventColorOf(roster, '青年之夜'), 0xFF27AE60);
+      expect(provider.eventColorOf(roster, '不存在的事件'), fallbackEventColor);
     });
 
     test('updateEventOptions 後顏色索引要失效', () async {

@@ -4,6 +4,17 @@ part of 'roster_card.dart';
 // _PeopleOptions – data class used by RosterCard and _RosterPeopleDialog
 // ---------------------------------------------------------------------------
 
+/// 選人視窗送出的一項服事。
+///
+/// [ranking] 只在有人拖過順序時才有值：候選名單裡名單上的同工由前到後，要
+/// 存成這個服事項目的同工排序。沒拖過就是 null，不必寫排序。
+typedef _PeopleSelection = ({
+  String role,
+  List<String> people,
+  StaffRanking? ranking,
+  Map<String, String> personIdsByName,
+});
+
 class _PeopleOptions {
   final List<String> options;
   final Set<String> allUserNames;
@@ -26,17 +37,13 @@ class _RosterPeopleDialog extends StatefulWidget {
   final String? initialRoleText;
   final List<String> roleOptions;
   final String? initialRole;
-  final List<String> initialOrder;
+
+  /// 候選名單，已經照同工排序排好（見 [RosterProvider.staffOrderFor]）。
   final Future<_PeopleOptions> Function(String? role) peopleLoader;
   final List<String> initialPeople;
   final Map<String, String> initialPersonIdsByName;
-  final void Function(
-    String role,
-    List<String> people,
-    List<String> order,
-    Map<String, String> personIdsByName,
-  )
-  onSubmit;
+
+  final void Function(_PeopleSelection selection) onSubmit;
   final String submitLabel;
   final bool roleEditable;
   final bool useBottomSheet;
@@ -51,7 +58,6 @@ class _RosterPeopleDialog extends StatefulWidget {
     this.initialRoleText,
     required this.roleOptions,
     required this.initialRole,
-    required this.initialOrder,
     required this.peopleLoader,
     required this.initialPeople,
     this.initialPersonIdsByName = const {},
@@ -70,8 +76,11 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
   late Set<String> _selectedPeople;
   late Set<String> _customNames;
   final Set<String> _removedCustomNames = {};
-  List<String> _options = const ['待定'];
+  List<String> _options = const [placeholderPerson];
   bool _optionsInitialized = false;
+
+  /// 拖過順序了嗎。拖曳改的是這個服事項目在每一週的順序，不只這一天。
+  bool _orderChanged = false;
   Set<String> _allUserNames = const {};
   Map<String, String> _userIdsByName = const {};
   String? _selectedRole;
@@ -91,11 +100,11 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
         .where((e) => e.isNotEmpty)
         .toSet();
     if (_selectedPeople.isEmpty) {
-      _selectedPeople = {'待定'};
+      _selectedPeople = {placeholderPerson};
     }
     _customNames = widget.initialPeople
         .map((e) => e.trim())
-        .where((e) => e.isNotEmpty && e != '待定')
+        .where((e) => e.isNotEmpty && e != placeholderPerson)
         .toSet();
     _selectedRole = widget.initialRole;
     _peopleFuture = widget.peopleLoader(_selectedRole);
@@ -107,9 +116,6 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
   late final Set<String> _initialSelection;
 
   /// 勾選或順序跟進場時不一樣了嗎。
-  ///
-  /// 順序只在原本就有存過順序時才比 —— 舊資料沒有 peopleOrder，拿現算的順序
-  /// 去比會每次都判定成「改過」，每次交換都跳一次沒必要的確認。
   bool get _hasUnsavedChanges {
     // 名單還沒載進來時 _options 只有一個「待定」，這時候算出來的勾選一定跟
     // 進場時不一樣，會誤判成「改過」而多跳一次確認。
@@ -117,18 +123,12 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
     final selected = _buildSelectedPeople(_options);
     // 「沒有人」在 _buildSelectedPeople 會被補成 ['待定']，而 _initialSelection
     // 是原始勾選（可能是空的），兩邊都先把佔位符拿掉才比得準。
-    const placeholder = '待定';
-    final selectedSet = selected.where((n) => n != placeholder).toSet();
+    final selectedSet = selected.where((n) => n != placeholderPerson).toSet();
     final initialSet = _initialSelection
-        .where((n) => n != placeholder)
+        .where((n) => n != placeholderPerson)
         .toSet();
     if (!setEquals(selectedSet, initialSet)) return true;
-    if (widget.initialOrder.isEmpty) return false;
-    final order = _buildSelectedOrder(_options, selected);
-    final initialOrder = widget.initialOrder
-        .where((name) => selected.contains(name))
-        .toList();
-    return !listEquals(order, initialOrder);
+    return _orderChanged;
   }
 
   /// 未存的改動要被丟掉時先問一聲。交換會重寫這一項的人，帶不過去。
@@ -169,16 +169,18 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
         _selectedPeople.add(name);
       }
 
-      if (name == '待定' && _selectedPeople.contains('待定')) {
+      if (name == placeholderPerson &&
+          _selectedPeople.contains(placeholderPerson)) {
         _selectedPeople
           ..clear()
-          ..add('待定');
-      } else if (_selectedPeople.length > 1 && _selectedPeople.contains('待定')) {
-        _selectedPeople.remove('待定');
+          ..add(placeholderPerson);
+      } else if (_selectedPeople.length > 1 &&
+          _selectedPeople.contains(placeholderPerson)) {
+        _selectedPeople.remove(placeholderPerson);
       }
 
       if (_selectedPeople.isEmpty) {
-        _selectedPeople.add('待定');
+        _selectedPeople.add(placeholderPerson);
       }
     });
   }
@@ -187,14 +189,14 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
     final name = (raw ?? _customController.text).trim();
     if (name.isEmpty) return;
     setState(() {
-      if (name == '待定') {
+      if (name == placeholderPerson) {
         _selectedPeople
           ..clear()
-          ..add('待定');
+          ..add(placeholderPerson);
       } else {
         _selectedPeople.add(name);
         _customNames.add(name);
-        _selectedPeople.remove('待定');
+        _selectedPeople.remove(placeholderPerson);
       }
     });
     _customController.clear();
@@ -209,7 +211,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
       _removedCustomNames.add(trimmed);
       _options = _options.where((option) => option != trimmed).toList();
       if (_selectedPeople.isEmpty) {
-        _selectedPeople.add('待定');
+        _selectedPeople.add(placeholderPerson);
       }
     });
   }
@@ -219,33 +221,33 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
     final roleKey = role.trim();
     if (trimmed.isEmpty || roleKey.isEmpty) return;
     final provider = context.read<RosterProvider>();
-    final rosters = provider.getRostersByType(widget.rosterType);
-    for (final roster in rosters) {
+    final messenger = ScaffoldMessenger.of(context);
+    final updates = <ServiceRoster>[];
+    for (final roster in provider.getRostersByType(widget.rosterType)) {
       var changed = false;
       final updatedDuties = roster.duties.map((duty) {
         if (duty.role.trim() != roleKey) return duty;
         if (!duty.people.contains(trimmed)) return duty;
         final people = duty.people.where((p) => p != trimmed).toList();
-        final order = duty.peopleOrder.where((p) => p != trimmed).toList();
         final personIdsByName = Map<String, String>.from(duty.personIdsByName)
           ..remove(trimmed);
         changed = true;
         if (people.isEmpty) {
           return duty.copyWith(
-            people: const ['待定'],
-            peopleOrder: order,
+            people: const [placeholderPerson],
             personIdsByName: personIdsByName,
           );
         }
-        return duty.copyWith(
-          people: people,
-          peopleOrder: order,
-          personIdsByName: personIdsByName,
-        );
+        return duty.copyWith(people: people, personIdsByName: personIdsByName);
       }).toList();
-      if (changed) {
-        await provider.updateRoster(roster.copyWith(duties: updatedDuties));
-      }
+      if (changed) updates.add(roster.copyWith(duties: updatedDuties));
+    }
+    // 一次送出而不是逐筆 await：逐筆的話中間一筆失敗，後面幾天就默默沒改。
+    // updateRosters 會把成功的先寫回畫面，再把失敗的報上來。
+    try {
+      await provider.updateRosters(updates);
+    } catch (e) {
+      showWriteFailure(messenger, '刪除', e);
     }
   }
 
@@ -324,27 +326,9 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
   List<String> _buildSelectedPeople(List<String> options) {
     final selected = options.where(_selectedPeople.contains).toList();
     if (selected.isEmpty) {
-      return ['待定'];
+      return [placeholderPerson];
     }
     return selected;
-  }
-
-  List<String> _buildSelectedOrder(
-    List<String> options,
-    List<String> selected,
-  ) {
-    final selectedSet = selected.where((name) => name != '待定').toSet();
-    if (selectedSet.isEmpty) return const [];
-
-    final ordered = options
-        .where((name) => name != '待定' && selectedSet.contains(name))
-        .toList();
-    final existing = ordered.toSet();
-    for (final name in selected) {
-      if (name == '待定' || existing.contains(name)) continue;
-      ordered.add(name);
-    }
-    return ordered;
   }
 
   List<String> _mergeOptions(List<String> baseOptions) {
@@ -362,18 +346,18 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
       if (trimmed.isNotEmpty) merged.add(trimmed);
     }
     final result = <String>[];
-    if (merged.contains('待定') || baseOptions.contains('待定')) {
-      result.add('待定');
+    if (merged.contains(placeholderPerson) ||
+        baseOptions.contains(placeholderPerson)) {
+      result.add(placeholderPerson);
     }
-    final baseOrdered =
-        (widget.initialOrder.isNotEmpty ? widget.initialOrder : baseOptions)
-            .map((name) => name.trim())
-            .where((name) => name.isNotEmpty && name != '待定')
-            .toList();
+    final baseOrdered = baseOptions
+        .map((name) => name.trim())
+        .where((name) => name.isNotEmpty && name != placeholderPerson)
+        .toList();
     final baseSet = baseOrdered.toSet();
     result.addAll(baseOrdered);
 
-    merged.remove('待定');
+    merged.remove(placeholderPerson);
     final remaining = merged.where((name) => !baseSet.contains(name)).toList()
       ..sort();
     result.addAll(remaining);
@@ -395,6 +379,34 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
     if (missing.isNotEmpty) {
       _options = [..._options, ...missing];
     }
+  }
+
+  bool _isRankable(String name) =>
+      name != placeholderPerson && _allUserNames.contains(name);
+
+  void _submit() {
+    final role = widget.roleEditable
+        ? (_selectedRole ?? '').trim()
+        : _roleController.text.trim();
+    if (role.isEmpty) return;
+    final selected = _buildSelectedPeople(_options);
+    final selectedPersonIdsByName = <String, String>{};
+    for (final name in selected) {
+      final uid = _userIdsByName[name];
+      if (uid == null || uid.trim().isEmpty) continue;
+      selectedPersonIdsByName[name] = uid;
+    }
+    widget.onSubmit((
+      role: role,
+      people: selected,
+      // 只收名單上的同工：外請講員這類名字寫進固定排序的話，之後新加入的
+      // 同工都會排在他們後面。他們本來就拖不動（見 onReorder）。
+      ranking: _orderChanged
+          ? StaffRanking(role, _options.where(_allUserNames.contains).toList())
+          : null,
+      personIdsByName: selectedPersonIdsByName,
+    ));
+    Navigator.of(context).pop();
   }
 
   @override
@@ -422,6 +434,9 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
                 setState(() {
                   _selectedRole = value;
                   _peopleFuture = widget.peopleLoader(_selectedRole);
+                  // 換了服事項目就換了一份排序，前一項拖過的順序不能帶過來。
+                  _optionsInitialized = false;
+                  _orderChanged = false;
                 });
               }
             },
@@ -456,7 +471,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
         Align(
           alignment: Alignment.centerLeft,
           child: Text(
-            '選擇同工',
+            '選擇同工（拖曳排序會套用到每一週）',
             style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
           ),
         ),
@@ -474,7 +489,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
               }
 
               final data = snapshot.data;
-              _syncOptions(data?.options ?? const ['待定']);
+              _syncOptions(data?.options ?? const [placeholderPerson]);
               if (_removedCustomNames.isNotEmpty) {
                 _options = _options
                     .where((name) => !_removedCustomNames.contains(name))
@@ -495,23 +510,25 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
                   buildDefaultDragHandles: true,
                   onReorder: (oldIndex, newIndex) {
                     final name = _options[oldIndex];
-                    if (name == '待定') {
-                      return;
-                    }
+                    // 待定與名單外的人不進固定排序，拖了也存不起來，乾脆
+                    // 不給拖 —— 否則畫面上排好的位置存完就跳回去。
+                    if (!_isRankable(name)) return;
                     setState(() {
                       if (newIndex > oldIndex) {
                         newIndex -= 1;
                       }
                       final moved = _options.removeAt(oldIndex);
                       _options.insert(newIndex, moved);
+                      _orderChanged = true;
                     });
                   },
                   itemBuilder: (context, index) {
                     final name = _options[index];
                     final checked = _selectedPeople.contains(name);
                     final isCustom =
-                        name != '待定' && !_allUserNames.contains(name);
-                    final canDrag = name != '待定';
+                        name != placeholderPerson &&
+                        !_allUserNames.contains(name);
+                    final canDrag = _isRankable(name);
                     return CheckboxListTile(
                       key: ValueKey('option-$name'),
                       title: Text(name),
@@ -569,29 +586,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
         ),
         const SizedBox(width: 8),
         FilledButton(
-          onPressed: roleMissing
-              ? null
-              : () {
-                  final role = widget.roleEditable
-                      ? (_selectedRole ?? '').trim()
-                      : _roleController.text.trim();
-                  if (role.isEmpty) return;
-                  final selected = _buildSelectedPeople(_options);
-                  final order = _buildSelectedOrder(_options, selected);
-                  final selectedPersonIdsByName = <String, String>{};
-                  for (final name in selected) {
-                    final uid = _userIdsByName[name];
-                    if (uid == null || uid.trim().isEmpty) continue;
-                    selectedPersonIdsByName[name] = uid;
-                  }
-                  widget.onSubmit(
-                    role,
-                    selected,
-                    order,
-                    selectedPersonIdsByName,
-                  );
-                  Navigator.of(context).pop();
-                },
+          onPressed: roleMissing ? null : _submit,
           child: Text(widget.submitLabel),
         ),
       ],
@@ -640,29 +635,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
           child: const Text('取消'),
         ),
         FilledButton(
-          onPressed: roleMissing
-              ? null
-              : () {
-                  final role = widget.roleEditable
-                      ? (_selectedRole ?? '').trim()
-                      : _roleController.text.trim();
-                  if (role.isEmpty) return;
-                  final selected = _buildSelectedPeople(_options);
-                  final order = _buildSelectedOrder(_options, selected);
-                  final selectedPersonIdsByName = <String, String>{};
-                  for (final name in selected) {
-                    final uid = _userIdsByName[name];
-                    if (uid == null || uid.trim().isEmpty) continue;
-                    selectedPersonIdsByName[name] = uid;
-                  }
-                  widget.onSubmit(
-                    role,
-                    selected,
-                    order,
-                    selectedPersonIdsByName,
-                  );
-                  Navigator.of(context).pop();
-                },
+          onPressed: roleMissing ? null : _submit,
           child: Text(widget.submitLabel),
         ),
       ],

@@ -5,6 +5,11 @@ import '../providers/roster_provider.dart';
 import '../../../auth/presentation/providers/user_admin_provider.dart';
 import '../../../../core/widgets/settings_bottom_sheet.dart';
 import '../../../../core/widgets/text_controller_scope.dart';
+import '../write_failure.dart';
+
+/// 部分失敗時接在後面的話：設定本身寫進去了，只有幾天的服事表沒同步到新
+/// 名稱。再存一次會補上 —— 改過的那幾天已經沒有舊名稱可以換，不會重複改。
+const _partialSaveNote = '設定本身已儲存，再按一次儲存會補上';
 
 class RoleSettingsScreen extends StatefulWidget {
   const RoleSettingsScreen({super.key});
@@ -103,7 +108,7 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('確認刪除'),
-        content: const Text('確定要刪除此服事項目嗎？'),
+        content: const Text('今天以後每一週的服事表都會拿掉這一項，已經排的人也會一起刪掉。已經過去的服事表不會動。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -217,13 +222,41 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
               onPressed: () async {
                 final rosterProvider = context.read<RosterProvider>();
                 final userAdminProvider = context.read<UserAdminProvider>();
-                await rosterProvider.updateTemplates(
-                  _editingTemplates,
-                  renamedRolesByType: _renamedRolesByType,
-                );
-                await userAdminProvider.cleanupUserMinistries(
-                  _editingTemplates,
-                );
+                final messenger = ScaffoldMessenger.of(context);
+                // 失敗一律留在這頁：改到一半的設定還在，再按一次就能重送。
+                PartialUpdateException? partial;
+                try {
+                  await rosterProvider.updateTemplates(
+                    _editingTemplates,
+                    renamedRolesByType: _renamedRolesByType,
+                  );
+                } on PartialUpdateException catch (e) {
+                  // 樣板已經寫進去了，只是有幾天的服事表沒改到名。同工設定
+                  // 照樣要跟著新樣板清，不然兩邊對不上。
+                  partial = e;
+                } catch (e) {
+                  // 樣板沒寫進去就不清同工設定。以前寫失敗也照清，同工的服事
+                  // 被新樣板刪掉，樣板本身卻還是舊的。
+                  showWriteFailure(messenger, '儲存', e);
+                  return;
+                }
+                try {
+                  await userAdminProvider.cleanupUserMinistries(
+                    _editingTemplates,
+                  );
+                } catch (e) {
+                  showWriteFailure(messenger, '儲存', e);
+                  return;
+                }
+                if (partial != null) {
+                  showWriteFailure(
+                    messenger,
+                    '儲存',
+                    partial,
+                    partialNote: _partialSaveNote,
+                  );
+                  return;
+                }
                 if (!context.mounted) return;
                 Navigator.pop(context);
               },

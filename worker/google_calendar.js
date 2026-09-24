@@ -11,10 +11,11 @@
 // admins do not need their own Google account on the calendar — but that
 // credential must never reach the browser, hence this server side.
 
+import { HttpError, base64UrlToBytes, requireEnv } from './firebase_user.js';
+
 const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
 const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 const CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
-const FIRESTORE_API = 'https://firestore.googleapis.com/v1';
 
 // Must match GoogleCalendarConfig.timeZone. The client sends wall-clock time
 // with no offset; this is what makes "19:00" mean 19:00 in Taipei.
@@ -24,171 +25,12 @@ const MAX_TITLE = 200;
 const MAX_LOCATION = 300;
 const MAX_DESCRIPTION = 4000;
 
+/// The handleWith() label for every /api/calendar/* route, so an unexpected
+/// error in any of them logs under one name.
+export const CALENDAR_LOG_LABEL = 'calendar function failed';
+
 /** Upstream call budget. Without it a hung Google request holds the request open. */
 const UPSTREAM_TIMEOUT_MS = 10000;
-
-export class HttpError extends Error {
-  constructor(status, message) {
-    super(message);
-    this.name = 'HttpError';
-    this.status = status;
-  }
-}
-
-export function jsonResponse(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      'content-type': 'application/json; charset=utf-8',
-      // These are private, admin-only responses; no intermediary should keep them.
-      'cache-control': 'no-store',
-    },
-  });
-}
-
-export function errorResponse(error) {
-  if (error instanceof HttpError) {
-    return jsonResponse({ error: error.message }, error.status);
-  }
-  return jsonResponse({ error: '操作失敗，請稍後再試' }, 500);
-}
-
-/** Wraps a handler so thrown HttpErrors become responses instead of 500s. */
-export async function handle(fn) {
-  try {
-    return await fn();
-  } catch (error) {
-    if (!(error instanceof HttpError)) {
-      console.error('calendar function failed', error);
-    }
-    return errorResponse(error);
-  }
-}
-
-function requireEnv(env, key) {
-  const value = env?.[key];
-  if (typeof value !== 'string' || value.trim() === '') {
-    // Deliberately not naming the variable to the client — the operator finds
-    // it in the Cloudflare log line below.
-    console.error(`missing environment variable ${key}`);
-    throw new HttpError(500, '伺服器設定不完整，請聯絡管理員');
-  }
-  return value.trim();
-}
-
-// ---------------------------------------------------------------------------
-// Caller identity
-// ---------------------------------------------------------------------------
-
-function base64UrlToBytes(text) {
-  const padded = text.replace(/-/g, '+').replace(/_/g, '/');
-  const binary = atob(padded + '='.repeat((4 - (padded.length % 4)) % 4));
-  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
-}
-
-/// Reads `sub` out of a Firebase ID token **without verifying the signature**.
-///
-/// That is safe here only because the uid is used for exactly one thing: to
-/// build the Firestore URL that is then fetched *with the caller's own token*.
-/// Firestore verifies the signature, expiry and audience, and firestore.rules
-/// only lets a caller read their own users/{uid} doc. A forged payload either
-/// fails the signature check or points at a doc the caller cannot read.
-export function uidFromIdToken(token) {
-  const parts = token.split('.');
-  if (parts.length !== 3) throw new HttpError(401, '登入狀態無效，請重新登入');
-  let payload;
-  try {
-    payload = JSON.parse(new TextDecoder().decode(base64UrlToBytes(parts[1])));
-  } catch {
-    throw new HttpError(401, '登入狀態無效，請重新登入');
-  }
-  const uid = payload?.sub ?? payload?.user_id;
-  if (typeof uid !== 'string' || uid === '' || uid.includes('/')) {
-    throw new HttpError(401, '登入狀態無效，請重新登入');
-  }
-  return uid;
-}
-
-/// The permission group that may write the calendar. Kept in sync with
-/// inGroup() in firestore.rules and UserGroup in the Flutter app — three
-/// enforcement points, one name. admin is root and holds it implicitly.
-const CALENDAR_GROUP = 'calendar-editors';
-
-/// Rejects anyone without calendar edit rights, and returns `{ uid, name }`.
-///
-/// The role lives in Firestore, not in the token's custom claims, so this reads
-/// users/{uid} as the caller. Doing it that way also means the token is fully
-/// verified by Firestore and the service account needs no Firestore IAM grant.
-///
-/// The display name comes along for the ride because the same document already
-/// has to be fetched for the permission check — the LINE notification wants to
-/// name the person, and a uid means nothing to the group.
-export async function requireEditor(request, env, fetchImpl = fetch) {
-  const header = request.headers.get('Authorization') ?? '';
-  if (!header.startsWith('Bearer ')) {
-    throw new HttpError(401, '請先登入');
-  }
-  const token = header.slice('Bearer '.length).trim();
-  if (token === '') throw new HttpError(401, '請先登入');
-
-  const projectId = requireEnv(env, 'FIREBASE_PROJECT_ID');
-  const uid = uidFromIdToken(token);
-  const url =
-    `${FIRESTORE_API}/projects/${encodeURIComponent(projectId)}` +
-    `/databases/(default)/documents/users/${encodeURIComponent(uid)}` +
-    '?mask.fieldPaths=role&mask.fieldPaths=groups&mask.fieldPaths=name';
-
-  const response = await fetchWithTimeout(fetchImpl, url, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-
-  if (response.status === 401 || response.status === 403) {
-    throw new HttpError(401, '登入狀態已過期，請重新登入');
-  }
-  // A member removed from the app keeps a valid Firebase Auth token but has no
-  // users/{uid} doc — same reasoning as isActiveUser() in firestore.rules.
-  if (response.status === 404) {
-    throw new HttpError(403, '這個帳號沒有權限');
-  }
-  if (!response.ok) {
-    console.error('firestore role lookup failed', response.status);
-    throw new HttpError(502, '無法確認權限，請稍後再試');
-  }
-
-  const doc = await response.json();
-  if (!hasCalendarAccess(doc)) {
-    throw new HttpError(403, '沒有編輯行事曆的權限');
-  }
-  return { uid, name: displayName(doc) };
-}
-
-/// The user's own `name` field, or null.
-///
-/// Not to be confused with the document's own `name` — that is the Firestore
-/// resource path (`projects/.../users/{uid}`) and sits one level up, outside
-/// `fields`. Anything missing or of another shape lands on null: a nameless
-/// notification is a worse message, not a failed request.
-function displayName(doc) {
-  const value = doc?.fields?.name?.stringValue;
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  return trimmed === '' ? null : trimmed;
-}
-
-/// admin is root, otherwise membership of CALENDAR_GROUP.
-///
-/// Firestore's REST encoding is nested and every level is optional: a user
-/// created before the field existed has no `groups` at all, and an empty array
-/// comes back as `{ arrayValue: {} }` with no `values`. Anything unreadable
-/// must land on "no access" rather than throw — a shape surprise here would
-/// otherwise turn into a 500 on a request that should simply be refused.
-function hasCalendarAccess(doc) {
-  const fields = doc?.fields;
-  if (fields?.role?.stringValue === 'admin') return true;
-  const values = fields?.groups?.arrayValue?.values;
-  if (!Array.isArray(values)) return false;
-  return values.some((entry) => entry?.stringValue === CALENDAR_GROUP);
-}
 
 // ---------------------------------------------------------------------------
 // Service account access token
@@ -420,14 +262,6 @@ export function buildGoogleEvent(body, { forPatch = false } = {}) {
   }
 
   return event;
-}
-
-export async function readJsonBody(request) {
-  try {
-    return await request.json();
-  } catch {
-    throw new HttpError(400, '資料格式不正確');
-  }
 }
 
 // ---------------------------------------------------------------------------

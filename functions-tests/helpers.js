@@ -80,8 +80,25 @@ export async function notifyingEnv(overrides = {}) {
   });
 }
 
-export function request(method, { token = idToken(ADMIN_UID), body } = {}) {
-  return new Request('https://app.example/api/calendar/events', {
+/// 換掉全域 fetch 跑一段，跑完一定換回來。
+///
+/// **一定要先 await 再還原**：從 try 裡把還沒完成的 promise 直接回傳出去，會
+/// 在 handler 還在飛的時候就把真的 fetch 裝回去，測試就默默地連上 Google 了。
+export async function withFetch(impl, fn) {
+  const original = globalThis.fetch;
+  globalThis.fetch = impl;
+  try {
+    return await fn();
+  } finally {
+    globalThis.fetch = original;
+  }
+}
+
+export function request(
+  method,
+  { token = idToken(ADMIN_UID), body, path = '/api/calendar/events' } = {},
+) {
+  return new Request(`https://app.example${path}`, {
     method,
     headers: {
       ...(token === null ? {} : { Authorization: `Bearer ${token}` }),
@@ -91,6 +108,14 @@ export function request(method, { token = idToken(ADMIN_UID), body } = {}) {
       ? {}
       : { body: typeof body === 'string' ? body : JSON.stringify(body) }),
   });
+}
+
+/// Firestore 對空陣列回的是 { arrayValue: {} }，沒有 values —— 照抄真實形狀，
+/// 否則讀陣列欄位時對空陣列的處理就沒有被測到。
+function stringArray(list) {
+  return list.length === 0
+    ? { arrayValue: {} }
+    : { arrayValue: { values: list.map((value) => ({ stringValue: value })) } };
 }
 
 /// Routes the three upstreams the functions talk to. Every call is recorded so
@@ -130,14 +155,8 @@ export function fakeFetch({
       // 使用者自己的 name 欄位。文件外層那個 name 是 Firestore 的資源路徑，
       // 兩者同名但不同層 —— displayName() 讀的是這一個。
       if (profile.name != null) fields.name = { stringValue: profile.name };
-      // Firestore 對空陣列回的是 { arrayValue: {} }，沒有 values —— 照抄真實形狀，
-      // 否則 hasCalendarAccess 對空陣列的處理就沒有被測到。
-      if (profile.groups != null) {
-        fields.groups =
-          profile.groups.length === 0
-            ? { arrayValue: {} }
-            : { arrayValue: { values: profile.groups.map((g) => ({ stringValue: g })) } };
-      }
+      if (profile.groups != null) fields.groups = stringArray(profile.groups);
+      if (profile.zoneTypes != null) fields.zoneTypes = stringArray(profile.zoneTypes);
       return Response.json({ name: `users/${uid}`, fields });
     }
 

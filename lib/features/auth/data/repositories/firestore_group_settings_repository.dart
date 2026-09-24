@@ -25,7 +25,7 @@ class FirestoreGroupSettingsRepository implements GroupSettingsRepository {
       final data = doc.data() as Map<String, dynamic>;
       return data.map((key, value) {
         final type = ServiceType.values.firstWhere(
-          (e) => e.toString().split('.').last == key,
+          (e) => e.name == key,
           orElse: () => ServiceType.sundayService,
         );
         return MapEntry(type, List<String>.from(value));
@@ -42,7 +42,7 @@ class FirestoreGroupSettingsRepository implements GroupSettingsRepository {
   ) async {
     try {
       final data = templates.map((key, value) {
-        return MapEntry(key.toString().split('.').last, value);
+        return MapEntry(key.name, value);
       });
       await _templatesDoc.set(data);
     } catch (e) {

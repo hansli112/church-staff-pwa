@@ -2,27 +2,25 @@ import 'package:church_staff_pwa/core/types/service_type.dart';
 
 class RosterEntry {
   final String role;
+
+  /// 這一天排到的人，照同工排序（`StaffOrder`）排好。
   final List<String> people;
-  final List<String> peopleOrder;
   final Map<String, String> personIdsByName;
 
   RosterEntry({
     required this.role,
     required this.people,
-    this.peopleOrder = const [],
     this.personIdsByName = const {},
   });
 
   RosterEntry copyWith({
     String? role,
     List<String>? people,
-    List<String>? peopleOrder,
     Map<String, String>? personIdsByName,
   }) {
     return RosterEntry(
       role: role ?? this.role,
       people: people ?? this.people,
-      peopleOrder: peopleOrder ?? this.peopleOrder,
       personIdsByName: personIdsByName ?? this.personIdsByName,
     );
   }

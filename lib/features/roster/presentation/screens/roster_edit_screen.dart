@@ -6,18 +6,20 @@ import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../../auth/presentation/providers/session_provider.dart';
 import '../../../auth/presentation/providers/user_admin_provider.dart';
 import '../../../auth/domain/entities/user.dart';
-import '../../domain/entities/event_option.dart';
+import '../../data/roster_import_service.dart';
+import '../../data/roster_photo.dart';
+import '../../data/roster_photo_picker.dart';
 import '../providers/roster_provider.dart';
 import '../widgets/roster_card.dart';
+import '../widgets/photo_import_progress.dart';
 import '../../../../core/utils/error_messages.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/utils/scroll_anchor.dart';
 import '../../../../core/utils/snappy_page_scroll_physics.dart';
 import '../../../../core/widgets/settings_bottom_sheet.dart';
-import '../../../../core/widgets/text_controller_scope.dart';
 import 'event_settings_screen.dart' deferred as event_settings_screen;
 import 'role_settings_screen.dart' deferred as role_settings_screen;
-import 'roster_import_parser.dart';
+import '../../domain/roster_import.dart';
 import 'roster_import_summary.dart';
 
 class RosterEditScreen extends StatefulWidget {
@@ -281,12 +283,14 @@ class _RosterListState extends State<_RosterList>
       return EmptyState(
         icon: Icons.event_busy_outlined,
         message: '此類別目前沒有服事資訊',
-        hint: isEditMode ? '可使用 JSON 匯入快速建立' : '管理員建立後會在這裡顯示',
+        hint: isEditMode
+            ? (canPickRosterPhotos ? '可以用服事表照片快速建立' : '可貼上 JSON 快速建立')
+            : '管理員建立後會在這裡顯示',
         action: isEditMode
             ? OutlinedButton.icon(
                 onPressed: () => _showImportJsonDialog(context),
-                icon: const Icon(Icons.data_object),
-                label: const Text('JSON 匯入'),
+                icon: const Icon(Icons.upload_file),
+                label: const Text('匯入服事表'),
               )
             : null,
       );
@@ -328,13 +332,12 @@ class _RosterListState extends State<_RosterList>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'JSON 匯入',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+                  Text('匯入服事表', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 4),
                   Text(
-                    '貼上陣列格式，依日期批次填入服事表',
+                    canPickRosterPhotos
+                        ? '用服事表照片辨識，依日期批次填入'
+                        : '貼上陣列格式，依日期批次填入服事表',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -352,119 +355,35 @@ class _RosterListState extends State<_RosterList>
     );
   }
 
-  Future<void> _showImportJsonDialog(BuildContext context) async {
-    // controller 由 TextControllerScope 在 bottom sheet 子樹卸載時 dispose ——
-    // sheet 的 future 在 pop 當下就完成，那時 TextField 還在退場動畫中。
-    final controller = TextEditingController();
-    String? errorText;
-    bool isSubmitting = false;
+  /// 照片轉 JSON。建一次就好 —— 它沒有狀態，每次開 sheet 都新建一個
+  /// http.Client 只是多開連線池。
+  late final RosterImportService _importService = RosterImportService();
 
-    await showModalBottomSheet(
+  Future<void> _showImportJsonDialog(BuildContext context) async {
+    final result = await showModalBottomSheet<_JsonImportResult>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       useSafeArea: true,
-      builder: (context) {
-        return TextControllerScope(
-          controller: controller,
-          child: StatefulBuilder(
-            builder: (context, setState) {
-              return SettingsBottomSheet(
-                title: 'JSON 匯入（${widget.type.label}）',
-                submitLabel: '匯入',
-                isSubmitting: isSubmitting,
-                onSubmit: isSubmitting
-                    ? null
-                    : () async {
-                        setState(() {
-                          errorText = null;
-                          isSubmitting = true;
-                        });
-                        final result = await _applyJsonImport(
-                          context,
-                          controller.text,
-                        );
-                        if (!context.mounted) return;
-                        if (result.error != null) {
-                          setState(() {
-                            errorText = result.error;
-                            isSubmitting = false;
-                          });
-                          return;
-                        }
-                        Navigator.of(context).pop();
-                        final summary = result.toSummary();
-                        if (summary.hasIssues) {
-                          if (!context.mounted) return;
-                          await _showImportSummaryDialog(context, summary);
-                        } else {
-                          final message = _buildResultMessage(result);
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(
-                            context,
-                          ).showSnackBar(SnackBar(content: Text(message)));
-                        }
-                      },
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: controller,
-                      maxLines: 12,
-                      decoration: InputDecoration(
-                        hintText:
-                            '[\n  {\n    "date": "2026-01-04",\n    "duties": [\n      {"people": ["芳伶"], "role": "敬拜主領"}\n    ],\n    "events": ["聖餐", {"name": "受洗禮", "color": "#F39C12"}]\n  }\n]',
-                        hintStyle: TextStyle(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.35),
-                        ),
-                        border: const OutlineInputBorder(),
-                      ),
-                    ),
-                    if (errorText != null) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        constraints: const BoxConstraints(maxHeight: 160),
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.06),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.redAccent),
-                        ),
-                        child: SingleChildScrollView(
-                          child: SelectableText(
-                            errorText!,
-                            style: const TextStyle(
-                              color: Colors.redAccent,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 8),
-                    const Text(
-                      '格式需為 JSON 陣列，每筆含 date，並至少含 duties 或 events',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        );
-      },
+      builder: (sheetContext) => _ImportJsonSheet(
+        type: widget.type,
+        importService: _importService,
+        onSubmit: (raw) => _applyJsonImport(sheetContext, raw),
+      ),
     );
-  }
+    // sheet 自己關掉時才有結果。成功之後的報告留在這裡而不是 sheet 裡：
+    // 匯入結果視窗要活得比 sheet 久，掛在正在退場的那棵子樹上會被一起帶走。
+    if (result == null || !context.mounted) return;
 
-  /// 一切順利時的 snackbar 文字。
-  ///
-  /// 只有 `hasIssues` 為 false 時才會走到這裡 —— 有任何未匹配都改走匯入結果
-  /// 視窗，因為那裡才有補設定的按鈕。
-  String _buildResultMessage(_JsonImportResult result) {
-    if (result.updated == 0) return '找不到可更新的日期';
-    return '已更新 ${result.updated} 筆服事表';
+    final summary = result.summary;
+    if (summary == null) return;
+    if (summary.hasIssues) {
+      await _showImportSummaryDialog(context, summary);
+      return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(importResultMessage(summary))));
   }
 
   /// 依姓名把服事補進該同工的設定。
@@ -508,18 +427,18 @@ class _RosterListState extends State<_RosterList>
     RosterImportSummary summary,
   ) async {
     final userAdminProvider = context.read<UserAdminProvider>();
-    // 補設定寫的是 users/{uid}，firestore.rules 裡是 admin only。服事表編輯者
-    // 進得來匯入流程，但這一項補不了。
-    final canFixUsers = context.read<SessionProvider>().isAdmin;
-    final templateRoles =
-        context.read<RosterProvider>().templates[widget.type] ?? const [];
+    // 補設定寫的是 users/{uid}、加活動寫的是 settings/，firestore.rules 裡
+    // 兩個都是 admin only。服事表編輯者進得來匯入流程，但這兩項都補不了。
+    final isAdmin = context.read<SessionProvider>().isAdmin;
+    final rosterProvider = context.read<RosterProvider>();
+    final templateRoles = rosterProvider.templates[widget.type] ?? const [];
     await showDialog(
       context: context,
       builder: (context) {
         return RosterImportSummaryDialog(
           type: widget.type,
           summary: summary,
-          onAddMinistry: canFixUsers
+          onAddMinistry: isAdmin
               ? (name, roles) => _addMinistryToUser(
                   userAdminProvider,
                   templateRoles,
@@ -527,11 +446,18 @@ class _RosterListState extends State<_RosterList>
                   roles,
                 )
               : null,
+          onAddEvent: isAdmin
+              ? (name) => rosterProvider.addEventOption(widget.type, name)
+              : null,
         );
       },
     );
   }
 
+  /// 讀現況、交給 [planRosterImport]、把它要寫的寫進去。
+  ///
+  /// 怎麼對名字、怎麼排順序、哪天要改什麼都在 planRosterImport 裡，這裡只剩
+  /// 它碰不到的兩件事：讀同工名單、寫 Firestore。
   Future<_JsonImportResult> _applyJsonImport(
     BuildContext context,
     String raw,
@@ -539,131 +465,33 @@ class _RosterListState extends State<_RosterList>
     final userAdminProvider = context.read<UserAdminProvider>();
     final rosterProvider = context.read<RosterProvider>();
 
-    final List<String> candidateNames;
-    final Map<String, Set<String>> allowedByRole;
-    final Map<String, String> nameToIdMap;
+    final List<User> users;
     try {
-      final users = await userAdminProvider.getUsers();
-      candidateNames = [
-        ...users.map((u) => u.name.trim()).where((name) => name.isNotEmpty),
-      ];
-      allowedByRole = _buildAllowedByRole(users);
-      nameToIdMap = {
-        for (final u in users)
-          if (u.name.trim().isNotEmpty && u.id.trim().isNotEmpty)
-            u.name.trim(): u.id.trim(),
-      };
+      users = await userAdminProvider.getUsers();
     } catch (_) {
-      return const _JsonImportResult(error: '無法載入同工名單');
+      return const _JsonImportResult.failed('無法載入同工名單');
     }
 
-    // Build catalog map for the current service type.
-    final catalogByName = <String, EventOption>{
-      for (final opt in rosterProvider.eventOptionsFor(widget.type))
-        opt.name: opt,
-    };
-
-    final parsed = parseRosterImportJson(
+    final plan = planRosterImport(
       input: raw,
-      candidateNames: candidateNames,
-      allowedByRole: allowedByRole,
-      catalogByName: catalogByName,
-      nameToIdMap: nameToIdMap,
+      type: widget.type,
+      users: users,
+      rosters: rosterProvider.getRostersByType(widget.type),
+      templates: rosterProvider.templatesLoaded
+          ? rosterProvider.templates
+          : null,
+      eventOptions: rosterProvider.eventOptionsFor(widget.type),
     );
-
-    if (parsed.error != null) {
-      return _JsonImportResult(error: parsed.error);
-    }
-
-    // 服事項目的順序完全由樣板決定，樣板不可靠就不能匯 —— 缺席時所有角色
-    // 並列，會退回 JSON 的順序寫進 Firestore，畫面上看不出哪裡不對。
-    //
-    // 只擋含 duties 的匯入：只帶 events 的 JSON 根本不排序，沒有理由一起擋。
-    //
-    // `templatesLoaded` 不夠：updateTemplates 寫入空樣板之後旗標也是 true，
-    // 但這個崇拜的鍵可能根本不存在。真正要問的是「這個崇拜的樣板拿得到嗎」。
-    if (parsed.dutiesProvidedDates.isNotEmpty) {
-      if (!rosterProvider.templatesLoaded) {
-        return const _JsonImportResult(error: '服事項目樣板尚未載入，順序會排錯。請重新整理後再匯入');
-      }
-      if (!rosterProvider.templates.containsKey(widget.type)) {
-        return _JsonImportResult(
-          // 服事項目設定是 admin only，非 admin 連那顆按鈕都看不到，所以這裡
-          // 講「請管理員」而不是「請先到」—— 後者對他是一條走不通的路。
-          error: '${widget.type.label}還沒有服事項目樣板，順序會排錯。請管理員到服事項目設定新增',
-        );
-      }
-    }
-
-    // Collect all dates that appear in either duties or events.
-    final allDates = <String>{
-      ...parsed.dutiesProvidedDates,
-      ...parsed.eventsProvidedDates,
-    };
-
-    final rosterByDate = <String, ServiceRoster>{
-      for (final roster in rosterProvider.getRostersByType(widget.type))
-        _dateKey(roster.date): roster,
-    };
-    final updates = <ServiceRoster>[];
-    final missingDates = <String>[];
-
-    final templateRoles = rosterProvider.templates[widget.type] ?? const [];
-
-    for (final key in allDates) {
-      final roster = rosterByDate[key];
-      if (roster == null) {
-        missingDates.add(key);
-        continue;
-      }
-
-      final hasDuties = parsed.dutiesProvidedDates.contains(key);
-      final hasEvents = parsed.eventsProvidedDates.contains(key);
-
-      List<RosterEntry> newDuties = roster.duties;
-      if (hasDuties) {
-        newDuties = orderDutiesByTemplate(
-          parsed.dutiesByDate[key] ?? const [],
-          templateRoles,
-        );
-      }
-
-      final newEvents = hasEvents
-          ? (parsed.eventsByDate[key] ?? const <String>[])
-          : roster.specialEvents;
-      final newColors = hasEvents
-          ? (parsed.colorsByDate[key] ?? const <String, int>{})
-          : roster.customEventColors;
-
-      updates.add(
-        roster.copyWith(
-          duties: newDuties,
-          specialEvents: newEvents,
-          customEventColors: newColors,
-        ),
-      );
-    }
-
-    // Normalize role-mismatch details (Set → sorted List).
-    final normalizedMismatch = <String, List<String>>{};
-    for (final entry in parsed.roleMismatchDetails.entries) {
-      normalizedMismatch[entry.key] = entry.value.toList()..sort();
-    }
-
-    if (updates.isEmpty) {
-      return _JsonImportResult(
-        updated: 0,
-        missingDates: missingDates,
-        notInRosterNames: parsed.notInRosterNames,
-        roleMismatchNames: parsed.roleMismatchNames,
-        roleMismatchDetails: normalizedMismatch,
-        otherNames: parsed.otherNames,
-        notInEventCatalog: parsed.notInEventCatalog,
-      );
+    final RosterImportReady ready;
+    switch (plan) {
+      case RosterImportRejected(:final message):
+        return _JsonImportResult.failed(message);
+      case RosterImportReady():
+        ready = plan;
     }
 
     try {
-      await rosterProvider.updateRosters(updates);
+      await rosterProvider.applyRosterImport(widget.type, ready);
     } catch (e, st) {
       log('匯入過程寫入 Firestore 失敗', error: e, stackTrace: st);
       String msg;
@@ -672,90 +500,258 @@ class _RosterListState extends State<_RosterList>
         // real Firestore error, not just the wrapping exception's stack.
         log('匯入部分失敗的代表性 cause', error: e.cause, stackTrace: e.causeStackTrace);
         final failedDates = e.failedRosters
-            .map((r) => _dateKey(r.date))
+            .map((r) => rosterDateKey(r.date))
             .join('、');
         msg =
             '${e.successCount} 筆已寫入、${e.failureCount} 筆失敗。'
             '失敗日期：$failedDates。請重新整理確認狀態後重試';
       } else {
-        msg = mapErrorToUserMessage(e);
+        // 服事表那一步失敗一律是 PartialUpdateException，走到這裡的是更早
+        // 的同工排序那一步 —— 服事表一張都還沒寫。
+        msg = '${mapErrorToUserMessage(e)}。服事表沒有動，可以直接重試';
       }
-      return _JsonImportResult(error: '匯入過程寫入失敗：$msg');
+      return _JsonImportResult.failed('匯入過程寫入失敗：$msg');
     }
 
-    return _JsonImportResult(
-      updated: updates.length,
-      missingDates: missingDates,
-      notInRosterNames: parsed.notInRosterNames,
-      roleMismatchNames: parsed.roleMismatchNames,
-      roleMismatchDetails: normalizedMismatch,
-      otherNames: parsed.otherNames,
-      notInEventCatalog: parsed.notInEventCatalog,
-    );
-  }
-
-  String _dateKey(DateTime date) {
-    final y = date.year.toString().padLeft(4, '0');
-    final m = date.month.toString().padLeft(2, '0');
-    final d = date.day.toString().padLeft(2, '0');
-    return '$y-$m-$d';
-  }
-
-  Map<String, Set<String>> _buildAllowedByRole(List<User> users) {
-    final Map<String, Set<String>> allowed = {};
-    for (final user in users) {
-      final userName = user.name.trim();
-      if (userName.isEmpty) continue;
-      for (final zone in user.zones) {
-        if (zone.serviceType != widget.type) continue;
-        for (final ministry in zone.ministries) {
-          final role = ministry.trim();
-          if (role.isEmpty) continue;
-          allowed.putIfAbsent(role, () => {});
-          allowed[role]!.add(userName);
-        }
-      }
-    }
-
-    return allowed;
+    return _JsonImportResult.done(ready.summary);
   }
 }
 
+/// sheet 交回來的東西：寫完的報告，或是要留在 sheet 上的錯誤。
 class _JsonImportResult {
-  final int updated;
-  final List<String> missingDates;
-  final List<String> notInRosterNames;
-  final List<String> roleMismatchNames;
-  final Map<String, List<String>> roleMismatchDetails;
-  final List<String> otherNames;
-  final List<String> notInEventCatalog;
-  final String? error;
+  const _JsonImportResult.done(RosterImportSummary this.summary) : error = null;
+  const _JsonImportResult.failed(String this.error) : summary = null;
 
-  const _JsonImportResult({
-    this.updated = 0,
-    this.missingDates = const [],
-    this.notInRosterNames = const [],
-    this.roleMismatchNames = const [],
-    this.roleMismatchDetails = const {},
-    this.otherNames = const [],
-    this.notInEventCatalog = const [],
-    this.error,
+  final RosterImportSummary? summary;
+  final String? error;
+}
+
+/// 匯入用的 bottom sheet。
+///
+/// 抽成獨立的 widget 而不是留在 `_showImportJsonDialog` 裡的 StatefulBuilder：
+/// 那個函式長到兩百行，而其中真正屬於畫面的狀態有四個（錯誤、送出中、辨識中、
+/// JSON 欄位開合），全靠閉包變數撐著。有了 State 之後 controller 也能自己
+/// dispose —— dispose 是在退場動畫結束後才跑的，不會像 sheet 的 future 那樣
+/// 在 pop 當下就把 TextField 底下的東西抽掉。
+class _ImportJsonSheet extends StatefulWidget {
+  const _ImportJsonSheet({
+    required this.type,
+    required this.importService,
+    required this.onSubmit,
   });
 
-  /// 轉成報告用的資料。
-  ///
-  /// roleMismatchDetails 刻意從 roleMismatchNames 反向長出來，而不是直接沿用：
-  /// 報告只畫得出 details 裡的人，兩份清單若對不齊，對不齊的那個人會從報告上
-  /// 整個消失 —— 那正是這次要修掉的那種靜默失蹤。
-  RosterImportSummary toSummary() => RosterImportSummary(
-    updated: updated,
-    missingDates: missingDates,
-    notInRosterNames: notInRosterNames,
-    roleMismatchDetails: {
-      for (final name in roleMismatchNames)
-        name: roleMismatchDetails[name] ?? const [],
-    },
-    otherNames: otherNames,
-    notInEventCatalog: notInEventCatalog,
-  );
+  final ServiceType type;
+  final RosterImportService importService;
+
+  /// 真正寫進 Firestore 的那一步。留在畫面外面是因為它要用到 provider 與
+  /// 服事表樣板，那些是 screen 的事，不是這張 sheet 的。
+  final Future<_JsonImportResult> Function(String raw) onSubmit;
+
+  @override
+  State<_ImportJsonSheet> createState() => _ImportJsonSheetState();
+}
+
+class _ImportJsonSheetState extends State<_ImportJsonSheet> {
+  final TextEditingController _controller = TextEditingController();
+  String? _errorText;
+  bool _isSubmitting = false;
+  bool _isConverting = false;
+
+  /// 選照片的那段時間也要算「忙碌」。只在辨識開始後才鎖按鈕的話，iPhone 上
+  /// 一次點擊偶爾會觸發兩次，第二個選擇器排在第一個後面，選完一張又跳出一個。
+  /// 用欄位而不是 setState 判斷：第二次觸發跟第一次在同一個 frame 內，等不到
+  /// 重建按鈕就已經進來了。
+  bool _isPicking = false;
+
+  /// 有照片辨識可用時，貼 JSON 是備援而不是主要動作 —— 預設收起來。
+  /// 辨識完會自動展開，因為那時它變成「看一眼再匯入」的地方。
+  bool _showJsonField = !canPickRosterPhotos;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _convertFromPhoto() async {
+    if (_isPicking || _isConverting) return;
+    _isPicking = true;
+    setState(() => _errorText = null);
+    final RosterPhoto? photo;
+    try {
+      photo = await pickRosterPhoto();
+    } on RosterPhotoException catch (e) {
+      if (mounted) setState(() => _errorText = e.message);
+      return;
+    } catch (e, st) {
+      _reportUnexpected(e, st);
+      return;
+    } finally {
+      _isPicking = false;
+    }
+    // 使用者按了取消。那不是錯誤，什麼都不做。
+    if (photo == null || !mounted) return;
+
+    setState(() => _isConverting = true);
+    try {
+      final json = await widget.importService.convert(
+        type: widget.type,
+        photos: [photo],
+      );
+      if (!mounted) return;
+      _controller.text = json;
+      setState(() {
+        _isConverting = false;
+        _showJsonField = true;
+      });
+    } on RosterImportException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isConverting = false;
+        _errorText = e.message;
+      });
+    } catch (e, st) {
+      _reportUnexpected(e, st);
+    }
+  }
+
+  /// 預期外的失敗（讀檔、拿登入 token 之類）也要讓畫面有反應。只接自己
+  /// 定義的例外的話，其他錯誤會被 async 吞掉 —— 使用者看到的就是「選完照片
+  /// 什麼都沒有」，連轉圈都沒有。
+  void _reportUnexpected(Object error, StackTrace stackTrace) {
+    debugPrint('roster photo import failed: $error\n$stackTrace');
+    if (!mounted) return;
+    setState(() {
+      _isConverting = false;
+      _errorText = '辨識失敗：$error';
+    });
+  }
+
+  Future<void> _submit() async {
+    // 空白時 parser 只會說「請貼上 JSON 內容」，但這個畫面上根本沒有可以貼的
+    // 地方（文字框收著）—— 要講得出下一步在哪。
+    if (_controller.text.trim().isEmpty && canPickRosterPhotos) {
+      setState(() {
+        _errorText = '請先從照片辨識，或展開下面自己貼 JSON';
+        _showJsonField = true;
+      });
+      return;
+    }
+
+    setState(() {
+      _errorText = null;
+      _isSubmitting = true;
+    });
+    final result = await widget.onSubmit(_controller.text);
+    if (!mounted) return;
+    if (result.error != null) {
+      setState(() {
+        _errorText = result.error;
+        _isSubmitting = false;
+      });
+      return;
+    }
+    Navigator.of(context).pop(result);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final busy = _isSubmitting || _isConverting;
+    return SettingsBottomSheet(
+      title: '匯入服事表（${widget.type.label}）',
+      submitLabel: '匯入',
+      isSubmitting: _isSubmitting,
+      onSubmit: busy ? null : _submit,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 辨識結果填回下面那個文字框，不直接匯入：看一眼再按匯入是這個流程
+          // 唯一的把關，而按下匯入走的還是跟手動貼上完全一樣的那條路。
+          if (canPickRosterPhotos) ...[
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.tonalIcon(
+                onPressed: busy ? null : _convertFromPhoto,
+                icon: _isConverting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.photo_camera_outlined, size: 18),
+                label: Text(_isConverting ? '辨識中…' : '從照片辨識'),
+              ),
+            ),
+            if (_isConverting) ...[
+              const SizedBox(height: 6),
+              const PhotoImportProgress(),
+            ],
+            const SizedBox(height: 4),
+            // 收合的理由不是版面好看，是這條路平常用不到：Gemini 掛掉、額度
+            // 用完、模型下架時，從別處轉好再貼進來是唯一還走得通的路，所以它
+            // 要在，但不該擋在前面。
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: _isSubmitting
+                    ? null
+                    : () => setState(() => _showJsonField = !_showJsonField),
+                icon: Icon(
+                  _showJsonField
+                      ? Icons.keyboard_arrow_down
+                      : Icons.keyboard_arrow_right,
+                  size: 18,
+                ),
+                label: const Text('自己貼 JSON'),
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+            ),
+          ],
+          if (_showJsonField)
+            TextField(
+              controller: _controller,
+              maxLines: 12,
+              decoration: InputDecoration(
+                hintText:
+                    '[\n  {\n    "date": "2026-01-04",\n    "duties": [\n      {"people": ["待定"], "role": "敬拜主領"}\n    ],\n    "events": ["聖餐", {"name": "受洗禮", "color": "#F39C12"}]\n  }\n]',
+                hintStyle: TextStyle(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.35),
+                ),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+          if (_errorText != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              constraints: const BoxConstraints(maxHeight: 160),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.redAccent),
+              ),
+              child: SingleChildScrollView(
+                child: SelectableText(
+                  _errorText!,
+                  style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Text(
+            canPickRosterPhotos
+                ? '可以直接選服事表照片辨識，或自己貼上 JSON。'
+                      '格式需為陣列，每筆含 date，並至少含 duties 或 events'
+                : '格式需為 JSON 陣列，每筆含 date，並至少含 duties 或 events',
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
 }

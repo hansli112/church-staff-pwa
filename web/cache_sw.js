@@ -131,9 +131,9 @@ const NEVER_CACHE_HOSTNAME_SUFFIXES = [
 
 self.addEventListener('install', () => {
   // Only auto-skipWaiting on first install (no previously active SW). On
-  // upgrades we wait until the page explicitly posts SKIP_WAITING — that
-  // lets index.html show "downloading update" UI and reload at a moment
-  // the user is ready, instead of yanking the bundle out from under them.
+  // upgrades we wait until the page explicitly posts SKIP_WAITING —
+  // app_update.js owns that hand-off (it sends SKIP_WAITING once the new
+  // worker is installed, then reloads on controllerchange).
   if (!self.registration.active) {
     self.skipWaiting();
   }

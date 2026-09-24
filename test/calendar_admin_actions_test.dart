@@ -1,10 +1,10 @@
 import 'dart:convert';
 
 import 'package:church_staff_pwa/features/auth/domain/entities/user.dart';
-import 'package:church_staff_pwa/features/auth/domain/repositories/auth_repository.dart';
 import 'package:church_staff_pwa/features/auth/presentation/providers/session_provider.dart';
 import 'package:church_staff_pwa/features/calendar/data/calendar_write_service.dart';
 import 'package:church_staff_pwa/features/calendar/presentation/screens/calendar_screen.dart';
+import 'package:church_staff_pwa/features/calendar/domain/entities/calendar_event.dart';
 import 'package:church_staff_pwa/features/calendar/presentation/widgets/_day_cell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,46 +13,14 @@ import 'package:http/testing.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'support/signed_in_auth_repository.dart';
 
 /// The calendar is read-only for everyone except an admin, and the write path
 /// reaches a real Google calendar. These tests pin the gate: a member must not
 /// be shown any way in, and the form must send what the user actually typed.
 ///
-/// The month listing cannot be stubbed — flutter_test refuses outbound HTTP, so
-/// _loadEventsForMonth always fails here. Tests that need an event on screen
-/// seed the SharedPreferences cache instead; see [_seedEventOn15th].
-
-class _FakeAuthRepository implements AuthRepository {
-  final User? user;
-  _FakeAuthRepository(this.user);
-
-  @override
-  Future<User?> getCachedUser() async => user;
-
-  @override
-  Future<User?> getCurrentUser() async => user;
-
-  @override
-  Future<void> writeCachedUser(User user) async {}
-
-  @override
-  Future<User?> login(String username, String password) async => user;
-
-  @override
-  Future<void> logout() async {}
-
-  @override
-  Future<List<User>> getUsers() async => const [];
-
-  @override
-  Future<void> addUser(User user, String password) async {}
-
-  @override
-  Future<void> updateUser(User user, {String? password}) async {}
-
-  @override
-  Future<void> deleteUser(String id) async {}
-}
+/// The month listing is stubbed with [_Listing] in place of the Google read, so
+/// a test decides what Google "has" and can change it when a write goes through.
 
 User _user(UserRole role, Set<UserGroup> groups) => User(
   id: 'u1',
@@ -87,30 +55,33 @@ class _Recorder {
       jsonDecode(requests.last.body) as Map<String, dynamic>;
 }
 
-/// Seeds one all-day event on the 15th of the current month.
-///
-/// Goes in through the SharedPreferences cache the screen already reads on
-/// startup, which is the only way to get events on screen here — the live fetch
-/// cannot reach Google from a test.
-void _seedEventOn15th({String title = '既有活動'}) {
-  final now = DateTime.now();
-  final key =
-      'calendar_events_${now.year}_${now.month.toString().padLeft(2, '0')}';
-  String stamp(int day) => DateTime(now.year, now.month, day).toIso8601String();
+/// Stands in for Google's month listing and records which months were asked.
+class _Listing {
+  final List<CalendarEvent> events = [];
+  final List<DateTime> requested = [];
 
-  SharedPreferences.setMockInitialValues({
-    key: jsonEncode([
-      {
-        'id': 'seeded-event',
-        'startTime': stamp(15),
-        'endTime': stamp(16),
-        'isAllDay': true,
-        'title': title,
-        'location': null,
-        'description': null,
-      },
-    ]),
-  });
+  Future<List<CalendarEvent>> fetch(DateTime month) async {
+    requested.add(month);
+    return events
+        .where((e) => e.startDay.year == month.year)
+        .where((e) => e.startDay.month == month.month)
+        .toList();
+  }
+}
+
+/// A listing with one all-day event on the 15th of the current month.
+_Listing _listingWithEventOn15th({String title = '既有活動'}) {
+  final now = DateTime.now();
+  return _Listing()
+    ..events.add(
+      CalendarEvent(
+        id: 'seeded-event',
+        startTime: DateTime(now.year, now.month, 15),
+        endTime: DateTime(now.year, now.month, 16),
+        isAllDay: true,
+        title: title,
+      ),
+    );
 }
 
 Finder _dayCell(int dayNumber) => find.byWidgetPredicate(
@@ -120,9 +91,11 @@ Finder _dayCell(int dayNumber) => find.byWidgetPredicate(
 Future<void> _pumpCalendar(
   WidgetTester tester, {
   required _Recorder recorder,
+  _Listing? listing,
   UserRole role = UserRole.member,
   Set<UserGroup> groups = const {},
 }) async {
+  listing ??= _Listing();
   final service = CalendarWriteService(
     client: recorder.client,
     endpoint: Uri.parse('https://app.example/api/calendar/events'),
@@ -131,8 +104,12 @@ Future<void> _pumpCalendar(
 
   await tester.pumpWidget(
     ChangeNotifierProvider(
-      create: (_) => SessionProvider(_FakeAuthRepository(_user(role, groups))),
-      child: MaterialApp(home: CalendarScreen(writeService: service)),
+      create: (_) => SessionProvider(
+        SignedInAuthRepository(_user(role, groups), users: const []),
+      ),
+      child: MaterialApp(
+        home: CalendarScreen(writeService: service, fetchMonth: listing.fetch),
+      ),
     ),
   );
   // SessionProvider restores asynchronously, so the first frame still has
@@ -236,9 +213,14 @@ void main() {
   // A member's day sheet does open when the day has events, so the add button
   // needs its own gate — "the sheet never opens" is not enough.
   testWidgets('a member sees the day sheet but no add button', (tester) async {
-    _seedEventOn15th();
+    final listing = _listingWithEventOn15th();
     final recorder = _Recorder();
-    await _pumpCalendar(tester, role: UserRole.member, recorder: recorder);
+    await _pumpCalendar(
+      tester,
+      role: UserRole.member,
+      recorder: recorder,
+      listing: listing,
+    );
 
     await tester.tap(_dayCell(15));
     await tester.pumpAndSettle();
@@ -250,9 +232,14 @@ void main() {
   testWidgets('an admin sees the add button on a day that already has events', (
     tester,
   ) async {
-    _seedEventOn15th();
+    final listing = _listingWithEventOn15th();
     final recorder = _Recorder();
-    await _pumpCalendar(tester, role: UserRole.admin, recorder: recorder);
+    await _pumpCalendar(
+      tester,
+      role: UserRole.admin,
+      recorder: recorder,
+      listing: listing,
+    );
 
     await tester.tap(_dayCell(15));
     await tester.pumpAndSettle();
@@ -263,9 +250,14 @@ void main() {
   testWidgets('a member opening an event gets no edit or delete', (
     tester,
   ) async {
-    _seedEventOn15th();
+    final listing = _listingWithEventOn15th();
     final recorder = _Recorder();
-    await _pumpCalendar(tester, role: UserRole.member, recorder: recorder);
+    await _pumpCalendar(
+      tester,
+      role: UserRole.member,
+      recorder: recorder,
+      listing: listing,
+    );
 
     await tester.tap(_dayCell(15));
     await tester.pumpAndSettle();
@@ -274,12 +266,21 @@ void main() {
 
     expect(find.text('編輯'), findsNothing);
     expect(find.text('刪除'), findsNothing);
+    // 複製 writes a new event, so it is gated exactly like 編輯.
+    expect(find.text('複製'), findsNothing);
   });
 
-  testWidgets('an admin opening an event gets edit and delete', (tester) async {
-    _seedEventOn15th();
+  testWidgets('an admin opening an event gets edit, copy and delete', (
+    tester,
+  ) async {
+    final listing = _listingWithEventOn15th();
     final recorder = _Recorder();
-    await _pumpCalendar(tester, role: UserRole.admin, recorder: recorder);
+    await _pumpCalendar(
+      tester,
+      role: UserRole.admin,
+      recorder: recorder,
+      listing: listing,
+    );
 
     await tester.tap(_dayCell(15));
     await tester.pumpAndSettle();
@@ -287,13 +288,55 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('編輯'), findsOneWidget);
+    expect(find.text('複製'), findsOneWidget);
     expect(find.text('刪除'), findsOneWidget);
   });
 
-  testWidgets('editing pre-fills the form and patches by id', (tester) async {
-    _seedEventOn15th();
+  // The point of the copy: several runs of the same event that differ only in
+  // when they happen. Everything carries over, and it POSTs a new event rather
+  // than touching the one it was copied from.
+  testWidgets('duplicating pre-fills the form and posts a new event', (
+    tester,
+  ) async {
+    final listing = _listingWithEventOn15th();
     final recorder = _Recorder();
-    await _pumpCalendar(tester, role: UserRole.admin, recorder: recorder);
+    await _pumpCalendar(
+      tester,
+      role: UserRole.admin,
+      recorder: recorder,
+      listing: listing,
+    );
+
+    await tester.tap(_dayCell(15));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('既有活動').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('複製'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('複製活動'), findsOneWidget);
+    expect(find.widgetWithText(TextField, '既有活動'), findsOneWidget);
+    // The seeded event is all-day, and that carries over too.
+    expect(find.byIcon(Icons.schedule), findsNothing);
+
+    await tester.tap(find.text('儲存'));
+    await tester.pumpAndSettle();
+
+    expect(recorder.requests.single.method, 'POST');
+    expect(recorder.lastBody['title'], '既有活動');
+    expect(recorder.lastBody['allDay'], isTrue);
+    expect(find.text('已新增活動'), findsOneWidget);
+  });
+
+  testWidgets('editing pre-fills the form and patches by id', (tester) async {
+    final listing = _listingWithEventOn15th();
+    final recorder = _Recorder();
+    await _pumpCalendar(
+      tester,
+      role: UserRole.admin,
+      recorder: recorder,
+      listing: listing,
+    );
 
     await tester.tap(_dayCell(15));
     await tester.pumpAndSettle();
@@ -319,9 +362,14 @@ void main() {
   testWidgets('deleting asks first and sends nothing when refused', (
     tester,
   ) async {
-    _seedEventOn15th();
+    final listing = _listingWithEventOn15th();
     final recorder = _Recorder();
-    await _pumpCalendar(tester, role: UserRole.admin, recorder: recorder);
+    await _pumpCalendar(
+      tester,
+      role: UserRole.admin,
+      recorder: recorder,
+      listing: listing,
+    );
 
     await tester.tap(_dayCell(15));
     await tester.pumpAndSettle();
@@ -340,12 +388,26 @@ void main() {
   testWidgets('confirming the delete removes the event from the grid', (
     tester,
   ) async {
-    _seedEventOn15th();
+    final listing = _listingWithEventOn15th();
     final recorder = _Recorder();
-    recorder.respond = (_) => http.Response('', 204);
-    await _pumpCalendar(tester, role: UserRole.admin, recorder: recorder);
+    recorder.respond = (_) {
+      // Google forgets it the moment the delete goes through.
+      listing.events.clear();
+      return http.Response('', 204);
+    };
+    await _pumpCalendar(
+      tester,
+      role: UserRole.admin,
+      recorder: recorder,
+      listing: listing,
+    );
 
     expect(find.text('既有活動'), findsWidgets);
+    final now = DateTime.now();
+    final thisMonth = DateTime(now.year, now.month);
+    int readsOfThisMonth() =>
+        listing.requested.where((m) => m == thisMonth).length;
+    final readsBefore = readsOfThisMonth();
 
     await tester.tap(_dayCell(15));
     await tester.pumpAndSettle();
@@ -359,9 +421,10 @@ void main() {
 
     expect(recorder.requests.single.method, 'DELETE');
     expect(find.text('已刪除活動'), findsOneWidget);
-    // Gone from the month grid too, without waiting for a refetch that cannot
-    // succeed in a test.
     expect(find.text('既有活動'), findsNothing);
+    // Read again despite the ten-minute freshness gate, so the device cache
+    // stops holding the deleted event as well.
+    expect(readsOfThisMonth(), readsBefore + 1);
   });
 
   testWidgets('the form defaults to a timed event and sends the title', (

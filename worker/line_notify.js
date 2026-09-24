@@ -17,7 +17,7 @@ const NOTIFY_TIMEOUT_MS = 5000;
 /// n8n 那端不必知道 Google 用 `date` 表示全天、用 `dateTime` 表示定時，也不必
 /// 知道 `end.date` 是排他的。那些差異在這裡一次弭平。
 ///
-/// [actor] 是 requireEditor() 回傳的 `{ uid, name }`。兩個都送：群組裡要看的是
+/// [actor] 是 authorize() 回傳值裡的 `{ uid, name }`。兩個都送：群組裡要看的是
 /// 名字，但名字會改、也可能重複，事後要追是誰做的還是得靠 uid。
 export function notifyPayload(action, event, actor) {
   const allDay = Boolean(event?.start?.date);

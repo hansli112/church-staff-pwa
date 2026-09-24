@@ -314,10 +314,8 @@ class _RosterViewListState extends State<_RosterViewList>
     context.select<RosterProvider, int>(
       (provider) => provider.eventOptionsRevision,
     );
-    final rosterProvider = context.read<RosterProvider>();
-    // 一個 closure 重複用，不要在 itemBuilder 裡每張卡各配一個。
-    int resolveEventColor(String event) =>
-        rosterProvider.eventColorFor(widget.type, event);
+    // 一個 tear-off 重複用，不要在 itemBuilder 裡每張卡各配一個 closure。
+    final resolveEventColor = context.read<RosterProvider>().eventColorOf;
 
     return ListView.builder(
       key: anchorListKey,

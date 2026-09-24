@@ -3,10 +3,29 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:church_staff_pwa/core/types/service_type.dart';
-import 'package:church_staff_pwa/features/roster/domain/entities/event_option.dart';
 import 'package:church_staff_pwa/features/roster/domain/entities/service_roster.dart';
-import 'package:church_staff_pwa/features/roster/domain/repositories/roster_repository.dart';
 import 'package:church_staff_pwa/features/roster/presentation/providers/roster_provider.dart';
+
+import 'support/in_memory_roster_repository.dart';
+
+InMemoryRosterRepository _repo({
+  List<ServiceRoster> cacheResult = const [],
+  List<ServiceRoster> serverResult = const [],
+  Object? cacheError,
+  Object? serverError,
+  Completer<void>? cachePause,
+  Completer<void>? serverPause,
+}) =>
+    InMemoryRosterRepository(
+        rosters: serverResult,
+        cachedRosters: cacheResult,
+        templates: emptyForEveryType(),
+        eventOptions: emptyForEveryType(),
+      )
+      ..cacheError = cacheError
+      ..serverError = serverError
+      ..cachePause = cachePause
+      ..serverPause = serverPause;
 
 // ── 輔助 roster fixture ──────────────────────────────────────────────────────
 
@@ -19,94 +38,6 @@ ServiceRoster _roster(String id, ServiceType type) => ServiceRoster(
 );
 
 // ── Configurable fake ───────────────────────────────────────────────────────
-
-class _FakeRepo implements RosterRepository {
-  /// ensureQuarterRosters 收到的聚會別範圍
-  List<ServiceType> ensureTypes = const [];
-
-  /// cache phase 回傳什麼
-  List<ServiceRoster> cacheResult;
-
-  /// server phase 回傳什麼
-  List<ServiceRoster> serverResult;
-
-  /// 若設 non-null，cache fetch 會 throw 此錯誤
-  Object? cacheError;
-
-  /// 若設 non-null，server fetch 會 throw 此錯誤
-  Object? serverError;
-
-  /// 讓測試可以控制 cache fetch 何時完成
-  Completer<void>? cachePause;
-
-  /// 讓測試可以控制 server fetch 何時完成
-  Completer<void>? serverPause;
-
-  int ensureCallCount = 0;
-
-  _FakeRepo({
-    this.cacheResult = const [],
-    this.serverResult = const [],
-    this.cacheError,
-    this.serverError,
-    this.cachePause,
-    this.serverPause,
-  });
-
-  @override
-  Future<List<ServiceRoster>> getUpcomingRostersFromCache() async {
-    if (cachePause != null) await cachePause!.future;
-    if (cacheError != null) throw cacheError!;
-    return List<ServiceRoster>.from(cacheResult);
-  }
-
-  @override
-  Future<List<ServiceRoster>> getUpcomingRosters() async {
-    if (serverPause != null) await serverPause!.future;
-    if (serverError != null) throw serverError!;
-    return List<ServiceRoster>.from(serverResult);
-  }
-
-  @override
-  Future<void> ensureQuarterRosters(List<ServiceType> allowedTypes) async {
-    ensureCallCount++;
-    ensureTypes = allowedTypes;
-  }
-
-  @override
-  Future<void> updateRoster(ServiceRoster roster) async {}
-
-  @override
-  Future<void> updateRostersAtomically(List<ServiceRoster> rosters) async {
-    for (final roster in rosters) {
-      await updateRoster(roster);
-    }
-  }
-
-  @override
-  Future<Map<ServiceType, List<String>>> getServiceTemplates() async => {
-    ServiceType.sundayService: const [],
-    ServiceType.youth: const [],
-    ServiceType.children: const [],
-  };
-
-  @override
-  Future<void> updateServiceTemplates(
-    Map<ServiceType, List<String>> templates,
-  ) async {}
-
-  @override
-  Future<Map<ServiceType, List<EventOption>>> getEventOptions() async => {
-    ServiceType.sundayService: const [],
-    ServiceType.youth: const [],
-    ServiceType.children: const [],
-  };
-
-  @override
-  Future<void> updateEventOptions(
-    Map<ServiceType, List<EventOption>> options,
-  ) async {}
-}
 
 // ── 工具：讓 event loop 跑完所有已排程的 microtask / Future ──────────────────
 
@@ -135,7 +66,7 @@ void main() {
 
       // 用 Completer 讓 server fetch 先暫停，確認中間狀態
       final serverPause = Completer<void>();
-      final repo = _FakeRepo(
+      final repo = _repo(
         cacheResult: [staleRoster],
         serverResult: [freshRoster],
         serverPause: serverPause,
@@ -166,7 +97,7 @@ void main() {
     // ────────────────────────────────────────────────────────────────────────
     test('cache miss 時不設 stale data，走 server 路徑', () async {
       final freshRoster = _roster('fresh-1', ServiceType.sundayService);
-      final repo = _FakeRepo(
+      final repo = _repo(
         cacheResult: const [], // cache miss
         serverResult: [freshRoster],
       );
@@ -185,7 +116,7 @@ void main() {
     // ────────────────────────────────────────────────────────────────────────
     test('cache 有資料、server 失敗 → 不顯示 error，保留 stale data', () async {
       final staleRoster = _roster('stale-1', ServiceType.sundayService);
-      final repo = _FakeRepo(
+      final repo = _repo(
         cacheResult: [staleRoster],
         serverError: Exception('network error'),
       );
@@ -203,7 +134,7 @@ void main() {
     // 情境 4：cache 無資料、server 失敗 → 顯示 error（與原本行為一致）。
     // ────────────────────────────────────────────────────────────────────────
     test('cache 無資料、server 失敗 → 顯示 error', () async {
-      final repo = _FakeRepo(
+      final repo = _repo(
         cacheResult: const [],
         serverError: Exception('network error'),
       );
@@ -226,11 +157,11 @@ void main() {
 
       // user-A 的 cache 很慢（用 Completer 控制）
       final userACachePause = Completer<void>();
-      final repoA = _FakeRepo(
+      final repoA = _repo(
         cacheResult: [oldCacheRoster],
         cachePause: userACachePause,
       );
-      final repoB = _FakeRepo(
+      final repoB = _repo(
         cacheResult: const [],
         serverResult: [newServerRoster],
       );
@@ -262,7 +193,7 @@ void main() {
     // 情境 6：ensureQuarterRosters 只在被明確呼叫時觸發（viewer 不呼叫）。
     // ────────────────────────────────────────────────────────────────────────
     test('fetchInitialData 不觸發 ensureQuarterRosters', () async {
-      final repo = _FakeRepo();
+      final repo = _repo();
       final provider = RosterProvider(repo);
 
       await provider.fetchInitialData();
@@ -272,7 +203,7 @@ void main() {
     });
 
     test('ensureQuarterRostersForEditor 觸發 ensureQuarterRosters', () async {
-      final repo = _FakeRepo();
+      final repo = _repo();
       final provider = RosterProvider(repo);
 
       await provider.ensureQuarterRostersForEditor(const [ServiceType.youth]);
@@ -289,7 +220,7 @@ void main() {
     // ────────────────────────────────────────────────────────────────────────
     test('cache throw 時靜默失敗，server 資料正常回填', () async {
       final freshRoster = _roster('fresh-1', ServiceType.sundayService);
-      final repo = _FakeRepo(
+      final repo = _repo(
         cacheError: Exception('cache exploded'),
         serverResult: [freshRoster],
       );
@@ -311,7 +242,7 @@ void main() {
       final freshRoster = _roster('fresh-1', ServiceType.youth);
 
       final serverPause = Completer<void>();
-      final repo = _FakeRepo(
+      final repo = _repo(
         cacheResult: [staleRoster],
         serverResult: [freshRoster],
         serverPause: serverPause,

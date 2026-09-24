@@ -28,19 +28,10 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
   late final Set<String> _selected;
   late final Set<String> _customEvents;
   final Map<String, int> _customEventColors = {};
-  static const int _defaultCustomColor = 0xFFF39C12;
+  static final int _defaultCustomColor = eventColorPalette.first;
   int _pendingCustomColor = _defaultCustomColor;
   late final TextEditingController _customController;
   late final ScrollController _scrollController;
-
-  static const _colorPalette = [
-    0xFFF39C12,
-    0xFF27AE60,
-    0xFF3498DB,
-    0xFF9B59B6,
-    0xFFE74C3C,
-    0xFF7F8C8D,
-  ];
 
   @override
   void initState() {
@@ -158,34 +149,10 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
                     style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
                   ),
                   const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 0,
-                    runSpacing: 0,
-                    children: _colorPalette.map((colorValue) {
-                      final isSelected = _pendingCustomColor == colorValue;
-                      return InkWell(
-                        onTap: () {
-                          setSheetState(() {
-                            _pendingCustomColor = colorValue;
-                          });
-                        },
-                        borderRadius: BorderRadius.circular(999),
-                        child: Padding(
-                          padding: const EdgeInsets.all(11),
-                          child: Container(
-                            width: 26,
-                            height: 26,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Color(colorValue),
-                              border: isSelected
-                                  ? Border.all(color: Colors.black54, width: 2)
-                                  : null,
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                  EventColorPicker(
+                    selected: _pendingCustomColor,
+                    onSelected: (color) =>
+                        setSheetState(() => _pendingCustomColor = color),
                   ),
                 ],
               ),

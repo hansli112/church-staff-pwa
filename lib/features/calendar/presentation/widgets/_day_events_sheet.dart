@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '_calendar_models.dart';
+import '../../domain/entities/calendar_event.dart';
 
 final _titleFormat = DateFormat('yyyy/MM/dd (E)', 'zh_TW');
 final _timeFormat = DateFormat('HH:mm', 'zh_TW');

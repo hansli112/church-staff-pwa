@@ -30,7 +30,7 @@ enum UserRole {
 ///
 /// 存進 Firestore 的是 [name]（字串），所以這些字串是資料格式的一部分，改名
 /// 等於要遷移資料。三個強制點共用同一組名稱：這裡、`firestore.rules` 的
-/// `inGroup()`、`worker/google_calendar.js` 的 `CALENDAR_GROUP`。
+/// `inGroup()`、`worker/authorize.js` 的 `ACTIONS`。
 enum UserGroup {
   rosterEditors('roster-editors', '服事表編輯', '服事表'),
   calendarEditors('calendar-editors', '行事曆編輯', '行事曆');
@@ -68,7 +68,7 @@ class UserZoneInfo {
   factory UserZoneInfo.fromJson(Map<String, dynamic> json) {
     return UserZoneInfo(
       serviceType: ServiceType.values.firstWhere(
-        (e) => e.toString().split('.').last == json['serviceType'],
+        (e) => e.name == json['serviceType'],
         orElse: () => ServiceType.sundayService,
       ),
       smallGroups: List<String>.from(json['smallGroups'] ?? []),
@@ -78,7 +78,7 @@ class UserZoneInfo {
 
   Map<String, dynamic> toJson() {
     return {
-      'serviceType': serviceType.toString().split('.').last,
+      'serviceType': serviceType.name,
       'smallGroups': smallGroups,
       'ministries': ministries,
     };
@@ -123,7 +123,7 @@ class User {
   /// admin 等同 root：隱含所有 group，不必個別授予。
   ///
   /// UI 用這個決定顯不顯示編輯入口，真正的強制點在 `firestore.rules` 與
-  /// `worker/google_calendar.js` —— 前端擋不住直接打 Firestore 的人。
+  /// `worker/authorize.js` —— 前端擋不住直接打 Firestore 的人。
   bool inGroup(UserGroup group) => isAdmin || groups.contains(group);
 
   bool get canEditRoster => inGroup(UserGroup.rosterEditors);
@@ -174,7 +174,7 @@ class User {
       email: json['email'] as String? ?? '',
       username: json['username'] as String,
       role: UserRole.values.firstWhere(
-        (e) => e.toString().split('.').last == json['role'],
+        (e) => e.name == json['role'],
         orElse: () => UserRole.member,
       ),
       zones:
@@ -192,12 +192,10 @@ class User {
       'name': name,
       'email': email,
       'username': username,
-      'role': role.toString().split('.').last,
+      'role': role.name,
       'zones': zones.map((e) => e.toJson()).toList(),
       // zones 的投影，給 firestore.rules 用。見 [zoneTypes]。
-      'zoneTypes': [
-        for (final type in zoneTypes) type.toString().split('.').last,
-      ],
+      'zoneTypes': [for (final type in zoneTypes) type.name],
       // 順序固定，否則每次存檔都會產生一筆沒有實質變化的 Firestore 寫入。
       'groups': [
         for (final group in UserGroup.values)

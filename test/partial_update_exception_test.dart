@@ -1,58 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:church_staff_pwa/core/types/service_type.dart';
-import 'package:church_staff_pwa/features/roster/domain/entities/event_option.dart';
 import 'package:church_staff_pwa/features/roster/domain/entities/service_roster.dart';
-import 'package:church_staff_pwa/features/roster/domain/repositories/roster_repository.dart';
 import 'package:church_staff_pwa/features/roster/presentation/providers/roster_provider.dart';
 
+import 'support/in_memory_roster_repository.dart';
+
+InMemoryRosterRepository _repo({required Set<String> failureRosterIds}) =>
+    InMemoryRosterRepository()..failRosterIds = failureRosterIds;
+
 // ── Fake repository：可指定哪些 roster id 的 updateRoster 應該失敗 ──────────────
-
-class _PartialFailRosterRepository implements RosterRepository {
-  /// 若 roster.id 在此 set 中，updateRoster 拋出例外。
-  final Set<String> failureRosterIds;
-
-  _PartialFailRosterRepository({required this.failureRosterIds});
-
-  @override
-  Future<List<ServiceRoster>> getUpcomingRosters() async => [];
-
-  @override
-  Future<List<ServiceRoster>> getUpcomingRostersFromCache() async => const []; // stub：no-op
-
-  @override
-  Future<void> ensureQuarterRosters(List<ServiceType> allowedTypes) async {} // stub：no-op
-
-  @override
-  Future<void> updateRoster(ServiceRoster roster) async {
-    if (failureRosterIds.contains(roster.id)) {
-      throw Exception('Firestore write failed for ${roster.id}');
-    }
-  }
-
-  @override
-  Future<void> updateRostersAtomically(List<ServiceRoster> rosters) async {
-    for (final roster in rosters) {
-      await updateRoster(roster);
-    }
-  }
-
-  @override
-  Future<Map<ServiceType, List<String>>> getServiceTemplates() async => {};
-
-  @override
-  Future<void> updateServiceTemplates(
-    Map<ServiceType, List<String>> templates,
-  ) async {}
-
-  @override
-  Future<Map<ServiceType, List<EventOption>>> getEventOptions() async => {};
-
-  @override
-  Future<void> updateEventOptions(
-    Map<ServiceType, List<EventOption>> options,
-  ) async {}
-}
 
 void main() {
   group('PartialUpdateException', () {
@@ -185,9 +142,7 @@ void main() {
       'updateRosters 部分失敗時拋出 PartialUpdateException，successCount/failureCount/failedRosters 正確',
       () async {
         // b1 和 c1 會失敗，a1 成功 → successCount=1, failureCount=2
-        final repo = _PartialFailRosterRepository(
-          failureRosterIds: {'b1', 'c1'},
-        );
+        final repo = _repo(failureRosterIds: {'b1', 'c1'});
         final provider = RosterProvider(repo);
 
         late Object caughtError;
@@ -208,9 +163,7 @@ void main() {
     );
 
     test('updateRosters 全部失敗時 successCount=0、failureCount=3', () async {
-      final repo = _PartialFailRosterRepository(
-        failureRosterIds: {'a1', 'b1', 'c1'},
-      );
+      final repo = _repo(failureRosterIds: {'a1', 'b1', 'c1'});
       final provider = RosterProvider(repo);
 
       late Object caughtError;
@@ -229,7 +182,7 @@ void main() {
     });
 
     test('updateRosters 全部成功時不拋例外', () async {
-      final repo = _PartialFailRosterRepository(failureRosterIds: {});
+      final repo = _repo(failureRosterIds: {});
       final provider = RosterProvider(repo);
 
       await expectLater(

@@ -2,7 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:church_staff_pwa/features/roster/domain/entities/event_option.dart';
 import 'package:church_staff_pwa/features/roster/domain/entities/service_roster.dart';
-import 'package:church_staff_pwa/features/roster/presentation/screens/roster_import_parser.dart';
+import 'package:church_staff_pwa/features/roster/domain/roster_import_parser.dart';
+import 'package:church_staff_pwa/features/roster/domain/staff_directory.dart';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -22,10 +23,12 @@ RosterImportParseResult _parse(
 }) {
   return parseRosterImportJson(
     input: json,
-    candidateNames: candidates,
-    allowedByRole: allowedByRole,
+    staff: StaffDirectory(
+      names: candidates,
+      idByName: nameToId,
+      namesByRole: allowedByRole,
+    ),
     catalogByName: catalog,
-    nameToIdMap: nameToId,
   );
 }
 
@@ -468,6 +471,117 @@ void main() {
   });
 
   // ══════════════════════════════════════════════════════════════════════════
+  // 形近字提示 — 名單裡誰跟這個名字很像，只提示不套用
+  //
+  // 刻意不自動接回去。拿真實名單量過：名單內部互相拼錯一個字時，唯一對到
+  // 「別的真人」的次數是 0；而會落進這一層的幾乎都是**還沒建帳號的人**
+  // （新同工、外來講員），他們的名字常常跟某個真人只差一個字。自動接的話
+  // 那個人的服事會被記到別人頭上、連上別人的 uid，提醒發給錯的人，原本那個
+  // 名字還會從表上消失。改動這一層前先看這一組。
+  // ══════════════════════════════════════════════════════════════════════════
+
+  group('形近字提示', () {
+    const db = ['陳志明', '黃雅婷', '林淑芸', '陳佳蓉', '李小華'];
+    const allowed = {
+      '司琴': {'陳志明', '黃雅婷', '林淑芸', '陳佳蓉', '李小華'},
+    };
+    const ids = {'陳志明': 'uid-ziqian', '李小華': 'uid-xiaohua'};
+
+    RosterImportParseResult run(String people) => _parse(
+      '[{"date":"2026-01-04","duties":[{"role":"司琴","people":$people}]}]',
+      candidates: db,
+      allowedByRole: allowed,
+      nameToId: ids,
+    );
+
+    RosterEntry dutyOf(RosterImportParseResult r) =>
+        r.dutiesByDate['2026-01-04']!.single;
+
+    test('沒建帳號的人不會被接到名單上那個很像的人身上', () {
+      // 陳志豪還沒有帳號，名單裡有陳志明 —— 只差最後一個字。
+      final r = run('["陳志豪"]');
+      expect(dutyOf(r).people, ['陳志豪'], reason: '名字照表上原文寫進去，不可以換成陳志明');
+      expect(
+        dutyOf(r).personIdsByName,
+        isEmpty,
+        reason: '帶上陳志明的 uid 等於把服事記到他頭上，提醒也發給他',
+      );
+      expect(r.notInRosterNames, ['陳志豪']);
+      expect(r.nearMatchSuggestions, {
+        '陳志豪': ['陳志明'],
+      }, reason: '提示還是要給，管理者才知道可能是誰');
+    });
+
+    test('很像的有好幾位就全部列出來，不挑', () {
+      // 佳芸：跟「陳佳蓉」的梓吻合、跟「林淑芸」的妤吻合，兩邊都只差一個字。
+      final r = run('["佳芸"]');
+      expect(dutyOf(r).people, ['佳芸']);
+      expect(r.nearMatchSuggestions['佳芸'], unorderedEquals(['陳佳蓉', '林淑芸']));
+    });
+
+    test('兩個字的寫法也給提示', () {
+      // 「伃」在表上被寫成「仔」。提示不會套用，所以吵一點無所謂，
+      // 漏掉才可惜 —— 這種只能靠人看到之後加進綽號對照。
+      final r = run('["雅亭"]');
+      expect(dutyOf(r).people, ['雅亭']);
+      expect(r.nearMatchSuggestions['雅亭'], ['黃雅婷']);
+    });
+
+    test('一個字不比對（會對上半本名單）', () {
+      // 「揚」不是名單裡任何人的結尾，所以前兩層都不會接走。
+      final r = run('["揚"]');
+      expect(r.notInRosterNames, ['揚']);
+      expect(r.nearMatchSuggestions, isEmpty);
+    });
+
+    test('差兩個字不給提示', () {
+      final r = run('["王小揚"]');
+      expect(r.notInRosterNames, ['王小揚']);
+      expect(r.nearMatchSuggestions, isEmpty);
+    });
+
+    test('長度不一樣不給提示 —— 那是插入或刪除，不是認錯字', () {
+      final r = run('["陳志明明"]');
+      expect(r.notInRosterNames, ['陳志明明']);
+      expect(r.nearMatchSuggestions, isEmpty);
+    });
+
+    test('名單裡完全沒有像的就不給提示，也不留空清單', () {
+      final r = run('["阿寶"]');
+      expect(r.notInRosterNames, ['阿寶']);
+      expect(r.nearMatchSuggestions, isEmpty);
+    });
+
+    test('全等時不進提示，也不算對不到', () {
+      final r = run('["陳志明"]');
+      expect(dutyOf(r).people, ['陳志明']);
+      expect(dutyOf(r).personIdsByName['陳志明'], 'uid-ziqian');
+      expect(r.notInRosterNames, isEmpty);
+      expect(r.nearMatchSuggestions, isEmpty);
+    });
+
+    test('後綴對得上時不進提示', () {
+      final r = run('["小華"]');
+      expect(dutyOf(r).people, ['李小華']);
+      expect(dutyOf(r).personIdsByName['李小華'], 'uid-xiaohua');
+      expect(r.nearMatchSuggestions, isEmpty);
+    });
+
+    test('「待定」不會被拿去比對', () {
+      final r = run('["待定"]');
+      expect(dutyOf(r).people, ['待定']);
+      expect(r.nearMatchSuggestions, isEmpty);
+    });
+
+    test('同一格有人對得上、有人對不上時，兩個都留著', () {
+      final r = run('["李小華","陳志豪"]');
+      expect(dutyOf(r).people, ['李小華', '陳志豪']);
+      expect(dutyOf(r).personIdsByName, {'李小華': 'uid-xiaohua'});
+      expect(r.nearMatchSuggestions['陳志豪'], ['陳志明']);
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
   // orderDutiesByTemplate — 匯入後的排序規格
   //
   // 規格是「一律照樣板排」，JSON 自己的順序不算數。這一組就是這條規則的
@@ -608,6 +722,120 @@ void main() {
         '主席',
         '領詩',
       ]);
+    });
+  });
+
+  group('外來講員', () {
+    // 名字一律照寫進服事表；這裡測的只是報告上歸到哪一段。
+    const json = '''
+[
+  {
+    "date": "2026-11-22",
+    "duties": [
+      {"role": "信息", "people": ["周慕恩"]},
+      {"role": "招待", "people": ["陳志明"]}
+    ]
+  },
+  {
+    "date": "2026-11-29",
+    "duties": [
+      {"role": "信息", "people": ["黃雅婷"]},
+      {"role": "招待", "people": ["黃雅婷"]}
+    ]
+  },
+  {
+    "date": "2026-12-06",
+    "duties": [{"role": "信息", "people": ["陳志豪"]}]
+  }
+]''';
+
+    RosterImportParseResult parse() => _parse(
+      json,
+      candidates: ['陳志明', '林淑芸'],
+      allowedByRole: {
+        '招待': {'陳志明'},
+      },
+      nameToId: {'陳志明': 'u1', '林淑芸': 'u2'},
+    );
+
+    test('只排在信息、名單裡沒有也沒有很像的人，歸到外來講員', () {
+      final result = parse();
+      expect(result.guestSpeakerNames, ['周慕恩']);
+      expect(result.notInRosterNames, isNot(contains('周慕恩')));
+    });
+
+    test('名字照樣寫進那一格，只是沒有 uid', () {
+      final duty = parse().dutiesByDate['2026-11-22']!.firstWhere(
+        (d) => d.role == '信息',
+      );
+      expect(duty.people, ['周慕恩']);
+      expect(duty.personIdsByName, isEmpty);
+    });
+
+    test('也排了別的服事的，多半是還沒開帳號的同工，留在警告裡', () {
+      final result = parse();
+      expect(result.notInRosterNames, contains('黃雅婷'));
+      expect(result.guestSpeakerNames, isNot(contains('黃雅婷')));
+    });
+
+    test('名單裡有很像的，多半是同工的名字被讀錯一個字，留在警告裡', () {
+      final result = parse();
+      expect(result.nearMatchSuggestions['陳志豪'], ['陳志明']);
+      expect(result.notInRosterNames, contains('陳志豪'));
+      expect(result.guestSpeakerNames, isNot(contains('陳志豪')));
+    });
+  });
+
+  group('帶自己日期的一次性活動', () {
+    test('認得出名稱後面帶的日期', () {
+      expect(isDatedOneOffEvent('感恩聚餐（12/26 六）'), isTrue);
+      expect(isDatedOneOffEvent('感恩聚餐(12/26六)'), isTrue);
+      expect(isDatedOneOffEvent('孩童奉獻禮'), isFalse);
+      // 名稱裡本來就有斜線的不算（合併格的「活動/地點」）。
+      expect(isDatedOneOffEvent('夏令營/營地'), isFalse);
+    });
+
+    test('不列進「活動沒有固定顏色」，但照樣寫進那天', () {
+      // 名字每次都不同，加進活動清單也永遠對不上下一次。
+      const json = '''
+[
+  {"date": "2026-12-27", "events": ["感恩聚餐（12/26 六）", "孩童奉獻禮"]}
+]''';
+      final result = _parse(json);
+      expect(result.notInEventCatalog, ['孩童奉獻禮']);
+      expect(result.eventsByDate['2026-12-27'], ['感恩聚餐（12/26 六）', '孩童奉獻禮']);
+    });
+  });
+
+  group('pickEventColor', () {
+    test('空的清單從色盤第一個開始', () {
+      expect(pickEventColor(const []), eventColorPalette.first);
+    });
+
+    test('挑目前用得最少的，連續加的幾個彼此分得開', () {
+      final existing = [
+        EventOption(name: '聖餐', color: eventColorPalette[0]),
+        EventOption(name: '愛餐', color: eventColorPalette[1]),
+      ];
+      expect(pickEventColor(existing), eventColorPalette[2]);
+    });
+
+    test('全部都用過一輪時，回到用得最少的那一個', () {
+      final existing = [
+        for (final color in eventColorPalette)
+          EventOption(name: '$color', color: color),
+        EventOption(name: '再一個', color: eventColorPalette[0]),
+      ];
+      expect(pickEventColor(existing), eventColorPalette[1]);
+    });
+
+    test('色盤沒有灰色：那是「沒設顏色」的顏色', () {
+      expect(eventColorPalette, isNot(contains(fallbackEventColor)));
+    });
+
+    test('色盤外的顏色（手動設的舊資料）不影響挑選', () {
+      final existing = [const EventOption(name: '舊的', color: 0xFF000000)];
+      expect(pickEventColor(existing), eventColorPalette.first);
     });
   });
 }

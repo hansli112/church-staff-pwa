@@ -172,7 +172,11 @@ class _EventFormSheetState extends State<_EventFormSheet> {
               const SizedBox(height: 16),
               TextField(
                 controller: _title,
-                autofocus: true,
+                // Only a blank form starts on the keyboard. When the title
+                // arrives filled in — an edit, or a copy whose whole point is
+                // to change the time — the keyboard would open over the
+                // pickers the user came here for.
+                autofocus: widget.initial.title.isEmpty,
                 enabled: !_submitting,
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
@@ -250,7 +254,7 @@ class _EventFormSheetState extends State<_EventFormSheet> {
                 enabled: !_submitting,
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
-                  labelText: '地點（可不填）',
+                  labelText: '地點',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -260,7 +264,7 @@ class _EventFormSheetState extends State<_EventFormSheet> {
                 enabled: !_submitting,
                 maxLines: 3,
                 decoration: const InputDecoration(
-                  labelText: '說明（可不填）',
+                  labelText: '說明',
                   border: OutlineInputBorder(),
                   alignLabelWithHint: true,
                 ),

@@ -21,64 +21,17 @@ import subprocess
 import sys
 import urllib.request
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent
-TYPES = {"sundayService": "主日", "youth": "青崇", "children": "兒主"}
+from _firestore import ROOT, TYPES, base_url, get as _get, paged as _paged, token  # noqa: F401
 
-
-def project_id() -> str:
-    """repo 是公開的，專案 id 不寫死在版控裡。"""
-    import os
-
-    value = os.environ.get("FIREBASE_PROJECT_ID", "").strip()
-    if value:
-        return value
-    path = ROOT / ".local" / "project-id"
-    if path.exists():
-        return path.read_text().strip()
-    sys.exit(
-        "找不到 Firebase 專案 id。二選一：\n"
-        "  export FIREBASE_PROJECT_ID=你的專案id\n"
-        "  echo 你的專案id > .local/project-id"
-    )
-
-
-BASE = (
-    f"https://firestore.googleapis.com/v1/projects/{project_id()}"
-    "/databases/(default)/documents"
-)
-
-
-def token() -> str:
-    result = subprocess.run(
-        ["gcloud", "auth", "print-access-token"], capture_output=True, text=True
-    )
-    if result.returncode != 0 or len(result.stdout.strip()) < 50:
-        sys.exit(
-            "拿不到 access token。先跑 gcloud auth login，"
-            f"並確認該帳號讀得到該專案。\n{result.stderr.strip()}"
-        )
-    return result.stdout.strip()
+BASE = base_url()
 
 
 def get(path: str, tok: str) -> dict:
-    request = urllib.request.Request(
-        f"{BASE}/{path}", headers={"Authorization": f"Bearer {tok}"}
-    )
-    with urllib.request.urlopen(request) as response:
-        return json.load(response)
+    return _get(BASE, path, tok)
 
 
 def paged(path: str, tok: str) -> list[dict]:
-    docs, page = [], None
-    while True:
-        joiner = "&" if "?" in path else "?"
-        suffix = f"{joiner}pageToken={page}" if page else ""
-        data = get(f"{path}{suffix}", tok)
-        docs.extend(data.get("documents", []))
-        page = data.get("nextPageToken")
-        if not page:
-            break
-    return docs
+    return _paged(BASE, path, tok)
 
 
 def dart_literal(value) -> str:
@@ -180,20 +133,23 @@ def main() -> None:
         f"""// 由 scripts/preview-roster-import.py 產生，跑完會自動刪掉。
 import 'package:flutter_test/flutter_test.dart';
 import 'package:church_staff_pwa/features/roster/domain/entities/event_option.dart';
-import 'package:church_staff_pwa/features/roster/presentation/screens/roster_import_parser.dart';
+import 'package:church_staff_pwa/features/roster/domain/roster_import_parser.dart';
+import 'package:church_staff_pwa/features/roster/domain/staff_directory.dart';
 
 void main() {{
   test('preview', () {{
     const input = r\"\"\"{raw}\"\"\";
     final result = parseRosterImportJson(
       input: input,
-      candidateNames: {dart_literal(candidate_names)},
-      allowedByRole: {dart_literal({k: v for k, v in allowed.items()})},
+      staff: StaffDirectory(
+        names: {dart_literal(candidate_names)},
+        idByName: {dart_literal(name_to_id)},
+        namesByRole: {dart_literal({k: v for k, v in allowed.items()})},
+      ),
       catalogByName: {{
         for (final name in {dart_literal(catalog)})
           name: EventOption(name: name, color: 0),
       }},
-      nameToIdMap: {dart_literal(name_to_id)},
     );
     if (result.error != null) {{
       print('OUT|error|${{result.error}}');
@@ -204,6 +160,9 @@ void main() {{
       print('OUT|roleMismatch|${{e.key}}|${{e.value.join('、')}}');
     }}
     for (final n in result.otherNames) {{ print('OUT|ambiguous|$n'); }}
+    for (final e in result.nearMatchSuggestions.entries) {{
+      print('OUT|nearMatch|${{e.key}}|${{e.value.join('、')}}');
+    }}
     for (final n in result.notInEventCatalog) {{ print('OUT|noColor|$n'); }}
     for (final d in result.dutiesProvidedDates) {{ print('OUT|dutiesDate|$d'); }}
     for (final d in result.eventsProvidedDates) {{ print('OUT|eventsDate|$d'); }}
@@ -260,6 +219,11 @@ void main() {{
         for item in items:
             print(f"  ・{item}")
 
+    section(
+        "名單裡有很像的",
+        [r.replace("|", " ≈ ") for r in buckets.get("nearMatch", [])],
+        "（只是提示，名字照原文寫進去，沒有自動換）",
+    )
     section("這幾天沒有匯入", missing, "（服事表裡沒有這些日期）")
     section(
         "沒有設定這個服事",
@@ -271,7 +235,8 @@ void main() {{
     section("活動沒有固定顏色", buckets.get("noColor", []))
 
     if not any(
-        buckets.get(k) for k in ("roleMismatch", "notInList", "ambiguous", "noColor")
+        buckets.get(k)
+        for k in ("roleMismatch", "notInList", "ambiguous", "nearMatch", "noColor")
     ) and not missing:
         print("\n✓ 全部對得上，匯入後不會有任何未匹配")
 

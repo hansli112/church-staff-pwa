@@ -11,11 +11,32 @@ import '../../../auth/presentation/providers/user_admin_provider.dart';
 import '../providers/roster_provider.dart';
 import '../../../../core/utils/error_messages.dart';
 import '../../../../core/widgets/settings_bottom_sheet.dart';
+import '../write_failure.dart';
 import 'duty_row.dart';
+import '../../domain/staff_directory.dart';
+import '../../domain/staff_order.dart';
+import 'event_color_picker.dart';
 
 part '_roster_people_dialog.dart';
 part '_special_event_dialog.dart';
 part '_swap_duty_dialog.dart';
+
+/// 寫一張服事表。失敗時就地跳 snackbar，不動整頁 —— provider 的寫入失敗
+/// 一律往上丟（見 [RosterProvider.updateRoster]），不會變成整頁的錯誤畫面。
+///
+/// [ranking] 是選人視窗裡拖過的順序，provider 會先存它再存這一天。
+Future<void> _saveRoster(
+  BuildContext context,
+  ServiceRoster roster, {
+  StaffRanking? ranking,
+}) async {
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    await context.read<RosterProvider>().updateRoster(roster, ranking: ranking);
+  } catch (e) {
+    showWriteFailure(messenger, '更新', e);
+  }
+}
 
 class RosterCard extends StatelessWidget {
   static final _dateFormat = DateFormat('yyyy/MM/dd (EEEEE)', 'zh_TW');
@@ -82,10 +103,9 @@ class RosterCard extends StatelessWidget {
                   runSpacing: 2,
                   children: [
                     ...roster.specialEvents.map((event) {
-                      final colorValue =
-                          roster.customEventColors[event] ??
-                          rosterProvider.eventColorFor(roster.type, event);
-                      final color = Color(colorValue);
+                      final color = Color(
+                        rosterProvider.eventColorOf(roster, event),
+                      );
                       final label = Text(
                         event,
                         style: TextStyle(
@@ -186,12 +206,10 @@ class RosterCard extends StatelessWidget {
           rosterType: roster.type,
           roleOptions: roleOptions,
           initialRole: roleOptions.isNotEmpty ? roleOptions.first : null,
-          initialOrder: const [],
           peopleLoader: peopleLoader,
-          initialPeople: const ['待定'],
+          initialPeople: const [placeholderPerson],
           initialPersonIdsByName: const {},
-          onSubmit: (role, people, order, personIdsByName) =>
-              _addDuty(context, role, people, order, personIdsByName),
+          onSubmit: (selection) => _addDuty(context, selection),
           submitLabel: '新增',
           useBottomSheet: true,
         );
@@ -199,25 +217,18 @@ class RosterCard extends StatelessWidget {
     );
   }
 
-  void _addDuty(
-    BuildContext context,
-    String role,
-    List<String> people,
-    List<String> peopleOrder,
-    Map<String, String> personIdsByName,
-  ) {
+  void _addDuty(BuildContext context, _PeopleSelection selection) {
     final newDuties = List<RosterEntry>.from(roster.duties);
     newDuties.add(
       RosterEntry(
-        role: role,
-        people: people,
-        peopleOrder: peopleOrder,
-        personIdsByName: personIdsByName,
+        role: selection.role,
+        people: selection.people,
+        personIdsByName: selection.personIdsByName,
       ),
     );
 
     final newRoster = roster.copyWith(duties: newDuties);
-    context.read<RosterProvider>().updateRoster(newRoster);
+    _saveRoster(context, newRoster, ranking: selection.ranking);
   }
 
   void _removeDuty(BuildContext context, int index) {
@@ -225,7 +236,7 @@ class RosterCard extends StatelessWidget {
     newDuties.removeAt(index);
 
     final newRoster = roster.copyWith(duties: newDuties);
-    context.read<RosterProvider>().updateRoster(newRoster);
+    _saveRoster(context, newRoster);
   }
 
   Future<void> _confirmRemoveDuty(
@@ -283,7 +294,7 @@ class RosterCard extends StatelessWidget {
         final otherDuty = other.duties[i];
         if (otherDuty.role.trim() != role) continue;
         final people = otherDuty.people.isEmpty
-            ? const [RosterProvider.placeholderPerson]
+            ? const [placeholderPerson]
             : otherDuty.people;
         for (final person in people) {
           if (alreadyHere.contains(person.trim())) continue;
@@ -341,12 +352,12 @@ class RosterCard extends StatelessWidget {
           initialRoleText: duty.role,
           roleOptions: const [],
           initialRole: duty.role,
-          initialOrder: duty.peopleOrder,
           peopleLoader: peopleLoader,
-          initialPeople: duty.people.isEmpty ? const ['待定'] : duty.people,
+          initialPeople: duty.people.isEmpty
+              ? const [placeholderPerson]
+              : duty.people,
           initialPersonIdsByName: duty.personIdsByName,
-          onSubmit: (role, people, order, personIdsByName) =>
-              _updateDuty(context, index, people, order, personIdsByName),
+          onSubmit: (selection) => _updateDuty(context, index, selection),
           submitLabel: '儲存',
           roleEditable: false,
           useBottomSheet: true,
@@ -359,19 +370,16 @@ class RosterCard extends StatelessWidget {
   void _updateDuty(
     BuildContext context,
     int index,
-    List<String> newPeople,
-    List<String> peopleOrder,
-    Map<String, String> personIdsByName,
+    _PeopleSelection selection,
   ) {
     final newDuties = List<RosterEntry>.from(roster.duties);
     newDuties[index] = newDuties[index].copyWith(
-      people: newPeople,
-      peopleOrder: peopleOrder,
-      personIdsByName: personIdsByName,
+      people: selection.people,
+      personIdsByName: selection.personIdsByName,
     );
 
     final newRoster = roster.copyWith(duties: newDuties);
-    context.read<RosterProvider>().updateRoster(newRoster);
+    _saveRoster(context, newRoster, ranking: selection.ranking);
   }
 
   Future<void> _showAddSpecialEventDialog(BuildContext context) async {
@@ -397,7 +405,8 @@ class RosterCard extends StatelessWidget {
       }
     }
     final mergedColors = {...roster.customEventColors, ...result.customColors};
-    context.read<RosterProvider>().updateRoster(
+    _saveRoster(
+      context,
       roster.copyWith(specialEvents: events, customEventColors: mergedColors),
     );
   }
@@ -406,7 +415,8 @@ class RosterCard extends StatelessWidget {
     final events = List<String>.from(roster.specialEvents)..remove(event);
     final colors = Map<String, int>.from(roster.customEventColors)
       ..remove(event);
-    context.read<RosterProvider>().updateRoster(
+    _saveRoster(
+      context,
       roster.copyWith(specialEvents: events, customEventColors: colors),
     );
   }
@@ -446,17 +456,16 @@ class RosterCard extends StatelessWidget {
     String? role,
   ) async {
     final provider = context.read<RosterProvider>();
-    final users = await context.read<UserAdminProvider>().getUsers();
-    final roleKey = role?.trim();
-    final allUserNames = users
-        .map((u) => u.name.trim())
-        .where((name) => name.isNotEmpty)
-        .toSet();
+    final staff = StaffDirectory.fromUsers(
+      await context.read<UserAdminProvider>().getUsers(),
+      rosterType,
+    );
+    final roleKey = role?.trim() ?? '';
     final extrasSet = extras
         .map((e) => e.trim())
         .where((e) => e.isNotEmpty)
         .toSet();
-    final rosterPeople = roleKey == null || roleKey.isEmpty
+    final rosterPeople = roleKey.isEmpty
         ? <String>{}
         : provider
               .getRostersByType(rosterType)
@@ -464,36 +473,26 @@ class RosterCard extends StatelessWidget {
               .where((duty) => duty.role.trim() == roleKey)
               .expand((duty) => duty.people)
               .map((name) => name.trim())
-              .where((name) => name.isNotEmpty && name != '待定')
+              .where((name) => name.isNotEmpty && name != placeholderPerson)
               .toSet();
-    final names = users
-        .where(
-          (u) => u.zones.any(
-            (zone) =>
-                zone.serviceType == rosterType &&
-                (roleKey != null && roleKey.isNotEmpty
-                    ? zone.ministries.contains(roleKey)
-                    : false),
-          ),
-        )
-        .map((u) => u.name.trim())
-        .where((n) => n.isNotEmpty)
-        .toList();
-    names.sort();
+    final names = roleKey.isEmpty
+        ? const <String>[]
+        : staff.namesForRole(roleKey);
     final Set<String> merged = {...names, ...rosterPeople, ...extrasSet};
-    final List<String> result = ['待定'];
-    result.addAll(merged.where((name) => name != '待定'));
-    final userIdsByName = <String, String>{};
-    for (final user in users) {
-      final name = user.name.trim();
-      final uid = user.id.trim();
-      if (name.isEmpty || uid.isEmpty) continue;
-      userIdsByName.putIfAbsent(name, () => uid);
-    }
+    final List<String> result = [placeholderPerson];
+    // 照同工排序排：視窗裡的先後就是這一項服事每一週的先後，拖曳改的也是它。
+    result.addAll(
+      provider
+          .staffOrderFor(rosterType)
+          .sort(
+            roleKey,
+            merged.where((name) => name != placeholderPerson).toList(),
+          ),
+    );
     return _PeopleOptions(
       options: result,
-      allUserNames: allUserNames,
-      userIdsByName: userIdsByName,
+      allUserNames: staff.names.toSet(),
+      userIdsByName: staff.idByName,
     );
   }
 }

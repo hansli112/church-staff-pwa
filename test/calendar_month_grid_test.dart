@@ -1,5 +1,4 @@
 import 'package:church_staff_pwa/features/auth/domain/entities/user.dart';
-import 'package:church_staff_pwa/features/auth/domain/repositories/auth_repository.dart';
 import 'package:church_staff_pwa/features/auth/presentation/providers/session_provider.dart';
 import 'package:church_staff_pwa/features/calendar/presentation/screens/calendar_screen.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'support/signed_in_auth_repository.dart';
 
 /// The month grid used to draw a fixed six rows, so a month that needs five
 /// reserved a whole empty row and pushed the card's bottom edge past the fold.
@@ -15,38 +15,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Everything here is derived from DateTime.now() rather than a fixed month:
 /// the screen always opens on the current one, and which months need five rows
 /// and which need six moves with the calendar.
-
-class _FakeAuthRepository implements AuthRepository {
-  final User? user;
-  _FakeAuthRepository(this.user);
-
-  @override
-  Future<User?> getCachedUser() async => user;
-
-  @override
-  Future<User?> getCurrentUser() async => user;
-
-  @override
-  Future<void> writeCachedUser(User user) async {}
-
-  @override
-  Future<User?> login(String username, String password) async => user;
-
-  @override
-  Future<void> logout() async {}
-
-  @override
-  Future<List<User>> getUsers() async => const [];
-
-  @override
-  Future<void> addUser(User user, String password) async {}
-
-  @override
-  Future<void> updateUser(User user, {String? password}) async {}
-
-  @override
-  Future<void> deleteUser(String id) async {}
-}
 
 /// Rows a month occupies: blanks before the 1st, plus its days, in whole weeks.
 int _expectedRows(DateTime month) {
@@ -66,7 +34,7 @@ Future<void> _pumpCalendar(WidgetTester tester) async {
   await tester.pumpWidget(
     ChangeNotifierProvider(
       create: (_) => SessionProvider(
-        _FakeAuthRepository(
+        SignedInAuthRepository(
           User(
             id: 'u1',
             name: '測試者',
@@ -75,6 +43,7 @@ Future<void> _pumpCalendar(WidgetTester tester) async {
             role: UserRole.member,
             groups: const {},
           ),
+          users: const [],
         ),
       ),
       child: const MaterialApp(home: CalendarScreen()),
@@ -212,5 +181,4 @@ void main() {
     expect(_gridHeight(tester), closeTo(shortHeight, 0.5));
     expect(tester.takeException(), isNull);
   });
-
 }
