@@ -435,7 +435,7 @@ class _ZoneEditorCardState extends State<_ZoneEditorCard> {
                   child: DropdownButtonFormField<ServiceType>(
                     initialValue: _selectedType,
                     decoration: const InputDecoration(labelText: '牧區'),
-                    items: ServiceType.values.map((type) {
+                    items: {...ServiceType.values, _selectedType}.map((type) {
                       final isUsed = widget.usedTypes.contains(type);
                       final isCurrent = type == _selectedType;
                       return DropdownMenuItem(

@@ -5,9 +5,9 @@ repo 是公開的，所以同工姓名一律不進版控：模板在
 docs/roster-import-prompt.template.md，產生的成品寫到 .local/（已 gitignore）。
 
 用法：
-    python3 scripts/build-import-prompt.py            # 三個崇拜都產生
-    python3 scripts/build-import-prompt.py youth      # 只產生青崇
-    python3 scripts/build-import-prompt.py --publish  # 順便發佈到 Firestore
+    uv run scripts/build-import-prompt.py            # 所有設定的聚會都產生
+    uv run scripts/build-import-prompt.py youth      # 只產生青崇
+    uv run scripts/build-import-prompt.py --publish  # 順便發佈到 Firestore
 
 需要環境變數 FIREBASE_PROJECT_ID，或 .local/project-id 這個檔。
 
@@ -25,6 +25,7 @@ docs/roster-import-prompt.template.md，產生的成品寫到 .local/（已 giti
 """
 
 import datetime
+from zoneinfo import ZoneInfo
 import json
 import pathlib
 import sys
@@ -32,6 +33,7 @@ import re
 import subprocess
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 
 # worker 每次呼叫才填的欄位。跟 worker/roster_prompt.js 的 fillPrompt 一致 ——
@@ -45,6 +47,7 @@ NAMES_PER_LINE = 6
 NO_EVENTS = "（尚未設定）"
 
 from _firestore import LOCAL, ROOT, TYPES, base_url, get, project_id, token  # noqa: F401
+from _church_config import CONFIG
 
 TEMPLATE = ROOT / "docs" / "roster-import-prompt.template.md"
 
@@ -83,7 +86,7 @@ def fill_live(template: str, *, roles: list[str], events: list[str], names: list
         )
         # 有些表的標題根本不寫年份（兒主那張就是），模型只能猜。給它今天，
         # 讓它挑離今天最近的那個年份 —— 猜錯年份整份都匯不進去。
-        .replace("{{TODAY}}", datetime.date.today().isoformat())
+        .replace("{{TODAY}}", datetime.datetime.now(ZoneInfo(CONFIG["timeZone"])).date().isoformat())
         .replace("{{SAMPLE_ROLE_A}}", roles[0])
         .replace("{{SAMPLE_ROLE_B}}", roles[1] if len(roles) > 1 else roles[0])
     )
@@ -95,7 +98,11 @@ def publish(base: str, tok: str, prompts: dict[str, str]) -> None:
     只送這一輪真的產生出來的那幾個崇拜（updateMask），所以
     `build-import-prompt.py youth --publish` 不會把另外兩個洗掉。
     """
-    mask = "&".join(f"updateMask.fieldPaths={t}" for t in prompts)
+    # 設定允許 ID 帶連字號；Firestore field path 要引用才能維持單一頂層鍵。
+    # IDs 已通過 ChurchConfig 驗證，不含反引號或反斜線。
+    mask = urllib.parse.urlencode(
+        [("updateMask.fieldPaths", f"`{t}`") for t in prompts]
+    )
     payload = json.dumps(
         {"fields": {t: {"stringValue": body} for t, body in prompts.items()}}
     ).encode()

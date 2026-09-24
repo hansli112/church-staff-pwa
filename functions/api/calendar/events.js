@@ -4,6 +4,7 @@
 // the exported onRequest* methods are routed; every other verb gets a 405 from
 // the Pages runtime.
 
+import { churchConfig, requireFeature } from '../../../worker/church_config.js';
 import { authorize } from '../../../worker/authorize.js';
 import {
   CALENDAR_LOG_LABEL,
@@ -15,16 +16,17 @@ import { notifyN8n, notifyPayload, scheduleNotify } from '../../../worker/line_n
 
 export const onRequestPost = ({ request, env, waitUntil }) =>
   handleWith(CALENDAR_LOG_LABEL, async () => {
+    requireFeature(env, 'calendar');
     // Only uid and name go on to the notification — not the caller's token.
     const { uid, name } = await authorize(request, env, { edit: 'calendar' });
     const actor = { uid, name };
-    const event = buildGoogleEvent(await readJsonBody(request));
+    const event = buildGoogleEvent(await readJsonBody(request), { timeZone: churchConfig(env).timeZone });
     const response = await callCalendar(env, { method: 'POST', body: event });
     // The raw Google item is returned on purpose: the client parses it with the
     // same code that parses the month listing, so the two cannot drift.
     const created = await response.json();
     // 活動已經建好，通知成不成功都不改變這個回應。有 waitUntil 時它在背景跑完，
     // 使用者不必等 LINE。
-    await scheduleNotify(waitUntil, notifyN8n(env, notifyPayload('created', created, actor)));
+    await scheduleNotify(waitUntil, notifyN8n(env, notifyPayload('created', created, actor, churchConfig(env).timeZone)));
     return jsonResponse(created, 201);
   });

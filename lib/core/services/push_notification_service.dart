@@ -5,7 +5,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 
+import '../config/church_config.dart';
+
 enum PushToggleFailureReason {
+  disabled,
   notWeb,
   notInitialized,
   missingVapidKey,
@@ -26,11 +29,17 @@ class PushNotificationService {
   PushNotificationService({
     FirebaseMessaging? messaging,
     FirebaseFirestore? firestore,
-  }) : _messaging = messaging ?? FirebaseMessaging.instance,
-       _firestore = firestore ?? FirebaseFirestore.instance;
+  }) : _providedMessaging = messaging,
+       _providedFirestore = firestore;
 
-  final FirebaseMessaging _messaging;
-  final FirebaseFirestore _firestore;
+  final FirebaseMessaging? _providedMessaging;
+  final FirebaseFirestore? _providedFirestore;
+  late final FirebaseMessaging _messaging =
+      _providedMessaging ?? FirebaseMessaging.instance;
+  late final FirebaseFirestore _firestore =
+      _providedFirestore ?? FirebaseFirestore.instance;
+
+  bool get _enabled => ChurchConfig.current.features.pushNotifications;
 
   StreamSubscription<RemoteMessage>? _foregroundMessageSub;
   StreamSubscription<String>? _tokenRefreshSub;
@@ -40,7 +49,7 @@ class PushNotificationService {
   String? _currentUserId;
 
   Future<void> initialize() async {
-    if (!kIsWeb || _initialized) return;
+    if (!_enabled || !kIsWeb || _initialized) return;
     _initialized = true;
 
     try {
@@ -63,7 +72,7 @@ class PushNotificationService {
 
   Future<void> syncTokenForUser(String? userId) async {
     try {
-      if (!kIsWeb || !_initialized) return;
+      if (!_enabled || !kIsWeb || !_initialized) return;
       if (_currentUserId == userId) return;
 
       _currentUserId = userId;
@@ -95,7 +104,7 @@ class PushNotificationService {
   }
 
   Future<bool> isNotificationEnabledForUser(String? userId) async {
-    if (!kIsWeb || !_initialized || userId == null) return false;
+    if (!_enabled || !kIsWeb || !_initialized || userId == null) return false;
 
     final preference = await _getWeeklyRosterReminderPreference(userId);
     if (preference == false) return false;
@@ -133,6 +142,12 @@ class PushNotificationService {
     required String userId,
     required bool enabled,
   }) async {
+    if (!_enabled) {
+      return const PushToggleResult(
+        enabled: false,
+        failureReason: PushToggleFailureReason.disabled,
+      );
+    }
     if (!kIsWeb) {
       return const PushToggleResult(
         enabled: false,

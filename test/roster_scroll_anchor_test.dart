@@ -18,7 +18,7 @@ InMemoryRosterRepository _repo(List<ServiceRoster> rosters) =>
     InMemoryRosterRepository(
       rosters: rosters,
       cachedRosters: rosters,
-      templates: const {
+      templates: {
         ServiceType.sundayService: ['敬拜主領', '司琴', '招待'],
       },
     );

@@ -33,6 +33,7 @@
 // GOOGLE_CLOUD_PROJECT, or gcloud's config.
 
 import { execFileSync } from 'node:child_process';
+import { readChurchConfig } from './read-church-config.mjs';
 import { readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -44,7 +45,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // with hasValidZoneTypes() in firestore.rules. Order matters: it is the order
 // User.zoneTypes writes, and writing the same set in a different order is a
 // Firestore write with no actual change in it.
-const SERVICE_TYPES = ['sundayService', 'youth', 'children'];
+const SERVICE_TYPES = readChurchConfig().services.map((service) => service.id);
 
 const APPLY = process.argv.includes('--apply');
 const CHECK = process.argv.includes('--check');

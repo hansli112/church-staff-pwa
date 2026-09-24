@@ -11,6 +11,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
+        CHURCH_CONFIG_JSON: ${CHURCH_CONFIG_JSON:?CHURCH_CONFIG_JSON is required (public church configuration JSON)}
         FCM_WEB_VAPID_KEY: ${FCM_WEB_VAPID_KEY:-}
         FIREBASE_API_KEY: ${FIREBASE_API_KEY:?FIREBASE_API_KEY is required}
         FIREBASE_AUTH_DOMAIN: ${FIREBASE_AUTH_DOMAIN:?FIREBASE_AUTH_DOMAIN is required}

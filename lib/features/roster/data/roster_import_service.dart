@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 
+import 'package:church_staff_pwa/core/config/church_config.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
 import 'roster_photo.dart';
 
@@ -57,6 +58,9 @@ class RosterImportService {
     required ServiceType type,
     required List<RosterPhoto> photos,
   }) async {
+    if (!ChurchConfig.current.features.photoImport) {
+      throw const RosterImportException('照片辨識未啟用，請貼上 JSON 匯入');
+    }
     if (photos.isEmpty) {
       throw const RosterImportException('請先選一張服事表照片');
     }

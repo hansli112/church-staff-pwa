@@ -4,7 +4,9 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../../../core/config/church_config.dart';
 import '../../../core/config/google_calendar_config.dart';
+import '../../../core/time/church_time.dart';
 import '../domain/entities/calendar_event.dart';
 import 'google_calendar_event.dart';
 
@@ -18,20 +20,17 @@ class CalendarReadException implements Exception {
   String toString() => 'CalendarReadException: $message';
 }
 
-/// The instants a month listing asks Google for: local midnight on the 1st up
-/// to local midnight on the 1st of the next month.
-///
-/// Local, because that is where the grid draws its day lines — every
-/// [CalendarEvent] is parsed with `toLocal()` and bucketed by
-/// `DateUtils.dateOnly`. A window on UTC midnight instead starts at 08:00 in
-/// Taipei, so an event at 00:30 on the 1st came back in the previous month's
-/// listing, which then filtered it out as not its own, and it showed nowhere.
+/// Church midnight on the 1st through church midnight on the next 1st.
+/// Construct each boundary separately: across DST a month is not a fixed
+/// number of 24-hour days, and the viewer's device zone is irrelevant.
 ///
 /// [timeMax] is exclusive on Google's side (it bounds the event *start*), so
 /// the next month's midnight is the right edge as-is.
 ({DateTime timeMin, DateTime timeMax}) calendarMonthWindow(DateTime month) => (
-  timeMin: DateTime(month.year, month.month, 1).toUtc(),
-  timeMax: DateTime(month.year, month.month + 1, 1).toUtc(),
+  timeMin: ChurchTime.atDate(DateTime.utc(month.year, month.month, 1)).toUtc(),
+  timeMax: ChurchTime.atDate(
+    DateTime.utc(month.year, month.month + 1, 1),
+  ).toUtc(),
 );
 
 /// Reads one month of the church calendar straight from Google with the public
@@ -47,15 +46,20 @@ class GoogleCalendarMonthReader {
   /// `http.get` exactly as before.
   GoogleCalendarMonthReader({
     http.Client? client,
-    String apiKey = GoogleCalendarConfig.apiKey,
-    String calendarId = GoogleCalendarConfig.calendarId,
+    String? apiKey,
+    String? calendarId,
   }) : _client = client,
-       _apiKey = apiKey,
-       _calendarId = calendarId;
+       _apiKey = apiKey ?? GoogleCalendarConfig.apiKey,
+       _calendarId = calendarId ?? GoogleCalendarConfig.calendarId;
 
   /// Throws [CalendarReadException] when Google rejects the request; anything
   /// else thrown (timeout, no network) means the listing never arrived.
   Future<List<CalendarEvent>> fetchMonth(DateTime month) async {
+    if (!ChurchConfig.current.features.calendar ||
+        _apiKey.trim().isEmpty ||
+        _calendarId.trim().isEmpty) {
+      return const [];
+    }
     final window = calendarMonthWindow(month);
     final uri =
         Uri.https('www.googleapis.com', '', {

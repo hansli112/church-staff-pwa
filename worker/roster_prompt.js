@@ -18,6 +18,7 @@
 // re-run a script before their name would be recognised. Nobody remembers.
 
 import { HttpError, listDocuments, readDocument } from './firebase_user.js';
+import { churchConfig, dateKeyInZone } from './church_config.js';
 
 /// Must match LIVE_FIELDS in scripts/build-import-prompt.py. If the two drift,
 /// a published template keeps a `{{NAMES}}` in it and that literal text is what
@@ -57,7 +58,7 @@ export async function loadRosterContext(env, type, token, fetchImpl = fetch) {
     roles,
     events: namedArray(options?.fields?.[type]),
     names: staffNames(users),
-    today: new Date().toISOString().slice(0, 10),
+    today: dateKeyInZone(new Date(), churchConfig(env).timeZone),
   };
 }
 

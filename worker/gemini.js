@@ -7,6 +7,7 @@
 // google_calendar.js.
 
 import { HttpError, requireEnv } from './firebase_user.js';
+import { churchConfig, dateKeyInZone, requireFeature } from './church_config.js';
 
 // v1, not v1beta. The newer models answer v1beta with an empty-bodied 404,
 // which reads like "no such model" and sends you hunting for the wrong thing.
@@ -81,6 +82,7 @@ export async function callGemini(
     now = Date.now,
   },
 ) {
+  requireFeature(env, 'photoImport');
   const key = requireEnv(env, 'GEMINI_API_KEY');
   const models = modelList(env);
 
@@ -156,7 +158,7 @@ export async function callGemini(
     if (response.status === 503) {
       throw new HttpError(503, 'Gemini 免費版現在太多人用，過幾分鐘再試一次');
     }
-    if (quotaDetail !== null) throw new HttpError(429, quotaMessage(quotaDetail, now()));
+    if (quotaDetail !== null) throw new HttpError(429, quotaMessage(quotaDetail, now(), churchConfig(env).timeZone));
     if (response.status === 404) {
       // No model answered, and at least the last one does not exist — a typo in
       // GEMINI_MODEL or a retired model. Nothing the caller can do.
@@ -267,9 +269,9 @@ function modelList(env) {
 /// the first: someone pressing the button every few minutes until tomorrow is
 /// exactly what that message invites. The 429 body names the quota that ran
 /// out, so say which one it was.
-function quotaMessage(detail, nowMs) {
+function quotaMessage(detail, nowMs, timeZone) {
   if (/PerDay/i.test(detail)) {
-    return `今天的免費辨識次數用完了，${quotaResetText(nowMs)}後再試（或先展開下面自己貼 JSON）`;
+    return `今天的免費辨識次數用完了，${quotaResetText(nowMs, timeZone)}後再試（或先展開下面自己貼 JSON）`;
   }
   return '辨識太頻繁了，等一分鐘再試';
 }
@@ -280,17 +282,9 @@ const PACIFIC_HOUR = new Intl.DateTimeFormat('en-US', {
   hourCycle: 'h23',
 });
 
-/// When the daily quota comes back, in the words a Taiwanese user reads.
-///
-/// The free tier resets at midnight Pacific time. That is 15:00 in Taiwan while
-/// the US is on daylight saving time and 16:00 after it ends (early November),
-/// so a fixed "下午三點" is wrong for five months a year. Taiwan has no DST, so
-/// the reset is always 07:00 or 08:00 UTC: find the next of those instants that
-/// is midnight in Los Angeles.
-///
-/// Exported for the tests, which pin both sides of the DST switch.
-export function quotaResetText(nowMs) {
-  const TAIPEI_OFFSET_MS = 8 * 3600 * 1000;
+/// The quota resets at midnight Los Angeles, never at church-local midnight.
+/// Only the message is displayed in the deployment's time zone.
+export function quotaResetText(nowMs, timeZone = churchConfig().timeZone) {
   const today = new Date(nowMs);
   for (let day = 0; day < 3; day += 1) {
     for (const utcHour of [7, 8]) {
@@ -301,9 +295,12 @@ export function quotaResetText(nowMs) {
         utcHour,
       );
       if (reset <= nowMs || Number(PACIFIC_HOUR.format(reset)) !== 0) continue;
-      const taipeiDay = (ms) => Math.floor((ms + TAIPEI_OFFSET_MS) / 86400000);
-      const when = taipeiDay(reset) === taipeiDay(nowMs) ? '' : '明天';
-      return `${when}下午${utcHour === 7 ? '三' : '四'}點`;
+      const resetDay = dateKeyInZone(reset, timeZone);
+      const when = resetDay === dateKeyInZone(nowMs, timeZone) ? '今天' : resetDay;
+      const clock = new Intl.DateTimeFormat('en-GB', {
+        timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+      }).format(reset);
+      return `${when} ${clock}（${timeZone}）`;
     }
   }
   // Unreachable while Los Angeles keeps a UTC-7/-8 offset.

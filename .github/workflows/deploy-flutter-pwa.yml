@@ -10,10 +10,8 @@ env:
   FLUTTER_VERSION: '3.41.0'
 
 jobs:
-  # firestore.rules 是「繞過 App 直接打 Firestore」時唯一的防線，所以規則
-  # 有自己的一套 emulator 測試。刻意不擋 build-and-deploy：規則不在前端的
-  # 部署產物裡（要另外 firebase deploy --only firestore:rules），把兩件事綁
-  # 在一起只會讓前端部署平白變慢。測試紅了照樣看得見。
+  # Rules are deployed separately after operator review, but failing security
+  # tests must still stop an application deployment.
   firestore-rules:
     runs-on: ubuntu-latest
     steps:
@@ -46,6 +44,19 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Test deployment operator scripts
+        run: node --test scripts/*.test.mjs
+
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          python-version: '3.12'
+          activate-environment: true
+          no-project: true
+          enable-cache: false
+
+      - name: Test prompt publishing offline
+        run: uv run --no-project --offline scripts/build_import_prompt_test.py
+
       - name: Test the calendar write API
         run: npm test
         working-directory: functions-tests
@@ -70,11 +81,34 @@ jobs:
         working-directory: web-tests
 
   build-and-deploy:
-    needs: [functions-tests, web-tests]
+    needs: [firestore-rules, functions-tests, web-tests]
     runs-on: ubuntu-latest
     steps:
       # 1. 檢出程式碼
       - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      # A missing deployment config must never reset an existing church to the
+      # neutral example. Settings are public, but may be supplied as a secret.
+      - name: Prepare church deployment
+        env:
+          CHURCH_CONFIG_JSON: ${{ secrets.CHURCH_CONFIG_JSON || vars.CHURCH_CONFIG_JSON }}
+          CHURCH_ASSETS_DIR: ${{ vars.CHURCH_ASSETS_DIR || 'web' }}
+          CLOUDFLARE_PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          const raw = process.env.CHURCH_CONFIG_JSON;
+          if (!raw?.trim()) throw new Error('CHURCH_CONFIG_JSON secret/variable is required; copy config/church.example.json and configure your deployment.');
+          if (!/^[a-z0-9][a-z0-9-]{0,57}$/.test(process.env.CLOUDFLARE_PAGES_PROJECT || '')) throw new Error('Set CLOUDFLARE_PAGES_PROJECT to your Pages project name.');
+          fs.mkdirSync('.local', { recursive: true });
+          fs.writeFileSync('.local/church.json', raw);
+          JS
+          node scripts/prepare-deployment.mjs --config .local/church.json --assets "$CHURCH_ASSETS_DIR" --out .local/deployment
 
       # 2. 安裝 Flutter 環境 (GitHub 支援，Cloudflare 不支援)
       # 版本固定：跟著 stable 浮動的話，某天 Flutter 發版就可能無預警 build 壞掉。
@@ -133,6 +167,7 @@ jobs:
             fi
           done
           DART_DEFINES=(
+            --dart-define-from-file=.local/deployment/dart-defines.json
             --dart-define=FCM_WEB_VAPID_KEY="$FCM_WEB_VAPID_KEY"
             --dart-define=FIREBASE_API_KEY="$FIREBASE_API_KEY"
             --dart-define=FIREBASE_AUTH_DOMAIN="$FIREBASE_AUTH_DOMAIN"
@@ -175,6 +210,14 @@ jobs:
           # artifact 變兩份、CI 變慢，卻換不到任何東西。
           # 上游修好之後把 --wasm 加回來即可（?perf=1 的 HUD 會顯示 WASM/JS）。
           flutter build web --release --base-href "/" --no-web-resources-cdn "${DART_DEFINES[@]}"
+
+      - name: Apply configured PWA metadata
+        run: cp -R .local/deployment/web/. build/web/
+
+      # Build from the staged copy, whose Worker settings match the Flutter
+      # defines and generated rules. Only the _worker.js/ module directory is deployed, not config files.
+      - name: Build Pages Functions
+        run: npx --yes wrangler@4 pages functions build .local/deployment/functions --outdir=build/web/_worker.js
 
       # 6. 將版本號注入 cache_sw.js
       # BUILD_VERSION（每次 deploy 都不同）→ App 資產 cache，確保使用者
@@ -259,5 +302,5 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: >-
             pages deploy build/web
-            --project-name=church-staff-pwa
+            --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT }}
             --branch=${{ github.ref_name }}

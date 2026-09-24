@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' show DateUtils;
 
+import '../../../../core/time/church_time.dart';
 import '../../domain/entities/calendar_event.dart';
 import '../widgets/_calendar_models.dart';
 
@@ -22,7 +23,7 @@ class MonthEventLayout {
   /// days, rounded up to whole weeks. Four for a February that starts on a
   /// Sunday, six for a month like 2026/08.
   static int weekRowsFor(DateTime month) {
-    final startOffset = DateTime(month.year, month.month, 1).weekday % 7;
+    final startOffset = DateTime.utc(month.year, month.month, 1).weekday % 7;
     final totalDays = DateUtils.getDaysInMonth(month.year, month.month);
     return ((startOffset + totalDays) / 7).ceil();
   }
@@ -40,17 +41,17 @@ class MonthEventLayout {
   ) {
     final year = month.year;
     final monthValue = month.month;
-    final firstDay = DateTime(year, monthValue, 1);
+    final firstDay = DateTime.utc(year, monthValue, 1);
     final totalDays = DateUtils.getDaysInMonth(year, monthValue);
-    final monthStart = DateUtils.dateOnly(firstDay);
-    final monthEnd = DateUtils.dateOnly(DateTime(year, monthValue, totalDays));
+    final monthStart = ChurchTime.dateOnly(firstDay);
+    final monthEnd = DateTime.utc(year, monthValue, totalDays);
     final overlappingEvents =
         events
             .where((event) => !event.endDay.isBefore(monthStart))
             .where((event) => !event.startDay.isAfter(monthEnd))
             .toList()
           ..sort((a, b) {
-            final byStart = a.startTime.compareTo(b.startTime);
+            final byStart = a.startInstant.compareTo(b.startInstant);
             if (byStart != 0) return byStart;
             return a.title.compareTo(b.title);
           });
@@ -71,7 +72,7 @@ class MonthEventLayout {
       final weekDays = List<DateTime?>.generate(7, (weekday) {
         final dayNumber = week * 7 + weekday - firstWeekOffset + 1;
         if (dayNumber < 1 || dayNumber > totalDays) return null;
-        return DateUtils.dateOnly(DateTime(year, monthValue, dayNumber));
+        return DateTime.utc(year, monthValue, dayNumber);
       });
 
       final weekSegments = <WeekEventSegment>[];
@@ -105,7 +106,7 @@ class MonthEventLayout {
         if (byStart != 0) return byStart;
         final byEnd = b.endIndex.compareTo(a.endIndex);
         if (byEnd != 0) return byEnd;
-        return a.event.startTime.compareTo(b.event.startTime);
+        return a.event.startInstant.compareTo(b.event.startInstant);
       });
 
       for (final segment in weekSegments) {

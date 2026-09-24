@@ -5,8 +5,10 @@ import '../../domain/entities/event_option.dart';
 import '../../domain/entities/service_roster.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../domain/repositories/roster_repository.dart';
-import '../../domain/staff_directory.dart';
 import '../../domain/staff_order.dart';
+import '../../domain/roster_schedule.dart';
+import '../roster_document.dart';
+import '../../../../core/time/church_time.dart';
 
 class FirestoreRosterRepository implements RosterRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -29,11 +31,9 @@ class FirestoreRosterRepository implements RosterRepository {
     // 純讀路徑。不執行任何 backfill 寫入。
     // backfill 已移至 ensureQuarterRosters()，只由 admin 在進入編輯畫面時觸發。
     try {
-      final now = DateTime.now();
-      final fetchFrom = DateTime(
-        now.year,
-        now.month,
-        now.day,
+      final now = ChurchTime.now();
+      final fetchFrom = ChurchTime.dateOnly(
+        now,
       ).subtract(const Duration(days: 7));
       final fetchFromTimestamp = Timestamp.fromDate(fetchFrom);
 
@@ -58,11 +58,9 @@ class FirestoreRosterRepository implements RosterRepository {
     // 若 cache 尚未建立（首次開啟），SDK 丟 unavailable / failed-precondition，
     // catch 後回傳空 list，讓呼叫端降級到 server fetch。
     try {
-      final now = DateTime.now();
-      final fetchFrom = DateTime(
-        now.year,
-        now.month,
-        now.day,
+      final now = ChurchTime.now();
+      final fetchFrom = ChurchTime.dateOnly(
+        now,
       ).subtract(const Duration(days: 7));
       final fetchFromTimestamp = Timestamp.fromDate(fetchFrom);
 
@@ -89,32 +87,56 @@ class FirestoreRosterRepository implements RosterRepository {
     if (allowedTypes.isEmpty) return;
     try {
       final templates = await getServiceTemplates();
-      final generated = _generateQuarterRosters(templates, allowedTypes);
-      if (generated.isEmpty) return;
-
-      // Scope the existence check to the current quarter onwards so that
-      // historical data does not cause a full-collection scan.
-      final now = DateTime.now();
+      final now = ChurchTime.now();
       final quarterStartMonth = ((now.month - 1) ~/ 3) * 3 + 1;
-      final quarterStart = DateTime(now.year, quarterStartMonth, 1);
+      // 包含跨季的同一週與 UTC 偏移，避免更換星期後在同一週產生第二場。
+      final fetchFrom = DateTime.utc(
+        now.year,
+        quarterStartMonth,
+        1,
+      ).subtract(const Duration(days: 7));
       final snapshot = await _rostersCollection
-          .where(
-            'date',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(quarterStart),
-          )
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(fetchFrom))
           .get();
-      final existingIds = snapshot.docs.map((d) => d.id).toSet();
-
-      final missing = generated
-          .where((r) => !existingIds.contains(r.id))
-          .toList();
-      if (missing.isEmpty) return;
-
-      final batch = _firestore.batch();
-      for (final roster in missing) {
-        batch.set(_rostersCollection.doc(roster.id), _toFirestore(roster));
+      final existing = snapshot.docs.map(
+        (doc) =>
+            rosterFromFirestore(doc.data() as Map<String, dynamic>, doc.id),
+      );
+      final missing = planQuarterRosters(
+        now: now,
+        types: allowedTypes,
+        templates: templates,
+        existing: existing,
+      );
+      // 每個候選週的七個日期都在 transaction 內讀取，避免兩個使用不同星期
+      // 設定的客戶端同時建表。每批最多 140 個讀取、20 個寫入；先全部讀再寫。
+      for (var start = 0; start < missing.length; start += 20) {
+        final chunk = missing.skip(start).take(20).toList();
+        final weeks = [
+          for (final roster in chunk)
+            rosterWeekDocumentIds(roster.type, roster.date),
+        ];
+        await _firestore.runTransaction((transaction) async {
+          final snapshots = await Future.wait(
+            weeks
+                .expand((ids) => ids)
+                .toSet()
+                .map((id) => transaction.get(_rostersCollection.doc(id))),
+          );
+          final occupiedIds = {
+            for (final snapshot in snapshots)
+              if (snapshot.exists) snapshot.id,
+          };
+          for (var i = 0; i < chunk.length; i++) {
+            if (!weeks[i].any(occupiedIds.contains)) {
+              transaction.set(
+                _rostersCollection.doc(chunk[i].id),
+                rosterToFirestore(chunk[i]),
+              );
+            }
+          }
+        });
       }
-      await batch.commit();
     } catch (e, st) {
       log('ensureQuarterRosters failed', error: e, stackTrace: st);
       rethrow;
@@ -128,13 +150,13 @@ class FirestoreRosterRepository implements RosterRepository {
     DateTime now,
   ) {
     if (docs.isEmpty) return const [];
-    final today = DateTime(now.year, now.month, now.day);
-    final endDate = _nextQuarterEndDate(now);
+    final today = ChurchTime.dateOnly(now);
+    final endDate = rosterQuarterEnd(now);
 
     final rosters = docs
         .map((doc) {
           final data = doc.data() as Map<String, dynamic>;
-          return _fromFirestore(data, doc.id);
+          return rosterFromFirestore(data, doc.id);
         })
         .where((r) => !r.date.isBefore(today) && !r.date.isAfter(endDate))
         .toList();
@@ -152,7 +174,7 @@ class FirestoreRosterRepository implements RosterRepository {
   Future<void> updateRoster(ServiceRoster roster) async {
     try {
       // 確保將 id 寫入 document id
-      await _rostersCollection.doc(roster.id).set(_toFirestore(roster));
+      await _rostersCollection.doc(roster.id).set(rosterToFirestore(roster));
     } catch (e, st) {
       log('Update roster failed', error: e, stackTrace: st);
       throw Exception('更新服事表失敗: $e');
@@ -165,7 +187,7 @@ class FirestoreRosterRepository implements RosterRepository {
     try {
       final batch = _firestore.batch();
       for (final roster in rosters) {
-        batch.set(_rostersCollection.doc(roster.id), _toFirestore(roster));
+        batch.set(_rostersCollection.doc(roster.id), rosterToFirestore(roster));
       }
       await batch.commit();
     } catch (e, st) {
@@ -183,20 +205,12 @@ class FirestoreRosterRepository implements RosterRepository {
       final doc = await _templatesDoc.get();
       if (!doc.exists) {
         // 如果沒有設定，預設為空，讓使用者自行設定
-        return {
-          ServiceType.sundayService: [],
-          ServiceType.youth: [],
-          ServiceType.children: [],
-        };
+        return {for (final type in ServiceType.values) type: []};
       }
 
       final data = doc.data() as Map<String, dynamic>;
       return data.map((key, value) {
-        // key is string like 'sundayService', convert back to enum
-        final type = ServiceType.values.firstWhere(
-          (e) => e.name == key,
-          orElse: () => ServiceType.sundayService,
-        );
+        final type = ServiceType.fromName(key);
         return MapEntry(type, List<String>.from(value));
       });
     } catch (e, st) {
@@ -213,7 +227,7 @@ class FirestoreRosterRepository implements RosterRepository {
       final data = templates.map((key, value) {
         return MapEntry(key.name, value);
       });
-      await _templatesDoc.set(data);
+      await _templatesDoc.set(data, SetOptions(merge: true));
     } catch (e, st) {
       log('Update service templates failed', error: e, stackTrace: st);
       throw Exception('更新樣板失敗: $e');
@@ -259,7 +273,7 @@ class FirestoreRosterRepository implements RosterRepository {
             .toList();
         return MapEntry(key.name, cleaned);
       });
-      await _eventOptionsDoc.set(data);
+      await _eventOptionsDoc.set(data, SetOptions(merge: true));
     } catch (e, st) {
       log('Update event options failed', error: e, stackTrace: st);
       throw Exception('更新事件選項失敗: $e');
@@ -326,147 +340,5 @@ class FirestoreRosterRepository implements RosterRepository {
       // permission-denied（見 updateRostersAtomically）。
       rethrow;
     }
-  }
-
-  // Helper: Convert ServiceRoster to Map for Firestore
-  Map<String, dynamic> _toFirestore(ServiceRoster roster) {
-    return {
-      'date': Timestamp.fromDate(roster.date),
-      'type': roster.type.name,
-      'serviceName': roster.serviceName,
-      'specialEvents': roster.specialEvents,
-      'customEventColors': Map<String, dynamic>.from(roster.customEventColors),
-      'duties': roster.duties
-          .map(
-            (d) => {
-              'role': d.role,
-              'people': d.people,
-              'personIdsByName': d.personIdsByName,
-            },
-          )
-          .toList(),
-    };
-  }
-
-  // Helper: Convert Map from Firestore to ServiceRoster
-
-  Map<String, String> _parsePersonIdsByName(dynamic raw) {
-    if (raw is! Map) return const {};
-    final result = <String, String>{};
-    raw.forEach((key, value) {
-      if (key is! String || value is! String) return;
-      final name = key.trim();
-      final uid = value.trim();
-      if (name.isEmpty || uid.isEmpty) return;
-      result[name] = uid;
-    });
-    return result;
-  }
-
-  ServiceRoster _fromFirestore(Map<String, dynamic> data, String id) {
-    return ServiceRoster(
-      id: id,
-      date: (data['date'] as Timestamp).toDate(),
-      type: ServiceType.values.firstWhere(
-        (e) => e.name == data['type'],
-        orElse: () => ServiceType.sundayService,
-      ),
-      serviceName: data['serviceName'] as String? ?? '',
-      specialEvents: List<String>.from(data['specialEvents'] ?? const []),
-      customEventColors: () {
-        final raw = data['customEventColors'];
-        if (raw is! Map) return <String, int>{};
-        return Map<String, int>.fromEntries(
-          raw.entries
-              .where((e) => e.key is String && e.value is num)
-              .map((e) => MapEntry(e.key as String, (e.value as num).toInt())),
-        );
-      }(),
-      duties:
-          (data['duties'] as List<dynamic>?)?.map((item) {
-            final d = item as Map<String, dynamic>;
-            return RosterEntry(
-              role: d['role'] as String,
-              people: List<String>.from(d['people'] ?? []),
-              personIdsByName: _parsePersonIdsByName(d['personIdsByName']),
-            );
-          }).toList() ??
-          [],
-    );
-  }
-
-  String _makeRosterId(DateTime date, ServiceType type) {
-    final y = date.year.toString().padLeft(4, '0');
-    final m = date.month.toString().padLeft(2, '0');
-    final d = date.day.toString().padLeft(2, '0');
-    final typeKey = type.name;
-    return '$y$m${d}_$typeKey';
-  }
-
-  String _serviceNameForType(ServiceType type) {
-    switch (type) {
-      case ServiceType.sundayService:
-        return '主日崇拜';
-      case ServiceType.youth:
-        return '青年崇拜';
-      case ServiceType.children:
-        return '兒童主日學';
-    }
-  }
-
-  List<ServiceRoster> _generateQuarterRosters(
-    Map<ServiceType, List<String>> templates,
-    List<ServiceType> allowedTypes,
-  ) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final quarterStartMonth = ((now.month - 1) ~/ 3) * 3 + 1;
-    final targetEndDate = _nextQuarterEndDate(now);
-
-    DateTime cursor = DateTime(now.year, quarterStartMonth, 1);
-    while (cursor.weekday != DateTime.sunday) {
-      cursor = cursor.add(const Duration(days: 1));
-    }
-
-    final List<ServiceRoster> allRosters = [];
-    while (!cursor.isAfter(targetEndDate)) {
-      for (final type in allowedTypes) {
-        final roles = templates[type] ?? [];
-        final duties = roles
-            .map((role) => RosterEntry(role: role, people: [placeholderPerson]))
-            .toList();
-        final serviceDate = _serviceDate(cursor, type);
-        allRosters.add(
-          ServiceRoster(
-            id: _makeRosterId(serviceDate, type),
-            date: serviceDate,
-            type: type,
-            serviceName: _serviceNameForType(type),
-            duties: duties,
-          ),
-        );
-      }
-      cursor = cursor.add(const Duration(days: 7));
-    }
-
-    return allRosters.where((r) => !r.date.isBefore(today)).toList();
-  }
-
-  DateTime _nextQuarterEndDate(DateTime now) {
-    final quarterStartMonth = ((now.month - 1) ~/ 3) * 3 + 1;
-    final isLastMonthOfQuarter = now.month == (quarterStartMonth + 2);
-    final targetEndMonthRaw = isLastMonthOfQuarter
-        ? quarterStartMonth + 5
-        : quarterStartMonth + 2;
-    final targetEndYear = now.year + ((targetEndMonthRaw - 1) ~/ 12);
-    final targetEndMonth = ((targetEndMonthRaw - 1) % 12) + 1;
-    return DateTime(targetEndYear, targetEndMonth + 1, 0);
-  }
-
-  DateTime _serviceDate(DateTime sunday, ServiceType type) {
-    if (type == ServiceType.youth) {
-      return sunday.subtract(const Duration(days: 1));
-    }
-    return sunday;
   }
 }

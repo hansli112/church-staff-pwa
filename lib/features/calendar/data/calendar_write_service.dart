@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import '../../../core/config/google_calendar_config.dart';
+import '../../../core/time/church_time.dart';
 import '../domain/entities/calendar_event.dart';
 import 'google_calendar_event.dart';
 
@@ -36,6 +38,10 @@ class CalendarEventDraft {
   final String location;
   final String description;
 
+  /// Keep the selected occurrence when editing the repeated hour at DST's end.
+  final Duration? startUtcOffset;
+  final Duration? endUtcOffset;
+
   const CalendarEventDraft({
     required this.title,
     required this.allDay,
@@ -45,13 +51,15 @@ class CalendarEventDraft {
     required this.endTime,
     this.location = '',
     this.description = '',
+    this.startUtcOffset,
+    this.endUtcOffset,
   });
 
   /// A blank draft for [day], defaulting to a timed evening event: church
   /// events almost always have a start and an end, and an all-day default made
   /// people turn the switch off before they could enter one.
   factory CalendarEventDraft.forDay(DateTime day) {
-    final date = DateUtils.dateOnly(day);
+    final date = ChurchTime.dateOnly(day);
     return CalendarEventDraft(
       title: '',
       allDay: false,
@@ -73,7 +81,7 @@ class CalendarEventDraft {
   /// such events uneditable. The end date of a timed event is simply the
   /// calendar day its end instant falls on (clamped to the start day).
   factory CalendarEventDraft.fromEvent(CalendarEvent event) {
-    final timedEndDate = DateUtils.dateOnly(event.endTime);
+    final timedEndDate = ChurchTime.dateOnly(event.endTime);
     return CalendarEventDraft(
       title: event.title,
       allDay: event.isAllDay,
@@ -87,6 +95,8 @@ class CalendarEventDraft {
       endTime: TimeOfDay.fromDateTime(event.endTime),
       location: event.location ?? '',
       description: event.description ?? '',
+      startUtcOffset: event.isAllDay ? null : event.startTime.timeZoneOffset,
+      endUtcOffset: event.isAllDay ? null : event.endTime.timeZoneOffset,
     );
   }
 
@@ -109,6 +119,8 @@ class CalendarEventDraft {
       endTime: endTime ?? this.endTime,
       location: location ?? this.location,
       description: description ?? this.description,
+      startUtcOffset: startUtcOffset,
+      endUtcOffset: endUtcOffset,
     );
   }
 
@@ -118,20 +130,57 @@ class CalendarEventDraft {
   static String formatDate(DateTime date) =>
       '${_pad(date.year, 4)}-${_pad(date.month)}-${_pad(date.day)}';
 
-  static String _formatDateTime(DateTime date, TimeOfDay time) =>
-      '${formatDate(date)}T${_pad(time.hour)}:${_pad(time.minute)}';
+  static DateTime _atTime(
+    DateTime date,
+    TimeOfDay time,
+    Duration? preferredOffset,
+  ) {
+    if (preferredOffset != null) {
+      final candidate = ChurchTime.inZone(
+        DateTime.utc(
+          date.year,
+          date.month,
+          date.day,
+          time.hour,
+          time.minute,
+        ).subtract(preferredOffset),
+      );
+      if (candidate.year == date.year &&
+          candidate.month == date.month &&
+          candidate.day == date.day &&
+          candidate.hour == time.hour &&
+          candidate.minute == time.minute) {
+        return candidate;
+      }
+    }
+    return ChurchTime.atTime(date, time.hour, time.minute);
+  }
 
-  /// The request body. Wall-clock time with no offset on purpose: the server
-  /// attaches `timeZone: Asia/Taipei`, so "19:00" means 19:00 in Taipei
-  /// regardless of where the admin's device thinks it is.
+  static String _formatDateTime(
+    DateTime date,
+    TimeOfDay time,
+    Duration? preferredOffset,
+  ) {
+    final instant = _atTime(date, time, preferredOffset);
+    final offset = instant.timeZoneOffset;
+    final sign = offset.isNegative ? '-' : '+';
+    final minutes = offset.inMinutes.abs();
+    return '${formatDate(date)}T${_pad(time.hour)}:${_pad(time.minute)}:00'
+        '$sign${_pad(minutes ~/ 60)}:${_pad(minutes % 60)}';
+  }
+
+  /// Explicit church-zone offsets disambiguate repeated hours during DST.
+  /// The server independently checks them against its configured IANA zone.
   Map<String, dynamic> toJson() {
     return {
       'title': title.trim(),
       'allDay': allDay,
       'start': allDay
           ? formatDate(startDate)
-          : _formatDateTime(startDate, startTime),
-      'end': allDay ? formatDate(endDate) : _formatDateTime(endDate, endTime),
+          : _formatDateTime(startDate, startTime, startUtcOffset),
+      'end': allDay
+          ? formatDate(endDate)
+          : _formatDateTime(endDate, endTime, endUtcOffset),
       'location': location.trim(),
       'description': description.trim(),
     };
@@ -142,12 +191,20 @@ class CalendarEventDraft {
   String? validate() {
     if (title.trim().isEmpty) return '請填寫標題';
     if (allDay) {
-      if (endDate.isBefore(startDate)) return '結束日期不能早於開始日期';
+      if (ChurchTime.dateOnly(
+        endDate,
+      ).isBefore(ChurchTime.dateOnly(startDate))) {
+        return '結束日期不能早於開始日期';
+      }
       return null;
     }
-    final start = _formatDateTime(startDate, startTime);
-    final end = _formatDateTime(endDate, endTime);
-    if (end.compareTo(start) < 0) return '結束時間不能早於開始時間';
+    try {
+      final start = _atTime(startDate, startTime, startUtcOffset);
+      final end = _atTime(endDate, endTime, endUtcOffset);
+      if (end.isBefore(start)) return '結束時間不能早於開始時間';
+    } on FormatException catch (error) {
+      return error.message;
+    }
     return null;
   }
 }
@@ -205,6 +262,9 @@ class CalendarWriteService {
     Uri uri, {
     Map<String, dynamic>? body,
   }) async {
+    if (!GoogleCalendarConfig.isEnabled) {
+      throw const CalendarWriteException('行事曆未啟用或設定不完整');
+    }
     final token = await _idToken();
     if (token == null || token.isEmpty) {
       throw const CalendarWriteException('請先登入');

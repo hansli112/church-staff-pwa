@@ -19,11 +19,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _editingTemplates = {
-      ServiceType.sundayService: [],
-      ServiceType.youth: [],
-      ServiceType.children: [],
-    };
+    _editingTemplates = {for (final type in ServiceType.values) type: []};
   }
 
   @override
@@ -49,7 +45,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
     );
     if (name == null) return;
     setState(() {
-      _editingTemplates[type]?.add(name);
+      (_editingTemplates[type] ??= []).add(name);
     });
   }
 
@@ -186,6 +182,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
         appBar: AppBar(
           title: const Text('小組設定'),
           bottom: TabBar(
+            isScrollable: ServiceType.values.length > 3,
             tabs: ServiceType.values
                 .map((type) => Tab(text: type.label))
                 .toList(),

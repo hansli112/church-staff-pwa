@@ -115,6 +115,33 @@ describe('buildGoogleEvent', () => {
     assert.deepEqual(event.end, { dateTime: '2026-08-20T21:30:00', timeZone: 'Asia/Taipei' });
   });
 
+  test('explicit RFC3339 offsets must agree with the configured IANA timezone', () => {
+    const base = { title: 'Meeting', allDay: false, start: '2026-11-01T01:30:00-04:00' };
+    const options = { timeZone: 'America/New_York' };
+    assert.equal(buildGoogleEvent(base, options).start.dateTime, base.start);
+    assert.equal(buildGoogleEvent({ ...base, start: '2026-11-01T01:30:00.000-05:00' }, options).start.dateTime, '2026-11-01T01:30:00.000-05:00');
+    for (const start of ['2026-11-01T01:30:00+08:00', '2026-03-08T02:30:00-05:00', '2026-03-08T02:30:00-04:00', '2026-11-01T01:30:00+99:99']) {
+      assert.throws(() => buildGoogleEvent({ ...base, start }, options), { status: 400 });
+    }
+    assert.equal(buildGoogleEvent({ ...base, start: '2026-01-01T01:30:00Z' }, { timeZone: 'UTC' }).start.dateTime, '2026-01-01T01:30:00Z');
+  });
+
+  test('legacy wall clocks reject both DST gaps and ambiguous folds', () => {
+    for (const start of ['2026-03-08T02:30', '2026-11-01T01:30']) {
+      assert.throws(() => buildGoogleEvent({ title: 'Meeting', allDay: false, start }, { timeZone: 'America/New_York' }), { status: 400 });
+    }
+    for (const start of ['2026-10-04T02:15', '2026-04-05T01:45']) {
+      assert.throws(() => buildGoogleEvent({ title: 'Meeting', allDay: false, start }, { timeZone: 'Australia/Lord_Howe' }), { status: 400 });
+    }
+  });
+
+  test('end ordering compares instants across the autumn DST fold', () => {
+    const base = { title: 'Meeting', allDay: false, start: '2026-11-01T01:45:00-04:00', end: '2026-11-01T01:15:00-05:00' };
+    const options = { timeZone: 'America/New_York' };
+    assert.equal(buildGoogleEvent(base, options).end.dateTime, base.end);
+    assert.throws(() => buildGoogleEvent({ ...base, start: base.end, end: base.start }, options), { status: 400, message: '結束時間不能早於開始時間' });
+  });
+
   test('a timed event without an end collapses to a zero-length event', () => {
     const event = buildGoogleEvent({ title: 'x', allDay: false, start: '2026-08-20T19:00' });
     assert.equal(event.end.dateTime, '2026-08-20T19:00:00');
@@ -480,6 +507,7 @@ describe('notifyPayload', () => {
     assert.deepEqual(notifyPayload('created', CREATED_TIMED, ADMIN_ACTOR), {
       action: 'created',
       source: 'pwa',
+      timeZone: 'Asia/Taipei',
       id: 'evt-timed',
       title: '小組聚會',
       allDay: false,
@@ -535,6 +563,7 @@ describe('notifyPayload', () => {
     assert.deepEqual(payload, {
       action: 'created',
       source: 'pwa',
+      timeZone: 'Asia/Taipei',
       id: 'x',
       title: null,
       allDay: false,
@@ -561,6 +590,7 @@ describe('POST /api/calendar/events — LINE notification', () => {
     assert.deepEqual(fetchImpl.notifyPayload(), {
       action: 'created',
       source: 'pwa',
+      timeZone: 'Asia/Taipei',
       id: 'evt-timed',
       title: '小組聚會',
       allDay: false,

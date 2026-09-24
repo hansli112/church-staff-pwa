@@ -1,3 +1,4 @@
+import 'package:church_staff_pwa/core/time/church_time.dart';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
@@ -133,7 +134,7 @@ class _RosterScreenState extends State<RosterScreen>
     final canEdit = canEditRoster && widget.allowEdit;
     final allowedTypes =
         session.currentUser?.allowedRosterTypes ?? const <ServiceType>[];
-    final now = DateTime.now();
+    final now = ChurchTime.now();
     final quarterStartMonth = ((now.month - 1) ~/ 3) * 3 + 1;
     final isLastMonthOfQuarter = now.month == (quarterStartMonth + 2);
     final titleText = isLastMonthOfQuarter ? '本季/下季服事表' : '本季服事表';
@@ -168,6 +169,7 @@ class _RosterScreenState extends State<RosterScreen>
       bottom: allowedTypes.isEmpty
           ? null
           : TabBar(
+              isScrollable: allowedTypes.length > 3,
               controller: _tabController,
               tabs: allowedTypes.map((type) => Tab(text: type.label)).toList(),
               indicatorSize: TabBarIndicatorSize.label,

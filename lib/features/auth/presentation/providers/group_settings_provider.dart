@@ -9,9 +9,7 @@ class GroupSettingsProvider extends ChangeNotifier {
   final GroupSettingsRepository _repository;
 
   Map<ServiceType, List<String>> _templates = {
-    ServiceType.sundayService: [],
-    ServiceType.youth: [],
-    ServiceType.children: [],
+    for (final type in ServiceType.values) type: [],
   };
   bool _isLoading = false;
   String? _error;
@@ -42,11 +40,7 @@ class GroupSettingsProvider extends ChangeNotifier {
       final result = await _repository.getSmallGroupTemplates();
       if (token != _fetchToken) return; // stale fetch，丟棄結果
       _templates = result.isEmpty
-          ? {
-              ServiceType.sundayService: [],
-              ServiceType.youth: [],
-              ServiceType.children: [],
-            }
+          ? {for (final type in ServiceType.values) type: []}
           : result;
     } catch (e, st) {
       if (token != _fetchToken) return; // stale fetch，丟棄錯誤
@@ -67,11 +61,7 @@ class GroupSettingsProvider extends ChangeNotifier {
     _lastSessionUserId = userId;
 
     _fetchToken++; // 讓進行中的 fetch 過期
-    _templates = {
-      ServiceType.sundayService: [],
-      ServiceType.youth: [],
-      ServiceType.children: [],
-    };
+    _templates = {for (final type in ServiceType.values) type: []};
     _error = null;
 
     if (userId != null) {

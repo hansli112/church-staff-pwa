@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/config/google_calendar_config.dart';
+import '../../../core/time/church_time.dart';
 import '../domain/entities/calendar_event.dart';
 import 'google_calendar_month_reader.dart';
 
@@ -30,7 +32,9 @@ class CalendarMonthStore with ChangeNotifier {
 
   /// SharedPreferences 只保留距今前後這麼多個月的快取，避免 key 無限累積。
   static const int _cacheKeepMonths = 12;
-  static const String _cacheKeyPrefix = 'calendar_events_';
+  static String get _cacheKeyPrefix =>
+      'calendar_events_v2_${Uri.encodeComponent(GoogleCalendarConfig.calendarId)}_'
+      '${Uri.encodeComponent(GoogleCalendarConfig.timeZone)}_';
 
   final CalendarMonthFetcher _fetchMonth;
   final DateTime Function() _now;
@@ -55,7 +59,7 @@ class CalendarMonthStore with ChangeNotifier {
     DateTime Function()? now,
     Future<SharedPreferences> Function()? prefs,
   }) : _fetchMonth = fetchMonth ?? GoogleCalendarMonthReader().fetchMonth,
-       _now = now ?? DateTime.now,
+       _now = now ?? ChurchTime.now,
        _prefs = prefs ?? SharedPreferences.getInstance;
 
   /// The month's events, or null if nothing has arrived for it yet — neither
@@ -135,11 +139,11 @@ class CalendarMonthStore with ChangeNotifier {
   /// both sides rather than only where it starts.
   static List<DateTime> monthsSpannedBy(CalendarEvent event) {
     final months = <DateTime>[];
-    var cursor = DateTime(event.startDay.year, event.startDay.month, 1);
-    final last = DateTime(event.endDay.year, event.endDay.month, 1);
+    var cursor = DateTime.utc(event.startDay.year, event.startDay.month, 1);
+    final last = DateTime.utc(event.endDay.year, event.endDay.month, 1);
     while (!cursor.isAfter(last)) {
       months.add(cursor);
-      cursor = DateTime(cursor.year, cursor.month + 1, 1);
+      cursor = DateTime.utc(cursor.year, cursor.month + 1, 1);
     }
     return months;
   }
@@ -154,8 +158,8 @@ class CalendarMonthStore with ChangeNotifier {
     if (!_disposed) notifyListeners();
   }
 
-  // Also the SharedPreferences key, so it cannot change without orphaning
-  // every copy already on people's phones.
+  // The namespace includes calendar and zone so redeploying another church's
+  // settings cannot reuse dates from the previous deployment.
   static String _keyFor(DateTime month) =>
       '$_cacheKeyPrefix${month.year}_${month.month.toString().padLeft(2, '0')}';
 

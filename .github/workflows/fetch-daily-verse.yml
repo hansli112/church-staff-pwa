@@ -2,11 +2,9 @@ name: Fetch Daily Verse
 
 on:
   schedule:
-    - cron: '0 17 * * *'  # 01:00 Taiwan time (UTC+8)
-  workflow_dispatch:       # 允許手動觸發
+    - cron: '0 17 * * *' # UTC；部署者可依自己的時區調整
+  workflow_dispatch:
 
-# 手動觸發撞上排程時，兩個 job 會各自 checkout data 分支再 push，
-# 後跑完的那個必然被 non-fast-forward 拒絕。排隊跑就不會有這個問題。
 concurrency:
   group: fetch-daily-verse
   cancel-in-progress: false
@@ -14,64 +12,56 @@ concurrency:
 jobs:
   fetch:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: write
+    env:
+      # 與部署使用同一份設定，避免時區／資料來源各自漂移。Fork 沒設定就不抓。
+      CHURCH_CONFIG_JSON: ${{ secrets.CHURCH_CONFIG_JSON || vars.CHURCH_CONFIG_JSON }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: data
+          path: source
 
-      - name: Fetch and parse daily verse
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Validate shared source configuration
+        id: source-config
+        run: node source/scripts/fetch-daily-verse.mjs --check-config >> "$GITHUB_OUTPUT"
+
+      - name: Prepare data branch
+        if: steps.source-config.outputs.enabled == 'true'
+        shell: bash
         run: |
-          # curl --insecure bypasses the incomplete certificate chain on breadoflife.taipei
-          # --fail：對方回 5xx 時別把錯誤頁餵給 parser（HTML 長得夠像就可能誤判）。
-          # --max-time / --retry：對方掛住的話，沒有逾時就會一路占著 runner 到
-          #   job 的 6 小時上限才失敗；偶發的連線失敗則值得重試而不是直接紅。
-          curl -s -L --insecure --fail --retry 3 --retry-delay 5 --max-time 60 \
-            -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
-            -H "Accept: text/html,application/xhtml+xml" \
-            -H "Accept-Language: zh-TW,zh;q=0.9,en;q=0.8" \
-            "https://www.breadoflife.taipei/news/daily-bible/" > /tmp/daily-bible.html
+          set -euo pipefail
+          remote_ref=$(git -C source ls-remote --heads origin refs/heads/data)
+          if [ -n "$remote_ref" ]; then
+            git -C source fetch origin data
+            git -C source worktree add --detach ../data-site FETCH_HEAD
+          else
+            git -C source worktree add --detach ../data-site HEAD
+            git -C data-site checkout --orphan data
+            git -C data-site rm -rf .
+          fi
 
-          cat << 'SCRIPT' > /tmp/parse-verse.js
-          const fs = require('fs');
-          const html = fs.readFileSync('/tmp/daily-bible.html', 'utf8');
-          const match = html.match(/(\d{4}-\d{2}-\d{2})\s*<span>\|<\/span>\s*<span>\s*([^<]+?)\s*<\/span>/s);
-          if (!match) {
-            console.error('Pattern not found. HTML length: ' + html.length);
-            console.error('Snippet: ' + html.substring(0, 500));
-            process.exit(1);
-          }
-          // curl 走的是 --insecure（對方憑證鏈不完整），所以這份 HTML 沒有
-          // 傳輸層保證。內容會 commit 進 data 分支並直接顯示在 App 上，
-          // 這裡先做基本健檢，明顯不對的就讓 workflow 失敗而不是寫進去。
-          const rawRange = match[2].trim();
-          if (rawRange.length === 0 || rawRange.length > 60 || /[<>]/.test(rawRange)) {
-            console.error('Suspicious rawRange, refusing to write: ' + JSON.stringify(rawRange));
-            process.exit(1);
-          }
-          const todayTW = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
-          if (match[1] > todayTW) {
-            console.error('Parsed date is in the future: ' + match[1] + ' > ' + todayTW);
-            process.exit(1);
-          }
+      - name: Fetch and validate configured devotional source
+        if: steps.source-config.outputs.enabled == 'true'
+        run: node source/scripts/fetch-daily-verse.mjs data-site/daily-verse.json
 
-          const now = new Date();
-          const fetchedAt = new Date(now.getTime() + 8 * 3600000).toISOString().replace('Z', '+08:00');
-          const data = { date: match[1], rawRange, fetchedAt };
-          fs.writeFileSync('daily-verse.json', JSON.stringify(data, null, 2) + '\n');
-          console.log('Fetched:', JSON.stringify(data));
-          SCRIPT
-          node /tmp/parse-verse.js
-
-      - name: Commit and push if changed
+      - name: Commit and push changed data
+        if: steps.source-config.outputs.enabled == 'true'
+        working-directory: data-site
+        shell: bash
         run: |
-          git config user.name  'github-actions[bot]'
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           git add daily-verse.json
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore: update daily verse $(date -u +%Y-%m-%d)"
-            git push origin data
+            git commit -m "chore(devotional): update daily verse $(date -u +%Y-%m-%d)"
+            git push origin HEAD:refs/heads/data
           fi

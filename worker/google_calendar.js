@@ -12,14 +12,14 @@
 // credential must never reach the browser, hence this server side.
 
 import { HttpError, base64UrlToBytes, requireEnv } from './firebase_user.js';
+import { churchConfig, requireFeature } from './church_config.js';
 
 const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
 const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 const CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
 
-// Must match GoogleCalendarConfig.timeZone. The client sends wall-clock time
-// with no offset; this is what makes "19:00" mean 19:00 in Taipei.
-export const TIME_ZONE = 'Asia/Taipei';
+// Wall-clock requests are interpreted in the deployment's IANA time zone.
+export const TIME_ZONE = churchConfig().timeZone;
 
 const MAX_TITLE = 200;
 const MAX_LOCATION = 300;
@@ -151,7 +151,7 @@ export async function getAccessToken(env, fetchImpl = fetch, now = Date.now()) {
 // ---------------------------------------------------------------------------
 
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
-const DATE_TIME_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/;
+const DATE_TIME_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})?$/;
 
 /// Parses `YYYY-MM-DD`, rejecting values that match the shape but are not real
 /// dates (2026-02-30 would otherwise roll over into March).
@@ -177,8 +177,27 @@ function formatDate(stamp) {
   return new Date(stamp).toISOString().slice(0, 10);
 }
 
-/// Normalises `YYYY-MM-DDTHH:MM[:SS]` and validates both halves.
-function parseDateTime(text, label) {
+// Cache Intl formatters: a deployment has one timezone, and rebuilding ICU
+// formatters for every candidate wastes the Worker's CPU budget.
+const CLOCK_FORMATTERS = new Map();
+function wallClockStamp(instant, timeZone) {
+  if (!CLOCK_FORMATTERS.has(timeZone)) {
+    CLOCK_FORMATTERS.set(timeZone, new Intl.DateTimeFormat('en-US', {
+      timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+    }));
+  }
+  const parts = CLOCK_FORMATTERS.get(timeZone).formatToParts(instant);
+  const part = (name) => Number(parts.find((entry) => entry.type === name).value);
+  return Date.UTC(part('year'), part('month') - 1, part('day'),
+    part('hour'), part('minute'), part('second'), new Date(instant).getUTCMilliseconds());
+}
+
+/// Explicit offsets disambiguate the autumn DST fold. They are accepted only
+/// when the instant actually has the supplied wall clock in the church's zone.
+/// Legacy offset-less requests remain supported only for unique wall clocks;
+/// a nonexistent or ambiguous DST time is rejected rather than silently shifted.
+function parseDateTime(text, label, timeZone) {
   const match = typeof text === 'string' ? DATE_TIME_PATTERN.exec(text) : null;
   if (!match) throw new HttpError(400, `${label}格式不正確`);
   parseDate(`${match[1]}-${match[2]}-${match[3]}`, label);
@@ -189,7 +208,30 @@ function parseDateTime(text, label) {
     throw new HttpError(400, `${label}不是有效的時間`);
   }
   const pad = (value) => String(value).padStart(2, '0');
-  return `${match[1]}-${match[2]}-${match[3]}T${pad(hour)}:${pad(minute)}:${pad(second)}`;
+  const wall = `${match[1]}-${match[2]}-${match[3]}T${pad(hour)}:${pad(minute)}:${pad(second)}${match[7] ?? ''}`;
+  const nominal = Date.parse(wall + 'Z');
+  const offset = match[8];
+  if (offset) {
+    const stamp = Date.parse(wall + offset);
+    if (!Number.isFinite(stamp) || wallClockStamp(stamp, timeZone) !== nominal) {
+      throw new HttpError(400, `${label}的時區偏移不符合教會時區，或該時間不存在`);
+    }
+    return { text: wall + offset, stamp };
+  }
+  const candidates = new Set();
+  // Sample both sides of timezone transitions, including half-hour DST and
+  // date-line jumps. Verify each candidate against the actual zone database.
+  for (const hours of [-36, -24, -12, 0, 12, 24, 36]) {
+    const sample = nominal + hours * 3600000;
+    const candidate = nominal - (wallClockStamp(sample, timeZone) - sample);
+    if (wallClockStamp(candidate, timeZone) === nominal) candidates.add(candidate);
+  }
+  if (candidates.size !== 1) {
+    throw new HttpError(400, candidates.size === 0
+      ? `${label}在教會時區不存在，請重新選擇`
+      : `${label}有兩個可能時間，請指定明確時區偏移`);
+  }
+  return { text: wall, stamp: [...candidates][0] };
 }
 
 function optionalText(value, label, max) {
@@ -214,7 +256,7 @@ function optionalText(value, label, max) {
 /// but PATCH merges, so switching an event between all-day and timed would
 /// otherwise leave the old `date`/`dateTime` in place and the API rejects an
 /// event that carries both.
-export function buildGoogleEvent(body, { forPatch = false } = {}) {
+export function buildGoogleEvent(body, { forPatch = false, timeZone = TIME_ZONE } = {}) {
   if (body === null || typeof body !== 'object' || Array.isArray(body)) {
     throw new HttpError(400, '資料格式不正確');
   }
@@ -246,15 +288,14 @@ export function buildGoogleEvent(body, { forPatch = false } = {}) {
       event.end.dateTime = null;
     }
   } else {
-    const start = parseDateTime(body.start, '開始時間');
+    const start = parseDateTime(body.start, '開始時間', timeZone);
     const end = body.end === undefined || body.end === null
       ? start
-      : parseDateTime(body.end, '結束時間');
-    // Both strings are fixed-width and zero-padded, so lexical order is
-    // chronological order.
-    if (end < start) throw new HttpError(400, '結束時間不能早於開始時間');
-    event.start = { dateTime: start, timeZone: TIME_ZONE };
-    event.end = { dateTime: end, timeZone: TIME_ZONE };
+      : parseDateTime(body.end, '結束時間', timeZone);
+    // A DST fold can reverse lexical wall-clock order. Compare instants.
+    if (end.stamp < start.stamp) throw new HttpError(400, '結束時間不能早於開始時間');
+    event.start = { dateTime: start.text, timeZone };
+    event.end = { dateTime: end.text, timeZone };
     if (forPatch) {
       event.start.date = null;
       event.end.date = null;
@@ -295,6 +336,7 @@ async function fetchWithTimeout(fetchImpl, url, init = {}) {
 /// `eventId` is appended as a path segment; it comes from the URL, so it is
 /// encoded rather than interpolated raw.
 export async function callCalendar(env, { method, eventId, body, fetchImpl = fetch }) {
+  requireFeature(env, 'calendar');
   const calendarId = requireEnv(env, 'GOOGLE_CALENDAR_ID');
   const token = await getAccessToken(env, fetchImpl);
 

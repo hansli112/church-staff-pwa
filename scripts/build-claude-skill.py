@@ -10,7 +10,7 @@ JSON。上傳一次，之後在 claude.ai 附上照片說「轉 json」就好。
     規則全部寫死在技能裡，錯了要等 app 的匯入結果視窗才會知道。
 
 用法：
-    python3 scripts/build-claude-skill.py
+    uv run scripts/build-claude-skill.py
 
 產物在 .local/claude-skill/（已 gitignore）：
     roster-import/SKILL.md
@@ -28,7 +28,7 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 LOCAL = ROOT / ".local"
 OUT = LOCAL / "claude-skill"
-TYPES = {"sundayService": "主日", "youth": "青崇", "children": "兒主"}
+from _church_config import CONFIG, TYPES
 
 FRONTMATTER = """---
 name: roster-import
@@ -40,16 +40,13 @@ description: 把教會服事表的照片轉成可以匯入服事表 app 的 JSON
 ## 第一步：判斷是哪一個崇拜
 
 照片標題通常寫得出來（例如「青年崇拜服事表」「兒童主日學服事表」）。
-判斷不出來就**問使用者**，不要猜 —— 三個崇拜的服事項目不一樣
-（主日是「投影」，青崇是「PPT」），弄錯整份都會對不上。
+判斷不出來就**問使用者**，不要猜；不同聚會的服事項目可能不一樣。
 
 對應到下面的章節：
 
 | 標題出現 | 用哪一節 |
 |---|---|
-| 主日崇拜、主日 | 主日 |
-| 青年崇拜、青崇 | 青崇 |
-| 兒童主日學、兒主 | 兒主 |
+{{SERVICE_TABLE}}
 
 ## 第二步：照那一節的規則轉
 
@@ -66,7 +63,7 @@ description: 把教會服事表的照片轉成可以匯入服事表 app 的 JSON
 
 
 def main() -> None:
-    # 先把三份最新的 prompt 產生出來（會從 Firestore 抓現況）。
+    # 先把各聚會最新的 prompt 產生出來（會從 Firestore 抓現況）。
     build = subprocess.run(
         [sys.executable, str(ROOT / "scripts" / "build-import-prompt.py")],
         cwd=ROOT,
@@ -92,7 +89,13 @@ def main() -> None:
     if OUT.exists():
         shutil.rmtree(OUT)
     skill_dir.mkdir(parents=True)
-    (skill_dir / "SKILL.md").write_text(FRONTMATTER + "\n".join(sections))
+    service_table = "\n".join(
+        f"| {service['name']}、{service['label']} | {service['label']} |"
+        for service in CONFIG["services"]
+    )
+    (skill_dir / "SKILL.md").write_text(
+        FRONTMATTER.replace("{{SERVICE_TABLE}}", service_table) + "\n".join(sections)
+    )
 
     archive = shutil.make_archive(str(OUT / "roster-import"), "zip", OUT, "roster-import")
     size = pathlib.Path(archive).stat().st_size

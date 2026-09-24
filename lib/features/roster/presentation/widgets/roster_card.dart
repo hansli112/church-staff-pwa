@@ -93,7 +93,7 @@ class RosterCard extends StatelessWidget {
         subtitle: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(roster.serviceName),
+            Text(roster.displayName),
             if (roster.specialEvents.isNotEmpty || isEditMode)
               const SizedBox(width: 8),
             if (roster.specialEvents.isNotEmpty || isEditMode)

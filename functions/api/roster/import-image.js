@@ -12,6 +12,7 @@
 // in parseRosterImportJson on the client, which is the same code path a pasted
 // JSON goes through. One place decides what an import means.
 
+import { requireFeature } from '../../../worker/church_config.js';
 import { authorize } from '../../../worker/authorize.js';
 import { readDocument, HttpError } from '../../../worker/firebase_user.js';
 import { handleWith, jsonResponse, readJsonBody } from '../../../worker/http.js';
@@ -48,6 +49,7 @@ const MAX_BODY_BYTES = 4 * 1024 * 1024;
 
 export const onRequestPost = ({ request, env }) =>
   handleWith('roster import function failed', async () => {
+    requireFeature(env, 'photoImport');
     rejectOversizedBody(request);
 
     // Who and which group before the body is read; which roster after, since

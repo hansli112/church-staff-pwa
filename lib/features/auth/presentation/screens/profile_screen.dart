@@ -3,6 +3,8 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/config/church_config.dart';
+import '../../../../core/time/church_time.dart';
 import '../../../../core/services/app_update_service.dart';
 import '../../../../core/services/app_version_service.dart';
 import '../../../../core/services/push_notification_service.dart';
@@ -112,6 +114,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _refreshPushStatus() async {
+    if (!ChurchConfig.current.features.pushNotifications) return;
     final userId = _statusUserId;
     if (userId == null) return;
     setState(() => _isPushLoading = true);
@@ -131,6 +134,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _togglePush(bool value) async {
+    if (!ChurchConfig.current.features.pushNotifications) return;
     final userId = context.read<SessionProvider>().currentUser?.id;
     if (userId == null) return;
     setState(() => _isPushLoading = true);
@@ -153,6 +157,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           PushToggleFailureReason.saveTokenFailed => '已取得識別碼，但儲存失敗，請稍後再試。',
           PushToggleFailureReason.savePreferenceFailed => '通知偏好儲存失敗，請稍後再試。',
           PushToggleFailureReason.notInitialized => '推播服務尚未初始化完成，請重整後再試。',
+          PushToggleFailureReason.disabled => '推播通知未啟用。',
           PushToggleFailureReason.notWeb => '目前環境不支援網頁推播。',
           null => '通知未啟用，請確認瀏覽器通知權限設定。',
         };
@@ -270,12 +275,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           const Divider(),
 
-          SwitchListTile(
-            secondary: const Icon(Icons.notifications_active),
-            title: const Text('服事提醒'),
-            subtitle: const Text('每週一晚間發送提醒'),
-            value: _isPushEnabled,
-            onChanged: _isPushLoading ? null : _togglePush,
+          if (ChurchConfig.current.features.pushNotifications)
+            SwitchListTile(
+              secondary: const Icon(Icons.notifications_active),
+              title: const Text('服事提醒'),
+              subtitle: const Text('每週一晚間發送提醒'),
+              value: _isPushEnabled,
+              onChanged: _isPushLoading ? null : _togglePush,
+            ),
+
+          ListTile(
+            leading: const Icon(Icons.description_outlined),
+            title: const Text('開源授權'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => showLicensePage(
+              context: context,
+              applicationName: ChurchConfig.current.appName,
+            ),
           ),
 
           // Logout Button
@@ -384,6 +400,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   String _buildVersionDateText(AppVersionInfo? info) {
-    return DateFormat('yyyy/MM/dd HH:mm').format(info!.generatedAt);
+    return DateFormat(
+      'yyyy/MM/dd HH:mm',
+    ).format(ChurchTime.inZone(info!.generatedAt));
   }
 }

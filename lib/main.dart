@@ -6,6 +6,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
+import 'core/config/church_config.dart';
 import 'core/services/push_notification_service.dart';
 import 'features/roster/data/repositories/firestore_roster_repository.dart';
 import 'features/roster/presentation/providers/roster_provider.dart';
@@ -19,6 +20,7 @@ import 'presentation/screens/main_scaffold.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final config = ChurchConfig.current;
 
   // Run independent inits in parallel to shave startup latency.
   await Future.wait([
@@ -40,7 +42,9 @@ void main() async {
   // PushNotificationService.initialize only registers stream listeners; we
   // don't need to block runApp on it.
   final pushNotificationService = PushNotificationService();
-  unawaited(pushNotificationService.initialize());
+  if (config.features.pushNotifications) {
+    unawaited(pushNotificationService.initialize());
+  }
 
   runApp(ChurchApp(pushNotificationService: pushNotificationService));
 }
@@ -104,7 +108,7 @@ class ChurchApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        title: '竹圍靈糧福音中心',
+        title: ChurchConfig.current.appName,
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: colorScheme,
@@ -191,7 +195,7 @@ class _AuthRestoringShell extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '竹圍靈糧福音中心',
+                ChurchConfig.current.appName,
                 style: theme.textTheme.headlineMedium,
                 textAlign: TextAlign.center,
               ),

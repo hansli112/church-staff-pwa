@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/time/church_time.dart';
 import '../../data/calendar_write_service.dart';
 
 final _dateLabelFormat = DateFormat('yyyy/MM/dd (E)', 'zh_TW');
@@ -86,19 +87,20 @@ class _EventFormSheetState extends State<_EventFormSheet> {
       lastDate: DateTime(anchor.year + 3, 12, 31),
     );
     if (picked == null || !mounted) return;
+    final date = ChurchTime.dateOnly(picked);
 
     setState(() {
       if (isStart) {
         // Moving the start past the end is almost always a person changing the
         // date of a one-day event, not asking for a negative range. Drag the
         // end along instead of making them fix a validation error.
-        final shouldFollow = _draft.endDate.isBefore(picked);
+        final shouldFollow = _draft.endDate.isBefore(date);
         _draft = _draft.copyWith(
-          startDate: picked,
-          endDate: shouldFollow ? picked : _draft.endDate,
+          startDate: date,
+          endDate: shouldFollow ? date : _draft.endDate,
         );
       } else {
-        _draft = _draft.copyWith(endDate: picked);
+        _draft = _draft.copyWith(endDate: date);
       }
       _error = null;
     });

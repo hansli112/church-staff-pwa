@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../../core/config/church_config.dart';
 import '../providers/session_provider.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -58,7 +59,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                '竹圍靈糧福音中心',
+                                ChurchConfig.current.appName,
                                 style: Theme.of(
                                   context,
                                 ).textTheme.headlineMedium,

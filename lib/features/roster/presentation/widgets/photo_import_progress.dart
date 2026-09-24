@@ -55,11 +55,11 @@ class _PhotoImportProgressState extends State<PhotoImportProgress> {
 String photoImportProgressText(Duration elapsed) {
   final seconds = elapsed.inSeconds;
   if (elapsed < RosterImportService.usualDuration) {
-    return 'Gemini 正在讀照片，已經 $seconds 秒\n'
-        '通常要一分鐘左右；免費版忙碌時伺服器會自動重試';
+    return '正在讀照片，已經 $seconds 秒\n'
+        '通常要一分鐘左右；服務忙碌時伺服器會自動重試';
   }
   final remaining = (RosterImportService.timeout - elapsed).inSeconds;
   if (remaining <= 0) return '快要逾時了，已經 $seconds 秒';
-  return '比平常久，Gemini 免費版應該在忙，伺服器正在重試\n'
+  return '比平常久，仍在等待辨識結果\n'
       '已經 $seconds 秒，最多再等 $remaining 秒';
 }

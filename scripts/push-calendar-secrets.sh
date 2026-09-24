@@ -15,20 +15,17 @@
 #
 # 需要 .local/service-account.json（已 gitignore）。
 #
-# LINE 通知（選用）：另外再讀 .local/n8n-notify-url 和 .local/n8n-notify-secret，
-# 兩個都在才會推，Production 與 Preview 都推。
-#
-# Preview 也推，是因為日常操作就在 dev 的預覽站上，而 n8n 那條 workflow 的
-# 群組是寫死的 —— 兩個環境本來就會發到同一個群組，把 Preview 關掉只會讓
-# 平常在用的站台收不到通知。
+# LINE 通知（選用）：另讀 .local/n8n-notify-url 與 .local/n8n-notify-secret。
+# Wrangler Pages secret put 只支援 Production，沒有 --env。
+# Preview 必須另用 Cloudflare Dashboard 或 REST API 設定，避免測試通知發到正式群組。
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROJECT_NAME="${CLOUDFLARE_PAGES_PROJECT:-church-staff-pwa}"
+PROJECT_NAME="${CLOUDFLARE_PAGES_PROJECT:?Set CLOUDFLARE_PAGES_PROJECT to your own Pages project}"
 KEY_FILE="$ROOT/.local/service-account.json"
 
-WRANGLER=(npx --yes wrangler)
+WRANGLER=(npx --yes wrangler@4)
 
 if [[ ! -f "$KEY_FILE" ]]; then
   echo "找不到 $KEY_FILE" >&2
@@ -67,21 +64,20 @@ if [[ -z "$PROJECT_ID" || -z "$CALENDAR_ID" ]]; then
   exit 1
 fi
 
-# Production 與 Preview 是分開的兩組設定。只設 production 的話，push 到 dev
-# 產生的預覽站點會回「伺服器設定不完整」，而 production 看起來一切正常。
-for environment in production preview; do
+# Production only; Wrangler does not expose a Pages preview flag.
+for environment in production; do
   echo "── $environment ──"
 
   # 全部走 secret：值不會回顯在 dashboard 或 wrangler 的輸出裡，而 Function
   # 讀的方式完全相同。
   "${WRANGLER[@]}" pages secret put GOOGLE_SERVICE_ACCOUNT_JSON \
-    --project-name "$PROJECT_NAME" --env "$environment" < "$KEY_FILE"
+    --project-name "$PROJECT_NAME" < "$KEY_FILE"
 
   printf '%s' "$PROJECT_ID" | "${WRANGLER[@]}" pages secret put FIREBASE_PROJECT_ID \
-    --project-name "$PROJECT_NAME" --env "$environment"
+    --project-name "$PROJECT_NAME"
 
   printf '%s' "$CALENDAR_ID" | "${WRANGLER[@]}" pages secret put GOOGLE_CALENDAR_ID \
-    --project-name "$PROJECT_NAME" --env "$environment"
+    --project-name "$PROJECT_NAME"
 done
 
 # ── LINE 通知（選用）────────────────────────────────────────────────────────
@@ -108,12 +104,12 @@ NOTIFY_SECRET="$(notify_secret)"
 
 echo
 if [[ -n "$NOTIFY_URL" && -n "$NOTIFY_SECRET" ]]; then
-  for environment in production preview; do
+  for environment in production; do
     echo "── LINE 通知：$environment ──"
     printf '%s' "$NOTIFY_URL" | "${WRANGLER[@]}" pages secret put NOTIFY_WEBHOOK_URL \
-      --project-name "$PROJECT_NAME" --env "$environment"
+      --project-name "$PROJECT_NAME"
     printf '%s' "$NOTIFY_SECRET" | "${WRANGLER[@]}" pages secret put NOTIFY_WEBHOOK_SECRET \
-      --project-name "$PROJECT_NAME" --env "$environment"
+      --project-name "$PROJECT_NAME"
   done
 else
   echo "略過 LINE 通知：找不到 .local/n8n-notify-url 或 .local/n8n-notify-secret。"
