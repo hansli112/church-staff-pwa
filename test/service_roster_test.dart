@@ -49,41 +49,6 @@ void main() {
 
   // ── RosterEntry ────────────────────────────────────────────────────────────
   group('RosterEntry', () {
-    test('assignedUserIds：返回去重後的 uid 列表，保持首次出現順序', () {
-      final entry = RosterEntry(
-        role: '領會',
-        people: const ['Alice', 'Bob'],
-        personIdsByName: const {'Alice': 'uid-a', 'Bob': 'uid-b'},
-      );
-      expect(entry.assignedUserIds, ['uid-a', 'uid-b']);
-    });
-
-    test('assignedUserIds：重複 uid 只出現一次', () {
-      final entry = RosterEntry(
-        role: '敬拜',
-        people: const ['Alice', 'Carol'],
-        personIdsByName: const {
-          'Alice': 'uid-a',
-          'Carol': 'uid-a', // 同一人兩個名字
-        },
-      );
-      expect(entry.assignedUserIds, ['uid-a']);
-    });
-
-    test('assignedUserIds：空白 uid 被過濾掉', () {
-      final entry = RosterEntry(
-        role: '講員',
-        people: const ['Dave'],
-        personIdsByName: const {'Dave': '   '},
-      );
-      expect(entry.assignedUserIds, isEmpty);
-    });
-
-    test('assignedUserIds：personIdsByName 為空時回傳空列表', () {
-      final entry = RosterEntry(role: '司琴', people: const ['待定']);
-      expect(entry.assignedUserIds, isEmpty);
-    });
-
     test('copyWith 只更新 role 時其他欄位保持不變', () {
       final original = RosterEntry(
         role: '領會',

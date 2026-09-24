@@ -24,18 +24,6 @@ class RosterEntry {
       personIdsByName: personIdsByName ?? this.personIdsByName,
     );
   }
-
-  List<String> get assignedUserIds {
-    final seen = <String>{};
-    final ids = <String>[];
-    for (final id in personIdsByName.values) {
-      final trimmed = id.trim();
-      if (trimmed.isEmpty || seen.contains(trimmed)) continue;
-      seen.add(trimmed);
-      ids.add(trimmed);
-    }
-    return ids;
-  }
 }
 
 class ServiceRoster {
