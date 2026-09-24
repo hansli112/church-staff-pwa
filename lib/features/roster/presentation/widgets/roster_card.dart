@@ -15,6 +15,7 @@ import '../write_failure.dart';
 import 'duty_row.dart';
 import '../../domain/staff_directory.dart';
 import '../../domain/staff_order.dart';
+import 'event_color_picker.dart';
 
 part '_roster_people_dialog.dart';
 part '_special_event_dialog.dart';

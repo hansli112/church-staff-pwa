@@ -18,7 +18,8 @@ void main() {
     test('fromJson：缺少 color 欄位時使用預設顏色', () {
       final e = EventOption.fromJson({'name': '復活節'});
       expect(e.name, '復活節');
-      expect(e.color, 0xFFF39C12);
+      // 預設色要在色盤裡，設定頁才點得回來。
+      expect(eventColorPalette, contains(e.color));
     });
 
     test('fromJson：缺少 name 欄位時 name 為空字串', () {
@@ -34,7 +35,8 @@ void main() {
 
     test('fromJson：color 非 int 時回退預設顏色', () {
       final e = EventOption.fromJson({'name': '聖誕', 'color': '紅色'});
-      expect(e.color, 0xFFF39C12);
+      // 預設色要在色盤裡，設定頁才點得回來。
+      expect(eventColorPalette, contains(e.color));
     });
 
     test('copyWith 只更新 name 時 color 不變', () {

@@ -829,6 +829,10 @@ void main() {
       expect(pickEventColor(existing), eventColorPalette[1]);
     });
 
+    test('色盤沒有灰色：那是「沒設顏色」的顏色', () {
+      expect(eventColorPalette, isNot(contains(fallbackEventColor)));
+    });
+
     test('色盤外的顏色（手動設的舊資料）不影響挑選', () {
       final existing = [const EventOption(name: '舊的', color: 0xFF000000)];
       expect(pickEventColor(existing), eventColorPalette.first);

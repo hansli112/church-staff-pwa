@@ -274,12 +274,12 @@ class FirestoreRosterRepository implements RosterRepository {
     return items
         .map((item) {
           if (item is String) {
-            return EventOption(name: item, color: 0xFFF39C12);
+            return EventOption(name: item, color: 0xFFD97706);
           }
           if (item is Map) {
             return EventOption.fromJson(Map<String, dynamic>.from(item));
           }
-          return const EventOption(name: '', color: 0xFFF39C12);
+          return const EventOption(name: '', color: 0xFFD97706);
         })
         .where((e) => e.name.trim().isNotEmpty)
         .toList();

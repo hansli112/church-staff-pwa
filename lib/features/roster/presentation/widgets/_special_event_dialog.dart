@@ -149,34 +149,10 @@ class _SpecialEventDialogState extends State<_SpecialEventDialog> {
                     style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
                   ),
                   const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 0,
-                    runSpacing: 0,
-                    children: eventColorPalette.map((colorValue) {
-                      final isSelected = _pendingCustomColor == colorValue;
-                      return InkWell(
-                        onTap: () {
-                          setSheetState(() {
-                            _pendingCustomColor = colorValue;
-                          });
-                        },
-                        borderRadius: BorderRadius.circular(999),
-                        child: Padding(
-                          padding: const EdgeInsets.all(11),
-                          child: Container(
-                            width: 26,
-                            height: 26,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Color(colorValue),
-                              border: isSelected
-                                  ? Border.all(color: Colors.black54, width: 2)
-                                  : null,
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                  EventColorPicker(
+                    selected: _pendingCustomColor,
+                    onSelected: (color) =>
+                        setSheetState(() => _pendingCustomColor = color),
                   ),
                 ],
               ),
