@@ -11,6 +11,7 @@ import '../../data/roster_photo.dart';
 import '../../data/roster_photo_picker.dart';
 import '../providers/roster_provider.dart';
 import '../widgets/roster_card.dart';
+import '../widgets/photo_import_progress.dart';
 import '../../../../core/utils/error_messages.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/utils/scroll_anchor.dart';
@@ -681,6 +682,10 @@ class _ImportJsonSheetState extends State<_ImportJsonSheet> {
                 label: Text(_isConverting ? '辨識中…' : '從照片辨識'),
               ),
             ),
+            if (_isConverting) ...[
+              const SizedBox(height: 6),
+              const PhotoImportProgress(),
+            ],
             const SizedBox(height: 4),
             // 收合的理由不是版面好看，是這條路平常用不到：Gemini 掛掉、額度
             // 用完、模型下架時，從別處轉好再貼進來是唯一還走得通的路，所以它

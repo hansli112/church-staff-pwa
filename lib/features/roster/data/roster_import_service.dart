@@ -29,7 +29,13 @@ class RosterImportService {
   /// worker 最晚在第 75 秒開始最後一次、那一次最多給 100 秒（見
   /// worker/gemini.js），這裡要留得比 175 秒寬，否則使用者會先看到「逾時」，
   /// 而那邊其實正要成功。
-  static const Duration _timeout = Duration(seconds: 190);
+  ///
+  /// 公開是因為匯入畫面要倒數「最多再等幾秒」，那個數字得跟這裡同一個。
+  static const Duration timeout = Duration(seconds: 190);
+
+  /// 一次順利的辨識大約 50–70 秒（見 worker/gemini.js）。超過這個時間還沒回來，
+  /// 多半是 Gemini 回了忙碌、worker 在重試 —— 畫面用它決定要不要改口說「比平常久」。
+  static const Duration usualDuration = Duration(seconds: 75);
 
   final http.Client _client;
   final IdTokenProvider _idToken;
@@ -70,8 +76,8 @@ class RosterImportService {
 
     final http.Response response;
     try {
-      final streamed = await _client.send(request).timeout(_timeout);
-      response = await http.Response.fromStream(streamed).timeout(_timeout);
+      final streamed = await _client.send(request).timeout(timeout);
+      response = await http.Response.fromStream(streamed).timeout(timeout);
     } on TimeoutException {
       throw const RosterImportException('辨識逾時了。請把照片裁到只剩表格，或裁成上下兩半分兩次辨識');
     } catch (_) {
