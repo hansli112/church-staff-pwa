@@ -22,13 +22,15 @@
 
 > **Cloud Shell 一打開可能就跳出「授權 Cloud Shell」視窗，請按「授權」。** 這是 Google 官方的視窗，讓 Cloud Shell 用你自己的 Google 帳號建立專案；按「拒絕」會讓後面的步驟無法進行。之後若再出現同樣的視窗，也一樣按「授權」。
 
-在下方的 Cloud Shell 終端機執行：
+**不用找程式在哪個資料夾。**按下方指令卡右上角的「在終端機執行」圖示（小終端機），然後在黑色終端機按一次 Enter。它會尋找已下載的程式；如果沒有，就從 GitHub 下載後啟動。只需做這一次，不要逐字輸入指令。
 
-```bash
-cd ~/cloudshell_open/church-staff-pwa && bash scripts/start-installation.sh
+```sh
+bash -c 's=$(find "$HOME" -maxdepth 7 -type f -path "*/church-staff-pwa/scripts/start-installation.sh" -print -quit); if [ -z "$s" ]; then d="$HOME/cloudshell_open/church-staff-pwa"; mkdir -p "$(dirname "$d")" && git clone --branch dev --single-branch https://github.com/hansli112/church-staff-pwa.git "$d" || exit 1; s="$d/scripts/start-installation.sh"; fi; exec bash "$s"'
 ```
 
-第一次會下載約 1.5 GB 的工具，終端機會顯示目前是第幾步和下載進度條，通常需要 3–10 分鐘；進度條還在動就代表沒有當機。如果之前開過這份教學，啟動時會自動更新到最新版本。
+目前精靈仍在 `dev` 分支驗收；合併到 `main` 後，教學會改用 `main`。如果終端機顯示紅色錯誤，先停下來，不要重複按「執行」。
+
+第一次會下載約 1.5 GB 的工具，終端機會顯示目前是第幾步和下載進度條，通常需要 3–10 分鐘。下載進度暫停不代表當機；若超過五分鐘完全不動，記下畫面上的錯誤訊息再求助，不必開第二個終端機。重新開啟教學時，只要再按同一張指令卡；程式檔案未被修改、也沒有待接續的安裝時，啟動工具會自動更新。
 
 準備完成後，終端機會顯示一個私人連結。**只在你自己的瀏覽器開啟，不要分享給別人**；這個連結 15 分鐘內要開啟，只能用一次。
 
