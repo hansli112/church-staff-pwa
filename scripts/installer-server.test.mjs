@@ -52,16 +52,20 @@ function rawGet(origin, route, headers) {
   });
 }
 
-test('only the top-level page load may arrive cross-site', async (t) => {
+test('the wizard page loads through cross-site redirects but the API does not accept them', async (t) => {
   const { server, call } = await fixture(t);
-  const navigation = { 'Sec-Fetch-Site': 'cross-site', 'Sec-Fetch-Mode': 'navigate', 'Sec-Fetch-Dest': 'document' };
-  const page = await rawGet(server.localOrigin, '/', navigation);
-  assert.equal(page.status, 200);
-  assert.match(page.body, /教會安裝精靈/);
-  assert.equal((await rawGet(server.localOrigin, '/', { ...navigation, 'Sec-Fetch-Dest': 'iframe' })).status, 403);
-  assert.equal((await rawGet(server.localOrigin, '/app.js', { ...navigation, 'Sec-Fetch-Dest': 'script', 'Sec-Fetch-Mode': 'no-cors' })).status, 403);
-  assert.equal((await rawGet(server.localOrigin, '/api/state', { ...navigation, 'X-Installer-Request': '1' })).status, 403);
+  for (const headers of [
+    { 'Sec-Fetch-Site': 'cross-site', 'Sec-Fetch-Mode': 'navigate', 'Sec-Fetch-Dest': 'document' },
+    { 'Sec-Fetch-Site': 'cross-site' },
+  ]) {
+    const page = await rawGet(server.localOrigin, '/', headers);
+    assert.equal(page.status, 200);
+    assert.match(page.body, /教會安裝精靈/);
+    assert.equal((await rawGet(server.localOrigin, '/app.js', headers)).status, 200);
+  }
+  assert.equal((await rawGet(server.localOrigin, '/api/state', { 'Sec-Fetch-Site': 'cross-site', 'X-Installer-Request': '1' })).status, 403);
   assert.equal((await call('/api/session', { token: new URL(server.url).hash.slice(1) }, { 'Sec-Fetch-Site': 'cross-site' })).status, 403);
+  assert.equal((await call('/api/session', { token: new URL(server.url).hash.slice(1) }, { 'Sec-Fetch-Site': 'same-site' })).status, 403);
 });
 
 test('API requires one-time bootstrap, HttpOnly cookie and anti-CSRF token', async (t) => {
