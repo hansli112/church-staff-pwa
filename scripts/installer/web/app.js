@@ -10,6 +10,15 @@ let accountsKey;
 let regionsReady = false;
 const weekdays = ['一', '二', '三', '四', '五', '六', '日'];
 const stateLabels = { pending: '尚未開始', running: '處理中', complete: '已完成', failed: '需要處理', paused: '已停止', waiting: '待本人操作' };
+// Long steps say so up front; the elapsed time shows the wizard is still alive.
+const slowSteps = { build: '可能需要十幾分鐘', publish: '可能需要幾分鐘' };
+const runningSince = new Map();
+let busySince;
+
+function elapsed(since) {
+  const seconds = Math.floor((Date.now() - since) / 1000);
+  return seconds < 60 ? `${seconds} 秒` : `${Math.floor(seconds / 60)} 分 ${seconds % 60} 秒`;
+}
 
 async function request(route, body) {
   const headers = { 'X-Installer-Request': '1' };
@@ -93,7 +102,9 @@ function summaryRow(label, value) {
 function render(state) {
   current = state;
   $('demo-banner').hidden = !state.demo;
-  $('status').textContent = state.message || '先連接 Google 與 Cloudflare 帳號';
+  if (state.busy) busySince ??= Date.now(); else busySince = undefined;
+  const message = state.message || '先連接 Google 與 Cloudflare 帳號';
+  $('status').textContent = busySince ? `${message}（已經過 ${elapsed(busySince)}）` : message;
   $('google-identity').textContent = state.identity.googleEmail || '尚未連接';
   $('cloudflare-identity').textContent = state.identity.cloudflareEmail || '尚未連接';
   $('connect-google').disabled = state.busy;
@@ -151,6 +162,10 @@ function render(state) {
       const status = document.createElement('span');
       status.className = 'step-state';
       status.textContent = stateLabels[step.status] ?? '需要核對';
+      if (step.status === 'running') {
+        if (!runningSince.has(step.id)) runningSince.set(step.id, Date.now());
+        status.textContent += ` · ${elapsed(runningSince.get(step.id))}${slowSteps[step.id] ? `（${slowSteps[step.id]}）` : ''}`;
+      } else runningSince.delete(step.id);
       item.append(label, status);
       $('steps').append(item);
     }
@@ -239,7 +254,7 @@ async function start() {
     timer = setInterval(refresh, 1_500);
   } catch (error) {
     $('fatal').hidden = false;
-    $('fatal').textContent = error.message || '无法開啟私人精靈，請重新執行啟動命令';
+    $('fatal').textContent = error.message || '無法開啟私人精靈，請重新執行啟動命令';
     document.querySelectorAll('button').forEach((button) => { button.disabled = true; });
   }
 }

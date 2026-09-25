@@ -18,7 +18,7 @@
 
 [![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_tutorial=docs%2Finstall-cloud-shell.md&show=terminal)
 
-在自己的 Google Cloud Shell 開啟私人安裝精靈：連接 Google 與 Cloudflare 帳號、填寫教會資料，確認後自動建立**全新的**核心功能網站（登入、同工管理、服事表）。不需安裝開發工具或 GitHub 帳號，不會自動綁定付費方案，也不接管既有網站。步驟說明見 **[安裝教學](docs/install-cloud-shell.md)**。第一版的真實雲端流程仍在驗證中。
+在自己的 Google Cloud Shell 開啟私人安裝精靈：連接 Google 與 Cloudflare 帳號、填寫教會資料，確認後自動建立**全新的**核心功能網站（登入、同工管理、服事表）。不需安裝開發工具或 GitHub 帳號，不會自動綁定付費方案，也不接管既有網站。步驟說明見 **[安裝教學](docs/install-cloud-shell.md)**。按下按鈕後 Cloud Shell 會先跳出 Google 官方的「授權 Cloud Shell」視窗，請按「授權」。第一版的真實雲端流程仍在驗證中。
 
 想先看介面、不連任何雲端：`node scripts/install-core.mjs --demo`，再開啟終端機顯示的連結。
 

@@ -97,6 +97,18 @@ try {
   await evaluate("document.getElementById('apply').click(); document.getElementById('apply').click()");
   await waitFor("[...document.querySelectorAll('#steps li')].some((li) => li.dataset.state === 'failed')", 'demo interruption at rules');
   check('interruption shown as error with resume button', (await evaluate("document.getElementById('error-message').textContent")).includes('示範中斷') && (await evaluate("document.getElementById('apply').textContent")).includes('接續'));
+  // Demo steps finish too fast for polling to catch, so render a running build directly.
+  await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 900, deviceScaleFactor: 1, mobile: true });
+  const running = await evaluate(`(() => {
+    clearInterval(timer);
+    render({ ...current, busy: true, steps: current.steps.map((s) => ({ ...s, status: s.id === 'build' ? 'running' : s.status })) });
+    const text = document.querySelector('#steps li[data-state=running] .step-state').textContent;
+    const result = { text, status: document.getElementById('status').textContent, overflow: document.documentElement.scrollWidth > innerWidth };
+    timer = setInterval(refresh, 1500);
+    return result;
+  })()`);
+  check('running step shows elapsed time and expected duration without overflow', /秒/.test(running.text) && running.text.includes('十幾分鐘') && running.status.includes('已經過') && !running.overflow);
+  await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
   const runId = await evaluate("document.getElementById('run-id').textContent");
   // Reload keeps the HttpOnly session and restores progress from the server.
   await send('Page.reload');
