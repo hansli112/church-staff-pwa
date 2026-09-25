@@ -85,11 +85,17 @@ export async function startInstallerServer({
         return send(response, 403, { message: '主機驗證失敗' });
       }
       if (request.headers.origin && request.headers.origin !== origin) return send(response, 403, { message: '來源驗證失敗' });
-      if (request.headers['sec-fetch-site'] && !['same-origin', 'none'].includes(request.headers['sec-fetch-site'])) {
-        return send(response, 403, { message: '不接受跨網站請求' });
-      }
       if (!request.url?.startsWith('/') || request.url.startsWith('//')) return send(response, 400, { message: '請求路徑不正確' });
       const url = new URL(request.url, origin);
+      // Opening the link from the Cloud Shell terminal is a cross-site
+      // top-level navigation. Only that page load is exempt; it holds no
+      // secret and cannot be framed. Every script, style and API call must
+      // still come from the wizard page itself.
+      const pageNavigation = request.method === 'GET' && url.pathname === '/' &&
+        request.headers['sec-fetch-mode'] === 'navigate' && request.headers['sec-fetch-dest'] === 'document';
+      if (request.headers['sec-fetch-site'] && !['same-origin', 'none'].includes(request.headers['sec-fetch-site']) && !pageNavigation) {
+        return send(response, 403, { message: '不接受跨網站請求' });
+      }
       if (request.method === 'GET' && STATIC.has(url.pathname)) {
         const [file, type] = STATIC.get(url.pathname);
         const body = await readFile(new URL(`./web/${file}`, import.meta.url));

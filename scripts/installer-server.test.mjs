@@ -40,6 +40,30 @@ test('static UI uses restrictive headers and never includes the private bootstra
   assert.match(body, /教會安裝精靈/);
 });
 
+// The Cloud Shell terminal link opens the wizard as a cross-site navigation.
+// fetch() rewrites Sec-Fetch-Mode, so these use http.request.
+function rawGet(origin, route, headers) {
+  return new Promise((resolve, reject) => {
+    const request = httpRequest(`${origin}${route}`, { headers }, (response) => {
+      let body = '';
+      response.setEncoding('utf8').on('data', (chunk) => { body += chunk; }).on('end', () => resolve({ status: response.statusCode, body }));
+    });
+    request.on('error', reject).end();
+  });
+}
+
+test('only the top-level page load may arrive cross-site', async (t) => {
+  const { server, call } = await fixture(t);
+  const navigation = { 'Sec-Fetch-Site': 'cross-site', 'Sec-Fetch-Mode': 'navigate', 'Sec-Fetch-Dest': 'document' };
+  const page = await rawGet(server.localOrigin, '/', navigation);
+  assert.equal(page.status, 200);
+  assert.match(page.body, /教會安裝精靈/);
+  assert.equal((await rawGet(server.localOrigin, '/', { ...navigation, 'Sec-Fetch-Dest': 'iframe' })).status, 403);
+  assert.equal((await rawGet(server.localOrigin, '/app.js', { ...navigation, 'Sec-Fetch-Dest': 'script', 'Sec-Fetch-Mode': 'no-cors' })).status, 403);
+  assert.equal((await rawGet(server.localOrigin, '/api/state', { ...navigation, 'X-Installer-Request': '1' })).status, 403);
+  assert.equal((await call('/api/session', { token: new URL(server.url).hash.slice(1) }, { 'Sec-Fetch-Site': 'cross-site' })).status, 403);
+});
+
 test('API requires one-time bootstrap, HttpOnly cookie and anti-CSRF token', async (t) => {
   const { call, login } = await fixture(t);
   assert.equal((await call('/api/state')).status, 401);
