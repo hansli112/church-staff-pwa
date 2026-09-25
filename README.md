@@ -14,9 +14,17 @@
 - PWA：可加入主畫面，提供靜態資源快取及版本更新；**不代表所有功能可離線使用**，行事曆寫入等操作需要網路。
 - 照片辨識、推播、LINE webhook 及每日靈糧都是選用功能，範例設定預設關閉。
 
-## 第一次部署
+## 非工程背景：用安裝精靈
 
-完整順序、首位管理員及舊站切換注意事項見 **[部署指南](docs/deployment.md)**。
+[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_tutorial=docs%2Finstall-cloud-shell.md&show=terminal)
+
+在自己的 Google Cloud Shell 開啟私人安裝精靈：連接 Google 與 Cloudflare 帳號、填寫教會資料，確認後自動建立**全新的**核心功能網站（登入、同工管理、服事表）。不需安裝開發工具或 GitHub 帳號，不會自動綁定付費方案，也不接管既有網站。步驟說明見 **[安裝教學](docs/install-cloud-shell.md)**。第一版的真實雲端流程仍在驗證中。
+
+想先看介面、不連任何雲端：`node scripts/install-core.mjs --demo`，再開啟終端機顯示的連結。
+
+## 第一次部署（工程師路線）
+
+完整順序、首位管理員及舊站切換注意事項見 **[部署指南](docs/deployment.md)**。既有網站升級、選用整合與自訂網域請走這條路線。
 
 1. Fork 原始碼；安裝 Flutter（CI 使用 `3.41.0`、Dart 需求見 `pubspec.yaml`）、Node.js 22+、Firebase CLI、Google Cloud CLI 與 Wrangler。
 2. 建立自己的 Firebase 專案，啟用 Email/Password 與 Firestore `(default)` 資料庫；建立自己的 Cloudflare Pages 專案。
@@ -116,9 +124,13 @@ npm test --prefix web-tests
 uv venv .venv
 uv run --no-project --python .venv/bin/python scripts/build_import_prompt_test.py
 
-# Firestore Emulator（首次需下載依賴與 emulator；需相容 Java）
+# Firestore + Auth Emulator（首次需下載依賴與 emulator；需相容 Java）
+# 含規則測試，以及安裝精靈建立首位管理員的整合測試
 npm ci --prefix firestore-tests
 npm test --prefix firestore-tests
+
+# 安裝精靈的真瀏覽器 smoke（離線示範，需本機 Chrome；CHROME 可指定執行檔）
+node scripts/installer-browser-smoke.mjs
 ```
 
 帶設定的本機執行及 release build 見[部署指南](docs/deployment.md)。**Docker/nginx 只是受限的靜態前端路線**：需提供 `CHURCH_CONFIG_JSON` build-arg，但不執行 Cloudflare Pages Functions；`calendar`、`photoImport`、`lineNotifications` 必須關閉（否則 build 拒絕），不可當作完整功能的一鍵部署。
@@ -131,6 +143,7 @@ npm test --prefix firestore-tests
 - `firestore.rules`、`firestore-tests/`：資料授權模板與 emulator 測試。
 - `web/`、`web-tests/`：PWA 資源與快取測試。
 - `scripts/`：設定產生、首位管理員 bootstrap 與離線測試。
+- `scripts/installer/`：Cloud Shell 安裝精靈（核心、各雲端 adapter、私人網頁）。
 
 協作規範見 [AGENTS.md](AGENTS.md)。歡迎 Issue／PR，但請先移除個資與憑證，不要把正式資料當測試 fixture。
 

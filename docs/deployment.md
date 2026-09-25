@@ -1,5 +1,7 @@
 # 自行部署指南
 
+> 全新教會只需核心功能時，可改用 [Cloud Shell 安裝精靈](install-cloud-shell.md)。本指南適用於工程師、既有站台升級、選用整合、自訂網域與 GitHub Actions 部署。
+
 這條路線使用各教會自己的 **Firebase Auth／Firestore + Cloudflare Pages／Pages Functions**。本文的 `example.invalid`、`your-project-id`、`AUTH_UID_FROM_CONSOLE` 都是佔位值，不是可用的上游服務。以下會連線或寫資料的步驟需由有權管理該專案的人確認後執行。
 
 ## 0. 前置條件

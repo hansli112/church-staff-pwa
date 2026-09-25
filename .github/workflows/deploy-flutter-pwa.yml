@@ -181,6 +181,17 @@ jobs:
               exit 1
             fi
           done
+          # Share the exact public Firebase values with the post-build finalizer.
+          # Do not serialize server credentials or the rest of the environment.
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          const keys = ['FIREBASE_API_KEY', 'FIREBASE_AUTH_DOMAIN', 'FIREBASE_PROJECT_ID',
+            'FIREBASE_STORAGE_BUCKET', 'FIREBASE_MESSAGING_SENDER_ID', 'FIREBASE_APP_ID',
+            'FIREBASE_MEASUREMENT_ID'];
+          fs.writeFileSync('.local/firebase-config.json', JSON.stringify(Object.fromEntries(
+            keys.map((key) => [key, process.env[key] || '']),
+          )));
+          JS
           DART_DEFINES=(
             --dart-define-from-file=.local/deployment/dart-defines.json
             --dart-define=FCM_WEB_VAPID_KEY="$FCM_WEB_VAPID_KEY"
@@ -226,84 +237,22 @@ jobs:
           # 上游修好之後把 --wasm 加回來即可（?perf=1 的 HUD 會顯示 WASM/JS）。
           flutter build web --release --base-href "/" --no-web-resources-cdn "${DART_DEFINES[@]}"
 
-      - name: Apply configured PWA metadata
-        run: cp -R .local/deployment/web/. build/web/
+      # 6. 與 installer 共用 PWA staging／cache／Firebase SW 收尾。
+      # BUILD_VERSION 每次 deploy 失效 App cache；VENDOR_VERSION 只跟 Flutter
+      # 版本走，避免每次重抓 CanvasKit。工具遇到缺失／殘留 placeholder 會停止。
+      - name: Finalize web deployment
+        run: |
+          set -euo pipefail
+          node scripts/finalize-web-deployment.mjs \
+            --build build/web --staging .local/deployment \
+            --firebase-config .local/firebase-config.json \
+            --build-version "${GITHUB_SHA::8}-${GITHUB_RUN_NUMBER}" \
+            --vendor-version "flutter-${FLUTTER_VERSION}"
 
       # Build from the staged copy, whose Worker settings match the Flutter
       # defines and generated rules. Only the _worker.js/ module directory is deployed, not config files.
       - name: Build Pages Functions
         run: npx --yes wrangler@4 pages functions build .local/deployment/functions --outdir=build/web/_worker.js
-
-      # 6. 將版本號注入 cache_sw.js
-      # BUILD_VERSION（每次 deploy 都不同）→ App 資產 cache，確保使用者
-      #   下一次 reload 不會卡在舊的 main.dart.js。
-      # VENDOR_VERSION（只跟 Flutter 版本走）→ canvaskit 等引擎資產 cache，
-      #   讓 7 MB 的 canvaskit.wasm 不會每次 deploy 都被清掉重下載。
-      # fail-fast 防止 placeholder 已被替換或不存在時 silently no-op。
-      - name: Inject cache versions into cache_sw.js
-        run: |
-          set -euo pipefail
-          for placeholder in __BUILD_VERSION__ __VENDOR_VERSION__; do
-            if ! grep -q "$placeholder" build/web/cache_sw.js; then
-              echo "::error::$placeholder placeholder not found in build/web/cache_sw.js"
-              exit 1
-            fi
-          done
-          BUILD_VERSION="${GITHUB_SHA::8}-${GITHUB_RUN_NUMBER}"
-          VENDOR_VERSION="flutter-${FLUTTER_VERSION}"
-          sed -i \
-            -e "s|__BUILD_VERSION__|${BUILD_VERSION}|g" \
-            -e "s|__VENDOR_VERSION__|${VENDOR_VERSION}|g" \
-            build/web/cache_sw.js
-          for expected in "${BUILD_VERSION}" "${VENDOR_VERSION}"; do
-            if ! grep -q "${expected}" build/web/cache_sw.js; then
-              echo "::error::sed substitution did not produce ${expected}"
-              exit 1
-            fi
-          done
-
-      # 7. 將 Firebase 設定注入 messaging service worker
-      # 同樣要 fail-fast。這支 SW 的失敗特別安靜：placeholder 改名或 sed 沒對到
-      # 時 workflow 照樣全綠、App 也照常開，只是 initializeApp 拿到字面上的
-      # '__FIREBASE_API_KEY__'，背景推播整個死掉 —— 要等到真的推一則通知沒收到
-      # 才會有人發現。cache_sw.js 那步早就有這層保護，這裡不能少。
-      - name: Inject Firebase config into service worker
-        env:
-          FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
-          FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
-          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
-          FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET }}
-          FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID }}
-          FIREBASE_APP_ID: ${{ vars.FIREBASE_APP_ID }}
-          FIREBASE_MEASUREMENT_ID: ${{ vars.FIREBASE_MEASUREMENT_ID }}
-        run: |
-          set -euo pipefail
-          SW=build/web/firebase-messaging-sw.js
-          for placeholder in __FIREBASE_API_KEY__ __FIREBASE_AUTH_DOMAIN__ \
-                             __FIREBASE_PROJECT_ID__ __FIREBASE_STORAGE_BUCKET__ \
-                             __FIREBASE_MESSAGING_SENDER_ID__ __FIREBASE_APP_ID__ \
-                             __FIREBASE_MEASUREMENT_ID__; do
-            if ! grep -q "$placeholder" "$SW"; then
-              echo "::error::$placeholder placeholder not found in $SW"
-              exit 1
-            fi
-          done
-          sed -i \
-            -e "s|__FIREBASE_API_KEY__|$FIREBASE_API_KEY|g" \
-            -e "s|__FIREBASE_AUTH_DOMAIN__|$FIREBASE_AUTH_DOMAIN|g" \
-            -e "s|__FIREBASE_PROJECT_ID__|$FIREBASE_PROJECT_ID|g" \
-            -e "s|__FIREBASE_STORAGE_BUCKET__|$FIREBASE_STORAGE_BUCKET|g" \
-            -e "s|__FIREBASE_MESSAGING_SENDER_ID__|$FIREBASE_MESSAGING_SENDER_ID|g" \
-            -e "s|__FIREBASE_APP_ID__|$FIREBASE_APP_ID|g" \
-            -e "s|__FIREBASE_MEASUREMENT_ID__|$FIREBASE_MEASUREMENT_ID|g" \
-            "$SW"
-          # 收尾再掃一次。上面逐一比對的是「替換前有沒有」，這條抓的是「替換後
-          # 還有沒有殘留」—— 例如日後多加一個欄位卻忘了補 sed 規則。
-          # 印出來的是「沒被替換掉」的那幾行，內容就是 placeholder 本身，不會外洩設定值。
-          if grep -n '__FIREBASE_[A-Z_]*__' "$SW"; then
-            echo "::error::Placeholders remain in $SW after substitution"
-            exit 1
-          fi
 
       # 8. 部署到 Cloudflare Pages
       # cloudflare/pages-action@v1 已被官方 deprecate（repo 已封存），

@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Security-rules tests for firestore.rules, run against the Firestore emulator.",
   "scripts": {
-    "test": "firebase emulators:exec --only firestore --project demo-church-staff \"node --test rules.test.js\""
+    "test": "firebase emulators:exec --only firestore,auth --project demo-church-staff \"node --test rules.test.js installer-admin.test.js\""
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.1",

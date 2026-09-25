@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>教會安裝精靈</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">各教會獨立持有帳號與資料</p>
+      <h1>建立你們的同工助手</h1>
+      <p class="intro">連接帳號、填寫教會資料，確認後由精靈準備登入、同工名單與服事表。</p>
+      <p id="demo-banner" class="notice" hidden>離線示範：帳號與部署結果皆為模擬，不會連接或建立任何雲端資源。</p>
+      <p class="muted">首次安裝限定全新專案。行事曆、照片辨識、通知與每日靈糧暫不啟用；不自動綁定付費帳單。</p>
+    </header>
+
+    <div id="fatal" class="error" role="alert" hidden></div>
+    <div id="status" class="status" role="status" aria-live="polite">正在連接私人安裝工作階段…</div>
+    <div id="error-box" class="error" role="alert" hidden>
+      <p id="error-message"></p>
+      <a id="error-action" target="_blank" rel="noopener noreferrer" hidden>開啟官方設定頁</a>
+    </div>
+
+    <section aria-labelledby="accounts-heading">
+      <div class="section-heading"><span class="number">1</span><h2 id="accounts-heading">連接你的帳號</h2></div>
+      <p>所有建立與部署動作都在你自己的 Cloud Shell 執行。Google 與 Cloudflare 密碼只在各自的官方頁面輸入。</p>
+      <div class="account-grid">
+        <article>
+          <h3>Google / Firebase</h3>
+          <p id="google-identity" class="muted">尚未連接</p>
+          <button id="connect-google" type="button">連接 Google</button>
+          <p class="hint">若官方授權視窗沒有出現，請切回 Cloud Shell 分頁確認 Authorize 提示。</p>
+        </article>
+        <article>
+          <h3>Cloudflare</h3>
+          <p id="cloudflare-identity" class="muted">尚未連接</p>
+          <button id="connect-cloudflare" type="button">連接 Cloudflare</button>
+          <p class="hint">開啟官方授權頁，核對裝置碼並授權。無須建立或貼上 API token。</p>
+        </article>
+      </div>
+      <div id="device" class="notice" hidden>
+        <p>在 Cloudflare 官方頁面確認這次登入：</p>
+        <p><strong id="device-code" class="device-code"></strong></p>
+        <a id="device-link" class="button" target="_blank" rel="noopener noreferrer">開啟官方授權頁</a>
+        <p class="hint">只核准你剛才啟動的登入。精靈會在完成授權後自動接續。</p>
+      </div>
+      <details id="resume-panel">
+        <summary>接續之前中斷的安裝</summary>
+        <p class="hint">請使用原本的 Google 與 Cloudflare 帳號。接續不會刪除已建立的資源。</p>
+        <label for="resume-existing">本機安裝紀錄</label>
+        <select id="resume-existing"><option value="">請選擇紀錄，或在下方貼上識別碼</option></select>
+        <label for="resume-id">安裝識別碼</label>
+        <input id="resume-id" autocomplete="off" spellcheck="false" placeholder="xxxxxxxx-xxxx-4xxx-xxxx-xxxxxxxxxxxx">
+        <button id="resume" type="button">載入安裝紀錄</button>
+      </details>
+    </section>
+
+    <section id="settings-section" aria-labelledby="settings-heading">
+      <div class="section-heading"><span class="number">2</span><h2 id="settings-heading">填寫教會資料</h2></div>
+      <form id="settings-form">
+        <fieldset id="settings-fields">
+          <div class="form-grid">
+            <label>教會／App 名稱<input name="appName" required maxlength="80" placeholder="例如：範例教會同工助手"></label>
+            <label>桌面圖示簡稱<input name="shortName" required maxlength="20" placeholder="例如：同工助手"></label>
+            <label>教會時區<input name="timeZone" required value="Asia/Taipei" list="timezones" maxlength="100"></label>
+            <label>資料庫地區<select name="region" id="region" required></select></label>
+          </div>
+          <datalist id="timezones"><option value="Asia/Taipei"><option value="Asia/Hong_Kong"><option value="Asia/Tokyo"><option value="Asia/Singapore"><option value="Australia/Sydney"><option value="America/Los_Angeles"><option value="America/New_York"><option value="Europe/London"><option value="UTC"></datalist>
+          <p class="hint">時區決定排表日期；資料庫地區決定資料儲存位置，建立後不能直接搬動。兩者不同。</p>
+          <h3>每週聚會</h3>
+          <div id="services"></div>
+          <button id="add-service" type="button" class="secondary">新增一種聚會</button>
+          <h3>首位管理員</h3>
+          <div class="form-grid">
+            <label>顯示姓名<input name="adminName" required maxlength="100" autocomplete="name"></label>
+            <label>收取設定密碼信的 email<input name="adminEmail" type="email" required maxlength="254" autocomplete="email"></label>
+          </div>
+          <p class="hint">不在這裡設定或保存管理員密碼。安裝後使用 Firebase 官方信件設定密碼，再以 email 登入 App。</p>
+          <label>部署到哪個 Cloudflare 帳號？<select id="cloudflare-account" name="cloudflareAccountId" required><option value="">請先連接 Cloudflare</option></select></label>
+          <button id="plan" type="submit" class="primary">檢查並預覽安裝</button>
+        </fieldset>
+      </form>
+    </section>
+
+    <section id="confirmation" aria-labelledby="confirmation-heading" hidden>
+      <div class="section-heading"><span class="number">3</span><h2 id="confirmation-heading">確認這次安裝</h2></div>
+      <dl id="summary"></dl>
+      <p class="notice">確認後會在你的帳號建立雲端資源。帳號與網站名稱已先檢查；Google 的專案額度、條款與組織政策沒有事先查詢的方式，會在最前面建立專案、啟用 Firebase 時確認；不通過就停下，不會繼續建立資料庫、網站或管理員。精靈不開通付費方案。</p>
+      <label class="check"><input id="confirm-region" type="checkbox"><span>已核對帳號、新專案與資料地區，了解資料庫地區建立後不能直接更改。</span></label>
+      <label class="check"><input id="confirm-email" type="checkbox"><span id="email-confirm-label">確認指定管理員 email，並同意建立此帳號及寄送設定密碼信。</span></label>
+      <div class="actions"><button id="apply" type="button" class="primary">確認並開始安裝</button><button id="cancel" type="button" class="secondary" hidden>停止目前步驟</button></div>
+      <p class="hint">停止不會刪除已建立的專案或資料。再次接續前，精靈會核對實際狀態。</p>
+    </section>
+
+    <section id="progress-section" aria-labelledby="progress-heading" hidden>
+      <div class="section-heading"><span class="number">4</span><h2 id="progress-heading">安裝進度</h2></div>
+      <p>首次下載工具與建置可能需要一段時間。請保留 Cloud Shell 分頁；不需重新按建立專案。</p>
+      <ol id="steps" class="steps"></ol>
+      <p class="hint">安裝識別碼：<code id="run-id"></code> <button id="copy-id" class="link-button" type="button">複製</button></p>
+      <p class="hint">進度存在你自己的 Cloud Shell 私有目錄，不在此瀏覽器的 localStorage。</p>
+    </section>
+
+    <section id="complete" aria-labelledby="complete-heading" hidden>
+      <h2 id="complete-heading">網站已發布，接著完成登入驗收</h2>
+      <a id="website" class="button primary" target="_blank" rel="noopener noreferrer">開啟你們的同工助手</a>
+      <ol>
+        <li>到指定管理員信箱找 Firebase 設定密碼信，也檢查垃圾郵件。</li>
+        <li>使用信件內的官方連結設定密碼，再以該 email 登入網站。</li>
+        <li>確認可管理同工、開啟服事表。資料規則可能需要幾分鐘才完全生效。</li>
+      </ol>
+      <p class="hint">寄信步驟成功只代表平台接受寄送請求，不保證送達。若沒有收到，請由 Firebase 官方 Authentication 使用者頁面重新寄送。</p>
+    </section>
+    <footer>這是私人安裝工具，不是教會網站的一部分。勿分享帶有工作階段識別資訊的啟動連結。</footer>
+  </main>
+</body>
+</html>
