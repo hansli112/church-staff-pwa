@@ -73,9 +73,6 @@ Before submitting:
 ## Code Quality Standards
 
 - Pass `flutter analyze` (lints from `analysis_options.yaml` and `flutter_lints`).
-- Keep functions small and single-responsibility.
-- Document complex logic with comments.
-- Use meaningful variable and function names.
 
 ## When to Update Firestore Rules
 
