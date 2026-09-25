@@ -187,6 +187,10 @@ function openStepSession(context, { fetchImpl, command, delay, now, inspectIdent
       }
       if (!operation.name) stop('GOOGLE_INVALID_RESPONSE', 'Google operation 缺少名稱；請續跑核對資源。');
       if (attempt >= 45 || now() - started >= 180_000) stop('GOOGLE_OPERATION_PENDING', 'Google 仍在建立資源；本次 operation 已保存，請稍後續跑。');
+      if (attempt % 5 === 0) {
+        const label = { googleProject: '新專案', googleServices: 'Firebase 所需 API', firebase: 'Firebase', database: 'Firestore 資料庫' }[key] ?? '雲端資源';
+        context.emit?.({ message: `Google 正在準備${label}（本階段已等待 ${Math.floor((now() - started) / 1000)} 秒）` });
+      }
       await delay(Math.min(1000 * 2 ** attempt, 8000), signal);
       operation = await request(host, `/${version}/${operationPath(host, operation.name)}`);
     }
@@ -277,26 +281,32 @@ async function enableFirebase(s) {
   const { owned, projectId, project, save, resource, intent, begin, request, createOrWait } = s;
   const services = ['firebase.googleapis.com', 'firestore.googleapis.com', 'identitytoolkit.googleapis.com', 'firebaserules.googleapis.com'];
   const missing = [];
+  s.context.emit?.({ message: '正在核對 Firebase 所需的 Google API…' });
   for (const service of services) {
     const state = await request('serviceusage', `/v1/${owned.name}/services/${service}`);
     if (state.state !== 'ENABLED') missing.push(service);
   }
   if (missing.length) {
+    s.context.emit?.({ message: '正在啟用 Firebase 所需的 Google API…' });
     await begin('googleServices', { services: missing });
     await createOrWait('serviceusage', 'v1', 'googleServices', `/v1/${owned.name}/services:batchEnable`, { serviceIds: missing });
+    s.context.emit?.({ message: '正在核對 Google API 是否已啟用…' });
     for (const service of services) {
       if ((await request('serviceusage', `/v1/${owned.name}/services/${service}`)).state !== 'ENABLED') stop('GOOGLE_OPERATION_PENDING', 'Google API 仍在啟用；請稍後續跑。');
     }
   }
+  s.context.emit?.({ message: '正在核對 Firebase 專案狀態…' });
   let firebase = await request('firebase', `/v1beta1/${project}`, { missing: true });
   if (!firebase) {
     if (resource('firebase')) conflict();
+    s.context.emit?.({ message: '正在將 Firebase 加入新專案…' });
     await begin('firebase', { projectId });
     await createOrWait('firebase', 'v1beta1', 'firebase', `/v1beta1/${project}:addFirebase`, {});
     firebase = await request('firebase', `/v1beta1/${project}`);
   }
   if (!intent('firebase') || firebase.projectId !== projectId || String(firebase.projectNumber) !== owned.name.split('/')[1]) conflict();
   await save('resources', 'firebase', { projectId });
+  s.context.emit?.({ message: 'Firebase 已準備完成' });
   return { firebase: { projectId } };
 }
 

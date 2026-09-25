@@ -412,6 +412,41 @@ test('long operations have bounded backoff, persist their ID and map provider fa
     await rejectsCode(h.adapter.execute('google-project', h.context), 'GOOGLE_OPERATION_PENDING');
     assert.equal(h.state.requests.filter((call) => call.pathname === '/v3/projects').length, before);
   });
+  for (const phase of ['googleServices', 'firebase']) {
+    await t.test(`pending ${phase} operation reports progress and resumes without another write`, async (t) => {
+      let clock = fixedNow;
+      let completed = false;
+      const h = await setup(t, { now: () => clock, delay: async (ms) => { h.state.delays.push(ms); clock += ms; } });
+      await h.through('google-project');
+      const services = ['firebase.googleapis.com', 'firestore.googleapis.com', 'identitytoolkit.googleapis.com', 'firebaserules.googleapis.com'];
+      if (phase === 'firebase') services.forEach((service) => h.state.enabled.add(service));
+      const operationName = phase === 'googleServices' ? 'operations/services-pending' : 'operations/firebase-pending';
+      const createPath = phase === 'googleServices' ? '/services:batchEnable' : ':addFirebase';
+      h.setInterceptor((call) => {
+        if (call.method === 'POST' && call.pathname.endsWith(createPath)) return response(200, { name: operationName, done: false });
+        if (call.pathname === `/v1/${operationName}` || call.pathname === `/v1beta1/${operationName}`) {
+          if (completed) {
+            if (phase === 'googleServices') services.forEach((service) => h.state.enabled.add(service));
+            else h.state.firebase = { projectId, projectNumber: '123456789' };
+            return response(200, { name: operationName, done: true, response: {} });
+          }
+          return response(200, { name: operationName, done: false });
+        }
+      });
+      await rejectsCode(h.adapter.execute('firebase', h.context), 'GOOGLE_OPERATION_PENDING');
+      assert.equal(h.context.checkpoint.intents[phase].operation, operationName);
+      assert.ok(clock - fixedNow >= 180_000);
+      assert.ok(h.state.delays.every((ms) => ms <= 8000));
+      const messages = h.context.events.map((event) => event.message);
+      assert.ok(messages.some((message) => message.includes('正在核對 Firebase 所需')));
+      assert.ok(messages.some((message) => message.includes('已等待') && /[1-9]\d* 秒/.test(message)));
+      assert.doesNotMatch(JSON.stringify(messages), /never-log-this-google-token|never-persist-api-key|services-pending|firebase-pending/);
+      completed = true;
+      await h.adapter.execute('firebase', h.context);
+      assert.equal(h.context.checkpoint.resources.firebase.projectId, projectId);
+      assert.equal(h.state.requests.filter((call) => call.method === 'POST' && call.pathname.endsWith(createPath)).length, 1);
+    });
+  }
   await t.test('operation permission error', async (t) => {
     const h = await setup(t);
     h.setInterceptor((call) => call.pathname === '/v3/projects'

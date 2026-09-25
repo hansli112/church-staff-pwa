@@ -11,7 +11,7 @@ let regionsReady = false;
 const weekdays = ['一', '二', '三', '四', '五', '六', '日'];
 const stateLabels = { pending: '尚未開始', running: '處理中', complete: '已完成', failed: '需要處理', paused: '已停止', waiting: '待本人操作' };
 // Long steps say so up front; the elapsed time shows the wizard is still alive.
-const slowSteps = { build: '可能需要十幾分鐘', publish: '可能需要幾分鐘' };
+const slowSteps = { 'google-project': '可能需要數分鐘', firebase: '可能需要數分鐘', build: '可能需要十幾分鐘', publish: '可能需要幾分鐘' };
 const runningSince = new Map();
 let busySince;
 
@@ -161,7 +161,8 @@ function render(state) {
       label.textContent = step.label;
       const status = document.createElement('span');
       status.className = 'step-state';
-      status.textContent = stateLabels[step.status] ?? '需要核對';
+      status.textContent = step.status === 'waiting' && state.error?.code === 'GOOGLE_OPERATION_PENDING'
+        ? '稍後接續' : stateLabels[step.status] ?? '需要核對';
       if (step.status === 'running') {
         if (!runningSince.has(step.id)) runningSince.set(step.id, Date.now());
         status.textContent += ` · ${elapsed(runningSince.get(step.id))}${slowSteps[step.id] ? `（${slowSteps[step.id]}）` : ''}`;
@@ -169,7 +170,9 @@ function render(state) {
       item.append(label, status);
       $('steps').append(item);
     }
-    $('apply').textContent = state.status === 'paused' ? '核對後接續安裝' : '確認並開始安裝';
+    $('apply').textContent = state.status === 'paused'
+      ? state.error?.code === 'GOOGLE_OPERATION_PENDING' ? '稍後接續安裝' : '核對後接續安裝'
+      : '確認並開始安裝';
     $('apply').hidden = state.status === 'complete';
     $('cancel').hidden = !state.busy;
   }
@@ -247,14 +250,28 @@ async function start() {
   const token = location.hash.slice(1);
   history.replaceState(null, '', location.pathname);
   try {
-    const session = await request('/api/session', token ? { token } : undefined);
-    csrf = session.csrf;
-    await refresh();
+    if (token) {
+      try { await request('/api/session', { token }); }
+      catch (error) {
+        if (error.status !== 401) throw error;
+        // An already authenticated tab can reopen an expired private link.
+        await request('/api/session').catch(() => { throw error; });
+      }
+      // A Cloud Shell sign-in redirect can keep Strict cookies off the first
+      // document's fetches. Navigate once, without the used token, before
+      // reading state; this also keeps the token out of browser history.
+      location.replace(location.pathname);
+      return;
+    }
+    csrf = (await request('/api/session')).csrf;
+    render(await request('/api/state'));
     await loadRuns();
     timer = setInterval(refresh, 1_500);
   } catch (error) {
     $('fatal').hidden = false;
-    $('fatal').textContent = error.message || '無法開啟私人精靈，請重新執行啟動命令';
+    $('fatal').textContent = error.status === 401 && !token
+      ? '無法確認私人工作階段。請在同一個瀏覽器開啟啟動工具顯示的完整私人連結，並允許這個網站使用 Cookie。已建立的安裝紀錄不會刪除。'
+      : error.message || '無法開啟私人精靈，請重新執行啟動命令';
     document.querySelectorAll('button').forEach((button) => { button.disabled = true; });
   }
 }
