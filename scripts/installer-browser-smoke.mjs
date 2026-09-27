@@ -203,8 +203,8 @@ try {
     message: await evaluate("document.getElementById('fatal').textContent"),
     navigations: startupEvents.filter((event) => event === 'navigation').length - beforeMissingCookie,
   };
-  check('missing cookie shows guidance without a navigation loop', noCookie.message.includes('Cookie') && noCookie.navigations === 1);
-  if (!noCookie.message.includes('Cookie') || noCookie.navigations !== 1) results.push(`  missing-cookie diagnostic: ${JSON.stringify(noCookie)}`);
+  check('opening without the link code (Google sign-in check) says to click the link again, without a loop', noCookie.message.includes('再點一次') && noCookie.navigations === 1);
+  if (!noCookie.message.includes('再點一次') || noCookie.navigations !== 1) results.push(`  missing-cookie diagnostic: ${JSON.stringify(noCookie)}`);
   await send('Page.navigate', { url: `http://localhost:${entry.address().port}/` });
   await waitFor("!!document.getElementById('open')", 'return to entry without a cookie');
   await evaluate("document.getElementById('open').click()");

@@ -317,9 +317,14 @@ async function start() {
     timer = setInterval(refresh, 1_500);
   } catch (error) {
     $('fatal').hidden = false;
-    $('fatal').textContent = error.status === 401 && !token
-      ? '無法確認私人工作階段。請在同一個瀏覽器開啟啟動工具顯示的完整私人連結，並允許這個網站使用 Cookie。已建立的安裝紀錄不會刪除。'
-      : error.message || '無法開啟私人精靈，請重新執行啟動命令';
+    $('status').hidden = true;
+    // The first open of a Web Preview goes through Google's sign-in check,
+    // which returns to "/" and drops the link's code. The second open works.
+    $('fatal').textContent = error.status === 401 && !token && !stored.get(TOKEN_KEY)
+      ? '還差一步：Google 剛才先確認了你的帳號，所以這次沒有帶到私人連結的代碼。請回到 Cloud Shell 分頁，再點一次終端機裡同一個連結，第二次就會直接開啟。這個分頁可以關掉。'
+      : error.status === 401 && !token
+        ? '瀏覽器沒有保留精靈的登入資訊。請用同一個瀏覽器、不要用無痕視窗，回到 Cloud Shell 分頁再點一次連結。已建立的安裝紀錄不會刪除。'
+        : error.message || '無法開啟私人精靈，請重新執行啟動命令';
     document.querySelectorAll('button').forEach((button) => { button.disabled = true; });
   }
 }
