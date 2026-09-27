@@ -56,6 +56,9 @@ export function createCloudflareInstaller({ command = runIsolatedCommand, fetchI
       if (!isPrivateDirectory(stat)) throw cloudflareError('Cloudflare 暫存目錄必須是私人目錄（0700）。');
       home = await mkdtemp(path.join(sessionDir, 'cloudflare-'));
       await chmod(home, 0o700);
+      // Wrangler prefers the legacy home once it exists. Create it before any CLI
+      // process so login and later commands always read the same credential store.
+      await mkdir(path.join(home, '.wrangler'), { mode: 0o700 });
       await mkdir(path.join(home, 'tmp'), { mode: 0o700 });
     })();
     await initializing;
@@ -88,7 +91,12 @@ export function createCloudflareInstaller({ command = runIsolatedCommand, fetchI
     const onStdout = (chunk) => {
       buffer = (buffer + chunk).slice(-16_384);
       const prompt = parseDevicePrompt(buffer);
-      if (prompt && !shown) { shown = true; emit({ type: 'authorization', provider: 'cloudflare', ...prompt, message: '請前往 Cloudflare 官方頁面，確認下列裝置碼並授權。' }); }
+      if (prompt && !shown) {
+        shown = true;
+        // The wizard stops waiting at loginTimeoutMs; approving later cannot finish this login.
+        emit({ type: 'authorization', provider: 'cloudflare', ...prompt, expiresInMs: Math.max(0, loginTimeoutMs - 10_000),
+          message: '請前往 Cloudflare 官方頁面，確認下列裝置碼並授權。' });
+      }
     };
     try {
       const version = await cli(['--version'], { signal });
@@ -104,6 +112,7 @@ export function createCloudflareInstaller({ command = runIsolatedCommand, fetchI
       // are exposed; partial credentials are discarded before another attempt.
       if (home) { await rm(home, { recursive: true, force: true }); home = undefined; initializing = undefined; }
       if (signal?.aborted || lifetime.signal.aborted) throw cloudflareError('Cloudflare 授權已取消。');
+      if (shown) throw cloudflareError('這組 Cloudflare 代碼已失效或未獲授權。請按「連接 Cloudflare」取得新代碼，並在倒數結束前按 Authorize；舊代碼即使顯示成功也不能再用。');
       throw cloudflareError('Cloudflare 授權未完成、遭拒絕或已逾時，請重新連接；請確認使用指定版本 Wrangler。');
     } finally { loginActive = false; }
   }
@@ -134,11 +143,12 @@ export function createCloudflareInstaller({ command = runIsolatedCommand, fetchI
   }
   async function deployments(base, signal) {
     const result = [];
+    const pageSize = 25;
     for (let page = 1; page <= 20; page += 1) {
-      const data = await api(`${base}/deployments?per_page=100&page=${page}`, { signal });
+      const data = await api(`${base}/deployments?per_page=${pageSize}&page=${page}`, { signal });
       if (!Array.isArray(data.result)) throw cloudflareError('Pages 部署清單格式不符。');
       result.push(...data.result);
-      if (data.result.length < 100) return result;
+      if (data.result.length < pageSize) return result;
     }
     throw cloudflareError('Pages 已有過多部署，不符合全新安裝條件。');
   }

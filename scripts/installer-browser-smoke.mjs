@@ -53,10 +53,23 @@ ws.addEventListener('message', (e) => {
     const url = new URL(msg.params.request.url);
     if (url.pathname.startsWith('/api/')) startupEvents.push(`${msg.params.request.method} ${url.pathname}`);
   }
+  if (msg.method === 'Fetch.requestPaused') void dropFirstSessionCookie(msg.params);
   if (msg.method === 'Runtime.exceptionThrown') consoleErrors.push(msg.params.exceptionDetails.text);
   if (msg.method === 'Log.entryAdded' && msg.params.entry.level === 'error') consoleErrors.push(msg.params.entry.text);
 });
 const send = (method, params = {}) => new Promise((resolve) => { const n = ++id; pending.set(n, resolve); ws.send(JSON.stringify({ id: n, method, params })); });
+// Reproduces Cloud Shell's sign-in redirect keeping the first session cookie
+// from the server: the first cookie check never reaches it and gets a 401.
+// The wizard must recover without the person reopening the link.
+let cookieDropped = false;
+async function dropFirstSessionCookie({ requestId, request }) {
+  if (cookieDropped || request.method !== 'GET') return send('Fetch.continueRequest', { requestId });
+  cookieDropped = true;
+  await send('Fetch.fulfillRequest', { requestId, responseCode: 401,
+    responseHeaders: [{ name: 'Content-Type', value: 'application/json; charset=utf-8' }],
+    body: Buffer.from(JSON.stringify({ message: '請使用啟動工具顯示的私人連結開啟精靈' })).toString('base64') });
+}
+const linkToken = new URL(server.url).searchParams.get('k');
 const evaluate = async (expression) => {
   const r = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
   if (r.result.exceptionDetails) throw new Error(r.result.exceptionDetails.exception?.description ?? r.result.exceptionDetails.text);
@@ -79,13 +92,18 @@ const results = [];
 const check = (label, ok) => { results.push(`${ok ? 'PASS' : 'FAIL'} ${label}`); if (!ok) process.exitCode = 1; };
 try {
   await send('Runtime.enable'); await send('Log.enable'); await send('Page.enable'); await send('Network.enable');
+  await send('Fetch.enable', { patterns: [{ urlPattern: `${server.localOrigin}/api/session`, requestStage: 'Request' }] });
   await send('Page.navigate', { url: `http://localhost:${entry.address().port}/` });
   await waitFor("!!document.getElementById('open')", 'cross-site entry page');
   await evaluate("document.getElementById('open').click()");
   await waitFor("document.getElementById('status').textContent.includes('先連接')", 'session established');
+  await send('Fetch.disable');
   const boot = startupEvents.slice(0, startupEvents.indexOf('GET /api/state') + 1);
-  check('cross-site bootstrap navigates once before reading state', boot.join(',') === 'navigation,POST /api/session,navigation,GET /api/session,GET /api/state');
-  check('private link opened and hash token removed from URL', !(await evaluate('location.hash')));
+  check('a first open that loses the cookie recovers once, without reopening the link', cookieDropped &&
+    boot.join(',') === 'navigation,POST /api/session,navigation,GET /api/session,POST /api/session,navigation,GET /api/session,GET /api/state');
+  if (!cookieDropped || boot.length !== 8) results.push(`  bootstrap events (cookie dropped: ${cookieDropped}): ${boot.join(',')}`);
+  check('private link token removed from URL and tab storage', !(await evaluate('location.hash || location.search')) &&
+    !(await evaluate("sessionStorage.getItem('installer-link')")));
   check('demo banner visible', await evaluate("!document.getElementById('demo-banner').hidden"));
   check('plan disabled before accounts connected', await evaluate("document.getElementById('plan').disabled"));
   await evaluate("document.getElementById('connect-google').click()");
@@ -137,6 +155,18 @@ try {
     return result;
   })()`);
   check('pending Firebase operation says wait then resume', pendingLabel.every((label) => label.includes('稍後接續')));
+  const countdown = await evaluate(`(() => {
+    clearInterval(timer);
+    const device = { url: 'https://dash.cloudflare.com/oauth2/device/verify', code: 'AbCd1234' };
+    render({ ...current, device: { ...device, expiresInMs: 125_000 } });
+    const live = document.getElementById('device-expiry').textContent;
+    render({ ...current, device: { ...device, expiresInMs: 0 } });
+    const expired = document.getElementById('device-expiry').textContent;
+    render({ ...current, device: undefined });
+    timer = setInterval(refresh, 1500);
+    return [live, expired];
+  })()`);
+  check('Cloudflare code shows a live countdown and says when to get a new one', countdown[0].includes('2 分 05 秒') && countdown[1].includes('已過期'));
   await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
   const runId = await evaluate("document.getElementById('run-id').textContent");
   // Reload keeps the HttpOnly session and restores progress from the server.
@@ -149,12 +179,18 @@ try {
   await waitFor("document.getElementById('run-id').textContent.length > 0", 'consumed link resumes with existing cookie');
   check('opening a consumed link resumes only an existing session',
     (await evaluate("document.getElementById('run-id').textContent")) === runId &&
-    await evaluate("document.getElementById('fatal').hidden && !location.hash"));
-  const reuse = await evaluate(`fetch('/api/session', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Installer-Request': '1' }, body: JSON.stringify({ token: ${JSON.stringify(new URL(server.url).hash.slice(1))} }) }).then((r) => r.status)`);
+    await evaluate("document.getElementById('fatal').hidden && !location.hash && !location.search"));
+  const reuse = await evaluate(`fetch('/api/session', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Installer-Request': '1' }, body: JSON.stringify({ token: ${JSON.stringify(linkToken)} }) }).then((r) => r.status)`);
   check('consumed one-time link cannot create another session', reuse === 401);
   await evaluate("document.getElementById('confirm-region').click(); document.getElementById('confirm-email').click(); document.getElementById('apply').click()");
   await waitFor("!document.getElementById('complete').hidden", 'resume via UI completes', 20000);
   check('completion card links to website', (await evaluate("document.getElementById('website').href")).endsWith('.pages.dev/'));
+  const cleanup = await evaluate(`[document.getElementById('cleanup-google-id').textContent, document.getElementById('cleanup-cloudflare-id').textContent,
+    document.getElementById('cleanup-google').href, document.getElementById('cleanup-cloudflare').href, document.querySelectorAll('#complete .checklist input').length]`);
+  const { plan } = manager.snapshot();
+  check('completion lists acceptance steps and only this run\'s IDs to clean up', cleanup[0] === plan.projectId && cleanup[1] === plan.pagesProject &&
+    cleanup[2].startsWith('https://console.cloud.google.com/') && cleanup[2].endsWith(`project=${plan.projectId}`) &&
+    cleanup[3] === `https://dash.cloudflare.com/${plan.cloudflareAccountId}/pages/view/${plan.pagesProject}` && cleanup[4] === 5);
   await shot('installer-complete', 1280);
   check('resume completes the same run without a new project', manager.snapshot().status === 'complete' && manager.snapshot().plan.runId === runId);
   check('completed state exposes verified website', manager.snapshot().website === `https://${manager.snapshot().plan.pagesProject}.pages.dev/`);

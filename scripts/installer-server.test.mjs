@@ -8,6 +8,8 @@ import { createInstallationManager } from './installer/core.mjs';
 import { startInstallerServer } from './installer/server.mjs';
 import { createDemoProviders } from './install-core.mjs';
 
+const linkToken = (server) => new URL(server.url).searchParams.get('k');
+
 async function fixture(t, options = {}) {
   const rootDir = await mkdtemp(path.join(os.tmpdir(), 'installer-server-'));
   const manager = createInstallationManager({ rootDir, ...createDemoProviders({ delayMs: 0 }), demo: true });
@@ -19,7 +21,7 @@ async function fixture(t, options = {}) {
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   async function login() {
-    const response = await call('/api/session', { token: new URL(server.url).hash.slice(1) });
+    const response = await call('/api/session', { token: linkToken(server) });
     const cookie = response.headers.get('set-cookie')?.split(';')[0];
     const { csrf } = await response.json();
     assert.equal(response.status, 200);
@@ -36,7 +38,7 @@ test('static UI uses restrictive headers and never includes the private bootstra
   assert.match(response.headers.get('content-security-policy'), /frame-ancestors 'none'/);
   assert.equal(response.headers.get('cache-control'), 'no-store');
   assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
-  assert.equal(body.includes(new URL(server.url).hash.slice(1)), false);
+  assert.equal(body.includes(linkToken(server)), false);
   assert.match(body, /教會安裝精靈/);
 });
 
@@ -64,8 +66,8 @@ test('the wizard page loads through cross-site redirects but the API does not ac
     assert.equal((await rawGet(server.localOrigin, '/app.js', headers)).status, 200);
   }
   assert.equal((await rawGet(server.localOrigin, '/api/state', { 'Sec-Fetch-Site': 'cross-site', 'X-Installer-Request': '1' })).status, 403);
-  assert.equal((await call('/api/session', { token: new URL(server.url).hash.slice(1) }, { 'Sec-Fetch-Site': 'cross-site' })).status, 403);
-  assert.equal((await call('/api/session', { token: new URL(server.url).hash.slice(1) }, { 'Sec-Fetch-Site': 'same-site' })).status, 403);
+  assert.equal((await call('/api/session', { token: linkToken(server) }, { 'Sec-Fetch-Site': 'cross-site' })).status, 403);
+  assert.equal((await call('/api/session', { token: linkToken(server) }, { 'Sec-Fetch-Site': 'same-site' })).status, 403);
 });
 
 test('API requires one-time bootstrap, HttpOnly cookie and anti-CSRF token', async (t) => {
@@ -80,9 +82,33 @@ test('API requires one-time bootstrap, HttpOnly cookie and anti-CSRF token', asy
   assert.equal((await state.json()).csrf, auth['X-Installer-CSRF']);
 });
 
+test('the private link survives a lost first cookie but is spent once the cookie arrives', async (t) => {
+  const { call, server } = await fixture(t);
+  const url = new URL(server.url);
+  assert.equal(url.hash, '');
+  assert.match(url.search, /^\?k=[A-Za-z0-9_-]{43}$/);
+  const first = await call('/api/session', { token: linkToken(server) });
+  const lostCookie = first.headers.get('set-cookie').split(';')[0];
+  // Cloud Shell's sign-in redirect dropped that cookie: the same link opens again.
+  const second = await call('/api/session', { token: linkToken(server) });
+  assert.equal(second.status, 200);
+  const cookie = second.headers.get('set-cookie').split(';')[0];
+  assert.notEqual(cookie, lostCookie);
+  assert.equal((await call('/api/state', undefined, { Cookie: lostCookie })).status, 401);
+  assert.equal((await call('/api/state', undefined, { Cookie: cookie })).status, 200);
+  assert.equal((await call('/api/session', { token: linkToken(server) })).status, 401);
+  assert.equal((await call('/api/state', undefined, { Cookie: cookie })).status, 200);
+});
+
+test('a link whose cookie never arrives opens at most three sessions', async (t) => {
+  const { call, server } = await fixture(t);
+  for (let attempt = 0; attempt < 3; attempt++) assert.equal((await call('/api/session', { token: linkToken(server) })).status, 200);
+  assert.equal((await call('/api/session', { token: linkToken(server) })).status, 401);
+});
+
 test('session cookie is HttpOnly and SameSite Strict', async (t) => {
   const { call, server } = await fixture(t);
-  const response = await call('/api/session', { token: new URL(server.url).hash.slice(1) });
+  const response = await call('/api/session', { token: linkToken(server) });
   assert.match(response.headers.get('set-cookie'), /HttpOnly; SameSite=Strict/);
 });
 
@@ -95,7 +121,7 @@ for (const [label, headers] of [
 ]) {
   test(`rejects ${label} before creating a session`, async (t) => {
     const { call, server } = await fixture(t);
-    assert.equal((await call('/api/session', { token: new URL(server.url).hash.slice(1) }, headers)).status, 403);
+    assert.equal((await call('/api/session', { token: linkToken(server) }, headers)).status, 403);
   });
 }
 
@@ -104,7 +130,7 @@ test('rejects DNS rebinding host before creating a session', async (t) => {
   const { server } = await fixture(t);
   const { port } = new URL(server.localOrigin);
   const status = await new Promise((resolve, reject) => {
-    const body = JSON.stringify({ token: new URL(server.url).hash.slice(1) });
+    const body = JSON.stringify({ token: linkToken(server) });
     const request = httpRequest({ host: '127.0.0.1', port, path: '/api/session', method: 'POST', headers: {
       Host: 'evil.invalid', Origin: server.origin, 'X-Installer-Request': '1', 'Content-Type': 'application/json',
     } }, (response) => { response.resume(); resolve(response.statusCode); });
@@ -137,7 +163,7 @@ test('expired bootstrap cannot establish a session', async (t) => {
   let clock = 100;
   const { call, server } = await fixture(t, { now: () => clock, bootstrapTimeoutMs: 10 });
   clock = 120;
-  assert.equal((await call('/api/session', { token: new URL(server.url).hash.slice(1) })).status, 401);
+  assert.equal((await call('/api/session', { token: linkToken(server) })).status, 401);
 });
 
 test('idle expiry clears provider identity and requires a fresh session', async (t) => {
@@ -193,7 +219,7 @@ test('a running step keeps the session alive; expiry waits for a grace period af
   const server = await startInstallerServer({ manager, port: 0, now: () => clock, idleTimeoutMs: 100, absoluteTimeoutMs: 1_000 });
   t.after(() => server.close());
   const headers = { Origin: server.origin, 'X-Installer-Request': '1', 'Content-Type': 'application/json' };
-  const response = await fetch(`${server.localOrigin}/api/session`, { method: 'POST', headers, body: JSON.stringify({ token: new URL(server.url).hash.slice(1) }) });
+  const response = await fetch(`${server.localOrigin}/api/session`, { method: 'POST', headers, body: JSON.stringify({ token: linkToken(server) }) });
   const auth = { ...headers, Cookie: response.headers.get('set-cookie').split(';')[0] };
   const state = () => fetch(`${server.localOrigin}/api/state`, { headers: auth }).then((r) => r.status);
   busy = true;

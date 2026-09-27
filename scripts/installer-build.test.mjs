@@ -123,8 +123,14 @@ test('Cloud Shell launcher pins official tools, checks hashes and does not log i
   assert.match(script, /WRANGLER_VERSION=4\.138\.0/);
   assert.match(script, /sha256sum --check --status/);
   assert.match(script, /sha512sum --check --status/);
+  assert.match(script, /curl[^\n]*--progress-bar/);
+  assert.doesNotMatch(script, /已經過.*秒/);
   assert.match(script, /npm install[^\n]*--ignore-scripts/);
   assert.match(script, /INSTALLER_BUILD_ROOT="\$TOOLS\/builds"/);
   assert.match(script, /install-core\.mjs" --cloud-shell/);
+  // Relaunching on the same VM reuses tools only behind a checksum-bound marker.
+  assert.match(script, /CACHE="\$BASE\/tools"/);
+  for (const tool of ['node', 'flutter', 'wrangler']) assert.match(script, new RegExp(`ready "${tool}-\\$`));
+  assert.ok(script.indexOf('mark "flutter-') > script.indexOf('verify "$FLUTTER_SHA256"'));
   assert.doesNotMatch(script, /gcloud\s+(auth|projects)|wrangler\s+(login|pages)|\.local\/.*(?:env|credential)|curl[^\n]*\|\s*(bash|sh)/);
 });

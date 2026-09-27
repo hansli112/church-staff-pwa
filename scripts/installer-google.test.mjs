@@ -63,7 +63,9 @@ async function setup(t, overrides = {}) {
     assert.ok(init.signal instanceof AbortSignal);
     const parsed = new URL(url);
     const host = parsed.hostname.split('.')[0];
-    if (host === 'identitytoolkit') assert.equal(init.headers['x-goog-user-project'], projectId);
+    if (['firebase', 'firestore', 'identitytoolkit', 'firebaserules'].includes(host)) {
+      assert.equal(init.headers['x-goog-user-project'], projectId);
+    } else assert.equal(init.headers['x-goog-user-project'], undefined);
     const pathname = decodeURIComponent(parsed.pathname);
     const body = init.body ? JSON.parse(init.body) : undefined;
     const call = { url, host, pathname, search: parsed.search, method: init.method, body };
@@ -92,13 +94,13 @@ async function setup(t, overrides = {}) {
       if (pathname.endsWith(':addFirebase')) {
         assert.ok(context.checkpoint.intents.firebase);
         state.firebase = { projectId, projectNumber: '123456789' };
-        return response(200, { name: 'operations/firebase-1', done: true, response: state.firebase });
+        return response(200, { name: 'operations/workflows/ZmIyMjgwYWUtMzM0Mi00NmI0LTkzYjctNjQwMjM3MzFiNjQy', done: true, response: state.firebase });
       }
       if (pathname.endsWith('/webApps') && init.method === 'GET') return response(200, { apps: state.apps });
       if (pathname.endsWith('/webApps') && init.method === 'POST') {
         assert.ok(context.checkpoint.intents.webApp);
         state.apps.push({ ...body, name: `${project}/webApps/1:123456789:web:install`, appId: '1:123456789:web:install', projectId, state: 'ACTIVE' });
-        return response(200, { name: 'operations/webapp-1', done: true, response: state.apps[0] });
+        return response(200, { name: 'operations/workflows/YjM5MDBkNGEtZTYwNi00YWFhLWE5YzQtNzU2YTY5YWI2ZTBh', done: true, response: state.apps[0] });
       }
       if (pathname.endsWith('/config')) return response(200, { projectId, appId: state.apps[0].appId,
         authDomain: `${projectId}.firebaseapp.com`, messagingSenderId: '123456789', apiKey: 'never-persist-api-key', storageBucket: `${projectId}.firebasestorage.app` });
@@ -236,6 +238,286 @@ test('already existing projects cannot be adopted even with the expected name or
   assert.equal(h.state.requests.length, 1);
 });
 
+test('a new project ID can be created when Google returns 403 for its first GET', async (t) => {
+  const h = await setup(t);
+  h.setInterceptor((call, state) => call.host === 'cloudresourcemanager' && call.pathname === `/v3/${project}` &&
+    call.method === 'GET' && !state.project ? response(403, { error: { status: 'PERMISSION_DENIED', details: [{ reason: 'IAM_PERMISSION_DENIED' }] } }) : undefined);
+  await h.adapter.execute('google-project', h.context);
+  assert.deepEqual(h.state.requests.slice(0, 2).map(({ method, pathname }) => [method, pathname]),
+    [['GET', `/v3/${project}`], ['POST', '/v3/projects']]);
+  assert.equal(h.context.checkpoint.resources.googleProject.projectId, projectId);
+});
+
+test('an inaccessible existing project ID is not adopted after a 403 GET', async (t) => {
+  const h = await setup(t);
+  let createCalls = 0;
+  h.setInterceptor((call) => {
+    if (call.host !== 'cloudresourcemanager') return undefined;
+    if (call.pathname === `/v3/${project}` && call.method === 'GET') return error(403, 'PERMISSION_DENIED');
+    if (call.pathname === '/v3/projects' && call.method === 'POST') {
+      createCalls++;
+      assert.deepEqual(call.body.labels, { 'church-install': runLabel });
+      return error(409, 'ALREADY_EXISTS');
+    }
+  });
+  await rejectsCode(h.adapter.execute('google-project', h.context), 'GOOGLE_RESOURCE_CONFLICT');
+  assert.equal(createCalls, 1);
+  assert.equal(h.context.checkpoint.resources.googleProject, undefined);
+  h.setInterceptor(undefined);
+  h.state.project = { name: 'projects/987654321', projectId, state: 'ACTIVE', labels: { 'church-install': runLabel } };
+  const before = h.state.requests.length;
+  await rejectsCode(h.adapter.execute('google-project', h.context), 'GOOGLE_RESOURCE_CONFLICT');
+  assert.deepEqual(h.state.requests.slice(before).map(({ method, pathname }) => [method, pathname]), [['GET', `/v3/${project}`]]);
+  assert.equal(h.context.checkpoint.resources.googleProject, undefined);
+});
+
+test('a 403 after a prior create intent never resends an unverified POST', async (t) => {
+  const h = await setup(t);
+  h.context.checkpoint.intents.googleProject = { projectId, runLabel, at: new Date(fixedNow).toISOString() };
+  h.setInterceptor((call) => {
+    if (call.pathname === `/v3/${project}` && call.method === 'GET') return error(403, 'PERMISSION_DENIED');
+    if (call.pathname === '/v3/projects' && call.method === 'POST') assert.fail('must not repeat create');
+  });
+  await rejectsCode(h.adapter.execute('google-project', h.context), 'GOOGLE_PERMISSION_REQUIRED');
+});
+
+test('an unacknowledged project create is not replayed after a 404', async (t) => {
+  const h = await setup(t);
+  h.context.checkpoint.intents.googleProject = { projectId, runLabel, at: new Date(fixedNow).toISOString() };
+  h.setInterceptor((call) => {
+    if (call.pathname === '/v3/projects' && call.method === 'POST') assert.fail('must not repeat unacknowledged create');
+  });
+  await rejectsCode(h.adapter.execute('google-project', h.context), 'GOOGLE_RESOURCE_CONFLICT');
+  assert.equal(h.context.checkpoint.resources.googleProject, undefined);
+});
+
+const creates = (h, suffix) => h.state.requests.filter((call) => call.method === 'POST' && call.pathname.endsWith(suffix)).length;
+
+test('Firebase workflow operations are saved and polled on the Firebase host only', async (t) => {
+  const h = await setup(t);
+  await h.through('google-project');
+  const name = 'operations/workflows/ZmIyMjgwYWUtMzM0Mi00NmI0LTkzYjctNjQwMjM3MzFiNjQy';
+  let polls = 0;
+  h.setInterceptor((call, state) => {
+    if (call.pathname.endsWith(':addFirebase')) return response(200, { name, done: false });
+    if (call.host === 'firebase' && call.pathname === `/v1beta1/${name}`) {
+      polls++;
+      state.firebase = { projectId, projectNumber: '123456789' };
+      return response(200, { name, done: true, response: state.firebase });
+    }
+  });
+  await h.adapter.execute('firebase', h.context);
+  assert.equal(polls, 1);
+  assert.equal(h.context.checkpoint.intents.firebase.operation, name);
+  assert.equal(h.context.checkpoint.resources.firebase.projectId, projectId);
+});
+
+test('operation names outside the expected shape or project stop before any poll', async (t) => {
+  for (const [label, reply, code] of [
+    ['path traversal', { name: 'operations/workflows/../../v1/projects/other', done: false }, 'GOOGLE_INVALID_RESPONSE'],
+    ['other resource path', { name: 'projects/other-project/operations/x', done: false }, 'GOOGLE_INVALID_RESPONSE'],
+    ['finished for another project', { name: 'operations/workflows/abc', done: true, response: { projectId: 'other-project' } }, 'GOOGLE_RESOURCE_CONFLICT'],
+  ]) await t.test(label, async (t) => {
+    const h = await setup(t);
+    await h.through('google-project');
+    h.setInterceptor((call) => call.pathname.endsWith(':addFirebase') ? response(200, reply) : undefined);
+    await rejectsCode(h.adapter.execute('firebase', h.context), code);
+    assert.ok(h.state.requests.every((call) => !call.pathname.includes('/operations/')));
+    assert.equal(h.context.checkpoint.resources.firebase, undefined);
+    if (code !== 'GOOGLE_INVALID_RESPONSE') return;
+    // The POST may have been accepted: a resume must read back, never resend.
+    h.setInterceptor(undefined);
+    await rejectsCode(h.adapter.execute('firebase', h.context), 'GOOGLE_REQUEST_UNCONFIRMED');
+    assert.equal(creates(h, ':addFirebase'), 1);
+  });
+});
+
+test('an addFirebase whose reply was lost is never resent; resume adopts it once readable', async (t) => {
+  const h = await setup(t);
+  await h.through('google-project');
+  h.setInterceptor((call, state) => {
+    if (call.pathname.endsWith(':addFirebase')) {
+      state.firebase = { projectId, projectNumber: '123456789' };
+      throw new TypeError('socket hang up');
+    }
+  });
+  await rejectsCode(h.adapter.execute('firebase', h.context), 'GOOGLE_CONNECTION_INTERRUPTED');
+  assert.equal(h.context.checkpoint.intents.firebase.requested, true);
+  h.setInterceptor((call) => call.pathname === `/v1beta1/${project}` ? response(404) : undefined);
+  await rejectsCode(h.adapter.execute('firebase', h.context), 'GOOGLE_REQUEST_UNCONFIRMED');
+  h.setInterceptor(undefined);
+  await h.adapter.execute('firebase', h.context);
+  assert.equal(creates(h, ':addFirebase'), 1);
+  assert.equal(h.context.checkpoint.resources.firebase.projectId, projectId);
+});
+
+test('a Web App create whose reply was lost is adopted from the list, never created twice', async (t) => {
+  const h = await setup(t);
+  await h.through('auth');
+  let dropped = false;
+  h.setInterceptor((call, state) => {
+    if (call.host === 'firebase' && call.method === 'POST' && call.pathname.endsWith('/webApps') && !dropped) {
+      dropped = true;
+      state.apps.push({ ...call.body, name: `${project}/webApps/1:123456789:web:install`, appId: '1:123456789:web:install', projectId, state: 'ACTIVE' });
+      throw new TypeError('socket hang up');
+    }
+  });
+  await rejectsCode(h.adapter.execute('web-app', h.context), 'GOOGLE_CONNECTION_INTERRUPTED');
+  await h.adapter.execute('web-app', h.context);
+  assert.equal(h.state.apps.length, 1);
+  assert.equal(creates(h, '/webApps'), 1);
+  assert.equal(h.context.checkpoint.resources.webApp.appId, '1:123456789:web:install');
+});
+
+test('a definite 4xx refusal lets the same create be retried after the person fixes it', async (t) => {
+  const h = await setup(t);
+  await h.through('google-project');
+  h.setInterceptor((call) => call.pathname.endsWith(':addFirebase') ? error(400, 'TERMS_OF_SERVICE_NOT_ACCEPTED') : undefined);
+  await rejectsCode(h.adapter.execute('firebase', h.context), 'GOOGLE_TERMS_REQUIRED');
+  assert.equal(h.context.checkpoint.intents.firebase.requested, undefined);
+  assert.equal(h.context.checkpoint.intents.firebase.lastRequestRejected, true);
+  h.setInterceptor(undefined);
+  await h.adapter.execute('firebase', h.context);
+  assert.equal(creates(h, ':addFirebase'), 2);
+});
+
+test('a server error on create is treated as possibly accepted', async (t) => {
+  const h = await setup(t);
+  await h.through('google-project');
+  h.setInterceptor((call) => call.pathname.endsWith(':addFirebase') ? error(503, 'backend unavailable') : undefined);
+  await rejectsCode(h.adapter.execute('firebase', h.context), 'GOOGLE_API_FAILED');
+  h.setInterceptor(undefined);
+  await rejectsCode(h.adapter.execute('firebase', h.context), 'GOOGLE_REQUEST_UNCONFIRMED');
+  assert.equal(creates(h, ':addFirebase'), 1);
+});
+
+test('a create stopped before it is sent (expired sign-in) stays retryable', async (t) => {
+  let clock = fixedNow;
+  let tokenFails = false;
+  const h = await setup(t, {
+    now: () => (clock += 61_000),
+    command: async (file, args) => {
+      if (args[0] === 'config') return { stdout: '{}' };
+      if (args[1] === 'list') return { stdout: JSON.stringify([{ account: 'operator@example.invalid', status: 'ACTIVE' }]) };
+      if (tokenFails) throw new Error('reauth required');
+      return { stdout: 'never-log-this-google-token\n' };
+    },
+  });
+  await h.through('google-project');
+  h.setInterceptor((call) => {
+    if (call.pathname === `/v1beta1/${project}` && call.method === 'GET') tokenFails = true;
+  });
+  await rejectsCode(h.adapter.execute('firebase', h.context), 'GOOGLE_AUTH_REQUIRED');
+  assert.equal(creates(h, ':addFirebase'), 0);
+  assert.equal(h.context.checkpoint.intents.firebase.requested, undefined);
+  h.setInterceptor(undefined);
+  tokenFails = false;
+  await h.adapter.execute('firebase', h.context);
+  assert.equal(creates(h, ':addFirebase'), 1);
+});
+
+test('a 408 or 499 on create is treated as possibly accepted', async (t) => {
+  for (const status of [408, 499]) await t.test(String(status), async (t) => {
+    const h = await setup(t);
+    await h.through('google-project');
+    h.setInterceptor((call) => call.pathname.endsWith(':addFirebase') ? error(status, 'timeout') : undefined);
+    await assert.rejects(h.adapter.execute('firebase', h.context));
+    assert.equal(h.context.checkpoint.intents.firebase.requested, true);
+    h.setInterceptor(undefined);
+    await rejectsCode(h.adapter.execute('firebase', h.context), 'GOOGLE_REQUEST_UNCONFIRMED');
+    assert.equal(creates(h, ':addFirebase'), 1);
+  });
+});
+
+test('a project whose create reply was lost is adopted only by its private run label', async (t) => {
+  const h = await setup(t);
+  h.setInterceptor((call, state) => {
+    if (call.pathname === '/v3/projects' && call.method === 'POST') {
+      state.project = { ...call.body, name: 'projects/123456789', state: 'ACTIVE', createTime: new Date(fixedNow + 1000).toISOString() };
+      return error(503, 'backend unavailable');
+    }
+  });
+  await rejectsCode(h.adapter.execute('google-project', h.context), 'GOOGLE_API_FAILED');
+  // Not visible yet: wait, never resend.
+  const project404 = (call) => call.pathname === `/v3/${project}` && call.method === 'GET' ? error(403, 'PERMISSION_DENIED') : undefined;
+  h.setInterceptor(project404);
+  await rejectsCode(h.adapter.execute('google-project', h.context), 'GOOGLE_REQUEST_UNCONFIRMED');
+  h.setInterceptor(undefined);
+  await h.adapter.execute('google-project', h.context);
+  assert.equal(creates(h, '/v3/projects'), 1);
+  assert.equal(h.context.checkpoint.resources.googleProject.projectNumber, '123456789');
+  await h.through('firebase');
+});
+
+test('a lost create reply never adopts a project with another label or an older creation time', async (t) => {
+  for (const [label, change] of [
+    ['other label', (p) => { p.labels = { 'church-install': 'someone-else' }; }],
+    ['created before our request', (p) => { p.createTime = new Date(fixedNow - 60 * 60_000).toISOString(); }],
+  ]) await t.test(label, async (t) => {
+    const h = await setup(t);
+    h.setInterceptor((call, state) => {
+      if (call.pathname === '/v3/projects' && call.method === 'POST') {
+        state.project = { ...call.body, name: 'projects/123456789', state: 'ACTIVE', createTime: new Date(fixedNow).toISOString() };
+        change(state.project);
+        return error(503, 'backend unavailable');
+      }
+    });
+    await rejectsCode(h.adapter.execute('google-project', h.context), 'GOOGLE_API_FAILED');
+    h.setInterceptor(undefined);
+    await rejectsCode(h.adapter.execute('google-project', h.context), 'GOOGLE_RESOURCE_CONFLICT');
+    assert.equal(h.context.checkpoint.resources.googleProject, undefined);
+  });
+});
+
+test('a project create refused with 403 can be retried; it is still never adopted', async (t) => {
+  const h = await setup(t);
+  let posts = 0;
+  h.setInterceptor((call) => {
+    if (call.pathname === `/v3/${project}` && call.method === 'GET' && !h.state.project) return error(403, 'PERMISSION_DENIED');
+    if (call.pathname === '/v3/projects' && posts++ === 0) return error(403, 'PERMISSION_DENIED');
+  });
+  await rejectsCode(h.adapter.execute('google-project', h.context), 'GOOGLE_PERMISSION_REQUIRED');
+  assert.equal(h.context.checkpoint.intents.googleProject.lastRequestRejected, true);
+  await h.adapter.execute('google-project', h.context);
+  assert.equal(posts, 2);
+  assert.equal(h.context.checkpoint.resources.googleProject.projectId, projectId);
+});
+
+test('connecting Google asks Cloud Shell to authorize the wizard configuration once', async () => {
+  const calls = [];
+  let authorized = false;
+  const adapter = createGoogleInstaller({
+    fetchImpl: () => assert.fail('no network'),
+    command: async (file, args, options) => {
+      calls.push({ args, timeoutMs: options?.timeoutMs });
+      if (args[0] === 'config') return { stdout: '{}' };
+      if (args[1] === 'list') return { stdout: JSON.stringify(authorized ? [{ account: 'Person@Example.invalid', status: 'ACTIVE' }] : []) };
+      assert.deepEqual(args, ['auth', 'print-access-token', '--quiet']);
+      authorized = true;
+      return { stdout: 'discarded-token\n' };
+    },
+    authorizeTimeoutMs: 1234,
+  });
+  assert.deepEqual(await adapter.authorize(), { email: 'person@example.invalid' });
+  assert.equal(calls.filter((call) => call.args[1] === 'print-access-token').length, 1);
+  assert.equal(calls.find((call) => call.args[1] === 'print-access-token').timeoutMs, 1234);
+  calls.length = 0;
+  assert.deepEqual(await adapter.authorize(), { email: 'person@example.invalid' });
+  assert.equal(calls.some((call) => call.args[1] === 'print-access-token'), false);
+});
+
+test('a declined Cloud Shell authorization explains how to retry', async () => {
+  const adapter = createGoogleInstaller({
+    fetchImpl: () => assert.fail('no network'),
+    command: async (file, args) => {
+      if (args[0] === 'config') return { stdout: '{}' };
+      if (args[1] === 'list') return { stdout: '[]' };
+      throw new Error('declined');
+    },
+  });
+  await assert.rejects(adapter.authorize(), (err) => err.code === 'GOOGLE_AUTH_REQUIRED' && /Authorize/.test(err.message));
+});
+
 test('every step rejects a changed Google account and project ownership before mutation', async (t) => {
   const h = await setup(t);
   await h.through('google-project');
@@ -305,7 +587,7 @@ test('existing database, data, Auth users and profile are never adopted or promo
   });
 });
 
-test('project creation crash resumes from its run-specific label, not another project', async (t) => {
+test('project creation without a saved operation adopts only its matching run label, without resending', async (t) => {
   const h = await setup(t);
   const save = h.context.save;
   h.context.save = async (patch) => {
@@ -316,6 +598,8 @@ test('project creation crash resumes from its run-specific label, not another pr
   h.context.save = save;
   await h.adapter.execute('google-project', h.context);
   assert.equal(h.state.requests.filter((call) => call.pathname === '/v3/projects').length, 1);
+  assert.equal(h.context.checkpoint.resources.googleProject.projectNumber, '123456789');
+  assert.equal(h.context.checkpoint.intents.googleProject.adoptedByLabel, true);
 });
 
 test('Auth creation and profile commit crash recover only exact deterministic records', async (t) => {

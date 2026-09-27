@@ -13,7 +13,7 @@ if [[ "$(uname -s)" != Linux || "$(uname -m)" != x86_64 || "${CLOUD_SHELL:-}" !=
   printf '%s\n' '請在自己的 Google Cloud Shell 執行此入口（Linux x86_64）。' >&2
   exit 1
 fi
-for tool in curl tar xz sha256sum sha512sum base64 awk df mktemp stat od tr; do
+for tool in curl tar xz sha256sum sha512sum base64 awk df mktemp stat od tr flock; do
   command -v "$tool" >/dev/null || { printf '缺少必要工具：%s\n' "$tool" >&2; exit 1; }
 done
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -80,49 +80,86 @@ WRANGLER_VERSION=4.138.0
 NODE_SHA256=9aa8e9d2298ab68c600bd6fb86a6c13bce11a4eca1ba9b39d79fa021755d7c37
 FLUTTER_SHA256=368ae5b6993c51861324e704c42d61c4e290fba7213a88fd0e9fec15ded54599
 WRANGLER_SHA512_B64='jxNlOfssgyMo+eUcWBX+BxAuU6/AZAn8mNimicLv4igxbRH40OFRBMtGJT8z4kJwXPJriy1O4TB7A8lYjKb82w=='
+# Verified tools are kept on this VM's disk, so relaunching the wizard (after
+# Ctrl+C, a closed tab or a crash) does not download 1.5 GB again. A marker is
+# written only after its download passed the checksum and finished unpacking.
+# Cloud Shell wipes /tmp when it recycles the VM; then everything downloads again.
+CACHE="$BASE/tools"
+if [[ -e "$CACHE" || -L "$CACHE" ]]; then
+  [[ -d "$CACHE" && ! -L "$CACHE" && -O "$CACHE" && "$(stat -c %a "$CACHE")" == 700 ]] || { printf '%s\n' '工具暫存目錄權限不符，已停止。' >&2; exit 1; }
+else
+  mkdir -m 700 "$CACHE"
+fi
+exec 9>"$CACHE/.lock"
+flock -n 9 || { printf '%s\n' '另一個安裝精靈正在準備工具，等它完成後會繼續…'; flock 9; }
+ready() { [[ -f "$CACHE/$1.ready" && ! -L "$CACHE/$1.ready" && "$(cat "$CACHE/$1.ready")" == "$2" ]]; }
+mark() { printf '%s' "$2" > "$CACHE/$1.ready"; }
+reuse() { printf '%s\n' '這台 Cloud Shell 已下載並核對過，直接使用。'; }
 # The progress bar is the only sign of life during a multi-minute download.
 download() { curl --proto '=https' --tlsv1.2 --fail --progress-bar --show-error --retry 3 --max-time 900 "$1" -o "$2"; }
-started_at=$SECONDS
-stage() { printf '\n[%s/5] %s（已經過 %d 秒）\n' "$1" "$2" "$((SECONDS - started_at))"; }
+stage() { printf '\n[%s/4] %s\n' "$1" "$2"; }
 verify() { printf '%s  %s\n' "$1" "$2" | sha256sum --check --status || { printf '%s\n' '官方工具 checksum 不符，已停止；沒有執行下載內容。' >&2; exit 1; }; }
-printf '%s\n' '正在準備固定版本 Node、Flutter 與 Wrangler，通常需要 3–10 分鐘。進度條在動就代表還在進行。'
-stage 1 '下載 Node.js（約 30 MB）'
-download "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" "$TOOLS/node.tar.xz"
-verify "$NODE_SHA256" "$TOOLS/node.tar.xz"
-tar -xJf "$TOOLS/node.tar.xz" -C "$TOOLS"
-rm "$TOOLS/node.tar.xz"
-export PATH="$TOOLS/node-v${NODE_VERSION}-linux-x64/bin:$PATH"
-stage 2 '下載 Flutter（約 1.5 GB，最久的一步）'
-download "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz" "$TOOLS/flutter.tar.xz"
-verify "$FLUTTER_SHA256" "$TOOLS/flutter.tar.xz"
-stage 3 '解壓縮 Flutter（約 1–3 分鐘，這段沒有進度條）'
-tar -xJf "$TOOLS/flutter.tar.xz" -C "$TOOLS"
-rm "$TOOLS/flutter.tar.xz"
-mkdir -m 700 "$TOOLS/npm" "$TOOLS/npm-cache" "$TOOLS/pub-cache" "$TOOLS/builds" "$TOOLS/sessions"
-: > "$TOOLS/npmrc"
-: > "$TOOLS/global-npmrc"
-stage 4 '下載並安裝 Wrangler'
-download "https://registry.npmjs.org/wrangler/-/wrangler-${WRANGLER_VERSION}.tgz" "$TOOLS/wrangler.tgz"
-EXPECTED="$(printf '%s' "$WRANGLER_SHA512_B64" | base64 -d | od -An -v -tx1 | tr -d ' \n')"
-printf '%s  %s\n' "$EXPECTED" "$TOOLS/wrangler.tgz" | sha512sum --check --status || { printf '%s\n' 'Wrangler checksum 不符，已停止。' >&2; exit 1; }
-# npm validates dependency tarball integrity. Disable lifecycle scripts and do
-# not read ~/.npmrc, inherited auth, or the checkout's production environment.
-(cd "$TOOLS/npm" && env -i PATH="$PATH" HOME="$TOOLS/npm" npm_config_cache="$TOOLS/npm-cache" \
-  npm_config_userconfig="$TOOLS/npmrc" npm_config_globalconfig="$TOOLS/global-npmrc" \
-  npm install --prefix "$TOOLS/npm" --ignore-scripts --no-audit --no-fund \
-  --registry=https://registry.npmjs.org "$TOOLS/wrangler.tgz")
-rm "$TOOLS/wrangler.tgz"
+printf '%s\n' '正在準備固定版本 Node、Flutter 與 Wrangler。第一次通常需要 3–10 分鐘；進度條在動就代表還在進行。'
+stage 1 '準備 Node.js（約 30 MB）'
+NODE_DIR="$CACHE/node-v${NODE_VERSION}-linux-x64"
+if ready "node-$NODE_VERSION" "$NODE_SHA256" && [[ -x "$NODE_DIR/bin/node" ]]; then reuse
+else
+  rm -rf -- "$NODE_DIR" "$CACHE/node.tar.xz"
+  download "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" "$CACHE/node.tar.xz"
+  verify "$NODE_SHA256" "$CACHE/node.tar.xz"
+  tar -xJf "$CACHE/node.tar.xz" -C "$CACHE"
+  rm "$CACHE/node.tar.xz"
+  mark "node-$NODE_VERSION" "$NODE_SHA256"
+fi
+export PATH="$NODE_DIR/bin:$PATH"
+stage 2 '準備 Flutter（約 1.5 GB，最久的一步）'
+FLUTTER_DIR="$CACHE/flutter-${FLUTTER_VERSION}"
+if ready "flutter-$FLUTTER_VERSION" "$FLUTTER_SHA256" && [[ -x "$FLUTTER_DIR/flutter/bin/flutter" ]]; then reuse
+else
+  rm -rf -- "$FLUTTER_DIR" "$CACHE/flutter.tar.xz"
+  download "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz" "$CACHE/flutter.tar.xz"
+  verify "$FLUTTER_SHA256" "$CACHE/flutter.tar.xz"
+  printf '%s\n' '下載完成，正在解壓縮（約 1–3 分鐘，這段沒有進度條）…'
+  mkdir -m 700 "$FLUTTER_DIR"
+  tar -xJf "$CACHE/flutter.tar.xz" -C "$FLUTTER_DIR"
+  rm "$CACHE/flutter.tar.xz"
+  mark "flutter-$FLUTTER_VERSION" "$FLUTTER_SHA256"
+fi
+mkdir -m 700 "$TOOLS/npm-cache" "$TOOLS/builds" "$TOOLS/sessions"
+# Dart packages are checksum-verified by pub; reusing them speeds up the build.
+[[ -d "$CACHE/pub-cache" ]] || mkdir -m 700 "$CACHE/pub-cache"
+stage 3 '準備 Wrangler'
+WRANGLER_DIR="$CACHE/wrangler-${WRANGLER_VERSION}"
+if ready "wrangler-$WRANGLER_VERSION" "$WRANGLER_SHA512_B64" && [[ -x "$WRANGLER_DIR/node_modules/.bin/wrangler" ]]; then reuse
+else
+  rm -rf -- "$WRANGLER_DIR"
+  mkdir -m 700 "$WRANGLER_DIR"
+  : > "$TOOLS/npmrc"
+  : > "$TOOLS/global-npmrc"
+  download "https://registry.npmjs.org/wrangler/-/wrangler-${WRANGLER_VERSION}.tgz" "$TOOLS/wrangler.tgz"
+  EXPECTED="$(printf '%s' "$WRANGLER_SHA512_B64" | base64 -d | od -An -v -tx1 | tr -d ' \n')"
+  printf '%s  %s\n' "$EXPECTED" "$TOOLS/wrangler.tgz" | sha512sum --check --status || { printf '%s\n' 'Wrangler checksum 不符，已停止。' >&2; exit 1; }
+  # npm validates dependency tarball integrity. Disable lifecycle scripts and do
+  # not read ~/.npmrc, inherited auth, or the checkout's production environment.
+  (cd "$WRANGLER_DIR" && env -i PATH="$PATH" HOME="$WRANGLER_DIR" npm_config_cache="$TOOLS/npm-cache" \
+    npm_config_userconfig="$TOOLS/npmrc" npm_config_globalconfig="$TOOLS/global-npmrc" npm_config_update_notifier=false \
+    npm install --prefix "$WRANGLER_DIR" --ignore-scripts --no-audit --no-fund \
+    --registry=https://registry.npmjs.org "$TOOLS/wrangler.tgz")
+  rm "$TOOLS/wrangler.tgz"
+  mark "wrangler-$WRANGLER_VERSION" "$WRANGLER_SHA512_B64"
+fi
+flock -u 9
 export INSTALLER_TOOL_ROOT="$TOOLS"
-export INSTALLER_FLUTTER="$TOOLS/flutter/bin/flutter"
-export INSTALLER_WRANGLER="$TOOLS/npm/node_modules/.bin/wrangler"
+export INSTALLER_FLUTTER="$FLUTTER_DIR/flutter/bin/flutter"
+export INSTALLER_WRANGLER="$WRANGLER_DIR/node_modules/.bin/wrangler"
 export INSTALLER_BUILD_ROOT="$TOOLS/builds"
 export INSTALLER_SESSION_ROOT="$TOOLS/sessions"
-export PUB_CACHE="$TOOLS/pub-cache"
+export PUB_CACHE="$CACHE/pub-cache"
 export FLUTTER_SUPPRESS_ANALYTICS=true
 export DART_SUPPRESS_ANALYTICS=true
 # Do not replace HOME here: Google Cloud Shell's own authorization remains the
 # operator identity. Adapters isolate their child-process environments instead.
-stage 5 '啟動安裝精靈'
+stage 4 '啟動安裝精靈'
 printf '%s\n' '工具已就緒。開啟私人 Web Preview 後，仍須本人登入、填表並確認建立資源。'
 unset NODE_OPTIONS NODE_EXTRA_CA_CERTS
 node "$ROOT/scripts/install-core.mjs" --cloud-shell &

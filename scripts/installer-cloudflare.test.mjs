@@ -49,12 +49,15 @@ test('official device flow uses minimal scopes and never forwards raw output or 
   assert.equal(events.length, 1);
   assert.equal(events[0].userCode, 'aB3dE7f8');
   assert.equal(events[0].verificationUrl, 'https://dash.cloudflare.com/oauth2/device/verify');
+  // The countdown ends before the wizard stops waiting, so a late approval is not invited.
+  assert.equal(events[0].expiresInMs, 300_000);
   assert.ok(!JSON.stringify(events).includes('secret-token'));
   assert.deepEqual(calls[1].args, ['login', '--device', '--browser=false', '--scopes', ...CLOUDFLARE_SCOPES]);
   assert.equal(calls[1].opts.timeoutMs, 310_000);
   for (const { opts } of calls) {
     assert.ok(opts.env.HOME.startsWith(sessionDir + path.sep));
     assert.equal((await stat(opts.env.HOME)).mode & 0o777, 0o700);
+    assert.equal((await stat(path.join(opts.env.HOME, '.wrangler'))).mode & 0o777, 0o700);
     for (const name of ['CLOUDFLARE_API_TOKEN', 'CF_API_KEY', 'WRANGLER_AUTH_URL', 'NODE_OPTIONS', 'HTTPS_PROXY']) assert.equal(opts.env[name], undefined);
     assert.equal(opts.env.CLOUDFLARE_AUTH_USE_KEYRING, 'false');
   }
@@ -97,6 +100,22 @@ test('Pages existing outside this run is rejected before any mutation', async (t
   const { installer, context } = await fixture(t, { fetchImpl: async (_url, options) => { methods.push(options.method); return response(project()); } });
   await assert.rejects(installer.execute('pages-project', context), /不會接管/);
   assert.deepEqual(methods, ['GET']);
+});
+
+test('Pages deployment listing uses Cloudflare-supported pagination', async (t) => {
+  const pages = [];
+  const { installer, context } = await fixture(t, { fetchImpl: async (url) => {
+    if (url.includes('/deployments?')) {
+      const query = new URL(url).searchParams;
+      pages.push([query.get('per_page'), query.get('page')]);
+      return query.get('per_page') === '25' ? response([]) : response(null, 400);
+    }
+    return response(project());
+  } });
+  context.checkpoint.intents.pagesProject = intent();
+  await installer.execute('pages-project', context);
+  assert.deepEqual(pages, [['25', '1']]);
+  assert.equal(context.checkpoint.resources.pagesProjectId, 'pages-id-1');
 });
 
 test('Pages create records intent before POST and includes production binding atomically', async (t) => {
@@ -234,4 +253,13 @@ test('preflight is read-only: rejects a taken Pages name and never creates anyth
   const free = await fixture(t, { fetchImpl: async (url, options) => { methods.push(options?.method ?? 'GET'); return new Response('{}', { status: 404 }); } });
   await free.installer.preflight(PLAN);
   assert.deepEqual([...new Set(methods)], ['GET']);
+});
+
+test('an expired device code tells the person to get a new one', async (t) => {
+  const { installer } = await fixture(t, { command: async (exe, args, opts) => {
+    if (args[0] === '--version') return { exitCode: 0, stdout: '4.138.0\n' };
+    if (args[0] === 'login') { opts.onStdout?.(prompt); return { exitCode: 1, stdout: '' }; }
+    return { exitCode: 0, stdout: '{}' };
+  } });
+  await assert.rejects(installer.startLogin({}), (error) => /取得新代碼/.test(error.message));
 });

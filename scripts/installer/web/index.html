@@ -33,7 +33,8 @@
           <h3>Google / Firebase</h3>
           <p id="google-identity" class="muted">尚未連接</p>
           <button id="connect-google" type="button">連接 Google</button>
-          <p class="hint">若官方授權視窗沒有出現，請切回 Cloud Shell 分頁確認 Authorize 提示。</p>
+          <p class="hint">按下後切到 Cloud Shell 分頁，在「Authorize Cloud Shell」按 Authorize。沒有出現就再按一次「連接 Google」。</p>
+          <p id="google-switch" class="hint" hidden>不是這次要用的 Google 帳號？請先別填表：關掉 Cloud Shell，在 Google 右上角頭像切換成正確帳號，再重新開啟安裝教學連結。</p>
         </article>
         <article>
           <h3>Cloudflare</h3>
@@ -46,6 +47,7 @@
         <p>在 Cloudflare 官方頁面確認這次登入：</p>
         <p><strong id="device-code" class="device-code"></strong></p>
         <a id="device-link" class="button" target="_blank" rel="noopener noreferrer">開啟官方授權頁</a>
+        <p id="device-expiry" class="hint" hidden></p>
         <p class="hint">只核准你剛才啟動的登入。精靈會在完成授權後自動接續。</p>
       </div>
       <details id="resume-panel">
@@ -107,12 +109,24 @@
     <section id="complete" aria-labelledby="complete-heading" hidden>
       <h2 id="complete-heading">網站已發布，接著完成登入驗收</h2>
       <a id="website" class="button primary" target="_blank" rel="noopener noreferrer">開啟你們的同工助手</a>
-      <ol>
-        <li>到指定管理員信箱找 Firebase 設定密碼信，也檢查垃圾郵件。</li>
-        <li>使用信件內的官方連結設定密碼，再以該 email 登入網站。</li>
-        <li>確認可管理同工、開啟服事表。資料規則可能需要幾分鐘才完全生效。</li>
+      <p>照順序完成下列 5 項，全部做到才算安裝成功：</p>
+      <ol class="checklist">
+        <li><label class="check"><input type="checkbox"><span>在指定管理員信箱收到 Firebase 設定密碼信（也檢查垃圾郵件）。</span></label></li>
+        <li><label class="check"><input type="checkbox"><span>用信件內的官方連結設定密碼。</span></label></li>
+        <li><label class="check"><input type="checkbox"><span>開啟網站，用管理員 email 與新密碼登入。</span></label></li>
+        <li><label class="check"><input type="checkbox"><span>在「同工」新增一位同工，勾選他的牧區，並在該牧區勾選要參與的服事。</span></label></li>
+        <li><label class="check"><input type="checkbox"><span>在「服事表」替這位同工排一次班，重新整理後仍看得到。</span></label></li>
       </ol>
-      <p class="hint">寄信步驟成功只代表平台接受寄送請求，不保證送達。若沒有收到，請由 Firebase 官方 Authentication 使用者頁面重新寄送。</p>
+      <p class="hint">資料規則可能需要幾分鐘才完全生效；剛裝好就登入失敗，請等 5 分鐘再試。寄信步驟成功只代表平台接受寄送請求，不保證送達。若沒有收到，請由 Firebase 官方 Authentication 使用者頁面重新寄送。</p>
+      <details id="cleanup">
+        <summary>這只是測試安裝？如何刪除</summary>
+        <p>只刪除下列這次建立的兩個項目，不要刪其他專案。刪除要在官方網站由你本人操作。</p>
+        <ol>
+          <li>Cloudflare 網站 <code id="cleanup-cloudflare-id"></code>：<a id="cleanup-cloudflare" target="_blank" rel="noopener noreferrer">開啟網站專案頁</a>，進入 Settings，到最下方按 Delete project。<strong>立即永久刪除</strong>，網站會馬上消失。</li>
+          <li>Google 專案 <code id="cleanup-google-id"></code>：<a id="cleanup-google" target="_blank" rel="noopener noreferrer">開啟專案設定頁</a>，按「關閉」（Shut down）並輸入專案 ID。Google 會保留約 <strong>30 天</strong>才永久刪除，期間可還原。</li>
+        </ol>
+        <p class="hint">順序：先刪 Cloudflare 網站，再關閉 Google 專案。正式使用的站請勿刪除。</p>
+      </details>
     </section>
     <footer>這是私人安裝工具，不是教會網站的一部分。勿分享帶有工作階段識別資訊的啟動連結。</footer>
   </main>

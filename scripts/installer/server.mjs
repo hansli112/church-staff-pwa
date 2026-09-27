@@ -39,6 +39,8 @@ export async function startInstallerServer({
 } = {}) {
   const bootstrapToken = randomBytes(32).toString('base64url');
   let bootstrapUsed = false;
+  // The page retries twice when its first cookie is lost; allow no more.
+  let bootstrapAttempts = 0;
   const bootAt = now();
   let session;
   let origin;
@@ -107,10 +109,13 @@ export async function startInstallerServer({
       if (request.method !== 'GET' && request.headers.origin !== origin) return send(response, 403, { message: '來源驗證失敗' });
       if (url.pathname === '/api/session' && request.method === 'POST') {
         const input = await jsonBody(request);
-        if (bootstrapUsed || now() - bootAt > bootstrapTimeoutMs || !equal(input.token, bootstrapToken)) {
+        if (bootstrapUsed || bootstrapAttempts >= 3 || now() - bootAt > bootstrapTimeoutMs || !equal(input.token, bootstrapToken)) {
           return send(response, 401, { message: '開啟連結已失效，請重新啟動精靈' });
         }
-        bootstrapUsed = true;
+        // The link stays valid until a request arrives with the cookie. A
+        // Cloud Shell sign-in redirect can drop that cookie on first open;
+        // reopening then replaces the session that never reached the browser.
+        bootstrapAttempts += 1;
         session = {
           id: randomBytes(32).toString('base64url'), csrf: randomBytes(32).toString('base64url'),
           createdAt: now(), touchedAt: now(),
@@ -123,6 +128,7 @@ export async function startInstallerServer({
       const cookies = (request.headers.cookie ?? '').split(';').map((cookie) => cookie.trim());
       const cookie = cookies.find((entry) => entry.startsWith('installer_session='))?.slice('installer_session='.length);
       if (!session || !equal(cookie, session.id)) return send(response, 401, { message: '請使用啟動工具顯示的私人連結開啟精靈' });
+      bootstrapUsed = true;
       session.touchedAt = now();
       if (request.method === 'GET' && url.pathname === '/api/session') return send(response, 200, { csrf: session.csrf });
       if (request.method === 'GET' && url.pathname === '/api/state') return send(response, 200, manager.snapshot());
@@ -169,7 +175,9 @@ export async function startInstallerServer({
   const timer = setInterval(checkExpired, Math.min(idleTimeoutMs, 30_000));
   timer.unref();
   return {
-    origin, localOrigin, url: `${origin}/#${bootstrapToken}`,
+    // A query survives Google's sign-in redirect; a #fragment does not.
+    // no-referrer and the page's history.replaceState keep it from leaking.
+    origin, localOrigin, url: `${origin}/?k=${bootstrapToken}`,
     async close() {
       if (closed) return;
       closed = true;

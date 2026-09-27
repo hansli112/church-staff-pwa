@@ -246,3 +246,37 @@ test('preflight re-checks that the connected Google account is still the planned
   providers.google.inspectIdentity = async () => ({ email: 'someone-else@example.invalid' });
   await assert.rejects(manager.plan(input()), /帳號與安裝紀錄不符/);
 });
+
+test('Cloudflare device code expiry is exposed as time left, never an absolute clock', async (t) => {
+  const rootDir = await mkdtemp(path.join(os.tmpdir(), 'installer-core-'));
+  t.after(() => rm(rootDir, { recursive: true, force: true }));
+  const providers = createDemoProviders({ delayMs: 0 });
+  let release;
+  providers.cloudflare.startLogin = ({ emit }) => {
+    emit({ verificationUrl: 'https://dash.cloudflare.com/oauth2/device/verify', userCode: 'aB3dE7f8', expiresInMs: 300_000 });
+    return new Promise((resolve) => { release = resolve; });
+  };
+  const manager = createInstallationManager({ rootDir, ...providers, demo: true, sourceRevision: 'test-v1' });
+  t.after(() => manager.dispose());
+  const connecting = manager.connectCloudflare();
+  const { device } = manager.snapshot();
+  assert.equal(device.code, 'aB3dE7f8');
+  assert.ok(device.expiresInMs > 295_000 && device.expiresInMs <= 300_000);
+  assert.equal(device.expiresAt, undefined);
+  release();
+  await connecting;
+  assert.equal(manager.snapshot().device, undefined);
+});
+
+test('connecting Google uses the provider authorization flow when it has one', async (t) => {
+  const rootDir = await mkdtemp(path.join(os.tmpdir(), 'installer-core-'));
+  t.after(() => rm(rootDir, { recursive: true, force: true }));
+  const providers = createDemoProviders({ delayMs: 0 });
+  let authorized = 0;
+  providers.google.authorize = async () => { authorized++; return { email: 'person@example.invalid' }; };
+  const manager = createInstallationManager({ rootDir, ...providers, demo: true, sourceRevision: 'test-v1' });
+  t.after(() => manager.dispose());
+  await manager.connectGoogle();
+  assert.equal(authorized, 1);
+  assert.equal(manager.snapshot().identity.googleEmail, 'person@example.invalid');
+});

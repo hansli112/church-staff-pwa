@@ -11,6 +11,7 @@ import { canonical, fingerprint, sha256 as hash, stepIdsFor } from './shared.mjs
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const hosts = new Set(['cloudresourcemanager', 'serviceusage', 'firebase', 'firestore', 'identitytoolkit', 'firebaserules']);
+const quotaProjectHosts = new Set(['firebase', 'firestore', 'identitytoolkit', 'firebaserules']);
 const steps = stepIdsFor('google');
 const projectPattern = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -129,17 +130,19 @@ function openStepSession(context, { fetchImpl, command, delay, now, inspectIdent
     if (!token || /\s/.test(token)) stop('GOOGLE_AUTH_REQUIRED', 'Google 短期授權無效；請重新完成官方授權。');
     checkedAt = now();
   }
-  async function request(host, pathname, { method = 'GET', body, missing = false, authSetup = false, readOnly = method === 'GET' } = {}) {
+  async function request(host, pathname, { method = 'GET', body, missing = false, authSetup = false, readOnly = method === 'GET', beforeSend } = {}) {
     if (!hosts.has(host) || !pathname.startsWith('/') || /[\r\n#]/.test(pathname)) stop('GOOGLE_INVALID_TARGET', 'Google API 目標無效。');
     for (let attempt = 0; attempt < 4; attempt++) {
       signal?.throwIfAborted();
       await credentials();
       let response;
       let data;
+      // Marks the write as possibly sent only once nothing can stop it locally.
+      if (beforeSend && attempt === 0) await beforeSend();
       try {
         response = await fetchImpl(`https://${host}.googleapis.com${pathname}`, {
           method, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json',
-            ...(host === 'identitytoolkit' ? { 'x-goog-user-project': projectId } : {}) },
+            ...(quotaProjectHosts.has(host) ? { 'x-goog-user-project': projectId } : {}) },
           ...(body === undefined ? {} : { body: JSON.stringify(body) }), redirect: 'error',
           signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(30_000)]) : AbortSignal.timeout(30_000),
         });
@@ -157,13 +160,26 @@ function openStepSession(context, { fetchImpl, command, delay, now, inspectIdent
         await delay(500 * 2 ** attempt, signal);
         continue;
       }
-      cloudError(response.status, data.error, authSetup);
+      try { cloudError(response.status, data.error, authSetup); }
+      catch (failure) {
+        // These answers are definite refusals: nothing was created. A 5xx may
+        // still have been accepted, so only these let a create be retried.
+        // 408 and 499 (cancelled) can still hide an accepted request.
+        if ([400, 401, 403, 404, 409, 429].includes(response.status)) failure.rejected = true;
+        throw failure;
+      }
     }
   }
   function operationPath(host, name) {
     const simple = /^operations\/[a-zA-Z0-9_.:-]+$/;
+    // Firebase Management runs addFirebase and webApps.create as workflows,
+    // e.g. operations/workflows/<base64 id>. The id carries no project, so the
+    // finished response is checked against this project in wait().
+    const firebase = /^operations\/workflows\/[A-Za-z0-9+_=-]+$/;
     const firestore = new RegExp(`^projects/${projectId}/databases/\\(default\\)/operations/[a-zA-Z0-9_.:-]+$`);
-    if (!(host === 'firestore' ? firestore : simple).test(name ?? '')) stop('GOOGLE_INVALID_RESPONSE', 'Google operation 目標與本次安裝不一致；已停止。');
+    const valid = host === 'firestore' ? firestore.test(name ?? '')
+      : simple.test(name ?? '') || (host === 'firebase' && firebase.test(name ?? ''));
+    if (!valid) stop('GOOGLE_INVALID_RESPONSE', 'Google operation 目標與本次安裝不一致；已停止。');
     return encodedName(name);
   }
   async function wait(host, version, operation, key) {
@@ -179,10 +195,11 @@ function openStepSession(context, { fetchImpl, command, delay, now, inspectIdent
           // A terminal failure is not an uncertain write. Reconcile resources
           // on the next run, then allow a new attempt after permissions/quota
           // are fixed instead of polling the same failed operation forever.
-          const { operation: _failed, ...previous } = intent(key);
+          const { operation: _failed, requested: _sent, ...previous } = intent(key);
           await save('intents', key, { ...previous, lastOperationFailed: true });
           cloudError(operation.error.code, operation.error);
         }
+        if (operation.response?.projectId !== undefined && operation.response.projectId !== projectId) conflict('Google operation 完成結果不屬於本次專案；已停止。');
         return operation.response;
       }
       if (!operation.name) stop('GOOGLE_INVALID_RESPONSE', 'Google operation 缺少名稱；請續跑核對資源。');
@@ -195,14 +212,34 @@ function openStepSession(context, { fetchImpl, command, delay, now, inspectIdent
       operation = await request(host, `/${version}/${operationPath(host, operation.name)}`);
     }
   }
+  // Each create is sent at most once per intent. The flag is saved before the
+  // POST; if no operation was saved after it, Google may have accepted it, so a
+  // resume reads the resource back (callers do) and never sends it again.
   async function createOrWait(host, version, key, pathname, body) {
-    const operation = intent(key)?.operation
-      ? await request(host, `/${version}/${operationPath(host, intent(key).operation)}`)
-      : await request(host, pathname, { method: 'POST', body });
+    if (intent(key)?.operation) {
+      return wait(host, version, await request(host, `/${version}/${operationPath(host, intent(key).operation)}`), key);
+    }
+    if (intent(key)?.requested) {
+      stop('GOOGLE_REQUEST_UNCONFIRMED', 'Google 可能已接受上一次建立請求，但精靈沒有收到可核對的回覆。為避免重複建立，不會重送；請等 3–5 分鐘後按「核對後接續安裝」，精靈會先讀回實際資源。若多次接續仍停在這裡，請保留安裝識別碼並求助。');
+    }
+    const { lastRequestRejected: _previous, ...pending } = intent(key);
+    let operation;
+    try {
+      operation = await request(host, pathname, { method: 'POST', body,
+        beforeSend: () => save('intents', key, { ...pending, requested: true }) });
+    }
+    catch (error) {
+      if (error.rejected && intent(key).requested) {
+        const { requested: _sent, ...rest } = intent(key);
+        await save('intents', key, { ...rest, lastRequestRejected: true });
+      }
+      throw error;
+    }
     return wait(host, version, operation, key);
   }
   function checkProject(value) {
-    if (!value || !intent('googleProject') || value.projectId !== projectId ||
+    if (!value || !intent('googleProject') ||
+        (!intent('googleProject').operation && !intent('googleProject').adoptedByLabel && !resource('googleProject')) || value.projectId !== projectId ||
         value.labels?.['church-install'] !== runLabel || value.state !== 'ACTIVE' ||
         !/^projects\/\d+$/.test(value.name ?? '') ||
         (resource('googleProject') && resource('googleProject').projectNumber !== value.name.split('/')[1])) conflict();
@@ -258,9 +295,22 @@ function openStepSession(context, { fetchImpl, command, delay, now, inspectIdent
 // Create the run-labelled Google project, or reconcile a pending create.
 async function createProject(s) {
   const { projectId, project, runLabel, save, resource, intent, begin, request, operationPath, wait, createOrWait, checkProject } = s;
-  let value = await request('cloudresourcemanager', `/v3/${project}`, { missing: true });
+  let value;
+  try { value = await request('cloudresourcemanager', `/v3/${project}`, { missing: true }); }
+  catch (error) {
+    // Google can return 403 for a nonexistent ID. Only before our first create intent,
+    // try creating this exact ID; an occupied ID cannot be adopted by a POST. A
+    // create whose reply was lost may also still read as 403; it waits below.
+    if (!(error instanceof ActionRequired && error.code === 'GOOGLE_PERMISSION_REQUIRED' && !resource('googleProject') &&
+        (!intent('googleProject') || intent('googleProject').lastRequestRejected || intent('googleProject').requested))) throw error;
+    value = null;
+  }
   if (!value) {
     if (resource('googleProject')) conflict('本次建立的 Google 專案已消失；不會自動重新建立或切換目標。');
+    const earlier = intent('googleProject');
+    if (earlier && !earlier.operation && !earlier.requested && !earlier.lastOperationFailed && !earlier.lastRequestRejected) {
+      conflict('先前建立請求沒有保存 Google operation；無法安全判定專案所有權，不會重送或接管。請核對本次專案後求助。');
+    }
     await begin('googleProject', { projectId, runLabel });
     await createOrWait('cloudresourcemanager', 'v3', 'googleProject', '/v3/projects', {
       projectId, displayName: 'Church Staff', labels: { 'church-install': runLabel },
@@ -269,6 +319,17 @@ async function createProject(s) {
   } else if (value.state !== 'ACTIVE' && intent('googleProject')?.operation) {
     await wait('cloudresourcemanager', 'v3', await request('cloudresourcemanager', `/v3/${operationPath('cloudresourcemanager', intent('googleProject').operation)}`), 'googleProject');
     value = await request('cloudresourcemanager', `/v3/${project}`);
+  }
+  // The create was sent but its reply was lost. The label is derived from the
+  // private run ID (the project ID shows only part of it), so a project with
+  // this label, created no earlier than our request, is the one we asked for.
+  const unconfirmed = intent('googleProject');
+  if (value && unconfirmed?.requested && !unconfirmed.operation && !unconfirmed.adoptedByLabel && !resource('googleProject')) {
+    const created = Date.parse(value.createTime ?? '');
+    if (value.labels?.['church-install'] !== runLabel || !(created >= Date.parse(unconfirmed.at) - 5 * 60_000)) {
+      conflict('Google 專案已存在，但不是這次安裝建立的；不會接管。請保留安裝識別碼並求助，不要另開新的安裝。');
+    }
+    await save('intents', 'googleProject', { ...unconfirmed, adoptedByLabel: true });
   }
   checkProject(value);
   const metadata = { projectId, projectNumber: value.name.split('/')[1], runLabel, createTime: value.createTime };
@@ -621,6 +682,7 @@ export function createGoogleInstaller({
   command = (file, args, options = {}) => runCommand(file, args, { timeoutMs: 30_000, maxOutputBytes: 1024 * 1024, ...options }),
   delay = (ms, signal) => sleep(ms, undefined, { signal }),
   now = Date.now,
+  authorizeTimeoutMs = 5 * 60_000,
 } = {}) {
   async function inspectIdentity({ signal } = {}) {
     signal?.throwIfAborted();
@@ -646,6 +708,21 @@ export function createGoogleInstaller({
       stop('GOOGLE_AUTH_REQUIRED', '找不到唯一有效的 Google 個人登入；請先完成 Cloud Shell 官方授權。');
     }
     return { email: accounts[0].account.toLowerCase() };
+  }
+
+  // Cloud Shell shows its official "Authorize Cloud Shell" prompt when this
+  // wizard's own gcloud first asks for a token, so the credential lands in the
+  // configuration the wizard reads (a second terminal tab has another one).
+  // The token is discarded; only the identity check result is kept.
+  async function authorize({ signal } = {}) {
+    try { return await inspectIdentity({ signal }); }
+    catch (error) { if (error.code !== 'GOOGLE_AUTH_REQUIRED' || signal?.aborted) throw error; }
+    try { await command('gcloud', ['auth', 'print-access-token', '--quiet'], { signal, timeoutMs: authorizeTimeoutMs }); }
+    catch {
+      signal?.throwIfAborted();
+      stop('GOOGLE_AUTH_REQUIRED', 'Cloud Shell 沒有完成 Google 授權。請按「連接 Google」再試一次，接著立刻切到 Cloud Shell 分頁，在「Authorize Cloud Shell」視窗按 Authorize 並選擇這次要用的 Google 帳號。');
+    }
+    return inspectIdentity({ signal });
   }
 
   async function executeStep(step, context) {
@@ -675,5 +752,5 @@ export function createGoogleInstaller({
       throw error;
     }
   }
-  return { inspectIdentity, execute };
+  return { inspectIdentity, authorize, execute };
 }

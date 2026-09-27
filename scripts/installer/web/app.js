@@ -13,6 +13,8 @@ const stateLabels = { pending: '尚未開始', running: '處理中', complete: '
 // Long steps say so up front; the elapsed time shows the wizard is still alive.
 const slowSteps = { 'google-project': '可能需要數分鐘', firebase: '可能需要數分鐘', build: '可能需要十幾分鐘', publish: '可能需要幾分鐘' };
 const runningSince = new Map();
+// Google is still working (or may have accepted a request): resume later, do not redo.
+const laterCodes = new Set(['GOOGLE_OPERATION_PENDING', 'GOOGLE_REQUEST_UNCONFIRMED']);
 let busySince;
 
 function elapsed(since) {
@@ -105,7 +107,8 @@ function render(state) {
   if (state.busy) busySince ??= Date.now(); else busySince = undefined;
   const message = state.message || '先連接 Google 與 Cloudflare 帳號';
   $('status').textContent = busySince ? `${message}（已經過 ${elapsed(busySince)}）` : message;
-  $('google-identity').textContent = state.identity.googleEmail || '尚未連接';
+  $('google-identity').textContent = state.identity.googleEmail ? `已連接：${state.identity.googleEmail}` : '尚未連接';
+  $('google-switch').hidden = !state.identity.googleEmail || Boolean(state.plan);
   $('cloudflare-identity').textContent = state.identity.cloudflareEmail || '尚未連接';
   $('connect-google').disabled = state.busy;
   $('connect-cloudflare').disabled = state.busy;
@@ -116,6 +119,13 @@ function render(state) {
   if (state.device) {
     $('device-code').textContent = state.device.code;
     $('device-link').href = state.device.url;
+    const left = state.device.expiresInMs === undefined ? undefined : Math.ceil(state.device.expiresInMs / 1000);
+    $('device-expiry').hidden = left === undefined;
+    if (left !== undefined) {
+      $('device-expiry').textContent = left > 0
+        ? `請在 ${Math.floor(left / 60)} 分 ${String(left % 60).padStart(2, '0')} 秒內按 Authorize。逾時請重新按「連接 Cloudflare」取得新代碼。`
+        : '這組代碼已過期。請按「連接 Cloudflare」取得新代碼，不要再授權舊代碼。';
+    }
   }
   if (!regionsReady) {
     for (const [id, name] of state.regions) $('region').add(new Option(`${name} · ${id}`, id));
@@ -161,7 +171,7 @@ function render(state) {
       label.textContent = step.label;
       const status = document.createElement('span');
       status.className = 'step-state';
-      status.textContent = step.status === 'waiting' && state.error?.code === 'GOOGLE_OPERATION_PENDING'
+      status.textContent = step.status === 'waiting' && laterCodes.has(state.error?.code)
         ? '稍後接續' : stateLabels[step.status] ?? '需要核對';
       if (step.status === 'running') {
         if (!runningSince.has(step.id)) runningSince.set(step.id, Date.now());
@@ -171,14 +181,25 @@ function render(state) {
       $('steps').append(item);
     }
     $('apply').textContent = state.status === 'paused'
-      ? state.error?.code === 'GOOGLE_OPERATION_PENDING' ? '稍後接續安裝' : '核對後接續安裝'
+      ? laterCodes.has(state.error?.code) ? '稍後接續安裝' : '核對後接續安裝'
       : '確認並開始安裝';
     $('apply').hidden = state.status === 'complete';
     $('cancel').hidden = !state.busy;
   }
   updateApply();
   if (state.website) $('website').href = state.website;
+  if (state.status === 'complete' && state.plan) renderCleanup(state.plan);
   showError(state.error);
+}
+
+// Only the IDs this run created. Deleting stays a manual, official-console action.
+function renderCleanup(plan) {
+  const project = encodeURIComponent(plan.projectId);
+  const account = encodeURIComponent(plan.cloudflareAccountId);
+  $('cleanup-google-id').textContent = plan.projectId;
+  $('cleanup-google').href = `https://console.cloud.google.com/iam-admin/settings?project=${project}`;
+  $('cleanup-cloudflare-id').textContent = plan.pagesProject;
+  $('cleanup-cloudflare').href = `https://dash.cloudflare.com/${account}/pages/view/${encodeURIComponent(plan.pagesProject)}`;
 }
 
 function updateApply() {
@@ -245,25 +266,52 @@ $('copy-id').addEventListener('click', () => perform(async () => {
   $('copy-id').textContent = '已複製';
 }));
 
+// The link token is kept in this tab's sessionStorage until the server has
+// seen the session cookie, so a first open that loses the cookie on Cloud
+// Shell's sign-in redirect recovers by itself instead of needing the link again.
+const TOKEN_KEY = 'installer-link';
+const RETRY_KEY = 'installer-link-retries';
+const stored = {
+  get: (key) => { try { return sessionStorage.getItem(key) ?? ''; } catch { return ''; } },
+  set: (key, value) => { try { sessionStorage.setItem(key, value); } catch { /* Private mode: the link still works once. */ } },
+  clear: () => { try { sessionStorage.removeItem(TOKEN_KEY); sessionStorage.removeItem(RETRY_KEY); } catch { /* Nothing stored. */ } },
+};
+
+async function openSession(token) {
+  try { await request('/api/session', { token }); }
+  catch (error) {
+    if (error.status !== 401) throw error;
+    // An already authenticated tab can reopen an expired private link.
+    await request('/api/session').catch(() => { throw error; });
+  }
+  // A Cloud Shell sign-in redirect can keep Strict cookies off the first
+  // document's fetches. Navigate once, without the token, before reading
+  // state; this also keeps the token out of browser history.
+  location.replace(location.pathname);
+}
+
 async function start() {
   addService({ label: '主日', name: '主日崇拜', weekday: 7 });
-  const token = location.hash.slice(1);
+  const token = new URLSearchParams(location.search).get('k') || location.hash.slice(1);
   history.replaceState(null, '', location.pathname);
   try {
     if (token) {
-      try { await request('/api/session', { token }); }
-      catch (error) {
-        if (error.status !== 401) throw error;
-        // An already authenticated tab can reopen an expired private link.
-        await request('/api/session').catch(() => { throw error; });
-      }
-      // A Cloud Shell sign-in redirect can keep Strict cookies off the first
-      // document's fetches. Navigate once, without the used token, before
-      // reading state; this also keeps the token out of browser history.
-      location.replace(location.pathname);
+      stored.set(TOKEN_KEY, token);
+      stored.set(RETRY_KEY, '0');
+      await openSession(token);
       return;
     }
-    csrf = (await request('/api/session')).csrf;
+    let session;
+    try { session = await request('/api/session'); }
+    catch (error) {
+      const retries = Number(stored.get(RETRY_KEY)) || 0;
+      if (error.status !== 401 || !stored.get(TOKEN_KEY) || retries >= 2) throw error;
+      stored.set(RETRY_KEY, String(retries + 1));
+      await openSession(stored.get(TOKEN_KEY));
+      return;
+    }
+    stored.clear();
+    csrf = session.csrf;
     render(await request('/api/state'));
     await loadRuns();
     timer = setInterval(refresh, 1_500);

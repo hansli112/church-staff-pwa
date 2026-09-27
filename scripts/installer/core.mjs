@@ -215,7 +215,9 @@ export function createInstallationManager({ rootDir, google, cloudflare, build, 
       try {
         const url = new URL(candidate);
         if (url.protocol === 'https:' && url.hostname === 'dash.cloudflare.com' && !url.username && !url.password) {
-          device = { url: url.href, code: String(event.userCode ?? event.code ?? '').slice(0, 50) };
+          const lifetimeMs = Number.isFinite(event.expiresInMs) ? Math.min(Math.max(event.expiresInMs, 0), 15 * 60_000) : undefined;
+          device = { url: url.href, code: String(event.userCode ?? event.code ?? '').slice(0, 50),
+            ...(lifetimeMs === undefined ? {} : { expiresAt: Date.now() + lifetimeMs }) };
         }
       } catch { /* Auth providers may only link to their official host. */ }
     }
@@ -273,7 +275,10 @@ export function createInstallationManager({ rootDir, google, cloudflare, build, 
     },
     snapshot() {
       return {
-        demo, busy, message, error: lastError, device,
+        demo, busy, message, error: lastError,
+        // Relative time, so the page's countdown does not depend on its clock.
+        device: device && { url: device.url, code: device.code,
+          ...(device.expiresAt ? { expiresInMs: Math.max(0, device.expiresAt - Date.now()) } : {}) },
         identity: {
           googleEmail: googleIdentity?.email,
           cloudflareEmail: cloudflareIdentity?.email,
@@ -288,8 +293,8 @@ export function createInstallationManager({ rootDir, google, cloudflare, build, 
     },
     connectGoogle() {
       return exclusive(async (signal) => {
-        message = '請完成 Google 官方 Cloud Shell 授權';
-        googleIdentity = await google.inspectIdentity({ signal });
+        message = '請切到 Cloud Shell 分頁：若出現「Authorize Cloud Shell」，按 Authorize 並選擇這次要用的 Google 帳號';
+        googleIdentity = await (google.authorize ?? google.inspectIdentity)({ signal });
         message = 'Google 帳號已連接';
       });
     },
