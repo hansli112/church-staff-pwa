@@ -575,7 +575,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
                     child: Text(
                       role.isEmpty
                           ? '先選擇服事項目，才會列出可以排的同工。'
-                          : '還沒有同工可排「$role」。請到「帳號管理」編輯同工，'
+                          : '還沒有同工可排「$role」。請到「我的」→「帳號管理」編輯同工，'
                                 '在「${widget.rosterType.label}」牧區的「參與服事」'
                                 '勾選「$role」，他就會出現在這裡。',
                       style: TextStyle(

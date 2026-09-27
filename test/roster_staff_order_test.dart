@@ -723,7 +723,10 @@ void main() {
 
       await tester.tap(find.text('司琴'));
       await tester.pumpAndSettle();
-      expect(find.textContaining('還沒有同工可排「司琴」。請到「帳號管理」編輯同工'), findsOneWidget);
+      expect(
+        find.textContaining('還沒有同工可排「司琴」。請到「我的」→「帳號管理」編輯同工'),
+        findsOneWidget,
+      );
       expect(find.textContaining('勾選「司琴」'), findsOneWidget);
 
       await tester.tap(find.text('取消'));
