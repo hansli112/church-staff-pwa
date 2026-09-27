@@ -13,7 +13,7 @@
 ## 開始之前
 
 - 雲端資源、資料與帳單都屬於你們教會自己的帳號。精靈**不會綁定付費帳單，也不會升級付費方案**；如果平台要求付費或受組織政策限制，精靈會停下來說明原因。
-- 打開 Cloud Shell 時，Google 會先問是否「信任存放區」：**一定要勾選再按「確認」**。畫面左上角若顯示「暫時模式」，代表沒勾到，請關掉分頁重新開啟。
+- 打開 Cloud Shell 時，Google 會先問是否「信任存放區」：**一定要勾選再按「確認」**。畫面左上角若顯示「暫時模式」，代表沒勾到：請按 Cloud Shell 右上角的「⋮」，點選單裡打勾的「暫時模式」，再按「停用」。Cloud Shell 會重新啟動並請你按「授權」，之後再按一次教學的指令卡。
 - 接著會跳出 Google 官方的「授權 Cloud Shell」視窗，請按「**授權**」，不要按拒絕。
 - 第一次會下載約 1–2 GB 的工具，需要幾分鐘到十幾分鐘。
 - 精靈只建立**全新的專案**，不會接管或修改你們已經在用的網站或資料庫。
@@ -26,7 +26,13 @@
 **不用找程式在哪個資料夾**。按下方指令卡右上角的「在終端機執行」圖示（小終端機），然後在黑色終端機按一次 Enter。它會尋找已下載的程式；如果沒有，就從 GitHub 下載後啟動。只需做這一次，不要逐字輸入指令。
 
 ```sh
-bash -c 's=$(find "$HOME" -maxdepth 7 -type f -path "*/church-staff-pwa/scripts/start-installation.sh" -print -quit); if [ -z "$s" ]; then d="$HOME/cloudshell_open/church-staff-pwa"; mkdir -p "$(dirname "$d")" && git clone --branch dev --single-branch https://github.com/hansli112/church-staff-pwa.git "$d" || exit 1; s="$d/scripts/start-installation.sh"; fi; exec bash "$s"'
+bash -c '
+d=""
+[ -f scripts/start-installation.sh ] && d="$PWD"
+if [ -z "$d" ]; then s=$(find "$HOME" -maxdepth 7 -type f -path "*/church-staff-pwa*/scripts/start-installation.sh" -print -quit); [ -n "$s" ] && d="${s%/scripts/start-installation.sh}"; fi
+if [ -z "$d" ]; then d="$HOME/cloudshell_open/church-staff-pwa"; mkdir -p "$(dirname "$d")" && git clone -q --branch dev --single-branch https://github.com/hansli112/church-staff-pwa.git "$d" || exit 1; fi
+grep -q "pull --ff-only --quiet origin" "$d/scripts/start-installation.sh" || git -C "$d" pull -q --ff-only origin dev
+exec bash "$d/scripts/start-installation.sh"'
 ```
 
 目前精靈仍在 `dev` 分支驗收；合併到 `main` 後，教學會改用 `main`。如果終端機顯示紅色錯誤，先停下來，不要重複按「執行」。
