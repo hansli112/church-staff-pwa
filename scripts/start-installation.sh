@@ -32,7 +32,10 @@ if [[ -z "${INSTALLER_SELF_UPDATED:-}" ]] && git -C "$ROOT" rev-parse --is-insid
     printf '%s\n' '程式檔案有本機修改，略過自動更新。'
   else
     before="$(git -C "$ROOT" rev-parse HEAD)"
-    if git -C "$ROOT" pull --ff-only --quiet >/dev/null 2>&1; then
+    # Cloud Shell's clone sets the branch upstream to the local repo itself
+    # (branch.<name>.remote = .), so a bare `git pull` never fetches anything.
+    branch="$(git -C "$ROOT" symbolic-ref --quiet --short HEAD || true)"
+    if [[ -n "$branch" ]] && git -C "$ROOT" pull --ff-only --quiet origin "$branch" >/dev/null 2>&1; then
       if [[ "$(git -C "$ROOT" rev-parse HEAD)" != "$before" ]]; then
         printf '%s\n' '已更新到最新版本，重新啟動。'
         INSTALLER_SELF_UPDATED=1 exec bash "$ROOT/scripts/start-installation.sh"
