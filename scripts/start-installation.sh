@@ -18,7 +18,8 @@ fi
 if [[ "${TRUSTED_ENVIRONMENT:-}" == false ]]; then
   printf '%s\n' '這個 Cloud Shell 是「暫時模式」，沒有你的 Google 授權，精靈無法建立專案。' \
     '請按 Cloud Shell 右上角的「⋮」，點選單裡打勾的「暫時模式」，再按「停用」。' \
-    'Cloud Shell 會重新啟動並請你按「授權」，之後再按一次教學的指令卡。' >&2
+    'Cloud Shell 重新啟動並請你按「授權」後，回到安裝說明頁重新按「Open in Cloud Shell」，' \
+    '勾選「信任存放區」再照教學做。' >&2
   exit 1
 fi
 for tool in curl tar xz sha256sum sha512sum base64 awk df mktemp stat od tr flock; do
