@@ -138,3 +138,14 @@ test('Cloud Shell launcher pins official tools, checks hashes and does not log i
   assert.ok(script.indexOf('mark "flutter-') > script.indexOf('verify "$FLUTTER_SHA256"'));
   assert.doesNotMatch(script, /gcloud\s+(auth|projects)|wrangler\s+(login|pages)|\.local\/.*(?:env|credential)|curl[^\n]*\|\s*(bash|sh)/);
 });
+
+test('the tutorial launch card is one line, because Cloud Shell rewrites newlines as "; "', async () => {
+  const guide = await readFile(path.join(ROOT, 'docs/install-cloud-shell.md'), 'utf8');
+  const cards = [...guide.matchAll(/```sh\n([\s\S]*?)```/g)].map((match) => match[1].trim());
+  assert.equal(cards.length, 1);
+  assert.equal(cards[0].includes('\n'), false);
+  assert.match(cards[0], /^bash -c '[^;]/);
+  assert.match(cards[0], /church-staff-pwa\*\/scripts/);
+  assert.match(cards[0], /pull -q --ff-only origin dev/);
+});
+
