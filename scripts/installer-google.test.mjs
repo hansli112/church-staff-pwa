@@ -469,6 +469,23 @@ test('a lost create reply never adopts a project with another label or an older 
   });
 });
 
+test('a just-enabled API answering SERVICE_DISABLED is waited out, not reported as a permission problem', async (t) => {
+  const h = await setup(t);
+  await h.through('firebase');
+  let refusals = 0;
+  const disabled = () => response(403, { error: { status: 'PERMISSION_DENIED', message: 'Cloud Firestore API has not been used in project before or it is disabled.',
+    details: [{ reason: 'SERVICE_DISABLED' }] } });
+  h.setInterceptor((call) => {
+    if (call.host === 'firestore' && call.method === 'GET' && refusals < 2) { refusals++; return disabled(); }
+  });
+  await h.adapter.execute('database', h.context);
+  assert.equal(refusals, 2);
+  assert.ok(h.state.delays.includes(5000) && h.state.delays.includes(10000));
+  h.setInterceptor((call) => call.host === 'firestore' && call.method === 'GET' ? disabled() : undefined);
+  await assert.rejects(h.adapter.execute('rules', h.context), (err) => err.code === 'GOOGLE_API_PROPAGATING' &&
+    err.message.includes('〔技術代碼：firestore 403 PERMISSION_DENIED SERVICE_DISABLED〕') && !/http|googleapis|Bearer/.test(err.message));
+});
+
 test('a project create refused with 403 can be retried; it is still never adopted', async (t) => {
   const h = await setup(t);
   let posts = 0;

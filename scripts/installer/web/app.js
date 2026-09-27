@@ -14,7 +14,7 @@ const stateLabels = { pending: '尚未開始', running: '處理中', complete: '
 const slowSteps = { 'google-project': '可能需要數分鐘', firebase: '可能需要數分鐘', build: '可能需要十幾分鐘', publish: '可能需要幾分鐘' };
 const runningSince = new Map();
 // Google is still working (or may have accepted a request): resume later, do not redo.
-const laterCodes = new Set(['GOOGLE_OPERATION_PENDING', 'GOOGLE_REQUEST_UNCONFIRMED']);
+const laterCodes = new Set(['GOOGLE_OPERATION_PENDING', 'GOOGLE_REQUEST_UNCONFIRMED', 'GOOGLE_API_PROPAGATING']);
 let busySince;
 
 function elapsed(since) {
@@ -109,7 +109,7 @@ function render(state) {
   $('status').textContent = busySince ? `${message}（已經過 ${elapsed(busySince)}）` : message;
   $('google-identity').textContent = state.identity.googleEmail ? `已連接：${state.identity.googleEmail}` : '尚未連接';
   $('google-switch').hidden = !state.identity.googleEmail || Boolean(state.plan);
-  $('cloudflare-identity').textContent = state.identity.cloudflareEmail || '尚未連接';
+  $('cloudflare-identity').textContent = state.identity.cloudflareEmail ? `已連接：${state.identity.cloudflareEmail}` : '尚未連接';
   $('connect-google').disabled = state.busy;
   $('connect-cloudflare').disabled = state.busy;
   $('resume').disabled = state.busy;

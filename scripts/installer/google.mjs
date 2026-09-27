@@ -49,13 +49,18 @@ function conflict(message = '雲端資源已存在或被其他操作變更；為
 function cloudError(status, error = {}, authSetup = false) {
   const reason = `${error.status ?? ''} ${error.message ?? ''} ${canonical(error.details ?? [])}`.toUpperCase();
   if (authSetup && (status === 404 || /CONFIGURATION_NOT_FOUND|PROJECT_NOT_FOUND|OPERATION_NOT_ALLOWED/.test(reason))) {
-    stop('AUTH_SETUP_REQUIRED', '請在本次 Firebase 專案的 Authentication 按「Get started」，不要升級付費方案；完成這一次官方確認後回到此處繼續。');
+    stop('AUTH_SETUP_REQUIRED', '請按下方「開啟官方設定頁」，在 Firebase 的 Authentication 頁按「Get started」。看到一排登入方式就完成了，不用再點任何一種，也不要升級付費方案；回到這裡按「核對後接續安裝」，精靈會自己設定 Email 登入。');
   }
   if (/BILLING|BLAZE|IDENTITY_PLATFORM.*UPGRADE/.test(reason)) {
     stop('GOOGLE_FREE_TIER_REQUIRED', 'Google 要求付費方案；安裝器不會綁定帳單或升級。請核對免費 Firebase 設定後再繼續。');
   }
   if (/TERMS|TOS_|TOS_NOT|AGREEMENT/.test(reason)) {
     stop('GOOGLE_TERMS_REQUIRED', '請先在 Google Cloud／Firebase 官方網站接受帳號所需條款，再回到此處繼續。');
+  }
+  // Right after services:batchEnable, Google can still answer 403 SERVICE_DISABLED
+  // for a few minutes. It is not a permission problem; waiting fixes it.
+  if (/SERVICE_DISABLED|ACCESS_NOT_CONFIGURED|API HAS NOT BEEN USED|IT IS DISABLED/.test(reason)) {
+    stop('GOOGLE_API_PROPAGATING', 'Google 剛啟用的服務還在生效中，通常需要 1–3 分鐘。請稍候再按「稍後接續安裝」；不需要改任何設定。');
   }
   if (status === 401 || status === 16) stop('GOOGLE_AUTH_REQUIRED', 'Google 授權已過期或未完成；請重新完成 Cloud Shell 官方授權，再繼續本次安裝。');
   if (status === 429 || status === 8 || /QUOTA|RESOURCE_EXHAUSTED/.test(reason)) {
@@ -160,8 +165,17 @@ function openStepSession(context, { fetchImpl, command, delay, now, inspectIdent
         await delay(500 * 2 ** attempt, signal);
         continue;
       }
+      const reasonCode = [data.error?.status, ...(data.error?.details ?? []).map((item) => item?.reason)]
+        .filter((value) => typeof value === 'string' && /^[A-Z_]{3,60}$/.test(value)).slice(0, 2).join(' ');
+      if (readOnly && /SERVICE_DISABLED/.test(reasonCode) && attempt < 3) {
+        await delay(5000 * 2 ** attempt, signal);
+        continue;
+      }
       try { cloudError(response.status, data.error, authSetup); }
       catch (failure) {
+        // Only the service, HTTP status and Google's reason enum: enough for
+        // support, never a URL, body or credential.
+        if (failure instanceof ActionRequired) failure.message += `〔技術代碼：${host} ${response.status}${reasonCode ? ` ${reasonCode}` : ''}〕`;
         // These answers are definite refusals: nothing was created. A 5xx may
         // still have been accepted, so only these let a create be retried.
         // 408 and 499 (cancelled) can still hide an accepted request.

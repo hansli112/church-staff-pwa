@@ -40,7 +40,7 @@ bash -c 'd=; [ -f scripts/start-installation.sh ] && d=$PWD; [ -z "$d" ] && s=$(
 在精靈頁面：
 
 1. 按「連接 Google」，接著切到 Cloud Shell 分頁。出現「Authorize Cloud Shell」時按 **Authorize**，選這次要用的 Google 帳號。沒出現就回精靈再按一次「連接 Google」。精靈會顯示已連接的帳號；**不是你要用的帳號就先停下**，照精靈上的說明切換帳號後重開教學。
-2. 按「連接 Cloudflare」，再按「開啟官方授權頁」。在 Cloudflare 官方網頁登入，**核對頁面上的代碼和精靈顯示的一樣**，再按授權。代碼約 5 分鐘內有效，精靈會倒數；過期就再按一次「連接 Cloudflare」取得新代碼，不要授權舊代碼。
+2. 按「連接 Cloudflare」，再按「開啟官方授權頁」。在 Cloudflare 官方網頁登入，**輸入精靈顯示的代碼**（頁面說的「terminal」指的就是精靈），按 Continue，再按 Authorize。代碼約 5 分鐘內有效，精靈會倒數；過期就再按一次「連接 Cloudflare」取得新代碼，不要授權舊代碼。
 
 兩邊的密碼都只在 Google 與 Cloudflare 官方網頁輸入，精靈不會看到。
 
