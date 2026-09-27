@@ -506,6 +506,21 @@ test('connecting Google asks Cloud Shell to authorize the wizard configuration o
   assert.equal(calls.some((call) => call.args[1] === 'print-access-token'), false);
 });
 
+test('an untrusted (ephemeral) Cloud Shell says to reopen it as trusted', async (t) => {
+  const previous = process.env.TRUSTED_ENVIRONMENT;
+  process.env.TRUSTED_ENVIRONMENT = 'false';
+  t.after(() => { if (previous === undefined) delete process.env.TRUSTED_ENVIRONMENT; else process.env.TRUSTED_ENVIRONMENT = previous; });
+  const adapter = createGoogleInstaller({
+    fetchImpl: () => assert.fail('no network'),
+    command: async (file, args) => {
+      if (args[0] === 'config') return { stdout: '{}' };
+      if (args[1] === 'list') return { stdout: '[]' };
+      assert.fail('no token request in an untrusted Cloud Shell');
+    },
+  });
+  await assert.rejects(adapter.authorize(), (err) => err.code === 'GOOGLE_AUTH_REQUIRED' && /信任存放區/.test(err.message));
+});
+
 test('a declined Cloud Shell authorization explains how to retry', async () => {
   const adapter = createGoogleInstaller({
     fetchImpl: () => assert.fail('no network'),

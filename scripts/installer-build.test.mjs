@@ -128,6 +128,8 @@ test('Cloud Shell launcher pins official tools, checks hashes and does not log i
   assert.match(script, /npm install[^\n]*--ignore-scripts/);
   assert.match(script, /INSTALLER_BUILD_ROOT="\$TOOLS\/builds"/);
   assert.match(script, /install-core\.mjs" --cloud-shell/);
+  // An untrusted Cloud Shell has no Google credentials: stop before downloading anything.
+  assert.ok(script.indexOf('TRUSTED_ENVIRONMENT') < script.indexOf('download()'));
   // A bare `git pull` is a no-op in Cloud Shell clones (upstream is the repo itself).
   assert.match(script, /pull --ff-only --quiet origin "\$branch"/);
   // Relaunching on the same VM reuses tools only behind a checksum-bound marker.

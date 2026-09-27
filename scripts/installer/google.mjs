@@ -717,6 +717,9 @@ export function createGoogleInstaller({
   async function authorize({ signal } = {}) {
     try { return await inspectIdentity({ signal }); }
     catch (error) { if (error.code !== 'GOOGLE_AUTH_REQUIRED' || signal?.aborted) throw error; }
+    if (process.env.TRUSTED_ENVIRONMENT === 'false') {
+      stop('GOOGLE_AUTH_REQUIRED', '這個 Cloud Shell 是「暫時模式」，沒有你的 Google 授權。請關掉 Cloud Shell 分頁，回到安裝說明頁重新按「Open in Cloud Shell」，這次勾選「信任存放區」再按「確認」。');
+    }
     try { await command('gcloud', ['auth', 'print-access-token', '--quiet'], { signal, timeoutMs: authorizeTimeoutMs }); }
     catch {
       signal?.throwIfAborted();

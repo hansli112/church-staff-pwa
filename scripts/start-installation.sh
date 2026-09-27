@@ -13,6 +13,14 @@ if [[ "$(uname -s)" != Linux || "$(uname -m)" != x86_64 || "${CLOUD_SHELL:-}" !=
   printf '%s\n' '請在自己的 Google Cloud Shell 執行此入口（Linux x86_64）。' >&2
   exit 1
 fi
+# Opening the repository without ticking "trust repository" starts Cloud Shell
+# with no Google credentials, so the wizard could never connect Google.
+if [[ "${TRUSTED_ENVIRONMENT:-}" == false ]]; then
+  printf '%s\n' '這個 Cloud Shell 是「暫時模式」，沒有你的 Google 授權，精靈無法建立專案。' \
+    '請關掉這個 Cloud Shell 分頁，回到安裝說明頁重新按「Open in Cloud Shell」，' \
+    '這次先勾選「信任存放區」（Trust repo），再按「確認」。' >&2
+  exit 1
+fi
 for tool in curl tar xz sha256sum sha512sum base64 awk df mktemp stat od tr flock; do
   command -v "$tool" >/dev/null || { printf '缺少必要工具：%s\n' "$tool" >&2; exit 1; }
 done
