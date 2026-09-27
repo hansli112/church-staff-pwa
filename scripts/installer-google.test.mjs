@@ -506,7 +506,7 @@ test('connecting Google asks Cloud Shell to authorize the wizard configuration o
   assert.equal(calls.some((call) => call.args[1] === 'print-access-token'), false);
 });
 
-test('an untrusted (ephemeral) Cloud Shell says to reopen it as trusted', async (t) => {
+test('an untrusted (ephemeral) Cloud Shell explains how to leave ephemeral mode', async (t) => {
   const previous = process.env.TRUSTED_ENVIRONMENT;
   process.env.TRUSTED_ENVIRONMENT = 'false';
   t.after(() => { if (previous === undefined) delete process.env.TRUSTED_ENVIRONMENT; else process.env.TRUSTED_ENVIRONMENT = previous; });
@@ -518,7 +518,7 @@ test('an untrusted (ephemeral) Cloud Shell says to reopen it as trusted', async 
       assert.fail('no token request in an untrusted Cloud Shell');
     },
   });
-  await assert.rejects(adapter.authorize(), (err) => err.code === 'GOOGLE_AUTH_REQUIRED' && /信任存放區/.test(err.message));
+  await assert.rejects(adapter.authorize(), (err) => err.code === 'GOOGLE_AUTH_REQUIRED' && /暫時模式.*停用/.test(err.message));
 });
 
 test('a declined Cloud Shell authorization explains how to retry', async () => {
