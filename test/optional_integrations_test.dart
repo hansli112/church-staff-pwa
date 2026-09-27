@@ -13,6 +13,7 @@ import 'package:church_staff_pwa/features/auth/presentation/screens/profile_scre
 import 'package:church_staff_pwa/features/calendar/data/calendar_write_service.dart';
 import 'package:church_staff_pwa/features/calendar/data/google_calendar_month_reader.dart';
 import 'package:church_staff_pwa/features/calendar/presentation/screens/calendar_screen.dart';
+import 'package:church_staff_pwa/features/dashboard/domain/season_window.dart';
 import 'package:church_staff_pwa/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:church_staff_pwa/features/roster/data/roster_import_service.dart';
 import 'package:church_staff_pwa/features/roster/data/roster_photo.dart';
@@ -158,7 +159,7 @@ void main() {
     );
     expect(find.text('每日靈糧'), findsNothing);
     expect(find.text('行事曆'), findsNothing);
-    expect(find.text('本季服事'), findsOneWidget);
+    expect(find.text(seasonWindow(ChurchTime.today()).title), findsOneWidget);
   });
 
   testWidgets('enabled Calendar with missing keys has no dashboard entry', (
@@ -291,5 +292,75 @@ void main() {
     );
     expect(find.text('每日讀經'), findsOneWidget);
     expect(find.text('約翰福音3:16-18'), findsOneWidget);
+  });
+
+  group('devotional fallback while the data branch is still on yesterday', () {
+    setUp(() {
+      ChurchConfig.current = testChurchConfig(
+        devotional: {
+          'enabled': true,
+          'dataUrl': 'https://example.org/devotional.json',
+          'linkUrl': 'https://example.org/devotional',
+          'sourceName': '每日靈糧',
+          'fetchUrl': 'https://example.org/source',
+          'fetchFormat': 'dailyBibleHtml',
+        },
+      );
+    });
+
+    http.Response stale(http.Request request) => http.Response(
+      jsonEncode({
+        'date': ChurchTime.dateKey(
+          ChurchTime.today().subtract(const Duration(days: 1)),
+        ),
+        'rawRange': '哥林多後書一：1-一：11',
+      }),
+      200,
+      headers: {'content-type': 'application/json; charset=utf-8'},
+    );
+
+    testWidgets('asks the site for today and shows its range', (tester) async {
+      final requests = <http.Request>[];
+      await _pumpSignedIn(
+        tester,
+        DashboardScreen(
+          idToken: () async => 'test-token',
+          httpClient: MockClient((request) async {
+            requests.add(request);
+            if (request.url.host == 'example.org') return stale(request);
+            return http.Response(
+              jsonEncode({
+                'date': ChurchTime.dateKey(ChurchTime.today()),
+                'rawRange': '哥林多後書一：12-一：24',
+              }),
+              200,
+              headers: {'content-type': 'application/json; charset=utf-8'},
+            );
+          }),
+        ),
+      );
+      expect(requests, hasLength(2));
+      expect(requests.last.url.path, '/api/devotional/today');
+      expect(requests.last.headers['Authorization'], 'Bearer test-token');
+      expect(find.text('哥林多後書1:12-24'), findsOneWidget);
+      expect(find.textContaining('一：1-'), findsNothing);
+    });
+
+    testWidgets('keeps the placeholder when the site has nothing either', (
+      tester,
+    ) async {
+      await _pumpSignedIn(
+        tester,
+        DashboardScreen(
+          idToken: () async => 'test-token',
+          httpClient: MockClient((request) async {
+            if (request.url.host == 'example.org') return stale(request);
+            return http.Response('{"error":"來源尚未更新今日經文"}', 404);
+          }),
+        ),
+      );
+      expect(find.text('查看今日經文範圍'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
   });
 }

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:developer';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -14,6 +15,7 @@ import '../../../calendar/data/google_calendar_event.dart';
 import '../../../../core/services/external_link_service.dart';
 import '../../../../core/utils/error_messages.dart';
 import '../../domain/entities/recent_activity.dart';
+import '../../domain/season_window.dart';
 import '../widgets/recent_activity_row.dart';
 import '../../../roster/domain/entities/service_roster.dart';
 import '../../../roster/presentation/providers/roster_provider.dart';
@@ -21,10 +23,13 @@ import '../../../calendar/presentation/screens/calendar_screen.dart'
     deferred as calendar;
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key, this.httpClient});
+  const DashboardScreen({super.key, this.httpClient, this.idToken});
 
   /// Tests supply a transport so optional integrations never contact a server.
   final http.Client? httpClient;
+
+  /// Tests supply the sign-in token for the site's own API.
+  final Future<String?> Function()? idToken;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -252,6 +257,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<String?> _fetchDailyBreadRange() async {
     final today = DateFormat('yyyy-MM-dd').format(ChurchTime.now());
+    String? raw;
+    try {
+      raw = await _fetchDailyVerseFromData(today);
+    } catch (e, st) {
+      log('daily verse data fetch failed', error: e, stackTrace: st);
+    }
+    // 資料分支靠 GitHub 排程每天更新，但排程常晚好幾個小時（凌晨一點排的，
+    // 實際三、四點才跑），這段時間首頁會看不到今天的範圍。還沒更新時改請
+    // 網站當場讀一次來源。
+    raw ??= await _fetchDailyVerseFromSite(today);
+    if (raw == null || raw.isEmpty) return null;
+    return _normalizeBibleRange(raw);
+  }
+
+  Future<String?> _fetchDailyVerseFromData(String today) async {
     final uri = Uri.parse(ChurchConfig.current.devotional.dataUrl);
     final datedUri = uri.replace(
       queryParameters: {...uri.queryParameters, 'd': today},
@@ -266,9 +286,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     if ((data['date'] as String?) != today) return null;
-    final raw = data['rawRange'] as String?;
-    if (raw == null || raw.isEmpty) return null;
-    return _normalizeBibleRange(raw);
+    return data['rawRange'] as String?;
+  }
+
+  static Future<String?> _firebaseIdToken() async {
+    try {
+      return await FirebaseAuth.instance.currentUser?.getIdToken();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 見 functions/api/devotional/today.js。失敗一律當作沒有，首頁顯示預設文字。
+  Future<String?> _fetchDailyVerseFromSite(String today) async {
+    if (ChurchConfig.current.devotional.fetchUrl.isEmpty) return null;
+    try {
+      final token = await (widget.idToken ?? _firebaseIdToken)();
+      if (token == null || token.isEmpty) return null;
+      final uri = Uri.base.resolve('/api/devotional/today');
+      final headers = {'Authorization': 'Bearer $token'};
+      final response =
+          await (widget.httpClient?.get(uri, headers: headers) ??
+                  http.get(uri, headers: headers))
+              .timeout(const Duration(seconds: 15));
+      if (response.statusCode != 200) return null;
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if ((data['date'] as String?) != today) return null;
+      return data['rawRange'] as String?;
+    } catch (e, st) {
+      log('daily verse fallback failed', error: e, stackTrace: st);
+      return null;
+    }
   }
 
   String _normalizeBibleRange(String? raw) {
@@ -571,13 +619,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required String fullName,
     required String? userId,
   }) {
+    final window = seasonWindow(ChurchTime.today());
     return Consumer<RosterProvider>(
       builder: (context, provider, child) {
         // 僅在 isLoading 且 cache 尚無資料時顯示 spinner（stale-while-revalidate）。
         // 若 IndexedDB cache 已有 roster，isLoading 仍可能為 true，但直接顯示卡內容。
         if (provider.isLoading && provider.rosters.isEmpty) {
           return _buildSectionCard(
-            title: '本季服事',
+            title: window.title,
             icon: Icons.volunteer_activism,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
@@ -598,7 +647,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         if (provider.error != null) {
           return _buildSectionCard(
-            title: '本季服事',
+            title: window.title,
             icon: Icons.volunteer_activism,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -624,16 +673,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
           userId: userId,
         );
         if (assignments.isEmpty) {
-          final emptyText = fullName.trim().isEmpty ? '尚未登入同工資料' : '本季尚無排到服事';
+          final emptyText = fullName.trim().isEmpty
+              ? '尚未登入同工資料'
+              : window.emptyText;
           return _buildSectionCard(
-            title: '本季服事',
+            title: window.title,
             icon: Icons.volunteer_activism,
             child: Text(emptyText),
           );
         }
 
         return _buildSectionCard(
-          title: '本季服事',
+          title: window.title,
           icon: Icons.volunteer_activism,
           child: SizedBox(
             height: _seasonListHeight(assignments.length),
@@ -737,16 +788,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (normalizedName.isEmpty && normalizedId.isEmpty) return [];
 
     final List<_UserServiceAssignment> results = [];
-    final now = ChurchTime.now();
-    final quarterStartMonth = ((now.month - 1) ~/ 3) * 3 + 1;
-    final quarterStart = DateTime.utc(now.year, quarterStartMonth, 1);
-    final quarterEnd = DateTime.utc(now.year, quarterStartMonth + 3, 0);
+    final window = seasonWindow(ChurchTime.today());
     final sorted = List<ServiceRoster>.from(rosters)
       ..sort((a, b) => a.date.compareTo(b.date));
 
     for (final roster in sorted) {
-      if (roster.date.isBefore(quarterStart) ||
-          roster.date.isAfter(quarterEnd)) {
+      if (roster.date.isBefore(window.start) ||
+          roster.date.isAfter(window.end)) {
         continue;
       }
       final roles = roster.duties

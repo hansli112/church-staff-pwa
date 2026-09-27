@@ -120,6 +120,7 @@ describe('不能攔截的請求', () => {
       'https://securetoken.googleapis.com/v1/token',
       'https://fcm.googleapis.com/fcm/send',
       'https://raw.githubusercontent.com/x/y/daily-verse.json',
+      `${ORIGIN}/api/devotional/today`,
     ];
     for (const url of live) {
       assert.equal(await sw.request(url), 'passthrough', url);
