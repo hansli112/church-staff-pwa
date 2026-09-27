@@ -12,7 +12,7 @@ const cloudflareError = (message) => installationError(message, 'CLOUDFLARE_INST
 
 export function parseDevicePrompt(output) {
   const clean = output.replace(/\x1b\[[0-9;]*m/g, '');
-  const match = clean.match(/To authorize [^\n]+, please visit:\s+(https:\/\/[^\s]+)\s+and enter the code:\s+([A-Z0-9]{4}-[A-Z0-9]{4})\b/);
+  const match = clean.match(/To authorize [^\n]+, please visit:\s+(https:\/\/[^\s]+)\s+and enter the code:\s+([A-Za-z0-9]{8}|[A-Z0-9]{4}-[A-Z0-9]{4})(?![A-Za-z0-9-])/);
   if (!match) return null;
   const url = new URL(match[1]);
   // The CLI prints the bare URI. Do not forward arbitrary query strings,

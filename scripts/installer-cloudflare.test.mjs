@@ -8,7 +8,8 @@ import { privateEnvironment, runIsolatedCommand } from './installer/process.mjs'
 
 const ACCOUNT = 'a'.repeat(32);
 const PLAN = { runId: 'run-example-1234', projectId: 'new-church-example', pagesProject: 'new-church-example', cloudflareAccountId: ACCOUNT };
-const prompt = 'To authorize Wrangler, please visit:\n\n https://dash.cloudflare.com/oauth2/device\n\nand enter the code:\n\n ABCD-EFGH\n';
+const prompt = 'To authorize Wrangler, please visit:\n\n https://dash.cloudflare.com/oauth2/device/verify\n\nand enter the code:\n\n aB3dE7f8\n';
+const legacyPrompt = 'To authorize Wrangler, please visit:\n\n https://dash.cloudflare.com/oauth2/device\n\nand enter the code:\n\n ABCD-EFGH\n';
 const identity = { loggedIn: true, authType: 'OAuth Token', email: 'operator@example.test', accounts: [{ id: ACCOUNT, name: 'New church' }], tokenPermissions: CLOUDFLARE_SCOPES };
 const response = (result, status = 200) => ({ ok: status >= 200 && status < 300, status, json: async () => ({ success: status === 200, result }) });
 const project = (subdomain = `${PLAN.pagesProject}.pages.dev`) => ({ id: 'pages-id-1', name: PLAN.pagesProject, subdomain, production_branch: 'main', source: null, deployment_configs: { production: { env_vars: { FIREBASE_PROJECT_ID: { type: 'plain_text', value: PLAN.projectId }, INSTALLER_RUN_ID: { type: 'plain_text', value: PLAN.runId } } } } });
@@ -46,8 +47,8 @@ test('official device flow uses minimal scopes and never forwards raw output or 
   const events = [];
   assert.deepEqual(await installer.startLogin({ emit: (event) => events.push(event) }), { loggedIn: true, email: identity.email, accounts: identity.accounts });
   assert.equal(events.length, 1);
-  assert.equal(events[0].userCode, 'ABCD-EFGH');
-  assert.equal(events[0].verificationUrl, 'https://dash.cloudflare.com/oauth2/device');
+  assert.equal(events[0].userCode, 'aB3dE7f8');
+  assert.equal(events[0].verificationUrl, 'https://dash.cloudflare.com/oauth2/device/verify');
   assert.ok(!JSON.stringify(events).includes('secret-token'));
   assert.deepEqual(calls[1].args, ['login', '--device', '--browser=false', '--scopes', ...CLOUDFLARE_SCOPES]);
   assert.equal(calls[1].opts.timeoutMs, 310_000);
@@ -64,7 +65,10 @@ test('official device flow uses minimal scopes and never forwards raw output or 
 });
 
 test('device prompt accepts only official bare verification URI and a bounded user code', () => {
-  for (const address of ['https://evil.example/oauth2/device', 'https://dash.cloudflare.com.evil.example/oauth2/device', 'https://user@dash.cloudflare.com/oauth2/device', 'https://dash.cloudflare.com/oauth2/device?token=secret', 'https://dash.cloudflare.com/oauth2/device#secret', 'https://dash.cloudflare.com/settings/api-tokens']) assert.equal(parseDevicePrompt(prompt.replace('https://dash.cloudflare.com/oauth2/device', address)), null);
+  assert.deepEqual(parseDevicePrompt(prompt), { verificationUrl: 'https://dash.cloudflare.com/oauth2/device/verify', userCode: 'aB3dE7f8' });
+  assert.deepEqual(parseDevicePrompt(legacyPrompt), { verificationUrl: 'https://dash.cloudflare.com/oauth2/device', userCode: 'ABCD-EFGH' });
+  for (const address of ['https://evil.example/oauth2/device', 'https://dash.cloudflare.com.evil.example/oauth2/device', 'https://user@dash.cloudflare.com/oauth2/device', 'https://dash.cloudflare.com/oauth2/device?token=secret', 'https://dash.cloudflare.com/oauth2/device#secret', 'https://dash.cloudflare.com/settings/api-tokens']) assert.equal(parseDevicePrompt(prompt.replace('https://dash.cloudflare.com/oauth2/device/verify', address)), null);
+  for (const code of ['aB3dE7f8Z', 'aB3dE7f8-extra', 'abcd-efgh', 'ab_cd123']) assert.equal(parseDevicePrompt(prompt.replace('aB3dE7f8', code)), null);
   assert.equal(parseDevicePrompt('oauth_token=secret\nhttps://dash.cloudflare.com/oauth2/device'), null);
 });
 
