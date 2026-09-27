@@ -190,7 +190,8 @@ try {
   const { plan } = manager.snapshot();
   check('completion lists acceptance steps and only this run\'s IDs to clean up', cleanup[0] === plan.projectId && cleanup[1] === plan.pagesProject &&
     cleanup[2].startsWith('https://console.cloud.google.com/') && cleanup[2].endsWith(`project=${plan.projectId}`) &&
-    cleanup[3] === `https://dash.cloudflare.com/${plan.cloudflareAccountId}/pages/view/${plan.pagesProject}` && cleanup[4] === 5);
+    cleanup[3] === `https://dash.cloudflare.com/${plan.cloudflareAccountId}/pages/view/${plan.pagesProject}` && cleanup[4] === 6 &&
+    (await evaluate("document.getElementById('mail-sender').textContent")) === `noreply@${plan.projectId}.firebaseapp.com`);
   await shot('installer-complete', 1280);
   check('resume completes the same run without a new project', manager.snapshot().status === 'complete' && manager.snapshot().plan.runId === runId);
   check('completed state exposes verified website', manager.snapshot().website === `https://${manager.snapshot().plan.pagesProject}.pages.dev/`);

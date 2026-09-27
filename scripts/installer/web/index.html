@@ -109,13 +109,14 @@
     <section id="complete" aria-labelledby="complete-heading" hidden>
       <h2 id="complete-heading">網站已發布，接著完成登入驗收</h2>
       <a id="website" class="button primary" target="_blank" rel="noopener noreferrer">開啟你們的同工助手</a>
-      <p>照順序完成下列 5 項，全部做到才算安裝成功：</p>
+      <p>照順序完成下列 6 項，全部做到才算安裝成功：</p>
       <ol class="checklist">
-        <li><label class="check"><input type="checkbox"><span>在指定管理員信箱收到 Firebase 設定密碼信（也檢查垃圾郵件）。</span></label></li>
+        <li><label class="check"><input type="checkbox"><span>到指定管理員信箱找 Firebase 的英文信（主旨含「Reset your password」，寄件者 <code id="mail-sender">noreply@….firebaseapp.com</code>）。<strong>這封信多半會在垃圾郵件</strong>，找到後可標成「不是垃圾郵件」。</span></label></li>
         <li><label class="check"><input type="checkbox"><span>用信件內的官方連結設定密碼。</span></label></li>
         <li><label class="check"><input type="checkbox"><span>開啟網站，用管理員 email 與新密碼登入。</span></label></li>
-        <li><label class="check"><input type="checkbox"><span>到下方「我的」→「帳號管理」新增一位同工（設定至少一個牧區），並在該牧區的「參與服事」勾選他要做的服事。</span></label></li>
-        <li><label class="check"><input type="checkbox"><span>在「服事表」替這位同工排一次班，重新整理後仍看得到。</span></label></li>
+        <li><label class="check"><input type="checkbox"><span>到下方「服事表」→ 右上角鉛筆 → 右上角清單圖示「服事項目設定」，新增一個服事項目（例如「招待」），按右上角 ✓ 儲存。</span></label></li>
+        <li><label class="check"><input type="checkbox"><span>到「我的」→「帳號管理」按 ＋ 新增一位同工：設定牧區，並在該牧區的「參與服事」勾選剛才的服事項目，按 ✓ 儲存。</span></label></li>
+        <li><label class="check"><input type="checkbox"><span>回「服事表」→ 鉛筆 → 在某個日期按「新增服事項目」，勾選這位同工後按「新增」。重新整理後仍看得到，就完成了。</span></label></li>
       </ol>
       <p class="hint">資料規則可能需要幾分鐘才完全生效；剛裝好就登入失敗，請等 5 分鐘再試。寄信步驟成功只代表平台接受寄送請求，不保證送達。若沒有收到，請由 Firebase 官方 Authentication 使用者頁面重新寄送。</p>
       <details id="cleanup">

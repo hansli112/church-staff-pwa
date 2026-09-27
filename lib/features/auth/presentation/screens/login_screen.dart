@@ -68,17 +68,21 @@ class _LoginScreenState extends State<LoginScreen> {
                               const SizedBox(height: 32),
                               TextFormField(
                                 controller: _usernameController,
+                                // 登入走 Firebase Email/Password，只收 email；寫「帳號」
+                                // 會讓第一次登入的管理員不知道該填什麼。
                                 decoration: const InputDecoration(
-                                  labelText: '帳號',
+                                  labelText: 'Email',
                                   border: OutlineInputBorder(),
                                   prefixIcon: Icon(Icons.person),
                                 ),
+                                keyboardType: TextInputType.emailAddress,
+                                autofillHints: const [AutofillHints.email],
                                 textInputAction: TextInputAction.next,
                                 onFieldSubmitted: (_) =>
                                     FocusScope.of(context).nextFocus(),
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
-                                    return '請輸入帳號';
+                                    return '請輸入 Email';
                                   }
                                   return null;
                                 },

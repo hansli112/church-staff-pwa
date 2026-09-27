@@ -516,7 +516,7 @@ class _ZoneEditorCardState extends State<_ZoneEditorCard> {
                 _ministries = newMinistries;
                 _notifyUpdate();
               },
-              emptyText: '尚未設定服事項目，請先到服事表的「服事項目設定」新增',
+              emptyText: '尚未設定服事項目：請先到「服事表」按鉛筆，再按右上角清單圖示「服事項目設定」新增',
             ),
           ],
         ),

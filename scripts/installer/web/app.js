@@ -196,6 +196,7 @@ function render(state) {
 function renderCleanup(plan) {
   const project = encodeURIComponent(plan.projectId);
   const account = encodeURIComponent(plan.cloudflareAccountId);
+  $('mail-sender').textContent = `noreply@${plan.projectId}.firebaseapp.com`;
   $('cleanup-google-id').textContent = plan.projectId;
   $('cleanup-google').href = `https://console.cloud.google.com/iam-admin/settings?project=${project}`;
   $('cleanup-cloudflare-id').textContent = plan.pagesProject;
