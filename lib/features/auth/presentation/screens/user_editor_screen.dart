@@ -316,7 +316,10 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('牧區資料', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  '牧區資料（必填）',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 if (_zones.length < ServiceType.values.length)
                   TextButton.icon(
                     icon: const Icon(Icons.add),
@@ -329,7 +332,19 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
               const Padding(
                 padding: EdgeInsets.all(16.0),
                 child: Center(
-                  child: Text('尚無牧區資料', style: TextStyle(color: Colors.grey)),
+                  child: Text(
+                    '尚未設定牧區。請按「新增牧區」，至少設定一個才能儲存。',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+              )
+            else
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8),
+                child: Text(
+                  '在牧區裡勾選「參與服事」，這位同工才會出現在該服事的排班名單。',
+                  style: TextStyle(color: Colors.grey, fontSize: 13),
                 ),
               ),
             ..._zones.asMap().entries.map((entry) {
@@ -501,7 +516,7 @@ class _ZoneEditorCardState extends State<_ZoneEditorCard> {
                 _ministries = newMinistries;
                 _notifyUpdate();
               },
-              emptyText: '尚未設定服事項目',
+              emptyText: '尚未設定服事項目，請先到服事表的「服事項目設定」新增',
             ),
           ],
         ),

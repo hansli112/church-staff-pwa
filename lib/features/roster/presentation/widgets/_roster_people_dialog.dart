@@ -500,7 +500,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
                 ...widget.initialPersonIdsByName,
                 ...(data?.userIdsByName ?? const <String, String>{}),
               };
-              return Scrollbar(
+              final list = Scrollbar(
                 controller: _peopleScrollController,
                 thumbVisibility: true,
                 trackVisibility: true,
@@ -561,6 +561,31 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
                     );
                   },
                 ),
+              );
+              // 只剩「待定」時，新手看不出是哪個設定沒做，直接說要去哪裡勾。
+              final hasCandidates = (data?.options ?? const <String>[]).any(
+                (name) => name != placeholderPerson,
+              );
+              if (hasCandidates) return list;
+              final role = _selectedRole?.trim() ?? '';
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      role.isEmpty
+                          ? '先選擇服事項目，才會列出可以排的同工。'
+                          : '還沒有同工可排「$role」。請到「帳號管理」編輯同工，'
+                                '在「${widget.rosterType.label}」牧區的「參與服事」'
+                                '勾選「$role」，他就會出現在這裡。',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  Expanded(child: list),
+                ],
               );
             },
           ),

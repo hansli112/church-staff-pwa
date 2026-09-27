@@ -706,6 +706,32 @@ void main() {
       expect(repo.staffOrderWrites, 0);
       expect(repo.rosters.single.duties.first.people, ['志豪']);
     });
+
+    testWidgets('沒有同工可選時，說明要去哪裡勾參與服事', (tester) async {
+      final repo = InMemoryRosterRepository(
+        rosters: [
+          _roster('a', 4, {
+            '招待': ['志豪'],
+            '司琴': [],
+          }),
+        ],
+        templates: {
+          _type: ['招待', '司琴'],
+        },
+      );
+      await _pumpCard(tester, repo);
+
+      await tester.tap(find.text('司琴'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('還沒有同工可排「司琴」。請到「帳號管理」編輯同工'), findsOneWidget);
+      expect(find.textContaining('勾選「司琴」'), findsOneWidget);
+
+      await tester.tap(find.text('取消'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('招待'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('還沒有同工可排'), findsNothing);
+    });
   });
 }
 
