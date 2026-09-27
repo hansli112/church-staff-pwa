@@ -38,7 +38,7 @@
 - 本機 SDK 的 `MaterialIcons_LICENSE.txt` 是 **CC BY 4.0**；不要因程式套件採 BSD/MIT，就宣稱所有字型也一樣。Material Icons 來源為 Google 的 [Material Design Icons](https://github.com/google/material-design-icons)。Flutter release build 可能做字型子集化，應保留相應 notices。
 - 本機 SDK 的 `Roboto_LICENSE.txt`、`RobotoCondensed_LICENSE.txt` 為 Apache-2.0。
 - CSS 指定 `Noto Sans TC`、`PingFang TC`、`Microsoft JhengHei` 等名稱，不代表本 repo 提供或授權這些字型檔。瀏覽器／Flutter 實際使用的系統字型或下載字型，須按發佈環境另行核對。
-- App「我的 → 開源授權」透過內建 `showLicensePage` 顯示授權。保留 Flutter 的 `LicenseRegistry`／`LicensePage` 及 build 產生的 `assets/NOTICES.Z` 等授權資源，不要為縮小檔案而移除。實際 notices 路徑可能隨 Flutter 版本調整。
+- App 不在畫面上列出授權；第三方 notices 隨網站發佈。保留 Flutter 的 `LicenseRegistry` 及 build 產生的 `assets/NOTICES.Z` 等授權資源，不要為縮小檔案而移除。實際 notices 路徑可能隨 Flutter 版本調整。
 - 本 repo 沒有以自己的 MIT 聲明覆蓋 CanvasKit、Dart runtime、Firebase JavaScript SDK 或相關原生 SDK 的授權。
 
 ## PWA 圖示

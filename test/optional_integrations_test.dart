@@ -197,24 +197,6 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets(
-    'profile opens the built-in license page with configured branding',
-    (tester) async {
-      await _pumpSignedIn(
-        tester,
-        const ProfileScreen(versionService: _NoVersionService()),
-      );
-      await tester.ensureVisible(find.text('開源授權'));
-      await tester.tap(find.text('開源授權'));
-      await tester.pumpAndSettle();
-      expect(find.byType(LicensePage), findsOneWidget);
-      expect(
-        tester.widget<LicensePage>(find.byType(LicensePage)).applicationName,
-        ChurchConfig.current.appName,
-      );
-    },
-  );
-
   testWidgets('disabled photo import preserves the manual JSON input', (
     tester,
   ) async {

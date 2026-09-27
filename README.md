@@ -153,6 +153,6 @@ node scripts/installer-browser-smoke.mjs
 
 ## 授權與素材
 
-MIT 適用於本專案原創程式碼與新製中性 PWA 圖示，**不會把 Flutter、套件、字型、聖經譯本、靈修內容或外部標誌全部重新授權為 MIT**。發佈時保留第三方 notices；App「我的 → 開源授權」使用 Flutter 內建的授權顯示機制。
+MIT 適用於本專案原創程式碼與新製中性 PWA 圖示，**不會把 Flutter、套件、字型、聖經譯本、靈修內容或外部標誌全部重新授權為 MIT**。發佈時保留第三方 notices；Flutter build 會把它們放在網站的 `assets/NOTICES`。
 
 已核對的本機套件／素材範圍與未查實項目見 [第三方授權與素材](docs/third-party-notices.md)。這不是完整的法務稽核或侵權保證。部署者自行加入的教會名稱、圖示、照片、文章與資料須另有適當權利。

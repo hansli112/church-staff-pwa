@@ -284,16 +284,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onChanged: _isPushLoading ? null : _togglePush,
             ),
 
-          ListTile(
-            leading: const Icon(Icons.description_outlined),
-            title: const Text('開源授權'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => showLicensePage(
-              context: context,
-              applicationName: ChurchConfig.current.appName,
-            ),
-          ),
-
           // Logout Button
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
