@@ -249,13 +249,13 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
         if (!didPop) _confirmDiscard();
       },
       child: DefaultTabController(
-        length: ServiceType.values.length,
+        length: ServiceType.active.length,
         child: Scaffold(
           appBar: AppBar(
             title: const Text('服事項目設定'),
             bottom: TabBar(
-              isScrollable: ServiceType.values.length > 3,
-              tabs: ServiceType.values
+              isScrollable: ServiceType.active.length > 3,
+              tabs: ServiceType.active
                   .map((type) => Tab(text: type.label))
                   .toList(),
             ),
@@ -307,7 +307,7 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
             ],
           ),
           body: TabBarView(
-            children: ServiceType.values.map((type) {
+            children: ServiceType.active.map((type) {
               final roles = _editingTemplates[type] ?? [];
               final scrollController = _scrollControllers[type]!;
               return Column(
