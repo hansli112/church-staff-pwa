@@ -134,16 +134,22 @@ service cloud.firestore {
         && hasValidZoneTypes();
 
       // Updates:
-      //   - admin: full control over any user doc
+      //   - admin: full control over any user doc, except taking away their
+      //            own admin role
       //   - self : only fcm and notificationPrefs. Note what this excludes:
       //             role AND groups, so nobody can grant themselves a group.
+      //
+      // An admin can neither demote nor delete themself. A church whose only
+      // admin did either would have nobody left who can manage it, and getting
+      // back in needs the Firebase console. Another admin can still do both.
       allow update: if (isAdmin() && hasValidRole() && hasValidGroups()
-            && hasValidZoneTypes())
+            && hasValidZoneTypes()
+            && (!isSelf(uid) || request.resource.data.role == 'admin'))
         || (isSelf(uid)
             && isActiveUser()
             && selfUpdateOnlyTouches(['fcm', 'notificationPrefs']));
 
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() && !isSelf(uid);
     }
 
     // Legacy records without dateKey remain readable and editable.

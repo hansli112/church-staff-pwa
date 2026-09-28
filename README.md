@@ -4,6 +4,16 @@
 
 原始程式碼採 [MIT License](LICENSE)，著作權人為 Hans Lee。這是可自行部署的開源專案，**不是代管服務；不承諾客服、維運、回應時間或第三方免費額度**。
 
+## 不會寫程式？用安裝精靈
+
+[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Finstall-cloud-shell.md&show=terminal)
+
+按上面的按鈕，照 Cloud Shell 右側的中文教學一步步做，大約 30 分鐘就能架好你們教會自己的同工助手（登入、同工管理、服事表）。不用安裝任何軟體，也不需要 GitHub 帳號；網站和資料都在你們教會自己的 Google／Cloudflare 帳號裡，不會綁定付費方案。
+
+- 按下按鈕後，Google 會問是否「信任存放區」：**先勾選「信任存放區」，再按「確認」**。接著跳出「授權 Cloud Shell」時按「授權」。
+- 完整圖文步驟見 **[安裝教學](docs/install-cloud-shell.md)**。
+- 已經裝過的網站，也是用同一顆按鈕更新到新版本，還可以順便換教會 Logo、設定自訂網址。
+
 ## 第一版範圍
 
 - 服事表：設定每週固定聚會的星期、顯示名稱及穩定 ID，分配同工、編輯服事項目、換班與特殊活動標記。
@@ -14,19 +24,11 @@
 - PWA：可加入主畫面，提供靜態資源快取及版本更新；**不代表所有功能可離線使用**，行事曆寫入等操作需要網路。
 - 照片辨識、推播、LINE webhook 及每日靈糧都是選用功能，範例設定預設關閉。
 
-## 非工程背景：用安裝精靈
-
-[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Finstall-cloud-shell.md&show=terminal)
-
-按下按鈕後，Google 會問是否「信任存放區」：**一定要勾選「信任存放區」，再按「確認」**；沒勾的話 Cloud Shell 會以「暫時模式」啟動、沒有你的 Google 授權；這時按 Cloud Shell 右上角的「⋮」，點選單裡打勾的「暫時模式」，再按「停用」。Cloud Shell 重新啟動並請你按「授權」後，回到安裝說明頁重新按「Open in Cloud Shell」，勾選「信任存放區」再照教學做。接著跳出「授權 Cloud Shell」時按「授權」，再照右側教學一步步做。
-
-在自己的 Google Cloud Shell 開啟私人安裝精靈：連接 Google 與 Cloudflare 帳號、填寫教會資料，確認後自動建立**全新的**核心功能網站（登入、同工管理、服事表）。不需安裝開發工具或 GitHub 帳號，不會自動綁定付費方案，也不接管既有網站。步驟說明見 **[安裝教學](docs/install-cloud-shell.md)**。按下按鈕後 Cloud Shell 會先跳出 Google 官方的「授權 Cloud Shell」視窗，請按「授權」。第一版的真實雲端流程仍在驗證中。
-
-想先看介面、不連任何雲端：`node scripts/install-core.mjs --demo`，再開啟終端機顯示的連結。
-
 ## 第一次部署（工程師路線）
 
-完整順序、首位管理員及舊站切換注意事項見 **[部署指南](docs/deployment.md)**。既有網站升級、選用整合與自訂網域請走這條路線。
+完整順序、首位管理員及舊站切換注意事項見 **[部署指南](docs/deployment.md)**。行事曆、照片辨識、通知、每日靈糧等選用整合，以及不是用安裝精靈架的既有網站，請走這條路線；精靈裝的網站用精靈更新即可。
+
+想先看安裝精靈的介面、不連任何雲端：`node scripts/install-core.mjs --demo`，再開啟終端機顯示的連結。
 
 1. Fork 原始碼；安裝 Flutter（CI 使用 `3.41.0`、Dart 需求見 `pubspec.yaml`）、Node.js 22+、Firebase CLI、Google Cloud CLI 與 Wrangler。
 2. 建立自己的 Firebase 專案，啟用 Email/Password 與 Firestore `(default)` 資料庫；建立自己的 Cloudflare Pages 專案。

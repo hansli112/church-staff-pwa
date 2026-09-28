@@ -77,6 +77,12 @@ class UserAdminProvider extends ChangeNotifier {
 
   Future<void> updateUser(User user, {String? password}) async {
     if (!_session.isAdmin) throw Exception('Permission denied');
+    // 唯一的管理員把自己降級，網站就沒有人能管了（規則也擋，見 firestore.rules）。
+    if (user.id == _session.currentUser?.id && !user.isAdmin) {
+      throw const AccountSafetyException(
+        '不能拿掉自己的管理員權限。要換人管理，請先把另一位同工設成管理員，再請他幫你改。',
+      );
+    }
     await _repository.updateUser(user, password: password);
 
     // 若是管理員在修改自己的資料，通知 SessionProvider 更新 currentUser。
@@ -88,6 +94,9 @@ class UserAdminProvider extends ChangeNotifier {
 
   Future<void> deleteUser(String id) async {
     if (!_session.isAdmin) throw Exception('Permission denied');
+    if (id == _session.currentUser?.id) {
+      throw const AccountSafetyException('不能刪除自己的帳號。要刪的話，請另一位管理員幫你刪。');
+    }
     await _repository.deleteUser(id);
     _cachedUsers = null;
     notifyListeners();
@@ -144,4 +153,14 @@ class UserAdminProvider extends ChangeNotifier {
     _cachedUsers = null;
     notifyListeners();
   }
+}
+
+/// 會讓網站沒有管理員的操作。訊息直接給使用者看。
+class AccountSafetyException implements Exception {
+  const AccountSafetyException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
 }

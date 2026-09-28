@@ -61,9 +61,10 @@
       </details>
     </section>
 
-    <section id="update-section" aria-labelledby="update-heading">
-      <div class="section-heading"><span class="number">↻</span><h2 id="update-heading">已經裝過了？更新到新版本</h2></div>
-      <p>把之前用這個精靈裝的網站，更新到最新版本。<strong>資料、帳號和服事表都不會變</strong>，只會換新網站程式和資料存取規則。第一次安裝請跳過這一段，直接填下面的教會資料。</p>
+    <section id="update-section" class="compact">
+      <details id="update-panel">
+      <summary><strong>已經裝過了？更新到新版本</strong>（第一次安裝請跳過，直接填下面的教會資料）</summary>
+      <p>把之前用這個精靈裝的網站，更新到最新版本。<strong>資料、帳號和服事表都不會變</strong>，只會換新網站程式和資料存取規則；也可以順便換教會 Logo、設定自訂網址。</p>
       <p id="release-line" class="hint" hidden></p>
       <button id="find-installs" type="button">尋找已安裝的網站</button>
       <div id="installs" class="installs"></div>
@@ -102,6 +103,7 @@
         </div>
         <a id="update-website" class="button primary" target="_blank" rel="noopener noreferrer">開啟網站</a>
       </div>
+      </details>
     </section>
 
     <section id="settings-section" aria-labelledby="settings-heading">
@@ -156,7 +158,7 @@
       <a id="website" class="button primary" target="_blank" rel="noopener noreferrer">開啟你們的同工助手</a>
       <p>照順序完成下列 6 項，全部做到才算安裝成功：</p>
       <ol class="checklist">
-        <li><label class="check"><input type="checkbox"><span>到指定管理員信箱找 Firebase 的英文信（主旨含「Reset your password」，寄件者 <code id="mail-sender">noreply@….firebaseapp.com</code>）。<strong>這封信多半會在垃圾郵件</strong>，找到後可標成「不是垃圾郵件」。</span></label></li>
+        <li><label class="check"><input type="checkbox"><span>到指定管理員信箱找設定密碼的信：寄件者顯示你們的教會名稱，信箱位址是 <code id="mail-sender">noreply@….firebaseapp.com</code>，主旨裡會有一串 church- 開頭的專案代號，這是正常的。<strong>這封信多半會在垃圾郵件</strong>，找到後可標成「不是垃圾郵件」。</span></label></li>
         <li><label class="check"><input type="checkbox"><span>用信件內的官方連結設定密碼。</span></label></li>
         <li><label class="check"><input type="checkbox"><span>開啟網站，用管理員 email 與新密碼登入。</span></label></li>
         <li><label class="check"><input type="checkbox"><span>到下方「服事表」→ 右上角鉛筆 → 右上角清單圖示「服事項目設定」，新增一個服事項目（例如「招待」），按右上角 ✓ 儲存。</span></label></li>

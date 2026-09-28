@@ -6,7 +6,9 @@ import '../../domain/entities/user.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../../roster/presentation/providers/roster_provider.dart';
 import '../providers/group_settings_provider.dart';
+import '../providers/session_provider.dart';
 import '../providers/user_admin_provider.dart';
+import '../../../../core/config/church_config.dart';
 import '../../../../core/utils/error_messages.dart';
 
 class UserEditorScreen extends StatefulWidget {
@@ -70,25 +72,30 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
+        // 沒開行事曆的教會不列「行事曆編輯」：勾了也沒有地方用。已經有的
+        // 權限照樣顯示，才看得到、拿得掉。
         for (final group in UserGroup.values)
-          CheckboxListTile(
-            value: isAdmin || _groups.contains(group),
-            onChanged: isAdmin
-                ? null
-                : (checked) {
-                    setState(() {
-                      if (checked ?? false) {
-                        _groups.add(group);
-                      } else {
-                        _groups.remove(group);
-                      }
-                    });
-                  },
-            title: Text(group.label),
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            controlAffinity: ListTileControlAffinity.leading,
-          ),
+          if (group != UserGroup.calendarEditors ||
+              ChurchConfig.current.features.calendar ||
+              _groups.contains(group))
+            CheckboxListTile(
+              value: isAdmin || _groups.contains(group),
+              onChanged: isAdmin
+                  ? null
+                  : (checked) {
+                      setState(() {
+                        if (checked ?? false) {
+                          _groups.add(group);
+                        } else {
+                          _groups.remove(group);
+                        }
+                      });
+                    },
+              title: Text(group.label),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+            ),
       ],
     );
   }
@@ -127,6 +134,12 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
     });
   }
 
+  /// 沒填代稱就用姓名，跟安裝精靈建立首位管理員時一樣。
+  String get _username {
+    final value = _usernameController.text.trim();
+    return value.isEmpty ? _nameController.text.trim() : value;
+  }
+
   Future<void> _save() async {
     if (_zones.isEmpty) {
       ScaffoldMessenger.of(
@@ -145,7 +158,7 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
           await authProvider.addUser(
             _nameController.text,
             email,
-            _usernameController.text,
+            _username,
             _selectedRole,
             password: _passwordController.text.trim(),
             zones: _zones,
@@ -155,7 +168,7 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
           final updatedUser = widget.user!.copyWith(
             name: _nameController.text,
             email: email,
-            username: _usernameController.text,
+            username: _username,
             role: _selectedRole,
             zones: _zones,
             groups: _groups,
@@ -176,7 +189,13 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
         log('儲存使用者資料失敗', error: e, stackTrace: st);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('錯誤：${mapErrorToUserMessage(e)}')),
+            SnackBar(
+              content: Text(
+                e is AccountSafetyException
+                    ? e.message
+                    : '錯誤：${mapErrorToUserMessage(e)}',
+              ),
+            ),
           );
         }
       }
@@ -185,6 +204,10 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 管理員不能改自己的角色：唯一的管理員把自己降級就沒人能管了。
+    final isSelf =
+        widget.user != null &&
+        widget.user!.id == context.watch<SessionProvider>().currentUser?.id;
     final canEditEmail =
         widget.user == null || (widget.user?.email.isEmpty ?? false);
     final hadEmail = widget.user?.email.isNotEmpty ?? false;
@@ -246,17 +269,13 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _usernameController,
+                      // 只是顯示在個人頁的 @代稱；登入一律用 Email。以前叫「顯示帳號
+                      // (ID)」而且有 Email 就必填，同工看不懂要填什麼。
                       decoration: const InputDecoration(
-                        labelText: '顯示帳號 (ID)',
+                        labelText: '帳號代稱（選填）',
                         border: OutlineInputBorder(),
-                        helperText: '未建立登入帳號時可留空',
+                        helperText: '顯示在個人頁，不是登入用；不填就用姓名',
                       ),
-                      validator: (v) {
-                        if (_emailController.text.trim().isEmpty) {
-                          return null;
-                        }
-                        return v?.isEmpty == true ? '請輸入帳號 ID' : null;
-                      },
                     ),
                     if (shouldPromptPassword) ...[
                       if (!hadEmail &&
@@ -289,9 +308,10 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
                     const SizedBox(height: 16),
                     DropdownButtonFormField<UserRole>(
                       initialValue: _selectedRole,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: '角色',
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
+                        helperText: isSelf ? '不能變更自己的角色，請另一位管理員幫你改' : null,
                       ),
                       items: UserRole.values.map((role) {
                         return DropdownMenuItem(
@@ -299,11 +319,13 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
                           child: Text(role.label),
                         );
                       }).toList(),
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() => _selectedRole = value);
-                        }
-                      },
+                      onChanged: isSelf
+                          ? null
+                          : (value) {
+                              if (value != null) {
+                                setState(() => _selectedRole = value);
+                              }
+                            },
                     ),
                     const SizedBox(height: 8),
                     _buildGroupSection(),

@@ -140,6 +140,10 @@ async function setup(t, overrides = {}) {
             assert.ok(context.checkpoint.intents.authDomains);
             state.authConfig.authorizedDomains = body.authorizedDomains;
           }
+          if (body.notification) {
+            assert.equal(parsed.search, '?updateMask=notification.sendEmail.resetPasswordTemplate.senderDisplayName');
+            state.authConfig.notification = body.notification;
+          }
         }
         return response(200, state.authConfig);
       }
@@ -157,6 +161,7 @@ async function setup(t, overrides = {}) {
         assert.equal(body.requestType, 'PASSWORD_RESET');
         assert.equal(body.returnOobLink, false);
         assert.equal(body.email, 'admin@example.invalid');
+        assert.equal(init.headers['X-Firebase-Locale'], 'zh-TW', 'the password mail is sent in Chinese');
         state.sent++;
         return response(200, { email: body.email, oobCode: 'unexpected-provider-secret-do-not-store' });
       }
@@ -706,9 +711,11 @@ test('activation needs explicit consent and ambiguous delivery never auto-resend
   h.setInterceptor(undefined);
   await assert.rejects(h.adapter.execute('activation', h.context), (err) => {
     assert.equal(err.code, 'ACTIVATION_DELIVERY_UNKNOWN');
-    assert.equal(err.helpUrl, `https://console.firebase.google.com/project/${projectId}/authentication/users`);
-    assert.match(err.message, /Authentication → Users/);
-    assert.doesNotMatch(err.message, /忘記密碼/);
+    // The site is published before this step, so its login page already
+    // offers 忘記密碼 — simpler than the Firebase console, and no link needed.
+    assert.equal(err.helpUrl, undefined);
+    assert.match(err.message, /忘記密碼/);
+    assert.doesNotMatch(err.message, /Authentication → Users/);
     return true;
   });
   assert.equal(h.state.sent, 1);
@@ -946,4 +953,44 @@ test('update adds the custom domain to Firebase Auth once and keeps every existi
   const patches = state.requests.filter((call) => call.method === 'PATCH' && call.pathname.endsWith('/config')).length;
   await adapter.update('domain', context);
   assert.equal(state.requests.filter((call) => call.method === 'PATCH' && call.pathname.endsWith('/config')).length, patches);
+});
+
+test('a new project whose Firestore IAM is still propagating waits and retries instead of blaming permissions', async (t) => {
+  const { adapter, context, state, setInterceptor, through } = await setup(t);
+  await through('firebase');
+  let denied = 0;
+  setInterceptor((call) => {
+    if (call.host === 'firestore' && denied < 2) { denied++; return error(403, 'PERMISSION_DENIED'); }
+  });
+  await adapter.execute('database', context);
+  assert.equal(denied, 2);
+  assert.ok(state.db, 'database created after the retries');
+  assert.equal(state.delays.filter((ms) => ms === 15_000).length, 2);
+  assert.ok(context.events.some((event) => event.message?.includes('自動重試')));
+});
+
+test('a 403 that outlasts the grace retries says to resume later, not to ask an administrator', async (t) => {
+  const { adapter, context, setInterceptor, through } = await setup(t);
+  await through('firebase');
+  setInterceptor((call) => call.host === 'firestore' ? error(403, 'PERMISSION_DENIED') : undefined);
+  await rejectsCode(adapter.execute('database', context), 'GOOGLE_API_PROPAGATING');
+});
+
+test('an old project answering 403 still reports a real permission problem', async (t) => {
+  const { adapter, context, setInterceptor, through } = await setup(t);
+  await through('firebase');
+  context.checkpoint.resources.googleProject.createTime = new Date(fixedNow - 60 * 60_000).toISOString();
+  setInterceptor((call) => call.host === 'firestore' ? error(403, 'PERMISSION_DENIED') : undefined);
+  await rejectsCode(adapter.execute('database', context), 'GOOGLE_PERMISSION_REQUIRED');
+});
+
+test('the password mail names the church as its sender, and a refusal does not stop the install', async (t) => {
+  const named = await setup(t);
+  await named.through('activation');
+  assert.equal(named.state.authConfig.notification.sendEmail.resetPasswordTemplate.senderDisplayName, config.appName);
+  const refused = await setup(t);
+  refused.setInterceptor((call) => call.method === 'PATCH' && call.body?.notification ? error(400, 'INVALID_CONFIG') : undefined);
+  await refused.through('activation');
+  assert.equal(refused.state.sent, 1);
+  assert.ok(refused.context.events.some((event) => event.message?.includes('寄件者名稱沒有設定成功')));
 });

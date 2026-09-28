@@ -141,10 +141,15 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
             ),
           ),
         ],
-        IconButton(
-          icon: const Icon(Icons.view_list),
-          tooltip: '切換至檢視模式',
-          onPressed: widget.onExit,
+        // 以前是 view_list 圖示，跟旁邊「服事項目設定」的清單圖示幾乎一樣，
+        // 照著「按清單圖示」的說明就會按到這顆、直接離開編輯模式。
+        Tooltip(
+          message: '切換至檢視模式',
+          child: TextButton.icon(
+            onPressed: widget.onExit,
+            icon: const Icon(Icons.check),
+            label: const Text('完成'),
+          ),
         ),
       ],
       bottom: allowedTypes.isEmpty
@@ -290,7 +295,7 @@ class _RosterListState extends State<_RosterList>
         icon: Icons.event_busy_outlined,
         message: '此類別目前沒有服事資訊',
         hint: isEditMode
-            ? (_photoImportAvailable ? '可以用服事表照片快速建立' : '可貼上 JSON 快速建立')
+            ? (_photoImportAvailable ? '可以用服事表照片快速建立' : '懂技術的同工可以貼上 JSON 快速建立')
             : '管理員建立後會在這裡顯示',
         action: isEditMode
             ? OutlinedButton.icon(
@@ -338,23 +343,35 @@ class _RosterListState extends State<_RosterList>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('匯入服事表', style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    _photoImportAvailable ? '匯入服事表' : '進階：匯入整季服事表',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 4),
+                  // 沒有照片辨識時只剩貼 JSON，那是給技術同工的。新教會第一次
+                  // 進編輯模式最先看到這張卡，要讓他知道可以跳過。
                   Text(
                     _photoImportAvailable
                         ? '用服事表照片辨識，依日期批次填入'
-                        : '貼上陣列格式，依日期批次填入服事表',
+                        : '給懂技術的同工用（貼上 JSON 資料）。一般直接在下面各日期按「新增服事項目」排班即可。',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 12),
-            FilledButton.icon(
-              onPressed: () => _showImportJsonDialog(context),
-              icon: const Icon(Icons.upload_file),
-              label: const Text('匯入'),
-            ),
+            if (_photoImportAvailable)
+              FilledButton.icon(
+                onPressed: () => _showImportJsonDialog(context),
+                icon: const Icon(Icons.upload_file),
+                label: const Text('匯入'),
+              )
+            else
+              OutlinedButton.icon(
+                onPressed: () => _showImportJsonDialog(context),
+                icon: const Icon(Icons.upload_file),
+                label: const Text('匯入'),
+              ),
           ],
         ),
       ),

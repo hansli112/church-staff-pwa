@@ -320,7 +320,7 @@ void main() {
       expect(exits, 0, reason: '有 roster-editors 就不該被擋在編輯模式外');
       expect(find.byIcon(Icons.palette_outlined), findsNothing);
       expect(find.byIcon(Icons.list_alt_outlined), findsNothing);
-      expect(find.byIcon(Icons.view_list), findsOneWidget);
+      expect(find.byTooltip('切換至檢視模式'), findsOneWidget);
     });
   });
 

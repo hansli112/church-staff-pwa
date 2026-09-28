@@ -688,6 +688,24 @@ describe('users 管理員操作與 role 驗證', () => {
     );
   });
 
+  // 唯一的管理員刪掉或降級自己，就沒有人能再管這個網站。
+  it('管理員不能刪除自己', async () => {
+    await assertFails(deleteDoc(doc(asAdmin(), 'users', ADMIN)));
+  });
+
+  it('管理員不能把自己降成非管理員', async () => {
+    await assertFails(updateDoc(doc(asAdmin(), 'users', ADMIN), { role: 'staff' }));
+  });
+
+  it('管理員可以改自己的其他資料', async () => {
+    await assertSucceeds(updateDoc(doc(asAdmin(), 'users', ADMIN), { name: '管理員改名' }));
+  });
+
+  it('管理員可以刪除別人', async () => {
+    await assertSucceeds(setDoc(doc(asAdmin(), 'users', 'to-remove'), userDoc('to-remove', 'staff')));
+    await assertSucceeds(deleteDoc(doc(asAdmin(), 'users', 'to-remove')));
+  });
+
   it('管理員可以調整別人的 role', async () => {
     await assertSucceeds(
       updateDoc(doc(asAdmin(), 'users', OTHER), { role: 'staff' }),
