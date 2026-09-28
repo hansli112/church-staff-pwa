@@ -25,7 +25,7 @@ const OPERATOR = 'operator@example.invalid';
 // Separate project so this file never touches rules.test.js data.
 const plan = {
   ...createInstallationPlan({
-    appName: '測試教會', shortName: '同工助手', timeZone: 'Asia/Taipei', region: 'asia-east1',
+    appName: '測試教會', shortName: '同工助手', siteName: 'test-church-staff', timeZone: 'Asia/Taipei', region: 'asia-east1',
     services: [{ label: '主日', name: '主日崇拜', weekday: 7 }, { label: '週間', name: '週間聚會', weekday: 3 }],
     adminName: '測試管理員', adminEmail: 'admin@example.invalid', cloudflareAccountId: '0'.repeat(32),
   }, { googleEmail: OPERATOR, accounts: [{ id: '0'.repeat(32) }] }, { runId: '5f6e7d8c-9b0a-4c1d-8e2f-3a4b5c6d7e8f', sourceRevision: 'emulator' }),

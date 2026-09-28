@@ -11,6 +11,7 @@ const ACCOUNT = '0123456789abcdef0123456789abcdef';
 const identity = { googleEmail: 'operator@example.invalid', accounts: [{ id: ACCOUNT, name: 'Test' }] };
 const input = () => ({
   appName: '範例教會', shortName: '同工助手', timeZone: 'Asia/Taipei', region: 'asia-east1',
+  siteName: 'example-staff',
   services: [{ name: '主日崇拜', label: '主日', weekday: 7 }, { name: '週間聚會', label: '週間', weekday: 3 }],
   adminName: '測試管理員', adminEmail: 'admin@example.invalid', cloudflareAccountId: ACCOUNT,
 });
@@ -41,7 +42,9 @@ test('plan is pure, stable, core-only and creates safe resource names', () => {
   const plan = createInstallationPlan(input(), identity, options);
   assert.deepEqual(plan, createInstallationPlan(input(), identity, options));
   assert.match(plan.projectId, /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/);
-  assert.equal(plan.pagesProject, plan.projectId);
+  // The church names the site; the Google project stays derived from the run.
+  assert.equal(plan.pagesProject, 'example-staff');
+  assert.equal(createInstallationPlan({ ...input(), siteName: ' Example-Staff ' }, identity, options).pagesProject, 'example-staff');
   assert.equal(plan.churchConfig.services[0].id, 'service1');
   assert.deepEqual(Object.values(plan.churchConfig.features), [false, false, false, false]);
   assert.equal(plan.churchConfig.devotional.enabled, false);
@@ -59,6 +62,12 @@ for (const [label, change] of [
   ['empty services', { services: [] }],
   ['invalid weekday', { services: [{ label: 'Test', name: 'Test', weekday: 0 }] }],
   ['invalid timezone', { timeZone: 'Not/AZone' }],
+  ['missing site name', { siteName: undefined }],
+  ['site name starting with a digit', { siteName: '1church' }],
+  ['site name with a dot', { siteName: 'church.staff' }],
+  ['site name with a double dash', { siteName: 'church--staff' }],
+  ['site name ending with a dash', { siteName: 'church-' }],
+  ['site name too long', { siteName: 'a'.repeat(41) }],
 ]) {
   test(`plan rejects ${label}`, () => assert.throws(() => createInstallationPlan({ ...input(), ...change }, identity)));
 }

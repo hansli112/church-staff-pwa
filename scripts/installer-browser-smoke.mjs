@@ -111,7 +111,7 @@ try {
   await evaluate("document.getElementById('connect-cloudflare').click()");
   await waitFor("document.getElementById('cloudflare-account').value.length === 32", 'cloudflare account selected');
   await evaluate(`(() => { const f = document.getElementById('settings-form');
-    f.appName.value = '範例教會同工助手'; f.shortName.value = '同工助手';
+    f.appName.value = '範例教會同工助手'; f.shortName.value = '同工助手'; f.siteName.value = 'example-staff';
     f.adminName.value = '測試管理員'; f.adminEmail.value = 'admin@example.invalid';
     document.getElementById('add-service').click();
     const rows = document.querySelectorAll('.service-row');
@@ -192,6 +192,13 @@ try {
     cleanup[2].startsWith('https://console.cloud.google.com/') && cleanup[2].endsWith(`project=${plan.projectId}`) &&
     cleanup[3] === `https://dash.cloudflare.com/${plan.cloudflareAccountId}/pages/view/${plan.pagesProject}` && cleanup[4] === 6 &&
     (await evaluate("document.getElementById('mail-sender').textContent")) === `noreply@${plan.projectId}.firebaseapp.com`);
+  const share = await evaluate("document.getElementById('share-message').value");
+  check('share message opens LINE links in the phone browser',
+    share.includes(`https://${plan.pagesProject}.pages.dev/?openExternalBrowser=1`) && share.includes('加入主畫面') && share.includes('忘記密碼'));
+  const handoff = await evaluate("[...document.querySelectorAll('#handoff dd')].map((item) => item.textContent)");
+  check('handoff card records the accounts and IDs, never a credential',
+    handoff.includes(plan.googleEmail) && handoff.includes(plan.projectId) && handoff.includes(plan.pagesProject) && handoff.includes(plan.runId) &&
+    !/token|password|secret/i.test(handoff.join(' ')));
   await shot('installer-complete', 1280);
   check('resume completes the same run without a new project', manager.snapshot().status === 'complete' && manager.snapshot().plan.runId === runId);
   check('completed state exposes verified website', manager.snapshot().website === `https://${manager.snapshot().plan.pagesProject}.pages.dev/`);
