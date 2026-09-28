@@ -102,7 +102,8 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
 
   void _addZone() {
     final usedTypes = _zones.map((zone) => zone.serviceType).toSet();
-    final availableTypes = ServiceType.values
+    // 停用的聚會不再給新的牧區；已經有的照樣顯示，才改得了、拿得掉。
+    final availableTypes = ServiceType.active
         .where((type) => !usedTypes.contains(type))
         .toList();
     if (availableTypes.isEmpty) {
@@ -342,7 +343,9 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
                   '牧區資料（必填）',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
-                if (_zones.length < ServiceType.values.length)
+                if (ServiceType.active.any(
+                  (type) => !_zones.any((zone) => zone.serviceType == type),
+                ))
                   TextButton.icon(
                     icon: const Icon(Icons.add),
                     label: const Text('新增牧區'),
@@ -472,7 +475,7 @@ class _ZoneEditorCardState extends State<_ZoneEditorCard> {
                   child: DropdownButtonFormField<ServiceType>(
                     initialValue: _selectedType,
                     decoration: const InputDecoration(labelText: '牧區'),
-                    items: {...ServiceType.values, _selectedType}.map((type) {
+                    items: {...ServiceType.active, _selectedType}.map((type) {
                       final isUsed = widget.usedTypes.contains(type);
                       final isCurrent = type == _selectedType;
                       return DropdownMenuItem(

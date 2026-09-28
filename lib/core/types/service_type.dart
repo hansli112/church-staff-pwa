@@ -16,6 +16,14 @@ class ServiceType {
     ChurchConfig.current.services.map((service) => ServiceType(service.id)),
   );
 
+  /// 還在舉行的聚會。停用的聚會保留 ID 與舊資料，只是不再出現在分頁上、
+  /// 也不再產生新的服事表。
+  static List<ServiceType> get active => List.unmodifiable(
+    ChurchConfig.current.services
+        .where((service) => service.enabled)
+        .map((service) => ServiceType(service.id)),
+  );
+
   static ServiceType fromName(String name) => ServiceType(name);
 
   ServiceDefinition? get _definition => ChurchConfig.current.service(name);

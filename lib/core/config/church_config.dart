@@ -60,18 +60,7 @@ class ChurchConfig {
     } catch (_) {
       throw FormatException('無效的 IANA 時區：$timeZone');
     }
-    final rawServices = json['services'];
-    if (rawServices is! List ||
-        rawServices.isEmpty ||
-        rawServices.length > 20) {
-      throw const FormatException('services 必須包含 1 至 20 種聚會');
-    }
-    final services = rawServices
-        .map((raw) => ServiceDefinition.fromJson(_object(raw, 'service')))
-        .toList();
-    if (services.map((s) => s.id).toSet().length != services.length) {
-      throw const FormatException('聚會 ID 不可重複');
-    }
+    final services = parseServices(json['services']);
     final rawIcons = _object(json['icons'], 'icons');
     _checkKeys(rawIcons, const [
       'favicon',
@@ -110,6 +99,41 @@ class ChurchConfig {
       ),
       icons: Map.unmodifiable(icons),
     );
+  }
+
+  /// 同一份設定，換成另一份聚會清單 —— 管理員在 App 裡改過的那份
+  /// （settings/services，見 ServiceCatalog）。其他欄位仍來自部署設定。
+  ChurchConfig withServices(List<ServiceDefinition> services) => ChurchConfig._(
+    appName: appName,
+    shortName: shortName,
+    timeZone: timeZone,
+    services: List.unmodifiable(services),
+    features: features,
+    devotional: devotional,
+    icons: icons,
+  );
+
+  /// 部署設定和 settings/services 共用同一套檢查。
+  static List<ServiceDefinition> parseServices(Object? rawServices) {
+    if (rawServices is! List ||
+        rawServices.isEmpty ||
+        rawServices.length > 20) {
+      throw const FormatException('services 必須包含 1 至 20 種聚會');
+    }
+    final services = rawServices
+        .map(
+          (raw) => ServiceDefinition.fromJson(
+            _object(
+              raw is Map ? Map<String, dynamic>.from(raw) : raw,
+              'service',
+            ),
+          ),
+        )
+        .toList();
+    if (services.map((s) => s.id).toSet().length != services.length) {
+      throw const FormatException('聚會 ID 不可重複');
+    }
+    return services;
   }
 
   Map<String, dynamic> toJson() => {
@@ -158,6 +182,31 @@ class ServiceDefinition {
       enabled: _flag(json, 'enabled'),
     );
   }
+
+  ServiceDefinition copyWith({
+    String? label,
+    String? name,
+    int? weekday,
+    bool? enabled,
+  }) => ServiceDefinition(
+    id: id,
+    label: label ?? this.label,
+    name: name ?? this.name,
+    weekday: weekday ?? this.weekday,
+    enabled: enabled ?? this.enabled,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      other is ServiceDefinition &&
+      other.id == id &&
+      other.label == label &&
+      other.name == name &&
+      other.weekday == weekday &&
+      other.enabled == enabled;
+
+  @override
+  int get hashCode => Object.hash(id, label, name, weekday, enabled);
 
   Map<String, dynamic> toJson() => {
     'id': id,

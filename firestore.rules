@@ -89,12 +89,38 @@ service cloud.firestore {
             && type in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('zoneTypes', [])));
     }
 
+    // Every service a roster or zone may name: the deployment's own, plus any an
+    // admin added in the app.
+    function serviceTypes() {
+      return deployedServiceTypes().concat(appServiceTypes());
+    }
+
     // Generated from church.json, including disabled IDs for existing records.
     // Do not edit this list: run scripts/prepare-deployment.mjs instead.
-    function serviceTypes() {
+    function deployedServiceTypes() {
       // BEGIN GENERATED SERVICE IDS
       return ['sundayService', 'youth', 'children'];
       // END GENERATED SERVICE IDS
+    }
+
+    // Services added in the app live in settings/services (see ServiceCatalog
+    // in the app). Its ids list only ever grows — validServiceSettings() —
+    // so a roster or zone that once named an ID keeps a valid type.
+    function appServiceTypes() {
+      return exists(/databases/$(database)/documents/settings/services)
+        ? get(/databases/$(database)/documents/settings/services).data.get('ids', [])
+        : [];
+    }
+
+    // settings/services: 1–20 services, their ids, and every ID ever used.
+    // Removing an ID (or the document) would orphan rosters and zone grants.
+    function validServiceSettings() {
+      let data = request.resource.data;
+      let before = resource == null ? [] : resource.data.get('ids', []);
+      return data.keys().hasOnly(['services', 'ids', 'updatedAt'])
+        && data.services is list && data.services.size() >= 1 && data.services.size() <= 20
+        && data.ids is list && data.ids.size() <= 100
+        && data.ids.hasAll(before);
     }
 
     // Same idea as hasValidGroups(): a typo'd service type would sit in the
@@ -182,7 +208,10 @@ service cloud.firestore {
     // The shape of rosters affects everyone and remains admin-only.
     match /settings/{doc} {
       allow read: if isActiveUser();
-      allow write: if isAdmin();
+      allow create, update: if isAdmin()
+        && (doc != 'services' || validServiceSettings());
+      // settings/services is never deleted; see validServiceSettings().
+      allow delete: if isAdmin() && doc != 'services';
     }
 
     match /{document=**} {

@@ -7,6 +7,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 import 'core/config/church_config.dart';
+import 'core/config/service_catalog.dart';
 import 'core/services/push_notification_service.dart';
 import 'features/roster/data/repositories/firestore_roster_repository.dart';
 import 'features/roster/presentation/providers/roster_provider.dart';
@@ -16,6 +17,8 @@ import 'features/auth/presentation/providers/session_provider.dart';
 import 'features/auth/presentation/providers/user_admin_provider.dart';
 import 'features/auth/presentation/providers/group_settings_provider.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
+import 'features/services/data/service_settings_repository.dart';
+import 'features/services/presentation/providers/service_catalog_provider.dart';
 import 'presentation/screens/main_scaffold.dart';
 
 void main() async {
@@ -26,6 +29,8 @@ void main() async {
   await Future.wait([
     initializeDateFormatting('zh_TW', null),
     Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform),
+    // 管理員在 App 裡改過的聚會清單（上一次讀到的），不等網路。
+    ServiceCatalog.applyCached(),
   ]);
 
   // Force long polling on web instead of WebSocket. WebSocket transport is
@@ -91,6 +96,19 @@ class ChurchApp extends StatelessWidget {
           create: (_) => RosterProvider(FirestoreRosterRepository()),
           update: (_, session, prev) {
             prev ??= RosterProvider(FirestoreRosterRepository());
+            prev.onSessionChanged(session.currentUser?.id);
+            return prev;
+          },
+        ),
+
+        // ServiceCatalogProvider — 登入後讀 settings/services，聚會清單變了就重載。
+        ChangeNotifierProxyProvider<SessionProvider, ServiceCatalogProvider>(
+          create: (_) =>
+              ServiceCatalogProvider(FirestoreServiceSettingsRepository()),
+          update: (_, session, prev) {
+            prev ??= ServiceCatalogProvider(
+              FirestoreServiceSettingsRepository(),
+            );
             prev.onSessionChanged(session.currentUser?.id);
             return prev;
           },

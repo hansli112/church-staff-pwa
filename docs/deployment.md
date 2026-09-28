@@ -33,6 +33,7 @@ cp config/church.example.json .local/church.json
 - `appName`、`shortName` 設顯示名稱；`timeZone` 設單一 IANA 時區。
 - 每個 `services` 項目有固定 `id`、`label`、`name`、`weekday`（1–7）及 `enabled`。第一版只有**每週固定星期**，不能靠改資料標籤實現單週例外。
 - **service ID 是永久資料鍵**。改顯示名稱只動 `label/name`；停用只動 `enabled:false`，保留項目與 ID，不直接刪除。不要為改名讓既有 `zones`、`zoneTypes`、服事表變成未知 ID。
+- 這裡的 `services` 是**預設值**。管理員在 App「我的」→「聚會設定」存過之後，清單改存 Firestore `settings/services`（`services` 清單加上只增不減的 `ids`），App、Firestore rules 的 `serviceTypes()` 與 Worker 都以部署設定加上那份 `ids` 為準。之後再改 `church.json` 的 `services` 只影響還沒存過聚會設定的網站；要改名、改星期請在 App 裡改。
 - 選用功能先維持 `false`；先驗證核心登入／服事表，再逐一啟用。
 - 每日靈糧的 `dataUrl` 是 App 讀取 JSON 的網址，`linkUrl` 是點擊後的網站；若需 workflow 更新 data 分支，另設 `fetchUrl` 與 `fetchFormat`（`json` 或固定版型 `dailyBibleHtml`）。`fetchUrl` 留空便不抓取，所有日期判定使用同份設定的 `timeZone`。來源 URL 不得含秘密。
 - 日曆 ID、同工姓名、server secrets 不放這個檔案。ChurchConfig 會被編入公開前端及 Worker。
