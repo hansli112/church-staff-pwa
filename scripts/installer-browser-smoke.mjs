@@ -213,11 +213,30 @@ try {
   await evaluate("document.querySelector('#installs input[type=radio]').click()");
   await waitFor("!document.getElementById('update-confirm').hidden", 'update confirmation shown');
   check('update cannot start before the site is confirmed', await evaluate("document.getElementById('apply-update').disabled"));
+  // A logo drawn on a canvas stands in for the church's image file.
+  await evaluate(`(async () => {
+    document.getElementById('update-options').open = true;
+    const source = document.createElement('canvas'); source.width = 300; source.height = 200;
+    const context = source.getContext('2d'); context.fillStyle = '#c2410c'; context.fillRect(0, 0, 300, 200);
+    const blob = await new Promise((resolve) => source.toBlob(resolve, 'image/png'));
+    const transfer = new DataTransfer(); transfer.items.add(new File([blob], 'logo.png', { type: 'image/png' }));
+    const input = document.getElementById('logo-file'); input.files = transfer.files;
+    input.dispatchEvent(new Event('change'));
+  })()`);
+  await waitFor("document.getElementById('icon-source').textContent.includes('新 Logo')", 'logo accepted by the wizard');
+  check('logo becomes five PNG icons of the right sizes', Object.values(manager.snapshot().update).length > 0 &&
+    manager.snapshot().update.iconSource === 'new' && await evaluate("!document.getElementById('logo-preview').hidden"));
+  await evaluate("document.getElementById('custom-domain').value = 'staff.hope-church.org'");
   await evaluate("document.getElementById('confirm-update').click(); document.getElementById('apply-update').click()");
   await waitFor("!document.getElementById('update-done').hidden", 'update completes', 20000);
   check('update completes and links to the updated site',
     (await evaluate("document.getElementById('update-website').href")) === 'https://grace-church-staff.pages.dev/' &&
     manager.snapshot().update.status === 'complete');
+  check('custom domain shows the CNAME the church must add',
+    await evaluate("!document.getElementById('domain-instructions').hidden") &&
+    (await evaluate("document.getElementById('dns-name').textContent")) === 'staff' &&
+    (await evaluate("document.getElementById('dns-target').textContent")) === 'grace-church-staff.pages.dev' &&
+    (await evaluate("document.getElementById('dns-zone').textContent")) === 'hope-church.org');
   await shot('installer-update', 1280);
   await send('Network.clearBrowserCookies');
   const beforeMissingCookie = startupEvents.filter((event) => event === 'navigation').length;

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { prepareDeployment, validateChurchConfig } from '../prepare-deployment.mjs';
 import { FIREBASE_KEYS, finalizeWebDeployment, OPTIONAL_FIREBASE_KEYS as OPTIONAL } from '../finalize-web-deployment.mjs';
 import { privateEnvironment, runIsolatedCommand } from './process.mjs';
-import { CORE_ICONS, FLUTTER_VERSION, installationError, isPrivateDirectory, verifyBuildArtifacts, WRANGLER_VERSION } from './shared.mjs';
+import { checkPng, CORE_ICONS, FLUTTER_VERSION, ICON_SIZES, installationError, isPrivateDirectory, verifyBuildArtifacts, WRANGLER_VERSION } from './shared.mjs';
 
 export { FLUTTER_VERSION };
 
@@ -104,6 +104,16 @@ export async function buildCoreDeployment(context, { command = runIsolatedComman
   await mkdir(path.join(workspace, 'scripts'), { mode: 0o700 });
   await safeCopy(path.join(root, 'scripts/generate-neutral-icons.mjs'), path.join(workspace, 'scripts/generate-neutral-icons.mjs'), hash, 'scripts/generate-neutral-icons.mjs');
   await run(process.execPath, [path.join(workspace, 'scripts/generate-neutral-icons.mjs')]);
+  // Update mode: the church's own logo, or the icons its site already has.
+  // Same paths as the neutral set, so the config's icon paths never change.
+  if (context.icons) {
+    for (const [name, size] of Object.entries(ICON_SIZES)) {
+      const bytes = checkPng(context.icons[name], size);
+      if (!bytes) throw buildError(`圖示 ${name} 不是 ${size}×${size} 的 PNG。`);
+      await writeFile(path.join(workspace, 'web', name), bytes, { mode: 0o600 });
+      hash.update(`icon:${name}`).update('\0').update(bytes).update('\0');
+    }
+  }
   const configPath = path.join(runDir, 'church.json');
   const firebasePath = path.join(runDir, 'firebase-config.json');
   await writeFile(configPath, JSON.stringify(config, null, 2) + '\n', { mode: 0o600 });

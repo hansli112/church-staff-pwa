@@ -354,6 +354,23 @@ export function createCloudflareInstaller({ command = runIsolatedCommand, fetchI
     }
     throw cloudflareError('新版網站部署仍未完成，請稍後重新按「開始更新」確認實際狀態。');
   }
+  // Attach the church's own subdomain. The wizard has no DNS permission, so
+  // the church adds the CNAME itself; Cloudflare checks it and issues the
+  // certificate. Adding first is deliberate: a CNAME to pages.dev that exists
+  // before the domain is attached answers with an error page.
+  async function addCustomDomain(context) {
+    const { plan, signal } = context;
+    const project = await updateTarget(context);
+    const domain = plan.customDomain;
+    if (typeof domain !== 'string' || !/^[a-z0-9.-]{4,253}$/.test(domain)) throw cloudflareError('自訂網址格式不符。');
+    const route = `${projectRoute(plan)}/domains`;
+    const listed = await api(route, { signal });
+    if (!Array.isArray(listed.result)) throw cloudflareError('Pages 網域清單格式不符。');
+    let entry = listed.result.find((item) => item.name === domain);
+    if (!entry) entry = (await api(route, { method: 'POST', body: { name: domain }, signal })).result;
+    const status = ['initializing', 'pending', 'active', 'deactivated', 'blocked', 'error'].includes(entry?.status) ? entry.status : 'pending';
+    return { domain, status, cname: { name: domain.split('.')[0], fullName: domain, target: project.subdomain } };
+  }
   async function execute(step, context) {
     if (!STEP_IDS.has(step)) throw cloudflareError('不支援的 Cloudflare 安裝步驟。');
     return step === 'pages-project' ? createPagesProject(context) : publish(context);
@@ -365,5 +382,5 @@ export function createCloudflareInstaller({ command = runIsolatedCommand, fetchI
     await Promise.allSettled([...activeCommands]);
     if (home) await rm(home, { recursive: true, force: true });
   }
-  return { inspectIdentity, startLogin, preflight, execute, listInstalls, publishUpdate, dispose };
+  return { inspectIdentity, startLogin, preflight, execute, listInstalls, publishUpdate, addCustomDomain, dispose };
 }

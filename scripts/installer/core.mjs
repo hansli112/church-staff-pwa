@@ -3,7 +3,7 @@ import { constants } from 'node:fs';
 import { lstat, mkdir, open, readdir, realpath, rename, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { validateChurchConfig } from '../../worker/church_config.js';
-import { CORE_ICONS, fingerprint, installationError, isPrivateDirectory, projectIdFor, STEPS, UPDATE_STEPS } from './shared.mjs';
+import { checkPng, CORE_ICONS, fingerprint, ICON_SIZES, installationError, isPrivateDirectory, normalizeCustomDomain, projectIdFor, STEPS, UPDATE_STEPS } from './shared.mjs';
 
 export { installationError, STEPS, UPDATE_STEPS };
 
@@ -59,6 +59,30 @@ async function fetchSiteJson(url, { signal } = {}) {
     const text = await response.text();
     return text.length > 256 * 1024 ? null : JSON.parse(text);
   } catch { return null; }
+}
+
+// The icons a live site serves, so an update keeps a logo set earlier.
+async function fetchSiteBytes(url, { signal } = {}) {
+  try {
+    const response = await fetch(url, {
+      redirect: 'error', headers: { 'Cache-Control': 'no-cache' },
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15_000)]) : AbortSignal.timeout(15_000),
+    });
+    if (!response.ok) return null;
+    const bytes = Buffer.from(await response.arrayBuffer());
+    return bytes.length > 1024 * 1024 ? null : bytes;
+  } catch { return null; }
+}
+
+// Only a complete, correctly sized set is accepted; anything else means neutral icons.
+function iconSet(files) {
+  const icons = {};
+  for (const [name, size] of Object.entries(ICON_SIZES)) {
+    const bytes = checkPng(files?.[name], size);
+    if (!bytes) return null;
+    icons[name] = bytes;
+  }
+  return icons;
 }
 
 export function createInstallationPlan(input, identity, {
@@ -239,7 +263,7 @@ async function updateDirectory(rootDir, runId) {
   return runDir;
 }
 
-export function createInstallationManager({ rootDir, google, cloudflare, build, sourceRevision = 'development', demo = false, release, fetchSite = fetchSiteJson }) {
+export function createInstallationManager({ rootDir, google, cloudflare, build, sourceRevision = 'development', demo = false, release, fetchSite = fetchSiteJson, fetchAsset = fetchSiteBytes }) {
   const mode = demo ? 'demo' : 'cloud';
   let state;
   let store;
@@ -346,8 +370,12 @@ export function createInstallationManager({ rootDir, google, cloudflare, build, 
           pagesProject: update.plan.pagesProject, cloudflareAccountId: update.plan.cloudflareAccountId,
           appName: update.plan.churchConfig.appName, website: update.target.website,
           currentRelease: update.target.currentRelease, release: update.plan.release,
-          steps: UPDATE_STEPS.map(({ id, label }) => ({ id, label, status: update.steps[id] ?? 'pending' })),
+          steps: UPDATE_STEPS.filter(({ id }) => id !== 'domain' || update.plan.customDomain || update.steps.domain)
+            .map(({ id, label }) => ({ id, label, status: update.steps[id] ?? 'pending' })),
           unchanged: update.result?.unchanged,
+          iconSource: update.icons ? 'new' : update.liveIcons ? 'live' : 'neutral',
+          customDomain: update.plan.customDomain,
+          domain: update.domain && { status: update.domain.status, cname: update.domain.cname },
         },
       };
     },
@@ -377,7 +405,7 @@ export function createInstallationManager({ rootDir, google, cloudflare, build, 
       });
     },
     planUpdate({ pagesProject, accountId } = {}) {
-      return exclusive(async () => {
+      return exclusive(async (signal) => {
         const target = installs?.find((item) => item.pagesProject === pagesProject && item.accountId === accountId);
         if (!target) throw installationError('請先按「尋找已安裝的網站」，再選擇一個', 'INVALID_INPUT');
         if (!target.readable) throw installationError('這個網站是舊版精靈裝的，讀不到教會設定，沒辦法自動更新。', 'UPDATE_UNSUPPORTED');
@@ -389,18 +417,45 @@ export function createInstallationManager({ rootDir, google, cloudflare, build, 
           },
           target, status: 'ready', steps: {},
         };
+        const live = {};
+        await Promise.all(Object.keys(ICON_SIZES).map(async (name) => { live[name] = await fetchAsset(`${target.website}${name}`, { signal }); }));
+        update.liveIcons = iconSet(live) ?? undefined;
         message = '請核對要更新的網站，再按「開始更新」';
       });
     },
-    applyUpdate({ confirm } = {}) {
+    // A new logo (five PNGs the page drew from the church's image), or back to neutral.
+    setUpdateIcons({ icons, reset } = {}) {
+      return exclusive(async () => {
+        if (!update || update.status === 'running') throw installationError('請先選擇要更新的網站', 'INVALID_INPUT');
+        if (reset) {
+          update.icons = undefined;
+          update.liveIcons = undefined;
+          message = '這次更新會改回預設圖示';
+          return;
+        }
+        const decoded = {};
+        for (const name of Object.keys(ICON_SIZES)) {
+          decoded[name] = typeof icons?.[name] === 'string' && /^[A-Za-z0-9+/]+={0,2}$/.test(icons[name]) ? Buffer.from(icons[name], 'base64') : undefined;
+        }
+        const set = iconSet(decoded);
+        if (!set) throw installationError('Logo 圖片轉換失敗，請換一張 PNG 或 JPG 再試', 'INVALID_INPUT');
+        update.icons = set;
+        message = '已套用新的 Logo，會在這次更新一起發布';
+      });
+    },
+    applyUpdate({ confirm, customDomain } = {}) {
       return exclusive(async (signal) => {
         if (!update || confirm !== update.plan.pagesProject) throw installationError('請勾選確認要更新的網站', 'CONFIRMATION_REQUIRED');
+        const domain = customDomain ? normalizeCustomDomain(customDomain) : undefined;
+        if (customDomain && !domain) throw installationError('自訂網址要是你們擁有的子網域，例如 staff.hope-church.org（不能只填 hope-church.org）', 'INVALID_INPUT');
+        update.plan.customDomain = domain;
+        update.domain = undefined;
         await verifyIdentity(update.plan, signal);
         const runDir = await updateDirectory(rootDir, update.plan.runId);
         const checkpoint = { resources: {}, intents: {} };
         const context = {
           plan: clone(update.plan), runDir, checkpoint, emit, signal, transient: {},
-          liveBuildVersion: update.target.liveBuildVersion,
+          liveBuildVersion: update.target.liveBuildVersion, icons: update.icons ?? update.liveIcons,
           save: async (patch) => { for (const key of ['resources', 'intents']) Object.assign(checkpoint[key], clone(patch[key] ?? {})); },
         };
         update.status = 'running';
@@ -409,15 +464,19 @@ export function createInstallationManager({ rootDir, google, cloudflare, build, 
         try {
           for (const step of UPDATE_STEPS) {
             signal.throwIfAborted();
+            if (step.id === 'domain' && !domain) continue;
             update.steps[step.id] = 'running';
             message = step.label;
             if (step.provider === 'build') await build(context);
             else if (step.provider === 'google') await google.update(step.id, context);
-            else update.result = await cloudflare.publishUpdate(context);
+            else if (step.provider === 'domain') {
+              update.domain = await cloudflare.addCustomDomain(context);
+              await google.update('domain', context);
+            } else update.result = await cloudflare.publishUpdate(context);
             update.steps[step.id] = context.transient.unchanged && ['build', 'publish'].includes(step.id) ? 'skipped' : 'complete';
           }
           update.status = 'complete';
-          message = update.result?.unchanged ? '這個網站已經是最新版本，不需要更新。' : '更新完成。同工下次打開 App 就會換到新版。';
+          message = update.result?.unchanged ? '網站程式已經是最新版本，不需要重新發布。' : '更新完成。同工下次打開 App 就會換到新版。';
         } catch (error) {
           const current = UPDATE_STEPS.find((step) => update.steps[step.id] === 'running');
           if (current) update.steps[current.id] = signal.aborted ? 'paused' : 'failed';

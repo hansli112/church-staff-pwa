@@ -32,7 +32,34 @@ export const UPDATE_STEPS = [
   ['build', '建置新版網站', 'build'],
   ['rules', '更新資料存取規則', 'google'],
   ['publish', '發布新版網站', 'cloudflare'],
+  // Only when the church asked for its own address.
+  ['domain', '設定自訂網址', 'domain'],
 ].map(([id, label, provider]) => ({ id, label, provider }));
+
+// A subdomain the church owns, e.g. staff.hope-church.org. Apex domains only
+// work with Cloudflare nameservers, which this wizard cannot set up.
+export function normalizeCustomDomain(value) {
+  const domain = typeof value === 'string' ? value.trim().toLowerCase().replace(/\.$/, '') : '';
+  const labels = domain.split('.');
+  if (domain.length > 253 || labels.length < 3 || labels.some((label) => !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label)) ||
+      /^\d+$/.test(labels.at(-1)) || /\.(?:pages\.dev|workers\.dev|cloudshell\.dev|firebaseapp\.com|web\.app)$/.test(domain)) return null;
+  return domain;
+}
+
+// Icons the update may replace, with their required pixel size.
+export const ICON_SIZES = Object.freeze({
+  'favicon.png': 32, 'icons/Icon-192.png': 192, 'icons/Icon-512.png': 512,
+  'icons/Icon-maskable-192.png': 192, 'icons/Icon-maskable-512.png': 512,
+});
+
+// A PNG of exactly the given size, or null. Only the signature and IHDR are
+// read: the browser made it from a canvas, and Pages serves it as a file.
+export function checkPng(bytes, size) {
+  if (!Buffer.isBuffer(bytes) || bytes.length < 33 || bytes.length > 1024 * 1024) return null;
+  if (!bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return null;
+  if (bytes.toString('latin1', 12, 16) !== 'IHDR' || bytes.readUInt32BE(16) !== size || bytes.readUInt32BE(20) !== size) return null;
+  return bytes;
+}
 
 // First installs only use the neutral artwork shipped in web/.
 export const CORE_ICONS = Object.freeze({

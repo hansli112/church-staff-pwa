@@ -740,7 +740,23 @@ async function updateRules(s) {
   return { rules: { unchanged: false } };
 }
 
-const UPDATE_HANDLERS = { inspect: inspectInstalled, rules: updateRules };
+// Let Firebase Auth accept the church's own address too. Only ever adds.
+async function authorizeCustomDomain(s) {
+  const { plan, configPath, request, getAuthConfig } = s;
+  const domain = plan.customDomain;
+  if (typeof domain !== 'string' || !/^[a-z0-9.-]{4,253}$/.test(domain)) stop('GOOGLE_INVALID_PLAN', '自訂網址格式不符。');
+  const before = (await getAuthConfig()).authorizedDomains ?? [];
+  if (!Array.isArray(before) || before.some((value) => typeof value !== 'string')) conflict();
+  if (!before.includes(domain)) {
+    await installedProject(s);
+    await request('identitytoolkit', `${configPath}?updateMask=authorizedDomains`, { method: 'PATCH', body: { authorizedDomains: [...before, domain] }, authSetup: true });
+    const after = (await getAuthConfig()).authorizedDomains ?? [];
+    if (!after.includes(domain) || before.some((value) => !after.includes(value))) conflict('登入網域更新後的核對結果不同；請檢查 Firebase Console。');
+  }
+  return { authDomains: { domain } };
+}
+
+const UPDATE_HANDLERS = { inspect: inspectInstalled, rules: updateRules, domain: authorizeCustomDomain };
 
 const STEP_HANDLERS = {
   'google-project': createProject,

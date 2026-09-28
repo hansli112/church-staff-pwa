@@ -335,3 +335,22 @@ test('publishUpdate skips the upload when the build is unchanged or already went
   assert.equal((await resumed.installer.publishUpdate(resumed.context)).unchanged, false);
   assert.equal(resumed.calls.filter(({ args }) => args[0] === 'pages').length, 0);
 });
+
+test('addCustomDomain attaches the subdomain once and returns the CNAME to add', async (t) => {
+  let domains = [];
+  const posted = [];
+  const { installer, context } = await fixture(t, { fetchImpl: async (url, options) => {
+    if (url.endsWith('/domains') && options.method === 'POST') {
+      posted.push(JSON.parse(options.body));
+      domains = [{ name: 'staff.hope-church.org', status: 'initializing' }];
+      return response(domains[0]);
+    }
+    if (url.endsWith('/domains')) return response(domains);
+    return response(installed());
+  } });
+  context.plan = { ...UPDATE_PLAN, customDomain: 'staff.hope-church.org' };
+  const expected = { domain: 'staff.hope-church.org', status: 'initializing', cname: { name: 'staff', fullName: 'staff.hope-church.org', target: 'grace-church-staff.pages.dev' } };
+  assert.deepEqual(await installer.addCustomDomain(context), expected);
+  assert.deepEqual(await installer.addCustomDomain(context), expected);
+  assert.deepEqual(posted, [{ name: 'staff.hope-church.org' }]);
+});

@@ -935,3 +935,15 @@ test('update never overwrites rules someone edited by hand', async (t) => {
   await rejectsCode(adapter.update('rules', context), 'GOOGLE_RESOURCE_CONFLICT');
   assert.equal(state.rulesets.size, before);
 });
+
+test('update adds the custom domain to Firebase Auth once and keeps every existing domain', async (t) => {
+  const { adapter, context, state, through } = await setup(t);
+  await through('activation');
+  const before = [...state.authConfig.authorizedDomains];
+  context.plan = { ...context.plan, customDomain: 'staff.hope-church.org' };
+  await adapter.update('domain', context);
+  assert.deepEqual(state.authConfig.authorizedDomains, [...before, 'staff.hope-church.org']);
+  const patches = state.requests.filter((call) => call.method === 'PATCH' && call.pathname.endsWith('/config')).length;
+  await adapter.update('domain', context);
+  assert.equal(state.requests.filter((call) => call.method === 'PATCH' && call.pathname.endsWith('/config')).length, patches);
+});

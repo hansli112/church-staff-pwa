@@ -131,6 +131,49 @@ function renderSteps(list, steps) {
   }
 }
 
+// The five icon files, drawn from the church's image on a solid background.
+// "any" icons keep a small margin; maskable ones keep the logo inside the
+// centre circle that Android may crop to.
+const ICONS = [['favicon.png', 32, 0.96], ['icons/Icon-192.png', 192, 0.84], ['icons/Icon-512.png', 512, 0.84],
+  ['icons/Icon-maskable-192.png', 192, 0.62], ['icons/Icon-maskable-512.png', 512, 0.62]];
+let logoBitmap;
+
+function drawIcon(canvas, size, scale, background) {
+  canvas.width = size;
+  canvas.height = size;
+  const context = canvas.getContext('2d');
+  context.fillStyle = background;
+  context.fillRect(0, 0, size, size);
+  const fit = Math.min((size * scale) / logoBitmap.width, (size * scale) / logoBitmap.height);
+  const width = logoBitmap.width * fit;
+  const height = logoBitmap.height * fit;
+  context.imageSmoothingQuality = 'high';
+  context.drawImage(logoBitmap, (size - width) / 2, (size - height) / 2, width, height);
+}
+
+async function base64Png(canvas) {
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(binary);
+}
+
+async function uploadLogo() {
+  if (!logoBitmap) return;
+  const background = $('logo-background').value;
+  const icons = {};
+  for (const [name, size, scale] of ICONS) {
+    const canvas = document.createElement('canvas');
+    drawIcon(canvas, size, scale, background);
+    icons[name] = await base64Png(canvas);
+  }
+  drawIcon($('logo-preview-icon'), 192, 0.84, background);
+  drawIcon($('logo-preview-mask'), 192, 0.62, background);
+  $('logo-preview').hidden = false;
+  await request('/api/update/icons', { icons });
+}
+
 // Update mode: pick a site this wizard installed, confirm, rebuild it.
 function renderUpdate(state) {
   const update = state.update;
@@ -193,13 +236,27 @@ function renderUpdate(state) {
     $('apply-update').textContent = update.status === 'paused' ? '重新開始更新' : '開始更新';
     $('apply-update').disabled = state.busy || !$('confirm-update').checked;
     $('cancel-update').hidden = !(state.busy && update.status === 'running');
+    $('icon-source').textContent = { new: '這次更新會換成下面的新 Logo。', live: '目前沿用網站現在的圖示。要換的話，選一張教會的 Logo 圖片。', neutral: '目前是預設圖示。要換成教會 Logo 的話，選一張圖片。' }[update.iconSource] ?? '';
+    $('logo-reset').hidden = update.iconSource === 'neutral';
+    if (update.iconSource !== 'new') $('logo-preview').hidden = true;
+    for (const id of ['logo-file', 'logo-background', 'logo-reset', 'custom-domain']) $(id).disabled = state.busy || update.status === 'running';
+    if (update.customDomain && !$('custom-domain').value) $('custom-domain').value = update.customDomain;
   }
   $('update-done').hidden = update?.status !== 'complete';
   if (update?.status === 'complete') {
-    $('update-done-message').textContent = update.unchanged
-      ? `${update.website} 已經是最新版本，不需要更新。`
-      : `已更新完成。同工下次打開 App（或重新整理）就會換到新版；手機上已加到桌面的 App，關掉重開一次即可。`;
+    $('update-done-message').textContent = [update.unchanged
+      ? `${update.website} 的網站程式已經是最新版本，不需要重新發布。`
+      : '已更新完成。同工下次打開 App（或重新整理）就會換到新版；手機上已加到桌面的 App，關掉重開一次即可。',
+    update.domain?.status === 'active' ? `自訂網址 https://${update.customDomain}/ 已經生效，可以改用這個網址分享給同工。` : ''].filter(Boolean).join(' ');
     $('update-website').href = update.website;
+  }
+  const dns = update?.status === 'complete' && update.domain && update.domain.status !== 'active' ? update.domain.cname : null;
+  $('domain-instructions').hidden = !dns;
+  if (dns) {
+    $('dns-zone').textContent = dns.fullName.split('.').slice(1).join('.');
+    $('dns-name').textContent = dns.name;
+    $('dns-full').textContent = dns.fullName;
+    $('dns-target').textContent = dns.target;
   }
 }
 
@@ -422,9 +479,24 @@ $('find-installs').addEventListener('click', () => perform(() => request('/api/u
 $('confirm-update').addEventListener('change', () => { $('apply-update').disabled = current?.busy || !$('confirm-update').checked; });
 $('apply-update').addEventListener('click', () => perform(() => {
   $('apply-update').disabled = true;
-  return request('/api/update/apply', { confirm: current.update.pagesProject });
+  return request('/api/update/apply', { confirm: current.update.pagesProject, customDomain: $('custom-domain').value.trim() || undefined });
 }));
 $('cancel-update').addEventListener('click', () => perform(() => request('/api/cancel', {})));
+$('logo-file').addEventListener('change', () => perform(async () => {
+  const file = $('logo-file').files[0];
+  if (!file) return;
+  if (file.size > 20 * 1024 * 1024) throw new Error('圖片太大了，請換一張 20 MB 以下的圖片');
+  try { logoBitmap = await createImageBitmap(file); }
+  catch { throw new Error('讀不到這張圖片，請換一張 PNG 或 JPG'); }
+  await uploadLogo();
+}));
+$('logo-background').addEventListener('change', () => perform(uploadLogo));
+$('logo-reset').addEventListener('click', () => perform(async () => {
+  logoBitmap = undefined;
+  $('logo-file').value = '';
+  $('logo-preview').hidden = true;
+  await request('/api/update/icons', { reset: true });
+}));
 $('resume-existing').addEventListener('change', () => { $('resume-id').value = $('resume-existing').value; });
 $('resume').addEventListener('click', () => perform(() => request('/api/resume', { runId: $('resume-id').value.trim() })));
 $('copy-id').addEventListener('click', () => perform(async () => {

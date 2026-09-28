@@ -47,12 +47,18 @@ export function createDemoProviders({ failAt, delayMs = 150 } = {}) {
     });
   };
   return {
+    fetchAsset: async () => null,
     fetchSite: async (url) => url.endsWith('/church-config.json') ? structuredClone(installedConfig)
       : url.endsWith('/version.json') ? { version: 'installer-demo-old', release: '2026.9.1', channel: 'installer' } : null,
     google: { inspectIdentity: async () => ({ email: googleEmail }), execute, update: async (step, context) => pause(context) },
     cloudflare: {
       listInstalls: async () => [structuredClone(installed)],
       publishUpdate: async (context) => { await pause(context); return { website: `https://${installed.subdomain}/`, unchanged: false }; },
+      addCustomDomain: async (context) => {
+        await pause(context);
+        const domain = context.plan.customDomain;
+        return { domain, status: 'pending', cname: { name: domain.split('.')[0], fullName: domain, target: installed.subdomain } };
+      },
       startLogin: async ({ emit, signal }) => {
         emit({ message: '離線示範：模擬官方授權等待，不會開啟真實登入頁' });
         await delay(delayMs, undefined, { signal });
