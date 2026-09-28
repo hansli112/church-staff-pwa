@@ -5,6 +5,8 @@
 // 規則是唯一擋得住「繞過 App、直接用公開 web SDK 打 Firestore」的東西，
 // 所以每一條授權判斷都要有對應的測試。
 import assert from 'node:assert';
+import defaults from '../worker/generated_config.js';
+import { renderRules } from '../scripts/prepare-deployment.mjs';
 import { readFileSync } from 'node:fs';
 import { after, before, describe, it } from 'node:test';
 import {
@@ -23,6 +25,7 @@ import {
   getDocs,
   orderBy,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -77,7 +80,12 @@ before(async () => {
   testEnv = await initializeTestEnvironment({
     projectId: 'demo-church-staff',
     firestore: {
-      rules: readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'),
+      rules: renderRules(readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'), {
+        ...defaults, services: [...defaults.services,
+          { id: 'midweek', label: '週中', name: '週中聚會', weekday: 3, enabled: true },
+          { id: 'retired', label: '舊聚會', name: '舊聚會', weekday: 1, enabled: false },
+        ],
+      }),
       host,
       port: Number(port),
     },
@@ -836,9 +844,95 @@ describe('staff_orders 同工排序', () => {
   });
 });
 
+describe('生成設定：自訂第四聚會、停用聚會與日期格式', () => {
+  it('第四聚會保持 admin / roster-editors + zone 的授權邊界', async () => {
+    const uid = 'midweek-editor';
+    await assertSucceeds(setDoc(doc(asAdmin(), 'users', uid),
+      userDoc(uid, 'staff', ['roster-editors'], ['midweek', 'retired'])));
+    const db = testEnv.authenticatedContext(uid).firestore();
+    const roster = { type: 'midweek', dateKey: '2030-01-02', date: Timestamp.fromDate(new Date('2030-01-02T00:00:00Z')) };
+    await assertSucceeds(setDoc(doc(db, 'rosters', '2030-01-02_midweek'), roster));
+    await assertSucceeds(setDoc(doc(db, 'staff_orders', 'midweek'), { roles: {} }));
+    await assertSucceeds(getDoc(doc(asMember(), 'rosters', '2030-01-02_midweek')));
+    await assertFails(updateDoc(doc(asYouthEditor(), 'rosters', '2030-01-02_midweek'), { type: 'youth' }));
+    await assertFails(setDoc(doc(asYouthEditor(), 'rosters', 'another-midweek'), roster));
+    await assertFails(setDoc(doc(db, 'rosters', 'another-sunday'), { type: 'sundayService' }));
+    await assertFails(setDoc(doc(asMember(), 'rosters', 'member-midweek'), roster));
+    // Hiding an ID is not deleting its historical records or permission grants.
+    await assertSucceeds(setDoc(doc(db, 'rosters', 'old-retired'), { type: 'retired', dateKey: '2030-01-07' }));
+    await assertSucceeds(getDoc(doc(asMember(), 'rosters', 'old-retired')));
+    await assertSucceeds(updateDoc(doc(db, 'rosters', 'old-retired'), { serviceName: '舊聚會' }));
+  });
+
+  it('未知 incoming type 連 admin 也不能建立或改寫', async () => {
+    await assertFails(setDoc(doc(asAdmin(), 'rosters', 'unknown-type'), { type: 'not-configured' }));
+    await assertFails(updateDoc(doc(asAdmin(), 'rosters', 'r2'), { type: 'not-configured' }));
+    await assertFails(setDoc(doc(asAdmin(), 'users', 'unknown-zone'), userDoc('unknown-zone', 'staff', [], ['not-configured'])));
+  });
+
+  it('dateKey 有正確格式，舊 Timestamp-only 仍可讀寫', async () => {
+    const ref = doc(asAdmin(), 'rosters', 'date-key-test');
+    await assertSucceeds(setDoc(ref, { type: 'midweek', dateKey: '2030-01-02' }));
+    for (const dateKey of ['2030-13-02', '2030-01-00', '2030/01/02', '2030-1-2', 20300102, null]) {
+      await assertFails(updateDoc(ref, { dateKey }));
+    }
+    await assertSucceeds(setDoc(doc(asAdmin(), 'rosters', '2030-01-09_midweek'), {
+      type: 'midweek', date: Timestamp.fromDate(new Date('2030-01-09T00:00:00Z')),
+    }));
+    await assertSucceeds(getDoc(doc(asMember(), 'rosters', '2030-01-09_midweek')));
+  });
+});
+
 describe('預設拒絕', () => {
   it('未定義的 collection 一律拒絕，連管理員也是', async () => {
     await assertFails(getDoc(doc(asAdmin(), 'anything', 'x')));
     await assertFails(setDoc(doc(asAdmin(), 'anything', 'x'), { a: 1 }));
+  });
+});
+
+
+// Dart 的 rosterWeekDocumentIds 測試釘住相同的七個 ID；這裡驗證實際
+// Firestore optimistic transaction 在兩個不同目標日期之間仍會衝突並重試。
+describe('排表並行建立', () => {
+  it('不同星期設定同時看到空週，也只會建立一場', { timeout: 20_000 }, async () => {
+    const ids = [
+      '20260928_midweek', '20260929_midweek', '20260930_midweek',
+      '20261001_midweek', '20261002_midweek', '20261003_midweek', '20261004_midweek',
+    ];
+    let arrivals = 0;
+    let attempts = 0;
+    let release;
+    const bothHaveRead = new Promise((resolve) => { release = resolve; });
+    const create = (targetIndex) => {
+      const db = testEnv.authenticatedContext(ADMIN).firestore();
+      let firstAttempt = true;
+      return runTransaction(db, async (transaction) => {
+        attempts++;
+        const snapshots = await Promise.all(ids.map((id) => transaction.get(doc(db, 'rosters', id))));
+        if (firstAttempt) {
+          firstAttempt = false;
+          if (++arrivals === 2) release();
+          await bothHaveRead;
+        }
+        if (snapshots.some((snapshot) => snapshot.exists())) return false;
+        const key = ids[targetIndex].slice(0, 8);
+        const dateKey = key.slice(0, 4) + '-' + key.slice(4, 6) + '-' + key.slice(6, 8);
+        transaction.set(doc(db, 'rosters', ids[targetIndex]), {
+          type: 'midweek', dateKey, date: Timestamp.fromDate(new Date(dateKey + 'T00:00:00Z')),
+          serviceName: '週間聚會', duties: [],
+        });
+        return true;
+      });
+    };
+    try {
+      const results = await Promise.all([create(4), create(6)]);
+      assert.equal(results.filter(Boolean).length, 1);
+      assert.ok(attempts >= 3, '第二個 transaction 必須因相同週的讀取衝突而重試');
+      const snapshots = await Promise.all(ids.map((id) => getDoc(doc(asAdmin(), 'rosters', id))));
+      assert.equal(snapshots.filter((snapshot) => snapshot.exists()).length, 1);
+    } finally {
+      const snapshots = await Promise.all(ids.map((id) => getDoc(doc(asAdmin(), 'rosters', id))));
+      await Promise.all(snapshots.filter((snapshot) => snapshot.exists()).map((snapshot) => deleteDoc(snapshot.ref)));
+    }
   });
 });

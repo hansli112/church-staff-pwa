@@ -1,3 +1,5 @@
+import { TEST_CHURCH_CONFIG } from '../worker/church_config.js';
+import { ENABLED_CONFIG } from './helpers.js';
 // Tests for POST /api/roster/import-image.
 //
 // Same approach as calendar.test.js: no Miniflare, no wrangler dev. Node 22
@@ -75,6 +77,7 @@ const EVENTS = ['聖餐', '愛餐'];
 const STAFF = ['陳志明', '李大華'];
 
 const ENV = {
+  [TEST_CHURCH_CONFIG]: ENABLED_CONFIG,
   FIREBASE_PROJECT_ID: PROJECT_ID,
   GEMINI_API_KEY: 'test-gemini-key',
 };
@@ -588,19 +591,19 @@ describe('callGemini — 上游的各種回法', () => {
   describe('額度重置時間（太平洋時間半夜）', () => {
     const at = (iso) => Date.parse(iso);
     test('夏令時間是台灣下午三點', () => {
-      assert.equal(quotaResetText(at('2026-09-24T02:15:00Z')), '下午三點'); // 台灣 10:15
+      assert.equal(quotaResetText(at('2026-09-24T02:15:00Z')), '今天 15:00（Asia/Taipei）'); // 台灣 10:15
     });
     test('過了三點就是明天', () => {
-      assert.equal(quotaResetText(at('2026-09-24T08:00:00Z')), '明天下午三點'); // 台灣 16:00
+      assert.equal(quotaResetText(at('2026-09-24T08:00:00Z')), '2026-09-25 15:00（Asia/Taipei）'); // 台灣 16:00
     });
     test('夏令時間結束當天還是三點，隔天起變四點', () => {
       // 美國 2026-11-01 02:00 結束夏令時間；11/1 的半夜還是 PDT。
-      assert.equal(quotaResetText(at('2026-10-31T08:00:00Z')), '明天下午三點');
-      assert.equal(quotaResetText(at('2026-11-01T08:00:00Z')), '明天下午四點');
-      assert.equal(quotaResetText(at('2026-11-02T02:00:00Z')), '下午四點');
+      assert.equal(quotaResetText(at('2026-10-31T08:00:00Z')), '2026-11-01 15:00（Asia/Taipei）');
+      assert.equal(quotaResetText(at('2026-11-01T08:00:00Z')), '2026-11-02 16:00（Asia/Taipei）');
+      assert.equal(quotaResetText(at('2026-11-02T02:00:00Z')), '今天 16:00（Asia/Taipei）');
     });
     test('冬令時間跨年也照算', () => {
-      assert.equal(quotaResetText(at('2026-12-31T23:00:00Z')), '下午四點'); // 台灣 1/1 07:00
+      assert.equal(quotaResetText(at('2026-12-31T23:00:00Z')), '今天 16:00（Asia/Taipei）'); // 台灣 1/1 07:00
     });
   });
 
@@ -834,7 +837,7 @@ describe('callGemini — 上游的各種回法', () => {
     const restore = muteConsoleError();
     try {
       await assert.rejects(
-        () => callGemini({ FIREBASE_PROJECT_ID: PROJECT_ID }, { prompt: 'x', images, fetchImpl: impl }),
+        () => callGemini({ ...ENV, GEMINI_API_KEY: undefined }, { prompt: 'x', images, fetchImpl: impl }),
         { status: 500 },
       );
       assert.equal(impl.geminiCalls().length, 0);

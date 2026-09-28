@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/time/church_time.dart';
+
 /// 首頁「近期活動」列出的一筆行事曆活動。
 ///
 /// 這裡刻意帶著結束時間。先前的版本只存開始時間，於是跨日活動整個壞掉：
@@ -25,7 +27,10 @@ class RecentActivity {
   final bool isAllDay;
   final String title;
 
-  DateTime get startDay => DateUtils.dateOnly(startTime);
+  DateTime get startInstant =>
+      ChurchTime.eventInstant(startTime, isAllDay: isAllDay);
+
+  DateTime get startDay => ChurchTime.dateOnly(startTime);
 
   /// 活動實際涵蓋的最後一天。
   ///
@@ -36,7 +41,7 @@ class RecentActivity {
   DateTime get endDay {
     final normalizedEnd = endTime.isBefore(startTime) ? startTime : endTime;
     final adjusted = normalizedEnd.subtract(const Duration(microseconds: 1));
-    final endDayOnly = DateUtils.dateOnly(adjusted);
+    final endDayOnly = ChurchTime.dateOnly(adjusted);
     return endDayOnly.isBefore(startDay) ? startDay : endDayOnly;
   }
 
@@ -47,13 +52,15 @@ class RecentActivity {
   /// 全日活動以「天」為單位判斷：只要今天還沒超過最後一天就算數，不會因為
   /// 現在是下午三點就把今天的全日活動視為過去式。
   bool isCurrentOrUpcoming(DateTime now) {
-    if (isAllDay) return !endDay.isBefore(DateUtils.dateOnly(now));
+    if (isAllDay) {
+      return !endDay.isBefore(ChurchTime.dateOnly(ChurchTime.inZone(now)));
+    }
     return endTime.isAfter(now);
   }
 
   bool isOngoing(DateTime now) {
     if (isAllDay) {
-      final today = DateUtils.dateOnly(now);
+      final today = ChurchTime.dateOnly(ChurchTime.inZone(now));
       return !today.isBefore(startDay) && !today.isAfter(endDay);
     }
     return !startTime.isAfter(now) && endTime.isAfter(now);
@@ -70,14 +77,18 @@ class RecentActivity {
   /// 一天也不要憑空生出一個不存在的區間；快取 key 已經升版，正常情況下走
   /// 不到這條路。
   factory RecentActivity.fromJson(Map<String, dynamic> json) {
-    final start = DateTime.parse(json['startTime'] as String).toLocal();
+    final isAllDay = json['isAllDay'] as bool? ?? false;
+    final start = ChurchTime.parseEventTime(
+      json['startTime'] as String,
+      isAllDay: isAllDay,
+    );
     final endRaw = json['endTime'];
     return RecentActivity(
       startTime: start,
       endTime: endRaw is String
-          ? DateTime.parse(endRaw).toLocal()
+          ? ChurchTime.parseEventTime(endRaw, isAllDay: isAllDay)
           : start.add(const Duration(minutes: 1)),
-      isAllDay: json['isAllDay'] as bool? ?? false,
+      isAllDay: isAllDay,
       title: json['title'] as String,
     );
   }
@@ -94,7 +105,7 @@ List<RecentActivity> selectRecentActivities(
 }) {
   final upcoming =
       activities.where((activity) => activity.isCurrentOrUpcoming(now)).toList()
-        ..sort((a, b) => a.startTime.compareTo(b.startTime));
+        ..sort((a, b) => a.startInstant.compareTo(b.startInstant));
   if (upcoming.length <= limit) return upcoming;
   return upcoming.take(limit).toList();
 }

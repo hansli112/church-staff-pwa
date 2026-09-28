@@ -10,6 +10,8 @@
 // GET 一次才拿得到標題 —— Google 的 DELETE 回 204 空 body。
 
 /// 通知是附帶效果，不該讓使用者為它多等。比對外的 Google 呼叫更短。
+import { churchConfig } from './church_config.js';
+
 const NOTIFY_TIMEOUT_MS = 5000;
 
 /// 把 Google 的 event resource 攤平成 n8n 好處理的形狀。
@@ -19,11 +21,12 @@ const NOTIFY_TIMEOUT_MS = 5000;
 ///
 /// [actor] 是 authorize() 回傳值裡的 `{ uid, name }`。兩個都送：群組裡要看的是
 /// 名字，但名字會改、也可能重複，事後要追是誰做的還是得靠 uid。
-export function notifyPayload(action, event, actor) {
+export function notifyPayload(action, event, actor, timeZone = churchConfig().timeZone) {
   const allDay = Boolean(event?.start?.date);
   return {
     action,
     source: 'pwa',
+    timeZone,
     id: event?.id ?? null,
     title: event?.summary ?? null,
     allDay,
@@ -58,6 +61,7 @@ function inclusiveEndDate(date) {
 /// 兩個環境變數任一沒設就整個關掉：本機 `wrangler pages dev` 和 Preview 部署
 /// 因此不會把測試資料推進真的群組。
 export async function notifyN8n(env, payload, fetchImpl = fetch) {
+  if (!churchConfig(env).features.lineNotifications) return;
   const url = env?.NOTIFY_WEBHOOK_URL;
   const secret = env?.NOTIFY_WEBHOOK_SECRET;
   if (!url || !secret) return;

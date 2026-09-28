@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/config/google_calendar_config.dart';
+import '../../../../core/time/church_time.dart';
 import '../../../auth/presentation/providers/session_provider.dart';
 import '../../data/calendar_month_store.dart';
 import '../../data/calendar_write_service.dart';
@@ -61,10 +63,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
-    _anchorMonth = DateTime(now.year, now.month, 1);
+    final now = ChurchTime.now();
+    _anchorMonth = DateTime.utc(now.year, now.month, 1);
     _focusedMonth = _anchorMonth;
-    _selectedDay.value = DateUtils.dateOnly(now);
+    _selectedDay.value = ChurchTime.dateOnly(now);
 
     _monthPageController = PageController(initialPage: _initialMonthPage);
 
@@ -85,7 +87,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   DateTime _monthFromPage(int page) {
     final delta = page - _initialMonthPage;
-    return DateTime(_anchorMonth.year, _anchorMonth.month + delta, 1);
+    return DateTime.utc(_anchorMonth.year, _anchorMonth.month + delta, 1);
   }
 
   void _changeMonth(int offset) {
@@ -103,9 +105,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
       _currentMonthPage = page;
       _focusedMonth = month;
     });
-    final now = DateTime.now();
+    final now = ChurchTime.now();
     final inSameMonth = month.year == now.year && month.month == now.month;
-    _selectedDay.value = inSameMonth ? DateUtils.dateOnly(now) : null;
+    _selectedDay.value = inSameMonth ? ChurchTime.dateOnly(now) : null;
 
     _loadMonthBundle(month);
     _loadMonthBundle(_monthFromPage(page - 1));
@@ -113,6 +115,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   void _loadMonthBundle(DateTime month) {
+    if (!GoogleCalendarConfig.isEnabled) return;
     _months.ensureLoaded(month);
   }
 
@@ -124,6 +127,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!GoogleCalendarConfig.isEnabled) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('行事曆')),
+        body: const Center(child: Text('行事曆未啟用或設定不完整')),
+      );
+    }
     final viewportWidth = MediaQuery.sizeOf(context).width;
     final isDesktopLayout = viewportWidth >= 900;
     final maxContentWidth = viewportWidth >= 900
@@ -417,7 +426,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   ) {
     final year = displayedMonth.year;
     final month = displayedMonth.month;
-    final firstDay = DateTime(year, month, 1);
+    final firstDay = DateTime.utc(year, month, 1);
     final totalDays = DateUtils.getDaysInMonth(year, month);
     final startOffset = firstDay.weekday % 7;
     final cellWidth = cellHeight * cellAspectRatio;
@@ -441,9 +450,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
           return const SizedBox.shrink();
         }
 
-        final date = DateTime(year, month, dayNumber);
-        final dateOnly = DateUtils.dateOnly(date);
-        final isToday = DateUtils.isSameDay(dateOnly, DateTime.now());
+        final date = DateTime.utc(year, month, dayNumber);
+        final dateOnly = ChurchTime.dateOnly(date);
+        final isToday = DateUtils.isSameDay(dateOnly, ChurchTime.now());
         final daySegments = layout.segmentsOn(dateOnly);
         final hasEvents = daySegments.isNotEmpty;
         final maxVisibleEvents = _maxVisibleEventsForCellHeight(cellHeight);
@@ -477,7 +486,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  bool get _canEdit => context.read<SessionProvider>().canEditCalendar;
+  bool get _canEdit =>
+      GoogleCalendarConfig.isEnabled &&
+      context.read<SessionProvider>().canEditCalendar;
 
   Future<void> _showEventDetails(CalendarEvent event) async {
     _selectedDay.value = event.startDay;

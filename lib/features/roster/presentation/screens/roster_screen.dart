@@ -1,3 +1,4 @@
+import 'package:church_staff_pwa/core/time/church_time.dart';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
@@ -133,7 +134,7 @@ class _RosterScreenState extends State<RosterScreen>
     final canEdit = canEditRoster && widget.allowEdit;
     final allowedTypes =
         session.currentUser?.allowedRosterTypes ?? const <ServiceType>[];
-    final now = DateTime.now();
+    final now = ChurchTime.now();
     final quarterStartMonth = ((now.month - 1) ~/ 3) * 3 + 1;
     final isLastMonthOfQuarter = now.month == (quarterStartMonth + 2);
     final titleText = isLastMonthOfQuarter ? '本季/下季服事表' : '本季服事表';
@@ -168,6 +169,7 @@ class _RosterScreenState extends State<RosterScreen>
       bottom: allowedTypes.isEmpty
           ? null
           : TabBar(
+              isScrollable: allowedTypes.length > 3,
               controller: _tabController,
               tabs: allowedTypes.map((type) => Tab(text: type.label)).toList(),
               indicatorSize: TabBarIndicatorSize.label,
@@ -303,10 +305,16 @@ class _RosterViewListState extends State<_RosterViewList>
     );
 
     if (rosters.isEmpty) {
-      return const EmptyState(
+      // 能編輯的人第一次進來看到空表，要知道從哪裡開始，而不是「等管理員」。
+      final canEdit = context.select<SessionProvider, bool>(
+        (session) => session.canEditRoster,
+      );
+      return EmptyState(
         icon: Icons.event_busy_outlined,
         message: '此類別目前沒有服事資訊',
-        hint: '管理員建立後會在這裡顯示',
+        hint: canEdit
+            ? '按右上角的鉛筆開始編輯：先按右上角的清單圖示「服事項目設定」新增服事項目，再到各日期按「新增服事項目」排班。'
+            : '管理員建立後會在這裡顯示',
       );
     }
 

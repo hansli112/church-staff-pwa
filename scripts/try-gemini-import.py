@@ -6,9 +6,9 @@ Firestore 現況、同一個 parser，只是跑在本機而不是 Cloudflare Fun
 先用它確認 Gemini 讀不讀得懂那幾張表，值得再搬進 worker。
 
 用法：
-    python3 scripts/try-gemini-import.py youth 服事表.jpg
-    python3 scripts/try-gemini-import.py youth 上半.jpg 下半.jpg --preview
-    python3 scripts/try-gemini-import.py --list-models
+    uv run scripts/try-gemini-import.py youth 服事表.jpg
+    uv run scripts/try-gemini-import.py youth 上半.jpg 下半.jpg --preview
+    uv run scripts/try-gemini-import.py --list-models
 
     --preview   轉完直接接 scripts/preview-roster-import.py 做乾式匯入
     --model X   換一個模型（預設見 DEFAULT_MODEL，或用 GEMINI_MODEL 環境變數）
@@ -38,7 +38,7 @@ import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 LOCAL = ROOT / ".local"
-TYPES = {"sundayService": "主日", "youth": "青崇", "children": "兒主"}
+from _church_config import CONFIG, TYPES
 
 # 模型名稱會改版，所以留得下來覆寫。跑 --list-models 看現在有哪些。
 #
@@ -266,7 +266,7 @@ def main() -> None:
     else:
         print(
             f"\n乾式匯入看一下對不對：\n"
-            f"  python3 scripts/preview-roster-import.py {args.service_type} "
+            f"  uv run scripts/preview-roster-import.py {args.service_type} "
             f"{out.relative_to(ROOT)}"
         )
 

@@ -1,3 +1,4 @@
+import 'support/church_test_config.dart';
 import 'dart:convert';
 
 import 'package:church_staff_pwa/features/auth/domain/entities/user.dart';
@@ -76,8 +77,8 @@ _Listing _listingWithEventOn15th({String title = '既有活動'}) {
     ..events.add(
       CalendarEvent(
         id: 'seeded-event',
-        startTime: DateTime(now.year, now.month, 15),
-        endTime: DateTime(now.year, now.month, 16),
+        startTime: DateTime.utc(now.year, now.month, 15),
+        endTime: DateTime.utc(now.year, now.month, 16),
         isAllDay: true,
         title: title,
       ),
@@ -127,6 +128,7 @@ Future<void> _openAddForm(WidgetTester tester) async {
 }
 
 void main() {
+  setUp(() => setTestChurchConfig(calendar: true));
   setUpAll(() async {
     await initializeDateFormatting('zh_TW');
   });
@@ -404,7 +406,7 @@ void main() {
 
     expect(find.text('既有活動'), findsWidgets);
     final now = DateTime.now();
-    final thisMonth = DateTime(now.year, now.month);
+    final thisMonth = DateTime.utc(now.year, now.month);
     int readsOfThisMonth() =>
         listing.requested.where((m) => m == thisMonth).length;
     final readsBefore = readsOfThisMonth();
@@ -447,8 +449,8 @@ void main() {
     expect(recorder.lastBody['title'], '青年小組');
     expect(recorder.lastBody['allDay'], isFalse);
     // Same day, with the default evening window attached.
-    expect(recorder.lastBody['start'], endsWith('T19:00'));
-    expect(recorder.lastBody['end'], endsWith('T21:00'));
+    expect(recorder.lastBody['start'], endsWith('T19:00:00+08:00'));
+    expect(recorder.lastBody['end'], endsWith('T21:00:00+08:00'));
     expect(
       (recorder.lastBody['start'] as String).split('T').first,
       (recorder.lastBody['end'] as String).split('T').first,

@@ -15,7 +15,7 @@ import vm from 'node:vm';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-export const ORIGIN = 'https://church-staff-pwa.pages.dev';
+export const ORIGIN = 'https://app.example.test';
 
 // CI substitutes these placeholders (see the deploy workflow); the checked-in
 // file keeps them literal, so that is what the cache names look like here.

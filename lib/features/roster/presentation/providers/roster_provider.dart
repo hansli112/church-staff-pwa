@@ -1,3 +1,4 @@
+import 'package:church_staff_pwa/core/time/church_time.dart';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
@@ -57,7 +58,7 @@ class RosterProvider with ChangeNotifier {
 
   /// [now] 只給測試用：刪除服事項目時「今天以後」的界線要固定得住。
   RosterProvider(this._repository, {DateTime Function()? now})
-    : _now = now ?? DateTime.now;
+    : _now = now ?? ChurchTime.now;
 
   final DateTime Function() _now;
 
@@ -237,7 +238,7 @@ class RosterProvider with ChangeNotifier {
       for (final type in ServiceType.values) type: <ServiceRoster>[],
     };
     for (final roster in all) {
-      grouped[roster.type]?.add(roster);
+      (grouped[roster.type] ??= []).add(roster);
     }
     return grouped;
   }
@@ -648,11 +649,11 @@ class RosterProvider with ChangeNotifier {
 
       if (renamedRolesByType.isNotEmpty || removedRolesByType.isNotEmpty) {
         final now = _now();
-        final today = DateTime(now.year, now.month, now.day);
+        final today = ChurchTime.dateOnly(now);
         final updatedRosters = <ServiceRoster>[];
         for (final roster in _allRosters) {
           final renameMap = renamedRolesByType[roster.type] ?? const {};
-          final removed = roster.date.isBefore(today)
+          final removed = ChurchTime.dateOnly(roster.date).isBefore(today)
               ? const <String>{}
               : removedRolesByType[roster.type] ?? const <String>{};
           if (renameMap.isEmpty && removed.isEmpty) continue;

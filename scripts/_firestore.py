@@ -1,7 +1,7 @@
 """這個資料夾裡的腳本共用的 Firestore 讀取工具。
 
 底線開頭代表「給 scripts/ 自己用」，不是可以獨立跑的腳本。腳本用
-`python3 scripts/x.py` 跑時 sys.path[0] 就是 scripts/，所以直接 `import
+`uv run scripts/x.py` 跑時 sys.path[0] 就是 scripts/，所以直接 `import
 _firestore` 就找得到。
 
 會抽出來是因為 build-import-prompt.py 與 preview-roster-import.py 各有一份
@@ -20,8 +20,8 @@ import urllib.request
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 LOCAL = ROOT / ".local"
 
-# enum 的 name 就是資料格式的一部分，見 lib/core/types/service_type.dart。
-TYPES = {"sundayService": "主日", "youth": "青崇", "children": "兒主"}
+# Stable service IDs come from the deployment config, including disabled IDs.
+from _church_config import CONFIG, TYPES
 
 
 def project_id() -> str:

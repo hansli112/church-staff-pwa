@@ -1,32 +1,38 @@
-/// 聚會別。
-///
-/// enum 的 [name]（`sundayService` / `youth` / `children`）是資料格式的一部分：
-/// 服事表文件的 `type` 欄位、使用者文件的 `zoneTypes` 陣列存的都是這幾個字串，
-/// 改名等於要遷移資料。新增或改名時，這幾處要一起動：
-///
-///   - `firestore.rules` 的 `hasValidZoneTypes()` —— 沒跟上的話，管理員存那個
-///     人時會直接 write denied（會當場爆，不是靜默壞掉）
-///   - `scripts/backfill-user-zone-types.mjs` 的 `SERVICE_TYPES`
-///   - `settings/roster_templates` 與 `settings/event_options` 這兩份文件是以
-///     這些字串當 key
-///
-/// 同樣的取捨在 [UserGroup] 也有一份，理由一樣：規則語言認不得 Dart 的 enum，
-/// 只能兩邊各寫一份字串清單。
-enum ServiceType {
-  sundayService, // 主日
-  youth, // 青崇
-  children, // 兒主
-}
+import '../config/church_config.dart';
 
-extension ServiceTypeExtension on ServiceType {
-  String get label {
-    switch (this) {
-      case ServiceType.sundayService:
-        return '主日';
-      case ServiceType.youth:
-        return '青崇';
-      case ServiceType.children:
-        return '兒主';
-    }
-  }
+/// 穩定的聚會 ID。顯示名稱及排程來自部署設定，不用改 ID 就能改名。
+/// 未知 ID 原樣保留，不能把舊資料或未設定的聚會誤認為另一種聚會。
+class ServiceType {
+  const ServiceType(this.name);
+
+  // 既有文件的 ID 保持不變；新部署可以使用完全不同的聚會清單。
+  static const sundayService = ServiceType('sundayService');
+  static const youth = ServiceType('youth');
+  static const children = ServiceType('children');
+
+  final String name;
+
+  static List<ServiceType> get values => List.unmodifiable(
+    ChurchConfig.current.services.map((service) => ServiceType(service.id)),
+  );
+
+  static ServiceType fromName(String name) => ServiceType(name);
+
+  ServiceDefinition? get _definition => ChurchConfig.current.service(name);
+  String get label => _definition?.label ?? name;
+  String get serviceName => _definition?.name ?? name;
+  bool get enabled => _definition?.enabled ?? false;
+  int get weekday =>
+      _definition?.weekday ?? (throw StateError('聚會 $name 不在部署設定內，不能產生排程'));
+  int get index =>
+      ChurchConfig.current.services.indexWhere((s) => s.id == name);
+
+  @override
+  bool operator ==(Object other) => other is ServiceType && other.name == name;
+
+  @override
+  int get hashCode => name.hashCode;
+
+  @override
+  String toString() => 'ServiceType.$name';
 }

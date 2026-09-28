@@ -6,15 +6,17 @@ app 真正在用的 parseRosterImportJson 與 orderDutiesByTemplate，所以這�
 的結果就是按下匯入會看到的結果。
 
 用法：
-    python3 scripts/preview-roster-import.py youth roster.json
-    python3 scripts/preview-roster-import.py sundayService roster.json
-    python3 scripts/preview-roster-import.py children roster.json
+    uv run scripts/preview-roster-import.py youth roster.json
+    uv run scripts/preview-roster-import.py sundayService roster.json
+    uv run scripts/preview-roster-import.py children roster.json
 
 只讀 Firestore，不寫入任何東西，也不會碰服事表。
 """
 
 import json
 from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
+from _church_config import CONFIG
 import pathlib
 import re
 import subprocess
@@ -109,7 +111,8 @@ def main() -> None:
     # 「今天 ~ 下一季末」這個區間（firestore_roster_repository 的
     # _filterAndSortRosters），過去的文件還在資料庫裡但匯入時看不到，
     # 一樣會被算成「這幾天沒有匯入」。這裡照同一個區間過濾。
-    today = date.today()
+    church_zone = ZoneInfo(CONFIG["timeZone"])
+    today = datetime.now(church_zone).date()
     quarter_start_month = ((today.month - 1) // 3) * 3 + 1
     is_last_month = today.month == quarter_start_month + 2
     raw_end_month = quarter_start_month + (5 if is_last_month else 2)
@@ -120,12 +123,22 @@ def main() -> None:
     existing = set()
     for d in paged("rosters?pageSize=300", tok):
         doc_id = d["name"].split("/")[-1]
-        stamp = d.get("fields", {}).get("date", {}).get("timestampValue")
-        if not stamp:
+        fields = d.get("fields", {})
+        if fields.get("type", {}).get("stringValue") != service_type:
             continue
-        when = datetime.fromisoformat(stamp.replace("Z", "+00:00")).astimezone().date()
+        key = fields.get("dateKey", {}).get("stringValue")
+        legacy = re.fullmatch(r"(\d{4})(\d{2})(\d{2})_" + re.escape(service_type), doc_id)
+        if key:
+            when = date.fromisoformat(key)
+        elif legacy:
+            when = date(*(int(part) for part in legacy.groups()))
+        else:
+            stamp = fields.get("date", {}).get("timestampValue")
+            if not stamp:
+                continue
+            when = datetime.fromisoformat(stamp.replace("Z", "+00:00")).astimezone(church_zone).date()
         if today <= when <= window_end:
-            existing.add(doc_id)
+            existing.add(when.isoformat())
 
     # ── 產生一支暫時的 Dart 測試，呼叫真正的 parser ──────────────────────
     test_path = ROOT / "test" / "zz_import_preview_test.dart"
@@ -206,7 +219,7 @@ void main() {{
 
     dates = sorted(set(buckets.get("dutiesDate", []) + buckets.get("eventsDate", [])))
     missing = [
-        d for d in dates if f"{d.replace('-', '')}_{service_type}" not in existing
+        d for d in dates if d not in existing
     ]
 
     print(f"=== 乾式匯入：{TYPES[service_type]} / {json_path.name} ===")

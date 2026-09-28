@@ -2,6 +2,8 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/service_roster.dart';
+import 'package:church_staff_pwa/core/config/church_config.dart';
+import 'package:church_staff_pwa/core/time/church_time.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../../auth/presentation/providers/session_provider.dart';
 import '../../../auth/presentation/providers/user_admin_provider.dart';
@@ -21,6 +23,9 @@ import 'event_settings_screen.dart' deferred as event_settings_screen;
 import 'role_settings_screen.dart' deferred as role_settings_screen;
 import '../../domain/roster_import.dart';
 import 'roster_import_summary.dart';
+
+bool get _photoImportAvailable =>
+    ChurchConfig.current.features.photoImport && canPickRosterPhotos;
 
 class RosterEditScreen extends StatefulWidget {
   final VoidCallback onExit;
@@ -107,7 +112,7 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
     // settings 的寫入權在 firestore.rules 裡是 admin only，所以非 admin 看到
     // 這兩顆按鈕只會按下去然後失敗 —— 不如不要顯示。
     final isAdmin = context.select<SessionProvider, bool>((s) => s.isAdmin);
-    final now = DateTime.now();
+    final now = ChurchTime.now();
     final quarterStartMonth = ((now.month - 1) ~/ 3) * 3 + 1;
     final isLastMonthOfQuarter = now.month == (quarterStartMonth + 2);
     final titleText = isLastMonthOfQuarter ? '編輯本季/下季服事表' : '編輯本季服事表';
@@ -146,6 +151,7 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
           ? null
           : TabBar(
               controller: widget.tabController,
+              isScrollable: allowedTypes.length > 3,
               tabs: allowedTypes.map((type) => Tab(text: type.label)).toList(),
               indicatorSize: TabBarIndicatorSize.label,
               // 讓切換時的動畫更平滑
@@ -284,7 +290,7 @@ class _RosterListState extends State<_RosterList>
         icon: Icons.event_busy_outlined,
         message: '此類別目前沒有服事資訊',
         hint: isEditMode
-            ? (canPickRosterPhotos ? '可以用服事表照片快速建立' : '可貼上 JSON 快速建立')
+            ? (_photoImportAvailable ? '可以用服事表照片快速建立' : '可貼上 JSON 快速建立')
             : '管理員建立後會在這裡顯示',
         action: isEditMode
             ? OutlinedButton.icon(
@@ -335,7 +341,7 @@ class _RosterListState extends State<_RosterList>
                   Text('匯入服事表', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 4),
                   Text(
-                    canPickRosterPhotos
+                    _photoImportAvailable
                         ? '用服事表照片辨識，依日期批次填入'
                         : '貼上陣列格式，依日期批次填入服事表',
                     style: Theme.of(context).textTheme.bodySmall,
@@ -565,7 +571,7 @@ class _ImportJsonSheetState extends State<_ImportJsonSheet> {
 
   /// 有照片辨識可用時，貼 JSON 是備援而不是主要動作 —— 預設收起來。
   /// 辨識完會自動展開，因為那時它變成「看一眼再匯入」的地方。
-  bool _showJsonField = !canPickRosterPhotos;
+  bool _showJsonField = !_photoImportAvailable;
 
   @override
   void dispose() {
@@ -574,7 +580,7 @@ class _ImportJsonSheetState extends State<_ImportJsonSheet> {
   }
 
   Future<void> _convertFromPhoto() async {
-    if (_isPicking || _isConverting) return;
+    if (!_photoImportAvailable || _isPicking || _isConverting) return;
     _isPicking = true;
     setState(() => _errorText = null);
     final RosterPhoto? photo;
@@ -630,7 +636,7 @@ class _ImportJsonSheetState extends State<_ImportJsonSheet> {
   Future<void> _submit() async {
     // 空白時 parser 只會說「請貼上 JSON 內容」，但這個畫面上根本沒有可以貼的
     // 地方（文字框收著）—— 要講得出下一步在哪。
-    if (_controller.text.trim().isEmpty && canPickRosterPhotos) {
+    if (_controller.text.trim().isEmpty && _photoImportAvailable) {
       setState(() {
         _errorText = '請先從照片辨識，或展開下面自己貼 JSON';
         _showJsonField = true;
@@ -667,7 +673,7 @@ class _ImportJsonSheetState extends State<_ImportJsonSheet> {
         children: [
           // 辨識結果填回下面那個文字框，不直接匯入：看一眼再按匯入是這個流程
           // 唯一的把關，而按下匯入走的還是跟手動貼上完全一樣的那條路。
-          if (canPickRosterPhotos) ...[
+          if (_photoImportAvailable) ...[
             SizedBox(
               width: double.infinity,
               child: FilledButton.tonalIcon(
@@ -744,7 +750,7 @@ class _ImportJsonSheetState extends State<_ImportJsonSheet> {
           ],
           const SizedBox(height: 8),
           Text(
-            canPickRosterPhotos
+            _photoImportAvailable
                 ? '可以直接選服事表照片辨識，或自己貼上 JSON。'
                       '格式需為陣列，每筆含 date，並至少含 duties 或 events'
                 : '格式需為 JSON 陣列，每筆含 date，並至少含 duties 或 events',

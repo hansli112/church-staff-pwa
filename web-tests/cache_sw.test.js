@@ -115,11 +115,12 @@ describe('不能攔截的請求', () => {
   test('後端 API 一律直通，不進任何快取', async () => {
     const sw = loadServiceWorker();
     const live = [
-      'https://firestore.googleapis.com/v1/projects/church-staff-pwa/databases/(default)/documents/rosters',
+      'https://firestore.googleapis.com/v1/projects/demo-church-staff/databases/(default)/documents/rosters',
       'https://identitytoolkit.googleapis.com/v1/accounts:lookup',
       'https://securetoken.googleapis.com/v1/token',
       'https://fcm.googleapis.com/fcm/send',
       'https://raw.githubusercontent.com/x/y/daily-verse.json',
+      `${ORIGIN}/api/devotional/today`,
     ];
     for (const url of live) {
       assert.equal(await sw.request(url), 'passthrough', url);

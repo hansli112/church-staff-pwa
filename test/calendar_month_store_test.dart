@@ -1,3 +1,4 @@
+import 'support/church_test_config.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -14,8 +15,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// the grid gets to show after cache reads, Google reads and admin writes land
 /// in whatever order they happen to land.
 
-final _september = DateTime(2026, 9);
-final _october = DateTime(2026, 10);
+final _september = DateTime.utc(2026, 9);
+final _october = DateTime.utc(2026, 10);
 
 CalendarEvent _event(String id, DateTime day) => CalendarEvent(
   id: id,
@@ -60,9 +61,10 @@ class _FullStorage implements SharedPreferences {
 }
 
 String _cacheKey(DateTime month) =>
-    'calendar_events_${month.year}_${month.month.toString().padLeft(2, '0')}';
+    'calendar_events_v2_test-calendar_Asia%2FTaipei_${month.year}_${month.month.toString().padLeft(2, '0')}';
 
 void main() {
+  setUp(() => setTestChurchConfig(calendar: true));
   setUp(() {
     SharedPreferences.setMockInitialValues({});
   });
@@ -73,8 +75,8 @@ void main() {
   // used to be applied anyway — wiping the local patch and stamping the month
   // fresh, so the new event vanished for ten minutes.
   test('a read sent before a write cannot undo it', () async {
-    final existing = _event('existing', DateTime(2026, 9, 10));
-    final added = _event('added', DateTime(2026, 9, 20));
+    final existing = _event('existing', DateTime.utc(2026, 9, 10));
+    final added = _event('added', DateTime.utc(2026, 9, 20));
     SharedPreferences.setMockInitialValues({
       _cacheKey(_september): jsonEncode([existing.toJson()]),
     });
@@ -121,10 +123,10 @@ void main() {
     addTearDown(months.dispose);
 
     final load = months.ensureLoaded(_september);
-    fetcher.answer(0, [_event('a', DateTime(2026, 9, 3))]);
+    fetcher.answer(0, [_event('a', DateTime.utc(2026, 9, 3))]);
     await load;
 
-    months.applyWrite(removed: _event('a', DateTime(2026, 9, 3)));
+    months.applyWrite(removed: _event('a', DateTime.utc(2026, 9, 3)));
     expect(months.eventsForMonth(_september), isEmpty);
     expect(fetcher.calls, hasLength(2));
     expect(fetcher.calls.last.$1, _september);
@@ -137,8 +139,8 @@ void main() {
     final months = CalendarMonthStore(fetchMonth: fetcher.call);
     addTearDown(months.dispose);
 
-    final before = _event('a', DateTime(2026, 9, 29));
-    final after = _event('a', DateTime(2026, 10, 2));
+    final before = _event('a', DateTime.utc(2026, 9, 29));
+    final after = _event('a', DateTime.utc(2026, 10, 2));
     final loads = [
       months.ensureLoaded(_september),
       months.ensureLoaded(_october),
@@ -155,7 +157,7 @@ void main() {
   });
 
   test('a month read within ten minutes is not read again', () async {
-    var now = DateTime(2026, 9, 23, 12);
+    var now = DateTime.utc(2026, 9, 23, 12);
     final fetcher = _ControlledFetcher();
     final months = CalendarMonthStore(fetchMonth: fetcher.call, now: () => now);
     addTearDown(months.dispose);
@@ -200,11 +202,9 @@ void main() {
     // listing, whose layout drops it as not its own — and October's listing
     // never had it — so it was on no page at all.
     //
-    // Built from local times, so it holds wherever the test runs; it only
-    // tells the two windows apart on a machine that is not on UTC, like the
-    // Taipei ones this app is used on (`TZ=Asia/Taipei flutter test`).
+    // Use an explicit church-zone offset, independent of the machine zone.
     test('an event at 00:30 on the 1st shows on the 1st', () async {
-      final start = DateTime(2026, 10, 1, 0, 30);
+      final start = DateTime.parse('2026-10-01T00:30:00+08:00');
       final client = googleWith([
         {
           'id': 'early',
@@ -230,19 +230,20 @@ void main() {
         _october,
         months.eventsForMonth(_october)!,
       );
-      expect(october.segmentsOn(DateTime(2026, 10, 1)).map((s) => s.event.id), [
-        'early',
-      ]);
+      expect(
+        october.segmentsOn(DateTime.utc(2026, 10, 1)).map((s) => s.event.id),
+        ['early'],
+      );
     });
 
-    test('the window is local midnight to local midnight', () {
+    test('the window is church midnight to church midnight', () {
       final window = calendarMonthWindow(_october);
-      expect(window.timeMin, DateTime(2026, 10, 1).toUtc());
-      expect(window.timeMax, DateTime(2026, 11, 1).toUtc());
+      expect(window.timeMin, DateTime.parse('2026-10-01T00:00:00+08:00'));
+      expect(window.timeMax, DateTime.parse('2026-11-01T00:00:00+08:00'));
       // December rolls over into the next year.
       expect(
-        calendarMonthWindow(DateTime(2026, 12)).timeMax,
-        DateTime(2027, 1, 1).toUtc(),
+        calendarMonthWindow(DateTime.utc(2026, 12)).timeMax,
+        DateTime.parse('2027-01-01T00:00:00+08:00'),
       );
     });
 
@@ -277,7 +278,7 @@ void main() {
     test('offline with a cached copy shows the copy and no error', () async {
       SharedPreferences.setMockInitialValues({
         _cacheKey(_september): jsonEncode([
-          _event('cached', DateTime(2026, 9, 8)).toJson(),
+          _event('cached', DateTime.utc(2026, 9, 8)).toJson(),
         ]),
       });
       final months = CalendarMonthStore(
@@ -295,7 +296,7 @@ void main() {
   // on screen, so a full disk must not turn into an "offline" error for it.
   test('a month that loaded but could not be cached is not an error', () async {
     final months = CalendarMonthStore(
-      fetchMonth: (_) async => [_event('a', DateTime(2026, 9, 8))],
+      fetchMonth: (_) async => [_event('a', DateTime.utc(2026, 9, 8))],
       prefs: () async => _FullStorage(),
     );
     addTearDown(months.dispose);
@@ -316,7 +317,7 @@ void main() {
     await load;
     final before = months.eventsForMonth(_september);
 
-    months.applyWrite(added: _event('a', DateTime(2026, 9, 4)));
+    months.applyWrite(added: _event('a', DateTime.utc(2026, 9, 4)));
     // The screen reuses a month's layout while the list is identical(), so an
     // in-place edit here would leave the old bars on screen.
     expect(identical(months.eventsForMonth(_september), before), isFalse);

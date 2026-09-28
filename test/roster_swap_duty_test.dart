@@ -23,7 +23,7 @@ import 'support/signed_in_auth_repository.dart';
 InMemoryRosterRepository _repo({required List<ServiceRoster> rosters}) =>
     InMemoryRosterRepository(
       rosters: rosters,
-      templates: const {
+      templates: {
         ServiceType.sundayService: ['破冰'],
       },
     );

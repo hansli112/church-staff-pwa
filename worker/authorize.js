@@ -11,6 +11,7 @@
 // zone rule and "admin is root" must agree across all three.
 
 import { HttpError, identifyCaller } from './firebase_user.js';
+import { churchConfig } from './church_config.js';
 
 /// Kept in sync with ServiceType in the Flutter app, the keys of
 /// settings/roster_templates and hasValidZoneTypes in firestore.rules.
@@ -18,7 +19,8 @@ import { HttpError, identifyCaller } from './firebase_user.js';
 /// Lives here rather than with request parsing because the type *is* the thing
 /// being authorized — zoneTypes on a user are drawn from the same list. A type
 /// outside it is refused for everyone, admin included.
-const ROSTER_TYPES = new Set(['sundayService', 'youth', 'children']);
+// Keep disabled services too: existing records and their zone grants survive
+// hiding a service in the UI. Unknown IDs never inherit another service's grant.
 
 /// What each action needs. The group names are part of the data format (they
 /// are what users/{uid}.groups stores) and match inGroup() in firestore.rules
@@ -51,6 +53,7 @@ export async function authorize(request, env, action, fetchImpl = fetch) {
   const rule = ACTIONS[action?.edit];
   if (!rule) throw new Error(`unknown action ${JSON.stringify(action)}`);
 
+  const rosterTypes = new Set(churchConfig(env).services.map((service) => service.id));
   const caller = await identifyCaller(request, env, fetchImpl);
   // admin is root: every group, every zone, without holding either.
   const isAdmin = caller.role === 'admin';
@@ -68,7 +71,7 @@ export async function authorize(request, env, action, fetchImpl = fetch) {
     /// editor could not write 主日, but could still spend the recognition
     /// quota on it.
     forRosterType(type) {
-      if (!ROSTER_TYPES.has(type)) {
+      if (!rosterTypes.has(type)) {
         throw new HttpError(400, '不知道這是哪一個崇拜的服事表');
       }
       if (!isAdmin && !caller.zoneTypes.includes(type)) {

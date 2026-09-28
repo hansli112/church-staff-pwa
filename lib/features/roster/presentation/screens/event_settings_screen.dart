@@ -233,6 +233,7 @@ class _EventSettingsScreenState extends State<EventSettingsScreen> {
         appBar: AppBar(
           title: const Text('事件選項設定'),
           bottom: TabBar(
+            isScrollable: ServiceType.values.length > 3,
             tabs: ServiceType.values
                 .map((type) => Tab(text: type.label))
                 .toList(),

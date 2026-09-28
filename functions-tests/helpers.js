@@ -1,3 +1,11 @@
+import { TEST_CHURCH_CONFIG } from '../worker/church_config.js';
+import defaultConfig from '../worker/generated_config.js';
+
+export const ENABLED_CONFIG = {
+  ...defaultConfig,
+  features: { calendar: true, photoImport: true, pushNotifications: true, lineNotifications: true },
+};
+
 // Shared fixtures for the Pages Functions tests.
 //
 // No dependencies on purpose: Node 22 already provides fetch/Response/Headers,
@@ -63,6 +71,7 @@ export async function serviceAccountJson() {
 
 export async function testEnv(overrides = {}) {
   return {
+    [TEST_CHURCH_CONFIG]: ENABLED_CONFIG,
     FIREBASE_PROJECT_ID: PROJECT_ID,
     GOOGLE_CALENDAR_ID: CALENDAR_ID,
     GOOGLE_SERVICE_ACCOUNT_JSON: await serviceAccountJson(),

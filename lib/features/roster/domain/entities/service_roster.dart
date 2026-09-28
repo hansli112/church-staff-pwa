@@ -24,25 +24,20 @@ class RosterEntry {
       personIdsByName: personIdsByName ?? this.personIdsByName,
     );
   }
-
-  List<String> get assignedUserIds {
-    final seen = <String>{};
-    final ids = <String>[];
-    for (final id in personIdsByName.values) {
-      final trimmed = id.trim();
-      if (trimmed.isEmpty || seen.contains(trimmed)) continue;
-      seen.add(trimmed);
-      ids.add(trimmed);
-    }
-    return ids;
-  }
 }
 
 class ServiceRoster {
   final String id;
   final DateTime date;
+
+  /// 讀取時的 Firestore 時間點。修改內容不重算舊文件的午夜或時區。
+  final DateTime? storedDate;
   final ServiceType type; // 新增類別
   final String serviceName;
+
+  /// 名稱可由部署設定改顯示；文件裡的原始名稱仍保留，不搬動歷史資料。
+  String get displayName => type.index >= 0 ? type.serviceName : serviceName;
+
   final List<RosterEntry> duties;
   final List<String> specialEvents;
   final Map<String, int> customEventColors; // key: event name, value: ARGB int
@@ -50,6 +45,7 @@ class ServiceRoster {
   ServiceRoster({
     required this.id,
     required this.date,
+    this.storedDate,
     required this.type, // Required
     required this.serviceName,
     required this.duties,
@@ -69,6 +65,7 @@ class ServiceRoster {
     return ServiceRoster(
       id: id ?? this.id,
       date: date ?? this.date,
+      storedDate: date == null ? storedDate : null,
       type: type ?? this.type,
       serviceName: serviceName ?? this.serviceName,
       duties: duties ?? this.duties,

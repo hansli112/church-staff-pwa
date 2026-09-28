@@ -1,3 +1,4 @@
+import 'support/church_test_config.dart';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -28,6 +29,7 @@ Future<String> _errorFor(http.Response response) async {
 }
 
 void main() {
+  setUp(() => setTestChurchConfig(photoImport: true));
   group('RosterImportService 的錯誤訊息', () {
     test('API 自己寫的訊息原樣顯示，不加狀態碼', () async {
       final message = await _errorFor(

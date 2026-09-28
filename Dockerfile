@@ -1,6 +1,23 @@
+# Public settings are validated once and staged; no local credentials enter
+# either image. The static nginx image intentionally excludes server integrations.
+ARG BUILDPLATFORM
+FROM --platform=$BUILDPLATFORM node:22-bookworm-slim AS deployment
+WORKDIR /source
+COPY config/ config/
+COPY scripts/ scripts/
+COPY worker/ worker/
+COPY functions/ functions/
+COPY web/ web/
+COPY firestore.rules ./
+ARG CHURCH_CONFIG_JSON=""
+RUN test -n "$CHURCH_CONFIG_JSON" \
+    || { echo "CHURCH_CONFIG_JSON build-arg is required" >&2; exit 1; }; \
+    printf '%s' "$CHURCH_CONFIG_JSON" > church.json; \
+    node scripts/prepare-deployment.mjs --config church.json --out /deployment
+RUN node --input-type=module -e "import fs from 'node:fs'; const c=JSON.parse(fs.readFileSync('/deployment/church.json')); if(c.features.calendar || c.features.photoImport || c.features.lineNotifications) throw Error('Static nginx does not run Pages Functions. Disable calendar/photoImport/lineNotifications or deploy to Cloudflare Pages.');"
+
 # Stage 1: 建置環境 (使用 build host 以確保 Flutter SDK 相容性與編譯速度)
 # 我們產出的是靜態 HTML/JS，所以在哪裡編譯都沒關係
-ARG BUILDPLATFORM
 FROM --platform=$BUILDPLATFORM ubuntu:22.04 AS builder
 
 # 安裝 Flutter 依賴
@@ -35,6 +52,7 @@ RUN flutter pub get
 
 # 複製其餘原始碼
 COPY . .
+COPY --from=deployment /deployment /deployment
 
 # CI 那條路徑會在 build 前生出 web/version.json，App 的 AppVersionService
 # 就是讀它來顯示「上次更新」。自架這條原本沒有這一步，/version.json 直接 404，
@@ -75,6 +93,7 @@ RUN for required in FIREBASE_API_KEY FIREBASE_AUTH_DOMAIN FIREBASE_PROJECT_ID \
       fi; \
     done; \
     flutter build web --release --base-href / --no-web-resources-cdn \
+    --dart-define-from-file=/deployment/dart-defines.json \
     --dart-define=FCM_WEB_VAPID_KEY="${FCM_WEB_VAPID_KEY}" \
     --dart-define=FIREBASE_API_KEY="${FIREBASE_API_KEY}" \
     --dart-define=FIREBASE_AUTH_DOMAIN="${FIREBASE_AUTH_DOMAIN}" \
@@ -85,6 +104,8 @@ RUN for required in FIREBASE_API_KEY FIREBASE_AUTH_DOMAIN FIREBASE_PROJECT_ID \
     --dart-define=FIREBASE_MEASUREMENT_ID="${FIREBASE_MEASUREMENT_ID}" \
     --dart-define=GOOGLE_CALENDAR_API_KEY="${GOOGLE_CALENDAR_API_KEY}" \
     --dart-define=GOOGLE_CALENDAR_ID="${GOOGLE_CALENDAR_ID}"
+
+RUN cp -R /deployment/web/. build/web/
 
 # 與 CI 相同：把版本號填進 cache_sw.js，並把 Firebase 設定填進推播 SW。
 # 少了這步，自架版的 SW cache 永遠不會失效，使用者會卡在第一次載入的版本。

@@ -1,11 +1,12 @@
+import 'support/church_test_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:church_staff_pwa/features/dashboard/domain/entities/recent_activity.dart';
 
 RecentActivity _timed(String start, String end, {String title = '活動'}) =>
     RecentActivity(
-      startTime: DateTime.parse(start),
-      endTime: DateTime.parse(end),
+      startTime: DateTime.parse('${start}Z'),
+      endTime: DateTime.parse('${end}Z'),
       isAllDay: false,
       title: title,
     );
@@ -16,27 +17,28 @@ RecentActivity _allDay(
   String endDateExclusive, {
   String title = '活動',
 }) => RecentActivity(
-  startTime: DateTime.parse('$startDate 00:00'),
-  endTime: DateTime.parse('$endDateExclusive 00:00'),
+  startTime: DateTime.parse('${startDate}T00:00Z'),
+  endTime: DateTime.parse('${endDateExclusive}T00:00Z'),
   isAllDay: true,
   title: title,
 );
 
 void main() {
+  setUp(() => setTestChurchConfig(timeZone: 'Etc/UTC'));
   setUpAll(() async => initializeDateFormatting('zh_TW', null));
 
   group('跨日活動的天數判讀', () {
     test('全日活動：end.date 是排他的，不能多算一天', () {
       // 8/12 到 8/14 的三天特會，Google 給的 end.date 是 8/15
       final retreat = _allDay('2026-08-12', '2026-08-15');
-      expect(retreat.startDay, DateTime(2026, 8, 12));
-      expect(retreat.endDay, DateTime(2026, 8, 14));
+      expect(retreat.startDay, DateTime.utc(2026, 8, 12));
+      expect(retreat.endDay, DateTime.utc(2026, 8, 14));
       expect(retreat.spansMultipleDays, isTrue);
     });
 
     test('單日全日活動不算跨日', () {
       final single = _allDay('2026-08-12', '2026-08-13');
-      expect(single.endDay, DateTime(2026, 8, 12));
+      expect(single.endDay, DateTime.utc(2026, 8, 12));
       expect(single.spansMultipleDays, isFalse);
     });
 
@@ -53,13 +55,13 @@ void main() {
 
     test('結束正好落在午夜不算跨到隔天', () {
       final event = _timed('2026-08-12 19:00', '2026-08-13 00:00');
-      expect(event.endDay, DateTime(2026, 8, 12));
+      expect(event.endDay, DateTime.utc(2026, 8, 12));
       expect(event.spansMultipleDays, isFalse);
     });
 
     test('資料壞掉（end 早於 start）時退化成單日，不會炸也不會算出負區間', () {
       final broken = _timed('2026-08-12 19:00', '2026-08-10 09:00');
-      expect(broken.endDay, DateTime(2026, 8, 12));
+      expect(broken.endDay, DateTime.utc(2026, 8, 12));
       expect(broken.spansMultipleDays, isFalse);
     });
   });
@@ -71,17 +73,17 @@ void main() {
       final retreat = _allDay('2026-08-12', '2026-08-15', title: '夏令會');
       final result = selectRecentActivities(
         [retreat],
-        now: DateTime(2026, 8, 13, 10),
+        now: DateTime.utc(2026, 8, 13, 10),
         limit: 3,
       );
       expect(result.map((e) => e.title), ['夏令會']);
-      expect(retreat.isOngoing(DateTime(2026, 8, 13, 10)), isTrue);
+      expect(retreat.isOngoing(DateTime.utc(2026, 8, 13, 10)), isTrue);
     });
 
     test('跨日活動在最後一天仍然要顯示', () {
       final result = selectRecentActivities(
         [_allDay('2026-08-12', '2026-08-15', title: '夏令會')],
-        now: DateTime(2026, 8, 14, 23, 59),
+        now: DateTime.utc(2026, 8, 14, 23, 59),
         limit: 3,
       );
       expect(result, hasLength(1));
@@ -90,7 +92,7 @@ void main() {
     test('跨日活動結束後就不再顯示', () {
       final result = selectRecentActivities(
         [_allDay('2026-08-12', '2026-08-15', title: '夏令會')],
-        now: DateTime(2026, 8, 15, 0, 1),
+        now: DateTime.utc(2026, 8, 15, 0, 1),
         limit: 3,
       );
       expect(result, isEmpty);
@@ -101,7 +103,7 @@ void main() {
       final finished = _timed('2026-08-13 06:00', '2026-08-13 08:00');
       final result = selectRecentActivities(
         [ongoing, finished],
-        now: DateTime(2026, 8, 13, 10),
+        now: DateTime.utc(2026, 8, 13, 10),
         limit: 3,
       );
       expect(result, hasLength(1));
@@ -111,7 +113,7 @@ void main() {
     test('今天的全日活動整天都算數，不會下午就消失', () {
       final result = selectRecentActivities(
         [_allDay('2026-08-13', '2026-08-14')],
-        now: DateTime(2026, 8, 13, 15, 30),
+        now: DateTime.utc(2026, 8, 13, 15, 30),
         limit: 3,
       );
       expect(result, hasLength(1));
@@ -122,7 +124,7 @@ void main() {
       final later = _allDay('2026-08-20', '2026-08-21', title: '兒童主日');
       final result = selectRecentActivities(
         [later, ongoing],
-        now: DateTime(2026, 8, 13),
+        now: DateTime.utc(2026, 8, 13),
         limit: 3,
       );
       expect(result.map((e) => e.title), ['夏令會', '兒童主日']);
@@ -134,7 +136,7 @@ void main() {
           for (var day = 14; day < 20; day++)
             _allDay('2026-08-$day', '2026-08-${day + 1}', title: 'day$day'),
         ],
-        now: DateTime(2026, 8, 13),
+        now: DateTime.utc(2026, 8, 13),
         limit: 3,
       );
       expect(result.map((e) => e.title), ['day14', 'day15', 'day16']);

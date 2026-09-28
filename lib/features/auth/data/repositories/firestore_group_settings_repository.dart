@@ -15,19 +15,12 @@ class FirestoreGroupSettingsRepository implements GroupSettingsRepository {
     try {
       final doc = await _templatesDoc.get();
       if (!doc.exists) {
-        return {
-          ServiceType.sundayService: [],
-          ServiceType.youth: [],
-          ServiceType.children: [],
-        };
+        return {for (final type in ServiceType.values) type: []};
       }
 
       final data = doc.data() as Map<String, dynamic>;
       return data.map((key, value) {
-        final type = ServiceType.values.firstWhere(
-          (e) => e.name == key,
-          orElse: () => ServiceType.sundayService,
-        );
+        final type = ServiceType.fromName(key);
         return MapEntry(type, List<String>.from(value));
       });
     } catch (e) {
@@ -44,7 +37,7 @@ class FirestoreGroupSettingsRepository implements GroupSettingsRepository {
       final data = templates.map((key, value) {
         return MapEntry(key.name, value);
       });
-      await _templatesDoc.set(data);
+      await _templatesDoc.set(data, SetOptions(merge: true));
     } catch (e) {
       log('Update Small Groups Error: $e');
       throw Exception('更新小組設定失敗: $e');

@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "appName": "教會同工助手",
+  "shortName": "同工助手",
+  "timeZone": "Asia/Taipei",
+  "services": [
+    {
+      "id": "sundayService",
+      "label": "主日",
+      "name": "主日崇拜",
+      "weekday": 7,
+      "enabled": true
+    },
+    {
+      "id": "youth",
+      "label": "青崇",
+      "name": "青年崇拜",
+      "weekday": 6,
+      "enabled": true
+    },
+    {
+      "id": "children",
+      "label": "兒主",
+      "name": "兒童主日學",
+      "weekday": 7,
+      "enabled": true
+    }
+  ],
+  "features": {
+    "calendar": false,
+    "photoImport": false,
+    "pushNotifications": false,
+    "lineNotifications": false
+  },
+  "devotional": {
+    "enabled": false,
+    "dataUrl": "",
+    "linkUrl": "",
+    "sourceName": "每日靈糧",
+    "fetchUrl": "",
+    "fetchFormat": "json"
+  },
+  "icons": {
+    "favicon": "favicon.png",
+    "icon192": "icons/Icon-192.png",
+    "icon512": "icons/Icon-512.png",
+    "maskable192": "icons/Icon-maskable-192.png",
+    "maskable512": "icons/Icon-maskable-512.png"
+  }
+}

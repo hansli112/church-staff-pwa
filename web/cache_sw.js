@@ -184,6 +184,10 @@ self.addEventListener('fetch', (event) => {
   // detection works correctly.
   if (NEVER_INTERCEPT_PATHS.has(url.pathname)) return;
 
+  // The site's own Pages Functions answer live, per-request data (today's
+  // devotional passage, for one); a cached copy would be served forever.
+  if (url.pathname.startsWith('/api/')) return;
+
   if (NETWORK_FIRST_PATHS.has(url.pathname)) {
     event.respondWith(networkFirst(event));
   } else if (VENDOR_PATH_PREFIXES.some((p) => url.pathname.startsWith(p))) {

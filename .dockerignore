@@ -6,3 +6,15 @@ build/
 .metadata
 .flutter-plugins-dependencies
 church_staff_pwa.iml
+
+# Private deployment data and development dependencies never enter an image.
+.local/
+.env
+*.key
+*.pem
+**/node_modules/
+.venv/
+.wrangler/
+.claude/
+**/__pycache__/
+.env.*

@@ -1,7 +1,9 @@
-/// One occurrence on the church calendar, in device-local time.
+import '../../../../core/time/church_time.dart';
+
+/// One occurrence in the church time zone, or UTC date values for all-day events.
 ///
 /// [startDay]/[endDay] are what the month grid buckets by, so the fetch window
-/// in `calendarMonthWindow` has to use the same local day boundaries.
+/// in `calendarMonthWindow` has to use the same church day boundaries.
 class CalendarEvent {
   final String id;
   final DateTime startTime;
@@ -23,8 +25,10 @@ class CalendarEvent {
 
   // DateUtils.dateOnly without the Flutter import: the domain layer stays
   // plain Dart.
-  static DateTime _dateOnly(DateTime date) =>
-      DateTime(date.year, date.month, date.day);
+  static DateTime _dateOnly(DateTime date) => ChurchTime.dateOnly(date);
+
+  DateTime get startInstant =>
+      ChurchTime.eventInstant(startTime, isAllDay: isAllDay);
 
   String get identity => '$id|${startTime.toIso8601String()}';
 
@@ -56,9 +60,15 @@ class CalendarEvent {
   };
 
   factory CalendarEvent.fromJson(Map<String, dynamic> json) {
-    final start = DateTime.parse(json['startTime'] as String).toLocal();
+    final isAllDay = json['isAllDay'] as bool? ?? false;
+    final start = ChurchTime.parseEventTime(
+      json['startTime'] as String,
+      isAllDay: isAllDay,
+    );
     final endRaw = json['endTime'];
-    final end = endRaw is String ? DateTime.parse(endRaw).toLocal() : start;
+    final end = endRaw is String
+        ? ChurchTime.parseEventTime(endRaw, isAllDay: isAllDay)
+        : start;
     final idRaw = json['id'];
     return CalendarEvent(
       id: idRaw is String && idRaw.isNotEmpty
@@ -66,7 +76,7 @@ class CalendarEvent {
           : 'legacy_${start.toIso8601String()}_${json['title'] as String? ?? ''}',
       startTime: start,
       endTime: end,
-      isAllDay: json['isAllDay'] as bool? ?? false,
+      isAllDay: isAllDay,
       title: json['title'] as String,
       location: (json['location'] as String?)?.trim(),
       description: (json['description'] as String?)?.trim(),

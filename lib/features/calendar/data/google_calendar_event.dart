@@ -1,3 +1,4 @@
+import '../../../core/time/church_time.dart';
 import '../domain/entities/calendar_event.dart';
 
 /// Parses one entry of the Google Calendar API's `items` array.
@@ -24,16 +25,16 @@ CalendarEvent? calendarEventFromGoogleItem(
   if (startRaw is! String) return null;
 
   final endRaw = end?['dateTime'] ?? end?['date'];
-  final startTime = DateTime.parse(startRaw).toLocal();
-  final endTime = endRaw is String
-      ? DateTime.parse(endRaw).toLocal()
-      : startTime;
-
   // An all-day event carries `date` on both ends and never `dateTime`.
   final isAllDay =
       start?['dateTime'] == null &&
       start?['date'] is String &&
       end?['dateTime'] == null;
+  DateTime parse(String value) => isAllDay
+      ? ChurchTime.parseDate(value)
+      : ChurchTime.inZone(DateTime.parse(value));
+  final startTime = parse(startRaw);
+  final endTime = endRaw is String ? parse(endRaw) : startTime;
 
   final title = (raw['summary'] as String?)?.trim();
   final location = (raw['location'] as String?)?.trim();

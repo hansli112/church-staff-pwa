@@ -50,8 +50,19 @@ app.*.map.json
 # Docker artifacts
 *.tar
 
-# Environment variables
+# Environment variables / Wrangler local secrets
 .env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+
+# Local Python environments and optional script dependencies
+.venv/
+scripts/node_modules/
+
+# Firebase CLI cache
+.firebase/
 
 # 本機專用：教會的真實同工名單、綽號對照、產生出來的 prompt。
 # repo 是公開的，這些個資一律不進版控。
@@ -60,6 +71,9 @@ app.*.map.json
 # 部署流程在 build 前生出來的（CI 與 Dockerfile 都會寫），內容是當次 build 的
 # SHA / 時間戳，不該被任何人的本機執行結果蓋進版控。
 /web/version.json
+
+# Private deployment artwork staged locally before Flutter builds
+/web/private-icons/
 
 # Firestore rules tests (Node)
 firestore-tests/node_modules/

@@ -69,7 +69,7 @@ service cloud.firestore {
         || request.resource.data.groups.hasOnly(['roster-editors', 'calendar-editors']);
     }
 
-    // Which service types (主日 / 青崇 / 兒主) this user may touch a roster for.
+    // Which configured service IDs this user may touch a roster for.
     //
     // zones on users/{uid} is a list of maps, and the rules language has no
     // loops and no map/filter — there is no way to read serviceType out of it.
@@ -84,14 +84,17 @@ service cloud.firestore {
     // Being in roster-editors is not enough: the group says "may edit rosters",
     // the zone says "which one". admin keeps every type without holding a zone.
     function canEditRosterType(type) {
-      return isAdmin()
+      return type in serviceTypes() && (isAdmin()
         || (inGroup('roster-editors')
-            && type in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('zoneTypes', []));
+            && type in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('zoneTypes', [])));
     }
 
-    // 所有崇拜的 ServiceType 名稱。新增崇拜時只改這裡（還有 lib 裡的 enum）。
+    // Generated from church.json, including disabled IDs for existing records.
+    // Do not edit this list: run scripts/prepare-deployment.mjs instead.
     function serviceTypes() {
+      // BEGIN GENERATED SERVICE IDS
       return ['sundayService', 'youth', 'children'];
+      // END GENERATED SERVICE IDS
     }
 
     // Same idea as hasValidGroups(): a typo'd service type would sit in the
@@ -143,47 +146,39 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Legacy records without dateKey remain readable and editable.
+    function hasValidDateKey() {
+      return !('dateKey' in request.resource.data)
+        || (request.resource.data.dateKey is string
+            && request.resource.data.dateKey.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$'));
+    }
+
     match /rosters/{rosterId} {
-      // Read stays open to every member on purpose: the roster is the thing the
-      // whole church looks at. The write side is what the zone narrows.
       allow read: if isActiveUser();
 
-      // On update both sides are checked: the incoming type must be in the
-      // editor's zones, and so must the type already on the document. Checking
-      // only the incoming one would let a 青崇 editor rewrite the 主日 roster by
-      // relabelling it 'youth' in the same write.
-      //
-      // `.get('type', '')` rather than `.type`: a document without the field
-      // (pre-ServiceType data, or a hand-written one) must be denied, not blow
-      // up the rule. '' matches no zone, so only admin gets through.
-      allow create: if canEditRosterType(request.resource.data.get('type', ''));
-      allow update: if canEditRosterType(request.resource.data.get('type', ''))
-        && canEditRosterType(resource.data.get('type', ''));
+      // Editors must hold both the old and new service's zone. An admin may
+      // explicitly repair a missing/unknown legacy type to a configured ID;
+      // nobody can write a new unknown type or silently fall back to another.
+      allow create: if hasValidDateKey()
+        && canEditRosterType(request.resource.data.get('type', ''));
+      allow update: if hasValidDateKey()
+        && canEditRosterType(request.resource.data.get('type', ''))
+        && (isAdmin() || canEditRosterType(resource.data.get('type', '')));
       allow delete: if canEditRosterType(resource.data.get('type', ''));
     }
 
-    // 同工排序：一個崇拜一份，文件 id 就是 ServiceType（見 StaffOrder）。
-    //
-    // 改得動那個崇拜服事表的人就改得動它的排序 —— 排序是在選人視窗裡拖出來
-    // 的，匯入時也會照圖片更新，這兩條路都是服事表編輯者在走。放在 settings/
-    // 底下的話只有 admin 寫得動，編輯者一拖就被擋。
-    //
-    // 先限定 id：admin 是 root，canEditRosterType 對任何字串都放行，打錯字的
-    // id 會留下一份沒有人讀的文件。
+    // Staff ordering carries the same service-specific permission as a roster.
     match /staff_orders/{type} {
       allow read: if isActiveUser();
       allow write: if type in serviceTypes() && canEditRosterType(type);
     }
 
-    // Templates and event options stay admin-only on purpose: they are the
-    // shape every roster is built from, so a mistake here affects everyone,
-    // not just one roster.
+    // The shape of rosters affects everyone and remains admin-only.
     match /settings/{doc} {
       allow read: if isActiveUser();
       allow write: if isAdmin();
     }
 
-    // Default deny for any other collection.
     match /{document=**} {
       allow read, write: if false;
     }

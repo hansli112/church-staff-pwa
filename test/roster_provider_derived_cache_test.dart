@@ -14,7 +14,7 @@ InMemoryRosterRepository _repo({
   required Map<ServiceType, List<EventOption>> eventOptions,
 }) => InMemoryRosterRepository(
   rosters: rosters,
-  templates: const {
+  templates: {
     ServiceType.sundayService: ['領會'],
     ServiceType.youth: ['領會'],
     ServiceType.children: [],

@@ -1,3 +1,4 @@
+import 'support/church_test_config.dart';
 import 'package:church_staff_pwa/features/auth/domain/entities/user.dart';
 import 'package:church_staff_pwa/features/auth/presentation/providers/session_provider.dart';
 import 'package:church_staff_pwa/features/calendar/presentation/screens/calendar_screen.dart';
@@ -46,7 +47,9 @@ Future<void> _pumpCalendar(WidgetTester tester) async {
           users: const [],
         ),
       ),
-      child: const MaterialApp(home: CalendarScreen()),
+      child: MaterialApp(
+        home: CalendarScreen(fetchMonth: (_) async => const []),
+      ),
     ),
   );
   await tester.pumpAndSettle();
@@ -56,6 +59,7 @@ double _gridHeight(WidgetTester tester) =>
     tester.getSize(find.byType(PageView)).height;
 
 void main() {
+  setUp(() => setTestChurchConfig(calendar: true));
   setUpAll(() async {
     await initializeDateFormatting('zh_TW');
   });

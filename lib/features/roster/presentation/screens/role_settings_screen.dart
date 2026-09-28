@@ -57,7 +57,7 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
     );
     if (name == null) return;
     setState(() {
-      _editingTemplates[type]?.add(name);
+      (_editingTemplates[type] ??= []).add(name);
     });
   }
 
@@ -212,6 +212,7 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
         appBar: AppBar(
           title: const Text('服事項目設定'),
           bottom: TabBar(
+            isScrollable: ServiceType.values.length > 3,
             tabs: ServiceType.values
                 .map((type) => Tab(text: type.label))
                 .toList(),

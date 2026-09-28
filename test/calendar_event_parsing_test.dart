@@ -39,11 +39,11 @@ void main() {
       })!;
 
       expect(event.isAllDay, isTrue);
-      expect(event.startDay, DateTime(2026, 8, 20));
-      expect(event.endDay, DateTime(2026, 8, 20));
+      expect(event.startDay, DateTime.utc(2026, 8, 20));
+      expect(event.endDay, DateTime.utc(2026, 8, 20));
       expect(event.spansMultipleDays, isFalse);
-      expect(event.occursOnDate(DateTime(2026, 8, 20)), isTrue);
-      expect(event.occursOnDate(DateTime(2026, 8, 21)), isFalse);
+      expect(event.occursOnDate(DateTime.utc(2026, 8, 20)), isTrue);
+      expect(event.occursOnDate(DateTime.utc(2026, 8, 21)), isFalse);
     });
 
     test('a multi-day all-day event covers every day in between', () {
@@ -55,15 +55,15 @@ void main() {
       })!;
 
       expect(event.spansMultipleDays, isTrue);
-      expect(event.endDay, DateTime(2026, 8, 22));
+      expect(event.endDay, DateTime.utc(2026, 8, 22));
       for (final day in [20, 21, 22]) {
         expect(
-          event.occursOnDate(DateTime(2026, 8, day)),
+          event.occursOnDate(DateTime.utc(2026, 8, day)),
           isTrue,
           reason: '8/$day',
         );
       }
-      expect(event.occursOnDate(DateTime(2026, 8, 23)), isFalse);
+      expect(event.occursOnDate(DateTime.utc(2026, 8, 23)), isFalse);
     });
 
     test(
@@ -151,7 +151,7 @@ void main() {
         'end': {'dateTime': '2026-08-20T18:00:00+08:00'},
       })!;
       expect(event.endDay, event.startDay);
-      expect(event.occursOnDate(DateTime(2026, 8, 20)), isTrue);
+      expect(event.occursOnDate(DateTime.utc(2026, 8, 20)), isTrue);
     });
 
     test(

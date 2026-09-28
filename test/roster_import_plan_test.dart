@@ -45,16 +45,20 @@ final _users = [
 RosterImportPlan _plan(
   Object json, {
   List<ServiceRoster>? rosters,
-  Map<ServiceType, List<String>>? templates = const {
-    _type: ['司琴', '敬拜'],
-  },
+  Map<ServiceType, List<String>>? templates,
+  bool templatesLoaded = true,
   List<EventOption> eventOptions = const [],
 }) => planRosterImport(
   input: jsonEncode(json),
   type: _type,
   users: _users,
   rosters: rosters ?? [_roster('2026-10-03')],
-  templates: templates,
+  templates: templatesLoaded
+      ? templates ??
+            {
+              _type: ['司琴', '敬拜'],
+            }
+      : null,
   eventOptions: eventOptions,
 );
 
@@ -78,7 +82,7 @@ void main() {
             type: _type,
             users: _users,
             rosters: const [],
-            templates: const {},
+            templates: {},
             eventOptions: const [],
           ),
         ),
@@ -98,7 +102,7 @@ void main() {
               },
             ],
           },
-        ], templates: null),
+        ], templatesLoaded: false),
       );
       expect(message, contains('尚未載入'));
     });
@@ -117,7 +121,7 @@ void main() {
               ],
             },
           ],
-          templates: const {
+          templates: {
             ServiceType.children: ['司琴'],
           },
         ),
@@ -133,7 +137,7 @@ void main() {
             'date': '2026-10-03',
             'events': ['聖餐'],
           },
-        ], templates: null),
+        ], templatesLoaded: false),
       );
       expect(plan.updates.single.specialEvents, ['聖餐']);
     });
@@ -308,7 +312,7 @@ void main() {
             ],
           },
         ],
-        templates: const {
+        templates: {
           _type: ['信息'],
         },
       ),

@@ -1,6 +1,6 @@
 // Live end-to-end check of the calendar write path.
 //
-// Imports the *real* worker/google_calendar.js — the same code the deployed
+// Imports the staged worker/google_calendar.js — the same code/config the deployed
 // Pages Function runs — and points it at the real Google Calendar API with the
 // real service account key. Nothing here is mocked, so a pass means the JWT
 // signing, the OAuth exchange, the API enablement and the calendar sharing are
@@ -10,7 +10,9 @@
 // it. If the delete fails the id is printed so it can be removed by hand.
 //
 // Usage:
+//     node scripts/prepare-deployment.mjs --config .local/church.json --out .local/deployment
 //     node scripts/verify-calendar-writer.mjs
+// Optional CHURCH_DEPLOYMENT_DIR selects a different prepared output directory.
 //
 // Reads the key from .local/service-account.json (gitignored) and the calendar
 // id from .local/calendar-id, GOOGLE_CALENDAR_ID, or `gh variable get`.
@@ -18,9 +20,10 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { buildGoogleEvent, callCalendar } from '../worker/google_calendar.js';
+import { readChurchConfig } from './read-church-config.mjs';
+
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -69,7 +72,14 @@ function calendarId() {
 }
 
 async function main() {
+  const config = readChurchConfig();
+  if (!config.features.calendar) die('Calendar is disabled in church configuration.');
+  const deploymentDir = process.env.CHURCH_DEPLOYMENT_DIR || path.join(ROOT, '.local/deployment');
+  const { buildGoogleEvent, callCalendar } = await import(
+    pathToFileURL(path.join(deploymentDir, 'worker/google_calendar.js')).href
+  );
   const env = {
+    CHURCH_CONFIG_JSON: JSON.stringify(config),
     GOOGLE_SERVICE_ACCOUNT_JSON: serviceAccountJson(),
     GOOGLE_CALENDAR_ID: calendarId(),
   };

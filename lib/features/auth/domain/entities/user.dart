@@ -67,10 +67,7 @@ class UserZoneInfo {
 
   factory UserZoneInfo.fromJson(Map<String, dynamic> json) {
     return UserZoneInfo(
-      serviceType: ServiceType.values.firstWhere(
-        (e) => e.name == json['serviceType'],
-        orElse: () => ServiceType.sundayService,
-      ),
+      serviceType: ServiceType.fromName(json['serviceType'] as String? ?? ''),
       smallGroups: List<String>.from(json['smallGroups'] ?? []),
       ministries: List<String>.from(json['ministries'] ?? []),
     );
@@ -141,14 +138,22 @@ class User {
   List<ServiceType> get zoneTypes => [
     for (final type in ServiceType.values)
       if (zones.any((zone) => zone.serviceType == type)) type,
+    // 保留未知 ID 供管理員修正設定，不能默默改成其他牧區或丟失原資料。
+    ...(zones
+        .map((zone) => zone.serviceType)
+        .toSet()
+        .where((type) => !ServiceType.values.contains(type))
+        .toList()
+      ..sort((a, b) => a.name.compareTo(b.name))),
   ];
 
   /// 服事表看得到、也改得動哪些聚會別。
   ///
   /// admin 等同 root，拿全部；其他人一律只有自己的牧區 —— 有 roster-editors 也
   /// 不例外。編輯權決定「能不能改」，牧區決定「能改哪一本」，兩者相乘。
-  List<ServiceType> get allowedRosterTypes =>
-      isAdmin ? ServiceType.values : zoneTypes;
+  List<ServiceType> get allowedRosterTypes => isAdmin
+      ? ServiceType.values
+      : zoneTypes.where(ServiceType.values.contains).toList();
 
   /// 認不得的東西一律丟掉，絕不拋例外。
   ///
