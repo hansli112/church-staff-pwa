@@ -43,7 +43,7 @@
 
 ## PWA 圖示
 
-目前 `web/favicon.png` 與 `web/icons/Icon-{192,512}.png`、`Icon-maskable-{192,512}.png` 是本專案**自行程式產生**的中性幾何人物圖形，未使用外部 logo、圖片或字型，隨本專案 MIT 授權。可重現產生：
+目前 `web/favicon.png` 與 `web/icons/Icon-{192,512}.png`、`Icon-maskable-{192,512}.png` 是本專案**自行程式產生**的中性幾何圖形（3×4 排班格，亮起的格子排成十字架），未使用外部 logo、圖片或字型，隨本專案 MIT 授權。可重現產生：
 
 ```bash
 node scripts/generate-neutral-icons.mjs

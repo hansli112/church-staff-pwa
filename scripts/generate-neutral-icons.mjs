@@ -23,22 +23,31 @@ function chunk(name, body) {
   return Buffer.concat([length, type, body, crc]);
 }
 
-function colorAt(x, y) {
-  const background = [30, 72, 98];
-  const white = [247, 250, 248];
-  const accent = [148, 212, 202];
-  // Three people, rather than a congregation-specific logo or lettering.
-  for (const [cx, cy, r] of [[0.5, 0.32, 0.072], [0.315, 0.39, 0.059], [0.685, 0.39, 0.059]]) {
-    if ((x - cx) ** 2 + (y - cy) ** 2 <= r ** 2) return cx === 0.5 ? white : accent;
-  }
-  for (const [cx, top, width, bottom] of [[0.5, 0.44, 0.085, 0.735], [0.315, 0.49, 0.07, 0.69], [0.685, 0.49, 0.07, 0.69]]) {
-    if (Math.abs(x - cx) <= width && y >= top + width && y <= bottom) return cx === 0.5 ? white : accent;
-    if ((x - cx) ** 2 + (y - top - width) ** 2 <= width ** 2) return cx === 0.5 ? white : accent;
+const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+
+function insideRoundedRect(x, y, left, top, size, radius) {
+  const dx = Math.max(left + radius - x, 0, x - (left + size - radius));
+  const dy = Math.max(top + radius - y, 0, y - (top + size - radius));
+  return x >= left && x <= left + size && y >= top && y <= top + size && dx * dx + dy * dy <= radius * radius;
+}
+
+// A 3×4 roster grid whose lit cells form a Latin cross, rather than a
+// congregation-specific logo or lettering. The favicon drops the dim cells so
+// the cross still reads at 16–32px.
+function colorAt(x, y, { dimCells = true } = {}) {
+  const background = mix([20, 184, 166], [15, 76, 92], Math.min(Math.max((x + y) / 2, 0), 1));
+  const white = [255, 255, 255];
+  for (let row = 0; row < 4; row++) {
+    for (let col = 0; col < 3; col++) {
+      if (!insideRoundedRect(x, y, (144 + col * 80) / 512, (104 + row * 80) / 512, 64 / 512, 17 / 512)) continue;
+      if (col === 1 || row === 1) return white;
+      return dimCells ? mix(background, white, 0.22) : background;
+    }
   }
   return background;
 }
 
-function png(size) {
+function png(size, options) {
   const samples = 4;
   const rows = Buffer.alloc((size * 3 + 1) * size);
   for (let y = 0; y < size; y++) {
@@ -46,7 +55,7 @@ function png(size) {
       const rgb = [0, 0, 0];
       for (let sy = 0; sy < samples; sy++) {
         for (let sx = 0; sx < samples; sx++) {
-          const color = colorAt((x + (sx + 0.5) / samples) / size, (y + (sy + 0.5) / samples) / size);
+          const color = colorAt((x + (sx + 0.5) / samples) / size, (y + (sy + 0.5) / samples) / size, options);
           for (let c = 0; c < 3; c++) rgb[c] += color[c];
         }
       }
@@ -63,6 +72,6 @@ function png(size) {
 }
 
 for (const [path, size] of [['favicon.png', 32], ['icons/Icon-192.png', 192], ['icons/Icon-512.png', 512], ['icons/Icon-maskable-192.png', 192], ['icons/Icon-maskable-512.png', 512]]) {
-  writeFileSync(fileURLToPath(new URL(`../web/${path}`, import.meta.url)), png(size));
+  writeFileSync(fileURLToPath(new URL(`../web/${path}`, import.meta.url)), png(size, { dimCells: path !== 'favicon.png' }));
   console.log(`Generated web/${path} (${size}x${size})`);
 }
