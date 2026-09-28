@@ -130,9 +130,11 @@ class _AddToHomeCardState extends State<AddToHomeCard> {
             share,
           ],
           InstallBrowser.safari => [
-            const TextSpan(text: '點畫面下方的分享圖示 '),
+            // iOS 26 起 Safari 有三種版面：「下方」「上方」的工具列直接有分享
+            // 鈕；預設的「精簡」只剩網址列，分享收在網址列右邊的「⋯」裡。
+            const TextSpan(text: '點下方工具列的分享圖示 '),
             share,
-            const TextSpan(text: '（沒看到的話，先點右下角的「⋯」）'),
+            const TextSpan(text: '。下方只有網址列的話，先點網址列右邊的「⋯」，再點「分享」'),
           ],
           InstallBrowser.other => [const TextSpan(text: '點瀏覽器的分享圖示 '), share],
         },

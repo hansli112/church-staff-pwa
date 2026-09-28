@@ -52,7 +52,7 @@ void main() {
     );
     expect(find.text('把這個網站加到手機桌面'), findsOneWidget);
     expect(
-      find.textContaining('畫面下方的分享圖示', findRichText: true),
+      find.textContaining('下方工具列的分享圖示', findRichText: true),
       findsOneWidget,
     );
     expect(find.byIcon(Icons.ios_share), findsOneWidget);
