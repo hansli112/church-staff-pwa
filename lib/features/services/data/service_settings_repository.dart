@@ -37,10 +37,15 @@ class FirestoreServiceSettingsRepository implements ServiceSettingsRepository {
 
   @override
   Future<ServiceSettings?> load() async {
-    // 一定要問伺服器：Firestore 的離線快取可能還是存檔前那一版。重新載入後
-    // 讀到舊版的話，剛停用的聚會又會被套回來。離線時這裡會丟例外，呼叫端
-    // 就沿用本機記下的清單。
-    final snapshot = await _doc.get(const GetOptions(source: Source.server));
+    // 要伺服器上的那一版：Firestore 的離線快取可能還是存檔前的，套回去的話
+    // 剛停用的聚會又會出現。不用 get(Source.server)：網頁剛啟動、連線還沒
+    // 建好時它會直接回報離線，每次啟動都撞在同一個時間點，就永遠拿不到新版。
+    // 改成聽這份文件，等第一筆確定來自伺服器的快照；30 秒都等不到（真的離線）
+    // 就丟例外，呼叫端沿用本機記下的清單。
+    final snapshot = await _doc
+        .snapshots(includeMetadataChanges: true)
+        .firstWhere((snapshot) => !snapshot.metadata.isFromCache)
+        .timeout(const Duration(seconds: 30));
     final data = snapshot.data();
     if (!snapshot.exists || data == null) return null;
     final ids = data['ids'];
