@@ -118,6 +118,11 @@ describe('加到主畫面', () => {
     assert.equal(load({ ua: UA.chromeAndroid }).hint.platform(), 'android');
   });
 
+  test('iPhone 上分得出 Safari 和 Chrome', () => {
+    assert.equal(load({ ua: UA.safari }).hint.browser(), 'safari');
+    assert.equal(load({ ua: UA.safari.replace('Version/18.0', 'CriOS/129.0') }).hint.browser(), 'chrome');
+  });
+
   test('已經從主畫面開啟：isStandalone 為真', () => {
     assert.equal(load({ ua: UA.safari, standalone: true }).hint.isStandalone(), true);
     assert.equal(load({ ua: UA.safari }).hint.isStandalone(), false);

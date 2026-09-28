@@ -60,11 +60,8 @@ class _AddToHomeCardState extends State<AddToHomeCard> {
     if (_dismissed || !hint.shouldSuggest) return const SizedBox.shrink();
 
     final theme = Theme.of(context);
-    final instructions = switch (hint.platform) {
-      InstallPlatform.ios => '用 Safari 開啟這個網站，按下方的「分享」按鈕，往下找「加入主畫面」。',
-      _ when hint.canPrompt => '按下面的「安裝到手機」，之後就能從主畫面直接打開。',
-      _ => '用 Chrome 開啟這個網站，按右上角的「⋮」，選「安裝應用程式」或「加到主畫面」。',
-    };
+    final canInstall =
+        hint.platform == InstallPlatform.android && hint.canPrompt;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
@@ -85,22 +82,24 @@ class _AddToHomeCardState extends State<AddToHomeCard> {
                   ),
                   const SizedBox(width: 8),
                   const Text(
-                    '加到手機主畫面',
+                    '把這個網站加到手機桌面',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
-              const Text('加了之後就像 App 一樣從桌面點開，也不用每次重新登入。'),
-              const SizedBox(height: 4),
-              Text(instructions),
+              const Text('桌面會多一個圖示，之後點一下就能打開，不用再去 LINE 找連結。'),
+              const SizedBox(height: 12),
+              if (canInstall)
+                const Text('按下面的「安裝到手機」，再按「安裝」就好了。')
+              else
+                ..._steps(hint, theme),
               const SizedBox(height: 4),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(onPressed: _dismiss, child: const Text('不用了')),
-                  if (hint.platform == InstallPlatform.android &&
-                      hint.canPrompt) ...[
+                  if (canInstall) ...[
                     const SizedBox(width: 8),
                     FilledButton(
                       onPressed: _installing ? null : _install,
@@ -114,5 +113,56 @@ class _AddToHomeCardState extends State<AddToHomeCard> {
         ),
       ),
     );
+  }
+
+  /// 照著點就會的步驟。圖示直接畫出來，因為「分享鈕」是哪一個很多人不知道。
+  List<Widget> _steps(InstallHint hint, ThemeData theme) {
+    WidgetSpan icon(IconData data) => WidgetSpan(
+      alignment: PlaceholderAlignment.middle,
+      child: Icon(data, size: 20, color: theme.colorScheme.primary),
+    );
+    final share = icon(Icons.ios_share);
+    final List<List<InlineSpan>> steps = switch (hint.platform) {
+      InstallPlatform.ios => [
+        switch (hint.browser) {
+          InstallBrowser.chrome => [
+            const TextSpan(text: '點網址列右邊的分享圖示 '),
+            share,
+          ],
+          InstallBrowser.safari => [
+            const TextSpan(text: '點畫面下方的分享圖示 '),
+            share,
+            const TextSpan(text: '（沒看到的話，先點右下角的「⋯」）'),
+          ],
+          InstallBrowser.other => [const TextSpan(text: '點瀏覽器的分享圖示 '), share],
+        },
+        [const TextSpan(text: '往下滑，點「加入主畫面」')],
+        [const TextSpan(text: '點右上角的「加入」，之後從桌面的圖示打開')],
+      ],
+      _ => [
+        [const TextSpan(text: '點瀏覽器右上角的選單 '), icon(Icons.more_vert)],
+        [const TextSpan(text: '點「安裝應用程式」或「加到主畫面」')],
+        [const TextSpan(text: '點「安裝」，之後從桌面的圖示打開')],
+      ],
+    };
+    return [
+      for (final (index, spans) in steps.indexed)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 24,
+                child: Text(
+                  '${index + 1}.',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              Expanded(child: Text.rich(TextSpan(children: spans))),
+            ],
+          ),
+        ),
+    ];
   }
 }

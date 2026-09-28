@@ -33,12 +33,22 @@
     return 'other';
   }
 
+  // iPhone 上每個瀏覽器的分享鈕位置不同：Safari 在下方（或收在「⋯」裡），
+  // Chrome 在網址列右邊。Android 一律照 Chrome 教。
+  function detectBrowser() {
+    if (/CriOS/i.test(ua)) return 'chrome';
+    if (/FxiOS|EdgiOS|OPiOS/i.test(ua)) return 'other';
+    if (/Safari/i.test(ua)) return 'safari';
+    return 'other';
+  }
+
   function isStandalone() {
     return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
       window.navigator.standalone === true;
   }
 
   var platform = detectPlatform();
+  var browser = detectBrowser();
   var inAppBrowser = detectInAppBrowser();
   var deferredPrompt = null;
 
@@ -53,6 +63,7 @@
 
   window.churchInstallHint = {
     platform: function () { return platform; },
+    browser: function () { return browser; },
     isStandalone: isStandalone,
     canPrompt: function () { return deferredPrompt !== null; },
     /// 回傳 'accepted'、'dismissed' 或 'unavailable'。
@@ -86,7 +97,7 @@
 
   url.searchParams.delete('openExternalBrowser');
   var cleanUrl = url.href;
-  var browser = platform === 'ios' ? 'Safari' : 'Chrome';
+  var target = platform === 'ios' ? 'Safari' : 'Chrome';
 
   function show() {
     var style = document.createElement('style');
@@ -110,14 +121,14 @@
     overlay.setAttribute('aria-modal', 'true');
     overlay.innerHTML =
       '<div class="card">' +
-      '<h1>請改用 ' + browser + ' 開啟</h1>' +
+      '<h1>請改用 ' + target + ' 開啟</h1>' +
       '<p>你現在是在 ' + inAppBrowser + ' 裡面開啟。在這裡沒辦法加到手機主畫面，關掉之後也常常要重新登入。</p>' +
       '<ol>' +
       (platform === 'ios'
         ? '<li>按右下角或右上角的「⋯」或分享圖示</li><li>選「在 Safari 中開啟」</li>'
         : '<li>按右上角的「⋮」</li><li>選「在瀏覽器中開啟」或「用 Chrome 開啟」</li>') +
       '</ol>' +
-      '<p>找不到的話，複製下面的網址，貼到 ' + browser + ' 的網址列：<br><code></code></p>' +
+      '<p>找不到的話，複製下面的網址，貼到 ' + target + ' 的網址列：<br><code></code></p>' +
       (platform === 'android' ? '<a class="button" data-action="chrome">直接用 Chrome 開啟</a>' : '') +
       '<button type="button" class="secondary" data-action="copy">複製網址</button>' +
       '<button type="button" class="quiet" data-action="stay">先在這裡使用</button>' +
@@ -132,7 +143,7 @@
     }
     overlay.querySelector('[data-action="copy"]').addEventListener('click', function (event) {
       var button = event.currentTarget;
-      var done = function () { button.textContent = '已複製，請貼到 ' + browser; };
+      var done = function () { button.textContent = '已複製，請貼到 ' + target; };
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(cleanUrl).then(done, function () { window.prompt('請複製這個網址', cleanUrl); });
       } else {

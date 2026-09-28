@@ -5,15 +5,21 @@ import 'install_hint_service_stub.dart'
 /// 這支手機要怎麼把網站加到主畫面。
 enum InstallPlatform { ios, android, other }
 
+/// iPhone 上分享鈕在哪裡要看瀏覽器：Safari 在下方，Chrome 在網址列右邊。
+enum InstallBrowser { safari, chrome, other }
+
 /// 首頁「加到手機主畫面」卡片需要知道的事，讀自 `web/install_hint.js`。
 class InstallHint {
   const InstallHint({
     required this.platform,
     required this.isStandalone,
     required this.canPrompt,
+    this.browser = InstallBrowser.other,
   });
 
   final InstallPlatform platform;
+
+  final InstallBrowser browser;
 
   /// 已經是從主畫面開的（不是在瀏覽器分頁裡）。
   final bool isStandalone;
