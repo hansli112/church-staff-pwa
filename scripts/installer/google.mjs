@@ -400,7 +400,7 @@ async function createDatabase(s) {
     catch (error) {
       const propagating = error instanceof ActionRequired && error.code === 'GOOGLE_PERMISSION_REQUIRED' && error.rejected && young();
       if (!propagating) throw error;
-      if (attempt >= 7) {
+      if (attempt >= 11) {
         stop('GOOGLE_API_PROPAGATING', 'Google 還在替剛建立的新專案開通權限，通常 1–3 分鐘。這不是你的帳號有問題，不用改任何設定；請稍候再按「稍後接續安裝」。');
       }
       s.context.emit?.({ message: `Google 正在替新專案開通資料庫權限，稍候自動重試（第 ${attempt + 1} 次）…` });

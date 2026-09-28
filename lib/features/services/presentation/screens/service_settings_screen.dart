@@ -148,7 +148,8 @@ class _ServiceSettingsScreenState extends State<ServiceSettingsScreen> {
         ),
         body: Column(
           children: [
-            Padding(
+            Container(
+              width: double.infinity,
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
               child: Text(
                 '每週固定的聚會。改完按右上角 ✓ 儲存，所有人的 App 下次打開就會換成新的設定。\n'
@@ -280,41 +281,49 @@ class _ServiceDialogState extends State<_ServiceDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(widget.initial == null ? '新增聚會' : '修改聚會'),
-      content: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              controller: _label,
-              autofocus: widget.initial == null,
-              decoration: const InputDecoration(
-                labelText: '簡稱',
-                helperText: '顯示在服事表分頁上，例如「主日」「禱告會」',
+      // 預設寬度會把「例如「主日」「禱告會」」這種說明截斷。
+      content: SizedBox(
+        width: 360,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _label,
+                autofocus: widget.initial == null,
+                decoration: const InputDecoration(
+                  labelText: '簡稱',
+                  helperText: '顯示在服事表分頁上，例如「主日」「禱告會」',
+                  helperMaxLines: 2,
+                ),
+                validator: (value) => _text(value, max: 20, unique: true),
               ),
-              validator: (value) => _text(value, max: 20, unique: true),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _name,
-              decoration: const InputDecoration(
-                labelText: '完整名稱',
-                helperText: '例如「主日崇拜」「週三禱告會」',
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _name,
+                decoration: const InputDecoration(
+                  labelText: '完整名稱',
+                  helperText: '例如「主日崇拜」「週三禱告會」',
+                ),
+                validator: (value) => _text(value, max: 80),
               ),
-              validator: (value) => _text(value, max: 80),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<int>(
-              initialValue: _weekday,
-              decoration: const InputDecoration(labelText: '每週'),
-              items: [
-                for (var day = 1; day <= 7; day++)
-                  DropdownMenuItem(value: day, child: Text(weekdayLabel(day))),
-              ],
-              onChanged: (value) =>
-                  setState(() => _weekday = value ?? _weekday),
-            ),
-          ],
+              const SizedBox(height: 12),
+              DropdownButtonFormField<int>(
+                initialValue: _weekday,
+                decoration: const InputDecoration(labelText: '每週'),
+                items: [
+                  for (var day = 1; day <= 7; day++)
+                    DropdownMenuItem(
+                      value: day,
+                      child: Text(weekdayLabel(day)),
+                    ),
+                ],
+                onChanged: (value) =>
+                    setState(() => _weekday = value ?? _weekday),
+              ),
+            ],
+          ),
         ),
       ),
       actions: [

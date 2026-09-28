@@ -444,7 +444,7 @@ class _RosterPeopleDialogState extends State<_RosterPeopleDialog> {
         if (roleMissing)
           Builder(
             builder: (context) => Text(
-              '請先按右上角的清單圖示「服事項目設定」新增項目',
+              '請先按右上角中間的清單圖示「服事項目設定」新增項目',
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ),
