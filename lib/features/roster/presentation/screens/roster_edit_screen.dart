@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/service_roster.dart';
 import 'package:church_staff_pwa/core/config/church_config.dart';
-import 'package:church_staff_pwa/core/time/church_time.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../../auth/presentation/providers/session_provider.dart';
 import '../../../auth/presentation/providers/user_admin_provider.dart';
@@ -112,10 +111,7 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
     // settings 的寫入權在 firestore.rules 裡是 admin only，所以非 admin 看到
     // 這兩顆按鈕只會按下去然後失敗 —— 不如不要顯示。
     final isAdmin = context.select<SessionProvider, bool>((s) => s.isAdmin);
-    final now = ChurchTime.now();
-    final quarterStartMonth = ((now.month - 1) ~/ 3) * 3 + 1;
-    final isLastMonthOfQuarter = now.month == (quarterStartMonth + 2);
-    final titleText = isLastMonthOfQuarter ? '編輯本季/下季服事表' : '編輯本季服事表';
+    const titleText = '編輯服事表';
 
     final appBar = AppBar(
       title: Text(titleText),
@@ -145,11 +141,7 @@ class _RosterEditScreenState extends State<RosterEditScreen> {
         // 照著「按清單圖示」的說明就會按到這顆、直接離開編輯模式。
         Tooltip(
           message: '切換至檢視模式',
-          child: TextButton.icon(
-            onPressed: widget.onExit,
-            icon: const Icon(Icons.check),
-            label: const Text('完成'),
-          ),
+          child: TextButton(onPressed: widget.onExit, child: const Text('完成')),
         ),
       ],
       bottom: allowedTypes.isEmpty

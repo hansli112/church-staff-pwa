@@ -7,7 +7,7 @@ void main() {
     expect(window.start, DateTime.utc(2026, 7, 1));
     expect(window.end, DateTime.utc(2026, 9, 30));
     expect(window.includesNextQuarter, isFalse);
-    expect(window.title, '本季服事');
+    expect(window.title, '我的服事');
   });
 
   test('季末最後兩週一併列出下一季', () {
@@ -18,8 +18,8 @@ void main() {
     ]) {
       final window = seasonWindow(day);
       expect(window.end, DateTime.utc(2026, 12, 31), reason: '$day');
-      expect(window.title, '本季與下季服事');
-      expect(window.emptyText, '本季與下季尚無排到服事');
+      expect(window.title, '我的服事');
+      expect(window.emptyText, '最近還沒有排到你的服事');
     }
   });
 

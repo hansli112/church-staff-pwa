@@ -1,4 +1,3 @@
-import 'package:church_staff_pwa/core/time/church_time.dart';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
@@ -134,10 +133,8 @@ class _RosterScreenState extends State<RosterScreen>
     final canEdit = canEditRoster && widget.allowEdit;
     final allowedTypes =
         session.currentUser?.allowedRosterTypes ?? const <ServiceType>[];
-    final now = ChurchTime.now();
-    final quarterStartMonth = ((now.month - 1) ~/ 3) * 3 + 1;
-    final isLastMonthOfQuarter = now.month == (quarterStartMonth + 2);
-    final titleText = isLastMonthOfQuarter ? '本季/下季服事表' : '本季服事表';
+    // 標題不分本季／下季：對同工來說那只是「服事表」，範圍怎麼算他不用管。
+    const titleText = '服事表';
     // select 而非 watch：否則每次 fetch 的 loading 開關都會重建整個 Scaffold
     // （含 AppBar / TabBar / TabController）。
     final isEditMode = context.select<RosterProvider, bool>(

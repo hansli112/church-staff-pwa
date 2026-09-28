@@ -14,9 +14,11 @@ class SeasonWindow {
   final DateTime end;
   final bool includesNextQuarter;
 
-  String get title => includesNextQuarter ? '本季與下季服事' : '本季服事';
+  // 範圍照樣是本季（季末兩週含下季），但不寫在標題上：同工在意的是「我接下來
+  // 要服事什麼」，不是季度怎麼切。
+  String get title => '我的服事';
 
-  String get emptyText => includesNextQuarter ? '本季與下季尚無排到服事' : '本季尚無排到服事';
+  String get emptyText => '最近還沒有排到你的服事';
 }
 
 /// [today] 是教會時區的日期（見 ChurchTime.today）。
