@@ -178,6 +178,8 @@ function fakeFetch({
       return Response.json({ name: `users/${uid}`, fields });
     }
 
+    if (target.includes('/documents/settings/services')) return new Response('{}', { status: 404 });
+
     if (target.includes('/documents/settings/import_prompts')) {
       if (prompts === null) return new Response('{}', { status: 404 });
       const fields = Object.fromEntries(

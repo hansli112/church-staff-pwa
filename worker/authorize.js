@@ -10,7 +10,7 @@
 // Flutter app (which only decides what the UI offers). The group names, the
 // zone rule and "admin is root" must agree across all three.
 
-import { HttpError, identifyCaller } from './firebase_user.js';
+import { HttpError, identifyCaller, readDocument } from './firebase_user.js';
 import { churchConfig } from './church_config.js';
 
 /// Kept in sync with ServiceType in the Flutter app, the keys of
@@ -53,7 +53,6 @@ export async function authorize(request, env, action, fetchImpl = fetch) {
   const rule = ACTIONS[action?.edit];
   if (!rule) throw new Error(`unknown action ${JSON.stringify(action)}`);
 
-  const rosterTypes = new Set(churchConfig(env).services.map((service) => service.id));
   const caller = await identifyCaller(request, env, fetchImpl);
   // admin is root: every group, every zone, without holding either.
   const isAdmin = caller.role === 'admin';
@@ -63,6 +62,7 @@ export async function authorize(request, env, action, fetchImpl = fetch) {
 
   const { uid, name, token } = caller;
   if (action.edit !== 'roster') return { uid, name, token };
+  const rosterTypes = await knownServiceTypes(env, token, fetchImpl);
   return {
     uid,
     name,
@@ -80,4 +80,18 @@ export async function authorize(request, env, action, fetchImpl = fetch) {
       return token;
     },
   };
+}
+
+/// The deployment's services plus any an admin added in the app
+/// (settings/services, the same list serviceTypes() reads in firestore.rules).
+/// Read as the caller, once per request, before the type is known — so
+/// forRosterType() never has to go back to Firestore.
+async function knownServiceTypes(env, token, fetchImpl) {
+  const types = new Set(churchConfig(env).services.map((service) => service.id));
+  const settings = await readDocument(env, 'settings/services', token, fetchImpl);
+  const values = settings?.fields?.ids?.arrayValue?.values;
+  if (Array.isArray(values)) {
+    for (const entry of values) if (typeof entry?.stringValue === 'string') types.add(entry.stringValue);
+  }
+  return types;
 }

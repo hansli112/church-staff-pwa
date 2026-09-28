@@ -142,6 +142,8 @@ export function fakeFetch({
   },
   calendar,
   notify,
+  // settings/services 的 ids（管理員在 App 裡新增的聚會）；不給就是沒有這份文件。
+  services,
 } = {}) {
   const calls = [];
 
@@ -151,6 +153,11 @@ export function fakeFetch({
 
     if (target.startsWith('https://oauth2.googleapis.com/token')) {
       return Response.json({ access_token: 'test-access-token', expires_in: 3600 });
+    }
+
+    if (target.includes('/documents/settings/services')) {
+      if (!services) return new Response('{}', { status: 404 });
+      return Response.json({ name: 'settings/services', fields: { ids: stringArray(services) } });
     }
 
     if (target.startsWith('https://firestore.googleapis.com/')) {

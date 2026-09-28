@@ -965,3 +965,53 @@ describe('排表並行建立', () => {
     }
   });
 });
+
+// 管理員在 App 裡新增的聚會（settings/services）。ids 只能增加：刪掉一個 ID，
+// 用過它的服事表和牧區權限就對不回去了。
+describe('App 裡設定的聚會', () => {
+  const services = (...ids) => ids.map((id) => ({ id, label: id, name: id, weekday: 3, enabled: true }));
+
+  it('一般同工不能改聚會設定', async () => {
+    await assertFails(setDoc(doc(asRosterEditor(), 'settings', 'services'), { services: services('prayer'), ids: ['prayer'] }));
+  });
+
+  it('管理員新增聚會後，那個聚會的服事表才寫得進去', async () => {
+    const roster = { type: 'prayer', dateKey: '2030-01-02', serviceName: '禱告會' };
+    await assertFails(setDoc(doc(asAdmin(), 'rosters', '20300102_prayer'), roster));
+    await assertSucceeds(setDoc(doc(asAdmin(), 'settings', 'services'), {
+      services: services('sundayService', 'prayer'), ids: ['sundayService', 'youth', 'children', 'prayer'],
+    }));
+    await assertSucceeds(setDoc(doc(asAdmin(), 'rosters', '20300102_prayer'), roster));
+    // 同工的牧區也可以設到新的聚會。
+    await assertSucceeds(updateDoc(doc(asAdmin(), 'users', OTHER), { zoneTypes: ['prayer'] }));
+  });
+
+  it('ids 只能增加，不能拿掉用過的聚會', async () => {
+    await assertFails(setDoc(doc(asAdmin(), 'settings', 'services'), {
+      services: services('sundayService'), ids: ['sundayService'],
+    }));
+    await assertSucceeds(setDoc(doc(asAdmin(), 'settings', 'services'), {
+      services: services('sundayService'), ids: ['sundayService', 'youth', 'children', 'prayer', 'choir'],
+    }));
+  });
+
+  it('聚會設定不能刪除，也不能塞別的欄位或空清單', async () => {
+    await assertFails(deleteDoc(doc(asAdmin(), 'settings', 'services')));
+    await assertFails(setDoc(doc(asAdmin(), 'settings', 'services'), {
+      services: services('sundayService'), ids: ['sundayService', 'youth', 'children', 'prayer', 'choir'], extra: true,
+    }));
+    await assertFails(setDoc(doc(asAdmin(), 'settings', 'services'), {
+      services: [], ids: ['sundayService', 'youth', 'children', 'prayer', 'choir'],
+    }));
+  });
+
+  it('沒在 ids 裡的聚會還是寫不進去', async () => {
+    await assertFails(setDoc(doc(asAdmin(), 'rosters', '20300102_wedding'), { type: 'wedding', dateKey: '2030-01-02' }));
+  });
+
+  it('其他設定照舊只有管理員能寫、也能刪', async () => {
+    await assertSucceeds(setDoc(doc(asAdmin(), 'settings', 'scratch'), { x: 1 }));
+    await assertSucceeds(deleteDoc(doc(asAdmin(), 'settings', 'scratch')));
+    await assertFails(setDoc(doc(asMember(), 'settings', 'scratch'), { x: 1 }));
+  });
+});

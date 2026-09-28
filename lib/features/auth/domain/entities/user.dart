@@ -151,9 +151,10 @@ class User {
   ///
   /// admin 等同 root，拿全部；其他人一律只有自己的牧區 —— 有 roster-editors 也
   /// 不例外。編輯權決定「能不能改」，牧區決定「能改哪一本」，兩者相乘。
+  /// 服事表分頁：停用的聚會不再出現（資料還在，見 ServiceType.active）。
   List<ServiceType> get allowedRosterTypes => isAdmin
-      ? ServiceType.values
-      : zoneTypes.where(ServiceType.values.contains).toList();
+      ? ServiceType.active
+      : zoneTypes.where(ServiceType.active.contains).toList();
 
   /// 認不得的東西一律丟掉，絕不拋例外。
   ///

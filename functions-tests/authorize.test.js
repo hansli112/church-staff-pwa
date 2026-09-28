@@ -278,3 +278,23 @@ describe('authorize — 編輯服事表', () => {
     assert.throws(() => permit.forRosterType('wedding'), { status: 400 });
   });
 });
+
+describe('App 裡新增的聚會', () => {
+  // 管理員在「聚會設定」新增的聚會存在 settings/services；照片匯入也要認得。
+  test('settings/services 裡的聚會可以編，不在裡面的照樣是 400', async () => {
+    const fetchImpl = fakeFetch({ users: USERS, services: ['sundayService', 'prayer'] });
+    const permit = await authorizeAs(ADMIN_UID, ROSTER, { fetchImpl });
+    assert.ok(permit.forRosterType('prayer'));
+    assert.throws(() => permit.forRosterType('wedding'), { status: 400 });
+  });
+
+  test('讀聚會設定用的是呼叫者自己的 token，只在服事表的授權時讀', async () => {
+    const fetchImpl = fakeFetch({ users: USERS, services: ['prayer'] });
+    await authorizeAs(ADMIN_UID, ROSTER, { fetchImpl });
+    const read = fetchImpl.calls.find((call) => call.url.includes('/documents/settings/services'));
+    assert.equal(read.init.headers.Authorization, `Bearer ${idToken(ADMIN_UID)}`);
+    const calendar = fakeFetch({ users: USERS, services: ['prayer'] });
+    await authorizeAs(ADMIN_UID, CALENDAR, { fetchImpl: calendar });
+    assert.ok(!calendar.calls.some((call) => call.url.includes('/documents/settings/services')));
+  });
+});

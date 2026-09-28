@@ -15,6 +15,8 @@ import '../../domain/entities/user.dart';
 import '../providers/session_provider.dart';
 import 'user_management_screen.dart' deferred as user_management_screen;
 import 'group_settings_screen.dart' deferred as group_settings_screen;
+import '../../../services/presentation/screens/service_settings_screen.dart'
+    deferred as service_settings_screen;
 
 /// 服事提醒的寄送端還不存在（見 build 裡的開關）。
 const _rosterReminderSenderExists = false;
@@ -288,6 +290,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 context,
                 user_management_screen.loadLibrary,
                 () => user_management_screen.UserManagementScreen(),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.event_repeat),
+              title: const Text('聚會設定'),
+              subtitle: const Text('新增或修改每週的聚會'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _loadAndPush(
+                context,
+                service_settings_screen.loadLibrary,
+                () => service_settings_screen.ServiceSettingsScreen(),
               ),
             ),
             ListTile(
