@@ -1,19 +1,35 @@
 #!/usr/bin/env node
-import { mkdtemp, lstat, realpath } from 'node:fs/promises';
+import { mkdtemp, lstat, readFile, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { createInstallationManager, installationError } from './installer/core.mjs';
 import { startInstallerServer } from './installer/server.mjs';
 import { runCommand } from './installer/process.mjs';
-import { isPrivateDirectory } from './installer/shared.mjs';
+import { isPrivateDirectory, projectIdFor } from './installer/shared.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+// The release this checkout would install or update to (shown by the wizard).
+export async function readLocalRelease(root = ROOT) {
+  try {
+    const { version, notes } = JSON.parse(await readFile(path.join(root, 'release.json'), 'utf8'));
+    if (typeof version !== 'string') return undefined;
+    return { version, notes: Array.isArray(notes) ? notes.filter((note) => typeof note === 'string').slice(0, 10) : [] };
+  } catch { return undefined; }
+}
 
 export function createDemoProviders({ failAt, delayMs = 150 } = {}) {
   let failed = false;
   const googleEmail = 'operator@example.invalid';
   const accounts = [{ id: '0123456789abcdef0123456789abcdef', name: '離線示範帳號' }];
+  // One site this demo pretends was installed earlier, for update mode.
+  const installedRunId = '4f1c2a9e-7b3d-4e8a-9c61-2d5f0a8b3e17';
+  const installed = { accountId: accounts[0].id, accountName: accounts[0].name, pagesProject: 'grace-church-staff',
+    subdomain: 'grace-church-staff.pages.dev', runId: installedRunId, projectId: projectIdFor(installedRunId) };
+  const installedConfig = { schemaVersion: 1, appName: '恩典教會同工助手', shortName: '恩典同工', timeZone: 'Asia/Taipei',
+    services: [{ id: 'service1', label: '主日', name: '主日崇拜', weekday: 7, enabled: true }] };
+  const pause = (context) => delay(delayMs, undefined, { signal: context.signal });
   const execute = async (step, context) => {
     context.signal?.throwIfAborted();
     await delay(delayMs, undefined, { signal: context.signal });
@@ -31,8 +47,18 @@ export function createDemoProviders({ failAt, delayMs = 150 } = {}) {
     });
   };
   return {
-    google: { inspectIdentity: async () => ({ email: googleEmail }), execute },
+    fetchAsset: async () => null,
+    fetchSite: async (url) => url.endsWith('/church-config.json') ? structuredClone(installedConfig)
+      : url.endsWith('/version.json') ? { version: 'installer-demo-old', release: '2026.9.1', channel: 'installer' } : null,
+    google: { inspectIdentity: async () => ({ email: googleEmail }), execute, update: async (step, context) => pause(context) },
     cloudflare: {
+      listInstalls: async () => [structuredClone(installed)],
+      publishUpdate: async (context) => { await pause(context); return { website: `https://${installed.subdomain}/`, unchanged: false }; },
+      addCustomDomain: async (context) => {
+        await pause(context);
+        const domain = context.plan.customDomain;
+        return { domain, status: 'pending', cname: { name: domain.split('.')[0], fullName: domain, target: installed.subdomain } };
+      },
       startLogin: async ({ emit, signal }) => {
         emit({ message: '離線示範：模擬官方授權等待，不會開啟真實登入頁' });
         await delay(delayMs, undefined, { signal });
@@ -92,7 +118,7 @@ export async function main(argv = process.argv.slice(2)) {
     };
   }
   const rootDir = path.resolve(options['state-root'] ?? ROOT);
-  const manager = createInstallationManager({ rootDir, ...providers, sourceRevision, demo: Boolean(options.demo) });
+  const manager = createInstallationManager({ rootDir, ...providers, sourceRevision, demo: Boolean(options.demo), release: await readLocalRelease() });
   if (options.resume) await manager.load(options.resume);
   let server;
   try { server = await startInstallerServer({ manager, port: options.port, publicOrigin }); }

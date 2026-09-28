@@ -886,3 +886,64 @@ test('read requests retry 429/5xx finitely, mutation failures are never blindly 
     assert.equal(h.state.requests.filter((call) => call.method === 'POST').length, 1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Update mode
+// ---------------------------------------------------------------------------
+
+test('update reads back the web config and replaces only this install\'s rules, only when they change', async (t) => {
+  const { adapter, context, state, through } = await setup(t);
+  await through('activation');
+  context.transient = {};
+  assert.deepEqual(await adapter.update('inspect', context), { region: 'asia-east1' });
+  assert.equal(context.transient.firebaseConfig.projectId, projectId);
+  assert.equal(context.transient.firebaseConfig.apiKey, 'never-persist-api-key');
+
+  const rulesetsBefore = state.rulesets.size;
+  assert.deepEqual(await adapter.update('rules', context), { rules: { unchanged: true } });
+  assert.equal(state.rulesets.size, rulesetsBefore, 'identical rules are not republished');
+
+  // A new service changes the generated rules; the update releases them.
+  context.plan.churchConfig = { ...config, services: [...config.services, { id: 'service9', label: '禱告', name: '禱告會', weekday: 3, enabled: true }] };
+  const changed = renderRules(await readFile(new URL('../firestore.rules', import.meta.url), 'utf8'), context.plan.churchConfig);
+  await writeFile(path.join(context.runDir, 'deployment/firestore.rules'), changed);
+  assert.deepEqual(await adapter.update('rules', context), { rules: { unchanged: false } });
+  const live = state.rulesets.get(state.release.rulesetName).source.files[0].content;
+  assert.ok(live.startsWith(`// church-install: ${runLabel}\n`));
+  assert.ok(live.includes("'service9'") || live.includes('"service9"'));
+  // Nothing else is written by an update: no user, profile or mail.
+  assert.equal(state.users.length, 1);
+  assert.equal(state.sent, 1);
+});
+
+test('update refuses a Google project that does not carry this install\'s label', async (t) => {
+  const { adapter, context, state, through } = await setup(t);
+  await through('activation');
+  state.project = { ...state.project, labels: { 'church-install': 'someone-else' } };
+  await rejectsCode(adapter.update('inspect', context), 'GOOGLE_RESOURCE_CONFLICT');
+  await rejectsCode(adapter.update('rules', context), 'GOOGLE_RESOURCE_CONFLICT');
+});
+
+test('update never overwrites rules someone edited by hand', async (t) => {
+  const { adapter, context, state, through } = await setup(t);
+  await through('activation');
+  const name = state.release.rulesetName;
+  const edited = structuredClone(state.rulesets.get(name));
+  edited.source.files[0].content = edited.source.files[0].content.replace(/^\/\/ church-install: [^\n]+\n/, '');
+  state.rulesets.set(name, edited);
+  const before = state.rulesets.size;
+  await rejectsCode(adapter.update('rules', context), 'GOOGLE_RESOURCE_CONFLICT');
+  assert.equal(state.rulesets.size, before);
+});
+
+test('update adds the custom domain to Firebase Auth once and keeps every existing domain', async (t) => {
+  const { adapter, context, state, through } = await setup(t);
+  await through('activation');
+  const before = [...state.authConfig.authorizedDomains];
+  context.plan = { ...context.plan, customDomain: 'staff.hope-church.org' };
+  await adapter.update('domain', context);
+  assert.deepEqual(state.authConfig.authorizedDomains, [...before, 'staff.hope-church.org']);
+  const patches = state.requests.filter((call) => call.method === 'PATCH' && call.pathname.endsWith('/config')).length;
+  await adapter.update('domain', context);
+  assert.equal(state.requests.filter((call) => call.method === 'PATCH' && call.pathname.endsWith('/config')).length, patches);
+});

@@ -3,7 +3,8 @@ import { mkdtemp, mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { CLOUDFLARE_SCOPES, createCloudflareInstaller, parseDevicePrompt } from './installer/cloudflare.mjs';
+import { CLOUDFLARE_SCOPES, createCloudflareInstaller, installerBinding, parseDevicePrompt } from './installer/cloudflare.mjs';
+import { projectIdFor } from './installer/shared.mjs';
 import { privateEnvironment, runIsolatedCommand } from './installer/process.mjs';
 
 const ACCOUNT = 'a'.repeat(32);
@@ -262,4 +263,94 @@ test('an expired device code tells the person to get a new one', async (t) => {
     return { exitCode: 0, stdout: '{}' };
   } });
   await assert.rejects(installer.startLogin({}), (error) => /取得新代碼/.test(error.message));
+});
+
+// ---------------------------------------------------------------------------
+// Update mode
+// ---------------------------------------------------------------------------
+
+const UPDATE_RUN = '4f1c2a9e-7b3d-4e8a-9c61-2d5f0a8b3e17';
+const UPDATE_PLAN = { runId: UPDATE_RUN, projectId: projectIdFor(UPDATE_RUN), pagesProject: 'grace-church-staff', cloudflareAccountId: ACCOUNT };
+const installed = (overrides = {}) => ({ id: 'pages-id-9', name: UPDATE_PLAN.pagesProject, subdomain: 'grace-church-staff.pages.dev', production_branch: 'main', source: null,
+  deployment_configs: { production: { env_vars: { FIREBASE_PROJECT_ID: { type: 'plain_text', value: UPDATE_PLAN.projectId }, INSTALLER_RUN_ID: { type: 'plain_text', value: UPDATE_RUN } } } }, ...overrides });
+const deployment = (id, message, status = 'success') => ({ id, environment: 'production', deployment_trigger: { metadata: { branch: 'main', commit_message: message } }, latest_stage: { name: 'deploy', status } });
+
+test('installerBinding recognises only direct uploads carrying a run and its derived project', () => {
+  assert.deepEqual(installerBinding(installed()), { runId: UPDATE_RUN, projectId: UPDATE_PLAN.projectId });
+  assert.equal(installerBinding(installed({ source: { type: 'github' } })), null);
+  assert.equal(installerBinding(installed({ production_branch: 'production' })), null);
+  const extra = installed();
+  extra.deployment_configs.production.env_vars.OTHER = { type: 'plain_text', value: 'x' };
+  assert.equal(installerBinding(extra), null);
+  const mismatched = installed();
+  mismatched.deployment_configs.production.env_vars.FIREBASE_PROJECT_ID.value = 'church-someoneelse0000000';
+  assert.equal(installerBinding(mismatched), null);
+  const secret = installed();
+  secret.deployment_configs.production.env_vars.INSTALLER_RUN_ID.type = 'secret_text';
+  assert.equal(installerBinding(secret), null);
+});
+
+test('listInstalls finds this wizard\'s sites and skips every other project in the account', async (t) => {
+  const { installer } = await fixture(t, { fetchImpl: async (url) => {
+    assert.ok(url.includes(`/accounts/${ACCOUNT}/pages/projects?`));
+    return response([installed(), installed({ name: 'blog', source: { type: 'github' } }), { name: 'other', subdomain: 'other.pages.dev', production_branch: 'main' }]);
+  } });
+  assert.deepEqual(await installer.listInstalls(), [{ accountId: ACCOUNT, accountName: 'New church', pagesProject: 'grace-church-staff',
+    subdomain: 'grace-church-staff.pages.dev', runId: UPDATE_RUN, projectId: UPDATE_PLAN.projectId }]);
+});
+
+async function updateFixture(t, deployments, { unchanged = false } = {}) {
+  let listed = deployments;
+  const env = await fixture(t, { fetchImpl: async (url) => response(url.includes('/deployments?') ? listed : installed()),
+    wait: async () => { listed = [deployment('new', `installer:${UPDATE_RUN}:installer-new`), ...listed]; } });
+  env.context.plan = UPDATE_PLAN;
+  const buildDir = path.join(env.context.runDir, 'web-build');
+  for (const name of ['index.html', 'main.dart.js', 'flutter_bootstrap.js', 'cache_sw.js', 'firebase-messaging-sw.js', 'version.json', 'canvaskit/canvaskit.wasm', '_worker.js/index.js']) {
+    await mkdir(path.dirname(path.join(buildDir, name)), { recursive: true });
+    await writeFile(path.join(buildDir, name), 'mock-public-build');
+  }
+  env.context.transient = { buildDir, buildVersion: 'installer-new', ...(unchanged ? { unchanged: true } : {}) };
+  return env;
+}
+
+test('publishUpdate uploads a new production deployment over this install\'s earlier ones', async (t) => {
+  const { installer, calls, context } = await updateFixture(t, [deployment('first', `installer:${UPDATE_RUN}:installer-old`)]);
+  assert.deepEqual(await installer.publishUpdate(context), { website: 'https://grace-church-staff.pages.dev/', unchanged: false });
+  const upload = calls.find(({ args }) => args[0] === 'pages');
+  assert.deepEqual(upload.args, ['pages', 'deploy', context.transient.buildDir, '--project-name', 'grace-church-staff', '--branch', 'main', '--commit-message', `installer:${UPDATE_RUN}:installer-new`, '--commit-dirty=true']);
+  assert.equal(upload.opts.env.CLOUDFLARE_ACCOUNT_ID, ACCOUNT);
+});
+
+test('publishUpdate never overwrites a site that has deployments from somewhere else', async (t) => {
+  const { installer, calls, context } = await updateFixture(t, [deployment('first', `installer:${UPDATE_RUN}:installer-old`), deployment('manual', 'fix typo')]);
+  await assert.rejects(installer.publishUpdate(context), /不是安裝精靈發布的版本/);
+  assert.equal(calls.filter(({ args }) => args[0] === 'pages').length, 0);
+});
+
+test('publishUpdate skips the upload when the build is unchanged or already went through', async (t) => {
+  const same = await updateFixture(t, [deployment('first', `installer:${UPDATE_RUN}:installer-old`)], { unchanged: true });
+  assert.deepEqual(await same.installer.publishUpdate(same.context), { website: 'https://grace-church-staff.pages.dev/', unchanged: true });
+  assert.equal(same.calls.filter(({ args }) => args[0] === 'pages').length, 0);
+  const resumed = await updateFixture(t, [deployment('new', `installer:${UPDATE_RUN}:installer-new`)]);
+  assert.equal((await resumed.installer.publishUpdate(resumed.context)).unchanged, false);
+  assert.equal(resumed.calls.filter(({ args }) => args[0] === 'pages').length, 0);
+});
+
+test('addCustomDomain attaches the subdomain once and returns the CNAME to add', async (t) => {
+  let domains = [];
+  const posted = [];
+  const { installer, context } = await fixture(t, { fetchImpl: async (url, options) => {
+    if (url.endsWith('/domains') && options.method === 'POST') {
+      posted.push(JSON.parse(options.body));
+      domains = [{ name: 'staff.hope-church.org', status: 'initializing' }];
+      return response(domains[0]);
+    }
+    if (url.endsWith('/domains')) return response(domains);
+    return response(installed());
+  } });
+  context.plan = { ...UPDATE_PLAN, customDomain: 'staff.hope-church.org' };
+  const expected = { domain: 'staff.hope-church.org', status: 'initializing', cname: { name: 'staff', fullName: 'staff.hope-church.org', target: 'grace-church-staff.pages.dev' } };
+  assert.deepEqual(await installer.addCustomDomain(context), expected);
+  assert.deepEqual(await installer.addCustomDomain(context), expected);
+  assert.deepEqual(posted, [{ name: 'staff.hope-church.org' }]);
 });

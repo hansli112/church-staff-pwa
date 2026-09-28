@@ -52,6 +52,15 @@ export function renderWeb(indexSource, manifestSource, config) {
   return { index: indexSource, manifest: JSON.stringify(manifest, null, 2) + '\n' };
 }
 
+// Served as /church-config.json so the installer's update mode can rebuild a
+// site from the site itself: Cloud Shell's home directory, where the install
+// record lives, is wiped after months without use. Only what the app already
+// shows its users; never integrations, feed URLs or anything credential-like.
+export function publicChurchConfig(config) {
+  const { schemaVersion, appName, shortName, timeZone, services } = config;
+  return { schemaVersion, appName, shortName, timeZone, services };
+}
+
 export function renderMessagingWorker(source, config) {
   validateChurchConfig(config);
   const title = /^  const title = data\.title \|\| notification\.title \|\| .*;$/gm;
@@ -124,6 +133,7 @@ export async function prepareDeployment({ configPath = path.join(ROOT, 'config/c
     writeFile(path.join(output, 'web/index.html'), web.index),
     writeFile(path.join(output, 'web/manifest.json'), web.manifest),
     writeFile(path.join(output, 'web/firebase-messaging-sw.js'), messagingWorker),
+    writeFile(path.join(output, 'web/church-config.json'), JSON.stringify(publicChurchConfig(config), null, 2) + '\n'),
     writeFile(path.join(output, 'dart-defines.json'), JSON.stringify({ CHURCH_CONFIG_JSON: JSON.stringify(config) }, null, 2) + '\n'),
     writeFile(path.join(output, 'church.json'), JSON.stringify(config, null, 2) + '\n'),
     writeFile(path.join(output, 'firestore.rules'), rules),

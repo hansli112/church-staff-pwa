@@ -7,7 +7,9 @@ import '../../../../core/config/church_config.dart';
 import '../../../../core/time/church_time.dart';
 import '../../../../core/services/app_update_service.dart';
 import '../../../../core/services/app_version_service.dart';
+import '../../../../core/services/external_link_service.dart';
 import '../../../../core/services/push_notification_service.dart';
+import '../../../../core/services/release_check_service.dart';
 import '../../../../core/utils/error_messages.dart';
 import '../../domain/entities/user.dart';
 import '../providers/session_provider.dart';
@@ -22,11 +24,13 @@ class ProfileScreen extends StatefulWidget {
     super.key,
     this.updateService = const AppUpdateService(),
     this.versionService = const AppVersionService(),
+    this.releaseService = const ReleaseCheckService(),
   });
 
-  /// 這兩個注入點只是為了測試 —— 正式環境永遠是預設那個。
+  /// 這幾個注入點只是為了測試 —— 正式環境永遠是預設那個。
   final AppUpdateService updateService;
   final AppVersionService versionService;
+  final ReleaseCheckService releaseService;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -39,6 +43,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isCheckingUpdate = false;
   late final Future<AppVersionInfo?> _versionInfoFuture = widget.versionService
       .fetchVersionInfo();
+
+  /// 精靈裝的網站、而且 GitHub 上有比較新的 release 時才有值。
+  /// 只給管理員看：一般同工看到「有新版本」也做不了什麼。
+  late final Future<(ReleaseInfo, String)?> _newRelease = () async {
+    final info = await _versionInfoFuture;
+    if (info == null || !info.isInstallerSite) return null;
+    final latest = await widget.releaseService.fetchLatest();
+    if (latest == null || !isNewerRelease(latest.version, info.release)) {
+      return null;
+    }
+    return (latest, info.release!);
+  }();
 
   /// 「檢查更新」。
   ///
@@ -255,6 +271,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           // Admin Actions
           if (session.isAdmin) ...[
             const Divider(),
+            FutureBuilder<(ReleaseInfo, String)?>(
+              future: _newRelease,
+              builder: (context, snapshot) {
+                final found = snapshot.data;
+                if (found == null) return const SizedBox.shrink();
+                return _NewReleaseTile(release: found.$1, current: found.$2);
+              },
+            ),
             ListTile(
               leading: const Icon(Icons.manage_accounts),
               title: const Text('帳號管理'),
@@ -402,5 +426,70 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return DateFormat(
       'yyyy/MM/dd HH:mm',
     ).format(ChurchTime.inZone(info!.generatedAt));
+  }
+}
+
+/// 「有新版本」。點下去開更新教學：更新要在 Cloud Shell 跑精靈，App 自己做不到。
+class _NewReleaseTile extends StatelessWidget {
+  const _NewReleaseTile({required this.release, required this.current});
+
+  final ReleaseInfo release;
+  final String current;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final guideUrl = release.guideUrl;
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: theme.colorScheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.system_update,
+                  color: theme.colorScheme.onPrimaryContainer,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '有新版本可以更新',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: theme.colorScheme.onPrimaryContainer,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '目前 $current，最新 ${release.version}。只有管理員看得到這則提醒。',
+              style: TextStyle(color: theme.colorScheme.onPrimaryContainer),
+            ),
+            if (release.notes.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              for (final note in release.notes)
+                Text(
+                  '・$note',
+                  style: TextStyle(color: theme.colorScheme.onPrimaryContainer),
+                ),
+            ],
+            if (guideUrl != null)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => openExternalLink(guideUrl),
+                  child: const Text('怎麼更新'),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }

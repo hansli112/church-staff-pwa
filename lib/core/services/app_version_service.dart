@@ -4,9 +4,18 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 class AppVersionInfo {
-  const AppVersionInfo({required this.generatedAt});
+  const AppVersionInfo({required this.generatedAt, this.release, this.channel});
 
   final DateTime generatedAt;
+
+  /// release.json 的版本號，例如 2026.9.1。只有安裝精靈 build 的網站才有。
+  final String? release;
+
+  /// 'installer'：這個網站是安裝精靈裝的，只能靠精靈更新，不會跟著 Git 自動
+  /// 部署。管理員才需要被告知有新版本（見 ReleaseCheckService）。
+  final String? channel;
+
+  bool get isInstallerSite => channel == 'installer';
 }
 
 class AppVersionService {
@@ -43,7 +52,11 @@ class AppVersionService {
         generatedAt ??= _parseLastModified(response);
         if (generatedAt == null) continue;
 
-        return AppVersionInfo(generatedAt: generatedAt.toLocal());
+        return AppVersionInfo(
+          generatedAt: generatedAt.toLocal(),
+          release: data['release'] is String ? data['release'] as String : null,
+          channel: data['channel'] is String ? data['channel'] as String : null,
+        );
       } catch (_) {
         continue;
       }

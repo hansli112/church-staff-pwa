@@ -72,7 +72,11 @@ test('core build isolates source, uses per-run output and shares staging/finaliz
   assert.ok(sw.includes('dummy-public-web-key'));
   const publicFiles = await readdir(result.buildDir);
   for (const name of ['firebase-config.json', 'church.json', '.installer-build', 'firestore.rules']) assert.ok(!publicFiles.includes(name));
-  assert.equal(JSON.parse(await readFile(path.join(result.buildDir, 'version.json'))).branch, 'main');
+  const version = JSON.parse(await readFile(path.join(result.buildDir, 'version.json')));
+  assert.equal(version.branch, 'main');
+  assert.equal(version.channel, 'installer');
+  assert.equal(version.release, JSON.parse(await readFile(path.join(ROOT, 'release.json'), 'utf8')).version);
+  assert.ok(publicFiles.includes('church-config.json'));
   assert.ok(!JSON.stringify(context.checkpoint).includes('dummy-public-web-key'));
 });
 
@@ -151,3 +155,37 @@ test('the tutorial launch card is one line, because Cloud Shell rewrites newline
   assert.match(cards[0], /pull -q --ff-only origin main;/);
 });
 
+
+test('update icons replace the neutral set and change the build version', async (t) => {
+  const plain = await fixture(t);
+  const neutral = await buildCoreDeployment(plain.context, plain.options);
+  const custom = await fixture(t);
+  const png = (size) => {
+    const bytes = Buffer.alloc(64);
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(bytes);
+    bytes.write('IHDR', 12, 'latin1');
+    bytes.writeUInt32BE(size, 16);
+    bytes.writeUInt32BE(size, 20);
+    return bytes;
+  };
+  custom.context.icons = { 'favicon.png': png(32), 'icons/Icon-192.png': png(192), 'icons/Icon-512.png': png(512), 'icons/Icon-maskable-192.png': png(192), 'icons/Icon-maskable-512.png': png(512) };
+  const result = await buildCoreDeployment(custom.context, custom.options);
+  assert.notEqual(result.buildVersion, neutral.buildVersion);
+  assert.ok((await readFile(path.join(result.buildDir, 'icons/Icon-512.png'))).equals(png(512)));
+  const wrong = await fixture(t);
+  wrong.context.icons = { ...custom.context.icons, 'icons/Icon-512.png': png(256) };
+  await assert.rejects(buildCoreDeployment(wrong.context, wrong.options), /不是 512×512 的 PNG/);
+});
+
+test('an update whose build matches the live site stops before Flutter runs', async (t) => {
+  const first = await fixture(t);
+  const built = await buildCoreDeployment(first.context, first.options);
+  const again = await fixture(t);
+  again.context.plan.runId = first.context.plan.runId;
+  again.context.liveBuildVersion = built.buildVersion;
+  const result = await buildCoreDeployment(again.context, again.options);
+  assert.equal(result.unchanged, true);
+  assert.equal(again.context.transient.unchanged, true);
+  assert.ok(again.context.transient.deploymentDir);
+  assert.ok(!again.calls.some(({ args }) => args[0] === 'build'));
+});

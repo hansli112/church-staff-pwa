@@ -14,7 +14,7 @@ const equal = (left, right) => {
   return a.length === b.length && timingSafeEqual(a, b);
 };
 
-async function jsonBody(request) {
+async function jsonBody(request, limit = 64 * 1024) {
   if (!/^application\/json(?:\s*;.*)?$/i.test(request.headers['content-type'] ?? '')) {
     throw Object.assign(new Error('只接受 JSON 請求'), { httpStatus: 415 });
   }
@@ -22,7 +22,7 @@ async function jsonBody(request) {
   const chunks = [];
   for await (const chunk of request) {
     bytes += chunk.length;
-    if (bytes > 64 * 1024) throw Object.assign(new Error('請求內容過大'), { httpStatus: 413 });
+    if (bytes > limit) throw Object.assign(new Error('請求內容過大'), { httpStatus: 413 });
     chunks.push(chunk);
   }
   try {
@@ -135,7 +135,8 @@ export async function startInstallerServer({
       if (request.method === 'GET' && url.pathname === '/api/runs') return send(response, 200, await manager.listRuns());
       if (request.method !== 'POST') return send(response, 405, { message: '不支援此操作' });
       if (!equal(request.headers['x-installer-csrf'], session.csrf)) return send(response, 403, { message: '工作階段驗證失敗' });
-      const input = await jsonBody(request);
+      // Only the logo upload carries images (five PNGs, base64): about 1 MB at most.
+      const input = await jsonBody(request, url.pathname === '/api/update/icons' ? 4 * 1024 * 1024 : undefined);
       if (url.pathname === '/api/cancel') {
         manager.cancel();
         return send(response, 200, { accepted: true });
@@ -147,6 +148,10 @@ export async function startInstallerServer({
       else if (url.pathname === '/api/plan') return send(response, 200, await manager.plan(input));
       else if (url.pathname === '/api/resume') return send(response, 200, await manager.load(input.runId));
       else if (url.pathname === '/api/apply') task = manager.apply(input);
+      else if (url.pathname === '/api/update/find') task = manager.findInstalls();
+      else if (url.pathname === '/api/update/plan') return send(response, 200, await manager.planUpdate(input) ?? { accepted: true });
+      else if (url.pathname === '/api/update/icons') return send(response, 200, await manager.setUpdateIcons(input) ?? { accepted: true });
+      else if (url.pathname === '/api/update/apply') task = manager.applyUpdate(input);
       else return send(response, 404, { message: '找不到操作' });
       // Progress and typed errors are read through /api/state, never raw subprocess output.
       void task.catch(() => {});

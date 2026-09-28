@@ -61,6 +61,49 @@
       </details>
     </section>
 
+    <section id="update-section" aria-labelledby="update-heading">
+      <div class="section-heading"><span class="number">↻</span><h2 id="update-heading">已經裝過了？更新到新版本</h2></div>
+      <p>把之前用這個精靈裝的網站，更新到最新版本。<strong>資料、帳號和服事表都不會變</strong>，只會換新網站程式和資料存取規則。第一次安裝請跳過這一段，直接填下面的教會資料。</p>
+      <p id="release-line" class="hint" hidden></p>
+      <button id="find-installs" type="button">尋找已安裝的網站</button>
+      <div id="installs" class="installs"></div>
+      <div id="update-confirm" hidden>
+        <dl id="update-summary"></dl>
+        <details id="update-options" class="options">
+          <summary>換教會 Logo、設定自訂網址（選填）</summary>
+          <h3>教會 Logo</h3>
+          <p id="icon-source" class="hint"></p>
+          <div class="logo-row">
+            <label>選一張圖片（PNG 或 JPG，正方形最好）<input id="logo-file" type="file" accept="image/png,image/jpeg,image/webp"></label>
+            <label>底色<input id="logo-background" type="color" value="#ffffff"></label>
+          </div>
+          <div id="logo-preview" class="logo-preview" hidden>
+            <figure><canvas id="logo-preview-icon" width="96" height="96"></canvas><figcaption>一般圖示</figcaption></figure>
+            <figure><canvas id="logo-preview-mask" width="96" height="96" class="round"></canvas><figcaption>Android 圓形</figcaption></figure>
+          </div>
+          <button id="logo-reset" type="button" class="link-button">改回預設圖示</button>
+          <p class="hint">手機上已經加到主畫面的圖示不會自動換；想換的話，刪掉桌面圖示再重新加一次。</p>
+          <h3>自訂網址</h3>
+          <label>你們的網址<input id="custom-domain" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="例如：staff.hope-church.org"></label>
+          <p class="hint">需要教會自己有網域，而且有人能改它的 DNS 設定。只能用子網域（例如 staff.hope-church.org），不能只填 hope-church.org。沒有的話留空，繼續用原本的 .pages.dev 網址。</p>
+        </details>
+        <label class="check"><input id="confirm-update" type="checkbox"><span id="confirm-update-label">確認要更新這個網站。</span></label>
+        <div class="actions"><button id="apply-update" type="button" class="primary">開始更新</button><button id="cancel-update" type="button" class="secondary" hidden>停止更新</button></div>
+        <p class="hint">建置新版網站大約要 10–20 分鐘，這段時間舊版網站照常可以用。中途停止或失敗都不會影響舊版，重新按「開始更新」即可。</p>
+        <ol id="update-steps" class="steps"></ol>
+      </div>
+      <div id="update-done" class="notice" hidden>
+        <p id="update-done-message"></p>
+        <div id="domain-instructions" hidden>
+          <p><strong>還差一步：設定自訂網址的 DNS</strong></p>
+          <p>請到管理 <code id="dns-zone"></code> 網域的地方（網域註冊商，或 Cloudflare 的 DNS 頁面），新增一筆記錄：</p>
+          <dl class="handoff"><dt>類型</dt><dd>CNAME</dd><dt>名稱</dt><dd><code id="dns-name"></code>（有些地方要填完整的 <code id="dns-full"></code>）</dd><dt>目標／內容</dt><dd><code id="dns-target"></code></dd></dl>
+          <p class="hint">加好之後通常幾分鐘到幾小時生效，生效前請繼續用原本的網址。想確認有沒有生效，之後重新跑一次更新就會顯示狀態。</p>
+        </div>
+        <a id="update-website" class="button primary" target="_blank" rel="noopener noreferrer">開啟網站</a>
+      </div>
+    </section>
+
     <section id="settings-section" aria-labelledby="settings-heading">
       <div class="section-heading"><span class="number">2</span><h2 id="settings-heading">填寫教會資料</h2></div>
       <form id="settings-form">

@@ -75,13 +75,14 @@ function cloudError(status, error = {}, authSetup = false) {
 
 // One step's view of the plan: derived resource names, a short-lived token
 // refreshed on demand, and the checkpoint helpers every step shares.
-function openStepSession(context, { fetchImpl, command, delay, now, inspectIdentity }) {
+function openStepSession(context, { fetchImpl, command, delay, now, inspectIdentity }, { update = false } = {}) {
   const { plan, signal } = context;
+  // An update has no admin to create and reads the region from the database.
   if (!projectPattern.test(plan?.projectId ?? '') || !emailPattern.test(plan?.googleEmail ?? '') ||
       typeof plan.runId !== 'string' || !/^[a-zA-Z0-9_-]{8,100}$/.test(plan.runId) ||
-      !/^[a-z][a-z0-9-]{1,40}$/.test(plan.region ?? '') ||
       !/^[a-z0-9][a-z0-9-]{0,57}[a-z0-9]$/.test(plan.pagesProject ?? '') ||
-      !emailPattern.test(plan.admin?.email ?? '') || !plan.admin?.name || !plan.admin?.username) {
+      (!update && (!/^[a-z][a-z0-9-]{1,40}$/.test(plan.region ?? '') ||
+        !emailPattern.test(plan.admin?.email ?? '') || !plan.admin?.name || !plan.admin?.username))) {
     stop('GOOGLE_INVALID_PLAN', '安裝計畫的專案、地區或管理員資料無效；未讀取憑證或連線。');
   }
   const serviceIds = enabledServiceIds(plan.churchConfig);
@@ -679,6 +680,84 @@ async function sendActivation(s) {
   return { activation: { sent: true } };
 }
 
+// ---------------------------------------------------------------------------
+// Update mode. The project is proven to be this install's by the label the
+// create step wrote (derived from the private run id, which only the Pages
+// project's env vars and the install record know). Nothing is created; data,
+// Auth users and settings are never read beyond what is needed here.
+// ---------------------------------------------------------------------------
+
+async function installedProject(s) {
+  const value = await s.request('cloudresourcemanager', `/v3/${s.project}`);
+  if (value.projectId !== s.projectId || value.labels?.['church-install'] !== s.runLabel || value.state !== 'ACTIVE' ||
+      !/^projects\/\d+$/.test(value.name ?? '')) {
+    conflict('這個 Google 專案不是安裝精靈為這個網站建立的，或已被關閉；不會更新。');
+  }
+  return value;
+}
+
+// Read back the web app config the build needs; no write.
+async function inspectInstalled(s) {
+  const { context, owned, projectId, project, database, runLabel, request } = s;
+  const db = await request('firestore', `/v1/${encodedName(database)}`);
+  if (db.name !== database || db.type !== 'FIRESTORE_NATIVE') conflict('Firestore 資料庫不是安裝精靈建立的樣子；不會更新。');
+  const apps = await request('firebase', `/v1beta1/${project}/webApps?pageSize=2`);
+  const app = apps.apps?.length === 1 ? apps.apps[0] : null;
+  if (apps.nextPageToken || !app || app.displayName !== `Church install ${runLabel}` || app.state !== 'ACTIVE' ||
+      !/^[a-zA-Z0-9:_-]+$/.test(app.appId ?? '') || app.name !== `${project}/webApps/${app.appId}`) {
+    conflict('Firebase 網站設定不是安裝精靈建立的樣子；不會更新。');
+  }
+  const config = await request('firebase', `/v1beta1/${encodedName(app.name)}/config`);
+  if (config.projectId !== projectId || config.appId !== app.appId || typeof config.apiKey !== 'string' || !config.apiKey ||
+      String(config.messagingSenderId) !== owned.name.split('/')[1]) conflict('Firebase Web 設定與這個專案不一致；未繼續建置。');
+  context.transient.firebaseConfig = Object.fromEntries(['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId']
+    .filter((key) => config[key] !== undefined).map((key) => [key, config[key]]));
+  return { region: db.locationId };
+}
+
+// Replace the live rules only if they are this install's (first line carries
+// its label), and only when the generated rules actually differ.
+async function updateRules(s) {
+  const { project, runLabel, request, context } = s;
+  const files = await generatedRules(s);
+  const desired = fingerprint(files);
+  const current = await liveRules(s);
+  const first = current.ruleset?.source?.files?.[0]?.content ?? '';
+  if (!current.release || current.ruleset.source.files.length !== 1 || !first.startsWith(`// church-install: ${runLabel}\n`)) {
+    conflict('Firestore 規則不是安裝精靈發布的（可能被手動改過）；為避免蓋掉別人的設定，已停止。');
+  }
+  if (fingerprint(current.ruleset.source.files) === desired) return { rules: { unchanged: true } };
+  const created = await request('firebaserules', `/v1/${project}/rulesets`, { method: 'POST', body: { source: { files } } });
+  rulesetPath(s, created.name);
+  await installedProject(s);
+  // No compare-and-set exists for releases: re-read right before replacing.
+  if (fingerprint(await liveRules(s)) !== fingerprint(current)) conflict('Firestore 規則在更新中被其他操作變更；未覆寫。');
+  const releaseName = releaseNameOf(s);
+  await request('firebaserules', `/v1/${releaseName}`, { method: 'PATCH', body: { release: { name: releaseName, rulesetName: created.name } } });
+  const after = await liveRules(s);
+  if (fingerprint(after.ruleset?.source?.files) !== desired) conflict('規則更新後的核對結果不同；請檢查 Firebase Console。');
+  context.emit?.({ message: '已更新資料存取規則；Firebase 可能需要幾分鐘才完全生效。' });
+  return { rules: { unchanged: false } };
+}
+
+// Let Firebase Auth accept the church's own address too. Only ever adds.
+async function authorizeCustomDomain(s) {
+  const { plan, configPath, request, getAuthConfig } = s;
+  const domain = plan.customDomain;
+  if (typeof domain !== 'string' || !/^[a-z0-9.-]{4,253}$/.test(domain)) stop('GOOGLE_INVALID_PLAN', '自訂網址格式不符。');
+  const before = (await getAuthConfig()).authorizedDomains ?? [];
+  if (!Array.isArray(before) || before.some((value) => typeof value !== 'string')) conflict();
+  if (!before.includes(domain)) {
+    await installedProject(s);
+    await request('identitytoolkit', `${configPath}?updateMask=authorizedDomains`, { method: 'PATCH', body: { authorizedDomains: [...before, domain] }, authSetup: true });
+    const after = (await getAuthConfig()).authorizedDomains ?? [];
+    if (!after.includes(domain) || before.some((value) => !after.includes(value))) conflict('登入網域更新後的核對結果不同；請檢查 Firebase Console。');
+  }
+  return { authDomains: { domain } };
+}
+
+const UPDATE_HANDLERS = { inspect: inspectInstalled, rules: updateRules, domain: authorizeCustomDomain };
+
 const STEP_HANDLERS = {
   'google-project': createProject,
   'firebase': enableFirebase,
@@ -751,8 +830,17 @@ export function createGoogleInstaller({
     s.owned = await s.ownedProject();
     return STEP_HANDLERS[step](s);
   }
-  async function execute(step, context) {
-    try { return await executeStep(step, context); }
+  async function updateStep(step, context) {
+    if (!UPDATE_HANDLERS[step]) stop('GOOGLE_INVALID_STEP', '不支援的更新步驟。');
+    const s = openStepSession(context, { fetchImpl, command, delay, now, inspectIdentity }, { update: true });
+    await s.credentials();
+    s.owned = await installedProject(s);
+    return UPDATE_HANDLERS[step](s);
+  }
+  const update = (step, context) => withHelp(context, () => updateStep(step, context));
+  const execute = (step, context) => withHelp(context, () => executeStep(step, context));
+  async function withHelp(context, run) {
+    try { return await run(); }
     catch (error) {
       if (error instanceof ActionRequired && projectPattern.test(context?.plan?.projectId ?? '')) {
         const id = encodeURIComponent(context.plan.projectId);
@@ -769,5 +857,5 @@ export function createGoogleInstaller({
       throw error;
     }
   }
-  return { inspectIdentity, authorize, execute };
+  return { inspectIdentity, authorize, execute, update };
 }

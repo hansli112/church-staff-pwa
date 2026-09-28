@@ -1,0 +1,10 @@
+{
+  "version": "2026.9.1",
+  "date": "2026-09-28",
+  "notes": [
+    "登入頁可以自己按「忘記密碼？」重設密碼",
+    "首頁會教同工把網站加到手機桌面",
+    "從 LINE 點開時，會改用手機的瀏覽器開啟"
+  ],
+  "guideUrl": "https://github.com/hansli112/church-staff-pwa/blob/main/docs/install-cloud-shell.md#7-更新到新版本"
+}

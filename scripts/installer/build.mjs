@@ -5,9 +5,18 @@ import { fileURLToPath } from 'node:url';
 import { prepareDeployment, validateChurchConfig } from '../prepare-deployment.mjs';
 import { FIREBASE_KEYS, finalizeWebDeployment, OPTIONAL_FIREBASE_KEYS as OPTIONAL } from '../finalize-web-deployment.mjs';
 import { privateEnvironment, runIsolatedCommand } from './process.mjs';
-import { CORE_ICONS, FLUTTER_VERSION, installationError, isPrivateDirectory, verifyBuildArtifacts, WRANGLER_VERSION } from './shared.mjs';
+import { checkPng, CORE_ICONS, FLUTTER_VERSION, ICON_SIZES, installationError, isPrivateDirectory, verifyBuildArtifacts, WRANGLER_VERSION } from './shared.mjs';
 
 export { FLUTTER_VERSION };
+
+// The app compares this with the latest release.json on GitHub to tell an
+// installer site's admin that an update exists (see ReleaseCheckService).
+export async function readRelease(root = ROOT) {
+  let release;
+  try { release = JSON.parse(await readFile(path.join(root, 'release.json'), 'utf8')); } catch { /* Fixed error below. */ }
+  if (typeof release?.version !== 'string' || !/^\d{4}\.\d{1,2}\.\d{1,3}$/.test(release.version)) throw buildError('release.json 缺少有效的版本號。');
+  return release.version;
+}
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const buildError = (message) => installationError(message, 'BUILD_FAILED');
@@ -89,11 +98,22 @@ export async function buildCoreDeployment(context, { command = runIsolatedComman
   if (version !== FLUTTER_VERSION) throw buildError(`需要 Flutter ${FLUTTER_VERSION}，請由 Cloud Shell 安裝入口重開。`);
   if ((await run(wrangler, ['--version'])).trim() !== WRANGLER_VERSION) throw buildError(`需要 Wrangler ${WRANGLER_VERSION}。`);
   emit({ type: 'progress', step: 'build', message: '正在準備隔離的核心功能建置；不修改原始程式或正式設定。' });
-  const hash = createHash('sha256').update(JSON.stringify({ runId: plan.runId, config, firebase }));
+  const release = await readRelease(root);
+  const hash = createHash('sha256').update(JSON.stringify({ runId: plan.runId, config, firebase, release }));
   for (const name of ['lib', 'web', 'pubspec.yaml', 'pubspec.lock', 'analysis_options.yaml']) await safeCopy(path.join(root, name), path.join(workspace, name), hash, name);
   await mkdir(path.join(workspace, 'scripts'), { mode: 0o700 });
   await safeCopy(path.join(root, 'scripts/generate-neutral-icons.mjs'), path.join(workspace, 'scripts/generate-neutral-icons.mjs'), hash, 'scripts/generate-neutral-icons.mjs');
   await run(process.execPath, [path.join(workspace, 'scripts/generate-neutral-icons.mjs')]);
+  // Update mode: the church's own logo, or the icons its site already has.
+  // Same paths as the neutral set, so the config's icon paths never change.
+  if (context.icons) {
+    for (const [name, size] of Object.entries(ICON_SIZES)) {
+      const bytes = checkPng(context.icons[name], size);
+      if (!bytes) throw buildError(`圖示 ${name} 不是 ${size}×${size} 的 PNG。`);
+      await writeFile(path.join(workspace, 'web', name), bytes, { mode: 0o600 });
+      hash.update(`icon:${name}`).update('\0').update(bytes).update('\0');
+    }
+  }
   const configPath = path.join(runDir, 'church.json');
   const firebasePath = path.join(runDir, 'firebase-config.json');
   await writeFile(configPath, JSON.stringify(config, null, 2) + '\n', { mode: 0o600 });
@@ -103,9 +123,16 @@ export async function buildCoreDeployment(context, { command = runIsolatedComman
   // Worker and rules must participate in the stable cache/build identity too.
   for (const name of ['worker', 'functions', 'firestore.rules']) await safeCopy(path.join(stagingDir, name), path.join(workspace, name), hash, name);
   const buildVersion = `installer-${hash.digest('hex').slice(0, 24)}`;
+  // Update mode: the live site already runs exactly this source and config.
+  // The staged rules are still handed on, so the rules step can check them.
+  if (context.liveBuildVersion && context.liveBuildVersion === buildVersion) {
+    Object.assign(transient, { deploymentDir: stagingDir, buildVersion, unchanged: true });
+    return { buildVersion, deploymentDir: stagingDir, unchanged: true };
+  }
   const generatedAt = context.checkpoint?.intents?.build?.generatedAt || plan.createdAt || new Date().toISOString();
   await save({ intents: { build: { buildVersion, generatedAt, flutterVersion: FLUTTER_VERSION, wranglerVersion: WRANGLER_VERSION } } });
-  await writeFile(path.join(workspace, 'web/version.json'), JSON.stringify({ version: buildVersion, build_number: plan.runId, branch: 'main', generated_at: generatedAt }) + '\n');
+  // channel tells the app it cannot update itself from Git: only this wizard can.
+  await writeFile(path.join(workspace, 'web/version.json'), JSON.stringify({ version: buildVersion, build_number: plan.runId, branch: 'main', generated_at: generatedAt, release, channel: 'installer' }) + '\n');
   await run(flutter, ['pub', 'get', '--enforce-lockfile'], 600_000);
   await run(flutter, ['build', 'web', '--release', '--base-href', '/', '--no-web-resources-cdn', '--output', buildDir, `--dart-define-from-file=${path.join(stagingDir, 'dart-defines.json')}`, `--dart-define-from-file=${firebasePath}`], 1_200_000);
   for (const name of ['index.html', 'main.dart.js', 'flutter_bootstrap.js', 'cache_sw.js', 'version.json', 'canvaskit/canvaskit.wasm']) await requiredFile(buildDir, name);
