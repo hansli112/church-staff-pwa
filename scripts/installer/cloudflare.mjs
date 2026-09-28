@@ -111,7 +111,7 @@ export function createCloudflareInstaller({ command = runIsolatedCommand, fetchI
         shown = true;
         // The wizard stops waiting at loginTimeoutMs; approving later cannot finish this login.
         emit({ type: 'authorization', provider: 'cloudflare', ...prompt, expiresInMs: Math.max(0, loginTimeoutMs - 10_000),
-          message: '請前往 Cloudflare 官方頁面，確認下列裝置碼並授權。' });
+          message: '請按「開啟官方授權頁」，在 Cloudflare 頁面輸入下列代碼，再按 Authorize。' });
       }
     };
     try {

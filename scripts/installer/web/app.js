@@ -179,6 +179,8 @@ function renderUpdate(state) {
   const update = state.update;
   const installing = Boolean(state.plan) && state.status !== 'complete';
   $('update-section').hidden = installing;
+  // Collapsed for first installs; once someone is updating, keep it open.
+  if ((state.installs || update) && !$('update-panel').open) $('update-panel').open = true;
   $('find-installs').disabled = state.busy || !state.identity.googleEmail || !state.identity.accounts.length || update?.status === 'running';
   $('release-line').hidden = !state.release;
   if (state.release) {

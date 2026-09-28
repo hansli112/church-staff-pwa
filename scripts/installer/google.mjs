@@ -136,7 +136,7 @@ function openStepSession(context, { fetchImpl, command, delay, now, inspectIdent
     if (!token || /\s/.test(token)) stop('GOOGLE_AUTH_REQUIRED', 'Google 短期授權無效；請重新完成官方授權。');
     checkedAt = now();
   }
-  async function request(host, pathname, { method = 'GET', body, missing = false, authSetup = false, readOnly = method === 'GET', beforeSend } = {}) {
+  async function request(host, pathname, { method = 'GET', body, missing = false, authSetup = false, readOnly = method === 'GET', beforeSend, locale } = {}) {
     if (!hosts.has(host) || !pathname.startsWith('/') || /[\r\n#]/.test(pathname)) stop('GOOGLE_INVALID_TARGET', 'Google API 目標無效。');
     for (let attempt = 0; attempt < 4; attempt++) {
       signal?.throwIfAborted();
@@ -148,7 +148,8 @@ function openStepSession(context, { fetchImpl, command, delay, now, inspectIdent
       try {
         response = await fetchImpl(`https://${host}.googleapis.com${pathname}`, {
           method, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json',
-            ...(quotaProjectHosts.has(host) ? { 'x-goog-user-project': projectId } : {}) },
+            ...(quotaProjectHosts.has(host) ? { 'x-goog-user-project': projectId } : {}),
+            ...(locale ? { 'X-Firebase-Locale': locale } : {}) },
           ...(body === undefined ? {} : { body: JSON.stringify(body) }), redirect: 'error',
           signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(30_000)]) : AbortSignal.timeout(30_000),
         });
@@ -301,7 +302,7 @@ function openStepSession(context, { fetchImpl, command, delay, now, inspectIdent
     return config;
   }
   return {
-    plan, context, signal, now, serviceIds, projectId, project, database, documents, authPath, configPath, runLabel, adminUid,
+    plan, context, signal, now, delay: (ms) => delay(ms, signal), serviceIds, projectId, project, database, documents, authPath, configPath, runLabel, adminUid,
     token: () => token, pagesDomain, save, resource, intent, begin, credentials, request, operationPath, wait, createOrWait,
     checkProject, ownedProject, noOtherData, checkAuthUser, onlyOwnAuth, getAuthConfig,
   };
@@ -386,8 +387,30 @@ async function enableFirebase(s) {
   return { firebase: { projectId } };
 }
 
-// Create the (default) Native Firestore database in the confirmed region.
+// A brand-new project's IAM takes a minute or two to reach Firestore, which
+// meanwhile answers 403 PERMISSION_DENIED. That is not a missing permission
+// (a personal Gmail has no organisation to ask), so wait it out, and if it
+// still lasts, say so instead of sending people to an administrator.
+const NEW_PROJECT_GRACE_MS = 15 * 60_000;
 async function createDatabase(s) {
+  const created = Date.parse(s.resource('googleProject')?.createTime ?? '');
+  const young = () => Number.isFinite(created) && s.now() - created < NEW_PROJECT_GRACE_MS;
+  for (let attempt = 0; ; attempt++) {
+    try { return await createDatabaseOnce(s); }
+    catch (error) {
+      const propagating = error instanceof ActionRequired && error.code === 'GOOGLE_PERMISSION_REQUIRED' && error.rejected && young();
+      if (!propagating) throw error;
+      if (attempt >= 7) {
+        stop('GOOGLE_API_PROPAGATING', 'Google 還在替剛建立的新專案開通權限，通常 1–3 分鐘。這不是你的帳號有問題，不用改任何設定；請稍候再按「稍後接續安裝」。');
+      }
+      s.context.emit?.({ message: `Google 正在替新專案開通資料庫權限，稍候自動重試（第 ${attempt + 1} 次）…` });
+      await s.delay(15_000);
+    }
+  }
+}
+
+// Create the (default) Native Firestore database in the confirmed region.
+async function createDatabaseOnce(s) {
   const { plan, project, database, save, resource, intent, begin, request, operationPath, wait, createOrWait, noOtherData } = s;
   let listing = await request('firestore', `/v1/${project}/databases`);
   if (listing.unreachable?.length || (listing.databases ?? []).some((db) => db.name !== database)) conflict('此專案已有非預期資料庫；首次安裝不會接管。');
@@ -659,6 +682,25 @@ async function authorizeDomain(s) {
   return { authDomains: { domain } };
 }
 
+// Show the church's name as the sender of Firebase's password mails, instead
+// of a bare noreply address. Best effort: a refusal never stops the install,
+// it only leaves Firebase's default sender.
+async function nameMailSender(s) {
+  const { plan, configPath, request, getAuthConfig } = s;
+  const name = String(plan.churchConfig?.appName ?? '').replace(/[\x00-\x1f<>"]/g, '').slice(0, 60).trim();
+  if (!name) return;
+  try {
+    const current = (await getAuthConfig()).notification?.sendEmail?.resetPasswordTemplate?.senderDisplayName;
+    if (current === name) return;
+    await request('identitytoolkit', `${configPath}?updateMask=notification.sendEmail.resetPasswordTemplate.senderDisplayName`, {
+      method: 'PATCH', authSetup: true, body: { notification: { sendEmail: { resetPasswordTemplate: { senderDisplayName: name } } } },
+    });
+  } catch (error) {
+    if (!(error instanceof ActionRequired)) throw error;
+    s.context.emit?.({ message: '寄件者名稱沒有設定成功，信件會用 Firebase 預設的寄件者；不影響安裝。' });
+  }
+}
+
 // Ask Firebase to send the admin a password-setup email, at most once.
 async function sendActivation(s) {
   const { plan, authPath, adminUid, pagesDomain, save, resource, intent, begin, request, noOtherData, onlyOwnAuth, getAuthConfig } = s;
@@ -669,10 +711,13 @@ async function sendActivation(s) {
   await noOtherData();
   if (!(await getAuthConfig()).authorizedDomains?.includes(domain)) conflict();
   if (!resource('activation')?.sent) {
-    if (intent('activation')) stop('ACTIVATION_DELIVERY_UNKNOWN', '上次寄信是否被接受無法確定，為避免重複寄信已停止。請先檢查信箱／垃圾信；若仍未收到，請到本次 Firebase Console 的 Authentication → Users，核對指定管理員 email 後選擇寄送密碼重設信。不要另建管理員。');
+    await nameMailSender(s);
+    if (intent('activation')) stop('ACTIVATION_DELIVERY_UNKNOWN', '上次寄信是否被接受無法確定，為避免重複寄信已停止。請先檢查信箱和垃圾郵件；若仍未收到，打開網站登入頁按「忘記密碼？」，輸入管理員 email 再寄一次。不要另建管理員。');
     await begin('activation', { uid: adminUid, state: 'sending' });
     // Firebase sends its own message. Never request/retain an OOB link/code.
-    await request('identitytoolkit', `${authPath}:sendOobCode`, { method: 'POST', body: {
+    // zh-TW picks Firebase's Chinese template; the default is English, which
+    // together with a project-id subject reads like a phishing mail.
+    await request('identitytoolkit', `${authPath}:sendOobCode`, { method: 'POST', locale: 'zh-TW', body: {
       requestType: 'PASSWORD_RESET', email: user.email, returnOobLink: false, continueUrl: `https://${domain}/`,
     } });
     await save('resources', 'activation', { sent: true });
@@ -846,7 +891,6 @@ export function createGoogleInstaller({
         const id = encodeURIComponent(context.plan.projectId);
         const links = {
           AUTH_SETUP_REQUIRED: `https://console.firebase.google.com/project/${id}/authentication`,
-          ACTIVATION_DELIVERY_UNKNOWN: `https://console.firebase.google.com/project/${id}/authentication/users`,
           GOOGLE_FREE_TIER_REQUIRED: `https://console.firebase.google.com/project/${id}/overview`,
           GOOGLE_PERMISSION_REQUIRED: `https://console.cloud.google.com/iam-admin/iam?project=${id}`,
           GOOGLE_QUOTA_REQUIRED: `https://console.cloud.google.com/iam-admin/quotas?project=${id}`,

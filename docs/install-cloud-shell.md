@@ -21,6 +21,8 @@
 
 ## 1. 啟動精靈
 
+> **畫面左邊那一大排資料夾和檔案不用理它**，那是程式本身。整個安裝只會用到右邊這份教學，和下方的黑色終端機。
+
 > **Cloud Shell 一打開可能就跳出「授權 Cloud Shell」視窗，請按「授權」。** 這是 Google 官方的視窗，讓 Cloud Shell 用你自己的 Google 帳號建立專案；按「拒絕」會讓後面的步驟無法進行。之後若再出現同樣的視窗，也一樣按「授權」。
 
 **不用找程式在哪個資料夾**。按下方指令卡右上角的「在終端機執行」圖示（小終端機），然後在黑色終端機按一次 Enter。它會尋找已下載的程式；如果沒有，就從 GitHub 下載後啟動。只需做這一次，不要逐字輸入指令。
@@ -40,7 +42,8 @@ bash -c 'd=; [ -f scripts/start-installation.sh ] && d=$PWD; [ -z "$d" ] && s=$(
 在精靈頁面：
 
 1. 按「連接 Google」，接著切到 Cloud Shell 分頁。出現「Authorize Cloud Shell」時按 **Authorize**，選這次要用的 Google 帳號。沒出現就回精靈再按一次「連接 Google」。精靈會顯示已連接的帳號；**不是你要用的帳號就先停下**，照精靈上的說明切換帳號後重開教學。
-2. 按「連接 Cloudflare」，再按「開啟官方授權頁」。在 Cloudflare 官方網頁登入，**輸入精靈顯示的代碼**（頁面說的「terminal」指的就是精靈），按 Continue，再按 Authorize。代碼約 5 分鐘內有效，精靈會倒數；過期就再按一次「連接 Cloudflare」取得新代碼，不要授權舊代碼。
+2. 按「連接 Cloudflare」，再按「開啟官方授權頁」。在 Cloudflare 官方網頁**輸入精靈顯示的代碼**（頁面說的「terminal」指的就是精靈），按 Continue。還沒登入的話，這時才會請你登入，登入後按 **Authorize**。看到「Authorization granted」就完成了，頁面上其他說明（例如 AI 工具）都不用理。代碼約 5 分鐘內有效，精靈會倒數；過期就再按一次「連接 Cloudflare」取得新代碼，不要授權舊代碼。
+   - **還沒有 Cloudflare 帳號**：在登入頁按「Sign up」免費註冊，Cloudflare 會寄一封驗證信，點信裡的連結完成驗證。之後回到精靈，**重新按一次「連接 Cloudflare」**拿新的代碼。
 
 兩邊的密碼都只在 Google 與 Cloudflare 官方網頁輸入，精靈不會看到。
 

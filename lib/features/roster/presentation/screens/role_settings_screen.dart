@@ -204,128 +204,196 @@ class _RoleSettingsScreenState extends State<RoleSettingsScreen> {
     });
   }
 
+  /// 有沒有還沒按 ✓ 的變更。
+  bool get _hasUnsavedChanges {
+    final saved = context.read<RosterProvider>().templates;
+    for (final type in ServiceType.values) {
+      final editing = _editingTemplates[type] ?? const <String>[];
+      final original = saved[type] ?? const <String>[];
+      if (editing.length != original.length) return true;
+      for (var i = 0; i < editing.length; i++) {
+        if (editing[i] != original[i]) return true;
+      }
+    }
+    return false;
+  }
+
+  Future<void> _confirmDiscard() async {
+    final discard = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('還沒儲存'),
+        content: const Text('剛才的變更還沒儲存。要儲存的話，請按右上角 ✓。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('繼續編輯'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('不儲存，離開'),
+          ),
+        ],
+      ),
+    );
+    if (discard == true && mounted) Navigator.of(context).pop();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: ServiceType.values.length,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('服事項目設定'),
-          bottom: TabBar(
-            isScrollable: ServiceType.values.length > 3,
-            tabs: ServiceType.values
-                .map((type) => Tab(text: type.label))
-                .toList(),
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.check),
-              onPressed: () async {
-                final rosterProvider = context.read<RosterProvider>();
-                final userAdminProvider = context.read<UserAdminProvider>();
-                final messenger = ScaffoldMessenger.of(context);
-                // 失敗一律留在這頁：改到一半的設定還在，再按一次就能重送。
-                PartialUpdateException? partial;
-                try {
-                  await rosterProvider.updateTemplates(
-                    _editingTemplates,
-                    renamedRolesByType: _renamedRolesByType,
-                  );
-                } on PartialUpdateException catch (e) {
-                  // 樣板已經寫進去了，只是有幾天的服事表沒改到名。同工設定
-                  // 照樣要跟著新樣板清，不然兩邊對不上。
-                  partial = e;
-                } catch (e) {
-                  // 樣板沒寫進去就不清同工設定。以前寫失敗也照清，同工的服事
-                  // 被新樣板刪掉，樣板本身卻還是舊的。
-                  showWriteFailure(messenger, '儲存', e);
-                  return;
-                }
-                try {
-                  await userAdminProvider.cleanupUserMinistries(
-                    _editingTemplates,
-                  );
-                } catch (e) {
-                  showWriteFailure(messenger, '儲存', e);
-                  return;
-                }
-                if (partial != null) {
-                  showWriteFailure(
-                    messenger,
-                    '儲存',
-                    partial,
-                    partialNote: _partialSaveNote,
-                  );
-                  return;
-                }
-                if (!context.mounted) return;
-                Navigator.pop(context);
-              },
+    // 新增完項目按左上角返回，以前會不聲不響地丟掉。✓ 的 Navigator.pop
+    // 不經過 PopScope，存好之後照常離開。
+    return PopScope(
+      canPop: !_hasUnsavedChanges,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _confirmDiscard();
+      },
+      child: DefaultTabController(
+        length: ServiceType.values.length,
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('服事項目設定'),
+            bottom: TabBar(
+              isScrollable: ServiceType.values.length > 3,
+              tabs: ServiceType.values
+                  .map((type) => Tab(text: type.label))
+                  .toList(),
             ),
-          ],
-        ),
-        body: TabBarView(
-          children: ServiceType.values.map((type) {
-            final roles = _editingTemplates[type] ?? [];
-            final scrollController = _scrollControllers[type]!;
-            return Column(
-              children: [
-                Expanded(
-                  child: Scrollbar(
-                    controller: scrollController,
-                    thumbVisibility: true,
-                    trackVisibility: true,
-                    child: PrimaryScrollController(
-                      controller: scrollController,
-                      child: ReorderableListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: roles.length,
-                        onReorder: (oldIndex, newIndex) {
-                          setState(() {
-                            if (newIndex > oldIndex) {
-                              newIndex -= 1;
-                            }
-                            final item = roles.removeAt(oldIndex);
-                            roles.insert(newIndex, item);
-                            _editingTemplates[type] = List<String>.from(roles);
-                          });
-                        },
-                        itemBuilder: (context, index) {
-                          return ListTile(
-                            key: ValueKey('role_${type.name}_${roles[index]}'),
-                            title: Text(roles[index]),
-                            onTap: () => _promptEditRole(type, index),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline),
-                                  onPressed: () =>
-                                      _confirmRemoveRole(type, index),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.check),
+                onPressed: () async {
+                  final rosterProvider = context.read<RosterProvider>();
+                  final userAdminProvider = context.read<UserAdminProvider>();
+                  final messenger = ScaffoldMessenger.of(context);
+                  // 失敗一律留在這頁：改到一半的設定還在，再按一次就能重送。
+                  PartialUpdateException? partial;
+                  try {
+                    await rosterProvider.updateTemplates(
+                      _editingTemplates,
+                      renamedRolesByType: _renamedRolesByType,
+                    );
+                  } on PartialUpdateException catch (e) {
+                    // 樣板已經寫進去了，只是有幾天的服事表沒改到名。同工設定
+                    // 照樣要跟著新樣板清，不然兩邊對不上。
+                    partial = e;
+                  } catch (e) {
+                    // 樣板沒寫進去就不清同工設定。以前寫失敗也照清，同工的服事
+                    // 被新樣板刪掉，樣板本身卻還是舊的。
+                    showWriteFailure(messenger, '儲存', e);
+                    return;
+                  }
+                  try {
+                    await userAdminProvider.cleanupUserMinistries(
+                      _editingTemplates,
+                    );
+                  } catch (e) {
+                    showWriteFailure(messenger, '儲存', e);
+                    return;
+                  }
+                  if (partial != null) {
+                    showWriteFailure(
+                      messenger,
+                      '儲存',
+                      partial,
+                      partialNote: _partialSaveNote,
+                    );
+                    return;
+                  }
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+          body: TabBarView(
+            children: ServiceType.values.map((type) {
+              final roles = _editingTemplates[type] ?? [];
+              final scrollController = _scrollControllers[type]!;
+              return Column(
+                children: [
+                  // 新教會第一次打開是一片空白，連「新增項目」在左下角都不容易看到。
+                  if (roles.isEmpty)
+                    Expanded(
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Text(
+                            '這個聚會還沒有服事項目。\n按左下角「新增項目」加入，例如「招待」「司琴」，'
+                            '全部加好後按右上角 ✓ 儲存。',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                                 ),
-                                ReorderableDragStartListener(
-                                  index: index,
-                                  child: const Icon(Icons.drag_handle),
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    Expanded(
+                      child: Scrollbar(
+                        controller: scrollController,
+                        thumbVisibility: true,
+                        trackVisibility: true,
+                        child: PrimaryScrollController(
+                          controller: scrollController,
+                          child: ReorderableListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: roles.length,
+                            onReorder: (oldIndex, newIndex) {
+                              setState(() {
+                                if (newIndex > oldIndex) {
+                                  newIndex -= 1;
+                                }
+                                final item = roles.removeAt(oldIndex);
+                                roles.insert(newIndex, item);
+                                _editingTemplates[type] = List<String>.from(
+                                  roles,
+                                );
+                              });
+                            },
+                            itemBuilder: (context, index) {
+                              return ListTile(
+                                key: ValueKey(
+                                  'role_${type.name}_${roles[index]}',
                                 ),
-                              ],
-                            ),
-                          );
-                        },
+                                title: Text(roles[index]),
+                                onTap: () => _promptEditRole(type, index),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline),
+                                      onPressed: () =>
+                                          _confirmRemoveRole(type, index),
+                                    ),
+                                    ReorderableDragStartListener(
+                                      index: index,
+                                      child: const Icon(Icons.drag_handle),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
                       ),
                     ),
+                  SafeArea(
+                    top: false,
+                    child: ListTile(
+                      leading: const Icon(Icons.add),
+                      title: const Text('新增項目'),
+                      onTap: () => _promptAddRole(type),
+                    ),
                   ),
-                ),
-                SafeArea(
-                  top: false,
-                  child: ListTile(
-                    leading: const Icon(Icons.add),
-                    title: const Text('新增項目'),
-                    onTap: () => _promptAddRole(type),
-                  ),
-                ),
-              ],
-            );
-          }).toList(),
+                ],
+              );
+            }).toList(),
+          ),
         ),
       ),
     );

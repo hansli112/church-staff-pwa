@@ -116,6 +116,28 @@ void main() {
       session.dispose();
     });
 
+    // ── 不能讓網站沒有管理員 ─────────────────────────────────────────────
+
+    test('管理員不能刪除自己', () async {
+      await expectLater(
+        provider.deleteUser(_adminUser.id),
+        throwsA(isA<AccountSafetyException>()),
+      );
+    });
+
+    test('管理員不能把自己降成非管理員，但可以改自己的其他資料', () async {
+      await expectLater(
+        provider.updateUser(_adminUser.copyWith(role: UserRole.staff)),
+        throwsA(isA<AccountSafetyException>()),
+      );
+      await provider.updateUser(_adminUser.copyWith(name: '新名字'));
+    });
+
+    test('管理員可以刪除別人、調整別人的角色', () async {
+      await provider.deleteUser(_staffUser.id);
+      await provider.updateUser(_staffUser.copyWith(role: UserRole.admin));
+    });
+
     // ── cache hit ────────────────────────────────────────────────────────
 
     test('cache hit：getUsers() 二次呼叫只呼叫 repository 一次', () async {

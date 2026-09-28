@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../domain/entities/user.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
 import '../../../../core/widgets/text_warmup.dart';
+import '../providers/session_provider.dart';
 import '../providers/user_admin_provider.dart';
 import '../providers/group_settings_provider.dart';
 import 'user_editor_screen.dart';
@@ -117,6 +118,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 自己那一行不給刪：唯一的管理員刪掉自己，網站就沒人能管了。
+    final selfId = context.select<SessionProvider, String?>(
+      (session) => session.currentUser?.id,
+    );
     // context.select 仍負責在 templates 變動時觸發 rebuild；
     // 這裡用 reference 比較決定要不要重排。
     final groupTemplates = context
@@ -239,53 +244,57 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     onTap: () => _openEditor(data.user),
-                                    trailing: IconButton(
-                                      icon: const Icon(
-                                        Icons.delete,
-                                        color: Colors.red,
-                                      ),
-                                      onPressed: () async {
-                                        final authProvider = context
-                                            .read<UserAdminProvider>();
-                                        final confirm = await showDialog<bool>(
-                                          context: context,
-                                          builder: (context) => AlertDialog(
-                                            title: const Text('確認刪除'),
-                                            content: Text(
-                                              '確定要刪除 ${data.user.name} 嗎？',
+                                    trailing: data.user.id == selfId
+                                        ? null
+                                        : IconButton(
+                                            icon: const Icon(
+                                              Icons.delete,
+                                              color: Colors.red,
                                             ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () => Navigator.pop(
-                                                  context,
-                                                  false,
-                                                ),
-                                                child: const Text('取消'),
-                                              ),
-                                              TextButton(
-                                                onPressed: () => Navigator.pop(
-                                                  context,
-                                                  true,
-                                                ),
-                                                child: const Text(
-                                                  '刪除',
-                                                  style: TextStyle(
-                                                    color: Colors.red,
+                                            onPressed: () async {
+                                              final authProvider = context
+                                                  .read<UserAdminProvider>();
+                                              final confirm = await showDialog<bool>(
+                                                context: context,
+                                                builder: (context) => AlertDialog(
+                                                  title: const Text('確認刪除'),
+                                                  content: Text(
+                                                    '確定要刪除 ${data.user.name} 嗎？',
                                                   ),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed: () =>
+                                                          Navigator.pop(
+                                                            context,
+                                                            false,
+                                                          ),
+                                                      child: const Text('取消'),
+                                                    ),
+                                                    TextButton(
+                                                      onPressed: () =>
+                                                          Navigator.pop(
+                                                            context,
+                                                            true,
+                                                          ),
+                                                      child: const Text(
+                                                        '刪除',
+                                                        style: TextStyle(
+                                                          color: Colors.red,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
-                                              ),
-                                            ],
-                                          ),
-                                        );
+                                              );
 
-                                        if (confirm != true) return;
-                                        await authProvider.deleteUser(
-                                          data.user.id,
-                                        );
-                                        if (!context.mounted) return;
-                                        _refreshUsers();
-                                      },
-                                    ),
+                                              if (confirm != true) return;
+                                              await authProvider.deleteUser(
+                                                data.user.id,
+                                              );
+                                              if (!context.mounted) return;
+                                              _refreshUsers();
+                                            },
+                                          ),
                                   ),
                                 ),
                               );

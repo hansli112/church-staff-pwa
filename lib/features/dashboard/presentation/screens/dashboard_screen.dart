@@ -141,8 +141,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return hasLatin ? parts.first : parts.last;
     }
 
-    if (_cjkRe.hasMatch(name)) {
-      return name.length > 1 ? name.substring(1) : name;
+    // 三個字的中文名最常見是單姓＋兩字名，叫名字比較親切（王小明 → 小明）。
+    // 兩個字（李安）或四個字以上（複姓、「測試管理員」這種非人名）就整個叫，
+    // 否則會變成「安」「試管理員」。
+    if (_cjkRe.hasMatch(name) && name.length == 3) {
+      return name.substring(1);
     }
 
     return name;
