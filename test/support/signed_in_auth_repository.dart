@@ -15,6 +15,12 @@ class SignedInAuthRepository implements AuthRepository {
   /// [getUsers] 回傳的同工名單。預設只有登入的那個人。
   final List<User> users;
 
+  /// 每次 [sendPasswordResetEmail] 收到的 Email，依呼叫順序。
+  final List<String> resetEmails = [];
+
+  /// 不為 null 時 [sendPasswordResetEmail] 會丟出這個例外。
+  Object? resetException;
+
   @override
   Future<User?> getCachedUser() async => user;
   @override
@@ -25,6 +31,12 @@ class SignedInAuthRepository implements AuthRepository {
   Future<User?> login(String username, String password) async => user;
   @override
   Future<void> logout() async {}
+  @override
+  Future<void> sendPasswordResetEmail(String email) async {
+    resetEmails.add(email);
+    if (resetException != null) throw resetException!;
+  }
+
   @override
   Future<List<User>> getUsers() async => users;
   @override

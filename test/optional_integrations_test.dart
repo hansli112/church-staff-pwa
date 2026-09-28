@@ -198,6 +198,20 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('reminder toggle stays hidden until a sender exists', (
+    tester,
+  ) async {
+    // 開了推播也不顯示：App 只記偏好，沒有東西在週一真的寄提醒。
+    ChurchConfig.current = testChurchConfig(pushNotifications: true);
+    await _pumpSignedIn(
+      tester,
+      const ProfileScreen(versionService: _NoVersionService()),
+    );
+    expect(find.text('服事提醒'), findsNothing);
+    expect(find.text('登出'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('disabled photo import preserves the manual JSON input', (
     tester,
   ) async {

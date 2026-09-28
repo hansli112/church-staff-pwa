@@ -416,7 +416,7 @@ void main() {
       expect(
         dutyOf(r).personIdsByName['王大明'],
         'uid-daming',
-        reason: '人是名單上的真人，uid 查得到就該帶上，否則收不到服事提醒',
+        reason: '人是名單上的真人，uid 查得到就該帶上，否則他在自己的首頁看不到',
       );
       expect(r.roleMismatchNames, ['王大明'], reason: '照樣匯入不等於不用報告');
       expect(r.roleMismatchDetails['王大明'], contains('招待'));

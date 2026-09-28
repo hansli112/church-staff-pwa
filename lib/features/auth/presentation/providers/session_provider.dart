@@ -141,6 +141,20 @@ class SessionProvider extends ChangeNotifier {
     }
   }
 
+  /// 寄重設密碼信。成功回傳 null，失敗回傳給使用者看的訊息。
+  ///
+  /// 不動 [isLoading] 和 [error]：那兩個是登入按鈕和登入錯誤在用的，
+  /// 重設信在自己的對話框裡顯示結果。
+  Future<String?> sendPasswordReset(String email) async {
+    try {
+      await _repository.sendPasswordResetEmail(email);
+      return null;
+    } catch (e, st) {
+      log('寄送重設密碼信失敗', error: e, stackTrace: st);
+      return mapPasswordResetErrorToUserMessage(e);
+    }
+  }
+
   Future<void> logout() async {
     _isLoading = true;
     _error = null;
