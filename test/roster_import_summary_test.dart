@@ -731,7 +731,7 @@ void main() {
           notInEventCatalog: [],
         ),
       );
-      expect(find.text('這一格沒有對到帳號，兩位都收不到服事提醒。'), findsOneWidget);
+      expect(find.text('這一格沒有對到帳號，兩位都不會在自己的首頁看到。'), findsOneWidget);
     });
 
     testWidgets('ImportFixException 的訊息原文顯示，不被壓成泛用字串', (tester) async {

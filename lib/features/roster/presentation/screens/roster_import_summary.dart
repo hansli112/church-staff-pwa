@@ -252,7 +252,7 @@ class _RosterImportSummaryDialogState extends State<RosterImportSummaryDialog> {
               if (summary.notInRosterNames.isNotEmpty)
                 _Section(
                   title: '名單裡沒有這個人',
-                  note: '他收不到服事提醒。',
+                  note: '他不會在自己的首頁看到這次服事。',
                   children: [
                     for (final name in summary.notInRosterNames)
                       // 名單裡有很像的就一起列出來。名字是照表上原文寫進去
@@ -287,9 +287,9 @@ class _RosterImportSummaryDialogState extends State<RosterImportSummaryDialog> {
                 _Section(
                   title: '不確定是哪一位',
                   // 這一格沒有連到任何帳號 —— 名字照樣寫上去了，但兩位都不會
-                  // 在自己的首頁看到，也收不到提醒。不講清楚的話，管理者只會
+                  // 在自己的首頁看到。不講清楚的話，管理者只會
                   // 覺得「反正名字有出現」就過去了。
-                  note: '這一格沒有對到帳號，兩位都收不到服事提醒。',
+                  note: '這一格沒有對到帳號，兩位都不會在自己的首頁看到。',
                   children: [
                     for (final name in summary.otherNames)
                       _PlainRow(text: name),

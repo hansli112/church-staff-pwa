@@ -154,4 +154,31 @@ void main() {
       expect(mapErrorToUserMessage(StateError('bad state')), '操作失敗，請稍後再試');
     });
   });
+
+  group('mapPasswordResetErrorToUserMessage', () {
+    test('user-not-found 當成已寄出，不透露帳號存不存在', () {
+      // ignore: invalid_use_of_protected_member
+      final e = FirebaseAuthException(code: 'user-not-found');
+      expect(mapPasswordResetErrorToUserMessage(e), isNull);
+    });
+
+    test('invalid-email → 電子郵件格式錯誤', () {
+      // ignore: invalid_use_of_protected_member
+      final e = FirebaseAuthException(code: 'invalid-email');
+      expect(mapPasswordResetErrorToUserMessage(e), '電子郵件格式錯誤');
+    });
+
+    test('too-many-requests 講寄送，不講登入', () {
+      // ignore: invalid_use_of_protected_member
+      final e = FirebaseAuthException(code: 'too-many-requests');
+      expect(mapPasswordResetErrorToUserMessage(e), '寄送次數過多，請稍後再試');
+    });
+
+    test('其他例外 → 無法寄出重設信', () {
+      expect(
+        mapPasswordResetErrorToUserMessage(Exception('boom')),
+        '無法寄出重設信，請稍後再試',
+      );
+    });
+  });
 }

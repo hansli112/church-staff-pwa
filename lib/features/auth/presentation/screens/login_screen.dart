@@ -30,6 +30,14 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _showForgotPassword() async {
+    await showDialog<void>(
+      context: context,
+      builder: (_) =>
+          _ForgotPasswordDialog(initialEmail: _usernameController.text.trim()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = context.watch<SessionProvider>();
@@ -118,7 +126,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                 },
                                 onFieldSubmitted: (_) => _handleLogin(),
                               ),
-                              const SizedBox(height: 32),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: _showForgotPassword,
+                                  child: const Text('忘記密碼？'),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
                               SizedBox(
                                 width: double.infinity,
                                 height: 48,
@@ -159,6 +174,124 @@ class _LoginScreenState extends State<LoginScreen> {
           },
         ),
       ),
+    );
+  }
+}
+
+/// 寄重設密碼信。新密碼是在信裡的 Firebase 頁面設定，不在 App 裡。
+class _ForgotPasswordDialog extends StatefulWidget {
+  const _ForgotPasswordDialog({required this.initialEmail});
+
+  final String initialEmail;
+
+  @override
+  State<_ForgotPasswordDialog> createState() => _ForgotPasswordDialogState();
+}
+
+class _ForgotPasswordDialogState extends State<_ForgotPasswordDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final _emailController = TextEditingController(
+    text: widget.initialEmail,
+  );
+  bool _isSending = false;
+  String? _error;
+  String? _sentTo;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    if (_isSending || !_formKey.currentState!.validate()) return;
+    final email = _emailController.text.trim();
+    setState(() {
+      _isSending = true;
+      _error = null;
+    });
+    final error = await context.read<SessionProvider>().sendPasswordReset(
+      email,
+    );
+    if (!mounted) return;
+    setState(() {
+      _isSending = false;
+      _error = error;
+      if (error == null) _sentTo = email;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sentTo = _sentTo;
+    if (sentTo != null) {
+      // Firebase 不告訴我們這個 Email 有沒有帳號，所以話只能說到「如果有」。
+      return AlertDialog(
+        title: const Text('請到信箱收信'),
+        content: Text(
+          '如果 $sentTo 有帳號，重設密碼的信已經寄出。'
+          '點信裡的連結設定新密碼，再回來登入。\n\n'
+          '幾分鐘內沒收到的話，看一下垃圾郵件；還是沒有就請管理員確認帳號的 Email。',
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('好'),
+          ),
+        ],
+      );
+    }
+
+    return AlertDialog(
+      title: const Text('忘記密碼'),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('輸入登入用的 Email，我們會寄一封重設密碼的信給你。'),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _emailController,
+              autofocus: widget.initialEmail.isEmpty,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.emailAddress,
+              autofillHints: const [AutofillHints.email],
+              textInputAction: TextInputAction.send,
+              onFieldSubmitted: (_) => _send(),
+              validator: (value) =>
+                  (value == null || value.trim().isEmpty) ? '請輸入 Email' : null,
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isSending ? null : () => Navigator.pop(context),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: _isSending ? null : _send,
+          child: _isSending
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('寄出'),
+        ),
+      ],
     );
   }
 }

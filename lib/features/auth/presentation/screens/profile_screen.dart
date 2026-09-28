@@ -14,6 +14,9 @@ import '../providers/session_provider.dart';
 import 'user_management_screen.dart' deferred as user_management_screen;
 import 'group_settings_screen.dart' deferred as group_settings_screen;
 
+/// 服事提醒的寄送端還不存在（見 build 裡的開關）。
+const _rosterReminderSenderExists = false;
+
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({
     super.key,
@@ -114,7 +117,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _refreshPushStatus() async {
-    if (!ChurchConfig.current.features.pushNotifications) return;
+    if (!_rosterReminderSenderExists ||
+        !ChurchConfig.current.features.pushNotifications) {
+      return;
+    }
     final userId = _statusUserId;
     if (userId == null) return;
     setState(() => _isPushLoading = true);
@@ -275,7 +281,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           const Divider(),
 
-          if (ChurchConfig.current.features.pushNotifications)
+          // 先藏起來：App 只會記下「要提醒」，還沒有任何東西真的在週一寄出。
+          // 留著開關會讓同工以為打開就會收到。有寄送端之後把這個常數改回 true。
+          if (_rosterReminderSenderExists &&
+              ChurchConfig.current.features.pushNotifications)
             SwitchListTile(
               secondary: const Icon(Icons.notifications_active),
               title: const Text('服事提醒'),

@@ -41,3 +41,23 @@ String mapErrorToUserMessage(Object? error) {
   // 4. 其他所有例外
   return '操作失敗，請稍後再試';
 }
+
+/// 寄重設密碼信失敗時給使用者看的訊息；回傳 null 代表「當作寄出了」。
+///
+/// user-not-found 刻意當成功：畫面一律說「如果這個 Email 有帳號就會收到
+/// 信」，不讓登入頁變成查誰有帳號的工具。開了 email enumeration
+/// protection 的專案本來就不會回這個錯，這裡是給沒開的專案用的。
+String? mapPasswordResetErrorToUserMessage(Object? error) {
+  if (error is FirebaseAuthException) {
+    return switch (error.code) {
+      'user-not-found' => null,
+      'invalid-email' || 'missing-email' => '電子郵件格式錯誤',
+      'user-disabled' => '帳號已被停用，請聯絡管理員',
+      'network-request-failed' => '網路連線失敗，請檢查網路',
+      'too-many-requests' => '寄送次數過多，請稍後再試',
+      _ => '無法寄出重設信，請稍後再試',
+    };
+  }
+  if (error is TimeoutException) return '操作逾時，請稍後再試';
+  return '無法寄出重設信，請稍後再試';
+}

@@ -22,6 +22,11 @@ abstract class AuthRepository {
   Future<void> writeCachedUser(User user);
 
   Future<void> logout();
+
+  /// Ask Firebase to email a password-reset link. Unknown addresses succeed
+  /// silently (Firebase's email-enumeration protection), so callers must not
+  /// treat success as proof that the account exists.
+  Future<void> sendPasswordResetEmail(String email);
   Future<List<User>> getUsers();
   Future<void> addUser(User user, String password);
   Future<void> updateUser(User user, {String? password});

@@ -91,6 +91,13 @@ class FirebaseAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<void> sendPasswordResetEmail(String email) async {
+    // 信件用 Firebase 內建範本；不設語言的話是英文，同工看到會以為是垃圾信。
+    await _auth.setLanguageCode('zh-TW');
+    await _auth.sendPasswordResetEmail(email: email.trim());
+  }
+
+  @override
   Future<List<User>> getUsers() async {
     final snapshot = await _usersCollection.get();
     return snapshot.docs

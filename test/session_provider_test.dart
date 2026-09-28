@@ -33,6 +33,12 @@ class _FakeAuthRepository implements AuthRepository {
   /// 若不為 null，`logout` 會 throw 此例外。
   Object? logoutException;
 
+  /// Every address passed to [sendPasswordResetEmail], in call order.
+  final List<String> resetEmails = [];
+
+  /// 若不為 null，`sendPasswordResetEmail` 會 throw 此例外。
+  Object? resetException;
+
   /// Records every user passed to [writeCachedUser] in call order.
   final List<User> writeCachedUserCalls = [];
 
@@ -72,6 +78,12 @@ class _FakeAuthRepository implements AuthRepository {
   Future<void> logout() async {
     logoutCalled = true;
     if (logoutException != null) throw logoutException!;
+  }
+
+  @override
+  Future<void> sendPasswordResetEmail(String email) async {
+    resetEmails.add(email);
+    if (resetException != null) throw resetException!;
   }
 
   @override
@@ -147,6 +159,25 @@ void main() {
       }
       return provider;
     }
+
+    // ── sendPasswordReset ────────────────────────────────────────────────
+
+    test('sendPasswordReset 成功回傳 null，且不動登入的 isLoading／error', () async {
+      final provider = await createAndWait();
+      final result = await provider.sendPasswordReset('a@example.com');
+      expect(result, isNull);
+      expect(repo.resetEmails, ['a@example.com']);
+      expect(provider.isLoading, false);
+      expect(provider.error, isNull);
+    });
+
+    test('sendPasswordReset 失敗回傳訊息，不寫進登入錯誤', () async {
+      repo.resetException = Exception('boom');
+      final provider = await createAndWait();
+      final result = await provider.sendPasswordReset('a@example.com');
+      expect(result, '無法寄出重設信，請稍後再試');
+      expect(provider.error, isNull);
+    });
 
     // ── _restoreSession ──────────────────────────────────────────────────
 

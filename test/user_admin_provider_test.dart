@@ -41,6 +41,9 @@ class _FakeAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<void> sendPasswordResetEmail(String email) async {}
+
+  @override
   Future<List<User>> getUsers() async {
     getUsersCallCount++;
     if (getUsersBlocker != null) {
