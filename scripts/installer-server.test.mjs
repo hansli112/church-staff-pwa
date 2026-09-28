@@ -190,7 +190,7 @@ test('authenticated HTTP flow connects, plans, confirms, completes and lists res
   assert.equal((await call('/api/connect/cloudflare', {}, auth)).status, 202);
   while (manager.snapshot().busy) await new Promise((resolve) => setImmediate(resolve));
   const response = await call('/api/plan', {
-    appName: '範例教會', shortName: '同工助手', timeZone: 'Asia/Taipei', region: 'asia-east1',
+    appName: '範例教會', shortName: '同工助手', siteName: 'example-staff', timeZone: 'Asia/Taipei', region: 'asia-east1',
     services: [{ name: '主日崇拜', label: '主日', weekday: 7 }],
     adminName: '測試管理員', adminEmail: 'admin@example.invalid', cloudflareAccountId: '0123456789abcdef0123456789abcdef',
   }, auth);

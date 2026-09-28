@@ -249,7 +249,7 @@ test('private environment keeps Wrangler normal output visible', async () => {
 test('preflight is read-only: rejects a taken Pages name and never creates anything', async (t) => {
   const methods = [];
   const taken = await fixture(t, { fetchImpl: async (url, options) => { methods.push(options?.method ?? 'GET'); return response(project()); } });
-  await assert.rejects(taken.installer.preflight(PLAN), /已被使用/);
+  await assert.rejects(taken.installer.preflight(PLAN), /已經有叫「new-church-example」的網站/);
   const free = await fixture(t, { fetchImpl: async (url, options) => { methods.push(options?.method ?? 'GET'); return new Response('{}', { status: 404 }); } });
   await free.installer.preflight(PLAN);
   assert.deepEqual([...new Set(methods)], ['GET']);

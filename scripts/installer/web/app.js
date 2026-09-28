@@ -93,12 +93,21 @@ function addService({ label = '', name = '', weekday = 7 } = {}) {
   $('services').append(row);
 }
 
-function summaryRow(label, value) {
+function summaryRow(label, value, list = $('summary')) {
   const term = document.createElement('dt');
   const description = document.createElement('dd');
   term.textContent = label;
   description.textContent = value;
-  $('summary').append(term, description);
+  list.append(term, description);
+}
+
+// Lowercase as they type, so the preview matches what the plan will accept.
+function updateSitePreview() {
+  const field = $('site-name');
+  const value = field.value.toLowerCase();
+  if (field.value !== value) field.value = value;
+  const preview = $('site-preview').querySelector('strong');
+  preview.textContent = `${value || '你填的名稱'}.pages.dev`;
 }
 
 function render(state) {
@@ -151,7 +160,7 @@ function render(state) {
       summaryRow('Google 帳號', plan.googleEmail);
       summaryRow('新專案名稱', plan.projectId);
       summaryRow('Cloudflare 帳號', state.identity.accounts.find((account) => account.id === plan.cloudflareAccountId)?.name || plan.cloudflareAccountId);
-      summaryRow('網站', `${plan.pagesProject}.pages.dev（實際網址以 Cloudflare 回覆為準）`);
+      summaryRow('網站', `${plan.pagesProject}.pages.dev（名稱被其他人用過的話，Cloudflare 會在後面加幾個字，實際網址以完成頁為準）`);
       summaryRow('資料儲存地區', `${state.regions.find(([id]) => id === plan.region)?.[1] || ''} · ${plan.region}`);
       summaryRow('教會時區', plan.churchConfig.timeZone);
       summaryRow('每週聚會', plan.churchConfig.services.map((service) => `${service.name}（週${weekdays[service.weekday - 1]}）`).join('、'));
@@ -188,7 +197,10 @@ function render(state) {
   }
   updateApply();
   if (state.website) $('website').href = state.website;
-  if (state.status === 'complete' && state.plan) renderCleanup(state.plan);
+  if (state.status === 'complete' && state.plan) {
+    renderCleanup(state.plan);
+    renderHandoff(state);
+  }
   showError(state.error);
 }
 
@@ -201,6 +213,54 @@ function renderCleanup(plan) {
   $('cleanup-google').href = `https://console.cloud.google.com/iam-admin/settings?project=${project}`;
   $('cleanup-cloudflare-id').textContent = plan.pagesProject;
   $('cleanup-cloudflare').href = `https://dash.cloudflare.com/${account}/pages/view/${encodeURIComponent(plan.pagesProject)}`;
+}
+
+// What the church needs later to find, update or hand over this install.
+// Only identifiers the operator already sees; no credentials.
+function handoffRows(state) {
+  const plan = state.plan;
+  const account = state.identity.accounts.find((item) => item.id === plan.cloudflareAccountId);
+  return [
+    ['網站網址', state.website ?? `https://${plan.pagesProject}.pages.dev/`],
+    ['教會名稱', plan.churchConfig.appName],
+    ['首位管理員', `${plan.admin.name} · ${plan.admin.email}`],
+    ['Google 帳號', plan.googleEmail],
+    ['Google 專案 ID', plan.projectId],
+    ['Cloudflare 帳號', [account?.name, state.identity.cloudflareEmail].filter(Boolean).join(' · ') || plan.cloudflareAccountId],
+    ['Cloudflare 網站名稱', plan.pagesProject],
+    ['安裝識別碼', plan.runId],
+    ['安裝日期', new Date().toLocaleDateString('zh-TW')],
+  ];
+}
+
+function shareMessage(state) {
+  const url = new URL(state.website ?? `https://${state.plan.pagesProject}.pages.dev/`);
+  url.searchParams.set('openExternalBrowser', '1');
+  return [
+    `「${state.plan.churchConfig.appName}」上線了！`,
+    `登入網址：${url.href}`,
+    '帳號是管理員幫你建立的 Email。忘記密碼的話，在登入頁按「忘記密碼？」。',
+    '第一次打開後，請加到手機主畫面，之後就像 App 一樣點開：',
+    '・iPhone：用 Safari 開啟，按下方「分享」→「加入主畫面」',
+    '・Android：用 Chrome 開啟，按右上角「⋮」→「安裝應用程式」或「加到主畫面」',
+  ].join('\n');
+}
+
+let renderedHandoff;
+function renderHandoff(state) {
+  const key = `${state.plan.digest}:${state.website}`;
+  if (renderedHandoff === key) return;
+  $('handoff').replaceChildren();
+  for (const [label, value] of handoffRows(state)) summaryRow(label, value, $('handoff'));
+  $('share-message').value = shareMessage(state);
+  renderedHandoff = key;
+}
+
+async function copyText(text, button) {
+  await navigator.clipboard.writeText(text);
+  const original = button.textContent;
+  button.textContent = '已複製';
+  setTimeout(() => { button.textContent = original; }, 2_000);
 }
 
 function updateApply() {
@@ -235,6 +295,10 @@ for (const provider of ['google', 'cloudflare']) {
   }));
 }
 $('add-service').addEventListener('click', () => addService());
+$('site-name').addEventListener('input', updateSitePreview);
+$('copy-share').addEventListener('click', () => perform(() => copyText($('share-message').value, $('copy-share'))));
+$('copy-handoff').addEventListener('click', () => perform(() => copyText(
+  handoffRows(current).map(([label, value]) => `${label}：${value}`).join('\n'), $('copy-handoff'))));
 $('confirm-region').addEventListener('change', updateApply);
 $('confirm-email').addEventListener('change', updateApply);
 $('settings-form').addEventListener('submit', (event) => {
@@ -293,6 +357,7 @@ async function openSession(token) {
 
 async function start() {
   addService({ label: '主日', name: '主日崇拜', weekday: 7 });
+  updateSitePreview();
   const token = new URLSearchParams(location.search).get('k') || location.hash.slice(1);
   history.replaceState(null, '', location.pathname);
   try {

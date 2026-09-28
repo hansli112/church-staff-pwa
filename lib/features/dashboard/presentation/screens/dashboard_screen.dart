@@ -13,23 +13,33 @@ import '../../../../core/config/google_calendar_config.dart';
 import '../../../../core/time/church_time.dart';
 import '../../../calendar/data/google_calendar_event.dart';
 import '../../../../core/services/external_link_service.dart';
+import '../../../../core/services/install_hint_service.dart';
 import '../../../../core/utils/error_messages.dart';
 import '../../domain/entities/recent_activity.dart';
 import '../../domain/season_window.dart';
 import '../widgets/recent_activity_row.dart';
+import '../widgets/add_to_home_card.dart';
 import '../../../roster/domain/entities/service_roster.dart';
 import '../../../roster/presentation/providers/roster_provider.dart';
 import '../../../calendar/presentation/screens/calendar_screen.dart'
     deferred as calendar;
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key, this.httpClient, this.idToken});
+  const DashboardScreen({
+    super.key,
+    this.httpClient,
+    this.idToken,
+    this.installHints = const InstallHintService(),
+  });
 
   /// Tests supply a transport so optional integrations never contact a server.
   final http.Client? httpClient;
 
   /// Tests supply the sign-in token for the site's own API.
   final Future<String?> Function()? idToken;
+
+  /// Tests supply the phone/browser the add-to-home card sees.
+  final InstallHintService installHints;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -94,6 +104,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
+            AddToHomeCard(service: widget.installHints),
             if (ChurchConfig.current.devotional.enabled) ...[
               _buildFeatureCard(
                 context,

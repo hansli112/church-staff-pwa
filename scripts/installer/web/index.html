@@ -73,6 +73,8 @@
           </div>
           <datalist id="timezones"><option value="Asia/Taipei"><option value="Asia/Hong_Kong"><option value="Asia/Tokyo"><option value="Asia/Singapore"><option value="Australia/Sydney"><option value="America/Los_Angeles"><option value="America/New_York"><option value="Europe/London"><option value="UTC"></datalist>
           <p class="hint">時區決定排表日期；資料庫地區決定資料儲存位置，建立後不能直接搬動。兩者不同。</p>
+          <label>網站名稱<input name="siteName" id="site-name" required minlength="3" maxlength="40" pattern="[a-z][a-z0-9\-]*[a-z0-9]" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="例如：hope-church-staff"></label>
+          <p id="site-preview" class="hint">網址會是 <strong>你填的名稱.pages.dev</strong>，同工會用這個網址登入。只能用英文小寫、數字和連字號（-），建立後不能更改。</p>
           <h3>每週聚會</h3>
           <div id="services"></div>
           <button id="add-service" type="button" class="secondary">新增一種聚會</button>
@@ -118,7 +120,17 @@
         <li><label class="check"><input type="checkbox"><span>到「我的」→「帳號管理」按 ＋ 新增一位同工：設定牧區，並在該牧區的「參與服事」勾選剛才的服事項目，按 ✓ 儲存。</span></label></li>
         <li><label class="check"><input type="checkbox"><span>回「服事表」→ 鉛筆 → 在某個日期按「新增服事項目」，勾選這位同工後按「新增」。重新整理後仍看得到，就完成了。</span></label></li>
       </ol>
-      <p class="hint">資料規則可能需要幾分鐘才完全生效；剛裝好就登入失敗，請等 5 分鐘再試。寄信步驟成功只代表平台接受寄送請求，不保證送達。若沒有收到，請由 Firebase 官方 Authentication 使用者頁面重新寄送。</p>
+      <p class="hint">資料規則可能需要幾分鐘才完全生效；剛裝好就登入失敗，請等 5 分鐘再試。寄信步驟成功只代表平台接受寄送請求，不保證送達。若沒有收到，在網站登入頁按「忘記密碼？」，輸入管理員 email 再寄一次。</p>
+
+      <h3>分享給同工</h3>
+      <p>驗收完成後，把下面這段貼到同工的 LINE 群組。連結後面的 <code>?openExternalBrowser=1</code> 會讓 LINE 改用手機的瀏覽器開啟，這樣才能加到主畫面。</p>
+      <textarea id="share-message" class="share" rows="7" readonly></textarea>
+      <button id="copy-share" type="button" class="secondary">複製這段訊息</button>
+
+      <h3>交接卡</h3>
+      <p>這個網站掛在下面這些帳號底下。<strong>請截圖或複製，存到教會的共用資料夾</strong>；以後要更新、除錯或交接給別人，都需要這些資料。</p>
+      <dl id="handoff" class="handoff"></dl>
+      <button id="copy-handoff" type="button" class="secondary">複製交接資料</button>
       <details id="cleanup">
         <summary>這只是測試安裝？如何刪除</summary>
         <p>只刪除下列這次建立的兩個項目，不要刪其他專案。刪除要在官方網站由你本人操作。</p>

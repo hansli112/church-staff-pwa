@@ -14,6 +14,10 @@ export const REGIONS = [
   ['us-central1', '美國中部'], ['us-east1', '美國東部'],
 ];
 const RUN_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+// The Pages project name becomes <name>.pages.dev, which staff type and share,
+// so the church picks it. Cloudflare allows up to 58; 40 leaves room for the
+// suffix it adds when the name is taken on another account.
+export const SITE_NAME = /^[a-z][a-z0-9-]{1,38}[a-z0-9]$/;
 const PRIVATE_KEY = /^(?:access_?token|refresh_?token|token|secret|client_?secret|password|passwordHash|salt|api_?key|authorization|oobCode|oobLink|firebaseConfig)$/i;
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
@@ -35,7 +39,7 @@ export function createInstallationPlan(input, identity, {
   runId = randomUUID(), sourceRevision = 'development', mode = 'cloud',
 } = {}) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw installationError('請填寫教會設定', 'INVALID_INPUT');
-  const allowed = new Set(['appName', 'shortName', 'timeZone', 'region', 'services', 'adminName', 'adminEmail', 'cloudflareAccountId']);
+  const allowed = new Set(['appName', 'shortName', 'siteName', 'timeZone', 'region', 'services', 'adminName', 'adminEmail', 'cloudflareAccountId']);
   if (Object.keys(input).some((key) => !allowed.has(key))) throw installationError('設定包含不支援的欄位', 'INVALID_INPUT');
   if (!RUN_ID.test(runId)) throw installationError('安裝識別碼不正確', 'INVALID_INPUT');
   const googleEmail = requireEmail(identity?.googleEmail, 'Google 帳號');
@@ -44,6 +48,10 @@ export function createInstallationPlan(input, identity, {
     throw installationError('請選擇已授權的 Cloudflare 帳號', 'INVALID_INPUT');
   }
   if (!REGIONS.some(([id]) => id === input.region)) throw installationError('請選擇資料庫地區', 'INVALID_INPUT');
+  const siteName = typeof input.siteName === 'string' ? input.siteName.trim().toLowerCase() : '';
+  if (!SITE_NAME.test(siteName) || siteName.includes('--')) {
+    throw installationError('網站名稱只能用 3–40 個英文小寫字母、數字和連字號（-），並以字母開頭', 'INVALID_INPUT');
+  }
   if (!Array.isArray(input.services) || input.services.length < 1 || input.services.length > 20) {
     throw installationError('請設定 1 至 20 種聚會', 'INVALID_INPUT');
   }
@@ -73,7 +81,7 @@ export function createInstallationPlan(input, identity, {
   const adminName = requireText(input.adminName, '管理員姓名');
   const plan = {
     schemaVersion: 1, runId, sourceRevision, mode,
-    projectId, pagesProject: projectId,
+    projectId, pagesProject: siteName,
     cloudflareAccountId: input.cloudflareAccountId,
     googleEmail, region: input.region, churchConfig,
     // Sign-in uses the email; like bootstrap-admin, the username defaults to the name.
@@ -88,7 +96,7 @@ function validateStoredPlan(plan, sourceRevision, mode) {
   if (fingerprint(fields) !== digest) throw installationError('安裝設定已被更改，拒絕接續');
   const config = validateChurchConfig(plan.churchConfig);
   if (Object.values(config.features).some(Boolean) || config.devotional.enabled ||
-      plan.projectId !== projectIdFor(plan.runId) || plan.pagesProject !== plan.projectId ||
+      plan.projectId !== projectIdFor(plan.runId) || !SITE_NAME.test(plan.pagesProject ?? '') ||
       !REGIONS.some(([id]) => id === plan.region)) throw installationError('紀錄不是核心首次安裝設定');
   if (plan.sourceRevision !== sourceRevision) throw installationError('程式版本與這次安裝不同；請使用原版本接續，不要重新建立專案');
   if (plan.mode !== mode) throw installationError('示範安裝與真實安裝不可互相接續');

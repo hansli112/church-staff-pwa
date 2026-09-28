@@ -202,7 +202,7 @@ export function createCloudflareInstaller({ command = runIsolatedCommand, fetchI
   }
   // Read-only check before confirmation: the account is usable and the name free.
   async function preflight(plan, { signal } = {}) {
-    if (await prepare({ plan, signal })) throw cloudflareError('此網站名稱已被使用；請重新整理頁面，以新的安裝識別碼重新預覽。');
+    if (await prepare({ plan, signal })) throw cloudflareError(`你的 Cloudflare 帳號裡已經有叫「${plan.pagesProject}」的網站，請換一個網站名稱再預覽。`);
   }
   async function createPagesProject(context) {
     const { plan, checkpoint, save, signal } = context;
