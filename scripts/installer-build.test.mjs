@@ -146,6 +146,8 @@ test('the tutorial launch card is one line, because Cloud Shell rewrites newline
   assert.equal(cards[0].includes('\n'), false);
   assert.match(cards[0], /^bash -c '[^;]/);
   assert.match(cards[0], /church-staff-pwa\*\/scripts/);
-  assert.match(cards[0], /pull -q --ff-only origin dev/);
+  // Churches install from the release branch, never from work in progress.
+  assert.match(cards[0], /clone -q --branch main /);
+  assert.match(cards[0], /pull -q --ff-only origin main;/);
 });
 

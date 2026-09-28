@@ -16,9 +16,7 @@
 
 ## 非工程背景：用安裝精靈
 
-[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=dev&cloudshell_workspace=.&cloudshell_tutorial=docs%2Finstall-cloud-shell.md&show=terminal)
-
-目前安裝精靈僅在 `dev` 分支驗收；尚未合併到 `main`。
+[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Finstall-cloud-shell.md&show=terminal)
 
 按下按鈕後，Google 會問是否「信任存放區」：**一定要勾選「信任存放區」，再按「確認」**；沒勾的話 Cloud Shell 會以「暫時模式」啟動、沒有你的 Google 授權；這時按 Cloud Shell 右上角的「⋮」，點選單裡打勾的「暫時模式」，再按「停用」。Cloud Shell 重新啟動並請你按「授權」後，回到安裝說明頁重新按「Open in Cloud Shell」，勾選「信任存放區」再照教學做。接著跳出「授權 Cloud Shell」時按「授權」，再照右側教學一步步做。
 

@@ -26,10 +26,10 @@
 **不用找程式在哪個資料夾**。按下方指令卡右上角的「在終端機執行」圖示（小終端機），然後在黑色終端機按一次 Enter。它會尋找已下載的程式；如果沒有，就從 GitHub 下載後啟動。只需做這一次，不要逐字輸入指令。
 
 ```sh
-bash -c 'd=; [ -f scripts/start-installation.sh ] && d=$PWD; [ -z "$d" ] && s=$(find "$HOME" -maxdepth 7 -type f -path "*/church-staff-pwa*/scripts/start-installation.sh" -print -quit) && [ -n "$s" ] && d=${s%/scripts/start-installation.sh}; if [ -z "$d" ]; then d=$HOME/cloudshell_open/church-staff-pwa; mkdir -p $HOME/cloudshell_open && git clone -q --branch dev --single-branch https://github.com/hansli112/church-staff-pwa.git "$d" || exit 1; fi; grep -q "pull --ff-only --quiet origin" "$d/scripts/start-installation.sh" || git -C "$d" pull -q --ff-only origin dev; exec bash "$d/scripts/start-installation.sh"'
+bash -c 'd=; [ -f scripts/start-installation.sh ] && d=$PWD; [ -z "$d" ] && s=$(find "$HOME" -maxdepth 7 -type f -path "*/church-staff-pwa*/scripts/start-installation.sh" -print -quit) && [ -n "$s" ] && d=${s%/scripts/start-installation.sh}; if [ -z "$d" ]; then d=$HOME/cloudshell_open/church-staff-pwa; mkdir -p $HOME/cloudshell_open && git clone -q --branch main --single-branch https://github.com/hansli112/church-staff-pwa.git "$d" || exit 1; fi; grep -q "pull --ff-only --quiet origin" "$d/scripts/start-installation.sh" || git -C "$d" pull -q --ff-only origin main; exec bash "$d/scripts/start-installation.sh"'
 ```
 
-目前精靈仍在 `dev` 分支驗收；合併到 `main` 後，教學會改用 `main`。如果終端機顯示紅色錯誤，先停下來，不要重複按「執行」。
+如果終端機顯示紅色錯誤，先停下來，不要重複按「執行」。
 
 第一次會下載約 1.5 GB 的工具，終端機會顯示目前是第幾步和下載進度條，通常需要 3–10 分鐘。下載進度暫停不代表當機；若超過五分鐘完全不動，記下畫面上的錯誤訊息再求助，不必開第二個終端機。重新開啟教學時，只要再按同一張指令卡；程式檔案未被修改、也沒有待接續的安裝時，啟動工具會自動更新。
 
