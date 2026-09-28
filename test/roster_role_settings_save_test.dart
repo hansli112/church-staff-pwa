@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
+import 'package:church_staff_pwa/core/config/church_config.dart';
 import 'package:church_staff_pwa/core/types/service_type.dart';
 import 'package:church_staff_pwa/features/auth/presentation/providers/user_admin_provider.dart';
 import 'package:church_staff_pwa/features/roster/presentation/providers/roster_provider.dart';
@@ -151,5 +152,39 @@ void main() {
 
     expect(userAdmin.cleanups, hasLength(1));
     expect(find.byType(RoleSettingsScreen), findsNothing);
+  });
+
+  // 聚會設定裡停用的聚會不再有分頁，但它的樣板要原封不動存回去：之後再開啟
+  // 時，服事項目都還在。
+  testWidgets('停用的聚會不出現分頁，存檔時樣板照樣保留', (tester) async {
+    final previous = ChurchConfig.current;
+    addTearDown(() => ChurchConfig.current = previous);
+    final services = previous.services;
+    ChurchConfig.current = previous.withServices([
+      for (final (index, service) in services.indexed)
+        index == services.length - 1
+            ? service.copyWith(enabled: false)
+            : service,
+    ]);
+    final disabled = ServiceType(services.last.id);
+
+    final repository = InMemoryRosterRepository(
+      templates: {
+        for (final type in ServiceType.values) type: ['領會'],
+      },
+    );
+    final rosterProvider = RosterProvider(repository);
+    await rosterProvider.fetchInitialData();
+    final userAdmin = _RecordingUserAdmin();
+    await _openRoleSettings(tester, rosterProvider, userAdmin);
+
+    expect(find.widgetWithText(Tab, services.first.label), findsOneWidget);
+    expect(find.widgetWithText(Tab, services.last.label), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.check));
+    await tester.pumpAndSettle();
+
+    expect(repository.templates[disabled], ['領會']);
+    expect(userAdmin.cleanups.single[disabled], ['領會']);
   });
 }

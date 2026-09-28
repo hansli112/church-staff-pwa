@@ -228,13 +228,13 @@ class _EventSettingsScreenState extends State<EventSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: ServiceType.values.length,
+      length: ServiceType.active.length,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('事件選項設定'),
           bottom: TabBar(
-            isScrollable: ServiceType.values.length > 3,
-            tabs: ServiceType.values
+            isScrollable: ServiceType.active.length > 3,
+            tabs: ServiceType.active
                 .map((type) => Tab(text: type.label))
                 .toList(),
           ),
@@ -266,7 +266,7 @@ class _EventSettingsScreenState extends State<EventSettingsScreen> {
           ],
         ),
         body: TabBarView(
-          children: ServiceType.values.map((type) {
+          children: ServiceType.active.map((type) {
             final options = _editingOptions[type] ?? const <EventOption>[];
             final scrollController = _scrollControllers[type]!;
             return Column(

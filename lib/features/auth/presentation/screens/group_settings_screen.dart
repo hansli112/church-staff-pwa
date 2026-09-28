@@ -177,13 +177,13 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
     }
 
     return DefaultTabController(
-      length: ServiceType.values.length,
+      length: ServiceType.active.length,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('小組設定'),
           bottom: TabBar(
-            isScrollable: ServiceType.values.length > 3,
-            tabs: ServiceType.values
+            isScrollable: ServiceType.active.length > 3,
+            tabs: ServiceType.active
                 .map((type) => Tab(text: type.label))
                 .toList(),
           ),
@@ -204,7 +204,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
           ],
         ),
         body: TabBarView(
-          children: ServiceType.values.map((type) {
+          children: ServiceType.active.map((type) {
             final groups = _editingTemplates[type] ?? [];
             return ListView.builder(
               padding: const EdgeInsets.all(16),
