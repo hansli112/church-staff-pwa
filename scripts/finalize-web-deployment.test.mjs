@@ -104,6 +104,11 @@ test('finalizer stages configured branding and cache/FCM values without changing
   assert.equal(runtime.notification.title, config.appName);
   assert.equal(runtime.notification.options.icon, '/' + config.icons.icon192);
   assert.equal(runtime.imports.length, 2);
+  // The installer's update mode reads this back; it carries only what the app shows.
+  const publicConfig = JSON.parse(output.get('church-config.json'));
+  assert.deepEqual(Object.keys(publicConfig).sort(), ['appName', 'schemaVersion', 'services', 'shortName', 'timeZone']);
+  assert.equal(publicConfig.appName, config.appName);
+  assert.deepEqual(publicConfig.services, config.services);
   for (const name of ['church.json', 'dart-defines.json', 'firestore.rules', 'firebase.json', 'worker/generated_config.js', 'functions/api/calendar/events.js']) {
     assert.equal(output.has(name), false, `${name} must not be served`);
   }

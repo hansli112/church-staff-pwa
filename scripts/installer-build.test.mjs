@@ -72,7 +72,11 @@ test('core build isolates source, uses per-run output and shares staging/finaliz
   assert.ok(sw.includes('dummy-public-web-key'));
   const publicFiles = await readdir(result.buildDir);
   for (const name of ['firebase-config.json', 'church.json', '.installer-build', 'firestore.rules']) assert.ok(!publicFiles.includes(name));
-  assert.equal(JSON.parse(await readFile(path.join(result.buildDir, 'version.json'))).branch, 'main');
+  const version = JSON.parse(await readFile(path.join(result.buildDir, 'version.json')));
+  assert.equal(version.branch, 'main');
+  assert.equal(version.channel, 'installer');
+  assert.equal(version.release, JSON.parse(await readFile(path.join(ROOT, 'release.json'), 'utf8')).version);
+  assert.ok(publicFiles.includes('church-config.json'));
   assert.ok(!JSON.stringify(context.checkpoint).includes('dummy-public-web-key'));
 });
 
