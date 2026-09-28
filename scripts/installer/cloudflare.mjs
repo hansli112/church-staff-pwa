@@ -2,11 +2,27 @@ import { chmod, lstat, mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { privateEnvironment, runIsolatedCommand } from './process.mjs';
-import { fingerprint, installationError, isPrivateDirectory, stepIdsFor, verifyBuildArtifacts, WRANGLER_VERSION } from './shared.mjs';
+import { fingerprint, installationError, isPrivateDirectory, projectIdFor, stepIdsFor, verifyBuildArtifacts, WRANGLER_VERSION } from './shared.mjs';
 
 export const CLOUDFLARE_SCOPES = ['account:read', 'user:read', 'pages:write'];
 const API = 'https://api.cloudflare.com/client/v4';
 const ACCOUNT_ID = /^[a-f0-9]{32}$/;
+const RUN_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+// A Pages project this wizard created, recognisable from Cloudflare alone: a
+// direct upload (no Git source) to 'main' whose production env vars are exactly
+// the two the create step writes, naming a run and the Google project derived
+// from it. Returns that pair, or null for anything else in the account.
+export function installerBinding(project) {
+  const vars = project?.deployment_configs?.production?.env_vars;
+  if (!project || project.source || project.production_branch !== 'main' || !vars ||
+      Object.keys(vars).sort().join() !== 'FIREBASE_PROJECT_ID,INSTALLER_RUN_ID') return null;
+  const runId = vars.INSTALLER_RUN_ID?.type === 'plain_text' ? vars.INSTALLER_RUN_ID.value : undefined;
+  const projectId = vars.FIREBASE_PROJECT_ID?.type === 'plain_text' ? vars.FIREBASE_PROJECT_ID.value : undefined;
+  if (!RUN_ID.test(runId ?? '') || projectId !== projectIdFor(runId)) return null;
+  if (typeof project.subdomain !== 'string' || !/^[a-z0-9][a-z0-9-]{0,62}\.pages\.dev$/.test(project.subdomain)) return null;
+  return { runId, projectId };
+}
 const STEP_IDS = stepIdsFor('cloudflare');
 const cloudflareError = (message) => installationError(message, 'CLOUDFLARE_INSTALL_FAILED');
 
@@ -263,6 +279,81 @@ export function createCloudflareInstaller({ command = runIsolatedCommand, fetchI
     }
     throw cloudflareError('Pages 部署仍未完成，請稍後續跑以確認實際狀態。');
   }
+  // Every install in the connected accounts, for update mode to offer.
+  async function listInstalls({ signal } = {}) {
+    const identity = await inspectIdentity({ signal });
+    if (!identity.loggedIn) throw cloudflareError('請先連接 Cloudflare。');
+    const found = [];
+    for (const account of identity.accounts) {
+      for (let page = 1; page <= 20; page += 1) {
+        const data = await api(`/accounts/${account.id}/pages/projects?per_page=10&page=${page}`, { signal });
+        if (!Array.isArray(data.result)) throw cloudflareError('Pages 專案清單格式不符。');
+        for (const project of data.result) {
+          const binding = installerBinding(project);
+          if (binding && /^[a-z0-9][a-z0-9-]{0,57}$/.test(project.name ?? '')) {
+            found.push({ accountId: account.id, accountName: account.name, pagesProject: project.name, subdomain: project.subdomain, ...binding });
+          }
+        }
+        const totalPages = data.result_info?.total_pages;
+        if (data.result.length < 10 || (Number.isInteger(totalPages) && page >= totalPages)) break;
+      }
+    }
+    return found;
+  }
+  // Update mode's ownership proof, re-read right before anything is uploaded.
+  async function updateTarget(context) {
+    const { plan, signal } = context;
+    if (!ACCOUNT_ID.test(plan.cloudflareAccountId) || !/^[a-z0-9][a-z0-9-]{0,57}$/.test(plan.pagesProject)) throw cloudflareError('更新目標格式不符。');
+    const project = (await api(projectRoute(plan), { signal, missing: true }))?.result;
+    const binding = installerBinding(project);
+    if (!binding || binding.runId !== plan.runId || binding.projectId !== plan.projectId || project.name !== plan.pagesProject) {
+      throw cloudflareError('這個 Cloudflare 網站不是安裝精靈為這次選擇的教會建立的，或設定已被改過；不會更新。');
+    }
+    return project;
+  }
+  // Only this install's own uploads may exist: an update never overwrites a
+  // site someone deployed by other means.
+  function assertOnlyInstallerDeployments(existing, runId) {
+    for (const deployment of existing) {
+      if (deployment.environment !== 'production' || deployment.deployment_trigger?.metadata?.branch !== 'main' ||
+          !String(deployment.deployment_trigger?.metadata?.commit_message ?? '').startsWith(`installer:${runId}:`)) {
+        throw cloudflareError('這個網站有不是安裝精靈發布的版本；為避免覆蓋別人的部署，已停止。');
+      }
+    }
+  }
+  async function publishUpdate(context) {
+    const { plan, signal, transient } = context;
+    const base = projectRoute(plan);
+    const project = await updateTarget(context);
+    const existing = await deployments(base, signal);
+    assertOnlyInstallerDeployments(existing, plan.runId);
+    const completed = (item) => item?.latest_stage?.name === 'deploy' && item.latest_stage.status === 'success';
+    const failed = (item) => ['failure', 'canceled'].includes(item?.latest_stage?.status);
+    const website = `https://${project.subdomain}/`;
+    if (transient.unchanged) return { website, unchanged: true };
+    if (!transient.buildDir || !transient.buildVersion) throw cloudflareError('缺少已驗證的建置產物，禁止發佈。');
+    await verifyUpload(transient.buildDir);
+    const marker = `installer:${plan.runId}:${transient.buildVersion}`;
+    const ours = (item) => item.deployment_trigger?.metadata?.commit_message === marker;
+    const previousFailures = new Set(existing.filter((item) => ours(item) && failed(item)).map((item) => item.id));
+    // A resumed update whose upload already went through only waits for it.
+    if (!existing.some((item) => ours(item) && !failed(item))) {
+      const result = await cli(['pages', 'deploy', transient.buildDir, '--project-name', plan.pagesProject, '--branch', 'main', '--commit-message', marker, '--commit-dirty=true'], { signal, accountId: plan.cloudflareAccountId, timeoutMs: 600_000 });
+      if (result.exitCode !== 0) throw cloudflareError('新版網站發佈尚未確認完成；請重新按「開始更新」，精靈會先查詢實際部署狀態。');
+    }
+    for (let attempt = 0; attempt < 60; attempt += 1) {
+      const all = await deployments(base, signal);
+      assertOnlyInstallerDeployments(all, plan.runId);
+      const deployment = all.find((item) => ours(item) && !previousFailures.has(item.id));
+      if (completed(deployment)) {
+        await updateTarget(context);
+        return { website, unchanged: false };
+      }
+      if (failed(deployment)) throw cloudflareError('新版網站部署失敗，請至 Cloudflare 官方部署頁確認原因；舊版網站仍照常運作。');
+      await wait(2000, undefined, { signal });
+    }
+    throw cloudflareError('新版網站部署仍未完成，請稍後重新按「開始更新」確認實際狀態。');
+  }
   async function execute(step, context) {
     if (!STEP_IDS.has(step)) throw cloudflareError('不支援的 Cloudflare 安裝步驟。');
     return step === 'pages-project' ? createPagesProject(context) : publish(context);
@@ -274,5 +365,5 @@ export function createCloudflareInstaller({ command = runIsolatedCommand, fetchI
     await Promise.allSettled([...activeCommands]);
     if (home) await rm(home, { recursive: true, force: true });
   }
-  return { inspectIdentity, startLogin, preflight, execute, dispose };
+  return { inspectIdentity, startLogin, preflight, execute, listInstalls, publishUpdate, dispose };
 }

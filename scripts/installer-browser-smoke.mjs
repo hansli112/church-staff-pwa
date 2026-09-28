@@ -202,6 +202,23 @@ try {
   await shot('installer-complete', 1280);
   check('resume completes the same run without a new project', manager.snapshot().status === 'complete' && manager.snapshot().plan.runId === runId);
   check('completed state exposes verified website', manager.snapshot().website === `https://${manager.snapshot().plan.pagesProject}.pages.dev/`);
+  // Update mode, on the site the demo pretends was installed before.
+  check('update section is offered once the install is complete', await evaluate("!document.getElementById('update-section').hidden"));
+  await evaluate("document.getElementById('find-installs').click()");
+  await waitFor("document.querySelectorAll('#installs input[type=radio]').length === 1", 'installed site listed');
+  check('installed site shows its name, address and current release',
+    (await evaluate("document.getElementById('installs').textContent")).includes('恩典教會同工助手') &&
+    (await evaluate("document.getElementById('installs').textContent")).includes('grace-church-staff.pages.dev') &&
+    (await evaluate("document.getElementById('installs').textContent")).includes('2026.9.1'));
+  await evaluate("document.querySelector('#installs input[type=radio]').click()");
+  await waitFor("!document.getElementById('update-confirm').hidden", 'update confirmation shown');
+  check('update cannot start before the site is confirmed', await evaluate("document.getElementById('apply-update').disabled"));
+  await evaluate("document.getElementById('confirm-update').click(); document.getElementById('apply-update').click()");
+  await waitFor("!document.getElementById('update-done').hidden", 'update completes', 20000);
+  check('update completes and links to the updated site',
+    (await evaluate("document.getElementById('update-website').href")) === 'https://grace-church-staff.pages.dev/' &&
+    manager.snapshot().update.status === 'complete');
+  await shot('installer-update', 1280);
   await send('Network.clearBrowserCookies');
   const beforeMissingCookie = startupEvents.filter((event) => event === 'navigation').length;
   await send('Page.reload');

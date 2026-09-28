@@ -61,6 +61,25 @@
       </details>
     </section>
 
+    <section id="update-section" aria-labelledby="update-heading">
+      <div class="section-heading"><span class="number">↻</span><h2 id="update-heading">已經裝過了？更新到新版本</h2></div>
+      <p>把之前用這個精靈裝的網站，更新到最新版本。<strong>資料、帳號和服事表都不會變</strong>，只會換新網站程式和資料存取規則。第一次安裝請跳過這一段，直接填下面的教會資料。</p>
+      <p id="release-line" class="hint" hidden></p>
+      <button id="find-installs" type="button">尋找已安裝的網站</button>
+      <div id="installs" class="installs"></div>
+      <div id="update-confirm" hidden>
+        <dl id="update-summary"></dl>
+        <label class="check"><input id="confirm-update" type="checkbox"><span id="confirm-update-label">確認要更新這個網站。</span></label>
+        <div class="actions"><button id="apply-update" type="button" class="primary">開始更新</button><button id="cancel-update" type="button" class="secondary" hidden>停止更新</button></div>
+        <p class="hint">建置新版網站大約要 10–20 分鐘，這段時間舊版網站照常可以用。中途停止或失敗都不會影響舊版，重新按「開始更新」即可。</p>
+        <ol id="update-steps" class="steps"></ol>
+      </div>
+      <div id="update-done" class="notice" hidden>
+        <p id="update-done-message"></p>
+        <a id="update-website" class="button primary" target="_blank" rel="noopener noreferrer">開啟網站</a>
+      </div>
+    </section>
+
     <section id="settings-section" aria-labelledby="settings-heading">
       <div class="section-heading"><span class="number">2</span><h2 id="settings-heading">填寫教會資料</h2></div>
       <form id="settings-form">

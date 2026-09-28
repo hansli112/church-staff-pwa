@@ -147,6 +147,9 @@ export async function startInstallerServer({
       else if (url.pathname === '/api/plan') return send(response, 200, await manager.plan(input));
       else if (url.pathname === '/api/resume') return send(response, 200, await manager.load(input.runId));
       else if (url.pathname === '/api/apply') task = manager.apply(input);
+      else if (url.pathname === '/api/update/find') task = manager.findInstalls();
+      else if (url.pathname === '/api/update/plan') return send(response, 200, await manager.planUpdate(input) ?? { accepted: true });
+      else if (url.pathname === '/api/update/apply') task = manager.applyUpdate(input);
       else return send(response, 404, { message: '找不到操作' });
       // Progress and typed errors are read through /api/state, never raw subprocess output.
       void task.catch(() => {});

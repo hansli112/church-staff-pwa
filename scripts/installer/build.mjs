@@ -113,6 +113,12 @@ export async function buildCoreDeployment(context, { command = runIsolatedComman
   // Worker and rules must participate in the stable cache/build identity too.
   for (const name of ['worker', 'functions', 'firestore.rules']) await safeCopy(path.join(stagingDir, name), path.join(workspace, name), hash, name);
   const buildVersion = `installer-${hash.digest('hex').slice(0, 24)}`;
+  // Update mode: the live site already runs exactly this source and config.
+  // The staged rules are still handed on, so the rules step can check them.
+  if (context.liveBuildVersion && context.liveBuildVersion === buildVersion) {
+    Object.assign(transient, { deploymentDir: stagingDir, buildVersion, unchanged: true });
+    return { buildVersion, deploymentDir: stagingDir, unchanged: true };
+  }
   const generatedAt = context.checkpoint?.intents?.build?.generatedAt || plan.createdAt || new Date().toISOString();
   await save({ intents: { build: { buildVersion, generatedAt, flutterVersion: FLUTTER_VERSION, wranglerVersion: WRANGLER_VERSION } } });
   // channel tells the app it cannot update itself from Git: only this wizard can.

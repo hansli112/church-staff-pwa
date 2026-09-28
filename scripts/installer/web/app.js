@@ -9,9 +9,11 @@ let displayedPlan;
 let accountsKey;
 let regionsReady = false;
 const weekdays = ['一', '二', '三', '四', '五', '六', '日'];
-const stateLabels = { pending: '尚未開始', running: '處理中', complete: '已完成', failed: '需要處理', paused: '已停止', waiting: '待本人操作' };
+const stateLabels = { pending: '尚未開始', running: '處理中', complete: '已完成', failed: '需要處理', paused: '已停止', waiting: '待本人操作', skipped: '已是最新，略過' };
 // Long steps say so up front; the elapsed time shows the wizard is still alive.
 const slowSteps = { 'google-project': '可能需要數分鐘', firebase: '可能需要數分鐘', build: '可能需要十幾分鐘', publish: '可能需要幾分鐘' };
+let installsKey;
+let updateKey;
 const runningSince = new Map();
 // Google is still working (or may have accepted a request): resume later, do not redo.
 const laterCodes = new Set(['GOOGLE_OPERATION_PENDING', 'GOOGLE_REQUEST_UNCONFIRMED', 'GOOGLE_API_PROPAGATING']);
@@ -110,6 +112,97 @@ function updateSitePreview() {
   preview.textContent = `${value || '你填的名稱'}.pages.dev`;
 }
 
+function renderSteps(list, steps) {
+  list.replaceChildren();
+  for (const step of steps) {
+    const item = document.createElement('li');
+    item.dataset.state = step.status;
+    const label = document.createElement('span');
+    label.textContent = step.label;
+    const status = document.createElement('span');
+    status.className = 'step-state';
+    status.textContent = stateLabels[step.status] ?? '需要核對';
+    if (step.status === 'running') {
+      if (!runningSince.has(`update:${step.id}`)) runningSince.set(`update:${step.id}`, Date.now());
+      status.textContent += ` · ${elapsed(runningSince.get(`update:${step.id}`))}${slowSteps[step.id] ? `（${slowSteps[step.id]}）` : ''}`;
+    } else runningSince.delete(`update:${step.id}`);
+    item.append(label, status);
+    list.append(item);
+  }
+}
+
+// Update mode: pick a site this wizard installed, confirm, rebuild it.
+function renderUpdate(state) {
+  const update = state.update;
+  const installing = Boolean(state.plan) && state.status !== 'complete';
+  $('update-section').hidden = installing;
+  $('find-installs').disabled = state.busy || !state.identity.googleEmail || !state.identity.accounts.length || update?.status === 'running';
+  $('release-line').hidden = !state.release;
+  if (state.release) {
+    $('release-line').textContent = `這次會更新到 ${state.release.version}${state.release.notes?.length ? `：${state.release.notes.join('；')}` : ''}`;
+  }
+  const nextInstallsKey = JSON.stringify([state.installs, update?.pagesProject, update?.cloudflareAccountId]);
+  if (installsKey !== nextInstallsKey) {
+    installsKey = nextInstallsKey;
+    $('installs').replaceChildren();
+    if (state.installs && !state.installs.length) {
+      const empty = document.createElement('p');
+      empty.className = 'hint';
+      empty.textContent = '這組 Google／Cloudflare 帳號底下找不到安裝精靈裝過的網站。請確認連接的是當初安裝用的帳號（可以對照交接卡）。';
+      $('installs').append(empty);
+    }
+    for (const install of state.installs ?? []) {
+      const option = document.createElement('label');
+      option.className = `install${install.readable ? '' : ' disabled'}`;
+      const radio = document.createElement('input');
+      radio.type = 'radio';
+      radio.name = 'install';
+      radio.disabled = !install.readable;
+      radio.checked = update?.pagesProject === install.pagesProject && update?.cloudflareAccountId === install.accountId;
+      radio.addEventListener('change', () => perform(() => request('/api/update/plan', { pagesProject: install.pagesProject, accountId: install.accountId })));
+      const text = document.createElement('span');
+      const name = document.createElement('span');
+      name.className = 'name';
+      name.textContent = install.appName ?? install.pagesProject;
+      const meta = document.createElement('span');
+      meta.className = 'meta';
+      meta.textContent = [install.website, install.currentRelease ? `目前版本 ${install.currentRelease}` : null,
+        install.readable ? null : '舊版精靈裝的，讀不到教會設定，無法自動更新'].filter(Boolean).join(' · ');
+      text.append(name, document.createElement('br'), meta);
+      option.append(radio, text);
+      $('installs').append(option);
+    }
+  }
+  $('update-confirm').hidden = !update;
+  if (update) {
+    const key = JSON.stringify([update.pagesProject, update.cloudflareAccountId]);
+    if (updateKey !== key) {
+      updateKey = key;
+      $('update-summary').replaceChildren();
+      summaryRow('教會名稱', update.appName, $('update-summary'));
+      summaryRow('網站', update.website, $('update-summary'));
+      summaryRow('版本', `${update.currentRelease ?? '較早的版本'} → ${update.release ?? '最新版'}`, $('update-summary'));
+      summaryRow('會變更', '網站程式、資料存取規則', $('update-summary'));
+      summaryRow('不會變更', '同工帳號、服事表、所有資料', $('update-summary'));
+      $('confirm-update-label').textContent = `確認要更新 ${update.website}。`;
+      $('confirm-update').checked = false;
+    }
+    renderSteps($('update-steps'), update.steps);
+    $('update-steps').hidden = update.status === 'ready';
+    $('apply-update').hidden = update.status === 'complete';
+    $('apply-update').textContent = update.status === 'paused' ? '重新開始更新' : '開始更新';
+    $('apply-update').disabled = state.busy || !$('confirm-update').checked;
+    $('cancel-update').hidden = !(state.busy && update.status === 'running');
+  }
+  $('update-done').hidden = update?.status !== 'complete';
+  if (update?.status === 'complete') {
+    $('update-done-message').textContent = update.unchanged
+      ? `${update.website} 已經是最新版本，不需要更新。`
+      : `已更新完成。同工下次打開 App（或重新整理）就會換到新版；手機上已加到桌面的 App，關掉重開一次即可。`;
+    $('update-website').href = update.website;
+  }
+}
+
 function render(state) {
   current = state;
   $('demo-banner').hidden = !state.demo;
@@ -122,7 +215,7 @@ function render(state) {
   $('connect-google').disabled = state.busy;
   $('connect-cloudflare').disabled = state.busy;
   $('resume').disabled = state.busy;
-  $('settings-fields').disabled = state.busy || ['running', 'paused', 'complete'].includes(state.status);
+  $('settings-fields').disabled = state.busy || ['running', 'paused', 'complete'].includes(state.status) || Boolean(state.update);
   $('plan').disabled = state.busy || !state.identity.googleEmail || !state.identity.accounts.length;
   $('device').hidden = !state.device;
   if (state.device) {
@@ -196,6 +289,7 @@ function render(state) {
     $('cancel').hidden = !state.busy;
   }
   updateApply();
+  renderUpdate(state);
   if (state.website) $('website').href = state.website;
   if (state.status === 'complete' && state.plan) {
     renderCleanup(state.plan);
@@ -324,6 +418,13 @@ $('apply').addEventListener('click', () => perform(() => {
   });
 }));
 $('cancel').addEventListener('click', () => perform(() => request('/api/cancel', {})));
+$('find-installs').addEventListener('click', () => perform(() => request('/api/update/find', {})));
+$('confirm-update').addEventListener('change', () => { $('apply-update').disabled = current?.busy || !$('confirm-update').checked; });
+$('apply-update').addEventListener('click', () => perform(() => {
+  $('apply-update').disabled = true;
+  return request('/api/update/apply', { confirm: current.update.pagesProject });
+}));
+$('cancel-update').addEventListener('click', () => perform(() => request('/api/cancel', {})));
 $('resume-existing').addEventListener('change', () => { $('resume-id').value = $('resume-existing').value; });
 $('resume').addEventListener('click', () => perform(() => request('/api/resume', { runId: $('resume-id').value.trim() })));
 $('copy-id').addEventListener('click', () => perform(async () => {

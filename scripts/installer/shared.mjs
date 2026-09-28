@@ -25,6 +25,15 @@ export const STEPS = [
 
 export const stepIdsFor = (provider) => new Set(STEPS.filter((step) => step.provider === provider).map((step) => step.id));
 
+// Update mode: rebuild an existing install from the latest source. Nothing is
+// created and no data, account or admin is touched; only the site and rules change.
+export const UPDATE_STEPS = [
+  ['inspect', '核對網站與 Google 專案', 'google'],
+  ['build', '建置新版網站', 'build'],
+  ['rules', '更新資料存取規則', 'google'],
+  ['publish', '發布新版網站', 'cloudflare'],
+].map(([id, label, provider]) => ({ id, label, provider }));
+
 // First installs only use the neutral artwork shipped in web/.
 export const CORE_ICONS = Object.freeze({
   favicon: 'favicon.png', icon192: 'icons/Icon-192.png', icon512: 'icons/Icon-512.png',

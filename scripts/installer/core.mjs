@@ -3,9 +3,9 @@ import { constants } from 'node:fs';
 import { lstat, mkdir, open, readdir, realpath, rename, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { validateChurchConfig } from '../../worker/church_config.js';
-import { CORE_ICONS, fingerprint, installationError, isPrivateDirectory, projectIdFor, STEPS } from './shared.mjs';
+import { CORE_ICONS, fingerprint, installationError, isPrivateDirectory, projectIdFor, STEPS, UPDATE_STEPS } from './shared.mjs';
 
-export { installationError, STEPS };
+export { installationError, STEPS, UPDATE_STEPS };
 
 export const REGIONS = [
   ['asia-east1', '台灣'], ['asia-east2', '香港'],
@@ -35,6 +35,32 @@ function requireEmail(value, label) {
   return result;
 }
 
+// The only church config an installer site ever has: core features, neutral
+// icon paths. Shared by a first install (from the form) and an update (from
+// the site's own /church-config.json, whose service ids are kept as they are).
+export function coreChurchConfig({ appName, shortName, timeZone, services }) {
+  return validateChurchConfig({
+    schemaVersion: 1, appName, shortName, timeZone, services,
+    features: { calendar: false, photoImport: false, pushNotifications: false, lineNotifications: false },
+    devotional: { enabled: false, dataUrl: '', linkUrl: '', sourceName: '每日靈糧', fetchUrl: '', fetchFormat: 'json' },
+    icons: { ...CORE_ICONS },
+  });
+}
+
+// A small JSON file from a site this wizard published. Pages answers unknown
+// paths with the app's index.html, so anything that is not JSON reads as missing.
+async function fetchSiteJson(url, { signal } = {}) {
+  try {
+    const response = await fetch(url, {
+      redirect: 'error', headers: { 'Cache-Control': 'no-cache' },
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15_000)]) : AbortSignal.timeout(15_000),
+    });
+    if (!response.ok) return null;
+    const text = await response.text();
+    return text.length > 256 * 1024 ? null : JSON.parse(text);
+  } catch { return null; }
+}
+
 export function createInstallationPlan(input, identity, {
   runId = randomUUID(), sourceRevision = 'development', mode = 'cloud',
 } = {}) {
@@ -57,8 +83,7 @@ export function createInstallationPlan(input, identity, {
   }
   let churchConfig;
   try {
-    churchConfig = validateChurchConfig({
-      schemaVersion: 1,
+    churchConfig = coreChurchConfig({
       appName: requireText(input.appName, '教會名稱'),
       shortName: requireText(input.shortName, '顯示簡稱', 20),
       timeZone: requireText(input.timeZone, '時區'),
@@ -69,9 +94,6 @@ export function createInstallationPlan(input, identity, {
         weekday: service?.weekday,
         enabled: true,
       })),
-      features: { calendar: false, photoImport: false, pushNotifications: false, lineNotifications: false },
-      devotional: { enabled: false, dataUrl: '', linkUrl: '', sourceName: '每日靈糧', fetchUrl: '', fetchFormat: 'json' },
-      icons: { ...CORE_ICONS },
     });
   } catch (error) {
     if (error.safeToDisplay) throw error;
@@ -202,7 +224,22 @@ export function publicError(error) {
   return result;
 }
 
-export function createInstallationManager({ rootDir, google, cloudflare, build, sourceRevision = 'development', demo = false }) {
+// Update builds get their own private directory; they never touch install records.
+async function updateDirectory(rootDir, runId) {
+  if (!RUN_ID.test(runId)) throw installationError('安裝識別碼不正確', 'INVALID_INPUT');
+  const root = await realpath(rootDir);
+  const local = path.join(root, '.local');
+  const localStat = await lstat(local).catch((error) => { if (error.code !== 'ENOENT') throw error; });
+  if (localStat && (!localStat.isDirectory() || localStat.isSymbolicLink())) throw new Error('.local must be a real directory');
+  if (!localStat) await mkdir(local, { mode: 0o700 });
+  const base = path.join(local, 'update');
+  await privateDirectory(base);
+  const runDir = path.join(base, runId);
+  await privateDirectory(runDir);
+  return runDir;
+}
+
+export function createInstallationManager({ rootDir, google, cloudflare, build, sourceRevision = 'development', demo = false, release, fetchSite = fetchSiteJson }) {
   const mode = demo ? 'demo' : 'cloud';
   let state;
   let store;
@@ -215,6 +252,10 @@ export function createInstallationManager({ rootDir, google, cloudflare, build, 
   let cloudflareIdentity;
   let transient = {};
   let writeQueue = Promise.resolve();
+  // Update mode lives only in memory: every run re-reads the truth from
+  // Cloudflare, Google and the live site, so there is nothing to resume.
+  let installs;
+  let update;
 
   const emit = (event) => {
     if (typeof event?.message === 'string') message = event.message.slice(0, 1_000);
@@ -297,7 +338,93 @@ export function createInstallationManager({ rootDir, google, cloudflare, build, 
         steps: STEPS.map(({ id, label }) => ({ id, label, status: state?.steps?.[id] ?? 'pending' })),
         website: state?.status === 'complete' ? verifiedWebsite(state.resources?.website) : undefined,
         regions: REGIONS,
+        release,
+        installs: installs?.map(({ accountId, accountName, pagesProject, website, appName, readable, currentRelease }) =>
+          ({ accountId, accountName, pagesProject, website, appName, readable, currentRelease })),
+        update: update && {
+          status: update.status,
+          pagesProject: update.plan.pagesProject, cloudflareAccountId: update.plan.cloudflareAccountId,
+          appName: update.plan.churchConfig.appName, website: update.target.website,
+          currentRelease: update.target.currentRelease, release: update.plan.release,
+          steps: UPDATE_STEPS.map(({ id, label }) => ({ id, label, status: update.steps[id] ?? 'pending' })),
+          unchanged: update.result?.unchanged,
+        },
       };
+    },
+    findInstalls() {
+      return exclusive(async (signal) => {
+        if (state?.approved && state.status !== 'complete') throw installationError('目前有一個安裝還沒完成；請先完成或停止它，再更新網站');
+        if (!googleIdentity?.email || !cloudflareIdentity?.accounts?.length) throw installationError('請先連接 Google 與 Cloudflare', 'CONFIRMATION_REQUIRED');
+        message = '正在尋找這組帳號裝過的網站…';
+        update = undefined;
+        const found = await cloudflare.listInstalls({ signal });
+        const next = [];
+        for (const item of found.slice(0, 20)) {
+          const website = `https://${item.subdomain}/`;
+          const [config, version] = await Promise.all([
+            fetchSite(`${website}church-config.json`, { signal }), fetchSite(`${website}version.json`, { signal }),
+          ]);
+          let churchConfig;
+          try { churchConfig = config && coreChurchConfig(config); } catch { /* Unreadable: listed, but cannot update. */ }
+          next.push({
+            ...item, website, churchConfig, readable: Boolean(churchConfig), appName: churchConfig?.appName,
+            currentRelease: typeof version?.release === 'string' ? version.release.slice(0, 20) : undefined,
+            liveBuildVersion: typeof version?.version === 'string' ? version.version.slice(0, 200) : undefined,
+          });
+        }
+        installs = next;
+        message = installs.length ? '請選擇要更新的網站' : '這組 Google／Cloudflare 帳號底下，找不到安裝精靈裝過的網站';
+      });
+    },
+    planUpdate({ pagesProject, accountId } = {}) {
+      return exclusive(async () => {
+        const target = installs?.find((item) => item.pagesProject === pagesProject && item.accountId === accountId);
+        if (!target) throw installationError('請先按「尋找已安裝的網站」，再選擇一個', 'INVALID_INPUT');
+        if (!target.readable) throw installationError('這個網站是舊版精靈裝的，讀不到教會設定，沒辦法自動更新。', 'UPDATE_UNSUPPORTED');
+        update = {
+          plan: {
+            schemaVersion: 1, kind: 'update', mode, runId: target.runId, projectId: target.projectId,
+            pagesProject: target.pagesProject, cloudflareAccountId: target.accountId, googleEmail: googleIdentity.email,
+            churchConfig: target.churchConfig, createdAt: new Date().toISOString(), release: release?.version,
+          },
+          target, status: 'ready', steps: {},
+        };
+        message = '請核對要更新的網站，再按「開始更新」';
+      });
+    },
+    applyUpdate({ confirm } = {}) {
+      return exclusive(async (signal) => {
+        if (!update || confirm !== update.plan.pagesProject) throw installationError('請勾選確認要更新的網站', 'CONFIRMATION_REQUIRED');
+        await verifyIdentity(update.plan, signal);
+        const runDir = await updateDirectory(rootDir, update.plan.runId);
+        const checkpoint = { resources: {}, intents: {} };
+        const context = {
+          plan: clone(update.plan), runDir, checkpoint, emit, signal, transient: {},
+          liveBuildVersion: update.target.liveBuildVersion,
+          save: async (patch) => { for (const key of ['resources', 'intents']) Object.assign(checkpoint[key], clone(patch[key] ?? {})); },
+        };
+        update.status = 'running';
+        update.steps = {};
+        update.result = undefined;
+        try {
+          for (const step of UPDATE_STEPS) {
+            signal.throwIfAborted();
+            update.steps[step.id] = 'running';
+            message = step.label;
+            if (step.provider === 'build') await build(context);
+            else if (step.provider === 'google') await google.update(step.id, context);
+            else update.result = await cloudflare.publishUpdate(context);
+            update.steps[step.id] = context.transient.unchanged && ['build', 'publish'].includes(step.id) ? 'skipped' : 'complete';
+          }
+          update.status = 'complete';
+          message = update.result?.unchanged ? '這個網站已經是最新版本，不需要更新。' : '更新完成。同工下次打開 App 就會換到新版。';
+        } catch (error) {
+          const current = UPDATE_STEPS.find((step) => update.steps[step.id] === 'running');
+          if (current) update.steps[current.id] = signal.aborted ? 'paused' : 'failed';
+          update.status = 'paused';
+          throw error;
+        }
+      });
     },
     connectGoogle() {
       return exclusive(async (signal) => {
