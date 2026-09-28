@@ -701,6 +701,17 @@ describe('users 管理員操作與 role 驗證', () => {
     await assertSucceeds(updateDoc(doc(asAdmin(), 'users', ADMIN), { name: '管理員改名' }));
   });
 
+  // 只擋自己：有兩位以上管理員時，可以互相降級或刪除（例如交接給別人）。
+  it('管理員可以把另一位管理員降成組員', async () => {
+    await assertSucceeds(setDoc(doc(asAdmin(), 'users', 'second-admin'), userDoc('second-admin', 'admin')));
+    await assertSucceeds(updateDoc(doc(asAdmin(), 'users', 'second-admin'), { role: 'member' }));
+  });
+
+  it('管理員可以刪除另一位管理員', async () => {
+    await assertSucceeds(setDoc(doc(asAdmin(), 'users', 'third-admin'), userDoc('third-admin', 'admin')));
+    await assertSucceeds(deleteDoc(doc(asAdmin(), 'users', 'third-admin')));
+  });
+
   it('管理員可以刪除別人', async () => {
     await assertSucceeds(setDoc(doc(asAdmin(), 'users', 'to-remove'), userDoc('to-remove', 'staff')));
     await assertSucceeds(deleteDoc(doc(asAdmin(), 'users', 'to-remove')));

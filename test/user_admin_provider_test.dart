@@ -133,6 +133,18 @@ void main() {
       await provider.updateUser(_adminUser.copyWith(name: '新名字'));
     });
 
+    test('管理員可以把另一位管理員降級或刪除（只擋自己）', () async {
+      const otherAdmin = User(
+        id: 'uid-admin-2',
+        name: 'Second Admin',
+        email: 'admin2@example.com',
+        username: 'admin2',
+        role: UserRole.admin,
+      );
+      await provider.updateUser(otherAdmin.copyWith(role: UserRole.member));
+      await provider.deleteUser(otherAdmin.id);
+    });
+
     test('管理員可以刪除別人、調整別人的角色', () async {
       await provider.deleteUser(_staffUser.id);
       await provider.updateUser(_staffUser.copyWith(role: UserRole.admin));
