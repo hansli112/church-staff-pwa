@@ -102,7 +102,10 @@ class ChurchApp extends StatelessWidget {
         ),
 
         // ServiceCatalogProvider — 登入後讀 settings/services，聚會清單變了就重載。
+        // lazy: false：平常沒有畫面讀它（只有「聚會設定」會），預設的 lazy
+        // 會讓它到打開設定頁才建立，其他裝置就永遠不會去讀新的聚會清單。
         ChangeNotifierProxyProvider<SessionProvider, ServiceCatalogProvider>(
+          lazy: false,
           create: (_) =>
               ServiceCatalogProvider(FirestoreServiceSettingsRepository()),
           update: (_, session, prev) {
