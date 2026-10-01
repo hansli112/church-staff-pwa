@@ -784,6 +784,17 @@ void main() {
       expect(result.notInRosterNames, contains('陳志豪'));
       expect(result.guestSpeakerNames, isNot(contains('陳志豪')));
     });
+
+    test('信息寫「總部連線」這種不是人名的，也照外來講員處理', () {
+      final result = _parse(
+        '[{"date": "2026-12-13", "duties": [{"role": "信息", "people": ["總部連線"]}]}]',
+        candidates: ['陳志明', '林淑芸'],
+        nameToId: {'陳志明': 'u1', '林淑芸': 'u2'},
+      );
+      expect(result.guestSpeakerNames, ['總部連線']);
+      expect(result.notInRosterNames, isEmpty);
+      expect(result.dutiesByDate['2026-12-13']!.single.people, ['總部連線']);
+    });
   });
 
   group('帶自己日期的一次性活動', () {
