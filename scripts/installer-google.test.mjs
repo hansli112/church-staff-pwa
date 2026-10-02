@@ -386,14 +386,30 @@ test('a definite 4xx refusal lets the same create be retried after the person fi
   assert.equal(creates(h, ':addFirebase'), 2);
 });
 
-test('an addFirebase 403 while the new project settles is retried without asking the person', async (t) => {
+test('a bare addFirebase 403 is not retried: the next resume sends it again once the project settles', async (t) => {
   const h = await setup(t);
   await h.through('google-project');
   let denied = 0;
-  h.setInterceptor((call) => call.pathname.endsWith(':addFirebase') && denied++ < 2 ? error(403, 'PERMISSION_DENIED') : undefined);
+  h.setInterceptor((call) => call.pathname.endsWith(':addFirebase') && denied++ < 1 ? error(403, 'PERMISSION_DENIED') : undefined);
+  await assert.rejects(h.adapter.execute('firebase', h.context), (err) => err.code === 'GOOGLE_TERMS_REQUIRED' && err.message.includes('以前就用過 Firebase'));
+  assert.equal(creates(h, ':addFirebase'), 1);
+  assert.deepEqual(h.state.delays, []);
   await h.adapter.execute('firebase', h.context);
-  assert.equal(creates(h, ':addFirebase'), 3);
+  assert.equal(creates(h, ':addFirebase'), 2);
   assert.deepEqual(h.context.checkpoint.resources.firebase, { projectId });
+});
+
+test('a rate-limited addFirebase asks to resume in a minute, not to raise a quota', async (t) => {
+  const h = await setup(t);
+  await h.through('google-project');
+  h.setInterceptor((call) => call.pathname.endsWith(':addFirebase') ? response(429, { error: { status: 'RESOURCE_EXHAUSTED',
+    message: 'Quota exceeded', details: [{ reason: 'RATE_LIMIT_EXCEEDED' }] } }) : undefined);
+  await assert.rejects(h.adapter.execute('firebase', h.context), (err) =>
+    err.code === 'GOOGLE_RATE_LIMITED' && !err.helpUrl && err.message.endsWith('〔技術代碼：firebase 429 RESOURCE_EXHAUSTED RATE_LIMIT_EXCEEDED〕'));
+  assert.equal(h.context.checkpoint.intents.firebase.requested, undefined);
+  h.setInterceptor(undefined);
+  await h.adapter.execute('firebase', h.context);
+  assert.equal(creates(h, ':addFirebase'), 2);
 });
 
 test('an account that never accepted the Firebase terms is sent to the console, then resumes', async (t) => {
@@ -403,12 +419,12 @@ test('an account that never accepted the Firebase terms is sent to the console, 
   await assert.rejects(h.adapter.execute('firebase', h.context), (err) =>
     err.code === 'GOOGLE_TERMS_REQUIRED' && err.helpUrl === 'https://console.firebase.google.com/' && err.message.includes(projectId) &&
     err.message.endsWith('〔技術代碼：firebase 403〕'));
-  assert.equal(creates(h, ':addFirebase'), 4);
+  assert.equal(creates(h, ':addFirebase'), 1);
   // The person adds Firebase in the console; the resume adopts it without another create.
   h.setInterceptor(undefined);
   h.state.firebase = { projectId, projectNumber: '123456789' };
   await h.adapter.execute('firebase', h.context);
-  assert.equal(creates(h, ':addFirebase'), 4);
+  assert.equal(creates(h, ':addFirebase'), 1);
   assert.deepEqual(h.context.checkpoint.resources.firebase, { projectId });
 });
 
@@ -436,7 +452,7 @@ test('an addFirebase operation that fails with permission denied is also treated
   await rejectsCode(h.adapter.execute('firebase', h.context), 'GOOGLE_TERMS_REQUIRED');
   h.setInterceptor(undefined);
   await h.adapter.execute('firebase', h.context);
-  assert.equal(creates(h, ':addFirebase'), 5);
+  assert.equal(creates(h, ':addFirebase'), 2);
 });
 
 test('a server error on create is treated as possibly accepted', async (t) => {
