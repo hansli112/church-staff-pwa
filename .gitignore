@@ -1,0 +1,24 @@
+# 本機專用：金鑰、service account、真實名單。一律不進版控。
+.local/
+.env
+.env.*
+!.env.example
+
+# Firebase CLI / emulator
+.firebase/
+*-debug.log
+
+# Node
+node_modules/
+
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins-dependencies
+/build/
+/coverage/
+
+# Editors / OS
+.idea/
+*.iml
+.DS_Store
+*~

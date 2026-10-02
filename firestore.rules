@@ -1,0 +1,217 @@
+rules_version = '2';
+
+// Firestore security rules for 馬大別忙 (hosted, multi-church).
+//
+// Data model (docs/data-model.md has the full field list):
+//   users/{uid}                              - global profile: name, locale, fcm
+//   churches/{cid}                           - name, nameKey, status
+//   churches/{cid}/members/{uid}             - role, groups, zones in that church
+//   churches/{cid}/rosters/{rosterId}        - service rosters
+//   churches/{cid}/staff_orders/{type}       - per-service staff ranking
+//   churches/{cid}/settings/{doc}            - admin-managed church settings
+//
+// Threat model:
+//   - Every church shares one project, so the church in the path is the
+//     tenant boundary. Every rule under churches/{cid} checks membership of
+//     *that* cid; being admin of one church grants nothing in another.
+//   - Client-side checks can be bypassed with the public web SDK. These rules
+//     are the real enforcement boundary.
+//   - Creating a church, joining one, renaming one and changing its status all
+//     go through Cloud Functions (Admin SDK, bypasses these rules), because
+//     each needs a check the rules cannot do: the duplicate-name lookup, an
+//     invite, or being the platform operator. No client may write those docs.
+//   - Removing a member deletes churches/{cid}/members/{uid}; the Auth account
+//     survives and keeps a valid ID token. Every church rule therefore needs
+//     an existing member doc, not just a signed-in user.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function churchPath(cid) {
+      return /databases/$(database)/documents/churches/$(cid);
+    }
+
+    function memberPath(cid) {
+      return /databases/$(database)/documents/churches/$(cid)/members/$(request.auth.uid);
+    }
+
+    // Holds a membership, whatever the church's status. Only used where a
+    // member of a suspended church still needs to see why it is closed.
+    function hasMembership(cid) {
+      return isSignedIn() && exists(memberPath(cid));
+    }
+
+    // A member of an active church. The baseline for every church rule: a
+    // removed member, or any member of a suspended or deleted church, gets
+    // nothing. exists() before get() so a missing doc denies instead of
+    // erroring.
+    function isMember(cid) {
+      return hasMembership(cid)
+        && exists(churchPath(cid))
+        && get(churchPath(cid)).data.get('status', '') == 'active';
+    }
+
+    function member(cid) {
+      return get(memberPath(cid)).data;
+    }
+
+    function isAdmin(cid) {
+      return isMember(cid) && member(cid).get('role', '') == 'admin';
+    }
+
+    // Permission groups, in the Linux sense: a member may hold several, they
+    // are orthogonal, and admin is root — it holds every group without being
+    // listed in any. A group never grants identity power: adding members,
+    // changing roles, granting groups and writing settings stay isAdmin(), so
+    // a grant cannot spread without an admin.
+    function inGroup(cid, name) {
+      return isAdmin(cid)
+        || (isMember(cid) && name in member(cid).get('groups', []));
+    }
+
+    function hasValidGroups() {
+      return !('groups' in request.resource.data)
+        || request.resource.data.groups.hasOnly(['roster-editors', 'calendar-editors']);
+    }
+
+    function hasValidRole() {
+      return request.resource.data.role in ['admin', 'leader', 'staff', 'member'];
+    }
+
+    // Every service ID this church has ever configured. The church's
+    // settings/services is seeded when the church is created; its ids list
+    // only ever grows (validServiceSettings), so a roster or zone that once
+    // named an ID keeps a valid type.
+    function serviceTypes(cid) {
+      let path = /databases/$(database)/documents/churches/$(cid)/settings/services;
+      return exists(path) ? get(path).data.get('ids', []) : [];
+    }
+
+    function validServiceSettings() {
+      let data = request.resource.data;
+      let before = resource == null ? [] : resource.data.get('ids', []);
+      return data.keys().hasOnly(['services', 'ids', 'updatedAt'])
+        && data.services is list && data.services.size() >= 1 && data.services.size() <= 20
+        && data.ids is list && data.ids.size() <= 100
+        && data.ids.hasAll(before);
+    }
+
+    // zones on a member doc is a list of maps, and the rules language has no
+    // loops — there is no way to read serviceType out of it. So the app writes
+    // a flattened projection alongside it, `zoneTypes`, and the rules read that.
+    function hasValidZoneTypes(cid) {
+      return !('zoneTypes' in request.resource.data)
+        || request.resource.data.zoneTypes.hasOnly(serviceTypes(cid));
+    }
+
+    // Being in roster-editors says "may edit rosters"; the zone says which
+    // service. admin keeps every type without holding a zone.
+    function canEditRosterType(cid, type) {
+      return type in serviceTypes(cid) && (isAdmin(cid)
+        || (inGroup(cid, 'roster-editors')
+            && type in member(cid).get('zoneTypes', [])));
+    }
+
+    function onlyTouches(allowed) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowed);
+    }
+
+    function hasValidDateKey() {
+      return !('dateKey' in request.resource.data)
+        || (request.resource.data.dateKey is string
+            && request.resource.data.dateKey.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$'));
+    }
+
+    // Global profile. Only its owner ever reads it: names shown inside a
+    // church come from the member doc, and push tokens are read by Cloud
+    // Functions. Deleting it is part of account deletion, done server-side.
+    match /users/{uid} {
+      function validProfile() {
+        return request.resource.data.keys().hasOnly(
+          ['name', 'email', 'locale', 'fcm', 'createdAt', 'updatedAt']);
+      }
+
+      allow read: if isSelf(uid);
+      allow create, update: if isSelf(uid) && validProfile();
+    }
+
+    // The church switcher lists the caller's own memberships with a
+    // collection-group query on members where uid == me. Rules must be
+    // provable from the query, so this checks the uid field, not the path.
+    match /{path=**}/members/{memberId} {
+      allow read: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    match /churches/{cid} {
+      // A member of a suspended church can still read its status, so the app
+      // can say the church is closed instead of failing everywhere.
+      allow read: if hasMembership(cid);
+
+      match /members/{uid} {
+        // Own membership, or roster-editors: the roster people picker lists
+        // this collection. Firestore has no field-level read restriction, so
+        // a roster editor sees every member's email.
+        allow read: if isSelf(uid) || inGroup(cid, 'roster-editors');
+
+        // Joining is an invite redemption, done by a Cloud Function.
+        allow create: if false;
+
+        //   - admin: anything, except changing who the doc belongs to or
+        //            taking away their own admin role
+        //   - self : only notificationPrefs. Not role, not groups.
+        //
+        // An admin can neither demote nor remove themself, so a church always
+        // keeps someone who can manage it. Another admin can do both.
+        allow update: if (isAdmin(cid) && hasValidRole() && hasValidGroups()
+              && hasValidZoneTypes(cid)
+              && request.resource.data.uid == uid
+              && (!isSelf(uid) || request.resource.data.role == 'admin'))
+          || (isSelf(uid) && isMember(cid) && onlyTouches(['notificationPrefs']));
+
+        // A non-admin may leave on their own. An admin must be demoted by
+        // another admin first, which is how the last admin is kept in place.
+        allow delete: if (isAdmin(cid) && !isSelf(uid))
+          || (isSelf(uid) && resource.data.get('role', '') != 'admin');
+      }
+
+      match /rosters/{rosterId} {
+        allow read: if isMember(cid);
+
+        // Editors must hold both the old and new service's zone. An admin may
+        // repair an unknown type to a configured one; nobody can write a new
+        // unknown type.
+        allow create: if hasValidDateKey()
+          && canEditRosterType(cid, request.resource.data.get('type', ''));
+        allow update: if hasValidDateKey()
+          && canEditRosterType(cid, request.resource.data.get('type', ''))
+          && (isAdmin(cid) || canEditRosterType(cid, resource.data.get('type', '')));
+        allow delete: if canEditRosterType(cid, resource.data.get('type', ''));
+      }
+
+      match /staff_orders/{type} {
+        allow read: if isMember(cid);
+        allow write: if canEditRosterType(cid, type);
+      }
+
+      match /settings/{doc} {
+        allow read: if isMember(cid);
+        allow create, update: if isAdmin(cid)
+          && (doc != 'services' || validServiceSettings());
+        // settings/services is never deleted; see validServiceSettings().
+        allow delete: if isAdmin(cid) && doc != 'services';
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
