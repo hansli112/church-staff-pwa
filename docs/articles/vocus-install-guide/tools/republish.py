@@ -9,7 +9,8 @@ d=json.load(open('vocus-body.json')); imgs=json.load(open('vocus-images.json'))
 missing=[n for n in d['caps'] if n not in imgs]
 assert not missing, missing
 for t in c('tabs'):
-    if 'vocus.cc' in t['url']: c('close', targetId=t['targetId'])
+    # Only stale editor tabs; leave any vocus page the person has open.
+    if 'vocus.cc/new-editor' in t['url']: c('close', targetId=t['targetId'])
 c('open', url='https://vocus.cc/new-editor/6aba4b3afd89780001a439af'); time.sleep(12)
 EMPTY='{"root":{"children":[{"children":[],"direction":null,"format":"","indent":0,"type":"paragraph","version":1}],"direction":null,"format":"","indent":0,"type":"root","version":1}}'
 ev("(() => { const e=document.querySelector('.ContentEditable__root').__lexicalEditor; e.setEditorState(e.parseEditorState(%s)); return 1; })()" % json.dumps(EMPTY)); time.sleep(1)
@@ -43,7 +44,11 @@ def btn(label):
     return ev("(() => { const b=[...document.querySelectorAll('button')].filter(b=>b.innerText.trim()===%r); if(!b.length) return null; b[b.length-1].click(); return b.length; })()" % label)
 btn('調整發佈設定'); time.sleep(5)
 btn('下一步'); time.sleep(3); ev("window.scrollTo(0,0)"); time.sleep(1)
-if ev("document.body.innerText.includes('十架救恩')"): c('click', x=687, y=326); time.sleep(1)
+# Clear 上篇 with its own clear icon; vocus's layout moves, so no fixed coordinates.
+CLEAR="(() => { const i=document.getElementById('react-select-3-input')?.closest('.css-b62m3t-container')?.querySelector('.icon-error_fill'); if(!i) return null; i.scrollIntoView({block:'center'}); const b=i.getBoundingClientRect(); return [b.x+b.width/2,b.y+b.height/2]; })()"
+if ev("document.body.innerText.includes('十架救恩')"):
+    r=ev(CLEAR)
+    if r: c('click', x=r[0], y=r[1]); time.sleep(1)
 assert not ev("document.body.innerText.includes('十架救恩')"), 'previous link still set'
 btn('下一步'); time.sleep(3)
 radios=dict(ev("(() => [...document.querySelectorAll('input[type=radio]')].map(r=>[r.value,r.checked]))()"))
