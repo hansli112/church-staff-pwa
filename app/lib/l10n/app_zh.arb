@@ -555,5 +555,21 @@
   "calSaved": "已儲存活動",
   "calPrevMonth": "上個月",
   "calNextMonth": "下個月",
-  "calendarSetting": "行事曆"
+  "calendarSetting": "行事曆",
+  "support": "支持馬大別忙",
+  "supportBody": "馬大別忙免費給每間教會使用。支持是自願的，不會多出任何功能",
+  "supportTips": "一次性支持",
+  "supportMonthly": "每月支持",
+  "supportRestore": "恢復購買",
+  "supportThanks": "謝謝你的支持",
+  "supportPending": "付款處理中",
+  "supportFailed": "沒有完成付款，沒有扣款",
+  "supportUnavailable": "現在無法連上商店",
+  "supporterBadge": "支持者",
+  "appIcon": "App 圖示",
+  "appIconSupporterOnly": "每月支持者可以換 App 圖示",
+  "appIconDefault": "藍",
+  "appIconGreen": "綠",
+  "appIconPurple": "紫",
+  "appIconNight": "夜"
 }

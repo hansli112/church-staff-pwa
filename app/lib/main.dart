@@ -23,6 +23,7 @@ import 'data/firebase/push_firebase.dart';
 import 'state/providers.dart';
 import 'state/push.dart';
 import 'state/session.dart';
+import 'state/support.dart';
 
 Future<void> main() async {
   // Real paths (/join/CODE), not #/: invite links must work as plain URLs.
@@ -44,6 +45,11 @@ Future<void> main() async {
       ? FirebaseTelemetry(cloud: backend.cloud, analytics: real)
       : const NoTelemetry();
   final PushService push = real ? FirebasePushService(prefs: prefs) : const NoPush();
+  // Tips and the subscription exist only in the store apps; the web build
+  // never shows them.
+  final native = !kIsWeb && env != Env.demo;
+  final SupportStore store = native ? StoreKitPlayStore() : const NoStore();
+  final AppIconSwitcher icons = native ? ChannelIconSwitcher() : const NoIconSwitcher();
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
     telemetry.recordError(details.exception, details.stack ?? StackTrace.empty);
@@ -60,6 +66,8 @@ Future<void> main() async {
         prefsProvider.overrideWithValue(prefs),
         telemetryProvider.overrideWithValue(telemetry),
         pushServiceProvider.overrideWithValue(push),
+        supportStoreProvider.overrideWithValue(store),
+        appIconSwitcherProvider.overrideWithValue(icons),
       ],
       // Streams retry by reconnecting themselves; a provider retry would
       // only repeat a permission error.

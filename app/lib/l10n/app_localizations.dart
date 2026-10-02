@@ -1824,6 +1824,102 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'行事曆'**
   String get calendarSetting;
+
+  /// No description provided for @support.
+  ///
+  /// In zh, this message translates to:
+  /// **'支持馬大別忙'**
+  String get support;
+
+  /// No description provided for @supportBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'馬大別忙免費給每間教會使用。支持是自願的，不會多出任何功能'**
+  String get supportBody;
+
+  /// No description provided for @supportTips.
+  ///
+  /// In zh, this message translates to:
+  /// **'一次性支持'**
+  String get supportTips;
+
+  /// No description provided for @supportMonthly.
+  ///
+  /// In zh, this message translates to:
+  /// **'每月支持'**
+  String get supportMonthly;
+
+  /// No description provided for @supportRestore.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢復購買'**
+  String get supportRestore;
+
+  /// No description provided for @supportThanks.
+  ///
+  /// In zh, this message translates to:
+  /// **'謝謝你的支持'**
+  String get supportThanks;
+
+  /// No description provided for @supportPending.
+  ///
+  /// In zh, this message translates to:
+  /// **'付款處理中'**
+  String get supportPending;
+
+  /// No description provided for @supportFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'沒有完成付款，沒有扣款'**
+  String get supportFailed;
+
+  /// No description provided for @supportUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'現在無法連上商店'**
+  String get supportUnavailable;
+
+  /// No description provided for @supporterBadge.
+  ///
+  /// In zh, this message translates to:
+  /// **'支持者'**
+  String get supporterBadge;
+
+  /// No description provided for @appIcon.
+  ///
+  /// In zh, this message translates to:
+  /// **'App 圖示'**
+  String get appIcon;
+
+  /// No description provided for @appIconSupporterOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'每月支持者可以換 App 圖示'**
+  String get appIconSupporterOnly;
+
+  /// No description provided for @appIconDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'藍'**
+  String get appIconDefault;
+
+  /// No description provided for @appIconGreen.
+  ///
+  /// In zh, this message translates to:
+  /// **'綠'**
+  String get appIconGreen;
+
+  /// No description provided for @appIconPurple.
+  ///
+  /// In zh, this message translates to:
+  /// **'紫'**
+  String get appIconPurple;
+
+  /// No description provided for @appIconNight.
+  ///
+  /// In zh, this message translates to:
+  /// **'夜'**
+  String get appIconNight;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

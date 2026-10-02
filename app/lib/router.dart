@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +22,7 @@ import 'features/me/members_screen.dart';
 import 'features/me/notifications_screen.dart';
 import 'features/me/profile_screen.dart';
 import 'features/me/services_screen.dart';
+import 'features/me/support_screen.dart';
 import 'features/rosters/import_screen.dart';
 import 'features/rosters/roster_day_screen.dart';
 import 'features/rosters/rosters_screen.dart';
@@ -100,6 +102,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                 (_) => const MeScreen(),
                 routes: [
                   page('profile', (_) => const ProfileScreen()),
+                  // Store apps only: the web build has no support page at all.
+                  if (!kIsWeb) page('support', (_) => const SupportScreen()),
                   page('language', (_) => const LanguageScreen()),
                   page('church', (_) => const ChurchInfoScreen()),
                   page('calendar', (s) => CalendarSettingsScreen(result: s.uri.queryParameters['result'])),

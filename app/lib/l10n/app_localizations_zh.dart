@@ -946,4 +946,52 @@ class L10nZh extends L10n {
 
   @override
   String get calendarSetting => '行事曆';
+
+  @override
+  String get support => '支持馬大別忙';
+
+  @override
+  String get supportBody => '馬大別忙免費給每間教會使用。支持是自願的，不會多出任何功能';
+
+  @override
+  String get supportTips => '一次性支持';
+
+  @override
+  String get supportMonthly => '每月支持';
+
+  @override
+  String get supportRestore => '恢復購買';
+
+  @override
+  String get supportThanks => '謝謝你的支持';
+
+  @override
+  String get supportPending => '付款處理中';
+
+  @override
+  String get supportFailed => '沒有完成付款，沒有扣款';
+
+  @override
+  String get supportUnavailable => '現在無法連上商店';
+
+  @override
+  String get supporterBadge => '支持者';
+
+  @override
+  String get appIcon => 'App 圖示';
+
+  @override
+  String get appIconSupporterOnly => '每月支持者可以換 App 圖示';
+
+  @override
+  String get appIconDefault => '藍';
+
+  @override
+  String get appIconGreen => '綠';
+
+  @override
+  String get appIconPurple => '紫';
+
+  @override
+  String get appIconNight => '夜';
 }

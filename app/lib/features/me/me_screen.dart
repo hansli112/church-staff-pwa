@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/design/components.dart';
+import '../../core/design/tokens.dart';
+import '../../state/support.dart';
 import '../../env.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
@@ -22,6 +24,8 @@ class MeScreen extends ConsumerWidget {
     final me = ref.watch(meProvider).value;
     final multiple = (ref.watch(membershipsProvider).value?.length ?? 0) > 1;
     final isOperator = ref.watch(isOperatorProvider).value ?? false;
+    final store = ref.watch(supportStoreProvider);
+    final supporter = store.available && ref.watch(supporterProvider);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.tabMe)),
       body: ListView(
@@ -31,6 +35,14 @@ class MeScreen extends ConsumerWidget {
               ListRow(
                 title: profile?.name ?? me?.name ?? '',
                 subtitle: profile?.email,
+                trailing: supporter
+                    ? Tag(
+                        label: l10n.supporterBadge,
+                        background: AppColors.of(context).accentSoft,
+                        foreground: AppColors.of(context).accent,
+                      )
+                    : null,
+                chevron: true,
                 onTap: () => context.push('/me/profile'),
               ),
             ],
@@ -60,6 +72,7 @@ class MeScreen extends ConsumerWidget {
                 value: l10n.languageZhHant,
                 onTap: () => context.push('/me/language'),
               ),
+              if (store.available) ListRow(title: l10n.support, onTap: () => context.push('/me/support')),
             ],
           ),
           if (isOperator || Env.current.isDevelopment)
