@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:martha/domain/models.dart';
+
 import '../support/harness.dart';
 import '../support/seed.dart';
 
@@ -53,6 +55,41 @@ void main() {
     expect(peopleOn(b, 18, '司琴'), ['李美玉']);
     expect(peopleOn(b, 18, '招待'), ['陳志明']);
     expect(savedDay(b, 18).duties[1].uids, {'李美玉': 'mei'});
+  });
+
+  testWidgets('an edit made while reviewing the preview survives the import', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/import/sunday');
+    await tapText(tester, '貼上 JSON');
+    await tester.enterText(
+      find.byType(TextField),
+      jsonEncode([
+        {
+          'date': '2026-10-11',
+          'duties': [
+            {
+              'role': '司琴',
+              'people': ['美玉'],
+            },
+          ],
+        },
+      ]),
+    );
+    await tapText(tester, '預覽');
+    // Meanwhile someone else sets 招待 on that day.
+    final day = savedDay(b, 11);
+    b.rosters['grace']![day.id] = day.copyWith(
+      duties: [
+        for (final d in day.duties) d.role == '招待' ? const Duty(role: '招待', people: ['陳志豪']) : d,
+      ],
+    );
+    b.notify();
+    await settle(tester);
+    await tester.scrollUntilVisible(find.text('套用到服事表'), 300);
+    await tapText(tester, '套用到服事表');
+    expect(peopleOn(b, 11, '司琴'), ['李美玉']);
+    expect(peopleOn(b, 11, '招待'), ['陳志豪']);
   });
 
   testWidgets('used-up photos say when they come back', (tester) async {

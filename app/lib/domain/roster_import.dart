@@ -134,7 +134,8 @@ ImportPlan planImport({
       report.badRows.add(i + 1);
       continue;
     }
-    final day = Day.tryParse(row['date'] as String?);
+    final rawDate = row['date'];
+    final day = rawDate is String ? Day.tryParse(rawDate) : null;
     if (day == null || !seen.add(day)) {
       report.badRows.add(i + 1);
       continue;

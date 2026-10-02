@@ -130,3 +130,21 @@ describe('delete and restore', () => {
     await rejectsWith(restoreChurch(deps, caller('alice'), { churchId: 'C1' }), 'unknown');
   });
 });
+
+describe('suspension', () => {
+  test('an admin cannot delete-and-restore their way out of a suspension', async () => {
+    await seedChurch('C1', { alice: 'admin' }, { status: 'suspended' });
+    await rejectsWith(deleteChurch(deps, caller('alice'), { churchId: 'C1' }), 'permissionDenied');
+    assert.equal((await db.doc('churches/C1').get()).get('status'), 'suspended');
+  });
+});
+
+describe('purge hooks', () => {
+  test('purge calls the hook before deleting, e.g. to revoke the calendar grant', async () => {
+    await seedChurch('Old', { alice: 'admin' });
+    await db.doc('churches/Old').update({ status: 'deleted', deletedAt: Timestamp.fromDate(new Date('2026-08-01T00:00:00Z')) });
+    const seen: string[] = [];
+    await purgeDeletedChurches(deps, undefined, async (cid) => seen.push(cid));
+    assert.deepEqual(seen, ['Old']);
+  });
+});

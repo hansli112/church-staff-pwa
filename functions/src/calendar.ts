@@ -73,7 +73,7 @@ export function decrypt(sealed: string, keyB64: string) {
   return Buffer.concat([decipher.update(body), decipher.final()]).toString('utf8');
 }
 
-type CalDeps = Deps & { google: GoogleApi; config: OAuthConfig };
+export type CalDeps = Deps & { google: GoogleApi; config: OAuthConfig };
 
 const cid = (data: unknown) => {
   const v = (data as { churchId?: unknown })?.churchId;
@@ -189,6 +189,17 @@ export async function calendarDisconnect(deps: CalDeps, caller: Caller | null, d
   const c = requireCaller(caller);
   const churchId = cid(data);
   if (!(await membership(deps, churchId, c)).admin) fail('permission-denied', 'permissionDenied');
+  await forgetCalendar(deps, churchId);
+  return {};
+}
+
+/**
+ * Revokes the church's Google grant and deletes the token, settings and
+ * cache. Used when an admin disconnects, when the church is purged, and
+ * when the person who connected it stops being an admin there (their
+ * Google account must not stay reachable through the church).
+ */
+export async function forgetCalendar(deps: CalDeps, churchId: string) {
   const tokenDoc = await deps.db.doc(`calendarTokens/${churchId}`).get();
   if (tokenDoc.exists) {
     try {
@@ -196,11 +207,18 @@ export async function calendarDisconnect(deps: CalDeps, caller: Caller | null, d
     } catch {
       // Already revoked on Google's side; still forget it here.
     }
+    await tokenDoc.ref.delete();
   }
-  await tokenDoc.ref.delete();
   await deps.db.doc(`churches/${churchId}/settings/calendar`).delete();
   await clearCache(deps, churchId);
-  return {};
+}
+
+/** forgetCalendar when [uid] is the admin who connected the church's calendar. */
+export async function releaseCalendarIfConnector(deps: CalDeps, churchId: string, uid: string) {
+  const tokenDoc = await deps.db.doc(`calendarTokens/${churchId}`).get();
+  if (!tokenDoc.exists || tokenDoc.get('connectedBy') !== uid) return false;
+  await forgetCalendar(deps, churchId);
+  return true;
 }
 
 async function clearCache(deps: Deps, churchId: string, month?: string) {
@@ -249,12 +267,14 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
   const { token, calendarId } = await access(deps, churchId);
   if (!calendarId) fail('failed-precondition', 'unknown', 'noCalendar');
   let result: CalendarEvent | null = null;
-  let month: string;
+  const months = new Set<string>();
+  const previous = (data as { previousStart?: unknown })?.previousStart;
+  if (typeof previous === 'string') months.add(monthOf(previous));
   if (input.op === 'delete') {
     if (typeof input.eventId !== 'string') fail('invalid-argument', 'unknown');
     const start = typeof input.event?.start === 'string' ? input.event.start : '';
     await deps.google.remove(token, calendarId, input.eventId);
-    month = start.slice(0, 7);
+    if (start) months.add(monthOf(start));
   } else if (input.op === 'upsert') {
     const e = input.event;
     if (!e || typeof e.title !== 'string' || !e.title.trim() || typeof e.start !== 'string' || typeof e.end !== 'string') {
@@ -269,12 +289,13 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
       location: typeof e.location === 'string' ? e.location.slice(0, 300) : undefined,
       description: typeof e.description === 'string' ? e.description.slice(0, 4000) : undefined,
     });
-    month = e.start.slice(0, 7);
+    months.add(monthOf(e.start));
   } else {
     fail('invalid-argument', 'unknown');
   }
-  // Drop the cached month so everyone sees the change on their next read.
-  if (month) await deps.db.doc(`calendarCache/${churchId}_${month}`).delete();
+  // Drop the cached months (old and new, for a moved event) so everyone
+  // sees the change on their next read.
+  await Promise.all([...months].map((m) => deps.db.doc(`calendarCache/${churchId}_${m}`).delete()));
   return { event: result };
 }
 
@@ -383,4 +404,11 @@ export function googleApi(): GoogleApi {
       await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(refreshToken)}`, { method: 'POST' });
     },
   };
+}
+
+/** `YYYY-MM` of an event start, in UTC+8 like the cache months. */
+export function monthOf(start: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(start)) return start.slice(0, 7);
+  const t = Date.parse(start);
+  return Number.isNaN(t) ? start.slice(0, 7) : new Date(t + 8 * 3600e3).toISOString().slice(0, 7);
 }

@@ -994,4 +994,7 @@ class L10nZh extends L10n {
 
   @override
   String get appIconNight => '夜';
+
+  @override
+  String get savedOffline => '已存在這台裝置，連上網路後會自動同步';
 }

@@ -170,6 +170,47 @@ void main() {
     });
   });
 
+  group('undo and offline', () {
+    testWidgets('undo restores only its duty, keeping another editor\'s change', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-04');
+      await tapText(tester, '司琴');
+      await tapText(tester, '李美玉');
+      await tapText(tester, '完成');
+      expect(peopleOn(b, 4, '司琴'), isEmpty);
+      // Someone else changes 司會 on the same day.
+      b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, 4))] = Roster(
+        type: 'sunday',
+        day: Day(2026, 10, 4),
+        events: savedDay(b, 4).events,
+        duties: [
+          for (final d in savedDay(b, 4).duties)
+            d.role == '司會' ? const Duty(role: '司會', people: ['王牧師'], uids: {'王牧師': 'pastor'}) : d,
+        ],
+      );
+      b.notify();
+      await settle(tester);
+      await tapText(tester, '復原');
+      expect(peopleOn(b, 4, '司琴'), ['李美玉']);
+      expect(peopleOn(b, 4, '司會'), ['王牧師']);
+    });
+
+    testWidgets('a slow (offline) write still answers, saying it will sync', (tester) async {
+      final b = seededChurch()..writeDelay = const Duration(seconds: 5);
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-04');
+      await tapText(tester, '司琴');
+      await tapText(tester, '李美玉');
+      await tapText(tester, '完成');
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump();
+      expect(find.text('已存在這台裝置，連上網路後會自動同步'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 4));
+      await settle(tester);
+    });
+  });
+
   group('swap', () {
     testWidgets('swaps two people in one write, and undo is one write', (tester) async {
       final b = seededChurch();

@@ -70,6 +70,9 @@ export async function onRosterWritten(
   editedBy: string | undefined,
 ) {
   const doc = after?.exists ? after : before;
+  // Bulk writes (import) would send one push per person per day; the
+  // import itself is the news, not each day.
+  if (after?.get('via') === 'import') return 0;
   const dateKey = doc?.get('dateKey') as string | undefined;
   const type = doc?.get('type') as string | undefined;
   if (!dateKey || !type || dateKey < dateKeyUtc8(deps.now())) return 0;

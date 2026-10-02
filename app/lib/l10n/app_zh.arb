@@ -571,5 +571,6 @@
   "appIconDefault": "藍",
   "appIconGreen": "綠",
   "appIconPurple": "紫",
-  "appIconNight": "夜"
+  "appIconNight": "夜",
+  "savedOffline": "已存在這台裝置，連上網路後會自動同步"
 }

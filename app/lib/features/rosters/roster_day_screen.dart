@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -153,26 +155,52 @@ class RosterDayScreen extends ConsumerWidget {
 }
 
 /// Runs a write that returns its own undo, then shows 「復原」 for it.
-Future<void> runWithUndo(
-  BuildContext context,
-  String message,
-  Future<Future<void> Function()> Function() write,
-) async {
+/// Shows the result of a roster write, with 「復原」.
+///
+/// Firestore applies the change on this device at once and confirms it when
+/// the server has it. Waiting for that offline would show nothing, so after
+/// a moment the toast appears anyway and says the change will sync; a later
+/// failure still shows up.
+Future<void> runWithUndo(BuildContext context, String message, RosterWrite Function() write) async {
   final l10n = L10n.of(context);
+  final RosterWrite w;
   try {
-    final undo = await write();
-    Haptics.success();
-    if (!context.mounted) return;
-    showToast(
-      context,
-      message,
-      onUndo: () => undo().catchError((Object e) {
-        if (context.mounted) showToast(context, errorText(l10n, e));
-      }),
-    );
-  } catch (e) {
+    w = write();
+  } catch (_) {
     if (context.mounted) showToast(context, l10n.saveFailed);
+    return;
   }
+  void offerUndo(String text) => showToast(
+    context,
+    text,
+    onUndo: () => w.undo().catchError((Object e) {
+      if (context.mounted) showToast(context, errorText(l10n, e));
+    }),
+  );
+  var settled = false;
+  final result = w.done.then((_) => true, onError: (Object _) => false);
+  // A cancellable timer, not Future.delayed: nothing is left running once
+  // the write settles.
+  final gate = Completer<bool?>();
+  final timer = Timer(const Duration(seconds: 2), () {
+    if (!gate.isCompleted) gate.complete(null);
+  });
+  unawaited(
+    result.then((ok) {
+      timer.cancel();
+      if (!gate.isCompleted) gate.complete(ok);
+    }),
+  );
+  final confirmed = await gate.future;
+  settled = confirmed != null;
+  if (!context.mounted) return;
+  if (confirmed == false) {
+    showToast(context, l10n.saveFailed);
+    return;
+  }
+  Haptics.success();
+  offerUndo(settled ? message : l10n.savedOffline);
+  if (!settled && !await result && context.mounted) showToast(context, l10n.saveFailed);
 }
 
 class _EditableDay extends ConsumerWidget {

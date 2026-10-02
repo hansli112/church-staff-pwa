@@ -117,7 +117,10 @@ abstract interface class ChurchData {
   Future<void> saveRoster(Roster roster);
 
   /// Writes all of [rosters] at once, or none of them (swap, undo).
-  Future<void> saveRosters(List<Roster> rosters);
+  ///
+  /// [via] marks where the change came from; `import` tells the backend
+  /// not to send a push for every day.
+  Future<void> saveRosters(List<Roster> rosters, {String via = 'app'});
 
   Future<void> deleteRoster(Roster roster);
 
@@ -252,7 +255,10 @@ abstract interface class CloudApi {
 
   /// Events of [month] (`YYYY-MM`).
   Future<List<CalendarEvent>> calendarEvents(String churchId, String month);
-  Future<CalendarEvent> calendarSave(String churchId, CalendarEvent event);
+
+  /// [previous] is the event before editing, so a move to another month
+  /// refreshes both months.
+  Future<CalendarEvent> calendarSave(String churchId, CalendarEvent event, {CalendarEvent? previous});
   Future<void> calendarDelete(String churchId, CalendarEvent event);
 
   /// Reports an uncaught error. Never throws.

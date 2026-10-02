@@ -178,6 +178,19 @@ void main() {
       expect(savedDay(b, 4).events.single.name, '主餐');
     });
 
+    testWidgets('renaming a duty moves members\' zones and the staff order with it', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/me/services/sunday');
+      await tapText(tester, '招待');
+      await tester.enterText(find.byType(TextField).last, '接待');
+      await tapText(tester, '儲存');
+      expect(b.services['grace']!.byId('sunday')!.duties, ['司會', '司琴', '接待']);
+      expect(b.members['grace']!['hao']!.serves('sunday', '接待'), isTrue);
+      expect(b.staffOrders['grace']!['sunday']!.rankingOf('接待'), ['陳志豪', '李美玉']);
+      expect(savedDay(b, 4).duties.map((d) => d.role), contains('招待'), reason: 'arranged days keep their wording');
+    });
+
     testWidgets('changing the template does not touch arranged rosters', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);

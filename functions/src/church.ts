@@ -81,9 +81,12 @@ export async function deleteChurch(deps: Deps, caller: Caller | null, data: unkn
   const c = requireCaller(caller);
   const cid = churchId(data);
   await requireChurchAdmin(deps.db, cid, c);
-  await deps.db.doc(`churches/${cid}`).update({
-    status: 'deleted',
-    deletedAt: Timestamp.fromDate(deps.now()),
+  await deps.db.runTransaction(async (tx) => {
+    const ref = deps.db.doc(`churches/${cid}`);
+    // Only an open church can be deleted: deleting and restoring a church
+    // the operator suspended would otherwise reopen it.
+    if ((await tx.get(ref)).get('status') !== 'active') fail('failed-precondition', 'permissionDenied');
+    tx.update(ref, { status: 'deleted', deletedAt: Timestamp.fromDate(deps.now()) });
   });
   return {};
 }
@@ -109,7 +112,7 @@ export async function restoreChurch(deps: Deps, caller: Caller | null, data: unk
  * Removes every church deleted more than [RESTORE_DAYS] days ago: the whole
  * churches/{cid} tree, its name reservation, invites and logo.
  */
-export async function purgeDeletedChurches(deps: Deps, storage?: Storage) {
+export async function purgeDeletedChurches(deps: Deps, storage?: Storage, beforePurge?: (cid: string) => Promise<unknown>) {
   const cutoff = Timestamp.fromMillis(deps.now().getTime() - RESTORE_DAYS * 86400e3);
   const expired = await deps.db
     .collection('churches')
@@ -119,6 +122,8 @@ export async function purgeDeletedChurches(deps: Deps, storage?: Storage) {
   const purged: string[] = [];
   for (const doc of expired.docs) {
     const key = doc.get('nameKey') as string | undefined;
+    // Data kept outside the church tree, e.g. the calendar grant.
+    if (beforePurge) await beforePurge(doc.id);
     await deps.db.recursiveDelete(doc.ref);
     if (key) await deps.db.doc(`churchNames/${key}`).delete();
     const invites = await deps.db.collection('invites').where('cid', '==', doc.id).get();

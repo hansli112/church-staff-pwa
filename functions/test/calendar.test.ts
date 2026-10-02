@@ -196,3 +196,38 @@ describe('writing', () => {
     assert.equal((await db.doc('churches/C1/settings/calendar').get()).exists, false);
   });
 });
+
+describe('releasing the grant', () => {
+  test('when the admin who connected it leaves, the grant is revoked; another admin leaving changes nothing', async () => {
+    const { releaseCalendarIfConnector } = await import('../src/calendar.js');
+    await church();
+    await db.doc('churches/C1/members/editor').update({ role: 'admin' });
+    const { google, calls } = fakeGoogle();
+    await connect(google);
+    const d = { ...deps, google, config };
+    assert.equal(await releaseCalendarIfConnector(d, 'C1', 'editor'), false);
+    assert.equal(await releaseCalendarIfConnector(d, 'C1', 'pastor'), true);
+    assert.deepEqual(calls.revoked, ['refresh-123']);
+    assert.equal((await db.doc('calendarTokens/C1').get()).exists, false);
+  });
+
+  test('cache months follow UTC+8, and a moved event clears both months', async () => {
+    const { monthOf } = await import('../src/calendar.js');
+    assert.equal(monthOf('2026-10-31T17:00:00.000Z'), '2026-11');
+    assert.equal(monthOf('2026-10-31'), '2026-10');
+    await church();
+    const { google } = fakeGoogle();
+    await connect(google);
+    const d = { ...deps, google, config };
+    await db.doc('calendarCache/C1_2026-10').set({ cid: 'C1', month: '2026-10', events: [] });
+    await db.doc('calendarCache/C1_2026-11').set({ cid: 'C1', month: '2026-11', events: [] });
+    await calendarWrite(d, caller('pastor'), {
+      churchId: 'C1',
+      op: 'upsert',
+      previousStart: '2026-10-10',
+      event: { id: 'e1', title: 'x', start: '2026-11-07', end: '2026-11-08', allDay: true },
+    });
+    assert.equal((await db.doc('calendarCache/C1_2026-10').get()).exists, false);
+    assert.equal((await db.doc('calendarCache/C1_2026-11').get()).exists, false);
+  });
+});

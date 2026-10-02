@@ -387,7 +387,7 @@ class MemoryChurchData implements ChurchData {
   Future<void> saveRoster(Roster roster) => saveRosters([roster]);
 
   @override
-  Future<void> saveRosters(List<Roster> rosters) async {
+  Future<void> saveRosters(List<Roster> rosters, {String via = 'app'}) async {
     for (final r in rosters) {
       _requireRosterEditor(r.type);
     }
@@ -777,7 +777,7 @@ class MemoryCloud implements CloudApi {
   int _nextEvent = 1;
 
   @override
-  Future<CalendarEvent> calendarSave(String churchId, CalendarEvent event) async {
+  Future<CalendarEvent> calendarSave(String churchId, CalendarEvent event, {CalendarEvent? previous}) async {
     _requireCalendarEditor(churchId);
     final list = _b.calendarEvents.putIfAbsent(churchId, () => []);
     final saved = event.id == null

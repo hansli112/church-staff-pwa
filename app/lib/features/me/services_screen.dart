@@ -181,6 +181,11 @@ class ServiceEditorScreen extends ConsumerWidget {
     final service = settings?.byId(serviceId);
     if (settings == null || service == null) return Scaffold(appBar: AppBar());
     final data = ref.read(churchDataProvider)!;
+    // The renames below read these: keep them live, since Riverpod pauses
+    // providers nobody watches and a read would return stale data.
+    ref.watch(membersProvider);
+    ref.watch(savedRostersProvider);
+    ref.watch(staffOrderProvider(serviceId));
 
     Future<void> save(Service next) async {
       try {

@@ -141,10 +141,11 @@ void main() {
       {'date': '2026-10-04', 'duties': []},
       'garbage',
       {'date': '10/11'},
+      {'date': 20261018},
     ]);
     expect(p.report.pastDays, ['2026-09-27']);
     expect(p.report.unknownDuties, {'鼓'});
-    expect(p.report.badRows, [3, 4, 5]);
+    expect(p.report.badRows, [3, 4, 5, 6]);
     expect(p.rosters.length, 1);
   });
 

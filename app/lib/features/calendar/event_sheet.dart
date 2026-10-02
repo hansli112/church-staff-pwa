@@ -85,7 +85,7 @@ Future<void> editEvent(BuildContext context, WidgetRef ref, CalendarEvent? event
         },
       );
     } else if (result.event != null) {
-      await cloud.calendarSave(cid, result.event!);
+      await cloud.calendarSave(cid, result.event!, previous: event);
       refresh(result.event!);
       if (event != null && monthKey(event.start) != monthKey(result.event!.start)) refresh(event);
       if (context.mounted) showToast(context, l10n.calSaved);
@@ -131,13 +131,28 @@ class _EventEditorState extends State<_EventEditor> {
     super.dispose();
   }
 
-  DateTime _at(TimeOfDay t) => DateTime(_day.year, _day.month, _day.day, t.hour, t.minute);
+  /// How many days the event spans, kept when editing so changing a title
+  /// does not cut a three-day camp to one day. All-day: days covered (end
+  /// is exclusive); timed: days between start and end (1 past midnight).
+  late final int _span = widget.event == null
+      ? 0
+      : DateTime(
+          widget.event!.end.year,
+          widget.event!.end.month,
+          widget.event!.end.day,
+        ).difference(DateTime(widget.event!.start.year, widget.event!.start.month, widget.event!.start.day)).inDays;
+
+  DateTime _at(TimeOfDay t, [int plusDays = 0]) =>
+      DateTime(_day.year, _day.month, _day.day + plusDays, t.hour, t.minute);
 
   void _save() {
     final title = _title.text.trim();
     if (title.isEmpty) return;
     final start = _allDay ? _day : _at(_start);
-    var end = _allDay ? _day.add(const Duration(days: 1)) : _at(_end);
+    final keep = widget.event != null && widget.event!.allDay == _allDay;
+    var end = _allDay
+        ? DateTime(_day.year, _day.month, _day.day + (keep && _span > 1 ? _span : 1))
+        : _at(_end, keep ? _span : 0);
     if (!end.isAfter(start)) end = start.add(const Duration(hours: 1));
     Navigator.pop(
       context,

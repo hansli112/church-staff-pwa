@@ -193,6 +193,9 @@ class FirebaseAuthGateway implements AuthGateway {
       password: password,
     );
     await result.user?.updateDisplayName(name.trim());
+    // Push the account with its name, so users/{uid} is created with it.
+    await _auth.currentUser?.reload();
+    _reloaded.add(_map(_auth.currentUser));
     await result.user?.sendEmailVerification();
     return result;
   });
@@ -369,10 +372,10 @@ class FirestoreChurchData implements ChurchData {
   Future<void> saveRoster(Roster roster) => _col('rosters').doc(roster.id).set(_rosterDoc(roster));
 
   @override
-  Future<void> saveRosters(List<Roster> rosters) {
+  Future<void> saveRosters(List<Roster> rosters, {String via = 'app'}) {
     final batch = _db.batch();
     for (final r in rosters) {
-      batch.set(_col('rosters').doc(r.id), _rosterDoc(r));
+      batch.set(_col('rosters').doc(r.id), {..._rosterDoc(r), 'via': via});
     }
     return batch.commit();
   }
@@ -661,9 +664,14 @@ class FirebaseCloudApi implements CloudApi {
   }
 
   @override
-  Future<CalendarEvent> calendarSave(String churchId, CalendarEvent event) async {
+  Future<CalendarEvent> calendarSave(String churchId, CalendarEvent event, {CalendarEvent? previous}) async {
     final d = _map(
-      await _call('calendarWrite', {'churchId': churchId, 'op': 'upsert', 'event': calendarEventToJson(event)}),
+      await _call('calendarWrite', {
+        'churchId': churchId,
+        'op': 'upsert',
+        'event': calendarEventToJson(event),
+        if (previous != null) 'previousStart': calendarEventToJson(previous)['start'],
+      }),
     );
     return calendarEventFromJson(d['event']) ?? event;
   }

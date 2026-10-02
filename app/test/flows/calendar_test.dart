@@ -70,6 +70,23 @@ void main() {
     expect(b.calendarEvents['grace']!.map((e) => e.title), containsAll(['同工會', '禱告會']));
   });
 
+  testWidgets('renaming a three-day event keeps its three days', (tester) async {
+    final b = seededChurch(as: calendarEditor, extra: const [calendarEditor]);
+    b.cloud.connectCalendar('grace', calendarName: '教會行事曆');
+    b.calendarEvents['grace'] = [
+      CalendarEvent(id: 'camp', title: '夏令營', start: DateTime(2026, 10, 9), end: DateTime(2026, 10, 12), allDay: true),
+    ];
+    await pumpApp(tester, b);
+    await go(tester, '/calendar');
+    await tapText(tester, '夏令營');
+    await tester.enterText(find.byType(TextField).first, '秋令營');
+    await tester.pump();
+    await tapText(tester, '儲存');
+    final camp = b.calendarEvents['grace']!.single;
+    expect(camp.title, '秋令營');
+    expect(camp.end, DateTime(2026, 10, 12));
+  });
+
   testWidgets('staff cannot edit even when connected', (tester) async {
     final b = seededChurch(as: staffMei);
     b.cloud.connectCalendar('grace', calendarName: '教會行事曆');

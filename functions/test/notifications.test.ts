@@ -117,3 +117,14 @@ describe('reminders', () => {
     assert.equal(sent.length, 0);
   });
 });
+
+describe('imports', () => {
+  test('a roster written by the import sends no per-day push', async () => {
+    await church();
+    const ref = db.doc('churches/C1/rosters/2026-10-04_sunday');
+    await ref.set({ type: 'sunday', dateKey: '2026-10-04', duties: duties(['美玉'], []), via: 'import' });
+    const { sent, messaging } = fakeMessaging();
+    await onRosterWritten({ db, messaging, now }, 'C1', undefined, await ref.get(), 'pastor');
+    assert.equal(sent.length, 0);
+  });
+});

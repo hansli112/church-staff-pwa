@@ -1920,6 +1920,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'夜'**
   String get appIconNight;
+
+  /// No description provided for @savedOffline.
+  ///
+  /// In zh, this message translates to:
+  /// **'已存在這台裝置，連上網路後會自動同步'**
+  String get savedOffline;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

@@ -79,19 +79,26 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     }
   }
 
-  void _makePlan(List<dynamic> rows) {
+  /// The rows behind [_plan], planned again at apply time against the
+  /// latest rosters so edits made meanwhile are not overwritten.
+  List<dynamic> _rows = const [];
+
+  ImportPlan _planFor(List<dynamic> rows) {
     final service = ref.read(servicesProvider).value!.byId(widget.serviceType)!;
-    setState(() {
-      _plan = planImport(
-        rows: rows,
-        service: service,
-        members: ref.read(membersProvider).value ?? const [],
-        saved: ref.read(savedRostersProvider).value ?? const [],
-        order: ref.read(staffOrderProvider(widget.serviceType)).value ?? StaffOrder(),
-        today: ref.read(todayProvider),
-      );
-    });
+    return planImport(
+      rows: rows,
+      service: service,
+      members: ref.read(membersProvider).value ?? const [],
+      saved: ref.read(savedRostersProvider).value ?? const [],
+      order: ref.read(staffOrderProvider(widget.serviceType)).value ?? StaffOrder(),
+      today: ref.read(todayProvider),
+    );
   }
+
+  void _makePlan(List<dynamic> rows) => setState(() {
+    _rows = rows;
+    _plan = _planFor(rows);
+  });
 
   void _parsePasted() {
     try {
@@ -103,13 +110,14 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     }
   }
 
-  Future<void> _apply(ImportPlan plan) async {
+  Future<void> _apply() async {
     final l10n = L10n.of(context);
+    final plan = _planFor(_rows);
     final data = ref.read(churchDataProvider)!;
     final before = ref.read(staffOrderProvider(widget.serviceType)).value ?? StaffOrder();
     setState(() => _busy = true);
     try {
-      await data.saveRosters(plan.rosters);
+      await data.saveRosters(plan.rosters, via: 'import');
       final changes = before.changesTo(plan.order);
       if (changes.isNotEmpty) await data.updateStaffOrder(widget.serviceType, changes);
       Haptics.success();
@@ -127,8 +135,11 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
+    // Keep these listened to: Riverpod pauses providers nobody watches, and
+    // the apply step re-plans against the latest rosters.
     ref.watch(membersProvider);
     ref.watch(staffOrderProvider(widget.serviceType));
+    ref.watch(savedRostersProvider);
     final plan = _plan;
     return Scaffold(
       appBar: AppBar(title: Text(plan == null ? l10n.photoImport : l10n.importPreview)),
@@ -252,7 +263,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         if (plan.rosters.isNotEmpty)
           Padding(
             padding: const EdgeInsets.all(Space.m),
-            child: PrimaryButton(label: l10n.importApply, busy: _busy, onPressed: () => _apply(plan)),
+            child: PrimaryButton(label: l10n.importApply, busy: _busy, onPressed: _apply),
           ),
       ],
     );

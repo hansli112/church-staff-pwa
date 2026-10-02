@@ -15,6 +15,9 @@ final sessionEffectsProvider = Provider<void>((ref) {
   ref.listen(authUserProvider, (_, next) {
     final user = next.value;
     if (user == null) return;
+    // An email sign-up sets its name a moment after the account exists;
+    // wait for it rather than saving the email prefix as the name.
+    if (user.usesPassword && (user.displayName?.trim().isEmpty ?? true)) return;
     ref
         .read(backendProvider)
         .profiles
