@@ -19,6 +19,8 @@ class MarthaApp extends ConsumerWidget {
     return MaterialApp.router(
       onGenerateTitle: (context) => L10n.of(context).appName,
       debugShowCheckedModeBanner: false,
+      // --dart-define=PERF_HUD=true shows frame timings (raster and UI threads).
+      showPerformanceOverlay: const bool.fromEnvironment('PERF_HUD'),
       theme: buildTheme(Brightness.light),
       darkTheme: buildTheme(Brightness.dark),
       themeMode: ThemeMode.system,

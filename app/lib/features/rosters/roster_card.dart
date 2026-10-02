@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/design/components.dart';
+import '../../core/perf.dart';
 import '../../core/design/tokens.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
@@ -39,6 +40,7 @@ class RosterCard extends ConsumerWidget {
       }),
     );
     if (roster == null) return const SizedBox.shrink();
+    perfMark('roster-visible');
     if (kDebugMode) {
       rosterCardBuilds.update(rosterId, (n) => n + 1, ifAbsent: () => 1);
     }

@@ -9,7 +9,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p scripts",
+    "seed": "tsx scripts/seed.ts",
     "test": "firebase emulators:exec --only firestore,auth,storage --project demo-martha --config ../firebase.json \"node --import tsx --test --test-concurrency=1 test/*.test.ts\""
   },
   "dependencies": {

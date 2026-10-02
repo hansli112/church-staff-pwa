@@ -89,6 +89,36 @@ self-host 已經做了延遲建構清單（`ListView.builder`）和縮小重建�
    - 捲動維持 60fps。
 5. Web 版的引擎限制無法消除，但資料層的改善一樣適用。
 
+### 量測紀錄
+
+工具：
+- `functions/scripts/seed.ts`：灌測試資料到 emulator 或 dev。
+- `tools/e2e/perf.mjs`：計時，用 profile build 加 `PERF_MARKS=true`。
+- `--dart-define=PERF_HUD=true`：顯示 frame 時間。
+
+**2026-10-02**
+
+條件：
+- Web profile build，資料在記憶體（demo：150 位同工、3 種聚會、一年份服事表）。
+- 在 Linux 伺服器上用 headless 瀏覽器跑，沒有 GPU（軟體繪圖）。
+- 每項跑 5 次取中位數。
+
+| 項目 | 目標 | Chromium | WebKit |
+| --- | --- | --- | --- |
+| 冷啟動到看見服事表 | < 1.5 秒 | 1.25 秒 | 1.15 秒 |
+| 切換分頁 | < 100ms | 89ms | 81ms |
+| 打開選人視窗 | < 100ms | 94ms | 117–140ms |
+| 捲動 | 60fps | 32fps，最長一格 183ms | 55fps，最長一格 152ms |
+
+解讀：
+- 這台機器沒有 GPU，瀏覽器的 WebGL 是軟體繪圖，所以捲動 fps 和 iPhone 不能直接比。冷啟動、切換分頁、選人在這種條件下都在目標附近。
+- 選人視窗在 WebKit 超過 100ms，主要花在底部面板第一次排版。已經把搜尋比對改成每個名字只正規化一次。
+- 捲動時最長的那一格，發生在第一次畫出新的中文字的時候：Web 版的中文字型是執行時才從 Google Fonts 下載的。
+
+下一步（需要實機）：
+- 原生 App 在 Hans 的 iPhone、Android 上各量一次。用 profile 模式和 DevTools 量冷啟動與捲動。
+- iPhone Safari 開 Web 版量一次。如果中文字型造成卡頓：預先載入常用字的子集字型，或在啟動畫面先暖字型。
+
 ## 數據與監控
 
 - 行為分析：Firebase Analytics（GA4），三平台。user property 帶 `church_id`，看各教會活躍度、DAU/MAU、留存、功能使用。不追蹤跨 App，不需 ATT。

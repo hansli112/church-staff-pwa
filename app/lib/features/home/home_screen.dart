@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/design/components.dart';
+import '../../core/perf.dart';
 import '../../core/design/tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
@@ -35,6 +36,7 @@ class HomeScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(savedRostersProvider),
         ),
         data: (list) {
+          perfMark('home-visible');
           if (list.isEmpty) {
             return EmptyState(
               message: l10n.noUpcomingServices,

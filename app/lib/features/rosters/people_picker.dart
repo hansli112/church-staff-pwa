@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../core/design/components.dart';
+import '../../core/perf.dart';
 import '../../core/design/tokens.dart';
 import '../../domain/models.dart';
 import '../../domain/staff_order.dart';
-import '../../domain/text.dart';
+import '../../domain/text.dart' show nameKey;
 import '../../l10n/app_localizations.dart';
 
 /// What the picker hands back when it closes.
@@ -87,6 +88,7 @@ class PeoplePickerState extends State<PeoplePicker> {
   @override
   void initState() {
     super.initState();
+    perfMark('picker-visible', repeat: true);
     final servingSet = <String>{};
     final serving = <String>[];
     final others = <Member>[];
@@ -210,16 +212,25 @@ class PeoplePickerState extends State<PeoplePicker> {
     );
   }
 
+  /// Folded search keys, computed once per name rather than on every
+  /// keystroke for the whole church.
+  final _keys = <String, String>{};
+
+  bool _matches(String name, String query) =>
+      query.isEmpty || _keys.putIfAbsent(name, () => nameKey(name)).contains(query);
+
   Widget _list(L10n l10n, AppColors c) {
+    final q = nameKey(_query);
+    final servingSet = _serving.toSet();
     final serving = [
       for (final n in _serving)
-        if (matchesSearch(n, _query)) n,
+        if (_matches(n, q)) n,
     ];
-    final searching = nameKey(_query).isNotEmpty;
+    final searching = q.isNotEmpty;
     final others = searching
         ? [
             for (final m in _others)
-              if (matchesSearch(m.name, _query) && !_serving.contains(m.name)) m,
+              if (_matches(m.name, q) && !servingSet.contains(m.name)) m,
           ]
         : const <Member>[];
     final typed = _query.trim();
