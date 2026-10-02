@@ -210,6 +210,33 @@ service cloud.firestore {
       }
     }
 
+    // Invites: a church's admins create, list and revoke them. Redeeming one
+    // is a Cloud Function (only the backend creates member docs), so nobody
+    // else reads them; the code itself is the secret.
+    match /invites/{code} {
+      allow read: if isAdmin(resource.data.cid);
+      allow create: if isAdmin(request.resource.data.cid)
+        && code.matches('^[A-Z0-9]{8,16}$')
+        && request.resource.data.keys().hasOnly(
+             ['cid', 'churchName', 'expiresAt', 'revoked', 'createdBy', 'createdAt'])
+        && request.resource.data.revoked == false
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.expiresAt is timestamp
+        && request.resource.data.expiresAt < request.time + duration.value(31, 'd');
+      // Revoking is the only change, and it is final.
+      allow update: if isAdmin(resource.data.cid)
+        && onlyTouches(['revoked'])
+        && request.resource.data.revoked == true;
+    }
+
+    // Daily platform snapshots, written by a scheduled function. Only the
+    // platform operator (custom claim) reads them.
+    match /stats/{date} {
+      allow read: if isSignedIn() && request.auth.token.operator == true;
+    }
+
+    // churchNames/{nameKey} (name reservations) and everything else: no
+    // client access.
     match /{document=**} {
       allow read, write: if false;
     }

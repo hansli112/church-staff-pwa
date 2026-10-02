@@ -22,6 +22,8 @@ import {
   query,
   setDoc,
   updateDoc,
+  serverTimestamp,
+  Timestamp,
   where,
 } from 'firebase/firestore';
 
@@ -407,5 +409,81 @@ describe('全域個資 (users)', () => {
     await assertFails(setDoc(doc(as(MEMBER_A), `users/${MEMBER_A}`), { name: '甲', role: 'admin' }));
     await assertFails(setDoc(doc(as(MEMBER_A), `users/${ADMIN_A}`), { name: '冒充' }));
     await assertFails(deleteDoc(doc(as(MEMBER_A), `users/${MEMBER_A}`)));
+  });
+});
+
+describe('邀請 (invites)', () => {
+  const inFuture = (days) => Timestamp.fromMillis(Date.now() + days * 86400e3);
+  const invite = (cid, by, extra = {}) => ({
+    cid,
+    churchName: cid,
+    expiresAt: inFuture(7),
+    revoked: false,
+    createdBy: by,
+    createdAt: serverTimestamp(),
+    ...extra,
+  });
+
+  it('管理員可以建立、列出、撤回自己教會的邀請', async () => {
+    const db = as(ADMIN_A);
+    await assertSucceeds(setDoc(doc(db, 'invites/AAAA1111'), invite(A, ADMIN_A)));
+    await assertSucceeds(getDocs(query(collection(db, 'invites'), where('cid', '==', A))));
+    await assertSucceeds(updateDoc(doc(db, 'invites/AAAA1111'), { revoked: true }));
+  });
+
+  it('撤回後不能恢復，也不能改成別的教會或延長期限', async () => {
+    await seed('invites/AAAA2222', { ...invite(A, ADMIN_A), expiresAt: inFuture(7) });
+    const db = as(ADMIN_A);
+    await assertFails(updateDoc(doc(db, 'invites/AAAA2222'), { cid: B }));
+    await assertFails(updateDoc(doc(db, 'invites/AAAA2222'), { expiresAt: inFuture(20) }));
+    await assertSucceeds(updateDoc(doc(db, 'invites/AAAA2222'), { revoked: true }));
+    await assertFails(updateDoc(doc(db, 'invites/AAAA2222'), { revoked: false }));
+  });
+
+  it('跨教會：B 的管理員不能建立、讀取、撤回 A 的邀請', async () => {
+    await seed('invites/AAAA3333', invite(A, ADMIN_A));
+    const db = as(ADMIN_B);
+    await assertFails(setDoc(doc(db, 'invites/BBBB1111'), invite(A, ADMIN_B)));
+    await assertFails(getDoc(doc(db, 'invites/AAAA3333')));
+    await assertFails(getDocs(query(collection(db, 'invites'), where('cid', '==', A))));
+    await assertFails(updateDoc(doc(db, 'invites/AAAA3333'), { revoked: true }));
+  });
+
+  it('一般同工、roster editor、陌生人都不能建立或讀取', async () => {
+    await seed('invites/AAAA4444', invite(A, ADMIN_A));
+    for (const uid of [MEMBER_A, EDITOR_A, STRANGER]) {
+      await assertFails(setDoc(doc(as(uid), 'invites/CCCC1111'), invite(A, uid)));
+      await assertFails(getDoc(doc(as(uid), 'invites/AAAA4444')));
+    }
+    await assertFails(getDoc(doc(asAnon(), 'invites/AAAA4444')));
+  });
+
+  it('不能建立超過 31 天、已撤回、冒名或格式不對的邀請', async () => {
+    const db = as(ADMIN_A);
+    await assertFails(setDoc(doc(db, 'invites/DDDD1111'), invite(A, ADMIN_A, { expiresAt: inFuture(40) })));
+    await assertFails(setDoc(doc(db, 'invites/DDDD2222'), invite(A, ADMIN_A, { revoked: true })));
+    await assertFails(setDoc(doc(db, 'invites/DDDD3333'), invite(A, MEMBER_A)));
+    await assertFails(setDoc(doc(db, 'invites/short'), invite(A, ADMIN_A)));
+    await assertFails(setDoc(doc(db, 'invites/DDDD4444'), invite(A, ADMIN_A, { role: 'admin' })));
+  });
+
+  it('停用中教會的管理員不能建立邀請', async () => {
+    await assertFails(setDoc(doc(as(MEMBER_S), 'invites/SSSS1111'), invite(SUSPENDED, MEMBER_S)));
+  });
+});
+
+describe('平台統計與名稱保留', () => {
+  it('stats 只有營運者讀得到，沒有人能寫', async () => {
+    await seed('stats/2026-10-01', { date: '2026-10-01', users: 3 });
+    const op = testEnv.authenticatedContext('hans', { operator: true }).firestore();
+    await assertSucceeds(getDoc(doc(op, 'stats/2026-10-01')));
+    await assertFails(setDoc(doc(op, 'stats/2026-10-02'), { users: 1 }));
+    await assertFails(getDoc(doc(as(ADMIN_A), 'stats/2026-10-01')));
+  });
+
+  it('churchNames 不能讀寫（只有建立教會的 function 用）', async () => {
+    await seed('churchNames/恩典堂', { cid: A });
+    await assertFails(getDoc(doc(as(ADMIN_A), 'churchNames/恩典堂')));
+    await assertFails(setDoc(doc(as(STRANGER), 'churchNames/搶註'), { cid: 'x' }));
   });
 });

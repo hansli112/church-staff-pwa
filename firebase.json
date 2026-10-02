@@ -3,15 +3,38 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
-  "emulators": {
-    "firestore": {
-      "port": 8181
-    },
-    "auth": {
-      "port": 9199
-    },
-    "ui": {
-      "enabled": false
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": ["node_modules", ".git", "*.log", "test/**"],
+      "predeploy": ["npm --prefix \"$RESOURCE_DIR\" run build"]
     }
+  ],
+  "hosting": {
+    "public": "app/build/web",
+    "ignore": ["firebase.json", "**/.*"],
+    "rewrites": [{ "source": "**", "destination": "/index.html" }],
+    "headers": [
+      {
+        "source": "**/*.@(js|wasm|otf|ttf|png)",
+        "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }]
+      },
+      {
+        "source": "/index.html",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      }
+    ]
+  },
+  "emulators": {
+    "firestore": { "port": 8181 },
+    "auth": { "port": 9199 },
+    "functions": { "port": 5001 },
+    "storage": { "port": 9299 },
+    "ui": { "enabled": false },
+    "singleProjectMode": true
   }
 }

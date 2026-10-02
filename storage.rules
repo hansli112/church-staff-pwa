@@ -1,0 +1,41 @@
+rules_version = '2';
+
+// Cloud Storage rules for 馬大別忙.
+//
+// The only client upload is a church logo at churches/{cid}/logo.png. The
+// app resizes it to 512px before upload; these rules are the real limit.
+// Membership and admin role come from Firestore, the same documents
+// firestore.rules checks, so the tenant boundary is the same.
+service firebase.storage {
+  match /b/{bucket}/o {
+    function memberDoc(cid) {
+      return /databases/(default)/documents/churches/$(cid)/members/$(request.auth.uid);
+    }
+
+    function churchDoc(cid) {
+      return /databases/(default)/documents/churches/$(cid);
+    }
+
+    function isMember(cid) {
+      return request.auth != null
+        && firestore.exists(memberDoc(cid))
+        && firestore.get(churchDoc(cid)).data.get('status', '') == 'active';
+    }
+
+    function isAdmin(cid) {
+      return isMember(cid) && firestore.get(memberDoc(cid)).data.get('role', '') == 'admin';
+    }
+
+    match /churches/{cid}/logo.png {
+      allow read: if isMember(cid);
+      allow write: if isAdmin(cid)
+        && request.resource.size < 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if isAdmin(cid);
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
