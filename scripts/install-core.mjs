@@ -111,6 +111,7 @@ export async function main(argv = process.argv.slice(2)) {
   let publicOrigin;
   let sourceRevision = 'offline-demo-v1';
   let resumableRevisions = [];
+  let report;
   if (options.demo) providers = createDemoProviders({ failAt: options['demo-fail-at'] });
   else {
     const host = process.env.WEB_HOST;
@@ -127,6 +128,11 @@ export async function main(argv = process.argv.slice(2)) {
     const { buildCoreDeployment } = await import('./installer/build.mjs');
     sourceRevision = (await runCommand('git', ['rev-parse', 'HEAD'], { cwd: ROOT })).stdout.trim();
     resumableRevisions = await readResumableRevisions();
+    // CHURCH_INSTALLER_STATS=off: no counts, e.g. while testing the wizard.
+    if (process.env.CHURCH_INSTALLER_STATS !== 'off') {
+      const { createStatsReporter } = await import('./installer/stats.mjs');
+      report = createStatsReporter({ revision: sourceRevision });
+    }
     providers = {
       google: createGoogleInstaller(),
       cloudflare: createCloudflareInstaller({ sessionDir }),
@@ -134,13 +140,14 @@ export async function main(argv = process.argv.slice(2)) {
     };
   }
   const rootDir = path.resolve(options['state-root'] ?? ROOT);
-  const manager = createInstallationManager({ rootDir, ...providers, sourceRevision, resumableRevisions, demo: Boolean(options.demo), release: await readLocalRelease() });
+  const manager = createInstallationManager({ rootDir, ...providers, sourceRevision, resumableRevisions, report, demo: Boolean(options.demo), release: await readLocalRelease() });
   if (options.resume) await manager.load(options.resume);
   let server;
   try { server = await startInstallerServer({ manager, port: options.port, publicOrigin }); }
   catch (error) { await manager.dispose(); throw error; }
   console.log(options.demo ? '離線示範：不會連接或建立雲端資源。' : '私人安裝精靈已啟動。請只在自己的瀏覽器開啟以下連結：');
   console.log(server.url);
+  report?.('opened');
   if (!options.demo) console.log('第一次點開時 Google 會先確認你的帳號；如果畫面請你再點一次，回到這裡再點同一個連結即可。');
   console.log('連結僅供這次私人工作階段使用，請勿分享。安裝期間請保持這個終端機開著，不要按 Ctrl+C；不小心停掉或關掉了，就重新按教學裡啟動精靈的那張指令卡接續，進度不會遺失。');
   let closing = false;
