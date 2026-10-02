@@ -33,7 +33,7 @@
     "firestore": { "port": 8181 },
     "auth": { "port": 9199 },
     "functions": { "port": 5001 },
-    "storage": { "port": 9299 },
+    "storage": { "port": 9399 },
     "ui": { "enabled": false },
     "singleProjectMode": true
   }

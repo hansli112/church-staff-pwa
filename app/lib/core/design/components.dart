@@ -41,13 +41,12 @@ class PrimaryButton extends StatelessWidget {
             ),
           )
         : Text(label, textAlign: TextAlign.center);
-    return Semantics(
-      button: true,
-      label: busy ? label : null,
-      child: icon == null || busy
-          ? FilledButton(onPressed: busy ? () {} : onPressed, child: child)
-          : FilledButton.icon(onPressed: onPressed, icon: icon!, label: child),
-    );
+    final button = icon == null || busy
+        ? FilledButton(onPressed: busy ? () {} : onPressed, child: child)
+        : FilledButton.icon(onPressed: onPressed, icon: icon!, label: child);
+    // While busy the label is a spinner; keep the name for screen readers
+    // without adding a second button node.
+    return busy ? Semantics(label: label, excludeSemantics: true, button: true, child: button) : button;
   }
 }
 

@@ -57,7 +57,7 @@ abstract final class EmulatorPorts {
   static const firestore = 8181;
   static const auth = 9199;
   static const functions = 5001;
-  static const storage = 9299;
+  static const storage = 9399;
 }
 
 FirebaseOptions firebaseOptionsFor(Env env) {
