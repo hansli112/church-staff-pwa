@@ -1,0 +1,122 @@
+import assert from 'node:assert/strict';
+import { beforeEach, describe, test } from 'node:test';
+
+import { buildPrompt, photoQuota, PHOTOS_PER_MONTH, recognizeRoster, type Gemini } from '../src/photo.js';
+import { caller, clearFirestore, db, deps, rejectsWith, seedChurch } from './support.js';
+
+const image = { mimeType: 'image/jpeg', data: Buffer.from('jpeg').toString('base64') };
+const ok: Gemini = async () => ({ rows: [{ date: '2026-10-04', duties: [] }], inputTokens: 2000, outputTokens: 3000 });
+
+async function church() {
+  await seedChurch('C1', { pastor: 'admin', editor: 'staff', staff: 'staff' });
+  await seedChurch('C2', { other: 'admin' });
+  await db.doc('churches/C1/members/editor').update({ groups: ['roster-editors'], zoneTypes: ['sunday'] });
+  await db.doc('churches/C1/settings/services').set({
+    services: [{ id: 'sunday', name: '主日崇拜', duties: ['司會', '司琴'], events: [{ name: '聖餐' }] }],
+    ids: ['sunday'],
+  });
+}
+
+beforeEach(clearFirestore);
+
+describe('recognizeRoster', () => {
+  test('an editor of the service gets rows back and one photo is counted', async () => {
+    await church();
+    let prompt = '';
+    const gemini: Gemini = async (p) => {
+      prompt = p;
+      return ok(p, []);
+    };
+    const r = await recognizeRoster({ ...deps, gemini }, caller('editor'), {
+      churchId: 'C1',
+      serviceType: 'sunday',
+      images: [image],
+    });
+    assert.equal(r.rows.length, 1);
+    assert.equal(r.remaining, PHOTOS_PER_MONTH - 1);
+    assert.match(prompt, /- 司會\n- 司琴/);
+    for (const n of ['pastor', 'editor', 'staff']) assert.ok(prompt.includes(n), n);
+    const budget = await db.doc('platform/photoBudget_2026-10').get();
+    assert.ok(budget.get('costUsd') > 0);
+  });
+
+  test('staff, editors of other services and other churches are refused', async () => {
+    await church();
+    const call = (uid: string, type = 'sunday', cid = 'C1') =>
+      recognizeRoster({ ...deps, gemini: ok }, caller(uid), { churchId: cid, serviceType: type, images: [image] });
+    await rejectsWith(call('staff'), 'permissionDenied');
+    await rejectsWith(call('editor', 'youth'), 'permissionDenied');
+    await rejectsWith(call('other'), 'permissionDenied');
+  });
+
+  test('the church limit and the platform budget stop it with a reason', async () => {
+    await church();
+    await db.doc('churches/C1/usage/2026-10').set({ photos: PHOTOS_PER_MONTH });
+    const err = await rejectsWith(
+      recognizeRoster({ ...deps, gemini: ok }, caller('pastor'), { churchId: 'C1', serviceType: 'sunday', images: [image] }),
+      'quotaExceeded',
+    );
+    assert.equal((err as { details: { detail: string } }).details.detail, 'church');
+
+    await db.doc('churches/C1/usage/2026-10').set({ photos: 0 });
+    await db.doc('platform/photoBudget_2026-10').set({ costUsd: 20 });
+    const err2 = await rejectsWith(
+      recognizeRoster({ ...deps, gemini: ok }, caller('pastor'), { churchId: 'C1', serviceType: 'sunday', images: [image] }),
+      'quotaExceeded',
+    );
+    assert.equal((err2 as { details: { detail: string } }).details.detail, 'platform');
+  });
+
+  test('a failed recognition gives the photo back', async () => {
+    await church();
+    const broken: Gemini = async () => {
+      throw new Error('boom');
+    };
+    await assert.rejects(
+      recognizeRoster({ ...deps, gemini: broken }, caller('pastor'), { churchId: 'C1', serviceType: 'sunday', images: [image] }),
+    );
+    const q = await photoQuota(deps, caller('pastor'), { churchId: 'C1' });
+    assert.equal(q.remaining, PHOTOS_PER_MONTH);
+  });
+
+  test('rejects too many or too large images', async () => {
+    await church();
+    const big = { mimeType: 'image/jpeg', data: 'A'.repeat(3 * 1024 * 1024) };
+    await rejectsWith(
+      recognizeRoster({ ...deps, gemini: ok }, caller('pastor'), { churchId: 'C1', serviceType: 'sunday', images: [big] }),
+      'unknown',
+    );
+    await rejectsWith(
+      recognizeRoster({ ...deps, gemini: ok }, caller('pastor'), {
+        churchId: 'C1',
+        serviceType: 'sunday',
+        images: [image, image, image, image],
+      }),
+      'unknown',
+    );
+  });
+});
+
+describe('photoQuota', () => {
+  test('members see remaining photos; outsiders are refused', async () => {
+    await church();
+    await db.doc('churches/C1/usage/2026-10').set({ photos: 7 });
+    const q = await photoQuota(deps, caller('staff'), { churchId: 'C1' });
+    assert.deepEqual(q, { remaining: PHOTOS_PER_MONTH - 7, limit: PHOTOS_PER_MONTH, platformOpen: true });
+    await rejectsWith(photoQuota(deps, caller('other'), { churchId: 'C1' }), 'permissionDenied');
+  });
+});
+
+describe('buildPrompt', () => {
+  test('includes nicknames and the layout rules when the church has them', () => {
+    const p = buildPrompt({
+      service: { id: 'sunday', name: '主日', duties: ['司會'] },
+      names: ['陳小明'],
+      today: '2026-10-02',
+      rules: { layoutRules: '## 這張表怎麼讀\n轉置的表', nicknames: { 小名: '陳小明' } },
+    });
+    assert.match(p, /轉置的表/);
+    assert.match(p, /「小名」是「陳小明」/);
+    assert.match(p, /今天是 2026-10-02/);
+  });
+});

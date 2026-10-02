@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -625,6 +626,30 @@ class FirebaseCloudApi implements CloudApi {
             },
           ),
     ];
+  }
+
+  @override
+  Future<PhotoQuota> photoQuota(String churchId) async {
+    final d = _map(await _call('photoQuota', {'churchId': churchId}));
+    return PhotoQuota(
+      remaining: (d['remaining'] as num).toInt(),
+      limit: (d['limit'] as num).toInt(),
+      platformOpen: d['platformOpen'] == true,
+    );
+  }
+
+  @override
+  Future<List<dynamic>> recognizeRoster(String churchId, String serviceType, List<PhotoInput> images) async {
+    final d = _map(
+      await _call('recognizeRoster', {
+        'churchId': churchId,
+        'serviceType': serviceType,
+        'images': [
+          for (final i in images) {'mimeType': i.mimeType, 'data': base64Encode(i.bytes)},
+        ],
+      }),
+    );
+    return d['rows'] as List<dynamic>? ?? const [];
   }
 
   @override

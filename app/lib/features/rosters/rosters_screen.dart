@@ -35,8 +35,22 @@ class RostersScreen extends ConsumerWidget {
     final l10n = L10n.of(context);
     final settings = ref.watch(servicesProvider);
     final me = ref.watch(meProvider).value;
+    final enabled = settings.value?.enabled ?? const [];
+    final selectedId = ref.watch(selectedServiceProvider);
+    final shown = enabled.where((s) => s.id == selectedId).firstOrNull ?? enabled.firstOrNull;
+    final canImport = shown != null && (me?.canEditRosters(shown.id) ?? false);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.tabRosters)),
+      appBar: AppBar(
+        title: Text(l10n.tabRosters),
+        actions: [
+          if (canImport)
+            IconButton(
+              tooltip: l10n.photoImport,
+              icon: const Icon(Icons.document_scanner_outlined),
+              onPressed: () => context.push('/rosters/import/${shown.id}'),
+            ),
+        ],
+      ),
       body: settings.when(
         loading: () => const SizedBox.shrink(),
         error: (_, _) => ErrorRetry(

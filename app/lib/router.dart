@@ -20,6 +20,7 @@ import 'features/me/members_screen.dart';
 import 'features/me/notifications_screen.dart';
 import 'features/me/profile_screen.dart';
 import 'features/me/services_screen.dart';
+import 'features/rosters/import_screen.dart';
 import 'features/rosters/roster_day_screen.dart';
 import 'features/rosters/rosters_screen.dart';
 import 'features/shell/shell.dart';
@@ -76,6 +77,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 '/rosters',
                 (_) => const RostersScreen(),
                 routes: [
+                  page('import/:type', (s) => ImportScreen(serviceType: s.pathParameters['type']!)),
                   page(
                     ':type/:day',
                     (s) => RosterDayScreen(

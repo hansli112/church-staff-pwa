@@ -470,5 +470,55 @@
   "notifThisChurch": "這間教會的通知",
   "notifPermissionOff": "通知被關掉了，請到系統設定打開",
   "notifEnable": "開啟通知",
-  "zoneSwitch": "負責這個聚會"
+  "zoneSwitch": "負責這個聚會",
+  "photoImport": "照片匯入",
+  "photoRemaining": "這個月還可以辨識 {count} 張",
+  "@photoRemaining": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "photoTake": "拍照",
+  "photoPick": "選照片",
+  "photoPasteJson": "貼上 JSON",
+  "photoRecognizing": "辨識中，大約需要一分鐘",
+  "photoChurchLimit": "這個月的 {limit} 張用完了，下個月 1 日恢復。可以先貼上 JSON",
+  "@photoChurchLimit": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "photoPlatformOff": "照片辨識這個月暫停（全站的辨識額度用完了），下個月恢復。可以先貼上 JSON",
+  "photoTooLarge": "照片太大，請裁到只剩表格再試",
+  "photoFailed": "辨識失敗，請換一張清楚一點的照片再試",
+  "importPreview": "確認後套用",
+  "importApply": "套用到服事表",
+  "importApplied": "已匯入 {count} 天",
+  "@importApplied": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importNothing": "照片裡沒有讀到之後的日期",
+  "importNotInList": "名單裡沒有這些人（照原文寫入，沒有連到帳號）",
+  "importNear": "名單裡有很像的：{names}",
+  "@importNear": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "importAmbiguous": "不確定是哪一位（沒有連到帳號）",
+  "importUnknownDuties": "這個聚會沒有這些服事項目",
+  "importPastDays": "已經過去的日期，沒有匯入",
+  "importBadRows": "讀不懂的資料",
+  "jsonHint": "貼上辨識結果的 JSON",
+  "next2": "預覽"
 }

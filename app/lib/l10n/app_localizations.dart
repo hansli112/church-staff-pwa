@@ -1524,6 +1524,138 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'負責這個聚會'**
   String get zoneSwitch;
+
+  /// No description provided for @photoImport.
+  ///
+  /// In zh, this message translates to:
+  /// **'照片匯入'**
+  String get photoImport;
+
+  /// No description provided for @photoRemaining.
+  ///
+  /// In zh, this message translates to:
+  /// **'這個月還可以辨識 {count} 張'**
+  String photoRemaining(int count);
+
+  /// No description provided for @photoTake.
+  ///
+  /// In zh, this message translates to:
+  /// **'拍照'**
+  String get photoTake;
+
+  /// No description provided for @photoPick.
+  ///
+  /// In zh, this message translates to:
+  /// **'選照片'**
+  String get photoPick;
+
+  /// No description provided for @photoPasteJson.
+  ///
+  /// In zh, this message translates to:
+  /// **'貼上 JSON'**
+  String get photoPasteJson;
+
+  /// No description provided for @photoRecognizing.
+  ///
+  /// In zh, this message translates to:
+  /// **'辨識中，大約需要一分鐘'**
+  String get photoRecognizing;
+
+  /// No description provided for @photoChurchLimit.
+  ///
+  /// In zh, this message translates to:
+  /// **'這個月的 {limit} 張用完了，下個月 1 日恢復。可以先貼上 JSON'**
+  String photoChurchLimit(int limit);
+
+  /// No description provided for @photoPlatformOff.
+  ///
+  /// In zh, this message translates to:
+  /// **'照片辨識這個月暫停（全站的辨識額度用完了），下個月恢復。可以先貼上 JSON'**
+  String get photoPlatformOff;
+
+  /// No description provided for @photoTooLarge.
+  ///
+  /// In zh, this message translates to:
+  /// **'照片太大，請裁到只剩表格再試'**
+  String get photoTooLarge;
+
+  /// No description provided for @photoFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'辨識失敗，請換一張清楚一點的照片再試'**
+  String get photoFailed;
+
+  /// No description provided for @importPreview.
+  ///
+  /// In zh, this message translates to:
+  /// **'確認後套用'**
+  String get importPreview;
+
+  /// No description provided for @importApply.
+  ///
+  /// In zh, this message translates to:
+  /// **'套用到服事表'**
+  String get importApply;
+
+  /// No description provided for @importApplied.
+  ///
+  /// In zh, this message translates to:
+  /// **'已匯入 {count} 天'**
+  String importApplied(int count);
+
+  /// No description provided for @importNothing.
+  ///
+  /// In zh, this message translates to:
+  /// **'照片裡沒有讀到之後的日期'**
+  String get importNothing;
+
+  /// No description provided for @importNotInList.
+  ///
+  /// In zh, this message translates to:
+  /// **'名單裡沒有這些人（照原文寫入，沒有連到帳號）'**
+  String get importNotInList;
+
+  /// No description provided for @importNear.
+  ///
+  /// In zh, this message translates to:
+  /// **'名單裡有很像的：{names}'**
+  String importNear(String names);
+
+  /// No description provided for @importAmbiguous.
+  ///
+  /// In zh, this message translates to:
+  /// **'不確定是哪一位（沒有連到帳號）'**
+  String get importAmbiguous;
+
+  /// No description provided for @importUnknownDuties.
+  ///
+  /// In zh, this message translates to:
+  /// **'這個聚會沒有這些服事項目'**
+  String get importUnknownDuties;
+
+  /// No description provided for @importPastDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'已經過去的日期，沒有匯入'**
+  String get importPastDays;
+
+  /// No description provided for @importBadRows.
+  ///
+  /// In zh, this message translates to:
+  /// **'讀不懂的資料'**
+  String get importBadRows;
+
+  /// No description provided for @jsonHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'貼上辨識結果的 JSON'**
+  String get jsonHint;
+
+  /// No description provided for @next2.
+  ///
+  /// In zh, this message translates to:
+  /// **'預覽'**
+  String get next2;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

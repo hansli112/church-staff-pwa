@@ -12,6 +12,7 @@ import {
   onDocumentWrittenWithAuthContext,
 } from 'firebase-functions/v2/firestore';
 import { onCall, type CallableRequest } from 'firebase-functions/v2/https';
+import { defineSecret } from 'firebase-functions/params';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { onObjectFinalized } from 'firebase-functions/v2/storage';
 
@@ -22,6 +23,7 @@ import * as invites from './invites.js';
 import { logClientError as logClientErrorHandler } from './logging.js';
 import * as notifications from './notifications.js';
 import * as operator from './operator.js';
+import * as photo from './photo.js';
 import { monitoringUsageReader, writeDailyStats } from './stats.js';
 import * as triggers from './triggers.js';
 
@@ -133,3 +135,16 @@ export const sendReminders = onSchedule(
     await notifications.sendReminders({ db: getFirestore(), messaging: getMessaging(), now: () => new Date() });
   },
 );
+
+// Photo recognition (Gemini, paid tier). The key is a Secret Manager secret.
+const geminiKey = defineSecret('GEMINI_API_KEY');
+export const recognizeRoster = onCall(
+  { ...callOpts, secrets: [geminiKey], timeoutSeconds: 180, memory: '512MiB' },
+  (req) =>
+    photo.recognizeRoster(
+      { ...deps(), gemini: photo.geminiClient(geminiKey.value(), (process.env.GEMINI_MODELS ?? '').split(',').filter(Boolean).length ? process.env.GEMINI_MODELS!.split(',') : undefined) },
+      caller(req),
+      req.data,
+    ),
+);
+export const photoQuota = callable(photo.photoQuota);

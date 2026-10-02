@@ -714,6 +714,27 @@ class MemoryCloud implements CloudApi {
     return stats.take(days).toList();
   }
 
+  /// Photos used this month per church, and what recognition returns.
+  final photosUsed = <String, int>{};
+  int photoLimit = 30;
+  bool photoPlatformOpen = true;
+  List<dynamic> recognized = const [];
+
+  @override
+  Future<PhotoQuota> photoQuota(String churchId) async => PhotoQuota(
+    remaining: photoLimit - (photosUsed[churchId] ?? 0),
+    limit: photoLimit,
+    platformOpen: photoPlatformOpen,
+  );
+
+  @override
+  Future<List<dynamic>> recognizeRoster(String churchId, String serviceType, List<PhotoInput> images) async {
+    if (!photoPlatformOpen) throw const CloudException(CloudErrorCode.quotaExceeded, 'platform');
+    if ((photosUsed[churchId] ?? 0) >= photoLimit) throw const CloudException(CloudErrorCode.quotaExceeded, 'church');
+    photosUsed[churchId] = (photosUsed[churchId] ?? 0) + 1;
+    return recognized;
+  }
+
   @override
   Future<void> logError({
     required String message,

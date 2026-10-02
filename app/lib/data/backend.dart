@@ -196,6 +196,23 @@ class DailyStats {
   final Map<String, num> values;
 }
 
+class PhotoQuota {
+  const PhotoQuota({required this.remaining, required this.limit, required this.platformOpen});
+
+  final int remaining;
+  final int limit;
+
+  /// False once the platform's monthly budget is spent.
+  final bool platformOpen;
+}
+
+class PhotoInput {
+  const PhotoInput({required this.mimeType, required this.bytes});
+
+  final String mimeType;
+  final List<int> bytes;
+}
+
 /// Privileged operations, done by Cloud Functions.
 abstract interface class CloudApi {
   /// Returns the new church ID.
@@ -218,6 +235,12 @@ abstract interface class CloudApi {
   Future<void> adminTransferAdmin(String churchId, String uid);
   Future<void> adminSetStatus(String churchId, ChurchStatus status);
   Future<List<DailyStats>> adminStats({int days = 30});
+
+  /// Photos this church may still recognize this month.
+  Future<PhotoQuota> photoQuota(String churchId);
+
+  /// Recognizes photos of a paper roster into import rows (JSON objects).
+  Future<List<dynamic>> recognizeRoster(String churchId, String serviceType, List<PhotoInput> images);
 
   /// Reports an uncaught error. Never throws.
   Future<void> logError({

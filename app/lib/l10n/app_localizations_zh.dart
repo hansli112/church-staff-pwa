@@ -786,4 +786,78 @@ class L10nZh extends L10n {
 
   @override
   String get zoneSwitch => '負責這個聚會';
+
+  @override
+  String get photoImport => '照片匯入';
+
+  @override
+  String photoRemaining(int count) {
+    return '這個月還可以辨識 $count 張';
+  }
+
+  @override
+  String get photoTake => '拍照';
+
+  @override
+  String get photoPick => '選照片';
+
+  @override
+  String get photoPasteJson => '貼上 JSON';
+
+  @override
+  String get photoRecognizing => '辨識中，大約需要一分鐘';
+
+  @override
+  String photoChurchLimit(int limit) {
+    return '這個月的 $limit 張用完了，下個月 1 日恢復。可以先貼上 JSON';
+  }
+
+  @override
+  String get photoPlatformOff => '照片辨識這個月暫停（全站的辨識額度用完了），下個月恢復。可以先貼上 JSON';
+
+  @override
+  String get photoTooLarge => '照片太大，請裁到只剩表格再試';
+
+  @override
+  String get photoFailed => '辨識失敗，請換一張清楚一點的照片再試';
+
+  @override
+  String get importPreview => '確認後套用';
+
+  @override
+  String get importApply => '套用到服事表';
+
+  @override
+  String importApplied(int count) {
+    return '已匯入 $count 天';
+  }
+
+  @override
+  String get importNothing => '照片裡沒有讀到之後的日期';
+
+  @override
+  String get importNotInList => '名單裡沒有這些人（照原文寫入，沒有連到帳號）';
+
+  @override
+  String importNear(String names) {
+    return '名單裡有很像的：$names';
+  }
+
+  @override
+  String get importAmbiguous => '不確定是哪一位（沒有連到帳號）';
+
+  @override
+  String get importUnknownDuties => '這個聚會沒有這些服事項目';
+
+  @override
+  String get importPastDays => '已經過去的日期，沒有匯入';
+
+  @override
+  String get importBadRows => '讀不懂的資料';
+
+  @override
+  String get jsonHint => '貼上辨識結果的 JSON';
+
+  @override
+  String get next2 => '預覽';
 }
