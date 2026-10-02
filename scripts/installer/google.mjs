@@ -54,7 +54,7 @@ function cloudError(status, error = {}, authSetup = false) {
   if (/BILLING|BLAZE|IDENTITY_PLATFORM.*UPGRADE/.test(reason)) {
     stop('GOOGLE_FREE_TIER_REQUIRED', 'Google 要求付費方案；安裝器不會綁定帳單或升級。請核對免費 Firebase 設定後再繼續。');
   }
-  if (/TERMS|TOS_|TOS_NOT|AGREEMENT/.test(reason)) {
+  if (/TERMS|TOS_|TOS NOT ACCEPTED|AGREEMENT/.test(reason)) {
     stop('GOOGLE_TERMS_REQUIRED', '請先在 Google Cloud／Firebase 官方網站接受帳號所需條款，再回到此處繼續。');
   }
   // Right after services:batchEnable, Google can still answer 403 SERVICE_DISABLED
@@ -387,12 +387,12 @@ async function enableFirebase(s) {
   return { firebase: { projectId } };
 }
 
-// The caller owns the project this run just created, so a definite 403 from
-// addFirebase is not missing IAM. It is either the new project's IAM still
-// propagating, or (far more often) an account that has never used Firebase and
-// so has not accepted its terms, which Google offers no API to accept. Retry
-// briefly, then send the person to the console to add Firebase there; the
-// resume reads the Firebase project back and carries on.
+// Google accepts the Firebase terms only in the console, once per account, so
+// every account new to Firebase stops here: addFirebase answers 403 with
+// "Firebase Tos Not Accepted". Send the person to the console to add Firebase
+// to this project there; the resume reads it back and carries on. The caller
+// owns the project this run just created, so a bare 403 is the new project's
+// IAM still propagating: retry it briefly before showing the same steps.
 const ADD_FIREBASE_RETRIES = 3;
 async function addFirebase(s) {
   const { projectId, intent } = s;
@@ -400,13 +400,13 @@ async function addFirebase(s) {
     try { return await s.createOrWait('firebase', 'v1beta1', 'firebase', `/v1beta1/${s.project}:addFirebase`, {}); }
     catch (error) {
       // Refused outright, or its operation failed: either way nothing is pending.
-      const refused = error instanceof ActionRequired && error.code === 'GOOGLE_PERMISSION_REQUIRED' &&
+      const refused = error instanceof ActionRequired && ['GOOGLE_TERMS_REQUIRED', 'GOOGLE_PERMISSION_REQUIRED'].includes(error.code) &&
         !intent('firebase')?.requested && !intent('firebase')?.operation;
       if (!refused) throw error;
-      if (attempt >= ADD_FIREBASE_RETRIES) {
+      if (error.code === 'GOOGLE_TERMS_REQUIRED' || attempt >= ADD_FIREBASE_RETRIES) {
         // Keep Google's reason code for support; it never carries a URL or credential.
         const code = error.message.match(/〔技術代碼：[^〕]*〕/)?.[0] ?? '';
-        stop('GOOGLE_TERMS_REQUIRED', `這個 Google 帳號第一次使用 Firebase，Google 規定要本人在官網同意 Firebase 條款，精靈無法代按。請按下方「開啟官方設定頁」，用同一個 Google 帳號：按「建立 Firebase 專案」，在第一頁下方選擇把 Firebase 加到現有的 Google Cloud 專案，選「Church Staff」（${projectId}），勾選同意條款後按繼續；Google Analytics 選不啟用，也不要升級付費方案。看到專案首頁就完成了，回到這裡按「核對後接續安裝」。若用的是公司或學校帳號，也可能是組織政策限制，請洽該帳號的管理員。${code}`);
+        stop('GOOGLE_TERMS_REQUIRED', `這個 Google 帳號第一次使用 Firebase，Google 規定要本人在 Firebase 官網同意條款，精靈無法代按；每個帳號只需做一次。請按下方「開啟官方設定頁」，用同一個 Google 帳號：按「如要開始使用，請設定 Firebase 專案」，不要在「輸入專案名稱」欄打字，改按最下方的「將 Firebase 新增到 Google Cloud 專案」；選「Church Staff」（${projectId}），勾選「我接受 Firebase 條款」後按繼續，Google Analytics 選不啟用，也不要升級付費方案。看到專案首頁就完成了，回到這裡按「核對後接續安裝」。若用的是公司或學校帳號，也可能是組織政策限制，請洽該帳號的管理員。${code}`);
       }
       s.context.emit?.({ message: `Google 正在替新專案開通 Firebase 權限，稍候自動重試（第 ${attempt + 1} 次）…` });
       await s.delay(10_000);

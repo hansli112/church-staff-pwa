@@ -412,6 +412,22 @@ test('an account that never accepted the Firebase terms is sent to the console, 
   assert.deepEqual(h.context.checkpoint.resources.firebase, { projectId });
 });
 
+test('an addFirebase refused with "Firebase Tos Not Accepted" asks for the console at once', async (t) => {
+  const h = await setup(t);
+  await h.through('google-project');
+  h.setInterceptor((call) => call.pathname.endsWith(':addFirebase') ? response(403, { error: { status: 'PERMISSION_DENIED',
+    message: 'The caller does not have permission', details: [{ detail: '[ORIGINAL ERROR] generic::permission_denied: Firebase Tos Not Accepted' }] } }) : undefined);
+  await assert.rejects(h.adapter.execute('firebase', h.context), (err) =>
+    err.code === 'GOOGLE_TERMS_REQUIRED' && err.message.includes('將 Firebase 新增到 Google Cloud 專案') && err.message.includes(projectId) &&
+    err.message.endsWith('〔技術代碼：firebase 403 PERMISSION_DENIED〕'));
+  assert.equal(creates(h, ':addFirebase'), 1);
+  assert.deepEqual(h.state.delays, []);
+  h.setInterceptor(undefined);
+  h.state.firebase = { projectId, projectNumber: '123456789' };
+  await h.adapter.execute('firebase', h.context);
+  assert.equal(creates(h, ':addFirebase'), 1);
+});
+
 test('an addFirebase operation that fails with permission denied is also treated as the terms step', async (t) => {
   const h = await setup(t);
   await h.through('google-project');
