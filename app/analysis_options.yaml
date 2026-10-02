@@ -1,0 +1,16 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-raw-types: true
+  exclude:
+    - lib/l10n/app_localizations*.dart
+
+linter:
+  rules:
+    - prefer_single_quotes
+    - prefer_const_constructors
+    - avoid_print
+    - unawaited_futures
+    - require_trailing_commas

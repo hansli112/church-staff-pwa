@@ -1,0 +1,740 @@
+import 'dart:async';
+import 'dart:math';
+
+import '../../domain/day.dart';
+import '../../domain/models.dart';
+import '../../domain/staff_order.dart';
+import '../../domain/text.dart';
+import '../backend.dart';
+
+/// An in-memory [Backend] for widget tests and the offline demo.
+///
+/// It follows the same permission rules as firestore.rules where screens
+/// depend on them (who may read the member list, who may leave), so tests
+/// catch a screen that would be denied in production.
+class MemoryBackend implements Backend {
+  MemoryBackend({DateTime Function()? clock}) : clock = clock ?? DateTime.now {
+    auth = MemoryAuth();
+    profiles = _Profiles(this);
+    memberships = _Memberships(this);
+    cloud = MemoryCloud(this);
+  }
+
+  final DateTime Function() clock;
+
+  @override
+  late final MemoryAuth auth;
+  @override
+  late final ProfileRepository profiles;
+  @override
+  late final MembershipRepository memberships;
+  @override
+  late final MemoryCloud cloud;
+
+  final churches = <String, Church>{};
+  final members = <String, Map<String, Member>>{};
+  final services = <String, ServiceSettings>{};
+  final rosters = <String, Map<String, Roster>>{};
+  final staffOrders = <String, Map<String, StaffOrder>>{};
+  final invites = <String, Invite>{};
+  final users = <String, UserProfile>{};
+
+  /// Set to make the next write fail, to test error handling.
+  Object? failNextWrite;
+
+  /// Simulated latency for every write.
+  Duration writeDelay = Duration.zero;
+
+  final _changes = StreamController<void>.broadcast(sync: true);
+
+  void notify() => _changes.add(null);
+
+  /// A stream of [read]'s value now and after every change, without
+  /// repeats. A read that throws emits the error.
+  Stream<T> watch<T>(T Function() read, {bool Function(T a, T b)? equals}) {
+    late StreamController<T> controller;
+    StreamSubscription<void>? sub;
+    var hasLast = false;
+    T? last;
+    void emit() {
+      try {
+        final value = read();
+        final same =
+            hasLast &&
+            (equals != null ? equals(last as T, value) : last == value);
+        if (same) return;
+        hasLast = true;
+        last = value;
+        controller.add(value);
+      } catch (e, st) {
+        hasLast = false;
+        controller.addError(e, st);
+      }
+    }
+
+    controller = StreamController<T>(
+      onListen: () {
+        scheduleMicrotask(emit);
+        sub = _changes.stream.listen((_) => emit());
+      },
+      onCancel: () => sub?.cancel(),
+    );
+    return controller.stream;
+  }
+
+  Future<void> write(void Function() change) async {
+    if (writeDelay > Duration.zero) await Future<void>.delayed(writeDelay);
+    final failure = failNextWrite;
+    if (failure != null) {
+      failNextWrite = null;
+      throw failure;
+    }
+    change();
+    notify();
+  }
+
+  @override
+  ChurchData church(String churchId) => MemoryChurchData(this, churchId);
+
+  // Seeding helpers for tests and the demo.
+
+  String addChurch(
+    String name, {
+    String? id,
+    ChurchStatus status = ChurchStatus.active,
+  }) {
+    final cid = id ?? 'c${churches.length + 1}';
+    churches[cid] = Church(id: cid, name: name, status: status);
+    members[cid] = {};
+    rosters[cid] = {};
+    staffOrders[cid] = {};
+    services[cid] = const ServiceSettings(services: [], ids: []);
+    notify();
+    return cid;
+  }
+
+  void addMember(String cid, Member member) {
+    members[cid]![member.uid] = member;
+    notify();
+  }
+
+  void setServices(String cid, List<Service> list) {
+    services[cid] = (services[cid] ?? const ServiceSettings(services: []))
+        .withServices(list);
+    notify();
+  }
+
+  Member? memberOf(String cid, String? uid) =>
+      uid == null ? null : members[cid]?[uid];
+
+  bool isActiveMember(String cid, String? uid) =>
+      memberOf(cid, uid) != null &&
+      churches[cid]?.status == ChurchStatus.active;
+
+  void requireMember(String cid) {
+    if (!isActiveMember(cid, auth.currentUser?.uid)) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+  }
+}
+
+class MemoryAuth implements AuthGateway {
+  MemoryAuth();
+
+  final _accounts =
+      <
+        String,
+        ({String uid, String password, bool google, bool verified, String name})
+      >{};
+  final _state = StreamController<AuthUser?>.broadcast(sync: true);
+  AuthUser? _current;
+  int _next = 1;
+
+  /// Email of the account the next Google sign-in picks; null cancels.
+  String? googleAccount = 'google@example.com';
+
+  @override
+  AuthUser? get currentUser => _current;
+
+  @override
+  Stream<AuthUser?> authState() async* {
+    yield _current;
+    yield* _state.stream;
+  }
+
+  void _set(AuthUser? user) {
+    _current = user;
+    _state.add(user);
+  }
+
+  AuthUser _user(String email) {
+    final a = _accounts[email]!;
+    return AuthUser(
+      uid: a.uid,
+      email: email,
+      emailVerified: a.verified || a.google,
+      displayName: a.name,
+      usesPassword: !a.google,
+    );
+  }
+
+  /// Signs in [email] directly, creating the account if needed.
+  AuthUser signInAs(
+    String email, {
+    String? uid,
+    String name = '',
+    bool verified = true,
+  }) {
+    _accounts[email] ??= (
+      uid: uid ?? 'u${_next++}',
+      password: '',
+      google: true,
+      verified: verified,
+      name: name,
+    );
+    final user = _user(email);
+    _set(user);
+    return user;
+  }
+
+  @override
+  Future<void> signInWithGoogle() async {
+    final email = googleAccount;
+    if (email == null) throw const AuthException(AuthErrorCode.cancelled);
+    final existing = _accounts[email];
+    // One account per email: Google takes over a password account.
+    _accounts[email] = (
+      uid: existing?.uid ?? 'u${_next++}',
+      password: existing?.password ?? '',
+      google: true,
+      verified: true,
+      name: existing?.name ?? email.split('@').first,
+    );
+    _set(_user(email));
+  }
+
+  @override
+  Future<void> signInWithEmail(String email, String password) async {
+    final a = _accounts[email.trim()];
+    if (a == null || a.password.isEmpty || a.password != password) {
+      throw const AuthException(AuthErrorCode.invalidCredential);
+    }
+    _set(_user(email.trim()));
+  }
+
+  @override
+  Future<void> registerWithEmail(
+    String name,
+    String email,
+    String password,
+  ) async {
+    email = email.trim();
+    if (!email.contains('@')) {
+      throw const AuthException(AuthErrorCode.invalidEmail);
+    }
+    if (password.length < 6) {
+      throw const AuthException(AuthErrorCode.weakPassword);
+    }
+    if (_accounts.containsKey(email)) {
+      throw AuthException(AuthErrorCode.emailInUse, email);
+    }
+    _accounts[email] = (
+      uid: 'u${_next++}',
+      password: password,
+      google: false,
+      verified: false,
+      name: name,
+    );
+    _set(_user(email));
+  }
+
+  int verificationEmailsSent = 0;
+  final resetEmails = <String>[];
+
+  @override
+  Future<void> sendEmailVerification() async => verificationEmailsSent++;
+
+  @override
+  Future<void> sendPasswordReset(String email) async => resetEmails.add(email);
+
+  /// Marks [email] verified, as if its owner clicked the link.
+  void verify(String email) {
+    final a = _accounts[email]!;
+    _accounts[email] = (
+      uid: a.uid,
+      password: a.password,
+      google: a.google,
+      verified: true,
+      name: a.name,
+    );
+  }
+
+  @override
+  Future<void> reload() async {
+    final email = _current?.email;
+    if (email != null && _accounts.containsKey(email)) _set(_user(email));
+  }
+
+  @override
+  Future<void> signOut() async => _set(null);
+
+  void deleteCurrent() {
+    final email = _current?.email;
+    if (email != null) _accounts.remove(email);
+    _set(null);
+  }
+}
+
+class _Profiles implements ProfileRepository {
+  _Profiles(this._b);
+  final MemoryBackend _b;
+
+  @override
+  Stream<UserProfile?> watch(String uid) => _b.watch(() => _b.users[uid]);
+
+  @override
+  Future<void> save(UserProfile profile) =>
+      _b.write(() => _b.users[profile.uid] = profile);
+}
+
+class _Memberships implements MembershipRepository {
+  _Memberships(this._b);
+  final MemoryBackend _b;
+
+  @override
+  Stream<List<Membership>> watchMine(String uid) => _b.watch(
+    () => [
+      for (final entry in _b.members.entries)
+        if (entry.value[uid] case final member?)
+          Membership(churchId: entry.key, member: member),
+    ],
+    equals: (a, b) =>
+        a.length == b.length &&
+        List.generate(
+          a.length,
+          (i) =>
+              a[i].churchId == b[i].churchId &&
+              identical(a[i].member, b[i].member),
+        ).every((x) => x),
+  );
+}
+
+class MemoryChurchData implements ChurchData {
+  MemoryChurchData(this._b, this.churchId);
+
+  final MemoryBackend _b;
+
+  @override
+  final String churchId;
+
+  String? get _uid => _b.auth.currentUser?.uid;
+  Member? get _me => _b.memberOf(churchId, _uid);
+
+  void _requireMember() => _b.requireMember(churchId);
+
+  void _requireAdmin() {
+    _requireMember();
+    if (!(_me?.isAdmin ?? false)) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+  }
+
+  void _requireRosterEditor(String type) {
+    _requireMember();
+    if (!(_me?.canEditRosters(type) ?? false)) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+  }
+
+  @override
+  Stream<Church?> church() => _b.watch(() {
+    if (_b.memberOf(churchId, _uid) == null) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    return _b.churches[churchId];
+  });
+
+  @override
+  Stream<Member?> member(String uid) =>
+      _b.watch(() => _b.memberOf(churchId, uid));
+
+  @override
+  Stream<List<Member>> members() => _b.watch(() {
+    _requireMember();
+    if (!(_me?.inGroup(Group.rosterEditors) ?? false)) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    return _b.members[churchId]!.values.toList();
+  }, equals: _sameList);
+
+  @override
+  Stream<ServiceSettings> services() => _b.watch(() {
+    _requireMember();
+    return _b.services[churchId]!;
+  });
+
+  @override
+  Stream<List<Roster>> rosters({required Day from}) => _b.watch(() {
+    _requireMember();
+    return (_b.rosters[churchId]!.values
+        .where((r) => !r.day.isBefore(from))
+        .toList()
+      ..sort((a, b) => a.day.compareTo(b.day)));
+  }, equals: _sameList);
+
+  @override
+  Stream<StaffOrder> staffOrder(String serviceType) => _b.watch(() {
+    _requireMember();
+    return _b.staffOrders[churchId]![serviceType] ?? StaffOrder();
+  });
+
+  @override
+  Future<void> saveRoster(Roster roster) => saveRosters([roster]);
+
+  @override
+  Future<void> saveRosters(List<Roster> rosters) async {
+    for (final r in rosters) {
+      _requireRosterEditor(r.type);
+    }
+    await _b.write(() {
+      for (final r in rosters) {
+        _b.rosters[churchId]![r.id] = r.copyWith(saved: true);
+      }
+    });
+  }
+
+  @override
+  Future<void> deleteRoster(Roster roster) async {
+    _requireRosterEditor(roster.type);
+    await _b.write(() => _b.rosters[churchId]!.remove(roster.id));
+  }
+
+  @override
+  Future<void> updateStaffOrder(
+    String serviceType,
+    Map<String, List<String>?> changes,
+  ) async {
+    _requireRosterEditor(serviceType);
+    await _b.write(() {
+      final orders = _b.staffOrders[churchId]!;
+      orders[serviceType] = (orders[serviceType] ?? StaffOrder()).withChanges(
+        changes,
+      );
+    });
+  }
+
+  @override
+  Future<void> saveServices(List<Service> services) async {
+    _requireAdmin();
+    await _b.write(() {
+      _b.services[churchId] = _b.services[churchId]!.withServices(services);
+    });
+  }
+
+  @override
+  Future<void> saveMember(Member member) async {
+    _requireAdmin();
+    if (member.uid == _uid && !member.isAdmin) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    await _b.write(() => _b.members[churchId]![member.uid] = member);
+  }
+
+  @override
+  Future<void> removeMember(String uid) async {
+    _requireMember();
+    final target = _b.memberOf(churchId, uid);
+    final self = uid == _uid;
+    final allowed = self
+        ? !(target?.isAdmin ?? false)
+        : (_me?.isAdmin ?? false);
+    if (!allowed) throw const CloudException(CloudErrorCode.permissionDenied);
+    await _b.write(() => _b.members[churchId]!.remove(uid));
+  }
+
+  @override
+  Future<void> setNotificationPrefs(
+    String uid,
+    Set<NotificationKind> muted,
+  ) async {
+    final m = _b.memberOf(churchId, uid);
+    if (m == null || uid != _uid) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    await _b.write(
+      () => _b.members[churchId]![uid] = m.copyWith(mutedNotifications: muted),
+    );
+  }
+
+  @override
+  Stream<List<Invite>> invites() => _b.watch(() {
+    _requireAdmin();
+    return _b.invites.values.where((i) => i.churchId == churchId).toList()
+      ..sort((a, b) => b.expiresAt.compareTo(a.expiresAt));
+  }, equals: _sameList);
+
+  @override
+  Future<Invite> createInvite({required Duration validFor}) async {
+    _requireAdmin();
+    final code = _randomCode();
+    final invite = Invite(
+      code: code,
+      churchId: churchId,
+      churchName: _b.churches[churchId]!.name,
+      expiresAt: _b.clock().add(validFor),
+      createdAt: _b.clock(),
+    );
+    await _b.write(() => _b.invites[code] = invite);
+    return invite;
+  }
+
+  @override
+  Future<void> revokeInvite(String code) async {
+    _requireAdmin();
+    final invite = _b.invites[code]!;
+    await _b.write(
+      () => _b.invites[code] = Invite(
+        code: code,
+        churchId: invite.churchId,
+        churchName: invite.churchName,
+        expiresAt: invite.expiresAt,
+        createdAt: invite.createdAt,
+        revoked: true,
+      ),
+    );
+  }
+
+  @override
+  Future<void> uploadLogo(List<int> bytes) async {
+    _requireAdmin();
+    await _b.write(() {
+      _b.churches[churchId] = _b.churches[churchId]!.copyWith(
+        logoUrl: 'memory://logo/$churchId/${bytes.length}',
+      );
+    });
+  }
+}
+
+bool _sameList<T>(List<T> a, List<T> b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
+}
+
+final _random = Random();
+const _alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+String _randomCode() => List.generate(
+  8,
+  (_) => _alphabet[_random.nextInt(_alphabet.length)],
+).join();
+
+class MemoryCloud implements CloudApi {
+  MemoryCloud(this._b);
+
+  final MemoryBackend _b;
+
+  /// Set by tests: the uids that hold the platform operator claim.
+  final operators = <String>{};
+  final loggedErrors = <String>[];
+  final stats = <DailyStats>[];
+
+  @override
+  Future<String> createChurch(String name) async {
+    final user = _b.auth.currentUser;
+    if (user == null || !user.verified) {
+      throw const CloudException(CloudErrorCode.unverifiedEmail);
+    }
+    final key = nameKey(name);
+    if (_b.churches.values.any((c) => nameKey(c.name) == key)) {
+      throw const CloudException(CloudErrorCode.duplicateName);
+    }
+    final cid = _b.addChurch(name.trim());
+    _b.setServices(cid, defaultServices);
+    _b.addMember(
+      cid,
+      Member(
+        uid: user.uid,
+        name: _b.users[user.uid]?.name ?? user.displayName ?? '',
+        email: user.email,
+        role: Role.admin,
+        joinedAt: _b.clock(),
+      ),
+    );
+    return cid;
+  }
+
+  Invite _invite(String code) {
+    final invite = _b.invites[code.trim().toUpperCase()];
+    if (invite == null || invite.revoked) {
+      throw const CloudException(CloudErrorCode.inviteInvalid);
+    }
+    if (!invite.usableAt(_b.clock())) {
+      throw const CloudException(CloudErrorCode.inviteExpired);
+    }
+    return invite;
+  }
+
+  @override
+  Future<Invite> previewInvite(String code) async => _invite(code);
+
+  @override
+  Future<String> redeemInvite(String code) async {
+    final user = _b.auth.currentUser;
+    if (user == null) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    final invite = _invite(code);
+    final cid = invite.churchId;
+    if (_b.memberOf(cid, user.uid) == null) {
+      _b.addMember(
+        cid,
+        Member(
+          uid: user.uid,
+          name: _b.users[user.uid]?.name ?? user.displayName ?? '',
+          email: user.email,
+          joinedAt: _b.clock(),
+        ),
+      );
+    }
+    return cid;
+  }
+
+  /// Churches where [uid] is the only admin.
+  List<Church> soleAdminChurches(String uid) => [
+    for (final entry in _b.members.entries)
+      if (entry.value[uid]?.isAdmin ?? false)
+        if (entry.value.values.where((m) => m.isAdmin).length == 1)
+          if (_b.churches[entry.key]!.status != ChurchStatus.deleted)
+            _b.churches[entry.key]!,
+  ];
+
+  @override
+  Future<void> deleteAccount() async {
+    final uid = _b.auth.currentUser?.uid;
+    if (uid == null) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    final blocking = soleAdminChurches(uid);
+    if (blocking.isNotEmpty) {
+      throw CloudException(CloudErrorCode.lastAdmin, [
+        for (final c in blocking) c.name,
+      ]);
+    }
+    for (final m in _b.members.values) {
+      m.remove(uid);
+    }
+    _b.users.remove(uid);
+    _b.notify();
+    _b.auth.deleteCurrent();
+  }
+
+  void _requireChurchAdmin(String cid) {
+    if (!(_b.memberOf(cid, _b.auth.currentUser?.uid)?.isAdmin ?? false)) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+  }
+
+  @override
+  Future<void> deleteChurch(String churchId) async {
+    _requireChurchAdmin(churchId);
+    final c = _b.churches[churchId]!;
+    _b.churches[churchId] = Church(
+      id: c.id,
+      name: c.name,
+      status: ChurchStatus.deleted,
+      logoUrl: c.logoUrl,
+      deletedAt: _b.clock(),
+    );
+    _b.notify();
+  }
+
+  @override
+  Future<void> restoreChurch(String churchId) async {
+    _requireChurchAdmin(churchId);
+    final c = _b.churches[churchId]!;
+    if (c.status != ChurchStatus.deleted) return;
+    _b.churches[churchId] = Church(id: c.id, name: c.name, logoUrl: c.logoUrl);
+    _b.notify();
+  }
+
+  void _requireOperator() {
+    if (!operators.contains(_b.auth.currentUser?.uid)) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+  }
+
+  @override
+  Future<List<ChurchSummary>> adminSearchChurches(String query) async {
+    _requireOperator();
+    return [
+      for (final c in _b.churches.values)
+        if (matchesSearch(c.name, query) || c.id == query.trim())
+          ChurchSummary(
+            id: c.id,
+            name: c.name,
+            status: c.status,
+            memberCount: _b.members[c.id]!.length,
+            admins: [
+              for (final m in _b.members[c.id]!.values)
+                if (m.isAdmin) m,
+            ],
+          ),
+    ];
+  }
+
+  @override
+  Future<void> adminRenameChurch(String churchId, String name) async {
+    _requireOperator();
+    final key = nameKey(name);
+    if (_b.churches.values.any(
+      (c) => c.id != churchId && nameKey(c.name) == key,
+    )) {
+      throw const CloudException(CloudErrorCode.duplicateName);
+    }
+    _b.churches[churchId] = _b.churches[churchId]!.copyWith(name: name.trim());
+    _b.notify();
+  }
+
+  @override
+  Future<void> adminTransferAdmin(String churchId, String uid) async {
+    _requireOperator();
+    final m = _b.memberOf(churchId, uid);
+    if (m == null) throw const CloudException(CloudErrorCode.unknown);
+    _b.members[churchId]![uid] = m.copyWith(role: Role.admin);
+    _b.notify();
+  }
+
+  @override
+  Future<void> adminSetStatus(String churchId, ChurchStatus status) async {
+    _requireOperator();
+    _b.churches[churchId] = _b.churches[churchId]!.copyWith(status: status);
+    _b.notify();
+  }
+
+  @override
+  Future<List<DailyStats>> adminStats({int days = 30}) async {
+    _requireOperator();
+    return stats.take(days).toList();
+  }
+
+  @override
+  Future<void> logError({
+    required String message,
+    required String stack,
+    String? churchId,
+  }) async => loggedErrors.add(message);
+}
+
+/// The services a new church starts with. The Cloud Function seeds the same
+/// list (functions/src/church.ts).
+const defaultServices = [
+  Service(
+    id: 'sunday',
+    name: '主日崇拜',
+    weekday: DateTime.sunday,
+    duties: ['司會', '敬拜', '司琴', '音控', '投影', '招待'],
+  ),
+];

@@ -1,0 +1,437 @@
+/// Plain data types shared by the repositories, the state layer and the UI.
+///
+/// Nothing here imports Firebase: IDs are strings and times are [DateTime] or
+/// [Day], so the data layer can move off Firestore without touching callers
+/// (docs/design.md, 遷移預留).
+library;
+
+import 'package:flutter/foundation.dart';
+
+import 'day.dart';
+
+enum ChurchStatus { active, suspended, deleted }
+
+@immutable
+class Church {
+  const Church({
+    required this.id,
+    required this.name,
+    this.status = ChurchStatus.active,
+    this.logoUrl,
+    this.deletedAt,
+  });
+
+  final String id;
+  final String name;
+  final ChurchStatus status;
+
+  /// Download URL of the 512px logo, or null when the church has none.
+  final String? logoUrl;
+  final DateTime? deletedAt;
+
+  bool get isActive => status == ChurchStatus.active;
+
+  Church copyWith({String? name, ChurchStatus? status, String? logoUrl}) =>
+      Church(
+        id: id,
+        name: name ?? this.name,
+        status: status ?? this.status,
+        logoUrl: logoUrl ?? this.logoUrl,
+        deletedAt: deletedAt,
+      );
+}
+
+/// Who someone is in a church. Only [admin] carries permissions; the rest
+/// are labels.
+enum Role { admin, leader, staff, member }
+
+/// Edit permissions, orthogonal to [Role]. An admin holds all of them.
+enum Group {
+  rosterEditors('roster-editors'),
+  calendarEditors('calendar-editors');
+
+  const Group(this.id);
+
+  /// The string stored in Firestore and checked by firestore.rules.
+  final String id;
+
+  static Group? byId(String id) {
+    for (final group in values) {
+      if (group.id == id) return group;
+    }
+    return null;
+  }
+}
+
+/// The duties a member can serve in one service.
+///
+/// A roster editor may only edit the services they hold a zone in.
+@immutable
+class Zone {
+  const Zone({required this.serviceType, this.duties = const []});
+
+  final String serviceType;
+  final List<String> duties;
+
+  Zone copyWith({List<String>? duties}) =>
+      Zone(serviceType: serviceType, duties: duties ?? this.duties);
+
+  @override
+  bool operator ==(Object other) =>
+      other is Zone &&
+      other.serviceType == serviceType &&
+      listEquals(other.duties, duties);
+
+  @override
+  int get hashCode => Object.hash(serviceType, Object.hashAll(duties));
+}
+
+/// Kinds of push notification a member can turn off per church.
+enum NotificationKind { reminder, rosterChange, memberLeft }
+
+@immutable
+class Member {
+  const Member({
+    required this.uid,
+    required this.name,
+    this.email = '',
+    this.role = Role.staff,
+    this.groups = const {},
+    this.zones = const [],
+    this.mutedNotifications = const {},
+    this.joinedAt,
+  });
+
+  final String uid;
+  final String name;
+  final String email;
+  final Role role;
+  final Set<Group> groups;
+  final List<Zone> zones;
+  final Set<NotificationKind> mutedNotifications;
+  final DateTime? joinedAt;
+
+  bool get isAdmin => role == Role.admin;
+
+  bool inGroup(Group group) => isAdmin || groups.contains(group);
+
+  /// The service types this member holds a zone in, in zone order. Stored
+  /// as `zoneTypes` because the security rules cannot look inside [zones].
+  List<String> get zoneTypes => [
+    for (final type in {for (final zone in zones) zone.serviceType}) type,
+  ];
+
+  /// Whether this member may edit rosters of [serviceType].
+  bool canEditRosters(String serviceType) =>
+      isAdmin ||
+      (groups.contains(Group.rosterEditors) && zoneTypes.contains(serviceType));
+
+  /// Whether this member is set up to serve [duty] in [serviceType].
+  bool serves(String serviceType, String duty) => zones.any(
+    (zone) => zone.serviceType == serviceType && zone.duties.contains(duty),
+  );
+
+  /// This member with [duty] added to their zone for [serviceType].
+  Member withDuty(String serviceType, String duty) {
+    if (serves(serviceType, duty)) return this;
+    var found = false;
+    final next = [
+      for (final zone in zones)
+        if (zone.serviceType == serviceType)
+          () {
+            found = true;
+            return zone.copyWith(duties: [...zone.duties, duty]);
+          }()
+        else
+          zone,
+    ];
+    if (!found) next.add(Zone(serviceType: serviceType, duties: [duty]));
+    return copyWith(zones: next);
+  }
+
+  Member copyWith({
+    String? name,
+    Role? role,
+    Set<Group>? groups,
+    List<Zone>? zones,
+    Set<NotificationKind>? mutedNotifications,
+  }) => Member(
+    uid: uid,
+    name: name ?? this.name,
+    email: email,
+    role: role ?? this.role,
+    groups: groups ?? this.groups,
+    zones: zones ?? this.zones,
+    mutedNotifications: mutedNotifications ?? this.mutedNotifications,
+    joinedAt: joinedAt,
+  );
+}
+
+/// A colored label on one day's roster: 聖餐, 浸禮, 特會…
+@immutable
+class EventTag {
+  const EventTag({required this.name, required this.color});
+
+  final String name;
+
+  /// One of [EventColors]; stored as its index so dark mode can pick its own
+  /// shade.
+  final int color;
+
+  @override
+  bool operator ==(Object other) =>
+      other is EventTag && other.name == name && other.color == color;
+
+  @override
+  int get hashCode => Object.hash(name, color);
+}
+
+/// One kind of gathering, e.g. 主日崇拜 on Sundays.
+@immutable
+class Service {
+  const Service({
+    required this.id,
+    required this.name,
+    required this.weekday,
+    this.enabled = true,
+    this.duties = const [],
+    this.events = const [],
+  });
+
+  /// Stable ID. Never reused, never deleted (settings/services `ids`).
+  final String id;
+  final String name;
+
+  /// 1 = Monday … 7 = Sunday.
+  final int weekday;
+
+  /// A disabled service keeps its old rosters but gets no new ones.
+  final bool enabled;
+
+  /// The roster template: duties a new roster starts with, in order.
+  final List<String> duties;
+
+  /// Common special-event tags offered when editing this service's rosters.
+  final List<EventTag> events;
+
+  Service copyWith({
+    String? name,
+    int? weekday,
+    bool? enabled,
+    List<String>? duties,
+    List<EventTag>? events,
+  }) => Service(
+    id: id,
+    name: name ?? this.name,
+    weekday: weekday ?? this.weekday,
+    enabled: enabled ?? this.enabled,
+    duties: duties ?? this.duties,
+    events: events ?? this.events,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      other is Service &&
+      other.id == id &&
+      other.name == name &&
+      other.weekday == weekday &&
+      other.enabled == enabled &&
+      listEquals(other.duties, duties) &&
+      listEquals(other.events, events);
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    weekday,
+    enabled,
+    Object.hashAll(duties),
+    Object.hashAll(events),
+  );
+}
+
+@immutable
+class ServiceSettings {
+  const ServiceSettings({required this.services, this.ids = const []});
+
+  final List<Service> services;
+
+  /// Every service ID ever configured. Only grows.
+  final List<String> ids;
+
+  List<Service> get enabled => [
+    for (final service in services)
+      if (service.enabled) service,
+  ];
+
+  Service? byId(String id) {
+    for (final service in services) {
+      if (service.id == id) return service;
+    }
+    return null;
+  }
+
+  /// [services] with [ids] grown to include every new ID.
+  ServiceSettings withServices(List<Service> services) => ServiceSettings(
+    services: services,
+    ids: {...ids, for (final s in services) s.id}.toList(),
+  );
+}
+
+/// One duty on one day: who serves it.
+@immutable
+class Duty {
+  const Duty({
+    required this.role,
+    this.people = const [],
+    this.uids = const {},
+  });
+
+  final String role;
+
+  /// Names as shown, in staff order. Names stay even after the person
+  /// deletes their account.
+  final List<String> people;
+
+  /// Name → uid for the people who are members, so "my services" and
+  /// reminders can find them. Free-text names have no entry.
+  final Map<String, String> uids;
+
+  Duty copyWith({
+    String? role,
+    List<String>? people,
+    Map<String, String>? uids,
+  }) => Duty(
+    role: role ?? this.role,
+    people: people ?? this.people,
+    uids: uids ?? this.uids,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      other is Duty &&
+      other.role == role &&
+      listEquals(other.people, people) &&
+      mapEquals(other.uids, uids);
+
+  @override
+  int get hashCode => Object.hash(
+    role,
+    Object.hashAll(people),
+    Object.hashAll(uids.entries.map((e) => '${e.key}=${e.value}')),
+  );
+}
+
+/// One service on one day.
+@immutable
+class Roster {
+  const Roster({
+    required this.type,
+    required this.day,
+    this.duties = const [],
+    this.events = const [],
+    this.saved = true,
+  });
+
+  /// Document ID: one roster per service per day.
+  static String idFor(String type, Day day) => '${day.key}_$type';
+
+  String get id => idFor(type, day);
+
+  /// The service ID.
+  final String type;
+  final Day day;
+  final List<Duty> duties;
+  final List<EventTag> events;
+
+  /// False for a roster that only exists on screen, built from the service
+  /// template because nobody has edited that day yet.
+  final bool saved;
+
+  Roster copyWith({
+    List<Duty>? duties,
+    List<EventTag>? events,
+    Day? day,
+    bool? saved,
+  }) => Roster(
+    type: type,
+    day: day ?? this.day,
+    duties: duties ?? this.duties,
+    events: events ?? this.events,
+    saved: saved ?? this.saved,
+  );
+
+  /// Whether [uid] (or, for names without a uid, [name]) serves this day.
+  List<String> dutiesOf({required String uid, required String name}) => [
+    for (final duty in duties)
+      if (duty.uids.values.contains(uid) ||
+          (duty.people.contains(name) && !duty.uids.containsKey(name)))
+        duty.role,
+  ];
+
+  @override
+  bool operator ==(Object other) =>
+      other is Roster &&
+      other.type == type &&
+      other.day == day &&
+      other.saved == saved &&
+      listEquals(other.duties, duties) &&
+      listEquals(other.events, events);
+
+  @override
+  int get hashCode => Object.hash(
+    type,
+    day,
+    saved,
+    Object.hashAll(duties),
+    Object.hashAll(events),
+  );
+}
+
+/// The global profile at users/{uid}.
+@immutable
+class UserProfile {
+  const UserProfile({
+    required this.uid,
+    required this.name,
+    this.email = '',
+    this.locale,
+  });
+
+  final String uid;
+  final String name;
+  final String email;
+
+  /// BCP-47 tag such as `zh-Hant`, or null to follow the device.
+  final String? locale;
+}
+
+/// A membership found by the collection-group query: which churches I am in.
+@immutable
+class Membership {
+  const Membership({required this.churchId, required this.member});
+
+  final String churchId;
+  final Member member;
+}
+
+@immutable
+class Invite {
+  const Invite({
+    required this.code,
+    required this.churchId,
+    required this.churchName,
+    required this.expiresAt,
+    this.revoked = false,
+    this.createdAt,
+  });
+
+  final String code;
+  final String churchId;
+  final String churchName;
+  final DateTime expiresAt;
+  final bool revoked;
+  final DateTime? createdAt;
+
+  bool usableAt(DateTime now) => !revoked && now.isBefore(expiresAt);
+}
