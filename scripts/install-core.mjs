@@ -126,7 +126,7 @@ export async function main(argv = process.argv.slice(2)) {
   console.log(options.demo ? '離線示範：不會連接或建立雲端資源。' : '私人安裝精靈已啟動。請只在自己的瀏覽器開啟以下連結：');
   console.log(server.url);
   if (!options.demo) console.log('第一次點開時 Google 會先確認你的帳號；如果畫面請你再點一次，回到這裡再點同一個連結即可。');
-  console.log('連結僅供這次私人工作階段使用，請勿分享。按 Ctrl+C 可停止；已建立的雲端資源不會刪除。');
+  console.log('連結僅供這次私人工作階段使用，請勿分享。安裝期間請保持這個終端機開著，不要按 Ctrl+C；不小心停掉或關掉了，就重新按教學裡啟動精靈的那張指令卡接續，進度不會遺失。');
   let closing = false;
   const close = async () => {
     if (closing) return;
