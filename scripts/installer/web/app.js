@@ -16,7 +16,7 @@ let installsKey;
 let updateKey;
 const runningSince = new Map();
 // Google is still working (or may have accepted a request): resume later, do not redo.
-const laterCodes = new Set(['GOOGLE_OPERATION_PENDING', 'GOOGLE_REQUEST_UNCONFIRMED', 'GOOGLE_API_PROPAGATING']);
+const laterCodes = new Set(['GOOGLE_OPERATION_PENDING', 'GOOGLE_REQUEST_UNCONFIRMED', 'GOOGLE_API_PROPAGATING', 'GOOGLE_RATE_LIMITED']);
 let busySince;
 
 function elapsed(since) {
