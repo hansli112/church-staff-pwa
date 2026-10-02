@@ -10,31 +10,82 @@
     {
       "source": "functions",
       "codebase": "default",
-      "ignore": ["node_modules", ".git", "*.log", "test/**"],
-      "predeploy": ["npm --prefix \"$RESOURCE_DIR\" run build"]
+      "ignore": [
+        "node_modules",
+        ".git",
+        "*.log",
+        "test/**"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run build"
+      ]
     }
   ],
   "hosting": {
     "public": "app/build/web",
-    "ignore": ["firebase.json", "**/.*"],
-    "rewrites": [{ "source": "**", "destination": "/index.html" }],
+    "ignore": [
+      "firebase.json",
+      "**/.*"
+    ],
+    "rewrites": [
+      {
+        "source": "/privacy",
+        "destination": "/privacy.html"
+      },
+      {
+        "source": "/terms",
+        "destination": "/terms.html"
+      },
+      {
+        "source": "/about",
+        "destination": "/about.html"
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
     "headers": [
       {
         "source": "**/*.@(js|wasm|otf|ttf|png)",
-        "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }]
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=604800"
+          }
+        ]
       },
       {
         "source": "/index.html",
-        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
       }
+    ],
+    "predeploy": [
+      "cp landing/privacy.html landing/terms.html \"$PROJECT_DIR\"/app/build/web/",
+      "cp landing/index.html \"$PROJECT_DIR\"/app/build/web/about.html"
     ]
   },
   "emulators": {
-    "firestore": { "port": 8181 },
-    "auth": { "port": 9199 },
-    "functions": { "port": 5001 },
-    "storage": { "port": 9399 },
-    "ui": { "enabled": false },
+    "firestore": {
+      "port": 8181
+    },
+    "auth": {
+      "port": 9199
+    },
+    "functions": {
+      "port": 5001
+    },
+    "storage": {
+      "port": 9399
+    },
+    "ui": {
+      "enabled": false
+    },
     "singleProjectMode": true
   }
 }

@@ -1,0 +1,15 @@
+{
+  "MARTHA_ENV": "dev",
+  "FIREBASE_PROJECT_ID": "martha-app-dev",
+  "FIREBASE_API_KEY": "",
+  "FIREBASE_WEB_APP_ID": "",
+  "FIREBASE_ANDROID_APP_ID": "",
+  "FIREBASE_IOS_APP_ID": "",
+  "FIREBASE_SENDER_ID": "",
+  "FIREBASE_STORAGE_BUCKET": "martha-app-dev.firebasestorage.app",
+  "FIREBASE_AUTH_DOMAIN": "martha-app-dev.firebaseapp.com",
+  "FIREBASE_MEASUREMENT_ID": "",
+  "GOOGLE_SERVER_CLIENT_ID": "",
+  "FCM_VAPID_KEY": "",
+  "WEB_ORIGIN": "https://martha-app-dev.web.app"
+}

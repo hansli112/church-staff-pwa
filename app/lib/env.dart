@@ -76,11 +76,31 @@ FirebaseOptions firebaseOptionsFor(Env env) {
       );
     case Env.dev:
     case Env.prod:
-      // Filled in by `scripts/firebase-project.sh` once the projects exist;
-      // see docs/firebase-setup.md.
-      throw UnsupportedError(
-        'Firebase options for ${env.name} are not configured yet. '
-        'Run with --dart-define=MARTHA_ENV=emulator.',
+      // From --dart-define-from-file=config/<env>.json, which
+      // scripts/firebase-project.sh writes. These values identify the
+      // project; they are not secrets (the security rules are the boundary).
+      const projectId = String.fromEnvironment('FIREBASE_PROJECT_ID');
+      if (projectId.isEmpty) {
+        throw UnsupportedError(
+          'No Firebase config for ${env.name}: build with --dart-define-from-file=config/${env.name}.json '
+          '(docs/firebase-setup.md).',
+        );
+      }
+      final android = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+      final ios = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+      return FirebaseOptions(
+        apiKey: const String.fromEnvironment('FIREBASE_API_KEY'),
+        appId: android
+            ? const String.fromEnvironment('FIREBASE_ANDROID_APP_ID')
+            : ios
+            ? const String.fromEnvironment('FIREBASE_IOS_APP_ID')
+            : const String.fromEnvironment('FIREBASE_WEB_APP_ID'),
+        messagingSenderId: const String.fromEnvironment('FIREBASE_SENDER_ID'),
+        projectId: projectId,
+        storageBucket: const String.fromEnvironment('FIREBASE_STORAGE_BUCKET'),
+        authDomain: const String.fromEnvironment('FIREBASE_AUTH_DOMAIN'),
+        measurementId: const String.fromEnvironment('FIREBASE_MEASUREMENT_ID'),
+        iosBundleId: ios ? 'io.github.hansli112.martha' : null,
       );
   }
 }
