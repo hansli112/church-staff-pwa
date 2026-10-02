@@ -469,5 +469,6 @@
   "notifMemberLeftSub": "有人退出教會時（管理員）",
   "notifThisChurch": "這間教會的通知",
   "notifPermissionOff": "通知被關掉了，請到系統設定打開",
-  "notifEnable": "開啟通知"
+  "notifEnable": "開啟通知",
+  "zoneSwitch": "負責這個聚會"
 }

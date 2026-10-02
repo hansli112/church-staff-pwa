@@ -139,7 +139,7 @@ class RosterDayView extends StatelessWidget {
                               ? Text(
                                   l10n.nobodyYet,
                                   style: AppText.body.copyWith(
-                                    color: c.tertiaryLabel,
+                                    color: c.secondaryLabel,
                                   ),
                                 )
                               : Text.rich(

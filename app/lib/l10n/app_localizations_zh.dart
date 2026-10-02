@@ -783,4 +783,7 @@ class L10nZh extends L10n {
 
   @override
   String get notifEnable => '開啟通知';
+
+  @override
+  String get zoneSwitch => '負責這個聚會';
 }

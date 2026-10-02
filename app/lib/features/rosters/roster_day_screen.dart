@@ -261,12 +261,17 @@ class _DutyRow extends ConsumerWidget {
         order: order,
         canGrantDuty: me?.isAdmin ?? false,
         canReorder: true,
+        canRemove: true,
         onChanged: (r) => latest = r,
       ),
     );
     final result = returned ?? latest;
     if (result == null || !context.mounted) return;
     final actions = ref.read(rosterActionsProvider);
+    if (result.removeDuty) {
+      await runWithUndo(context, l10n.dutyRemoved(duty.role), () => actions.removeDuty(roster, duty.role));
+      return;
+    }
     try {
       for (final m in result.addDutyTo) {
         await actions.grantDuty(m, roster.type, duty.role);
@@ -383,7 +388,7 @@ class _DutyRow extends ConsumerWidget {
                 child: duty.people.isEmpty
                     ? Text(
                         l10n.nobodyYet,
-                        style: AppText.body.copyWith(color: c.tertiaryLabel),
+                        style: AppText.body.copyWith(color: c.secondaryLabel),
                       )
                     : Wrap(
                         spacing: Space.xs,

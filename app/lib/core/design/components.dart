@@ -172,7 +172,7 @@ class ListRow extends StatelessWidget {
     this.onTap,
     this.chevron,
     this.destructive = false,
-    this.selected = false,
+    this.selected,
   });
 
   final String title;
@@ -189,15 +189,16 @@ class ListRow extends StatelessWidget {
   final bool? chevron;
   final bool destructive;
 
-  /// Shows a check mark, for single-choice lists.
-  final bool selected;
+  /// Non-null makes this a choice row: a check mark when true, and never a
+  /// disclosure chevron, since choosing does not open another page.
+  final bool? selected;
 
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
     final platform = Theme.of(context).platform;
-    final showChevron = chevron ?? (onTap != null && trailing == null && !selected && !destructive);
-    return InkWell(
+    final showChevron = chevron ?? (onTap != null && trailing == null && selected == null && !destructive);
+    final row = InkWell(
       onTap: onTap,
       child: ConstrainedBox(
         constraints: BoxConstraints(minHeight: Space.minTap(platform)),
@@ -255,7 +256,7 @@ class ListRow extends StatelessWidget {
                   padding: const EdgeInsetsDirectional.only(start: Space.s),
                   child: trailing!,
                 ),
-              if (selected)
+              if (selected == true)
                 Padding(
                   padding: const EdgeInsetsDirectional.only(start: Space.s),
                   child: Icon(
@@ -279,6 +280,7 @@ class ListRow extends StatelessWidget {
         ),
       ),
     );
+    return selected == null ? row : Semantics(selected: selected, child: row);
   }
 }
 

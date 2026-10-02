@@ -35,7 +35,7 @@ void main() {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/me/members/john');
-      await tester.tap(find.text('牧區與服事').last);
+      await tester.tap(find.text('負責這個聚會').last);
       await settle(tester);
       expect(b.members['grace']!['john']!.zoneTypes, ['youth']);
     });

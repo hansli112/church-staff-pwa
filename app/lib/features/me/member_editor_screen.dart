@@ -134,7 +134,7 @@ class _ZoneSection extends StatelessWidget {
       header: service.name,
       children: [
         SwitchRow(
-          title: L10n.of(context).zones,
+          title: L10n.of(context).zoneSwitch,
           value: zone != null,
           onChanged: (on) => onSave(withZone(on ? Zone(serviceType: service.id) : null)),
         ),

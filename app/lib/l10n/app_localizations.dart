@@ -1518,6 +1518,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'開啟通知'**
   String get notifEnable;
+
+  /// No description provided for @zoneSwitch.
+  ///
+  /// In zh, this message translates to:
+  /// **'負責這個聚會'**
+  String get zoneSwitch;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

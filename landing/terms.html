@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>服務條款（草稿）｜馬大別忙</title>
+<meta name="description" content="馬大別忙服務條款草稿：使用規範、管理員責任、帳號與教會刪除、支持平台、授權與責任限制。">
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:site_name" content="馬大別忙">
+<meta property="og:title" content="服務條款（草稿）｜馬大別忙">
+<meta property="og:description" content="使用馬大別忙的規範與雙方責任。">
+<!-- TODO(M7): 買網域後換成正式網址 -->
+<meta property="og:url" content="https://martha-app.web.app/terms.html">
+<style>
+/* 共用樣式：index.html、privacy.html、terms.html 用同一段 */
+:root {
+  color-scheme: light dark;
+  --bg: #FFFFFF;
+  --bg2: #F2F2F5;
+  --text: #1D1D1F;
+  --text2: #5C5C61;
+  --line: #D6D6DB;
+  --accent: #1F5FD1;
+  --on-accent: #FFFFFF;
+  --warn-bg: #FFF3D1;
+  --warn-text: #4A3400;
+  --warn-line: #D9A93A;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121214;
+    --bg2: #1F1F23;
+    --text: #F2F2F5;
+    --text2: #A8A8AF;
+    --line: #3A3A40;
+    --accent: #6EA2FF;
+    --on-accent: #0A1A33;
+    --warn-bg: #33270A;
+    --warn-text: #FFE2A0;
+    --warn-line: #8F6E22;
+  }
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem; /* 17px */
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.wrap { max-width: 680px; margin: 0 auto; padding: 0 16px; }
+a { color: var(--accent); text-underline-offset: 2px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+h1, h2, h3 { line-height: 1.3; margin: 0; }
+p { margin: 0 0 16px; }
+
+/* 頂部 */
+.top { display: flex; align-items: center; min-height: 56px; }
+.top a {
+  display: inline-flex; align-items: center; min-height: 44px;
+  font-weight: 600; color: var(--text); text-decoration: none;
+}
+
+/* 首頁 */
+.hero { padding: 32px 0 40px; }
+.hero h1 { font-size: 2.125rem; font-weight: 700; margin-bottom: 8px; }
+.hero .lead { font-size: 1.25rem; color: var(--text2); margin-bottom: 32px; }
+.actions { display: grid; gap: 8px; }
+.btn {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  min-height: 52px; padding: 12px 16px; border-radius: 12px;
+  font-weight: 600; text-decoration: none;
+}
+.btn-primary { background: var(--accent); color: var(--on-accent); }
+.btn-secondary { background: var(--bg2); color: var(--text); }
+.badge {
+  flex: none; font-size: 0.8125rem; font-weight: 500; color: var(--text2);
+  padding: 2px 8px; border: 1px solid var(--line); border-radius: 999px;
+}
+.section { padding: 32px 0; border-top: 1px solid var(--line); }
+.section h2 { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; }
+.plain { list-style: none; margin: 0; padding: 0; }
+.plain li { padding: 8px 0; }
+.plain strong { display: block; }
+.plain span, .muted { color: var(--text2); }
+.steps { margin: 0; padding: 0 0 0 24px; }
+.steps li { padding: 0 0 16px 8px; }
+
+/* 頁尾 */
+.foot { padding: 24px 0 40px; border-top: 1px solid var(--line); color: var(--text2); font-size: 0.9375rem; }
+.foot nav { display: flex; flex-wrap: wrap; column-gap: 24px; margin-bottom: 8px; }
+.foot nav a { display: inline-flex; align-items: center; min-height: 44px; }
+
+/* 法律文件 */
+.legal { line-height: 1.7; padding-bottom: 40px; }
+.legal h1 { font-size: 1.75rem; font-weight: 700; margin: 16px 0 8px; }
+.legal h2 { font-size: 1.25rem; font-weight: 700; margin: 40px 0 16px; scroll-margin-top: 16px; }
+.legal h3 { font-size: 1.0625rem; font-weight: 700; margin: 24px 0 8px; }
+.legal ul, .legal ol { padding-left: 24px; margin: 0 0 16px; }
+.legal li { margin-bottom: 8px; }
+.legal dl { margin: 0 0 16px; }
+.legal dt { font-weight: 600; }
+.legal dd { margin: 0 0 8px; }
+.updated { color: var(--text2); margin-bottom: 24px; }
+.draft {
+  background: var(--warn-bg); color: var(--warn-text);
+  border: 2px solid var(--warn-line); border-radius: 12px;
+  padding: 16px; margin: 16px 0; font-weight: 600;
+}
+.draft p { margin: 0; }
+.draft p + p { margin-top: 8px; font-weight: 400; }
+.toc { background: var(--bg2); border-radius: 12px; padding: 16px; margin-bottom: 8px; }
+.toc h2 { font-size: 1.0625rem; margin: 0 0 8px; }
+.toc ol { margin: 0; padding-left: 24px; }
+.toc li { margin: 0; }
+.toc a { display: inline-flex; align-items: center; min-height: 44px; }
+.todo { background: var(--warn-bg); color: var(--warn-text); padding: 0 4px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top"><a href="index.html">‹ 馬大別忙</a></header>
+
+<main class="legal">
+  <div class="draft" role="note">
+    <p>草稿：待懂個資法的人審閱（台灣個資法、香港 PDPO、馬來西亞 PDPA），尚未生效</p>
+    <p>標成 <span class="todo">〔…〕</span> 的地方需要在上架前確認或填入。</p>
+  </div>
+
+  <h1>服務條款</h1>
+  <p class="updated">最後更新：2026-10-02（草稿）</p>
+
+  <p>歡迎使用「馬大別忙」（以下稱「本服務」）。本服務由個人營運，營運者為 <span class="todo">〔營運者法定姓名，上架前填入〕</span>（以下稱「營運者」或「我們」）。使用本服務，即表示你同意這份條款與<a href="privacy.html">隱私權政策</a>。</p>
+
+  <nav class="toc" aria-labelledby="toc-title">
+    <h2 id="toc-title">目錄</h2>
+    <ol>
+      <li><a href="#service">服務內容</a></li>
+      <li><a href="#account">帳號</a></li>
+      <li><a href="#fees">費用與支持平台</a></li>
+      <li><a href="#use">使用規範</a></li>
+      <li><a href="#admin">管理員的責任</a></li>
+      <li><a href="#operator">營運者的管理</a></li>
+      <li><a href="#availability">服務可用性</a></li>
+      <li><a href="#delete">刪除帳號與教會</a></li>
+      <li><a href="#ip">授權與名稱</a></li>
+      <li><a href="#liability">免責與責任限制</a></li>
+      <li><a href="#changes">條款變更</a></li>
+      <li><a href="#law">準據法與管轄</a></li>
+      <li><a href="#contact">聯絡方式</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="service">1. 服務內容</h2>
+  <p>本服務是代管的服事表工具，讓教會同工查看與安排服事表，提供 iOS App、Android App 與網頁版。</p>
+  <p>本服務是<strong>為教會設計</strong>的，只給同工使用，不給會友使用。非教會的團體（例如機構、團契）也可以使用，但功能與用語都以教會為準，我們不會為其他用途另外調整。</p>
+
+  <h2 id="account">2. 帳號</h2>
+  <ul>
+    <li>你可以用 Google 帳號、Apple 帳號（iOS）或 email 註冊。</li>
+    <li>請提供真實的名字，並妥善保管你的登入方式。用你的帳號進行的操作，視為你本人的操作。</li>
+    <li>建立教會的人會成為該教會的管理員。其他同工要透過管理員的邀請連結加入。</li>
+  </ul>
+
+  <h2 id="fees">3. 費用與支持平台</h2>
+  <ul>
+    <li>本服務<strong>免費</strong>，沒有付費功能。</li>
+    <li>iOS、Android App 內提供一次性打賞與訂閱，用來支持本服務的營運，不是對任何教會的奉獻。支持與否，功能完全相同；訂閱者只會得到自己看得到的徽章與可替換的 App icon。網頁版不提供打賞或訂閱。</li>
+    <li>付款、續訂與取消訂閱由 Apple App Store 或 Google Play 處理，適用其條款。<strong>退款請向 Apple 或 Google 申請</strong>，營運者無法直接退款。</li>
+    <li>打賞或訂閱不代表營運者對服務可用性做出任何額外承諾。</li>
+  </ul>
+
+  <h2 id="use">4. 使用規範</h2>
+  <p>使用本服務時，你不可以：</p>
+  <ul>
+    <li>違反法律，或侵害他人的隱私、名譽或其他權利；</li>
+    <li>未經同意把他人的個人資料放進本服務；</li>
+    <li>冒用其他教會的名稱，或為了阻止他人使用而搶先註冊教會名稱；</li>
+    <li>上傳違法、暴力、色情、騷擾或歧視性的內容（包括教會名稱與 logo）；</li>
+    <li>試圖存取不屬於你的教會或帳號的資料，或干擾、攻擊、逆向破解本服務的系統；</li>
+    <li>用自動化程式大量存取本服務，造成不合理的負擔；</li>
+    <li>把本服務包裝成商業產品販售或轉租。</li>
+  </ul>
+
+  <h2 id="admin">5. 管理員的責任</h2>
+  <p>每間教會的管理員負責管理自己教會的同工資料。管理員同意：</p>
+  <ul>
+    <li>加入同工、在服事表上安排某人之前，已經取得對方的同意，或有其他合法依據；</li>
+    <li>只在服事安排需要的範圍內使用同工的資料（例如 email），不另作他用；</li>
+    <li>同工要求更正或刪除自己的資料時，協助處理；</li>
+    <li>管理員權限只交給可信任的人。</li>
+  </ul>
+  <p><span class="todo">〔管理員／教會與營運者在個資法上的角色（例如控管者與受託者），待審閱者確認〕</span></p>
+
+  <h2 id="operator">6. 營運者的管理</h2>
+  <p>為了處理濫用、違反本條款、名稱搶註或爭議，營運者可以在不事先通知的情況下：</p>
+  <ul>
+    <li>將教會改名；</li>
+    <li>停用教會（停用期間同工無法使用該教會，資料保留）；</li>
+    <li>把教會的管理員權限轉移給其他同工；</li>
+    <li>停用違反本條款的帳號。</li>
+  </ul>
+  <p>建立教會時，若名稱與現有教會相同，系統會提醒並阻擋。如果你的教會名稱被別人先註冊，請<a href="#contact">聯絡我們</a>，我們會在查證後處理。</p>
+
+  <h2 id="availability">7. 服務可用性</h2>
+  <p>本服務由個人在空閒時間營運，以盡力而為的方式提供，<strong>不保證</strong>服務不中斷、沒有錯誤，或資料永遠不會遺失。我們可能隨時修改、暫停或終止部分或全部功能。若決定終止本服務，會盡量提前公告，讓教會有時間匯出資料 <span class="todo">〔提前公告天數待審閱者確認〕</span>。</p>
+  <p>重要的服事安排，請自行保留備份。</p>
+
+  <h2 id="delete">8. 刪除帳號與教會</h2>
+  <ul>
+    <li><strong>退出教會</strong>：非管理員可以在 App 裡自己退出。退出後要重新邀請才能回來。</li>
+    <li><strong>刪除帳號</strong>：你可以在 App 裡自己刪除帳號，會刪除你的登入帳號、帳號資料與所有教會的同工身分。已經在服事表上的名字會以純文字保留。如果你是某間教會唯一的管理員，要先交接給別人。</li>
+    <li><strong>刪除教會</strong>：教會刪除後保留 30 天，期間可以還原；30 天後永久刪除。</li>
+  </ul>
+  <p>詳細的刪除範圍見<a href="privacy.html#delete">隱私權政策</a>。</p>
+
+  <h2 id="ip">9. 授權與名稱</h2>
+  <ul>
+    <li>本服務的程式碼以 MIT 授權公開。</li>
+    <li>「馬大別忙」的名稱與圖示<strong>不在 MIT 授權範圍內</strong>。使用本服務的程式碼另行架設或修改時，請改用其他名稱與圖示。</li>
+    <li>你與你的教會放進本服務的內容（例如服事表、教會 logo），權利仍屬於你或你的教會。你同意營運者為了提供本服務而存放、處理與顯示這些內容。</li>
+  </ul>
+
+  <h2 id="liability">10. 免責與責任限制</h2>
+  <p>在法律允許的最大範圍內：</p>
+  <ul>
+    <li>本服務依「現況」提供，不做任何明示或默示的保證，包括適用於特定目的的保證。</li>
+    <li>營運者不對因使用或無法使用本服務所造成的任何間接、附帶或衍生損害負責，包括資料遺失、服事安排錯誤或錯過服事。</li>
+    <li>營運者對你的總賠償責任，以你在過去 12 個月內為本服務支付的金額為上限 <span class="todo">〔上限與各地消費者保護法的相容性待審閱者確認〕</span>。</li>
+  </ul>
+  <p>有些地區的法律不允許排除或限制某些責任，在這些地區，上述限制只在法律允許的範圍內適用。</p>
+
+  <h2 id="changes">11. 條款變更</h2>
+  <p>我們可能修改這份條款。修改後會更新本頁的「最後更新」日期；重大變更會另外公告 <span class="todo">〔公告方式待審閱者確認〕</span>。變更後繼續使用本服務，即表示你同意修改後的條款。</p>
+
+  <h2 id="law">12. 準據法與管轄</h2>
+  <p>本條款的準據法與管轄法院：<span class="todo">〔待審閱者決定〕</span>。</p>
+
+  <h2 id="contact">13. 聯絡方式</h2>
+  <ul>
+    <li>Email：<span class="todo">〔聯絡 email，上架前填入〕</span></li>
+    <li>問題回報：<a href="https://github.com/hansli112/church-staff-pwa/issues">GitHub issues</a>（公開，請勿貼上個人資料）</li>
+  </ul>
+</main>
+
+<footer class="foot">
+  <nav aria-label="頁尾">
+    <a href="index.html">首頁</a>
+    <a href="privacy.html">隱私權政策</a>
+    <a href="https://github.com/hansli112/church-staff-pwa/issues">問題回報</a>
+  </nav>
+  <p>本服務由個人營運。</p>
+</footer>
+
+</div>
+</body>
+</html>

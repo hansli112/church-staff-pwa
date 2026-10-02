@@ -13,6 +13,7 @@ class PickerResult {
     required this.people,
     this.ranking,
     this.addDutyTo = const [],
+    this.removeDuty = false,
   });
 
   /// The chosen names, any order (the caller sorts by staff order).
@@ -23,6 +24,9 @@ class PickerResult {
 
   /// Members to give this duty to, so they show up first next time.
   final List<Member> addDutyTo;
+
+  /// Take this duty off the day altogether.
+  final bool removeDuty;
 }
 
 /// When to focus the search box on open: long lists are faster to search
@@ -46,6 +50,7 @@ class PeoplePicker extends StatefulWidget {
     required this.order,
     required this.canGrantDuty,
     required this.canReorder,
+    this.canRemove = false,
     this.onChanged,
   });
 
@@ -58,6 +63,9 @@ class PeoplePicker extends StatefulWidget {
   /// Admins may add the duty to someone's zone; roster editors may not.
   final bool canGrantDuty;
   final bool canReorder;
+
+  /// Offer 「移除這項」 at the end of the list (the row also swipes away).
+  final bool canRemove;
 
   /// Called with the latest result after every change, so closing the
   /// sheet any way (drag down, tap outside) keeps what was picked.
@@ -267,6 +275,19 @@ class PeoplePickerState extends State<PeoplePicker> {
             l10n.pickerNoResults(typed),
             textAlign: TextAlign.center,
             style: AppText.body.copyWith(color: c.secondaryLabel),
+          ),
+        ),
+      );
+    }
+    if (widget.canRemove && !searching) {
+      rows.add(const SizedBox(height: Space.l));
+      rows.add(
+        ListRow(
+          title: l10n.removeDuty,
+          destructive: true,
+          onTap: () => Navigator.pop(
+            context,
+            PickerResult(people: widget.initial, removeDuty: true),
           ),
         ),
       );
