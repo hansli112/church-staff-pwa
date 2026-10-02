@@ -72,7 +72,7 @@ Google 可能還在建立資源，或已收到建立請求但沒回覆結果。*
 
 有些平台設定必須由本人在官方網頁確認，例如第一次啟用 Firebase 登入功能。畫面會顯示原因和「開啟官方設定頁」按鈕。在官方網頁完成後，回到精靈按「核對後接續安裝」。
 
-從沒用過 Firebase 的 Google 帳號，會在「將 Firebase 加入新專案」這一步停下來，因為 Google 規定要本人同意 Firebase 條款。照畫面指示到 Firebase 官網，把 Firebase 加到精靈建好的「Church Staff」專案（不要另建新專案），回來按「核對後接續安裝」即可。
+從沒用過 Firebase 的 Google 帳號，會在「將 Firebase 加入新專案」這一步停下來，因為 Google 規定要本人同意 Firebase 條款。每個帳號只需做一次：照畫面指示到 Firebase 官網，不要在「輸入專案名稱」欄打字，改按最下方的「將 Firebase 新增到 Google Cloud 專案」，選精靈建好的「Church Staff」並同意條款，回來按「核對後接續安裝」即可。
 
 ### 如果中途關掉了
 
