@@ -46,6 +46,22 @@
 - 原生 `in_app_purchase`，支持者狀態**只在裝置上判斷**，無後端、不同步 Firestore。
 - 不做感謝名單；Web 版不放贊助連結。
 
+## 數據與監控
+
+- 行為分析：Firebase Analytics（GA4），三平台。user property 帶 `church_id`，看各教會活躍度、DAU/MAU、留存、功能使用。不追蹤跨 App，不需 ATT。
+- 平台統計：每日排程 Cloud Function 寫 `stats/{date}`：
+  - `count()` 聚合：使用者、教會（依 status）、members、rosters。
+  - Cloud Monitoring API：前一日 Firestore reads/writes/deletes、儲存量、Functions 呼叫次數。
+  - 費用：用量 × 公開單價估算，不開 billing export（要 BigQuery，多一套東西）。
+  - 限制：Firestore 無法拆出每間教會的讀寫量；重度教會靠 GA4 活躍度與後端既有計數（照片額度）推估。
+- 錯誤 log：
+  - App：Crashlytics（當機、未處理例外）。
+  - Web：Crashlytics 不支援，錯誤送到一支 function 寫入 Cloud Logging。
+  - Cloud Functions：直接寫 Cloud Logging，Error Reporting 自動分組。
+- 通知：Crashlytics 與 Error Reporting 的「新錯誤類型」email，寄到專案擁有者的 Google 帳號，不用開新帳號。
+- 檢視：Hans 後台加「統計」頁，畫每日快照趨勢；行為與錯誤細節連到 Firebase / GCP console。
+- 隱私：log 只記 uid、cid、錯誤堆疊，不記姓名、email、服事表內容；log 保留預設 30 天。分析不提供關閉開關，隱私權政策與商店隱私標籤揭露。
+
 ## 授權
 
 - 程式碼：MIT（self-host 與馬大別忙皆同）。
@@ -73,9 +89,9 @@
 ## 里程碑（有空才做，無期限）
 
 1. **M1**：orphan branch、`dev` 專案；tenant 資料模型、rules、跨教會隔離測試
-2. **M2**：註冊、email 驗證、同名檢查、membership、邀請、帳號刪除、後台
+2. **M2**：註冊、email 驗證、同名檢查、membership、邀請、帳號刪除、後台（含統計頁）；錯誤 log、每日統計快照
 3. **M3**：匯入工具（含 `auth:export`/`auth:import` 保留密碼 hash），自家教會搬進 `prod` dogfood；i18n
-4. **M4**：iOS/Android App、推播、Google 封閉測試
+4. **M4**：iOS/Android App、推播、Crashlytics、GA4、Google 封閉測試
 5. **M5**：打賞與訂閱、照片辨識限額
 6. **M6**：landing page、法律文件、行事曆 OAuth
 7. **M7**：買網域、付 Apple 年費、送審；執行 repo 切換
