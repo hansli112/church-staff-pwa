@@ -313,9 +313,10 @@ async function updateDirectory(rootDir, runId) {
   return runDir;
 }
 
-export function createInstallationManager({ rootDir, google, cloudflare, build, sourceRevision = 'development', resumableRevisions = [], demo = false, release, fetchSite = fetchSiteJson, fetchAsset = fetchSiteBytes }) {
+export function createInstallationManager({ rootDir, google, cloudflare, build, sourceRevision = 'development', resumableRevisions = [], demo = false, report = () => {}, release, fetchSite = fetchSiteJson, fetchAsset = fetchSiteBytes }) {
   const mode = demo ? 'demo' : 'cloud';
   const resumable = new Set([sourceRevision, ...resumableRevisions]);
+  const count = (event, fields) => { try { report(event, fields); } catch { /* Counting never affects the install. */ } };
   let state;
   let store;
   let busy = false;
@@ -609,6 +610,8 @@ export function createInstallationManager({ rootDir, google, cloudflare, build, 
         state.approved = true;
         state.status = 'running';
         await store.write(state);
+        const runId = state.plan.runId;
+        count('started', { runId });
         const context = {
           plan: { ...clone(state.plan), activationEmailConfirmed: true },
           runDir: store.runDir, checkpoint: state, save, emit, signal, transient,
@@ -628,10 +631,12 @@ export function createInstallationManager({ rootDir, google, cloudflare, build, 
             await store.write(state);
           }
           state.status = 'complete';
+          count('completed', { runId });
           message = '部署步驟已完成。請查看管理員信箱並實際登入驗收；規則可能需要幾分鐘生效。';
         } catch (error) {
           const current = STEPS.find((step) => state.steps[step.id] === 'running');
           if (current) state.steps[current.id] = signal.aborted ? 'paused' : error.actionRequired ? 'waiting' : 'failed';
+          count('stopped', { runId, step: current?.id, code: signal.aborted ? 'CANCELLED' : error.code ?? 'UNEXPECTED' });
           state.status = 'paused';
           await store.write(state);
           throw error;

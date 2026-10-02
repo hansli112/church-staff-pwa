@@ -1,0 +1,11 @@
+# Receives the installer's anonymous progress events (scripts/installer/stats.mjs).
+# Deployed by hand: npx wrangler@4 deploy --config stats-worker/wrangler.toml
+name = "church-install-stats"
+main = "index.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "church-install-stats"
+database_id = "079c8cf6-363b-4db2-8b25-3e3ce8ceab04"
