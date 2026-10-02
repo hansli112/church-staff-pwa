@@ -65,7 +65,7 @@ function cloudError(status, error = {}, authSetup = false) {
   if (status === 401 || status === 16) stop('GOOGLE_AUTH_REQUIRED', 'Google 授權已過期或未完成；請重新完成 Cloud Shell 官方授權，再繼續本次安裝。');
   // A per-minute request limit, not a quota to raise: waiting a minute clears it.
   if (/RATE_LIMIT_EXCEEDED/.test(reason)) {
-    stop('GOOGLE_RATE_LIMITED', 'Google 暫時限制了短時間內的請求次數，不是帳號或配額有問題，不用改任何設定。請等 1–2 分鐘後按「稍後接續安裝」；如果你剛在 Firebase 官網加過 Firebase，Google 還在背景啟用服務，可能要等 5 分鐘左右。');
+    stop('GOOGLE_RATE_LIMITED', 'Google 暫時擋下太多次請求，不用改任何設定。請等 5 分鐘後按「稍後接續安裝」。');
   }
   if (status === 429 || status === 8 || /QUOTA|RESOURCE_EXHAUSTED/.test(reason)) {
     stop('GOOGLE_QUOTA_REQUIRED', 'Google 專案或 API 配額不足；請到官方配額頁核對，稍後再繼續。安裝進度已保留。');
@@ -415,7 +415,16 @@ async function addFirebase(s) {
     if (!refused) throw error;
     // Keep Google's reason code for support; it never carries a URL or credential.
     const code = error.message.match(/〔技術代碼：[^〕]*〕/)?.[0] ?? '';
-    stop('GOOGLE_TERMS_REQUIRED', `這個 Google 帳號第一次使用 Firebase，Google 規定要本人在 Firebase 官網同意條款，精靈無法代按；每個帳號只需做一次。請按下方「開啟官方設定頁」，用同一個 Google 帳號：按「如要開始使用，請設定 Firebase 專案」，不要在「輸入專案名稱」欄打字，改按最下方的「將 Firebase 新增到 Google Cloud 專案」；選「Church Staff」（${projectId}），勾選「我接受 Firebase 條款」後按繼續，Google Analytics 選不啟用，也不要升級付費方案。看到專案首頁就完成了，回到這裡按「核對後接續安裝」。如果這個帳號以前就用過 Firebase，可能只是新專案還在開通，等 1–2 分鐘再按「核對後接續安裝」即可。若用的是公司或學校帳號，也可能是組織政策限制，請洽該帳號的管理員。${code}`);
+    stop('GOOGLE_TERMS_REQUIRED', [
+      '這個 Google 帳號第一次用 Firebase，要先到 Firebase 官網同意條款（每個帳號只做一次）：',
+      '1. 按下方「開啟官方設定頁」',
+      '2. 按「如要開始使用，請設定 Firebase 專案」',
+      '3. 按最下面的「將 Firebase 新增到 Google Cloud 專案」（不要輸入專案名稱）',
+      `4. 選「Church Staff」（${projectId}），勾選同意條款，一路按繼續`,
+      '5. 看到專案首頁後，回來按「核對後接續安裝」',
+      '如果以前就用過 Firebase，等 2 分鐘再按「核對後接續安裝」即可。',
+      code,
+    ].filter(Boolean).join('\n'));
   }
 }
 
