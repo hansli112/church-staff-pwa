@@ -487,3 +487,21 @@ describe('平台統計與名稱保留', () => {
     await assertFails(setDoc(doc(as(STRANGER), 'churchNames/搶註'), { cid: 'x' }));
   });
 });
+
+describe('行事曆的授權', () => {
+  it('refresh token、OAuth state、快取都只有後端能碰（管理員也不行）', async () => {
+    await seed(`calendarTokens/${A}`, { token: 'sealed' });
+    await seed('calendarStates/abc', { cid: A });
+    await seed(`calendarCache/${A}_2026-10`, { cid: A, events: [] });
+    for (const path of [`calendarTokens/${A}`, 'calendarStates/abc', `calendarCache/${A}_2026-10`]) {
+      await assertFails(getDoc(doc(as(ADMIN_A), path)));
+      await assertFails(setDoc(doc(as(ADMIN_A), path), { x: 1 }));
+    }
+  });
+
+  it('同工讀得到自己教會的行事曆設定，其他教會讀不到', async () => {
+    await seed(`churches/${A}/settings/calendar`, { connected: true, calendarName: '教會' });
+    await assertSucceeds(getDoc(doc(as(MEMBER_A), `churches/${A}/settings/calendar`)));
+    await assertFails(getDoc(doc(as(ADMIN_B), `churches/${A}/settings/calendar`)));
+  });
+});

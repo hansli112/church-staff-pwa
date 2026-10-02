@@ -38,6 +38,8 @@ class MemoryBackend implements Backend {
   final staffOrders = <String, Map<String, StaffOrder>>{};
   final invites = <String, Invite>{};
   final users = <String, UserProfile>{};
+  final calendars = <String, CalendarSettings>{};
+  final calendarEvents = <String, List<CalendarEvent>>{};
 
   /// Set to make the next write fail, to test error handling.
   Object? failNextWrite;
@@ -496,6 +498,12 @@ class MemoryChurchData implements ChurchData {
   }
 
   @override
+  Stream<CalendarSettings> calendarSettings() => _b.watch(() {
+    _requireMember();
+    return _b.calendars[churchId] ?? const CalendarSettings();
+  });
+
+  @override
   Future<void> uploadLogo(List<int> bytes) async {
     _requireAdmin();
     await _b.write(() {
@@ -712,6 +720,86 @@ class MemoryCloud implements CloudApi {
   Future<List<DailyStats>> adminStats({int days = 30}) async {
     _requireOperator();
     return stats.take(days).toList();
+  }
+
+  void _requireCalendarEditor(String cid) {
+    final m = _b.memberOf(cid, _b.auth.currentUser?.uid);
+    if (m == null || !m.inGroup(Group.calendarEditors)) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+  }
+
+  @override
+  Future<Uri> calendarAuthUrl(String churchId) async {
+    _requireChurchAdmin(churchId);
+    return Uri.parse('https://accounts.google.com/o/oauth2/v2/auth?state=memory');
+  }
+
+  /// Simulates the OAuth callback for [churchId].
+  void connectCalendar(String churchId, {String? calendarName}) {
+    _b.calendars[churchId] = CalendarSettings(connected: true, calendarName: calendarName);
+    _b.notify();
+  }
+
+  @override
+  Future<List<({String id, String name})>> calendarList(String churchId) async {
+    _requireChurchAdmin(churchId);
+    return const [(id: 'cal-1', name: '教會行事曆'), (id: 'cal-2', name: '青年行事曆')];
+  }
+
+  @override
+  Future<void> calendarSelect(String churchId, String calendarId, String calendarName) async {
+    _requireChurchAdmin(churchId);
+    _b.calendars[churchId] = CalendarSettings(connected: true, calendarName: calendarName);
+    _b.notify();
+  }
+
+  @override
+  Future<void> calendarDisconnect(String churchId) async {
+    _requireChurchAdmin(churchId);
+    _b.calendars.remove(churchId);
+    _b.calendarEvents.remove(churchId);
+    _b.notify();
+  }
+
+  @override
+  Future<List<CalendarEvent>> calendarEvents(String churchId, String month) async {
+    _b.requireMember(churchId);
+    if (_b.calendars[churchId]?.needsReconnect ?? false) {
+      throw const CloudException(CloudErrorCode.unknown, 'reconnect');
+    }
+    return [
+      for (final e in _b.calendarEvents[churchId] ?? const <CalendarEvent>[])
+        if (e.day.key.startsWith(month)) e,
+    ]..sort((a, b) => a.start.compareTo(b.start));
+  }
+
+  int _nextEvent = 1;
+
+  @override
+  Future<CalendarEvent> calendarSave(String churchId, CalendarEvent event) async {
+    _requireCalendarEditor(churchId);
+    final list = _b.calendarEvents.putIfAbsent(churchId, () => []);
+    final saved = event.id == null
+        ? CalendarEvent(
+            id: 'ev${_nextEvent++}',
+            title: event.title,
+            start: event.start,
+            end: event.end,
+            allDay: event.allDay,
+            location: event.location,
+            description: event.description,
+          )
+        : event;
+    list.removeWhere((e) => e.id == saved.id);
+    list.add(saved);
+    return saved;
+  }
+
+  @override
+  Future<void> calendarDelete(String churchId, CalendarEvent event) async {
+    _requireCalendarEditor(churchId);
+    _b.calendarEvents[churchId]?.removeWhere((e) => e.id == event.id);
   }
 
   /// Photos used this month per church, and what recognition returns.

@@ -139,6 +139,7 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
                   title: l10n.serviceSettings,
                   onTap: () => context.push('/me/services'),
                 ),
+                ListRow(title: l10n.calendarSetting, onTap: () => context.push('/me/calendar')),
                 ListRow(
                   title: logo == null ? l10n.uploadLogo : l10n.changeLogo,
                   trailing: _uploading

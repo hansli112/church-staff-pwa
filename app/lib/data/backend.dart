@@ -141,6 +141,8 @@ abstract interface class ChurchData {
   Future<Invite> createInvite({required Duration validFor});
   Future<void> revokeInvite(String code);
 
+  Stream<CalendarSettings> calendarSettings();
+
   /// Uploads [bytes] (already a 512px PNG) as the church logo.
   Future<void> uploadLogo(List<int> bytes);
 }
@@ -241,6 +243,17 @@ abstract interface class CloudApi {
 
   /// Recognizes photos of a paper roster into import rows (JSON objects).
   Future<List<dynamic>> recognizeRoster(String churchId, String serviceType, List<PhotoInput> images);
+
+  // Calendar, proxied by the backend.
+  Future<Uri> calendarAuthUrl(String churchId);
+  Future<List<({String id, String name})>> calendarList(String churchId);
+  Future<void> calendarSelect(String churchId, String calendarId, String calendarName);
+  Future<void> calendarDisconnect(String churchId);
+
+  /// Events of [month] (`YYYY-MM`).
+  Future<List<CalendarEvent>> calendarEvents(String churchId, String month);
+  Future<CalendarEvent> calendarSave(String churchId, CalendarEvent event);
+  Future<void> calendarDelete(String churchId, CalendarEvent event);
 
   /// Reports an uncaught error. Never throws.
   Future<void> logError({

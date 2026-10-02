@@ -11,12 +11,13 @@ import {
   onDocumentWritten,
   onDocumentWrittenWithAuthContext,
 } from 'firebase-functions/v2/firestore';
-import { onCall, type CallableRequest } from 'firebase-functions/v2/https';
+import { onCall, onRequest, type CallableRequest } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { onObjectFinalized } from 'firebase-functions/v2/storage';
 
 import * as account from './account.js';
+import * as calendar from './calendar.js';
 import * as church from './church.js';
 import { REGION, type Caller, type Deps } from './common.js';
 import * as invites from './invites.js';
@@ -148,3 +149,33 @@ export const recognizeRoster = onCall(
     ),
 );
 export const photoQuota = callable(photo.photoQuota);
+
+// Calendar (Google OAuth, per church)
+const oauthClientId = defineSecret('GOOGLE_OAUTH_CLIENT_ID');
+const oauthClientSecret = defineSecret('GOOGLE_OAUTH_CLIENT_SECRET');
+const calendarTokenKey = defineSecret('CALENDAR_TOKEN_KEY');
+const calendarSecrets = [oauthClientId, oauthClientSecret, calendarTokenKey];
+const calDeps = () => ({
+  ...deps(),
+  google: calendar.googleApi(),
+  config: {
+    clientId: oauthClientId.value(),
+    clientSecret: oauthClientSecret.value(),
+    redirectUri: `https://${REGION}-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/calendarCallback`,
+    appUrl: process.env.APP_URL ?? `https://${process.env.GCLOUD_PROJECT}.web.app`,
+    tokenKey: calendarTokenKey.value(),
+  },
+});
+type CalHandler = (d: ReturnType<typeof calDeps>, c: Caller | null, data: unknown) => Promise<unknown>;
+const calendarCallable = (handler: CalHandler) =>
+  onCall({ ...callOpts, secrets: calendarSecrets }, (req) => handler(calDeps(), caller(req), req.data));
+
+export const calendarAuthUrl = calendarCallable(calendar.calendarAuthUrl);
+export const calendarList = calendarCallable(calendar.calendarList);
+export const calendarSelect = calendarCallable(calendar.calendarSelect);
+export const calendarDisconnect = calendarCallable(calendar.calendarDisconnect);
+export const calendarEvents = calendarCallable(calendar.calendarEvents);
+export const calendarWrite = calendarCallable(calendar.calendarWrite);
+export const calendarCallback = onRequest({ region: REGION, secrets: calendarSecrets }, async (req, res) => {
+  res.redirect(303, await calendar.calendarCallback(calDeps(), req.query as Record<string, unknown>));
+});

@@ -6,6 +6,7 @@ import 'env.dart';
 import 'features/admin/admin_screens.dart';
 import 'features/auth/login_screen.dart';
 import 'features/calendar/calendar_screen.dart';
+import 'features/calendar/calendar_settings_screen.dart';
 import 'features/church/closed_screen.dart';
 import 'features/church/join_screen.dart';
 import 'features/church/welcome_screen.dart';
@@ -101,6 +102,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                   page('profile', (_) => const ProfileScreen()),
                   page('language', (_) => const LanguageScreen()),
                   page('church', (_) => const ChurchInfoScreen()),
+                  page('calendar', (s) => CalendarSettingsScreen(result: s.uri.queryParameters['result'])),
                   page('notifications', (_) => const NotificationsScreen()),
                   page('invites', (_) => const InvitesScreen()),
                   page(

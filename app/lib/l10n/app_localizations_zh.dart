@@ -860,4 +860,90 @@ class L10nZh extends L10n {
 
   @override
   String get next2 => '預覽';
+
+  @override
+  String get calNotConnected => '教會還沒有連接行事曆';
+
+  @override
+  String get calConnect => '連接 Google 日曆';
+
+  @override
+  String get calReconnect => '重新連接';
+
+  @override
+  String get calNeedsReconnect => '行事曆的授權失效了';
+
+  @override
+  String get calNeedsReconnectStaff => '行事曆暫時讀不到，請管理員重新連接';
+
+  @override
+  String get calPickCalendar => '選擇要用的日曆';
+
+  @override
+  String get calNoCalendarYet => '還沒選日曆';
+
+  @override
+  String get calDisconnect => '中斷連接';
+
+  @override
+  String get calDisconnectTitle => '中斷行事曆連接？';
+
+  @override
+  String get calDisconnectBody => '同工會看不到行事曆，Google 日曆本身不受影響';
+
+  @override
+  String get calUnverifiedNote => '接下來 Google 會顯示「這個應用程式未經驗證」。這是因為馬大別忙還在審核中，點「進階」→「前往」即可。只會讀寫你選的那個日曆';
+
+  @override
+  String get calConnectedOk => '已連接 Google 日曆';
+
+  @override
+  String get calConnectFailed => '沒有連接成功，請再試一次';
+
+  @override
+  String get calNoEvents => '這個月沒有活動';
+
+  @override
+  String get calAllDay => '整天';
+
+  @override
+  String get calNewEvent => '新增活動';
+
+  @override
+  String get calEditEvent => '編輯活動';
+
+  @override
+  String get calTitle => '活動名稱';
+
+  @override
+  String get calLocation => '地點';
+
+  @override
+  String get calDate => '日期';
+
+  @override
+  String get calStart => '開始';
+
+  @override
+  String get calEnd => '結束';
+
+  @override
+  String get calDelete => '刪除活動';
+
+  @override
+  String calDeleted(String title) {
+    return '已刪除$title';
+  }
+
+  @override
+  String get calSaved => '已儲存活動';
+
+  @override
+  String get calPrevMonth => '上個月';
+
+  @override
+  String get calNextMonth => '下個月';
+
+  @override
+  String get calendarSetting => '行事曆';
 }

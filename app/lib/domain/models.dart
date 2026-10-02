@@ -425,3 +425,55 @@ class Invite {
 
   bool usableAt(DateTime now) => !revoked && now.isBefore(expiresAt);
 }
+
+/// One event on the church's Google Calendar.
+@immutable
+class CalendarEvent {
+  const CalendarEvent({
+    this.id,
+    required this.title,
+    required this.start,
+    required this.end,
+    this.allDay = false,
+    this.location,
+    this.description,
+  });
+
+  final String? id;
+  final String title;
+
+  /// All-day events: midnight local of the first day; [end] is exclusive.
+  final DateTime start;
+  final DateTime end;
+  final bool allDay;
+  final String? location;
+  final String? description;
+
+  /// The local day the event starts on.
+  Day get day => Day(start.year, start.month, start.day);
+
+  CalendarEvent copyWith({String? title, DateTime? start, DateTime? end, bool? allDay, String? location}) =>
+      CalendarEvent(
+        id: id,
+        title: title ?? this.title,
+        start: start ?? this.start,
+        end: end ?? this.end,
+        allDay: allDay ?? this.allDay,
+        location: location ?? this.location,
+        description: description,
+      );
+}
+
+/// churches/{cid}/settings/calendar, written by the backend.
+@immutable
+class CalendarSettings {
+  const CalendarSettings({this.connected = false, this.needsReconnect = false, this.calendarName});
+
+  final bool connected;
+  final bool needsReconnect;
+
+  /// Null until the admin picks a calendar.
+  final String? calendarName;
+
+  bool get ready => connected && !needsReconnect && calendarName != null;
+}

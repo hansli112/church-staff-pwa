@@ -461,6 +461,10 @@ class FirestoreChurchData implements ChurchData {
   Future<void> revokeInvite(String code) => _db.collection('invites').doc(code).update({'revoked': true});
 
   @override
+  Stream<CalendarSettings> calendarSettings() =>
+      _col('settings').doc('calendar').snapshots().map((s) => calendarSettingsFromJson(s.data()));
+
+  @override
   Future<void> uploadLogo(List<int> bytes) async {
     await _storage
         .ref(_logoPath)
@@ -627,6 +631,50 @@ class FirebaseCloudApi implements CloudApi {
           ),
     ];
   }
+
+  @override
+  Future<Uri> calendarAuthUrl(String churchId) async =>
+      Uri.parse(_map(await _call('calendarAuthUrl', {'churchId': churchId}))['url'] as String);
+
+  @override
+  Future<List<({String id, String name})>> calendarList(String churchId) async {
+    final d = _map(await _call('calendarList', {'churchId': churchId}));
+    return [
+      for (final c in d['calendars'] as List<dynamic>? ?? const [])
+        if (c is Map) (id: c['id'] as String, name: c['name'] as String? ?? ''),
+    ];
+  }
+
+  @override
+  Future<void> calendarSelect(String churchId, String calendarId, String calendarName) =>
+      _call('calendarSelect', {'churchId': churchId, 'calendarId': calendarId, 'calendarName': calendarName});
+
+  @override
+  Future<void> calendarDisconnect(String churchId) => _call('calendarDisconnect', {'churchId': churchId});
+
+  @override
+  Future<List<CalendarEvent>> calendarEvents(String churchId, String month) async {
+    final d = _map(await _call('calendarEvents', {'churchId': churchId, 'month': month}));
+    return [
+      for (final e in d['events'] as List<dynamic>? ?? const []) ?calendarEventFromJson(e),
+    ];
+  }
+
+  @override
+  Future<CalendarEvent> calendarSave(String churchId, CalendarEvent event) async {
+    final d = _map(
+      await _call('calendarWrite', {'churchId': churchId, 'op': 'upsert', 'event': calendarEventToJson(event)}),
+    );
+    return calendarEventFromJson(d['event']) ?? event;
+  }
+
+  @override
+  Future<void> calendarDelete(String churchId, CalendarEvent event) => _call('calendarWrite', {
+    'churchId': churchId,
+    'op': 'delete',
+    'eventId': event.id,
+    'event': calendarEventToJson(event),
+  });
 
   @override
   Future<PhotoQuota> photoQuota(String churchId) async {

@@ -195,3 +195,48 @@ UserProfile profileFromJson(String uid, Json data) => UserProfile(
   email: data['email'] as String? ?? '',
   locale: data['locale'] as String?,
 );
+
+CalendarSettings calendarSettingsFromJson(Json? data) => CalendarSettings(
+  connected: data?['connected'] == true,
+  needsReconnect: data?['needsReconnect'] == true,
+  calendarName: data?['calendarName'] as String?,
+);
+
+DateTime _eventTime(String value, bool allDay) {
+  if (allDay) {
+    final d = Day.parse(value.substring(0, 10));
+    return DateTime(d.year, d.month, d.day);
+  }
+  return DateTime.parse(value).toLocal();
+}
+
+CalendarEvent? calendarEventFromJson(Object? raw) {
+  if (raw is! Map || raw['title'] is! String || raw['start'] is! String || raw['end'] is! String) return null;
+  final allDay = raw['allDay'] == true;
+  try {
+    return CalendarEvent(
+      id: raw['id'] as String?,
+      title: raw['title'] as String,
+      start: _eventTime(raw['start'] as String, allDay),
+      end: _eventTime(raw['end'] as String, allDay),
+      allDay: allDay,
+      location: raw['location'] as String?,
+      description: raw['description'] as String?,
+    );
+  } on FormatException {
+    return null;
+  }
+}
+
+Json calendarEventToJson(CalendarEvent e) {
+  String time(DateTime t) => e.allDay ? Day(t.year, t.month, t.day).key : t.toUtc().toIso8601String();
+  return {
+    'id': ?e.id,
+    'title': e.title,
+    'start': time(e.start),
+    'end': time(e.end),
+    'allDay': e.allDay,
+    'location': ?e.location,
+    'description': ?e.description,
+  };
+}

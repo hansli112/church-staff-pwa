@@ -1656,6 +1656,174 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'預覽'**
   String get next2;
+
+  /// No description provided for @calNotConnected.
+  ///
+  /// In zh, this message translates to:
+  /// **'教會還沒有連接行事曆'**
+  String get calNotConnected;
+
+  /// No description provided for @calConnect.
+  ///
+  /// In zh, this message translates to:
+  /// **'連接 Google 日曆'**
+  String get calConnect;
+
+  /// No description provided for @calReconnect.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新連接'**
+  String get calReconnect;
+
+  /// No description provided for @calNeedsReconnect.
+  ///
+  /// In zh, this message translates to:
+  /// **'行事曆的授權失效了'**
+  String get calNeedsReconnect;
+
+  /// No description provided for @calNeedsReconnectStaff.
+  ///
+  /// In zh, this message translates to:
+  /// **'行事曆暫時讀不到，請管理員重新連接'**
+  String get calNeedsReconnectStaff;
+
+  /// No description provided for @calPickCalendar.
+  ///
+  /// In zh, this message translates to:
+  /// **'選擇要用的日曆'**
+  String get calPickCalendar;
+
+  /// No description provided for @calNoCalendarYet.
+  ///
+  /// In zh, this message translates to:
+  /// **'還沒選日曆'**
+  String get calNoCalendarYet;
+
+  /// No description provided for @calDisconnect.
+  ///
+  /// In zh, this message translates to:
+  /// **'中斷連接'**
+  String get calDisconnect;
+
+  /// No description provided for @calDisconnectTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'中斷行事曆連接？'**
+  String get calDisconnectTitle;
+
+  /// No description provided for @calDisconnectBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'同工會看不到行事曆，Google 日曆本身不受影響'**
+  String get calDisconnectBody;
+
+  /// No description provided for @calUnverifiedNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'接下來 Google 會顯示「這個應用程式未經驗證」。這是因為馬大別忙還在審核中，點「進階」→「前往」即可。只會讀寫你選的那個日曆'**
+  String get calUnverifiedNote;
+
+  /// No description provided for @calConnectedOk.
+  ///
+  /// In zh, this message translates to:
+  /// **'已連接 Google 日曆'**
+  String get calConnectedOk;
+
+  /// No description provided for @calConnectFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'沒有連接成功，請再試一次'**
+  String get calConnectFailed;
+
+  /// No description provided for @calNoEvents.
+  ///
+  /// In zh, this message translates to:
+  /// **'這個月沒有活動'**
+  String get calNoEvents;
+
+  /// No description provided for @calAllDay.
+  ///
+  /// In zh, this message translates to:
+  /// **'整天'**
+  String get calAllDay;
+
+  /// No description provided for @calNewEvent.
+  ///
+  /// In zh, this message translates to:
+  /// **'新增活動'**
+  String get calNewEvent;
+
+  /// No description provided for @calEditEvent.
+  ///
+  /// In zh, this message translates to:
+  /// **'編輯活動'**
+  String get calEditEvent;
+
+  /// No description provided for @calTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'活動名稱'**
+  String get calTitle;
+
+  /// No description provided for @calLocation.
+  ///
+  /// In zh, this message translates to:
+  /// **'地點'**
+  String get calLocation;
+
+  /// No description provided for @calDate.
+  ///
+  /// In zh, this message translates to:
+  /// **'日期'**
+  String get calDate;
+
+  /// No description provided for @calStart.
+  ///
+  /// In zh, this message translates to:
+  /// **'開始'**
+  String get calStart;
+
+  /// No description provided for @calEnd.
+  ///
+  /// In zh, this message translates to:
+  /// **'結束'**
+  String get calEnd;
+
+  /// No description provided for @calDelete.
+  ///
+  /// In zh, this message translates to:
+  /// **'刪除活動'**
+  String get calDelete;
+
+  /// No description provided for @calDeleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已刪除{title}'**
+  String calDeleted(String title);
+
+  /// No description provided for @calSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'已儲存活動'**
+  String get calSaved;
+
+  /// No description provided for @calPrevMonth.
+  ///
+  /// In zh, this message translates to:
+  /// **'上個月'**
+  String get calPrevMonth;
+
+  /// No description provided for @calNextMonth.
+  ///
+  /// In zh, this message translates to:
+  /// **'下個月'**
+  String get calNextMonth;
+
+  /// No description provided for @calendarSetting.
+  ///
+  /// In zh, this message translates to:
+  /// **'行事曆'**
+  String get calendarSetting;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

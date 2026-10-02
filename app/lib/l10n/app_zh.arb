@@ -520,5 +520,40 @@
   "importPastDays": "已經過去的日期，沒有匯入",
   "importBadRows": "讀不懂的資料",
   "jsonHint": "貼上辨識結果的 JSON",
-  "next2": "預覽"
+  "next2": "預覽",
+  "calNotConnected": "教會還沒有連接行事曆",
+  "calConnect": "連接 Google 日曆",
+  "calReconnect": "重新連接",
+  "calNeedsReconnect": "行事曆的授權失效了",
+  "calNeedsReconnectStaff": "行事曆暫時讀不到，請管理員重新連接",
+  "calPickCalendar": "選擇要用的日曆",
+  "calNoCalendarYet": "還沒選日曆",
+  "calDisconnect": "中斷連接",
+  "calDisconnectTitle": "中斷行事曆連接？",
+  "calDisconnectBody": "同工會看不到行事曆，Google 日曆本身不受影響",
+  "calUnverifiedNote": "接下來 Google 會顯示「這個應用程式未經驗證」。這是因為馬大別忙還在審核中，點「進階」→「前往」即可。只會讀寫你選的那個日曆",
+  "calConnectedOk": "已連接 Google 日曆",
+  "calConnectFailed": "沒有連接成功，請再試一次",
+  "calNoEvents": "這個月沒有活動",
+  "calAllDay": "整天",
+  "calNewEvent": "新增活動",
+  "calEditEvent": "編輯活動",
+  "calTitle": "活動名稱",
+  "calLocation": "地點",
+  "calDate": "日期",
+  "calStart": "開始",
+  "calEnd": "結束",
+  "calDelete": "刪除活動",
+  "calDeleted": "已刪除{title}",
+  "@calDeleted": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "calSaved": "已儲存活動",
+  "calPrevMonth": "上個月",
+  "calNextMonth": "下個月",
+  "calendarSetting": "行事曆"
 }
