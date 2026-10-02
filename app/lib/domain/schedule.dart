@@ -20,10 +20,7 @@ List<Roster> upcomingRosters({
   final end = from.weekStart.addDays(weeks * 7);
   final result = <Roster>[
     for (final roster in saved)
-      if (roster.type == service.id &&
-          !roster.day.isBefore(from) &&
-          roster.day.isBefore(end))
-        roster,
+      if (roster.type == service.id && !roster.day.isBefore(from) && roster.day.isBefore(end)) roster,
   ];
   if (service.enabled) {
     final taken = {for (final r in result) r.day.weekStart};
@@ -66,7 +63,5 @@ List<MyService> myServices(
   required String name,
 }) => [
   for (final roster in rosters)
-    if (roster.dutiesOf(uid: uid, name: name) case final duties
-        when duties.isNotEmpty)
-      MyService(roster, duties),
+    if (roster.dutiesOf(uid: uid, name: name) case final duties when duties.isNotEmpty) MyService(roster, duties),
 ];

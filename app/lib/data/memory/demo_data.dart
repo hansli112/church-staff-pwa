@@ -79,9 +79,7 @@ List<Member> demoMembers(int count) {
   final members = <Member>[];
   for (var i = 0; i < count; i++) {
     final name =
-        _surnames[i % _surnames.length] +
-        _given[(i * 7) % _given.length] +
-        _given[(i * 13 + 3) % _given.length];
+        _surnames[i % _surnames.length] + _given[(i * 7) % _given.length] + _given[(i * 13 + 3) % _given.length];
     final zones = <Zone>[
       for (final (j, s) in demoServices.indexed)
         if ((i + j) % 3 != 2)
@@ -133,8 +131,7 @@ List<Roster> demoRosters(List<Member> people, Day today) {
                 if (pool.isEmpty) return Duty(role: duty);
                 final picks = {
                   pool[(week + k) % pool.length],
-                  if (duty == '招待' || duty == '敬拜主領')
-                    pool[(week + k + 1) % pool.length],
+                  if (duty == '招待' || duty == '敬拜主領') pool[(week + k + 1) % pool.length],
                 }.toList();
                 return Duty(
                   role: duty,

@@ -1,0 +1,119 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../core/design/components.dart';
+import '../../core/design/tokens.dart';
+import '../../domain/models.dart';
+import '../../l10n/app_localizations.dart';
+import '../../state/providers.dart';
+import '../common/errors.dart';
+
+final _invitePreviewProvider = FutureProvider.autoDispose.family<Invite, String>(
+  (ref, code) => ref.watch(backendProvider).cloud.previewInvite(code),
+);
+
+/// Where an invite link lands (/join/CODE), after sign-in if needed. Shows
+/// which church it is before joining.
+class JoinScreen extends ConsumerStatefulWidget {
+  const JoinScreen({super.key, required this.code});
+
+  final String code;
+
+  @override
+  ConsumerState<JoinScreen> createState() => _JoinScreenState();
+}
+
+class _JoinScreenState extends ConsumerState<JoinScreen> {
+  bool _busy = false;
+  String? _error;
+
+  Future<void> _join(Invite invite) async {
+    final l10n = L10n.of(context);
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final cid = await ref.read(backendProvider).cloud.redeemInvite(widget.code);
+      ref.read(selectedChurchProvider.notifier).select(cid);
+      Haptics.success();
+      if (!mounted) return;
+      showToast(context, l10n.joined(invite.churchName));
+      context.go('/home');
+    } catch (e) {
+      if (mounted) setState(() => _error = errorText(l10n, e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final c = AppColors.of(context);
+    final preview = ref.watch(
+      _invitePreviewProvider(widget.code.toUpperCase()),
+    );
+    final memberships = ref.watch(membershipsProvider).value ?? const [];
+    return Scaffold(
+      appBar: AppBar(),
+      body: SafeArea(
+        child: preview.when(
+          loading: () => const SizedBox.shrink(),
+          error: (e, _) => EmptyState(
+            message: errorText(l10n, e),
+            actionLabel: memberships.isEmpty ? l10n.enterInviteCode : l10n.tabHome,
+            onAction: () => context.go(memberships.isEmpty ? '/welcome/join' : '/home'),
+          ),
+          data: (invite) {
+            final already = memberships.any(
+              (m) => m.churchId == invite.churchId,
+            );
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: ListView(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.all(Space.l),
+                  children: [
+                    Text(
+                      l10n.joinTitle(invite.churchName),
+                      textAlign: TextAlign.center,
+                      style: AppText.title,
+                    ),
+                    const SizedBox(height: Space.xl),
+                    if (already)
+                      PrimaryButton(
+                        label: l10n.tabHome,
+                        onPressed: () {
+                          ref.read(selectedChurchProvider.notifier).select(invite.churchId);
+                          context.go('/home');
+                        },
+                      )
+                    else
+                      PrimaryButton(
+                        label: l10n.join,
+                        busy: _busy,
+                        onPressed: () => _join(invite),
+                      ),
+                    if (_error != null) ...[
+                      const SizedBox(height: Space.m),
+                      Text(
+                        _error!,
+                        textAlign: TextAlign.center,
+                        style: AppText.subheadline.copyWith(
+                          color: c.destructive,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}

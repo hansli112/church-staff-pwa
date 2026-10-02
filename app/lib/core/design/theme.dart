@@ -72,9 +72,7 @@ ThemeData buildTheme(Brightness brightness) {
       labelTextStyle: WidgetStateProperty.resolveWith(
         (s) => AppText.caption.copyWith(
           color: s.contains(WidgetState.selected) ? c.accent : c.secondaryLabel,
-          fontWeight: s.contains(WidgetState.selected)
-              ? FontWeight.w600
-              : FontWeight.w400,
+          fontWeight: s.contains(WidgetState.selected) ? FontWeight.w600 : FontWeight.w400,
         ),
       ),
       iconTheme: WidgetStateProperty.resolveWith(
@@ -98,9 +96,7 @@ ThemeData buildTheme(Brightness brightness) {
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: brightness == Brightness.dark
-          ? c.surfaceRaised
-          : const Color(0xFF2C2C2E),
+      backgroundColor: brightness == Brightness.dark ? c.surfaceRaised : const Color(0xFF2C2C2E),
       contentTextStyle: AppText.subheadline.copyWith(color: Colors.white),
       actionTextColor: AppColors.dark.accent,
       shape: RoundedRectangleBorder(

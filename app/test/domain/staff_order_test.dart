@@ -9,8 +9,7 @@ Roster _roster(int day, Map<String, List<String>> duties) => Roster(
   type: 'sunday',
   day: Day(2026, 1, day),
   duties: [
-    for (final entry in duties.entries)
-      Duty(role: entry.key, people: entry.value),
+    for (final entry in duties.entries) Duty(role: entry.key, people: entry.value),
   ],
 );
 

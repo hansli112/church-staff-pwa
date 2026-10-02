@@ -3,6 +3,7 @@ import { beforeEach, describe, test } from 'node:test';
 
 import { logClientError, scrub } from '../src/logging.js';
 import {
+  adminChurchMembers,
   adminRenameChurch,
   adminSearchChurches,
   adminSetStatus,
@@ -29,6 +30,7 @@ describe('operator back office', () => {
     await rejectsWith(adminSetStatus(deps, admin, { churchId: 'C1', status: 'suspended' }), 'permissionDenied');
     await rejectsWith(adminStats(deps, admin, {}), 'permissionDenied');
     await rejectsWith(adminStats(deps, null, {}), 'permissionDenied');
+    await rejectsWith(adminChurchMembers(deps, admin, { churchId: 'C1' }), 'permissionDenied');
   });
 
   test('search finds part of a name, any width or case, with admins and count', async () => {
@@ -57,6 +59,8 @@ describe('operator back office', () => {
 
   test('transfer makes a member admin; suspend and reopen', async () => {
     await seedChurch('C1', { alice: 'admin', bob: 'staff' });
+    const { members } = await adminChurchMembers(deps, op, { churchId: 'C1' });
+    assert.deepEqual(members.map((m) => m.uid), ['alice', 'bob']);
     await adminTransferAdmin(deps, op, { churchId: 'C1', uid: 'bob' });
     assert.equal((await db.doc('churches/C1/members/bob').get()).get('role'), 'admin');
     await rejectsWith(adminTransferAdmin(deps, op, { churchId: 'C1', uid: 'nobody' }), 'unknown');

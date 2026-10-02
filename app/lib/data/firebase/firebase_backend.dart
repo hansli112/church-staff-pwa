@@ -24,8 +24,7 @@ class FirebaseBackend implements Backend {
     FirebaseStorage? storage,
   }) : _auth = auth ?? fa.FirebaseAuth.instance,
        _db = firestore ?? FirebaseFirestore.instance,
-       _functions =
-           functions ?? FirebaseFunctions.instanceFor(region: functionsRegion),
+       _functions = functions ?? FirebaseFunctions.instanceFor(region: functionsRegion),
        _storage = storage ?? FirebaseStorage.instance;
 
   final fa.FirebaseAuth _auth;
@@ -76,9 +75,7 @@ class FirebaseAuthGateway implements AuthGateway {
       emailVerified: u.emailVerified,
       displayName: u.displayName,
       usesPassword:
-          providers.contains('password') &&
-          !providers.contains('google.com') &&
-          !providers.contains('apple.com'),
+          providers.contains('password') && !providers.contains('google.com') && !providers.contains('apple.com'),
     );
   }
 
@@ -92,10 +89,7 @@ class FirebaseAuthGateway implements AuthGateway {
     controller.onListen = () {
       subs
         ..add(
-          _auth
-              .userChanges()
-              .map(_map)
-              .listen(controller.add, onError: controller.addError),
+          _auth.userChanges().map(_map).listen(controller.add, onError: controller.addError),
         )
         ..add(_reloaded.stream.listen(controller.add));
     };
@@ -157,13 +151,10 @@ class FirebaseAuthGateway implements AuthGateway {
 
   @override
   Future<void> signInWithGoogle() => _run(() {
-    final provider = fa.GoogleAuthProvider()
-      ..setCustomParameters({'prompt': 'select_account'});
+    final provider = fa.GoogleAuthProvider()..setCustomParameters({'prompt': 'select_account'});
     // Web uses a popup. Native apps use the system browser flow here; the
     // native account picker is wired in with the native-app work.
-    return kIsWeb
-        ? _auth.signInWithPopup(provider)
-        : _auth.signInWithProvider(provider);
+    return kIsWeb ? _auth.signInWithPopup(provider) : _auth.signInWithProvider(provider);
   });
 
   @override
@@ -175,16 +166,15 @@ class FirebaseAuthGateway implements AuthGateway {
   );
 
   @override
-  Future<void> registerWithEmail(String name, String email, String password) =>
-      _run(() async {
-        final result = await _auth.createUserWithEmailAndPassword(
-          email: email.trim(),
-          password: password,
-        );
-        await result.user?.updateDisplayName(name.trim());
-        await result.user?.sendEmailVerification();
-        return result;
-      });
+  Future<void> registerWithEmail(String name, String email, String password) => _run(() async {
+    final result = await _auth.createUserWithEmailAndPassword(
+      email: email.trim(),
+      password: password,
+    );
+    await result.user?.updateDisplayName(name.trim());
+    await result.user?.sendEmailVerification();
+    return result;
+  });
 
   @override
   Future<void> sendEmailVerification() async {
@@ -218,6 +208,12 @@ class FirebaseAuthGateway implements AuthGateway {
 
   @override
   Future<void> signOut() => _auth.signOut();
+
+  @override
+  Future<bool> isOperator() async {
+    final token = await _auth.currentUser?.getIdTokenResult();
+    return token?.claims?['operator'] == true;
+  }
 }
 
 // ---------------------------------------------------------------- users
@@ -228,10 +224,8 @@ class _Profiles implements ProfileRepository {
   final FirebaseFirestore _db;
 
   @override
-  Stream<UserProfile?> watch(String uid) => _db
-      .doc('users/$uid')
-      .snapshots()
-      .map((s) => s.exists ? profileFromJson(uid, s.data()!) : null);
+  Stream<UserProfile?> watch(String uid) =>
+      _db.doc('users/$uid').snapshots().map((s) => s.exists ? profileFromJson(uid, s.data()!) : null);
 
   @override
   Future<void> save(UserProfile profile) => _db.runTransaction((tx) async {
@@ -240,10 +234,24 @@ class _Profiles implements ProfileRepository {
     tx.set(ref, {
       'name': profile.name,
       'email': profile.email,
-      'locale': ?profile.locale,
+      'locale': profile.locale ?? FieldValue.delete(),
       'updatedAt': FieldValue.serverTimestamp(),
       if (!current.exists) 'createdAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+  });
+
+  @override
+  Future<void> ensure(UserProfile profile) => _db.runTransaction((tx) async {
+    // A transaction reads the server, not the offline cache, so a profile
+    // created on another device is seen and kept.
+    final ref = _db.doc('users/${profile.uid}');
+    if ((await tx.get(ref)).exists) return;
+    tx.set(ref, {
+      'name': profile.name,
+      'email': profile.email,
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   });
 }
 
@@ -307,10 +315,8 @@ class FirestoreChurchData implements ChurchData {
   String get _logoPath => 'churches/$churchId/logo.png';
 
   @override
-  Stream<Member?> member(String uid) => _col('members')
-      .doc(uid)
-      .snapshots()
-      .map((s) => s.exists ? memberFromJson(uid, s.data()!) : null);
+  Stream<Member?> member(String uid) =>
+      _col('members').doc(uid).snapshots().map((s) => s.exists ? memberFromJson(uid, s.data()!) : null);
 
   @override
   Stream<List<Member>> members() => _col('members').snapshots().map(
@@ -330,10 +336,8 @@ class FirestoreChurchData implements ChurchData {
       .map((snap) => [for (final d in snap.docs) ?rosterFromJson(d.data())]);
 
   @override
-  Stream<StaffOrder> staffOrder(String serviceType) => _col('staff_orders')
-      .doc(serviceType)
-      .snapshots()
-      .map((s) => StaffOrder.fromJson(s.data() ?? const {}));
+  Stream<StaffOrder> staffOrder(String serviceType) =>
+      _col('staff_orders').doc(serviceType).snapshots().map((s) => StaffOrder.fromJson(s.data() ?? const {}));
 
   Json _rosterDoc(Roster r) => {
     ...rosterToJson(r),
@@ -341,8 +345,7 @@ class FirestoreChurchData implements ChurchData {
   };
 
   @override
-  Future<void> saveRoster(Roster roster) =>
-      _col('rosters').doc(roster.id).set(_rosterDoc(roster));
+  Future<void> saveRoster(Roster roster) => _col('rosters').doc(roster.id).set(_rosterDoc(roster));
 
   @override
   Future<void> saveRosters(List<Roster> rosters) {
@@ -354,8 +357,7 @@ class FirestoreChurchData implements ChurchData {
   }
 
   @override
-  Future<void> deleteRoster(Roster roster) =>
-      _col('rosters').doc(roster.id).delete();
+  Future<void> deleteRoster(Roster roster) => _col('rosters').doc(roster.id).delete();
 
   @override
   Future<void> updateStaffOrder(
@@ -392,17 +394,15 @@ class FirestoreChurchData implements ChurchData {
   }
 
   @override
-  Future<void> saveMember(Member member) =>
-      _col('members').doc(member.uid).update(memberToJson(member));
+  Future<void> saveMember(Member member) => _col('members').doc(member.uid).update(memberToJson(member));
 
   @override
   Future<void> removeMember(String uid) => _col('members').doc(uid).delete();
 
   @override
-  Future<void> setNotificationPrefs(String uid, Set<NotificationKind> muted) =>
-      _col(
-        'members',
-      ).doc(uid).update({'notificationPrefs': notificationPrefsToJson(muted)});
+  Future<void> setNotificationPrefs(String uid, Set<NotificationKind> muted) => _col(
+    'members',
+  ).doc(uid).update({'notificationPrefs': notificationPrefsToJson(muted)});
 
   @override
   Stream<List<Invite>> invites() => _db
@@ -437,8 +437,7 @@ class FirestoreChurchData implements ChurchData {
   }
 
   @override
-  Future<void> revokeInvite(String code) =>
-      _db.collection('invites').doc(code).update({'revoked': true});
+  Future<void> revokeInvite(String code) => _db.collection('invites').doc(code).update({'revoked': true});
 
   @override
   Future<void> uploadLogo(List<int> bytes) async {
@@ -491,16 +490,14 @@ class FirebaseCloudApi implements CloudApi {
       }
     }
     return CloudException(switch (e.code) {
-      'permission-denied' ||
-      'unauthenticated' => CloudErrorCode.permissionDenied,
+      'permission-denied' || 'unauthenticated' => CloudErrorCode.permissionDenied,
       'unavailable' || 'deadline-exceeded' => CloudErrorCode.unavailable,
       'resource-exhausted' => CloudErrorCode.quotaExceeded,
       _ => CloudErrorCode.unknown,
     });
   }
 
-  Map<String, Object?> _map(Object? data) =>
-      data is Map ? Map<String, Object?>.from(data) : const {};
+  Map<String, Object?> _map(Object? data) => data is Map ? Map<String, Object?>.from(data) : const {};
 
   @override
   Future<String> createChurch(String name) async =>
@@ -527,12 +524,10 @@ class FirebaseCloudApi implements CloudApi {
   Future<void> deleteAccount() => _call('deleteAccount');
 
   @override
-  Future<void> deleteChurch(String churchId) =>
-      _call('deleteChurch', {'churchId': churchId});
+  Future<void> deleteChurch(String churchId) => _call('deleteChurch', {'churchId': churchId});
 
   @override
-  Future<void> restoreChurch(String churchId) =>
-      _call('restoreChurch', {'churchId': churchId});
+  Future<void> restoreChurch(String churchId) => _call('restoreChurch', {'churchId': churchId});
 
   @override
   Future<List<ChurchSummary>> adminSearchChurches(String query) async {
@@ -567,6 +562,26 @@ class FirebaseCloudApi implements CloudApi {
       _call('adminRenameChurch', {'churchId': churchId, 'name': name});
 
   @override
+  Future<List<Member>> adminChurchMembers(String churchId) async {
+    final data = _map(
+      await _call('adminChurchMembers', {'churchId': churchId}),
+    );
+    return [
+      for (final raw in data['members'] as List<dynamic>? ?? const [])
+        if (raw is Map)
+          Member(
+            uid: raw['uid'] as String,
+            name: raw['name'] as String? ?? '',
+            email: raw['email'] as String? ?? '',
+            role: Role.values.firstWhere(
+              (r) => r.name == raw['role'],
+              orElse: () => Role.staff,
+            ),
+          ),
+    ];
+  }
+
+  @override
   Future<void> adminTransferAdmin(String churchId, String uid) =>
       _call('adminTransferAdmin', {'churchId': churchId, 'uid': uid});
 
@@ -586,8 +601,7 @@ class FirebaseCloudApi implements CloudApi {
             day: Day.parse(date),
             values: {
               for (final e in (raw).entries)
-                if (e.key is String && e.value is num)
-                  e.key as String: e.value as num,
+                if (e.key is String && e.value is num) e.key as String: e.value as num,
             },
           ),
     ];

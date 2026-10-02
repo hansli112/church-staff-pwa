@@ -95,3 +95,18 @@ export async function adminStats(deps: Deps, caller: Caller | null, data: unknow
   const snap = await deps.db.collection('stats').orderBy('date', 'desc').limit(days).get();
   return { days: snap.docs.map((d) => d.data()) };
 }
+
+/** A church's members, so the operator can pick who becomes admin. */
+export async function adminChurchMembers(deps: Deps, caller: Caller | null, data: unknown) {
+  requireOperator(caller);
+  const cid = id((data as { churchId?: unknown })?.churchId);
+  const snap = await deps.db.collection(`churches/${cid}/members`).orderBy('name').limit(500).get();
+  return {
+    members: snap.docs.map((d) => ({
+      uid: d.id,
+      name: d.get('name') ?? '',
+      email: d.get('email') ?? '',
+      role: d.get('role') ?? 'staff',
+    })),
+  };
+}

@@ -24,8 +24,7 @@ final _whitespace = RegExp(r'\s+');
 
 /// The key two church names are compared by: "台北 靈糧堂" and "台北靈糧堂"
 /// are the same church.
-String nameKey(String name) =>
-    foldWidthAndCase(name).replaceAll(_whitespace, '');
+String nameKey(String name) => foldWidthAndCase(name).replaceAll(_whitespace, '');
 
 /// Whether [name] contains [query], ignoring spaces, width and case.
 bool matchesSearch(String name, String query) {

@@ -197,9 +197,7 @@ class ListRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
     final platform = Theme.of(context).platform;
-    final showChevron =
-        chevron ??
-        (onTap != null && trailing == null && !selected && !destructive);
+    final showChevron = chevron ?? (onTap != null && trailing == null && !selected && !destructive);
     return InkWell(
       onTap: onTap,
       child: ConstrainedBox(
@@ -536,9 +534,7 @@ Future<T?> showAppSheet<T>(
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,
-    builder: (context) => expand
-        ? FractionallySizedBox(heightFactor: 0.92, child: builder(context))
-        : builder(context),
+    builder: (context) => expand ? FractionallySizedBox(heightFactor: 0.92, child: builder(context)) : builder(context),
   );
 }
 
@@ -562,8 +558,7 @@ class SearchField extends StatefulWidget {
 }
 
 class _SearchFieldState extends State<SearchField> {
-  late final TextEditingController _controller =
-      widget.controller ?? TextEditingController();
+  late final TextEditingController _controller = widget.controller ?? TextEditingController();
 
   @override
   void dispose() {

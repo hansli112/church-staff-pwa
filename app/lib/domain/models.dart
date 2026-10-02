@@ -31,14 +31,13 @@ class Church {
 
   bool get isActive => status == ChurchStatus.active;
 
-  Church copyWith({String? name, ChurchStatus? status, String? logoUrl}) =>
-      Church(
-        id: id,
-        name: name ?? this.name,
-        status: status ?? this.status,
-        logoUrl: logoUrl ?? this.logoUrl,
-        deletedAt: deletedAt,
-      );
+  Church copyWith({String? name, ChurchStatus? status, String? logoUrl}) => Church(
+    id: id,
+    name: name ?? this.name,
+    status: status ?? this.status,
+    logoUrl: logoUrl ?? this.logoUrl,
+    deletedAt: deletedAt,
+  );
 }
 
 /// Who someone is in a church. Only [admin] carries permissions; the rest
@@ -48,7 +47,8 @@ enum Role { admin, leader, staff, member }
 /// Edit permissions, orthogonal to [Role]. An admin holds all of them.
 enum Group {
   rosterEditors('roster-editors'),
-  calendarEditors('calendar-editors');
+  calendarEditors('calendar-editors')
+  ;
 
   const Group(this.id);
 
@@ -73,14 +73,11 @@ class Zone {
   final String serviceType;
   final List<String> duties;
 
-  Zone copyWith({List<String>? duties}) =>
-      Zone(serviceType: serviceType, duties: duties ?? this.duties);
+  Zone copyWith({List<String>? duties}) => Zone(serviceType: serviceType, duties: duties ?? this.duties);
 
   @override
   bool operator ==(Object other) =>
-      other is Zone &&
-      other.serviceType == serviceType &&
-      listEquals(other.duties, duties);
+      other is Zone && other.serviceType == serviceType && listEquals(other.duties, duties);
 
   @override
   int get hashCode => Object.hash(serviceType, Object.hashAll(duties));
@@ -123,8 +120,7 @@ class Member {
 
   /// Whether this member may edit rosters of [serviceType].
   bool canEditRosters(String serviceType) =>
-      isAdmin ||
-      (groups.contains(Group.rosterEditors) && zoneTypes.contains(serviceType));
+      isAdmin || (groups.contains(Group.rosterEditors) && zoneTypes.contains(serviceType));
 
   /// Whether this member is set up to serve [duty] in [serviceType].
   bool serves(String serviceType, String duty) => zones.any(
@@ -179,8 +175,7 @@ class EventTag {
   final int color;
 
   @override
-  bool operator ==(Object other) =>
-      other is EventTag && other.name == name && other.color == color;
+  bool operator ==(Object other) => other is EventTag && other.name == name && other.color == color;
 
   @override
   int get hashCode => Object.hash(name, color);
@@ -309,10 +304,7 @@ class Duty {
 
   @override
   bool operator ==(Object other) =>
-      other is Duty &&
-      other.role == role &&
-      listEquals(other.people, people) &&
-      mapEquals(other.uids, uids);
+      other is Duty && other.role == role && listEquals(other.people, people) && mapEquals(other.uids, uids);
 
   @override
   int get hashCode => Object.hash(
@@ -364,9 +356,7 @@ class Roster {
   /// Whether [uid] (or, for names without a uid, [name]) serves this day.
   List<String> dutiesOf({required String uid, required String name}) => [
     for (final duty in duties)
-      if (duty.uids.values.contains(uid) ||
-          (duty.people.contains(name) && !duty.uids.containsKey(name)))
-        duty.role,
+      if (duty.uids.values.contains(uid) || (duty.people.contains(name) && !duty.uids.containsKey(name))) duty.role,
   ];
 
   @override

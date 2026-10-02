@@ -22,5 +22,452 @@
   "saveFailed": "沒有儲存成功，請檢查網路後再試一次",
   "noPermission": "你沒有權限做這件事",
   "comingSoon": "還在做，很快就好",
-  "@comingSoon": {"description": "Placeholder for a tab that is not built yet"}
+  "@comingSoon": {
+    "description": "Placeholder for a tab that is not built yet"
+  },
+  "signInWithGoogle": "使用 Google 登入",
+  "signInWithEmail": "用 email 登入",
+  "loginTagline": "同工服事表，大家一起看",
+  "email": "Email",
+  "password": "密碼",
+  "yourName": "你的名字",
+  "signIn": "登入",
+  "register": "註冊",
+  "createAccount": "註冊新帳號",
+  "haveAccount": "已經有帳號？登入",
+  "forgotPassword": "忘記密碼",
+  "resetSent": "重設密碼的信已寄到 {email}",
+  "@resetSent": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "errInvalidCredential": "Email 或密碼不對",
+  "errEmailInUse": "這個 email 註冊過了，請直接登入或用 Google 登入",
+  "errWeakPassword": "密碼至少要 6 個字",
+  "errInvalidEmail": "Email 格式不對",
+  "errNeedsLink": "這個 email 已經有帳號。請用原本的方式登入，登入後會自動連在一起",
+  "errTooMany": "嘗試太多次，請稍後再試",
+  "errNetwork": "連不上網路，請檢查後再試一次",
+  "errUnknown": "沒有成功，請再試一次",
+  "nameRequired": "請輸入名字",
+  "emailRequired": "請輸入 email",
+  "verifyEmailTitle": "驗證你的 email",
+  "verifyEmailBody": "驗證信已寄到 {email}，點信裡的連結後回到這裡",
+  "@verifyEmailBody": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "verifyResend": "重寄驗證信",
+  "verifyResent": "已重寄",
+  "verifyDone": "我已經驗證",
+  "verifyStill": "還沒驗證成功，請點信裡的連結",
+  "welcomeTitle": "加入你的教會",
+  "welcomeBody": "請教會的管理員給你邀請連結",
+  "enterInviteCode": "輸入邀請碼",
+  "createChurch": "建立新教會",
+  "signOut": "登出",
+  "inviteCode": "邀請碼",
+  "next": "下一步",
+  "churchName": "教會名稱",
+  "createChurchVerifyFirst": "驗證 email 後才能建立教會",
+  "create": "建立",
+  "errDuplicateName": "已經有教會叫這個名字。如果是被別人搶先註冊，請聯絡我們",
+  "contactUs": "聯絡我們",
+  "joinTitle": "加入〈{church}〉",
+  "@joinTitle": {
+    "placeholders": {
+      "church": {
+        "type": "String"
+      }
+    }
+  },
+  "join": "加入",
+  "joined": "已加入〈{church}〉",
+  "@joined": {
+    "placeholders": {
+      "church": {
+        "type": "String"
+      }
+    }
+  },
+  "errInviteInvalid": "這個邀請已失效，請向管理員要新的邀請",
+  "errInviteExpired": "這個邀請過期了，請向管理員要新的邀請",
+  "churchSuspendedTitle": "〈{church}〉已停用",
+  "@churchSuspendedTitle": {
+    "placeholders": {
+      "church": {
+        "type": "String"
+      }
+    }
+  },
+  "churchSuspendedBody": "有問題請聯絡教會的管理員",
+  "churchDeletedTitle": "〈{church}〉已刪除",
+  "@churchDeletedTitle": {
+    "placeholders": {
+      "church": {
+        "type": "String"
+      }
+    }
+  },
+  "churchDeletedBody": "管理員可以在 {date} 前還原",
+  "@churchDeletedBody": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "churchUnavailable": "無法開啟這間教會",
+  "restoreChurch": "還原教會",
+  "churchRestored": "教會已還原",
+  "switchChurch": "切換教會",
+  "myServicesTitle": "我接下來的服事",
+  "noUpcomingServices": "接下來沒有你的服事",
+  "viewRosters": "看服事表",
+  "nobodyYet": "待定",
+  "noServicesConfigured": "還沒有設定聚會",
+  "setUpServices": "設定聚會",
+  "noRostersAhead": "接下來沒有聚會",
+  "today": "今天",
+  "tomorrow": "明天",
+  "offlineShowingCached": "離線中，顯示上次的資料",
+  "dutyCount": "{count} 項服事",
+  "@dutyCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addDuty": "新增服事項目",
+  "dutyName": "服事項目名稱",
+  "removeDuty": "移除這項",
+  "dutyRemoved": "已移除{duty}",
+  "@dutyRemoved": {
+    "placeholders": {
+      "duty": {
+        "type": "String"
+      }
+    }
+  },
+  "dutyUpdated": "已更新{duty}",
+  "@dutyUpdated": {
+    "placeholders": {
+      "duty": {
+        "type": "String"
+      }
+    }
+  },
+  "pickerServes": "有這項服事",
+  "pickerOthers": "其他同工",
+  "pickerUseName": "用「{name}」",
+  "@pickerUseName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pickerNoOneServes": "還沒有人負責{duty}",
+  "@pickerNoOneServes": {
+    "placeholders": {
+      "duty": {
+        "type": "String"
+      }
+    }
+  },
+  "pickerNoResults": "找不到「{query}」",
+  "@pickerNoResults": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "pickerSearchHint": "搜尋同工",
+  "pickerAddDutyTitle": "也讓{name}負責{duty}？",
+  "@pickerAddDutyTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "duty": {
+        "type": "String"
+      }
+    }
+  },
+  "pickerAddDutyBody": "之後安排{duty}時，他會出現在上面",
+  "@pickerAddDutyBody": {
+    "placeholders": {
+      "duty": {
+        "type": "String"
+      }
+    }
+  },
+  "pickerAddDutyYes": "加上",
+  "pickerAddDutyNo": "只排這次",
+  "reorder": "調整順序",
+  "reorderHint": "拖曳調整先後，每一週都照這個順序",
+  "orderSaved": "已更新順序",
+  "swap": "交換",
+  "swapWith": "和誰交換{duty}？",
+  "@swapWith": {
+    "placeholders": {
+      "duty": {
+        "type": "String"
+      }
+    }
+  },
+  "swapNone": "其他日期沒有可以交換的人",
+  "swapped": "已交換 {a} 和 {b}",
+  "@swapped": {
+    "placeholders": {
+      "a": {
+        "type": "String"
+      },
+      "b": {
+        "type": "String"
+      }
+    }
+  },
+  "moved": "已把 {name} 移到 {day}",
+  "@moved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "emptySlot": "空著",
+  "removeFromDuty": "從{duty}移除",
+  "@removeFromDuty": {
+    "placeholders": {
+      "duty": {
+        "type": "String"
+      }
+    }
+  },
+  "events": "特別活動",
+  "customEvent": "自訂活動",
+  "eventName": "活動名稱",
+  "addToCommon": "加入常用選項",
+  "eventColor": "顏色",
+  "colorName0": "紅",
+  "colorName1": "橘",
+  "colorName2": "黃",
+  "colorName3": "綠",
+  "colorName4": "藍",
+  "colorName5": "紫",
+  "removed": "已移除{name}",
+  "@removed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "profile": "個人資料",
+  "name": "名字",
+  "nameSaved": "已更新名字",
+  "language": "語言",
+  "languageSystem": "跟隨系統",
+  "languageZhHant": "繁體中文",
+  "churchInfo": "教會資訊",
+  "members": "同工",
+  "serviceSettings": "服事設定",
+  "invites": "邀請",
+  "notifications": "通知",
+  "account": "帳號",
+  "deleteAccount": "刪除帳號",
+  "developer": "開發",
+  "components": "元件",
+  "operatorConsole": "平台後台",
+  "leaveChurch": "退出教會",
+  "leaveChurchTitle": "退出〈{church}〉？",
+  "@leaveChurchTitle": {
+    "placeholders": {
+      "church": {
+        "type": "String"
+      }
+    }
+  },
+  "leaveChurchBody": "需要重新邀請才能回來",
+  "leave": "退出",
+  "leftChurch": "已退出〈{church}〉",
+  "@leftChurch": {
+    "placeholders": {
+      "church": {
+        "type": "String"
+      }
+    }
+  },
+  "adminCannotLeave": "管理員要先把管理員交給別人，才能退出",
+  "churchLogo": "教會 logo",
+  "uploadLogo": "上傳 logo",
+  "changeLogo": "更換 logo",
+  "logoUploaded": "已更新 logo",
+  "logoTooLarge": "圖片太大了，請選 1MB 以下的圖片",
+  "logoNotImage": "請選一張圖片",
+  "memberCount": "{count} 位同工",
+  "@memberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteChurch": "刪除教會",
+  "deleteChurchTitle": "刪除〈{church}〉？",
+  "@deleteChurchTitle": {
+    "placeholders": {
+      "church": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteChurchBody": "所有同工都看不到這間教會。30 天內可以還原，之後資料會永久刪除",
+  "roleAdmin": "管理員",
+  "roleLeader": "小組長",
+  "roleStaff": "同工",
+  "roleMember": "組員",
+  "role": "角色",
+  "groups": "權限",
+  "groupRosterEditors": "安排服事表",
+  "groupCalendarEditors": "編輯行事曆",
+  "zones": "牧區與服事",
+  "zonesFooter": "勾選他在各聚會負責的服事。有「安排服事表」權限的人，只能安排自己牧區的服事表",
+  "removeMember": "移除同工",
+  "memberRemoved": "已移除{name}",
+  "@memberRemoved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "memberSaved": "已儲存",
+  "searchMembers": "搜尋同工",
+  "noMembersFound": "找不到這位同工",
+  "you": "你",
+  "inviteCreate": "建立邀請連結",
+  "inviteValidFor": "有效期限",
+  "inviteDays": "{days} 天",
+  "@inviteDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "inviteCopy": "複製連結",
+  "inviteCopied": "已複製邀請連結",
+  "inviteShare": "分享",
+  "inviteRevoke": "撤回",
+  "inviteRevoked": "已撤回",
+  "inviteExpiresOn": "{date} 到期",
+  "@inviteExpiresOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "inviteNone": "還沒有邀請連結",
+  "inviteMessage": "邀請你加入〈{church}〉的服事表：{link}",
+  "@inviteMessage": {
+    "placeholders": {
+      "church": {
+        "type": "String"
+      },
+      "link": {
+        "type": "String"
+      }
+    }
+  },
+  "servicesTitle": "聚會",
+  "serviceAdd": "新增聚會",
+  "serviceName": "聚會名稱",
+  "weekday": "星期",
+  "serviceEnabled": "舉行中",
+  "serviceDisabledFooter": "停用的聚會不會再出現新的服事表，舊的保留",
+  "templateDuties": "服事項目",
+  "templateFooter": "新的服事表會帶入這些項目。已經安排的服事表不受影響",
+  "commonEvents": "常用特別活動",
+  "rename": "改名",
+  "moveUp": "上移",
+  "moveDown": "下移",
+  "saved": "已儲存",
+  "weekday1": "週一",
+  "weekday2": "週二",
+  "weekday3": "週三",
+  "weekday4": "週四",
+  "weekday5": "週五",
+  "weekday6": "週六",
+  "weekday7": "週日",
+  "deleteAccountTitle": "刪除你的帳號？",
+  "deleteAccountBody": "你會退出所有教會，帳號與個人資料會刪除且無法復原。服事表上的名字會保留",
+  "deleteAccountLastAdmin": "你是〈{churches}〉唯一的管理員。請先到「同工」把管理員交給別人",
+  "@deleteAccountLastAdmin": {
+    "placeholders": {
+      "churches": {
+        "type": "String"
+      }
+    }
+  },
+  "accountDeleted": "帳號已刪除",
+  "serviceDisabled": "停用",
+  "adminSearchHint": "教會名稱或 ID",
+  "adminNoChurches": "找不到教會",
+  "adminStats": "統計",
+  "adminRename": "改名",
+  "adminMakeAdmin": "設為管理員",
+  "adminMadeAdmin": "已設 {name} 為管理員",
+  "@adminMadeAdmin": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "adminSuspend": "停用教會",
+  "adminReopen": "恢復教會",
+  "adminSuspendTitle": "停用〈{church}〉？",
+  "@adminSuspendTitle": {
+    "placeholders": {
+      "church": {
+        "type": "String"
+      }
+    }
+  },
+  "adminSuspendBody": "所有同工會立刻看到停用畫面",
+  "statusActive": "使用中",
+  "statusSuspended": "已停用",
+  "statusDeleted": "已刪除",
+  "statsUsers": "使用者",
+  "statsChurches": "教會",
+  "statsMembers": "成員",
+  "statsRosters": "服事表",
+  "statsReads": "Firestore 讀取",
+  "statsWrites": "Firestore 寫入",
+  "statsCost": "估計費用（USD）",
+  "statsNone": "還沒有統計資料",
+  "statsMoreInConsole": "行為與錯誤細節在 Firebase console",
+  "notifReminder": "服事提醒",
+  "notifReminderSub": "服事前一天晚上提醒你",
+  "notifRosterChange": "服事表異動",
+  "notifRosterChangeSub": "你被排進或移出服事時",
+  "notifMemberLeft": "同工退出",
+  "notifMemberLeftSub": "有人退出教會時（管理員）",
+  "notifThisChurch": "這間教會的通知",
+  "notifPermissionOff": "通知被關掉了，請到系統設定打開",
+  "notifEnable": "開啟通知"
 }

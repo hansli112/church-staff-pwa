@@ -14,3 +14,7 @@ linter:
     - avoid_print
     - unawaited_futures
     - require_trailing_commas
+
+formatter:
+  page_width: 120
+  trailing_commas: preserve

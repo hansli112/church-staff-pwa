@@ -45,6 +45,10 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   shared_preferences: ^2.5.5
+  url_launcher: ^6.3.2
+  image: ^4.10.1
+  image_picker: ^1.2.3
+  share_plus: ^13.3.1
 
 dev_dependencies:
   flutter_test:

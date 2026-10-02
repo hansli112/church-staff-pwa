@@ -136,8 +136,7 @@ class StaffOrder {
 
   /// Only the people [keep] accepts.
   StaffOrder where(bool Function(String name) keep) => StaffOrder({
-    for (final entry in _byRole.entries)
-      entry.key: entry.value.where(keep).toList(),
+    for (final entry in _byRole.entries) entry.key: entry.value.where(keep).toList(),
   });
 
   /// The roles that change going to [next]: the new ranking, or null for a
@@ -175,8 +174,7 @@ class StaffOrder {
   StaffOrder withRolesRenamed(Map<String, String> renamed) {
     if (renamed.isEmpty) return this;
     return StaffOrder({
-      for (final entry in _byRole.entries)
-        renamed[entry.key] ?? entry.key: entry.value,
+      for (final entry in _byRole.entries) renamed[entry.key] ?? entry.key: entry.value,
     });
   }
 

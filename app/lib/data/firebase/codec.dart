@@ -63,8 +63,7 @@ Member memberFromJson(String uid, Json data) {
             ),
     ],
     mutedNotifications: {
-      for (final name
-          in prefs is Map ? _strings(prefs['muted']) : const <String>[])
+      for (final name in prefs is Map ? _strings(prefs['muted']) : const <String>[])
         for (final kind in NotificationKind.values)
           if (kind.name == name) kind,
     },
@@ -129,8 +128,7 @@ ServiceSettings serviceSettingsFromJson(Json? data) {
     services: [
       if (data['services'] is List)
         for (final s in data['services'] as List<dynamic>)
-          if (s is Map && s['id'] is String)
-            serviceFromJson(Map<String, dynamic>.from(s)),
+          if (s is Map && s['id'] is String) serviceFromJson(Map<String, dynamic>.from(s)),
     ],
     ids: _strings(data['ids']),
   );
@@ -154,8 +152,7 @@ Roster? rosterFromJson(Json data) {
               uids: {
                 if (d['uids'] is Map)
                   for (final e in (d['uids'] as Map).entries)
-                    if (e.key is String && e.value is String)
-                      e.key as String: e.value as String,
+                    if (e.key is String && e.value is String) e.key as String: e.value as String,
               },
             ),
     ],
@@ -187,8 +184,7 @@ Invite inviteFromJson(String code, Json data) => Invite(
   code: code,
   churchId: data['cid'] as String? ?? '',
   churchName: data['churchName'] as String? ?? '',
-  expiresAt:
-      readTime(data['expiresAt']) ?? DateTime.fromMillisecondsSinceEpoch(0),
+  expiresAt: readTime(data['expiresAt']) ?? DateTime.fromMillisecondsSinceEpoch(0),
   revoked: data['revoked'] as bool? ?? false,
   createdAt: readTime(data['createdAt']),
 );

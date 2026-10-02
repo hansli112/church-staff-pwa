@@ -59,9 +59,7 @@ class MemoryBackend implements Backend {
     void emit() {
       try {
         final value = read();
-        final same =
-            hasLast &&
-            (equals != null ? equals(last as T, value) : last == value);
+        final same = hasLast && (equals != null ? equals(last as T, value) : last == value);
         if (same) return;
         hasLast = true;
         last = value;
@@ -119,17 +117,14 @@ class MemoryBackend implements Backend {
   }
 
   void setServices(String cid, List<Service> list) {
-    services[cid] = (services[cid] ?? const ServiceSettings(services: []))
-        .withServices(list);
+    services[cid] = (services[cid] ?? const ServiceSettings(services: [])).withServices(list);
     notify();
   }
 
-  Member? memberOf(String cid, String? uid) =>
-      uid == null ? null : members[cid]?[uid];
+  Member? memberOf(String cid, String? uid) => uid == null ? null : members[cid]?[uid];
 
   bool isActiveMember(String cid, String? uid) =>
-      memberOf(cid, uid) != null &&
-      churches[cid]?.status == ChurchStatus.active;
+      memberOf(cid, uid) != null && churches[cid]?.status == ChurchStatus.active;
 
   void requireMember(String cid) {
     if (!isActiveMember(cid, auth.currentUser?.uid)) {
@@ -141,11 +136,7 @@ class MemoryBackend implements Backend {
 class MemoryAuth implements AuthGateway {
   MemoryAuth();
 
-  final _accounts =
-      <
-        String,
-        ({String uid, String password, bool google, bool verified, String name})
-      >{};
+  final _accounts = <String, ({String uid, String password, bool google, bool verified, String name})>{};
   final _state = StreamController<AuthUser?>.broadcast(sync: true);
   AuthUser? _current;
   int _next = 1;
@@ -278,6 +269,12 @@ class MemoryAuth implements AuthGateway {
   @override
   Future<void> signOut() async => _set(null);
 
+  /// uids that hold the platform operator claim.
+  final operators = <String>{};
+
+  @override
+  Future<bool> isOperator() async => operators.contains(_current?.uid);
+
   void deleteCurrent() {
     final email = _current?.email;
     if (email != null) _accounts.remove(email);
@@ -293,8 +290,10 @@ class _Profiles implements ProfileRepository {
   Stream<UserProfile?> watch(String uid) => _b.watch(() => _b.users[uid]);
 
   @override
-  Future<void> save(UserProfile profile) =>
-      _b.write(() => _b.users[profile.uid] = profile);
+  Future<void> save(UserProfile profile) => _b.write(() => _b.users[profile.uid] = profile);
+
+  @override
+  Future<void> ensure(UserProfile profile) => _b.write(() => _b.users.putIfAbsent(profile.uid, () => profile));
 }
 
 class _Memberships implements MembershipRepository {
@@ -305,16 +304,13 @@ class _Memberships implements MembershipRepository {
   Stream<List<Membership>> watchMine(String uid) => _b.watch(
     () => [
       for (final entry in _b.members.entries)
-        if (entry.value[uid] case final member?)
-          Membership(churchId: entry.key, member: member),
+        if (entry.value[uid] case final member?) Membership(churchId: entry.key, member: member),
     ],
     equals: (a, b) =>
         a.length == b.length &&
         List.generate(
           a.length,
-          (i) =>
-              a[i].churchId == b[i].churchId &&
-              identical(a[i].member, b[i].member),
+          (i) => a[i].churchId == b[i].churchId && identical(a[i].member, b[i].member),
         ).every((x) => x),
   );
 }
@@ -355,8 +351,7 @@ class MemoryChurchData implements ChurchData {
   });
 
   @override
-  Stream<Member?> member(String uid) =>
-      _b.watch(() => _b.memberOf(churchId, uid));
+  Stream<Member?> member(String uid) => _b.watch(() => _b.memberOf(churchId, uid));
 
   @override
   Stream<List<Member>> members() => _b.watch(() {
@@ -376,9 +371,7 @@ class MemoryChurchData implements ChurchData {
   @override
   Stream<List<Roster>> rosters({required Day from}) => _b.watch(() {
     _requireMember();
-    return (_b.rosters[churchId]!.values
-        .where((r) => !r.day.isBefore(from))
-        .toList()
+    return (_b.rosters[churchId]!.values.where((r) => !r.day.isBefore(from)).toList()
       ..sort((a, b) => a.day.compareTo(b.day)));
   }, equals: _sameList);
 
@@ -445,9 +438,7 @@ class MemoryChurchData implements ChurchData {
     _requireMember();
     final target = _b.memberOf(churchId, uid);
     final self = uid == _uid;
-    final allowed = self
-        ? !(target?.isAdmin ?? false)
-        : (_me?.isAdmin ?? false);
+    final allowed = self ? !(target?.isAdmin ?? false) : (_me?.isAdmin ?? false);
     if (!allowed) throw const CloudException(CloudErrorCode.permissionDenied);
     await _b.write(() => _b.members[churchId]!.remove(uid));
   }
@@ -536,8 +527,6 @@ class MemoryCloud implements CloudApi {
 
   final MemoryBackend _b;
 
-  /// Set by tests: the uids that hold the platform operator claim.
-  final operators = <String>{};
   final loggedErrors = <String>[];
   final stats = <DailyStats>[];
 
@@ -607,8 +596,7 @@ class MemoryCloud implements CloudApi {
     for (final entry in _b.members.entries)
       if (entry.value[uid]?.isAdmin ?? false)
         if (entry.value.values.where((m) => m.isAdmin).length == 1)
-          if (_b.churches[entry.key]!.status != ChurchStatus.deleted)
-            _b.churches[entry.key]!,
+          if (_b.churches[entry.key]!.status != ChurchStatus.deleted) _b.churches[entry.key]!,
   ];
 
   @override
@@ -661,7 +649,7 @@ class MemoryCloud implements CloudApi {
   }
 
   void _requireOperator() {
-    if (!operators.contains(_b.auth.currentUser?.uid)) {
+    if (!_b.auth.operators.contains(_b.auth.currentUser?.uid)) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
   }
@@ -696,6 +684,12 @@ class MemoryCloud implements CloudApi {
     }
     _b.churches[churchId] = _b.churches[churchId]!.copyWith(name: name.trim());
     _b.notify();
+  }
+
+  @override
+  Future<List<Member>> adminChurchMembers(String churchId) async {
+    _requireOperator();
+    return _b.members[churchId]!.values.toList()..sort((a, b) => a.name.compareTo(b.name));
   }
 
   @override
@@ -736,5 +730,9 @@ const defaultServices = [
     name: '主日崇拜',
     weekday: DateTime.sunday,
     duties: ['司會', '敬拜', '司琴', '音控', '投影', '招待'],
+    events: [
+      EventTag(name: '聖餐', color: 0),
+      EventTag(name: '浸禮', color: 4),
+    ],
   ),
 ];

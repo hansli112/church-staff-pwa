@@ -11,7 +11,8 @@ enum Env {
   emulator,
   dev,
   prod,
-  demo;
+  demo
+  ;
 
   static Env get current {
     const name = String.fromEnvironment('MARTHA_ENV', defaultValue: 'emulator');
@@ -25,6 +26,19 @@ enum Env {
 
   /// Show developer-only screens (the component gallery).
   bool get isDevelopment => this != Env.prod;
+
+  /// Where invite links point. On the web it is wherever the app is served;
+  /// native apps link to the hosted web app, which opens the app when it is
+  /// installed.
+  String get webOrigin {
+    const override = String.fromEnvironment('WEB_ORIGIN');
+    if (override.isNotEmpty) return override;
+    if (kIsWeb) return Uri.base.origin;
+    return switch (this) {
+      Env.prod => 'https://martha-app.web.app',
+      _ => 'https://martha-app-dev.web.app',
+    };
+  }
 }
 
 /// Host the emulators listen on. The Android emulator reaches the host

@@ -68,6 +68,7 @@ export const adminRenameChurch = callable(operator.adminRenameChurch);
 export const adminTransferAdmin = callable(operator.adminTransferAdmin);
 export const adminSetStatus = callable(operator.adminSetStatus);
 export const adminStats = callable(operator.adminStats);
+export const adminChurchMembers = callable(operator.adminChurchMembers);
 
 export const dailyStats = onSchedule(
   { region: REGION, schedule: 'every day 01:30', timeZone: 'Asia/Taipei' },

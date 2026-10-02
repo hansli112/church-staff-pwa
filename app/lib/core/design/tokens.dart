@@ -12,9 +12,7 @@ abstract final class Space {
 
   /// Minimum tap target: 44pt on iOS, 48dp on Android.
   static double minTap(TargetPlatform platform) =>
-      platform == TargetPlatform.iOS || platform == TargetPlatform.macOS
-      ? 44
-      : 48;
+      platform == TargetPlatform.iOS || platform == TargetPlatform.macOS ? 44 : 48;
 }
 
 abstract final class Radii {
@@ -99,8 +97,7 @@ class AppColors extends ThemeExtension<AppColors> {
     success: Color(0xFF5BD27A),
   );
 
-  static AppColors of(BuildContext context) =>
-      Theme.of(context).extension<AppColors>()!;
+  static AppColors of(BuildContext context) => Theme.of(context).extension<AppColors>()!;
 
   @override
   AppColors copyWith() => this;

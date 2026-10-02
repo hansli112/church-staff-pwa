@@ -46,7 +46,11 @@ class SelectedChurch extends Notifier<String?> {
   static const _key = 'selected_church';
 
   @override
-  String? build() => ref.watch(prefsProvider).getString(_key);
+  String? build() {
+    // Re-read when the account changes; sign-out clears the key.
+    ref.watch(uidProvider);
+    return ref.watch(prefsProvider).getString(_key);
+  }
 
   void select(String churchId) {
     state = churchId;
@@ -138,27 +142,26 @@ const rosterWeeks = 13;
 /// The rosters of one service to show: saved days plus drafts for the
 /// other weeks. Computed here, not in build, and only when its inputs
 /// change.
-final serviceRostersProvider =
-    Provider.family<AsyncValue<List<Roster>>, String>((ref, serviceType) {
-      final settings = ref.watch(servicesProvider);
-      final saved = ref.watch(savedRostersProvider);
-      final today = ref.watch(todayProvider);
-      if (settings.hasError) {
-        return AsyncError(settings.error!, settings.stackTrace!);
-      }
-      if (saved.hasError) return AsyncError(saved.error!, saved.stackTrace!);
-      final service = settings.value?.byId(serviceType);
-      final rosters = saved.value;
-      if (service == null || rosters == null) return const AsyncLoading();
-      return AsyncData(
-        upcomingRosters(
-          service: service,
-          saved: rosters,
-          from: today,
-          weeks: rosterWeeks,
-        ),
-      );
-    });
+final serviceRostersProvider = Provider.family<AsyncValue<List<Roster>>, String>((ref, serviceType) {
+  final settings = ref.watch(servicesProvider);
+  final saved = ref.watch(savedRostersProvider);
+  final today = ref.watch(todayProvider);
+  if (settings.hasError) {
+    return AsyncError(settings.error!, settings.stackTrace!);
+  }
+  if (saved.hasError) return AsyncError(saved.error!, saved.stackTrace!);
+  final service = settings.value?.byId(serviceType);
+  final rosters = saved.value;
+  if (service == null || rosters == null) return const AsyncLoading();
+  return AsyncData(
+    upcomingRosters(
+      service: service,
+      saved: rosters,
+      from: today,
+      weeks: rosterWeeks,
+    ),
+  );
+});
 
 /// The days I serve, soonest first.
 final myServicesProvider = Provider<AsyncValue<List<MyService>>>((ref) {
@@ -190,4 +193,11 @@ final appStageProvider = Provider<AppStage>((ref) {
   final c = church.value;
   if (c == null || !c.isActive) return AppStage.churchClosed;
   return AppStage.ready;
+});
+
+/// Whether I am the platform operator (custom claim, checked again by every
+/// back-office function).
+final isOperatorProvider = FutureProvider<bool>((ref) async {
+  if (ref.watch(uidProvider) == null) return false;
+  return ref.watch(backendProvider).auth.isOperator();
 });

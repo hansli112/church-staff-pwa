@@ -74,6 +74,9 @@ abstract interface class AuthGateway {
   /// link, and pushes the result through [authState].
   Future<void> reload();
   Future<void> signOut();
+
+  /// Whether the signed-in account holds the platform operator claim.
+  Future<bool> isOperator();
 }
 
 abstract interface class ProfileRepository {
@@ -81,6 +84,10 @@ abstract interface class ProfileRepository {
 
   /// Creates or updates users/{uid}.
   Future<void> save(UserProfile profile);
+
+  /// Creates users/{uid} on first sign-in. Leaves an existing profile
+  /// alone, so a name the user changed is not reset to the Google name.
+  Future<void> ensure(UserProfile profile);
 }
 
 abstract interface class MembershipRepository {
@@ -207,6 +214,7 @@ abstract interface class CloudApi {
   // Platform operator only.
   Future<List<ChurchSummary>> adminSearchChurches(String query);
   Future<void> adminRenameChurch(String churchId, String name);
+  Future<List<Member>> adminChurchMembers(String churchId);
   Future<void> adminTransferAdmin(String churchId, String uid);
   Future<void> adminSetStatus(String churchId, ChurchStatus status);
   Future<List<DailyStats>> adminStats({int days = 30});
