@@ -6,6 +6,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fa;
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../domain/day.dart';
 import '../../domain/models.dart';
@@ -150,12 +151,31 @@ class FirebaseAuthGateway implements AuthGateway {
   }
 
   @override
-  Future<void> signInWithGoogle() => _run(() {
+  Future<void> signInWithGoogle() => _run(() async {
     final provider = fa.GoogleAuthProvider()..setCustomParameters({'prompt': 'select_account'});
-    // Web uses a popup. Native apps use the system browser flow here; the
-    // native account picker is wired in with the native-app work.
-    return kIsWeb ? _auth.signInWithPopup(provider) : _auth.signInWithProvider(provider);
+    if (kIsWeb) return _auth.signInWithPopup(provider);
+    // Native: the system account picker (no browser), when the OAuth web
+    // client ID is configured for this build. Otherwise fall back to the
+    // browser flow, which needs no native setup.
+    if (_googleServerClientId.isEmpty) return _auth.signInWithProvider(provider);
+    final google = GoogleSignIn.instance;
+    if (!_googleReady) {
+      await google.initialize(serverClientId: _googleServerClientId);
+      _googleReady = true;
+    }
+    try {
+      final account = await google.authenticate();
+      final idToken = account.authentication.idToken;
+      return _auth.signInWithCredential(fa.GoogleAuthProvider.credential(idToken: idToken));
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) throw const AuthException(AuthErrorCode.cancelled);
+      rethrow;
+    }
   });
+
+  /// The project's OAuth web client ID, from --dart-define.
+  static const _googleServerClientId = String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID');
+  bool _googleReady = false;
 
   @override
   Future<void> signInWithEmail(String email, String password) => _run(

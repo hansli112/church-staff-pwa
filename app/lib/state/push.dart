@@ -19,6 +19,10 @@ abstract interface class PushService {
 
   /// Removes this device's token, at sign-out.
   Future<void> unregister(String uid);
+
+  /// App routes from notifications the user tapped, including the one that
+  /// launched the app.
+  Stream<String> get openedLinks;
 }
 
 class NoPush implements PushService {
@@ -35,6 +39,9 @@ class NoPush implements PushService {
 
   @override
   Future<void> unregister(String uid) async {}
+
+  @override
+  Stream<String> get openedLinks => const Stream.empty();
 }
 
 /// Overridden in main() with the Firebase implementation.
@@ -44,3 +51,5 @@ final pushPermissionProvider = FutureProvider<PushPermission>((ref) {
   ref.watch(uidProvider);
   return ref.watch(pushServiceProvider).permission();
 });
+
+final pushLinksProvider = StreamProvider<String>((ref) => ref.watch(pushServiceProvider).openedLinks);

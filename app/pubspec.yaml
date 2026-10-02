@@ -51,6 +51,10 @@ dependencies:
   share_plus: ^13.3.1
   flutter_web_plugins:
     sdk: flutter
+  firebase_crashlytics: ^5.4.0
+  firebase_analytics: ^12.6.0
+  firebase_messaging: ^16.7.0
+  google_sign_in: ^7.2.0
 
 dev_dependencies:
   flutter_test:

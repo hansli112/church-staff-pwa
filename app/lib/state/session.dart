@@ -1,11 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/telemetry.dart';
 import '../domain/models.dart';
 import 'providers.dart';
+import 'push.dart';
 
-/// Creates users/{uid} the first time someone signs in. Watched once by the
-/// app root.
-final profileBootstrapProvider = Provider<void>((ref) {
+/// Overridden in main() for builds that report to Firebase.
+final telemetryProvider = Provider<Telemetry>((ref) => const NoTelemetry());
+
+/// Side effects of who is signed in and which church is open. Watched once
+/// by the app root.
+final sessionEffectsProvider = Provider<void>((ref) {
+  // users/{uid} the first time someone signs in.
   ref.listen(authUserProvider, (_, next) {
     final user = next.value;
     if (user == null) return;
@@ -21,10 +27,20 @@ final profileBootstrapProvider = Provider<void>((ref) {
         )
         .ignore();
   }, fireImmediately: true);
+
+  ref.listen(uidProvider, (_, uid) {
+    ref.read(telemetryProvider).setUser(uid);
+    if (uid != null) ref.read(pushServiceProvider).refresh(uid).ignore();
+  }, fireImmediately: true);
+
+  ref.listen(currentChurchIdProvider, (_, cid) => ref.read(telemetryProvider).setChurch(cid), fireImmediately: true);
 });
 
-/// Signs out and forgets the picked church.
+/// Signs out: this device stops getting pushes, and the picked church is
+/// forgotten.
 Future<void> signOut(WidgetRef ref) async {
+  final uid = ref.read(uidProvider);
+  if (uid != null) await ref.read(pushServiceProvider).unregister(uid);
   await ref.read(prefsProvider).remove('selected_church');
   await ref.read(backendProvider).auth.signOut();
 }

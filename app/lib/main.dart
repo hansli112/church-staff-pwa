@@ -5,6 +5,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,7 +18,11 @@ import 'data/backend.dart';
 import 'data/firebase/firebase_backend.dart';
 import 'data/memory/demo_data.dart';
 import 'env.dart';
+import 'core/telemetry.dart';
+import 'data/firebase/push_firebase.dart';
 import 'state/providers.dart';
+import 'state/push.dart';
+import 'state/session.dart';
 
 Future<void> main() async {
   // Real paths (/join/CODE), not #/: invite links must work as plain URLs.
@@ -31,11 +36,30 @@ Future<void> main() async {
   // End-to-end tests drive the web build through the accessibility tree.
   if (const bool.fromEnvironment('E2E')) SemanticsBinding.instance.ensureSemantics();
 
+  // Real projects report crashes and analytics. Against the emulators only
+  // the web error log runs (to the logClientError emulator); FCM, Crashlytics
+  // and GA4 have no emulator.
+  final real = env == Env.dev || env == Env.prod;
+  final Telemetry telemetry = real || (env == Env.emulator && kIsWeb)
+      ? FirebaseTelemetry(cloud: backend.cloud, analytics: real)
+      : const NoTelemetry();
+  final PushService push = real ? FirebasePushService(prefs: prefs) : const NoPush();
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    telemetry.recordError(details.exception, details.stack ?? StackTrace.empty);
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    telemetry.recordError(error, stack, fatal: true);
+    return true;
+  };
+
   runApp(
     ProviderScope(
       overrides: [
         backendProvider.overrideWithValue(backend),
         prefsProvider.overrideWithValue(prefs),
+        telemetryProvider.overrideWithValue(telemetry),
+        pushServiceProvider.overrideWithValue(push),
       ],
       // Streams retry by reconnecting themselves; a provider retry would
       // only repeat a permission error.

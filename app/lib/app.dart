@@ -6,6 +6,7 @@ import 'core/design/theme.dart';
 import 'l10n/app_localizations.dart';
 import 'router.dart';
 import 'state/providers.dart';
+import 'state/push.dart';
 import 'state/session.dart';
 
 class MarthaApp extends ConsumerWidget {
@@ -13,8 +14,13 @@ class MarthaApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(profileBootstrapProvider);
+    ref.watch(sessionEffectsProvider);
     final router = ref.watch(routerProvider);
+    // A tapped notification opens the page it is about.
+    ref.listen(pushLinksProvider, (_, link) {
+      final l = link.value;
+      if (l != null && l.startsWith('/')) router.go(l);
+    });
     final locale = ref.watch(profileProvider.select((p) => p.value?.locale));
     return MaterialApp.router(
       onGenerateTitle: (context) => L10n.of(context).appName,

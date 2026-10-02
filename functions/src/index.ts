@@ -6,7 +6,11 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 import { getStorage } from 'firebase-admin/storage';
-import { onDocumentDeletedWithAuthContext, onDocumentWritten } from 'firebase-functions/v2/firestore';
+import {
+  onDocumentDeletedWithAuthContext,
+  onDocumentWritten,
+  onDocumentWrittenWithAuthContext,
+} from 'firebase-functions/v2/firestore';
 import { onCall, type CallableRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { onObjectFinalized } from 'firebase-functions/v2/storage';
@@ -16,6 +20,7 @@ import * as church from './church.js';
 import { REGION, type Caller, type Deps } from './common.js';
 import * as invites from './invites.js';
 import { logClientError as logClientErrorHandler } from './logging.js';
+import * as notifications from './notifications.js';
 import * as operator from './operator.js';
 import { monitoringUsageReader, writeDailyStats } from './stats.js';
 import * as triggers from './triggers.js';
@@ -107,3 +112,24 @@ export const onMemberDeleted = onDocumentDeletedWithAuthContext(
 export const onLogoUploaded = onObjectFinalized({ region: REGION }, async (event) => {
   await triggers.onLogoUploaded(deps(), event.data.name, String(event.data.generation));
 });
+
+// Push: roster changes and evening reminders
+export const onRosterWritten = onDocumentWrittenWithAuthContext(
+  { region: REGION, document: 'churches/{cid}/rosters/{rosterId}' },
+  async (event) => {
+    await notifications.onRosterWritten(
+      { db: getFirestore(), messaging: getMessaging(), now: () => new Date() },
+      event.params.cid,
+      event.data?.before,
+      event.data?.after,
+      event.authType === 'system' ? undefined : event.authId,
+    );
+  },
+);
+
+export const sendReminders = onSchedule(
+  { region: REGION, schedule: 'every day 19:00', timeZone: 'Asia/Taipei' },
+  async () => {
+    await notifications.sendReminders({ db: getFirestore(), messaging: getMessaging(), now: () => new Date() });
+  },
+);
