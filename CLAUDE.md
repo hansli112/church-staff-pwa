@@ -1,6 +1,6 @@
 # 馬大別忙
 
-設計：`docs/design.md`。資料模型與權限規格：`docs/data-model.md`。
+設計：`docs/design.md`。資料模型與權限規格：`docs/data-model.md`。用語：`CONTEXT.md`。介面原則：`docs/design-principles.md`（審查畫面用 `apple-design` skill）。
 
 ## Agent skills
 
