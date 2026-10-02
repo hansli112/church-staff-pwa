@@ -1,0 +1,10 @@
+3011d04dba969732d590c9c6ab436a0760ba7e4d
+# The oldest program version whose unfinished installs this one can continue.
+# Read by scripts/start-installation.sh (before updating) and install-core.mjs.
+# Move it to the new commit whenever a change would misread an older record:
+# a plan, step, intent or resource meaning something else than it used to.
+#
+# Checked from here to 0e16ef3 (2026-10-02): the first-install steps, plan
+# fields and intents keep their meaning. Later changes only add to them: an
+# optional plan.icons (absent means the default icons) and the firebase
+# intent's addedInConsole flag.

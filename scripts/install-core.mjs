@@ -19,6 +19,20 @@ export async function readLocalRelease(root = ROOT) {
   } catch { return undefined; }
 }
 
+// Every commit from RESUMES_FROM up to this checkout: unfinished installs
+// planned by any of them can be continued, so an update never strands them.
+// scripts/start-installation.sh applies the same rule before updating.
+// Without that history (e.g. a shallow clone) only this exact version resumes.
+const COMMIT = /^[0-9a-f]{40}$/;
+export async function readResumableRevisions(root = ROOT) {
+  try {
+    const floor = (await readFile(path.join(root, 'scripts/installer/RESUMES_FROM'), 'utf8')).split('\n')[0].trim();
+    if (!COMMIT.test(floor)) return [];
+    const { stdout } = await runCommand('git', ['rev-list', '--ancestry-path', `${floor}..HEAD`], { cwd: root });
+    return [floor, ...stdout.split('\n').filter((line) => COMMIT.test(line))];
+  } catch { return []; }
+}
+
 export function createDemoProviders({ failAt, delayMs = 150 } = {}) {
   let failed = false;
   const googleEmail = 'operator@example.invalid';
@@ -96,6 +110,7 @@ export async function main(argv = process.argv.slice(2)) {
   let providers;
   let publicOrigin;
   let sourceRevision = 'offline-demo-v1';
+  let resumableRevisions = [];
   if (options.demo) providers = createDemoProviders({ failAt: options['demo-fail-at'] });
   else {
     const host = process.env.WEB_HOST;
@@ -111,6 +126,7 @@ export async function main(argv = process.argv.slice(2)) {
     const { createCloudflareInstaller } = await import('./installer/cloudflare.mjs');
     const { buildCoreDeployment } = await import('./installer/build.mjs');
     sourceRevision = (await runCommand('git', ['rev-parse', 'HEAD'], { cwd: ROOT })).stdout.trim();
+    resumableRevisions = await readResumableRevisions();
     providers = {
       google: createGoogleInstaller(),
       cloudflare: createCloudflareInstaller({ sessionDir }),
@@ -118,7 +134,7 @@ export async function main(argv = process.argv.slice(2)) {
     };
   }
   const rootDir = path.resolve(options['state-root'] ?? ROOT);
-  const manager = createInstallationManager({ rootDir, ...providers, sourceRevision, demo: Boolean(options.demo), release: await readLocalRelease() });
+  const manager = createInstallationManager({ rootDir, ...providers, sourceRevision, resumableRevisions, demo: Boolean(options.demo), release: await readLocalRelease() });
   if (options.resume) await manager.load(options.resume);
   let server;
   try { server = await startInstallerServer({ manager, port: options.port, publicOrigin }); }

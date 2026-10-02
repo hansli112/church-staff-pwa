@@ -6,6 +6,7 @@ import test from 'node:test';
 import { createInstallationManager, createInstallationPlan, publicError, STEPS } from './installer/core.mjs';
 import { createDemoProviders } from './install-core.mjs';
 import { commandEnvironment, runCommand } from './installer/process.mjs';
+import { git } from './test-git.mjs';
 
 const ACCOUNT = '0123456789abcdef0123456789abcdef';
 const identity = { googleEmail: 'operator@example.invalid', accounts: [{ id: ACCOUNT, name: 'Test' }] };
@@ -143,6 +144,45 @@ test('demo state cannot be resumed by a live manager', async (t) => {
   const live = createInstallationManager({ rootDir, ...createDemoProviders(), sourceRevision: 'test-v1', demo: false });
   await assert.rejects(live.load(plan.runId), /示範安裝與真實安裝/);
   assert.deepEqual(await live.listRuns(), []);
+});
+
+test('an unfinished install planned by an earlier compatible version resumes on the new one', async (t) => {
+  const { manager, rootDir } = await fixture(t);
+  const plan = await manager.plan(input());
+  const newer = createInstallationManager({ rootDir, ...createDemoProviders({ delayMs: 0 }), sourceRevision: 'test-v2', resumableRevisions: ['test-v1'], demo: true });
+  t.after(() => newer.dispose());
+  assert.deepEqual((await newer.listRuns()).map((run) => run.runId), [plan.runId]);
+  await newer.load(plan.runId);
+  await newer.connectGoogle();
+  await newer.connectCloudflare();
+  await newer.apply(confirmation(plan));
+  assert.equal(newer.snapshot().status, 'complete');
+  // The record keeps the version that planned it; new plans take the new one.
+  assert.equal(JSON.parse(await readFile(path.join(rootDir, '.local/install', plan.runId, 'state.json'))).plan.sourceRevision, 'test-v1');
+  const unrelated = createInstallationManager({ rootDir, ...createDemoProviders(), sourceRevision: 'test-v3', resumableRevisions: ['test-v2'], demo: true });
+  t.after(() => unrelated.dispose());
+  assert.deepEqual(await unrelated.listRuns(), []);
+  await assert.rejects(unrelated.load(plan.runId), /程式版本/);
+});
+
+test('resumable versions run from RESUMES_FROM to the checkout, and none without that history', async (t) => {
+  const { readResumableRevisions } = await import('./install-core.mjs');
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'installer-resumes-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await git(dir, 'init', '-q', '-b', 'main');
+  const ids = [];
+  for (const name of ['before', 'floor', 'after', 'head']) {
+    await git(dir, 'commit', '-q', '--allow-empty', '-m', name);
+    ids.push(await git(dir, 'rev-parse', 'HEAD'));
+  }
+  assert.deepEqual(await readResumableRevisions(dir), []);
+  await mkdir(path.join(dir, 'scripts/installer'), { recursive: true });
+  await writeFile(path.join(dir, 'scripts/installer/RESUMES_FROM'), `${ids[1]}\n# note\n`);
+  assert.deepEqual(new Set(await readResumableRevisions(dir)), new Set(ids.slice(1)));
+  await writeFile(path.join(dir, 'scripts/installer/RESUMES_FROM'), `${'0'.repeat(40)}\n`);
+  assert.deepEqual(await readResumableRevisions(dir), []);
+  // CI checks out one commit, so only the shipped file's shape is checked here.
+  assert.match(await readFile(new URL('./installer/RESUMES_FROM', import.meta.url), 'utf8'), /^[0-9a-f]{40}\n/);
 });
 
 test('changed plan, different source and path traversal fail closed', async (t) => {
