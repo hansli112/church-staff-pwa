@@ -188,5 +188,20 @@
   "src": "https://images.vocus.cc/039d7417-17be-457f-afeb-039041f0906f.png",
   "width": 1696,
   "height": 1784
+ },
+ "18a-firebase-welcome.png": {
+  "src": "https://images.vocus.cc/9fda5527-2268-461b-9454-db8a23b55cd4.png",
+  "width": 1108,
+  "height": 330
+ },
+ "18b-firebase-add-to-cloud.png": {
+  "src": "https://images.vocus.cc/712559c3-fc56-46c7-aab1-59d1eec93ab5.png",
+  "width": 1142,
+  "height": 720
+ },
+ "18c-firebase-project-ready.png": {
+  "src": "https://images.vocus.cc/f7b4892d-cc73-42c2-bbc3-170cdbaf78a1.png",
+  "width": 1155,
+  "height": 565
  }
 }
