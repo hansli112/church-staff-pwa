@@ -1,0 +1,192 @@
+{
+ "01-open-in-cloud-shell.png": {
+  "src": "https://images.vocus.cc/16648e8f-f9e7-420e-a04e-ecb8b35ce014.png",
+  "width": 840,
+  "height": 203
+ },
+ "02-trust-repo.png": {
+  "src": "https://images.vocus.cc/da270878-2a49-4c1f-a45b-65cefe34a240.png",
+  "width": 415,
+  "height": 302
+ },
+ "03-authorize-cloud-shell.png": {
+  "src": "https://images.vocus.cc/76698de5-3174-42a3-88ca-819902bbd3db.png",
+  "width": 475,
+  "height": 220
+ },
+ "04-ephemeral-menu.png": {
+  "src": "https://images.vocus.cc/421e6c4e-0f8e-43f8-8ffc-9e12b4eb97f7.png",
+  "width": 772,
+  "height": 450
+ },
+ "05-ephemeral-disable.png": {
+  "src": "https://images.vocus.cc/796d67a2-ff7d-4d39-9607-e85bcb6fc4f0.png",
+  "width": 710,
+  "height": 222
+ },
+ "06-run-in-terminal.png": {
+  "src": "https://images.vocus.cc/abcaad73-d7bd-4895-9ba7-51ea0b5f243f.png",
+  "width": 400,
+  "height": 340
+ },
+ "07-terminal-downloading.png": {
+  "src": "https://images.vocus.cc/9922c554-9466-41d7-b4eb-b198aef8b668.png",
+  "width": 1035,
+  "height": 140
+ },
+ "08-terminal-link.png": {
+  "src": "https://images.vocus.cc/62bbf2dd-f884-4432-a3f9-94efffbdf4ca.png",
+  "width": 1300,
+  "height": 250
+ },
+ "09-open-again.png": {
+  "src": "https://images.vocus.cc/d28eb5f5-3807-4296-88a2-ead936ded356.png",
+  "width": 900,
+  "height": 310
+ },
+ "10-connect-accounts.png": {
+  "src": "https://images.vocus.cc/f4453e07-41a0-4d17-a962-f30f0ff569cc.png",
+  "width": 1400,
+  "height": 850
+ },
+ "11-cloudflare-code.png": {
+  "src": "https://images.vocus.cc/d6815fd8-09f1-4433-bfb5-da2ea692bb55.png",
+  "width": 1400,
+  "height": 1240
+ },
+ "12-cloudflare-enter-code.png": {
+  "src": "https://images.vocus.cc/d356f1d4-ae18-41c2-a2fe-a704026124ca.png",
+  "width": 980,
+  "height": 450
+ },
+ "13-cloudflare-granted.png": {
+  "src": "https://images.vocus.cc/56c6193c-df6e-48fd-9633-489535393a45.png",
+  "width": 600,
+  "height": 400
+ },
+ "14-accounts-connected.png": {
+  "src": "https://images.vocus.cc/dc8962cc-f340-46b7-b770-d28f23e65e4b.png",
+  "width": 1400,
+  "height": 880
+ },
+ "15-church-settings.png": {
+  "src": "https://images.vocus.cc/5d908bd7-f7c8-435f-921c-8f69abc7d432.png",
+  "width": 1400,
+  "height": 1789
+ },
+ "16-confirm.png": {
+  "src": "https://images.vocus.cc/49eb1f6d-15a6-4269-8456-f94e6dd1dffe.png",
+  "width": 1400,
+  "height": 1236
+ },
+ "17-progress.png": {
+  "src": "https://images.vocus.cc/fafa91b8-8953-47e1-ace4-e436cb5a1b52.png",
+  "width": 1400,
+  "height": 1344
+ },
+ "18-firebase-waiting.png": {
+  "src": "https://images.vocus.cc/aa1cc90a-3f73-4b73-9d8c-49eff0e1819e.png",
+  "width": 1400,
+  "height": 252
+ },
+ "19-firebase-get-started.png": {
+  "src": "https://images.vocus.cc/ba5e6216-0483-4df5-9363-80739563d790.png",
+  "width": 1128,
+  "height": 520
+ },
+ "20-firebase-providers-shown.png": {
+  "src": "https://images.vocus.cc/8c5f7e7a-839d-4020-9c0b-f18648aa623b.png",
+  "width": 1128,
+  "height": 560
+ },
+ "21-complete-checklist.png": {
+  "src": "https://images.vocus.cc/1fb949c8-c7c9-437e-95e8-8f727a141685.png",
+  "width": 1400,
+  "height": 950
+ },
+ "22-roster-pencil.png": {
+  "src": "https://images.vocus.cc/5741211b-a122-4d9c-8004-bbcc830187d6.png",
+  "width": 1440,
+  "height": 420
+ },
+ "23-roster-service-settings.png": {
+  "src": "https://images.vocus.cc/12df2f6e-263c-4dfc-a92c-1ca02f51bdb0.png",
+  "width": 1440,
+  "height": 420
+ },
+ "24-add-service-item.png": {
+  "src": "https://images.vocus.cc/99db0e0a-ede6-46d6-8ad7-971d484f066f.png",
+  "width": 1440,
+  "height": 756
+ },
+ "25-service-item-saved.png": {
+  "src": "https://images.vocus.cc/c197352f-a9a8-4f31-8501-db09a425c6da.png",
+  "width": 1440,
+  "height": 500
+ },
+ "26-me-account-admin.png": {
+  "src": "https://images.vocus.cc/ecd27fa5-9cdc-4f8a-bda6-af37e015d512.png",
+  "width": 1440,
+  "height": 756
+ },
+ "27-new-account-form.png": {
+  "src": "https://images.vocus.cc/4f90bd15-ce65-4046-9be6-dc598fa7d520.png",
+  "width": 640,
+  "height": 728
+ },
+ "28-ministry-and-service.png": {
+  "src": "https://images.vocus.cc/0ab73d8a-d57a-47b5-9bce-9b366119f89e.png",
+  "width": 600,
+  "height": 728
+ },
+ "29-roster-add-assignment.png": {
+  "src": "https://images.vocus.cc/1f0c8fc8-7833-4957-8235-321ef7fa130d.png",
+  "width": 1440,
+  "height": 560
+ },
+ "30-pick-staff.png": {
+  "src": "https://images.vocus.cc/c2167c80-51ba-4b0e-8b0b-9bb430e3bc7a.png",
+  "width": 1440,
+  "height": 756
+ },
+ "31-roster-done.png": {
+  "src": "https://images.vocus.cc/fc47ef6b-d108-4362-a29e-637880b69402.png",
+  "width": 1440,
+  "height": 380
+ },
+ "32-share-message.png": {
+  "src": "https://images.vocus.cc/ffd393c7-0afb-4217-bf17-7e5c416fbecb.png",
+  "width": 1400,
+  "height": 635
+ },
+ "33-handoff-card.png": {
+  "src": "https://images.vocus.cc/d1d73926-3e1e-4078-a20f-8b9b555a3bc6.png",
+  "width": 1400,
+  "height": 834
+ },
+ "34-cleanup-steps.png": {
+  "src": "https://images.vocus.cc/9a107e1b-a6c4-410b-957a-4b350b3b2a58.png",
+  "width": 1400,
+  "height": 455
+ },
+ "35-cloudflare-delete.png": {
+  "src": "https://images.vocus.cc/d7c560eb-4c0f-4574-9138-e93024785b75.png",
+  "width": 1178,
+  "height": 650
+ },
+ "36-google-shutdown.png": {
+  "src": "https://images.vocus.cc/717df707-ae0d-49b0-8d05-c09b19735727.png",
+  "width": 720,
+  "height": 590
+ },
+ "37-service-settings.png": {
+  "src": "https://images.vocus.cc/4008c486-b824-44cc-9ffa-b93a55b37b8b.png",
+  "width": 1440,
+  "height": 380
+ },
+ "00-app-overview.png": {
+  "src": "https://images.vocus.cc/039d7417-17be-457f-afeb-039041f0906f.png",
+  "width": 1696,
+  "height": 1784
+ }
+}

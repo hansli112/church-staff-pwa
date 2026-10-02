@@ -378,13 +378,40 @@ async function enableFirebase(s) {
     if (resource('firebase')) conflict();
     s.context.emit?.({ message: '正在將 Firebase 加入新專案…' });
     await begin('firebase', { projectId });
-    await createOrWait('firebase', 'v1beta1', 'firebase', `/v1beta1/${project}:addFirebase`, {});
+    await addFirebase(s);
     firebase = await request('firebase', `/v1beta1/${project}`);
   }
   if (!intent('firebase') || firebase.projectId !== projectId || String(firebase.projectNumber) !== owned.name.split('/')[1]) conflict();
   await save('resources', 'firebase', { projectId });
   s.context.emit?.({ message: 'Firebase 已準備完成' });
   return { firebase: { projectId } };
+}
+
+// The caller owns the project this run just created, so a definite 403 from
+// addFirebase is not missing IAM. It is either the new project's IAM still
+// propagating, or (far more often) an account that has never used Firebase and
+// so has not accepted its terms, which Google offers no API to accept. Retry
+// briefly, then send the person to the console to add Firebase there; the
+// resume reads the Firebase project back and carries on.
+const ADD_FIREBASE_RETRIES = 3;
+async function addFirebase(s) {
+  const { projectId, intent } = s;
+  for (let attempt = 0; ; attempt++) {
+    try { return await s.createOrWait('firebase', 'v1beta1', 'firebase', `/v1beta1/${s.project}:addFirebase`, {}); }
+    catch (error) {
+      // Refused outright, or its operation failed: either way nothing is pending.
+      const refused = error instanceof ActionRequired && error.code === 'GOOGLE_PERMISSION_REQUIRED' &&
+        !intent('firebase')?.requested && !intent('firebase')?.operation;
+      if (!refused) throw error;
+      if (attempt >= ADD_FIREBASE_RETRIES) {
+        // Keep Google's reason code for support; it never carries a URL or credential.
+        const code = error.message.match(/〔技術代碼：[^〕]*〕/)?.[0] ?? '';
+        stop('GOOGLE_TERMS_REQUIRED', `這個 Google 帳號第一次使用 Firebase，Google 規定要本人在官網同意 Firebase 條款，精靈無法代按。請按下方「開啟官方設定頁」，用同一個 Google 帳號：按「建立 Firebase 專案」，在第一頁下方選擇把 Firebase 加到現有的 Google Cloud 專案，選「Church Staff」（${projectId}），勾選同意條款後按繼續；Google Analytics 選不啟用，也不要升級付費方案。看到專案首頁就完成了，回到這裡按「核對後接續安裝」。若用的是公司或學校帳號，也可能是組織政策限制，請洽該帳號的管理員。${code}`);
+      }
+      s.context.emit?.({ message: `Google 正在替新專案開通 Firebase 權限，稍候自動重試（第 ${attempt + 1} 次）…` });
+      await s.delay(10_000);
+    }
+  }
 }
 
 // A brand-new project's IAM takes a minute or two to reach Firestore, which

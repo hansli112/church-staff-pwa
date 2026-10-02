@@ -386,6 +386,43 @@ test('a definite 4xx refusal lets the same create be retried after the person fi
   assert.equal(creates(h, ':addFirebase'), 2);
 });
 
+test('an addFirebase 403 while the new project settles is retried without asking the person', async (t) => {
+  const h = await setup(t);
+  await h.through('google-project');
+  let denied = 0;
+  h.setInterceptor((call) => call.pathname.endsWith(':addFirebase') && denied++ < 2 ? error(403, 'PERMISSION_DENIED') : undefined);
+  await h.adapter.execute('firebase', h.context);
+  assert.equal(creates(h, ':addFirebase'), 3);
+  assert.deepEqual(h.context.checkpoint.resources.firebase, { projectId });
+});
+
+test('an account that never accepted the Firebase terms is sent to the console, then resumes', async (t) => {
+  const h = await setup(t);
+  await h.through('google-project');
+  h.setInterceptor((call) => call.pathname.endsWith(':addFirebase') ? error(403, 'PERMISSION_DENIED') : undefined);
+  await assert.rejects(h.adapter.execute('firebase', h.context), (err) =>
+    err.code === 'GOOGLE_TERMS_REQUIRED' && err.helpUrl === 'https://console.firebase.google.com/' && err.message.includes(projectId) &&
+    err.message.endsWith('〔技術代碼：firebase 403〕'));
+  assert.equal(creates(h, ':addFirebase'), 4);
+  // The person adds Firebase in the console; the resume adopts it without another create.
+  h.setInterceptor(undefined);
+  h.state.firebase = { projectId, projectNumber: '123456789' };
+  await h.adapter.execute('firebase', h.context);
+  assert.equal(creates(h, ':addFirebase'), 4);
+  assert.deepEqual(h.context.checkpoint.resources.firebase, { projectId });
+});
+
+test('an addFirebase operation that fails with permission denied is also treated as the terms step', async (t) => {
+  const h = await setup(t);
+  await h.through('google-project');
+  h.setInterceptor((call) => call.pathname.endsWith(':addFirebase')
+    ? response(200, { name: 'operations/workflows/ZmFpbGVk', done: true, error: { code: 7, message: 'The caller does not have permission' } }) : undefined);
+  await rejectsCode(h.adapter.execute('firebase', h.context), 'GOOGLE_TERMS_REQUIRED');
+  h.setInterceptor(undefined);
+  await h.adapter.execute('firebase', h.context);
+  assert.equal(creates(h, ':addFirebase'), 5);
+});
+
 test('a server error on create is treated as possibly accepted', async (t) => {
   const h = await setup(t);
   await h.through('google-project');
