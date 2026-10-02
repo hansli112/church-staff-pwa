@@ -386,6 +386,26 @@ test('a definite 4xx refusal lets the same create be retried after the person fi
   assert.equal(creates(h, ':addFirebase'), 2);
 });
 
+test('Firebase added in the console before the installer asked is adopted on this run\'s project', async (t) => {
+  const h = await setup(t);
+  await h.through('google-project');
+  // The console enables the APIs and adds Firebase in one go.
+  ['firebase.googleapis.com', 'firestore.googleapis.com', 'identitytoolkit.googleapis.com', 'firebaserules.googleapis.com']
+    .forEach((service) => h.state.enabled.add(service));
+  h.state.firebase = { projectId, projectNumber: '123456789' };
+  await h.adapter.execute('firebase', h.context);
+  assert.equal(creates(h, ':addFirebase'), 0);
+  assert.equal(h.context.checkpoint.intents.firebase.addedInConsole, true);
+  assert.deepEqual(h.context.checkpoint.resources.firebase, { projectId });
+});
+
+test('Firebase on a project with another project number is still refused', async (t) => {
+  const h = await setup(t);
+  await h.through('google-project');
+  h.state.firebase = { projectId, projectNumber: '999999999' };
+  await rejectsCode(h.adapter.execute('firebase', h.context), 'GOOGLE_RESOURCE_CONFLICT');
+});
+
 test('a bare addFirebase 403 is not retried: the next resume sends it again once the project settles', async (t) => {
   const h = await setup(t);
   await h.through('google-project');

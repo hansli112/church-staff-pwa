@@ -65,7 +65,7 @@ function cloudError(status, error = {}, authSetup = false) {
   if (status === 401 || status === 16) stop('GOOGLE_AUTH_REQUIRED', 'Google 授權已過期或未完成；請重新完成 Cloud Shell 官方授權，再繼續本次安裝。');
   // A per-minute request limit, not a quota to raise: waiting a minute clears it.
   if (/RATE_LIMIT_EXCEEDED/.test(reason)) {
-    stop('GOOGLE_RATE_LIMITED', 'Google 暫時限制了短時間內的請求次數，不是帳號或配額有問題，不用改任何設定。請等 1–2 分鐘後按「稍後接續安裝」。');
+    stop('GOOGLE_RATE_LIMITED', 'Google 暫時限制了短時間內的請求次數，不是帳號或配額有問題，不用改任何設定。請等 1–2 分鐘後按「稍後接續安裝」；如果你剛在 Firebase 官網加過 Firebase，Google 還在背景啟用服務，可能要等 5 分鐘左右。');
   }
   if (status === 429 || status === 8 || /QUOTA|RESOURCE_EXHAUSTED/.test(reason)) {
     stop('GOOGLE_QUOTA_REQUIRED', 'Google 專案或 API 配額不足；請到官方配額頁核對，稍後再繼續。安裝進度已保留。');
@@ -384,6 +384,11 @@ async function enableFirebase(s) {
     await begin('firebase', { projectId });
     await addFirebase(s);
     firebase = await request('firebase', `/v1beta1/${project}`);
+  } else if (!intent('firebase')) {
+    // Added in the console before this run asked, e.g. someone who did the
+    // terms step ahead of time. The project is this run's own (checked by its
+    // label before every step), so only its owner can have done it.
+    await begin('firebase', { projectId, addedInConsole: true });
   }
   if (!intent('firebase') || firebase.projectId !== projectId || String(firebase.projectNumber) !== owned.name.split('/')[1]) conflict();
   await save('resources', 'firebase', { projectId });
