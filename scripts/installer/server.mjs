@@ -14,6 +14,10 @@ const equal = (left, right) => {
   return a.length === b.length && timingSafeEqual(a, b);
 };
 
+// Requests that may carry a logo: five PNGs of at most 1 MB each, base64 encoded.
+const LOGO_ROUTES = new Set(['/api/plan', '/api/update/icons']);
+const LOGO_BODY_LIMIT = 8 * 1024 * 1024;
+
 async function jsonBody(request, limit = 64 * 1024) {
   if (!/^application\/json(?:\s*;.*)?$/i.test(request.headers['content-type'] ?? '')) {
     throw Object.assign(new Error('只接受 JSON 請求'), { httpStatus: 415 });
@@ -135,8 +139,7 @@ export async function startInstallerServer({
       if (request.method === 'GET' && url.pathname === '/api/runs') return send(response, 200, await manager.listRuns());
       if (request.method !== 'POST') return send(response, 405, { message: '不支援此操作' });
       if (!equal(request.headers['x-installer-csrf'], session.csrf)) return send(response, 403, { message: '工作階段驗證失敗' });
-      // Only the logo upload carries images (five PNGs, base64): about 1 MB at most.
-      const input = await jsonBody(request, url.pathname === '/api/update/icons' ? 4 * 1024 * 1024 : undefined);
+      const input = await jsonBody(request, LOGO_ROUTES.has(url.pathname) ? LOGO_BODY_LIMIT : undefined);
       if (url.pathname === '/api/cancel') {
         manager.cancel();
         return send(response, 200, { accepted: true });

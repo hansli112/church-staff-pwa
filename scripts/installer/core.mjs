@@ -1,6 +1,6 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
-import { lstat, mkdir, open, readdir, realpath, rename, unlink } from 'node:fs/promises';
+import { lstat, mkdir, open, readdir, realpath, rename, rm, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { validateChurchConfig } from '../../worker/church_config.js';
 import { checkPng, CORE_ICONS, fingerprint, ICON_SIZES, installationError, isPrivateDirectory, normalizeCustomDomain, projectIdFor, STEPS, UPDATE_STEPS } from './shared.mjs';
@@ -85,8 +85,48 @@ function iconSet(files) {
   return icons;
 }
 
+// The page sends the five PNGs it drew from the church's image, base64 encoded.
+function decodeIcons(icons) {
+  const decoded = {};
+  for (const name of Object.keys(ICON_SIZES)) {
+    decoded[name] = typeof icons?.[name] === 'string' && /^[A-Za-z0-9+/]+={0,2}$/.test(icons[name]) ? Buffer.from(icons[name], 'base64') : undefined;
+  }
+  const set = iconSet(decoded);
+  if (!set) throw installationError('Logo 圖片轉換失敗，請換一張 PNG 或 JPG 再試', 'INVALID_INPUT');
+  return set;
+}
+
+// A first install's logo lives as files next to its record; the plan keeps
+// their hashes, so its digest covers them and a resume builds the same icons.
+const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
+const iconHashes = (icons) => Object.fromEntries(Object.keys(ICON_SIZES).map((name) => [name, sha256(icons[name])]));
+const isIconHashes = (value) => Boolean(value) && typeof value === 'object' &&
+  Object.keys(value).sort().join() === Object.keys(ICON_SIZES).sort().join() &&
+  Object.values(value).every((hash) => /^[0-9a-f]{64}$/.test(hash));
+const logoDirectory = (runDir) => path.join(runDir, 'logo');
+const logoFile = (runDir, name) => path.join(logoDirectory(runDir), name.replace('/', '_'));
+async function writePlanIcons(runDir, icons) {
+  await privateDirectory(logoDirectory(runDir));
+  for (const name of Object.keys(ICON_SIZES)) await writeFile(logoFile(runDir, name), icons[name], { mode: 0o600, flag: 'wx' });
+}
+async function readPlanIcons(runDir, hashes) {
+  if (!hashes) return undefined;
+  const files = {};
+  for (const name of Object.keys(ICON_SIZES)) {
+    let bytes;
+    try { bytes = await readPrivateFile(logoFile(runDir, name)); } catch { /* Reported below like a changed file. */ }
+    if (!bytes || sha256(bytes) !== hashes[name]) {
+      throw installationError('這次安裝的教會 Logo 檔案遺失或被更改，已停止；不會自動改用預設圖示。');
+    }
+    files[name] = bytes;
+  }
+  const icons = iconSet(files);
+  if (!icons) throw installationError('這次安裝的教會 Logo 檔案遺失或被更改，已停止；不會自動改用預設圖示。');
+  return icons;
+}
+
 export function createInstallationPlan(input, identity, {
-  runId = randomUUID(), sourceRevision = 'development', mode = 'cloud',
+  runId = randomUUID(), sourceRevision = 'development', mode = 'cloud', iconHashes,
 } = {}) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw installationError('請填寫教會設定', 'INVALID_INPUT');
   const allowed = new Set(['appName', 'shortName', 'siteName', 'timeZone', 'region', 'services', 'adminName', 'adminEmail', 'cloudflareAccountId']);
@@ -130,6 +170,7 @@ export function createInstallationPlan(input, identity, {
     projectId, pagesProject: siteName,
     cloudflareAccountId: input.cloudflareAccountId,
     googleEmail, region: input.region, churchConfig,
+    ...(iconHashes ? { icons: { ...iconHashes } } : {}),
     // Sign-in uses the email; like bootstrap-admin, the username defaults to the name.
     admin: { name: adminName, email: requireEmail(input.adminEmail, '管理員 email'), username: adminName },
   };
@@ -146,6 +187,7 @@ function validateStoredPlan(plan, sourceRevision, mode) {
       !REGIONS.some(([id]) => id === plan.region)) throw installationError('紀錄不是核心首次安裝設定');
   if (plan.sourceRevision !== sourceRevision) throw installationError('程式版本與這次安裝不同；請使用原版本接續，不要重新建立專案');
   if (plan.mode !== mode) throw installationError('示範安裝與真實安裝不可互相接續');
+  if (plan.icons !== undefined && !isIconHashes(plan.icons)) throw installationError('安裝紀錄格式不正確');
   requireEmail(plan.googleEmail, 'Google 帳號');
   requireEmail(plan.admin?.email, '管理員 email');
 }
@@ -176,6 +218,13 @@ async function assertRegular(file) {
   return stat;
 }
 
+// A private regular file, never followed through a link; undefined when absent.
+async function readPrivateFile(file) {
+  if (!(await assertRegular(file))) return undefined;
+  const handle = await open(file, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try { return await handle.readFile(); } finally { await handle.close(); }
+}
+
 async function openStore(rootDir, runId) {
   if (!RUN_ID.test(runId)) throw installationError('安裝識別碼不正確', 'INVALID_INPUT');
   const root = await realpath(rootDir);
@@ -194,8 +243,7 @@ async function openStore(rootDir, runId) {
     async read() {
       const stat = await assertRegular(file);
       if (!stat || stat.size > 2 * 1024 * 1024) throw installationError('找不到有效的安裝紀錄');
-      const handle = await open(file, constants.O_RDONLY | constants.O_NOFOLLOW);
-      try { return JSON.parse(await handle.readFile('utf8')); } finally { await handle.close(); }
+      return JSON.parse((await readPrivateFile(file)).toString('utf8'));
     },
     async write(value, initial = false) {
       assertCheckpointSafe(value);
@@ -433,13 +481,7 @@ export function createInstallationManager({ rootDir, google, cloudflare, build, 
           message = '這次更新會改回預設圖示';
           return;
         }
-        const decoded = {};
-        for (const name of Object.keys(ICON_SIZES)) {
-          decoded[name] = typeof icons?.[name] === 'string' && /^[A-Za-z0-9+/]+={0,2}$/.test(icons[name]) ? Buffer.from(icons[name], 'base64') : undefined;
-        }
-        const set = iconSet(decoded);
-        if (!set) throw installationError('Logo 圖片轉換失敗，請換一張 PNG 或 JPG 再試', 'INVALID_INPUT');
-        update.icons = set;
+        update.icons = decodeIcons(icons);
         message = '已套用新的 Logo，會在這次更新一起發布';
       });
     },
@@ -505,9 +547,13 @@ export function createInstallationManager({ rootDir, google, cloudflare, build, 
     plan(input) {
       return exclusive(async (signal) => {
         if (state?.approved) throw installationError('這次安裝已開始，不能更改設定或另建專案；請接續原安裝');
-        const plan = createInstallationPlan(input, {
+        // The optional logo travels with the form but is stored beside the record.
+        const form = input && typeof input === 'object' && !Array.isArray(input);
+        const { icons: iconInput, ...fields } = form ? input : {};
+        const icons = iconInput == null ? undefined : decodeIcons(iconInput);
+        const plan = createInstallationPlan(form ? fields : input, {
           googleEmail: googleIdentity?.email, accounts: cloudflareIdentity?.accounts,
-        }, { sourceRevision, mode });
+        }, { sourceRevision, mode, iconHashes: icons && iconHashes(icons) });
         // Read-only checks before anything is recorded or confirmed. Google
         // offers no read-only quota/terms check; those surface at the first
         // step, before any other resource exists.
@@ -516,7 +562,14 @@ export function createInstallationManager({ rootDir, google, cloudflare, build, 
         await cloudflare.preflight?.(plan, { signal });
         const nextStore = await openStore(rootDir, plan.runId);
         const next = { schemaVersion: 1, plan, approved: false, status: 'ready', steps: {}, resources: {}, intents: {}, backups: {} };
-        await nextStore.write(next, true);
+        // The logo first, so a record never points at files that were not written.
+        try {
+          if (icons) await writePlanIcons(nextStore.runDir, icons);
+          await nextStore.write(next, true);
+        } catch (error) {
+          await rm(logoDirectory(nextStore.runDir), { recursive: true, force: true });
+          throw error;
+        }
         state = next;
         store = nextStore;
         transient = {};
@@ -548,12 +601,15 @@ export function createInstallationManager({ rootDir, google, cloudflare, build, 
         }
         validateStoredPlan(state.plan, sourceRevision, mode);
         await verifyIdentity(state.plan, signal);
+        // Before anything is marked as started: a missing logo stops here.
+        const icons = await readPlanIcons(store.runDir, state.plan.icons);
         state.approved = true;
         state.status = 'running';
         await store.write(state);
         const context = {
           plan: { ...clone(state.plan), activationEmailConfirmed: true },
           runDir: store.runDir, checkpoint: state, save, emit, signal, transient,
+          icons,
         };
         try {
           for (const step of STEPS) {
