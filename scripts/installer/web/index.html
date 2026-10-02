@@ -118,6 +118,17 @@
           </div>
           <datalist id="timezones"><option value="Asia/Taipei"><option value="Asia/Hong_Kong"><option value="Asia/Tokyo"><option value="Asia/Singapore"><option value="Australia/Sydney"><option value="America/Los_Angeles"><option value="America/New_York"><option value="Europe/London"><option value="UTC"></datalist>
           <p class="hint">時區決定排表日期；資料庫地區決定資料儲存位置，建立後不能直接搬動。兩者不同。</p>
+          <h3>教會 Logo（選填）</h3>
+          <p class="hint">會用在網站和手機桌面的圖示。不選就用預設圖示。</p>
+          <div class="logo-row">
+            <label>選一張圖片（PNG 或 JPG，正方形最好）<input id="install-logo-file" type="file" accept="image/png,image/jpeg,image/webp"></label>
+            <label>底色<input id="install-logo-background" type="color" value="#ffffff"></label>
+          </div>
+          <div id="install-logo-preview" class="logo-preview" hidden>
+            <figure><canvas id="install-logo-preview-icon" width="96" height="96"></canvas><figcaption>一般圖示</figcaption></figure>
+            <figure><canvas id="install-logo-preview-mask" width="96" height="96" class="round"></canvas><figcaption>Android 圓形</figcaption></figure>
+          </div>
+          <button id="install-logo-reset" type="button" class="link-button" hidden>不用 Logo，改回預設圖示</button>
           <label>網站名稱<input name="siteName" id="site-name" required minlength="3" maxlength="40" pattern="[a-z][a-z0-9\-]*[a-z0-9]" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="例如：hope-church-staff"></label>
           <p id="site-preview" class="hint">網址會是 <strong>你填的名稱.pages.dev</strong>，同工會用這個網址登入。只能用英文小寫、數字和連字號（-），建立後不能更改。</p>
           <h3>每週聚會</h3>
@@ -142,6 +153,7 @@
       <p class="notice">確認後會在你的帳號建立雲端資源。帳號與網站名稱已先檢查；Google 的專案額度、條款與組織政策沒有事先查詢的方式，會在最前面建立專案、啟用 Firebase 時確認；不通過就停下，不會繼續建立資料庫、網站或管理員。精靈不開通付費方案。這個 Google 帳號若從沒用過 Firebase，中途會請你到 Firebase 官網同意條款（每個帳號只做一次，約 1 分鐘）。</p>
       <label class="check"><input id="confirm-region" type="checkbox"><span>已核對帳號、新專案與資料地區，了解資料庫地區建立後不能直接更改。</span></label>
       <label class="check"><input id="confirm-email" type="checkbox"><span id="email-confirm-label">確認指定管理員 email，並同意建立此帳號及寄送設定密碼信。</span></label>
+      <p id="logo-stale" class="notice" hidden>Logo 已經改過了，請再按一次上方的「檢查並預覽安裝」，確認後才能開始安裝。</p>
       <div class="actions"><button id="apply" type="button" class="primary">確認並開始安裝</button><button id="cancel" type="button" class="secondary" hidden>停止目前步驟</button></div>
       <p class="hint">停止不會刪除已建立的專案或資料。再次接續前，精靈會核對實際狀態。</p>
     </section>

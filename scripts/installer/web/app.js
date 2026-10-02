@@ -136,19 +136,27 @@ function renderSteps(list, steps) {
 // centre circle that Android may crop to.
 const ICONS = [['favicon.png', 32, 0.96], ['icons/Icon-192.png', 192, 0.84], ['icons/Icon-512.png', 512, 0.84],
   ['icons/Icon-maskable-192.png', 192, 0.62], ['icons/Icon-maskable-512.png', 512, 0.62]];
-let logoBitmap;
+// The same picker serves a first install and an update; each has its own elements.
+const LOGO_PICKERS = {
+  install: { prefix: 'install-logo', reset: 'install-logo-reset' },
+  update: { prefix: 'logo' },
+};
+const logoBitmaps = { install: undefined, update: undefined };
+const logoElement = (kind, part) => $(`${LOGO_PICKERS[kind].prefix}-${part}`);
+// A first-install logo changed after 檢查並預覽安裝: the shown plan no longer matches.
+let installLogoChanged = false;
 
-function drawIcon(canvas, size, scale, background) {
+function drawIcon(canvas, bitmap, size, scale, background) {
   canvas.width = size;
   canvas.height = size;
   const context = canvas.getContext('2d');
   context.fillStyle = background;
   context.fillRect(0, 0, size, size);
-  const fit = Math.min((size * scale) / logoBitmap.width, (size * scale) / logoBitmap.height);
-  const width = logoBitmap.width * fit;
-  const height = logoBitmap.height * fit;
+  const fit = Math.min((size * scale) / bitmap.width, (size * scale) / bitmap.height);
+  const width = bitmap.width * fit;
+  const height = bitmap.height * fit;
   context.imageSmoothingQuality = 'high';
-  context.drawImage(logoBitmap, (size - width) / 2, (size - height) / 2, width, height);
+  context.drawImage(bitmap, (size - width) / 2, (size - height) / 2, width, height);
 }
 
 async function base64Png(canvas) {
@@ -159,19 +167,57 @@ async function base64Png(canvas) {
   return btoa(binary);
 }
 
-async function uploadLogo() {
-  if (!logoBitmap) return;
-  const background = $('logo-background').value;
+function previewLogo(kind) {
+  const bitmap = logoBitmaps[kind];
+  if (!bitmap) return;
+  const background = logoElement(kind, 'background').value;
+  drawIcon(logoElement(kind, 'preview-icon'), bitmap, 192, 0.84, background);
+  drawIcon(logoElement(kind, 'preview-mask'), bitmap, 192, 0.62, background);
+  logoElement(kind, 'preview').hidden = false;
+  if (LOGO_PICKERS[kind].reset) $(LOGO_PICKERS[kind].reset).hidden = false;
+}
+
+// The five icon files drawn from the picked image, or nothing without a logo.
+async function logoIcons(kind) {
+  const bitmap = logoBitmaps[kind];
+  if (!bitmap) return undefined;
+  const background = logoElement(kind, 'background').value;
   const icons = {};
   for (const [name, size, scale] of ICONS) {
     const canvas = document.createElement('canvas');
-    drawIcon(canvas, size, scale, background);
+    drawIcon(canvas, bitmap, size, scale, background);
     icons[name] = await base64Png(canvas);
   }
-  drawIcon($('logo-preview-icon'), 192, 0.84, background);
-  drawIcon($('logo-preview-mask'), 192, 0.62, background);
-  $('logo-preview').hidden = false;
-  await request('/api/update/icons', { icons });
+  return icons;
+}
+
+function clearLogo(kind) {
+  logoBitmaps[kind] = undefined;
+  logoElement(kind, 'file').value = '';
+  logoElement(kind, 'preview').hidden = true;
+  if (LOGO_PICKERS[kind].reset) $(LOGO_PICKERS[kind].reset).hidden = true;
+}
+
+// A picture that cannot be read clears the picker, so the last one is never sent instead.
+async function pickLogo(kind) {
+  const file = logoElement(kind, 'file').files[0];
+  if (!file) return false;
+  try {
+    if (file.size > 20 * 1024 * 1024) throw new Error('圖片太大了，請換一張 20 MB 以下的圖片');
+    try { logoBitmaps[kind] = await createImageBitmap(file); }
+    catch { throw new Error('讀不到這張圖片，請換一張 PNG 或 JPG'); }
+  } catch (error) {
+    clearLogo(kind);
+    throw error;
+  }
+  previewLogo(kind);
+  return true;
+}
+
+async function uploadLogo() {
+  previewLogo('update');
+  const icons = await logoIcons('update');
+  if (icons) await request('/api/update/icons', { icons });
 }
 
 // Update mode: pick a site this wizard installed, confirm, rebuild it.
@@ -314,6 +360,7 @@ function render(state) {
       summaryRow('Cloudflare 帳號', state.identity.accounts.find((account) => account.id === plan.cloudflareAccountId)?.name || plan.cloudflareAccountId);
       summaryRow('網站', `${plan.pagesProject}.pages.dev（名稱被其他人用過的話，Cloudflare 會在後面加幾個字，實際網址以完成頁為準）`);
       summaryRow('資料儲存地區', `${state.regions.find(([id]) => id === plan.region)?.[1] || ''} · ${plan.region}`);
+      summaryRow('教會 Logo', plan.icons ? '自訂 Logo' : '預設圖示');
       summaryRow('教會時區', plan.churchConfig.timeZone);
       summaryRow('每週聚會', plan.churchConfig.services.map((service) => `${service.name}（週${weekdays[service.weekday - 1]}）`).join('、'));
       summaryRow('指定管理員', `${plan.admin.name} · ${plan.admin.email}`);
@@ -417,8 +464,14 @@ async function copyText(text, button) {
 }
 
 function updateApply() {
+  $('logo-stale').hidden = !installLogoChanged || !current?.plan || current.status !== 'ready';
   $('apply').disabled = !current?.plan || current.busy || !$('confirm-region').checked || !$('confirm-email').checked ||
-    !current.identity.googleEmail || !current.identity.accounts.length;
+    !current.identity.googleEmail || !current.identity.accounts.length || !$('logo-stale').hidden;
+}
+
+function markInstallLogoChanged() {
+  if (current?.plan) installLogoChanged = true;
+  updateApply();
 }
 
 async function refresh() {
@@ -463,7 +516,10 @@ $('settings-form').addEventListener('submit', (event) => {
       name: row.querySelector('[data-field="name"]').value,
       weekday: Number(row.querySelector('[data-field="weekday"]').value),
     }));
+    const icons = await logoIcons('install');
+    if (icons) values.icons = icons;
     await request('/api/plan', values);
+    installLogoChanged = false;
     await loadRuns();
     $('confirmation').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
@@ -484,21 +540,18 @@ $('apply-update').addEventListener('click', () => perform(() => {
   return request('/api/update/apply', { confirm: current.update.pagesProject, customDomain: $('custom-domain').value.trim() || undefined });
 }));
 $('cancel-update').addEventListener('click', () => perform(() => request('/api/cancel', {})));
-$('logo-file').addEventListener('change', () => perform(async () => {
-  const file = $('logo-file').files[0];
-  if (!file) return;
-  if (file.size > 20 * 1024 * 1024) throw new Error('圖片太大了，請換一張 20 MB 以下的圖片');
-  try { logoBitmap = await createImageBitmap(file); }
-  catch { throw new Error('讀不到這張圖片，請換一張 PNG 或 JPG'); }
-  await uploadLogo();
-}));
+$('logo-file').addEventListener('change', () => perform(async () => { if (await pickLogo('update')) await uploadLogo(); }));
 $('logo-background').addEventListener('change', () => perform(uploadLogo));
 $('logo-reset').addEventListener('click', () => perform(async () => {
-  logoBitmap = undefined;
-  $('logo-file').value = '';
-  $('logo-preview').hidden = true;
+  clearLogo('update');
   await request('/api/update/icons', { reset: true });
 }));
+// A first install's logo is only drawn here; it is sent with 檢查並預覽安裝.
+$('install-logo-file').addEventListener('change', () => perform(async () => {
+  try { await pickLogo('install'); } finally { markInstallLogoChanged(); }
+}));
+$('install-logo-background').addEventListener('change', () => { previewLogo('install'); markInstallLogoChanged(); });
+$('install-logo-reset').addEventListener('click', () => { clearLogo('install'); markInstallLogoChanged(); });
 $('resume-existing').addEventListener('change', () => { $('resume-id').value = $('resume-existing').value; });
 $('resume').addEventListener('click', () => perform(() => request('/api/resume', { runId: $('resume-id').value.trim() })));
 $('copy-id').addEventListener('click', () => perform(async () => {

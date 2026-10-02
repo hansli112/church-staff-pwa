@@ -289,3 +289,96 @@ test('connecting Google uses the provider authorization flow when it has one', a
   assert.equal(authorized, 1);
   assert.equal(manager.snapshot().identity.googleEmail, 'person@example.invalid');
 });
+
+// A valid PNG header of the given size: enough for the size check, not an image.
+function png(size, fill = 0) {
+  const bytes = Buffer.alloc(64, fill);
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(bytes);
+  bytes.writeUInt32BE(13, 8);
+  bytes.write('IHDR', 12, 'latin1');
+  bytes.writeUInt32BE(size, 16);
+  bytes.writeUInt32BE(size, 20);
+  return bytes;
+}
+const SIZES = { 'favicon.png': 32, 'icons/Icon-192.png': 192, 'icons/Icon-512.png': 512, 'icons/Icon-maskable-192.png': 192, 'icons/Icon-maskable-512.png': 512 };
+const encodedIcons = (sizes = SIZES) => Object.fromEntries(Object.entries(sizes).map(([name, size]) => [name, png(size).toString('base64')]));
+function recordBuildIcons(providers) {
+  const received = [];
+  const build = providers.build;
+  providers.build = async (context) => { received.push(context.icons); return build(context); };
+  return received;
+}
+// A connected demo manager whose build records the icons it is given; pass
+// rootDir to open a second manager on the same records, as after a restart.
+async function iconFixture(t, rootDir) {
+  if (!rootDir) {
+    rootDir = await mkdtemp(path.join(os.tmpdir(), 'installer-core-icons-'));
+    t.after(() => rm(rootDir, { recursive: true, force: true }));
+  }
+  const providers = createDemoProviders({ delayMs: 0 });
+  const received = recordBuildIcons(providers);
+  const manager = createInstallationManager({ rootDir, ...providers, demo: true, sourceRevision: 'test-v1' });
+  t.after(() => manager.dispose());
+  await manager.connectGoogle();
+  await manager.connectCloudflare();
+  return { rootDir, manager, received };
+}
+
+test('a first install can bring its logo: stored beside the record, covered by the plan, handed to the build', async (t) => {
+  const { manager, rootDir, received } = await iconFixture(t);
+  const plan = await manager.plan({ ...input(), icons: encodedIcons() });
+  assert.deepEqual(Object.keys(plan.icons).sort(), Object.keys(SIZES).sort());
+  assert.ok(Object.values(plan.icons).every((hash) => /^[0-9a-f]{64}$/.test(hash)));
+  const stored = await readFile(path.join(rootDir, '.local/install', plan.runId, 'logo', 'icons_Icon-512.png'));
+  assert.ok(stored.equals(png(512)));
+  const state = JSON.parse(await readFile(path.join(rootDir, '.local/install', plan.runId, 'state.json')));
+  assert.equal(JSON.stringify(state).includes(png(512).toString('base64')), false);
+  await manager.apply(confirmation(plan));
+  assert.equal(received.length, 1);
+  assert.ok(received[0]['icons/Icon-512.png'].equals(png(512)));
+  assert.equal(manager.snapshot().status, 'complete');
+});
+
+test('without a logo the plan and the build stay on the neutral icons', async (t) => {
+  const { manager, received } = await iconFixture(t);
+  const plan = await manager.plan(input());
+  assert.equal(plan.icons, undefined);
+  await manager.apply(confirmation(plan));
+  assert.deepEqual(received, [undefined]);
+});
+
+test('a broken logo is refused before any record is written', async (t) => {
+  const { manager } = await fixture(t);
+  await assert.rejects(manager.plan({ ...input(), icons: encodedIcons({ ...SIZES, 'icons/Icon-512.png': 256 }) }), /Logo 圖片轉換失敗/);
+  await assert.rejects(manager.plan({ ...input(), icons: 'not icons' }), /Logo 圖片轉換失敗/);
+  assert.deepEqual(await manager.listRuns(), []);
+});
+
+test('a resumed install builds the same logo, and a changed logo file stops it before it starts', async (t) => {
+  const { manager, rootDir } = await fixture(t, { failAt: 'rules' });
+  const plan = await manager.plan({ ...input(), icons: encodedIcons() });
+  await assert.rejects(manager.apply(confirmation(plan)), /示範中斷/);
+  const { manager: next, received } = await iconFixture(t, rootDir);
+  await next.load(plan.runId);
+  const logo = path.join(rootDir, '.local/install', plan.runId, 'logo', 'favicon.png');
+  const original = await readFile(logo);
+  await writeFile(logo, png(32, 1));
+  await assert.rejects(next.apply(confirmation(plan)), /Logo 檔案遺失或被更改/);
+  assert.notEqual(next.snapshot().status, 'running');
+  await writeFile(logo, original);
+  await next.apply(confirmation(plan));
+  assert.ok(received.at(-1)['favicon.png'].equals(png(32)));
+  assert.equal(next.snapshot().status, 'complete');
+});
+
+test('a logo file swapped for a link is refused, not followed', async (t) => {
+  const { manager, rootDir } = await iconFixture(t);
+  const plan = await manager.plan({ ...input(), icons: encodedIcons() });
+  const logo = path.join(rootDir, '.local/install', plan.runId, 'logo', 'favicon.png');
+  const elsewhere = path.join(rootDir, 'favicon-copy.png');
+  await writeFile(elsewhere, await readFile(logo), { mode: 0o600 });
+  await rm(logo);
+  await symlink(elsewhere, logo);
+  await assert.rejects(manager.apply(confirmation(plan)), /Logo 檔案遺失或被更改/);
+  assert.equal(manager.snapshot().status, 'ready');
+});
