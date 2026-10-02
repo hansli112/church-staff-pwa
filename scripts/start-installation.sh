@@ -28,29 +28,46 @@ done
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 [[ -f "$ROOT/scripts/install-core.mjs" ]] || { printf '%s\n' '找不到安裝主程式，請重新開啟完整教學。' >&2; exit 1; }
 # Reopening the tutorial reuses the earlier clone without updating it. Update
-# a clean checkout, except while an unfinished installation exists: resuming
-# requires the exact program version that planned it.
+# a clean checkout, unless a wizard is still running from it or an unfinished
+# installation was planned by a version the new code cannot continue (its
+# scripts/installer/RESUMES_FROM). The tutorial card leaves updating to this
+# script when it finds "pull --ff-only --quiet origin" here, so keep that text.
 if [[ -z "${INSTALLER_SELF_UPDATED:-}" ]] && git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  unfinished=''
-  for state in "$ROOT"/.local/install/*/state.json; do
-    [[ -f "$state" ]] && ! grep -qE '^  "status": "complete",?$' "$state" && unfinished=1
+  running=''
+  for marker in "/tmp/church-core-installer-${UID}"/session-*/.installer-pid; do
+    [[ -f "$marker" && ! -L "$marker" ]] && read -r pid < "$marker" && [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null && running=1
   done
-  if [[ -n "$unfinished" ]]; then
-    printf '%s\n' '有尚未完成的安裝紀錄，維持目前程式版本以便接續。'
+  # Cloud Shell's clone sets the branch upstream to the local repo itself
+  # (branch.<name>.remote = .), so a bare `git pull` never fetches anything.
+  branch="$(git -C "$ROOT" symbolic-ref --quiet --short HEAD || true)"
+  if [[ -n "$running" ]]; then
+    printf '%s\n' '另一個安裝精靈還在執行，略過自動更新。'
   elif [[ -n "$(git -C "$ROOT" status --porcelain --untracked-files=no)" ]]; then
     printf '%s\n' '程式檔案有本機修改，略過自動更新。'
+  elif [[ -z "$branch" ]] || ! git -C "$ROOT" fetch --quiet origin "$branch" >/dev/null 2>&1; then
+    printf '%s\n' '無法檢查新版本，繼續使用目前版本。'
   else
-    before="$(git -C "$ROOT" rev-parse HEAD)"
-    # Cloud Shell's clone sets the branch upstream to the local repo itself
-    # (branch.<name>.remote = .), so a bare `git pull` never fetches anything.
-    branch="$(git -C "$ROOT" symbolic-ref --quiet --short HEAD || true)"
-    if [[ -n "$branch" ]] && git -C "$ROOT" pull --ff-only --quiet origin "$branch" >/dev/null 2>&1; then
-      if [[ "$(git -C "$ROOT" rev-parse HEAD)" != "$before" ]]; then
+    # Resumable means: RESUMES_FROM <= the record's version <= the new code.
+    # install-core.mjs (readResumableRevisions) applies the same rule.
+    floor="$(git -C "$ROOT" show FETCH_HEAD:scripts/installer/RESUMES_FROM 2>/dev/null | head -n 1 || true)"
+    stranded=''
+    if ! git -C "$ROOT" merge-base --is-ancestor FETCH_HEAD HEAD 2>/dev/null; then
+      for state in "$ROOT"/.local/install/*/state.json; do
+        [[ -f "$state" ]] && ! grep -qE '^  "status": "complete",?$' "$state" || continue
+        # The plan's own field: a direct child of the top-level "plan" object.
+        revision="$(sed -n '/^  "plan": {$/,/^  }/p' "$state" | grep -oE '^    "sourceRevision": "[0-9a-f]{40}"' | grep -oE '[0-9a-f]{40}' || true)"
+        if [[ ! "$floor" =~ ^[0-9a-f]{40}$ || ! "$revision" =~ ^[0-9a-f]{40}$ ]] ||
+          ! git -C "$ROOT" merge-base --is-ancestor "$floor" "$revision" 2>/dev/null ||
+          ! git -C "$ROOT" merge-base --is-ancestor "$revision" FETCH_HEAD 2>/dev/null; then stranded=1; fi
+      done
+      if [[ -n "$stranded" ]]; then
+        printf '%s\n' '有尚未完成的安裝紀錄，新版本無法接續，維持目前程式版本以便接續。'
+      elif git -C "$ROOT" merge --ff-only --quiet FETCH_HEAD >/dev/null 2>&1; then
         printf '%s\n' '已更新到最新版本，重新啟動。'
         INSTALLER_SELF_UPDATED=1 exec bash "$ROOT/scripts/start-installation.sh"
+      else
+        printf '%s\n' '無法自動更新到最新版本，繼續使用目前版本。'
       fi
-    else
-      printf '%s\n' '無法檢查新版本，繼續使用目前版本。'
     fi
   fi
 fi

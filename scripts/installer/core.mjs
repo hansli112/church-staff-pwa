@@ -177,7 +177,9 @@ export function createInstallationPlan(input, identity, {
   return { ...plan, digest: fingerprint(plan) };
 }
 
-function validateStoredPlan(plan, sourceRevision, mode) {
+// resumable: the program versions whose records this one can safely continue
+// (see scripts/installer/RESUMES_FROM), always including its own.
+function validateStoredPlan(plan, resumable, mode) {
   if (!plan || plan.schemaVersion !== 1 || !RUN_ID.test(plan.runId ?? '')) throw installationError('安裝紀錄格式不正確');
   const { digest, ...fields } = plan;
   if (fingerprint(fields) !== digest) throw installationError('安裝設定已被更改，拒絕接續');
@@ -185,7 +187,7 @@ function validateStoredPlan(plan, sourceRevision, mode) {
   if (Object.values(config.features).some(Boolean) || config.devotional.enabled ||
       plan.projectId !== projectIdFor(plan.runId) || !SITE_NAME.test(plan.pagesProject ?? '') ||
       !REGIONS.some(([id]) => id === plan.region)) throw installationError('紀錄不是核心首次安裝設定');
-  if (plan.sourceRevision !== sourceRevision) throw installationError('程式版本與這次安裝不同；請使用原版本接續，不要重新建立專案');
+  if (!resumable.has(plan.sourceRevision)) throw installationError('程式版本與這次安裝不相容；請使用原版本接續，不要重新建立專案');
   if (plan.mode !== mode) throw installationError('示範安裝與真實安裝不可互相接續');
   if (plan.icons !== undefined && !isIconHashes(plan.icons)) throw installationError('安裝紀錄格式不正確');
   requireEmail(plan.googleEmail, 'Google 帳號');
@@ -311,8 +313,9 @@ async function updateDirectory(rootDir, runId) {
   return runDir;
 }
 
-export function createInstallationManager({ rootDir, google, cloudflare, build, sourceRevision = 'development', demo = false, release, fetchSite = fetchSiteJson, fetchAsset = fetchSiteBytes }) {
+export function createInstallationManager({ rootDir, google, cloudflare, build, sourceRevision = 'development', resumableRevisions = [], demo = false, release, fetchSite = fetchSiteJson, fetchAsset = fetchSiteBytes }) {
   const mode = demo ? 'demo' : 'cloud';
+  const resumable = new Set([sourceRevision, ...resumableRevisions]);
   let state;
   let store;
   let busy = false;
@@ -388,7 +391,7 @@ export function createInstallationManager({ rootDir, google, cloudflare, build, 
         try {
           const candidate = await openStore(rootDir, runId);
           const record = await candidate.read();
-          validateStoredPlan(record.plan, sourceRevision, mode);
+          validateStoredPlan(record.plan, resumable, mode);
           results.push({ runId, appName: record.plan.churchConfig.appName, projectId: record.plan.projectId, status: record.status });
         } catch { /* Invalid or different-version records cannot become resume targets. */ }
       }
@@ -582,7 +585,7 @@ export function createInstallationManager({ rootDir, google, cloudflare, build, 
         if (state?.approved && state.plan.runId !== runId) throw installationError('請先完成或停止目前的安裝，不可在執行期間切換目標');
         const nextStore = await openStore(rootDir, runId);
         const next = await nextStore.read();
-        validateStoredPlan(next.plan, sourceRevision, mode);
+        validateStoredPlan(next.plan, resumable, mode);
         if (next.schemaVersion !== 1 || typeof next.approved !== 'boolean') throw installationError('安裝紀錄格式不正確');
         assertCheckpointSafe(next);
         state = next;
@@ -599,7 +602,7 @@ export function createInstallationManager({ rootDir, google, cloudflare, build, 
             confirmAdmin !== state.plan.admin.email || acknowledgeRegion !== true || acknowledgeEmail !== true) {
           throw installationError('請明確核對新專案、管理員、資料地區與寄信，再確認安裝', 'CONFIRMATION_REQUIRED');
         }
-        validateStoredPlan(state.plan, sourceRevision, mode);
+        validateStoredPlan(state.plan, resumable, mode);
         await verifyIdentity(state.plan, signal);
         // Before anything is marked as started: a missing logo stops here.
         const icons = await readPlanIcons(store.runDir, state.plan.icons);

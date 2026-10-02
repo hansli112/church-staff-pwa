@@ -135,7 +135,10 @@ test('Cloud Shell launcher pins official tools, checks hashes and does not log i
   // An untrusted Cloud Shell has no Google credentials: stop before downloading anything.
   assert.ok(script.indexOf('TRUSTED_ENVIRONMENT') < script.indexOf('download()'));
   // A bare `git pull` is a no-op in Cloud Shell clones (upstream is the repo itself).
-  assert.match(script, /pull --ff-only --quiet origin "\$branch"/);
+  assert.match(script, /fetch --quiet origin "\$branch"/);
+  assert.match(script, /merge --ff-only --quiet FETCH_HEAD/);
+  // Older tutorial cards skip their own pull only when they find this text.
+  assert.match(script, /pull --ff-only --quiet origin/);
   // Relaunching on the same VM reuses tools only behind a checksum-bound marker.
   assert.match(script, /CACHE="\$BASE\/tools"/);
   for (const tool of ['node', 'flutter', 'wrangler']) assert.match(script, new RegExp(`ready "${tool}-\\$`));
