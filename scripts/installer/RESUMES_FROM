@@ -6,5 +6,7 @@
 #
 # Checked from here to 0e16ef3 (2026-10-02): the first-install steps, plan
 # fields and intents keep their meaning. Later changes only add to them: an
-# optional plan.icons (absent means the default icons) and the firebase
-# intent's addedInConsole flag.
+# optional plan.icons (absent means the default icons), the firebase
+# intent's addedInConsole flag, and the account-admin step before publish (it
+# saves no intent; on a record that already published it leaves the key to
+# update mode, so a live site never loses the key it runs on).

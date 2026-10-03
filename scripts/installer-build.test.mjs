@@ -192,3 +192,16 @@ test('an update whose build matches the live site stops before Flutter runs', as
   assert.ok(again.context.transient.deploymentDir);
   assert.ok(!again.calls.some(({ args }) => args[0] === 'build'));
 });
+
+test('a key stored just now builds a matching update anyway, so a deployment can carry it', async (t) => {
+  const first = await fixture(t);
+  const built = await buildCoreDeployment(first.context, first.options);
+  const again = await fixture(t);
+  again.context.plan.runId = first.context.plan.runId;
+  again.context.liveBuildVersion = built.buildVersion;
+  again.context.transient.accountAdminRedeploy = 'key-0123456789ab';
+  const result = await buildCoreDeployment(again.context, again.options);
+  assert.equal(result.unchanged, undefined);
+  assert.equal(result.buildVersion, built.buildVersion);
+  assert.ok(again.calls.some(({ args }) => args[0] === 'build'));
+});

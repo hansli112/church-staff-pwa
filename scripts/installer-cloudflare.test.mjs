@@ -354,3 +354,106 @@ test('addCustomDomain attaches the subdomain once and returns the CNAME to add',
   assert.deepEqual(await installer.addCustomDomain(context), expected);
   assert.deepEqual(posted, [{ name: 'staff.hope-church.org' }]);
 });
+
+// ---------------------------------------------------------------------------
+// Account management key
+// ---------------------------------------------------------------------------
+
+const KEY_JSON = JSON.stringify({ type: 'service_account', client_email: 'church-accounts@x.iam.gserviceaccount.com', private_key: 'never-public-key' });
+
+// A Pages project that takes PATCHed env vars the way Cloudflare does: merged,
+// and a secret's value never shown again.
+function patchableProject(state) {
+  return async (url, options) => {
+    if (url.includes('/deployments?')) return response([]);
+    if (options.method === 'PATCH') {
+      const vars = JSON.parse(options.body).deployment_configs.production.env_vars;
+      state.patches.push(JSON.parse(options.body));
+      for (const [name, value] of Object.entries(vars)) state.project.deployment_configs.production.env_vars[name] = { type: value.type, value: '' };
+    }
+    return response(state.project);
+  };
+}
+
+test('installerBinding also recognises a site that stores the account management key, as a secret only', () => {
+  const stored = installed();
+  stored.deployment_configs.production.env_vars.ACCOUNT_ADMIN_KEY = { type: 'secret_text', value: '' };
+  assert.deepEqual(installerBinding(stored), { runId: UPDATE_RUN, projectId: UPDATE_PLAN.projectId });
+  stored.deployment_configs.production.env_vars.ACCOUNT_ADMIN_KEY = { type: 'plain_text', value: KEY_JSON };
+  assert.equal(installerBinding(stored), null);
+});
+
+test('a first install stores the key as a secret and still recognises its project afterwards', async (t) => {
+  const state = { project: project(), patches: [] };
+  const { installer, context } = await fixture(t, { fetchImpl: patchableProject(state) });
+  context.checkpoint.intents.pagesProject = intent();
+  await installer.execute('pages-project', context);
+  assert.deepEqual(await installer.accountAdminKeyState(context), { stored: false });
+  await installer.storeAccountAdminKey(context, KEY_JSON);
+  assert.deepEqual(state.patches, [{ deployment_configs: { production: { env_vars: { ACCOUNT_ADMIN_KEY: { type: 'secret_text', value: KEY_JSON } } } } }]);
+  assert.deepEqual(await installer.accountAdminKeyState(context), { stored: true });
+  // Publish and resume check the same ownership; the key is this run's own change.
+  await installer.execute('pages-project', context);
+  assert.equal(JSON.stringify(context.checkpoint).includes('never-public-key'), false);
+});
+
+test('the key is never sent for a project that is not this install\'s', async (t) => {
+  const state = { project: project(), patches: [] };
+  state.project.deployment_configs.production.env_vars.OTHER = { type: 'plain_text', value: 'x' };
+  const { installer, context } = await fixture(t, { fetchImpl: patchableProject(state) });
+  context.checkpoint.intents.pagesProject = intent();
+  await assert.rejects(installer.storeAccountAdminKey(context, KEY_JSON), /不會接管/);
+  await assert.rejects(installer.storeAccountAdminKey(context, 'not json'), /格式不符/);
+  assert.deepEqual(state.patches, []);
+});
+
+test('update mode stores the key on an installed site, which update mode still finds', async (t) => {
+  const state = { project: installed(), patches: [] };
+  const { installer, context } = await fixture(t, { fetchImpl: async (url, options) => url.includes('/pages/projects?')
+    ? response([state.project]) : patchableProject(state)(url, options) });
+  context.plan = UPDATE_PLAN;
+  assert.deepEqual(await installer.accountAdminKeyState(context, { update: true }), { stored: false });
+  await installer.storeAccountAdminKey(context, KEY_JSON, { update: true });
+  assert.equal((await installer.accountAdminKeyState(context, { update: true })).stored, true);
+  assert.equal((await installer.listInstalls()).length, 1);
+});
+
+test('a newly stored key gets a new deployment even of a build already live', async (t) => {
+  let listed = [deployment('live', `installer:${UPDATE_RUN}:installer-new`)];
+  let calls;
+  // The next poll finds whatever the upload was marked with.
+  const env = await updateFixture(t, listed);
+  const marked = await fixture(t, { fetchImpl: async (url) => response(url.includes('/deployments?') ? listed : installed()),
+    wait: async () => { listed = [deployment('again', calls.find(({ args }) => args[0] === 'pages').args[8]), ...listed]; } });
+  calls = marked.calls;
+  marked.context.plan = UPDATE_PLAN;
+  marked.context.transient = { ...env.context.transient, accountAdminRedeploy: 'key-0123456789ab' };
+  assert.equal((await marked.installer.publishUpdate(marked.context)).unchanged, false);
+  const uploads = calls.filter(({ args }) => args[0] === 'pages');
+  assert.equal(uploads.length, 1);
+  assert.equal(uploads[0].args[8], `installer:${UPDATE_RUN}:installer-new:key-0123456789ab`);
+});
+
+test('a run stopped right after storing the key still recognises its project on resume', async (t) => {
+  const state = project();
+  const { installer, context } = await fixture(t, { fetchImpl: async (url) => response(url.includes('/deployments?') ? [] : state) });
+  context.checkpoint.intents.pagesProject = intent();
+  await installer.execute('pages-project', context);
+  // Stored on Cloudflare, but the run ended before it recorded anything.
+  state.deployment_configs.production.env_vars.ACCOUNT_ADMIN_KEY = { type: 'secret_text', value: '' };
+  await installer.execute('pages-project', context);
+  assert.deepEqual(await installer.accountAdminKeyState(context), { stored: true });
+});
+
+test('update mode tells whether the live deployment was made with the stored key', async (t) => {
+  const stored = installed();
+  stored.deployment_configs.production.env_vars.ACCOUNT_ADMIN_KEY = { type: 'secret_text', value: '' };
+  const withKey = { ...deployment('new', `installer:${UPDATE_RUN}:b`), env_vars: { ACCOUNT_ADMIN_KEY: { type: 'secret_text', value: '' } } };
+  const withoutKey = { ...deployment('old', `installer:${UPDATE_RUN}:a`), env_vars: { FIREBASE_PROJECT_ID: { type: 'plain_text', value: UPDATE_PLAN.projectId } } };
+  for (const [listed, live] of [[[withKey, withoutKey], true], [[withoutKey], false], [[deployment('bare', `installer:${UPDATE_RUN}:a`)], undefined],
+    [[{ ...withKey, latest_stage: { name: 'deploy', status: 'failure' } }, withoutKey], false]]) {
+    const { installer, context } = await fixture(t, { fetchImpl: async (url) => response(url.includes('/deployments?') ? listed : stored) });
+    context.plan = UPDATE_PLAN;
+    assert.deepEqual(await installer.accountAdminKeyState(context, { update: true }), { stored: true, live });
+  }
+});

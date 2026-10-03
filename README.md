@@ -105,7 +105,7 @@
 | 讀取使用者完整名單 | 可 | 可 | 不授予 |
 | 帳號、角色、群組與範本管理 | 可 | 不可 | 不可 |
 
-Firestore rules 才是資料庫防線，隱藏按鈕不是授權。`zoneTypes` 是 `zones` 的投影；直接在 Console 寫資料時也須保持一致。刪除 `users/{uid}` 撤銷 App 資料存取，不等於刪除 Firebase Auth 帳號。
+Firestore rules 才是資料庫防線，隱藏按鈕不是授權。`zoneTypes` 是 `zones` 的投影；直接在 Console 寫資料時也須保持一致。刪除 `users/{uid}` 撤銷 App 資料存取；網站設定了 `ACCOUNT_ADMIN_KEY`（見[部署指南](docs/deployment.md)）時，App 刪除同工會一併刪除 Firebase Auth 帳號，否則登入帳號會留著。
 
 **隱私提醒**：Firestore 沒有欄位級讀取遮罩；可讀使用者名單的服事表編輯者也能讀那些文件中的 email、推播 token 等欄位。授權前請理解此範圍，收集資料以必要為限。部署者負責備份、刪除、存取檢查、帳號停用與事故處理。
 

@@ -63,7 +63,7 @@ async function setup(t, overrides = {}) {
     assert.ok(init.signal instanceof AbortSignal);
     const parsed = new URL(url);
     const host = parsed.hostname.split('.')[0];
-    if (['firebase', 'firestore', 'identitytoolkit', 'firebaserules'].includes(host)) {
+    if (['firebase', 'firestore', 'identitytoolkit', 'firebaserules', 'iam'].includes(host)) {
       assert.equal(init.headers['x-goog-user-project'], projectId);
     } else assert.equal(init.headers['x-goog-user-project'], undefined);
     const pathname = decodeURIComponent(parsed.pathname);
@@ -1082,4 +1082,153 @@ test('the password mail names the church as its sender, and a refusal does not s
   await refused.through('activation');
   assert.equal(refused.state.sent, 1);
   assert.ok(refused.context.events.some((event) => event.message?.includes('寄件者名稱沒有設定成功')));
+});
+
+// ---------------------------------------------------------------------------
+// Account management (both modes)
+// ---------------------------------------------------------------------------
+
+const accountEmail = `church-accounts@${projectId}.iam.gserviceaccount.com`;
+const accountPath = `/v1/projects/${projectId}/serviceAccounts/${accountEmail}`;
+const PRIVATE_KEY = '-----BEGIN PRIVATE KEY-----never-persist-account-key-----END PRIVATE KEY-----';
+
+// IAM, the project policy and enabling the IAM API, on top of setup()'s fakes.
+function fakeIam(h, { keys = [], account, bindings = [{ role: 'roles/owner', members: ['user:operator@example.invalid'] }], refuseKeys } = {}) {
+  const iam = { account, keys: [...keys], policy: { version: 1, etag: 'BwX1', bindings }, created: 0, setPolicy: [], deleted: [] };
+  iam.interceptor = (call) => {
+    if (call.host === 'serviceusage' && call.pathname.endsWith('/services/iam.googleapis.com:enable')) {
+      h.state.enabled.add('iam.googleapis.com');
+      return response(200, { name: 'operations/acat.iam-enable', done: true, response: {} });
+    }
+    if (call.host === 'cloudresourcemanager' && call.pathname === `/v3/${project}:getIamPolicy`) return response(200, iam.policy);
+    if (call.host === 'cloudresourcemanager' && call.pathname === `/v3/${project}:setIamPolicy`) {
+      assert.equal(call.body.policy.etag, iam.policy.etag, 'sent back with the etag that was read');
+      iam.setPolicy.push(call.body);
+      iam.policy = { ...call.body.policy, etag: 'BwX2' };
+      return response(200, iam.policy);
+    }
+    if (call.host !== 'iam') return undefined;
+    if (call.pathname === accountPath && call.method === 'GET') return iam.account ? response(200, iam.account) : response(404);
+    if (call.pathname === `/v1/projects/${projectId}/serviceAccounts` && call.method === 'POST') {
+      assert.equal(call.body.accountId, 'church-accounts');
+      iam.account = { email: accountEmail, projectId, name: `projects/${projectId}/serviceAccounts/${accountEmail}` };
+      return response(200, iam.account);
+    }
+    if (call.pathname === `${accountPath}/keys` && call.method === 'GET') {
+      assert.equal(call.search, '?keyTypes=USER_MANAGED');
+      return response(200, { keys: iam.keys.map((id) => ({ name: `projects/${projectId}/serviceAccounts/${accountEmail}/keys/${id}` })) });
+    }
+    if (call.pathname === `${accountPath}/keys` && call.method === 'POST') {
+      if (refuseKeys) return response(400, { error: { status: 'FAILED_PRECONDITION', message: 'Key creation is not allowed on this service account.' } });
+      const id = `${++iam.created}`.padStart(40, 'a');
+      iam.keys.push(id);
+      const file = { type: 'service_account', project_id: projectId, private_key_id: id, private_key: PRIVATE_KEY, client_email: accountEmail };
+      return response(200, { name: `projects/${projectId}/serviceAccounts/${accountEmail}/keys/${id}`,
+        privateKeyData: Buffer.from(JSON.stringify(file)).toString('base64') });
+    }
+    if (call.pathname.startsWith(`${accountPath}/keys/`) && call.method === 'DELETE') {
+      const id = call.pathname.split('/').at(-1);
+      iam.deleted.push(id);
+      iam.keys = iam.keys.filter((key) => key !== id);
+      return response(200, {});
+    }
+    return undefined;
+  };
+  h.setInterceptor(iam.interceptor);
+  return iam;
+}
+
+test('account management: a service account that may only manage sign-ins, and a key that is never saved', async (t) => {
+  const h = await setup(t);
+  await h.through('admin');
+  const iam = fakeIam(h);
+  const key = await h.adapter.newAccountAdminKey(h.context, { configured: false });
+  assert.ok(h.state.enabled.has('iam.googleapis.com'));
+  assert.equal(JSON.parse(key.json).client_email, accountEmail);
+  assert.equal(key.id, iam.keys[0]);
+  // Every binding that was there is sent back; one member is added.
+  assert.equal(iam.setPolicy.length, 1);
+  assert.deepEqual(iam.policy.bindings, [
+    { role: 'roles/owner', members: ['user:operator@example.invalid'] },
+    { role: 'roles/firebaseauth.admin', members: [`serviceAccount:${accountEmail}`] },
+  ]);
+  const persisted = JSON.stringify([h.context.snapshots, h.context.checkpoint, h.context.events]);
+  assert.equal(persisted.includes('never-persist-account-key'), false);
+
+  // Stored on the site (configured) with exactly that key: nothing to do.
+  assert.equal(await h.adapter.newAccountAdminKey(h.context, { configured: true }), null);
+  assert.equal(iam.created, 1);
+  assert.equal(iam.setPolicy.length, 1, 'an existing grant is not sent again');
+});
+
+test('account management redoes a key the site does not hold, and only then retires the others', async (t) => {
+  const h = await setup(t);
+  await h.through('admin');
+  // An earlier run stopped between creating a key and storing it.
+  const iam = fakeIam(h, { keys: ['b'.repeat(40), 'c'.repeat(40)],
+    account: { email: accountEmail, projectId },
+    bindings: [{ role: 'roles/firebaseauth.admin', members: ['user:someone@example.invalid', `serviceAccount:${accountEmail}`] }] });
+  const key = await h.adapter.newAccountAdminKey(h.context, { configured: true });
+  assert.ok(key, 'two keys: which one the site holds is unknown');
+  assert.equal(iam.setPolicy.length, 0);
+  assert.deepEqual(iam.deleted, [], 'nothing is retired before the new key is stored');
+  await h.adapter.retireOtherAccountAdminKeys(h.context, { keep: key.id });
+  assert.deepEqual(iam.keys, [key.id]);
+  assert.deepEqual(iam.deleted.sort(), ['b'.repeat(40), 'c'.repeat(40)]);
+});
+
+test('an organisation that forbids service account keys skips account management, not the install', async (t) => {
+  const h = await setup(t);
+  await h.through('admin');
+  fakeIam(h, { refuseKeys: true });
+  assert.equal(await h.adapter.newAccountAdminKey(h.context, { configured: false }), null);
+  assert.ok(h.context.events.some((event) => event.message?.includes('不允許建立服務帳號金鑰')));
+});
+
+test('a first install that already published keeps its key; a disabled account is left disabled', async (t) => {
+  const h = await setup(t);
+  await h.through('admin');
+  const iam = fakeIam(h, { keys: ['b'.repeat(40)], account: { email: accountEmail, projectId } });
+  h.context.checkpoint.resources.website = 'https://demo-church-site.pages.dev';
+  assert.equal(await h.adapter.newAccountAdminKey(h.context, { configured: false }), null);
+  assert.equal(iam.created, 0);
+
+  iam.account = { email: accountEmail, projectId, disabled: true };
+  delete h.context.checkpoint.resources.website;
+  assert.equal(await h.adapter.newAccountAdminKey(h.context, { configured: false }), null);
+  assert.equal(iam.created, 0);
+  assert.ok(h.context.events.some((event) => event.message?.includes('被停用')));
+});
+
+test('update mode sets account management up on a site installed before it', async (t) => {
+  const h = await setup(t);
+  await h.through('activation');
+  h.context.transient = {};
+  const iam = fakeIam(h);
+  const key = await h.adapter.newAccountAdminKey(h.context, { update: true, configured: false });
+  assert.ok(key);
+  assert.equal(iam.created, 1);
+  // A Google project without this install's label is never touched.
+  h.state.project.labels = { 'church-install': 'someone-else' };
+  await rejectsCode(h.adapter.newAccountAdminKey(h.context, { update: true, configured: false }), 'GOOGLE_RESOURCE_CONFLICT');
+  assert.equal(iam.created, 1);
+});
+
+test('a service account Google has not finished creating is waited for, not reported as a failure', async (t) => {
+  const h = await setup(t);
+  await h.through('admin');
+  const iam = fakeIam(h);
+  let refused = 0;
+  h.setInterceptor((call, ...rest) => {
+    if (call.pathname.endsWith(':setIamPolicy') && refused < 2) {
+      refused++;
+      return response(400, { error: { status: 'INVALID_ARGUMENT', message: `Service account ${accountEmail} does not exist.` } });
+    }
+    return iam.interceptor(call, ...rest);
+  });
+  const key = await h.adapter.newAccountAdminKey(h.context, { configured: false });
+  assert.ok(key);
+  assert.equal(refused, 2);
+  assert.equal(iam.setPolicy.length, 1);
+  assert.equal(h.state.delays.filter((ms) => ms === 10_000).length, 2);
 });

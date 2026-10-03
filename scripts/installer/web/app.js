@@ -273,7 +273,7 @@ function renderUpdate(state) {
       summaryRow('教會名稱', update.appName, $('update-summary'));
       summaryRow('網站', update.website, $('update-summary'));
       summaryRow('版本', `${update.currentRelease ?? '較早的版本'} → ${update.release ?? '最新版'}`, $('update-summary'));
-      summaryRow('會變更', '網站程式、資料存取規則', $('update-summary'));
+      summaryRow('會變更', '網站程式、資料存取規則、同工帳號管理（還沒設定的話）', $('update-summary'));
       summaryRow('不會變更', '同工帳號、服事表、所有資料', $('update-summary'));
       $('confirm-update-label').textContent = `確認要更新 ${update.website}。`;
       $('confirm-update').checked = false;

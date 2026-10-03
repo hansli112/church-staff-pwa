@@ -5,6 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { createInstallationManager, createInstallationPlan, publicError, STEPS } from './installer/core.mjs';
 import { createDemoProviders } from './install-core.mjs';
+import { setUpAccountAdmin } from './installer/core.mjs';
 import { commandEnvironment, runCommand } from './installer/process.mjs';
 import { git } from './test-git.mjs';
 
@@ -31,6 +32,9 @@ async function fixture(t, options = {}) {
   }
   const build = providers.build;
   providers.build = async (context) => { calls.push('build'); return build(context); };
+  // The account step asks Cloudflare first, then Google (setUpAccountAdmin).
+  const keyState = providers.cloudflare.accountAdminKeyState;
+  providers.cloudflare.accountAdminKeyState = async (context, options) => { calls.push('account-admin'); return keyState(context, options); };
   const manager = createInstallationManager({ rootDir, ...providers, demo: true, sourceRevision: 'test-v1' });
   t.after(() => manager.dispose());
   await manager.connectGoogle();
@@ -105,7 +109,8 @@ test('full installation uses the same interface and saves each completed step', 
   const file = JSON.parse(await readFile(path.join(rootDir, '.local/install', plan.runId, 'state.json')));
   assert.equal(file.approved, true);
   assert.equal(file.status, 'complete');
-  assert.equal(Object.keys(file.intents).length, STEPS.length);
+  // Every step but the account one, which keeps nothing (its key is never saved).
+  assert.equal(Object.keys(file.intents).length, STEPS.length - 1);
   assert.equal(JSON.stringify(file).includes('access_token'), false);
   await assert.rejects(manager.plan(input()), /不能更改/);
 });
@@ -421,4 +426,55 @@ test('a logo file swapped for a link is refused, not followed', async (t) => {
   await symlink(elsewhere, logo);
   await assert.rejects(manager.apply(confirmation(plan)), /Logo 檔案遺失或被更改/);
   assert.equal(manager.snapshot().status, 'ready');
+});
+
+// The key passes from Google to Cloudflare in memory. A first install has not
+// published, so old keys go at once; an update keeps them until it has.
+function accountProviders(calls, { stored = true, live = true, key = { id: 'new0123456789abcd', json: '{"k":1}' } } = {}) {
+  return {
+    google: {
+      newAccountAdminKey: async (_context, options) => { calls.push(['key', options]); return key; },
+      retireOtherAccountAdminKeys: async (_context, options) => { calls.push(['retire', options]); },
+    },
+    cloudflare: {
+      accountAdminKeyState: async (_context, options) => { calls.push(['state', options]); return { stored, live }; },
+      storeAccountAdminKey: async (_context, json, options) => { calls.push(['store', json, options]); },
+    },
+  };
+}
+
+test('a first install stores the new key, then retires the others at once', async () => {
+  const calls = [];
+  const context = { transient: {} };
+  await setUpAccountAdmin({ ...accountProviders(calls, { stored: false }), context });
+  assert.deepEqual(calls, [
+    ['state', { update: false }], ['key', { update: false, configured: false }],
+    ['store', '{"k":1}', { update: false }], ['retire', { keep: 'new0123456789abcd' }],
+  ]);
+  assert.equal(context.transient.accountAdminRedeploy, 'key-new012345678');
+});
+
+test('an update stores the new key and leaves retiring the old ones until it has published', async () => {
+  const calls = [];
+  const context = { transient: {} };
+  await setUpAccountAdmin({ ...accountProviders(calls), context, update: true });
+  assert.ok(!calls.some(([name]) => name === 'retire'));
+  assert.equal(context.transient.retireAccountAdminKeys, 'new0123456789abcd');
+  assert.equal(context.transient.accountAdminRedeploy, 'key-new012345678');
+});
+
+test('a failed store never retires anything', async () => {
+  const calls = [];
+  const providers = accountProviders(calls, { stored: false });
+  providers.cloudflare.storeAccountAdminKey = async () => { throw new Error('Cloudflare down'); };
+  await assert.rejects(setUpAccountAdmin({ ...providers, context: { transient: {} } }), /Cloudflare down/);
+  assert.ok(!calls.some(([name]) => name === 'retire'));
+});
+
+test('a key stored by an update that never deployed gets deployed now', async () => {
+  for (const [live, expected] of [[false, 'key'], [true, undefined], [undefined, undefined]]) {
+    const context = { transient: {} };
+    await setUpAccountAdmin({ ...accountProviders([], { live, key: null }), context, update: true });
+    assert.equal(context.transient.accountAdminRedeploy, expected);
+  }
 });

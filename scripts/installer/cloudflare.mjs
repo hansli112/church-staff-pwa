@@ -2,21 +2,31 @@ import { chmod, lstat, mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { privateEnvironment, runIsolatedCommand } from './process.mjs';
-import { fingerprint, installationError, isPrivateDirectory, projectIdFor, stepIdsFor, verifyBuildArtifacts, WRANGLER_VERSION } from './shared.mjs';
+import { ACCOUNT_ADMIN_SECRET, fingerprint, installationError, isPrivateDirectory, projectIdFor, stepIdsFor, verifyBuildArtifacts, WRANGLER_VERSION } from './shared.mjs';
 
 export const CLOUDFLARE_SCOPES = ['account:read', 'user:read', 'pages:write'];
 const API = 'https://api.cloudflare.com/client/v4';
 const ACCOUNT_ID = /^[a-f0-9]{32}$/;
 const RUN_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
+const storesAccountAdminKey = (vars) => vars?.[ACCOUNT_ADMIN_SECRET]?.type === 'secret_text';
+
+// The production env vars an install has: the two the create step writes,
+// plus the account management key once that step has stored it.
+function hasOnlyInstallerVars(vars) {
+  if (!vars || typeof vars !== 'object') return false;
+  const names = Object.keys(vars).filter((name) => name !== ACCOUNT_ADMIN_SECRET).sort().join();
+  return names === 'FIREBASE_PROJECT_ID,INSTALLER_RUN_ID' &&
+    (!(ACCOUNT_ADMIN_SECRET in vars) || storesAccountAdminKey(vars));
+}
+
 // A Pages project this wizard created, recognisable from Cloudflare alone: a
-// direct upload (no Git source) to 'main' whose production env vars are exactly
-// the two the create step writes, naming a run and the Google project derived
-// from it. Returns that pair, or null for anything else in the account.
+// direct upload (no Git source) to 'main' whose production env vars are the
+// ones an install writes (hasOnlyInstallerVars), naming a run and the Google project
+// derived from it. Returns that pair, or null for anything else in the account.
 export function installerBinding(project) {
   const vars = project?.deployment_configs?.production?.env_vars;
-  if (!project || project.source || project.production_branch !== 'main' || !vars ||
-      Object.keys(vars).sort().join() !== 'FIREBASE_PROJECT_ID,INSTALLER_RUN_ID') return null;
+  if (!project || project.source || project.production_branch !== 'main' || !hasOnlyInstallerVars(vars)) return null;
   const runId = vars.INSTALLER_RUN_ID?.type === 'plain_text' ? vars.INSTALLER_RUN_ID.value : undefined;
   const projectId = vars.FIREBASE_PROJECT_ID?.type === 'plain_text' ? vars.FIREBASE_PROJECT_ID.value : undefined;
   if (!RUN_ID.test(runId ?? '') || projectId !== projectIdFor(runId)) return null;
@@ -41,7 +51,13 @@ function safeJson(stdout) {
   try { return JSON.parse(stdout); } catch { throw cloudflareError('Cloudflare 工具回應格式不符，請重新授權。'); }
 }
 
-const configurationFingerprint = (project) => fingerprint(project.deployment_configs);
+// Without the account management key: storing it is this install's own
+// change, and a resume after storing it must still recognise the project.
+function configurationFingerprint(project) {
+  const configs = structuredClone(project.deployment_configs ?? null);
+  delete configs?.production?.env_vars?.[ACCOUNT_ADMIN_SECRET];
+  return fingerprint(configs);
+}
 
 async function verifyUpload(directory) {
   if (!path.isAbsolute(directory) || !(await lstat(directory)).isDirectory()) throw cloudflareError('Pages 建置目錄格式不符。');
@@ -190,8 +206,7 @@ export function createCloudflareInstaller({ command = runIsolatedCommand, fetchI
       intent.accountId === plan.cloudflareAccountId && project.name === plan.pagesProject &&
       project.production_branch === 'main' && !project.source;
     const bindingsMatch = vars?.INSTALLER_RUN_ID?.value === plan.runId && vars?.FIREBASE_PROJECT_ID?.value === plan.projectId &&
-      vars?.INSTALLER_RUN_ID?.type === 'plain_text' && vars?.FIREBASE_PROJECT_ID?.type === 'plain_text' &&
-      Object.keys(vars || {}).every((key) => ['INSTALLER_RUN_ID', 'FIREBASE_PROJECT_ID'].includes(key));
+      vars?.INSTALLER_RUN_ID?.type === 'plain_text' && vars?.FIREBASE_PROJECT_ID?.type === 'plain_text' && hasOnlyInstallerVars(vars);
     const unchangedSinceRecorded = (!recorded.pagesProjectId || project.id === recorded.pagesProjectId) &&
       (!recorded.pagesConfigFingerprint || configurationFingerprint(project) === recorded.pagesConfigFingerprint) &&
       (!recorded.pagesSubdomain || project.subdomain === recorded.pagesSubdomain);
@@ -333,7 +348,10 @@ export function createCloudflareInstaller({ command = runIsolatedCommand, fetchI
     if (transient.unchanged) return { website, unchanged: true };
     if (!transient.buildDir || !transient.buildVersion) throw cloudflareError('缺少已驗證的建置產物，禁止發佈。');
     await verifyUpload(transient.buildDir);
-    const marker = `installer:${plan.runId}:${transient.buildVersion}`;
+    // A newly stored key needs a new deployment even of the same build, and
+    // an equal marker would read as already deployed. The suffix names the
+    // key, so a resumed update still finds its own upload.
+    const marker = `installer:${plan.runId}:${transient.buildVersion}${transient.accountAdminRedeploy ? `:${transient.accountAdminRedeploy}` : ''}`;
     const ours = (item) => item.deployment_trigger?.metadata?.commit_message === marker;
     const previousFailures = new Set(existing.filter((item) => ours(item) && failed(item)).map((item) => item.id));
     // A resumed update whose upload already went through only waits for it.
@@ -371,6 +389,47 @@ export function createCloudflareInstaller({ command = runIsolatedCommand, fetchI
     const status = ['initializing', 'pending', 'active', 'deactivated', 'blocked', 'error'].includes(entry?.status) ? entry.status : 'pending';
     return { domain, status, cname: { name: domain.split('.')[0], fullName: domain, target: project.subdomain } };
   }
+  // Account management (see setUpAccountAdmin in core.mjs). Both modes first
+  // prove the project is this install's, the way each mode always does.
+  async function accountAdminProject(context, update) {
+    if (update) return updateTarget(context);
+    const project = await prepare(context);
+    verifyProject(project, context);
+    return project;
+  }
+  // stored: the project holds a key. live: the site's current deployment was
+  // made with it (update mode only; undefined when Cloudflare does not say).
+  async function accountAdminKeyState(context, { update = false } = {}) {
+    const project = await accountAdminProject(context, update);
+    const stored = storesAccountAdminKey(project.deployment_configs?.production?.env_vars);
+    if (!update || !stored) return { stored };
+    const current = (await deployments(projectRoute(context.plan), context.signal))
+      .find((item) => item.environment === 'production' && item.latest_stage?.name === 'deploy' && item.latest_stage.status === 'success');
+    return { stored, live: current?.env_vars ? storesAccountAdminKey(current.env_vars) : undefined };
+  }
+  // Stored as a secret: Cloudflare never shows it again, not even to this wizard.
+  async function storeAccountAdminKey(context, json, { update = false } = {}) {
+    const { plan, signal } = context;
+    if (typeof json !== 'string' || !json.startsWith('{') || json.length > 5000) throw cloudflareError('帳號管理金鑰格式不符，未存進網站。');
+    await accountAdminProject(context, update);
+    await api(projectRoute(plan), { method: 'PATCH', signal, body: {
+      deployment_configs: { production: { env_vars: { [ACCOUNT_ADMIN_SECRET]: { type: 'secret_text', value: json } } } },
+    } });
+    const project = (await api(projectRoute(plan), { signal })).result;
+    if (!storesAccountAdminKey(project?.deployment_configs?.production?.env_vars)) {
+      throw cloudflareError('帳號管理金鑰沒有存進 Cloudflare，請重試。');
+    }
+    if (update) {
+      await updateTarget(context);
+      return;
+    }
+    // This run's own change to the settings: record it, so publish still
+    // recognises the project as unchanged by anyone else.
+    const pagesConfigFingerprint = configurationFingerprint(project);
+    await context.save({ resources: { pagesConfigFingerprint } });
+    context.checkpoint.resources = { ...context.checkpoint.resources, pagesConfigFingerprint };
+    verifyProject(project, context);
+  }
   async function execute(step, context) {
     if (!STEP_IDS.has(step)) throw cloudflareError('不支援的 Cloudflare 安裝步驟。');
     return step === 'pages-project' ? createPagesProject(context) : publish(context);
@@ -382,5 +441,5 @@ export function createCloudflareInstaller({ command = runIsolatedCommand, fetchI
     await Promise.allSettled([...activeCommands]);
     if (home) await rm(home, { recursive: true, force: true });
   }
-  return { inspectIdentity, startLogin, preflight, execute, listInstalls, publishUpdate, addCustomDomain, dispose };
+  return { inspectIdentity, startLogin, preflight, execute, listInstalls, publishUpdate, addCustomDomain, accountAdminKeyState, storeAccountAdminKey, dispose };
 }

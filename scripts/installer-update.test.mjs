@@ -17,6 +17,10 @@ async function fixture(t, { config } = {}) {
   providers.cloudflare.publishUpdate = async (context) => { calls.push('publish'); return publish(context); };
   const build = providers.build;
   providers.build = async (context) => { calls.push(['build', context.liveBuildVersion, context.plan.churchConfig.appName]); return build(context); };
+  const retire = providers.google.retireOtherAccountAdminKeys;
+  providers.google.retireOtherAccountAdminKeys = async (context, options) => { calls.push(['retire keys', options]); return retire(context, options); };
+  const store = providers.cloudflare.storeAccountAdminKey;
+  providers.cloudflare.storeAccountAdminKey = async (context, json, options) => { calls.push(['store key', options]); return store(context, json, options); };
   if (config !== undefined) {
     const fetchSite = providers.fetchSite;
     providers.fetchSite = async (url, options) => url.endsWith('/church-config.json') ? config : fetchSite(url, options);
@@ -50,7 +54,9 @@ test('update finds the installed site, rebuilds it from its own config and publi
   assert.deepEqual(update.steps.map((step) => step.id), UPDATE_STEPS.map((step) => step.id).filter((id) => id !== 'domain'));
   assert.ok(update.steps.every((step) => step.status === 'complete'));
   // The build gets the live build version (to skip identical rebuilds) and the site's own config.
-  assert.deepEqual(calls, ['inspect', ['build', 'installer-demo-old', '恩典教會同工助手'], 'rules', 'publish']);
+  // A site from before account management gets its key first, in update mode.
+  assert.deepEqual(calls, ['inspect', ['store key', { update: true }], ['build', 'installer-demo-old', '恩典教會同工助手'], 'rules', 'publish',
+    ['retire keys', { update: true, keep: '0123456789abcdef' }]]);
   // An update is not an installation: nothing to resume, no install record.
   assert.deepEqual(await manager.listRuns(), []);
   assert.equal(manager.snapshot().plan, undefined);
@@ -168,4 +174,29 @@ test('without a custom domain the domain step is not shown or run', async (t) =>
   await manager.applyUpdate({ confirm: site.pagesProject });
   assert.ok(!manager.snapshot().update.steps.some((step) => step.id === 'domain'));
   assert.ok(!calls.includes('domain'));
+});
+
+test('a second update leaves the stored key alone', async (t) => {
+  const { manager, calls } = await fixture(t);
+  await manager.connectGoogle();
+  await manager.connectCloudflare();
+  await manager.findInstalls();
+  const [site] = manager.snapshot().installs;
+  for (let run = 0; run < 2; run += 1) {
+    await manager.planUpdate({ pagesProject: site.pagesProject, accountId: site.accountId });
+    await manager.applyUpdate({ confirm: 'grace-church-staff' });
+  }
+  assert.equal(calls.filter((call) => call[0] === 'store key').length, 1);
+});
+
+test('an update retires the old account management keys only after it has published', async (t) => {
+  const { manager, calls } = await fixture(t);
+  await manager.connectGoogle();
+  await manager.connectCloudflare();
+  await manager.findInstalls();
+  const [site] = manager.snapshot().installs;
+  await manager.planUpdate({ pagesProject: site.pagesProject, accountId: site.accountId });
+  await manager.applyUpdate({ confirm: 'grace-church-staff' });
+  const order = calls.map((call) => Array.isArray(call) ? call[0] : call);
+  assert.ok(order.indexOf('publish') < order.indexOf('retire keys'));
 });

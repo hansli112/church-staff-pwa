@@ -8,8 +8,8 @@ import '../../../roster/presentation/providers/roster_provider.dart';
 import '../providers/group_settings_provider.dart';
 import '../providers/session_provider.dart';
 import '../providers/user_admin_provider.dart';
+import '../widgets/account_error_snack_bar.dart';
 import '../../../../core/config/church_config.dart';
-import '../../../../core/utils/error_messages.dart';
 
 class UserEditorScreen extends StatefulWidget {
   final User? user; // If null, it's add mode
@@ -189,15 +189,9 @@ class _UserEditorScreenState extends State<UserEditorScreen> {
       } catch (e, st) {
         log('儲存使用者資料失敗', error: e, stackTrace: st);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                e is AccountSafetyException
-                    ? e.message
-                    : '錯誤：${mapErrorToUserMessage(e)}',
-              ),
-            ),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(accountErrorSnackBar(e, prefix: '錯誤：'));
         }
       }
     }
