@@ -313,6 +313,30 @@ async function updateDirectory(rootDir, runId) {
   return runDir;
 }
 
+// Account management: a Google service account that may create and remove
+// staff sign-ins, its key stored as the site's secret. Google and Cloudflare
+// each do their half; the key passes between them in memory and is never
+// written anywhere else.
+//
+// A stored key reaches the site only with its next deployment. A first install
+// has not published yet (the Google half makes sure), so old keys go at once.
+// An update sets transient.retireAccountAdminKeys instead, and the old keys go
+// once the new deployment is live; until then the site still runs on them.
+export async function setUpAccountAdmin({ google, cloudflare, context, update = false }) {
+  const site = await cloudflare.accountAdminKeyState(context, { update });
+  const key = await google.newAccountAdminKey(context, { update, configured: site.stored });
+  if (key) {
+    await cloudflare.storeAccountAdminKey(context, key.json, { update });
+    // Names the deployment that carries this key (see publishUpdate).
+    context.transient.accountAdminRedeploy = `key-${key.id.slice(0, 12)}`;
+    if (update) context.transient.retireAccountAdminKeys = key.id;
+    else await google.retireOtherAccountAdminKeys(context, { keep: key.id });
+    return;
+  }
+  // Stored by an earlier update whose deployment never went through.
+  if (update && site.stored && site.live === false) context.transient.accountAdminRedeploy = 'key';
+}
+
 export function createInstallationManager({ rootDir, google, cloudflare, build, sourceRevision = 'development', resumableRevisions = [], demo = false, report = () => {}, release, fetchSite = fetchSiteJson, fetchAsset = fetchSiteBytes }) {
   const mode = demo ? 'demo' : 'cloud';
   const resumable = new Set([sourceRevision, ...resumableRevisions]);
@@ -514,11 +538,17 @@ export function createInstallationManager({ rootDir, google, cloudflare, build, 
             update.steps[step.id] = 'running';
             message = step.label;
             if (step.provider === 'build') await build(context);
+            else if (step.provider === 'accounts') await setUpAccountAdmin({ google, cloudflare, context, update: true });
             else if (step.provider === 'google') await google.update(step.id, context);
             else if (step.provider === 'domain') {
               update.domain = await cloudflare.addCustomDomain(context);
               await google.update('domain', context);
-            } else update.result = await cloudflare.publishUpdate(context);
+            } else {
+              update.result = await cloudflare.publishUpdate(context);
+              // The site now runs on the key stored above; the old ones can go.
+              const keep = context.transient.retireAccountAdminKeys;
+              if (keep) await google.retireOtherAccountAdminKeys(context, { update: true, keep });
+            }
             update.steps[step.id] = context.transient.unchanged && ['build', 'publish'].includes(step.id) ? 'skipped' : 'complete';
           }
           update.status = 'complete';
@@ -625,6 +655,7 @@ export function createInstallationManager({ rootDir, google, cloudflare, build, 
             message = step.label;
             await store.write(state);
             if (step.provider === 'build') await build(context);
+            else if (step.provider === 'accounts') await setUpAccountAdmin({ google, cloudflare, context });
             else await (step.provider === 'google' ? google : cloudflare).execute(step.id, context);
             await writeQueue;
             state.steps[step.id] = 'complete';

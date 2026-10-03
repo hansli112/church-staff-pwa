@@ -22,6 +22,7 @@ import {
 
 const CALENDAR = { edit: 'calendar' };
 const ROSTER = { edit: 'roster' };
+const ACCOUNTS = { edit: 'accounts' };
 
 const YOUTH_EDITOR_UID = 'youth-editor-uid';
 /// 有青崇的牧區，卻不在 roster-editors：牧區本身不是授權。
@@ -276,6 +277,31 @@ describe('authorize — 編輯服事表', () => {
   test('不認得的崇拜比牧區先檢查', async () => {
     const permit = await authorizeAs(YOUTH_EDITOR_UID, ROSTER);
     assert.throws(() => permit.forRosterType('wedding'), { status: 400 });
+  });
+});
+
+describe('authorize — 管理同工帳號', () => {
+  test('管理員可以', async () => {
+    assert.deepEqual(await authorizeAs(ADMIN_UID, ACCOUNTS), {
+      uid: ADMIN_UID,
+      name: ADMIN_NAME,
+      token: idToken(ADMIN_UID),
+    });
+  });
+
+  // 沒有任何 group 能給這個權限 —— 跟 firestore.rules 新增、刪除 users/{uid} 一樣只看 admin。
+  test('任何 group 的同工、會友都不行', async () => {
+    for (const uid of [CALENDAR_EDITOR_UID, ROSTER_EDITOR_UID, YOUTH_EDITOR_UID, MEMBER_UID]) {
+      await assert.rejects(authorizeAs(uid, ACCOUNTS), {
+        status: 403,
+        message: '只有管理員可以新增或刪除同工帳號',
+      });
+    }
+  });
+
+  test('即使 groups 裡寫了 accounts 也不行', async () => {
+    const users = { [MEMBER_UID]: { role: 'staff', groups: ['accounts', 'null'] } };
+    await assert.rejects(authorizeAs(MEMBER_UID, ACCOUNTS, { users }), { status: 403 });
   });
 });
 

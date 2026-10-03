@@ -7,9 +7,9 @@ import { uidFromIdToken } from '../worker/firebase_user.js';
 import {
   buildGoogleEvent,
   getAccessToken,
-  resetAccessTokenCache,
 } from '../worker/google_calendar.js';
 import { notifyPayload } from '../worker/line_notify.js';
+import { resetServiceAccountTokens } from '../worker/service_account.js';
 import {
   ADMIN_NAME,
   ADMIN_UID,
@@ -27,7 +27,7 @@ import {
   withFetch,
 } from './helpers.js';
 
-beforeEach(() => resetAccessTokenCache());
+beforeEach(() => resetServiceAccountTokens());
 
 // ---------------------------------------------------------------------------
 

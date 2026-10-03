@@ -18,17 +18,27 @@ export const STEPS = [
   ['build', '建置教會網站', 'build'],
   ['rules', '部署資料存取規則', 'google'],
   ['admin', '建立指定管理員', 'google'],
+  ['account-admin', '設定同工帳號管理', 'accounts'],
   ['publish', '發布網站', 'cloudflare'],
   ['auth-domains', '設定登入網域', 'google'],
   ['activation', '寄送管理員設定密碼信', 'google'],
 ].map(([id, label, provider]) => ({ id, label, provider }));
 
+// The site's secret holding the key of the service account that creates and
+// removes staff sign-ins (worker/account_admin.js). The step that sets it up
+// ('accounts' provider above) runs Google and Cloudflare in turn.
+export const ACCOUNT_ADMIN_SECRET = 'ACCOUNT_ADMIN_KEY';
+
 export const stepIdsFor = (provider) => new Set(STEPS.filter((step) => step.provider === provider).map((step) => step.id));
 
-// Update mode: rebuild an existing install from the latest source. Nothing is
-// created and no data, account or admin is touched; only the site and rules change.
+// Update mode: rebuild an existing install from the latest source. No data,
+// staff account or admin is touched; the site, its rules and the account
+// management key (set up here for sites installed before it existed) change.
 export const UPDATE_STEPS = [
   ['inspect', '核對網站與 Google 專案', 'google'],
+  // Before the build: a newly stored key only reaches the site with a new
+  // deployment, so it makes an otherwise unchanged build publish anyway.
+  ['account-admin', '設定同工帳號管理', 'accounts'],
   ['build', '建置新版網站', 'build'],
   ['rules', '更新資料存取規則', 'google'],
   ['publish', '發布新版網站', 'cloudflare'],

@@ -31,11 +31,14 @@ import { churchConfig } from './church_config.js';
 const ACTIONS = {
   calendar: { group: 'calendar-editors', denied: '沒有編輯行事曆的權限' },
   roster: { group: 'roster-editors', denied: '沒有編輯服事表的權限' },
+  // No group grants this: only an admin creates or removes sign-ins, the same
+  // line firestore.rules draws around creating and deleting users/{uid}.
+  accounts: { group: null, denied: '只有管理員可以新增或刪除同工帳號' },
 };
 
 /// Rejects a caller who may not perform [action].
 ///
-/// `{ edit: 'calendar' }` returns `{ uid, name, token }`.
+/// `{ edit: 'calendar' }` and `{ edit: 'accounts' }` return `{ uid, name, token }`.
 ///
 /// `{ edit: 'roster' }` returns `{ uid, name, forRosterType(type) }`. The group
 /// only says "may edit rosters"; which roster is in the request body, and the
@@ -56,7 +59,7 @@ export async function authorize(request, env, action, fetchImpl = fetch) {
   const caller = await identifyCaller(request, env, fetchImpl);
   // admin is root: every group, every zone, without holding either.
   const isAdmin = caller.role === 'admin';
-  if (!isAdmin && !caller.groups.includes(rule.group)) {
+  if (!isAdmin && (!rule.group || !caller.groups.includes(rule.group))) {
     throw new HttpError(403, rule.denied);
   }
 

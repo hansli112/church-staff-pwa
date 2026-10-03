@@ -125,7 +125,8 @@ export async function buildCoreDeployment(context, { command = runIsolatedComman
   const buildVersion = `installer-${hash.digest('hex').slice(0, 24)}`;
   // Update mode: the live site already runs exactly this source and config.
   // The staged rules are still handed on, so the rules step can check them.
-  if (context.liveBuildVersion && context.liveBuildVersion === buildVersion) {
+  // A key stored just now still needs a deployment to reach the site.
+  if (context.liveBuildVersion && context.liveBuildVersion === buildVersion && !transient.accountAdminRedeploy) {
     Object.assign(transient, { deploymentDir: stagingDir, buildVersion, unchanged: true });
     return { buildVersion, deploymentDir: stagingDir, unchanged: true };
   }

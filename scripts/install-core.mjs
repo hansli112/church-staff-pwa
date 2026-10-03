@@ -44,6 +44,8 @@ export function createDemoProviders({ failAt, delayMs = 150 } = {}) {
   const installedConfig = { schemaVersion: 1, appName: '恩典教會同工助手', shortName: '恩典同工', timeZone: 'Asia/Taipei',
     services: [{ id: 'service1', label: '主日', name: '主日崇拜', weekday: 7, enabled: true }] };
   const pause = (context) => delay(delayMs, undefined, { signal: context.signal });
+  // Whether the pretend site stores an account management key (it starts without).
+  let accountAdminKey = false;
   const execute = async (step, context) => {
     context.signal?.throwIfAborted();
     await delay(delayMs, undefined, { signal: context.signal });
@@ -64,7 +66,11 @@ export function createDemoProviders({ failAt, delayMs = 150 } = {}) {
     fetchAsset: async () => null,
     fetchSite: async (url) => url.endsWith('/church-config.json') ? structuredClone(installedConfig)
       : url.endsWith('/version.json') ? { version: 'installer-demo-old', release: '2026.9.1', channel: 'installer' } : null,
-    google: { inspectIdentity: async () => ({ email: googleEmail }), execute, update: async (step, context) => pause(context) },
+    google: {
+      inspectIdentity: async () => ({ email: googleEmail }), execute, update: async (step, context) => pause(context),
+      newAccountAdminKey: async (context, { configured }) => { await pause(context); return configured ? null : { id: '0123456789abcdef', json: '{"demo":true}' }; },
+      retireOtherAccountAdminKeys: pause,
+    },
     cloudflare: {
       listInstalls: async () => [structuredClone(installed)],
       publishUpdate: async (context) => { await pause(context); return { website: `https://${installed.subdomain}/`, unchanged: false }; },
@@ -78,6 +84,8 @@ export function createDemoProviders({ failAt, delayMs = 150 } = {}) {
         await delay(delayMs, undefined, { signal });
       },
       inspectIdentity: async () => ({ loggedIn: true, email: googleEmail, accounts }),
+      accountAdminKeyState: async (context) => { await pause(context); return { stored: accountAdminKey, live: accountAdminKey }; },
+      storeAccountAdminKey: async (context) => { await pause(context); accountAdminKey = true; },
       execute, dispose: async () => {},
     },
     build: (context) => execute('build', context),

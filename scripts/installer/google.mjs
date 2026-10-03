@@ -10,8 +10,8 @@ import { runCommand } from './process.mjs';
 import { canonical, fingerprint, sha256 as hash, stepIdsFor } from './shared.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const hosts = new Set(['cloudresourcemanager', 'serviceusage', 'firebase', 'firestore', 'identitytoolkit', 'firebaserules']);
-const quotaProjectHosts = new Set(['firebase', 'firestore', 'identitytoolkit', 'firebaserules']);
+const hosts = new Set(['cloudresourcemanager', 'serviceusage', 'firebase', 'firestore', 'identitytoolkit', 'firebaserules', 'iam']);
+const quotaProjectHosts = new Set(['firebase', 'firestore', 'identitytoolkit', 'firebaserules', 'iam']);
 const steps = stepIdsFor('google');
 const projectPattern = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -186,6 +186,9 @@ function openStepSession(context, { fetchImpl, command, delay, now, inspectIdent
         // still have been accepted, so only these let a create be retried.
         // 408 and 499 (cancelled) can still hide an accepted request.
         if ([400, 401, 403, 404, 409, 429].includes(response.status)) failure.rejected = true;
+        // For callers that tell refusals apart; the same enums as the code above.
+        failure.status = response.status;
+        failure.reason = reasonCode;
         throw failure;
       }
     }
@@ -767,6 +770,151 @@ async function sendActivation(s) {
 }
 
 // ---------------------------------------------------------------------------
+// Account management, in both modes: a service account that may only manage
+// Firebase Authentication users, so the site can create and remove staff
+// sign-ins (worker/account_admin.js). Its key is created here and handed to
+// Cloudflare in memory (see setUpAccountAdmin in core.mjs); it is never saved.
+// ---------------------------------------------------------------------------
+
+const ACCOUNT_ADMIN_ID = 'church-accounts';
+const ACCOUNT_ADMIN_ROLE = 'roles/firebaseauth.admin';
+const KEY_ID = /^[0-9a-f]{16,64}$/;
+
+function accountAdminPaths(s) {
+  const email = `${ACCOUNT_ADMIN_ID}@${s.projectId}.iam.gserviceaccount.com`;
+  const account = `/v1/projects/${s.projectId}/serviceAccounts/${email}`;
+  return { email, account, keys: `${account}/keys` };
+}
+
+// The ids of the account's own keys (Google-managed ones never leave Google).
+async function accountAdminKeys(s) {
+  const { account, keys } = accountAdminPaths(s);
+  const listed = await s.request('iam', `${keys}?keyTypes=USER_MANAGED`);
+  const prefix = `${account.slice('/v1/'.length)}/keys/`;
+  return (listed.keys ?? []).map((key) => {
+    const id = typeof key?.name === 'string' && key.name.startsWith(prefix) ? key.name.slice(prefix.length) : '';
+    if (!KEY_ID.test(id)) stop('GOOGLE_INVALID_RESPONSE', 'Google 回傳的金鑰清單格式不符；已停止。');
+    return id;
+  });
+}
+
+// An organisation can forbid service accounts or their keys. The site then
+// keeps the browser-only way of adding staff, so the install goes on.
+function refusedByOrganisation(error) {
+  return error instanceof ActionRequired && (error.code === 'GOOGLE_PERMISSION_REQUIRED' ||
+    (error.status === 400 && /FAILED_PRECONDITION/.test(error.reason ?? '')));
+}
+
+// A service account just created, or the IAM API just enabled, takes a
+// little while to be usable everywhere; until then Google refuses writes with
+// SERVICE_DISABLED, or 400/404 naming the account. Wait that out here rather
+// than stopping a first install that would pass a minute later.
+async function onceSettled(s, send) {
+  for (let attempt = 0; ; attempt++) {
+    try { return await send(); }
+    catch (error) {
+      const settling = error instanceof ActionRequired && error.rejected && (error.code === 'GOOGLE_API_PROPAGATING' ||
+        ([400, 404].includes(error.status) && !/FAILED_PRECONDITION/.test(error.reason ?? '')));
+      if (!settling || attempt >= 5) throw error;
+      s.context.emit?.({ message: `Google 還在讓剛建立的服務帳號生效，稍候自動重試（第 ${attempt + 1} 次）…` });
+      await s.delay(10_000);
+    }
+  }
+}
+
+async function enableIam(s) {
+  const service = `/v1/${s.owned.name}/services/iam.googleapis.com`;
+  if ((await s.request('serviceusage', service)).state === 'ENABLED') return;
+  s.context.emit?.({ message: '正在啟用帳號管理需要的 Google API…' });
+  // Enabling is idempotent: unlike a create, sending it again is harmless.
+  await s.wait('serviceusage', 'v1', await s.request('serviceusage', `${service}:enable`, { method: 'POST', body: {} }), 'iamService');
+  if ((await s.request('serviceusage', service)).state !== 'ENABLED') stop('GOOGLE_OPERATION_PENDING', 'Google API 仍在啟用；請稍後續跑。');
+}
+
+async function ensureAccountAdmin(s) {
+  const { projectId, request } = s;
+  const { email, account } = accountAdminPaths(s);
+  let found = await request('iam', account, { missing: true });
+  if (!found) {
+    s.context.emit?.({ message: '正在建立管理同工帳號用的服務帳號…' });
+    found = await onceSettled(s, () => request('iam', `/v1/projects/${projectId}/serviceAccounts`, { method: 'POST', body: {
+      accountId: ACCOUNT_ADMIN_ID,
+      serviceAccount: { displayName: 'Church staff sign-ins', description: '讓同工 App 新增、刪除同工的登入帳號（安裝精靈建立）' },
+    } }));
+  }
+  if (found.email !== email || found.projectId !== projectId) conflict('帳號管理的服務帳號與這個專案不一致；已停止。');
+  // Someone turned it off on purpose; leave it that way.
+  if (found.disabled) return null;
+  // Only ever adds this one member; every other binding is sent back as read.
+  // Each attempt reads the policy afresh, so its etag is current.
+  await onceSettled(s, async () => {
+    const policy = await request('cloudresourcemanager', `/v3/projects/${projectId}:getIamPolicy`, {
+      method: 'POST', body: { options: { requestedPolicyVersion: 3 } }, readOnly: true,
+    });
+    const member = `serviceAccount:${email}`;
+    const bindings = Array.isArray(policy.bindings) ? policy.bindings : [];
+    const granted = bindings.find((binding) => binding?.role === ACCOUNT_ADMIN_ROLE && !binding.condition);
+    if (granted?.members?.includes(member)) return;
+    s.context.emit?.({ message: '正在授權服務帳號管理 Firebase 登入帳號…' });
+    const next = granted
+      ? bindings.map((binding) => binding === granted ? { ...binding, members: [...binding.members, member] } : binding)
+      : [...bindings, { role: ACCOUNT_ADMIN_ROLE, members: [member] }];
+    // The etag makes Google refuse this if anything changed the policy since the read.
+    await request('cloudresourcemanager', `/v3/projects/${projectId}:setIamPolicy`, { method: 'POST', body: {
+      policy: { ...policy, bindings: next }, updateMask: 'bindings,etag',
+    } });
+  });
+  return email;
+}
+
+// Returns { id, json } when the site needs a new key, null when the one it has
+// stands (or the organisation does not allow one). [configured]: the site
+// already stores a key. Exactly one key next to it means that is the one;
+// anything else is redone, and the old keys go once the new one is stored.
+async function newAccountAdminKey(s, { configured, update }) {
+  try {
+    await enableIam(s);
+    const email = await ensureAccountAdmin(s);
+    if (!email) {
+      s.context.emit?.({ message: '管理同工帳號用的服務帳號（church-accounts）被停用了，略過同工帳號管理；要使用請到 Google Cloud 的「服務帳戶」頁重新啟用，再更新一次網站。' });
+      return null;
+    }
+    const existing = await accountAdminKeys(s);
+    if (configured && existing.length === 1) return null;
+    // A first install that already published would keep running on the key it
+    // has; replacing it now would leave that site with a deleted key.
+    if (!update && s.resource('website')) {
+      s.context.emit?.({ message: '網站已經發布過；同工帳號管理之後用「更新網站」設定，不影響這次安裝。' });
+      return null;
+    }
+    const { keys } = accountAdminPaths(s);
+    const created = await onceSettled(s, () => s.request('iam', keys, { method: 'POST', body: {
+      privateKeyType: 'TYPE_GOOGLE_CREDENTIALS_FILE', keyAlgorithm: 'KEY_ALG_RSA_2048',
+    } }));
+    const id = typeof created?.name === 'string' ? created.name.split('/').at(-1) : '';
+    let json;
+    try { json = JSON.parse(Buffer.from(created.privateKeyData ?? '', 'base64').toString('utf8')); } catch { /* Checked below. */ }
+    if (!KEY_ID.test(id) || json?.type !== 'service_account' || json.client_email !== email ||
+        json.project_id !== s.projectId || json.private_key_id !== id || typeof json.private_key !== 'string') {
+      stop('GOOGLE_INVALID_RESPONSE', 'Google 回傳的服務帳號金鑰格式不符；已停止，不會存進網站。');
+    }
+    return { id, json: JSON.stringify(json) };
+  } catch (error) {
+    if (!refusedByOrganisation(error)) throw error;
+    s.context.emit?.({ message: '這個 Google 帳號所屬的機構不允許建立服務帳號金鑰，略過同工帳號管理：網站照常運作，刪除同工時登入帳號要到 Firebase 主控台刪。' });
+    return null;
+  }
+}
+
+// Once the site stores [keep], every other key of the account goes.
+async function retireAccountAdminKeys(s, { keep }) {
+  const { keys } = accountAdminPaths(s);
+  for (const id of await accountAdminKeys(s)) {
+    if (id !== keep) await s.request('iam', `${keys}/${id}`, { method: 'DELETE', missing: true });
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Update mode. The project is proven to be this install's by the label the
 // create step wrote (derived from the private run id, which only the Pages
 // project's env vars and the install record know). Nothing is created; data,
@@ -925,6 +1073,17 @@ export function createGoogleInstaller({
   }
   const update = (step, context) => withHelp(context, () => updateStep(step, context));
   const execute = (step, context) => withHelp(context, () => executeStep(step, context));
+  // Account management runs in both modes, against the project each mode proves.
+  async function accountSession(context, update) {
+    const s = openStepSession(context, { fetchImpl, command, delay, now, inspectIdentity }, { update });
+    await s.credentials();
+    s.owned = update ? await installedProject(s) : await s.ownedProject();
+    return s;
+  }
+  const newKey = (context, { update = false, configured = false } = {}) =>
+    withHelp(context, async () => newAccountAdminKey(await accountSession(context, update), { configured, update }));
+  const retireOtherAccountAdminKeys = (context, { update = false, keep } = {}) =>
+    withHelp(context, async () => retireAccountAdminKeys(await accountSession(context, update), { keep }));
   async function withHelp(context, run) {
     try { return await run(); }
     catch (error) {
@@ -942,5 +1101,5 @@ export function createGoogleInstaller({
       throw error;
     }
   }
-  return { inspectIdentity, authorize, execute, update };
+  return { inspectIdentity, authorize, execute, update, newAccountAdminKey: newKey, retireOtherAccountAdminKeys };
 }
