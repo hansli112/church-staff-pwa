@@ -102,6 +102,29 @@ void main() {
     },
   );
 
+  test('every time zone the installer accepts is accepted', () {
+    final zones = File('test/support/installer_time_zones.txt')
+        .readAsLinesSync()
+        .where((line) => line.isNotEmpty && !line.startsWith('#'))
+        .toList();
+    expect(
+      zones,
+      containsAll([
+        'Europe/Amsterdam',
+        'Asia/Kuala_Lumpur',
+        'Asia/Calcutta',
+        'Asia/Saigon',
+        'America/Buenos_Aires',
+        'Europe/Kiev',
+      ]),
+    );
+    final rejected = [
+      for (final zone in zones)
+        if (!_parses({...defaults(), 'timeZone': zone})) zone,
+    ];
+    expect(rejected, isEmpty);
+  });
+
   test('invalid schema, timezones, flags, IDs and weekdays fail early', () {
     final invalid = <Map<String, dynamic>>[
       {...defaults(), 'schemaVersion': 2},
@@ -189,4 +212,13 @@ void main() {
       );
     }
   });
+}
+
+bool _parses(Map<String, dynamic> json) {
+  try {
+    ChurchConfig.fromJson(json);
+    return true;
+  } on FormatException {
+    return false;
+  }
 }
