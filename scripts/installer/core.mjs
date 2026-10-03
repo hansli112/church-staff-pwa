@@ -40,11 +40,22 @@ function requireEmail(value, label) {
 // the site's own /church-config.json, whose service ids are kept as they are).
 export function coreChurchConfig({ appName, shortName, timeZone, services }) {
   return validateChurchConfig({
-    schemaVersion: 1, appName, shortName, timeZone, services,
+    schemaVersion: 1, appName, shortName, timeZone: canonicalTimeZone(timeZone), services,
     features: { calendar: false, photoImport: false, pushNotifications: false, lineNotifications: false },
     devotional: { enabled: false, dataUrl: '', linkUrl: '', sourceName: '每日靈糧', fetchUrl: '', fetchFormat: 'json' },
     icons: { ...CORE_ICONS },
   });
+}
+
+// Intl takes a time zone in any letter case (europe/amsterdam), the app only
+// in its exact IANA spelling, so the config stores the name Intl resolves to.
+// An unknown zone is left as typed for validateChurchConfig to reject.
+function canonicalTimeZone(value) {
+  try {
+    return new Intl.DateTimeFormat('en-US', { timeZone: value }).resolvedOptions().timeZone;
+  } catch {
+    return value;
+  }
 }
 
 // A small JSON file from a site this wizard published. Pages answers unknown

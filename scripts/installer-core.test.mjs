@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promis
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { createInstallationManager, createInstallationPlan, publicError, STEPS } from './installer/core.mjs';
+import { coreChurchConfig, createInstallationManager, createInstallationPlan, publicError, STEPS } from './installer/core.mjs';
 import { createDemoProviders } from './install-core.mjs';
 import { setUpAccountAdmin } from './installer/core.mjs';
 import { commandEnvironment, runCommand } from './installer/process.mjs';
@@ -57,6 +57,26 @@ test('plan is pure, stable, core-only and creates safe resource names', () => {
   assert.equal(plan.admin.username, '測試管理員');
   assert.equal(plan.mode, 'cloud');
   assert.equal('activationEmailConfirmed' in plan, false);
+});
+
+// The app only knows exact IANA spellings; Intl takes any case. A site whose
+// config says europe/amsterdam would never get past its loading screen.
+test('plan stores the time zone in the spelling Intl resolves to', () => {
+  for (const [typed, stored] of [
+    ['europe/amsterdam', 'Europe/Amsterdam'],
+    ['ASIA/TAIPEI', 'Asia/Taipei'],
+    ['us/pacific', 'America/Los_Angeles'],
+    ['utc', 'UTC'],
+    ['Europe/Amsterdam', 'Europe/Amsterdam'],
+  ]) {
+    assert.equal(createInstallationPlan({ ...input(), timeZone: typed }, identity).churchConfig.timeZone, stored);
+  }
+});
+
+// Updating a site installed before that fixes its config on the way.
+test('an installed config is respelled the same way', () => {
+  const config = coreChurchConfig({ appName: 'x', shortName: 'x', timeZone: 'europe/oslo', services: [{ id: 'service1', label: '主日', name: '主日崇拜', weekday: 7, enabled: true }] });
+  assert.equal(config.timeZone, 'Europe/Oslo');
 });
 
 for (const [label, change] of [
