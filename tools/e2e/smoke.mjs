@@ -107,17 +107,18 @@ try {
   await button(alice.page, '7 天').click();
   await alice.page.waitForTimeout(3000);
   await shot(alice.page, 'invite-created');
-  const code = await alice.page.evaluate(async () => {
+  const invite = await alice.page.evaluate(async () => {
     const res = await fetch('http://localhost:8181/v1/projects/demo-martha/databases/(default)/documents/invites', {
       headers: { Authorization: 'Bearer owner' },
     });
     const json = await res.json();
-    return json.documents?.[0]?.name?.split('/').pop();
+    const d = json.documents?.[0];
+    return { code: d?.name?.split('/').pop(), cid: d?.fields?.cid?.stringValue };
   });
-  console.log('invite code', code);
+  console.log('invite', invite);
 
   const bob = await newUser('bob@gmail.com', '鮑伯');
-  await bob.page.goto(`${base}/join/${code}`);
+  await bob.page.goto(`${base}/c/${invite.cid}/join/${invite.code}`);
   await bob.page.waitForTimeout(4000);
   await shot(bob.page, 'bob-login');
   await googleSignIn(bob);

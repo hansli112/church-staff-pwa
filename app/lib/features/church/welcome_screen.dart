@@ -161,8 +161,8 @@ class _EnterCodeScreenState extends State<EnterCodeScreen> {
     final code = _code.text.trim().toUpperCase();
     if (code.isEmpty) return;
     // Accept a whole pasted link too.
-    final fromLink = RegExp(r'/join/([A-Za-z0-9]+)').firstMatch(code)?.group(1);
-    context.push('/join/${fromLink ?? code}');
+    final fromLink = RegExp(r'/JOIN/([A-Z0-9]+)').firstMatch(code)?.group(1);
+    context.push('/welcome/join/${fromLink ?? code}');
   }
 
   @override

@@ -101,7 +101,7 @@ void main() {
     await pumpApp(tester, b);
 
     final router = GoRouter.of(tester.element(find.byType(Scaffold).first));
-    router.go('/join/WELCOME26');
+    router.go('/c/$cid/join/WELCOME26');
     await settle(tester);
     expect(find.text('使用 Google 登入'), findsOneWidget);
 
@@ -112,6 +112,25 @@ void main() {
     final uid = b.auth.currentUser!.uid;
     expect(b.members[cid]![uid]!.role, Role.staff);
     expect(find.byType(NavigationBar), findsOneWidget);
+  });
+
+  testWidgets('a pasted invite link works as a code', (tester) async {
+    final b = MemoryBackend();
+    final cid = b.addChurch('恩典堂');
+    b.invites['PASTED26'] = Invite(
+      code: 'PASTED26',
+      churchId: cid,
+      churchName: '恩典堂',
+      expiresAt: DateTime.now().add(const Duration(days: 7)),
+    );
+    b.auth.signInAs('x@gmail.com');
+    await pumpApp(tester, b);
+    await tapText(tester, '輸入邀請碼');
+    await tester.enterText(find.byType(TextField), 'https://martha-app.web.app/c/$cid/join/PASTED26');
+    await tester.pump();
+    await tapText(tester, '下一步');
+    await tapText(tester, '加入');
+    expect(b.members[cid]!.containsKey(b.auth.currentUser!.uid), isTrue);
   });
 
   testWidgets('an expired invite says so and offers to enter another code', (
@@ -129,7 +148,7 @@ void main() {
     await pumpApp(tester, b);
     GoRouter.of(
       tester.element(find.byType(Scaffold).first),
-    ).go('/join/OLDCODE1');
+    ).go('/c/$cid/join/OLDCODE1');
     await settle(tester);
     expect(find.text('這個邀請過期了，請向管理員要新的邀請'), findsOneWidget);
     expect(find.text('輸入邀請碼'), findsOneWidget);

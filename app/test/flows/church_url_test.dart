@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/data/memory/memory_backend.dart';
@@ -84,16 +83,11 @@ void main() {
     await pumpApp(tester, seededChurch(as: staffMei));
     await go(tester, '/me/church');
     expect(find.text('martha-app-dev.web.app/c/grace'), findsOneWidget);
-    String? copied;
-    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
-      if (call.method == 'Clipboard.setData') copied = (call.arguments as Map)['text'] as String?;
-      return null;
-    });
-    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+    final out = captureOutbox(tester);
     await tapText(tester, '教會網址');
     expect(find.text('分享教會網址'), findsOneWidget);
     await tapText(tester, '複製教會網址');
-    expect(copied, 'https://martha-app-dev.web.app/c/grace');
+    expect(out.copied.single, 'https://martha-app-dev.web.app/c/grace');
     expect(find.text('已複製教會網址'), findsOneWidget);
   });
 

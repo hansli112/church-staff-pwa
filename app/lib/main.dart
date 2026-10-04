@@ -26,7 +26,8 @@ import 'state/session.dart';
 import 'state/support.dart';
 
 Future<void> main() async {
-  // Real paths (/join/CODE), not #/: invite links must work as plain URLs.
+  // Real paths (/c/ID), not #/: church URLs and invite links must work as
+  // plain URLs.
   usePathUrlStrategy();
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('zh_TW');

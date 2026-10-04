@@ -10,6 +10,10 @@ import '../../env.dart';
 /// and icon (the church page function, functions/src/churchPage.ts).
 String churchUrl(String churchId) => '${Env.current.webOrigin}/c/$churchId';
 
+/// The link an invite opens: under the church URL, so adding the invite
+/// page to the home screen already gives the church's icon.
+String inviteLink(String churchId, String code) => '${churchUrl(churchId)}/join/$code';
+
 /// [url] without the scheme, for showing in a row.
 String displayUrl(String url) => url.replaceFirst(RegExp('^https?://'), '');
 

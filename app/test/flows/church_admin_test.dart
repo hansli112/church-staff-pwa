@@ -156,6 +156,19 @@ void main() {
       expect(b.invites[code]!.revoked, isTrue);
     });
 
+    testWidgets('the shared invite link is under the church URL', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      final out = captureOutbox(tester);
+      await go(tester, '/me/invites');
+      await tapText(tester, '7 天');
+      final code = b.invites.keys.single;
+      expect(out.sharedTexts.single, contains('https://martha-app-dev.web.app/c/grace/join/$code'));
+      await tapText(tester, code);
+      await tapText(tester, '複製連結');
+      expect(out.copied.single, 'https://martha-app-dev.web.app/c/grace/join/$code');
+    });
+
     testWidgets('disabling a service hides it from the roster tab but keeps its rosters', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);

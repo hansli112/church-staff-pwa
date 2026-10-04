@@ -69,12 +69,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         '/welcome',
         (_) => const WelcomeScreen(),
         routes: [
-          page('join', (_) => const EnterCodeScreen()),
+          page(
+            'join',
+            (_) => const EnterCodeScreen(),
+            routes: [page(':code', (s) => JoinScreen(code: s.pathParameters['code']!))],
+          ),
           page('create', (_) => const CreateChurchScreen()),
         ],
       ),
-      page('/join/:code', (s) => JoinScreen(code: s.pathParameters['code']!)),
-      page('/c/:churchId', (s) => ChurchEntryScreen(churchId: s.pathParameters['churchId']!)),
+      page(
+        '/c/:churchId',
+        (s) => ChurchEntryScreen(churchId: s.pathParameters['churchId']!),
+        // An invite link. The code decides the church, not the URL.
+        routes: [page('join/:code', (s) => JoinScreen(code: s.pathParameters['code']!))],
+      ),
       page('/closed', (_) => const ClosedScreen()),
       page('/account', (_) => const AccountScreen()),
       page(
@@ -198,13 +206,13 @@ String? redirectFor(AppStage stage, Uri uri) {
       }
       return withFrom('/login');
     case AppStage.noChurch:
-      if (at('/welcome') || at('/join') || at('/c') || at('/account') || at('/dev')) {
+      if (at('/welcome') || at('/c') || at('/account') || at('/dev')) {
         return null;
       }
       if (at('/loading') || at('/login')) return resume('/welcome');
       return '/welcome';
     case AppStage.churchClosed:
-      if (at('/closed') || at('/join') || at('/c') || at('/account') || at('/welcome') || at('/dev')) {
+      if (at('/closed') || at('/c') || at('/account') || at('/welcome') || at('/dev')) {
         return null;
       }
       if (at('/loading') || at('/login')) return resume('/closed');

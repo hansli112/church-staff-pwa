@@ -22,14 +22,16 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
-            <!-- Invite links open the app when it is installed (App Links;
-                 the site serves /.well-known/assetlinks.json). -->
+            <!-- Church URLs and invite links (/c/...) open the app when it is
+                 installed (App Links; the site serves
+                 /.well-known/assetlinks.json). The hosts change to the real
+                 domain once it is bought (#37). -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="https" android:host="martha-app.web.app" android:pathPrefix="/join/"/>
-                <data android:scheme="https" android:host="martha-app-dev.web.app" android:pathPrefix="/join/"/>
+                <data android:scheme="https" android:host="martha-app.web.app" android:pathPrefix="/c/"/>
+                <data android:scheme="https" android:host="martha-app-dev.web.app" android:pathPrefix="/c/"/>
             </intent-filter>
             <meta-data android:name="flutter_deeplinking_enabled" android:value="true"/>
         </activity>

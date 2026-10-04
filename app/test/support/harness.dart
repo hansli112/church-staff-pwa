@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -89,4 +90,32 @@ Future<void> settle(WidgetTester tester) async {
   for (var i = 0; i < 20; i++) {
     await tester.pump(const Duration(milliseconds: 50));
   }
+}
+
+/// What the app shared through the system share sheet and copied to the
+/// clipboard, recorded instead of reaching the platform.
+class Outbox {
+  final shared = <Map<String, Object?>>[];
+  final copied = <String>[];
+
+  List<String> get sharedTexts => [for (final s in shared) ?s['text'] as String?];
+}
+
+Outbox captureOutbox(WidgetTester tester) {
+  final out = Outbox();
+  final messenger = tester.binding.defaultBinaryMessenger;
+  const share = MethodChannel('dev.fluttercommunity.plus/share');
+  messenger.setMockMethodCallHandler(share, (call) async {
+    out.shared.add(Map<String, Object?>.from(call.arguments as Map));
+    return 'dev.fluttercommunity.plus/share/success';
+  });
+  messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+    if (call.method == 'Clipboard.setData') out.copied.add((call.arguments as Map)['text'] as String);
+    return null;
+  });
+  addTearDown(() {
+    messenger.setMockMethodCallHandler(share, null);
+    messenger.setMockMethodCallHandler(SystemChannels.platform, null);
+  });
+  return out;
 }

@@ -6,16 +6,13 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/design/components.dart';
 import '../../domain/models.dart';
-import '../../env.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
+import '../church/links.dart';
 
 final _invitesProvider = StreamProvider.autoDispose<List<Invite>>(
   (ref) => ref.watch(churchDataProvider)!.invites(),
 );
-
-/// The link an invite opens.
-String inviteLink(String code) => '${Env.current.webOrigin}/join/$code';
 
 /// Admins make invite links (7 or 30 days), share them, and revoke them.
 class InvitesScreen extends ConsumerStatefulWidget {
@@ -43,7 +40,7 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
 
   Future<void> _share(Invite invite) async {
     final l10n = L10n.of(context);
-    final text = l10n.inviteMessage(invite.churchName, inviteLink(invite.code));
+    final text = l10n.inviteMessage(invite.churchName, inviteLink(invite.churchId, invite.code));
     try {
       await SharePlus.instance.share(ShareParams(text: text));
     } catch (_) {
@@ -85,7 +82,7 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
       case 'share':
         await _share(invite);
       case 'copy':
-        await Clipboard.setData(ClipboardData(text: inviteLink(invite.code)));
+        await Clipboard.setData(ClipboardData(text: inviteLink(invite.churchId, invite.code)));
         if (mounted) showToast(context, l10n.inviteCopied);
       case 'revoke':
         await ref.read(churchDataProvider)!.revokeInvite(invite.code);

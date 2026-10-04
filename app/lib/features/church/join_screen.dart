@@ -13,7 +13,8 @@ final _invitePreviewProvider = FutureProvider.autoDispose.family<Invite, String>
   (ref, code) => ref.watch(backendProvider).cloud.previewInvite(code),
 );
 
-/// Where an invite link lands (/join/CODE), after sign-in if needed. Shows
+/// Where an invite link (/c/CHURCH/join/CODE) or a typed code
+/// (/welcome/join/CODE) lands, after sign-in if needed. Shows
 /// which church it is before joining.
 class JoinScreen extends ConsumerStatefulWidget {
   const JoinScreen({super.key, required this.code});

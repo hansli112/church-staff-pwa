@@ -6,23 +6,23 @@ String? go(AppStage stage, String location) => redirectFor(stage, Uri.parse(loca
 
 void main() {
   test('while loading, waits and remembers where it was going', () {
-    expect(go(AppStage.loading, '/join/ABC'), '/loading?from=%2Fjoin%2FABC');
-    expect(go(AppStage.loading, '/loading?from=%2Fjoin%2FABC'), isNull);
+    expect(go(AppStage.loading, '/c/grace/join/ABC'), '/loading?from=%2Fc%2Fgrace%2Fjoin%2FABC');
+    expect(go(AppStage.loading, '/loading?from=%2Fc%2Fgrace%2Fjoin%2FABC'), isNull);
   });
 
   test('signed out goes to login, keeping an invite link', () {
     expect(
-      go(AppStage.signedOut, '/loading?from=%2Fjoin%2FABC'),
-      '/login?from=%2Fjoin%2FABC',
+      go(AppStage.signedOut, '/loading?from=%2Fc%2Fgrace%2Fjoin%2FABC'),
+      '/login?from=%2Fc%2Fgrace%2Fjoin%2FABC',
     );
-    expect(go(AppStage.signedOut, '/join/ABC'), '/login?from=%2Fjoin%2FABC');
+    expect(go(AppStage.signedOut, '/c/grace/join/ABC'), '/login?from=%2Fc%2Fgrace%2Fjoin%2FABC');
     expect(go(AppStage.signedOut, '/home'), '/login?from=%2Fhome');
     expect(go(AppStage.signedOut, '/login'), isNull);
   });
 
   test('after sign-in, an invite link resumes', () {
-    expect(go(AppStage.noChurch, '/login?from=%2Fjoin%2FABC'), '/join/ABC');
-    expect(go(AppStage.ready, '/login?from=%2Fjoin%2FABC'), '/join/ABC');
+    expect(go(AppStage.noChurch, '/login?from=%2Fc%2Fgrace%2Fjoin%2FABC'), '/c/grace/join/ABC');
+    expect(go(AppStage.ready, '/login?from=%2Fc%2Fgrace%2Fjoin%2FABC'), '/c/grace/join/ABC');
   });
 
   test('no church: welcome, unless joining or deleting the account', () {

@@ -69,14 +69,17 @@ cd functions && npx tsx scripts/grant-operator.ts --project martha-app-dev <emai
 
 設定後要重新登入才會生效。之後「我的」頁會出現「平台後台」。
 
-## App Links / Universal Links（邀請連結直接開 App）
+## App Links / Universal Links（教會網址與邀請連結直接開 App）
 
-- **Android**：Web build 要提供 `/.well-known/assetlinks.json`，內容包含簽章憑證的 SHA-256。
+開 App 的路徑都在 `/c/` 底下：教會網址 `/c/<教會 id>`，邀請連結 `/c/<教會 id>/join/<邀請碼>`。host 等網域買好後一起換（#37）。
+
+- Hosting 設定忽略 `**/.*`，`.well-known` 會被擋掉，要在 `firebase.json` 的 `ignore` 例外放行。
+- **Android**：`AndroidManifest.xml` 的 intent filter 是 `pathPrefix="/c/"`。Web build 要提供 `/.well-known/assetlinks.json`，內容包含簽章憑證的 SHA-256。
   - 取得 SHA-256：`keytool -list -v -keystore <keystore>`。
   - debug 和 release 的金鑰不同，兩個都要列進去。
 - **iOS**：要付費開發者帳號，才能開 Associated Domains。
   - 在 `Runner.entitlements` 加上 `applinks:<網域>`。
-  - 網站提供 `/.well-known/apple-app-site-association`。
+  - 網站提供 `/.well-known/apple-app-site-association`，`components` 只放 `{"/": "/c/*"}`。
   - 這部分在 M7 處理。
 
 ## 照片辨識匯入（self-host → 代管）
