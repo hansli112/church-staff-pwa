@@ -87,6 +87,15 @@ Json memberToJson(Member m) => {
   'zoneTypes': m.zoneTypes,
 };
 
+ChurchLink? churchLinkFromJson(Json? data) {
+  final title = data?['title'];
+  final url = data?['url'];
+  if (title is! String || url is! String) return null;
+  return ChurchLink(title: title, body: data!['body'] as String? ?? '', url: url);
+}
+
+Json churchLinkToJson(ChurchLink link) => {'title': link.title, 'body': link.body, 'url': link.url};
+
 Json notificationPrefsToJson(Set<NotificationKind> muted) => {
   'muted': [
     for (final k in NotificationKind.values)

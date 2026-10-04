@@ -10,7 +10,9 @@ import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/l10n/app_localizations.dart';
 import 'package:martha/state/providers.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 /// Thursday 2026-10-01: the "today" every widget test runs on.
 final testToday = Day(2026, 10, 1);
@@ -118,4 +120,26 @@ Outbox captureOutbox(WidgetTester tester) {
     messenger.setMockMethodCallHandler(SystemChannels.platform, null);
   });
   return out;
+}
+
+/// Records URLs the app opens instead of launching a browser.
+class FakeUrlLauncher extends Fake with MockPlatformInterfaceMixin implements UrlLauncherPlatform {
+  final opened = <String>[];
+
+  @override
+  Future<bool> canLaunch(String url) async => true;
+
+  @override
+  Future<bool> launchUrl(String url, LaunchOptions options) async {
+    opened.add(url);
+    return true;
+  }
+}
+
+FakeUrlLauncher captureLaunches() {
+  final previous = UrlLauncherPlatform.instance;
+  final fake = FakeUrlLauncher();
+  UrlLauncherPlatform.instance = fake;
+  addTearDown(() => UrlLauncherPlatform.instance = previous);
+  return fake;
 }

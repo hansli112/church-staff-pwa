@@ -212,11 +212,27 @@ service cloud.firestore {
       }
 
       match /settings/{doc} {
+        // Written only by the backend: the calendar connection, the church
+        // link's fetched content, the webhook settings.
+        function serverOnly() {
+          return doc in ['calendar', 'linkContent', 'webhook'];
+        }
+
+        // 教會連結: title 1–30, body up to 120, an https link.
+        function validChurchLink() {
+          let data = request.resource.data;
+          return data.keys().hasOnly(['title', 'body', 'url', 'updatedAt'])
+            && data.title is string && data.title.size() >= 1 && data.title.size() <= 30
+            && data.get('body', '') is string && data.get('body', '').size() <= 120
+            && data.url is string && data.url.size() <= 500 && data.url.matches('https://[^ ]+');
+        }
+
         allow read: if isMember(cid);
-        allow create, update: if isAdmin(cid)
-          && (doc != 'services' || validServiceSettings());
+        allow create, update: if isAdmin(cid) && !serverOnly()
+          && (doc != 'services' || validServiceSettings())
+          && (doc != 'link' || validChurchLink());
         // settings/services is never deleted; see validServiceSettings().
-        allow delete: if isAdmin(cid) && doc != 'services';
+        allow delete: if isAdmin(cid) && doc != 'services' && !serverOnly();
       }
     }
 

@@ -2016,6 +2016,72 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'iPhone 上已經加入的圖示不會跟著更新。換了名稱或 logo 之後，請刪掉圖示再加入一次。'**
   String get addToHomeIosNote;
+
+  /// No description provided for @churchLink.
+  ///
+  /// In zh, this message translates to:
+  /// **'教會連結'**
+  String get churchLink;
+
+  /// No description provided for @churchLinkNone.
+  ///
+  /// In zh, this message translates to:
+  /// **'未設定'**
+  String get churchLinkNone;
+
+  /// No description provided for @churchLinkTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'標題'**
+  String get churchLinkTitle;
+
+  /// No description provided for @churchLinkBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'敘述（選填）'**
+  String get churchLinkBody;
+
+  /// No description provided for @churchLinkUrl.
+  ///
+  /// In zh, this message translates to:
+  /// **'連結'**
+  String get churchLinkUrl;
+
+  /// No description provided for @churchLinkNeedsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'請輸入標題'**
+  String get churchLinkNeedsTitle;
+
+  /// No description provided for @churchLinkNeedsHttps.
+  ///
+  /// In zh, this message translates to:
+  /// **'請輸入 https:// 開頭的連結'**
+  String get churchLinkNeedsHttps;
+
+  /// No description provided for @churchLinkFooter.
+  ///
+  /// In zh, this message translates to:
+  /// **'顯示在每位同工首頁的最上方，點了用瀏覽器打開。'**
+  String get churchLinkFooter;
+
+  /// No description provided for @churchLinkRemove.
+  ///
+  /// In zh, this message translates to:
+  /// **'移除教會連結'**
+  String get churchLinkRemove;
+
+  /// No description provided for @churchLinkRemoved.
+  ///
+  /// In zh, this message translates to:
+  /// **'已移除教會連結'**
+  String get churchLinkRemoved;
+
+  /// No description provided for @churchLinkOpens.
+  ///
+  /// In zh, this message translates to:
+  /// **'用瀏覽器打開'**
+  String get churchLinkOpens;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

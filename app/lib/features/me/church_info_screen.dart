@@ -237,6 +237,11 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
                 ),
                 ListRow(title: l10n.calendarSetting, onTap: () => context.push('/me/calendar')),
                 ListRow(
+                  title: l10n.churchLink,
+                  value: ref.watch(churchLinkProvider).value == null ? l10n.churchLinkNone : null,
+                  onTap: () => context.push('/me/link'),
+                ),
+                ListRow(
                   title: logo == null ? l10n.uploadLogo : l10n.changeLogo,
                   trailing: _uploading
                       ? const SizedBox.square(

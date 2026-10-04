@@ -410,6 +410,42 @@ describe('設定 (settings)', () => {
   });
 });
 
+describe('教會連結 (settings/link)', () => {
+  const link = { title: '主日奉獻', body: '線上奉獻', url: 'https://grace.example/give' };
+
+  it('只有管理員能寫，同工讀得到，其他教會讀寫不了', async () => {
+    const path = `churches/${A}/settings/link`;
+    await assertSucceeds(setDoc(doc(as(ADMIN_A), path), link));
+    await assertSucceeds(getDoc(doc(as(MEMBER_A), path)));
+    await assertFails(setDoc(doc(as(MEMBER_A), path), link));
+    await assertFails(setDoc(doc(as(EDITOR_A), path), link));
+    await assertFails(getDoc(doc(as(ADMIN_B), path)));
+    await assertFails(setDoc(doc(as(ADMIN_B), path), link));
+    await assertSucceeds(deleteDoc(doc(as(ADMIN_A), path)));
+  });
+
+  it('標題必填、最多 30 字，敘述最多 120 字，連結限 https', async () => {
+    const ref = doc(as(ADMIN_A), `churches/${A}/settings/link`);
+    await assertFails(setDoc(ref, { ...link, title: '' }));
+    await assertFails(setDoc(ref, { ...link, title: '字'.repeat(31) }));
+    await assertSucceeds(setDoc(ref, { ...link, title: '字'.repeat(30), body: '字'.repeat(120) }));
+    await assertFails(setDoc(ref, { ...link, body: '字'.repeat(121) }));
+    await assertFails(setDoc(ref, { ...link, url: 'http://grace.example' }));
+    await assertFails(setDoc(ref, { ...link, url: 'javascript:alert(1)' }));
+    await assertFails(setDoc(ref, { ...link, extra: true }));
+    await assertSucceeds(setDoc(ref, { title: '只有標題', url: 'https://grace.example' }));
+  });
+
+  it('後端寫的設定（行事曆、教會連結內容、外部通知）管理員也寫不了', async () => {
+    for (const name of ['calendar', 'linkContent', 'webhook']) {
+      await assertFails(setDoc(doc(as(ADMIN_A), `churches/${A}/settings/${name}`), { x: 1 }));
+    }
+    await seed(`churches/${A}/settings/linkContent`, { title: 'x' });
+    await assertFails(deleteDoc(doc(as(ADMIN_A), `churches/${A}/settings/linkContent`)));
+    await assertSucceeds(getDoc(doc(as(MEMBER_A), `churches/${A}/settings/linkContent`)));
+  });
+});
+
 describe('全域個資 (users)', () => {
   it('只有本人讀得到', async () => {
     await assertSucceeds(getDoc(doc(as(MEMBER_A), `users/${MEMBER_A}`)));

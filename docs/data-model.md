@@ -13,6 +13,7 @@
 | `churches/{cid}/rosters/{id}` | 服事表，`type` 是聚會別 ID，`dateKey` 是 `YYYY-MM-DD` |
 | `churches/{cid}/staff_orders/{type}` | 各聚會別的同工排序 |
 | `churches/{cid}/settings/{doc}` | `services`（聚會別，`ids` 只增不減）、`roster_templates` 等 |
+| `churches/{cid}/settings/link` | 教會連結：`title`（1–30 字）、`body`（最多 120 字）、`url`（限 `https`） |
 
 - 一個教會的所有資料都在 `churches/{cid}` 底下，可以整棵匯出。
 - 推播 token 放在 `users/{uid}`，只有本人和 Cloud Functions 讀得到。self-host 版的 roster editor 讀得到全部 token，這裡改掉了。
@@ -40,7 +41,7 @@
 | 刪 member | admin 刪別人；非 admin 可以自己退出。admin 要先被別的 admin 降級才能走 |
 | 讀服事表、排序、設定 | 同工 |
 | 寫服事表、排序 | admin（任何已設定的聚會別）；roster-editors（只限自己 `zoneTypes` 裡的聚會別，移動時新舊聚會別都要有） |
-| 寫設定 | admin；`services` 的 `ids` 只增不減，不能刪 |
+| 寫設定 | admin；`services` 的 `ids` 只增不減，不能刪；`calendar`、`linkContent`、`webhook` 只有 Cloud Functions 能寫 |
 | 讀寫 `users/{uid}` | 本人（限上列欄位）；刪除由 Cloud Functions 處理 |
 
 ## 交給 Cloud Functions 的（M2）

@@ -488,3 +488,32 @@ class CalendarSettings {
 
   bool get ready => connected && !needsReconnect && calendarName != null;
 }
+
+/// 教會連結: the one link an admin puts at the top of everyone's home page,
+/// e.g. the church website, giving page or a sign-up form.
+@immutable
+class ChurchLink {
+  const ChurchLink({required this.title, this.body = '', required this.url});
+
+  static const titleMax = 30;
+  static const bodyMax = 120;
+
+  final String title;
+  final String body;
+
+  /// Always `https`.
+  final String url;
+
+  /// Whether [url] is an https URL with a host.
+  static bool validUrl(String url) {
+    final u = Uri.tryParse(url.trim());
+    return u != null && u.scheme == 'https' && u.host.isNotEmpty;
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is ChurchLink && other.title == title && other.body == body && other.url == url;
+
+  @override
+  int get hashCode => Object.hash(title, body, url);
+}

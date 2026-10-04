@@ -39,6 +39,7 @@ class MemoryBackend implements Backend {
   final invites = <String, Invite>{};
   final users = <String, UserProfile>{};
   final calendars = <String, CalendarSettings>{};
+  final churchLinks = <String, ChurchLink>{};
   final calendarEvents = <String, List<CalendarEvent>>{};
 
   /// Set to make the next write fail, to test error handling.
@@ -502,6 +503,25 @@ class MemoryChurchData implements ChurchData {
     _requireMember();
     return _b.calendars[churchId] ?? const CalendarSettings();
   });
+
+  @override
+  Stream<ChurchLink?> churchLink() => _b.watch(() {
+    _requireMember();
+    return _b.churchLinks[churchId];
+  });
+
+  @override
+  Future<void> saveChurchLink(ChurchLink? link) async {
+    _requireAdmin();
+    if (link != null &&
+        (link.title.isEmpty ||
+            link.title.runes.length > ChurchLink.titleMax ||
+            link.body.runes.length > ChurchLink.bodyMax ||
+            !ChurchLink.validUrl(link.url))) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    await _b.write(() => link == null ? _b.churchLinks.remove(churchId) : _b.churchLinks[churchId] = link);
+  }
 
   @override
   Future<void> setHomeName(String? name) async {

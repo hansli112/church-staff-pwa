@@ -146,6 +146,12 @@ abstract interface class ChurchData {
 
   Stream<CalendarSettings> calendarSettings();
 
+  /// The church link, or null when the admin has not set one.
+  Stream<ChurchLink?> churchLink();
+
+  /// Saves the church link (admins only); null removes it.
+  Future<void> saveChurchLink(ChurchLink? link);
+
   /// Sets the home-screen name (admins only); null goes back to the church
   /// name.
   Future<void> setHomeName(String? name);

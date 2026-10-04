@@ -469,6 +469,16 @@ class FirestoreChurchData implements ChurchData {
       _col('settings').doc('calendar').snapshots().map((s) => calendarSettingsFromJson(s.data()));
 
   @override
+  Stream<ChurchLink?> churchLink() => _col('settings').doc('link').snapshots().map((s) => churchLinkFromJson(s.data()));
+
+  @override
+  Future<void> saveChurchLink(ChurchLink? link) {
+    final ref = _col('settings').doc('link');
+    if (link == null) return ref.delete();
+    return ref.set({...churchLinkToJson(link), 'updatedAt': FieldValue.serverTimestamp()});
+  }
+
+  @override
   Future<void> setHomeName(String? name) => _church.update({'homeName': name ?? FieldValue.delete()});
 
   @override

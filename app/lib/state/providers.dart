@@ -116,6 +116,9 @@ final servicesProvider = StreamProvider<ServiceSettings>(
   (ref) => _requireOpenChurch(ref).services(),
 );
 
+/// The church link at the top of the home page, or null.
+final churchLinkProvider = StreamProvider<ChurchLink?>((ref) => _requireOpenChurch(ref).churchLink());
+
 /// Saved rosters from today on, every service.
 final savedRostersProvider = StreamProvider<List<Roster>>((ref) {
   final from = ref.watch(todayProvider);

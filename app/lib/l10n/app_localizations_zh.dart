@@ -1042,4 +1042,37 @@ class L10nZh extends L10n {
 
   @override
   String get addToHomeIosNote => 'iPhone 上已經加入的圖示不會跟著更新。換了名稱或 logo 之後，請刪掉圖示再加入一次。';
+
+  @override
+  String get churchLink => '教會連結';
+
+  @override
+  String get churchLinkNone => '未設定';
+
+  @override
+  String get churchLinkTitle => '標題';
+
+  @override
+  String get churchLinkBody => '敘述（選填）';
+
+  @override
+  String get churchLinkUrl => '連結';
+
+  @override
+  String get churchLinkNeedsTitle => '請輸入標題';
+
+  @override
+  String get churchLinkNeedsHttps => '請輸入 https:// 開頭的連結';
+
+  @override
+  String get churchLinkFooter => '顯示在每位同工首頁的最上方，點了用瀏覽器打開。';
+
+  @override
+  String get churchLinkRemove => '移除教會連結';
+
+  @override
+  String get churchLinkRemoved => '已移除教會連結';
+
+  @override
+  String get churchLinkOpens => '用瀏覽器打開';
 }

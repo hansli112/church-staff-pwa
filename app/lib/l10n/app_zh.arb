@@ -587,5 +587,16 @@
   "addToHome": "加入主畫面",
   "addToHomeIphone": "用 Safari 打開教會網址，點「分享」，再點「加入主畫面」",
   "addToHomeAndroid": "用 Chrome 打開教會網址，點右上角的選單，再點「加到主畫面」",
-  "addToHomeIosNote": "iPhone 上已經加入的圖示不會跟著更新。換了名稱或 logo 之後，請刪掉圖示再加入一次。"
+  "addToHomeIosNote": "iPhone 上已經加入的圖示不會跟著更新。換了名稱或 logo 之後，請刪掉圖示再加入一次。",
+  "churchLink": "教會連結",
+  "churchLinkNone": "未設定",
+  "churchLinkTitle": "標題",
+  "churchLinkBody": "敘述（選填）",
+  "churchLinkUrl": "連結",
+  "churchLinkNeedsTitle": "請輸入標題",
+  "churchLinkNeedsHttps": "請輸入 https:// 開頭的連結",
+  "churchLinkFooter": "顯示在每位同工首頁的最上方，點了用瀏覽器打開。",
+  "churchLinkRemove": "移除教會連結",
+  "churchLinkRemoved": "已移除教會連結",
+  "churchLinkOpens": "用瀏覽器打開"
 }

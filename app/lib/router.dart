@@ -18,6 +18,7 @@ import 'features/dev/component_gallery.dart';
 import 'features/home/home_screen.dart';
 import 'features/me/account_screen.dart';
 import 'features/me/church_info_screen.dart';
+import 'features/me/church_link_screen.dart';
 import 'features/me/invites_screen.dart';
 import 'features/me/me_screen.dart';
 import 'features/me/member_editor_screen.dart';
@@ -129,6 +130,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                   if (!kIsWeb) page('support', (_) => const SupportScreen()),
                   page('language', (_) => const LanguageScreen()),
                   page('church', (_) => const ChurchInfoScreen()),
+                  page('link', (_) => const ChurchLinkScreen()),
                   page('calendar', (s) => CalendarSettingsScreen(result: s.uri.queryParameters['result'])),
                   page('notifications', (_) => const NotificationsScreen()),
                   page('invites', (_) => const InvitesScreen()),
