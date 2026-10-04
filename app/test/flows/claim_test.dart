@@ -99,4 +99,43 @@ void main() {
     await tapText(tester, '刪除');
     expect(b.pendingMembers['grace'], isEmpty);
   });
+
+  testWidgets('an admin merges pending data into someone who joined with another email', (tester) async {
+    final b = seededChurch(
+      extra: const [Member(uid: 'mei-google', name: '美玉', email: 'mei@gmail.com')],
+    );
+    b.pendingMembers['grace'] = {'old-mei': meiPending};
+    b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, 18))] = Roster(
+      type: 'sunday',
+      day: Day(2026, 10, 18),
+      duties: const [
+        Duty(role: '司琴', people: ['李美玉'], uids: {'李美玉': 'old-mei'}),
+      ],
+    );
+    await pumpApp(tester, b);
+    await go(tester, '/me/members/mei-google');
+    await tester.scrollUntilVisible(find.text('合併還沒登入的資料'), 200, scrollable: find.byType(Scrollable).last);
+    await tapText(tester, '合併還沒登入的資料');
+    await tapText(tester, '李美玉');
+    expect(find.text('把〈李美玉〉合併到〈美玉〉？'), findsOneWidget);
+    await tapText(tester, '合併');
+
+    final m = b.members['grace']!['mei-google']!;
+    expect(m.groups, {Group.rosterEditors});
+    expect(m.serves('sunday', '司琴'), isTrue);
+    expect(b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, 18))]!.duties.single.uids, {'李美玉': 'mei-google'});
+    expect(b.pendingMembers['grace'], isEmpty);
+    expect(find.text('已合併'), findsOneWidget);
+    expect(find.text('合併還沒登入的資料'), findsNothing, reason: 'nothing left to merge');
+  });
+
+  testWidgets('without pending data there is nothing to merge; non-admins cannot merge', (tester) async {
+    await pumpApp(tester, seededChurch());
+    await go(tester, '/me/members/mei');
+    expect(find.text('合併還沒登入的資料'), findsNothing);
+    final b = seededChurch(as: editor);
+    b.pendingMembers['grace'] = {'old-mei': meiPending};
+    await expectLater(b.cloud.mergePending('grace', 'old-mei', 'mei'), throwsA(isA<Object>()));
+    expect(b.pendingMembers['grace']!.length, 1);
+  });
 }

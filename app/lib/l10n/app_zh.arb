@@ -757,5 +757,29 @@
     }
   },
   "pendingDeleteBody": "他就不能用 email 認領了。服事表上的名字會保留。",
-  "pendingDeleted": "已刪除"
+  "pendingDeleted": "已刪除",
+  "mergePending": "合併還沒登入的資料",
+  "mergePendingFooter": "同工換了 email 加入時，把舊名單上他的那筆資料合併過來，服事表、牧區、權限都會接上。",
+  "mergePendingPick": "選一筆還沒登入的資料",
+  "mergePendingTitle": "把〈{pending}〉合併到〈{member}〉？",
+  "@mergePendingTitle": {
+    "placeholders": {
+      "pending": {
+        "type": "String"
+      },
+      "member": {
+        "type": "String"
+      }
+    }
+  },
+  "mergePendingBody": "服事表上的〈{pending}〉會改成這位同工，牧區和權限群組也會加上去。",
+  "@mergePendingBody": {
+    "placeholders": {
+      "pending": {
+        "type": "String"
+      }
+    }
+  },
+  "mergePendingAction": "合併",
+  "merged": "已合併"
 }

@@ -5,6 +5,7 @@ import '../../core/design/components.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
+import '../common/errors.dart';
 import '../common/labels.dart';
 
 /// An admin editing one member: role, permission groups, and per service
@@ -25,9 +26,50 @@ class MemberEditorScreen extends ConsumerWidget {
     }
   }
 
+  /// Picks a pending member and, once confirmed, merges it into [member].
+  Future<void> _mergePending(BuildContext context, WidgetRef ref, Member member, List<PendingMember> pending) async {
+    final l10n = L10n.of(context);
+    final picked = await showAppSheet<PendingMember>(
+      context,
+      builder: (context) => SafeArea(
+        child: SingleChildScrollView(
+          child: ListSection(
+            header: l10n.mergePendingPick,
+            children: [
+              for (final p in pending)
+                ListRow(
+                  title: p.name.isEmpty ? p.email : p.name,
+                  subtitle: p.name.isEmpty || p.email.isEmpty ? null : p.email,
+                  onTap: () => Navigator.pop(context, p),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (picked == null || !context.mounted) return;
+    final name = picked.name.isEmpty ? picked.email : picked.name;
+    final ok = await askChoice(
+      context,
+      title: l10n.mergePendingTitle(name, member.name),
+      message: l10n.mergePendingBody(name),
+      yes: l10n.mergePendingAction,
+      no: l10n.cancel,
+    );
+    if (ok != true || !context.mounted) return;
+    try {
+      await ref.read(backendProvider).cloud.mergePending(ref.read(currentChurchIdProvider)!, picked.id, member.uid);
+      Haptics.success();
+      if (context.mounted) showToast(context, l10n.merged);
+    } catch (e) {
+      if (context.mounted) showToast(context, errorText(l10n, e));
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
+    final pending = ref.watch(pendingMembersProvider).value ?? const <PendingMember>[];
     final member = ref.watch(
       membersProvider.select(
         (v) => v.value?.where((m) => m.uid == uid).firstOrNull,
@@ -90,6 +132,13 @@ class MemberEditorScreen extends ConsumerWidget {
                 l10n.zonesFooter,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
+            ),
+          if (pending.isNotEmpty)
+            ListSection(
+              footer: l10n.mergePendingFooter,
+              children: [
+                ListRow(title: l10n.mergePending, onTap: () => _mergePending(context, ref, member, pending)),
+              ],
             ),
           if (!self)
             ListSection(

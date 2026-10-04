@@ -2514,6 +2514,48 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'已刪除'**
   String get pendingDeleted;
+
+  /// No description provided for @mergePending.
+  ///
+  /// In zh, this message translates to:
+  /// **'合併還沒登入的資料'**
+  String get mergePending;
+
+  /// No description provided for @mergePendingFooter.
+  ///
+  /// In zh, this message translates to:
+  /// **'同工換了 email 加入時，把舊名單上他的那筆資料合併過來，服事表、牧區、權限都會接上。'**
+  String get mergePendingFooter;
+
+  /// No description provided for @mergePendingPick.
+  ///
+  /// In zh, this message translates to:
+  /// **'選一筆還沒登入的資料'**
+  String get mergePendingPick;
+
+  /// No description provided for @mergePendingTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'把〈{pending}〉合併到〈{member}〉？'**
+  String mergePendingTitle(String pending, String member);
+
+  /// No description provided for @mergePendingBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'服事表上的〈{pending}〉會改成這位同工，牧區和權限群組也會加上去。'**
+  String mergePendingBody(String pending);
+
+  /// No description provided for @mergePendingAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'合併'**
+  String get mergePendingAction;
+
+  /// No description provided for @merged.
+  ///
+  /// In zh, this message translates to:
+  /// **'已合併'**
+  String get merged;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

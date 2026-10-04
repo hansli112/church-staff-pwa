@@ -1315,4 +1315,29 @@ class L10nZh extends L10n {
 
   @override
   String get pendingDeleted => '已刪除';
+
+  @override
+  String get mergePending => '合併還沒登入的資料';
+
+  @override
+  String get mergePendingFooter => '同工換了 email 加入時，把舊名單上他的那筆資料合併過來，服事表、牧區、權限都會接上。';
+
+  @override
+  String get mergePendingPick => '選一筆還沒登入的資料';
+
+  @override
+  String mergePendingTitle(String pending, String member) {
+    return '把〈$pending〉合併到〈$member〉？';
+  }
+
+  @override
+  String mergePendingBody(String pending) {
+    return '服事表上的〈$pending〉會改成這位同工，牧區和權限群組也會加上去。';
+  }
+
+  @override
+  String get mergePendingAction => '合併';
+
+  @override
+  String get merged => '已合併';
 }
