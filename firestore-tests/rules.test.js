@@ -458,6 +458,29 @@ describe('教會連結 (settings/link)', () => {
   });
 });
 
+describe('外部通知 (webhook)', () => {
+  it('管理員讀得到設定但不能寫；同工、其他教會讀不到', async () => {
+    const path = `churches/${A}/settings/webhook`;
+    await seed(path, { url: 'https://n8n.example/hook', events: { calendar: true, roster: false } });
+    await assertSucceeds(getDoc(doc(as(ADMIN_A), path)));
+    await assertFails(setDoc(doc(as(ADMIN_A), path), { url: 'https://evil.example' }));
+    await assertFails(updateDoc(doc(as(ADMIN_A), path), { 'events.roster': true }));
+    await assertFails(deleteDoc(doc(as(ADMIN_A), path)));
+    await assertFails(getDoc(doc(as(MEMBER_A), path)));
+    await assertFails(getDoc(doc(as(EDITOR_A), path)));
+    await assertFails(getDoc(doc(as(ADMIN_B), path)));
+  });
+
+  it('密鑰任何 client 都不能讀寫', async () => {
+    await seed(`webhookSecrets/${A}`, { secret: 'sealed' });
+    for (const uid of [ADMIN_A, MEMBER_A, ADMIN_B]) {
+      await assertFails(getDoc(doc(as(uid), `webhookSecrets/${A}`)));
+      await assertFails(setDoc(doc(as(uid), `webhookSecrets/${A}`), { secret: 'x' }));
+    }
+    await assertFails(getDoc(doc(asAnon(), `webhookSecrets/${A}`)));
+  });
+});
+
 describe('全域個資 (users)', () => {
   it('只有本人讀得到', async () => {
     await assertSucceeds(getDoc(doc(as(MEMBER_A), `users/${MEMBER_A}`)));

@@ -231,7 +231,8 @@ service cloud.firestore {
             && data.url is string && data.url.size() <= 500 && data.url.matches('https://[^ ]+');
         }
 
-        allow read: if isMember(cid);
+        // The webhook URL may carry a token of the receiver: admins only.
+        allow read: if isMember(cid) && (doc != 'webhook' || isAdmin(cid));
         allow create, update: if isAdmin(cid) && !serverOnly()
           && (doc != 'services' || validServiceSettings())
           && (doc != 'link' || validChurchLink());
@@ -266,7 +267,8 @@ service cloud.firestore {
     }
 
     // churchNames/{nameKey} (name reservations), linkSources/{cid} (the
-    // church link fetch schedule) and everything else: no client access.
+    // church link fetch schedule), webhookSecrets/{cid} and everything
+    // else: no client access.
     match /{document=**} {
       allow read, write: if false;
     }

@@ -2166,6 +2166,180 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'原因不明，請再試一次'**
   String get linkErrUnknown;
+
+  /// No description provided for @webhook.
+  ///
+  /// In zh, this message translates to:
+  /// **'外部通知'**
+  String get webhook;
+
+  /// No description provided for @webhookUrl.
+  ///
+  /// In zh, this message translates to:
+  /// **'接收網址'**
+  String get webhookUrl;
+
+  /// No description provided for @webhookNeedsHttps.
+  ///
+  /// In zh, this message translates to:
+  /// **'請輸入 https:// 開頭的網址'**
+  String get webhookNeedsHttps;
+
+  /// No description provided for @webhookSecretOptional.
+  ///
+  /// In zh, this message translates to:
+  /// **'密鑰（選填，留空會自動產生）'**
+  String get webhookSecretOptional;
+
+  /// No description provided for @webhookSecretTooShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'密鑰至少要 16 個字元'**
+  String get webhookSecretTooShort;
+
+  /// No description provided for @webhookCalendar.
+  ///
+  /// In zh, this message translates to:
+  /// **'行事曆異動'**
+  String get webhookCalendar;
+
+  /// No description provided for @webhookCalendarHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'新增、修改、刪除活動'**
+  String get webhookCalendarHint;
+
+  /// No description provided for @webhookRoster.
+  ///
+  /// In zh, this message translates to:
+  /// **'服事表異動'**
+  String get webhookRoster;
+
+  /// No description provided for @webhookRosterHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'幾分鐘內的異動合併成一則'**
+  String get webhookRosterHint;
+
+  /// No description provided for @webhookFooter.
+  ///
+  /// In zh, this message translates to:
+  /// **'行事曆或服事表有異動時，把通知送到這個網址，例如交給 n8n 轉發到 LINE 群組。每則通知都用密鑰簽章。'**
+  String get webhookFooter;
+
+  /// No description provided for @webhookTest.
+  ///
+  /// In zh, this message translates to:
+  /// **'傳送測試'**
+  String get webhookTest;
+
+  /// No description provided for @webhookLast.
+  ///
+  /// In zh, this message translates to:
+  /// **'上次送出：{time}・{result}'**
+  String webhookLast(String time, String result);
+
+  /// No description provided for @webhookOk.
+  ///
+  /// In zh, this message translates to:
+  /// **'成功'**
+  String get webhookOk;
+
+  /// No description provided for @webhookHttp.
+  ///
+  /// In zh, this message translates to:
+  /// **'對方回應 {status}'**
+  String webhookHttp(String status);
+
+  /// No description provided for @webhookTimeout.
+  ///
+  /// In zh, this message translates to:
+  /// **'逾時'**
+  String get webhookTimeout;
+
+  /// No description provided for @webhookNetwork.
+  ///
+  /// In zh, this message translates to:
+  /// **'連不上'**
+  String get webhookNetwork;
+
+  /// No description provided for @webhookRotate.
+  ///
+  /// In zh, this message translates to:
+  /// **'換新的密鑰'**
+  String get webhookRotate;
+
+  /// No description provided for @webhookRotateMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'舊的密鑰會立刻失效，接收端要改用新的。'**
+  String get webhookRotateMessage;
+
+  /// No description provided for @webhookGenerate.
+  ///
+  /// In zh, this message translates to:
+  /// **'自動產生'**
+  String get webhookGenerate;
+
+  /// No description provided for @webhookTypeOwn.
+  ///
+  /// In zh, this message translates to:
+  /// **'自己輸入'**
+  String get webhookTypeOwn;
+
+  /// No description provided for @webhookSecretTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'密鑰'**
+  String get webhookSecretTitle;
+
+  /// No description provided for @webhookSecretOnce.
+  ///
+  /// In zh, this message translates to:
+  /// **'只會顯示這一次。請貼到接收端，用來驗證通知是馬大別忙送的。'**
+  String get webhookSecretOnce;
+
+  /// No description provided for @webhookCopySecret.
+  ///
+  /// In zh, this message translates to:
+  /// **'複製密鑰'**
+  String get webhookCopySecret;
+
+  /// No description provided for @webhookSecretCopied.
+  ///
+  /// In zh, this message translates to:
+  /// **'已複製密鑰'**
+  String get webhookSecretCopied;
+
+  /// No description provided for @webhookSecretChanged.
+  ///
+  /// In zh, this message translates to:
+  /// **'已換成新的密鑰'**
+  String get webhookSecretChanged;
+
+  /// No description provided for @webhookOff.
+  ///
+  /// In zh, this message translates to:
+  /// **'關閉外部通知'**
+  String get webhookOff;
+
+  /// No description provided for @webhookOffTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'關閉外部通知？'**
+  String get webhookOffTitle;
+
+  /// No description provided for @webhookOffMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'網址和密鑰都會刪掉，之後要重新設定。'**
+  String get webhookOffMessage;
+
+  /// No description provided for @webhookOffAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'關閉'**
+  String get webhookOffAction;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

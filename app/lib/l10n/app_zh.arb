@@ -640,5 +640,51 @@
     }
   },
   "linkErrNetwork": "連不上對方網站",
-  "linkErrUnknown": "原因不明，請再試一次"
+  "linkErrUnknown": "原因不明，請再試一次",
+  "webhook": "外部通知",
+  "webhookUrl": "接收網址",
+  "webhookNeedsHttps": "請輸入 https:// 開頭的網址",
+  "webhookSecretOptional": "密鑰（選填，留空會自動產生）",
+  "webhookSecretTooShort": "密鑰至少要 16 個字元",
+  "webhookCalendar": "行事曆異動",
+  "webhookCalendarHint": "新增、修改、刪除活動",
+  "webhookRoster": "服事表異動",
+  "webhookRosterHint": "幾分鐘內的異動合併成一則",
+  "webhookFooter": "行事曆或服事表有異動時，把通知送到這個網址，例如交給 n8n 轉發到 LINE 群組。每則通知都用密鑰簽章。",
+  "webhookTest": "傳送測試",
+  "webhookLast": "上次送出：{time}・{result}",
+  "@webhookLast": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "result": {
+        "type": "String"
+      }
+    }
+  },
+  "webhookOk": "成功",
+  "webhookHttp": "對方回應 {status}",
+  "@webhookHttp": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "webhookTimeout": "逾時",
+  "webhookNetwork": "連不上",
+  "webhookRotate": "換新的密鑰",
+  "webhookRotateMessage": "舊的密鑰會立刻失效，接收端要改用新的。",
+  "webhookGenerate": "自動產生",
+  "webhookTypeOwn": "自己輸入",
+  "webhookSecretTitle": "密鑰",
+  "webhookSecretOnce": "只會顯示這一次。請貼到接收端，用來驗證通知是馬大別忙送的。",
+  "webhookCopySecret": "複製密鑰",
+  "webhookSecretCopied": "已複製密鑰",
+  "webhookSecretChanged": "已換成新的密鑰",
+  "webhookOff": "關閉外部通知",
+  "webhookOffTitle": "關閉外部通知？",
+  "webhookOffMessage": "網址和密鑰都會刪掉，之後要重新設定。",
+  "webhookOffAction": "關閉"
 }

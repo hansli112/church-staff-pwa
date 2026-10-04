@@ -589,3 +589,61 @@ class LinkContent {
   @override
   int get hashCode => Object.hash(source, title, body, link, fetchedAt, error, errorStatus, errorAt);
 }
+
+/// How the last webhook notice went.
+enum WebhookDeliveryError { timeout, network, http }
+
+@immutable
+class WebhookDelivery {
+  const WebhookDelivery({required this.ok, this.status, this.error, this.event, this.at});
+
+  final bool ok;
+
+  /// The receiver's HTTP status, when it answered.
+  final int? status;
+  final WebhookDeliveryError? error;
+
+  /// `ping`, `calendar.created`, `roster.changed`, …
+  final String? event;
+  final DateTime? at;
+
+  @override
+  bool operator ==(Object other) =>
+      other is WebhookDelivery &&
+      other.ok == ok &&
+      other.status == status &&
+      other.error == error &&
+      other.event == event &&
+      other.at == at;
+
+  @override
+  int get hashCode => Object.hash(ok, status, error, event, at);
+}
+
+/// 外部通知: where the church's webhook goes and which changes it reports
+/// (churches/{cid}/settings/webhook, written by the backend). The secret
+/// is never here.
+@immutable
+class WebhookSettings {
+  const WebhookSettings({required this.url, this.calendar = false, this.roster = false, this.lastDelivery});
+
+  final String url;
+
+  /// Calendar events created, changed or deleted.
+  final bool calendar;
+
+  /// Roster changes, a few minutes' worth in one notice.
+  final bool roster;
+  final WebhookDelivery? lastDelivery;
+
+  @override
+  bool operator ==(Object other) =>
+      other is WebhookSettings &&
+      other.url == url &&
+      other.calendar == calendar &&
+      other.roster == roster &&
+      other.lastDelivery == lastDelivery;
+
+  @override
+  int get hashCode => Object.hash(url, calendar, roster, lastDelivery);
+}

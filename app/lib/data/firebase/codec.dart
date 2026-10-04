@@ -126,6 +126,36 @@ LinkContent? linkContentFromJson(Json? data) {
 /// The fields the app writes; source and fetchMinute belong to the backend.
 Json churchLinkToJson(ChurchLink link) => {'title': link.title, 'body': link.body, 'url': link.url};
 
+WebhookDelivery? webhookDeliveryFromJson(Object? raw) {
+  if (raw is! Map) return null;
+  return WebhookDelivery(
+    ok: raw['ok'] == true,
+    status: (raw['status'] as num?)?.toInt(),
+    error: _enumByNameOrNull(WebhookDeliveryError.values, raw['error']),
+    event: raw['event'] as String?,
+    at: readTime(raw['at']),
+  );
+}
+
+T? _enumByNameOrNull<T extends Enum>(List<T> values, Object? name) {
+  for (final v in values) {
+    if (v.name == name) return v;
+  }
+  return null;
+}
+
+WebhookSettings? webhookFromJson(Json? data) {
+  final url = data?['url'];
+  if (url is! String) return null;
+  final events = data!['events'];
+  return WebhookSettings(
+    url: url,
+    calendar: events is Map && events['calendar'] == true,
+    roster: events is Map && events['roster'] == true,
+    lastDelivery: webhookDeliveryFromJson(data['lastDelivery']),
+  );
+}
+
 Json notificationPrefsToJson(Set<NotificationKind> muted) => {
   'muted': [
     for (final k in NotificationKind.values)

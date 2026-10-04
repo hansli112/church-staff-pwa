@@ -156,6 +156,9 @@ abstract interface class ChurchData {
   /// What the backend last fetched from the church link's content source.
   Stream<LinkContent?> linkContent();
 
+  /// The church's webhook, or null when it has none. Admins only.
+  Stream<WebhookSettings?> webhook();
+
   /// Sets the home-screen name (admins only); null goes back to the church
   /// name.
   Future<void> setHomeName(String? name);
@@ -275,6 +278,23 @@ abstract interface class CloudApi {
   /// Sets the church link's content source and daily fetch time (admins);
   /// a null [source] removes it. A new source is fetched at once.
   Future<LinkSourceResult> setLinkSource(String churchId, String? source, int fetchMinute);
+
+  /// Sets the webhook URL and which events it gets (admins); a null [url]
+  /// turns it off. The first time, [secret] is used or one is made and
+  /// returned: the only time it is shown.
+  Future<String?> webhookSave(
+    String churchId, {
+    required String? url,
+    bool calendar = false,
+    bool roster = false,
+    String? secret,
+  });
+
+  /// Replaces the secret with [secret], or a new one that is returned.
+  Future<String?> webhookRotateSecret(String churchId, {String? secret});
+
+  /// Sends a test notice now.
+  Future<WebhookDelivery> webhookTest(String churchId);
 
   // Platform operator only.
   Future<List<ChurchSummary>> adminSearchChurches(String query);

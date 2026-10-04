@@ -1125,4 +1125,95 @@ class L10nZh extends L10n {
 
   @override
   String get linkErrUnknown => '原因不明，請再試一次';
+
+  @override
+  String get webhook => '外部通知';
+
+  @override
+  String get webhookUrl => '接收網址';
+
+  @override
+  String get webhookNeedsHttps => '請輸入 https:// 開頭的網址';
+
+  @override
+  String get webhookSecretOptional => '密鑰（選填，留空會自動產生）';
+
+  @override
+  String get webhookSecretTooShort => '密鑰至少要 16 個字元';
+
+  @override
+  String get webhookCalendar => '行事曆異動';
+
+  @override
+  String get webhookCalendarHint => '新增、修改、刪除活動';
+
+  @override
+  String get webhookRoster => '服事表異動';
+
+  @override
+  String get webhookRosterHint => '幾分鐘內的異動合併成一則';
+
+  @override
+  String get webhookFooter => '行事曆或服事表有異動時，把通知送到這個網址，例如交給 n8n 轉發到 LINE 群組。每則通知都用密鑰簽章。';
+
+  @override
+  String get webhookTest => '傳送測試';
+
+  @override
+  String webhookLast(String time, String result) {
+    return '上次送出：$time・$result';
+  }
+
+  @override
+  String get webhookOk => '成功';
+
+  @override
+  String webhookHttp(String status) {
+    return '對方回應 $status';
+  }
+
+  @override
+  String get webhookTimeout => '逾時';
+
+  @override
+  String get webhookNetwork => '連不上';
+
+  @override
+  String get webhookRotate => '換新的密鑰';
+
+  @override
+  String get webhookRotateMessage => '舊的密鑰會立刻失效，接收端要改用新的。';
+
+  @override
+  String get webhookGenerate => '自動產生';
+
+  @override
+  String get webhookTypeOwn => '自己輸入';
+
+  @override
+  String get webhookSecretTitle => '密鑰';
+
+  @override
+  String get webhookSecretOnce => '只會顯示這一次。請貼到接收端，用來驗證通知是馬大別忙送的。';
+
+  @override
+  String get webhookCopySecret => '複製密鑰';
+
+  @override
+  String get webhookSecretCopied => '已複製密鑰';
+
+  @override
+  String get webhookSecretChanged => '已換成新的密鑰';
+
+  @override
+  String get webhookOff => '關閉外部通知';
+
+  @override
+  String get webhookOffTitle => '關閉外部通知？';
+
+  @override
+  String get webhookOffMessage => '網址和密鑰都會刪掉，之後要重新設定。';
+
+  @override
+  String get webhookOffAction => '關閉';
 }

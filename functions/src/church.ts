@@ -127,6 +127,7 @@ export async function purgeDeletedChurches(deps: Deps, storage?: Storage, before
     await deps.db.recursiveDelete(doc.ref);
     if (key) await deps.db.doc(`churchNames/${key}`).delete();
     await deps.db.doc(`linkSources/${doc.id}`).delete();
+    await deps.db.doc(`webhookSecrets/${doc.id}`).delete();
     const invites = await deps.db.collection('invites').where('cid', '==', doc.id).get();
     await Promise.all(invites.docs.map((d) => d.ref.delete()));
     // The logo and the icons made from it.

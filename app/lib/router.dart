@@ -27,6 +27,7 @@ import 'features/me/notifications_screen.dart';
 import 'features/me/profile_screen.dart';
 import 'features/me/services_screen.dart';
 import 'features/me/support_screen.dart';
+import 'features/me/webhook_screen.dart';
 import 'features/rosters/import_screen.dart';
 import 'features/rosters/roster_day_screen.dart';
 import 'features/rosters/rosters_screen.dart';
@@ -131,6 +132,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                   page('language', (_) => const LanguageScreen()),
                   page('church', (_) => const ChurchInfoScreen()),
                   page('link', (_) => const ChurchLinkScreen()),
+                  page('webhook', (_) => const WebhookScreen()),
                   page('calendar', (s) => CalendarSettingsScreen(result: s.uri.queryParameters['result'])),
                   page('notifications', (_) => const NotificationsScreen()),
                   page('invites', (_) => const InvitesScreen()),

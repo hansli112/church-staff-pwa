@@ -484,6 +484,10 @@ class FirestoreChurchData implements ChurchData {
       _col('settings').doc('linkContent').snapshots().map((s) => linkContentFromJson(s.data()));
 
   @override
+  Stream<WebhookSettings?> webhook() =>
+      _col('settings').doc('webhook').snapshots().map((s) => webhookFromJson(s.data()));
+
+  @override
   Future<void> setHomeName(String? name) => _church.update({'homeName': name ?? FieldValue.delete()});
 
   @override
@@ -602,6 +606,33 @@ class FirebaseCloudApi implements CloudApi {
       status: (d['status'] as num?)?.toInt(),
     );
   }
+
+  @override
+  Future<String?> webhookSave(
+    String churchId, {
+    required String? url,
+    bool calendar = false,
+    bool roster = false,
+    String? secret,
+  }) async {
+    final d = _map(
+      await _call('webhookSave', {
+        'churchId': churchId,
+        'url': url,
+        'events': {'calendar': calendar, 'roster': roster},
+        'secret': ?secret,
+      }),
+    );
+    return d['secret'] as String?;
+  }
+
+  @override
+  Future<String?> webhookRotateSecret(String churchId, {String? secret}) async =>
+      _map(await _call('webhookRotateSecret', {'churchId': churchId, 'secret': ?secret}))['secret'] as String?;
+
+  @override
+  Future<WebhookDelivery> webhookTest(String churchId) async =>
+      webhookDeliveryFromJson(await _call('webhookTest', {'churchId': churchId})) ?? const WebhookDelivery(ok: false);
 
   @override
   Future<List<ChurchSummary>> adminSearchChurches(String query) async {

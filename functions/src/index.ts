@@ -30,6 +30,7 @@ import * as operator from './operator.js';
 import * as photo from './photo.js';
 import { monitoringUsageReader, writeDailyStats } from './stats.js';
 import * as triggers from './triggers.js';
+import * as webhook from './webhook.js';
 
 initializeApp();
 
@@ -98,6 +99,15 @@ export const fetchChurchLinks = onSchedule(
     await churchLink.fetchDueLinks(deps());
   },
 );
+
+// 外部通知 (webhooks). The secret is sealed with the calendar token key.
+type WebhookHandler = (d: webhook.WebhookDeps, c: Caller | null, data: unknown) => Promise<unknown>;
+const webhookDeps = (): webhook.WebhookDeps => ({ ...deps(), secretKey: calendarTokenKey.value() });
+const webhookCallable = (handler: WebhookHandler) =>
+  onCall({ ...callOpts, secrets: [calendarTokenKey] }, (req) => handler(webhookDeps(), caller(req), req.data));
+export const webhookSave = webhookCallable(webhook.webhookSave);
+export const webhookRotateSecret = webhookCallable(webhook.webhookRotateSecret);
+export const webhookTest = webhookCallable(webhook.webhookTest);
 
 // Invites
 export const previewInvite = callable(invites.previewInvite);

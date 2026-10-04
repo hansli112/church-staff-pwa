@@ -41,6 +41,16 @@ class MemoryBackend implements Backend {
   final calendars = <String, CalendarSettings>{};
   final churchLinks = <String, ChurchLink>{};
   final linkContents = <String, LinkContent>{};
+  final webhooks = <String, WebhookSettings>{};
+
+  /// The webhook secret per church: only the backend has it.
+  final webhookSecrets = <String, String>{};
+
+  /// What the receiver does with the next notices.
+  WebhookDelivery webhookAnswer = const WebhookDelivery(ok: true, status: 200);
+
+  /// Notices sent, as (church, event).
+  final webhookSent = <(String, String)>[];
 
   /// What fetching each content source URL gives: a [LinkContent] (its
   /// title, body and link) or a [LinkFetchError]. Unknown URLs fail.
@@ -549,6 +559,12 @@ class MemoryChurchData implements ChurchData {
   });
 
   @override
+  Stream<WebhookSettings?> webhook() => _b.watch(() {
+    _requireAdmin();
+    return _b.webhooks[churchId];
+  });
+
+  @override
   Future<void> setHomeName(String? name) async {
     _requireAdmin();
     if (name != null && (name.isEmpty || name.runes.length > Church.homeNameMaxLength)) {
@@ -686,6 +702,70 @@ class MemoryCloud implements CloudApi {
     final c = _b.churches[churchId];
     if (c == null || !c.isActive) throw const CloudException(CloudErrorCode.notFound);
     return ChurchPreview(id: c.id, name: c.name, logoUrl: c.logoUrl);
+  }
+
+  int _secrets = 0;
+  String _newSecret() => 'whsec_memory${++_secrets}';
+
+  @override
+  Future<String?> webhookSave(
+    String churchId, {
+    required String? url,
+    bool calendar = false,
+    bool roster = false,
+    String? secret,
+  }) async {
+    _requireChurchAdmin(churchId);
+    if (url == null) {
+      _b.webhooks.remove(churchId);
+      _b.webhookSecrets.remove(churchId);
+      _b.notify();
+      return null;
+    }
+    if (!ChurchLink.validUrl(url)) throw const CloudException(CloudErrorCode.unknown, 'notHttps');
+    if (secret != null && secret.length < 16) throw const CloudException(CloudErrorCode.unknown, 'secret');
+    String? generated;
+    if (secret != null) {
+      _b.webhookSecrets[churchId] = secret;
+    } else if (!_b.webhookSecrets.containsKey(churchId)) {
+      generated = _newSecret();
+      _b.webhookSecrets[churchId] = generated;
+    }
+    _b.webhooks[churchId] = WebhookSettings(
+      url: url.trim(),
+      calendar: calendar,
+      roster: roster,
+      lastDelivery: _b.webhooks[churchId]?.lastDelivery,
+    );
+    _b.notify();
+    return generated;
+  }
+
+  @override
+  Future<String?> webhookRotateSecret(String churchId, {String? secret}) async {
+    _requireChurchAdmin(churchId);
+    if (secret != null && secret.length < 16) throw const CloudException(CloudErrorCode.unknown, 'secret');
+    final next = secret ?? _newSecret();
+    _b.webhookSecrets[churchId] = next;
+    return secret == null ? next : null;
+  }
+
+  @override
+  Future<WebhookDelivery> webhookTest(String churchId) async {
+    _requireChurchAdmin(churchId);
+    final hook = _b.webhooks[churchId];
+    if (hook == null) throw const CloudException(CloudErrorCode.unknown);
+    _b.webhookSent.add((churchId, 'ping'));
+    final a = _b.webhookAnswer;
+    final delivery = WebhookDelivery(ok: a.ok, status: a.status, error: a.error, event: 'ping', at: _b.clock());
+    _b.webhooks[churchId] = WebhookSettings(
+      url: hook.url,
+      calendar: hook.calendar,
+      roster: hook.roster,
+      lastDelivery: delivery,
+    );
+    _b.notify();
+    return delivery;
   }
 
   /// Sources fetched by [setLinkSource], in order.

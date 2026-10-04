@@ -16,6 +16,8 @@
 | `churches/{cid}/settings/link` | 教會連結：`title`（1–30 字）、`body`（最多 120 字）、`url`（限 `https`）；`source`（每日內容來源，`https`）與 `fetchMinute`（每天抓取時間，台北時間午夜後的分鐘數，15 分鐘為單位）只能經 `setLinkSource` 設定 |
 | `churches/{cid}/settings/linkContent` | 只有後端寫：最近抓到的 `title`、`body`、`link`、`source`、`fetchedAt`，以及上次失敗的 `error`、`errorStatus`、`errorAt` |
 | `linkSources/{cid}` | 只有後端讀寫：內容來源的排程，`source`、`fetchMinute`、`nextAt`、`lastDay` |
+| `churches/{cid}/settings/webhook` | 外部通知，只有後端寫、只有管理員讀：`url`（`https`）、`events`（`calendar`、`roster`）、`lastDelivery`（`at`、`event`、`ok`、`status`、`error`） |
+| `webhookSecrets/{cid}` | 只有後端讀寫：外部通知的密鑰，用行事曆 token 的金鑰以 AES-256-GCM 加密 |
 
 - 一個教會的所有資料都在 `churches/{cid}` 底下，可以整棵匯出。
 - 推播 token 放在 `users/{uid}`，只有本人和 Cloud Functions 讀得到。self-host 版的 roster editor 讀得到全部 token，這裡改掉了。
