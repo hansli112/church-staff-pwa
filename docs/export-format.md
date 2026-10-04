@@ -54,10 +54,15 @@
     }
   ],
 
+  // 從舊版搬來、還沒登入的同工。服事表的 uids 可能指向這裡的 id（沿用舊 uid）。
+  "pendingMembers": [
+    { "id": "<舊 uid>", "name": "陳志豪", "email": "hao@example.com", "role": "staff", "groups": [], "zones": [] }
+  ],
+
   // 同工排序：服事 id → 服事項目 → 依序的名字。
   "staffOrders": { "sunday": { "司琴": ["李美玉", "陳志豪"] } },
 
-  // 所有存過的服事表。people 是顯示的名字；uids 只列出是同工的人。
+  // 所有存過的服事表。people 是顯示的名字；uids 只列出是同工（或待認領同工）的人。
   "rosters": [
     {
       "id": "2026-10-04_sunday", "date": "2026-10-04", "serviceId": "sunday",

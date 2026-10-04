@@ -432,6 +432,12 @@ class MemoryChurchData implements ChurchData {
   }
 
   @override
+  Future<List<PendingMember>> allPendingMembers() async {
+    _requireAdmin();
+    return (_b.pendingMembers[churchId] ?? const {}).values.toList();
+  }
+
+  @override
   Future<List<Roster>> allRosters() async {
     _requireMember();
     return _b.rosters[churchId]!.values.toList();

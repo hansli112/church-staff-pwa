@@ -1,11 +1,12 @@
 import { createHash } from 'node:crypto';
 
-import { Timestamp } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import type { Storage } from 'firebase-admin/storage';
 
 import { openChurch } from './church.js';
 import { fail, requireCaller, text, type Caller, type Deps } from './common.js';
 import { buildImport, type SelfHostSnapshot, type SourceDoc } from './importer.js';
+import { nameKey } from './text.js';
 
 /**
  * 自助搬家: a self-host admin runs one command in their own Cloud Shell,
@@ -128,14 +129,16 @@ export async function moveCommit(deps: MoveDeps, caller: Caller | null, data: un
   const me = typeof input.me === 'string' ? built.members.find((m) => m.uid === input.me) : undefined;
   if (input.me != null && !me) fail('invalid-argument', 'unknown');
 
-  const cid = await openChurch(deps, c, churchName, {
-    services: built.services,
-    admin: me ? { name: me.name, groups: me.groups, zones: me.zones, zoneTypes: me.zoneTypes } : undefined,
-    extra: { movedFrom: project, movedBy: c.uid },
-  });
-
+  // Everything under the church is written first and the church doc last,
+  // in openChurch's transaction with the name: until then nothing reads
+  // these documents, and a failed move leaves no half-made church (and
+  // keeps the name free for a retry).
   const { db } = deps;
-  const root = db.doc(`churches/${cid}`);
+  // The name is checked again in openChurch's transaction; this only spares
+  // writing everything for a name that is already taken.
+  if ((await db.doc(`churchNames/${nameKey(churchName)}`).get()).exists) fail('already-exists', 'duplicateName');
+  const root = db.collection('churches').doc();
+  const cid = root.id;
   // Which roster days name each person, so claiming rewrites only those.
   const rosterIds = new Map<string, string[]>();
   for (const r of built.rosters) {
@@ -144,10 +147,12 @@ export async function moveCommit(deps: MoveDeps, caller: Caller | null, data: un
     }
   }
   const w = db.bulkWriter();
+  const failures: unknown[] = [];
+  const write = (p: Promise<unknown>) => void p.catch((e) => failures.push(e));
   for (const m of built.members) {
     if (m === me) continue;
     const hash = m.email ? emailHash(m.email) : null;
-    void w.set(root.collection('pendingMembers').doc(m.uid), {
+    write(w.set(root.collection('pendingMembers').doc(m.uid), {
       name: m.name,
       email: m.email,
       emailHash: hash,
@@ -157,8 +162,8 @@ export async function moveCommit(deps: MoveDeps, caller: Caller | null, data: un
       zoneTypes: m.zoneTypes,
       rosterIds: rosterIds.get(m.uid) ?? [],
       importedAt: now,
-    });
-    if (hash) void w.set(db.doc(`pendingIndex/${hash}`), { churches: { [cid]: m.uid } }, { merge: true });
+    }));
+    if (hash) write(w.set(db.doc(`pendingIndex/${hash}`), { churches: { [cid]: m.uid } }, { merge: true }));
   }
   for (const r of built.rosters) {
     const duties = me
@@ -167,10 +172,29 @@ export async function moveCommit(deps: MoveDeps, caller: Caller | null, data: un
           uids: Object.fromEntries(Object.entries(d.uids).map(([n, u]) => [n, u === me.uid ? c.uid : u])),
         }))
       : r.data.duties;
-    void w.set(root.collection('rosters').doc(r.id), { ...r.data, duties, via: 'import', updatedAt: now });
+    write(w.set(root.collection('rosters').doc(r.id), { ...r.data, duties, via: 'import', updatedAt: now }));
   }
-  for (const o of built.staffOrders) void w.set(root.collection('staff_orders').doc(o.id), { roles: o.roles });
+  for (const o of built.staffOrders) write(w.set(root.collection('staff_orders').doc(o.id), { roles: o.roles }));
   await w.close();
+  if (failures.length) {
+    console.error(`moveCommit: ${failures.length} writes failed for ${cid}`, failures[0]);
+    fail('unavailable', 'unavailable');
+  }
+  try {
+    await openChurch(deps, c, churchName, {
+      cid,
+      services: built.services,
+      admin: me ? { name: me.name, groups: me.groups, zones: me.zones, zoneTypes: me.zoneTypes } : undefined,
+      extra: { movedFrom: project, movedBy: c.uid },
+    });
+  } catch (e) {
+    // Taken in the meantime: drop what was written under the unused ID.
+    await db.recursiveDelete(root);
+    for (const m of built.members) {
+      if (m.email) await db.doc(`pendingIndex/${emailHash(m.email)}`).set({ churches: { [cid]: FieldValue.delete() } }, { merge: true });
+    }
+    throw e;
+  }
   await deps.bucket.file(path).delete({ ignoreNotFound: true });
   return { churchId: cid };
 }

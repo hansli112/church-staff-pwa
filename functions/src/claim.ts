@@ -50,14 +50,14 @@ export async function pendingClaims(deps: Deps, caller: Caller | null) {
  * move recorded for [pid] are read.
  */
 async function repoint(deps: Deps, cid: string, pid: string, uid: string, rosterIds: string[]) {
-  const refs = rosterIds.map((id) => deps.db.doc(`churches/${cid}/rosters/${id}`));
-  for (let i = 0; i < refs.length; i += 300) {
-    const snaps = await deps.db.getAll(...refs.slice(i, i + 300));
-    const batch = deps.db.batch();
-    let n = 0;
-    for (const s of snaps) {
+  // One transaction per day, a few at a time: an editor changing the same
+  // day meanwhile is never overwritten.
+  const one = (id: string) =>
+    deps.db.runTransaction(async (tx) => {
+      const ref = deps.db.doc(`churches/${cid}/rosters/${id}`);
+      const s = await tx.get(ref);
       const duties = s.get('duties') as { uids?: Record<string, string> }[] | undefined;
-      if (!s.exists || !Array.isArray(duties)) continue;
+      if (!s.exists || !Array.isArray(duties)) return;
       let changed = false;
       const next = duties.map((d) => ({
         ...d,
@@ -69,13 +69,9 @@ async function repoint(deps: Deps, cid: string, pid: string, uid: string, roster
           }),
         ),
       }));
-      if (changed) {
-        batch.update(s.ref, { duties: next });
-        n++;
-      }
-    }
-    if (n) await batch.commit();
-  }
+      if (changed) tx.update(ref, { duties: next });
+    });
+  for (let i = 0; i < rosterIds.length; i += 10) await Promise.all(rosterIds.slice(i, i + 10).map(one));
 }
 
 /** Deletes the pending member and its index entry. */

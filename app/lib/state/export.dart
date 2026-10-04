@@ -31,9 +31,10 @@ final fileSaverProvider = Provider<FileSaver>((ref) => const PlatformFileSaver()
 Future<ChurchSnapshot> loadChurchSnapshot(WidgetRef ref) async {
   final data = ref.read(churchDataProvider)!;
   final church = await data.church().first;
-  final (services, members, staffOrders, rosters, calendar, link, webhook) = await (
+  final (services, members, pending, staffOrders, rosters, calendar, link, webhook) = await (
     data.services().first,
     data.allMembers(),
+    data.allPendingMembers(),
     data.allStaffOrders(),
     data.allRosters(),
     data.calendarSettings().first,
@@ -44,6 +45,7 @@ Future<ChurchSnapshot> loadChurchSnapshot(WidgetRef ref) async {
     church: church!,
     services: services,
     members: members,
+    pendingMembers: pending,
     staffOrders: staffOrders,
     rosters: rosters,
     calendar: calendar,

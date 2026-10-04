@@ -124,6 +124,9 @@ abstract interface class ChurchData {
   /// Everyone in the church, read once from the server when online (export).
   Future<List<Member>> allMembers();
 
+  /// Pending members, read once (export). Admins.
+  Future<List<PendingMember>> allPendingMembers();
+
   /// Every saved roster, past ones too, read once (export).
   Future<List<Roster>> allRosters();
 

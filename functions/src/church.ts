@@ -51,6 +51,8 @@ export async function openChurch(
     services?: { services: unknown[]; ids: string[] };
     admin?: { name?: string; groups?: string[]; zones?: unknown[]; zoneTypes?: string[] };
     extra?: Record<string, unknown>;
+    /** A church ID picked beforehand, e.g. for data written first. */
+    cid?: string;
   } = {},
 ) {
   if (!c.emailVerified) fail('failed-precondition', 'unverifiedEmail');
@@ -58,7 +60,7 @@ export async function openChurch(
   if (!key) fail('invalid-argument', 'unknown');
 
   const { db } = deps;
-  const churchRef = db.collection('churches').doc();
+  const churchRef = opts.cid ? db.doc(`churches/${opts.cid}`) : db.collection('churches').doc();
   const cid = churchRef.id;
   const profile = await db.doc(`users/${c.uid}`).get();
   const memberName = opts.admin?.name || (profile.get('name') as string | undefined) || c.name || '';

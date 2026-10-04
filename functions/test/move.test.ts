@@ -177,6 +177,8 @@ describe('self-serve move', () => {
     await upload(moveFile());
     await moveCommit(d, me, { path: PATH, churchName: '恩典堂' });
     await upload(moveFile());
+    const before = (await db.collectionGroup('pendingMembers').get()).size;
     await rejectsWith(moveCommit(d, me, { path: PATH, churchName: '恩典 堂' }), 'duplicateName');
+    assert.equal((await db.collectionGroup('pendingMembers').get()).size, before, 'nothing written for a taken name');
   });
 });

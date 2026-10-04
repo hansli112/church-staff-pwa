@@ -17,6 +17,7 @@ class ChurchSnapshot {
     required this.church,
     required this.services,
     this.members = const [],
+    this.pendingMembers = const [],
     this.staffOrders = const {},
     this.rosters = const [],
     this.calendar,
@@ -27,6 +28,9 @@ class ChurchSnapshot {
   final Church church;
   final ServiceSettings services;
   final List<Member> members;
+
+  /// Moved from self-host, not signed in yet. Rosters may point at them.
+  final List<PendingMember> pendingMembers;
 
   /// By service ID.
   final Map<String, StaffOrder> staffOrders;
@@ -95,6 +99,22 @@ Map<String, Object?> exportJson(ChurchSnapshot s, DateTime exportedAt) => {
           for (final z in m.zones) {'serviceType': z.serviceType, 'duties': z.duties},
         ],
         'joinedAt': m.joinedAt?.toUtc().toIso8601String(),
+      },
+  ],
+  'pendingMembers': [
+    for (final p in [...s.pendingMembers]..sort((a, b) => a.name.compareTo(b.name)))
+      {
+        'id': p.id,
+        'name': p.name,
+        'email': p.email,
+        'role': p.role.name,
+        'groups': [
+          for (final g in Group.values)
+            if (p.groups.contains(g)) g.id,
+        ],
+        'zones': [
+          for (final z in p.zones) {'serviceType': z.serviceType, 'duties': z.duties},
+        ],
       },
   ],
   'staffOrders': {

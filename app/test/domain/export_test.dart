@@ -28,6 +28,9 @@ void main() {
       ),
       const Member(uid: 'pastor', name: '王牧師', role: Role.admin),
     ],
+    pendingMembers: const [
+      PendingMember(id: 'old-hao', name: '陳志豪', email: 'hao@example.com', groups: {Group.calendarEditors}),
+    ],
     staffOrders: {
       'sunday': StaffOrder({
         '司琴': ['李美玉', '陳志豪'],
@@ -117,6 +120,16 @@ void main() {
         {
           'serviceType': 'sunday',
           'duties': ['司琴'],
+        },
+      ]);
+      expect(j['pendingMembers'], [
+        {
+          'id': 'old-hao',
+          'name': '陳志豪',
+          'email': 'hao@example.com',
+          'role': 'staff',
+          'groups': ['calendar-editors'],
+          'zones': <Object>[],
         },
       ]);
       expect(j['staffOrders'], {

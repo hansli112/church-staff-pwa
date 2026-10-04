@@ -83,11 +83,16 @@ export async function onLogoUploaded(deps: LogoDeps, path: string, generation: s
     return true;
   });
 
-  // Icons of older logos are no longer linked from anywhere.
+  // Icons of older logos are no longer linked from anywhere. Never touch a
+  // newer upload's: its trigger may still be about to link them. A late,
+  // older upload removes only its own.
   const [files] = await deps.bucket.getFiles({ prefix: `churches/${cid}/logo-` });
-  const keep = applied ? `churches/${cid}/logo-${generation}-` : null;
-  await Promise.all(
-    files.filter((f) => keep && !f.name.startsWith(keep)).map((f) => f.delete({ ignoreNotFound: true })),
-  );
+  const versionOf = (name: string) => /\/logo-(\d+)-[^/]+$/.exec(name)?.[1];
+  const stale = files.filter((f) => {
+    const v = versionOf(f.name);
+    if (!v || !/^\d+$/.test(generation)) return false;
+    return applied ? BigInt(v) < BigInt(generation) : v === generation;
+  });
+  await Promise.all(stale.map((f) => f.delete({ ignoreNotFound: true })));
   return true;
 }

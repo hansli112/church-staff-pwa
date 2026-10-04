@@ -381,6 +381,12 @@ class FirestoreChurchData implements ChurchData {
   }
 
   @override
+  Future<List<PendingMember>> allPendingMembers() async {
+    final snap = await _col('pendingMembers').get();
+    return [for (final d in snap.docs) pendingMemberFromJson(d.id, d.data())];
+  }
+
+  @override
   Future<List<Roster>> allRosters() async {
     final snap = await _col('rosters').get();
     return [for (final d in snap.docs) ?rosterFromJson(d.data())];

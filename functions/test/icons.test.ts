@@ -98,6 +98,18 @@ describe('home-screen icons', () => {
     await onLogoUploaded(logoDeps, 'churches/C1/logo.png', '250');
     assert.equal((await db.doc('churches/C1').get()).get('logoVersion'), '300');
     assert.ok((await files('C1')).some((n) => n.includes('logo-300-')), 'current icons kept');
+    assert.ok((await files('C1')).every((n) => !n.includes('logo-250-')), 'the late upload removes its own');
+  });
+
+  test('an older upload linking first never deletes a newer upload’s icons', async () => {
+    await seedChurch('C1', {});
+    await bucket.file('churches/C1/logo.png').save(await logo(), { contentType: 'image/png' });
+    // The newer upload has made its icons but not linked them yet.
+    for (const f of ['icon-192.png', 'icon-512.png', 'maskable-512.png', 'apple-touch-180.png']) {
+      await bucket.file(`churches/C1/logo-200-${f}`).save(Buffer.from('x'), { contentType: 'image/png' });
+    }
+    await onLogoUploaded(logoDeps, 'churches/C1/logo.png', '100');
+    assert.equal((await files('C1')).filter((n) => n.includes('logo-200-')).length, 4);
   });
 
   test('a logo that cannot be read still gets its version, and the page uses the logo itself', async () => {
