@@ -164,10 +164,10 @@ void main() {
       await go(tester, '/me/invites');
       await tapText(tester, '7 天');
       final code = b.invites.keys.single;
-      expect(out.sharedTexts.single, contains('https://martha-app-dev.web.app/c/grace/join/$code'));
+      expect(out.sharedTexts.single, contains('https://marthasit-dev.web.app/c/grace/join/$code'));
       await tapText(tester, code);
       await tapText(tester, '複製連結');
-      expect(out.copied.single, 'https://martha-app-dev.web.app/c/grace/join/$code');
+      expect(out.copied.single, 'https://marthasit-dev.web.app/c/grace/join/$code');
     });
 
     testWidgets('disabling a service hides it from the roster tab but keeps its rosters', (tester) async {

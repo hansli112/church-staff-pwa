@@ -19,8 +19,8 @@ npx --prefix functions firebase login          # 同一個帳號
 ## 建立或補齊專案
 
 ```sh
-scripts/firebase-project.sh dev  martha-app-dev [BILLING_ACCOUNT_ID]
-scripts/firebase-project.sh prod martha-app     [BILLING_ACCOUNT_ID]
+scripts/firebase-project.sh dev  marthasit-dev [BILLING_ACCOUNT_ID]
+scripts/firebase-project.sh prod marthasit     [BILLING_ACCOUNT_ID]
 ```
 
 腳本可以重跑，每一步都會先檢查。加 `--dry-run` 只印出指令。它做的事：
@@ -53,7 +53,7 @@ flutter build apk --dart-define-from-file=config/dev.json
 
 ```sh
 cd functions && npm run build && cd ..
-npx --prefix functions firebase deploy --project martha-app-dev
+npx --prefix functions firebase deploy --project marthasit-dev
 ```
 
 Hosting 部署前，會把 landing page 和法律文件複製進 Web build：
@@ -64,7 +64,7 @@ Hosting 部署前，會把 landing page 和法律文件複製進 Web build：
 ## 平台營運者
 
 ```sh
-cd functions && npx tsx scripts/grant-operator.ts --project martha-app-dev <email>
+cd functions && npx tsx scripts/grant-operator.ts --project marthasit-dev <email>
 ```
 
 設定後要重新登入才會生效。之後「我的」頁會出現「平台後台」。

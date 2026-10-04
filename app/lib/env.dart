@@ -35,8 +35,8 @@ enum Env {
     if (override.isNotEmpty) return override;
     if (kIsWeb) return Uri.base.origin;
     return switch (this) {
-      Env.prod => 'https://martha-app.web.app',
-      _ => 'https://martha-app-dev.web.app',
+      Env.prod => 'https://marthasit.web.app',
+      _ => 'https://marthasit-dev.web.app',
     };
   }
 }
@@ -100,7 +100,7 @@ FirebaseOptions firebaseOptionsFor(Env env) {
         storageBucket: const String.fromEnvironment('FIREBASE_STORAGE_BUCKET'),
         authDomain: const String.fromEnvironment('FIREBASE_AUTH_DOMAIN'),
         measurementId: const String.fromEnvironment('FIREBASE_MEASUREMENT_ID'),
-        iosBundleId: ios ? 'io.github.hansli112.martha' : null,
+        iosBundleId: ios ? 'app.marthasit' : null,
       );
   }
 }

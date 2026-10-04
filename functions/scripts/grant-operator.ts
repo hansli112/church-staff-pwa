@@ -1,7 +1,7 @@
 // Gives (or with --revoke, removes) the platform operator claim, which opens
 // the back office. Uses Application Default Credentials.
 //
-//   npx tsx scripts/grant-operator.ts --project martha-app-dev you@gmail.com
+//   npx tsx scripts/grant-operator.ts --project marthasit-dev you@gmail.com
 //
 // The user must sign out and in again (or wait for the token to refresh,
 // up to an hour) before the claim takes effect.

@@ -82,12 +82,12 @@ void main() {
   testWidgets('church info shows the church URL, to copy or share', (tester) async {
     await pumpApp(tester, seededChurch(as: staffMei));
     await go(tester, '/me/church');
-    expect(find.text('martha-app-dev.web.app/c/grace'), findsOneWidget);
+    expect(find.text('marthasit-dev.web.app/c/grace'), findsOneWidget);
     final out = captureOutbox(tester);
     await tapText(tester, '教會網址');
     expect(find.text('分享教會網址'), findsOneWidget);
     await tapText(tester, '複製教會網址');
-    expect(out.copied.single, 'https://martha-app-dev.web.app/c/grace');
+    expect(out.copied.single, 'https://marthasit-dev.web.app/c/grace');
     expect(find.text('已複製教會網址'), findsOneWidget);
   });
 

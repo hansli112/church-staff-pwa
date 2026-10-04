@@ -17,7 +17,7 @@ import { ICON_FILES, iconStoragePath, type IconFile } from './icons.js';
  */
 export interface PageDeps extends Deps {
   bucket: Pick<ReturnType<Storage['bucket']>, 'file'>;
-  /** The hosting origin, e.g. https://martha-app.web.app. */
+  /** The hosting origin, e.g. https://marthasit.web.app. */
   appUrl: string;
 }
 

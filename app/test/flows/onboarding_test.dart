@@ -126,7 +126,7 @@ void main() {
     b.auth.signInAs('x@gmail.com');
     await pumpApp(tester, b);
     await tapText(tester, '輸入邀請碼');
-    await tester.enterText(find.byType(TextField), 'https://martha-app.web.app/c/$cid/join/PASTED26');
+    await tester.enterText(find.byType(TextField), 'https://marthasit.web.app/c/$cid/join/PASTED26');
     await tester.pump();
     await tapText(tester, '下一步');
     await tapText(tester, '加入');

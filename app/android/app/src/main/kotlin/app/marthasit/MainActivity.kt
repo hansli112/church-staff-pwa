@@ -1,4 +1,4 @@
-package io.github.hansli112.martha
+package app.marthasit
 
 import android.content.ComponentName
 import android.content.pm.PackageManager

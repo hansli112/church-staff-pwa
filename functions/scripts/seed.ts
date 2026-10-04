@@ -6,7 +6,7 @@
 //   FIRESTORE_EMULATOR_HOST=localhost:8181 FIREBASE_AUTH_EMULATOR_HOST=localhost:9199 \
 //     npx tsx scripts/seed.ts
 //   # against a real project: needs --project and --really
-//   npx tsx scripts/seed.ts --project martha-app-dev --really
+//   npx tsx scripts/seed.ts --project marthasit-dev --really
 //
 // Re-running replaces the same documents (fixed IDs), so it never duplicates.
 // Sign in as perf-admin@example.com / perf-admin-123 (emulator only).

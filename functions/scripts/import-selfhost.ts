@@ -4,12 +4,12 @@
 //   npx tsx scripts/import-selfhost.ts --source church-staff-pwa --church-id grace \
 //     --church-name 恩典堂 --dry-run
 //   # 2. Into dev (or the emulators: set FIRESTORE_EMULATOR_HOST), then compare.
-//   npx tsx scripts/import-selfhost.ts --source church-staff-pwa --target martha-app-dev \
+//   npx tsx scripts/import-selfhost.ts --source church-staff-pwa --target marthasit-dev \
 //     --church-id grace --church-name 恩典堂 --really
 //   # 3. Accounts, keeping passwords (the script prints these commands with
 //   #    the source project's hash parameters filled in):
 //   firebase auth:export users.json --project church-staff-pwa
-//   firebase auth:import users.json --project martha-app-dev --hash-algo=SCRYPT ...
+//   firebase auth:import users.json --project marthasit-dev --hash-algo=SCRYPT ...
 //
 // Credentials: Application Default Credentials (gcloud auth
 // application-default login) for an account that can read the source and
