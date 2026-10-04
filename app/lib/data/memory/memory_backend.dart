@@ -821,6 +821,90 @@ class MemoryCloud implements CloudApi {
   }
 
   @override
+  Future<List<PendingClaim>> pendingClaims() async {
+    final user = _b.auth.currentUser;
+    if (user == null || !user.verified) return const [];
+    final email = user.email.trim().toLowerCase();
+    return [
+      for (final MapEntry(key: cid, value: pending) in _b.pendingMembers.entries)
+        if (_b.churches[cid]?.isActive ?? false)
+          for (final p in pending.values)
+            if (p.email.trim().toLowerCase() == email)
+              PendingClaim(churchId: cid, churchName: _b.churches[cid]!.name, pendingId: p.id, name: p.name),
+    ];
+  }
+
+  /// Points [cid]'s rosters at [uid] instead of pending member [pid].
+  void _repoint(String cid, String pid, String uid) {
+    final rosters = _b.rosters[cid]!;
+    for (final MapEntry(:key, :value) in rosters.entries.toList()) {
+      rosters[key] = value.copyWith(
+        duties: [
+          for (final d in value.duties)
+            d.copyWith(uids: {for (final e in d.uids.entries) e.key: e.value == pid ? uid : e.value}),
+        ],
+      );
+    }
+  }
+
+  Member _absorb(Member m, PendingMember p) => m.copyWith(
+    groups: {...m.groups, ...p.groups},
+    zones: [
+      for (final type in {...m.zoneTypes, for (final z in p.zones) z.serviceType})
+        Zone(
+          serviceType: type,
+          duties: {
+            for (final z in [...m.zones, ...p.zones])
+              if (z.serviceType == type) ...z.duties,
+          }.toList(),
+        ),
+    ],
+  );
+
+  @override
+  Future<String> claimPending(String churchId, String pendingId) async {
+    final user = _b.auth.currentUser;
+    if (user == null || !user.verified) throw const CloudException(CloudErrorCode.unverifiedEmail);
+    final p = _b.pendingMembers[churchId]?[pendingId];
+    final existing = _b.memberOf(churchId, user.uid);
+    if (p == null) {
+      if (existing != null) return churchId;
+      throw const CloudException(CloudErrorCode.notFound);
+    }
+    if (p.email.trim().toLowerCase() != user.email.trim().toLowerCase() ||
+        !(_b.churches[churchId]?.isActive ?? false)) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    _b.members[churchId]![user.uid] = existing != null
+        ? _absorb(existing, p)
+        : Member(
+            uid: user.uid,
+            name: p.name,
+            email: user.email,
+            role: p.role,
+            groups: p.groups,
+            zones: p.zones,
+            joinedAt: _b.clock(),
+          );
+    _repoint(churchId, pendingId, user.uid);
+    _b.pendingMembers[churchId]!.remove(pendingId);
+    _b.notify();
+    return churchId;
+  }
+
+  @override
+  Future<void> mergePending(String churchId, String pendingId, String uid) async {
+    _requireChurchAdmin(churchId);
+    final p = _b.pendingMembers[churchId]?[pendingId];
+    final m = _b.memberOf(churchId, uid);
+    if (p == null || m == null) throw const CloudException(CloudErrorCode.notFound);
+    _b.members[churchId]![uid] = _absorb(m, p);
+    _repoint(churchId, pendingId, uid);
+    _b.pendingMembers[churchId]!.remove(pendingId);
+    _b.notify();
+  }
+
+  @override
   Future<ChurchPreview> churchPreview(String churchId) async {
     final c = _b.churches[churchId];
     if (c == null || !c.isActive) throw const CloudException(CloudErrorCode.notFound);

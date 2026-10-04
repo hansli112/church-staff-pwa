@@ -735,5 +735,27 @@
         "type": "int"
       }
     }
-  }
+  },
+  "claimPrompt": "〈{church}〉的同工資料已經搬過來了，要加入嗎？",
+  "@claimPrompt": {
+    "placeholders": {
+      "church": {
+        "type": "String"
+      }
+    }
+  },
+  "claimJoin": "加入",
+  "claimDecline": "不要",
+  "movedPasswordNote": "從舊版搬過來的同工：舊的密碼不能用，請用同一個 email 註冊新帳號，或用 Google 登入。",
+  "pendingDelete": "刪除這筆資料",
+  "pendingDeleteTitle": "刪除〈{name}〉的資料？",
+  "@pendingDeleteTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pendingDeleteBody": "他就不能用 email 認領了。服事表上的名字會保留。",
+  "pendingDeleted": "已刪除"
 }

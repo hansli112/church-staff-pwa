@@ -10,6 +10,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/session.dart';
 import '../common/errors.dart';
+import 'claims.dart';
 
 /// For someone signed in who belongs to no church yet. Most people arrive
 /// through an invite link and never see this; the rest either have a code
@@ -31,6 +32,7 @@ class WelcomeScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(Space.l),
               children: [
                 const VerifyEmailBanner(),
+                const PendingClaimsCard(),
                 Text(
                   l10n.welcomeTitle,
                   textAlign: TextAlign.center,

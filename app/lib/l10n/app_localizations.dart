@@ -2466,6 +2466,54 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'{count} 位還沒登入'**
   String pendingCount(int count);
+
+  /// No description provided for @claimPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'〈{church}〉的同工資料已經搬過來了，要加入嗎？'**
+  String claimPrompt(String church);
+
+  /// No description provided for @claimJoin.
+  ///
+  /// In zh, this message translates to:
+  /// **'加入'**
+  String get claimJoin;
+
+  /// No description provided for @claimDecline.
+  ///
+  /// In zh, this message translates to:
+  /// **'不要'**
+  String get claimDecline;
+
+  /// No description provided for @movedPasswordNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'從舊版搬過來的同工：舊的密碼不能用，請用同一個 email 註冊新帳號，或用 Google 登入。'**
+  String get movedPasswordNote;
+
+  /// No description provided for @pendingDelete.
+  ///
+  /// In zh, this message translates to:
+  /// **'刪除這筆資料'**
+  String get pendingDelete;
+
+  /// No description provided for @pendingDeleteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'刪除〈{name}〉的資料？'**
+  String pendingDeleteTitle(String name);
+
+  /// No description provided for @pendingDeleteBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'他就不能用 email 認領了。服事表上的名字會保留。'**
+  String get pendingDeleteBody;
+
+  /// No description provided for @pendingDeleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已刪除'**
+  String get pendingDeleted;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

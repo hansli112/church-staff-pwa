@@ -142,6 +142,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                                 if (p.email.isNotEmpty && p.name.isNotEmpty) p.email,
                               ].join('・'),
                               value: roleLabel(l10n, p.role),
+                              onTap: isAdmin ? () => _openPending(p) : null,
                             ),
                           );
                         },
@@ -167,6 +168,44 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
       child: child,
     ),
   );
+
+  /// What an admin can do with someone who has not signed in yet.
+  Future<void> _openPending(PendingMember p) async {
+    final l10n = L10n.of(context);
+    final name = p.name.isEmpty ? p.email : p.name;
+    final choice = await showAppSheet<String>(
+      context,
+      builder: (context) => SafeArea(
+        child: ListSection(
+          header: name,
+          children: [
+            ListRow(
+              title: l10n.pendingDelete,
+              destructive: true,
+              leading: const Icon(Icons.delete_outline),
+              onTap: () => Navigator.pop(context, 'delete'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || choice == null) return;
+    if (choice == 'delete') {
+      final ok = await confirmDestructive(
+        context,
+        title: l10n.pendingDeleteTitle(name),
+        message: l10n.pendingDeleteBody,
+        action: l10n.delete,
+      );
+      if (!ok || !mounted) return;
+      try {
+        await ref.read(churchDataProvider)!.deletePendingMember(p.id);
+        if (mounted) showToast(context, l10n.pendingDeleted);
+      } catch (e) {
+        if (mounted) showToast(context, errorText(l10n, e));
+      }
+    }
+  }
 
   Future<void> _open(Member m) async {
     final l10n = L10n.of(context);

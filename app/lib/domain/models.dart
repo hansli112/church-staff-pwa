@@ -714,3 +714,20 @@ class MovePreview {
   /// Days in the file with no readable date or service.
   final int skippedRosters;
 }
+
+/// A pending member waiting for the signed-in person, found by their
+/// verified email.
+@immutable
+class PendingClaim {
+  const PendingClaim({required this.churchId, required this.churchName, required this.pendingId, required this.name});
+
+  final String churchId;
+  final String churchName;
+  final String pendingId;
+
+  /// Their name on that church's list.
+  final String name;
+
+  /// Remembered on the device when declined.
+  String get key => '$churchId/$pendingId';
+}

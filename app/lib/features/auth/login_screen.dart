@@ -209,12 +209,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 _error = null;
               }),
             ),
-            if (!register)
+            if (!register) ...[
               SecondaryButton(
                 label: l10n.forgotPassword,
                 expand: true,
                 onPressed: _busy ? null : _forgot,
               ),
+              const SizedBox(height: Space.m),
+              Text(
+                l10n.movedPasswordNote,
+                textAlign: TextAlign.center,
+                style: AppText.footnote.copyWith(color: AppColors.of(context).secondaryLabel),
+              ),
+            ],
           ],
         ),
       ),

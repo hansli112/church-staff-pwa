@@ -9,6 +9,7 @@ import '../../domain/church_link.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../church/church_logo.dart';
+import '../church/claims.dart';
 import 'church_link_card.dart';
 import '../rosters/format.dart';
 import '../rosters/rosters_screen.dart';
@@ -43,7 +44,8 @@ class HomeScreen extends ConsumerWidget {
         ),
         data: (list) {
           perfMark('home-visible');
-          if (list.isEmpty && link == null) {
+          final claims = ref.watch(pendingClaimsProvider).value ?? const [];
+          if (list.isEmpty && link == null && claims.isEmpty) {
             return EmptyState(
               message: l10n.noUpcomingServices,
               actionLabel: l10n.viewRosters,
@@ -52,6 +54,7 @@ class HomeScreen extends ConsumerWidget {
           }
           return ListView(
             children: [
+              const PendingClaimsCard(),
               if (link != null) ChurchLinkCard(title: link.title, body: link.body, url: link.url),
               if (list.isEmpty)
                 EmptyState(

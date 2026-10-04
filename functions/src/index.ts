@@ -7,6 +7,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 import { getStorage } from 'firebase-admin/storage';
 import {
+  onDocumentDeleted,
   onDocumentDeletedWithAuthContext,
   onDocumentWritten,
   onDocumentUpdated,
@@ -20,6 +21,7 @@ import { onObjectFinalized } from 'firebase-functions/v2/storage';
 import * as account from './account.js';
 import * as calendar from './calendar.js';
 import * as church from './church.js';
+import * as claim from './claim.js';
 import * as churchLink from './churchLink.js';
 import { churchPage as churchPageHandler } from './churchPage.js';
 import { REGION, type Caller, type Deps } from './common.js';
@@ -119,6 +121,15 @@ const moveCallable = (handler: MoveHandler) =>
   );
 export const movePreview = moveCallable(move.movePreview);
 export const moveCommit = moveCallable(move.moveCommit);
+export const pendingClaims = onCall(callOpts, (req) => claim.pendingClaims(deps(), caller(req)));
+export const claimPending = callable(claim.claimPending);
+export const mergePending = callable(claim.mergePending);
+export const onPendingMemberDeleted = onDocumentDeleted(
+  { region: REGION, document: 'churches/{cid}/pendingMembers/{pid}' },
+  async (event) => {
+    if (event.data) await claim.onPendingMemberDeleted(deps(), event.params.cid, event.data);
+  },
+);
 
 // Invites
 export const previewInvite = callable(invites.previewInvite);

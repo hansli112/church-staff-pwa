@@ -136,6 +136,13 @@ export async function moveCommit(deps: MoveDeps, caller: Caller | null, data: un
 
   const { db } = deps;
   const root = db.doc(`churches/${cid}`);
+  // Which roster days name each person, so claiming rewrites only those.
+  const rosterIds = new Map<string, string[]>();
+  for (const r of built.rosters) {
+    for (const uid of new Set(r.data.duties.flatMap((d) => Object.values(d.uids)))) {
+      rosterIds.set(uid, [...(rosterIds.get(uid) ?? []), r.id]);
+    }
+  }
   const w = db.bulkWriter();
   for (const m of built.members) {
     if (m === me) continue;
@@ -148,6 +155,7 @@ export async function moveCommit(deps: MoveDeps, caller: Caller | null, data: un
       groups: m.groups,
       zones: m.zones,
       zoneTypes: m.zoneTypes,
+      rosterIds: rosterIds.get(m.uid) ?? [],
       importedAt: now,
     });
     if (hash) void w.set(db.doc(`pendingIndex/${hash}`), { churches: { [cid]: m.uid } }, { merge: true });

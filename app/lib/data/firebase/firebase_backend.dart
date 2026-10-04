@@ -639,6 +639,29 @@ class FirebaseCloudApi implements CloudApi {
       _map(await _call('moveCommit', {'path': path, 'churchName': churchName, 'me': me}))['churchId'] as String;
 
   @override
+  Future<List<PendingClaim>> pendingClaims() async {
+    final d = _map(await _call('pendingClaims'));
+    return [
+      for (final c in d['claims'] as List<dynamic>? ?? const [])
+        if (c is Map)
+          PendingClaim(
+            churchId: c['churchId'] as String,
+            churchName: c['churchName'] as String? ?? '',
+            pendingId: c['pendingId'] as String,
+            name: c['name'] as String? ?? '',
+          ),
+    ];
+  }
+
+  @override
+  Future<String> claimPending(String churchId, String pendingId) async =>
+      _map(await _call('claimPending', {'churchId': churchId, 'pendingId': pendingId}))['churchId'] as String;
+
+  @override
+  Future<void> mergePending(String churchId, String pendingId, String uid) =>
+      _call('mergePending', {'churchId': churchId, 'pendingId': pendingId, 'uid': uid});
+
+  @override
   Future<ChurchPreview> churchPreview(String churchId) async {
     final d = _map(await _call('churchPreview', {'churchId': churchId}));
     final logo = d['logoPath'];

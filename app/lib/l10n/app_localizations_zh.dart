@@ -1287,4 +1287,32 @@ class L10nZh extends L10n {
   String pendingCount(int count) {
     return '$count 位還沒登入';
   }
+
+  @override
+  String claimPrompt(String church) {
+    return '〈$church〉的同工資料已經搬過來了，要加入嗎？';
+  }
+
+  @override
+  String get claimJoin => '加入';
+
+  @override
+  String get claimDecline => '不要';
+
+  @override
+  String get movedPasswordNote => '從舊版搬過來的同工：舊的密碼不能用，請用同一個 email 註冊新帳號，或用 Google 登入。';
+
+  @override
+  String get pendingDelete => '刪除這筆資料';
+
+  @override
+  String pendingDeleteTitle(String name) {
+    return '刪除〈$name〉的資料？';
+  }
+
+  @override
+  String get pendingDeleteBody => '他就不能用 email 認領了。服事表上的名字會保留。';
+
+  @override
+  String get pendingDeleted => '已刪除';
 }

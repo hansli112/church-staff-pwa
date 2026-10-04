@@ -298,6 +298,17 @@ abstract interface class CloudApi {
   /// the church ID.
   Future<String> moveCommit(String path, {required String churchName, String? me});
 
+  /// Pending members (moved from self-host) under the caller's verified
+  /// email. Empty for an unverified email.
+  Future<List<PendingClaim>> pendingClaims();
+
+  /// Joins the caller to the church as that pending member. Returns the
+  /// church ID.
+  Future<String> claimPending(String churchId, String pendingId);
+
+  /// Merges a pending member into a member of the same church (admins).
+  Future<void> mergePending(String churchId, String pendingId, String uid);
+
   /// Name and logo of an active church, for someone who is not a member.
   /// Throws [CloudErrorCode.notFound] for an unknown or closed church.
   Future<ChurchPreview> churchPreview(String churchId);
