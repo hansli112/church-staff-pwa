@@ -2,6 +2,13 @@
 
 dev、prod 兩個專案都放在 Hans 的**個人 Google 帳號**底下，不放進 dwave.cc organization。
 
+| | 專案 ID | 網址 |
+|---|---|---|
+| dev | `marthasit-dev` | <https://marthasit-dev.web.app> |
+| prod | `marthasit` | <https://marthasit.web.app>（網域買好後換成 `marthasit.app`） |
+
+英文名「Martha, sit」，技術識別一律寫 `marthasit`。prod 不加後綴，因為 ID 會出現在網址和 Google 登入畫面上。
+
 ## 一次性準備
 
 ```sh
@@ -12,9 +19,15 @@ npx --prefix functions firebase login          # 同一個帳號
 ```
 
 - billing account 只能在 console 建：<https://console.cloud.google.com/billing>
-- 個人帳號的專案配額滿了的話，有兩個辦法：
+  - 帳戶類型選「個人」。台灣稅務身分：沒有統一編號就選 Unregistered individual，存了不能改。
+  - 第一次建會是免費試用（US$300、90 天）。試用結束要按「啟用完整帳戶」，否則 Functions 和 Storage 會停。
+- 個人帳號的專案配額滿了的話：
   - 刪掉不用的專案。刪除後要等 30 天才釋出配額。
   - 到 <https://support.google.com/code/contact/project_quota_increase> 申請提高配額。
+  - 用另一個 Gmail（不是 Workspace 帳號，否則專案會掛進那個組織）建專案，再把個人帳號加成擁有者。目前兩個專案都是這樣建的，建立者是教會帳號。
+    - 另開一個 gcloud 設定給那個帳號，執行腳本時用 `MARTHA_GCLOUD_CONFIG=<設定名稱>` 指定。
+    - 擁有者不能用 gcloud 加（`SOLO_MUST_INVITE_OWNERS`）：在 console 的 IAM 頁邀請，個人帳號收信接受。
+    - 接受後其餘步驟都用個人帳號。`firebase login` 也換成個人帳號，最後把建立者從 IAM 移除。
 
 ## 建立或補齊專案
 
@@ -32,12 +45,16 @@ scripts/firebase-project.sh prod marthasit     [BILLING_ACCOUNT_ID]
 - 註冊 Web、Android、iOS App，寫出 `app/config/<env>.json`。
 - 建 Storage bucket。
 - 部署 rules 和 indexes。
-- 設 budget alert：NT$300 / 月，50%、90%、100% 各通知一次，寄給 billing 擁有者。
+- 有 billing 時：
+  - 開需要付費方案的 API（Functions、Cloud Run、排程、Secret Manager…）。
+  - 給 Google 服務帳號 Functions 部署需要的角色。`firebase deploy` 自己加有時會失敗（"We failed to modify the IAM policy"）。
+  - 建 Functions 用的 secret，值不會印出來：`CALENDAR_TOKEN_KEY` 隨機產生；`GEMINI_API_KEY` 建一把只能呼叫 Gemini 的 API key；行事曆的 OAuth client 先放佔位值，部署和其他功能不受影響，只有連接行事曆會失敗。
+  - 設 budget alert：NT$300 / 月，50%、90%、100% 各通知一次，寄給 billing 擁有者。
 
 腳本最後會列出要手動做的步驟。這些 Google 沒有 API：
 - 在 console 開 Google 登入，並把 Web client ID 填到 config 的 `GOOGLE_SERVER_CLIENT_ID`。
 - 產生 Web Push 金鑰，填到 `FCM_VAPID_KEY`。
-- 設定 Functions 用的 secret：`GEMINI_API_KEY`、OAuth client、`CALENDAR_TOKEN_KEY`。
+- 設定 OAuth 同意畫面，建一個「網頁應用程式」OAuth client，用 `gcloud secrets versions add` 換掉兩個佔位 secret。
 
 ## 建置
 
@@ -52,9 +69,14 @@ flutter build apk --dart-define-from-file=config/dev.json
 ## 部署
 
 ```sh
-cd functions && npm run build && cd ..
-npx --prefix functions firebase deploy --project marthasit-dev
+scripts/deploy.sh dev                  # 建 Web 版，部署 Functions 和 Hosting
+scripts/deploy.sh prod --only hosting  # 只更新網頁
 ```
+
+- 專案取自 `app/config/<env>.json`，所以 dev 的 Web build 不會部署到 prod。
+- 新專案第一次部署 Functions，常因 Eventarc 權限還沒生效而失敗。腳本會等 3 分鐘重試一次。
+- 部署後設定 Functions 舊映像的清理規則，不然每月會有一點費用。映像庫第一次部署後才存在，所以放在這裡。
+- rules 和 indexes 由 `firebase-project.sh` 部署，或 `npx --prefix functions firebase deploy --project <id> --only firestore,storage`。
 
 Hosting 部署前，會把 landing page 和法律文件複製進 Web build：
 - `/about`

@@ -70,7 +70,25 @@ if [ -n "$billing" ]; then
   run gcloud services enable --project "$project" \
     cloudfunctions.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com \
     run.googleapis.com eventarc.googleapis.com pubsub.googleapis.com cloudscheduler.googleapis.com \
-    secretmanager.googleapis.com
+    secretmanager.googleapis.com billingbudgets.googleapis.com
+fi
+
+# 3b. Roles the Functions deploy needs. `firebase deploy` tries to grant them
+# itself but can fail ("We failed to modify the IAM policy"), so grant them here.
+if [ -n "$billing" ] && ! $dry; then
+  number="$(gcloud projects describe "$project" --format='value(projectNumber)')"
+  gcloud beta services identity create --service=pubsub.googleapis.com --project "$project" >/dev/null 2>&1 || true
+  gcloud storage service-agent --project "$project" >/dev/null 2>&1 || true
+  for binding in \
+    "service-$number@gs-project-accounts.iam.gserviceaccount.com roles/pubsub.publisher" \
+    "service-$number@gcp-sa-pubsub.iam.gserviceaccount.com roles/iam.serviceAccountTokenCreator" \
+    "$number-compute@developer.gserviceaccount.com roles/run.invoker" \
+    "$number-compute@developer.gserviceaccount.com roles/eventarc.eventReceiver"; do
+    set -- $binding
+    echo "+ grant $2 to $1"
+    gcloud projects add-iam-policy-binding "$project" --member="serviceAccount:$1" --role="$2" \
+      --condition=None >/dev/null || echo "  (not yet; firebase deploy will try again)"
+  done
 fi
 
 # 4. Add Firebase.
@@ -138,10 +156,34 @@ fi
 ( cd "$root" && run npx --prefix functions firebase deploy --project "$project" \
     --only firestore:rules,firestore:indexes${billing:+,storage} )
 
+# 9b. Secrets for Cloud Functions (Secret Manager needs billing). Values are
+# never printed. The OAuth client starts as a placeholder: Functions deploy and
+# run, and only connecting a calendar fails until the real client is set.
+secret() { # name; value on stdin
+  if gcloud secrets describe "$1" --project "$project" >/dev/null 2>&1; then
+    cat >/dev/null; echo "  secret $1 exists"
+  else
+    echo "+ create secret $1"
+    gcloud secrets create "$1" --project "$project" --replication-policy=automatic --data-file=- >/dev/null
+  fi
+}
+if [ -n "$billing" ] && ! $dry; then
+  openssl rand -base64 32 | tr -d '\n' | secret CALENDAR_TOKEN_KEY
+  printf placeholder | secret GOOGLE_OAUTH_CLIENT_ID
+  printf placeholder | secret GOOGLE_OAUTH_CLIENT_SECRET
+  if ! gcloud secrets describe GEMINI_API_KEY --project "$project" >/dev/null 2>&1; then
+    gcloud services enable apikeys.googleapis.com --project "$project"
+    key="$(gcloud services api-keys create --project "$project" --display-name='Gemini (functions)' \
+      --api-target=service=generativelanguage.googleapis.com --format='value(response.keyString)' 2>/dev/null)"
+    [ -n "$key" ] || { echo "Could not create the Gemini API key" >&2; exit 1; }
+    printf %s "$key" | secret GEMINI_API_KEY
+  fi
+fi
+
 # 10. Budget alert to the account owner.
 if [ -n "$billing" ]; then
-  if ! gcloud billing budgets list --billing-account="$billing" --format='value(displayName)' 2>/dev/null | grep -qx "martha-$env_name"; then
-    run gcloud billing budgets create --billing-account="$billing" --display-name="martha-$env_name" \
+  if ! gcloud billing budgets list --billing-project="$project" --billing-account="$billing" --format='value(displayName)' 2>/dev/null | grep -qx "martha-$env_name"; then
+    run gcloud billing budgets create --billing-project="$project" --billing-account="$billing" --display-name="martha-$env_name" \
       --budget-amount=300TWD --threshold-rule=percent=0.5 --threshold-rule=percent=0.9 --threshold-rule=percent=1.0 \
       --filter-projects="projects/$project"
   fi
@@ -153,12 +195,9 @@ Done with the automatic part. By hand, once (docs/firebase-setup.md):
   1. Firebase console › Authentication › Sign-in method › Google: enable.
      Copy the Web client ID into app/config/$env_name.json as GOOGLE_SERVER_CLIENT_ID.
   2. Cloud Messaging › Web Push certificates: generate; copy into FCM_VAPID_KEY.
-  3. Secrets for Cloud Functions:
-       npx --prefix functions firebase functions:secrets:set GEMINI_API_KEY --project $project
-       npx --prefix functions firebase functions:secrets:set GOOGLE_OAUTH_CLIENT_ID --project $project
-       npx --prefix functions firebase functions:secrets:set GOOGLE_OAUTH_CLIENT_SECRET --project $project
-       openssl rand -base64 32 | npx --prefix functions firebase functions:secrets:set CALENDAR_TOKEN_KEY --data-file=- --project $project
-  4. Deploy functions and hosting:
-       npx --prefix functions firebase deploy --project $project --only functions,hosting
+  3. Google Calendar: OAuth consent screen and a Web OAuth client, then replace the placeholders:
+       printf %s '<client id>' | gcloud secrets versions add GOOGLE_OAUTH_CLIENT_ID --project $project --data-file=-
+       printf %s '<secret>' | gcloud secrets versions add GOOGLE_OAUTH_CLIENT_SECRET --project $project --data-file=-
+  4. Deploy: scripts/deploy.sh $env_name
   5. Platform operator: npx --prefix functions tsx functions/scripts/grant-operator.ts --project $project <your email>
 EOF
