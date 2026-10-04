@@ -91,9 +91,39 @@ ChurchLink? churchLinkFromJson(Json? data) {
   final title = data?['title'];
   final url = data?['url'];
   if (title is! String || url is! String) return null;
-  return ChurchLink(title: title, body: data!['body'] as String? ?? '', url: url);
+  return ChurchLink(
+    title: title,
+    body: data!['body'] as String? ?? '',
+    url: url,
+    source: data['source'] as String?,
+    fetchMinute: (data['fetchMinute'] as num?)?.toInt() ?? ChurchLink.defaultFetchMinute,
+  );
 }
 
+LinkFetchError? linkFetchErrorFromName(Object? name) {
+  if (name == null) return null;
+  for (final e in LinkFetchError.values) {
+    if (e.name == name) return e;
+  }
+  return LinkFetchError.unknown;
+}
+
+LinkContent? linkContentFromJson(Json? data) {
+  final source = data?['source'];
+  if (source is! String) return null;
+  return LinkContent(
+    source: source,
+    title: data!['title'] as String? ?? '',
+    body: data['body'] as String? ?? '',
+    link: data['link'] as String?,
+    fetchedAt: readTime(data['fetchedAt']),
+    error: linkFetchErrorFromName(data['error']),
+    errorStatus: (data['errorStatus'] as num?)?.toInt(),
+    errorAt: readTime(data['errorAt']),
+  );
+}
+
+/// The fields the app writes; source and fetchMinute belong to the backend.
 Json churchLinkToJson(ChurchLink link) => {'title': link.title, 'body': link.body, 'url': link.url};
 
 Json notificationPrefsToJson(Set<NotificationKind> muted) => {

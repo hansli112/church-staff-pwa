@@ -493,16 +493,33 @@ class CalendarSettings {
 /// e.g. the church website, giving page or a sign-up form.
 @immutable
 class ChurchLink {
-  const ChurchLink({required this.title, this.body = '', required this.url});
+  const ChurchLink({
+    required this.title,
+    this.body = '',
+    required this.url,
+    this.source,
+    this.fetchMinute = defaultFetchMinute,
+  });
 
   static const titleMax = 30;
   static const bodyMax = 120;
+
+  /// 04:30 in Asia/Taipei.
+  static const defaultFetchMinute = 4 * 60 + 30;
 
   final String title;
   final String body;
 
   /// Always `https`.
   final String url;
+
+  /// A JSON URL fetched once a day for content that replaces [title],
+  /// [body] and [url] while fresh. Set through the backend only.
+  final String? source;
+
+  /// When [source] is fetched: minutes after midnight, Asia/Taipei, in
+  /// steps of 15.
+  final int fetchMinute;
 
   /// Whether [url] is an https URL with a host.
   static bool validUrl(String url) {
@@ -512,8 +529,63 @@ class ChurchLink {
 
   @override
   bool operator ==(Object other) =>
-      other is ChurchLink && other.title == title && other.body == body && other.url == url;
+      other is ChurchLink &&
+      other.title == title &&
+      other.body == body &&
+      other.url == url &&
+      other.source == source &&
+      other.fetchMinute == fetchMinute;
 
   @override
-  int get hashCode => Object.hash(title, body, url);
+  int get hashCode => Object.hash(title, body, url, source, fetchMinute);
+}
+
+/// Why fetching the content source failed.
+enum LinkFetchError { timeout, tooLarge, badFormat, notHttps, http, network, unknown }
+
+/// What the backend last fetched from the church link's content source
+/// (settings/linkContent).
+@immutable
+class LinkContent {
+  const LinkContent({
+    required this.source,
+    this.title = '',
+    this.body = '',
+    this.link,
+    this.fetchedAt,
+    this.error,
+    this.errorStatus,
+    this.errorAt,
+  });
+
+  /// The source this came from; content of an earlier source is ignored.
+  final String source;
+  final String title;
+  final String body;
+  final String? link;
+
+  /// Last successful fetch.
+  final DateTime? fetchedAt;
+
+  /// The last attempt's failure, or null when it worked.
+  final LinkFetchError? error;
+
+  /// The HTTP status for [LinkFetchError.http].
+  final int? errorStatus;
+  final DateTime? errorAt;
+
+  @override
+  bool operator ==(Object other) =>
+      other is LinkContent &&
+      other.source == source &&
+      other.title == title &&
+      other.body == body &&
+      other.link == link &&
+      other.fetchedAt == fetchedAt &&
+      other.error == error &&
+      other.errorStatus == errorStatus &&
+      other.errorAt == errorAt;
+
+  @override
+  int get hashCode => Object.hash(source, title, body, link, fetchedAt, error, errorStatus, errorAt);
 }

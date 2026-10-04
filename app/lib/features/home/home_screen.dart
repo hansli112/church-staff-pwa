@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/design/components.dart';
 import '../../core/perf.dart';
 import '../../core/design/tokens.dart';
+import '../../domain/church_link.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../church/church_logo.dart';
@@ -24,7 +25,9 @@ class HomeScreen extends ConsumerWidget {
     final mine = ref.watch(myServicesProvider);
     final services = ref.watch(servicesProvider).value;
     final today = ref.watch(todayProvider);
-    final link = ref.watch(churchLinkProvider).value;
+    final fixedLink = ref.watch(churchLinkProvider).value;
+    final content = ref.watch(linkContentProvider).value;
+    final link = fixedLink == null ? null : shownChurchLink(fixedLink, content, DateTime.now());
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,

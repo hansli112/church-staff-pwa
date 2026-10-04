@@ -40,6 +40,11 @@ class MemoryBackend implements Backend {
   final users = <String, UserProfile>{};
   final calendars = <String, CalendarSettings>{};
   final churchLinks = <String, ChurchLink>{};
+  final linkContents = <String, LinkContent>{};
+
+  /// What fetching each content source URL gives: a [LinkContent] (its
+  /// title, body and link) or a [LinkFetchError]. Unknown URLs fail.
+  final linkSourceAnswers = <String, Object>{};
   final calendarEvents = <String, List<CalendarEvent>>{};
 
   /// Set to make the next write fail, to test error handling.
@@ -520,8 +525,28 @@ class MemoryChurchData implements ChurchData {
             !ChurchLink.validUrl(link.url))) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
-    await _b.write(() => link == null ? _b.churchLinks.remove(churchId) : _b.churchLinks[churchId] = link);
+    await _b.write(() {
+      if (link == null) {
+        _b.churchLinks.remove(churchId);
+        return;
+      }
+      // Like the merge in Firestore: the source stays the backend's.
+      final old = _b.churchLinks[churchId];
+      _b.churchLinks[churchId] = ChurchLink(
+        title: link.title,
+        body: link.body,
+        url: link.url,
+        source: old?.source,
+        fetchMinute: old?.fetchMinute ?? ChurchLink.defaultFetchMinute,
+      );
+    });
   }
+
+  @override
+  Stream<LinkContent?> linkContent() => _b.watch(() {
+    _requireMember();
+    return _b.linkContents[churchId];
+  });
 
   @override
   Future<void> setHomeName(String? name) async {
@@ -661,6 +686,62 @@ class MemoryCloud implements CloudApi {
     final c = _b.churches[churchId];
     if (c == null || !c.isActive) throw const CloudException(CloudErrorCode.notFound);
     return ChurchPreview(id: c.id, name: c.name, logoUrl: c.logoUrl);
+  }
+
+  /// Sources fetched by [setLinkSource], in order.
+  final linkSourceFetches = <String>[];
+
+  @override
+  Future<LinkSourceResult> setLinkSource(String churchId, String? source, int fetchMinute) async {
+    _requireChurchAdmin(churchId);
+    final link = _b.churchLinks[churchId];
+    if (link == null) throw const CloudException(CloudErrorCode.unknown, 'noLink');
+    ChurchLink next(String? s, int m) =>
+        ChurchLink(title: link.title, body: link.body, url: link.url, source: s, fetchMinute: m);
+    if (source == null) {
+      _b.churchLinks[churchId] = next(null, ChurchLink.defaultFetchMinute);
+      _b.linkContents.remove(churchId);
+      _b.notify();
+      return const LinkSourceResult();
+    }
+    if (!ChurchLink.validUrl(source)) throw const CloudException(CloudErrorCode.unknown, 'notHttps');
+    final changed = link.source != source;
+    _b.churchLinks[churchId] = next(source, fetchMinute);
+    if (!changed) {
+      _b.notify();
+      return const LinkSourceResult();
+    }
+    linkSourceFetches.add(source);
+    final answer = _b.linkSourceAnswers[source] ?? LinkFetchError.network;
+    final now = _b.clock();
+    final before = _b.linkContents[churchId];
+    final LinkSourceResult result;
+    if (answer is LinkContent) {
+      _b.linkContents[churchId] = LinkContent(
+        source: source,
+        title: answer.title,
+        body: answer.body,
+        link: answer.link,
+        fetchedAt: now,
+      );
+      result = LinkSourceResult(content: _b.linkContents[churchId]);
+    } else {
+      final error = answer as LinkFetchError;
+      // A new source starts with no content of its own.
+      final kept = before?.source == source ? before : null;
+      _b.linkContents[churchId] = LinkContent(
+        source: source,
+        title: kept?.title ?? '',
+        body: kept?.body ?? '',
+        link: kept?.link,
+        fetchedAt: kept?.fetchedAt,
+        error: error,
+        errorAt: now,
+      );
+      result = LinkSourceResult(error: error);
+    }
+    _b.notify();
+    return result;
   }
 
   void _requireChurchAdmin(String cid) {

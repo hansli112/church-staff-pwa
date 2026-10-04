@@ -102,6 +102,7 @@ describe('delete and restore', () => {
     await seedChurch('Live', { carol: 'admin' });
     await db.doc('churches/Old/rosters/r1').set({ type: 'sunday', dateKey: '2026-08-02' });
     await db.doc('invites/ABCDEFGH').set({ cid: 'Old' });
+    await db.doc('linkSources/Old').set({ source: 'https://x.example' });
     await db.doc('churches/Old').update({
       status: 'deleted',
       deletedAt: Timestamp.fromDate(new Date('2026-08-25T00:00:00Z')),
@@ -119,6 +120,7 @@ describe('delete and restore', () => {
     assert.equal((await db.doc('churches/Old/members/alice').get()).exists, false);
     assert.equal((await db.doc('churchNames/old').get()).exists, false);
     assert.equal((await db.doc('invites/ABCDEFGH').get()).exists, false);
+    assert.equal((await db.doc('linkSources/Old').get()).exists, false);
     assert.ok((await db.doc('churches/Recent').get()).exists);
     assert.ok((await db.doc('churches/Live').get()).exists);
   });

@@ -149,8 +149,12 @@ abstract interface class ChurchData {
   /// The church link, or null when the admin has not set one.
   Stream<ChurchLink?> churchLink();
 
-  /// Saves the church link (admins only); null removes it.
+  /// Saves the church link's title, body and URL (admins only); null
+  /// removes it. Its content source is set with [CloudApi.setLinkSource].
   Future<void> saveChurchLink(ChurchLink? link);
+
+  /// What the backend last fetched from the church link's content source.
+  Stream<LinkContent?> linkContent();
 
   /// Sets the home-screen name (admins only); null goes back to the church
   /// name.
@@ -238,6 +242,17 @@ class ChurchPreview {
   final String? logoUrl;
 }
 
+/// The result of fetching a content source right after saving it.
+class LinkSourceResult {
+  const LinkSourceResult({this.content, this.error, this.status});
+
+  final LinkContent? content;
+  final LinkFetchError? error;
+  final int? status;
+
+  bool get ok => error == null;
+}
+
 /// Privileged operations, done by Cloud Functions.
 abstract interface class CloudApi {
   /// Returns the new church ID.
@@ -256,6 +271,10 @@ abstract interface class CloudApi {
 
   Future<void> deleteChurch(String churchId);
   Future<void> restoreChurch(String churchId);
+
+  /// Sets the church link's content source and daily fetch time (admins);
+  /// a null [source] removes it. A new source is fetched at once.
+  Future<LinkSourceResult> setLinkSource(String churchId, String? source, int fetchMinute);
 
   // Platform operator only.
   Future<List<ChurchSummary>> adminSearchChurches(String query);

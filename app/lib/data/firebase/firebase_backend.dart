@@ -475,8 +475,13 @@ class FirestoreChurchData implements ChurchData {
   Future<void> saveChurchLink(ChurchLink? link) {
     final ref = _col('settings').doc('link');
     if (link == null) return ref.delete();
-    return ref.set({...churchLinkToJson(link), 'updatedAt': FieldValue.serverTimestamp()});
+    // Merge: the content source on the same doc is the backend's.
+    return ref.set({...churchLinkToJson(link), 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
   }
+
+  @override
+  Stream<LinkContent?> linkContent() =>
+      _col('settings').doc('linkContent').snapshots().map((s) => linkContentFromJson(s.data()));
 
   @override
   Future<void> setHomeName(String? name) => _church.update({'homeName': name ?? FieldValue.delete()});
@@ -582,6 +587,21 @@ class FirebaseCloudApi implements CloudApi {
 
   @override
   Future<void> restoreChurch(String churchId) => _call('restoreChurch', {'churchId': churchId});
+
+  @override
+  Future<LinkSourceResult> setLinkSource(String churchId, String? source, int fetchMinute) async {
+    final d = _map(
+      await _call('setLinkSource', {'churchId': churchId, 'source': source, 'fetchMinute': fetchMinute}),
+    );
+    final content = d['content'];
+    return LinkSourceResult(
+      content: content is Map && source != null
+          ? linkContentFromJson({...Map<String, dynamic>.from(content), 'source': source})
+          : null,
+      error: d['ok'] == true ? null : linkFetchErrorFromName(d['error']),
+      status: (d['status'] as num?)?.toInt(),
+    );
+  }
 
   @override
   Future<List<ChurchSummary>> adminSearchChurches(String query) async {

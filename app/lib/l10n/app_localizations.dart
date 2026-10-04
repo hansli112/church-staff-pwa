@@ -2082,6 +2082,90 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'用瀏覽器打開'**
   String get churchLinkOpens;
+
+  /// No description provided for @linkSource.
+  ///
+  /// In zh, this message translates to:
+  /// **'每日內容來源（選填）'**
+  String get linkSource;
+
+  /// No description provided for @linkSourceUrl.
+  ///
+  /// In zh, this message translates to:
+  /// **'JSON 網址'**
+  String get linkSourceUrl;
+
+  /// No description provided for @linkFetchTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'每天更新時間'**
+  String get linkFetchTime;
+
+  /// No description provided for @linkSourceFooter.
+  ///
+  /// In zh, this message translates to:
+  /// **'每天在這個時間抓一次，格式是有 title、body、link 的 JSON。抓到後 48 小時內，首頁顯示抓到的內容；抓不到就顯示上面的固定內容。'**
+  String get linkSourceFooter;
+
+  /// No description provided for @linkSourceUpdated.
+  ///
+  /// In zh, this message translates to:
+  /// **'上次更新：{time}'**
+  String linkSourceUpdated(String time);
+
+  /// No description provided for @linkSourceFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'上次沒有抓到：{reason}'**
+  String linkSourceFailed(String reason);
+
+  /// No description provided for @linkSourceFetched.
+  ///
+  /// In zh, this message translates to:
+  /// **'已儲存，抓到「{title}」'**
+  String linkSourceFetched(String title);
+
+  /// No description provided for @linkErrTimeout.
+  ///
+  /// In zh, this message translates to:
+  /// **'對方網站 5 秒內沒有回應'**
+  String get linkErrTimeout;
+
+  /// No description provided for @linkErrTooLarge.
+  ///
+  /// In zh, this message translates to:
+  /// **'內容超過 64KB'**
+  String get linkErrTooLarge;
+
+  /// No description provided for @linkErrBadFormat.
+  ///
+  /// In zh, this message translates to:
+  /// **'內容不是有 title 的 JSON'**
+  String get linkErrBadFormat;
+
+  /// No description provided for @linkErrNotHttps.
+  ///
+  /// In zh, this message translates to:
+  /// **'網址或轉址不是 https'**
+  String get linkErrNotHttps;
+
+  /// No description provided for @linkErrHttp.
+  ///
+  /// In zh, this message translates to:
+  /// **'對方網站回應錯誤（{status}）'**
+  String linkErrHttp(String status);
+
+  /// No description provided for @linkErrNetwork.
+  ///
+  /// In zh, this message translates to:
+  /// **'連不上對方網站'**
+  String get linkErrNetwork;
+
+  /// No description provided for @linkErrUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'原因不明，請再試一次'**
+  String get linkErrUnknown;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

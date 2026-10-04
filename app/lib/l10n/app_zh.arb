@@ -598,5 +598,47 @@
   "churchLinkFooter": "顯示在每位同工首頁的最上方，點了用瀏覽器打開。",
   "churchLinkRemove": "移除教會連結",
   "churchLinkRemoved": "已移除教會連結",
-  "churchLinkOpens": "用瀏覽器打開"
+  "churchLinkOpens": "用瀏覽器打開",
+  "linkSource": "每日內容來源（選填）",
+  "linkSourceUrl": "JSON 網址",
+  "linkFetchTime": "每天更新時間",
+  "linkSourceFooter": "每天在這個時間抓一次，格式是有 title、body、link 的 JSON。抓到後 48 小時內，首頁顯示抓到的內容；抓不到就顯示上面的固定內容。",
+  "linkSourceUpdated": "上次更新：{time}",
+  "@linkSourceUpdated": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "linkSourceFailed": "上次沒有抓到：{reason}",
+  "@linkSourceFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "linkSourceFetched": "已儲存，抓到「{title}」",
+  "@linkSourceFetched": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "linkErrTimeout": "對方網站 5 秒內沒有回應",
+  "linkErrTooLarge": "內容超過 64KB",
+  "linkErrBadFormat": "內容不是有 title 的 JSON",
+  "linkErrNotHttps": "網址或轉址不是 https",
+  "linkErrHttp": "對方網站回應錯誤（{status}）",
+  "@linkErrHttp": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "linkErrNetwork": "連不上對方網站",
+  "linkErrUnknown": "原因不明，請再試一次"
 }

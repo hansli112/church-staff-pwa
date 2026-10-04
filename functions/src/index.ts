@@ -20,6 +20,7 @@ import { onObjectFinalized } from 'firebase-functions/v2/storage';
 import * as account from './account.js';
 import * as calendar from './calendar.js';
 import * as church from './church.js';
+import * as churchLink from './churchLink.js';
 import { churchPage as churchPageHandler } from './churchPage.js';
 import { REGION, type Caller, type Deps } from './common.js';
 import * as invites from './invites.js';
@@ -88,6 +89,15 @@ export const churchPage = onRequest({ region: REGION, maxInstances: 10 }, async 
   const r = await churchPageHandler({ ...deps(), bucket: getStorage().bucket(), appUrl: appUrl() }, req.path);
   res.status(r.status).set(r.headers).send(r.body);
 });
+
+// Church link: the daily content source
+export const setLinkSource = callable(churchLink.setLinkSource);
+export const fetchChurchLinks = onSchedule(
+  { region: REGION, schedule: 'every 15 minutes', timeZone: 'Asia/Taipei' },
+  async () => {
+    await churchLink.fetchDueLinks(deps());
+  },
+);
 
 // Invites
 export const previewInvite = callable(invites.previewInvite);

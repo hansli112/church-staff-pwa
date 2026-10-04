@@ -1075,4 +1075,54 @@ class L10nZh extends L10n {
 
   @override
   String get churchLinkOpens => '用瀏覽器打開';
+
+  @override
+  String get linkSource => '每日內容來源（選填）';
+
+  @override
+  String get linkSourceUrl => 'JSON 網址';
+
+  @override
+  String get linkFetchTime => '每天更新時間';
+
+  @override
+  String get linkSourceFooter => '每天在這個時間抓一次，格式是有 title、body、link 的 JSON。抓到後 48 小時內，首頁顯示抓到的內容；抓不到就顯示上面的固定內容。';
+
+  @override
+  String linkSourceUpdated(String time) {
+    return '上次更新：$time';
+  }
+
+  @override
+  String linkSourceFailed(String reason) {
+    return '上次沒有抓到：$reason';
+  }
+
+  @override
+  String linkSourceFetched(String title) {
+    return '已儲存，抓到「$title」';
+  }
+
+  @override
+  String get linkErrTimeout => '對方網站 5 秒內沒有回應';
+
+  @override
+  String get linkErrTooLarge => '內容超過 64KB';
+
+  @override
+  String get linkErrBadFormat => '內容不是有 title 的 JSON';
+
+  @override
+  String get linkErrNotHttps => '網址或轉址不是 https';
+
+  @override
+  String linkErrHttp(String status) {
+    return '對方網站回應錯誤（$status）';
+  }
+
+  @override
+  String get linkErrNetwork => '連不上對方網站';
+
+  @override
+  String get linkErrUnknown => '原因不明，請再試一次';
 }

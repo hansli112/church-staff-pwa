@@ -436,6 +436,18 @@ describe('教會連結 (settings/link)', () => {
     await assertSucceeds(setDoc(ref, { title: '只有標題', url: 'https://grace.example' }));
   });
 
+  it('內容來源和抓取時間只能經由後端設定，改標題時保留', async () => {
+    const path = `churches/${A}/settings/link`;
+    await assertFails(setDoc(doc(as(ADMIN_A), path), { ...link, source: 'https://feed.example' }));
+    await seed(path, { ...link, source: 'https://feed.example', fetchMinute: 270 });
+    await assertSucceeds(setDoc(doc(as(ADMIN_A), path), { title: '新標題', body: '', url: link.url }, { merge: true }));
+    await assertFails(updateDoc(doc(as(ADMIN_A), path), { fetchMinute: 300 }));
+    await assertFails(setDoc(doc(as(ADMIN_A), path), link), '整份覆寫會拿掉來源');
+    await seed(`linkSources/${A}`, { source: 'https://feed.example' });
+    await assertFails(getDoc(doc(as(ADMIN_A), `linkSources/${A}`)));
+    await assertFails(setDoc(doc(as(ADMIN_A), `linkSources/${A}`), { source: 'x' }));
+  });
+
   it('後端寫的設定（行事曆、教會連結內容、外部通知）管理員也寫不了', async () => {
     for (const name of ['calendar', 'linkContent', 'webhook']) {
       await assertFails(setDoc(doc(as(ADMIN_A), `churches/${A}/settings/${name}`), { x: 1 }));

@@ -89,4 +89,80 @@ void main() {
     expect(find.text('教會連結'), findsNothing);
     await expectLater(b.church('grace').saveChurchLink(link), throwsA(anything));
   });
+
+  group('daily content source', () {
+    const src = 'https://feed.example/today.json';
+    const sourced = ChurchLink(title: '教會官網', url: 'https://grace.example', source: src);
+
+    testWidgets('the home page shows fresh fetched content, else the fixed link', (tester) async {
+      final b = seededChurch(as: staffMei)
+        ..churchLinks['grace'] = sourced
+        ..linkContents['grace'] = LinkContent(
+          source: src,
+          title: '今日經文',
+          body: '耶和華是我的牧者',
+          fetchedAt: DateTime.now().subtract(const Duration(hours: 3)),
+        );
+      await pumpApp(tester, b);
+      expect(find.text('今日經文'), findsOneWidget);
+      expect(find.text('教會官網'), findsNothing);
+
+      b.linkContents['grace'] = LinkContent(
+        source: src,
+        title: '今日經文',
+        fetchedAt: DateTime.now().subtract(const Duration(hours: 49)),
+      );
+      b.notify();
+      await settle(tester);
+      expect(find.text('教會官網'), findsOneWidget, reason: 'over 48 hours old');
+    });
+
+    testWidgets('an admin adds a source and a time; it is fetched at once', (tester) async {
+      final b = seededChurch()
+        ..churchLinks['grace'] = const ChurchLink(title: '教會官網', url: 'https://grace.example')
+        ..linkSourceAnswers[src] = const LinkContent(source: src, title: '今日經文', body: '詩篇 23');
+      await pumpApp(tester, b);
+      await go(tester, '/me/link');
+      expect(find.text('每天更新時間'), findsNothing, reason: 'only with a source');
+      await tester.enterText(field('JSON 網址'), src);
+      await tester.pump();
+      expect(find.text('04:30'), findsOneWidget, reason: 'the default');
+      await tapText(tester, '每天更新時間');
+      await tapText(tester, '05:00');
+      expect(find.text('05:00'), findsOneWidget);
+      await tester.ensureVisible(find.text('儲存').last);
+      await tapText(tester, '儲存');
+      expect(find.text('已儲存，抓到「今日經文」'), findsOneWidget);
+      expect(b.churchLinks['grace']!.source, src);
+      expect(b.churchLinks['grace']!.fetchMinute, 300);
+      expect(b.cloud.linkSourceFetches, [src]);
+      expect(find.text('JSON 網址'), findsNothing, reason: 'the page closed');
+
+      await go(tester, '/me/link');
+      expect(find.textContaining('上次更新：'), findsOneWidget);
+    });
+
+    testWidgets('a source that fails says why and stays on the page', (tester) async {
+      final b = seededChurch()
+        ..churchLinks['grace'] = const ChurchLink(title: '教會官網', url: 'https://grace.example')
+        ..linkSourceAnswers[src] = LinkFetchError.timeout;
+      await pumpApp(tester, b);
+      await go(tester, '/me/link');
+      await tester.enterText(field('JSON 網址'), src);
+      await tapText(tester, '儲存');
+      expect(find.text('上次沒有抓到：對方網站 5 秒內沒有回應'), findsOneWidget);
+      expect(find.text('JSON 網址'), findsOneWidget);
+      expect(b.churchLinks['grace']!.source, src, reason: 'saved anyway; it runs again tomorrow');
+    });
+
+    testWidgets('a source must be https', (tester) async {
+      final b = seededChurch()..churchLinks['grace'] = const ChurchLink(title: '教會官網', url: 'https://grace.example');
+      await pumpApp(tester, b);
+      await go(tester, '/me/link');
+      await tester.enterText(field('JSON 網址'), 'http://feed.example');
+      await tapText(tester, '儲存');
+      expect(find.text('請輸入 https:// 開頭的連結'), findsOneWidget);
+      expect(b.cloud.linkSourceFetches, isEmpty);
+    });
+  });
 }

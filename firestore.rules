@@ -218,10 +218,14 @@ service cloud.firestore {
           return doc in ['calendar', 'linkContent', 'webhook'];
         }
 
-        // 教會連結: title 1–30, body up to 120, an https link.
+        // 教會連結: title 1–30, body up to 120, an https link. Its content
+        // source and fetch time are set through a Cloud Function, which
+        // fetches the source at once; the app leaves them as they are.
         function validChurchLink() {
           let data = request.resource.data;
-          return data.keys().hasOnly(['title', 'body', 'url', 'updatedAt'])
+          let before = resource == null ? {} : resource.data;
+          return data.keys().hasOnly(['title', 'body', 'url', 'source', 'fetchMinute', 'updatedAt'])
+            && !data.diff(before).affectedKeys().hasAny(['source', 'fetchMinute'])
             && data.title is string && data.title.size() >= 1 && data.title.size() <= 30
             && data.get('body', '') is string && data.get('body', '').size() <= 120
             && data.url is string && data.url.size() <= 500 && data.url.matches('https://[^ ]+');
@@ -261,8 +265,8 @@ service cloud.firestore {
       allow read: if isSignedIn() && request.auth.token.operator == true;
     }
 
-    // churchNames/{nameKey} (name reservations) and everything else: no
-    // client access.
+    // churchNames/{nameKey} (name reservations), linkSources/{cid} (the
+    // church link fetch schedule) and everything else: no client access.
     match /{document=**} {
       allow read, write: if false;
     }
