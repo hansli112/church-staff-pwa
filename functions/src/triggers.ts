@@ -1,6 +1,8 @@
-import type { DocumentSnapshot } from 'firebase-admin/firestore';
+import { FieldValue, type DocumentSnapshot } from 'firebase-admin/firestore';
+import type { Storage } from 'firebase-admin/storage';
 
 import type { Deps } from './common.js';
+import { ICON_FILES, iconStoragePath, makeIcons } from './icons.js';
 import { adminUids, notifyMembers, type PushDeps } from './push.js';
 
 /**
@@ -44,12 +46,48 @@ export async function onMemberLeft(
   });
 }
 
-/** After a logo upload, bump the church's logoVersion so apps refetch it. */
-export async function onLogoUploaded(deps: Deps, path: string, generation: string) {
+export type LogoDeps = Deps & { bucket: Pick<ReturnType<Storage['bucket']>, 'file' | 'getFiles'> };
+
+/**
+ * After a logo upload: make the home-screen icons next to it, then bump the
+ * church's logoVersion so apps refetch it and the church page links the new
+ * icons (logoIcons says they exist for that version). A logo that cannot be
+ * read still gets its version; the church page then uses it as is.
+ */
+export async function onLogoUploaded(deps: LogoDeps, path: string, generation: string) {
   const match = /^churches\/([A-Za-z0-9]+)\/logo\.png$/.exec(path);
   if (!match) return false;
-  const ref = deps.db.doc(`churches/${match[1]}`);
+  const cid = match[1];
+  const ref = deps.db.doc(`churches/${cid}`);
   if (!(await ref.get()).exists) return false;
-  await ref.update({ logoVersion: generation });
+
+  let icons = false;
+  try {
+    const [logo] = await deps.bucket.file(path).download();
+    const made = await makeIcons(logo);
+    await Promise.all(
+      ICON_FILES.map((f) =>
+        deps.bucket.file(iconStoragePath(cid, generation, f)).save(made[f], { contentType: 'image/png', resumable: false }),
+      ),
+    );
+    icons = true;
+  } catch (e) {
+    console.error(`onLogoUploaded: no icons for ${cid}`, e);
+  }
+
+  const applied = await deps.db.runTransaction(async (tx) => {
+    const current = (await tx.get(ref)).get('logoVersion') as string | undefined;
+    // Two uploads close together can finish out of order; the newer wins.
+    if (current && /^\d+$/.test(current) && /^\d+$/.test(generation) && BigInt(current) > BigInt(generation)) return false;
+    tx.update(ref, { logoVersion: generation, logoIcons: icons ? generation : FieldValue.delete() });
+    return true;
+  });
+
+  // Icons of older logos are no longer linked from anywhere.
+  const [files] = await deps.bucket.getFiles({ prefix: `churches/${cid}/logo-` });
+  const keep = applied ? `churches/${cid}/logo-${generation}-` : null;
+  await Promise.all(
+    files.filter((f) => keep && !f.name.startsWith(keep)).map((f) => f.delete({ ignoreNotFound: true })),
+  );
   return true;
 }

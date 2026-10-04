@@ -143,8 +143,12 @@ export const onMemberDeleted = onDocumentDeletedWithAuthContext(
   },
 );
 
-export const onLogoUploaded = onObjectFinalized({ region: REGION }, async (event) => {
-  await triggers.onLogoUploaded(deps(), event.data.name, String(event.data.generation));
+export const onLogoUploaded = onObjectFinalized({ region: REGION, memory: '512MiB' }, async (event) => {
+  await triggers.onLogoUploaded(
+    { ...deps(), bucket: getStorage().bucket(event.data.bucket) },
+    event.data.name,
+    String(event.data.generation),
+  );
 });
 
 // Push: roster changes and evening reminders

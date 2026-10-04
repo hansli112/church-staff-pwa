@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
 
 import { Timestamp } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 
 import { deleteAccount } from '../src/account.js';
 import { previewInvite, redeemInvite } from '../src/invites.js';
@@ -184,8 +185,9 @@ describe('triggers', () => {
 
   test('a logo upload bumps logoVersion; other paths are ignored', async () => {
     await seedChurch('C1', { alice: 'admin' });
-    assert.equal(await onLogoUploaded(deps, 'churches/C1/logo.png', '123'), true);
+    const logoDeps = { ...deps, bucket: getStorage().bucket('demo-martha.appspot.com') };
+    assert.equal(await onLogoUploaded(logoDeps, 'churches/C1/logo.png', '123'), true);
     assert.equal((await db.doc('churches/C1').get()).get('logoVersion'), '123');
-    assert.equal(await onLogoUploaded(deps, 'other/thing.png', '1'), false);
+    assert.equal(await onLogoUploaded(logoDeps, 'other/thing.png', '1'), false);
   });
 });

@@ -2,6 +2,7 @@ import type { Storage } from 'firebase-admin/storage';
 
 import type { Deps } from './common.js';
 import { publicLogoPath } from './church.js';
+import { ICON_FILES, iconStoragePath, type IconFile } from './icons.js';
 
 /**
  * 教會頁: Hosting sends /c/** here, so each church URL is its own web app
@@ -83,13 +84,23 @@ function face(cid: string, church: FirebaseFirestore.DocumentSnapshot): ChurchFa
   const name = church.get('name') as string;
   const homeName = church.get('homeName') as string | undefined;
   const version = church.get('logoVersion') as string | undefined;
-  const logo = version ? publicLogoPath(cid, version) : null;
+  const base = { name, shortName: homeName || name };
+  if (!version) return { ...base, icons: DEFAULT_ICONS, touchIcon: DEFAULT_TOUCH_ICON, ogImage: DEFAULT_OG_IMAGE };
+  const logo = publicLogoPath(cid, version);
+  // Until the icons for this logo exist, the logo itself.
+  if (church.get('logoIcons') !== version) {
+    return { ...base, icons: [{ src: logo, sizes: '512x512', type: 'image/png' }], touchIcon: logo, ogImage: logo };
+  }
+  const icon = (file: IconFile) => publicLogoPath(cid, version, file);
   return {
-    name,
-    shortName: homeName || name,
-    icons: logo ? [{ src: logo, sizes: '512x512', type: 'image/png' }] : DEFAULT_ICONS,
-    touchIcon: logo ?? DEFAULT_TOUCH_ICON,
-    ogImage: logo ?? DEFAULT_OG_IMAGE,
+    ...base,
+    icons: [
+      { src: icon('icon-192.png'), sizes: '192x192', type: 'image/png' },
+      { src: icon('icon-512.png'), sizes: '512x512', type: 'image/png' },
+      { src: icon('maskable-512.png'), sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    ],
+    touchIcon: icon('apple-touch-180.png'),
+    ogImage: logo,
   };
 }
 
@@ -169,11 +180,17 @@ export async function churchPage(deps: PageDeps, path: string): Promise<PageResp
   };
 }
 
-/** The logo (or, once made, one of its sizes) from Storage; null when missing. */
-async function readIcon(deps: PageDeps, cid: string, _version: string, file: string): Promise<Buffer | null> {
-  if (file !== 'logo.png') return null;
+/** The logo or one of the icons made from it, from Storage; null when missing. */
+async function readIcon(deps: PageDeps, cid: string, version: string, file: string): Promise<Buffer | null> {
+  const path =
+    file === 'logo.png'
+      ? `churches/${cid}/logo.png`
+      : (ICON_FILES as readonly string[]).includes(file)
+        ? iconStoragePath(cid, version, file as IconFile)
+        : null;
+  if (!path) return null;
   try {
-    const [bytes] = await deps.bucket.file(`churches/${cid}/logo.png`).download();
+    const [bytes] = await deps.bucket.file(path).download();
     return bytes;
   } catch (e) {
     if ((e as { code?: number }).code === 404) return null;

@@ -128,12 +128,8 @@ export async function purgeDeletedChurches(deps: Deps, storage?: Storage, before
     if (key) await deps.db.doc(`churchNames/${key}`).delete();
     const invites = await deps.db.collection('invites').where('cid', '==', doc.id).get();
     await Promise.all(invites.docs.map((d) => d.ref.delete()));
-    if (storage) {
-      await storage
-        .bucket()
-        .file(`churches/${doc.id}/logo.png`)
-        .delete({ ignoreNotFound: true });
-    }
+    // The logo and the icons made from it.
+    if (storage) await storage.bucket().deleteFiles({ prefix: `churches/${doc.id}/` });
     purged.push(doc.id);
   }
   return purged;
