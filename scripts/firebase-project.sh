@@ -2,12 +2,14 @@
 # Creates (or finishes setting up) a 馬大別忙 Firebase project under Hans's
 # personal Google account. Safe to re-run: every step checks first.
 #
-#   scripts/firebase-project.sh dev  martha-app-dev  [BILLING_ACCOUNT_ID] [--dry-run]
-#   scripts/firebase-project.sh prod martha-app      [BILLING_ACCOUNT_ID] [--dry-run]
+#   scripts/firebase-project.sh dev  marthasit-dev  [BILLING_ACCOUNT_ID] [--dry-run]
+#   scripts/firebase-project.sh prod marthasit      [BILLING_ACCOUNT_ID] [--dry-run]
 #
 # Needs: gcloud signed in as the personal account in a configuration named
 # "martha" (gcloud config configurations create martha), and `npx firebase
-# login` as the same account for the deploy step. Steps Google offers no API
+# login` as the same account for the deploy step. MARTHA_GCLOUD_CONFIG picks
+# another configuration, e.g. a second account that creates the project and
+# then invites the personal account as owner. Steps Google offers no API
 # for are printed at the end (docs/firebase-setup.md has the details).
 set -euo pipefail
 
@@ -18,10 +20,10 @@ dry=false
 for a in "$@"; do [ "$a" = "--dry-run" ] && dry=true; done
 [ "$billing" = "--dry-run" ] && billing=""
 
-export CLOUDSDK_ACTIVE_CONFIG_NAME=martha
+export CLOUDSDK_ACTIVE_CONFIG_NAME="${MARTHA_GCLOUD_CONFIG:-martha}"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 region=asia-east1
-bundle=io.github.hansli112.martha
+bundle=app.marthasit
 
 run() {
   echo "+ $*"
@@ -30,7 +32,7 @@ run() {
 
 api() { # method url [json]
   local method=$1 url=$2 body=${3:-}
-  echo "+ $method $url"
+  echo "+ $method $url" >&2
   $dry && { echo '{}'; return; }
   curl -sS -X "$method" "$url" \
     -H "Authorization: Bearer $(gcloud auth print-access-token)" \
@@ -57,15 +59,19 @@ if [ -n "$billing" ]; then
   run gcloud billing projects link "$project" --billing-account="$billing"
 fi
 
-# 3. APIs.
+# 3. APIs. The second group needs billing.
 run gcloud services enable --project "$project" \
   firebase.googleapis.com firestore.googleapis.com identitytoolkit.googleapis.com \
-  cloudfunctions.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com \
-  run.googleapis.com eventarc.googleapis.com pubsub.googleapis.com cloudscheduler.googleapis.com \
-  secretmanager.googleapis.com firebasestorage.googleapis.com storage.googleapis.com \
+  firebasestorage.googleapis.com storage.googleapis.com \
   fcm.googleapis.com firebaseinstallations.googleapis.com monitoring.googleapis.com \
   logging.googleapis.com clouderrorreporting.googleapis.com calendar-json.googleapis.com \
   generativelanguage.googleapis.com firebasehosting.googleapis.com
+if [ -n "$billing" ]; then
+  run gcloud services enable --project "$project" \
+    cloudfunctions.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com \
+    run.googleapis.com eventarc.googleapis.com pubsub.googleapis.com cloudscheduler.googleapis.com \
+    secretmanager.googleapis.com
+fi
 
 # 4. Add Firebase.
 if ! api GET "https://firebase.googleapis.com/v1beta1/projects/$project" | grep -q '"projectId"'; then
@@ -83,13 +89,18 @@ api PATCH "https://identitytoolkit.googleapis.com/admin/v2/projects/$project/con
   "{\"signIn\":{\"email\":{\"enabled\":true,\"passwordRequired\":true},\"allowDuplicateEmails\":false},\"authorizedDomains\":[\"localhost\",\"$project.firebaseapp.com\",\"$project.web.app\"]}" >/dev/null
 
 # 7. Apps (web, Android, iOS) and the app's build config.
-apps="$(api GET "https://firebase.googleapis.com/v1beta1/projects/$project/webApps")"
-if ! echo "$apps" | grep -q '"appId"'; then
-  api POST "https://firebase.googleapis.com/v1beta1/projects/$project/webApps" '{"displayName":"馬大別忙 Web"}' >/dev/null
-  api POST "https://firebase.googleapis.com/v1beta1/projects/$project/androidApps" "{\"displayName\":\"馬大別忙 Android\",\"packageName\":\"$bundle\"}" >/dev/null
-  api POST "https://firebase.googleapis.com/v1beta1/projects/$project/iosApps" "{\"displayName\":\"馬大別忙 iOS\",\"bundleId\":\"$bundle\"}" >/dev/null
-  $dry || sleep 15
-fi
+# One at a time: creating them together can silently drop one.
+for kind in web android ios; do
+  case $kind in
+    web) body='{"displayName":"馬大別忙 Web"}' ;;
+    android) body="{\"displayName\":\"馬大別忙 Android\",\"packageName\":\"$bundle\"}" ;;
+    ios) body="{\"displayName\":\"馬大別忙 iOS\",\"bundleId\":\"$bundle\"}" ;;
+  esac
+  if ! api GET "https://firebase.googleapis.com/v1beta1/projects/$project/${kind}Apps" | grep -q '"appId"'; then
+    api POST "https://firebase.googleapis.com/v1beta1/projects/$project/${kind}Apps" "$body" >/dev/null
+    $dry || sleep 15
+  fi
+done
 if ! $dry; then
   web_id="$(api GET "https://firebase.googleapis.com/v1beta1/projects/$project/webApps" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).apps[0].appId))')"
   android_id="$(api GET "https://firebase.googleapis.com/v1beta1/projects/$project/androidApps" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log((JSON.parse(s).apps??[])[0]?.appId??""))')"
