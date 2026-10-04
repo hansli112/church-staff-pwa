@@ -29,6 +29,7 @@ import * as notifications from './notifications.js';
 import * as operator from './operator.js';
 import * as photo from './photo.js';
 import { monitoringUsageReader, writeDailyStats } from './stats.js';
+import * as rosterWebhook from './rosterWebhook.js';
 import * as triggers from './triggers.js';
 import * as webhook from './webhook.js';
 
@@ -175,13 +176,22 @@ export const onLogoUploaded = onObjectFinalized({ region: REGION, memory: '512Mi
 export const onRosterWritten = onDocumentWrittenWithAuthContext(
   { region: REGION, document: 'churches/{cid}/rosters/{rosterId}' },
   async (event) => {
+    const editedBy = event.authType === 'system' ? undefined : event.authId;
     await notifications.onRosterWritten(
       { db: getFirestore(), messaging: getMessaging(), now: () => new Date() },
       event.params.cid,
       event.data?.before,
       event.data?.after,
-      event.authType === 'system' ? undefined : event.authId,
+      editedBy,
     );
+    await rosterWebhook.queueRosterChange(deps(), event.params.cid, event.data?.before, event.data?.after, editedBy, event.id);
+  },
+);
+
+export const sendRosterChanges = onSchedule(
+  { region: REGION, schedule: 'every 5 minutes', timeZone: 'Asia/Taipei', secrets: [calendarTokenKey] },
+  async () => {
+    await rosterWebhook.sendRosterChanges(webhookDeps());
   },
 );
 

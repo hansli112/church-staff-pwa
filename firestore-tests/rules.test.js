@@ -479,6 +479,17 @@ describe('外部通知 (webhook)', () => {
     }
     await assertFails(getDoc(doc(asAnon(), `webhookSecrets/${A}`)));
   });
+
+  it('服事表異動的待送區任何 client 都不能讀寫', async () => {
+    const path = `webhookOutbox/${A}/rosterChanges/ev1`;
+    await seed(path, { date: '2026-10-04' });
+    for (const uid of [ADMIN_A, EDITOR_A, ADMIN_B]) {
+      await assertFails(getDoc(doc(as(uid), path)));
+      await assertFails(getDocs(collection(as(uid), `webhookOutbox/${A}/rosterChanges`)));
+      await assertFails(setDoc(doc(as(uid), `webhookOutbox/${A}/rosterChanges/fake`), { date: 'x' }));
+    }
+    await assertFails(getDocs(collectionGroup(as(ADMIN_A), 'rosterChanges')));
+  });
 });
 
 describe('全域個資 (users)', () => {

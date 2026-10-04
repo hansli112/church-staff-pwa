@@ -18,6 +18,7 @@
 | `linkSources/{cid}` | 只有後端讀寫：內容來源的排程，`source`、`fetchMinute`、`nextAt`、`lastDay` |
 | `churches/{cid}/settings/webhook` | 外部通知，只有後端寫、只有管理員讀：`url`（`https`）、`events`（`calendar`、`roster`）、`lastDelivery`（`at`、`event`、`ok`、`status`、`error`） |
 | `webhookSecrets/{cid}` | 只有後端讀寫：外部通知的密鑰，用行事曆 token 的金鑰以 AES-256-GCM 加密 |
+| `webhookOutbox/{cid}/rosterChanges/{eventId}` | 只有後端讀寫：還沒送出的服事表異動，每 5 分鐘合併成一則外部通知後刪除 |
 
 - 一個教會的所有資料都在 `churches/{cid}` 底下，可以整棵匯出。
 - 推播 token 放在 `users/{uid}`，只有本人和 Cloud Functions 讀得到。self-host 版的 roster editor 讀得到全部 token，這裡改掉了。

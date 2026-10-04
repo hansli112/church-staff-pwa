@@ -267,8 +267,9 @@ service cloud.firestore {
     }
 
     // churchNames/{nameKey} (name reservations), linkSources/{cid} (the
-    // church link fetch schedule), webhookSecrets/{cid} and everything
-    // else: no client access.
+    // church link fetch schedule), webhookSecrets/{cid}, webhookOutbox/{cid}
+    // (roster changes waiting to go out) and everything else: no client
+    // access.
     match /{document=**} {
       allow read, write: if false;
     }
