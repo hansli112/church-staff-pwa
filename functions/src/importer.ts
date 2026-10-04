@@ -11,13 +11,6 @@
 //   staff_orders/{type}       {roles: {[duty]: [names]}}
 //   settings/small_group_templates, devotional, …: not imported (v1 drops them)
 
-export interface Report {
-  members: number;
-  rosters: number;
-  services: number;
-  skipped: string[];
-}
-
 const PLACEHOLDER = '待定';
 
 /** Self-host ARGB colour → the hosted palette index (red, orange, yellow, green, blue, purple). */
@@ -157,4 +150,81 @@ export function inferServices(
     enabled: true,
   }));
   return mapServices({ services: list, ids: list.map((s) => s.id) }, templates, eventOptions);
+}
+
+/** One document of the self-host project, as read. */
+export interface SourceDoc {
+  id: string;
+  data: Doc;
+}
+
+/** Everything read from a self-host project. */
+export interface SelfHostSnapshot {
+  users: SourceDoc[];
+  settings: SourceDoc[];
+  rosters: SourceDoc[];
+  staffOrders: SourceDoc[];
+}
+
+/** What an import leaves out or could not read, for the operator or the uploader. */
+export interface ImportReport {
+  members: number;
+  admins: number;
+  services: string[];
+  rosters: number;
+  /** Self-host roster IDs with no readable date or type. */
+  skippedRosters: string[];
+  staffOrders: number;
+  /** settings/* documents the hosted app has no place for. */
+  droppedSettings: string[];
+  /** People who had small groups, which are not imported. */
+  smallGroupPeople: number;
+  unnamedMembers: number;
+}
+
+/**
+ * The hosted church's documents built from a self-host snapshot: members,
+ * services, rosters and staff orders, plus a report. Shared by the
+ * operator's import script and self-serve moving.
+ */
+export function buildImport(snapshot: SelfHostSnapshot, joinedAt: unknown) {
+  const settingsById = new Map(snapshot.settings.map((d) => [d.id, d.data]));
+  const services = settingsById.has('services')
+    ? mapServices(settingsById.get('services'), settingsById.get('roster_templates'), settingsById.get('event_options'))
+    : inferServices(settingsById.get('roster_templates'), settingsById.get('event_options'), snapshot.rosters);
+  const eventColors = new Map<string, number>();
+  for (const s of services.services) for (const e of s.events) eventColors.set(`${s.id}/${e.name}`, e.color);
+
+  const members = snapshot.users.map((u) => mapMember(u.id, u.data, joinedAt));
+  const rosters: NonNullable<ReturnType<typeof mapRoster>>[] = [];
+  const skippedRosters: string[] = [];
+  for (const r of snapshot.rosters) {
+    const mapped = mapRoster(r.id, r.data, eventColors);
+    if (mapped) rosters.push(mapped);
+    else skippedRosters.push(r.id);
+  }
+  const staffOrders = snapshot.staffOrders.map((o) => ({
+    id: o.id,
+    roles: (o.data.roles ?? {}) as Record<string, unknown>,
+  }));
+  const droppedSettings = [...settingsById.keys()].filter(
+    (id) => DROPPED_SETTINGS.includes(id) || !['services', 'roster_templates', 'event_options'].includes(id),
+  );
+  const smallGroupPeople = snapshot.users.filter((u) =>
+    ((u.data.zones as { smallGroups?: unknown[] }[] | undefined) ?? []).some(
+      (z) => Array.isArray(z?.smallGroups) && z.smallGroups.length > 0,
+    ),
+  ).length;
+  const report: ImportReport = {
+    members: members.length,
+    admins: members.filter((m) => m.role === 'admin').length,
+    services: services.services.map((s) => s.id),
+    rosters: rosters.length,
+    skippedRosters,
+    staffOrders: staffOrders.length,
+    droppedSettings,
+    smallGroupPeople,
+    unnamedMembers: members.filter((m) => !m.name).length,
+  };
+  return { members, services, rosters, staffOrders, report };
 }

@@ -17,9 +17,9 @@
 //
 // Re-running writes the same document IDs, so it never duplicates.
 import { initializeApp, type App } from 'firebase-admin/app';
-import { getFirestore, Timestamp, type Firestore } from 'firebase-admin/firestore';
+import { getFirestore, Timestamp, type Firestore, type QuerySnapshot } from 'firebase-admin/firestore';
 
-import { DROPPED_SETTINGS, inferServices, mapMember, mapRoster, mapServices } from '../src/importer.js';
+import { buildImport } from '../src/importer.js';
 import { nameKey } from '../src/text.js';
 
 const args = process.argv.slice(2);
@@ -56,34 +56,19 @@ async function readAll() {
 
 async function main() {
   const data = await readAll();
-  const settingsById = new Map(data.settings.docs.map((d) => [d.id, d.data()]));
-  const services = settingsById.has('services')
-    ? mapServices(settingsById.get('services'), settingsById.get('roster_templates'), settingsById.get('event_options'))
-    : inferServices(
-        settingsById.get('roster_templates'),
-        settingsById.get('event_options'),
-        data.rosters.docs.map((r) => ({ id: r.id, data: r.data() })),
-      );
-  const eventColors = new Map<string, number>();
-  for (const s of services.services) for (const e of s.events) eventColors.set(`${s.id}/${e.name}`, e.color);
-
-  const members = data.users.docs.map((u) => mapMember(u.id, u.data(), Timestamp.now()));
-  const rosters = data.rosters.docs.map((r) => ({ src: r.id, mapped: mapRoster(r.id, r.data(), eventColors) }));
-  const badRosters = rosters.filter((r) => !r.mapped).map((r) => r.src);
-  const dropped = [...settingsById.keys()].filter(
-    (id) => DROPPED_SETTINGS.includes(id) || !['services', 'roster_templates', 'event_options'].includes(id),
+  const docs = (q: QuerySnapshot) => q.docs.map((d) => ({ id: d.id, data: d.data() }));
+  const { members, services, rosters, staffOrders, report } = buildImport(
+    { users: docs(data.users), settings: docs(data.settings), rosters: docs(data.rosters), staffOrders: docs(data.orders) },
+    Timestamp.now(),
   );
-  const smallGroups = data.users.docs.filter((u) =>
-    ((u.get('zones') as { smallGroups?: unknown[] }[] | undefined) ?? []).some((z) => (z.smallGroups ?? []).length > 0),
-  ).length;
 
   console.log(`Source ${source}:`);
-  console.log(`  users → members      ${members.length} (admins: ${members.filter((m) => m.role === 'admin').length})`);
-  console.log(`  services             ${services.services.length} (${services.services.map((s) => s.id).join(', ')})`);
-  console.log(`  rosters              ${rosters.length - badRosters.length}${badRosters.length ? `, skipped ${badRosters.length}: ${badRosters.join(', ')}` : ''}`);
-  console.log(`  staff orders         ${data.orders.size}`);
-  console.log(`  not imported         settings/${dropped.join(', settings/') || '—'}; small groups on ${smallGroups} people`);
-  if (members.some((m) => !m.name)) console.log(`  ⚠ ${members.filter((m) => !m.name).length} users have no name`);
+  console.log(`  users → members      ${report.members} (admins: ${report.admins})`);
+  console.log(`  services             ${report.services.length} (${report.services.join(', ')})`);
+  console.log(`  rosters              ${report.rosters}${report.skippedRosters.length ? `, skipped ${report.skippedRosters.length}: ${report.skippedRosters.join(', ')}` : ''}`);
+  console.log(`  staff orders         ${report.staffOrders}`);
+  console.log(`  not imported         settings/${report.droppedSettings.join(', settings/') || '—'}; small groups on ${report.smallGroupPeople} people`);
+  if (report.unnamedMembers) console.log(`  ⚠ ${report.unnamedMembers} users have no name`);
 
   if (dryRun) return;
   if (savedHost) process.env.FIRESTORE_EMULATOR_HOST = savedHost;
@@ -114,8 +99,8 @@ async function main() {
       updatedAt: Timestamp.now(),
     }, { merge: true });
   }
-  for (const r of rosters) if (r.mapped) void w.set(root.collection('rosters').doc(r.mapped.id), { ...r.mapped.data, updatedAt: Timestamp.now() });
-  for (const o of data.orders.docs) void w.set(root.collection('staff_orders').doc(o.id), { roles: o.get('roles') ?? {} });
+  for (const r of rosters) void w.set(root.collection('rosters').doc(r.id), { ...r.data, updatedAt: Timestamp.now() });
+  for (const o of staffOrders) void w.set(root.collection('staff_orders').doc(o.id), { roles: o.roles });
   await w.close();
   console.log(`Wrote churches/${churchId} in ${target}.`);
   await printAuthCommands();

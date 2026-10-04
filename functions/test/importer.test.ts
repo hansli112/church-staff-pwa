@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
-import { mapMember, mapRoster, mapServices, paletteIndex, rosterDateKey } from '../src/importer.js';
+import { buildImport, mapMember, mapRoster, mapServices, paletteIndex, rosterDateKey } from '../src/importer.js';
 
 describe('self-host import mapping', () => {
   test('members: ministries become duties, small groups and unknown groups are dropped', () => {
@@ -102,5 +102,66 @@ describe('inferServices', () => {
         ['youth', '青崇', 6, ['敬拜']],
       ],
     );
+  });
+});
+
+describe('buildImport', () => {
+  const snapshot = {
+    users: [
+      { id: 'u1', data: { name: '王大明', email: 'a@example.com', role: 'admin', zones: [{ serviceType: 'sunday', smallGroups: ['A'], ministries: ['司會'] }] } },
+      { id: 'u2', data: { name: '', email: 'b@example.com', role: 'staff' } },
+    ],
+    settings: [
+      { id: 'services', data: { services: [{ id: 'sunday', name: '主日崇拜', weekday: 7 }], ids: ['sunday'] } },
+      { id: 'roster_templates', data: { sunday: ['司會', '司琴'] } },
+      { id: 'event_options', data: { sunday: [{ name: '聖餐', color: 0xffdc2626 }] } },
+      { id: 'devotional', data: { url: 'x' } },
+    ],
+    rosters: [
+      { id: '20261004_sunday', data: { type: 'sunday', duties: [{ role: '司會', people: ['王大明'], personIdsByName: { 王大明: 'u1' } }], specialEvents: ['聖餐'] } },
+      { id: 'broken', data: { duties: [] } },
+    ],
+    staffOrders: [{ id: 'sunday', data: { roles: { 司會: ['王大明'] } } }],
+  };
+
+  test('maps a whole snapshot into the hosted documents', () => {
+    const out = buildImport(snapshot, 'JOINED');
+    assert.deepEqual(out.members.map((m) => [m.uid, m.role, m.joinedAt]), [
+      ['u1', 'admin', 'JOINED'],
+      ['u2', 'staff', 'JOINED'],
+    ]);
+    assert.deepEqual(out.services.services[0].duties, ['司會', '司琴']);
+    assert.deepEqual(out.rosters, [
+      {
+        id: '2026-10-04_sunday',
+        data: {
+          type: 'sunday',
+          dateKey: '2026-10-04',
+          duties: [{ role: '司會', people: ['王大明'], uids: { 王大明: 'u1' } }],
+          events: [{ name: '聖餐', color: 0 }],
+        },
+      },
+    ]);
+    assert.deepEqual(out.staffOrders, [{ id: 'sunday', roles: { 司會: ['王大明'] } }]);
+  });
+
+  test('reports what was left out', () => {
+    assert.deepEqual(buildImport(snapshot, null).report, {
+      members: 2,
+      admins: 1,
+      services: ['sunday'],
+      rosters: 1,
+      skippedRosters: ['broken'],
+      staffOrders: 1,
+      droppedSettings: ['devotional'],
+      smallGroupPeople: 1,
+      unnamedMembers: 1,
+    });
+  });
+
+  test('without settings/services the services come from the data', () => {
+    const out = buildImport({ ...snapshot, settings: snapshot.settings.filter((s) => s.id !== 'services') }, null);
+    assert.deepEqual(out.services.ids, ['sunday']);
+    assert.deepEqual(out.services.services[0].duties, ['司會', '司琴']);
   });
 });
