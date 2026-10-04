@@ -139,6 +139,30 @@ export async function purgeDeletedChurches(deps: Deps, storage?: Storage, before
   return purged;
 }
 
+/**
+ * Where the church page serves a church's logo, under its church URL. The
+ * version is the logo's storage generation, so a new logo is a new URL.
+ */
+export function publicLogoPath(cid: string, version: string, file = 'logo.png') {
+  return `/c/${cid}/icons/${version}/${file}`;
+}
+
+/**
+ * Name and logo of an active church, for someone opening its church URL
+ * who is not a member. Public: the same is on the church page anyway.
+ */
+export async function churchPreview(deps: Deps, _caller: Caller | null, data: unknown) {
+  const cid = churchId(data);
+  const snap = await deps.db.doc(`churches/${cid}`).get();
+  if (snap.get('status') !== 'active') fail('not-found', 'notFound');
+  const version = snap.get('logoVersion') as string | undefined;
+  return {
+    churchId: cid,
+    name: snap.get('name') as string,
+    logoPath: version ? publicLogoPath(cid, version) : null,
+  };
+}
+
 function churchId(data: unknown): string {
   const value = (data as { churchId?: unknown })?.churchId;
   if (typeof value !== 'string' || !/^[A-Za-z0-9]{1,64}$/.test(value)) {

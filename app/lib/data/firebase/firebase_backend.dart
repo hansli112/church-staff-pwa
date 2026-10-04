@@ -12,6 +12,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../../domain/day.dart';
 import '../../domain/models.dart';
 import '../../domain/staff_order.dart';
+import '../../env.dart';
 import '../backend.dart';
 import 'codec.dart';
 
@@ -550,6 +551,18 @@ class FirebaseCloudApi implements CloudApi {
 
   @override
   Future<void> deleteAccount() => _call('deleteAccount');
+
+  @override
+  Future<ChurchPreview> churchPreview(String churchId) async {
+    final d = _map(await _call('churchPreview', {'churchId': churchId}));
+    final logo = d['logoPath'];
+    return ChurchPreview(
+      id: churchId,
+      name: d['name'] as String? ?? '',
+      // Served by the church page on the hosting origin.
+      logoUrl: logo is String ? '${Env.current.webOrigin}$logo' : null,
+    );
+  }
 
   @override
   Future<void> deleteChurch(String churchId) => _call('deleteChurch', {'churchId': churchId});

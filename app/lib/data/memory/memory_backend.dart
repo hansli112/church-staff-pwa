@@ -627,6 +627,13 @@ class MemoryCloud implements CloudApi {
     _b.auth.deleteCurrent();
   }
 
+  @override
+  Future<ChurchPreview> churchPreview(String churchId) async {
+    final c = _b.churches[churchId];
+    if (c == null || !c.isActive) throw const CloudException(CloudErrorCode.notFound);
+    return ChurchPreview(id: c.id, name: c.name, logoUrl: c.logoUrl);
+  }
+
   void _requireChurchAdmin(String cid) {
     if (!(_b.memberOf(cid, _b.auth.currentUser?.uid)?.isAdmin ?? false)) {
       throw const CloudException(CloudErrorCode.permissionDenied);

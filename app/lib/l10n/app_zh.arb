@@ -572,5 +572,12 @@
   "appIconGreen": "綠",
   "appIconPurple": "紫",
   "appIconNight": "夜",
-  "savedOffline": "已存在這台裝置，連上網路後會自動同步"
+  "savedOffline": "已存在這台裝置，連上網路後會自動同步",
+  "goHome": "回首頁",
+  "churchNotFound": "找不到這間教會",
+  "churchEntryNotMember": "你還不是這間教會的同工。請向管理員要邀請連結來加入。",
+  "churchUrl": "教會網址",
+  "churchUrlCopied": "已複製教會網址",
+  "churchUrlCopy": "複製教會網址",
+  "churchUrlShare": "分享教會網址"
 }

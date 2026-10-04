@@ -156,6 +156,7 @@ enum CloudErrorCode {
   inviteInvalid,
   inviteExpired,
   lastAdmin,
+  notFound,
   permissionDenied,
   quotaExceeded,
   unavailable,
@@ -218,6 +219,15 @@ class PhotoInput {
   final List<int> bytes;
 }
 
+/// What anyone opening a church URL may see of an active church.
+class ChurchPreview {
+  const ChurchPreview({required this.id, required this.name, this.logoUrl});
+
+  final String id;
+  final String name;
+  final String? logoUrl;
+}
+
 /// Privileged operations, done by Cloud Functions.
 abstract interface class CloudApi {
   /// Returns the new church ID.
@@ -229,6 +239,10 @@ abstract interface class CloudApi {
   Future<String> redeemInvite(String code);
 
   Future<void> deleteAccount();
+
+  /// Name and logo of an active church, for someone who is not a member.
+  /// Throws [CloudErrorCode.notFound] for an unknown or closed church.
+  Future<ChurchPreview> churchPreview(String churchId);
 
   Future<void> deleteChurch(String churchId);
   Future<void> restoreChurch(String churchId);

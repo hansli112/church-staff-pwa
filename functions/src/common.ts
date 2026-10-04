@@ -37,6 +37,7 @@ export type Reason =
   | 'inviteInvalid'
   | 'inviteExpired'
   | 'lastAdmin'
+  | 'notFound'
   | 'permissionDenied'
   | 'quotaExceeded'
   | 'unavailable'

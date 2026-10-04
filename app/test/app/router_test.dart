@@ -47,4 +47,20 @@ void main() {
     expect(go(AppStage.ready, '/welcome'), '/home');
     expect(go(AppStage.ready, '/rosters'), isNull);
   });
+
+  test('a church URL is reachable at every stage that has an account', () {
+    expect(go(AppStage.signedOut, '/c/grace'), '/login?from=%2Fc%2Fgrace');
+    expect(go(AppStage.noChurch, '/c/grace'), isNull);
+    expect(go(AppStage.churchClosed, '/c/grace'), isNull);
+    expect(go(AppStage.ready, '/c/grace'), isNull);
+    expect(go(AppStage.noChurch, '/login?from=%2Fc%2Fgrace'), '/c/grace');
+  });
+
+  test('churchUrlId reads only /c/ID', () {
+    expect(churchUrlId(Uri.parse('/c/grace')), 'grace');
+    expect(churchUrlId(Uri.parse('/c/grace?x=1')), 'grace');
+    expect(churchUrlId(Uri.parse('/c/grace/join/ABC')), isNull);
+    expect(churchUrlId(Uri.parse('/c')), isNull);
+    expect(churchUrlId(Uri.parse('/home')), isNull);
+  });
 }

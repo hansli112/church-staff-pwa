@@ -71,6 +71,7 @@ const callable = (handler: Handler) =>
 export const createChurch = callable(church.createChurch);
 export const deleteChurch = callable(church.deleteChurch);
 export const restoreChurch = callable(church.restoreChurch);
+export const churchPreview = callable(church.churchPreview);
 export const purgeDeletedChurches = onSchedule(
   { region: REGION, schedule: 'every day 03:00', timeZone: 'Asia/Taipei', secrets: calendarSecrets },
   async () => {

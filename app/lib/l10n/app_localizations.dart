@@ -1926,6 +1926,48 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'已存在這台裝置，連上網路後會自動同步'**
   String get savedOffline;
+
+  /// No description provided for @goHome.
+  ///
+  /// In zh, this message translates to:
+  /// **'回首頁'**
+  String get goHome;
+
+  /// No description provided for @churchNotFound.
+  ///
+  /// In zh, this message translates to:
+  /// **'找不到這間教會'**
+  String get churchNotFound;
+
+  /// No description provided for @churchEntryNotMember.
+  ///
+  /// In zh, this message translates to:
+  /// **'你還不是這間教會的同工。請向管理員要邀請連結來加入。'**
+  String get churchEntryNotMember;
+
+  /// No description provided for @churchUrl.
+  ///
+  /// In zh, this message translates to:
+  /// **'教會網址'**
+  String get churchUrl;
+
+  /// No description provided for @churchUrlCopied.
+  ///
+  /// In zh, this message translates to:
+  /// **'已複製教會網址'**
+  String get churchUrlCopied;
+
+  /// No description provided for @churchUrlCopy.
+  ///
+  /// In zh, this message translates to:
+  /// **'複製教會網址'**
+  String get churchUrlCopy;
+
+  /// No description provided for @churchUrlShare.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享教會網址'**
+  String get churchUrlShare;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

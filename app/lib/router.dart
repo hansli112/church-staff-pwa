@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +10,7 @@ import 'features/admin/admin_screens.dart';
 import 'features/auth/login_screen.dart';
 import 'features/calendar/calendar_screen.dart';
 import 'features/calendar/calendar_settings_screen.dart';
+import 'features/church/church_entry_screen.dart';
 import 'features/church/closed_screen.dart';
 import 'features/church/join_screen.dart';
 import 'features/church/welcome_screen.dart';
@@ -47,7 +50,18 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/home',
     refreshListenable: refresh,
-    redirect: (context, state) => redirectFor(ref.read(appStageProvider), state.uri),
+    redirect: (context, state) {
+      // A church URL of one of my churches opens that church. Done here,
+      // before any page is built, so the shell is never pushed twice.
+      final cid = churchUrlId(state.uri);
+      if (cid != null && (ref.read(membershipsProvider).value ?? const []).any((m) => m.churchId == cid)) {
+        // After this redirect: changing the church now would rebuild the
+        // app stage twice in one frame.
+        scheduleMicrotask(() => ref.read(selectedChurchProvider.notifier).select(cid));
+        return '/home';
+      }
+      return redirectFor(ref.read(appStageProvider), state.uri);
+    },
     routes: [
       page('/loading', (_) => const LoadingScreen()),
       page('/login', (_) => const LoginScreen()),
@@ -60,6 +74,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
       page('/join/:code', (s) => JoinScreen(code: s.pathParameters['code']!)),
+      page('/c/:churchId', (s) => ChurchEntryScreen(churchId: s.pathParameters['churchId']!)),
       page('/closed', (_) => const ClosedScreen()),
       page('/account', (_) => const AccountScreen()),
       page(
@@ -141,6 +156,13 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
+/// The church ID of a church URL (`/c/ID`), or null.
+@visibleForTesting
+String? churchUrlId(Uri uri) {
+  final parts = uri.pathSegments;
+  return parts.length == 2 && parts[0] == 'c' && parts[1].isNotEmpty ? parts[1] : null;
+}
+
 /// Where to send someone at [uri] given the app [stage]; null stays.
 ///
 /// A redirect away from the page someone asked for (an invite link, a deep
@@ -176,13 +198,13 @@ String? redirectFor(AppStage stage, Uri uri) {
       }
       return withFrom('/login');
     case AppStage.noChurch:
-      if (at('/welcome') || at('/join') || at('/account') || at('/dev')) {
+      if (at('/welcome') || at('/join') || at('/c') || at('/account') || at('/dev')) {
         return null;
       }
       if (at('/loading') || at('/login')) return resume('/welcome');
       return '/welcome';
     case AppStage.churchClosed:
-      if (at('/closed') || at('/join') || at('/account') || at('/welcome') || at('/dev')) {
+      if (at('/closed') || at('/join') || at('/c') || at('/account') || at('/welcome') || at('/dev')) {
         return null;
       }
       if (at('/loading') || at('/login')) return resume('/closed');

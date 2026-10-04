@@ -9,6 +9,7 @@ import '../../domain/logo.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
+import '../church/links.dart';
 import '../common/errors.dart';
 
 /// 教會資訊: the church's name and logo, the admin tools, and at the very
@@ -45,6 +46,37 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
       if (mounted) showToast(context, l10n.saveFailed);
     } finally {
       if (mounted) setState(() => _uploading = false);
+    }
+  }
+
+  Future<void> _churchUrlActions(String url) async {
+    final l10n = L10n.of(context);
+    final choice = await showAppSheet<String>(
+      context,
+      builder: (context) => SafeArea(
+        child: ListSection(
+          header: displayUrl(url),
+          children: [
+            ListRow(
+              title: l10n.churchUrlShare,
+              leading: const Icon(Icons.ios_share),
+              onTap: () => Navigator.pop(context, 'share'),
+            ),
+            ListRow(
+              title: l10n.churchUrlCopy,
+              leading: const Icon(Icons.copy),
+              onTap: () => Navigator.pop(context, 'copy'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted) return;
+    switch (choice) {
+      case 'share':
+        await shareText(context, url, copied: l10n.churchUrlCopied);
+      case 'copy':
+        await copyText(context, url, copied: l10n.churchUrlCopied);
     }
   }
 
@@ -123,6 +155,15 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
                 ),
               ],
             ),
+          ),
+          ListSection(
+            children: [
+              ListRow(
+                title: l10n.churchUrl,
+                subtitle: displayUrl(churchUrl(church.id)),
+                onTap: () => _churchUrlActions(churchUrl(church.id)),
+              ),
+            ],
           ),
           if (admin)
             ListSection(

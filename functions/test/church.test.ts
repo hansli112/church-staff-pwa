@@ -3,7 +3,7 @@ import { beforeEach, describe, test } from 'node:test';
 
 import { Timestamp } from 'firebase-admin/firestore';
 
-import { createChurch, deleteChurch, purgeDeletedChurches, restoreChurch } from '../src/church.js';
+import { churchPreview, createChurch, deleteChurch, purgeDeletedChurches, restoreChurch } from '../src/church.js';
 import { nameKey } from '../src/text.js';
 import { caller, clearFirestore, db, deps, rejectsWith, seedChurch, setNow } from './support.js';
 
@@ -146,5 +146,27 @@ describe('purge hooks', () => {
     const seen: string[] = [];
     await purgeDeletedChurches(deps, undefined, async (cid) => seen.push(cid));
     assert.deepEqual(seen, ['Old']);
+  });
+});
+
+describe('churchPreview', () => {
+  test('anyone, even signed out, gets an active church’s name and logo', async () => {
+    await seedChurch('Grace', { pastor: 'admin' }, { name: '恩典堂', logoVersion: '17' });
+    assert.deepEqual(await churchPreview(deps, null, { churchId: 'Grace' }), {
+      churchId: 'Grace',
+      name: '恩典堂',
+      logoPath: '/c/Grace/icons/17/logo.png',
+    });
+    await seedChurch('Plain', {});
+    assert.equal((await churchPreview(deps, caller('x'), { churchId: 'Plain' })).logoPath, null);
+  });
+
+  test('a suspended, deleted or unknown church is not found', async () => {
+    await seedChurch('Closed', {}, { status: 'suspended' });
+    await seedChurch('Gone', {}, { status: 'deleted' });
+    for (const churchId of ['Closed', 'Gone', 'Nope']) {
+      await rejectsWith(churchPreview(deps, caller('x'), { churchId }), 'notFound');
+    }
+    await rejectsWith(churchPreview(deps, null, { churchId: '../x' }), 'unknown');
   });
 });

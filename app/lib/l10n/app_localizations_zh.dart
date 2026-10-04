@@ -997,4 +997,25 @@ class L10nZh extends L10n {
 
   @override
   String get savedOffline => '已存在這台裝置，連上網路後會自動同步';
+
+  @override
+  String get goHome => '回首頁';
+
+  @override
+  String get churchNotFound => '找不到這間教會';
+
+  @override
+  String get churchEntryNotMember => '你還不是這間教會的同工。請向管理員要邀請連結來加入。';
+
+  @override
+  String get churchUrl => '教會網址';
+
+  @override
+  String get churchUrlCopied => '已複製教會網址';
+
+  @override
+  String get churchUrlCopy => '複製教會網址';
+
+  @override
+  String get churchUrlShare => '分享教會網址';
 }
