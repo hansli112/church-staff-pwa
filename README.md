@@ -2,7 +2,16 @@
 
 多教會共用的同工服事表工具（代管版）。設計見 [`docs/design.md`](docs/design.md)，資料模型與權限見 [`docs/data-model.md`](docs/data-model.md)，專案建立見 [`docs/firebase-setup.md`](docs/firebase-setup.md)。
 
-> 開發中。自架版（church-staff-pwa）在其他分支。
+> 開發中。舊的自架版（church-staff-pwa）在其他分支，已凍結。
+
+## 自己部署
+
+代管版是唯一受支援的使用方式。程式碼採 MIT 公開，技術同工可以自己部署，但**不受支援**：沒有安裝精靈、沒有升級指引，問題請自行處理。要離開代管版，管理員可以在「教會資訊 → 匯出資料」下載全部資料。
+
+想自己部署的話，起點在：
+
+- `scripts/firebase-project.sh`：建立 Firebase 專案、開服務、寫 App 設定
+- [`docs/firebase-setup.md`](docs/firebase-setup.md)：專案設定步驟與要手動完成的部分
 
 ## 結構
 
