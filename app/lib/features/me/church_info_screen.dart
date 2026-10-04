@@ -5,10 +5,13 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
+import '../../domain/export.dart';
 import '../../domain/logo.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
+import '../../state/export.dart';
 import '../../state/providers.dart';
+import '../../state/session.dart';
 import '../church/links.dart';
 import '../common/errors.dart';
 import 'home_name_dialog.dart';
@@ -26,6 +29,24 @@ class ChurchInfoScreen extends ConsumerStatefulWidget {
 
 class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
   bool _uploading = false;
+  bool _exporting = false;
+
+  Future<void> _export(Church church) async {
+    final l10n = L10n.of(context);
+    setState(() => _exporting = true);
+    try {
+      final now = DateTime.now();
+      final zip = exportZip(await loadChurchSnapshot(ref), now);
+      await ref.read(fileSaverProvider).save(exportFileName(church, now), zip, 'application/zip');
+      // That it happened, never what was in it.
+      ref.read(telemetryProvider).logEvent('church_export');
+      if (mounted) showToast(context, l10n.exported);
+    } catch (e) {
+      if (mounted) showToast(context, errorText(l10n, e));
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
 
   Future<void> _pickLogo() async {
     final l10n = L10n.of(context);
@@ -260,6 +281,19 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
                 ListRow(
                   title: l10n.members,
                   onTap: () => context.push('/me/members'),
+                ),
+              ],
+            ),
+          if (admin)
+            ListSection(
+              footer: l10n.exportFooter,
+              children: [
+                ListRow(
+                  title: l10n.exportData,
+                  trailing: _exporting
+                      ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                      : null,
+                  onTap: _exporting ? null : () => _export(church),
                 ),
               ],
             ),

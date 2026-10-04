@@ -114,6 +114,15 @@ abstract interface class ChurchData {
 
   Stream<StaffOrder> staffOrder(String serviceType);
 
+  /// Everyone in the church, read once from the server when online (export).
+  Future<List<Member>> allMembers();
+
+  /// Every saved roster, past ones too, read once (export).
+  Future<List<Roster>> allRosters();
+
+  /// Every service's staff order, read once (export).
+  Future<Map<String, StaffOrder>> allStaffOrders();
+
   Future<void> saveRoster(Roster roster);
 
   /// Writes all of [rosters] at once, or none of them (swap, undo).

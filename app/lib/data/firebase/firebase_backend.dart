@@ -364,6 +364,26 @@ class FirestoreChurchData implements ChurchData {
   Stream<StaffOrder> staffOrder(String serviceType) =>
       _col('staff_orders').doc(serviceType).snapshots().map((s) => StaffOrder.fromJson(s.data() ?? const {}));
 
+  // One-off reads go to the server when online: a listener's first
+  // snapshot may come from the offline cache and miss documents.
+  @override
+  Future<List<Member>> allMembers() async {
+    final snap = await _col('members').get();
+    return [for (final d in snap.docs) memberFromJson(d.id, d.data())];
+  }
+
+  @override
+  Future<List<Roster>> allRosters() async {
+    final snap = await _col('rosters').get();
+    return [for (final d in snap.docs) ?rosterFromJson(d.data())];
+  }
+
+  @override
+  Future<Map<String, StaffOrder>> allStaffOrders() async {
+    final snap = await _col('staff_orders').get();
+    return {for (final d in snap.docs) d.id: StaffOrder.fromJson(d.data())};
+  }
+
   Json _rosterDoc(Roster r) => {
     ...rosterToJson(r),
     'updatedAt': FieldValue.serverTimestamp(),

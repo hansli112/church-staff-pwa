@@ -686,5 +686,8 @@
   "webhookOff": "關閉外部通知",
   "webhookOffTitle": "關閉外部通知？",
   "webhookOffMessage": "網址和密鑰都會刪掉，之後要重新設定。",
-  "webhookOffAction": "關閉"
+  "webhookOffAction": "關閉",
+  "exportData": "匯出資料",
+  "exportFooter": "下載教會的全部資料：一份 JSON，加上一份可以用 Excel 打開的服事表。",
+  "exported": "已匯出"
 }

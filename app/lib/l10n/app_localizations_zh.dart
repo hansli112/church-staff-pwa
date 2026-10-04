@@ -1216,4 +1216,13 @@ class L10nZh extends L10n {
 
   @override
   String get webhookOffAction => '關閉';
+
+  @override
+  String get exportData => '匯出資料';
+
+  @override
+  String get exportFooter => '下載教會的全部資料：一份 JSON，加上一份可以用 Excel 打開的服事表。';
+
+  @override
+  String get exported => '已匯出';
 }

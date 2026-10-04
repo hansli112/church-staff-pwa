@@ -2340,6 +2340,24 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'關閉'**
   String get webhookOffAction;
+
+  /// No description provided for @exportData.
+  ///
+  /// In zh, this message translates to:
+  /// **'匯出資料'**
+  String get exportData;
+
+  /// No description provided for @exportFooter.
+  ///
+  /// In zh, this message translates to:
+  /// **'下載教會的全部資料：一份 JSON，加上一份可以用 Excel 打開的服事表。'**
+  String get exportFooter;
+
+  /// No description provided for @exported.
+  ///
+  /// In zh, this message translates to:
+  /// **'已匯出'**
+  String get exported;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

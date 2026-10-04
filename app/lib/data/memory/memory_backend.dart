@@ -93,7 +93,11 @@ class MemoryBackend implements Backend {
         scheduleMicrotask(emit);
         sub = _changes.stream.listen((_) => emit());
       },
-      onCancel: () => sub?.cancel(),
+      // Not awaited: `first` would wait on it, and fake-async tests never
+      // finish that future.
+      onCancel: () {
+        sub?.cancel();
+      },
     );
     return controller.stream;
   }
@@ -398,6 +402,24 @@ class MemoryChurchData implements ChurchData {
     _requireMember();
     return _b.staffOrders[churchId]![serviceType] ?? StaffOrder();
   });
+
+  @override
+  Future<List<Member>> allMembers() async {
+    _requireAdmin();
+    return _b.members[churchId]!.values.toList();
+  }
+
+  @override
+  Future<List<Roster>> allRosters() async {
+    _requireMember();
+    return _b.rosters[churchId]!.values.toList();
+  }
+
+  @override
+  Future<Map<String, StaffOrder>> allStaffOrders() async {
+    _requireMember();
+    return Map.of(_b.staffOrders[churchId]!);
+  }
 
   @override
   Future<void> saveRoster(Roster roster) => saveRosters([roster]);

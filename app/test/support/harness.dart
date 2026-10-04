@@ -33,6 +33,7 @@ Future<void> pumpApp(
   MemoryBackend backend, {
   Brightness brightness = Brightness.light,
   double textScale = 1,
+  List<Override> overrides = const [],
 }) async {
   tester.view.physicalSize = const Size(393 * 3, 852 * 3);
   tester.view.devicePixelRatio = 3;
@@ -42,7 +43,7 @@ Future<void> pumpApp(
   addTearDown(tester.platformDispatcher.clearAllTestValues);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: await testOverrides(backend),
+      overrides: [...await testOverrides(backend), ...overrides],
       retry: (_, _) => null,
       child: const MarthaApp(),
     ),
