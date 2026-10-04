@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 
 import '../../domain/day.dart';
@@ -41,6 +42,12 @@ class MemoryBackend implements Backend {
   final calendars = <String, CalendarSettings>{};
   final churchLinks = <String, ChurchLink>{};
   final linkContents = <String, LinkContent>{};
+
+  /// Pending members per church, by ID.
+  final pendingMembers = <String, Map<String, PendingMember>>{};
+
+  /// Uploaded move files by path.
+  final moveFiles = <String, List<int>>{};
   final webhooks = <String, WebhookSettings>{};
 
   /// The webhook secret per church: only the backend has it.
@@ -385,6 +392,21 @@ class MemoryChurchData implements ChurchData {
   }, equals: _sameList);
 
   @override
+  Stream<List<PendingMember>> pendingMembers() => _b.watch(() {
+    _requireMember();
+    if (!(_me?.inGroup(Group.rosterEditors) ?? false)) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    return (_b.pendingMembers[churchId] ?? const {}).values.toList();
+  }, equals: _sameList);
+
+  @override
+  Future<void> deletePendingMember(String id) async {
+    _requireAdmin();
+    await _b.write(() => _b.pendingMembers[churchId]?.remove(id));
+  }
+
+  @override
   Stream<ServiceSettings> services() => _b.watch(() {
     _requireMember();
     return _b.services[churchId]!;
@@ -717,6 +739,85 @@ class MemoryCloud implements CloudApi {
     _b.users.remove(uid);
     _b.notify();
     _b.auth.deleteCurrent();
+  }
+
+  @override
+  Future<String> uploadMoveFile(List<int> bytes) async {
+    final uid = _b.auth.currentUser?.uid;
+    if (uid == null) throw const CloudException(CloudErrorCode.permissionDenied);
+    final path = 'moves/$uid/${_b.moveFiles.length + 1}.json';
+    _b.moveFiles[path] = bytes;
+    return path;
+  }
+
+  /// A move file, read the way the backend does, with only what the
+  /// screens show: people, roster days, services.
+  ({List<MovePerson> people, int rosters, List<String> services}) _readMove(String path) {
+    final uid = _b.auth.currentUser?.uid;
+    final bytes = _b.moveFiles[path];
+    if (uid == null || !path.startsWith('moves/$uid/') || bytes == null) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    final Object? raw;
+    try {
+      raw = jsonDecode(utf8.decode(bytes));
+    } on FormatException {
+      throw const CloudException(CloudErrorCode.moveInvalid);
+    }
+    if (raw is! Map || raw['format'] != 'church-staff-pwa-move' || raw['users'] is! List) {
+      throw const CloudException(CloudErrorCode.moveInvalid);
+    }
+    final users = raw['users'] as List;
+    final rosters = (raw['rosters'] as List?) ?? const [];
+    if (users.length > 2000 || rosters.length > 20000) {
+      throw CloudException(CloudErrorCode.moveTooLarge, {'members': users.length, 'rosters': rosters.length});
+    }
+    final settings = {
+      for (final s in (raw['settings'] as List?) ?? const [])
+        if (s is Map) s['id']: s['data'],
+    };
+    final services = (settings['services'] as Map?)?['services'] as List? ?? const [];
+    return (
+      people: [
+        for (final u in users)
+          if (u is Map)
+            MovePerson(
+              id: u['id'] as String,
+              name: ((u['data'] as Map?)?['name'] as String? ?? '').trim(),
+              email: (u['data'] as Map?)?['email'] as String? ?? '',
+            ),
+      ],
+      rosters: rosters.length,
+      services: [
+        for (final s in services)
+          if (s is Map) s['name'] as String? ?? '',
+      ],
+    );
+  }
+
+  @override
+  Future<MovePreview> movePreview(String path) async {
+    final m = _readMove(path);
+    return MovePreview(members: m.people.length, rosters: m.rosters, services: m.services, people: m.people);
+  }
+
+  @override
+  Future<String> moveCommit(String path, {required String churchName, String? me}) async {
+    final m = _readMove(path);
+    final cid = await createChurch(churchName);
+    final uid = _b.auth.currentUser!.uid;
+    final mine = [
+      for (final p in m.people)
+        if (p.id == me) p,
+    ];
+    if (mine.isNotEmpty) _b.members[cid]![uid] = _b.members[cid]![uid]!.copyWith(name: mine.single.name);
+    _b.pendingMembers[cid] = {
+      for (final p in m.people)
+        if (p.id != me) p.id: PendingMember(id: p.id, name: p.name, email: p.email),
+    };
+    _b.moveFiles.remove(path);
+    _b.notify();
+    return cid;
   }
 
   @override

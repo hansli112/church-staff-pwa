@@ -56,6 +56,10 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
           onRetry: () => ref.invalidate(membersProvider),
         ),
         data: (all) {
+          final pending = [
+            for (final p in ref.watch(pendingMembersProvider).value ?? const <PendingMember>[])
+              if (matchesSearch(p.name, _query) || matchesSearch(p.email, _query)) p,
+          ]..sort((a, b) => a.name.compareTo(b.name));
           final list =
               [
                 for (final m in all)
@@ -93,24 +97,18 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                   ),
                 ),
               Expanded(
-                child: list.isEmpty
+                child: list.isEmpty && pending.isEmpty
                     ? EmptyState(message: l10n.noMembersFound)
                     : ListView.builder(
-                        itemCount: list.length,
+                        itemCount: list.length + (pending.isEmpty ? 0 : pending.length + 1),
                         itemExtent: null,
                         itemBuilder: (context, i) {
-                          final m = list[i];
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: Space.m,
-                            ),
-                            child: Material(
-                              color: c.surface,
-                              borderRadius: BorderRadius.vertical(
-                                top: i == 0 ? const Radius.circular(Radii.m) : Radius.zero,
-                                bottom: i == list.length - 1 ? const Radius.circular(Radii.m) : Radius.zero,
-                              ),
-                              clipBehavior: Clip.antiAlias,
+                          if (i < list.length) {
+                            final m = list[i];
+                            return _grouped(
+                              c,
+                              first: i == 0,
+                              last: i == list.length - 1,
                               child: ListRow(
                                 title: m.uid == uid ? '${m.name}（${l10n.you}）' : m.name,
                                 subtitle: [
@@ -120,6 +118,30 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                                 value: roleLabel(l10n, m.role),
                                 onTap: isAdmin ? () => _open(m) : null,
                               ),
+                            );
+                          }
+                          if (i == list.length) {
+                            return Padding(
+                              padding: const EdgeInsets.fromLTRB(Space.l, Space.l, Space.l, Space.s),
+                              child: Text(
+                                l10n.pendingCount(pending.length),
+                                style: AppText.footnote.copyWith(color: c.secondaryLabel),
+                              ),
+                            );
+                          }
+                          final j = i - list.length - 1;
+                          final p = pending[j];
+                          return _grouped(
+                            c,
+                            first: j == 0,
+                            last: j == pending.length - 1,
+                            child: ListRow(
+                              title: p.name.isEmpty ? p.email : p.name,
+                              subtitle: [
+                                l10n.notSignedInYet,
+                                if (p.email.isNotEmpty && p.name.isNotEmpty) p.email,
+                              ].join('・'),
+                              value: roleLabel(l10n, p.role),
                             ),
                           );
                         },
@@ -131,6 +153,20 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
       ),
     );
   }
+
+  /// One row of a rounded group.
+  Widget _grouped(AppColors c, {required bool first, required bool last, required Widget child}) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: Space.m),
+    child: Material(
+      color: c.surface,
+      borderRadius: BorderRadius.vertical(
+        top: first ? const Radius.circular(Radii.m) : Radius.zero,
+        bottom: last ? const Radius.circular(Radii.m) : Radius.zero,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: child,
+    ),
+  );
 
   Future<void> _open(Member m) async {
     final l10n = L10n.of(context);

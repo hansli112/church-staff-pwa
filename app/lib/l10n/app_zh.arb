@@ -689,5 +689,51 @@
   "webhookOffAction": "關閉",
   "exportData": "匯出資料",
   "exportFooter": "下載教會的全部資料：一份 JSON，加上一份可以用 Excel 打開的服事表。",
-  "exported": "已匯出"
+  "exported": "已匯出",
+  "errMoveInvalid": "這不是搬家檔，請確認選對了檔案",
+  "errMoveTooLarge": "同工超過 2,000 位或服事表超過 20,000 天，沒辦法自動搬，請聯絡我們",
+  "moveFromSelfHost": "從舊版搬過來",
+  "moveIntro": "在舊版（church-staff-pwa）的 Cloud Shell 執行搬家指令，會得到一個搬家檔。上傳後先看預覽，確認了才會建立教會。",
+  "movePickFile": "選擇搬家檔",
+  "moveReading": "讀取搬家檔…",
+  "moveContents": "搬家檔內容",
+  "moveMembers": "同工",
+  "moveMembersCount": "{count} 位",
+  "@moveMembersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "moveRosters": "服事表",
+  "moveRostersCount": "{count} 天",
+  "@moveRostersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "moveServices": "服事",
+  "moveWhoAmI": "這位是我（選填）",
+  "moveWhoAmIFooter": "選了就接手那位的服事表、牧區和權限。其他同工用同一個 email 登入馬大別忙時，會被問要不要加入。",
+  "moveCreate": "建立教會並搬過來",
+  "moveDone": "已建立〈{church}〉",
+  "@moveDone": {
+    "placeholders": {
+      "church": {
+        "type": "String"
+      }
+    }
+  },
+  "notSignedInYet": "還沒登入",
+  "pendingCount": "{count} 位還沒登入",
+  "@pendingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

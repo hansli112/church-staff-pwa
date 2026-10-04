@@ -26,6 +26,8 @@ String errorText(L10n l10n, Object error) {
       CloudErrorCode.unavailable => l10n.errNetwork,
       CloudErrorCode.lastAdmin => l10n.errUnknown,
       CloudErrorCode.notFound => l10n.churchNotFound,
+      CloudErrorCode.moveInvalid => l10n.errMoveInvalid,
+      CloudErrorCode.moveTooLarge => l10n.errMoveTooLarge,
       CloudErrorCode.quotaExceeded => l10n.errUnknown,
       CloudErrorCode.unknown => l10n.errUnknown,
     };

@@ -1,4 +1,4 @@
-import { Timestamp } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import type { Storage } from 'firebase-admin/storage';
 
 import { fail, requireCaller, requireChurchAdmin, serverTime, text, type Caller, type Deps } from './common.js';
@@ -34,8 +34,26 @@ export const DEFAULT_SERVICES = [
  */
 export async function createChurch(deps: Deps, caller: Caller | null, data: unknown) {
   const c = requireCaller(caller);
-  if (!c.emailVerified) fail('failed-precondition', 'unverifiedEmail');
   const name = text((data as { name?: unknown })?.name, 60);
+  return { churchId: await openChurch(deps, c, name) };
+}
+
+/**
+ * Creates church [name] with [c] as its admin, in one transaction with the
+ * name reservation. [services] and the admin's [zones] and [groups] come
+ * from a move; [extra] goes on the church doc. Returns the church ID.
+ */
+export async function openChurch(
+  deps: Deps,
+  c: Caller,
+  name: string,
+  opts: {
+    services?: { services: unknown[]; ids: string[] };
+    admin?: { name?: string; groups?: string[]; zones?: unknown[]; zoneTypes?: string[] };
+    extra?: Record<string, unknown>;
+  } = {},
+) {
+  if (!c.emailVerified) fail('failed-precondition', 'unverifiedEmail');
   const key = nameKey(name);
   if (!key) fail('invalid-argument', 'unknown');
 
@@ -43,7 +61,8 @@ export async function createChurch(deps: Deps, caller: Caller | null, data: unkn
   const churchRef = db.collection('churches').doc();
   const cid = churchRef.id;
   const profile = await db.doc(`users/${c.uid}`).get();
-  const memberName = (profile.get('name') as string | undefined) || c.name || '';
+  const memberName = opts.admin?.name || (profile.get('name') as string | undefined) || c.name || '';
+  const services = opts.services ?? { services: DEFAULT_SERVICES, ids: DEFAULT_SERVICES.map((s) => s.id) };
 
   await db.runTransaction(async (tx) => {
     const reserved = await tx.get(db.doc(`churchNames/${key}`));
@@ -56,24 +75,21 @@ export async function createChurch(deps: Deps, caller: Caller | null, data: unkn
       createdBy: c.uid,
       createdAt: serverTime(),
       deletedAt: null,
+      ...opts.extra,
     });
     tx.create(churchRef.collection('members').doc(c.uid), {
       uid: c.uid,
       name: memberName,
       email: c.email ?? '',
       role: 'admin',
-      groups: [],
-      zones: [],
-      zoneTypes: [],
+      groups: opts.admin?.groups ?? [],
+      zones: opts.admin?.zones ?? [],
+      zoneTypes: opts.admin?.zoneTypes ?? [],
       joinedAt: serverTime(),
     });
-    tx.create(churchRef.collection('settings').doc('services'), {
-      services: DEFAULT_SERVICES,
-      ids: DEFAULT_SERVICES.map((s) => s.id),
-      updatedAt: serverTime(),
-    });
+    tx.create(churchRef.collection('settings').doc('services'), { ...services, updatedAt: serverTime() });
   });
-  return { churchId: cid };
+  return cid;
 }
 
 /** Marks the church deleted. Restorable for [RESTORE_DAYS] days. */
@@ -124,6 +140,12 @@ export async function purgeDeletedChurches(deps: Deps, storage?: Storage, before
     const key = doc.get('nameKey') as string | undefined;
     // Data kept outside the church tree, e.g. the calendar grant.
     if (beforePurge) await beforePurge(doc.id);
+    // Pending members of a move: their index entries go before the church tree.
+    const pending = await doc.ref.collection('pendingMembers').get();
+    for (const p of pending.docs) {
+      const hash = p.get('emailHash') as string | null;
+      if (hash) await deps.db.doc(`pendingIndex/${hash}`).set({ churches: { [doc.id]: FieldValue.delete() } }, { merge: true });
+    }
     await deps.db.recursiveDelete(doc.ref);
     if (key) await deps.db.doc(`churchNames/${key}`).delete();
     await deps.db.doc(`linkSources/${doc.id}`).delete();

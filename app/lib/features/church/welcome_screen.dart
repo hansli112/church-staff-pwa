@@ -286,6 +286,12 @@ class _CreateChurchScreenState extends ConsumerState<CreateChurchScreen> {
             busy: _busy,
             onPressed: verified && _name.text.trim().isNotEmpty ? _create : null,
           ),
+          const SizedBox(height: Space.xl),
+          SecondaryButton(
+            label: l10n.moveFromSelfHost,
+            expand: true,
+            onPressed: () => context.push('/welcome/move'),
+          ),
         ],
       ),
     );

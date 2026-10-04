@@ -13,6 +13,7 @@ import 'features/calendar/calendar_settings_screen.dart';
 import 'features/church/church_entry_screen.dart';
 import 'features/church/closed_screen.dart';
 import 'features/church/join_screen.dart';
+import 'features/church/move_screen.dart';
 import 'features/church/welcome_screen.dart';
 import 'features/dev/component_gallery.dart';
 import 'features/home/home_screen.dart';
@@ -77,6 +78,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [page(':code', (s) => JoinScreen(code: s.pathParameters['code']!))],
           ),
           page('create', (_) => const CreateChurchScreen()),
+          page('move', (_) => const MoveScreen()),
         ],
       ),
       page(

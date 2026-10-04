@@ -57,6 +57,7 @@ dependencies:
   google_sign_in: ^7.2.0
   in_app_purchase: ^3.3.1
   archive: ^4.0.0
+  file_picker: ^13.1.0
 
 dev_dependencies:
   flutter_test:

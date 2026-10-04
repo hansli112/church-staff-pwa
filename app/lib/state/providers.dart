@@ -138,6 +138,16 @@ final membersProvider = StreamProvider<List<Member>>((ref) {
   return _requireOpenChurch(ref).members();
 });
 
+/// Members moved from self-host who have not signed in yet. Like
+/// [membersProvider], only for admins and roster editors.
+final pendingMembersProvider = StreamProvider<List<PendingMember>>((ref) {
+  final canRead = ref.watch(
+    meProvider.select((m) => m.value?.inGroup(Group.rosterEditors) ?? false),
+  );
+  if (!canRead) return Stream.value(const []);
+  return _requireOpenChurch(ref).pendingMembers();
+});
+
 final staffOrderProvider = StreamProvider.family<StaffOrder, String>(
   (ref, serviceType) => _requireOpenChurch(ref).staffOrder(serviceType),
 );

@@ -647,3 +647,70 @@ class WebhookSettings {
   @override
   int get hashCode => Object.hash(url, calendar, roster, lastDelivery);
 }
+
+/// Someone moved over from the self-host version who has not signed in
+/// yet. Their rosters point at [id] (their old uid) until they claim it by
+/// signing in with [email], or an admin merges it into a member.
+@immutable
+class PendingMember {
+  const PendingMember({
+    required this.id,
+    required this.name,
+    this.email = '',
+    this.role = Role.staff,
+    this.groups = const {},
+    this.zones = const [],
+  });
+
+  final String id;
+  final String name;
+  final String email;
+  final Role role;
+  final Set<Group> groups;
+  final List<Zone> zones;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PendingMember &&
+      other.id == id &&
+      other.name == name &&
+      other.email == email &&
+      other.role == role &&
+      setEquals(other.groups, groups) &&
+      listEquals(other.zones, zones);
+
+  @override
+  int get hashCode => Object.hash(id, name, email, role, Object.hashAll(groups), Object.hashAll(zones));
+}
+
+/// One person in a move file, for 「這位是我」.
+@immutable
+class MovePerson {
+  const MovePerson({required this.id, required this.name, this.email = ''});
+
+  final String id;
+  final String name;
+  final String email;
+}
+
+/// What a move file would bring.
+@immutable
+class MovePreview {
+  const MovePreview({
+    required this.members,
+    required this.rosters,
+    this.services = const [],
+    this.people = const [],
+    this.skippedRosters = 0,
+  });
+
+  final int members;
+
+  /// Roster days.
+  final int rosters;
+  final List<String> services;
+  final List<MovePerson> people;
+
+  /// Days in the file with no readable date or service.
+  final int skippedRosters;
+}

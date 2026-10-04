@@ -45,7 +45,7 @@ class FirebaseBackend implements Backend {
   late final MembershipRepository memberships = _Memberships(_db);
 
   @override
-  late final CloudApi cloud = FirebaseCloudApi(_functions);
+  late final CloudApi cloud = FirebaseCloudApi(_functions, storage: _storage, auth: _auth);
 
   final _churches = <String, ChurchData>{};
 
@@ -349,6 +349,14 @@ class FirestoreChurchData implements ChurchData {
   );
 
   @override
+  Stream<List<PendingMember>> pendingMembers() => _col('pendingMembers').snapshots().map(
+    (snap) => [for (final d in snap.docs) pendingMemberFromJson(d.id, d.data())],
+  );
+
+  @override
+  Future<void> deletePendingMember(String id) => _col('pendingMembers').doc(id).delete();
+
+  @override
   Stream<ServiceSettings> services() => _col(
     'settings',
   ).doc('services').snapshots().map((s) => serviceSettingsFromJson(s.data()));
@@ -539,9 +547,13 @@ String randomInviteCode() {
 // ---------------------------------------------------------------- functions
 
 class FirebaseCloudApi implements CloudApi {
-  FirebaseCloudApi(this._functions);
+  FirebaseCloudApi(this._functions, {FirebaseStorage? storage, fa.FirebaseAuth? auth})
+    : _storage = storage ?? FirebaseStorage.instance,
+      _auth = auth ?? fa.FirebaseAuth.instance;
 
   final FirebaseFunctions _functions;
+  final FirebaseStorage _storage;
+  final fa.FirebaseAuth _auth;
 
   Future<Object?> _call(String name, [Map<String, Object?>? data]) async {
     try {
@@ -593,6 +605,38 @@ class FirebaseCloudApi implements CloudApi {
 
   @override
   Future<void> deleteAccount() => _call('deleteAccount');
+
+  @override
+  Future<String> uploadMoveFile(List<int> bytes) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) throw const CloudException(CloudErrorCode.permissionDenied);
+    final path = 'moves/$uid/${DateTime.now().millisecondsSinceEpoch}.json';
+    await _storage.ref(path).putData(Uint8List.fromList(bytes), SettableMetadata(contentType: 'application/json'));
+    return path;
+  }
+
+  @override
+  Future<MovePreview> movePreview(String path) async {
+    final d = _map(await _call('movePreview', {'path': path}));
+    return MovePreview(
+      members: (d['members'] as num?)?.toInt() ?? 0,
+      rosters: (d['rosters'] as num?)?.toInt() ?? 0,
+      skippedRosters: (d['skippedRosters'] as num?)?.toInt() ?? 0,
+      services: [
+        for (final s in d['services'] as List<dynamic>? ?? const [])
+          if (s is Map) s['name'] as String? ?? '',
+      ],
+      people: [
+        for (final p in d['people'] as List<dynamic>? ?? const [])
+          if (p is Map)
+            MovePerson(id: p['id'] as String, name: p['name'] as String? ?? '', email: p['email'] as String? ?? ''),
+      ],
+    );
+  }
+
+  @override
+  Future<String> moveCommit(String path, {required String churchName, String? me}) async =>
+      _map(await _call('moveCommit', {'path': path, 'churchName': churchName, 'me': me}))['churchId'] as String;
 
   @override
   Future<ChurchPreview> churchPreview(String churchId) async {

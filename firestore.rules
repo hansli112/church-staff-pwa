@@ -192,6 +192,14 @@ service cloud.firestore {
           || (isSelf(uid) && resource.data.get('role', '') != 'admin');
       }
 
+      // Members moved from self-host who have not signed in yet. Listed
+      // with the members; only an admin may drop one. The backend creates
+      // them (a move) and turns them into members (a claim or a merge).
+      match /pendingMembers/{id} {
+        allow read: if inGroup(cid, 'roster-editors');
+        allow delete: if isAdmin(cid);
+      }
+
       match /rosters/{rosterId} {
         allow read: if isMember(cid);
 
@@ -268,8 +276,8 @@ service cloud.firestore {
 
     // churchNames/{nameKey} (name reservations), linkSources/{cid} (the
     // church link fetch schedule), webhookSecrets/{cid}, webhookOutbox/{cid}
-    // (roster changes waiting to go out) and everything else: no client
-    // access.
+    // (roster changes waiting to go out), pendingIndex/{email hash} (who has
+    // a pending member where) and everything else: no client access.
     match /{document=**} {
       allow read, write: if false;
     }

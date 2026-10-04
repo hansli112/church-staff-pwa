@@ -1225,4 +1225,66 @@ class L10nZh extends L10n {
 
   @override
   String get exported => '已匯出';
+
+  @override
+  String get errMoveInvalid => '這不是搬家檔，請確認選對了檔案';
+
+  @override
+  String get errMoveTooLarge => '同工超過 2,000 位或服事表超過 20,000 天，沒辦法自動搬，請聯絡我們';
+
+  @override
+  String get moveFromSelfHost => '從舊版搬過來';
+
+  @override
+  String get moveIntro => '在舊版（church-staff-pwa）的 Cloud Shell 執行搬家指令，會得到一個搬家檔。上傳後先看預覽，確認了才會建立教會。';
+
+  @override
+  String get movePickFile => '選擇搬家檔';
+
+  @override
+  String get moveReading => '讀取搬家檔…';
+
+  @override
+  String get moveContents => '搬家檔內容';
+
+  @override
+  String get moveMembers => '同工';
+
+  @override
+  String moveMembersCount(int count) {
+    return '$count 位';
+  }
+
+  @override
+  String get moveRosters => '服事表';
+
+  @override
+  String moveRostersCount(int count) {
+    return '$count 天';
+  }
+
+  @override
+  String get moveServices => '服事';
+
+  @override
+  String get moveWhoAmI => '這位是我（選填）';
+
+  @override
+  String get moveWhoAmIFooter => '選了就接手那位的服事表、牧區和權限。其他同工用同一個 email 登入馬大別忙時，會被問要不要加入。';
+
+  @override
+  String get moveCreate => '建立教會並搬過來';
+
+  @override
+  String moveDone(String church) {
+    return '已建立〈$church〉';
+  }
+
+  @override
+  String get notSignedInYet => '還沒登入';
+
+  @override
+  String pendingCount(int count) {
+    return '$count 位還沒登入';
+  }
 }

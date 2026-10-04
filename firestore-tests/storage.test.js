@@ -81,3 +81,21 @@ describe('教會 logo', () => {
     await assertFails(uploadBytes(ref(storageAs('admin-a'), 'anything.png'), png, image));
   });
 });
+
+describe('搬家檔', () => {
+  const json = new TextEncoder().encode('{"format":"church-staff-pwa-move"}');
+  const meta = { contentType: 'application/json' };
+
+  it('只有上傳者本人能讀寫', async () => {
+    await assertSucceeds(uploadBytes(ref(storageAs('mover'), 'moves/mover/f1.json'), json, meta));
+    await assertSucceeds(getBytes(ref(storageAs('mover'), 'moves/mover/f1.json')));
+    await assertFails(getBytes(ref(storageAs('admin-a'), 'moves/mover/f1.json')));
+    await assertFails(uploadBytes(ref(storageAs('admin-a'), 'moves/mover/f2.json'), json, meta));
+    await assertFails(getBytes(ref(testEnv.unauthenticatedContext().storage(), 'moves/mover/f1.json')));
+  });
+
+  it('最大 20MB', async () => {
+    const big = new Uint8Array(20 * 1024 * 1024 + 1);
+    await assertFails(uploadBytes(ref(storageAs('mover'), 'moves/mover/big.json'), big, meta));
+  });
+});

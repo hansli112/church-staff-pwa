@@ -492,6 +492,31 @@ describe('外部通知 (webhook)', () => {
   });
 });
 
+describe('待認領的同工 (pendingMembers) 與索引', () => {
+  it('管理員和 roster-editors 讀得到，只有管理員能刪；沒有人能建立或修改', async () => {
+    const path = `churches/${A}/pendingMembers/old-1`;
+    await seed(path, { name: '舊同工', email: 'old@example.com', role: 'staff' });
+    await assertSucceeds(getDoc(doc(as(ADMIN_A), path)));
+    await assertSucceeds(getDocs(collection(as(EDITOR_A), `churches/${A}/pendingMembers`)));
+    await assertFails(getDoc(doc(as(MEMBER_A), path)));
+    await assertFails(getDoc(doc(as(ADMIN_B), path)));
+    await assertFails(setDoc(doc(as(ADMIN_A), `churches/${A}/pendingMembers/new`), { name: 'x' }));
+    await assertFails(updateDoc(doc(as(ADMIN_A), path), { role: 'admin' }));
+    await assertFails(deleteDoc(doc(as(EDITOR_A), path)));
+    await assertFails(deleteDoc(doc(as(ADMIN_B), path)));
+    await assertSucceeds(deleteDoc(doc(as(ADMIN_A), path)));
+  });
+
+  it('待認領索引任何 client 都不能讀寫', async () => {
+    await seed('pendingIndex/abc', { churches: { [A]: 'old-1' } });
+    for (const uid of [ADMIN_A, MEMBER_A, STRANGER]) {
+      await assertFails(getDoc(doc(as(uid), 'pendingIndex/abc')));
+      await assertFails(setDoc(doc(as(uid), 'pendingIndex/abc'), { churches: {} }));
+    }
+    await assertFails(getDocs(collection(as(ADMIN_A), 'pendingIndex')));
+  });
+});
+
 describe('全域個資 (users)', () => {
   it('只有本人讀得到', async () => {
     await assertSucceeds(getDoc(doc(as(MEMBER_A), `users/${MEMBER_A}`)));

@@ -24,6 +24,7 @@ import * as churchLink from './churchLink.js';
 import { churchPage as churchPageHandler } from './churchPage.js';
 import { REGION, type Caller, type Deps } from './common.js';
 import * as invites from './invites.js';
+import * as move from './move.js';
 import { logClientError as logClientErrorHandler } from './logging.js';
 import * as notifications from './notifications.js';
 import * as operator from './operator.js';
@@ -109,6 +110,15 @@ const webhookCallable = (handler: WebhookHandler) =>
 export const webhookSave = webhookCallable(webhook.webhookSave);
 export const webhookRotateSecret = webhookCallable(webhook.webhookRotateSecret);
 export const webhookTest = webhookCallable(webhook.webhookTest);
+
+// 自助搬家 (self-serve move from self-host)
+type MoveHandler = (d: move.MoveDeps, c: Caller | null, data: unknown) => Promise<unknown>;
+const moveCallable = (handler: MoveHandler) =>
+  onCall({ ...callOpts, timeoutSeconds: 300, memory: '1GiB' }, (req) =>
+    handler({ ...deps(), bucket: getStorage().bucket() }, caller(req), req.data),
+  );
+export const movePreview = moveCallable(move.movePreview);
+export const moveCommit = moveCallable(move.moveCommit);
 
 // Invites
 export const previewInvite = callable(invites.previewInvite);

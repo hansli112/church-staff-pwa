@@ -2358,6 +2358,114 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'已匯出'**
   String get exported;
+
+  /// No description provided for @errMoveInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'這不是搬家檔，請確認選對了檔案'**
+  String get errMoveInvalid;
+
+  /// No description provided for @errMoveTooLarge.
+  ///
+  /// In zh, this message translates to:
+  /// **'同工超過 2,000 位或服事表超過 20,000 天，沒辦法自動搬，請聯絡我們'**
+  String get errMoveTooLarge;
+
+  /// No description provided for @moveFromSelfHost.
+  ///
+  /// In zh, this message translates to:
+  /// **'從舊版搬過來'**
+  String get moveFromSelfHost;
+
+  /// No description provided for @moveIntro.
+  ///
+  /// In zh, this message translates to:
+  /// **'在舊版（church-staff-pwa）的 Cloud Shell 執行搬家指令，會得到一個搬家檔。上傳後先看預覽，確認了才會建立教會。'**
+  String get moveIntro;
+
+  /// No description provided for @movePickFile.
+  ///
+  /// In zh, this message translates to:
+  /// **'選擇搬家檔'**
+  String get movePickFile;
+
+  /// No description provided for @moveReading.
+  ///
+  /// In zh, this message translates to:
+  /// **'讀取搬家檔…'**
+  String get moveReading;
+
+  /// No description provided for @moveContents.
+  ///
+  /// In zh, this message translates to:
+  /// **'搬家檔內容'**
+  String get moveContents;
+
+  /// No description provided for @moveMembers.
+  ///
+  /// In zh, this message translates to:
+  /// **'同工'**
+  String get moveMembers;
+
+  /// No description provided for @moveMembersCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 位'**
+  String moveMembersCount(int count);
+
+  /// No description provided for @moveRosters.
+  ///
+  /// In zh, this message translates to:
+  /// **'服事表'**
+  String get moveRosters;
+
+  /// No description provided for @moveRostersCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 天'**
+  String moveRostersCount(int count);
+
+  /// No description provided for @moveServices.
+  ///
+  /// In zh, this message translates to:
+  /// **'服事'**
+  String get moveServices;
+
+  /// No description provided for @moveWhoAmI.
+  ///
+  /// In zh, this message translates to:
+  /// **'這位是我（選填）'**
+  String get moveWhoAmI;
+
+  /// No description provided for @moveWhoAmIFooter.
+  ///
+  /// In zh, this message translates to:
+  /// **'選了就接手那位的服事表、牧區和權限。其他同工用同一個 email 登入馬大別忙時，會被問要不要加入。'**
+  String get moveWhoAmIFooter;
+
+  /// No description provided for @moveCreate.
+  ///
+  /// In zh, this message translates to:
+  /// **'建立教會並搬過來'**
+  String get moveCreate;
+
+  /// No description provided for @moveDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'已建立〈{church}〉'**
+  String moveDone(String church);
+
+  /// No description provided for @notSignedInYet.
+  ///
+  /// In zh, this message translates to:
+  /// **'還沒登入'**
+  String get notSignedInYet;
+
+  /// No description provided for @pendingCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 位還沒登入'**
+  String pendingCount(int count);
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

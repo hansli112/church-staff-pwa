@@ -156,6 +156,11 @@ WebhookSettings? webhookFromJson(Json? data) {
   );
 }
 
+PendingMember pendingMemberFromJson(String id, Json data) {
+  final m = memberFromJson(id, data);
+  return PendingMember(id: id, name: m.name, email: m.email, role: m.role, groups: m.groups, zones: m.zones);
+}
+
 Json notificationPrefsToJson(Set<NotificationKind> muted) => {
   'muted': [
     for (final k in NotificationKind.values)

@@ -2,8 +2,9 @@ rules_version = '2';
 
 // Cloud Storage rules for 馬大別忙.
 //
-// The only client upload is a church logo at churches/{cid}/logo.png. The
-// app resizes it to 512px before upload; these rules are the real limit.
+// Client uploads: a church logo at churches/{cid}/logo.png (the app resizes
+// it to 512px before upload; these rules are the real limit) and a move file
+// at moves/{uid}/….
 // Membership and admin role come from Firestore, the same documents
 // firestore.rules checks, so the tenant boundary is the same.
 service firebase.storage {
@@ -32,6 +33,14 @@ service firebase.storage {
         && request.resource.size < 1024 * 1024
         && request.resource.contentType.matches('image/.*');
       allow delete: if isAdmin(cid);
+    }
+
+    // 搬家檔: only its uploader reads or writes it, up to 20MB. The move
+    // functions read it with the Admin SDK and delete it once used.
+    match /moves/{uid}/{file} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.size <= 20 * 1024 * 1024;
     }
 
     match /{allPaths=**} {

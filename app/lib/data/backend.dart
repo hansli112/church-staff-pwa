@@ -107,6 +107,13 @@ abstract interface class ChurchData {
   /// Everyone in the church. Only admins and roster editors may read this.
   Stream<List<Member>> members();
 
+  /// Members moved from self-host who have not signed in yet. Admins and
+  /// roster editors.
+  Stream<List<PendingMember>> pendingMembers();
+
+  /// Drops a pending member (admins). Their names stay on the rosters.
+  Future<void> deletePendingMember(String id);
+
   Stream<ServiceSettings> services();
 
   /// Saved rosters from [from] on, of every service, oldest first.
@@ -182,6 +189,8 @@ enum CloudErrorCode {
   inviteInvalid,
   inviteExpired,
   lastAdmin,
+  moveInvalid,
+  moveTooLarge,
   notFound,
   permissionDenied,
   quotaExceeded,
@@ -276,6 +285,18 @@ abstract interface class CloudApi {
   Future<String> redeemInvite(String code);
 
   Future<void> deleteAccount();
+
+  /// Uploads a move file for [movePreview] and [moveCommit]; returns its
+  /// storage path, which only the uploader can read.
+  Future<String> uploadMoveFile(List<int> bytes);
+
+  /// What the move file at [path] would bring.
+  Future<MovePreview> movePreview(String path);
+
+  /// Creates church [churchName] from the move file with the caller as its
+  /// admin; [me] is the person in the file the caller takes over. Returns
+  /// the church ID.
+  Future<String> moveCommit(String path, {required String churchName, String? me});
 
   /// Name and logo of an active church, for someone who is not a member.
   /// Throws [CloudErrorCode.notFound] for an unknown or closed church.
