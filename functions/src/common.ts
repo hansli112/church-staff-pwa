@@ -17,9 +17,14 @@ export interface Caller {
   operator: boolean;
 }
 
+/** The global fetch, or a fake in tests. */
+export type Fetch = (url: string, init?: RequestInit) => Promise<Response>;
+
 export interface Deps {
   db: Firestore;
   now: () => Date;
+  /** Every outgoing HTTP request goes through this, so tests can fake it. */
+  fetch: Fetch;
 }
 
 /**

@@ -31,7 +31,7 @@ import * as triggers from './triggers.js';
 
 initializeApp();
 
-const deps = (): Deps => ({ db: getFirestore(), now: () => new Date() });
+const deps = (): Deps => ({ db: getFirestore(), now: () => new Date(), fetch: globalThis.fetch });
 
 function caller(req: CallableRequest): Caller | null {
   if (!req.auth) return null;
