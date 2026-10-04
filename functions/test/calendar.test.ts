@@ -16,7 +16,8 @@ import {
   type GoogleApi,
   type OAuthConfig,
 } from '../src/calendar.js';
-import { caller, clearFirestore, db, deps, rejectsWith, seedChurch, setNow } from './support.js';
+import { deliver, webhookSave } from '../src/webhook.js';
+import { caller, clearFirestore, db, deps, fakeFetch, rejectsWith, seedChurch, setNow } from './support.js';
 
 const config: OAuthConfig = {
   clientId: 'client',
@@ -42,7 +43,8 @@ function fakeGoogle() {
       calls.events++;
       return stored;
     },
-    upsert: async (_t, _c, e) => ({ ...e, id: e.id ?? 'new-id' }),
+    upsert: async (_t, _c, e) => ({ ...e, id: e.id ?? 'new-id', link: `https://calendar.google.com/event?eid=${e.id ?? 'new-id'}` }),
+    get: async (_t, _c, id) => stored.find((e) => e.id === id) ?? null,
     remove: async (_t, _c, id) => {
       calls.removed.push(id);
     },
@@ -229,5 +231,102 @@ describe('releasing the grant', () => {
     });
     assert.equal((await db.doc('calendarCache/C1_2026-10').get()).exists, false);
     assert.equal((await db.doc('calendarCache/C1_2026-11').get()).exists, false);
+  });
+});
+
+describe('calendar webhooks', () => {
+  const HOOK = 'https://n8n.example/hook';
+
+  async function withHook(events = { calendar: true, roster: false }) {
+    await church();
+    const { google } = fakeGoogle();
+    await connect(google);
+    const f = fakeFetch({ [HOOK]: { status: 200 } });
+    const d = { ...deps, fetch: f.fetch, google, config };
+    await webhookSave({ ...d, secretKey: config.tokenKey }, caller('pastor'), { churchId: 'C1', url: HOOK, events });
+    await db.doc('churches/C1').update({ name: '恩典堂' });
+    await db.doc('churches/C1/members/editor').update({ name: '林同工' });
+    const sent = () => f.requests.map((r) => ({ event: r.headers['x-martha-event'], body: JSON.parse(r.body) }));
+    return { d, sent };
+  }
+
+  test('created and updated, after Google has them, with the editor’s name', async () => {
+    const { d, sent } = await withHook();
+    const event = { title: '小組聚會', start: '2026-10-20T19:00:00+08:00', end: '2026-10-20T21:00:00+08:00', allDay: false, location: '2F' };
+    await calendarWrite(d, caller('editor'), { churchId: 'C1', op: 'upsert', event });
+    await calendarWrite(d, caller('editor'), { churchId: 'C1', op: 'upsert', event: { ...event, id: 'new-id', title: '小組聚會（改時間）' } });
+    assert.deepEqual(sent()[0], {
+      event: 'calendar.created',
+      body: {
+        action: 'created',
+        source: 'martha',
+        churchId: 'C1',
+        churchName: '恩典堂',
+        timeZone: 'Asia/Taipei',
+        id: 'new-id',
+        title: '小組聚會',
+        allDay: false,
+        start: '2026-10-20T19:00:00+08:00',
+        end: '2026-10-20T21:00:00+08:00',
+        location: '2F',
+        description: '',
+        link: 'https://calendar.google.com/event?eid=new-id',
+        actorUid: 'editor',
+        actorName: '林同工',
+      },
+    });
+    assert.equal(sent()[1].event, 'calendar.updated');
+    assert.equal(sent()[1].body.action, 'updated');
+    assert.equal(sent()[1].body.title, '小組聚會（改時間）');
+  });
+
+  test('an all-day event ends on its last day', async () => {
+    const { d, sent } = await withHook();
+    await calendarWrite(d, caller('pastor'), {
+      churchId: 'C1',
+      op: 'upsert',
+      event: { title: '退修會', start: '2026-10-10', end: '2026-10-13', allDay: true },
+    });
+    assert.equal(sent()[0].body.start, '2026-10-10');
+    assert.equal(sent()[0].body.end, '2026-10-12');
+  });
+
+  test('deleted sends what the event was before', async () => {
+    const { d, sent } = await withHook();
+    await calendarWrite(d, caller('pastor'), { churchId: 'C1', op: 'delete', eventId: 'e1', event: { start: '2026-10-10' } });
+    assert.equal(sent()[0].event, 'calendar.deleted');
+    assert.equal(sent()[0].body.action, 'deleted');
+    assert.equal(sent()[0].body.title, '同工會');
+    assert.equal(sent()[0].body.allDay, true);
+    assert.equal(sent()[0].body.end, '2026-10-10');
+  });
+
+  test('nothing is sent when calendar notices are off', async () => {
+    const { d, sent } = await withHook({ calendar: false, roster: true });
+    await calendarWrite(d, caller('pastor'), { churchId: 'C1', op: 'upsert', event: { title: 'x', start: '2026-10-10', end: '2026-10-11', allDay: true } });
+    assert.equal(sent().length, 0);
+  });
+
+  test('a failing webhook does not fail the edit', async () => {
+    await church();
+    const { google } = fakeGoogle();
+    await connect(google);
+    const f = fakeFetch({ [HOOK]: { status: 500 } });
+    const d = { ...deps, fetch: f.fetch, google, config };
+    await webhookSave({ ...d, secretKey: config.tokenKey }, caller('pastor'), { churchId: 'C1', url: HOOK, events: { calendar: true } });
+    const r = await calendarWrite(d, caller('pastor'), { churchId: 'C1', op: 'upsert', event: { title: 'x', start: '2026-10-10', end: '2026-10-11', allDay: true } });
+    assert.equal(r.event!.id, 'new-id');
+    assert.equal((await db.doc('churches/C1/settings/webhook').get()).get('lastDelivery.status'), 500);
+  });
+
+  test('a suspended church sends nothing', async () => {
+    const { d, sent } = await withHook();
+    await db.doc('churches/C1').update({ status: 'suspended' });
+    await rejectsWith(
+      calendarWrite(d, caller('pastor'), { churchId: 'C1', op: 'upsert', event: { title: 'x', start: '2026-10-10', end: '2026-10-11', allDay: true } }),
+      'permissionDenied',
+    );
+    assert.equal(await deliver({ ...d, secretKey: config.tokenKey }, 'C1', 'calendar.created', {}), null);
+    assert.equal(sent().length, 0);
   });
 });

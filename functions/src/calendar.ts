@@ -3,6 +3,7 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 import { fail, requireCaller, type Caller, type Deps } from './common.js';
+import { deliver } from './webhook.js';
 
 /**
  * 行事曆: a church admin connects one Google Calendar. The backend keeps the
@@ -40,6 +41,8 @@ export interface GoogleApi {
   calendars(accessToken: string): Promise<{ id: string; name: string; primary: boolean }[]>;
   events(accessToken: string, calendarId: string, from: Date, to: Date): Promise<CalendarEvent[]>;
   upsert(accessToken: string, calendarId: string, event: CalendarEvent): Promise<CalendarEvent>;
+  /** One event, or null when it is gone. */
+  get(accessToken: string, calendarId: string, eventId: string): Promise<CalendarEvent | null>;
   remove(accessToken: string, calendarId: string, eventId: string): Promise<void>;
   revoke(refreshToken: string): Promise<void>;
 }
@@ -56,6 +59,8 @@ export interface CalendarEvent {
   allDay: boolean;
   location?: string;
   description?: string;
+  /** Google Calendar's page for the event (htmlLink); read only. */
+  link?: string;
 }
 
 export function encrypt(plain: string, keyB64: string) {
@@ -89,7 +94,7 @@ async function membership(deps: Deps, churchId: string, c: Caller) {
   if (church.get('status') !== 'active' || !member.exists) fail('permission-denied', 'permissionDenied');
   const admin = member.get('role') === 'admin';
   const editor = admin || ((member.get('groups') as string[]) ?? []).includes('calendar-editors');
-  return { admin, editor };
+  return { admin, editor, name: (member.get('name') as string | undefined) || null, churchName: church.get('name') as string };
 }
 
 /** Starts connecting: a Google consent URL bound to this admin and church. */
@@ -262,19 +267,24 @@ export async function calendarEvents(deps: CalDeps, caller: Caller | null, data:
 export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: unknown) {
   const c = requireCaller(caller);
   const churchId = cid(data);
-  if (!(await membership(deps, churchId, c)).editor) fail('permission-denied', 'permissionDenied');
+  const me = await membership(deps, churchId, c);
+  if (!me.editor) fail('permission-denied', 'permissionDenied');
   const input = data as { op?: unknown; event?: Partial<CalendarEvent>; eventId?: unknown };
   const { token, calendarId } = await access(deps, churchId);
   if (!calendarId) fail('failed-precondition', 'unknown', 'noCalendar');
   let result: CalendarEvent | null = null;
+  let notice: { action: 'created' | 'updated' | 'deleted'; event: Partial<CalendarEvent> } | null = null;
   const months = new Set<string>();
   const previous = (data as { previousStart?: unknown })?.previousStart;
   if (typeof previous === 'string') months.add(monthOf(previous));
   if (input.op === 'delete') {
     if (typeof input.eventId !== 'string') fail('invalid-argument', 'unknown');
     const start = typeof input.event?.start === 'string' ? input.event.start : '';
+    // What it was, for the webhook: Google's DELETE returns nothing.
+    const before = await deps.google.get(token, calendarId, input.eventId).catch(() => null);
     await deps.google.remove(token, calendarId, input.eventId);
     if (start) months.add(monthOf(start));
+    notice = { action: 'deleted', event: before ?? { ...input.event, id: input.eventId } };
   } else if (input.op === 'upsert') {
     const e = input.event;
     if (!e || typeof e.title !== 'string' || !e.title.trim() || typeof e.start !== 'string' || typeof e.end !== 'string') {
@@ -290,13 +300,67 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
       description: typeof e.description === 'string' ? e.description.slice(0, 4000) : undefined,
     });
     months.add(monthOf(e.start));
+    notice = { action: typeof e.id === 'string' ? 'updated' : 'created', event: result };
   } else {
     fail('invalid-argument', 'unknown');
   }
   // Drop the cached months (old and new, for a moved event) so everyone
   // sees the change on their next read.
   await Promise.all([...months].map((m) => deps.db.doc(`calendarCache/${churchId}_${m}`).delete()));
+  if (notice) {
+    // After Google has it. A webhook failure is recorded, never thrown.
+    await deliver(
+      { ...deps, secretKey: deps.config.tokenKey },
+      churchId,
+      `calendar.${notice.action}`,
+      calendarPayload(notice.action, notice.event, {
+        churchId,
+        churchName: me.churchName,
+        actorUid: c.uid,
+        actorName: me.name,
+      }),
+    );
+  }
   return { event: result };
+}
+
+/** The time zone every church's calendar is shown in. */
+export const CHURCH_TIME_ZONE = 'Asia/Taipei';
+
+/**
+ * The webhook body for a calendar change, in the self-host version's shape
+ * so existing n8n flows keep working: every key always present, an
+ * all-day event's end the last day it covers (Google's is the day after).
+ */
+export function calendarPayload(
+  action: 'created' | 'updated' | 'deleted',
+  e: Partial<CalendarEvent>,
+  who: { churchId: string; churchName: string; actorUid: string; actorName: string | null },
+) {
+  const allDay = e.allDay === true;
+  return {
+    action,
+    source: 'martha',
+    churchId: who.churchId,
+    churchName: who.churchName,
+    timeZone: CHURCH_TIME_ZONE,
+    id: e.id ?? null,
+    title: e.title ?? null,
+    allDay,
+    start: e.start ?? null,
+    end: allDay ? inclusiveEnd(e.end) : (e.end ?? null),
+    location: e.location ?? '',
+    description: e.description ?? '',
+    link: e.link ?? null,
+    actorUid: who.actorUid,
+    actorName: who.actorName,
+  };
+}
+
+/** Google's exclusive all-day end date → the last day covered. */
+function inclusiveEnd(end: string | undefined): string | null {
+  if (typeof end !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(end)) return null;
+  return new Date(Date.parse(`${end}T00:00:00Z`) - 86400e3).toISOString().slice(0, 10);
 }
 
 /** The real Google APIs over fetch. */
@@ -318,6 +382,7 @@ export function googleApi(): GoogleApi {
     summary?: string;
     location?: string;
     description?: string;
+    htmlLink?: string;
     start: { date?: string; dateTime?: string };
     end: { date?: string; dateTime?: string };
   }): CalendarEvent => ({
@@ -328,6 +393,7 @@ export function googleApi(): GoogleApi {
     allDay: !!g.start.date,
     location: g.location,
     description: g.description,
+    link: g.htmlLink,
   });
   return {
     async exchangeCode(code, config) {
@@ -391,6 +457,14 @@ export function googleApi(): GoogleApi {
         headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
         body: JSON.stringify(toGoogle(event)),
       });
+      return fromGoogle((await json(res)) as Parameters<typeof fromGoogle>[0]);
+    },
+    async get(token, calendarId, eventId) {
+      const res = await fetch(
+        `${api}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
+        { headers: { authorization: `Bearer ${token}` } },
+      );
+      if (res.status === 404 || res.status === 410) return null;
       return fromGoogle((await json(res)) as Parameters<typeof fromGoogle>[0]);
     },
     async remove(token, calendarId, eventId) {
