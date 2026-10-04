@@ -316,12 +316,13 @@ class _ConfiguredState extends ConsumerState<_Configured> {
           children: [
             ListRow(
               title: l10n.webhookTest,
+              chevron: false,
               trailing: _testing
                   ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
                   : null,
               onTap: _testing ? null : _test,
             ),
-            ListRow(title: l10n.webhookRotate, onTap: _rotate),
+            ListRow(title: l10n.webhookRotate, chevron: false, onTap: _rotate),
           ],
         ),
         ListSection(

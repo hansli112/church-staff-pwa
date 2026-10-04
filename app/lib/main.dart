@@ -33,7 +33,9 @@ Future<void> main() async {
   await initializeDateFormatting('zh_TW');
   final env = Env.current;
   final prefs = await SharedPreferences.getInstance();
-  final Backend backend = env.usesFirebase ? await _firebase(env) : demoBackend();
+  final Backend backend = env.usesFirebase
+      ? await _firebase(env)
+      : demoBackend(newUser: const bool.fromEnvironment('DEMO_NEW_USER'));
 
   // End-to-end tests drive the web build through the accessibility tree.
   if (const bool.fromEnvironment('E2E')) SemanticsBinding.instance.ensureSemantics();

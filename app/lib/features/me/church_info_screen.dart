@@ -230,6 +230,7 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
               ListRow(
                 title: l10n.churchUrl,
                 subtitle: displayUrl(churchUrl(church.id)),
+                chevron: false,
                 onTap: () => _churchUrlActions(churchUrl(church.id)),
               ),
               if (admin)
@@ -290,6 +291,7 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
               children: [
                 ListRow(
                   title: l10n.exportData,
+                  chevron: false,
                   trailing: _exporting
                       ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
                       : null,

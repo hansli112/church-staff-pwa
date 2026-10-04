@@ -12,10 +12,48 @@ MemoryBackend demoBackend({
   int memberCount = 150,
   Day? today,
   bool signIn = true,
+  bool newUser = false,
 }) {
   final b = MemoryBackend();
   final start = today ?? Day.today();
   final cid = b.addChurch('恩典之家', id: 'demo');
+  // The features an admin sets up: a church link with a daily source, a
+  // webhook, and two people moved from self-host who have not signed in.
+  b.churchLinks[cid] = const ChurchLink(
+    title: '主日奉獻',
+    body: '線上奉獻、索取收據',
+    url: 'https://example.org/give',
+    source: 'https://example.org/today.json',
+  );
+  b.linkContents[cid] = LinkContent(
+    source: 'https://example.org/today.json',
+    title: '今日經文　詩篇 23:1',
+    body: '耶和華是我的牧者，我必不至缺乏。',
+    link: 'https://example.org/bible/ps23',
+    fetchedAt: DateTime.now().subtract(const Duration(hours: 5)),
+  );
+  b.webhooks[cid] = WebhookSettings(
+    url: 'https://n8n.example.org/webhook/martha',
+    calendar: true,
+    roster: true,
+    lastDelivery: WebhookDelivery(
+      ok: true,
+      status: 200,
+      event: 'roster.changed',
+      at: DateTime.now().subtract(const Duration(minutes: 12)),
+    ),
+  );
+  b.webhookSecrets[cid] = 'whsec_demo';
+  b.pendingMembers[cid] = {
+    'old-1': const PendingMember(id: 'old-1', name: '林佳穎', email: 'chiaying@example.com'),
+    'old-2': const PendingMember(id: 'old-2', name: '黃俊傑', email: 'chunchieh@example.com'),
+  };
+  // Another church moved from self-host, with data waiting for the demo
+  // account.
+  final other = b.addChurch('活水教會', id: 'living');
+  b.pendingMembers[other] = {
+    'old-demo': const PendingMember(id: 'old-demo', name: '示範同工', email: 'demo@example.com'),
+  };
   b.setServices(cid, demoServices);
   final people = demoMembers(memberCount);
   for (final m in people) {
@@ -33,7 +71,10 @@ MemoryBackend demoBackend({
         ],
     });
   }
-  if (signIn) {
+  if (newUser) {
+    // Signed in with no church yet: the welcome page, a claim, moving.
+    b.auth.signInAs('demo@example.com', uid: 'newcomer', name: '新同工');
+  } else if (signIn) {
     final admin = people.first;
     b.auth.signInAs('demo@example.com', uid: admin.uid, name: admin.name);
     b.users[admin.uid] = UserProfile(

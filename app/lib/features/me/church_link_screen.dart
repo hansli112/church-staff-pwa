@@ -135,75 +135,91 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
         : content.fetchedAt == null
         ? null
         : l10n.linkSourceUpdated(DateFormat('M/d HH:mm').format(content.fetchedAt!));
+    final fieldPadding = const EdgeInsets.symmetric(horizontal: Space.m);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.churchLink)),
       body: ListView(
-        padding: const EdgeInsets.all(Space.m),
+        padding: const EdgeInsets.symmetric(vertical: Space.m),
         children: [
-          TextField(
-            controller: _title,
-            maxLength: ChurchLink.titleMax,
-            textInputAction: TextInputAction.next,
-            decoration: InputDecoration(labelText: l10n.churchLinkTitle, errorText: _tried ? _titleError : null),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: Space.s),
-          TextField(
-            controller: _body,
-            maxLength: ChurchLink.bodyMax,
-            minLines: 2,
-            maxLines: 4,
-            decoration: InputDecoration(labelText: l10n.churchLinkBody),
-          ),
-          const SizedBox(height: Space.s),
-          TextField(
-            controller: _url,
-            keyboardType: TextInputType.url,
-            autocorrect: false,
-            textInputAction: TextInputAction.done,
-            decoration: InputDecoration(labelText: l10n.churchLinkUrl, errorText: _tried ? _urlError : null),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: Space.s),
-          Text(
-            l10n.churchLinkFooter,
-            style: AppText.footnote.copyWith(color: AppColors.of(context).secondaryLabel),
-          ),
-          const SizedBox(height: Space.xl),
-          Text(l10n.linkSource, style: AppText.headline),
-          const SizedBox(height: Space.s),
-          TextField(
-            controller: _source,
-            keyboardType: TextInputType.url,
-            autocorrect: false,
-            decoration: InputDecoration(
-              labelText: l10n.linkSourceUrl,
-              hintText: 'https://',
-              errorText: _tried ? _sourceError : null,
+          Padding(
+            padding: fieldPadding,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: _title,
+                  maxLength: ChurchLink.titleMax,
+                  textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(labelText: l10n.churchLinkTitle, errorText: _tried ? _titleError : null),
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: Space.s),
+                TextField(
+                  controller: _body,
+                  maxLength: ChurchLink.bodyMax,
+                  minLines: 2,
+                  maxLines: 4,
+                  decoration: InputDecoration(labelText: l10n.churchLinkBody),
+                ),
+                const SizedBox(height: Space.s),
+                TextField(
+                  controller: _url,
+                  keyboardType: TextInputType.url,
+                  autocorrect: false,
+                  textInputAction: TextInputAction.done,
+                  decoration: InputDecoration(labelText: l10n.churchLinkUrl, errorText: _tried ? _urlError : null),
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: Space.s),
+                Text(l10n.churchLinkFooter, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
+                const SizedBox(height: Space.xl),
+                Text(l10n.linkSource, style: AppText.headline),
+                const SizedBox(height: Space.m),
+                TextField(
+                  controller: _source,
+                  keyboardType: TextInputType.url,
+                  autocorrect: false,
+                  decoration: InputDecoration(
+                    labelText: l10n.linkSourceUrl,
+                    hintText: 'https://',
+                    errorText: _tried ? _sourceError : null,
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ],
             ),
-            onChanged: (_) => setState(() {}),
           ),
           if (_source.text.trim().isNotEmpty)
-            ListRow(title: l10n.linkFetchTime, value: fetchTimeLabel(_fetchMinute), onTap: _pickTime),
-          if (status != null) ...[
-            const SizedBox(height: Space.xs),
-            Text(
-              status,
-              style: AppText.footnote.copyWith(
-                color: _sourceProblem != null || content?.error != null ? c.destructive : c.secondaryLabel,
-              ),
+            ListSection(
+              children: [ListRow(title: l10n.linkFetchTime, value: fetchTimeLabel(_fetchMinute), onTap: _pickTime)],
             ),
-          ],
-          const SizedBox(height: Space.s),
-          Text(l10n.linkSourceFooter, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
-          const SizedBox(height: Space.l),
-          PrimaryButton(label: l10n.save, busy: _busy, onPressed: () => _save(link)),
+          Padding(
+            padding: fieldPadding,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (status != null) ...[
+                  Text(
+                    status,
+                    style: AppText.footnote.copyWith(
+                      color: _sourceProblem != null || content?.error != null ? c.destructive : c.secondaryLabel,
+                    ),
+                  ),
+                  const SizedBox(height: Space.xs),
+                ],
+                Text(l10n.linkSourceFooter, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
+                const SizedBox(height: Space.l),
+                PrimaryButton(label: l10n.save, busy: _busy, onPressed: () => _save(link)),
+              ],
+            ),
+          ),
           if (link != null) ...[
             const SizedBox(height: Space.l),
             ListSection(
               children: [ListRow(title: l10n.churchLinkRemove, destructive: true, onTap: () => _remove(link))],
             ),
           ],
+          SizedBox(height: MediaQuery.paddingOf(context).bottom),
         ],
       ),
     );

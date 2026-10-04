@@ -99,6 +99,7 @@ void main() {
     testWidgets('an admin has no leave entry and is told to hand over', (tester) async {
       await pumpApp(tester, seededChurch());
       await go(tester, '/me/church');
+      await tester.scrollUntilVisible(find.text('管理員要先把管理員交給別人，才能退出'), 300);
       expect(find.text('退出教會'), findsNothing);
       expect(find.text('管理員要先把管理員交給別人，才能退出'), findsOneWidget);
     });
