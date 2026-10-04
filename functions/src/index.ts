@@ -20,6 +20,7 @@ import { onObjectFinalized } from 'firebase-functions/v2/storage';
 import * as account from './account.js';
 import * as calendar from './calendar.js';
 import * as church from './church.js';
+import { churchPage as churchPageHandler } from './churchPage.js';
 import { REGION, type Caller, type Deps } from './common.js';
 import * as invites from './invites.js';
 import { logClientError as logClientErrorHandler } from './logging.js';
@@ -31,6 +32,8 @@ import * as triggers from './triggers.js';
 
 initializeApp();
 
+/** The hosted web app. */
+const appUrl = () => process.env.APP_URL ?? `https://${process.env.GCLOUD_PROJECT}.web.app`;
 const deps = (): Deps => ({ db: getFirestore(), now: () => new Date(), fetch: globalThis.fetch });
 
 function caller(req: CallableRequest): Caller | null {
@@ -59,7 +62,7 @@ const calDeps = () => ({
     clientId: oauthClientId.value(),
     clientSecret: oauthClientSecret.value(),
     redirectUri: `https://${REGION}-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/calendarCallback`,
-    appUrl: process.env.APP_URL ?? `https://${process.env.GCLOUD_PROJECT}.web.app`,
+    appUrl: appUrl(),
     tokenKey: calendarTokenKey.value(),
   },
 });
@@ -79,6 +82,12 @@ export const purgeDeletedChurches = onSchedule(
     await church.purgeDeletedChurches(deps(), getStorage(), (cid) => calendar.forgetCalendar(cal, cid));
   },
 );
+
+// Church URL: /c/<id> pages, manifests and icons, through Hosting.
+export const churchPage = onRequest({ region: REGION, maxInstances: 10 }, async (req, res) => {
+  const r = await churchPageHandler({ ...deps(), bucket: getStorage().bucket(), appUrl: appUrl() }, req.path);
+  res.status(r.status).set(r.headers).send(r.body);
+});
 
 // Invites
 export const previewInvite = callable(invites.previewInvite);

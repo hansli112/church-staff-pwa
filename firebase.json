@@ -41,6 +41,13 @@
         "destination": "/about.html"
       },
       {
+        "source": "/c/**",
+        "function": {
+          "functionId": "churchPage",
+          "region": "asia-east1"
+        }
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
