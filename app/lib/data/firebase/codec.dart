@@ -40,6 +40,7 @@ Church churchFromJson(String id, Json data, {String? logoUrl}) => Church(
     ChurchStatus.suspended,
   ),
   logoUrl: logoUrl,
+  homeName: data['homeName'] is String ? data['homeName'] as String : null,
   deletedAt: readTime(data['deletedAt']),
 );
 

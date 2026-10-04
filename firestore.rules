@@ -155,6 +155,16 @@ service cloud.firestore {
       // can say the church is closed instead of failing everywhere.
       allow read: if hasMembership(cid);
 
+      // An admin sets the home-screen name (up to 8 characters; removing the
+      // field falls back to the church name). Everything else on the church
+      // doc is the backend's.
+      allow update: if isAdmin(cid)
+        && onlyTouches(['homeName'])
+        && (!('homeName' in request.resource.data)
+            || (request.resource.data.homeName is string
+                && request.resource.data.homeName.size() >= 1
+                && request.resource.data.homeName.size() <= 8));
+
       match /members/{uid} {
         // Own membership, or roster-editors: the roster people picker lists
         // this collection. Firestore has no field-level read restriction, so

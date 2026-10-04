@@ -1968,6 +1968,54 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'分享教會網址'**
   String get churchUrlShare;
+
+  /// No description provided for @homeName.
+  ///
+  /// In zh, this message translates to:
+  /// **'主畫面名稱'**
+  String get homeName;
+
+  /// No description provided for @homeNameUnset.
+  ///
+  /// In zh, this message translates to:
+  /// **'同教會名稱'**
+  String get homeNameUnset;
+
+  /// No description provided for @homeNameMayBeCut.
+  ///
+  /// In zh, this message translates to:
+  /// **'部分手機會被截斷'**
+  String get homeNameMayBeCut;
+
+  /// No description provided for @homeNameFooter.
+  ///
+  /// In zh, this message translates to:
+  /// **'加入主畫面時，圖示下方顯示的名字。留空就用教會名稱。'**
+  String get homeNameFooter;
+
+  /// No description provided for @addToHome.
+  ///
+  /// In zh, this message translates to:
+  /// **'加入主畫面'**
+  String get addToHome;
+
+  /// No description provided for @addToHomeIphone.
+  ///
+  /// In zh, this message translates to:
+  /// **'用 Safari 打開教會網址，點「分享」，再點「加入主畫面」'**
+  String get addToHomeIphone;
+
+  /// No description provided for @addToHomeAndroid.
+  ///
+  /// In zh, this message translates to:
+  /// **'用 Chrome 打開教會網址，點右上角的選單，再點「加到主畫面」'**
+  String get addToHomeAndroid;
+
+  /// No description provided for @addToHomeIosNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'iPhone 上已經加入的圖示不會跟著更新。換了名稱或 logo 之後，請刪掉圖示再加入一次。'**
+  String get addToHomeIosNote;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

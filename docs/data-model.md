@@ -8,7 +8,7 @@
 | 路徑 | 內容 |
 |---|---|
 | `users/{uid}` | 全域個資：`name`、`email`、`locale`、`fcm`（`{deviceId: token}`）、`createdAt`、`updatedAt` |
-| `churches/{cid}` | `name`、`nameKey`（正規化後的名稱，同名檢查用）、`status`（`active` / `suspended` / `deleted`）、`createdBy`、`createdAt`、`deletedAt` |
+| `churches/{cid}` | `name`、`nameKey`（正規化後的名稱，同名檢查用）、`status`（`active` / `suspended` / `deleted`）、`createdBy`、`createdAt`、`deletedAt`、`logoVersion`（logo 的 Storage generation）、`homeName`（主畫面名稱，選填，最多 8 字） |
 | `churches/{cid}/members/{uid}` | `uid`（= doc id，collection group 查詢用）、`name`、`email`、`role`、`groups`、`zones`、`zoneTypes`、`notificationPrefs`、`joinedAt` |
 | `churches/{cid}/rosters/{id}` | 服事表，`type` 是聚會別 ID，`dateKey` 是 `YYYY-MM-DD` |
 | `churches/{cid}/staff_orders/{type}` | 各聚會別的同工排序 |
@@ -32,6 +32,7 @@
 |---|---|
 | 讀 `churches/{cid}` | 有 member doc 的人（停用中也可以，用來顯示「教會已停用」） |
 | 建立、改名、改狀態、刪除教會 | 只有 Cloud Functions |
+| 改主畫面名稱（`homeName`） | admin，只能動這個欄位 |
 | 查自己屬於哪些教會 | 本人（collection group `members`，`where uid == 自己`） |
 | 讀 member | 本人、roster-editors、admin |
 | 加入教會（建立 member） | 只有 Cloud Functions（邀請） |

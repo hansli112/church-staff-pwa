@@ -469,6 +469,9 @@ class FirestoreChurchData implements ChurchData {
       _col('settings').doc('calendar').snapshots().map((s) => calendarSettingsFromJson(s.data()));
 
   @override
+  Future<void> setHomeName(String? name) => _church.update({'homeName': name ?? FieldValue.delete()});
+
+  @override
   Future<void> uploadLogo(List<int> bytes) async {
     await _storage
         .ref(_logoPath)

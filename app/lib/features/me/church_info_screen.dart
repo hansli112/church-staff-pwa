@@ -11,6 +11,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../church/links.dart';
 import '../common/errors.dart';
+import 'home_name_dialog.dart';
 
 /// 教會資訊: the church's name and logo, the admin tools, and at the very
 /// bottom, in red, leaving the church.
@@ -78,6 +79,53 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
       case 'copy':
         await copyText(context, url, copied: l10n.churchUrlCopied);
     }
+  }
+
+  Future<void> _editHomeName(Church church) async {
+    final l10n = L10n.of(context);
+    final name = await askHomeName(context, churchName: church.name, current: church.homeName);
+    if (name == null || name == (church.homeName ?? '') || !mounted) return;
+    try {
+      await ref.read(churchDataProvider)!.setHomeName(name.isEmpty ? null : name);
+    } catch (_) {
+      if (mounted) showToast(context, l10n.saveFailed);
+    }
+  }
+
+  Future<void> _addToHomeHelp(String url) async {
+    final l10n = L10n.of(context);
+    await showAppSheet<void>(
+      context,
+      builder: (context) => SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListSection(
+                header: l10n.addToHome,
+                footer: l10n.addToHomeIosNote,
+                children: [
+                  ListRow(title: 'iPhone', subtitle: l10n.addToHomeIphone),
+                  ListRow(title: 'Android', subtitle: l10n.addToHomeAndroid),
+                ],
+              ),
+              ListSection(
+                children: [
+                  ListRow(
+                    title: l10n.churchUrlShare,
+                    leading: const Icon(Icons.ios_share),
+                    onTap: () {
+                      Navigator.pop(context);
+                      shareText(this.context, url, copied: l10n.churchUrlCopied);
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _leave(Church church, Member me) async {
@@ -163,6 +211,13 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
                 subtitle: displayUrl(churchUrl(church.id)),
                 onTap: () => _churchUrlActions(churchUrl(church.id)),
               ),
+              if (admin)
+                ListRow(
+                  title: l10n.homeName,
+                  value: church.homeName ?? l10n.homeNameUnset,
+                  onTap: () => _editHomeName(church),
+                ),
+              ListRow(title: l10n.addToHome, onTap: () => _addToHomeHelp(churchUrl(church.id))),
             ],
           ),
           if (admin)

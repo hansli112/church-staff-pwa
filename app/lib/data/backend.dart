@@ -146,6 +146,10 @@ abstract interface class ChurchData {
 
   Stream<CalendarSettings> calendarSettings();
 
+  /// Sets the home-screen name (admins only); null goes back to the church
+  /// name.
+  Future<void> setHomeName(String? name);
+
   /// Uploads [bytes] (already a 512px PNG) as the church logo.
   Future<void> uploadLogo(List<int> bytes);
 }

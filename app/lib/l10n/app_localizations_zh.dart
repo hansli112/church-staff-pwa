@@ -1018,4 +1018,28 @@ class L10nZh extends L10n {
 
   @override
   String get churchUrlShare => '分享教會網址';
+
+  @override
+  String get homeName => '主畫面名稱';
+
+  @override
+  String get homeNameUnset => '同教會名稱';
+
+  @override
+  String get homeNameMayBeCut => '部分手機會被截斷';
+
+  @override
+  String get homeNameFooter => '加入主畫面時，圖示下方顯示的名字。留空就用教會名稱。';
+
+  @override
+  String get addToHome => '加入主畫面';
+
+  @override
+  String get addToHomeIphone => '用 Safari 打開教會網址，點「分享」，再點「加入主畫面」';
+
+  @override
+  String get addToHomeAndroid => '用 Chrome 打開教會網址，點右上角的選單，再點「加到主畫面」';
+
+  @override
+  String get addToHomeIosNote => 'iPhone 上已經加入的圖示不會跟著更新。換了名稱或 logo 之後，請刪掉圖示再加入一次。';
 }

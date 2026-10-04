@@ -69,6 +69,17 @@ describe('church page', () => {
     assert.deepEqual(m.icons, [{ src: '/c/Grace/icons/42/logo.png', sizes: '512x512', type: 'image/png' }]);
   });
 
+  test('the home-screen name goes under the icon; the title keeps the full name', async () => {
+    await seedChurch('Long', {}, { name: '台北靈糧堂民生分堂', homeName: '民生靈糧堂' });
+    const { get } = page();
+    const m = JSON.parse(text((await get('/c/Long/manifest.json')).body));
+    assert.equal(m.name, '台北靈糧堂民生分堂');
+    assert.equal(m.short_name, '民生靈糧堂');
+    const html = text((await get('/c/Long')).body);
+    assert.match(html, /<title>台北靈糧堂民生分堂<\/title>/);
+    assert.match(html, /<meta name="apple-mobile-web-app-title" content="民生靈糧堂">/);
+  });
+
   test('without a logo the default icons are used', async () => {
     await seedChurch('Plain', {}, { name: '平安堂' });
     const { get } = page();

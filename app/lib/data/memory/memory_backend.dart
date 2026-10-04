@@ -504,6 +504,15 @@ class MemoryChurchData implements ChurchData {
   });
 
   @override
+  Future<void> setHomeName(String? name) async {
+    _requireAdmin();
+    if (name != null && (name.isEmpty || name.runes.length > Church.homeNameMaxLength)) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    await _b.write(() => _b.churches[churchId] = _b.churches[churchId]!.copyWith(homeName: () => name));
+  }
+
+  @override
   Future<void> uploadLogo(List<int> bytes) async {
     _requireAdmin();
     await _b.write(() {
@@ -649,6 +658,7 @@ class MemoryCloud implements CloudApi {
       name: c.name,
       status: ChurchStatus.deleted,
       logoUrl: c.logoUrl,
+      homeName: c.homeName,
       deletedAt: _b.clock(),
     );
     _b.notify();
@@ -659,7 +669,7 @@ class MemoryCloud implements CloudApi {
     _requireChurchAdmin(churchId);
     final c = _b.churches[churchId]!;
     if (c.status != ChurchStatus.deleted) return;
-    _b.churches[churchId] = Church(id: c.id, name: c.name, logoUrl: c.logoUrl);
+    _b.churches[churchId] = Church(id: c.id, name: c.name, logoUrl: c.logoUrl, homeName: c.homeName);
     _b.notify();
   }
 

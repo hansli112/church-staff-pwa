@@ -579,5 +579,13 @@
   "churchUrl": "教會網址",
   "churchUrlCopied": "已複製教會網址",
   "churchUrlCopy": "複製教會網址",
-  "churchUrlShare": "分享教會網址"
+  "churchUrlShare": "分享教會網址",
+  "homeName": "主畫面名稱",
+  "homeNameUnset": "同教會名稱",
+  "homeNameMayBeCut": "部分手機會被截斷",
+  "homeNameFooter": "加入主畫面時，圖示下方顯示的名字。留空就用教會名稱。",
+  "addToHome": "加入主畫面",
+  "addToHomeIphone": "用 Safari 打開教會網址，點「分享」，再點「加入主畫面」",
+  "addToHomeAndroid": "用 Chrome 打開教會網址，點右上角的選單，再點「加到主畫面」",
+  "addToHomeIosNote": "iPhone 上已經加入的圖示不會跟著更新。換了名稱或 logo 之後，請刪掉圖示再加入一次。"
 }

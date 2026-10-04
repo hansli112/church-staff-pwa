@@ -18,6 +18,7 @@ class Church {
     required this.name,
     this.status = ChurchStatus.active,
     this.logoUrl,
+    this.homeName,
     this.deletedAt,
   });
 
@@ -27,15 +28,25 @@ class Church {
 
   /// Download URL of the 512px logo, or null when the church has none.
   final String? logoUrl;
+
+  /// 主畫面名稱: the shorter name under the home-screen icon, or null to use
+  /// [name].
+  final String? homeName;
   final DateTime? deletedAt;
+
+  /// The most characters a home-screen name may have; past
+  /// [homeNameSafeLength], some phones cut it off.
+  static const homeNameMaxLength = 8;
+  static const homeNameSafeLength = 6;
 
   bool get isActive => status == ChurchStatus.active;
 
-  Church copyWith({String? name, ChurchStatus? status, String? logoUrl}) => Church(
+  Church copyWith({String? name, ChurchStatus? status, String? logoUrl, String? Function()? homeName}) => Church(
     id: id,
     name: name ?? this.name,
     status: status ?? this.status,
     logoUrl: logoUrl ?? this.logoUrl,
+    homeName: homeName == null ? this.homeName : homeName(),
     deletedAt: deletedAt,
   );
 }

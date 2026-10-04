@@ -16,6 +16,7 @@ import {
   collection,
   collectionGroup,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -221,6 +222,23 @@ describe('教會本身', () => {
     await assertFails(updateDoc(doc(as(ADMIN_A), `churches/${A}`), { name: '改名' }));
     await assertFails(updateDoc(doc(as(MEMBER_S), `churches/${SUSPENDED}`), { status: 'active' }));
     await assertFails(deleteDoc(doc(as(ADMIN_A), `churches/${A}`)));
+  });
+
+  it('主畫面名稱：只有該教會的管理員能設定，最多 8 個字，也能拿掉', async () => {
+    await seed(`churches/home-name`, { name: '台北靈糧堂民生分堂', nameKey: 'x', status: 'active' });
+    await seed(`churches/home-name/members/${ADMIN_A}`, memberDoc(ADMIN_A, 'admin'));
+    await seed(`churches/home-name/members/${MEMBER_A}`, memberDoc(MEMBER_A, 'member'));
+    const ref = (uid) => doc(as(uid), 'churches/home-name');
+    await assertSucceeds(updateDoc(ref(ADMIN_A), { homeName: '民生靈糧堂' }));
+    await assertSucceeds(updateDoc(ref(ADMIN_A), { homeName: '一二三四五六七八' }));
+    await assertFails(updateDoc(ref(ADMIN_A), { homeName: '一二三四五六七八九' }));
+    await assertFails(updateDoc(ref(ADMIN_A), { homeName: '' }));
+    await assertFails(updateDoc(ref(ADMIN_A), { homeName: 8 }));
+    await assertFails(updateDoc(ref(ADMIN_A), { homeName: '民生', name: '改名' }));
+    await assertFails(updateDoc(ref(MEMBER_A), { homeName: '民生' }));
+    await assertFails(updateDoc(ref(ADMIN_B), { homeName: '民生' }), 'another church’s admin');
+    await assertSucceeds(updateDoc(ref(ADMIN_A), { homeName: deleteField() }));
+    await assertFails(updateDoc(doc(as(MEMBER_S), `churches/${SUSPENDED}`), { homeName: '停用' }));
   });
 
   it('停用的教會：連管理員都讀寫不了裡面的東西', async () => {
