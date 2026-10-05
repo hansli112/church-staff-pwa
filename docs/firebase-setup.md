@@ -58,6 +58,8 @@ scripts/firebase-project.sh prod marthasit     [BILLING_ACCOUNT_ID]
 - 產生 Web Push 金鑰，填到 `FCM_VAPID_KEY`。
 - 設定 OAuth 同意畫面，建一個「網頁應用程式」OAuth client，用 `gcloud secrets versions add` 換掉兩個佔位 secret。
 
+Function 改掉不用某個 secret 時，`firebase deploy` 不會拿掉已部署版本上的 secret 綁定。要先 `scripts/firebase.sh <id> functions:delete <名稱> --region asia-east1` 再部署一次，確認綁定拿掉之後才能刪 secret，不然新的 instance 起不來。
+
 `GOOGLE_SERVER_CLIENT_ID` 和 `FCM_VAPID_KEY` 填過之後，重跑腳本會保留。網頁推播還需要 `app/web/firebase-messaging-sw.js`：它從 Hosting 的 `/__/firebase/init.js` 讀專案設定，所以 dev 和 prod 共用同一個檔案。
 
 ## 建置
