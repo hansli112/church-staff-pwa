@@ -81,7 +81,10 @@ class L10nZh extends L10n {
   String get signInWithEmail => '用 email 登入';
 
   @override
-  String get loginTagline => '馬大！馬大！你為許多的事思慮煩擾，\n但是不可少的只有一件；\n馬利亞已經選擇那上好的福分，\n是不能奪去的。\n（路加福音 10:41–42）';
+  String get loginTagline => '馬大！馬大！你為許多的事思慮煩擾，但是不可少的只有一件；馬利亞已經選擇那上好的福分，是不能奪去的。';
+
+  @override
+  String get loginTaglineSource => '路加福音 10:41–42';
 
   @override
   String get email => 'Email';

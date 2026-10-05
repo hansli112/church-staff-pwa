@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -111,51 +109,56 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  /// The name in the upper part, the sign-in buttons low, within reach of
-  /// the thumb, and the verse quietly under them. On a wide screen the group stays together in
-  /// the middle. Scrolls when large text needs the room.
+  /// One group, centred: icon, name, the verse quietly under it, then the
+  /// sign-in buttons. Scrolls when large text needs the room.
   Widget _choose(L10n l10n, AppColors c) {
-    return LayoutBuilder(
-      builder: (context, box) => Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(Space.l),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: MediaQuery.sizeOf(context).width < 600
-                  ? box.maxHeight - Space.l * 2
-                  : math.min(box.maxHeight - Space.l * 2, 560),
-            ),
-            child: IntrinsicHeight(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Spacer(flex: 2),
-                  Text(l10n.appName, textAlign: TextAlign.center, style: AppText.largeTitle),
-                  const Spacer(flex: 3),
-                  const SizedBox(height: Space.xl),
-                  PrimaryButton(
-                    label: l10n.signInWithGoogle,
-                    busy: _busy,
-                    onPressed: () => _run(_auth.signInWithGoogle),
-                  ),
-                  const SizedBox(height: Space.s),
-                  SecondaryButton(
-                    label: l10n.signInWithEmail,
-                    expand: true,
-                    onPressed: _busy ? null : () => setState(() => _mode = _Mode.signIn),
-                  ),
-                  ..._errorText(c),
-                  const SizedBox(height: Space.l),
-                  // Quiet, below the actions: the name already says it.
-                  Text(
-                    l10n.loginTagline,
-                    textAlign: TextAlign.center,
-                    style: AppText.footnote.copyWith(color: c.secondaryLabel, height: 1.5),
-                  ),
-                ],
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(Space.l, Space.l, Space.l, Space.xxl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Image.asset('assets/icons/app.png', width: 88, height: 88, excludeFromSemantics: true),
               ),
             ),
-          ),
+            const SizedBox(height: Space.m),
+            Text(l10n.appName, textAlign: TextAlign.center, style: AppText.largeTitle),
+            const SizedBox(height: Space.m),
+            // Narrow enough that the lines come out about even.
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 300),
+                child: Text(
+                  l10n.loginTagline,
+                  textAlign: TextAlign.center,
+                  style: AppText.subheadline.copyWith(color: c.secondaryLabel, height: 1.5),
+                ),
+              ),
+            ),
+            const SizedBox(height: Space.xs),
+            Text(
+              l10n.loginTaglineSource,
+              textAlign: TextAlign.center,
+              style: AppText.footnote.copyWith(color: c.secondaryLabel),
+            ),
+            const SizedBox(height: Space.xxl),
+            PrimaryButton(
+              label: l10n.signInWithGoogle,
+              busy: _busy,
+              onPressed: () => _run(_auth.signInWithGoogle),
+            ),
+            const SizedBox(height: Space.s),
+            SecondaryButton(
+              label: l10n.signInWithEmail,
+              expand: true,
+              onPressed: _busy ? null : () => setState(() => _mode = _Mode.signIn),
+            ),
+            ..._errorText(c),
+          ],
         ),
       ),
     );
