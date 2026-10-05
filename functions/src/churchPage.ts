@@ -134,7 +134,7 @@ export function manifest(cid: string, f: ChurchFace | null) {
     display: 'standalone',
     background_color: '#F2F2F7',
     theme_color: '#1F5FD1',
-    description: '教會同工的服事表，大家一起看',
+    description: '馬大！馬大！你為許多的事思慮煩擾，但是不可少的只有一件。（路加福音 10:41–42）',
     orientation: 'portrait-primary',
     prefer_related_applications: false,
     lang: 'zh-Hant',

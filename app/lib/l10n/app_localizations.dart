@@ -238,8 +238,14 @@ abstract class L10n {
   /// No description provided for @loginTagline.
   ///
   /// In zh, this message translates to:
-  /// **'同工服事表，大家一起看'**
+  /// **'馬大！馬大！\n你為許多的事思慮煩擾，\n但是不可少的只有一件。'**
   String get loginTagline;
+
+  /// No description provided for @loginTaglineSource.
+  ///
+  /// In zh, this message translates to:
+  /// **'路加福音 10:41–42'**
+  String get loginTaglineSource;
 
   /// No description provided for @email.
   ///

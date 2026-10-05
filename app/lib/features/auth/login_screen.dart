@@ -112,6 +112,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     textAlign: TextAlign.center,
                     style: AppText.body.copyWith(color: c.secondaryLabel),
                   ),
+                  const SizedBox(height: Space.xs),
+                  Text(
+                    l10n.loginTaglineSource,
+                    textAlign: TextAlign.center,
+                    style: AppText.footnote.copyWith(color: c.secondaryLabel),
+                  ),
                   const SizedBox(height: Space.xxl),
                   PrimaryButton(
                     label: l10n.signInWithGoogle,

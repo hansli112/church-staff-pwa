@@ -81,7 +81,10 @@ class L10nZh extends L10n {
   String get signInWithEmail => '用 email 登入';
 
   @override
-  String get loginTagline => '同工服事表，大家一起看';
+  String get loginTagline => '馬大！馬大！\n你為許多的事思慮煩擾，\n但是不可少的只有一件。';
+
+  @override
+  String get loginTaglineSource => '路加福音 10:41–42';
 
   @override
   String get email => 'Email';
