@@ -265,7 +265,10 @@ export async function calendarEvents(deps: CalDeps, caller: Caller | null, data:
   }
   const { token, calendarId } = await access(deps, churchId);
   if (!calendarId) fail('failed-precondition', 'unknown', 'noCalendar');
-  const events = await deps.google.events(token, calendarId, from, to);
+  // Google leaves out what an event does not have; Firestore refuses undefined.
+  const events = (await deps.google.events(token, calendarId, from, to)).map(
+    (e) => Object.fromEntries(Object.entries(e).filter(([, v]) => v !== undefined)) as unknown as CalendarEvent,
+  );
   await cacheRef.set({ cid: churchId, month, events, fetchedAt: Timestamp.fromDate(deps.now()) });
   return { events, cached: false };
 }

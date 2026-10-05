@@ -148,6 +148,21 @@ describe('reading', () => {
     assert.equal(calls.events, 2);
   });
 
+  test('events without a location or description, as Google sends them, are cached', async () => {
+    await church();
+    const { google } = fakeGoogle();
+    google.events = async () => [
+      { id: 'e2', title: '主日', start: '2026-10-11T02:00:00Z', end: '2026-10-11T04:00:00Z', allDay: false, location: undefined, description: undefined, link: undefined },
+    ];
+    await connect(google);
+    const d = { ...deps, google, config };
+    const first = await calendarEvents(d, caller('staff'), { churchId: 'C1', month: '2026-10' });
+    assert.equal(first.events[0].title, '主日');
+    const again = await calendarEvents(d, caller('staff'), { churchId: 'C1', month: '2026-10' });
+    assert.equal(again.cached, true);
+    assert.deepEqual(Object.keys(again.events[0]).sort(), ['allDay', 'end', 'id', 'start', 'title']);
+  });
+
   test('another church cannot read it', async () => {
     await church();
     const { google } = fakeGoogle();
