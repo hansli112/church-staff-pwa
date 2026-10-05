@@ -69,7 +69,11 @@ class CalendarSettingsScreen extends ConsumerWidget {
               builder: (context, ref, _) {
                 final list = ref.watch(_calendarListProvider);
                 return list.when(
-                  loading: () => const SizedBox.shrink(),
+                  // The first call after a while can wait on a cold start.
+                  loading: () => const Padding(
+                    padding: EdgeInsets.all(Space.xl),
+                    child: Center(child: CircularProgressIndicator.adaptive()),
+                  ),
                   error: (e, _) =>
                       ErrorRetry(message: l10n.loadFailed, onRetry: () => ref.invalidate(_calendarListProvider)),
                   data: (calendars) => ListSection(

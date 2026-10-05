@@ -124,7 +124,7 @@ class _Agenda extends ConsumerWidget {
         Expanded(
           child: events.when(
             skipLoadingOnReload: true,
-            loading: () => const SizedBox.shrink(),
+            loading: () => const Center(child: CircularProgressIndicator.adaptive()),
             error: (e, _) => ErrorRetry(
               message: e is CloudException && e.detail == 'reconnect' ? l10n.calNeedsReconnectStaff : l10n.loadFailed,
               onRetry: () => ref.invalidate(calendarEventsProvider(monthKey(month))),

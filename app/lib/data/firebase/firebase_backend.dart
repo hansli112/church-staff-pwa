@@ -15,6 +15,19 @@ import '../../domain/staff_order.dart';
 import '../../env.dart';
 import '../backend.dart';
 import 'codec.dart';
+import '../retry_refused.dart';
+
+bool _refused(Object e) => e is FirebaseException && e.code == 'permission-denied';
+
+/// Firestore listeners that survive being refused right after sign-in (see
+/// [retryRefused]).
+extension on DocumentReference<Json> {
+  Stream<DocumentSnapshot<Json>> live() => retryRefused(snapshots, isRefused: _refused);
+}
+
+extension on Query<Json> {
+  Stream<QuerySnapshot<Json>> live() => retryRefused(snapshots, isRefused: _refused);
+}
 
 /// All Cloud Functions run in the same region as Firestore.
 const functionsRegion = 'asia-east1';
@@ -250,7 +263,7 @@ class _Profiles implements ProfileRepository {
 
   @override
   Stream<UserProfile?> watch(String uid) =>
-      _db.doc('users/$uid').snapshots().map((s) => s.exists ? profileFromJson(uid, s.data()!) : null);
+      _db.doc('users/$uid').live().map((s) => s.exists ? profileFromJson(uid, s.data()!) : null);
 
   @override
   Future<void> save(UserProfile profile) => _db.runTransaction((tx) async {
@@ -289,7 +302,7 @@ class _Memberships implements MembershipRepository {
   Stream<List<Membership>> watchMine(String uid) => _db
       .collectionGroup('members')
       .where('uid', isEqualTo: uid)
-      .snapshots()
+      .live()
       .map(
         (snap) => [
           for (final doc in snap.docs)
@@ -320,7 +333,7 @@ class FirestoreChurchData implements ChurchData {
   Object? _logoVersion;
 
   @override
-  Stream<Church?> church() => _church.snapshots().asyncMap((snap) async {
+  Stream<Church?> church() => _church.live().asyncMap((snap) async {
     final data = snap.data();
     if (data == null) return null;
     final version = data['logoVersion'];
@@ -341,15 +354,15 @@ class FirestoreChurchData implements ChurchData {
 
   @override
   Stream<Member?> member(String uid) =>
-      _col('members').doc(uid).snapshots().map((s) => s.exists ? memberFromJson(uid, s.data()!) : null);
+      _col('members').doc(uid).live().map((s) => s.exists ? memberFromJson(uid, s.data()!) : null);
 
   @override
-  Stream<List<Member>> members() => _col('members').snapshots().map(
+  Stream<List<Member>> members() => _col('members').live().map(
     (snap) => [for (final d in snap.docs) memberFromJson(d.id, d.data())],
   );
 
   @override
-  Stream<List<PendingMember>> pendingMembers() => _col('pendingMembers').snapshots().map(
+  Stream<List<PendingMember>> pendingMembers() => _col('pendingMembers').live().map(
     (snap) => [for (final d in snap.docs) pendingMemberFromJson(d.id, d.data())],
   );
 
@@ -359,18 +372,18 @@ class FirestoreChurchData implements ChurchData {
   @override
   Stream<ServiceSettings> services() => _col(
     'settings',
-  ).doc('services').snapshots().map((s) => serviceSettingsFromJson(s.data()));
+  ).doc('services').live().map((s) => serviceSettingsFromJson(s.data()));
 
   @override
   Stream<List<Roster>> rosters({required Day from}) => _col('rosters')
       .where('dateKey', isGreaterThanOrEqualTo: from.key)
       .orderBy('dateKey')
-      .snapshots()
+      .live()
       .map((snap) => [for (final d in snap.docs) ?rosterFromJson(d.data())]);
 
   @override
   Stream<StaffOrder> staffOrder(String serviceType) =>
-      _col('staff_orders').doc(serviceType).snapshots().map((s) => StaffOrder.fromJson(s.data() ?? const {}));
+      _col('staff_orders').doc(serviceType).live().map((s) => StaffOrder.fromJson(s.data() ?? const {}));
 
   // One-off reads go to the server when online: a listener's first
   // snapshot may come from the offline cache and miss documents.
@@ -468,7 +481,7 @@ class FirestoreChurchData implements ChurchData {
       .collection('invites')
       .where('cid', isEqualTo: churchId)
       .orderBy('expiresAt', descending: true)
-      .snapshots()
+      .live()
       .map(
         (snap) => [for (final d in snap.docs) inviteFromJson(d.id, d.data())],
       );
@@ -500,10 +513,10 @@ class FirestoreChurchData implements ChurchData {
 
   @override
   Stream<CalendarSettings> calendarSettings() =>
-      _col('settings').doc('calendar').snapshots().map((s) => calendarSettingsFromJson(s.data()));
+      _col('settings').doc('calendar').live().map((s) => calendarSettingsFromJson(s.data()));
 
   @override
-  Stream<ChurchLink?> churchLink() => _col('settings').doc('link').snapshots().map((s) => churchLinkFromJson(s.data()));
+  Stream<ChurchLink?> churchLink() => _col('settings').doc('link').live().map((s) => churchLinkFromJson(s.data()));
 
   @override
   Future<void> saveChurchLink(ChurchLink? link) {
@@ -515,11 +528,10 @@ class FirestoreChurchData implements ChurchData {
 
   @override
   Stream<LinkContent?> linkContent() =>
-      _col('settings').doc('linkContent').snapshots().map((s) => linkContentFromJson(s.data()));
+      _col('settings').doc('linkContent').live().map((s) => linkContentFromJson(s.data()));
 
   @override
-  Stream<WebhookSettings?> webhook() =>
-      _col('settings').doc('webhook').snapshots().map((s) => webhookFromJson(s.data()));
+  Stream<WebhookSettings?> webhook() => _col('settings').doc('webhook').live().map((s) => webhookFromJson(s.data()));
 
   @override
   Future<void> setHomeName(String? name) => _church.update({'homeName': name ?? FieldValue.delete()});
