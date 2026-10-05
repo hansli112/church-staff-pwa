@@ -13,6 +13,61 @@ export const REGIONS = [
   ['australia-southeast1', '雪梨'], ['europe-west1', '比利時'],
   ['us-central1', '美國中部'], ['us-east1', '美國東部'],
 ];
+
+// Churches rarely know which data center suits them, and the choice is
+// permanent, so by default the plan picks the one nearest the church's time
+// zone: exact places first, then the continent, then the standard UTC offset.
+const REGION_BY_ZONE = {
+  'Asia/Taipei': 'asia-east1', 'Asia/Shanghai': 'asia-east1', 'Asia/Manila': 'asia-east1',
+  'Asia/Hong_Kong': 'asia-east2', 'Asia/Macau': 'asia-east2',
+  // Indonesia and East Timor reach east to UTC+9, still nearest Singapore.
+  'Asia/Jakarta': 'asia-southeast1', 'Asia/Pontianak': 'asia-southeast1', 'Asia/Makassar': 'asia-southeast1',
+  'Asia/Jayapura': 'asia-southeast1', 'Asia/Dili': 'asia-southeast1',
+  // Western Pacific islands nearer Tokyo than Sydney (Intl may spell Chuuk and Pohnpei the old way).
+  'Pacific/Guam': 'asia-northeast1', 'Pacific/Saipan': 'asia-northeast1', 'Pacific/Palau': 'asia-northeast1',
+  'Pacific/Chuuk': 'asia-northeast1', 'Pacific/Truk': 'asia-northeast1', 'Pacific/Pohnpei': 'asia-northeast1',
+  'Pacific/Ponape': 'asia-northeast1', 'Pacific/Kosrae': 'asia-northeast1', 'Pacific/Wake': 'asia-northeast1',
+};
+
+function standardOffsetHours(timeZone) {
+  // The smaller of January and July is standard time in either hemisphere.
+  // A fixed year keeps the answer the same from one run to the next.
+  const offsets = [0, 6].map((month) => {
+    const name = new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'longOffset' })
+      .formatToParts(Date.UTC(2026, month, 15)).find((part) => part.type === 'timeZoneName').value;
+    const match = /GMT([+-])(\d{2}):(\d{2})/.exec(name);
+    return match ? (match[1] === '-' ? -1 : 1) * (Number(match[2]) + Number(match[3]) / 60) : 0;
+  });
+  return Math.min(...offsets);
+}
+
+// The offered region nearest a UTC offset, for zones that name no continent
+// (UTC, Etc/GMT+8, Antarctica/…) or span an ocean.
+function regionForOffset(offset) {
+  if (offset < -5) return 'us-central1';
+  if (offset < -2) return 'us-east1';
+  if (offset < 5) return 'europe-west1';
+  if (offset < 8) return 'asia-southeast1';
+  if (offset < 9) return 'asia-east1';
+  return offset < 10 ? 'asia-northeast1' : 'australia-southeast1';
+}
+
+export function regionForTimeZone(timeZone) {
+  if (REGION_BY_ZONE[timeZone]) return REGION_BY_ZONE[timeZone];
+  const area = timeZone.split('/')[0];
+  const offset = standardOffsetHours(timeZone);
+  if (area === 'Europe' || area === 'Africa') return 'europe-west1';
+  if (area === 'America') return offset >= -5 ? 'us-east1' : 'us-central1';
+  if (area === 'Australia') return 'australia-southeast1';
+  if (area === 'Pacific') return offset > 0 ? 'australia-southeast1' : 'us-central1';
+  if (area === 'Indian') return 'asia-southeast1';
+  if (area === 'Asia') {
+    if (offset >= 9) return 'asia-northeast1';
+    return offset >= 5 ? 'asia-southeast1' : 'europe-west1';
+  }
+  return regionForOffset(offset);
+}
+
 const RUN_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 // The Pages project name becomes <name>.pages.dev, which staff type and share,
 // so the church picks it. Cloudflare allows up to 58; 40 leaves room for the
@@ -148,7 +203,8 @@ export function createInstallationPlan(input, identity, {
       !identity?.accounts?.some((account) => account.id === input.cloudflareAccountId)) {
     throw installationError('請選擇已授權的 Cloudflare 帳號', 'INVALID_INPUT');
   }
-  if (!REGIONS.some(([id]) => id === input.region)) throw installationError('請選擇資料庫地區', 'INVALID_INPUT');
+  // Empty means automatic; a region is only sent when the church chose one.
+  if (input.region && !REGIONS.some(([id]) => id === input.region)) throw installationError('資料庫地區不正確，請重新選擇', 'INVALID_INPUT');
   const siteName = typeof input.siteName === 'string' ? input.siteName.trim().toLowerCase() : '';
   if (!SITE_NAME.test(siteName) || siteName.includes('--')) {
     throw installationError('網站名稱只能用 3–40 個英文小寫字母、數字和連字號（-），並以字母開頭', 'INVALID_INPUT');
@@ -180,7 +236,7 @@ export function createInstallationPlan(input, identity, {
     schemaVersion: 1, runId, sourceRevision, mode,
     projectId, pagesProject: siteName,
     cloudflareAccountId: input.cloudflareAccountId,
-    googleEmail, region: input.region, churchConfig,
+    googleEmail, region: input.region || regionForTimeZone(churchConfig.timeZone), churchConfig,
     ...(iconHashes ? { icons: { ...iconHashes } } : {}),
     // Sign-in uses the email; like bootstrap-admin, the username defaults to the name.
     admin: { name: adminName, email: requireEmail(input.adminEmail, '管理員 email'), username: adminName },

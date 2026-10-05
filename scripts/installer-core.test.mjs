@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promis
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { coreChurchConfig, createInstallationManager, createInstallationPlan, publicError, STEPS } from './installer/core.mjs';
+import { coreChurchConfig, createInstallationManager, createInstallationPlan, publicError, regionForTimeZone, REGIONS, STEPS } from './installer/core.mjs';
 import { createDemoProviders } from './install-core.mjs';
 import { setUpAccountAdmin } from './installer/core.mjs';
 import { commandEnvironment, runCommand } from './installer/process.mjs';
@@ -71,6 +71,39 @@ test('plan stores the time zone in the spelling Intl resolves to', () => {
   ]) {
     assert.equal(createInstallationPlan({ ...input(), timeZone: typed }, identity).churchConfig.timeZone, stored);
   }
+});
+
+// Churches do not pick a data center unless they open the advanced option.
+test('without a chosen region the plan uses the one nearest the time zone', () => {
+  for (const [timeZone, region] of [
+    ['Asia/Taipei', 'asia-east1'], ['America/Los_Angeles', 'us-central1'], ['us/pacific', 'us-central1'],
+    ['Europe/Amsterdam', 'europe-west1'], ['Asia/Kuala_Lumpur', 'asia-southeast1'],
+  ]) {
+    for (const automatic of [undefined, '']) {
+      const plan = createInstallationPlan({ ...input(), timeZone, region: automatic }, identity);
+      assert.equal(plan.region, region, `${timeZone} ${JSON.stringify(automatic)}`);
+    }
+  }
+  const plan = createInstallationPlan({ ...input(), timeZone: 'America/Los_Angeles', region: 'us-east1' }, identity);
+  assert.equal(plan.region, 'us-east1');
+});
+
+test('every time zone maps to a region the wizard offers', async () => {
+  const offered = new Set(REGIONS.map(([id]) => id));
+  const zones = (await readFile(new URL('../test/support/installer_time_zones.txt', import.meta.url), 'utf8'))
+    .split('\n').filter((line) => line && !line.startsWith('#'));
+  for (const zone of zones) assert.ok(offered.has(regionForTimeZone(zone)), zone);
+  for (const [zone, region] of [
+    ['Asia/Hong_Kong', 'asia-east2'], ['Asia/Tokyo', 'asia-northeast1'], ['Asia/Seoul', 'asia-northeast1'],
+    ['Asia/Singapore', 'asia-southeast1'], ['Australia/Sydney', 'australia-southeast1'], ['Pacific/Auckland', 'australia-southeast1'],
+    ['America/New_York', 'us-east1'], ['America/Toronto', 'us-east1'], ['America/Chicago', 'us-central1'],
+    ['America/Vancouver', 'us-central1'], ['Europe/London', 'europe-west1'],
+    ['Asia/Jayapura', 'asia-southeast1'], ['Pacific/Guam', 'asia-northeast1'], ['Atlantic/Bermuda', 'us-east1'],
+    ['Atlantic/Azores', 'europe-west1'], ['Arctic/Longyearbyen', 'europe-west1'],
+    // No continent: the nearest by UTC offset.
+    ['UTC', 'europe-west1'], ['Etc/GMT+8', 'us-central1'], ['Etc/GMT+5', 'us-east1'], ['Etc/GMT-8', 'asia-east1'],
+    ['Antarctica/McMurdo', 'australia-southeast1'],
+  ]) assert.equal(regionForTimeZone(zone), region, zone);
 });
 
 // Updating a site installed before that fixes its config on the way.
