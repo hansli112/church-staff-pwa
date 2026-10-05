@@ -24,9 +24,14 @@ async function usableInvite(deps: Deps, data: unknown) {
   return { code, cid, churchName: church.get('name') as string, expiresAt };
 }
 
+/**
+ * The church an invite is for. Open before sign-in, so the login page can say
+ * who is inviting: the code is the secret, and it is enough to join anyway.
+ * Signed out, only the name.
+ */
 export async function previewInvite(deps: Deps, caller: Caller | null, data: unknown) {
-  requireCaller(caller);
   const invite = await usableInvite(deps, data);
+  if (!caller) return { churchName: invite.churchName };
   return {
     churchId: invite.cid,
     churchName: invite.churchName,

@@ -1,7 +1,7 @@
 // Entry point: wires the handlers to Cloud Functions triggers. Handlers take
 // their dependencies as arguments so tests run them against the emulators
 // without the Functions runtime.
-import { initializeApp } from 'firebase-admin/app';
+import { applicationDefault, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
@@ -24,7 +24,7 @@ import * as church from './church.js';
 import * as claim from './claim.js';
 import * as churchLink from './churchLink.js';
 import { churchPage as churchPageHandler } from './churchPage.js';
-import { REGION, type Caller, type Deps } from './common.js';
+import { REGION, appUrl, type Caller, type Deps } from './common.js';
 import * as invites from './invites.js';
 import * as move from './move.js';
 import { logClientError as logClientErrorHandler } from './logging.js';
@@ -38,8 +38,6 @@ import * as webhook from './webhook.js';
 
 initializeApp();
 
-/** The hosted web app. */
-const appUrl = () => process.env.APP_URL ?? `https://${process.env.GCLOUD_PROJECT}.web.app`;
 const deps = (): Deps => ({ db: getFirestore(), now: () => new Date(), fetch: globalThis.fetch });
 
 function caller(req: CallableRequest): Caller | null {
@@ -177,7 +175,7 @@ export const onMemberDeleted = onDocumentDeletedWithAuthContext(
     // goes with them.
     await calendar.releaseCalendarIfConnector(calDeps(), event.params.cid, event.params.uid);
     await triggers.onMemberLeft(
-      { db: getFirestore(), messaging: getMessaging() },
+      { db: getFirestore(), messaging: getMessaging(), appUrl: appUrl() },
       event.params.cid,
       event.data,
       event.authType === 'system' ? undefined : event.authId,
@@ -199,7 +197,7 @@ export const onRosterWritten = onDocumentWrittenWithAuthContext(
   async (event) => {
     const editedBy = event.authType === 'system' ? undefined : event.authId;
     await notifications.onRosterWritten(
-      { db: getFirestore(), messaging: getMessaging(), now: () => new Date() },
+      { db: getFirestore(), messaging: getMessaging(), appUrl: appUrl(), now: () => new Date() },
       event.params.cid,
       event.data?.before,
       event.data?.after,
@@ -219,17 +217,21 @@ export const sendRosterChanges = onSchedule(
 export const sendReminders = onSchedule(
   { region: REGION, schedule: 'every day 19:00', timeZone: 'Asia/Taipei' },
   async () => {
-    await notifications.sendReminders({ db: getFirestore(), messaging: getMessaging(), now: () => new Date() });
+    await notifications.sendReminders({ db: getFirestore(), messaging: getMessaging(), appUrl: appUrl(), now: () => new Date() });
   },
 );
 
-// Photo recognition (Gemini, paid tier). The key is a Secret Manager secret.
-const geminiKey = defineSecret('GEMINI_API_KEY');
+// Photo recognition: Gemini on Vertex AI, signed as the Functions service
+// account (roles/aiplatform.user), so no API key.
+const vertex: photo.VertexConfig = {
+  project: process.env.GCLOUD_PROJECT ?? '',
+  accessToken: async () => (await applicationDefault().getAccessToken()).access_token,
+};
 export const recognizeRoster = onCall(
-  { ...callOpts, secrets: [geminiKey], timeoutSeconds: 180, memory: '512MiB' },
+  { ...callOpts, timeoutSeconds: 180, memory: '512MiB' },
   (req) =>
     photo.recognizeRoster(
-      { ...deps(), gemini: photo.geminiClient(geminiKey.value(), (process.env.GEMINI_MODELS ?? '').split(',').filter(Boolean).length ? process.env.GEMINI_MODELS!.split(',') : undefined) },
+      { ...deps(), gemini: photo.geminiClient(vertex, (process.env.GEMINI_MODELS ?? '').split(',').filter(Boolean).length ? process.env.GEMINI_MODELS!.split(',') : undefined) },
       caller(req),
       req.data,
     ),

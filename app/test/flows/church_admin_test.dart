@@ -99,9 +99,9 @@ void main() {
     testWidgets('an admin has no leave entry and is told to hand over', (tester) async {
       await pumpApp(tester, seededChurch());
       await go(tester, '/me/church');
-      await tester.scrollUntilVisible(find.text('管理員要先把管理員交給別人，才能退出'), 300);
+      await tester.scrollUntilVisible(find.text('管理員不能直接退出。要退出，先把另一位同工設成管理員，再請對方取消你的管理員'), 300);
       expect(find.text('退出教會'), findsNothing);
-      expect(find.text('管理員要先把管理員交給別人，才能退出'), findsOneWidget);
+      expect(find.text('管理員不能直接退出。要退出，先把另一位同工設成管理員，再請對方取消你的管理員'), findsOneWidget);
     });
 
     testWidgets('a removed member loses the church at once', (tester) async {
@@ -147,7 +147,7 @@ void main() {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/me/invites');
-      await tapText(tester, '7 天');
+      await tapText(tester, '7 天內有效');
       expect(b.invites.length, 1);
       final code = b.invites.keys.single;
       await go(tester, '/me');
@@ -162,7 +162,7 @@ void main() {
       await pumpApp(tester, b);
       final out = captureOutbox(tester);
       await go(tester, '/me/invites');
-      await tapText(tester, '7 天');
+      await tapText(tester, '7 天內有效');
       final code = b.invites.keys.single;
       expect(out.sharedTexts.single, contains('https://marthasit-dev.web.app/c/grace/join/$code'));
       await tapText(tester, code);
@@ -187,6 +187,7 @@ void main() {
       await go(tester, '/me/services/sunday');
       await tester.scrollUntilVisible(find.text('聖餐'), 300);
       await tapText(tester, '聖餐');
+      await tapText(tester, '改名');
       await tester.enterText(find.byType(TextField).last, '主餐');
       await tapText(tester, '儲存');
       expect(savedDay(b, 4).events.single.name, '主餐');
@@ -197,12 +198,24 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/me/services/sunday');
       await tapText(tester, '招待');
+      await tapText(tester, '改名');
       await tester.enterText(find.byType(TextField).last, '接待');
       await tapText(tester, '儲存');
       expect(b.services['grace']!.byId('sunday')!.duties, ['司會', '司琴', '接待']);
       expect(b.members['grace']!['hao']!.serves('sunday', '接待'), isTrue);
       expect(b.staffOrders['grace']!['sunday']!.rankingOf('接待'), ['陳志豪', '李美玉']);
       expect(savedDay(b, 4).duties.map((d) => d.role), contains('招待'), reason: 'arranged days keep their wording');
+    });
+
+    testWidgets('a duty can be removed from its menu, not only by swiping', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/me/services/sunday');
+      await tapText(tester, '司琴');
+      await tapText(tester, '移除');
+      expect(b.services['grace']!.byId('sunday')!.duties, ['司會', '招待']);
+      await tapText(tester, '復原');
+      expect(b.services['grace']!.byId('sunday')!.duties, ['司會', '司琴', '招待']);
     });
 
     testWidgets('changing the template does not touch arranged rosters', (tester) async {

@@ -4,6 +4,8 @@ import { beforeEach, describe, test } from 'node:test';
 import { onRosterWritten, rosterChange, sendReminders } from '../src/notifications.js';
 import { clearFirestore, db, seedChurch } from './support.js';
 
+const appUrl = 'https://app.example';
+
 const now = () => new Date('2026-10-03T19:00:00+08:00'); // Saturday evening
 
 function fakeMessaging() {
@@ -59,7 +61,7 @@ describe('roster change notifications', () => {
     const after = await ref.get();
     const { sent, messaging } = fakeMessaging();
 
-    await onRosterWritten({ db, messaging, now }, 'C1', before, after, 'hao');
+    await onRosterWritten({ db, messaging, now, appUrl }, 'C1', before, after, 'hao');
 
     assert.equal(sent.length, 1);
     assert.deepEqual(sent[0].tokens, ['tok-mei', 'tok-mei-2']);
@@ -72,12 +74,12 @@ describe('roster change notifications', () => {
     const ref = db.doc('churches/C1/rosters/2026-10-04_sunday');
     await ref.set({ type: 'sunday', dateKey: '2026-10-04', duties: duties(['美玉'], []) });
     const { sent, messaging } = fakeMessaging();
-    await onRosterWritten({ db, messaging, now }, 'C1', undefined, await ref.get(), 'pastor');
+    await onRosterWritten({ db, messaging, now, appUrl }, 'C1', undefined, await ref.get(), 'pastor');
     assert.equal(sent.length, 0);
 
     const past = db.doc('churches/C1/rosters/2026-09-27_sunday');
     await past.set({ type: 'sunday', dateKey: '2026-09-27', duties: duties(['志豪'], []) });
-    await onRosterWritten({ db, messaging, now }, 'C1', undefined, await past.get(), 'pastor');
+    await onRosterWritten({ db, messaging, now, appUrl }, 'C1', undefined, await past.get(), 'pastor');
     assert.equal(sent.length, 0);
   });
 });
@@ -97,7 +99,7 @@ describe('reminders', () => {
     });
     const { sent, messaging } = fakeMessaging();
 
-    await sendReminders({ db, messaging, now });
+    await sendReminders({ db, messaging, now, appUrl });
 
     assert.equal(sent.length, 2);
     const mei = sent.find((s) => s.tokens.includes('tok-mei'))!;
@@ -113,7 +115,7 @@ describe('reminders', () => {
       duties: duties(['美玉'], []),
     });
     const { sent, messaging } = fakeMessaging();
-    await sendReminders({ db, messaging, now });
+    await sendReminders({ db, messaging, now, appUrl });
     assert.equal(sent.length, 0);
   });
 });
@@ -124,7 +126,7 @@ describe('imports', () => {
     const ref = db.doc('churches/C1/rosters/2026-10-04_sunday');
     await ref.set({ type: 'sunday', dateKey: '2026-10-04', duties: duties(['美玉'], []), via: 'import' });
     const { sent, messaging } = fakeMessaging();
-    await onRosterWritten({ db, messaging, now }, 'C1', undefined, await ref.get(), 'pastor');
+    await onRosterWritten({ db, messaging, now, appUrl }, 'C1', undefined, await ref.get(), 'pastor');
     assert.equal(sent.length, 0);
   });
 });

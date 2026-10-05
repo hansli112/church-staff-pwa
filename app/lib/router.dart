@@ -54,20 +54,23 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/home',
     refreshListenable: refresh,
     redirect: (context, state) {
-      // A church URL of one of my churches opens that church. Done here,
-      // before any page is built, so the shell is never pushed twice.
+      // A church URL of one of my churches opens that church, at `?to=` if
+      // given (a notification's page). Done here, before any page is built,
+      // so the shell is never pushed twice.
       final cid = churchUrlId(state.uri);
       if (cid != null && (ref.read(membershipsProvider).value ?? const []).any((m) => m.churchId == cid)) {
         // After this redirect: changing the church now would rebuild the
         // app stage twice in one frame.
         scheduleMicrotask(() => ref.read(selectedChurchProvider.notifier).select(cid));
-        return '/home';
+        final to = state.uri.queryParameters['to'];
+        // A page of this app only, not another site (`//host`).
+        return to != null && to.startsWith('/') && !to.startsWith('//') ? to : '/home';
       }
       return redirectFor(ref.read(appStageProvider), state.uri);
     },
     routes: [
       page('/loading', (_) => const LoadingScreen()),
-      page('/login', (_) => const LoginScreen()),
+      page('/login', (s) => LoginScreen(from: s.uri.queryParameters['from'])),
       page(
         '/welcome',
         (_) => const WelcomeScreen(),

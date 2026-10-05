@@ -284,6 +284,10 @@ abstract interface class CloudApi {
 
   Future<Invite> previewInvite(String code);
 
+  /// The church an invite is for, by name only; works signed out, for the
+  /// login page an invite link opens.
+  Future<String> invitedChurchName(String code);
+
   /// Returns the church ID joined.
   Future<String> redeemInvite(String code);
 

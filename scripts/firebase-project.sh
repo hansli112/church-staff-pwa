@@ -65,13 +65,13 @@ run gcloud services enable --project "$project" \
   firebasestorage.googleapis.com storage.googleapis.com \
   fcm.googleapis.com firebaseinstallations.googleapis.com monitoring.googleapis.com \
   logging.googleapis.com clouderrorreporting.googleapis.com calendar-json.googleapis.com \
-  generativelanguage.googleapis.com firebasehosting.googleapis.com \
+  firebasehosting.googleapis.com \
   cloudbilling.googleapis.com cloudresourcemanager.googleapis.com serviceusage.googleapis.com iam.googleapis.com
 if [ -n "$billing" ]; then
   run gcloud services enable --project "$project" \
     cloudfunctions.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com \
     run.googleapis.com eventarc.googleapis.com pubsub.googleapis.com cloudscheduler.googleapis.com \
-    secretmanager.googleapis.com billingbudgets.googleapis.com
+    secretmanager.googleapis.com billingbudgets.googleapis.com aiplatform.googleapis.com
 fi
 
 # 3b. Roles the Functions deploy needs. `firebase deploy` tries to grant them
@@ -84,7 +84,8 @@ if [ -n "$billing" ] && ! $dry; then
     "service-$number@gs-project-accounts.iam.gserviceaccount.com roles/pubsub.publisher" \
     "service-$number@gcp-sa-pubsub.iam.gserviceaccount.com roles/iam.serviceAccountTokenCreator" \
     "$number-compute@developer.gserviceaccount.com roles/run.invoker" \
-    "$number-compute@developer.gserviceaccount.com roles/eventarc.eventReceiver"; do
+    "$number-compute@developer.gserviceaccount.com roles/eventarc.eventReceiver" \
+    "$number-compute@developer.gserviceaccount.com roles/aiplatform.user"; do
     set -- $binding
     echo "+ grant $2 to $1"
     gcloud projects add-iam-policy-binding "$project" --member="serviceAccount:$1" --role="$2" \
@@ -128,6 +129,10 @@ if ! $dry; then
     | ENV="$env_name" ANDROID="$android_id" IOS="$ios_id" node -e '
       let s=""; process.stdin.on("data",d=>s+=d).on("end",()=>{
         const c = JSON.parse(s);
+        // Values filled in by hand (Console only) survive a rerun.
+        const file = `'"$root"'/app/config/${process.env.ENV}.json`;
+        let kept = {};
+        try { kept = JSON.parse(require("fs").readFileSync(file, "utf8")); } catch {}
         const out = {
           MARTHA_ENV: process.env.ENV,
           FIREBASE_PROJECT_ID: c.projectId,
@@ -139,11 +144,11 @@ if ! $dry; then
           FIREBASE_STORAGE_BUCKET: c.storageBucket ?? `${c.projectId}.firebasestorage.app`,
           FIREBASE_AUTH_DOMAIN: c.authDomain,
           FIREBASE_MEASUREMENT_ID: c.measurementId ?? "",
-          GOOGLE_SERVER_CLIENT_ID: "",
-          FCM_VAPID_KEY: "",
+          GOOGLE_SERVER_CLIENT_ID: kept.GOOGLE_SERVER_CLIENT_ID ?? "",
+          FCM_VAPID_KEY: kept.FCM_VAPID_KEY ?? "",
           WEB_ORIGIN: `https://${c.projectId}.web.app`,
         };
-        require("fs").writeFileSync(`'"$root"'/app/config/${process.env.ENV}.json`, JSON.stringify(out, null, 2) + "\n");
+        require("fs").writeFileSync(file, JSON.stringify(out, null, 2) + "\n");
         console.log(`wrote app/config/${process.env.ENV}.json`);
       });'
 fi
@@ -172,13 +177,6 @@ if [ -n "$billing" ] && ! $dry; then
   openssl rand -base64 32 | tr -d '\n' | secret CALENDAR_TOKEN_KEY
   printf placeholder | secret GOOGLE_OAUTH_CLIENT_ID
   printf placeholder | secret GOOGLE_OAUTH_CLIENT_SECRET
-  if ! gcloud secrets describe GEMINI_API_KEY --project "$project" >/dev/null 2>&1; then
-    gcloud services enable apikeys.googleapis.com --project "$project"
-    key="$(gcloud services api-keys create --project "$project" --display-name='Gemini (functions)' \
-      --api-target=service=generativelanguage.googleapis.com --format='value(response.keyString)' 2>/dev/null)"
-    [ -n "$key" ] || { echo "Could not create the Gemini API key" >&2; exit 1; }
-    printf %s "$key" | secret GEMINI_API_KEY
-  fi
 fi
 
 # 10. Budget alert to the account owner.

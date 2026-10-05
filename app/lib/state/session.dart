@@ -11,13 +11,17 @@ final telemetryProvider = Provider<Telemetry>((ref) => const NoTelemetry());
 /// Side effects of who is signed in and which church is open. Watched once
 /// by the app root.
 final sessionEffectsProvider = Provider<void>((ref) {
-  // users/{uid} the first time someone signs in.
+  // users/{uid} the first time someone signs in. Once per account: the user
+  // changes again on every reload and token refresh.
+  String? ensured;
   ref.listen(authUserProvider, (_, next) {
     final user = next.value;
-    if (user == null) return;
+    if (user == null || user.uid == ensured) return;
     // An email sign-up sets its name a moment after the account exists;
     // wait for it rather than saving the email prefix as the name.
     if (user.usesPassword && (user.displayName?.trim().isEmpty ?? true)) return;
+    final uid = user.uid;
+    ensured = uid;
     ref
         .read(backendProvider)
         .profiles
@@ -28,7 +32,10 @@ final sessionEffectsProvider = Provider<void>((ref) {
             email: user.email,
           ),
         )
-        .ignore();
+        // Failed (offline at first sign-in): try again on the next change.
+        .catchError((Object _) {
+          if (ensured == uid) ensured = null;
+        });
   }, fireImmediately: true);
 
   ref.listen(uidProvider, (_, uid) {

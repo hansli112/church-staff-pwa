@@ -4,6 +4,9 @@ import { HttpsError, type FunctionsErrorCode } from 'firebase-functions/v2/https
 /** Region for every function, the same as Firestore. */
 export const REGION = 'asia-east1';
 
+/** The hosted web app. */
+export const appUrl = () => process.env.APP_URL ?? `https://${process.env.GCLOUD_PROJECT}.web.app`;
+
 /**
  * Who is calling. Built from the callable request so handlers can be tested
  * without the Functions runtime.

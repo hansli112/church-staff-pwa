@@ -3,8 +3,8 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { dateKeyUtc8, fail, requireCaller, type Caller, type Deps } from './common.js';
 
 /**
- * 照片辨識: a roster editor sends photos of a paper roster; Gemini (paid
- * tier, so the photos are not used for training) turns them into the JSON
+ * 照片辨識: a roster editor sends photos of a paper roster; Gemini on Vertex
+ * AI (which does not train on the photos) turns them into the JSON
  * the app's import parser reads. Nothing is stored: the photos only pass
  * through. Name matching and the import report stay in the app, the same
  * as self-host.
@@ -21,7 +21,7 @@ const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/hei
 /** Pinned models, tried in order (self-host measured these on real sheets). */
 export const DEFAULT_MODELS = ['gemini-3.6-flash', 'gemini-3.7-flash'];
 
-/** Estimate only: USD per million tokens, paid tier flash, 2026-10. */
+/** Estimate only: USD per million tokens, flash, 2026-10. */
 const PRICE_PER_M = { input: 0.3, output: 2.5 };
 
 export interface GeminiImage {
@@ -187,14 +187,30 @@ export async function recognizeRoster(deps: Deps & { gemini: Gemini }, caller: C
   }
 }
 
-const API_BASE = 'https://generativelanguage.googleapis.com/v1';
 const RETRY_DELAYS_MS = [3000, 10000];
 
-/** The real Gemini call, with 503 retries and model fallback (from self-host). */
-export function geminiClient(apiKey: string, models: string[] = DEFAULT_MODELS): Gemini {
+/** Where Gemini runs and how to sign the call: the Functions service account. */
+export interface VertexConfig {
+  project: string;
+  accessToken: () => Promise<string>;
+}
+
+/**
+ * The real Gemini call, through Vertex AI, with 503 retries and model
+ * fallback (from self-host). Vertex bills the project's Cloud Billing
+ * account; the Gemini API in AI Studio has its own prepaid credit, which the
+ * Cloud free trial does not cover.
+ */
+export function geminiClient(vertex: VertexConfig, models: string[] = DEFAULT_MODELS): Gemini {
+  const base = `https://aiplatform.googleapis.com/v1/projects/${vertex.project}/locations/global/publishers/google/models`;
   return async (prompt, images) => {
     const body = JSON.stringify({
-      contents: [{ parts: [{ text: prompt }, ...images.map((i) => ({ inline_data: { mime_type: i.mimeType, data: i.data } }))] }],
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: prompt }, ...images.map((i) => ({ inlineData: { mimeType: i.mimeType, data: i.data } }))],
+        },
+      ],
       generationConfig: { temperature: 0, responseMimeType: 'application/json', maxOutputTokens: 16384 },
     });
     const queue = [...models];
@@ -205,9 +221,9 @@ export function geminiClient(apiKey: string, models: string[] = DEFAULT_MODELS):
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 100_000);
       try {
-        last = await fetch(`${API_BASE}/models/${encodeURIComponent(model)}:generateContent`, {
+        last = await fetch(`${base}/${encodeURIComponent(model)}:generateContent`, {
           method: 'POST',
-          headers: { 'X-goog-api-key': apiKey, 'content-type': 'application/json' },
+          headers: { authorization: `Bearer ${await vertex.accessToken()}`, 'content-type': 'application/json' },
           body,
           signal: controller.signal,
         });
@@ -226,7 +242,12 @@ export function geminiClient(apiKey: string, models: string[] = DEFAULT_MODELS):
         break;
       }
     }
-    if (!last?.ok) fail('unavailable', 'unavailable');
+    if (!last?.ok) {
+      // The reason (no permission, API off, model gone) is only in the answer.
+      const detail = last ? (await last.text().catch(() => '')).slice(0, 500) : '';
+      console.warn('gemini refused', last?.status, detail);
+      fail('unavailable', 'unavailable');
+    }
     const payload = (await last.json()) as {
       candidates?: { content?: { parts?: { text?: string }[] } }[];
       usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };

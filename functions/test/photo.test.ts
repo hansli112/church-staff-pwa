@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
 
-import { buildPrompt, photoQuota, PHOTOS_PER_MONTH, recognizeRoster, type Gemini } from '../src/photo.js';
+import { buildPrompt, geminiClient, photoQuota, PHOTOS_PER_MONTH, recognizeRoster, type Gemini } from '../src/photo.js';
 import { caller, clearFirestore, db, deps, rejectsWith, seedChurch } from './support.js';
 
 const image = { mimeType: 'image/jpeg', data: Buffer.from('jpeg').toString('base64') };
@@ -118,5 +118,38 @@ describe('buildPrompt', () => {
     assert.match(p, /轉置的表/);
     assert.match(p, /「小名」是「陳小明」/);
     assert.match(p, /今天是 2026-10-02/);
+  });
+});
+
+describe('geminiClient', () => {
+  const vertex = { project: 'p1', accessToken: async () => 'SECRET-TOKEN-123' };
+
+  test('calls Gemini on Vertex AI in the project, signed with the service account', async (t) => {
+    const fetch = t.mock.method(globalThis, 'fetch', async () =>
+      Response.json({
+        candidates: [{ content: { parts: [{ text: '[]' }] } }],
+        usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 2 },
+      }),
+    );
+    const r = await geminiClient(vertex, ['gemini-x'])('prompt', [image]);
+    assert.deepEqual(r, { rows: [], inputTokens: 10, outputTokens: 2 });
+    const [url, init] = fetch.mock.calls[0].arguments as [string, RequestInit];
+    assert.equal(
+      url,
+      'https://aiplatform.googleapis.com/v1/projects/p1/locations/global/publishers/google/models/gemini-x:generateContent',
+    );
+    assert.equal((init.headers as Record<string, string>).authorization, 'Bearer SECRET-TOKEN-123');
+  });
+
+  test('a refused call says unavailable and logs why', async (t) => {
+    t.mock.method(globalThis, 'fetch', async () =>
+      Response.json({ error: { code: 403, message: 'Vertex AI API has not been used in project p1.' } }, { status: 403 }),
+    );
+    const warn = t.mock.method(console, 'warn', () => {});
+    await rejectsWith(geminiClient(vertex, ['gemini-x'])('prompt', [image]), 'unavailable');
+    const logged = warn.mock.calls.map((c) => c.arguments.join(' ')).join('\n');
+    assert.match(logged, /403/);
+    assert.match(logged, /Vertex AI API has not been used/);
+    assert.doesNotMatch(logged, /SECRET-TOKEN-123/, 'the token is never logged');
   });
 });

@@ -698,6 +698,9 @@ class MemoryCloud implements CloudApi {
   Future<Invite> previewInvite(String code) async => _invite(code);
 
   @override
+  Future<String> invitedChurchName(String code) async => _invite(code).churchName;
+
+  @override
   Future<String> redeemInvite(String code) async {
     final user = _b.auth.currentUser;
     if (user == null) {

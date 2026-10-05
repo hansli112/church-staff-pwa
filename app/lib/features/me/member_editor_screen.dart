@@ -96,6 +96,8 @@ class MemberEditorScreen extends ConsumerWidget {
                 for (final role in Role.values)
                   ListRow(
                     title: roleLabel(l10n, role),
+                    // The only role that grants anything; the rest are titles.
+                    subtitle: role == Role.admin ? l10n.roleAdminCan : null,
                     selected: member.role == role,
                     onTap: () => _save(context, ref, member.copyWith(role: role)),
                   ),

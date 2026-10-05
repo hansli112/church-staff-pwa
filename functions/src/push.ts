@@ -14,6 +14,8 @@ export interface PushMessage {
 export interface PushDeps {
   db: Firestore;
   messaging: Pick<Messaging, 'sendEachForMulticast'>;
+  /** The hosted web app, for the link a web notification opens. */
+  appUrl: string;
 }
 
 const DEAD_TOKEN_CODES = new Set([
@@ -59,15 +61,19 @@ export async function notifyMembers(
   }
   if (targets.length === 0) return 0;
 
+  // Through the church URL, which switches to this church first: someone in
+  // two churches lands on the right one.
+  const link = `/c/${cid}?to=${encodeURIComponent(message.link ?? '/home')}`;
   let sent = 0;
   for (let i = 0; i < targets.length; i += 500) {
     const batch = targets.slice(i, i + 500);
     const result = await deps.messaging.sendEachForMulticast({
       tokens: batch.map((t) => t.token),
       notification: { title: message.title, body: message.body },
-      data: { cid, kind, link: message.link ?? '/home' },
+      data: { cid, kind, link },
       apns: { payload: { aps: { sound: 'default' } } },
-      webpush: { fcmOptions: { link: message.link ?? '/home' } },
+      // FCM documents this link as HTTPS only, so not a bare route.
+      webpush: { fcmOptions: { link: `${deps.appUrl}${link}` } },
     });
     const dead: typeof batch = [];
     result.responses.forEach((r, j) => {

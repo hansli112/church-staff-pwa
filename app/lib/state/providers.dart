@@ -35,7 +35,16 @@ final profileProvider = StreamProvider<UserProfile?>((ref) {
   return ref.watch(backendProvider).profiles.watch(uid);
 });
 
+/// The church name of an invite code; works signed out.
+final invitedChurchProvider = FutureProvider.autoDispose.family<String, String>(
+  (ref, code) => ref.watch(backendProvider).cloud.invitedChurchName(code),
+);
+
 final membershipsProvider = StreamProvider<List<Membership>>((ref) {
+  // Not "no churches" while the saved session is still being restored: that
+  // empty list outlived the restore and sent a reload of /rosters to the
+  // welcome page.
+  if (ref.watch(authUserProvider.select((u) => u.isLoading && !u.hasValue))) return const Stream.empty();
   final uid = ref.watch(uidProvider);
   if (uid == null) return Stream.value(const []);
   return ref.watch(backendProvider).memberships.watchMine(uid);

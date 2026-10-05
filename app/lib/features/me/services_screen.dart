@@ -266,6 +266,65 @@ class ServiceEditorScreen extends ConsumerWidget {
       if (touched.isNotEmpty) await data.saveRosters(touched);
     }
 
+    void removeDuty(String d) {
+      final before = service;
+      save(
+        service.copyWith(
+          duties: [
+            for (final x in service.duties)
+              if (x != d) x,
+          ],
+        ),
+      );
+      showToast(context, l10n.dutyRemoved(d), onUndo: () => save(before));
+    }
+
+    void removeEvent(EventTag e) {
+      final before = service;
+      save(
+        service.copyWith(
+          events: [
+            for (final x in service.events)
+              if (x.name != e.name) x,
+          ],
+        ),
+      );
+      showToast(context, l10n.removed(e.name), onUndo: () => save(before));
+    }
+
+    /// Tapping a duty or an event: rename or remove it. Swiping the row
+    /// removes it too.
+    Future<void> rowActions(String name, {required VoidCallback rename, required VoidCallback remove}) async {
+      final choice = await showAppSheet<String>(
+        context,
+        builder: (context) => SafeArea(
+          child: ListSection(
+            header: name,
+            children: [
+              ListRow(
+                title: l10n.rename,
+                leading: const Icon(Icons.edit_outlined),
+                onTap: () => Navigator.pop(context, 'rename'),
+              ),
+              ListRow(
+                title: l10n.remove,
+                destructive: true,
+                leading: const Icon(Icons.delete_outline),
+                onTap: () => Navigator.pop(context, 'remove'),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (!context.mounted) return;
+      switch (choice) {
+        case 'rename':
+          rename();
+        case 'remove':
+          remove();
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text(service.name)),
       body: ListView(
@@ -326,25 +385,10 @@ class ServiceEditorScreen extends ConsumerWidget {
                   key: ValueKey('duty/$d'),
                   direction: DismissDirection.endToStart,
                   background: Container(color: c.destructive),
-                  onDismissed: (_) {
-                    final before = service;
-                    save(
-                      service.copyWith(
-                        duties: [
-                          for (final x in service.duties)
-                            if (x != d) x,
-                        ],
-                      ),
-                    );
-                    showToast(
-                      context,
-                      l10n.dutyRemoved(d),
-                      onUndo: () => save(before),
-                    );
-                  },
+                  onDismissed: (_) => removeDuty(d),
                   child: ListRow(
                     title: d,
-                    onTap: () => renameDuty(d),
+                    onTap: () => rowActions(d, rename: () => renameDuty(d), remove: () => removeDuty(d)),
                     trailing: IconButton(
                       tooltip: l10n.moveUp,
                       icon: const Icon(Icons.arrow_upward),
@@ -384,26 +428,11 @@ class ServiceEditorScreen extends ConsumerWidget {
                   key: ValueKey('event/${e.name}'),
                   direction: DismissDirection.endToStart,
                   background: Container(color: c.destructive),
-                  onDismissed: (_) {
-                    final before = service;
-                    save(
-                      service.copyWith(
-                        events: [
-                          for (final x in service.events)
-                            if (x.name != e.name) x,
-                        ],
-                      ),
-                    );
-                    showToast(
-                      context,
-                      l10n.removed(e.name),
-                      onUndo: () => save(before),
-                    );
-                  },
+                  onDismissed: (_) => removeEvent(e),
                   child: ListRow(
                     title: e.name,
                     leading: Tag.event(context, ' ', e.color),
-                    onTap: () => renameEvent(e),
+                    onTap: () => rowActions(e.name, rename: () => renameEvent(e), remove: () => removeEvent(e)),
                   ),
                 ),
               ListRow(

@@ -29,6 +29,11 @@
   "signInWithEmail": "用 email 登入",
   "loginTagline": "馬大！馬大！你為許多的事思慮煩擾，\n但是不可少的只有一件；\n馬利亞已經選擇那上好的福分，\n是不能奪去的。",
   "loginTaglineSource": "路加福音 10:41–42",
+  "loginInvitedTo": "受邀加入〈{church}〉",
+  "@loginInvitedTo": {
+    "description": "On the login page when it was opened from an invite link",
+    "placeholders": { "church": { "type": "String" } }
+  },
   "email": "Email",
   "password": "密碼",
   "yourName": "你的名字",
@@ -131,6 +136,12 @@
   "myServicesTitle": "我接下來的服事",
   "noUpcomingServices": "接下來沒有你的服事",
   "viewRosters": "看服事表",
+  "gettingStarted": "開始使用",
+  "@gettingStarted": { "description": "Home page section for an admin who is still the church's only member" },
+  "gettingStartedInvite": "邀請同工",
+  "gettingStartedInviteBody": "建立邀請連結，傳給同工",
+  "gettingStartedServices": "設定聚會",
+  "gettingStartedServicesBody": "星期幾、要安排哪些服事",
   "nobodyYet": "待定",
   "noServicesConfigured": "還沒有設定聚會",
   "setUpServices": "設定聚會",
@@ -311,7 +322,7 @@
       }
     }
   },
-  "adminCannotLeave": "管理員要先把管理員交給別人，才能退出",
+  "adminCannotLeave": "管理員不能直接退出。要退出，先把另一位同工設成管理員，再請對方取消你的管理員",
   "churchLogo": "教會 logo",
   "uploadLogo": "上傳 logo",
   "changeLogo": "更換 logo",
@@ -341,6 +352,7 @@
   "roleStaff": "同工",
   "roleMember": "組員",
   "role": "角色",
+  "roleAdminCan": "所有設定、邀請和移除同工",
   "groups": "權限",
   "groupRosterEditors": "安排服事表",
   "groupCalendarEditors": "編輯行事曆",
@@ -361,7 +373,7 @@
   "you": "你",
   "inviteCreate": "建立邀請連結",
   "inviteValidFor": "有效期限",
-  "inviteDays": "{days} 天",
+  "inviteDays": "{days} 天內有效",
   "@inviteDays": {
     "placeholders": {
       "days": {
@@ -404,6 +416,7 @@
   "templateFooter": "新的服事表會帶入這些項目。已經安排的服事表不受影響",
   "commonEvents": "常用特別活動",
   "rename": "改名",
+  "remove": "移除",
   "moveUp": "上移",
   "moveDown": "下移",
   "saved": "已儲存",
@@ -496,6 +509,7 @@
   "photoPlatformOff": "照片辨識這個月暫停（全站的辨識額度用完了），下個月恢復。可以先貼上 JSON",
   "photoTooLarge": "照片太大，請裁到只剩表格再試",
   "photoFailed": "辨識失敗，請換一張清楚一點的照片再試",
+  "photoUnavailable": "照片辨識暫時無法使用，請稍後再試，或先貼上 JSON",
   "importPreview": "確認後套用",
   "importApply": "套用到服事表",
   "importApplied": "已匯入 {count} 天",

@@ -11,6 +11,7 @@ import '../../state/providers.dart';
 import '../../state/session.dart';
 import '../common/errors.dart';
 import 'claims.dart';
+import 'links.dart';
 
 /// For someone signed in who belongs to no church yet. Most people arrive
 /// through an invite link and never see this; the rest either have a code
@@ -81,6 +82,26 @@ class VerifyEmailBanner extends ConsumerStatefulWidget {
 
 class _VerifyEmailBannerState extends ConsumerState<VerifyEmailBanner> {
   bool _busy = false;
+
+  late final AppLifecycleListener _lifecycle;
+
+  @override
+  void initState() {
+    super.initState();
+    // Coming back from the email's link: look again without being asked.
+    _lifecycle = AppLifecycleListener(onResume: _recheck);
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
+
+  void _recheck() {
+    final user = ref.read(authUserProvider).value;
+    if (user != null && !user.verified) ref.read(backendProvider).auth.reload().ignore();
+  }
 
   Future<void> _check() async {
     final l10n = L10n.of(context);
@@ -160,11 +181,11 @@ class _EnterCodeScreenState extends State<EnterCodeScreen> {
   }
 
   void _next() {
-    final code = _code.text.trim().toUpperCase();
-    if (code.isEmpty) return;
+    final text = _code.text.trim();
+    if (text.isEmpty) return;
     // Accept a whole pasted link too.
-    final fromLink = RegExp(r'/JOIN/([A-Z0-9]+)').firstMatch(code)?.group(1);
-    context.push('/welcome/join/${fromLink ?? code}');
+    final fromLink = inviteCodeIn(Uri.tryParse(text)?.path ?? '');
+    context.push('/welcome/join/${fromLink ?? text.toUpperCase()}');
   }
 
   @override

@@ -10,6 +10,8 @@ import { notifyMembers } from '../src/push.js';
 import { onLogoUploaded, onMemberLeft, syncProfileName } from '../src/triggers.js';
 import { auth, caller, clearFirestore, db, deps, rejectsWith, seedChurch, setNow } from './support.js';
 
+const appUrl = 'https://app.example';
+
 beforeEach(async () => {
   await clearFirestore();
   setNow(new Date('2026-10-01T10:00:00+08:00'));
@@ -39,6 +41,13 @@ describe('invites', () => {
     assert.equal(member.get('role'), 'staff');
     assert.equal(member.get('name'), '新同工');
     assert.equal(member.get('uid'), 'newbie');
+  });
+
+  test('previews an invite before sign-in, so the login page can name the church', async () => {
+    await seedChurch('C1', {});
+    await invite('JOINME2026', 'C1');
+    const preview = await previewInvite(deps, null, { code: 'JOINME2026' });
+    assert.deepEqual(preview, { churchName: 'C1' }, 'signed out: only the name');
   });
 
   test('redeeming twice keeps one member doc and does not reset the role', async () => {
@@ -143,9 +152,9 @@ describe('triggers', () => {
     } as never;
     const bob = await db.doc('churches/C1/members/bob').get();
 
-    assert.equal(await onMemberLeft({ db, messaging }, 'C1', bob, 'bob'), 1);
+    assert.equal(await onMemberLeft({ db, messaging, appUrl }, 'C1', bob, 'bob'), 1);
     assert.deepEqual(sent, [['tok-alice']], 'carol muted it');
-    assert.equal(await onMemberLeft({ db, messaging }, 'C1', bob, 'alice'), 0);
+    assert.equal(await onMemberLeft({ db, messaging, appUrl }, 'C1', bob, 'alice'), 0);
   });
 
   test('dead tokens are removed, live ones kept', async () => {
@@ -162,9 +171,23 @@ describe('triggers', () => {
         ),
       }),
     } as never;
-    const n = await notifyMembers({ db, messaging }, 'C1', ['alice'], 'reminder', { title: 't', body: 'b' });
+    const n = await notifyMembers({ db, messaging, appUrl }, 'C1', ['alice'], 'reminder', { title: 't', body: 'b' });
     assert.equal(n, 1);
     assert.deepEqual((await db.doc('users/alice').get()).get('fcm'), { phone: 'live' });
+  });
+
+  test('the web push opens an absolute HTTPS link, as FCM documents', async () => {
+    await seedChurch('C1', { alice: 'admin' });
+    await db.doc('users/alice').set({ fcm: { laptop: 'tok' } });
+    let link = '';
+    const messaging = {
+      sendEachForMulticast: async (m: { tokens: string[]; webpush: { fcmOptions: { link: string } } }) => {
+        link = m.webpush.fcmOptions.link;
+        return { successCount: 1, failureCount: 0, responses: [{ success: true }] };
+      },
+    } as never;
+    await notifyMembers({ db, messaging, appUrl }, 'C1', ['alice'], 'reminder', { title: 't', body: 'b', link: '/rosters' });
+    assert.equal(link, 'https://app.example/c/C1?to=%2Frosters', 'through the church URL, so it opens this church');
   });
 
   test('another church never gets the push', async () => {
@@ -179,7 +202,7 @@ describe('triggers', () => {
       },
     } as never;
     // eve is not a member of C1, so asking C1 to notify eve sends nothing.
-    assert.equal(await notifyMembers({ db, messaging }, 'C1', ['eve'], 'reminder', { title: 't', body: 'b' }), 0);
+    assert.equal(await notifyMembers({ db, messaging, appUrl }, 'C1', ['eve'], 'reminder', { title: 't', body: 'b' }), 0);
     assert.equal(calls, 0);
   });
 

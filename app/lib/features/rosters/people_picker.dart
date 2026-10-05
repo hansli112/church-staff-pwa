@@ -39,7 +39,8 @@ const searchAutofocusThreshold = 30;
 /// Like self-host it lists only the people who serve this duty here, in
 /// staff order. New: a search over the whole church (part of a name, any
 /// width or case) shows everyone else under 「其他同工」, and picking one of
-/// them offers to give them the duty. A typed name nobody has can be used
+/// them offers to give them the duty. Everyone is listed there from the start
+/// while nobody serves the duty yet. A typed name nobody has can be used
 /// as is, for a visiting speaker.
 class PeoplePicker extends StatefulWidget {
   const PeoplePicker({
@@ -227,7 +228,9 @@ class PeoplePickerState extends State<PeoplePicker> {
         if (_matches(n, q)) n,
     ];
     final searching = q.isNotEmpty;
-    final others = searching
+    // Nobody serves this duty yet (a new church): offer everyone rather
+    // than an empty list that only a search would fill.
+    final others = searching || _serving.isEmpty
         ? [
             for (final m in _others)
               if (_matches(m.name, q) && !servingSet.contains(m.name)) m,

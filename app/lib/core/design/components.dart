@@ -532,6 +532,9 @@ Future<T?> showAppSheet<T>(
 }) {
   return showModalBottomSheet<T>(
     context: context,
+    // Over the tab bar too, like a system sheet; the tab navigator alone
+    // left the bar bright and tappable below the dimmed page.
+    useRootNavigator: true,
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,

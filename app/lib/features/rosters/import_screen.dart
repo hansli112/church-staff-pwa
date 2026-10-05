@@ -69,6 +69,8 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
           (CloudErrorCode.quotaExceeded, 'platform') => l10n.photoPlatformOff,
           (CloudErrorCode.quotaExceeded, _) => l10n.photoChurchLimit(30),
           (_, 'tooLarge') => l10n.photoTooLarge,
+          // Gemini down or refusing: not the photo's fault.
+          (CloudErrorCode.unavailable, _) => l10n.photoUnavailable,
           _ => l10n.photoFailed,
         },
       );
@@ -217,7 +219,12 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   Widget _preview(ImportPlan plan, L10n l10n, AppColors c) {
     final today = ref.read(todayProvider);
     final r = plan.report;
-    return ListView(
+    // A new church has nobody in the list yet: those names fit on one row.
+    final unmatched = [
+      for (final e in r.notInList.entries)
+        if (e.value.isEmpty) e.key,
+    ];
+    final list = ListView(
       padding: const EdgeInsets.only(bottom: Space.xl),
       children: [
         if (plan.rosters.isEmpty) EmptyState(message: l10n.importNothing),
@@ -226,7 +233,8 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
             header: l10n.importNotInList,
             children: [
               for (final e in r.notInList.entries)
-                ListRow(title: e.key, subtitle: e.value.isEmpty ? null : l10n.importNear(e.value.join('、'))),
+                if (e.value.isNotEmpty) ListRow(title: e.key, subtitle: l10n.importNear(e.value.join('、'))),
+              if (unmatched.isNotEmpty) ListRow(title: unmatched.join('、')),
             ],
           ),
         if (r.ambiguous.isNotEmpty)
@@ -260,11 +268,20 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                 ),
             ],
           ),
-        if (plan.rosters.isNotEmpty)
-          Padding(
+      ],
+    );
+    if (plan.rosters.isEmpty) return list;
+    // Pinned below the list: a long sheet would push it out of sight.
+    return Column(
+      children: [
+        Expanded(child: list),
+        SafeArea(
+          top: false,
+          child: Padding(
             padding: const EdgeInsets.all(Space.m),
             child: PrimaryButton(label: l10n.importApply, busy: _busy, onPressed: _apply),
           ),
+        ),
       ],
     );
   }

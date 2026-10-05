@@ -6,6 +6,7 @@ import '../../core/design/tokens.dart';
 import '../../data/backend.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
+import '../church/links.dart';
 import '../common/errors.dart';
 
 /// Sign-in. Google is the main way in, so it is the one prominent button;
@@ -14,7 +15,10 @@ import '../common/errors.dart';
 /// Self-host showed a username/password form first and had no Google
 /// sign-in. Here the form only appears when asked for.
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.from});
+
+  /// Where sign-in continues to. An invite link names its church here.
+  final String? from;
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -130,6 +134,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             const SizedBox(height: Space.m),
             _verse(l10n, c),
             const SizedBox(height: Space.xxl),
+            if (_invitedTo() case final church?) ...[
+              Text(l10n.loginInvitedTo(church), textAlign: TextAlign.center, style: AppText.headline),
+              const SizedBox(height: Space.m),
+            ],
             PrimaryButton(
               label: l10n.signInWithGoogle,
               busy: _busy,
@@ -146,6 +154,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
       ),
     );
+  }
+
+  /// The church name of the invite being opened, once it has loaded.
+  String? _invitedTo() {
+    final code = inviteCodeIn(widget.from ?? '');
+    if (code == null) return null;
+    final name = ref.watch(invitedChurchProvider(code)).value;
+    return name == null || name.isEmpty ? null : name;
   }
 
   /// The verse, a short rule, then where it is from.

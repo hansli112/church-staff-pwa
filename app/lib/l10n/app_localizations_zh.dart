@@ -87,6 +87,11 @@ class L10nZh extends L10n {
   String get loginTaglineSource => '路加福音 10:41–42';
 
   @override
+  String loginInvitedTo(String church) {
+    return '受邀加入〈$church〉';
+  }
+
+  @override
   String get email => 'Email';
 
   @override
@@ -258,6 +263,21 @@ class L10nZh extends L10n {
 
   @override
   String get viewRosters => '看服事表';
+
+  @override
+  String get gettingStarted => '開始使用';
+
+  @override
+  String get gettingStartedInvite => '邀請同工';
+
+  @override
+  String get gettingStartedInviteBody => '建立邀請連結，傳給同工';
+
+  @override
+  String get gettingStartedServices => '設定聚會';
+
+  @override
+  String get gettingStartedServicesBody => '星期幾、要安排哪些服事';
 
   @override
   String get nobodyYet => '待定';
@@ -488,7 +508,7 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get adminCannotLeave => '管理員要先把管理員交給別人，才能退出';
+  String get adminCannotLeave => '管理員不能直接退出。要退出，先把另一位同工設成管理員，再請對方取消你的管理員';
 
   @override
   String get churchLogo => '教會 logo';
@@ -540,6 +560,9 @@ class L10nZh extends L10n {
   String get role => '角色';
 
   @override
+  String get roleAdminCan => '所有設定、邀請和移除同工';
+
+  @override
   String get groups => '權限';
 
   @override
@@ -582,7 +605,7 @@ class L10nZh extends L10n {
 
   @override
   String inviteDays(int days) {
-    return '$days 天';
+    return '$days 天內有效';
   }
 
   @override
@@ -642,6 +665,9 @@ class L10nZh extends L10n {
 
   @override
   String get rename => '改名';
+
+  @override
+  String get remove => '移除';
 
   @override
   String get moveUp => '上移';
@@ -823,6 +849,9 @@ class L10nZh extends L10n {
 
   @override
   String get photoFailed => '辨識失敗，請換一張清楚一點的照片再試';
+
+  @override
+  String get photoUnavailable => '照片辨識暫時無法使用，請稍後再試，或先貼上 JSON';
 
   @override
   String get importPreview => '確認後套用';

@@ -35,6 +35,21 @@ void main() {
     expect(find.text('恩典堂'), findsOneWidget);
   });
 
+  testWidgets('a notification link opens its church at the page it names', (tester) async {
+    final b = seededChurch();
+    b.addChurch('希望堂', id: 'hope');
+    b.addMember('hope', pastor);
+    await pumpApp(tester, b);
+    await go(tester, '/c/hope?to=%2Fme');
+    expect(find.text('希望堂'), findsOneWidget);
+    expect(find.text('教會資訊'), findsOneWidget, reason: 'on 我的, not 首頁');
+
+    // Only a page of this app.
+    await go(tester, '/c/hope?to=%2F%2Fevil.example');
+    expect(find.text('教會資訊'), findsNothing, reason: 'home instead');
+    expect(find.byType(NavigationBar), findsOneWidget);
+  });
+
   testWidgets('launching from a home-screen shortcut opens its church', (tester) async {
     final b = seededChurch();
     b.addChurch('希望堂', id: 'hope');

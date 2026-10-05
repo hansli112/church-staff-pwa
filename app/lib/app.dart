@@ -39,8 +39,10 @@ class MarthaApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
       ],
       // Only Traditional Chinese for now; every device gets it until other
-      // ARB files are added.
-      localeResolutionCallback: (device, supported) => supported.first,
+      // ARB files are added. With the script and region, not plain `zh`,
+      // which gives Flutter's own labels (close, date picker) in Simplified.
+      localeResolutionCallback: (device, supported) =>
+          const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant', countryCode: 'TW'),
       routerConfig: router,
     );
   }

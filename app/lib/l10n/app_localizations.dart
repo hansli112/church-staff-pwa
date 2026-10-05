@@ -247,6 +247,12 @@ abstract class L10n {
   /// **'路加福音 10:41–42'**
   String get loginTaglineSource;
 
+  /// On the login page when it was opened from an invite link
+  ///
+  /// In zh, this message translates to:
+  /// **'受邀加入〈{church}〉'**
+  String loginInvitedTo(String church);
+
   /// No description provided for @email.
   ///
   /// In zh, this message translates to:
@@ -564,6 +570,36 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'看服事表'**
   String get viewRosters;
+
+  /// Home page section for an admin who is still the church's only member
+  ///
+  /// In zh, this message translates to:
+  /// **'開始使用'**
+  String get gettingStarted;
+
+  /// No description provided for @gettingStartedInvite.
+  ///
+  /// In zh, this message translates to:
+  /// **'邀請同工'**
+  String get gettingStartedInvite;
+
+  /// No description provided for @gettingStartedInviteBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'建立邀請連結，傳給同工'**
+  String get gettingStartedInviteBody;
+
+  /// No description provided for @gettingStartedServices.
+  ///
+  /// In zh, this message translates to:
+  /// **'設定聚會'**
+  String get gettingStartedServices;
+
+  /// No description provided for @gettingStartedServicesBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'星期幾、要安排哪些服事'**
+  String get gettingStartedServicesBody;
 
   /// No description provided for @nobodyYet.
   ///
@@ -964,7 +1000,7 @@ abstract class L10n {
   /// No description provided for @adminCannotLeave.
   ///
   /// In zh, this message translates to:
-  /// **'管理員要先把管理員交給別人，才能退出'**
+  /// **'管理員不能直接退出。要退出，先把另一位同工設成管理員，再請對方取消你的管理員'**
   String get adminCannotLeave;
 
   /// No description provided for @churchLogo.
@@ -1057,6 +1093,12 @@ abstract class L10n {
   /// **'角色'**
   String get role;
 
+  /// No description provided for @roleAdminCan.
+  ///
+  /// In zh, this message translates to:
+  /// **'所有設定、邀請和移除同工'**
+  String get roleAdminCan;
+
   /// No description provided for @groups.
   ///
   /// In zh, this message translates to:
@@ -1138,7 +1180,7 @@ abstract class L10n {
   /// No description provided for @inviteDays.
   ///
   /// In zh, this message translates to:
-  /// **'{days} 天'**
+  /// **'{days} 天內有效'**
   String inviteDays(int days);
 
   /// No description provided for @inviteCopy.
@@ -1248,6 +1290,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'改名'**
   String get rename;
+
+  /// No description provided for @remove.
+  ///
+  /// In zh, this message translates to:
+  /// **'移除'**
+  String get remove;
 
   /// No description provided for @moveUp.
   ///
@@ -1590,6 +1638,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'辨識失敗，請換一張清楚一點的照片再試'**
   String get photoFailed;
+
+  /// No description provided for @photoUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'照片辨識暫時無法使用，請稍後再試，或先貼上 JSON'**
+  String get photoUnavailable;
 
   /// No description provided for @importPreview.
   ///

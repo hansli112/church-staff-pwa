@@ -5,6 +5,7 @@ import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/models.dart';
 
 import '../support/harness.dart';
+import '../support/seed.dart';
 
 Future<void> tapText(WidgetTester tester, String text) async {
   await tester.tap(find.text(text).last);
@@ -37,6 +38,16 @@ void main() {
     final uid = b.auth.currentUser!.uid;
     expect(b.members.values.single[uid]!.role, Role.admin);
     expect(find.byType(NavigationBar), findsOneWidget);
+
+    // The home page points the new admin at inviting people.
+    expect(find.text('開始使用'), findsOneWidget);
+    await tapText(tester, '邀請同工');
+    expect(find.text('建立邀請連結'), findsOneWidget);
+  });
+
+  testWidgets('getting started is gone once someone else has joined', (tester) async {
+    await pumpApp(tester, seededChurch());
+    expect(find.text('開始使用'), findsNothing);
   });
 
   testWidgets('email sign-up must verify before creating a church', (
@@ -104,6 +115,7 @@ void main() {
     router.go('/c/$cid/join/WELCOME26');
     await settle(tester);
     expect(find.text('使用 Google 登入'), findsOneWidget);
+    expect(find.text('受邀加入〈恩典堂〉'), findsOneWidget, reason: 'the login page says who is inviting');
 
     await tapText(tester, '使用 Google 登入');
     expect(find.text('加入〈恩典堂〉'), findsOneWidget);

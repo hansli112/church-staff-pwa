@@ -117,6 +117,19 @@ void main() {
       expect(find.text('其他同工'), findsNothing);
     });
 
+    testWidgets('when nobody serves the duty yet, everyone is listed to pick from', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/youth/2026-10-10');
+      await tapText(tester, '司會');
+      expect(find.text('還沒有人負責司會'), findsOneWidget);
+      expect(find.text('其他同工'), findsOneWidget);
+      await tapText(tester, 'John Chen');
+      await tapText(tester, '加上');
+      await tapText(tester, '完成');
+      expect(b.members['grace']!['john']!.serves('youth', '司會'), isTrue);
+    });
+
     testWidgets('no search results is one sentence; a typed name can be used', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);

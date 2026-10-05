@@ -14,14 +14,20 @@ String churchUrl(String churchId) => '${Env.current.webOrigin}/c/$churchId';
 /// page to the home screen already gives the church's icon.
 String inviteLink(String churchId, String code) => '${churchUrl(churchId)}/join/$code';
 
+/// The invite code in a location made by [inviteLink] (path only, like a
+/// login page's `from`), upper-cased; null for anything else.
+String? inviteCodeIn(String location) =>
+    RegExp(r'^/c/[^/?]+/join/([A-Za-z0-9]+)').firstMatch(location)?.group(1)?.toUpperCase();
+
 /// [url] without the scheme, for showing in a row.
 String displayUrl(String url) => url.replaceFirst(RegExp('^https?://'), '');
 
 /// Opens the system share sheet with [text]; copies it when sharing is not
-/// available, and says so with [copied].
+/// available (most desktop browsers), and says so with [copied].
 Future<void> shareText(BuildContext context, String text, {required String copied}) async {
   try {
-    await SharePlus.instance.share(ShareParams(text: text));
+    // Without the share sheet the plugin would open a mail app instead.
+    await SharePlus.instance.share(ShareParams(text: text, mailToFallbackEnabled: false));
   } catch (_) {
     await Clipboard.setData(ClipboardData(text: text));
     if (context.mounted) showToast(context, copied);

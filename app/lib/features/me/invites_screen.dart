@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../core/design/components.dart';
 import '../../domain/models.dart';
@@ -41,12 +40,7 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
   Future<void> _share(Invite invite) async {
     final l10n = L10n.of(context);
     final text = l10n.inviteMessage(invite.churchName, inviteLink(invite.churchId, invite.code));
-    try {
-      await SharePlus.instance.share(ShareParams(text: text));
-    } catch (_) {
-      await Clipboard.setData(ClipboardData(text: text));
-      if (mounted) showToast(context, l10n.inviteCopied);
-    }
+    await shareText(context, text, copied: l10n.inviteCopied);
   }
 
   Future<void> _actions(Invite invite) async {

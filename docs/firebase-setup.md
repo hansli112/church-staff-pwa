@@ -49,13 +49,16 @@ scripts/firebase-project.sh prod marthasit     [BILLING_ACCOUNT_ID]
 - 有 billing 時：
   - 開需要付費方案的 API（Functions、Cloud Run、排程、Secret Manager…）。
   - 給 Google 服務帳號 Functions 部署需要的角色。`firebase deploy` 自己加有時會失敗（"We failed to modify the IAM policy"）。
-  - 建 Functions 用的 secret，值不會印出來：`CALENDAR_TOKEN_KEY` 隨機產生；`GEMINI_API_KEY` 建一把只能呼叫 Gemini 的 API key；行事曆的 OAuth client 先放佔位值，部署和其他功能不受影響，只有連接行事曆會失敗。
+  - 建 Functions 用的 secret，值不會印出來：`CALENDAR_TOKEN_KEY` 隨機產生；行事曆的 OAuth client 先放佔位值，部署和其他功能不受影響，只有連接行事曆會失敗。
+  - 照片辨識走 Vertex AI 上的 Gemini，用 Functions 的服務帳號（給 `roles/aiplatform.user`），不用 API key。費用算在專案的 Cloud Billing（試用帳戶也能呼叫）。AI Studio 的 Gemini API 是另外的預付額度，Cloud 試用金明文不能付。
   - 設 budget alert：NT$300 / 月，50%、90%、100% 各通知一次，寄給 billing 擁有者。
 
 腳本最後會列出要手動做的步驟。這些 Google 沒有 API：
 - 在 console 開 Google 登入，並把 Web client ID 填到 config 的 `GOOGLE_SERVER_CLIENT_ID`。
 - 產生 Web Push 金鑰，填到 `FCM_VAPID_KEY`。
 - 設定 OAuth 同意畫面，建一個「網頁應用程式」OAuth client，用 `gcloud secrets versions add` 換掉兩個佔位 secret。
+
+`GOOGLE_SERVER_CLIENT_ID` 和 `FCM_VAPID_KEY` 填過之後，重跑腳本會保留。網頁推播還需要 `app/web/firebase-messaging-sw.js`：它從 Hosting 的 `/__/firebase/init.js` 讀專案設定，所以 dev 和 prod 共用同一個檔案。
 
 ## 建置
 
@@ -95,6 +98,10 @@ scripts/as-owner.sh marthasit-dev npx --prefix functions tsx functions/scripts/g
 ## App Links / Universal Links（教會網址與邀請連結直接開 App）
 
 開 App 的路徑都在 `/c/` 底下：教會網址 `/c/<教會 id>`，邀請連結 `/c/<教會 id>/join/<邀請碼>`。host 等網域買好後一起換（#37）。
+
+推播點開的連結也是教會網址：`/c/<教會 id>?to=<頁面>`，先切到那間教會再開該頁。網頁推播要完整網址，Functions 用 `APP_URL`（沒設就是 `https://<專案>.web.app`）；換成自己的網域時，記得在 Functions 設 `APP_URL`。
+
+`firebase-messaging-sw.js` 只在 Hosting 上能用（要讀 `/__/firebase/init.js`）。用 `flutter run` 在本機跑時，網頁推播不會註冊成功，這是預期的。
 
 - Hosting 設定忽略 `**/.*`，`.well-known` 會被擋掉，要在 `firebase.json` 的 `ignore` 例外放行。
 - **Android**：`AndroidManifest.xml` 的 intent filter 是 `pathPrefix="/c/"`。Web build 要提供 `/.well-known/assetlinks.json`，內容包含簽章憑證的 SHA-256。

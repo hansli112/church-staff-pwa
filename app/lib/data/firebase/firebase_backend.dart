@@ -575,11 +575,37 @@ class FirebaseCloudApi implements CloudApi {
 
   Future<Object?> _call(String name, [Map<String, Object?>? data]) async {
     try {
+      return await _callOnce(name, data);
+    } on CloudException catch (e) {
+      // Verified in another tab, or before the app was reopened: the ID
+      // token still says unverified until it is refreshed.
+      if (e.code != CloudErrorCode.unverifiedEmail || !await _verifiedNow()) rethrow;
+      return _callOnce(name, data);
+    }
+  }
+
+  Future<Object?> _callOnce(String name, Map<String, Object?>? data) async {
+    try {
       final result = await _functions.httpsCallable(name).call<Object?>(data);
       return result.data;
     } on FirebaseFunctionsException catch (e) {
       throw _translate(e);
     }
+  }
+
+  /// Reloads the account and, when its email is verified, refreshes the ID
+  /// token so the next call carries it.
+  Future<bool> _verifiedNow() async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+    try {
+      await user.reload();
+    } on fa.FirebaseAuthException {
+      return false; // Offline: the unverified answer stands.
+    }
+    if (_auth.currentUser?.emailVerified != true) return false;
+    await _auth.currentUser?.getIdToken(true);
+    return true;
   }
 
   static CloudException _translate(FirebaseFunctionsException e) {
@@ -616,6 +642,10 @@ class FirebaseCloudApi implements CloudApi {
       ),
     );
   }
+
+  @override
+  Future<String> invitedChurchName(String code) async =>
+      _map(await _call('previewInvite', {'code': code}))['churchName'] as String? ?? '';
 
   @override
   Future<String> redeemInvite(String code) async =>
