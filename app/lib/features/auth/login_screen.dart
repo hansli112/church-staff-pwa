@@ -109,8 +109,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  /// One group, centred: icon, name, the verse quietly under it, then the
-  /// sign-in buttons. Scrolls when large text needs the room.
+  /// One group, centred: icon, name, the verse under it, then the sign-in
+  /// buttons. Scrolls when large text needs the room.
   Widget _choose(L10n l10n, AppColors c) {
     return Center(
       child: SingleChildScrollView(
@@ -128,23 +128,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             const SizedBox(height: Space.m),
             Text(l10n.appName, textAlign: TextAlign.center, style: AppText.largeTitle),
             const SizedBox(height: Space.m),
-            // Narrow enough that the lines come out about even.
-            Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 300),
-                child: Text(
-                  l10n.loginTagline,
-                  textAlign: TextAlign.center,
-                  style: AppText.subheadline.copyWith(color: c.secondaryLabel, height: 1.5),
-                ),
-              ),
-            ),
-            const SizedBox(height: Space.xs),
-            Text(
-              l10n.loginTaglineSource,
-              textAlign: TextAlign.center,
-              style: AppText.footnote.copyWith(color: c.secondaryLabel),
-            ),
+            _verse(l10n, c),
             const SizedBox(height: Space.xxl),
             PrimaryButton(
               label: l10n.signInWithGoogle,
@@ -161,6 +145,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  /// The verse, a short rule, then where it is from.
+  Widget _verse(L10n l10n, AppColors c) {
+    return Column(
+      children: [
+        Text(
+          l10n.loginTagline,
+          textAlign: TextAlign.center,
+          style: AppText.subheadline.copyWith(color: c.secondaryLabel, height: 1.6),
+        ),
+        const SizedBox(height: Space.s),
+        Container(width: 20, height: 1, color: c.separator),
+        const SizedBox(height: Space.s),
+        Text(
+          l10n.loginTaglineSource,
+          textAlign: TextAlign.center,
+          style: AppText.footnote.copyWith(color: c.secondaryLabel, letterSpacing: 1),
+        ),
+      ],
     );
   }
 

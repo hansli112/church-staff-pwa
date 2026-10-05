@@ -238,7 +238,7 @@ abstract class L10n {
   /// No description provided for @loginTagline.
   ///
   /// In zh, this message translates to:
-  /// **'馬大！馬大！你為許多的事思慮煩擾，但是不可少的只有一件；馬利亞已經選擇那上好的福分，是不能奪去的。'**
+  /// **'馬大！馬大！你為許多的事思慮煩擾，\n但是不可少的只有一件；\n馬利亞已經選擇那上好的福分，\n是不能奪去的。'**
   String get loginTagline;
 
   /// No description provided for @loginTaglineSource.

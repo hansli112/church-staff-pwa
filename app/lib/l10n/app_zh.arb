@@ -27,7 +27,7 @@
   },
   "signInWithGoogle": "使用 Google 登入",
   "signInWithEmail": "用 email 登入",
-  "loginTagline": "馬大！馬大！你為許多的事思慮煩擾，但是不可少的只有一件；馬利亞已經選擇那上好的福分，是不能奪去的。",
+  "loginTagline": "馬大！馬大！你為許多的事思慮煩擾，\n但是不可少的只有一件；\n馬利亞已經選擇那上好的福分，\n是不能奪去的。",
   "loginTaglineSource": "路加福音 10:41–42",
   "email": "Email",
   "password": "密碼",
