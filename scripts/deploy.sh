@@ -22,7 +22,8 @@ if [[ ",$only," == *",hosting,"* ]]; then
   ( cd "$root/app" && flutter build web --dart-define-from-file="config/$env_name.json" )
 fi
 
-deploy() { ( cd "$root" && npx --prefix functions firebase deploy --project "$project" --only "$only" --non-interactive ); }
+firebase() { "$root/scripts/firebase.sh" "$project" "$@"; }
+deploy() { firebase deploy --only "$only" --non-interactive; }
 
 # Delete old Functions images, or they add a small monthly bill. Without this
 # policy the deploy reports an error even when every function deployed. The
@@ -30,8 +31,7 @@ deploy() { ( cd "$root" && npx --prefix functions firebase deploy --project "$pr
 # that this does nothing.
 policy() {
   [[ ",$only," == *",functions,"* ]] || return 0
-  ( cd "$root" && npx --prefix functions firebase functions:artifacts:setpolicy \
-      --project "$project" --location asia-east1 --non-interactive --force ) || true
+  firebase functions:artifacts:setpolicy --location asia-east1 --non-interactive --force || true
 }
 
 policy

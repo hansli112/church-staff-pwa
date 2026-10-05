@@ -6,8 +6,8 @@
 #   scripts/firebase-project.sh prod marthasit      [BILLING_ACCOUNT_ID] [--dry-run]
 #
 # Needs: gcloud signed in as the personal account in a configuration named
-# "martha" (gcloud config configurations create martha), and `npx firebase
-# login` as the same account for the deploy step. MARTHA_GCLOUD_CONFIG picks
+# "martha" (gcloud config configurations create martha). The Firebase CLI runs
+# as the same account through scripts/firebase.sh. MARTHA_GCLOUD_CONFIG picks
 # another configuration, e.g. a second account that creates the project and
 # then invites the personal account as owner. Steps Google offers no API
 # for are printed at the end (docs/firebase-setup.md has the details).
@@ -65,7 +65,8 @@ run gcloud services enable --project "$project" \
   firebasestorage.googleapis.com storage.googleapis.com \
   fcm.googleapis.com firebaseinstallations.googleapis.com monitoring.googleapis.com \
   logging.googleapis.com clouderrorreporting.googleapis.com calendar-json.googleapis.com \
-  generativelanguage.googleapis.com firebasehosting.googleapis.com
+  generativelanguage.googleapis.com firebasehosting.googleapis.com \
+  cloudbilling.googleapis.com cloudresourcemanager.googleapis.com serviceusage.googleapis.com iam.googleapis.com
 if [ -n "$billing" ]; then
   run gcloud services enable --project "$project" \
     cloudfunctions.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com \
@@ -153,8 +154,8 @@ if [ -n "$billing" ]; then
 fi
 
 # 9. Rules and indexes (Functions need Blaze and the secrets below).
-( cd "$root" && run npx --prefix functions firebase deploy --project "$project" \
-    --only firestore:rules,firestore:indexes${billing:+,storage} )
+run "$root/scripts/firebase.sh" "$project" deploy --non-interactive \
+  --only firestore:rules,firestore:indexes${billing:+,storage}
 
 # 9b. Secrets for Cloud Functions (Secret Manager needs billing). Values are
 # never printed. The OAuth client starts as a placeholder: Functions deploy and
@@ -199,5 +200,5 @@ Done with the automatic part. By hand, once (docs/firebase-setup.md):
        printf %s '<client id>' | gcloud secrets versions add GOOGLE_OAUTH_CLIENT_ID --project $project --data-file=-
        printf %s '<secret>' | gcloud secrets versions add GOOGLE_OAUTH_CLIENT_SECRET --project $project --data-file=-
   4. Deploy: scripts/deploy.sh $env_name
-  5. Platform operator: npx --prefix functions tsx functions/scripts/grant-operator.ts --project $project <your email>
+  5. Platform operator: scripts/as-owner.sh $project npx --prefix functions tsx functions/scripts/grant-operator.ts --project $project <your email>
 EOF

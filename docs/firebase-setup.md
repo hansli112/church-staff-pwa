@@ -15,8 +15,9 @@ dev、prod 兩個專案都放在 Hans 的**個人 Google 帳號**底下，不放
 gcloud auth login                              # 個人帳號
 gcloud config configurations create martha     # 只給這個專案用的設定
 gcloud config set account <個人帳號>
-npx --prefix functions firebase login          # 同一個帳號
 ```
+
+Firebase CLI 和管理腳本都透過 `scripts/as-owner.sh` 用這個 gcloud 帳號執行（`scripts/firebase.sh` 是 Firebase CLI 的捷徑），不需要另外 `firebase login`，也不會用到這台機器上 `firebase login` 的其他帳號。
 
 - billing account 只能在 console 建：<https://console.cloud.google.com/billing>
   - 帳戶類型選「個人」。台灣稅務身分：沒有統一編號就選 Unregistered individual，存了不能改。
@@ -27,7 +28,7 @@ npx --prefix functions firebase login          # 同一個帳號
   - 用另一個 Gmail（不是 Workspace 帳號，否則專案會掛進那個組織）建專案，再把個人帳號加成擁有者。目前兩個專案都是這樣建的，建立者是教會帳號。
     - 另開一個 gcloud 設定給那個帳號，執行腳本時用 `MARTHA_GCLOUD_CONFIG=<設定名稱>` 指定。
     - 擁有者不能用 gcloud 加（`SOLO_MUST_INVITE_OWNERS`）：在 console 的 IAM 頁邀請，個人帳號收信接受。
-    - 接受後其餘步驟都用個人帳號。`firebase login` 也換成個人帳號，最後把建立者從 IAM 移除。
+    - 接受後其餘步驟都用個人帳號，最後把建立者從 IAM 移除（兩個專案都已移除）。
 
 ## 建立或補齊專案
 
@@ -76,7 +77,7 @@ scripts/deploy.sh prod --only hosting  # 只更新網頁
 - 專案取自 `app/config/<env>.json`，所以 dev 的 Web build 不會部署到 prod。
 - 新專案第一次部署 Functions，常因 Eventarc 權限還沒生效而失敗。腳本會等 3 分鐘重試一次。
 - 部署後設定 Functions 舊映像的清理規則，不然每月會有一點費用。映像庫第一次部署後才存在，所以放在這裡。
-- rules 和 indexes 由 `firebase-project.sh` 部署，或 `npx --prefix functions firebase deploy --project <id> --only firestore,storage`。
+- rules 和 indexes 由 `firebase-project.sh` 部署，或 `scripts/firebase.sh <id> deploy --only firestore,storage`。
 
 Hosting 部署前，會把 landing page 和法律文件複製進 Web build：
 - `/about`
@@ -86,7 +87,7 @@ Hosting 部署前，會把 landing page 和法律文件複製進 Web build：
 ## 平台營運者
 
 ```sh
-cd functions && npx tsx scripts/grant-operator.ts --project marthasit-dev <email>
+scripts/as-owner.sh marthasit-dev npx --prefix functions tsx functions/scripts/grant-operator.ts --project marthasit-dev <email>
 ```
 
 設定後要重新登入才會生效。之後「我的」頁會出現「平台後台」。
