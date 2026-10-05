@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -96,29 +98,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
-            child: ListView(
-              shrinkWrap: true,
-              padding: const EdgeInsets.all(Space.l),
-              children: [
-                if (_mode == _Mode.choose) ...[
-                  Text(
-                    l10n.appName,
-                    textAlign: TextAlign.center,
-                    style: AppText.largeTitle,
+            child: _mode == _Mode.choose
+                ? _choose(l10n, c)
+                : ListView(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.all(Space.l),
+                    children: [_emailForm(l10n), ..._errorText(c)],
                   ),
-                  const SizedBox(height: Space.s),
-                  Text(
-                    l10n.loginTagline,
-                    textAlign: TextAlign.center,
-                    style: AppText.body.copyWith(color: c.secondaryLabel),
-                  ),
-                  const SizedBox(height: Space.xs),
-                  Text(
-                    l10n.loginTaglineSource,
-                    textAlign: TextAlign.center,
-                    style: AppText.footnote.copyWith(color: c.secondaryLabel),
-                  ),
-                  const SizedBox(height: Space.xxl),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The name in the upper part, the sign-in buttons low, within reach of
+  /// the thumb, and the verse quietly under them. On a wide screen the group stays together in
+  /// the middle. Scrolls when large text needs the room.
+  Widget _choose(L10n l10n, AppColors c) {
+    return LayoutBuilder(
+      builder: (context, box) => Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(Space.l),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.sizeOf(context).width < 600
+                  ? box.maxHeight - Space.l * 2
+                  : math.min(box.maxHeight - Space.l * 2, 560),
+            ),
+            child: IntrinsicHeight(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Spacer(flex: 2),
+                  Text(l10n.appName, textAlign: TextAlign.center, style: AppText.largeTitle),
+                  const Spacer(flex: 3),
+                  const SizedBox(height: Space.xl),
                   PrimaryButton(
                     label: l10n.signInWithGoogle,
                     busy: _busy,
@@ -130,26 +144,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     expand: true,
                     onPressed: _busy ? null : () => setState(() => _mode = _Mode.signIn),
                   ),
-                ] else
-                  _emailForm(l10n),
-                if (_error != null) ...[
-                  const SizedBox(height: Space.m),
-                  Semantics(
-                    liveRegion: true,
-                    child: Text(
-                      _error!,
-                      textAlign: TextAlign.center,
-                      style: AppText.subheadline.copyWith(color: c.destructive),
-                    ),
+                  ..._errorText(c),
+                  const SizedBox(height: Space.l),
+                  // Quiet, below the actions: the name already says it.
+                  Text(
+                    l10n.loginTagline,
+                    textAlign: TextAlign.center,
+                    style: AppText.footnote.copyWith(color: c.secondaryLabel, height: 1.5),
                   ),
                 ],
-              ],
+              ),
             ),
           ),
         ),
       ),
     );
   }
+
+  List<Widget> _errorText(AppColors c) => [
+    if (_error != null) ...[
+      const SizedBox(height: Space.m),
+      Semantics(
+        liveRegion: true,
+        child: Text(
+          _error!,
+          textAlign: TextAlign.center,
+          style: AppText.subheadline.copyWith(color: c.destructive),
+        ),
+      ),
+    ],
+  ];
 
   Widget _emailForm(L10n l10n) {
     final register = _mode == _Mode.register;
