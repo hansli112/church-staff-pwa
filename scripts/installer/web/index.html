@@ -114,10 +114,14 @@
             <label>教會／App 名稱<input name="appName" required maxlength="80" placeholder="例如：範例教會同工助手"></label>
             <label>桌面圖示簡稱<input name="shortName" required maxlength="20" placeholder="例如：同工助手"></label>
             <label>教會時區<input name="timeZone" required value="Asia/Taipei" list="timezones" maxlength="100"></label>
-            <label>資料庫地區<select name="region" id="region" required></select></label>
           </div>
           <datalist id="timezones"><option value="Asia/Taipei"><option value="Asia/Hong_Kong"><option value="Asia/Tokyo"><option value="Asia/Singapore"><option value="Australia/Sydney"><option value="America/Los_Angeles"><option value="America/New_York"><option value="Europe/London"><option value="UTC"></datalist>
-          <p class="hint">時區決定排表日期；資料庫地區決定資料儲存位置，建立後不能直接搬動。兩者不同。</p>
+          <p class="hint">時區決定排表日期。資料會存在離這個時區最近的 Google 機房，下一步的預覽會顯示是哪一個。</p>
+          <details class="options">
+            <summary>自己選資料存放地區（選填，一般不用改）</summary>
+            <label>資料庫地區<select name="region" id="region"><option value="">自動：離教會時區最近的機房</option></select></label>
+            <p class="hint">例如教會規定資料要放在歐洲，才需要自己選。建立後不能更改。</p>
+          </details>
           <h3>教會 Logo（選填）</h3>
           <p class="hint">會用在網站和手機桌面的圖示。不選就用預設圖示。</p>
           <div class="logo-row">
@@ -151,7 +155,7 @@
       <div class="section-heading"><span class="number">3</span><h2 id="confirmation-heading">確認這次安裝</h2></div>
       <dl id="summary"></dl>
       <p class="notice">確認後會在你的帳號建立雲端資源。帳號與網站名稱已先檢查；Google 的專案額度、條款與組織政策沒有事先查詢的方式，會在最前面建立專案、啟用 Firebase 時確認；不通過就停下，不會繼續建立資料庫、網站或管理員。精靈不開通付費方案。這個 Google 帳號若從沒用過 Firebase，中途會請你到 Firebase 官網同意條款（每個帳號只做一次，約 1 分鐘）。</p>
-      <label class="check"><input id="confirm-region" type="checkbox"><span>已核對帳號、新專案與資料地區，了解資料庫地區建立後不能直接更改。</span></label>
+      <label class="check"><input id="confirm-region" type="checkbox"><span>已核對帳號、新專案與資料地區，了解資料庫地區建立後不能更改。</span></label>
       <label class="check"><input id="confirm-email" type="checkbox"><span id="email-confirm-label">確認指定管理員 email，並同意建立此帳號及寄送設定密碼信。</span></label>
       <p id="logo-stale" class="notice" hidden>Logo 已經改過了，請再按一次上方的「檢查並預覽安裝」，確認後才能開始安裝。</p>
       <div class="actions"><button id="apply" type="button" class="primary">確認並開始安裝</button><button id="cancel" type="button" class="secondary" hidden>停止目前步驟</button></div>
