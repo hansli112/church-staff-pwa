@@ -32,7 +32,10 @@ function fakeGoogle() {
   let revoked = false;
   const stored: CalendarEvent[] = [{ id: 'e1', title: '同工會', start: '2026-10-10', end: '2026-10-11', allDay: true }];
   const google: GoogleApi = {
-    exchangeCode: async (code) => ({ refreshToken: code === 'good' ? 'refresh-123' : null }),
+    exchangeCode: async (code) => {
+      if (code === 'used') throw new Error('google 400: invalid_grant');
+      return { refreshToken: code === 'good' ? 'refresh-123' : null };
+    },
     accessToken: async (rt) => {
       if (revoked) throw new GoogleAuthRevoked();
       assert.equal(rt, 'refresh-123');
@@ -109,6 +112,16 @@ describe('connecting', () => {
     setNow(new Date('2026-10-02T10:30:00+08:00'));
     assert.match(await calendarCallback(d, { state, code: 'good' }), /result=expired/);
     assert.match(await calendarCallback(d, { state, code: 'good' }), /result=expired/);
+    assert.equal((await db.doc('calendarTokens/C1').get()).exists, false);
+  });
+
+  test('a code Google refuses (used twice, page reloaded) sends the admin back to try again', async () => {
+    await church();
+    const { google } = fakeGoogle();
+    const d = { ...deps, google, config };
+    const { url } = await calendarAuthUrl(d, caller('pastor'), { churchId: 'C1' });
+    const state = new URL(url).searchParams.get('state')!;
+    assert.match(await calendarCallback(d, { state, code: 'used' }), /result=failed/);
     assert.equal((await db.doc('calendarTokens/C1').get()).exists, false);
   });
 

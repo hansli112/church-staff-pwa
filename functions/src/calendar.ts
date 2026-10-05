@@ -133,7 +133,14 @@ export async function calendarCallback(deps: CalDeps, query: Record<string, unkn
   const expiresAt = snap.get('expiresAt') as Timestamp | undefined;
   if (!snap.exists || !expiresAt || expiresAt.toMillis() < deps.now().getTime()) return back('expired');
   if (!code) return back('denied');
-  const { refreshToken } = await deps.google.exchangeCode(code, deps.config);
+  let refreshToken: string | null;
+  try {
+    ({ refreshToken } = await deps.google.exchangeCode(code, deps.config));
+  } catch (e) {
+    // A used or stale code (a reloaded page, a double tap): let them try again.
+    console.warn('calendarCallback: code refused', e);
+    return back('failed');
+  }
   if (!refreshToken) return back('failed');
   const churchId = snap.get('cid') as string;
   await deps.db.doc(`calendarTokens/${churchId}`).set({
