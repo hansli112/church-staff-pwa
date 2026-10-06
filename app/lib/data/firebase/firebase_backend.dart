@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fa;
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -170,30 +171,39 @@ class FirebaseAuthGateway implements AuthGateway {
   Future<void> signInWithGoogle() => _run(() async {
     final provider = fa.GoogleAuthProvider()..setCustomParameters({'prompt': 'select_account'});
     if (kIsWeb) return _auth.signInWithPopup(provider);
+    Future<fa.UserCredential> browser() => _auth.signInWithProvider(provider);
     // Native: the system account picker (no browser), when the OAuth web
-    // client ID is configured for this build. Otherwise fall back to the
-    // browser flow, which needs no native setup.
-    if (_googleServerClientId.isEmpty) return _auth.signInWithProvider(provider);
+    // client ID is configured for this build. Otherwise the browser flow,
+    // which needs no native setup.
+    if (_googleServerClientId.isEmpty) return browser();
     final google = GoogleSignIn.instance;
-    if (!_googleReady) {
-      // iOS also needs its own client ID; Android finds its client from the
-      // package name and signing certificate.
-      final ios = defaultTargetPlatform == TargetPlatform.iOS;
-      await google.initialize(
-        clientId: ios && _googleIosClientId.isNotEmpty ? _googleIosClientId : null,
-        serverClientId: _googleServerClientId,
-      );
-      _googleReady = true;
-    }
     try {
+      if (!_googleReady) {
+        // iOS also needs its own client ID; Android finds its client from
+        // the package name and signing certificate.
+        final ios = defaultTargetPlatform == TargetPlatform.iOS;
+        await google.initialize(
+          clientId: ios && _googleIosClientId.isNotEmpty ? _googleIosClientId : null,
+          serverClientId: _googleServerClientId,
+        );
+        _googleReady = true;
+      }
       return await nativeOrBrowser(
         native: () async {
           final account = await google.authenticate();
           final idToken = account.authentication.idToken;
           return _auth.signInWithCredential(fa.GoogleAuthProvider.credential(idToken: idToken));
         },
-        browser: () => _auth.signInWithProvider(provider),
-        useBrowser: (e) => e is GoogleSignInException && e.code != GoogleSignInExceptionCode.canceled,
+        browser: browser,
+        useBrowser: nativeGoogleUnavailable,
+        // A signing certificate missing from the Firebase Android app looks
+        // the same as a phone without a Google account, so every fallback
+        // is reported.
+        onFallback: (e, stack) => FirebaseCrashlytics.instance.recordError(
+          e,
+          stack,
+          reason: 'native Google sign-in unavailable; signed in with the browser',
+        ),
       );
     } on GoogleSignInException catch (e) {
       if (e.code == GoogleSignInExceptionCode.canceled) throw const AuthException(AuthErrorCode.cancelled);
