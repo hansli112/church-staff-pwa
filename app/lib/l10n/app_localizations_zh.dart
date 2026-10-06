@@ -274,7 +274,7 @@ class L10nZh extends L10n {
   String get gettingStartedInviteBody => '建立邀請連結，傳給同工';
 
   @override
-  String get gettingStartedServices => '設定聚會';
+  String get gettingStartedServices => '服事設定';
 
   @override
   String get gettingStartedServicesBody => '星期幾、要安排哪些服事';

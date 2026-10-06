@@ -592,7 +592,7 @@ abstract class L10n {
   /// No description provided for @gettingStartedServices.
   ///
   /// In zh, this message translates to:
-  /// **'設定聚會'**
+  /// **'服事設定'**
   String get gettingStartedServices;
 
   /// No description provided for @gettingStartedServicesBody.

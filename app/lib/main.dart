@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -29,6 +30,9 @@ Future<void> main() async {
   // Real paths (/c/ID), not #/: church URLs and invite links must work as
   // plain URLs.
   usePathUrlStrategy();
+  // Pages opened with push (a roster day, a settings page) show their own
+  // URL, so a reload or a shared address lands on that page, not its tab.
+  GoRouter.optionURLReflectsImperativeAPIs = true;
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('zh_TW');
   final env = Env.current;
