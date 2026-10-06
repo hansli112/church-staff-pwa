@@ -4,7 +4,7 @@ import { beforeEach, describe, test } from 'node:test';
 import { getStorage } from 'firebase-admin/storage';
 import sharp from 'sharp';
 
-import { churchPage, clearTemplateCache } from '../src/churchPage.js';
+import { APP_SHELL, churchPage, clearTemplateCache } from '../src/churchPage.js';
 import { makeIcons } from '../src/icons.js';
 import { onLogoUploaded } from '../src/triggers.js';
 import { clearFirestore, db, deps, fakeFetch, seedChurch } from './support.js';
@@ -72,7 +72,7 @@ describe('home-screen icons', () => {
     assert.equal(church.get('logoVersion'), '200');
     assert.equal(church.get('logoIcons'), '200');
 
-    const f = fakeFetch({ 'https://app.example/index.html': { body: '<head><link rel="apple-touch-icon" href="x"></head>' } });
+    const f = fakeFetch({ [`https://app.example${APP_SHELL}`]: { body: '<head><link rel="apple-touch-icon" href="x"></head><script src="flutter_bootstrap.js"></script>' } });
     const get = (path: string) => churchPage({ ...deps, fetch: f.fetch, bucket, appUrl: 'https://app.example' }, path);
     const m = JSON.parse((await get('/c/C1/manifest.json')).body.toString());
     assert.deepEqual(

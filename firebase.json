@@ -28,6 +28,18 @@
       "**/.!(well-known)",
       "**/.!(well-known)/**"
     ],
+    "redirects": [
+      {
+        "source": "/about",
+        "destination": "/",
+        "type": 301
+      },
+      {
+        "source": "/about.html",
+        "destination": "/",
+        "type": 301
+      }
+    ],
     "rewrites": [
       {
         "source": "/privacy",
@@ -38,10 +50,6 @@
         "destination": "/terms.html"
       },
       {
-        "source": "/about",
-        "destination": "/about.html"
-      },
-      {
         "source": "/c/**",
         "function": {
           "functionId": "churchPage",
@@ -50,7 +58,7 @@
       },
       {
         "source": "**",
-        "destination": "/index.html"
+        "destination": "/app.html"
       }
     ],
     "headers": [
@@ -74,8 +82,7 @@
       }
     ],
     "predeploy": [
-      "cp landing/privacy.html landing/terms.html \"$PROJECT_DIR\"/app/build/web/",
-      "cp landing/index.html \"$PROJECT_DIR\"/app/build/web/about.html"
+      "\"$PROJECT_DIR\"/scripts/hosting-predeploy.sh"
     ]
   },
   "emulators": {

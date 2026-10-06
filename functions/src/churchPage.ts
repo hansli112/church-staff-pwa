@@ -6,10 +6,10 @@ import { ICON_FILES, iconStoragePath, type IconFile } from './icons.js';
 
 /**
  * 教會頁: Hosting sends /c/** here, so each church URL is its own web app
- * install. The page is the web app's index.html with the church's name and
- * logo in the head; the manifest names the church and starts at its URL.
- * Adding /c/ID to the home screen therefore gives the church's name and
- * icon, and a link pasted into LINE previews with them.
+ * install. The page is the web app's shell with the church's name and logo
+ * in the head; the manifest names the church and starts at its URL. Adding
+ * /c/ID to the home screen therefore gives the church's name and icon, and a
+ * link pasted into LINE previews with them.
  *
  * Closed (suspended, deleted) churches get the plain page: the app explains
  * why. An unknown ID gets the plain page with a 404; the app says the church
@@ -27,7 +27,9 @@ export interface PageResponse {
   body: string | Buffer;
 }
 
-/** How long a fetched index.html is reused. */
+/** The web app's shell on the hosting origin: index.html is the landing page. */
+export const APP_SHELL = '/app.html';
+/** How long a fetched app shell is reused. */
 export const TEMPLATE_MINUTES = 5;
 const CACHE = 'public, max-age=300';
 const IMMUTABLE = 'public, max-age=31536000, immutable';
@@ -45,23 +47,26 @@ const DEFAULT_OG_IMAGE = '/icons/Icon-512.png';
 
 let template: { html: string; at: number } | null = null;
 
-/** Forgets the cached index.html (tests). */
+/** Forgets the cached app shell (tests). */
 export function clearTemplateCache() {
   template = null;
 }
 
-/** The deployed index.html, fetched from the hosting origin and kept a few minutes. */
-async function indexHtml(deps: PageDeps): Promise<string | null> {
+/** The deployed app shell, fetched from the hosting origin and kept a few minutes. */
+async function appShell(deps: PageDeps): Promise<string | null> {
   const now = deps.now().getTime();
   if (template && now - template.at < TEMPLATE_MINUTES * 60e3) return template.html;
   try {
-    const res = await deps.fetch(`${deps.appUrl}/index.html`, { signal: AbortSignal.timeout(5000) });
-    if (!res.ok) throw new Error(`index.html ${res.status}`);
-    template = { html: await res.text(), at: now };
+    const res = await deps.fetch(`${deps.appUrl}${APP_SHELL}`, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) throw new Error(`${APP_SHELL} ${res.status}`);
+    const html = await res.text();
+    // Only the app gets a church's name, never the landing page.
+    if (!html.includes('flutter_bootstrap.js')) throw new Error(`${APP_SHELL} is not the app`);
+    template = { html, at: now };
   } catch (e) {
     // A stale copy is better than no page.
     if (!template) {
-      console.error('churchPage: no index.html', e);
+      console.error('churchPage: no app shell', e);
       return null;
     }
   }
@@ -107,7 +112,7 @@ function face(cid: string, church: FirebaseFirestore.DocumentSnapshot): ChurchFa
 const escape = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-/** index.html with the church's name and icons in its head. */
+/** The app shell with the church's name and icons in its head. */
 export function personalize(html: string, cid: string, f: ChurchFace, appUrl: string): string {
   const name = escape(f.name);
   const og = [
@@ -167,7 +172,7 @@ export async function churchPage(deps: PageDeps, path: string): Promise<PageResp
     return { status: 200, headers: { 'content-type': 'image/png', 'cache-control': IMMUTABLE }, body: bytes };
   }
 
-  const html = await indexHtml(deps);
+  const html = await appShell(deps);
   if (html === null) return { status: 503, headers: { 'content-type': 'text/plain', 'retry-after': '30' }, body: '' };
   if (!cid || !church?.exists) {
     return { status: 404, headers: { 'content-type': HTML, 'cache-control': CACHE }, body: html };

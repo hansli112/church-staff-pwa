@@ -1,7 +1,8 @@
 {
   "name": "馬大別忙",
   "short_name": "馬大別忙",
-  "start_url": "/",
+  "id": "/",
+  "start_url": "/home",
   "display": "standalone",
   "background_color": "#F2F2F7",
   "theme_color": "#1F5FD1",

@@ -14,351 +14,215 @@
 <meta property="og:description" content="馬大別忙蒐集哪些資料、怎麼使用、如何刪除。">
 <!-- TODO(M7): 買網域後換成正式網址 -->
 <meta property="og:url" content="https://marthasit.web.app/privacy.html">
-<style>
-/* 共用樣式：index.html、privacy.html、terms.html 用同一段 */
-:root {
-  color-scheme: light dark;
-  --bg: #FFFFFF;
-  --bg2: #F2F2F5;
-  --text: #1D1D1F;
-  --text2: #5C5C61;
-  --line: #D6D6DB;
-  --accent: #1F5FD1;
-  --on-accent: #FFFFFF;
-  --warn-bg: #FFF3D1;
-  --warn-text: #4A3400;
-  --warn-line: #D9A93A;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #121214;
-    --bg2: #1F1F23;
-    --text: #F2F2F5;
-    --text2: #A8A8AF;
-    --line: #3A3A40;
-    --accent: #6EA2FF;
-    --on-accent: #0A1A33;
-    --warn-bg: #33270A;
-    --warn-text: #FFE2A0;
-    --warn-line: #8F6E22;
-  }
-}
-*, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
-  font-size: 1.0625rem; /* 17px */
-  line-height: 1.6;
-  overflow-wrap: anywhere;
-}
-.wrap { max-width: 680px; margin: 0 auto; padding: 0 16px; }
-a { color: var(--accent); text-underline-offset: 2px; }
-a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
-h1, h2, h3 { line-height: 1.3; margin: 0; }
-p { margin: 0 0 16px; }
-
-/* 頂部 */
-.top { display: flex; align-items: center; min-height: 56px; }
-.top a {
-  display: inline-flex; align-items: center; min-height: 44px;
-  font-weight: 600; color: var(--text); text-decoration: none;
-}
-
-/* 首頁 */
-.hero { padding: 32px 0 40px; }
-.hero h1 { font-size: 2.125rem; font-weight: 700; margin-bottom: 8px; }
-.hero .lead { font-size: 1.25rem; color: var(--text2); margin-bottom: 32px; }
-.actions { display: grid; gap: 8px; }
-.btn {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  min-height: 52px; padding: 12px 16px; border-radius: 12px;
-  font-weight: 600; text-decoration: none;
-}
-.btn-primary { background: var(--accent); color: var(--on-accent); }
-.btn-secondary { background: var(--bg2); color: var(--text); }
-.badge {
-  flex: none; font-size: 0.8125rem; font-weight: 500; color: var(--text2);
-  padding: 2px 8px; border: 1px solid var(--line); border-radius: 999px;
-}
-.section { padding: 32px 0; border-top: 1px solid var(--line); }
-.section h2 { font-size: 1.375rem; font-weight: 700; margin-bottom: 16px; }
-.plain { list-style: none; margin: 0; padding: 0; }
-.plain li { padding: 8px 0; }
-.plain strong { display: block; }
-.plain span, .muted { color: var(--text2); }
-.steps { margin: 0; padding: 0 0 0 24px; }
-.steps li { padding: 0 0 16px 8px; }
-
-/* 頁尾 */
-.foot { padding: 24px 0 40px; border-top: 1px solid var(--line); color: var(--text2); font-size: 0.9375rem; }
-.foot nav { display: flex; flex-wrap: wrap; column-gap: 24px; margin-bottom: 8px; }
-.foot nav a { display: inline-flex; align-items: center; min-height: 44px; }
-
-/* 法律文件 */
-.legal { line-height: 1.7; padding-bottom: 40px; }
-.legal h1 { font-size: 1.75rem; font-weight: 700; margin: 16px 0 8px; }
-.legal h2 { font-size: 1.25rem; font-weight: 700; margin: 40px 0 16px; scroll-margin-top: 16px; }
-.legal h3 { font-size: 1.0625rem; font-weight: 700; margin: 24px 0 8px; }
-.legal ul, .legal ol { padding-left: 24px; margin: 0 0 16px; }
-.legal li { margin-bottom: 8px; }
-.legal dl { margin: 0 0 16px; }
-.legal dt { font-weight: 600; }
-.legal dd { margin: 0 0 8px; }
-.updated { color: var(--text2); margin-bottom: 24px; }
-.draft {
-  background: var(--warn-bg); color: var(--warn-text);
-  border: 2px solid var(--warn-line); border-radius: 12px;
-  padding: 16px; margin: 16px 0; font-weight: 600;
-}
-.draft p { margin: 0; }
-.draft p + p { margin-top: 8px; font-weight: 400; }
-.toc { background: var(--bg2); border-radius: 12px; padding: 16px; margin-bottom: 8px; }
-.toc h2 { font-size: 1.0625rem; margin: 0 0 8px; }
-.toc ol { margin: 0; padding-left: 24px; }
-.toc li { margin: 0; }
-.toc a { display: inline-flex; align-items: center; min-height: 44px; }
-.todo { background: var(--warn-bg); color: var(--warn-text); padding: 0 4px; border-radius: 4px; }
-</style>
+<link rel="stylesheet" href="site.css">
+<link rel="icon" type="image/png" href="favicon.png">
 </head>
 <body>
-<div class="wrap">
 
-<header class="top"><a href="index.html">‹ 馬大別忙</a></header>
-
-<main class="legal">
-  <div class="draft" role="note">
-    <p>草稿：待懂個資法的人審閱（台灣個資法、香港 PDPO、馬來西亞 PDPA），尚未生效</p>
-    <p>標成 <span class="todo">〔…〕</span> 的地方需要在上架前確認或填入。</p>
+<header class="top ruled">
+  <div class="wrap">
+    <a class="brand" href="/"><img src="icons/Icon-192.png" alt="" width="28" height="28">馬大別忙</a>
+    <a class="top-link" href="/home">開啟網頁版</a>
   </div>
+</header>
 
-  <h1>隱私權政策</h1>
-  <p class="updated">最後更新：2026-10-02（草稿）</p>
+<div class="doc">
+  <div class="wrap">
+    <aside>
+      <details class="toc" id="toc" open>
+        <summary>目錄</summary>
+        <ol>
+        <li><a href="#operator">誰營運本服務</a></li>
+        <li><a href="#where">資料存放在哪裡</a></li>
+        <li><a href="#data">蒐集的資料與用途</a></li>
+        <li><a href="#visibility">誰看得到你的資料</a></li>
+        <li><a href="#sharing">與第三方分享</a></li>
+        <li><a href="#delete">刪除資料</a></li>
+        <li><a href="#rights">你的權利</a></li>
+        <li><a href="#security">資料安全</a></li>
+        <li><a href="#children">兒童</a></li>
+        <li><a href="#changes">政策變更</a></li>
+        <li><a href="#contact">聯絡方式</a></li>
+        </ol>
+      </details>
+      <script>if (matchMedia('(max-width: 899px)').matches) document.getElementById('toc').open = false;</script>
+    </aside>
+    <main class="legal">
+    <div class="draft" role="note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17.5v.01"/></svg>
+      <p><strong>草稿：待懂個資法的人審閱（台灣個資法、香港 PDPO、馬來西亞 PDPA），尚未生效</strong><br>標成 <span class="todo">〔…〕</span> 的地方需要在上架前確認或填入。</p>
+    </div>
+    <h1>隱私權政策</h1>
+    <p class="updated">最後更新：2026-10-02（草稿）</p>
 
-  <p>「馬大別忙」（以下稱「本服務」）是給教會同工使用的服事表工具，包含 iOS App、Android App 與網頁版。這份政策說明本服務蒐集哪些資料、為什麼蒐集、存在哪裡、保存多久、誰看得到，以及你可以怎麼刪除。</p>
+    <p>「馬大別忙」（以下稱「本服務」）是給教會同工使用的服事表工具，包含 iOS App、Android App 與網頁版。這份政策說明本服務蒐集哪些資料、為什麼蒐集、存在哪裡、保存多久、誰看得到，以及你可以怎麼刪除。</p>
 
-  <nav class="toc" aria-labelledby="toc-title">
-    <h2 id="toc-title">目錄</h2>
-    <ol>
-      <li><a href="#operator">誰營運本服務</a></li>
-      <li><a href="#where">資料存放在哪裡</a></li>
-      <li><a href="#data">蒐集的資料與用途</a></li>
-      <li><a href="#visibility">誰看得到你的資料</a></li>
-      <li><a href="#sharing">與第三方分享</a></li>
-      <li><a href="#delete">刪除資料</a></li>
-      <li><a href="#rights">你的權利</a></li>
-      <li><a href="#security">資料安全</a></li>
-      <li><a href="#children">兒童</a></li>
-      <li><a href="#changes">政策變更</a></li>
-      <li><a href="#contact">聯絡方式</a></li>
-    </ol>
-  </nav>
+    <h2 id="operator">1. 誰營運本服務</h2>
+    <p>本服務由個人營運，營運者為 <span class="todo">〔營運者法定姓名，上架前填入〕</span>（以下稱「營運者」或「我們」），不是公司或教會組織。</p>
+    <p>每間教會的管理員決定要把哪些同工加進教會、在服事表上安排誰。管理員對自己教會的同工資料負有責任，詳見<a href="terms.html">服務條款</a>。</p>
 
-  <h2 id="operator">1. 誰營運本服務</h2>
-  <p>本服務由個人營運，營運者為 <span class="todo">〔營運者法定姓名，上架前填入〕</span>（以下稱「營運者」或「我們」），不是公司或教會組織。</p>
-  <p>每間教會的管理員決定要把哪些同工加進教會、在服事表上安排誰。管理員對自己教會的同工資料負有責任，詳見<a href="terms.html">服務條款</a>。</p>
+    <h2 id="where">2. 資料存放在哪裡</h2>
+    <p>本服務使用 Google Firebase。帳號以外的主要資料（同工資料、服事表、教會設定、教會 logo）存放在 Google Cloud <strong>asia-east1（台灣）</strong>區域。</p>
+    <p>以下 Google 服務由 Google 的全球設施處理，資料可能存放或處理於台灣以外的地區（例如美國）：Firebase Authentication（登入）、Google Analytics for Firebase（使用分析）、Firebase Crashlytics（當機紀錄）、Firebase Cloud Messaging（推播）、Gemini API（照片辨識）。<span class="todo">〔跨境傳輸的告知方式待審閱者確認〕</span></p>
 
-  <h2 id="where">2. 資料存放在哪裡</h2>
-  <p>本服務使用 Google Firebase。帳號以外的主要資料（同工資料、服事表、教會設定、教會 logo）存放在 Google Cloud <strong>asia-east1（台灣）</strong>區域。</p>
-  <p>以下 Google 服務由 Google 的全球設施處理，資料可能存放或處理於台灣以外的地區（例如美國）：Firebase Authentication（登入）、Google Analytics for Firebase（使用分析）、Firebase Crashlytics（當機紀錄）、Firebase Cloud Messaging（推播）、Gemini API（照片辨識）。<span class="todo">〔跨境傳輸的告知方式待審閱者確認〕</span></p>
+    <h2 id="data">3. 蒐集的資料與用途</h2>
 
-  <h2 id="data">3. 蒐集的資料與用途</h2>
+    <h3>3.1 帳號資料</h3>
+    <dl>
+      <div><dt>內容</dt><dd>你用 Google、Apple 或 email 登入時的姓名與 email。用 email 註冊時另有密碼，密碼由 Firebase Authentication 以雜湊方式保存，營運者看不到。使用 Apple 的「隱藏我的電子郵件」時，我們只會收到 Apple 提供的轉寄地址。另存你的語言設定。</dd></div>
+      <div><dt>用途</dt><dd>登入、辨識你的身分、在你加入的教會裡顯示你的名字。</dd></div>
+      <div><dt>存放</dt><dd>Firebase Authentication 與 Firestore 的 <code>users/{uid}</code>。</dd></div>
+      <div><dt>保存期間</dt><dd>直到你刪除帳號。</dd></div>
+    </dl>
 
-  <h3>3.1 帳號資料</h3>
-  <dl>
-    <dt>內容</dt>
-    <dd>你用 Google、Apple 或 email 登入時的姓名與 email。用 email 註冊時另有密碼，密碼由 Firebase Authentication 以雜湊方式保存，營運者看不到。使用 Apple 的「隱藏我的電子郵件」時，我們只會收到 Apple 提供的轉寄地址。另存你的語言設定。</dd>
-    <dt>用途</dt>
-    <dd>登入、辨識你的身分、在你加入的教會裡顯示你的名字。</dd>
-    <dt>存放</dt>
-    <dd>Firebase Authentication 與 Firestore 的 <code>users/{uid}</code>。</dd>
-    <dt>保存期間</dt>
-    <dd>直到你刪除帳號。</dd>
-  </dl>
+    <h3>3.2 教會裡的同工資料</h3>
+    <dl>
+      <div><dt>內容</dt><dd>你在每間教會裡的名字、email、身分（例如管理員）、權限群組、負責的牧區與服事項目、通知設定、加入時間。</dd></div>
+      <div><dt>用途</dt><dd>安排服事表時列出可選的同工、決定誰能安排哪些服事表、送出你設定要收的通知。</dd></div>
+      <div><dt>存放</dt><dd>Firestore，asia-east1（台灣）。</dd></div>
+      <div><dt>保存期間</dt><dd>直到你退出教會、被管理員移除、刪除帳號，或教會被刪除。</dd></div>
+    </dl>
 
-  <h3>3.2 教會裡的同工資料</h3>
-  <dl>
-    <dt>內容</dt>
-    <dd>你在每間教會裡的名字、email、身分（例如管理員）、權限群組、負責的牧區與服事項目、通知設定、加入時間。</dd>
-    <dt>用途</dt>
-    <dd>安排服事表時列出可選的同工、決定誰能安排哪些服事表、送出你設定要收的通知。</dd>
-    <dt>存放</dt>
-    <dd>Firestore，asia-east1（台灣）。</dd>
-    <dt>保存期間</dt>
-    <dd>直到你退出教會、被管理員移除、刪除帳號，或教會被刪除。</dd>
-  </dl>
+    <h3>3.3 服事表</h3>
+    <dl>
+      <div><dt>內容</dt><dd>日期、服事、服事項目與負責同工的名字、特別活動標籤。</dd></div>
+      <div><dt>用途</dt><dd>讓同工查看與安排服事表。</dd></div>
+      <div><dt>存放</dt><dd>Firestore，asia-east1（台灣）。</dd></div>
+      <div><dt>保存期間</dt><dd>直到教會管理員或能安排服事表的同工刪除，或教會被刪除。你刪除帳號後，已經在服事表上的名字會以純文字保留，見<a href="#delete">第 6 節</a>。</dd></div>
+    </dl>
 
-  <h3>3.3 服事表</h3>
-  <dl>
-    <dt>內容</dt>
-    <dd>日期、服事、服事項目與負責同工的名字、特別活動標籤。</dd>
-    <dt>用途</dt>
-    <dd>讓同工查看與安排服事表。</dd>
-    <dt>存放</dt>
-    <dd>Firestore，asia-east1（台灣）。</dd>
-    <dt>保存期間</dt>
-    <dd>直到教會管理員或能安排服事表的同工刪除，或教會被刪除。你刪除帳號後，已經在服事表上的名字會以純文字保留，見<a href="#delete">第 6 節</a>。</dd>
-  </dl>
+    <h3>3.4 教會資料</h3>
+    <dl>
+      <div><dt>內容</dt><dd>教會名稱、教會 logo（管理員上傳，壓縮成 512px）。</dd></div>
+      <div><dt>用途</dt><dd>在 App 裡顯示教會。教會名稱也用來做同名檢查：有人建立同名的教會時，會看到已有同名教會的提醒。</dd></div>
+      <div><dt>存放</dt><dd>Firestore 與 Firebase Storage，asia-east1（台灣）。</dd></div>
+      <div><dt>保存期間</dt><dd>直到教會被刪除（刪除後 30 天內可以還原，之後永久刪除）。</dd></div>
+    </dl>
 
-  <h3>3.4 教會資料</h3>
-  <dl>
-    <dt>內容</dt>
-    <dd>教會名稱、教會 logo（管理員上傳，壓縮成 512px）。</dd>
-    <dt>用途</dt>
-    <dd>在 App 裡顯示教會。教會名稱也用來做同名檢查：有人建立同名的教會時，會看到已有同名教會的提醒。</dd>
-    <dt>存放</dt>
-    <dd>Firestore 與 Firebase Storage，asia-east1（台灣）。</dd>
-    <dt>保存期間</dt>
-    <dd>直到教會被刪除（刪除後 30 天內可以還原，之後永久刪除）。</dd>
-  </dl>
+    <h3>3.5 推播 token</h3>
+    <dl>
+      <div><dt>內容</dt><dd>每台裝置一組由 Firebase Cloud Messaging 產生的推播 token。</dd></div>
+      <div><dt>用途</dt><dd>把通知送到你的裝置。你可以在裝置的系統設定關閉通知。</dd></div>
+      <div><dt>存放</dt><dd>Firestore 的 <code>users/{uid}</code>，只有你本人與後端程式讀得到，教會管理員看不到。</dd></div>
+      <div><dt>保存期間</dt><dd>登出、刪除帳號，或推播服務回報 token 已失效時刪除。</dd></div>
+    </dl>
 
-  <h3>3.5 推播 token</h3>
-  <dl>
-    <dt>內容</dt>
-    <dd>每台裝置一組由 Firebase Cloud Messaging 產生的推播 token。</dd>
-    <dt>用途</dt>
-    <dd>把通知送到你的裝置。你可以在裝置的系統設定關閉通知。</dd>
-    <dt>存放</dt>
-    <dd>Firestore 的 <code>users/{uid}</code>，只有你本人與後端程式讀得到，教會管理員看不到。</dd>
-    <dt>保存期間</dt>
-    <dd>登出、刪除帳號，或推播服務回報 token 已失效時刪除。</dd>
-  </dl>
+    <h3>3.6 使用分析</h3>
+    <dl>
+      <div><dt>內容</dt><dd>Google Analytics for Firebase（GA4）記錄的使用事件，例如開啟了哪個畫面、用了哪個功能；以及 Google 自動蒐集的裝置型號、作業系統與 App 版本、大略地區、一組隨機的安裝識別碼。我們另外附上你目前所在教會的 ID（<code>church_id</code>），用來看各教會的活躍度。分析資料不包含你的姓名、email 或服事表內容。</dd></div>
+      <div><dt>用途</dt><dd>了解每日與每月使用人數、留存、哪些功能有人用，以改進本服務。</dd></div>
+      <div><dt>不做的事</dt><dd>不追蹤你在其他 App 或網站的活動，不用於廣告，不出售資料。因此 iOS 版不會詢問「App 追蹤透明度」（ATT）。</dd></div>
+      <div><dt>關閉</dt><dd>目前 App 內<strong>沒有</strong>關閉使用分析的開關。若你不同意，請不要使用本服務，或來信告訴我們。</dd></div>
+      <div><dt>保存期間</dt><dd><span class="todo">〔依 GA4 資料保留設定，2 或 14 個月，上架前確認〕</span></dd></div>
+    </dl>
 
-  <h3>3.6 使用分析</h3>
-  <dl>
-    <dt>內容</dt>
-    <dd>Google Analytics for Firebase（GA4）記錄的使用事件，例如開啟了哪個畫面、用了哪個功能；以及 Google 自動蒐集的裝置型號、作業系統與 App 版本、大略地區、一組隨機的安裝識別碼。我們另外附上你目前所在教會的 ID（<code>church_id</code>），用來看各教會的活躍度。分析資料不包含你的姓名、email 或服事表內容。</dd>
-    <dt>用途</dt>
-    <dd>了解每日與每月使用人數、留存、哪些功能有人用，以改進本服務。</dd>
-    <dt>不做的事</dt>
-    <dd>不追蹤你在其他 App 或網站的活動，不用於廣告，不出售資料。因此 iOS 版不會詢問「App 追蹤透明度」（ATT）。</dd>
-    <dt>關閉</dt>
-    <dd>目前 App 內<strong>沒有</strong>關閉使用分析的開關。若你不同意，請不要使用本服務，或來信告訴我們。</dd>
-    <dt>保存期間</dt>
-    <dd><span class="todo">〔依 GA4 資料保留設定，2 或 14 個月，上架前確認〕</span></dd>
-  </dl>
+    <h3>3.7 錯誤紀錄</h3>
+    <dl>
+      <div><dt>內容</dt><dd>App 當機或出錯時的紀錄：使用者 ID（uid）、教會 ID、錯誤堆疊，以及裝置型號、作業系統與 App 版本。不記錄姓名、email 或服事表內容。</dd></div>
+      <div><dt>用途</dt><dd>找出並修正錯誤。</dd></div>
+      <div><dt>存放</dt><dd>iOS、Android App 使用 Firebase Crashlytics；網頁版與後端程式使用 Google Cloud Logging。</dd></div>
+      <div><dt>保存期間</dt><dd>Cloud Logging 約 30 天。Crashlytics 依 Firebase 的保存規定 <span class="todo">〔上架前確認，Firebase 文件記載約 90 天〕</span>。</dd></div>
+    </dl>
 
-  <h3>3.7 錯誤紀錄</h3>
-  <dl>
-    <dt>內容</dt>
-    <dd>App 當機或出錯時的紀錄：使用者 ID（uid）、教會 ID、錯誤堆疊，以及裝置型號、作業系統與 App 版本。不記錄姓名、email 或服事表內容。</dd>
-    <dt>用途</dt>
-    <dd>找出並修正錯誤。</dd>
-    <dt>存放</dt>
-    <dd>iOS、Android App 使用 Firebase Crashlytics；網頁版與後端程式使用 Google Cloud Logging。</dd>
-    <dt>保存期間</dt>
-    <dd>Cloud Logging 約 30 天。Crashlytics 依 Firebase 的保存規定 <span class="todo">〔上架前確認，Firebase 文件記載約 90 天〕</span>。</dd>
-  </dl>
+    <h3>3.8 Google 日曆連接（只限連接日曆的管理員）</h3>
+    <dl>
+      <div><dt>內容</dt><dd>管理員選擇連接 Google 日曆時，我們取得一組 Google OAuth refresh token，以及管理員選定日曆的活動。權限範圍：<code>calendar.events</code>（讀寫活動）、<code>calendar.calendarlist.readonly</code>（列出日曆讓管理員挑選）。只用 Google 帳號登入不會取得日曆權限。</dd></div>
+      <div><dt>用途</dt><dd>在 App 裡顯示與編輯教會日曆。所有讀寫都經由我們的後端代理，並暫存活動以加快顯示。本服務使用及轉移從 Google API 取得的資料，會遵守 <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API 服務使用者資料政策</a>，包括其中的「有限使用」（Limited Use）規定。</dd></div>
+      <div><dt>存放</dt><dd>refresh token <strong>加密</strong>存放在後端，App 與其他同工都拿不到。</dd></div>
+      <div><dt>誰看得到</dt><dd>該教會的同工可以在 App 裡看到這個日曆的活動。</dd></div>
+      <div><dt>保存期間與刪除</dt><dd>暫存的活動最多保留 10 分鐘就會重新向 Google 讀取；管理員中斷連接或教會被刪除時，授權與暫存一併刪除。你也可以隨時在 Google 帳戶的「第三方存取權」頁面撤銷授權。</dd></div>
+      <div><dt>Google API</dt><dd>本服務使用 Google API 取得的資料，遵守 Google API 服務使用者資料政策，包括其中的「有限使用」規定。</dd></div>
+    </dl>
 
-  <h3>3.8 Google 日曆連接（只限連接日曆的管理員）</h3>
-  <dl>
-    <dt>內容</dt>
-    <dd>管理員選擇連接 Google 日曆時，我們取得一組 Google OAuth refresh token，以及管理員選定日曆的活動。權限範圍：<code>calendar.events</code>（讀寫活動）、<code>calendar.calendarlist.readonly</code>（列出日曆讓管理員挑選）。只用 Google 帳號登入不會取得日曆權限。</dd>
-    <dt>用途</dt>
-    <dd>在 App 裡顯示與編輯教會日曆。所有讀寫都經由我們的後端代理，並暫存活動以加快顯示。</dd>
-    <dt>存放</dt>
-    <dd>refresh token <strong>加密</strong>存放在後端，App 與其他同工都拿不到。</dd>
-    <dt>誰看得到</dt>
-    <dd>該教會的同工可以在 App 裡看到這個日曆的活動。</dd>
-    <dt>保存期間與刪除</dt>
-    <dd>暫存的活動最多保留 10 分鐘就會重新向 Google 讀取；管理員中斷連接或教會被刪除時，授權與暫存一併刪除。你也可以隨時在 Google 帳戶的「第三方存取權」頁面撤銷授權。</dd>
-    <dt>Google API</dt>
-    <dd>本服務使用 Google API 取得的資料，遵守 Google API 服務使用者資料政策，包括其中的「有限使用」規定。</dd>
-  </dl>
+    <h3>3.9 照片辨識</h3>
+    <dl>
+      <div><dt>內容</dt><dd>能安排服事表的同工選擇「用照片匯入」時上傳的服事表照片。照片上可能有同工的名字。</dd></div>
+      <div><dt>用途</dt><dd>照片會送到 Google Gemini API（付費方案）辨識文字，轉成服事表。依 Google 的付費方案條款，Google 不會用這些內容訓練模型。我們另外記錄每間教會每月用了幾張，用於額度控管。</dd></div>
+      <div><dt>保存期間</dt><dd>照片只在辨識當下傳給 Google，本服務不保存照片。Google 端依 Gemini API 條款，可能為偵測濫用短期保存 <span class="todo">〔天數上架前確認〕</span>。</dd></div>
+    </dl>
 
-  <h3>3.9 照片辨識</h3>
-  <dl>
-    <dt>內容</dt>
-    <dd>能安排服事表的同工選擇「用照片匯入」時上傳的服事表照片。照片上可能有同工的名字。</dd>
-    <dt>用途</dt>
-    <dd>照片會送到 Google Gemini API（付費方案）辨識文字，轉成服事表。依 Google 的付費方案條款，Google 不會用這些內容訓練模型。我們另外記錄每間教會每月用了幾張，用於額度控管。</dd>
-    <dt>保存期間</dt>
-    <dd>照片只在辨識當下傳給 Google，本服務不保存照片。Google 端依 Gemini API 條款，可能為偵測濫用短期保存 <span class="todo">〔天數上架前確認〕</span>。</dd>
-  </dl>
+    <h3>3.10 打賞與訂閱</h3>
+    <dl>
+      <div><dt>內容</dt><dd>iOS、Android App 內的打賞與訂閱，由 Apple App Store 與 Google Play 處理付款。我們收不到你的付款資料（例如信用卡號）。</dd></div>
+      <div><dt>存放</dt><dd>支持者狀態只在你的裝置上判斷，不會傳到我們的伺服器。</dd></div>
+    </dl>
 
-  <h3>3.10 打賞與訂閱</h3>
-  <dl>
-    <dt>內容</dt>
-    <dd>iOS、Android App 內的打賞與訂閱，由 Apple App Store 與 Google Play 處理付款。我們收不到你的付款資料（例如信用卡號）。</dd>
-    <dt>存放</dt>
-    <dd>支持者狀態只在你的裝置上判斷，不會傳到我們的伺服器。</dd>
-  </dl>
+    <h2 id="visibility">4. 誰看得到你的資料</h2>
+    <ul>
+      <li><strong>你本人</strong>：自己的帳號資料、同工資料與推播 token。</li>
+      <li><strong>同一間教會的管理員，以及能安排服事表的同工</strong>：這間教會裡所有同工的同工資料，<strong>包括 email</strong>。</li>
+      <li><strong>同一間教會的其他同工</strong>：服事表（包括上面的名字）、教會名稱與 logo。</li>
+      <li><strong>其他教會的人</strong>：看不到你在這間教會的任何資料。</li>
+      <li><strong>營運者</strong>：基於維運、處理問題、處理濫用或同名爭議的必要範圍內存取資料。營運者的後台可以把教會改名、停用教會、轉移管理員。</li>
+    </ul>
 
-  <h2 id="visibility">4. 誰看得到你的資料</h2>
-  <ul>
-    <li><strong>你本人</strong>：自己的帳號資料、同工資料與推播 token。</li>
-    <li><strong>同一間教會的管理員，以及能安排服事表的同工</strong>：這間教會裡所有同工的同工資料，<strong>包括 email</strong>。</li>
-    <li><strong>同一間教會的其他同工</strong>：服事表（包括上面的名字）、教會名稱與 logo。</li>
-    <li><strong>其他教會的人</strong>：看不到你在這間教會的任何資料。</li>
-    <li><strong>營運者</strong>：基於維運、處理問題、處理濫用或同名爭議的必要範圍內存取資料。營運者的後台可以把教會改名、停用教會、轉移管理員。</li>
-  </ul>
+    <h2 id="sharing">5. 與第三方分享</h2>
+    <p>我們不出售你的資料。資料只交給為了提供本服務必要的服務商處理：</p>
+    <ul>
+      <li><strong>Google</strong>：Firebase（資料庫、登入、檔案存放、推播、分析、錯誤紀錄）、Google Cloud（後端程式、紀錄）、Gemini API（照片辨識）、Google 日曆（只限連接日曆的教會）。</li>
+      <li><strong>Apple、Google</strong>：Sign in with Apple、Google 登入，以及 App 商店的付款。</li>
+    </ul>
+    <p>法律要求時，我們可能依法提供資料給主管機關。</p>
 
-  <h2 id="sharing">5. 與第三方分享</h2>
-  <p>我們不出售你的資料。資料只交給為了提供本服務必要的服務商處理：</p>
-  <ul>
-    <li><strong>Google</strong>：Firebase（資料庫、登入、檔案存放、推播、分析、錯誤紀錄）、Google Cloud（後端程式、紀錄）、Gemini API（照片辨識）、Google 日曆（只限連接日曆的教會）。</li>
-    <li><strong>Apple、Google</strong>：Sign in with Apple、Google 登入，以及 App 商店的付款。</li>
-  </ul>
-  <p>法律要求時，我們可能依法提供資料給主管機關。</p>
+    <h2 id="delete">6. 刪除資料</h2>
+    <h3>退出教會</h3>
+    <p>非管理員可以在 App 裡自己退出教會，這會刪除你在那間教會的同工資料。你的帳號還在。</p>
+    <h3>刪除帳號</h3>
+    <p>你可以在 App 裡自己刪除帳號。刪除時會移除：</p>
+    <ul>
+      <li>你的登入帳號（Firebase Authentication）；</li>
+      <li>你的帳號資料 <code>users/{uid}</code>，包含所有裝置的推播 token；</li>
+      <li>你在所有教會的同工資料。</li>
+    </ul>
+    <p>已經安排在服事表上的名字會以<strong>純文字</strong>保留，因為那是教會的服事紀錄；如需移除，請聯絡該教會的管理員。如果你是某間教會唯一的管理員，要先把管理員交接給別人才能刪除帳號。</p>
+    <h3>刪除教會</h3>
+    <p>教會刪除後保留 30 天，期間該教會的管理員打開 App 就會看到「還原教會」；30 天後永久刪除這間教會的所有資料。</p>
+    <h3>備份與紀錄</h3>
+    <p>錯誤紀錄與使用分析依第 3 節的保存期間自動過期。<span class="todo">〔若有資料庫備份，寫明備份保存期間〕</span></p>
 
-  <h2 id="delete">6. 刪除資料</h2>
-  <h3>退出教會</h3>
-  <p>非管理員可以在 App 裡自己退出教會，這會刪除你在那間教會的同工資料。你的帳號還在。</p>
-  <h3>刪除帳號</h3>
-  <p>你可以在 App 裡自己刪除帳號。刪除時會移除：</p>
-  <ul>
-    <li>你的登入帳號（Firebase Authentication）；</li>
-    <li>你的帳號資料 <code>users/{uid}</code>，包含所有裝置的推播 token；</li>
-    <li>你在所有教會的同工資料。</li>
-  </ul>
-  <p>已經安排在服事表上的名字會以<strong>純文字</strong>保留，因為那是教會的服事紀錄；如需移除，請聯絡該教會的管理員。如果你是某間教會唯一的管理員，要先把管理員交接給別人才能刪除帳號。</p>
-  <h3>刪除教會</h3>
-  <p>教會刪除後保留 30 天，期間該教會的管理員打開 App 就會看到「還原教會」；30 天後永久刪除這間教會的所有資料。</p>
-  <h3>備份與紀錄</h3>
-  <p>錯誤紀錄與使用分析依第 3 節的保存期間自動過期。<span class="todo">〔若有資料庫備份，寫明備份保存期間〕</span></p>
+    <h2 id="rights">7. 你的權利</h2>
+    <p>依你所在地的法律（台灣《個人資料保護法》、香港《個人資料（私隱）條例》、馬來西亞《2010 年個人資料保護法》），你通常可以：</p>
+    <ul>
+      <li>查詢、閱覽你的個人資料，或要求提供複本；</li>
+      <li>要求補充或更正不正確的資料；</li>
+      <li>要求停止蒐集、處理或利用，或撤回同意；</li>
+      <li>要求刪除你的資料。</li>
+    </ul>
+    <p>退出教會、刪除帳號可以直接在 App 裡完成。其他請求請依<a href="#contact">第 11 節</a>聯絡我們，我們會在法律規定的期限內回覆 <span class="todo">〔回覆期限待審閱者確認〕</span>。教會服事表上的資料由該教會的管理員管理，我們可能會請你先聯絡管理員。</p>
 
-  <h2 id="rights">7. 你的權利</h2>
-  <p>依你所在地的法律（台灣《個人資料保護法》、香港《個人資料（私隱）條例》、馬來西亞《2010 年個人資料保護法》），你通常可以：</p>
-  <ul>
-    <li>查詢、閱覽你的個人資料，或要求提供複本；</li>
-    <li>要求補充或更正不正確的資料；</li>
-    <li>要求停止蒐集、處理或利用，或撤回同意；</li>
-    <li>要求刪除你的資料。</li>
-  </ul>
-  <p>退出教會、刪除帳號可以直接在 App 裡完成。其他請求請依<a href="#contact">第 11 節</a>聯絡我們，我們會在法律規定的期限內回覆 <span class="todo">〔回覆期限待審閱者確認〕</span>。教會服事表上的資料由該教會的管理員管理，我們可能會請你先聯絡管理員。</p>
+    <h2 id="security">8. 資料安全</h2>
+    <ul>
+      <li>傳輸全程使用 HTTPS 加密。</li>
+      <li>資料庫的存取規則讓每間教會的資料彼此隔離，只有該教會的同工讀得到。</li>
+      <li>Google 日曆的 refresh token 加密存放。</li>
+    </ul>
+    <p>沒有任何系統能保證絕對安全。若發生影響你資料的事故，我們會依法通知。</p>
 
-  <h2 id="security">8. 資料安全</h2>
-  <ul>
-    <li>傳輸全程使用 HTTPS 加密。</li>
-    <li>資料庫的存取規則讓每間教會的資料彼此隔離，只有該教會的同工讀得到。</li>
-    <li>Google 日曆的 refresh token 加密存放。</li>
-  </ul>
-  <p>沒有任何系統能保證絕對安全。若發生影響你資料的事故，我們會依法通知。</p>
+    <h2 id="children">9. 兒童</h2>
+    <p>本服務是給教會同工使用的工具，不以未滿 13 歲（或當地法律規定的年齡，例如 16 歲）的兒童為對象。教會管理員不應把兒童加入為同工。若我們得知蒐集了兒童的資料，會將其刪除。<span class="todo">〔各地年齡門檻與監護人同意待審閱者確認〕</span></p>
 
-  <h2 id="children">9. 兒童</h2>
-  <p>本服務是給教會同工使用的工具，不以未滿 13 歲（或當地法律規定的年齡，例如 16 歲）的兒童為對象。教會管理員不應把兒童加入為同工。若我們得知蒐集了兒童的資料，會將其刪除。<span class="todo">〔各地年齡門檻與監護人同意待審閱者確認〕</span></p>
+    <h2 id="changes">10. 政策變更</h2>
+    <p>我們可能修改這份政策。修改後會更新本頁的「最後更新」日期；重大變更會另外公告 <span class="todo">〔公告方式待審閱者確認〕</span>。變更後繼續使用本服務，即表示你同意修改後的政策。</p>
 
-  <h2 id="changes">10. 政策變更</h2>
-  <p>我們可能修改這份政策。修改後會更新本頁的「最後更新」日期；重大變更會另外公告 <span class="todo">〔公告方式待審閱者確認〕</span>。變更後繼續使用本服務，即表示你同意修改後的政策。</p>
-
-  <h2 id="contact">11. 聯絡方式</h2>
-  <ul>
-    <li>Email：<span class="todo">〔聯絡 email，上架前填入〕</span></li>
-    <li>問題回報：<a href="https://github.com/hansli112/church-staff-pwa/issues">GitHub issues</a>（公開，請勿貼上個人資料）</li>
-  </ul>
-</main>
+    <h2 id="contact">11. 聯絡方式</h2>
+    <ul>
+      <li>Email：<span class="todo">〔聯絡 email，上架前填入〕</span></li>
+      <li>問題回報：<a href="https://github.com/hansli112/church-staff-pwa/issues">GitHub issues</a>（公開，請勿貼上個人資料）</li>
+    </ul>
+    </main>
+  </div>
+</div>
 
 <footer class="foot">
-  <nav aria-label="頁尾">
-    <a href="index.html">首頁</a>
-    <a href="terms.html">服務條款</a>
-    <a href="https://github.com/hansli112/church-staff-pwa/issues">問題回報</a>
-  </nav>
-  <p>本服務由個人營運。</p>
+  <div class="wrap">
+    <nav aria-label="頁尾">
+      <a href="/">首頁</a>
+      <a href="terms.html">服務條款</a>
+      <a href="https://github.com/hansli112/church-staff-pwa/issues">問題回報</a>
+    </nav>
+    <p>本服務由個人營運。</p>
+  </div>
 </footer>
 
-</div>
 </body>
 </html>

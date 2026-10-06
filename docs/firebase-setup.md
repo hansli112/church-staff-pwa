@@ -95,10 +95,14 @@ scripts/deploy.sh prod --only hosting  # 只更新網頁
 - 部署後設定 Functions 舊映像的清理規則，不然每月會有一點費用。映像庫第一次部署後才存在，所以放在這裡。
 - rules 和 indexes 由 `firebase-project.sh` 部署，或 `scripts/firebase.sh <id> deploy --only firestore,storage`。
 
-Hosting 部署前，會把 landing page 和法律文件複製進 Web build：
-- `/about`
+Hosting 部署前，`scripts/hosting-predeploy.sh` 會把 landing page 和法律文件複製進 Web build：
+- `/`：landing page。Flutter 的 `index.html` 改名成 `app.html`，其他路徑都 rewrite 到它，所以網頁版從 `/home` 開始（manifest 的 `start_url`）。舊的 `/about` 轉到 `/`。
 - `/privacy`
 - `/terms`
+
+改成這個配置後第一次部署，Functions 與 Hosting 要一起部署（`deploy.sh` 預設就是）。只部署 Hosting 的話，舊版 `churchPage` 會去抓 `index.html`，拿到 landing page；新版只接受 `app.html` 裡的 Flutter 頁。
+
+OAuth 同意畫面的首頁網址填 `/`，隱私權政策填 `/privacy`：Google 不接受只有登入畫面的首頁。
 
 ## 雲端費用進度（商店付款通知）
 

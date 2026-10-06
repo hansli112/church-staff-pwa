@@ -3,12 +3,12 @@ import { beforeEach, describe, test } from 'node:test';
 
 import { getStorage } from 'firebase-admin/storage';
 
-import { churchPage, clearTemplateCache, type PageDeps } from '../src/churchPage.js';
+import { APP_SHELL, churchPage, clearTemplateCache, type PageDeps } from '../src/churchPage.js';
 import { clearFirestore, db, deps, fakeFetch, seedChurch, setNow } from './support.js';
 
 const APP = 'https://martha.example';
 // The built web app's head, as Flutter writes it.
-const INDEX = `<!DOCTYPE html>
+const SHELL = `<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
   <base href="/">
@@ -23,7 +23,7 @@ const INDEX = `<!DOCTYPE html>
 const bucket = getStorage().bucket('demo-martha.appspot.com');
 
 function page(routes = {}) {
-  const f = fakeFetch({ [`${APP}/index.html`]: { body: INDEX }, ...routes });
+  const f = fakeFetch({ [`${APP}${APP_SHELL}`]: { body: SHELL }, ...routes });
   const d: PageDeps = { ...deps, fetch: f.fetch, bucket, appUrl: APP };
   return { get: (path: string) => churchPage(d, path), requests: f.requests };
 }
@@ -95,7 +95,7 @@ describe('church page', () => {
     const { get } = page();
     const r = await get('/c/Nope');
     assert.equal(r.status, 404);
-    assert.equal(text(r.body), INDEX);
+    assert.equal(text(r.body), SHELL);
     assert.equal((await get('/c/Nope/manifest.json')).status, 404);
     assert.equal((await get('/c/bad.id')).status, 404);
   });
@@ -107,7 +107,7 @@ describe('church page', () => {
     for (const cid of ['Closed', 'Gone']) {
       const r = await get(`/c/${cid}`);
       assert.equal(r.status, 200);
-      assert.equal(text(r.body), INDEX);
+      assert.equal(text(r.body), SHELL);
       const m = JSON.parse(text((await get(`/c/${cid}/manifest.json`)).body));
       assert.equal(m.name, '馬大別忙');
       assert.equal(m.icons[0].src, '/icons/Icon-192.png');
@@ -115,7 +115,7 @@ describe('church page', () => {
     assert.equal((await get('/c/Closed/icons/1/logo.png')).status, 404);
   });
 
-  test('index.html is fetched from the hosting origin once every few minutes', async () => {
+  test('the app shell is fetched from the hosting origin once every few minutes', async () => {
     await seedChurch('Grace', {}, { name: '恩典堂' });
     const { get, requests } = page();
     await get('/c/Grace');
@@ -126,12 +126,18 @@ describe('church page', () => {
     assert.equal(requests.length, 2);
   });
 
+  test('a page that is not the app (the landing page, say) never gets a church’s name', async () => {
+    await seedChurch('Grace', {}, { name: '恩典堂' });
+    const landing = { body: '<html><head><title>馬大別忙｜教會同工的服事表</title></head></html>' };
+    assert.equal((await page({ [`${APP}${APP_SHELL}`]: landing }).get('/c/Grace')).status, 503);
+  });
+
   test('when the template cannot be fetched, a stale copy is used, else 503', async () => {
     await seedChurch('Grace', {}, { name: '恩典堂' });
-    assert.equal((await page({ [`${APP}/index.html`]: { status: 500 } }).get('/c/Grace')).status, 503);
+    assert.equal((await page({ [`${APP}${APP_SHELL}`]: { status: 500 } }).get('/c/Grace')).status, 503);
     await page().get('/c/Grace');
     setNow(new Date('2026-10-01T11:00:00+08:00'));
-    const r = await page({ [`${APP}/index.html`]: { status: 500 } }).get('/c/Grace');
+    const r = await page({ [`${APP}${APP_SHELL}`]: { status: 500 } }).get('/c/Grace');
     assert.equal(r.status, 200);
     assert.match(text(r.body), /<title>恩典堂<\/title>/);
   });
