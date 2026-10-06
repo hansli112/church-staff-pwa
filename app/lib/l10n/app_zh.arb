@@ -269,6 +269,7 @@
     }
   },
   "events": "特別活動",
+  "eventsUpdated": "已更新特別活動",
   "customEvent": "自訂活動",
   "eventName": "活動名稱",
   "addToCommon": "加入常用選項",
@@ -485,7 +486,8 @@
   "notifThisChurch": "這間教會的通知",
   "notifPermissionOff": "通知被關掉了，請到系統設定打開",
   "notifEnable": "開啟通知",
-  "notifNotAllowed": "通知還沒開。瀏覽器問要不要允許時，請按「允許」",
+  "notifNotAllowed": "通知還沒開。跳出詢問時，請按「允許」",
+  "notifRegisterFailed": "通知還沒設定好，下次打開 App 會再試",
   "pushView": "查看",
   "zoneSwitch": "負責這個聚會",
   "photoImport": "照片匯入",
@@ -501,7 +503,7 @@
   "photoPick": "選照片",
   "photoPasteJson": "貼上 JSON",
   "photoRecognizing": "辨識中，大約需要一分鐘",
-  "photoChurchLimit": "這個月的 {limit} 張用完了，下個月 1 日恢復。可以先貼上 JSON",
+  "photoChurchLimit": "這個月的 {limit} 張用完了，下個月 1 日恢復。這段時間可以直接安排服事表",
   "@photoChurchLimit": {
     "placeholders": {
       "limit": {
@@ -509,10 +511,10 @@
       }
     }
   },
-  "photoPlatformOff": "照片辨識這個月暫停（全站的辨識額度用完了），下個月恢復。可以先貼上 JSON",
+  "photoPlatformOff": "照片辨識這個月暫停（全站的辨識額度用完了），下個月恢復。這段時間可以直接安排服事表",
   "photoTooLarge": "照片太大，請裁到只剩表格再試",
   "photoFailed": "辨識失敗，請換一張清楚一點的照片再試",
-  "photoUnavailable": "照片辨識暫時無法使用，請稍後再試，或先貼上 JSON",
+  "photoUnavailable": "照片辨識暫時無法使用，請稍後再試，或直接安排服事表",
   "importPreview": "確認後套用",
   "importApply": "套用到服事表",
   "importApplied": "已匯入 {count} 天",
@@ -706,7 +708,7 @@
   "webhookOffMessage": "網址和密鑰都會刪掉，之後要重新設定。",
   "webhookOffAction": "關閉",
   "exportData": "匯出資料",
-  "exportFooter": "下載教會的全部資料：一份 JSON，加上一份可以用 Excel 打開的服事表。",
+  "exportFooter": "匯出教會的全部資料：一份 JSON，加上一份可以用 Excel 打開的服事表。",
   "exported": "已匯出",
   "errMoveInvalid": "這不是搬家檔，請確認選對了檔案",
   "errMoveTooLarge": "同工超過 2,000 位或服事表超過 20,000 天，沒辦法自動搬，請聯絡我們",

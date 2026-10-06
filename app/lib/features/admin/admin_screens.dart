@@ -272,7 +272,7 @@ class AdminStatsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.adminStats)),
       body: stats.when(
-        loading: () => const SizedBox.shrink(),
+        loading: () => const Center(child: CircularProgressIndicator.adaptive()),
         error: (e, _) => ErrorRetry(
           message: errorText(l10n, e),
           onRetry: () => ref.invalidate(_statsProvider),
@@ -466,7 +466,7 @@ class AdminFundingScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.fundingCosts)),
       body: overview.when(
-        loading: () => const SizedBox.shrink(),
+        loading: () => const Center(child: CircularProgressIndicator.adaptive()),
         error: (e, _) => ErrorRetry(
           message: errorText(l10n, e),
           onRetry: () => ref.invalidate(_fundingProvider),

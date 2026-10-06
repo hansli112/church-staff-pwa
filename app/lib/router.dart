@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -136,7 +135,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 routes: [
                   page('profile', (_) => const ProfileScreen()),
                   // Store apps only: the web build has no support page at all.
-                  if (!kIsWeb) page('support', (_) => const SupportScreen()),
+                  if (!ref.read(isWebProvider)) page('support', (_) => const SupportScreen()),
                   page('language', (_) => const LanguageScreen()),
                   page('church', (_) => const ChurchInfoScreen()),
                   page('link', (_) => const ChurchLinkScreen()),

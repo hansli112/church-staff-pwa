@@ -19,7 +19,8 @@ final _quotaProvider = FutureProvider.autoDispose<PhotoQuota>((ref) {
 });
 
 /// 照片匯入: photograph a paper roster, check what was read, apply it.
-/// Pasting JSON is the way in when the monthly photos are used up.
+/// The operator can paste recognised JSON instead, e.g. to help a church
+/// whose photos are used up.
 class ImportScreen extends ConsumerStatefulWidget {
   const ImportScreen({super.key, required this.serviceType});
 
@@ -190,11 +191,13 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
             expand: true,
             onPressed: blocked ? null : () => _photos(ImageSource.gallery),
           ),
-          SecondaryButton(
-            label: l10n.photoPasteJson,
-            expand: true,
-            onPressed: () => setState(() => _paste = !_paste),
-          ),
+          // Results recognised elsewhere: only the operator has them.
+          if (ref.watch(isOperatorProvider).value ?? false)
+            SecondaryButton(
+              label: l10n.photoPasteJson,
+              expand: true,
+              onPressed: () => setState(() => _paste = !_paste),
+            ),
         ],
         if (_error != null)
           Padding(

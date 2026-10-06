@@ -805,6 +805,12 @@ abstract class L10n {
   /// **'特別活動'**
   String get events;
 
+  /// No description provided for @eventsUpdated.
+  ///
+  /// In zh, this message translates to:
+  /// **'已更新特別活動'**
+  String get eventsUpdated;
+
   /// No description provided for @customEvent.
   ///
   /// In zh, this message translates to:
@@ -1582,8 +1588,14 @@ abstract class L10n {
   /// No description provided for @notifNotAllowed.
   ///
   /// In zh, this message translates to:
-  /// **'通知還沒開。瀏覽器問要不要允許時，請按「允許」'**
+  /// **'通知還沒開。跳出詢問時，請按「允許」'**
   String get notifNotAllowed;
+
+  /// No description provided for @notifRegisterFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'通知還沒設定好，下次打開 App 會再試'**
+  String get notifRegisterFailed;
 
   /// No description provided for @pushView.
   ///
@@ -1636,13 +1648,13 @@ abstract class L10n {
   /// No description provided for @photoChurchLimit.
   ///
   /// In zh, this message translates to:
-  /// **'這個月的 {limit} 張用完了，下個月 1 日恢復。可以先貼上 JSON'**
+  /// **'這個月的 {limit} 張用完了，下個月 1 日恢復。這段時間可以直接安排服事表'**
   String photoChurchLimit(int limit);
 
   /// No description provided for @photoPlatformOff.
   ///
   /// In zh, this message translates to:
-  /// **'照片辨識這個月暫停（全站的辨識額度用完了），下個月恢復。可以先貼上 JSON'**
+  /// **'照片辨識這個月暫停（全站的辨識額度用完了），下個月恢復。這段時間可以直接安排服事表'**
   String get photoPlatformOff;
 
   /// No description provided for @photoTooLarge.
@@ -1660,7 +1672,7 @@ abstract class L10n {
   /// No description provided for @photoUnavailable.
   ///
   /// In zh, this message translates to:
-  /// **'照片辨識暫時無法使用，請稍後再試，或先貼上 JSON'**
+  /// **'照片辨識暫時無法使用，請稍後再試，或直接安排服事表'**
   String get photoUnavailable;
 
   /// No description provided for @importPreview.
@@ -2428,7 +2440,7 @@ abstract class L10n {
   /// No description provided for @exportFooter.
   ///
   /// In zh, this message translates to:
-  /// **'下載教會的全部資料：一份 JSON，加上一份可以用 Excel 打開的服事表。'**
+  /// **'匯出教會的全部資料：一份 JSON，加上一份可以用 Excel 打開的服事表。'**
   String get exportFooter;
 
   /// No description provided for @exported.

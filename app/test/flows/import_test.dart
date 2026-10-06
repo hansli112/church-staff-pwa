@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/models.dart';
 
 import '../support/harness.dart';
@@ -19,9 +20,12 @@ Future<void> tapText(WidgetTester tester, String text) async {
   await settle(tester);
 }
 
+/// Only the platform operator can paste JSON.
+MemoryBackend operatorChurch() => seededChurch()..auth.operators.add('pastor');
+
 void main() {
   testWidgets('pasted JSON previews with a report, then applies', (tester) async {
-    final b = seededChurch();
+    final b = operatorChurch();
     await pumpApp(tester, b);
     await go(tester, '/rosters');
     await tester.tap(find.byTooltip('照片匯入'));
@@ -58,7 +62,7 @@ void main() {
   });
 
   testWidgets('an edit made while reviewing the preview survives the import', (tester) async {
-    final b = seededChurch();
+    final b = operatorChurch();
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '貼上 JSON');
@@ -98,8 +102,15 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     expect(find.textContaining('這個月的 30 張用完了'), findsOneWidget);
+    expect(find.textContaining('直接安排服事表'), findsOneWidget);
     final take = tester.widget<FilledButton>(find.byType(FilledButton).first);
     expect(take.onPressed, isNull);
+  });
+
+  testWidgets('only the platform operator can paste JSON', (tester) async {
+    await pumpApp(tester, seededChurch());
+    await go(tester, '/rosters/import/sunday');
+    expect(find.text('貼上 JSON'), findsNothing);
   });
 
   testWidgets('staff do not see photo import', (tester) async {

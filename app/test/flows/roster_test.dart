@@ -290,6 +290,34 @@ void main() {
       await tapText(tester, '完成');
       expect(savedDay(b, 11).events.map((e) => e.name), ['聖餐', '特會']);
       expect(b.services['grace']!.byId('sunday')!.events.map((e) => e.name), ['聖餐', '特會']);
+      expect(find.text('已更新特別活動'), findsOneWidget);
+    });
+
+    testWidgets('closing the sheet without a change saves nothing', (tester) async {
+      await pumpApp(tester, seededChurch());
+      await go(tester, '/rosters/sunday/2026-10-04');
+      await tester.tap(find.byTooltip('編輯'));
+      await settle(tester);
+      await tapText(tester, '特別活動');
+      await tapText(tester, '完成');
+      expect(find.text('復原'), findsNothing);
+    });
+
+    testWidgets('ticking an event off and on again is no change', (tester) async {
+      final b = seededChurch();
+      final day = savedDay(b, 4);
+      const events = [EventTag(name: '聖餐', color: 0), EventTag(name: '浸禮', color: 4)];
+      b.rosters['grace']![day.id] = day.copyWith(events: events);
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-04');
+      await tester.tap(find.byTooltip('編輯'));
+      await settle(tester);
+      await tapText(tester, '特別活動');
+      await tapText(tester, '聖餐');
+      await tapText(tester, '聖餐');
+      await tapText(tester, '完成');
+      expect(find.text('復原'), findsNothing);
+      expect(savedDay(b, 4).events, events);
     });
   });
 }

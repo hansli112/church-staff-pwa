@@ -406,6 +406,9 @@ class L10nZh extends L10n {
   String get events => '特別活動';
 
   @override
+  String get eventsUpdated => '已更新特別活動';
+
+  @override
   String get customEvent => '自訂活動';
 
   @override
@@ -817,7 +820,10 @@ class L10nZh extends L10n {
   String get notifEnable => '開啟通知';
 
   @override
-  String get notifNotAllowed => '通知還沒開。瀏覽器問要不要允許時，請按「允許」';
+  String get notifNotAllowed => '通知還沒開。跳出詢問時，請按「允許」';
+
+  @override
+  String get notifRegisterFailed => '通知還沒設定好，下次打開 App 會再試';
 
   @override
   String get pushView => '查看';
@@ -847,11 +853,11 @@ class L10nZh extends L10n {
 
   @override
   String photoChurchLimit(int limit) {
-    return '這個月的 $limit 張用完了，下個月 1 日恢復。可以先貼上 JSON';
+    return '這個月的 $limit 張用完了，下個月 1 日恢復。這段時間可以直接安排服事表';
   }
 
   @override
-  String get photoPlatformOff => '照片辨識這個月暫停（全站的辨識額度用完了），下個月恢復。可以先貼上 JSON';
+  String get photoPlatformOff => '照片辨識這個月暫停（全站的辨識額度用完了），下個月恢復。這段時間可以直接安排服事表';
 
   @override
   String get photoTooLarge => '照片太大，請裁到只剩表格再試';
@@ -860,7 +866,7 @@ class L10nZh extends L10n {
   String get photoFailed => '辨識失敗，請換一張清楚一點的照片再試';
 
   @override
-  String get photoUnavailable => '照片辨識暫時無法使用，請稍後再試，或先貼上 JSON';
+  String get photoUnavailable => '照片辨識暫時無法使用，請稍後再試，或直接安排服事表';
 
   @override
   String get importPreview => '確認後套用';
@@ -1262,7 +1268,7 @@ class L10nZh extends L10n {
   String get exportData => '匯出資料';
 
   @override
-  String get exportFooter => '下載教會的全部資料：一份 JSON，加上一份可以用 Excel 打開的服事表。';
+  String get exportFooter => '匯出教會的全部資料：一份 JSON，加上一份可以用 Excel 打開的服事表。';
 
   @override
   String get exported => '已匯出';

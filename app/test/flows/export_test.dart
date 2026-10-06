@@ -23,10 +23,17 @@ Future<void> go(WidgetTester tester, String location) async {
 }
 
 class _Saver implements FileSaver {
+  _Saver({this.saves = true});
+
+  /// False: the share sheet is closed without saving.
+  final bool saves;
   final files = <(String, Uint8List, String)>[];
 
   @override
-  Future<void> save(String name, Uint8List bytes, String mimeType) async => files.add((name, bytes, mimeType));
+  Future<bool> save(String name, Uint8List bytes, String mimeType) async {
+    files.add((name, bytes, mimeType));
+    return saves;
+  }
 }
 
 class _Events extends NoTelemetry {
@@ -60,6 +67,24 @@ void main() {
     expect(utf8.decode(zip.findFile('服事表.csv')!.content), contains('2026-10-04,主日崇拜,招待,陳志豪、李美玉'));
     expect(telemetry.events.where((e) => e.$1 == 'church_export'), [('church_export', null)]);
     expect(find.text('已匯出'), findsOneWidget);
+  });
+
+  testWidgets('closing the share sheet without saving is not an export', (tester) async {
+    final telemetry = _Events();
+    await pumpApp(
+      tester,
+      seededChurch(),
+      overrides: [
+        fileSaverProvider.overrideWithValue(_Saver(saves: false)),
+        telemetryProvider.overrideWithValue(telemetry),
+      ],
+    );
+    await go(tester, '/me/church');
+    await tester.scrollUntilVisible(find.text('匯出資料'), 200);
+    await tapText(tester, '匯出資料');
+
+    expect(find.text('已匯出'), findsNothing);
+    expect(telemetry.events, isEmpty);
   });
 
   testWidgets('only admins can export', (tester) async {

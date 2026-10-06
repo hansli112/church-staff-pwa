@@ -37,7 +37,8 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
     try {
       final now = DateTime.now();
       final zip = exportZip(await loadChurchSnapshot(ref), now);
-      await ref.read(fileSaverProvider).save(exportFileName(church, now), zip, 'application/zip');
+      final saved = await ref.read(fileSaverProvider).save(exportFileName(church, now), zip, 'application/zip');
+      if (!saved) return;
       // That it happened, never what was in it.
       ref.read(telemetryProvider).logEvent('church_export');
       if (mounted) showToast(context, l10n.exported);
@@ -239,7 +240,9 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
                   value: church.homeName ?? l10n.homeNameUnset,
                   onTap: () => _editHomeName(church),
                 ),
-              ListRow(title: l10n.addToHome, onTap: () => _addToHomeHelp(churchUrl(church.id))),
+              // Store apps are already on the home screen.
+              if (ref.watch(isWebProvider))
+                ListRow(title: l10n.addToHome, onTap: () => _addToHomeHelp(churchUrl(church.id))),
             ],
           ),
           if (admin)

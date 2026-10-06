@@ -6,6 +6,7 @@ import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/push.dart';
+import '../../state/session.dart';
 
 /// Which notifications I get from this church. Stored on my member doc
 /// (`notificationPrefs`, the one field I may write there). The system
@@ -21,11 +22,23 @@ class NotificationsScreen extends ConsumerWidget {
     if (me == null) return Scaffold(appBar: AppBar());
     final muted = me.mutedNotifications;
 
-    Future<void> set(NotificationKind kind, bool on) async {
-      if (on) {
-        await ref.read(pushServiceProvider).enable();
+    // Registering can fail even when allowed (no APNs token yet); the next
+    // launch tries again, so say so instead of looking stuck.
+    Future<PushPermission?> enable() async {
+      try {
+        return await ref.read(pushServiceProvider).enable();
+      } catch (e, stack) {
+        ref.read(telemetryProvider).recordError(e, stack);
+        if (context.mounted) showToast(context, l10n.notifRegisterFailed);
+        return null;
+      } finally {
         ref.invalidate(pushPermissionProvider);
       }
+    }
+
+    Future<void> set(NotificationKind kind, bool on) async {
+      // Once allowed, each launch registers the device again.
+      if (on && permission == PushPermission.notAsked) await enable();
       final next = on ? ({...muted}..remove(kind)) : {...muted, kind};
       try {
         await ref.read(churchDataProvider)!.setNotificationPrefs(me.uid, next);
@@ -60,8 +73,7 @@ class NotificationsScreen extends ConsumerWidget {
                   title: l10n.notifEnable,
                   leading: const Icon(Icons.notifications_active_outlined),
                   onTap: () async {
-                    final result = await ref.read(pushServiceProvider).enable();
-                    ref.invalidate(pushPermissionProvider);
+                    final result = await enable();
                     // Dismissed, or tucked into the address bar by the browser.
                     if (result == PushPermission.notAsked && context.mounted) showToast(context, l10n.notifNotAllowed);
                   },

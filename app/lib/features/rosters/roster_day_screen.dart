@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -145,10 +146,11 @@ class RosterDayScreen extends ConsumerWidget {
           s.id == service.id ? s.copyWith(events: [...s.events, ...result.addToCommon]) : s,
       ]);
     }
-    if (!context.mounted) return;
+    // Ticking a tag off and on again only moves it to the end.
+    if (!context.mounted || setEquals(result.events.toSet(), roster.events.toSet())) return;
     await runWithUndo(
       context,
-      l10n.events,
+      l10n.eventsUpdated,
       () => ref.read(rosterActionsProvider).setEvents(roster, result.events),
     );
   }
