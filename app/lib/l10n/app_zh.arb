@@ -102,7 +102,7 @@
       }
     }
   },
-  "errInviteInvalid": "這個邀請已失效，請向管理員要新的邀請",
+  "errInviteInvalid": "找不到這個邀請，請確認邀請碼，或向管理員要新的邀請",
   "errInviteExpired": "這個邀請過期了，請向管理員要新的邀請",
   "churchSuspendedTitle": "〈{church}〉已停用",
   "@churchSuspendedTitle": {
@@ -134,7 +134,7 @@
   "churchRestored": "教會已還原",
   "switchChurch": "切換教會",
   "myServicesTitle": "我接下來的服事",
-  "noUpcomingServices": "接下來沒有你的服事",
+  "noUpcomingServices": "接下來沒有你的服事，排到你時會出現在這裡",
   "viewRosters": "看服事表",
   "gettingStarted": "開始使用",
   "@gettingStarted": { "description": "Home page section for an admin who is still the church's only member" },

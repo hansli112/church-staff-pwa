@@ -8,6 +8,7 @@ import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
+import 'church_logo.dart';
 
 final _invitePreviewProvider = FutureProvider.autoDispose.family<Invite, String>(
   (ref, code) => ref.watch(backendProvider).cloud.previewInvite(code),
@@ -68,6 +69,8 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
             onAction: () => context.go(memberships.isEmpty ? '/welcome/join' : '/home'),
           ),
           data: (invite) {
+            // The logo is a nicety: shown once it comes, never waited for.
+            final logo = ref.watch(churchPreviewProvider(invite.churchId)).value?.logoUrl;
             final already = memberships.any(
               (m) => m.churchId == invite.churchId,
             );
@@ -78,6 +81,7 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
                   shrinkWrap: true,
                   padding: const EdgeInsets.all(Space.l),
                   children: [
+                    ChurchLogo(url: logo),
                     Text(
                       l10n.joinTitle(invite.churchName),
                       textAlign: TextAlign.center,

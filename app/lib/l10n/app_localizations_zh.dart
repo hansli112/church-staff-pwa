@@ -220,7 +220,7 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get errInviteInvalid => '這個邀請已失效，請向管理員要新的邀請';
+  String get errInviteInvalid => '找不到這個邀請，請確認邀請碼，或向管理員要新的邀請';
 
   @override
   String get errInviteExpired => '這個邀請過期了，請向管理員要新的邀請';
@@ -259,7 +259,7 @@ class L10nZh extends L10n {
   String get myServicesTitle => '我接下來的服事';
 
   @override
-  String get noUpcomingServices => '接下來沒有你的服事';
+  String get noUpcomingServices => '接下來沒有你的服事，排到你時會出現在這裡';
 
   @override
   String get viewRosters => '看服事表';

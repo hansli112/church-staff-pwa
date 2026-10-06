@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/models.dart';
+import 'package:martha/features/church/church_logo.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
@@ -143,6 +144,35 @@ void main() {
     await tapText(tester, '下一步');
     await tapText(tester, '加入');
     expect(b.members[cid]!.containsKey(b.auth.currentUser!.uid), isTrue);
+  });
+
+  testWidgets('a mistyped code asks to check it', (tester) async {
+    final b = MemoryBackend()..addChurch('恩典堂');
+    b.auth.signInAs('x@gmail.com');
+    await pumpApp(tester, b);
+    await tapText(tester, '輸入邀請碼');
+    await tester.enterText(find.byType(TextField), 'TYPO1234');
+    await tester.pump();
+    await tapText(tester, '下一步');
+    expect(find.text('找不到這個邀請，請確認邀請碼，或向管理員要新的邀請'), findsOneWidget);
+  });
+
+  testWidgets('the invite shows the church logo above its name', (tester) async {
+    final b = MemoryBackend();
+    final cid = b.addChurch('恩典堂');
+    b.churches[cid] = b.churches[cid]!.copyWith(logoUrl: 'https://example.org/logo.png');
+    b.invites['LOGO2026'] = Invite(
+      code: 'LOGO2026',
+      churchId: cid,
+      churchName: '恩典堂',
+      expiresAt: DateTime.now().add(const Duration(days: 7)),
+    );
+    b.auth.signInAs('x@gmail.com');
+    await pumpApp(tester, b);
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/welcome/join/LOGO2026');
+    await settle(tester);
+    expect(find.text('加入〈恩典堂〉'), findsOneWidget);
+    expect(find.descendant(of: find.byType(ChurchLogo), matching: find.byType(Image)), findsOneWidget);
   });
 
   testWidgets('an expired invite says so and offers to enter another code', (

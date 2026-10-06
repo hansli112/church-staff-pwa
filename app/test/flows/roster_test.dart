@@ -30,7 +30,7 @@ void main() {
 
     testWidgets('home with nothing ahead says one sentence', (tester) async {
       await pumpApp(tester, seededChurch(as: john));
-      expect(find.text('接下來沒有你的服事'), findsOneWidget);
+      expect(find.text('接下來沒有你的服事，排到你時會出現在這裡'), findsOneWidget);
     });
 
     testWidgets('roster tab shows saved days and template drafts', (tester) async {

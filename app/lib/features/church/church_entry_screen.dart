@@ -8,10 +8,7 @@ import '../../data/backend.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
-
-final _previewProvider = FutureProvider.autoDispose.family<ChurchPreview, String>(
-  (ref, churchId) => ref.watch(backendProvider).cloud.churchPreview(churchId),
-);
+import 'church_logo.dart';
 
 /// Where a church URL (/c/ID) lands for someone who is not a member of
 /// that church: which church it is and how to join. Members never see it;
@@ -43,7 +40,7 @@ class _NotMember extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
-    final preview = ref.watch(_previewProvider(churchId));
+    final preview = ref.watch(churchPreviewProvider(churchId));
     // Somewhere to go next: home for members of another church, the invite
     // code page for everyone else.
     final next = hasChurch
@@ -62,7 +59,6 @@ class _NotMember extends ConsumerWidget {
             onAction: () => context.go('/home'),
           ),
           data: (church) {
-            final logo = church.logoUrl;
             return Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 420),
@@ -70,22 +66,7 @@ class _NotMember extends ConsumerWidget {
                   shrinkWrap: true,
                   padding: const EdgeInsets.all(Space.l),
                   children: [
-                    if (logo != null && logo.startsWith('http')) ...[
-                      Center(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(Radii.l),
-                          child: Image.network(
-                            logo,
-                            width: 96,
-                            height: 96,
-                            fit: BoxFit.cover,
-                            semanticLabel: l10n.churchLogo,
-                            errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: Space.m),
-                    ],
+                    ChurchLogo(url: church.logoUrl),
                     Text(church.name, textAlign: TextAlign.center, style: AppText.title),
                     const SizedBox(height: Space.s),
                     Text(

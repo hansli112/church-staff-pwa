@@ -496,7 +496,7 @@ abstract class L10n {
   /// No description provided for @errInviteInvalid.
   ///
   /// In zh, this message translates to:
-  /// **'這個邀請已失效，請向管理員要新的邀請'**
+  /// **'找不到這個邀請，請確認邀請碼，或向管理員要新的邀請'**
   String get errInviteInvalid;
 
   /// No description provided for @errInviteExpired.
@@ -562,7 +562,7 @@ abstract class L10n {
   /// No description provided for @noUpcomingServices.
   ///
   /// In zh, this message translates to:
-  /// **'接下來沒有你的服事'**
+  /// **'接下來沒有你的服事，排到你時會出現在這裡'**
   String get noUpcomingServices;
 
   /// No description provided for @viewRosters.
