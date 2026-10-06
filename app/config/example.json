@@ -10,6 +10,7 @@
   "FIREBASE_AUTH_DOMAIN": "marthasit-dev.firebaseapp.com",
   "FIREBASE_MEASUREMENT_ID": "",
   "GOOGLE_SERVER_CLIENT_ID": "",
+  "GOOGLE_IOS_CLIENT_ID": "",
   "FCM_VAPID_KEY": "",
   "WEB_ORIGIN": "https://marthasit-dev.web.app"
 }

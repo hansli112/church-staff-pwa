@@ -60,7 +60,7 @@ scripts/firebase-project.sh prod marthasit     [BILLING_ACCOUNT_ID]
 
 Function 改掉不用某個 secret 時，`firebase deploy` 不會拿掉已部署版本上的 secret 綁定。要先 `scripts/firebase.sh <id> functions:delete <名稱> --region asia-east1` 再部署一次，確認綁定拿掉之後才能刪 secret，不然新的 instance 起不來。
 
-`GOOGLE_SERVER_CLIENT_ID` 和 `FCM_VAPID_KEY` 填過之後，重跑腳本會保留。網頁推播還需要 `app/web/firebase-messaging-sw.js`：它從 Hosting 的 `/__/firebase/init.js` 讀專案設定，所以 dev 和 prod 共用同一個檔案。
+`GOOGLE_SERVER_CLIENT_ID` 和 `FCM_VAPID_KEY` 填過之後，重跑腳本會保留。`GOOGLE_IOS_CLIENT_ID` 由腳本從 iOS app 的 `GoogleService-Info.plist` 讀出來；要先開 Google 登入，Firebase 才會建這個 client，所以開完要重跑一次腳本。iOS 的 Google 登入另外要把它反過來的 `com.googleusercontent.apps.…` 列在 `app/ios/Runner/Info.plist` 的 `CFBundleURLTypes`，dev 和 prod 兩個都列。網頁推播還需要 `app/web/firebase-messaging-sw.js`：它從 Hosting 的 `/__/firebase/init.js` 讀專案設定，所以 dev 和 prod 共用同一個檔案。
 
 ## 建置
 
@@ -71,6 +71,15 @@ flutter build apk --dart-define-from-file=config/dev.json
 ```
 
 `config/*.json` 裡放的是專案識別資訊，不是密碼，但也不放進 git。
+
+iOS 要在 Mac 上 build，最低版本是 iOS 15（Firebase 的要求）。Xcode 的「Upload Crashlytics symbols」會把 dSYM 傳到這次 build 的 Firebase app。app ID 從 dart define 讀，所以直接在 Xcode 按 Archive 時，傳去的是最近一次 `flutter build` 用的環境。上架用的 build 要先跑 `flutter build ipa --dart-define-from-file=config/prod.json`。
+
+### 檢查 Crashlytics 與 GA4
+
+- **Crashlytics**：dev 版「我的」→「開發」→「測試當機」。App 會直接當掉，重開之後才會送出報告，幾分鐘內出現在 Firebase console 的 Crashlytics。
+- **GA4**：專案要先在 Firebase console 的「專案設定」→「整合」連結 Google Analytics，`church_id` 才收得到。看 DebugView 要先開除錯模式：
+  - Android：`adb shell setprop debug.firebase.analytics.app app.marthasit`
+  - iOS：在 Xcode 的 Runner scheme 加上啟動參數 `-FIRDebugEnabled`
 
 ## 部署
 
@@ -109,10 +118,11 @@ scripts/as-owner.sh marthasit-dev npx --prefix functions tsx functions/scripts/g
 
 用 Playwright 接著瀏覽器測推播時，頁面會一直被當成在前景，要先斷開連線，才能測背景通知。
 
-- Hosting 設定忽略 `**/.*`，`.well-known` 會被擋掉，要在 `firebase.json` 的 `ignore` 例外放行。
-- **Android**：`AndroidManifest.xml` 的 intent filter 是 `pathPrefix="/c/"`。Web build 要提供 `/.well-known/assetlinks.json`，內容包含簽章憑證的 SHA-256。
-  - 取得 SHA-256：`keytool -list -v -keystore <keystore>`。
-  - debug 和 release 的金鑰不同，兩個都要列進去。
+- Hosting 忽略點開頭的檔案，只放行 `.well-known`。`firebase.json` 的 `ignore` 不支援 `!` 例外，所以用 `**/.!(well-known)`。
+- **Android**：`AndroidManifest.xml` 的 intent filter 是 `pathPrefix="/c/"`。網站從 `app/web/.well-known/assetlinks.json` 提供簽章憑證的 SHA-256，dev 和 prod 共用這個檔案。
+  - 取得 SHA-256：`keytool -list -v -keystore <keystore>`。debug 金鑰在 `~/.android/debug.keystore`，密碼 `android`。
+  - 每台 build 的電腦 debug 金鑰都不同，目前只列了一台開發用的 Mac。release 金鑰（上架後是 Play App Signing 的金鑰，在 Play Console 查）要再加進去。
+  - 原生 Google 登入也看簽章：同一組 SHA-1、SHA-256 要加到 Firebase 的 Android app（`apps:android:sha:create`）。
 - **iOS**：要付費開發者帳號，才能開 Associated Domains。
   - 在 `Runner.entitlements` 加上 `applinks:<網域>`。
   - 網站提供 `/.well-known/apple-app-site-association`，`components` 只放 `{"/": "/c/*"}`。

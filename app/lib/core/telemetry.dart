@@ -17,6 +17,10 @@ abstract interface class Telemetry {
   void setChurch(String? churchId);
   void setUser(String? uid);
   void logEvent(String name, [Map<String, Object>? parameters]);
+
+  /// Crashes the native app, to check that Crashlytics receives crashes.
+  /// Development builds only.
+  void testCrash();
 }
 
 class NoTelemetry implements Telemetry {
@@ -33,6 +37,9 @@ class NoTelemetry implements Telemetry {
 
   @override
   void logEvent(String name, [Map<String, Object>? parameters]) {}
+
+  @override
+  void testCrash() {}
 }
 
 class FirebaseTelemetry implements Telemetry {
@@ -82,5 +89,10 @@ class FirebaseTelemetry implements Telemetry {
   @override
   void logEvent(String name, [Map<String, Object>? parameters]) {
     _analytics?.logEvent(name: name, parameters: parameters);
+  }
+
+  @override
+  void testCrash() {
+    if (!kIsWeb) FirebaseCrashlytics.instance.crash();
   }
 }

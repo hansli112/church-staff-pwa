@@ -486,6 +486,9 @@ class L10nZh extends L10n {
   String get components => '元件';
 
   @override
+  String get testCrash => '測試當機';
+
+  @override
   String get operatorConsole => '平台後台';
 
   @override

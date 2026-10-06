@@ -961,6 +961,12 @@ abstract class L10n {
   /// **'元件'**
   String get components;
 
+  /// No description provided for @testCrash.
+  ///
+  /// In zh, this message translates to:
+  /// **'測試當機'**
+  String get testCrash;
+
   /// No description provided for @operatorConsole.
   ///
   /// In zh, this message translates to:

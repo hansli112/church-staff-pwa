@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.marthasit",
+      "sha256_cert_fingerprints": [
+        "FB:4B:50:82:EE:34:68:9F:87:AB:69:3D:95:C2:FF:79:1E:BF:F2:40:D7:AA:BF:BB:06:7B:15:DF:36:02:2D:33"
+      ]
+    }
+  }
+]

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -88,6 +89,12 @@ class MeScreen extends ConsumerWidget {
                   ListRow(
                     title: l10n.components,
                     onTap: () => context.push('/dev/components'),
+                  ),
+                // Crashlytics has no web SDK.
+                if (Env.current.isDevelopment && !kIsWeb)
+                  ListRow(
+                    title: l10n.testCrash,
+                    onTap: () => ref.read(telemetryProvider).testCrash(),
                   ),
               ],
             ),

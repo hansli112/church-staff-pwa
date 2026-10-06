@@ -2,6 +2,18 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<!-- Google sign-in returns here: the reversed iOS client IDs of
+			     marthasit-dev and marthasit (docs/firebase-setup.md). -->
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.578090575030-2lj6mqehm97g9dtassgcljj3e6t8k06p</string>
+				<string>com.googleusercontent.apps.493104398300-85pmmq39lqgnrv3g8dpngtm6eh3b2b3v</string>
+			</array>
+		</dict>
+	</array>
 	<key>FlutterDeepLinkingEnabled</key>
 	<true/>
 	<key>UIBackgroundModes</key>
@@ -25,7 +37,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>martha</string>
+	<string>馬大別忙</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

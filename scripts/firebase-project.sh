@@ -125,8 +125,14 @@ if ! $dry; then
   web_id="$(api GET "https://firebase.googleapis.com/v1beta1/projects/$project/webApps" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).apps[0].appId))')"
   android_id="$(api GET "https://firebase.googleapis.com/v1beta1/projects/$project/androidApps" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log((JSON.parse(s).apps??[])[0]?.appId??""))')"
   ios_id="$(api GET "https://firebase.googleapis.com/v1beta1/projects/$project/iosApps" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log((JSON.parse(s).apps??[])[0]?.appId??""))')"
+  # The iOS OAuth client (made when Google sign-in is on) is only in the
+  # GoogleService-Info.plist; native Google sign-in on iOS needs it.
+  ios_client=""
+  if [ -n "$ios_id" ]; then
+    ios_client="$(api GET "https://firebase.googleapis.com/v1beta1/projects/$project/iosApps/$ios_id/config" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const p=Buffer.from(JSON.parse(s).configFileContents??"","base64").toString();console.log(/<key>CLIENT_ID<\/key>\s*<string>([^<]+)/.exec(p)?.[1]??"")})')"
+  fi
   api GET "https://firebase.googleapis.com/v1beta1/projects/$project/webApps/$web_id/config" \
-    | ENV="$env_name" ANDROID="$android_id" IOS="$ios_id" node -e '
+    | ENV="$env_name" ANDROID="$android_id" IOS="$ios_id" IOS_CLIENT="$ios_client" node -e '
       let s=""; process.stdin.on("data",d=>s+=d).on("end",()=>{
         const c = JSON.parse(s);
         // Values filled in by hand (Console only) survive a rerun.
@@ -145,6 +151,7 @@ if ! $dry; then
           FIREBASE_AUTH_DOMAIN: c.authDomain,
           FIREBASE_MEASUREMENT_ID: c.measurementId ?? "",
           GOOGLE_SERVER_CLIENT_ID: kept.GOOGLE_SERVER_CLIENT_ID ?? "",
+          GOOGLE_IOS_CLIENT_ID: process.env.IOS_CLIENT || kept.GOOGLE_IOS_CLIENT_ID || "",
           FCM_VAPID_KEY: kept.FCM_VAPID_KEY ?? "",
           WEB_ORIGIN: `https://${c.projectId}.web.app`,
         };

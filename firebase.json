@@ -25,7 +25,8 @@
     "public": "app/build/web",
     "ignore": [
       "firebase.json",
-      "**/.*"
+      "**/.!(well-known)",
+      "**/.!(well-known)/**"
     ],
     "rewrites": [
       {

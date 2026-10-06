@@ -175,7 +175,13 @@ class FirebaseAuthGateway implements AuthGateway {
     if (_googleServerClientId.isEmpty) return _auth.signInWithProvider(provider);
     final google = GoogleSignIn.instance;
     if (!_googleReady) {
-      await google.initialize(serverClientId: _googleServerClientId);
+      // iOS also needs its own client ID; Android finds its client from the
+      // package name and signing certificate.
+      final ios = defaultTargetPlatform == TargetPlatform.iOS;
+      await google.initialize(
+        clientId: ios && _googleIosClientId.isNotEmpty ? _googleIosClientId : null,
+        serverClientId: _googleServerClientId,
+      );
       _googleReady = true;
     }
     try {
@@ -190,6 +196,9 @@ class FirebaseAuthGateway implements AuthGateway {
 
   /// The project's OAuth web client ID, from --dart-define.
   static const _googleServerClientId = String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID');
+
+  /// The project's iOS OAuth client ID, from --dart-define.
+  static const _googleIosClientId = String.fromEnvironment('GOOGLE_IOS_CLIENT_ID');
   bool _googleReady = false;
 
   @override

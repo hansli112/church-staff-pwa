@@ -302,6 +302,7 @@
   "deleteAccount": "刪除帳號",
   "developer": "開發",
   "components": "元件",
+  "testCrash": "測試當機",
   "operatorConsole": "平台後台",
   "leaveChurch": "退出教會",
   "leaveChurchTitle": "退出〈{church}〉？",
