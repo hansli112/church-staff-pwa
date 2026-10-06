@@ -15,6 +15,7 @@ import '../../domain/staff_order.dart';
 import '../../env.dart';
 import '../backend.dart';
 import 'codec.dart';
+import '../native_or_browser.dart';
 import '../retry_refused.dart';
 
 bool _refused(Object e) => e is FirebaseException && e.code == 'permission-denied';
@@ -185,9 +186,15 @@ class FirebaseAuthGateway implements AuthGateway {
       _googleReady = true;
     }
     try {
-      final account = await google.authenticate();
-      final idToken = account.authentication.idToken;
-      return _auth.signInWithCredential(fa.GoogleAuthProvider.credential(idToken: idToken));
+      return await nativeOrBrowser(
+        native: () async {
+          final account = await google.authenticate();
+          final idToken = account.authentication.idToken;
+          return _auth.signInWithCredential(fa.GoogleAuthProvider.credential(idToken: idToken));
+        },
+        browser: () => _auth.signInWithProvider(provider),
+        useBrowser: (e) => e is GoogleSignInException && e.code != GoogleSignInExceptionCode.canceled,
+      );
     } on GoogleSignInException catch (e) {
       if (e.code == GoogleSignInExceptionCode.canceled) throw const AuthException(AuthErrorCode.cancelled);
       rethrow;
