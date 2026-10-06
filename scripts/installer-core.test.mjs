@@ -333,7 +333,7 @@ test('process runner bounds failure output and timeout without exposing it in th
     assert.equal(error.exitCode, 2);
     return true;
   });
-  await assert.rejects(runCommand(process.execPath, ['-e', 'setInterval(()=>{},1000)'], { timeoutMs: 20 }), /逾時/);
+  await assert.rejects(runCommand(process.execPath, ['-e', 'setInterval(()=>{},1000)'], { timeoutMs: 20 }), (err) => /逾時/.test(err.message) && err.timedOut === true);
   const environment = commandEnvironment({ CLOUDFLARE_API_TOKEN: undefined });
   assert.equal(environment.CLOUDFLARE_API_TOKEN, undefined);
 });

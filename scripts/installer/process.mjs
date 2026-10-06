@@ -63,7 +63,10 @@ export function runCommand(executable, args, {
       killTimer.unref();
     };
     const abort = () => stop('操作已取消');
-    const timer = setTimeout(() => stop('工具執行逾時'), timeoutMs);
+    const timer = setTimeout(() => {
+      stop('工具執行逾時');
+      if (failure) failure.timedOut = true;
+    }, timeoutMs);
     timer.unref();
     signal?.addEventListener('abort', abort, { once: true });
     const finish = (error, exitCode) => {

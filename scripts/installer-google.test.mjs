@@ -49,12 +49,14 @@ async function setup(t, overrides = {}) {
   };
   let interceptor;
   let account = 'operator@example.invalid';
+  let tokenStderr;
   const command = async (file, args) => {
     state.commands.push({ file, args });
     assert.equal(file, 'gcloud');
     if (args[0] === 'config') return { stdout: '{}', stderr: '' };
     if (args[1] === 'list') return { stdout: JSON.stringify([{ account, status: 'ACTIVE' }]), stderr: '' };
     assert.deepEqual(args, ['auth', 'print-access-token', `--account=${account}`, '--quiet']);
+    if (tokenStderr !== undefined) throw Object.assign(new Error('必要工具未成功完成'), { stderr: tokenStderr });
     return { stdout: 'never-log-this-google-token\n', stderr: '' };
   };
   const fetchImpl = async (url, init) => {
@@ -192,7 +194,7 @@ async function setup(t, overrides = {}) {
     assert.fail(`Unexpected offline API call: ${init.method} ${host}${pathname}`);
   };
   const adapter = createGoogleInstaller({ fetchImpl, command, delay: async (ms) => state.delays.push(ms), now: () => fixedNow, ...overrides });
-  return { adapter, context, state, setInterceptor: (fn) => { interceptor = fn; }, setAccount: (value) => { account = value; },
+  return { adapter, context, state, setInterceptor: (fn) => { interceptor = fn; }, setAccount: (value) => { account = value; }, setTokenStderr: (value) => { tokenStderr = value; },
     through: async (last) => { for (const step of steps.slice(0, steps.indexOf(last) + 1)) await adapter.execute(step, context); } };
 }
 
@@ -603,18 +605,35 @@ test('connecting Google asks Cloud Shell to authorize the wizard configuration o
       calls.push({ args, timeoutMs: options?.timeoutMs });
       if (args[0] === 'config') return { stdout: '{}' };
       if (args[1] === 'list') return { stdout: JSON.stringify(authorized ? [{ account: 'Person@Example.invalid', status: 'ACTIVE' }] : []) };
-      assert.deepEqual(args, ['auth', 'print-access-token', '--quiet']);
+      assert.equal(args[1], 'print-access-token');
       authorized = true;
       return { stdout: 'discarded-token\n' };
     },
     authorizeTimeoutMs: 1234,
   });
   assert.deepEqual(await adapter.authorize(), { email: 'person@example.invalid' });
-  assert.equal(calls.filter((call) => call.args[1] === 'print-access-token').length, 1);
-  assert.equal(calls.find((call) => call.args[1] === 'print-access-token').timeoutMs, 1234);
+  const tokens = () => calls.filter((call) => call.args[1] === 'print-access-token');
+  assert.deepEqual(tokens().map((call) => [call.args, call.timeoutMs]), [[['auth', 'print-access-token', '--quiet'], 1234]]);
+  // Already listed: the token request proves the credentials still work.
   calls.length = 0;
   assert.deepEqual(await adapter.authorize(), { email: 'person@example.invalid' });
-  assert.equal(calls.some((call) => call.args[1] === 'print-access-token'), false);
+  assert.deepEqual(tokens().map((call) => call.args), [['auth', 'print-access-token', '--account=person@example.invalid', '--quiet']]);
+});
+
+// The 4-second failures in the field: listed, but the credentials are gone.
+test('connecting Google reports a listed account whose credentials no longer work', async () => {
+  const adapter = createGoogleInstaller({
+    fetchImpl: () => assert.fail('no network'),
+    command: async (file, args) => {
+      if (args[0] === 'config') return { stdout: '{}' };
+      if (args[1] === 'list') return { stdout: JSON.stringify([{ account: 'person@example.invalid', status: 'ACTIVE' }]) };
+      throw Object.assign(new Error('必要工具未成功完成'), {
+        stderr: 'ERROR: (gcloud.auth.print-access-token) Your current active account [person@example.invalid] does not have any valid credentials\nPlease run:\n\n  $ gcloud auth login\n',
+      });
+    },
+  });
+  await assert.rejects(adapter.authorize(), (err) => err.code === 'GOOGLE_AUTH_REQUIRED' && /重新啟動/.test(err.message) &&
+    /原因：Your current active account \[person@example\.invalid\] does not have any valid credentials$/.test(err.message));
 });
 
 test('an untrusted (ephemeral) Cloud Shell explains how to leave ephemeral mode', async (t) => {
@@ -642,6 +661,53 @@ test('a declined Cloud Shell authorization explains how to retry', async () => {
     },
   });
   await assert.rejects(adapter.authorize(), (err) => err.code === 'GOOGLE_AUTH_REQUIRED' && /Authorize/.test(err.message));
+});
+
+// gcloud's stderr decides which step to show; its first ERROR line is shown too.
+test('a failed Cloud Shell token says what to do for each kind of gcloud error', async () => {
+  const failing = (stderr, extra = {}) => createGoogleInstaller({
+    fetchImpl: () => assert.fail('no network'),
+    command: async (file, args) => {
+      if (args[0] === 'config') return { stdout: '{}' };
+      if (args[1] === 'list') return { stdout: '[]' };
+      throw Object.assign(new Error('必要工具未成功完成'), { stderr, ...extra });
+    },
+    authorizeTimeoutMs: 3 * 60_000,
+  });
+  const cases = [
+    ['ERROR: (gcloud.auth.print-access-token) There was a problem refreshing your current auth tokens: Reauthentication failed. cannot prompt during non-interactive execution.\nPlease run:\n\n  $ gcloud auth login\n',
+      'GOOGLE_REAUTH_REQUIRED', /gcloud auth login[\s\S]*原因：There was a problem refreshing your current auth tokens: Reauthentication failed/],
+    ['ERROR: (gcloud.auth.print-access-token) There was a problem refreshing your current auth tokens: (\'invalid_grant: reauth related error (invalid_rapt)\', ...)\n',
+      'GOOGLE_REAUTH_REQUIRED', /重新確認你的身分/],
+    ['ERROR: (gcloud.auth.print-access-token) There was a problem refreshing your current auth tokens: access_denied: Account restricted by your administrator (admin_policy_enforced)\n',
+      'GOOGLE_ORG_POLICY', /個人 Gmail/],
+    ['ERROR: (gcloud.auth.print-access-token) There was a problem refreshing your current auth tokens: access_denied\n\nAccess was blocked by Context Aware Access. If you are using gcloud on a ...\n',
+      'GOOGLE_ORG_POLICY', /個人 Gmail/],
+    ['ERROR: (gcloud.auth.print-access-token) There was a problem refreshing your current auth tokens: Failed to retrieve http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token from the Google Compute Engine metadata service. Status: 401 Response:\nb\'{"error":"reauth needed"}\'\n',
+      'GOOGLE_AUTH_REQUIRED', /重新啟動[\s\S]*原因：.*metadata/],
+    ['ERROR: (gcloud.auth.print-access-token) You do not currently have an active account selected.\n',
+      'GOOGLE_AUTH_REQUIRED', /^Cloud Shell 目前沒有可用的 Google 授權。.*重新啟動[\s\S]*原因：You do not currently have an active account selected\./],
+    ['', 'GOOGLE_AUTH_REQUIRED', /^Cloud Shell 沒有完成 Google 授權。.*Authorize.*一直不行的話.*重新啟動[^\n]*$/],
+  ];
+  for (const [stderr, code, message] of cases) {
+    await assert.rejects(failing(stderr).authorize(), (err) => err.code === code && message.test(err.message), stderr);
+  }
+  await assert.rejects(failing('', { timedOut: true }).authorize(), (err) => /^等了 3 分鐘/.test(err.message));
+  await assert.rejects(failing(`ERROR: (gcloud.auth.print-access-token) odd ya29.a0AfH6SMBsecret ${'x'.repeat(50)}\n`).authorize(),
+    (err) => !/ya29\.a0|x{40}/.test(err.message) && /原因：odd …/.test(err.message));
+});
+
+// Mid-run there is no 「連接 Google」 button to press: the advice restarts Cloud Shell instead.
+test('a step that cannot get a token says what to do without pointing at the connect button', async (t) => {
+  const h = await setup(t);
+  h.setTokenStderr('ERROR: (gcloud.auth.print-access-token) Your current active account [operator@example.invalid] does not have any valid credentials\n');
+  await assert.rejects(h.adapter.execute('google-project', h.context), (err) => err.code === 'GOOGLE_AUTH_REQUIRED' &&
+    /^Cloud Shell 目前沒有可用的 Google 授權。.*重新啟動/.test(err.message) && !/連接 Google/.test(err.message) && /原因：Your current active account/.test(err.message));
+  h.setTokenStderr('ERROR: (gcloud.auth.print-access-token) There was a problem refreshing your current auth tokens: Reauthentication failed. cannot prompt during non-interactive execution.\n');
+  await rejectsCode(h.adapter.execute('google-project', h.context), 'GOOGLE_REAUTH_REQUIRED');
+  h.setTokenStderr('ERROR: (gcloud.auth.print-access-token) something new\n');
+  await assert.rejects(h.adapter.execute('google-project', h.context), (err) => /^無法取得 Google 短期授權。.*重新啟動/.test(err.message) && !/連接 Google/.test(err.message));
+  assert.equal(h.state.requests.length, 0);
 });
 
 test('every step rejects a changed Google account and project ownership before mutation', async (t) => {

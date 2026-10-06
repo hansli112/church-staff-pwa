@@ -41,6 +41,44 @@ export class ActionRequired extends Error {
 }
 
 function stop(code, message) { throw new ActionRequired(code, message); }
+
+const RETRY_AUTHORIZE = '請按「連接 Google」再試一次，接著立刻切到 Cloud Shell 分頁，在「Authorize Cloud Shell」視窗按 Authorize 並選擇這次要用的 Google 帳號。';
+const RESTART_CLOUD_SHELL = '請切到 Cloud Shell 分頁，按右上角的「⋮」→「重新啟動」，出現「Authorize Cloud Shell」就按 Authorize 並選擇這次要用的 Google 帳號，' +
+  '再按一次教學裡啟動精靈的指令卡，進度不會遺失。還是不行的話，在 Cloud Shell 按 Ctrl+C 停掉精靈，輸入 gcloud auth login 後按 Enter，照畫面登入同一個帳號，再啟動精靈。';
+
+// Turns gcloud's refusal to hand out a token into a step the church can take,
+// and always throws. Only gcloud's ERROR line is matched (later lines may echo
+// a server response) and shown: it is what a helper needs from a screenshot,
+// and it never holds the token. [waitMs] is how long connecting waited for
+// someone to press Authorize; it is unset during a run.
+function gcloudAuthFailure(error, { waitMs } = {}) {
+  const lines = String(error?.stderr ?? '').split('\n').map((text) => text.trim()).filter(Boolean);
+  const line = lines.find((text) => text.startsWith('ERROR:')) ?? lines[0] ?? '';
+  const reason = line.replace(/^ERROR:\s*(?:\([^)]*\)\s*)?/, '').replace(/ya29\.[\w.-]+|[\w-]{40,}/g, '…').slice(0, 300);
+  const detail = reason ? `\n\nGoogle 回報的原因：${reason}` : '';
+  if (/reauth|invalid_rapt/i.test(reason)) {
+    stop('GOOGLE_REAUTH_REQUIRED', 'Google 要求重新確認你的身分（學校或公司帳號常有這種安全設定）。請切到 Cloud Shell 分頁，按 Ctrl+C 停掉精靈，' +
+      '輸入 gcloud auth login 後按 Enter（問要不要繼續就輸入 Y），照畫面打開連結、登入同一個 Google 帳號並允許，再把網頁上的驗證碼貼回 Cloud Shell 按 Enter。' +
+      `完成後再按一次教學裡啟動精靈的指令卡，進度不會遺失。${detail}`);
+  }
+  // gcloud adds the Context Aware Access explanation on a later line.
+  if (/admin_policy_enforced/i.test(reason) || lines.some((text) => /Context Aware Access/i.test(text))) {
+    stop('GOOGLE_ORG_POLICY', '這個 Google 帳號屬於學校或公司，管理員的安全政策不允許在 Cloud Shell 使用。請改用個人 Gmail 安裝：' +
+      `關掉 Cloud Shell，在 Google 右上角頭像切換成個人帳號，再重新打開安裝教學。${detail}`);
+  }
+  if (waitMs && error?.timedOut) {
+    stop('GOOGLE_AUTH_REQUIRED', `等了 ${Math.round(waitMs / 60_000)} 分鐘都沒有收到 Cloud Shell 授權。${RETRY_AUTHORIZE}`);
+  }
+  // No account, an account without credentials, or Cloud Shell's own token
+  // service refusing: Cloud Shell has lost (or never got) its authorization.
+  if (/do not currently have an active account|does not have any valid credentials|metadata|Failed to retrieve|Connection (?:reset|refused|aborted)|Temporary failure|Network is unreachable/i.test(reason)) {
+    stop('GOOGLE_AUTH_REQUIRED', `Cloud Shell 目前沒有可用的 Google 授權。${RESTART_CLOUD_SHELL}${detail}`);
+  }
+  stop('GOOGLE_AUTH_REQUIRED', waitMs
+    ? `Cloud Shell 沒有完成 Google 授權。${RETRY_AUTHORIZE}一直不行的話：${RESTART_CLOUD_SHELL}${detail}`
+    : `無法取得 Google 短期授權。${RESTART_CLOUD_SHELL}${detail}`);
+}
+
 function conflict(message = '雲端資源已存在或被其他操作變更；為避免接管既有站，已停止。請核對本次安裝紀錄。') {
   stop('GOOGLE_RESOURCE_CONFLICT', message);
 }
@@ -133,9 +171,9 @@ function openStepSession(context, { fetchImpl, command, delay, now, inspectIdent
     }
     try {
       token = (await command('gcloud', ['auth', 'print-access-token', `--account=${identity.email}`, '--quiet'], { signal })).stdout.trim();
-    } catch {
+    } catch (error) {
       signal?.throwIfAborted();
-      stop('GOOGLE_AUTH_REQUIRED', '無法取得 Google 短期授權；請重新完成 Cloud Shell 官方授權。');
+      gcloudAuthFailure(error);
     }
     if (!token || /\s/.test(token)) stop('GOOGLE_AUTH_REQUIRED', 'Google 短期授權無效；請重新完成官方授權。');
     checkedAt = now();
@@ -1040,19 +1078,23 @@ export function createGoogleInstaller({
   // Cloud Shell shows its official "Authorize Cloud Shell" prompt when this
   // wizard's own gcloud first asks for a token, so the credential lands in the
   // configuration the wizard reads (a second terminal tab has another one).
+  // A listed account can still hold expired credentials, so a token is asked
+  // for every time: the failure shows here, not at the first install step.
   // The token is discarded; only the identity check result is kept.
   async function authorize({ signal } = {}) {
-    try { return await inspectIdentity({ signal }); }
+    let identity;
+    try { identity = await inspectIdentity({ signal }); }
     catch (error) { if (error.code !== 'GOOGLE_AUTH_REQUIRED' || signal?.aborted) throw error; }
-    if (process.env.TRUSTED_ENVIRONMENT === 'false') {
+    if (!identity && process.env.TRUSTED_ENVIRONMENT === 'false') {
       stop('GOOGLE_AUTH_REQUIRED', '這個 Cloud Shell 是「暫時模式」，沒有你的 Google 授權。按 Cloud Shell 右上角的「⋮」，點選單裡打勾的「暫時模式」，再按「停用」。Cloud Shell 重新啟動並請你按「授權」後，回到安裝說明頁重新按「Open in Cloud Shell」，勾選「信任存放區」再照教學做。精靈會重新開始，尚未建立任何雲端資源。');
     }
-    try { await command('gcloud', ['auth', 'print-access-token', '--quiet'], { signal, timeoutMs: authorizeTimeoutMs }); }
-    catch {
+    const account = identity ? [`--account=${identity.email}`] : [];
+    try { await command('gcloud', ['auth', 'print-access-token', ...account, '--quiet'], { signal, timeoutMs: authorizeTimeoutMs }); }
+    catch (error) {
       signal?.throwIfAborted();
-      stop('GOOGLE_AUTH_REQUIRED', 'Cloud Shell 沒有完成 Google 授權。請按「連接 Google」再試一次，接著立刻切到 Cloud Shell 分頁，在「Authorize Cloud Shell」視窗按 Authorize 並選擇這次要用的 Google 帳號。');
+      gcloudAuthFailure(error, { waitMs: authorizeTimeoutMs });
     }
-    return inspectIdentity({ signal });
+    return identity ?? inspectIdentity({ signal });
   }
 
   async function executeStep(step, context) {
