@@ -90,6 +90,8 @@ scripts/deploy.sh prod --only hosting  # 只更新網頁
 
 - 專案取自 `app/config/<env>.json`，所以 dev 的 Web build 不會部署到 prod。
 - 新專案第一次部署 Functions，常因 Eventarc 權限還沒生效而失敗。腳本會等 3 分鐘重試一次。
+- `playBillingNotifications` 失敗會自動重試，第一次部署到某個專案時，Firebase CLI 要確認這件事，非互動模式會停下來。先單獨部署它一次：`scripts/firebase.sh <專案> deploy --only functions:playBillingNotifications --non-interactive --force`，再跑 `deploy.sh`。不要直接給 `deploy.sh` 加 `--force`：它也會刪掉程式碼裡沒有的 Functions。
+- Functions 的套件（Firestore SDK 等）要 Node 22 以上才會裝。用 ssh 在別台機器執行時，先載入 nvm 選 Node 22+，否則 `npm ci` 會略過這些套件，部署時 TypeScript 編譯失敗。
 - 部署後設定 Functions 舊映像的清理規則，不然每月會有一點費用。映像庫第一次部署後才存在，所以放在這裡。
 - rules 和 indexes 由 `firebase-project.sh` 部署，或 `scripts/firebase.sh <id> deploy --only firestore,storage`。
 
