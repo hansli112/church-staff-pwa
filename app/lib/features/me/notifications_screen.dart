@@ -60,8 +60,10 @@ class NotificationsScreen extends ConsumerWidget {
                   title: l10n.notifEnable,
                   leading: const Icon(Icons.notifications_active_outlined),
                   onTap: () async {
-                    await ref.read(pushServiceProvider).enable();
+                    final result = await ref.read(pushServiceProvider).enable();
                     ref.invalidate(pushPermissionProvider);
+                    // Dismissed, or tucked into the address bar by the browser.
+                    if (result == PushPermission.notAsked && context.mounted) showToast(context, l10n.notifNotAllowed);
                   },
                 ),
               ],

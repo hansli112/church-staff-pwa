@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../state/push.dart';
+import 'push_clicks.dart';
 
 /// FCM on this device. Each device keeps its own token at
 /// users/{uid}.fcm.{deviceId}, readable only by the owner and the backend
@@ -88,11 +89,25 @@ class FirebasePushService implements PushService {
     final initial = await _messaging.getInitialMessage();
     final first = initial?.data['link'];
     if (first is String) yield first;
+    if (kIsWeb) {
+      yield* webNotificationClicks();
+      return;
+    }
     await for (final m in FirebaseMessaging.onMessageOpenedApp) {
       final link = m.data['link'];
       if (link is String) yield link;
     }
   }
+
+  @override
+  Stream<PushNotice> get foreground => FirebaseMessaging.onMessage.map((m) {
+    final link = m.data['link'];
+    return PushNotice(
+      title: m.notification?.title ?? '',
+      body: m.notification?.body ?? '',
+      link: link is String ? link : null,
+    );
+  });
 
   @override
   Future<void> unregister(String uid) async {

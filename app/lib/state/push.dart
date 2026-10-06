@@ -23,6 +23,21 @@ abstract interface class PushService {
   /// App routes from notifications the user tapped, including the one that
   /// launched the app.
   Stream<String> get openedLinks;
+
+  /// Notifications that arrive while the app is open in front. The system
+  /// does not show these, so the app does.
+  Stream<PushNotice> get foreground;
+}
+
+/// A notification received while the app is open.
+class PushNotice {
+  const PushNotice({required this.title, required this.body, this.link});
+
+  final String title;
+  final String body;
+
+  /// App route to open, as in [PushService.openedLinks].
+  final String? link;
 }
 
 class NoPush implements PushService {
@@ -42,6 +57,9 @@ class NoPush implements PushService {
 
   @override
   Stream<String> get openedLinks => const Stream.empty();
+
+  @override
+  Stream<PushNotice> get foreground => const Stream.empty();
 }
 
 /// Overridden in main() with the Firebase implementation.
@@ -53,3 +71,5 @@ final pushPermissionProvider = FutureProvider<PushPermission>((ref) {
 });
 
 final pushLinksProvider = StreamProvider<String>((ref) => ref.watch(pushServiceProvider).openedLinks);
+
+final pushNoticesProvider = StreamProvider<PushNotice>((ref) => ref.watch(pushServiceProvider).foreground);

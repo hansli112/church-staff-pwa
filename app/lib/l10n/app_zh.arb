@@ -484,6 +484,8 @@
   "notifThisChurch": "這間教會的通知",
   "notifPermissionOff": "通知被關掉了，請到系統設定打開",
   "notifEnable": "開啟通知",
+  "notifNotAllowed": "通知還沒開。瀏覽器問要不要允許時，請按「允許」",
+  "pushView": "查看",
   "zoneSwitch": "負責這個聚會",
   "photoImport": "照片匯入",
   "photoRemaining": "這個月還可以辨識 {count} 張",

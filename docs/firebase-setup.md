@@ -105,6 +105,10 @@ scripts/as-owner.sh marthasit-dev npx --prefix functions tsx functions/scripts/g
 
 `firebase-messaging-sw.js` 只在 Hosting 上能用（要讀 `/__/firebase/init.js`）。用 `flutter run` 在本機跑時，網頁推播不會註冊成功，這是預期的。
 
+網頁推播的顯示規則寫在這個檔案裡：app 的分頁正在使用（有 focus）時，交給 app 用 toast 顯示；其他情況一律顯示系統通知。不照 Firebase SDK 原本「分頁看得見就不顯示」的規則，否則分頁被別的視窗擋住時，Chrome 會另外跳一則「This site has been updated in the background」。點通知時如果已經有分頁開著，SDK 只會切到那個分頁並傳訊息給它，導頁由 app 處理（`push_clicks_web.dart`）。
+
+用 Playwright 接著瀏覽器測推播時，頁面會一直被當成在前景，要先斷開連線，才能測背景通知。
+
 - Hosting 設定忽略 `**/.*`，`.well-known` 會被擋掉，要在 `firebase.json` 的 `ignore` 例外放行。
 - **Android**：`AndroidManifest.xml` 的 intent filter 是 `pathPrefix="/c/"`。Web build 要提供 `/.well-known/assetlinks.json`，內容包含簽章憑證的 SHA-256。
   - 取得 SHA-256：`keytool -list -v -keystore <keystore>`。

@@ -19,4 +19,13 @@ void main() {
     await settle(tester);
     expect(find.byType(NavigationBar), findsOneWidget);
   });
+
+  testWidgets('a desktop-wide window keeps the app a readable width', (tester) async {
+    await pumpApp(tester, demoBackend(today: testToday));
+    tester.view.physicalSize = const Size(1440 * 3, 900 * 3);
+    await settle(tester);
+
+    expect(tester.getSize(find.byType(NavigationBar)).width, 640);
+    expect(tester.getCenter(find.byType(NavigationBar)).dx, 720, reason: 'centred');
+  });
 }

@@ -814,6 +814,12 @@ class L10nZh extends L10n {
   String get notifEnable => '開啟通知';
 
   @override
+  String get notifNotAllowed => '通知還沒開。瀏覽器問要不要允許時，請按「允許」';
+
+  @override
+  String get pushView => '查看';
+
+  @override
   String get zoneSwitch => '負責這個聚會';
 
   @override

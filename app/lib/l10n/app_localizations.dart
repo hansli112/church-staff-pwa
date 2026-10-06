@@ -1573,6 +1573,18 @@ abstract class L10n {
   /// **'開啟通知'**
   String get notifEnable;
 
+  /// No description provided for @notifNotAllowed.
+  ///
+  /// In zh, this message translates to:
+  /// **'通知還沒開。瀏覽器問要不要允許時，請按「允許」'**
+  String get notifNotAllowed;
+
+  /// No description provided for @pushView.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看'**
+  String get pushView;
+
   /// No description provided for @zoneSwitch.
   ///
   /// In zh, this message translates to:
