@@ -286,7 +286,7 @@ class L10nZh extends L10n {
   String get noServicesConfigured => '還沒有設定聚會';
 
   @override
-  String get setUpServices => '設定聚會';
+  String get setUpServices => '服事設定';
 
   @override
   String get noRostersAhead => '接下來沒有聚會';

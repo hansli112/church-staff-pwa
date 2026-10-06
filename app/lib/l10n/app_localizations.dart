@@ -616,7 +616,7 @@ abstract class L10n {
   /// No description provided for @setUpServices.
   ///
   /// In zh, this message translates to:
-  /// **'設定聚會'**
+  /// **'服事設定'**
   String get setUpServices;
 
   /// No description provided for @noRostersAhead.
