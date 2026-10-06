@@ -95,7 +95,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       page(
         '/admin',
         (_) => const AdminScreen(),
-        routes: [page('stats', (_) => const AdminStatsScreen())],
+        routes: [
+          page('stats', (_) => const AdminStatsScreen()),
+          page('funding', (_) => const AdminFundingScreen()),
+        ],
       ),
       if (Env.current.isDevelopment) page('/dev/components', (_) => const ComponentGallery()),
       StatefulShellRoute.indexedStack(

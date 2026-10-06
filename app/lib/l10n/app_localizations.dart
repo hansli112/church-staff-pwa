@@ -1912,7 +1912,7 @@ abstract class L10n {
   /// No description provided for @supportBody.
   ///
   /// In zh, this message translates to:
-  /// **'馬大別忙免費給每間教會使用。支持是自願的，不會多出任何功能'**
+  /// **'馬大別忙免費給每間教會使用，雲端費用由大家一起分擔：大的扶持小的，有餘的補不足的。支持是自願的，不會多出任何功能'**
   String get supportBody;
 
   /// No description provided for @supportTips.
@@ -2634,6 +2634,150 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'已合併'**
   String get merged;
+
+  /// No description provided for @fundingTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'這個月的雲端費用'**
+  String get fundingTitle;
+
+  /// No description provided for @fundingProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'{available} / {target}'**
+  String fundingProgress(String available, String target);
+
+  /// No description provided for @fundingEnough.
+  ///
+  /// In zh, this message translates to:
+  /// **'這個月已經足夠'**
+  String get fundingEnough;
+
+  /// No description provided for @fundingMonthsLeft.
+  ///
+  /// In zh, this message translates to:
+  /// **'這個月已經足夠，多的還能再維持 {months} 個月'**
+  String fundingMonthsLeft(int months);
+
+  /// No description provided for @fundingCarried.
+  ///
+  /// In zh, this message translates to:
+  /// **'含前幾個月留下的 {amount}'**
+  String fundingCarried(String amount);
+
+  /// No description provided for @fundingCosts.
+  ///
+  /// In zh, this message translates to:
+  /// **'雲端費用'**
+  String get fundingCosts;
+
+  /// No description provided for @fundingTarget.
+  ///
+  /// In zh, this message translates to:
+  /// **'每月目標 {amount}'**
+  String fundingTarget(String amount);
+
+  /// No description provided for @fundingCostsHeader.
+  ///
+  /// In zh, this message translates to:
+  /// **'費用'**
+  String get fundingCostsHeader;
+
+  /// No description provided for @fundingCostsFooter.
+  ///
+  /// In zh, this message translates to:
+  /// **'價格變了再改。每年的項目平均分到每個月'**
+  String get fundingCostsFooter;
+
+  /// No description provided for @fundingMonthsHeader.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近幾個月'**
+  String get fundingMonthsHeader;
+
+  /// No description provided for @fundingMonthValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'{received} / {target}'**
+  String fundingMonthValue(String received, String target);
+
+  /// No description provided for @costAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'新增項目'**
+  String get costAdd;
+
+  /// No description provided for @costEdit.
+  ///
+  /// In zh, this message translates to:
+  /// **'費用項目'**
+  String get costEdit;
+
+  /// No description provided for @costName.
+  ///
+  /// In zh, this message translates to:
+  /// **'名稱'**
+  String get costName;
+
+  /// No description provided for @costAmount.
+  ///
+  /// In zh, this message translates to:
+  /// **'金額'**
+  String get costAmount;
+
+  /// No description provided for @costPerMonth.
+  ///
+  /// In zh, this message translates to:
+  /// **'每月'**
+  String get costPerMonth;
+
+  /// No description provided for @costPerYear.
+  ///
+  /// In zh, this message translates to:
+  /// **'每年'**
+  String get costPerYear;
+
+  /// No description provided for @costValueMonth.
+  ///
+  /// In zh, this message translates to:
+  /// **'{amount}・每月'**
+  String costValueMonth(String amount);
+
+  /// No description provided for @costValueYear.
+  ///
+  /// In zh, this message translates to:
+  /// **'{amount}・每年'**
+  String costValueYear(String amount);
+
+  /// No description provided for @moneyTwd.
+  ///
+  /// In zh, this message translates to:
+  /// **'NT\${amount}'**
+  String moneyTwd(String amount);
+
+  /// No description provided for @moneyUsd.
+  ///
+  /// In zh, this message translates to:
+  /// **'US\${amount}'**
+  String moneyUsd(String amount);
+
+  /// No description provided for @currencyTwd.
+  ///
+  /// In zh, this message translates to:
+  /// **'NT\$'**
+  String get currencyTwd;
+
+  /// No description provided for @currencyUsd.
+  ///
+  /// In zh, this message translates to:
+  /// **'US\$'**
+  String get currencyUsd;
+
+  /// No description provided for @fundingRatesBy.
+  ///
+  /// In zh, this message translates to:
+  /// **'匯率：Exchange Rate API'**
+  String get fundingRatesBy;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

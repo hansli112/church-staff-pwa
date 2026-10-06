@@ -98,6 +98,23 @@ Hosting 部署前，會把 landing page 和法律文件複製進 Web build：
 - `/privacy`
 - `/terms`
 
+## 雲端費用進度（商店付款通知）
+
+支持頁的進度條由後端自動加總收入。平台營運者只在「平台後台」→ 存錢筒圖示裡填費用清單，價格變了才需要改。每天 00:10（台北時間）`fundingDaily` 會開新的月份、更新匯率。
+
+- **Apple**（要先付年費，#38）：
+  1. App Store Connect → App 資訊 →「App Store 伺服器通知」選 Version 2：
+     - 正式環境網址：`https://asia-east1-marthasit.cloudfunctions.net/appStoreNotifications`
+     - 沙盒網址：`https://asia-east1-marthasit-dev.cloudfunctions.net/appStoreNotifications`。TestFlight 和沙盒的付款只會進 dev。prod 會拒收 sandbox 通知，dev 也會拒收正式環境的，網址設反了不會把測試的錢算進去。
+  2. 把 App Store Connect 上的 Apple ID（一串數字）填進 `functions/src/funding.ts` 的 `APPLE_APP_ID`，再部署 prod。沒填的話，正式環境的通知驗證會失敗，Apple 會一直重送。
+  3. 加入 App Store Small Business Program，抽成才是 15%。收入估算用的是 15%。
+- **Google Play**（Play Console 建好 App 之後）：
+  1. 部署 prod 時會自動建立 Pub/Sub 主題 `play-billing`。在 GCP console 把 `google-play-developer-notifications@system.gserviceaccount.com` 加成這個主題的「Pub/Sub 發布者」。
+  2. Play Console →「營利設定」→「即時開發人員通知」，主題填 `projects/marthasit/topics/play-billing`，按「傳送測試通知」。
+  3. Play Console →「使用者和權限」邀請 Functions 的服務帳號（`<專案編號>-compute@developer.gserviceaccount.com`），權限勾「查看財務資料」。查訂單（`orders.get`）要這個權限。
+  - 一個 App 只能設一個主題，所以 Google 的通知只進 prod。授權測試帳號的購買會被略過，不算進收入。
+- 匯率來自 `open.er-api.com`，每天抓一次，抓不到就沿用上次的匯率（超過 7 天會記錯誤 log）。免費方案要求在用到匯率的頁面註明來源，支持頁已加上。
+
 ## 平台營運者
 
 ```sh

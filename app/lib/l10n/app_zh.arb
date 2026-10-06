@@ -575,7 +575,7 @@
   "calNextMonth": "下個月",
   "calendarSetting": "行事曆",
   "support": "支持馬大別忙",
-  "supportBody": "馬大別忙免費給每間教會使用。支持是自願的，不會多出任何功能",
+  "supportBody": "馬大別忙免費給每間教會使用，雲端費用由大家一起分擔：大的扶持小的，有餘的補不足的。支持是自願的，不會多出任何功能",
   "supportTips": "一次性支持",
   "supportMonthly": "每月支持",
   "supportRestore": "恢復購買",
@@ -799,5 +799,98 @@
     }
   },
   "mergePendingAction": "合併",
-  "merged": "已合併"
+  "merged": "已合併",
+  "fundingTitle": "這個月的雲端費用",
+  "fundingProgress": "{available} / {target}",
+  "@fundingProgress": {
+    "placeholders": {
+      "available": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "fundingEnough": "這個月已經足夠",
+  "fundingMonthsLeft": "這個月已經足夠，多的還能再維持 {months} 個月",
+  "@fundingMonthsLeft": {
+    "placeholders": {
+      "months": {
+        "type": "int"
+      }
+    }
+  },
+  "fundingCarried": "含前幾個月留下的 {amount}",
+  "@fundingCarried": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "fundingCosts": "雲端費用",
+  "fundingTarget": "每月目標 {amount}",
+  "@fundingTarget": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "fundingCostsHeader": "費用",
+  "fundingCostsFooter": "價格變了再改。每年的項目平均分到每個月",
+  "fundingMonthsHeader": "最近幾個月",
+  "fundingMonthValue": "{received} / {target}",
+  "@fundingMonthValue": {
+    "placeholders": {
+      "received": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "costAdd": "新增項目",
+  "costEdit": "費用項目",
+  "costName": "名稱",
+  "costAmount": "金額",
+  "costPerMonth": "每月",
+  "costPerYear": "每年",
+  "costValueMonth": "{amount}・每月",
+  "@costValueMonth": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "costValueYear": "{amount}・每年",
+  "@costValueYear": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "moneyTwd": "NT${amount}",
+  "@moneyTwd": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "moneyUsd": "US${amount}",
+  "@moneyUsd": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "currencyTwd": "NT$",
+  "currencyUsd": "US$",
+  "fundingRatesBy": "匯率：Exchange Rate API"
 }

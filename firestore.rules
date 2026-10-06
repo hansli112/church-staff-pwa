@@ -274,6 +274,13 @@ service cloud.firestore {
       allow read: if isSignedIn() && request.auth.token.operator == true;
     }
 
+    // 雲端費用進度: the summary everyone signed in sees on the support page.
+    // Functions write it; the cost list (platform/fundingCosts), months
+    // (fundingMonths) and payments (fundingPayments) stay backend-only.
+    match /platform/funding {
+      allow read: if isSignedIn();
+    }
+
     // churchNames/{nameKey} (name reservations), linkSources/{cid} (the
     // church link fetch schedule), webhookSecrets/{cid}, webhookOutbox/{cid}
     // (roster changes waiting to go out), pendingIndex/{email hash} (who has

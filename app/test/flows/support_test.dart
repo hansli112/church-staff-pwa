@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/app.dart';
+import 'package:martha/data/backend.dart';
+import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/state/support.dart';
 
 import '../support/harness.dart';
@@ -46,14 +48,19 @@ class FakeIcons implements AppIconSwitcher {
   Future<void> set(String? name) async => icon = name;
 }
 
-Future<void> pumpWithStore(WidgetTester tester, SupportStore store, AppIconSwitcher icons) async {
+Future<void> pumpWithStore(
+  WidgetTester tester,
+  SupportStore store,
+  AppIconSwitcher icons, {
+  MemoryBackend? backend,
+}) async {
   tester.view.physicalSize = const Size(393 * 3, 852 * 3);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        ...await testOverrides(seededChurch(as: staffMei)),
+        ...await testOverrides(backend ?? seededChurch(as: staffMei)),
         supportStoreProvider.overrideWithValue(store),
         appIconSwitcherProvider.overrideWithValue(icons),
       ],
@@ -97,5 +104,43 @@ void main() {
     expect(icons.icon, 'Purple');
     expect(store.bought, ['tip_small', 'supporter_monthly']);
     expect(find.text('支持者'), findsOneWidget);
+  });
+
+  group('this month\'s cloud costs', () {
+    Future<MemoryBackend> open(WidgetTester tester, Funding? funding) async {
+      final b = seededChurch(as: staffMei)..funding = funding;
+      await pumpWithStore(tester, FakeStore(), FakeIcons(), backend: b);
+      GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
+      await settle(tester);
+      return b;
+    }
+
+    testWidgets('what has come in against the target; a shortfall is not spelled out', (tester) async {
+      await open(tester, const Funding(month: '2026-10', target: 500, received: 220, carried: 80, monthsLeft: 0));
+      expect(find.text('這個月的雲端費用'), findsOneWidget);
+      expect(find.text('NT\$300 / NT\$500'), findsOneWidget);
+      expect(find.textContaining('還差'), findsNothing, reason: 'the platform operator covers a shortfall');
+      expect(find.text('這個月已經足夠'), findsNothing);
+      expect(find.text('含前幾個月留下的 NT\$80'), findsOneWidget);
+    });
+
+    testWidgets('a payment shows up while the page is open', (tester) async {
+      final b = await open(
+        tester,
+        const Funding(month: '2026-10', target: 500, received: 220, carried: 0, monthsLeft: 0),
+      );
+      b.funding = const Funding(month: '2026-10', target: 500, received: 1400, carried: 0, monthsLeft: 1);
+      b.notify();
+      await settle(tester);
+      expect(find.text('NT\$1,400 / NT\$500'), findsOneWidget);
+      expect(find.text('這個月已經足夠，多的還能再維持 1 個月'), findsOneWidget);
+    });
+
+    testWidgets('no costs set yet: nothing to show', (tester) async {
+      await open(tester, null);
+      expect(find.text('這個月的雲端費用'), findsNothing);
+      await open(tester, const Funding(month: '2026-10', target: 0, received: 50, carried: 0, monthsLeft: 0));
+      expect(find.text('這個月的雲端費用'), findsNothing);
+    });
   });
 }

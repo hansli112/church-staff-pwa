@@ -4,6 +4,9 @@ import { HttpsError, type FunctionsErrorCode } from 'firebase-functions/v2/https
 /** Region for every function, the same as Firestore. */
 export const REGION = 'asia-east1';
 
+/** The prod Firebase project (docs/firebase-setup.md); everything else is dev. */
+export const PROD_PROJECT = 'marthasit';
+
 /** The hosted web app. */
 export const appUrl = () => process.env.APP_URL ?? `https://${process.env.GCLOUD_PROJECT}.web.app`;
 

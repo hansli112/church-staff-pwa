@@ -61,6 +61,11 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
             icon: const Icon(Icons.insights),
             onPressed: () => context.push('/admin/stats'),
           ),
+          IconButton(
+            tooltip: l10n.fundingCosts,
+            icon: const Icon(Icons.savings_outlined),
+            onPressed: () => context.push('/admin/funding'),
+          ),
         ],
       ),
       body: Column(
@@ -408,4 +413,207 @@ class _TrendPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_TrendPainter old) => old.values != values || old.color != color;
+}
+
+final _fundingProvider = FutureProvider.autoDispose<FundingOverview>(
+  (ref) => ref.watch(backendProvider).cloud.adminFunding(),
+);
+
+String _costValue(L10n l10n, CostItem item) {
+  final amount = money(l10n, item.amount, item.currency);
+  return item.per == CostPeriod.year ? l10n.costValueYear(amount) : l10n.costValueMonth(amount);
+}
+
+/// The platform's costs, which set the monthly target on the support page.
+/// Only edited when a price changes; payments are counted by the backend.
+class AdminFundingScreen extends ConsumerWidget {
+  const AdminFundingScreen({super.key});
+
+  Future<void> _save(BuildContext context, WidgetRef ref, List<CostItem> items) async {
+    try {
+      await ref.read(backendProvider).cloud.adminSetFundingCosts(items);
+      ref.invalidate(_fundingProvider);
+    } catch (e) {
+      if (context.mounted) showToast(context, errorText(L10n.of(context), e));
+    }
+  }
+
+  Future<void> _edit(BuildContext context, WidgetRef ref, List<CostItem> costs, int? index) async {
+    final result = await showAppSheet<_CostEdit>(
+      context,
+      builder: (_) => _CostSheet(initial: index == null ? null : costs[index]),
+    );
+    if (result == null || !context.mounted) return;
+    final next = [...costs];
+    switch (result) {
+      case _SaveCost(:final item) when index == null:
+        next.add(item);
+      case _SaveCost(:final item):
+        next[index!] = item;
+      case _DeleteCost():
+        next.removeAt(index!);
+    }
+    await _save(context, ref, next);
+    if (result is _DeleteCost && context.mounted) {
+      showToast(context, L10n.of(context).deleted, onUndo: () => _save(context, ref, costs));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = L10n.of(context);
+    final overview = ref.watch(_fundingProvider);
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.fundingCosts)),
+      body: overview.when(
+        loading: () => const SizedBox.shrink(),
+        error: (e, _) => ErrorRetry(
+          message: errorText(l10n, e),
+          onRetry: () => ref.invalidate(_fundingProvider),
+        ),
+        data: (o) => ListView(
+          padding: const EdgeInsets.only(bottom: Space.xl),
+          children: [
+            if (o.funding case final f?)
+              ListSection(
+                children: [ListRow(title: l10n.fundingTarget(money(l10n, f.target)))],
+              ),
+            ListSection(
+              header: l10n.fundingCostsHeader,
+              footer: l10n.fundingCostsFooter,
+              children: [
+                for (final (i, item) in o.costs.indexed)
+                  ListRow(
+                    title: item.name,
+                    value: _costValue(l10n, item),
+                    onTap: () => _edit(context, ref, o.costs, i),
+                  ),
+                ListRow(
+                  title: l10n.costAdd,
+                  leading: const Icon(Icons.add),
+                  onTap: () => _edit(context, ref, o.costs, null),
+                ),
+              ],
+            ),
+            if (o.months.isNotEmpty)
+              ListSection(
+                header: l10n.fundingMonthsHeader,
+                children: [
+                  for (final m in o.months)
+                    ListRow(
+                      title: m.month,
+                      value: l10n.fundingMonthValue(money(l10n, m.received), money(l10n, m.target)),
+                    ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// What the cost sheet closed with.
+sealed class _CostEdit {}
+
+class _SaveCost extends _CostEdit {
+  _SaveCost(this.item);
+
+  final CostItem item;
+}
+
+class _DeleteCost extends _CostEdit {}
+
+class _CostSheet extends StatefulWidget {
+  const _CostSheet({this.initial});
+
+  final CostItem? initial;
+
+  @override
+  State<_CostSheet> createState() => _CostSheetState();
+}
+
+class _CostSheetState extends State<_CostSheet> {
+  late final _name = TextEditingController(text: widget.initial?.name ?? '');
+  late final _amount = TextEditingController(text: widget.initial == null ? '' : '${widget.initial!.amount}');
+  late Currency _currency = widget.initial?.currency ?? Currency.twd;
+  late CostPeriod _per = widget.initial?.per ?? CostPeriod.month;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _amount.dispose();
+    super.dispose();
+  }
+
+  CostItem? get _item {
+    final name = _name.text.trim();
+    final amount = num.tryParse(_amount.text.trim());
+    if (name.isEmpty || amount == null || amount <= 0) return null;
+    return CostItem(name: name, amount: amount, currency: _currency, per: _per);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final c = AppColors.of(context);
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.symmetric(horizontal: Space.m),
+          children: [
+            Text(l10n.costEdit, style: AppText.title3),
+            const SizedBox(height: Space.m),
+            TextField(
+              key: const Key('costName'),
+              controller: _name,
+              maxLength: 40,
+              decoration: InputDecoration(labelText: l10n.costName),
+              onChanged: (_) => setState(() {}),
+            ),
+            TextField(
+              key: const Key('costAmount'),
+              controller: _amount,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(labelText: l10n.costAmount),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: Space.m),
+            SegmentedButton<Currency>(
+              showSelectedIcon: false,
+              segments: [
+                for (final c in Currency.values) ButtonSegment(value: c, label: Text(currencyLabel(l10n, c))),
+              ],
+              selected: {_currency},
+              onSelectionChanged: (v) => setState(() => _currency = v.first),
+            ),
+            const SizedBox(height: Space.s),
+            SegmentedButton<CostPeriod>(
+              showSelectedIcon: false,
+              segments: [
+                ButtonSegment(value: CostPeriod.month, label: Text(l10n.costPerMonth)),
+                ButtonSegment(value: CostPeriod.year, label: Text(l10n.costPerYear)),
+              ],
+              selected: {_per},
+              onSelectionChanged: (v) => setState(() => _per = v.first),
+            ),
+            const SizedBox(height: Space.l),
+            PrimaryButton(
+              label: l10n.save,
+              onPressed: _item == null ? null : () => Navigator.pop<_CostEdit>(context, _SaveCost(_item!)),
+            ),
+            if (widget.initial != null)
+              TextButton(
+                style: TextButton.styleFrom(foregroundColor: c.destructive),
+                onPressed: () => Navigator.pop<_CostEdit>(context, _DeleteCost()),
+                child: Text(l10n.delete),
+              ),
+            const SizedBox(height: Space.m),
+          ],
+        ),
+      ),
+    );
+  }
 }

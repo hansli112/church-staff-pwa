@@ -1,6 +1,7 @@
 // Entry point: wires the handlers to Cloud Functions triggers. Handlers take
 // their dependencies as arguments so tests run them against the emulators
 // without the Functions runtime.
+import { Environment } from '@apple/app-store-server-library';
 import { applicationDefault, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
@@ -15,6 +16,7 @@ import {
 } from 'firebase-functions/v2/firestore';
 import { onCall, onRequest, type CallableRequest } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
+import { onMessagePublished } from 'firebase-functions/v2/pubsub';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { onObjectFinalized } from 'firebase-functions/v2/storage';
 
@@ -24,7 +26,10 @@ import * as church from './church.js';
 import * as claim from './claim.js';
 import * as churchLink from './churchLink.js';
 import { churchPage as churchPageHandler } from './churchPage.js';
-import { REGION, appUrl, type Caller, type Deps } from './common.js';
+import { PROD_PROJECT, REGION, appUrl, type Caller, type Deps } from './common.js';
+import * as funding from './funding.js';
+import * as fundingApple from './fundingApple.js';
+import * as fundingPlay from './fundingPlay.js';
 import * as invites from './invites.js';
 import * as move from './move.js';
 import { logClientError as logClientErrorHandler } from './logging.js';
@@ -151,6 +156,35 @@ export const dailyStats = onSchedule(
   async () => {
     const projectId = process.env.GCLOUD_PROJECT ?? '';
     await writeDailyStats(deps(), monitoringUsageReader(projectId));
+  },
+);
+
+// 雲端費用進度: payments arrive from the stores on their own; the operator
+// only keeps the cost list.
+export const adminFunding = callable(funding.adminFunding);
+export const adminSetFundingCosts = callable(funding.adminSetFundingCosts);
+// Built on first use: every function loads this file, only this one needs Apple's certificate.
+let apple: fundingApple.AppleVerifier | undefined;
+export const appStoreNotifications = onRequest({ region: REGION, maxInstances: 5 }, async (req, res) => {
+  if (req.method !== 'POST') {
+    res.status(405).end();
+    return;
+  }
+  apple ??= fundingApple.appleVerifier(
+    process.env.GCLOUD_PROJECT === PROD_PROJECT ? Environment.PRODUCTION : Environment.SANDBOX,
+  );
+  res.status(await fundingApple.appStoreNotification(deps(), apple, req.body)).end();
+});
+// Play Console sends to this topic. Throwing makes Pub/Sub deliver again.
+export const playBillingNotifications = onMessagePublished(
+  { topic: 'play-billing', region: REGION, retry: true, maxInstances: 5 },
+  (event) => fundingPlay.playNotification(deps(), event.data.message.json, new Date(event.data.message.publishTime)),
+);
+// Starts each month's target, and refreshes the exchange rates.
+export const fundingDaily = onSchedule(
+  { region: REGION, schedule: 'every day 00:10', timeZone: 'Asia/Taipei' },
+  async () => {
+    await funding.publishFunding(deps());
   },
 );
 

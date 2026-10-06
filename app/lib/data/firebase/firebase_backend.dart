@@ -62,6 +62,9 @@ class FirebaseBackend implements Backend {
   @override
   late final CloudApi cloud = FirebaseCloudApi(_functions, storage: _storage, auth: _auth);
 
+  @override
+  late final PlatformData platform = _Platform(_db);
+
   final _churches = <String, ChurchData>{};
 
   @override
@@ -317,6 +320,27 @@ class _Profiles implements ProfileRepository {
       'updatedAt': FieldValue.serverTimestamp(),
     });
   });
+}
+
+class _Platform implements PlatformData {
+  _Platform(this._db);
+
+  final FirebaseFirestore _db;
+
+  @override
+  Stream<Funding?> funding() =>
+      _db.doc('platform/funding').live().map((s) => s.exists ? fundingFromJson(s.data()!) : null);
+}
+
+Funding fundingFromJson(Map<String, Object?> d) {
+  int n(String key) => (d[key] as num?)?.round() ?? 0;
+  return Funding(
+    month: d['month'] as String? ?? '',
+    target: n('target'),
+    received: n('received'),
+    carried: n('carried'),
+    monthsLeft: n('monthsLeft'),
+  );
 }
 
 class _Memberships implements MembershipRepository {
@@ -920,6 +944,42 @@ class FirebaseCloudApi implements CloudApi {
     'op': 'delete',
     'eventId': event.id,
     'event': calendarEventToJson(event),
+  });
+
+  @override
+  Future<FundingOverview> adminFunding() async {
+    final d = _map(await _call('adminFunding'));
+    final summary = d['funding'];
+    return FundingOverview(
+      costs: [
+        for (final raw in d['costs'] as List<dynamic>? ?? const [])
+          if (raw case {
+            'name': final String name,
+            'amount': final num amount,
+            'currency': final String code,
+            'per': final String per,
+          } when Currency.fromCode(code) != null)
+            CostItem(
+              name: name,
+              amount: amount,
+              currency: Currency.fromCode(code)!,
+              per: per == 'year' ? CostPeriod.year : CostPeriod.month,
+            ),
+      ],
+      months: [
+        for (final raw in d['months'] as List<dynamic>? ?? const [])
+          if (raw case {'month': final String month, 'received': final num received, 'target': final num target})
+            FundingMonth(month: month, received: received.round(), target: target.round()),
+      ],
+      funding: summary is Map ? fundingFromJson(Map<String, Object?>.from(summary)) : null,
+    );
+  }
+
+  @override
+  Future<void> adminSetFundingCosts(List<CostItem> items) => _call('adminSetFundingCosts', {
+    'items': [
+      for (final i in items) {'name': i.name, 'amount': i.amount, 'currency': i.currency.code, 'per': i.per.name},
+    ],
   });
 
   @override

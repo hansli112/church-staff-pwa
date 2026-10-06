@@ -19,6 +19,7 @@ class MemoryBackend implements Backend {
     profiles = _Profiles(this);
     memberships = _Memberships(this);
     cloud = MemoryCloud(this);
+    platform = _Platform(this);
   }
 
   final DateTime Function() clock;
@@ -31,6 +32,17 @@ class MemoryBackend implements Backend {
   late final MembershipRepository memberships;
   @override
   late final MemoryCloud cloud;
+  @override
+  late final PlatformData platform;
+
+  /// What the backend last published for the support page.
+  Funding? funding;
+
+  /// The operator's cost list.
+  List<CostItem> fundingCosts = [];
+
+  /// NT\$ per US\$ for the cost list.
+  static const usdRate = 32;
 
   final churches = <String, Church>{};
   final members = <String, Map<String, Member>>{};
@@ -650,6 +662,14 @@ String _randomCode() => List.generate(
   (_) => _alphabet[_random.nextInt(_alphabet.length)],
 ).join();
 
+class _Platform implements PlatformData {
+  _Platform(this._b);
+  final MemoryBackend _b;
+
+  @override
+  Stream<Funding?> funding() => _b.watch(() => _b.funding);
+}
+
 class MemoryCloud implements CloudApi {
   MemoryCloud(this._b);
 
@@ -1134,6 +1154,42 @@ class MemoryCloud implements CloudApi {
   Future<List<DailyStats>> adminStats({int days = 30}) async {
     _requireOperator();
     return stats.take(days).toList();
+  }
+
+  @override
+  Future<FundingOverview> adminFunding() async {
+    _requireOperator();
+    final funding = _b.funding ?? (_b.fundingCosts.isEmpty ? null : _fundingFor(_b.fundingCosts));
+    return FundingOverview(costs: List.of(_b.fundingCosts), months: const [], funding: funding);
+  }
+
+  @override
+  Future<void> adminSetFundingCosts(List<CostItem> items) async {
+    _requireOperator();
+    await _b.write(() {
+      _b.fundingCosts = List.of(items);
+      _b.funding = _fundingFor(items);
+    });
+  }
+
+  /// What the backend would publish for [items], keeping what came in.
+  Funding _fundingFor(List<CostItem> items) {
+    var target = 0.0;
+    for (final i in items) {
+      final twd = i.currency == Currency.usd ? i.amount * MemoryBackend.usdRate : i.amount;
+      target += i.per == CostPeriod.year ? twd / 12 : twd;
+    }
+    final now = _b.clock();
+    final f = _b.funding;
+    final t = target.round();
+    final available = (f?.received ?? 0) + (f?.carried ?? 0);
+    return Funding(
+      month: '${now.year}-${now.month.toString().padLeft(2, '0')}',
+      target: t,
+      received: f?.received ?? 0,
+      carried: f?.carried ?? 0,
+      monthsLeft: t > 0 && available > t ? (available - t) ~/ t : 0,
+    );
   }
 
   void _requireCalendarEditor(String cid) {

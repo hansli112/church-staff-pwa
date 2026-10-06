@@ -1,3 +1,6 @@
+import 'package:intl/intl.dart';
+
+import '../../data/backend.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -23,3 +26,17 @@ String weekdayLabel(L10n l10n, int weekday) => switch (weekday) {
   6 => l10n.weekday6,
   _ => l10n.weekday7,
 };
+
+String currencyLabel(L10n l10n, Currency c) => switch (c) {
+  Currency.twd => l10n.currencyTwd,
+  Currency.usd => l10n.currencyUsd,
+};
+
+/// NT\$1,400 or US\$99.
+String money(L10n l10n, num amount, [Currency currency = Currency.twd]) {
+  final n = NumberFormat('#,##0.##').format(amount);
+  return switch (currency) {
+    Currency.twd => l10n.moneyTwd(n),
+    Currency.usd => l10n.moneyUsd(n),
+  };
+}

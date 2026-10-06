@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/data/backend.dart';
 import 'package:martha/domain/models.dart';
 
 import '../support/harness.dart';
@@ -234,6 +235,37 @@ void main() {
       await pumpApp(tester, seededChurch());
       await go(tester, '/me');
       expect(find.text('平台後台'), findsNothing);
+    });
+
+    testWidgets('keeps the cost list: a yearly item counts a twelfth a month', (tester) async {
+      final b = seededChurch();
+      b.auth.operators.add('pastor');
+      b.fundingCosts = const [CostItem(name: '雲端', amount: 300, currency: Currency.twd, per: CostPeriod.month)];
+      await pumpApp(tester, b);
+      await go(tester, '/admin/funding');
+      expect(find.text('每月目標 NT\$300'), findsOneWidget);
+
+      await tapText(tester, '新增項目');
+      await tester.enterText(find.byKey(const Key('costName')), '網域');
+      await tester.enterText(find.byKey(const Key('costAmount')), '600');
+      await tapText(tester, '每年');
+      await tapText(tester, '儲存');
+      expect(
+        b.fundingCosts.last,
+        const CostItem(name: '網域', amount: 600, currency: Currency.twd, per: CostPeriod.year),
+      );
+      expect(find.text('每月目標 NT\$350'), findsOneWidget);
+
+      await tapText(tester, '雲端');
+      await tester.enterText(find.byKey(const Key('costAmount')), '400');
+      await tapText(tester, '儲存');
+      expect(find.text('每月目標 NT\$450'), findsOneWidget);
+
+      await tapText(tester, '網域');
+      await tapText(tester, '刪除');
+      expect(b.fundingCosts, const [CostItem(name: '雲端', amount: 400, currency: Currency.twd, per: CostPeriod.month)]);
+      await tapText(tester, '復原');
+      expect(b.fundingCosts.map((c) => c.name), ['雲端', '網域']);
     });
 
     testWidgets('suspends a church; its members see the closed page', (tester) async {

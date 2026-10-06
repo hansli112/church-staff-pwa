@@ -250,6 +250,89 @@ class PhotoQuota {
   final bool platformOpen;
 }
 
+/// 雲端費用進度 for this month, in NT\$, the same for everyone. Payments
+/// are added by the backend as the stores report them.
+class Funding {
+  const Funding({
+    required this.month,
+    required this.target,
+    required this.received,
+    required this.carried,
+    required this.monthsLeft,
+  });
+
+  /// `YYYY-MM`.
+  final String month;
+
+  /// What the platform costs a month; 0 until the operator sets the costs.
+  final int target;
+
+  /// Paid in this month.
+  final int received;
+
+  /// Left over from earlier months (a shortfall is not carried).
+  final int carried;
+
+  /// Whole months beyond this one that the money covers.
+  final int monthsLeft;
+
+  int get available => received + carried;
+}
+
+enum CostPeriod { month, year }
+
+/// The currencies a cost can be entered in.
+enum Currency {
+  twd,
+  usd
+  ;
+
+  /// `TWD`, `USD`: what the backend stores.
+  String get code => name.toUpperCase();
+
+  static Currency? fromCode(String code) => values.where((c) => c.code == code).firstOrNull;
+}
+
+/// One line of the platform's costs, entered by the operator.
+class CostItem {
+  const CostItem({required this.name, required this.amount, required this.currency, required this.per});
+
+  final String name;
+  final num amount;
+  final Currency currency;
+  final CostPeriod per;
+
+  @override
+  bool operator ==(Object other) =>
+      other is CostItem &&
+      other.name == name &&
+      other.amount == amount &&
+      other.currency == currency &&
+      other.per == per;
+
+  @override
+  int get hashCode => Object.hash(name, amount, currency, per);
+}
+
+/// A month's totals in NT\$, for the operator.
+class FundingMonth {
+  const FundingMonth({required this.month, required this.received, required this.target});
+
+  final String month;
+  final int received;
+  final int target;
+}
+
+class FundingOverview {
+  const FundingOverview({required this.costs, required this.months, required this.funding});
+
+  final List<CostItem> costs;
+
+  /// The last 12 months, newest first.
+  final List<FundingMonth> months;
+  final Funding? funding;
+}
+
 class PhotoInput {
   const PhotoInput({required this.mimeType, required this.bytes});
 
@@ -351,6 +434,10 @@ abstract interface class CloudApi {
   Future<void> adminTransferAdmin(String churchId, String uid);
   Future<void> adminSetStatus(String churchId, ChurchStatus status);
   Future<List<DailyStats>> adminStats({int days = 30});
+  Future<FundingOverview> adminFunding();
+
+  /// Replaces the cost list; this month's target follows.
+  Future<void> adminSetFundingCosts(List<CostItem> items);
 
   /// Photos this church may still recognize this month.
   Future<PhotoQuota> photoQuota(String churchId);
@@ -380,11 +467,18 @@ abstract interface class CloudApi {
   });
 }
 
+/// Platform-wide data everyone signed in may read.
+abstract interface class PlatformData {
+  /// Null until the backend has published anything.
+  Stream<Funding?> funding();
+}
+
 /// Everything the app needs from a backend.
 abstract interface class Backend {
   AuthGateway get auth;
   ProfileRepository get profiles;
   MembershipRepository get memberships;
   CloudApi get cloud;
+  PlatformData get platform;
   ChurchData church(String churchId);
 }

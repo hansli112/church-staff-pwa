@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
+import '../data/backend.dart';
 import 'providers.dart';
 
 /// 支持平台: one-off tips and a monthly subscription, through the App Store
@@ -148,6 +149,9 @@ class Supporter extends Notifier<bool> {
 }
 
 final supporterProvider = NotifierProvider<Supporter, bool>(Supporter.new);
+
+/// 雲端費用進度, live: everyone sees a payment as soon as the store reports it.
+final fundingProvider = StreamProvider.autoDispose<Funding?>((ref) => ref.watch(backendProvider).platform.funding());
 
 /// The alternate app icons, bundled at build time (store rules: no
 /// downloaded or user-supplied icons). `null` is the default icon.

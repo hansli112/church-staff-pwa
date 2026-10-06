@@ -992,7 +992,7 @@ class L10nZh extends L10n {
   String get support => '支持馬大別忙';
 
   @override
-  String get supportBody => '馬大別忙免費給每間教會使用。支持是自願的，不會多出任何功能';
+  String get supportBody => '馬大別忙免費給每間教會使用，雲端費用由大家一起分擔：大的扶持小的，有餘的補不足的。支持是自願的，不會多出任何功能';
 
   @override
   String get supportTips => '一次性支持';
@@ -1381,4 +1381,94 @@ class L10nZh extends L10n {
 
   @override
   String get merged => '已合併';
+
+  @override
+  String get fundingTitle => '這個月的雲端費用';
+
+  @override
+  String fundingProgress(String available, String target) {
+    return '$available / $target';
+  }
+
+  @override
+  String get fundingEnough => '這個月已經足夠';
+
+  @override
+  String fundingMonthsLeft(int months) {
+    return '這個月已經足夠，多的還能再維持 $months 個月';
+  }
+
+  @override
+  String fundingCarried(String amount) {
+    return '含前幾個月留下的 $amount';
+  }
+
+  @override
+  String get fundingCosts => '雲端費用';
+
+  @override
+  String fundingTarget(String amount) {
+    return '每月目標 $amount';
+  }
+
+  @override
+  String get fundingCostsHeader => '費用';
+
+  @override
+  String get fundingCostsFooter => '價格變了再改。每年的項目平均分到每個月';
+
+  @override
+  String get fundingMonthsHeader => '最近幾個月';
+
+  @override
+  String fundingMonthValue(String received, String target) {
+    return '$received / $target';
+  }
+
+  @override
+  String get costAdd => '新增項目';
+
+  @override
+  String get costEdit => '費用項目';
+
+  @override
+  String get costName => '名稱';
+
+  @override
+  String get costAmount => '金額';
+
+  @override
+  String get costPerMonth => '每月';
+
+  @override
+  String get costPerYear => '每年';
+
+  @override
+  String costValueMonth(String amount) {
+    return '$amount・每月';
+  }
+
+  @override
+  String costValueYear(String amount) {
+    return '$amount・每年';
+  }
+
+  @override
+  String moneyTwd(String amount) {
+    return 'NT\$$amount';
+  }
+
+  @override
+  String moneyUsd(String amount) {
+    return 'US\$$amount';
+  }
+
+  @override
+  String get currencyTwd => 'NT\$';
+
+  @override
+  String get currencyUsd => 'US\$';
+
+  @override
+  String get fundingRatesBy => '匯率：Exchange Rate API';
 }
