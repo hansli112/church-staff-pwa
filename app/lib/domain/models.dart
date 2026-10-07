@@ -469,6 +469,13 @@ class CalendarEvent {
   /// The local day the event starts on.
   Day get day => Day(start.year, start.month, start.day);
 
+  /// The last local day the event covers. [end] is exclusive, so an event
+  /// that ends at midnight does not reach into the next day.
+  Day get lastDay {
+    final last = end.isAfter(start) ? end.subtract(const Duration(microseconds: 1)) : start;
+    return Day(last.year, last.month, last.day);
+  }
+
   CalendarEvent copyWith({String? title, DateTime? start, DateTime? end, bool? allDay, String? location}) =>
       CalendarEvent(
         id: id,
@@ -479,6 +486,23 @@ class CalendarEvent {
         location: location ?? this.location,
         description: description,
       );
+}
+
+/// The days from [from] to [to] that [events] cover, each mapped to the day
+/// the agenda lists its event under (the day it starts). A day covered by
+/// several events points at the earliest of them.
+Map<Day, Day> agendaAnchors(Iterable<CalendarEvent> events, {required Day from, required Day to}) {
+  final anchors = <Day, Day>{};
+  for (final e in events) {
+    var d = e.day.isBefore(from) ? from : e.day;
+    final end = e.lastDay.isAfter(to) ? to : e.lastDay;
+    while (!d.isAfter(end)) {
+      final current = anchors[d];
+      if (current == null || e.day.isBefore(current)) anchors[d] = e.day;
+      d = d.addDays(1);
+    }
+  }
+  return anchors;
 }
 
 /// churches/{cid}/settings/calendar, written by the backend.

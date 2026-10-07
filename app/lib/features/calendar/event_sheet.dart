@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
+import '../../domain/day.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
@@ -47,14 +48,26 @@ Future<void> showEventDetail(BuildContext context, CalendarEvent e) {
 }
 
 /// Opens the editor for [event] (null for a new one) and saves through the
-/// backend. Deleting offers 復原, which creates the event again.
-Future<void> editEvent(BuildContext context, WidgetRef ref, CalendarEvent? event, {required DateTime month}) async {
+/// backend. A new event starts on [day] when one is picked, else today in
+/// this month or the month's first. Deleting offers 復原, which creates the
+/// event again.
+Future<void> editEvent(
+  BuildContext context,
+  WidgetRef ref,
+  CalendarEvent? event, {
+  required DateTime month,
+  Day? day,
+}) async {
   final l10n = L10n.of(context);
   final church = ref.read(churchDataProvider)!;
   final today = ref.read(todayProvider);
   final initialDay =
       event?.start ??
-      (month.year == today.year && month.month == today.month ? DateTime(today.year, today.month, today.day) : month);
+      (day != null
+          ? DateTime(day.year, day.month, day.day)
+          : month.year == today.year && month.month == today.month
+          ? DateTime(today.year, today.month, today.day)
+          : month);
   final result = await showAppSheet<_EditResult>(
     context,
     expand: true,

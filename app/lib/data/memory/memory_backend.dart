@@ -100,6 +100,10 @@ class MemoryBackend implements Backend {
   /// ([connectCalendar] stands in for the OAuth callback).
   final calendarEvents = <String, List<CalendarEvent>>{};
 
+  /// Scripted: while set, reading a month's events waits for this to
+  /// complete, as on a slow network. Completing it with an error fails it.
+  Completer<void>? calendarEventsHeld;
+
   /// Scripted: photos used this month per church, the limit, whether the
   /// platform's budget is left, and what recognition returns.
   final photosUsed = <String, int>{};
@@ -941,9 +945,14 @@ class MemoryChurchData implements ChurchData {
     if (_b.calendars[churchId]?.needsReconnect ?? false) {
       throw const CloudException(CloudErrorCode.unknown, 'reconnect');
     }
+    await _b.calendarEventsHeld?.future;
+    // Like Google: every event that overlaps the month, including one that
+    // began the month before.
+    final first = Day.parse('$month-01');
+    final last = first.lastOfMonth;
     return [
       for (final e in _b.calendarEvents[churchId] ?? const <CalendarEvent>[])
-        if (e.day.key.startsWith(month)) e,
+        if (!e.day.isAfter(last) && !e.lastDay.isBefore(first)) e,
     ]..sort((a, b) => a.start.compareTo(b.start));
   }
 

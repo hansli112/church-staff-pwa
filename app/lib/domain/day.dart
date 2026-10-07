@@ -55,6 +55,12 @@ class Day implements Comparable<Day> {
   /// The Monday of this day's week.
   Day get weekStart => addDays(-(weekday - DateTime.monday));
 
+  /// The first day of this day's month.
+  Day get firstOfMonth => Day(year, month, 1);
+
+  /// The last day of this day's month.
+  Day get lastOfMonth => Day(year, month + 1, 1).addDays(-1);
+
   /// The first day on or after this one that falls on [weekday].
   Day nextOnOrAfter(int weekday) => addDays((weekday - this.weekday + 7) % 7);
 
