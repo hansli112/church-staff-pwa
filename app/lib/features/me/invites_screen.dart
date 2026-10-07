@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -27,14 +26,17 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
   Future<void> _create(int days) async {
     final l10n = L10n.of(context);
     setState(() => _busy = true);
+    final Invite invite;
     try {
-      final invite = await ref.read(churchDataProvider)!.createInvite(validFor: Duration(days: days));
-      if (mounted) await _share(invite);
+      invite = await ref.read(churchDataProvider)!.createInvite(validFor: Duration(days: days));
     } catch (_) {
       if (mounted) showToast(context, l10n.saveFailed);
+      return;
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+    // Saved: whatever happens to the share sheet, the invite is in the list.
+    if (mounted) await _share(invite);
   }
 
   Future<void> _share(Invite invite) async {
@@ -76,8 +78,7 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
       case 'share':
         await _share(invite);
       case 'copy':
-        await Clipboard.setData(ClipboardData(text: inviteLink(invite.churchId, invite.code)));
-        if (mounted) showToast(context, l10n.inviteCopied);
+        await copyText(context, inviteLink(invite.churchId, invite.code), copied: l10n.inviteCopied);
       case 'revoke':
         await ref.read(churchDataProvider)!.revokeInvite(invite.code);
         if (mounted) showToast(context, l10n.inviteRevoked);

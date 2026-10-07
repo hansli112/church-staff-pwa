@@ -385,6 +385,7 @@
   },
   "inviteCopy": "複製連結",
   "inviteCopied": "已複製邀請連結",
+  "copyByHand": "沒辦法自動複製，請選取下面的文字自己複製",
   "inviteShare": "分享",
   "inviteRevoke": "撤回",
   "inviteRevoked": "已撤回",

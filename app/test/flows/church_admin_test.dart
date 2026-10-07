@@ -171,6 +171,21 @@ void main() {
       expect(out.copied.single, 'https://marthasit-dev.web.app/c/grace/join/$code');
     });
 
+    testWidgets('a new invite that cannot be shared or copied is shown to copy by hand', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      captureOutbox(tester, blocked: true);
+      await go(tester, '/me/invites');
+      await tapText(tester, '7 天內有效');
+      final code = b.invites.keys.single;
+      expect(find.text('沒有儲存成功，請檢查網路後再試一次'), findsNothing, reason: 'the invite was saved');
+      expect(find.text('沒辦法自動複製，請選取下面的文字自己複製'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate((w) => w is SelectableText && w.data!.contains('/c/grace/join/$code')),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('disabling a service hides it from the roster tab but keeps its rosters', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);

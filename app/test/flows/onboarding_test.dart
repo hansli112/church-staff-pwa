@@ -81,6 +81,19 @@ void main() {
     expect(b.churches.values.single.name, '活水堂');
   });
 
+  testWidgets('a sign-up error goes away once the field is filled', (tester) async {
+    await pumpApp(tester, MemoryBackend());
+    await tapText(tester, '用 email 登入');
+    await tapText(tester, '註冊新帳號');
+    await tapText(tester, '註冊');
+    expect(find.text('請輸入名字'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextFormField).at(0), '小明');
+    await tester.pump();
+    expect(find.text('請輸入名字'), findsNothing);
+    expect(find.text('請輸入 email'), findsOneWidget, reason: 'the other errors stay until fixed');
+  });
+
   testWidgets('a taken name is refused with a way to contact us', (
     tester,
   ) async {

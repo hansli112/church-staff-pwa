@@ -203,6 +203,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final register = _mode == _Mode.register;
     return Form(
       key: _form,
+      // An error goes away as soon as the field is fixed, not on the next submit.
+      autovalidateMode: AutovalidateMode.onUserInteractionIfError,
       child: AutofillGroup(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

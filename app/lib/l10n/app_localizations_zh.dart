@@ -621,6 +621,9 @@ class L10nZh extends L10n {
   String get inviteCopied => '已複製邀請連結';
 
   @override
+  String get copyByHand => '沒辦法自動複製，請選取下面的文字自己複製';
+
+  @override
   String get inviteShare => '分享';
 
   @override

@@ -96,7 +96,9 @@ Future<void> settle(WidgetTester tester) async {
 }
 
 /// What the app shared through the system share sheet and copied to the
-/// clipboard, recorded instead of reaching the platform.
+/// clipboard, recorded instead of reaching the platform. With [blocked], both
+/// fail, as in a desktop browser that has no share sheet and refuses the
+/// clipboard.
 class Outbox {
   final shared = <Map<String, Object?>>[];
   final copied = <String>[];
@@ -104,15 +106,17 @@ class Outbox {
   List<String> get sharedTexts => [for (final s in shared) ?s['text'] as String?];
 }
 
-Outbox captureOutbox(WidgetTester tester) {
+Outbox captureOutbox(WidgetTester tester, {bool blocked = false}) {
   final out = Outbox();
   final messenger = tester.binding.defaultBinaryMessenger;
   const share = MethodChannel('dev.fluttercommunity.plus/share');
   messenger.setMockMethodCallHandler(share, (call) async {
+    if (blocked) throw PlatformException(code: 'unavailable');
     out.shared.add(Map<String, Object?>.from(call.arguments as Map));
     return 'dev.fluttercommunity.plus/share/success';
   });
   messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+    if (call.method == 'Clipboard.setData' && blocked) throw PlatformException(code: 'denied');
     if (call.method == 'Clipboard.setData') out.copied.add((call.arguments as Map)['text'] as String);
     return null;
   });

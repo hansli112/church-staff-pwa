@@ -1207,6 +1207,12 @@ abstract class L10n {
   /// **'已複製邀請連結'**
   String get inviteCopied;
 
+  /// No description provided for @copyByHand.
+  ///
+  /// In zh, this message translates to:
+  /// **'沒辦法自動複製，請選取下面的文字自己複製'**
+  String get copyByHand;
+
   /// No description provided for @inviteShare.
   ///
   /// In zh, this message translates to:
