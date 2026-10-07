@@ -14,3 +14,20 @@ if grep -q flutter_bootstrap "$web/index.html"; then
 fi
 cp "$root/landing/index.html" "$web/index.html"
 cp "$root/landing/privacy.html" "$root/landing/terms.html" "$root/landing/site.css" "$web/"
+
+# Search engines see only the production site, and not the church pages
+# (a church's name is not meant to show up in search results).
+# TODO(M7): the origin becomes the bought domain.
+if [ "${GCLOUD_PROJECT:-}" = marthasit ]; then
+  origin="https://marthasit.web.app"
+  printf 'User-agent: *\nDisallow: /c/\n\nSitemap: %s/sitemap.xml\n' "$origin" > "$web/robots.txt"
+  cat > "$web/sitemap.xml" <<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>$origin/</loc></url>
+</urlset>
+XML
+else
+  printf 'User-agent: *\nDisallow: /\n' > "$web/robots.txt"
+  rm -f "$web/sitemap.xml"
+fi
