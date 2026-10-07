@@ -14,16 +14,23 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
-/// Thursday 2026-10-01: the "today" every widget test runs on.
-final testToday = Day(2026, 10, 1);
+/// Thursday 2026-10-01, 09:00: the time every widget test starts at.
+final testNow = DateTime(2026, 10, 1, 9);
+final testToday = Day.today(testNow);
+
+/// The clock a test backend runs on unless the test moves time itself.
+DateTime testClock() => testNow;
 
 Future<List<Override>> testOverrides(MemoryBackend backend) async {
+  // On the real clock, what a test sees would change from day to day.
+  if (identical(backend.clock, DateTime.now)) {
+    throw ArgumentError('Give the test backend a clock: MemoryBackend(clock: testClock)');
+  }
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
   return [
     backendProvider.overrideWithValue(backend),
     prefsProvider.overrideWithValue(prefs),
-    todayProvider.overrideWithValue(testToday),
   ];
 }
 
@@ -65,7 +72,7 @@ Future<void> pumpWidgetInApp(
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: await testOverrides(backend ?? MemoryBackend()),
+      overrides: await testOverrides(backend ?? MemoryBackend(clock: testClock)),
       retry: (_, _) => null,
       child: MaterialApp(
         theme: buildTheme(brightness).copyWith(platform: platform),

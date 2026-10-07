@@ -3,6 +3,8 @@ import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/domain/staff_order.dart';
 
+import 'harness.dart';
+
 const sundayService = Service(
   id: 'sunday',
   name: '主日崇拜',
@@ -38,9 +40,9 @@ const staffHao = Member(
 const john = Member(uid: 'john', name: 'John Chen');
 
 /// A church with two services, five members and one saved Sunday.
-/// Signs in as [as].
-MemoryBackend seededChurch({Member as = pastor, List<Member> extra = const []}) {
-  final b = MemoryBackend();
+/// Signs in as [as]. Runs on [clock], [testNow] unless a test moves time.
+MemoryBackend seededChurch({Member as = pastor, List<Member> extra = const [], DateTime Function() clock = testClock}) {
+  final b = MemoryBackend(clock: clock);
   final cid = b.addChurch('恩典堂', id: 'grace');
   b.setServices(cid, const [sundayService, youthService]);
   for (final m in [pastor, editor, staffMei, staffHao, john, ...extra]) {

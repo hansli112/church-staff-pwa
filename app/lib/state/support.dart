@@ -143,7 +143,7 @@ class Supporter extends Notifier<bool> {
   }
 
   void mark() {
-    ref.read(prefsProvider).setString(_key, DateTime.now().toIso8601String());
+    ref.read(prefsProvider).setString(_key, ref.read(clockProvider)().toIso8601String());
     state = true;
   }
 }

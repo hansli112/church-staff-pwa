@@ -17,7 +17,7 @@ void main() {
   testWidgets('Google sign-in, create a church, land on its home', (
     tester,
   ) async {
-    final b = MemoryBackend()..auth.googleAccount = 'alice@gmail.com';
+    final b = MemoryBackend(clock: testClock)..auth.googleAccount = 'alice@gmail.com';
     await pumpApp(tester, b);
 
     expect(find.text('使用 Google 登入'), findsOneWidget);
@@ -54,7 +54,7 @@ void main() {
   testWidgets('email sign-up must verify before creating a church', (
     tester,
   ) async {
-    final b = MemoryBackend();
+    final b = MemoryBackend(clock: testClock);
     await pumpApp(tester, b);
 
     await tapText(tester, '用 email 登入');
@@ -82,7 +82,7 @@ void main() {
   });
 
   testWidgets('a sign-up error goes away once the field is filled', (tester) async {
-    await pumpApp(tester, MemoryBackend());
+    await pumpApp(tester, MemoryBackend(clock: testClock));
     await tapText(tester, '用 email 登入');
     await tapText(tester, '註冊新帳號');
     await tapText(tester, '註冊');
@@ -97,7 +97,7 @@ void main() {
   testWidgets('a taken name is refused with a way to contact us', (
     tester,
   ) async {
-    final b = MemoryBackend()..addChurch('台北 靈糧堂');
+    final b = MemoryBackend(clock: testClock)..addChurch('台北 靈糧堂');
     b.auth.googleAccount = 'bob@gmail.com';
     await pumpApp(tester, b);
     await tapText(tester, '使用 Google 登入');
@@ -113,14 +113,14 @@ void main() {
   testWidgets('an invite link opened signed out joins after sign-in', (
     tester,
   ) async {
-    final b = MemoryBackend();
+    final b = MemoryBackend(clock: testClock);
     final cid = b.addChurch('恩典堂');
     b.addMember(cid, const Member(uid: 'admin', name: '牧師', role: Role.admin));
     b.invites['WELCOME26'] = Invite(
       code: 'WELCOME26',
       churchId: cid,
       churchName: '恩典堂',
-      expiresAt: DateTime.now().add(const Duration(days: 7)),
+      expiresAt: testNow.add(const Duration(days: 7)),
     );
     b.auth.googleAccount = 'new@gmail.com';
     await pumpApp(tester, b);
@@ -141,13 +141,13 @@ void main() {
   });
 
   testWidgets('a pasted invite link works as a code', (tester) async {
-    final b = MemoryBackend();
+    final b = MemoryBackend(clock: testClock);
     final cid = b.addChurch('恩典堂');
     b.invites['PASTED26'] = Invite(
       code: 'PASTED26',
       churchId: cid,
       churchName: '恩典堂',
-      expiresAt: DateTime.now().add(const Duration(days: 7)),
+      expiresAt: testNow.add(const Duration(days: 7)),
     );
     b.auth.signInAs('x@gmail.com');
     await pumpApp(tester, b);
@@ -160,7 +160,7 @@ void main() {
   });
 
   testWidgets('a mistyped code asks to check it', (tester) async {
-    final b = MemoryBackend()..addChurch('恩典堂');
+    final b = MemoryBackend(clock: testClock)..addChurch('恩典堂');
     b.auth.signInAs('x@gmail.com');
     await pumpApp(tester, b);
     await tapText(tester, '輸入邀請碼');
@@ -171,14 +171,14 @@ void main() {
   });
 
   testWidgets('the invite shows the church logo above its name', (tester) async {
-    final b = MemoryBackend();
+    final b = MemoryBackend(clock: testClock);
     final cid = b.addChurch('恩典堂');
     b.churches[cid] = b.churches[cid]!.copyWith(logoUrl: 'https://example.org/logo.png');
     b.invites['LOGO2026'] = Invite(
       code: 'LOGO2026',
       churchId: cid,
       churchName: '恩典堂',
-      expiresAt: DateTime.now().add(const Duration(days: 7)),
+      expiresAt: testNow.add(const Duration(days: 7)),
     );
     b.auth.signInAs('x@gmail.com');
     await pumpApp(tester, b);
@@ -191,13 +191,13 @@ void main() {
   testWidgets('an expired invite says so and offers to enter another code', (
     tester,
   ) async {
-    final b = MemoryBackend();
+    final b = MemoryBackend(clock: testClock);
     final cid = b.addChurch('恩典堂');
     b.invites['OLDCODE1'] = Invite(
       code: 'OLDCODE1',
       churchId: cid,
       churchName: '恩典堂',
-      expiresAt: DateTime.now().subtract(const Duration(days: 1)),
+      expiresAt: testNow.subtract(const Duration(days: 1)),
     );
     b.auth.signInAs('x@gmail.com');
     await pumpApp(tester, b);
@@ -210,7 +210,7 @@ void main() {
   });
 
   testWidgets('a suspended church shows only the closed page', (tester) async {
-    final b = MemoryBackend();
+    final b = MemoryBackend(clock: testClock);
     final cid = b.addChurch('停用堂', status: ChurchStatus.suspended);
     final user = b.auth.signInAs('s@gmail.com');
     b.addMember(cid, Member(uid: user.uid, name: '同工'));
@@ -220,7 +220,7 @@ void main() {
   });
 
   testWidgets('a deleted church can be restored by its admin', (tester) async {
-    final b = MemoryBackend();
+    final b = MemoryBackend(clock: testClock);
     final cid = b.addChurch('刪除堂');
     final user = b.auth.signInAs('a@gmail.com');
     b.addMember(cid, Member(uid: user.uid, name: '管理員', role: Role.admin));

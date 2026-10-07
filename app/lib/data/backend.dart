@@ -504,6 +504,12 @@ abstract interface class PlatformData {
 
 /// Everything the app needs from a backend.
 abstract interface class Backend {
+  /// What time it is for every decision that depends on it: whether an
+  /// invite still works, whether the church link's fetched content is
+  /// still fresh, what day today is. The device clock, or a test's.
+  /// Screens and state read it through `clockProvider`.
+  DateTime Function() get clock;
+
   AuthGateway get auth;
   ProfileRepository get profiles;
   MembershipRepository get memberships;

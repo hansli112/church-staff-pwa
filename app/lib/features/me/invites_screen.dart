@@ -12,6 +12,20 @@ final _invitesProvider = StreamProvider.autoDispose<List<Invite>>(
   (ref) => ref.watch(churchDataProvider)!.invites(),
 );
 
+/// The invites that still work. One leaves the list when it expires.
+final _liveInvitesProvider = Provider.autoDispose<List<Invite>>((ref) {
+  final invites = ref.watch(_invitesProvider).value ?? const <Invite>[];
+  final now = ref.watch(clockProvider)();
+  final live = [
+    for (final i in invites)
+      if (i.usableAt(now)) i,
+  ];
+  for (final i in live) {
+    rebuildAt(ref, i.expiresAt, now);
+  }
+  return live;
+});
+
 /// Admins make invite links (7 or 30 days), share them, and revoke them.
 class InvitesScreen extends ConsumerStatefulWidget {
   const InvitesScreen({super.key});
@@ -88,12 +102,7 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    final invites = ref.watch(_invitesProvider).value ?? const <Invite>[];
-    final now = DateTime.now();
-    final live = [
-      for (final i in invites)
-        if (i.usableAt(now)) i,
-    ];
+    final live = ref.watch(_liveInvitesProvider);
     final fmt = DateFormat.MMMd('zh_TW');
     return Scaffold(
       appBar: AppBar(title: Text(l10n.invites)),

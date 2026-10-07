@@ -8,7 +8,7 @@ void main() {
   testWidgets('signed-in member sees the four tabs from the ARB file', (
     tester,
   ) async {
-    await pumpApp(tester, demoBackend(today: testToday));
+    await pumpApp(tester, demoBackend(clock: testClock));
 
     expect(find.text('首頁'), findsWidgets);
     expect(find.text('服事表'), findsOneWidget);
@@ -21,7 +21,7 @@ void main() {
   });
 
   testWidgets('a desktop-wide window keeps the app a readable width', (tester) async {
-    await pumpApp(tester, demoBackend(today: testToday));
+    await pumpApp(tester, demoBackend(clock: testClock));
     tester.view.physicalSize = const Size(1440 * 3, 900 * 3);
     await settle(tester);
 

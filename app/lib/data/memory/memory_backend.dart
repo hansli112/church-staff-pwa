@@ -27,6 +27,7 @@ class MemoryBackend implements Backend {
     platform = _Platform(this);
   }
 
+  @override
   final DateTime Function() clock;
 
   @override

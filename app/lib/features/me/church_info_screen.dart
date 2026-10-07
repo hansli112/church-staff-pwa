@@ -35,7 +35,7 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
     final l10n = L10n.of(context);
     setState(() => _exporting = true);
     try {
-      final now = DateTime.now();
+      final now = ref.read(clockProvider)();
       final zip = exportZip(await loadChurchSnapshot(ref), now);
       final saved = await ref.read(fileSaverProvider).save(exportFileName(church, now), zip, 'application/zip');
       if (!saved) return;

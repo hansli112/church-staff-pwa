@@ -31,7 +31,7 @@ const meiPending = PendingMember(
 
 /// 恩典堂, moved from self-host, with 李美玉 pending; 李美玉 signs in fresh.
 MemoryBackend movedChurch({bool signIn = true}) {
-  final b = MemoryBackend();
+  final b = MemoryBackend(clock: testClock);
   final cid = b.addChurch('恩典堂', id: 'grace');
   b.setServices(cid, const [sundayService]);
   b.addMember(cid, pastor);
@@ -83,7 +83,7 @@ void main() {
   });
 
   testWidgets('the sign-in page tells old password users to register again', (tester) async {
-    await pumpApp(tester, MemoryBackend());
+    await pumpApp(tester, MemoryBackend(clock: testClock));
     await tapText(tester, '用 email 登入');
     expect(find.text('從舊版搬過來的同工：舊的密碼不能用，請用同一個 email 註冊新帳號，或用 Google 登入。'), findsOneWidget);
   });

@@ -73,7 +73,7 @@ void main() {
   });
 
   testWidgets('without any church, the next step is an invite code', (tester) async {
-    final b = MemoryBackend();
+    final b = MemoryBackend(clock: testClock);
     b.addChurch('希望堂', id: 'hope');
     b.auth.signInAs('new@example.com', uid: 'new', name: '新朋友');
     await pumpApp(tester, b);

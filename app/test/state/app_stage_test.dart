@@ -11,7 +11,7 @@ import '../support/harness.dart';
 
 void main() {
   test('restoring a saved session waits for the memberships instead of showing welcome', () async {
-    final backend = MemoryBackend();
+    final backend = MemoryBackend(clock: testClock);
     final cid = backend.addChurch('恩典堂', id: 'grace');
     backend.addMember(cid, const Member(uid: 'u1', name: '王牧師', role: Role.admin));
     final auth = StreamController<AuthUser?>();
@@ -36,7 +36,7 @@ void main() {
   });
 
   test('a failed session restore signs out instead of waiting forever', () async {
-    final backend = MemoryBackend();
+    final backend = MemoryBackend(clock: testClock);
     final auth = StreamController<AuthUser?>();
     // As after Riverpod's retries have given up.
     final container = ProviderContainer(

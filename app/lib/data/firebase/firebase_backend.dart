@@ -57,7 +57,9 @@ class FirebaseBackend implements Backend {
     FirebaseFunctions? functions,
     FirebaseStorage? storage,
     bool serverReads = false,
-  }) : _auth = auth ?? fa.FirebaseAuth.instance,
+    DateTime Function()? clock,
+  }) : clock = clock ?? DateTime.now,
+       _auth = auth ?? fa.FirebaseAuth.instance,
        _db = firestore ?? FirebaseFirestore.instance,
        _functions = functions ?? FirebaseFunctions.instanceFor(region: functionsRegion),
        _storage = storage ?? FirebaseStorage.instance {
@@ -68,6 +70,9 @@ class FirebaseBackend implements Backend {
   final FirebaseFirestore _db;
   final FirebaseFunctions _functions;
   final FirebaseStorage _storage;
+
+  @override
+  final DateTime Function() clock;
 
   @override
   late final AuthGateway auth = FirebaseAuthGateway(_auth);
@@ -91,7 +96,7 @@ class FirebaseBackend implements Backend {
   @override
   ChurchData church(String churchId) => _churches.putIfAbsent(
     churchId,
-    () => FirestoreChurchData._(_db, _storage, _calls, churchId),
+    () => FirestoreChurchData._(_db, _storage, _calls, clock, churchId),
   );
 }
 
@@ -392,11 +397,12 @@ class _Memberships implements MembershipRepository {
 /// the backend does for it. Every error leaves as a [CloudException]
 /// ([_guard], [_Translated.translated]).
 class FirestoreChurchData implements ChurchData {
-  FirestoreChurchData._(this._db, this._storage, this._calls, this.churchId);
+  FirestoreChurchData._(this._db, this._storage, this._calls, this._clock, this.churchId);
 
   final FirebaseFirestore _db;
   final FirebaseStorage _storage;
   final _Callables _calls;
+  final DateTime Function() _clock;
 
   @override
   final String churchId;
@@ -574,7 +580,7 @@ class FirestoreChurchData implements ChurchData {
   Future<Invite> createInvite({required Duration validFor}) => _guard(() async {
     final church = await _church.get();
     final code = randomInviteCode();
-    final expiresAt = DateTime.now().add(validFor);
+    final expiresAt = _clock().add(validFor);
     final uid = fa.FirebaseAuth.instance.currentUser?.uid;
     await _db.collection('invites').doc(code).set({
       'cid': churchId,

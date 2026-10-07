@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/backend.dart';
+import '../domain/church_link.dart';
 import '../domain/day.dart';
 import '../domain/models.dart';
 import '../domain/schedule.dart';
@@ -17,8 +20,21 @@ final prefsProvider = Provider<SharedPreferences>(
   (ref) => throw UnimplementedError('prefsProvider must be overridden'),
 );
 
-/// Today on this device. Overridden in tests.
-final todayProvider = Provider<Day>((ref) => Day.today());
+/// The backend's clock: what time it is for anything that depends on it.
+/// A test moves time by giving its backend a clock of its own.
+final clockProvider = Provider<DateTime Function()>((ref) => ref.watch(backendProvider).clock);
+
+/// Today on this device.
+final todayProvider = Provider<Day>((ref) => Day.today(ref.watch(clockProvider)()));
+
+/// Rebuilds the provider at [at], for what changes with time alone. Wakes
+/// at least daily: a browser fires a timer over 24.8 days at once.
+void rebuildAt(Ref ref, DateTime at, DateTime now) {
+  if (!at.isAfter(now)) return;
+  final wait = at.difference(now);
+  final timer = Timer(wait < const Duration(days: 1) ? wait : const Duration(days: 1), ref.invalidateSelf);
+  ref.onDispose(timer.cancel);
+}
 
 final authUserProvider = StreamProvider<AuthUser?>(
   (ref) => ref.watch(backendProvider).auth.authState(),
@@ -131,6 +147,23 @@ final churchLinkProvider = StreamProvider<ChurchLink?>((ref) => _requireOpenChur
 
 /// What was last fetched from the church link's content source.
 final linkContentProvider = StreamProvider<LinkContent?>((ref) => _requireOpenChurch(ref).linkContent());
+
+/// What the home page shows for the church link, or null when there is
+/// none: the fetched content while fresh, then the fixed link.
+final shownChurchLinkProvider = Provider<({String title, String body, String url})?>((ref) {
+  // Watched directly so switching church marks this stale at once. Through
+  // the link's streams alone, which pause while 首頁 is hidden, it would go
+  // stale only when 首頁 shows again, mid-frame, and Riverpod would then
+  // schedule its rebuild during a build.
+  ref.watch(churchDataProvider);
+  final link = ref.watch(churchLinkProvider).value;
+  if (link == null) return null;
+  final content = ref.watch(linkContentProvider).value;
+  final now = ref.watch(clockProvider)();
+  final fetched = content?.fetchedAt;
+  if (fetched != null) rebuildAt(ref, fetched.add(linkContentFresh), now);
+  return shownChurchLink(link, content, now);
+});
 
 /// Saved rosters from today on, every service.
 final savedRostersProvider = StreamProvider<List<Roster>>((ref) {

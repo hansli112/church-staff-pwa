@@ -8,11 +8,8 @@ class Day implements Comparable<Day> {
 
   Day._(this._utc);
 
-  /// Today on this device.
-  factory Day.today([DateTime? now]) {
-    final n = now ?? DateTime.now();
-    return Day(n.year, n.month, n.day);
-  }
+  /// The day [now] falls on, in this device's time zone.
+  factory Day.today(DateTime now) => Day(now.year, now.month, now.day);
 
   /// Parses `YYYY-MM-DD`. Throws [FormatException] on anything else,
   /// including dates that do not exist such as 2026-02-30.

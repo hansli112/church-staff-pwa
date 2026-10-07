@@ -11,7 +11,7 @@ import '../support/harness.dart';
 
 void main() {
   test('a profile that failed to save (offline) is saved on the next account change', () async {
-    final backend = MemoryBackend()..failNextWrite = Exception('offline');
+    final backend = MemoryBackend(clock: testClock)..failNextWrite = Exception('offline');
     final auth = StreamController<AuthUser?>();
     final container = ProviderContainer(
       overrides: [

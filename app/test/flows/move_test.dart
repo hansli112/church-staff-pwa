@@ -35,7 +35,7 @@ const preview = MovePreview(
 
 /// Signed in, no church yet, with a file picked that reads as [answer].
 Future<MemoryBackend> start(WidgetTester tester, Object answer, {String email = 'pastor@grace.org'}) async {
-  final b = MemoryBackend()..moveAnswer = answer;
+  final b = MemoryBackend(clock: testClock)..moveAnswer = answer;
   b.auth.signInAs(email, uid: 'me', name: '新帳號');
   await pumpApp(tester, b, overrides: [moveFilePickerProvider.overrideWithValue(() async => utf8.encode('{}'))]);
   await tapText(tester, '建立新教會');

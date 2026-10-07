@@ -101,7 +101,7 @@ void main() {
           source: src,
           title: '今日經文',
           body: '耶和華是我的牧者',
-          fetchedAt: DateTime.now().subtract(const Duration(hours: 3)),
+          fetchedAt: testNow.subtract(const Duration(hours: 3)),
         );
       await pumpApp(tester, b);
       expect(find.text('今日經文'), findsOneWidget);
@@ -110,11 +110,31 @@ void main() {
       b.linkContents['grace'] = LinkContent(
         source: src,
         title: '今日經文',
-        fetchedAt: DateTime.now().subtract(const Duration(hours: 49)),
+        fetchedAt: testNow.subtract(const Duration(hours: 49)),
       );
       b.notify();
       await settle(tester);
       expect(find.text('教會官網'), findsOneWidget, reason: 'over 48 hours old');
+    });
+
+    testWidgets('fetched content gives way to the fixed link once 48 hours pass', (tester) async {
+      var now = testNow;
+      final b = seededChurch(as: staffMei, clock: () => now)
+        ..churchLinks['grace'] = sourced
+        ..linkContents['grace'] = LinkContent(
+          source: src,
+          title: '今日經文',
+          fetchedAt: testNow.subtract(const Duration(hours: 47)),
+        );
+      await pumpApp(tester, b);
+      expect(find.text('今日經文'), findsOneWidget);
+
+      // No new content arrives; only time passes.
+      now = testNow.add(const Duration(hours: 1));
+      await tester.pump(const Duration(hours: 1));
+      await settle(tester);
+      expect(find.text('今日經文'), findsNothing);
+      expect(find.text('教會官網'), findsOneWidget);
     });
 
     testWidgets('an admin adds a source and a time; it is fetched at once', (tester) async {

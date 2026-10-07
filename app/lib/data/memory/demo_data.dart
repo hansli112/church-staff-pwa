@@ -10,12 +10,12 @@ import 'memory_backend.dart';
 /// run. The emulator seed script (tools/seed) builds the same shape.
 MemoryBackend demoBackend({
   int memberCount = 150,
-  Day? today,
+  DateTime Function()? clock,
   bool signIn = true,
   bool newUser = false,
 }) {
-  final b = MemoryBackend();
-  final start = today ?? Day.today();
+  final b = MemoryBackend(clock: clock);
+  final start = Day.today(b.clock());
   final cid = b.addChurch('恩典之家', id: 'demo');
   // The features an admin sets up: a church link with a daily source, a
   // webhook, and two people moved from self-host who have not signed in.
@@ -30,7 +30,7 @@ MemoryBackend demoBackend({
     title: '今日經文　詩篇 23:1',
     body: '耶和華是我的牧者，我必不至缺乏。',
     link: 'https://example.org/bible/ps23',
-    fetchedAt: DateTime.now().subtract(const Duration(hours: 5)),
+    fetchedAt: b.clock().subtract(const Duration(hours: 5)),
   );
   b.webhooks[cid] = WebhookSettings(
     url: 'https://n8n.example.org/webhook/martha',
@@ -40,7 +40,7 @@ MemoryBackend demoBackend({
       ok: true,
       status: 200,
       event: 'roster.changed',
-      at: DateTime.now().subtract(const Duration(minutes: 12)),
+      at: b.clock().subtract(const Duration(minutes: 12)),
     ),
   );
   b.webhookSecrets[cid] = 'whsec_demo';

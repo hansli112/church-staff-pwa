@@ -158,6 +158,32 @@ void main() {
       expect(b.invites[code]!.revoked, isTrue);
     });
 
+    testWidgets('an invite leaves the list when it expires, and stops working', (tester) async {
+      var now = testNow;
+      final b = seededChurch(clock: () => now);
+      await pumpApp(tester, b);
+      captureOutbox(tester);
+      await go(tester, '/me/invites');
+      await tapText(tester, '7 天內有效');
+      final code = b.invites.keys.single;
+      expect(find.text(code), findsOneWidget);
+
+      now = testNow.add(const Duration(days: 6, hours: 23));
+      await tester.pump(const Duration(days: 6, hours: 23));
+      await settle(tester);
+      expect(find.text(code), findsOneWidget, reason: 'an hour left');
+      expect((await b.cloud.previewInvite(code)).code, code);
+
+      now = testNow.add(const Duration(days: 7));
+      await tester.pump(const Duration(hours: 1));
+      await settle(tester);
+      expect(find.text(code), findsNothing);
+      await expectLater(
+        b.cloud.previewInvite(code),
+        throwsA(isA<CloudException>().having((e) => e.code, 'code', CloudErrorCode.inviteExpired)),
+      );
+    });
+
     testWidgets('the shared invite link is under the church URL', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
