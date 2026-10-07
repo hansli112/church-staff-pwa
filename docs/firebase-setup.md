@@ -97,7 +97,7 @@ scripts/deploy.sh prod --only hosting  # 只更新網頁
 
 Hosting 部署前，`scripts/hosting-predeploy.sh` 用 `scripts/build-site.mjs` 把網站放進 Web build（需要 Node；第一次會在 `landing/` 跑 `npm ci`）。網站各頁共用的頁首、頁尾在 `build-site.mjs` 裡，`landing/` 的頁面用 `<!-- site-header -->`、`<!-- site-footer -->` 標位置。
 - `/`：landing page。Flutter 的 `index.html` 改名成 `app.html`，其他路徑都 rewrite 到它，所以網頁版從 `/home` 開始（manifest 的 `start_url`）。舊的 `/about` 轉到 `/`。
-- `/support`：支持頁。顯示這個月的雲端費用（不用登入就讀 `platform/funding`），以及網站的線上支持按鈕。
+- `/support`：支持頁。顯示這個月的雲端費用（不用登入就讀 `platform/funding`），以及網站的線上支持按鈕。線上支持預設關著（按鈕只顯示「即將開放」），部署時加 `SUPPORT_PAYMENTS=on` 才有選金額和付款，見〈線上支持（藍新金流）〉。`/support/pay` rewrite 到 `newebpayStart`。
 - `/blog/`：教學文章。每篇是 `landing/blog/<網址>.md`，開頭寫 `title`、`date`、`description`，會變成 `/blog/<網址>/`。
 - `/privacy`、`/terms`：App 會打開這兩頁，所以它們沒有網站的頁首、頁尾，也不連到首頁，從 App 點不到支持頁（商店不准 App 把人帶去外部付款）。
 
@@ -123,6 +123,58 @@ OAuth 同意畫面的首頁網址填 `/`，隱私權政策填 `/privacy`：Googl
   3. Play Console →「使用者和權限」邀請 Functions 的服務帳號（`<專案編號>-compute@developer.gserviceaccount.com`），權限勾「查看財務資料」。查訂單（`orders.get`）要這個權限。
   - 一個 App 只能設一個主題，所以 Google 的通知只進 prod。授權測試帳號的購買會被略過，不算進收入。
 - 匯率來自 `open.er-api.com`，每天抓一次，抓不到就沿用上次的匯率（超過 7 天會記錯誤 log）。免費方案要求在用到匯率的頁面註明來源，支持頁已加上。
+
+## 線上支持（藍新金流）
+
+網站支持頁的一次性付款，走藍新金流 MPG（規格《線上交易─幕前支付技術串接手冊》NDNF-1.2.6，藍新官網「API 文件下載」）。流程和資料見 `docs/design.md`〈金流〉。三支 Function：
+
+| Function | 網址 | 誰呼叫 |
+|---|---|---|
+| `newebpayStart` | `<網站>/support/pay`（Hosting rewrite） | 支持頁，開單並拿到要送去藍新的表單 |
+| `newebpayNotify` | `https://asia-east1-<專案>.cloudfunctions.net/newebpayNotify` | 藍新在背景通知付款結果（NotifyURL） |
+| `newebpayReturn` | `https://asia-east1-<專案>.cloudfunctions.net/newebpayReturn` | 付款人的瀏覽器付完回來（ReturnURL），轉到 `/support?paid=1` |
+
+NotifyURL、ReturnURL、ClientBackURL（藍新頁面上的「返回商店」，`<網站>/support`）每筆交易都由 `newebpayStart` 帶給藍新，所以不用在藍新後台設定；後台也可以填（會員中心 → 商店管理 → 商店資料設定 → 詳細資料的「API 應用 URL」），兩邊都有時以每筆交易帶的為準。注意 ReturnURL 和 NotifyURL 不能填同一個網址。
+
+設定分三處，三處都齊了才會開單，少一樣 `newebpayStart` 就回「暫時無法使用」：
+- **金鑰**（Secret Manager）：`NEWEBPAY_HASH_KEY`（32 字元）、`NEWEBPAY_HASH_IV`（16 字元），在藍新會員專區該商店的「API 串接金鑰」。`firebase-project.sh` 先建好佔位值；佔位值長度不對，等於關著。
+- **商店代號和環境**：`functions/.env.<專案 ID>`（不進 git，部署的那台電腦要有），例如 `functions/.env.marthasit-dev`：
+  ```
+  NEWEBPAY_MERCHANT_ID=<商店代號>
+  NEWEBPAY_ENV=test
+  ```
+  `NEWEBPAY_ENV` 是 `test`（送到 `ccore.newebpay.com`）或 `production`（送到 `core.newebpay.com`）。prod（`marthasit`）只接受 `production`，測試付款不會算進正式的進度。
+- **網站**：Hosting 部署時加 `SUPPORT_PAYMENTS=on`，支持頁才出現選金額和付款按鈕（`hosting-predeploy.sh` → `build-site.mjs --payments on`）。沒加就是「即將開放」，每次部署 Hosting 都要加。
+
+**第一次部署前**：Functions 宣告了這兩個 secret，專案裡沒有的話 `firebase deploy` 會停下來。已經建好的專案重跑一次 `scripts/firebase-project.sh`（只會補上缺的佔位 secret），或手動建：
+```sh
+printf placeholder | gcloud secrets create NEWEBPAY_HASH_KEY --project <專案> --replication-policy=automatic --data-file=-
+printf placeholder | gcloud secrets create NEWEBPAY_HASH_IV  --project <專案> --replication-policy=automatic --data-file=-
+```
+
+**金鑰到了以後**（先在 dev 用藍新測試區的商店，再換正式）：
+1. 藍新會員專區該商店：開啟信用卡一次付清、Apple Pay、Google Pay；複製商店代號、HashKey、HashIV。
+2. 換掉佔位 secret：
+   ```sh
+   printf %s '<HashKey>' | gcloud secrets versions add NEWEBPAY_HASH_KEY --project marthasit-dev --data-file=-
+   printf %s '<HashIV>'  | gcloud secrets versions add NEWEBPAY_HASH_IV  --project marthasit-dev --data-file=-
+   ```
+3. 寫 `functions/.env.marthasit-dev`（上面的格式，`NEWEBPAY_ENV=test`）。
+4. 部署：`SUPPORT_PAYMENTS=on scripts/deploy.sh dev`。secret 和 `.env` 都是部署時讀的，改了要再部署 Functions。
+5. 測試：開 `https://marthasit-dev.web.app/support` 付一筆，測試卡號 `4000-2211-1111-1111`（有效期限、末三碼隨便填）。確認：付完回到支持頁顯示謝謝；`fundingPayments/newebpay_<訂單號碼>` 出現；支持頁的金額變多。Function 的 log 搜尋 `NewebPay`。Apple Pay、Google Pay 在測試區要用真的卡在手機上測。
+6. 正式上線（prod）：
+   ```sh
+   printf %s '<正式 HashKey>' | gcloud secrets versions add NEWEBPAY_HASH_KEY --project marthasit --data-file=-
+   printf %s '<正式 HashIV>'  | gcloud secrets versions add NEWEBPAY_HASH_IV  --project marthasit --data-file=-
+   printf 'NEWEBPAY_MERCHANT_ID=<正式商店代號>\nNEWEBPAY_ENV=production\n' > functions/.env.marthasit
+   SUPPORT_PAYMENTS=on scripts/deploy.sh prod
+   ```
+   正式付一筆小額確認，再到藍新後台退款（退款不會自動從進度扣掉）。
+7. 隱私權政策和服務條款補上付款服務商（藍新金流）。
+
+**從測試區換到正式環境**：測試區和正式環境是不同的商店，商店代號和兩把金鑰都不一樣。三樣一起換（secret 加新版本、`.env` 的 `NEWEBPAY_MERCHANT_ID` 和 `NEWEBPAY_ENV=production`），再部署 Functions。
+
+關掉線上支持：Hosting 部署時不加 `SUPPORT_PAYMENTS=on`（按鈕回到「即將開放」）；要連後端一起停，把 `.env` 的 `NEWEBPAY_MERCHANT_ID` 拿掉再部署 Functions。
 
 ## 平台營運者
 

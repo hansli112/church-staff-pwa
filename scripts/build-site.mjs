@@ -2,7 +2,12 @@
 // blog and the legal pages, with one shared header and footer. Prints the
 // path of every page search engines may list, for the sitemap.
 //
-//   node scripts/build-site.mjs <out> --origin https://marthasit.web.app --project marthasit
+//   node scripts/build-site.mjs <out> --origin https://marthasit.web.app --project marthasit [--payments on|off]
+//
+// --payments (default off) turns on 線上支持 on the support page: the
+// amount picker and NewebPay. Pages mark what shows only one way with
+// <!-- payments:on --> … <!-- /payments:on --> and the same for off; with
+// it off the support button only says 即將開放.
 //
 // Pages in landing/ mark where the shared parts go with <!-- site-header -->
 // and <!-- site-footer -->, and use __ORIGIN__ / __FIREBASE_PROJECT__ for
@@ -30,8 +35,9 @@ const flag = (name) => {
 const out = args[0];
 const origin = flag('origin');
 const project = flag('project') ?? '';
-if (!out || out.startsWith('--') || !origin) {
-  throw new Error('usage: build-site.mjs <out> --origin <https://…> [--project <id>]');
+const payments = flag('payments') ?? 'off';
+if (!out || out.startsWith('--') || !origin || !['on', 'off'].includes(payments)) {
+  throw new Error('usage: build-site.mjs <out> --origin <https://…> [--project <id>] [--payments on|off]');
 }
 
 const escapeHtml = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -72,9 +78,17 @@ function footer(path) {
 </footer>`;
 }
 
+/** Keeps the <!-- payments:<payments> --> parts of [html] and drops the others. */
+function paymentParts(html) {
+  const other = payments === 'on' ? 'off' : 'on';
+  return html
+    .replace(new RegExp(`[ \\t]*<!-- payments:${other} -->[\\s\\S]*?<!-- /payments:${other} -->\\n?`, 'g'), '')
+    .replace(new RegExp(`[ \\t]*<!-- /?payments:${payments} -->\\n?`, 'g'), '');
+}
+
 /** A page from landing/ with the shared parts and this project's values. */
 function fill(html, path) {
-  return html
+  return paymentParts(html)
     .replace('<!-- site-header -->', header(path))
     .replace('<!-- site-footer -->', footer(path))
     .replaceAll('__ORIGIN__', origin)

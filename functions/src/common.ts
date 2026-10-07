@@ -9,6 +9,12 @@ export const REGION = 'asia-east1';
 /** The prod Firebase project (docs/firebase-setup.md); everything else is dev. */
 export const PROD_PROJECT = 'marthasit';
 
+/** One day, in milliseconds. */
+export const DAY_MS = 86_400_000;
+
+/** An amount of money to the cent. */
+export const round2 = (n: number) => Math.round(n * 100) / 100;
+
 /** The hosted web app. */
 export const appUrl = () => process.env.APP_URL ?? `https://${process.env.GCLOUD_PROJECT}.web.app`;
 

@@ -2,15 +2,17 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, test } from 'node:test';
 
-import { LIMITS, personName, RULES_SIZE_FACTOR, TEXT_LIMITS } from '../src/limits.js';
+import { LIMITS, personName, RULES_SIZE_FACTOR, SUPPORT_AMOUNT, TEXT_LIMITS } from '../src/limits.js';
 
 // The same limits live in three places: src/limits.ts (here),
 // app/lib/domain/limits.dart and firestore.rules. This reads the other two
-// as text and fails on any number that disagrees.
+// as text and fails on any number that disagrees. The website's support
+// page (landing/support.html) has the 線上支持 amounts.
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
 const dart = read('../../app/lib/domain/limits.dart');
 const rules = read('../../firestore.rules');
+const supportPage = read('../../landing/support.html');
 
 /** `static const name = 123;` in `abstract final class [name]`; nothing else allowed there. */
 function dartClass(name: string): Record<string, number> {
@@ -68,6 +70,16 @@ describe('limits', () => {
       const want = of.text ? TEXT_LIMITS[of.text] * RULES_SIZE_FACTOR : of.other ? LIMITS[of.other] : of.rulesOnly;
       for (const { n } of found) assert.equal(n, want, `${field}.size() <= ${n} in firestore.rules`);
     }
+  });
+
+  test('the support page takes the amounts the Functions take', () => {
+    const field = supportPage.match(/<input[^>]*id="pay-custom"[^>]*>/)?.[0];
+    assert.ok(field, 'the custom amount field in support.html');
+    assert.equal(Number(field.match(/\bmin="(\d+)"/)?.[1]), SUPPORT_AMOUNT.min);
+    assert.equal(Number(field.match(/\bmax="(\d+)"/)?.[1]), SUPPORT_AMOUNT.max);
+    const presets = [...supportPage.matchAll(/name="amount" value="(\d+)"/g)].map(([, v]) => Number(v));
+    assert.ok(presets.length > 0, 'preset amounts in support.html');
+    for (const p of presets) assert.ok(p >= SUPPORT_AMOUNT.min && p <= SUPPORT_AMOUNT.max, `preset ${p}`);
   });
 
   test('a name from elsewhere is trimmed and cut to whole characters', () => {

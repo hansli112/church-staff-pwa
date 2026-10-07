@@ -170,8 +170,9 @@ run "$root/scripts/firebase.sh" "$project" deploy --non-interactive \
   --only firestore:rules,firestore:indexes${billing:+,storage}
 
 # 9b. Secrets for Cloud Functions (Secret Manager needs billing). Values are
-# never printed. The OAuth client starts as a placeholder: Functions deploy and
-# run, and only connecting a calendar fails until the real client is set.
+# never printed. The OAuth client and NewebPay's keys start as placeholders:
+# Functions deploy and run, and only connecting a calendar (or 線上支持) fails
+# until the real values are set.
 secret() { # name; value on stdin
   if gcloud secrets describe "$1" --project "$project" >/dev/null 2>&1; then
     cat >/dev/null; echo "  secret $1 exists"
@@ -184,6 +185,9 @@ if [ -n "$billing" ] && ! $dry; then
   openssl rand -base64 32 | tr -d '\n' | secret CALENDAR_TOKEN_KEY
   printf placeholder | secret GOOGLE_OAUTH_CLIENT_ID
   printf placeholder | secret GOOGLE_OAUTH_CLIENT_SECRET
+  # 線上支持 stays off while these are placeholders (docs/firebase-setup.md).
+  printf placeholder | secret NEWEBPAY_HASH_KEY
+  printf placeholder | secret NEWEBPAY_HASH_IV
 fi
 
 # 10. Budget alert to the account owner.
@@ -206,4 +210,5 @@ Done with the automatic part. By hand, once (docs/firebase-setup.md):
        printf %s '<secret>' | gcloud secrets versions add GOOGLE_OAUTH_CLIENT_SECRET --project $project --data-file=-
   4. Deploy: scripts/deploy.sh $env_name
   5. Platform operator: scripts/as-owner.sh $project npx --prefix functions tsx functions/scripts/grant-operator.ts --project $project <your email>
+  6. 線上支持 (NewebPay), once the store's keys exist: docs/firebase-setup.md, 線上支持（藍新金流）.
 EOF

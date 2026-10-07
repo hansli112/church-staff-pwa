@@ -636,6 +636,24 @@ describe('平台統計與名稱保留', () => {
     await assertFails(getDoc(doc(as(STRANGER), 'fundingPayments/apple_1')));
   });
 
+  it('線上支持（藍新）的訂單和每小時計數只有後端碰：沒登入、同工、營運者都不能讀寫', async () => {
+    await seed('newebpayOrders/20261007a1b2c3d4e5f6', { amount: 300, status: 'pending' });
+    await seed('platform/newebpayRate', { hour: '2026-10-07T01', count: 1 });
+    await seed('fundingPayments/newebpay_20261007a1b2c3d4e5f6', { amountTwd: 291 });
+    const op = testEnv.authenticatedContext('hans', { operator: true }).firestore();
+    for (const db of [testEnv.unauthenticatedContext().firestore(), as(STRANGER), as(ADMIN_A), op]) {
+      await assertFails(getDoc(doc(db, 'newebpayOrders/20261007a1b2c3d4e5f6')));
+      await assertFails(getDocs(collection(db, 'newebpayOrders')));
+      await assertFails(setDoc(doc(db, 'newebpayOrders/20261007ffffffffffff'), { amount: 30, status: 'pending' }));
+      await assertFails(setDoc(doc(db, 'newebpayOrders/20261007a1b2c3d4e5f6'), { amount: 300, status: 'paid' }));
+      await assertFails(deleteDoc(doc(db, 'newebpayOrders/20261007a1b2c3d4e5f6')));
+      await assertFails(getDoc(doc(db, 'platform/newebpayRate')));
+      await assertFails(setDoc(doc(db, 'platform/newebpayRate'), { hour: '2026-10-07T01', count: 0 }));
+      await assertFails(getDoc(doc(db, 'fundingPayments/newebpay_20261007a1b2c3d4e5f6')));
+      await assertFails(setDoc(doc(db, 'fundingPayments/newebpay_x'), { amountTwd: 1 }));
+    }
+  });
+
   it('churchNames 不能讀寫（只有建立教會的 function 用）', async () => {
     await seed('churchNames/恩典堂', { cid: A });
     await assertFails(getDoc(doc(as(ADMIN_A), 'churchNames/恩典堂')));

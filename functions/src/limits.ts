@@ -28,6 +28,16 @@ export const LIMITS = {
 } as const;
 
 /**
+ * 線上支持 (the website's NewebPay payments), in whole NT$. Only the
+ * website and the Functions check it, not the app: landing/support.html
+ * has the same bounds on its amount field (test/limits.test.ts).
+ */
+export const SUPPORT_AMOUNT = {
+  min: 30,
+  max: 10000,
+} as const;
+
+/**
  * firestore.rules counts UTF-16 code units, not characters, so for a text
  * limit it allows this many times as many: an abuse guard, not the limit.
  * The Functions apply the same guard before counting characters.

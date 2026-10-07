@@ -25,7 +25,9 @@
 | `platform/fundingCosts` | 只有後端讀寫（營運者經 `adminSetFundingCosts` 改）：`items`（`name`、`amount`、`currency` 為 `TWD` / `USD`、`per` 為 `month` / `year`） |
 | `platform/fxRates` | 只有後端讀寫：`rates`（一元台幣換多少外幣）、`fetchedOn` |
 | `fundingMonths/{YYYY-MM}` | 只有後端讀寫：該月 `received`、`target`（月份過了就不再改） |
-| `fundingPayments/{商店_交易 id}` | 只有後端讀寫：`store`、`productId`、`amount`、`currency`、`amountTwd`、`refundedTwd`、`month`、`at`。退款比付款先到時，先只有 `store`、`refundShare`（退了幾成），付款到了再補上其他欄位。不記帳號或名字 |
+| `fundingPayments/{商店_交易 id}` | 只有後端讀寫：`store`（`apple` / `google` / `newebpay`）、`productId`（網站付款是 `web_once`）、`amount`、`currency`、`amountTwd`、`refundedTwd`、`month`、`at`。id 是 `apple_<交易 id>`、`google_<訂單 id>`、`newebpay_<訂單號碼>`。退款比付款先到時，先只有 `store`、`refundShare`（退了幾成），付款到了再補上其他欄位。不記帳號或名字 |
+| `newebpayOrders/{訂單號碼}` | 只有後端讀寫：網站線上支持（藍新金流）的訂單。訂單號碼（MerchantOrderNo）由後端產生，`YYYYMMDD` 加 12 個十六進位字元。開單時 `amount`（新台幣整數，30–10,000）、`status`（`pending`）、`createdAt`、`expiresAt`；付款通知到了改成 `status: paid`，加上 `tradeNo`（藍新交易序號）、`paymentType`、`paidAt`，拿掉 `expiresAt`。沒付款的過了 `expiresAt`（3 天）就刪掉。不記卡號、email、IP 或名字 |
+| `platform/newebpayRate` | 只有後端讀寫：這個小時開了幾張藍新訂單，`hour`（UTC 的 `YYYY-MM-DDTHH`）、`count`。全站每小時最多 60 張 |
 
 - 一個教會的所有資料都在 `churches/{cid}` 底下，可以整棵匯出。
 - 推播 token 放在 `users/{uid}`，只有本人和 Cloud Functions 讀得到。self-host 版的 roster editor 讀得到全部 token，這裡改掉了。
@@ -50,6 +52,8 @@
 其他上限每一邊單位都一樣：網址（教會連結、內容來源、外部通知）500 個 UTF-16 單位，外部通知的密鑰 16–200 個可見 ASCII 字元，服事最多 20 種。
 
 數字在三個地方：`app/lib/domain/limits.dart`、`functions/src/limits.ts`、`firestore.rules`。`functions/test/limits.test.ts`（CI 的 backend job）讀這三個檔，任何一個數字對不上就失敗；規則裡新加一個 `size() <=` 也要在那裡登記。
+
+線上支持的金額（30–10,000 元）只有網站和 Functions 檢查，不在 App 裡：`functions/src/limits.ts` 的 `SUPPORT_AMOUNT` 和 `landing/support.html` 金額欄位的 `min`、`max`，同一個測試比對。
 
 比對教會名稱、搜尋同工的正規化（`app/lib/domain/text.dart` ↔ `functions/src/text.ts`）和數字的方法，兩邊的測試都跑 `testdata/text_rules.json` 的每一列；要改規則先在那裡加一列。
 

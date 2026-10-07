@@ -22,7 +22,11 @@ else
   origin="https://${GCLOUD_PROJECT:-marthasit-dev}.web.app"
 fi
 [ -d "$root/landing/node_modules" ] || npm ci --prefix "$root/landing" --silent
-pages="$(node "$root/scripts/build-site.mjs" "$web" --origin "$origin" --project "${GCLOUD_PROJECT:-}")"
+# 線上支持 (NewebPay) on the support page: off unless the deploy asks for it,
+# e.g. SUPPORT_PAYMENTS=on scripts/deploy.sh dev --only hosting. Turn it on
+# only where newebpayStart is set up (docs/firebase-setup.md).
+pages="$(node "$root/scripts/build-site.mjs" "$web" --origin "$origin" --project "${GCLOUD_PROJECT:-}" \
+  --payments "${SUPPORT_PAYMENTS:-off}")"
 
 # Search engines see only the production site, and not the church pages
 # (a church's name is not meant to show up in search results).

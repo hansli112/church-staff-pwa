@@ -25,6 +25,9 @@
     <h1>支持馬大別忙</h1>
     <p class="lead">馬大別忙免費給每間教會使用，雲端費用由大家一起分擔：大的扶持小的，有餘的補不足的。支持是自願的，不會多出任何功能。</p>
 
+    <!-- 從藍新的付款頁回來（/support?paid=1 或 0，由 newebpayReturn 轉過來）。網址裡沒有付款資料。 -->
+    <p class="notice" id="paid" role="status" hidden></p>
+
     <!-- 這個月的雲端費用：讀 platform/funding（公開）。讀不到就整塊不顯示。 -->
     <section class="panel" id="funding" hidden aria-labelledby="funding-title">
       <h2 id="funding-title">這個月的雲端費用</h2>
@@ -37,10 +40,33 @@
 
     <section class="panel" aria-labelledby="pay-title">
       <h2 id="pay-title">線上支持</h2>
+      <!-- TODO(LINE Pay): 藍新的 LINE Pay 要另外申請；開通後這行加上 LINE Pay，fundingNewebpay.ts 打開 LINEPAY。 -->
       <p>可以用信用卡、Apple Pay 或 Google Pay，金額自己決定。</p>
-      <!-- TODO(金流): 藍新金流審核通過後，href 換成藍新的收款頁，拿掉 data-soon 和下面的提示；沒通過就改接 Portaly（只有信用卡，這行的付款方式也要改）。 -->
+      <!-- payments:off -->
+      <!-- 藍新金流還沒接上：按鈕只顯示「即將開放」。接上後網站改用 payments on 建置（docs/firebase-setup.md〈線上支持〉）。藍新沒通過就改接 Portaly（只有信用卡，上面的付款方式也要改）。 -->
       <a class="btn btn-primary wide" href="#pay-title" id="pay" data-soon>支持馬大別忙</a>
       <p class="fine" id="pay-soon" hidden>線上支持即將開放，謝謝你的心意。</p>
+      <!-- /payments:off -->
+      <!-- payments:on -->
+      <!-- 選金額 → POST /support/pay（Hosting 轉到 newebpayStart）→ 拿到簽好的表單，送到藍新的付款頁。 -->
+      <form id="pay-form" action="/support/pay" method="post" novalidate>
+        <fieldset class="amounts">
+          <legend>金額（新台幣）</legend>
+          <label><input type="radio" name="amount" value="100">100</label>
+          <label><input type="radio" name="amount" value="300" checked>300</label>
+          <label><input type="radio" name="amount" value="500">500</label>
+          <label><input type="radio" name="amount" value="1000">1,000</label>
+          <label><input type="radio" name="amount" value="other" id="pay-other">其他</label>
+        </fieldset>
+        <div class="custom" id="pay-custom-row" hidden>
+          <label for="pay-custom">其他金額</label>
+          <input id="pay-custom" type="number" inputmode="numeric" min="30" max="10000" step="1" placeholder="30–10,000" aria-describedby="pay-msg">
+        </div>
+        <button class="btn btn-primary wide" id="pay" type="submit">支持馬大別忙</button>
+        <p class="fine" id="pay-msg" role="status" hidden></p>
+        <p class="fine">付款由藍新金流處理，會轉到藍新的付款頁；馬大別忙不會拿到你的卡號。</p>
+      </form>
+      <!-- /payments:on -->
     </section>
 
     <section class="panel" aria-labelledby="where-title">
@@ -98,6 +124,17 @@
     document.getElementById('funding').hidden = false;
   }).catch(() => {});
 
+  // Back from NewebPay's page: say how it went, then tidy the address.
+  const paid = new URLSearchParams(location.search).get('paid');
+  if (paid === '1' || paid === '0') {
+    const note = document.getElementById('paid');
+    note.textContent = paid === '1'
+      ? '謝謝你的支持！付款完成後，這個月的雲端費用會自動更新。'
+      : '這次付款沒有完成，可以再試一次。';
+    note.hidden = false;
+    history.replaceState(null, '', location.pathname + location.hash);
+  }
+
   const pay = document.getElementById('pay');
   if (pay.hasAttribute('data-soon')) {
     pay.addEventListener('click', (e) => {
@@ -105,6 +142,74 @@
       document.getElementById('pay-soon').hidden = false;
     });
   }
+
+  // 線上支持 (only when built with --payments on).
+  const form = document.getElementById('pay-form');
+  if (!form) return;
+  const custom = document.getElementById('pay-custom');
+  const customRow = document.getElementById('pay-custom-row');
+  const msg = document.getElementById('pay-msg');
+  const min = Number(custom.min);
+  const max = Number(custom.max);
+  const messages = {
+    amount: `請輸入 ${min.toLocaleString('zh-TW')}–${max.toLocaleString('zh-TW')} 的整數金額。`,
+    busy: '現在支持的人比較多，請過一會兒再試。',
+    unavailable: '線上支持暫時無法使用，請稍後再試。',
+  };
+  const say = (text) => {
+    msg.textContent = text;
+    msg.hidden = !text;
+  };
+  const ready = () => {
+    pay.disabled = false;
+    pay.textContent = '支持馬大別忙';
+  };
+  form.addEventListener('change', (e) => {
+    if (e.target.name !== 'amount') return;
+    customRow.hidden = e.target.value !== 'other';
+    if (!customRow.hidden) custom.focus();
+    say('');
+  });
+  // Coming back from NewebPay with the back button shows the page as it was left.
+  addEventListener('pageshow', ready);
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const choice = form.elements.amount.value;
+    const amount = choice === 'other' ? Number(custom.value) : Number(choice);
+    if (!Number.isInteger(amount) || amount < min || amount > max) {
+      say(messages.amount);
+      if (choice === 'other') custom.focus();
+      return;
+    }
+    say('');
+    pay.disabled = true;
+    pay.textContent = '前往付款頁…';
+    try {
+      const r = await fetch(form.action, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount }),
+      });
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok || !body.gateway) throw new Error(body.error || String(r.status));
+      // NewebPay only takes a form posted by the browser (NDNF-1.2.6 §6, MPG02005).
+      const post = document.createElement('form');
+      post.method = 'post';
+      post.action = body.gateway;
+      for (const [name, value] of Object.entries(body.fields)) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        post.append(input);
+      }
+      document.body.append(post);
+      post.submit();
+    } catch (err) {
+      ready();
+      say(messages[err.message] || '連不上付款服務，請稍後再試。');
+    }
+  });
 })();
 </script>
 </body>

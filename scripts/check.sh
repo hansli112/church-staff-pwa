@@ -42,7 +42,7 @@ run_contract() {
   npm run build
   cd "$root/app"
   flutter pub get >/dev/null
-  # The webhook and calendar functions read secrets; any will do here. A
+  # The webhook, calendar and NewebPay functions read secrets; any will do here. A
   # .secret.local of your own is used as it is.
   local secrets="$root/functions/.secret.local"
   if [ ! -f "$secrets" ]; then
@@ -51,6 +51,8 @@ run_contract() {
       echo "CALENDAR_TOKEN_KEY=$(node -e "process.stdout.write(require('crypto').randomBytes(32).toString('base64'))")"
       echo "GOOGLE_OAUTH_CLIENT_ID=contract"
       echo "GOOGLE_OAUTH_CLIENT_SECRET=contract"
+      echo "NEWEBPAY_HASH_KEY=contract"
+      echo "NEWEBPAY_HASH_IV=contract"
     } >"$secrets"
   fi
   cd "$root"

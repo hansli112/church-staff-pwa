@@ -289,8 +289,9 @@ service cloud.firestore {
 
     // 雲端費用進度: the summary on the support pages, the app's and the
     // website's (read without signing in). Functions write it; the cost list
-    // (platform/fundingCosts), months (fundingMonths) and payments
-    // (fundingPayments) stay backend-only.
+    // (platform/fundingCosts), months (fundingMonths), payments
+    // (fundingPayments), the website's NewebPay orders (newebpayOrders) and
+    // their hourly count (platform/newebpayRate) stay backend-only.
     match /platform/funding {
       allow read: if true;
     }

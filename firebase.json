@@ -59,6 +59,13 @@
         "destination": "/support.html"
       },
       {
+        "source": "/support/pay",
+        "function": {
+          "functionId": "newebpayStart",
+          "region": "asia-east1"
+        }
+      },
+      {
         "source": "/c/**",
         "function": {
           "functionId": "churchPage",

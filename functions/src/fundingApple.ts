@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { Environment, SignedDataVerifier } from '@apple/app-store-server-library';
 import { logger } from 'firebase-functions/v2';
 
-import type { Deps } from './common.js';
+import { round2, type Deps } from './common.js';
 import { BUNDLE_ID, recordPayment, setRefund } from './funding.js';
 
 /**
@@ -40,8 +40,6 @@ const SALES_TAX: Record<string, number> = {
   CAN: 0,
 };
 const UNLISTED_SALES_TAX = 0.1;
-
-const round2 = (n: number) => Math.round(n * 100) / 100;
 
 /** What Apple pays us out of [priceMilli] (milliunits of the buyer's currency). */
 export function appleNet(priceMilli: number, storefront?: string): number {

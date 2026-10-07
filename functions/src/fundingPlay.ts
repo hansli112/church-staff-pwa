@@ -1,6 +1,6 @@
 import { logger } from 'firebase-functions/v2';
 
-import type { Deps } from './common.js';
+import { DAY_MS, type Deps } from './common.js';
 import { BUNDLE_ID, recordPayment, setRefund } from './funding.js';
 
 /**
@@ -15,7 +15,7 @@ const TOKEN_URL =
   'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token?scopes=https://www.googleapis.com/auth/androidpublisher';
 
 /** An order still unsettled after this long is given up on, and logged. */
-const GIVE_UP_MS = 3 * 86_400_000;
+const GIVE_UP_MS = 3 * DAY_MS;
 
 interface DeveloperNotification {
   packageName?: string;

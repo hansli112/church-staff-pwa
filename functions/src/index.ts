@@ -14,7 +14,8 @@ import {
   onDocumentUpdated,
   onDocumentWrittenWithAuthContext,
 } from 'firebase-functions/v2/firestore';
-import { onCall, onRequest, type CallableRequest } from 'firebase-functions/v2/https';
+import { onCall, onRequest, type CallableRequest, type Request } from 'firebase-functions/v2/https';
+import type { Response } from 'express';
 import { defineSecret } from 'firebase-functions/params';
 import { onMessagePublished } from 'firebase-functions/v2/pubsub';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
@@ -29,6 +30,7 @@ import { churchPage as churchPageHandler } from './churchPage.js';
 import { PROD_PROJECT, REGION, appUrl, type Caller, type Deps } from './common.js';
 import * as funding from './funding.js';
 import * as fundingApple from './fundingApple.js';
+import * as fundingNewebpay from './fundingNewebpay.js';
 import * as fundingPlay from './fundingPlay.js';
 import * as invites from './invites.js';
 import * as move from './move.js';
@@ -159,32 +161,74 @@ export const dailyStats = onSchedule(
   },
 );
 
-// 雲端費用進度: payments arrive from the stores on their own; the operator
-// only keeps the cost list.
+// 雲端費用進度: payments arrive from the stores (and the website's NewebPay
+// payments, below) on their own; the operator only keeps the cost list.
 export const adminFunding = callable(funding.adminFunding);
 export const adminSetFundingCosts = callable(funding.adminSetFundingCosts);
+/** [handler] for POST requests; anything else gets 405. */
+const postOnly =
+  (handler: (req: Request, res: Response) => Promise<void>) => async (req: Request, res: Response) => {
+    if (req.method !== 'POST') {
+      res.status(405).end();
+      return;
+    }
+    await handler(req, res);
+  };
 // Built on first use: every function loads this file, only this one needs Apple's certificate.
 let apple: fundingApple.AppleVerifier | undefined;
-export const appStoreNotifications = onRequest({ region: REGION, maxInstances: 5 }, async (req, res) => {
-  if (req.method !== 'POST') {
-    res.status(405).end();
-    return;
-  }
+export const appStoreNotifications = onRequest({ region: REGION, maxInstances: 5 }, postOnly(async (req, res) => {
   apple ??= fundingApple.appleVerifier(
     process.env.GCLOUD_PROJECT === PROD_PROJECT ? Environment.PRODUCTION : Environment.SANDBOX,
   );
   res.status(await fundingApple.appStoreNotification(deps(), apple, req.body)).end();
-});
+}));
 // Play Console sends to this topic. Throwing makes Pub/Sub deliver again.
 export const playBillingNotifications = onMessagePublished(
   { topic: 'play-billing', region: REGION, retry: true, maxInstances: 5 },
   (event) => fundingPlay.playNotification(deps(), event.data.message.json, new Date(event.data.message.publishTime)),
 );
-// Starts each month's target, and refreshes the exchange rates.
+// 線上支持 on the website, through NewebPay (藍新金流). The support page
+// posts to /support/pay (a Hosting rewrite to newebpayStart) and sends the
+// browser on to NewebPay; NewebPay posts the result to newebpayNotify, and
+// the payer comes back through newebpayReturn. Off until NEWEBPAY_MERCHANT_ID
+// and NEWEBPAY_ENV are set (functions/.env.<project>) and the two secrets
+// hold the store's real keys (docs/firebase-setup.md).
+const newebpayHashKey = defineSecret('NEWEBPAY_HASH_KEY');
+const newebpayHashIv = defineSecret('NEWEBPAY_HASH_IV');
+const newebpaySecrets = [newebpayHashKey, newebpayHashIv];
+const newebpayConfig = () =>
+  fundingNewebpay.newebpayConfig({
+    merchantId: process.env.NEWEBPAY_MERCHANT_ID,
+    gateway: process.env.NEWEBPAY_ENV,
+    hashKey: newebpayHashKey.value(),
+    hashIv: newebpayHashIv.value(),
+    project: process.env.GCLOUD_PROJECT ?? '',
+    appUrl: appUrl(),
+  });
+export const newebpayStart = onRequest(
+  { region: REGION, maxInstances: 2, secrets: newebpaySecrets },
+  postOnly(async (req, res) => {
+    const r = await fundingNewebpay.newebpayStart(deps(), newebpayConfig(), req.body);
+    res.set('Cache-Control', 'no-store').status(r.status).json(r.body);
+  }),
+);
+export const newebpayNotify = onRequest(
+  { region: REGION, maxInstances: 5, secrets: newebpaySecrets },
+  postOnly(async (req, res) => {
+    const status = await fundingNewebpay.newebpayNotify(deps(), newebpayConfig(), req.body);
+    res.status(status).send(status === 200 ? 'OK' : '');
+  }),
+);
+export const newebpayReturn = onRequest({ region: REGION, maxInstances: 5 }, (req, res) => {
+  res.redirect(303, fundingNewebpay.returnLocation(appUrl(), req.method === 'POST' ? req.body : null));
+});
+// Starts each month's target, refreshes the exchange rates, and drops
+// 線上支持 orders nobody paid.
 export const fundingDaily = onSchedule(
   { region: REGION, schedule: 'every day 00:10', timeZone: 'Asia/Taipei' },
   async () => {
     await funding.publishFunding(deps());
+    await fundingNewebpay.dropExpiredOrders(deps());
   },
 );
 

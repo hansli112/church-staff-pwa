@@ -1,28 +1,29 @@
 import { FieldValue, type DocumentSnapshot } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions/v2';
 
-import { dateKeyUtc8, fail, requireOperator, serverTime, text, type Caller, type Deps } from './common.js';
+import { DAY_MS, dateKeyUtc8, fail, requireOperator, serverTime, text, type Caller, type Deps } from './common.js';
 import { TEXT_LIMITS } from './limits.js';
 
 /**
  * 雲端費用進度: what supporters gave this month against what the platform
- * costs. Payments come in on their own (fundingApple.ts, fundingPlay.ts);
- * the platform operator only enters the costs. Everyone signed in reads
- * `platform/funding`.
+ * costs. Payments come in on their own: the stores' notices (fundingApple.ts,
+ * fundingPlay.ts) and the website's NewebPay notices (fundingNewebpay.ts)
+ * all go through [recordPayment]. The platform operator only enters the
+ * costs. Everyone reads `platform/funding` (the website, without signing in).
  *
  * A payment keeps its amount, product and time, not the account or name
  * of whoever paid (its ID is the store's transaction or order ID, which
- * the store's own console can trace).
+ * the store's own console can trace; for NewebPay, our order number).
  *
  * - `platform/fundingCosts`: { items: CostItem[] }, the operator's list.
  * - `fundingMonths/{YYYY-MM}`: { received, target } in NT$. A month keeps
  *   the target it had last; changing the costs only moves this month's.
  *   A month without a doc (before any costs, or with no exchange rate)
  *   counts as target 0, so whatever came in carries on.
- * - `fundingPayments/{store_id}`: one per payment, so a notice sent twice
- *   counts once and a refund knows what to take off. A refund that comes
- *   before its payment leaves a placeholder, so the payment is not counted
- *   when it arrives later.
+ * - `fundingPayments/{store_id}`: one per payment (`apple_`, `google_`,
+ *   `newebpay_`), so a notice sent twice counts once and a refund knows
+ *   what to take off. A refund that comes before its payment leaves a
+ *   placeholder, so the payment is not counted when it arrives later.
  * - `platform/fxRates`: today's rates, kept for days the rate service is down.
  */
 
@@ -111,7 +112,7 @@ async function currentRates(deps: Deps): Promise<Rates> {
     return body.rates;
   } catch (e) {
     const fetchedOn = saved.get('fetchedOn') as string | undefined;
-    const days = fetchedOn ? (Date.parse(today) - Date.parse(fetchedOn)) / 86_400_000 : Infinity;
+    const days = fetchedOn ? (Date.parse(today) - Date.parse(fetchedOn)) / DAY_MS : Infinity;
     const log = days > STALE_RATE_DAYS ? logger.error : logger.warn;
     log('Exchange rates unavailable; using the last ones', { error: String(e), fetchedOn: fetchedOn ?? null });
     return (saved.get('rates') as Rates | undefined) ?? {};
@@ -141,9 +142,9 @@ export async function publishFunding(deps: Deps, rates?: Rates) {
 }
 
 export interface Payment {
-  /** `apple_<transactionId>` or `google_<orderId>`. */
+  /** `apple_<transactionId>`, `google_<orderId>` or `newebpay_<MerchantOrderNo>`. */
   id: string;
-  store: 'apple' | 'google';
+  store: 'apple' | 'google' | 'newebpay';
   productId: string;
   /** What we get, in [currency]. */
   amount: number;
@@ -152,7 +153,8 @@ export interface Payment {
 }
 
 /**
- * Adds a payment to its month, once, less any refund that came first.
+ * Adds a payment to its month, once, less any refund that came first: the
+ * one place a payment becomes 雲端費用進度, whoever it came through.
  * Throws (so the store sends it again) when it cannot be changed into NT$.
  */
 export async function recordPayment(deps: Deps, p: Payment) {
