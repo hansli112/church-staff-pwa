@@ -1,4 +1,3 @@
-import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/models.dart';
 
@@ -52,7 +51,4 @@ class MemoryWorld implements ContractWorld {
     );
     backend.notify();
   }
-
-  @override
-  bool isDenied(Object error) => error is CloudException && error.code == CloudErrorCode.permissionDenied;
 }

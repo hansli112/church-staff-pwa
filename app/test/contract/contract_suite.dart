@@ -8,6 +8,9 @@
 /// the Cloud Functions. What the fake scripts instead (a move file's
 /// contents, fetched pages, webhook deliveries, Google Calendar, photo
 /// recognition, the funding target) stays out.
+///
+/// A refusal is always [CloudErrorCode.permissionDenied], whether the
+/// security rules refused a direct read or write or a function refused.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -100,6 +103,9 @@ Matcher fails(CloudErrorCode code, [Object? detail]) {
   return throwsA(m);
 }
 
+/// Refused for lack of permission, by the rules or by a function.
+Matcher denied() => fails(CloudErrorCode.permissionDenied);
+
 Matcher authFails(AuthErrorCode code) => throwsA(isA<AuthException>().having((e) => e.code, 'code', code));
 
 /// Registers the contract's tests; [open] gives a fresh, empty world for
@@ -108,7 +114,6 @@ void contractTests(Future<ContractWorld> Function() open) {
   late ContractWorld w;
   setUp(() async => w = await open());
 
-  Matcher denied() => throwsA(predicate<Object>(w.isDenied, 'refused for lack of permission'));
   AuthGateway auth() => w.backend.auth;
   CloudApi cloud() => w.backend.cloud;
 
@@ -185,12 +190,50 @@ void contractTests(Future<ContractWorld> Function() open) {
 
     test('a deleted church does not hold its admin back', () async {
       final g = await Grace.open(w);
-      await cloud().deleteChurch(g.cid);
+      await g.church.deleteChurch();
       await cloud().deleteAccount();
       await expectLater(
         auth().signInWithEmail(Grace.pastorEmail, contractPassword),
         authFails(AuthErrorCode.invalidCredential),
       );
+    });
+  });
+
+  group('refusals', () {
+    test('a direct read or write the rules refuse fails as a function refusing does', () async {
+      final g = await Grace.open(w);
+      await w.signIn(Grace.meiEmail);
+      await expectLater(g.church.webhookSave(url: 'https://hook.example/x'), denied(), reason: 'a function');
+      await expectLater(g.church.saveRoster(sundayOn(4)), denied(), reason: 'a write');
+      await expectLater(g.church.saveRosters([sundayOn(4), sundayOn(11)]), denied(), reason: 'a batch');
+      await expectLater(
+        g.church.updateStaffOrder('sunday', {
+          '司會': ['李美玉'],
+        }),
+        denied(),
+        reason: 'a transaction',
+      );
+      await expectLater(
+        g.church.saveMember(Member(uid: g.mei, name: '李美玉', role: Role.admin)),
+        denied(),
+        reason: 'an update',
+      );
+      await expectLater(
+        g.church.createInvite(validFor: const Duration(days: 7)),
+        denied(),
+        reason: 'outside the church',
+      );
+      await expectLater(g.church.uploadLogo(png), denied(), reason: 'Storage');
+      await expectLater(g.church.allMembers(), denied(), reason: 'a one-off read');
+      await expectLater(g.church.members().first, denied(), reason: 'a listener');
+    });
+
+    test('a stranger\'s direct write fails the same way', () async {
+      final g = await Grace.open(w);
+      await w.signUp('outsider@example.com');
+      await expectLater(g.church.saveRoster(sundayOn(4)), denied());
+      await expectLater(g.church.removeMember(g.mei), denied());
+      await expectLater(g.church.photoQuota(), denied());
     });
   });
 
@@ -256,39 +299,39 @@ void contractTests(Future<ContractWorld> Function() open) {
     test('an admin deletes an open church and restores it', () async {
       final g = await Grace.open(w);
       await w.signIn(Grace.meiEmail);
-      await expectLater(cloud().deleteChurch(g.cid), denied());
+      await expectLater(g.church.deleteChurch(), denied());
       await w.signIn(Grace.pastorEmail);
-      await cloud().deleteChurch(g.cid);
+      await g.church.deleteChurch();
       final deleted = (await g.church.church().first)!;
       expect(deleted.status, ChurchStatus.deleted);
       expect(deleted.deletedAt, isNotNull);
-      await cloud().restoreChurch(g.cid);
+      await g.church.restoreChurch();
       expect((await g.church.church().first)!.status, ChurchStatus.active);
-      await cloud().restoreChurch(g.cid);
+      await g.church.restoreChurch();
       expect((await g.church.church().first)!.status, ChurchStatus.active, reason: 'an open church stays open');
     });
 
     test('a church deleted over 30 days ago cannot be restored', () async {
       final g = await Grace.open(w);
-      await cloud().deleteChurch(g.cid);
+      await g.church.deleteChurch();
       await w.backdateDeletion(g.cid, const Duration(days: 31));
-      await expectLater(cloud().restoreChurch(g.cid), fails(CloudErrorCode.churchClosed));
+      await expectLater(g.church.restoreChurch(), fails(CloudErrorCode.churchClosed));
       expect((await g.church.church().first)!.status, ChurchStatus.deleted);
     });
 
     test('a deleted church: its members are told it is closed, its admin may only restore it', () async {
       final g = await Grace.open(w);
-      await cloud().deleteChurch(g.cid);
-      await expectLater(cloud().deleteChurch(g.cid), fails(CloudErrorCode.churchClosed));
-      await expectLater(cloud().webhookSave(g.cid, url: 'https://hook.example/x'), fails(CloudErrorCode.churchClosed));
+      await g.church.deleteChurch();
+      await expectLater(g.church.deleteChurch(), fails(CloudErrorCode.churchClosed));
+      await expectLater(g.church.webhookSave(url: 'https://hook.example/x'), fails(CloudErrorCode.churchClosed));
       await w.signIn(Grace.meiEmail);
-      await expectLater(cloud().restoreChurch(g.cid), denied());
-      await expectLater(cloud().photoQuota(g.cid), fails(CloudErrorCode.churchClosed));
+      await expectLater(g.church.restoreChurch(), denied());
+      await expectLater(g.church.photoQuota(), fails(CloudErrorCode.churchClosed));
       await w.signUp('outsider@example.com');
-      await expectLater(cloud().photoQuota(g.cid), denied());
+      await expectLater(g.church.photoQuota(), denied());
       await w.signIn(Grace.pastorEmail);
-      await cloud().restoreChurch(g.cid);
-      expect((await cloud().photoQuota(g.cid)).limit, 30);
+      await g.church.restoreChurch();
+      expect((await g.church.photoQuota()).limit, 30);
     });
   });
 
@@ -311,13 +354,13 @@ void contractTests(Future<ContractWorld> Function() open) {
       await expectLater(g.church.createInvite(validFor: const Duration(days: 7)), denied());
       await expectLater(g.church.saveRoster(sundayOn(4)), denied());
       final closed = fails(CloudErrorCode.churchClosed);
-      await expectLater(cloud().deleteChurch(g.cid), closed);
-      await expectLater(cloud().restoreChurch(g.cid), closed);
-      await expectLater(cloud().mergePending(g.cid, 'old-1', g.mei), closed);
-      await expectLater(cloud().setLinkSource(g.cid, unreachable, 300), closed);
-      await expectLater(cloud().webhookSave(g.cid, url: 'https://hook.example/x'), closed);
-      await expectLater(cloud().calendarAuthUrl(g.cid), closed);
-      await expectLater(cloud().photoQuota(g.cid), closed);
+      await expectLater(g.church.deleteChurch(), closed);
+      await expectLater(g.church.restoreChurch(), closed);
+      await expectLater(g.church.mergePending('old-1', g.mei), closed);
+      await expectLater(g.church.setLinkSource(unreachable, 300), closed);
+      await expectLater(g.church.webhookSave(url: 'https://hook.example/x'), closed);
+      await expectLater(g.church.calendarAuthUrl(), closed);
+      await expectLater(g.church.photoQuota(), closed);
       expect((await g.church.church().first)!.status, ChurchStatus.suspended);
     });
 
@@ -326,14 +369,14 @@ void contractTests(Future<ContractWorld> Function() open) {
       await g.suspend(as: Grace.editorEmail);
       final closed = fails(CloudErrorCode.churchClosed);
       const photo = [PhotoInput(mimeType: 'image/png', bytes: png)];
-      await expectLater(cloud().recognizeRoster(g.cid, 'sunday', photo), closed);
-      await expectLater(cloud().calendarEvents(g.cid, '2026-10'), closed);
+      await expectLater(g.church.recognizeRoster('sunday', photo), closed);
+      await expectLater(g.church.calendarEvents('2026-10'), closed);
       await w.signIn(Grace.meiEmail);
-      await expectLater(cloud().photoQuota(g.cid), closed);
-      await expectLater(cloud().webhookSave(g.cid, url: 'https://hook.example/x'), closed);
+      await expectLater(g.church.photoQuota(), closed);
+      await expectLater(g.church.webhookSave(url: 'https://hook.example/x'), closed);
       await w.signUp('outsider@example.com');
-      await expectLater(cloud().photoQuota(g.cid), denied());
-      await expectLater(cloud().calendarEvents(g.cid, '2026-10'), denied());
+      await expectLater(g.church.photoQuota(), denied());
+      await expectLater(g.church.calendarEvents('2026-10'), denied());
     });
 
     test('its invites stop working', () async {
@@ -537,14 +580,14 @@ void contractTests(Future<ContractWorld> Function() open) {
 
     test('its content source: admins, https, a link first; a failed fetch is kept and said', () async {
       final g = await Grace.open(w);
-      await expectLater(cloud().setLinkSource(g.cid, unreachable, 300), fails(CloudErrorCode.unknown, 'noLink'));
+      await expectLater(g.church.setLinkSource(unreachable, 300), fails(CloudErrorCode.unknown, 'noLink'));
       await g.church.saveChurchLink(const ChurchLink(title: '官網', url: 'https://grace.example'));
       await expectLater(
-        cloud().setLinkSource(g.cid, 'http://feed.example', 300),
+        g.church.setLinkSource('http://feed.example', 300),
         fails(CloudErrorCode.unknown, 'notHttps'),
       );
 
-      final result = await cloud().setLinkSource(g.cid, unreachable, 300);
+      final result = await g.church.setLinkSource(unreachable, 300);
       expect(result.error, LinkFetchError.network);
       final link = (await g.church.churchLink().first)!;
       expect((link.source, link.fetchMinute), (unreachable, 300));
@@ -556,12 +599,12 @@ void contractTests(Future<ContractWorld> Function() open) {
       await g.church.saveChurchLink(const ChurchLink(title: '教會官網', url: 'https://grace.example'));
       expect((await g.church.churchLink().first)!.source, unreachable);
 
-      await cloud().setLinkSource(g.cid, null, 300);
+      await g.church.setLinkSource(null, 300);
       expect((await g.church.churchLink().first)!.source, isNull);
       expect(await g.church.linkContent().first, isNull);
 
       await w.signIn(Grace.meiEmail);
-      await expectLater(cloud().setLinkSource(g.cid, unreachable, 300), denied());
+      await expectLater(g.church.setLinkSource(unreachable, 300), denied());
     });
   });
 
@@ -570,27 +613,27 @@ void contractTests(Future<ContractWorld> Function() open) {
       final g = await Grace.open(w);
       const url = 'https://127.0.0.1:9/hook';
       await expectLater(
-        cloud().webhookSave(g.cid, url: 'http://hook.example'),
+        g.church.webhookSave(url: 'http://hook.example'),
         fails(CloudErrorCode.unknown, 'notHttps'),
       );
-      await expectLater(cloud().webhookSave(g.cid, url: url, secret: 'short'), fails(CloudErrorCode.unknown, 'secret'));
-      await expectLater(cloud().webhookRotateSecret(g.cid), fails(CloudErrorCode.unknown), reason: 'nothing set up');
+      await expectLater(g.church.webhookSave(url: url, secret: 'short'), fails(CloudErrorCode.unknown, 'secret'));
+      await expectLater(g.church.webhookRotateSecret(), fails(CloudErrorCode.unknown), reason: 'nothing set up');
 
-      final secret = await cloud().webhookSave(g.cid, url: url, calendar: true);
+      final secret = await g.church.webhookSave(url: url, calendar: true);
       expect(secret, startsWith('whsec_'));
       expect(await g.church.webhook().first, const WebhookSettings(url: url, calendar: true));
-      expect(await cloud().webhookSave(g.cid, url: url, roster: true), isNull, reason: 'the secret stays');
+      expect(await g.church.webhookSave(url: url, roster: true), isNull, reason: 'the secret stays');
       expect(await g.church.webhook().first, const WebhookSettings(url: url, roster: true));
 
-      final next = await cloud().webhookRotateSecret(g.cid);
+      final next = await g.church.webhookRotateSecret();
       expect(next, allOf(startsWith('whsec_'), isNot(secret)));
-      expect(await cloud().webhookRotateSecret(g.cid, secret: 'our-shared-secret-2026'), isNull);
+      expect(await g.church.webhookRotateSecret(secret: 'our-shared-secret-2026'), isNull);
 
-      final delivery = await cloud().webhookTest(g.cid);
+      final delivery = await g.church.webhookTest();
       final last = (await g.church.webhook().first)!.lastDelivery!;
       expect((last.ok, last.event), (delivery.ok, 'ping'));
 
-      expect(await cloud().webhookSave(g.cid, url: null), isNull);
+      expect(await g.church.webhookSave(url: null), isNull);
       expect(await g.church.webhook().first, isNull);
     });
 
@@ -598,8 +641,8 @@ void contractTests(Future<ContractWorld> Function() open) {
       final g = await Grace.open(w);
       await w.signIn(Grace.meiEmail);
       await expectLater(g.church.webhook().first, denied());
-      await expectLater(cloud().webhookSave(g.cid, url: 'https://hook.example/x'), denied());
-      await expectLater(cloud().webhookTest(g.cid), denied());
+      await expectLater(g.church.webhookSave(url: 'https://hook.example/x'), denied());
+      await expectLater(g.church.webhookTest(), denied());
     });
   });
 
@@ -682,8 +725,8 @@ void contractTests(Future<ContractWorld> Function() open) {
           ],
         ),
       );
-      await expectLater(cloud().mergePending(g.cid, 'nobody', g.mei), fails(CloudErrorCode.notFound));
-      await cloud().mergePending(g.cid, pid, g.mei);
+      await expectLater(g.church.mergePending('nobody', g.mei), fails(CloudErrorCode.notFound));
+      await g.church.mergePending(pid, g.mei);
       final mei = (await g.church.member(g.mei).first)!;
       expect(mei.role, Role.staff);
       expect(mei.groups, {Group.calendarEditors, Group.rosterEditors});
@@ -698,7 +741,7 @@ void contractTests(Future<ContractWorld> Function() open) {
     test('only admins merge or delete them', () async {
       final g = await moved();
       await w.signIn(Grace.editorEmail);
-      await expectLater(cloud().mergePending(g.cid, pid, g.mei), denied());
+      await expectLater(g.church.mergePending(pid, g.mei), denied());
       await expectLater(g.church.deletePendingMember(pid), denied());
       await w.signIn(Grace.pastorEmail);
       await g.church.deletePendingMember(pid);
@@ -709,16 +752,16 @@ void contractTests(Future<ContractWorld> Function() open) {
   group('calendar', () {
     test('admins connect it, calendar editors write, members read', () async {
       final g = await Grace.open(w);
-      expect((await cloud().calendarAuthUrl(g.cid)).host, 'accounts.google.com');
+      expect((await g.church.calendarAuthUrl()).host, 'accounts.google.com');
       await w.signIn(Grace.meiEmail);
       expect((await g.church.calendarSettings().first).connected, isFalse);
-      await expectLater(cloud().calendarAuthUrl(g.cid), denied());
-      await expectLater(cloud().calendarList(g.cid), denied());
-      await expectLater(cloud().calendarDisconnect(g.cid), denied());
+      await expectLater(g.church.calendarAuthUrl(), denied());
+      await expectLater(g.church.calendarList(), denied());
+      await expectLater(g.church.calendarDisconnect(), denied());
       final event = CalendarEvent(title: '同工會', start: DateTime(2026, 10, 4, 14), end: DateTime(2026, 10, 4, 15));
-      await expectLater(cloud().calendarSave(g.cid, event), denied());
+      await expectLater(g.church.calendarSave(event), denied());
       await w.signUp('outsider@example.com');
-      await expectLater(cloud().calendarEvents(g.cid, '2026-10'), denied());
+      await expectLater(g.church.calendarEvents('2026-10'), denied());
     });
   });
 
@@ -726,22 +769,22 @@ void contractTests(Future<ContractWorld> Function() open) {
     test('members see the quota; a new church has all 30 photos', () async {
       final g = await Grace.open(w);
       await w.signIn(Grace.meiEmail);
-      final quota = await cloud().photoQuota(g.cid);
+      final quota = await g.church.photoQuota();
       expect((quota.remaining, quota.limit, quota.platformOpen), (30, 30, true));
       await w.signUp('outsider@example.com');
-      await expectLater(cloud().photoQuota(g.cid), denied());
+      await expectLater(g.church.photoQuota(), denied());
     });
 
     test('only editors of a service the church has recognize photos for it', () async {
       final g = await Grace.open(w);
       const photo = [PhotoInput(mimeType: 'image/png', bytes: png)];
-      await expectLater(cloud().recognizeRoster(g.cid, 'retreat', photo), denied());
+      await expectLater(g.church.recognizeRoster('retreat', photo), denied());
       await w.signIn(Grace.editorEmail);
-      await expectLater(cloud().recognizeRoster(g.cid, 'youth', photo), denied());
+      await expectLater(g.church.recognizeRoster('youth', photo), denied());
       await w.signIn(Grace.meiEmail);
-      await expectLater(cloud().recognizeRoster(g.cid, 'sunday', photo), denied());
+      await expectLater(g.church.recognizeRoster('sunday', photo), denied());
       await w.signUp('outsider@example.com');
-      await expectLater(cloud().recognizeRoster(g.cid, 'sunday', photo), denied());
+      await expectLater(g.church.recognizeRoster('sunday', photo), denied());
     });
   });
 
@@ -784,7 +827,7 @@ void contractTests(Future<ContractWorld> Function() open) {
       await w.signIn(Grace.meiEmail);
       expect(await g.church.services().first, isNotNull, reason: 'open again');
       await w.signIn(Grace.pastorEmail);
-      await cloud().deleteChurch(g.cid);
+      await g.church.deleteChurch();
       await w.signIn('operator@example.com');
       await expectLater(cloud().adminSetStatus(g.cid, ChurchStatus.active), fails(CloudErrorCode.churchClosed));
     });

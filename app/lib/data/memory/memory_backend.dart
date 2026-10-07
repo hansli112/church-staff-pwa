@@ -85,7 +85,20 @@ class MemoryBackend implements Backend {
   /// [LinkContent] (its title, body and link) or a [LinkFetchError].
   /// Unknown URLs fail with [LinkFetchError.network].
   final linkSourceAnswers = <String, Object>{};
+
+  /// Sources fetched by [ChurchData.setLinkSource], in order.
+  final linkSourceFetches = <String>[];
+
+  /// Scripted Google Calendar: the events per church, and its calendars
+  /// ([connectCalendar] stands in for the OAuth callback).
   final calendarEvents = <String, List<CalendarEvent>>{};
+
+  /// Scripted: photos used this month per church, the limit, whether the
+  /// platform's budget is left, and what recognition returns.
+  final photosUsed = <String, int>{};
+  int photoLimit = 30;
+  bool photoPlatformOpen = true;
+  List<dynamic> recognized = const [];
 
   /// Set to make the next write fail, to test error handling.
   Object? failNextWrite;
@@ -193,6 +206,47 @@ class MemoryBackend implements Backend {
     if (!me.isAdmin) throw const CloudException(CloudErrorCode.permissionDenied);
     return me;
   }
+
+  /// The caller's access to [cid], decided as functions/src/access.ts does
+  /// for every function that acts in a church: a non-member is refused, a
+  /// member of a closed church is told it is closed, then [allowed] decides.
+  /// [anyone] lets in non-members (claiming a pending member), [allowClosed]
+  /// a closed church (restoring it).
+  Member? functionAccess(
+    String cid, {
+    bool Function(Member me)? allowed,
+    bool anyone = false,
+    bool allowClosed = false,
+  }) {
+    final uid = auth.currentUser?.uid;
+    if (uid == null) throw const CloudException(CloudErrorCode.permissionDenied);
+    final church = churches[cid];
+    final me = memberOf(cid, uid);
+    if (anyone) {
+      if (church == null) throw const CloudException(CloudErrorCode.notFound);
+    } else if (me == null) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    if (!(church?.isActive ?? false) && !allowClosed) {
+      throw const CloudException(CloudErrorCode.churchClosed);
+    }
+    if (allowed != null && (me == null || !allowed(me))) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    return me;
+  }
+
+  /// Simulates Google Calendar's OAuth callback for [cid].
+  void connectCalendar(String cid, {String? calendarName}) {
+    calendars[cid] = CalendarSettings(connected: true, calendarName: calendarName);
+    notify();
+  }
+
+  int _secrets = 0;
+  String newWebhookSecret() => 'whsec_memory${++_secrets}';
+
+  int _events = 0;
+  String newEventId() => 'ev${++_events}';
 }
 
 class MemoryAuth implements AuthGateway {
@@ -665,6 +719,256 @@ class MemoryChurchData implements ChurchData {
       );
     });
   }
+
+  // What the Cloud Functions do for the church: refused as
+  // functions/src/access.ts refuses ([MemoryBackend.functionAccess]).
+
+  Member _functionAdmin({bool allowClosed = false}) =>
+      _b.functionAccess(churchId, allowed: (me) => me.isAdmin, allowClosed: allowClosed)!;
+
+  /// How long a deleted church can be restored (RESTORE_DAYS in
+  /// functions/src/church.ts).
+  static const restoreFor = Duration(days: 30);
+
+  @override
+  Future<void> deleteChurch() async {
+    // Only an open church: deleting and restoring a suspended one would
+    // reopen it.
+    _functionAdmin();
+    final c = _b.churches[churchId]!;
+    _b.churches[churchId] = Church(
+      id: c.id,
+      name: c.name,
+      status: ChurchStatus.deleted,
+      logoUrl: c.logoUrl,
+      homeName: c.homeName,
+      deletedAt: _b.clock(),
+    );
+    _b.notify();
+  }
+
+  @override
+  Future<void> restoreChurch() async {
+    _functionAdmin(allowClosed: true);
+    final c = _b.churches[churchId]!;
+    if (c.isActive) return;
+    final deletedAt = c.deletedAt;
+    if (c.status != ChurchStatus.deleted || (deletedAt != null && _b.clock().difference(deletedAt) > restoreFor)) {
+      throw const CloudException(CloudErrorCode.churchClosed);
+    }
+    _b.churches[churchId] = Church(id: c.id, name: c.name, logoUrl: c.logoUrl, homeName: c.homeName);
+    _b.notify();
+  }
+
+  @override
+  Future<void> mergePending(String pendingId, String uid) async {
+    _functionAdmin();
+    final p = _b.pendingMembers[churchId]?[pendingId];
+    final m = _b.memberOf(churchId, uid);
+    if (p == null || m == null) throw const CloudException(CloudErrorCode.notFound);
+    _b.members[churchId]![uid] = _absorb(m, p);
+    _repoint(_b, churchId, pendingId, uid);
+    _b.pendingMembers[churchId]!.remove(pendingId);
+    _b.notify();
+  }
+
+  @override
+  Future<LinkSourceResult> setLinkSource(String? source, int fetchMinute) async {
+    _functionAdmin();
+    final link = _b.churchLinks[churchId];
+    if (link == null) throw const CloudException(CloudErrorCode.unknown, 'noLink');
+    ChurchLink next(String? s, int m) =>
+        ChurchLink(title: link.title, body: link.body, url: link.url, source: s, fetchMinute: m);
+    if (source == null) {
+      _b.churchLinks[churchId] = next(null, ChurchLink.defaultFetchMinute);
+      _b.linkContents.remove(churchId);
+      _b.notify();
+      return const LinkSourceResult();
+    }
+    if (!ChurchLink.validUrl(source)) throw const CloudException(CloudErrorCode.unknown, 'notHttps');
+    final changed = link.source != source;
+    _b.churchLinks[churchId] = next(source, fetchMinute);
+    if (!changed) {
+      _b.notify();
+      return const LinkSourceResult();
+    }
+    // A new source is fetched at once; what it gives is scripted.
+    _b.linkSourceFetches.add(source);
+    final answer = _b.linkSourceAnswers[source] ?? LinkFetchError.network;
+    final now = _b.clock();
+    final LinkSourceResult result;
+    if (answer is LinkContent) {
+      _b.linkContents[churchId] = LinkContent(
+        source: source,
+        title: answer.title,
+        body: answer.body,
+        link: answer.link,
+        fetchedAt: now,
+      );
+      result = LinkSourceResult(content: _b.linkContents[churchId]);
+    } else {
+      final error = answer as LinkFetchError;
+      _b.linkContents[churchId] = LinkContent(source: source, error: error, errorAt: now);
+      result = LinkSourceResult(error: error);
+    }
+    _b.notify();
+    return result;
+  }
+
+  @override
+  Future<String?> webhookSave({
+    required String? url,
+    bool calendar = false,
+    bool roster = false,
+    String? secret,
+  }) async {
+    _functionAdmin();
+    if (url == null) {
+      _b.webhooks.remove(churchId);
+      _b.webhookSecrets.remove(churchId);
+      _b.notify();
+      return null;
+    }
+    if (!ChurchLink.validUrl(url)) throw const CloudException(CloudErrorCode.unknown, 'notHttps');
+    if (secret != null && secret.length < 16) throw const CloudException(CloudErrorCode.unknown, 'secret');
+    String? generated;
+    if (secret != null) {
+      _b.webhookSecrets[churchId] = secret;
+    } else if (!_b.webhookSecrets.containsKey(churchId)) {
+      generated = _b.newWebhookSecret();
+      _b.webhookSecrets[churchId] = generated;
+    }
+    _b.webhooks[churchId] = WebhookSettings(
+      url: url.trim(),
+      calendar: calendar,
+      roster: roster,
+      lastDelivery: _b.webhooks[churchId]?.lastDelivery,
+    );
+    _b.notify();
+    return generated;
+  }
+
+  @override
+  Future<String?> webhookRotateSecret({String? secret}) async {
+    _functionAdmin();
+    if (!_b.webhooks.containsKey(churchId)) throw const CloudException(CloudErrorCode.unknown);
+    if (secret != null && secret.length < 16) throw const CloudException(CloudErrorCode.unknown, 'secret');
+    final next = secret ?? _b.newWebhookSecret();
+    _b.webhookSecrets[churchId] = next;
+    return secret == null ? next : null;
+  }
+
+  @override
+  Future<WebhookDelivery> webhookTest() async {
+    _functionAdmin();
+    final hook = _b.webhooks[churchId];
+    if (hook == null) throw const CloudException(CloudErrorCode.unknown);
+    _b.webhookSent.add((churchId, 'ping'));
+    final a = _b.webhookAnswer;
+    final delivery = WebhookDelivery(ok: a.ok, status: a.status, error: a.error, event: 'ping', at: _b.clock());
+    _b.webhooks[churchId] = WebhookSettings(
+      url: hook.url,
+      calendar: hook.calendar,
+      roster: hook.roster,
+      lastDelivery: delivery,
+    );
+    _b.notify();
+    return delivery;
+  }
+
+  // Google Calendar itself is scripted: [MemoryBackend.connectCalendar], the
+  // calendars [calendarList] offers and the events in
+  // [MemoryBackend.calendarEvents].
+
+  void _requireCalendarEditor() => _b.functionAccess(churchId, allowed: (me) => me.inGroup(Group.calendarEditors));
+
+  @override
+  Future<Uri> calendarAuthUrl() async {
+    _functionAdmin();
+    return Uri.parse('https://accounts.google.com/o/oauth2/v2/auth?state=memory');
+  }
+
+  @override
+  Future<List<({String id, String name})>> calendarList() async {
+    _functionAdmin();
+    return const [(id: 'cal-1', name: '教會行事曆'), (id: 'cal-2', name: '青年行事曆')];
+  }
+
+  @override
+  Future<void> calendarSelect(String calendarId, String calendarName) async {
+    _functionAdmin();
+    _b.calendars[churchId] = CalendarSettings(connected: true, calendarName: calendarName);
+    _b.notify();
+  }
+
+  @override
+  Future<void> calendarDisconnect() async {
+    _functionAdmin();
+    _b.calendars.remove(churchId);
+    _b.calendarEvents.remove(churchId);
+    _b.notify();
+  }
+
+  @override
+  Future<List<CalendarEvent>> calendarEvents(String month) async {
+    _b.functionAccess(churchId);
+    if (_b.calendars[churchId]?.needsReconnect ?? false) {
+      throw const CloudException(CloudErrorCode.unknown, 'reconnect');
+    }
+    return [
+      for (final e in _b.calendarEvents[churchId] ?? const <CalendarEvent>[])
+        if (e.day.key.startsWith(month)) e,
+    ]..sort((a, b) => a.start.compareTo(b.start));
+  }
+
+  @override
+  Future<CalendarEvent> calendarSave(CalendarEvent event, {CalendarEvent? previous}) async {
+    _requireCalendarEditor();
+    final list = _b.calendarEvents.putIfAbsent(churchId, () => []);
+    final saved = event.id == null
+        ? CalendarEvent(
+            id: _b.newEventId(),
+            title: event.title,
+            start: event.start,
+            end: event.end,
+            allDay: event.allDay,
+            location: event.location,
+            description: event.description,
+          )
+        : event;
+    list.removeWhere((e) => e.id == saved.id);
+    list.add(saved);
+    return saved;
+  }
+
+  @override
+  Future<void> calendarDelete(CalendarEvent event) async {
+    _requireCalendarEditor();
+    _b.calendarEvents[churchId]?.removeWhere((e) => e.id == event.id);
+  }
+
+  @override
+  Future<PhotoQuota> photoQuota() async {
+    _b.functionAccess(churchId);
+    return PhotoQuota(
+      remaining: max(0, _b.photoLimit - (_b.photosUsed[churchId] ?? 0)),
+      limit: _b.photoLimit,
+      platformOpen: _b.photoPlatformOpen,
+    );
+  }
+
+  @override
+  Future<List<dynamic>> recognizeRoster(String serviceType, List<PhotoInput> images) async {
+    _b.functionAccess(
+      churchId,
+      allowed: (me) => _b.services[churchId]!.ids.contains(serviceType) && me.canEditRosters(serviceType),
+    );
+    if (!_b.photoPlatformOpen) throw const CloudException(CloudErrorCode.quotaExceeded, 'platform');
+    final used = _b.photosUsed[churchId] ?? 0;
+    if (used >= _b.photoLimit) throw const CloudException(CloudErrorCode.quotaExceeded, 'church');
+    _b.photosUsed[churchId] = used + 1;
+    return _b.recognized;
+  }
 }
 
 /// Invites must expire sooner than this (firestore.rules).
@@ -701,38 +1005,6 @@ class MemoryCloud implements CloudApi {
 
   final loggedErrors = <String>[];
   final stats = <DailyStats>[];
-
-  /// The caller's access to [cid], decided as functions/src/access.ts does
-  /// for every function that acts in a church: a non-member is refused, a
-  /// member of a closed church is told it is closed, then [allowed] decides.
-  /// [anyone] lets in non-members (claiming a pending member), [allowClosed]
-  /// a closed church (restoring it).
-  Member? _access(
-    String cid, {
-    bool Function(Member me)? allowed,
-    bool anyone = false,
-    bool allowClosed = false,
-  }) {
-    final uid = _b.auth.currentUser?.uid;
-    if (uid == null) throw const CloudException(CloudErrorCode.permissionDenied);
-    final church = _b.churches[cid];
-    final me = _b.memberOf(cid, uid);
-    if (anyone) {
-      if (church == null) throw const CloudException(CloudErrorCode.notFound);
-    } else if (me == null) {
-      throw const CloudException(CloudErrorCode.permissionDenied);
-    }
-    if (!(church?.isActive ?? false) && !allowClosed) {
-      throw const CloudException(CloudErrorCode.churchClosed);
-    }
-    if (allowed != null && (me == null || !allowed(me))) {
-      throw const CloudException(CloudErrorCode.permissionDenied);
-    }
-    return me;
-  }
-
-  Member _admin(String cid, {bool allowClosed = false}) =>
-      _access(cid, allowed: (me) => me.isAdmin, allowClosed: allowClosed)!;
 
   @override
   Future<String> createChurch(String name) async {
@@ -883,38 +1155,11 @@ class MemoryCloud implements CloudApi {
     ];
   }
 
-  /// Points [cid]'s rosters at [uid] instead of pending member [pid].
-  void _repoint(String cid, String pid, String uid) {
-    final rosters = _b.rosters[cid]!;
-    for (final MapEntry(:key, :value) in rosters.entries.toList()) {
-      rosters[key] = value.copyWith(
-        duties: [
-          for (final d in value.duties)
-            d.copyWith(uids: {for (final e in d.uids.entries) e.key: e.value == pid ? uid : e.value}),
-        ],
-      );
-    }
-  }
-
-  Member _absorb(Member m, PendingMember p) => m.copyWith(
-    groups: {...m.groups, ...p.groups},
-    zones: [
-      for (final type in {...m.zoneTypes, for (final z in p.zones) z.serviceType})
-        Zone(
-          serviceType: type,
-          duties: {
-            for (final z in [...m.zones, ...p.zones])
-              if (z.serviceType == type) ...z.duties,
-          }.toList(),
-        ),
-    ],
-  );
-
   @override
   Future<String> claimPending(String churchId, String pendingId) async {
     final user = _b.auth.currentUser;
     if (user == null || !user.verified) throw const CloudException(CloudErrorCode.unverifiedEmail);
-    final existing = _access(churchId, anyone: true);
+    final existing = _b.functionAccess(churchId, anyone: true);
     final p = _b.pendingMembers[churchId]?[pendingId];
     if (p == null) {
       // Claimed already (a double tap, a retry): fine if it was by them.
@@ -935,22 +1180,10 @@ class MemoryCloud implements CloudApi {
             zones: p.zones,
             joinedAt: _b.clock(),
           );
-    _repoint(churchId, pendingId, user.uid);
+    _repoint(_b, churchId, pendingId, user.uid);
     _b.pendingMembers[churchId]!.remove(pendingId);
     _b.notify();
     return churchId;
-  }
-
-  @override
-  Future<void> mergePending(String churchId, String pendingId, String uid) async {
-    _admin(churchId);
-    final p = _b.pendingMembers[churchId]?[pendingId];
-    final m = _b.memberOf(churchId, uid);
-    if (p == null || m == null) throw const CloudException(CloudErrorCode.notFound);
-    _b.members[churchId]![uid] = _absorb(m, p);
-    _repoint(churchId, pendingId, uid);
-    _b.pendingMembers[churchId]!.remove(pendingId);
-    _b.notify();
   }
 
   @override
@@ -958,151 +1191,6 @@ class MemoryCloud implements CloudApi {
     final c = _b.churches[churchId];
     if (c == null || !c.isActive) throw const CloudException(CloudErrorCode.notFound);
     return ChurchPreview(id: c.id, name: c.name, logoUrl: c.logoUrl);
-  }
-
-  int _secrets = 0;
-  String _newSecret() => 'whsec_memory${++_secrets}';
-
-  @override
-  Future<String?> webhookSave(
-    String churchId, {
-    required String? url,
-    bool calendar = false,
-    bool roster = false,
-    String? secret,
-  }) async {
-    _admin(churchId);
-    if (url == null) {
-      _b.webhooks.remove(churchId);
-      _b.webhookSecrets.remove(churchId);
-      _b.notify();
-      return null;
-    }
-    if (!ChurchLink.validUrl(url)) throw const CloudException(CloudErrorCode.unknown, 'notHttps');
-    if (secret != null && secret.length < 16) throw const CloudException(CloudErrorCode.unknown, 'secret');
-    String? generated;
-    if (secret != null) {
-      _b.webhookSecrets[churchId] = secret;
-    } else if (!_b.webhookSecrets.containsKey(churchId)) {
-      generated = _newSecret();
-      _b.webhookSecrets[churchId] = generated;
-    }
-    _b.webhooks[churchId] = WebhookSettings(
-      url: url.trim(),
-      calendar: calendar,
-      roster: roster,
-      lastDelivery: _b.webhooks[churchId]?.lastDelivery,
-    );
-    _b.notify();
-    return generated;
-  }
-
-  @override
-  Future<String?> webhookRotateSecret(String churchId, {String? secret}) async {
-    _admin(churchId);
-    if (!_b.webhooks.containsKey(churchId)) throw const CloudException(CloudErrorCode.unknown);
-    if (secret != null && secret.length < 16) throw const CloudException(CloudErrorCode.unknown, 'secret');
-    final next = secret ?? _newSecret();
-    _b.webhookSecrets[churchId] = next;
-    return secret == null ? next : null;
-  }
-
-  @override
-  Future<WebhookDelivery> webhookTest(String churchId) async {
-    _admin(churchId);
-    final hook = _b.webhooks[churchId];
-    if (hook == null) throw const CloudException(CloudErrorCode.unknown);
-    _b.webhookSent.add((churchId, 'ping'));
-    final a = _b.webhookAnswer;
-    final delivery = WebhookDelivery(ok: a.ok, status: a.status, error: a.error, event: 'ping', at: _b.clock());
-    _b.webhooks[churchId] = WebhookSettings(
-      url: hook.url,
-      calendar: hook.calendar,
-      roster: hook.roster,
-      lastDelivery: delivery,
-    );
-    _b.notify();
-    return delivery;
-  }
-
-  /// Sources fetched by [setLinkSource], in order.
-  final linkSourceFetches = <String>[];
-
-  @override
-  Future<LinkSourceResult> setLinkSource(String churchId, String? source, int fetchMinute) async {
-    _admin(churchId);
-    final link = _b.churchLinks[churchId];
-    if (link == null) throw const CloudException(CloudErrorCode.unknown, 'noLink');
-    ChurchLink next(String? s, int m) =>
-        ChurchLink(title: link.title, body: link.body, url: link.url, source: s, fetchMinute: m);
-    if (source == null) {
-      _b.churchLinks[churchId] = next(null, ChurchLink.defaultFetchMinute);
-      _b.linkContents.remove(churchId);
-      _b.notify();
-      return const LinkSourceResult();
-    }
-    if (!ChurchLink.validUrl(source)) throw const CloudException(CloudErrorCode.unknown, 'notHttps');
-    final changed = link.source != source;
-    _b.churchLinks[churchId] = next(source, fetchMinute);
-    if (!changed) {
-      _b.notify();
-      return const LinkSourceResult();
-    }
-    // A new source is fetched at once; what it gives is scripted.
-    linkSourceFetches.add(source);
-    final answer = _b.linkSourceAnswers[source] ?? LinkFetchError.network;
-    final now = _b.clock();
-    final LinkSourceResult result;
-    if (answer is LinkContent) {
-      _b.linkContents[churchId] = LinkContent(
-        source: source,
-        title: answer.title,
-        body: answer.body,
-        link: answer.link,
-        fetchedAt: now,
-      );
-      result = LinkSourceResult(content: _b.linkContents[churchId]);
-    } else {
-      final error = answer as LinkFetchError;
-      _b.linkContents[churchId] = LinkContent(source: source, error: error, errorAt: now);
-      result = LinkSourceResult(error: error);
-    }
-    _b.notify();
-    return result;
-  }
-
-  /// How long a deleted church can be restored (RESTORE_DAYS in
-  /// functions/src/church.ts).
-  static const restoreFor = Duration(days: 30);
-
-  @override
-  Future<void> deleteChurch(String churchId) async {
-    // Only an open church: deleting and restoring a suspended one would
-    // reopen it.
-    _admin(churchId);
-    final c = _b.churches[churchId]!;
-    _b.churches[churchId] = Church(
-      id: c.id,
-      name: c.name,
-      status: ChurchStatus.deleted,
-      logoUrl: c.logoUrl,
-      homeName: c.homeName,
-      deletedAt: _b.clock(),
-    );
-    _b.notify();
-  }
-
-  @override
-  Future<void> restoreChurch(String churchId) async {
-    _admin(churchId, allowClosed: true);
-    final c = _b.churches[churchId]!;
-    if (c.isActive) return;
-    final deletedAt = c.deletedAt;
-    if (c.status != ChurchStatus.deleted || (deletedAt != null && _b.clock().difference(deletedAt) > restoreFor)) {
-      throw const CloudException(CloudErrorCode.churchClosed);
-    }
-    _b.churches[churchId] = Church(id: c.id, name: c.name, logoUrl: c.logoUrl, homeName: c.homeName);
-    _b.notify();
   }
 
   void _requireOperator() {
@@ -1191,113 +1279,6 @@ class MemoryCloud implements CloudApi {
     });
   }
 
-  void _requireCalendarEditor(String cid) => _access(cid, allowed: (me) => me.inGroup(Group.calendarEditors));
-
-  // Google Calendar itself is scripted: [connectCalendar], the calendars
-  // [calendarList] offers and the events in [MemoryBackend.calendarEvents].
-
-  @override
-  Future<Uri> calendarAuthUrl(String churchId) async {
-    _admin(churchId);
-    return Uri.parse('https://accounts.google.com/o/oauth2/v2/auth?state=memory');
-  }
-
-  /// Simulates the OAuth callback for [churchId].
-  void connectCalendar(String churchId, {String? calendarName}) {
-    _b.calendars[churchId] = CalendarSettings(connected: true, calendarName: calendarName);
-    _b.notify();
-  }
-
-  @override
-  Future<List<({String id, String name})>> calendarList(String churchId) async {
-    _admin(churchId);
-    return const [(id: 'cal-1', name: '教會行事曆'), (id: 'cal-2', name: '青年行事曆')];
-  }
-
-  @override
-  Future<void> calendarSelect(String churchId, String calendarId, String calendarName) async {
-    _admin(churchId);
-    _b.calendars[churchId] = CalendarSettings(connected: true, calendarName: calendarName);
-    _b.notify();
-  }
-
-  @override
-  Future<void> calendarDisconnect(String churchId) async {
-    _admin(churchId);
-    _b.calendars.remove(churchId);
-    _b.calendarEvents.remove(churchId);
-    _b.notify();
-  }
-
-  @override
-  Future<List<CalendarEvent>> calendarEvents(String churchId, String month) async {
-    _access(churchId);
-    if (_b.calendars[churchId]?.needsReconnect ?? false) {
-      throw const CloudException(CloudErrorCode.unknown, 'reconnect');
-    }
-    return [
-      for (final e in _b.calendarEvents[churchId] ?? const <CalendarEvent>[])
-        if (e.day.key.startsWith(month)) e,
-    ]..sort((a, b) => a.start.compareTo(b.start));
-  }
-
-  int _nextEvent = 1;
-
-  @override
-  Future<CalendarEvent> calendarSave(String churchId, CalendarEvent event, {CalendarEvent? previous}) async {
-    _requireCalendarEditor(churchId);
-    final list = _b.calendarEvents.putIfAbsent(churchId, () => []);
-    final saved = event.id == null
-        ? CalendarEvent(
-            id: 'ev${_nextEvent++}',
-            title: event.title,
-            start: event.start,
-            end: event.end,
-            allDay: event.allDay,
-            location: event.location,
-            description: event.description,
-          )
-        : event;
-    list.removeWhere((e) => e.id == saved.id);
-    list.add(saved);
-    return saved;
-  }
-
-  @override
-  Future<void> calendarDelete(String churchId, CalendarEvent event) async {
-    _requireCalendarEditor(churchId);
-    _b.calendarEvents[churchId]?.removeWhere((e) => e.id == event.id);
-  }
-
-  /// Scripted: photos used this month per church, the limit, whether the
-  /// platform's budget is left, and what recognition returns.
-  final photosUsed = <String, int>{};
-  int photoLimit = 30;
-  bool photoPlatformOpen = true;
-  List<dynamic> recognized = const [];
-
-  @override
-  Future<PhotoQuota> photoQuota(String churchId) async {
-    _access(churchId);
-    return PhotoQuota(
-      remaining: max(0, photoLimit - (photosUsed[churchId] ?? 0)),
-      limit: photoLimit,
-      platformOpen: photoPlatformOpen,
-    );
-  }
-
-  @override
-  Future<List<dynamic>> recognizeRoster(String churchId, String serviceType, List<PhotoInput> images) async {
-    _access(
-      churchId,
-      allowed: (me) => _b.services[churchId]!.ids.contains(serviceType) && me.canEditRosters(serviceType),
-    );
-    if (!photoPlatformOpen) throw const CloudException(CloudErrorCode.quotaExceeded, 'platform');
-    if ((photosUsed[churchId] ?? 0) >= photoLimit) throw const CloudException(CloudErrorCode.quotaExceeded, 'church');
-    photosUsed[churchId] = (photosUsed[churchId] ?? 0) + 1;
-    return recognized;
-  }
-
   @override
   Future<void> logError({
     required String message,
@@ -1305,6 +1286,34 @@ class MemoryCloud implements CloudApi {
     String? churchId,
   }) async => loggedErrors.add(message);
 }
+
+/// Points [cid]'s rosters at [uid] instead of pending member [pid].
+void _repoint(MemoryBackend b, String cid, String pid, String uid) {
+  final rosters = b.rosters[cid]!;
+  for (final MapEntry(:key, :value) in rosters.entries.toList()) {
+    rosters[key] = value.copyWith(
+      duties: [
+        for (final d in value.duties)
+          d.copyWith(uids: {for (final e in d.uids.entries) e.key: e.value == pid ? uid : e.value}),
+      ],
+    );
+  }
+}
+
+/// [m] with the groups and zones of pending member [p] added.
+Member _absorb(Member m, PendingMember p) => m.copyWith(
+  groups: {...m.groups, ...p.groups},
+  zones: [
+    for (final type in {...m.zoneTypes, for (final z in p.zones) z.serviceType})
+      Zone(
+        serviceType: type,
+        duties: {
+          for (final z in [...m.zones, ...p.zones])
+            if (z.serviceType == type) ...z.duties,
+        }.toList(),
+      ),
+  ],
+);
 
 /// The services a new church starts with. The Cloud Function seeds the same
 /// list (functions/src/church.ts).

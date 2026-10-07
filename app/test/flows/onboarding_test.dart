@@ -224,7 +224,7 @@ void main() {
     final cid = b.addChurch('刪除堂');
     final user = b.auth.signInAs('a@gmail.com');
     b.addMember(cid, Member(uid: user.uid, name: '管理員', role: Role.admin));
-    await b.cloud.deleteChurch(cid);
+    await b.church(cid).deleteChurch();
     await pumpApp(tester, b);
     expect(find.text('〈刪除堂〉已刪除'), findsOneWidget);
     await tapText(tester, '還原教會');

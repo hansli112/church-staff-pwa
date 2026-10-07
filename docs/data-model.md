@@ -69,6 +69,8 @@
 
 例外：邀請停用教會的回 `inviteInvalid`，教會預覽回 `notFound`（給還不是同工的人看）；排程和觸發器遇到停用的教會直接略過。Firestore 直接讀寫被規則擋下時，規則分不出原因，一律是 permission-denied。
 
+App 看不到這個差別：在一間教會裡做的事，不管是 Firestore、Storage 還是 Function，都在那間教會的 `ChurchData`（`app/lib/data/backend.dart`）上，被擋下一律是 `CloudException`。規則擋下的讀寫和 Function 一樣是 `permissionDenied`，所以畫面說的是同一句「沒有權限」。
+
 `previewInvite` 不用登入：邀請連結開的登入頁要能顯示是哪間教會邀請。沒登入時只回教會名稱；登入後才回教會 id 和到期日。邀請碼本身就是秘密，拿到碼就能註冊加入，所以這不多露出什麼。
 
 ## Storage

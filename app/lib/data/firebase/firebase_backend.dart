@@ -78,8 +78,10 @@ class FirebaseBackend implements Backend {
   @override
   late final MembershipRepository memberships = _Memberships(_db);
 
+  late final _calls = _Callables(_functions, _auth);
+
   @override
-  late final CloudApi cloud = FirebaseCloudApi(_functions, storage: _storage, auth: _auth);
+  late final CloudApi cloud = FirebaseCloudApi._(_calls, _storage, _auth);
 
   @override
   late final PlatformData platform = _Platform(_db);
@@ -89,7 +91,7 @@ class FirebaseBackend implements Backend {
   @override
   ChurchData church(String churchId) => _churches.putIfAbsent(
     churchId,
-    () => FirestoreChurchData(_db, _storage, churchId),
+    () => FirestoreChurchData._(_db, _storage, _calls, churchId),
   );
 }
 
@@ -386,17 +388,25 @@ class _Memberships implements MembershipRepository {
 
 // ---------------------------------------------------------------- church
 
+/// Firestore and Storage for the church's data, Cloud Functions for what
+/// the backend does for it. Every error leaves as a [CloudException]
+/// ([_guard], [_Translated.translated]).
 class FirestoreChurchData implements ChurchData {
-  FirestoreChurchData(this._db, this._storage, this.churchId);
+  FirestoreChurchData._(this._db, this._storage, this._calls, this.churchId);
 
   final FirebaseFirestore _db;
   final FirebaseStorage _storage;
+  final _Callables _calls;
 
   @override
   final String churchId;
 
   DocumentReference<Json> get _church => _db.doc('churches/$churchId');
   CollectionReference<Json> _col(String name) => _church.collection(name);
+
+  /// Calls function [name] for this church.
+  Future<Map<String, Object?>> _call(String name, [Map<String, Object?> data = const {}]) async =>
+      _asMap(await _calls.call(name, {'churchId': churchId, ...data}));
 
   String? _logoUrl;
   Object? _logoVersion;
@@ -417,68 +427,68 @@ class FirestoreChurchData implements ChurchData {
     }
     _logoVersion = version;
     return churchFromJson(snap.id, data, logoUrl: _logoUrl);
-  });
+  }).translated();
 
   String get _logoPath => 'churches/$churchId/logo.png';
 
   @override
   Stream<Member?> member(String uid) =>
-      _col('members').doc(uid).live().map((s) => s.exists ? memberFromJson(uid, s.data()!) : null);
+      _col('members').doc(uid).live().map((s) => s.exists ? memberFromJson(uid, s.data()!) : null).translated();
 
   @override
-  Stream<List<Member>> members() => _col('members').live().map(
-    (snap) => [for (final d in snap.docs) memberFromJson(d.id, d.data())],
-  );
+  Stream<List<Member>> members() =>
+      _col('members').live().map((snap) => [for (final d in snap.docs) memberFromJson(d.id, d.data())]).translated();
 
   @override
-  Stream<List<PendingMember>> pendingMembers() => _col('pendingMembers').live().map(
-    (snap) => [for (final d in snap.docs) pendingMemberFromJson(d.id, d.data())],
-  );
+  Stream<List<PendingMember>> pendingMembers() => _col(
+    'pendingMembers',
+  ).live().map((snap) => [for (final d in snap.docs) pendingMemberFromJson(d.id, d.data())]).translated();
 
   @override
-  Future<void> deletePendingMember(String id) => _col('pendingMembers').doc(id).delete();
+  Future<void> deletePendingMember(String id) => _guard(() => _col('pendingMembers').doc(id).delete());
 
   @override
-  Stream<ServiceSettings> services() => _col(
-    'settings',
-  ).doc('services').live().map((s) => serviceSettingsFromJson(s.data()));
+  Stream<ServiceSettings> services() =>
+      _col('settings').doc('services').live().map((s) => serviceSettingsFromJson(s.data())).translated();
 
   @override
   Stream<List<Roster>> rosters({required Day from}) => _col('rosters')
       .where('dateKey', isGreaterThanOrEqualTo: from.key)
       .orderBy('dateKey')
       .live()
-      .map((snap) => [for (final d in snap.docs) ?rosterFromJson(d.data())]);
+      .map((snap) => [for (final d in snap.docs) ?rosterFromJson(d.data())])
+      .translated();
 
   @override
-  Stream<StaffOrder> staffOrder(String serviceType) =>
-      _col('staff_orders').doc(serviceType).live().map((s) => StaffOrder.fromJson(s.data() ?? const {}));
+  Stream<StaffOrder> staffOrder(String serviceType) => _col(
+    'staff_orders',
+  ).doc(serviceType).live().map((s) => StaffOrder.fromJson(s.data() ?? const {})).translated();
 
   // One-off reads go to the server when online: a listener's first
   // snapshot may come from the offline cache and miss documents.
   @override
-  Future<List<Member>> allMembers() async {
+  Future<List<Member>> allMembers() => _guard(() async {
     final snap = await _col('members').get();
     return [for (final d in snap.docs) memberFromJson(d.id, d.data())];
-  }
+  });
 
   @override
-  Future<List<PendingMember>> allPendingMembers() async {
+  Future<List<PendingMember>> allPendingMembers() => _guard(() async {
     final snap = await _col('pendingMembers').get();
     return [for (final d in snap.docs) pendingMemberFromJson(d.id, d.data())];
-  }
+  });
 
   @override
-  Future<List<Roster>> allRosters() async {
+  Future<List<Roster>> allRosters() => _guard(() async {
     final snap = await _col('rosters').get();
     return [for (final d in snap.docs) ?rosterFromJson(d.data())];
-  }
+  });
 
   @override
-  Future<Map<String, StaffOrder>> allStaffOrders() async {
+  Future<Map<String, StaffOrder>> allStaffOrders() => _guard(() async {
     final snap = await _col('staff_orders').get();
     return {for (final d in snap.docs) d.id: StaffOrder.fromJson(d.data())};
-  }
+  });
 
   Json _rosterDoc(Roster r) => {
     ...rosterToJson(r),
@@ -486,19 +496,19 @@ class FirestoreChurchData implements ChurchData {
   };
 
   @override
-  Future<void> saveRoster(Roster roster) => _col('rosters').doc(roster.id).set(_rosterDoc(roster));
+  Future<void> saveRoster(Roster roster) => _guard(() => _col('rosters').doc(roster.id).set(_rosterDoc(roster)));
 
   @override
-  Future<void> saveRosters(List<Roster> rosters, {String via = 'app'}) {
+  Future<void> saveRosters(List<Roster> rosters, {String via = 'app'}) => _guard(() {
     final batch = _db.batch();
     for (final r in rosters) {
       batch.set(_col('rosters').doc(r.id), {..._rosterDoc(r), 'via': via});
     }
     return batch.commit();
-  }
+  });
 
   @override
-  Future<void> deleteRoster(Roster roster) => _col('rosters').doc(roster.id).delete();
+  Future<void> deleteRoster(Roster roster) => _guard(() => _col('rosters').doc(roster.id).delete());
 
   @override
   Future<void> updateStaffOrder(
@@ -509,41 +519,45 @@ class FirestoreChurchData implements ChurchData {
     final ref = _col('staff_orders').doc(serviceType);
     // Read-modify-write in a transaction so two editors ordering different
     // duties do not overwrite each other.
-    await _db.runTransaction((tx) async {
-      final snap = await tx.get(ref);
-      final next = StaffOrder.fromJson(
-        snap.data() ?? const {},
-      ).withChanges(changes);
-      tx.set(ref, next.toJson());
-    });
+    await _guard(
+      () => _db.runTransaction((tx) async {
+        final snap = await tx.get(ref);
+        final next = StaffOrder.fromJson(
+          snap.data() ?? const {},
+        ).withChanges(changes);
+        tx.set(ref, next.toJson());
+      }),
+    );
   }
 
   @override
-  Future<void> saveServices(List<Service> services) async {
+  Future<void> saveServices(List<Service> services) {
     final ref = _col('settings').doc('services');
     // Merge ids inside a transaction: two admins saving at once must not
     // drop each other's new IDs (the rules also reject shrinking ids).
-    await _db.runTransaction((tx) async {
-      final current = serviceSettingsFromJson((await tx.get(ref)).data());
-      final next = current.withServices(services);
-      tx.set(ref, {
-        'services': [for (final s in next.services) serviceToJson(s)],
-        'ids': next.ids,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    });
+    return _guard(
+      () => _db.runTransaction((tx) async {
+        final current = serviceSettingsFromJson((await tx.get(ref)).data());
+        final next = current.withServices(services);
+        tx.set(ref, {
+          'services': [for (final s in next.services) serviceToJson(s)],
+          'ids': next.ids,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }),
+    );
   }
 
   @override
-  Future<void> saveMember(Member member) => _col('members').doc(member.uid).update(memberToJson(member));
+  Future<void> saveMember(Member member) => _guard(() => _col('members').doc(member.uid).update(memberToJson(member)));
 
   @override
-  Future<void> removeMember(String uid) => _col('members').doc(uid).delete();
+  Future<void> removeMember(String uid) => _guard(() => _col('members').doc(uid).delete());
 
   @override
-  Future<void> setNotificationPrefs(String uid, Set<NotificationKind> muted) => _col(
-    'members',
-  ).doc(uid).update({'notificationPrefs': notificationPrefsToJson(muted)});
+  Future<void> setNotificationPrefs(String uid, Set<NotificationKind> muted) => _guard(
+    () => _col('members').doc(uid).update({'notificationPrefs': notificationPrefsToJson(muted)}),
+  );
 
   @override
   Stream<List<Invite>> invites() => _db
@@ -553,10 +567,11 @@ class FirestoreChurchData implements ChurchData {
       .live()
       .map(
         (snap) => [for (final d in snap.docs) inviteFromJson(d.id, d.data())],
-      );
+      )
+      .translated();
 
   @override
-  Future<Invite> createInvite({required Duration validFor}) async {
+  Future<Invite> createInvite({required Duration validFor}) => _guard(() async {
     final church = await _church.get();
     final code = randomInviteCode();
     final expiresAt = DateTime.now().add(validFor);
@@ -575,39 +590,41 @@ class FirestoreChurchData implements ChurchData {
       churchName: church.data()?['name'] as String? ?? '',
       expiresAt: expiresAt,
     );
-  }
+  });
 
   @override
-  Future<void> revokeInvite(String code) => _db.collection('invites').doc(code).update({'revoked': true});
+  Future<void> revokeInvite(String code) => _guard(() => _db.collection('invites').doc(code).update({'revoked': true}));
 
   @override
   Stream<CalendarSettings> calendarSettings() =>
-      _col('settings').doc('calendar').live().map((s) => calendarSettingsFromJson(s.data()));
+      _col('settings').doc('calendar').live().map((s) => calendarSettingsFromJson(s.data())).translated();
 
   @override
-  Stream<ChurchLink?> churchLink() => _col('settings').doc('link').live().map((s) => churchLinkFromJson(s.data()));
+  Stream<ChurchLink?> churchLink() =>
+      _col('settings').doc('link').live().map((s) => churchLinkFromJson(s.data())).translated();
 
   @override
-  Future<void> saveChurchLink(ChurchLink? link) {
+  Future<void> saveChurchLink(ChurchLink? link) => _guard(() {
     final ref = _col('settings').doc('link');
     if (link == null) return ref.delete();
     // Merge: the content source on the same doc is the backend's.
     return ref.set({...churchLinkToJson(link), 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
-  }
+  });
 
   @override
   Stream<LinkContent?> linkContent() =>
-      _col('settings').doc('linkContent').live().map((s) => linkContentFromJson(s.data()));
+      _col('settings').doc('linkContent').live().map((s) => linkContentFromJson(s.data())).translated();
 
   @override
-  Stream<WebhookSettings?> webhook() => _col('settings').doc('webhook').live().map((s) => webhookFromJson(s.data()));
+  Stream<WebhookSettings?> webhook() =>
+      _col('settings').doc('webhook').live().map((s) => webhookFromJson(s.data())).translated();
 
   @override
-  Future<void> setHomeName(String? name) => _church.update({'homeName': name ?? FieldValue.delete()});
+  Future<void> setHomeName(String? name) => _guard(() => _church.update({'homeName': name ?? FieldValue.delete()}));
 
   @override
-  Future<void> uploadLogo(List<int> bytes) async {
-    await _storage
+  Future<void> uploadLogo(List<int> bytes) => _guard(
+    () => _storage
         .ref(_logoPath)
         .putData(
           Uint8List.fromList(bytes),
@@ -615,7 +632,118 @@ class FirestoreChurchData implements ChurchData {
             contentType: 'image/png',
             cacheControl: 'public, max-age=86400',
           ),
-        );
+        ),
+  );
+
+  @override
+  Future<void> deleteChurch() => _call('deleteChurch');
+
+  @override
+  Future<void> restoreChurch() => _call('restoreChurch');
+
+  @override
+  Future<void> mergePending(String pendingId, String uid) =>
+      _call('mergePending', {'pendingId': pendingId, 'uid': uid});
+
+  @override
+  Future<LinkSourceResult> setLinkSource(String? source, int fetchMinute) async {
+    final d = await _call('setLinkSource', {'source': source, 'fetchMinute': fetchMinute});
+    final content = d['content'];
+    return LinkSourceResult(
+      content: content is Map && source != null
+          ? linkContentFromJson({...Map<String, dynamic>.from(content), 'source': source})
+          : null,
+      error: d['ok'] == true ? null : linkFetchErrorFromName(d['error']),
+      status: (d['status'] as num?)?.toInt(),
+    );
+  }
+
+  @override
+  Future<String?> webhookSave({
+    required String? url,
+    bool calendar = false,
+    bool roster = false,
+    String? secret,
+  }) async {
+    final d = await _call('webhookSave', {
+      'url': url,
+      'events': {'calendar': calendar, 'roster': roster},
+      'secret': ?secret,
+    });
+    return d['secret'] as String?;
+  }
+
+  @override
+  Future<String?> webhookRotateSecret({String? secret}) async =>
+      (await _call('webhookRotateSecret', {'secret': ?secret}))['secret'] as String?;
+
+  @override
+  Future<WebhookDelivery> webhookTest() async =>
+      webhookDeliveryFromJson(await _call('webhookTest')) ?? const WebhookDelivery(ok: false);
+
+  @override
+  Future<Uri> calendarAuthUrl() async => Uri.parse((await _call('calendarAuthUrl'))['url'] as String);
+
+  @override
+  Future<List<({String id, String name})>> calendarList() async {
+    final d = await _call('calendarList');
+    return [
+      for (final c in d['calendars'] as List<dynamic>? ?? const [])
+        if (c is Map) (id: c['id'] as String, name: c['name'] as String? ?? ''),
+    ];
+  }
+
+  @override
+  Future<void> calendarSelect(String calendarId, String calendarName) =>
+      _call('calendarSelect', {'calendarId': calendarId, 'calendarName': calendarName});
+
+  @override
+  Future<void> calendarDisconnect() => _call('calendarDisconnect');
+
+  @override
+  Future<List<CalendarEvent>> calendarEvents(String month) async {
+    final d = await _call('calendarEvents', {'month': month});
+    return [
+      for (final e in d['events'] as List<dynamic>? ?? const []) ?calendarEventFromJson(e),
+    ];
+  }
+
+  @override
+  Future<CalendarEvent> calendarSave(CalendarEvent event, {CalendarEvent? previous}) async {
+    final d = await _call('calendarWrite', {
+      'op': 'upsert',
+      'event': calendarEventToJson(event),
+      if (previous != null) 'previousStart': calendarEventToJson(previous)['start'],
+    });
+    return calendarEventFromJson(d['event']) ?? event;
+  }
+
+  @override
+  Future<void> calendarDelete(CalendarEvent event) => _call('calendarWrite', {
+    'op': 'delete',
+    'eventId': event.id,
+    'event': calendarEventToJson(event),
+  });
+
+  @override
+  Future<PhotoQuota> photoQuota() async {
+    final d = await _call('photoQuota');
+    return PhotoQuota(
+      remaining: (d['remaining'] as num).toInt(),
+      limit: (d['limit'] as num).toInt(),
+      platformOpen: d['platformOpen'] == true,
+    );
+  }
+
+  @override
+  Future<List<dynamic>> recognizeRoster(String serviceType, List<PhotoInput> images) async {
+    final d = await _call('recognizeRoster', {
+      'serviceType': serviceType,
+      'images': [
+        for (final i in images) {'mimeType': i.mimeType, 'data': base64Encode(i.bytes)},
+      ],
+    });
+    return d['rows'] as List<dynamic>? ?? const [];
   }
 }
 
@@ -633,16 +761,51 @@ String randomInviteCode() {
 
 // ---------------------------------------------------------------- functions
 
-class FirebaseCloudApi implements CloudApi {
-  FirebaseCloudApi(this._functions, {FirebaseStorage? storage, fa.FirebaseAuth? auth})
-    : _storage = storage ?? FirebaseStorage.instance,
-      _auth = auth ?? fa.FirebaseAuth.instance;
+/// Errors from Firestore, Storage and Cloud Functions as [CloudException]s:
+/// a direct write the rules refuse gives the code a function refusing it
+/// would give.
+CloudException _cloudError(FirebaseException e) => switch (e) {
+  FirebaseFunctionsException() => _Callables.translate(e),
+  // Storage says unauthorized where Firestore says permission-denied.
+  FirebaseException(code: 'unauthorized') => const CloudException(CloudErrorCode.permissionDenied),
+  _ => CloudException(_codeFor(e.code)),
+};
+
+/// What a Firebase error code means, when no reason of ours came with it.
+CloudErrorCode _codeFor(String code) => switch (code) {
+  'permission-denied' || 'unauthenticated' => CloudErrorCode.permissionDenied,
+  'unavailable' || 'deadline-exceeded' => CloudErrorCode.unavailable,
+  'resource-exhausted' => CloudErrorCode.quotaExceeded,
+  _ => CloudErrorCode.unknown,
+};
+
+/// Runs a Firestore or Storage operation, its errors as [CloudException]s.
+Future<T> _guard<T>(Future<T> Function() op) async {
+  try {
+    return await op();
+  } on FirebaseException catch (e, stack) {
+    Error.throwWithStackTrace(_cloudError(e), stack);
+  }
+}
+
+extension _Translated<T> on Stream<T> {
+  /// This stream, its Firestore errors as [CloudException]s.
+  Stream<T> translated() => handleError(
+    (Object e, StackTrace stack) => Error.throwWithStackTrace(_cloudError(e as FirebaseException), stack),
+    test: (e) => e is FirebaseException,
+  );
+}
+
+Map<String, Object?> _asMap(Object? data) => data is Map ? Map<String, Object?>.from(data) : const {};
+
+/// Calls Cloud Functions, their errors as [CloudException]s.
+class _Callables {
+  _Callables(this._functions, this._auth);
 
   final FirebaseFunctions _functions;
-  final FirebaseStorage _storage;
   final fa.FirebaseAuth _auth;
 
-  Future<Object?> _call(String name, [Map<String, Object?>? data]) async {
+  Future<Object?> call(String name, [Map<String, Object?>? data]) async {
     try {
       return await _callOnce(name, data);
     } on CloudException catch (e) {
@@ -658,7 +821,7 @@ class FirebaseCloudApi implements CloudApi {
       final result = await _functions.httpsCallable(name).call<Object?>(data);
       return result.data;
     } on FirebaseFunctionsException catch (e) {
-      throw _translate(e);
+      throw translate(e);
     }
   }
 
@@ -677,7 +840,8 @@ class FirebaseCloudApi implements CloudApi {
     return true;
   }
 
-  static CloudException _translate(FirebaseFunctionsException e) {
+  /// The reason the function gave, else what its error code means.
+  static CloudException translate(FirebaseFunctionsException e) {
     final details = e.details;
     final reason = details is Map ? details['reason'] : null;
     for (final code in CloudErrorCode.values) {
@@ -685,23 +849,35 @@ class FirebaseCloudApi implements CloudApi {
         return CloudException(code, details is Map ? details['detail'] : null);
       }
     }
-    return CloudException(switch (e.code) {
-      'permission-denied' || 'unauthenticated' => CloudErrorCode.permissionDenied,
-      'unavailable' || 'deadline-exceeded' => CloudErrorCode.unavailable,
-      'resource-exhausted' => CloudErrorCode.quotaExceeded,
-      _ => CloudErrorCode.unknown,
-    });
+    return CloudException(_codeFor(e.code));
   }
 
-  Map<String, Object?> _map(Object? data) => data is Map ? Map<String, Object?>.from(data) : const {};
+  /// Sends an error report once, never failing.
+  Future<void> report(Map<String, Object?> data) async {
+    try {
+      await _functions.httpsCallable('logClientError').call<Object?>(data);
+    } catch (_) {
+      // Error reporting must never cause another error.
+    }
+  }
+}
+
+class FirebaseCloudApi implements CloudApi {
+  FirebaseCloudApi._(this._calls, this._storage, this._auth);
+
+  final _Callables _calls;
+  final FirebaseStorage _storage;
+  final fa.FirebaseAuth _auth;
+
+  Future<Object?> _call(String name, [Map<String, Object?>? data]) => _calls.call(name, data);
 
   @override
   Future<String> createChurch(String name) async =>
-      _map(await _call('createChurch', {'name': name}))['churchId'] as String;
+      _asMap(await _call('createChurch', {'name': name}))['churchId'] as String;
 
   @override
   Future<Invite> previewInvite(String code) async {
-    final data = _map(await _call('previewInvite', {'code': code}));
+    final data = _asMap(await _call('previewInvite', {'code': code}));
     return Invite(
       code: code,
       churchId: data['churchId'] as String,
@@ -714,11 +890,11 @@ class FirebaseCloudApi implements CloudApi {
 
   @override
   Future<String> invitedChurchName(String code) async =>
-      _map(await _call('previewInvite', {'code': code}))['churchName'] as String? ?? '';
+      _asMap(await _call('previewInvite', {'code': code}))['churchName'] as String? ?? '';
 
   @override
   Future<String> redeemInvite(String code) async =>
-      _map(await _call('redeemInvite', {'code': code}))['churchId'] as String;
+      _asMap(await _call('redeemInvite', {'code': code}))['churchId'] as String;
 
   @override
   Future<void> deleteAccount() => _call('deleteAccount');
@@ -734,7 +910,7 @@ class FirebaseCloudApi implements CloudApi {
 
   @override
   Future<MovePreview> movePreview(String path) async {
-    final d = _map(await _call('movePreview', {'path': path}));
+    final d = _asMap(await _call('movePreview', {'path': path}));
     return MovePreview(
       members: (d['members'] as num?)?.toInt() ?? 0,
       rosters: (d['rosters'] as num?)?.toInt() ?? 0,
@@ -753,11 +929,11 @@ class FirebaseCloudApi implements CloudApi {
 
   @override
   Future<String> moveCommit(String path, {required String churchName, String? me}) async =>
-      _map(await _call('moveCommit', {'path': path, 'churchName': churchName, 'me': me}))['churchId'] as String;
+      _asMap(await _call('moveCommit', {'path': path, 'churchName': churchName, 'me': me}))['churchId'] as String;
 
   @override
   Future<List<PendingClaim>> pendingClaims() async {
-    final d = _map(await _call('pendingClaims'));
+    final d = _asMap(await _call('pendingClaims'));
     return [
       for (final c in d['claims'] as List<dynamic>? ?? const [])
         if (c is Map)
@@ -772,15 +948,11 @@ class FirebaseCloudApi implements CloudApi {
 
   @override
   Future<String> claimPending(String churchId, String pendingId) async =>
-      _map(await _call('claimPending', {'churchId': churchId, 'pendingId': pendingId}))['churchId'] as String;
-
-  @override
-  Future<void> mergePending(String churchId, String pendingId, String uid) =>
-      _call('mergePending', {'churchId': churchId, 'pendingId': pendingId, 'uid': uid});
+      _asMap(await _call('claimPending', {'churchId': churchId, 'pendingId': pendingId}))['churchId'] as String;
 
   @override
   Future<ChurchPreview> churchPreview(String churchId) async {
-    final d = _map(await _call('churchPreview', {'churchId': churchId}));
+    final d = _asMap(await _call('churchPreview', {'churchId': churchId}));
     final logo = d['logoPath'];
     return ChurchPreview(
       id: churchId,
@@ -791,56 +963,8 @@ class FirebaseCloudApi implements CloudApi {
   }
 
   @override
-  Future<void> deleteChurch(String churchId) => _call('deleteChurch', {'churchId': churchId});
-
-  @override
-  Future<void> restoreChurch(String churchId) => _call('restoreChurch', {'churchId': churchId});
-
-  @override
-  Future<LinkSourceResult> setLinkSource(String churchId, String? source, int fetchMinute) async {
-    final d = _map(
-      await _call('setLinkSource', {'churchId': churchId, 'source': source, 'fetchMinute': fetchMinute}),
-    );
-    final content = d['content'];
-    return LinkSourceResult(
-      content: content is Map && source != null
-          ? linkContentFromJson({...Map<String, dynamic>.from(content), 'source': source})
-          : null,
-      error: d['ok'] == true ? null : linkFetchErrorFromName(d['error']),
-      status: (d['status'] as num?)?.toInt(),
-    );
-  }
-
-  @override
-  Future<String?> webhookSave(
-    String churchId, {
-    required String? url,
-    bool calendar = false,
-    bool roster = false,
-    String? secret,
-  }) async {
-    final d = _map(
-      await _call('webhookSave', {
-        'churchId': churchId,
-        'url': url,
-        'events': {'calendar': calendar, 'roster': roster},
-        'secret': ?secret,
-      }),
-    );
-    return d['secret'] as String?;
-  }
-
-  @override
-  Future<String?> webhookRotateSecret(String churchId, {String? secret}) async =>
-      _map(await _call('webhookRotateSecret', {'churchId': churchId, 'secret': ?secret}))['secret'] as String?;
-
-  @override
-  Future<WebhookDelivery> webhookTest(String churchId) async =>
-      webhookDeliveryFromJson(await _call('webhookTest', {'churchId': churchId})) ?? const WebhookDelivery(ok: false);
-
-  @override
   Future<List<ChurchSummary>> adminSearchChurches(String query) async {
-    final data = _map(await _call('adminSearchChurches', {'query': query}));
+    final data = _asMap(await _call('adminSearchChurches', {'query': query}));
     return [
       for (final raw in data['churches'] as List<dynamic>? ?? const [])
         if (raw is Map)
@@ -872,7 +996,7 @@ class FirebaseCloudApi implements CloudApi {
 
   @override
   Future<List<Member>> adminChurchMembers(String churchId) async {
-    final data = _map(
+    final data = _asMap(
       await _call('adminChurchMembers', {'churchId': churchId}),
     );
     return [
@@ -900,7 +1024,7 @@ class FirebaseCloudApi implements CloudApi {
 
   @override
   Future<List<DailyStats>> adminStats({int days = 30}) async {
-    final data = _map(await _call('adminStats', {'days': days}));
+    final data = _asMap(await _call('adminStats', {'days': days}));
     return [
       for (final raw in data['days'] as List<dynamic>? ?? const [])
         if (raw case {
@@ -917,57 +1041,8 @@ class FirebaseCloudApi implements CloudApi {
   }
 
   @override
-  Future<Uri> calendarAuthUrl(String churchId) async =>
-      Uri.parse(_map(await _call('calendarAuthUrl', {'churchId': churchId}))['url'] as String);
-
-  @override
-  Future<List<({String id, String name})>> calendarList(String churchId) async {
-    final d = _map(await _call('calendarList', {'churchId': churchId}));
-    return [
-      for (final c in d['calendars'] as List<dynamic>? ?? const [])
-        if (c is Map) (id: c['id'] as String, name: c['name'] as String? ?? ''),
-    ];
-  }
-
-  @override
-  Future<void> calendarSelect(String churchId, String calendarId, String calendarName) =>
-      _call('calendarSelect', {'churchId': churchId, 'calendarId': calendarId, 'calendarName': calendarName});
-
-  @override
-  Future<void> calendarDisconnect(String churchId) => _call('calendarDisconnect', {'churchId': churchId});
-
-  @override
-  Future<List<CalendarEvent>> calendarEvents(String churchId, String month) async {
-    final d = _map(await _call('calendarEvents', {'churchId': churchId, 'month': month}));
-    return [
-      for (final e in d['events'] as List<dynamic>? ?? const []) ?calendarEventFromJson(e),
-    ];
-  }
-
-  @override
-  Future<CalendarEvent> calendarSave(String churchId, CalendarEvent event, {CalendarEvent? previous}) async {
-    final d = _map(
-      await _call('calendarWrite', {
-        'churchId': churchId,
-        'op': 'upsert',
-        'event': calendarEventToJson(event),
-        if (previous != null) 'previousStart': calendarEventToJson(previous)['start'],
-      }),
-    );
-    return calendarEventFromJson(d['event']) ?? event;
-  }
-
-  @override
-  Future<void> calendarDelete(String churchId, CalendarEvent event) => _call('calendarWrite', {
-    'churchId': churchId,
-    'op': 'delete',
-    'eventId': event.id,
-    'event': calendarEventToJson(event),
-  });
-
-  @override
   Future<FundingOverview> adminFunding() async {
-    final d = _map(await _call('adminFunding'));
+    final d = _asMap(await _call('adminFunding'));
     final summary = d['funding'];
     return FundingOverview(
       costs: [
@@ -1002,43 +1077,9 @@ class FirebaseCloudApi implements CloudApi {
   });
 
   @override
-  Future<PhotoQuota> photoQuota(String churchId) async {
-    final d = _map(await _call('photoQuota', {'churchId': churchId}));
-    return PhotoQuota(
-      remaining: (d['remaining'] as num).toInt(),
-      limit: (d['limit'] as num).toInt(),
-      platformOpen: d['platformOpen'] == true,
-    );
-  }
-
-  @override
-  Future<List<dynamic>> recognizeRoster(String churchId, String serviceType, List<PhotoInput> images) async {
-    final d = _map(
-      await _call('recognizeRoster', {
-        'churchId': churchId,
-        'serviceType': serviceType,
-        'images': [
-          for (final i in images) {'mimeType': i.mimeType, 'data': base64Encode(i.bytes)},
-        ],
-      }),
-    );
-    return d['rows'] as List<dynamic>? ?? const [];
-  }
-
-  @override
   Future<void> logError({
     required String message,
     required String stack,
     String? churchId,
-  }) async {
-    try {
-      await _functions.httpsCallable('logClientError').call<Object?>({
-        'message': message,
-        'stack': stack,
-        'churchId': ?churchId,
-      });
-    } catch (_) {
-      // Error reporting must never cause another error.
-    }
-  }
+  }) => _calls.report({'message': message, 'stack': stack, 'churchId': ?churchId});
 }

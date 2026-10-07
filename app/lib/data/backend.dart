@@ -4,8 +4,13 @@
 /// Functions implement them in `firebase/`; `memory/` implements them in
 /// memory for widget tests and the offline demo.
 ///
-/// Every church-scoped read and write goes through a [ChurchData] for one
-/// church ID, so a path outside `churches/{cid}` cannot be built by accident.
+/// The interfaces follow the domain, not the storage: everything done in
+/// one church, whether a Firestore read or write or a Cloud Function, is on
+/// that church's [ChurchData], so a screen never passes a church ID and a
+/// path outside `churches/{cid}` cannot be built by accident. [CloudApi]
+/// keeps what is not about a church the caller is in: making or joining
+/// one, the account, the platform operator. Every refusal, from Firestore,
+/// Storage or a function, is a [CloudException].
 library;
 
 import '../domain/day.dart';
@@ -95,7 +100,16 @@ abstract interface class MembershipRepository {
   Stream<List<Membership>> watchMine(String uid);
 }
 
-/// Reads and writes for one church.
+/// Everything done in one church: its data, and the work the backend does
+/// for it (fetching the church link's source, the webhook, Google Calendar,
+/// photo recognition, deleting and restoring it). Whether an operation is a
+/// Firestore read or write or a Cloud Function is the adapter's business.
+///
+/// Every failure is a [CloudException]. A refusal is
+/// [CloudErrorCode.permissionDenied]: a non-member, a member without the
+/// role, or (for Firestore's reads and writes) a closed church. What the
+/// Cloud Functions do in a suspended or deleted church is refused with
+/// [CloudErrorCode.churchClosed] instead (functions/src/access.ts).
 abstract interface class ChurchData {
   String get churchId;
 
@@ -169,7 +183,7 @@ abstract interface class ChurchData {
   Stream<ChurchLink?> churchLink();
 
   /// Saves the church link's title, body and URL (admins only); null
-  /// removes it. Its content source is set with [CloudApi.setLinkSource].
+  /// removes it. Its content source is set with [setLinkSource].
   Future<void> saveChurchLink(ChurchLink? link);
 
   /// What the backend last fetched from the church link's content source.
@@ -184,6 +198,58 @@ abstract interface class ChurchData {
 
   /// Uploads [bytes] (already a 512px PNG) as the church logo.
   Future<void> uploadLogo(List<int> bytes);
+
+  /// Deletes the church while it is open (admins); restorable for 30 days.
+  Future<void> deleteChurch();
+
+  /// Reopens the church its admin deleted under 30 days ago; an open church
+  /// stays open. A suspended one, or one deleted longer ago, is
+  /// [CloudErrorCode.churchClosed].
+  Future<void> restoreChurch();
+
+  /// Merges a pending member into a member (admins).
+  Future<void> mergePending(String pendingId, String uid);
+
+  /// Sets the church link's content source and daily fetch time (admins);
+  /// a null [source] removes it. A new source is fetched at once.
+  Future<LinkSourceResult> setLinkSource(String? source, int fetchMinute);
+
+  /// Sets the webhook URL and which events it gets (admins); a null [url]
+  /// turns it off. The first time, [secret] is used or one is made and
+  /// returned: the only time it is shown.
+  Future<String?> webhookSave({
+    required String? url,
+    bool calendar = false,
+    bool roster = false,
+    String? secret,
+  });
+
+  /// Replaces the secret with [secret], or a new one that is returned.
+  Future<String?> webhookRotateSecret({String? secret});
+
+  /// Sends a test notice now.
+  Future<WebhookDelivery> webhookTest();
+
+  // Google Calendar, proxied by the backend. Admins connect it, calendar
+  // editors write, members read.
+  Future<Uri> calendarAuthUrl();
+  Future<List<({String id, String name})>> calendarList();
+  Future<void> calendarSelect(String calendarId, String calendarName);
+  Future<void> calendarDisconnect();
+
+  /// Events of [month] (`YYYY-MM`).
+  Future<List<CalendarEvent>> calendarEvents(String month);
+
+  /// [previous] is the event before editing, so a move to another month
+  /// refreshes both months.
+  Future<CalendarEvent> calendarSave(CalendarEvent event, {CalendarEvent? previous});
+  Future<void> calendarDelete(CalendarEvent event);
+
+  /// Photos the church may still recognize this month.
+  Future<PhotoQuota> photoQuota();
+
+  /// Recognizes photos of a paper roster into import rows (JSON objects).
+  Future<List<dynamic>> recognizeRoster(String serviceType, List<PhotoInput> images);
 }
 
 enum CloudErrorCode {
@@ -363,12 +429,13 @@ class LinkSourceResult {
   bool get ok => error == null;
 }
 
-/// Privileged operations, done by Cloud Functions.
+/// What is not about a church the caller is in: making a church, joining
+/// one (invites, pending members, the church preview), the account, the
+/// platform operator, error reports. Done by Cloud Functions.
 ///
-/// One that acts in a church refuses a non-member with
-/// [CloudErrorCode.permissionDenied] and, in a suspended or deleted church,
-/// a member with [CloudErrorCode.churchClosed] (functions/src/access.ts).
-/// Invites say [CloudErrorCode.inviteInvalid] instead, the church preview
+/// One that acts in a church the caller is joining says
+/// [CloudErrorCode.churchClosed] for a suspended or deleted church, except
+/// invites ([CloudErrorCode.inviteInvalid]) and the church preview
 /// [CloudErrorCode.notFound].
 abstract interface class CloudApi {
   /// Returns the new church ID.
@@ -405,41 +472,9 @@ abstract interface class CloudApi {
   /// church ID.
   Future<String> claimPending(String churchId, String pendingId);
 
-  /// Merges a pending member into a member of the same church (admins).
-  Future<void> mergePending(String churchId, String pendingId, String uid);
-
   /// Name and logo of an active church, for someone who is not a member.
   /// Throws [CloudErrorCode.notFound] for an unknown or closed church.
   Future<ChurchPreview> churchPreview(String churchId);
-
-  /// Deletes an open church (admins); restorable for 30 days.
-  Future<void> deleteChurch(String churchId);
-
-  /// Reopens a church its admin deleted under 30 days ago; an open church
-  /// stays open. A suspended one, or one deleted longer ago, is
-  /// [CloudErrorCode.churchClosed].
-  Future<void> restoreChurch(String churchId);
-
-  /// Sets the church link's content source and daily fetch time (admins);
-  /// a null [source] removes it. A new source is fetched at once.
-  Future<LinkSourceResult> setLinkSource(String churchId, String? source, int fetchMinute);
-
-  /// Sets the webhook URL and which events it gets (admins); a null [url]
-  /// turns it off. The first time, [secret] is used or one is made and
-  /// returned: the only time it is shown.
-  Future<String?> webhookSave(
-    String churchId, {
-    required String? url,
-    bool calendar = false,
-    bool roster = false,
-    String? secret,
-  });
-
-  /// Replaces the secret with [secret], or a new one that is returned.
-  Future<String?> webhookRotateSecret(String churchId, {String? secret});
-
-  /// Sends a test notice now.
-  Future<WebhookDelivery> webhookTest(String churchId);
 
   // Platform operator only.
   Future<List<ChurchSummary>> adminSearchChurches(String query);
@@ -452,26 +487,6 @@ abstract interface class CloudApi {
 
   /// Replaces the cost list; this month's target follows.
   Future<void> adminSetFundingCosts(List<CostItem> items);
-
-  /// Photos this church may still recognize this month.
-  Future<PhotoQuota> photoQuota(String churchId);
-
-  /// Recognizes photos of a paper roster into import rows (JSON objects).
-  Future<List<dynamic>> recognizeRoster(String churchId, String serviceType, List<PhotoInput> images);
-
-  // Calendar, proxied by the backend.
-  Future<Uri> calendarAuthUrl(String churchId);
-  Future<List<({String id, String name})>> calendarList(String churchId);
-  Future<void> calendarSelect(String churchId, String calendarId, String calendarName);
-  Future<void> calendarDisconnect(String churchId);
-
-  /// Events of [month] (`YYYY-MM`).
-  Future<List<CalendarEvent>> calendarEvents(String churchId, String month);
-
-  /// [previous] is the event before editing, so a move to another month
-  /// refreshes both months.
-  Future<CalendarEvent> calendarSave(String churchId, CalendarEvent event, {CalendarEvent? previous});
-  Future<void> calendarDelete(String churchId, CalendarEvent event);
 
   /// Reports an uncaught error. Never throws.
   Future<void> logError({

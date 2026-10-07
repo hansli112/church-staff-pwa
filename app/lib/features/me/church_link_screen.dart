@@ -75,10 +75,7 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
           .saveChurchLink(ChurchLink(title: _title.text.trim(), body: _body.text.trim(), url: _url.text.trim()));
       LinkSourceResult? result;
       if (sourceChanged) {
-        result = await ref
-            .read(backendProvider)
-            .cloud
-            .setLinkSource(ref.read(currentChurchIdProvider)!, source.isEmpty ? null : source, _fetchMinute);
+        result = await ref.read(churchDataProvider)!.setLinkSource(source.isEmpty ? null : source, _fetchMinute);
       }
       if (!mounted) return;
       if (result != null && !result.ok) {

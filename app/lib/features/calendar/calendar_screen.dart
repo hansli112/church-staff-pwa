@@ -35,9 +35,9 @@ String monthKey(DateTime m) => '${m.year.toString().padLeft(4, '0')}-${m.month.t
 
 /// Events of a month, read through the backend's shared cache.
 final calendarEventsProvider = FutureProvider.autoDispose.family<List<CalendarEvent>, String>((ref, month) {
-  final cid = ref.watch(currentChurchIdProvider);
-  if (cid == null) return const [];
-  return ref.watch(backendProvider).cloud.calendarEvents(cid, month);
+  final church = ref.watch(churchDataProvider);
+  if (church == null) return const [];
+  return church.calendarEvents(month);
 });
 
 /// 行事曆: the church's Google Calendar as an agenda, month by month.

@@ -35,7 +35,7 @@ void main() {
 
   testWidgets('after connecting, the admin picks a calendar and everyone sees events', (tester) async {
     final b = seededChurch();
-    b.cloud.connectCalendar('grace');
+    b.connectCalendar('grace');
     b.calendarEvents['grace'] = [
       CalendarEvent(id: 'e1', title: '同工會', start: DateTime(2026, 10, 10, 19, 30), end: DateTime(2026, 10, 10, 21)),
     ];
@@ -50,7 +50,7 @@ void main() {
 
   testWidgets('staff have no edit entry; calendar editors add and delete with undo', (tester) async {
     final b = seededChurch(as: calendarEditor, extra: const [calendarEditor]);
-    b.cloud.connectCalendar('grace', calendarName: '教會行事曆');
+    b.connectCalendar('grace', calendarName: '教會行事曆');
     b.calendarEvents['grace'] = [
       CalendarEvent(id: 'e1', title: '同工會', start: DateTime(2026, 10, 10), end: DateTime(2026, 10, 11), allDay: true),
     ];
@@ -72,7 +72,7 @@ void main() {
 
   testWidgets('renaming a three-day event keeps its three days', (tester) async {
     final b = seededChurch(as: calendarEditor, extra: const [calendarEditor]);
-    b.cloud.connectCalendar('grace', calendarName: '教會行事曆');
+    b.connectCalendar('grace', calendarName: '教會行事曆');
     b.calendarEvents['grace'] = [
       CalendarEvent(id: 'camp', title: '夏令營', start: DateTime(2026, 10, 9), end: DateTime(2026, 10, 12), allDay: true),
     ];
@@ -89,7 +89,7 @@ void main() {
 
   testWidgets('staff cannot edit even when connected', (tester) async {
     final b = seededChurch(as: staffMei);
-    b.cloud.connectCalendar('grace', calendarName: '教會行事曆');
+    b.connectCalendar('grace', calendarName: '教會行事曆');
     await pumpApp(tester, b);
     await go(tester, '/calendar');
     expect(find.byTooltip('新增活動'), findsNothing);

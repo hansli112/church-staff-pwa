@@ -34,6 +34,8 @@ flutter run -d chrome --dart-define=MARTHA_ENV=demo       # 不用網路，記�
 flutter run -d chrome --dart-define=MARTHA_ENV=emulator   # 接本機 Firebase emulator
 ```
 
+App 只經過 `app/lib/data/backend.dart` 的介面和後端說話。在目前這間教會做的事（資料、教會連結的內容來源、webhook、行事曆、照片辨識、合併待認領同工、刪除與還原教會）都在 `ChurchData`，畫面不傳教會 id；不在某間教會裡做的（建立或加入教會、帳號、營運者後台）在 `CloudApi`。走 Firestore 還是 Cloud Function 由轉接層決定，錯誤一律是 `CloudException`。
+
 App 的流程測試與示範模式用記憶體版後端（`app/lib/data/memory/`）。它只保留畫面需要的規則（權限、邀請期限、最後一位管理員、未驗證 email、教會停用），而且每一條都在 `app/test/contract/` 的契約測試裡：同一組案例在 `flutter test` 跑記憶體版，在 `scripts/check.sh contract` 用 Chrome 跑真的 Firebase 後端接本機 emulator（需要 Chrome、Java、Node）。後端另外算出來的東西（搬家檔內容、教會連結抓到的內容、webhook 送出結果、Google 行事曆、照片辨識、雲端費用目標）在記憶體版是測試指定的固定答案。改 rules 或 Functions 的行為時，契約測試要跟著改。
 
 本機 emulator：

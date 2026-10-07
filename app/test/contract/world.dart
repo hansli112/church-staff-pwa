@@ -30,9 +30,6 @@ abstract interface class ContractWorld {
 
   /// Moves the church's deletion [ago] into the past.
   Future<void> backdateDeletion(String churchId, Duration ago);
-
-  /// Whether [error] is the backend refusing for lack of permission.
-  bool isDenied(Object error);
 }
 
 /// The password every contract account uses.

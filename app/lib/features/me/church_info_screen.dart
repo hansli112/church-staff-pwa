@@ -179,7 +179,7 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
     );
     if (!ok || !mounted) return;
     try {
-      await ref.read(backendProvider).cloud.deleteChurch(church.id);
+      await ref.read(churchDataProvider)!.deleteChurch();
     } catch (e) {
       if (mounted) showToast(context, errorText(l10n, e));
     }

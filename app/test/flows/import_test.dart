@@ -98,7 +98,7 @@ void main() {
 
   testWidgets('used-up photos say when they come back', (tester) async {
     final b = seededChurch();
-    b.cloud.photosUsed['grace'] = 30;
+    b.photosUsed['grace'] = 30;
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     expect(find.textContaining('這個月的 30 張用完了'), findsOneWidget);

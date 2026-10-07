@@ -135,7 +135,7 @@ void main() {
       expect(find.text('已儲存，抓到「今日經文」'), findsOneWidget);
       expect(b.churchLinks['grace']!.source, src);
       expect(b.churchLinks['grace']!.fetchMinute, 300);
-      expect(b.cloud.linkSourceFetches, [src]);
+      expect(b.linkSourceFetches, [src]);
       expect(find.text('JSON 網址'), findsNothing, reason: 'the page closed');
 
       await go(tester, '/me/link');
@@ -162,7 +162,7 @@ void main() {
       await tester.enterText(field('JSON 網址'), 'http://feed.example');
       await tapText(tester, '儲存');
       expect(find.text('請輸入 https:// 開頭的連結'), findsOneWidget);
-      expect(b.cloud.linkSourceFetches, isEmpty);
+      expect(b.linkSourceFetches, isEmpty);
     });
   });
 }

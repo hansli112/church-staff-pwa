@@ -135,7 +135,7 @@ void main() {
     expect(find.text('合併還沒登入的資料'), findsNothing);
     final b = seededChurch(as: editor);
     b.pendingMembers['grace'] = {'old-mei': meiPending};
-    await expectLater(b.cloud.mergePending('grace', 'old-mei', 'mei'), throwsA(isA<Object>()));
+    await expectLater(b.church('grace').mergePending('old-mei', 'mei'), throwsA(isA<Object>()));
     expect(b.pendingMembers['grace']!.length, 1);
   });
 }

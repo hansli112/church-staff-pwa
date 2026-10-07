@@ -1,8 +1,6 @@
 import 'dart:convert';
 import 'dart:js_interop';
 
-import 'package:firebase_core/firebase_core.dart';
-import 'package:martha/data/backend.dart';
 import 'package:martha/data/firebase/codec.dart';
 import 'package:martha/data/firebase/firebase_backend.dart';
 import 'package:martha/domain/models.dart';
@@ -92,14 +90,6 @@ class FirebaseWorld implements ContractWorld {
   @override
   Future<void> backdateDeletion(String churchId, Duration ago) =>
       _write('churches/$churchId', {'deletedAt': DateTime.now().subtract(ago)}, mask: ['deletedAt']);
-
-  @override
-  bool isDenied(Object error) => switch (error) {
-    CloudException(code: CloudErrorCode.permissionDenied) => true,
-    // Firestore and Storage refusing a direct read or write.
-    FirebaseException(code: 'permission-denied' || 'unauthorized') => true,
-    _ => false,
-  };
 
   Future<void> _updateAccount(String email, Map<String, Object?> fields) => _send(
     'POST',

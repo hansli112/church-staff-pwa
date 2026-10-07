@@ -58,7 +58,7 @@ class MemberEditorScreen extends ConsumerWidget {
     );
     if (ok != true || !context.mounted) return;
     try {
-      await ref.read(backendProvider).cloud.mergePending(ref.read(currentChurchIdProvider)!, picked.id, member.uid);
+      await ref.read(churchDataProvider)!.mergePending(picked.id, member.uid);
       Haptics.success();
       if (context.mounted) showToast(context, l10n.merged);
     } catch (e) {

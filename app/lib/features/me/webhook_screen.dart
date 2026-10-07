@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
+import '../../data/backend.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
@@ -100,10 +101,8 @@ class _SetupState extends ConsumerState<_Setup> {
     try {
       final secret = _secret.text.trim();
       final generated = await ref
-          .read(backendProvider)
-          .cloud
+          .read(churchDataProvider)!
           .webhookSave(
-            ref.read(currentChurchIdProvider)!,
             url: _url.text.trim(),
             calendar: _calendar,
             roster: _roster,
@@ -190,20 +189,16 @@ class _Configured extends ConsumerStatefulWidget {
 class _ConfiguredState extends ConsumerState<_Configured> {
   bool _testing = false;
 
-  String get _cid => ref.read(currentChurchIdProvider)!;
+  ChurchData get _church => ref.read(churchDataProvider)!;
 
   Future<void> _save({String? url, bool? calendar, bool? roster}) async {
     final l10n = L10n.of(context);
     try {
-      await ref
-          .read(backendProvider)
-          .cloud
-          .webhookSave(
-            _cid,
-            url: url ?? widget.hook.url,
-            calendar: calendar ?? widget.hook.calendar,
-            roster: roster ?? widget.hook.roster,
-          );
+      await _church.webhookSave(
+        url: url ?? widget.hook.url,
+        calendar: calendar ?? widget.hook.calendar,
+        roster: roster ?? widget.hook.roster,
+      );
     } catch (e) {
       if (mounted) showToast(context, errorText(l10n, e));
     }
@@ -224,7 +219,7 @@ class _ConfiguredState extends ConsumerState<_Configured> {
     final l10n = L10n.of(context);
     setState(() => _testing = true);
     try {
-      final r = await ref.read(backendProvider).cloud.webhookTest(_cid);
+      final r = await _church.webhookTest();
       if (mounted) showToast(context, deliveryText(l10n, r));
     } catch (e) {
       if (mounted) showToast(context, errorText(l10n, e));
@@ -253,7 +248,7 @@ class _ConfiguredState extends ConsumerState<_Configured> {
       }
     }
     try {
-      final secret = await ref.read(backendProvider).cloud.webhookRotateSecret(_cid, secret: typed);
+      final secret = await _church.webhookRotateSecret(secret: typed);
       if (!mounted) return;
       if (secret != null) {
         await _showSecret(context, secret);
@@ -275,7 +270,7 @@ class _ConfiguredState extends ConsumerState<_Configured> {
     );
     if (!ok || !mounted) return;
     try {
-      await ref.read(backendProvider).cloud.webhookSave(_cid, url: null);
+      await _church.webhookSave(url: null);
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) showToast(context, errorText(l10n, e));

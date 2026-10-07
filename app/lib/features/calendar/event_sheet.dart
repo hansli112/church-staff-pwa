@@ -50,8 +50,7 @@ Future<void> showEventDetail(BuildContext context, CalendarEvent e) {
 /// backend. Deleting offers 復原, which creates the event again.
 Future<void> editEvent(BuildContext context, WidgetRef ref, CalendarEvent? event, {required DateTime month}) async {
   final l10n = L10n.of(context);
-  final cid = ref.read(currentChurchIdProvider)!;
-  final cloud = ref.read(backendProvider).cloud;
+  final church = ref.read(churchDataProvider)!;
   final today = ref.read(todayProvider);
   final initialDay =
       event?.start ??
@@ -65,7 +64,7 @@ Future<void> editEvent(BuildContext context, WidgetRef ref, CalendarEvent? event
   void refresh(CalendarEvent e) => ref.invalidate(calendarEventsProvider(monthKey(e.start)));
   try {
     if (result.delete && event != null) {
-      await cloud.calendarDelete(cid, event);
+      await church.calendarDelete(event);
       refresh(event);
       if (!context.mounted) return;
       showToast(
@@ -80,12 +79,12 @@ Future<void> editEvent(BuildContext context, WidgetRef ref, CalendarEvent? event
             location: event.location,
             description: event.description,
           );
-          await cloud.calendarSave(cid, again);
+          await church.calendarSave(again);
           refresh(again);
         },
       );
     } else if (result.event != null) {
-      await cloud.calendarSave(cid, result.event!, previous: event);
+      await church.calendarSave(result.event!, previous: event);
       refresh(result.event!);
       if (event != null && monthKey(event.start) != monthKey(result.event!.start)) refresh(event);
       if (context.mounted) showToast(context, l10n.calSaved);

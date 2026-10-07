@@ -13,10 +13,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import 'format.dart';
 
-final _quotaProvider = FutureProvider.autoDispose<PhotoQuota>((ref) {
-  final cid = ref.watch(currentChurchIdProvider)!;
-  return ref.watch(backendProvider).cloud.photoQuota(cid);
-});
+final _quotaProvider = FutureProvider.autoDispose<PhotoQuota>((ref) => ref.watch(churchDataProvider)!.photoQuota());
 
 /// 照片匯入: photograph a paper roster, check what was read, apply it.
 /// The operator can paste recognised JSON instead, e.g. to help a church
@@ -58,10 +55,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       final images = [
         for (final f in files.take(3)) PhotoInput(mimeType: f.mimeType ?? 'image/jpeg', bytes: await f.readAsBytes()),
       ];
-      final rows = await ref
-          .read(backendProvider)
-          .cloud
-          .recognizeRoster(ref.read(currentChurchIdProvider)!, widget.serviceType, images);
+      final rows = await ref.read(churchDataProvider)!.recognizeRoster(widget.serviceType, images);
       ref.invalidate(_quotaProvider);
       _makePlan(rows);
     } on CloudException catch (e) {

@@ -23,11 +23,11 @@ class ClosedScreen extends ConsumerStatefulWidget {
 class _ClosedScreenState extends ConsumerState<ClosedScreen> {
   bool _busy = false;
 
-  Future<void> _restore(Church church) async {
+  Future<void> _restore() async {
     final l10n = L10n.of(context);
     setState(() => _busy = true);
     try {
-      await ref.read(backendProvider).cloud.restoreChurch(church.id);
+      await ref.read(churchDataProvider)!.restoreChurch();
       if (mounted) showToast(context, l10n.churchRestored);
     } catch (e) {
       if (mounted) showToast(context, errorText(l10n, e));
@@ -82,7 +82,7 @@ class _ClosedScreenState extends ConsumerState<ClosedScreen> {
                   PrimaryButton(
                     label: l10n.restoreChurch,
                     busy: _busy,
-                    onPressed: () => _restore(church!),
+                    onPressed: _restore,
                   ),
                 if (multiple)
                   SecondaryButton(
