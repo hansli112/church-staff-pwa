@@ -21,29 +21,48 @@ import '../retry_refused.dart';
 
 bool _refused(Object e) => e is FirebaseException && e.code == 'permission-denied';
 
+/// Firestore instances whose listeners skip what the local cache answers
+/// first ([FirebaseBackend.serverReads]).
+final _serverReads = Expando<bool>();
+
 /// Firestore listeners that survive being refused right after sign-in (see
 /// [retryRefused]).
 extension on DocumentReference<Json> {
-  Stream<DocumentSnapshot<Json>> live() => retryRefused(snapshots, isRefused: _refused);
+  Stream<DocumentSnapshot<Json>> live() => _serverReads[firestore] == true
+      ? retryRefused(() => snapshots(includeMetadataChanges: true), isRefused: _refused).where(_fromServer)
+      : retryRefused(snapshots, isRefused: _refused);
 }
 
 extension on Query<Json> {
-  Stream<QuerySnapshot<Json>> live() => retryRefused(snapshots, isRefused: _refused);
+  Stream<QuerySnapshot<Json>> live() => _serverReads[firestore] == true
+      ? retryRefused(() => snapshots(includeMetadataChanges: true), isRefused: _refused).where(_fromServer)
+      : retryRefused(snapshots, isRefused: _refused);
 }
+
+bool _fromServer(Object snapshot) => switch (snapshot) {
+  DocumentSnapshot(:final metadata) || QuerySnapshot(:final metadata) => !metadata.isFromCache,
+  _ => true,
+};
 
 /// All Cloud Functions run in the same region as Firestore.
 const functionsRegion = 'asia-east1';
 
 class FirebaseBackend implements Backend {
+  /// With [serverReads], every listener's first value is the server's
+  /// answer, never the local cache's (which may be stale or another
+  /// user's). For the contract tests; the app shows the cache at once.
   FirebaseBackend({
     fa.FirebaseAuth? auth,
     FirebaseFirestore? firestore,
     FirebaseFunctions? functions,
     FirebaseStorage? storage,
+    bool serverReads = false,
   }) : _auth = auth ?? fa.FirebaseAuth.instance,
        _db = firestore ?? FirebaseFirestore.instance,
        _functions = functions ?? FirebaseFunctions.instanceFor(region: functionsRegion),
-       _storage = storage ?? FirebaseStorage.instance;
+       _storage = storage ?? FirebaseStorage.instance {
+    if (serverReads) _serverReads[_db] = true;
+  }
 
   final fa.FirebaseAuth _auth;
   final FirebaseFirestore _db;

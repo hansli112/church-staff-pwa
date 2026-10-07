@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math';
 
 import '../../domain/day.dart';
@@ -8,11 +7,17 @@ import '../../domain/staff_order.dart';
 import '../../domain/text.dart';
 import '../backend.dart';
 
-/// An in-memory [Backend] for widget tests and the offline demo.
+/// An in-memory [Backend] for widget tests and the offline demo: a verified
+/// fake.
 ///
-/// It follows the same permission rules as firestore.rules where screens
-/// depend on them (who may read the member list, who may leave), so tests
-/// catch a screen that would be denied in production.
+/// It keeps only the rules the screens depend on (who may read or write
+/// what, invites, the last admin, an unverified email, a closed church),
+/// and every one of them is checked against the real backend by the
+/// contract tests in test/contract, which run the same cases on this class
+/// and on the Firebase emulators. Whatever the backend computes beyond that
+/// (reading a move file, fetching a church link's source, sending a
+/// webhook, Google Calendar, photo recognition, the funding target) is not
+/// imitated: those answers are scripted through the fields below.
 class MemoryBackend implements Backend {
   MemoryBackend({DateTime Function()? clock}) : clock = clock ?? DateTime.now {
     auth = MemoryAuth();
@@ -41,8 +46,9 @@ class MemoryBackend implements Backend {
   /// The operator's cost list.
   List<CostItem> fundingCosts = [];
 
-  /// NT\$ per US\$ for the cost list.
-  static const usdRate = 32;
+  /// Scripted: what the backend publishes once the operator changes the
+  /// costs. Null leaves [funding] as it is.
+  Funding Function(List<CostItem> costs)? publishFunding;
 
   final churches = <String, Church>{};
   final members = <String, Map<String, Member>>{};
@@ -60,19 +66,24 @@ class MemoryBackend implements Backend {
 
   /// Uploaded move files by path.
   final moveFiles = <String, List<int>>{};
+
+  /// Scripted: what reading any uploaded move file gives, a [MovePreview]
+  /// or the [CloudException] the backend would throw.
+  Object moveAnswer = const CloudException(CloudErrorCode.moveInvalid);
   final webhooks = <String, WebhookSettings>{};
 
   /// The webhook secret per church: only the backend has it.
   final webhookSecrets = <String, String>{};
 
-  /// What the receiver does with the next notices.
+  /// Scripted: what the receiver does with the next notices.
   WebhookDelivery webhookAnswer = const WebhookDelivery(ok: true, status: 200);
 
   /// Notices sent, as (church, event).
   final webhookSent = <(String, String)>[];
 
-  /// What fetching each content source URL gives: a [LinkContent] (its
-  /// title, body and link) or a [LinkFetchError]. Unknown URLs fail.
+  /// Scripted: what fetching each content source URL gives, a
+  /// [LinkContent] (its title, body and link) or a [LinkFetchError].
+  /// Unknown URLs fail with [LinkFetchError.network].
   final linkSourceAnswers = <String, Object>{};
   final calendarEvents = <String, List<CalendarEvent>>{};
 
@@ -167,10 +178,20 @@ class MemoryBackend implements Backend {
   bool isActiveMember(String cid, String? uid) =>
       memberOf(cid, uid) != null && churches[cid]?.status == ChurchStatus.active;
 
-  void requireMember(String cid) {
-    if (!isActiveMember(cid, auth.currentUser?.uid)) {
+  /// The signed-in member of [cid], which must be open.
+  Member requireMember(String cid) {
+    final uid = auth.currentUser?.uid;
+    if (!isActiveMember(cid, uid)) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
+    return memberOf(cid, uid)!;
+  }
+
+  /// The signed-in admin of [cid], which must be open.
+  Member requireAdmin(String cid) {
+    final me = requireMember(cid);
+    if (!me.isAdmin) throw const CloudException(CloudErrorCode.permissionDenied);
+    return me;
   }
 }
 
@@ -369,16 +390,19 @@ class MemoryChurchData implements ChurchData {
 
   void _requireMember() => _b.requireMember(churchId);
 
-  void _requireAdmin() {
-    _requireMember();
-    if (!(_me?.isAdmin ?? false)) {
+  void _requireAdmin() => _b.requireAdmin(churchId);
+
+  /// Admins and roster editors: the member list and pending members.
+  void _requireRosterEditors() {
+    if (!_b.requireMember(churchId).inGroup(Group.rosterEditors)) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
   }
 
+  /// A service the church has configured, which the member may edit.
   void _requireRosterEditor(String type) {
-    _requireMember();
-    if (!(_me?.canEditRosters(type) ?? false)) {
+    final me = _b.requireMember(churchId);
+    if (!_b.services[churchId]!.ids.contains(type) || !me.canEditRosters(type)) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
   }
@@ -396,19 +420,13 @@ class MemoryChurchData implements ChurchData {
 
   @override
   Stream<List<Member>> members() => _b.watch(() {
-    _requireMember();
-    if (!(_me?.inGroup(Group.rosterEditors) ?? false)) {
-      throw const CloudException(CloudErrorCode.permissionDenied);
-    }
+    _requireRosterEditors();
     return _b.members[churchId]!.values.toList();
   }, equals: _sameList);
 
   @override
   Stream<List<PendingMember>> pendingMembers() => _b.watch(() {
-    _requireMember();
-    if (!(_me?.inGroup(Group.rosterEditors) ?? false)) {
-      throw const CloudException(CloudErrorCode.permissionDenied);
-    }
+    _requireRosterEditors();
     return (_b.pendingMembers[churchId] ?? const {}).values.toList();
   }, equals: _sameList);
 
@@ -439,13 +457,13 @@ class MemoryChurchData implements ChurchData {
 
   @override
   Future<List<Member>> allMembers() async {
-    _requireAdmin();
+    _requireRosterEditors();
     return _b.members[churchId]!.values.toList();
   }
 
   @override
   Future<List<PendingMember>> allPendingMembers() async {
-    _requireAdmin();
+    _requireRosterEditors();
     return (_b.pendingMembers[churchId] ?? const {}).values.toList();
   }
 
@@ -499,6 +517,9 @@ class MemoryChurchData implements ChurchData {
   @override
   Future<void> saveServices(List<Service> services) async {
     _requireAdmin();
+    if (services.isEmpty || services.length > 20) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
     await _b.write(() {
       _b.services[churchId] = _b.services[churchId]!.withServices(services);
     });
@@ -515,10 +536,11 @@ class MemoryChurchData implements ChurchData {
 
   @override
   Future<void> removeMember(String uid) async {
-    _requireMember();
     final target = _b.memberOf(churchId, uid);
-    final self = uid == _uid;
-    final allowed = self ? !(target?.isAdmin ?? false) : (_me?.isAdmin ?? false);
+    // Leaving needs no open church: a member of a suspended one may go.
+    final allowed = uid == _uid
+        ? target != null && !target.isAdmin
+        : _b.isActiveMember(churchId, _uid) && (_me?.isAdmin ?? false);
     if (!allowed) throw const CloudException(CloudErrorCode.permissionDenied);
     await _b.write(() => _b.members[churchId]!.remove(uid));
   }
@@ -528,10 +550,8 @@ class MemoryChurchData implements ChurchData {
     String uid,
     Set<NotificationKind> muted,
   ) async {
-    final m = _b.memberOf(churchId, uid);
-    if (m == null || uid != _uid) {
-      throw const CloudException(CloudErrorCode.permissionDenied);
-    }
+    if (uid != _uid) throw const CloudException(CloudErrorCode.permissionDenied);
+    final m = _b.requireMember(churchId);
     await _b.write(
       () => _b.members[churchId]![uid] = m.copyWith(mutedNotifications: muted),
     );
@@ -547,6 +567,7 @@ class MemoryChurchData implements ChurchData {
   @override
   Future<Invite> createInvite({required Duration validFor}) async {
     _requireAdmin();
+    if (validFor >= _inviteMax) throw const CloudException(CloudErrorCode.permissionDenied);
     final code = _randomCode();
     final invite = Invite(
       code: code,
@@ -646,6 +667,9 @@ class MemoryChurchData implements ChurchData {
   }
 }
 
+/// Invites must expire sooner than this (firestore.rules).
+const _inviteMax = Duration(days: 31);
+
 bool _sameList<T>(List<T> a, List<T> b) {
   if (a.length != b.length) return false;
   for (var i = 0; i < a.length; i++) {
@@ -710,6 +734,9 @@ class MemoryCloud implements CloudApi {
     }
     if (!invite.usableAt(_b.clock())) {
       throw const CloudException(CloudErrorCode.inviteExpired);
+    }
+    if (!(_b.churches[invite.churchId]?.isActive ?? false)) {
+      throw const CloudException(CloudErrorCode.inviteInvalid);
     }
     return invite;
   }
@@ -779,67 +806,28 @@ class MemoryCloud implements CloudApi {
     return path;
   }
 
-  /// A move file, read the way the backend does, with only what the
-  /// screens show: people, roster days, services.
-  ({List<MovePerson> people, int rosters, List<String> services}) _readMove(String path) {
-    final uid = _b.auth.currentUser?.uid;
-    final bytes = _b.moveFiles[path];
-    if (uid == null || !path.startsWith('moves/$uid/') || bytes == null) {
-      throw const CloudException(CloudErrorCode.permissionDenied);
-    }
-    final Object? raw;
-    try {
-      raw = jsonDecode(utf8.decode(bytes));
-    } on FormatException {
-      throw const CloudException(CloudErrorCode.moveInvalid);
-    }
-    if (raw is! Map || raw['format'] != 'church-staff-pwa-move' || raw['users'] is! List) {
-      throw const CloudException(CloudErrorCode.moveInvalid);
-    }
-    final users = raw['users'] as List;
-    final rosters = (raw['rosters'] as List?) ?? const [];
-    if (users.length > 2000 || rosters.length > 20000) {
-      throw CloudException(CloudErrorCode.moveTooLarge, {'members': users.length, 'rosters': rosters.length});
-    }
-    final settings = {
-      for (final s in (raw['settings'] as List?) ?? const [])
-        if (s is Map) s['id']: s['data'],
+  /// The scripted [MemoryBackend.moveAnswer] for an uploaded file.
+  MovePreview _readMove(String path) {
+    if (!_b.moveFiles.containsKey(path)) throw const CloudException(CloudErrorCode.notFound);
+    return switch (_b.moveAnswer) {
+      final MovePreview preview => preview,
+      final Object error => throw error,
     };
-    final services = (settings['services'] as Map?)?['services'] as List? ?? const [];
-    return (
-      people: [
-        for (final u in users)
-          if (u is Map)
-            MovePerson(
-              id: u['id'] as String,
-              name: ((u['data'] as Map?)?['name'] as String? ?? '').trim(),
-              email: (u['data'] as Map?)?['email'] as String? ?? '',
-            ),
-      ],
-      rosters: rosters.length,
-      services: [
-        for (final s in services)
-          if (s is Map) s['name'] as String? ?? '',
-      ],
-    );
   }
 
   @override
-  Future<MovePreview> movePreview(String path) async {
-    final m = _readMove(path);
-    return MovePreview(members: m.people.length, rosters: m.rosters, services: m.services, people: m.people);
-  }
+  Future<MovePreview> movePreview(String path) async => _readMove(path);
 
+  /// The church is made as [createChurch] makes it; everyone in the
+  /// scripted preview but [me] becomes a pending member.
   @override
   Future<String> moveCommit(String path, {required String churchName, String? me}) async {
     final m = _readMove(path);
     final cid = await createChurch(churchName);
     final uid = _b.auth.currentUser!.uid;
-    final mine = [
-      for (final p in m.people)
-        if (p.id == me) p,
-    ];
-    if (mine.isNotEmpty) _b.members[cid]![uid] = _b.members[cid]![uid]!.copyWith(name: mine.single.name);
+    for (final p in m.people) {
+      if (p.id == me) _b.members[cid]![uid] = _b.members[cid]![uid]!.copyWith(name: p.name);
+    }
     _b.pendingMembers[cid] = {
       for (final p in m.people)
         if (p.id != me) p.id: PendingMember(id: p.id, name: p.name, email: p.email),
@@ -894,14 +882,15 @@ class MemoryCloud implements CloudApi {
   Future<String> claimPending(String churchId, String pendingId) async {
     final user = _b.auth.currentUser;
     if (user == null || !user.verified) throw const CloudException(CloudErrorCode.unverifiedEmail);
+    if (!(_b.churches[churchId]?.isActive ?? false)) throw const CloudException(CloudErrorCode.permissionDenied);
     final p = _b.pendingMembers[churchId]?[pendingId];
     final existing = _b.memberOf(churchId, user.uid);
     if (p == null) {
+      // Claimed already (a double tap, a retry): fine if it was by them.
       if (existing != null) return churchId;
       throw const CloudException(CloudErrorCode.notFound);
     }
-    if (p.email.trim().toLowerCase() != user.email.trim().toLowerCase() ||
-        !(_b.churches[churchId]?.isActive ?? false)) {
+    if (p.email.trim().toLowerCase() != user.email.trim().toLowerCase()) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
     _b.members[churchId]![user.uid] = existing != null
@@ -923,7 +912,7 @@ class MemoryCloud implements CloudApi {
 
   @override
   Future<void> mergePending(String churchId, String pendingId, String uid) async {
-    _requireChurchAdmin(churchId);
+    _b.requireAdmin(churchId);
     final p = _b.pendingMembers[churchId]?[pendingId];
     final m = _b.memberOf(churchId, uid);
     if (p == null || m == null) throw const CloudException(CloudErrorCode.notFound);
@@ -951,7 +940,7 @@ class MemoryCloud implements CloudApi {
     bool roster = false,
     String? secret,
   }) async {
-    _requireChurchAdmin(churchId);
+    _b.requireAdmin(churchId);
     if (url == null) {
       _b.webhooks.remove(churchId);
       _b.webhookSecrets.remove(churchId);
@@ -979,7 +968,8 @@ class MemoryCloud implements CloudApi {
 
   @override
   Future<String?> webhookRotateSecret(String churchId, {String? secret}) async {
-    _requireChurchAdmin(churchId);
+    _b.requireAdmin(churchId);
+    if (!_b.webhooks.containsKey(churchId)) throw const CloudException(CloudErrorCode.unknown);
     if (secret != null && secret.length < 16) throw const CloudException(CloudErrorCode.unknown, 'secret');
     final next = secret ?? _newSecret();
     _b.webhookSecrets[churchId] = next;
@@ -988,7 +978,7 @@ class MemoryCloud implements CloudApi {
 
   @override
   Future<WebhookDelivery> webhookTest(String churchId) async {
-    _requireChurchAdmin(churchId);
+    _b.requireAdmin(churchId);
     final hook = _b.webhooks[churchId];
     if (hook == null) throw const CloudException(CloudErrorCode.unknown);
     _b.webhookSent.add((churchId, 'ping'));
@@ -1009,7 +999,7 @@ class MemoryCloud implements CloudApi {
 
   @override
   Future<LinkSourceResult> setLinkSource(String churchId, String? source, int fetchMinute) async {
-    _requireChurchAdmin(churchId);
+    _b.requireAdmin(churchId);
     final link = _b.churchLinks[churchId];
     if (link == null) throw const CloudException(CloudErrorCode.unknown, 'noLink');
     ChurchLink next(String? s, int m) =>
@@ -1027,10 +1017,10 @@ class MemoryCloud implements CloudApi {
       _b.notify();
       return const LinkSourceResult();
     }
+    // A new source is fetched at once; what it gives is scripted.
     linkSourceFetches.add(source);
     final answer = _b.linkSourceAnswers[source] ?? LinkFetchError.network;
     final now = _b.clock();
-    final before = _b.linkContents[churchId];
     final LinkSourceResult result;
     if (answer is LinkContent) {
       _b.linkContents[churchId] = LinkContent(
@@ -1043,33 +1033,31 @@ class MemoryCloud implements CloudApi {
       result = LinkSourceResult(content: _b.linkContents[churchId]);
     } else {
       final error = answer as LinkFetchError;
-      // A new source starts with no content of its own.
-      final kept = before?.source == source ? before : null;
-      _b.linkContents[churchId] = LinkContent(
-        source: source,
-        title: kept?.title ?? '',
-        body: kept?.body ?? '',
-        link: kept?.link,
-        fetchedAt: kept?.fetchedAt,
-        error: error,
-        errorAt: now,
-      );
+      _b.linkContents[churchId] = LinkContent(source: source, error: error, errorAt: now);
       result = LinkSourceResult(error: error);
     }
     _b.notify();
     return result;
   }
 
+  /// An admin of [cid], whatever its status.
   void _requireChurchAdmin(String cid) {
     if (!(_b.memberOf(cid, _b.auth.currentUser?.uid)?.isAdmin ?? false)) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
   }
 
+  /// How long a deleted church can be restored (RESTORE_DAYS in
+  /// functions/src/church.ts).
+  static const restoreFor = Duration(days: 30);
+
   @override
   Future<void> deleteChurch(String churchId) async {
     _requireChurchAdmin(churchId);
     final c = _b.churches[churchId]!;
+    // Only an open church: deleting and restoring a suspended one would
+    // reopen it.
+    if (!c.isActive) throw const CloudException(CloudErrorCode.permissionDenied);
     _b.churches[churchId] = Church(
       id: c.id,
       name: c.name,
@@ -1086,6 +1074,10 @@ class MemoryCloud implements CloudApi {
     _requireChurchAdmin(churchId);
     final c = _b.churches[churchId]!;
     if (c.status != ChurchStatus.deleted) return;
+    final deletedAt = c.deletedAt;
+    if (deletedAt != null && _b.clock().difference(deletedAt) > restoreFor) {
+      throw const CloudException(CloudErrorCode.unknown);
+    }
     _b.churches[churchId] = Church(id: c.id, name: c.name, logoUrl: c.logoUrl, homeName: c.homeName);
     _b.notify();
   }
@@ -1146,6 +1138,9 @@ class MemoryCloud implements CloudApi {
   @override
   Future<void> adminSetStatus(String churchId, ChurchStatus status) async {
     _requireOperator();
+    if (status == ChurchStatus.deleted || _b.churches[churchId]?.status == ChurchStatus.deleted) {
+      throw const CloudException(CloudErrorCode.unknown);
+    }
     _b.churches[churchId] = _b.churches[churchId]!.copyWith(status: status);
     _b.notify();
   }
@@ -1159,8 +1154,7 @@ class MemoryCloud implements CloudApi {
   @override
   Future<FundingOverview> adminFunding() async {
     _requireOperator();
-    final funding = _b.funding ?? (_b.fundingCosts.isEmpty ? null : _fundingFor(_b.fundingCosts));
-    return FundingOverview(costs: List.of(_b.fundingCosts), months: const [], funding: funding);
+    return FundingOverview(costs: List.of(_b.fundingCosts), months: const [], funding: _b.funding);
   }
 
   @override
@@ -1168,40 +1162,22 @@ class MemoryCloud implements CloudApi {
     _requireOperator();
     await _b.write(() {
       _b.fundingCosts = List.of(items);
-      _b.funding = _fundingFor(items);
+      _b.funding = _b.publishFunding?.call(items) ?? _b.funding;
     });
   }
 
-  /// What the backend would publish for [items], keeping what came in.
-  Funding _fundingFor(List<CostItem> items) {
-    var target = 0.0;
-    for (final i in items) {
-      final twd = i.currency == Currency.usd ? i.amount * MemoryBackend.usdRate : i.amount;
-      target += i.per == CostPeriod.year ? twd / 12 : twd;
-    }
-    final now = _b.clock();
-    final f = _b.funding;
-    final t = target.round();
-    final available = (f?.received ?? 0) + (f?.carried ?? 0);
-    return Funding(
-      month: '${now.year}-${now.month.toString().padLeft(2, '0')}',
-      target: t,
-      received: f?.received ?? 0,
-      carried: f?.carried ?? 0,
-      monthsLeft: t > 0 && available > t ? (available - t) ~/ t : 0,
-    );
-  }
-
   void _requireCalendarEditor(String cid) {
-    final m = _b.memberOf(cid, _b.auth.currentUser?.uid);
-    if (m == null || !m.inGroup(Group.calendarEditors)) {
+    if (!_b.requireMember(cid).inGroup(Group.calendarEditors)) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
   }
 
+  // Google Calendar itself is scripted: [connectCalendar], the calendars
+  // [calendarList] offers and the events in [MemoryBackend.calendarEvents].
+
   @override
   Future<Uri> calendarAuthUrl(String churchId) async {
-    _requireChurchAdmin(churchId);
+    _b.requireAdmin(churchId);
     return Uri.parse('https://accounts.google.com/o/oauth2/v2/auth?state=memory');
   }
 
@@ -1213,20 +1189,20 @@ class MemoryCloud implements CloudApi {
 
   @override
   Future<List<({String id, String name})>> calendarList(String churchId) async {
-    _requireChurchAdmin(churchId);
+    _b.requireAdmin(churchId);
     return const [(id: 'cal-1', name: '教會行事曆'), (id: 'cal-2', name: '青年行事曆')];
   }
 
   @override
   Future<void> calendarSelect(String churchId, String calendarId, String calendarName) async {
-    _requireChurchAdmin(churchId);
+    _b.requireAdmin(churchId);
     _b.calendars[churchId] = CalendarSettings(connected: true, calendarName: calendarName);
     _b.notify();
   }
 
   @override
   Future<void> calendarDisconnect(String churchId) async {
-    _requireChurchAdmin(churchId);
+    _b.requireAdmin(churchId);
     _b.calendars.remove(churchId);
     _b.calendarEvents.remove(churchId);
     _b.notify();
@@ -1272,18 +1248,24 @@ class MemoryCloud implements CloudApi {
     _b.calendarEvents[churchId]?.removeWhere((e) => e.id == event.id);
   }
 
-  /// Photos used this month per church, and what recognition returns.
+  /// Scripted: photos used this month per church, the limit, whether the
+  /// platform's budget is left, and what recognition returns.
   final photosUsed = <String, int>{};
   int photoLimit = 30;
   bool photoPlatformOpen = true;
   List<dynamic> recognized = const [];
 
   @override
-  Future<PhotoQuota> photoQuota(String churchId) async => PhotoQuota(
-    remaining: photoLimit - (photosUsed[churchId] ?? 0),
-    limit: photoLimit,
-    platformOpen: photoPlatformOpen,
-  );
+  Future<PhotoQuota> photoQuota(String churchId) async {
+    if (_b.memberOf(churchId, _b.auth.currentUser?.uid) == null) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    return PhotoQuota(
+      remaining: max(0, photoLimit - (photosUsed[churchId] ?? 0)),
+      limit: photoLimit,
+      platformOpen: photoPlatformOpen,
+    );
+  }
 
   @override
   Future<List<dynamic>> recognizeRoster(String churchId, String serviceType, List<PhotoInput> images) async {

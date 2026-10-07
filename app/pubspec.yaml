@@ -73,6 +73,13 @@ dev_dependencies:
   url_launcher_platform_interface: ^2.3.2
   plugin_platform_interface: ^2.1.8
   fake_async: ^1.3.3
+  # The contract tests (test/contract) register the Firebase web plugins
+  # themselves to run FirebaseBackend in Chrome.
+  firebase_core_web: any
+  firebase_auth_web: any
+  cloud_firestore_web: any
+  cloud_functions_web: any
+  firebase_storage_web: any
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

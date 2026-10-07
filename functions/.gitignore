@@ -1,3 +1,5 @@
 lib/
 node_modules/
 *.log
+# Emulator secrets (scripts/check.sh contract writes a throwaway one).
+.secret.local

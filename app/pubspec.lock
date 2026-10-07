@@ -106,7 +106,7 @@ packages:
     source: hosted
     version: "8.0.7"
   cloud_firestore_web:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: cloud_firestore_web
       sha256: b30b3b44937345d50b195f85ef328f1d71c2a79965cb1645a479d029d45f636a
@@ -130,7 +130,7 @@ packages:
     source: hosted
     version: "6.0.7"
   cloud_functions_web:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: cloud_functions_web
       sha256: fca862c4babe8c17e9aa20dc1a521ab24dd04d1296491beb0000245f3e04b648
@@ -346,7 +346,7 @@ packages:
     source: hosted
     version: "9.1.0"
   firebase_auth_web:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: firebase_auth_web
       sha256: "11861819c667e9f47269fa1e7fca8d0e5229f80d4d3008d44b2108b8c93bfd94"
@@ -370,7 +370,7 @@ packages:
     source: hosted
     version: "8.1.1"
   firebase_core_web:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: firebase_core_web
       sha256: "8ed84f5001dbd7a0390e2818d46bc858ceebb970edededdfc8d6552c76fc2f6e"
@@ -434,7 +434,7 @@ packages:
     source: hosted
     version: "6.0.7"
   firebase_storage_web:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: firebase_storage_web
       sha256: b8a2e1f8a013d192f7b6e09ad40ec50e13d0bc97d2a3462369b2ba3f368d9c78

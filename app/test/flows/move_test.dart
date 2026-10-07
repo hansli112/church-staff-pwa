@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/core/design/components.dart';
 import 'package:martha/domain/models.dart';
@@ -20,52 +21,23 @@ Future<void> go(WidgetTester tester, String location) async {
   await settle(tester);
 }
 
-List<int> moveFile({int users = 3}) => utf8.encode(
-  jsonEncode({
-    'format': 'church-staff-pwa-move',
-    'version': 1,
-    'users': [
-      {
-        'id': 'old-pastor',
-        'data': {'name': '王牧師', 'email': 'pastor@grace.org'},
-      },
-      {
-        'id': 'old-mei',
-        'data': {'name': '李美玉', 'email': 'mei@example.com'},
-      },
-      {
-        'id': 'old-hao',
-        'data': {'name': '陳志豪', 'email': ''},
-      },
-      for (var i = 3; i < users; i++)
-        {
-          'id': 'u$i',
-          'data': {'name': '同工$i'},
-        },
-    ],
-    'settings': [
-      {
-        'id': 'services',
-        'data': {
-          'services': [
-            {'id': 'sunday', 'name': '主日崇拜'},
-            {'id': 'youth', 'name': '青年崇拜'},
-          ],
-        },
-      },
-    ],
-    'rosters': [
-      {'id': '20261004_sunday', 'data': <String, Object>{}},
-      {'id': '20261011_sunday', 'data': <String, Object>{}},
-    ],
-  }),
+/// What reading the move file gives: scripted, the backend reads it.
+const preview = MovePreview(
+  members: 3,
+  rosters: 2,
+  services: ['主日崇拜', '青年崇拜'],
+  people: [
+    MovePerson(id: 'old-pastor', name: '王牧師', email: 'pastor@grace.org'),
+    MovePerson(id: 'old-mei', name: '李美玉', email: 'mei@example.com'),
+    MovePerson(id: 'old-hao', name: '陳志豪'),
+  ],
 );
 
-/// Signed in, no church yet, with [file] as the picked move file.
-Future<MemoryBackend> start(WidgetTester tester, List<int>? file, {String email = 'pastor@grace.org'}) async {
-  final b = MemoryBackend();
+/// Signed in, no church yet, with a file picked that reads as [answer].
+Future<MemoryBackend> start(WidgetTester tester, Object answer, {String email = 'pastor@grace.org'}) async {
+  final b = MemoryBackend()..moveAnswer = answer;
   b.auth.signInAs(email, uid: 'me', name: '新帳號');
-  await pumpApp(tester, b, overrides: [moveFilePickerProvider.overrideWithValue(() async => file)]);
+  await pumpApp(tester, b, overrides: [moveFilePickerProvider.overrideWithValue(() async => utf8.encode('{}'))]);
   await tapText(tester, '建立新教會');
   await tester.ensureVisible(find.text('從舊版搬過來'));
   await tapText(tester, '從舊版搬過來');
@@ -74,7 +46,7 @@ Future<MemoryBackend> start(WidgetTester tester, List<int>? file, {String email 
 
 void main() {
   testWidgets('upload, preview, pick who I am, and the church is made', (tester) async {
-    final b = await start(tester, moveFile());
+    final b = await start(tester, preview);
     await tapText(tester, '選擇搬家檔');
     expect(find.text('3 位'), findsOneWidget);
     expect(find.text('2 天'), findsOneWidget);
@@ -105,7 +77,7 @@ void main() {
   });
 
   testWidgets('I can be nobody in the file, with any account', (tester) async {
-    final b = await start(tester, moveFile(), email: 'brand.new@gmail.com');
+    final b = await start(tester, preview, email: 'brand.new@gmail.com');
     await tapText(tester, '選擇搬家檔');
     expect(tester.widgetList<ListRow>(find.byType(ListRow)).where((r) => r.selected == true), isEmpty);
     await tester.enterText(find.widgetWithText(TextField, '教會名稱'), '恩典堂');
@@ -118,13 +90,13 @@ void main() {
   });
 
   testWidgets('a wrong file or one too large says so', (tester) async {
-    await start(tester, utf8.encode('{"hello": 1}'));
+    await start(tester, const CloudException(CloudErrorCode.moveInvalid));
     await tapText(tester, '選擇搬家檔');
     expect(find.text('這不是搬家檔，請確認選對了檔案'), findsOneWidget);
   });
 
   testWidgets('over 2,000 members is refused with the reason', (tester) async {
-    await start(tester, moveFile(users: 2001));
+    await start(tester, const CloudException(CloudErrorCode.moveTooLarge, {'members': 2001, 'rosters': 2}));
     await tapText(tester, '選擇搬家檔');
     expect(find.text('同工超過 2,000 位或服事表超過 20,000 天，沒辦法自動搬，請聯絡我們'), findsOneWidget);
   });

@@ -48,6 +48,17 @@ MemoryBackend demoBackend({
     'old-1': const PendingMember(id: 'old-1', name: '林佳穎', email: 'chiaying@example.com'),
     'old-2': const PendingMember(id: 'old-2', name: '黃俊傑', email: 'chunchieh@example.com'),
   };
+  // Moving from self-host: whatever file is picked reads as this.
+  b.moveAnswer = const MovePreview(
+    members: 3,
+    rosters: 104,
+    services: ['主日崇拜', '青年崇拜'],
+    people: [
+      MovePerson(id: 'old-a', name: '示範同工', email: 'demo@example.com'),
+      MovePerson(id: 'old-b', name: '陳志明', email: 'chihming@example.com'),
+      MovePerson(id: 'old-c', name: '林雅婷'),
+    ],
+  );
   // Another church moved from self-host, with data waiting for the demo
   // account.
   final other = b.addChurch('活水教會', id: 'living');

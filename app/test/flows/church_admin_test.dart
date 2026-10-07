@@ -252,10 +252,19 @@ void main() {
       expect(find.text('平台後台'), findsNothing);
     });
 
-    testWidgets('keeps the cost list: a yearly item counts a twelfth a month', (tester) async {
-      final b = seededChurch();
+    testWidgets('keeps the cost list and shows the target the backend works out', (tester) async {
+      // Scripted: the backend's target for NT\$ costs, a yearly one a twelfth.
+      Funding published(List<CostItem> costs) => Funding(
+        month: '2026-10',
+        target: costs.fold<num>(0, (t, c) => t + (c.per == CostPeriod.year ? c.amount / 12 : c.amount)).round(),
+        received: 0,
+        carried: 0,
+        monthsLeft: 0,
+      );
+      final b = seededChurch()..publishFunding = published;
       b.auth.operators.add('pastor');
       b.fundingCosts = const [CostItem(name: '雲端', amount: 300, currency: Currency.twd, per: CostPeriod.month)];
+      b.funding = published(b.fundingCosts);
       await pumpApp(tester, b);
       await go(tester, '/admin/funding');
       expect(find.text('每月目標 NT\$300'), findsOneWidget);
