@@ -23,6 +23,11 @@ rules_version = '2';
 //   - Removing a member deletes churches/{cid}/members/{uid}; the Auth account
 //     survives and keeps a valid ID token. Every church rule therefore needs
 //     an existing member doc, not just a signed-in user.
+//   - Text lengths are the exception: their limits count characters as a
+//     person does, which size() cannot (it counts UTF-16 code units). The app
+//     holds the limit; a size() here is the limit × 4, an abuse guard only.
+//     The limits are TextLimits in app/lib/domain/limits.dart, and
+//     functions/test/limits.test.ts fails when a number here disagrees.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -155,15 +160,14 @@ service cloud.firestore {
       // can say the church is closed instead of failing everywhere.
       allow read: if hasMembership(cid);
 
-      // An admin sets the home-screen name (up to 8 characters; removing the
-      // field falls back to the church name). Everything else on the church
-      // doc is the backend's.
+      // An admin sets the home-screen name (removing the field falls back to
+      // the church name). Everything else on the church doc is the backend's.
       allow update: if isAdmin(cid)
         && onlyTouches(['homeName'])
         && (!('homeName' in request.resource.data)
             || (request.resource.data.homeName is string
                 && request.resource.data.homeName.size() >= 1
-                && request.resource.data.homeName.size() <= 8));
+                && request.resource.data.homeName.size() <= 32));
 
       match /members/{uid} {
         // Own membership, or roster-editors: the roster people picker lists
@@ -226,16 +230,16 @@ service cloud.firestore {
           return doc in ['calendar', 'linkContent', 'webhook'];
         }
 
-        // 教會連結: title 1–30, body up to 120, an https link. Its content
-        // source and fetch time are set through a Cloud Function, which
-        // fetches the source at once; the app leaves them as they are.
+        // 教會連結: a title, a body and an https link. Its content source and
+        // fetch time are set through a Cloud Function, which fetches the
+        // source at once; the app leaves them as they are.
         function validChurchLink() {
           let data = request.resource.data;
           let before = resource == null ? {} : resource.data;
           return data.keys().hasOnly(['title', 'body', 'url', 'source', 'fetchMinute', 'updatedAt'])
             && !data.diff(before).affectedKeys().hasAny(['source', 'fetchMinute'])
-            && data.title is string && data.title.size() >= 1 && data.title.size() <= 30
-            && data.get('body', '') is string && data.get('body', '').size() <= 120
+            && data.title is string && data.title.size() >= 1 && data.title.size() <= 120
+            && data.get('body', '') is string && data.get('body', '').size() <= 480
             && data.url is string && data.url.size() <= 500 && data.url.matches('https://[^ ]+');
         }
 

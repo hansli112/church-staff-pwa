@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
+import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
@@ -69,7 +70,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           TextField(
             controller: _name,
             autofocus: true,
-            maxLength: 40,
+            maxLength: TextLimits.profileName,
             textInputAction: TextInputAction.done,
             decoration: InputDecoration(hintText: l10n.name, counterText: ''),
             onChanged: (_) => setState(() {}),

@@ -2,6 +2,8 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 import { churchAccess } from './access.js';
 import { dateKeyUtc8, fail, type Caller, type Deps } from './common.js';
+import { LIMITS, TEXT_LIMITS } from './limits.js';
+import { characters } from './text.js';
 
 /**
  * 教會連結的每日內容來源: an admin gives a JSON URL and a time of day; the
@@ -16,7 +18,7 @@ import { dateKeyUtc8, fail, type Caller, type Deps } from './common.js';
  * Only JSON is supported; scraping a page (self-host's dailyBibleHtml) is
  * not.
  */
-export const LIMITS = { title: 30, body: 120, bytes: 64 * 1024, timeoutMs: 5000, redirects: 3 };
+export const FETCH_LIMITS = { bytes: 64 * 1024, timeoutMs: 5000, redirects: 3 };
 export const DEFAULT_FETCH_MINUTE = 4 * 60 + 30;
 
 export type FetchError = 'timeout' | 'tooLarge' | 'badFormat' | 'notHttps' | 'http' | 'network';
@@ -38,8 +40,8 @@ const isHttps = (url: string) => {
   }
 };
 
-/** At most [max] characters (code points), trimmed. */
-const clip = (s: string, max: number) => [...s.trim()].slice(0, max).join('').trim();
+/** At most [max] characters, trimmed. */
+const clip = (s: string, max: number) => characters(s.trim()).slice(0, max).join('').trim();
 
 /** `{title, body, link}` checked and cut to the church link's limits. */
 export function parseContent(raw: unknown): LinkContent | null {
@@ -48,7 +50,7 @@ export function parseContent(raw: unknown): LinkContent | null {
   if (typeof r.title !== 'string' || !r.title.trim()) return null;
   if (r.body !== undefined && r.body !== null && typeof r.body !== 'string') return null;
   const link = typeof r.link === 'string' && isHttps(r.link.trim()) ? r.link.trim() : null;
-  return { title: clip(r.title, LIMITS.title), body: clip((r.body as string | undefined) ?? '', LIMITS.body), link };
+  return { title: clip(r.title, TEXT_LIMITS.linkTitle), body: clip((r.body as string | undefined) ?? '', TEXT_LIMITS.linkBody), link };
 }
 
 async function readLimited(res: Response, max: number): Promise<string | null> {
@@ -76,10 +78,10 @@ async function readLimited(res: Response, max: number): Promise<string | null> {
  * https. Never throws.
  */
 export async function fetchSource(deps: Pick<Deps, 'fetch'>, url: string): Promise<FetchResult> {
-  const signal = AbortSignal.timeout(LIMITS.timeoutMs);
+  const signal = AbortSignal.timeout(FETCH_LIMITS.timeoutMs);
   let current = url;
   try {
-    for (let hop = 0; hop <= LIMITS.redirects; hop++) {
+    for (let hop = 0; hop <= FETCH_LIMITS.redirects; hop++) {
       if (!isHttps(current)) return { ok: false, error: 'notHttps' };
       const res = await deps.fetch(current, { method: 'GET', redirect: 'manual', signal, headers: { accept: 'application/json' } });
       const location = res.headers.get('location');
@@ -88,7 +90,7 @@ export async function fetchSource(deps: Pick<Deps, 'fetch'>, url: string): Promi
         continue;
       }
       if (!res.ok) return { ok: false, error: 'http', status: res.status };
-      const text = await readLimited(res, LIMITS.bytes);
+      const text = await readLimited(res, FETCH_LIMITS.bytes);
       if (text === null) return { ok: false, error: 'tooLarge' };
       let json: unknown;
       try {
@@ -164,7 +166,7 @@ export async function setLinkSource(deps: Deps, caller: Caller | null, data: unk
     await deps.db.doc(`churches/${cid}/settings/linkContent`).delete();
     return { ok: true, content: null };
   }
-  if (typeof input.source !== 'string' || input.source.length > 500 || !isHttps(input.source.trim())) {
+  if (typeof input.source !== 'string' || input.source.length > LIMITS.url || !isHttps(input.source.trim())) {
     fail('invalid-argument', 'unknown', 'notHttps');
   }
   const source = input.source.trim();

@@ -1,6 +1,8 @@
 import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { HttpsError, type FunctionsErrorCode } from 'firebase-functions/v2/https';
 
+import { withinTextLimit } from './limits.js';
+
 /** Region for every function, the same as Firestore. */
 export const REGION = 'asia-east1';
 
@@ -67,11 +69,14 @@ export function requireOperator(caller: Caller | null): Caller {
   return c;
 }
 
-/** A trimmed string between 1 and [max] characters, or a failure. */
+/**
+ * A trimmed string of 1 to [max] characters (TEXT_LIMITS, counted as a
+ * person counts them), or a failure.
+ */
 export function text(value: unknown, max: number): string {
   if (typeof value !== 'string') fail('invalid-argument', 'unknown');
   const t = value.trim();
-  if (t.length === 0 || t.length > max) fail('invalid-argument', 'unknown');
+  if (t.length === 0 || !withinTextLimit(t, max)) fail('invalid-argument', 'unknown');
   return t;
 }
 

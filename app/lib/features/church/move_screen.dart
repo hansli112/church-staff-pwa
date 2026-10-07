@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
+import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
@@ -134,7 +135,7 @@ class _MoveScreenState extends ConsumerState<MoveScreen> {
               padding: const EdgeInsets.symmetric(horizontal: Space.m),
               child: TextField(
                 controller: _name,
-                maxLength: 60,
+                maxLength: TextLimits.churchName,
                 textInputAction: TextInputAction.done,
                 decoration: InputDecoration(labelText: l10n.churchName, counterText: ''),
                 onChanged: (_) => setState(() {}),

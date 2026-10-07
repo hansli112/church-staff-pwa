@@ -7,6 +7,7 @@ import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../data/backend.dart';
 import '../../domain/church_link.dart';
+import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
@@ -145,7 +146,7 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
               children: [
                 TextField(
                   controller: _title,
-                  maxLength: ChurchLink.titleMax,
+                  maxLength: TextLimits.linkTitle,
                   textInputAction: TextInputAction.next,
                   decoration: InputDecoration(labelText: l10n.churchLinkTitle, errorText: _tried ? _titleError : null),
                   onChanged: (_) => setState(() {}),
@@ -153,7 +154,7 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
                 const SizedBox(height: Space.s),
                 TextField(
                   controller: _body,
-                  maxLength: ChurchLink.bodyMax,
+                  maxLength: TextLimits.linkBody,
                   minLines: 2,
                   maxLines: 4,
                   decoration: InputDecoration(labelText: l10n.churchLinkBody),

@@ -42,6 +42,7 @@ dependencies:
   cloud_functions: ^6.5.0
   firebase_storage: ^13.6.0
   intl: any
+  characters: any
   flutter_localizations:
     sdk: flutter
   shared_preferences: ^2.5.5

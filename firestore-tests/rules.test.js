@@ -224,14 +224,19 @@ describe('教會本身', () => {
     await assertFails(deleteDoc(doc(as(ADMIN_A), `churches/${A}`)));
   });
 
-  it('主畫面名稱：只有該教會的管理員能設定，最多 8 個字，也能拿掉', async () => {
+  // 字數上限（8 個字）由 App 把關；規則的 size() 算 UTF-16 code unit，
+  // 只擋濫用：上限 × 4 = 32。
+  it('主畫面名稱：只有該教會的管理員能設定，最多 32 個 UTF-16 單位，也能拿掉', async () => {
     await seed(`churches/home-name`, { name: '台北靈糧堂民生分堂', nameKey: 'x', status: 'active' });
     await seed(`churches/home-name/members/${ADMIN_A}`, memberDoc(ADMIN_A, 'admin'));
     await seed(`churches/home-name/members/${MEMBER_A}`, memberDoc(MEMBER_A, 'member'));
     const ref = (uid) => doc(as(uid), 'churches/home-name');
     await assertSucceeds(updateDoc(ref(ADMIN_A), { homeName: '民生靈糧堂' }));
     await assertSucceeds(updateDoc(ref(ADMIN_A), { homeName: '一二三四五六七八' }));
-    await assertFails(updateDoc(ref(ADMIN_A), { homeName: '一二三四五六七八九' }));
+    await assertSucceeds(updateDoc(ref(ADMIN_A), { homeName: '👍🏽'.repeat(8) }), '8 characters, 32 units');
+    await assertSucceeds(updateDoc(ref(ADMIN_A), { homeName: 'A'.repeat(32) }), 'over 8 characters: the app’s to stop');
+    await assertFails(updateDoc(ref(ADMIN_A), { homeName: 'A'.repeat(33) }));
+    await assertFails(updateDoc(ref(ADMIN_A), { homeName: '🙏'.repeat(16) + 'A' }), '33 units');
     await assertFails(updateDoc(ref(ADMIN_A), { homeName: '' }));
     await assertFails(updateDoc(ref(ADMIN_A), { homeName: 8 }));
     await assertFails(updateDoc(ref(ADMIN_A), { homeName: '民生', name: '改名' }));
@@ -424,12 +429,15 @@ describe('教會連結 (settings/link)', () => {
     await assertSucceeds(deleteDoc(doc(as(ADMIN_A), path)));
   });
 
-  it('標題必填、最多 30 字，敘述最多 120 字，連結限 https', async () => {
+  // 標題 30 字、敘述 120 字由 App 把關；規則只擋超過上限 × 4 個 UTF-16 單位。
+  it('標題必填、最多 120 個 UTF-16 單位，敘述最多 480，連結限 https', async () => {
     const ref = doc(as(ADMIN_A), `churches/${A}/settings/link`);
     await assertFails(setDoc(ref, { ...link, title: '' }));
-    await assertFails(setDoc(ref, { ...link, title: '字'.repeat(31) }));
-    await assertSucceeds(setDoc(ref, { ...link, title: '字'.repeat(30), body: '字'.repeat(120) }));
-    await assertFails(setDoc(ref, { ...link, body: '字'.repeat(121) }));
+    await assertSucceeds(setDoc(ref, { ...link, title: '👍🏽'.repeat(30), body: '👍🏽'.repeat(120) }), 'limits in 4-unit emoji');
+    await assertSucceeds(setDoc(ref, { ...link, title: '字'.repeat(120), body: '字'.repeat(480) }));
+    await assertFails(setDoc(ref, { ...link, title: '字'.repeat(121) }));
+    await assertFails(setDoc(ref, { ...link, body: '字'.repeat(481) }));
+    await assertFails(setDoc(ref, { ...link, title: '🙏'.repeat(61) }), '122 units');
     await assertFails(setDoc(ref, { ...link, url: 'http://grace.example' }));
     await assertFails(setDoc(ref, { ...link, url: 'javascript:alert(1)' }));
     await assertFails(setDoc(ref, { ...link, extra: true }));

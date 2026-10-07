@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../data/backend.dart';
+import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
@@ -179,6 +180,7 @@ class _AdminChurchScreenState extends ConsumerState<AdminChurchScreen> {
                     title: l10n.adminRename,
                     hint: l10n.churchName,
                     initial: c.name,
+                    maxLength: TextLimits.churchName,
                   );
                   if (name != null) {
                     await _run(
@@ -569,7 +571,7 @@ class _CostSheetState extends State<_CostSheet> {
             TextField(
               key: const Key('costName'),
               controller: _name,
-              maxLength: 40,
+              maxLength: TextLimits.costName,
               decoration: InputDecoration(labelText: l10n.costName),
               onChanged: (_) => setState(() {}),
             ),

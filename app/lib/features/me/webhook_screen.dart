@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../data/backend.dart';
+import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
@@ -90,7 +91,7 @@ class _SetupState extends ConsumerState<_Setup> {
   String? get _urlError => ChurchLink.validUrl(_url.text) ? null : L10n.of(context).webhookNeedsHttps;
   String? get _secretError {
     final s = _secret.text.trim();
-    return s.isEmpty || s.length >= 16 ? null : L10n.of(context).webhookSecretTooShort;
+    return s.isEmpty || s.length >= Limits.webhookSecretMin ? null : L10n.of(context).webhookSecretTooShort;
   }
 
   Future<void> _save() async {
@@ -140,8 +141,10 @@ class _SetupState extends ConsumerState<_Setup> {
               TextField(
                 controller: _secret,
                 autocorrect: false,
+                maxLength: Limits.webhookSecretMax,
                 decoration: InputDecoration(
                   labelText: l10n.webhookSecretOptional,
+                  counterText: '',
                   errorText: _tried ? _secretError : null,
                 ),
                 onChanged: (_) => setState(() {}),

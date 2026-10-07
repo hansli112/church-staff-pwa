@@ -1,5 +1,18 @@
-// Church-name comparison. Mirrors app/lib/domain/text.dart; keep the two in
-// step, since the app uses its copy to warn early and this one decides.
+// Church-name comparison and how characters are counted. Mirrors
+// app/lib/domain/text.dart: the app uses its copy to warn early and this one
+// decides. Both test suites run every row of testdata/text_rules.json.
+
+const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+
+/** [text] split into characters as a person counts them (grapheme clusters). */
+export function characters(text: string): string[] {
+  return Array.from(graphemes.segment(text), (s) => s.segment);
+}
+
+/** "🙏", "🇹🇼" and "é" written as e + accent are one character each. */
+export function characterCount(text: string): number {
+  return characters(text).length;
+}
 
 /** Full-width ASCII to half-width, ideographic space to space, lower case. */
 export function foldWidthAndCase(input: string): string {

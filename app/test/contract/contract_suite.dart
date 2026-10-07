@@ -260,6 +260,13 @@ void contractTests(Future<ContractWorld> Function() open) {
       await expectLater(cloud().createChurch('gracechurch'), fails(CloudErrorCode.duplicateName));
     });
 
+    test('a church name is 1 to 60 characters as a person counts them', () async {
+      await w.signUp('a@example.com');
+      await expectLater(cloud().createChurch('   '), fails(CloudErrorCode.unknown));
+      await expectLater(cloud().createChurch('🙏' * 61), fails(CloudErrorCode.unknown));
+      expect(await cloud().createChurch('🙏' * 60), isNotEmpty, reason: '60 characters in 120 UTF-16 units');
+    });
+
     test('only members read the church', () async {
       final g = await Grace.open(w);
       await w.signUp('outsider@example.com');
@@ -277,10 +284,14 @@ void contractTests(Future<ContractWorld> Function() open) {
       await expectLater(cloud().churchPreview(g.cid), fails(CloudErrorCode.notFound));
     });
 
+    // 9 to 32 UTF-16 units is the app's to stop: the rules only guard
+    // against 8 × 4 (firestore.rules), MemoryBackend counts characters.
     test('the home-screen name: admins, 1 to 8 characters, null for the church name', () async {
       final g = await Grace.open(w);
       await expectLater(g.church.setHomeName(''), denied());
-      await expectLater(g.church.setHomeName('ABCDEFGHI'), denied());
+      await expectLater(g.church.setHomeName('A' * 33), denied());
+      await g.church.setHomeName('👍🏽' * 8);
+      expect((await g.church.church().first)!.homeName, '👍🏽' * 8);
       await g.church.setHomeName('恩典');
       expect((await g.church.church().first)!.homeName, '恩典');
       await g.church.setHomeName(null);
@@ -557,18 +568,19 @@ void contractTests(Future<ContractWorld> Function() open) {
   });
 
   group('church link', () {
+    // Between the limit and limit × 4 UTF-16 units is the app's to stop, as
+    // for the home-screen name.
     test('admins save it within its limits; members read it', () async {
       final g = await Grace.open(w);
-      final title31 = 'T' * 31;
       for (final bad in [
         const ChurchLink(title: '', url: 'https://grace.example'),
-        ChurchLink(title: title31, url: 'https://grace.example'),
-        ChurchLink(title: '官網', body: 'b' * 121, url: 'https://grace.example'),
+        ChurchLink(title: 'T' * 121, url: 'https://grace.example'),
+        ChurchLink(title: '官網', body: 'b' * 481, url: 'https://grace.example'),
         const ChurchLink(title: '官網', url: 'http://grace.example'),
       ]) {
         await expectLater(g.church.saveChurchLink(bad), denied(), reason: '${bad.title} ${bad.url}');
       }
-      final link = ChurchLink(title: 'T' * 30, body: 'b' * 120, url: 'https://grace.example/give');
+      final link = ChurchLink(title: '👍🏽' * 30, body: '👍🏽' * 120, url: 'https://grace.example/give');
       await g.church.saveChurchLink(link);
       await w.signIn(Grace.meiEmail);
       expect(await g.church.churchLink().first, link);

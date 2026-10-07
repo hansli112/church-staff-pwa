@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../data/backend.dart';
+import '../../domain/limits.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/session.dart';
@@ -279,7 +280,7 @@ class _CreateChurchScreenState extends ConsumerState<CreateChurchScreen> {
             controller: _name,
             autofocus: verified,
             enabled: verified,
-            maxLength: 60,
+            maxLength: TextLimits.churchName,
             textInputAction: TextInputAction.done,
             decoration: InputDecoration(
               hintText: l10n.churchName,

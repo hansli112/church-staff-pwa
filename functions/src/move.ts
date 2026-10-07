@@ -6,6 +6,7 @@ import type { Storage } from 'firebase-admin/storage';
 import { openChurch } from './church.js';
 import { fail, requireCaller, text, type Caller, type Deps } from './common.js';
 import { buildImport, type SelfHostSnapshot, type SourceDoc } from './importer.js';
+import { TEXT_LIMITS } from './limits.js';
 import { nameKey } from './text.js';
 
 /**
@@ -122,7 +123,7 @@ export async function moveCommit(deps: MoveDeps, caller: Caller | null, data: un
   if (!c.emailVerified) fail('failed-precondition', 'unverifiedEmail');
   const path = pathOf(c, data);
   const input = data as { churchName?: unknown; me?: unknown };
-  const churchName = text(input.churchName, 60);
+  const churchName = text(input.churchName, TEXT_LIMITS.churchName);
   const { snapshot, project } = await readMoveFile(deps, path);
   const now = Timestamp.fromDate(deps.now());
   const built = buildImport(snapshot, now);

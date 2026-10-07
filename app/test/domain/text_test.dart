@@ -1,28 +1,43 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:martha/domain/limits.dart';
 import 'package:martha/domain/text.dart';
 
-void main() {
-  group('nameKey', () {
-    test('ignores spaces, full-width forms and case', () {
-      expect(nameKey('台北 靈糧堂'), nameKey('台北靈糧堂'));
-      expect(nameKey('ＴＡＩＰＥＩ'), nameKey('taipei'));
-      expect(nameKey('  Grace　Church '), nameKey('gracechurch'));
-    });
+/// The rows functions/test/text.test.ts runs too: both sides must agree.
+final _rules = jsonDecode(File('../testdata/text_rules.json').readAsStringSync()) as Map<String, dynamic>;
 
-    test('keeps different names different', () {
-      expect(nameKey('台北靈糧堂'), isNot(nameKey('台中靈糧堂')));
-    });
+List<Map<String, dynamic>> _rows(String name) => (_rules[name] as List).cast<Map<String, dynamic>>();
+
+void main() {
+  group('foldWidthAndCase', () {
+    for (final r in _rows('foldWidthAndCase')) {
+      test(r['why'] as String, () => expect(foldWidthAndCase(r['in'] as String), r['out']));
+    }
+  });
+
+  group('nameKey', () {
+    for (final r in _rows('nameKey')) {
+      test(r['why'] as String, () => expect(nameKey(r['in'] as String), r['out']));
+    }
   });
 
   group('matchesSearch', () {
-    test('finds part of a name ignoring width and case', () {
-      expect(matchesSearch('John Chen', 'ｊｏｈｎ'), isTrue);
-      expect(matchesSearch('王大明', '大明'), isTrue);
-      expect(matchesSearch('王大明', '小明'), isFalse);
-    });
+    for (final r in _rows('matchesSearch')) {
+      test(r['why'] as String, () => expect(matchesSearch(r['name'] as String, r['query'] as String), r['matches']));
+    }
+  });
 
-    test('an empty query matches everyone', () {
-      expect(matchesSearch('王大明', '  '), isTrue);
-    });
+  group('characterCount', () {
+    for (final r in _rows('characterCount')) {
+      test(r['why'] as String, () => expect(characterCount(r['in'] as String), r['count']));
+    }
+  });
+
+  group('withinTextLimit', () {
+    for (final r in _rows('withinTextLimit')) {
+      test(r['why'] as String, () => expect(withinTextLimit(r['in'] as String, r['max'] as int), r['within']));
+    }
   });
 }

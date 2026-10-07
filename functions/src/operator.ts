@@ -1,5 +1,6 @@
 import { churchClosed, churchId } from './access.js';
 import { fail, id, requireOperator, serverTime, text, type Caller, type Deps } from './common.js';
+import { TEXT_LIMITS } from './limits.js';
 import { matchesSearch, nameKey } from './text.js';
 
 /**
@@ -42,7 +43,7 @@ export async function adminRenameChurch(deps: Deps, caller: Caller | null, data:
   requireOperator(caller);
   const input = data as { churchId?: unknown; name?: unknown };
   const cid = churchId(input?.churchId);
-  const name = text(input?.name, 60);
+  const name = text(input?.name, TEXT_LIMITS.churchName);
   const key = nameKey(name);
   const { db } = deps;
   await db.runTransaction(async (tx) => {

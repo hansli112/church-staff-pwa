@@ -5,6 +5,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { decrypt, encrypt } from './calendar.js';
 import { churchAccess } from './access.js';
 import { fail, type Caller, type Deps } from './common.js';
+import { LIMITS } from './limits.js';
 
 /**
  * 外部通知 (webhooks): a church's admin gives an https URL and a secret;
@@ -54,7 +55,7 @@ const isHttps = (url: string) => {
 /** A secret the admin typed: 16–200 printable characters. */
 function givenSecret(v: unknown): string | null {
   if (v === undefined || v === null || v === '') return null;
-  if (typeof v !== 'string' || v.length < 16 || v.length > 200 || !/^[\x21-\x7e]+$/.test(v)) {
+  if (typeof v !== 'string' || v.length < LIMITS.webhookSecretMin || v.length > LIMITS.webhookSecretMax || !/^[\x21-\x7e]+$/.test(v)) {
     fail('invalid-argument', 'unknown', 'secret');
   }
   return v;
@@ -76,7 +77,7 @@ export async function webhookSave(deps: WebhookDeps, caller: Caller | null, data
     await forgetWebhook(deps, cid);
     return { secret: null };
   }
-  if (typeof input.url !== 'string' || input.url.length > 500 || !isHttps(input.url.trim())) {
+  if (typeof input.url !== 'string' || input.url.length > LIMITS.url || !isHttps(input.url.trim())) {
     fail('invalid-argument', 'unknown', 'notHttps');
   }
   const settings = deps.db.doc(`churches/${cid}/settings/webhook`);

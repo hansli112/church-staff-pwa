@@ -3,6 +3,7 @@ import type { Storage } from 'firebase-admin/storage';
 
 import { churchAccess, churchClosed, churchId } from './access.js';
 import { fail, requireCaller, serverTime, text, type Caller, type Deps } from './common.js';
+import { TEXT_LIMITS } from './limits.js';
 import { nameKey } from './text.js';
 
 /** How long a deleted church can be restored. */
@@ -35,7 +36,7 @@ export const DEFAULT_SERVICES = [
  */
 export async function createChurch(deps: Deps, caller: Caller | null, data: unknown) {
   const c = requireCaller(caller);
-  const name = text((data as { name?: unknown })?.name, 60);
+  const name = text((data as { name?: unknown })?.name, TEXT_LIMITS.churchName);
   return { churchId: await openChurch(deps, c, name) };
 }
 

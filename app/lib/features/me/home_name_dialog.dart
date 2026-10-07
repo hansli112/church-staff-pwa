@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -41,7 +42,7 @@ class _HomeNameDialogState extends State<_HomeNameDialog> {
       content: TextField(
         controller: _controller,
         autofocus: true,
-        maxLength: Church.homeNameMaxLength,
+        maxLength: TextLimits.homeName,
         textInputAction: TextInputAction.done,
         decoration: InputDecoration(
           hintText: widget.churchName,

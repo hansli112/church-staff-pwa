@@ -2,6 +2,7 @@ import { FieldValue, type DocumentSnapshot } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions/v2';
 
 import { dateKeyUtc8, fail, requireOperator, serverTime, text, type Caller, type Deps } from './common.js';
+import { TEXT_LIMITS } from './limits.js';
 
 /**
  * 雲端費用進度: what supporters gave this month against what the platform
@@ -216,7 +217,7 @@ export async function setRefund(deps: Deps, id: string, store: Payment['store'],
 
 function costItem(value: unknown): CostItem {
   const v = value as Partial<CostItem> | null;
-  const name = text(v?.name, 40);
+  const name = text(v?.name, TEXT_LIMITS.costName);
   const amount = v?.amount;
   if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0 || amount > 10_000_000) {
     fail('invalid-argument', 'unknown');

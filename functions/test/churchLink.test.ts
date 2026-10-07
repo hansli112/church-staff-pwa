@@ -37,6 +37,12 @@ describe('fetching a content source', () => {
     assert.equal(r.content.link, 'https://x.example');
   });
 
+  test('the cut counts characters as a person does and never splits one', () => {
+    const c = parseContent({ title: '👍🏽'.repeat(40), body: '🇹🇼'.repeat(200) })!;
+    assert.equal(c.title, '👍🏽'.repeat(30));
+    assert.equal(c.body, '🇹🇼'.repeat(120));
+  });
+
   test('the request is a plain GET', async () => {
     const { d, requests } = withFetch({ [SRC]: { body: good } });
     await fetchSource(d, SRC);

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import '../../domain/day.dart';
+import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../domain/staff_order.dart';
 import '../../domain/text.dart';
@@ -668,8 +669,9 @@ class MemoryChurchData implements ChurchData {
     _requireAdmin();
     if (link != null &&
         (link.title.isEmpty ||
-            link.title.runes.length > ChurchLink.titleMax ||
-            link.body.runes.length > ChurchLink.bodyMax ||
+            !withinTextLimit(link.title, TextLimits.linkTitle) ||
+            !withinTextLimit(link.body, TextLimits.linkBody) ||
+            link.url.length > Limits.url ||
             !ChurchLink.validUrl(link.url))) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
@@ -705,7 +707,7 @@ class MemoryChurchData implements ChurchData {
   @override
   Future<void> setHomeName(String? name) async {
     _requireAdmin();
-    if (name != null && (name.isEmpty || name.runes.length > Church.homeNameMaxLength)) {
+    if (name != null && (name.isEmpty || !withinTextLimit(name, TextLimits.homeName))) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
     await _b.write(() => _b.churches[churchId] = _b.churches[churchId]!.copyWith(homeName: () => name));
@@ -786,7 +788,9 @@ class MemoryChurchData implements ChurchData {
       _b.notify();
       return const LinkSourceResult();
     }
-    if (!ChurchLink.validUrl(source)) throw const CloudException(CloudErrorCode.unknown, 'notHttps');
+    if (source.length > Limits.url || !ChurchLink.validUrl(source)) {
+      throw const CloudException(CloudErrorCode.unknown, 'notHttps');
+    }
     final changed = link.source != source;
     _b.churchLinks[churchId] = next(source, fetchMinute);
     if (!changed) {
@@ -830,8 +834,10 @@ class MemoryChurchData implements ChurchData {
       _b.notify();
       return null;
     }
-    if (!ChurchLink.validUrl(url)) throw const CloudException(CloudErrorCode.unknown, 'notHttps');
-    if (secret != null && secret.length < 16) throw const CloudException(CloudErrorCode.unknown, 'secret');
+    if (url.length > Limits.url || !ChurchLink.validUrl(url)) {
+      throw const CloudException(CloudErrorCode.unknown, 'notHttps');
+    }
+    _checkSecret(secret);
     String? generated;
     if (secret != null) {
       _b.webhookSecrets[churchId] = secret;
@@ -853,7 +859,7 @@ class MemoryChurchData implements ChurchData {
   Future<String?> webhookRotateSecret({String? secret}) async {
     _functionAdmin();
     if (!_b.webhooks.containsKey(churchId)) throw const CloudException(CloudErrorCode.unknown);
-    if (secret != null && secret.length < 16) throw const CloudException(CloudErrorCode.unknown, 'secret');
+    _checkSecret(secret);
     final next = secret ?? _b.newWebhookSecret();
     _b.webhookSecrets[churchId] = next;
     return secret == null ? next : null;
@@ -1013,11 +1019,12 @@ class MemoryCloud implements CloudApi {
     if (user == null || !user.verified) {
       throw const CloudException(CloudErrorCode.unverifiedEmail);
     }
+    name = _text(name, TextLimits.churchName);
     final key = nameKey(name);
     if (_b.churches.values.any((c) => nameKey(c.name) == key)) {
       throw const CloudException(CloudErrorCode.duplicateName);
     }
-    final cid = _b.addChurch(name.trim());
+    final cid = _b.addChurch(name);
     _b.setServices(cid, defaultServices);
     _b.addMember(
       cid,
@@ -1222,13 +1229,14 @@ class MemoryCloud implements CloudApi {
   @override
   Future<void> adminRenameChurch(String churchId, String name) async {
     _requireOperator();
+    name = _text(name, TextLimits.churchName);
     final key = nameKey(name);
     if (_b.churches.values.any(
       (c) => c.id != churchId && nameKey(c.name) == key,
     )) {
       throw const CloudException(CloudErrorCode.duplicateName);
     }
-    _b.churches[churchId] = _b.churches[churchId]!.copyWith(name: name.trim());
+    _b.churches[churchId] = _b.churches[churchId]!.copyWith(name: name);
     _b.notify();
   }
 
@@ -1274,6 +1282,9 @@ class MemoryCloud implements CloudApi {
   @override
   Future<void> adminSetFundingCosts(List<CostItem> items) async {
     _requireOperator();
+    for (final item in items) {
+      _text(item.name, TextLimits.costName);
+    }
     await _b.write(() {
       _b.fundingCosts = List.of(items);
       _b.funding = _b.publishFunding?.call(items) ?? _b.funding;
@@ -1298,6 +1309,21 @@ void _repoint(MemoryBackend b, String cid, String pid, String uid) {
           d.copyWith(uids: {for (final e in d.uids.entries) e.key: e.value == pid ? uid : e.value}),
       ],
     );
+  }
+}
+
+/// [value] trimmed, if it is 1 to [max] characters; what `text()` in
+/// functions/src/common.ts takes.
+String _text(String value, int max) {
+  final t = value.trim();
+  if (t.isEmpty || !withinTextLimit(t, max)) throw const CloudException(CloudErrorCode.unknown);
+  return t;
+}
+
+/// A webhook secret the admin typed, as functions/src/webhook.ts takes it.
+void _checkSecret(String? secret) {
+  if (secret != null && (secret.length < Limits.webhookSecretMin || secret.length > Limits.webhookSecretMax)) {
+    throw const CloudException(CloudErrorCode.unknown, 'secret');
   }
 }
 

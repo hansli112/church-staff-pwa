@@ -34,9 +34,8 @@ class Church {
   final String? homeName;
   final DateTime? deletedAt;
 
-  /// The most characters a home-screen name may have; past
-  /// [homeNameSafeLength], some phones cut it off.
-  static const homeNameMaxLength = 8;
+  /// Past this many characters some phones cut the home-screen name off;
+  /// the most it may have is `TextLimits.homeName`.
   static const homeNameSafeLength = 6;
 
   bool get isActive => status == ChurchStatus.active;
@@ -500,9 +499,6 @@ class ChurchLink {
     this.source,
     this.fetchMinute = defaultFetchMinute,
   });
-
-  static const titleMax = 30;
-  static const bodyMax = 120;
 
   /// 04:30 in Asia/Taipei.
   static const defaultFetchMinute = 4 * 60 + 30;

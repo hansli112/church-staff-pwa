@@ -1,8 +1,26 @@
-/// Text comparison rules shared by church-name checks and people search.
+/// Text comparison rules shared by church-name checks and people search,
+/// and how characters are counted.
 ///
-/// The Cloud Function that enforces unique church names applies the same
-/// rule (functions/src/text.ts); keep the two in step.
+/// The Cloud Functions apply the same rules (functions/src/text.ts) and
+/// decide; both test suites run every row of testdata/text_rules.json, so
+/// keep the two in step through that table.
 library;
+
+import 'package:characters/characters.dart';
+
+/// How many characters [text] has as a person counts them (grapheme
+/// clusters): "🙏", "🇹🇼" and "é" written as e + accent are one each. The
+/// unit of every `TextLimits` value.
+int characterCount(String text) => text.characters.length;
+
+/// A capital sigma that ends a word, where JavaScript's toLowerCase gives
+/// the final form ς (Unicode's Final_Sigma condition).
+final _finalSigma = RegExp(r'(?<=\p{Cased}\p{Case_Ignorable}*)Σ(?!\p{Case_Ignorable}*\p{Cased})', unicode: true);
+
+/// Lower case exactly as the server's JavaScript does it. The Dart VM leaves
+/// out two special mappings JavaScript applies: İ to i + combining dot
+/// and a word-final Σ to ς.
+String _lowerCase(String input) => input.replaceAll('İ', 'i̇').replaceAll(_finalSigma, 'ς').toLowerCase();
 
 /// Full-width ASCII (U+FF01–FF5E) to half-width, the ideographic space to a
 /// plain space, then lower case.
@@ -17,7 +35,7 @@ String foldWidthAndCase(String input) {
       out.writeCharCode(rune);
     }
   }
-  return out.toString().toLowerCase();
+  return _lowerCase(out.toString());
 }
 
 final _whitespace = RegExp(r'\s+');

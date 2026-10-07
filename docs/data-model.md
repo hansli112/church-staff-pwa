@@ -30,6 +30,28 @@
 - 一個教會的所有資料都在 `churches/{cid}` 底下，可以整棵匯出。
 - 推播 token 放在 `users/{uid}`，只有本人和 Cloud Functions 讀得到。self-host 版的 roster editor 讀得到全部 token，這裡改掉了。
 - 教會內顯示的名字來自 member doc，不讀 `users/{uid}`。
+- 上面的「字」都是[長度上限](#長度上限)說的字。
+
+## 長度上限
+
+文字欄位的上限算「字」：人看到的一個字（grapheme cluster），「🙏」「👨‍👩‍👧」「🇹🇼」都是一個字。App 的輸入框（Flutter `maxLength` 本來就這樣算）、`MemoryBackend`、Cloud Functions（`Intl.Segmenter`）都這樣數。
+
+| 上限 | 字 | 誰檢查 | 規則的 UTF-16 上限 |
+|---|---|---|---|
+| 教會名稱 `churchName` | 60 | App、Functions（建立、搬家、改名） | — |
+| 主畫面名稱 `homeName` | 8 | App | 32 |
+| 教會連結標題 `linkTitle` | 30 | App；抓來的內容由 Functions 截斷 | 120 |
+| 教會連結敘述 `linkBody` | 120 | App；抓來的內容由 Functions 截斷 | 480 |
+| 雲端費用項目 `costName` | 40 | App、Functions | — |
+| 個人名字 `profileName` | 40 | App | — |
+
+`firestore.rules` 的 `size()` 算的是 UTF-16 code unit，數不了字，所以規則只擋濫用：上限 × 4。Functions 數字之前也先擋同一個 × 4。一般的字（中文 1 單位、emoji 2–4 單位）到上限都過得了；一個字超過 4 單位的（組合的家庭 emoji、帶 tag 的旗子）可能字數沒到就先碰到 × 4。介於上限和 × 4 之間的直接寫入規則會放行，這段由 App 擋。
+
+其他上限每一邊單位都一樣：網址（教會連結、內容來源、外部通知）500 個 UTF-16 單位，外部通知的密鑰 16–200 個可見 ASCII 字元，服事最多 20 種。
+
+數字在三個地方：`app/lib/domain/limits.dart`、`functions/src/limits.ts`、`firestore.rules`。`functions/test/limits.test.ts`（CI 的 backend job）讀這三個檔，任何一個數字對不上就失敗；規則裡新加一個 `size() <=` 也要在那裡登記。
+
+比對教會名稱、搜尋同工的正規化（`app/lib/domain/text.dart` ↔ `functions/src/text.ts`）和數字的方法，兩邊的測試都跑 `testdata/text_rules.json` 的每一列；要改規則先在那裡加一列。
 
 ## 角色與群組
 

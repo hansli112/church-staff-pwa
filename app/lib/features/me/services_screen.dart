@@ -116,10 +116,11 @@ Future<String?> promptText(
   required String title,
   required String hint,
   String initial = '',
+  int? maxLength,
 }) async {
   final result = await showAdaptiveDialog<String>(
     context: context,
-    builder: (context) => _PromptDialog(title: title, hint: hint, initial: initial),
+    builder: (context) => _PromptDialog(title: title, hint: hint, initial: initial, maxLength: maxLength),
   );
   final t = result?.trim();
   return t == null || t.isEmpty ? null : t;
@@ -128,11 +129,12 @@ Future<String?> promptText(
 /// Owns its text controller, so the controller outlives the closing
 /// animation.
 class _PromptDialog extends StatefulWidget {
-  const _PromptDialog({required this.title, required this.hint, required this.initial});
+  const _PromptDialog({required this.title, required this.hint, required this.initial, this.maxLength});
 
   final String title;
   final String hint;
   final String initial;
+  final int? maxLength;
 
   @override
   State<_PromptDialog> createState() => _PromptDialogState();
@@ -155,6 +157,7 @@ class _PromptDialogState extends State<_PromptDialog> {
       content: TextField(
         controller: _controller,
         autofocus: true,
+        maxLength: widget.maxLength,
         decoration: InputDecoration(hintText: widget.hint),
         onSubmitted: (v) => Navigator.pop(context, v),
       ),

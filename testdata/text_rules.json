@@ -1,0 +1,66 @@
+{
+  "about": "Text rules both app/lib/domain/text.dart and functions/src/text.ts (and the limits.dart / limits.ts helper) must follow; app/test/domain/text_test.dart and functions/test/text.test.ts run every row. Add a row here, not to one side.",
+  "foldWidthAndCase": [
+    { "in": "ＡＢＣ１２３！", "out": "abc123!", "why": "full-width ASCII to half-width, then lower case" },
+    { "in": "Ａ\u3000Ｂ", "out": "a b", "why": "the ideographic space becomes a plain space" },
+    { "in": "～｟", "out": "~｟", "why": "U+FF5E is the last full-width form folded; U+FF5F stays" },
+    { "in": "ｶﾀｶﾅ", "out": "ｶﾀｶﾅ", "why": "half-width katakana stays as it is" }
+  ],
+  "nameKey": [
+    { "in": "台北 靈糧堂", "out": "台北靈糧堂", "why": "spaces go" },
+    { "in": "台北\u3000靈糧堂", "out": "台北靈糧堂", "why": "the ideographic space goes too" },
+    { "in": "ＴＡＩＰＥＩ靈糧堂", "out": "taipei靈糧堂", "why": "full-width letters fold and lower" },
+    { "in": "  Grace\tChurch\n", "out": "gracechurch", "why": "tabs, newlines and the ends" },
+    { "in": "Ｇｒａｃｅ\u3000Ｃｈｕｒｃｈ！", "out": "gracechurch!", "why": "full-width punctuation folds" },
+    { "in": "a\u00a0b\u202fc\u2028d\ufeffe", "out": "abcde", "why": "no-break, narrow no-break, line separator and BOM are whitespace" },
+    { "in": "a\u200bb", "out": "a\u200bb", "why": "a zero-width space is not whitespace and stays" },
+    { "in": "a\u200cb\u200dc", "out": "a\u200cb\u200dc", "why": "zero-width non-joiner and joiner stay" },
+    { "in": "a\u180eb", "out": "a\u180eb", "why": "the Mongolian vowel separator is no longer whitespace" },
+    { "in": "🙏 恩典堂", "out": "🙏恩典堂", "why": "emoji stay" },
+    { "in": "👨\u200d👩\u200d👧\u200d👦 家", "out": "👨\u200d👩\u200d👧\u200d👦家", "why": "a joined emoji keeps its joiners" },
+    { "in": "café", "out": "café", "why": "no Unicode normalisation: precomposed é..." },
+    { "in": "cafe\u0301", "out": "cafe\u0301", "why": "...and e + combining accent give different keys" },
+    { "in": "ΣΑΣ", "out": "σας", "why": "a word-final capital sigma lowers to ς, as JavaScript does" },
+    { "in": "ΌΣΟΣ ΆΣ", "out": "όσοςάς", "why": "final sigma is decided before spaces are removed" },
+    { "in": "ΑΣ'Α", "out": "ασ'α", "why": "an apostrophe inside a word does not end it" },
+    { "in": "İstanbul", "out": "i\u0307stanbul", "why": "capital dotted I lowers to i + combining dot, as JavaScript does" },
+    { "in": "ẞ", "out": "ß", "why": "capital sharp s" },
+    { "in": "Ⅻ Ⓐ", "out": "ⅻⓐ", "why": "Roman numerals and circled letters have case" },
+    { "in": "𐐀", "out": "𐐨", "why": "case outside the Basic Multilingual Plane" },
+    { "in": "", "out": "", "why": "empty" },
+    { "in": "  \u3000 ", "out": "", "why": "only spaces" }
+  ],
+  "matchesSearch": [
+    { "name": "John Chen", "query": "ｊｏｈｎ", "matches": true, "why": "width and case" },
+    { "name": "王大明", "query": "大明", "matches": true, "why": "part of a name" },
+    { "name": "王大明", "query": "小明", "matches": false, "why": "a different name" },
+    { "name": "王大明", "query": "  ", "matches": true, "why": "an empty query matches everyone" },
+    { "name": "Grace Church", "query": "ce ch", "matches": true, "why": "spaces are ignored on both sides" },
+    { "name": "İstanbul", "query": "istanbul", "matches": false, "why": "the combining dot from İ stays, so plain i does not match" }
+  ],
+  "characterCount": [
+    { "in": "恩典堂", "count": 3, "why": "one per CJK character" },
+    { "in": "Grace", "count": 5, "why": "one per letter" },
+    { "in": "a b", "count": 3, "why": "a space counts" },
+    { "in": "a\r\n", "count": 2, "why": "CR LF is one" },
+    { "in": "🙏", "count": 1, "why": "an emoji (two UTF-16 units)" },
+    { "in": "👍🏽", "count": 1, "why": "an emoji with a skin tone (four units)" },
+    { "in": "👨\u200d👩\u200d👧\u200d👦", "count": 1, "why": "a joined family (eleven units)" },
+    { "in": "🇹🇼", "count": 1, "why": "a flag" },
+    { "in": "🏴\udb40\udc67\udb40\udc62\udb40\udc65\udb40\udc6e\udb40\udc67\udb40\udc7f", "count": 1, "why": "a flag with tags (fourteen units)" },
+    { "in": "1\ufe0f\u20e3", "count": 1, "why": "a keycap" },
+    { "in": "❤\ufe0f", "count": 1, "why": "a symbol with a variation selector" },
+    { "in": "e\u0301", "count": 1, "why": "e + combining accent" },
+    { "in": "\u1100\u1161\u11a8", "count": 1, "why": "a Hangul syllable from jamo" },
+    { "in": "ด\u0e49", "count": 1, "why": "Thai with a tone mark" },
+    { "in": "क\u094dषि", "count": 1, "why": "a Devanagari conjunct (Unicode 15.1)" },
+    { "in": "", "count": 0, "why": "empty" }
+  ],
+  "withinTextLimit": [
+    { "in": "一二三四五六七八", "max": 8, "within": true, "why": "eight characters" },
+    { "in": "一二三四五六七八九", "max": 8, "within": false, "why": "nine characters" },
+    { "in": "👍🏽👍🏽👍🏽👍🏽👍🏽👍🏽👍🏽👍🏽", "max": 8, "within": true, "why": "eight characters in 32 UTF-16 units: the rules guard exactly" },
+    { "in": "🙏🙏🙏🙏🙏🙏🙏🙏🙏", "max": 8, "within": false, "why": "nine emoji" },
+    { "in": "👨\u200d👩\u200d👧\u200d👦👨\u200d👩\u200d👧\u200d👦👨\u200d👩\u200d👧\u200d👦", "max": 8, "within": false, "why": "three characters but 33 UTF-16 units, past the rules guard of 8 × 4" }
+  ]
+}
