@@ -2,6 +2,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 
 import { churchAccess } from './access.js';
 import { fail, id, requireCaller, serverTime, type Caller, type Deps } from './common.js';
+import { personName } from './limits.js';
 import { emailHash } from './move.js';
 
 /**
@@ -133,7 +134,7 @@ export async function claimPending(deps: Deps, caller: Caller | null, data: unkn
   } else {
     await memberRef.create({
       uid: c.uid,
-      name: (pending.get('name') as string) || c.name || '',
+      name: personName(pending.get('name')) || personName(c.name),
       email: c.email ?? '',
       role: pending.get('role') ?? 'member',
       groups: pending.get('groups') ?? [],

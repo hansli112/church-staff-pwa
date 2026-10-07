@@ -43,7 +43,7 @@
 | 教會連結標題 `linkTitle` | 30 | App；抓來的內容由 Functions 截斷 | 120 |
 | 教會連結敘述 `linkBody` | 120 | App；抓來的內容由 Functions 截斷 | 480 |
 | 雲端費用項目 `costName` | 40 | App、Functions | — |
-| 個人名字 `profileName` | 40 | App | — |
+| 個人名字 `profileName`（個人資料、同工名單上的名字） | 40 | App（Google 帳號的名字也截到 40 字）；Functions 從別處抄來的名字（登入名稱、搬家檔、個人資料）截到 40 字 | 160 |
 
 `firestore.rules` 的 `size()` 算的是 UTF-16 code unit，數不了字，所以規則只擋濫用：上限 × 4。Functions 數字之前也先擋同一個 × 4。一般的字（中文 1 單位、emoji 2–4 單位）到上限都過得了；一個字超過 4 單位的（組合的家庭 emoji、帶 tag 的旗子）可能字數沒到就先碰到 × 4。介於上限和 × 4 之間的直接寫入規則會放行，這段由 App 擋。
 

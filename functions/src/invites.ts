@@ -1,6 +1,7 @@
 import type { Timestamp } from 'firebase-admin/firestore';
 
 import { fail, requireCaller, serverTime, type Caller, type Deps } from './common.js';
+import { personName } from './limits.js';
 
 /**
  * Invites live at invites/{code}. Admins create and revoke them from the app
@@ -51,7 +52,7 @@ export async function redeemInvite(deps: Deps, caller: Caller | null, data: unkn
     if (existing.exists) return;
     tx.create(memberRef, {
       uid: c.uid,
-      name: (profile.get('name') as string | undefined) || c.name || '',
+      name: personName(profile.get('name')) || personName(c.name),
       email: c.email ?? '',
       role: 'staff',
       groups: [],

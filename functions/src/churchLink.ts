@@ -2,8 +2,7 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 import { churchAccess } from './access.js';
 import { dateKeyUtc8, fail, type Caller, type Deps } from './common.js';
-import { LIMITS, TEXT_LIMITS } from './limits.js';
-import { characters } from './text.js';
+import { cutText, LIMITS, TEXT_LIMITS } from './limits.js';
 
 /**
  * 教會連結的每日內容來源: an admin gives a JSON URL and a time of day; the
@@ -41,7 +40,6 @@ const isHttps = (url: string) => {
 };
 
 /** At most [max] characters, trimmed. */
-const clip = (s: string, max: number) => characters(s.trim()).slice(0, max).join('').trim();
 
 /** `{title, body, link}` checked and cut to the church link's limits. */
 export function parseContent(raw: unknown): LinkContent | null {
@@ -50,7 +48,7 @@ export function parseContent(raw: unknown): LinkContent | null {
   if (typeof r.title !== 'string' || !r.title.trim()) return null;
   if (r.body !== undefined && r.body !== null && typeof r.body !== 'string') return null;
   const link = typeof r.link === 'string' && isHttps(r.link.trim()) ? r.link.trim() : null;
-  return { title: clip(r.title, TEXT_LIMITS.linkTitle), body: clip((r.body as string | undefined) ?? '', TEXT_LIMITS.linkBody), link };
+  return { title: cutText(r.title, TEXT_LIMITS.linkTitle), body: cutText((r.body as string | undefined) ?? '', TEXT_LIMITS.linkBody), link };
 }
 
 async function readLimited(res: Response, max: number): Promise<string | null> {

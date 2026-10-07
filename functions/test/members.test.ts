@@ -134,6 +134,16 @@ describe('triggers', () => {
     assert.equal((await db.doc('churches/C2/members/bob').get()).get('name'), 'bob');
   });
 
+  test('a profile name past 40 characters reaches the church cut to 40', async () => {
+    await seedChurch('C1', { alice: 'staff' });
+    const before = await db.doc('users/alice').get();
+    await db.doc('users/alice').set({ name: `  ${'🙏'.repeat(45)}` });
+    const after = await db.doc('users/alice').get();
+
+    assert.equal(await syncProfileName(deps, 'alice', before, after), 1);
+    assert.equal((await db.doc('churches/C1/members/alice').get()).get('name'), '🙏'.repeat(40));
+  });
+
   test('leaving notifies the admins; removal by an admin does not', async () => {
     await seedChurch('C1', { alice: 'admin', carol: 'admin', bob: 'staff' });
     await db.doc('users/alice').set({ fcm: { phone: 'tok-alice' } });

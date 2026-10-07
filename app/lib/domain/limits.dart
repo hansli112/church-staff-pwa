@@ -4,6 +4,8 @@
 /// disagree. Keep every value a plain number so it can.
 library;
 
+import 'package:characters/characters.dart';
+
 import 'text.dart';
 
 /// Text limits, in characters as a person counts them (grapheme clusters,
@@ -51,3 +53,7 @@ const rulesSizeFactor = 4;
 /// characters: at most [max] characters and at most [max] ×
 /// [rulesSizeFactor] UTF-16 code units.
 bool withinTextLimit(String text, int max) => text.length <= max * rulesSizeFactor && characterCount(text) <= max;
+
+/// [text] trimmed and cut to [max] characters, for text the app takes from
+/// elsewhere (the name a Google account gives).
+String cutText(String text, int max) => text.trim().characters.take(max).toString().trim();

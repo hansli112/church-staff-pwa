@@ -3,7 +3,7 @@ import type { Storage } from 'firebase-admin/storage';
 
 import { churchAccess, churchClosed, churchId } from './access.js';
 import { fail, requireCaller, serverTime, text, type Caller, type Deps } from './common.js';
-import { TEXT_LIMITS } from './limits.js';
+import { personName, TEXT_LIMITS } from './limits.js';
 import { nameKey } from './text.js';
 
 /** How long a deleted church can be restored. */
@@ -65,7 +65,7 @@ export async function openChurch(
   const churchRef = opts.cid ? db.doc(`churches/${opts.cid}`) : db.collection('churches').doc();
   const cid = churchRef.id;
   const profile = await db.doc(`users/${c.uid}`).get();
-  const memberName = opts.admin?.name || (profile.get('name') as string | undefined) || c.name || '';
+  const memberName = personName(opts.admin?.name) || personName(profile.get('name')) || personName(c.name);
   const services = opts.services ?? { services: DEFAULT_SERVICES, ids: DEFAULT_SERVICES.map((s) => s.id) };
 
   await db.runTransaction(async (tx) => {

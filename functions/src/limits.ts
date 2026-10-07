@@ -3,7 +3,7 @@
 // test/limits.test.ts reads all three and fails when they disagree. Keep
 // every value a plain number so it can.
 
-import { characterCount } from './text.js';
+import { characterCount, characters } from './text.js';
 
 /**
  * Text limits, in characters as a person counts them (grapheme clusters,
@@ -38,3 +38,16 @@ export const RULES_SIZE_FACTOR = 4;
 export function withinTextLimit(text: string, max: number): boolean {
   return text.length <= max * RULES_SIZE_FACTOR && characterCount(text) <= max;
 }
+
+/**
+ * [text] trimmed and cut to [max] characters, for text the backend copies
+ * from somewhere that did not hold the limit: a sign-in name, a profile
+ * written past the app, a moved-in file.
+ */
+export function cutText(text: string, max: number): string {
+  return characters(text.trim()).slice(0, max).join('').trim();
+}
+
+/** A person's name as a member doc keeps it. */
+export const personName = (name: unknown): string =>
+  typeof name === 'string' ? cutText(name, TEXT_LIMITS.profileName) : '';

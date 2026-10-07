@@ -298,6 +298,9 @@ describe('同工 (members)', () => {
     await assertFails(updateDoc(ref, { groups: ['typo-editors'] }));
     await assertFails(updateDoc(ref, { zoneTypes: ['nope'] }));
     await assertFails(updateDoc(ref, { uid: ADMIN_B }));
+    await assertSucceeds(updateDoc(ref, { name: 'A'.repeat(160) }), '40 characters × 4 units');
+    await assertFails(updateDoc(ref, { name: 'A'.repeat(161) }));
+    await assertFails(updateDoc(ref, { name: 40 }));
   });
 
   it('管理員不能把自己降級', async () => {
@@ -536,6 +539,10 @@ describe('全域個資 (users)', () => {
     const ref = doc(as(STRANGER), `users/${STRANGER}`);
     await assertSucceeds(setDoc(ref, { name: '新人', email: 's@example.com', locale: 'zh-TW' }));
     await assertSucceeds(updateDoc(ref, { fcm: { 'device-1': 'token' } }));
+    await assertSucceeds(updateDoc(ref, { name: '🙏'.repeat(40) }), '40 characters, 80 units');
+    await assertSucceeds(updateDoc(ref, { name: 'A'.repeat(160) }), 'over 40 characters: the app’s to stop');
+    await assertFails(updateDoc(ref, { name: 'A'.repeat(161) }));
+    await assertFails(updateDoc(ref, { name: 40 }));
   });
 
   it('不能夾帶權限欄位、不能寫別人的、不能自己刪（帳號刪除走 Cloud Functions）', async () => {

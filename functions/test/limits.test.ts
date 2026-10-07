@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, test } from 'node:test';
 
-import { LIMITS, RULES_SIZE_FACTOR, TEXT_LIMITS } from '../src/limits.js';
+import { LIMITS, personName, RULES_SIZE_FACTOR, TEXT_LIMITS } from '../src/limits.js';
 
 // The same limits live in three places: src/limits.ts (here),
 // app/lib/domain/limits.dart and firestore.rules. This reads the other two
@@ -28,6 +28,7 @@ function dartClass(name: string): Record<string, number> {
 /** Which limit each `<field>.size() <= n` in firestore.rules guards. */
 const RULES_FIELDS: Record<string, { text?: keyof typeof TEXT_LIMITS; other?: keyof typeof LIMITS; rulesOnly?: number }> = {
   'request.resource.data.homeName': { text: 'homeName' },
+  'request.resource.data.name': { text: 'profileName' },
   'data.title': { text: 'linkTitle' },
   "data.get('body', '')": { text: 'linkBody' },
   'data.url': { other: 'url' },
@@ -67,5 +68,11 @@ describe('limits', () => {
       const want = of.text ? TEXT_LIMITS[of.text] * RULES_SIZE_FACTOR : of.other ? LIMITS[of.other] : of.rulesOnly;
       for (const { n } of found) assert.equal(n, want, `${field}.size() <= ${n} in firestore.rules`);
     }
+  });
+
+  test('a name from elsewhere is trimmed and cut to whole characters', () => {
+    assert.equal(personName(`  ${'👨‍👩‍👧'.repeat(41)} `), '👨‍👩‍👧'.repeat(40));
+    assert.equal(personName(' 王小明 '), '王小明');
+    assert.equal(personName(undefined), '');
   });
 });

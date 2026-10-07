@@ -408,10 +408,22 @@ class _Profiles implements ProfileRepository {
   Stream<UserProfile?> watch(String uid) => _b.watch(() => _b.users[uid]);
 
   @override
-  Future<void> save(UserProfile profile) => _b.write(() => _b.users[profile.uid] = profile);
+  Future<void> save(UserProfile profile) async {
+    _checkName(profile.name);
+    await _b.write(() => _b.users[profile.uid] = profile);
+  }
 
   @override
-  Future<void> ensure(UserProfile profile) => _b.write(() => _b.users.putIfAbsent(profile.uid, () => profile));
+  Future<void> ensure(UserProfile profile) async {
+    _checkName(profile.name);
+    await _b.write(() => _b.users.putIfAbsent(profile.uid, () => profile));
+  }
+}
+
+/// A person's name, on a profile or a member: refused past
+/// [TextLimits.profileName] as firestore.rules refuses past its guard.
+void _checkName(String name) {
+  if (!withinTextLimit(name, TextLimits.profileName)) throw const CloudException(CloudErrorCode.permissionDenied);
 }
 
 class _Memberships implements MembershipRepository {
@@ -587,6 +599,7 @@ class MemoryChurchData implements ChurchData {
     if (member.uid == _uid && !member.isAdmin) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
+    _checkName(member.name);
     await _b.write(() => _b.members[churchId]![member.uid] = member);
   }
 

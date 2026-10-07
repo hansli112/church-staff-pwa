@@ -4,6 +4,7 @@ import type { Storage } from 'firebase-admin/storage';
 import { CHURCH_ID } from './access.js';
 import type { Deps } from './common.js';
 import { ICON_FILES, iconStoragePath, makeIcons } from './icons.js';
+import { personName } from './limits.js';
 import { adminUids, notifyMembers, type PushDeps } from './push.js';
 
 /**
@@ -17,9 +18,10 @@ export async function syncProfileName(
   before: DocumentSnapshot | undefined,
   after: DocumentSnapshot | undefined,
 ) {
-  const name = after?.get('name') as string | undefined;
-  if (!after?.exists || typeof name !== 'string' || name.trim() === '') return 0;
-  if (before?.get('name') === name) return 0;
+  const raw = after?.get('name') as unknown;
+  const name = personName(raw);
+  if (!after?.exists || name === '') return 0;
+  if (before?.get('name') === raw) return 0;
   const memberships = await deps.db.collectionGroup('members').where('uid', '==', uid).get();
   const stale = memberships.docs.filter((m) => m.get('name') !== name);
   await Promise.all(stale.map((m) => m.ref.update({ name })));

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/telemetry.dart';
+import '../domain/limits.dart';
 import '../domain/models.dart';
 import 'providers.dart';
 import 'push.dart';
@@ -28,7 +29,10 @@ final sessionEffectsProvider = Provider<void>((ref) {
         .ensure(
           UserProfile(
             uid: user.uid,
-            name: user.displayName?.trim().isNotEmpty == true ? user.displayName!.trim() : user.email.split('@').first,
+            name: cutText(
+              user.displayName?.trim().isNotEmpty == true ? user.displayName! : user.email.split('@').first,
+              TextLimits.profileName,
+            ),
             email: user.email,
           ),
         )

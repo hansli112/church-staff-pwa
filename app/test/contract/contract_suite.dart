@@ -175,6 +175,16 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect((saved.name, saved.locale), ('王小明', 'zh-Hant'));
     });
 
+    test('a profile name holds 40 characters; far past it is refused', () async {
+      // Between 40 characters and 160 UTF-16 units the rules let it through
+      // and the app stops it; outside that band both say the same.
+      final uid = await w.signUp('a@example.com');
+      final profiles = w.backend.profiles;
+      await profiles.save(UserProfile(uid: uid, name: '🙏' * 40, email: 'a@example.com'));
+      expect((await profiles.watch(uid).first)!.name, '🙏' * 40);
+      await expectLater(profiles.save(UserProfile(uid: uid, name: 'A' * 161, email: 'a@example.com')), denied());
+    });
+
     test('the only admin of a church cannot delete their account', () async {
       final g = await Grace.open(w);
       await expectLater(cloud().deleteAccount(), fails(CloudErrorCode.lastAdmin, ['恩典堂']));
@@ -435,6 +445,13 @@ void contractTests(Future<ContractWorld> Function() open) {
       await expectLater(g.church.saveMember(Member(uid: g.pastor, name: '王牧師')), denied());
       await w.signIn(Grace.meiEmail);
       await expectLater(g.church.saveMember(Member(uid: g.mei, name: '李美玉', role: Role.admin)), denied());
+    });
+
+    test('a member name holds 40 characters; far past it is refused', () async {
+      final g = await Grace.open(w);
+      await g.church.saveMember(Member(uid: g.mei, name: '🙏' * 40, role: Role.staff));
+      expect((await g.church.member(g.mei).first)!.name, '🙏' * 40);
+      await expectLater(g.church.saveMember(Member(uid: g.mei, name: 'A' * 161, role: Role.staff)), denied());
     });
 
     test('members leave on their own; only another admin removes someone', () async {

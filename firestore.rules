@@ -129,6 +129,14 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowed);
     }
 
+    // A person's name, on users/{uid} and on member docs: an abuse guard,
+    // 4 UTF-16 units for each of the 40 characters the app allows.
+    function hasValidName() {
+      return !('name' in request.resource.data)
+        || (request.resource.data.name is string
+            && request.resource.data.name.size() <= 160);
+    }
+
     function hasValidDateKey() {
       return !('dateKey' in request.resource.data)
         || (request.resource.data.dateKey is string
@@ -141,7 +149,8 @@ service cloud.firestore {
     match /users/{uid} {
       function validProfile() {
         return request.resource.data.keys().hasOnly(
-          ['name', 'email', 'locale', 'fcm', 'createdAt', 'updatedAt']);
+            ['name', 'email', 'locale', 'fcm', 'createdAt', 'updatedAt'])
+          && hasValidName();
       }
 
       allow read: if isSelf(uid);
@@ -185,7 +194,7 @@ service cloud.firestore {
         // An admin can neither demote nor remove themself, so a church always
         // keeps someone who can manage it. Another admin can do both.
         allow update: if (isAdmin(cid) && hasValidRole() && hasValidGroups()
-              && hasValidZoneTypes(cid)
+              && hasValidZoneTypes(cid) && hasValidName()
               && request.resource.data.uid == uid
               && (!isSelf(uid) || request.resource.data.role == 'admin'))
           || (isSelf(uid) && isMember(cid) && onlyTouches(['notificationPrefs']));

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../data/backend.dart';
+import '../../domain/limits.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../church/links.dart';
@@ -219,6 +220,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 controller: _name,
                 textInputAction: TextInputAction.next,
                 autofillHints: const [AutofillHints.name],
+                maxLength: TextLimits.profileName,
                 decoration: InputDecoration(hintText: l10n.yourName),
                 validator: (v) => (v ?? '').trim().isEmpty ? l10n.nameRequired : null,
               ),

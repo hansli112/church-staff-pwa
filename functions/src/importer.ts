@@ -11,6 +11,8 @@
 //   staff_orders/{type}       {roles: {[duty]: [names]}}
 //   settings/small_group_templates, devotional, …: not imported (v1 drops them)
 
+import { personName } from './limits.js';
+
 const PLACEHOLDER = '待定';
 
 /** Self-host ARGB colour → the hosted palette index (red, orange, yellow, green, blue, purple). */
@@ -46,7 +48,7 @@ export function mapMember(uid: string, u: Doc, joinedAt: unknown) {
   const role = ['admin', 'leader', 'staff', 'member'].includes(u.role as string) ? (u.role as string) : 'member';
   return {
     uid,
-    name: typeof u.name === 'string' ? u.name.trim() : '',
+    name: personName(u.name),
     email: typeof u.email === 'string' ? u.email : '',
     role,
     groups: strings(u.groups).filter((g) => g === 'roster-editors' || g === 'calendar-editors'),

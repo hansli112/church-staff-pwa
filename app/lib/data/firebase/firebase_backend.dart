@@ -321,31 +321,35 @@ class _Profiles implements ProfileRepository {
       _db.doc('users/$uid').live().map((s) => s.exists ? profileFromJson(uid, s.data()!) : null);
 
   @override
-  Future<void> save(UserProfile profile) => _db.runTransaction((tx) async {
-    final ref = _db.doc('users/${profile.uid}');
-    final current = await tx.get(ref);
-    tx.set(ref, {
-      'name': profile.name,
-      'email': profile.email,
-      'locale': profile.locale ?? FieldValue.delete(),
-      'updatedAt': FieldValue.serverTimestamp(),
-      if (!current.exists) 'createdAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-  });
+  Future<void> save(UserProfile profile) => _guard(
+    () => _db.runTransaction((tx) async {
+      final ref = _db.doc('users/${profile.uid}');
+      final current = await tx.get(ref);
+      tx.set(ref, {
+        'name': profile.name,
+        'email': profile.email,
+        'locale': profile.locale ?? FieldValue.delete(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        if (!current.exists) 'createdAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    }),
+  );
 
   @override
-  Future<void> ensure(UserProfile profile) => _db.runTransaction((tx) async {
-    // A transaction reads the server, not the offline cache, so a profile
-    // created on another device is seen and kept.
-    final ref = _db.doc('users/${profile.uid}');
-    if ((await tx.get(ref)).exists) return;
-    tx.set(ref, {
-      'name': profile.name,
-      'email': profile.email,
-      'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-  });
+  Future<void> ensure(UserProfile profile) => _guard(
+    () => _db.runTransaction((tx) async {
+      // A transaction reads the server, not the offline cache, so a profile
+      // created on another device is seen and kept.
+      final ref = _db.doc('users/${profile.uid}');
+      if ((await tx.get(ref)).exists) return;
+      tx.set(ref, {
+        'name': profile.name,
+        'email': profile.email,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    }),
+  );
 }
 
 class _Platform implements PlatformData {
