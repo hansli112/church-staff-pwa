@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/design/theme.dart';
+import 'deep_link.dart';
 import 'l10n/app_localizations.dart';
 import 'router.dart';
 import 'state/providers.dart';
@@ -22,15 +23,15 @@ class MarthaApp extends ConsumerWidget {
     final router = ref.watch(routerProvider);
     // A tapped notification opens the page it is about.
     ref.listen(pushLinksProvider, (_, link) {
-      final l = link.value;
-      if (l != null && l.startsWith('/')) router.go(l);
+      final l = appLocation(link.value);
+      if (l != null) router.go(l);
     });
     // In front, the system shows nothing: say it here, with a way to open it.
     ref.listen(pushNoticesProvider, (_, notice) {
       final n = notice.value;
       final messenger = _messenger.currentState;
       if (n == null || messenger == null) return;
-      final link = n.link;
+      final link = appLocation(n.link);
       messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(
@@ -38,7 +39,7 @@ class MarthaApp extends ConsumerWidget {
             content: Text(n.title.isEmpty ? n.body : '${n.title}：${n.body}'),
             duration: const Duration(seconds: 8),
             persist: false,
-            action: link == null || !link.startsWith('/')
+            action: link == null
                 ? null
                 : SnackBarAction(label: L10n.of(messenger.context).pushView, onPressed: () => router.go(link)),
           ),

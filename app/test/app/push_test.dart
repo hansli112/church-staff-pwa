@@ -55,6 +55,16 @@ void main() {
     expect(router.state.uri.path, '/rosters');
   });
 
+  testWidgets('a notification linking outside the app shows without a way to open it', (tester) async {
+    final push = FakePush();
+    await pumpApp(tester, seededChurch(), overrides: [pushServiceProvider.overrideWithValue(push)]);
+
+    push.notices.add(const PushNotice(title: '恩典堂', body: '有新消息', link: '//evil.example'));
+    await settle(tester);
+    expect(find.text('恩典堂：有新消息'), findsOneWidget);
+    expect(find.text('查看'), findsNothing);
+  });
+
   testWidgets('turning notifications on without allowing them says what to do', (tester) async {
     await pumpApp(tester, seededChurch(), overrides: [pushServiceProvider.overrideWithValue(FakePush())]);
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/notifications');

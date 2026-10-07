@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'deep_link.dart';
 import 'env.dart';
 import 'features/admin/admin_screens.dart';
 import 'features/auth/login_screen.dart';
@@ -53,19 +54,20 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/home',
     refreshListenable: refresh,
     redirect: (context, state) {
-      // A church URL of one of my churches opens that church, at `?to=` if
-      // given (a notification's page). Done here, before any page is built,
-      // so the shell is never pushed twice.
-      final cid = churchUrlId(state.uri);
-      if (cid != null && (ref.read(membershipsProvider).value ?? const []).any((m) => m.churchId == cid)) {
+      // Done here, before any page is built, so the shell is never pushed
+      // twice when a church URL switches church.
+      final target = resolveLink(
+        ref.read(appStageProvider),
+        ref.read(membershipsProvider).value ?? const [],
+        state.uri,
+      );
+      final church = target.church;
+      if (church != null) {
         // After this redirect: changing the church now would rebuild the
         // app stage twice in one frame.
-        scheduleMicrotask(() => ref.read(selectedChurchProvider.notifier).select(cid));
-        final to = state.uri.queryParameters['to'];
-        // A page of this app only, not another site (`//host`).
-        return to != null && to.startsWith('/') && !to.startsWith('//') ? to : '/home';
+        scheduleMicrotask(() => ref.read(selectedChurchProvider.notifier).select(church));
       }
-      return redirectFor(ref.read(appStageProvider), state.uri);
+      return target.location;
     },
     routes: [
       page('/loading', (_) => const LoadingScreen()),
@@ -174,67 +176,6 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
-
-/// The church ID of a church URL (`/c/ID`), or null.
-@visibleForTesting
-String? churchUrlId(Uri uri) {
-  final parts = uri.pathSegments;
-  return parts.length == 2 && parts[0] == 'c' && parts[1].isNotEmpty ? parts[1] : null;
-}
-
-/// Where to send someone at [uri] given the app [stage]; null stays.
-///
-/// A redirect away from the page someone asked for (an invite link, a deep
-/// link) carries it in `from`, so they land there once signed in.
-@visibleForTesting
-String? redirectFor(AppStage stage, Uri uri) {
-  final path = uri.path;
-  bool at(String prefix) => path == prefix || path.startsWith('$prefix/');
-  final from = uri.queryParameters['from'];
-
-  String withFrom(String target) {
-    final keep = from ?? (at('/loading') || at('/login') ? null : uri.toString());
-    return keep == null ? target : '$target?from=${Uri.encodeComponent(keep)}';
-  }
-
-  /// Leaves a waiting page for [from] if this stage allows it.
-  String? resume(String fallback) {
-    if (from != null) {
-      final target = Uri.parse(from);
-      final again = redirectFor(stage, target);
-      return again ?? target.toString();
-    }
-    return fallback;
-  }
-
-  switch (stage) {
-    case AppStage.loading:
-      return at('/loading') ? null : withFrom('/loading');
-    case AppStage.signedOut:
-      if (at('/login')) return null;
-      if (at('/loading')) {
-        return from == null ? '/login' : '/login?from=${Uri.encodeComponent(from)}';
-      }
-      return withFrom('/login');
-    case AppStage.noChurch:
-      if (at('/welcome') || at('/c') || at('/account') || at('/dev')) {
-        return null;
-      }
-      if (at('/loading') || at('/login')) return resume('/welcome');
-      return '/welcome';
-    case AppStage.churchClosed:
-      if (at('/closed') || at('/c') || at('/account') || at('/welcome') || at('/dev')) {
-        return null;
-      }
-      if (at('/loading') || at('/login')) return resume('/closed');
-      return '/closed';
-    case AppStage.ready:
-      if (at('/loading') || at('/login') || at('/welcome') || at('/closed')) {
-        return resume('/home');
-      }
-      return null;
-  }
-}
 
 /// Shown for the moment before the first auth state arrives. Just the
 /// background: no full-screen spinner.
