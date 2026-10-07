@@ -24,8 +24,12 @@ final prefsProvider = Provider<SharedPreferences>(
 /// A test moves time by giving its backend a clock of its own.
 final clockProvider = Provider<DateTime Function()>((ref) => ref.watch(backendProvider).clock);
 
-/// Today on this device.
-final todayProvider = Provider<Day>((ref) => Day.today(ref.watch(clockProvider)()));
+/// Today on this device. Turns over at midnight while the app stays open.
+final todayProvider = Provider<Day>((ref) {
+  final now = ref.watch(clockProvider)();
+  rebuildAt(ref, DateTime(now.year, now.month, now.day + 1), now);
+  return Day.today(now);
+});
 
 /// Rebuilds the provider at [at], for what changes with time alone. Wakes
 /// at least daily: a browser fires a timer over 24.8 days at once.
