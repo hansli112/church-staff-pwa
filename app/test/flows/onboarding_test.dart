@@ -140,6 +140,50 @@ void main() {
     expect(find.byType(NavigationBar), findsOneWidget);
   });
 
+  testWidgets('an invite to a church I am already in says so and takes me there', (tester) async {
+    final b = seededChurch();
+    b.addChurch('希望堂', id: 'hope');
+    b.addMember('hope', pastor);
+    b.invites['HOPE2026'] = Invite(
+      code: 'HOPE2026',
+      churchId: 'hope',
+      churchName: '希望堂',
+      expiresAt: testNow.add(const Duration(days: 7)),
+    );
+    await pumpApp(tester, b);
+    expect(find.text('恩典堂'), findsOneWidget);
+
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/c/hope/join/HOPE2026');
+    await settle(tester);
+    expect(find.text('希望堂'), findsOneWidget);
+    expect(find.text('你已經是〈希望堂〉的同工'), findsOneWidget);
+    expect(find.text('加入〈希望堂〉'), findsNothing);
+    expect(find.text('加入'), findsNothing);
+
+    await tapText(tester, '首頁');
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.text('希望堂'), findsOneWidget, reason: 'switched to the church the invite is for');
+  });
+
+  testWidgets('joining a second church from an invite switches to it', (tester) async {
+    final b = seededChurch(as: staffMei);
+    b.addChurch('希望堂', id: 'hope');
+    b.invites['HOPE2026'] = Invite(
+      code: 'HOPE2026',
+      churchId: 'hope',
+      churchName: '希望堂',
+      expiresAt: testNow.add(const Duration(days: 7)),
+    );
+    await pumpApp(tester, b);
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/c/hope/join/HOPE2026');
+    await settle(tester);
+    expect(find.text('加入〈希望堂〉'), findsOneWidget);
+    await tapText(tester, '加入');
+    expect(b.members['hope']!.containsKey('mei'), isTrue);
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.text('希望堂'), findsOneWidget);
+  });
+
   testWidgets('a pasted invite link works as a code', (tester) async {
     final b = MemoryBackend(clock: testClock);
     final cid = b.addChurch('恩典堂');

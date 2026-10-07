@@ -493,6 +493,12 @@ abstract class L10n {
   /// **'已加入〈{church}〉'**
   String joined(String church);
 
+  /// An invite link opened by someone already in that church
+  ///
+  /// In zh, this message translates to:
+  /// **'你已經是〈{church}〉的同工'**
+  String alreadyMember(String church);
+
   /// No description provided for @errInviteInvalid.
   ///
   /// In zh, this message translates to:

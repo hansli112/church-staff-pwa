@@ -102,6 +102,15 @@
       }
     }
   },
+  "alreadyMember": "你已經是〈{church}〉的同工",
+  "@alreadyMember": {
+    "description": "An invite link opened by someone already in that church",
+    "placeholders": {
+      "church": {
+        "type": "String"
+      }
+    }
+  },
   "errInviteInvalid": "找不到這個邀請，請確認邀請碼，或向管理員要新的邀請",
   "errInviteExpired": "這個邀請過期了，請向管理員要新的邀請",
   "errChurchClosed": "這間教會已停用",

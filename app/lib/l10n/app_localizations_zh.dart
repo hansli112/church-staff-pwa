@@ -220,6 +220,11 @@ class L10nZh extends L10n {
   }
 
   @override
+  String alreadyMember(String church) {
+    return '你已經是〈$church〉的同工';
+  }
+
+  @override
   String get errInviteInvalid => '找不到這個邀請，請確認邀請碼，或向管理員要新的邀請';
 
   @override

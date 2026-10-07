@@ -172,7 +172,11 @@ final shownChurchLinkProvider = Provider<({String title, String body, String url
   ref.watch(churchDataProvider);
   final link = ref.watch(churchLinkProvider).value;
   if (link == null) return null;
-  final content = ref.watch(linkContentProvider).value;
+  final loaded = ref.watch(linkContentProvider);
+  // Until a sourced link's content has come, show nothing rather than the
+  // fixed link it may replace a moment later. If it fails, the fixed link.
+  if (link.source != null && !loaded.hasValue && !loaded.hasError) return null;
+  final content = loaded.value;
   final now = ref.watch(clockProvider)();
   final fetched = content?.fetchedAt;
   if (fetched != null) rebuildAt(ref, fetched.add(linkContentFresh), now);
@@ -238,6 +242,11 @@ final serviceRostersProvider = Provider.family<AsyncValue<List<Roster>>, String>
 
 /// The days I serve, soonest first.
 final myServicesProvider = Provider<AsyncValue<List<MyService>>>((ref) {
+  // Watched directly so switching church marks this stale at once. Through
+  // the saved rosters alone, it would go stale only when a newly built 首頁
+  // (after joining or picking a church from an invite) first reads it, and
+  // Riverpod would then schedule its rebuild during a build.
+  ref.watch(churchDataProvider);
   final saved = ref.watch(savedRostersProvider);
   final me = ref.watch(meProvider).value;
   final uid = ref.watch(uidProvider);

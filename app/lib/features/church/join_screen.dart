@@ -16,7 +16,7 @@ final _invitePreviewProvider = FutureProvider.autoDispose.family<Invite, String>
 
 /// Where an invite link (/c/CHURCH/join/CODE) or a typed code
 /// (/welcome/join/CODE) lands, after sign-in if needed. Shows
-/// which church it is before joining.
+/// which church it is before joining, or that I am already in it.
 class JoinScreen extends ConsumerStatefulWidget {
   const JoinScreen({super.key, required this.code});
 
@@ -83,10 +83,18 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
                   children: [
                     ChurchLogo(url: logo),
                     Text(
-                      l10n.joinTitle(invite.churchName),
+                      already ? invite.churchName : l10n.joinTitle(invite.churchName),
                       textAlign: TextAlign.center,
                       style: AppText.title,
                     ),
+                    if (already) ...[
+                      const SizedBox(height: Space.s),
+                      Text(
+                        l10n.alreadyMember(invite.churchName),
+                        textAlign: TextAlign.center,
+                        style: AppText.body.copyWith(color: c.secondaryLabel),
+                      ),
+                    ],
                     const SizedBox(height: Space.xl),
                     if (already)
                       PrimaryButton(

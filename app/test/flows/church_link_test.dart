@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -115,6 +117,38 @@ void main() {
       b.notify();
       await settle(tester);
       expect(find.text('教會官網'), findsOneWidget, reason: 'over 48 hours old');
+    });
+
+    testWidgets('until the content comes, neither it nor the fixed link shows', (tester) async {
+      final held = Completer<void>();
+      final b = seededChurch(as: staffMei)
+        ..churchLinks['grace'] = sourced
+        ..linkContents['grace'] = LinkContent(
+          source: src,
+          title: '今日經文',
+          fetchedAt: testNow.subtract(const Duration(hours: 3)),
+        )
+        ..linkContentHeld = held;
+      await pumpApp(tester, b);
+      expect(find.text('我接下來的服事'), findsOneWidget, reason: 'the rest of the page is up');
+      expect(find.text('教會官網'), findsNothing, reason: 'not the fixed link it is about to replace');
+      expect(find.text('今日經文'), findsNothing);
+
+      held.complete();
+      await settle(tester);
+      expect(find.text('今日經文'), findsOneWidget);
+      expect(find.text('教會官網'), findsNothing);
+    });
+
+    testWidgets('if the content cannot be read, the fixed link shows', (tester) async {
+      final held = Completer<void>();
+      final b = seededChurch(as: staffMei)
+        ..churchLinks['grace'] = sourced
+        ..linkContentHeld = held;
+      await pumpApp(tester, b);
+      held.completeError(StateError('offline'));
+      await settle(tester);
+      expect(find.text('教會官網'), findsOneWidget);
     });
 
     testWidgets('fetched content gives way to the fixed link once 48 hours pass', (tester) async {

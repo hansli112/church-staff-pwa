@@ -91,6 +91,11 @@ class MemoryBackend implements Backend {
   /// Sources fetched by [ChurchData.setLinkSource], in order.
   final linkSourceFetches = <String>[];
 
+  /// Scripted: while set, the link content stream delivers nothing until
+  /// this completes, as on a slow network. Completing it with an error
+  /// fails the stream instead.
+  Completer<void>? linkContentHeld;
+
   /// Scripted Google Calendar: the events per church, and its calendars
   /// ([connectCalendar] stands in for the OAuth callback).
   final calendarEvents = <String, List<CalendarEvent>>{};
@@ -706,10 +711,15 @@ class MemoryChurchData implements ChurchData {
   }
 
   @override
-  Stream<LinkContent?> linkContent() => _b.watch(() {
-    _requireMember();
-    return _b.linkContents[churchId];
-  });
+  Stream<LinkContent?> linkContent() {
+    final content = _b.watch(() {
+      _requireMember();
+      return _b.linkContents[churchId];
+    });
+    final held = _b.linkContentHeld;
+    if (held == null) return content;
+    return Stream.fromFuture(held.future).asyncExpand((_) => content);
+  }
 
   @override
   Stream<WebhookSettings?> webhook() => _b.watch(() {
