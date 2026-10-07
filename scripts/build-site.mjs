@@ -65,6 +65,7 @@ function footer(path) {
       <a href="/privacy">隱私權政策</a>
       <a href="/terms">服務條款</a>
       <a href="https://github.com/hansli112/church-staff-pwa/issues">問題回報</a>
+      <a href="mailto:hansli112871114@gmail.com">聯絡我們</a>
     </nav>
     <p>本服務由個人營運。</p>
   </div>
