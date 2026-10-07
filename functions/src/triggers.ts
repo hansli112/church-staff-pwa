@@ -1,6 +1,7 @@
 import { FieldValue, type DocumentSnapshot } from 'firebase-admin/firestore';
 import type { Storage } from 'firebase-admin/storage';
 
+import { CHURCH_ID } from './access.js';
 import type { Deps } from './common.js';
 import { ICON_FILES, iconStoragePath, makeIcons } from './icons.js';
 import { adminUids, notifyMembers, type PushDeps } from './push.js';
@@ -55,7 +56,7 @@ export type LogoDeps = Deps & { bucket: Pick<ReturnType<Storage['bucket']>, 'fil
  * read still gets its version; the church page then uses it as is.
  */
 export async function onLogoUploaded(deps: LogoDeps, path: string, generation: string) {
-  const match = /^churches\/([A-Za-z0-9]+)\/logo\.png$/.exec(path);
+  const match = new RegExp(`^churches/(${CHURCH_ID})/logo\\.png$`).exec(path);
   if (!match) return false;
   const cid = match[1];
   const ref = deps.db.doc(`churches/${cid}`);

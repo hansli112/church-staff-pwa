@@ -49,6 +49,25 @@ describe('recognizeRoster', () => {
     await rejectsWith(call('other'), 'permissionDenied');
   });
 
+  test('nobody, admins neither, recognizes for a service the church never had', async () => {
+    await church();
+    await db.doc('churches/C1/members/editor').update({ zoneTypes: ['sunday', 'youth'] });
+    const call = (uid: string) =>
+      recognizeRoster({ ...deps, gemini: ok }, caller(uid), { churchId: 'C1', serviceType: 'youth', images: [image] });
+    await rejectsWith(call('pastor'), 'permissionDenied');
+    await rejectsWith(call('editor'), 'permissionDenied');
+    assert.equal((await db.doc('churches/C1/usage/2026-10').get()).exists, false, 'no photo counted');
+  });
+
+  test('a closed church recognizes nothing', async () => {
+    await church();
+    await db.doc('churches/C1').update({ status: 'suspended' });
+    await rejectsWith(
+      recognizeRoster({ ...deps, gemini: ok }, caller('editor'), { churchId: 'C1', serviceType: 'sunday', images: [image] }),
+      'churchClosed',
+    );
+  });
+
   test('the church limit and the platform budget stop it with a reason', async () => {
     await church();
     await db.doc('churches/C1/usage/2026-10').set({ photos: PHOTOS_PER_MONTH });
@@ -104,6 +123,14 @@ describe('photoQuota', () => {
     const q = await photoQuota(deps, caller('staff'), { churchId: 'C1' });
     assert.deepEqual(q, { remaining: PHOTOS_PER_MONTH - 7, limit: PHOTOS_PER_MONTH, platformOpen: true });
     await rejectsWith(photoQuota(deps, caller('other'), { churchId: 'C1' }), 'permissionDenied');
+  });
+
+  test('a closed church has no quota to show', async () => {
+    await church();
+    for (const status of ['suspended', 'deleted']) {
+      await db.doc('churches/C1').update({ status });
+      await rejectsWith(photoQuota(deps, caller('staff'), { churchId: 'C1' }), 'churchClosed');
+    }
   });
 });
 

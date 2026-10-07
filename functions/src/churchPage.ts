@@ -1,5 +1,6 @@
 import type { Storage } from 'firebase-admin/storage';
 
+import { CHURCH_ID } from './access.js';
 import type { Deps } from './common.js';
 import { publicLogoPath } from './church.js';
 import { ICON_FILES, iconStoragePath, type IconFile } from './icons.js';
@@ -151,7 +152,7 @@ const notFound = (body = ''): PageResponse => ({ status: 404, headers: { 'conten
 
 /** Answers one request under /c/. [path] is the request path. */
 export async function churchPage(deps: PageDeps, path: string): Promise<PageResponse> {
-  const match = /^\/c\/([A-Za-z0-9]{1,64})(\/.*)?$/.exec(path);
+  const match = new RegExp(`^/c/(${CHURCH_ID})(/.*)?$`).exec(path);
   const cid = match?.[1];
   const rest = match?.[2] ?? '';
   const church = cid ? await deps.db.doc(`churches/${cid}`).get() : null;

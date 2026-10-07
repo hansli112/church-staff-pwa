@@ -505,6 +505,12 @@ abstract class L10n {
   /// **'這個邀請過期了，請向管理員要新的邀請'**
   String get errInviteExpired;
 
+  /// The church is suspended or deleted (教會停用), so nothing can be done in it
+  ///
+  /// In zh, this message translates to:
+  /// **'這間教會已停用'**
+  String get errChurchClosed;
+
   /// No description provided for @churchSuspendedTitle.
   ///
   /// In zh, this message translates to:

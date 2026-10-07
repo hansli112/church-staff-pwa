@@ -38,6 +38,7 @@ export interface Deps {
  * app/lib/data/backend.dart.
  */
 export type Reason =
+  | 'churchClosed'
   | 'unverifiedEmail'
   | 'duplicateName'
   | 'inviteInvalid'
@@ -74,17 +75,15 @@ export function text(value: unknown, max: number): string {
   return t;
 }
 
+/**
+ * A uid or another document ID the caller names (a pending member). Church
+ * IDs have their own, stricter check: churchId() in access.ts.
+ */
 export function id(value: unknown): string {
   if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(value)) {
     fail('invalid-argument', 'unknown');
   }
   return value;
-}
-
-/** Requires [caller] to be an admin of the church, whatever its status. */
-export async function requireChurchAdmin(db: Firestore, cid: string, caller: Caller) {
-  const member = await db.doc(`churches/${cid}/members/${caller.uid}`).get();
-  if (member.get('role') !== 'admin') fail('permission-denied', 'permissionDenied');
 }
 
 export const serverTime = () => FieldValue.serverTimestamp();

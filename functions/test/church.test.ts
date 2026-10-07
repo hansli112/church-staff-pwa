@@ -129,14 +129,15 @@ describe('delete and restore', () => {
     await seedChurch('C1', { alice: 'admin' });
     await deleteChurch(deps, caller('alice'), { churchId: 'C1' });
     setNow(new Date('2026-11-05T10:00:00+08:00'));
-    await rejectsWith(restoreChurch(deps, caller('alice'), { churchId: 'C1' }), 'unknown');
+    await rejectsWith(restoreChurch(deps, caller('alice'), { churchId: 'C1' }), 'churchClosed');
   });
 });
 
 describe('suspension', () => {
   test('an admin cannot delete-and-restore their way out of a suspension', async () => {
     await seedChurch('C1', { alice: 'admin' }, { status: 'suspended' });
-    await rejectsWith(deleteChurch(deps, caller('alice'), { churchId: 'C1' }), 'permissionDenied');
+    await rejectsWith(deleteChurch(deps, caller('alice'), { churchId: 'C1' }), 'churchClosed');
+    await rejectsWith(restoreChurch(deps, caller('alice'), { churchId: 'C1' }), 'churchClosed');
     assert.equal((await db.doc('churches/C1').get()).get('status'), 'suspended');
   });
 });

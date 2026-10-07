@@ -352,7 +352,7 @@ describe('calendar webhooks', () => {
     await db.doc('churches/C1').update({ status: 'suspended' });
     await rejectsWith(
       calendarWrite(d, caller('pastor'), { churchId: 'C1', op: 'upsert', event: { title: 'x', start: '2026-10-10', end: '2026-10-11', allDay: true } }),
-      'permissionDenied',
+      'churchClosed',
     );
     assert.equal(await deliver({ ...d, secretKey: config.tokenKey }, 'C1', 'calendar.created', {}), null);
     assert.equal(sent().length, 0);

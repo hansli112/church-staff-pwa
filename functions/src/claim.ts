@@ -1,6 +1,7 @@
 import { FieldValue } from 'firebase-admin/firestore';
 
-import { fail, requireCaller, requireChurchAdmin, serverTime, type Caller, type Deps } from './common.js';
+import { churchAccess } from './access.js';
+import { fail, id, requireCaller, serverTime, type Caller, type Deps } from './common.js';
 import { emailHash } from './move.js';
 
 /**
@@ -16,11 +17,6 @@ import { emailHash } from './move.js';
  * groups and zones, the rosters that pointed at the pending member point at
  * them, and the pending member and its index entry are deleted.
  */
-const cidOf = (v: unknown) =>
-  typeof v === 'string' && /^[A-Za-z0-9]{1,64}$/.test(v) ? v : fail('invalid-argument', 'unknown');
-const pidOf = (v: unknown) =>
-  typeof v === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(v) ? v : fail('invalid-argument', 'unknown');
-
 /** The verified email's hash, or null: an unverified email finds nothing. */
 function callerHash(c: Caller) {
   return c.emailVerified && c.email ? emailHash(c.email) : null;
@@ -113,15 +109,13 @@ function mergeZones(a: unknown, b: unknown) {
 /** Joins the caller to the church as the pending member with their email. */
 export async function claimPending(deps: Deps, caller: Caller | null, data: unknown) {
   const c = requireCaller(caller);
-  const input = (data ?? {}) as { churchId?: unknown; pendingId?: unknown };
-  const cid = cidOf(input.churchId);
-  const pid = pidOf(input.pendingId);
+  const pid = id((data as { pendingId?: unknown })?.pendingId);
   const hash = callerHash(c);
   if (!hash) fail('failed-precondition', 'unverifiedEmail');
-  const church = await deps.db.doc(`churches/${cid}`).get();
-  if (church.get('status') !== 'active') fail('failed-precondition', 'permissionDenied');
-  const memberRef = deps.db.doc(`churches/${cid}/members/${c.uid}`);
-  const [pending, member] = await Promise.all([deps.db.doc(`churches/${cid}/pendingMembers/${pid}`).get(), memberRef.get()]);
+  // Not a member yet, most likely: anyone signed in, but the church open.
+  const { cid, member } = await churchAccess(deps, c, data, 'anyone');
+  const memberRef = member.ref;
+  const pending = await deps.db.doc(`churches/${cid}/pendingMembers/${pid}`).get();
   if (!pending.exists) {
     // Claimed already (a double tap, a retry): fine if it was by them.
     if (member.exists) return { churchId: cid };
@@ -159,14 +153,10 @@ export async function claimPending(deps: Deps, caller: Caller | null, data: unkn
  * (admins): for someone who joined with a different email.
  */
 export async function mergePending(deps: Deps, caller: Caller | null, data: unknown) {
-  const c = requireCaller(caller);
-  const input = (data ?? {}) as { churchId?: unknown; pendingId?: unknown; uid?: unknown };
-  const cid = cidOf(input.churchId);
-  const pid = pidOf(input.pendingId);
-  const uid = pidOf(input.uid);
-  await requireChurchAdmin(deps.db, cid, c);
-  const church = await deps.db.doc(`churches/${cid}`).get();
-  if (church.get('status') !== 'active') fail('failed-precondition', 'permissionDenied');
+  const input = (data ?? {}) as { pendingId?: unknown; uid?: unknown };
+  const pid = id(input.pendingId);
+  const uid = id(input.uid);
+  const { cid } = await churchAccess(deps, caller, data, 'admin');
   // Both looked up under this church only, so nothing crosses churches.
   const [pending, member] = await Promise.all([
     deps.db.doc(`churches/${cid}/pendingMembers/${pid}`).get(),

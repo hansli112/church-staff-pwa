@@ -3,7 +3,8 @@ import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { Timestamp } from 'firebase-admin/firestore';
 
 import { decrypt, encrypt } from './calendar.js';
-import { fail, requireCaller, requireChurchAdmin, type Caller, type Deps } from './common.js';
+import { churchAccess } from './access.js';
+import { fail, type Caller, type Deps } from './common.js';
 
 /**
  * 外部通知 (webhooks): a church's admin gives an https URL and a secret;
@@ -50,20 +51,6 @@ const isHttps = (url: string) => {
   }
 };
 
-function churchIdOf(data: unknown): string {
-  const v = (data as { churchId?: unknown })?.churchId;
-  if (typeof v !== 'string' || !/^[A-Za-z0-9]{1,64}$/.test(v)) fail('invalid-argument', 'unknown');
-  return v;
-}
-
-async function requireOpenChurchAdmin(deps: Deps, cid: string, caller: Caller | null) {
-  const c = requireCaller(caller);
-  await requireChurchAdmin(deps.db, cid, c);
-  const church = await deps.db.doc(`churches/${cid}`).get();
-  if (church.get('status') !== 'active') fail('failed-precondition', 'permissionDenied');
-  return church;
-}
-
 /** A secret the admin typed: 16–200 printable characters. */
 function givenSecret(v: unknown): string | null {
   if (v === undefined || v === null || v === '') return null;
@@ -83,8 +70,7 @@ async function storeSecret(deps: WebhookDeps, cid: string, secret: string) {
  * webhooks off and forgets the secret.
  */
 export async function webhookSave(deps: WebhookDeps, caller: Caller | null, data: unknown) {
-  const cid = churchIdOf(data);
-  await requireOpenChurchAdmin(deps, cid, caller);
+  const { cid } = await churchAccess(deps, caller, data, 'admin');
   const input = data as { url?: unknown; events?: { calendar?: unknown; roster?: unknown }; secret?: unknown };
   if (input.url === null) {
     await forgetWebhook(deps, cid);
@@ -114,8 +100,7 @@ export async function webhookSave(deps: WebhookDeps, caller: Caller | null, data
 
 /** Replaces the secret with the one given or a new one, returned once. */
 export async function webhookRotateSecret(deps: WebhookDeps, caller: Caller | null, data: unknown) {
-  const cid = churchIdOf(data);
-  await requireOpenChurchAdmin(deps, cid, caller);
+  const { cid } = await churchAccess(deps, caller, data, 'admin');
   if (!(await deps.db.doc(`churches/${cid}/settings/webhook`).get()).exists) fail('failed-precondition', 'unknown');
   const typed = givenSecret((data as { secret?: unknown }).secret);
   const secret = typed ?? newSecret();
@@ -125,8 +110,7 @@ export async function webhookRotateSecret(deps: WebhookDeps, caller: Caller | nu
 
 /** Sends a ping now and returns how it went (admins). */
 export async function webhookTest(deps: WebhookDeps, caller: Caller | null, data: unknown) {
-  const cid = churchIdOf(data);
-  const church = await requireOpenChurchAdmin(deps, cid, caller);
+  const { cid, church } = await churchAccess(deps, caller, data, 'admin');
   const result = await deliver(deps, cid, 'ping', { source: 'martha', churchId: cid, churchName: church.get('name') });
   if (!result) fail('failed-precondition', 'unknown');
   return result;

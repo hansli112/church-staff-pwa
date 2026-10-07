@@ -1,7 +1,8 @@
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import type { Storage } from 'firebase-admin/storage';
 
-import { fail, requireCaller, requireChurchAdmin, serverTime, text, type Caller, type Deps } from './common.js';
+import { churchAccess, churchClosed, churchId } from './access.js';
+import { fail, requireCaller, serverTime, text, type Caller, type Deps } from './common.js';
 import { nameKey } from './text.js';
 
 /** How long a deleted church can be restored. */
@@ -96,31 +97,31 @@ export async function openChurch(
 
 /** Marks the church deleted. Restorable for [RESTORE_DAYS] days. */
 export async function deleteChurch(deps: Deps, caller: Caller | null, data: unknown) {
-  const c = requireCaller(caller);
-  const cid = churchId(data);
-  await requireChurchAdmin(deps.db, cid, c);
+  const { cid } = await churchAccess(deps, caller, data, 'admin');
   await deps.db.runTransaction(async (tx) => {
     const ref = deps.db.doc(`churches/${cid}`);
-    // Only an open church can be deleted: deleting and restoring a church
-    // the operator suspended would otherwise reopen it.
-    if ((await tx.get(ref)).get('status') !== 'active') fail('failed-precondition', 'permissionDenied');
+    // Only an open church can be deleted, checked again here: deleting and
+    // restoring a church the operator just suspended would reopen it.
+    if ((await tx.get(ref)).get('status') !== 'active') churchClosed();
     tx.update(ref, { status: 'deleted', deletedAt: Timestamp.fromDate(deps.now()) });
   });
   return {};
 }
 
+/**
+ * Reopens a church its admin deleted, within [RESTORE_DAYS] days. An open
+ * church stays as it is; a suspended one, or one deleted too long ago, is
+ * closed for good as far as its admin goes.
+ */
 export async function restoreChurch(deps: Deps, caller: Caller | null, data: unknown) {
-  const c = requireCaller(caller);
-  const cid = churchId(data);
-  await requireChurchAdmin(deps.db, cid, c);
+  const { cid } = await churchAccess(deps, caller, data, 'admin', { closed: 'allow' });
   await deps.db.runTransaction(async (tx) => {
     const ref = deps.db.doc(`churches/${cid}`);
     const snap = await tx.get(ref);
-    if (snap.get('status') !== 'deleted') return;
+    if (snap.get('status') === 'active') return;
+    if (snap.get('status') !== 'deleted') churchClosed();
     const deletedAt = snap.get('deletedAt') as Timestamp | null;
-    if (deletedAt && deps.now().getTime() - deletedAt.toMillis() > RESTORE_DAYS * 86400e3) {
-      fail('failed-precondition', 'unknown');
-    }
+    if (deletedAt && deps.now().getTime() - deletedAt.toMillis() > RESTORE_DAYS * 86400e3) churchClosed();
     tx.update(ref, { status: 'active', deletedAt: null });
   });
   return {};
@@ -175,7 +176,7 @@ export function publicLogoPath(cid: string, version: string, file = 'logo.png') 
  * who is not a member. Public: the same is on the church page anyway.
  */
 export async function churchPreview(deps: Deps, _caller: Caller | null, data: unknown) {
-  const cid = churchId(data);
+  const cid = churchId((data as { churchId?: unknown })?.churchId);
   const snap = await deps.db.doc(`churches/${cid}`).get();
   if (snap.get('status') !== 'active') fail('not-found', 'notFound');
   const version = snap.get('logoVersion') as string | undefined;
@@ -184,12 +185,4 @@ export async function churchPreview(deps: Deps, _caller: Caller | null, data: un
     name: snap.get('name') as string,
     logoPath: version ? publicLogoPath(cid, version) : null,
   };
-}
-
-function churchId(data: unknown): string {
-  const value = (data as { churchId?: unknown })?.churchId;
-  if (typeof value !== 'string' || !/^[A-Za-z0-9]{1,64}$/.test(value)) {
-    fail('invalid-argument', 'unknown');
-  }
-  return value;
 }

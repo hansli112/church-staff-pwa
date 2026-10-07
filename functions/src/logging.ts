@@ -1,5 +1,6 @@
 import { logger } from 'firebase-functions/v2';
 
+import { isChurchId } from './access.js';
 import { fail, requireCaller, type Caller } from './common.js';
 
 const MAX_MESSAGE = 1000;
@@ -29,9 +30,7 @@ export function logClientError(caller: Caller | null, data: unknown) {
   if (typeof input.stack !== 'string' || input.stack.length > MAX_STACK) {
     fail('invalid-argument', 'unknown');
   }
-  const cid = typeof input.churchId === 'string' && /^[A-Za-z0-9]{1,64}$/.test(input.churchId)
-    ? input.churchId
-    : null;
+  const cid = isChurchId(input.churchId) ? input.churchId : null;
   const message = scrub(input.message);
   const stack = scrub(input.stack);
   // write(), not error(): error() appends this function's own stack trace,

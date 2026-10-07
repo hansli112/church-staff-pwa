@@ -702,6 +702,38 @@ class MemoryCloud implements CloudApi {
   final loggedErrors = <String>[];
   final stats = <DailyStats>[];
 
+  /// The caller's access to [cid], decided as functions/src/access.ts does
+  /// for every function that acts in a church: a non-member is refused, a
+  /// member of a closed church is told it is closed, then [allowed] decides.
+  /// [anyone] lets in non-members (claiming a pending member), [allowClosed]
+  /// a closed church (restoring it).
+  Member? _access(
+    String cid, {
+    bool Function(Member me)? allowed,
+    bool anyone = false,
+    bool allowClosed = false,
+  }) {
+    final uid = _b.auth.currentUser?.uid;
+    if (uid == null) throw const CloudException(CloudErrorCode.permissionDenied);
+    final church = _b.churches[cid];
+    final me = _b.memberOf(cid, uid);
+    if (anyone) {
+      if (church == null) throw const CloudException(CloudErrorCode.notFound);
+    } else if (me == null) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    if (!(church?.isActive ?? false) && !allowClosed) {
+      throw const CloudException(CloudErrorCode.churchClosed);
+    }
+    if (allowed != null && (me == null || !allowed(me))) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    return me;
+  }
+
+  Member _admin(String cid, {bool allowClosed = false}) =>
+      _access(cid, allowed: (me) => me.isAdmin, allowClosed: allowClosed)!;
+
   @override
   Future<String> createChurch(String name) async {
     final user = _b.auth.currentUser;
@@ -882,9 +914,8 @@ class MemoryCloud implements CloudApi {
   Future<String> claimPending(String churchId, String pendingId) async {
     final user = _b.auth.currentUser;
     if (user == null || !user.verified) throw const CloudException(CloudErrorCode.unverifiedEmail);
-    if (!(_b.churches[churchId]?.isActive ?? false)) throw const CloudException(CloudErrorCode.permissionDenied);
+    final existing = _access(churchId, anyone: true);
     final p = _b.pendingMembers[churchId]?[pendingId];
-    final existing = _b.memberOf(churchId, user.uid);
     if (p == null) {
       // Claimed already (a double tap, a retry): fine if it was by them.
       if (existing != null) return churchId;
@@ -912,7 +943,7 @@ class MemoryCloud implements CloudApi {
 
   @override
   Future<void> mergePending(String churchId, String pendingId, String uid) async {
-    _b.requireAdmin(churchId);
+    _admin(churchId);
     final p = _b.pendingMembers[churchId]?[pendingId];
     final m = _b.memberOf(churchId, uid);
     if (p == null || m == null) throw const CloudException(CloudErrorCode.notFound);
@@ -940,7 +971,7 @@ class MemoryCloud implements CloudApi {
     bool roster = false,
     String? secret,
   }) async {
-    _b.requireAdmin(churchId);
+    _admin(churchId);
     if (url == null) {
       _b.webhooks.remove(churchId);
       _b.webhookSecrets.remove(churchId);
@@ -968,7 +999,7 @@ class MemoryCloud implements CloudApi {
 
   @override
   Future<String?> webhookRotateSecret(String churchId, {String? secret}) async {
-    _b.requireAdmin(churchId);
+    _admin(churchId);
     if (!_b.webhooks.containsKey(churchId)) throw const CloudException(CloudErrorCode.unknown);
     if (secret != null && secret.length < 16) throw const CloudException(CloudErrorCode.unknown, 'secret');
     final next = secret ?? _newSecret();
@@ -978,7 +1009,7 @@ class MemoryCloud implements CloudApi {
 
   @override
   Future<WebhookDelivery> webhookTest(String churchId) async {
-    _b.requireAdmin(churchId);
+    _admin(churchId);
     final hook = _b.webhooks[churchId];
     if (hook == null) throw const CloudException(CloudErrorCode.unknown);
     _b.webhookSent.add((churchId, 'ping'));
@@ -999,7 +1030,7 @@ class MemoryCloud implements CloudApi {
 
   @override
   Future<LinkSourceResult> setLinkSource(String churchId, String? source, int fetchMinute) async {
-    _b.requireAdmin(churchId);
+    _admin(churchId);
     final link = _b.churchLinks[churchId];
     if (link == null) throw const CloudException(CloudErrorCode.unknown, 'noLink');
     ChurchLink next(String? s, int m) =>
@@ -1040,24 +1071,16 @@ class MemoryCloud implements CloudApi {
     return result;
   }
 
-  /// An admin of [cid], whatever its status.
-  void _requireChurchAdmin(String cid) {
-    if (!(_b.memberOf(cid, _b.auth.currentUser?.uid)?.isAdmin ?? false)) {
-      throw const CloudException(CloudErrorCode.permissionDenied);
-    }
-  }
-
   /// How long a deleted church can be restored (RESTORE_DAYS in
   /// functions/src/church.ts).
   static const restoreFor = Duration(days: 30);
 
   @override
   Future<void> deleteChurch(String churchId) async {
-    _requireChurchAdmin(churchId);
-    final c = _b.churches[churchId]!;
     // Only an open church: deleting and restoring a suspended one would
     // reopen it.
-    if (!c.isActive) throw const CloudException(CloudErrorCode.permissionDenied);
+    _admin(churchId);
+    final c = _b.churches[churchId]!;
     _b.churches[churchId] = Church(
       id: c.id,
       name: c.name,
@@ -1071,12 +1094,12 @@ class MemoryCloud implements CloudApi {
 
   @override
   Future<void> restoreChurch(String churchId) async {
-    _requireChurchAdmin(churchId);
+    _admin(churchId, allowClosed: true);
     final c = _b.churches[churchId]!;
-    if (c.status != ChurchStatus.deleted) return;
+    if (c.isActive) return;
     final deletedAt = c.deletedAt;
-    if (deletedAt != null && _b.clock().difference(deletedAt) > restoreFor) {
-      throw const CloudException(CloudErrorCode.unknown);
+    if (c.status != ChurchStatus.deleted || (deletedAt != null && _b.clock().difference(deletedAt) > restoreFor)) {
+      throw const CloudException(CloudErrorCode.churchClosed);
     }
     _b.churches[churchId] = Church(id: c.id, name: c.name, logoUrl: c.logoUrl, homeName: c.homeName);
     _b.notify();
@@ -1138,8 +1161,10 @@ class MemoryCloud implements CloudApi {
   @override
   Future<void> adminSetStatus(String churchId, ChurchStatus status) async {
     _requireOperator();
-    if (status == ChurchStatus.deleted || _b.churches[churchId]?.status == ChurchStatus.deleted) {
-      throw const CloudException(CloudErrorCode.unknown);
+    if (status == ChurchStatus.deleted) throw const CloudException(CloudErrorCode.unknown);
+    // A deleted church is its admin's to restore, not the operator's.
+    if (_b.churches[churchId]?.status == ChurchStatus.deleted) {
+      throw const CloudException(CloudErrorCode.churchClosed);
     }
     _b.churches[churchId] = _b.churches[churchId]!.copyWith(status: status);
     _b.notify();
@@ -1166,18 +1191,14 @@ class MemoryCloud implements CloudApi {
     });
   }
 
-  void _requireCalendarEditor(String cid) {
-    if (!_b.requireMember(cid).inGroup(Group.calendarEditors)) {
-      throw const CloudException(CloudErrorCode.permissionDenied);
-    }
-  }
+  void _requireCalendarEditor(String cid) => _access(cid, allowed: (me) => me.inGroup(Group.calendarEditors));
 
   // Google Calendar itself is scripted: [connectCalendar], the calendars
   // [calendarList] offers and the events in [MemoryBackend.calendarEvents].
 
   @override
   Future<Uri> calendarAuthUrl(String churchId) async {
-    _b.requireAdmin(churchId);
+    _admin(churchId);
     return Uri.parse('https://accounts.google.com/o/oauth2/v2/auth?state=memory');
   }
 
@@ -1189,20 +1210,20 @@ class MemoryCloud implements CloudApi {
 
   @override
   Future<List<({String id, String name})>> calendarList(String churchId) async {
-    _b.requireAdmin(churchId);
+    _admin(churchId);
     return const [(id: 'cal-1', name: '教會行事曆'), (id: 'cal-2', name: '青年行事曆')];
   }
 
   @override
   Future<void> calendarSelect(String churchId, String calendarId, String calendarName) async {
-    _b.requireAdmin(churchId);
+    _admin(churchId);
     _b.calendars[churchId] = CalendarSettings(connected: true, calendarName: calendarName);
     _b.notify();
   }
 
   @override
   Future<void> calendarDisconnect(String churchId) async {
-    _b.requireAdmin(churchId);
+    _admin(churchId);
     _b.calendars.remove(churchId);
     _b.calendarEvents.remove(churchId);
     _b.notify();
@@ -1210,7 +1231,7 @@ class MemoryCloud implements CloudApi {
 
   @override
   Future<List<CalendarEvent>> calendarEvents(String churchId, String month) async {
-    _b.requireMember(churchId);
+    _access(churchId);
     if (_b.calendars[churchId]?.needsReconnect ?? false) {
       throw const CloudException(CloudErrorCode.unknown, 'reconnect');
     }
@@ -1257,9 +1278,7 @@ class MemoryCloud implements CloudApi {
 
   @override
   Future<PhotoQuota> photoQuota(String churchId) async {
-    if (_b.memberOf(churchId, _b.auth.currentUser?.uid) == null) {
-      throw const CloudException(CloudErrorCode.permissionDenied);
-    }
+    _access(churchId);
     return PhotoQuota(
       remaining: max(0, photoLimit - (photosUsed[churchId] ?? 0)),
       limit: photoLimit,
@@ -1269,6 +1288,10 @@ class MemoryCloud implements CloudApi {
 
   @override
   Future<List<dynamic>> recognizeRoster(String churchId, String serviceType, List<PhotoInput> images) async {
+    _access(
+      churchId,
+      allowed: (me) => _b.services[churchId]!.ids.contains(serviceType) && me.canEditRosters(serviceType),
+    );
     if (!photoPlatformOpen) throw const CloudException(CloudErrorCode.quotaExceeded, 'platform');
     if ((photosUsed[churchId] ?? 0) >= photoLimit) throw const CloudException(CloudErrorCode.quotaExceeded, 'church');
     photosUsed[churchId] = (photosUsed[churchId] ?? 0) + 1;

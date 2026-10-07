@@ -1,6 +1,7 @@
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
-import { dateKeyUtc8, fail, requireCaller, requireChurchAdmin, type Caller, type Deps } from './common.js';
+import { churchAccess } from './access.js';
+import { dateKeyUtc8, fail, type Caller, type Deps } from './common.js';
 
 /**
  * 教會連結的每日內容來源: an admin gives a JSON URL and a time of day; the
@@ -151,12 +152,8 @@ async function runFetch(deps: Deps, cid: string, source: string): Promise<FetchR
  * a new time alone takes effect from its next occurrence.
  */
 export async function setLinkSource(deps: Deps, caller: Caller | null, data: unknown) {
-  const c = requireCaller(caller);
-  const input = (data ?? {}) as { churchId?: unknown; source?: unknown; fetchMinute?: unknown };
-  const cid = typeof input.churchId === 'string' && /^[A-Za-z0-9]{1,64}$/.test(input.churchId) ? input.churchId : fail('invalid-argument', 'unknown');
-  await requireChurchAdmin(deps.db, cid, c);
-  const church = await deps.db.doc(`churches/${cid}`).get();
-  if (church.get('status') !== 'active') fail('permission-denied', 'permissionDenied');
+  const { cid } = await churchAccess(deps, caller, data, 'admin');
+  const input = (data ?? {}) as { source?: unknown; fetchMinute?: unknown };
   const linkRef = deps.db.doc(`churches/${cid}/settings/link`);
   if (!(await linkRef.get()).exists) fail('failed-precondition', 'unknown', 'noLink');
   const scheduleRef = deps.db.doc(`linkSources/${cid}`);

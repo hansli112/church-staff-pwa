@@ -93,7 +93,7 @@ describe('claiming', () => {
     const cid = await moved();
     await db.doc(`churches/${cid}`).update({ status: 'suspended' });
     assert.deepEqual((await pendingClaims(deps, mei())).claims, []);
-    await rejectsWith(claimPending(deps, mei(), { churchId: cid, pendingId: 'old-mei' }), 'permissionDenied');
+    await rejectsWith(claimPending(deps, mei(), { churchId: cid, pendingId: 'old-mei' }), 'churchClosed');
   });
 });
 

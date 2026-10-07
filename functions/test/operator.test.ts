@@ -70,6 +70,8 @@ describe('operator back office', () => {
     await adminSetStatus(deps, op, { churchId: 'C1', status: 'active' });
     assert.equal((await db.doc('churches/C1').get()).get('status'), 'active');
     await rejectsWith(adminSetStatus(deps, op, { churchId: 'C1', status: 'deleted' }), 'unknown');
+    await db.doc('churches/C1').update({ status: 'deleted' });
+    await rejectsWith(adminSetStatus(deps, op, { churchId: 'C1', status: 'active' }), 'churchClosed');
   });
 });
 

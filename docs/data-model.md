@@ -61,6 +61,14 @@
 
 規則做不到的檢查都放在後端：建立教會（email 已驗證、`nameKey` 不重複）、邀請加入、帳號刪除、平台後台（改名、轉移管理員、停用）。
 
+在某間教會裡做事的 Function 都先經過 `functions/src/access.ts`，判斷和上表的規則一樣，依序：
+
+1. 不是這間教會的同工 → `permission-denied`（reason `permissionDenied`），不透露教會的狀態。
+2. 教會停用（`suspended` 或 `deleted`）→ `failed-precondition`、reason `churchClosed`，不管這位同工原本能做什麼；App 顯示「這間教會已停用」。只有還原教會（`restoreChurch`）放行停用中的教會，而且只還原 30 天內刪除的；營運者停用的、刪除超過 30 天的一樣是 `churchClosed`。
+3. 權限不夠 → `permissionDenied`。等級有同工、權限群組（admin 都算）、admin，以及 roster editor：教會有過這個聚會別（`settings/services` 的 `ids`），而且是 admin 或在 roster-editors 裡、`zoneTypes` 有它。
+
+例外：邀請停用教會的回 `inviteInvalid`，教會預覽回 `notFound`（給還不是同工的人看）；排程和觸發器遇到停用的教會直接略過。Firestore 直接讀寫被規則擋下時，規則分不出原因，一律是 permission-denied。
+
 `previewInvite` 不用登入：邀請連結開的登入頁要能顯示是哪間教會邀請。沒登入時只回教會名稱；登入後才回教會 id 和到期日。邀請碼本身就是秘密，拿到碼就能註冊加入，所以這不多露出什麼。
 
 ## Storage

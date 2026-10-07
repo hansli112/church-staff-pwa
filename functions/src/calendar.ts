@@ -2,7 +2,8 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
-import { fail, requireCaller, type Caller, type Deps } from './common.js';
+import { churchAccess } from './access.js';
+import { fail, type Caller, type Deps } from './common.js';
 import { deliver } from './webhook.js';
 
 /**
@@ -80,28 +81,9 @@ export function decrypt(sealed: string, keyB64: string) {
 
 export type CalDeps = Deps & { google: GoogleApi; config: OAuthConfig };
 
-const cid = (data: unknown) => {
-  const v = (data as { churchId?: unknown })?.churchId;
-  if (typeof v !== 'string' || !/^[A-Za-z0-9]{1,64}$/.test(v)) fail('invalid-argument', 'unknown');
-  return v;
-};
-
-async function membership(deps: Deps, churchId: string, c: Caller) {
-  const [church, member] = await Promise.all([
-    deps.db.doc(`churches/${churchId}`).get(),
-    deps.db.doc(`churches/${churchId}/members/${c.uid}`).get(),
-  ]);
-  if (church.get('status') !== 'active' || !member.exists) fail('permission-denied', 'permissionDenied');
-  const admin = member.get('role') === 'admin';
-  const editor = admin || ((member.get('groups') as string[]) ?? []).includes('calendar-editors');
-  return { admin, editor, name: (member.get('name') as string | undefined) || null, churchName: church.get('name') as string };
-}
-
 /** Starts connecting: a Google consent URL bound to this admin and church. */
 export async function calendarAuthUrl(deps: CalDeps, caller: Caller | null, data: unknown) {
-  const c = requireCaller(caller);
-  const churchId = cid(data);
-  if (!(await membership(deps, churchId, c)).admin) fail('permission-denied', 'permissionDenied');
+  const { cid: churchId, caller: c } = await churchAccess(deps, caller, data, 'admin');
   const state = randomBytes(24).toString('base64url');
   await deps.db.doc(`calendarStates/${state}`).set({
     cid: churchId,
@@ -175,17 +157,13 @@ async function access(deps: CalDeps, churchId: string) {
 }
 
 export async function calendarList(deps: CalDeps, caller: Caller | null, data: unknown) {
-  const c = requireCaller(caller);
-  const churchId = cid(data);
-  if (!(await membership(deps, churchId, c)).admin) fail('permission-denied', 'permissionDenied');
+  const { cid: churchId } = await churchAccess(deps, caller, data, 'admin');
   const { token } = await access(deps, churchId);
   return { calendars: await deps.google.calendars(token) };
 }
 
 export async function calendarSelect(deps: CalDeps, caller: Caller | null, data: unknown) {
-  const c = requireCaller(caller);
-  const churchId = cid(data);
-  if (!(await membership(deps, churchId, c)).admin) fail('permission-denied', 'permissionDenied');
+  const { cid: churchId } = await churchAccess(deps, caller, data, 'admin');
   const input = data as { calendarId?: unknown; calendarName?: unknown };
   if (typeof input.calendarId !== 'string' || typeof input.calendarName !== 'string') fail('invalid-argument', 'unknown');
   await deps.db.doc(`calendarTokens/${churchId}`).update({ calendarId: input.calendarId });
@@ -198,9 +176,7 @@ export async function calendarSelect(deps: CalDeps, caller: Caller | null, data:
 }
 
 export async function calendarDisconnect(deps: CalDeps, caller: Caller | null, data: unknown) {
-  const c = requireCaller(caller);
-  const churchId = cid(data);
-  if (!(await membership(deps, churchId, c)).admin) fail('permission-denied', 'permissionDenied');
+  const { cid: churchId } = await churchAccess(deps, caller, data, 'admin');
   await forgetCalendar(deps, churchId);
   return {};
 }
@@ -252,9 +228,7 @@ function monthRange(month: string) {
  * many people opening the calendar at once make one Google call.
  */
 export async function calendarEvents(deps: CalDeps, caller: Caller | null, data: unknown) {
-  const c = requireCaller(caller);
-  const churchId = cid(data);
-  await membership(deps, churchId, c);
+  const { cid: churchId } = await churchAccess(deps, caller, data, 'member');
   const month = String((data as { month?: unknown })?.month ?? '');
   const { from, to } = monthRange(month);
   const cacheRef = deps.db.doc(`calendarCache/${churchId}_${month}`);
@@ -275,10 +249,8 @@ export async function calendarEvents(deps: CalDeps, caller: Caller | null, data:
 
 /** Create, update or delete one event (admins and calendar-editors). */
 export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: unknown) {
-  const c = requireCaller(caller);
-  const churchId = cid(data);
-  const me = await membership(deps, churchId, c);
-  if (!me.editor) fail('permission-denied', 'permissionDenied');
+  const me = await churchAccess(deps, caller, data, { group: 'calendar-editors' });
+  const churchId = me.cid;
   const input = data as { op?: unknown; event?: Partial<CalendarEvent>; eventId?: unknown };
   const { token, calendarId } = await access(deps, churchId);
   if (!calendarId) fail('failed-precondition', 'unknown', 'noCalendar');
@@ -325,9 +297,9 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
       `calendar.${notice.action}`,
       calendarPayload(notice.action, notice.event, {
         churchId,
-        churchName: me.churchName,
-        actorUid: c.uid,
-        actorName: me.name,
+        churchName: me.church.get('name') as string,
+        actorUid: me.caller.uid,
+        actorName: (me.member.get('name') as string | undefined) || null,
       }),
     );
   }

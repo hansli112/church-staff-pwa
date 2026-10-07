@@ -1,6 +1,7 @@
 import { FieldValue } from 'firebase-admin/firestore';
 
-import { dateKeyUtc8, fail, requireCaller, type Caller, type Deps } from './common.js';
+import { churchAccess } from './access.js';
+import { dateKeyUtc8, fail, type Caller, type Deps } from './common.js';
 
 /**
  * 照片辨識: a roster editor sends photos of a paper roster; Gemini on Vertex
@@ -37,25 +38,9 @@ export type Gemini = (
 
 const monthKey = (d: Date) => dateKeyUtc8(d).slice(0, 7);
 
-async function requireEditor(deps: Deps, cid: string, type: string, c: Caller) {
-  const [church, member] = await Promise.all([
-    deps.db.doc(`churches/${cid}`).get(),
-    deps.db.doc(`churches/${cid}/members/${c.uid}`).get(),
-  ]);
-  if (church.get('status') !== 'active' || !member.exists) fail('permission-denied', 'permissionDenied');
-  const admin = member.get('role') === 'admin';
-  const editor = ((member.get('groups') as string[]) ?? []).includes('roster-editors')
-    && ((member.get('zoneTypes') as string[]) ?? []).includes(type);
-  if (!admin && !editor) fail('permission-denied', 'permissionDenied');
-}
-
 /** How many photos the church has left this month, and whether the platform is on. */
 export async function photoQuota(deps: Deps, caller: Caller | null, data: unknown) {
-  const c = requireCaller(caller);
-  const cid = (data as { churchId?: unknown })?.churchId;
-  if (typeof cid !== 'string' || !/^[A-Za-z0-9]{1,64}$/.test(cid)) fail('invalid-argument', 'unknown');
-  const member = await deps.db.doc(`churches/${cid}/members/${c.uid}`).get();
-  if (!member.exists) fail('permission-denied', 'permissionDenied');
+  const { cid } = await churchAccess(deps, caller, data, 'member');
   const month = monthKey(deps.now());
   const [usage, budget] = await Promise.all([
     deps.db.doc(`churches/${cid}/usage/${month}`).get(),
@@ -132,14 +117,10 @@ function parseImages(raw: unknown): GeminiImage[] {
 }
 
 export async function recognizeRoster(deps: Deps & { gemini: Gemini }, caller: Caller | null, data: unknown) {
-  const c = requireCaller(caller);
-  const input = data as { churchId?: unknown; serviceType?: unknown; images?: unknown };
-  const cid = input?.churchId;
+  const input = data as { serviceType?: unknown; images?: unknown };
   const type = input?.serviceType;
-  if (typeof cid !== 'string' || !/^[A-Za-z0-9]{1,64}$/.test(cid) || typeof type !== 'string') {
-    fail('invalid-argument', 'unknown');
-  }
-  await requireEditor(deps, cid, type, c);
+  if (typeof type !== 'string') fail('invalid-argument', 'unknown');
+  const { cid } = await churchAccess(deps, caller, data, { rosterEditor: type });
   const images = parseImages(input.images);
   const { db } = deps;
   const month = monthKey(deps.now());

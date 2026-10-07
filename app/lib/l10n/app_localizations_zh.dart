@@ -226,6 +226,9 @@ class L10nZh extends L10n {
   String get errInviteExpired => '這個邀請過期了，請向管理員要新的邀請';
 
   @override
+  String get errChurchClosed => '這間教會已停用';
+
+  @override
   String churchSuspendedTitle(String church) {
     return '〈$church〉已停用';
   }

@@ -18,6 +18,7 @@ String errorText(L10n l10n, Object error) {
   }
   if (error is CloudException) {
     return switch (error.code) {
+      CloudErrorCode.churchClosed => l10n.errChurchClosed,
       CloudErrorCode.unverifiedEmail => l10n.createChurchVerifyFirst,
       CloudErrorCode.duplicateName => l10n.errDuplicateName,
       CloudErrorCode.inviteInvalid => l10n.errInviteInvalid,

@@ -187,6 +187,9 @@ abstract interface class ChurchData {
 }
 
 enum CloudErrorCode {
+  /// The church is suspended or deleted (教會停用): its members can see that,
+  /// and do nothing else there.
+  churchClosed,
   unverifiedEmail,
   duplicateName,
   inviteInvalid,
@@ -361,6 +364,12 @@ class LinkSourceResult {
 }
 
 /// Privileged operations, done by Cloud Functions.
+///
+/// One that acts in a church refuses a non-member with
+/// [CloudErrorCode.permissionDenied] and, in a suspended or deleted church,
+/// a member with [CloudErrorCode.churchClosed] (functions/src/access.ts).
+/// Invites say [CloudErrorCode.inviteInvalid] instead, the church preview
+/// [CloudErrorCode.notFound].
 abstract interface class CloudApi {
   /// Returns the new church ID.
   Future<String> createChurch(String name);
@@ -403,7 +412,12 @@ abstract interface class CloudApi {
   /// Throws [CloudErrorCode.notFound] for an unknown or closed church.
   Future<ChurchPreview> churchPreview(String churchId);
 
+  /// Deletes an open church (admins); restorable for 30 days.
   Future<void> deleteChurch(String churchId);
+
+  /// Reopens a church its admin deleted under 30 days ago; an open church
+  /// stays open. A suspended one, or one deleted longer ago, is
+  /// [CloudErrorCode.churchClosed].
   Future<void> restoreChurch(String churchId);
 
   /// Sets the church link's content source and daily fetch time (admins);

@@ -1,3 +1,4 @@
+import { churchClosed, churchId } from './access.js';
 import { fail, id, requireOperator, serverTime, text, type Caller, type Deps } from './common.js';
 import { matchesSearch, nameKey } from './text.js';
 
@@ -40,7 +41,7 @@ export async function adminSearchChurches(deps: Deps, caller: Caller | null, dat
 export async function adminRenameChurch(deps: Deps, caller: Caller | null, data: unknown) {
   requireOperator(caller);
   const input = data as { churchId?: unknown; name?: unknown };
-  const cid = id(input?.churchId);
+  const cid = churchId(input?.churchId);
   const name = text(input?.name, 60);
   const key = nameKey(name);
   const { db } = deps;
@@ -64,7 +65,7 @@ export async function adminRenameChurch(deps: Deps, caller: Caller | null, data:
 export async function adminTransferAdmin(deps: Deps, caller: Caller | null, data: unknown) {
   requireOperator(caller);
   const input = data as { churchId?: unknown; uid?: unknown };
-  const cid = id(input?.churchId);
+  const cid = churchId(input?.churchId);
   const uid = id(input?.uid);
   const ref = deps.db.doc(`churches/${cid}/members/${uid}`);
   const member = await ref.get();
@@ -76,13 +77,15 @@ export async function adminTransferAdmin(deps: Deps, caller: Caller | null, data
 export async function adminSetStatus(deps: Deps, caller: Caller | null, data: unknown) {
   requireOperator(caller);
   const input = data as { churchId?: unknown; status?: unknown };
-  const cid = id(input?.churchId);
+  const cid = churchId(input?.churchId);
   if (input?.status !== 'active' && input?.status !== 'suspended') {
     fail('invalid-argument', 'unknown');
   }
   const ref = deps.db.doc(`churches/${cid}`);
   const church = await ref.get();
-  if (!church.exists || church.get('status') === 'deleted') fail('failed-precondition', 'unknown');
+  if (!church.exists) fail('failed-precondition', 'unknown');
+  // A deleted church is its admin's to restore (or let go), not the operator's.
+  if (church.get('status') === 'deleted') churchClosed();
   await ref.update({ status: input.status });
   return {};
 }
@@ -99,7 +102,7 @@ export async function adminStats(deps: Deps, caller: Caller | null, data: unknow
 /** A church's members, so the operator can pick who becomes admin. */
 export async function adminChurchMembers(deps: Deps, caller: Caller | null, data: unknown) {
   requireOperator(caller);
-  const cid = id((data as { churchId?: unknown })?.churchId);
+  const cid = churchId((data as { churchId?: unknown })?.churchId);
   const snap = await deps.db.collection(`churches/${cid}/members`).orderBy('name').limit(500).get();
   return {
     members: snap.docs.map((d) => ({
