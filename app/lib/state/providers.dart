@@ -123,6 +123,16 @@ final churchProvider = StreamProvider<Church?>((ref) {
   return data.church();
 });
 
+/// Whether the current church was deleted by its admin and can still be
+/// restored. Turns false when [Church.restoreWindow] runs out.
+final churchRestorableProvider = Provider<bool>((ref) {
+  final until = ref.watch(churchProvider).value?.restorableUntil;
+  if (until == null) return false;
+  final now = ref.watch(clockProvider)();
+  rebuildAt(ref, until.add(const Duration(milliseconds: 1)), now);
+  return !now.isAfter(until);
+});
+
 /// Whether the current church is open. Church data is only requested when
 /// it is, so a suspended church sends no reads that would be denied.
 final churchOpenProvider = Provider<bool>(

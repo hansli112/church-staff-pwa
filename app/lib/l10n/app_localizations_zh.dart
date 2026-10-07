@@ -247,6 +247,9 @@ class L10nZh extends L10n {
   }
 
   @override
+  String get churchDeletedExpired => '已經超過 30 天，不能再還原了';
+
+  @override
   String get churchUnavailable => '無法開啟這間教會';
 
   @override

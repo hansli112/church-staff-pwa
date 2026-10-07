@@ -38,7 +38,14 @@ class Church {
   /// the most it may have is `TextLimits.homeName`.
   static const homeNameSafeLength = 6;
 
+  /// How long a church its admin deleted can be restored (RESTORE_DAYS in
+  /// functions/src/church.ts).
+  static const restoreWindow = Duration(days: 30);
+
   bool get isActive => status == ChurchStatus.active;
+
+  /// The last moment its admin can restore it; null unless deleted.
+  DateTime? get restorableUntil => status == ChurchStatus.deleted ? deletedAt?.add(restoreWindow) : null;
 
   Church copyWith({String? name, ChurchStatus? status, String? logoUrl, String? Function()? homeName}) => Church(
     id: id,

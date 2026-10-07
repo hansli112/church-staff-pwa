@@ -133,6 +133,7 @@
       }
     }
   },
+  "churchDeletedExpired": "已經超過 30 天，不能再還原了",
   "churchUnavailable": "無法開啟這間教會",
   "restoreChurch": "還原教會",
   "churchRestored": "教會已還原",

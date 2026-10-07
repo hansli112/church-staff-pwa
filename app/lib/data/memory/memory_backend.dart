@@ -729,10 +729,6 @@ class MemoryChurchData implements ChurchData {
   Member _functionAdmin({bool allowClosed = false}) =>
       _b.functionAccess(churchId, allowed: (me) => me.isAdmin, allowClosed: allowClosed)!;
 
-  /// How long a deleted church can be restored (RESTORE_DAYS in
-  /// functions/src/church.ts).
-  static const restoreFor = Duration(days: 30);
-
   @override
   Future<void> deleteChurch() async {
     // Only an open church: deleting and restoring a suspended one would
@@ -755,8 +751,8 @@ class MemoryChurchData implements ChurchData {
     _functionAdmin(allowClosed: true);
     final c = _b.churches[churchId]!;
     if (c.isActive) return;
-    final deletedAt = c.deletedAt;
-    if (c.status != ChurchStatus.deleted || (deletedAt != null && _b.clock().difference(deletedAt) > restoreFor)) {
+    final until = c.restorableUntil;
+    if (c.status != ChurchStatus.deleted || (until != null && _b.clock().isAfter(until))) {
       throw const CloudException(CloudErrorCode.churchClosed);
     }
     _b.churches[churchId] = Church(id: c.id, name: c.name, logoUrl: c.logoUrl, homeName: c.homeName);

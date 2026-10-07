@@ -535,6 +535,12 @@ abstract class L10n {
   /// **'管理員可以在 {date} 前還原'**
   String churchDeletedBody(String date);
 
+  /// No description provided for @churchDeletedExpired.
+  ///
+  /// In zh, this message translates to:
+  /// **'已經超過 30 天，不能再還原了'**
+  String get churchDeletedExpired;
+
   /// No description provided for @churchUnavailable.
   ///
   /// In zh, this message translates to:

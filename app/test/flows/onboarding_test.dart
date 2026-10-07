@@ -231,4 +231,22 @@ void main() {
     expect(b.churches[cid]!.status, ChurchStatus.active);
     expect(find.byType(NavigationBar), findsOneWidget);
   });
+
+  testWidgets('a deleted church can no longer be restored after 30 days', (tester) async {
+    var now = testNow;
+    final b = MemoryBackend(clock: () => now);
+    final cid = b.addChurch('刪除堂');
+    final user = b.auth.signInAs('a@gmail.com');
+    b.addMember(cid, Member(uid: user.uid, name: '管理員', role: Role.admin));
+    await b.church(cid).deleteChurch();
+    now = testNow.add(const Duration(days: 30)).subtract(const Duration(hours: 1));
+    await pumpApp(tester, b);
+    expect(find.text('還原教會'), findsOneWidget);
+
+    now = now.add(const Duration(hours: 2));
+    await tester.pump(const Duration(hours: 2));
+    await settle(tester);
+    expect(find.text('還原教會'), findsNothing);
+    expect(find.text('已經超過 30 天，不能再還原了'), findsOneWidget);
+  });
 }

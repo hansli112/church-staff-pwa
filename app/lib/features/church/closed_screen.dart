@@ -43,6 +43,7 @@ class _ClosedScreenState extends ConsumerState<ClosedScreen> {
     final church = ref.watch(churchProvider).value;
     final me = ref.watch(meProvider).value;
     final multiple = (ref.watch(membershipsProvider).value?.length ?? 0) > 1;
+    final restorable = ref.watch(churchRestorableProvider);
 
     final String title;
     final String body;
@@ -51,13 +52,17 @@ class _ClosedScreenState extends ConsumerState<ClosedScreen> {
       body = '';
     } else if (church.status == ChurchStatus.deleted) {
       title = l10n.churchDeletedTitle(church.name);
-      final until = church.deletedAt?.add(const Duration(days: 30));
-      body = until == null ? '' : l10n.churchDeletedBody(DateFormat.yMMMd('zh_TW').format(until));
+      final until = church.restorableUntil;
+      body = until == null
+          ? ''
+          : restorable
+          ? l10n.churchDeletedBody(DateFormat.yMMMd('zh_TW').format(until))
+          : l10n.churchDeletedExpired;
     } else {
       title = l10n.churchSuspendedTitle(church.name);
       body = l10n.churchSuspendedBody;
     }
-    final canRestore = church?.status == ChurchStatus.deleted && (me?.isAdmin ?? false);
+    final canRestore = restorable && (me?.isAdmin ?? false);
 
     return Scaffold(
       body: SafeArea(
