@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>支持馬大別忙</title>
+<meta name="description" content="馬大別忙免費給每間教會使用，雲端費用由大家一起分擔。這裡可以看到這個月的雲端費用，也可以支持馬大別忙。">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:site_name" content="馬大別忙">
+<meta property="og:title" content="支持馬大別忙">
+<meta property="og:description" content="馬大別忙免費給每間教會使用，雲端費用由大家一起分擔。">
+<meta property="og:url" content="__ORIGIN__/support">
+<link rel="stylesheet" href="/site.css">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/icons/Icon-192.png">
+</head>
+<body>
+
+<!-- site-header -->
+
+<main class="page">
+  <div class="wrap narrow">
+    <h1>支持馬大別忙</h1>
+    <p class="lead">馬大別忙免費給每間教會使用，雲端費用由大家一起分擔：大的扶持小的，有餘的補不足的。支持是自願的，不會多出任何功能。</p>
+
+    <!-- 這個月的雲端費用：讀 platform/funding（公開）。讀不到就整塊不顯示。 -->
+    <section class="panel" id="funding" hidden aria-labelledby="funding-title">
+      <h2 id="funding-title">這個月的雲端費用</h2>
+      <p class="amount" id="funding-amount"></p>
+      <div class="bar" role="progressbar" aria-labelledby="funding-title" aria-valuemin="0" aria-valuemax="100" id="funding-bar"><span></span></div>
+      <p class="status" id="funding-status" hidden></p>
+      <p class="fine" id="funding-carried" hidden></p>
+      <p class="fine">匯率：<a href="https://www.exchangerate-api.com">Exchange Rate API</a></p>
+    </section>
+
+    <section class="panel" aria-labelledby="pay-title">
+      <h2 id="pay-title">線上支持</h2>
+      <p>可以用台灣發行的信用卡、ATM 轉帳、超商繳費或 TWQR 掃碼，金額自己決定。</p>
+      <!-- TODO(金流): 綠界實況主收款通過後，href 換成綠界的收款頁，拿掉 data-soon 和下面的提示。 -->
+      <a class="btn btn-primary wide" href="#pay-title" id="pay" data-soon>支持馬大別忙</a>
+      <p class="fine" id="pay-soon" hidden>線上支持即將開放，謝謝你的心意。</p>
+    </section>
+
+    <section class="panel" aria-labelledby="where-title">
+      <h2 id="where-title">雲端費用包含</h2>
+      <ul>
+        <li>照片辨識匯入服事表（Google Gemini）</li>
+        <li>Apple、Google 的開發者帳號年費</li>
+        <li>網域</li>
+        <li>使用的教會變多以後，雲端主機的費用</li>
+      </ul>
+      <p class="fine">款項用於馬大別忙的雲端費用，不是給教會的奉獻，也無法開立奉獻收據。</p>
+    </section>
+
+    <p class="fine">iPhone、Android App 上架後，也可以在 App 裡打賞或每月支持。</p>
+  </div>
+</main>
+
+<!-- site-footer -->
+
+<script>
+(() => {
+  // Replaced with the Firebase project ID when the site is deployed.
+  const project = '__FIREBASE_PROJECT__';
+  const money = (n) => 'NT$' + Math.round(n).toLocaleString('zh-TW');
+  const url = `https://firestore.googleapis.com/v1/projects/${project}/databases/(default)/documents/platform/funding`;
+  fetch(url).then((r) => (r.ok ? r.json() : Promise.reject(r.status))).then((doc) => {
+    const f = doc.fields || {};
+    const num = (k) => Number(f[k]?.integerValue ?? f[k]?.doubleValue ?? 0);
+    const target = num('target');
+    if (target <= 0) return;
+    const carried = num('carried');
+    const available = num('received') + carried;
+    const monthsLeft = num('monthsLeft');
+    const pct = Math.min(100, Math.round((available / target) * 100));
+    document.getElementById('funding-amount').textContent = `${money(available)} / ${money(target)}`;
+    const bar = document.getElementById('funding-bar');
+    bar.setAttribute('aria-valuenow', pct);
+    bar.firstElementChild.style.width = pct + '%';
+    if (available >= target) {
+      const s = document.getElementById('funding-status');
+      s.textContent = monthsLeft > 0 ? `這個月已經足夠，多的還能再維持 ${monthsLeft} 個月` : '這個月已經足夠';
+      s.hidden = false;
+    }
+    if (carried > 0) {
+      const c = document.getElementById('funding-carried');
+      c.textContent = `含前幾個月留下的 ${money(carried)}`;
+      c.hidden = false;
+    }
+    document.getElementById('funding').hidden = false;
+  }).catch(() => {});
+
+  const pay = document.getElementById('pay');
+  if (pay.hasAttribute('data-soon')) {
+    pay.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('pay-soon').hidden = false;
+    });
+  }
+})();
+</script>
+</body>
+</html>

@@ -12,16 +12,16 @@
 <meta property="og:site_name" content="馬大別忙">
 <meta property="og:title" content="隱私權政策（草稿）｜馬大別忙">
 <meta property="og:description" content="馬大別忙蒐集哪些資料、怎麼使用、如何刪除。">
-<!-- TODO(M7): 買網域後換成正式網址 -->
-<meta property="og:url" content="https://marthasit.web.app/privacy.html">
-<link rel="stylesheet" href="site.css">
-<link rel="icon" type="image/png" href="favicon.png">
+<meta property="og:url" content="__ORIGIN__/privacy">
+<link rel="stylesheet" href="/site.css">
+<link rel="icon" type="image/png" href="/favicon.png">
 </head>
 <body>
 
 <header class="top ruled">
   <div class="wrap">
-    <a class="brand" href="/"><img src="icons/Icon-192.png" alt="" width="28" height="28">馬大別忙</a>
+    <!-- App 會打開這頁，所以不連到首頁：首頁有支持頁，商店不准 App 把人帶去外部付款。 -->
+    <span class="brand"><img src="/icons/Icon-192.png" alt="" width="28" height="28">馬大別忙</span>
     <a class="top-link" href="/home">開啟網頁版</a>
   </div>
 </header>
@@ -59,7 +59,7 @@
 
     <h2 id="operator">1. 誰營運本服務</h2>
     <p>本服務由個人營運，營運者為 <span class="todo">〔營運者法定姓名，上架前填入〕</span>（以下稱「營運者」或「我們」），不是公司或教會組織。</p>
-    <p>每間教會的管理員決定要把哪些同工加進教會、在服事表上安排誰。管理員對自己教會的同工資料負有責任，詳見<a href="terms.html">服務條款</a>。</p>
+    <p>每間教會的管理員決定要把哪些同工加進教會、在服事表上安排誰。管理員對自己教會的同工資料負有責任，詳見<a href="/terms">服務條款</a>。</p>
 
     <h2 id="where">2. 資料存放在哪裡</h2>
     <p>本服務使用 Google Firebase。帳號以外的主要資料（同工資料、服事表、教會設定、教會 logo）存放在 Google Cloud <strong>asia-east1（台灣）</strong>區域。</p>
@@ -216,8 +216,7 @@
 <footer class="foot">
   <div class="wrap">
     <nav aria-label="頁尾">
-      <a href="/">首頁</a>
-      <a href="terms.html">服務條款</a>
+      <a href="/terms">服務條款</a>
       <a href="https://github.com/hansli112/church-staff-pwa/issues">問題回報</a>
     </nav>
     <p>本服務由個人營運。</p>

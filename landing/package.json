@@ -1,0 +1,9 @@
+{
+  "name": "martha-site",
+  "private": true,
+  "description": "Builds the blog pages of the website (scripts/build-blog.mjs).",
+  "type": "module",
+  "dependencies": {
+    "marked": "13.0.3"
+  }
+}

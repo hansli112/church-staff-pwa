@@ -95,10 +95,13 @@ scripts/deploy.sh prod --only hosting  # 只更新網頁
 - 部署後設定 Functions 舊映像的清理規則，不然每月會有一點費用。映像庫第一次部署後才存在，所以放在這裡。
 - rules 和 indexes 由 `firebase-project.sh` 部署，或 `scripts/firebase.sh <id> deploy --only firestore,storage`。
 
-Hosting 部署前，`scripts/hosting-predeploy.sh` 會把 landing page 和法律文件複製進 Web build：
+Hosting 部署前，`scripts/hosting-predeploy.sh` 用 `scripts/build-site.mjs` 把網站放進 Web build（需要 Node；第一次會在 `landing/` 跑 `npm ci`）。網站各頁共用的頁首、頁尾在 `build-site.mjs` 裡，`landing/` 的頁面用 `<!-- site-header -->`、`<!-- site-footer -->` 標位置。
 - `/`：landing page。Flutter 的 `index.html` 改名成 `app.html`，其他路徑都 rewrite 到它，所以網頁版從 `/home` 開始（manifest 的 `start_url`）。舊的 `/about` 轉到 `/`。
-- `/privacy`
-- `/terms`
+- `/support`：支持頁。顯示這個月的雲端費用（不用登入就讀 `platform/funding`），以及網站的線上支持按鈕。
+- `/blog/`：教學文章。每篇是 `landing/blog/<網址>.md`，開頭寫 `title`、`date`、`description`，會變成 `/blog/<網址>/`。
+- `/privacy`、`/terms`：App 會打開這兩頁，所以它們沒有網站的頁首、頁尾，也不連到首頁，從 App 點不到支持頁（商店不准 App 把人帶去外部付款）。
+
+本機預覽網站：`node scripts/build-site.mjs <資料夾> --origin http://localhost:8090`，再用任何靜態伺服器打開那個資料夾。
 
 改成這個配置後第一次部署，Functions 與 Hosting 要一起部署（`deploy.sh` 預設就是）。只部署 Hosting 的話，舊版 `churchPage` 會去抓 `index.html`，拿到 landing page；新版只接受 `app.html` 裡的 Flutter 頁。
 

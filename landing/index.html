@@ -14,24 +14,19 @@
 <meta property="og:site_name" content="馬大別忙">
 <meta property="og:title" content="馬大別忙｜教會同工的服事表">
 <meta property="og:description" content="給教會同工用的免費服事表工具：看自己哪天服事、一起安排服事表。">
-<!-- TODO(M7): 買網域後換成正式網址；og:image 等有 App icon 後補上 -->
-<meta property="og:url" content="https://marthasit.web.app/">
+<!-- TODO: og:image 等有 App icon 後補上 -->
+<meta property="og:url" content="__ORIGIN__/">
 <script>
 // 從主畫面打開的網頁版直接進 App（start_url 改成 /home 之前裝的會從 / 開始）。
 if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) location.replace('/home');
 </script>
-<link rel="stylesheet" href="site.css">
-<link rel="icon" type="image/png" href="favicon.png">
-<link rel="apple-touch-icon" href="icons/Icon-192.png">
+<link rel="stylesheet" href="/site.css">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/icons/Icon-192.png">
 </head>
 <body>
 
-<header class="top">
-  <div class="wrap">
-    <a class="brand" href="/"><img src="icons/Icon-192.png" alt="" width="28" height="28">馬大別忙</a>
-    <a class="top-link" href="/home">開啟網頁版</a>
-  </div>
-</header>
+<!-- site-header -->
 
 <main>
   <section class="hero">
@@ -134,7 +129,7 @@ if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) lo
       <div>
         <h2 id="free">免費使用</h2>
         <p>不收費，也沒有付費功能。</p>
-        <p class="sub">想支持的話，可以在 iPhone、Android App 裡打賞或訂閱。支持與否，功能完全一樣。</p>
+        <p class="sub">雲端費用由大家一起分擔，想支持的話可以<a href="/support">在這裡支持</a>，或在 iPhone、Android App 裡打賞或訂閱。支持與否，功能完全一樣。</p>
       </div>
       <blockquote class="verse">
         <p>馬大！馬大！你為許多的事思慮煩擾，但是不可少的只有一件；馬利亞已經選擇那上好的福分，是不能奪去的。</p>
@@ -144,16 +139,7 @@ if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) lo
   </section>
 </main>
 
-<footer class="foot">
-  <div class="wrap">
-    <nav aria-label="頁尾">
-      <a href="privacy.html">隱私權政策</a>
-      <a href="terms.html">服務條款</a>
-      <a href="https://github.com/hansli112/church-staff-pwa/issues">問題回報</a>
-    </nav>
-    <p>本服務由個人營運。</p>
-  </div>
-</footer>
+<!-- site-footer -->
 
 </body>
 </html>

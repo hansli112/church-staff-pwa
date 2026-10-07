@@ -30,6 +30,11 @@
     ],
     "redirects": [
       {
+        "source": "/support/",
+        "destination": "/support",
+        "type": 301
+      },
+      {
         "source": "/about",
         "destination": "/",
         "type": 301
@@ -48,6 +53,10 @@
       {
         "source": "/terms",
         "destination": "/terms.html"
+      },
+      {
+        "source": "/support",
+        "destination": "/support.html"
       },
       {
         "source": "/c/**",

@@ -606,13 +606,14 @@ describe('平台統計與名稱保留', () => {
     await assertFails(getDoc(doc(as(ADMIN_A), 'stats/2026-10-01')));
   });
 
-  it('雲端費用進度：登入的人都讀得到摘要，費用清單、每月與每筆收入只有後端碰', async () => {
+  it('雲端費用進度：誰都讀得到摘要（網站的支持頁不用登入），費用清單、每月與每筆收入只有後端碰', async () => {
     await seed('platform/funding', { month: '2026-10', target: 500, received: 120 });
     await seed('platform/fundingCosts', { items: [] });
     await seed('fundingMonths/2026-10', { received: 120, target: 500 });
     await seed('fundingPayments/apple_1', { amountTwd: 120 });
     await assertSucceeds(getDoc(doc(as(STRANGER), 'platform/funding')));
-    await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'platform/funding')));
+    await assertSucceeds(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'platform/funding')));
+    await assertFails(setDoc(doc(testEnv.unauthenticatedContext().firestore(), 'platform/funding'), { received: 1 }));
     const op = testEnv.authenticatedContext('hans', { operator: true }).firestore();
     await assertFails(setDoc(doc(op, 'platform/funding'), { received: 99999 }));
     await assertFails(getDoc(doc(as(STRANGER), 'platform/fundingCosts')));

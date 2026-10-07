@@ -20,7 +20,7 @@
 | `app/` | Flutter App（iOS、Android、Web） |
 | `functions/` | Cloud Functions（TypeScript，asia-east1） |
 | `firestore.rules`、`storage.rules` | 安全規則，測試在 `firestore-tests/` |
-| `landing/` | Landing page 與法律文件草稿 |
+| `landing/` | 網站：landing page、支持頁、教學文章（`blog/*.md`）、法律文件草稿 |
 | `tools/e2e/` | 瀏覽器 smoke test、截圖、效能量測 |
 | `scripts/` | `check.sh`（全部檢查）、`firebase-project.sh`（建立專案） |
 

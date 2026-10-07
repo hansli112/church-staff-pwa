@@ -1,4 +1,4 @@
-/* 馬大別忙網站共用樣式：about（landing）、privacy、terms。顏色跟 App 的 tokens.dart 一致。 */
+/* 馬大別忙網站共用樣式：首頁、支持、教學文章、privacy、terms。顏色跟 App 的 tokens.dart 一致。 */
 :root {
   color-scheme: light dark;
   --bg: #FFFFFF;
@@ -65,6 +65,9 @@ p { margin: 0 0 16px; }
 .brand { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--text); font-weight: 700; text-decoration: none; }
 .brand img { width: 28px; height: 28px; border-radius: 7px; }
 .top-link { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; text-decoration: none; }
+.top-nav { display: flex; align-items: center; gap: 4px 16px; }
+.top-nav a:not(.top-link) { display: inline-flex; align-items: center; min-height: 44px; color: var(--text2); text-decoration: none; font-size: 0.9375rem; }
+.top-nav a:not(.top-link):hover, .top-nav a[aria-current] { color: var(--text); }
 
 /* 按鈕 */
 .btn {
@@ -81,7 +84,8 @@ p { margin: 0 0 16px; }
 @media (min-width: 860px) { .hero .wrap { grid-template-columns: 1fr auto; gap: 64px; padding-top: 72px; padding-bottom: 88px; } }
 .eyebrow { display: inline-block; margin-bottom: 16px; padding: 4px 12px; border-radius: 999px; background: var(--fill); color: var(--text2); font-size: 0.875rem; font-weight: 600; }
 .hero h1 { font-size: clamp(2.25rem, 7vw, 3.5rem); font-weight: 800; letter-spacing: -0.01em; margin-bottom: 16px; }
-.hero .lead { font-size: 1.1875rem; color: var(--text2); max-width: 30em; margin-bottom: 32px; }
+.hero .lead, .page .lead { font-size: 1.1875rem; color: var(--text2); margin-bottom: 32px; }
+.hero .lead { max-width: 30em; }
 .cta { display: flex; flex-wrap: wrap; gap: 12px; }
 .cta .btn-primary { flex: 1 1 100%; }
 @media (min-width: 480px) { .cta .btn-primary { flex: none; } }
@@ -137,6 +141,39 @@ p { margin: 0 0 16px; }
 .verse { margin: 0; padding: 0 0 0 24px; border-left: 4px solid var(--line); font-size: 1.125rem; }
 .verse p { margin-bottom: 8px; }
 .verse cite { font-style: normal; font-size: 0.9375rem; color: var(--text2); }
+
+/* 一般頁面：支持、教學文章 */
+.page .wrap { padding-top: 40px; padding-bottom: 64px; }
+.narrow { max-width: 720px; }
+.page h1 { font-size: clamp(1.875rem, 5vw, 2.5rem); font-weight: 800; margin-bottom: 12px; }
+.panel { background: var(--bg2); border-radius: 18px; padding: 24px; margin-bottom: 16px; }
+.panel h2 { font-size: 1.1875rem; font-weight: 700; margin-bottom: 12px; }
+.panel ul { margin: 0 0 16px; padding-left: 24px; }
+.panel li { margin-bottom: 4px; }
+.panel > :last-child { margin-bottom: 0; }
+.panel .amount { font-size: 1.75rem; font-weight: 700; margin-bottom: 12px; font-variant-numeric: tabular-nums; }
+.bar { height: 8px; border-radius: 999px; background: var(--fill); overflow: hidden; margin-bottom: 12px; }
+.bar span { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--accent); }
+.panel .status { font-weight: 600; margin-bottom: 4px; }
+.fine { color: var(--text2); font-size: 0.9375rem; }
+.btn.wide { width: 100%; margin: 8px 0 12px; }
+@media (min-width: 480px) { .btn.wide { width: auto; min-width: 240px; } }
+.posts { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.posts a { display: block; padding: 24px; border-radius: 18px; background: var(--bg2); color: var(--text); text-decoration: none; }
+.posts a:hover { background: var(--fill); }
+.posts h2 { font-size: 1.1875rem; font-weight: 700; margin-bottom: 8px; }
+.posts p { color: var(--text2); margin-bottom: 8px; }
+.posts time, .prose .meta { color: var(--text2); font-size: 0.875rem; }
+.prose { line-height: 1.8; }
+.prose .meta { margin-bottom: 8px; }
+.prose .meta a { color: var(--text2); }
+.prose h2 { font-size: 1.375rem; font-weight: 700; margin: 40px 0 12px; }
+.prose h3 { font-size: 1.125rem; font-weight: 700; margin: 32px 0 8px; }
+.prose ul, .prose ol { padding-left: 24px; margin: 0 0 16px; }
+.prose li { margin-bottom: 8px; }
+.prose img { max-width: 100%; height: auto; border-radius: 14px; }
+.prose code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.875em; padding: 1px 6px; border-radius: 6px; background: var(--fill); }
+.prose blockquote { margin: 0 0 16px; padding-left: 16px; border-left: 4px solid var(--line); color: var(--text2); }
 
 /* 頁尾 */
 .foot { padding: 32px 0 48px; border-top: 1px solid var(--line); color: var(--text2); font-size: 0.9375rem; }
