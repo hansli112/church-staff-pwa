@@ -23,11 +23,12 @@ class MarthaApp extends ConsumerWidget {
     ref.watch(sessionEffectsProvider);
     final router = ref.watch(routerProvider);
     // The web page's loading screen stays over the app's own blank loading
-    // page, and comes down after the first frame of the page that follows.
+    // page, and comes down after the first frame of the page that follows,
+    // drawn with the fonts for its text.
     void hideSplashAfterFrame(AppStage stage) {
       if (stage == AppStage.loading) return;
       final hide = ref.read(hideSplashProvider);
-      WidgetsBinding.instance.addPostFrameCallback((_) => hide());
+      ref.read(fontsReadyProvider).then((_) => WidgetsBinding.instance.endOfFrame).then((_) => hide());
     }
 
     ref.listen(appStageProvider, (_, stage) => hideSplashAfterFrame(stage));

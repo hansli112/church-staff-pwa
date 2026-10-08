@@ -8,6 +8,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:go_router/go_router.dart';
@@ -19,12 +20,14 @@ import 'data/backend.dart';
 import 'data/firebase/firebase_backend.dart';
 import 'data/memory/demo_data.dart';
 import 'env.dart';
+import 'core/fonts.dart';
 import 'core/telemetry.dart';
 import 'data/firebase/push_firebase.dart';
 import 'state/providers.dart';
 import 'state/push.dart';
 import 'state/session.dart';
 import 'state/support.dart';
+import 'state/web_page.dart';
 
 Future<void> main() async {
   // Real paths (/c/ID), not #/: church URLs and invite links must work as
@@ -34,6 +37,10 @@ Future<void> main() async {
   // URL, so a reload or a shared address lands on that page, not its tab.
   GoRouter.optionURLReflectsImperativeAPIs = true;
   WidgetsFlutterBinding.ensureInitialized();
+  // Before anything else, so the fonts download while the app starts.
+  final fontsReady = kIsWeb
+      ? warmUpFonts(bundle: rootBundle, systemFonts: PaintingBinding.instance.systemFonts)
+      : Future<void>.value();
   await initializeDateFormatting('zh_TW');
   final env = Env.current;
   final prefs = await SharedPreferences.getInstance();
@@ -75,6 +82,7 @@ Future<void> main() async {
         pushServiceProvider.overrideWithValue(push),
         supportStoreProvider.overrideWithValue(store),
         appIconSwitcherProvider.overrideWithValue(icons),
+        fontsReadyProvider.overrideWithValue(fontsReady),
       ],
       // Streams retry by reconnecting themselves; a provider retry would
       // only repeat a permission error.

@@ -90,6 +90,9 @@ flutter:
   generate: true
   assets:
     - assets/icons/
+    # The app's strings, whose fonts the web build fetches at start
+    # (lib/core/fonts.dart).
+    - lib/l10n/app_zh.arb
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

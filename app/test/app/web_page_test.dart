@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/features/auth/in_app_browser.dart';
 import 'package:martha/features/church/links.dart';
@@ -10,6 +12,25 @@ void main() {
   testWidgets('the page’s loading screen comes down once the app is past loading', (tester) async {
     var hidden = 0;
     await pumpApp(tester, seededChurch(), overrides: [hideSplashProvider.overrideWithValue(() => hidden++)]);
+    expect(hidden, greaterThan(0));
+  });
+
+  testWidgets('the loading screen stays until the fonts are in, so the first page has no boxes for text', (
+    tester,
+  ) async {
+    var hidden = 0;
+    final fonts = Completer<void>();
+    await pumpApp(
+      tester,
+      seededChurch(),
+      overrides: [
+        hideSplashProvider.overrideWithValue(() => hidden++),
+        fontsReadyProvider.overrideWithValue(fonts.future),
+      ],
+    );
+    expect(hidden, 0);
+    fonts.complete();
+    await tester.pumpAndSettle();
     expect(hidden, greaterThan(0));
   });
 
