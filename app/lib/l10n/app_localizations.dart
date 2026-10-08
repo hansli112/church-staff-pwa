@@ -1156,7 +1156,7 @@ abstract class L10n {
   /// No description provided for @zonesFooter.
   ///
   /// In zh, this message translates to:
-  /// **'勾選他在各聚會負責的服事。有「安排服事表」權限的人，只能安排自己牧區的服事表'**
+  /// **'能安排服事表的人，只能排自己牧區的聚會'**
   String get zonesFooter;
 
   /// No description provided for @removeMember.
@@ -1630,8 +1630,38 @@ abstract class L10n {
   /// No description provided for @zoneSwitch.
   ///
   /// In zh, this message translates to:
-  /// **'負責這個聚會'**
+  /// **'屬於這個牧區'**
   String get zoneSwitch;
+
+  /// No description provided for @zoneLeft.
+  ///
+  /// In zh, this message translates to:
+  /// **'不再屬於{service}牧區'**
+  String zoneLeft(String service);
+
+  /// No description provided for @noZoneYet.
+  ///
+  /// In zh, this message translates to:
+  /// **'你還沒有屬於任何牧區，請找管理員設定'**
+  String get noZoneYet;
+
+  /// No description provided for @waitsForZone.
+  ///
+  /// In zh, this message translates to:
+  /// **'還沒設定牧區'**
+  String get waitsForZone;
+
+  /// No description provided for @waitingForZone.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 位同工還沒設定牧區'**
+  String waitingForZone(int count);
+
+  /// No description provided for @inviteZones.
+  ///
+  /// In zh, this message translates to:
+  /// **'加入後屬於'**
+  String get inviteZones;
 
   /// No description provided for @photoImport.
   ///

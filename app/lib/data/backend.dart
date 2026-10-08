@@ -174,7 +174,9 @@ abstract interface class ChurchData {
   Future<void> setNotificationPrefs(String uid, Set<NotificationKind> muted);
 
   Stream<List<Invite>> invites();
-  Future<Invite> createInvite({required Duration validFor});
+
+  /// A new invite. Members who join with it belong to [zoneTypes].
+  Future<Invite> createInvite({required Duration validFor, List<String> zoneTypes = const []});
   Future<void> revokeInvite(String code);
 
   Stream<CalendarSettings> calendarSettings();

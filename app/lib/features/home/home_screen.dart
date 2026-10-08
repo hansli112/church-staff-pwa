@@ -22,6 +22,15 @@ final _gettingStartedProvider = Provider.autoDispose<bool>((ref) {
   return members != null && members.length <= 1 && pending != null && pending.isEmpty;
 });
 
+/// For admins: how many members are in no 牧區 yet, so their 服事表 tab
+/// is empty.
+final _waitingForZoneProvider = Provider.autoDispose<int>((ref) {
+  if (!(ref.watch(meProvider).value?.isAdmin ?? false)) return 0;
+  final members = ref.watch(membersProvider).value ?? const [];
+  final enabled = ref.watch(servicesProvider).value?.enabled ?? const [];
+  return members.where((m) => m.waitsForZone(enabled)).length;
+});
+
 /// What to do first in a new church, where the screens for it are three
 /// levels down under 我的. Shown while [_gettingStartedProvider] holds.
 class _GettingStarted extends StatelessWidget {
@@ -51,8 +60,9 @@ class _GettingStarted extends StatelessWidget {
 }
 
 /// 首頁: the days I serve next. That is what most people open the app for.
-/// Above them, the church link when the admin has set one, and 開始使用 for
-/// the admin of a church nobody else has joined yet.
+/// Above them, the church link when the admin has set one, 開始使用 for
+/// the admin of a church nobody else has joined yet, and for admins the
+/// members still in no 牧區.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -81,7 +91,8 @@ class HomeScreen extends ConsumerWidget {
           perfMark('home-visible');
           final claims = ref.watch(pendingClaimsProvider).value ?? const [];
           final gettingStarted = ref.watch(_gettingStartedProvider);
-          if (list.isEmpty && link == null && claims.isEmpty && !gettingStarted) {
+          final waiting = ref.watch(_waitingForZoneProvider);
+          if (list.isEmpty && link == null && claims.isEmpty && !gettingStarted && waiting == 0) {
             return EmptyState(
               message: l10n.noUpcomingServices,
               actionLabel: l10n.viewRosters,
@@ -92,6 +103,16 @@ class HomeScreen extends ConsumerWidget {
             children: [
               const PendingClaimsCard(),
               if (gettingStarted) const _GettingStarted(),
+              if (waiting > 0)
+                ListSection(
+                  children: [
+                    ListRow(
+                      title: l10n.waitingForZone(waiting),
+                      leading: const Icon(Icons.group_add_outlined),
+                      onTap: () => context.push('/me/members'),
+                    ),
+                  ],
+                ),
               if (link != null) ChurchLinkCard(title: link.title, body: link.body, url: link.url),
               if (list.isEmpty)
                 EmptyState(

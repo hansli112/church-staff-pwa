@@ -270,7 +270,10 @@ service cloud.firestore {
       allow create: if isAdmin(request.resource.data.cid)
         && code.matches('^[A-Z0-9]{8,16}$')
         && request.resource.data.keys().hasOnly(
-             ['cid', 'churchName', 'expiresAt', 'revoked', 'createdBy', 'createdAt'])
+             ['cid', 'churchName', 'expiresAt', 'revoked', 'createdBy', 'createdAt', 'zoneTypes'])
+        // The 牧區 its members join; redeemInvite keeps only real services.
+        && request.resource.data.get('zoneTypes', []) is list
+        && request.resource.data.get('zoneTypes', []).size() <= 20
         && request.resource.data.revoked == false
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.expiresAt is timestamp

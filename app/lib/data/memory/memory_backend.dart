@@ -643,9 +643,11 @@ class MemoryChurchData implements ChurchData {
   }, equals: _sameList);
 
   @override
-  Future<Invite> createInvite({required Duration validFor}) async {
+  Future<Invite> createInvite({required Duration validFor, List<String> zoneTypes = const []}) async {
     _requireAdmin();
-    if (validFor >= _inviteMax) throw const CloudException(CloudErrorCode.permissionDenied);
+    if (validFor >= _inviteMax || zoneTypes.length > Limits.services) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
     final code = _randomCode();
     final invite = Invite(
       code: code,
@@ -653,6 +655,7 @@ class MemoryChurchData implements ChurchData {
       churchName: _b.churches[churchId]!.name,
       expiresAt: _b.clock().add(validFor),
       createdAt: _b.clock(),
+      zoneTypes: zoneTypes,
     );
     await _b.write(() => _b.invites[code] = invite);
     return invite;
@@ -669,6 +672,7 @@ class MemoryChurchData implements ChurchData {
         churchName: invite.churchName,
         expiresAt: invite.expiresAt,
         createdAt: invite.createdAt,
+        zoneTypes: invite.zoneTypes,
         revoked: true,
       ),
     );
@@ -1107,6 +1111,8 @@ class MemoryCloud implements CloudApi {
     final invite = _invite(code);
     final cid = invite.churchId;
     if (_b.memberOf(cid, user.uid) == null) {
+      // The invite's 牧區 the church still has, each once (redeemInvite).
+      final have = {for (final s in _b.services[cid]?.services ?? const <Service>[]) s.id};
       _b.addMember(
         cid,
         Member(
@@ -1114,6 +1120,10 @@ class MemoryCloud implements CloudApi {
           name: _b.users[user.uid]?.name ?? user.displayName ?? '',
           email: user.email,
           joinedAt: _b.clock(),
+          zones: [
+            for (final t in {...invite.zoneTypes})
+              if (have.contains(t)) Zone(serviceType: t),
+          ],
         ),
       );
     }

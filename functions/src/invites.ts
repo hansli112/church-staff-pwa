@@ -23,7 +23,23 @@ async function usableInvite(deps: Deps, data: unknown) {
   const cid = snap.get('cid') as string;
   const church = await deps.db.doc(`churches/${cid}`).get();
   if (!isChurchOpen(church)) fail('failed-precondition', 'inviteInvalid');
-  return { code, cid, churchName: church.get('name') as string, expiresAt };
+  return { code, cid, churchName: church.get('name') as string, expiresAt, zoneTypes: snap.get('zoneTypes') as unknown };
+}
+
+/**
+ * The 牧區 an invite puts its members in: the services it names that the
+ * church still has, each once, in the invite's order.
+ */
+async function inviteZoneTypes(deps: Deps, cid: string, raw: unknown): Promise<string[]> {
+  if (!Array.isArray(raw) || raw.length === 0) return [];
+  const settings = await deps.db.doc(`churches/${cid}/settings/services`).get();
+  const services = settings.get('services');
+  const have = new Set(
+    Array.isArray(services)
+      ? services.map((s: { id?: unknown }) => s?.id).filter((id): id is string => typeof id === 'string')
+      : [],
+  );
+  return [...new Set(raw.filter((t): t is string => typeof t === 'string' && have.has(t)))];
 }
 
 /**
@@ -41,13 +57,17 @@ export async function previewInvite(deps: Deps, caller: Caller | null, data: unk
   };
 }
 
-/** Joins the caller to the invite's church. Joining twice is a no-op. */
+/**
+ * Joins the caller to the invite's church, in the 牧區 the invite names.
+ * Joining twice is a no-op.
+ */
 export async function redeemInvite(deps: Deps, caller: Caller | null, data: unknown) {
   const c = requireCaller(caller);
   const invite = await usableInvite(deps, data);
   const { db } = deps;
   const memberRef = db.doc(`churches/${invite.cid}/members/${c.uid}`);
   const profile = await db.doc(`users/${c.uid}`).get();
+  const zoneTypes = await inviteZoneTypes(deps, invite.cid, invite.zoneTypes);
   await db.runTransaction(async (tx) => {
     const existing = await tx.get(memberRef);
     if (existing.exists) return;
@@ -57,8 +77,8 @@ export async function redeemInvite(deps: Deps, caller: Caller | null, data: unkn
       email: c.email ?? '',
       role: 'staff',
       groups: [],
-      zones: [],
-      zoneTypes: [],
+      zones: zoneTypes.map((serviceType) => ({ serviceType, duties: [] })),
+      zoneTypes,
       joinedAt: serverTime(),
       invitedWith: invite.code,
     });

@@ -592,7 +592,7 @@ class L10nZh extends L10n {
   String get zones => '牧區與服事';
 
   @override
-  String get zonesFooter => '勾選他在各聚會負責的服事。有「安排服事表」權限的人，只能安排自己牧區的服事表';
+  String get zonesFooter => '能安排服事表的人，只能排自己牧區的聚會';
 
   @override
   String get removeMember => '移除同工';
@@ -843,7 +843,26 @@ class L10nZh extends L10n {
   String get pushView => '查看';
 
   @override
-  String get zoneSwitch => '負責這個聚會';
+  String get zoneSwitch => '屬於這個牧區';
+
+  @override
+  String zoneLeft(String service) {
+    return '不再屬於$service牧區';
+  }
+
+  @override
+  String get noZoneYet => '你還沒有屬於任何牧區，請找管理員設定';
+
+  @override
+  String get waitsForZone => '還沒設定牧區';
+
+  @override
+  String waitingForZone(int count) {
+    return '$count 位同工還沒設定牧區';
+  }
+
+  @override
+  String get inviteZones => '加入後屬於';
 
   @override
   String get photoImport => '照片匯入';

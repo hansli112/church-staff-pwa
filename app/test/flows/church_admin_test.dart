@@ -36,9 +36,35 @@ void main() {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/me/members/john');
-      await tester.tap(find.text('負責這個聚會').last);
+      await tester.tap(find.text('屬於這個牧區').last);
       await settle(tester);
       expect(b.members['grace']!['john']!.zoneTypes, ['youth']);
+    });
+
+    testWidgets('leaving a 牧區 clears its duties, and undo brings both back', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/me/members/mei');
+      await tester.tap(find.text('屬於這個牧區').first);
+      await settle(tester);
+      expect(b.members['grace']!['mei']!.zones, isEmpty);
+      expect(find.text('不再屬於主日崇拜牧區'), findsOneWidget);
+      await tapText(tester, '復原');
+      expect(b.members['grace']!['mei']!.zones, const [
+        Zone(serviceType: 'sunday', duties: ['司琴', '招待']),
+      ]);
+    });
+
+    testWidgets('members in no 牧區 are marked, and admins are told on the home page', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await tapText(tester, '1 位同工還沒設定牧區');
+      expect(find.textContaining('還沒設定牧區'), findsOneWidget, reason: 'John Chen, in the member list');
+      await tapText(tester, 'John Chen');
+      await tester.tap(find.text('屬於這個牧區').first);
+      await settle(tester);
+      await go(tester, '/home');
+      expect(find.textContaining('還沒設定牧區'), findsNothing, reason: 'everyone is in a 牧區 now');
     });
 
     testWidgets('removing uses undo, and commits after the window', (tester) async {
@@ -156,6 +182,18 @@ void main() {
       await tapText(tester, code);
       await tapText(tester, '撤回');
       expect(b.invites[code]!.revoked, isTrue);
+    });
+
+    testWidgets('an invite can put those who join in some 牧區, named on it', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      captureOutbox(tester);
+      await go(tester, '/me/invites');
+      await tapText(tester, '青年崇拜');
+      await tapText(tester, '7 天內有效');
+      final invite = b.invites.values.single;
+      expect(invite.zoneTypes, ['youth']);
+      expect(find.text('青年崇拜'), findsNWidgets(2), reason: 'the picker, and under the code');
     });
 
     testWidgets('an invite leaves the list when it expires, and stops working', (tester) async {

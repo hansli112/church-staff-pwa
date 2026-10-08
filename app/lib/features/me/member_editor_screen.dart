@@ -9,7 +9,8 @@ import '../common/errors.dart';
 import '../common/labels.dart';
 
 /// An admin editing one member: role, permission groups, and per service
-/// the zone and the duties they serve. Every change saves at once.
+/// whether they belong to its 牧區 and the duties they serve there. Every
+/// change saves at once.
 ///
 /// An admin cannot demote or remove themself (the rules forbid it too), so
 /// those controls do not appear on their own page.
@@ -18,12 +19,46 @@ class MemberEditorScreen extends ConsumerWidget {
 
   final String uid;
 
-  Future<void> _save(BuildContext context, WidgetRef ref, Member next) async {
+  /// Saves [next]; false, and says so, when it failed.
+  Future<bool> _save(BuildContext context, WidgetRef ref, Member next) async {
     try {
       await ref.churchData.saveMember(next);
+      return true;
     } catch (_) {
       if (context.mounted) showToast(context, L10n.of(context).saveFailed);
+      return false;
     }
+  }
+
+  /// Takes [member] out of [service]'s 牧區, which clears its duties too,
+  /// and offers 「復原」: the 牧區 comes back where it was, on the member as
+  /// they are by then.
+  Future<void> _leaveZone(BuildContext context, WidgetRef ref, Member member, Service service) async {
+    final index = member.zones.indexWhere((z) => z.serviceType == service.id);
+    if (index < 0) return;
+    final zone = member.zones[index];
+    // The toast outlives this page, so undo holds on to what it needs.
+    final container = ProviderScope.containerOf(context, listen: false);
+    final data = ref.churchData;
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = L10n.of(context);
+    if (!await _save(context, ref, member.copyWith(zones: [...member.zones]..removeAt(index)))) return;
+    if (!context.mounted) return;
+    showToast(
+      context,
+      l10n.zoneLeft(service.name),
+      onUndo: () {
+        // The member as they are now, which may not show the change yet.
+        final now = container.read(membersProvider).value?.where((m) => m.uid == member.uid).firstOrNull ?? member;
+        final rest = [
+          for (final z in now.zones)
+            if (z.serviceType != service.id) z,
+        ];
+        data.saveMember(now.copyWith(zones: rest..insert(index.clamp(0, rest.length), zone))).catchError((_) {
+          messenger.showSnackBar(SnackBar(content: Text(l10n.saveFailed)));
+        });
+      },
+    );
   }
 
   /// Picks a pending member and, once confirmed, merges it into [member].
@@ -126,6 +161,7 @@ class MemberEditorScreen extends ConsumerWidget {
               member: member,
               service: s,
               onSave: (m) => _save(context, ref, m),
+              onLeave: () => _leaveZone(context, ref, member, s),
             ),
           if (shown.isNotEmpty)
             Padding(
@@ -164,11 +200,13 @@ class _ZoneSection extends StatelessWidget {
     required this.member,
     required this.service,
     required this.onSave,
+    required this.onLeave,
   });
 
   final Member member;
   final Service service;
   final ValueChanged<Member> onSave;
+  final VoidCallback onLeave;
 
   @override
   Widget build(BuildContext context) {
@@ -187,7 +225,7 @@ class _ZoneSection extends StatelessWidget {
         SwitchRow(
           title: L10n.of(context).zoneSwitch,
           value: zone != null,
-          onChanged: (on) => onSave(withZone(on ? Zone(serviceType: service.id) : null)),
+          onChanged: (on) => on ? onSave(withZone(Zone(serviceType: service.id))) : onLeave(),
         ),
         if (zone != null)
           for (final d in duties)

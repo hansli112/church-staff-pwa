@@ -598,6 +598,17 @@ describe('邀請 (invites)', () => {
     await assertFails(getDoc(doc(asAnon(), 'invites/AAAA4444')));
   });
 
+  it('邀請可以帶加入後屬於的牧區，最多 20 個', async () => {
+    const db = as(ADMIN_A);
+    const many = (n) => Array.from({ length: n }, (_, i) => `s${i}`);
+    await assertSucceeds(setDoc(doc(db, 'invites/EEEE1111'), invite(A, ADMIN_A, { zoneTypes: ['sunday'] })));
+    await assertSucceeds(setDoc(doc(db, 'invites/EEEE2222'), invite(A, ADMIN_A, { zoneTypes: many(20) })));
+    await assertFails(setDoc(doc(db, 'invites/EEEE3333'), invite(A, ADMIN_A, { zoneTypes: many(21) })));
+    await assertFails(setDoc(doc(db, 'invites/EEEE4444'), invite(A, ADMIN_A, { zoneTypes: 'sunday' })));
+    // Another church's admin cannot invite into A's 牧區.
+    await assertFails(setDoc(doc(as(ADMIN_B), 'invites/EEEE5555'), invite(A, ADMIN_B, { zoneTypes: ['sunday'] })));
+  });
+
   it('不能建立超過 31 天、已撤回、冒名或格式不對的邀請', async () => {
     const db = as(ADMIN_A);
     await assertFails(setDoc(doc(db, 'invites/DDDD1111'), invite(A, ADMIN_A, { expiresAt: inFuture(40) })));

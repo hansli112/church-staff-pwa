@@ -262,6 +262,11 @@ Invite inviteFromJson(String code, Json data) => Invite(
   expiresAt: readTime(data['expiresAt']) ?? DateTime.fromMillisecondsSinceEpoch(0),
   revoked: data['revoked'] as bool? ?? false,
   createdAt: readTime(data['createdAt']),
+  zoneTypes: [
+    if (data['zoneTypes'] is List)
+      for (final t in data['zoneTypes'] as List<dynamic>)
+        if (t is String) t,
+  ],
 );
 
 UserProfile profileFromJson(String uid, Json data) => UserProfile(

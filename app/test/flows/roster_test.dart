@@ -34,7 +34,7 @@ void main() {
     });
 
     testWidgets('roster tab shows saved days and template drafts', (tester) async {
-      await pumpApp(tester, seededChurch(as: john));
+      await pumpApp(tester, seededChurch(as: editor));
       await tapText(tester, '服事表');
       expect(find.text('主日崇拜'), findsOneWidget);
       expect(find.text('青年崇拜'), findsOneWidget);
@@ -44,8 +44,19 @@ void main() {
       expect(find.text('待定'), findsWidgets);
     });
 
+    testWidgets('a member sees only their 牧區; one in none is told to ask an admin', (tester) async {
+      await pumpApp(tester, seededChurch(as: staffMei));
+      await tapText(tester, '服事表');
+      expect(find.text('青年崇拜'), findsNothing);
+      expect(find.textContaining('10月4日'), findsWidgets);
+
+      await pumpApp(tester, seededChurch(as: john));
+      await tapText(tester, '服事表');
+      expect(find.text('你還沒有屬於任何牧區，請找管理員設定'), findsOneWidget);
+    });
+
     testWidgets('a change rebuilds only the card it touched', (tester) async {
-      final b = seededChurch(as: john);
+      final b = seededChurch(as: staffMei);
       await pumpApp(tester, b);
       await tapText(tester, '服事表');
       rosterCardBuilds.clear();

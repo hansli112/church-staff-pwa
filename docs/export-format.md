@@ -43,7 +43,7 @@
     "ids": ["sunday"]
   },
 
-  // 同工。groups：roster-editors、calendar-editors。zones 是各服事負責的服事項目。
+  // 同工。groups：roster-editors、calendar-editors。zones 是屬於的牧區（聚會別）和在那裡的服事項目，服事項目可以是空的。
   "members": [
     {
       "uid": "…", "name": "李美玉", "email": "mei@example.com",

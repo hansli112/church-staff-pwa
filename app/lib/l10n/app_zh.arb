@@ -373,7 +373,7 @@
   "groupRosterEditors": "安排服事表",
   "groupCalendarEditors": "編輯行事曆",
   "zones": "牧區與服事",
-  "zonesFooter": "勾選他在各聚會負責的服事。有「安排服事表」權限的人，只能安排自己牧區的服事表",
+  "zonesFooter": "能安排服事表的人，只能排自己牧區的聚會",
   "removeMember": "移除同工",
   "memberRemoved": "已移除{name}",
   "@memberRemoved": {
@@ -504,7 +504,26 @@
   "notifNotAllowed": "通知還沒開。跳出詢問時，請按「允許」",
   "notifRegisterFailed": "通知還沒設定好，下次打開 App 會再試",
   "pushView": "查看",
-  "zoneSwitch": "負責這個聚會",
+  "zoneSwitch": "屬於這個牧區",
+  "zoneLeft": "不再屬於{service}牧區",
+  "@zoneLeft": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "noZoneYet": "你還沒有屬於任何牧區，請找管理員設定",
+  "waitsForZone": "還沒設定牧區",
+  "waitingForZone": "{count} 位同工還沒設定牧區",
+  "@waitingForZone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "inviteZones": "加入後屬於",
   "photoImport": "照片匯入",
   "photoRemaining": "這個月還可以辨識 {count} 張",
   "@photoRemaining": {

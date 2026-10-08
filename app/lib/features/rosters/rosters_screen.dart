@@ -22,7 +22,8 @@ final selectedServiceProvider = NotifierProvider<SelectedService, String?>(
 );
 
 /// The 服事表 tab: upcoming days of one service at a time, with a switch
-/// between services when the church has more than one.
+/// between services when it shows more than one. A member sees the 牧區
+/// they belong to; admins and roster editors see every service.
 ///
 /// Self-host collapsed every day into an expansion tile and had a separate
 /// edit mode. Here every day shows its people at once; tapping a day opens
@@ -34,10 +35,11 @@ class RostersScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
     final settings = ref.watch(servicesProvider);
-    final me = ref.watch(meProvider).value;
-    final enabled = settings.value?.enabled ?? const [];
+    final meValue = ref.watch(meProvider);
+    final me = meValue.value;
+    final mine = me?.rosterServices(settings.value?.enabled ?? const []) ?? const <Service>[];
     final selectedId = ref.watch(selectedServiceProvider);
-    final shown = enabled.where((s) => s.id == selectedId).firstOrNull ?? enabled.firstOrNull;
+    final shown = mine.where((s) => s.id == selectedId).firstOrNull ?? mine.firstOrNull;
     final canImport = shown != null && (me?.canEditRosters(shown.id) ?? false);
     return Scaffold(
       appBar: AppBar(
@@ -58,22 +60,22 @@ class RostersScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(servicesProvider),
         ),
         data: (settings) {
-          final services = settings.enabled;
-          if (services.isEmpty) {
+          if (settings.enabled.isEmpty) {
             return EmptyState(
               message: l10n.noServicesConfigured,
               actionLabel: (me?.isAdmin ?? false) ? l10n.setUpServices : null,
               onAction: () => context.push('/me/services'),
             );
           }
-          final selected = ref.watch(selectedServiceProvider);
-          final current = services.firstWhere(
-            (s) => s.id == selected,
-            orElse: () => services.first,
-          );
+          // Which services are mine waits for my member doc.
+          if (meValue.hasError) {
+            return ErrorRetry(message: l10n.loadFailed, onRetry: () => ref.invalidate(meProvider));
+          }
+          if (me == null) return const SizedBox.shrink();
+          if (shown == null) return EmptyState(message: l10n.noZoneYet);
           return Column(
             children: [
-              if (services.length > 1)
+              if (mine.length > 1)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                     Space.m,
@@ -86,13 +88,13 @@ class RostersScreen extends ConsumerWidget {
                     child: SegmentedButton<String>(
                       showSelectedIcon: false,
                       segments: [
-                        for (final s in services)
+                        for (final s in mine)
                           ButtonSegment(
                             value: s.id,
                             label: Text(s.name, maxLines: 1),
                           ),
                       ],
-                      selected: {current.id},
+                      selected: {shown.id},
                       onSelectionChanged: (v) {
                         Haptics.selection();
                         ref.read(selectedServiceProvider.notifier).select(v.first);
@@ -100,7 +102,7 @@ class RostersScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-              Expanded(child: ServiceRosterList(service: current)),
+              Expanded(child: ServiceRosterList(service: shown)),
             ],
           );
         },

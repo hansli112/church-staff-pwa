@@ -581,7 +581,7 @@ class FirestoreChurchData implements ChurchData {
       .translated();
 
   @override
-  Future<Invite> createInvite({required Duration validFor}) => _guard(() async {
+  Future<Invite> createInvite({required Duration validFor, List<String> zoneTypes = const []}) => _guard(() async {
     final church = await _church.get();
     final code = randomInviteCode();
     final expiresAt = _clock().add(validFor);
@@ -593,12 +593,14 @@ class FirestoreChurchData implements ChurchData {
       'revoked': false,
       'createdBy': uid,
       'createdAt': FieldValue.serverTimestamp(),
+      if (zoneTypes.isNotEmpty) 'zoneTypes': zoneTypes,
     });
     return Invite(
       code: code,
       churchId: churchId,
       churchName: church.data()?['name'] as String? ?? '',
       expiresAt: expiresAt,
+      zoneTypes: zoneTypes,
     );
   });
 

@@ -586,6 +586,17 @@ void contractTests(Future<ContractWorld> Function() open) {
       await expectLater(cloud().redeemInvite(revoked.code), fails(CloudErrorCode.inviteInvalid));
       await expectLater(cloud().redeemInvite(expired.code), fails(CloudErrorCode.inviteExpired));
     });
+
+    test("joining with an invite's 牧區 belongs to those the church has", () async {
+      final g = await Grace.open(w);
+      final invite = await g.church.createInvite(validFor: const Duration(days: 7), zoneTypes: ['youth', 'gone']);
+      expect((await g.church.invites().first).firstWhere((i) => i.code == invite.code).zoneTypes, ['youth', 'gone']);
+      await w.signOut();
+      final uid = await w.signUp('new@example.com', name: '新朋友');
+      await cloud().redeemInvite(invite.code);
+      final me = (await g.church.member(uid).first)!;
+      expect(me.zones, const [Zone(serviceType: 'youth')]);
+    });
   });
 
   group('church link', () {

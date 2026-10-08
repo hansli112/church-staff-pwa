@@ -27,12 +27,17 @@ beforeEach(async () => {
   setNow(new Date('2026-10-01T10:00:00+08:00'));
 });
 
-async function invite(code: string, cid: string, opts: { expiresAt?: Date; revoked?: boolean } = {}) {
+async function invite(
+  code: string,
+  cid: string,
+  opts: { expiresAt?: Date; revoked?: boolean; zoneTypes?: unknown } = {},
+) {
   await db.doc(`invites/${code}`).set({
     cid,
     churchName: cid,
     expiresAt: Timestamp.fromDate(opts.expiresAt ?? new Date('2026-10-08T00:00:00Z')),
     revoked: opts.revoked ?? false,
+    ...(opts.zoneTypes === undefined ? {} : { zoneTypes: opts.zoneTypes }),
   });
 }
 
@@ -58,6 +63,30 @@ describe('invites', () => {
     await invite('JOINME2026', 'C1');
     const preview = await previewInvite(deps, null, { code: 'JOINME2026' });
     assert.deepEqual(preview, { churchName: 'C1' }, 'signed out: only the name');
+  });
+
+  test("joining with an invite's 牧區 belongs to those still set up, with no duties", async () => {
+    await seedChurch('C1', { alice: 'admin' });
+    await db.doc('churches/C1/settings/services').set({
+      services: [
+        { id: 'sunday', name: '主日崇拜', weekday: 7, enabled: true, duties: ['司琴'] },
+        { id: 'youth', name: '青年崇拜', weekday: 6, enabled: true, duties: [] },
+      ],
+      ids: ['sunday', 'youth', 'gone'],
+    });
+    await seedChurch('C2', { bob: 'admin' });
+    await db.doc('churches/C2/settings/services').set({ services: [{ id: 'c2only', name: '別間的聚會' }], ids: ['c2only'] });
+    // Another church's service, a removed one, a repeat and junk are dropped.
+    await invite('JOINME2026', 'C1', { zoneTypes: ['youth', 'gone', 'c2only', 'sunday', 'youth', 7] });
+
+    await redeemInvite(deps, caller('newbie'), { code: 'JOINME2026' });
+
+    const member = await db.doc('churches/C1/members/newbie').get();
+    assert.deepEqual(member.get('zones'), [
+      { serviceType: 'youth', duties: [] },
+      { serviceType: 'sunday', duties: [] },
+    ]);
+    assert.deepEqual(member.get('zoneTypes'), ['youth', 'sunday']);
   });
 
   test('redeeming twice keeps one member doc and does not reset the role', async () => {

@@ -27,6 +27,7 @@ final _liveInvitesProvider = Provider.autoDispose<List<Invite>>((ref) {
 });
 
 /// Admins make invite links (7 or 30 days), share them, and revoke them.
+/// A link can put the people who join with it in some 牧區 at once.
 class InvitesScreen extends ConsumerStatefulWidget {
   const InvitesScreen({super.key});
 
@@ -37,18 +38,30 @@ class InvitesScreen extends ConsumerStatefulWidget {
 class _InvitesScreenState extends ConsumerState<InvitesScreen> {
   bool _busy = false;
 
+  /// The 牧區 the next invite joins, as service IDs.
+  final _zones = <String>{};
+
   Future<void> _create(int days) async {
     final l10n = L10n.of(context);
     setState(() => _busy = true);
     final Invite invite;
     try {
-      invite = await ref.churchData.createInvite(validFor: Duration(days: days));
+      final services = ref.read(servicesProvider).value?.enabled ?? const <Service>[];
+      invite = await ref.churchData.createInvite(
+        validFor: Duration(days: days),
+        zoneTypes: [
+          for (final s in services)
+            if (_zones.contains(s.id)) s.id,
+        ],
+      );
     } catch (_) {
       if (mounted) showToast(context, l10n.saveFailed);
       return;
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+    // Each invite picks its own 牧區.
+    if (mounted) setState(_zones.clear);
     // Saved: whatever happens to the share sheet, the invite is in the list.
     if (mounted) await _share(invite);
   }
@@ -103,11 +116,33 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final live = ref.watch(_liveInvitesProvider);
+    final services = ref.watch(servicesProvider).value;
+    final enabled = services?.enabled ?? const <Service>[];
     final fmt = DateFormat.MMMd('zh_TW');
+    String? zonesOf(Invite i) {
+      final names = [for (final t in i.zoneTypes) ?services?.byId(t)?.name];
+      return names.isEmpty ? null : names.join('、');
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text(l10n.invites)),
       body: ListView(
         children: [
+          if (enabled.isNotEmpty)
+            ListSection(
+              header: l10n.inviteZones,
+              children: [
+                for (final s in enabled)
+                  ListRow(
+                    title: s.name,
+                    selected: _zones.contains(s.id),
+                    onTap: () {
+                      Haptics.selection();
+                      setState(() => _zones.contains(s.id) ? _zones.remove(s.id) : _zones.add(s.id));
+                    },
+                  ),
+              ],
+            ),
           ListSection(
             header: l10n.inviteCreate,
             children: [
@@ -125,6 +160,7 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
                 for (final i in live)
                   ListRow(
                     title: i.code,
+                    subtitle: zonesOf(i),
                     value: l10n.inviteExpiresOn(fmt.format(i.expiresAt)),
                     onTap: () => _actions(i),
                   ),

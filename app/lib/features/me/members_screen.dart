@@ -41,6 +41,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
     final members = ref.watch(membersProvider);
+    final enabled = ref.watch(servicesProvider).value?.enabled ?? const <Service>[];
     final hidden = ref.watch(pendingRemovalsProvider);
     final uid = ref.watch(uidProvider);
     final isAdmin = ref.watch(
@@ -112,6 +113,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                               child: ListRow(
                                 title: m.uid == uid ? '${m.name}（${l10n.you}）' : m.name,
                                 subtitle: [
+                                  if (m.waitsForZone(enabled)) l10n.waitsForZone,
                                   if (m.inGroup(Group.rosterEditors) && !m.isAdmin) l10n.groupRosterEditors,
                                   if (m.inGroup(Group.calendarEditors) && !m.isAdmin) l10n.groupCalendarEditors,
                                 ].join('・').ifEmpty(null),

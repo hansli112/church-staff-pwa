@@ -13,6 +13,7 @@
 | `churches/{cid}/rosters/{id}` | 服事表，`type` 是聚會別 ID，`dateKey` 是 `YYYY-MM-DD` |
 | `churches/{cid}/pendingMembers/{舊 uid}` | 從舊版搬來、還沒登入的同工：`name`、`email`、`emailHash`、`role`、`groups`、`zones`、`zoneTypes`。後端建立，管理員可以刪 |
 | `pendingIndex/{email 的 SHA-256}` | 只有後端讀寫：`churches`（教會 id → 待認領同工 id） |
+| `invites/{邀請碼}` | `cid`、`churchName`、`expiresAt`（31 天內）、`revoked`、`createdBy`、`createdAt`、`zoneTypes`（選填，加入後屬於的牧區，最多 20 個；加入時只留教會還有的聚會別，不帶服事項目）。管理員建立、撤回，加入經 `redeemInvite` |
 | `churches/{cid}/staff_orders/{type}` | 各聚會別的同工排序 |
 | `churches/{cid}/settings/{doc}` | `services`（聚會別，`ids` 只增不減）、`roster_templates` 等 |
 | `churches/{cid}/settings/link` | 教會連結：`title`（1–30 字）、`body`（最多 120 字）、`url`（限 `https`）；`source`（每日內容來源，`https`）與 `fetchMinute`（每天抓取時間，台北時間午夜後的分鐘數，15 分鐘為單位）只能經 `setLinkSource` 設定 |
@@ -61,7 +62,8 @@
 
 - `role`：`admin`、`leader`、`staff`、`member`。只有 `admin` 有權限上的意義，其他是身分標示。
 - `groups`：`roster-editors`、`calendar-editors`。可同時擁有多個；admin 視同全部都有。
-- `zoneTypes`：`zones` 攤平後的聚會別 ID 清單，決定 roster editor 能改哪幾種服事表。
+- `zones`：同工屬於的牧區（聚會別），每個帶他在那裡的服事項目，可以是空的。服事表分頁只顯示自己的牧區，admin 和 roster-editors 看全部；這只是讓畫面清爽，規則照樣讓所有同工讀所有服事表。
+- `zoneTypes`：`zones` 攤平後的聚會別 ID 清單，也就是自己的牧區。服事表分頁照它顯示，也決定 roster editor 能改哪幾種服事表；規則讀不到 `zones` 裡面，所以另存一份。
 
 ## 權限
 

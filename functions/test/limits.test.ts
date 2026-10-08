@@ -35,6 +35,8 @@ const RULES_FIELDS: Record<string, { text?: keyof typeof TEXT_LIMITS; other?: ke
   "data.get('body', '')": { text: 'linkBody' },
   'data.url': { other: 'url' },
   'data.services': { other: 'services' },
+  // invites: the 牧區 an invite joins, at most every service.
+  "request.resource.data.get('zoneTypes', [])": { other: 'services' },
   // settings/services ids: a list only the rules bound.
   'data.ids': { rulesOnly: 100 },
 };

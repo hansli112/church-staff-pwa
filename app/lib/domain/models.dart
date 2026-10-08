@@ -135,6 +135,26 @@ class Member {
     for (final type in {for (final zone in zones) zone.serviceType}) type,
   ];
 
+  /// Whether the 服事表 tab shows this member every service, not only
+  /// their 牧區.
+  bool get seesAllServices => inGroup(Group.rosterEditors);
+
+  /// The services of [services] the 服事表 tab shows this member: the 牧區
+  /// they belong to, or all of them for admins and roster editors. Only
+  /// tidies the tab; every member may still read every roster.
+  List<Service> rosterServices(List<Service> services) {
+    if (seesAllServices) return services;
+    final mine = zoneTypes.toSet();
+    return [
+      for (final s in services)
+        if (mine.contains(s.id)) s,
+    ];
+  }
+
+  /// Whether the 服事表 tab, showing [services], is empty for this member
+  /// until an admin puts them in a 牧區: they are in none of them.
+  bool waitsForZone(List<Service> services) => services.isNotEmpty && rosterServices(services).isEmpty;
+
   /// Whether this member may edit rosters of [serviceType].
   bool canEditRosters(String serviceType) =>
       isAdmin || (groups.contains(Group.rosterEditors) && zoneTypes.contains(serviceType));
@@ -431,6 +451,7 @@ class Invite {
     required this.expiresAt,
     this.revoked = false,
     this.createdAt,
+    this.zoneTypes = const [],
   });
 
   final String code;
@@ -439,6 +460,9 @@ class Invite {
   final DateTime expiresAt;
   final bool revoked;
   final DateTime? createdAt;
+
+  /// The 牧區 (service IDs) a member who joins with it belongs to.
+  final List<String> zoneTypes;
 
   bool usableAt(DateTime now) => !revoked && now.isBefore(expiresAt);
 }
