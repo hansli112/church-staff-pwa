@@ -35,6 +35,36 @@ void main() {
     expect(done, isTrue);
   });
 
+  testWidgets('the most used characters come after the app’s own, which the loading screen waits for', (tester) async {
+    final laidOut = <String>[];
+    var done = false;
+    unawaited(
+      warmUpFonts(
+        bundle: rootBundle,
+        systemFonts: PaintingBinding.instance.systemFonts,
+        layOut: laidOut.add,
+      ).then((_) => done = true),
+    );
+    // Reading the strings is real I/O.
+    await tester.runAsync(() async {
+      while (laidOut.isEmpty) {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
+    expect(laidOut, hasLength(1));
+    expect(laidOut.single, contains('切換教會'));
+    expect(laidOut.single, isNot(contains(commonCharacters)), reason: 'not held up by them');
+
+    await sendFontsChange(tester);
+    await tester.pump();
+    expect(done, isTrue);
+    expect(laidOut.last, commonCharacters);
+
+    await sendFontsChange(tester);
+    await tester.pump();
+    expect(laidOut, hasLength(2), reason: 'once');
+  });
+
   testWidgets('strings that cannot be read leave the fonts to the first page', (tester) async {
     Object? error;
     var done = false;

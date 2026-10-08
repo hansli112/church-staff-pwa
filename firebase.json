@@ -88,11 +88,20 @@
         ]
       },
       {
-        "source": "**/*.@(otf|ttf|png)",
+        "source": "**/*.png",
         "headers": [
           {
             "key": "Cache-Control",
             "value": "public, max-age=86400"
+          }
+        ]
+      },
+      {
+        "regex": "^/assets/.+\\.[0-9a-f]{10}\\.(otf|ttf)$",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000, immutable"
           }
         ]
       }
