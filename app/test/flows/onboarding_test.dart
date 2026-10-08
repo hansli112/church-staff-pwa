@@ -184,6 +184,82 @@ void main() {
     expect(find.text('希望堂'), findsOneWidget);
   });
 
+  testWidgets('a member of one church starts another from 切換教會', (tester) async {
+    final b = seededChurch(as: staffMei);
+    await pumpApp(tester, b);
+    await tapText(tester, '我的');
+    await tapText(tester, '切換教會');
+    await tapText(tester, '建立新教會');
+    await tester.enterText(find.byType(TextField), '希望堂');
+    await tester.pump();
+    await tapText(tester, '建立');
+
+    final hope = b.churches.entries.singleWhere((e) => e.value.name == '希望堂').key;
+    expect(b.members[hope]!['mei']!.role, Role.admin);
+    expect(b.members['grace']!.containsKey('mei'), isTrue);
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.text('希望堂'), findsOneWidget, reason: 'switched to the new church');
+
+    await tapText(tester, '我的');
+    await tapText(tester, '切換教會');
+    await tapText(tester, '恩典堂');
+    expect(find.text('恩典堂'), findsOneWidget);
+  });
+
+  testWidgets('a member of one church joins another with a code from 切換教會', (tester) async {
+    final b = seededChurch(as: staffMei);
+    b.addChurch('希望堂', id: 'hope');
+    b.invites['HOPE2026'] = Invite(
+      code: 'HOPE2026',
+      churchId: 'hope',
+      churchName: '希望堂',
+      expiresAt: testNow.add(const Duration(days: 7)),
+    );
+    await pumpApp(tester, b);
+    await tapText(tester, '我的');
+    await tapText(tester, '切換教會');
+    await tapText(tester, '輸入邀請碼');
+    await tester.enterText(find.byType(TextField), 'hope2026');
+    await tester.pump();
+    await tapText(tester, '下一步');
+    await tapText(tester, '加入');
+
+    expect(b.members['hope']!.containsKey('mei'), isTrue);
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.text('希望堂'), findsOneWidget);
+
+    await tapText(tester, '我的');
+    await tapText(tester, '切換教會');
+    await tapText(tester, '恩典堂');
+    expect(find.text('恩典堂'), findsOneWidget, reason: 'still in the first church');
+  });
+
+  testWidgets('back from starting a church returns to the church I am in', (tester) async {
+    await pumpApp(tester, seededChurch(as: staffMei));
+    await tapText(tester, '我的');
+    await tapText(tester, '切換教會');
+    await tapText(tester, '建立新教會');
+    expect(find.text('教會名稱'), findsOneWidget);
+    await tester.tap(find.byType(BackButton));
+    await settle(tester);
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.text('加入你的教會'), findsNothing);
+    expect(find.text('切換教會'), findsOneWidget, reason: 'back on 我的');
+  });
+
+  testWidgets('a member who mistypes a code goes back to fix it', (tester) async {
+    await pumpApp(tester, seededChurch(as: staffMei));
+    await tapText(tester, '我的');
+    await tapText(tester, '切換教會');
+    await tapText(tester, '輸入邀請碼');
+    await tester.enterText(find.byType(TextField), 'TYPO1234');
+    await tester.pump();
+    await tapText(tester, '下一步');
+    expect(find.text('找不到這個邀請，請確認邀請碼，或向管理員要新的邀請'), findsOneWidget);
+    await tapText(tester, '輸入邀請碼');
+    expect(find.text('TYPO1234'), findsOneWidget, reason: 'the code to fix');
+  });
+
   testWidgets('a pasted invite link works as a code', (tester) async {
     final b = MemoryBackend(clock: testClock);
     final cid = b.addChurch('恩典堂');

@@ -63,11 +63,19 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
       body: SafeArea(
         child: preview.when(
           loading: () => const SizedBox.shrink(),
-          error: (e, _) => EmptyState(
-            message: errorText(l10n, e),
-            actionLabel: memberships.isEmpty ? l10n.enterInviteCode : l10n.tabHome,
-            onAction: () => context.go(memberships.isEmpty ? '/welcome/join' : '/home'),
-          ),
+          // A typed code goes back to be fixed; a link, to another code
+          // or home.
+          error: (e, _) => context.canPop()
+              ? EmptyState(
+                  message: errorText(l10n, e),
+                  actionLabel: l10n.enterInviteCode,
+                  onAction: () => context.pop(),
+                )
+              : EmptyState(
+                  message: errorText(l10n, e),
+                  actionLabel: memberships.isEmpty ? l10n.enterInviteCode : l10n.tabHome,
+                  onAction: () => context.go(memberships.isEmpty ? '/welcome/join' : '/home'),
+                ),
           data: (invite) {
             // The logo is a nicety: shown once it comes, never waited for.
             final logo = ref.watch(churchPreviewProvider(invite.churchId)).value?.logoUrl;

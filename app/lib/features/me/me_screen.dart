@@ -23,7 +23,6 @@ class MeScreen extends ConsumerWidget {
     final profile = ref.watch(profileProvider).value;
     final church = ref.watch(churchProvider).value;
     final me = ref.watch(meProvider).value;
-    final multiple = (ref.watch(membershipsProvider).value?.length ?? 0) > 1;
     final isOperator = ref.watch(isOperatorProvider).value ?? false;
     final store = ref.watch(supportStoreProvider);
     final supporter = store.available && ref.watch(supporterProvider);
@@ -55,11 +54,11 @@ class MeScreen extends ConsumerWidget {
                 value: church?.name,
                 onTap: () => context.push('/me/church'),
               ),
-              if (multiple)
-                ListRow(
-                  title: l10n.switchChurch,
-                  onTap: () => showChurchSwitcher(context, ref),
-                ),
+              // Also with one church: joining or starting another starts here.
+              ListRow(
+                title: l10n.switchChurch,
+                onTap: () => showChurchSwitcher(context, ref),
+              ),
               ListRow(
                 title: l10n.notifications,
                 onTap: () => context.push('/me/notifications'),

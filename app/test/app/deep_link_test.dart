@@ -114,6 +114,14 @@ void main() {
     (ready, invite, stay),
   ]);
 
+  table('ready: joining or starting another church stays', [
+    (ready, '/welcome/join', stay),
+    (ready, '/welcome/join/ABC', stay),
+    (ready, '/welcome/create', stay),
+    (ready, '/welcome/move', stay),
+    (ready, '/login?from=%2Fwelcome%2Fcreate', to('/welcome/create')),
+  ]);
+
   table('a church URL of my church switches to it, at its notification page', [
     (ready, '/c/hope', to('/home', church: 'hope')),
     (ready, '/c/hope?to=%2Fme', to('/me', church: 'hope')),

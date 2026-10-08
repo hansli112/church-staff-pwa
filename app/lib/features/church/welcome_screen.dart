@@ -22,6 +22,18 @@ class WelcomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Also under the code and new-church pages opened from 切換教會, where
+    // going back lands here: blank for someone in a church (a swipe back
+    // shows it), and back to 我的 once it is the top page, since a pop is
+    // not redirected.
+    if (ref.watch(appStageProvider) == AppStage.ready) {
+      if (ModalRoute.of(context)?.isCurrent ?? true) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) context.go('/me');
+        });
+      }
+      return const Scaffold();
+    }
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
     return Scaffold(

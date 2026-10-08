@@ -58,6 +58,9 @@ LinkTarget resolveLink(AppStage stage, List<Membership> memberships, Uri uri) {
       if (at('/loading') || at('/login')) return resume('/closed');
       return _go('/closed');
     case AppStage.ready:
+      // Joining or starting another church, from 切換教會: only the
+      // welcome page itself is for someone in no church.
+      if (at('/welcome') && path != '/welcome') return _stay;
       if (at('/loading') || at('/login') || at('/welcome') || at('/closed')) {
         return resume('/home');
       }
