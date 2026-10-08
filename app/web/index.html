@@ -31,6 +31,37 @@
 
   <title>馬大別忙</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- The loading screen: a first visit downloads a few MB before the app
+       draws anything. The app removes it once past its own loading page;
+       the server fills in the church, or the invite (churchPage.ts). -->
+  <style>
+    #splash {
+      position: fixed; inset: 0; z-index: 2147483647;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 12px; padding: 24px; text-align: center;
+      background: #F2F2F7; color: #000;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    }
+    #splash img { width: 72px; height: 72px; border-radius: 16px; }
+    #splash p { margin: 0; max-width: 320px; }
+    #splash .title { font-size: 22px; font-weight: 700; line-height: 1.3; }
+    #splash .note { font-size: 15px; line-height: 1.5; color: #5C5C62; }
+    #splash .spin {
+      width: 22px; height: 22px; border-radius: 50%;
+      border: 3px solid #D1D1D6; border-top-color: #1F5FD1;
+      animation: splash-spin 0.9s linear infinite;
+    }
+    @keyframes splash-spin { to { transform: rotate(360deg); } }
+    @media (prefers-color-scheme: dark) {
+      #splash { background: #000; color: #fff; }
+      #splash .note { color: #AEAEB2; }
+      #splash .spin { border-color: #38383A; border-top-color: #6EA2FF; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #splash .spin { animation: none; }
+    }
+  </style>
 </head>
 <body>
   <!--
@@ -41,6 +72,13 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <div id="splash" role="status"><!--splash--><img src="icons/Icon-192.png" alt=""><p class="title">馬大別忙</p><div class="spin" aria-hidden="true"></div><p class="note">載入中…</p><!--/splash--></div>
+  <script>
+    // Should the app never take it down, it must not cover the app for good.
+    window.addEventListener('flutter-first-frame', function () {
+      setTimeout(function () { var s = document.getElementById('splash'); if (s) s.remove(); }, 20000);
+    });
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

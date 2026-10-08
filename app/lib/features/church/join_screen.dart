@@ -62,7 +62,7 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
       appBar: AppBar(),
       body: SafeArea(
         child: preview.when(
-          loading: () => const SizedBox.shrink(),
+          loading: () => const Center(child: CircularProgressIndicator.adaptive()),
           // A typed code goes back to be fixed; a link, to another code
           // or home.
           error: (e, _) => context.canPop()

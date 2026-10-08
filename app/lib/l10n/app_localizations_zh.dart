@@ -81,6 +81,17 @@ class L10nZh extends L10n {
   String get signInWithEmail => '用 email 登入';
 
   @override
+  String inAppBrowserNote(String app) {
+    return '在 $app 裡不能用 Google 登入。請用 Safari 或 Chrome 打開這個網頁，或用 email 登入';
+  }
+
+  @override
+  String get copyPageUrl => '複製網址';
+
+  @override
+  String get pageUrlCopied => '已複製網址，貼到 Safari 或 Chrome 打開';
+
+  @override
   String get loginTagline => '馬大！馬大！你為許多的事思慮煩擾，\n但是不可少的只有一件；\n馬利亞已經選擇那上好的福分，\n是不能奪去的。';
 
   @override

@@ -9,6 +9,7 @@ import 'router.dart';
 import 'state/providers.dart';
 import 'state/push.dart';
 import 'state/session.dart';
+import 'state/web_page.dart';
 
 /// Lets app-wide events (a notification arriving) show a toast without a
 /// screen's context.
@@ -21,6 +22,16 @@ class MarthaApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(sessionEffectsProvider);
     final router = ref.watch(routerProvider);
+    // The web page's loading screen stays over the app's own blank loading
+    // page, and comes down after the first frame of the page that follows.
+    void hideSplashAfterFrame(AppStage stage) {
+      if (stage == AppStage.loading) return;
+      final hide = ref.read(hideSplashProvider);
+      WidgetsBinding.instance.addPostFrameCallback((_) => hide());
+    }
+
+    ref.listen(appStageProvider, (_, stage) => hideSplashAfterFrame(stage));
+    hideSplashAfterFrame(ref.read(appStageProvider));
     // A tapped notification opens the page it is about.
     ref.listen(pushLinksProvider, (_, link) {
       final l = appLocation(link.value);

@@ -13,8 +13,11 @@ import '../../l10n/app_localizations.dart';
 String churchUrl(String churchId) => '${Env.current.webOrigin}/c/$churchId';
 
 /// The link an invite opens: under the church URL, so adding the invite
-/// page to the home screen already gives the church's icon.
-String inviteLink(String churchId, String code) => '${churchUrl(churchId)}/join/$code';
+/// page to the home screen already gives the church's icon. LINE, where
+/// most invites go, opens it in the phone's browser for the flag: its own
+/// browser keeps nothing between visits, and Google's sign-in policy turns
+/// such browsers away.
+String inviteLink(String churchId, String code) => '${churchUrl(churchId)}/join/$code?openExternalBrowser=1';
 
 /// The invite code in a location made by [inviteLink] (path only, like a
 /// login page's `from`), upper-cased; null for anything else.

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/features/church/church_logo.dart';
+import 'package:martha/state/web_page.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
@@ -258,6 +259,43 @@ void main() {
     expect(find.text('找不到這個邀請，請確認邀請碼，或向管理員要新的邀請'), findsOneWidget);
     await tapText(tester, '輸入邀請碼');
     expect(find.text('TYPO1234'), findsOneWidget, reason: 'the code to fix');
+  });
+
+  testWidgets('in LINE’s built-in browser, sign-in says to open the page in Safari or Chrome', (tester) async {
+    const line =
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari Line/14.16.0';
+    await pumpApp(
+      tester,
+      MemoryBackend(clock: testClock),
+      overrides: [userAgentProvider.overrideWithValue(line)],
+    );
+    expect(find.text('在 LINE 裡不能用 Google 登入。請用 Safari 或 Chrome 打開這個網頁，或用 email 登入'), findsOneWidget);
+    expect(find.text('複製網址'), findsOneWidget);
+    expect(find.text('使用 Google 登入'), findsOneWidget, reason: 'still offered');
+  });
+
+  testWidgets('the address to copy out of LINE is the invite link, not the sign-in page', (tester) async {
+    const line =
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari Line/14.16.0';
+    final b = MemoryBackend(clock: testClock);
+    final cid = b.addChurch('恩典堂');
+    b.invites['LINE2026'] = Invite(
+      code: 'LINE2026',
+      churchId: cid,
+      churchName: '恩典堂',
+      expiresAt: testNow.add(const Duration(days: 7)),
+    );
+    await pumpApp(tester, b, overrides: [userAgentProvider.overrideWithValue(line)]);
+    final out = captureOutbox(tester);
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/c/$cid/join/LINE2026?openExternalBrowser=1');
+    await settle(tester);
+    await tapText(tester, '複製網址');
+    expect(out.copied.single, endsWith('/c/$cid/join/LINE2026?openExternalBrowser=1'));
+  });
+
+  testWidgets('in a real browser, sign-in shows no such note', (tester) async {
+    await pumpApp(tester, MemoryBackend(clock: testClock));
+    expect(find.text('複製網址'), findsNothing);
   });
 
   testWidgets('a pasted invite link works as a code', (tester) async {

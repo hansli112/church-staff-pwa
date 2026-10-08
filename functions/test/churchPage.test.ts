@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
 
+import { Timestamp } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 
 import { APP_SHELL, churchPage, clearTemplateCache, type PageDeps } from '../src/churchPage.js';
@@ -17,8 +18,24 @@ const SHELL = `<!DOCTYPE html>
   <title>馬大別忙</title>
   <link rel="manifest" href="manifest.json">
 </head>
-<body><script src="flutter_bootstrap.js" async></script></body>
+<body>
+  <div id="splash" role="status"><!--splash--><p class="title">馬大別忙</p><p class="note">載入中…</p><!--/splash--></div>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
 </html>`;
+
+/** What the page shows before the app starts. */
+const splashOf = (html: string) => /<!--splash-->([\s\S]*?)<!--\/splash-->/.exec(html)?.[1] ?? '';
+
+async function seedInvite(code: string, cid: string, fields: Record<string, unknown> = {}) {
+  await db.doc(`invites/${code}`).set({
+    cid,
+    churchName: 'old name',
+    expiresAt: Timestamp.fromDate(new Date('2026-10-08T10:00:00+08:00')),
+    revoked: false,
+    ...fields,
+  });
+}
 
 const bucket = getStorage().bucket('demo-martha.appspot.com');
 
@@ -43,7 +60,7 @@ describe('church page', () => {
     for (const path of ['/c/Grace', '/c/Grace/join/ABCDEFGH']) {
       const r = await get(path);
       assert.equal(r.status, 200);
-      assert.equal(r.headers['cache-control'], 'public, max-age=300');
+      assert.equal(r.headers['cache-control'], path === '/c/Grace' ? 'public, max-age=300' : 'private, no-cache');
       const html = text(r.body);
       assert.match(html, /<title>恩典堂 &lt;台北&gt;<\/title>/);
       assert.match(html, /<meta name="apple-mobile-web-app-title" content="恩典堂 &lt;台北&gt;">/);
@@ -53,6 +70,63 @@ describe('church page', () => {
       assert.match(html, /<meta property="og:image" content="https:\/\/martha.example\/c\/Grace\/icons\/42\/logo.png">/);
       assert.match(html, /flutter_bootstrap\.js/, 'still the app');
     }
+  });
+
+  test('before the app starts, the church page shows the church, loading', async () => {
+    await seedChurch('Grace', {}, { name: '恩典堂 <台北>', logoVersion: '42' });
+    const shown = splashOf(text((await page().get('/c/Grace')).body));
+    assert.match(shown, /<img src="\/c\/Grace\/icons\/42\/logo.png" alt="">/);
+    assert.match(shown, /<p class="title">恩典堂 &lt;台北&gt;<\/p>/);
+    assert.match(shown, /載入中…/);
+    assert.match(shown, /class="spin"/);
+  });
+
+  test('an invite link shows whom it joins straight away, and fresh', async () => {
+    await seedChurch('Grace', {}, { name: '恩典堂' });
+    await seedInvite('ABCDEFGH', 'Grace');
+    const r = await page().get('/c/Grace/join/abcdefgh');
+    assert.equal(r.status, 200);
+    assert.equal(r.headers['cache-control'], 'private, no-cache');
+    const html = text(r.body);
+    assert.match(html, /<title>恩典堂<\/title>/, 'still the church’s page');
+    const shown = splashOf(html);
+    assert.match(shown, /<p class="title">加入〈恩典堂〉<\/p>/, 'the church’s name now, not the invite’s');
+    assert.match(shown, /載入中…/);
+    assert.match(shown, /class="spin"/);
+  });
+
+  test('an invite link that cannot be used says why, before the app starts', async () => {
+    await seedChurch('Grace', {}, { name: '恩典堂' });
+    await seedChurch('Closed', {}, { name: '關閉堂', status: 'suspended' });
+    await seedInvite('EXPIRED1', 'Grace', { expiresAt: Timestamp.fromDate(new Date('2026-10-01T09:00:00+08:00')) });
+    await seedInvite('REVOKED1', 'Grace', { revoked: true });
+    await seedInvite('CLOSED01', 'Closed');
+    const { get } = page();
+    const shown = async (path: string) => splashOf(text((await get(path)).body));
+
+    assert.match(await shown('/c/Grace/join/EXPIRED1'), /這個邀請過期了，請向管理員要新的邀請/);
+    for (const path of ['/c/Grace/join/REVOKED1', '/c/Grace/join/NOSUCH01', '/c/Closed/join/CLOSED01']) {
+      const s = await shown(path);
+      assert.match(s, /找不到這個邀請，請確認邀請碼，或向管理員要新的邀請/, path);
+      assert.doesNotMatch(s, /class="spin"/, path);
+      assert.doesNotMatch(s, /關閉堂/, 'a closed church stays unnamed');
+    }
+  });
+
+  test('a shell without the loading screen is left as it is', async () => {
+    await seedChurch('Grace', {}, { name: '恩典堂' });
+    await seedInvite('ABCDEFGH', 'Grace');
+    const bare = SHELL.replace(/\s*<div id="splash"[^\n]*/, '');
+    const html = text((await page({ [`${APP}${APP_SHELL}`]: { body: bare } }).get('/c/Grace/join/ABCDEFGH')).body);
+    assert.match(html, /<title>恩典堂<\/title>/);
+    assert.doesNotMatch(html, /splash/);
+  });
+
+  test('a church name with $ in it is written as it is', async () => {
+    await seedChurch('Cash', {}, { name: "$& $' 堂" });
+    const html = text((await page().get('/c/Cash')).body);
+    assert.match(html, /<title>\$&amp; \$' 堂<\/title>/);
+    assert.match(splashOf(html), /<p class="title">\$&amp; \$' 堂<\/p>/);
   });
 
   test('the manifest names the church and starts at its URL', async () => {

@@ -76,6 +76,12 @@ void main() {
     (signedOut, '/loading', to('/login')),
   ]);
 
+  table('an invite link opened from LINE keeps its flag through sign-in', [
+    (signedOut, '$invite?openExternalBrowser=1', to('/login?from=${e('$invite?openExternalBrowser=1')}')),
+    (ready, '/login?from=${e('$invite?openExternalBrowser=1')}', to('$invite?openExternalBrowser=1')),
+    (ready, '$invite?openExternalBrowser=1', stay),
+  ]);
+
   table('after sign-in, the page asked for resumes', [
     (noChurch, '/login?from=%2Fc%2Fgrace%2Fjoin%2FABC', to(invite)),
     (ready, '/login?from=%2Fc%2Fgrace%2Fjoin%2FABC', to(invite)),

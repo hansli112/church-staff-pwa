@@ -1,4 +1,5 @@
 import type { Timestamp } from 'firebase-admin/firestore';
+import type { FunctionsErrorCode } from 'firebase-functions/v2/https';
 
 import { isChurchOpen } from './access.js';
 import { fail, requireCaller, serverTime, type Caller, type Deps } from './common.js';
@@ -9,21 +10,31 @@ import { personName } from './limits.js';
  * (firestore.rules); joining goes through [redeemInvite] because only the
  * backend may create a member doc.
  */
-async function usableInvite(deps: Deps, data: unknown) {
-  const raw = (data as { code?: unknown })?.code;
-  if (typeof raw !== 'string') fail('invalid-argument', 'inviteInvalid');
+export type InviteCheck =
+  | { ok: true; code: string; cid: string; churchName: string; expiresAt: Timestamp; zoneTypes: unknown }
+  | { ok: false; error: FunctionsErrorCode; reason: 'inviteInvalid' | 'inviteExpired' };
+
+/** Whether invite [raw] can be used now, and to join which church; never throws for a bad code. */
+export async function checkInvite(deps: Deps, raw: unknown): Promise<InviteCheck> {
+  const no = (error: FunctionsErrorCode, reason: 'inviteInvalid' | 'inviteExpired' = 'inviteInvalid') =>
+    ({ ok: false, error, reason }) as const;
+  if (typeof raw !== 'string') return no('invalid-argument');
   const code = raw.trim().toUpperCase();
-  if (!/^[A-Z0-9]{6,16}$/.test(code)) fail('not-found', 'inviteInvalid');
+  if (!/^[A-Z0-9]{6,16}$/.test(code)) return no('not-found');
   const snap = await deps.db.doc(`invites/${code}`).get();
-  if (!snap.exists || snap.get('revoked') === true) fail('not-found', 'inviteInvalid');
+  if (!snap.exists || snap.get('revoked') === true) return no('not-found');
   const expiresAt = snap.get('expiresAt') as Timestamp | undefined;
-  if (!expiresAt || expiresAt.toMillis() <= deps.now().getTime()) {
-    fail('failed-precondition', 'inviteExpired');
-  }
+  if (!expiresAt || expiresAt.toMillis() <= deps.now().getTime()) return no('failed-precondition', 'inviteExpired');
   const cid = snap.get('cid') as string;
   const church = await deps.db.doc(`churches/${cid}`).get();
-  if (!isChurchOpen(church)) fail('failed-precondition', 'inviteInvalid');
-  return { code, cid, churchName: church.get('name') as string, expiresAt, zoneTypes: snap.get('zoneTypes') as unknown };
+  if (!isChurchOpen(church)) return no('failed-precondition');
+  return { ok: true, code, cid, churchName: church.get('name') as string, expiresAt, zoneTypes: snap.get('zoneTypes') as unknown };
+}
+
+async function usableInvite(deps: Deps, data: unknown) {
+  const invite = await checkInvite(deps, (data as { code?: unknown })?.code);
+  if (!invite.ok) fail(invite.error, invite.reason);
+  return invite;
 }
 
 /**

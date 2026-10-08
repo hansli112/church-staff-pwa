@@ -4,11 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../data/backend.dart';
+import '../../deep_link.dart';
+import '../../env.dart';
 import '../../domain/limits.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
+import '../../state/web_page.dart';
 import '../church/links.dart';
 import '../common/errors.dart';
+import 'in_app_browser.dart';
 
 /// Sign-in. Google is the main way in, so it is the one prominent button;
 /// email and password sit below it.
@@ -139,6 +143,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               Text(l10n.loginInvitedTo(church), textAlign: TextAlign.center, style: AppText.headline),
               const SizedBox(height: Space.m),
             ],
+            if (inAppBrowser(ref.watch(userAgentProvider)) case final app?) ...[
+              _InAppBrowserNote(app: app, url: _pageToOpen()),
+              const SizedBox(height: Space.m),
+            ],
             PrimaryButton(
               label: l10n.signInWithGoogle,
               busy: _busy,
@@ -155,6 +163,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
       ),
     );
+  }
+
+  /// The address to open in the phone's browser: the page sign-in leads to
+  /// (an invite link, a church's page), which carries the church's name and
+  /// icon, rather than this one.
+  String _pageToOpen() {
+    final from = appLocation(widget.from);
+    return from == null ? Uri.base.toString() : '${Env.current.webOrigin}$from';
   }
 
   /// The church name of the invite being opened, once it has loaded.
@@ -282,6 +298,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Inside LINE, Facebook or Instagram, whose built-in browsers Google's
+/// sign-in policy turns away: the way out is the phone's browser, with
+/// [url] to paste there.
+class _InAppBrowserNote extends StatelessWidget {
+  const _InAppBrowserNote({required this.app, required this.url});
+
+  final String app;
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final c = AppColors.of(context);
+    return Container(
+      padding: const EdgeInsets.all(Space.m),
+      decoration: BoxDecoration(color: c.accentSoft, borderRadius: BorderRadius.circular(Radii.m)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(l10n.inAppBrowserNote(app), style: AppText.subheadline),
+          const SizedBox(height: Space.s),
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: SecondaryButton(
+              label: l10n.copyPageUrl,
+              onPressed: () => copyText(context, url, copied: l10n.pageUrlCopied),
+            ),
+          ),
+        ],
       ),
     );
   }

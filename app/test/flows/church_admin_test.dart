@@ -232,7 +232,7 @@ void main() {
       expect(out.sharedTexts.single, contains('https://marthasit-dev.web.app/c/grace/join/$code'));
       await tapText(tester, code);
       await tapText(tester, '複製連結');
-      expect(out.copied.single, 'https://marthasit-dev.web.app/c/grace/join/$code');
+      expect(out.copied.single, 'https://marthasit-dev.web.app/c/grace/join/$code?openExternalBrowser=1');
     });
 
     testWidgets('a new invite that cannot be shared or copied is shown to copy by hand', (tester) async {

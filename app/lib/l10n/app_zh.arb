@@ -27,6 +27,16 @@
   },
   "signInWithGoogle": "使用 Google 登入",
   "signInWithEmail": "用 email 登入",
+  "inAppBrowserNote": "在 {app} 裡不能用 Google 登入。請用 Safari 或 Chrome 打開這個網頁，或用 email 登入",
+  "@inAppBrowserNote": {
+    "placeholders": {
+      "app": {
+        "type": "String"
+      }
+    }
+  },
+  "copyPageUrl": "複製網址",
+  "pageUrlCopied": "已複製網址，貼到 Safari 或 Chrome 打開",
   "loginTagline": "馬大！馬大！你為許多的事思慮煩擾，\n但是不可少的只有一件；\n馬利亞已經選擇那上好的福分，\n是不能奪去的。",
   "loginTaglineSource": "路加福音 10:41–42",
   "loginInvitedTo": "受邀加入〈{church}〉",

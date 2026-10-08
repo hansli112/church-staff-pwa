@@ -235,6 +235,24 @@ abstract class L10n {
   /// **'用 email 登入'**
   String get signInWithEmail;
 
+  /// No description provided for @inAppBrowserNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'在 {app} 裡不能用 Google 登入。請用 Safari 或 Chrome 打開這個網頁，或用 email 登入'**
+  String inAppBrowserNote(String app);
+
+  /// No description provided for @copyPageUrl.
+  ///
+  /// In zh, this message translates to:
+  /// **'複製網址'**
+  String get copyPageUrl;
+
+  /// No description provided for @pageUrlCopied.
+  ///
+  /// In zh, this message translates to:
+  /// **'已複製網址，貼到 Safari 或 Chrome 打開'**
+  String get pageUrlCopied;
+
   /// No description provided for @loginTagline.
   ///
   /// In zh, this message translates to:

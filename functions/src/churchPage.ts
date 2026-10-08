@@ -4,6 +4,7 @@ import { CHURCH_ID, isChurchOpen } from './access.js';
 import type { Deps } from './common.js';
 import { publicLogoPath } from './church.js';
 import { ICON_FILES, iconStoragePath, type IconFile } from './icons.js';
+import { checkInvite } from './invites.js';
 
 /**
  * 教會頁: Hosting sends /c/** here, so each church URL is its own web app
@@ -11,6 +12,10 @@ import { ICON_FILES, iconStoragePath, type IconFile } from './icons.js';
  * in the head; the manifest names the church and starts at its URL. Adding
  * /c/ID to the home screen therefore gives the church's name and icon, and a
  * link pasted into LINE previews with them.
+ *
+ * Until the app has started (a first visit downloads a few MB), the page
+ * shows the church loading; an invite link (/c/ID/join/CODE) shows whom it
+ * joins, or why it cannot be used, as the app will.
  *
  * Closed (suspended, deleted) churches get the plain page: the app explains
  * why. An unknown ID gets the plain page with a 404; the app says the church
@@ -34,6 +39,8 @@ export const APP_SHELL = '/app.html';
 export const TEMPLATE_MINUTES = 5;
 const CACHE = 'public, max-age=300';
 const IMMUTABLE = 'public, max-age=31536000, immutable';
+/** An invite can be revoked or expire any moment. */
+const FRESH = 'private, no-cache';
 const HTML = 'text/html; charset=utf-8';
 
 /** The web app's own icons, used when a church has no logo. */
@@ -113,6 +120,32 @@ function face(cid: string, church: FirebaseFirestore.DocumentSnapshot): ChurchFa
 const escape = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+/** What the page shows before the app starts, as the app words it. */
+export interface Splash {
+  icon: string;
+  title: string;
+  note: string;
+  /** Still loading, rather than stopped at [note]. */
+  busy: boolean;
+}
+
+/** The app's errInviteInvalid and errInviteExpired (app/lib/l10n/app_zh.arb), word for word. */
+const INVITE_ERRORS = {
+  inviteInvalid: '找不到這個邀請，請確認邀請碼，或向管理員要新的邀請',
+  inviteExpired: '這個邀請過期了，請向管理員要新的邀請',
+} as const;
+
+/** Puts [s] in the shell's loading screen, between its markers; a shell without one is left as it is. */
+export function withSplash(html: string, s: Splash): string {
+  const body = [
+    `<img src="${escape(s.icon)}" alt="">`,
+    `<p class="title">${escape(s.title)}</p>`,
+    s.busy ? '<div class="spin" aria-hidden="true"></div>' : '',
+    `<p class="note">${escape(s.note)}</p>`,
+  ].join('');
+  return html.replace(/<!--splash-->[\s\S]*?<!--\/splash-->/, () => `<!--splash-->${body}<!--/splash-->`);
+}
+
 /** The app shell with the church's name and icons in its head. */
 export function personalize(html: string, cid: string, f: ChurchFace, appUrl: string): string {
   const name = escape(f.name);
@@ -123,11 +156,11 @@ export function personalize(html: string, cid: string, f: ChurchFace, appUrl: st
     `<meta property="og:url" content="${escape(`${appUrl}/c/${cid}`)}">`,
   ].join('\n  ');
   return html
-    .replace(/<title>[^<]*<\/title>/, `<title>${name}</title>`)
-    .replace(/<meta name="apple-mobile-web-app-title" content="[^"]*">/, `<meta name="apple-mobile-web-app-title" content="${escape(f.shortName)}">`)
-    .replace(/<link rel="apple-touch-icon" href="[^"]*">/, `<link rel="apple-touch-icon" href="${escape(f.touchIcon)}">`)
-    .replace(/<link rel="manifest" href="[^"]*">/, `<link rel="manifest" href="/c/${cid}/manifest.json">`)
-    .replace('</head>', `  ${og}\n</head>`);
+    .replace(/<title>[^<]*<\/title>/, () => `<title>${name}</title>`)
+    .replace(/<meta name="apple-mobile-web-app-title" content="[^"]*">/, () => `<meta name="apple-mobile-web-app-title" content="${escape(f.shortName)}">`)
+    .replace(/<link rel="apple-touch-icon" href="[^"]*">/, () => `<link rel="apple-touch-icon" href="${escape(f.touchIcon)}">`)
+    .replace(/<link rel="manifest" href="[^"]*">/, () => `<link rel="manifest" href="/c/${cid}/manifest.json">`)
+    .replace('</head>', () => `  ${og}\n</head>`);
 }
 
 export function manifest(cid: string, f: ChurchFace | null) {
@@ -179,10 +212,26 @@ export async function churchPage(deps: PageDeps, path: string): Promise<PageResp
     return { status: 404, headers: { 'content-type': HTML, 'cache-control': CACHE }, body: html };
   }
   const f = face(cid, church);
+  const page = f ? personalize(html, cid, f, deps.appUrl) : html;
+  const code = /^\/join\/([A-Za-z0-9]{1,32})$/.exec(rest)?.[1];
+  if (code) {
+    const invite = await checkInvite(deps, code);
+    const icon = f && invite.ok && invite.cid === cid ? f.touchIcon : DEFAULT_TOUCH_ICON;
+    return {
+      status: 200,
+      headers: { 'content-type': HTML, 'cache-control': FRESH },
+      body: withSplash(
+        page,
+        invite.ok
+          ? { icon, title: `加入〈${invite.churchName}〉`, note: '載入中…', busy: true }
+          : { icon, title: f?.name ?? '馬大別忙', note: INVITE_ERRORS[invite.reason], busy: false },
+      ),
+    };
+  }
   return {
     status: 200,
     headers: { 'content-type': HTML, 'cache-control': CACHE },
-    body: f ? personalize(html, cid, f, deps.appUrl) : html,
+    body: f ? withSplash(page, { icon: f.touchIcon, title: f.name, note: '載入中…', busy: true }) : page,
   };
 }
 
