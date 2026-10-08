@@ -147,6 +147,18 @@ describe('setLinkSource', () => {
     assert.equal((await schedule())!.nextAt.toDate().toISOString(), new Date('2026-10-05T10:00:00+08:00').toISOString(), 'it ran today');
   });
 
+  test('the same source on a link removed and set again is fetched again', async () => {
+    await church();
+    const { d, requests } = withFetch({ [SRC]: { body: good } });
+    await setLinkSource(d, caller('pastor'), { churchId: 'C1', source: SRC, fetchMinute: 270 });
+    // Removed by the app (the doc goes; the schedule stays until the next run), then set again.
+    await db.doc('churches/C1/settings/link').delete();
+    await db.doc('churches/C1/settings/link').set({ title: '官網', body: '', url: 'https://grace.example' });
+    const r = await setLinkSource(d, caller('pastor'), { churchId: 'C1', source: SRC, fetchMinute: 270 });
+    assert.deepEqual(r, { ok: true, content: good });
+    assert.equal(requests.length, 2);
+  });
+
   test('clearing the source stops it and drops the content', async () => {
     await church();
     const { d } = withFetch({ [SRC]: { body: good } });

@@ -155,7 +155,8 @@ export async function setLinkSource(deps: Deps, caller: Caller | null, data: unk
   const { cid } = await churchAccess(deps, caller, data, 'admin');
   const input = (data ?? {}) as { source?: unknown; fetchMinute?: unknown };
   const linkRef = deps.db.doc(`churches/${cid}/settings/link`);
-  if (!(await linkRef.get()).exists) fail('failed-precondition', 'unknown', 'noLink');
+  const link = await linkRef.get();
+  if (!link.exists) fail('failed-precondition', 'unknown', 'noLink');
   const scheduleRef = deps.db.doc(`linkSources/${cid}`);
 
   if (input.source === null || input.source === '') {
@@ -173,7 +174,9 @@ export async function setLinkSource(deps: Deps, caller: Caller | null, data: unk
   const today = dateKeyUtc8(deps.now());
 
   await linkRef.update({ source, fetchMinute });
-  if (schedule.get('source') === source) {
+  // The schedule outlives a removed link until the next run drops it: a
+  // source set again on a new link is new, and fetched at once.
+  if (schedule.get('source') === source && link.get('source') === source) {
     // Only the time changed: no fetch now, the next run moves.
     const ranToday = schedule.get('lastDay') === today;
     await scheduleRef.set({ source, fetchMinute, nextAt: Timestamp.fromDate(nextFetchAt(deps.now(), fetchMinute, ranToday)) }, { merge: true });
