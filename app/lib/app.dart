@@ -3,9 +3,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/design/theme.dart';
+import 'core/fonts.dart';
 import 'deep_link.dart';
 import 'l10n/app_localizations.dart';
 import 'router.dart';
+import 'state/fonts.dart';
 import 'state/providers.dart';
 import 'state/push.dart';
 import 'state/session.dart';
@@ -24,15 +26,17 @@ class MarthaApp extends ConsumerWidget {
     final router = ref.watch(routerProvider);
     // The web page's loading screen stays over the app's own blank loading
     // page, and comes down after the first frame of the page that follows,
-    // drawn with the fonts for its text.
-    void hideSplashAfterFrame(AppStage stage) {
+    // drawn with the fonts for its text (or without them, after a while).
+    Future<void> hideSplashOnceDrawn(AppStage stage) async {
       if (stage == AppStage.loading) return;
       final hide = ref.read(hideSplashProvider);
-      ref.read(fontsReadyProvider).then((_) => WidgetsBinding.instance.endOfFrame).then((_) => hide());
+      await ref.read(fontsReadyProvider).timeout(fontsWaitLimit, onTimeout: () {});
+      await WidgetsBinding.instance.endOfFrame;
+      hide();
     }
 
-    ref.listen(appStageProvider, (_, stage) => hideSplashAfterFrame(stage));
-    hideSplashAfterFrame(ref.read(appStageProvider));
+    ref.listen(appStageProvider, (_, stage) => hideSplashOnceDrawn(stage));
+    hideSplashOnceDrawn(ref.read(appStageProvider));
     // A tapped notification opens the page it is about.
     ref.listen(pushLinksProvider, (_, link) {
       final l = appLocation(link.value);

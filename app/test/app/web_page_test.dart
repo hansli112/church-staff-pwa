@@ -1,8 +1,12 @@
 import 'dart:async';
 
+import 'package:flutter/painting.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:martha/core/fonts.dart';
 import 'package:martha/features/auth/in_app_browser.dart';
 import 'package:martha/features/church/links.dart';
+import 'package:martha/state/fonts.dart';
 import 'package:martha/state/web_page.dart';
 
 import '../support/harness.dart';
@@ -15,21 +19,40 @@ void main() {
     expect(hidden, greaterThan(0));
   });
 
-  testWidgets('the loading screen stays until the fonts are in, so the first page has no boxes for text', (
+  testWidgets('the loading screen stays until the engine has the fonts, so the first page has no boxes for text', (
     tester,
   ) async {
     var hidden = 0;
-    final fonts = Completer<void>();
     await pumpApp(
       tester,
       seededChurch(),
       overrides: [
         hideSplashProvider.overrideWithValue(() => hidden++),
-        fontsReadyProvider.overrideWithValue(fonts.future),
+        fontsReadyProvider.overrideWithValue(
+          warmUpFonts(bundle: rootBundle, systemFonts: PaintingBinding.instance.systemFonts),
+        ),
       ],
     );
     expect(hidden, 0);
-    fonts.complete();
+    await sendFontsChange(tester);
+    await tester.pumpAndSettle();
+    expect(hidden, greaterThan(0));
+  });
+
+  testWidgets('fonts that never come hold the loading screen a few seconds at most', (
+    tester,
+  ) async {
+    var hidden = 0;
+    await pumpApp(
+      tester,
+      seededChurch(),
+      overrides: [
+        hideSplashProvider.overrideWithValue(() => hidden++),
+        fontsReadyProvider.overrideWithValue(Completer<void>().future),
+      ],
+    );
+    expect(hidden, 0, reason: 'a second into the first page');
+    await tester.pump(fontsWaitLimit);
     await tester.pumpAndSettle();
     expect(hidden, greaterThan(0));
   });

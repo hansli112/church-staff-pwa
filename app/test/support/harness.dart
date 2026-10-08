@@ -155,3 +155,10 @@ FakeUrlLauncher captureLaunches() {
   addTearDown(() => UrlLauncherPlatform.instance = previous);
   return fake;
 }
+
+/// What the web engine sends once a round of font downloads is done.
+Future<void> sendFontsChange(WidgetTester tester) => tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+  SystemChannels.system.name,
+  SystemChannels.system.codec.encodeMessage({'type': 'fontsChange'}),
+  (_) {},
+);

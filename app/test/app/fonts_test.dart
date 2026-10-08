@@ -1,64 +1,54 @@
-import 'package:fake_async/fake_async.dart';
-import 'package:flutter/foundation.dart';
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/core/fonts.dart';
 
-/// An asset bundle with nothing in it.
-class _EmptyBundle extends CachingAssetBundle {
+import '../support/harness.dart';
+
+/// An asset bundle whose strings cannot be read.
+class _BrokenBundle extends CachingAssetBundle {
   @override
-  Future<ByteData> load(String key) => Future.error(FlutterError('no $key'));
+  Future<ByteData> load(String key) async => ByteData.sublistView(utf8.encode('not json'));
 }
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
-
   test('the app’s own text comes from its strings, shipped with it', () async {
-    final text = uiText(await rootBundle.loadString(uiStringsAsset));
+    TestWidgetsFlutterBinding.ensureInitialized();
+    final text = arbText(await rootBundle.loadString(uiStringsAsset));
     expect(text, contains('馬大別忙'));
     expect(text, contains('切換教會'));
     expect(text, isNot(contains('placeholders')), reason: 'not the strings’ notes');
   });
 
-  test('the fonts are in once the engine says its fonts changed', () {
-    fakeAsync((async) {
-      final fonts = ChangeNotifier();
-      var done = false;
-      warmUpFonts(bundle: rootBundle, systemFonts: fonts).then((_) => done = true);
-      async.elapse(const Duration(milliseconds: 500));
-      expect(done, isFalse);
-      fonts.notifyListeners();
-      async.flushMicrotasks();
-      expect(done, isTrue);
-    });
+  testWidgets('the fonts are in once the engine says its fonts changed', (tester) async {
+    var done = false;
+    unawaited(
+      warmUpFonts(bundle: rootBundle, systemFonts: PaintingBinding.instance.systemFonts).then((_) => done = true),
+    );
+    await tester.pump(const Duration(seconds: 10));
+    expect(done, isFalse, reason: 'no limit of its own: the loading screen sets one');
+    await sendFontsChange(tester);
+    await tester.pump();
+    expect(done, isTrue);
   });
 
-  test('fonts that never come stop holding things up after a while', () {
-    fakeAsync((async) {
-      var done = false;
-      warmUpFonts(bundle: rootBundle, systemFonts: ChangeNotifier()).then((_) => done = true);
-      async.elapse(fontsWaitLimit - const Duration(milliseconds: 1));
-      expect(done, isFalse);
-      async.elapse(const Duration(milliseconds: 1));
-      expect(done, isTrue);
-    });
-  });
-
-  test('without the strings, it still waits for the fonts the first page asks for', () {
-    fakeAsync((async) {
-      final fonts = ChangeNotifier();
-      Object? error;
-      var done = false;
+  testWidgets('strings that cannot be read leave the fonts to the first page', (tester) async {
+    Object? error;
+    var done = false;
+    unawaited(
       warmUpFonts(
-        bundle: _EmptyBundle(),
-        systemFonts: fonts,
-      ).then((_) => done = true, onError: (Object e) => error = e);
-      async.elapse(const Duration(milliseconds: 100));
-      expect(done, isFalse);
-      fonts.notifyListeners();
-      async.flushMicrotasks();
-      expect(done, isTrue);
-      expect(error, isNull);
-    });
+        bundle: _BrokenBundle(),
+        systemFonts: PaintingBinding.instance.systemFonts,
+      ).then((_) => done = true, onError: (Object e) => error = e),
+    );
+    await tester.pump();
+    expect(done, isFalse);
+    await sendFontsChange(tester);
+    await tester.pump();
+    expect(done, isTrue);
+    expect(error, isNull);
   });
 }
