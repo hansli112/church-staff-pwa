@@ -209,28 +209,48 @@ ServiceSettings serviceSettingsFromJson(Json? data) {
   );
 }
 
-/// Returns null for a document too broken to show (no type or date).
+List<Duty> _duties(Object? raw) => [
+  if (raw is List)
+    for (final d in raw)
+      if (d is Map && d['role'] is String)
+        Duty(
+          role: d['role'] as String,
+          people: _strings(d['people']),
+          uids: {
+            if (d['uids'] is Map)
+              for (final e in (d['uids'] as Map).entries)
+                if (e.key is String && e.value is String) e.key as String: e.value as String,
+          },
+        ),
+];
+
+/// Returns null for a document too broken to show (no type or date, or an
+/// event's roster with no event).
 Roster? rosterFromJson(Json data) {
-  final type = data['type'];
   final day = Day.tryParse(data['dateKey'] as String?);
-  if (type is! String || type.isEmpty || day == null) return null;
+  if (day == null) return null;
+  if (data['kind'] == 'event') {
+    final eventId = data['eventId'];
+    if (eventId is! String || eventId.isEmpty) return null;
+    final last = Day.tryParse(data['endDateKey'] as String?);
+    return Roster(
+      type: '',
+      day: day,
+      duties: _duties(data['duties']),
+      forEvent: RosterEvent(
+        eventId: eventId,
+        title: data['title'] as String? ?? '',
+        lastDay: last == null || last.isBefore(day) ? day : last,
+        cancelled: data['cancelledAt'] != null,
+      ),
+    );
+  }
+  final type = data['type'];
+  if (type is! String || type.isEmpty) return null;
   return Roster(
     type: type,
     day: day,
-    duties: [
-      if (data['duties'] is List)
-        for (final d in data['duties'] as List<dynamic>)
-          if (d is Map && d['role'] is String)
-            Duty(
-              role: d['role'] as String,
-              people: _strings(d['people']),
-              uids: {
-                if (d['uids'] is Map)
-                  for (final e in (d['uids'] as Map).entries)
-                    if (e.key is String && e.value is String) e.key as String: e.value as String,
-              },
-            ),
-    ],
+    duties: _duties(data['duties']),
     events: [
       if (data['events'] is List)
         for (final e in data['events'] as List<dynamic>) ?_event(e),
@@ -238,8 +258,17 @@ Roster? rosterFromJson(Json data) {
   );
 }
 
+/// An event's roster has no type: app versions from before 活動的服事表
+/// read it as broken and leave it out. Only the backend writes
+/// cancelledAt.
 Json rosterToJson(Roster r) => {
-  'type': r.type,
+  if (r.forEvent case final e?) ...{
+    'kind': 'event',
+    'eventId': e.eventId,
+    'title': e.title,
+    'endDateKey': e.lastDay.key,
+  } else
+    'type': r.type,
   'dateKey': r.day.key,
   'duties': [
     for (final d in r.duties)

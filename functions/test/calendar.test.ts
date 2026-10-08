@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { beforeEach, describe, test } from 'node:test';
 
 import {
@@ -9,6 +10,7 @@ import {
   calendarEvents,
   calendarSelect,
   calendarWrite,
+  eventRosterDays,
   GoogleAuthRevoked,
   monthOf,
   monthsOf,
@@ -189,6 +191,109 @@ describe('reading', () => {
     );
     assert.equal((err as { details: { detail: string } }).details.detail, 'reconnect');
     assert.equal((await db.doc('churches/C1/settings/calendar').get()).get('needsReconnect'), true);
+  });
+});
+
+describe('an event roster’s days (testdata/event_days.json, which the app runs too)', () => {
+  const data = JSON.parse(readFileSync(new URL('../../testdata/event_days.json', import.meta.url), 'utf8')) as {
+    cases: { name: string; event: { start: string; end: string; allDay: boolean }; dateKey: string; endDateKey: string }[];
+  };
+  for (const c of data.cases) {
+    test(c.name, () => {
+      assert.deepEqual(eventRosterDays(c.event), { dateKey: c.dateKey, endDateKey: c.endDateKey });
+    });
+  }
+});
+
+describe('an event’s roster follows its event', () => {
+  const roster = (extra: Record<string, unknown> = {}) => ({
+    kind: 'event',
+    eventId: 'e1',
+    title: '同工會',
+    dateKey: '2026-10-10',
+    endDateKey: '2026-10-10',
+    duties: [{ role: '主持', people: ['美玉'], uids: { 美玉: 'mei' } }],
+    events: [],
+    ...extra,
+  });
+
+  test('a new title and days are copied to it, the days in UTC+8; a calendar editor needs no roster rights', async () => {
+    await church();
+    const { google } = fakeGoogle();
+    await connect(google);
+    await db.doc('churches/C1/rosters/ev_e1').set(roster());
+    const d = { ...deps, google, config };
+    await calendarWrite(d, caller('editor'), {
+      churchId: 'C1',
+      op: 'upsert',
+      event: { id: 'e1', title: '同工會（改期）', start: '2026-10-16T23:00:00+08:00', end: '2026-10-17T01:00:00+08:00', allDay: false },
+    });
+    const r = (await db.doc('churches/C1/rosters/ev_e1').get()).data()!;
+    assert.deepEqual([r.title, r.dateKey, r.endDateKey], ['同工會（改期）', '2026-10-16', '2026-10-17']);
+    assert.deepEqual(r.duties, roster().duties, 'the people stay');
+    assert.equal(r.movedBy, 'editor', 'so the trigger does not tell them of their own move');
+
+    await calendarWrite(d, caller('editor'), {
+      churchId: 'C1',
+      op: 'upsert',
+      event: { id: 'e1', title: '退修會', start: '2026-10-23', end: '2026-10-26', allDay: true },
+    });
+    const all = (await db.doc('churches/C1/rosters/ev_e1').get()).data()!;
+    assert.deepEqual([all.dateKey, all.endDateKey], ['2026-10-23', '2026-10-25'], 'an all-day end is exclusive');
+  });
+
+  test('an event with no roster gets none', async () => {
+    await church();
+    const { google } = fakeGoogle();
+    await connect(google);
+    await calendarWrite({ ...deps, google, config }, caller('editor'), {
+      churchId: 'C1',
+      op: 'upsert',
+      event: { id: 'e1', title: '同工會', start: '2026-10-10', end: '2026-10-11', allDay: true },
+    });
+    assert.equal((await db.doc('churches/C1/rosters/ev_e1').get()).exists, false);
+  });
+
+  test('deleting the event cancels its roster; undoing moves it onto the event made again', async () => {
+    await church();
+    const { google } = fakeGoogle();
+    await connect(google);
+    await db.doc('churches/C1/rosters/ev_e1').set(roster());
+    const d = { ...deps, google, config };
+    await calendarWrite(d, caller('editor'), { churchId: 'C1', op: 'delete', eventId: 'e1', event: { start: '2026-10-10' } });
+    const cancelled = await db.doc('churches/C1/rosters/ev_e1').get();
+    assert.ok(cancelled.get('cancelledAt'), 'kept, cancelled');
+
+    const { event } = await calendarWrite(d, caller('editor'), {
+      churchId: 'C1',
+      op: 'upsert',
+      event: { title: '同工會', start: '2026-10-10', end: '2026-10-11', allDay: true },
+      restoreRosterOf: 'e1',
+    });
+    assert.equal(event?.id, 'new-id');
+    assert.equal((await db.doc('churches/C1/rosters/ev_e1').get()).exists, false);
+    const back = (await db.doc('churches/C1/rosters/ev_new-id').get()).data()!;
+    assert.deepEqual(
+      [back.kind, back.eventId, back.title, back.dateKey, back.via, back.cancelledAt],
+      ['event', 'new-id', '同工會', '2026-10-10', 'restore', undefined],
+    );
+    assert.deepEqual(back.duties, roster().duties);
+  });
+
+  test('undo only moves a cancelled roster of the same church', async () => {
+    await church();
+    const { google } = fakeGoogle();
+    await connect(google);
+    await db.doc('churches/C1/rosters/ev_live').set(roster({ eventId: 'live' }));
+    await db.doc('churches/C2/rosters/ev_other').set(roster({ eventId: 'other', cancelledAt: new Date() }));
+    const d = { ...deps, google, config };
+    const event = { title: 'x', start: '2026-10-10', end: '2026-10-11', allDay: true };
+    await calendarWrite(d, caller('editor'), { churchId: 'C1', op: 'upsert', event, restoreRosterOf: 'live' });
+    await calendarWrite(d, caller('editor'), { churchId: 'C1', op: 'upsert', event, restoreRosterOf: 'other' });
+    await calendarWrite(d, caller('editor'), { churchId: 'C1', op: 'upsert', event, restoreRosterOf: '../x' });
+    assert.equal((await db.doc('churches/C1/rosters/ev_live').get()).exists, true);
+    assert.equal((await db.doc('churches/C2/rosters/ev_other').get()).exists, true);
+    assert.equal((await db.doc('churches/C1/rosters/ev_new-id').get()).exists, false);
   });
 });
 

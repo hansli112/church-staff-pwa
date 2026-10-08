@@ -27,6 +27,9 @@ abstract final class TextLimits {
 
   /// The name on the profile.
   static const profileName = 40;
+
+  /// An event's title as its roster keeps it, cut from the calendar's.
+  static const eventTitle = 200;
 }
 
 /// Limits whose unit is the same everywhere: URLs and secrets in UTF-16

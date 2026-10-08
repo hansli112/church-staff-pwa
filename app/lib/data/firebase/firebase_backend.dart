@@ -727,10 +727,11 @@ class FirestoreChurchData implements ChurchData {
   }
 
   @override
-  Future<CalendarEvent> calendarSave(CalendarEvent event, {CalendarEvent? previous}) async {
+  Future<CalendarEvent> calendarSave(CalendarEvent event, {CalendarEvent? previous, String? restoreRosterOf}) async {
     final d = await _call('calendarWrite', {
       'op': 'upsert',
       'event': calendarEventToJson(event),
+      'restoreRosterOf': ?restoreRosterOf,
       // The months the event was in, for the function to drop from its
       // cache. previousStart is what functions before `previous` read.
       if (previous != null) ...{

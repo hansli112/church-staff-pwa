@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import '../../domain/day.dart';
+import '../../domain/event_roster.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../domain/staff_order.dart';
@@ -484,6 +485,23 @@ class MemoryChurchData implements ChurchData {
     }
   }
 
+  /// Writing [r] over what is saved at its ID, as firestore.rules allow: a
+  /// service's day by its zone, an event's roster by any roster editor. One
+  /// never turns into the other, and a cancelled event's is the backend's.
+  void _requireRosterWrite(Roster r) {
+    final saved = _b.rosters[churchId]![r.id];
+    if (saved != null && saved.isEvent != r.isEvent) throw const CloudException(CloudErrorCode.permissionDenied);
+    if (!r.isEvent) return _requireRosterEditor(r.type);
+    _requireRosterEditors();
+    // The title and days are the calendar's: the app sets them only when
+    // making the roster.
+    final was = saved?.forEvent;
+    if (was != null &&
+        (was.cancelled || was.title != r.forEvent!.title || saved!.day != r.day || was.lastDay != r.lastDay)) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+  }
+
   @override
   Stream<Church?> church() => _b.watch(() {
     if (_b.memberOf(churchId, _uid) == null) {
@@ -562,7 +580,7 @@ class MemoryChurchData implements ChurchData {
   @override
   Future<void> saveRosters(List<Roster> rosters, {String via = 'app'}) async {
     for (final r in rosters) {
-      _requireRosterEditor(r.type);
+      _requireRosterWrite(r);
     }
     await _b.write(() {
       for (final r in rosters) {
@@ -573,7 +591,7 @@ class MemoryChurchData implements ChurchData {
 
   @override
   Future<void> deleteRoster(Roster roster) async {
-    _requireRosterEditor(roster.type);
+    roster.isEvent ? _requireRosterEditors() : _requireRosterEditor(roster.type);
     await _b.write(() => _b.rosters[churchId]!.remove(roster.id));
   }
 
@@ -966,7 +984,7 @@ class MemoryChurchData implements ChurchData {
   }
 
   @override
-  Future<CalendarEvent> calendarSave(CalendarEvent event, {CalendarEvent? previous}) async {
+  Future<CalendarEvent> calendarSave(CalendarEvent event, {CalendarEvent? previous, String? restoreRosterOf}) async {
     _requireCalendarEditor();
     final list = _b.calendarEvents.putIfAbsent(churchId, () => []);
     final saved = event.id == null
@@ -982,6 +1000,17 @@ class MemoryChurchData implements ChurchData {
         : event;
     list.removeWhere((e) => e.id == saved.id);
     list.add(saved);
+    // As calendarWrite: the event's roster follows it, and undoing a delete
+    // moves the cancelled roster to the event made again.
+    final rosters = _b.rosters[churchId]!;
+    final from = rosters[Roster.idForEvent(restoreRosterOf ?? saved.id!)];
+    if (from != null && (restoreRosterOf == null) != from.forEvent!.cancelled) {
+      final moved = eventRoster(saved, duties: from.duties).copyWith(saved: true);
+      await _b.write(() {
+        if (restoreRosterOf != null) rosters.remove(from.id);
+        rosters[moved.id] = moved;
+      });
+    }
     return saved;
   }
 
@@ -989,6 +1018,14 @@ class MemoryChurchData implements ChurchData {
   Future<void> calendarDelete(CalendarEvent event) async {
     _requireCalendarEditor();
     _b.calendarEvents[churchId]?.removeWhere((e) => e.id == event.id);
+    // As calendarWrite: its roster is cancelled, kept for undo.
+    final rosters = _b.rosters[churchId]!;
+    final r = rosters[Roster.idForEvent(event.id!)];
+    if (r != null) {
+      await _b.write(
+        () => rosters[r.id] = r.copyWith(forEvent: r.forEvent!.copyWith(cancelled: true)),
+      );
+    }
   }
 
   @override

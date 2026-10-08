@@ -1,0 +1,11 @@
+{
+  "_comment": "The days (dateKey, endDateKey) an event's roster is on, as the app (app/lib/domain/event_roster.dart) and calendarWrite (functions/src/calendar.ts) both work them out: UTC+8 for a timed event, an all-day end exclusive. Events as calendarWrite takes them. Add a row here before changing either.",
+  "cases": [
+    { "name": "timed, one evening", "event": { "start": "2026-12-24T11:00:00.000Z", "end": "2026-12-24T13:00:00.000Z", "allDay": false }, "dateKey": "2026-12-24", "endDateKey": "2026-12-24" },
+    { "name": "timed, past midnight in Taipei", "event": { "start": "2026-12-24T15:30:00.000Z", "end": "2026-12-24T17:00:00.000Z", "allDay": false }, "dateKey": "2026-12-24", "endDateKey": "2026-12-25" },
+    { "name": "timed, ending at midnight Taipei", "event": { "start": "2026-12-24T11:00:00.000Z", "end": "2026-12-24T16:00:00.000Z", "allDay": false }, "dateKey": "2026-12-24", "endDateKey": "2026-12-24" },
+    { "name": "timed, early morning Taipei is the day before in UTC", "event": { "start": "2026-12-23T22:00:00.000Z", "end": "2026-12-23T23:00:00.000Z", "allDay": false }, "dateKey": "2026-12-24", "endDateKey": "2026-12-24" },
+    { "name": "all-day, one day", "event": { "start": "2026-10-10", "end": "2026-10-11", "allDay": true }, "dateKey": "2026-10-10", "endDateKey": "2026-10-10" },
+    { "name": "all-day, three days over a month end", "event": { "start": "2027-01-30", "end": "2027-02-02", "allDay": true }, "dateKey": "2027-01-30", "endDateKey": "2027-02-01" }
+  ]
+}

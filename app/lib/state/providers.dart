@@ -113,10 +113,18 @@ final shownChurchLinkProvider = Provider<({String title, String body, String url
   return shownChurchLink(link, content, now);
 });
 
-/// Saved rosters from today on, every service.
+/// Saved rosters from today on, every service and event. Not an event's
+/// roster cancelled with its event: the backend keeps it only for undo.
 final savedRostersProvider = StreamProvider<List<Roster>>((ref) {
   final from = ref.watch(todayProvider);
-  return openChurch(ref).rosters(from: from);
+  return openChurch(ref)
+      .rosters(from: from)
+      .map(
+        (list) => [
+          for (final r in list)
+            if (!(r.forEvent?.cancelled ?? false)) r,
+        ],
+      );
 });
 
 /// Everyone in the church, read once per church and shared by every

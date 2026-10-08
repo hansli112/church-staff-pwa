@@ -351,7 +351,38 @@ class Duty {
   );
 }
 
-/// One service on one day.
+/// The calendar event a 活動的服事表 belongs to, as the roster keeps it:
+/// the title and days are copied from the calendar, which has the say.
+@immutable
+class RosterEvent {
+  const RosterEvent({required this.eventId, required this.title, required this.lastDay, this.cancelled = false});
+
+  final String eventId;
+  final String title;
+
+  /// The event's last day; [Roster.day] is its first.
+  final Day lastDay;
+
+  /// The event was deleted: the roster is kept a while but neither shown
+  /// nor reminded of. Only the backend sets it.
+  final bool cancelled;
+
+  RosterEvent copyWith({bool? cancelled}) =>
+      RosterEvent(eventId: eventId, title: title, lastDay: lastDay, cancelled: cancelled ?? this.cancelled);
+
+  @override
+  bool operator ==(Object other) =>
+      other is RosterEvent &&
+      other.eventId == eventId &&
+      other.title == title &&
+      other.lastDay == lastDay &&
+      other.cancelled == cancelled;
+
+  @override
+  int get hashCode => Object.hash(eventId, title, lastDay, cancelled);
+}
+
+/// One service on one day, or one calendar event ([forEvent]).
 @immutable
 class Roster {
   const Roster({
@@ -360,34 +391,53 @@ class Roster {
     this.duties = const [],
     this.events = const [],
     this.saved = true,
+    this.forEvent,
   });
 
   /// Document ID: one roster per service per day.
   static String idFor(String type, Day day) => '${day.key}_$type';
 
-  String get id => idFor(type, day);
+  /// Document ID of an event's roster: no date in it, so it stays put
+  /// when the event moves.
+  static String idForEvent(String eventId) => 'ev_$eventId';
 
-  /// The service ID.
+  String get id => forEvent == null ? idFor(type, day) : idForEvent(forEvent!.eventId);
+
+  /// The service ID; empty for an event's roster.
   final String type;
+
+  /// The day; an event's first day.
   final Day day;
   final List<Duty> duties;
+
+  /// Special-event tags (聖餐, 浸禮…); never on an event's roster.
   final List<EventTag> events;
 
   /// False for a roster that only exists on screen, built from the service
   /// template because nobody has edited that day yet.
   final bool saved;
 
+  /// The calendar event this roster belongs to, for a 活動的服事表.
+  final RosterEvent? forEvent;
+
+  bool get isEvent => forEvent != null;
+
+  /// The last day it is on: an event's last, a service's only.
+  Day get lastDay => forEvent?.lastDay ?? day;
+
   Roster copyWith({
     List<Duty>? duties,
     List<EventTag>? events,
     Day? day,
     bool? saved,
+    RosterEvent? forEvent,
   }) => Roster(
     type: type,
     day: day ?? this.day,
     duties: duties ?? this.duties,
     events: events ?? this.events,
     saved: saved ?? this.saved,
+    forEvent: forEvent ?? this.forEvent,
   );
 
   /// Whether [uid] (or, for names without a uid, [name]) serves this day.
@@ -402,6 +452,7 @@ class Roster {
       other.type == type &&
       other.day == day &&
       other.saved == saved &&
+      other.forEvent == forEvent &&
       listEquals(other.duties, duties) &&
       listEquals(other.events, events);
 
@@ -410,6 +461,7 @@ class Roster {
     type,
     day,
     saved,
+    forEvent,
     Object.hashAll(duties),
     Object.hashAll(events),
   );

@@ -241,8 +241,12 @@ abstract interface class ChurchData {
   Future<List<CalendarEvent>> calendarEvents(String month);
 
   /// [previous] is the event before editing, so a move to another month
-  /// refreshes both months.
-  Future<CalendarEvent> calendarSave(CalendarEvent event, {CalendarEvent? previous});
+  /// refreshes both months. The event's roster follows a change of title or
+  /// days. [restoreRosterOf] undoes deleting that event: its cancelled
+  /// roster moves to [event], made again.
+  Future<CalendarEvent> calendarSave(CalendarEvent event, {CalendarEvent? previous, String? restoreRosterOf});
+
+  /// Deletes [event] and cancels its roster, kept a while for undo.
   Future<void> calendarDelete(CalendarEvent event);
 
   /// Photos the church may still recognize this month.

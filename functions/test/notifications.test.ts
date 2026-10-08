@@ -60,6 +60,30 @@ describe('reminders', () => {
     assert.equal(mei.body, '主日崇拜 司琴、招待');
   });
 
+  test('an event’s roster is reminded of the day before it starts, by its title; a cancelled one is not', async () => {
+    await church();
+    await db.doc('churches/C1/rosters/ev_x1').set({
+      kind: 'event',
+      eventId: 'x1',
+      title: '秋季退修會',
+      dateKey: '2026-10-04',
+      endDateKey: '2026-10-05',
+      duties: duties(['美玉'], []),
+    });
+    await db.doc('churches/C1/rosters/ev_x2').set({
+      kind: 'event',
+      eventId: 'x2',
+      title: '取消的活動',
+      dateKey: '2026-10-04',
+      endDateKey: '2026-10-04',
+      duties: duties([], ['志豪']),
+      cancelledAt: new Date(),
+    });
+    const { sent, messaging } = fakeMessaging();
+    await sendReminders({ db, messaging, now, appUrl });
+    assert.deepEqual(sent.map((s) => s.body), ['秋季退修會 司琴']);
+  });
+
   test('suspended churches send no reminders', async () => {
     await church();
     await db.doc('churches/C1').update({ status: 'suspended' });

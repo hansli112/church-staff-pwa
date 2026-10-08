@@ -29,6 +29,7 @@ import 'features/me/profile_screen.dart';
 import 'features/me/services_screen.dart';
 import 'features/me/support_screen.dart';
 import 'features/me/webhook_screen.dart';
+import 'features/rosters/event_roster_screen.dart';
 import 'features/rosters/import_screen.dart';
 import 'features/rosters/roster_day_screen.dart';
 import 'features/rosters/rosters_screen.dart';
@@ -115,6 +116,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                 (_) => const RostersScreen(),
                 routes: [
                   page('import/:type', (s) => ImportScreen(serviceType: s.pathParameters['type']!)),
+                  // Before :type/:day, which would take it for a service.
+                  page('event/:id', (s) => EventRosterScreen(eventId: s.pathParameters['id']!)),
                   page(
                     ':type/:day',
                     (s) => RosterDayScreen(

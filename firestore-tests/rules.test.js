@@ -377,6 +377,76 @@ describe('服事表 (rosters)', () => {
   });
 });
 
+describe('活動的服事表 (rosters/ev_…)', () => {
+  const ev = (eventId, extra = {}) => ({
+    kind: 'event',
+    eventId,
+    title: '聖誕晚會',
+    dateKey: '2030-12-24',
+    endDateKey: '2030-12-24',
+    duties: [],
+    events: [],
+    ...extra,
+  });
+  const path = (id) => `churches/${A}/rosters/ev_${id}`;
+
+  it('管理員和任何牧區的 roster-editors 都能寫；一般同工、只能編輯行事曆的人不行', async () => {
+    await seed(`churches/${A}/members/cal-a`, memberDoc('cal-a', 'staff', ['calendar-editors']));
+    await seed(`churches/${A}/members/youth-ed`, memberDoc('youth-ed', 'staff', ['roster-editors'], ['youth']));
+    await assertSucceeds(setDoc(doc(as(ADMIN_A), path('e1')), ev('e1')));
+    await assertSucceeds(setDoc(doc(as(EDITOR_A), path('e2')), ev('e2')));
+    await assertSucceeds(setDoc(doc(as('youth-ed'), path('e3')), ev('e3')));
+    await assertSucceeds(updateDoc(doc(as('youth-ed'), path('e2')), { duties: [{ role: '主持', people: [], uids: {} }] }));
+    await assertSucceeds(deleteDoc(doc(as(EDITOR_A), path('e3'))));
+    await assertFails(setDoc(doc(as(MEMBER_A), path('e4')), ev('e4')));
+    await assertFails(setDoc(doc(as('cal-a'), path('e4')), ev('e4')));
+    await assertFails(deleteDoc(doc(as(MEMBER_A), path('e1'))));
+    await assertSucceeds(getDoc(doc(as(MEMBER_A), path('e1'))));
+  });
+
+  it('ID 要是 ev_ 加活動 id，日期要對，名稱有上限', async () => {
+    const db = as(ADMIN_A);
+    await assertFails(setDoc(doc(db, path('x1')), ev('other')));
+    await assertFails(setDoc(doc(db, path('x2')), ev('x2', { dateKey: '2030-13-01' })));
+    await assertFails(setDoc(doc(db, path('x3')), ev('x3', { endDateKey: '2030-12-23' })));
+    await assertFails(setDoc(doc(db, path('x4')), ev('x4', { title: 'x'.repeat(801) })));
+    await assertSucceeds(setDoc(doc(db, path('x5')), ev('x5', { title: 'x'.repeat(800) })));
+    await assertFails(setDoc(doc(db, path('x6')), ev('x6', { type: 'sunday' })));
+    await assertFails(setDoc(doc(db, path('x7')), ev('x7', { cancelledAt: new Date() })), 'only the backend cancels');
+    // Nor does an app writing over a cancelled one bring it back.
+    await seed(path('x8'), ev('x8', { cancelledAt: new Date() }));
+    await assertFails(setDoc(doc(db, path('x8')), ev('x8')));
+    await assertSucceeds(deleteDoc(doc(db, path('x8'))));
+  });
+
+  it('一般服事表和活動的服事表不能互相改過去，繞過牧區', async () => {
+    await seed(path('m1'), ev('m1'));
+    await seed(`churches/${A}/rosters/2030-12-22_youth`, { type: 'youth', dateKey: '2030-12-22' });
+    // A sunday-only editor may write events, but not turn one into youth's.
+    await assertFails(setDoc(doc(as(EDITOR_A), path('m1')), { type: 'youth', dateKey: '2030-12-24' }));
+    await assertFails(setDoc(doc(as(ADMIN_A), path('m1')), { type: 'youth', dateKey: '2030-12-24' }));
+    // Nor a youth day into an event, which they could then edit.
+    await assertFails(setDoc(doc(as(EDITOR_A), `churches/${A}/rosters/2030-12-22_youth`), ev('m2')));
+    await assertFails(setDoc(doc(as(ADMIN_A), `churches/${A}/rosters/2030-12-22_youth`), ev('m2')));
+  });
+
+  it('名稱和日期跟著行事曆，App 改不了；一般服事表也佔不了 ev_ 的 ID', async () => {
+    await seed(path('t1'), ev('t1', { movedBy: 'someone' }));
+    const db = as(EDITOR_A);
+    await assertFails(setDoc(doc(db, path('t1')), ev('t1', { title: '改名' })));
+    await assertFails(setDoc(doc(db, path('t1')), ev('t1', { dateKey: '2030-12-23', endDateKey: '2030-12-23' })));
+    await assertSucceeds(setDoc(doc(db, path('t1')), ev('t1', { duties: [{ role: '主持', people: [], uids: {} }] })));
+    await assertFails(setDoc(doc(db, `churches/${A}/rosters/ev_t2`), { type: 'sunday', dateKey: '2030-12-24' }));
+  });
+
+  it('B 的管理員寫不了 A 的活動服事表', async () => {
+    await seed(path('b1'), ev('b1'));
+    await assertFails(setDoc(doc(as(ADMIN_B), path('b2')), ev('b2')));
+    await assertFails(updateDoc(doc(as(ADMIN_B), path('b1')), { title: '改' }));
+    await assertFails(getDoc(doc(as(ADMIN_B), path('b1'))));
+  });
+});
+
 describe('同工排序 (staff_orders)', () => {
   it('跟服事表同樣的牧區權限', async () => {
     await assertSucceeds(getDoc(doc(as(MEMBER_A), `churches/${A}/staff_orders/sunday`)));

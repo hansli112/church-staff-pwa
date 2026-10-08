@@ -96,7 +96,7 @@ void main() {
       final j = exportJson(snapshot(), at);
       expect(j.keys.take(3), ['format', 'version', 'exportedAt']);
       expect(j['format'], 'martha-church-export');
-      expect(j['version'], 1);
+      expect(j['version'], 2);
       expect(j['exportedAt'], '2026-10-04T02:30:00.000Z');
     });
 
@@ -156,6 +156,64 @@ void main() {
         'url': 'https://n8n.example/hook',
         'events': {'calendar': true, 'roster': false},
       });
+    });
+
+    test('an event’s roster: no service, its event and title, by the services on its first day', () {
+      final rosters = [
+        Roster(
+          type: '',
+          day: Day(2026, 10, 4),
+          duties: const [
+            Duty(role: '主持', people: ['李美玉'], uids: {'李美玉': 'mei'}),
+          ],
+          forEvent: RosterEvent(eventId: 'g1', title: '秋季退修會', lastDay: Day(2026, 10, 5)),
+        ),
+        Roster(
+          type: 'sunday',
+          day: Day(2026, 10, 4),
+          duties: const [Duty(role: '司琴')],
+        ),
+        Roster(
+          type: '',
+          day: Day(2026, 10, 3),
+          forEvent: RosterEvent(eventId: 'gone', title: '取消的活動', lastDay: Day(2026, 10, 3), cancelled: true),
+        ),
+      ];
+      final j = jsonDecode(jsonEncode(exportJson(snapshot(rosters: rosters), at))) as Map<String, dynamic>;
+      expect(j['rosters'], [
+        {
+          'id': '2026-10-04_sunday',
+          'date': '2026-10-04',
+          'endDate': '2026-10-04',
+          'serviceId': 'sunday',
+          'eventId': null,
+          'title': null,
+          'duties': [
+            {'duty': '司琴', 'people': <String>[], 'uids': <String, String>{}},
+          ],
+          'events': <Object>[],
+        },
+        {
+          'id': 'ev_g1',
+          'date': '2026-10-04',
+          'endDate': '2026-10-05',
+          'serviceId': null,
+          'eventId': 'g1',
+          'title': '秋季退修會',
+          'duties': [
+            {
+              'duty': '主持',
+              'people': ['李美玉'],
+              'uids': {'李美玉': 'mei'},
+            },
+          ],
+          'events': <Object>[],
+        },
+      ]);
+      expect(
+        exportCsv(snapshot(rosters: rosters)),
+        '\uFEFF日期,服事,服事項目,同工\r\n2026-10-04,主日崇拜,司琴,\r\n2026-10-04,秋季退修會,主持,李美玉\r\n',
+      );
     });
 
     test('holds no secrets', () {

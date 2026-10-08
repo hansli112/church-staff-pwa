@@ -15,14 +15,14 @@ const appUrl = 'https://app.example';
 
 let f: ReturnType<typeof fakeFetch>;
 let d: WebhookDeps;
-let pushed: { tokens: string[]; body: string }[];
+let pushed: { tokens: string[]; body: string; link?: string }[];
 /** Set to make every push fail like FCM out of reach. */
 let fcmDown = false;
 
 const messaging = {
-  sendEachForMulticast: async (m: { tokens: string[]; notification: { body: string } }) => {
+  sendEachForMulticast: async (m: { tokens: string[]; notification: { body: string }; data?: { link?: string } }) => {
     if (fcmDown) throw new Error('fcm unreachable');
-    pushed.push({ tokens: m.tokens, body: m.notification.body });
+    pushed.push({ tokens: m.tokens, body: m.notification.body, link: m.data?.link });
     return { successCount: m.tokens.length, failureCount: 0, responses: m.tokens.map(() => ({ success: true })) };
   },
 } as never;
@@ -58,6 +58,23 @@ async function write(
   const before = await ref.get();
   await ref.set({ type: 'sunday', dateKey: day, duties, ...(opts.via ? { via: opts.via } : {}) });
   return onRosterWritten(triggerDeps(), cid, before, await ref.get(), opts.editedBy ?? 'pastor', `ev${++n}`);
+}
+
+/** Writes (or with null deletes) event x1's roster and runs the trigger, as [editedBy]. */
+async function writeEvent(
+  cid: string,
+  data: Record<string, unknown> | null,
+  opts: { editedBy?: string | null } = {},
+) {
+  const ref = db.doc(`churches/${cid}/rosters/ev_x1`);
+  const before = await ref.get();
+  if (data) {
+    await ref.set({ kind: 'event', eventId: 'x1', title: '聖誕晚會', dateKey: '2026-12-24', endDateKey: '2026-12-24', ...data });
+  } else {
+    await ref.delete();
+  }
+  const by = opts.editedBy === undefined ? 'pastor' : (opts.editedBy ?? undefined);
+  return onRosterWritten(triggerDeps(), cid, before, await ref.get(), by, `ev${++n}`);
 }
 
 const queued = async (cid = 'C1') => (await db.collection(`webhookOutbox/${cid}/rosterChanges`).get()).docs.map((x) => x.data());
@@ -201,6 +218,81 @@ describe('push and webhook are independent', () => {
   });
 });
 
+describe('an event’s roster', () => {
+  test('put on or taken off: told by the event’s title, and the link opens it', async () => {
+    await church();
+    await writeEvent('C1', { duties: [duty('主持', ['美玉'])] });
+    await writeEvent('C1', { duties: [duty('主持', ['志豪'])] });
+    assert.deepEqual(
+      pushed.map((p) => [p.body, p.link]),
+      [
+        ['你被排進 12/24 聖誕晚會：主持', '/c/C1?to=%2Frosters%2Fevent%2Fx1'],
+        ['你被排進 12/24 聖誕晚會：主持', '/c/C1?to=%2Frosters%2Fevent%2Fx1'],
+        ['12/24 聖誕晚會 的主持已改由別人負責', '/c/C1?to=%2Frosters%2Fevent%2Fx1'],
+      ],
+    );
+  });
+
+  test('moved to another day: everyone on it is told the new date, by nobody in particular', async () => {
+    await church();
+    await writeEvent('C1', { duties: [duty('主持', ['美玉']), duty('招待', ['志豪', '林同工'])] });
+    pushed = [];
+    // calendarWrite moves it as the backend, naming who moved it: 美玉 is not told.
+    await writeEvent(
+      'C1',
+      { dateKey: '2026-12-23', endDateKey: '2026-12-23', movedBy: 'mei', duties: [duty('主持', ['美玉']), duty('招待', ['志豪', '林同工'])] },
+      { editedBy: null },
+    );
+    assert.deepEqual(pushed.map((p) => [p.tokens, p.body]), [[['tok-hao'], '聖誕晚會改到 12/23（週三）']]);
+  });
+
+  test('cancelled with its event, or later purged, it tells nobody; deleted by an editor, as any day', async () => {
+    await church();
+    await writeEvent('C1', { duties: [duty('主持', ['美玉'])] });
+    pushed = [];
+    await writeEvent('C1', { duties: [duty('主持', ['美玉'])], cancelledAt: Timestamp.now() }, { editedBy: null });
+    await writeEvent('C1', null, { editedBy: null });
+    assert.equal(pushed.length, 0);
+    await writeEvent('C1', { duties: [duty('主持', ['美玉'])] });
+    pushed = [];
+    await writeEvent('C1', null);
+    assert.deepEqual(pushed.map((p) => p.body), ['12/24 聖誕晚會 的主持已改由別人負責']);
+  });
+
+  test('put back by undoing a delete (via restore): no push, no webhook', async () => {
+    await church();
+    assert.equal(await writeEvent('C1', { duties: [duty('主持', ['美玉'])], via: 'restore' }, { editedBy: null }), null);
+    assert.equal(pushed.length, 0);
+    assert.equal((await queued()).length, 0);
+  });
+
+  test('a two-day event started yesterday is still news; one that ended is not', async () => {
+    await church();
+    setNow(new Date('2026-12-25T10:00:00+08:00'));
+    await writeEvent('C1', { endDateKey: '2026-12-25', duties: [duty('主持', ['美玉'])] });
+    assert.equal(pushed.length, 1);
+    setNow(new Date('2026-12-26T10:00:00+08:00'));
+    assert.equal(await writeEvent('C1', { endDateKey: '2026-12-25', duties: [duty('主持', ['志豪'])] }), null);
+  });
+
+  test('the webhook names the event, with no service', async () => {
+    await church();
+    await writeEvent('C1', { duties: [duty('主持', ['美玉'])] });
+    await sendQueued(d);
+    assert.deepEqual(bodies()[0].changes[0], {
+      date: '2026-12-24',
+      serviceId: null,
+      serviceName: '聖誕晚會',
+      eventId: 'x1',
+      title: '聖誕晚會',
+      duties: [{ duty: '主持', added: ['美玉'], removed: [] }],
+      actorUid: 'pastor',
+      actorName: '王牧師',
+      via: 'app',
+    });
+  });
+});
+
 describe('roster webhooks', () => {
   test('changes within the window go out as one notice, then the outbox is empty', async () => {
     await church();
@@ -226,6 +318,8 @@ describe('roster webhooks', () => {
       date: '2026-10-04',
       serviceId: 'sunday',
       serviceName: '主日崇拜',
+      eventId: null,
+      title: null,
       duties: [{ duty: '司琴', added: ['志豪'], removed: ['美玉'] }],
       actorUid: 'pastor',
       actorName: '王牧師',

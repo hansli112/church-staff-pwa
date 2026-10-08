@@ -13,18 +13,18 @@
 | 欄位 | 內容 |
 | --- | --- |
 | 日期 | `YYYY-MM-DD` |
-| 服事 | 服事名稱，例如「主日崇拜」 |
+| 服事 | 服事名稱，例如「主日崇拜」；活動的服事表是活動名稱，例如「聖誕晚會」 |
 | 服事項目 | 例如「司琴」 |
 | 同工 | 這一格的同工，好幾個人用「、」連接；沒有人就是空的 |
 
-只有存過的服事表會出現，包括過去的日子。日期由舊到新，同一天依服事設定的順序。
+只有存過的服事表會出現，包括過去的日子。日期由舊到新，同一天依服事設定的順序，活動的服事表排在最後。跨好幾天的活動只在第一天出現。隨活動一起刪掉（取消）的不會出現。
 
 ## `martha-export.json`
 
 ```jsonc
 {
   "format": "martha-church-export",  // 固定
-  "version": 1,                       // 格式改了會加一
+  "version": 2,                       // 格式改了會加一。2：加上活動的服事表
   "exportedAt": "2026-10-04T02:30:00.000Z",
 
   "church": { "id": "…", "name": "恩典堂", "homeName": "恩典", "logoUrl": "https://…" },
@@ -63,11 +63,21 @@
   "staffOrders": { "sunday": { "司琴": ["李美玉", "陳志豪"] } },
 
   // 所有存過的服事表。people 是顯示的名字；uids 只列出是同工（或待認領同工）的人。
+  // 活動的服事表（掛在行事曆活動上）沒有 serviceId，改用 eventId（Google 日曆的活動 id）
+  // 和 title（活動名稱）；endDate 是活動的最後一天。一般服事表的 eventId、title 是 null，
+  // endDate 和 date 相同。
   "rosters": [
     {
-      "id": "2026-10-04_sunday", "date": "2026-10-04", "serviceId": "sunday",
+      "id": "2026-10-04_sunday", "date": "2026-10-04", "endDate": "2026-10-04",
+      "serviceId": "sunday", "eventId": null, "title": null,
       "duties": [{ "duty": "司琴", "people": ["李美玉"], "uids": { "李美玉": "…" } }],
       "events": [{ "name": "聖餐", "color": 0 }]
+    },
+    {
+      "id": "ev_…", "date": "2026-12-24", "endDate": "2026-12-24",
+      "serviceId": null, "eventId": "…", "title": "聖誕晚會",
+      "duties": [{ "duty": "主持", "people": ["李美玉"], "uids": { "李美玉": "…" } }],
+      "events": []
     }
   ],
 

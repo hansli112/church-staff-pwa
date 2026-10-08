@@ -128,10 +128,14 @@ class HomeScreen extends ConsumerWidget {
                       ListRow(
                         title: dayLabel(l10n, s.roster.day, today),
                         subtitle: [
-                          services?.byId(s.roster.type)?.name ?? '',
+                          s.roster.forEvent?.title ?? services?.byId(s.roster.type)?.name ?? '',
                           s.duties.join('、'),
                         ].where((t) => t.isNotEmpty).join(' · '),
                         onTap: () {
+                          if (s.roster.forEvent case final e?) {
+                            context.push('/rosters/event/${e.eventId}');
+                            return;
+                          }
                           ref.read(selectedServiceProvider.notifier).select(s.roster.type);
                           context.push(
                             '/rosters/${s.roster.type}/${s.roster.day.key}',

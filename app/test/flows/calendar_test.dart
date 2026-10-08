@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/core/design/components.dart';
+import 'package:martha/domain/day.dart';
+import 'package:martha/domain/event_roster.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/features/calendar/month_grid.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -80,6 +82,45 @@ void main() {
     expect(b.calendarEvents['grace']!.map((e) => e.title), ['禱告會']);
     await tapText(tester, '復原');
     expect(b.calendarEvents['grace']!.map((e) => e.title), containsAll(['同工會', '禱告會']));
+  });
+
+  testWidgets("an event's roster follows a rename, is cancelled with a delete, and comes back with undo", (
+    tester,
+  ) async {
+    final b = seededChurch(as: calendarEditor, extra: const [calendarEditor]);
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    final camp = CalendarEvent(
+      id: 'camp',
+      title: '夏令營',
+      start: DateTime(2026, 10, 9),
+      end: DateTime(2026, 10, 12),
+      allDay: true,
+    );
+    b.calendarEvents['grace'] = [camp];
+    b.rosters['grace']![Roster.idForEvent('camp')] = eventRoster(
+      camp,
+      duties: const [
+        Duty(role: '報到', people: ['李美玉']),
+      ],
+    ).copyWith(saved: true);
+    await pumpApp(tester, b);
+    await go(tester, '/calendar');
+    await tapText(tester, '夏令營');
+    await tester.enterText(find.byType(TextField).first, '秋令營');
+    await tester.pump();
+    await tapText(tester, '儲存');
+    final renamed = b.rosters['grace']![Roster.idForEvent('camp')]!;
+    expect((renamed.forEvent!.title, renamed.day, renamed.lastDay), ('秋令營', Day(2026, 10, 9), Day(2026, 10, 11)));
+
+    await tapText(tester, '秋令營');
+    await tapText(tester, '刪除活動');
+    expect(b.rosters['grace']![Roster.idForEvent('camp')]!.forEvent!.cancelled, isTrue);
+    await tapText(tester, '復原');
+    final again = b.calendarEvents['grace']!.single;
+    expect(b.rosters['grace']!.containsKey(Roster.idForEvent('camp')), isFalse);
+    final back = b.rosters['grace']![Roster.idForEvent(again.id!)]!;
+    expect(back.forEvent!.cancelled, isFalse);
+    expect(back.duties.single.people, ['李美玉']);
   });
 
   testWidgets('renaming a three-day event keeps its three days', (tester) async {

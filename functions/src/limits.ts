@@ -17,6 +17,8 @@ export const TEXT_LIMITS = {
   linkBody: 120,
   costName: 40,
   profileName: 40,
+  /** An event's title as its roster keeps it, cut from the calendar's. */
+  eventTitle: 200,
 } as const;
 
 /** URLs and secrets in UTF-16 code units, services as a count. */

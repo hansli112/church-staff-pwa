@@ -43,16 +43,23 @@ class ChurchSnapshot {
 }
 
 const exportFormat = 'martha-church-export';
-const exportVersion = 1;
+
+/// 2: 活動的服事表 (serviceId null, eventId, title, endDate).
+const exportVersion = 2;
 const exportJsonName = 'martha-export.json';
 const exportCsvName = '服事表.csv';
 
-/// Rosters oldest first; on one day, in the order of the services.
+/// Rosters oldest first; on one day, in the order of the services, then
+/// events'. Not an event's roster cancelled with its event.
 List<Roster> _ordered(ChurchSnapshot s) {
   final rank = {for (final (i, svc) in s.services.services.indexed) svc.id: i};
-  return [...s.rosters]..sort((a, b) {
+  return [
+    for (final r in s.rosters)
+      if (!(r.forEvent?.cancelled ?? false)) r,
+  ]..sort((a, b) {
     final byDay = a.day.compareTo(b.day);
-    return byDay != 0 ? byDay : (rank[a.type] ?? 999).compareTo(rank[b.type] ?? 999);
+    int of(Roster r) => r.isEvent ? 1000 : rank[r.type] ?? 999;
+    return byDay != 0 ? byDay : of(a).compareTo(of(b));
   });
 }
 
@@ -126,7 +133,10 @@ Map<String, Object?> exportJson(ChurchSnapshot s, DateTime exportedAt) => {
       {
         'id': r.id,
         'date': r.day.key,
-        'serviceId': r.type,
+        'endDate': r.lastDay.key,
+        'serviceId': r.isEvent ? null : r.type,
+        'eventId': r.forEvent?.eventId,
+        'title': r.forEvent?.title,
         'duties': [
           for (final d in r.duties) {'duty': d.role, 'people': d.people, 'uids': d.uids},
         ],
@@ -157,13 +167,16 @@ Map<String, Object?> exportJson(ChurchSnapshot s, DateTime exportedAt) => {
 
 String _csvField(String v) => v.contains(RegExp('[",\r\n]')) ? '"${v.replaceAll('"', '""')}"' : v;
 
+/// A roster's 服事 column: the service's name, or the event's title.
+String _name(ChurchSnapshot s, Roster r) => r.forEvent?.title ?? s.services.byId(r.type)?.name ?? r.type;
+
 /// One row per duty on each saved day: 日期, 服事, 服事項目, 同工 (several
 /// people joined with 「、」). UTF-8 with a BOM so Excel reads the Chinese.
 String exportCsv(ChurchSnapshot s) {
   final rows = <List<String>>[
     ['日期', '服事', '服事項目', '同工'],
     for (final r in _ordered(s))
-      for (final d in r.duties) [r.day.key, s.services.byId(r.type)?.name ?? r.type, d.role, d.people.join('、')],
+      for (final d in r.duties) [r.day.key, _name(s, r), d.role, d.people.join('、')],
   ];
   return '\uFEFF${rows.map((row) => row.map(_csvField).join(',')).join('\r\n')}\r\n';
 }

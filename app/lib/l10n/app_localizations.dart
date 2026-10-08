@@ -1639,6 +1639,12 @@ abstract class L10n {
   /// **'不再屬於{service}牧區'**
   String zoneLeft(String service);
 
+  /// No description provided for @eventRosterGone.
+  ///
+  /// In zh, this message translates to:
+  /// **'這個活動的服事表已經不在了'**
+  String get eventRosterGone;
+
   /// No description provided for @noZoneYet.
   ///
   /// In zh, this message translates to:

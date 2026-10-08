@@ -238,8 +238,13 @@ async function deliver(
 /** One roster change as `roster.changed` lists it. */
 export interface QueuedRosterChange {
   date: string;
-  serviceId: string;
+  /** null for an event's roster. */
+  serviceId: string | null;
+  /** The service's name, or the event's title. */
   serviceName: string;
+  /** The calendar event of an event's roster (活動的服事表), else null. */
+  eventId: string | null;
+  title: string | null;
   duties: { duty: string; added: string[]; removed: string[] }[];
   actorUid: string | null;
   actorName: string | null;
@@ -285,6 +290,8 @@ export async function sendQueued(deps: WebhookDeps) {
         date: c.date,
         serviceId: c.serviceId,
         serviceName: c.serviceName,
+        eventId: c.eventId ?? null,
+        title: c.title ?? null,
         duties: c.duties,
         actorUid: c.actorUid,
         actorName: c.actorName,

@@ -499,6 +499,28 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect(await g.church.rosters(from: Day(2026, 10, 1)).first, [second]);
     });
 
+    test("an event's roster: any roster editor writes and deletes it, staff only read it", () async {
+      final g = await Grace.open(w);
+      final party = Roster(
+        type: '',
+        day: Day(2026, 12, 24),
+        duties: const [
+          Duty(role: '主持', people: ['李美玉'], uids: {'李美玉': 'mei'}),
+        ],
+        forEvent: RosterEvent(eventId: 'x1', title: '聖誕晚會', lastDay: Day(2026, 12, 25)),
+      );
+      // 林同工 edits only sunday; an event is in no service.
+      await w.signIn(Grace.editorEmail);
+      await g.church.saveRoster(party);
+      await w.signIn(Grace.meiEmail);
+      expect(await g.church.rosters(from: Day(2026, 12, 1)).first, [party]);
+      await expectLater(g.church.saveRoster(party.copyWith(duties: const [])), denied());
+      await expectLater(g.church.deleteRoster(party), denied());
+      await w.signIn(Grace.editorEmail);
+      await g.church.deleteRoster(party);
+      expect(await g.church.rosters(from: Day(2026, 12, 24)).first, isNot(contains(party)));
+    });
+
     test('roster editors edit only their services; staff read', () async {
       final g = await Grace.open(w);
       await w.signIn(Grace.editorEmail);

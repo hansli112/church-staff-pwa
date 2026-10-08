@@ -4,7 +4,7 @@ import type { DocumentSnapshot } from 'firebase-admin/firestore';
 import { isChurchOpen } from './access.js';
 import { dateKeyUtc8 } from './common.js';
 import { notifyMembers, type PushDeps } from './push.js';
-import { dutiesByUid, shortDate } from './rosterChange.js';
+import { dutiesByUid, isEvent, shortDate } from './rosterChange.js';
 
 async function serviceName(deps: PushDeps, cid: string, type: string) {
   const settings = await deps.db.doc(`churches/${cid}/settings/services`).get();
@@ -14,7 +14,9 @@ async function serviceName(deps: PushDeps, cid: string, type: string) {
 
 /**
  * Evening reminders for tomorrow (UTC+8): everyone with a uid on a duty of
- * an active church gets one message listing their duties that day.
+ * an active church gets one message listing their duties that day. An
+ * event's roster is reminded of the day before it starts, by its title;
+ * not once its event is cancelled.
  */
 export async function sendReminders(deps: PushDeps & { now: () => Date }) {
   const tomorrow = dateKeyUtc8(new Date(deps.now().getTime() + 86400e3));
@@ -30,7 +32,9 @@ export async function sendReminders(deps: PushDeps & { now: () => Date }) {
     if (!isChurchOpen(church)) continue;
     const perUid = new Map<string, string[]>();
     for (const r of docs) {
-      const name = await serviceName(deps, cid, r.get('type') as string);
+      if (r.get('cancelledAt') != null) continue;
+      const name =
+        isEvent(r) ? ((r.get('title') as string | undefined) ?? '') : await serviceName(deps, cid, r.get('type') as string);
       for (const [uid, roles] of dutiesByUid(r.get('duties'))) {
         perUid.set(uid, [...(perUid.get(uid) ?? []), `${name} ${roles.join('、')}`]);
       }

@@ -28,6 +28,31 @@ void main() {
       expect(find.textContaining('10月11日'), findsOneWidget);
     });
 
+    testWidgets("an event's roster shows in 我的服事 by its title and opens; a cancelled one is gone", (tester) async {
+      final b = seededChurch(as: staffMei);
+      b.rosters['grace']![Roster.idForEvent('x1')] = Roster(
+        type: '',
+        day: Day(2026, 10, 9),
+        duties: const [
+          Duty(role: '報到', people: ['李美玉'], uids: {'李美玉': 'mei'}),
+        ],
+        forEvent: RosterEvent(eventId: 'x1', title: '秋季退修會', lastDay: Day(2026, 10, 10)),
+      );
+      b.rosters['grace']![Roster.idForEvent('x2')] = Roster(
+        type: '',
+        day: Day(2026, 10, 9),
+        duties: const [
+          Duty(role: '主持', people: ['李美玉'], uids: {'李美玉': 'mei'}),
+        ],
+        forEvent: RosterEvent(eventId: 'x2', title: '取消的活動', lastDay: Day(2026, 10, 9), cancelled: true),
+      );
+      await pumpApp(tester, b);
+      expect(find.textContaining('取消的活動'), findsNothing);
+      await tapText(tester, '秋季退修會 · 報到');
+      expect(find.text('秋季退修會'), findsOneWidget, reason: 'the title on top');
+      expect(find.textContaining('10月10日'), findsOneWidget, reason: 'its last day');
+    });
+
     testWidgets('home with nothing ahead says one sentence', (tester) async {
       await pumpApp(tester, seededChurch(as: john));
       expect(find.text('接下來沒有你的服事，排到你時會出現在這裡'), findsOneWidget);

@@ -3,7 +3,8 @@ import { randomBytes } from 'node:crypto';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 import { churchAccess } from './access.js';
-import { DAY_MS, fail, type Caller, type Deps } from './common.js';
+import { DAY_MS, dateKeyUtc8, fail, type Caller, type Deps } from './common.js';
+import { cutText, TEXT_LIMITS } from './limits.js';
 import { seal, unseal } from './sealing.js';
 import { notify, type WebhookDeps } from './webhook.js';
 
@@ -260,16 +261,29 @@ const MAX_CLEARED_MONTHS = 12;
 /**
  * Create, update or delete one event (admins and calendar-editors).
  *
- * `{ churchId, op: 'upsert', event, previous?: { start, end } }`, where
- * `previous` is where an edited event was before (older web clients send
- * `previousStart` instead), or `{ churchId, op: 'delete', eventId, event:
- * { start, end } }`. Every cached month the event was or is in is dropped,
- * so everyone sees the change on their next read.
+ * `{ churchId, op: 'upsert', event, previous?: { start, end },
+ * restoreRosterOf? }`, where `previous` is where an edited event was before
+ * (older web clients send `previousStart` instead), or `{ churchId, op:
+ * 'delete', eventId, event: { start, end } }`. Every cached month the event
+ * was or is in is dropped, so everyone sees the change on their next read.
+ *
+ * The event's roster (活動的服事表), if it has one, goes with it, written
+ * here because a calendar editor may not hold roster rights: an edit copies
+ * the title and days, a delete cancels it (kept for undo), and an upsert
+ * with `restoreRosterOf` (undoing a delete, which makes the event again
+ * under a new id) moves the cancelled roster onto the new event.
  */
 export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: unknown) {
   const me = await churchAccess(deps, caller, data, { group: 'calendar-editors' });
   const churchId = me.cid;
-  const input = data as { op?: unknown; event?: Partial<CalendarEvent>; eventId?: unknown; previous?: unknown; previousStart?: unknown };
+  const input = data as {
+    op?: unknown;
+    event?: Partial<CalendarEvent>;
+    eventId?: unknown;
+    previous?: unknown;
+    previousStart?: unknown;
+    restoreRosterOf?: unknown;
+  };
   const { token, calendarId } = await access(deps, churchId);
   if (!calendarId) fail('failed-precondition', 'unknown', 'noCalendar');
   let result: CalendarEvent | null = null;
@@ -280,6 +294,7 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
     // What it was, for the webhook: Google's DELETE returns nothing.
     const before = await deps.google.get(token, calendarId, input.eventId).catch(() => null);
     await deps.google.remove(token, calendarId, input.eventId);
+    await rosterStep(`cancel ${churchId}/ev_${input.eventId}`, () => cancelEventRoster(deps, churchId, input.eventId as string));
     spans.push(span(input.event), span(before));
     notice = { action: 'deleted', event: before ?? { ...input.event, id: input.eventId } };
   } else if (input.op === 'upsert') {
@@ -297,6 +312,14 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
       description: typeof e.description === 'string' ? e.description.slice(0, 4000) : undefined,
     });
     spans.push(span(e));
+    const done = result;
+    if (typeof e.id === 'string') {
+      await rosterStep(`follow ${churchId}/ev_${e.id}`, () => followEvent(deps, churchId, done, me.caller.uid));
+    }
+    const restore = input.restoreRosterOf;
+    if (typeof restore === 'string') {
+      await rosterStep(`restore ${churchId}/ev_${restore}`, () => restoreEventRoster(deps, churchId, restore, done));
+    }
     notice = { action: typeof e.id === 'string' ? 'updated' : 'created', event: result };
   } else {
     fail('invalid-argument', 'unknown');
@@ -311,6 +334,82 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
     }));
   }
   return { event: result };
+}
+
+/** The days an event's roster is on (`dateKey`s): UTC+8, an all-day end exclusive. */
+export function eventRosterDays(e: { start: string; end?: string; allDay?: boolean }) {
+  const ymd = /^\d{4}-\d{2}-\d{2}$/;
+  if (e.allDay === true || ymd.test(e.start)) {
+    const last = inclusiveEnd(e.end);
+    return { dateKey: e.start, endDateKey: last && last > e.start ? last : e.start };
+  }
+  const start = Date.parse(e.start);
+  const end = e.end === undefined ? NaN : Date.parse(e.end);
+  const dateKey = dateKeyUtc8(new Date(start));
+  return { dateKey, endDateKey: end > start ? dateKeyUtc8(new Date(end - 1)) : dateKey };
+}
+
+const eventRosterRef = (deps: Deps, churchId: string, eventId: string) =>
+  deps.db.doc(`churches/${churchId}/rosters/ev_${eventId}`);
+
+/**
+ * Runs a step on an event's roster after Google has the change. A failure
+ * is logged, never thrown: the event changed, so the call must not look
+ * failed (an undo retried would make the event twice).
+ */
+async function rosterStep(what: string, step: () => Promise<void>) {
+  try {
+    await step();
+  } catch (e) {
+    console.error(`event roster: ${what} failed`, e);
+  }
+}
+
+/** What an event's roster copies from [e]. `via` clears a `restore`, so a later move is told. */
+const fromEvent = (e: CalendarEvent) => ({
+  title: cutText(e.title, TEXT_LIMITS.eventTitle),
+  ...eventRosterDays(e),
+  via: 'calendar',
+  updatedAt: FieldValue.serverTimestamp(),
+});
+
+/**
+ * Copies [e]'s title and days to its roster, if it has one still on.
+ * [by] made the change: the trigger tells them nothing of it.
+ */
+async function followEvent(deps: Deps, churchId: string, e: CalendarEvent, by: string) {
+  if (!e.id) return;
+  const ref = eventRosterRef(deps, churchId, e.id);
+  await deps.db.runTransaction(async (tx) => {
+    const r = await tx.get(ref);
+    if (!r.exists || r.get('kind') !== 'event' || r.get('cancelledAt') != null) return;
+    const next = fromEvent(e);
+    if (r.get('title') === next.title && r.get('dateKey') === next.dateKey && r.get('endDateKey') === next.endDateKey) return;
+    tx.update(ref, { ...next, movedBy: by });
+  });
+}
+
+/** Marks the roster of deleted event [eventId] cancelled: not shown, not reminded, kept for undo. */
+async function cancelEventRoster(deps: Deps, churchId: string, eventId: string) {
+  const ref = eventRosterRef(deps, churchId, eventId);
+  await deps.db.runTransaction(async (tx) => {
+    const r = await tx.get(ref);
+    if (r.exists && r.get('kind') === 'event') tx.update(ref, { cancelledAt: Timestamp.fromDate(deps.now()) });
+  });
+}
+
+/** Moves the cancelled roster of deleted event [fromId] onto [e], the event made again. */
+async function restoreEventRoster(deps: Deps, churchId: string, fromId: string, e: CalendarEvent) {
+  if (!/^[A-Za-z0-9_-]{1,1024}$/.test(fromId) || !e.id || fromId === e.id) return;
+  const from = eventRosterRef(deps, churchId, fromId);
+  const to = eventRosterRef(deps, churchId, e.id);
+  await deps.db.runTransaction(async (tx) => {
+    const r = await tx.get(from);
+    if (!r.exists || r.get('kind') !== 'event' || r.get('cancelledAt') == null) return;
+    // As a restore: the trigger tells nobody, they were never told it went.
+    tx.set(to, { kind: 'event', eventId: e.id, duties: r.get('duties') ?? [], events: [], ...fromEvent(e), via: 'restore' });
+    tx.delete(from);
+  });
 }
 
 /**

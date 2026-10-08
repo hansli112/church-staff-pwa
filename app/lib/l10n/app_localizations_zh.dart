@@ -851,6 +851,9 @@ class L10nZh extends L10n {
   }
 
   @override
+  String get eventRosterGone => '這個活動的服事表已經不在了';
+
+  @override
   String get noZoneYet => '你還沒有屬於任何牧區，請找管理員設定';
 
   @override

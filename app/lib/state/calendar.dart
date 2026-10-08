@@ -30,13 +30,14 @@ class CalendarActions {
     _reload([event, ?previous]);
   }
 
-  /// Deletes [event]. The returned undo creates it again, as a new event.
+  /// Deletes [event], which cancels its roster. The returned undo creates it
+  /// again, as a new event, with the roster back on it.
   Future<Future<void> Function()> delete(CalendarEvent event) async {
     final data = _ref.churchData;
     await data.calendarDelete(event);
     _reload([event]);
     return () async {
-      await data.calendarSave(event.anew);
+      await data.calendarSave(event.anew, restoreRosterOf: event.id);
       _reload([event]);
     };
   }
