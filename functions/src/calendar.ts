@@ -64,6 +64,11 @@ export interface CalendarEvent {
   description?: string;
   /** Google Calendar's page for the event (htmlLink); read only. */
   link?: string;
+  /** Deleted (Google's status `cancelled`), as a get of it may still say. */
+  cancelled?: boolean;
+  /** For one day of a recurring event: the series, and the start it had in it. */
+  recurringEventId?: string;
+  originalStart?: string;
 }
 
 /** Changes go out to the church's webhook, hence WebhookDeps. */
@@ -127,6 +132,20 @@ export async function calendarCallback(deps: CalDeps, query: Record<string, unkn
     updatedAt: FieldValue.serverTimestamp(),
   });
   return back('connected');
+}
+
+/**
+ * The church's access token and calendar for a scheduled job, or null when
+ * there is none to use now (not connected, the grant revoked, Google out
+ * of reach): the job leaves the church alone until there is.
+ */
+export async function calendarAccess(deps: CalDeps, churchId: string) {
+  try {
+    return await access(deps, churchId);
+  } catch (e) {
+    console.warn(`calendar access ${churchId}`, e);
+    return null;
+  }
 }
 
 async function access(deps: CalDeps, churchId: string) {
@@ -366,7 +385,7 @@ async function rosterStep(what: string, step: () => Promise<void>) {
 }
 
 /** What an event's roster copies from [e]. `via` clears a `restore`, so a later move is told. */
-const fromEvent = (e: CalendarEvent) => ({
+export const fromEvent = (e: CalendarEvent) => ({
   title: cutText(e.title, TEXT_LIMITS.eventTitle),
   ...eventRosterDays(e),
   via: 'calendar',
@@ -407,7 +426,18 @@ async function restoreEventRoster(deps: Deps, churchId: string, fromId: string, 
     const r = await tx.get(from);
     if (!r.exists || r.get('kind') !== 'event' || r.get('cancelledAt') == null) return;
     // As a restore: the trigger tells nobody, they were never told it went.
-    tx.set(to, { kind: 'event', eventId: e.id, duties: r.get('duties') ?? [], events: [], ...fromEvent(e), via: 'restore' });
+    const keep = (k: string) => (r.get(k) === undefined ? {} : { [k]: r.get(k) });
+    tx.set(to, {
+      kind: 'event',
+      eventId: e.id,
+      duties: r.get('duties') ?? [],
+      events: [],
+      ...keep('calendarId'),
+      ...keep('recurringEventId'),
+      ...keep('originalStart'),
+      ...fromEvent(e),
+      via: 'restore',
+    });
     tx.delete(from);
   });
 }
@@ -456,21 +486,27 @@ export function googleApi(): GoogleApi {
   });
   const fromGoogle = (g: {
     id: string;
+    status?: string;
     summary?: string;
     location?: string;
     description?: string;
     htmlLink?: string;
-    start: { date?: string; dateTime?: string };
-    end: { date?: string; dateTime?: string };
+    start?: { date?: string; dateTime?: string };
+    end?: { date?: string; dateTime?: string };
+    recurringEventId?: string;
+    originalStartTime?: { date?: string; dateTime?: string };
   }): CalendarEvent => ({
     id: g.id,
     title: g.summary ?? '',
-    start: g.start.date ?? g.start.dateTime ?? '',
-    end: g.end.date ?? g.end.dateTime ?? '',
-    allDay: !!g.start.date,
+    start: g.start?.date ?? g.start?.dateTime ?? '',
+    end: g.end?.date ?? g.end?.dateTime ?? '',
+    allDay: !!g.start?.date,
     location: g.location,
     description: g.description,
     link: g.htmlLink,
+    ...(g.status === 'cancelled' ? { cancelled: true } : {}),
+    recurringEventId: g.recurringEventId,
+    originalStart: g.originalStartTime?.date ?? g.originalStartTime?.dateTime,
   });
   return {
     async exchangeCode(code, config) {

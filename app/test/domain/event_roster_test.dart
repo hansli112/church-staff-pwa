@@ -109,4 +109,45 @@ void main() {
       expect(order.rankingOf('招待'), isEmpty);
     });
   });
+
+  group('a day of a recurring event', () {
+    Roster day(String id, String series, Day d, List<String> roles) => Roster(
+      type: '',
+      day: d,
+      duties: [for (final r in roles) Duty(role: r)],
+      forEvent: RosterEvent(eventId: id, title: '禱告會', lastDay: d, recurringEventId: series),
+    );
+    final next = CalendarEvent(
+      id: 'pray_20261224',
+      title: '禱告會',
+      start: DateTime.utc(2026, 12, 24, 11),
+      end: DateTime.utc(2026, 12, 24, 12),
+      recurringEventId: 'pray_R20261201',
+    );
+
+    test('starts with the duties of the latest earlier day of its series, split or not', () {
+      final rosters = [
+        day('pray_20261029', 'pray', Day(2026, 10, 29), ['領禱']),
+        day('pray_20261126', 'pray', Day(2026, 11, 26), ['領禱', '司琴']),
+        day('pray_20261231', 'pray_R20261201', Day(2026, 12, 31), ['之後的']),
+        day('other_1', 'other', Day(2026, 12, 1), ['別的']),
+      ];
+      expect(previousInSeries(next, rosters), ['領禱', '司琴']);
+    });
+
+    test('a one-off event starts empty', () {
+      final once = CalendarEvent(
+        id: 'x',
+        title: 'x',
+        start: DateTime.utc(2026, 12, 24),
+        end: DateTime.utc(2026, 12, 25),
+      );
+      expect(
+        previousInSeries(once, [
+          day('a', 'a', Day(2026, 1, 1), ['領禱']),
+        ]),
+        isEmpty,
+      );
+    });
+  });
 }

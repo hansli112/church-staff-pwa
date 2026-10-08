@@ -250,7 +250,11 @@ class MemoryBackend implements Backend {
 
   /// Simulates Google Calendar's OAuth callback for [cid].
   void connectCalendar(String cid, {String? calendarName}) {
-    calendars[cid] = CalendarSettings(connected: true, calendarName: calendarName);
+    calendars[cid] = CalendarSettings(
+      connected: true,
+      calendarName: calendarName,
+      calendarId: calendarName == null ? null : 'cal-$cid',
+    );
     notify();
   }
 
@@ -963,7 +967,7 @@ class MemoryChurchData implements ChurchData {
   @override
   Future<void> calendarSelect(String calendarId, String calendarName) async {
     _functionAdmin();
-    _b.calendars[churchId] = CalendarSettings(connected: true, calendarName: calendarName);
+    _b.calendars[churchId] = CalendarSettings(connected: true, calendarName: calendarName, calendarId: calendarId);
     _b.notify();
   }
 
@@ -1014,7 +1018,11 @@ class MemoryChurchData implements ChurchData {
     final rosters = _b.rosters[churchId]!;
     final from = rosters[Roster.idForEvent(restoreRosterOf ?? saved.id!)];
     if (from != null && (restoreRosterOf == null) != from.forEvent!.cancelled) {
-      final moved = eventRoster(saved, duties: from.duties).copyWith(saved: true);
+      final moved = eventRoster(
+        saved,
+        duties: from.duties,
+        calendarId: from.forEvent!.calendarId,
+      ).copyWith(saved: true);
       await _b.write(() {
         if (restoreRosterOf != null) rosters.remove(from.id);
         rosters[moved.id] = moved;

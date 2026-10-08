@@ -23,6 +23,7 @@ import { onObjectFinalized } from 'firebase-functions/v2/storage';
 
 import * as account from './account.js';
 import * as calendar from './calendar.js';
+import * as eventSync from './eventSync.js';
 import * as church from './church.js';
 import * as claim from './claim.js';
 import * as churchLink from './churchLink.js';
@@ -289,6 +290,16 @@ export const sendRosterChanges = onSchedule(
   { region: REGION, schedule: 'every 5 minutes', timeZone: 'Asia/Taipei', secrets: [sealKey] },
   async () => {
     await webhook.sendQueued(hookDeps());
+  },
+);
+
+// Events' rosters against what was done in Google Calendar itself; the
+// evening run comes before the reminders at 19:00.
+export const syncEventRosters = onSchedule(
+  { region: REGION, schedule: '30 6,12,18 * * *', timeZone: 'Asia/Taipei', secrets: calendarSecrets, timeoutSeconds: 540 },
+  async () => {
+    const counts = await eventSync.syncEventRosters(calDeps());
+    console.log('event rosters synced', counts);
   },
 );
 

@@ -167,4 +167,43 @@ void main() {
     await pumpApp(tester, church(as: staffMei, saved: retreat, clock: () => DateTime(2026, 10, 10, 9)));
     expect(find.textContaining('秋季退修會'), findsOneWidget);
   });
+
+  testWidgets('a day of a recurring event starts with the last day’s duties, and records its calendar', (tester) async {
+    final b = church(as: editor);
+    final pray = CalendarEvent(
+      id: 'pray_20261008',
+      title: '禱告會',
+      start: DateTime(2026, 10, 8, 19, 30),
+      end: DateTime(2026, 10, 8, 21),
+      recurringEventId: 'pray',
+    );
+    b.calendarEvents['grace'] = [pray];
+    b.rosters['grace']!['ev_pray_20260910'] = Roster(
+      type: '',
+      day: Day(2026, 9, 10),
+      duties: const [
+        Duty(role: '領禱', people: ['王牧師']),
+      ],
+      forEvent: RosterEvent(
+        eventId: 'pray_20260910',
+        title: '禱告會',
+        lastDay: Day(2026, 9, 10),
+        recurringEventId: 'pray',
+      ),
+    );
+    await pumpApp(tester, b);
+    await go(tester, '/calendar');
+    await tapText(tester, '禱告會');
+    await tapText(tester, '安排服事');
+    expect(find.text('領禱'), findsOneWidget);
+    expect(find.text('王牧師'), findsNothing, reason: 'the duties, not the people');
+
+    await tapText(tester, '領禱');
+    await tapText(tester, '林同工');
+    await tester.tapAt(const Offset(10, 10));
+    await settle(tester);
+    final saved = b.rosters['grace']!['ev_pray_20261008']!;
+    expect(saved.forEvent!.calendarId, 'cal-grace');
+    expect(saved.forEvent!.recurringEventId, 'pray');
+  });
 }

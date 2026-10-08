@@ -36,6 +36,10 @@ const RULES_FIELDS: Record<string, { text?: keyof typeof TEXT_LIMITS; other?: ke
   'data.url': { other: 'url' },
   'data.services': { other: 'services' },
   'roster.title': { text: 'eventTitle' },
+  // Where an event roster's event is, copied from Google: abuse guards only.
+  "roster.get('calendarId', '')": { rulesOnly: 1024 },
+  "roster.get('recurringEventId', '')": { rulesOnly: 1024 },
+  "roster.get('originalStart', '')": { rulesOnly: 64 },
   // invites: the 牧區 an invite joins, at most every service.
   "request.resource.data.get('zoneTypes', [])": { other: 'services' },
   // settings/services ids: a list only the rules bound.

@@ -10,6 +10,7 @@ import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/roster_actions.dart';
+import '../calendar/calendar_screen.dart';
 import '../common/errors.dart';
 import 'format.dart';
 import 'roster_card.dart';
@@ -27,6 +28,14 @@ final _eventRosterProvider = Provider.autoDispose.family<Roster?, String>(
     savedRostersProvider.select((v) => v.value?.where((r) => r.id == Roster.idForEvent(eventId)).firstOrNull),
   ),
 );
+
+/// The roles a new roster for a day of a recurring event starts with: the
+/// latest earlier day's (預設沿用上一次). Read once, from every event's
+/// roster; none for a one-off event.
+final _seriesRolesProvider = FutureProvider.autoDispose.family<List<String>, CalendarEvent>((ref, e) async {
+  if (e.recurringEventId == null) return const [];
+  return previousInSeries(e, await ref.churchData.eventRosters());
+});
 
 /// Whether this member may arrange events' rosters: admins and every roster
 /// editor, in no 牧區.
@@ -101,7 +110,17 @@ class EventRosterScreen extends ConsumerWidget {
     final rosters = ref.watch(savedRostersProvider);
     final saved = ref.watch(_eventRosterProvider(eventId));
     final e = event;
-    final roster = saved ?? (e != null && e.id == eventId ? eventRoster(e) : null);
+    final calendarId = ref.watch(calendarSettingsProvider.select((s) => s.value?.calendarId));
+    final roles = e == null ? const <String>[] : ref.watch(_seriesRolesProvider(e)).value ?? const <String>[];
+    final roster =
+        saved ??
+        (e != null && e.id == eventId
+            ? eventRoster(
+                e,
+                duties: [for (final r in roles) Duty(role: r)],
+                calendarId: calendarId,
+              )
+            : null);
     final canEdit = ref.watch(_canArrangeProvider);
     final editable = canEdit && ref.watch(eventEditingProvider);
     return Scaffold(

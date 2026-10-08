@@ -439,6 +439,15 @@ describe('活動的服事表 (rosters/ev_…)', () => {
     await assertFails(setDoc(doc(db, `churches/${A}/rosters/ev_t2`), { type: 'sunday', dateKey: '2030-12-24' }));
   });
 
+  it('活動在哪本行事曆、哪一串：建立時可以寫，之後 App 改不了', async () => {
+    const db = as(EDITOR_A);
+    const where = { calendarId: 'cal-1', recurringEventId: 'pray', originalStart: '2030-12-24T11:00:00Z' };
+    await assertSucceeds(setDoc(doc(db, path('w1')), ev('w1', where)));
+    await assertSucceeds(setDoc(doc(db, path('w1')), ev('w1', { ...where, duties: [{ role: '領禱', people: [], uids: {} }] })));
+    await assertFails(setDoc(doc(db, path('w1')), ev('w1', { ...where, calendarId: 'cal-2' })));
+    await assertFails(setDoc(doc(db, path('w1')), ev('w1')), 'nor drop them');
+  });
+
   it('B 的管理員寫不了 A 的活動服事表', async () => {
     await seed(path('b1'), ev('b1'));
     await assertFails(setDoc(doc(as(ADMIN_B), path('b2')), ev('b2')));

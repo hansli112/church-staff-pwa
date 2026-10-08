@@ -355,10 +355,25 @@ class Duty {
 /// the title and days are copied from the calendar, which has the say.
 @immutable
 class RosterEvent {
-  const RosterEvent({required this.eventId, required this.title, required this.lastDay, this.cancelled = false});
+  const RosterEvent({
+    required this.eventId,
+    required this.title,
+    required this.lastDay,
+    this.cancelled = false,
+    this.calendarId,
+    this.recurringEventId,
+    this.originalStart,
+  });
 
   final String eventId;
   final String title;
+
+  /// Where the event is, for the backend to find it again (eventSync.ts):
+  /// the calendar, and for a day of a recurring event its series and the
+  /// start it had there, as Google gives them.
+  final String? calendarId;
+  final String? recurringEventId;
+  final String? originalStart;
 
   /// The event's last day; [Roster.day] is its first.
   final Day lastDay;
@@ -367,8 +382,15 @@ class RosterEvent {
   /// nor reminded of. Only the backend sets it.
   final bool cancelled;
 
-  RosterEvent copyWith({bool? cancelled}) =>
-      RosterEvent(eventId: eventId, title: title, lastDay: lastDay, cancelled: cancelled ?? this.cancelled);
+  RosterEvent copyWith({bool? cancelled}) => RosterEvent(
+    eventId: eventId,
+    title: title,
+    lastDay: lastDay,
+    cancelled: cancelled ?? this.cancelled,
+    calendarId: calendarId,
+    recurringEventId: recurringEventId,
+    originalStart: originalStart,
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -376,10 +398,13 @@ class RosterEvent {
       other.eventId == eventId &&
       other.title == title &&
       other.lastDay == lastDay &&
-      other.cancelled == cancelled;
+      other.cancelled == cancelled &&
+      other.calendarId == calendarId &&
+      other.recurringEventId == recurringEventId &&
+      other.originalStart == originalStart;
 
   @override
-  int get hashCode => Object.hash(eventId, title, lastDay, cancelled);
+  int get hashCode => Object.hash(eventId, title, lastDay, cancelled, calendarId, recurringEventId, originalStart);
 }
 
 /// One service on one day, or one calendar event ([forEvent]).
@@ -533,10 +558,17 @@ class CalendarEvent {
     this.allDay = false,
     this.location,
     this.description,
+    this.recurringEventId,
+    this.originalStart,
   });
 
   final String? id;
   final String title;
+
+  /// For one day of a recurring event: its series, and the start it had
+  /// there, as Google gives it. Read only.
+  final String? recurringEventId;
+  final String? originalStart;
 
   /// All-day events: midnight local of the first day; [end] is exclusive.
   final DateTime start;
@@ -620,10 +652,13 @@ Map<Day, Day> agendaAnchors(Iterable<CalendarEvent> events, {required Day from, 
 /// churches/{cid}/settings/calendar, written by the backend.
 @immutable
 class CalendarSettings {
-  const CalendarSettings({this.connected = false, this.needsReconnect = false, this.calendarName});
+  const CalendarSettings({this.connected = false, this.needsReconnect = false, this.calendarName, this.calendarId});
 
   final bool connected;
   final bool needsReconnect;
+
+  /// The picked calendar's Google id, which an event's roster records.
+  final String? calendarId;
 
   /// Null until the admin picks a calendar.
   final String? calendarName;

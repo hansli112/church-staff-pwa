@@ -130,19 +130,24 @@ service cloud.firestore {
     }
 
     // The event's title and days are copied from the calendar, the days in
-    // UTC+8 like every dateKey. Only the backend cancels one (cancelledAt),
-    // when its event is deleted.
+    // UTC+8 like every dateKey, with where the event is (calendarId, and a
+    // recurring event's series and original start) for eventSync. Only the
+    // backend cancels one (cancelledAt), when its event is deleted.
     function validEventRoster(rosterId) {
       let roster = request.resource.data;
       let day = '^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$';
       return isEventRoster(roster)
-        && roster.keys().hasOnly(['kind', 'eventId', 'title', 'dateKey', 'endDateKey', 'duties', 'events', 'via', 'updatedAt'])
+        && roster.keys().hasOnly(['kind', 'eventId', 'title', 'dateKey', 'endDateKey', 'duties', 'events', 'via', 'updatedAt',
+             'calendarId', 'recurringEventId', 'originalStart'])
         && roster.eventId is string && rosterId == 'ev_' + roster.eventId
         && roster.title is string && roster.title.size() <= 800
         && roster.dateKey is string && roster.dateKey.matches(day)
         && roster.endDateKey is string && roster.endDateKey.matches(day)
         && roster.endDateKey >= roster.dateKey
-        && roster.duties is list;
+        && roster.duties is list
+        && roster.get('calendarId', '') is string && roster.get('calendarId', '').size() <= 1024
+        && roster.get('recurringEventId', '') is string && roster.get('recurringEventId', '').size() <= 1024
+        && roster.get('originalStart', '') is string && roster.get('originalStart', '').size() <= 64;
     }
 
     function onlyTouches(allowed) {

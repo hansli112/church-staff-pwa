@@ -261,6 +261,7 @@ describe('an event’s roster follows its event', () => {
     await db.doc('churches/C1/rosters/ev_e1').set(roster());
     const d = { ...deps, google, config };
     await calendarWrite(d, caller('editor'), { churchId: 'C1', op: 'delete', eventId: 'e1', event: { start: '2026-10-10' } });
+    await db.doc('churches/C1/rosters/ev_e1').update({ calendarId: 'cal-1' });
     const cancelled = await db.doc('churches/C1/rosters/ev_e1').get();
     assert.ok(cancelled.get('cancelledAt'), 'kept, cancelled');
 
@@ -278,6 +279,7 @@ describe('an event’s roster follows its event', () => {
       ['event', 'new-id', '同工會', '2026-10-10', 'restore', undefined],
     );
     assert.deepEqual(back.duties, roster().duties);
+    assert.equal(back.calendarId, 'cal-1', 'where it is, kept');
   });
 
   test('undo only moves a cancelled roster of the same church', async () => {

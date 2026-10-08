@@ -259,6 +259,15 @@ describe('an event’s roster', () => {
     assert.deepEqual(pushed.map((p) => p.body), ['12/24 聖誕晚會 的主持已改由別人負責']);
   });
 
+  test('moved to its event’s new id (via relink): neither the old going nor the new one is told', async () => {
+    await church();
+    await writeEvent('C1', { duties: [duty('主持', ['美玉'])] });
+    pushed = [];
+    await writeEvent('C1', { duties: [duty('主持', ['美玉'])], via: 'relink' }, { editedBy: null });
+    await writeEvent('C1', null, { editedBy: null });
+    assert.equal(pushed.length, 0);
+  });
+
   test('put back by undoing a delete (via restore): no push, no webhook', async () => {
     await church();
     assert.equal(await writeEvent('C1', { duties: [duty('主持', ['美玉'])], via: 'restore' }, { editedBy: null }), null);

@@ -96,14 +96,20 @@ export interface RosterChange extends DutyDiff {
 
 /** Whether [d] is an event's roster (活動的服事表). */
 export const isEvent = (d: DocumentSnapshot | undefined) => d?.exists === true && d.get('kind') === 'event';
+/**
+ * Writes that tell nobody: an event's roster put back by undoing its
+ * event's delete or out of Google's trash (`restore`), or moved to its
+ * event's new id (`relink`, eventSync.ts).
+ */
+const QUIET = new Set(['restore', 'relink']);
 const isCancelled = (d: DocumentSnapshot | undefined) => d?.exists === true && d.get('cancelledAt') != null;
 
 /**
  * The change one roster write makes, or null when there is nothing to tell:
  * not a roster, a past day (UTC+8; an event's last day), a church that is
  * not open, or nobody put on or taken off anything. An event's roster also
- * tells of a move to another day. A cancelled event's roster, and one put
- * back by undoing its event's delete (via `restore`), tell nothing.
+ * tells of a move to another day. A cancelled event's roster, and a
+ * [QUIET] write, tell nothing.
  */
 export async function readRosterChange(
   deps: Deps,
@@ -118,7 +124,7 @@ export async function readRosterChange(
   const serviceId = event ? null : (doc?.get('type') as string | undefined);
   const lastDay = event ? ((doc?.get('endDateKey') as string | undefined) ?? dateKey) : dateKey;
   if (!dateKey || !lastDay || (!event && !serviceId) || lastDay < dateKeyUtc8(deps.now())) return null;
-  if (event && (isCancelled(before) || isCancelled(after) || doc?.get('via') === 'restore')) return null;
+  if (event && (isCancelled(before) || isCancelled(after) || QUIET.has(doc?.get('via') as string))) return null;
   const diff = diffDuties(before?.exists ? before.get('duties') : [], after?.exists ? after.get('duties') : []);
   const movedFrom =
     event && before?.exists && after?.exists && before.get('dateKey') !== dateKey ? (before.get('dateKey') as string) : null;

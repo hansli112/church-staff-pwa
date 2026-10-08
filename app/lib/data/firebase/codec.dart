@@ -242,6 +242,9 @@ Roster? rosterFromJson(Json data) {
         title: data['title'] as String? ?? '',
         lastDay: last == null || last.isBefore(day) ? day : last,
         cancelled: data['cancelledAt'] != null,
+        calendarId: data['calendarId'] as String?,
+        recurringEventId: data['recurringEventId'] as String?,
+        originalStart: data['originalStart'] as String?,
       ),
     );
   }
@@ -267,6 +270,10 @@ Json rosterToJson(Roster r) => {
     'eventId': e.eventId,
     'title': e.title,
     'endDateKey': e.lastDay.key,
+    // Written back as read: the rules let the app change none of them.
+    'calendarId': ?e.calendarId,
+    'recurringEventId': ?e.recurringEventId,
+    'originalStart': ?e.originalStart,
   } else
     'type': r.type,
   'dateKey': r.day.key,
@@ -309,6 +316,7 @@ CalendarSettings calendarSettingsFromJson(Json? data) => CalendarSettings(
   connected: data?['connected'] == true,
   needsReconnect: data?['needsReconnect'] == true,
   calendarName: data?['calendarName'] as String?,
+  calendarId: data?['calendarId'] as String?,
 );
 
 DateTime _eventTime(String value, bool allDay) {
@@ -331,6 +339,8 @@ CalendarEvent? calendarEventFromJson(Object? raw) {
       allDay: allDay,
       location: raw['location'] as String?,
       description: raw['description'] as String?,
+      recurringEventId: raw['recurringEventId'] as String?,
+      originalStart: raw['originalStart'] as String?,
     );
   } on FormatException {
     return null;
