@@ -57,19 +57,20 @@ void table(String name, List<(AppStage, String, LinkTarget)> rows) {
   return (at: at, church: church);
 }
 
-const invite = '/c/grace/join/ABC';
+/// An invite to someone else's church.
+const invite = '/c/other/join/ABC';
 
 void main() {
   table('while loading, waits and remembers where it was going', [
-    (loading, invite, to('/loading?from=%2Fc%2Fgrace%2Fjoin%2FABC')),
-    (loading, '/loading?from=%2Fc%2Fgrace%2Fjoin%2FABC', stay),
+    (loading, invite, to('/loading?from=%2Fc%2Fother%2Fjoin%2FABC')),
+    (loading, '/loading?from=%2Fc%2Fother%2Fjoin%2FABC', stay),
     (loading, '/rosters', to('/loading?from=%2Frosters')),
     (loading, '/c/other', to('/loading?from=%2Fc%2Fother')),
   ]);
 
   table('signed out goes to login, keeping the page asked for', [
-    (signedOut, '/loading?from=%2Fc%2Fgrace%2Fjoin%2FABC', to('/login?from=%2Fc%2Fgrace%2Fjoin%2FABC')),
-    (signedOut, invite, to('/login?from=%2Fc%2Fgrace%2Fjoin%2FABC')),
+    (signedOut, '/loading?from=%2Fc%2Fother%2Fjoin%2FABC', to('/login?from=%2Fc%2Fother%2Fjoin%2FABC')),
+    (signedOut, invite, to('/login?from=%2Fc%2Fother%2Fjoin%2FABC')),
     (signedOut, '/home', to('/login?from=%2Fhome')),
     (signedOut, '/c/hope?to=%2Fme', to('/login?from=${e('/c/hope?to=%2Fme')}')),
     (signedOut, '/login', stay),
@@ -82,10 +83,18 @@ void main() {
     (ready, '$invite?openExternalBrowser=1', stay),
   ]);
 
+  table('an invite to a church I am already in opens that church: nothing to join', [
+    (ready, '/c/hope/join/ABC', to('/home', church: 'hope')),
+    (ready, '/c/hope/join/ABC?openExternalBrowser=1', to('/home', church: 'hope')),
+    (ready, '/login?from=${e('/c/hope/join/ABC?openExternalBrowser=1')}', to('/home', church: 'hope')),
+    (closed, '/c/hope/join/ABC', to('/home', church: 'hope')),
+    (signedOut, '/c/hope/join/ABC', to('/login?from=${e('/c/hope/join/ABC')}')),
+  ]);
+
   table('after sign-in, the page asked for resumes', [
-    (noChurch, '/login?from=%2Fc%2Fgrace%2Fjoin%2FABC', to(invite)),
-    (ready, '/login?from=%2Fc%2Fgrace%2Fjoin%2FABC', to(invite)),
-    (closed, '/loading?from=%2Fc%2Fgrace%2Fjoin%2FABC', to(invite)),
+    (noChurch, '/login?from=%2Fc%2Fother%2Fjoin%2FABC', to(invite)),
+    (ready, '/login?from=%2Fc%2Fother%2Fjoin%2FABC', to(invite)),
+    (closed, '/loading?from=%2Fc%2Fother%2Fjoin%2FABC', to(invite)),
     (ready, '/loading?from=%2Fdev%2Fcomponents', to('/dev/components')),
     (ready, '/login?from=%2Frosters', to('/rosters')),
     // Where the stage allows it: without a church, not the church's pages.
@@ -190,6 +199,7 @@ void main() {
   test('a notification tapped while signed out lands on its page in its church', () {
     expect(journey([signedOut, loading, ready], '/c/hope?to=%2Fme'), (at: '/me', church: 'hope'));
     expect(journey([loading, signedOut, loading, ready], invite), (at: invite, church: null));
+    expect(journey([loading, signedOut, loading, ready], '/c/hope/join/ABC'), (at: '/home', church: 'hope'));
   });
 
   test('appLocation keeps only pages of this app', () {
@@ -207,5 +217,13 @@ void main() {
     expect(churchUrlId(Uri.parse('/c/grace/join/ABC')), isNull);
     expect(churchUrlId(Uri.parse('/c')), isNull);
     expect(churchUrlId(Uri.parse('/home')), isNull);
+  });
+
+  test('inviteChurchId reads only /c/ID/join/CODE', () {
+    expect(inviteChurchId(Uri.parse('/c/grace/join/ABC')), 'grace');
+    expect(inviteChurchId(Uri.parse('/c/grace/join/ABC?openExternalBrowser=1')), 'grace');
+    expect(inviteChurchId(Uri.parse('/c/grace')), isNull);
+    expect(inviteChurchId(Uri.parse('/c/grace/join')), isNull);
+    expect(inviteChurchId(Uri.parse('/welcome/join/ABC')), isNull);
   });
 }

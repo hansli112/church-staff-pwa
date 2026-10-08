@@ -19,7 +19,8 @@ LinkTarget _go(String location) => (location: location, church: null);
 LinkTarget resolveLink(AppStage stage, List<Membership> memberships, Uri uri) {
   // A church URL of one of my churches opens that church, at `?to=` if
   // given (a notification's page). Someone else sees the church's page.
-  final cid = churchUrlId(uri);
+  // So does an invite to a church I am already in: nothing to join.
+  final cid = churchUrlId(uri) ?? inviteChurchId(uri);
   if (cid != null && memberships.any((m) => m.churchId == cid)) {
     return (location: appLocation(uri.queryParameters['to']) ?? '/home', church: cid);
   }
@@ -72,6 +73,12 @@ LinkTarget resolveLink(AppStage stage, List<Membership> memberships, Uri uri) {
 String? churchUrlId(Uri uri) {
   final parts = uri.pathSegments;
   return parts.length == 2 && parts[0] == 'c' && parts[1].isNotEmpty ? parts[1] : null;
+}
+
+/// The church ID of an invite link (`/c/ID/join/CODE`), or null.
+String? inviteChurchId(Uri uri) {
+  final parts = uri.pathSegments;
+  return parts.length == 4 && parts[0] == 'c' && parts[1].isNotEmpty && parts[2] == 'join' ? parts[1] : null;
 }
 
 /// [link] if it is a page of this app: a path from the root, no scheme, no

@@ -223,7 +223,8 @@ export async function churchPage(deps: PageDeps, path: string): Promise<PageResp
       body: withSplash(
         page,
         invite.ok
-          ? { icon, title: `加入〈${invite.churchName}〉`, note: '載入中…', busy: true }
+          ? // Just the name: someone already in the church goes straight to it.
+            { icon, title: invite.churchName, note: '載入中…', busy: true }
           : { icon, title: f?.name ?? '馬大別忙', note: INVITE_ERRORS[invite.reason], busy: false },
       ),
     };

@@ -82,7 +82,7 @@ describe('church page', () => {
     assert.match(shown, /class="spin"/);
   });
 
-  test('an invite link shows whom it joins straight away, and fresh', async () => {
+  test('an invite link shows whose it is straight away, and fresh', async () => {
     await seedChurch('Grace', {}, { name: '恩典堂' });
     await seedInvite('ABCDEFGH', 'Grace');
     const r = await page().get('/c/Grace/join/abcdefgh');
@@ -91,7 +91,8 @@ describe('church page', () => {
     const html = text(r.body);
     assert.match(html, /<title>恩典堂<\/title>/, 'still the church’s page');
     const shown = splashOf(html);
-    assert.match(shown, /<p class="title">加入〈恩典堂〉<\/p>/, 'the church’s name now, not the invite’s');
+    assert.match(shown, /<p class="title">恩典堂<\/p>/, 'the church’s name now, not the invite’s');
+    assert.doesNotMatch(shown, /加入/, 'someone already in it goes straight to the church');
     assert.match(shown, /載入中…/);
     assert.match(shown, /class="spin"/);
   });

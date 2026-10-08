@@ -143,7 +143,7 @@ void main() {
     expect(find.byType(NavigationBar), findsOneWidget);
   });
 
-  testWidgets('an invite to a church I am already in says so and takes me there', (tester) async {
+  testWidgets('an invite to a church I am already in opens that church, with nothing to join', (tester) async {
     final b = seededChurch();
     b.addChurch('希望堂', id: 'hope');
     b.addMember('hope', pastor);
@@ -156,11 +156,28 @@ void main() {
     await pumpApp(tester, b);
     expect(find.text('恩典堂'), findsOneWidget);
 
-    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/c/hope/join/HOPE2026');
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/c/hope/join/HOPE2026?openExternalBrowser=1');
     await settle(tester);
-    expect(find.text('希望堂'), findsOneWidget);
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.text('希望堂'), findsOneWidget, reason: 'switched to the church the invite is for');
+    expect(find.text('加入'), findsNothing);
+  });
+
+  testWidgets('a typed code for a church I am already in says so and takes me there', (tester) async {
+    final b = seededChurch();
+    b.addChurch('希望堂', id: 'hope');
+    b.addMember('hope', pastor);
+    b.invites['HOPE2026'] = Invite(
+      code: 'HOPE2026',
+      churchId: 'hope',
+      churchName: '希望堂',
+      expiresAt: testNow.add(const Duration(days: 7)),
+    );
+    await pumpApp(tester, b);
+
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/welcome/join/HOPE2026');
+    await settle(tester);
     expect(find.text('你已經是〈希望堂〉的同工'), findsOneWidget);
-    expect(find.text('加入〈希望堂〉'), findsNothing);
     expect(find.text('加入'), findsNothing);
 
     await tapText(tester, '首頁');
