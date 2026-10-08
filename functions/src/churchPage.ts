@@ -38,6 +38,14 @@ export const APP_SHELL = '/app.html';
 /** How long a fetched app shell is reused. */
 export const TEMPLATE_MINUTES = 5;
 const CACHE = 'public, max-age=300';
+/**
+ * The church page and its manifest, the same for everyone: Hosting's CDN
+ * keeps them a day, so opening the church from the home screen does not
+ * wait for this function to start (a cold start is 4 to 13 seconds of
+ * blank page). A new name or logo shows within that day; a Hosting deploy
+ * clears the CDN.
+ */
+const CHURCH_CACHE = 'public, max-age=300, s-maxage=86400';
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 /** An invite can be revoked or expire any moment. */
 const FRESH = 'private, no-cache';
@@ -193,7 +201,7 @@ export async function churchPage(deps: PageDeps, path: string): Promise<PageResp
   if (cid && church?.exists && rest === '/manifest.json') {
     return {
       status: 200,
-      headers: { 'content-type': 'application/manifest+json; charset=utf-8', 'cache-control': CACHE },
+      headers: { 'content-type': 'application/manifest+json; charset=utf-8', 'cache-control': CHURCH_CACHE },
       body: JSON.stringify(manifest(cid, face(cid, church))),
     };
   }
@@ -231,7 +239,7 @@ export async function churchPage(deps: PageDeps, path: string): Promise<PageResp
   }
   return {
     status: 200,
-    headers: { 'content-type': HTML, 'cache-control': CACHE },
+    headers: { 'content-type': HTML, 'cache-control': CHURCH_CACHE },
     body: f ? withSplash(page, { icon: f.touchIcon, title: f.name, note: '載入中…', busy: true }) : page,
   };
 }

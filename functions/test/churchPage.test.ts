@@ -61,7 +61,10 @@ describe('church page', () => {
     for (const path of ['/c/Grace', '/c/Grace/join/ABCDEFGH']) {
       const r = await get(path);
       assert.equal(r.status, 200);
-      assert.equal(r.headers['cache-control'], path === '/c/Grace' ? 'public, max-age=300' : 'private, no-cache');
+      assert.equal(
+        r.headers['cache-control'],
+        path === '/c/Grace' ? 'public, max-age=300, s-maxage=86400' : 'private, no-cache',
+      );
       const html = text(r.body);
       assert.match(html, /<title>恩典堂 &lt;台北&gt;<\/title>/);
       assert.match(html, /<meta name="apple-mobile-web-app-title" content="恩典堂 &lt;台北&gt;">/);
@@ -147,6 +150,7 @@ describe('church page', () => {
   test('the manifest names the church and starts at its URL', async () => {
     await seedChurch('Grace', {}, { name: '恩典堂', logoVersion: '42' });
     const r = await page().get('/c/Grace/manifest.json');
+    assert.equal(r.headers['cache-control'], 'public, max-age=300, s-maxage=86400', 'kept a day by the CDN');
     assert.equal(r.status, 200);
     assert.match(r.headers['content-type'], /application\/manifest\+json/);
     const m = JSON.parse(text(r.body));
