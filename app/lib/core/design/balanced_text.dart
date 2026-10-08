@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 
 /// Text whose lines break where a reader would. Centered (the default), its
 /// lines come out even, as CSS's `text-wrap: balance` does, instead of a
 /// full line and a word or two left over below it; where it can, every line
-/// but the last ends on a punctuation mark (，、。), so a phrase stays whole:
-/// 「接下來沒有你的服事，／排到你時會出現在這裡」, not 「…排到你時會出現在／這裡」.
+/// but the last ends on a punctuation mark, so a phrase stays whole, and a
+/// comma that ends a line is left out, the line break being pause enough:
+/// 「接下來沒有你的服事／排到你時會出現在這裡」, not 「…排到你時會出現在／這裡」.
 /// Aligned to the start, a paragraph takes a little less than its width
 /// where that splits no 「quoted term」, leaves no line of one or two
 /// characters, or ends lines on punctuation. Text that fits on one line is
-/// left alone.
-class BalancedText extends StatelessWidget {
+/// left alone. Screen readers read [text] as it is.
+class BalancedText extends StatefulWidget {
   const BalancedText(this.text, {super.key, this.style, this.textAlign = TextAlign.center});
 
   final String text;
@@ -20,17 +22,49 @@ class BalancedText extends StatelessWidget {
   final TextAlign textAlign;
 
   @override
+  State<BalancedText> createState() => _BalancedTextState();
+}
+
+class _BalancedTextState extends State<BalancedText> {
+  /// The text with the commas that end its lines left out, once laid out.
+  String? _withoutCommas;
+
+  @override
+  void didUpdateWidget(BalancedText old) {
+    super.didUpdateWidget(old);
+    if (old.text != widget.text) _withoutCommas = null;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final shown = textAlign == TextAlign.center ? text : keepQuotesWhole(text);
+    final centered = widget.textAlign == TextAlign.center;
+    final text = centered ? widget.text : keepQuotesWhole(widget.text);
+    final shown = centered ? (_withoutCommas ?? text) : text;
     return _Balanced(
-      text: shown,
-      style: DefaultTextStyle.of(context).style.merge(style),
+      text: text,
+      shown: shown,
+      onShown: centered ? (s) => setState(() => _withoutCommas = s) : null,
+      style: DefaultTextStyle.of(context).style.merge(widget.style),
       textScaler: MediaQuery.textScalerOf(context),
       direction: Directionality.of(context),
-      centered: textAlign == TextAlign.center,
-      child: Text(shown, style: style, textAlign: textAlign, semanticsLabel: text),
+      centered: centered,
+      child: Text(shown, style: widget.style, textAlign: widget.textAlign, semanticsLabel: widget.text),
     );
   }
+}
+
+/// [text] with the commas (，) at the [ends] of its lines, but the last,
+/// turned into line breaks.
+String dropLineEndCommas(String text, List<int> ends) {
+  final chars = text.split('');
+  for (final end in ends.take(ends.length - 1)) {
+    var i = end - 1;
+    while (i >= 0 && chars[i].trim().isEmpty) {
+      i--;
+    }
+    if (i >= 0 && chars[i] == '，') chars[i] = '\n';
+  }
+  return chars.join();
 }
 
 /// Joins the characters inside each 「」 or 『』 with an invisible WORD
@@ -59,6 +93,8 @@ String keepQuotesWhole(String text) {
 class _Balanced extends SingleChildRenderObjectWidget {
   const _Balanced({
     required this.text,
+    required this.shown,
+    required this.onShown,
     required this.style,
     required this.textScaler,
     required this.direction,
@@ -66,7 +102,13 @@ class _Balanced extends SingleChildRenderObjectWidget {
     required super.child,
   });
 
+  /// What to lay out by.
   final String text;
+
+  /// What the child shows now: [text], or it without the commas that end
+  /// its lines, which [onShown] asks for once it knows them.
+  final String shown;
+  final ValueChanged<String>? onShown;
   final TextStyle style;
   final TextScaler textScaler;
   final TextDirection direction;
@@ -74,12 +116,16 @@ class _Balanced extends SingleChildRenderObjectWidget {
 
   @override
   _RenderBalanced createRenderObject(BuildContext context) =>
-      _RenderBalanced(text, style, textScaler, direction, centered);
+      _RenderBalanced(text, style, textScaler, direction, centered)
+        ..shown = shown
+        ..onShown = onShown;
 
   @override
   void updateRenderObject(BuildContext context, _RenderBalanced renderObject) {
     renderObject
       ..text = text
+      ..shown = shown
+      ..onShown = onShown
       ..style = style
       ..textScaler = textScaler
       ..direction = direction
@@ -92,29 +138,35 @@ class _RenderBalanced extends RenderShiftedBox {
   _RenderBalanced(this.text, this.style, this.textScaler, this.direction, this.centered) : super(null);
 
   String text;
+  String shown = '';
+  ValueChanged<String>? onShown;
   TextStyle style;
   TextScaler textScaler;
   TextDirection direction;
   bool centered;
 
-  BoxConstraints _inner(BoxConstraints constraints) {
-    final width = constraints.hasBoundedWidth
-        ? (centered ? balancedWidth : paragraphWidth)(
-            text,
-            style: style,
-            textScaler: textScaler,
-            direction: direction,
-            maxWidth: constraints.maxWidth,
-          )
-        : null;
-    return BoxConstraints(maxWidth: width ?? constraints.maxWidth, maxHeight: constraints.maxHeight);
-  }
+  /// Not painted for the one frame until the child shows [text] without the
+  /// commas that end its lines.
+  bool _waiting = false;
+
+  double? _width(BoxConstraints constraints) => constraints.hasBoundedWidth
+      ? (centered ? balancedWidth : paragraphWidth)(
+          text,
+          style: style,
+          textScaler: textScaler,
+          direction: direction,
+          maxWidth: constraints.maxWidth,
+        )
+      : null;
+
+  BoxConstraints _inner(double? width, BoxConstraints constraints) =>
+      BoxConstraints(maxWidth: width ?? constraints.maxWidth, maxHeight: constraints.maxHeight);
 
   @override
   Size computeDryLayout(BoxConstraints constraints) {
     final child = this.child;
     if (child == null) return constraints.smallest;
-    return constraints.constrain(child.getDryLayout(_inner(constraints)));
+    return constraints.constrain(child.getDryLayout(_inner(_width(constraints), constraints)));
   }
 
   @override
@@ -124,13 +176,34 @@ class _RenderBalanced extends RenderShiftedBox {
       size = constraints.smallest;
       return;
     }
-    child.layout(_inner(constraints), parentUsesSize: true);
+    final width = _width(constraints);
+    final onShown = this.onShown;
+    if (onShown != null) {
+      final wanted = width == null ? text : _withoutLineEndCommas(width);
+      _waiting = wanted != shown;
+      if (_waiting) SchedulerBinding.instance.addPostFrameCallback((_) => onShown(wanted));
+    }
+    child.layout(_inner(width, constraints), parentUsesSize: true);
     size = constraints.constrain(child.size);
     final spare = size.width - child.size.width;
     (child.parentData! as BoxParentData).offset = Offset(
       centered ? spare / 2 : (direction == TextDirection.rtl ? spare : 0),
       (size.height - child.size.height) / 2,
     );
+  }
+
+  String _withoutLineEndCommas(double width) {
+    final lines = _Lines(text, style, textScaler, direction);
+    try {
+      return dropLineEndCommas(text, lines.endsAt(width));
+    } finally {
+      lines.dispose();
+    }
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    if (!_waiting) super.paint(context, offset);
   }
 }
 

@@ -275,7 +275,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'TYPO1234');
     await tester.pump();
     await tapText(tester, '下一步');
-    expect(find.text('找不到這個邀請，請確認邀請碼，或向管理員要新的邀請'), findsOneWidget);
+    expect(findShown('找不到這個邀請，請確認邀請碼，或向管理員要新的邀請'), findsOneWidget);
     await tapText(tester, '輸入邀請碼');
     expect(find.text('TYPO1234'), findsOneWidget, reason: 'the code to fix');
   });
@@ -367,7 +367,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'TYPO1234');
     await tester.pump();
     await tapText(tester, '下一步');
-    expect(find.text('找不到這個邀請，請確認邀請碼，或向管理員要新的邀請'), findsOneWidget);
+    expect(findShown('找不到這個邀請，請確認邀請碼，或向管理員要新的邀請'), findsOneWidget);
   });
 
   testWidgets('the invite shows the church logo above its name', (tester) async {

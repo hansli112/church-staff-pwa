@@ -67,17 +67,36 @@ void main() {
     expect(lines.map((l) => l.length).reduce((a, b) => a > b ? a : b), lessThanOrEqualTo(8));
   });
 
-  testWidgets('it is still the same text, centered', (tester) async {
+  Future<void> pumpAt(WidgetTester tester, double width) async {
     await tester.pumpWidget(
-      const Directionality(
+      Directionality(
         textDirection: TextDirection.ltr,
         child: Center(
-          child: SizedBox(width: 190, child: BalancedText(empty, style: TextStyle(fontSize: 10))),
+          child: SizedBox(
+            width: width,
+            child: const BalancedText(empty, style: TextStyle(fontSize: 10)),
+          ),
         ),
       ),
     );
+    await tester.pump();
+  }
+
+  testWidgets('a comma that ends a line is left out; screen readers still hear it', (tester) async {
+    await pumpAt(tester, 190);
+    expect(find.text('接下來沒有你的服事\n排到你時會出現在這裡'), findsOneWidget);
+    expect(tester.getSize(find.byType(Text)).width, lessThanOrEqualTo(110));
+    expect(tester.widget<Text>(find.byType(Text)).semanticsLabel, empty);
+  });
+
+  testWidgets('on one line, the comma stays', (tester) async {
+    await pumpAt(tester, 300);
     expect(find.text(empty), findsOneWidget);
-    expect(tester.getSize(find.text(empty)).width, lessThanOrEqualTo(110));
+  });
+
+  test('only commas that end a line go', () {
+    expect(dropLineEndCommas('一，二，三', [2, 5]), '一\n二，三');
+    expect(dropLineEndCommas('一。二', [2, 3]), '一。二', reason: 'other marks stay');
   });
 
   group('a paragraph', () {
