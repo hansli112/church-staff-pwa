@@ -2266,43 +2266,37 @@ abstract class L10n {
   /// No description provided for @addToHomeIosShare.
   ///
   /// In zh, this message translates to:
-  /// **'點瀏覽器的「分享」按鈕。看不到的話，先點「⋯」'**
+  /// **'分享'**
   String get addToHomeIosShare;
 
   /// No description provided for @addToHomeIosAdd.
   ///
   /// In zh, this message translates to:
-  /// **'往下找到「加入主畫面」，點它，再點「加入」'**
+  /// **'加入'**
   String get addToHomeIosAdd;
 
   /// No description provided for @addToHomeIosOpen.
   ///
   /// In zh, this message translates to:
-  /// **'從主畫面的圖示打開，再登入一次'**
+  /// **'從主畫面打開，再登入一次'**
   String get addToHomeIosOpen;
-
-  /// No description provided for @addToHomeIosNotif.
-  ///
-  /// In zh, this message translates to:
-  /// **'到「我的」→「通知」，開啟通知'**
-  String get addToHomeIosNotif;
-
-  /// No description provided for @addToHomeAndroidMenu.
-  ///
-  /// In zh, this message translates to:
-  /// **'點 Chrome 右上角的選單（⋮）'**
-  String get addToHomeAndroidMenu;
 
   /// No description provided for @addToHomeAndroidAdd.
   ///
   /// In zh, this message translates to:
-  /// **'點「加到主畫面」或「安裝應用程式」'**
+  /// **'加到主畫面'**
   String get addToHomeAndroidAdd;
+
+  /// No description provided for @addToHomeAndroidInstall.
+  ///
+  /// In zh, this message translates to:
+  /// **'安裝'**
+  String get addToHomeAndroidInstall;
 
   /// No description provided for @addToHomeAndroidOpen.
   ///
   /// In zh, this message translates to:
-  /// **'之後從主畫面的圖示打開'**
+  /// **'從主畫面打開'**
   String get addToHomeAndroidOpen;
 
   /// No description provided for @addToHomeCardBody.

@@ -22,13 +22,10 @@ const line = '$iphone Line/14.16.0';
 const windows =
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36';
 
-const iosSteps = [
-  '點瀏覽器的「分享」按鈕。看不到的話，先點「⋯」',
-  '往下找到「加入主畫面」，點它，再點「加入」',
-  '從主畫面的圖示打開，再登入一次',
-  '到「我的」→「通知」，開啟通知',
-];
-const androidMenu = '點 Chrome 右上角的選單（⋮）';
+/// What the iPhone's steps say, beside the icons: 分享, 加入主畫面 › 加入,
+/// then signing in again, then turning on notifications.
+const iosSteps = ['分享', '加入', '從主畫面打開，再登入一次', '開啟通知'];
+const androidMenu = '加到主畫面';
 const card = '一點就打開，也收得到服事通知';
 
 Future<void> tapText(WidgetTester tester, String text) async {
@@ -143,7 +140,7 @@ void main() {
     await tapText(tester, '加入');
 
     expect(b.members[cid]![b.auth.currentUser!.uid], isNotNull);
-    expect(find.text('加入主畫面'), findsOneWidget);
+    expect(find.text('加入主畫面'), findsNWidgets(2), reason: 'the title, and the button to tap');
     for (final step in iosSteps) {
       expect(find.text(step), findsOneWidget);
     }
@@ -262,6 +259,19 @@ void main() {
     await settle(tester);
     expect(find.text('先加入主畫面，才收得到通知'), findsNothing);
     expect(tester.widget<Switch>(find.byType(Switch).first).onChanged, isNotNull);
+  });
+
+  testWidgets('the steps wrap, not overflow, at the largest text size', (tester) async {
+    await pumpApp(
+      tester,
+      seededChurch(),
+      textScale: 2,
+      overrides: [userAgentProvider.overrideWithValue(iphone), pageChurchProvider.overrideWithValue('grace')],
+    );
+    routerOf(tester).go('/add-to-home');
+    await settle(tester);
+    expect(find.text('從主畫面打開，再登入一次'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('教會資訊 opens the same steps on a phone’s browser', (tester) async {

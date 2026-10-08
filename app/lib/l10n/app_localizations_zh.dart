@@ -1187,25 +1187,22 @@ class L10nZh extends L10n {
   String get addToHomeDone => '已加入主畫面，之後從主畫面的圖示打開';
 
   @override
-  String get addToHomeIosShare => '點瀏覽器的「分享」按鈕。看不到的話，先點「⋯」';
+  String get addToHomeIosShare => '分享';
 
   @override
-  String get addToHomeIosAdd => '往下找到「加入主畫面」，點它，再點「加入」';
+  String get addToHomeIosAdd => '加入';
 
   @override
-  String get addToHomeIosOpen => '從主畫面的圖示打開，再登入一次';
+  String get addToHomeIosOpen => '從主畫面打開，再登入一次';
 
   @override
-  String get addToHomeIosNotif => '到「我的」→「通知」，開啟通知';
+  String get addToHomeAndroidAdd => '加到主畫面';
 
   @override
-  String get addToHomeAndroidMenu => '點 Chrome 右上角的選單（⋮）';
+  String get addToHomeAndroidInstall => '安裝';
 
   @override
-  String get addToHomeAndroidAdd => '點「加到主畫面」或「安裝應用程式」';
-
-  @override
-  String get addToHomeAndroidOpen => '之後從主畫面的圖示打開';
+  String get addToHomeAndroidOpen => '從主畫面打開';
 
   @override
   String get addToHomeCardBody => '一點就打開，也收得到服事通知';

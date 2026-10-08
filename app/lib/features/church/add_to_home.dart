@@ -110,17 +110,26 @@ class _AddToHomeScreenState extends ConsumerState<AddToHomeScreen> {
     final c = AppColors.of(context);
     final how = ref.watch(addToHomeProvider);
     final offered = how == AddToHome.android && ref.watch(installOfferProvider);
+    // Each step is what to tap, as the phone shows it, in order.
     final steps = switch (how) {
       AddToHome.ios => [
-        l10n.addToHomeIosShare,
-        l10n.addToHomeIosAdd,
-        l10n.addToHomeIosOpen,
-        l10n.addToHomeIosNotif,
+        [const _Tap(icon: Icons.more_horiz), _Tap(icon: Icons.ios_share, label: l10n.addToHomeIosShare)],
+        [_Tap(icon: Icons.add_box_outlined, label: l10n.addToHome), _Tap(label: l10n.addToHomeIosAdd)],
+        [_Tap(label: l10n.addToHomeIosOpen, button: false)],
+        [
+          _Tap(icon: Icons.person_outline, label: l10n.tabMe),
+          _Tap(label: l10n.notifications),
+          _Tap(label: l10n.notifEnable),
+        ],
       ],
       // Nothing to add here (a computer), or Chrome does it in one tap.
-      null => const <String>[],
-      _ when offered => const <String>[],
-      AddToHome.android => [l10n.addToHomeAndroidMenu, l10n.addToHomeAndroidAdd, l10n.addToHomeAndroidOpen],
+      null => const <List<_Tap>>[],
+      _ when offered => const <List<_Tap>>[],
+      AddToHome.android => [
+        [const _Tap(icon: Icons.more_vert), _Tap(icon: Icons.add_to_home_screen, label: l10n.addToHomeAndroidAdd)],
+        [_Tap(label: l10n.addToHomeAndroidInstall)],
+        [_Tap(label: l10n.addToHomeAndroidOpen, button: false)],
+      ],
     };
     return Scaffold(
       body: SafeArea(
@@ -138,11 +147,7 @@ class _AddToHomeScreenState extends ConsumerState<AddToHomeScreen> {
                 if (steps.isNotEmpty)
                   ListSection(
                     children: [
-                      for (final (i, step) in steps.indexed)
-                        ListRow(
-                          title: step,
-                          leading: Text('${i + 1}', style: AppText.headline.copyWith(color: c.secondaryLabel)),
-                        ),
+                      for (final (i, taps) in steps.indexed) _Step(n: i + 1, taps: taps),
                     ],
                   ),
                 Padding(
@@ -162,6 +167,73 @@ class _AddToHomeScreenState extends ConsumerState<AddToHomeScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// One thing to tap in a step, drawn like the phone's own button: its
+/// [icon], its [label], or both. Not a [button]: something to do instead.
+class _Tap {
+  const _Tap({this.icon, this.label, this.button = true});
+
+  final IconData? icon;
+  final String? label;
+  final bool button;
+}
+
+/// A numbered step: its taps in order, with arrows between them. They
+/// wrap onto more lines at large text sizes.
+class _Step extends StatelessWidget {
+  const _Step({required this.n, required this.taps});
+
+  final int n;
+  final List<_Tap> taps;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    final parts = <Widget>[];
+    for (final (i, tap) in taps.indexed) {
+      if (i > 0) parts.add(Icon(Icons.chevron_right, size: 20, color: c.tertiaryLabel));
+      final content = Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (tap.icon case final icon?) Icon(icon, size: 20, color: c.label),
+          if (tap.icon != null && tap.label != null) const SizedBox(width: Space.xs),
+          if (tap.label case final label?) Flexible(child: Text(label, style: AppText.body)),
+        ],
+      );
+      parts.add(
+        tap.button
+            ? DecoratedBox(
+                decoration: BoxDecoration(color: c.fill, borderRadius: BorderRadius.circular(Radii.s)),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: Space.s, vertical: Space.xs),
+                  child: content,
+                ),
+              )
+            : content,
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: Space.m, vertical: Space.m - Space.xs),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: Space.l,
+            child: Text('$n', style: AppText.headline.copyWith(color: c.secondaryLabel)),
+          ),
+          Expanded(
+            child: Wrap(
+              spacing: Space.xs,
+              runSpacing: Space.xs,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: parts,
+            ),
+          ),
+        ],
       ),
     );
   }
