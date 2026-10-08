@@ -71,7 +71,7 @@ class _ChurchSwitcherSheet extends ConsumerWidget {
                 ),
                 ListRow(
                   title: l10n.createChurch,
-                  leading: const Icon(Icons.add_home_outlined),
+                  leading: const Icon(Icons.add),
                   onTap: () => open('/welcome/create'),
                 ),
               ],
