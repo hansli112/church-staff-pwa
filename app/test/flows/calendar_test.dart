@@ -121,6 +121,55 @@ void main() {
     expect(inAgenda('秋季退修會'), findsWidgets);
   });
 
+  Future<void> pickDay(WidgetTester tester, String chip, int day, {bool end = false}) async {
+    final f = find.text(chip);
+    await tester.tap(end ? f.last : f.first);
+    await settle(tester);
+    await tester.tap(find.text('$day').last);
+    await tester.pump();
+    await tapText(tester, '確定');
+  }
+
+  testWidgets('an all-day event over several days is made with its first and last day', (tester) async {
+    final b = seededChurch(as: calendarEditor, extra: const [calendarEditor]);
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    await pumpApp(tester, b);
+    await go(tester, '/calendar');
+    await tester.tap(find.byTooltip('新增活動'));
+    await settle(tester);
+    await tester.enterText(find.byType(TextField).first, '秋季退修會');
+    await tester.pump();
+    await tapText(tester, '整天');
+    await pickDay(tester, '10月1日 週四', 3, end: true);
+    await tapText(tester, '儲存');
+    final e = b.calendarEvents['grace']!.single;
+    expect((e.allDay, e.start, e.end), (true, DateTime(2026, 10, 1), DateTime(2026, 10, 4)));
+  });
+
+  testWidgets('moving the start keeps the length; an end before the start cannot be saved', (tester) async {
+    final b = seededChurch(as: calendarEditor, extra: const [calendarEditor]);
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    await pumpApp(tester, b);
+    await go(tester, '/calendar');
+    await tester.tap(find.byTooltip('新增活動'));
+    await settle(tester);
+    await tester.enterText(find.byType(TextField).first, '同工會');
+    await tester.pump();
+    await pickDay(tester, '10月1日 週四', 5);
+    expect(find.text('10月5日 週一'), findsNWidgets(2), reason: 'the end moved with the start');
+
+    await pickDay(tester, '10月5日 週一', 3, end: true);
+    expect(find.text('結束要在開始之後'), findsOneWidget);
+    await tapText(tester, '儲存');
+    expect(b.calendarEvents['grace'] ?? const [], isEmpty);
+
+    await pickDay(tester, '10月3日 週六', 6, end: true);
+    expect(find.text('結束要在開始之後'), findsNothing);
+    await tapText(tester, '儲存');
+    final e = b.calendarEvents['grace']!.single;
+    expect((e.start, e.end), (DateTime(2026, 10, 5, 19, 30), DateTime(2026, 10, 6, 21)));
+  });
+
   testWidgets('staff cannot edit even when connected', (tester) async {
     final b = seededChurch(as: staffMei);
     b.connectCalendar('grace', calendarName: '教會行事曆');

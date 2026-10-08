@@ -980,13 +980,13 @@ class L10nZh extends L10n {
   String get calLocation => '地點';
 
   @override
-  String get calDate => '日期';
-
-  @override
   String get calStart => '開始';
 
   @override
   String get calEnd => '結束';
+
+  @override
+  String get calEndBeforeStart => '結束要在開始之後';
 
   @override
   String get calDelete => '刪除活動';

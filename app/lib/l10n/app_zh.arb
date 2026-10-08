@@ -575,9 +575,9 @@
   "calEditEvent": "編輯活動",
   "calTitle": "活動名稱",
   "calLocation": "地點",
-  "calDate": "日期",
   "calStart": "開始",
   "calEnd": "結束",
+  "calEndBeforeStart": "結束要在開始之後",
   "calDelete": "刪除活動",
   "calDeleted": "已刪除{title}",
   "@calDeleted": {

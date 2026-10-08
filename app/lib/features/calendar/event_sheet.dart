@@ -27,9 +27,13 @@ Future<void> showEventDetail(BuildContext context, CalendarEvent e) {
             Text(e.title, style: AppText.title3),
             const SizedBox(height: Space.s),
             Text(
-              e.allDay
-                  ? '${fmt.format(e.start)} ${l10n.calAllDay}'
-                  : '${fmt.format(e.start)} ${time.format(e.start)}–${time.format(e.end)}',
+              switch (e) {
+                _ when e.allDay && e.lastDay == e.day => '${fmt.format(e.start)} ${l10n.calAllDay}',
+                _ when e.allDay =>
+                  '${fmt.format(e.start)} – ${fmt.format(DateTime(e.lastDay.year, e.lastDay.month, e.lastDay.day))}',
+                _ when e.lastDay == e.day => '${fmt.format(e.start)} ${time.format(e.start)}–${time.format(e.end)}',
+                _ => '${fmt.format(e.start)} ${time.format(e.start)} – ${fmt.format(e.end)} ${time.format(e.end)}',
+              },
               style: AppText.body,
             ),
             if (e.location != null && e.location!.isNotEmpty) ...[
@@ -70,7 +74,7 @@ Future<void> editEvent(
   final result = await showAppSheet<_EditResult>(
     context,
     expand: true,
-    builder: (_) => _EventEditor(event: event, initialDay: initialDay),
+    builder: (_) => _EventEditor(event: event, initialDay: initialDay, thisYear: today.year),
   );
   if (result == null || !context.mounted) return;
   final calendar = ref.read(calendarActionsProvider);
@@ -96,10 +100,13 @@ class _EditResult {
 }
 
 class _EventEditor extends StatefulWidget {
-  const _EventEditor({required this.event, required this.initialDay});
+  const _EventEditor({required this.event, required this.initialDay, required this.thisYear});
 
   final CalendarEvent? event;
   final DateTime initialDay;
+
+  /// Dates in this year are shown without it.
+  final int thisYear;
 
   @override
   State<_EventEditor> createState() => _EventEditorState();
@@ -109,11 +116,20 @@ class _EventEditorState extends State<_EventEditor> {
   late final _title = TextEditingController(text: widget.event?.title ?? '');
   late final _location = TextEditingController(text: widget.event?.location ?? '');
   late bool _allDay = widget.event?.allDay ?? false;
-  late DateTime _day = DateTime(widget.initialDay.year, widget.initialDay.month, widget.initialDay.day);
-  late TimeOfDay _start = widget.event == null
+
+  // The first and last day, both included, and the times when not all day.
+  // An all-day event keeps the usual times for when it is switched to one
+  // with times.
+  late DateTime _startDay = _dateOf(widget.event?.start ?? widget.initialDay);
+  late DateTime _endDay = switch (widget.event) {
+    null => _startDay,
+    final e when e.allDay => _dateOf(DateTime(e.lastDay.year, e.lastDay.month, e.lastDay.day)),
+    final e => _dateOf(e.end),
+  };
+  late TimeOfDay _startTime = widget.event == null || widget.event!.allDay
       ? const TimeOfDay(hour: 19, minute: 30)
       : TimeOfDay.fromDateTime(widget.event!.start);
-  late TimeOfDay _end = widget.event == null
+  late TimeOfDay _endTime = widget.event == null || widget.event!.allDay
       ? const TimeOfDay(hour: 21, minute: 0)
       : TimeOfDay.fromDateTime(widget.event!.end);
 
@@ -124,37 +140,53 @@ class _EventEditorState extends State<_EventEditor> {
     super.dispose();
   }
 
-  /// How many days the event spans, kept when editing so changing a title
-  /// does not cut a three-day camp to one day. All-day: days covered (end
-  /// is exclusive); timed: days between start and end (1 past midnight).
-  late final int _span = widget.event == null
-      ? 0
-      : DateTime(
-          widget.event!.end.year,
-          widget.event!.end.month,
-          widget.event!.end.day,
-        ).difference(DateTime(widget.event!.start.year, widget.event!.start.month, widget.event!.start.day)).inDays;
+  static DateTime _dateOf(DateTime d) => DateTime(d.year, d.month, d.day);
 
-  DateTime _at(TimeOfDay t, [int plusDays = 0]) =>
-      DateTime(_day.year, _day.month, _day.day + plusDays, t.hour, t.minute);
+  static DateTime _at(DateTime day, TimeOfDay t) => DateTime(day.year, day.month, day.day, t.hour, t.minute);
+
+  DateTime get _start => _allDay ? _startDay : _at(_startDay, _startTime);
+
+  /// Exclusive, as the calendar keeps it: the day after the last for an
+  /// all-day event.
+  DateTime get _end => _allDay ? DateTime(_endDay.year, _endDay.month, _endDay.day + 1) : _at(_endDay, _endTime);
+
+  bool get _valid => _end.isAfter(_start);
+
+  /// Moves the start; the end moves with it, so the event keeps its length.
+  void _moveStart(DateTime day, TimeOfDay time) {
+    final days = _endDay.difference(_startDay).inDays;
+    final length = _at(_endDay, _endTime).difference(_at(_startDay, _startTime));
+    setState(() {
+      _startDay = day;
+      _startTime = time;
+      if (_allDay) {
+        _endDay = DateTime(day.year, day.month, day.day + (days < 0 ? 0 : days));
+      } else {
+        final end = _at(day, time).add(length > Duration.zero ? length : const Duration(hours: 1));
+        _endDay = _dateOf(end);
+        _endTime = TimeOfDay.fromDateTime(end);
+      }
+    });
+  }
+
+  Future<DateTime?> _pickDay(DateTime day) => showDatePicker(
+    context: context,
+    initialDate: day,
+    firstDate: DateTime(day.year - 1),
+    lastDate: DateTime(day.year + 2),
+  );
 
   void _save() {
     final title = _title.text.trim();
-    if (title.isEmpty) return;
-    final start = _allDay ? _day : _at(_start);
-    final keep = widget.event != null && widget.event!.allDay == _allDay;
-    var end = _allDay
-        ? DateTime(_day.year, _day.month, _day.day + (keep && _span > 1 ? _span : 1))
-        : _at(_end, keep ? _span : 0);
-    if (!end.isAfter(start)) end = start.add(const Duration(hours: 1));
+    if (title.isEmpty || !_valid) return;
     Navigator.pop(
       context,
       _EditResult(
         event: CalendarEvent(
           id: widget.event?.id,
           title: title,
-          start: start,
-          end: end,
+          start: _start,
+          end: _end,
           allDay: _allDay,
           location: _location.text.trim().isEmpty ? null : _location.text.trim(),
           description: widget.event?.description,
@@ -166,7 +198,6 @@ class _EventEditorState extends State<_EventEditor> {
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    final date = DateFormat.yMMMEd('zh_TW');
     return Column(
       children: [
         Padding(
@@ -174,7 +205,10 @@ class _EventEditorState extends State<_EventEditor> {
           child: Row(
             children: [
               Expanded(child: Text(widget.event == null ? l10n.calNewEvent : l10n.calEditEvent, style: AppText.title3)),
-              SecondaryButton(label: l10n.save, onPressed: _title.text.trim().isEmpty ? null : _save),
+              SecondaryButton(
+                label: l10n.save,
+                onPressed: _title.text.trim().isEmpty || !_valid ? null : _save,
+              ),
             ],
           ),
         ),
@@ -201,42 +235,46 @@ class _EventEditorState extends State<_EventEditor> {
               ListSection(
                 children: [
                   SwitchRow(title: l10n.calAllDay, value: _allDay, onChanged: (v) => setState(() => _allDay = v)),
-                  ListRow(
-                    title: l10n.calDate,
-                    value: date.format(_day),
-                    chevron: false,
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: _day,
-                        firstDate: DateTime(_day.year - 1),
-                        lastDate: DateTime(_day.year + 2),
-                      );
-                      if (picked != null) setState(() => _day = picked);
+                  _WhenRow(
+                    title: l10n.calStart,
+                    thisYear: widget.thisYear,
+                    day: _startDay,
+                    time: _allDay ? null : _startTime,
+                    onDay: () async {
+                      final d = await _pickDay(_startDay);
+                      if (d != null) _moveStart(d, _startTime);
+                    },
+                    onTime: () async {
+                      final t = await showTimePicker(context: context, initialTime: _startTime);
+                      if (t != null) _moveStart(_startDay, t);
                     },
                   ),
-                  if (!_allDay) ...[
-                    ListRow(
-                      title: l10n.calStart,
-                      value: _start.format(context),
-                      chevron: false,
-                      onTap: () async {
-                        final t = await showTimePicker(context: context, initialTime: _start);
-                        if (t != null) setState(() => _start = t);
-                      },
-                    ),
-                    ListRow(
-                      title: l10n.calEnd,
-                      value: _end.format(context),
-                      chevron: false,
-                      onTap: () async {
-                        final t = await showTimePicker(context: context, initialTime: _end);
-                        if (t != null) setState(() => _end = t);
-                      },
-                    ),
-                  ],
+                  _WhenRow(
+                    title: l10n.calEnd,
+                    thisYear: widget.thisYear,
+                    day: _endDay,
+                    time: _allDay ? null : _endTime,
+                    wrong: !_valid,
+                    onDay: () async {
+                      final d = await _pickDay(_endDay);
+                      if (d != null) setState(() => _endDay = d);
+                    },
+                    onTime: () async {
+                      final t = await showTimePicker(context: context, initialTime: _endTime);
+                      if (t != null) setState(() => _endTime = t);
+                    },
+                  ),
                 ],
               ),
+              if (!_valid)
+                Padding(
+                  // In line with the rows above.
+                  padding: const EdgeInsets.symmetric(horizontal: Space.xl),
+                  child: Text(
+                    l10n.calEndBeforeStart,
+                    style: AppText.footnote.copyWith(color: AppColors.of(context).destructive),
+                  ),
+                ),
               if (widget.event != null)
                 ListSection(
                   children: [
@@ -251,6 +289,71 @@ class _EventEditorState extends State<_EventEditor> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// 開始 or 結束: its day, and its time unless the event is all day, each
+/// tapped to change. [wrong] marks an end that is not after the start.
+class _WhenRow extends StatelessWidget {
+  const _WhenRow({
+    required this.title,
+    required this.thisYear,
+    required this.day,
+    required this.time,
+    required this.onDay,
+    required this.onTime,
+    this.wrong = false,
+  });
+
+  final String title;
+  final int thisYear;
+  final DateTime day;
+  final TimeOfDay? time;
+  final VoidCallback onDay;
+  final VoidCallback onTime;
+  final bool wrong;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    final style = AppText.body.copyWith(
+      color: wrong ? c.destructive : c.label,
+      decoration: wrong ? TextDecoration.lineThrough : null,
+    );
+    final date = (day.year == thisYear ? DateFormat.MMMEd('zh_TW') : DateFormat.yMMMEd('zh_TW')).format(day);
+    Widget chip(String text, VoidCallback onTap) => Material(
+      color: c.fill,
+      borderRadius: BorderRadius.circular(Radii.s),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(Radii.s),
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: Space.minTap(Theme.of(context).platform)),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Space.s),
+            child: Center(widthFactor: 1, child: Text(text, style: style)),
+          ),
+        ),
+      ),
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: Space.m, vertical: Space.xs),
+      child: Row(
+        children: [
+          Text(title, style: AppText.body),
+          const SizedBox(width: Space.s),
+          // With large text the time goes under the day.
+          Expanded(
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              spacing: Space.xs,
+              runSpacing: Space.xs,
+              children: [chip(date, onDay), if (time != null) chip(time!.format(context), onTime)],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1885,12 +1885,6 @@ abstract class L10n {
   /// **'地點'**
   String get calLocation;
 
-  /// No description provided for @calDate.
-  ///
-  /// In zh, this message translates to:
-  /// **'日期'**
-  String get calDate;
-
   /// No description provided for @calStart.
   ///
   /// In zh, this message translates to:
@@ -1902,6 +1896,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'結束'**
   String get calEnd;
+
+  /// No description provided for @calEndBeforeStart.
+  ///
+  /// In zh, this message translates to:
+  /// **'結束要在開始之後'**
+  String get calEndBeforeStart;
 
   /// No description provided for @calDelete.
   ///
