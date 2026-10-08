@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/backend.dart';
 import '../domain/models.dart';
 import '../domain/roster_edit.dart';
+import '../domain/roster_import.dart';
 import '../domain/schedule.dart';
 import '../domain/staff_order.dart';
 import 'providers.dart';
@@ -17,23 +19,35 @@ typedef RosterWrite = ({Future<void> done, Future<void> Function() undo});
 
 /// Writes for 安排服事表. Each returns a [RosterWrite], so screens offer
 /// 「復原」 instead of asking for confirmation.
+///
+/// It reads the church's services, saved rosters, members and staff orders
+/// as this device has them. A screen that edits a service watches
+/// [rosterEditingProvider] for it, which keeps all of them loaded and says
+/// when they are; a write before then fails rather than guess.
 class RosterActions {
   RosterActions(this._ref);
 
   final Ref _ref;
 
-  ChurchData get _data => _ref.read(churchDataProvider)!;
+  ChurchData get _data => _ref.churchData;
 
-  Map<String, String> get _nameIds => uniqueNameIds(_ref.read(membersProvider).value ?? const []);
+  static T _loaded<T>(AsyncValue<T> value, String what) =>
+      value.hasValue ? value.requireValue : throw StateError('$what not loaded');
 
-  StaffOrder _order(String type) => _ref.read(staffOrderProvider(type)).value ?? StaffOrder();
+  ServiceSettings get _services => _loaded(_ref.read(servicesProvider), 'services');
+
+  List<Roster> get _saved => _loaded(_ref.read(savedRostersProvider), 'rosters');
+
+  Map<String, String> get _nameIds => uniqueNameIds(_loaded(_ref.read(membersProvider), 'members'));
+
+  StaffOrder _order(String type) => _loaded(_ref.read(staffOrderProvider(type)), 'staff order');
 
   /// [r]'s day as this device sees it now: saved, or the template draft.
   Roster _now(Roster r) {
-    for (final s in _ref.read(savedRostersProvider).value ?? const <Roster>[]) {
+    for (final s in _saved) {
       if (s.id == r.id) return s;
     }
-    final service = _ref.read(servicesProvider).value?.byId(r.type);
+    final service = _services.byId(r.type);
     return service == null ? r.copyWith(saved: false) : draftRoster(service, r.day);
   }
 
@@ -78,11 +92,43 @@ class RosterActions {
 
   RosterWrite addDuty(Roster roster, String role) => setPeople(roster, role, const []);
 
-  RosterWrite setEvents(Roster roster, List<EventTag> events) {
+  /// Sets [roster]'s special events; [addToCommon] also become choices for
+  /// every day of the service. Undo takes back both.
+  RosterWrite setEvents(Roster roster, List<EventTag> events, {List<EventTag> addToCommon = const []}) {
     final next = roster.copyWith(events: events);
+    // Ticking a tag off and on again only moves it to the end: the day
+    // stays as it is (a draft stays a draft).
+    final changed = !setEquals(events.toSet(), roster.events.toSet());
+    final services = _services;
+    final service = services.byId(roster.type);
+    final common = addToCommon.isEmpty || service == null
+        ? null
+        : [
+            for (final s in services.services)
+              s.id == service.id ? s.copyWith(events: [...s.events, ...addToCommon]) : s,
+          ];
+    Future<void> done() async {
+      if (common != null) await _data.saveServices(common);
+      if (changed) await _data.saveRoster(next);
+    }
+
     return (
-      done: _data.saveRoster(next),
-      undo: () {
+      done: done(),
+      undo: () async {
+        if (common != null) {
+          await _data.saveServices([
+            for (final s in _services.services)
+              s.id == service!.id
+                  ? s.copyWith(
+                      events: [
+                        for (final e in s.events)
+                          if (!addToCommon.contains(e)) e,
+                      ],
+                    )
+                  : s,
+          ]);
+        }
+        if (!changed) return;
         if (_untouchedDraft(roster, next)) return _data.deleteRoster(roster);
         return _data.saveRoster(_now(roster).copyWith(events: roster.events));
       },
@@ -114,9 +160,8 @@ class RosterActions {
     final changes = before.changesTo(after);
     if (changes.isEmpty) return;
     await _data.updateStaffOrder(type, changes);
-    final saved = _ref.read(savedRostersProvider).value ?? const [];
     final resorted = [
-      for (final r in saved)
+      for (final r in _saved)
         if (r.type == type)
           if (after.applyTo(r) case final next when !identical(next, r)) next,
     ];
@@ -125,6 +170,63 @@ class RosterActions {
 
   /// Gives [member] the duty, so the picker lists them first next time.
   Future<void> grantDuty(Member member, String type, String role) => _data.saveMember(member.withDuty(type, role));
+
+  /// What importing [rows] into [type] would do, against the rosters as
+  /// they are now.
+  ImportPlan previewImport(String type, List<dynamic> rows) => planImport(
+    rows: rows,
+    service: _services.byId(type) ?? (throw StateError('No service $type')),
+    members: _loaded(_ref.read(membersProvider), 'members'),
+    saved: _saved,
+    order: _order(type),
+    today: _ref.read(todayProvider),
+  );
+
+  /// Imports [rows] into [type], planned again now so edits made since the
+  /// preview are not overwritten, and the staff order the plan grew. Undo
+  /// puts back each imported day whole, as it was before the import (an
+  /// edit made to it since is lost), and the staff order.
+  RosterWrite applyImport(String type, List<dynamic> rows) {
+    final plan = previewImport(type, rows);
+    final before = {
+      for (final r in _saved)
+        if (r.type == type) r.id: r,
+    };
+    final order = _order(type);
+    final changes = order.changesTo(plan.order);
+    Future<void> done() async {
+      await _data.saveRosters(plan.rosters, via: 'import');
+      if (changes.isNotEmpty) await _data.updateStaffOrder(type, changes);
+    }
+
+    return (
+      done: done(),
+      undo: () async {
+        final restore = [
+          for (final r in plan.rosters) ?before[r.id],
+        ];
+        // As an import too: the import told nobody, nor does taking it back.
+        if (restore.isNotEmpty) await _data.saveRosters(restore, via: 'import');
+        for (final r in plan.rosters) {
+          if (!before.containsKey(r.id)) await _data.deleteRoster(r);
+        }
+        final back = plan.order.changesTo(order);
+        if (back.isNotEmpty) await _data.updateStaffOrder(type, back);
+      },
+    );
+  }
 }
 
+/// Whether everything [RosterActions] reads for service [type] is loaded.
+/// A screen that edits the service watches this, which also keeps it
+/// loaded: Riverpod pauses what nobody watches.
+final rosterEditingProvider = Provider.autoDispose.family<bool, String>((ref, type) {
+  final loaded = [
+    ref.watch(servicesProvider),
+    ref.watch(savedRostersProvider),
+    ref.watch(membersProvider),
+    ref.watch(staffOrderProvider(type)),
+  ];
+  return loaded.every((v) => v.hasValue);
+});
 final rosterActionsProvider = Provider<RosterActions>(RosterActions.new);

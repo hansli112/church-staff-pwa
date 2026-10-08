@@ -88,7 +88,7 @@ class MemoryBackend implements Backend {
   /// Unknown URLs fail with [LinkFetchError.network].
   final linkSourceAnswers = <String, Object>{};
 
-  /// Sources fetched by [ChurchData.setLinkSource], in order.
+  /// Sources fetched by [ChurchData.setChurchLink], in order.
   final linkSourceFetches = <String>[];
 
   /// Scripted: while set, the link content stream delivers nothing until
@@ -687,7 +687,7 @@ class MemoryChurchData implements ChurchData {
   });
 
   @override
-  Future<void> saveChurchLink(ChurchLink? link) async {
+  Future<LinkSourceResult> setChurchLink(ChurchLink? link) async {
     _requireAdmin();
     if (link != null &&
         (link.title.isEmpty ||
@@ -697,21 +697,26 @@ class MemoryChurchData implements ChurchData {
             !ChurchLink.validUrl(link.url))) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
+    final saved = _b.churchLinks[churchId];
     await _b.write(() {
       if (link == null) {
         _b.churchLinks.remove(churchId);
         return;
       }
-      // Like the merge in Firestore: the source stays the backend's.
-      final old = _b.churchLinks[churchId];
+      // Like the merge in Firestore: the source is set by the function below.
       _b.churchLinks[churchId] = ChurchLink(
         title: link.title,
         body: link.body,
         url: link.url,
-        source: old?.source,
-        fetchMinute: old?.fetchMinute ?? ChurchLink.defaultFetchMinute,
+        source: saved?.source,
+        fetchMinute: saved?.fetchMinute ?? ChurchLink.defaultFetchMinute,
       );
     });
+    if (link == null ||
+        (link.source == saved?.source && (link.source == null || link.fetchMinute == saved?.fetchMinute))) {
+      return const LinkSourceResult();
+    }
+    return _setLinkSource(link.source, link.fetchMinute);
   }
 
   @override
@@ -798,11 +803,11 @@ class MemoryChurchData implements ChurchData {
     _b.notify();
   }
 
-  @override
-  Future<LinkSourceResult> setLinkSource(String? source, int fetchMinute) async {
+  /// The setLinkSource function.
+  Future<LinkSourceResult> _setLinkSource(String? source, int fetchMinute) async {
     _functionAdmin();
     final link = _b.churchLinks[churchId];
-    if (link == null) throw const CloudException(CloudErrorCode.unknown, 'noLink');
+    if (link == null) throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.noLink);
     ChurchLink next(String? s, int m) =>
         ChurchLink(title: link.title, body: link.body, url: link.url, source: s, fetchMinute: m);
     if (source == null) {
@@ -812,7 +817,7 @@ class MemoryChurchData implements ChurchData {
       return const LinkSourceResult();
     }
     if (source.length > Limits.url || !ChurchLink.validUrl(source)) {
-      throw const CloudException(CloudErrorCode.unknown, 'notHttps');
+      throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.notHttps);
     }
     final changed = link.source != source;
     _b.churchLinks[churchId] = next(source, fetchMinute);
@@ -858,7 +863,7 @@ class MemoryChurchData implements ChurchData {
       return null;
     }
     if (url.length > Limits.url || !ChurchLink.validUrl(url)) {
-      throw const CloudException(CloudErrorCode.unknown, 'notHttps');
+      throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.notHttps);
     }
     _checkSecret(secret);
     String? generated;
@@ -943,7 +948,7 @@ class MemoryChurchData implements ChurchData {
   Future<List<CalendarEvent>> calendarEvents(String month) async {
     _b.functionAccess(churchId);
     if (_b.calendars[churchId]?.needsReconnect ?? false) {
-      throw const CloudException(CloudErrorCode.unknown, 'reconnect');
+      throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.reconnect);
     }
     await _b.calendarEventsHeld?.future;
     // Like Google: every event that overlaps the month, including one that
@@ -998,13 +1003,19 @@ class MemoryChurchData implements ChurchData {
       churchId,
       allowed: (me) => _b.services[churchId]!.ids.contains(serviceType) && me.canEditRosters(serviceType),
     );
-    if (!_b.photoPlatformOpen) throw const CloudException(CloudErrorCode.quotaExceeded, 'platform');
+    if (images.any((i) => i.bytes.length > _photoMaxBytes)) {
+      throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.tooLarge);
+    }
+    if (!_b.photoPlatformOpen) throw const CloudException(CloudErrorCode.quotaExceeded, reason: CloudReason.platform);
     final used = _b.photosUsed[churchId] ?? 0;
-    if (used >= _b.photoLimit) throw const CloudException(CloudErrorCode.quotaExceeded, 'church');
+    if (used >= _b.photoLimit) throw const CloudException(CloudErrorCode.quotaExceeded, reason: CloudReason.church);
     _b.photosUsed[churchId] = used + 1;
     return _b.recognized;
   }
 }
+
+/// The most a photo can be: MAX_IMAGE_BYTES in functions/src/photo.ts.
+const _photoMaxBytes = 2 * 1024 * 1024;
 
 /// Invites must expire sooner than this (firestore.rules).
 const _inviteMax = Duration(days: 31);
@@ -1125,9 +1136,7 @@ class MemoryCloud implements CloudApi {
     }
     final blocking = soleAdminChurches(uid);
     if (blocking.isNotEmpty) {
-      throw CloudException(CloudErrorCode.lastAdmin, [
-        for (final c in blocking) c.name,
-      ]);
+      throw CloudException(CloudErrorCode.lastAdmin, churches: [for (final c in blocking) c.name]);
     }
     for (final m in _b.members.values) {
       m.remove(uid);
@@ -1351,7 +1360,7 @@ String _text(String value, int max) {
 /// A webhook secret the admin typed, as functions/src/webhook.ts takes it.
 void _checkSecret(String? secret) {
   if (secret != null && (secret.length < Limits.webhookSecretMin || secret.length > Limits.webhookSecretMax)) {
-    throw const CloudException(CloudErrorCode.unknown, 'secret');
+    throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.secret);
   }
 }
 

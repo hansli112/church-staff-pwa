@@ -10,7 +10,7 @@ import '../common/errors.dart';
 import 'calendar_screen.dart';
 
 final _calendarListProvider = FutureProvider.autoDispose<List<({String id, String name})>>(
-  (ref) => ref.watch(churchDataProvider)!.calendarList(),
+  (ref) => openChurch(ref).calendarList(),
 );
 
 /// Admins connect the church's Google Calendar here and pick which calendar
@@ -25,7 +25,7 @@ class CalendarSettingsScreen extends ConsumerWidget {
   Future<void> _connect(BuildContext context, WidgetRef ref) async {
     final l10n = L10n.of(context);
     try {
-      final url = await ref.read(churchDataProvider)!.calendarAuthUrl();
+      final url = await ref.churchData.calendarAuthUrl();
       await launchUrl(url, mode: LaunchMode.externalApplication, webOnlyWindowName: '_self');
     } catch (e) {
       if (context.mounted) showToast(context, errorText(l10n, e));

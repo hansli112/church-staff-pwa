@@ -9,7 +9,7 @@ import '../../state/providers.dart';
 import '../church/links.dart';
 
 final _invitesProvider = StreamProvider.autoDispose<List<Invite>>(
-  (ref) => ref.watch(churchDataProvider)!.invites(),
+  (ref) => openChurch(ref).invites(),
 );
 
 /// The invites that still work. One leaves the list when it expires.
@@ -42,7 +42,7 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
     setState(() => _busy = true);
     final Invite invite;
     try {
-      invite = await ref.read(churchDataProvider)!.createInvite(validFor: Duration(days: days));
+      invite = await ref.churchData.createInvite(validFor: Duration(days: days));
     } catch (_) {
       if (mounted) showToast(context, l10n.saveFailed);
       return;
@@ -94,7 +94,7 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
       case 'copy':
         await copyText(context, inviteLink(invite.churchId, invite.code), copied: l10n.inviteCopied);
       case 'revoke':
-        await ref.read(churchDataProvider)!.revokeInvite(invite.code);
+        await ref.churchData.revokeInvite(invite.code);
         if (mounted) showToast(context, l10n.inviteRevoked);
     }
   }

@@ -99,6 +99,28 @@ void main() {
     expect(camp.end, DateTime(2026, 10, 12));
   });
 
+  testWidgets('an event over the end of a month changes, and goes, in the month on screen too', (tester) async {
+    final b = seededChurch(as: calendarEditor, extra: const [calendarEditor]);
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    b.calendarEvents['grace'] = [
+      CalendarEvent(id: 'r', title: '退修會', start: DateTime(2026, 9, 30), end: DateTime(2026, 10, 3), allDay: true),
+    ];
+    await pumpApp(tester, b);
+    await go(tester, '/calendar');
+    expect(find.text('2026年10月'), findsOneWidget);
+    await tapText(tester, '退修會');
+    await tester.enterText(find.byType(TextField).first, '秋季退修會');
+    await tester.pump();
+    await tapText(tester, '儲存');
+    expect(inAgenda('秋季退修會'), findsWidgets, reason: 'October, though the event began in September');
+
+    await tapText(tester, '秋季退修會');
+    await tapText(tester, '刪除活動');
+    expect(inAgenda('秋季退修會'), findsNothing);
+    await tapText(tester, '復原');
+    expect(inAgenda('秋季退修會'), findsWidgets);
+  });
+
   testWidgets('staff cannot edit even when connected', (tester) async {
     final b = seededChurch(as: staffMei);
     b.connectCalendar('grace', calendarName: '教會行事曆');

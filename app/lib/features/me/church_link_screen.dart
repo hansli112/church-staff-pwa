@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
-import '../../data/backend.dart';
 import '../../domain/church_link.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
@@ -60,7 +59,7 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
     return s.isEmpty || ChurchLink.validUrl(s) ? null : L10n.of(context).churchLinkNeedsHttps;
   }
 
-  Future<void> _save(ChurchLink? saved) async {
+  Future<void> _save() async {
     final l10n = L10n.of(context);
     setState(() {
       _tried = true;
@@ -69,24 +68,25 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
     if (_titleError != null || _urlError != null || _sourceError != null) return;
     setState(() => _busy = true);
     final source = _source.text.trim();
-    final sourceChanged = source != (saved?.source ?? '') || (source.isNotEmpty && _fetchMinute != saved?.fetchMinute);
     try {
-      await ref
-          .read(churchDataProvider)!
-          .saveChurchLink(ChurchLink(title: _title.text.trim(), body: _body.text.trim(), url: _url.text.trim()));
-      LinkSourceResult? result;
-      if (sourceChanged) {
-        result = await ref.read(churchDataProvider)!.setLinkSource(source.isEmpty ? null : source, _fetchMinute);
-      }
+      final result = await ref.churchData.setChurchLink(
+        ChurchLink(
+          title: _title.text.trim(),
+          body: _body.text.trim(),
+          url: _url.text.trim(),
+          source: source.isEmpty ? null : source,
+          fetchMinute: _fetchMinute,
+        ),
+      );
       if (!mounted) return;
-      if (result != null && !result.ok) {
+      if (!result.ok) {
         // Saved, but the source did not give anything: stay and say why.
         showToast(context, l10n.saved);
-        setState(() => _sourceProblem = linkErrorText(l10n, result!.error!, result.status));
+        setState(() => _sourceProblem = linkErrorText(l10n, result.error!, result.status));
         return;
       }
       Haptics.success();
-      final fetched = result?.content?.title;
+      final fetched = result.content?.title;
       showToast(context, fetched == null ? l10n.saved : l10n.linkSourceFetched(fetched));
       context.pop();
     } catch (e) {
@@ -98,15 +98,15 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
 
   Future<void> _remove(ChurchLink link) async {
     final l10n = L10n.of(context);
-    final data = ref.read(churchDataProvider)!;
+    final data = ref.churchData;
     try {
-      await data.saveChurchLink(null);
+      await data.setChurchLink(null);
     } catch (_) {
       if (mounted) showToast(context, l10n.saveFailed);
       return;
     }
     if (!mounted) return;
-    showToast(context, l10n.churchLinkRemoved, onUndo: () => data.saveChurchLink(link));
+    showToast(context, l10n.churchLinkRemoved, onUndo: () => data.setChurchLink(link));
     context.pop();
   }
 
@@ -207,7 +207,7 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
                 ],
                 Text(l10n.linkSourceFooter, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
                 const SizedBox(height: Space.l),
-                PrimaryButton(label: l10n.save, busy: _busy, onPressed: () => _save(link)),
+                PrimaryButton(label: l10n.save, busy: _busy, onPressed: _save),
               ],
             ),
           ),

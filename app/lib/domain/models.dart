@@ -443,6 +443,9 @@ class Invite {
   bool usableAt(DateTime now) => !revoked && now.isBefore(expiresAt);
 }
 
+/// A month of the calendar as the backend names it: `YYYY-MM`.
+String monthKey(DateTime m) => '${m.year.toString().padLeft(4, '0')}-${m.month.toString().padLeft(2, '0')}';
+
 /// One event on the church's Google Calendar.
 @immutable
 class CalendarEvent {
@@ -484,6 +487,30 @@ class CalendarEvent {
     if (day.isAfter(to) || lastDay.isBefore(from)) return null;
     return (first: day.isBefore(from) ? from : day, last: lastDay.isAfter(to) ? to : lastDay);
   }
+
+  /// The months the event shows in, as [monthKey]s: from its first day's
+  /// to its last day's.
+  List<String> get months {
+    final last = lastDay;
+    return [
+      for (
+        var m = DateTime(start.year, start.month);
+        !m.isAfter(DateTime(last.year, last.month));
+        m = DateTime(m.year, m.month + 1)
+      )
+        monthKey(m),
+    ];
+  }
+
+  /// The same event to create again, as after it was deleted.
+  CalendarEvent get anew => CalendarEvent(
+    title: title,
+    start: start,
+    end: end,
+    allDay: allDay,
+    location: location,
+    description: description,
+  );
 
   CalendarEvent copyWith({String? title, DateTime? start, DateTime? end, bool? allDay, String? location}) =>
       CalendarEvent(

@@ -96,7 +96,7 @@ void main() {
   });
 
   testWidgets('over 2,000 members is refused with the reason', (tester) async {
-    await start(tester, const CloudException(CloudErrorCode.moveTooLarge, {'members': 2001, 'rosters': 2}));
+    await start(tester, const CloudException(CloudErrorCode.moveTooLarge));
     await tapText(tester, '選擇搬家檔');
     expect(find.text('同工超過 2,000 位或服事表超過 20,000 天，沒辦法自動搬，請聯絡我們'), findsOneWidget);
   });

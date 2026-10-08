@@ -14,7 +14,7 @@ import '../church/links.dart';
 import '../common/errors.dart';
 import 'services_screen.dart' show promptText;
 
-final webhookProvider = StreamProvider.autoDispose<WebhookSettings?>((ref) => ref.watch(churchDataProvider)!.webhook());
+final webhookProvider = StreamProvider.autoDispose<WebhookSettings?>((ref) => openChurch(ref).webhook());
 
 /// 外部通知: admins point the church's webhook at an https URL (e.g. n8n),
 /// pick which changes it reports, send a test and see how the last notice
@@ -101,14 +101,12 @@ class _SetupState extends ConsumerState<_Setup> {
     setState(() => _busy = true);
     try {
       final secret = _secret.text.trim();
-      final generated = await ref
-          .read(churchDataProvider)!
-          .webhookSave(
-            url: _url.text.trim(),
-            calendar: _calendar,
-            roster: _roster,
-            secret: secret.isEmpty ? null : secret,
-          );
+      final generated = await ref.churchData.webhookSave(
+        url: _url.text.trim(),
+        calendar: _calendar,
+        roster: _roster,
+        secret: secret.isEmpty ? null : secret,
+      );
       Haptics.success();
       if (generated != null && mounted) await _showSecret(context, generated);
     } catch (e) {
@@ -192,7 +190,7 @@ class _Configured extends ConsumerStatefulWidget {
 class _ConfiguredState extends ConsumerState<_Configured> {
   bool _testing = false;
 
-  ChurchData get _church => ref.read(churchDataProvider)!;
+  ChurchData get _church => ref.churchData;
 
   Future<void> _save({String? url, bool? calendar, bool? roster}) async {
     final l10n = L10n.of(context);

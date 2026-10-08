@@ -27,7 +27,7 @@ class _ClosedScreenState extends ConsumerState<ClosedScreen> {
     final l10n = L10n.of(context);
     setState(() => _busy = true);
     try {
-      await ref.read(churchDataProvider)!.restoreChurch();
+      await ref.churchData.restoreChurch();
       if (mounted) showToast(context, l10n.churchRestored);
     } catch (e) {
       if (mounted) showToast(context, errorText(l10n, e));

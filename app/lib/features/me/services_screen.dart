@@ -26,7 +26,7 @@ class ServicesScreen extends ConsumerWidget {
 
     Future<void> save(List<Service> next) async {
       try {
-        await ref.read(churchDataProvider)!.saveServices(next);
+        await ref.churchData.saveServices(next);
       } catch (_) {
         if (context.mounted) showToast(context, l10n.saveFailed);
       }
@@ -183,7 +183,7 @@ class ServiceEditorScreen extends ConsumerWidget {
     final settings = ref.watch(servicesProvider).value;
     final service = settings?.byId(serviceId);
     if (settings == null || service == null) return Scaffold(appBar: AppBar());
-    final data = ref.read(churchDataProvider)!;
+    final data = ref.churchData;
     // The renames below read these: keep them live, since Riverpod pauses
     // providers nobody watches and a read would return stale data.
     ref.watch(membersProvider);

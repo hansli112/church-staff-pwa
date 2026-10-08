@@ -199,7 +199,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
       );
       if (!ok || !mounted) return;
       try {
-        await ref.read(churchDataProvider)!.deletePendingMember(p.id);
+        await ref.churchData.deletePendingMember(p.id);
         if (mounted) showToast(context, l10n.pendingDeleted);
       } catch (e) {
         if (mounted) showToast(context, errorText(l10n, e));
@@ -212,7 +212,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
     final result = await context.push<String>('/me/members/${m.uid}');
     if (result != 'remove' || !mounted) return;
     final pending = ref.read(pendingRemovalsProvider.notifier);
-    final data = ref.read(churchDataProvider)!;
+    final data = ref.churchData;
     pending.add(m.uid);
     showDeferredUndo(
       context,

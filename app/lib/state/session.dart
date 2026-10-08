@@ -55,6 +55,6 @@ final sessionEffectsProvider = Provider<void>((ref) {
 Future<void> signOut(WidgetRef ref) async {
   final uid = ref.read(uidProvider);
   if (uid != null) await ref.read(pushServiceProvider).unregister(uid);
-  await ref.read(prefsProvider).remove('selected_church');
+  await ref.read(selectedChurchProvider.notifier).forget();
   await ref.read(backendProvider).auth.signOut();
 }

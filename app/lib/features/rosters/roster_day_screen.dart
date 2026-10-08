@@ -10,7 +10,6 @@ import '../../domain/day.dart';
 import '../../domain/models.dart';
 import '../../domain/roster_edit.dart';
 import '../../domain/schedule.dart';
-import '../../domain/staff_order.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/roster_actions.dart';
@@ -50,12 +49,9 @@ class RosterDayScreen extends ConsumerWidget {
     final canEdit = ref.watch(
       meProvider.select((m) => m.value?.canEditRosters(serviceType) ?? false),
     );
-    if (canEdit) {
-      // Keep the member list and staff order loaded, so the picker opens at
-      // once with everything already in memory.
-      ref.watch(membersProvider);
-      ref.watch(staffOrderProvider(serviceType));
-    }
+    // Keeps what editing reads loaded, so the picker opens at once and
+    // writes see the church as it is.
+    final editable = canEdit && ref.watch(rosterEditingProvider(serviceType));
     final title = dayLabel(l10n, day, today);
 
     return Scaffold(
@@ -64,6 +60,7 @@ class RosterDayScreen extends ConsumerWidget {
         actions: [
           if (canEdit)
             PopupMenuButton<String>(
+              enabled: editable,
               tooltip: l10n.edit,
               icon: const Icon(Icons.more_horiz),
               onSelected: (v) => switch (v) {
@@ -139,19 +136,13 @@ class RosterDayScreen extends ConsumerWidget {
       ),
     );
     if (result == null || !context.mounted) return;
-    if (result.addToCommon.isNotEmpty) {
-      final settings = ref.read(servicesProvider).value!;
-      await ref.read(churchDataProvider)!.saveServices([
-        for (final s in settings.services)
-          s.id == service.id ? s.copyWith(events: [...s.events, ...result.addToCommon]) : s,
-      ]);
-    }
     // Ticking a tag off and on again only moves it to the end.
-    if (!context.mounted || setEquals(result.events.toSet(), roster.events.toSet())) return;
+    if (result.addToCommon.isEmpty && setEquals(result.events.toSet(), roster.events.toSet())) return;
+    if (!context.mounted) return;
     await runWithUndo(
       context,
       l10n.eventsUpdated,
-      () => ref.read(rosterActionsProvider).setEvents(roster, result.events),
+      () => ref.read(rosterActionsProvider).setEvents(roster, result.events, addToCommon: result.addToCommon),
     );
   }
 }
@@ -220,6 +211,7 @@ class _EditableDay extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
+    final ready = ref.watch(rosterEditingProvider(roster.type));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -243,7 +235,7 @@ class _EditableDay extends ConsumerWidget {
             for (final duty in roster.duties)
               Dismissible(
                 key: ValueKey('${roster.id}/${duty.role}'),
-                direction: DismissDirection.endToStart,
+                direction: ready ? DismissDirection.endToStart : DismissDirection.none,
                 background: Container(
                   color: c.destructive,
                   alignment: AlignmentDirectional.centerEnd,
@@ -276,8 +268,8 @@ class _DutyRow extends ConsumerWidget {
 
   Future<void> _pick(BuildContext context, WidgetRef ref) async {
     final l10n = L10n.of(context);
-    final members = ref.read(membersProvider).value ?? const <Member>[];
-    final order = ref.read(staffOrderProvider(roster.type)).value ?? StaffOrder();
+    final members = ref.read(membersProvider).requireValue;
+    final order = ref.read(staffOrderProvider(roster.type)).requireValue;
     final me = ref.read(meProvider).value;
     PickerResult? latest;
     final returned = await showAppSheet<PickerResult>(
@@ -394,8 +386,9 @@ class _DutyRow extends ConsumerWidget {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
     final platform = Theme.of(context).platform;
+    final ready = ref.watch(rosterEditingProvider(roster.type));
     return InkWell(
-      onTap: () => _pick(context, ref),
+      onTap: ready ? () => _pick(context, ref) : null,
       child: ConstrainedBox(
         constraints: BoxConstraints(minHeight: Space.minTap(platform)),
         child: Padding(
@@ -427,7 +420,7 @@ class _DutyRow extends ConsumerWidget {
                           for (final p in duty.people)
                             _NameButton(
                               name: p,
-                              onTap: () => _personMenu(context, ref, p),
+                              onTap: ready ? () => _personMenu(context, ref, p) : null,
                             ),
                         ],
                       ),
@@ -443,10 +436,10 @@ class _DutyRow extends ConsumerWidget {
 
 /// A name inside a duty row: its own tap target for swap and remove.
 class _NameButton extends StatelessWidget {
-  const _NameButton({required this.name, required this.onTap});
+  const _NameButton({required this.name, this.onTap});
 
   final String name;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {

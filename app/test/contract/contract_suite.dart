@@ -97,9 +97,10 @@ const png = [
   0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
 ];
 
-Matcher fails(CloudErrorCode code, [Object? detail]) {
+Matcher fails(CloudErrorCode code, {CloudReason? reason, List<String>? churches}) {
   var m = isA<CloudException>().having((e) => e.code, 'code', code);
-  if (detail != null) m = m.having((e) => e.detail, 'detail', detail);
+  if (reason != null) m = m.having((e) => e.reason, 'reason', reason);
+  if (churches != null) m = m.having((e) => e.churches, 'churches', churches);
   return throwsA(m);
 }
 
@@ -187,7 +188,7 @@ void contractTests(Future<ContractWorld> Function() open) {
 
     test('the only admin of a church cannot delete their account', () async {
       final g = await Grace.open(w);
-      await expectLater(cloud().deleteAccount(), fails(CloudErrorCode.lastAdmin, ['恩典堂']));
+      await expectLater(cloud().deleteAccount(), fails(CloudErrorCode.lastAdmin, churches: ['恩典堂']));
       await g.church.saveMember(Member(uid: g.editor, name: '林同工', role: Role.admin));
       await cloud().deleteAccount();
       await expectLater(
@@ -369,7 +370,7 @@ void contractTests(Future<ContractWorld> Function() open) {
 
     test('its admin can change nothing, and the functions say why', () async {
       final g = await Grace.open(w);
-      await g.church.saveChurchLink(const ChurchLink(title: '官網', url: 'https://grace.example'));
+      await g.church.setChurchLink(const ChurchLink(title: '官網', url: 'https://grace.example'));
       await w.addPending(g.cid, const PendingMember(id: 'old-1', name: '舊同工'));
       await g.suspend();
       await expectLater(g.church.createInvite(validFor: const Duration(days: 7)), denied());
@@ -378,7 +379,10 @@ void contractTests(Future<ContractWorld> Function() open) {
       await expectLater(g.church.deleteChurch(), closed);
       await expectLater(g.church.restoreChurch(), closed);
       await expectLater(g.church.mergePending('old-1', g.mei), closed);
-      await expectLater(g.church.setLinkSource(unreachable, 300), closed);
+      await expectLater(
+        g.church.setChurchLink(const ChurchLink(title: '官網', url: 'https://grace.example', source: unreachable)),
+        denied(),
+      );
       await expectLater(g.church.webhookSave(url: 'https://hook.example/x'), closed);
       await expectLater(g.church.calendarAuthUrl(), closed);
       await expectLater(g.church.photoQuota(), closed);
@@ -595,28 +599,29 @@ void contractTests(Future<ContractWorld> Function() open) {
         ChurchLink(title: '官網', body: 'b' * 481, url: 'https://grace.example'),
         const ChurchLink(title: '官網', url: 'http://grace.example'),
       ]) {
-        await expectLater(g.church.saveChurchLink(bad), denied(), reason: '${bad.title} ${bad.url}');
+        await expectLater(g.church.setChurchLink(bad), denied(), reason: '${bad.title} ${bad.url}');
       }
       final link = ChurchLink(title: '👍🏽' * 30, body: '👍🏽' * 120, url: 'https://grace.example/give');
-      await g.church.saveChurchLink(link);
+      await g.church.setChurchLink(link);
       await w.signIn(Grace.meiEmail);
       expect(await g.church.churchLink().first, link);
-      await expectLater(g.church.saveChurchLink(null), denied());
+      await expectLater(g.church.setChurchLink(null), denied());
       await w.signIn(Grace.pastorEmail);
-      await g.church.saveChurchLink(null);
+      await g.church.setChurchLink(null);
       expect(await g.church.churchLink().first, isNull);
     });
 
-    test('its content source: admins, https, a link first; a failed fetch is kept and said', () async {
+    test('its content source: admins, https; a failed fetch is kept and said; it comes back with the link', () async {
       final g = await Grace.open(w);
-      await expectLater(g.church.setLinkSource(unreachable, 300), fails(CloudErrorCode.unknown, 'noLink'));
-      await g.church.saveChurchLink(const ChurchLink(title: '官網', url: 'https://grace.example'));
       await expectLater(
-        g.church.setLinkSource('http://feed.example', 300),
-        fails(CloudErrorCode.unknown, 'notHttps'),
+        g.church.setChurchLink(
+          const ChurchLink(title: '官網', url: 'https://grace.example', source: 'http://feed.example'),
+        ),
+        fails(CloudErrorCode.unknown, reason: CloudReason.notHttps),
       );
 
-      final result = await g.church.setLinkSource(unreachable, 300);
+      const sourced = ChurchLink(title: '官網', url: 'https://grace.example', source: unreachable, fetchMinute: 300);
+      final result = await g.church.setChurchLink(sourced);
       expect(result.error, LinkFetchError.network);
       final link = (await g.church.churchLink().first)!;
       expect((link.source, link.fetchMinute), (unreachable, 300));
@@ -624,16 +629,25 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect((content.source, content.error), (unreachable, LinkFetchError.network));
       expect(content.fetchedAt, isNull);
 
-      // Saving the link keeps the source: that is the backend's.
-      await g.church.saveChurchLink(const ChurchLink(title: '教會官網', url: 'https://grace.example'));
-      expect((await g.church.churchLink().first)!.source, unreachable);
+      // The same source again is not fetched again.
+      final renamed = await g.church.setChurchLink(
+        const ChurchLink(title: '教會官網', url: 'https://grace.example', source: unreachable, fetchMinute: 300),
+      );
+      expect(renamed.ok, isTrue);
+      expect((await g.church.churchLink().first)!.title, '教會官網');
 
-      await g.church.setLinkSource(null, 300);
+      // Removed, then put back as it was (undo): the source comes back too.
+      await g.church.setChurchLink(null);
+      await g.church.setChurchLink(sourced);
+      final back = (await g.church.churchLink().first)!;
+      expect((back.title, back.source, back.fetchMinute), ('官網', unreachable, 300));
+
+      await g.church.setChurchLink(const ChurchLink(title: '官網', url: 'https://grace.example'));
       expect((await g.church.churchLink().first)!.source, isNull);
       expect(await g.church.linkContent().first, isNull);
 
       await w.signIn(Grace.meiEmail);
-      await expectLater(g.church.setLinkSource(unreachable, 300), denied());
+      await expectLater(g.church.setChurchLink(sourced), denied());
     });
   });
 
@@ -643,9 +657,12 @@ void contractTests(Future<ContractWorld> Function() open) {
       const url = 'https://127.0.0.1:9/hook';
       await expectLater(
         g.church.webhookSave(url: 'http://hook.example'),
-        fails(CloudErrorCode.unknown, 'notHttps'),
+        fails(CloudErrorCode.unknown, reason: CloudReason.notHttps),
       );
-      await expectLater(g.church.webhookSave(url: url, secret: 'short'), fails(CloudErrorCode.unknown, 'secret'));
+      await expectLater(
+        g.church.webhookSave(url: url, secret: 'short'),
+        fails(CloudErrorCode.unknown, reason: CloudReason.secret),
+      );
       await expectLater(g.church.webhookRotateSecret(), fails(CloudErrorCode.unknown), reason: 'nothing set up');
 
       final secret = await g.church.webhookSave(url: url, calendar: true);
@@ -789,6 +806,11 @@ void contractTests(Future<ContractWorld> Function() open) {
       await expectLater(g.church.calendarDisconnect(), denied());
       final event = CalendarEvent(title: '同工會', start: DateTime(2026, 10, 4, 14), end: DateTime(2026, 10, 4, 15));
       await expectLater(g.church.calendarSave(event), denied());
+      await expectLater(
+        g.church.calendarSave(event, previous: event.copyWith(end: DateTime(2026, 10, 5))),
+        denied(),
+      );
+      await expectLater(g.church.calendarDelete(event), denied());
       await w.signUp('outsider@example.com');
       await expectLater(g.church.calendarEvents('2026-10'), denied());
     });
@@ -802,6 +824,15 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect((quota.remaining, quota.limit, quota.platformOpen), (30, 30, true));
       await w.signUp('outsider@example.com');
       await expectLater(g.church.photoQuota(), denied());
+    });
+
+    test('a photo over 2 MB is refused as too large', () async {
+      final g = await Grace.open(w);
+      final big = [PhotoInput(mimeType: 'image/png', bytes: List.filled(2 * 1024 * 1024 + 3, 0))];
+      await expectLater(
+        g.church.recognizeRoster('sunday', big),
+        fails(CloudErrorCode.unknown, reason: CloudReason.tooLarge),
+      );
     });
 
     test('only editors of a service the church has recognize photos for it', () async {

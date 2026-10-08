@@ -56,7 +56,7 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
     setState(() => _uploading = true);
     try {
       final bytes = prepareLogo(await file.readAsBytes());
-      await ref.read(churchDataProvider)!.uploadLogo(bytes);
+      await ref.churchData.uploadLogo(bytes);
       if (mounted) showToast(context, l10n.logoUploaded);
     } on LogoException catch (e) {
       if (mounted) {
@@ -108,7 +108,7 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
     final name = await askHomeName(context, churchName: church.name, current: church.homeName);
     if (name == null || name == (church.homeName ?? '') || !mounted) return;
     try {
-      await ref.read(churchDataProvider)!.setHomeName(name.isEmpty ? null : name);
+      await ref.churchData.setHomeName(name.isEmpty ? null : name);
     } catch (_) {
       if (mounted) showToast(context, l10n.saveFailed);
     }
@@ -160,7 +160,7 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
     );
     if (!ok || !mounted) return;
     try {
-      await ref.read(churchDataProvider)!.removeMember(me.uid);
+      await ref.churchData.removeMember(me.uid);
       if (!mounted) return;
       showToast(context, l10n.leftChurch(church.name));
       context.go('/home');
@@ -179,7 +179,7 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
     );
     if (!ok || !mounted) return;
     try {
-      await ref.read(churchDataProvider)!.deleteChurch();
+      await ref.churchData.deleteChurch();
     } catch (e) {
       if (mounted) showToast(context, errorText(l10n, e));
     }

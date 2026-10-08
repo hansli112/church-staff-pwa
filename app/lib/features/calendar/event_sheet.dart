@@ -7,8 +7,8 @@ import '../../core/design/tokens.dart';
 import '../../domain/day.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
+import '../../state/calendar.dart';
 import '../../state/providers.dart';
-import 'calendar_screen.dart';
 
 /// Read-only details, for people who cannot edit the calendar.
 Future<void> showEventDetail(BuildContext context, CalendarEvent e) {
@@ -59,7 +59,6 @@ Future<void> editEvent(
   Day? day,
 }) async {
   final l10n = L10n.of(context);
-  final church = ref.read(churchDataProvider)!;
   final today = ref.read(todayProvider);
   final initialDay =
       event?.start ??
@@ -74,32 +73,14 @@ Future<void> editEvent(
     builder: (_) => _EventEditor(event: event, initialDay: initialDay),
   );
   if (result == null || !context.mounted) return;
-  void refresh(CalendarEvent e) => ref.invalidate(calendarEventsProvider(monthKey(e.start)));
+  final calendar = ref.read(calendarActionsProvider);
   try {
     if (result.delete && event != null) {
-      await church.calendarDelete(event);
-      refresh(event);
+      final undo = await calendar.delete(event);
       if (!context.mounted) return;
-      showToast(
-        context,
-        l10n.calDeleted(event.title),
-        onUndo: () async {
-          final again = CalendarEvent(
-            title: event.title,
-            start: event.start,
-            end: event.end,
-            allDay: event.allDay,
-            location: event.location,
-            description: event.description,
-          );
-          await church.calendarSave(again);
-          refresh(again);
-        },
-      );
+      showToast(context, l10n.calDeleted(event.title), onUndo: () => undo().ignore());
     } else if (result.event != null) {
-      await church.calendarSave(result.event!, previous: event);
-      refresh(result.event!);
-      if (event != null && monthKey(event.start) != monthKey(result.event!.start)) refresh(event);
+      await calendar.save(result.event!, previous: event);
       if (context.mounted) showToast(context, l10n.calSaved);
     }
   } catch (_) {

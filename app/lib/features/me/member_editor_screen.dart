@@ -20,7 +20,7 @@ class MemberEditorScreen extends ConsumerWidget {
 
   Future<void> _save(BuildContext context, WidgetRef ref, Member next) async {
     try {
-      await ref.read(churchDataProvider)!.saveMember(next);
+      await ref.churchData.saveMember(next);
     } catch (_) {
       if (context.mounted) showToast(context, L10n.of(context).saveFailed);
     }
@@ -58,7 +58,7 @@ class MemberEditorScreen extends ConsumerWidget {
     );
     if (ok != true || !context.mounted) return;
     try {
-      await ref.read(churchDataProvider)!.mergePending(picked.id, member.uid);
+      await ref.churchData.mergePending(picked.id, member.uid);
       Haptics.success();
       if (context.mounted) showToast(context, l10n.merged);
     } catch (e) {

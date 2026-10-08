@@ -9,6 +9,7 @@ import '../../data/backend.dart';
 import '../../domain/day.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
+import '../../state/calendar.dart';
 import '../../state/providers.dart';
 import '../rosters/format.dart';
 import 'event_sheet.dart';
@@ -16,7 +17,7 @@ import 'month_grid.dart';
 
 final calendarSettingsProvider = StreamProvider<CalendarSettings>((ref) {
   if (!ref.watch(churchOpenProvider)) return Stream.value(const CalendarSettings());
-  return ref.watch(churchDataProvider)!.calendarSettings();
+  return openChurch(ref).calendarSettings();
 });
 
 /// The month on screen, as `YYYY-MM`.
@@ -46,15 +47,6 @@ class MonthGridShown extends Notifier<bool> {
 }
 
 final monthGridShownProvider = NotifierProvider<MonthGridShown, bool>(MonthGridShown.new);
-
-String monthKey(DateTime m) => '${m.year.toString().padLeft(4, '0')}-${m.month.toString().padLeft(2, '0')}';
-
-/// Events of a month, read through the backend's shared cache.
-final calendarEventsProvider = FutureProvider.autoDispose.family<List<CalendarEvent>, String>((ref, month) {
-  final church = ref.watch(churchDataProvider);
-  if (church == null) return const [];
-  return church.calendarEvents(month);
-});
 
 /// 行事曆: the church's Google Calendar month by month, a month grid above
 /// an agenda of the days with events.
@@ -247,7 +239,9 @@ class _AgendaState extends ConsumerState<_Agenda> {
       skipLoadingOnReload: true,
       loading: () => const CircularProgressIndicator.adaptive(),
       error: (e, _) => ErrorRetry(
-        message: e is CloudException && e.detail == 'reconnect' ? l10n.calNeedsReconnectStaff : l10n.loadFailed,
+        message: e is CloudException && e.reason == CloudReason.reconnect
+            ? l10n.calNeedsReconnectStaff
+            : l10n.loadFailed,
         onRetry: () => ref.invalidate(calendarEventsProvider(monthKey(month))),
       ),
       data: (list) => list.isEmpty ? EmptyState(message: l10n.calNoEvents) : null,

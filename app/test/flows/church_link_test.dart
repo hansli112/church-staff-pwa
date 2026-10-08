@@ -89,7 +89,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/me/church');
     expect(find.text('教會連結'), findsNothing);
-    await expectLater(b.church('grace').saveChurchLink(link), throwsA(anything));
+    await expectLater(b.church('grace').setChurchLink(link), throwsA(anything));
   });
 
   group('daily content source', () {
@@ -194,6 +194,24 @@ void main() {
 
       await go(tester, '/me/link');
       expect(find.textContaining('上次更新：'), findsOneWidget);
+    });
+
+    testWidgets('undoing a removal brings the source back with the link', (tester) async {
+      final b = seededChurch()
+        ..churchLinks['grace'] = const ChurchLink(
+          title: '教會官網',
+          url: 'https://grace.example',
+          source: src,
+          fetchMinute: 300,
+        )
+        ..linkSourceAnswers[src] = const LinkContent(source: src, title: '今日經文');
+      await pumpApp(tester, b);
+      await go(tester, '/me/link');
+      await tapText(tester, '移除教會連結');
+      expect(b.churchLinks['grace'], isNull);
+      await tapText(tester, '復原');
+      final back = b.churchLinks['grace']!;
+      expect((back.title, back.source, back.fetchMinute), ('教會官網', src, 300));
     });
 
     testWidgets('a source that fails says why and stays on the page', (tester) async {

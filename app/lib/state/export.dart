@@ -32,7 +32,7 @@ final fileSaverProvider = Provider<FileSaver>((ref) => const PlatformFileSaver()
 
 /// Reads everything an admin can see of the current church, once.
 Future<ChurchSnapshot> loadChurchSnapshot(WidgetRef ref) async {
-  final data = ref.read(churchDataProvider)!;
+  final data = ref.churchData;
   final church = await data.church().first;
   final (services, members, pending, staffOrders, rosters, calendar, link, webhook) = await (
     data.services().first,

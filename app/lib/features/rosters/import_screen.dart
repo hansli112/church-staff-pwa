@@ -8,12 +8,12 @@ import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../data/backend.dart';
 import '../../domain/roster_import.dart';
-import '../../domain/staff_order.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
+import '../../state/roster_actions.dart';
 import 'format.dart';
 
-final _quotaProvider = FutureProvider.autoDispose<PhotoQuota>((ref) => ref.watch(churchDataProvider)!.photoQuota());
+final _quotaProvider = FutureProvider.autoDispose<PhotoQuota>((ref) => openChurch(ref).photoQuota());
 
 /// 照片匯入: photograph a paper roster, check what was read, apply it.
 /// The operator can paste recognised JSON instead, e.g. to help a church
@@ -55,15 +55,15 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       final images = [
         for (final f in files.take(3)) PhotoInput(mimeType: f.mimeType ?? 'image/jpeg', bytes: await f.readAsBytes()),
       ];
-      final rows = await ref.read(churchDataProvider)!.recognizeRoster(widget.serviceType, images);
+      final rows = await ref.churchData.recognizeRoster(widget.serviceType, images);
       ref.invalidate(_quotaProvider);
       _makePlan(rows);
     } on CloudException catch (e) {
       setState(
-        () => _error = switch ((e.code, e.detail)) {
-          (CloudErrorCode.quotaExceeded, 'platform') => l10n.photoPlatformOff,
-          (CloudErrorCode.quotaExceeded, _) => l10n.photoChurchLimit(30),
-          (_, 'tooLarge') => l10n.photoTooLarge,
+        () => _error = switch ((e.code, e.reason)) {
+          (CloudErrorCode.quotaExceeded, CloudReason.platform) => l10n.photoPlatformOff,
+          (CloudErrorCode.quotaExceeded, _) => l10n.photoChurchLimit(ref.read(_quotaProvider).value?.limit ?? 30),
+          (_, CloudReason.tooLarge) => l10n.photoTooLarge,
           // Gemini down or refusing: not the photo's fault.
           (CloudErrorCode.unavailable, _) => l10n.photoUnavailable,
           _ => l10n.photoFailed,
@@ -80,17 +80,10 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   /// latest rosters so edits made meanwhile are not overwritten.
   List<dynamic> _rows = const [];
 
-  ImportPlan _planFor(List<dynamic> rows) {
-    final service = ref.read(servicesProvider).value!.byId(widget.serviceType)!;
-    return planImport(
-      rows: rows,
-      service: service,
-      members: ref.read(membersProvider).value ?? const [],
-      saved: ref.read(savedRostersProvider).value ?? const [],
-      order: ref.read(staffOrderProvider(widget.serviceType)).value ?? StaffOrder(),
-      today: ref.read(todayProvider),
-    );
-  }
+  /// Whether everything the plan reads is loaded.
+  bool _ready = false;
+
+  ImportPlan _planFor(List<dynamic> rows) => ref.read(rosterActionsProvider).previewImport(widget.serviceType, rows);
 
   void _makePlan(List<dynamic> rows) => setState(() {
     _rows = rows;
@@ -109,17 +102,15 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
 
   Future<void> _apply() async {
     final l10n = L10n.of(context);
-    final plan = _planFor(_rows);
-    final data = ref.read(churchDataProvider)!;
-    final before = ref.read(staffOrderProvider(widget.serviceType)).value ?? StaffOrder();
+    final days = _plan!.rosters.length;
     setState(() => _busy = true);
     try {
-      await data.saveRosters(plan.rosters, via: 'import');
-      final changes = before.changesTo(plan.order);
-      if (changes.isNotEmpty) await data.updateStaffOrder(widget.serviceType, changes);
+      final write = ref.read(rosterActionsProvider).applyImport(widget.serviceType, _rows);
+      await write.done;
       Haptics.success();
       if (!mounted) return;
-      showToast(context, l10n.importApplied(plan.rosters.length));
+      // The page closes; undo runs on its own.
+      showToast(context, l10n.importApplied(days), onUndo: () => write.undo().ignore());
       Navigator.of(context).pop();
     } catch (_) {
       if (mounted) showToast(context, l10n.saveFailed);
@@ -132,11 +123,9 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
-    // Keep these listened to: Riverpod pauses providers nobody watches, and
-    // the apply step re-plans against the latest rosters.
-    ref.watch(membersProvider);
-    ref.watch(staffOrderProvider(widget.serviceType));
-    ref.watch(savedRostersProvider);
+    // Keeps what the plan reads loaded; applying re-plans against the
+    // latest rosters.
+    _ready = ref.watch(rosterEditingProvider(widget.serviceType));
     final plan = _plan;
     return Scaffold(
       appBar: AppBar(title: Text(plan == null ? l10n.photoImport : l10n.importPreview)),
@@ -146,7 +135,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
 
   Widget _start(L10n l10n, AppColors c) {
     final quota = ref.watch(_quotaProvider).value;
-    final blocked = quota != null && (!quota.platformOpen || quota.remaining <= 0);
+    final blocked = !_ready || (quota != null && (!quota.platformOpen || quota.remaining <= 0));
     return ListView(
       padding: const EdgeInsets.all(Space.m),
       children: [
@@ -207,7 +196,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
             decoration: InputDecoration(hintText: l10n.jsonHint),
           ),
           const SizedBox(height: Space.s),
-          SecondaryButton(label: l10n.next2, expand: true, onPressed: _parsePasted),
+          SecondaryButton(label: l10n.next2, expand: true, onPressed: _ready ? _parsePasted : null),
         ],
       ],
     );
@@ -276,7 +265,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
           top: false,
           child: Padding(
             padding: const EdgeInsets.all(Space.m),
-            child: PrimaryButton(label: l10n.importApply, busy: _busy, onPressed: _apply),
+            child: PrimaryButton(label: l10n.importApply, busy: _busy, onPressed: _ready ? _apply : null),
           ),
         ),
       ],

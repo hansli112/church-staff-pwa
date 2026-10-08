@@ -182,9 +182,11 @@ abstract interface class ChurchData {
   /// The church link, or null when the admin has not set one.
   Stream<ChurchLink?> churchLink();
 
-  /// Saves the church link's title, body and URL (admins only); null
-  /// removes it. Its content source is set with [setLinkSource].
-  Future<void> saveChurchLink(ChurchLink? link);
+  /// Sets the whole church link, its content source and fetch time
+  /// included (admins only); null removes it. A new source is fetched at
+  /// once and the result returned; a bad source URL is
+  /// [CloudErrorCode.unknown] with [CloudReason.notHttps].
+  Future<LinkSourceResult> setChurchLink(ChurchLink? link);
 
   /// What the backend last fetched from the church link's content source.
   Stream<LinkContent?> linkContent();
@@ -209,10 +211,6 @@ abstract interface class ChurchData {
 
   /// Merges a pending member into a member (admins).
   Future<void> mergePending(String pendingId, String uid);
-
-  /// Sets the church link's content source and daily fetch time (admins);
-  /// a null [source] removes it. A new source is fetched at once.
-  Future<LinkSourceResult> setLinkSource(String? source, int fetchMinute);
 
   /// Sets the webhook URL and which events it gets (admins); a null [url]
   /// turns it off. The first time, [secret] is used or one is made and
@@ -270,17 +268,50 @@ enum CloudErrorCode {
   unknown,
 }
 
+/// What a function refused more precisely than its [CloudErrorCode]:
+/// the `detail` string the functions send (functions/src/*.ts `fail`).
+enum CloudReason {
+  /// A URL that is not https (church link source, webhook).
+  notHttps,
+
+  /// A content source set before the church link.
+  noLink,
+
+  /// No Google Calendar connected yet.
+  noCalendar,
+  notConnected,
+
+  /// The connected Google account no longer lets the platform in.
+  reconnect,
+
+  /// A webhook secret of the wrong length.
+  secret,
+
+  /// A photo over the size the function takes.
+  tooLarge,
+
+  /// What Gemini gave back could not be read as a roster.
+  unparseable,
+
+  /// [CloudErrorCode.quotaExceeded]: the platform turned photo import off…
+  platform,
+
+  /// …or the church used this month's photos.
+  church,
+}
+
 class CloudException implements Exception {
-  const CloudException(this.code, [this.detail]);
+  const CloudException(this.code, {this.reason, this.churches = const []});
 
   final CloudErrorCode code;
+  final CloudReason? reason;
 
-  /// Extra data from the function, e.g. the churches where the caller is the
+  /// For [CloudErrorCode.lastAdmin]: the churches where the caller is the
   /// only admin.
-  final Object? detail;
+  final List<String> churches;
 
   @override
-  String toString() => 'CloudException($code, $detail)';
+  String toString() => 'CloudException($code, $reason)';
 }
 
 /// A church as the platform operator sees it.
@@ -418,7 +449,7 @@ class ChurchPreview {
   final String? logoUrl;
 }
 
-/// The result of fetching a content source right after saving it.
+/// The result of fetching a content source right after setting it.
 class LinkSourceResult {
   const LinkSourceResult({this.content, this.error, this.status});
 

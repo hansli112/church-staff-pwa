@@ -39,12 +39,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       await ref.read(backendProvider).auth.signOut();
     } on CloudException catch (e) {
       if (!mounted) return;
-      final churches = e.detail;
-      setState(
-        () => _error = e.code == CloudErrorCode.lastAdmin && churches is List
-            ? l10n.deleteAccountLastAdmin(churches.join('〉〈'))
-            : errorText(l10n, e),
-      );
+      setState(() => _error = errorText(l10n, e));
     } catch (e) {
       if (mounted) setState(() => _error = errorText(l10n, e));
     } finally {

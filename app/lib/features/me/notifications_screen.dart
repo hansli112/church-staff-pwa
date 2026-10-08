@@ -41,7 +41,7 @@ class NotificationsScreen extends ConsumerWidget {
       if (on && permission == PushPermission.notAsked) await enable();
       final next = on ? ({...muted}..remove(kind)) : {...muted, kind};
       try {
-        await ref.read(churchDataProvider)!.setNotificationPrefs(me.uid, next);
+        await ref.churchData.setNotificationPrefs(me.uid, next);
       } catch (_) {
         if (context.mounted) showToast(context, l10n.saveFailed);
       }

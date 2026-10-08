@@ -614,12 +614,31 @@ class FirestoreChurchData implements ChurchData {
       _col('settings').doc('link').live().map((s) => churchLinkFromJson(s.data())).translated();
 
   @override
-  Future<void> saveChurchLink(ChurchLink? link) => _guard(() {
+  Future<LinkSourceResult> setChurchLink(ChurchLink? link) async {
     final ref = _col('settings').doc('link');
-    if (link == null) return ref.delete();
-    // Merge: the content source on the same doc is the backend's.
-    return ref.set({...churchLinkToJson(link), 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
-  });
+    if (link == null) {
+      await _guard(ref.delete);
+      return const LinkSourceResult();
+    }
+    final saved = churchLinkFromJson((await _guard(ref.get)).data());
+    // Merge: the source and fetch time on the same doc are set by the
+    // setLinkSource function, which also fetches a new source.
+    await _guard(
+      () => ref.set({...churchLinkToJson(link), 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true)),
+    );
+    if (link.source == saved?.source && (link.source == null || link.fetchMinute == saved?.fetchMinute)) {
+      return const LinkSourceResult();
+    }
+    final d = await _call('setLinkSource', {'source': link.source, 'fetchMinute': link.fetchMinute});
+    final content = d['content'];
+    return LinkSourceResult(
+      content: content is Map && link.source != null
+          ? linkContentFromJson({...Map<String, dynamic>.from(content), 'source': link.source})
+          : null,
+      error: d['ok'] == true ? null : linkFetchErrorFromName(d['error']),
+      status: (d['status'] as num?)?.toInt(),
+    );
+  }
 
   @override
   Stream<LinkContent?> linkContent() =>
@@ -654,19 +673,6 @@ class FirestoreChurchData implements ChurchData {
   @override
   Future<void> mergePending(String pendingId, String uid) =>
       _call('mergePending', {'pendingId': pendingId, 'uid': uid});
-
-  @override
-  Future<LinkSourceResult> setLinkSource(String? source, int fetchMinute) async {
-    final d = await _call('setLinkSource', {'source': source, 'fetchMinute': fetchMinute});
-    final content = d['content'];
-    return LinkSourceResult(
-      content: content is Map && source != null
-          ? linkContentFromJson({...Map<String, dynamic>.from(content), 'source': source})
-          : null,
-      error: d['ok'] == true ? null : linkFetchErrorFromName(d['error']),
-      status: (d['status'] as num?)?.toInt(),
-    );
-  }
 
   @override
   Future<String?> webhookSave({
@@ -723,7 +729,12 @@ class FirestoreChurchData implements ChurchData {
     final d = await _call('calendarWrite', {
       'op': 'upsert',
       'event': calendarEventToJson(event),
-      if (previous != null) 'previousStart': calendarEventToJson(previous)['start'],
+      // The months the event was in, for the function to drop from its
+      // cache. previousStart is what functions before `previous` read.
+      if (previous != null) ...{
+        'previous': {'start': calendarEventToJson(previous)['start'], 'end': calendarEventToJson(previous)['end']},
+        'previousStart': calendarEventToJson(previous)['start'],
+      },
     });
     return calendarEventFromJson(d['event']) ?? event;
   }
@@ -854,9 +865,14 @@ class _Callables {
   static CloudException translate(FirebaseFunctionsException e) {
     final details = e.details;
     final reason = details is Map ? details['reason'] : null;
+    final detail = details is Map ? details['detail'] : null;
     for (final code in CloudErrorCode.values) {
       if (code.name == reason) {
-        return CloudException(code, details is Map ? details['detail'] : null);
+        return CloudException(
+          code,
+          reason: CloudReason.values.where((r) => r.name == detail).firstOrNull,
+          churches: detail is List ? [for (final c in detail) '$c'] : const [],
+        );
       }
     }
     return CloudException(_codeFor(e.code));

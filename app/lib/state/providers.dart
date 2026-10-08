@@ -10,6 +10,9 @@ import '../domain/day.dart';
 import '../domain/models.dart';
 import '../domain/schedule.dart';
 import '../domain/staff_order.dart';
+import 'current_church.dart';
+
+export 'current_church.dart';
 
 /// Overridden in main() and in tests.
 final backendProvider = Provider<Backend>(
@@ -71,79 +74,6 @@ final membershipsProvider = StreamProvider<List<Membership>>((ref) {
   return ref.watch(backendProvider).memberships.watchMine(uid);
 });
 
-/// The church the user picked last, remembered on this device.
-class SelectedChurch extends Notifier<String?> {
-  static const _key = 'selected_church';
-
-  @override
-  String? build() {
-    // Re-read when the account changes; sign-out clears the key.
-    ref.watch(uidProvider);
-    return ref.watch(prefsProvider).getString(_key);
-  }
-
-  void select(String churchId) {
-    state = churchId;
-    ref.read(prefsProvider).setString(_key, churchId);
-  }
-}
-
-final selectedChurchProvider = NotifierProvider<SelectedChurch, String?>(
-  SelectedChurch.new,
-);
-
-/// The church every screen shows: the one picked last if still a member,
-/// otherwise the first membership. Null while loading or with no church.
-final currentChurchIdProvider = Provider<String?>((ref) {
-  final memberships = ref.watch(membershipsProvider).value;
-  if (memberships == null || memberships.isEmpty) return null;
-  final selected = ref.watch(selectedChurchProvider);
-  for (final m in memberships) {
-    if (m.churchId == selected) return selected;
-  }
-  final ids = memberships.map((m) => m.churchId).toList()..sort();
-  return ids.first;
-});
-
-final churchDataProvider = Provider<ChurchData?>((ref) {
-  final cid = ref.watch(currentChurchIdProvider);
-  if (cid == null) return null;
-  return ref.watch(backendProvider).church(cid);
-});
-
-ChurchData _requireChurch(Ref ref) {
-  final data = ref.watch(churchDataProvider);
-  if (data == null) throw StateError('No current church');
-  return data;
-}
-
-final churchProvider = StreamProvider<Church?>((ref) {
-  final data = ref.watch(churchDataProvider);
-  if (data == null) return Stream.value(null);
-  return data.church();
-});
-
-/// Whether the current church was deleted by its admin and can still be
-/// restored. Turns false when [Church.restoreWindow] runs out.
-final churchRestorableProvider = Provider<bool>((ref) {
-  final until = ref.watch(churchProvider).value?.restorableUntil;
-  if (until == null) return false;
-  final now = ref.watch(clockProvider)();
-  rebuildAt(ref, until.add(const Duration(milliseconds: 1)), now);
-  return !now.isAfter(until);
-});
-
-/// Whether the current church is open. Church data is only requested when
-/// it is, so a suspended church sends no reads that would be denied.
-final churchOpenProvider = Provider<bool>(
-  (ref) => ref.watch(churchProvider.select((c) => c.value?.isActive ?? false)),
-);
-
-ChurchData _requireOpenChurch(Ref ref) {
-  if (!ref.watch(churchOpenProvider)) throw StateError('Church is not open');
-  return _requireChurch(ref);
-}
-
 /// My member doc in the current church.
 final meProvider = StreamProvider<Member?>((ref) {
   final data = ref.watch(churchDataProvider);
@@ -153,14 +83,14 @@ final meProvider = StreamProvider<Member?>((ref) {
 });
 
 final servicesProvider = StreamProvider<ServiceSettings>(
-  (ref) => _requireOpenChurch(ref).services(),
+  (ref) => openChurch(ref).services(),
 );
 
 /// The church link at the top of the home page, or null.
-final churchLinkProvider = StreamProvider<ChurchLink?>((ref) => _requireOpenChurch(ref).churchLink());
+final churchLinkProvider = StreamProvider<ChurchLink?>((ref) => openChurch(ref).churchLink());
 
 /// What was last fetched from the church link's content source.
-final linkContentProvider = StreamProvider<LinkContent?>((ref) => _requireOpenChurch(ref).linkContent());
+final linkContentProvider = StreamProvider<LinkContent?>((ref) => openChurch(ref).linkContent());
 
 /// What the home page shows for the church link, or null when there is
 /// none: the fetched content while fresh, then the fixed link.
@@ -186,7 +116,7 @@ final shownChurchLinkProvider = Provider<({String title, String body, String url
 /// Saved rosters from today on, every service.
 final savedRostersProvider = StreamProvider<List<Roster>>((ref) {
   final from = ref.watch(todayProvider);
-  return _requireOpenChurch(ref).rosters(from: from);
+  return openChurch(ref).rosters(from: from);
 });
 
 /// Everyone in the church, read once per church and shared by every
@@ -196,7 +126,7 @@ final membersProvider = StreamProvider<List<Member>>((ref) {
     meProvider.select((m) => m.value?.inGroup(Group.rosterEditors) ?? false),
   );
   if (!canRead) return Stream.value(const []);
-  return _requireOpenChurch(ref).members();
+  return openChurch(ref).members();
 });
 
 /// Members moved from self-host who have not signed in yet. Like
@@ -206,11 +136,11 @@ final pendingMembersProvider = StreamProvider<List<PendingMember>>((ref) {
     meProvider.select((m) => m.value?.inGroup(Group.rosterEditors) ?? false),
   );
   if (!canRead) return Stream.value(const []);
-  return _requireOpenChurch(ref).pendingMembers();
+  return openChurch(ref).pendingMembers();
 });
 
 final staffOrderProvider = StreamProvider.family<StaffOrder, String>(
-  (ref, serviceType) => _requireOpenChurch(ref).staffOrder(serviceType),
+  (ref, serviceType) => openChurch(ref).staffOrder(serviceType),
 );
 
 /// How many weeks ahead the roster tab shows.
