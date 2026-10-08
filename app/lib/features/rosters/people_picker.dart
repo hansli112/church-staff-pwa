@@ -262,9 +262,8 @@ class PeoplePickerState extends State<PeoplePicker> {
       rows.add(
         Padding(
           padding: const EdgeInsets.all(Space.l),
-          child: Text(
+          child: BalancedText(
             l10n.pickerNoOneServes(widget.duty),
-            textAlign: TextAlign.center,
             style: AppText.body.copyWith(color: c.secondaryLabel),
           ),
         ),
@@ -289,11 +288,7 @@ class PeoplePickerState extends State<PeoplePicker> {
       rows.add(
         Padding(
           padding: const EdgeInsets.all(Space.l),
-          child: Text(
-            l10n.pickerNoResults(typed),
-            textAlign: TextAlign.center,
-            style: AppText.body.copyWith(color: c.secondaryLabel),
-          ),
+          child: BalancedText(l10n.pickerNoResults(typed), style: AppText.body.copyWith(color: c.secondaryLabel)),
         ),
       );
     }

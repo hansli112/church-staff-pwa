@@ -2260,8 +2260,8 @@ abstract class L10n {
   /// No description provided for @addToHomeDone.
   ///
   /// In zh, this message translates to:
-  /// **'已加入主畫面，之後從主畫面的圖示打開'**
-  String get addToHomeDone;
+  /// **'已加入，之後點手機上的「{name}」圖示打開'**
+  String addToHomeDone(String name);
 
   /// No description provided for @addToHomeIosShare.
   ///
@@ -2278,8 +2278,8 @@ abstract class L10n {
   /// No description provided for @addToHomeIosOpen.
   ///
   /// In zh, this message translates to:
-  /// **'從主畫面打開，再登入一次'**
-  String get addToHomeIosOpen;
+  /// **'點手機上的「{name}」圖示打開，再登入一次'**
+  String addToHomeIosOpen(String name);
 
   /// No description provided for @addToHomeAndroidAdd.
   ///
@@ -2296,8 +2296,8 @@ abstract class L10n {
   /// No description provided for @addToHomeAndroidOpen.
   ///
   /// In zh, this message translates to:
-  /// **'從主畫面打開'**
-  String get addToHomeAndroidOpen;
+  /// **'點手機上的「{name}」圖示打開'**
+  String addToHomeAndroidOpen(String name);
 
   /// No description provided for @addToHomeCardBody.
   ///

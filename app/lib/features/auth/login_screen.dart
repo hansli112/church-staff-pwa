@@ -135,12 +135,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ),
             const SizedBox(height: Space.m),
-            Text(l10n.appName, textAlign: TextAlign.center, style: AppText.largeTitle),
+            BalancedText(l10n.appName, style: AppText.largeTitle),
             const SizedBox(height: Space.m),
             _verse(l10n, c),
             const SizedBox(height: Space.xxl),
             if (_invitedTo() case final church?) ...[
-              Text(l10n.loginInvitedTo(church), textAlign: TextAlign.center, style: AppText.headline),
+              BalancedText(l10n.loginInvitedTo(church), style: AppText.headline),
               const SizedBox(height: Space.m),
             ],
             if (inAppBrowser(ref.watch(userAgentProvider)) case final app?) ...[
@@ -185,17 +185,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget _verse(L10n l10n, AppColors c) {
     return Column(
       children: [
-        Text(
-          l10n.loginTagline,
-          textAlign: TextAlign.center,
-          style: AppText.subheadline.copyWith(color: c.secondaryLabel, height: 1.6),
-        ),
+        BalancedText(l10n.loginTagline, style: AppText.subheadline.copyWith(color: c.secondaryLabel, height: 1.6)),
         const SizedBox(height: Space.s),
         Container(width: 20, height: 1, color: c.separator),
         const SizedBox(height: Space.s),
-        Text(
+        BalancedText(
           l10n.loginTaglineSource,
-          textAlign: TextAlign.center,
           style: AppText.footnote.copyWith(color: c.secondaryLabel, letterSpacing: 1),
         ),
       ],
@@ -207,11 +202,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       const SizedBox(height: Space.m),
       Semantics(
         liveRegion: true,
-        child: Text(
-          _error!,
-          textAlign: TextAlign.center,
-          style: AppText.subheadline.copyWith(color: c.destructive),
-        ),
+        child: BalancedText(_error!, style: AppText.subheadline.copyWith(color: c.destructive)),
       ),
     ],
   ];
@@ -290,9 +281,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 onPressed: _busy ? null : _forgot,
               ),
               const SizedBox(height: Space.m),
-              Text(
+              BalancedText(
                 l10n.movedPasswordNote,
-                textAlign: TextAlign.center,
                 style: AppText.footnote.copyWith(color: AppColors.of(context).secondaryLabel),
               ),
             ],

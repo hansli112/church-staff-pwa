@@ -67,13 +67,9 @@ class _NotMember extends ConsumerWidget {
                   padding: const EdgeInsets.all(Space.l),
                   children: [
                     ChurchLogo(url: church.logoUrl),
-                    Text(church.name, textAlign: TextAlign.center, style: AppText.title),
+                    BalancedText(church.name, style: AppText.title),
                     const SizedBox(height: Space.s),
-                    Text(
-                      l10n.churchEntryNotMember,
-                      textAlign: TextAlign.center,
-                      style: AppText.body.copyWith(color: c.secondaryLabel),
-                    ),
+                    BalancedText(l10n.churchEntryNotMember, style: AppText.body.copyWith(color: c.secondaryLabel)),
                     const SizedBox(height: Space.xl),
                     next,
                   ],

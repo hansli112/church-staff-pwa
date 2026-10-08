@@ -100,7 +100,8 @@ class _AddToHomeScreenState extends ConsumerState<AddToHomeScreen> {
     final l10n = L10n.of(context);
     if (!await ref.read(installOfferProvider.notifier).show() || !mounted) return;
     ref.read(addToHomeHiddenProvider.notifier).hide();
-    showToast(context, l10n.addToHomeDone);
+    final church = ref.read(churchProvider).value;
+    showToast(context, l10n.addToHomeDone(church?.homeName ?? church?.name ?? l10n.appName));
     _leave();
   }
 
@@ -110,12 +111,15 @@ class _AddToHomeScreenState extends ConsumerState<AddToHomeScreen> {
     final c = AppColors.of(context);
     final how = ref.watch(addToHomeProvider);
     final offered = how == AddToHome.android && ref.watch(installOfferProvider);
+    // What the icon will be called: the church's home-screen name.
+    final church = ref.watch(churchProvider).value;
+    final iconName = church?.homeName ?? church?.name ?? l10n.appName;
     // Each step is what to tap, as the phone shows it, in order.
     final steps = switch (how) {
       AddToHome.ios => [
         [const _Tap(icon: Icons.more_horiz), _Tap(icon: Icons.ios_share, label: l10n.addToHomeIosShare)],
         [_Tap(icon: Icons.add_box_outlined, label: l10n.addToHome), _Tap(label: l10n.addToHomeIosAdd)],
-        [_Tap(label: l10n.addToHomeIosOpen, button: false)],
+        [_Tap(label: l10n.addToHomeIosOpen(iconName), button: false)],
         [
           _Tap(icon: Icons.person_outline, label: l10n.tabMe),
           _Tap(label: l10n.notifications),
@@ -128,7 +132,7 @@ class _AddToHomeScreenState extends ConsumerState<AddToHomeScreen> {
       AddToHome.android => [
         [const _Tap(icon: Icons.more_vert), _Tap(icon: Icons.add_to_home_screen, label: l10n.addToHomeAndroidAdd)],
         [_Tap(label: l10n.addToHomeAndroidInstall)],
-        [_Tap(label: l10n.addToHomeAndroidOpen, button: false)],
+        [_Tap(label: l10n.addToHomeAndroidOpen(iconName), button: false)],
       ],
     };
     return Scaffold(
@@ -142,7 +146,7 @@ class _AddToHomeScreenState extends ConsumerState<AddToHomeScreen> {
               children: [
                 Icon(Icons.add_to_home_screen, size: 48, color: c.secondaryLabel),
                 const SizedBox(height: Space.m),
-                Text(l10n.addToHome, textAlign: TextAlign.center, style: AppText.title),
+                BalancedText(l10n.addToHome, style: AppText.title),
                 const SizedBox(height: Space.l),
                 if (steps.isNotEmpty)
                   ListSection(
@@ -201,7 +205,12 @@ class _Step extends StatelessWidget {
         children: [
           if (tap.icon case final icon?) Icon(icon, size: 20, color: c.label),
           if (tap.icon != null && tap.label != null) const SizedBox(width: Space.xs),
-          if (tap.label case final label?) Flexible(child: Text(label, style: AppText.body)),
+          if (tap.label case final label?)
+            Flexible(
+              child: tap.button
+                  ? Text(label, style: AppText.body)
+                  : BalancedText(label, textAlign: TextAlign.start, style: AppText.body),
+            ),
         ],
       );
       parts.add(

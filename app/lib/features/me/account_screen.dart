@@ -56,8 +56,9 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       body: ListView(
         padding: const EdgeInsets.all(Space.m),
         children: [
-          Text(
+          BalancedText(
             l10n.deleteAccountBody,
+            textAlign: TextAlign.start,
             style: AppText.body.copyWith(color: c.secondaryLabel),
           ),
           const SizedBox(height: Space.l),

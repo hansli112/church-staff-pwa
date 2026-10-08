@@ -10,7 +10,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../l10n/app_localizations.dart';
+import 'balanced_text.dart';
 import 'tokens.dart';
+
+export 'balanced_text.dart';
 
 /// The one primary action of a screen.
 class PrimaryButton extends StatelessWidget {
@@ -149,8 +152,9 @@ class ListSection extends StatelessWidget {
           if (footer != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(Space.m, Space.s, Space.m, 0),
-              child: Text(
+              child: BalancedText(
                 footer!,
+                textAlign: TextAlign.start,
                 style: AppText.footnote.copyWith(color: c.secondaryLabel),
               ),
             ),
@@ -334,11 +338,7 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: AppText.body.copyWith(color: c.secondaryLabel),
-            ),
+            BalancedText(message, style: AppText.body.copyWith(color: c.secondaryLabel)),
             if (actionLabel != null) ...[
               const SizedBox(height: Space.s),
               SecondaryButton(label: actionLabel!, onPressed: onAction),

@@ -183,9 +183,8 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
                     ),
                   ),
                 const SizedBox(height: Space.s),
-                Text(
+                BalancedText(
                   church.name,
-                  textAlign: TextAlign.center,
                   style: AppText.title2,
                 ),
               ],

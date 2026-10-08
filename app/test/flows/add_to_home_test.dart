@@ -24,7 +24,7 @@ const windows =
 
 /// What the iPhone's steps say, beside the icons: 分享, 加入主畫面 › 加入,
 /// then signing in again, then turning on notifications.
-const iosSteps = ['分享', '加入', '從主畫面打開，再登入一次', '開啟通知'];
+const iosSteps = ['分享', '加入', '點手機上的「恩典堂」圖示打開，再登入一次', '開啟通知'];
 const androidMenu = '加到主畫面';
 const card = '一點就打開，也收得到服事通知';
 
@@ -142,7 +142,7 @@ void main() {
     expect(b.members[cid]![b.auth.currentUser!.uid], isNotNull);
     expect(find.text('加入主畫面'), findsNWidgets(2), reason: 'the title, and the button to tap');
     for (final step in iosSteps) {
-      expect(find.text(step), findsOneWidget);
+      expect(findShown(step), findsOneWidget);
     }
 
     await tapText(tester, '稍後再說');
@@ -211,7 +211,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, '加入主畫面'));
     await settle(tester);
     expect(offer.shown, 1);
-    expect(find.text('已加入主畫面，之後從主畫面的圖示打開'), findsOneWidget);
+    expect(find.text('已加入，之後點手機上的「恩典堂」圖示打開'), findsOneWidget);
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text(card), findsNothing, reason: 'installed: nothing to remind of');
   });
@@ -270,7 +270,7 @@ void main() {
     );
     routerOf(tester).go('/add-to-home');
     await settle(tester);
-    expect(find.text('從主畫面打開，再登入一次'), findsOneWidget);
+    expect(findShown('點手機上的「恩典堂」圖示打開，再登入一次'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

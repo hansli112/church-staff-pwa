@@ -73,14 +73,10 @@ class _ClosedScreenState extends ConsumerState<ClosedScreen> {
               shrinkWrap: true,
               padding: const EdgeInsets.all(Space.l),
               children: [
-                Text(title, textAlign: TextAlign.center, style: AppText.title2),
+                BalancedText(title, style: AppText.title2),
                 if (body.isNotEmpty) ...[
                   const SizedBox(height: Space.s),
-                  Text(
-                    body,
-                    textAlign: TextAlign.center,
-                    style: AppText.body.copyWith(color: c.secondaryLabel),
-                  ),
+                  BalancedText(body, style: AppText.body.copyWith(color: c.secondaryLabel)),
                 ],
                 const SizedBox(height: Space.xl),
                 if (canRestore)

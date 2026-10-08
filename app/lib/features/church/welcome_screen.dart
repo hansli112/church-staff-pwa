@@ -48,17 +48,12 @@ class WelcomeScreen extends ConsumerWidget {
               children: [
                 const VerifyEmailBanner(),
                 const PendingClaimsCard(),
-                Text(
+                BalancedText(
                   l10n.welcomeTitle,
-                  textAlign: TextAlign.center,
                   style: AppText.title,
                 ),
                 const SizedBox(height: Space.s),
-                Text(
-                  l10n.welcomeBody,
-                  textAlign: TextAlign.center,
-                  style: AppText.body.copyWith(color: c.secondaryLabel),
-                ),
+                BalancedText(l10n.welcomeBody, style: AppText.body.copyWith(color: c.secondaryLabel)),
                 const SizedBox(height: Space.xl),
                 PrimaryButton(
                   label: l10n.enterInviteCode,

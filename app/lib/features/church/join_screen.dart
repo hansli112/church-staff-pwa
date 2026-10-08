@@ -91,16 +91,14 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
                   padding: const EdgeInsets.all(Space.l),
                   children: [
                     ChurchLogo(url: logo),
-                    Text(
+                    BalancedText(
                       already ? invite.churchName : l10n.joinTitle(invite.churchName),
-                      textAlign: TextAlign.center,
                       style: AppText.title,
                     ),
                     if (already) ...[
                       const SizedBox(height: Space.s),
-                      Text(
+                      BalancedText(
                         l10n.alreadyMember(invite.churchName),
-                        textAlign: TextAlign.center,
                         style: AppText.body.copyWith(color: c.secondaryLabel),
                       ),
                     ],
@@ -121,9 +119,8 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
                       ),
                     if (_error != null) ...[
                       const SizedBox(height: Space.m),
-                      Text(
+                      BalancedText(
                         _error!,
-                        textAlign: TextAlign.center,
                         style: AppText.subheadline.copyWith(
                           color: c.destructive,
                         ),

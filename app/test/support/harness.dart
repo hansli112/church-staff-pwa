@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/app.dart';
+import 'package:martha/core/design/balanced_text.dart';
 import 'package:martha/core/design/theme.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
@@ -161,4 +162,14 @@ Future<void> sendFontsChange(WidgetTester tester) => tester.binding.defaultBinar
   SystemChannels.system.name,
   SystemChannels.system.codec.encodeMessage({'type': 'fontsChange'}),
   (_) {},
+);
+
+/// [text] as shown, also by a [BalancedText], which joins the characters
+/// inside 「」 with invisible joiners so the term stays on one line.
+Finder findShown(String text) =>
+    find.byWidgetPredicate((w) => (w is Text && w.data == text) || (w is BalancedText && w.text == text));
+
+/// Text shown that contains [part], as [findShown].
+Finder findShownContaining(String part) => find.byWidgetPredicate(
+  (w) => (w is Text && (w.data?.contains(part) ?? false)) || (w is BalancedText && w.text.contains(part)),
 );

@@ -53,7 +53,11 @@ class CalendarSettingsScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(l10n.calUnverifiedNote, style: AppText.subheadline.copyWith(color: c.secondaryLabel)),
+                  BalancedText(
+                    l10n.calUnverifiedNote,
+                    textAlign: TextAlign.start,
+                    style: AppText.subheadline.copyWith(color: c.secondaryLabel),
+                  ),
                   const SizedBox(height: Space.m),
                   PrimaryButton(
                     label: settings?.needsReconnect ?? false ? l10n.calReconnect : l10n.calConnect,

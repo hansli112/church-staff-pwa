@@ -1184,7 +1184,9 @@ class L10nZh extends L10n {
   String get addToHomeLater => '稍後再說';
 
   @override
-  String get addToHomeDone => '已加入主畫面，之後從主畫面的圖示打開';
+  String addToHomeDone(String name) {
+    return '已加入，之後點手機上的「$name」圖示打開';
+  }
 
   @override
   String get addToHomeIosShare => '分享';
@@ -1193,7 +1195,9 @@ class L10nZh extends L10n {
   String get addToHomeIosAdd => '加入';
 
   @override
-  String get addToHomeIosOpen => '從主畫面打開，再登入一次';
+  String addToHomeIosOpen(String name) {
+    return '點手機上的「$name」圖示打開，再登入一次';
+  }
 
   @override
   String get addToHomeAndroidAdd => '加到主畫面';
@@ -1202,7 +1206,9 @@ class L10nZh extends L10n {
   String get addToHomeAndroidInstall => '安裝';
 
   @override
-  String get addToHomeAndroidOpen => '從主畫面打開';
+  String addToHomeAndroidOpen(String name) {
+    return '點手機上的「$name」圖示打開';
+  }
 
   @override
   String get addToHomeCardBody => '一點就打開，也收得到服事通知';

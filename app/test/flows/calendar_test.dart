@@ -44,7 +44,7 @@ void main() {
     await pumpApp(tester, seededChurch());
     await go(tester, '/calendar');
     await tapText(tester, '連接 Google 日曆');
-    expect(find.textContaining('這個應用程式未經驗證'), findsOneWidget);
+    expect(findShownContaining('這個應用程式未經驗證'), findsOneWidget);
   });
 
   testWidgets('after connecting, the admin picks a calendar and everyone sees events', (tester) async {
