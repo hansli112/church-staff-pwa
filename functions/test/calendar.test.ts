@@ -9,15 +9,17 @@ import {
   calendarEvents,
   calendarSelect,
   calendarWrite,
-  decrypt,
-  encrypt,
   GoogleAuthRevoked,
+  monthOf,
+  monthsOf,
+  releaseCalendarIfConnector,
   type CalendarEvent,
   type GoogleApi,
   type OAuthConfig,
 } from '../src/calendar.js';
-import { deliver, webhookSave } from '../src/webhook.js';
-import { caller, clearFirestore, db, deps, fakeFetch, rejectsWith, seedChurch, setNow } from './support.js';
+import { seal, unseal } from '../src/sealing.js';
+import { notify, webhookSave } from '../src/webhook.js';
+import { caller, clearFirestore, db, deps as plain, fakeFetch, rejectsWith, seedChurch, setNow } from './support.js';
 
 const config: OAuthConfig = {
   clientId: 'client',
@@ -26,6 +28,8 @@ const config: OAuthConfig = {
   appUrl: 'https://app.example',
   tokenKey: randomBytes(32).toString('base64'),
 };
+/** Webhook secrets are sealed with the same key, as the wiring does. */
+const deps = { ...plain, secretKey: config.tokenKey };
 
 function fakeGoogle() {
   const calls = { events: 0, revoked: [] as string[], removed: [] as string[] };
@@ -98,7 +102,7 @@ describe('connecting', () => {
     assert.equal(back, 'https://app.example/me/calendar?result=connected');
     const token = await db.doc('calendarTokens/C1').get();
     assert.notEqual(token.get('token'), 'refresh-123');
-    assert.equal(decrypt(token.get('token'), config.tokenKey), 'refresh-123');
+    assert.equal(unseal(token.get('token'), config.tokenKey), 'refresh-123');
     const settings = await db.doc('churches/C1/settings/calendar').get();
     assert.deepEqual(Object.keys(settings.data()!).sort(), ['calendarId', 'calendarName', 'connected', 'needsReconnect', 'updatedAt']);
   });
@@ -125,10 +129,11 @@ describe('connecting', () => {
     assert.equal((await db.doc('calendarTokens/C1').get()).exists, false);
   });
 
-  test('encryption round-trips and is not deterministic', () => {
-    const a = encrypt('x', config.tokenKey);
-    assert.notEqual(a, encrypt('x', config.tokenKey));
-    assert.equal(decrypt(a, config.tokenKey), 'x');
+  test('sealing round-trips and is not deterministic', () => {
+    const a = seal('x', config.tokenKey);
+    assert.notEqual(a, seal('x', config.tokenKey));
+    assert.equal(unseal(a, config.tokenKey), 'x');
+    assert.throws(() => unseal(a, randomBytes(32).toString('base64')));
   });
 });
 
@@ -229,7 +234,6 @@ describe('writing', () => {
 
 describe('releasing the grant', () => {
   test('when the admin who connected it leaves, the grant is revoked; another admin leaving changes nothing', async () => {
-    const { releaseCalendarIfConnector } = await import('../src/calendar.js');
     await church();
     await db.doc('churches/C1/members/editor').update({ role: 'admin' });
     const { google, calls } = fakeGoogle();
@@ -242,7 +246,6 @@ describe('releasing the grant', () => {
   });
 
   test('cache months follow UTC+8, and a moved event clears both months', async () => {
-    const { monthOf } = await import('../src/calendar.js');
     assert.equal(monthOf('2026-10-31T17:00:00.000Z'), '2026-11');
     assert.equal(monthOf('2026-10-31'), '2026-10');
     await church();
@@ -262,6 +265,92 @@ describe('releasing the grant', () => {
   });
 });
 
+describe('the months an event is cached in', () => {
+  test('one month, or each month it spans', () => {
+    assert.deepEqual(monthsOf('2026-10-10', '2026-10-11'), ['2026-10']);
+    assert.deepEqual(monthsOf('2026-09-30', '2026-10-03'), ['2026-09', '2026-10']);
+    assert.deepEqual(monthsOf('2026-12-30', '2027-02-02'), ['2026-12', '2027-01', '2027-02']);
+  });
+
+  test('an all-day event ending on the 1st (exclusive) is not in that month', () => {
+    assert.deepEqual(monthsOf('2026-10-30', '2026-11-01'), ['2026-10']);
+  });
+
+  test('a timed event crossing midnight UTC+8 into a new month is in both', () => {
+    // 22:00 on 10/31 to 01:00 on 11/1, Taipei.
+    assert.deepEqual(monthsOf('2026-10-31T14:00:00Z', '2026-10-31T17:00:00Z'), ['2026-10', '2026-11']);
+    assert.deepEqual(monthsOf('2026-10-31T22:00:00+08:00', '2026-11-01T00:00:00+08:00'), ['2026-10'], 'ends at midnight');
+  });
+
+  test('without a usable end, the start month', () => {
+    assert.deepEqual(monthsOf('2026-10-10'), ['2026-10']);
+    assert.deepEqual(monthsOf('2026-10-10', 'soon'), ['2026-10']);
+    assert.deepEqual(monthsOf('2026-10-10', '2026-09-01'), ['2026-10']);
+  });
+});
+
+describe('writing clears every month an event was or is in', () => {
+  async function cached() {
+    for (const m of ['2026-09', '2026-10', '2026-11', '2026-12']) {
+      await db.doc(`calendarCache/C1_${m}`).set({ cid: 'C1', month: m, events: [] });
+    }
+  }
+  const left = async () =>
+    (await db.collection('calendarCache').get()).docs.map((x) => x.get('month') as string).sort();
+
+  test('editing an event spanning Sep 30–Oct 2 clears both months', async () => {
+    await church();
+    const { google } = fakeGoogle();
+    await connect(google);
+    await cached();
+    await calendarWrite({ ...deps, google, config }, caller('pastor'), {
+      churchId: 'C1',
+      op: 'upsert',
+      previous: { start: '2026-09-30', end: '2026-10-03' },
+      event: { id: 'e1', title: '退修會', start: '2026-09-30', end: '2026-10-03', allDay: true },
+    });
+    assert.deepEqual(await left(), ['2026-11', '2026-12']);
+  });
+
+  test('moving a spanning event clears where it was and where it is', async () => {
+    await church();
+    const { google } = fakeGoogle();
+    await connect(google);
+    await cached();
+    await calendarWrite({ ...deps, google, config }, caller('pastor'), {
+      churchId: 'C1',
+      op: 'upsert',
+      previous: { start: '2026-09-30T20:00:00+08:00', end: '2026-10-01T02:00:00+08:00' },
+      event: { id: 'e1', title: '守夜禱告', start: '2026-12-01T20:00:00+08:00', end: '2026-12-01T22:00:00+08:00', allDay: false },
+    });
+    assert.deepEqual(await left(), ['2026-11']);
+  });
+
+  test('deleting an event spanning Sep 30–Oct 2 clears both months', async () => {
+    await church();
+    const { google } = fakeGoogle();
+    await connect(google);
+    await cached();
+    await calendarWrite({ ...deps, google, config }, caller('pastor'), {
+      churchId: 'C1',
+      op: 'delete',
+      eventId: 'gone',
+      event: { start: '2026-09-30', end: '2026-10-03' },
+    });
+    assert.deepEqual(await left(), ['2026-11', '2026-12']);
+  });
+
+  test('a delete also clears where Google says the event was', async () => {
+    await church();
+    const { google } = fakeGoogle();
+    await connect(google);
+    await cached();
+    // e1 is 10/10 on Google; an older client sends no event at all.
+    await calendarWrite({ ...deps, google, config }, caller('pastor'), { churchId: 'C1', op: 'delete', eventId: 'e1' });
+    assert.deepEqual(await left(), ['2026-09', '2026-11', '2026-12']);
+  });
+});
+
 describe('calendar webhooks', () => {
   const HOOK = 'https://n8n.example/hook';
 
@@ -271,7 +360,7 @@ describe('calendar webhooks', () => {
     await connect(google);
     const f = fakeFetch({ [HOOK]: { status: 200 } });
     const d = { ...deps, fetch: f.fetch, google, config };
-    await webhookSave({ ...d, secretKey: config.tokenKey }, caller('pastor'), { churchId: 'C1', url: HOOK, events });
+    await webhookSave(d, caller('pastor'), { churchId: 'C1', url: HOOK, events });
     await db.doc('churches/C1').update({ name: '恩典堂' });
     await db.doc('churches/C1/members/editor').update({ name: '林同工' });
     const sent = () => f.requests.map((r) => ({ event: r.headers['x-martha-event'], body: JSON.parse(r.body) }));
@@ -341,7 +430,7 @@ describe('calendar webhooks', () => {
     await connect(google);
     const f = fakeFetch({ [HOOK]: { status: 500 } });
     const d = { ...deps, fetch: f.fetch, google, config };
-    await webhookSave({ ...d, secretKey: config.tokenKey }, caller('pastor'), { churchId: 'C1', url: HOOK, events: { calendar: true } });
+    await webhookSave(d, caller('pastor'), { churchId: 'C1', url: HOOK, events: { calendar: true } });
     const r = await calendarWrite(d, caller('pastor'), { churchId: 'C1', op: 'upsert', event: { title: 'x', start: '2026-10-10', end: '2026-10-11', allDay: true } });
     assert.equal(r.event!.id, 'new-id');
     assert.equal((await db.doc('churches/C1/settings/webhook').get()).get('lastDelivery.status'), 500);
@@ -354,7 +443,7 @@ describe('calendar webhooks', () => {
       calendarWrite(d, caller('pastor'), { churchId: 'C1', op: 'upsert', event: { title: 'x', start: '2026-10-10', end: '2026-10-11', allDay: true } }),
       'churchClosed',
     );
-    assert.equal(await deliver({ ...d, secretKey: config.tokenKey }, 'C1', 'calendar.created', {}), null);
+    assert.equal(await notify(d, 'C1', 'calendar.created', {}), null);
     assert.equal(sent().length, 0);
   });
 });

@@ -22,6 +22,12 @@ const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/hei
 /** Pinned models, tried in order (self-host measured these on real sheets). */
 export const DEFAULT_MODELS = ['gemini-3.6-flash', 'gemini-3.7-flash'];
 
+/** GEMINI_MODELS, comma separated, or [DEFAULT_MODELS] when it names none. */
+export function geminiModels(env: string | undefined): string[] {
+  const models = (env ?? '').split(',').map((m) => m.trim()).filter(Boolean);
+  return models.length ? models : DEFAULT_MODELS;
+}
+
 /** Estimate only: USD per million tokens, flash, 2026-10. */
 const PRICE_PER_M = { input: 0.3, output: 2.5 };
 

@@ -1,13 +1,23 @@
 import assert from 'node:assert/strict';
+import { randomBytes } from 'node:crypto';
 import { beforeEach, describe, test } from 'node:test';
 
 import { Timestamp } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 
 import { deleteAccount } from '../src/account.js';
+import type { CalDeps, GoogleApi } from '../src/calendar.js';
 import { previewInvite, redeemInvite } from '../src/invites.js';
 import { notifyMembers } from '../src/push.js';
-import { onLogoUploaded, onMemberLeft, syncProfileName } from '../src/triggers.js';
+import { seal } from '../src/sealing.js';
+import {
+  editorOf,
+  onLogoUploaded,
+  onMemberDeleted,
+  onMemberLeft,
+  onMemberUpdated,
+  syncProfileName,
+} from '../src/triggers.js';
 import { auth, caller, clearFirestore, db, deps, rejectsWith, seedChurch, setNow } from './support.js';
 
 const appUrl = 'https://app.example';
@@ -222,5 +232,81 @@ describe('triggers', () => {
     assert.equal(await onLogoUploaded(logoDeps, 'churches/C1/logo.png', '123'), true);
     assert.equal((await db.doc('churches/C1').get()).get('logoVersion'), '123');
     assert.equal(await onLogoUploaded(logoDeps, 'other/thing.png', '1'), false);
+  });
+});
+
+describe('member triggers', () => {
+  const key = randomBytes(32).toString('base64');
+  let revoked: string[];
+  let cal: CalDeps;
+
+  /** C1 with admins alice (who connected the calendar) and bob, and staff carol. */
+  async function connected() {
+    await seedChurch('C1', { alice: 'admin', bob: 'admin', carol: 'staff' });
+    await db.doc('calendarTokens/C1').set({ token: seal('refresh-alice', key), connectedBy: 'alice', calendarId: 'cal' });
+    await db.doc('churches/C1/settings/calendar').set({ connected: true });
+    await db.doc('users/alice').set({ fcm: { phone: 'tok-alice' } });
+    await db.doc('users/bob').set({ fcm: { phone: 'tok-bob' } });
+  }
+
+  /** Changes a member doc and returns it before and after. */
+  async function change(uid: string, fields: Record<string, unknown>) {
+    const ref = db.doc(`churches/C1/members/${uid}`);
+    const before = await ref.get();
+    await ref.update(fields);
+    return [before, await ref.get()] as const;
+  }
+
+  beforeEach(() => {
+    revoked = [];
+    const google = { revoke: async (rt: string) => void revoked.push(rt) } as unknown as GoogleApi;
+    cal = { ...deps, secretKey: key, google, config: { clientId: '', clientSecret: '', redirectUri: '', appUrl, tokenKey: key } };
+  });
+
+  test('who made a write: a person, or nobody for the backend itself', () => {
+    assert.equal(editorOf({ authType: 'unknown', authId: 'alice' }), 'alice');
+    assert.equal(editorOf({ authType: 'service_account', authId: 'sa@example.com' }), 'sa@example.com');
+    assert.equal(editorOf({ authType: 'system', authId: 'anything' }), undefined);
+    assert.equal(editorOf({ authType: 'unauthenticated' }), undefined);
+  });
+
+  test('an admin made staff lets go of the calendar they connected', async () => {
+    await connected();
+    assert.equal(await onMemberUpdated(cal, 'C1', ...(await change('alice', { role: 'staff' }))), true);
+    assert.deepEqual(revoked, ['refresh-alice']);
+    assert.equal((await db.doc('calendarTokens/C1').get()).exists, false);
+  });
+
+  test('other member changes keep the calendar', async () => {
+    await connected();
+    assert.equal(await onMemberUpdated(cal, 'C1', ...(await change('alice', { name: '愛麗絲' }))), false, 'still admin');
+    assert.equal(await onMemberUpdated(cal, 'C1', ...(await change('bob', { role: 'staff' }))), false, 'not who connected');
+    assert.equal(await onMemberUpdated(cal, 'C1', ...(await change('carol', { role: 'admin' }))), false, 'promoted');
+    assert.equal((await db.doc('calendarTokens/C1').get()).exists, true);
+  });
+
+  test('the connector leaving: the calendar goes and the admins hear, independently', async () => {
+    await connected();
+    const sent: string[][] = [];
+    const messaging = {
+      sendEachForMulticast: async (m: { tokens: string[] }) => {
+        sent.push(m.tokens);
+        return { successCount: m.tokens.length, failureCount: 0, responses: m.tokens.map(() => ({ success: true })) };
+      },
+    } as never;
+    const alice = await db.doc('churches/C1/members/alice').get();
+    await alice.ref.delete();
+    assert.deepEqual(await onMemberDeleted({ ...cal, messaging, appUrl }, 'C1', alice, 'alice'), { calendar: true, memberLeft: 1 });
+    assert.deepEqual(revoked, ['refresh-alice']);
+    assert.deepEqual(sent, [['tok-bob']]);
+  });
+
+  test('the push failing still releases the calendar', async () => {
+    await connected();
+    const messaging = { sendEachForMulticast: async () => Promise.reject(new Error('fcm down')) } as never;
+    const alice = await db.doc('churches/C1/members/alice').get();
+    await alice.ref.delete();
+    await assert.rejects(onMemberDeleted({ ...cal, messaging, appUrl }, 'C1', alice, 'alice'), /fcm down/);
+    assert.equal((await db.doc('calendarTokens/C1').get()).exists, false);
   });
 });

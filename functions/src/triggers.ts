@@ -1,11 +1,45 @@
 import { FieldValue, type DocumentSnapshot } from 'firebase-admin/firestore';
 import type { Storage } from 'firebase-admin/storage';
 
-import { CHURCH_ID } from './access.js';
-import type { Deps } from './common.js';
+import { CHURCH_ID, isChurchOpen } from './access.js';
+import { releaseCalendarIfConnector, type CalDeps } from './calendar.js';
+import { runEach, type Deps } from './common.js';
 import { ICON_FILES, iconStoragePath, makeIcons } from './icons.js';
 import { personName } from './limits.js';
 import { adminUids, notifyMembers, type PushDeps } from './push.js';
+
+/**
+ * Who made a Firestore write, from a trigger's auth context: the uid of a
+ * person, or undefined for the backend itself (authType `system`).
+ */
+export const editorOf = (auth: { authType: string; authId?: string }) =>
+  auth.authType === 'system' ? undefined : auth.authId;
+
+/**
+ * A member doc deleted: removed by an admin, left on their own, or their
+ * account deleted. A calendar they connected goes with them, and their
+ * leaving is told to the admins; one failing never stops the other.
+ */
+export async function onMemberDeleted(
+  deps: CalDeps & PushDeps,
+  cid: string,
+  member: DocumentSnapshot,
+  deletedBy: string | undefined,
+) {
+  return runEach(`member ${cid}/${member.id} deleted`, {
+    calendar: () => releaseCalendarIfConnector(deps, cid, member.id),
+    memberLeft: () => onMemberLeft(deps, cid, member, deletedBy),
+  });
+}
+
+/**
+ * A member doc changed. An admin who is no longer one lets go of the
+ * church's calendar if they connected it. Returns whether it was released.
+ */
+export async function onMemberUpdated(deps: CalDeps, cid: string, before: DocumentSnapshot, after: DocumentSnapshot) {
+  if (before.get('role') !== 'admin' || after.get('role') === 'admin') return false;
+  return releaseCalendarIfConnector(deps, cid, after.id);
+}
 
 /**
  * A member's name lives on each member doc (what the church sees) and on
@@ -40,7 +74,7 @@ export async function onMemberLeft(
 ) {
   if (!deletedBy || deletedBy !== member.id) return 0;
   const church = await deps.db.doc(`churches/${cid}`).get();
-  if (church.get('status') !== 'active') return 0;
+  if (!isChurchOpen(church)) return 0;
   const name = (member.get('name') as string | undefined) || '有人';
   return notifyMembers(deps, cid, await adminUids(deps.db, cid), 'memberLeft', {
     title: church.get('name') as string,

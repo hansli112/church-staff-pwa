@@ -1,11 +1,17 @@
 import assert from 'node:assert/strict';
+import { randomBytes } from 'node:crypto';
 import { beforeEach, describe, test } from 'node:test';
 
-import { Timestamp } from 'firebase-admin/firestore';
+import { Timestamp, type CollectionReference } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 
-import { churchPreview, createChurch, deleteChurch, purgeDeletedChurches, restoreChurch } from '../src/church.js';
+import type { GoogleApi } from '../src/calendar.js';
+import { churchPreview, createChurch, deleteChurch, purgeDeletedChurches, restoreChurch, type PurgeDeps } from '../src/church.js';
+import { emailHash } from '../src/claim.js';
+import { seal } from '../src/sealing.js';
 import { nameKey } from '../src/text.js';
-import { caller, clearFirestore, db, deps, rejectsWith, seedChurch, setNow } from './support.js';
+import { webhookSave } from '../src/webhook.js';
+import { caller, clearFirestore, db, deps, purgeDeps, rejectsWith, seedChurch, setNow } from './support.js';
 
 beforeEach(async () => {
   await clearFirestore();
@@ -112,7 +118,7 @@ describe('delete and restore', () => {
       deletedAt: Timestamp.fromDate(new Date('2026-09-20T00:00:00Z')),
     });
 
-    const purged = await purgeDeletedChurches(deps);
+    const purged = await purgeDeletedChurches(purgeDeps);
 
     assert.deepEqual(purged, ['Old']);
     assert.equal((await db.doc('churches/Old').get()).exists, false);
@@ -142,13 +148,99 @@ describe('suspension', () => {
   });
 });
 
-describe('purge hooks', () => {
-  test('purge calls the hook before deleting, e.g. to revoke the calendar grant', async () => {
-    await seedChurch('Old', { alice: 'admin' });
-    await db.doc('churches/Old').update({ status: 'deleted', deletedAt: Timestamp.fromDate(new Date('2026-08-01T00:00:00Z')) });
-    const seen: string[] = [];
-    await purgeDeletedChurches(deps, undefined, async (cid) => seen.push(cid));
-    assert.deepEqual(seen, ['Old']);
+describe('purging forgets everything about the church', () => {
+  const bucket = getStorage().bucket('demo-martha.appspot.com');
+  const key = randomBytes(32).toString('base64');
+  const hash = emailHash('mei@example.com');
+
+  /** A church with something in every store that keeps anything per church. */
+  async function everyStore(cid: string, pendingId: string) {
+    await seedChurch(cid, { [`${cid.toLowerCase()}-admin`]: 'admin' });
+    const admin = caller(`${cid.toLowerCase()}-admin`);
+    const d = { ...deps, secretKey: key };
+    await db.doc(`churches/${cid}/rosters/2026-10-04_sunday`).set({ type: 'sunday', dateKey: '2026-10-04', duties: [] });
+    // Calendar
+    await db.doc(`calendarTokens/${cid}`).set({ token: seal(`refresh-${cid}`, key), connectedBy: admin.uid, calendarId: 'cal' });
+    await db.doc(`churches/${cid}/settings/calendar`).set({ connected: true, calendarId: 'cal' });
+    await db.doc(`calendarCache/${cid}_2026-10`).set({ cid, month: '2026-10', events: [] });
+    await db.doc(`calendarStates/state-${cid}`).set({ cid, uid: admin.uid });
+    // Webhook
+    await webhookSave(d, admin, { churchId: cid, url: 'https://n8n.example/hook', events: { calendar: true, roster: true } });
+    await db.doc(`webhookOutbox/${cid}/rosterChanges/ev1`).set({ date: '2026-10-04', at: Timestamp.now() });
+    // Church link
+    await db.doc(`churches/${cid}/settings/link`).set({ source: 'https://daily.example/today.json' });
+    await db.doc(`linkSources/${cid}`).set({ fetchMinute: 270, nextAt: Timestamp.now() });
+    // Invites
+    await db.doc(`invites/INVITE${cid.toUpperCase()}`).set({ cid, expiresAt: Timestamp.now() });
+    // A pending member from a move, in the index shared with other churches
+    await db.doc(`churches/${cid}/pendingMembers/${pendingId}`).set({ name: '美玉', emailHash: hash });
+    await db.doc(`pendingIndex/${hash}`).set({ churches: { [cid]: pendingId } }, { merge: true });
+    // Logo and icons
+    await bucket.file(`churches/${cid}/logo.png`).save('png');
+    await bucket.file(`churches/${cid}/logo-1-icon-192.png`).save('png');
+  }
+
+  /** Every document in the database, with its data, and every stored file. */
+  async function everything() {
+    const out: string[] = [];
+    const walk = async (cols: CollectionReference[]) => {
+      for (const c of cols) {
+        for (const ref of await c.listDocuments()) {
+          const snap = await ref.get();
+          if (snap.exists) out.push(`${ref.path} ${JSON.stringify(snap.data())}`);
+          await walk(await ref.listCollections());
+        }
+      }
+    };
+    await walk(await db.listCollections());
+    const [files] = await bucket.getFiles({ prefix: 'churches/' });
+    return [...out, ...files.map((f) => f.name)].sort();
+  }
+
+  function purgeWith(over: Partial<PurgeDeps> = {}) {
+    const revoked: string[] = [];
+    const google = { revoke: async (rt: string) => void revoked.push(rt) } as unknown as GoogleApi;
+    const d: PurgeDeps = { ...purgeDeps, secretKey: key, google, config: { ...purgeDeps.config, tokenKey: key }, bucket, ...over };
+    return { d, revoked };
+  }
+
+  beforeEach(async () => {
+    await bucket.deleteFiles({ prefix: 'churches/' });
+    await everyStore('Gone', 'p-gone');
+    await everyStore('Live', 'p-live');
+    await db.doc('churches/Gone').update({ status: 'deleted', deletedAt: Timestamp.fromDate(new Date('2026-08-01T00:00:00Z')) });
+  });
+
+  test('nothing about the purged church is left; another church keeps all of its own', async () => {
+    const before = await everything();
+    const stores = ['calendarTokens/Gone', 'calendarCache/Gone_', 'calendarStates/state-Gone', 'webhookSecrets/Gone',
+      'webhookOutbox/Gone/', 'linkSources/Gone', 'invites/INVITEGONE', 'pendingIndex/', 'churchNames/gone',
+      'churches/Gone/settings/webhook', 'churches/Gone/logo.png'];
+    for (const store of stores) {
+      assert.ok(before.some((line) => line.startsWith(store) && /gone/i.test(line)), `seeded ${store}`);
+    }
+    const { d, revoked } = purgeWith();
+
+    assert.deepEqual(await purgeDeletedChurches(d), ['Gone']);
+
+    const after = await everything();
+    assert.deepEqual(after.filter((line) => /gone/i.test(line)), []);
+    const live = (lines: string[]) => lines.filter((line) => !/gone/i.test(line) && !line.startsWith('pendingIndex/'));
+    assert.deepEqual(live(after), live(before));
+    assert.deepEqual((await db.doc(`pendingIndex/${hash}`).get()).get('churches'), { Live: 'p-live' });
+    assert.deepEqual(revoked, ['refresh-Gone'], 'its Google grant is revoked');
+  });
+
+  test('a store that cannot be forgotten leaves the church for the next run', async () => {
+    const failing = { deleteFiles: async () => Promise.reject(new Error('storage down')) };
+    const { d } = purgeWith({ bucket: failing });
+
+    assert.deepEqual(await purgeDeletedChurches(d), []);
+    assert.ok((await db.doc('churches/Gone').get()).exists, 'found again tomorrow');
+    assert.equal((await db.doc('linkSources/Gone').get()).exists, false, 'the other stores were still forgotten');
+
+    assert.deepEqual(await purgeDeletedChurches(purgeWith().d), ['Gone']);
+    assert.deepEqual((await everything()).filter((line) => /gone/i.test(line)), []);
   });
 });
 

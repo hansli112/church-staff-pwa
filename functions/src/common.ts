@@ -99,8 +99,35 @@ export function id(value: unknown): string {
 
 export const serverTime = () => FieldValue.serverTimestamp();
 
+/** The time zone every church is shown in (UTC+8, the same for HK and MY). */
+export const CHURCH_TIME_ZONE = 'Asia/Taipei';
+
 /** `YYYY-MM-DD` of [date] in Asia/Taipei (UTC+8, the same for HK and MY). */
 export function dateKeyUtc8(date: Date): string {
   const shifted = new Date(date.getTime() + 8 * 3600 * 1000);
   return shifted.toISOString().slice(0, 10);
+}
+
+/**
+ * Runs [steps] side by side, so one failing never stops another, and
+ * returns what each gave. A failure is logged under [label] and its step's
+ * name; once all have finished the first is thrown, so the invocation
+ * still shows as failed.
+ */
+export async function runEach<T extends Record<string, () => Promise<unknown>>>(
+  label: string,
+  steps: T,
+): Promise<{ [K in keyof T]: Awaited<ReturnType<T[K]>> }> {
+  const names = Object.keys(steps);
+  const results = await Promise.allSettled(names.map((n) => steps[n]()));
+  const failures: unknown[] = [];
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled') return;
+    console.error(`${label}: ${names[i]} failed`, r.reason);
+    failures.push(r.reason);
+  });
+  if (failures.length) throw failures[0];
+  return Object.fromEntries(
+    names.map((n, i) => [n, (results[i] as PromiseFulfilledResult<unknown>).value]),
+  ) as { [K in keyof T]: Awaited<ReturnType<T[K]>> };
 }

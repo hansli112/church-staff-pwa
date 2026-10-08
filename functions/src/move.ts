@@ -1,9 +1,8 @@
-import { createHash } from 'node:crypto';
-
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import type { Storage } from 'firebase-admin/storage';
 
 import { openChurch } from './church.js';
+import { emailHash } from './claim.js';
 import { fail, requireCaller, text, type Caller, type Deps } from './common.js';
 import { buildImport, type SelfHostSnapshot, type SourceDoc } from './importer.js';
 import { TEXT_LIMITS } from './limits.js';
@@ -35,8 +34,6 @@ export type MoveDeps = Deps & { bucket: Pick<ReturnType<Storage['bucket']>, 'fil
 /** Keys never read from a move file, wherever they appear. */
 const SECRET_KEYS = new Set(['passwordHash', 'passwordSalt', 'salt', 'hash', 'password']);
 
-/** The email as the pending index keys it. */
-export const emailHash = (email: string) => createHash('sha256').update(email.trim().toLowerCase()).digest('hex');
 
 /** Timestamps written as `{"__time__": ISO}` or `{_seconds, _nanoseconds}` become Date-like. */
 function revive(value: unknown): unknown {

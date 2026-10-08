@@ -1,6 +1,6 @@
-// Entry point: wires the handlers to Cloud Functions triggers. Handlers take
-// their dependencies as arguments so tests run them against the emulators
-// without the Functions runtime.
+// Entry point: declares the Cloud Functions and wires each to its handler.
+// Handlers take their dependencies as arguments, built here and only here,
+// so tests run them against the emulators without the Functions runtime.
 import { Environment } from '@apple/app-store-server-library';
 import { applicationDefault, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
@@ -14,7 +14,7 @@ import {
   onDocumentUpdated,
   onDocumentWrittenWithAuthContext,
 } from 'firebase-functions/v2/firestore';
-import { onCall, onRequest, type CallableRequest, type Request } from 'firebase-functions/v2/https';
+import { onCall, onRequest, type CallableOptions, type CallableRequest, type Request } from 'firebase-functions/v2/https';
 import type { Response } from 'express';
 import { defineSecret } from 'firebase-functions/params';
 import { onMessagePublished } from 'firebase-functions/v2/pubsub';
@@ -27,7 +27,7 @@ import * as church from './church.js';
 import * as claim from './claim.js';
 import * as churchLink from './churchLink.js';
 import { churchPage as churchPageHandler } from './churchPage.js';
-import { PROD_PROJECT, REGION, appUrl, type Caller, type Deps } from './common.js';
+import { PROD_PROJECT, REGION, appUrl, runEach, type Caller, type Deps } from './common.js';
 import * as funding from './funding.js';
 import * as fundingApple from './fundingApple.js';
 import * as fundingNewebpay from './fundingNewebpay.js';
@@ -39,13 +39,36 @@ import * as notifications from './notifications.js';
 import * as operator from './operator.js';
 import * as photo from './photo.js';
 import { monitoringUsageReader, writeDailyStats } from './stats.js';
-import * as rosterWebhook from './rosterWebhook.js';
+import * as rosterChange from './rosterChange.js';
 import * as triggers from './triggers.js';
 import * as webhook from './webhook.js';
 
 initializeApp();
 
+// Dependencies
 const deps = (): Deps => ({ db: getFirestore(), now: () => new Date(), fetch: globalThis.fetch });
+const bucket = () => getStorage().bucket();
+const withPush = <D extends Deps>(d: D) => ({ ...d, messaging: getMessaging(), appUrl: appUrl() });
+const pushDeps = () => withPush(deps());
+
+// One key seals both the calendar refresh tokens and the webhook secrets
+// (sealing.ts). Secrets are read only by functions that list them.
+const oauthClientId = defineSecret('GOOGLE_OAUTH_CLIENT_ID');
+const oauthClientSecret = defineSecret('GOOGLE_OAUTH_CLIENT_SECRET');
+const sealKey = defineSecret('CALENDAR_TOKEN_KEY');
+const calendarSecrets = [oauthClientId, oauthClientSecret, sealKey];
+const hookDeps = (): webhook.WebhookDeps => ({ ...deps(), secretKey: sealKey.value() });
+const calDeps = (): calendar.CalDeps => ({
+  ...hookDeps(),
+  google: calendar.googleApi(),
+  config: {
+    clientId: oauthClientId.value(),
+    clientSecret: oauthClientSecret.value(),
+    redirectUri: `https://${REGION}-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/calendarCallback`,
+    appUrl: appUrl(),
+    tokenKey: sealKey.value(),
+  },
+});
 
 function caller(req: CallableRequest): Caller | null {
   if (!req.auth) return null;
@@ -60,26 +83,10 @@ function caller(req: CallableRequest): Caller | null {
 }
 
 const callOpts = { region: REGION, cors: true, maxInstances: 10 };
-
-// Calendar secrets and deps, defined early: several triggers use them.
-const oauthClientId = defineSecret('GOOGLE_OAUTH_CLIENT_ID');
-const oauthClientSecret = defineSecret('GOOGLE_OAUTH_CLIENT_SECRET');
-const calendarTokenKey = defineSecret('CALENDAR_TOKEN_KEY');
-const calendarSecrets = [oauthClientId, oauthClientSecret, calendarTokenKey];
-const calDeps = () => ({
-  ...deps(),
-  google: calendar.googleApi(),
-  config: {
-    clientId: oauthClientId.value(),
-    clientSecret: oauthClientSecret.value(),
-    redirectUri: `https://${REGION}-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/calendarCallback`,
-    appUrl: appUrl(),
-    tokenKey: calendarTokenKey.value(),
-  },
-});
-type Handler = (d: Deps, c: Caller | null, data: unknown) => Promise<unknown>;
-const callable = (handler: Handler) =>
-  onCall(callOpts, (req) => handler(deps(), caller(req), req.data));
+type Handler<D> = (d: D, c: Caller | null, data: unknown) => Promise<unknown>;
+/** A callable function: [handler] with deps from [make], [opts] on top of callOpts. */
+const callable = <D = Deps>(handler: Handler<D>, make: () => D = deps as () => D, opts: CallableOptions = {}) =>
+  onCall({ ...callOpts, ...opts }, (req) => handler(make(), caller(req), req.data));
 
 // Churches
 export const createChurch = callable(church.createChurch);
@@ -89,14 +96,13 @@ export const churchPreview = callable(church.churchPreview);
 export const purgeDeletedChurches = onSchedule(
   { region: REGION, schedule: 'every day 03:00', timeZone: 'Asia/Taipei', secrets: calendarSecrets },
   async () => {
-    const cal = calDeps();
-    await church.purgeDeletedChurches(deps(), getStorage(), (cid) => calendar.forgetCalendar(cal, cid));
+    await church.purgeDeletedChurches({ ...calDeps(), bucket: bucket() });
   },
 );
 
 // Church URL: /c/<id> pages, manifests and icons, through Hosting.
 export const churchPage = onRequest({ region: REGION, maxInstances: 10 }, async (req, res) => {
-  const r = await churchPageHandler({ ...deps(), bucket: getStorage().bucket(), appUrl: appUrl() }, req.path);
+  const r = await churchPageHandler({ ...deps(), bucket: bucket(), appUrl: appUrl() }, req.path);
   res.status(r.status).set(r.headers).send(r.body);
 });
 
@@ -109,24 +115,18 @@ export const fetchChurchLinks = onSchedule(
   },
 );
 
-// 外部通知 (webhooks). The secret is sealed with the calendar token key.
-type WebhookHandler = (d: webhook.WebhookDeps, c: Caller | null, data: unknown) => Promise<unknown>;
-const webhookDeps = (): webhook.WebhookDeps => ({ ...deps(), secretKey: calendarTokenKey.value() });
-const webhookCallable = (handler: WebhookHandler) =>
-  onCall({ ...callOpts, secrets: [calendarTokenKey] }, (req) => handler(webhookDeps(), caller(req), req.data));
-export const webhookSave = webhookCallable(webhook.webhookSave);
-export const webhookRotateSecret = webhookCallable(webhook.webhookRotateSecret);
-export const webhookTest = webhookCallable(webhook.webhookTest);
+// 外部通知 (webhooks)
+const webhookOpts = { secrets: [sealKey] };
+export const webhookSave = callable(webhook.webhookSave, hookDeps, webhookOpts);
+export const webhookRotateSecret = callable(webhook.webhookRotateSecret, hookDeps, webhookOpts);
+export const webhookTest = callable(webhook.webhookTest, hookDeps, webhookOpts);
 
 // 自助搬家 (self-serve move from self-host)
-type MoveHandler = (d: move.MoveDeps, c: Caller | null, data: unknown) => Promise<unknown>;
-const moveCallable = (handler: MoveHandler) =>
-  onCall({ ...callOpts, timeoutSeconds: 300, memory: '1GiB' }, (req) =>
-    handler({ ...deps(), bucket: getStorage().bucket() }, caller(req), req.data),
-  );
-export const movePreview = moveCallable(move.movePreview);
-export const moveCommit = moveCallable(move.moveCommit);
-export const pendingClaims = onCall(callOpts, (req) => claim.pendingClaims(deps(), caller(req)));
+const moveDeps = (): move.MoveDeps => ({ ...deps(), bucket: bucket() });
+const moveOpts: CallableOptions = { timeoutSeconds: 300, memory: '1GiB' };
+export const movePreview = callable(move.movePreview, moveDeps, moveOpts);
+export const moveCommit = callable(move.moveCommit, moveDeps, moveOpts);
+export const pendingClaims = callable(claim.pendingClaims);
 export const claimPending = callable(claim.claimPending);
 export const mergePending = callable(claim.mergePending);
 export const onPendingMemberDeleted = onDocumentDeleted(
@@ -141,9 +141,7 @@ export const previewInvite = callable(invites.previewInvite);
 export const redeemInvite = callable(invites.redeemInvite);
 
 // Account
-export const deleteAccount = onCall(callOpts, (req) =>
-  account.deleteAccount({ ...deps(), auth: getAuth() }, caller(req)),
-);
+export const deleteAccount = callable(account.deleteAccount, () => ({ ...deps(), auth: getAuth() }));
 
 // Platform operator
 export const adminSearchChurches = callable(operator.adminSearchChurches);
@@ -227,8 +225,11 @@ export const newebpayReturn = onRequest({ region: REGION, maxInstances: 5 }, (re
 export const fundingDaily = onSchedule(
   { region: REGION, schedule: 'every day 00:10', timeZone: 'Asia/Taipei' },
   async () => {
-    await funding.publishFunding(deps());
-    await fundingNewebpay.dropExpiredOrders(deps());
+    const d = deps();
+    await runEach('fundingDaily', {
+      publish: () => funding.publishFunding(d),
+      orders: () => fundingNewebpay.dropExpiredOrders(d),
+    });
   },
 );
 
@@ -249,15 +250,15 @@ export const onMemberDeleted = onDocumentDeletedWithAuthContext(
   { region: REGION, document: 'churches/{cid}/members/{uid}', secrets: calendarSecrets },
   async (event) => {
     if (!event.data) return;
-    // Removed, left, or deleted their account: a calendar they connected
-    // goes with them.
-    await calendar.releaseCalendarIfConnector(calDeps(), event.params.cid, event.params.uid);
-    await triggers.onMemberLeft(
-      { db: getFirestore(), messaging: getMessaging(), appUrl: appUrl() },
-      event.params.cid,
-      event.data,
-      event.authType === 'system' ? undefined : event.authId,
-    );
+    await triggers.onMemberDeleted(withPush(calDeps()), event.params.cid, event.data, triggers.editorOf(event));
+  },
+);
+
+export const onMemberDemoted = onDocumentUpdated(
+  { region: REGION, document: 'churches/{cid}/members/{uid}', secrets: calendarSecrets },
+  async (event) => {
+    if (!event.data) return;
+    await triggers.onMemberUpdated(calDeps(), event.params.cid, event.data.before, event.data.after);
   },
 );
 
@@ -269,33 +270,32 @@ export const onLogoUploaded = onObjectFinalized({ region: REGION, memory: '512Mi
   );
 });
 
-// Push: roster changes and evening reminders
+// Roster changes (push and webhook) and evening reminders
 export const onRosterWritten = onDocumentWrittenWithAuthContext(
   { region: REGION, document: 'churches/{cid}/rosters/{rosterId}' },
   async (event) => {
-    const editedBy = event.authType === 'system' ? undefined : event.authId;
-    await notifications.onRosterWritten(
-      { db: getFirestore(), messaging: getMessaging(), appUrl: appUrl(), now: () => new Date() },
+    await rosterChange.onRosterWritten(
+      pushDeps(),
       event.params.cid,
       event.data?.before,
       event.data?.after,
-      editedBy,
+      triggers.editorOf(event),
+      event.id,
     );
-    await rosterWebhook.queueRosterChange(deps(), event.params.cid, event.data?.before, event.data?.after, editedBy, event.id);
   },
 );
 
 export const sendRosterChanges = onSchedule(
-  { region: REGION, schedule: 'every 5 minutes', timeZone: 'Asia/Taipei', secrets: [calendarTokenKey] },
+  { region: REGION, schedule: 'every 5 minutes', timeZone: 'Asia/Taipei', secrets: [sealKey] },
   async () => {
-    await rosterWebhook.sendRosterChanges(webhookDeps());
+    await webhook.sendQueued(hookDeps());
   },
 );
 
 export const sendReminders = onSchedule(
   { region: REGION, schedule: 'every day 19:00', timeZone: 'Asia/Taipei' },
   async () => {
-    await notifications.sendReminders({ db: getFirestore(), messaging: getMessaging(), appUrl: appUrl(), now: () => new Date() });
+    await notifications.sendReminders(pushDeps());
   },
 );
 
@@ -305,39 +305,21 @@ const vertex: photo.VertexConfig = {
   project: process.env.GCLOUD_PROJECT ?? '',
   accessToken: async () => (await applicationDefault().getAccessToken()).access_token,
 };
-export const recognizeRoster = onCall(
-  { ...callOpts, timeoutSeconds: 180, memory: '512MiB' },
-  (req) =>
-    photo.recognizeRoster(
-      { ...deps(), gemini: photo.geminiClient(vertex, (process.env.GEMINI_MODELS ?? '').split(',').filter(Boolean).length ? process.env.GEMINI_MODELS!.split(',') : undefined) },
-      caller(req),
-      req.data,
-    ),
+export const recognizeRoster = callable(
+  photo.recognizeRoster,
+  () => ({ ...deps(), gemini: photo.geminiClient(vertex, photo.geminiModels(process.env.GEMINI_MODELS)) }),
+  { timeoutSeconds: 180, memory: '512MiB' },
 );
 export const photoQuota = callable(photo.photoQuota);
 
 // Calendar (Google OAuth, per church)
-type CalHandler = (d: ReturnType<typeof calDeps>, c: Caller | null, data: unknown) => Promise<unknown>;
-const calendarCallable = (handler: CalHandler) =>
-  onCall({ ...callOpts, secrets: calendarSecrets }, (req) => handler(calDeps(), caller(req), req.data));
-
-export const calendarAuthUrl = calendarCallable(calendar.calendarAuthUrl);
-export const calendarList = calendarCallable(calendar.calendarList);
-export const calendarSelect = calendarCallable(calendar.calendarSelect);
-export const calendarDisconnect = calendarCallable(calendar.calendarDisconnect);
-export const calendarEvents = calendarCallable(calendar.calendarEvents);
-export const calendarWrite = calendarCallable(calendar.calendarWrite);
+const calendarOpts = { secrets: calendarSecrets };
+export const calendarAuthUrl = callable(calendar.calendarAuthUrl, calDeps, calendarOpts);
+export const calendarList = callable(calendar.calendarList, calDeps, calendarOpts);
+export const calendarSelect = callable(calendar.calendarSelect, calDeps, calendarOpts);
+export const calendarDisconnect = callable(calendar.calendarDisconnect, calDeps, calendarOpts);
+export const calendarEvents = callable(calendar.calendarEvents, calDeps, calendarOpts);
+export const calendarWrite = callable(calendar.calendarWrite, calDeps, calendarOpts);
 export const calendarCallback = onRequest({ region: REGION, secrets: calendarSecrets }, async (req, res) => {
   res.redirect(303, await calendar.calendarCallback(calDeps(), req.query as Record<string, unknown>));
 });
-
-export const onMemberDemoted = onDocumentUpdated(
-  { region: REGION, document: 'churches/{cid}/members/{uid}', secrets: calendarSecrets },
-  async (event) => {
-    const before = event.data?.before.get('role');
-    const after = event.data?.after.get('role');
-    if (before === 'admin' && after !== 'admin') {
-      await calendar.releaseCalendarIfConnector(calDeps(), event.params.cid, event.params.uid);
-    }
-  },
-);

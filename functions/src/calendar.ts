@@ -1,15 +1,16 @@
-import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 import { churchAccess } from './access.js';
-import { fail, type Caller, type Deps } from './common.js';
-import { deliver } from './webhook.js';
+import { DAY_MS, fail, type Caller, type Deps } from './common.js';
+import { seal, unseal } from './sealing.js';
+import { notify, type WebhookDeps } from './webhook.js';
 
 /**
  * 行事曆: a church admin connects one Google Calendar. The backend keeps the
- * refresh token (AES-256-GCM encrypted, in calendarTokens/{cid}, which no
- * client can read), reads through a 10-minute cache shared by everyone in
+ * refresh token (sealed, in calendarTokens/{cid}, which no client can
+ * read), reads through a 10-minute cache shared by everyone in
  * the church, and writes for admins and calendar-editors.
  *
  * Scopes: calendar.events (read/write events), calendar.calendarlist.readonly
@@ -30,7 +31,7 @@ export interface OAuthConfig {
   redirectUri: string;
   /** Where the browser goes after connecting (the web app). */
   appUrl: string;
-  /** 32-byte key, base64. */
+  /** 32-byte key, base64, that seals the refresh token. */
   tokenKey: string;
 }
 
@@ -64,22 +65,8 @@ export interface CalendarEvent {
   link?: string;
 }
 
-export function encrypt(plain: string, keyB64: string) {
-  const key = Buffer.from(keyB64, 'base64');
-  const iv = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', key, iv);
-  const body = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()]);
-  return [iv, cipher.getAuthTag(), body].map((b) => b.toString('base64')).join('.');
-}
-
-export function decrypt(sealed: string, keyB64: string) {
-  const [iv, tag, body] = sealed.split('.').map((p) => Buffer.from(p, 'base64'));
-  const decipher = createDecipheriv('aes-256-gcm', Buffer.from(keyB64, 'base64'), iv);
-  decipher.setAuthTag(tag);
-  return Buffer.concat([decipher.update(body), decipher.final()]).toString('utf8');
-}
-
-export type CalDeps = Deps & { google: GoogleApi; config: OAuthConfig };
+/** Changes go out to the church's webhook, hence WebhookDeps. */
+export type CalDeps = WebhookDeps & { google: GoogleApi; config: OAuthConfig };
 
 /** Starts connecting: a Google consent URL bound to this admin and church. */
 export async function calendarAuthUrl(deps: CalDeps, caller: Caller | null, data: unknown) {
@@ -126,7 +113,7 @@ export async function calendarCallback(deps: CalDeps, query: Record<string, unkn
   if (!refreshToken) return back('failed');
   const churchId = snap.get('cid') as string;
   await deps.db.doc(`calendarTokens/${churchId}`).set({
-    token: encrypt(refreshToken, deps.config.tokenKey),
+    token: seal(refreshToken, deps.config.tokenKey),
     connectedBy: snap.get('uid'),
     connectedAt: FieldValue.serverTimestamp(),
     calendarId: null,
@@ -145,7 +132,7 @@ async function access(deps: CalDeps, churchId: string) {
   const tokenDoc = await deps.db.doc(`calendarTokens/${churchId}`).get();
   if (!tokenDoc.exists) fail('failed-precondition', 'unknown', 'notConnected');
   try {
-    const token = await deps.google.accessToken(decrypt(tokenDoc.get('token') as string, deps.config.tokenKey), deps.config);
+    const token = await deps.google.accessToken(unseal(tokenDoc.get('token') as string, deps.config.tokenKey), deps.config);
     return { token, calendarId: tokenDoc.get('calendarId') as string | null };
   } catch (e) {
     if (e instanceof GoogleAuthRevoked) {
@@ -182,16 +169,17 @@ export async function calendarDisconnect(deps: CalDeps, caller: Caller | null, d
 }
 
 /**
- * Revokes the church's Google grant and deletes the token, settings and
- * cache. Used when an admin disconnects, when the church is purged, and
- * when the person who connected it stops being an admin there (their
- * Google account must not stay reachable through the church).
+ * Revokes the church's Google grant and deletes the token, settings, cache
+ * and any connecting still in progress. Used when an admin disconnects,
+ * when the church is purged, and when the person who connected it stops
+ * being an admin there (their Google account must not stay reachable
+ * through the church).
  */
 export async function forgetCalendar(deps: CalDeps, churchId: string) {
   const tokenDoc = await deps.db.doc(`calendarTokens/${churchId}`).get();
   if (tokenDoc.exists) {
     try {
-      await deps.google.revoke(decrypt(tokenDoc.get('token') as string, deps.config.tokenKey));
+      await deps.google.revoke(unseal(tokenDoc.get('token') as string, deps.config.tokenKey));
     } catch {
       // Already revoked on Google's side; still forget it here.
     }
@@ -199,6 +187,8 @@ export async function forgetCalendar(deps: CalDeps, churchId: string) {
   }
   await deps.db.doc(`churches/${churchId}/settings/calendar`).delete();
   await clearCache(deps, churchId);
+  const states = await deps.db.collection('calendarStates').where('cid', '==', churchId).get();
+  await Promise.all(states.docs.map((d) => d.ref.delete()));
 }
 
 /** forgetCalendar when [uid] is the admin who connected the church's calendar. */
@@ -209,17 +199,22 @@ export async function releaseCalendarIfConnector(deps: CalDeps, churchId: string
   return true;
 }
 
-async function clearCache(deps: Deps, churchId: string, month?: string) {
-  const q = deps.db.collection('calendarCache').where('cid', '==', churchId);
-  const snap = await (month ? q.where('month', '==', month) : q).get();
+/** Drops the church's cached [months], or every cached month. */
+async function clearCache(deps: Deps, churchId: string, months?: Iterable<string>) {
+  if (months) {
+    await Promise.all([...months].map((m) => deps.db.doc(`calendarCache/${churchId}_${m}`).delete()));
+    return;
+  }
+  const snap = await deps.db.collection('calendarCache').where('cid', '==', churchId).get();
   await Promise.all(snap.docs.map((d) => d.ref.delete()));
 }
 
 function monthRange(month: string) {
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) fail('invalid-argument', 'unknown');
   const [y, m] = month.split('-').map(Number);
-  // UTC+8 month boundaries, with a day of slack on both sides for timed
-  // events near midnight.
+  // UTC+8 month boundaries. Google returns every event that overlaps them
+  // (ends after `from`, starts before `to`), so one event can be in the
+  // cache of several months: see monthsOf.
   return { from: new Date(Date.UTC(y, m - 1, 1) - 8 * 3600e3), to: new Date(Date.UTC(y, m, 1) - 8 * 3600e3) };
 }
 
@@ -247,25 +242,45 @@ export async function calendarEvents(deps: CalDeps, caller: Caller | null, data:
   return { events, cached: false };
 }
 
-/** Create, update or delete one event (admins and calendar-editors). */
+/** An event's start and end as the app sends them (CalendarEvent's). */
+interface Span {
+  start: string;
+  end?: string;
+}
+
+const span = (v: unknown): Span | null => {
+  const o = v as { start?: unknown; end?: unknown } | null | undefined;
+  if (typeof o?.start !== 'string') return null;
+  return { start: o.start, end: typeof o.end === 'string' ? o.end : undefined };
+};
+
+/** More months than this and a write drops the church's whole cache instead. */
+const MAX_CLEARED_MONTHS = 12;
+
+/**
+ * Create, update or delete one event (admins and calendar-editors).
+ *
+ * `{ churchId, op: 'upsert', event, previous?: { start, end } }`, where
+ * `previous` is where an edited event was before (older web clients send
+ * `previousStart` instead), or `{ churchId, op: 'delete', eventId, event:
+ * { start, end } }`. Every cached month the event was or is in is dropped,
+ * so everyone sees the change on their next read.
+ */
 export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: unknown) {
   const me = await churchAccess(deps, caller, data, { group: 'calendar-editors' });
   const churchId = me.cid;
-  const input = data as { op?: unknown; event?: Partial<CalendarEvent>; eventId?: unknown };
+  const input = data as { op?: unknown; event?: Partial<CalendarEvent>; eventId?: unknown; previous?: unknown; previousStart?: unknown };
   const { token, calendarId } = await access(deps, churchId);
   if (!calendarId) fail('failed-precondition', 'unknown', 'noCalendar');
   let result: CalendarEvent | null = null;
   let notice: { action: 'created' | 'updated' | 'deleted'; event: Partial<CalendarEvent> } | null = null;
-  const months = new Set<string>();
-  const previous = (data as { previousStart?: unknown })?.previousStart;
-  if (typeof previous === 'string') months.add(monthOf(previous));
+  const spans: (Span | null)[] = [span(input.previous), span({ start: input.previousStart })];
   if (input.op === 'delete') {
     if (typeof input.eventId !== 'string') fail('invalid-argument', 'unknown');
-    const start = typeof input.event?.start === 'string' ? input.event.start : '';
     // What it was, for the webhook: Google's DELETE returns nothing.
     const before = await deps.google.get(token, calendarId, input.eventId).catch(() => null);
     await deps.google.remove(token, calendarId, input.eventId);
-    if (start) months.add(monthOf(start));
+    spans.push(span(input.event), span(before));
     notice = { action: 'deleted', event: before ?? { ...input.event, id: input.eventId } };
   } else if (input.op === 'upsert') {
     const e = input.event;
@@ -281,51 +296,32 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
       location: typeof e.location === 'string' ? e.location.slice(0, 300) : undefined,
       description: typeof e.description === 'string' ? e.description.slice(0, 4000) : undefined,
     });
-    months.add(monthOf(e.start));
+    spans.push(span(e));
     notice = { action: typeof e.id === 'string' ? 'updated' : 'created', event: result };
   } else {
     fail('invalid-argument', 'unknown');
   }
-  // Drop the cached months (old and new, for a moved event) so everyone
-  // sees the change on their next read.
-  await Promise.all([...months].map((m) => deps.db.doc(`calendarCache/${churchId}_${m}`).delete()));
+  const months = new Set(spans.flatMap((s) => (s ? monthsOf(s.start, s.end) : [])));
+  await clearCache(deps, churchId, months.size > MAX_CLEARED_MONTHS ? undefined : months);
   if (notice) {
     // After Google has it. A webhook failure is recorded, never thrown.
-    await deliver(
-      { ...deps, secretKey: deps.config.tokenKey },
-      churchId,
-      `calendar.${notice.action}`,
-      calendarPayload(notice.action, notice.event, {
-        churchId,
-        churchName: me.church.get('name') as string,
-        actorUid: me.caller.uid,
-        actorName: (me.member.get('name') as string | undefined) || null,
-      }),
-    );
+    await notify(deps, me.church, `calendar.${notice.action}`, eventDetails(notice.event, {
+      actorUid: me.caller.uid,
+      actorName: (me.member.get('name') as string | undefined) || null,
+    }));
   }
   return { event: result };
 }
 
-/** The time zone every church's calendar is shown in. */
-export const CHURCH_TIME_ZONE = 'Asia/Taipei';
-
 /**
- * The webhook body for a calendar change, in the self-host version's shape
- * so existing n8n flows keep working: every key always present, an
- * all-day event's end the last day it covers (Google's is the day after).
+ * What a calendar notice says about the event (webhook.ts adds the church
+ * and the action), in the self-host version's shape so existing n8n flows
+ * keep working: every key always present, an all-day event's end the last
+ * day it covers (Google's is the day after).
  */
-export function calendarPayload(
-  action: 'created' | 'updated' | 'deleted',
-  e: Partial<CalendarEvent>,
-  who: { churchId: string; churchName: string; actorUid: string; actorName: string | null },
-) {
+export function eventDetails(e: Partial<CalendarEvent>, who: { actorUid: string; actorName: string | null }) {
   const allDay = e.allDay === true;
   return {
-    action,
-    source: 'martha',
-    churchId: who.churchId,
-    churchName: who.churchName,
-    timeZone: CHURCH_TIME_ZONE,
     id: e.id ?? null,
     title: e.title ?? null,
     allDay,
@@ -342,7 +338,7 @@ export function calendarPayload(
 /** Google's exclusive all-day end date → the last day covered. */
 function inclusiveEnd(end: string | undefined): string | null {
   if (typeof end !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(end)) return null;
-  return new Date(Date.parse(`${end}T00:00:00Z`) - 86400e3).toISOString().slice(0, 10);
+  return new Date(Date.parse(`${end}T00:00:00Z`) - DAY_MS).toISOString().slice(0, 10);
 }
 
 /** The real Google APIs over fetch. */
@@ -467,4 +463,25 @@ export function monthOf(start: string): string {
   if (/^\d{4}-\d{2}-\d{2}$/.test(start)) return start.slice(0, 7);
   const t = Date.parse(start);
   return Number.isNaN(t) ? start.slice(0, 7) : new Date(t + 8 * 3600e3).toISOString().slice(0, 7);
+}
+
+/**
+ * Every cache month (UTC+8 `YYYY-MM`) an event from [start] to [end]
+ * overlaps, the way Google matches it to a month: the end is exclusive, so
+ * an all-day event ending on the 1st, or a timed one ending at midnight,
+ * is not in that month. Without a usable end, the start's month.
+ */
+export function monthsOf(start: string, end?: string): string[] {
+  const first = monthOf(start);
+  if (!/^\d{4}-\d{2}$/.test(first)) return [first];
+  const t = end === undefined ? NaN : /^\d{4}-\d{2}-\d{2}$/.test(end) ? Date.parse(`${end}T00:00:00+08:00`) : Date.parse(end);
+  const last = Number.isNaN(t) ? first : monthOf(new Date(t - 1).toISOString());
+  const months = [first];
+  let [y, m] = first.split('-').map(Number);
+  for (;;) {
+    [y, m] = m === 12 ? [y + 1, 1] : [y, m + 1];
+    const next = `${y}-${String(m).padStart(2, '0')}`;
+    if (next > last) return months;
+    months.push(next);
+  }
 }

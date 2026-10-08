@@ -1,10 +1,15 @@
-import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { Timestamp } from 'firebase-admin/firestore';
 import type { Storage } from 'firebase-admin/storage';
 
-import { churchAccess, churchClosed, churchId } from './access.js';
-import { fail, requireCaller, serverTime, text, type Caller, type Deps } from './common.js';
+import { churchAccess, churchClosed, churchId, isChurchOpen } from './access.js';
+import { forgetCalendar, type CalDeps } from './calendar.js';
+import { forgetLinkSource } from './churchLink.js';
+import { forgetPendingClaims } from './claim.js';
+import { DAY_MS, fail, requireCaller, runEach, serverTime, text, type Caller, type Deps } from './common.js';
+import { forgetInvites } from './invites.js';
 import { personName, TEXT_LIMITS } from './limits.js';
 import { nameKey } from './text.js';
+import { forgetWebhook } from './webhook.js';
 
 /** How long a deleted church can be restored. */
 export const RESTORE_DAYS = 30;
@@ -103,7 +108,7 @@ export async function deleteChurch(deps: Deps, caller: Caller | null, data: unkn
     const ref = deps.db.doc(`churches/${cid}`);
     // Only an open church can be deleted, checked again here: deleting and
     // restoring a church the operator just suspended would reopen it.
-    if ((await tx.get(ref)).get('status') !== 'active') churchClosed();
+    if (!isChurchOpen(await tx.get(ref))) churchClosed();
     tx.update(ref, { status: 'deleted', deletedAt: Timestamp.fromDate(deps.now()) });
   });
   return {};
@@ -119,21 +124,44 @@ export async function restoreChurch(deps: Deps, caller: Caller | null, data: unk
   await deps.db.runTransaction(async (tx) => {
     const ref = deps.db.doc(`churches/${cid}`);
     const snap = await tx.get(ref);
-    if (snap.get('status') === 'active') return;
+    if (isChurchOpen(snap)) return;
     if (snap.get('status') !== 'deleted') churchClosed();
     const deletedAt = snap.get('deletedAt') as Timestamp | null;
-    if (deletedAt && deps.now().getTime() - deletedAt.toMillis() > RESTORE_DAYS * 86400e3) churchClosed();
+    if (deletedAt && deps.now().getTime() - deletedAt.toMillis() > RESTORE_DAYS * DAY_MS) churchClosed();
     tx.update(ref, { status: 'active', deletedAt: null });
   });
   return {};
 }
 
+export type PurgeDeps = CalDeps & { bucket?: Pick<ReturnType<Storage['bucket']>, 'deleteFiles'> };
+
 /**
- * Removes every church deleted more than [RESTORE_DAYS] days ago: the whole
- * churches/{cid} tree, its name reservation, invites and logo.
+ * Forgets everything kept about church [cid] outside its churches/{cid}
+ * tree. Each store's own module says how; add a step here with any new
+ * store that keeps something per church. The steps run side by side; it
+ * throws, after all have run, when any failed.
  */
-export async function purgeDeletedChurches(deps: Deps, storage?: Storage, beforePurge?: (cid: string) => Promise<unknown>) {
-  const cutoff = Timestamp.fromMillis(deps.now().getTime() - RESTORE_DAYS * 86400e3);
+export function forgetChurch(deps: PurgeDeps, cid: string) {
+  return runEach(`purge ${cid}`, {
+    calendar: () => forgetCalendar(deps, cid),
+    webhook: () => forgetWebhook(deps, cid),
+    churchLink: () => forgetLinkSource(deps, cid),
+    invites: () => forgetInvites(deps, cid),
+    // Reads the pending members, so before the tree goes.
+    pendingClaims: () => forgetPendingClaims(deps, cid),
+    // The logo and the icons made from it.
+    logo: async () => deps.bucket?.deleteFiles({ prefix: `churches/${cid}/` }),
+  });
+}
+
+/**
+ * Removes every church deleted more than [RESTORE_DAYS] days ago: what
+ * other stores keep about it ([forgetChurch]), then the churches/{cid}
+ * tree and its name reservation. A church whose stores could not all be
+ * forgotten is left for the next run: the church doc is what finds them.
+ */
+export async function purgeDeletedChurches(deps: PurgeDeps) {
+  const cutoff = Timestamp.fromMillis(deps.now().getTime() - RESTORE_DAYS * DAY_MS);
   const expired = await deps.db
     .collection('churches')
     .where('status', '==', 'deleted')
@@ -141,24 +169,14 @@ export async function purgeDeletedChurches(deps: Deps, storage?: Storage, before
     .get();
   const purged: string[] = [];
   for (const doc of expired.docs) {
-    const key = doc.get('nameKey') as string | undefined;
-    // Data kept outside the church tree, e.g. the calendar grant.
-    if (beforePurge) await beforePurge(doc.id);
-    // Pending members of a move: their index entries go before the church tree.
-    const pending = await doc.ref.collection('pendingMembers').get();
-    for (const p of pending.docs) {
-      const hash = p.get('emailHash') as string | null;
-      if (hash) await deps.db.doc(`pendingIndex/${hash}`).set({ churches: { [doc.id]: FieldValue.delete() } }, { merge: true });
+    try {
+      await forgetChurch(deps, doc.id);
+    } catch {
+      continue;
     }
     await deps.db.recursiveDelete(doc.ref);
+    const key = doc.get('nameKey') as string | undefined;
     if (key) await deps.db.doc(`churchNames/${key}`).delete();
-    await deps.db.doc(`linkSources/${doc.id}`).delete();
-    await deps.db.doc(`webhookSecrets/${doc.id}`).delete();
-    await deps.db.recursiveDelete(deps.db.doc(`webhookOutbox/${doc.id}`));
-    const invites = await deps.db.collection('invites').where('cid', '==', doc.id).get();
-    await Promise.all(invites.docs.map((d) => d.ref.delete()));
-    // The logo and the icons made from it.
-    if (storage) await storage.bucket().deleteFiles({ prefix: `churches/${doc.id}/` });
     purged.push(doc.id);
   }
   return purged;
@@ -179,7 +197,7 @@ export function publicLogoPath(cid: string, version: string, file = 'logo.png') 
 export async function churchPreview(deps: Deps, _caller: Caller | null, data: unknown) {
   const cid = churchId((data as { churchId?: unknown })?.churchId);
   const snap = await deps.db.doc(`churches/${cid}`).get();
-  if (snap.get('status') !== 'active') fail('not-found', 'notFound');
+  if (!isChurchOpen(snap)) fail('not-found', 'notFound');
   const version = snap.get('logoVersion') as string | undefined;
   return {
     churchId: cid,

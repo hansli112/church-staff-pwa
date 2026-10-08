@@ -1,5 +1,6 @@
 import type { Timestamp } from 'firebase-admin/firestore';
 
+import { isChurchOpen } from './access.js';
 import { fail, requireCaller, serverTime, type Caller, type Deps } from './common.js';
 import { personName } from './limits.js';
 
@@ -21,7 +22,7 @@ async function usableInvite(deps: Deps, data: unknown) {
   }
   const cid = snap.get('cid') as string;
   const church = await deps.db.doc(`churches/${cid}`).get();
-  if (church.get('status') !== 'active') fail('failed-precondition', 'inviteInvalid');
+  if (!isChurchOpen(church)) fail('failed-precondition', 'inviteInvalid');
   return { code, cid, churchName: church.get('name') as string, expiresAt };
 }
 
@@ -63,4 +64,10 @@ export async function redeemInvite(deps: Deps, caller: Caller | null, data: unkn
     });
   });
   return { churchId: invite.cid };
+}
+
+/** Deletes every invite to church [cid]: the church is purged. */
+export async function forgetInvites(deps: Deps, cid: string) {
+  const invites = await deps.db.collection('invites').where('cid', '==', cid).get();
+  await Promise.all(invites.docs.map((d) => d.ref.delete()));
 }

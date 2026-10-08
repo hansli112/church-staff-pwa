@@ -5,9 +5,9 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 
 import { purgeDeletedChurches } from '../src/church.js';
-
-import { emailHash, MOVE_LIMITS, moveCommit, movePreview, type MoveDeps } from '../src/move.js';
-import { caller, clearFirestore, db, deps, rejectsWith } from './support.js';
+import { emailHash } from '../src/claim.js';
+import { MOVE_LIMITS, moveCommit, movePreview, type MoveDeps } from '../src/move.js';
+import { caller, clearFirestore, db, deps, purgeDeps, rejectsWith } from './support.js';
 
 const bucket = getStorage().bucket('demo-martha.appspot.com');
 const d: MoveDeps = { ...deps, bucket };
@@ -168,7 +168,7 @@ describe('self-serve move', () => {
     await upload(moveFile());
     const { churchId } = await moveCommit(d, me, { path: PATH, churchName: '恩典堂' });
     await db.doc(`churches/${churchId}`).update({ status: 'deleted', deletedAt: Timestamp.fromDate(new Date('2026-08-01T00:00:00Z')) });
-    await purgeDeletedChurches(deps);
+    await purgeDeletedChurches(purgeDeps);
     const index = await db.doc(`pendingIndex/${emailHash('mei@example.com')}`).get();
     assert.deepEqual(index.get('churches'), {});
   });

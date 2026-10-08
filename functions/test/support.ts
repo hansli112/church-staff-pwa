@@ -4,6 +4,8 @@ import { getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 
+import type { GoogleApi } from '../src/calendar.js';
+import type { PurgeDeps } from '../src/church.js';
 import type { Caller, Deps, Fetch } from '../src/common.js';
 
 export const PROJECT = 'demo-martha';
@@ -22,6 +24,14 @@ const offline: Fetch = async (url) => {
   throw new TypeError(`fetch failed: no fake for ${url}`);
 };
 export const deps: Deps = { db, now: () => clock, fetch: offline };
+
+/** What a purge needs, for tests that connect no calendar: Google is never reached. */
+export const purgeDeps: PurgeDeps = {
+  ...deps,
+  secretKey: '',
+  google: {} as GoogleApi,
+  config: { clientId: '', clientSecret: '', redirectUri: '', appUrl: '', tokenKey: '' },
+};
 
 /** What a fake endpoint answers. */
 export interface FakeResponse {

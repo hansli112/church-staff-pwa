@@ -1,6 +1,6 @@
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
-import { churchAccess } from './access.js';
+import { churchAccess, isChurchOpen } from './access.js';
 import { dateKeyUtc8, fail, type Caller, type Deps } from './common.js';
 import { cutText, LIMITS, TEXT_LIMITS } from './limits.js';
 
@@ -216,11 +216,16 @@ export async function fetchDueLinks(deps: Deps) {
       await doc.ref.delete();
       continue;
     }
-    if (church.get('status') === 'active') {
+    if (isChurchOpen(church)) {
       await runFetch(deps, cid, source);
       fetched++;
     }
     await doc.ref.update(next);
   }
   return fetched;
+}
+
+/** Drops the church's fetch schedule: the church is purged. */
+export async function forgetLinkSource(deps: Deps, cid: string) {
+  await deps.db.doc(`linkSources/${cid}`).delete();
 }

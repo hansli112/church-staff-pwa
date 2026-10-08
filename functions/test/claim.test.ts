@@ -3,8 +3,8 @@ import { beforeEach, describe, test } from 'node:test';
 
 import { getStorage } from 'firebase-admin/storage';
 
-import { claimPending, mergePending, onPendingMemberDeleted, pendingClaims } from '../src/claim.js';
-import { emailHash, moveCommit, type MoveDeps } from '../src/move.js';
+import { claimPending, emailHash, mergePending, onPendingMemberDeleted, pendingClaims } from '../src/claim.js';
+import { moveCommit, type MoveDeps } from '../src/move.js';
 import { caller, clearFirestore, db, deps, rejectsWith } from './support.js';
 
 const bucket = getStorage().bucket('demo-martha.appspot.com');

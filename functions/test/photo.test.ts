@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
 
-import { buildPrompt, geminiClient, photoQuota, PHOTOS_PER_MONTH, recognizeRoster, type Gemini } from '../src/photo.js';
+import { buildPrompt, DEFAULT_MODELS, geminiClient, geminiModels, photoQuota, PHOTOS_PER_MONTH, recognizeRoster, type Gemini } from '../src/photo.js';
 import { caller, clearFirestore, db, deps, rejectsWith, seedChurch } from './support.js';
 
 const image = { mimeType: 'image/jpeg', data: Buffer.from('jpeg').toString('base64') };
@@ -178,5 +178,14 @@ describe('geminiClient', () => {
     assert.match(logged, /403/);
     assert.match(logged, /Vertex AI API has not been used/);
     assert.doesNotMatch(logged, /SECRET-TOKEN-123/, 'the token is never logged');
+  });
+});
+
+describe('geminiModels', () => {
+  test('GEMINI_MODELS, comma separated, in order; the pinned ones when it names none', () => {
+    assert.deepEqual(geminiModels('gemini-a,gemini-b'), ['gemini-a', 'gemini-b']);
+    assert.deepEqual(geminiModels(' gemini-a , ,gemini-b,'), ['gemini-a', 'gemini-b']);
+    assert.deepEqual(geminiModels(undefined), DEFAULT_MODELS);
+    assert.deepEqual(geminiModels(' , '), DEFAULT_MODELS);
   });
 });

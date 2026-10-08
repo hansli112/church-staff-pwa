@@ -1,9 +1,10 @@
+import { createHash } from 'node:crypto';
+
 import { FieldValue } from 'firebase-admin/firestore';
 
-import { churchAccess } from './access.js';
+import { churchAccess, isChurchOpen } from './access.js';
 import { fail, id, requireCaller, serverTime, type Caller, type Deps } from './common.js';
 import { personName } from './limits.js';
-import { emailHash } from './move.js';
 
 /**
  * 認領與合併: a pending member (moved from self-host) becomes a real member.
@@ -18,6 +19,9 @@ import { emailHash } from './move.js';
  * groups and zones, the rosters that pointed at the pending member point at
  * them, and the pending member and its index entry are deleted.
  */
+/** The email as the pending index (pendingIndex/{hash}) keys it. */
+export const emailHash = (email: string) => createHash('sha256').update(email.trim().toLowerCase()).digest('hex');
+
 /** The verified email's hash, or null: an unverified email finds nothing. */
 function callerHash(c: Caller) {
   return c.emailVerified && c.email ? emailHash(c.email) : null;
@@ -36,7 +40,7 @@ export async function pendingClaims(deps: Deps, caller: Caller | null) {
       deps.db.doc(`churches/${cid}`).get(),
       deps.db.doc(`churches/${cid}/pendingMembers/${pid}`).get(),
     ]);
-    if (church.get('status') !== 'active' || !pending.exists || pending.get('emailHash') !== hash) continue;
+    if (!isChurchOpen(church) || !pending.exists || pending.get('emailHash') !== hash) continue;
     claims.push({ churchId: cid, churchName: church.get('name') as string, pendingId: pid, name: pending.get('name') as string });
   }
   return { claims };
@@ -76,6 +80,15 @@ async function dropPending(deps: Deps, cid: string, pending: FirebaseFirestore.D
   const hash = pending.get('emailHash') as string | null;
   await pending.ref.delete();
   if (hash) await deps.db.doc(`pendingIndex/${hash}`).set({ churches: { [cid]: FieldValue.delete() } }, { merge: true });
+}
+
+/** Drops the index entries of church [cid]'s pending members: the church is purged. */
+export async function forgetPendingClaims(deps: Deps, cid: string) {
+  const pending = await deps.db.collection(`churches/${cid}/pendingMembers`).get();
+  for (const p of pending.docs) {
+    const hash = p.get('emailHash') as string | null;
+    if (hash) await deps.db.doc(`pendingIndex/${hash}`).set({ churches: { [cid]: FieldValue.delete() } }, { merge: true });
+  }
 }
 
 /**

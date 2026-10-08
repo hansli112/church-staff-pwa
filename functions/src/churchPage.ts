@@ -1,6 +1,6 @@
 import type { Storage } from 'firebase-admin/storage';
 
-import { CHURCH_ID } from './access.js';
+import { CHURCH_ID, isChurchOpen } from './access.js';
 import type { Deps } from './common.js';
 import { publicLogoPath } from './church.js';
 import { ICON_FILES, iconStoragePath, type IconFile } from './icons.js';
@@ -86,7 +86,7 @@ export interface ChurchFace {
 
 /** How an active church presents itself; null for a closed one. */
 function face(cid: string, church: FirebaseFirestore.DocumentSnapshot): ChurchFace | null {
-  if (church.get('status') !== 'active') return null;
+  if (!isChurchOpen(church)) return null;
   const name = church.get('name') as string;
   const homeName = church.get('homeName') as string | undefined;
   const version = church.get('logoVersion') as string | undefined;
@@ -167,7 +167,7 @@ export async function churchPage(deps: PageDeps, path: string): Promise<PageResp
 
   const icon = /^\/icons\/([A-Za-z0-9_-]{1,64})\/([a-z0-9-]{1,40}\.png)$/.exec(rest);
   if (icon) {
-    if (!cid || church?.get('status') !== 'active' || church.get('logoVersion') !== icon[1]) return notFound();
+    if (!cid || !isChurchOpen(church) || church?.get('logoVersion') !== icon[1]) return notFound();
     const bytes = await readIcon(deps, cid, icon[1], icon[2]);
     if (!bytes) return notFound();
     return { status: 200, headers: { 'content-type': 'image/png', 'cache-control': IMMUTABLE }, body: bytes };

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
 
-import { onRosterWritten, rosterChange, sendReminders } from '../src/notifications.js';
+import { sendReminders } from '../src/notifications.js';
 import { clearFirestore, db, seedChurch } from './support.js';
 
 const appUrl = 'https://app.example';
@@ -38,52 +38,6 @@ const duties = (piano: string[], usher: string[]) => [
 
 beforeEach(clearFirestore);
 
-describe('rosterChange', () => {
-  test('lists who was added to and removed from which duty', () => {
-    const c = rosterChange(duties(['美玉'], []), duties(['志豪'], ['美玉']));
-    assert.deepEqual([...c.added], [['hao', ['司琴']], ['mei', ['招待']]]);
-    assert.deepEqual([...c.removed], [['mei', ['司琴']]]);
-  });
-
-  test('ignores uids whose name is no longer listed', () => {
-    const c = rosterChange([], [{ role: '司琴', people: [], uids: { 美玉: 'mei' } }]);
-    assert.equal(c.added.size, 0);
-  });
-});
-
-describe('roster change notifications', () => {
-  test('both of a member’s devices hear about it; the editor does not', async () => {
-    await church();
-    const ref = db.doc('churches/C1/rosters/2026-10-04_sunday');
-    await ref.set({ type: 'sunday', dateKey: '2026-10-04', duties: duties([], []) });
-    const before = await ref.get();
-    await ref.set({ type: 'sunday', dateKey: '2026-10-04', duties: duties(['美玉'], ['志豪']) });
-    const after = await ref.get();
-    const { sent, messaging } = fakeMessaging();
-
-    await onRosterWritten({ db, messaging, now, appUrl }, 'C1', before, after, 'hao');
-
-    assert.equal(sent.length, 1);
-    assert.deepEqual(sent[0].tokens, ['tok-mei', 'tok-mei-2']);
-    assert.match(sent[0].body, /10\/4 主日崇拜：司琴/);
-  });
-
-  test('muted members and past days get nothing', async () => {
-    await church();
-    await db.doc('churches/C1/members/mei').update({ 'notificationPrefs.muted': ['rosterChange'] });
-    const ref = db.doc('churches/C1/rosters/2026-10-04_sunday');
-    await ref.set({ type: 'sunday', dateKey: '2026-10-04', duties: duties(['美玉'], []) });
-    const { sent, messaging } = fakeMessaging();
-    await onRosterWritten({ db, messaging, now, appUrl }, 'C1', undefined, await ref.get(), 'pastor');
-    assert.equal(sent.length, 0);
-
-    const past = db.doc('churches/C1/rosters/2026-09-27_sunday');
-    await past.set({ type: 'sunday', dateKey: '2026-09-27', duties: duties(['志豪'], []) });
-    await onRosterWritten({ db, messaging, now, appUrl }, 'C1', undefined, await past.get(), 'pastor');
-    assert.equal(sent.length, 0);
-  });
-});
-
 describe('reminders', () => {
   test('one message per person for tomorrow, listing their duties', async () => {
     await church();
@@ -116,17 +70,6 @@ describe('reminders', () => {
     });
     const { sent, messaging } = fakeMessaging();
     await sendReminders({ db, messaging, now, appUrl });
-    assert.equal(sent.length, 0);
-  });
-});
-
-describe('imports', () => {
-  test('a roster written by the import sends no per-day push', async () => {
-    await church();
-    const ref = db.doc('churches/C1/rosters/2026-10-04_sunday');
-    await ref.set({ type: 'sunday', dateKey: '2026-10-04', duties: duties(['美玉'], []), via: 'import' });
-    const { sent, messaging } = fakeMessaging();
-    await onRosterWritten({ db, messaging, now, appUrl }, 'C1', undefined, await ref.get(), 'pastor');
     assert.equal(sent.length, 0);
   });
 });

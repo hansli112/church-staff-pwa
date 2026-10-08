@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
 
-import { adminFunding, adminSetFundingCosts, monthlyTarget, publishFunding, summarize } from '../src/funding.js';
+import { adminFunding, adminSetFundingCosts, monthlyTarget, publishFunding, recordPayment, setRefund, summarize, type Payment } from '../src/funding.js';
 import { appStoreNotification, type AppleVerifier } from '../src/fundingApple.js';
 import { RATES, funding, op, withRates } from './fundingFixtures.js';
-import { caller, clearFirestore, deps, fakeFetch, rejectsWith, setNow } from './support.js';
+import { caller, clearFirestore, db, deps, fakeFetch, rejectsWith, setNow } from './support.js';
 
 beforeEach(async () => {
   await clearFirestore();
@@ -120,5 +120,72 @@ describe('the daily refresh', () => {
     setNow(new Date('2026-10-09T09:00:00+08:00'));
     await publishFunding({ ...deps, fetch: fakeFetch().fetch });
     assert.equal((await funding())?.target, 320);
+  });
+});
+
+describe('the ledger: every payment, whoever it came through', () => {
+  const payment = (over: Partial<Payment> = {}): Payment => ({
+    id: 'newebpay_M1',
+    store: 'newebpay',
+    productId: 'web_once',
+    amount: 500,
+    currency: 'TWD',
+    at: new Date('2026-10-06T08:00:00+08:00'),
+    ...over,
+  });
+  const month = async (m = '2026-10') => (await db.doc(`fundingMonths/${m}`).get()).get('received');
+
+  test('a payment sent twice counts once', async () => {
+    const d = withRates();
+    await recordPayment(d, payment());
+    await recordPayment(d, payment());
+    assert.equal(await month(), 500);
+    assert.equal((await funding())?.received, 500);
+  });
+
+  test('foreign money counts in NT$ at the day\'s rate, rounded to the dollar', async () => {
+    await recordPayment(withRates(), payment({ id: 'apple_1', store: 'apple', amount: 9.99, currency: 'USD' }));
+    assert.equal(await month(), 320); // 9.99 ÷ 0.03125 = 319.68
+    const kept = (await db.doc('fundingPayments/apple_1').get()).data();
+    assert.deepEqual({ ...kept, at: undefined }, {
+      store: 'apple', productId: 'web_once', amount: 9.99, currency: 'USD', amountTwd: 320, refundedTwd: 0, month: '2026-10', at: undefined,
+    });
+  });
+
+  test('a currency without a rate is refused, so the store sends it again', async () => {
+    await assert.rejects(recordPayment(withRates(), payment({ currency: 'JPY' })), /No exchange rate for JPY/);
+    assert.equal(await month(), undefined);
+  });
+
+  test('counted in the month it was paid (UTC+8), not the month it arrived', async () => {
+    await recordPayment(withRates(), payment({ at: new Date('2026-09-30T23:30:00+08:00') }));
+    assert.equal(await month('2026-09'), 500);
+    assert.equal(await month('2026-10'), undefined);
+  });
+
+  test('refunded after the payment: taken off its month, once', async () => {
+    const d = withRates();
+    await recordPayment(d, payment());
+    await setRefund(d, 'newebpay_M1', 'newebpay', 1);
+    await setRefund(d, 'newebpay_M1', 'newebpay', 1);
+    assert.equal(await month(), 0);
+    await setRefund(d, 'newebpay_M1', 'newebpay', 0);
+    assert.equal(await month(), 500, 'a reversed refund puts it back');
+  });
+
+  test('a partial refund takes off its share', async () => {
+    const d = withRates();
+    await recordPayment(d, payment());
+    await setRefund(d, 'newebpay_M1', 'newebpay', 0.4);
+    assert.equal(await month(), 300);
+  });
+
+  test('refunded before the payment arrives: the payment never counts', async () => {
+    const d = withRates();
+    await setRefund(d, 'newebpay_M1', 'newebpay', 1);
+    assert.equal(await month(), undefined);
+    await recordPayment(d, payment());
+    assert.equal(await month(), 0);
+    assert.equal((await db.doc('fundingPayments/newebpay_M1').get()).get('refundedTwd'), 500);
   });
 });

@@ -59,6 +59,16 @@ export interface ChurchAccess {
   inGroup(group: Group): boolean;
 }
 
+/**
+ * A church's status: open (`active`), suspended by the platform operator,
+ * or deleted by its admin (restorable for RESTORE_DAYS, then purged).
+ */
+export type ChurchStatus = 'active' | 'suspended' | 'deleted';
+
+/** Whether [church] is open: not suspended, deleted or missing. */
+export const isChurchOpen = (church: DocumentSnapshot | null | undefined) =>
+  church?.get('status') === 'active';
+
 /** Fails with churchClosed: the church is suspended or deleted. */
 export function churchClosed(): never {
   fail('failed-precondition', 'churchClosed');
@@ -87,7 +97,7 @@ export async function churchAccess(
   } else if (!member.exists) {
     fail('permission-denied', 'permissionDenied');
   }
-  const open = church.get('status') === 'active';
+  const open = isChurchOpen(church);
   if (!open && opts.closed !== 'allow') churchClosed();
 
   const admin = member.exists && member.get('role') === 'admin';
