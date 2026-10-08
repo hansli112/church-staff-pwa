@@ -244,13 +244,13 @@ abstract class L10n {
   /// No description provided for @copyPageUrl.
   ///
   /// In zh, this message translates to:
-  /// **'複製網址'**
+  /// **'複製連結'**
   String get copyPageUrl;
 
   /// No description provided for @pageUrlCopied.
   ///
   /// In zh, this message translates to:
-  /// **'已複製網址，貼到 Safari 或 Chrome 打開'**
+  /// **'已複製連結，貼到 Safari 或 Chrome 打開'**
   String get pageUrlCopied;
 
   /// No description provided for @loginTagline.

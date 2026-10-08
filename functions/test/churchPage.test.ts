@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { beforeEach, describe, test } from 'node:test';
 
 import { Timestamp } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 
-import { APP_SHELL, churchPage, clearTemplateCache, type PageDeps } from '../src/churchPage.js';
+import { APP_SHELL, churchPage, clearTemplateCache, withSplash, type PageDeps } from '../src/churchPage.js';
 import { clearFirestore, db, deps, fakeFetch, seedChurch, setNow } from './support.js';
 
 const APP = 'https://martha.example';
@@ -111,6 +112,14 @@ describe('church page', () => {
       assert.doesNotMatch(s, /class="spin"/, path);
       assert.doesNotMatch(s, /關閉堂/, 'a closed church stays unnamed');
     }
+  });
+
+  test('the app’s real page has the loading screen the server fills in', () => {
+    const index = readFileSync(new URL('../../app/web/index.html', import.meta.url), 'utf8');
+    assert.match(splashOf(index), /載入中…/, 'app/web/index.html keeps its <!--splash--> markers');
+    const filled = withSplash(index, { icon: '/x.png', title: '加入〈恩典堂〉', note: '載入中…', busy: true });
+    assert.match(splashOf(filled), /<p class="title">加入〈恩典堂〉<\/p>/);
+    assert.match(filled, /<div id="splash"/);
   });
 
   test('a shell without the loading screen is left as it is', async () => {

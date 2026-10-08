@@ -86,10 +86,10 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get copyPageUrl => '複製網址';
+  String get copyPageUrl => '複製連結';
 
   @override
-  String get pageUrlCopied => '已複製網址，貼到 Safari 或 Chrome 打開';
+  String get pageUrlCopied => '已複製連結，貼到 Safari 或 Chrome 打開';
 
   @override
   String get loginTagline => '馬大！馬大！你為許多的事思慮煩擾，\n但是不可少的只有一件；\n馬利亞已經選擇那上好的福分，\n是不能奪去的。';

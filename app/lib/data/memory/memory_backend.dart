@@ -105,6 +105,10 @@ class MemoryBackend implements Backend {
   /// complete, as on a slow network. Completing it with an error fails it.
   Completer<void>? calendarEventsHeld;
 
+  /// Scripted: while set, previewing an invite waits for this to complete,
+  /// as on a slow network.
+  Completer<void>? invitePreviewHeld;
+
   /// Scripted: photos used this month per church, the limit, whether the
   /// platform's budget is left, and what recognition returns.
   final photosUsed = <String, int>{};
@@ -1151,7 +1155,10 @@ class MemoryCloud implements CloudApi {
   }
 
   @override
-  Future<Invite> previewInvite(String code) async => _invite(code);
+  Future<Invite> previewInvite(String code) async {
+    await _b.invitePreviewHeld?.future;
+    return _invite(code);
+  }
 
   @override
   Future<String> invitedChurchName(String code) async => _invite(code).churchName;

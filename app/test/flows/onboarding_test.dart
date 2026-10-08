@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -270,7 +272,7 @@ void main() {
       overrides: [userAgentProvider.overrideWithValue(line)],
     );
     expect(find.text('在 LINE 裡不能用 Google 登入。請用 Safari 或 Chrome 打開這個網頁，或用 email 登入'), findsOneWidget);
-    expect(find.text('複製網址'), findsOneWidget);
+    expect(find.text('複製連結'), findsOneWidget);
     expect(find.text('使用 Google 登入'), findsOneWidget, reason: 'still offered');
   });
 
@@ -289,13 +291,36 @@ void main() {
     final out = captureOutbox(tester);
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/c/$cid/join/LINE2026?openExternalBrowser=1');
     await settle(tester);
-    await tapText(tester, '複製網址');
+    await tapText(tester, '複製連結');
     expect(out.copied.single, endsWith('/c/$cid/join/LINE2026?openExternalBrowser=1'));
   });
 
   testWidgets('in a real browser, sign-in shows no such note', (tester) async {
     await pumpApp(tester, MemoryBackend(clock: testClock));
-    expect(find.text('複製網址'), findsNothing);
+    expect(find.text('複製連結'), findsNothing);
+  });
+
+  testWidgets('the join page shows it is loading while the invite comes', (tester) async {
+    final b = seededChurch(as: staffMei);
+    b.addChurch('希望堂', id: 'hope');
+    b.invites['HOPE2026'] = Invite(
+      code: 'HOPE2026',
+      churchId: 'hope',
+      churchName: '希望堂',
+      expiresAt: testNow.add(const Duration(days: 7)),
+    );
+    final held = b.invitePreviewHeld = Completer<void>();
+    await pumpApp(tester, b);
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/c/hope/join/HOPE2026');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.text('加入〈希望堂〉'), findsNothing);
+
+    held.complete();
+    await settle(tester);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.text('加入〈希望堂〉'), findsOneWidget);
   });
 
   testWidgets('a pasted invite link works as a code', (tester) async {
