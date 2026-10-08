@@ -1897,11 +1897,29 @@ abstract class L10n {
   /// **'結束'**
   String get calEnd;
 
-  /// No description provided for @calEndBeforeStart.
+  /// No description provided for @calOtherTime.
   ///
   /// In zh, this message translates to:
-  /// **'結束要在開始之後'**
-  String get calEndBeforeStart;
+  /// **'其他時間…'**
+  String get calOtherTime;
+
+  /// No description provided for @calLengthMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'{minutes} 分鐘'**
+  String calLengthMinutes(int minutes);
+
+  /// No description provided for @calLengthHours.
+  ///
+  /// In zh, this message translates to:
+  /// **'{hours} 小時'**
+  String calLengthHours(int hours);
+
+  /// No description provided for @calLengthHoursMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'{hours} 小時 {minutes} 分'**
+  String calLengthHoursMinutes(int hours, int minutes);
 
   /// No description provided for @calDelete.
   ///

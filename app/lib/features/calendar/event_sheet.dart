@@ -150,6 +150,8 @@ class _EventEditorState extends State<_EventEditor> {
   /// all-day event.
   DateTime get _end => _allDay ? DateTime(_endDay.year, _endDay.month, _endDay.day + 1) : _at(_endDay, _endTime);
 
+  /// Always true from the pickers, which offer no end before the start;
+  /// kept as a guard for saving.
   bool get _valid => _end.isAfter(_start);
 
   /// Moves the start; the end moves with it, so the event keeps its length.
@@ -169,12 +171,30 @@ class _EventEditorState extends State<_EventEditor> {
     });
   }
 
-  Future<DateTime?> _pickDay(DateTime day) => showDatePicker(
+  Future<DateTime?> _pickDay(DateTime day, {DateTime? notBefore}) => showDatePicker(
     context: context,
     initialDate: day,
-    firstDate: DateTime(day.year - 1),
+    firstDate: notBefore ?? DateTime(day.year - 1),
     lastDate: DateTime(day.year + 2),
   );
+
+  /// Moves the end to [day]. On the start day an end time not after the
+  /// start becomes an hour after it.
+  void _moveEndDay(DateTime day) => setState(() {
+    _endDay = day;
+    if (!_allDay && !_at(day, _endTime).isAfter(_start)) {
+      final end = _start.add(const Duration(hours: 1));
+      _endDay = _dateOf(end);
+      _endTime = TimeOfDay.fromDateTime(end);
+    }
+  });
+
+  /// Sets the end time. One not after the start, which only 其他時間 can
+  /// give, means the next day: the end day moves there, in sight.
+  void _setEndTime(TimeOfDay t) => setState(() {
+    _endTime = t;
+    if (!_at(_endDay, t).isAfter(_start)) _endDay = DateTime(_startDay.year, _startDay.month, _startDay.day + 1);
+  });
 
   void _save() {
     final title = _title.text.trim();
@@ -254,27 +274,24 @@ class _EventEditorState extends State<_EventEditor> {
                     thisYear: widget.thisYear,
                     day: _endDay,
                     time: _allDay ? null : _endTime,
-                    wrong: !_valid,
                     onDay: () async {
-                      final d = await _pickDay(_endDay);
-                      if (d != null) setState(() => _endDay = d);
+                      final d = await _pickDay(_endDay, notBefore: _startDay);
+                      if (d != null) _moveEndDay(d);
                     },
                     onTime: () async {
-                      final t = await showTimePicker(context: context, initialTime: _endTime);
-                      if (t != null) setState(() => _endTime = t);
+                      final t = await showAppSheet<TimeOfDay>(
+                        context,
+                        builder: (_) => _EndTimeSheet(
+                          start: _start,
+                          endDay: _endDay,
+                          selected: _endTime,
+                        ),
+                      );
+                      if (t != null) _setEndTime(t);
                     },
                   ),
                 ],
               ),
-              if (!_valid)
-                Padding(
-                  // In line with the rows above.
-                  padding: const EdgeInsets.symmetric(horizontal: Space.xl),
-                  child: Text(
-                    l10n.calEndBeforeStart,
-                    style: AppText.footnote.copyWith(color: AppColors.of(context).destructive),
-                  ),
-                ),
               if (widget.event != null)
                 ListSection(
                   children: [
@@ -294,7 +311,7 @@ class _EventEditorState extends State<_EventEditor> {
 }
 
 /// 開始 or 結束: its day, and its time unless the event is all day, each
-/// tapped to change. [wrong] marks an end that is not after the start.
+/// tapped to change.
 class _WhenRow extends StatelessWidget {
   const _WhenRow({
     required this.title,
@@ -303,7 +320,6 @@ class _WhenRow extends StatelessWidget {
     required this.time,
     required this.onDay,
     required this.onTime,
-    this.wrong = false,
   });
 
   final String title;
@@ -312,15 +328,11 @@ class _WhenRow extends StatelessWidget {
   final TimeOfDay? time;
   final VoidCallback onDay;
   final VoidCallback onTime;
-  final bool wrong;
 
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
-    final style = AppText.body.copyWith(
-      color: wrong ? c.destructive : c.label,
-      decoration: wrong ? TextDecoration.lineThrough : null,
-    );
+    final style = AppText.body.copyWith(color: c.label);
     final date = (day.year == thisYear ? DateFormat.MMMEd('zh_TW') : DateFormat.yMMMEd('zh_TW')).format(day);
     Widget chip(String text, VoidCallback onTap) => Material(
       color: c.fill,
@@ -353,6 +365,102 @@ class _WhenRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The end time, in steps of 15 minutes (and the one set now, when off
+/// them): on the start day only times after the start, each with how long
+/// the event would be. 其他時間 opens the clock for any minute.
+class _EndTimeSheet extends StatefulWidget {
+  const _EndTimeSheet({required this.start, required this.endDay, required this.selected});
+
+  final DateTime start;
+  final DateTime endDay;
+  final TimeOfDay selected;
+
+  @override
+  State<_EndTimeSheet> createState() => _EndTimeSheetState();
+}
+
+class _EndTimeSheetState extends State<_EndTimeSheet> {
+  final _selectedKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final row = _selectedKey.currentContext;
+      if (row != null) Scrollable.ensureVisible(row, alignment: 0.3);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final s = widget.start;
+    final d = widget.endDay;
+    final sameDay = d.year == s.year && d.month == s.month && d.day == s.day;
+    // On the start day the steps count from the start; on a later day, from
+    // midnight.
+    final times = <DateTime>[
+      for (
+        var t = sameDay ? s.add(const Duration(minutes: 15)) : DateTime(d.year, d.month, d.day);
+        t.day == d.day && t.month == d.month && t.year == d.year;
+        t = t.add(const Duration(minutes: 15))
+      )
+        t,
+    ];
+    final current = DateTime(d.year, d.month, d.day, widget.selected.hour, widget.selected.minute);
+    if (current.isAfter(s) && !times.contains(current)) times.add(current);
+    times.sort();
+    String length(Duration x) {
+      final h = x.inHours;
+      final m = x.inMinutes % 60;
+      return h == 0
+          ? l10n.calLengthMinutes(m)
+          : m == 0
+          ? l10n.calLengthHours(h)
+          : l10n.calLengthHoursMinutes(h, m);
+    }
+
+    // 其他時間 stays in sight above the list, which scrolls to the time set.
+    return SafeArea(
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.6,
+        child: Column(
+          children: [
+            ListSection(
+              header: l10n.calEnd,
+              children: [
+                ListRow(
+                  title: l10n.calOtherTime,
+                  onTap: () async {
+                    final t = await showTimePicker(context: context, initialTime: widget.selected);
+                    if (t != null && context.mounted) Navigator.pop(context, t);
+                  },
+                ),
+              ],
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                child: ListSection(
+                  children: [
+                    for (final t in times)
+                      ListRow(
+                        key: t.hour == widget.selected.hour && t.minute == widget.selected.minute ? _selectedKey : null,
+                        title: TimeOfDay.fromDateTime(t).format(context),
+                        subtitle: sameDay ? length(t.difference(s)) : null,
+                        selected: t.hour == widget.selected.hour && t.minute == widget.selected.minute,
+                        onTap: () => Navigator.pop(context, TimeOfDay.fromDateTime(t)),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

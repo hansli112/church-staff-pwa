@@ -577,7 +577,34 @@
   "calLocation": "地點",
   "calStart": "開始",
   "calEnd": "結束",
-  "calEndBeforeStart": "結束要在開始之後",
+  "calOtherTime": "其他時間…",
+  "calLengthMinutes": "{minutes} 分鐘",
+  "@calLengthMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "calLengthHours": "{hours} 小時",
+  "@calLengthHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "calLengthHoursMinutes": "{hours} 小時 {minutes} 分",
+  "@calLengthHoursMinutes": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "calDelete": "刪除活動",
   "calDeleted": "已刪除{title}",
   "@calDeleted": {

@@ -986,7 +986,22 @@ class L10nZh extends L10n {
   String get calEnd => '結束';
 
   @override
-  String get calEndBeforeStart => '結束要在開始之後';
+  String get calOtherTime => '其他時間…';
+
+  @override
+  String calLengthMinutes(int minutes) {
+    return '$minutes 分鐘';
+  }
+
+  @override
+  String calLengthHours(int hours) {
+    return '$hours 小時';
+  }
+
+  @override
+  String calLengthHoursMinutes(int hours, int minutes) {
+    return '$hours 小時 $minutes 分';
+  }
 
   @override
   String get calDelete => '刪除活動';

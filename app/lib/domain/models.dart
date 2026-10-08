@@ -525,7 +525,8 @@ class CalendarEvent {
 }
 
 /// The days from [from] to [to] that [events] cover, each mapped to the day
-/// the agenda lists its event under (the day it starts). A day covered by
+/// the agenda lists its event under: its first day from [from] on, so an
+/// event begun the month before is listed under the 1st. A day covered by
 /// several events points at the earliest of them.
 Map<Day, Day> agendaAnchors(Iterable<CalendarEvent> events, {required Day from, required Day to}) {
   final anchors = <Day, Day>{};
@@ -534,7 +535,7 @@ Map<Day, Day> agendaAnchors(Iterable<CalendarEvent> events, {required Day from, 
     if (days == null) continue;
     for (var d = days.first; !d.isAfter(days.last); d = d.addDays(1)) {
       final current = anchors[d];
-      if (current == null || e.day.isBefore(current)) anchors[d] = e.day;
+      if (current == null || days.first.isBefore(current)) anchors[d] = days.first;
     }
   }
   return anchors;

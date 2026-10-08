@@ -146,7 +146,7 @@ void main() {
     expect((e.allDay, e.start, e.end), (true, DateTime(2026, 10, 1), DateTime(2026, 10, 4)));
   });
 
-  testWidgets('moving the start keeps the length; an end before the start cannot be saved', (tester) async {
+  testWidgets('the end cannot be set before the start, and moves with it', (tester) async {
     final b = seededChurch(as: calendarEditor, extra: const [calendarEditor]);
     b.connectCalendar('grace', calendarName: '教會行事曆');
     await pumpApp(tester, b);
@@ -159,15 +159,68 @@ void main() {
     expect(find.text('10月5日 週一'), findsNWidgets(2), reason: 'the end moved with the start');
 
     await pickDay(tester, '10月5日 週一', 3, end: true);
-    expect(find.text('結束要在開始之後'), findsOneWidget);
-    await tapText(tester, '儲存');
-    expect(b.calendarEvents['grace'] ?? const [], isEmpty);
+    expect(find.text('10月5日 週一'), findsNWidgets(2), reason: 'days before the start cannot be picked');
 
-    await pickDay(tester, '10月3日 週六', 6, end: true);
-    expect(find.text('結束要在開始之後'), findsNothing);
+    // End times on the start day: only after the start, each with its length.
+    await tester.tap(find.textContaining('9:00'));
+    await settle(tester);
+    expect(find.textContaining('7:30'), findsOneWidget, reason: 'the start only, not offered as an end');
+    expect(find.text('15 分鐘'), findsOneWidget);
+    await tester.ensureVisible(find.text('30 分鐘'));
+    await settle(tester);
+    await tester.tap(find.text('30 分鐘'));
+    await settle(tester);
     await tapText(tester, '儲存');
     final e = b.calendarEvents['grace']!.single;
-    expect((e.start, e.end), (DateTime(2026, 10, 5, 19, 30), DateTime(2026, 10, 6, 21)));
+    expect((e.start, e.end), (DateTime(2026, 10, 5, 19, 30), DateTime(2026, 10, 5, 20)));
+  });
+
+  testWidgets('其他時間 sets any minute; one before the start ends the next day', (tester) async {
+    final b = seededChurch(as: calendarEditor, extra: const [calendarEditor]);
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    await pumpApp(tester, b);
+    await go(tester, '/calendar');
+    await tester.tap(find.byTooltip('新增活動'));
+    await settle(tester);
+    await tester.enterText(find.byType(TextField).first, '禱告會');
+    await tester.pump();
+
+    // The clock is in 12 hours, starting from the end set now (下午).
+    Future<void> otherTime(String shown, int hour, int minute) async {
+      await tester.tap(find.textContaining(shown).last);
+      await settle(tester);
+      await tapText(tester, '其他時間…');
+      await tester.tap(find.byIcon(Icons.keyboard_outlined));
+      await settle(tester);
+      final fields = find.descendant(of: find.byType(Dialog), matching: find.byType(TextField));
+      await tester.enterText(fields.at(0), '$hour');
+      await tester.enterText(fields.at(1), '$minute'.padLeft(2, '0'));
+      await tapText(tester, '確定');
+    }
+
+    await otherTime('9:00', 7, 40);
+    expect(find.textContaining('7:40'), findsOneWidget);
+    expect(find.text('10月1日 週四'), findsNWidgets(2), reason: 'still the same day');
+
+    await otherTime('7:40', 6, 0);
+    expect(find.text('10月2日 週五'), findsOneWidget, reason: 'the end moved to the next day');
+    await tapText(tester, '儲存');
+    final e = b.calendarEvents['grace']!.single;
+    expect((e.start, e.end), (DateTime(2026, 10, 1, 19, 30), DateTime(2026, 10, 2, 18)));
+  });
+
+  testWidgets('an event begun the month before is listed under the 1st, with its whole span', (tester) async {
+    final b = seededChurch(as: staffMei);
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    b.calendarEvents['grace'] = [
+      CalendarEvent(title: '退修會', start: DateTime(2026, 9, 29), end: DateTime(2026, 10, 3), allDay: true),
+      CalendarEvent(title: '守夜禱告', start: DateTime(2026, 10, 9, 22), end: DateTime(2026, 10, 10, 6)),
+    ];
+    await pumpApp(tester, b);
+    await go(tester, '/calendar');
+    expect(find.text('9/29–10/2'), findsOneWidget);
+    expect(find.text('10/9 22:00 –\n10/10 06:00'), findsOneWidget);
+    expect(find.textContaining('9月29日'), findsNothing, reason: 'listed under 10月1日');
   });
 
   testWidgets('staff cannot edit even when connected', (tester) async {

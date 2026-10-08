@@ -175,7 +175,6 @@ class _AgendaState extends ConsumerState<_Agenda> {
     final selected = ref.watch(calendarSelectedDayProvider);
     final gridShown = ref.watch(monthGridShownProvider);
     final title = DateFormat.yMMMM('zh_TW').format(month);
-    final time = DateFormat.Hm('zh_TW');
     final loaded = events.value ?? const <CalendarEvent>[];
     final anchors = agendaAnchors(loaded, from: shownMonth, to: shownMonth.lastOfMonth);
     void shift(int months) => ref.read(calendarMonthProvider.notifier).shift(months);
@@ -211,9 +210,11 @@ class _AgendaState extends ConsumerState<_Agenda> {
           )
         : null;
 
+    // Each event under its first day in this month, as [agendaAnchors].
     final byDay = <Day, List<CalendarEvent>>{};
     for (final e in loaded) {
-      byDay.putIfAbsent(e.day, () => []).add(e);
+      final listed = e.daysWithin(shownMonth, shownMonth.lastOfMonth)?.first;
+      if (listed != null) byDay.putIfAbsent(listed, () => []).add(e);
     }
     final days = byDay.keys.toList()..sort();
     final agenda = [
@@ -226,7 +227,11 @@ class _AgendaState extends ConsumerState<_Agenda> {
               ListRow(
                 title: e.title,
                 subtitle: e.location,
-                value: e.allDay ? l10n.calAllDay : time.format(e.start),
+                trailing: Text(
+                  _when(l10n, e),
+                  textAlign: TextAlign.end,
+                  style: AppText.body.copyWith(color: AppColors.of(context).secondaryLabel),
+                ),
                 chevron: canEdit,
                 onTap: () => canEdit ? editEvent(context, ref, e, month: month) : showEventDetail(context, e),
               ),
@@ -288,4 +293,14 @@ class _AgendaState extends ConsumerState<_Agenda> {
       },
     );
   }
+}
+
+/// When an event is, beside its title: all day or its start time, or for
+/// one over several days the whole span, on two lines when it has times.
+String _when(L10n l10n, CalendarEvent e) {
+  final time = DateFormat.Hm('zh_TW');
+  final day = DateFormat.Md('zh_TW');
+  if (e.lastDay == e.day) return e.allDay ? l10n.calAllDay : time.format(e.start);
+  if (e.allDay) return '${day.format(e.start)}–${day.format(DateTime(e.lastDay.year, e.lastDay.month, e.lastDay.day))}';
+  return '${day.format(e.start)} ${time.format(e.start)} –\n${day.format(e.end)} ${time.format(e.end)}';
 }
