@@ -1642,8 +1642,56 @@ abstract class L10n {
   /// No description provided for @eventRosterGone.
   ///
   /// In zh, this message translates to:
-  /// **'這個活動的服事表已經不在了'**
+  /// **'找不到這個活動的服事表'**
   String get eventRosterGone;
+
+  /// No description provided for @eventRoster.
+  ///
+  /// In zh, this message translates to:
+  /// **'服事表'**
+  String get eventRoster;
+
+  /// No description provided for @eventRosterPeople.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 人'**
+  String eventRosterPeople(int count);
+
+  /// No description provided for @arrangeEventRoster.
+  ///
+  /// In zh, this message translates to:
+  /// **'安排服事'**
+  String get arrangeEventRoster;
+
+  /// No description provided for @eventRosterEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'還沒有服事項目'**
+  String get eventRosterEmpty;
+
+  /// No description provided for @copyDuties.
+  ///
+  /// In zh, this message translates to:
+  /// **'沿用其他活動'**
+  String get copyDuties;
+
+  /// No description provided for @copyDutiesHeader.
+  ///
+  /// In zh, this message translates to:
+  /// **'沿用哪一場的服事項目'**
+  String get copyDutiesHeader;
+
+  /// No description provided for @copyDutiesNone.
+  ///
+  /// In zh, this message translates to:
+  /// **'還沒有其他活動的服事表'**
+  String get copyDutiesNone;
+
+  /// No description provided for @dutiesCopied.
+  ///
+  /// In zh, this message translates to:
+  /// **'已加入 {count} 個服事項目'**
+  String dutiesCopied(int count);
 
   /// No description provided for @noZoneYet.
   ///

@@ -9,43 +9,59 @@ import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/calendar.dart';
 import '../../state/providers.dart';
+import '../rosters/event_roster_screen.dart';
 
-/// Read-only details, for people who cannot edit the calendar.
+/// Read-only details, for people who cannot edit the calendar, with the
+/// event's roster.
 Future<void> showEventDetail(BuildContext context, CalendarEvent e) {
   final l10n = L10n.of(context);
+  final screen = context;
   final fmt = DateFormat.MMMEd('zh_TW');
   final time = DateFormat.Hm('zh_TW');
   return showAppSheet<void>(
     context,
     builder: (context) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(Space.l, 0, Space.l, Space.l),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(e.title, style: AppText.title3),
-            const SizedBox(height: Space.s),
-            Text(
-              switch (e) {
-                _ when e.allDay && e.lastDay == e.day => '${fmt.format(e.start)} ${l10n.calAllDay}',
-                _ when e.allDay =>
-                  '${fmt.format(e.start)} – ${fmt.format(DateTime(e.lastDay.year, e.lastDay.month, e.lastDay.day))}',
-                _ when e.lastDay == e.day => '${fmt.format(e.start)} ${time.format(e.start)}–${time.format(e.end)}',
-                _ => '${fmt.format(e.start)} ${time.format(e.start)} – ${fmt.format(e.end)} ${time.format(e.end)}',
-              },
-              style: AppText.body,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Space.l, 0, Space.l, Space.l),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(e.title, style: AppText.title3),
+                const SizedBox(height: Space.s),
+                Text(
+                  switch (e) {
+                    _ when e.allDay && e.lastDay == e.day => '${fmt.format(e.start)} ${l10n.calAllDay}',
+                    _ when e.allDay =>
+                      '${fmt.format(e.start)} – ${fmt.format(DateTime(e.lastDay.year, e.lastDay.month, e.lastDay.day))}',
+                    _ when e.lastDay == e.day => '${fmt.format(e.start)} ${time.format(e.start)}–${time.format(e.end)}',
+                    _ => '${fmt.format(e.start)} ${time.format(e.start)} – ${fmt.format(e.end)} ${time.format(e.end)}',
+                  },
+                  style: AppText.body,
+                ),
+                if (e.location != null && e.location!.isNotEmpty) ...[
+                  const SizedBox(height: Space.xs),
+                  Text(e.location!, style: AppText.body.copyWith(color: AppColors.of(context).secondaryLabel)),
+                ],
+                if (e.description != null && e.description!.isNotEmpty) ...[
+                  const SizedBox(height: Space.m),
+                  Text(e.description!, style: AppText.callout),
+                ],
+              ],
             ),
-            if (e.location != null && e.location!.isNotEmpty) ...[
-              const SizedBox(height: Space.xs),
-              Text(e.location!, style: AppText.body.copyWith(color: AppColors.of(context).secondaryLabel)),
-            ],
-            if (e.description != null && e.description!.isNotEmpty) ...[
-              const SizedBox(height: Space.m),
-              Text(e.description!, style: AppText.callout),
-            ],
-          ],
-        ),
+          ),
+          EventRosterRow(
+            event: e,
+            onOpen: () {
+              Navigator.pop(context);
+              openEventRoster(screen, e);
+            },
+          ),
+        ],
       ),
     ),
   );
@@ -79,7 +95,12 @@ Future<void> editEvent(
   if (result == null || !context.mounted) return;
   final calendar = ref.read(calendarActionsProvider);
   try {
-    if (result.delete && event != null) {
+    if (result.openRoster && event != null) {
+      // Saved first: going to the roster keeps what was changed here.
+      final edited = result.event;
+      if (edited != null) await calendar.save(edited, previous: event);
+      if (context.mounted) openEventRoster(context, edited ?? event);
+    } else if (result.delete && event != null) {
       final undo = await calendar.delete(event);
       if (!context.mounted) return;
       showToast(context, l10n.calDeleted(event.title), onUndo: () => undo().ignore());
@@ -93,10 +114,14 @@ Future<void> editEvent(
 }
 
 class _EditResult {
-  const _EditResult({this.event, this.delete = false});
+  const _EditResult({this.event, this.delete = false, this.openRoster = false});
 
   final CalendarEvent? event;
   final bool delete;
+
+  /// Leave the editor for the event's roster, saving [event] first when
+  /// it was changed.
+  final bool openRoster;
 }
 
 class _EventEditor extends StatefulWidget {
@@ -196,23 +221,34 @@ class _EventEditorState extends State<_EventEditor> {
     if (!_at(_endDay, t).isAfter(_start)) _endDay = DateTime(_startDay.year, _startDay.month, _startDay.day + 1);
   });
 
+  /// The event as edited.
+  CalendarEvent get _edited => CalendarEvent(
+    id: widget.event?.id,
+    title: _title.text.trim(),
+    start: _start,
+    end: _end,
+    allDay: _allDay,
+    location: _location.text.trim().isEmpty ? null : _location.text.trim(),
+    description: widget.event?.description,
+  );
+
   void _save() {
-    final title = _title.text.trim();
-    if (title.isEmpty || !_valid) return;
-    Navigator.pop(
-      context,
-      _EditResult(
-        event: CalendarEvent(
-          id: widget.event?.id,
-          title: title,
-          start: _start,
-          end: _end,
-          allDay: _allDay,
-          location: _location.text.trim().isEmpty ? null : _location.text.trim(),
-          description: widget.event?.description,
-        ),
-      ),
-    );
+    if (_title.text.trim().isEmpty || !_valid) return;
+    Navigator.pop(context, _EditResult(event: _edited));
+  }
+
+  /// To the roster, with what was changed here unless it cannot be saved.
+  void _openRoster() {
+    final e = widget.event!;
+    final edited = _edited;
+    final changed =
+        edited.title != e.title ||
+        edited.start != e.start ||
+        edited.end != e.end ||
+        edited.allDay != e.allDay ||
+        (edited.location ?? '') != (e.location ?? '');
+    final ok = edited.title.isNotEmpty && _valid;
+    Navigator.pop(context, _EditResult(event: changed && ok ? edited : null, openRoster: true));
   }
 
   @override
@@ -292,6 +328,7 @@ class _EventEditorState extends State<_EventEditor> {
                   ),
                 ],
               ),
+              if (widget.event case final e?) EventRosterRow(event: e, onOpen: _openRoster),
               if (widget.event != null)
                 ListSection(
                   children: [

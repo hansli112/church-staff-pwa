@@ -6,6 +6,7 @@ import 'package:martha/data/firebase/codec.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/event_roster.dart';
 import 'package:martha/domain/models.dart';
+import 'package:martha/domain/staff_order.dart';
 
 void main() {
   group('the days, as calendarWrite works them out too (testdata/event_days.json)', () {
@@ -67,6 +68,45 @@ void main() {
         end: DateTime.utc(2026, 12, 24, 12),
       );
       expect(eventRoster(e).forEvent!.title.length, 200);
+    });
+  });
+
+  group('arranging an event', () {
+    const sunday = Service(id: 'sunday', name: '主日崇拜', weekday: 7, duties: ['司會', '司琴', '招待']);
+    const youth = Service(id: 'youth', name: '青年崇拜', weekday: 6, duties: ['司琴', '音控']);
+
+    test('offers every duty the services use, each once, in their order', () {
+      expect(eventDutySuggestions(const [sunday, youth]), ['司會', '司琴', '招待', '音控']);
+    });
+
+    test('a member serves a duty there when any 牧區 of theirs has it', () {
+      const m = Member(
+        uid: 'a',
+        name: '小明',
+        zones: [
+          Zone(serviceType: 'youth', duties: ['音控']),
+        ],
+      );
+      expect(servesAnywhere(m, '音控'), isTrue);
+      expect(servesAnywhere(m, '司琴'), isFalse);
+    });
+
+    test('the staff order of the first service ranking the duty', () {
+      final order = eventStaffOrder(
+        const [sunday, youth],
+        {
+          'sunday': StaffOrder({
+            '司琴': ['美玉', '志豪'],
+          }),
+          'youth': StaffOrder({
+            '司琴': ['志豪', '小華'],
+            '音控': ['小華'],
+          }),
+        },
+      );
+      expect(order.rankingOf('司琴'), ['美玉', '志豪']);
+      expect(order.rankingOf('音控'), ['小華']);
+      expect(order.rankingOf('招待'), isEmpty);
     });
   });
 }

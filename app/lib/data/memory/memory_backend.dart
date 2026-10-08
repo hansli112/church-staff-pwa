@@ -540,7 +540,7 @@ class MemoryChurchData implements ChurchData {
   @override
   Stream<List<Roster>> rosters({required Day from}) => _b.watch(() {
     _requireMember();
-    return (_b.rosters[churchId]!.values.where((r) => !r.day.isBefore(from)).toList()
+    return (_b.rosters[churchId]!.values.where((r) => !r.lastDay.isBefore(from)).toList()
       ..sort((a, b) => a.day.compareTo(b.day)));
   }, equals: _sameList);
 
@@ -566,6 +566,15 @@ class MemoryChurchData implements ChurchData {
   Future<List<Roster>> allRosters() async {
     _requireMember();
     return _b.rosters[churchId]!.values.toList();
+  }
+
+  @override
+  Future<List<Roster>> eventRosters() async {
+    _requireMember();
+    return [
+      for (final r in _b.rosters[churchId]!.values)
+        if (r.forEvent case final e? when !e.cancelled) r,
+    ]..sort((a, b) => b.day.compareTo(a.day));
   }
 
   @override

@@ -1,6 +1,7 @@
 import 'day.dart';
 import 'limits.dart';
 import 'models.dart';
+import 'staff_order.dart';
 
 /// The days of [e] as a roster keeps them: in UTC+8, the time zone of every
 /// dateKey (Taiwan, Hong Kong and Malaysia alike), not the phone's. An
@@ -30,4 +31,26 @@ Roster eventRoster(CalendarEvent e, {List<Duty> duties = const []}) {
       lastDay: days.last,
     ),
   );
+}
+
+/// The duties to offer when arranging an event: every duty the services'
+/// templates have, each once, in the services' order.
+List<String> eventDutySuggestions(List<Service> services) => {
+  for (final s in services) ...s.duties,
+}.toList();
+
+/// Whether [m] serves [duty] in any 牧區: an event is in none, so whoever
+/// does it anywhere is listed first.
+bool servesAnywhere(Member m, String duty) => m.zones.any((z) => z.duties.contains(duty));
+
+/// The staff order for an event: per duty, the ranking of the first of
+/// [services] that ranks it.
+StaffOrder eventStaffOrder(List<Service> services, Map<String, StaffOrder> orders) {
+  final byRole = <String, List<String>>{};
+  for (final s in services) {
+    for (final e in (orders[s.id] ?? StaffOrder()).rankingsByRole.entries) {
+      byRole.putIfAbsent(e.key, () => e.value);
+    }
+  }
+  return StaffOrder(byRole);
 }

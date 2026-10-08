@@ -851,7 +851,35 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get eventRosterGone => '這個活動的服事表已經不在了';
+  String get eventRosterGone => '找不到這個活動的服事表';
+
+  @override
+  String get eventRoster => '服事表';
+
+  @override
+  String eventRosterPeople(int count) {
+    return '$count 人';
+  }
+
+  @override
+  String get arrangeEventRoster => '安排服事';
+
+  @override
+  String get eventRosterEmpty => '還沒有服事項目';
+
+  @override
+  String get copyDuties => '沿用其他活動';
+
+  @override
+  String get copyDutiesHeader => '沿用哪一場的服事項目';
+
+  @override
+  String get copyDutiesNone => '還沒有其他活動的服事表';
+
+  @override
+  String dutiesCopied(int count) {
+    return '已加入 $count 個服事項目';
+  }
 
   @override
   String get noZoneYet => '你還沒有屬於任何牧區，請找管理員設定';

@@ -11,6 +11,7 @@ import '../church/church_logo.dart';
 import '../church/claims.dart';
 import 'church_link_card.dart';
 import '../rosters/format.dart';
+import '../rosters/event_roster_screen.dart';
 import '../rosters/rosters_screen.dart';
 
 /// Whether to show 開始使用: I am an admin and still the church's only
@@ -126,7 +127,9 @@ class HomeScreen extends ConsumerWidget {
                   children: [
                     for (final s in list.take(20))
                       ListRow(
-                        title: dayLabel(l10n, s.roster.day, today),
+                        title: s.roster.isEvent
+                            ? eventDaysLabel(l10n, s.roster, today)
+                            : dayLabel(l10n, s.roster.day, today),
                         subtitle: [
                           s.roster.forEvent?.title ?? services?.byId(s.roster.type)?.name ?? '',
                           s.duties.join('、'),

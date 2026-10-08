@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'deep_link.dart';
+import 'domain/models.dart';
 import 'env.dart';
 import 'features/admin/admin_screens.dart';
 import 'features/auth/login_screen.dart';
@@ -117,7 +118,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 routes: [
                   page('import/:type', (s) => ImportScreen(serviceType: s.pathParameters['type']!)),
                   // Before :type/:day, which would take it for a service.
-                  page('event/:id', (s) => EventRosterScreen(eventId: s.pathParameters['id']!)),
+                  page(
+                    'event/:id',
+                    (s) => EventRosterScreen(eventId: s.pathParameters['id']!, event: s.extra as CalendarEvent?),
+                  ),
                   page(
                     ':type/:day',
                     (s) => RosterDayScreen(

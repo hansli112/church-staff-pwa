@@ -516,6 +516,10 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect(await g.church.rosters(from: Day(2026, 12, 1)).first, [party]);
       await expectLater(g.church.saveRoster(party.copyWith(duties: const [])), denied());
       await expectLater(g.church.deleteRoster(party), denied());
+      // Still on the day after it began; and there to copy from later.
+      expect(await g.church.rosters(from: Day(2026, 12, 25)).first, [party]);
+      expect(await g.church.rosters(from: Day(2026, 12, 26)).first, isEmpty);
+      expect(await g.church.eventRosters(), [party]);
       await w.signIn(Grace.editorEmail);
       await g.church.deleteRoster(party);
       expect(await g.church.rosters(from: Day(2026, 12, 24)).first, isNot(contains(party)));

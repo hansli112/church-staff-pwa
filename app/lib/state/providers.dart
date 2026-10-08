@@ -113,7 +113,8 @@ final shownChurchLinkProvider = Provider<({String title, String body, String url
   return shownChurchLink(link, content, now);
 });
 
-/// Saved rosters from today on, every service and event. Not an event's
+/// Saved rosters from today on, every service and event, and events'
+/// rosters still on today (a retreat begun yesterday). Not an event's
 /// roster cancelled with its event: the backend keeps it only for undo.
 final savedRostersProvider = StreamProvider<List<Roster>>((ref) {
   final from = ref.watch(todayProvider);

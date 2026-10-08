@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/design/components.dart';
 import '../../core/perf.dart';
 import '../../core/design/tokens.dart';
+import '../../domain/event_roster.dart';
 import '../../domain/models.dart';
 import '../../domain/staff_order.dart';
 import '../../domain/text.dart' show nameKey;
@@ -56,7 +57,9 @@ class PeoplePicker extends StatefulWidget {
     this.onChanged,
   });
 
-  final String serviceType;
+  /// The service, or null for an event's roster: then whoever serves the
+  /// duty in any 牧區 is listed first.
+  final String? serviceType;
   final String duty;
   final List<String> initial;
   final List<Member> members;
@@ -96,7 +99,8 @@ class PeoplePickerState extends State<PeoplePicker> {
     for (final m in widget.members) {
       final name = m.name.trim();
       if (name.isEmpty) continue;
-      if (m.serves(widget.serviceType, widget.duty)) {
+      final type = widget.serviceType;
+      if (type == null ? servesAnywhere(m, widget.duty) : m.serves(type, widget.duty)) {
         if (servingSet.add(name)) serving.add(name);
       } else {
         others.add(m);

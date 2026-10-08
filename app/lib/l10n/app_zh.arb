@@ -513,7 +513,29 @@
       }
     }
   },
-  "eventRosterGone": "這個活動的服事表已經不在了",
+  "eventRosterGone": "找不到這個活動的服事表",
+  "eventRoster": "服事表",
+  "eventRosterPeople": "{count} 人",
+  "@eventRosterPeople": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "arrangeEventRoster": "安排服事",
+  "eventRosterEmpty": "還沒有服事項目",
+  "copyDuties": "沿用其他活動",
+  "copyDutiesHeader": "沿用哪一場的服事項目",
+  "copyDutiesNone": "還沒有其他活動的服事表",
+  "dutiesCopied": "已加入 {count} 個服事項目",
+  "@dutiesCopied": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "noZoneYet": "你還沒有屬於任何牧區，請找管理員設定",
   "waitsForZone": "還沒設定牧區",
   "waitingForZone": "{count} 位同工還沒設定牧區",

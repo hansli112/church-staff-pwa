@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/backend.dart';
+import '../domain/event_roster.dart';
 import '../domain/models.dart';
 import '../domain/roster_edit.dart';
 import '../domain/roster_import.dart';
@@ -41,6 +42,12 @@ class RosterActions {
   Map<String, String> get _nameIds => uniqueNameIds(_loaded(_ref.read(membersProvider), 'members'));
 
   StaffOrder _order(String type) => _loaded(_ref.read(staffOrderProvider(type)), 'staff order');
+
+  /// [r]'s staff order: its service's, or for an event's roster that of the
+  /// first service ranking each duty.
+  StaffOrder orderOf(Roster r) => r.isEvent
+      ? eventStaffOrder(_services.services, {for (final s in _services.services) s.id: _order(s.id)})
+      : _order(r.type);
 
   /// [r]'s day as this device sees it now: saved, or the template draft.
   Roster _now(Roster r) {
@@ -84,13 +91,45 @@ class RosterActions {
 
   RosterWrite setPeople(Roster roster, String role, List<String> people) => _dutyWrite(
     roster,
-    withPeople(roster, role, people, nameIds: _nameIds, order: _order(roster.type)),
+    withPeople(roster, role, people, nameIds: _nameIds, order: orderOf(roster)),
     role,
   );
 
   RosterWrite removeDuty(Roster roster, String role) => _dutyWrite(roster, withoutDuty(roster, role), role);
 
   RosterWrite addDuty(Roster roster, String role) => setPeople(roster, role, const []);
+
+  /// Adds those of [roles] that [roster] lacks, with nobody yet, in one
+  /// write: 沿用 another event's duties. Undo takes back the ones still
+  /// empty.
+  RosterWrite addDuties(Roster roster, List<String> roles) {
+    final have = {for (final d in roster.duties) d.role};
+    final added = [
+      for (final r in {...roles})
+        if (!have.contains(r)) r,
+    ];
+    final next = roster.copyWith(
+      duties: [
+        ...roster.duties,
+        for (final r in added) Duty(role: r),
+      ],
+    );
+    return (
+      done: _data.saveRoster(next),
+      undo: () {
+        if (_untouchedDraft(roster, next)) return _data.deleteRoster(roster);
+        final now = _now(roster);
+        return _data.saveRoster(
+          now.copyWith(
+            duties: [
+              for (final d in now.duties)
+                if (!added.contains(d.role) || d.people.isNotEmpty) d,
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   /// Sets [roster]'s special events; [addToCommon] also become choices for
   /// every day of the service. Undo takes back both.
@@ -216,6 +255,19 @@ class RosterActions {
     );
   }
 }
+
+/// Whether everything [RosterActions] reads for an event's roster is
+/// loaded: every service's staff order too. Watching it keeps them loaded.
+final eventEditingProvider = Provider.autoDispose<bool>((ref) {
+  final services = ref.watch(servicesProvider);
+  final loaded = [
+    services,
+    ref.watch(savedRostersProvider),
+    ref.watch(membersProvider),
+    for (final s in services.value?.services ?? const <Service>[]) ref.watch(staffOrderProvider(s.id)),
+  ];
+  return services.hasValue && loaded.every((v) => v.hasValue);
+});
 
 /// Whether everything [RosterActions] reads for service [type] is loaded.
 /// A screen that edits the service watches this, which also keeps it

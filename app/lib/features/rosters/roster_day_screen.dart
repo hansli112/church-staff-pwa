@@ -86,7 +86,7 @@ class RosterDayScreen extends ConsumerWidget {
               highlightName: ref.watch(meProvider.select((m) => m.value?.name)),
             )
           else
-            _EditableDay(roster: roster, service: service, title: title),
+            EditableRoster(roster: roster, title: title),
         ],
       ),
     );
@@ -106,7 +106,7 @@ class RosterDayScreen extends ConsumerWidget {
     ];
     final role = await showAppSheet<String>(
       context,
-      builder: (context) => _AddDutySheet(suggestions: suggestions),
+      builder: (context) => AddDutySheet(suggestions: suggestions),
     );
     if (role == null || role.trim().isEmpty || present.contains(role.trim())) {
       return;
@@ -196,22 +196,27 @@ Future<void> runWithUndo(BuildContext context, String message, RosterWrite Funct
   if (!settled && !await result && context.mounted) showToast(context, l10n.saveFailed);
 }
 
-class _EditableDay extends ConsumerWidget {
-  const _EditableDay({
-    required this.roster,
-    required this.service,
-    required this.title,
-  });
+/// Whether what editing [roster] reads is loaded; watching it keeps it so.
+bool _editingReady(WidgetRef ref, Roster roster) =>
+    roster.isEvent ? ref.watch(eventEditingProvider) : ref.watch(rosterEditingProvider(roster.type));
+
+/// A roster as its editors see it: tap a duty to pick people, a name to
+/// swap or remove it (no swap on an event's roster: it has no other days),
+/// swipe a duty away.
+class EditableRoster extends ConsumerWidget {
+  const EditableRoster({super.key, required this.roster, required this.title, this.whenEmpty});
 
   final Roster roster;
-  final Service service;
   final String title;
+
+  /// Shown while it has no duties; by default a hint to add one.
+  final Widget? whenEmpty;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
-    final ready = ref.watch(rosterEditingProvider(roster.type));
+    final ready = _editingReady(ref, roster);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -254,7 +259,7 @@ class _EditableDay extends ConsumerWidget {
               ),
           ],
         ),
-        if (roster.duties.isEmpty) EmptyState(message: l10n.addDuty),
+        if (roster.duties.isEmpty) whenEmpty ?? EmptyState(message: l10n.addDuty),
       ],
     );
   }
@@ -269,20 +274,22 @@ class _DutyRow extends ConsumerWidget {
   Future<void> _pick(BuildContext context, WidgetRef ref) async {
     final l10n = L10n.of(context);
     final members = ref.read(membersProvider).requireValue;
-    final order = ref.read(staffOrderProvider(roster.type)).requireValue;
+    final order = ref.read(rosterActionsProvider).orderOf(roster);
     final me = ref.read(meProvider).value;
     PickerResult? latest;
     final returned = await showAppSheet<PickerResult>(
       context,
       expand: true,
       builder: (_) => PeoplePicker(
-        serviceType: roster.type,
+        serviceType: roster.isEvent ? null : roster.type,
         duty: duty.role,
         initial: duty.people,
         members: members,
         order: order,
-        canGrantDuty: me?.isAdmin ?? false,
-        canReorder: true,
+        // An event is in no 牧區 to add the duty to, and has no staff
+        // order of its own to drag.
+        canGrantDuty: !roster.isEvent && (me?.isAdmin ?? false),
+        canReorder: !roster.isEvent,
         canRemove: true,
         onChanged: (r) => latest = r,
       ),
@@ -326,11 +333,12 @@ class _DutyRow extends ConsumerWidget {
         child: ListSection(
           header: person,
           children: [
-            ListRow(
-              title: l10n.swap,
-              leading: const Icon(Icons.swap_horiz),
-              onTap: () => Navigator.pop(context, 'swap'),
-            ),
+            if (!roster.isEvent)
+              ListRow(
+                title: l10n.swap,
+                leading: const Icon(Icons.swap_horiz),
+                onTap: () => Navigator.pop(context, 'swap'),
+              ),
             ListRow(
               title: l10n.removeFromDuty(duty.role),
               destructive: true,
@@ -386,7 +394,7 @@ class _DutyRow extends ConsumerWidget {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
     final platform = Theme.of(context).platform;
-    final ready = ref.watch(rosterEditingProvider(roster.type));
+    final ready = _editingReady(ref, roster);
     return InkWell(
       onTap: ready ? () => _pick(context, ref) : null,
       child: ConstrainedBox(
@@ -503,16 +511,17 @@ class _SwapSheet extends StatelessWidget {
   }
 }
 
-class _AddDutySheet extends StatefulWidget {
-  const _AddDutySheet({required this.suggestions});
+/// Picks a duty to add: one of [suggestions], or a name typed in.
+class AddDutySheet extends StatefulWidget {
+  const AddDutySheet({super.key, required this.suggestions});
 
   final List<String> suggestions;
 
   @override
-  State<_AddDutySheet> createState() => _AddDutySheetState();
+  State<AddDutySheet> createState() => _AddDutySheetState();
 }
 
-class _AddDutySheetState extends State<_AddDutySheet> {
+class _AddDutySheetState extends State<AddDutySheet> {
   final _name = TextEditingController();
 
   @override

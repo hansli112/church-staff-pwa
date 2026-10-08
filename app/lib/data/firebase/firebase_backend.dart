@@ -462,12 +462,28 @@ class FirestoreChurchData implements ChurchData {
       _col('settings').doc('services').live().map((s) => serviceSettingsFromJson(s.data())).translated();
 
   @override
-  Stream<List<Roster>> rosters({required Day from}) => _col('rosters')
-      .where('dateKey', isGreaterThanOrEqualTo: from.key)
-      .orderBy('dateKey')
-      .live()
-      .map((snap) => [for (final d in snap.docs) ?rosterFromJson(d.data())])
-      .translated();
+  Stream<List<Roster>> rosters({required Day from}) => _latestOfBoth(
+    _col('rosters').where('dateKey', isGreaterThanOrEqualTo: from.key).orderBy('dateKey').live(),
+    // Events begun before [from] and still on: only events' rosters have
+    // an endDateKey, so its single-field index is enough.
+    _col('rosters').where('endDateKey', isGreaterThanOrEqualTo: from.key).live(),
+    (days, events) {
+      final byId = {
+        for (final d in [...events.docs, ...days.docs]) d.id: ?rosterFromJson(d.data()),
+      };
+      return byId.values.toList()..sort((a, b) => a.day.compareTo(b.day));
+    },
+  ).translated();
+
+  @override
+  Future<List<Roster>> eventRosters() => _guard(() async {
+    final snap = await _col('rosters').where('kind', isEqualTo: 'event').get();
+    final all = [for (final d in snap.docs) ?rosterFromJson(d.data())];
+    return [
+      for (final r in all)
+        if (!(r.forEvent?.cancelled ?? true)) r,
+    ]..sort((a, b) => b.day.compareTo(a.day));
+  });
 
   @override
   Stream<StaffOrder> staffOrder(String serviceType) => _col(
@@ -772,6 +788,56 @@ class FirestoreChurchData implements ChurchData {
 }
 
 const _alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+/// The latest of [a] and [b] together, once each has given one.
+Stream<R> _latestOfBoth<A, B, R>(Stream<A> a, Stream<B> b, R Function(A a, B b) combine) {
+  late final StreamController<R> out;
+  StreamSubscription<A>? subA;
+  StreamSubscription<B>? subB;
+  (A,)? lastA;
+  (B,)? lastB;
+  void emit() {
+    if (lastA case (final x,)) {
+      if (lastB case (final y,)) out.add(combine(x, y));
+    }
+  }
+
+  out = StreamController<R>(
+    onListen: () {
+      var open = 2;
+      void done() {
+        if (--open == 0) out.close();
+      }
+
+      subA = a.listen(
+        (v) {
+          lastA = (v,);
+          emit();
+        },
+        onError: out.addError,
+        onDone: done,
+      );
+      subB = b.listen(
+        (v) {
+          lastB = (v,);
+          emit();
+        },
+        onError: out.addError,
+        onDone: done,
+      );
+    },
+    onPause: () {
+      subA?.pause();
+      subB?.pause();
+    },
+    onResume: () {
+      subA?.resume();
+      subB?.resume();
+    },
+    onCancel: () => Future.wait([?subA?.cancel(), ?subB?.cancel()]),
+  );
+  return out.stream;
+}
 
 /// 10 characters from a 32-letter alphabet without look-alikes (0/O, 1/I):
 /// 50 bits, enough that guessing a live invite is not practical.

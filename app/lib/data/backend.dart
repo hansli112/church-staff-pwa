@@ -130,8 +130,13 @@ abstract interface class ChurchData {
 
   Stream<ServiceSettings> services();
 
-  /// Saved rosters from [from] on, of every service, oldest first.
+  /// Saved rosters from [from] on, of every service, oldest first, and
+  /// events' rosters still on at [from] (a retreat begun the day before).
   Stream<List<Roster>> rosters({required Day from});
+
+  /// Every event's roster, past ones too, newest first, to copy duties
+  /// from (沿用). Not one cancelled with its event.
+  Future<List<Roster>> eventRosters();
 
   Stream<StaffOrder> staffOrder(String serviceType);
 
