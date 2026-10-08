@@ -79,7 +79,7 @@
     ],
     "headers": [
       {
-        "source": "**",
+        "regex": "^/(?:[^c].*|c[^/].*|c)?$",
         "headers": [
           {
             "key": "Cache-Control",
