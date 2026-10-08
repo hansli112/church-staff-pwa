@@ -139,18 +139,21 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     return ListView(
       padding: const EdgeInsets.all(Space.m),
       children: [
-        if (quota != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: Space.m),
-            child: Text(
-              !quota.platformOpen
-                  ? l10n.photoPlatformOff
-                  : quota.remaining <= 0
-                  ? l10n.photoChurchLimit(quota.limit)
-                  : l10n.photoRemaining(quota.remaining),
-              style: AppText.subheadline.copyWith(color: c.secondaryLabel),
-            ),
+        // The line is there before the quota comes, so the buttons below
+        // do not move under a finger when it does.
+        Padding(
+          padding: const EdgeInsets.only(bottom: Space.m),
+          child: Text(
+            quota == null
+                ? ' '
+                : !quota.platformOpen
+                ? l10n.photoPlatformOff
+                : quota.remaining <= 0
+                ? l10n.photoChurchLimit(quota.limit)
+                : l10n.photoRemaining(quota.remaining),
+            style: AppText.subheadline.copyWith(color: c.secondaryLabel),
           ),
+        ),
         if (_busy)
           Padding(
             padding: const EdgeInsets.all(Space.l),
