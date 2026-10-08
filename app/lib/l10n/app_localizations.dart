@@ -1936,20 +1936,14 @@ abstract class L10n {
   /// No description provided for @calShowMonth.
   ///
   /// In zh, this message translates to:
-  /// **'顯示小月曆'**
+  /// **'顯示月曆'**
   String get calShowMonth;
 
   /// No description provided for @calHideMonth.
   ///
   /// In zh, this message translates to:
-  /// **'收起小月曆'**
+  /// **'只看列表'**
   String get calHideMonth;
-
-  /// No description provided for @calHasEvents.
-  ///
-  /// In zh, this message translates to:
-  /// **'有活動'**
-  String get calHasEvents;
 
   /// No description provided for @calendarSetting.
   ///

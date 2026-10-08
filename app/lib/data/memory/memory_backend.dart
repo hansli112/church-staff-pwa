@@ -952,7 +952,7 @@ class MemoryChurchData implements ChurchData {
     final last = first.lastOfMonth;
     return [
       for (final e in _b.calendarEvents[churchId] ?? const <CalendarEvent>[])
-        if (!e.day.isAfter(last) && !e.lastDay.isBefore(first)) e,
+        if (e.daysWithin(first, last) != null) e,
     ]..sort((a, b) => a.start.compareTo(b.start));
   }
 

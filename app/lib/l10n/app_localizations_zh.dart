@@ -1006,13 +1006,10 @@ class L10nZh extends L10n {
   String get calNextMonth => '下個月';
 
   @override
-  String get calShowMonth => '顯示小月曆';
+  String get calShowMonth => '顯示月曆';
 
   @override
-  String get calHideMonth => '收起小月曆';
-
-  @override
-  String get calHasEvents => '有活動';
+  String get calHideMonth => '只看列表';
 
   @override
   String get calendarSetting => '行事曆';

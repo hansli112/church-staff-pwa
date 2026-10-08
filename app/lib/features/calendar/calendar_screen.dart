@@ -32,7 +32,7 @@ class CalendarMonth extends Notifier<DateTime> {
 
 final calendarMonthProvider = NotifierProvider<CalendarMonth, DateTime>(CalendarMonth.new);
 
-/// Whether the small month shows above the agenda. Remembered on this device.
+/// Whether the month grid shows above the agenda. Remembered on this device.
 class MonthGridShown extends Notifier<bool> {
   static const _key = 'calendar_month_grid';
 
@@ -56,7 +56,7 @@ final calendarEventsProvider = FutureProvider.autoDispose.family<List<CalendarEv
   return church.calendarEvents(month);
 });
 
-/// 行事曆: the church's Google Calendar month by month, a small month above
+/// 行事曆: the church's Google Calendar month by month, a month grid above
 /// an agenda of the days with events.
 class CalendarScreen extends ConsumerWidget {
   const CalendarScreen({super.key});
@@ -110,8 +110,8 @@ class CalendarScreen extends ConsumerWidget {
   }
 }
 
-/// The day picked on the small month, if any. Cleared when the month
-/// changes and when the small month is shown or folded away.
+/// The day picked on the month grid, if any. Cleared when the month
+/// changes and when the month grid is shown or folded away.
 class CalendarSelectedDay extends Notifier<Day?> {
   @override
   Day? build() {
@@ -166,9 +166,10 @@ class _AgendaState extends ConsumerState<_Agenda> {
     );
   }
 
-  /// Room the agenda keeps below a small month that stays put, at the usual
-  /// text size; it grows with the text. With less (a small phone on its
-  /// side, very large text) the month scrolls with the agenda instead.
+  /// Room the agenda keeps below a month grid that stays put, at the usual
+  /// text size; it grows with the text. With less (a small phone, a phone
+  /// on its side, very large text) the month scrolls with the agenda
+  /// instead. Decided for a six-week month, so it is the same every month.
   static const _agendaMinHeight = 200.0;
 
   @override
@@ -211,7 +212,7 @@ class _AgendaState extends ConsumerState<_Agenda> {
         ? MonthGrid(
             month: shownMonth,
             today: today,
-            marked: anchors.keys.toSet(),
+            events: loaded,
             selected: selected,
             onSelect: (d) => _select(d, anchors),
             onShift: shift,
@@ -257,7 +258,7 @@ class _AgendaState extends ConsumerState<_Agenda> {
         final headerHeight = Space.minTap(Theme.of(context).platform);
         final pinned =
             grid != null &&
-            constraints.maxHeight - headerHeight - MonthGrid.heightOf(context, shownMonth) >=
+            constraints.maxHeight - headerHeight - MonthGrid.tallest(context) >=
                 MediaQuery.textScalerOf(context).scale(_agendaMinHeight);
         return Column(
           children: [

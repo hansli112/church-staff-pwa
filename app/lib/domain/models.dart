@@ -476,6 +476,15 @@ class CalendarEvent {
     return Day(last.year, last.month, last.day);
   }
 
+  /// Whether the event is on [d].
+  bool covers(Day d) => !d.isBefore(day) && !d.isAfter(lastDay);
+
+  /// The event's days between [from] and [to], or null if it has none there.
+  ({Day first, Day last})? daysWithin(Day from, Day to) {
+    if (day.isAfter(to) || lastDay.isBefore(from)) return null;
+    return (first: day.isBefore(from) ? from : day, last: lastDay.isAfter(to) ? to : lastDay);
+  }
+
   CalendarEvent copyWith({String? title, DateTime? start, DateTime? end, bool? allDay, String? location}) =>
       CalendarEvent(
         id: id,
@@ -494,12 +503,11 @@ class CalendarEvent {
 Map<Day, Day> agendaAnchors(Iterable<CalendarEvent> events, {required Day from, required Day to}) {
   final anchors = <Day, Day>{};
   for (final e in events) {
-    var d = e.day.isBefore(from) ? from : e.day;
-    final end = e.lastDay.isAfter(to) ? to : e.lastDay;
-    while (!d.isAfter(end)) {
+    final days = e.daysWithin(from, to);
+    if (days == null) continue;
+    for (var d = days.first; !d.isAfter(days.last); d = d.addDays(1)) {
       final current = anchors[d];
       if (current == null || e.day.isBefore(current)) anchors[d] = e.day;
-      d = d.addDays(1);
     }
   }
   return anchors;
