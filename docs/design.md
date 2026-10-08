@@ -23,7 +23,7 @@
   - `churches/{cid}/members/{uid}`：角色、權限群組、牧區（沿用現有 user doc 的權限形狀）
   - `churches/{cid}/...`：rosters、settings、staff_orders
 - 遷移預留（輕度）：repository interface 保持乾淨；`churches/{cid}` 可整棵匯出；ID、時間不依賴 Firestore 專有型別；權限邏輯另寫規格文件。
-- 多教會身分：資料模型支援，產品不鼓勵；簡單的教會切換即可。
+- 多教會身分：一個人可以在好幾間教會。「我的 → 切換教會」切換，也在這裡輸入邀請碼加入或建立另一間（例如在 A 教會服事、幫 B 教會開一間）。
 
 ## 帳號與教會
 
