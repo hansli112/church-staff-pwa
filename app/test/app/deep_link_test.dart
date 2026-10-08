@@ -110,6 +110,9 @@ void main() {
     (noChurch, '/welcome/create', stay),
     (noChurch, '/account', stay),
     (noChurch, invite, stay),
+    // Right after joining, before the new church has come in.
+    (noChurch, '/add-to-home', stay),
+    (ready, '/add-to-home', stay),
   ]);
 
   table('a closed church shows the closed page', [

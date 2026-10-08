@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/design/components.dart';
 import '../../domain/models.dart';
@@ -7,6 +8,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/push.dart';
 import '../../state/session.dart';
+import '../church/add_to_home.dart';
 
 /// Which notifications I get from this church. Stored on my member doc
 /// (`notificationPrefs`, the one field I may write there). The system
@@ -21,6 +23,9 @@ class NotificationsScreen extends ConsumerWidget {
     final permission = ref.watch(pushPermissionProvider).value;
     if (me == null) return Scaffold(appBar: AppBar());
     final muted = me.mutedNotifications;
+    // Safari gets no notifications: only the page opened from the home screen.
+    final needsHomeScreen = ref.watch(addToHomeProvider) == AddToHome.iphone;
+    final off = permission == PushPermission.denied || needsHomeScreen;
 
     // Registering can fail even when allowed (no APNs token yet); the next
     // launch tries again, so say so instead of looking stuck.
@@ -65,8 +70,20 @@ class NotificationsScreen extends ConsumerWidget {
       appBar: AppBar(title: Text(l10n.notifications)),
       body: ListView(
         children: [
-          if (permission == PushPermission.denied) ListSection(footer: l10n.notifPermissionOff, children: const []),
-          if (permission == PushPermission.notAsked)
+          if (needsHomeScreen)
+            ListSection(
+              footer: l10n.notifNeedsHomeScreen,
+              children: [
+                ListRow(
+                  title: l10n.notifHowToAddToHome,
+                  leading: const Icon(Icons.add_to_home_screen),
+                  onTap: () => context.push('/add-to-home'),
+                ),
+              ],
+            )
+          else if (permission == PushPermission.denied)
+            ListSection(footer: l10n.notifPermissionOff, children: const [])
+          else if (permission == PushPermission.notAsked)
             ListSection(
               children: [
                 ListRow(
@@ -87,8 +104,8 @@ class NotificationsScreen extends ConsumerWidget {
                 SwitchRow(
                   title: title,
                   subtitle: sub,
-                  value: permission != PushPermission.denied && !muted.contains(kind),
-                  onChanged: permission == PushPermission.denied ? null : (v) => set(kind, v),
+                  value: !off && !muted.contains(kind),
+                  onChanged: off ? null : (v) => set(kind, v),
                 ),
             ],
           ),

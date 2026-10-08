@@ -2263,6 +2263,96 @@ abstract class L10n {
   /// **'iPhone 上已經加入的圖示不會跟著更新。換了名稱或 logo 之後，請刪掉圖示再加入一次。'**
   String get addToHomeIosNote;
 
+  /// No description provided for @addToHomeWhy.
+  ///
+  /// In zh, this message translates to:
+  /// **'從主畫面打開，就像一般的 App：一點就到服事表，也收得到服事通知。'**
+  String get addToHomeWhy;
+
+  /// No description provided for @addToHomeLater.
+  ///
+  /// In zh, this message translates to:
+  /// **'稍後再說'**
+  String get addToHomeLater;
+
+  /// No description provided for @addToHomeDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'已加入主畫面，之後從主畫面的圖示打開'**
+  String get addToHomeDone;
+
+  /// No description provided for @addToHomeIphoneShare.
+  ///
+  /// In zh, this message translates to:
+  /// **'點 Safari 的「分享」按鈕。看不到的話，先點「⋯」'**
+  String get addToHomeIphoneShare;
+
+  /// No description provided for @addToHomeIphoneAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'往下找到「加入主畫面」，點它，再點「加入」'**
+  String get addToHomeIphoneAdd;
+
+  /// No description provided for @addToHomeIphoneOpen.
+  ///
+  /// In zh, this message translates to:
+  /// **'從主畫面的圖示打開，再登入一次'**
+  String get addToHomeIphoneOpen;
+
+  /// No description provided for @addToHomeIphoneNotif.
+  ///
+  /// In zh, this message translates to:
+  /// **'到「我的」→「通知」，開啟通知'**
+  String get addToHomeIphoneNotif;
+
+  /// No description provided for @addToHomeIphoneFooter.
+  ///
+  /// In zh, this message translates to:
+  /// **'主畫面的 App 跟 Safari 是分開的，所以要再登入一次。'**
+  String get addToHomeIphoneFooter;
+
+  /// No description provided for @addToHomeAndroidMenu.
+  ///
+  /// In zh, this message translates to:
+  /// **'點 Chrome 右上角的選單（⋮）'**
+  String get addToHomeAndroidMenu;
+
+  /// No description provided for @addToHomeAndroidAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'點「加到主畫面」或「安裝應用程式」'**
+  String get addToHomeAndroidAdd;
+
+  /// No description provided for @addToHomeAndroidOpen.
+  ///
+  /// In zh, this message translates to:
+  /// **'之後從主畫面的圖示打開'**
+  String get addToHomeAndroidOpen;
+
+  /// No description provided for @addToHomeCardBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'一點就打開，也收得到服事通知'**
+  String get addToHomeCardBody;
+
+  /// No description provided for @addToHomeCardHide.
+  ///
+  /// In zh, this message translates to:
+  /// **'不再顯示'**
+  String get addToHomeCardHide;
+
+  /// No description provided for @notifNeedsHomeScreen.
+  ///
+  /// In zh, this message translates to:
+  /// **'iPhone 要先把這個網頁加入主畫面，從主畫面打開，才收得到通知。'**
+  String get notifNeedsHomeScreen;
+
+  /// No description provided for @notifHowToAddToHome.
+  ///
+  /// In zh, this message translates to:
+  /// **'怎麼加入主畫面'**
+  String get notifHowToAddToHome;
+
   /// No description provided for @churchLink.
   ///
   /// In zh, this message translates to:

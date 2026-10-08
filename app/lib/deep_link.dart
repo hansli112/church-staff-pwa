@@ -49,7 +49,8 @@ LinkTarget resolveLink(AppStage stage, List<Membership> memberships, Uri uri) {
     case AppStage.signedOut:
       return at('/login') ? _stay : away('/login');
     case AppStage.noChurch:
-      if (at('/welcome') || at('/c') || at('/account') || at('/dev')) return _stay;
+      // 加入主畫面 comes right after joining, maybe before the church has.
+      if (at('/welcome') || at('/c') || at('/account') || at('/dev') || at('/add-to-home')) return _stay;
       if (at('/loading') || at('/login')) return resume('/welcome');
       return _go('/welcome');
     case AppStage.churchClosed:

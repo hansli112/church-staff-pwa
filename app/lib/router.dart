@@ -11,6 +11,7 @@ import 'features/admin/admin_screens.dart';
 import 'features/auth/login_screen.dart';
 import 'features/calendar/calendar_screen.dart';
 import 'features/calendar/calendar_settings_screen.dart';
+import 'features/church/add_to_home.dart';
 import 'features/church/church_entry_screen.dart';
 import 'features/church/closed_screen.dart';
 import 'features/church/join_screen.dart';
@@ -94,6 +95,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [page('join/:code', (s) => JoinScreen(code: s.pathParameters['code']!))],
       ),
       page('/closed', (_) => const ClosedScreen()),
+      page('/add-to-home', (_) => const AddToHomeScreen()),
       page('/account', (_) => const AccountScreen()),
       page(
         '/admin',

@@ -80,6 +80,14 @@
   -->
   <div id="splash" role="status"><!--splash--><img src="icons/Icon-192.png" alt=""><p class="title">馬大別忙</p><div class="spin" aria-hidden="true"></div><p class="note">載入中…</p><!--/splash--></div>
   <script>
+    // Chrome offers to install the page once, often before the app has
+    // started: kept for the app's own 加入主畫面 button
+    // (lib/features/church/add_to_home.dart) instead of Chrome's bar.
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      window.marthaInstallPrompt = e;
+    });
+    window.addEventListener('appinstalled', function () { window.marthaInstallPrompt = null; });
     // Should the app never take it down, it must not cover the app for good.
     window.addEventListener('flutter-first-frame', function () {
       setTimeout(function () { var s = document.getElementById('splash'); if (s) s.remove(); }, 20000);

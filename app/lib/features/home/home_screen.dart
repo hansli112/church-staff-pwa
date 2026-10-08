@@ -7,6 +7,7 @@ import '../../core/perf.dart';
 import '../../core/design/tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
+import '../church/add_to_home.dart';
 import '../church/church_logo.dart';
 import '../church/claims.dart';
 import 'church_link_card.dart';
@@ -61,7 +62,8 @@ class _GettingStarted extends StatelessWidget {
 }
 
 /// 首頁: the days I serve next. That is what most people open the app for.
-/// Above them, the church link when the admin has set one, 開始使用 for
+/// Above them, 加入主畫面 on a phone's browser, the church link when the
+/// admin has set one, 開始使用 for
 /// the admin of a church nobody else has joined yet, and for admins the
 /// members still in no 牧區.
 class HomeScreen extends ConsumerWidget {
@@ -93,7 +95,8 @@ class HomeScreen extends ConsumerWidget {
           final claims = ref.watch(pendingClaimsProvider).value ?? const [];
           final gettingStarted = ref.watch(_gettingStartedProvider);
           final waiting = ref.watch(_waitingForZoneProvider);
-          if (list.isEmpty && link == null && claims.isEmpty && !gettingStarted && waiting == 0) {
+          final addToHome = AddToHomeCard.shown(ref);
+          if (list.isEmpty && link == null && claims.isEmpty && !gettingStarted && waiting == 0 && !addToHome) {
             return EmptyState(
               message: l10n.noUpcomingServices,
               actionLabel: l10n.viewRosters,
@@ -103,6 +106,7 @@ class HomeScreen extends ConsumerWidget {
           return ListView(
             children: [
               const PendingClaimsCard(),
+              if (addToHome) const AddToHomeCard(),
               if (gettingStarted) const _GettingStarted(),
               if (waiting > 0)
                 ListSection(

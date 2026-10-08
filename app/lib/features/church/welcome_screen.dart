@@ -11,6 +11,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/session.dart';
 import '../common/errors.dart';
+import 'add_to_home.dart';
 import 'claims.dart';
 import 'links.dart';
 
@@ -263,7 +264,7 @@ class _CreateChurchScreenState extends ConsumerState<CreateChurchScreen> {
       final cid = await ref.read(backendProvider).cloud.createChurch(name);
       ref.read(selectedChurchProvider.notifier).select(cid);
       Haptics.success();
-      if (mounted) context.go('/home');
+      if (mounted) context.go(afterJoining(ref));
     } catch (e) {
       if (!mounted) return;
       setState(() {

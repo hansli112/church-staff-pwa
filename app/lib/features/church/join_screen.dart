@@ -8,6 +8,7 @@ import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
+import 'add_to_home.dart';
 import 'church_logo.dart';
 
 final _invitePreviewProvider = FutureProvider.autoDispose.family<Invite, String>(
@@ -42,7 +43,7 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
       Haptics.success();
       if (!mounted) return;
       showToast(context, l10n.joined(invite.churchName));
-      context.go('/home');
+      context.go(afterJoining(ref));
     } catch (e) {
       if (mounted) setState(() => _error = errorText(l10n, e));
     } finally {
