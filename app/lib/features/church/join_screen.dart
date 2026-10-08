@@ -43,7 +43,7 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
       Haptics.success();
       if (!mounted) return;
       showToast(context, l10n.joined(invite.churchName));
-      context.go(afterJoining(ref));
+      goAfterJoining(context, ref, cid);
     } catch (e) {
       if (mounted) setState(() => _error = errorText(l10n, e));
     } finally {

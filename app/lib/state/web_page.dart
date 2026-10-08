@@ -14,11 +14,28 @@ final standaloneProvider = Provider<bool>((_) => page.isStandalone());
 /// How many touch points the browser reports; 0 off the web.
 final touchPointsProvider = Provider<int>((_) => page.touchPoints());
 
-/// Chrome's offer to install the web page: whether it made one (asked
-/// each time, since it can come at any moment), and showing it, which says
-/// whether it was installed.
-typedef InstallPrompt = ({bool Function() offered, Future<bool> Function() show});
+/// The church whose page this is: the one whose name and icon adding to
+/// the home screen gives. Null for the plain app page, and off the web.
+final pageChurchProvider = Provider<String?>((_) => page.pageChurchId());
 
-final installPromptProvider = Provider<InstallPrompt>(
-  (_) => (offered: page.installOffered, show: page.showInstall),
-);
+/// Loads a location as a new web page, from the server.
+final loadPageProvider = Provider<void Function(String location)>((_) => page.loadPage);
+
+/// Whether Chrome is offering to install the web page right now. It can
+/// come at any moment, and goes once used.
+final installOfferProvider = NotifierProvider<InstallOffer, bool>(InstallOffer.new);
+
+class InstallOffer extends Notifier<bool> {
+  @override
+  bool build() {
+    ref.onDispose(page.watchInstallOffer(() => state = page.installOffered()));
+    return page.installOffered();
+  }
+
+  /// Shows Chrome's install dialog; true when it was installed.
+  Future<bool> show() async {
+    final installed = await page.showInstall();
+    state = page.installOffered();
+    return installed;
+  }
+}

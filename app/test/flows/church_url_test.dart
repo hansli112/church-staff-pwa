@@ -133,17 +133,19 @@ void main() {
     expect(b.churches['grace']!.homeName, isNull);
   });
 
-  testWidgets('only admins see the home-screen name; everyone on the web sees how to add to home', (tester) async {
-    await pumpApp(tester, seededChurch(as: staffMei), overrides: [isWebProvider.overrideWithValue(true)]);
+  const iconsStay = 'iPhone 上已經加入的圖示不會跟著更新。換了名稱或 logo 之後，請刪掉圖示再加入一次。';
+
+  testWidgets('only admins see the home-screen name, and that icons on an iPhone keep the old one', (tester) async {
+    await pumpApp(tester, seededChurch(as: staffMei));
     await go(tester, '/me/church');
     expect(find.text('主畫面名稱'), findsNothing);
-    await tapText(tester, '加入主畫面');
-    expect(find.text('iPhone 上已經加入的圖示不會跟著更新。換了名稱或 logo 之後，請刪掉圖示再加入一次。'), findsOneWidget);
+    expect(find.text(iconsStay), findsNothing);
   });
 
-  testWidgets('the store app does not tell people to add the web page to home', (tester) async {
-    await pumpApp(tester, seededChurch(), overrides: [isWebProvider.overrideWithValue(false)]);
+  testWidgets('away from a phone’s browser, nobody is told to add the app to home', (tester) async {
+    await pumpApp(tester, seededChurch(), overrides: [isWebProvider.overrideWithValue(true)]);
     await go(tester, '/me/church');
-    expect(find.text('加入主畫面'), findsNothing);
+    expect(find.text(iconsStay), findsOneWidget, reason: 'for the admin');
+    expect(find.text('加入主畫面'), findsNothing, reason: 'a computer, a store app, or the home screen already');
   });
 }

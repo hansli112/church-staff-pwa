@@ -264,7 +264,7 @@ class _CreateChurchScreenState extends ConsumerState<CreateChurchScreen> {
       final cid = await ref.read(backendProvider).cloud.createChurch(name);
       ref.read(selectedChurchProvider.notifier).select(cid);
       Haptics.success();
-      if (mounted) context.go(afterJoining(ref));
+      if (mounted) goAfterJoining(context, ref, cid);
     } catch (e) {
       if (!mounted) return;
       setState(() {

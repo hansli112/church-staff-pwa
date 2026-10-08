@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/design/components.dart';
 import '../../domain/models.dart';
@@ -24,8 +23,9 @@ class NotificationsScreen extends ConsumerWidget {
     if (me == null) return Scaffold(appBar: AppBar());
     final muted = me.mutedNotifications;
     // Safari gets no notifications: only the page opened from the home screen.
-    final needsHomeScreen = ref.watch(addToHomeProvider) == AddToHome.iphone;
+    final needsHomeScreen = ref.watch(addToHomeProvider) == AddToHome.ios;
     final off = permission == PushPermission.denied || needsHomeScreen;
+    final churchId = ref.watch(currentChurchIdProvider);
 
     // Registering can fail even when allowed (no APNs token yet); the next
     // launch tries again, so say so instead of looking stuck.
@@ -72,12 +72,11 @@ class NotificationsScreen extends ConsumerWidget {
         children: [
           if (needsHomeScreen)
             ListSection(
-              footer: l10n.notifNeedsHomeScreen,
               children: [
                 ListRow(
-                  title: l10n.notifHowToAddToHome,
+                  title: l10n.notifNeedsHomeScreen,
                   leading: const Icon(Icons.add_to_home_screen),
-                  onTap: () => context.push('/add-to-home'),
+                  onTap: churchId == null ? null : () => openAddToHome(context, ref, churchId),
                 ),
               ],
             )

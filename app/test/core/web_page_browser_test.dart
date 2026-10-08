@@ -5,6 +5,7 @@ import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:web/web.dart' as web;
 import 'package:martha/core/web_page.dart';
 
 /// Chrome's install offer, as web/index.html keeps it.
@@ -41,5 +42,26 @@ void main() {
 
     globalContext['marthaInstallPrompt'] = offer('dismissed');
     expect(await showInstall(), isFalse);
+  });
+
+  test('the church whose page this is comes from its manifest', () {
+    final link = web.document.createElement('link')..setAttribute('rel', 'manifest');
+    web.document.head!.append(link);
+    addTearDown(() => link.remove());
+
+    link.setAttribute('href', '/c/grace/manifest.json');
+    expect(pageChurchId(), 'grace');
+    link.setAttribute('href', 'manifest.json');
+    expect(pageChurchId(), isNull, reason: 'the plain app page');
+  });
+
+  test('the app hears of Chrome’s offer coming or going', () {
+    var heard = 0;
+    final stop = watchInstallOffer(() => heard++);
+    web.window.dispatchEvent(web.Event('martha-install-offer'));
+    expect(heard, 1);
+    stop();
+    web.window.dispatchEvent(web.Event('martha-install-offer'));
+    expect(heard, 1, reason: 'stopped');
   });
 }

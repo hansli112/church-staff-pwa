@@ -12,6 +12,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/export.dart';
 import '../../state/providers.dart';
 import '../../state/session.dart';
+import '../church/add_to_home.dart';
 import '../church/links.dart';
 import '../common/errors.dart';
 import 'home_name_dialog.dart';
@@ -114,42 +115,6 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
     }
   }
 
-  Future<void> _addToHomeHelp(String url) async {
-    final l10n = L10n.of(context);
-    await showAppSheet<void>(
-      context,
-      builder: (context) => SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListSection(
-                header: l10n.addToHome,
-                footer: l10n.addToHomeIosNote,
-                children: [
-                  ListRow(title: 'iPhone', subtitle: l10n.addToHomeIphone),
-                  ListRow(title: 'Android', subtitle: l10n.addToHomeAndroid),
-                ],
-              ),
-              ListSection(
-                children: [
-                  ListRow(
-                    title: l10n.churchUrlShare,
-                    leading: const Icon(Icons.ios_share),
-                    onTap: () {
-                      Navigator.pop(context);
-                      shareText(this.context, url, copied: l10n.churchUrlCopied);
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Future<void> _leave(Church church, Member me) async {
     final l10n = L10n.of(context);
     final ok = await confirmDestructive(
@@ -227,6 +192,8 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
             ),
           ),
           ListSection(
+            // For whoever changes the church's name or logo.
+            footer: admin ? l10n.addToHomeIosNote : null,
             children: [
               ListRow(
                 title: l10n.churchUrl,
@@ -240,9 +207,10 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
                   value: church.homeName ?? l10n.homeNameUnset,
                   onTap: () => _editHomeName(church),
                 ),
-              // Store apps are already on the home screen.
-              if (ref.watch(isWebProvider))
-                ListRow(title: l10n.addToHome, onTap: () => _addToHomeHelp(churchUrl(church.id))),
+              // Only on a phone's browser: anywhere else it is on the home
+              // screen already, or cannot be.
+              if (ref.watch(addToHomeProvider) != null)
+                ListRow(title: l10n.addToHome, onTap: () => openAddToHome(context, ref, church.id)),
             ],
           ),
           if (admin)

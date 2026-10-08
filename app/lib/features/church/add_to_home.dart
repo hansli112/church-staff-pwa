@@ -16,16 +16,16 @@ import '../auth/in_app_browser.dart';
 /// of it until dismissed.
 
 /// How this phone adds the page to its home screen.
-enum AddToHome { iphone, android }
+enum AddToHome { ios, android }
 
 /// How [userAgent]'s phone adds the page to its home screen; null when it
 /// needs not or cannot: opened from the home screen already ([standalone]),
 /// a computer, a store app (no user agent), or an app's built-in browser.
 AddToHome? addToHomeFor(String userAgent, {required bool standalone, required int touchPoints}) {
   if (standalone || inAppBrowser(userAgent) != null) return null;
-  if (RegExp('iPhone|iPad|iPod').hasMatch(userAgent)) return AddToHome.iphone;
+  if (RegExp('iPhone|iPad|iPod').hasMatch(userAgent)) return AddToHome.ios;
   // An iPad asks for the desktop site, as a Mac with a touch screen.
-  if (userAgent.contains('Macintosh') && touchPoints > 1) return AddToHome.iphone;
+  if (userAgent.contains('Macintosh') && touchPoints > 1) return AddToHome.ios;
   if (userAgent.contains('Android')) return AddToHome.android;
   return null;
 }
@@ -38,9 +38,29 @@ final addToHomeProvider = Provider<AddToHome?>(
   ),
 );
 
-/// Where joining or starting a church leads: 加入主畫面 on a phone's
-/// browser, the home page anywhere else.
-String afterJoining(WidgetRef ref) => ref.read(addToHomeProvider) == null ? '/home' : '/add-to-home';
+/// Opens 加入主畫面 for [churchId], on top of the page I am on ([push]) or
+/// in its place. Only that church's own page adds it with the church's name
+/// and icon, so any other page is first loaded again as that one, which
+/// then comes straight here; 稍後再說 leads on to its home page.
+void openAddToHome(BuildContext context, WidgetRef ref, String churchId, {bool push = true}) {
+  if (ref.read(pageChurchProvider) != churchId) {
+    ref.read(loadPageProvider)('/c/$churchId?to=${Uri.encodeComponent('/add-to-home')}');
+  } else if (push) {
+    context.push('/add-to-home');
+  } else {
+    context.go('/add-to-home');
+  }
+}
+
+/// Where joining or starting [churchId] leads: 加入主畫面 on a phone's
+/// browser, its home page anywhere else.
+void goAfterJoining(BuildContext context, WidgetRef ref, String churchId) {
+  if (ref.read(addToHomeProvider) == null) {
+    context.go('/home');
+  } else {
+    openAddToHome(context, ref, churchId, push: false);
+  }
+}
 
 /// The home page's reminder was dismissed on this device.
 final addToHomeHiddenProvider = NotifierProvider<AddToHomeHidden, bool>(AddToHomeHidden.new);
@@ -57,9 +77,9 @@ class AddToHomeHidden extends Notifier<bool> {
   }
 }
 
-/// 加入主畫面: why, and the steps on this phone. Chrome on Android installs
-/// in one tap when it has offered to. Right after joining it leads on to
-/// the home page; opened from a page, it goes back there.
+/// 加入主畫面: the steps on this phone, or one tap while Chrome offers to
+/// install. Right after joining it leads on to the home page; opened from
+/// a page, it goes back there.
 class AddToHomeScreen extends ConsumerStatefulWidget {
   const AddToHomeScreen({super.key});
 
@@ -78,7 +98,8 @@ class _AddToHomeScreenState extends ConsumerState<AddToHomeScreen> {
 
   Future<void> _install() async {
     final l10n = L10n.of(context);
-    if (!await ref.read(installPromptProvider).show() || !mounted) return;
+    if (!await ref.read(installOfferProvider.notifier).show() || !mounted) return;
+    ref.read(addToHomeHiddenProvider.notifier).hide();
     showToast(context, l10n.addToHomeDone);
     _leave();
   }
@@ -88,18 +109,18 @@ class _AddToHomeScreenState extends ConsumerState<AddToHomeScreen> {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
     final how = ref.watch(addToHomeProvider);
-    final offered = how == AddToHome.android && ref.read(installPromptProvider).offered();
+    final offered = how == AddToHome.android && ref.watch(installOfferProvider);
     final steps = switch (how) {
-      AddToHome.iphone => [
-        l10n.addToHomeIphoneShare,
-        l10n.addToHomeIphoneAdd,
-        l10n.addToHomeIphoneOpen,
-        l10n.addToHomeIphoneNotif,
+      AddToHome.ios => [
+        l10n.addToHomeIosShare,
+        l10n.addToHomeIosAdd,
+        l10n.addToHomeIosOpen,
+        l10n.addToHomeIosNotif,
       ],
       // Nothing to add here (a computer), or Chrome does it in one tap.
       null => const <String>[],
       _ when offered => const <String>[],
-      _ => [l10n.addToHomeAndroidMenu, l10n.addToHomeAndroidAdd, l10n.addToHomeAndroidOpen],
+      AddToHome.android => [l10n.addToHomeAndroidMenu, l10n.addToHomeAndroidAdd, l10n.addToHomeAndroidOpen],
     };
     return Scaffold(
       body: SafeArea(
@@ -110,28 +131,18 @@ class _AddToHomeScreenState extends ConsumerState<AddToHomeScreen> {
               shrinkWrap: true,
               padding: const EdgeInsets.symmetric(vertical: Space.l),
               children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: Space.l),
-                  child: Column(
-                    children: [
-                      Icon(Icons.add_to_home_screen, size: 48, color: c.accent),
-                      const SizedBox(height: Space.m),
-                      Text(l10n.addToHome, textAlign: TextAlign.center, style: AppText.title),
-                      const SizedBox(height: Space.s),
-                      Text(
-                        l10n.addToHomeWhy,
-                        textAlign: TextAlign.center,
-                        style: AppText.body.copyWith(color: c.secondaryLabel),
-                      ),
-                    ],
-                  ),
-                ),
+                Icon(Icons.add_to_home_screen, size: 48, color: c.secondaryLabel),
+                const SizedBox(height: Space.m),
+                Text(l10n.addToHome, textAlign: TextAlign.center, style: AppText.title),
                 const SizedBox(height: Space.l),
                 if (steps.isNotEmpty)
                   ListSection(
-                    footer: how == AddToHome.iphone ? l10n.addToHomeIphoneFooter : null,
                     children: [
-                      for (final (i, step) in steps.indexed) ListRow(title: step, leading: _StepNumber(i + 1)),
+                      for (final (i, step) in steps.indexed)
+                        ListRow(
+                          title: step,
+                          leading: Text('${i + 1}', style: AppText.headline.copyWith(color: c.secondaryLabel)),
+                        ),
                     ],
                   ),
                 Padding(
@@ -156,25 +167,6 @@ class _AddToHomeScreenState extends ConsumerState<AddToHomeScreen> {
   }
 }
 
-class _StepNumber extends StatelessWidget {
-  const _StepNumber(this.n);
-
-  final int n;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = AppColors.of(context);
-    return CircleAvatar(
-      radius: 12,
-      backgroundColor: c.accent,
-      child: Text(
-        '$n',
-        style: AppText.footnote.copyWith(color: c.onAccent, fontWeight: FontWeight.w600),
-      ),
-    );
-  }
-}
-
 /// The home page's 加入主畫面 row, on a phone's browser until dismissed.
 class AddToHomeCard extends ConsumerWidget {
   const AddToHomeCard({super.key});
@@ -185,6 +177,7 @@ class AddToHomeCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
+    final churchId = ref.watch(currentChurchIdProvider);
     return ListSection(
       children: [
         ListRow(
@@ -196,7 +189,7 @@ class AddToHomeCard extends ConsumerWidget {
             tooltip: l10n.addToHomeCardHide,
             onPressed: () => ref.read(addToHomeHiddenProvider.notifier).hide(),
           ),
-          onTap: () => context.push('/add-to-home'),
+          onTap: churchId == null ? null : () => openAddToHome(context, ref, churchId),
         ),
       ],
     );

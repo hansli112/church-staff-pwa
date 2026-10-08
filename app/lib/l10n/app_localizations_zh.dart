@@ -1178,16 +1178,7 @@ class L10nZh extends L10n {
   String get addToHome => '加入主畫面';
 
   @override
-  String get addToHomeIphone => '用 Safari 打開教會網址，點「分享」，再點「加入主畫面」';
-
-  @override
-  String get addToHomeAndroid => '用 Chrome 打開教會網址，點右上角的選單，再點「加到主畫面」';
-
-  @override
   String get addToHomeIosNote => 'iPhone 上已經加入的圖示不會跟著更新。換了名稱或 logo 之後，請刪掉圖示再加入一次。';
-
-  @override
-  String get addToHomeWhy => '從主畫面打開，就像一般的 App：一點就到服事表，也收得到服事通知。';
 
   @override
   String get addToHomeLater => '稍後再說';
@@ -1196,19 +1187,16 @@ class L10nZh extends L10n {
   String get addToHomeDone => '已加入主畫面，之後從主畫面的圖示打開';
 
   @override
-  String get addToHomeIphoneShare => '點 Safari 的「分享」按鈕。看不到的話，先點「⋯」';
+  String get addToHomeIosShare => '點瀏覽器的「分享」按鈕。看不到的話，先點「⋯」';
 
   @override
-  String get addToHomeIphoneAdd => '往下找到「加入主畫面」，點它，再點「加入」';
+  String get addToHomeIosAdd => '往下找到「加入主畫面」，點它，再點「加入」';
 
   @override
-  String get addToHomeIphoneOpen => '從主畫面的圖示打開，再登入一次';
+  String get addToHomeIosOpen => '從主畫面的圖示打開，再登入一次';
 
   @override
-  String get addToHomeIphoneNotif => '到「我的」→「通知」，開啟通知';
-
-  @override
-  String get addToHomeIphoneFooter => '主畫面的 App 跟 Safari 是分開的，所以要再登入一次。';
+  String get addToHomeIosNotif => '到「我的」→「通知」，開啟通知';
 
   @override
   String get addToHomeAndroidMenu => '點 Chrome 右上角的選單（⋮）';
@@ -1226,10 +1214,7 @@ class L10nZh extends L10n {
   String get addToHomeCardHide => '不再顯示';
 
   @override
-  String get notifNeedsHomeScreen => 'iPhone 要先把這個網頁加入主畫面，從主畫面打開，才收得到通知。';
-
-  @override
-  String get notifHowToAddToHome => '怎麼加入主畫面';
+  String get notifNeedsHomeScreen => '先加入主畫面，才收得到通知';
 
   @override
   String get churchLink => '教會連結';

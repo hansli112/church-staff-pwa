@@ -63,9 +63,8 @@ class _GettingStarted extends StatelessWidget {
 
 /// 首頁: the days I serve next. That is what most people open the app for.
 /// Above them, 加入主畫面 on a phone's browser, the church link when the
-/// admin has set one, 開始使用 for
-/// the admin of a church nobody else has joined yet, and for admins the
-/// members still in no 牧區.
+/// admin has set one, 開始使用 for the admin of a church nobody else has
+/// joined yet, and for admins the members still in no 牧區.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 

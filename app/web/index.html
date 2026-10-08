@@ -83,11 +83,16 @@
     // Chrome offers to install the page once, often before the app has
     // started: kept for the app's own 加入主畫面 button
     // (lib/features/church/add_to_home.dart) instead of Chrome's bar.
+    // It may come late, after the page is up: the app is told.
+    function installOffer(e) {
+      window.marthaInstallPrompt = e;
+      window.dispatchEvent(new Event('martha-install-offer'));
+    }
     window.addEventListener('beforeinstallprompt', function (e) {
       e.preventDefault();
-      window.marthaInstallPrompt = e;
+      installOffer(e);
     });
-    window.addEventListener('appinstalled', function () { window.marthaInstallPrompt = null; });
+    window.addEventListener('appinstalled', function () { installOffer(null); });
     // Should the app never take it down, it must not cover the app for good.
     window.addEventListener('flutter-first-frame', function () {
       setTimeout(function () { var s = document.getElementById('splash'); if (s) s.remove(); }, 20000);
