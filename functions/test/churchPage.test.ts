@@ -120,6 +120,11 @@ describe('church page', () => {
     const filled = withSplash(index, { icon: '/x.png', title: '加入〈恩典堂〉', note: '載入中…', busy: true });
     assert.match(splashOf(filled), /<p class="title">加入〈恩典堂〉<\/p>/);
     assert.match(filled, /<div id="splash"/);
+    assert.match(
+      index,
+      /<meta name="viewport" content="width=device-width[^"]*">/,
+      'phone-sized before Flutter sets its own, or the loading screen is drawn tiny',
+    );
   });
 
   test('a shell without the loading screen is left as it is', async () => {
