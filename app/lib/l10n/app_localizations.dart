@@ -2263,6 +2263,222 @@ abstract class L10n {
   /// **'已加入，之後點手機上的「{name}」圖示打開'**
   String addToHomeDone(String name);
 
+  /// No description provided for @addToHomeIntro.
+  ///
+  /// In zh, this message translates to:
+  /// **'下次點主畫面的圖示，就能打開服事表'**
+  String get addToHomeIntro;
+
+  /// No description provided for @addToHomeBrowserGuide.
+  ///
+  /// In zh, this message translates to:
+  /// **'{device} · {browser} 教學'**
+  String addToHomeBrowserGuide(String device, String browser);
+
+  /// No description provided for @addToHomeChooseBrowser.
+  ///
+  /// In zh, this message translates to:
+  /// **'畫面不一樣？'**
+  String get addToHomeChooseBrowser;
+
+  /// No description provided for @addToHomeChooseGuide.
+  ///
+  /// In zh, this message translates to:
+  /// **'選擇要看的教學'**
+  String get addToHomeChooseGuide;
+
+  /// No description provided for @addToHomeChooseGuideNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'只切換教學，不會替你開啟另一個瀏覽器'**
+  String get addToHomeChooseGuideNote;
+
+  /// No description provided for @addToHomeInApp.
+  ///
+  /// In zh, this message translates to:
+  /// **'App 內建瀏覽器'**
+  String get addToHomeInApp;
+
+  /// No description provided for @addToHomeOtherBrowser.
+  ///
+  /// In zh, this message translates to:
+  /// **'其他瀏覽器'**
+  String get addToHomeOtherBrowser;
+
+  /// No description provided for @addToHomeScreenshotNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'請點瀏覽器上圈出的按鈕'**
+  String get addToHomeScreenshotNote;
+
+  /// No description provided for @addToHomeSafariScreenshot.
+  ///
+  /// In zh, this message translates to:
+  /// **'Safari · iOS 26.5 · 繁中模擬器畫面'**
+  String get addToHomeSafariScreenshot;
+
+  /// No description provided for @addToHomeChromeAndroidScreenshot.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chrome 113 · Android 14 · 繁中模擬器畫面（舊版選單）'**
+  String get addToHomeChromeAndroidScreenshot;
+
+  /// No description provided for @addToHomeChromeIosScreenshot.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chrome 155 · iOS 27.2 · iPhone 13 真機畫面'**
+  String get addToHomeChromeIosScreenshot;
+
+  /// No description provided for @addToHomeAddressBar.
+  ///
+  /// In zh, this message translates to:
+  /// **'網址列'**
+  String get addToHomeAddressBar;
+
+  /// No description provided for @addToHomeChromeShare.
+  ///
+  /// In zh, this message translates to:
+  /// **'點網址列旁的分享圖示'**
+  String get addToHomeChromeShare;
+
+  /// No description provided for @addToHomeChromeShareHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'不是「⋯」選單，也不是「分享 Chrome」'**
+  String get addToHomeChromeShareHint;
+
+  /// No description provided for @addToHomeChromeScroll.
+  ///
+  /// In zh, this message translates to:
+  /// **'看不到時，先將分享面板展開，再往下滑'**
+  String get addToHomeChromeScroll;
+
+  /// No description provided for @addToHomeSafariShare.
+  ///
+  /// In zh, this message translates to:
+  /// **'點 Safari 的分享圖示'**
+  String get addToHomeSafariShare;
+
+  /// No description provided for @addToHomeSafariShareHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'若只看到「⋯」，先點它，再選「分享」'**
+  String get addToHomeSafariShareHint;
+
+  /// No description provided for @addToHomeFirefoxShare.
+  ///
+  /// In zh, this message translates to:
+  /// **'點網址列的分享圖示'**
+  String get addToHomeFirefoxShare;
+
+  /// No description provided for @addToHomeIpadMore.
+  ///
+  /// In zh, this message translates to:
+  /// **'iPad 若沒看到此選項，先點分享面板中的「更多」'**
+  String get addToHomeIpadMore;
+
+  /// No description provided for @addToHomeSelectAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'點「加入主畫面」'**
+  String get addToHomeSelectAdd;
+
+  /// No description provided for @addToHomeShareMore.
+  ///
+  /// In zh, this message translates to:
+  /// **'若只看到一排圖示，先點「檢視較多」；舊版可往下滑'**
+  String get addToHomeShareMore;
+
+  /// No description provided for @addToHomeIosConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'若有網頁 App 開關，先保持開啟；最後點右上角「加入」或「新增」'**
+  String get addToHomeIosConfirm;
+
+  /// No description provided for @addToHomeOpenTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'回主畫面，點新圖示開啟'**
+  String get addToHomeOpenTitle;
+
+  /// No description provided for @addToHomeMenu.
+  ///
+  /// In zh, this message translates to:
+  /// **'點 {browser} 的選單'**
+  String addToHomeMenu(String browser);
+
+  /// No description provided for @addToHomeChromeInstall.
+  ///
+  /// In zh, this message translates to:
+  /// **'安裝並建立捷徑 → 安裝'**
+  String get addToHomeChromeInstall;
+
+  /// No description provided for @addToHomeChromeInstallHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'舊版可能叫「加到主畫面」或「安裝應用程式」。請選安裝，不是建立捷徑'**
+  String get addToHomeChromeInstallHint;
+
+  /// No description provided for @addToHomeFirefoxInstallHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'再依手機提示新增；若只有「新增至主畫面」，可能只會建立瀏覽器捷徑'**
+  String get addToHomeFirefoxInstallHint;
+
+  /// No description provided for @addToHomeTrouble.
+  ///
+  /// In zh, this message translates to:
+  /// **'找不到「加入主畫面」？'**
+  String get addToHomeTrouble;
+
+  /// No description provided for @addToHomeSafariTrouble.
+  ///
+  /// In zh, this message translates to:
+  /// **'先把分享面板往上拉，查看下方的動作；仍找不到時，點最下方「編輯動作」查看'**
+  String get addToHomeSafariTrouble;
+
+  /// No description provided for @addToHomeExternalTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'先用 {browser} 開啟'**
+  String addToHomeExternalTitle(String browser);
+
+  /// No description provided for @addToHomeExternalHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'複製教會網址，再貼到 {browser} 的網址列，開啟後繼續教學'**
+  String addToHomeExternalHint(String browser);
+
+  /// No description provided for @addToHomeEmbeddedHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'你正在 App 裡看網頁，請先換到手機的瀏覽器'**
+  String get addToHomeEmbeddedHint;
+
+  /// No description provided for @addToHomeUnknownHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'這個瀏覽器的選單可能不同，改用下方方式繼續'**
+  String get addToHomeUnknownHint;
+
+  /// No description provided for @addToHomeCopiedForBrowser.
+  ///
+  /// In zh, this message translates to:
+  /// **'已複製，請開啟 {browser}，貼到網址列'**
+  String addToHomeCopiedForBrowser(String browser);
+
+  /// No description provided for @addToHomePhoneOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'請用手機開啟教會網址，再加入主畫面'**
+  String get addToHomePhoneOnly;
+
+  /// No description provided for @addToHomeNotificationsAfter.
+  ///
+  /// In zh, this message translates to:
+  /// **'開啟後要收服事通知：我的 → 通知 → 開啟通知'**
+  String get addToHomeNotificationsAfter;
+
   /// No description provided for @addToHomeIosShare.
   ///
   /// In zh, this message translates to:

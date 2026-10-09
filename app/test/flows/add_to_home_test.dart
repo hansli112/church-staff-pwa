@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/features/church/add_to_home.dart';
+import 'package:martha/features/church/links.dart';
 import 'package:martha/state/providers.dart';
 import 'package:martha/state/web_page.dart';
 
@@ -22,13 +23,20 @@ const line = '$iphone Line/14.16.0';
 const windows =
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36';
 
-/// What the iPhone's steps say, beside the icons: 分享, 加入主畫面 › 加入,
-/// then signing in again, then turning on notifications.
-const iosSteps = ['分享', '加入', '點手機上的「恩典堂」圖示打開，再登入一次', '開啟通知'];
-const androidMenu = '加到主畫面';
+const iosSteps = [
+  '點 Safari 的分享圖示',
+  '點「加入主畫面」',
+  '點手機上的「恩典堂」圖示打開，再登入一次',
+];
+const androidMenu = '安裝並建立捷徑 → 安裝';
 const card = '一點就打開，也收得到服事通知';
 
 Future<void> tapText(WidgetTester tester, String text) async {
+  if (find.text(text).evaluate().isEmpty) {
+    await tester.scrollUntilVisible(find.text(text), 300, scrollable: find.byType(Scrollable).last);
+  }
+  await tester.ensureVisible(find.text(text).last);
+  await settle(tester);
   await tester.tap(find.text(text).last);
   await settle(tester);
 }
@@ -130,7 +138,7 @@ void main() {
     expect(on(mac), isNull);
     expect(on(android), AddToHome.android);
     expect(on(android, standalone: true), isNull);
-    expect(on(line), isNull, reason: 'LINE’s browser cannot add to the home screen');
+    expect(on(line), AddToHome.ios, reason: 'LINE gets instructions to switch to an external browser');
     expect(on(windows), isNull);
     expect(on(''), isNull, reason: 'a store app');
   });
@@ -140,14 +148,25 @@ void main() {
     await tapText(tester, '加入');
 
     expect(b.members[cid]![b.auth.currentUser!.uid], isNotNull);
-    expect(find.text('加入主畫面'), findsNWidgets(2), reason: 'the title, and the button to tap');
+    expect(find.text('加入主畫面'), findsOneWidget, reason: 'the title');
     for (final step in iosSteps) {
       expect(findShown(step), findsOneWidget);
     }
+    expect(find.text('開啟後要收服事通知：我的 → 通知 → 開啟通知'), findsOneWidget);
 
     await tapText(tester, '稍後再說');
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text(card), findsOneWidget, reason: 'the home page reminds of it');
+  });
+
+  testWidgets('iPhone Chrome points to page sharing, not the more menu or Share Chrome', (tester) async {
+    await seeded(tester, '$iphone CriOS/140.0.7339.39');
+    routerOf(tester).go('/add-to-home');
+    await settle(tester);
+
+    expect(find.text('點網址列旁的分享圖示'), findsOneWidget);
+    expect(find.byIcon(Icons.more_horiz), findsNothing);
+    expect(find.text('不是「⋯」選單，也不是「分享 Chrome」'), findsOneWidget);
   });
 
   testWidgets('starting a church loads its own page first, so the home screen gets its name and icon', (tester) async {
@@ -271,6 +290,213 @@ void main() {
     routerOf(tester).go('/add-to-home');
     await settle(tester);
     expect(findShown('點手機上的「恩典堂」圖示打開，再登入一次'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final brightness in Brightness.values) {
+    for (final ua in [iphone, '$iphone CriOS/140.0', '$iphone FxiOS/140.0', android, '$android EdgA/140.0', line]) {
+      testWidgets('guide fits a narrow phone with large text: $brightness / $ua', (tester) async {
+        await pumpApp(
+          tester,
+          seededChurch(),
+          brightness: brightness,
+          textScale: 2,
+          overrides: [userAgentProvider.overrideWithValue(ua), pageChurchProvider.overrideWithValue('grace')],
+        );
+        tester.view.physicalSize = const Size(320 * 3, 640 * 3);
+        routerOf(tester).go('/add-to-home');
+        await settle(tester);
+        expect(tester.takeException(), isNull);
+        await tapText(tester, '畫面不一樣？');
+        expect(tester.takeException(), isNull);
+        await tapText(tester, 'Chrome');
+        expect(tester.takeException(), isNull);
+        await tester.scrollUntilVisible(find.text('稍後再說'), 300, scrollable: find.byType(Scrollable).first);
+        await tapText(tester, '稍後再說');
+        expect(find.byType(NavigationBar), findsOneWidget, reason: 'the exit stays reachable');
+      });
+    }
+  }
+
+  testWidgets('the browser picker switches the guide without opening a different browser', (tester) async {
+    final loads = Loads();
+    await seeded(tester, '$iphone CriOS/140.0', overrides: [loads.override]);
+    routerOf(tester).go('/add-to-home');
+    await settle(tester);
+    await tapText(tester, '畫面不一樣？');
+    expect(find.text('Samsung Internet'), findsNothing);
+    expect(find.text('只切換教學，不會替你開啟另一個瀏覽器'), findsOneWidget);
+    await tapText(tester, 'Safari');
+    expect(find.text(iosSteps.first), findsOneWidget);
+    expect(find.text('點網址列旁的分享圖示'), findsNothing);
+    expect(loads.pages, isEmpty);
+  });
+
+  for (final ua in [line, '$iphone [FBAN/FBIOS]', '$iphone Instagram 350.0', '$iphone EdgiOS/140.0']) {
+    testWidgets('iOS embedded or unsupported browser copies the church guide: $ua', (tester) async {
+      final out = captureOutbox(tester);
+      await seeded(tester, ua);
+      await tapText(tester, card);
+      expect(find.text('先用 Safari 開啟'), findsOneWidget);
+      expect(find.text('點 Safari 的分享圖示'), findsNothing, reason: 'do not show Safari controls inside another app');
+      await tapText(tester, '複製教會網址');
+      expect(out.copied, ['${churchUrl('grace')}?to=%2Fadd-to-home']);
+      expect(find.text('已複製，請開啟 Safari，貼到網址列'), findsOneWidget);
+    });
+  }
+
+  testWidgets('a refused clipboard offers the church link to copy by hand', (tester) async {
+    captureOutbox(tester, blocked: true);
+    await seeded(tester, line);
+    routerOf(tester).go('/add-to-home');
+    await settle(tester);
+    await tapText(tester, '複製教會網址');
+    expect(find.byType(SelectableText), findsOneWidget);
+    expect(tester.widget<SelectableText>(find.byType(SelectableText)).data, '${churchUrl('grace')}?to=%2Fadd-to-home');
+    expect(find.text('已複製，請開啟 Safari，貼到網址列'), findsNothing);
+  });
+
+  testWidgets('Chrome iOS troubleshooting offers Safari without claiming to install', (tester) async {
+    final out = captureOutbox(tester);
+    await seeded(tester, '$iphone CriOS/140.0');
+    routerOf(tester).go('/add-to-home');
+    await settle(tester);
+    expect(find.text('複製教會網址'), findsNothing);
+    await tapText(tester, '找不到「加入主畫面」？');
+    await tapText(tester, '複製教會網址');
+    expect(out.copied, ['${churchUrl('grace')}?to=%2Fadd-to-home']);
+    final container = ProviderScope.containerOf(tester.element(find.byType(Scaffold).first));
+    expect(container.read(addToHomeHiddenProvider), isFalse);
+  });
+
+  for (final (suffix, title) in [
+    ('', '點 Chrome 的選單'),
+    (' Firefox/140.0', '點 Firefox 的選單'),
+  ]) {
+    testWidgets('Android browser has its own menu: $title', (tester) async {
+      await seeded(tester, '$android$suffix');
+      routerOf(tester).go('/add-to-home');
+      await settle(tester);
+      expect(find.text(title), findsOneWidget);
+      expect(find.text('點網址列旁的分享圖示'), findsNothing);
+    });
+  }
+
+  testWidgets('Android embedded browser opens Chrome instead of offering installation', (tester) async {
+    final offer = FakeOffer(offered: true);
+    final out = captureOutbox(tester);
+    await seeded(tester, '$android Line/14.16.0', overrides: [installOfferProvider.overrideWith(() => offer)]);
+    routerOf(tester).go('/add-to-home');
+    await settle(tester);
+    expect(find.text('先用 Chrome 開啟'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, '加入主畫面'), findsNothing);
+    await tapText(tester, '複製教會網址');
+    expect(out.copied, ['${churchUrl('grace')}?to=%2Fadd-to-home']);
+    expect(offer.shown, 0);
+  });
+
+  testWidgets('choosing another guide cannot use the current browser’s install offer', (tester) async {
+    final offer = FakeOffer(offered: true);
+    await seeded(tester, android, overrides: [installOfferProvider.overrideWith(() => offer)]);
+    routerOf(tester).go('/add-to-home');
+    await settle(tester);
+    await tapText(tester, '畫面不一樣？');
+    await tapText(tester, 'Samsung Internet');
+    expect(find.widgetWithText(FilledButton, '加入主畫面'), findsNothing);
+    expect(find.text('先用 Chrome 開啟'), findsOneWidget);
+    expect(offer.shown, 0);
+  });
+
+  for (final suffix in [' EdgA/140.0', ' SamsungBrowser/28.0', ' OPR/80.0']) {
+    testWidgets('unverified Android menus offer a safe fallback: $suffix', (tester) async {
+      await seeded(tester, '$android$suffix');
+      routerOf(tester).go('/add-to-home');
+      await settle(tester);
+      expect(find.text('先用 Chrome 開啟'), findsOneWidget);
+      expect(find.byIcon(Icons.more_vert), findsNothing, reason: 'do not invent Chrome menus in other browsers');
+    });
+  }
+
+  testWidgets('Samsung can use an actual install offer despite unknown manual menu layout', (tester) async {
+    final offer = FakeOffer(offered: true);
+    await seeded(tester, '$android SamsungBrowser/28.0', overrides: [installOfferProvider.overrideWith(() => offer)]);
+    routerOf(tester).go('/add-to-home');
+    await settle(tester);
+    await tester.tap(find.widgetWithText(FilledButton, '加入主畫面'));
+    await settle(tester);
+    expect(offer.shown, 1);
+  });
+
+  testWidgets('iOS Firefox uses its own share entry rather than Safari’s more menu', (tester) async {
+    await seeded(tester, '$iphone FxiOS/140.0');
+    routerOf(tester).go('/add-to-home');
+    await settle(tester);
+    expect(find.text('點網址列的分享圖示'), findsOneWidget);
+    expect(find.text('若只看到「⋯」，先點它，再選「分享」'), findsNothing);
+  });
+
+  testWidgets('iPad Safari opens share before More, including a desktop user agent', (tester) async {
+    await seeded(tester, mac, overrides: [touchPointsProvider.overrideWithValue(5)]);
+    routerOf(tester).go('/add-to-home');
+    await settle(tester);
+    expect(find.text('iPad · Safari 教學'), findsOneWidget);
+    expect(find.text('點 Safari 的分享圖示'), findsOneWidget);
+    expect(find.text('若只看到「⋯」，先點它，再選「分享」'), findsNothing);
+    expect(find.textContaining('先點分享面板中的「更多」'), findsOneWidget);
+  });
+
+  testWidgets('Safari shows Chinese captured menus, including View More before Add to Home Screen', (tester) async {
+    await seeded(tester, iphone);
+    routerOf(tester).go('/add-to-home');
+    await settle(tester);
+    final screenshots = tester
+        .widgetList<Image>(find.byType(Image))
+        .map((image) => image.image)
+        .whereType<AssetImage>();
+    expect(
+      screenshots.map((image) => image.assetName),
+      containsAll([
+        'assets/add_to_home/safari_more.png',
+        'assets/add_to_home/safari_share.png',
+        'assets/add_to_home/safari_share_more.png',
+        'assets/add_to_home/safari_add.png',
+      ]),
+    );
+    expect(find.textContaining('若只看到一排圖示，先點「檢視較多」；舊版可往下滑'), findsOneWidget);
+    expect(find.text('Safari · iOS 26.5 · 繁中模擬器畫面'), findsNWidgets(2));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Chrome does not show Safari screenshots or claim the old Android capture is current', (tester) async {
+    await seeded(tester, '$iphone CriOS/140.0');
+    routerOf(tester).go('/add-to-home');
+    await settle(tester);
+    final iosImages = tester.widgetList<Image>(find.byType(Image)).map((image) => image.image).whereType<AssetImage>();
+    expect(
+      iosImages.map((image) => image.assetName),
+      containsAll(['assets/add_to_home/chrome_ios_share.png', 'assets/add_to_home/chrome_ios_add.png']),
+    );
+    expect(iosImages.map((image) => image.assetName), everyElement(isNot(contains('safari'))));
+    expect(find.text('Chrome 155 · iOS 27.2 · iPhone 13 真機畫面'), findsNWidgets(2));
+    expect(find.textContaining('看不到時，先將分享面板展開，再往下滑'), findsOneWidget);
+    expect(find.text('按鈕示意，請點瀏覽器上的按鈕'), findsNothing);
+    expect(find.text('點網址列旁的分享圖示'), findsOneWidget);
+
+    await seeded(tester, android);
+    routerOf(tester).go('/add-to-home');
+    await settle(tester);
+    expect(find.text('Chrome 113 · Android 14 · 繁中模擬器畫面（舊版選單）'), findsNWidgets(2));
+    final screenshots = tester
+        .widgetList<Image>(find.byType(Image))
+        .map((image) => image.image)
+        .whereType<AssetImage>();
+    expect(
+      screenshots.map((image) => image.assetName),
+      containsAll([
+        'assets/add_to_home/chrome_android_more.png',
+        'assets/add_to_home/chrome_android_add.png',
+      ]),
+    );
     expect(tester.takeException(), isNull);
   });
 

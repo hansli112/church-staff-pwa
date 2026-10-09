@@ -1189,6 +1189,124 @@ class L10nZh extends L10n {
   }
 
   @override
+  String get addToHomeIntro => '下次點主畫面的圖示，就能打開服事表';
+
+  @override
+  String addToHomeBrowserGuide(String device, String browser) {
+    return '$device · $browser 教學';
+  }
+
+  @override
+  String get addToHomeChooseBrowser => '畫面不一樣？';
+
+  @override
+  String get addToHomeChooseGuide => '選擇要看的教學';
+
+  @override
+  String get addToHomeChooseGuideNote => '只切換教學，不會替你開啟另一個瀏覽器';
+
+  @override
+  String get addToHomeInApp => 'App 內建瀏覽器';
+
+  @override
+  String get addToHomeOtherBrowser => '其他瀏覽器';
+
+  @override
+  String get addToHomeScreenshotNote => '請點瀏覽器上圈出的按鈕';
+
+  @override
+  String get addToHomeSafariScreenshot => 'Safari · iOS 26.5 · 繁中模擬器畫面';
+
+  @override
+  String get addToHomeChromeAndroidScreenshot => 'Chrome 113 · Android 14 · 繁中模擬器畫面（舊版選單）';
+
+  @override
+  String get addToHomeChromeIosScreenshot => 'Chrome 155 · iOS 27.2 · iPhone 13 真機畫面';
+
+  @override
+  String get addToHomeAddressBar => '網址列';
+
+  @override
+  String get addToHomeChromeShare => '點網址列旁的分享圖示';
+
+  @override
+  String get addToHomeChromeShareHint => '不是「⋯」選單，也不是「分享 Chrome」';
+
+  @override
+  String get addToHomeChromeScroll => '看不到時，先將分享面板展開，再往下滑';
+
+  @override
+  String get addToHomeSafariShare => '點 Safari 的分享圖示';
+
+  @override
+  String get addToHomeSafariShareHint => '若只看到「⋯」，先點它，再選「分享」';
+
+  @override
+  String get addToHomeFirefoxShare => '點網址列的分享圖示';
+
+  @override
+  String get addToHomeIpadMore => 'iPad 若沒看到此選項，先點分享面板中的「更多」';
+
+  @override
+  String get addToHomeSelectAdd => '點「加入主畫面」';
+
+  @override
+  String get addToHomeShareMore => '若只看到一排圖示，先點「檢視較多」；舊版可往下滑';
+
+  @override
+  String get addToHomeIosConfirm => '若有網頁 App 開關，先保持開啟；最後點右上角「加入」或「新增」';
+
+  @override
+  String get addToHomeOpenTitle => '回主畫面，點新圖示開啟';
+
+  @override
+  String addToHomeMenu(String browser) {
+    return '點 $browser 的選單';
+  }
+
+  @override
+  String get addToHomeChromeInstall => '安裝並建立捷徑 → 安裝';
+
+  @override
+  String get addToHomeChromeInstallHint => '舊版可能叫「加到主畫面」或「安裝應用程式」。請選安裝，不是建立捷徑';
+
+  @override
+  String get addToHomeFirefoxInstallHint => '再依手機提示新增；若只有「新增至主畫面」，可能只會建立瀏覽器捷徑';
+
+  @override
+  String get addToHomeTrouble => '找不到「加入主畫面」？';
+
+  @override
+  String get addToHomeSafariTrouble => '先把分享面板往上拉，查看下方的動作；仍找不到時，點最下方「編輯動作」查看';
+
+  @override
+  String addToHomeExternalTitle(String browser) {
+    return '先用 $browser 開啟';
+  }
+
+  @override
+  String addToHomeExternalHint(String browser) {
+    return '複製教會網址，再貼到 $browser 的網址列，開啟後繼續教學';
+  }
+
+  @override
+  String get addToHomeEmbeddedHint => '你正在 App 裡看網頁，請先換到手機的瀏覽器';
+
+  @override
+  String get addToHomeUnknownHint => '這個瀏覽器的選單可能不同，改用下方方式繼續';
+
+  @override
+  String addToHomeCopiedForBrowser(String browser) {
+    return '已複製，請開啟 $browser，貼到網址列';
+  }
+
+  @override
+  String get addToHomePhoneOnly => '請用手機開啟教會網址，再加入主畫面';
+
+  @override
+  String get addToHomeNotificationsAfter => '開啟後要收服事通知：我的 → 通知 → 開啟通知';
+
+  @override
   String get addToHomeIosShare => '分享';
 
   @override
