@@ -199,7 +199,9 @@ scripts/as-owner.sh marthasit-dev npx --prefix functions tsx functions/scripts/g
 - Hosting 忽略點開頭的檔案，只放行 `.well-known`。`firebase.json` 的 `ignore` 不支援 `!` 例外，所以用 `**/.!(well-known)`。
 - **Android**：`AndroidManifest.xml` 的 intent filter 是 `pathPrefix="/c/"`。網站從 `app/web/.well-known/assetlinks.json` 提供簽章憑證的 SHA-256，dev 和 prod 共用這個檔案。
   - 取得 SHA-256：`keytool -list -v -keystore <keystore>`。debug 金鑰在 `~/.android/debug.keystore`，密碼 `android`。
-  - 每台 build 的電腦 debug 金鑰都不同，目前只列了一台開發用的 Mac。release 金鑰（上架後是 Play App Signing 的金鑰，在 Play Console 查）要再加進去。
+  - 每台 build 的電腦 debug 金鑰都不同，目前只列了一台開發用的 Mac。
+  - 上架用的是上傳金鑰（upload key）：`~/.martha/upload-keystore.jks`，密碼在 `app/android/key.properties`（不進 git）。release build 有這個檔就用它簽，沒有就用 debug 金鑰。金鑰和密碼要另外備份；遺失了要到 Play Console 申請重設上傳金鑰。
+  - 上傳金鑰的 SHA 已列在 assetlinks 和兩個專案的 Firebase。從 Play 商店安裝的 App 是 Play App Signing 的金鑰簽的（在 Play Console 的「應用程式完整性」查），它的 SHA-1、SHA-256 也要加進這兩處。
   - 原生 Google 登入也看簽章：同一組 SHA-1、SHA-256 要加到 Firebase 的 Android app（`apps:android:sha:create`）。
 - **iOS**：要付費開發者帳號，才能開 Associated Domains。
   - 在 `Runner.entitlements` 加上 `applinks:<網域>`。

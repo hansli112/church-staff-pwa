@@ -5,7 +5,9 @@
       "namespace": "android_app",
       "package_name": "app.marthasit",
       "sha256_cert_fingerprints": [
-        "FB:4B:50:82:EE:34:68:9F:87:AB:69:3D:95:C2:FF:79:1E:BF:F2:40:D7:AA:BF:BB:06:7B:15:DF:36:02:2D:33"
+        "FB:4B:50:82:EE:34:68:9F:87:AB:69:3D:95:C2:FF:79:1E:BF:F2:40:D7:AA:BF:BB:06:7B:15:DF:36:02:2D:33",
+        "43:6E:C5:CC:7B:2B:10:18:6D:2E:62:19:A0:FB:49:96:E1:72:12:53:4A:79:CB:F6:19:FB:8A:1E:A3:E2:5B:7D",
+        "B3:57:E5:46:0C:60:48:86:4B:21:74:37:D3:0C:4F:DB:D3:7E:77:83:A3:92:A2:7C:CC:6C:E7:9C:A3:B7:83:20"
       ]
     }
   }
