@@ -4,6 +4,122 @@
 
 > 開發中。舊的自架版（church-staff-pwa）在其他分支，已凍結。
 
+## 系統架構
+
+同一個 Flutter App 支援 iOS、Android 與 Web，所有教會共用 Firebase 服務；資料與權限依教會隔離。以下是主要元件與存取路徑，虛線是示範與測試用的替代後端。
+
+```mermaid
+flowchart TB
+  subgraph clients["用戶端與網站"]
+    hosting["Firebase Hosting"]
+    site["靜態網站<br/>首頁、教學、支持頁"]
+    web["Flutter Web / PWA"]
+    native["Flutter iOS / Android"]
+    ui["共用 Flutter 畫面<br/>Riverpod 狀態與路由"]
+    hosting --> site
+    hosting --> web
+    web --> ui
+    native --> ui
+  end
+
+  subgraph backend["App 後端邊界"]
+    api["Backend<br/>ChurchData / CloudApi"]
+    firebase["FirebaseBackend"]
+    memory["MemoryBackend<br/>離線示範與流程測試"]
+    api --> firebase
+    api -.-> memory
+  end
+
+  subgraph cloud["Firebase 服務"]
+    auth["Authentication<br/>帳號與登入"]
+    db[("Firestore<br/>教會、同工、服事表")]
+    storage["Storage<br/>教會圖示、搬家檔"]
+    functions["Cloud Functions<br/>asia-east1"]
+  end
+
+  ui --> api
+  firebase --> auth
+  firebase -->|Security Rules| db
+  firebase -->|Security Rules| storage
+  firebase -->|特權操作與外部整合| functions
+  functions --> db
+  functions --> calendar["Google Calendar<br/>行事曆讀寫"]
+```
+
+- **網站與 App 分開呈現**：`/` 是靜態首頁；App 路徑使用同一份 Flutter 網頁。`/c/<教會 id>` 由 `churchPage` 提供教會專屬名稱、圖示與 manifest，不是另外部署一個 App。
+- **操作邊界**：目前教會內的操作走 `ChurchData`；建立／加入教會、帳號與營運者操作走 `CloudApi`。轉接層決定直接存取 Firestore，或呼叫 Cloud Functions。
+- **授權在後端執行**：直接讀寫資料由 Firestore／Storage Security Rules 驗證；特權操作由 Functions 再檢查身分、教會狀態與權限。畫面的按鈕限制不能取代後端授權。
+- **其他整合**：Functions 處理 FCM 推播、外部通知與照片辨識。Google Calendar 讀取共用快取，也支援有權限同工新增、修改與刪除活動；一般服事表不會自動匯出到 Google Calendar。
+
+實作入口：[`backend.dart`](app/lib/data/backend.dart)、[`FirebaseBackend`](app/lib/data/firebase/firebase_backend.dart)、[`MemoryBackend`](app/lib/data/memory/memory_backend.dart)、[`Functions`](functions/src/index.ts)、[`Hosting 設定`](firebase.json)。
+
+## 主要流程
+
+### 登入、建立與加入教會
+
+以下依進入情境簡化流程；教會／邀請連結會在登入後接續原本要去的地方。
+
+```mermaid
+flowchart TB
+  login["登入或註冊<br/>Google／email 與密碼"] --> entry{"進入情境"}
+  entry -->|已有同工身分| select["選擇／切換教會"]
+  entry -->|建立教會| create["驗證 email、確認教會名稱<br/>建立教會並成為管理員"]
+  entry -->|邀請碼或連結| invite["檢查邀請期限與教會狀態<br/>加入成為新同工"]
+  entry -->|匯入資料待認領| claim["驗證 email 並確認認領<br/>接回同工資料與服事安排"]
+  create --> select
+  invite --> select
+  select --> active{"教會啟用中？"}
+  active -->|是| home["教會首頁／服事表"]
+  active -->|否| closed["教會停用畫面"]
+  claim --> home
+```
+
+- 建立教會與認領匯入資料需要已驗證的 email；邀請加入不要求 email 已驗證。
+- 邀請加入與認領是兩件事：邀請建立新同工身分，不會自動接回匯入資料；認領需本人確認。已透過邀請加入的同工，也可以再合併待認領資料。
+- 建立或透過邀請加入成功後，適用的手機瀏覽器會先顯示加入主畫面提示，再進入教會。名稱重複、邀請過期或其他檢查未通過時，會留在原步驟顯示錯誤。
+
+實作入口：[`登入後導向`](app/lib/deep_link.dart)、[`建立教會`](functions/src/church.ts)、[`邀請`](functions/src/invites.ts)、[`認領`](functions/src/claim.ts)。
+
+### 儲存服事表與通知
+
+一般服事表由管理員，或有該牧區權限的 `roster-editors` 安排；活動的服事表由管理員或 `roster-editors` 安排，不限制牧區。儲存直接寫入 Firestore，不經過 callable Function。
+
+```mermaid
+sequenceDiagram
+  participant app as Flutter App
+  participant db as Firestore
+  participant fn as Functions
+  participant fcm as FCM
+  participant receiver as Webhook 接收端
+
+  app->>db: 儲存服事表
+  db->>db: 安全規則驗證
+  alt 寫入被拒
+    db-->>app: 拒絕寫入，顯示錯誤
+  else 寫入成功
+    db-->>app: 儲存確認與快照更新
+    db-->>fn: 服事表異動事件
+    opt 符合推播條件
+      fn->>fcm: 通知新增／移除安排
+      fcm-->>app: 同工裝置收到推播
+    end
+    opt 已設定外部通知
+      fn->>db: 異動加入待送佇列
+      Note over db,fn: 每五分鐘彙整
+      fn->>db: 排程讀取佇列
+      fn->>receiver: 帶簽章的 HTTPS POST
+      fn->>db: 清除本次待送項目
+    end
+  end
+```
+
+- Firestore 會先反映本機變更，再等待伺服器確認；圖中只呈現確認後的主要路徑。其他同工的畫面也透過快照串流更新。
+- 服事表異動推播不通知修改者或關閉通知的同工；匯入資料不發推播。推播是否送達仍取決於裝置權限與平台設定。
+- 外部通知是選用整合，可由 n8n 等接收端轉送到 LINE；平台沒有內建 LINE 通知。服事表通知每五分鐘彙整，行事曆操作的通知則即時送出。
+- 外部通知採盡力傳送，不重試；即使接收端失敗，本次待送項目仍會清除。
+
+實作入口：[`服事表操作`](app/lib/state/roster_actions.dart)、[`安全規則`](firestore.rules)、[`異動推播`](functions/src/rosterChange.ts)、[`外部通知`](functions/src/webhook.ts)。
+
 ## 自己部署
 
 代管版是唯一受支援的使用方式。程式碼採 MIT 公開，技術同工可以自己部署，但**不受支援**：沒有安裝精靈、沒有升級指引，問題請自行處理。要離開代管版，管理員可以在「教會資訊 → 匯出資料」下載全部資料。
