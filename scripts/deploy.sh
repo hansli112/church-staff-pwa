@@ -19,6 +19,11 @@ project="$(node -p "require('$config').FIREBASE_PROJECT_ID")"
 echo "Deploying $only to $project ($env_name)"
 
 if [[ ",$only," == *",hosting,"* ]]; then
+  # Flutter removes only its tracked outputs. Start with a fresh generated
+  # web directory so hashes/markers from dev cannot leak into prod (or vice
+  # versa). Published immutable assets live separately in .firebase/web-assets
+  # and survive this cleanup, including when the build or deploy fails.
+  rm -rf -- "$root/app/build/web"
   ( cd "$root/app" && flutter build web --dart-define-from-file="config/$env_name.json" )
 fi
 

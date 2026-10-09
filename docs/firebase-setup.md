@@ -96,6 +96,11 @@ scripts/deploy.sh prod --only hosting  # 只更新網頁
 - rules 和 indexes 由 `firebase-project.sh` 部署，或 `scripts/firebase.sh <id> deploy --only firestore,storage`。
 
 Hosting 部署前，`scripts/hosting-predeploy.sh` 用 `scripts/build-site.mjs` 把網站放進 Web build（需要 Node；第一次會在 `landing/` 跑 `npm ci`）。網站各頁共用的頁首、頁尾在 `build-site.mjs` 裡，`landing/` 的頁面用 `<!-- site-header -->`、`<!-- site-footer -->` 標位置。
+
+字型改寫完成後，`fingerprint-web.mjs` 把 `main.dart.js` 與 deferred JS 改成帶內容 hash 的檔名，並透過 loader 的 `config.assetBase` 指向 `asset-bundles/<內容 hash>/assets/`：同版的字型 manifest、字型、圖片與其他 Flutter assets 一起保留，舊 bootstrap 不會讀到新版少了圖示的字型。asset tree 不變就共用同一個 bundle；歷史 loose 字型不算進新版的 tree。這些版本化檔案快取一年；HTML、`flutter_bootstrap.js`、穩定的 `assets/` 與保留給舊 bootstrap 的 `main.dart.js` 不改網址（manifest 與入口仍 `no-cache`）。這保留目前 dart2js 的 build 選擇、空的 fallback metadata 與 base href，**不是 wasm rollout 相容保證**；helper 遇到真實 `dart2wasm` build 會在修改任何產物前拒絕，將來啟用 wasm 須另做入口檔版本化。
+
+**保留 `.firebase/web-assets/`**：每個 Firebase 專案分開累積已準備部署的 hashed JS、Flutter asset bundles 與相容舊網址的字型，下一次部署一併上傳。新檔案／bundle 先寫到暫存位置並驗證，再原子改名；中斷留下的暫存檔不會發布，重跑也不覆寫已驗證相同的完整檔案。`deploy.sh` 建置前只清掉產物 `app/build/web`，避免 dev／prod 的舊 hash 混入；archive 不受影響。手動建置／部署也要使用乾淨的 Web 產物；腳本會拒絕沿用另一個專案的產物。失敗或重試不會刪掉舊版本，也不自動清理；空間會隨改版增加。換部署電腦／worktree 時，要先移轉這個目錄；沒有它就無法保留先前部署的 hash。這不是完整網站備份。腳本測試：`node --test scripts/test/*.test.mjs`（需現有的 `landing/node_modules`）。
+
 - `/`：landing page。Flutter 的 `index.html` 改名成 `app.html`，其他路徑都 rewrite 到它，所以網頁版從 `/home` 開始（manifest 的 `start_url`）。舊的 `/about` 轉到 `/`。
 - `/support`：支持頁。顯示這個月的雲端費用（不用登入就讀 `platform/funding`），以及網站的線上支持按鈕。線上支持預設關著（按鈕只顯示「即將開放」），部署時加 `SUPPORT_PAYMENTS=on` 才有選金額和付款，見〈線上支持（藍新金流）〉。`/support/pay` rewrite 到 `newebpayStart`。
 - `/blog/`：教學文章。每篇是 `landing/blog/<網址>.md`，開頭寫 `title`、`date`、`description`，會變成 `/blog/<網址>/`。

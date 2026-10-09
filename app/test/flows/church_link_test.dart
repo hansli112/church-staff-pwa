@@ -194,6 +194,7 @@ void main() {
 
       await go(tester, '/me/link');
       expect(find.textContaining('上次更新：'), findsOneWidget);
+      expect(find.textContaining('10/1 09:00'), findsOneWidget);
     });
 
     testWidgets('undoing a removal brings the source back with the link', (tester) async {

@@ -15,10 +15,7 @@ import '../rosters/format.dart';
 import 'event_sheet.dart';
 import 'month_grid.dart';
 
-final calendarSettingsProvider = StreamProvider<CalendarSettings>((ref) {
-  if (!ref.watch(churchOpenProvider)) return Stream.value(const CalendarSettings());
-  return openChurch(ref).calendarSettings();
-});
+export '../../state/calendar.dart' show calendarSettingsProvider;
 
 /// The month on screen, as `YYYY-MM`.
 class CalendarMonth extends Notifier<DateTime> {

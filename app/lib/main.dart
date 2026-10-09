@@ -12,7 +12,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
@@ -39,7 +38,6 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Before anything else, so the fonts download while the app starts.
   final fontsReady = kIsWeb ? warmUpFonts(bundle: rootBundle, systemFonts: PaintingBinding.instance.systemFonts) : null;
-  await initializeDateFormatting('zh_TW');
   final env = Env.current;
   final prefs = await SharedPreferences.getInstance();
   final Backend backend = env.usesFirebase

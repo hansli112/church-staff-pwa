@@ -4,9 +4,14 @@
 # page (index.html), so the Flutter app shell moves to app.html, where every
 # other path is rewritten.
 set -euo pipefail
+: "${GCLOUD_PROJECT:?Firebase project id is required}"
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 web="$root/app/build/web"
+
+# Fail closed on unsupported build kinds before moving HTML or rewriting
+# fonts. Fingerprinting/snapshotting still happens only after font rewriting.
+node "$root/scripts/fingerprint-web.mjs" "$web" --check-build
 
 # Only a fresh Flutter build has its shell in index.html; a second run must
 # not move the landing page over it.
@@ -17,6 +22,13 @@ fi
 # Fonts named after their contents, so a new build's icons are never drawn
 # with an old cached font (scripts/fingerprint-fonts.mjs).
 node "$root/scripts/fingerprint-fonts.mjs" "$web"
+
+# Hash JS and snapshot assets only after build-time asset rewriting. Keep
+# previous immutable JS/asset bundles and loose fonts in the project archive,
+# so an older/in-flight bootstrap still resolves its matching manifest/fonts.
+# Preparing a failed deploy never prunes that archive.
+node "$root/scripts/fingerprint-web.mjs" "$web" \
+  --archive "$root/.firebase/web-assets" --project "$GCLOUD_PROJECT"
 
 # The website, built from landing/ (scripts/build-site.mjs).
 # TODO(M7): the production origin becomes the bought domain.

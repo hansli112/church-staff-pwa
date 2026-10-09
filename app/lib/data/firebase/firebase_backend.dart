@@ -418,26 +418,88 @@ class FirestoreChurchData implements ChurchData {
   Future<Map<String, Object?>> _call(String name, [Map<String, Object?> data = const {}]) async =>
       _asMap(await _calls.call(name, {'churchId': churchId, ...data}));
 
+  String? _logoVersion;
   String? _logoUrl;
-  Object? _logoVersion;
+  Future<String>? _logoLookup;
 
   @override
-  Stream<Church?> church() => _church.live().asyncMap((snap) async {
-    final data = snap.data();
-    if (data == null) return null;
-    final version = data['logoVersion'];
-    if (version == null) {
-      _logoUrl = null;
-    } else if (version != _logoVersion) {
-      try {
-        _logoUrl = await _storage.ref(_logoPath).getDownloadURL();
-      } on FirebaseException {
-        _logoUrl = null;
-      }
-    }
-    _logoVersion = version;
-    return churchFromJson(snap.id, data, logoUrl: _logoUrl);
-  }).translated();
+  Stream<Church?> church() {
+    late final StreamController<Church?> out;
+    StreamSubscription<Church?>? sub;
+    Church? latest;
+    Future<String>? pending;
+    var readEpoch = 0;
+    var open = true;
+
+    out = StreamController<Church?>(
+      onListen: () {
+        sub = _church
+            .live()
+            .map((snap) {
+              final data = snap.data();
+              latest = data == null ? null : churchFromJson(snap.id, data);
+              final church = latest;
+              final version = data?['logoVersion'];
+              if (church == null || !church.isActive || version is! String || version.isEmpty) {
+                _logoVersion = null;
+                _logoUrl = null;
+                _logoLookup = null;
+                pending = null;
+                return church;
+              }
+              if (version != _logoVersion) {
+                _logoVersion = version;
+                _logoUrl = null;
+                _logoLookup = null;
+              }
+              if (_logoUrl == null) {
+                final lookup = _logoLookup ??= Future<String>.sync(() => _storage.ref(_logoPath).getDownloadURL());
+                if (pending != lookup) {
+                  pending = lookup;
+                  final epoch = readEpoch;
+                  unawaited(
+                    lookup.then(
+                      (url) {
+                        if (epoch != readEpoch || !open || out.isClosed || pending != lookup || _logoLookup != lookup) {
+                          return;
+                        }
+                        _logoUrl = url;
+                        if (latest case final church?) out.add(church.copyWith(logoUrl: url));
+                      },
+                      onError: (Object error, StackTrace stack) {
+                        if (epoch != readEpoch || !open || out.isClosed || pending != lookup || _logoLookup != lookup) {
+                          return;
+                        }
+                        // The logo is optional; metadata is already available.
+                        if (error is! FirebaseException) out.addError(error, stack);
+                      },
+                    ),
+                  );
+                }
+              }
+              return church.copyWith(logoUrl: _logoUrl);
+            })
+            .listen(
+              out.add,
+              onError: (Object error, StackTrace stack) {
+                readEpoch++;
+                latest = null;
+                pending = null;
+                out.addError(error, stack);
+              },
+              onDone: out.close,
+            );
+      },
+      onPause: () => sub?.pause(),
+      onResume: () => sub?.resume(),
+      onCancel: () {
+        open = false;
+        // Match live()'s nonwaiting cancellation, including on source completion.
+        unawaited(sub?.cancel());
+      },
+    );
+    return out.stream.translated();
+  }
 
   String get _logoPath => 'churches/$churchId/logo.png';
 

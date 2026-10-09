@@ -76,6 +76,7 @@ void main() {
     expect(b.webhookSent, [('grace', 'ping')]);
     expect(find.text('成功'), findsOneWidget);
     expect(find.textContaining('上次送出：'), findsOneWidget);
+    expect(find.textContaining('10/1 09:00'), findsOneWidget);
     expect(find.textContaining('・成功'), findsOneWidget);
 
     b.webhookAnswer = const WebhookDelivery(ok: false, status: 500, error: WebhookDeliveryError.http);
