@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/app.dart';
 import 'package:martha/core/design/balanced_text.dart';
 import 'package:martha/core/design/theme.dart';
+import 'package:martha/deferred_pages.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/l10n/app_localizations.dart';
@@ -43,6 +44,14 @@ Future<void> pumpApp(
   double textScale = 1,
   List<Override> overrides = const [],
 }) async {
+  // VM deferred snapshots use real async work, not the widget test's fake
+  // clock. Download delays/failures are injected at loadPageLibraryProvider;
+  // actual web script delivery is checked by the browser smoke test.
+  await tester.runAsync(() async {
+    for (final library in PageLibrary.values) {
+      await library.load();
+    }
+  });
   tester.view.physicalSize = const Size(393 * 3, 852 * 3);
   tester.view.devicePixelRatio = 3;
   tester.platformDispatcher.platformBrightnessTestValue = brightness;

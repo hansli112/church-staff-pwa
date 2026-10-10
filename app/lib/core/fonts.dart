@@ -26,45 +26,178 @@ const fontsWaitLimit = Duration(seconds: 3);
 /// upgrade: a new copy may split them differently.
 const commonCharacters = '玖誦砌蠶渦蔻瀚舜濤蔚滷蒜瑩菸毅芒槽芽疊蘿淚蒂洞舖棄苗武耳減聖泰詳瀏該比著服聯心正';
 
+/// Text on the first login/home pages and the auth/church-entry states that
+/// may appear instead. Other screens ask for their fonts when opened.
+const _startupKeys = {
+  'appName',
+  'tabHome',
+  'tabRosters',
+  'tabCalendar',
+  'tabMe',
+  'cancel',
+  'done',
+  'retry',
+  'close',
+  'loadFailed',
+  'noPermission',
+  'signInWithGoogle',
+  'signInWithEmail',
+  'inAppBrowserNote',
+  'copyPageUrl',
+  'pageUrlCopied',
+  'loginTagline',
+  'loginTaglineSource',
+  'loginInvitedTo',
+  'email',
+  'password',
+  'yourName',
+  'signIn',
+  'register',
+  'createAccount',
+  'haveAccount',
+  'forgotPassword',
+  'movedPasswordNote',
+  'verifyEmailTitle',
+  'verifyEmailBody',
+  'verifyResend',
+  'verifyResent',
+  'verifyDone',
+  'verifyStill',
+  'welcomeTitle',
+  'welcomeBody',
+  'enterInviteCode',
+  'createChurch',
+  'signOut',
+  'inviteCode',
+  'next',
+  'churchName',
+  'createChurchVerifyFirst',
+  'create',
+  'contactUs',
+  'joinTitle',
+  'join',
+  'joined',
+  'alreadyMember',
+  'errInviteInvalid',
+  'errInviteExpired',
+  'errChurchClosed',
+  'churchSuspendedTitle',
+  'churchSuspendedBody',
+  'churchDeletedTitle',
+  'churchDeletedBody',
+  'churchDeletedExpired',
+  'churchUnavailable',
+  'restoreChurch',
+  'churchRestored',
+  'switchChurch',
+  'myServicesTitle',
+  'noUpcomingServices',
+  'viewRosters',
+  'gettingStarted',
+  'gettingStartedInvite',
+  'gettingStartedInviteBody',
+  'gettingStartedServices',
+  'gettingStartedServicesBody',
+  'nobodyYet',
+  'noServicesConfigured',
+  'setUpServices',
+  'noRostersAhead',
+  'today',
+  'tomorrow',
+  'offlineShowingCached',
+  'waitingForZone',
+  'claimPrompt',
+  'claimJoin',
+  'claimDecline',
+  'addToHome',
+  'addToHomeCardBody',
+  'addToHomeCardHide',
+  'pushView',
+  'goHome',
+  'churchNotFound',
+  'churchEntryNotMember',
+  'weekday1',
+  'weekday2',
+  'weekday3',
+  'weekday4',
+  'weekday5',
+  'weekday6',
+  'weekday7',
+};
+
 /// Every string of an .arb file, run together, without its notes (`@`
 /// keys).
-String arbText(String json) => [
+String arbText(String json) => _text(json);
+
+String _text(String json, {bool startupOnly = false}) => [
   for (final MapEntry(:key, :value) in (jsonDecode(json) as Map<String, dynamic>).entries)
-    if (!key.startsWith('@') && value is String) value,
+    if (!key.startsWith('@') && value is String && (!startupOnly || _startupKeys.contains(key))) value,
 ].join();
 
-/// On the web the engine draws Chinese with fonts it downloads when a text
-/// first needs them, so the first page shows boxes until they arrive. This
-/// lays out every character of the app's own text at once, before any page,
-/// so those downloads start alongside the app's; once they are in, the most
-/// used characters ([commonCharacters]), for the names the pages show. The
-/// loading screen waits for the app's own only, not for those.
+/// On the web the engine fetches Chinese fonts when text first needs them,
+/// so the first page can show boxes until they arrive. This starts those
+/// downloads before the page is drawn. [startupOnly] limits the initial text
+/// to login/home and auth/church-entry states; use the default for other
+/// initial deep links.
 ///
-/// Completes when the engine next says its fonts changed ([systemFonts]),
-/// which it does once a round of downloads is done, failed ones included.
-/// [layOut] lays a text out, which is what asks the engine for its fonts.
+/// Completes on the next font change after laying out the initial text, or
+/// at once if the strings cannot be used. The loading screen owns its wait
+/// limit. When supplied, [afterFirstFrame] also releases an unfinished wait
+/// after that screen has timed out, and ignores a late asset read.
+///
+/// The most used characters ([commonCharacters]) warm up only after both
+/// readiness and [afterFirstFrame], so they cannot compete with the first
+/// usable frame. Without that signal they follow readiness, as before.
+/// [layOut] asks the engine for fonts; [systemFonts] reports font changes.
 Future<void> warmUpFonts({
   required AssetBundle bundle,
   required Listenable systemFonts,
+  bool startupOnly = false,
+  Future<void>? afterFirstFrame,
   void Function(String text) layOut = _layOut,
 }) {
   final done = Completer<void>();
+  var reading = true;
   void finish() {
-    if (done.isCompleted) return;
+    if (reading || done.isCompleted) return;
     done.complete();
     // Not while it is calling its listeners: it cannot take that.
     scheduleMicrotask(() {
       systemFonts.removeListener(finish);
-      layOut(commonCharacters);
+      unawaited(() async {
+        try {
+          await afterFirstFrame;
+        } catch (_) {
+          return;
+        }
+        layOut(commonCharacters);
+      }());
     });
   }
 
   systemFonts.addListener(finish);
+  unawaited(
+    afterFirstFrame?.then<void>((_) {
+      // The page can draw after the caller's font wait has timed out.
+      reading = false;
+      finish();
+    }, onError: (Object _) {}),
+  );
   unawaited(() async {
     try {
-      layOut(arbText(await bundle.loadString(uiStringsAsset)));
+      final json = await bundle.loadString(uiStringsAsset);
+      if (done.isCompleted) return;
+      final text = _text(json, startupOnly: startupOnly);
+      reading = false;
+      if (text.trim().isEmpty) {
+        finish();
+      } else {
+        layOut(text);
+      }
     } catch (_) {
+      reading = false;
       // Without them, the first page asks for the fonts it needs.
+      finish();
     }
   }());
   return done.future;

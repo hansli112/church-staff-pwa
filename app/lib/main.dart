@@ -18,6 +18,7 @@ import 'app.dart';
 import 'data/backend.dart';
 import 'data/firebase/firebase_backend.dart';
 import 'data/memory/demo_data.dart';
+import 'deep_link.dart';
 import 'env.dart';
 import 'core/fonts.dart';
 import 'core/telemetry.dart';
@@ -36,13 +37,29 @@ Future<void> main() async {
   // URL, so a reload or a shared address lands on that page, not its tab.
   GoRouter.optionURLReflectsImperativeAPIs = true;
   WidgetsFlutterBinding.ensureInitialized();
-  // Before anything else, so the fonts download while the app starts.
-  final fontsReady = kIsWeb ? warmUpFonts(bundle: rootBundle, systemFonts: PaintingBinding.instance.systemFonts) : null;
+  // Start the initial page's fonts alongside Firebase. Other deep links
+  // keep the full warmup; common names wait until a usable page is drawn.
+  final firstPageDrawn = Completer<void>();
+  final entry = Uri.base;
+  final startupOnly =
+      const {'', '/', '/home'}.contains(entry.path) ||
+      (entry.path == '/login' && entry.queryParameters['from'] == null) ||
+      (churchUrlId(entry) != null && (entry.queryParameters['to'] == null || entry.queryParameters['to'] == '/home'));
+  final fontsReady = kIsWeb
+      ? warmUpFonts(
+          bundle: rootBundle,
+          systemFonts: PaintingBinding.instance.systemFonts,
+          startupOnly: startupOnly,
+          afterFirstFrame: firstPageDrawn.future,
+        )
+      : null;
   final env = Env.current;
-  final prefs = await SharedPreferences.getInstance();
-  final Backend backend = env.usesFirebase
-      ? await _firebase(env)
-      : demoBackend(newUser: const bool.fromEnvironment('DEMO_NEW_USER'));
+  final (prefs, backend) = await (
+    SharedPreferences.getInstance(),
+    env.usesFirebase
+        ? _firebase(env)
+        : Future<Backend>.value(demoBackend(newUser: const bool.fromEnvironment('DEMO_NEW_USER'))),
+  ).wait;
 
   // End-to-end tests drive the web build through the accessibility tree.
   if (const bool.fromEnvironment('E2E')) SemanticsBinding.instance.ensureSemantics();
@@ -78,7 +95,12 @@ Future<void> main() async {
         pushServiceProvider.overrideWithValue(push),
         supportStoreProvider.overrideWithValue(store),
         appIconSwitcherProvider.overrideWithValue(icons),
-        if (fontsReady != null) fontsReadyProvider.overrideWithValue(fontsReady),
+        if (fontsReady != null) ...[
+          fontsReadyProvider.overrideWithValue(fontsReady),
+          onFirstPageDrawnProvider.overrideWithValue(() {
+            if (!firstPageDrawn.isCompleted) firstPageDrawn.complete();
+          }),
+        ],
       ],
       // Streams retry by reconnecting themselves; a provider retry would
       // only repeat a permission error.

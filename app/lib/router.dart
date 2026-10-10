@@ -5,22 +5,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'deep_link.dart';
+import 'deferred_pages.dart';
 import 'domain/models.dart';
 import 'env.dart';
-import 'features/admin/admin_screens.dart';
 import 'features/auth/login_screen.dart';
 import 'features/calendar/calendar_screen.dart';
-import 'features/calendar/calendar_settings_screen.dart';
 import 'features/church/add_to_home.dart';
 import 'features/church/church_entry_screen.dart';
 import 'features/church/closed_screen.dart';
 import 'features/church/join_screen.dart';
-import 'features/church/move_screen.dart';
 import 'features/church/welcome_screen.dart';
 import 'features/dev/component_gallery.dart';
 import 'features/home/home_screen.dart';
 import 'features/me/account_screen.dart';
-import 'features/me/church_info_screen.dart';
 import 'features/me/church_link_screen.dart';
 import 'features/me/invites_screen.dart';
 import 'features/me/me_screen.dart';
@@ -32,7 +29,6 @@ import 'features/me/services_screen.dart';
 import 'features/me/support_screen.dart';
 import 'features/me/webhook_screen.dart';
 import 'features/rosters/event_roster_screen.dart';
-import 'features/rosters/import_screen.dart';
 import 'features/rosters/roster_day_screen.dart';
 import 'features/rosters/rosters_screen.dart';
 import 'features/shell/shell.dart';
@@ -85,7 +81,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [page(':code', (s) => JoinScreen(code: s.pathParameters['code']!))],
           ),
           page('create', (_) => const CreateChurchScreen()),
-          page('move', (_) => const MoveScreen()),
+          page('move', (_) => const DeferredPage.move()),
         ],
       ),
       page(
@@ -99,10 +95,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       page('/account', (_) => const AccountScreen()),
       page(
         '/admin',
-        (_) => const AdminScreen(),
+        (_) => const DeferredPage.admin(),
         routes: [
-          page('stats', (_) => const AdminStatsScreen()),
-          page('funding', (_) => const AdminFundingScreen()),
+          page('stats', (_) => const DeferredPage.adminStats()),
+          page('funding', (_) => const DeferredPage.adminFunding()),
         ],
       ),
       if (Env.current.isDevelopment) page('/dev/components', (_) => const ComponentGallery()),
@@ -118,7 +114,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 '/rosters',
                 (_) => const RostersScreen(),
                 routes: [
-                  page('import/:type', (s) => ImportScreen(serviceType: s.pathParameters['type']!)),
+                  page('import/:type', (s) => DeferredPage.rosterImport(serviceType: s.pathParameters['type']!)),
                   // Before :type/:day, which would take it for a service.
                   page(
                     'event/:id',
@@ -148,10 +144,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                   // Store apps only: the web build has no support page at all.
                   if (!ref.read(isWebProvider)) page('support', (_) => const SupportScreen()),
                   page('language', (_) => const LanguageScreen()),
-                  page('church', (_) => const ChurchInfoScreen()),
+                  page('church', (_) => const DeferredPage.churchInfo()),
                   page('link', (_) => const ChurchLinkScreen()),
                   page('webhook', (_) => const WebhookScreen()),
-                  page('calendar', (s) => CalendarSettingsScreen(result: s.uri.queryParameters['result'])),
+                  page('calendar', (s) => DeferredPage.calendarSettings(result: s.uri.queryParameters['result'])),
                   page('notifications', (_) => const NotificationsScreen()),
                   page('invites', (_) => const InvitesScreen()),
                   page(

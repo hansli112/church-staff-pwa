@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/painting.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/core/fonts.dart';
 import 'package:martha/features/auth/in_app_browser.dart';
@@ -9,6 +8,7 @@ import 'package:martha/features/church/links.dart';
 import 'package:martha/state/fonts.dart';
 import 'package:martha/state/web_page.dart';
 
+import '../support/fonts.dart';
 import '../support/harness.dart';
 import '../support/seed.dart';
 
@@ -29,7 +29,7 @@ void main() {
       overrides: [
         hideSplashProvider.overrideWithValue(() => hidden++),
         fontsReadyProvider.overrideWithValue(
-          warmUpFonts(bundle: rootBundle, systemFonts: PaintingBinding.instance.systemFonts),
+          warmUpFonts(bundle: UiStringsBundle(), systemFonts: PaintingBinding.instance.systemFonts),
         ),
       ],
     );

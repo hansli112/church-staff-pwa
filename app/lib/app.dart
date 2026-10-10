@@ -1,10 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/design/theme.dart';
 import 'core/fonts.dart';
 import 'deep_link.dart';
+import 'deferred_pages.dart';
 import 'l10n/app_localizations.dart';
 import 'router.dart';
 import 'state/fonts.dart';
@@ -17,26 +21,71 @@ import 'state/web_page.dart';
 /// screen's context.
 final _messenger = GlobalKey<ScaffoldMessengerState>();
 
-class MarthaApp extends ConsumerWidget {
+class MarthaApp extends ConsumerStatefulWidget {
   const MarthaApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MarthaApp> createState() => _MarthaAppState();
+}
+
+class _MarthaAppState extends ConsumerState<MarthaApp> {
+  GoRouter? _router;
+  bool _splashHidden = false;
+  Future<void>? _fontsSettled;
+  int _drawAttempt = 0;
+
+  void _routeChanged() => unawaited(_hideSplashOnceDrawn());
+
+  // Fonts and the current destination's code load together. A download
+  // error is a usable page too: dismiss the splash so retry can be reached.
+  Future<void> _hideSplashOnceDrawn() async {
+    if (_splashHidden) return;
+    final attempt = ++_drawAttempt;
+    if (ref.read(appStageProvider) == AppStage.loading) return;
+    await (_fontsSettled ??= ref.read(fontsReadyProvider).timeout(fontsWaitLimit, onTimeout: () {}));
+    if (!mounted || attempt != _drawAttempt) return;
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted || attempt != _drawAttempt) return;
+    final router = _router!;
+    final location = router.routerDelegate.currentConfiguration.uri;
+    if (location.path == '/loading') return;
+    final library = PageLibrary.forLocation(location);
+    if (library != null) {
+      try {
+        await ref.read(pageLibraryProvider(library).future);
+      } catch (_) {
+        // DeferredPage shows the download error with a retry button.
+      }
+    }
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted ||
+        attempt != _drawAttempt ||
+        ref.read(appStageProvider) == AppStage.loading ||
+        router.routerDelegate.currentConfiguration.uri != location) {
+      return;
+    }
+    _splashHidden = true;
+    ref.read(hideSplashProvider)();
+    ref.read(onFirstPageDrawnProvider)();
+  }
+
+  @override
+  void dispose() {
+    _router?.routerDelegate.removeListener(_routeChanged);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     ref.watch(sessionEffectsProvider);
     final router = ref.watch(routerProvider);
-    // The web page's loading screen stays over the app's own blank loading
-    // page, and comes down after the first frame of the page that follows,
-    // drawn with the fonts for its text (or without them, after a while).
-    Future<void> hideSplashOnceDrawn(AppStage stage) async {
-      if (stage == AppStage.loading) return;
-      final hide = ref.read(hideSplashProvider);
-      await ref.read(fontsReadyProvider).timeout(fontsWaitLimit, onTimeout: () {});
-      await WidgetsBinding.instance.endOfFrame;
-      hide();
+    if (_router != router) {
+      _router?.routerDelegate.removeListener(_routeChanged);
+      _router = router;
+      router.routerDelegate.addListener(_routeChanged);
     }
-
-    ref.listen(appStageProvider, (_, stage) => hideSplashOnceDrawn(stage));
-    hideSplashOnceDrawn(ref.read(appStageProvider));
+    ref.listen(appStageProvider, (_, _) => _routeChanged());
+    _routeChanged();
     // A tapped notification opens the page it is about.
     ref.listen(pushLinksProvider, (_, link) {
       final l = appLocation(link.value);
