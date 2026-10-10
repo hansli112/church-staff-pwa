@@ -67,8 +67,11 @@ class AddToHomeScreen extends ConsumerStatefulWidget {
   ConsumerState<AddToHomeScreen> createState() => _AddToHomeScreenState();
 }
 
+enum _SafariLayout { compact, expanded }
+
 class _AddToHomeScreenState extends ConsumerState<AddToHomeScreen> {
   HomeBrowser? _chosenBrowser;
+  _SafariLayout? _safariLayout;
   bool _trouble = false;
 
   void _leave() {
@@ -88,28 +91,52 @@ class _AddToHomeScreenState extends ConsumerState<AddToHomeScreen> {
     _leave();
   }
 
-  Future<void> _chooseBrowser(AddToHome platform, HomeBrowser current) async {
+  Future<void> _chooseGuide(AddToHome platform, HomeBrowser current, {required bool ipad}) async {
     final l10n = L10n.of(context);
-    final choice = await showAppSheet<HomeBrowser>(
+    final choice = await showAppSheet<({HomeBrowser browser, _SafariLayout? layout})>(
       context,
       builder: (context) => SingleChildScrollView(
-        child: ListSection(
-          header: l10n.addToHomeChooseGuide,
-          footer: l10n.addToHomeChooseGuideNote,
+        child: Column(
           children: [
-            for (final browser in homeBrowsersFor(platform))
-              ListRow(
-                title: _browserName(l10n, browser),
-                selected: browser == current,
-                onTap: () => Navigator.pop(context, browser),
+            if (platform == AddToHome.ios && current == HomeBrowser.safari && !ipad)
+              ListSection(
+                header: l10n.addToHomeSafariLayoutTitle,
+                footer: l10n.addToHomeSafariLayoutHint,
+                children: [
+                  ListRow(
+                    title: l10n.addToHomeSafariMoreChoice,
+                    leading: const Icon(Icons.more_horiz),
+                    selected: _safariLayout == _SafariLayout.compact,
+                    onTap: () => Navigator.pop(context, (browser: HomeBrowser.safari, layout: _SafariLayout.compact)),
+                  ),
+                  ListRow(
+                    title: l10n.addToHomeSafariShareChoice,
+                    leading: const Icon(Icons.ios_share),
+                    selected: _safariLayout == _SafariLayout.expanded,
+                    onTap: () => Navigator.pop(context, (browser: HomeBrowser.safari, layout: _SafariLayout.expanded)),
+                  ),
+                ],
               ),
+            ListSection(
+              header: l10n.addToHomeChooseGuide,
+              footer: l10n.addToHomeChooseGuideNote,
+              children: [
+                for (final browser in homeBrowsersFor(platform))
+                  ListRow(
+                    title: _browserName(l10n, browser),
+                    selected: browser == current,
+                    onTap: () => Navigator.pop(context, (browser: browser, layout: null)),
+                  ),
+              ],
+            ),
           ],
         ),
       ),
     );
     if (!mounted || choice == null) return;
     setState(() {
-      _chosenBrowser = choice;
+      _chosenBrowser = choice.browser;
+      if (choice.layout != null) _safariLayout = choice.layout!;
       _trouble = false;
     });
   }
@@ -143,7 +170,9 @@ class _AddToHomeScreenState extends ConsumerState<AddToHomeScreen> {
     final church = ref.watch(churchProvider).value;
     final iconName = church?.homeName ?? church?.name ?? l10n.appName;
     final guide = homeGuideFor(platform, browser, ipad: ipad);
-    final instructions = guide == null ? null : _instructionsFor(l10n, guide, iconName);
+    final instructions = guide == null
+        ? null
+        : _instructionsFor(l10n, guide, iconName, _safariLayout ?? _SafariLayout.compact);
     final external = instructions == null;
     final fallback = platform == AddToHome.ios ? 'Safari' : 'Chrome';
     final browserName = browser == HomeBrowser.inApp
@@ -186,7 +215,7 @@ class _AddToHomeScreenState extends ConsumerState<AddToHomeScreen> {
                   ),
                   SecondaryButton(
                     label: l10n.addToHomeChooseBrowser,
-                    onPressed: () => _chooseBrowser(platform, browser),
+                    onPressed: () => _chooseGuide(platform, browser, ipad: ipad),
                   ),
                   if (!offered && instructions != null)
                     ListSection(
@@ -259,10 +288,39 @@ String _browserName(L10n l10n, HomeBrowser browser) => switch (browser) {
   HomeBrowser.other => l10n.addToHomeOtherBrowser,
 };
 
+_GuideStep _safariShareStep(L10n l10n, _SafariLayout layout) {
+  final (title, detail, images) = switch (layout) {
+    _SafariLayout.compact => (
+      l10n.addToHomeSafariMoreShare,
+      null,
+      const [
+        (path: 'assets/add_to_home/safari_more.png', aspectRatio: 900 / 142),
+        (path: 'assets/add_to_home/safari_share.png', aspectRatio: 790 / 280),
+      ],
+    ),
+    _SafariLayout.expanded => (
+      l10n.addToHomeSafariShare,
+      l10n.addToHomeSafariDirectShareHint,
+      const [(path: 'assets/add_to_home/safari_direct_share.png', aspectRatio: 900 / 139)],
+    ),
+  };
+  return _GuideStep(
+    n: 1,
+    title: title,
+    detail: detail,
+    illustration: _GuideScreenshots(images: images, caption: l10n.addToHomeSafariScreenshot),
+  );
+}
+
 // Mobile instructions checked against Apple iphea86e5236 / ipad8f1f7a29,
 // Google Chrome help 9658361, and Mozilla's add-website-shortcut-your-home-screen-ios
 // and use-web-apps-firefox-android (2026-10-09).
-({List<Widget> steps, String? footer}) _instructionsFor(L10n l10n, HomeGuide guide, String iconName) {
+({List<Widget> steps, String? footer}) _instructionsFor(
+  L10n l10n,
+  HomeGuide guide,
+  String iconName,
+  _SafariLayout safariLayout,
+) {
   final iosConfirmStep = _GuideStep(
     n: 2,
     title: l10n.addToHomeSelectAdd,
@@ -271,18 +329,7 @@ String _browserName(L10n l10n, HomeBrowser browser) => switch (browser) {
   );
   final (first, second, ios) = switch (guide) {
     HomeGuide.safariIphone => (
-      _GuideStep(
-        n: 1,
-        title: l10n.addToHomeSafariShare,
-        detail: l10n.addToHomeSafariShareHint,
-        illustration: _GuideScreenshots(
-          images: const [
-            (path: 'assets/add_to_home/safari_more.png', aspectRatio: 900 / 142),
-            (path: 'assets/add_to_home/safari_share.png', aspectRatio: 790 / 280),
-          ],
-          caption: l10n.addToHomeSafariScreenshot,
-        ),
-      ),
+      _safariShareStep(l10n, safariLayout),
       _GuideStep(
         n: 2,
         title: l10n.addToHomeSelectAdd,

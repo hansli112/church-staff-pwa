@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/core/design/components.dart' show ListRow;
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/features/church/add_to_home.dart';
@@ -24,7 +25,7 @@ const windows =
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36';
 
 const iosSteps = [
-  '點 Safari 的分享圖示',
+  '點「⋯」，再選「分享」',
   '點「加入主畫面」',
   '點手機上的「恩典堂」圖示打開，再登入一次',
 ];
@@ -466,6 +467,101 @@ void main() {
     expect(find.text('Safari · iOS 26.5 · 繁中模擬器畫面'), findsNWidgets(2));
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('iPhone Safari can choose the visible toolbar without changing browser or settings', (tester) async {
+    final loads = Loads();
+    await seeded(tester, iphone, overrides: [loads.override]);
+    routerOf(tester).go('/add-to-home');
+    await settle(tester);
+    await tapText(tester, '畫面不一樣？');
+    expect(find.text('Safari 畫面'), findsOneWidget);
+    expect(find.text('我看到「⋯」'), findsOneWidget);
+    expect(find.text('我看到分享圖示'), findsOneWidget);
+    expect(
+      tester
+          .widgetList<ListRow>(find.byType(ListRow))
+          .where((row) => row.title.startsWith('我看到'))
+          .map((row) => row.selected),
+      [false, false],
+      reason: 'the page cannot detect Safari layout; neither choice is guessed',
+    );
+    expect(find.text('請依工具列上的按鈕選擇，不需要更改 Safari 設定'), findsOneWidget);
+    await tapText(tester, '我看到分享圖示');
+
+    expect(routerOf(tester).routeInformationProvider.value.uri.path, '/add-to-home');
+    expect(find.text('點 Safari 的分享圖示'), findsOneWidget);
+    expect(find.text('網址列在上或下都可以，請找「方框向上箭頭」'), findsOneWidget);
+    expect(find.text('若只看到「⋯」，先點它，再選「分享」'), findsNothing);
+    final images = tester.widgetList<Image>(find.byType(Image)).map((image) => image.image).whereType<AssetImage>();
+    expect(images.map((image) => image.assetName), contains('assets/add_to_home/safari_direct_share.png'));
+    expect(images.map((image) => image.assetName), isNot(contains('assets/add_to_home/safari_more.png')));
+    expect(images.map((image) => image.assetName), isNot(contains('assets/add_to_home/safari_share.png')));
+    expect(
+      images.map((image) => image.assetName),
+      containsAll([
+        'assets/add_to_home/safari_share_more.png',
+        'assets/add_to_home/safari_add.png',
+      ]),
+    );
+    expect(loads.pages, isEmpty);
+
+    await tapText(tester, '畫面不一樣？');
+    await tapText(tester, '我看到「⋯」');
+    expect(find.text('點「⋯」，再選「分享」'), findsOneWidget);
+    final compact = tester.widgetList<Image>(find.byType(Image)).map((image) => image.image).whereType<AssetImage>();
+    expect(compact.map((image) => image.assetName), contains('assets/add_to_home/safari_more.png'));
+    expect(compact.map((image) => image.assetName), isNot(contains('assets/add_to_home/safari_direct_share.png')));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Safari toolbar choice survives switching guide and never leaks into Chrome', (tester) async {
+    await seeded(tester, iphone);
+    routerOf(tester).go('/add-to-home');
+    await settle(tester);
+    await tapText(tester, '畫面不一樣？');
+    await tapText(tester, '我看到分享圖示');
+    await tapText(tester, '畫面不一樣？');
+    await tapText(tester, 'Chrome');
+    expect(find.text('點網址列旁的分享圖示'), findsOneWidget);
+    expect(find.text('網址列在上或下都可以，請找「方框向上箭頭」'), findsNothing);
+    await tapText(tester, '畫面不一樣？');
+    expect(find.text('Safari 畫面'), findsNothing);
+    await tapText(tester, 'Safari');
+    expect(find.text('網址列在上或下都可以，請找「方框向上箭頭」'), findsOneWidget);
+  });
+
+  testWidgets('iPad Safari keeps its own share order instead of iPhone layout choices', (tester) async {
+    await seeded(tester, mac, overrides: [touchPointsProvider.overrideWithValue(5)]);
+    routerOf(tester).go('/add-to-home');
+    await settle(tester);
+    await tapText(tester, '畫面不一樣？');
+    expect(find.text('Safari 畫面'), findsNothing);
+    expect(find.text('我看到「⋯」'), findsNothing);
+    await tapText(tester, 'Safari');
+    expect(find.text('點 Safari 的分享圖示'), findsOneWidget);
+    expect(find.textContaining('先點分享面板中的「更多」'), findsOneWidget);
+  });
+
+  for (final brightness in Brightness.values) {
+    testWidgets('Safari layout choices and direct guide fit large text: $brightness', (tester) async {
+      await pumpApp(
+        tester,
+        seededChurch(),
+        brightness: brightness,
+        textScale: 2,
+        overrides: [userAgentProvider.overrideWithValue(iphone), pageChurchProvider.overrideWithValue('grace')],
+      );
+      tester.view.physicalSize = const Size(320 * 3, 640 * 3);
+      routerOf(tester).go('/add-to-home');
+      await settle(tester);
+      await tapText(tester, '畫面不一樣？');
+      expect(tester.takeException(), isNull);
+      await tapText(tester, '我看到分享圖示');
+      expect(tester.takeException(), isNull);
+      await tapText(tester, '稍後再說');
+      expect(find.byType(NavigationBar), findsOneWidget);
+    });
+  }
 
   testWidgets('Chrome does not show Safari screenshots or claim the old Android capture is current', (tester) async {
     await seeded(tester, '$iphone CriOS/140.0');

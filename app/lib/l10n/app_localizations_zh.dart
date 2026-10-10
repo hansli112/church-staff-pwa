@@ -1206,6 +1206,24 @@ class L10nZh extends L10n {
   String get addToHomeChooseGuideNote => '只切換教學，不會替你開啟另一個瀏覽器';
 
   @override
+  String get addToHomeSafariLayoutTitle => 'Safari 畫面';
+
+  @override
+  String get addToHomeSafariLayoutHint => '請依工具列上的按鈕選擇，不需要更改 Safari 設定';
+
+  @override
+  String get addToHomeSafariMoreChoice => '我看到「⋯」';
+
+  @override
+  String get addToHomeSafariShareChoice => '我看到分享圖示';
+
+  @override
+  String get addToHomeSafariMoreShare => '點「⋯」，再選「分享」';
+
+  @override
+  String get addToHomeSafariDirectShareHint => '網址列在上或下都可以，請找「方框向上箭頭」';
+
+  @override
   String get addToHomeInApp => 'App 內建瀏覽器';
 
   @override
@@ -1237,9 +1255,6 @@ class L10nZh extends L10n {
 
   @override
   String get addToHomeSafariShare => '點 Safari 的分享圖示';
-
-  @override
-  String get addToHomeSafariShareHint => '若只看到「⋯」，先點它，再選「分享」';
 
   @override
   String get addToHomeFirefoxShare => '點網址列的分享圖示';

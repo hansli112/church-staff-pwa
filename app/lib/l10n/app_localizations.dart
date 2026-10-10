@@ -2293,6 +2293,42 @@ abstract class L10n {
   /// **'只切換教學，不會替你開啟另一個瀏覽器'**
   String get addToHomeChooseGuideNote;
 
+  /// No description provided for @addToHomeSafariLayoutTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Safari 畫面'**
+  String get addToHomeSafariLayoutTitle;
+
+  /// No description provided for @addToHomeSafariLayoutHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'請依工具列上的按鈕選擇，不需要更改 Safari 設定'**
+  String get addToHomeSafariLayoutHint;
+
+  /// No description provided for @addToHomeSafariMoreChoice.
+  ///
+  /// In zh, this message translates to:
+  /// **'我看到「⋯」'**
+  String get addToHomeSafariMoreChoice;
+
+  /// No description provided for @addToHomeSafariShareChoice.
+  ///
+  /// In zh, this message translates to:
+  /// **'我看到分享圖示'**
+  String get addToHomeSafariShareChoice;
+
+  /// No description provided for @addToHomeSafariMoreShare.
+  ///
+  /// In zh, this message translates to:
+  /// **'點「⋯」，再選「分享」'**
+  String get addToHomeSafariMoreShare;
+
+  /// No description provided for @addToHomeSafariDirectShareHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'網址列在上或下都可以，請找「方框向上箭頭」'**
+  String get addToHomeSafariDirectShareHint;
+
   /// No description provided for @addToHomeInApp.
   ///
   /// In zh, this message translates to:
@@ -2358,12 +2394,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'點 Safari 的分享圖示'**
   String get addToHomeSafariShare;
-
-  /// No description provided for @addToHomeSafariShareHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'若只看到「⋯」，先點它，再選「分享」'**
-  String get addToHomeSafariShareHint;
 
   /// No description provided for @addToHomeFirefoxShare.
   ///
