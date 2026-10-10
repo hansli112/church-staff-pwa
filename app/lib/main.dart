@@ -18,7 +18,6 @@ import 'app.dart';
 import 'data/backend.dart';
 import 'data/firebase/firebase_backend.dart';
 import 'data/memory/demo_data.dart';
-import 'deep_link.dart';
 import 'env.dart';
 import 'core/fonts.dart';
 import 'core/telemetry.dart';
@@ -37,19 +36,14 @@ Future<void> main() async {
   // URL, so a reload or a shared address lands on that page, not its tab.
   GoRouter.optionURLReflectsImperativeAPIs = true;
   WidgetsFlutterBinding.ensureInitialized();
-  // Start the initial page's fonts alongside Firebase. Other deep links
-  // keep the full warmup; common names wait until a usable page is drawn.
+  // Start the entry page's fonts alongside Firebase; common names wait
+  // until a usable page is drawn.
   final firstPageDrawn = Completer<void>();
-  final entry = Uri.base;
-  final startupOnly =
-      const {'', '/', '/home'}.contains(entry.path) ||
-      (entry.path == '/login' && entry.queryParameters['from'] == null) ||
-      (churchUrlId(entry) != null && (entry.queryParameters['to'] == null || entry.queryParameters['to'] == '/home'));
   final fontsReady = kIsWeb
       ? warmUpFonts(
           bundle: rootBundle,
           systemFonts: PaintingBinding.instance.systemFonts,
-          startupOnly: startupOnly,
+          initialLocation: Uri.base,
           afterFirstFrame: firstPageDrawn.future,
         )
       : null;

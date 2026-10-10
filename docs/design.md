@@ -136,7 +136,7 @@ self-host 已經做了延遲建構清單（`ListView.builder`）和縮小重建�
 - 這台機器沒有 GPU，瀏覽器的 WebGL 是軟體繪圖，所以捲動 fps 和 iPhone 不能直接比。冷啟動、切換分頁、選人在這種條件下都在目標附近。
 - 選人視窗在 WebKit 超過 100ms，主要花在底部面板第一次排版。已經把搜尋比對改成每個名字只正規化一次。
 - 捲動時最長的那一格，發生在第一次畫出新的中文字的時候：Web 版的中文字型是執行時才從 Google Fonts 下載的。
-- Web 版首頁、登入頁與直接開啟教會網址時，先預熱首畫面及必要帳號／教會狀態文字的字型，不等管理、匯入等未開啟畫面的文字；其他初始深連結仍預熱全部 App 文字。載入畫面從第一個非 loading 狀態起最多等字型 3 秒，切換路由不重新計時；首個目的頁面（或可重試的下載錯誤頁）畫出來後才拿掉。接著才預熱常用約 4300 字的 20 個字型檔（共約 740 KB），不與首畫面競爭；未預熱的動態名字與互動後文字由引擎按需下載。只對繁中（zh-TW）瀏覽器有效，其他語言引擎會選別的字型。
+- Web 版首頁、登入頁與直接開啟教會網址時，先預熱首畫面及必要帳號／教會狀態文字的字型，不等管理、匯入等未開啟畫面的文字；已辨識的服事表與教會資訊深連結也只加上目的頁文字（第三批），其他初始深連結仍預熱全部 App 文字。載入畫面從第一個非 loading 狀態起最多等字型 3 秒，切換路由不重新計時；首個目的頁面（或可重試的下載錯誤頁）畫出來後才拿掉。接著才預熱常用約 4300 字的 20 個字型檔（共約 740 KB），不與首畫面競爭；未預熱的動態名字與互動後文字由引擎按需下載。只對繁中（zh-TW）瀏覽器有效，其他語言引擎會選別的字型。
 - 教會頁面（`/c/ID`）和它的 manifest 由 churchPage 函式產生，閒置後第一次呼叫要冷啟動 4–13 秒，這段時間整頁空白。這兩個對每個人都一樣，回應加 `s-maxage=86400`，讓 Hosting 的 CDN 存一天：從主畫面打開不必等函式。`firebase.json` 全站 `no-cache` 的規則因此不含 `/c/`（Hosting 的 header 設定會蓋掉函式自己給的）。改教會名稱或 logo 最多一天才看到；Hosting 部署會清掉 CDN。邀請連結要即時檢查邀請，不存；第一次點仍可能冷啟動，上線時再看要不要讓正式站常駐一台（`minInstances`）。
 - 字型檔（圖示字型每次 build 都只留用到的圖示）部署前改成帶內容 hash 的檔名，快取一年；不然手機留著舊的圖示字型，新的圖示會是空白。
 
@@ -156,6 +156,36 @@ self-host 已經做了延遲建構清單（`ListView.builder`）和縮小重建�
 | 啟動主 JS（Brotli） | 1,036,390 bytes | 943,738 bytes |
 
 首次小幅改善，主 JS 減少約 9%；重開差距不大，第一批的快取效益仍保留。這批延後字型工作，未聲稱減少總字型下載；首次載入仍受引擎、SDK、字型等成本影響。Demo release 的實際瀏覽器驗證涵蓋首頁不抓 optional chunks、五組程式的冷深連結、SPA 重訪不重抓、帶 hash 的 chunk／immutable header，以及真實 404 後重試成功與明暗介面；不使用或修改真實教會資料。
+
+**2026-10-10：第三批 guideline 試驗**
+
+保留：
+- 服事表兩個 Firestore query 仍讀完整結果，未加上界或 `limit`，索引、rules、日期與權限語意不變。每個 query 訂閱只保留已轉換模型；`docChanges` 決定哪些重轉換，完整 snapshot 決定文件是否存在與次序。重連重建基線，cache→server 即使沒有 changes 也正確；解碼失敗清空增量基線，該來源的錯誤保留到下一份成功快照，不被另一 query 更新洗掉；僅讀伺服器模式仍忽略快取快照。有效日資料優先，解碼為 null 時保留活動資料的 fallback。取消釋放模型，不跨帳號、教會或訂閱共用。
+- 合成 156 份服事表加跨日活動、六輪 AB/BA、兩版都保留最新結果：單筆更新轉換 181→1，無異動 181→0；callback CPU 中位 335→70µs、無異動 335→57µs。代價是初始 417→488µs、全量更新 335→349µs；1560 份壓力樣本的初始時間分布不穩定，全量更新 p95 也增加。文件讀量不變，不聲稱冷啟動更快；active heap 約增加 0.08–0.11MB，取消後 domain 模型釋放。
+- 選人清單原先在 builder 外建立全部列，現在只為可見列建立 Widget。500 人範例的 VM GC 觀察中，保留的 `ListRow` 從 505→19；搜尋、選人、同工排序、加入服事、移除與關閉結果不變。這是 widget-test 配置觀察，不是手機開啟秒數。
+- Web 首開辨識服事表與教會資訊，預熱目的頁加上必要帳號、教會狀態與導覽文字；安全跟隨 `from`／`to`，未知入口、管理與照片匯入仍用完整文字。沿用同一個 3 秒 deadline、listener 清理與首個可用畫面後的常用字預熱；不改原生字型與登入。
+- Calendar 的 Google adapter 在同一個暖 instance 共用；依教會、grant 的精確 updateTime、refresh token 與設定隔離，按請求開始時間計算有效期並提前 60 秒失效，併發 refresh 共用，失敗不快取。每次仍驗教會與同工、讀 grant，取 token 後再次確認 revision；斷開、撤銷或 401 不沿用舊結果，不自動重播寫入。未新增 persistent 資料結構，既有 10 分鐘活動快取與月份失效不變。
+- 合成 handler／真實 HTTP adapter 的呼叫數：三個月份未命中 refresh 3→1、events 3→3，Firestore reads 12→15；八個併發未命中 refresh 8→1、events 8→8，reads 32→40。額外讀取是 grant guard，暖 token hit 也保留；八個 persistent cache hit 仍都是 24 reads、不 refresh。不聲稱減少活動查詢或 Firestore 費用。
+- Apple server library、sharp 延到付款驗證或 icon 產生時才載入，原接口與 53 個 Functions export／設定不變。Mac Node 26、filesystem-warm 的本地 process-cold，交錯各 20 次：入口匯入中位 258.05→215.39ms；不是 production Node 22 或 Cloud Functions 冷啟動成績，成本是移到首次使用，不是消失。
+
+Web 首開對照只套用字型與選人修改，使用離線 demo 資料、匿名隔離 context、先後再反向各一輪，每入口每版兩次冷開、四次重開。Chrome 為 Android UA／393×852／DPR2、CPU 4×、4Mbps／1Mbps、150ms；WebKit 為桌面引擎搭配手機尺寸，沒有 CPU／網路限速，兩引擎不可直接比較。計時到首幀、載入畫面移除與非 loading 目的頁，不是雲端資料讀完；48 次沒有程式例外，檢查首個可用畫面截圖，字可讀。
+
+| 入口／引擎 | 冷開前→後 | 重開前→後 |
+| --- | --- | --- |
+| 教會資訊／Chrome | 9.04→8.69 秒 | 1.92→1.77 秒 |
+| 服事表／Chrome | 9.01→8.76 秒 | 1.97→1.80 秒 |
+| 教會資訊／桌面 WebKit | 0.992→1.073 秒 | 0.656→0.628 秒 |
+| 服事表／桌面 WebKit | 0.835→0.818 秒 | 0.611→0.576 秒 |
+
+Chrome 小幅改善；桌面 WebKit 差距小且教會資訊冷開反而較慢，不能宣稱 iOS 速度改善。樣本有限，字型請求仍約 22 個，不保證總下載量降低；Android／iOS 實機都尚未測。
+
+未保留：
+- 直接限制未來服事查詢會破壞首頁下一 20 筆本人服事、全部未來表排序／標籤改名與遠期匯入合併／復原；本批只重用轉換，真正限窗需要 coverage／分頁與獨立遠期操作設計。
+- 行事曆 agenda 的 lazy sliver 原型減少首幀建構，但不等高活動使月底日期定位失準。撤回 production 原型，留下 480 筆不等高活動的公開導航回歸；可靠方案要真正 indexed positioning，不用省建構交換導航正確性。原型 profile 計時有本機併發干擾，只作探索性證據，不列為交付成績。
+- 同 query 的單 instance flight 原型可合併上游，但跨 instance 寫入後仍可能回填舊活動，須 durable query／write revision 才能鎖住；本批不增加 schema、讀寫或改快取失效語意，所以未保留。
+- 不開 Wasm、不大量 preload、不設定付費 minInstances，未部署或操作真實資料。
+
+參考官方 guideline：[Flutter 效能](https://docs.flutter.dev/perf/best-practices)、[Web profiling](https://docs.flutter.dev/perf/web-performance)、[Firestore](https://firebase.google.com/docs/firestore/best-practices)、[Functions](https://firebase.google.com/docs/functions/tips)、[resource hints](https://web.dev/learn/performance/resource-hints)、[Safari Web Inspector](https://developer.apple.com/safari/tools/)。
 
 下一步（需要實機）：
 - 原生 App 在 Hans 的 iPhone、Android 上各量一次。用 profile 模式和 DevTools 量冷啟動與捲動。

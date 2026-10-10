@@ -8,10 +8,12 @@ import {
   calendarCallback,
   calendarDisconnect,
   calendarEvents,
+  calendarList,
   calendarSelect,
   calendarWrite,
   eventRosterDays,
   GoogleAuthRevoked,
+  googleApi,
   monthOf,
   monthsOf,
   releaseCalendarIfConnector,
@@ -140,6 +142,118 @@ describe('connecting', () => {
 });
 
 describe('reading', () => {
+  test('successive calendar calls reuse the same church’s valid Google token', async () => {
+    await church();
+    await connect(fakeGoogle().google);
+    let refreshes = 0;
+    const google = googleApi({ now: deps.now, fetch: async (url) => {
+      if (url === 'https://oauth2.googleapis.com/token') {
+        refreshes++;
+        return Response.json({ access_token: 'access', expires_in: 3600 });
+      }
+      return Response.json({ items: [{ id: 'cal-1', summary: '教會行事曆' }] });
+    } });
+    const d = { ...deps, google, config };
+    assert.equal((await calendarList(d, caller('pastor'), { churchId: 'C1' })).calendars[0].id, 'cal-1');
+    await calendarList(d, caller('pastor'), { churchId: 'C1' });
+    assert.equal(refreshes, 1);
+  });
+
+  test('a disconnect during token refresh cannot continue using the old grant', async () => {
+    await church();
+    const { google } = fakeGoogle();
+    await connect(google);
+    let entered!: () => void;
+    let release!: () => void;
+    const refreshing = new Promise<void>((resolve) => { entered = resolve; });
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    google.accessToken = async () => { entered(); await gate; return 'old-access'; };
+    let lists = 0;
+    google.calendars = async () => { lists++; return []; };
+    const d = { ...deps, google, config };
+    const pending = calendarList(d, caller('pastor'), { churchId: 'C1' });
+    await refreshing;
+    await calendarDisconnect(d, caller('pastor'), { churchId: 'C1' });
+    release();
+    await rejectsWith(pending, 'unknown');
+    assert.equal(lists, 0);
+  });
+
+  test('a revoked refresh racing a reconnect reports a changed grant, not a revoked new grant', async () => {
+    await church();
+    const { google } = fakeGoogle();
+    await connect(google);
+    let entered!: () => void;
+    let release!: () => void;
+    const refreshing = new Promise<void>((resolve) => { entered = resolve; });
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    google.accessToken = async () => { entered(); await gate; throw new GoogleAuthRevoked(); };
+    const d = { ...deps, google, config };
+    const pending = calendarList(d, caller('pastor'), { churchId: 'C1' });
+    await refreshing;
+    await connect(google);
+    release();
+    const error = await rejectsWith(pending, 'unknown');
+    assert.equal((error as { details: { detail: string } }).details.detail, 'calendarChanged');
+    google.accessToken = async () => 'new-access';
+    google.calendars = async (token) => {
+      assert.equal(token, 'new-access');
+      return [{ id: 'new-calendar', name: '重新連接', primary: false }];
+    };
+    assert.equal((await calendarList(d, caller('pastor'), { churchId: 'C1' })).calendars[0].id, 'new-calendar');
+  });
+
+  test('warm tokens never replace sign-in, membership, church status, or calendar permissions', async () => {
+    await church();
+    await connect(fakeGoogle().google);
+    let refreshes = 0;
+    let requests = 0;
+    const google = googleApi({ now: deps.now, fetch: async (url) => {
+      if (url === 'https://oauth2.googleapis.com/token') {
+        refreshes++;
+        return Response.json({ access_token: 'access', expires_in: 3600 });
+      }
+      requests++;
+      return Response.json({ items: [], id: 'created', summary: '活動', start: { date: '2026-10-10' }, end: { date: '2026-10-11' } });
+    } });
+    const d = { ...deps, google, config };
+    const input = { churchId: 'C1', op: 'upsert', event: { title: '活動', start: '2026-10-10', end: '2026-10-11', allDay: true } };
+    await calendarList(d, caller('pastor'), { churchId: 'C1' });
+    await calendarWrite(d, caller('editor'), input);
+    await rejectsWith(calendarList(d, null, { churchId: 'C1' }), 'permissionDenied');
+    await rejectsWith(calendarList(d, caller('other'), { churchId: 'C1' }), 'permissionDenied');
+    await rejectsWith(calendarWrite(d, caller('staff'), input), 'permissionDenied');
+    await db.doc('churches/C1/members/editor').update({ groups: [] });
+    await rejectsWith(calendarWrite(d, caller('editor'), input), 'permissionDenied');
+    await db.doc('churches/C1').update({ status: 'suspended' });
+    await rejectsWith(calendarList(d, caller('pastor'), { churchId: 'C1' }), 'churchClosed');
+    await db.doc('churches/C1').update({ status: 'active' });
+    await db.doc('churches/C1/members/pastor').delete();
+    await rejectsWith(calendarList(d, caller('pastor'), { churchId: 'C1' }), 'permissionDenied');
+    assert.equal(refreshes, 1);
+    assert.equal(requests, 2);
+  });
+
+  test('selecting a calendar or reconnecting cannot reuse the previous grant revision’s token', async () => {
+    await church();
+    await connect(fakeGoogle().google);
+    let refreshes = 0;
+    const google = googleApi({ now: deps.now, fetch: async (url) => {
+      if (url === 'https://oauth2.googleapis.com/token') {
+        return Response.json({ access_token: `access-${++refreshes}`, expires_in: 3600 });
+      }
+      return Response.json({ items: [] });
+    } });
+    const d = { ...deps, google, config };
+    await calendarList(d, caller('pastor'), { churchId: 'C1' });
+    await calendarSelect(d, caller('pastor'), { churchId: 'C1', calendarId: 'cal-2', calendarName: '第二本' });
+    await calendarList(d, caller('pastor'), { churchId: 'C1' });
+    assert.equal(refreshes, 2);
+    await connect(fakeGoogle().google);
+    await calendarList(d, caller('pastor'), { churchId: 'C1' });
+    assert.equal(refreshes, 3);
+  });
+
   test('members share one cached copy for 10 minutes', async () => {
     await church();
     const { google, calls } = fakeGoogle();

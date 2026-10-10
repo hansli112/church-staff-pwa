@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 
-import { Environment, SignedDataVerifier } from '@apple/app-store-server-library';
+import type { Environment, SignedDataVerifier } from '@apple/app-store-server-library';
 import { logger } from 'firebase-functions/v2';
 
 import { round2, type Deps } from './common.js';
@@ -115,19 +115,21 @@ export function appleVerifier(environment: Environment.PRODUCTION | Environment.
   // Built on first use, so a missing APPLE_APP_ID in production fails the
   // check (and is logged) instead of the whole function.
   let v: SignedDataVerifier | undefined;
-  const verifier = () =>
-    (v ??= new SignedDataVerifier(
+  const verifier = async () => {
+    const { SignedDataVerifier } = await import('@apple/app-store-server-library');
+    return (v ??= new SignedDataVerifier(
       [readFileSync(new URL('../certs/AppleRootCA-G3.cer', import.meta.url))],
       true,
       environment,
       BUNDLE_ID,
       APPLE_APP_ID,
     ));
+  };
   return {
     notification: async (s) => {
-      const n = await verifier().verifyAndDecodeNotification(s);
+      const n = await (await verifier()).verifyAndDecodeNotification(s);
       return { notificationType: n.notificationType, signedTransactionInfo: n.data?.signedTransactionInfo };
     },
-    transaction: (s) => verifier().verifyAndDecodeTransaction(s),
+    transaction: async (s) => (await verifier()).verifyAndDecodeTransaction(s),
   };
 }

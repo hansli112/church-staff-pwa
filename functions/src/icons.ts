@@ -1,4 +1,4 @@
-import sharp from 'sharp';
+import type sharp from 'sharp';
 
 /**
  * Home-screen icons made from a church logo, so neither Android nor iOS
@@ -15,15 +15,15 @@ export type IconFile = (typeof ICON_FILES)[number];
 const WHITE = { r: 255, g: 255, b: 255, alpha: 1 };
 const CLEAR = { r: 0, g: 0, b: 0, alpha: 0 };
 
-async function fit(logo: Buffer, size: number) {
-  return sharp(logo).resize(size, size, { fit: 'contain', background: CLEAR }).png().toBuffer();
+async function fit(image: typeof sharp, logo: Buffer, size: number) {
+  return image(logo).resize(size, size, { fit: 'contain', background: CLEAR }).png().toBuffer();
 }
 
 /** [logo] centred at [scale] of a [size] square on white, with no alpha. */
-async function onWhite(logo: Buffer, size: number, scale: number) {
+async function onWhite(image: typeof sharp, logo: Buffer, size: number, scale: number) {
   const inner = Math.round(size * scale);
   const pad = Math.floor((size - inner) / 2);
-  return sharp(await fit(logo, inner))
+  return image(await fit(image, logo, inner))
     .extend({ top: pad, bottom: size - inner - pad, left: pad, right: size - inner - pad, background: WHITE })
     .flatten({ background: WHITE })
     .removeAlpha()
@@ -32,11 +32,12 @@ async function onWhite(logo: Buffer, size: number, scale: number) {
 }
 
 export async function makeIcons(logo: Buffer): Promise<Record<IconFile, Buffer>> {
+  const { default: image } = await import('sharp');
   const [icon192, icon512, maskable, apple] = await Promise.all([
-    fit(logo, 192),
-    fit(logo, 512),
-    onWhite(logo, 512, 0.56),
-    onWhite(logo, 180, 0.9),
+    fit(image, logo, 192),
+    fit(image, logo, 512),
+    onWhite(image, logo, 512, 0.56),
+    onWhite(image, logo, 180, 0.9),
   ]);
   return { 'icon-192.png': icon192, 'icon-512.png': icon512, 'maskable-512.png': maskable, 'apple-touch-180.png': apple };
 }

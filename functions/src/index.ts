@@ -1,7 +1,6 @@
 // Entry point: declares the Cloud Functions and wires each to its handler.
 // Handlers take their dependencies as arguments, built here and only here,
 // so tests run them against the emulators without the Functions runtime.
-import { Environment } from '@apple/app-store-server-library';
 import { applicationDefault, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
@@ -59,9 +58,11 @@ const oauthClientSecret = defineSecret('GOOGLE_OAUTH_CLIENT_SECRET');
 const sealKey = defineSecret('CALENDAR_TOKEN_KEY');
 const calendarSecrets = [oauthClientId, oauthClientSecret, sealKey];
 const hookDeps = (): webhook.WebhookDeps => ({ ...deps(), secretKey: sealKey.value() });
+// One adapter per warm instance; every access still reads the church's grant.
+const google = calendar.googleApi();
 const calDeps = (): calendar.CalDeps => ({
   ...hookDeps(),
-  google: calendar.googleApi(),
+  google,
   config: {
     clientId: oauthClientId.value(),
     clientSecret: oauthClientSecret.value(),
@@ -176,9 +177,12 @@ const postOnly =
 // Built on first use: every function loads this file, only this one needs Apple's certificate.
 let apple: fundingApple.AppleVerifier | undefined;
 export const appStoreNotifications = onRequest({ region: REGION, maxInstances: 5 }, postOnly(async (req, res) => {
-  apple ??= fundingApple.appleVerifier(
-    process.env.GCLOUD_PROJECT === PROD_PROJECT ? Environment.PRODUCTION : Environment.SANDBOX,
-  );
+  if (!apple) {
+    const { Environment } = await import('@apple/app-store-server-library');
+    apple ??= fundingApple.appleVerifier(
+      process.env.GCLOUD_PROJECT === PROD_PROJECT ? Environment.PRODUCTION : Environment.SANDBOX,
+    );
+  }
   res.status(await fundingApple.appStoreNotification(deps(), apple, req.body)).end();
 }));
 // Play Console sends to this topic. Throwing makes Pub/Sub deliver again.

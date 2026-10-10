@@ -189,6 +189,30 @@ void main() {
       expect(field.autofocus, isTrue);
     });
 
+    testWidgets('a large picker can search, select different distant names, and keep them when closed', (tester) async {
+      final many = [
+        for (var i = 0; i < 500; i++)
+          Member(
+            uid: 'large$i',
+            name: '同工${i.toString().padLeft(4, '0')}',
+            zones: const [
+              Zone(serviceType: 'sunday', duties: ['招待']),
+            ],
+          ),
+      ];
+      final b = seededChurch(extra: many);
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-11');
+      await tapText(tester, '招待');
+      for (final name in ['同工0499', '同工0000']) {
+        await tester.enterText(find.byType(TextField), name);
+        await settle(tester);
+        await tapText(tester, name);
+      }
+      await tapText(tester, '完成');
+      expect(peopleOn(b, 11, '招待'), containsAll(['同工0499', '同工0000', '李美玉']));
+    });
+
     testWidgets('removing a duty can be undone', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);

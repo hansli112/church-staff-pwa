@@ -249,18 +249,18 @@ class PeoplePickerState extends State<PeoplePicker> {
         if (!_serving.contains(n) && !_others.any((m) => m.name == n)) n,
     ];
 
-    final rows = <Widget>[];
+    final rows = <Widget Function()>[];
     if (serving.isNotEmpty || custom.isNotEmpty) {
-      rows.add(SectionHeader(l10n.pickerServes));
+      rows.add(() => SectionHeader(l10n.pickerServes));
       for (final n in [
         ...serving,
         ...custom.where((n) => !serving.contains(n)),
       ]) {
-        rows.add(_row(n, c, onTap: () => _toggle(n)));
+        rows.add(() => _row(n, c, onTap: () => _toggle(n)));
       }
     } else if (!searching) {
       rows.add(
-        Padding(
+        () => Padding(
           padding: const EdgeInsets.all(Space.l),
           child: BalancedText(
             l10n.pickerNoOneServes(widget.duty),
@@ -270,14 +270,14 @@ class PeoplePickerState extends State<PeoplePicker> {
       );
     }
     if (others.isNotEmpty) {
-      rows.add(SectionHeader(l10n.pickerOthers));
+      rows.add(() => SectionHeader(l10n.pickerOthers));
       for (final m in others) {
-        rows.add(_row(m.name, c, onTap: () => _pickOther(m)));
+        rows.add(() => _row(m.name, c, onTap: () => _pickOther(m)));
       }
     }
     if (!typedIsKnown) {
       rows.add(
-        ListRow(
+        () => ListRow(
           title: l10n.pickerUseName(typed),
           leading: const Icon(Icons.add),
           onTap: _useTyped,
@@ -286,16 +286,16 @@ class PeoplePickerState extends State<PeoplePicker> {
     }
     if (searching && serving.isEmpty && others.isEmpty && typedIsKnown) {
       rows.add(
-        Padding(
+        () => Padding(
           padding: const EdgeInsets.all(Space.l),
           child: BalancedText(l10n.pickerNoResults(typed), style: AppText.body.copyWith(color: c.secondaryLabel)),
         ),
       );
     }
     if (widget.canRemove && !searching) {
-      rows.add(const SizedBox(height: Space.l));
+      rows.add(() => const SizedBox(height: Space.l));
       rows.add(
-        ListRow(
+        () => ListRow(
           title: l10n.removeDuty,
           destructive: true,
           onTap: () => Navigator.pop(
@@ -309,7 +309,7 @@ class PeoplePickerState extends State<PeoplePicker> {
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.only(bottom: Space.xl),
       itemCount: rows.length,
-      itemBuilder: (_, i) => rows[i],
+      itemBuilder: (_, i) => rows[i](),
     );
   }
 

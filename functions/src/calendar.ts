@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
@@ -40,7 +40,7 @@ export interface OAuthConfig {
 export interface GoogleApi {
   exchangeCode(code: string, config: OAuthConfig): Promise<{ refreshToken: string | null }>;
   /** Throws GoogleAuthRevoked when the refresh token no longer works. */
-  accessToken(refreshToken: string, config: OAuthConfig): Promise<string>;
+  accessToken(refreshToken: string, config: OAuthConfig, grant?: { churchId: string; revision: string }): Promise<string>;
   calendars(accessToken: string): Promise<{ id: string; name: string; primary: boolean }[]>;
   events(accessToken: string, calendarId: string, from: Date, to: Date): Promise<CalendarEvent[]>;
   upsert(accessToken: string, calendarId: string, event: CalendarEvent): Promise<CalendarEvent>;
@@ -152,11 +152,24 @@ async function access(deps: CalDeps, churchId: string) {
   const tokenDoc = await deps.db.doc(`calendarTokens/${churchId}`).get();
   if (!tokenDoc.exists) fail('failed-precondition', 'unknown', 'notConnected');
   try {
-    const token = await deps.google.accessToken(unseal(tokenDoc.get('token') as string, deps.config.tokenKey), deps.config);
+    const revision = tokenDoc.updateTime!;
+    const token = await deps.google.accessToken(
+      unseal(tokenDoc.get('token') as string, deps.config.tokenKey), deps.config,
+      { churchId, revision: `${revision.seconds}:${revision.nanoseconds}` },
+    );
+    const current = await tokenDoc.ref.get();
+    if (!current.exists) fail('failed-precondition', 'unknown', 'notConnected');
+    if (!current.updateTime?.isEqual(revision)) fail('aborted', 'unknown', 'calendarChanged');
     return { token, calendarId: tokenDoc.get('calendarId') as string | null };
   } catch (e) {
     if (e instanceof GoogleAuthRevoked) {
-      await deps.db.doc(`churches/${churchId}/settings/calendar`).set({ needsReconnect: true }, { merge: true });
+      const sameGrant = await deps.db.runTransaction(async (tx) => {
+        const current = await tx.get(tokenDoc.ref);
+        if (!current.updateTime?.isEqual(tokenDoc.updateTime!)) return false;
+        tx.set(deps.db.doc(`churches/${churchId}/settings/calendar`), { needsReconnect: true }, { merge: true });
+        return true;
+      });
+      if (!sameGrant) fail('aborted', 'unknown', 'calendarChanged');
       fail('failed-precondition', 'unknown', 'reconnect');
     }
     throw e;
@@ -239,8 +252,8 @@ function monthRange(month: string) {
 }
 
 /**
- * Events of one month. Everyone in the church shares one cached copy, so
- * many people opening the calendar at once make one Google call.
+ * Events of one month. Everyone in the church shares a 10-minute cached
+ * copy; simultaneous cold misses can still make separate Google calls.
  */
 export async function calendarEvents(deps: CalDeps, caller: Caller | null, data: unknown) {
   const { cid: churchId } = await churchAccess(deps, caller, data, 'member');
@@ -471,9 +484,17 @@ function inclusiveEnd(end: string | undefined): string | null {
 }
 
 /** The real Google APIs over fetch. */
-export function googleApi(): GoogleApi {
+export function googleApi(options: Partial<Pick<Deps, 'fetch' | 'now'>> = {}): GoogleApi {
+  const fetch = options.fetch ?? globalThis.fetch;
+  const now = options.now ?? (() => new Date());
+  const tokens = new Map<string, { token: string; expiresAt: number }>();
+  const refreshes = new Map<string, { pending: Promise<string>; until: number }>();
+  const grantHash = (refreshToken: string) => createHash('sha256').update(refreshToken).digest('hex');
   const api = 'https://www.googleapis.com/calendar/v3';
-  const json = async (res: Response) => {
+  const json = async (res: Response, token?: string) => {
+    if (res.status === 401 && token) {
+      for (const [key, cached] of tokens) if (cached.token === token) tokens.delete(key);
+    }
     if (!res.ok) throw new Error(`google ${res.status}: ${(await res.text()).slice(0, 300)}`);
     return res.status === 204 ? {} : res.json();
   };
@@ -524,29 +545,54 @@ export function googleApi(): GoogleApi {
       const body = (await json(res)) as { refresh_token?: string };
       return { refreshToken: body.refresh_token ?? null };
     },
-    async accessToken(refreshToken, config) {
-      const res = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: { 'content-type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          refresh_token: refreshToken,
-          client_id: config.clientId,
-          client_secret: config.clientSecret,
-          grant_type: 'refresh_token',
-        }),
-      });
-      if (res.status === 400 || res.status === 401) {
-        const text = await res.text();
-        if (text.includes('invalid_grant')) throw new GoogleAuthRevoked();
-        throw new Error(`token ${res.status}: ${text.slice(0, 200)}`);
+    async accessToken(refreshToken, config, grant) {
+      // Unscoped callers never reuse a grant belonging to another church.
+      const key = grant && `${grantHash(refreshToken)}:${createHash('sha256').update(JSON.stringify([grant, config])).digest('hex')}`;
+      const cached = key ? tokens.get(key) : undefined;
+      if (cached && cached.expiresAt > now().getTime()) return cached.token;
+      for (const [k, value] of tokens) if (value.expiresAt <= now().getTime()) tokens.delete(k);
+      for (const [k, flight] of refreshes) if (flight.until <= now().getTime()) refreshes.delete(k);
+      const inProgress = key ? refreshes.get(key) : undefined;
+      if (inProgress) return inProgress.pending;
+      const refresh = async () => {
+        const startedAt = now().getTime();
+        const res = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: { 'content-type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            refresh_token: refreshToken,
+            client_id: config.clientId,
+            client_secret: config.clientSecret,
+            grant_type: 'refresh_token',
+          }),
+        });
+        if (res.status === 400 || res.status === 401) {
+          const text = await res.text();
+          if (text.includes('invalid_grant')) throw new GoogleAuthRevoked();
+          throw new Error(`token ${res.status}: ${text.slice(0, 200)}`);
+        }
+        const body = (await json(res)) as { access_token?: string; expires_in?: number };
+        if (typeof body.access_token !== 'string' || !body.access_token) throw new Error('Google returned no access token');
+        const expiresAt = typeof body.expires_in === 'number' ? startedAt + body.expires_in * 1000 - 60_000 : NaN;
+        if (key && refreshes.get(key)?.pending === pending && Number.isFinite(expiresAt) && expiresAt > now().getTime()) {
+          if (tokens.size >= 128) tokens.delete(tokens.keys().next().value!);
+          tokens.set(key, { token: body.access_token, expiresAt });
+        }
+        return body.access_token;
+      };
+      const pending = refresh();
+      if (key) refreshes.set(key, { pending, until: now().getTime() + 60_000 });
+      try {
+        return await pending;
+      } finally {
+        if (key && refreshes.get(key)?.pending === pending) refreshes.delete(key);
       }
-      return ((await json(res)) as { access_token: string }).access_token;
     },
     async calendars(token) {
       const res = await fetch(`${api}/users/me/calendarList?minAccessRole=writer`, {
         headers: { authorization: `Bearer ${token}` },
       });
-      const body = (await json(res)) as { items?: { id: string; summary: string; primary?: boolean }[] };
+      const body = (await json(res, token)) as { items?: { id: string; summary: string; primary?: boolean }[] };
       return (body.items ?? []).map((c) => ({ id: c.id, name: c.summary, primary: c.primary === true }));
     },
     async events(token, calendarId, from, to) {
@@ -560,7 +606,7 @@ export function googleApi(): GoogleApi {
       const res = await fetch(`${api}/calendars/${encodeURIComponent(calendarId)}/events?${params}`, {
         headers: { authorization: `Bearer ${token}` },
       });
-      const body = (await json(res)) as { items?: Parameters<typeof fromGoogle>[0][] };
+      const body = (await json(res, token)) as { items?: Parameters<typeof fromGoogle>[0][] };
       return (body.items ?? []).map(fromGoogle);
     },
     async upsert(token, calendarId, event) {
@@ -570,7 +616,7 @@ export function googleApi(): GoogleApi {
         headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
         body: JSON.stringify(toGoogle(event)),
       });
-      return fromGoogle((await json(res)) as Parameters<typeof fromGoogle>[0]);
+      return fromGoogle((await json(res, token)) as Parameters<typeof fromGoogle>[0]);
     },
     async get(token, calendarId, eventId) {
       const res = await fetch(
@@ -578,17 +624,28 @@ export function googleApi(): GoogleApi {
         { headers: { authorization: `Bearer ${token}` } },
       );
       if (res.status === 404 || res.status === 410) return null;
-      return fromGoogle((await json(res)) as Parameters<typeof fromGoogle>[0]);
+      return fromGoogle((await json(res, token)) as Parameters<typeof fromGoogle>[0]);
     },
     async remove(token, calendarId, eventId) {
       const res = await fetch(
         `${api}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
         { method: 'DELETE', headers: { authorization: `Bearer ${token}` } },
       );
-      if (res.status !== 404 && res.status !== 410) await json(res);
+      if (res.status !== 404 && res.status !== 410) await json(res, token);
     },
     async revoke(refreshToken) {
-      await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(refreshToken)}`, { method: 'POST' });
+      const prefix = `${grantHash(refreshToken)}:`;
+      const clearGrant = () => {
+        for (const key of tokens.keys()) if (key.startsWith(prefix)) tokens.delete(key);
+        for (const key of refreshes.keys()) if (key.startsWith(prefix)) refreshes.delete(key);
+      };
+      clearGrant();
+      try {
+        await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(refreshToken)}`, { method: 'POST' });
+      } finally {
+        // A refresh started while revoke was waiting must not refill the grant.
+        clearGrant();
+      }
     },
   };
 }

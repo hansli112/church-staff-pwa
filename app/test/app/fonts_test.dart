@@ -38,6 +38,24 @@ void main() {
     expect(text, isNot(contains('placeholders')), reason: 'not the strings’ notes');
   }, skip: kIsWeb);
 
+  testWidgets('a home entry keeps the narrow first-page warmup', (tester) async {
+    final laidOut = <String>[];
+    unawaited(
+      warmUpFonts(
+        bundle: UiStringsBundle(),
+        systemFonts: PaintingBinding.instance.systemFonts,
+        initialLocation: Uri.parse('/home'),
+        layOut: laidOut.add,
+      ),
+    );
+    await tester.pump();
+    expect(laidOut.single, contains('我接下來的服事'));
+    expect(laidOut.single, isNot(contains('估計費用（USD）')));
+    expect(laidOut.single, isNot(contains('辨識中，大約需要一分鐘')));
+    await sendFontsChange(tester);
+    await tester.pump();
+  });
+
   testWidgets('startup warms the first pages without paying for admin or photo-import text', (tester) async {
     final laidOut = <String>[];
     unawaited(
@@ -57,6 +75,164 @@ void main() {
     expect(laidOut.single, isNot(contains('辨識中，大約需要一分鐘')));
     await sendFontsChange(tester);
     await tester.pump();
+  });
+
+  testWidgets('a roster notification warms its destination without optional admin or import text', (tester) async {
+    final bundle = _DelayedBundle();
+    final fonts = _SystemFonts();
+    addTearDown(fonts.dispose);
+    final laidOut = <String>[];
+    unawaited(
+      warmUpFonts(
+        bundle: bundle,
+        systemFonts: fonts,
+        initialLocation: Uri.parse('/rosters/event/notice'),
+        layOut: laidOut.add,
+      ),
+    );
+    bundle.complete('''{
+      "appName":"馬大別忙",
+      "eventRosterGone":"找不到這個活動的服事表",
+      "statsCost":"估計費用（USD）",
+      "photoRecognizing":"辨識中，大約需要一分鐘"
+    }''');
+    await tester.pump();
+    expect(laidOut.single, contains('馬大別忙'));
+    expect(laidOut.single, contains('找不到這個活動的服事表'));
+    expect(laidOut.single, isNot(contains('估計費用（USD）')));
+    expect(laidOut.single, isNot(contains('辨識中，大約需要一分鐘')));
+    fonts.notifyListeners();
+    await tester.pump();
+    expect(fonts.waiting, isFalse);
+  });
+
+  testWidgets('a church notification warms the linked roster while keeping church-entry text', (tester) async {
+    final bundle = _DelayedBundle();
+    final fonts = _SystemFonts();
+    addTearDown(fonts.dispose);
+    final laidOut = <String>[];
+    unawaited(
+      warmUpFonts(
+        bundle: bundle,
+        systemFonts: fonts,
+        initialLocation: Uri.parse('/c/grace?to=%2Frosters%2Fevent%2Fnotice'),
+        layOut: laidOut.add,
+      ),
+    );
+    bundle.complete('''{
+      "churchEntryNotMember":"你還不是這間教會的同工",
+      "eventRosterGone":"找不到這個活動的服事表",
+      "photoRecognizing":"辨識中，大約需要一分鐘"
+    }''');
+    await tester.pump();
+    expect(laidOut.single, contains('你還不是這間教會的同工'));
+    expect(laidOut.single, contains('找不到這個活動的服事表'));
+    expect(laidOut.single, isNot(contains('辨識中，大約需要一分鐘')));
+    fonts.notifyListeners();
+    await tester.pump();
+  });
+
+  testWidgets('a sign-in return link warms its roster and sign-in text, not an unrelated feature', (tester) async {
+    final bundle = _DelayedBundle();
+    final fonts = _SystemFonts();
+    addTearDown(fonts.dispose);
+    final laidOut = <String>[];
+    unawaited(
+      warmUpFonts(
+        bundle: bundle,
+        systemFonts: fonts,
+        initialLocation: Uri.parse('/login?from=%2Frosters%2Fsunday%2F2026-10-11'),
+        layOut: laidOut.add,
+      ),
+    );
+    bundle.complete('''{
+      "signInWithGoogle":"使用 Google 登入",
+      "eventRosterGone":"找不到這個活動的服事表",
+      "photoRecognizing":"辨識中，大約需要一分鐘"
+    }''');
+    await tester.pump();
+    expect(laidOut.single, contains('使用 Google 登入'));
+    expect(laidOut.single, contains('找不到這個活動的服事表'));
+    expect(laidOut.single, isNot(contains('辨識中，大約需要一分鐘')));
+    fonts.notifyListeners();
+    await tester.pump();
+  });
+
+  testWidgets('church information warms its own labels without importing the console text', (tester) async {
+    final bundle = _DelayedBundle();
+    final fonts = _SystemFonts();
+    addTearDown(fonts.dispose);
+    final laidOut = <String>[];
+    unawaited(
+      warmUpFonts(
+        bundle: bundle,
+        systemFonts: fonts,
+        initialLocation: Uri.parse('/me/church'),
+        layOut: laidOut.add,
+      ),
+    );
+    bundle.complete('''{
+      "appName":"馬大別忙",
+      "churchInfo":"教會資訊",
+      "churchLogo":"教會 logo",
+      "members":"同工",
+      "exportData":"匯出資料",
+      "statsCost":"估計費用（USD）",
+      "photoRecognizing":"辨識中，大約需要一分鐘"
+    }''');
+    await tester.pump();
+    expect(laidOut.single, contains('教會資訊'));
+    expect(laidOut.single, contains('教會 logo'));
+    expect(laidOut.single, contains('同工'));
+    expect(laidOut.single, contains('匯出資料'));
+    expect(laidOut.single, isNot(contains('估計費用（USD）')));
+    expect(laidOut.single, isNot(contains('辨識中，大約需要一分鐘')));
+    fonts.notifyListeners();
+    await tester.pump();
+  });
+
+  testWidgets('unknown and optional deep links retain all text instead of guessing their first page', (tester) async {
+    for (final path in ['/unknown', '/admin', '/rosters/import/sunday']) {
+      final fonts = _SystemFonts();
+      final laidOut = <String>[];
+      unawaited(
+        warmUpFonts(
+          bundle: UiStringsBundle(),
+          systemFonts: fonts,
+          initialLocation: Uri.parse(path),
+          layOut: laidOut.add,
+        ),
+      );
+      await tester.pump();
+      expect(laidOut.single, contains('使用 Google 登入'), reason: path);
+      expect(laidOut.single, contains('估計費用（USD）'), reason: path);
+      expect(laidOut.single, contains('辨識中，大約需要一分鐘'), reason: path);
+      fonts.notifyListeners();
+      await tester.pump();
+      expect(fonts.waiting, isFalse);
+      fonts.dispose();
+    }
+  });
+
+  testWidgets('external return links do not choose another destination for font warmup', (tester) async {
+    for (final path in ['/login?from=https%3A%2F%2Felsewhere.invalid%2Fadmin', '/c/grace?to=%2F%2Felsewhere.invalid']) {
+      final fonts = _SystemFonts();
+      final laidOut = <String>[];
+      unawaited(
+        warmUpFonts(
+          bundle: UiStringsBundle(),
+          systemFonts: fonts,
+          initialLocation: Uri.parse(path),
+          layOut: laidOut.add,
+        ),
+      );
+      await tester.pump();
+      expect(laidOut.single, contains('使用 Google 登入'), reason: path);
+      expect(laidOut.single, isNot(contains('估計費用（USD）')), reason: path);
+      fonts.notifyListeners();
+      await tester.pump();
+      fonts.dispose();
+    }
   });
 
   testWidgets('the fonts are in once the engine says its fonts changed', (tester) async {

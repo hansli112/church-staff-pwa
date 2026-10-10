@@ -524,18 +524,17 @@ class FirestoreChurchData implements ChurchData {
       _col('settings').doc('services').live().map((s) => serviceSettingsFromJson(s.data())).translated();
 
   @override
-  Stream<List<Roster>> rosters({required Day from}) => _latestOfBoth(
-    _col('rosters').where('dateKey', isGreaterThanOrEqualTo: from.key).orderBy('dateKey').live(),
-    // Events begun before [from] and still on: only events' rosters have
-    // an endDateKey, so its single-field index is enough.
-    _col('rosters').where('endDateKey', isGreaterThanOrEqualTo: from.key).live(),
-    (days, events) {
-      final byId = {
-        for (final d in [...events.docs, ...days.docs]) d.id: ?rosterFromJson(d.data()),
-      };
-      return byId.values.toList()..sort((a, b) => a.day.compareTo(b.day));
-    },
-  ).translated();
+  Stream<List<Roster>> rosters({required Day from}) {
+    final merged = _MergedRosters();
+    return _latestOfBoth(
+      _decodedRosters(_col('rosters').where('dateKey', isGreaterThanOrEqualTo: from.key).orderBy('dateKey')),
+      // Events begun before [from] and still on: only events' rosters have
+      // an endDateKey, so its single-field index is enough.
+      _decodedRosters(_col('rosters').where('endDateKey', isGreaterThanOrEqualTo: from.key)),
+      merged.combine,
+      onCancel: merged.clear,
+    ).translated();
+  }
 
   @override
   Future<List<Roster>> eventRosters() => _guard(() async {
@@ -851,8 +850,124 @@ class FirestoreChurchData implements ChurchData {
 
 const _alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
+typedef _DecodedRosterSnapshot = ({Map<String, Roster?> rosters, ({Object error, StackTrace stack})? failure});
+
+/// Keeps only decoded rosters, per query subscription, not a second JSON copy.
+/// Queries still read every matching document; only unchanged conversion work
+/// is avoided. The complete snapshot supplies membership and source order.
+Stream<_DecodedRosterSnapshot> _decodedRosters(Query<Json> query) {
+  var previous = <String, Roster?>{};
+  final serverReads = _serverReads[query.firestore] == true;
+  late final StreamController<_DecodedRosterSnapshot> out;
+  StreamSubscription<_DecodedRosterSnapshot>? sub;
+  out = StreamController<_DecodedRosterSnapshot>(
+    onListen: () {
+      sub = retryRefused(
+        () {
+          // A retried listener starts its own docChanges baseline.
+          previous = {};
+          return query
+              .snapshots(includeMetadataChanges: serverReads)
+              .map<_DecodedRosterSnapshot?>((snapshot) {
+                try {
+                  final docs = snapshot.docs;
+                  final changes = snapshot.docChanges;
+                  // A full replacement already has to convert everything. Do
+                  // not deep-compare all duties merely to reuse its objects.
+                  final replaceAll = docs.length > 1 && changes.length >= docs.length;
+                  final changed = replaceAll ? const <String>{} : {for (final change in changes) change.doc.id};
+                  final next = <String, Roster?>{};
+                  for (final doc in docs) {
+                    if (replaceAll) {
+                      next[doc.id] = rosterFromJson(doc.data());
+                      continue;
+                    }
+                    final before = previous[doc.id];
+                    final value = previous.containsKey(doc.id) && !changed.contains(doc.id)
+                        ? before
+                        : rosterFromJson(doc.data());
+                    // Check identity first for untouched documents, and cheap
+                    // event tags before deep duty equality on bulk tag edits.
+                    final same =
+                        identical(value, before) ||
+                        (value != null && before != null && listEquals(value.events, before.events) && value == before);
+                    next[doc.id] = same ? before : value;
+                  }
+                  previous = next;
+                  // Reconcile cache snapshots too: the server acknowledgement
+                  // may contain no changes relative to the suppressed cache.
+                  return serverReads && snapshot.metadata.isFromCache ? null : (rosters: next, failure: null);
+                } catch (error, stack) {
+                  // SDK changes advanced even when this snapshot failed to
+                  // decode. The next snapshot must rebuild its whole baseline.
+                  previous = {};
+                  // Server-only reads never exposed cache decoding failures.
+                  if (serverReads && snapshot.metadata.isFromCache) return null;
+                  // Keep the failed source, not its last successful data: an
+                  // update of the other query cannot make this decode succeed.
+                  return (rosters: const <String, Roster?>{}, failure: (error: error, stack: stack));
+                }
+              })
+              .where((value) => value != null)
+              .cast<_DecodedRosterSnapshot>();
+        },
+        isRefused: _refused,
+      ).listen(out.add, onError: out.addError, onDone: out.close);
+    },
+    onPause: () => sub?.pause(),
+    onResume: () => sub?.resume(),
+    onCancel: () async {
+      previous = {};
+      final stopping = sub;
+      sub = null;
+      await stopping?.cancel();
+    },
+  );
+  return out.stream;
+}
+
+/// Reuses an unchanged sorted result without changing the two queries' merge
+/// order: a valid day-query entry wins; a null one leaves the event fallback.
+class _MergedRosters {
+  Map<String, Roster> _previous = {};
+  List<Roster> _sorted = [];
+
+  List<Roster> combine(_DecodedRosterSnapshot days, _DecodedRosterSnapshot events) {
+    // Events were decoded first in the original raw-snapshot merge.
+    final failure = events.failure ?? days.failure;
+    if (failure != null) Error.throwWithStackTrace(failure.error, failure.stack);
+    final next = {
+      for (final source in [events.rosters, days.rosters])
+        for (final entry in source.entries) entry.key: ?entry.value,
+    };
+    var unchanged = next.length == _previous.length;
+    final oldKeys = _previous.keys.iterator;
+    if (unchanged) {
+      for (final entry in next.entries) {
+        if (!oldKeys.moveNext() || oldKeys.current != entry.key || !identical(_previous[entry.key], entry.value)) {
+          unchanged = false;
+          break;
+        }
+      }
+    }
+    if (unchanged) return _sorted;
+    _previous = next;
+    return _sorted = next.values.toList()..sort((a, b) => a.day.compareTo(b.day));
+  }
+
+  void clear() {
+    _previous = {};
+    _sorted = [];
+  }
+}
+
 /// The latest of [a] and [b] together, once each has given one.
-Stream<R> _latestOfBoth<A, B, R>(Stream<A> a, Stream<B> b, R Function(A a, B b) combine) {
+Stream<R> _latestOfBoth<A, B, R>(
+  Stream<A> a,
+  Stream<B> b,
+  R Function(A a, B b) combine, {
+  void Function()? onCancel,
+}) {
   late final StreamController<R> out;
   StreamSubscription<A>? subA;
   StreamSubscription<B>? subB;
@@ -860,7 +975,13 @@ Stream<R> _latestOfBoth<A, B, R>(Stream<A> a, Stream<B> b, R Function(A a, B b) 
   (B,)? lastB;
   void emit() {
     if (lastA case (final x,)) {
-      if (lastB case (final y,)) out.add(combine(x, y));
+      if (lastB case (final y,)) {
+        try {
+          out.add(combine(x, y));
+        } catch (error, stack) {
+          out.addError(error, stack);
+        }
+      }
     }
   }
 
@@ -896,7 +1017,16 @@ Stream<R> _latestOfBoth<A, B, R>(Stream<A> a, Stream<B> b, R Function(A a, B b) 
       subA?.resume();
       subB?.resume();
     },
-    onCancel: () => Future.wait([?subA?.cancel(), ?subB?.cancel()]),
+    onCancel: () async {
+      lastA = null;
+      lastB = null;
+      onCancel?.call();
+      final stoppingA = subA;
+      final stoppingB = subB;
+      subA = null;
+      subB = null;
+      await Future.wait<void>([?stoppingA?.cancel(), ?stoppingB?.cancel()]);
+    },
   );
   return out.stream;
 }
