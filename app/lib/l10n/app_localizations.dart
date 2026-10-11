@@ -991,6 +991,18 @@ abstract class L10n {
   /// **'刪除帳號'**
   String get deleteAccount;
 
+  /// No description provided for @privacyPolicy.
+  ///
+  /// In zh, this message translates to:
+  /// **'隱私權政策'**
+  String get privacyPolicy;
+
+  /// No description provided for @termsOfService.
+  ///
+  /// In zh, this message translates to:
+  /// **'服務條款'**
+  String get termsOfService;
+
   /// No description provided for @developer.
   ///
   /// In zh, this message translates to:

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
@@ -100,6 +101,12 @@ class MeScreen extends ConsumerWidget {
               ],
             ),
           ListSection(
+            children: [
+              ListRow(title: l10n.privacyPolicy, onTap: () => _openSitePage('/privacy')),
+              ListRow(title: l10n.termsOfService, onTap: () => _openSitePage('/terms')),
+            ],
+          ),
+          ListSection(
             header: l10n.account,
             children: [
               ListRow(title: l10n.signOut, onTap: () => signOut(ref)),
@@ -115,6 +122,10 @@ class MeScreen extends ConsumerWidget {
     );
   }
 }
+
+/// A page of the website (the privacy policy, the terms), which the stores
+/// require the app to link to.
+void _openSitePage(String path) => launchUrl(Uri.parse('${Env.current.webOrigin}$path'));
 
 class _UpdatesSection extends ConsumerWidget {
   const _UpdatesSection();

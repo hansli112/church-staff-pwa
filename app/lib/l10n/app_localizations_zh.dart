@@ -505,6 +505,12 @@ class L10nZh extends L10n {
   String get deleteAccount => '刪除帳號';
 
   @override
+  String get privacyPolicy => '隱私權政策';
+
+  @override
+  String get termsOfService => '服務條款';
+
+  @override
   String get developer => '開發';
 
   @override
