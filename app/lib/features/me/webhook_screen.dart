@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../data/backend.dart';
+import '../../domain/church_time.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
@@ -308,7 +309,7 @@ class _ConfiguredState extends ConsumerState<_Configured> {
         ListSection(
           footer: last?.at == null
               ? null
-              : l10n.webhookLast(DateFormat('M/d HH:mm').format(last!.at!), deliveryText(l10n, last)),
+              : l10n.webhookLast(DateFormat('M/d HH:mm').format(churchTime(last!.at!)), deliveryText(l10n, last)),
           children: [
             ListRow(
               title: l10n.webhookTest,

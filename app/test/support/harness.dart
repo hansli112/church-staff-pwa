@@ -9,16 +9,17 @@ import 'package:martha/core/design/balanced_text.dart';
 import 'package:martha/core/design/theme.dart';
 import 'package:martha/deferred_pages.dart';
 import 'package:martha/data/memory/memory_backend.dart';
-import 'package:martha/domain/day.dart';
+import 'package:martha/domain/church_time.dart';
 import 'package:martha/l10n/app_localizations.dart';
 import 'package:martha/state/providers.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
-/// Thursday 2026-10-01, 09:00: the time every widget test starts at.
-final testNow = DateTime(2026, 10, 1, 9);
-final testToday = Day.today(testNow);
+/// Thursday 2026-10-01, 09:00 at the church: the time every widget test
+/// starts at, whatever zone the machine running the tests is in (CI is UTC).
+final testNow = churchInstant(DateTime(2026, 10, 1, 9));
+final testToday = churchToday(testNow);
 
 /// The clock a test backend runs on unless the test moves time itself.
 DateTime testClock() => testNow;

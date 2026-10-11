@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/design/components.dart';
+import '../../domain/church_time.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
@@ -161,7 +162,7 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
                   ListRow(
                     title: i.code,
                     subtitle: zonesOf(i),
-                    value: l10n.inviteExpiresOn(fmt.format(i.expiresAt)),
+                    value: l10n.inviteExpiresOn(fmt.format(churchTime(i.expiresAt))),
                     onTap: () => _actions(i),
                   ),
               ],

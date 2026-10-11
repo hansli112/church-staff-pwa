@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
+import '../../domain/church_time.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
@@ -56,7 +57,7 @@ class _ClosedScreenState extends ConsumerState<ClosedScreen> {
       body = until == null
           ? ''
           : restorable
-          ? l10n.churchDeletedBody(DateFormat.yMMMd('zh_TW').format(until))
+          ? l10n.churchDeletedBody(DateFormat.yMMMd('zh_TW').format(churchTime(until)))
           : l10n.churchDeletedExpired;
     } else {
       title = l10n.churchSuspendedTitle(church.name);
