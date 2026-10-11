@@ -227,6 +227,8 @@ final appStageProvider = Provider<AppStage>((ref) {
   }
   if (memberships.value!.isEmpty) return AppStage.noChurch;
   final church = ref.watch(churchProvider);
+  // Still coming in, and holding the null from before there was a church.
+  if (church.isLoading && !church.hasError && church.value == null) return AppStage.loading;
   if (!church.hasValue) {
     return church.hasError ? AppStage.churchClosed : AppStage.loading;
   }

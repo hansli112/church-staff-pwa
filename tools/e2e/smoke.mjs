@@ -21,10 +21,11 @@ const base = 'http://localhost:5055';
 
 const browser = await chromium.launch();
 const errors = [];
+const users = [];
 let step = 0;
 
 async function newUser(email, name) {
-  const context = await browser.newContext({ viewport: { width: 393, height: 852 }, locale: 'zh-TW' });
+  const context = await browser.newContext({ viewport: { width: 393, height: 852 }, locale: 'zh-TW', permissions: ['clipboard-read', 'clipboard-write'] });
   // The emulator's warning banner sits over the tab bar.
   await context.addInitScript(() => {
     document.addEventListener('DOMContentLoaded', () => {
@@ -36,7 +37,9 @@ async function newUser(email, name) {
   const page = await context.newPage();
   page.on('pageerror', (e) => errors.push(`${email}: ${e.message}`));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(`${email} console: ${m.text()}`); });
-  return { context, page, email, name };
+  const user = { context, page, email, name };
+  users.push(user);
+  return user;
 }
 
 async function shot(page, label) {
@@ -127,6 +130,18 @@ try {
   await button(bob.page, '加入').click();
   await bob.page.waitForTimeout(4000);
   await shot(bob.page, 'bob-home');
+
+  // A new member sees rosters only once an admin puts them in a 牧區.
+  await alice.page.goBack();
+  await alice.page.waitForTimeout(1500);
+  await alice.page.getByRole('button', { name: '同工', exact: true }).click();
+  await alice.page.waitForTimeout(1500);
+  await alice.page.getByRole('button', { name: /^鮑伯/ }).first().click();
+  await alice.page.waitForTimeout(1500);
+  await alice.page.getByRole('switch', { name: '屬於這個牧區' }).or(alice.page.getByRole('checkbox', { name: '屬於這個牧區' })).first().click();
+  await alice.page.waitForTimeout(2500);
+  await shot(alice.page, 'bob-zone');
+
   await button(bob.page, '服事表').click();
   await bob.page.waitForTimeout(2500);
   await shot(bob.page, 'bob-rosters');
@@ -134,6 +149,7 @@ try {
   console.log('bob sees the edit:', sees > 0);
 } catch (e) {
   console.error('E2E failed:', e.message);
+  for (const u of users) await shot(u.page, `failed-${u.name}`).catch(() => {});
   process.exitCode = 1;
 } finally {
   console.log('errors:', errors.length ? errors.join('\n') : 'none');
