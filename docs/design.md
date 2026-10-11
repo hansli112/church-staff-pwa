@@ -208,6 +208,7 @@ Chrome 小幅改善；桌面 WebKit 差距小且教會資訊冷開反而較慢�
 - Wasm：部署改成 `flutter build web --wasm`。Flutter 的 loader 只在 Chromium 系瀏覽器（Chrome、Android 的 Chrome、Edge）用 wasm 版；Safari 與 iOS 上所有瀏覽器仍被 WebKit bug 267291 擋住（2026-09 仍未修），Firefox 也還不行，這些照舊跑 JS 版，同一份部署自動選。self-host 時期沒加 wasm，是因為使用者以 iPhone 為主、加了換不到東西；現在 Android 使用者跑 wasm 會快。
 - 固定單執行緒 skwasm：多執行緒需要 COOP/COEP（cross-origin isolation），會擋掉 Google 登入彈窗；Flutter 3.47 的多執行緒 skwasm 也有文字畫面當機的問題（flutter/flutter#190039）。
 - 代價：dart2wasm 目前不拆 deferred 程式（3.50 才有實驗選項），Chrome 上第二批的「打開才下載」不再適用；這已算在下面的數字裡。部署多一份 wasm 產物，App 殼更新時整版下載也多約 1.3 MB。
+- wasm 下 JS interop 的 `is`／`as` 行為不同：自己的 interop（`app_update_gateway_web.dart`、`push_clicks_web.dart`）都是先 `dartify()` 再用 Dart 的 `is` 判斷，兩種編譯結果一樣，不用改。
 - Google 登入 SDK：網頁版登入一直走 Firebase 彈窗，`google_sign_in` 只有原生 App 用。`app/packages/google_sign_in_unused_web` 取代 web 實作，不載入任何東西、被呼叫就拒絕；原生 App 不受影響，不 fork 上游套件。
 
 量測：demo release build（PERF_MARKS），Mac 上的 headless Chromium，Android UA、393×852、DPR 2、CPU 降速 4×、延遲 150ms，伺服器像 Hosting 一樣送 Brotli；每個情境三版交錯 6 輪取中位數，計時從開始載入到首頁畫出來（`[perf] home-visible`）。不是實機成績。

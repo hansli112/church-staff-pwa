@@ -390,13 +390,13 @@ test('a wasm build loads content-named wasm and module entries, beside the JS bu
 
 test('a wasm build without the JS build, its module, or its usual paths fails before changing output', (t) => {
   const cases = [
-    ['no JS build for Safari', (web) => writeFileSync(join(web, 'flutter_bootstrap.js'), `_flutter.buildConfig = ${JSON.stringify({ builds: [wasmBuild] })}; _flutter.loader.load({});`)],
-    ['missing module', (web) => rmSync(join(web, 'main.dart.mjs'))],
-    ['missing wasm', (web) => rmSync(join(web, 'main.dart.wasm'))],
-    ['unsupported wasm path', (web) => writeFileSync(join(web, 'flutter_bootstrap.js'), `_flutter.buildConfig = ${JSON.stringify({ builds: [{ ...wasmBuild, mainWasmPath: 'elsewhere.wasm' }, jsBuild] })}; _flutter.loader.load({});`)],
-    ['two wasm builds', (web) => writeFileSync(join(web, 'flutter_bootstrap.js'), `_flutter.buildConfig = ${JSON.stringify({ builds: [wasmBuild, wasmBuild, jsBuild] })}; _flutter.loader.load({});`)],
+    ['no JS build for Safari', /expected a dart2js build/, (web) => writeFileSync(join(web, 'flutter_bootstrap.js'), `_flutter.buildConfig = ${JSON.stringify({ builds: [wasmBuild] })}; _flutter.loader.load({});`)],
+    ['missing module', /main\.dart\.mjs/, (web) => rmSync(join(web, 'main.dart.mjs'))],
+    ['missing wasm', /main\.dart\.wasm/, (web) => rmSync(join(web, 'main.dart.wasm'))],
+    ['unsupported wasm path', /unsupported dart2wasm paths/, (web) => writeFileSync(join(web, 'flutter_bootstrap.js'), `_flutter.buildConfig = ${JSON.stringify({ builds: [{ ...wasmBuild, mainWasmPath: 'elsewhere.wasm' }, jsBuild] })}; _flutter.loader.load({});`)],
+    ['two wasm builds', /at most one dart2wasm build/, (web) => writeFileSync(join(web, 'flutter_bootstrap.js'), `_flutter.buildConfig = ${JSON.stringify({ builds: [wasmBuild, wasmBuild, jsBuild] })}; _flutter.loader.load({});`)],
   ];
-  for (const [label, prepare] of cases) {
+  for (const [label, error, prepare] of cases) {
     const archive = mkdtempSync(join(tmpdir(), 'martha-archive-'));
     t.after(() => rmSync(archive, { recursive: true, force: true }));
     const web = wasmFixture(t);
@@ -405,6 +405,7 @@ test('a wasm build without the JS build, its module, or its usual paths fails be
     const result = spawnSync(process.execPath, [script, web, '--archive', archive, '--project', 'test-dev'], { encoding: 'utf8' });
     assert.equal(result.status, 1, label);
     assert.match(result.stderr, /^fingerprint-web: /, label);
+    assert.match(result.stderr, error, label);
     assert.deepEqual(artifacts(web), before, label);
     assert.deepEqual(readdirSync(archive), [], label);
   }

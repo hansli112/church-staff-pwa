@@ -57,7 +57,8 @@ dependencies:
   firebase_messaging: ^16.7.0
   web: ^1.1.1
   google_sign_in: ^7.2.0
-  # The web build's: Google's sign-in SDK is never needed there.
+  # Replaces google_sign_in_web, so the web build does not download Google's
+  # sign-in SDK it never uses (it signs in through Firebase's popup).
   google_sign_in_unused_web:
     path: packages/google_sign_in_unused_web
   in_app_purchase: ^3.3.1

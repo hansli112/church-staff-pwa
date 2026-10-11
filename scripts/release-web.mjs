@@ -49,20 +49,19 @@ function run() {
   const base = /\/\*martha-assets\*\/\s*"(asset-bundles\/[0-9a-f]{10}\/)"/.exec(bootstrap)?.[1];
   if (!base) throw new Error('asset bundle must be bound to the bootstrap');
   const chunks = [...new Set(mainBytes.toString().match(/main\.dart\.js_\d+\.part\.[0-9a-f]{10}\.js/g) ?? [])].sort();
+  const hashed = (path, kind) => {
+    const bytes = readFileSync(join(web, path));
+    if (!path.includes(sha(bytes).slice(0, 10))) throw new Error(`${kind} hash mismatch: ${path}`);
+    return { path, bytes };
+  };
   const wasmEntries = wasmBuilds.flatMap((build) => [build.mainWasmPath, build.jsSupportRuntimePath]).map((path) => {
     if (!/^main\.dart\.[0-9a-f]{10}\.(?:wasm|mjs)$/.test(path)) throw new Error('wasm entry points must be content-named');
-    const bytes = readFileSync(join(web, path));
-    if (!path.includes(sha(bytes).slice(0, 10))) throw new Error(`wasm entry point hash mismatch: ${path}`);
-    return { path, bytes };
+    return hashed(path, 'wasm entry point');
   });
   // The loader runs either the JS main or the wasm main and its module, by
   // browser. Like the engine files, a first install caches only what this
   // page used; an update stages them all.
-  const shared = [...[{ path: main, bytes: mainBytes }, ...wasmEntries].map((file) => ({ ...file, optional: true, engine: true })), ...chunks.map((path) => {
-    const bytes = readFileSync(join(web, path));
-    if (!path.includes(sha(bytes).slice(0, 10))) throw new Error(`deferred chunk hash mismatch: ${path}`);
-    return { path, bytes, optional: true };
-  }), ...tree(join(web, base, 'assets'), `${base}assets/`).map((file) => ({ ...file, optional: !/(?:AssetManifest\.(?:bin|json)|FontManifest\.json|app_zh\.arb|MaterialIcons(?:-Regular)?\.[a-f0-9]+\.(?:otf|ttf)|CupertinoIcons\.[a-f0-9]+\.ttf)$/.test(file.path) }))];
+  const shared = [...[{ path: main, bytes: mainBytes }, ...wasmEntries].map((file) => ({ ...file, optional: true, engine: true })), ...chunks.map((path) => ({ ...hashed(path, 'deferred chunk'), optional: true })), ...tree(join(web, base, 'assets'), `${base}assets/`).map((file) => ({ ...file, optional: !/(?:AssetManifest\.(?:bin|json)|FontManifest\.json|app_zh\.arb|MaterialIcons(?:-Regular)?\.[a-f0-9]+\.(?:otf|ttf)|CupertinoIcons\.[a-f0-9]+\.ttf)$/.test(file.path) }))];
   const local = [
     ...tree(join(web, 'icons'), 'icons/').map((file) => ({ ...file, optional: file.path !== 'icons/Icon-192.png' })),
     ...tree(join(web, 'canvaskit'), 'canvaskit/').map((file) => ({ ...file, optional: true, engine: true })),

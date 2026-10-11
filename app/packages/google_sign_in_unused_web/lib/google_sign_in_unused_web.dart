@@ -44,8 +44,8 @@ class UnusedGoogleSignIn extends GoogleSignInPlatform {
   Future<void> clearAuthorizationToken(ClearAuthorizationTokenParams params) async => _unused();
 
   @override
-  Future<void> signOut(SignOutParams params) async {}
+  Future<void> signOut(SignOutParams params) async => _unused();
 
   @override
-  Future<void> disconnect(DisconnectParams params) async {}
+  Future<void> disconnect(DisconnectParams params) async => _unused();
 }

@@ -65,7 +65,7 @@ test('each browser caches only the main entry it ran, and the wasm renderer stay
   const release = packageRelease(web, join(dir, 'archive'));
   const manifest = JSON.parse(readFileSync(join(web, release.manifest.slice(1)), 'utf8'));
   const entries = manifest.files.filter((f) => /^\/main\.dart\.[0-9a-f]{10}\.(?:js|wasm|mjs)$/.test(f.url));
-  assert.deepEqual(entries.map((f) => f.url.replace(/\.[0-9a-f]{10}\.js$/, '.<hash>.js')).sort(), ['/main.dart.<hash>.js', '/main.dart.ad50759298.wasm', '/main.dart.b108204f3a.mjs']);
+  assert.deepEqual(entries.map((f) => f.url).sort(), ['/main.dart.7759d5d813.js', '/main.dart.ad50759298.wasm', '/main.dart.b108204f3a.mjs']);
   // Like the engine files: on first install, cached only if this page used it.
   assert.ok(entries.every((f) => f.optional && f.engine));
   const bootstrap = readFileSync(join(web, manifest.bootstrap.slice(1)), 'utf8');

@@ -117,6 +117,7 @@ function bindAssets(bootstrap, base) {
 
 const immutable = /^(?:main\.dart(?:\.js_\d+\.part)?\.[0-9a-f]{10}\.js|main\.dart\.[0-9a-f]{10}\.(?:wasm|mjs)|assets\/(?:[A-Za-z0-9_-][A-Za-z0-9_.-]*\/)*[A-Za-z0-9_-][A-Za-z0-9_.-]*\.[0-9a-f]{10}\.(?:otf|ttf))$/;
 const digest = (bytes) => createHash('sha256').update(bytes).digest('hex').slice(0, 10);
+const contentHash = (path) => /\.([0-9a-f]{10})\.(?:js|wasm|mjs|otf|ttf)$/.exec(path)[1];
 
 function immutableFiles(dir, prefix = '') {
   if (!existsSync(dir)) return [];
@@ -126,8 +127,7 @@ function immutableFiles(dir, prefix = '') {
     if (entry.isDirectory()) files.push(...immutableFiles(join(dir, entry.name), `${path}/`));
     else if (entry.isFile() && immutable.test(path)) {
       const bytes = readFileSync(join(dir, entry.name));
-      const hash = /\.([0-9a-f]{10})\.(?:js|wasm|mjs|otf|ttf)$/.exec(path)[1];
-      if (hash !== digest(bytes)) throw new Error(`content hash mismatch: ${path}`);
+      if (contentHash(path) !== digest(bytes)) throw new Error(`content hash mismatch: ${path}`);
       files.push(path);
     }
   }
@@ -136,7 +136,7 @@ function immutableFiles(dir, prefix = '') {
 
 function publish(source, target) {
   const bytes = readFileSync(source);
-  const hash = /\.([0-9a-f]{10})\.(?:js|wasm|mjs|otf|ttf)$/.exec(target)[1];
+  const hash = contentHash(target);
   if (digest(bytes) !== hash) throw new Error(`content hash mismatch: ${source}`);
   if (existsSync(target)) {
     const previous = readFileSync(target);
@@ -229,10 +229,11 @@ function run() {
   });
   // The wasm main and its module are loaded separately from buildConfig and
   // never name each other, so each is named after its own bytes.
-  const wasmEntries = wasmBuilds.length ? ['wasm', 'mjs'].map((ext) => {
+  const entry = (ext) => {
     const bytes = readFileSync(join(web, `main.dart.${ext}`));
-    return { ext, bytes, named: `main.dart.${digest(bytes)}.${ext}` };
-  }) : [];
+    return { bytes, named: `main.dart.${digest(bytes)}.${ext}` };
+  };
+  const wasmEntries = wasmBuilds.length ? { wasm: entry('wasm'), module: entry('mjs') } : null;
   const tree = assetTree(join(web, 'assets'));
   const base = `asset-bundles/${tree.hash}/`;
   const boundBootstrap = bindAssets(bootstrap, base);
@@ -246,12 +247,12 @@ function run() {
   const named = `main.dart.${hash}.js`;
   writeFileSync(join(web, named), main);
   writeFileSync(mainPath, main);
-  for (const { bytes, named: entry } of wasmEntries) writeFileSync(join(web, entry), bytes);
+  for (const { bytes, named: name } of Object.values(wasmEntries ?? {})) writeFileSync(join(web, name), bytes);
   for (const build of config.builds) {
     if (build?.compileTarget === 'dart2js') build.mainJsPath = named;
     if (build?.compileTarget === 'dart2wasm') {
-      build.mainWasmPath = wasmEntries[0].named;
-      build.jsSupportRuntimePath = wasmEntries[1].named;
+      build.mainWasmPath = wasmEntries.wasm.named;
+      build.jsSupportRuntimePath = wasmEntries.module.named;
     }
   }
   writeFileSync(bootstrapPath, boundBootstrap.replace(assignment, () => `_flutter.buildConfig = ${JSON.stringify(config)};`));
