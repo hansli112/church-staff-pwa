@@ -139,8 +139,17 @@ class ServiceRosterList extends ConsumerWidget {
         return ListView.builder(
           key: PageStorageKey('rosters-${service.id}'),
           padding: const EdgeInsets.only(bottom: Space.l),
-          itemCount: list.length,
+          itemCount: list.length + (service.enabled ? 1 : 0),
           itemBuilder: (context, i) {
+            if (i == list.length) {
+              return Padding(
+                padding: const EdgeInsets.all(Space.m),
+                child: SecondaryButton(
+                  label: l10n.rosterShowMore,
+                  onPressed: () => ref.read(rosterWeeksProvider(service.id).notifier).showMore(),
+                ),
+              );
+            }
             final id = list[i];
             return RosterCard(
               key: ValueKey(id),

@@ -2,7 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
-import { churchAccess } from './access.js';
+import { churchAccess, isChurchOpen } from './access.js';
 import { DAY_MS, dateKeyUtc8, fail, type Caller, type Deps } from './common.js';
 import { cutText, TEXT_LIMITS } from './limits.js';
 import { seal, unseal } from './sealing.js';
@@ -103,35 +103,82 @@ export async function calendarCallback(deps: CalDeps, query: Record<string, unkn
   const code = typeof query.code === 'string' ? query.code : '';
   if (!state || !/^[A-Za-z0-9_-]{16,64}$/.test(state)) return back('invalid');
   const ref = deps.db.doc(`calendarStates/${state}`);
-  const snap = await ref.get();
-  await ref.delete();
-  const expiresAt = snap.get('expiresAt') as Timestamp | undefined;
-  if (!snap.exists || !expiresAt || expiresAt.toMillis() < deps.now().getTime()) return back('expired');
-  if (!code) return back('denied');
+  const grant = await deps.db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const expiresAt = snap.get('expiresAt') as Timestamp | undefined;
+    // A repeated callback cannot exchange again or cancel the first callback.
+    if (snap.get('exchanging') === true) return null;
+    if (!snap.exists || !expiresAt || expiresAt.toMillis() < deps.now().getTime()) {
+      tx.delete(ref);
+      return null;
+    }
+    const churchId = snap.get('cid') as string;
+    const uid = snap.get('uid') as string;
+    const [church, member] = await tx.getAll(
+      deps.db.doc(`churches/${churchId}`), deps.db.doc(`churches/${churchId}/members/${uid}`),
+    );
+    const authorized = isChurchOpen(church) && member.get('role') === 'admin';
+    // Reserve once, but keep it cancellable while the provider is pending.
+    if (authorized && code) tx.update(ref, { exchanging: true });
+    else tx.delete(ref);
+    return { churchId, uid, authorized };
+  });
+  if (!grant) return back('expired');
+  if (!code || !grant.authorized) return back('denied');
   let refreshToken: string | null;
   try {
     ({ refreshToken } = await deps.google.exchangeCode(code, deps.config));
   } catch (e) {
+    await ref.delete();
     // A used or stale code (a reloaded page, a double tap): let them try again.
     console.warn('calendarCallback: code refused', e);
     return back('failed');
   }
-  if (!refreshToken) return back('failed');
-  const churchId = snap.get('cid') as string;
-  await deps.db.doc(`calendarTokens/${churchId}`).set({
-    token: seal(refreshToken, deps.config.tokenKey),
-    connectedBy: snap.get('uid'),
-    connectedAt: FieldValue.serverTimestamp(),
-    calendarId: null,
-  });
-  await deps.db.doc(`churches/${churchId}/settings/calendar`).set({
-    connected: true,
-    needsReconnect: false,
-    calendarId: null,
-    calendarName: null,
-    updatedAt: FieldValue.serverTimestamp(),
-  });
-  return back('connected');
+  if (!refreshToken) {
+    await ref.delete();
+    return back('failed');
+  }
+  const { churchId, uid } = grant;
+  let installed = false;
+  try {
+    installed = await deps.db.runTransaction(async (tx) => {
+      const [current, church, member] = await tx.getAll(
+        ref, deps.db.doc(`churches/${churchId}`), deps.db.doc(`churches/${churchId}/members/${uid}`),
+      );
+      // The provider exchange can take time. These reads serialize the grant
+      // installation with cancellation, demotion, removal or church closure.
+      tx.delete(ref);
+      if (!current.exists || !isChurchOpen(church) || member.get('role') !== 'admin') return false;
+      tx.set(deps.db.doc(`calendarTokens/${churchId}`), {
+        token: seal(refreshToken, deps.config.tokenKey),
+        connectedBy: uid,
+        connectedAt: FieldValue.serverTimestamp(),
+        calendarId: null,
+      });
+      tx.set(deps.db.doc(`churches/${churchId}/settings/calendar`), {
+        connected: true,
+        needsReconnect: false,
+        calendarId: null,
+        calendarName: null,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      return true;
+    });
+    return back(installed ? 'connected' : 'denied');
+  } finally {
+    if (!installed) {
+      try {
+        await ref.delete();
+      } finally {
+        try {
+          await deps.google.revoke(refreshToken);
+        } catch (e) {
+          // Never install an unauthorized token, even when Google is unreachable.
+          console.warn('calendarCallback: unused grant revocation failed', e);
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -209,27 +256,39 @@ export async function calendarDisconnect(deps: CalDeps, caller: Caller | null, d
  * through the church).
  */
 export async function forgetCalendar(deps: CalDeps, churchId: string) {
-  const tokenDoc = await deps.db.doc(`calendarTokens/${churchId}`).get();
+  await forgetGrant(deps, churchId);
+}
+
+async function forgetGrant(deps: CalDeps, churchId: string, connectorUid?: string) {
+  const tokenDoc = await deps.db.runTransaction(async (tx) => {
+    const ref = deps.db.doc(`calendarTokens/${churchId}`);
+    const current = await tx.get(ref);
+    if (connectorUid && (!current.exists || current.get('connectedBy') !== connectorUid)) return null;
+    // Unlink before waiting on Google, and never unlink a newer connector's
+    // grant because a delayed member trigger read an older token earlier.
+    tx.delete(ref);
+    tx.delete(deps.db.doc(`churches/${churchId}/settings/calendar`));
+    return current;
+  });
+  if (!tokenDoc) return false;
+  await clearCache(deps, churchId);
+  const states = await deps.db.collection('calendarStates').where('cid', '==', churchId).get();
+  await Promise.all(states.docs.map((d) => d.ref.delete()));
   if (tokenDoc.exists) {
     try {
       await deps.google.revoke(unseal(tokenDoc.get('token') as string, deps.config.tokenKey));
     } catch {
-      // Already revoked on Google's side; still forget it here.
+      // Already revoked on Google's side; it has still been forgotten here.
     }
-    await tokenDoc.ref.delete();
   }
-  await deps.db.doc(`churches/${churchId}/settings/calendar`).delete();
-  await clearCache(deps, churchId);
-  const states = await deps.db.collection('calendarStates').where('cid', '==', churchId).get();
-  await Promise.all(states.docs.map((d) => d.ref.delete()));
+  return tokenDoc.exists;
 }
 
-/** forgetCalendar when [uid] is the admin who connected the church's calendar. */
+/** Clears [uid]'s unfinished consents, and releases a grant they connected. */
 export async function releaseCalendarIfConnector(deps: CalDeps, churchId: string, uid: string) {
-  const tokenDoc = await deps.db.doc(`calendarTokens/${churchId}`).get();
-  if (!tokenDoc.exists || tokenDoc.get('connectedBy') !== uid) return false;
-  await forgetCalendar(deps, churchId);
-  return true;
+  const states = await deps.db.collection('calendarStates').where('cid', '==', churchId).get();
+  await Promise.all(states.docs.filter((d) => d.get('uid') === uid).map((d) => d.ref.delete()));
+  return forgetGrant(deps, churchId, uid);
 }
 
 /** Drops the church's cached [months], or every cached month. */
@@ -502,8 +561,10 @@ export function googleApi(options: Partial<Pick<Deps, 'fetch' | 'now'>> = {}): G
     summary: e.title,
     location: e.location,
     description: e.description,
-    start: e.allDay ? { date: e.start } : { dateTime: e.start },
-    end: e.allDay ? { date: e.end } : { dateTime: e.end },
+    // PATCH merges nested objects: clear the opposite type explicitly.
+    // New events have no previous date type, so POST keeps the normal shape.
+    start: e.allDay ? { date: e.start, ...(e.id ? { dateTime: null } : {}) } : { dateTime: e.start, ...(e.id ? { date: null } : {}) },
+    end: e.allDay ? { date: e.end, ...(e.id ? { dateTime: null } : {}) } : { dateTime: e.end, ...(e.id ? { date: null } : {}) },
   });
   const fromGoogle = (g: {
     id: string;

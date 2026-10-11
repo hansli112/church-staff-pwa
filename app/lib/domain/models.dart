@@ -7,6 +7,7 @@ library;
 
 import 'package:flutter/foundation.dart';
 
+import 'church_time.dart';
 import 'day.dart';
 
 enum ChurchStatus { active, suspended, deleted }
@@ -85,19 +86,29 @@ enum Group {
 /// A roster editor may only edit the services they hold a zone in.
 @immutable
 class Zone {
-  const Zone({required this.serviceType, this.duties = const []});
+  const Zone({required this.serviceType, this.duties = const [], this.smallGroups = const []});
 
   final String serviceType;
   final List<String> duties;
 
-  Zone copyWith({List<String>? duties}) => Zone(serviceType: serviceType, duties: duties ?? this.duties);
+  /// Plain member data within this 牧區, unrelated to permission [Group].
+  final List<String> smallGroups;
+
+  Zone copyWith({List<String>? duties, List<String>? smallGroups}) => Zone(
+    serviceType: serviceType,
+    duties: duties ?? this.duties,
+    smallGroups: smallGroups ?? this.smallGroups,
+  );
 
   @override
   bool operator ==(Object other) =>
-      other is Zone && other.serviceType == serviceType && listEquals(other.duties, duties);
+      other is Zone &&
+      other.serviceType == serviceType &&
+      listEquals(other.duties, duties) &&
+      listEquals(other.smallGroups, smallGroups);
 
   @override
-  int get hashCode => Object.hash(serviceType, Object.hashAll(duties));
+  int get hashCode => Object.hash(serviceType, Object.hashAll(duties), Object.hashAll(smallGroups));
 }
 
 /// Kinds of push notification a member can turn off per church.
@@ -465,10 +476,11 @@ class Roster {
     forEvent: forEvent ?? this.forEvent,
   );
 
-  /// Whether [uid] (or, for names without a uid, [name]) serves this day.
-  List<String> dutiesOf({required String uid, required String name}) => [
+  /// Duties explicitly bound to [uid]. Unbound names are guests, never a
+  /// runtime identity guess, even when a member has exactly the same name.
+  List<String> dutiesOf({required String uid}) => [
     for (final duty in duties)
-      if (duty.uids.values.contains(uid) || (duty.people.contains(name) && !duty.uids.containsKey(name))) duty.role,
+      if (duty.uids.values.contains(uid)) duty.role,
   ];
 
   @override
@@ -550,17 +562,18 @@ String monthKey(DateTime m) => '${m.year.toString().padLeft(4, '0')}-${m.month.t
 /// One event on the church's Google Calendar.
 @immutable
 class CalendarEvent {
-  const CalendarEvent({
+  CalendarEvent({
     this.id,
     required this.title,
-    required this.start,
-    required this.end,
+    required DateTime start,
+    required DateTime end,
     this.allDay = false,
     this.location,
     this.description,
     this.recurringEventId,
     this.originalStart,
-  });
+  }) : start = churchCivilTime(start),
+       end = churchCivilTime(end);
 
   final String? id;
   final String title;
@@ -570,17 +583,19 @@ class CalendarEvent {
   final String? recurringEventId;
   final String? originalStart;
 
-  /// All-day events: midnight local of the first day; [end] is exclusive.
+  /// The church's wall time (UTC+8), held in a UTC [DateTime] whatever the
+  /// phone's zone; the constructor takes the fields as given. All-day
+  /// events: midnight of the first day; [end] is exclusive.
   final DateTime start;
   final DateTime end;
   final bool allDay;
   final String? location;
   final String? description;
 
-  /// The local day the event starts on.
+  /// The church day the event starts on.
   Day get day => Day(start.year, start.month, start.day);
 
-  /// The last local day the event covers. [end] is exclusive, so an event
+  /// The last church day the event covers. [end] is exclusive, so an event
   /// that ends at midnight does not reach into the next day.
   Day get lastDay {
     final last = end.isAfter(start) ? end.subtract(const Duration(microseconds: 1)) : start;
@@ -620,16 +635,22 @@ class CalendarEvent {
     description: description,
   );
 
-  CalendarEvent copyWith({String? title, DateTime? start, DateTime? end, bool? allDay, String? location}) =>
-      CalendarEvent(
-        id: id,
-        title: title ?? this.title,
-        start: start ?? this.start,
-        end: end ?? this.end,
-        allDay: allDay ?? this.allDay,
-        location: location ?? this.location,
-        description: description,
-      );
+  CalendarEvent copyWith({
+    String? title,
+    DateTime? start,
+    DateTime? end,
+    bool? allDay,
+    String? location,
+    String? description,
+  }) => CalendarEvent(
+    id: id,
+    title: title ?? this.title,
+    start: start ?? this.start,
+    end: end ?? this.end,
+    allDay: allDay ?? this.allDay,
+    location: location ?? this.location,
+    description: description ?? this.description,
+  );
 }
 
 /// The days from [from] to [to] that [events] cover, each mapped to the day
@@ -652,7 +673,17 @@ Map<Day, Day> agendaAnchors(Iterable<CalendarEvent> events, {required Day from, 
 /// churches/{cid}/settings/calendar, written by the backend.
 @immutable
 class CalendarSettings {
-  const CalendarSettings({this.connected = false, this.needsReconnect = false, this.calendarName, this.calendarId});
+  const CalendarSettings({
+    this.connected = false,
+    this.needsReconnect = false,
+    this.calendarName,
+    this.calendarId,
+    this.revision,
+  });
+
+  /// Opaque revision of settings/calendar.updatedAt. Missing revisions never
+  /// authorize reuse of a persistent calendar cache.
+  final String? revision;
 
   final bool connected;
   final bool needsReconnect;
@@ -715,7 +746,7 @@ class ChurchLink {
 }
 
 /// Why fetching the content source failed.
-enum LinkFetchError { timeout, tooLarge, badFormat, notHttps, http, network, unknown }
+enum LinkFetchError { timeout, tooLarge, badFormat, notToday, notHttps, http, network, unknown }
 
 /// What the backend last fetched from the church link's content source
 /// (settings/linkContent).
@@ -723,6 +754,7 @@ enum LinkFetchError { timeout, tooLarge, badFormat, notHttps, http, network, unk
 class LinkContent {
   const LinkContent({
     required this.source,
+    this.date,
     this.title = '',
     this.body = '',
     this.link,
@@ -734,6 +766,9 @@ class LinkContent {
 
   /// The source this came from; content of an earlier source is ignored.
   final String source;
+
+  /// The source's civil church date (`YYYY-MM-DD`); absent in error records.
+  final String? date;
   final String title;
   final String body;
   final String? link;
@@ -752,6 +787,7 @@ class LinkContent {
   bool operator ==(Object other) =>
       other is LinkContent &&
       other.source == source &&
+      other.date == date &&
       other.title == title &&
       other.body == body &&
       other.link == link &&
@@ -761,7 +797,7 @@ class LinkContent {
       other.errorAt == errorAt;
 
   @override
-  int get hashCode => Object.hash(source, title, body, link, fetchedAt, error, errorStatus, errorAt);
+  int get hashCode => Object.hash(source, date, title, body, link, fetchedAt, error, errorStatus, errorAt);
 }
 
 /// How the last webhook notice went.
@@ -834,6 +870,7 @@ class PendingMember {
     this.role = Role.staff,
     this.groups = const {},
     this.zones = const [],
+    this.mutedNotifications = const {},
   });
 
   final String id;
@@ -842,6 +879,7 @@ class PendingMember {
   final Role role;
   final Set<Group> groups;
   final List<Zone> zones;
+  final Set<NotificationKind> mutedNotifications;
 
   @override
   bool operator ==(Object other) =>
@@ -851,10 +889,19 @@ class PendingMember {
       other.email == email &&
       other.role == role &&
       setEquals(other.groups, groups) &&
-      listEquals(other.zones, zones);
+      listEquals(other.zones, zones) &&
+      setEquals(other.mutedNotifications, mutedNotifications);
 
   @override
-  int get hashCode => Object.hash(id, name, email, role, Object.hashAll(groups), Object.hashAll(zones));
+  int get hashCode => Object.hash(
+    id,
+    name,
+    email,
+    role,
+    Object.hashAll(groups),
+    Object.hashAll(zones),
+    Object.hashAllUnordered(mutedNotifications),
+  );
 }
 
 /// One person in a move file, for 「這位是我」.

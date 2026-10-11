@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/backend.dart';
 import '../domain/church_link.dart';
+import '../domain/church_time.dart';
 import '../domain/day.dart';
 import '../domain/models.dart';
 import '../domain/schedule.dart';
@@ -27,11 +28,12 @@ final prefsProvider = Provider<SharedPreferences>(
 /// A test moves time by giving its backend a clock of its own.
 final clockProvider = Provider<DateTime Function()>((ref) => ref.watch(backendProvider).clock);
 
-/// Today on this device. Turns over at midnight while the app stays open.
+/// Today in the church. Turns over at its midnight, wherever the device is.
 final todayProvider = Provider<Day>((ref) {
   final now = ref.watch(clockProvider)();
-  rebuildAt(ref, DateTime(now.year, now.month, now.day + 1), now);
-  return Day.today(now);
+  final civil = churchTime(now);
+  rebuildAt(ref, churchInstant(DateTime.utc(civil.year, civil.month, civil.day + 1)), now);
+  return churchToday(now);
 });
 
 /// Rebuilds the provider at [at], for what changes with time alone. Wakes
@@ -107,9 +109,8 @@ final shownChurchLinkProvider = Provider<({String title, String body, String url
   // fixed link it may replace a moment later. If it fails, the fixed link.
   if (link.source != null && !loaded.hasValue && !loaded.hasError) return null;
   final content = loaded.value;
+  ref.watch(todayProvider);
   final now = ref.watch(clockProvider)();
-  final fetched = content?.fetchedAt;
-  if (fetched != null) rebuildAt(ref, fetched.add(linkContentFresh), now);
   return shownChurchLink(link, content, now);
 });
 
@@ -152,8 +153,27 @@ final staffOrderProvider = StreamProvider.family<StaffOrder, String>(
   (ref, serviceType) => openChurch(ref).staffOrder(serviceType),
 );
 
-/// How many weeks ahead the roster tab shows.
+/// The initial rolling draft horizon; saved future days are never hidden.
 const rosterWeeks = 13;
+
+/// Extends unsaved weekly drafts without writing any roster documents.
+/// Rebuild on account/church changes so another church starts at 13 weeks.
+class RosterWeeks extends Notifier<int> {
+  RosterWeeks(this.serviceType);
+
+  final String serviceType;
+
+  @override
+  int build() {
+    ref.watch(uidProvider);
+    ref.watch(churchDataProvider);
+    return rosterWeeks;
+  }
+
+  void showMore() => state += rosterWeeks;
+}
+
+final rosterWeeksProvider = NotifierProvider.family<RosterWeeks, int, String>(RosterWeeks.new);
 
 /// The rosters of one service to show: saved days plus drafts for the
 /// other weeks. Computed here, not in build, and only when its inputs
@@ -174,7 +194,7 @@ final serviceRostersProvider = Provider.family<AsyncValue<List<Roster>>, String>
       service: service,
       saved: rosters,
       from: today,
-      weeks: rosterWeeks,
+      weeks: ref.watch(rosterWeeksProvider(serviceType)),
     ),
   );
 });
@@ -187,12 +207,11 @@ final myServicesProvider = Provider<AsyncValue<List<MyService>>>((ref) {
   // Riverpod would then schedule its rebuild during a build.
   ref.watch(churchDataProvider);
   final saved = ref.watch(savedRostersProvider);
-  final me = ref.watch(meProvider).value;
   final uid = ref.watch(uidProvider);
   if (saved.hasError) return AsyncError(saved.error!, saved.stackTrace!);
   final rosters = saved.value;
   if (rosters == null || uid == null) return const AsyncLoading();
-  return AsyncData(myServices(rosters, uid: uid, name: me?.name ?? ''));
+  return AsyncData(myServices(rosters, uid: uid));
 });
 
 /// Where the app is, which decides the screen the router shows.

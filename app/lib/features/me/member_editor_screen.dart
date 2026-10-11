@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/design/components.dart';
+import '../../core/design/tokens.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
@@ -40,7 +41,6 @@ class MemberEditorScreen extends ConsumerWidget {
     // The toast outlives this page, so undo holds on to what it needs.
     final container = ProviderScope.containerOf(context, listen: false);
     final data = ref.churchData;
-    final messenger = ScaffoldMessenger.of(context);
     final l10n = L10n.of(context);
     if (!await _save(context, ref, member.copyWith(zones: [...member.zones]..removeAt(index)))) return;
     if (!context.mounted) return;
@@ -54,9 +54,7 @@ class MemberEditorScreen extends ConsumerWidget {
           for (final z in now.zones)
             if (z.serviceType != service.id) z,
         ];
-        data.saveMember(now.copyWith(zones: rest..insert(index.clamp(0, rest.length), zone))).catchError((_) {
-          messenger.showSnackBar(SnackBar(content: Text(l10n.saveFailed)));
-        });
+        return data.saveMember(now.copyWith(zones: rest..insert(index.clamp(0, rest.length), zone)));
       },
     );
   }
@@ -227,7 +225,18 @@ class _ZoneSection extends StatelessWidget {
           value: zone != null,
           onChanged: (on) => on ? onSave(withZone(Zone(serviceType: service.id))) : onLeave(),
         ),
-        if (zone != null)
+        if (zone != null) ...[
+          ListRow(
+            title: L10n.of(context).memberSmallGroups,
+            subtitle: zone.smallGroups.isEmpty ? null : zone.smallGroups.join('、'),
+            onTap: () async {
+              final groups = await showAppSheet<List<String>>(
+                context,
+                builder: (_) => _SmallGroupsEditor(groups: zone.smallGroups),
+              );
+              if (groups != null && context.mounted) onSave(withZone(zone.copyWith(smallGroups: groups)));
+            },
+          ),
           for (final d in duties)
             ListRow(
               title: d,
@@ -248,7 +257,62 @@ class _ZoneSection extends StatelessWidget {
                 );
               },
             ),
+        ],
       ],
     );
   }
+}
+
+class _SmallGroupsEditor extends StatefulWidget {
+  const _SmallGroupsEditor({required this.groups});
+
+  final List<String> groups;
+
+  @override
+  State<_SmallGroupsEditor> createState() => _SmallGroupsEditorState();
+}
+
+class _SmallGroupsEditorState extends State<_SmallGroupsEditor> {
+  late final _groups = TextEditingController(text: widget.groups.join('\n'));
+
+  @override
+  void dispose() {
+    _groups.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+    child: SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(Space.m, 0, Space.m, MediaQuery.viewInsetsOf(context).bottom + Space.l),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text(L10n.of(context).memberSmallGroups, style: AppText.title3)),
+              SecondaryButton(
+                label: L10n.of(context).save,
+                onPressed: () => Navigator.pop(
+                  context,
+                  {
+                    for (final line in _groups.text.split('\n'))
+                      if (line.trim().isNotEmpty) line.trim(),
+                  }.toList(),
+                ),
+              ),
+            ],
+          ),
+          TextField(
+            controller: _groups,
+            autofocus: true,
+            keyboardType: TextInputType.multiline,
+            minLines: 3,
+            maxLines: 6,
+            decoration: InputDecoration(hintText: L10n.of(context).memberSmallGroupsHint),
+          ),
+        ],
+      ),
+    ),
+  );
 }

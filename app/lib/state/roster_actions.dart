@@ -12,11 +12,19 @@ import 'providers.dart';
 
 /// A write that has been issued, and how to take it back.
 ///
-/// [done] completes when the server has it; offline it waits, while the
-/// change already shows on this device. [undo] restores only what this
-/// write touched, applied to the day as it is when undo is tapped, so a
-/// change someone else made meanwhile is kept.
+/// [done] completes when the server confirms the online write. Offline
+/// writes are refused. [undo] restores only what this write touched,
+/// preserving unrelated changes and refusing overlapping newer edits.
 typedef RosterWrite = ({Future<void> done, Future<void> Function() undo});
+
+/// A bulk preview is scoped to the church and account that opened it.
+class RosterPreview {
+  RosterPreview._(this.plan, this.churchId, this.uid);
+
+  final FutureRosterPlan plan;
+  final String churchId;
+  final String? uid;
+}
 
 /// Writes for 安排服事表. Each returns a [RosterWrite], so screens offer
 /// 「復原」 instead of asking for confirmation.
@@ -73,27 +81,137 @@ class RosterActions {
   bool _untouchedDraft(Roster before, Roster next) =>
       !before.saved && _now(before).copyWith(saved: false) == next.copyWith(saved: false);
 
+  /// Prevents an undo from following the reader into another account/church.
+  VoidCallback _scopeGuard(ChurchData data) {
+    final uid = _ref.read(uidProvider);
+    return () {
+      if (_data.churchId != data.churchId || _ref.read(uidProvider) != uid) {
+        throw const CloudException(CloudErrorCode.permissionDenied);
+      }
+    };
+  }
+
+  Roster? _persisted(Roster r) => r.saved ? r : null;
+
   /// Writes [next] over [before], which differ only in [role]; undo
-  /// restores that duty.
+  /// restores that duty while preserving unrelated edits.
   RosterWrite _dutyWrite(Roster before, Roster next, String role) {
+    final data = _data;
+    final guard = _scopeGuard(data);
     final index = before.duties.indexWhere((d) => d.role == role);
     final previous = index < 0 ? null : before.duties[index];
+    final written = next.duties.where((d) => d.role == role).firstOrNull;
     return (
-      done: _data.saveRoster(next),
+      done: data.compareAndSetRosters(before: {before.id: _persisted(before)}, after: {next.id: next}),
       undo: () {
-        // A day that was only a draft and that nobody touched since goes
-        // back to following the template.
-        if (_untouchedDraft(before, next)) return _data.deleteRoster(before);
-        return _data.saveRoster(_withDutyRestored(_now(before), role, previous, index));
+        guard();
+        final now = _now(before);
+        if (now.duties.where((d) => d.role == role).firstOrNull != written) {
+          throw const CloudException(CloudErrorCode.conflict);
+        }
+        // An untouched draft goes back to following its template.
+        final restore = _untouchedDraft(before, next) ? null : _withDutyRestored(now, role, previous, index);
+        return data.compareAndSetRosters(before: {now.id: _persisted(now)}, after: {now.id: restore});
       },
     );
   }
 
-  RosterWrite setPeople(Roster roster, String role, List<String> people) => _dutyWrite(
-    roster,
-    withPeople(roster, role, people, nameIds: _nameIds, order: orderOf(roster)),
-    role,
+  RosterWrite setPeople(
+    Roster roster,
+    String role,
+    List<String> people, {
+    Set<String> guestNames = const {},
+    List<String>? ranking,
+  }) {
+    final order = orderOf(roster);
+    final afterOrder = ranking == null ? order : order.withRanking(role, ranking);
+    final next = withPeople(roster, role, people, nameIds: _nameIds, order: afterOrder, guestNames: guestNames);
+    if (ranking == null || order == afterOrder) return _dutyWrite(roster, next, role);
+    if (roster.isEvent) throw StateError('Event rosters have no staff order');
+    final data = _data;
+    final guard = _scopeGuard(data);
+    final before = <String, Roster?>{roster.id: _persisted(roster)};
+    final after = <String, Roster?>{roster.id: next};
+    for (final saved in _saved) {
+      if (saved.type != roster.type || saved.id == roster.id) continue;
+      final sorted = afterOrder.applyTo(saved);
+      if (identical(sorted, saved)) continue;
+      before[saved.id] = saved;
+      after[saved.id] = sorted;
+    }
+    return (
+      done: data.compareAndSetRosters(
+        before: before,
+        after: after,
+        staffOrder: (serviceType: roster.type, before: order, after: afterOrder),
+      ),
+      undo: () {
+        guard();
+        return data.compareAndSetRosters(
+          before: after,
+          after: before,
+          staffOrder: (serviceType: roster.type, before: afterOrder, after: order),
+        );
+      },
+    );
+  }
+
+  /// Reuses only already arranged, unbound names in this service and duty.
+  /// Explicit staff order is respected; no order is learned from rosters.
+  List<String> guestSuggestions(String? type, String role) {
+    final names = <String>{
+      for (final r in _saved)
+        if (type == null ? r.isEvent : !r.isEvent && r.type == type)
+          for (final d in r.duties)
+            if (d.role == role)
+              for (final name in d.people)
+                if (name.trim().isNotEmpty && !d.uids.containsKey(name)) name,
+    }.toList()..sort();
+    return type == null ? names : _order(type).sort(role, names);
+  }
+
+  RosterPreview previewGuestRemoval(String type, String role, String name) => RosterPreview._(
+    planGuestRemoval(saved: _saved, type: type, role: role, name: name, today: _ref.read(todayProvider)),
+    _data.churchId,
+    _ref.read(uidProvider),
   );
+
+  RosterPreview previewDutyRename(String type, String from, String to) => RosterPreview._(
+    planDutyRename(saved: _saved, type: type, from: from, to: to, today: _ref.read(todayProvider)),
+    _data.churchId,
+    _ref.read(uidProvider),
+  );
+
+  RosterPreview previewEventRename(String type, String from, String to) => RosterPreview._(
+    planEventRename(saved: _saved, type: type, from: from, to: to, today: _ref.read(todayProvider)),
+    _data.churchId,
+    _ref.read(uidProvider),
+  );
+
+  /// Applies exactly the previewed documents; a newer edit rejects the whole
+  /// operation. Undo uses the reverse baseline, never overwriting newer work.
+  RosterWrite applyFuturePreview(RosterPreview preview) {
+    final data = _data;
+    void validate() {
+      if (_data.churchId != preview.churchId || _ref.read(uidProvider) != preview.uid) {
+        throw const CloudException(CloudErrorCode.permissionDenied);
+      }
+      final today = _ref.read(todayProvider);
+      if (preview.plan.conflicts.isNotEmpty ||
+          preview.plan.before.values.any((r) => r == null || !r.day.isAfter(today))) {
+        throw const CloudException(CloudErrorCode.conflict);
+      }
+    }
+
+    validate();
+    return (
+      done: data.compareAndSetRosters(before: preview.plan.before, after: preview.plan.after),
+      undo: () {
+        validate();
+        return data.compareAndSetRosters(before: preview.plan.after, after: preview.plan.before);
+      },
+    );
+  }
 
   RosterWrite removeDuty(Roster roster, String role) => _dutyWrite(roster, withoutDuty(roster, role), role);
 
@@ -114,62 +232,56 @@ class RosterActions {
         for (final r in added) Duty(role: r),
       ],
     );
+    final data = _data;
+    final guard = _scopeGuard(data);
     return (
-      done: _data.saveRoster(next),
+      done: data.compareAndSetRosters(before: {roster.id: _persisted(roster)}, after: {next.id: next}),
       undo: () {
-        if (_untouchedDraft(roster, next)) return _data.deleteRoster(roster);
+        guard();
         final now = _now(roster);
-        return _data.saveRoster(
-          now.copyWith(
-            duties: [
-              for (final d in now.duties)
-                if (!added.contains(d.role) || d.people.isNotEmpty) d,
-            ],
-          ),
-        );
+        final restored = _untouchedDraft(roster, next)
+            ? null
+            : now.copyWith(
+                duties: [
+                  for (final d in now.duties)
+                    if (!added.contains(d.role) || d.people.isNotEmpty) d,
+                ],
+              );
+        return data.compareAndSetRosters(before: {now.id: _persisted(now)}, after: {now.id: restored});
       },
     );
   }
 
-  /// Sets [roster]'s special events; [addToCommon] also become choices for
-  /// every day of the service. Undo takes back both.
+  /// Sets the day's tags and, when requested, its common-event options in
+  /// one events-only transaction. Any newer settings/day baseline refuses
+  /// the whole write; undo reverses both baselines in the same transaction.
   RosterWrite setEvents(Roster roster, List<EventTag> events, {List<EventTag> addToCommon = const []}) {
     final next = roster.copyWith(events: events);
     // Ticking a tag off and on again only moves it to the end: the day
     // stays as it is (a draft stays a draft).
     final changed = !setEquals(events.toSet(), roster.events.toSet());
-    final services = _services;
-    final service = services.byId(roster.type);
+    final service = _services.byId(roster.type);
     final common = addToCommon.isEmpty || service == null
         ? null
-        : [
-            for (final s in services.services)
-              s.id == service.id ? s.copyWith(events: [...s.events, ...addToCommon]) : s,
-          ];
-    Future<void> done() async {
-      if (common != null) await _data.saveServices(common);
-      if (changed) await _data.saveRoster(next);
-    }
-
+        : service.copyWith(events: [...service.events, ...addToCommon]);
+    if (!changed && common == null) return (done: Future<void>.value(), undo: () async {});
+    final data = _data;
+    final guard = _scopeGuard(data);
+    final before = <String, Roster?>{if (changed) roster.id: _persisted(roster)};
+    final after = <String, Roster?>{if (changed) next.id: next};
     return (
-      done: done(),
-      undo: () async {
-        if (common != null) {
-          await _data.saveServices([
-            for (final s in _services.services)
-              s.id == service!.id
-                  ? s.copyWith(
-                      events: [
-                        for (final e in s.events)
-                          if (!addToCommon.contains(e)) e,
-                      ],
-                    )
-                  : s,
-          ]);
-        }
-        if (!changed) return;
-        if (_untouchedDraft(roster, next)) return _data.deleteRoster(roster);
-        return _data.saveRoster(_now(roster).copyWith(events: roster.events));
+      done: data.compareAndSetRosters(
+        before: before,
+        after: after,
+        serviceChange: common == null ? null : (before: service!, after: common),
+      ),
+      undo: () {
+        guard();
+        return data.compareAndSetRosters(
+          before: after,
+          after: before,
+          serviceChange: common == null ? null : (before: common, after: service!),
+        );
       },
     );
   }
@@ -182,12 +294,27 @@ class RosterActions {
     Duty? dutyOf(Roster r) => indexOf(r) < 0 ? null : r.duties[indexOf(r)];
     final prevA = dutyOf(a.roster), prevB = dutyOf(b.roster);
     final idxA = indexOf(a.roster), idxB = indexOf(b.roster);
+    final data = _data;
+    final guard = _scopeGuard(data);
     return (
-      done: _data.saveRosters([a2, b2]),
-      undo: () => _data.saveRosters([
-        _withDutyRestored(_now(a.roster), role, prevA, idxA),
-        _withDutyRestored(_now(b.roster), role, prevB, idxB),
-      ]),
+      done: data.compareAndSetRosters(
+        before: {a.roster.id: _persisted(a.roster), b.roster.id: _persisted(b.roster)},
+        after: {a2.id: a2, b2.id: b2},
+      ),
+      undo: () {
+        guard();
+        final nowA = _now(a.roster), nowB = _now(b.roster);
+        if (dutyOf(nowA) != dutyOf(a2) || dutyOf(nowB) != dutyOf(b2)) {
+          throw const CloudException(CloudErrorCode.conflict);
+        }
+        return data.compareAndSetRosters(
+          before: {nowA.id: _persisted(nowA), nowB.id: _persisted(nowB)},
+          after: {
+            nowA.id: _untouchedDraft(a.roster, a2) ? null : _withDutyRestored(nowA, role, prevA, idxA),
+            nowB.id: _untouchedDraft(b.roster, b2) ? null : _withDutyRestored(nowB, role, prevB, idxB),
+          },
+        );
+      },
     );
   }
 
@@ -198,59 +325,115 @@ class RosterActions {
     final after = before.withRanking(role, ranking);
     final changes = before.changesTo(after);
     if (changes.isEmpty) return;
-    await _data.updateStaffOrder(type, changes);
-    final resorted = [
-      for (final r in _saved)
-        if (r.type == type)
-          if (after.applyTo(r) case final next when !identical(next, r)) next,
-    ];
-    if (resorted.isNotEmpty) await _data.saveRosters(resorted);
+    final originals = <String, Roster?>{};
+    final resorted = <String, Roster?>{};
+    for (final r in _saved) {
+      if (r.type != type) continue;
+      final next = after.applyTo(r);
+      if (identical(next, r)) continue;
+      originals[r.id] = r;
+      resorted[r.id] = next;
+    }
+    await _data.compareAndSetRosters(
+      before: originals,
+      after: resorted,
+      staffOrder: (serviceType: type, before: before, after: after),
+    );
+  }
+
+  /// Settings changes are admin-only in the backend. The single-service
+  /// baseline avoids replacing another service or overwriting newer edits.
+  RosterWrite updateService(Service before, Service after, {({String from, String to})? dutyRename}) {
+    final data = _data;
+    final uid = _ref.read(uidProvider);
+    return (
+      done: data.compareAndSetService(before: before, after: after, dutyRename: dutyRename),
+      undo: () {
+        if (_data.churchId != data.churchId || _ref.read(uidProvider) != uid) {
+          throw const CloudException(CloudErrorCode.permissionDenied);
+        }
+        return data.compareAndSetService(
+          before: after,
+          after: before,
+          dutyRename: dutyRename == null ? null : (from: dutyRename.to, to: dutyRename.from),
+        );
+      },
+    );
   }
 
   /// Gives [member] the duty, so the picker lists them first next time.
-  Future<void> grantDuty(Member member, String type, String role) => _data.saveMember(member.withDuty(type, role));
+  Future<void> grantDuty(Member member, String type, String role) => _data.grantDuty(member.uid, type, role);
 
   /// What importing [rows] into [type] would do, against the rosters as
   /// they are now.
-  ImportPlan previewImport(String type, List<dynamic> rows) => planImport(
+  ImportPlan previewImport(
+    String type,
+    List<dynamic> rows, {
+    ImportMode mode = ImportMode.merge,
+    Map<String, ImportPersonChoice> people = const {},
+  }) => planImport(
     rows: rows,
     service: _services.byId(type) ?? (throw StateError('No service $type')),
     members: _loaded(_ref.read(membersProvider), 'members'),
     saved: _saved,
     order: _order(type),
     today: _ref.read(todayProvider),
+    mode: mode,
+    people: people,
   );
 
   /// Imports [rows] into [type], planned again now so edits made since the
   /// preview are not overwritten, and the staff order the plan grew. Undo
   /// puts back each imported day whole, as it was before the import (an
   /// edit made to it since is lost), and the staff order.
-  RosterWrite applyImport(String type, List<dynamic> rows) {
-    final plan = previewImport(type, rows);
-    final before = {
-      for (final r in _saved)
-        if (r.type == type) r.id: r,
-    };
-    final order = _order(type);
-    final changes = order.changesTo(plan.order);
-    Future<void> done() async {
-      await _data.saveRosters(plan.rosters, via: 'import');
-      if (changes.isNotEmpty) await _data.updateStaffOrder(type, changes);
+  RosterWrite applyImport(
+    String type,
+    List<dynamic> rows, {
+    ImportMode mode = ImportMode.merge,
+    Map<String, ImportPersonChoice> people = const {},
+    ImportPlan? preview,
+  }) {
+    final plan = previewImport(type, rows, mode: mode, people: people);
+    if (!plan.canApply) throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.unparseable);
+    final data = _data;
+    final uid = _ref.read(uidProvider);
+    void validate() {
+      final member = _ref.read(meProvider).value;
+      if (uid == null ||
+          _ref.read(uidProvider) != uid ||
+          _ref.read(churchDataProvider)?.churchId != data.churchId ||
+          !_ref.read(churchOpenProvider) ||
+          !(member?.canEditRosters(type) ?? false)) {
+        throw const CloudException(CloudErrorCode.permissionDenied);
+      }
     }
 
+    validate();
+    final before = {for (final e in plan.changes.entries) e.key: e.value.before};
+    final after = {for (final e in plan.changes.entries) e.key: e.value.after};
+    final order = _order(type);
+    if (preview != null &&
+        (!mapEquals({for (final e in preview.changes.entries) e.key: e.value.before}, before) ||
+            !mapEquals({for (final e in preview.changes.entries) e.key: e.value.after}, after) ||
+            preview.order.changesTo(plan.order).isNotEmpty)) {
+      throw const CloudException(CloudErrorCode.conflict);
+    }
+    final changedOrder = order.changesTo(plan.order).isNotEmpty;
     return (
-      done: done(),
-      undo: () async {
-        final restore = [
-          for (final r in plan.rosters) ?before[r.id],
-        ];
-        // As an import too: the import told nobody, nor does taking it back.
-        if (restore.isNotEmpty) await _data.saveRosters(restore, via: 'import');
-        for (final r in plan.rosters) {
-          if (!before.containsKey(r.id)) await _data.deleteRoster(r);
-        }
-        final back = plan.order.changesTo(order);
-        if (back.isNotEmpty) await _data.updateStaffOrder(type, back);
+      done: data.compareAndSetRosters(
+        before: before,
+        after: after,
+        via: 'import',
+        staffOrder: changedOrder ? (serviceType: type, before: order, after: plan.order) : null,
+      ),
+      undo: () {
+        validate();
+        return data.compareAndSetRosters(
+          before: after,
+          after: before,
+          via: 'import',
+          staffOrder: changedOrder ? (serviceType: type, before: plan.order, after: order) : null,
+        );
       },
     );
   }

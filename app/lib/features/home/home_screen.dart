@@ -5,11 +5,16 @@ import 'package:go_router/go_router.dart';
 import '../../core/design/components.dart';
 import '../../core/perf.dart';
 import '../../core/design/tokens.dart';
+import '../../domain/church_time.dart';
+import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
+import '../../state/calendar.dart';
 import '../../state/providers.dart';
 import '../church/add_to_home.dart';
 import '../church/church_logo.dart';
 import '../church/claims.dart';
+import '../calendar/event_sheet.dart';
+import '../common/calendar_read_notice.dart';
 import 'church_link_card.dart';
 import '../rosters/format.dart';
 import '../rosters/event_roster_screen.dart';
@@ -76,6 +81,27 @@ class HomeScreen extends ConsumerWidget {
     final services = ref.watch(servicesProvider).value;
     final today = ref.watch(todayProvider);
     final link = ref.watch(shownChurchLinkProvider);
+    // A sourced link with nothing for today says so; it never falls back.
+    final sourceMissing =
+        link == null &&
+        ref.watch(churchLinkProvider).value?.source != null &&
+        !ref.watch(linkContentProvider).isLoading;
+    final calendarReady = ref.watch(calendarSettingsProvider).value?.ready ?? false;
+    final activityMonths = calendarReady
+        ? [monthKey(DateTime.utc(today.year, today.month)), monthKey(DateTime.utc(today.year, today.month + 1))]
+        : const <String>[];
+    final activityStates = [for (final month in activityMonths) ref.watch(calendarEventsProvider(month))];
+    final activityReadStatus = {
+      for (final month in activityMonths) month: ref.watch(calendarReadStatusProvider(month)),
+    };
+    final now = churchTime(ref.watch(clockProvider)());
+    final activities = {
+      for (final state in activityStates)
+        if (!state.hasError)
+          for (final event in state.value ?? const <CalendarEvent>[]) event.id ?? event: event,
+    }.values.where((event) => event.end.isAfter(now)).toList()..sort((a, b) => a.start.compareTo(b.start));
+    final activityError = activityStates.any((state) => state.hasError);
+    final activityLoading = activityStates.any((state) => state.isLoading);
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
@@ -95,7 +121,16 @@ class HomeScreen extends ConsumerWidget {
           final gettingStarted = ref.watch(_gettingStartedProvider);
           final waiting = ref.watch(_waitingForZoneProvider);
           final addToHome = AddToHomeCard.shown(ref);
-          if (list.isEmpty && link == null && claims.isEmpty && !gettingStarted && waiting == 0 && !addToHome) {
+          if (list.isEmpty &&
+              link == null &&
+              !sourceMissing &&
+              claims.isEmpty &&
+              !gettingStarted &&
+              waiting == 0 &&
+              !addToHome &&
+              activities.isEmpty &&
+              !activityError &&
+              !activityLoading) {
             return EmptyState(
               message: l10n.noUpcomingServices,
               actionLabel: l10n.viewRosters,
@@ -118,6 +153,7 @@ class HomeScreen extends ConsumerWidget {
                   ],
                 ),
               if (link != null) ChurchLinkCard(title: link.title, body: link.body, url: link.url),
+              if (sourceMissing) ChurchLinkSourceStatus(key: ValueKey(ref.watch(churchDataProvider)?.churchId)),
               if (list.isEmpty)
                 EmptyState(
                   message: l10n.noUpcomingServices,
@@ -147,6 +183,35 @@ class HomeScreen extends ConsumerWidget {
                             '/rosters/${s.roster.type}/${s.roster.day.key}',
                           );
                         },
+                      ),
+                  ],
+                ),
+              if (activities.isNotEmpty || activityError || activityLoading)
+                ListSection(
+                  header: l10n.homeUpcomingEvents,
+                  children: [
+                    for (final entry in activityReadStatus.entries)
+                      if (entry.value.cached && activities.take(3).any((event) => event.months.contains(entry.key)))
+                        CalendarReadNotice(status: entry.value, month: entry.key),
+                    for (final event in activities.take(3))
+                      ListRow(
+                        title: event.title,
+                        subtitle: dayLabel(l10n, event.day, today),
+                        onTap: () => showEventDetail(context, event),
+                      ),
+                    if (activityError)
+                      ErrorRetry(
+                        message: l10n.loadFailed,
+                        onRetry: () {
+                          for (final month in activityMonths) {
+                            ref.invalidate(calendarEventsProvider(month));
+                          }
+                        },
+                      )
+                    else if (activityLoading && activities.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(Space.m),
+                        child: Center(child: CircularProgressIndicator.adaptive()),
                       ),
                   ],
                 ),

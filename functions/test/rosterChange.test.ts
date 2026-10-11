@@ -123,6 +123,17 @@ describe('reading a roster change', () => {
 });
 
 describe('push', () => {
+  test('adding or moving an explicit same-name guest never notifies the member with that name', async () => {
+    await church();
+    await db.doc('churches/C1/members/mei').update({ name: '美玉' });
+    const guest = { role: '主持', people: ['美玉'], uids: {} };
+    const bound = duty('招待', ['志豪']);
+    await writeEvent('C1', { duties: [guest, bound] });
+    assert.deepEqual(pushed.map((p) => p.tokens), [['tok-hao']]);
+    pushed = [];
+    await writeEvent('C1', { dateKey: '2026-12-23', endDateKey: '2026-12-23', duties: [guest, bound] });
+    assert.deepEqual(pushed.map((p) => p.tokens), [['tok-hao']], 'moving an event uses persisted holders, not names');
+  });
   test('both of a member’s devices hear about it; the editor does not', async () => {
     await church();
     const r = await write('C1', '2026-10-04', [duty('司琴', ['美玉']), duty('招待', ['志豪'])], { editedBy: 'hao' });

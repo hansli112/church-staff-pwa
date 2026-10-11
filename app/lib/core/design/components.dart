@@ -356,7 +356,7 @@ class EmptyState extends StatelessWidget {
 void showToast(
   BuildContext context,
   String message, {
-  VoidCallback? onUndo,
+  FutureOr<void> Function()? onUndo,
   Duration duration = const Duration(seconds: 5),
 }) {
   final messenger = ScaffoldMessenger.of(context);
@@ -371,9 +371,22 @@ void showToast(
           ? null
           : SnackBarAction(
               label: l10n.undo,
-              onPressed: () {
+              onPressed: () async {
                 Haptics.light();
-                onUndo();
+                try {
+                  await onUndo();
+                  await Future<void>.value();
+                  if (!messenger.mounted) return;
+                  messenger.hideCurrentSnackBar();
+                  messenger.showSnackBar(SnackBar(content: Text(l10n.undoDone)));
+                } catch (_) {
+                  // The action itself closes its snackbar, including when a
+                  // synchronous refusal happens before the first await.
+                  await Future<void>.value();
+                  if (!messenger.mounted) return;
+                  messenger.hideCurrentSnackBar();
+                  messenger.showSnackBar(SnackBar(content: Text(l10n.undoFailed)));
+                }
               },
             ),
     ),

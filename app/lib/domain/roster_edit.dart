@@ -1,12 +1,12 @@
+import 'day.dart';
 import 'models.dart';
 import 'staff_order.dart';
 
 /// Name → uid for members whose name is unique in the church.
 ///
-/// Two members with the same name get no uid: picking one would be a guess,
-/// and a wrong guess sends the reminder to the other person with no sign
-/// anything is off. Without a uid, "my services" falls back to the name and
-/// both see it (from self-host StaffDirectory).
+/// Two members with the same name get no uid: picking one would be a guess
+/// and could send the reminder to the wrong person. Unbound names remain
+/// visible guests but never become a member's personal services/reminders.
 Map<String, String> uniqueNameIds(Iterable<Member> members) {
   final ids = <String, String>{};
   final duplicates = <String>{};
@@ -22,15 +22,18 @@ Map<String, String> uniqueNameIds(Iterable<Member> members) {
   };
 }
 
-/// [roster] with [role]'s people set to [people], sorted by [order], with
-/// uids for the names that are members. Adds the duty if it is missing.
+/// [roster] with [role]'s people set to [people], sorted by [order].
+/// Existing assignments keep their identity; new exact unique member names
+/// receive a uid unless explicitly picked as guests. Adds a missing duty.
 Roster withPeople(
   Roster roster,
   String role,
   List<String> people, {
   required Map<String, String> nameIds,
   required StaffOrder order,
+  Set<String> guestNames = const {},
 }) {
+  final previous = roster.duties.where((d) => d.role == role).firstOrNull;
   final cleaned = <String>[];
   for (final p in people) {
     final name = p.trim();
@@ -41,7 +44,9 @@ Roster withPeople(
     role: role,
     people: sorted,
     uids: {
-      for (final name in sorted) name: ?nameIds[name],
+      for (final name in sorted)
+        if (!guestNames.contains(name))
+          name: ?((previous?.people.contains(name) ?? false) ? previous!.uids[name] : nameIds[name]),
     },
   );
   final exists = roster.duties.any((d) => d.role == role);
@@ -92,18 +97,29 @@ class SwapSide {
     return next;
   }
 
+  Map<String, String> transferredIds(SwapSide source) {
+    final ids = {...nameIds};
+    final person = source.person;
+    if (person == null) return ids;
+    ids.remove(person);
+    final duty = source.roster.duties.where((d) => d.role == role).firstOrNull;
+    final uid = duty?.uids[person];
+    if (uid != null) ids[person] = uid;
+    return ids;
+  }
+
   final aNext = withPeople(
     a.roster,
     role,
     replaced(a.roster, a.person, b.person),
-    nameIds: nameIds,
+    nameIds: transferredIds(b),
     order: order,
   );
   final bNext = withPeople(
     b.roster,
     role,
     replaced(b.roster, b.person, a.person),
-    nameIds: nameIds,
+    nameIds: transferredIds(a),
     order: order,
   );
   return (aNext, bNext);
@@ -141,4 +157,115 @@ List<SwapSide> swapTargets(
     }
   }
   return result;
+}
+
+/// The exact saved documents shown before a future bulk change. Neither
+/// planning nor extending the draft horizon writes any document.
+class FutureRosterPlan {
+  FutureRosterPlan({
+    required Map<String, Roster?> before,
+    required Map<String, Roster?> after,
+    List<Roster> conflicts = const [],
+  }) : before = Map.unmodifiable(before),
+       after = Map.unmodifiable(after),
+       conflicts = List.unmodifiable(conflicts);
+
+  final Map<String, Roster?> before;
+  final Map<String, Roster?> after;
+  final List<Roster> conflicts;
+  bool get isEmpty => before.isEmpty;
+}
+
+/// Removes only an exact unbound guest from this duty after today. The
+/// same text bound to a member, another duty/service, today and history stay.
+FutureRosterPlan planGuestRemoval({
+  required Iterable<Roster> saved,
+  required String type,
+  required String role,
+  required String name,
+  required Day today,
+}) {
+  final before = <String, Roster?>{};
+  final after = <String, Roster?>{};
+  for (final r in saved) {
+    if (r.isEvent || r.type != type || !r.day.isAfter(today)) continue;
+    final duty = r.duties.where((d) => d.role == role).firstOrNull;
+    if (duty == null || !duty.people.contains(name) || duty.uids.containsKey(name)) continue;
+    before[r.id] = r;
+    after[r.id] = r.copyWith(
+      duties: [
+        for (final d in r.duties)
+          if (d.role == role)
+            Duty(
+              role: role,
+              people: [
+                for (final p in d.people)
+                  if (p != name) p,
+              ],
+              uids: d.uids,
+            )
+          else
+            d,
+      ],
+    );
+  }
+  return FutureRosterPlan(before: before, after: after);
+}
+
+/// Explicitly updates wording only on saved future services. A destination
+/// duty already present is a conflict, not an invitation to merge identities.
+FutureRosterPlan planDutyRename({
+  required Iterable<Roster> saved,
+  required String type,
+  required String from,
+  required String to,
+  required Day today,
+}) {
+  final before = <String, Roster?>{};
+  final after = <String, Roster?>{};
+  final conflicts = <Roster>[];
+  if (from == to) return FutureRosterPlan(before: before, after: after);
+  for (final r in saved) {
+    if (r.isEvent || r.type != type || !r.day.isAfter(today) || !r.duties.any((d) => d.role == from)) continue;
+    if (r.duties.any((d) => d.role == to)) {
+      conflicts.add(r);
+      continue;
+    }
+    before[r.id] = r;
+    after[r.id] = r.copyWith(
+      duties: [
+        for (final d in r.duties) d.role == from ? Duty(role: to, people: d.people, uids: d.uids) : d,
+      ],
+    );
+  }
+  return FutureRosterPlan(before: before, after: after, conflicts: conflicts);
+}
+
+/// Renames only future saved tags, keeping each day's chosen color. A
+/// same-name destination is a conflict rather than silently dropping a tag.
+FutureRosterPlan planEventRename({
+  required Iterable<Roster> saved,
+  required String type,
+  required String from,
+  required String to,
+  required Day today,
+}) {
+  final before = <String, Roster?>{};
+  final after = <String, Roster?>{};
+  final conflicts = <Roster>[];
+  if (from == to) return FutureRosterPlan(before: before, after: after);
+  for (final r in saved) {
+    if (r.isEvent || r.type != type || !r.day.isAfter(today) || !r.events.any((e) => e.name == from)) continue;
+    if (r.events.any((e) => e.name == to)) {
+      conflicts.add(r);
+      continue;
+    }
+    before[r.id] = r;
+    after[r.id] = r.copyWith(
+      events: [
+        for (final e in r.events) e.name == from ? EventTag(name: to, color: e.color) : e,
+      ],
+    );
+  }
+  return FutureRosterPlan(before: before, after: after, conflicts: conflicts);
 }

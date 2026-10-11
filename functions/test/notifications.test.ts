@@ -39,6 +39,50 @@ const duties = (piano: string[], usher: string[]) => [
 beforeEach(clearFirestore);
 
 describe('reminders', () => {
+  test('an explicit same-name guest or missing UID binding never notifies the member with that name', async () => {
+    await church();
+    await db.doc('churches/C1/members/mei').update({ name: '美玉' });
+    await db.doc('churches/C1/rosters/2026-10-04_sunday').set({
+      type: 'sunday', dateKey: '2026-10-04', duties: [
+        { role: '司琴', people: ['美玉'], uids: {} },
+        { role: '敬拜', people: ['美玉'] },
+        { role: '招待', people: ['志豪'], uids: { 志豪: 'hao' } },
+      ],
+    });
+    const { sent, messaging } = fakeMessaging();
+    assert.equal(await sendReminders({ db, messaging, now, appUrl }), 1);
+    assert.deepEqual(sent, [{ tokens: ['tok-hao'], body: '主日崇拜 招待' }]);
+  });
+  test('non-map UID fields cannot authorize a reminder recipient', async () => {
+    await church();
+    await db.doc('churches/C1/members/mei').update({ name: '0' });
+    await db.doc('churches/C1/members/m').set({ uid: 'm', name: '0', role: 'staff' });
+    await db.doc('users/m').set({ fcm: { phone: 'tok-m' } });
+    await db.doc('churches/C1/rosters/2026-10-04_sunday').set({
+      type: 'sunday', dateKey: '2026-10-04', duties: [
+        { role: '司琴', people: ['0'], uids: ['mei'] },
+        { role: '招待', people: ['0'], uids: 'm' },
+      ],
+    });
+    const { sent, messaging } = fakeMessaging();
+    assert.equal(await sendReminders({ db, messaging, now, appUrl }), 0);
+    assert.deepEqual(sent, []);
+  });
+
+  test('empty or path-shaped UID values are not identities and do not stop valid recipients', async () => {
+    await church();
+    await db.doc('churches/C1/rosters/2026-10-04_sunday').set({
+      type: 'sunday', dateKey: '2026-10-04', duties: [
+        { role: '司琴', people: ['美玉'], uids: { 美玉: '' } },
+        { role: '敬拜', people: ['美玉'], uids: { 美玉: '/' } },
+        { role: '招待', people: ['志豪'], uids: { 志豪: 'hao' } },
+      ],
+    });
+    const { sent, messaging } = fakeMessaging();
+    assert.equal(await sendReminders({ db, messaging, now, appUrl }), 1);
+    assert.deepEqual(sent, [{ tokens: ['tok-hao'], body: '主日崇拜 招待' }]);
+  });
+
   test('one message per person for tomorrow, listing their duties', async () => {
     await church();
     await db.doc('churches/C1/rosters/2026-10-04_sunday').set({

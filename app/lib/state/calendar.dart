@@ -3,7 +3,11 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/backend.dart';
+import '../data/cache/calendar_read_cache.dart';
+import '../env.dart';
 import '../domain/models.dart';
+import 'connectivity.dart';
+import 'app_update.dart';
 import 'providers.dart';
 
 final calendarSettingsProvider = StreamProvider<CalendarSettings>((ref) {
@@ -11,7 +15,7 @@ final calendarSettingsProvider = StreamProvider<CalendarSettings>((ref) {
   return openChurch(ref).calendarSettings();
 });
 
-typedef _CalendarScope = ({ChurchData data, String uid, String? calendarId});
+typedef _CalendarScope = ({ChurchData data, String uid, String? calendarId, String? revision});
 
 /// No retained month survives a change of account, church, access or calendar.
 final _calendarScopeProvider = Provider<_CalendarScope?>((ref) {
@@ -21,13 +25,74 @@ final _calendarScopeProvider = Provider<_CalendarScope?>((ref) {
   final member = ref.watch(meProvider.select((m) => m.hasError || m.isLoading ? null : m.value?.uid));
   final settings = ref.watch(
     calendarSettingsProvider.select(
-      (s) => s.hasError || s.isLoading ? null : (ready: s.value?.ready ?? false, calendarId: s.value?.calendarId),
+      (s) => s.hasError || s.isLoading
+          ? null
+          : (ready: s.value?.ready ?? false, calendarId: s.value?.calendarId, revision: s.value?.revision),
     ),
   );
   if (uid == null || data == null || !open || member != uid || !(settings?.ready ?? false)) {
     return null;
   }
-  return (data: data, uid: uid, calendarId: settings!.calendarId);
+  return (data: data, uid: uid, calendarId: settings!.calendarId, revision: settings.revision);
+});
+
+CalendarCacheScope? _cacheScope(_CalendarScope? scope) {
+  if (scope == null || scope.calendarId == null || scope.revision == null) return null;
+  return CalendarCacheScope(
+    project: '${Env.current.name}:${firebaseOptionsFor(Env.current).projectId}',
+    uid: scope.uid,
+    churchId: scope.data.churchId,
+    calendarId: scope.calendarId!,
+    revision: scope.revision!,
+  );
+}
+
+final _calendarCacheProvider = Provider<CalendarReadCache>((ref) => CalendarReadCache(ref.watch(prefsProvider)));
+
+/// Loading a restored session is not an observed loss of access. Actual
+/// account/church/membership/calendar changes discard the previous scope.
+final calendarCacheLifecycleProvider = Provider<CalendarReadCache>((ref) {
+  final cache = ref.watch(_calendarCacheProvider);
+  final scope = ref.watch(_calendarScopeProvider);
+  final auth = ref.watch(authUserProvider);
+  final uid = ref.watch(uidProvider);
+  final data = ref.watch(churchDataProvider);
+  final member = ref.watch(meProvider);
+  final church = ref.watch(churchProvider);
+  final settings = ref.watch(calendarSettingsProvider);
+  final previous = cache.scope;
+  final changedIdentity = previous != null && (uid != previous.uid || data?.churchId != previous.churchId);
+  final accessLost =
+      (!auth.isLoading && uid == null) ||
+      (data != null && !member.isLoading && (member.hasError || member.value?.uid != uid)) ||
+      (data != null && !church.isLoading && (church.hasError || !(church.value?.isActive ?? false))) ||
+      (ref.watch(churchOpenProvider) &&
+          member.value?.uid == uid &&
+          !settings.isLoading &&
+          (settings.hasError || !(settings.value?.ready ?? false)));
+  if (changedIdentity || accessLost) cache.select(null);
+  if (scope != null) cache.select(_cacheScope(scope));
+  return cache;
+});
+
+class CalendarReadStatus {
+  const CalendarReadStatus({this.cached = false, this.fetchedAt, this.refreshError});
+  final bool cached;
+  final DateTime? fetchedAt;
+  final Object? refreshError;
+}
+
+/// Alongside the existing events interface, so callers never mistake an
+/// offline persisted month for a new successful server read.
+final calendarReadStatusProvider = Provider.autoDispose.family<CalendarReadStatus, String>((ref, month) {
+  ref.watch(calendarEventsProvider(month));
+  final online = ref.watch(onlineProvider);
+  final status = ref.watch(_calendarMonthsProvider)?.statuses[month] ?? const CalendarReadStatus();
+  return CalendarReadStatus(
+    cached: status.cached || !online,
+    fetchedAt: status.fetchedAt,
+    refreshError: status.refreshError,
+  );
 });
 
 bool _accessRefused(Object error) =>
@@ -41,17 +106,20 @@ const _maxIdleMonths = 6;
 
 final _calendarMonthsProvider = Provider<_CalendarMonths?>((ref) {
   final scope = ref.watch(_calendarScopeProvider);
+  final cache = ref.watch(calendarCacheLifecycleProvider);
   if (scope == null) return null;
-  final months = _CalendarMonths(scope);
+  final months = _CalendarMonths(scope, cache);
   ref.onDispose(months.close);
   return months;
 });
 
 /// Only idle months count towards the bound; a month on screen is not evicted.
 class _CalendarMonths {
-  _CalendarMonths(this.scope);
+  _CalendarMonths(this.scope, this.cache);
 
   final _CalendarScope scope;
+  final CalendarReadCache cache;
+  final statuses = <String, CalendarReadStatus>{};
   final entries = <String, _CalendarEvents>{};
   final _keepers = <String, void Function()>{};
   final _idle = <String>{};
@@ -64,12 +132,15 @@ class _CalendarMonths {
     generation++;
     refusal = error;
     refusalStack = stack;
+    cache.select(null);
+    statuses.clear();
     for (final entry in entries.values.toList()) {
       entry.deny(error, stack);
     }
   }
 
   _CalendarWrite begin(CalendarEvent event, CalendarEvent? previous) {
+    unawaited(cache.invalidate({...event.months, ...?previous?.months}));
     final key = event.id ?? Object();
     final mutation = _mutations.putIfAbsent(key, _CalendarMutation.new);
     mutation.events.addAll([event, ?previous]);
@@ -195,28 +266,51 @@ class _CalendarEvents extends AsyncNotifier<List<CalendarEvent>> {
       months.remove(month, this);
     });
     final generation = months.generation;
-    return months.scope.data
-        .calendarEvents(month)
-        .then(
-          (events) {
-            if (generation != months.generation) {
-              Error.throwWithStackTrace(months.refusal!, months.refusalStack!);
+    void report(CalendarReadStatus status) {
+      if (!requestRef.mounted || generation != months.generation) return;
+      // calendarReadStatusProvider watches this month's events, so it reads
+      // the status once the read settles; invalidating it here is circular.
+      months.statuses[month] = status;
+    }
+
+    Future<List<CalendarEvent>> load() async {
+      final authorized = _cacheScope(months.scope);
+      final cached = authorized != null && authorized == months.cache.scope ? months.cache.read(month) : null;
+      try {
+        final events = await months.scope.data.calendarEvents(month);
+        if (generation != months.generation) Error.throwWithStackTrace(months.refusal!, months.refusalStack!);
+        if (requestRef.mounted) {
+          final fetched = clock();
+          freshUntil = fetched.add(_retention);
+          expireWhenIdle();
+          report(CalendarReadStatus(fetchedAt: fetched));
+          if (authorized != null) unawaited(months.cache.save(authorized, month, events, fetchedAt: fetched));
+        }
+        return events;
+      } catch (error, stack) {
+        if (requestRef.mounted) {
+          freshUntil = clock().add(_retention);
+          expireWhenIdle();
+          if (_accessRefused(error)) {
+            months.revoke(error, stack);
+          } else if (error is CloudException && error.code == CloudErrorCode.unavailable) {
+            report(
+              CalendarReadStatus(
+                cached: true,
+                fetchedAt: cached?.fetchedAt ?? months.statuses[month]?.fetchedAt,
+                refreshError: error,
+              ),
+            );
+            if (cached != null && authorized == months.cache.scope && generation == months.generation) {
+              return cached.events;
             }
-            if (requestRef.mounted) {
-              freshUntil = clock().add(_retention);
-              expireWhenIdle();
-            }
-            return events;
-          },
-          onError: (Object error, StackTrace stack) {
-            if (requestRef.mounted) {
-              freshUntil = clock().add(_retention);
-              expireWhenIdle();
-              if (_accessRefused(error)) months.revoke(error, stack);
-            }
-            Error.throwWithStackTrace(error, stack);
-          },
-        );
+          }
+        }
+        Error.throwWithStackTrace(error, stack);
+      }
+    }
+
+    return Future.microtask(load);
   }
 
   void deny(Object error, StackTrace stack) {
@@ -290,7 +384,8 @@ class CalendarActions {
     if (current == null ||
         current.scope.uid != origin.scope.uid ||
         current.scope.data.churchId != origin.scope.data.churchId ||
-        current.scope.calendarId != origin.scope.calendarId) {
+        current.scope.calendarId != origin.scope.calendarId ||
+        current.scope.revision != origin.scope.revision) {
       return null;
     }
     return current;
@@ -334,7 +429,7 @@ class CalendarActions {
   }
 
   /// Saves [event], new or changed from [previous].
-  Future<void> save(CalendarEvent event, {CalendarEvent? previous}) async {
+  Future<void> save(CalendarEvent event, {CalendarEvent? previous}) => withEditLock(_ref, () async {
     final months = _ref.read(_calendarMonthsProvider);
     final write = months?.begin(event, previous);
     try {
@@ -351,11 +446,11 @@ class CalendarActions {
     } finally {
       if (_current(months) && write != null) months!.finish(write);
     }
-  }
+  });
 
   /// Deletes [event], which cancels its roster. The returned undo creates it
   /// again, as a new event, with the roster back on it.
-  Future<Future<void> Function()> delete(CalendarEvent event) async {
+  Future<Future<void> Function()> delete(CalendarEvent event) => withEditLock(_ref, () async {
     final data = _ref.churchData;
     final months = _ref.read(_calendarMonthsProvider);
     final write = months?.begin(event, null);
@@ -374,7 +469,7 @@ class CalendarActions {
     } finally {
       if (_current(months) && write != null) months!.finish(write);
     }
-    return () async {
+    return () => withEditLock(_ref, () async {
       // The backend writes to the currently selected calendar, so an old
       // undo must not recreate its event in a different one.
       if (!_current(months)) throw const CloudException(CloudErrorCode.unavailable);
@@ -389,8 +484,8 @@ class CalendarActions {
       } finally {
         if (_current(months)) months.finish(restoring);
       }
-    };
-  }
+    });
+  });
 }
 
 final calendarActionsProvider = Provider<CalendarActions>(CalendarActions.new);

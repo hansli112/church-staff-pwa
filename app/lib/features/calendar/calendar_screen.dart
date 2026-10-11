@@ -11,6 +11,7 @@ import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/calendar.dart';
 import '../../state/providers.dart';
+import '../common/calendar_read_notice.dart';
 import '../rosters/format.dart';
 import 'event_sheet.dart';
 import 'month_grid.dart';
@@ -168,6 +169,7 @@ class _AgendaState extends ConsumerState<_Agenda> {
     final shownMonth = Day(month.year, month.month, 1);
     final canEdit = widget.canEdit;
     final events = ref.watch(calendarEventsProvider(monthKey(month)));
+    final readStatus = ref.watch(calendarReadStatusProvider(monthKey(month)));
     final today = ref.watch(todayProvider);
     final selected = ref.watch(calendarSelectedDayProvider);
     final gridShown = ref.watch(monthGridShownProvider);
@@ -270,6 +272,7 @@ class _AgendaState extends ConsumerState<_Agenda> {
                   controller: _scroll,
                   physics: const AlwaysScrollableScrollPhysics(),
                   slivers: [
+                    SliverToBoxAdapter(child: CalendarReadNotice(status: readStatus)),
                     if (grid != null && !pinned) SliverToBoxAdapter(child: grid),
                     if (instead != null)
                       SliverFillRemaining(hasScrollBody: false, child: Center(child: instead))

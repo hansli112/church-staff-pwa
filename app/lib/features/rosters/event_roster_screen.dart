@@ -13,6 +13,7 @@ import '../../state/roster_actions.dart';
 import '../calendar/calendar_screen.dart';
 import '../common/errors.dart';
 import 'format.dart';
+import 'future_changes.dart';
 import 'roster_card.dart';
 import 'roster_day_screen.dart';
 
@@ -167,7 +168,6 @@ class EventRosterScreen extends ConsumerWidget {
                 roster: roster,
                 title: eventDaysLabel(l10n, roster, today),
                 highlightUid: ref.watch(uidProvider),
-                highlightName: ref.watch(meProvider.select((m) => m.value?.name)),
               ),
           ],
         ),

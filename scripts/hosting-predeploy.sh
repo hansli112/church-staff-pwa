@@ -58,3 +58,9 @@ else
   printf 'User-agent: *\nDisallow: /\n' > "$web/robots.txt"
   rm -f "$web/sitemap.xml"
 fi
+
+# Freeze this boot's shell/engine/runtime and strict hashes. Initial offline
+# install leaves deferred modules optional; only an explicit update stages
+# the complete release. Old published releases remain additive in the archive.
+node "$root/scripts/release-web.mjs" "$web" \
+  --archive "$root/.firebase/web-assets" --project "$GCLOUD_PROJECT"

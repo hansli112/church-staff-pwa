@@ -111,6 +111,28 @@ describe('self-serve move', () => {
     assert.equal((await db.doc(`pendingIndex/${emailHash('pastor@example.com')}`).get()).exists, false);
   });
 
+  test('moving preserves small groups and reminder opt-out for pending members and the uploader’s chosen identity, not FCM tokens', async () => {
+    const file = moveFile();
+    for (const user of file.users.slice(0, 2)) {
+      Object.assign(user.data, {
+        zones: [{ serviceType: 'sunday', ministries: ['司琴'], smallGroups: ['喜樂小組'] }],
+        notificationPrefs: { weeklyRosterReminder: false },
+        fcm: { phone: 'SOURCE-FCM' }, fcmTokens: ['SOURCE-FCM'],
+      });
+    }
+    await upload(file);
+    const { churchId } = await moveCommit(d, me, { path: PATH, churchName: '恩典堂', me: 'old-pastor' });
+    const admin = await db.doc(`churches/${churchId}/members/newadmin`).get();
+    const pending = await db.doc(`churches/${churchId}/pendingMembers/old-mei`).get();
+    for (const member of [pending, admin]) {
+      assert.deepEqual(member.get('notificationPrefs'), { muted: ['reminder'] }, member.ref.path);
+      assert.deepEqual(member.get('zones'), [{ serviceType: 'sunday', duties: ['司琴'], smallGroups: ['喜樂小組'] }], member.ref.path);
+      assert.equal(JSON.stringify(member.data()).includes('SOURCE-FCM'), false);
+      assert.equal(JSON.stringify(member.data()).includes('weeklyRosterReminder'), false);
+    }
+    assert.equal((await db.collection('users').get()).size, 0, 'cross-project notification credentials are never installed');
+  });
+
   test('the pending index is keyed by the email hash, never the email', async () => {
     await upload(moveFile());
     const { churchId } = await moveCommit(d, me, { path: PATH, churchName: '恩典堂' });

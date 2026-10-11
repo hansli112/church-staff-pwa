@@ -57,6 +57,7 @@ export type Reason =
   | 'notFound'
   | 'permissionDenied'
   | 'quotaExceeded'
+  | 'conflict'
   | 'unavailable'
   | 'unknown';
 

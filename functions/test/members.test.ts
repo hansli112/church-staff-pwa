@@ -6,7 +6,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 
 import { deleteAccount } from '../src/account.js';
-import type { CalDeps, GoogleApi } from '../src/calendar.js';
+import { calendarAuthUrl, type CalDeps, type GoogleApi } from '../src/calendar.js';
 import { previewInvite, redeemInvite } from '../src/invites.js';
 import { notifyMembers } from '../src/push.js';
 import { seal } from '../src/sealing.js';
@@ -304,6 +304,33 @@ describe('member triggers', () => {
     assert.equal(await onMemberUpdated(cal, 'C1', ...(await change('alice', { role: 'staff' }))), true);
     assert.deepEqual(revoked, ['refresh-alice']);
     assert.equal((await db.doc('calendarTokens/C1').get()).exists, false);
+  });
+
+  test('demotion or leaving clears only that connector’s unfinished OAuth states, even before any grant exists', async () => {
+    for (const changeKind of ['demoted', 'left']) {
+      await clearFirestore();
+      await seedChurch('C1', { alice: 'admin', bob: 'admin' });
+      await seedChurch('C2', { alice: 'admin' });
+      const stateFor = async (uid: string, churchId: string) => {
+        const { url } = await calendarAuthUrl(cal, caller(uid), { churchId });
+        return db.doc(`calendarStates/${new URL(url).searchParams.get('state')}`);
+      };
+      const own = await stateFor('alice', 'C1');
+      const otherAdmin = await stateFor('bob', 'C1');
+      const otherChurch = await stateFor('alice', 'C2');
+      if (changeKind === 'demoted') {
+        assert.equal(await onMemberUpdated(cal, 'C1', ...(await change('alice', { role: 'staff' }))), false, 'there was no installed grant');
+      } else {
+        const alice = await db.doc('churches/C1/members/alice').get();
+        await alice.ref.delete();
+        const messaging = { sendEachForMulticast: async () => { throw new Error('no push should be sent'); } } as never;
+        assert.deepEqual(await onMemberDeleted({ ...cal, messaging, appUrl }, 'C1', alice, undefined), { calendar: false, memberLeft: 0 });
+      }
+      assert.equal((await own.get()).exists, false, changeKind);
+      assert.equal((await otherAdmin.get()).exists, true, 'another admin’s consent stays');
+      assert.equal((await otherChurch.get()).exists, true, 'the other church is independent');
+      assert.deepEqual(revoked, [], 'there was nothing to revoke');
+    }
   });
 
   test('other member changes keep the calendar', async () => {

@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 
+import '../../domain/church_time.dart';
 import '../../domain/day.dart';
 import '../../domain/event_roster.dart';
 import '../../domain/limits.dart';
@@ -8,6 +10,8 @@ import '../../domain/models.dart';
 import '../../domain/staff_order.dart';
 import '../../domain/text.dart';
 import '../backend.dart';
+import '../connectivity.dart';
+import '../roster_compare_and_set.dart';
 
 /// An in-memory [Backend] for widget tests and the offline demo: a verified
 /// fake.
@@ -27,6 +31,28 @@ class MemoryBackend implements Backend {
     memberships = _Memberships(this);
     cloud = MemoryCloud(this);
     platform = _Platform(this);
+  }
+
+  @override
+  final TransportConnectivity connectivity = TransportConnectivity();
+
+  /// Whether the simulated network reaches the backend. What the app last
+  /// observed ([connectivity]) can lag behind it, as on a phone.
+  bool _network = true;
+
+  void setOnline(bool online) {
+    _network = online;
+    connectivity.observe(online);
+  }
+
+  /// Like a real request: refused while the network is down, and a reply
+  /// tells the app it is online again.
+  void requireNetwork() {
+    if (!_network) {
+      connectivity.observe(false);
+      throw offlineReadOnly;
+    }
+    connectivity.observe(true);
   }
 
   @override
@@ -88,6 +114,9 @@ class MemoryBackend implements Backend {
   /// [LinkContent] (its title, body and link) or a [LinkFetchError].
   /// Unknown URLs fail with [LinkFetchError.network].
   final linkSourceAnswers = <String, Object>{};
+
+  /// One explicit source-fetch reply, used by the next set/retry operation.
+  LinkSourceResult? nextLinkResult;
 
   /// Sources fetched by [ChurchData.setChurchLink], in order.
   final linkSourceFetches = <String>[];
@@ -162,14 +191,23 @@ class MemoryBackend implements Backend {
   }
 
   Future<void> write(void Function() change) async {
-    if (writeDelay > Duration.zero) await Future<void>.delayed(writeDelay);
-    final failure = failNextWrite;
-    if (failure != null) {
-      failNextWrite = null;
-      throw failure;
+    final release = connectivity.beginWrite();
+    try {
+      requireNetwork();
+      final uid = auth.currentUser?.uid;
+      if (writeDelay > Duration.zero) await Future<void>.delayed(writeDelay);
+      requireNetwork();
+      if (auth.currentUser?.uid != uid) throw const CloudException(CloudErrorCode.permissionDenied);
+      final failure = failNextWrite;
+      if (failure != null) {
+        failNextWrite = null;
+        throw failure;
+      }
+      change();
+      notify();
+    } finally {
+      release();
     }
-    change();
-    notify();
   }
 
   @override
@@ -234,6 +272,7 @@ class MemoryBackend implements Backend {
     bool anyone = false,
     bool allowClosed = false,
   }) {
+    requireNetwork();
     final uid = auth.currentUser?.uid;
     if (uid == null) throw const CloudException(CloudErrorCode.permissionDenied);
     final church = churches[cid];
@@ -252,12 +291,15 @@ class MemoryBackend implements Backend {
     return me;
   }
 
+  int _calendarRevision = 0;
+
   /// Simulates Google Calendar's OAuth callback for [cid].
   void connectCalendar(String cid, {String? calendarName}) {
     calendars[cid] = CalendarSettings(
       connected: true,
       calendarName: calendarName,
       calendarId: calendarName == null ? null : 'cal-$cid',
+      revision: 'memory:${++_calendarRevision}',
     );
     notify();
   }
@@ -433,6 +475,7 @@ class _Profiles implements ProfileRepository {
 
   @override
   Future<void> ensure(UserProfile profile) async {
+    if (!_b.connectivity.online && _b.auth.currentUser?.uid == profile.uid && _b.users.containsKey(profile.uid)) return;
     _checkName(profile.name);
     await _b.write(() => _b.users.putIfAbsent(profile.uid, () => profile));
   }
@@ -607,6 +650,72 @@ class MemoryChurchData implements ChurchData {
   }
 
   @override
+  Future<void> compareAndSetRosters({
+    required Map<String, Roster?> before,
+    required Map<String, Roster?> after,
+    String via = 'app',
+    ({String serviceType, StaffOrder before, StaffOrder after})? staffOrder,
+    ({Service before, Service after})? serviceChange,
+  }) async {
+    validateRosterCompareAndSet(before, after);
+    validateRosterServiceChange(serviceChange);
+    if (after.length + (staffOrder == null ? 0 : 1) + (serviceChange == null ? 0 : 1) > 500) {
+      throw const CloudException(CloudErrorCode.quotaExceeded, reason: CloudReason.tooManyChanges);
+    }
+    // Snapshot the preview before yielding: a caller mutating its map cannot
+    // alter the transaction's preconditions midway through a write.
+    final expected = Map.of(before);
+    final next = Map.of(after);
+    final uid = _uid;
+    await _b.write(() {
+      if (_uid != uid) throw const CloudException(CloudErrorCode.permissionDenied);
+      _requireMember();
+      final saved = _b.rosters[churchId]!;
+      for (final entry in expected.entries) {
+        if (!rosterMatchesBaseline(saved[entry.key], entry.value)) {
+          throw const CloudException(CloudErrorCode.conflict);
+        }
+      }
+      if (staffOrder case final order?) {
+        _requireRosterEditor(order.serviceType);
+        if ((_b.staffOrders[churchId]![order.serviceType] ?? StaffOrder()) != order.before) {
+          throw const CloudException(CloudErrorCode.conflict);
+        }
+      }
+      if (serviceChange case final change?) {
+        _requireAdmin();
+        if (_b.services[churchId]!.byId(change.before.id) != change.before) {
+          throw const CloudException(CloudErrorCode.conflict);
+        }
+      }
+      // Check every permission before changing anything (including deletes).
+      for (final entry in next.entries) {
+        final roster = entry.value ?? saved[entry.key];
+        if (roster == null) continue;
+        if (entry.value == null) {
+          roster.isEvent ? _requireRosterEditors() : _requireRosterEditor(roster.type);
+        } else {
+          _requireRosterWrite(roster);
+        }
+      }
+      for (final entry in next.entries) {
+        if (entry.value == null) {
+          saved.remove(entry.key);
+        } else {
+          saved[entry.key] = entry.value!.copyWith(saved: true);
+        }
+      }
+      if (staffOrder case final order?) _b.staffOrders[churchId]![order.serviceType] = order.after;
+      if (serviceChange case final change?) {
+        final settings = _b.services[churchId]!;
+        _b.services[churchId] = settings.withServices([
+          for (final service in settings.services) service.id == change.before.id ? change.after : service,
+        ]);
+      }
+    });
+  }
+
+  @override
   Future<void> deleteRoster(Roster roster) async {
     roster.isEvent ? _requireRosterEditors() : _requireRosterEditor(roster.type);
     await _b.write(() => _b.rosters[churchId]!.remove(roster.id));
@@ -638,6 +747,76 @@ class MemoryChurchData implements ChurchData {
   }
 
   @override
+  Future<void> compareAndSetService({
+    required Service before,
+    required Service after,
+    ({String from, String to})? dutyRename,
+  }) async {
+    if (before.id != after.id) throw ArgumentError('service id cannot change');
+    await _b.write(() {
+      _requireAdmin();
+      final settings = _b.services[churchId]!;
+      if (settings.byId(before.id) != before) throw const CloudException(CloudErrorCode.conflict);
+      if (dutyRename case final rename?) {
+        if (rename.from == rename.to ||
+            !before.duties.contains(rename.from) ||
+            before.duties.contains(rename.to) ||
+            !after.duties.contains(rename.to) ||
+            after.duties.contains(rename.from)) {
+          throw ArgumentError('invalid duty rename');
+        }
+        final orders = _b.staffOrders[churchId]!;
+        final order = orders[before.id];
+        if (order?.rankingsByRole.containsKey(rename.to) ?? false) throw const CloudException(CloudErrorCode.conflict);
+        bool affected(List<Zone> zones) =>
+            zones.any((zone) => zone.serviceType == before.id && zone.duties.contains(rename.from));
+        final changedMembers = _b.members[churchId]!.values.where((member) => affected(member.zones)).length;
+        final changedPending = (_b.pendingMembers[churchId]?.values ?? const <PendingMember>[])
+            .where((member) => affected(member.zones))
+            .length;
+        if (1 + changedMembers + changedPending + ((order?.rankingsByRole.containsKey(rename.from) ?? false) ? 1 : 0) >
+            500) {
+          throw const CloudException(CloudErrorCode.quotaExceeded, reason: CloudReason.tooManyChanges);
+        }
+        List<Zone> renamed(List<Zone> zones) => [
+          for (final zone in zones)
+            zone.serviceType == before.id
+                ? zone.copyWith(
+                    duties: {for (final duty in zone.duties) duty == rename.from ? rename.to : duty}.toList(),
+                  )
+                : zone,
+        ];
+        final members = _b.members[churchId]!;
+        for (final entry in members.entries.toList()) {
+          if (affected(entry.value.zones)) members[entry.key] = entry.value.copyWith(zones: renamed(entry.value.zones));
+        }
+        final pending = _b.pendingMembers[churchId];
+        if (pending != null) {
+          for (final entry in pending.entries.toList()) {
+            final member = entry.value;
+            if (!affected(member.zones)) continue;
+            pending[entry.key] = PendingMember(
+              id: member.id,
+              name: member.name,
+              email: member.email,
+              role: member.role,
+              groups: member.groups,
+              zones: renamed(member.zones),
+              mutedNotifications: member.mutedNotifications,
+            );
+          }
+        }
+        if (order?.rankingsByRole.containsKey(rename.from) ?? false) {
+          orders[before.id] = order!.withRolesRenamed({rename.from: rename.to});
+        }
+      }
+      _b.services[churchId] = settings.withServices([
+        for (final service in settings.services) service.id == before.id ? after : service,
+      ]);
+    });
+  }
+
+  @override
   Future<void> saveMember(Member member) async {
     _requireAdmin();
     if (member.uid == _uid && !member.isAdmin) {
@@ -645,6 +824,16 @@ class MemoryChurchData implements ChurchData {
     }
     _checkName(member.name);
     await _b.write(() => _b.members[churchId]![member.uid] = member);
+  }
+
+  @override
+  Future<void> grantDuty(String uid, String serviceType, String duty) async {
+    _requireAdmin();
+    await _b.write(() {
+      final now = _b.members[churchId]![uid];
+      if (now == null) throw const CloudException(CloudErrorCode.notFound);
+      _b.members[churchId]![uid] = now.withDuty(serviceType, duty);
+    });
   }
 
   @override
@@ -759,6 +948,15 @@ class MemoryChurchData implements ChurchData {
   }
 
   @override
+  Future<LinkSourceResult> refreshChurchLink() async {
+    _functionAdmin();
+    final link = _b.churchLinks[churchId];
+    if (link == null) throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.noLink);
+    if (link.source == null) throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.noSource);
+    return _setLinkSource(link.source, link.fetchMinute, refresh: true);
+  }
+
+  @override
   Stream<LinkContent?> linkContent() {
     final content = _b.watch(() {
       _requireMember();
@@ -843,7 +1041,7 @@ class MemoryChurchData implements ChurchData {
   }
 
   /// The setLinkSource function.
-  Future<LinkSourceResult> _setLinkSource(String? source, int fetchMinute) async {
+  Future<LinkSourceResult> _setLinkSource(String? source, int fetchMinute, {bool refresh = false}) async {
     _functionAdmin();
     final link = _b.churchLinks[churchId];
     if (link == null) throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.noLink);
@@ -859,19 +1057,31 @@ class MemoryChurchData implements ChurchData {
       throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.notHttps);
     }
     final changed = link.source != source;
-    _b.churchLinks[churchId] = next(source, fetchMinute);
-    if (!changed) {
+    if (!refresh) _b.churchLinks[churchId] = next(source, fetchMinute);
+    if (!changed && !refresh) {
       _b.notify();
       return const LinkSourceResult();
     }
     // A new source is fetched at once; what it gives is scripted.
     _b.linkSourceFetches.add(source);
-    final answer = _b.linkSourceAnswers[source] ?? LinkFetchError.network;
+    final scripted = _b.nextLinkResult;
+    _b.nextLinkResult = null;
+    final answer = scripted?.content ?? _b.linkSourceAnswers[source] ?? LinkFetchError.network;
     final now = _b.clock();
+    final today = churchToday(now).key;
+    var error = scripted?.error;
+    if (scripted != null && error == null && scripted.content == null) error = LinkFetchError.badFormat;
+    if (answer is LinkContent && error == null && answer.date != null && answer.date != today) {
+      error = LinkFetchError.notToday;
+    }
+    if (answer is LinkContent && scripted != null && answer.date == null && error == null) {
+      error = LinkFetchError.badFormat;
+    }
     final LinkSourceResult result;
-    if (answer is LinkContent) {
+    if (answer is LinkContent && error == null) {
       _b.linkContents[churchId] = LinkContent(
         source: source,
+        date: answer.date ?? today,
         title: answer.title,
         body: answer.body,
         link: answer.link,
@@ -879,9 +1089,14 @@ class MemoryChurchData implements ChurchData {
       );
       result = LinkSourceResult(content: _b.linkContents[churchId]);
     } else {
-      final error = answer as LinkFetchError;
-      _b.linkContents[churchId] = LinkContent(source: source, error: error, errorAt: now);
-      result = LinkSourceResult(error: error);
+      final failed = error ?? answer as LinkFetchError;
+      _b.linkContents[churchId] = LinkContent(
+        source: source,
+        error: failed,
+        errorStatus: scripted?.status,
+        errorAt: now,
+      );
+      result = LinkSourceResult(error: failed, status: scripted?.status);
     }
     _b.notify();
     return result;
@@ -971,7 +1186,12 @@ class MemoryChurchData implements ChurchData {
   @override
   Future<void> calendarSelect(String calendarId, String calendarName) async {
     _functionAdmin();
-    _b.calendars[churchId] = CalendarSettings(connected: true, calendarName: calendarName, calendarId: calendarId);
+    _b.calendars[churchId] = CalendarSettings(
+      connected: true,
+      calendarName: calendarName,
+      calendarId: calendarId,
+      revision: 'memory:${++_b._calendarRevision}',
+    );
     _b.notify();
   }
 
@@ -985,6 +1205,7 @@ class MemoryChurchData implements ChurchData {
 
   @override
   Future<List<CalendarEvent>> calendarEvents(String month) async {
+    _b.requireNetwork();
     _b.functionAccess(churchId);
     if (_b.calendars[churchId]?.needsReconnect ?? false) {
       throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.reconnect);
@@ -1003,7 +1224,6 @@ class MemoryChurchData implements ChurchData {
   @override
   Future<CalendarEvent> calendarSave(CalendarEvent event, {CalendarEvent? previous, String? restoreRosterOf}) async {
     _requireCalendarEditor();
-    final list = _b.calendarEvents.putIfAbsent(churchId, () => []);
     final saved = event.id == null
         ? CalendarEvent(
             id: _b.newEventId(),
@@ -1015,38 +1235,37 @@ class MemoryChurchData implements ChurchData {
             description: event.description,
           )
         : event;
-    list.removeWhere((e) => e.id == saved.id);
-    list.add(saved);
-    // As calendarWrite: the event's roster follows it, and undoing a delete
-    // moves the cancelled roster to the event made again.
-    final rosters = _b.rosters[churchId]!;
-    final from = rosters[Roster.idForEvent(restoreRosterOf ?? saved.id!)];
-    if (from != null && (restoreRosterOf == null) != from.forEvent!.cancelled) {
-      final moved = eventRoster(
-        saved,
-        duties: from.duties,
-        calendarId: from.forEvent!.calendarId,
-      ).copyWith(saved: true);
-      await _b.write(() {
+    await _b.write(() {
+      _requireCalendarEditor();
+      final list = _b.calendarEvents.putIfAbsent(churchId, () => []);
+      list.removeWhere((e) => e.id == saved.id);
+      list.add(saved);
+      // The roster and calendar change become visible together.
+      final rosters = _b.rosters[churchId]!;
+      final from = rosters[Roster.idForEvent(restoreRosterOf ?? saved.id!)];
+      if (from != null && (restoreRosterOf == null) != from.forEvent!.cancelled) {
+        final moved = eventRoster(
+          saved,
+          duties: from.duties,
+          calendarId: from.forEvent!.calendarId,
+        ).copyWith(saved: true);
         if (restoreRosterOf != null) rosters.remove(from.id);
         rosters[moved.id] = moved;
-      });
-    }
+      }
+    });
     return saved;
   }
 
   @override
   Future<void> calendarDelete(CalendarEvent event) async {
     _requireCalendarEditor();
-    _b.calendarEvents[churchId]?.removeWhere((e) => e.id == event.id);
-    // As calendarWrite: its roster is cancelled, kept for undo.
-    final rosters = _b.rosters[churchId]!;
-    final r = rosters[Roster.idForEvent(event.id!)];
-    if (r != null) {
-      await _b.write(
-        () => rosters[r.id] = r.copyWith(forEvent: r.forEvent!.copyWith(cancelled: true)),
-      );
-    }
+    await _b.write(() {
+      _requireCalendarEditor();
+      _b.calendarEvents[churchId]?.removeWhere((e) => e.id == event.id);
+      final rosters = _b.rosters[churchId]!;
+      final r = rosters[Roster.idForEvent(event.id!)];
+      if (r != null) rosters[r.id] = r.copyWith(forEvent: r.forEvent!.copyWith(cancelled: true));
+    });
   }
 
   @override
@@ -1116,6 +1335,7 @@ class MemoryCloud implements CloudApi {
 
   @override
   Future<String> createChurch(String name) async {
+    _b.requireNetwork();
     final user = _b.auth.currentUser;
     if (user == null || !user.verified) {
       throw const CloudException(CloudErrorCode.unverifiedEmail);
@@ -1165,6 +1385,7 @@ class MemoryCloud implements CloudApi {
 
   @override
   Future<String> redeemInvite(String code) async {
+    _b.requireNetwork();
     final user = _b.auth.currentUser;
     if (user == null) {
       throw const CloudException(CloudErrorCode.permissionDenied);
@@ -1201,6 +1422,7 @@ class MemoryCloud implements CloudApi {
 
   @override
   Future<void> deleteAccount() async {
+    _b.requireNetwork();
     final uid = _b.auth.currentUser?.uid;
     if (uid == null) {
       throw const CloudException(CloudErrorCode.permissionDenied);
@@ -1219,6 +1441,7 @@ class MemoryCloud implements CloudApi {
 
   @override
   Future<String> uploadMoveFile(List<int> bytes) async {
+    _b.requireNetwork();
     final uid = _b.auth.currentUser?.uid;
     if (uid == null) throw const CloudException(CloudErrorCode.permissionDenied);
     final path = 'moves/$uid/${_b.moveFiles.length + 1}.json';
@@ -1238,19 +1461,76 @@ class MemoryCloud implements CloudApi {
   @override
   Future<MovePreview> movePreview(String path) async => _readMove(path);
 
+  /// Only member metadata is read here; validation, counts and the rest of
+  /// the import remain the scripted answer. Legacy names are converted once
+  /// at this boundary, never by the runtime member codec. Tokens are not read.
+  List<PendingMember> _movePeople(String path, MovePreview preview) {
+    final Object? raw;
+    try {
+      raw = jsonDecode(utf8.decode(_b.moveFiles[path]!));
+    } on FormatException {
+      throw const CloudException(CloudErrorCode.moveInvalid);
+    }
+    if (raw is! Map) throw const CloudException(CloudErrorCode.moveInvalid);
+    final users = raw['users'];
+    final byId = {
+      if (users is List)
+        for (final user in users)
+          if (user is Map && user['id'] is String && user['data'] is Map) user['id'] as String: user['data'] as Map,
+    };
+    List<String> strings(Object? values) => [
+      if (values is List)
+        for (final value in values)
+          if (value is String) value,
+    ];
+    return preview.people.map((person) {
+      final source = byId[person.id];
+      final prefs = source?['notificationPrefs'];
+      final muted = prefs is Map ? strings(prefs['muted']) : const <String>[];
+      return PendingMember(
+        id: person.id,
+        name: person.name,
+        email: person.email,
+        role: source == null
+            ? Role.staff
+            : Role.values.where((role) => role.name == source['role']).firstOrNull ?? Role.member,
+        groups: {for (final id in strings(source?['groups'])) ?Group.byId(id)},
+        zones: [
+          if (source?['zones'] is List)
+            for (final zone in source!['zones'] as List)
+              if (zone is Map && zone['serviceType'] is String)
+                Zone(
+                  serviceType: zone['serviceType'] as String,
+                  duties: strings(zone['ministries']),
+                  smallGroups: strings(zone['smallGroups']),
+                ),
+        ],
+        mutedNotifications: {
+          for (final kind in NotificationKind.values)
+            if (muted.contains(kind.name)) kind,
+          if (prefs is Map && prefs['weeklyRosterReminder'] == false) NotificationKind.reminder,
+        },
+      );
+    }).toList();
+  }
+
   /// The church is made as [createChurch] makes it; everyone in the
   /// scripted preview but [me] becomes a pending member.
   @override
   Future<String> moveCommit(String path, {required String churchName, String? me}) async {
-    final m = _readMove(path);
+    final preview = _readMove(path);
+    final people = _movePeople(path, preview);
     final cid = await createChurch(churchName);
     final uid = _b.auth.currentUser!.uid;
-    for (final p in m.people) {
-      if (p.id == me) _b.members[cid]![uid] = _b.members[cid]![uid]!.copyWith(name: p.name);
+    for (final person in people) {
+      if (person.id == me) {
+        final admin = _b.members[cid]![uid]!;
+        _b.members[cid]![uid] = _absorb(admin.copyWith(name: person.name), person);
+      }
     }
     _b.pendingMembers[cid] = {
-      for (final p in m.people)
-        if (p.id != me) p.id: PendingMember(id: p.id, name: p.name, email: p.email),
+      for (final person in people)
+        if (person.id != me) person.id: person,
     };
     _b.moveFiles.remove(path);
     _b.notify();
@@ -1294,6 +1574,7 @@ class MemoryCloud implements CloudApi {
             role: p.role,
             groups: p.groups,
             zones: p.zones,
+            mutedNotifications: p.mutedNotifications,
             joinedAt: _b.clock(),
           );
     _repoint(_b, churchId, pendingId, user.uid);
@@ -1310,6 +1591,7 @@ class MemoryCloud implements CloudApi {
   }
 
   void _requireOperator() {
+    _b.requireNetwork();
     if (!_b.auth.operators.contains(_b.auth.currentUser?.uid)) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
@@ -1438,6 +1720,7 @@ void _checkSecret(String? secret) {
 /// [m] with the groups and zones of pending member [p] added.
 Member _absorb(Member m, PendingMember p) => m.copyWith(
   groups: {...m.groups, ...p.groups},
+  mutedNotifications: {...m.mutedNotifications, ...p.mutedNotifications},
   zones: [
     for (final type in {...m.zoneTypes, for (final z in p.zones) z.serviceType})
       Zone(
@@ -1445,6 +1728,10 @@ Member _absorb(Member m, PendingMember p) => m.copyWith(
         duties: {
           for (final z in [...m.zones, ...p.zones])
             if (z.serviceType == type) ...z.duties,
+        }.toList(),
+        smallGroups: {
+          for (final z in [...m.zones, ...p.zones])
+            if (z.serviceType == type) ...z.smallGroups,
         }.toList(),
       ),
   ],

@@ -160,6 +160,19 @@ abstract interface class ChurchData {
   /// not to send a push for every day.
   Future<void> saveRosters(List<Roster> rosters, {String via = 'app'});
 
+  /// Atomically replaces (or deletes) exactly these documents only if their
+  /// persisted values still match [before]. Null means an absent document.
+  /// The maps must have identical keys; each non-null roster must match its
+  /// key. [Roster.saved] is presentation state, not part of the baseline.
+  /// A changed baseline is [CloudErrorCode.conflict], with no writes applied.
+  Future<void> compareAndSetRosters({
+    required Map<String, Roster?> before,
+    required Map<String, Roster?> after,
+    String via = 'app',
+    ({String serviceType, StaffOrder before, StaffOrder after})? staffOrder,
+    ({Service before, Service after})? serviceChange,
+  });
+
   Future<void> deleteRoster(Roster roster);
 
   /// Writes only the duties in [changes]; null removes that duty's ranking.
@@ -170,7 +183,20 @@ abstract interface class ChurchData {
 
   Future<void> saveServices(List<Service> services);
 
+  /// Updates one unchanged service, preserving every other service. A duty
+  /// rename also moves members'/pending members' zone duties and staff order
+  /// atomically; historical rosters are never rewritten.
+  Future<void> compareAndSetService({
+    required Service before,
+    required Service after,
+    ({String from, String to})? dutyRename,
+  });
+
   Future<void> saveMember(Member member);
+
+  /// Gives member [uid] [duty] in [serviceType], applied to the member as
+  /// they are when written (admins): nothing else on them changes.
+  Future<void> grantDuty(String uid, String serviceType, String duty);
 
   /// Removes [uid] from the church: an admin removing someone, or a member
   /// leaving.
@@ -194,6 +220,10 @@ abstract interface class ChurchData {
   /// once and the result returned; a bad source URL is
   /// [CloudErrorCode.unknown] with [CloudReason.notHttps].
   Future<LinkSourceResult> setChurchLink(ChurchLink? link);
+
+  /// Admin-only retry of the currently configured source. Does not rewrite
+  /// the static link or resurrect content from an earlier source/date.
+  Future<LinkSourceResult> refreshChurchLink();
 
   /// What the backend last fetched from the church link's content source.
   Stream<LinkContent?> linkContent();
@@ -275,6 +305,7 @@ enum CloudErrorCode {
   notFound,
   permissionDenied,
   quotaExceeded,
+  conflict,
   unavailable,
   unknown,
 }
@@ -282,11 +313,21 @@ enum CloudErrorCode {
 /// What a function refused more precisely than its [CloudErrorCode]:
 /// the `detail` string the functions send (functions/src/*.ts `fail`).
 enum CloudReason {
+  /// An online-only operation could not reach the backend. It is not queued
+  /// and must be deliberately tried again after reconnecting.
+  offlineReadOnly,
+
+  /// An atomic bulk edit exceeds the backend's transaction write bound.
+  tooManyChanges,
+
   /// A URL that is not https (church link source, webhook).
   notHttps,
 
   /// A content source set before the church link.
   noLink,
+
+  /// The church link has no configured content source to retry.
+  noSource,
 
   /// No Google Calendar connected yet.
   noCalendar,
@@ -544,8 +585,22 @@ abstract interface class PlatformData {
   Stream<Funding?> funding();
 }
 
+/// Transport hints, not authorization or proof that a cached snapshot is
+/// current. Failed online operations mark offline; successful ones restore it.
+abstract interface class BackendConnectivity {
+  bool get online;
+  Stream<bool> watch();
+
+  /// Outstanding online mutations, including a Future whose initiating
+  /// screen was disposed. Safe PWA refresh must wait for these to finish.
+  int get pendingWrites;
+  Stream<int> watchPendingWrites();
+}
+
 /// Everything the app needs from a backend.
 abstract interface class Backend {
+  BackendConnectivity get connectivity;
+
   /// What time it is for every decision that depends on it: whether an
   /// invite still works, whether the church link's fetched content is
   /// still fresh, what day today is. The device clock, or a test's.

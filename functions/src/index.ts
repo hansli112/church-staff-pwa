@@ -40,6 +40,7 @@ import * as operator from './operator.js';
 import * as photo from './photo.js';
 import { monitoringUsageReader, writeDailyStats } from './stats.js';
 import * as rosterChange from './rosterChange.js';
+import * as serviceSettings from './serviceSettings.js';
 import * as triggers from './triggers.js';
 import * as webhook from './webhook.js';
 
@@ -137,6 +138,9 @@ export const onPendingMemberDeleted = onDocumentDeleted(
     if (event.data) await claim.onPendingMemberDeleted(deps(), event.params.cid, event.data);
   },
 );
+
+// Service settings: compared edits and atomic configured duty renames.
+export const editService = callable(serviceSettings.editService);
 
 // Invites
 export const previewInvite = callable(invites.previewInvite);

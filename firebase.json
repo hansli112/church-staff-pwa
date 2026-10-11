@@ -115,6 +115,24 @@
         ]
       },
       {
+        "regex": "^/releases/[0-9a-f]{20}/.+$",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000, immutable"
+          }
+        ]
+      },
+      {
+        "regex": "^/(release\\.json|martha_app_sw\\.js)$",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
+      {
         "regex": "^/asset-bundles/[0-9a-f]{10}/assets/.+$",
         "headers": [
           {

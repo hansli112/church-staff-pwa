@@ -1,7 +1,18 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
+import { fetchSource } from '../src/churchLink.js';
 import { deps, fakeFetch } from './support.js';
+
+test('source dates must match today in UTC+8, not UTC or a stale/future provider day', async () => {
+  const source = 'https://feed.example/today.json';
+  for (const date of ['2026-10-03', '2026-10-05', '2026-10-04']) {
+    const content = { date, title: '今日經文', body: '摘要', link: 'https://feed.example/original' };
+    const { fetch } = fakeFetch({ [source]: { body: content } });
+    const result = await fetchSource({ fetch, now: () => new Date('2026-10-03T16:30:00Z') }, source);
+    assert.deepEqual(result, date === '2026-10-04' ? { ok: true, content } : { ok: false, error: 'notToday' });
+  }
+});
 
 describe('fake fetch', () => {
   test('answers with the status, body and headers given, and records the request', async () => {

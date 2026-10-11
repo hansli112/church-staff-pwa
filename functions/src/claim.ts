@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { FieldValue } from 'firebase-admin/firestore';
 
-import { churchAccess, isChurchOpen } from './access.js';
+import { churchAccess, churchClosed, isChurchOpen } from './access.js';
 import { fail, id, requireCaller, serverTime, type Caller, type Deps } from './common.js';
 import { personName } from './limits.js';
 
@@ -110,14 +110,30 @@ const union = (a: unknown, b: unknown) => [
   ...new Set([...(Array.isArray(a) ? a : []), ...(Array.isArray(b) ? b : [])]),
 ];
 
-/** [a]'s zones with [b]'s duties added, by service. */
+/** [a]'s zones with [b]'s duties and small-group data added, by service. */
 function mergeZones(a: unknown, b: unknown) {
-  const out = new Map<string, string[]>();
-  for (const z of [...(Array.isArray(a) ? a : []), ...(Array.isArray(b) ? b : [])] as { serviceType?: string; duties?: string[] }[]) {
+  const out = new Map<string, { serviceType: string; duties: unknown[]; smallGroups: unknown[] }>();
+  for (const z of [...(Array.isArray(a) ? a : []), ...(Array.isArray(b) ? b : [])] as { serviceType?: string; duties?: unknown; smallGroups?: unknown }[]) {
     if (typeof z?.serviceType !== 'string') continue;
-    out.set(z.serviceType, [...new Set([...(out.get(z.serviceType) ?? []), ...(z.duties ?? [])])]);
+    const previous = out.get(z.serviceType);
+    out.set(z.serviceType, {
+      serviceType: z.serviceType,
+      duties: union(previous?.duties, z.duties),
+      smallGroups: union(previous?.smallGroups, z.smallGroups),
+    });
   }
-  return [...out].map(([serviceType, duties]) => ({ serviceType, duties }));
+  return [...out.values()];
+}
+
+function mergedMember(member: FirebaseFirestore.DocumentSnapshot, pending: FirebaseFirestore.DocumentSnapshot) {
+  return {
+    groups: union(member.get('groups'), pending.get('groups')),
+    zones: mergeZones(member.get('zones'), pending.get('zones')),
+    zoneTypes: union(member.get('zoneTypes'), pending.get('zoneTypes')),
+    // Merge opt-outs, never reset a current preference to a pending default.
+    // Updating this field alone also preserves any other current preferences.
+    'notificationPrefs.muted': union(member.get('notificationPrefs.muted'), pending.get('notificationPrefs.muted')),
+  };
 }
 
 /** Joins the caller to the church as the pending member with their email. */
@@ -127,36 +143,40 @@ export async function claimPending(deps: Deps, caller: Caller | null, data: unkn
   const hash = callerHash(c);
   if (!hash) fail('failed-precondition', 'unverifiedEmail');
   // Not a member yet, most likely: anyone signed in, but the church open.
-  const { cid, member } = await churchAccess(deps, c, data, 'anyone');
-  const memberRef = member.ref;
-  const pending = await deps.db.doc(`churches/${cid}/pendingMembers/${pid}`).get();
-  if (!pending.exists) {
-    // Claimed already (a double tap, a retry): fine if it was by them.
-    if (member.exists) return { churchId: cid };
-    fail('not-found', 'notFound');
-  }
-  if (pending.get('emailHash') !== hash) fail('permission-denied', 'permissionDenied');
-
-  if (member.exists) {
-    // Joined by invite before claiming: keep their role, add what they had.
-    await memberRef.update({
-      groups: union(member.get('groups'), pending.get('groups')),
-      zones: mergeZones(member.get('zones'), pending.get('zones')),
-      zoneTypes: union(member.get('zoneTypes'), pending.get('zoneTypes')),
-    });
-  } else {
-    await memberRef.create({
-      uid: c.uid,
-      name: personName(pending.get('name')) || personName(c.name),
-      email: c.email ?? '',
-      role: pending.get('role') ?? 'member',
-      groups: pending.get('groups') ?? [],
-      zones: pending.get('zones') ?? [],
-      zoneTypes: pending.get('zoneTypes') ?? [],
-      joinedAt: serverTime(),
-      claimedFrom: pid,
-    });
-  }
+  const { cid } = await churchAccess(deps, c, data, 'anyone');
+  const pending = await deps.db.runTransaction(async (tx) => {
+    const [church, member, pending] = await tx.getAll(
+      deps.db.doc(`churches/${cid}`),
+      deps.db.doc(`churches/${cid}/members/${c.uid}`),
+      deps.db.doc(`churches/${cid}/pendingMembers/${pid}`),
+    );
+    if (!isChurchOpen(church)) churchClosed();
+    if (!pending.exists) {
+      // Claimed already (a double tap, a retry): fine if it was by them.
+      if (member.exists) return null;
+      fail('not-found', 'notFound');
+    }
+    if (pending.get('emailHash') !== hash) fail('permission-denied', 'permissionDenied');
+    if (member.exists) {
+      // Read current preferences in the transaction: concurrent edits are kept.
+      tx.update(member.ref, mergedMember(member, pending));
+    } else {
+      tx.create(member.ref, {
+        uid: c.uid,
+        name: personName(pending.get('name')) || personName(c.name),
+        email: c.email ?? '',
+        role: pending.get('role') ?? 'member',
+        groups: pending.get('groups') ?? [],
+        zones: pending.get('zones') ?? [],
+        zoneTypes: pending.get('zoneTypes') ?? [],
+        notificationPrefs: pending.get('notificationPrefs') ?? { muted: [] },
+        joinedAt: serverTime(),
+        claimedFrom: pid,
+      });
+    }
+    return pending;
+  });
+  if (!pending) return { churchId: cid };
   await repoint(deps, cid, pid, c.uid, (pending.get('rosterIds') as string[] | undefined) ?? []);
   await dropPending(deps, cid, pending);
   return { churchId: cid };
@@ -170,17 +190,21 @@ export async function mergePending(deps: Deps, caller: Caller | null, data: unkn
   const input = (data ?? {}) as { pendingId?: unknown; uid?: unknown };
   const pid = id(input.pendingId);
   const uid = id(input.uid);
-  const { cid } = await churchAccess(deps, caller, data, 'admin');
+  const { cid, caller: c } = await churchAccess(deps, caller, data, 'admin');
   // Both looked up under this church only, so nothing crosses churches.
-  const [pending, member] = await Promise.all([
-    deps.db.doc(`churches/${cid}/pendingMembers/${pid}`).get(),
-    deps.db.doc(`churches/${cid}/members/${uid}`).get(),
-  ]);
-  if (!pending.exists || !member.exists) fail('not-found', 'notFound');
-  await member.ref.update({
-    groups: union(member.get('groups'), pending.get('groups')),
-    zones: mergeZones(member.get('zones'), pending.get('zones')),
-    zoneTypes: union(member.get('zoneTypes'), pending.get('zoneTypes')),
+  const pending = await deps.db.runTransaction(async (tx) => {
+    const [church, admin, pending, member] = await tx.getAll(
+      deps.db.doc(`churches/${cid}`),
+      deps.db.doc(`churches/${cid}/members/${c.uid}`),
+      deps.db.doc(`churches/${cid}/pendingMembers/${pid}`),
+      deps.db.doc(`churches/${cid}/members/${uid}`),
+    );
+    if (!admin.exists) fail('permission-denied', 'permissionDenied');
+    if (!isChurchOpen(church)) churchClosed();
+    if (admin.get('role') !== 'admin') fail('permission-denied', 'permissionDenied');
+    if (!pending.exists || !member.exists) fail('not-found', 'notFound');
+    tx.update(member.ref, mergedMember(member, pending));
+    return pending;
   });
   await repoint(deps, cid, pid, uid, (pending.get('rosterIds') as string[] | undefined) ?? []);
   await dropPending(deps, cid, pending);

@@ -33,6 +33,7 @@ import 'features/rosters/roster_day_screen.dart';
 import 'features/rosters/rosters_screen.dart';
 import 'features/shell/shell.dart';
 import 'state/providers.dart';
+import 'state/app_update.dart';
 
 /// Re-runs the router's redirect whenever the app stage changes.
 class _StageListenable extends ChangeNotifier {
@@ -48,7 +49,14 @@ final routerProvider = Provider<GoRouter>((ref) {
     String path,
     Widget Function(GoRouterState s) build, {
     List<RouteBase> routes = const [],
-  }) => GoRoute(path: path, builder: (_, s) => build(s), routes: routes);
+  }) => GoRoute(
+    path: path,
+    builder: (_, s) {
+      final child = build(s);
+      return isUpdateEditorRoute(s.matchedLocation) ? UpdateEditGuard(child: child) : child;
+    },
+    routes: routes,
+  );
   return GoRouter(
     initialLocation: '/home',
     refreshListenable: refresh,

@@ -133,6 +133,139 @@ describe('connecting', () => {
     assert.equal((await db.doc('calendarTokens/C1').get()).exists, false);
   });
 
+  test('OAuth completion refuses a connector who is no longer an active church admin before exchanging the code', async () => {
+    for (const change of ['demoted', 'removed', 'suspended', 'deleted', 'purged']) {
+      await clearFirestore();
+      await church();
+      const { google, calls } = fakeGoogle();
+      let exchanges = 0;
+      const exchange = google.exchangeCode;
+      google.exchangeCode = async (...args) => { exchanges++; return exchange(...args); };
+      const d = { ...deps, google, config };
+      const { url } = await calendarAuthUrl(d, caller('pastor'), { churchId: 'C1' });
+      const state = new URL(url).searchParams.get('state')!;
+      if (change === 'demoted') await db.doc('churches/C1/members/pastor').update({ role: 'staff' });
+      else if (change === 'removed') await db.doc('churches/C1/members/pastor').delete();
+      else if (change === 'purged') await db.doc('churches/C1').delete();
+      else await db.doc('churches/C1').update({ status: change });
+      assert.match(await calendarCallback(d, { state, code: 'good' }), /result=denied/, change);
+      assert.equal(exchanges, 0, `${change}: no provider exchange`);
+      assert.equal((await db.doc(`calendarStates/${state}`).get()).exists, false, 'the refused state is consumed');
+      assert.equal((await db.doc('calendarTokens/C1').get()).exists, false);
+      assert.equal((await db.doc('churches/C1/settings/calendar').get()).exists, false);
+      assert.deepEqual(calls.revoked, [], 'no credential was obtained');
+    }
+  });
+
+  test('OAuth completion revokes an unused credential when church or admin access changes during the provider exchange', async () => {
+    for (const change of ['demoted', 'removed', 'suspended', 'deleted', 'purged']) {
+      await clearFirestore();
+      await church();
+      const { google, calls } = fakeGoogle();
+      let entered!: () => void;
+      let release!: () => void;
+      const exchanging = new Promise<void>((resolve) => { entered = resolve; });
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      google.exchangeCode = async () => { entered(); await gate; return { refreshToken: 'unused-refresh' }; };
+      const d = { ...deps, google, config };
+      const { url } = await calendarAuthUrl(d, caller('pastor'), { churchId: 'C1' });
+      const state = new URL(url).searchParams.get('state')!;
+      const pending = calendarCallback(d, { state, code: 'good' });
+      await exchanging;
+      if (change === 'demoted') await db.doc('churches/C1/members/pastor').update({ role: 'staff' });
+      else if (change === 'removed') await db.doc('churches/C1/members/pastor').delete();
+      else if (change === 'purged') await db.doc('churches/C1').delete();
+      else await db.doc('churches/C1').update({ status: change });
+      release();
+      assert.match(await pending, /result=denied/, change);
+      assert.deepEqual(calls.revoked, ['unused-refresh'], change);
+      assert.equal((await db.doc('calendarTokens/C1').get()).exists, false);
+      assert.equal((await db.doc('churches/C1/settings/calendar').get()).exists, false);
+      assert.equal((await db.doc(`calendarStates/${state}`).get()).exists, false);
+    }
+  });
+
+  test('disconnecting while OAuth exchange waits cancels completion and revokes the unused credential', async () => {
+    await church();
+    const { google, calls } = fakeGoogle();
+    let entered!: () => void;
+    let release!: () => void;
+    const exchanging = new Promise<void>((resolve) => { entered = resolve; });
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    google.exchangeCode = async () => { entered(); await gate; return { refreshToken: 'cancelled-refresh' }; };
+    const d = { ...deps, google, config };
+    const { url } = await calendarAuthUrl(d, caller('pastor'), { churchId: 'C1' });
+    const state = new URL(url).searchParams.get('state')!;
+    const pending = calendarCallback(d, { state, code: 'good' });
+    await exchanging;
+    await calendarDisconnect(d, caller('pastor'), { churchId: 'C1' });
+    release();
+    assert.match(await pending, /result=denied/);
+    assert.deepEqual(calls.revoked, ['cancelled-refresh']);
+    assert.equal((await db.doc('calendarTokens/C1').get()).exists, false);
+    assert.equal((await db.doc('churches/C1/settings/calendar').get()).exists, false);
+    assert.equal((await db.doc(`calendarStates/${state}`).get()).exists, false);
+  });
+
+  test('grant persistence errors still surface, while the unused credential and reserved state are cleaned up', async () => {
+    await church();
+    const { google, calls } = fakeGoogle();
+    const d = { ...deps, google, config: { ...config, tokenKey: 'not-a-valid-aes-key' } };
+    const { url } = await calendarAuthUrl(d, caller('pastor'), { churchId: 'C1' });
+    const state = new URL(url).searchParams.get('state')!;
+    await assert.rejects(calendarCallback(d, { state, code: 'good' }), /key length/i);
+    assert.deepEqual(calls.revoked, ['refresh-123']);
+    assert.equal((await db.doc('calendarTokens/C1').get()).exists, false);
+    assert.equal((await db.doc('churches/C1/settings/calendar').get()).exists, false);
+    assert.equal((await db.doc(`calendarStates/${state}`).get()).exists, false);
+  });
+
+  test('simultaneous callbacks consume one consent once without cancelling the exchange already in progress', async () => {
+    await church();
+    const { google } = fakeGoogle();
+    let exchanges = 0;
+    let entered!: () => void;
+    let release!: () => void;
+    const exchanging = new Promise<void>((resolve) => { entered = resolve; });
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    google.exchangeCode = async () => { exchanges++; entered(); await gate; return { refreshToken: 'refresh-123' }; };
+    const d = { ...deps, google, config };
+    const { url } = await calendarAuthUrl(d, caller('pastor'), { churchId: 'C1' });
+    const state = new URL(url).searchParams.get('state')!;
+    const first = calendarCallback(d, { state, code: 'good' });
+    await exchanging;
+    try {
+      assert.match(await calendarCallback(d, { state, code: 'good' }), /result=expired/);
+      assert.equal(exchanges, 1);
+    } finally {
+      release();
+    }
+    assert.match(await first, /result=connected/);
+    assert.equal((await db.doc(`calendarStates/${state}`).get()).exists, false);
+  });
+
+  test('refused grant cleanup leaves another authorized connector’s existing grant intact even if provider revocation fails', async () => {
+    await church();
+    const { google, calls } = fakeGoogle();
+    await connect(google);
+    await db.doc('churches/C1/members/editor').update({ role: 'admin' });
+    const d = { ...deps, google, config };
+    const { url } = await calendarAuthUrl(d, caller('editor'), { churchId: 'C1' });
+    const state = new URL(url).searchParams.get('state')!;
+    google.exchangeCode = async () => {
+      await db.doc('churches/C1/members/editor').update({ role: 'staff' });
+      return { refreshToken: 'refused-refresh' };
+    };
+    google.revoke = async (token) => { calls.revoked.push(token); throw new Error('Google unreachable'); };
+    assert.match(await calendarCallback(d, { state, code: 'good' }), /result=denied/);
+    assert.deepEqual(calls.revoked, ['refused-refresh']);
+    const token = await db.doc('calendarTokens/C1').get();
+    assert.equal(token.get('connectedBy'), 'pastor');
+    assert.equal(unseal(token.get('token'), config.tokenKey), 'refresh-123');
+    assert.equal((await db.doc('churches/C1/settings/calendar').get()).get('calendarId'), 'cal-1');
+    assert.equal((await db.doc(`calendarStates/${state}`).get()).exists, false);
+  });
+
   test('sealing round-trips and is not deterministic', () => {
     const a = seal('x', config.tokenKey);
     assert.notEqual(a, seal('x', config.tokenKey));
@@ -464,6 +597,30 @@ describe('releasing the grant', () => {
     assert.equal(await releaseCalendarIfConnector(d, 'C1', 'pastor'), true);
     assert.deepEqual(calls.revoked, ['refresh-123']);
     assert.equal((await db.doc('calendarTokens/C1').get()).exists, false);
+  });
+
+  test('a reconnect while old-grant revocation waits is not deleted by the earlier disconnect', async () => {
+    await church();
+    const { google, calls } = fakeGoogle();
+    await connect(google);
+    let entered!: () => void;
+    let release!: () => void;
+    const revoking = new Promise<void>((resolve) => { entered = resolve; });
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    google.revoke = async (token) => { calls.revoked.push(token); entered(); await gate; };
+    const d = { ...deps, google, config };
+    const disconnecting = calendarDisconnect(d, caller('pastor'), { churchId: 'C1' });
+    await revoking;
+    google.exchangeCode = async () => ({ refreshToken: 'new-refresh' });
+    const { url } = await calendarAuthUrl(d, caller('pastor'), { churchId: 'C1' });
+    assert.match(await calendarCallback(d, { state: new URL(url).searchParams.get('state'), code: 'new' }), /result=connected/);
+    release();
+    await disconnecting;
+    const token = await db.doc('calendarTokens/C1').get();
+    assert.equal(token.exists, true, 'the newer grant remains installed');
+    assert.equal(unseal(token.get('token'), config.tokenKey), 'new-refresh');
+    assert.equal((await db.doc('churches/C1/settings/calendar').get()).get('connected'), true);
+    assert.deepEqual(calls.revoked, ['refresh-123']);
   });
 
   test('cache months follow UTC+8, and a moved event clears both months', async () => {

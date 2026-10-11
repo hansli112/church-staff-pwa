@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/domain/church_time.dart';
 import 'package:martha/domain/models.dart';
 
 import '../support/harness.dart';
@@ -96,38 +97,36 @@ void main() {
     const src = 'https://feed.example/today.json';
     const sourced = ChurchLink(title: '教會官網', url: 'https://grace.example', source: src);
 
-    testWidgets('the home page shows fresh fetched content, else the fixed link', (tester) async {
+    LinkContent today({String title = '今日經文', DateTime? at}) => LinkContent(
+      source: src,
+      date: churchToday(at ?? testNow).key,
+      title: title,
+      body: '耶和華是我的牧者',
+      link: 'https://feed.example/today',
+      fetchedAt: at ?? testNow.subtract(const Duration(hours: 3)),
+    );
+
+    testWidgets('the home page shows today’s content; never the fixed link in its place', (tester) async {
       final b = seededChurch(as: staffMei)
         ..churchLinks['grace'] = sourced
-        ..linkContents['grace'] = LinkContent(
-          source: src,
-          title: '今日經文',
-          body: '耶和華是我的牧者',
-          fetchedAt: testNow.subtract(const Duration(hours: 3)),
-        );
+        ..linkContents['grace'] = today();
       await pumpApp(tester, b);
       expect(find.text('今日經文'), findsOneWidget);
       expect(find.text('教會官網'), findsNothing);
 
-      b.linkContents['grace'] = LinkContent(
-        source: src,
-        title: '今日經文',
-        fetchedAt: testNow.subtract(const Duration(hours: 49)),
-      );
+      b.linkContents['grace'] = const LinkContent(source: src, error: LinkFetchError.http, errorStatus: 503);
       b.notify();
       await settle(tester);
-      expect(find.text('教會官網'), findsOneWidget, reason: 'over 48 hours old');
+      expect(find.text('今日經文'), findsNothing, reason: 'a failed fetch keeps no old content');
+      expect(find.text('教會官網'), findsNothing);
+      expect(find.textContaining('對方網站回應錯誤（503）'), findsOneWidget);
     });
 
     testWidgets('until the content comes, neither it nor the fixed link shows', (tester) async {
       final held = Completer<void>();
       final b = seededChurch(as: staffMei)
         ..churchLinks['grace'] = sourced
-        ..linkContents['grace'] = LinkContent(
-          source: src,
-          title: '今日經文',
-          fetchedAt: testNow.subtract(const Duration(hours: 3)),
-        )
+        ..linkContents['grace'] = today()
         ..linkContentHeld = held;
       await pumpApp(tester, b);
       expect(find.text('我接下來的服事'), findsOneWidget, reason: 'the rest of the page is up');
@@ -140,7 +139,7 @@ void main() {
       expect(find.text('教會官網'), findsNothing);
     });
 
-    testWidgets('if the content cannot be read, the fixed link shows', (tester) async {
+    testWidgets('if the content cannot be read, the page says so and can read it again', (tester) async {
       final held = Completer<void>();
       final b = seededChurch(as: staffMei)
         ..churchLinks['grace'] = sourced
@@ -148,27 +147,32 @@ void main() {
       await pumpApp(tester, b);
       held.completeError(StateError('offline'));
       await settle(tester);
-      expect(find.text('教會官網'), findsOneWidget);
+      expect(find.text('教會官網'), findsNothing);
+      expect(find.text('載入失敗，請檢查網路後再試一次'), findsOneWidget);
+
+      b
+        ..linkContentHeld = null
+        ..linkContents['grace'] = today();
+      await tester.tap(find.widgetWithText(TextButton, '重試'));
+      await settle(tester);
+      expect(find.text('今日經文'), findsOneWidget);
     });
 
-    testWidgets('fetched content gives way to the fixed link once 48 hours pass', (tester) async {
+    testWidgets('today’s content gives way at the church’s midnight', (tester) async {
       var now = testNow;
       final b = seededChurch(as: staffMei, clock: () => now)
         ..churchLinks['grace'] = sourced
-        ..linkContents['grace'] = LinkContent(
-          source: src,
-          title: '今日經文',
-          fetchedAt: testNow.subtract(const Duration(hours: 47)),
-        );
+        ..linkContents['grace'] = today();
       await pumpApp(tester, b);
       expect(find.text('今日經文'), findsOneWidget);
 
-      // No new content arrives; only time passes.
-      now = testNow.add(const Duration(hours: 1));
-      await tester.pump(const Duration(hours: 1));
+      // No new content arrives; only the day turns over in the church.
+      now = testNow.add(const Duration(hours: 16));
+      await tester.pump(const Duration(hours: 16));
       await settle(tester);
       expect(find.text('今日經文'), findsNothing);
-      expect(find.text('教會官網'), findsOneWidget);
+      expect(find.text('教會官網'), findsNothing);
+      expect(find.textContaining('來源尚未提供今天的內容'), findsOneWidget);
     });
 
     testWidgets('an admin adds a source and a time; it is fetched at once', (tester) async {

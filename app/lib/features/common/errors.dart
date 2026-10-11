@@ -24,13 +24,19 @@ String errorText(L10n l10n, Object error) {
       CloudErrorCode.inviteInvalid => l10n.errInviteInvalid,
       CloudErrorCode.inviteExpired => l10n.errInviteExpired,
       CloudErrorCode.permissionDenied => l10n.noPermission,
-      CloudErrorCode.unavailable => l10n.errNetwork,
+      CloudErrorCode.conflict => l10n.errConflict,
+      CloudErrorCode.unavailable =>
+        error.reason == CloudReason.offlineReadOnly ? l10n.errOfflineReadOnly : l10n.errNetwork,
       CloudErrorCode.lastAdmin =>
         error.churches.isEmpty ? l10n.errUnknown : l10n.deleteAccountLastAdmin(error.churches.join('〉〈')),
       CloudErrorCode.notFound => l10n.churchNotFound,
       CloudErrorCode.moveInvalid => l10n.errMoveInvalid,
       CloudErrorCode.moveTooLarge => l10n.errMoveTooLarge,
-      CloudErrorCode.quotaExceeded => error.reason == CloudReason.platform ? l10n.photoPlatformOff : l10n.errUnknown,
+      CloudErrorCode.quotaExceeded => switch (error.reason) {
+        CloudReason.platform => l10n.photoPlatformOff,
+        CloudReason.tooManyChanges => l10n.errTooManyChanges,
+        _ => l10n.errUnknown,
+      },
       CloudErrorCode.unknown => l10n.errUnknown,
     };
   }

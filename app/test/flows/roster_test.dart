@@ -269,18 +269,20 @@ void main() {
       expect(peopleOn(b, 4, '司會'), ['王牧師']);
     });
 
-    testWidgets('a slow (offline) write still answers, saying it will sync', (tester) async {
-      final b = seededChurch()..writeDelay = const Duration(seconds: 5);
+    testWidgets('offline, a change is refused and says so; nothing waits to sync later', (tester) async {
+      final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-04');
+      final before = peopleOn(b, 4, '司琴');
+      b.setOnline(false);
+      await settle(tester);
       await tapText(tester, '司琴');
       await tapText(tester, '李美玉');
       await tapText(tester, '完成');
-      await tester.pump(const Duration(seconds: 2));
-      await tester.pump();
-      expect(find.text('已存在這台裝置，連上網路後會自動同步'), findsOneWidget);
-      await tester.pump(const Duration(seconds: 4));
+      expect(find.text('目前無法連線，只能查看已取得的資料。'), findsOneWidget);
+      b.setOnline(true);
       await settle(tester);
+      expect(peopleOn(b, 4, '司琴'), before, reason: 'reconnecting sends nothing that was refused');
     });
   });
 

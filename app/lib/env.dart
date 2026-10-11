@@ -54,10 +54,10 @@ String get emulatorHost {
 
 /// Ports from firebase.json.
 abstract final class EmulatorPorts {
-  static const firestore = 8181;
-  static const auth = 9199;
-  static const functions = 5001;
-  static const storage = 9399;
+  static const firestore = int.fromEnvironment('EMULATOR_FIRESTORE_PORT', defaultValue: 8181);
+  static const auth = int.fromEnvironment('EMULATOR_AUTH_PORT', defaultValue: 9199);
+  static const functions = int.fromEnvironment('EMULATOR_FUNCTIONS_PORT', defaultValue: 5001);
+  static const storage = int.fromEnvironment('EMULATOR_STORAGE_PORT', defaultValue: 9399);
 }
 
 FirebaseOptions firebaseOptionsFor(Env env) {

@@ -15,14 +15,22 @@ function deployment(t) {
   const dir = mkdtempSync(join(tmpdir(), 'martha-hosting-'));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   mkdirSync(join(dir, 'scripts'));
-  for (const script of ['hosting-predeploy.sh', 'fingerprint-fonts.mjs', 'fingerprint-web.mjs', 'build-site.mjs']) {
+  for (const script of ['hosting-predeploy.sh', 'fingerprint-fonts.mjs', 'fingerprint-web.mjs', 'release-web.mjs', 'build-site.mjs']) {
     copyFileSync(join(root, 'scripts', script), join(dir, 'scripts', script));
   }
   assert.ok(existsSync(join(root, 'landing/node_modules/marked')), 'use existing website dependencies; do not install in tests');
   cpSync(join(root, 'landing'), join(dir, 'landing'), { recursive: true });
   const web = join(dir, 'app/build/web');
   mkdirSync(join(web, 'assets/fonts'), { recursive: true });
-  writeFileSync(join(web, 'index.html'), '<base href="/nested/"><script src="flutter_bootstrap.js" async></script>');
+  mkdirSync(join(web, 'canvaskit'));
+  mkdirSync(join(web, 'icons'));
+  writeFileSync(join(web, 'canvaskit/canvaskit.js'), 'engine');
+  writeFileSync(join(web, 'canvaskit/canvaskit.wasm'), 'engine wasm');
+  writeFileSync(join(web, 'icons/Icon-192.png'), 'icon');
+  writeFileSync(join(web, 'favicon.png'), 'favicon');
+  writeFileSync(join(web, 'manifest.json'), '{}');
+  for (const script of ['martha_app.js', 'martha_app_sw.js']) copyFileSync(join(root, 'app/web', script), join(web, script));
+  writeFileSync(join(web, 'index.html'), '<html><head><base href="/"></head><body><script src="martha_app.js"></script><script src="flutter_bootstrap.js" async></script></body></html>');
   writeFileSync(join(web, 'main.dart.js'), 'console.log("martha");\n');
   writeFileSync(join(web, 'flutter_bootstrap.js'), '_flutter.buildConfig = {"builds":[{"compileTarget":"dart2js","renderer":"canvaskit","mainJsPath":"main.dart.js"},{}]};\n_flutter.loader.load({});');
   writeFileSync(join(web, 'assets/fonts/Icons.otf'), 'icons A');
@@ -45,14 +53,17 @@ test('Hosting CLI packages stable HTML/bootstrap with versioned JS and fonts, in
   predeploy(dir);
   assert.match(readFileSync(join(web, 'flutter_bootstrap.js'), 'utf8'), /"mainJsPath":"main\.dart\.d3e18322f0\.js"/);
   assert.equal(readFileSync(join(web, 'main.dart.d3e18322f0.js'), 'utf8'), 'console.log("martha");\n');
-  assert.equal(readFileSync(join(web, 'app.html'), 'utf8'), html);
+  const packagedHtml = readFileSync(join(web, 'app.html'), 'utf8');
+  assert.match(packagedHtml, /martha-boot/);
+  assert.match(packagedHtml, /\/releases\/[0-9a-f]{20}\/flutter_bootstrap\.js/);
+  assert.notEqual(packagedHtml, html);
   assert.doesNotMatch(readFileSync(join(web, 'index.html'), 'utf8'), /flutter_bootstrap/);
   assert.equal(readFileSync(join(web, 'flutter_service_worker.js'), 'utf8'), worker);
   assert.match(readFileSync(join(web, 'assets/FontManifest.json'), 'utf8'), /Icons\.a2f6674ce7\.otf/);
   assert.equal(readFileSync(join(dir, '.firebase/web-assets/test-martha-dev/assets/fonts/Icons.a2f6674ce7.otf'), 'utf8'), 'icons A');
   const bootstrap = readFileSync(join(web, 'flutter_bootstrap.js'), 'utf8');
   predeploy(dir);
-  assert.equal(readFileSync(join(web, 'app.html'), 'utf8'), html);
+  assert.equal(readFileSync(join(web, 'app.html'), 'utf8'), packagedHtml);
   assert.equal(readFileSync(join(web, 'flutter_bootstrap.js'), 'utf8'), bootstrap);
 });
 

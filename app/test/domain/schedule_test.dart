@@ -82,7 +82,7 @@ void main() {
   });
 
   group('myServices', () {
-    test('finds days by uid, and by name only when the name has no uid', () {
+    test('finds days only by explicitly bound uid and never by an unbound name', () {
       final rosters = [
         Roster(
           type: 'sunday',
@@ -100,13 +100,13 @@ void main() {
           ],
         ),
       ];
-      final mine = myServices(rosters, uid: 'u1', name: '王大明');
+      final mine = myServices(rosters, uid: 'u1');
       expect(mine.length, 1);
       expect(mine.single.roster.day.key, '2026-10-04');
       expect(mine.single.duties, ['司會']);
 
-      final hers = myServices(rosters, uid: 'u9', name: '李小美');
-      expect(hers.single.duties, ['司琴']);
+      final unbound = myServices(rosters, uid: 'u9');
+      expect(unbound, isEmpty);
     });
   });
 }

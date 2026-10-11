@@ -103,7 +103,7 @@ Map<String, Object?> exportJson(ChurchSnapshot s, DateTime exportedAt) => {
             if (m.groups.contains(g)) g.id,
         ],
         'zones': [
-          for (final z in m.zones) {'serviceType': z.serviceType, 'duties': z.duties},
+          for (final z in m.zones) {'serviceType': z.serviceType, 'duties': z.duties, 'smallGroups': z.smallGroups},
         ],
         'joinedAt': m.joinedAt?.toUtc().toIso8601String(),
       },
@@ -120,7 +120,7 @@ Map<String, Object?> exportJson(ChurchSnapshot s, DateTime exportedAt) => {
             if (p.groups.contains(g)) g.id,
         ],
         'zones': [
-          for (final z in p.zones) {'serviceType': z.serviceType, 'duties': z.duties},
+          for (final z in p.zones) {'serviceType': z.serviceType, 'duties': z.duties, 'smallGroups': z.smallGroups},
         ],
       },
   ],

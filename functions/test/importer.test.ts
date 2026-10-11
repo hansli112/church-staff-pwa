@@ -4,7 +4,7 @@ import { describe, test } from 'node:test';
 import { buildImport, mapMember, mapRoster, mapServices, paletteIndex, rosterDateKey } from '../src/importer.js';
 
 describe('self-host import mapping', () => {
-  test('members: ministries become duties, small groups and unknown groups are dropped', () => {
+  test('members: ministries become duties, small groups are preserved and unknown permission groups are dropped', () => {
     const m = mapMember(
       'u1',
       {
@@ -25,8 +25,8 @@ describe('self-host import mapping', () => {
     assert.equal(m.role, 'leader');
     assert.deepEqual(m.groups, ['roster-editors']);
     assert.deepEqual(m.zones, [
-      { serviceType: 'sundayService', duties: ['司琴', '招待'] },
-      { serviceType: 'youth', duties: [] },
+      { serviceType: 'sundayService', duties: ['司琴', '招待'], smallGroups: ['小組A'] },
+      { serviceType: 'youth', duties: [], smallGroups: [] },
     ]);
     assert.deepEqual(m.zoneTypes, ['sundayService', 'youth']);
   });
@@ -157,6 +157,60 @@ describe('buildImport', () => {
       smallGroupPeople: 1,
       unnamedMembers: 1,
     });
+  });
+
+  test('converts legacy member groups and reminder opt-out once, without importing FCM credentials', () => {
+    const out = buildImport({
+      users: [
+        { id: 'opted-out', data: {
+          name: '同工', role: 'staff', groups: ['roster-editors'],
+          zones: [{ serviceType: 'sunday', ministries: ['司琴'], smallGroups: ['喜樂', '恩典'] }],
+          notificationPrefs: { weeklyRosterReminder: false, muted: ['rosterChange'] },
+          fcm: { phone: 'OLD-PROJECT-TOKEN' }, fcmTokens: ['OLD-PROJECT-TOKEN'],
+        } },
+        { id: 'enabled', data: { notificationPrefs: { weeklyRosterReminder: true } } },
+        { id: 'default', data: {} },
+      ], settings: [], rosters: [], staffOrders: [],
+    }, 'JOINED');
+    assert.deepEqual(out.members[0].zones, [{ serviceType: 'sunday', duties: ['司琴'], smallGroups: ['喜樂', '恩典'] }]);
+    assert.deepEqual((out.members[0] as Record<string, unknown>).notificationPrefs, { muted: ['rosterChange', 'reminder'] });
+    assert.deepEqual((out.members[1] as Record<string, unknown>).notificationPrefs, { muted: [] });
+    assert.deepEqual((out.members[2] as Record<string, unknown>).notificationPrefs, { muted: [] });
+    assert.equal(out.report.smallGroupPeople, 1, 'small groups are preserved, not reported as dropped');
+    assert.equal(JSON.stringify(out).includes('OLD-PROJECT-TOKEN'), false);
+    assert.equal(JSON.stringify(out).includes('weeklyRosterReminder'), false, 'only the new preference format leaves the boundary');
+  });
+
+  test('only legacy duties with an absent UID map bind unique exact original full names at the import boundary', () => {
+    const sharedPrefix = '名'.repeat(40);
+    const longA = `${sharedPrefix}甲`;
+    const longB = `${sharedPrefix}乙`;
+    const out = buildImport({
+      users: [
+        { id: 'unique', data: { name: '王大明' } },
+        { id: 'mei', data: { name: '李美玉' } },
+        { id: 'hao1', data: { name: '志豪' } },
+        { id: 'hao2', data: { name: '志豪' } },
+        { id: 'longA', data: { name: longA } },
+        { id: 'longB', data: { name: longB } },
+      ], settings: [], staffOrders: [],
+      rosters: [{ id: '20261004_sunday', data: { type: 'sunday', duties: [
+        { role: '司琴', people: ['王大明', '志豪', '美玉', '訪客', longA, longB, sharedPrefix] },
+        { role: '敬拜', people: ['王大明', '訪客'], personIdsByName: { 王大明: 'explicit-other', 訪客: 'explicit-unknown' } },
+        { role: '音控', people: ['王大明'], personIdsByName: {} },
+        { role: '投影', people: ['王大明', '李美玉'], personIdsByName: { 王大明: 'unique' } },
+        { role: '招待', people: [' 王大明 '] },
+      ] } }],
+    }, null);
+    assert.deepEqual(out.rosters[0].data.duties.map((d) => d.uids), [
+      { 王大明: 'unique', [longA]: 'longA', [longB]: 'longB' },
+      { 王大明: 'explicit-other', 訪客: 'explicit-unknown' },
+      {},
+      { 王大明: 'unique' },
+      {},
+    ]);
+    assert.equal(out.members.find((m) => m.uid === 'longA')!.name, sharedPrefix);
+    assert.equal(out.members.find((m) => m.uid === 'longB')!.name, sharedPrefix, 'matching uses original source names, not truncated display names');
   });
 
   test('without settings/services the services come from the data', () => {

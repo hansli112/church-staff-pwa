@@ -2167,12 +2167,6 @@ abstract class L10n {
   /// **'夜'**
   String get appIconNight;
 
-  /// No description provided for @savedOffline.
-  ///
-  /// In zh, this message translates to:
-  /// **'已存在這台裝置，連上網路後會自動同步'**
-  String get savedOffline;
-
   /// No description provided for @goHome.
   ///
   /// In zh, this message translates to:
@@ -2650,7 +2644,7 @@ abstract class L10n {
   /// No description provided for @linkSourceFooter.
   ///
   /// In zh, this message translates to:
-  /// **'每天在這個時間抓一次，格式是有 title、body、link 的 JSON。抓到後 48 小時內，首頁顯示抓到的內容；抓不到就顯示上面的固定內容。'**
+  /// **'每天這個時間抓一次。JSON 要有 date（教會的今天）、title、body、link（https）。'**
   String get linkSourceFooter;
 
   /// No description provided for @linkSourceUpdated.
@@ -2686,7 +2680,7 @@ abstract class L10n {
   /// No description provided for @linkErrBadFormat.
   ///
   /// In zh, this message translates to:
-  /// **'內容不是有 title 的 JSON'**
+  /// **'內容不是完整的 date、title、body、link JSON'**
   String get linkErrBadFormat;
 
   /// No description provided for @linkErrNotHttps.
@@ -3246,6 +3240,750 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'匯率：Exchange Rate API'**
   String get fundingRatesBy;
+
+  /// Import source advanced controls heading
+  ///
+  /// In zh, this message translates to:
+  /// **'進階'**
+  String get importAdvanced;
+
+  /// Explanation below the unlocalized canonical JSON protocol example
+  ///
+  /// In zh, this message translates to:
+  /// **'date：YYYY-MM-DD；無人時 people 填 []。\nevents 可省略；活動 color 只接受 0–5 的色票編號。'**
+  String get importFormatHelp;
+
+  /// Photo recognizer returned an invalid canonical JSON response
+  ///
+  /// In zh, this message translates to:
+  /// **'辨識結果格式不符，請重新辨識或使用進階 JSON'**
+  String get importPhotoFormatError;
+
+  /// Pasted import JSON syntax or root-array error
+  ///
+  /// In zh, this message translates to:
+  /// **'JSON 格式錯誤，請使用下方範例的陣列格式'**
+  String get importJsonSyntaxError;
+
+  /// Import preview source JSON edit action and sheet title
+  ///
+  /// In zh, this message translates to:
+  /// **'編輯 JSON'**
+  String get importJsonEdit;
+
+  /// Import source JSON editor validation
+  ///
+  /// In zh, this message translates to:
+  /// **'請填 JSON 陣列'**
+  String get importJsonArrayRequired;
+
+  /// Import identity confirmation sheet title
+  ///
+  /// In zh, this message translates to:
+  /// **'確認「{name}」'**
+  String importConfirmName(String name);
+
+  /// Explains that a confirmed raw-name mapping covers this import only
+  ///
+  /// In zh, this message translates to:
+  /// **'這份匯入中的同名人名都使用這個對應'**
+  String get importSameNameScope;
+
+  /// Explicitly preserve an imported name without linking any member UID
+  ///
+  /// In zh, this message translates to:
+  /// **'保留「{name}」為外請'**
+  String importGuestChoice(String name);
+
+  /// Import row date editor sheet title
+  ///
+  /// In zh, this message translates to:
+  /// **'編輯日期'**
+  String get importEditDate;
+
+  /// Import date field label; protocol format YYYY-MM-DD stays unchanged
+  ///
+  /// In zh, this message translates to:
+  /// **'日期（YYYY-MM-DD）'**
+  String get importDateFormatLabel;
+
+  /// Import date field validation
+  ///
+  /// In zh, this message translates to:
+  /// **'請填有效的 YYYY-MM-DD 日期'**
+  String get importValidDate;
+
+  /// Import duty and people editor sheet title
+  ///
+  /// In zh, this message translates to:
+  /// **'編輯服事項目'**
+  String get importEditDuty;
+
+  /// Import duty editor role field label
+  ///
+  /// In zh, this message translates to:
+  /// **'服事項目'**
+  String get importDutyLabel;
+
+  /// Import people multiline field label
+  ///
+  /// In zh, this message translates to:
+  /// **'人名（每行一人）'**
+  String get importPeopleLines;
+
+  /// Add an import event action and editor sheet title
+  ///
+  /// In zh, this message translates to:
+  /// **'新增活動'**
+  String get importAddEventAction;
+
+  /// Import event name and palette editor sheet title
+  ///
+  /// In zh, this message translates to:
+  /// **'編輯活動'**
+  String get importEditEvent;
+
+  /// Applying an import rejected a change not included in the displayed preview
+  ///
+  /// In zh, this message translates to:
+  /// **'服事表已變更，請重新檢查差異後再套用'**
+  String get importConflict;
+
+  /// Old import input and preview cleared after church or account scope changed
+  ///
+  /// In zh, this message translates to:
+  /// **'教會或帳號已切換，請重新匯入'**
+  String get importScopeChanged;
+
+  /// One-based import source row label
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {number} 列'**
+  String importRow(int number);
+
+  /// Editable import row date label
+  ///
+  /// In zh, this message translates to:
+  /// **'日期'**
+  String get importDateLabel;
+
+  /// Import row has no string date
+  ///
+  /// In zh, this message translates to:
+  /// **'請填日期'**
+  String get importDateMissing;
+
+  /// Malformed import duty edit action
+  ///
+  /// In zh, this message translates to:
+  /// **'修正服事項目'**
+  String get importFixDuty;
+
+  /// Malformed imported people field hint; people is a protocol field name
+  ///
+  /// In zh, this message translates to:
+  /// **'people 請填人名陣列'**
+  String get importPeopleArrayHint;
+
+  /// Malformed import event edit action
+  ///
+  /// In zh, this message translates to:
+  /// **'修正活動'**
+  String get importFixEvent;
+
+  /// Import diff removes a duty and its current names
+  ///
+  /// In zh, this message translates to:
+  /// **'移除{role}：{names}'**
+  String importRemoveDuty(String role, String names);
+
+  /// Import diff adds a duty with arranged names
+  ///
+  /// In zh, this message translates to:
+  /// **'新增{role}：{names}'**
+  String importAddDuty(String role, String names);
+
+  /// Import duty diff before and after names
+  ///
+  /// In zh, this message translates to:
+  /// **'{role}：{before} → {after}'**
+  String importChangeDuty(String role, String before, String after);
+
+  /// Import diff name is linked to a member UID
+  ///
+  /// In zh, this message translates to:
+  /// **'{name}（同工）'**
+  String importMemberIdentity(String name);
+
+  /// Import diff name is explicitly not linked to a member UID
+  ///
+  /// In zh, this message translates to:
+  /// **'{name}（外請）'**
+  String importGuestIdentity(String name);
+
+  /// Import diff removes an event
+  ///
+  /// In zh, this message translates to:
+  /// **'移除活動：{name}'**
+  String importRemoveEvent(String name);
+
+  /// Import diff adds an event
+  ///
+  /// In zh, this message translates to:
+  /// **'新增活動：{name}'**
+  String importAddEvent(String name);
+
+  /// Import diff changes an existing event color
+  ///
+  /// In zh, this message translates to:
+  /// **'活動：{name}'**
+  String importChangeEvent(String name);
+
+  /// Localized palette labels before and after import event color change
+  ///
+  /// In zh, this message translates to:
+  /// **'{before} → {after}'**
+  String importChangedColor(String before, String after);
+
+  /// Import diff has no arrangement changes
+  ///
+  /// In zh, this message translates to:
+  /// **'安排沒有變更'**
+  String get importNoChange;
+
+  /// Imported name has no member candidate and requires an explicit decision
+  ///
+  /// In zh, this message translates to:
+  /// **'請保留為外請或修正人名'**
+  String get importNoCandidate;
+
+  /// Unconfirmed import name member candidates
+  ///
+  /// In zh, this message translates to:
+  /// **'候選：{names}'**
+  String importCandidates(String names);
+
+  /// Imported name explicitly remains an unlinked guest
+  ///
+  /// In zh, this message translates to:
+  /// **'外請（不連結帳號）'**
+  String get importGuestUnlinked;
+
+  /// Import name identity still needs confirmation
+  ///
+  /// In zh, this message translates to:
+  /// **'請確認人名'**
+  String get importNameNeedsConfirm;
+
+  /// Imported raw name is linked to this member
+  ///
+  /// In zh, this message translates to:
+  /// **'同工：{name}'**
+  String importLinkedMember(String name);
+
+  /// Import merge or replacement mode section heading
+  ///
+  /// In zh, this message translates to:
+  /// **'匯入方式'**
+  String get importMode;
+
+  /// Default import mode keeps unmentioned arrangements
+  ///
+  /// In zh, this message translates to:
+  /// **'合併（保留未提到的安排）'**
+  String get importMerge;
+
+  /// Explicit import replacement mode
+  ///
+  /// In zh, this message translates to:
+  /// **'取代當天全部安排'**
+  String get importReplace;
+
+  /// Import replacement affects only the previewed dates
+  ///
+  /// In zh, this message translates to:
+  /// **'移除未提到的服事項目與活動；不影響其他日期'**
+  String get importReplaceHelp;
+
+  /// Invalid canonical import data blocks all writes
+  ///
+  /// In zh, this message translates to:
+  /// **'請修正資料後再匯入'**
+  String get importFixData;
+
+  /// Import row correction action hint
+  ///
+  /// In zh, this message translates to:
+  /// **'請修正這一列資料'**
+  String get importFixRow;
+
+  /// Imported name identity mapping section heading
+  ///
+  /// In zh, this message translates to:
+  /// **'人名對應'**
+  String get importNameLinks;
+
+  /// Unconfirmed import names block all writes
+  ///
+  /// In zh, this message translates to:
+  /// **'確認人名後才能匯入'**
+  String get importNamesNeedConfirm;
+
+  /// Admin-only optional import repair section heading
+  ///
+  /// In zh, this message translates to:
+  /// **'修正教會設定（可選）'**
+  String get importRepairSettings;
+
+  /// Ordinary editor import does not grant qualifications or change settings
+  ///
+  /// In zh, this message translates to:
+  /// **'這次安排不會變更同工或教會設定'**
+  String get importNoSettingsChange;
+
+  /// Admin adds an imported duty to the service template
+  ///
+  /// In zh, this message translates to:
+  /// **'加入服事設定：{role}'**
+  String importAddConfiguredDuty(String role);
+
+  /// Imported one-day duty is not in the service template
+  ///
+  /// In zh, this message translates to:
+  /// **'未設定的服事項目：{role}'**
+  String importUnconfiguredDuty(String role);
+
+  /// Admin grants this imported duty to the matched member
+  ///
+  /// In zh, this message translates to:
+  /// **'讓{name}負責{role}'**
+  String importGrantQualification(String name, String role);
+
+  /// Matched member has no configured qualification for this duty
+  ///
+  /// In zh, this message translates to:
+  /// **'{name}尚未設定{role}'**
+  String importMissingQualification(String name, String role);
+
+  /// Admin keeps an imported event as a common service option
+  ///
+  /// In zh, this message translates to:
+  /// **'加入常用活動：{name}'**
+  String importAddCommonEvent(String name);
+
+  /// Imported event remains a one-day event rather than a common option
+  ///
+  /// In zh, this message translates to:
+  /// **'未設為常用活動：{name}'**
+  String importNotCommonEvent(String name);
+
+  /// Import diff section heading with the existing localized date label
+  ///
+  /// In zh, this message translates to:
+  /// **'套用後差異・{date}'**
+  String importDiff(String date);
+
+  /// Required import editor field validation
+  ///
+  /// In zh, this message translates to:
+  /// **'請填{field}'**
+  String importRequiredField(String field);
+
+  /// Import event palette field label
+  ///
+  /// In zh, this message translates to:
+  /// **'色彩'**
+  String get importColor;
+
+  /// ImportIssueCode.rowObject
+  ///
+  /// In zh, this message translates to:
+  /// **'請填包含 date、duties 的物件'**
+  String get importIssueRowObject;
+
+  /// ImportIssueCode.rowFields
+  ///
+  /// In zh, this message translates to:
+  /// **'只支援 date、duties、events 欄位'**
+  String get importIssueRowFields;
+
+  /// ImportIssueCode.date
+  ///
+  /// In zh, this message translates to:
+  /// **'date 請填有效的 YYYY-MM-DD 日期'**
+  String get importIssueDate;
+
+  /// ImportIssueCode.duplicateDate
+  ///
+  /// In zh, this message translates to:
+  /// **'日期重複，請合併成同一列'**
+  String get importIssueDuplicateDate;
+
+  /// ImportIssueCode.dutiesArray
+  ///
+  /// In zh, this message translates to:
+  /// **'duties 請填陣列'**
+  String get importIssueDutiesArray;
+
+  /// ImportIssueCode.dutyFields; source duty item position is one-based
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {index} 個服事項目只支援 role、people'**
+  String importIssueDutyFields(int index);
+
+  /// ImportIssueCode.role; source duty item position is one-based
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {index} 個 role 請填不重複的服事項目名稱'**
+  String importIssueRole(int index);
+
+  /// ImportIssueCode.peopleArray; source duty item position is one-based
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {index} 個 people 請填非空白人名的字串陣列；無人時填 []'**
+  String importIssuePeopleArray(int index);
+
+  /// ImportIssueCode.duplicatePeople; source duty item position is one-based
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {index} 個 people 不可有重複人名'**
+  String importIssueDuplicatePeople(int index);
+
+  /// ImportIssueCode.eventsArray
+  ///
+  /// In zh, this message translates to:
+  /// **'events 請填陣列'**
+  String get importIssueEventsArray;
+
+  /// ImportIssueCode.eventObject; example is a verbatim protocol JSON literal supplied by UI, not translated; avoids ICU interpreting JSON braces
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {index} 個活動請填 {example}'**
+  String importIssueEventObject(int index, String example);
+
+  /// ImportIssueCode.eventName; source event item position is one-based
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {index} 個活動 name 請填不重複的名稱'**
+  String importIssueEventName(int index);
+
+  /// ImportIssueCode.eventColor; source event item position is one-based
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {index} 個活動 color 請填 0 到 5 的整數'**
+  String importIssueEventColor(int index);
+
+  /// ImportIssueCode.resolvedDuplicatePeople; role is the imported duty label
+  ///
+  /// In zh, this message translates to:
+  /// **'{role}：確認後人名重複，請移除重複的人名'**
+  String importIssueResolvedDuplicatePeople(String role);
+
+  /// The release that actually booted the running PWA, never the server-latest release. Its opaque release id is shown as the row subtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'目前版本'**
+  String get appRunningVersion;
+
+  /// Web development build without a generated release manifest; no update or native store claim.
+  ///
+  /// In zh, this message translates to:
+  /// **'開發版本（尚未建立發布版本）'**
+  String get appVersionDevelopment;
+
+  /// No description provided for @appUpdateNativeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'App 更新'**
+  String get appUpdateNativeTitle;
+
+  /// No description provided for @appUpdateNativeNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'請從 App Store 或 Google Play 檢查更新。'**
+  String get appUpdateNativeNote;
+
+  /// No description provided for @appUpdateCheck.
+  ///
+  /// In zh, this message translates to:
+  /// **'檢查更新'**
+  String get appUpdateCheck;
+
+  /// No description provided for @appUpdateChecking.
+  ///
+  /// In zh, this message translates to:
+  /// **'檢查中…'**
+  String get appUpdateChecking;
+
+  /// No description provided for @appUpdateApply.
+  ///
+  /// In zh, this message translates to:
+  /// **'更新並重新開啟'**
+  String get appUpdateApply;
+
+  /// No description provided for @appUpdateApplying.
+  ///
+  /// In zh, this message translates to:
+  /// **'更新中…'**
+  String get appUpdateApplying;
+
+  /// Only after an explicit server check confirms the currently running release is latest.
+  ///
+  /// In zh, this message translates to:
+  /// **'目前已是最新發布版本。'**
+  String get appUpdateCurrent;
+
+  /// No description provided for @appUpdateReady.
+  ///
+  /// In zh, this message translates to:
+  /// **'新版本已準備好；完成編輯後再更新，不會自動重新整理。'**
+  String get appUpdateReady;
+
+  /// No description provided for @appUpdateFinishEditing.
+  ///
+  /// In zh, this message translates to:
+  /// **'請先完成編輯或儲存，再回到「我的」更新。'**
+  String get appUpdateFinishEditing;
+
+  /// No description provided for @appUpdateFinishEditingNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'請先完成編輯或儲存。'**
+  String get appUpdateFinishEditingNote;
+
+  /// No description provided for @appUpdateFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'無法完成更新，請檢查網路後重試。'**
+  String get appUpdateFailed;
+
+  /// No description provided for @appUpdateScopeChanged.
+  ///
+  /// In zh, this message translates to:
+  /// **'帳號或教會已變更，請重新檢查更新。'**
+  String get appUpdateScopeChanged;
+
+  /// No description provided for @appUpdateBackToMe.
+  ///
+  /// In zh, this message translates to:
+  /// **'請回到「我的」再更新。'**
+  String get appUpdateBackToMe;
+
+  /// No description provided for @appUpdateCheckFirst.
+  ///
+  /// In zh, this message translates to:
+  /// **'請先檢查更新。'**
+  String get appUpdateCheckFirst;
+
+  /// No description provided for @rosterShowMore.
+  ///
+  /// In zh, this message translates to:
+  /// **'顯示更多'**
+  String get rosterShowMore;
+
+  /// No description provided for @pickerGuestNames.
+  ///
+  /// In zh, this message translates to:
+  /// **'外請姓名'**
+  String get pickerGuestNames;
+
+  /// No description provided for @serviceSettingsSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'服事設定已儲存'**
+  String get serviceSettingsSaved;
+
+  /// No description provided for @serviceSyncOriginalEvent.
+  ///
+  /// In zh, this message translates to:
+  /// **'原本的特別活動'**
+  String get serviceSyncOriginalEvent;
+
+  /// No description provided for @serviceSyncOriginalDuty.
+  ///
+  /// In zh, this message translates to:
+  /// **'原本的服事項目'**
+  String get serviceSyncOriginalDuty;
+
+  /// No description provided for @serviceFutureSyncTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'同步「{from}」為「{to}」'**
+  String serviceFutureSyncTitle(String from, String to);
+
+  /// No description provided for @serviceFutureSyncSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'已同步{count}份未來服事表'**
+  String serviceFutureSyncSaved(int count);
+
+  /// No description provided for @serviceEventColorTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'{name}・顏色'**
+  String serviceEventColorTitle(String name);
+
+  /// No description provided for @serviceEventColor.
+  ///
+  /// In zh, this message translates to:
+  /// **'顏色'**
+  String get serviceEventColor;
+
+  /// No description provided for @serviceSyncFutureRosters.
+  ///
+  /// In zh, this message translates to:
+  /// **'同步未來服事表'**
+  String get serviceSyncFutureRosters;
+
+  /// No description provided for @rosterFutureChangesNone.
+  ///
+  /// In zh, this message translates to:
+  /// **'沒有需要變更的未來服事表'**
+  String get rosterFutureChangesNone;
+
+  /// No description provided for @rosterFutureChangesFooter.
+  ///
+  /// In zh, this message translates to:
+  /// **'只變更明天起已儲存的服事表'**
+  String get rosterFutureChangesFooter;
+
+  /// No description provided for @rosterFutureChangesConflict.
+  ///
+  /// In zh, this message translates to:
+  /// **'已有同名項目，請先調整'**
+  String get rosterFutureChangesConflict;
+
+  /// No description provided for @rosterApplyFutureChanges.
+  ///
+  /// In zh, this message translates to:
+  /// **'套用變更'**
+  String get rosterApplyFutureChanges;
+
+  /// No description provided for @rosterRemoveFutureGuest.
+  ///
+  /// In zh, this message translates to:
+  /// **'移除未來的外請安排'**
+  String get rosterRemoveFutureGuest;
+
+  /// No description provided for @rosterRemoveFutureGuestTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'移除「{name}」的未來安排'**
+  String rosterRemoveFutureGuestTitle(String name);
+
+  /// No description provided for @rosterFutureGuestRemoved.
+  ///
+  /// In zh, this message translates to:
+  /// **'已移除{count}份未來安排'**
+  String rosterFutureGuestRemoved(int count);
+
+  /// No description provided for @rosterFutureDutyChange.
+  ///
+  /// In zh, this message translates to:
+  /// **'{role}：{before} → {after}'**
+  String rosterFutureDutyChange(String role, String before, String after);
+
+  /// No description provided for @rosterFutureEventChange.
+  ///
+  /// In zh, this message translates to:
+  /// **'{before} → {after}'**
+  String rosterFutureEventChange(String before, String after);
+
+  /// No description provided for @errConflict.
+  ///
+  /// In zh, this message translates to:
+  /// **'資料已被其他同工修改，請重新讀取後再試。'**
+  String get errConflict;
+
+  /// No description provided for @errOfflineReadOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'目前無法連線，只能查看已取得的資料。'**
+  String get errOfflineReadOnly;
+
+  /// No description provided for @errTooManyChanges.
+  ///
+  /// In zh, this message translates to:
+  /// **'變更項目太多，請縮小範圍後再試。'**
+  String get errTooManyChanges;
+
+  /// No description provided for @undoDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'已復原'**
+  String get undoDone;
+
+  /// No description provided for @undoFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'復原失敗，請再試一次'**
+  String get undoFailed;
+
+  /// No description provided for @offlineReadOnlyBanner.
+  ///
+  /// In zh, this message translates to:
+  /// **'離線唯讀：連線後才能儲存變更'**
+  String get offlineReadOnlyBanner;
+
+  /// Calendar content shown from a previous read, never presented as fresh
+  ///
+  /// In zh, this message translates to:
+  /// **'離線資料'**
+  String get calendarCached;
+
+  /// Church-time stamp of the last complete read
+  ///
+  /// In zh, this message translates to:
+  /// **'資料讀取於{time}'**
+  String calendarReadAt(String time);
+
+  /// No description provided for @calDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'活動說明'**
+  String get calDescription;
+
+  /// No description provided for @calDuplicate.
+  ///
+  /// In zh, this message translates to:
+  /// **'複製活動'**
+  String get calDuplicate;
+
+  /// No description provided for @homeUpcomingEvents.
+  ///
+  /// In zh, this message translates to:
+  /// **'近期活動'**
+  String get homeUpcomingEvents;
+
+  /// No description provided for @memberSmallGroups.
+  ///
+  /// In zh, this message translates to:
+  /// **'小組'**
+  String get memberSmallGroups;
+
+  /// No description provided for @memberSmallGroupsHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'每行一個小組'**
+  String get memberSmallGroupsHint;
+
+  /// No description provided for @linkErrNotToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'來源尚未提供今天的內容'**
+  String get linkErrNotToday;
+
+  /// No description provided for @linkSourceToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天的內容沒有更新：{reason}'**
+  String linkSourceToday(String reason);
+
+  /// No description provided for @linkSourceRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新抓取'**
+  String get linkSourceRetry;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

@@ -15,6 +15,8 @@ import '../../domain/models.dart';
 import '../../domain/staff_order.dart';
 import '../../env.dart';
 import '../backend.dart';
+import '../connectivity.dart';
+import '../roster_compare_and_set.dart';
 import 'codec.dart';
 import '../native_or_browser.dart';
 import '../retry_refused.dart';
@@ -72,18 +74,21 @@ class FirebaseBackend implements Backend {
   final FirebaseStorage _storage;
 
   @override
+  final TransportConnectivity connectivity = TransportConnectivity(browserHints: true);
+
+  @override
   final DateTime Function() clock;
 
   @override
   late final AuthGateway auth = FirebaseAuthGateway(_auth);
 
   @override
-  late final ProfileRepository profiles = _Profiles(_db);
+  late final ProfileRepository profiles = _Profiles(_db, _auth, connectivity);
 
   @override
   late final MembershipRepository memberships = _Memberships(_db);
 
-  late final _calls = _Callables(_functions, _auth);
+  late final _calls = _Callables(_functions, _auth, connectivity);
 
   @override
   late final CloudApi cloud = FirebaseCloudApi._(_calls, _storage, _auth);
@@ -312,17 +317,22 @@ class FirebaseAuthGateway implements AuthGateway {
 // ---------------------------------------------------------------- users
 
 class _Profiles implements ProfileRepository {
-  _Profiles(this._db);
+  _Profiles(this._db, this._auth, this._connectivity);
 
   final FirebaseFirestore _db;
+  final fa.FirebaseAuth _auth;
+  final TransportConnectivity _connectivity;
 
   @override
   Stream<UserProfile?> watch(String uid) =>
       _db.doc('users/$uid').live().map((s) => s.exists ? profileFromJson(uid, s.data()!) : null);
 
   @override
-  Future<void> save(UserProfile profile) => _guard(
-    () => _db.runTransaction((tx) async {
+  Future<void> save(UserProfile profile) => _onlineTransaction(
+    _db,
+    _auth,
+    _connectivity,
+    (tx) async {
       final ref = _db.doc('users/${profile.uid}');
       final current = await tx.get(ref);
       tx.set(ref, {
@@ -332,24 +342,39 @@ class _Profiles implements ProfileRepository {
         'updatedAt': FieldValue.serverTimestamp(),
         if (!current.exists) 'createdAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-    }),
+    },
   );
 
   @override
-  Future<void> ensure(UserProfile profile) => _guard(
-    () => _db.runTransaction((tx) async {
-      // A transaction reads the server, not the offline cache, so a profile
-      // created on another device is seen and kept.
-      final ref = _db.doc('users/${profile.uid}');
-      if ((await tx.get(ref)).exists) return;
-      tx.set(ref, {
-        'name': profile.name,
-        'email': profile.email,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
+  Future<void> ensure(UserProfile profile) async {
+    Future<bool> cachedOwnProfile() async {
+      if (_auth.currentUser?.uid != profile.uid) return false;
+      try {
+        final cached = await _db.doc('users/${profile.uid}').get(const GetOptions(source: Source.cache));
+        return _auth.currentUser?.uid == profile.uid && cached.exists && cached.data()?['name'] is String;
+      } on FirebaseException {
+        return false;
+      }
+    }
+
+    if (!_connectivity.online && await cachedOwnProfile()) return;
+    try {
+      await _onlineTransaction(_db, _auth, _connectivity, (tx) async {
+        final ref = _db.doc('users/${profile.uid}');
+        if ((await tx.get(ref)).exists) return;
+        tx.set(ref, {
+          'name': profile.name,
+          'email': profile.email,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
       });
-    }),
-  );
+    } on CloudException catch (error) {
+      // An existing own profile is readable offline, never rewritten. An
+      // unknown profile still fails instead of pretending creation succeeded.
+      if (error.code != CloudErrorCode.unavailable || !await cachedOwnProfile()) rethrow;
+    }
+  }
 }
 
 class _Platform implements PlatformData {
@@ -413,6 +438,16 @@ class FirestoreChurchData implements ChurchData {
 
   DocumentReference<Json> get _church => _db.doc('churches/$churchId');
   CollectionReference<Json> _col(String name) => _church.collection(name);
+
+  Future<T> _transaction<T>(Future<T> Function(Transaction tx) update) =>
+      _onlineTransaction(_db, _calls._auth, _calls._connectivity, update);
+
+  /// A server read is mandatory even for a simple mutation. Transactions
+  /// commit online and never enter Firestore's persistent mutation queue.
+  Future<void> _write(DocumentReference<Json> ref, void Function(Transaction tx) change) => _transaction((tx) async {
+    await tx.get(ref);
+    change(tx);
+  });
 
   /// Calls function [name] for this church.
   Future<Map<String, Object?>> _call(String name, [Map<String, Object?> data = const {}]) async =>
@@ -517,7 +552,10 @@ class FirestoreChurchData implements ChurchData {
   ).live().map((snap) => [for (final d in snap.docs) pendingMemberFromJson(d.id, d.data())]).translated();
 
   @override
-  Future<void> deletePendingMember(String id) => _guard(() => _col('pendingMembers').doc(id).delete());
+  Future<void> deletePendingMember(String id) {
+    final ref = _col('pendingMembers').doc(id);
+    return _write(ref, (tx) => tx.delete(ref));
+  }
 
   @override
   Stream<ServiceSettings> services() =>
@@ -583,19 +621,93 @@ class FirestoreChurchData implements ChurchData {
   };
 
   @override
-  Future<void> saveRoster(Roster roster) => _guard(() => _col('rosters').doc(roster.id).set(_rosterDoc(roster)));
+  Future<void> saveRoster(Roster roster) {
+    final ref = _col('rosters').doc(roster.id);
+    return _write(ref, (tx) => tx.set(ref, _rosterDoc(roster)));
+  }
 
   @override
-  Future<void> saveRosters(List<Roster> rosters, {String via = 'app'}) => _guard(() {
-    final batch = _db.batch();
-    for (final r in rosters) {
-      batch.set(_col('rosters').doc(r.id), {..._rosterDoc(r), 'via': via});
+  Future<void> saveRosters(List<Roster> rosters, {String via = 'app'}) {
+    final docs = {
+      for (final roster in rosters) _col('rosters').doc(roster.id): {..._rosterDoc(roster), 'via': via},
+    };
+    return _transaction((tx) async {
+      // All reads precede all writes, including the empty batch's online guard.
+      if (docs.isEmpty) await tx.get(_church);
+      for (final ref in docs.keys) {
+        await tx.get(ref);
+      }
+      for (final entry in docs.entries) {
+        tx.set(entry.key, entry.value);
+      }
+    });
+  }
+
+  @override
+  Future<void> compareAndSetRosters({
+    required Map<String, Roster?> before,
+    required Map<String, Roster?> after,
+    String via = 'app',
+    ({String serviceType, StaffOrder before, StaffOrder after})? staffOrder,
+    ({Service before, Service after})? serviceChange,
+  }) async {
+    validateRosterCompareAndSet(before, after);
+    validateRosterServiceChange(serviceChange);
+    if (after.length + (staffOrder == null ? 0 : 1) + (serviceChange == null ? 0 : 1) > 500) {
+      throw const CloudException(CloudErrorCode.quotaExceeded, reason: CloudReason.tooManyChanges);
     }
-    return batch.commit();
-  });
+    final expected = Map.of(before);
+    final next = {
+      for (final entry in after.entries)
+        entry.key: entry.value == null ? null : {..._rosterDoc(entry.value!), 'via': via},
+    };
+    await _transaction((tx) async {
+      Json? serviceDoc;
+      if (serviceChange case final change?) {
+        final settingsRef = _col('settings').doc('services');
+        final settings = serviceSettingsFromJson((await tx.get(settingsRef)).data());
+        if (settings.byId(change.before.id) != change.before) throw const CloudException(CloudErrorCode.conflict);
+        final nextSettings = settings.withServices([
+          for (final service in settings.services) service.id == change.before.id ? change.after : service,
+        ]);
+        serviceDoc = {
+          'services': [for (final service in nextSettings.services) serviceToJson(service)],
+          'ids': nextSettings.ids,
+          'updatedAt': FieldValue.serverTimestamp(),
+        };
+      }
+      if (expected.isEmpty) await tx.get(_church);
+      for (final entry in expected.entries) {
+        final snapshot = await tx.get(_col('rosters').doc(entry.key));
+        final matches = entry.value == null
+            ? !snapshot.exists
+            : snapshot.exists && rosterMatchesBaseline(rosterFromJson(snapshot.data()!), entry.value);
+        if (!matches) throw const CloudException(CloudErrorCode.conflict);
+      }
+      if (staffOrder case final order?) {
+        final snapshot = await tx.get(_col('staff_orders').doc(order.serviceType));
+        if (StaffOrder.fromJson(snapshot.data() ?? const {}) != order.before) {
+          throw const CloudException(CloudErrorCode.conflict);
+        }
+      }
+      for (final entry in next.entries) {
+        final ref = _col('rosters').doc(entry.key);
+        if (entry.value == null) {
+          if (expected[entry.key] != null) tx.delete(ref);
+        } else {
+          tx.set(ref, entry.value!);
+        }
+      }
+      if (staffOrder case final order?) tx.set(_col('staff_orders').doc(order.serviceType), order.after.toJson());
+      if (serviceDoc != null) tx.set(_col('settings').doc('services'), serviceDoc);
+    });
+  }
 
   @override
-  Future<void> deleteRoster(Roster roster) => _guard(() => _col('rosters').doc(roster.id).delete());
+  Future<void> deleteRoster(Roster roster) {
+    final ref = _col('rosters').doc(roster.id);
+    return _write(ref, (tx) => tx.delete(ref));
+  }
 
   @override
   Future<void> updateStaffOrder(
@@ -606,15 +718,11 @@ class FirestoreChurchData implements ChurchData {
     final ref = _col('staff_orders').doc(serviceType);
     // Read-modify-write in a transaction so two editors ordering different
     // duties do not overwrite each other.
-    await _guard(
-      () => _db.runTransaction((tx) async {
-        final snap = await tx.get(ref);
-        final next = StaffOrder.fromJson(
-          snap.data() ?? const {},
-        ).withChanges(changes);
-        tx.set(ref, next.toJson());
-      }),
-    );
+    await _transaction((tx) async {
+      final snap = await tx.get(ref);
+      final next = StaffOrder.fromJson(snap.data() ?? const {}).withChanges(changes);
+      tx.set(ref, next.toJson());
+    });
   }
 
   @override
@@ -622,29 +730,60 @@ class FirestoreChurchData implements ChurchData {
     final ref = _col('settings').doc('services');
     // Merge ids inside a transaction: two admins saving at once must not
     // drop each other's new IDs (the rules also reject shrinking ids).
-    return _guard(
-      () => _db.runTransaction((tx) async {
-        final current = serviceSettingsFromJson((await tx.get(ref)).data());
-        final next = current.withServices(services);
-        tx.set(ref, {
-          'services': [for (final s in next.services) serviceToJson(s)],
-          'ids': next.ids,
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-      }),
-    );
+    return _transaction((tx) async {
+      final current = serviceSettingsFromJson((await tx.get(ref)).data());
+      final next = current.withServices(services);
+      tx.set(ref, {
+        'services': [for (final s in next.services) serviceToJson(s)],
+        'ids': next.ids,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    });
   }
 
   @override
-  Future<void> saveMember(Member member) => _guard(() => _col('members').doc(member.uid).update(memberToJson(member)));
+  Future<void> compareAndSetService({
+    required Service before,
+    required Service after,
+    ({String from, String to})? dutyRename,
+  }) async {
+    if (before.id != after.id) throw ArgumentError('service id cannot change');
+    await _call('editService', {
+      'before': serviceToJson(before),
+      'after': serviceToJson(after),
+      if (dutyRename case final rename?) 'dutyRename': {'from': rename.from, 'to': rename.to},
+    });
+  }
 
   @override
-  Future<void> removeMember(String uid) => _guard(() => _col('members').doc(uid).delete());
+  Future<void> saveMember(Member member) {
+    final ref = _col('members').doc(member.uid);
+    return _write(ref, (tx) => tx.update(ref, memberToJson(member)));
+  }
 
   @override
-  Future<void> setNotificationPrefs(String uid, Set<NotificationKind> muted) => _guard(
-    () => _col('members').doc(uid).update({'notificationPrefs': notificationPrefsToJson(muted)}),
-  );
+  Future<void> grantDuty(String uid, String serviceType, String duty) {
+    final ref = _col('members').doc(uid);
+    return _transaction((tx) async {
+      final snap = await tx.get(ref);
+      final data = snap.data();
+      if (data == null) throw const CloudException(CloudErrorCode.notFound);
+      final next = memberToJson(memberFromJson(uid, data).withDuty(serviceType, duty));
+      tx.update(ref, {'zones': next['zones'], 'zoneTypes': next['zoneTypes']});
+    });
+  }
+
+  @override
+  Future<void> removeMember(String uid) {
+    final ref = _col('members').doc(uid);
+    return _write(ref, (tx) => tx.delete(ref));
+  }
+
+  @override
+  Future<void> setNotificationPrefs(String uid, Set<NotificationKind> muted) {
+    final ref = _col('members').doc(uid);
+    return _write(ref, (tx) => tx.update(ref, {'notificationPrefs': notificationPrefsToJson(muted)}));
+  }
 
   @override
   Stream<List<Invite>> invites() => _db
@@ -658,31 +797,33 @@ class FirestoreChurchData implements ChurchData {
       .translated();
 
   @override
-  Future<Invite> createInvite({required Duration validFor, List<String> zoneTypes = const []}) => _guard(() async {
-    final church = await _church.get();
+  Future<Invite> createInvite({required Duration validFor, List<String> zoneTypes = const []}) async {
+    // Generate identity/time once, outside the retryable transaction callback.
     final code = randomInviteCode();
     final expiresAt = _clock().add(validFor);
-    final uid = fa.FirebaseAuth.instance.currentUser?.uid;
-    await _db.collection('invites').doc(code).set({
-      'cid': churchId,
-      'churchName': church.data()?['name'] ?? '',
-      'expiresAt': Timestamp.fromDate(expiresAt),
-      'revoked': false,
-      'createdBy': uid,
-      'createdAt': FieldValue.serverTimestamp(),
-      if (zoneTypes.isNotEmpty) 'zoneTypes': zoneTypes,
+    final uid = _calls._auth.currentUser?.uid;
+    final churchName = await _transaction((tx) async {
+      final church = await tx.get(_church);
+      final name = church.data()?['name'] as String? ?? '';
+      tx.set(_db.collection('invites').doc(code), {
+        'cid': churchId,
+        'churchName': name,
+        'expiresAt': Timestamp.fromDate(expiresAt),
+        'revoked': false,
+        'createdBy': uid,
+        'createdAt': FieldValue.serverTimestamp(),
+        if (zoneTypes.isNotEmpty) 'zoneTypes': zoneTypes,
+      });
+      return name;
     });
-    return Invite(
-      code: code,
-      churchId: churchId,
-      churchName: church.data()?['name'] as String? ?? '',
-      expiresAt: expiresAt,
-      zoneTypes: zoneTypes,
-    );
-  });
+    return Invite(code: code, churchId: churchId, churchName: churchName, expiresAt: expiresAt, zoneTypes: zoneTypes);
+  }
 
   @override
-  Future<void> revokeInvite(String code) => _guard(() => _db.collection('invites').doc(code).update({'revoked': true}));
+  Future<void> revokeInvite(String code) {
+    final ref = _db.collection('invites').doc(code);
+    return _write(ref, (tx) => tx.update(ref, {'revoked': true}));
+  }
 
   @override
   Stream<CalendarSettings> calendarSettings() =>
@@ -696,15 +837,15 @@ class FirestoreChurchData implements ChurchData {
   Future<LinkSourceResult> setChurchLink(ChurchLink? link) async {
     final ref = _col('settings').doc('link');
     if (link == null) {
-      await _guard(ref.delete);
+      await _write(ref, (tx) => tx.delete(ref));
       return const LinkSourceResult();
     }
-    final saved = churchLinkFromJson((await _guard(ref.get)).data());
-    // Merge: the source and fetch time on the same doc are set by the
-    // setLinkSource function, which also fetches a new source.
-    await _guard(
-      () => ref.set({...churchLinkToJson(link), 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true)),
-    );
+    final saved = await _transaction((tx) async {
+      final saved = churchLinkFromJson((await tx.get(ref)).data());
+      // The source/fetch time is owned by setLinkSource on the same doc.
+      tx.set(ref, {...churchLinkToJson(link), 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
+      return saved;
+    });
     if (link.source == saved?.source && (link.source == null || link.fetchMinute == saved?.fetchMinute)) {
       return const LinkSourceResult();
     }
@@ -720,6 +861,17 @@ class FirestoreChurchData implements ChurchData {
   }
 
   @override
+  Future<LinkSourceResult> refreshChurchLink() async {
+    final d = await _call('setLinkSource', {'refresh': true});
+    final content = d['content'];
+    return LinkSourceResult(
+      content: content is Map ? linkContentFromJson(Map<String, dynamic>.from(content)) : null,
+      error: d['ok'] == true ? null : linkFetchErrorFromName(d['error']),
+      status: (d['status'] as num?)?.toInt(),
+    );
+  }
+
+  @override
   Stream<LinkContent?> linkContent() =>
       _col('settings').doc('linkContent').live().map((s) => linkContentFromJson(s.data())).translated();
 
@@ -728,20 +880,25 @@ class FirestoreChurchData implements ChurchData {
       _col('settings').doc('webhook').live().map((s) => webhookFromJson(s.data())).translated();
 
   @override
-  Future<void> setHomeName(String? name) => _guard(() => _church.update({'homeName': name ?? FieldValue.delete()}));
+  Future<void> setHomeName(String? name) =>
+      _write(_church, (tx) => tx.update(_church, {'homeName': name ?? FieldValue.delete()}));
 
   @override
-  Future<void> uploadLogo(List<int> bytes) => _guard(
-    () => _storage
-        .ref(_logoPath)
-        .putData(
-          Uint8List.fromList(bytes),
-          SettableMetadata(
-            contentType: 'image/png',
-            cacheControl: 'public, max-age=86400',
+  Future<void> uploadLogo(List<int> bytes) async {
+    await _transaction((tx) async {
+      await tx.get(_church);
+    });
+    await _online(
+      _calls._connectivity,
+      () => _storage
+          .ref(_logoPath)
+          .putData(
+            Uint8List.fromList(bytes),
+            SettableMetadata(contentType: 'image/png', cacheControl: 'public, max-age=86400'),
           ),
-        ),
-  );
+      write: true,
+    );
+  }
 
   @override
   Future<void> deleteChurch() => _call('deleteChurch');
@@ -1058,8 +1215,66 @@ CloudErrorCode _codeFor(String code) => switch (code) {
   'permission-denied' || 'unauthenticated' => CloudErrorCode.permissionDenied,
   'unavailable' || 'deadline-exceeded' => CloudErrorCode.unavailable,
   'resource-exhausted' => CloudErrorCode.quotaExceeded,
+  'aborted' || 'already-exists' => CloudErrorCode.conflict,
   _ => CloudErrorCode.unknown,
 };
+
+/// Transactions are online-only (unlike set/update/delete and write batches).
+/// Callbacks stage Firestore writes only: no random IDs, clock reads, network
+/// calls, notifications or application mutations that could repeat on retry.
+Future<T> _onlineTransaction<T>(
+  FirebaseFirestore db,
+  fa.FirebaseAuth auth,
+  TransportConnectivity connectivity,
+  Future<T> Function(Transaction tx) update,
+) {
+  final uid = auth.currentUser?.uid;
+  return _online(connectivity, () async {
+    // On the web, what the callback throws comes back wrapped in a JS
+    // error and loses its type. Keep the last attempt's failure (a retry
+    // starts clean) and rethrow it as it was.
+    Object? failure;
+    StackTrace? failureStack;
+    try {
+      return await db.runTransaction((tx) async {
+        failure = null;
+        try {
+          if (uid == null || auth.currentUser?.uid != uid) throw const CloudException(CloudErrorCode.permissionDenied);
+          final result = await update(tx);
+          if (auth.currentUser?.uid != uid) throw const CloudException(CloudErrorCode.permissionDenied);
+          return result;
+        } catch (e, stack) {
+          failure = e;
+          failureStack = stack;
+          rethrow;
+        }
+      });
+    } catch (_) {
+      final original = failure;
+      if (original == null) rethrow;
+      Error.throwWithStackTrace(original is FirebaseException ? _cloudError(original) : original, failureStack!);
+    }
+  }, write: true);
+}
+
+Future<T> _online<T>(TransportConnectivity connectivity, Future<T> Function() op, {bool write = false}) async {
+  final release = write ? connectivity.beginWrite() : null;
+  try {
+    connectivity.requireBrowserOnline();
+    final result = await _guard(op);
+    connectivity.observe(true);
+    return result;
+  } on CloudException catch (error) {
+    if (error.code == CloudErrorCode.unavailable) {
+      connectivity.observe(false);
+      throw offlineReadOnly;
+    }
+    connectivity.observe(true);
+    rethrow;
+  } finally {
+    release?.call();
+  }
+}
 
 /// Runs a Firestore or Storage operation, its errors as [CloudException]s.
 Future<T> _guard<T>(Future<T> Function() op) async {
@@ -1082,30 +1297,47 @@ Map<String, Object?> _asMap(Object? data) => data is Map ? Map<String, Object?>.
 
 /// Calls Cloud Functions, their errors as [CloudException]s.
 class _Callables {
-  _Callables(this._functions, this._auth);
+  _Callables(this._functions, this._auth, this._connectivity);
 
   final FirebaseFunctions _functions;
   final fa.FirebaseAuth _auth;
+  final TransportConnectivity _connectivity;
 
   Future<Object?> call(String name, [Map<String, Object?>? data]) async {
+    const reads = {
+      'previewInvite',
+      'pendingClaims',
+      'churchPreview',
+      'movePreview',
+      'calendarList',
+      'calendarEvents',
+      'photoQuota',
+      'adminSearchChurches',
+      'adminChurchMembers',
+      'adminStats',
+      'adminFunding',
+    };
+    final release = reads.contains(name) ? null : _connectivity.beginWrite();
     try {
-      return await _callOnce(name, data);
-    } on CloudException catch (e) {
-      // Verified in another tab, or before the app was reopened: the ID
-      // token still says unverified until it is refreshed.
-      if (e.code != CloudErrorCode.unverifiedEmail || !await _verifiedNow()) rethrow;
-      return _callOnce(name, data);
+      try {
+        return await _callOnce(name, data);
+      } on CloudException catch (e) {
+        if (e.code != CloudErrorCode.unverifiedEmail || !await _verifiedNow()) rethrow;
+        return await _callOnce(name, data);
+      }
+    } finally {
+      release?.call();
     }
   }
 
-  Future<Object?> _callOnce(String name, Map<String, Object?>? data) async {
+  Future<Object?> _callOnce(String name, Map<String, Object?>? data) => _online(_connectivity, () async {
     try {
       final result = await _functions.httpsCallable(name).call<Object?>(data);
       return result.data;
     } on FirebaseFunctionsException catch (e) {
       throw translate(e);
     }
-  }
+  });
 
   /// Reloads the account and, when its email is verified, refreshes the ID
   /// token so the next call carries it.
@@ -1191,7 +1423,16 @@ class FirebaseCloudApi implements CloudApi {
     final uid = _auth.currentUser?.uid;
     if (uid == null) throw const CloudException(CloudErrorCode.permissionDenied);
     final path = 'moves/$uid/${DateTime.now().millisecondsSinceEpoch}.json';
-    await _storage.ref(path).putData(Uint8List.fromList(bytes), SettableMetadata(contentType: 'application/json'));
+    await _online(
+      _calls._connectivity,
+      () => _storage
+          .ref(path)
+          .putData(
+            Uint8List.fromList(bytes),
+            SettableMetadata(contentType: 'application/json'),
+          ),
+      write: true,
+    );
     return path;
   }
 

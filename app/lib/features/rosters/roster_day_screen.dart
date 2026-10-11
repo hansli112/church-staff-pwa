@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +14,7 @@ import '../../state/roster_actions.dart';
 import '../common/errors.dart';
 import 'event_sheet.dart';
 import 'format.dart';
+import 'future_changes.dart';
 import 'people_picker.dart';
 import 'roster_card.dart';
 
@@ -83,7 +82,6 @@ class RosterDayScreen extends ConsumerWidget {
               roster: roster,
               title: title,
               highlightUid: ref.watch(uidProvider),
-              highlightName: ref.watch(meProvider.select((m) => m.value?.name)),
             )
           else
             EditableRoster(roster: roster, title: title),
@@ -147,55 +145,6 @@ class RosterDayScreen extends ConsumerWidget {
   }
 }
 
-/// Runs a write that returns its own undo, then shows 「復原」 for it.
-/// Shows the result of a roster write, with 「復原」.
-///
-/// Firestore applies the change on this device at once and confirms it when
-/// the server has it. Waiting for that offline would show nothing, so after
-/// a moment the toast appears anyway and says the change will sync; a later
-/// failure still shows up.
-Future<void> runWithUndo(BuildContext context, String message, RosterWrite Function() write) async {
-  final l10n = L10n.of(context);
-  final RosterWrite w;
-  try {
-    w = write();
-  } catch (_) {
-    if (context.mounted) showToast(context, l10n.saveFailed);
-    return;
-  }
-  void offerUndo(String text) => showToast(
-    context,
-    text,
-    onUndo: () => w.undo().catchError((Object e) {
-      if (context.mounted) showToast(context, errorText(l10n, e));
-    }),
-  );
-  var settled = false;
-  final result = w.done.then((_) => true, onError: (Object _) => false);
-  // A cancellable timer, not Future.delayed: nothing is left running once
-  // the write settles.
-  final gate = Completer<bool?>();
-  final timer = Timer(const Duration(seconds: 2), () {
-    if (!gate.isCompleted) gate.complete(null);
-  });
-  unawaited(
-    result.then((ok) {
-      timer.cancel();
-      if (!gate.isCompleted) gate.complete(ok);
-    }),
-  );
-  final confirmed = await gate.future;
-  settled = confirmed != null;
-  if (!context.mounted) return;
-  if (confirmed == false) {
-    showToast(context, l10n.saveFailed);
-    return;
-  }
-  Haptics.success();
-  offerUndo(settled ? message : l10n.savedOffline);
-  if (!settled && !await result && context.mounted) showToast(context, l10n.saveFailed);
-}
-
 /// Whether what editing [roster] reads is loaded; watching it keeps it so.
 bool _editingReady(WidgetRef ref, Roster roster) =>
     roster.isEvent ? ref.watch(eventEditingProvider) : ref.watch(rosterEditingProvider(roster.type));
@@ -250,11 +199,14 @@ class EditableRoster extends ConsumerWidget {
                     style: AppText.body.copyWith(color: c.onAccent),
                   ),
                 ),
-                onDismissed: (_) => runWithUndo(
-                  context,
-                  l10n.dutyRemoved(duty.role),
-                  () => ref.read(rosterActionsProvider).removeDuty(roster, duty.role),
-                ),
+                confirmDismiss: (_) async {
+                  await runWithUndo(
+                    context,
+                    l10n.dutyRemoved(duty.role),
+                    () => ref.read(rosterActionsProvider).removeDuty(roster, duty.role),
+                  );
+                  return false;
+                },
                 child: _DutyRow(roster: roster, duty: duty),
               ),
           ],
@@ -284,6 +236,13 @@ class _DutyRow extends ConsumerWidget {
         serviceType: roster.isEvent ? null : roster.type,
         duty: duty.role,
         initial: duty.people,
+        initialGuests: {
+          for (final name in duty.people)
+            if (!duty.uids.containsKey(name)) name,
+        },
+        guestSuggestions: ref
+            .read(rosterActionsProvider)
+            .guestSuggestions(roster.isEvent ? null : roster.type, duty.role),
         members: members,
         order: order,
         // An event is in no 牧區 to add the duty to, and has no staff
@@ -305,19 +264,19 @@ class _DutyRow extends ConsumerWidget {
       for (final m in result.addDutyTo) {
         await actions.grantDuty(m, roster.type, duty.role);
       }
-      if (result.ranking != null) {
-        await actions.setRanking(roster.type, duty.role, result.ranking!);
-        if (context.mounted) showToast(context, l10n.orderSaved);
-      }
-    } catch (_) {
-      if (context.mounted) showToast(context, l10n.saveFailed);
+    } catch (error) {
+      if (context.mounted) showToast(context, errorText(l10n, error));
+      return;
     }
-    final changed = result.people.length != duty.people.length || !result.people.toSet().containsAll(duty.people);
-    if (!changed || !context.mounted) return;
+    final changed =
+        result.people.length != duty.people.length ||
+        !result.people.toSet().containsAll(duty.people) ||
+        result.guestNames.any((name) => duty.uids.containsKey(name));
+    if (!context.mounted || (!changed && result.ranking == null)) return;
     await runWithUndo(
       context,
-      l10n.dutyUpdated(duty.role),
-      () => actions.setPeople(roster, duty.role, result.people),
+      changed ? l10n.dutyUpdated(duty.role) : l10n.orderSaved,
+      () => actions.setPeople(roster, duty.role, result.people, guestNames: result.guestNames, ranking: result.ranking),
     );
   }
 
@@ -345,6 +304,13 @@ class _DutyRow extends ConsumerWidget {
               leading: const Icon(Icons.remove_circle_outline),
               onTap: () => Navigator.pop(context, 'remove'),
             ),
+            if (!roster.isEvent && !duty.uids.containsKey(person))
+              ListRow(
+                title: L10n.of(context).rosterRemoveFutureGuest,
+                destructive: true,
+                leading: const Icon(Icons.event_busy_outlined),
+                onTap: () => Navigator.pop(context, 'removeFutureGuest'),
+              ),
           ],
         ),
       ),
@@ -358,6 +324,21 @@ class _DutyRow extends ConsumerWidget {
           for (final p in duty.people)
             if (p != person) p,
         ]),
+      );
+    } else if (choice == 'removeFutureGuest') {
+      final actions = ref.read(rosterActionsProvider);
+      final preview = actions.previewGuestRemoval(roster.type, duty.role, person);
+      final apply = await showFutureRosterPreview(
+        context,
+        title: L10n.of(context).rosterRemoveFutureGuestTitle(person),
+        preview: preview,
+        today: ref.read(todayProvider),
+      );
+      if (!apply || !context.mounted) return;
+      await runWithUndo(
+        context,
+        L10n.of(context).rosterFutureGuestRemoved(preview.plan.before.length),
+        () => actions.applyFuturePreview(preview),
       );
     } else if (choice == 'swap') {
       await _swap(context, ref, person);

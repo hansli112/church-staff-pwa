@@ -56,7 +56,7 @@ export async function openChurch(
   name: string,
   opts: {
     services?: { services: unknown[]; ids: string[] };
-    admin?: { name?: string; groups?: string[]; zones?: unknown[]; zoneTypes?: string[] };
+    admin?: { name?: string; groups?: string[]; zones?: unknown[]; zoneTypes?: string[]; notificationPrefs?: { muted: string[] } };
     extra?: Record<string, unknown>;
     /** A church ID picked beforehand, e.g. for data written first. */
     cid?: string;
@@ -94,6 +94,7 @@ export async function openChurch(
       groups: opts.admin?.groups ?? [],
       zones: opts.admin?.zones ?? [],
       zoneTypes: opts.admin?.zoneTypes ?? [],
+      ...(opts.admin?.notificationPrefs ? { notificationPrefs: opts.admin.notificationPrefs } : {}),
       joinedAt: serverTime(),
     });
     tx.create(churchRef.collection('settings').doc('services'), { ...services, updatedAt: serverTime() });

@@ -1139,9 +1139,6 @@ class L10nZh extends L10n {
   String get appIconNight => '夜';
 
   @override
-  String get savedOffline => '已存在這台裝置，連上網路後會自動同步';
-
-  @override
   String get goHome => '回首頁';
 
   @override
@@ -1395,7 +1392,7 @@ class L10nZh extends L10n {
   String get linkFetchTime => '每天更新時間';
 
   @override
-  String get linkSourceFooter => '每天在這個時間抓一次，格式是有 title、body、link 的 JSON。抓到後 48 小時內，首頁顯示抓到的內容；抓不到就顯示上面的固定內容。';
+  String get linkSourceFooter => '每天這個時間抓一次。JSON 要有 date（教會的今天）、title、body、link（https）。';
 
   @override
   String linkSourceUpdated(String time) {
@@ -1419,7 +1416,7 @@ class L10nZh extends L10n {
   String get linkErrTooLarge => '內容超過 64KB';
 
   @override
-  String get linkErrBadFormat => '內容不是有 title 的 JSON';
+  String get linkErrBadFormat => '內容不是完整的 date、title、body、link JSON';
 
   @override
   String get linkErrNotHttps => '網址或轉址不是 https';
@@ -1739,4 +1736,454 @@ class L10nZh extends L10n {
 
   @override
   String get fundingRatesBy => '匯率：Exchange Rate API';
+
+  @override
+  String get importAdvanced => '進階';
+
+  @override
+  String get importFormatHelp => 'date：YYYY-MM-DD；無人時 people 填 []。\nevents 可省略；活動 color 只接受 0–5 的色票編號。';
+
+  @override
+  String get importPhotoFormatError => '辨識結果格式不符，請重新辨識或使用進階 JSON';
+
+  @override
+  String get importJsonSyntaxError => 'JSON 格式錯誤，請使用下方範例的陣列格式';
+
+  @override
+  String get importJsonEdit => '編輯 JSON';
+
+  @override
+  String get importJsonArrayRequired => '請填 JSON 陣列';
+
+  @override
+  String importConfirmName(String name) {
+    return '確認「$name」';
+  }
+
+  @override
+  String get importSameNameScope => '這份匯入中的同名人名都使用這個對應';
+
+  @override
+  String importGuestChoice(String name) {
+    return '保留「$name」為外請';
+  }
+
+  @override
+  String get importEditDate => '編輯日期';
+
+  @override
+  String get importDateFormatLabel => '日期（YYYY-MM-DD）';
+
+  @override
+  String get importValidDate => '請填有效的 YYYY-MM-DD 日期';
+
+  @override
+  String get importEditDuty => '編輯服事項目';
+
+  @override
+  String get importDutyLabel => '服事項目';
+
+  @override
+  String get importPeopleLines => '人名（每行一人）';
+
+  @override
+  String get importAddEventAction => '新增活動';
+
+  @override
+  String get importEditEvent => '編輯活動';
+
+  @override
+  String get importConflict => '服事表已變更，請重新檢查差異後再套用';
+
+  @override
+  String get importScopeChanged => '教會或帳號已切換，請重新匯入';
+
+  @override
+  String importRow(int number) {
+    return '第 $number 列';
+  }
+
+  @override
+  String get importDateLabel => '日期';
+
+  @override
+  String get importDateMissing => '請填日期';
+
+  @override
+  String get importFixDuty => '修正服事項目';
+
+  @override
+  String get importPeopleArrayHint => 'people 請填人名陣列';
+
+  @override
+  String get importFixEvent => '修正活動';
+
+  @override
+  String importRemoveDuty(String role, String names) {
+    return '移除$role：$names';
+  }
+
+  @override
+  String importAddDuty(String role, String names) {
+    return '新增$role：$names';
+  }
+
+  @override
+  String importChangeDuty(String role, String before, String after) {
+    return '$role：$before → $after';
+  }
+
+  @override
+  String importMemberIdentity(String name) {
+    return '$name（同工）';
+  }
+
+  @override
+  String importGuestIdentity(String name) {
+    return '$name（外請）';
+  }
+
+  @override
+  String importRemoveEvent(String name) {
+    return '移除活動：$name';
+  }
+
+  @override
+  String importAddEvent(String name) {
+    return '新增活動：$name';
+  }
+
+  @override
+  String importChangeEvent(String name) {
+    return '活動：$name';
+  }
+
+  @override
+  String importChangedColor(String before, String after) {
+    return '$before → $after';
+  }
+
+  @override
+  String get importNoChange => '安排沒有變更';
+
+  @override
+  String get importNoCandidate => '請保留為外請或修正人名';
+
+  @override
+  String importCandidates(String names) {
+    return '候選：$names';
+  }
+
+  @override
+  String get importGuestUnlinked => '外請（不連結帳號）';
+
+  @override
+  String get importNameNeedsConfirm => '請確認人名';
+
+  @override
+  String importLinkedMember(String name) {
+    return '同工：$name';
+  }
+
+  @override
+  String get importMode => '匯入方式';
+
+  @override
+  String get importMerge => '合併（保留未提到的安排）';
+
+  @override
+  String get importReplace => '取代當天全部安排';
+
+  @override
+  String get importReplaceHelp => '移除未提到的服事項目與活動；不影響其他日期';
+
+  @override
+  String get importFixData => '請修正資料後再匯入';
+
+  @override
+  String get importFixRow => '請修正這一列資料';
+
+  @override
+  String get importNameLinks => '人名對應';
+
+  @override
+  String get importNamesNeedConfirm => '確認人名後才能匯入';
+
+  @override
+  String get importRepairSettings => '修正教會設定（可選）';
+
+  @override
+  String get importNoSettingsChange => '這次安排不會變更同工或教會設定';
+
+  @override
+  String importAddConfiguredDuty(String role) {
+    return '加入服事設定：$role';
+  }
+
+  @override
+  String importUnconfiguredDuty(String role) {
+    return '未設定的服事項目：$role';
+  }
+
+  @override
+  String importGrantQualification(String name, String role) {
+    return '讓$name負責$role';
+  }
+
+  @override
+  String importMissingQualification(String name, String role) {
+    return '$name尚未設定$role';
+  }
+
+  @override
+  String importAddCommonEvent(String name) {
+    return '加入常用活動：$name';
+  }
+
+  @override
+  String importNotCommonEvent(String name) {
+    return '未設為常用活動：$name';
+  }
+
+  @override
+  String importDiff(String date) {
+    return '套用後差異・$date';
+  }
+
+  @override
+  String importRequiredField(String field) {
+    return '請填$field';
+  }
+
+  @override
+  String get importColor => '色彩';
+
+  @override
+  String get importIssueRowObject => '請填包含 date、duties 的物件';
+
+  @override
+  String get importIssueRowFields => '只支援 date、duties、events 欄位';
+
+  @override
+  String get importIssueDate => 'date 請填有效的 YYYY-MM-DD 日期';
+
+  @override
+  String get importIssueDuplicateDate => '日期重複，請合併成同一列';
+
+  @override
+  String get importIssueDutiesArray => 'duties 請填陣列';
+
+  @override
+  String importIssueDutyFields(int index) {
+    return '第 $index 個服事項目只支援 role、people';
+  }
+
+  @override
+  String importIssueRole(int index) {
+    return '第 $index 個 role 請填不重複的服事項目名稱';
+  }
+
+  @override
+  String importIssuePeopleArray(int index) {
+    return '第 $index 個 people 請填非空白人名的字串陣列；無人時填 []';
+  }
+
+  @override
+  String importIssueDuplicatePeople(int index) {
+    return '第 $index 個 people 不可有重複人名';
+  }
+
+  @override
+  String get importIssueEventsArray => 'events 請填陣列';
+
+  @override
+  String importIssueEventObject(int index, String example) {
+    return '第 $index 個活動請填 $example';
+  }
+
+  @override
+  String importIssueEventName(int index) {
+    return '第 $index 個活動 name 請填不重複的名稱';
+  }
+
+  @override
+  String importIssueEventColor(int index) {
+    return '第 $index 個活動 color 請填 0 到 5 的整數';
+  }
+
+  @override
+  String importIssueResolvedDuplicatePeople(String role) {
+    return '$role：確認後人名重複，請移除重複的人名';
+  }
+
+  @override
+  String get appRunningVersion => '目前版本';
+
+  @override
+  String get appVersionDevelopment => '開發版本（尚未建立發布版本）';
+
+  @override
+  String get appUpdateNativeTitle => 'App 更新';
+
+  @override
+  String get appUpdateNativeNote => '請從 App Store 或 Google Play 檢查更新。';
+
+  @override
+  String get appUpdateCheck => '檢查更新';
+
+  @override
+  String get appUpdateChecking => '檢查中…';
+
+  @override
+  String get appUpdateApply => '更新並重新開啟';
+
+  @override
+  String get appUpdateApplying => '更新中…';
+
+  @override
+  String get appUpdateCurrent => '目前已是最新發布版本。';
+
+  @override
+  String get appUpdateReady => '新版本已準備好；完成編輯後再更新，不會自動重新整理。';
+
+  @override
+  String get appUpdateFinishEditing => '請先完成編輯或儲存，再回到「我的」更新。';
+
+  @override
+  String get appUpdateFinishEditingNote => '請先完成編輯或儲存。';
+
+  @override
+  String get appUpdateFailed => '無法完成更新，請檢查網路後重試。';
+
+  @override
+  String get appUpdateScopeChanged => '帳號或教會已變更，請重新檢查更新。';
+
+  @override
+  String get appUpdateBackToMe => '請回到「我的」再更新。';
+
+  @override
+  String get appUpdateCheckFirst => '請先檢查更新。';
+
+  @override
+  String get rosterShowMore => '顯示更多';
+
+  @override
+  String get pickerGuestNames => '外請姓名';
+
+  @override
+  String get serviceSettingsSaved => '服事設定已儲存';
+
+  @override
+  String get serviceSyncOriginalEvent => '原本的特別活動';
+
+  @override
+  String get serviceSyncOriginalDuty => '原本的服事項目';
+
+  @override
+  String serviceFutureSyncTitle(String from, String to) {
+    return '同步「$from」為「$to」';
+  }
+
+  @override
+  String serviceFutureSyncSaved(int count) {
+    return '已同步$count份未來服事表';
+  }
+
+  @override
+  String serviceEventColorTitle(String name) {
+    return '$name・顏色';
+  }
+
+  @override
+  String get serviceEventColor => '顏色';
+
+  @override
+  String get serviceSyncFutureRosters => '同步未來服事表';
+
+  @override
+  String get rosterFutureChangesNone => '沒有需要變更的未來服事表';
+
+  @override
+  String get rosterFutureChangesFooter => '只變更明天起已儲存的服事表';
+
+  @override
+  String get rosterFutureChangesConflict => '已有同名項目，請先調整';
+
+  @override
+  String get rosterApplyFutureChanges => '套用變更';
+
+  @override
+  String get rosterRemoveFutureGuest => '移除未來的外請安排';
+
+  @override
+  String rosterRemoveFutureGuestTitle(String name) {
+    return '移除「$name」的未來安排';
+  }
+
+  @override
+  String rosterFutureGuestRemoved(int count) {
+    return '已移除$count份未來安排';
+  }
+
+  @override
+  String rosterFutureDutyChange(String role, String before, String after) {
+    return '$role：$before → $after';
+  }
+
+  @override
+  String rosterFutureEventChange(String before, String after) {
+    return '$before → $after';
+  }
+
+  @override
+  String get errConflict => '資料已被其他同工修改，請重新讀取後再試。';
+
+  @override
+  String get errOfflineReadOnly => '目前無法連線，只能查看已取得的資料。';
+
+  @override
+  String get errTooManyChanges => '變更項目太多，請縮小範圍後再試。';
+
+  @override
+  String get undoDone => '已復原';
+
+  @override
+  String get undoFailed => '復原失敗，請再試一次';
+
+  @override
+  String get offlineReadOnlyBanner => '離線唯讀：連線後才能儲存變更';
+
+  @override
+  String get calendarCached => '離線資料';
+
+  @override
+  String calendarReadAt(String time) {
+    return '資料讀取於$time';
+  }
+
+  @override
+  String get calDescription => '活動說明';
+
+  @override
+  String get calDuplicate => '複製活動';
+
+  @override
+  String get homeUpcomingEvents => '近期活動';
+
+  @override
+  String get memberSmallGroups => '小組';
+
+  @override
+  String get memberSmallGroupsHint => '每行一個小組';
+
+  @override
+  String get linkErrNotToday => '來源尚未提供今天的內容';
+
+  @override
+  String linkSourceToday(String reason) {
+    return '今天的內容沒有更新：$reason';
+  }
+
+  @override
+  String get linkSourceRetry => '重新抓取';
 }

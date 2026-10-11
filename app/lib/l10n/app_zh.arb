@@ -688,7 +688,6 @@
   "appIconGreen": "綠",
   "appIconPurple": "紫",
   "appIconNight": "夜",
-  "savedOffline": "已存在這台裝置，連上網路後會自動同步",
   "goHome": "回首頁",
   "churchNotFound": "找不到這間教會",
   "churchEntryNotMember": "你還不是這間教會的同工。請向管理員要邀請連結來加入。",
@@ -792,7 +791,7 @@
   "linkSource": "每日內容來源（選填）",
   "linkSourceUrl": "JSON 網址",
   "linkFetchTime": "每天更新時間",
-  "linkSourceFooter": "每天在這個時間抓一次，格式是有 title、body、link 的 JSON。抓到後 48 小時內，首頁顯示抓到的內容；抓不到就顯示上面的固定內容。",
+  "linkSourceFooter": "每天這個時間抓一次。JSON 要有 date（教會的今天）、title、body、link（https）。",
   "linkSourceUpdated": "上次更新：{time}",
   "@linkSourceUpdated": {
     "placeholders": {
@@ -819,7 +818,7 @@
   },
   "linkErrTimeout": "對方網站 5 秒內沒有回應",
   "linkErrTooLarge": "內容超過 64KB",
-  "linkErrBadFormat": "內容不是有 title 的 JSON",
+  "linkErrBadFormat": "內容不是完整的 date、title、body、link JSON",
   "linkErrNotHttps": "網址或轉址不是 https",
   "linkErrHttp": "對方網站回應錯誤（{status}）",
   "@linkErrHttp": {
@@ -1064,5 +1063,648 @@
   },
   "currencyTwd": "NT$",
   "currencyUsd": "US$",
-  "fundingRatesBy": "匯率：Exchange Rate API"
+  "fundingRatesBy": "匯率：Exchange Rate API",
+  "importAdvanced": "進階",
+  "@importAdvanced": {
+    "description": "Import source advanced controls heading"
+  },
+  "importFormatHelp": "date：YYYY-MM-DD；無人時 people 填 []。\nevents 可省略；活動 color 只接受 0–5 的色票編號。",
+  "@importFormatHelp": {
+    "description": "Explanation below the unlocalized canonical JSON protocol example"
+  },
+  "importPhotoFormatError": "辨識結果格式不符，請重新辨識或使用進階 JSON",
+  "@importPhotoFormatError": {
+    "description": "Photo recognizer returned an invalid canonical JSON response"
+  },
+  "importJsonSyntaxError": "JSON 格式錯誤，請使用下方範例的陣列格式",
+  "@importJsonSyntaxError": {
+    "description": "Pasted import JSON syntax or root-array error"
+  },
+  "importJsonEdit": "編輯 JSON",
+  "@importJsonEdit": {
+    "description": "Import preview source JSON edit action and sheet title"
+  },
+  "importJsonArrayRequired": "請填 JSON 陣列",
+  "@importJsonArrayRequired": {
+    "description": "Import source JSON editor validation"
+  },
+  "importConfirmName": "確認「{name}」",
+  "@importConfirmName": {
+    "description": "Import identity confirmation sheet title",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "美玉"
+      }
+    }
+  },
+  "importSameNameScope": "這份匯入中的同名人名都使用這個對應",
+  "@importSameNameScope": {
+    "description": "Explains that a confirmed raw-name mapping covers this import only"
+  },
+  "importGuestChoice": "保留「{name}」為外請",
+  "@importGuestChoice": {
+    "description": "Explicitly preserve an imported name without linking any member UID",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "陳志明"
+      }
+    }
+  },
+  "importEditDate": "編輯日期",
+  "@importEditDate": {
+    "description": "Import row date editor sheet title"
+  },
+  "importDateFormatLabel": "日期（YYYY-MM-DD）",
+  "@importDateFormatLabel": {
+    "description": "Import date field label; protocol format YYYY-MM-DD stays unchanged"
+  },
+  "importValidDate": "請填有效的 YYYY-MM-DD 日期",
+  "@importValidDate": {
+    "description": "Import date field validation"
+  },
+  "importEditDuty": "編輯服事項目",
+  "@importEditDuty": {
+    "description": "Import duty and people editor sheet title"
+  },
+  "importDutyLabel": "服事項目",
+  "@importDutyLabel": {
+    "description": "Import duty editor role field label"
+  },
+  "importPeopleLines": "人名（每行一人）",
+  "@importPeopleLines": {
+    "description": "Import people multiline field label"
+  },
+  "importAddEventAction": "新增活動",
+  "@importAddEventAction": {
+    "description": "Add an import event action and editor sheet title"
+  },
+  "importEditEvent": "編輯活動",
+  "@importEditEvent": {
+    "description": "Import event name and palette editor sheet title"
+  },
+  "importConflict": "服事表已變更，請重新檢查差異後再套用",
+  "@importConflict": {
+    "description": "Applying an import rejected a change not included in the displayed preview"
+  },
+  "importScopeChanged": "教會或帳號已切換，請重新匯入",
+  "@importScopeChanged": {
+    "description": "Old import input and preview cleared after church or account scope changed"
+  },
+  "importRow": "第 {number} 列",
+  "@importRow": {
+    "description": "One-based import source row label",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "importDateLabel": "日期",
+  "@importDateLabel": {
+    "description": "Editable import row date label"
+  },
+  "importDateMissing": "請填日期",
+  "@importDateMissing": {
+    "description": "Import row has no string date"
+  },
+  "importFixDuty": "修正服事項目",
+  "@importFixDuty": {
+    "description": "Malformed import duty edit action"
+  },
+  "importPeopleArrayHint": "people 請填人名陣列",
+  "@importPeopleArrayHint": {
+    "description": "Malformed imported people field hint; people is a protocol field name"
+  },
+  "importFixEvent": "修正活動",
+  "@importFixEvent": {
+    "description": "Malformed import event edit action"
+  },
+  "importRemoveDuty": "移除{role}：{names}",
+  "@importRemoveDuty": {
+    "description": "Import diff removes a duty and its current names",
+    "placeholders": {
+      "role": {
+        "type": "String",
+        "example": "司會"
+      },
+      "names": {
+        "type": "String",
+        "example": "王牧師"
+      }
+    }
+  },
+  "importAddDuty": "新增{role}：{names}",
+  "@importAddDuty": {
+    "description": "Import diff adds a duty with arranged names",
+    "placeholders": {
+      "role": {
+        "type": "String",
+        "example": "司琴"
+      },
+      "names": {
+        "type": "String",
+        "example": "李美玉"
+      }
+    }
+  },
+  "importChangeDuty": "{role}：{before} → {after}",
+  "@importChangeDuty": {
+    "description": "Import duty diff before and after names",
+    "placeholders": {
+      "role": {
+        "type": "String",
+        "example": "司琴"
+      },
+      "before": {
+        "type": "String",
+        "example": "陳志豪"
+      },
+      "after": {
+        "type": "String",
+        "example": "李美玉"
+      }
+    }
+  },
+  "importMemberIdentity": "{name}（同工）",
+  "@importMemberIdentity": {
+    "description": "Import diff name is linked to a member UID",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "李美玉"
+      }
+    }
+  },
+  "importGuestIdentity": "{name}（外請）",
+  "@importGuestIdentity": {
+    "description": "Import diff name is explicitly not linked to a member UID",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "外請講員"
+      }
+    }
+  },
+  "importRemoveEvent": "移除活動：{name}",
+  "@importRemoveEvent": {
+    "description": "Import diff removes an event",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "聖餐"
+      }
+    }
+  },
+  "importAddEvent": "新增活動：{name}",
+  "@importAddEvent": {
+    "description": "Import diff adds an event",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "浸禮"
+      }
+    }
+  },
+  "importChangeEvent": "活動：{name}",
+  "@importChangeEvent": {
+    "description": "Import diff changes an existing event color",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "聖餐"
+      }
+    }
+  },
+  "importChangedColor": "{before} → {after}",
+  "@importChangedColor": {
+    "description": "Localized palette labels before and after import event color change",
+    "placeholders": {
+      "before": {
+        "type": "String",
+        "example": "紅"
+      },
+      "after": {
+        "type": "String",
+        "example": "紫"
+      }
+    }
+  },
+  "importNoChange": "安排沒有變更",
+  "@importNoChange": {
+    "description": "Import diff has no arrangement changes"
+  },
+  "importNoCandidate": "請保留為外請或修正人名",
+  "@importNoCandidate": {
+    "description": "Imported name has no member candidate and requires an explicit decision"
+  },
+  "importCandidates": "候選：{names}",
+  "@importCandidates": {
+    "description": "Unconfirmed import name member candidates",
+    "placeholders": {
+      "names": {
+        "type": "String",
+        "example": "李美玉、王美玉"
+      }
+    }
+  },
+  "importGuestUnlinked": "外請（不連結帳號）",
+  "@importGuestUnlinked": {
+    "description": "Imported name explicitly remains an unlinked guest"
+  },
+  "importNameNeedsConfirm": "請確認人名",
+  "@importNameNeedsConfirm": {
+    "description": "Import name identity still needs confirmation"
+  },
+  "importLinkedMember": "同工：{name}",
+  "@importLinkedMember": {
+    "description": "Imported raw name is linked to this member",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "李美玉"
+      }
+    }
+  },
+  "importMode": "匯入方式",
+  "@importMode": {
+    "description": "Import merge or replacement mode section heading"
+  },
+  "importMerge": "合併（保留未提到的安排）",
+  "@importMerge": {
+    "description": "Default import mode keeps unmentioned arrangements"
+  },
+  "importReplace": "取代當天全部安排",
+  "@importReplace": {
+    "description": "Explicit import replacement mode"
+  },
+  "importReplaceHelp": "移除未提到的服事項目與活動；不影響其他日期",
+  "@importReplaceHelp": {
+    "description": "Import replacement affects only the previewed dates"
+  },
+  "importFixData": "請修正資料後再匯入",
+  "@importFixData": {
+    "description": "Invalid canonical import data blocks all writes"
+  },
+  "importFixRow": "請修正這一列資料",
+  "@importFixRow": {
+    "description": "Import row correction action hint"
+  },
+  "importNameLinks": "人名對應",
+  "@importNameLinks": {
+    "description": "Imported name identity mapping section heading"
+  },
+  "importNamesNeedConfirm": "確認人名後才能匯入",
+  "@importNamesNeedConfirm": {
+    "description": "Unconfirmed import names block all writes"
+  },
+  "importRepairSettings": "修正教會設定（可選）",
+  "@importRepairSettings": {
+    "description": "Admin-only optional import repair section heading"
+  },
+  "importNoSettingsChange": "這次安排不會變更同工或教會設定",
+  "@importNoSettingsChange": {
+    "description": "Ordinary editor import does not grant qualifications or change settings"
+  },
+  "importAddConfiguredDuty": "加入服事設定：{role}",
+  "@importAddConfiguredDuty": {
+    "description": "Admin adds an imported duty to the service template",
+    "placeholders": {
+      "role": {
+        "type": "String",
+        "example": "鼓"
+      }
+    }
+  },
+  "importUnconfiguredDuty": "未設定的服事項目：{role}",
+  "@importUnconfiguredDuty": {
+    "description": "Imported one-day duty is not in the service template",
+    "placeholders": {
+      "role": {
+        "type": "String",
+        "example": "鼓"
+      }
+    }
+  },
+  "importGrantQualification": "讓{name}負責{role}",
+  "@importGrantQualification": {
+    "description": "Admin grants this imported duty to the matched member",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "陳志豪"
+      },
+      "role": {
+        "type": "String",
+        "example": "鼓"
+      }
+    }
+  },
+  "importMissingQualification": "{name}尚未設定{role}",
+  "@importMissingQualification": {
+    "description": "Matched member has no configured qualification for this duty",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "陳志豪"
+      },
+      "role": {
+        "type": "String",
+        "example": "鼓"
+      }
+    }
+  },
+  "importAddCommonEvent": "加入常用活動：{name}",
+  "@importAddCommonEvent": {
+    "description": "Admin keeps an imported event as a common service option",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "浸禮"
+      }
+    }
+  },
+  "importNotCommonEvent": "未設為常用活動：{name}",
+  "@importNotCommonEvent": {
+    "description": "Imported event remains a one-day event rather than a common option",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "浸禮"
+      }
+    }
+  },
+  "importDiff": "套用後差異・{date}",
+  "@importDiff": {
+    "description": "Import diff section heading with the existing localized date label",
+    "placeholders": {
+      "date": {
+        "type": "String",
+        "example": "10/18（日）"
+      }
+    }
+  },
+  "importRequiredField": "請填{field}",
+  "@importRequiredField": {
+    "description": "Required import editor field validation",
+    "placeholders": {
+      "field": {
+        "type": "String",
+        "example": "服事項目"
+      }
+    }
+  },
+  "importColor": "色彩",
+  "@importColor": {
+    "description": "Import event palette field label"
+  },
+  "importIssueRowObject": "請填包含 date、duties 的物件",
+  "@importIssueRowObject": {
+    "description": "ImportIssueCode.rowObject"
+  },
+  "importIssueRowFields": "只支援 date、duties、events 欄位",
+  "@importIssueRowFields": {
+    "description": "ImportIssueCode.rowFields"
+  },
+  "importIssueDate": "date 請填有效的 YYYY-MM-DD 日期",
+  "@importIssueDate": {
+    "description": "ImportIssueCode.date"
+  },
+  "importIssueDuplicateDate": "日期重複，請合併成同一列",
+  "@importIssueDuplicateDate": {
+    "description": "ImportIssueCode.duplicateDate"
+  },
+  "importIssueDutiesArray": "duties 請填陣列",
+  "@importIssueDutiesArray": {
+    "description": "ImportIssueCode.dutiesArray"
+  },
+  "importIssueDutyFields": "第 {index} 個服事項目只支援 role、people",
+  "@importIssueDutyFields": {
+    "description": "ImportIssueCode.dutyFields; source duty item position is one-based",
+    "placeholders": {
+      "index": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "importIssueRole": "第 {index} 個 role 請填不重複的服事項目名稱",
+  "@importIssueRole": {
+    "description": "ImportIssueCode.role; source duty item position is one-based",
+    "placeholders": {
+      "index": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "importIssuePeopleArray": "第 {index} 個 people 請填非空白人名的字串陣列；無人時填 []",
+  "@importIssuePeopleArray": {
+    "description": "ImportIssueCode.peopleArray; source duty item position is one-based",
+    "placeholders": {
+      "index": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "importIssueDuplicatePeople": "第 {index} 個 people 不可有重複人名",
+  "@importIssueDuplicatePeople": {
+    "description": "ImportIssueCode.duplicatePeople; source duty item position is one-based",
+    "placeholders": {
+      "index": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "importIssueEventsArray": "events 請填陣列",
+  "@importIssueEventsArray": {
+    "description": "ImportIssueCode.eventsArray"
+  },
+  "importIssueEventObject": "第 {index} 個活動請填 {example}",
+  "@importIssueEventObject": {
+    "description": "ImportIssueCode.eventObject; example is a verbatim protocol JSON literal supplied by UI, not translated; avoids ICU interpreting JSON braces",
+    "placeholders": {
+      "index": {
+        "type": "int",
+        "example": "1"
+      },
+      "example": {
+        "type": "String",
+        "example": "{\"name\":\"活動名稱\",\"color\":0}"
+      }
+    }
+  },
+  "importIssueEventName": "第 {index} 個活動 name 請填不重複的名稱",
+  "@importIssueEventName": {
+    "description": "ImportIssueCode.eventName; source event item position is one-based",
+    "placeholders": {
+      "index": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "importIssueEventColor": "第 {index} 個活動 color 請填 0 到 5 的整數",
+  "@importIssueEventColor": {
+    "description": "ImportIssueCode.eventColor; source event item position is one-based",
+    "placeholders": {
+      "index": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "importIssueResolvedDuplicatePeople": "{role}：確認後人名重複，請移除重複的人名",
+  "@importIssueResolvedDuplicatePeople": {
+    "description": "ImportIssueCode.resolvedDuplicatePeople; role is the imported duty label",
+    "placeholders": {
+      "role": {
+        "type": "String",
+        "example": "招待"
+      }
+    }
+  },
+  "appRunningVersion": "目前版本",
+  "@appRunningVersion": {
+    "description": "The release that actually booted the running PWA, never the server-latest release. Its opaque release id is shown as the row subtitle."
+  },
+  "appVersionDevelopment": "開發版本（尚未建立發布版本）",
+  "@appVersionDevelopment": {
+    "description": "Web development build without a generated release manifest; no update or native store claim."
+  },
+  "appUpdateNativeTitle": "App 更新",
+  "appUpdateNativeNote": "請從 App Store 或 Google Play 檢查更新。",
+  "appUpdateCheck": "檢查更新",
+  "appUpdateChecking": "檢查中…",
+  "appUpdateApply": "更新並重新開啟",
+  "appUpdateApplying": "更新中…",
+  "appUpdateCurrent": "目前已是最新發布版本。",
+  "@appUpdateCurrent": {
+    "description": "Only after an explicit server check confirms the currently running release is latest."
+  },
+  "appUpdateReady": "新版本已準備好；完成編輯後再更新，不會自動重新整理。",
+  "appUpdateFinishEditing": "請先完成編輯或儲存，再回到「我的」更新。",
+  "appUpdateFinishEditingNote": "請先完成編輯或儲存。",
+  "appUpdateFailed": "無法完成更新，請檢查網路後重試。",
+  "appUpdateScopeChanged": "帳號或教會已變更，請重新檢查更新。",
+  "appUpdateBackToMe": "請回到「我的」再更新。",
+  "appUpdateCheckFirst": "請先檢查更新。",
+  "rosterShowMore": "顯示更多",
+  "pickerGuestNames": "外請姓名",
+  "serviceSettingsSaved": "服事設定已儲存",
+  "serviceSyncOriginalEvent": "原本的特別活動",
+  "serviceSyncOriginalDuty": "原本的服事項目",
+  "serviceFutureSyncTitle": "同步「{from}」為「{to}」",
+  "@serviceFutureSyncTitle": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "serviceFutureSyncSaved": "已同步{count}份未來服事表",
+  "@serviceFutureSyncSaved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "serviceEventColorTitle": "{name}・顏色",
+  "@serviceEventColorTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "serviceEventColor": "顏色",
+  "serviceSyncFutureRosters": "同步未來服事表",
+  "rosterFutureChangesNone": "沒有需要變更的未來服事表",
+  "rosterFutureChangesFooter": "只變更明天起已儲存的服事表",
+  "rosterFutureChangesConflict": "已有同名項目，請先調整",
+  "rosterApplyFutureChanges": "套用變更",
+  "rosterRemoveFutureGuest": "移除未來的外請安排",
+  "rosterRemoveFutureGuestTitle": "移除「{name}」的未來安排",
+  "@rosterRemoveFutureGuestTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "rosterFutureGuestRemoved": "已移除{count}份未來安排",
+  "@rosterFutureGuestRemoved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rosterFutureDutyChange": "{role}：{before} → {after}",
+  "@rosterFutureDutyChange": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      },
+      "before": {
+        "type": "String"
+      },
+      "after": {
+        "type": "String"
+      }
+    }
+  },
+  "rosterFutureEventChange": "{before} → {after}",
+  "@rosterFutureEventChange": {
+    "placeholders": {
+      "before": {
+        "type": "String"
+      },
+      "after": {
+        "type": "String"
+      }
+    }
+  },
+  "errConflict": "資料已被其他同工修改，請重新讀取後再試。",
+  "errOfflineReadOnly": "目前無法連線，只能查看已取得的資料。",
+  "errTooManyChanges": "變更項目太多，請縮小範圍後再試。",
+  "undoDone": "已復原",
+  "undoFailed": "復原失敗，請再試一次",
+  "offlineReadOnlyBanner": "離線唯讀：連線後才能儲存變更",
+  "calendarCached": "離線資料",
+  "@calendarCached": {
+    "description": "Calendar content shown from a previous read, never presented as fresh"
+  },
+  "calendarReadAt": "資料讀取於{time}",
+  "@calendarReadAt": {
+    "description": "Church-time stamp of the last complete read",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "calDescription": "活動說明",
+  "calDuplicate": "複製活動",
+  "homeUpcomingEvents": "近期活動",
+  "memberSmallGroups": "小組",
+  "memberSmallGroupsHint": "每行一個小組",
+  "linkErrNotToday": "來源尚未提供今天的內容",
+  "linkSourceToday": "今天的內容沒有更新：{reason}",
+  "@linkSourceToday": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "linkSourceRetry": "重新抓取"
 }

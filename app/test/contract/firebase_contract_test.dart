@@ -27,6 +27,8 @@ import 'package:martha/env.dart';
 
 import 'contract_suite.dart';
 import 'firebase_world.dart';
+import 'roster_cas_contract.dart';
+import 'service_cas_contract.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -51,8 +53,12 @@ void main() {
     world = FirebaseWorld(FirebaseBackend(functions: functions, serverReads: true));
   });
 
-  contractTests(() async {
+  Future<FirebaseWorld> open() async {
     await world.reset();
     return world;
-  });
+  }
+
+  contractTests(open);
+  rosterCasContractTests(open);
+  serviceCasContractTests(open);
 }

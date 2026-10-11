@@ -11,8 +11,11 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '../..');
 function deployment(t) {
   const dir = mkdtempSync(join(tmpdir(), 'martha-deploy-'));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
-  for (const path of ['scripts', 'app/config', 'bin']) mkdirSync(join(dir, path), { recursive: true });
-  for (const script of ['deploy.sh', 'hosting-predeploy.sh', 'fingerprint-fonts.mjs', 'fingerprint-web.mjs', 'build-site.mjs']) {
+  for (const path of ['scripts', 'app/config', 'app/web', 'bin']) mkdirSync(join(dir, path), { recursive: true });
+  // A Flutter build copies app/web, the app shell's runtime scripts included.
+  for (const file of ['martha_app.js', 'martha_app_sw.js', 'favicon.png', 'manifest.json']) copyFileSync(join(root, 'app/web', file), join(dir, 'app/web', file));
+  cpSync(join(root, 'app/web/icons'), join(dir, 'app/web/icons'), { recursive: true });
+  for (const script of ['deploy.sh', 'hosting-predeploy.sh', 'fingerprint-fonts.mjs', 'fingerprint-web.mjs', 'build-site.mjs', 'release-web.mjs']) {
     copyFileSync(join(root, 'scripts', script), join(dir, 'scripts', script));
   }
   assert.ok(existsSync(join(root, 'landing/node_modules/marked')), 'use existing website dependencies; do not install in tests');
@@ -25,7 +28,10 @@ function deployment(t) {
 set -euo pipefail
 [ "\${FAKE_FLUTTER_FAIL:-}" != 1 ] || exit 1
 mkdir -p build/web/assets/fonts
-printf '%s' '<base href="/"><script src="flutter_bootstrap.js" async></script>' > build/web/index.html
+printf '%s' '<html><head><base href="/"></head><body><script src="martha_app.js"></script><script src="flutter_bootstrap.js" async></script></body></html>' > build/web/index.html
+cp -R web/martha_app.js web/martha_app_sw.js web/favicon.png web/manifest.json web/icons build/web/
+mkdir -p build/web/canvaskit
+printf '%s' 'engine' > build/web/canvaskit/canvaskit.wasm
 printf '%s' '_flutter.buildConfig = {"builds":[{"compileTarget":"dart2js","mainJsPath":"main.dart.js"},{}]}; _flutter.loader.load({});' > build/web/flutter_bootstrap.js
 printf '%s\\n' "$FAKE_MAIN" > build/web/main.dart.js
 printf '%s' 'icons A' > build/web/assets/fonts/Icons.otf

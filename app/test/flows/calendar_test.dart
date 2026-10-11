@@ -137,7 +137,7 @@ void main() {
     await tapText(tester, '儲存');
     final camp = b.calendarEvents['grace']!.single;
     expect(camp.title, '秋令營');
-    expect(camp.end, DateTime(2026, 10, 12));
+    expect(camp.end, DateTime.utc(2026, 10, 12));
   });
 
   testWidgets('an event over the end of a month changes, and goes, in the month on screen too', (tester) async {
@@ -184,7 +184,7 @@ void main() {
     await pickDay(tester, '10月1日 週四', 3, end: true);
     await tapText(tester, '儲存');
     final e = b.calendarEvents['grace']!.single;
-    expect((e.allDay, e.start, e.end), (true, DateTime(2026, 10, 1), DateTime(2026, 10, 4)));
+    expect((e.allDay, e.start, e.end), (true, DateTime.utc(2026, 10, 1), DateTime.utc(2026, 10, 4)));
   });
 
   testWidgets('the end cannot be set before the start, and moves with it', (tester) async {
@@ -213,7 +213,7 @@ void main() {
     await settle(tester);
     await tapText(tester, '儲存');
     final e = b.calendarEvents['grace']!.single;
-    expect((e.start, e.end), (DateTime(2026, 10, 5, 19, 30), DateTime(2026, 10, 5, 20)));
+    expect((e.start, e.end), (DateTime.utc(2026, 10, 5, 19, 30), DateTime.utc(2026, 10, 5, 20)));
   });
 
   testWidgets('其他時間 sets any minute; one before the start ends the next day', (tester) async {
@@ -247,7 +247,7 @@ void main() {
     expect(find.text('10月2日 週五'), findsOneWidget, reason: 'the end moved to the next day');
     await tapText(tester, '儲存');
     final e = b.calendarEvents['grace']!.single;
-    expect((e.start, e.end), (DateTime(2026, 10, 1, 19, 30), DateTime(2026, 10, 2, 18)));
+    expect((e.start, e.end), (DateTime.utc(2026, 10, 1, 19, 30), DateTime.utc(2026, 10, 2, 18)));
   });
 
   testWidgets('an event begun the month before is listed under the 1st, with its whole span', (tester) async {
@@ -410,11 +410,14 @@ void main() {
     final inScroll = find.descendant(of: find.byType(CustomScrollView), matching: find.byType(MonthGrid));
     expect(inScroll, findsOneWidget);
 
+    // 首頁 has already read next month for its activities: hold the one after.
+    await tester.fling(find.byType(MonthGrid), const Offset(-300, 0), 1000);
+    await settle(tester);
     b.calendarEventsHeld = Completer();
     await tester.fling(find.byType(MonthGrid), const Offset(-300, 0), 1000);
     await tester.pump();
     await tester.pump();
-    expect(find.text('2026年11月'), findsOneWidget);
+    expect(find.text('2026年12月'), findsOneWidget);
     expect(find.byType(MonthGrid), findsOneWidget);
 
     b.calendarEventsHeld!.completeError(StateError('offline'));

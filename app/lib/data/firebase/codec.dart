@@ -6,6 +6,7 @@ library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../domain/church_time.dart';
 import '../../domain/day.dart';
 import '../../domain/models.dart';
 
@@ -61,6 +62,7 @@ Member memberFromJson(String uid, Json data) {
             Zone(
               serviceType: z['serviceType'] as String,
               duties: _strings(z['duties']),
+              smallGroups: _strings(z['smallGroups']),
             ),
     ],
     mutedNotifications: {
@@ -82,7 +84,7 @@ Json memberToJson(Member m) => {
       if (m.groups.contains(g)) g.id,
   ],
   'zones': [
-    for (final z in m.zones) {'serviceType': z.serviceType, 'duties': z.duties},
+    for (final z in m.zones) {'serviceType': z.serviceType, 'duties': z.duties, 'smallGroups': z.smallGroups},
   ],
   'zoneTypes': m.zoneTypes,
 };
@@ -113,7 +115,8 @@ LinkContent? linkContentFromJson(Json? data) {
   if (source is! String) return null;
   return LinkContent(
     source: source,
-    title: data!['title'] as String? ?? '',
+    date: data!['date'] as String?,
+    title: data['title'] as String? ?? '',
     body: data['body'] as String? ?? '',
     link: data['link'] as String?,
     fetchedAt: readTime(data['fetchedAt']),
@@ -158,7 +161,15 @@ WebhookSettings? webhookFromJson(Json? data) {
 
 PendingMember pendingMemberFromJson(String id, Json data) {
   final m = memberFromJson(id, data);
-  return PendingMember(id: id, name: m.name, email: m.email, role: m.role, groups: m.groups, zones: m.zones);
+  return PendingMember(
+    id: id,
+    name: m.name,
+    email: m.email,
+    role: m.role,
+    groups: m.groups,
+    zones: m.zones,
+    mutedNotifications: m.mutedNotifications,
+  );
 }
 
 Json notificationPrefsToJson(Set<NotificationKind> muted) => {
@@ -317,14 +328,21 @@ CalendarSettings calendarSettingsFromJson(Json? data) => CalendarSettings(
   needsReconnect: data?['needsReconnect'] == true,
   calendarName: data?['calendarName'] as String?,
   calendarId: data?['calendarId'] as String?,
+  revision: switch (data?['updatedAt']) {
+    Timestamp stamp => '${stamp.seconds}:${stamp.nanoseconds}',
+    _ => null,
+  },
 );
 
 DateTime _eventTime(String value, bool allDay) {
   if (allDay) {
     final d = Day.parse(value.substring(0, 10));
-    return DateTime(d.year, d.month, d.day);
+    return DateTime.utc(d.year, d.month, d.day);
   }
-  return DateTime.parse(value).toLocal();
+  if (!RegExp(r'(Z|[+-]\d{2}:\d{2})$').hasMatch(value)) {
+    throw const FormatException('Calendar time requires an explicit offset');
+  }
+  return churchTime(DateTime.parse(value));
 }
 
 CalendarEvent? calendarEventFromJson(Object? raw) {
@@ -348,7 +366,7 @@ CalendarEvent? calendarEventFromJson(Object? raw) {
 }
 
 Json calendarEventToJson(CalendarEvent e) {
-  String time(DateTime t) => e.allDay ? Day(t.year, t.month, t.day).key : t.toUtc().toIso8601String();
+  String time(DateTime t) => e.allDay ? Day(t.year, t.month, t.day).key : churchInstant(t).toIso8601String();
   return {
     'id': ?e.id,
     'title': e.title,

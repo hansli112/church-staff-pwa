@@ -1,22 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/design/tokens.dart';
 import '../../l10n/app_localizations.dart';
+import '../../state/connectivity.dart';
 
 enum AppTab { home, rosters, calendar, me }
 
 /// The bottom tab bar around the four top-level tabs. Each tab keeps its
 /// own navigation stack.
-class AppShell extends StatelessWidget {
+class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.shell});
 
   final StatefulNavigationShell shell;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
+    final online = ref.watch(onlineProvider);
     return Scaffold(
-      body: shell,
+      body: SafeArea(
+        top: !online,
+        bottom: false,
+        child: Column(
+          children: [
+            if (!online)
+              Semantics(
+                liveRegion: true,
+                child: Container(
+                  width: double.infinity,
+                  color: AppColors.of(context).fill,
+                  padding: const EdgeInsets.symmetric(horizontal: Space.m, vertical: Space.s),
+                  child: Text(l10n.offlineReadOnlyBanner, style: AppText.callout),
+                ),
+              ),
+            Expanded(child: shell),
+          ],
+        ),
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: shell.currentIndex,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,

@@ -56,12 +56,27 @@ describe('claiming', () => {
     assert.equal(m.get('email'), 'mei@example.com');
     assert.equal(m.get('role'), 'leader');
     assert.deepEqual(m.get('groups'), ['roster-editors']);
-    assert.deepEqual(m.get('zones'), [{ serviceType: 'sunday', duties: ['司琴'] }]);
+    assert.deepEqual(m.get('zones'), [{ serviceType: 'sunday', duties: ['司琴'], smallGroups: [] }]);
     assert.deepEqual(await uidsOn(cid, '2026-10-04'), [{ 李美玉: 'new-mei' }, { 陳志豪: 'old-hao' }]);
     assert.deepEqual(await uidsOn(cid, '2026-10-11'), [{ 李美玉: 'new-mei' }]);
     assert.equal((await db.doc(`churches/${cid}/pendingMembers/old-mei`).get()).exists, false);
     assert.equal((await db.doc(`pendingIndex/${emailHash('mei@example.com')}`).get()).get(`churches.${cid}`), undefined);
     assert.deepEqual((await pendingClaims(deps, mei())).claims, []);
+  });
+
+  test('claiming a new identity preserves migrated small groups and reminder opt-out', async () => {
+    const cid = await moved();
+    await db.doc(`churches/${cid}/pendingMembers/old-mei`).update({
+      zones: [{ serviceType: 'sunday', duties: ['司琴'], smallGroups: ['喜樂'] }],
+      notificationPrefs: { muted: ['reminder'] },
+    });
+    await claimPending(deps, mei(), { churchId: cid, pendingId: 'old-mei' });
+    const m = await db.doc(`churches/${cid}/members/new-mei`).get();
+    assert.deepEqual(m.get('notificationPrefs'), { muted: ['reminder'] });
+    assert.deepEqual(m.get('zones'), [{ serviceType: 'sunday', duties: ['司琴'], smallGroups: ['喜樂'] }]);
+    assert.deepEqual(m.get('groups'), ['roster-editors']);
+    assert.deepEqual(await uidsOn(cid, '2026-10-04'), [{ 李美玉: 'new-mei' }, { 陳志豪: 'old-hao' }]);
+    assert.equal((await db.doc(`churches/${cid}/pendingMembers/old-mei`).get()).exists, false);
   });
 
   test('claiming twice is fine', async () => {
@@ -86,7 +101,7 @@ describe('claiming', () => {
     const m = await db.doc(`churches/${cid}/members/new-mei`).get();
     assert.equal(m.get('role'), 'staff');
     assert.deepEqual(m.get('groups'), ['roster-editors']);
-    assert.deepEqual(m.get('zones'), [{ serviceType: 'sunday', duties: ['招待', '司琴'] }]);
+    assert.deepEqual(m.get('zones'), [{ serviceType: 'sunday', duties: ['招待', '司琴'], smallGroups: [] }]);
   });
 
   test('a suspended church cannot be claimed into', async () => {
@@ -115,11 +130,43 @@ describe('merging', () => {
     await db.doc(`churches/${cid}/members/hao-google`).set({ uid: 'hao-google', name: '志豪', email: 'hao@gmail.com', role: 'staff', groups: [], zones: [], zoneTypes: [] });
     assert.deepEqual(await mergePending(deps, caller('mover'), { churchId: cid, pendingId: 'old-hao', uid: 'hao-google' }), {});
     const m = await db.doc(`churches/${cid}/members/hao-google`).get();
-    assert.deepEqual(m.get('zones'), [{ serviceType: 'sunday', duties: ['招待'] }]);
+    assert.deepEqual(m.get('zones'), [{ serviceType: 'sunday', duties: ['招待'], smallGroups: [] }]);
     assert.deepEqual(m.get('zoneTypes'), ['sunday']);
     assert.deepEqual(await uidsOn(cid, '2026-10-04'), [{ 李美玉: 'old-mei' }, { 陳志豪: 'hao-google' }]);
     assert.equal((await db.doc(`churches/${cid}/pendingMembers/old-hao`).get()).exists, false);
     assert.equal((await db.doc(`pendingIndex/${emailHash('hao@example.com')}`).get()).get(`churches.${cid}`), undefined);
+  });
+
+  test('claim and admin merge union small groups and opt-outs without overwriting current preferences with stale pending defaults', async () => {
+    for (const mode of ['claim', 'merge']) for (const muted of [['reminder'], []]) {
+      await clearFirestore();
+      const cid = await moved();
+      await db.doc(`churches/${cid}/pendingMembers/old-mei`).update({
+        zones: [{ serviceType: 'sunday', duties: ['司琴'], smallGroups: ['共同', '遷入'] }],
+        notificationPrefs: { muted },
+      });
+      const memberRef = db.doc(`churches/${cid}/members/new-mei`);
+      await memberRef.set({
+        uid: 'new-mei', name: '美玉', role: 'staff', groups: ['calendar-editors'],
+        zones: [
+          { serviceType: 'sunday', duties: ['招待'], smallGroups: ['現有', '共同'] },
+          { serviceType: 'youth', duties: [], smallGroups: ['青年'] },
+        ], zoneTypes: ['sunday', 'youth'],
+        notificationPrefs: { muted: ['memberLeft'], otherPreference: 'preserved' },
+      });
+      if (mode === 'claim') await claimPending(deps, mei(), { churchId: cid, pendingId: 'old-mei' });
+      else await mergePending(deps, caller('mover'), { churchId: cid, pendingId: 'old-mei', uid: 'new-mei' });
+      const member = await memberRef.get();
+      assert.deepEqual(member.get('zones'), [
+        { serviceType: 'sunday', duties: ['招待', '司琴'], smallGroups: ['現有', '共同', '遷入'] },
+        { serviceType: 'youth', duties: [], smallGroups: ['青年'] },
+      ], mode);
+      assert.deepEqual(member.get('notificationPrefs'), { muted: ['memberLeft', ...muted], otherPreference: 'preserved' }, mode);
+      assert.deepEqual(member.get('groups'), ['calendar-editors', 'roster-editors']);
+      assert.equal(member.get('role'), 'staff');
+      assert.equal((await db.doc(`churches/${cid}/pendingMembers/old-mei`).get()).exists, false);
+      assert.deepEqual(await uidsOn(cid, '2026-10-11'), [{ 李美玉: 'new-mei' }]);
+    }
   });
 
   test('only that church’s admin, and only within that church', async () => {

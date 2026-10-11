@@ -41,7 +41,13 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
     final members = ref.watch(membersProvider);
-    final enabled = ref.watch(servicesProvider).value?.enabled ?? const <Service>[];
+    final services = ref.watch(servicesProvider).value;
+    final enabled = services?.enabled ?? const <Service>[];
+    List<String> smallGroupLabels(List<Zone> zones) => [
+      for (final zone in zones)
+        if (zone.smallGroups.isNotEmpty)
+          '${services?.byId(zone.serviceType)?.name ?? zone.serviceType}：${zone.smallGroups.join('、')}',
+    ];
     final hidden = ref.watch(pendingRemovalsProvider);
     final uid = ref.watch(uidProvider);
     final isAdmin = ref.watch(
@@ -116,6 +122,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                                   if (m.waitsForZone(enabled)) l10n.waitsForZone,
                                   if (m.inGroup(Group.rosterEditors) && !m.isAdmin) l10n.groupRosterEditors,
                                   if (m.inGroup(Group.calendarEditors) && !m.isAdmin) l10n.groupCalendarEditors,
+                                  ...smallGroupLabels(m.zones),
                                 ].join('・').ifEmpty(null),
                                 value: roleLabel(l10n, m.role),
                                 onTap: isAdmin ? () => _open(m) : null,
@@ -142,6 +149,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                               subtitle: [
                                 l10n.notSignedInYet,
                                 if (p.email.isNotEmpty && p.name.isNotEmpty) p.email,
+                                ...smallGroupLabels(p.zones),
                               ].join('・'),
                               value: roleLabel(l10n, p.role),
                               onTap: isAdmin ? () => _openPending(p) : null,

@@ -457,7 +457,17 @@ class AdminFundingScreen extends ConsumerWidget {
     }
     await _save(context, ref, next);
     if (result is _DeleteCost && context.mounted) {
-      showToast(context, L10n.of(context).deleted, onUndo: () => _save(context, ref, costs));
+      // Undo reports its own failure, so it calls the backend directly.
+      final cloud = ref.read(backendProvider).cloud;
+      final container = ProviderScope.containerOf(context, listen: false);
+      showToast(
+        context,
+        L10n.of(context).deleted,
+        onUndo: () async {
+          await cloud.adminSetFundingCosts(costs);
+          container.invalidate(_fundingProvider);
+        },
+      );
     }
   }
 

@@ -120,6 +120,7 @@ void main() {
         {
           'serviceType': 'sunday',
           'duties': ['司琴'],
+          'smallGroups': <String>[],
         },
       ]);
       expect(j['pendingMembers'], [

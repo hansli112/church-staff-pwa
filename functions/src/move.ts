@@ -158,6 +158,7 @@ export async function moveCommit(deps: MoveDeps, caller: Caller | null, data: un
       groups: m.groups,
       zones: m.zones,
       zoneTypes: m.zoneTypes,
+      notificationPrefs: m.notificationPrefs,
       rosterIds: rosterIds.get(m.uid) ?? [],
       importedAt: now,
     }));
@@ -182,7 +183,7 @@ export async function moveCommit(deps: MoveDeps, caller: Caller | null, data: un
     await openChurch(deps, c, churchName, {
       cid,
       services: built.services,
-      admin: me ? { name: me.name, groups: me.groups, zones: me.zones, zoneTypes: me.zoneTypes } : undefined,
+      admin: me ? { name: me.name, groups: me.groups, zones: me.zones, zoneTypes: me.zoneTypes, notificationPrefs: me.notificationPrefs } : undefined,
       extra: { movedFrom: project, movedBy: c.uid },
     });
   } catch (e) {

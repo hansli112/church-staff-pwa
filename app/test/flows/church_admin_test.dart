@@ -261,18 +261,6 @@ void main() {
       expect(find.text('青年崇拜'), findsNothing);
     });
 
-    testWidgets('renaming a common event renames it on upcoming days', (tester) async {
-      final b = seededChurch();
-      await pumpApp(tester, b);
-      await go(tester, '/me/services/sunday');
-      await tester.scrollUntilVisible(find.text('聖餐'), 300);
-      await tapText(tester, '聖餐');
-      await tapText(tester, '改名');
-      await tester.enterText(find.byType(TextField).last, '主餐');
-      await tapText(tester, '儲存');
-      expect(savedDay(b, 4).events.single.name, '主餐');
-    });
-
     testWidgets('renaming a duty moves members\' zones and the staff order with it', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);

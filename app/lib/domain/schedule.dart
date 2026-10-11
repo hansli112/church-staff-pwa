@@ -17,10 +17,9 @@ List<Roster> upcomingRosters({
   required Day from,
   int weeks = 13,
 }) {
-  final end = from.weekStart.addDays(weeks * 7);
   final result = <Roster>[
     for (final roster in saved)
-      if (roster.type == service.id && !roster.day.isBefore(from) && roster.day.isBefore(end)) roster,
+      if (roster.type == service.id && !roster.day.isBefore(from)) roster,
   ];
   if (service.enabled) {
     final taken = {for (final r in result) r.day.weekStart};
@@ -52,16 +51,9 @@ class MyService {
   final List<String> duties;
 }
 
-/// The days in [rosters] where this person serves, with their duties.
-///
-/// Matches by uid; a name with no uid on that duty (typed in by hand, or a
-/// name two members share) falls back to the name, so the right person
-/// still sees it.
-List<MyService> myServices(
-  Iterable<Roster> rosters, {
-  required String uid,
-  required String name,
-}) => [
+/// The days explicitly assigned to [uid], with their duties. Names are
+/// display text only: unbound guest names never identify a member.
+List<MyService> myServices(Iterable<Roster> rosters, {required String uid}) => [
   for (final roster in rosters)
-    if (roster.dutiesOf(uid: uid, name: name) case final duties when duties.isNotEmpty) MyService(roster, duties),
+    if (roster.dutiesOf(uid: uid) case final duties when duties.isNotEmpty) MyService(roster, duties),
 ];

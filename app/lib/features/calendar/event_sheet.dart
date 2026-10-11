@@ -37,7 +37,7 @@ Future<void> showEventDetail(BuildContext context, CalendarEvent e) {
                   switch (e) {
                     _ when e.allDay && e.lastDay == e.day => '${fmt.format(e.start)} ${l10n.calAllDay}',
                     _ when e.allDay =>
-                      '${fmt.format(e.start)} – ${fmt.format(DateTime(e.lastDay.year, e.lastDay.month, e.lastDay.day))}',
+                      '${fmt.format(e.start)} – ${fmt.format(DateTime.utc(e.lastDay.year, e.lastDay.month, e.lastDay.day))}',
                     _ when e.lastDay == e.day => '${fmt.format(e.start)} ${time.format(e.start)}–${time.format(e.end)}',
                     _ => '${fmt.format(e.start)} ${time.format(e.start)} – ${fmt.format(e.end)} ${time.format(e.end)}',
                   },
@@ -83,15 +83,26 @@ Future<void> editEvent(
   final initialDay =
       event?.start ??
       (day != null
-          ? DateTime(day.year, day.month, day.day)
+          ? DateTime.utc(day.year, day.month, day.day)
           : month.year == today.year && month.month == today.month
-          ? DateTime(today.year, today.month, today.day)
+          ? DateTime.utc(today.year, today.month, today.day)
           : month);
-  final result = await showAppSheet<_EditResult>(
+  var previous = event;
+  var result = await showAppSheet<_EditResult>(
     context,
     expand: true,
     builder: (_) => _EventEditor(event: event, initialDay: initialDay, thisYear: today.year),
   );
+  if (result?.duplicate == true && context.mounted) {
+    // A copy is a new draft, not a write to the original or its roster.
+    previous = null;
+    final draft = result!.event!;
+    result = await showAppSheet<_EditResult>(
+      context,
+      expand: true,
+      builder: (_) => _EventEditor(event: draft, initialDay: draft.start, thisYear: today.year),
+    );
+  }
   if (result == null || !context.mounted) return;
   final calendar = ref.read(calendarActionsProvider);
   try {
@@ -103,9 +114,9 @@ Future<void> editEvent(
     } else if (result.delete && event != null) {
       final undo = await calendar.delete(event);
       if (!context.mounted) return;
-      showToast(context, l10n.calDeleted(event.title), onUndo: () => undo().ignore());
+      showToast(context, l10n.calDeleted(event.title), onUndo: undo);
     } else if (result.event != null) {
-      await calendar.save(result.event!, previous: event);
+      await calendar.save(result.event!, previous: previous);
       if (context.mounted) showToast(context, l10n.calSaved);
     }
   } catch (_) {
@@ -114,10 +125,11 @@ Future<void> editEvent(
 }
 
 class _EditResult {
-  const _EditResult({this.event, this.delete = false, this.openRoster = false});
+  const _EditResult({this.event, this.delete = false, this.openRoster = false, this.duplicate = false});
 
   final CalendarEvent? event;
   final bool delete;
+  final bool duplicate;
 
   /// Leave the editor for the event's roster, saving [event] first when
   /// it was changed.
@@ -140,6 +152,7 @@ class _EventEditor extends StatefulWidget {
 class _EventEditorState extends State<_EventEditor> {
   late final _title = TextEditingController(text: widget.event?.title ?? '');
   late final _location = TextEditingController(text: widget.event?.location ?? '');
+  late final _description = TextEditingController(text: widget.event?.description ?? '');
   late bool _allDay = widget.event?.allDay ?? false;
 
   // The first and last day, both included, and the times when not all day.
@@ -148,7 +161,7 @@ class _EventEditorState extends State<_EventEditor> {
   late DateTime _startDay = _dateOf(widget.event?.start ?? widget.initialDay);
   late DateTime _endDay = switch (widget.event) {
     null => _startDay,
-    final e when e.allDay => _dateOf(DateTime(e.lastDay.year, e.lastDay.month, e.lastDay.day)),
+    final e when e.allDay => _dateOf(DateTime.utc(e.lastDay.year, e.lastDay.month, e.lastDay.day)),
     final e => _dateOf(e.end),
   };
   late TimeOfDay _startTime = widget.event == null || widget.event!.allDay
@@ -162,18 +175,19 @@ class _EventEditorState extends State<_EventEditor> {
   void dispose() {
     _title.dispose();
     _location.dispose();
+    _description.dispose();
     super.dispose();
   }
 
-  static DateTime _dateOf(DateTime d) => DateTime(d.year, d.month, d.day);
+  static DateTime _dateOf(DateTime d) => DateTime.utc(d.year, d.month, d.day);
 
-  static DateTime _at(DateTime day, TimeOfDay t) => DateTime(day.year, day.month, day.day, t.hour, t.minute);
+  static DateTime _at(DateTime day, TimeOfDay t) => DateTime.utc(day.year, day.month, day.day, t.hour, t.minute);
 
   DateTime get _start => _allDay ? _startDay : _at(_startDay, _startTime);
 
   /// Exclusive, as the calendar keeps it: the day after the last for an
   /// all-day event.
-  DateTime get _end => _allDay ? DateTime(_endDay.year, _endDay.month, _endDay.day + 1) : _at(_endDay, _endTime);
+  DateTime get _end => _allDay ? DateTime.utc(_endDay.year, _endDay.month, _endDay.day + 1) : _at(_endDay, _endTime);
 
   /// Always true from the pickers, which offer no end before the start;
   /// kept as a guard for saving.
@@ -184,10 +198,10 @@ class _EventEditorState extends State<_EventEditor> {
     final days = _endDay.difference(_startDay).inDays;
     final length = _at(_endDay, _endTime).difference(_at(_startDay, _startTime));
     setState(() {
-      _startDay = day;
+      _startDay = _dateOf(day);
       _startTime = time;
       if (_allDay) {
-        _endDay = DateTime(day.year, day.month, day.day + (days < 0 ? 0 : days));
+        _endDay = DateTime.utc(day.year, day.month, day.day + (days < 0 ? 0 : days));
       } else {
         final end = _at(day, time).add(length > Duration.zero ? length : const Duration(hours: 1));
         _endDay = _dateOf(end);
@@ -199,14 +213,14 @@ class _EventEditorState extends State<_EventEditor> {
   Future<DateTime?> _pickDay(DateTime day, {DateTime? notBefore}) => showDatePicker(
     context: context,
     initialDate: day,
-    firstDate: notBefore ?? DateTime(day.year - 1),
-    lastDate: DateTime(day.year + 2),
+    firstDate: notBefore ?? DateTime.utc(day.year - 1),
+    lastDate: DateTime.utc(day.year + 2),
   );
 
   /// Moves the end to [day]. On the start day an end time not after the
   /// start becomes an hour after it.
   void _moveEndDay(DateTime day) => setState(() {
-    _endDay = day;
+    _endDay = _dateOf(day);
     if (!_allDay && !_at(day, _endTime).isAfter(_start)) {
       final end = _start.add(const Duration(hours: 1));
       _endDay = _dateOf(end);
@@ -218,7 +232,7 @@ class _EventEditorState extends State<_EventEditor> {
   /// give, means the next day: the end day moves there, in sight.
   void _setEndTime(TimeOfDay t) => setState(() {
     _endTime = t;
-    if (!_at(_endDay, t).isAfter(_start)) _endDay = DateTime(_startDay.year, _startDay.month, _startDay.day + 1);
+    if (!_at(_endDay, t).isAfter(_start)) _endDay = DateTime.utc(_startDay.year, _startDay.month, _startDay.day + 1);
   });
 
   /// The event as edited.
@@ -229,7 +243,9 @@ class _EventEditorState extends State<_EventEditor> {
     end: _end,
     allDay: _allDay,
     location: _location.text.trim().isEmpty ? null : _location.text.trim(),
-    description: widget.event?.description,
+    description: _description.text.trim(),
+    recurringEventId: widget.event?.recurringEventId,
+    originalStart: widget.event?.originalStart,
   );
 
   void _save() {
@@ -246,7 +262,8 @@ class _EventEditorState extends State<_EventEditor> {
         edited.start != e.start ||
         edited.end != e.end ||
         edited.allDay != e.allDay ||
-        (edited.location ?? '') != (e.location ?? '');
+        (edited.location ?? '') != (e.location ?? '') ||
+        (edited.description ?? '') != (e.description ?? '');
     final ok = edited.title.isNotEmpty && _valid;
     Navigator.pop(context, _EditResult(event: changed && ok ? edited : null, openRoster: true));
   }
@@ -260,7 +277,9 @@ class _EventEditorState extends State<_EventEditor> {
           padding: const EdgeInsets.fromLTRB(Space.m, 0, Space.s, 0),
           child: Row(
             children: [
-              Expanded(child: Text(widget.event == null ? l10n.calNewEvent : l10n.calEditEvent, style: AppText.title3)),
+              Expanded(
+                child: Text(widget.event?.id == null ? l10n.calNewEvent : l10n.calEditEvent, style: AppText.title3),
+              ),
               SecondaryButton(
                 label: l10n.save,
                 onPressed: _title.text.trim().isEmpty || !_valid ? null : _save,
@@ -276,7 +295,7 @@ class _EventEditorState extends State<_EventEditor> {
                 padding: const EdgeInsets.symmetric(horizontal: Space.m, vertical: Space.s),
                 child: TextField(
                   controller: _title,
-                  autofocus: widget.event == null,
+                  autofocus: widget.event?.id == null,
                   decoration: InputDecoration(hintText: l10n.calTitle),
                   onChanged: (_) => setState(() {}),
                 ),
@@ -286,6 +305,16 @@ class _EventEditorState extends State<_EventEditor> {
                 child: TextField(
                   controller: _location,
                   decoration: InputDecoration(hintText: l10n.calLocation),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Space.m, vertical: Space.s),
+                child: TextField(
+                  controller: _description,
+                  decoration: InputDecoration(hintText: l10n.calDescription),
+                  keyboardType: TextInputType.multiline,
+                  minLines: 2,
+                  maxLines: 6,
                 ),
               ),
               ListSection(
@@ -328,10 +357,16 @@ class _EventEditorState extends State<_EventEditor> {
                   ),
                 ],
               ),
-              if (widget.event case final e?) EventRosterRow(event: e, onOpen: _openRoster),
-              if (widget.event != null)
+              if (widget.event case final e? when e.id != null) EventRosterRow(event: e, onOpen: _openRoster),
+              if (widget.event?.id != null)
                 ListSection(
                   children: [
+                    ListRow(
+                      title: l10n.calDuplicate,
+                      onTap: _title.text.trim().isEmpty || !_valid
+                          ? null
+                          : () => Navigator.pop(context, _EditResult(event: _edited.anew, duplicate: true)),
+                    ),
                     ListRow(
                       title: l10n.calDelete,
                       destructive: true,
@@ -443,13 +478,13 @@ class _EndTimeSheetState extends State<_EndTimeSheet> {
     // midnight.
     final times = <DateTime>[
       for (
-        var t = sameDay ? s.add(const Duration(minutes: 15)) : DateTime(d.year, d.month, d.day);
+        var t = sameDay ? s.add(const Duration(minutes: 15)) : DateTime.utc(d.year, d.month, d.day);
         t.day == d.day && t.month == d.month && t.year == d.year;
         t = t.add(const Duration(minutes: 15))
       )
         t,
     ];
-    final current = DateTime(d.year, d.month, d.day, widget.selected.hour, widget.selected.minute);
+    final current = DateTime.utc(d.year, d.month, d.day, widget.selected.hour, widget.selected.minute);
     if (current.isAfter(s) && !times.contains(current)) times.add(current);
     times.sort();
     String length(Duration x) {

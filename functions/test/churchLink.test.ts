@@ -7,7 +7,7 @@ import { fetchDueLinks, fetchSource, nextFetchAt, parseContent, setLinkSource } 
 import { caller, clearFirestore, db, deps, fakeFetch, rejectsWith, seedChurch, setNow, type FakeResponse } from './support.js';
 
 const SRC = 'https://feed.example/today.json';
-const good = { title: '今日經文', body: '耶和華是我的牧者', link: 'https://feed.example/1004' };
+const good = { date: '2026-10-04', title: '今日經文', body: '耶和華是我的牧者', link: 'https://feed.example/1004' };
 
 function withFetch(routes: Record<string, FakeResponse>) {
   const f = fakeFetch(routes);
@@ -28,8 +28,28 @@ beforeEach(async () => {
 });
 
 describe('fetching a content source', () => {
-  test('a JSON {title, body, link} is cut to the church link limits', async () => {
-    const { d } = withFetch({ [SRC]: { body: { title: '題'.repeat(40), body: '文'.repeat(200), link: 'https://x.example' } } });
+  test('parseContent accepts only the required dated JSON contract with a real Gregorian date and HTTPS original link', () => {
+    const valid = { date: '2026-10-04', title: '今日經文', body: '', link: 'https://feed.example/original' };
+    assert.deepEqual(parseContent(valid), valid);
+    assert.deepEqual(parseContent({ ...valid, date: '2024-02-29' }), { ...valid, date: '2024-02-29' });
+    assert.deepEqual(parseContent({ ...valid, date: '2000-02-29' }), { ...valid, date: '2000-02-29' });
+    for (const field of ['date', 'title', 'body', 'link']) {
+      const missing = { ...valid } as Record<string, unknown>;
+      delete missing[field];
+      assert.equal(parseContent(missing), null, `missing ${field}`);
+    }
+    for (const date of ['2026-02-29', '1900-02-29', '2026-04-31', '2026-00-04', '2026-13-04', '0000-01-01', '2026-1-04', '2026-10-04T00:00:00Z']) {
+      assert.equal(parseContent({ ...valid, date }), null, date);
+    }
+    for (const raw of [
+      { ...valid, rawRange: 'legacy' }, { title: '舊格式', rawRange: '創世記' }, '<html>經文</html>',
+      { ...valid, body: null }, { ...valid, title: ' ' },
+      { ...valid, link: null }, { ...valid, link: 'http://feed.example/original' },
+      { ...valid, link: 'javascript:alert(1)' },
+    ]) assert.equal(parseContent(raw), null, JSON.stringify(raw));
+  });
+  test('a JSON {date, title, body, link} is cut to the church link limits', async () => {
+    const { d } = withFetch({ [SRC]: { body: { ...good, title: '題'.repeat(40), body: '文'.repeat(200), link: 'https://x.example' } } });
     const r = await fetchSource(d, SRC);
     assert.ok(r.ok);
     assert.equal([...r.content.title].length, 30);
@@ -38,7 +58,7 @@ describe('fetching a content source', () => {
   });
 
   test('the cut counts characters as a person does and never splits one', () => {
-    const c = parseContent({ title: '👍🏽'.repeat(40), body: '🇹🇼'.repeat(200) })!;
+    const c = parseContent({ ...good, title: '👍🏽'.repeat(40), body: '🇹🇼'.repeat(200) })!;
     assert.equal(c.title, '👍🏽'.repeat(30));
     assert.equal(c.body, '🇹🇼'.repeat(120));
   });
@@ -86,9 +106,9 @@ describe('fetching a content source', () => {
     assert.deepEqual(await fetchSource(d, 'https://nowhere.example/'), { ok: false, error: 'network' });
   });
 
-  test('a link that is not https is dropped', () => {
-    assert.equal(parseContent({ title: 't', link: 'javascript:alert(1)' })!.link, null);
-    assert.equal(parseContent({ title: 't' })!.body, '');
+  test('an invalid original link or missing summary is a format error, never a manual-link fallback', () => {
+    assert.equal(parseContent({ ...good, link: 'javascript:alert(1)' }), null);
+    assert.equal(parseContent({ date: good.date, title: 't', link: good.link }), null);
   });
 });
 
@@ -102,11 +122,113 @@ describe('when sources run', () => {
 });
 
 describe('setLinkSource', () => {
+  test('an admin explicitly retries the stored source without resaving static fields or accepting a client source override', async () => {
+    await church();
+    const failed = withFetch({ [SRC]: { status: 503 } });
+    assert.deepEqual(await setLinkSource(failed.d, caller('pastor'), { churchId: 'C1', source: SRC, fetchMinute: 270 }), { ok: false, error: 'http', status: 503 });
+    assert.equal((await schedule())!.lastDay, undefined);
+    assert.equal((await schedule())!.lastAttemptDay, '2026-10-04');
+    const before = (await db.doc('churches/C1/settings/link').get()).data();
+    const { d, requests } = withFetch({ [SRC]: { body: good } });
+    assert.deepEqual(await setLinkSource(d, caller('pastor'), { churchId: 'C1', refresh: true }), { ok: true, content: { ...good, source: SRC, fetchedAt: Date.parse('2026-10-04T03:00:00+08:00') } });
+    assert.equal(requests.length, 1, 'explicit retry is allowed on the same day');
+    assert.equal(requests[0].url, SRC, 'the current server source is authoritative');
+    assert.deepEqual((await db.doc('churches/C1/settings/link').get()).data(), before, 'static fields and source/time are not rewritten');
+    assert.equal((await schedule())!.lastDay, '2026-10-04');
+    assert.equal((await content())!.error, null);
+    for (const extra of [{ source: 'https://arbitrary.example/' }, { fetchMinute: 900 }, { title: '改名' }, { url: 'https://arbitrary.example/' }]) {
+      await rejectsWith(setLinkSource(d, caller('pastor'), { churchId: 'C1', refresh: true, ...extra }), 'unknown');
+    }
+    await rejectsWith(setLinkSource(d, caller('mei'), { churchId: 'C1', refresh: true }), 'permissionDenied');
+    assert.equal(requests.length, 1, 'refused requests do not fetch');
+  });
+  test('a pending admin fetch cannot refill content or overwrite schedules after its source, settings or authorization epoch changes', async () => {
+    for (const change of ['source', 'clear', 'sourceABA', 'time', 'removedLink', 'suspended', 'deleted', 'demoted', 'removedMember']) {
+      await clearFirestore();
+      await church();
+      const other = 'https://other.example/today.json';
+      let entered!: () => void;
+      let release!: () => void;
+      const fetching = new Promise<void>((resolve) => { entered = resolve; });
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      const { fetch: ready } = fakeFetch({
+        [SRC]: { body: { ...good, title: '最新 A' } },
+        [other]: { body: { ...good, title: '最新 B' } },
+      });
+      const requests: string[] = [];
+      const d = { ...deps, fetch: async (url: string, init?: RequestInit) => {
+        requests.push(url);
+        if (requests.length === 1) { entered(); await gate; return Response.json({ ...good, title: '慢舊內容' }); }
+        return ready(url, init);
+      } };
+      const pending = setLinkSource(d, caller('pastor'), { churchId: 'C1', source: SRC, fetchMinute: 270 });
+      await fetching;
+      let reason = 'conflict';
+      if (change === 'source' || change === 'sourceABA') {
+        await setLinkSource(d, caller('pastor'), { churchId: 'C1', source: other, fetchMinute: 270 });
+        if (change === 'sourceABA') await setLinkSource(d, caller('pastor'), { churchId: 'C1', source: SRC, fetchMinute: 270 });
+      } else if (change === 'clear') await setLinkSource(d, caller('pastor'), { churchId: 'C1', source: null });
+      else if (change === 'time') {
+        assert.deepEqual(await setLinkSource(d, caller('pastor'), { churchId: 'C1', source: SRC, fetchMinute: 600 }), { ok: true, content: null, unchanged: true });
+        assert.equal(requests.length, 1, 'a time-only edit never starts another download');
+      } else if (change === 'removedLink') await db.doc('churches/C1/settings/link').delete();
+      else if (change === 'demoted') { await db.doc('churches/C1/members/pastor').update({ role: 'staff' }); reason = 'permissionDenied'; }
+      else if (change === 'removedMember') { await db.doc('churches/C1/members/pastor').delete(); reason = 'permissionDenied'; }
+      else { await db.doc('churches/C1').update({ status: change }); reason = 'churchClosed'; }
+      const currentContent = await content();
+      const currentSchedule = await schedule();
+      const currentLink = (await db.doc('churches/C1/settings/link').get()).data();
+      release();
+      const error = await rejectsWith(pending, reason) as { code: string };
+      if (reason === 'conflict') assert.equal(error.code, 'aborted', change);
+      assert.deepEqual(await content(), currentContent, `${change}: no late content write`);
+      assert.deepEqual(await schedule(), currentSchedule, `${change}: no schedule revival or overwrite`);
+      assert.deepEqual((await db.doc('churches/C1/settings/link').get()).data(), currentLink, change);
+    }
+  });
+
+  test('refresh replies identify the server source and actual fetched time so clients need not guess either', async () => {
+    await church();
+    const { d } = withFetch({ [SRC]: { body: good } });
+    await setLinkSource(d, caller('pastor'), { churchId: 'C1', source: SRC, fetchMinute: 270 });
+    setNow(new Date('2026-10-04T03:15:00+08:00'));
+    assert.deepEqual(await setLinkSource(d, caller('pastor'), { churchId: 'C1', refresh: true }), {
+      ok: true,
+      content: { ...good, source: SRC, fetchedAt: Date.parse('2026-10-04T03:15:00+08:00') },
+    });
+    assert.equal((await content())!.fetchedAt.toMillis(), Date.parse('2026-10-04T03:15:00+08:00'));
+  });
+
+  test('a newer manual retry can publish an error without a slower earlier retry restoring successful-looking content', async () => {
+    await church();
+    const initial = withFetch({ [SRC]: { body: good } });
+    await setLinkSource(initial.d, caller('pastor'), { churchId: 'C1', source: SRC, fetchMinute: 270 });
+    let entered!: () => void;
+    let release!: () => void;
+    const fetching = new Promise<void>((resolve) => { entered = resolve; });
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    let requests = 0;
+    const d = { ...deps, fetch: async () => {
+      if (++requests === 1) { entered(); await gate; return Response.json(good); }
+      return new Response('not JSON');
+    } };
+    const slow = setLinkSource(d, caller('pastor'), { churchId: 'C1', refresh: true });
+    await fetching;
+    assert.deepEqual(await setLinkSource(d, caller('pastor'), { churchId: 'C1', refresh: true }), { ok: false, error: 'badFormat', status: null });
+    const current = await content();
+    const currentSchedule = await schedule();
+    release();
+    await rejectsWith(slow, 'conflict');
+    assert.deepEqual(await content(), current);
+    assert.deepEqual(Object.keys(current!).sort(), ['error', 'errorAt', 'errorStatus', 'source']);
+    assert.deepEqual(await schedule(), currentSchedule);
+  });
+
   test('saving a source fetches it at once and returns the result', async () => {
     await church();
     const { d } = withFetch({ [SRC]: { body: good } });
     const r = await setLinkSource(d, caller('pastor'), { churchId: 'C1', source: SRC, fetchMinute: 300 });
-    assert.deepEqual(r, { ok: true, content: good });
+    assert.deepEqual(r, { ok: true, content: { ...good, source: SRC, fetchedAt: Date.parse('2026-10-04T03:00:00+08:00') } });
     const c = await content();
     assert.equal(c!.title, '今日經文');
     assert.equal(c!.source, SRC);
@@ -155,7 +277,7 @@ describe('setLinkSource', () => {
     await db.doc('churches/C1/settings/link').delete();
     await db.doc('churches/C1/settings/link').set({ title: '官網', body: '', url: 'https://grace.example' });
     const r = await setLinkSource(d, caller('pastor'), { churchId: 'C1', source: SRC, fetchMinute: 270 });
-    assert.deepEqual(r, { ok: true, content: good });
+    assert.deepEqual(r, { ok: true, content: { ...good, source: SRC, fetchedAt: Date.parse('2026-10-04T03:00:00+08:00') } });
     assert.equal(requests.length, 2);
   });
 
@@ -195,7 +317,8 @@ describe('the 15-minute schedule', () => {
   test('fetches only once its time has come, and once a day', async () => {
     await church();
     await scheduled('C1', 270);
-    const { d, requests } = withFetch({ [SRC]: { body: good } });
+    const todayContent = { ...good };
+    const { d, requests } = withFetch({ [SRC]: { body: todayContent } });
     setNow(new Date('2026-10-04T04:15:00+08:00'));
     assert.equal(await fetchDueLinks(d), 0, 'not yet');
     setNow(new Date('2026-10-04T04:30:00+08:00'));
@@ -205,10 +328,98 @@ describe('the 15-minute schedule', () => {
     assert.equal(requests.length, 1);
     assert.equal((await content())!.title, '今日經文');
     setNow(new Date('2026-10-05T04:30:00+08:00'));
+    todayContent.date = '2026-10-05';
     assert.equal(await fetchDueLinks(d), 1, 'again the next day');
+    assert.equal((await content())!.date, '2026-10-05');
+    assert.equal((await content())!.error, null);
   });
 
-  test('a failure keeps the last content and records why', async () => {
+  test('scheduled fetches cannot publish or reschedule after source/settings changes, clear, closure or schedule removal', async () => {
+    for (const change of ['source', 'clear', 'sourceABA', 'time', 'removedLink', 'suspended', 'deleted', 'removedSchedule']) {
+      await clearFirestore();
+      await church();
+      await scheduled('C1', 270);
+      setNow(new Date('2026-10-04T04:30:00+08:00'));
+      let entered!: () => void;
+      let release!: () => void;
+      const fetching = new Promise<void>((resolve) => { entered = resolve; });
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      const other = 'https://other.example/today.json';
+      const { fetch: ready } = fakeFetch({ [SRC]: { body: { ...good, title: '最新 A' } }, [other]: { body: { ...good, title: '最新 B' } } });
+      let requests = 0;
+      const d = { ...deps, fetch: async (url: string, init?: RequestInit) => {
+        if (++requests === 1) { entered(); await gate; return Response.json({ ...good, title: '慢舊內容' }); }
+        return ready(url, init);
+      } };
+      const pending = fetchDueLinks(d);
+      await fetching;
+      if (change === 'source' || change === 'sourceABA') {
+        await setLinkSource(d, caller('pastor'), { churchId: 'C1', source: other, fetchMinute: 600 });
+        if (change === 'sourceABA') await setLinkSource(d, caller('pastor'), { churchId: 'C1', source: SRC, fetchMinute: 600 });
+      } else if (change === 'clear') await setLinkSource(d, caller('pastor'), { churchId: 'C1', source: null });
+      else if (change === 'time') await setLinkSource(d, caller('pastor'), { churchId: 'C1', source: SRC, fetchMinute: 600 });
+      else if (change === 'removedLink') await db.doc('churches/C1/settings/link').delete();
+      else if (change === 'removedSchedule') await db.doc('linkSources/C1').delete();
+      else await db.doc('churches/C1').update({ status: change });
+      const latest = await content();
+      const latestSchedule = await schedule();
+      release();
+      assert.equal(await pending, 0, change);
+      assert.deepEqual(await content(), latest, `${change}: no stale content`);
+      assert.deepEqual(await schedule(), latestSchedule, `${change}: no stale schedule`);
+    }
+  });
+
+  test('editing the fixed title while today’s fetch runs keeps the fetched content', async () => {
+    await church();
+    await scheduled('C1', 270);
+    setNow(new Date('2026-10-04T04:30:00+08:00'));
+    let entered!: () => void;
+    let release!: () => void;
+    const fetching = new Promise<void>((resolve) => { entered = resolve; });
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const d = { ...deps, fetch: async () => { entered(); await gate; return Response.json(good); } };
+    const pending = fetchDueLinks(d);
+    await fetching;
+    await db.doc('churches/C1/settings/link').update({ title: '新的固定標題' });
+    release();
+    assert.equal(await pending, 1);
+    assert.equal((await content())!.title, good.title);
+    assert.equal((await schedule())!.lastDay, '2026-10-04');
+  });
+
+  test('simultaneous scheduled jobs reserve one daily attempt, while explicit admin retry can still run that day', async () => {
+    await church();
+    await scheduled('C1', 270);
+    setNow(new Date('2026-10-04T04:30:00+08:00'));
+    let entered!: () => void;
+    let release!: () => void;
+    const fetching = new Promise<void>((resolve) => { entered = resolve; });
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    let requests = 0;
+    const d = { ...deps, fetch: async () => {
+      if (++requests === 1) { entered(); await gate; return new Response('not JSON'); }
+      return Response.json(good);
+    } };
+    const first = fetchDueLinks(d);
+    await fetching;
+    assert.equal(await fetchDueLinks(d), 0);
+    assert.equal(requests, 1);
+    release();
+    assert.equal(await first, 1);
+    assert.equal((await content())!.error, 'badFormat');
+    assert.equal((await schedule())!.lastDay, '2026-10-03');
+    setNow(new Date('2026-10-04T06:00:00+08:00'));
+    await setLinkSource(d, caller('pastor'), { churchId: 'C1', source: SRC, fetchMinute: 600 });
+    setNow(new Date('2026-10-04T10:00:00+08:00'));
+    assert.equal(await fetchDueLinks(d), 0, 'moving the time does not create automatic retries');
+    await setLinkSource(d, caller('pastor'), { churchId: 'C1', refresh: true });
+    assert.equal(requests, 2, 'only an explicit manual retry fetches again today');
+    assert.equal((await content())!.error, null);
+    assert.equal((await schedule())!.lastDay, '2026-10-04');
+  });
+
+  test('a failed daily fetch stores only the error, never stale content or a successful lastDay', async () => {
     await church();
     await scheduled('C1', 270);
     await db.doc('churches/C1/settings/linkContent').set({ ...good, source: SRC, fetchedAt: Timestamp.now(), error: null });
@@ -216,8 +427,12 @@ describe('the 15-minute schedule', () => {
     setNow(new Date('2026-10-04T04:30:00+08:00'));
     await fetchDueLinks(d);
     const c = await content();
-    assert.equal(c!.title, '今日經文');
+    assert.deepEqual(Object.keys(c!).sort(), ['error', 'errorAt', 'errorStatus', 'source']);
     assert.equal(c!.error, 'timeout');
+    const next = await schedule();
+    assert.equal(next!.lastDay, '2026-10-03', 'lastDay means success, not an attempted fetch');
+    assert.equal(next!.lastAttemptDay, '2026-10-04');
+    assert.equal(next!.nextAt.toDate().toISOString(), new Date('2026-10-05T04:30:00+08:00').toISOString());
   });
 
   test('suspended churches are skipped; removed links are dropped', async () => {
@@ -231,6 +446,7 @@ describe('the 15-minute schedule', () => {
     assert.equal(await fetchDueLinks(d), 0);
     assert.equal(requests.length, 0);
     assert.equal(await schedule('Gone'), undefined);
-    assert.equal((await schedule('Closed'))!.lastDay, '2026-10-04', 'waits for tomorrow');
+    assert.equal((await schedule('Closed'))!.lastDay, '2026-10-03', 'skipping a closed church is not a successful fetch');
+    assert.equal((await schedule('Closed'))!.nextAt.toDate().toISOString(), new Date('2026-10-05T04:30:00+08:00').toISOString());
   });
 });

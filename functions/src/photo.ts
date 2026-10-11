@@ -7,8 +7,8 @@ import { dateKeyUtc8, fail, type Caller, type Deps } from './common.js';
  * 照片辨識: a roster editor sends photos of a paper roster; Gemini on Vertex
  * AI (which does not train on the photos) turns them into the JSON
  * the app's import parser reads. Nothing is stored: the photos only pass
- * through. Name matching and the import report stay in the app, the same
- * as self-host.
+ * through. Identity confirmation and format errors stay in the app's
+ * shared editable import preview.
  *
  * Limits: PHOTOS_PER_MONTH per church; the whole platform stops for the
  * month once the estimated spend reaches MONTHLY_BUDGET_USD.
@@ -64,51 +64,37 @@ interface Service {
   id: string;
   name: string;
   duties?: string[];
-  events?: { name: string }[];
+  events?: { name: string; color: number }[];
 }
 
 /** The prompt, built from the church's live settings on every call. */
-export function buildPrompt(opts: {
-  service: Service;
-  names: string[];
-  today: string;
-  rules?: { layoutRules?: string; extraRoleRules?: string; nicknames?: Record<string, string> };
-}) {
-  const { service, names, today, rules } = opts;
+export function buildPrompt(opts: { service: Service; names: string[]; today: string }) {
+  const { service, names, today } = opts;
   const roles = (service.duties ?? []).map((d) => `- ${d}`).join('\n');
-  const events = (service.events ?? []).map((e) => `「${e.name}」`).join('、') || '（無）';
-  const nicknames = Object.entries(rules?.nicknames ?? {})
-    .map(([nick, full]) => `- 「${nick}」是「${full}」`)
-    .join('\n');
+  const events = JSON.stringify(service.events ?? []);
   return [
-    `幫我把「${service.name}」的服事表照片轉成 JSON。只輸出 JSON，第一個字元是 [，最後一個字元是 ]，不要有任何說明文字。`,
-    '',
+    `把「${service.name}」的服事表照片轉成 JSON。只輸出 JSON 陣列，不加 Markdown 或說明文字。`,
     '## 只要這些',
-    '日期、服事項目、同工、活動。其他一律不要。',
-    rules?.layoutRules ?? '',
-    '## 服事項目命名',
-    '只能用以下名稱，一字不差：',
+    '日期、服事項目、人名、活動。其他不要輸出。逐格讀取，不要漏掉看得見的服事項目或人名。',
+    '## 服事項目',
+    '教會目前的服事項目（參考，不是白名單）：',
     roles,
-    '清單裡沒有的欄位整欄不要輸出。',
-    rules?.extraRoleRules ?? '',
+    '照片上其他服事項目也照原文輸出，不要略過、不自行改名。',
     '## 人名',
-    '輸出的人名必須是下面同工名單裡的其中一個全名，一字不差。表格上寫的是簡稱（去掉姓氏）或加了稱謂（哥、姐、牧師、傳道…），要還原成名單裡的全名。',
-    '同工名單：',
+    '照照片原文抄寫。不要還原簡稱、稱謂、錯字，不憑相似字形選同工，不猜身分。確認身分由匯入預覽處理。',
+    '以下同工名單僅供辨識已寫完整的人名，不能拿來補字或替換：',
     names.join('、'),
-    '- 罕用字容易認錯：不要自己拼字，從名單裡挑字形最接近的那一個。',
-    '- 一格有多個人（用「/」或「+」分隔）就拆成多個元素；照表格上的先後順序，不要重排。',
-    '- 空白格 → "people": ["待定"]。「暫停」代表那週沒有這一項，整個項目不要輸出。',
-    '- 真的對不到名單裡任何一位，就照表格原文輸出。',
-    nicknames,
+    '一格有多人（/ 或 + 分隔）拆成多個字串，保留照片先後順序。',
+    '空白或「待定」填 "people": []；「暫停」的服事項目不輸出。',
     '## 活動',
-    `放進該天的 events。意思相同時優先用這些名稱：${events}。對不到就照原文抄，不要拆。不要輸出顏色。沒有活動就不要寫 events。`,
+    'events 每個元素固定是 {"name":"活動名稱","color":0}，color 是 0 到 5 的整數色票編號，不是 RGB 或 ARGB。',
+    `教會常用活動：${events}。名稱完全相同時使用該 color；其他活動照原文抄，color 填 4。`,
+    '沒有活動時可省略 events。',
     '## 格式',
-    '[{"date":"2026-07-04","duties":[{"role":"司會","people":["陳小明"]}],"events":["聖餐"]}]',
-    `- date 一定是 YYYY-MM-DD。標題沒寫年份時，今天是 ${today}，挑讓表上月份離今天最近的年份。`,
-    '- people 的每個元素都是字串；duties 不可以是空陣列；同一個日期只出現一次。',
-  ]
-    .filter((line) => line !== '')
-    .join('\n');
+    '[{"date":"2026-07-04","duties":[{"role":"司會","people":["陳小明"]}],"events":[{"name":"聖餐","color":0}]}]',
+    `date 一定是 YYYY-MM-DD。標題沒寫年份時，今天是 ${today}，選照片月份離今天最近的年份。`,
+    '每列必須有 date 和 duties 陣列；同一天只出現一次；不輸出其他欄位。',
+  ].join('\n');
 }
 
 function parseImages(raw: unknown): GeminiImage[] {
@@ -147,10 +133,9 @@ export async function recognizeRoster(deps: Deps & { gemini: Gemini }, caller: C
   });
 
   try {
-    const [settings, members, rules] = await Promise.all([
+    const [settings, members] = await Promise.all([
       db.doc(`churches/${cid}/settings/services`).get(),
       db.collection(`churches/${cid}/members`).select('name').get(),
-      db.doc(`churches/${cid}/settings/import_rules`).get(),
     ]);
     const service = ((settings.get('services') as Service[] | undefined) ?? []).find((s) => s.id === type);
     if (!service) fail('failed-precondition', 'unknown');
@@ -158,7 +143,6 @@ export async function recognizeRoster(deps: Deps & { gemini: Gemini }, caller: C
       service,
       names: members.docs.map((m) => m.get('name') as string).filter(Boolean),
       today: dateKeyUtc8(deps.now()),
-      rules: rules.get(type) as Parameters<typeof buildPrompt>[0]['rules'],
     });
     const result = await deps.gemini(prompt, images);
     const cost = (result.inputTokens * PRICE_PER_M.input + result.outputTokens * PRICE_PER_M.output) / 1e6;
@@ -198,7 +182,32 @@ export function geminiClient(vertex: VertexConfig, models: string[] = DEFAULT_MO
           parts: [{ text: prompt }, ...images.map((i) => ({ inlineData: { mimeType: i.mimeType, data: i.data } }))],
         },
       ],
-      generationConfig: { temperature: 0, responseMimeType: 'application/json', maxOutputTokens: 16384 },
+      generationConfig: {
+        temperature: 0,
+        responseMimeType: 'application/json',
+        maxOutputTokens: 16384,
+        responseSchema: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT', required: ['date', 'duties'],
+            properties: {
+              date: { type: 'STRING', description: 'YYYY-MM-DD' },
+              duties: {
+                type: 'ARRAY', items: {
+                  type: 'OBJECT', required: ['role', 'people'],
+                  properties: { role: { type: 'STRING' }, people: { type: 'ARRAY', items: { type: 'STRING' } } },
+                },
+              },
+              events: {
+                type: 'ARRAY', items: {
+                  type: 'OBJECT', required: ['name', 'color'],
+                  properties: { name: { type: 'STRING' }, color: { type: 'INTEGER', minimum: 0, maximum: 5 } },
+                },
+              },
+            },
+          },
+        },
+      },
     });
     const queue = [...models];
     let retries = 0;
@@ -240,10 +249,9 @@ export function geminiClient(vertex: VertexConfig, models: string[] = DEFAULT_MO
       usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
     };
     const text = (payload.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? '').join('').trim();
-    const fenced = /^```(?:json)?\s*\n([\s\S]*?)\n```$/.exec(text);
     let rows: unknown;
     try {
-      rows = JSON.parse(fenced ? fenced[1] : text);
+      rows = JSON.parse(text);
     } catch {
       fail('internal', 'unknown', 'unparseable');
     }

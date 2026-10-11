@@ -26,8 +26,8 @@ void main() {
         id: 'x1',
         title: '聖誕晚會',
         // 23:30–01:00 in Taipei: two days there, one day in UTC.
-        start: DateTime.utc(2026, 12, 24, 15, 30),
-        end: DateTime.utc(2026, 12, 24, 17),
+        start: DateTime.utc(2026, 12, 24, 23, 30),
+        end: DateTime.utc(2026, 12, 25, 1),
       );
       final r = eventRoster(e);
       expect(r.id, 'ev_x1');

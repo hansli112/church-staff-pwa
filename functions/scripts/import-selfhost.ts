@@ -67,7 +67,8 @@ async function main() {
   console.log(`  services             ${report.services.length} (${report.services.join(', ')})`);
   console.log(`  rosters              ${report.rosters}${report.skippedRosters.length ? `, skipped ${report.skippedRosters.length}: ${report.skippedRosters.join(', ')}` : ''}`);
   console.log(`  staff orders         ${report.staffOrders}`);
-  console.log(`  not imported         settings/${report.droppedSettings.join(', settings/') || '—'}; small groups on ${report.smallGroupPeople} people`);
+  console.log(`  small groups kept    on ${report.smallGroupPeople} people`);
+  console.log(`  not imported         settings/${report.droppedSettings.join(', settings/') || '—'}`);
   if (report.unnamedMembers) console.log(`  ⚠ ${report.unnamedMembers} users have no name`);
 
   if (dryRun) return;

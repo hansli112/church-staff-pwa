@@ -12,6 +12,35 @@ const config: OAuthConfig = {
 };
 const grant = { churchId: 'C1', revision: 'first-grant' };
 
+test('Google PATCH clears the opposite date field when changing event type, while POST sends only its date type', async () => {
+  const requests: { url: string; method?: string; body: Record<string, unknown> }[] = [];
+  const google = googleApi({ fetch: async (url, init) => {
+    const body = JSON.parse(init!.body as string) as Record<string, unknown>;
+    requests.push({ url, method: init!.method, body });
+    return Response.json({ id: 'event', summary: body.summary, start: body.start, end: body.end });
+  } });
+  const allDay = { id: 'event', title: '退修會', start: '2026-10-10', end: '2026-10-12', allDay: true, description: '保留說明' };
+  await google.upsert('access', 'church@example.com', allDay);
+  assert.equal(requests[0].method, 'PATCH');
+  assert.match(requests[0].url, /church%40example\.com\/events\/event$/);
+  assert.deepEqual(requests[0].body, {
+    summary: '退修會', description: '保留說明',
+    start: { date: '2026-10-10', dateTime: null },
+    end: { date: '2026-10-12', dateTime: null },
+  });
+
+  await google.upsert('access', 'church@example.com', { ...allDay, start: '2026-10-10T10:00:00+08:00', end: '2026-10-10T12:00:00+08:00', allDay: false });
+  assert.equal(requests[1].method, 'PATCH');
+  assert.deepEqual(requests[1].body.start, { dateTime: '2026-10-10T10:00:00+08:00', date: null });
+  assert.deepEqual(requests[1].body.end, { dateTime: '2026-10-10T12:00:00+08:00', date: null });
+  assert.equal('recurrence' in requests[1].body, false, 'unrelated Google fields are not patched');
+
+  await google.upsert('access', 'church@example.com', { ...allDay, id: undefined });
+  assert.equal(requests[2].method, 'POST');
+  assert.deepEqual(requests[2].body.start, { date: '2026-10-10' });
+  assert.deepEqual(requests[2].body.end, { date: '2026-10-12' });
+});
+
 test('one church reuses its unexpired Google access token', async (t) => {
   let refreshes = 0;
   const fetch = async () => {

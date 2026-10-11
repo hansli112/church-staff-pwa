@@ -6,11 +6,13 @@ import 'package:intl/intl.dart';
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../domain/church_link.dart';
+import '../../domain/church_time.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
+import '../common/link_errors.dart';
 
 /// Admins set the church link shown at the top of everyone's home page,
 /// and optionally a content source fetched once a day at a time they pick.
@@ -31,6 +33,7 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
   bool _filled = false;
   bool _tried = false;
   bool _busy = false;
+  bool _retrying = false;
 
   @override
   void dispose() {
@@ -96,6 +99,25 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
     }
   }
 
+  /// Fetches the saved source again now. Saves nothing typed on this page.
+  Future<void> _retrySource() async {
+    final l10n = L10n.of(context);
+    final data = ref.churchData;
+    setState(() {
+      _retrying = true;
+      _sourceProblem = null;
+    });
+    try {
+      final result = await data.refreshChurchLink();
+      if (!mounted || ref.read(churchDataProvider)?.churchId != data.churchId) return;
+      if (!result.ok) setState(() => _sourceProblem = linkErrorText(l10n, result.error!, result.status));
+    } catch (e) {
+      if (mounted) showToast(context, errorText(l10n, e));
+    } finally {
+      if (mounted) setState(() => _retrying = false);
+    }
+  }
+
   Future<void> _remove(ChurchLink link) async {
     final l10n = L10n.of(context);
     final data = ref.churchData;
@@ -132,7 +154,7 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
         ? l10n.linkSourceFailed(linkErrorText(l10n, content.error!, content.errorStatus))
         : content.fetchedAt == null
         ? null
-        : l10n.linkSourceUpdated(DateFormat('M/d HH:mm').format(content.fetchedAt!));
+        : l10n.linkSourceUpdated(DateFormat('M/d HH:mm').format(churchTime(content.fetchedAt!)));
     final fieldPadding = const EdgeInsets.symmetric(horizontal: Space.m);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.churchLink)),
@@ -206,6 +228,12 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
                   const SizedBox(height: Space.xs),
                 ],
                 Text(l10n.linkSourceFooter, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
+                if (link?.source != null)
+                  SecondaryButton(
+                    label: l10n.linkSourceRetry,
+                    expand: true,
+                    onPressed: _retrying || _busy ? null : _retrySource,
+                  ),
                 const SizedBox(height: Space.l),
                 PrimaryButton(label: l10n.save, busy: _busy, onPressed: _save),
               ],
@@ -272,14 +300,3 @@ class _TimeSheetState extends State<_TimeSheet> {
     );
   }
 }
-
-/// Why the content source could not be fetched, for the admin.
-String linkErrorText(L10n l10n, LinkFetchError error, int? status) => switch (error) {
-  LinkFetchError.timeout => l10n.linkErrTimeout,
-  LinkFetchError.tooLarge => l10n.linkErrTooLarge,
-  LinkFetchError.badFormat => l10n.linkErrBadFormat,
-  LinkFetchError.notHttps => l10n.linkErrNotHttps,
-  LinkFetchError.http => l10n.linkErrHttp('${status ?? ''}'),
-  LinkFetchError.network => l10n.linkErrNetwork,
-  LinkFetchError.unknown => l10n.linkErrUnknown,
-};

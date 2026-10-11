@@ -12,14 +12,13 @@ async function church() {
   await seedChurch('C2', { other: 'admin' });
   await db.doc('churches/C1/members/editor').update({ groups: ['roster-editors'], zoneTypes: ['sunday'] });
   await db.doc('churches/C1/settings/services').set({
-    services: [{ id: 'sunday', name: '主日崇拜', duties: ['司會', '司琴'], events: [{ name: '聖餐' }] }],
+    services: [{ id: 'sunday', name: '主日崇拜', duties: ['司會', '司琴'], events: [{ name: '聖餐', color: 0 }] }],
     ids: ['sunday'],
   });
 }
 
-beforeEach(clearFirestore);
-
 describe('recognizeRoster', () => {
+  beforeEach(clearFirestore);
   test('an editor of the service gets rows back and one photo is counted', async () => {
     await church();
     let prompt = '';
@@ -117,6 +116,7 @@ describe('recognizeRoster', () => {
 });
 
 describe('photoQuota', () => {
+  beforeEach(clearFirestore);
   test('members see remaining photos; outsiders are refused', async () => {
     await church();
     await db.doc('churches/C1/usage/2026-10').set({ photos: 7 });
@@ -135,15 +135,14 @@ describe('photoQuota', () => {
 });
 
 describe('buildPrompt', () => {
-  test('includes nicknames and the layout rules when the church has them', () => {
+  test('uses canonical palette events and transcribes names without guessing an identity', () => {
     const p = buildPrompt({
       service: { id: 'sunday', name: '主日', duties: ['司會'] },
-      names: ['陳小明'],
-      today: '2026-10-02',
-      rules: { layoutRules: '## 這張表怎麼讀\n轉置的表', nicknames: { 小名: '陳小明' } },
+      names: ['陳小明'], today: '2026-10-02',
     });
-    assert.match(p, /轉置的表/);
-    assert.match(p, /「小名」是「陳小明」/);
+    assert.match(p, /"events":\[\{"name":"聖餐","color":0\}\]/);
+    assert.match(p, /不要還原簡稱/);
+    assert.doesNotMatch(p, /字形最接近|整欄不要輸出/);
     assert.match(p, /今天是 2026-10-02/);
   });
 });
@@ -166,6 +165,27 @@ describe('geminiClient', () => {
       'https://aiplatform.googleapis.com/v1/projects/p1/locations/global/publishers/google/models/gemini-x:generateContent',
     );
     assert.equal((init.headers as Record<string, string>).authorization, 'Bearer SECRET-TOKEN-123');
+  });
+
+  test('requests the same typed photo and pasted JSON event contract', async (t) => {
+    const fetch = t.mock.method(globalThis, 'fetch', async () => Response.json({
+      candidates: [{ content: { parts: [{ text: '[{"date":"2026-10-18","duties":[],"events":[{"name":"聖餐","color":5}]}]' }] } }],
+    }));
+    const result = await geminiClient(vertex, ['gemini-x'])('prompt', [image]);
+    assert.deepEqual(result.rows, [{date: '2026-10-18', duties: [], events: [{name: '聖餐', color: 5}]}]);
+    const request = JSON.parse((fetch.mock.calls[0].arguments[1] as RequestInit).body as string);
+    const event = request.generationConfig.responseSchema.items.properties.events.items;
+    assert.deepEqual(event.required, ['name', 'color']);
+    assert.equal(event.properties.color.type, 'INTEGER');
+    assert.equal(event.properties.color.minimum, 0);
+    assert.equal(event.properties.color.maximum, 5);
+  });
+
+  test('non-canonical fenced output fails explicitly instead of being silently downgraded', async (t) => {
+    t.mock.method(globalThis, 'fetch', async () => Response.json({
+      candidates: [{ content: { parts: [{ text: '```json\n[]\n```' }] } }],
+    }));
+    await rejectsWith(geminiClient(vertex, ['gemini-x'])('prompt', [image]), 'unknown');
   });
 
   test('a refused call says unavailable and logs why', async (t) => {

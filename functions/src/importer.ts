@@ -44,7 +44,9 @@ const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string =>
 export function mapMember(uid: string, u: Doc, joinedAt: unknown) {
   const zones = (Array.isArray(u.zones) ? u.zones : [])
     .filter((z): z is Doc => !!z && typeof z === 'object' && typeof (z as Doc).serviceType === 'string')
-    .map((z) => ({ serviceType: z.serviceType as string, duties: strings(z.ministries) }));
+    .map((z) => ({ serviceType: z.serviceType as string, duties: strings(z.ministries), smallGroups: strings(z.smallGroups) }));
+  const prefs = u.notificationPrefs as { weeklyRosterReminder?: unknown; muted?: unknown } | undefined;
+  const muted = [...new Set([...strings(prefs?.muted), ...(prefs?.weeklyRosterReminder === false ? ['reminder'] : [])])];
   const role = ['admin', 'leader', 'staff', 'member'].includes(u.role as string) ? (u.role as string) : 'member';
   return {
     uid,
@@ -54,6 +56,7 @@ export function mapMember(uid: string, u: Doc, joinedAt: unknown) {
     groups: strings(u.groups).filter((g) => g === 'roster-editors' || g === 'calendar-editors'),
     zones,
     zoneTypes: [...new Set(zones.map((z) => z.serviceType))],
+    notificationPrefs: { muted },
     joinedAt,
   };
 }
@@ -89,21 +92,41 @@ export function rosterDateKey(id: string, r: Doc): string | null {
   return null;
 }
 
-export function mapRoster(id: string, r: Doc, eventColors: Map<string, number>) {
+/** Migration boundary only: full source names, with duplicates excluded, never normalized or truncated. */
+export function exactUidIndex(people: readonly { uid: string; name: unknown }[]) {
+  const unique = new Map<string, string>();
+  const ambiguous = new Set<string>();
+  for (const person of people) {
+    const name = person.name;
+    if (typeof name !== 'string' || !name.trim() || !person.uid || person.uid.includes('/') || ambiguous.has(name)) continue;
+    if (unique.has(name)) {
+      unique.delete(name);
+      ambiguous.add(name);
+    } else unique.set(name, person.uid);
+  }
+  return { unique, ambiguous };
+}
+
+export function mapRoster(id: string, r: Doc, eventColors: Map<string, number>, exactUids: ReadonlyMap<string, string> = new Map()) {
   const dateKey = rosterDateKey(id, r);
   const type = r.type;
   if (!dateKey || typeof type !== 'string' || !type) return null;
   const duties = (Array.isArray(r.duties) ? (r.duties as Doc[]) : [])
     .filter((d) => typeof d.role === 'string')
     .map((d) => {
-      const people = strings(d.people).map((p) => p.trim()).filter((p) => p && p !== PLACEHOLDER);
-      const ids = (d.personIdsByName ?? {}) as Record<string, unknown>;
+      const listed = strings(d.people).map((raw) => ({ raw, name: raw.trim() })).filter((p) => p.name && p.name !== PLACEHOLDER);
+      const supplied = Object.hasOwn(d, 'personIdsByName');
+      const ids = d.personIdsByName && typeof d.personIdsByName === 'object' && !Array.isArray(d.personIdsByName)
+        ? d.personIdsByName as Record<string, unknown> : {};
       return {
         role: d.role as string,
-        people,
-        uids: Object.fromEntries(
-          people.filter((p) => typeof ids[p] === 'string').map((p) => [p, ids[p] as string]),
-        ),
+        people: listed.map((p) => p.name),
+        uids: Object.fromEntries(listed.flatMap((p) => {
+          // Even an explicitly empty or partial map is authoritative. Only
+          // missing legacy maps may infer a unique exact original full name.
+          const uid = supplied ? ids[Object.hasOwn(ids, p.raw) ? p.raw : p.name] : exactUids.get(p.raw);
+          return typeof uid === 'string' && uid && !uid.includes('/') ? [[p.name, uid]] : [];
+        })),
       };
     });
   const custom = (r.customEventColors ?? {}) as Record<string, unknown>;
@@ -179,7 +202,7 @@ export interface ImportReport {
   staffOrders: number;
   /** settings/* documents the hosted app has no place for. */
   droppedSettings: string[];
-  /** People who had small groups, which are not imported. */
+  /** People whose per-zone small-group data is preserved. */
   smallGroupPeople: number;
   unnamedMembers: number;
 }
@@ -198,10 +221,11 @@ export function buildImport(snapshot: SelfHostSnapshot, joinedAt: unknown) {
   for (const s of services.services) for (const e of s.events) eventColors.set(`${s.id}/${e.name}`, e.color);
 
   const members = snapshot.users.map((u) => mapMember(u.id, u.data, joinedAt));
+  const { unique: exactUids } = exactUidIndex(snapshot.users.map((u) => ({ uid: u.id, name: u.data.name })));
   const rosters: NonNullable<ReturnType<typeof mapRoster>>[] = [];
   const skippedRosters: string[] = [];
   for (const r of snapshot.rosters) {
-    const mapped = mapRoster(r.id, r.data, eventColors);
+    const mapped = mapRoster(r.id, r.data, eventColors, exactUids);
     if (mapped) rosters.push(mapped);
     else skippedRosters.push(r.id);
   }

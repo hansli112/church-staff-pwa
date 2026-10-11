@@ -27,8 +27,9 @@ export function dutiesByUid(value: unknown): Map<string, string[]> {
   const out = new Map<string, string[]>();
   for (const d of duties(value)) {
     const people = names(d.people);
-    for (const [name, uid] of Object.entries((d.uids as Record<string, unknown> | undefined) ?? {})) {
-      if (typeof uid !== 'string' || !people.includes(name)) continue;
+    if (!d.uids || typeof d.uids !== 'object' || Array.isArray(d.uids)) continue;
+    for (const [name, uid] of Object.entries(d.uids as Record<string, unknown>)) {
+      if (typeof uid !== 'string' || !uid || uid.includes('/') || !people.includes(name)) continue;
       out.set(uid, [...(out.get(uid) ?? []), d.role as string]);
     }
   }

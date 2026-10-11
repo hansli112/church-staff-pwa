@@ -451,6 +451,21 @@ void contractTests(Future<ContractWorld> Function() open) {
       await expectLater(g.church.saveMember(Member(uid: g.mei, name: '李美玉', role: Role.admin)), denied());
     });
 
+    test('granting a duty changes only that member’s zones, as they are now; staff cannot', () async {
+      final g = await Grace.open(w);
+      await g.church.saveMember(
+        Member(uid: g.mei, name: '李美玉', role: Role.leader, groups: const {Group.calendarEditors}),
+      );
+      await g.church.grantDuty(g.mei, 'sunday', '音控');
+      final mei = (await g.church.member(g.mei).first)!;
+      expect(mei.role, Role.leader);
+      expect(mei.groups, {Group.calendarEditors});
+      expect(mei.serves('sunday', '音控'), isTrue);
+      expect(mei.zoneTypes, ['sunday']);
+      await w.signIn(Grace.meiEmail);
+      await expectLater(g.church.grantDuty(g.mei, 'sunday', '司琴'), denied());
+    });
+
     test('a member name holds 40 characters; far past it is refused', () async {
       final g = await Grace.open(w);
       await g.church.saveMember(Member(uid: g.mei, name: '🙏' * 40, role: Role.staff));

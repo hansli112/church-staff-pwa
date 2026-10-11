@@ -9,6 +9,7 @@ import '../../state/support.dart';
 import '../../env.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
+import '../../state/app_update.dart';
 import '../../state/session.dart';
 import '../church/church_switcher.dart';
 
@@ -75,6 +76,7 @@ class MeScreen extends ConsumerWidget {
               if (store.available) ListRow(title: l10n.support, onTap: () => context.push('/me/support')),
             ],
           ),
+          const _UpdatesSection(),
           if (isOperator || Env.current.isDevelopment)
             ListSection(
               header: l10n.developer,
@@ -110,6 +112,67 @@ class MeScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _UpdatesSection extends ConsumerWidget {
+  const _UpdatesSection();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = L10n.of(context);
+    final update = ref.watch(appUpdateProvider);
+    final blocked = ref.watch(updateBlockedProvider);
+    final error = update.error;
+    final footer = error is UpdateRejected
+        ? switch (error.reason) {
+            UpdateRejection.editing => l10n.appUpdateFinishEditing,
+            UpdateRejection.scopeChanged => l10n.appUpdateScopeChanged,
+            UpdateRejection.unsafeRoute => l10n.appUpdateBackToMe,
+            UpdateRejection.noUpdate => l10n.appUpdateCheckFirst,
+          }
+        : error != null
+        ? l10n.appUpdateFailed
+        : update.phase == AppUpdatePhase.current
+        ? l10n.appUpdateCurrent
+        : update.availableVersion != null
+        ? l10n.appUpdateReady
+        : null;
+    if (!update.supported) {
+      if (ref.watch(isWebProvider)) {
+        return ListSection(
+          children: [ListRow(title: l10n.appRunningVersion, subtitle: l10n.appVersionDevelopment)],
+        );
+      }
+      return ListSection(
+        children: [ListRow(title: l10n.appUpdateNativeTitle, subtitle: l10n.appUpdateNativeNote)],
+      );
+    }
+    Future<void> run(Future<void> Function() action) async {
+      try {
+        await action();
+      } catch (_) {
+        /* The controller renders the explicit inline error above. */
+      }
+    }
+
+    return ListSection(
+      footer: footer,
+      children: [
+        ListRow(title: l10n.appRunningVersion, subtitle: update.runningVersion, chevron: false),
+        ListRow(
+          title: update.phase == AppUpdatePhase.checking ? l10n.appUpdateChecking : l10n.appUpdateCheck,
+          chevron: false,
+          onTap: update.busy ? null : () => run(ref.read(appUpdateProvider.notifier).check),
+        ),
+        if (update.availableVersion != null)
+          ListRow(
+            title: update.phase == AppUpdatePhase.applying ? l10n.appUpdateApplying : l10n.appUpdateApply,
+            subtitle: blocked ? l10n.appUpdateFinishEditingNote : null,
+            chevron: false,
+            onTap: update.busy || blocked ? null : () => run(ref.read(appUpdateProvider.notifier).apply),
+          ),
+      ],
     );
   }
 }

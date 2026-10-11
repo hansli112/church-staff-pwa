@@ -16,7 +16,11 @@ class PickerResult {
     this.ranking,
     this.addDutyTo = const [],
     this.removeDuty = false,
+    this.guestNames = const {},
   });
+
+  /// Names explicitly arranged without binding a same-name member.
+  final Set<String> guestNames;
 
   /// The chosen names, any order (the caller sorts by staff order).
   final List<String> people;
@@ -54,6 +58,8 @@ class PeoplePicker extends StatefulWidget {
     required this.canGrantDuty,
     required this.canReorder,
     this.canRemove = false,
+    this.initialGuests = const {},
+    this.guestSuggestions = const [],
     this.onChanged,
   });
 
@@ -64,6 +70,8 @@ class PeoplePicker extends StatefulWidget {
   final List<String> initial;
   final List<Member> members;
   final StaffOrder order;
+  final Set<String> initialGuests;
+  final List<String> guestSuggestions;
 
   /// Admins may add the duty to someone's zone; roster editors may not.
   final bool canGrantDuty;
@@ -82,6 +90,7 @@ class PeoplePicker extends StatefulWidget {
 
 class PeoplePickerState extends State<PeoplePicker> {
   late final List<String> _selected = [...widget.initial];
+  late final Set<String> _guests = {...widget.initialGuests};
   late List<String> _serving;
   late final List<Member> _others;
   final _grant = <Member>[];
@@ -113,12 +122,22 @@ class PeoplePickerState extends State<PeoplePicker> {
   }
 
   /// The result if the sheet closes now.
-  PickerResult get result => PickerResult(people: _selected, ranking: _ranking, addDutyTo: _grant);
+  PickerResult get result => PickerResult(
+    people: _selected,
+    ranking: _ranking,
+    addDutyTo: _grant,
+    guestNames: _guests.intersection(_selected.toSet()),
+  );
 
-  void _toggle(String name) {
+  void _toggle(String name, {bool guest = false}) {
     Haptics.selection();
     setState(() {
-      if (!_selected.remove(name)) _selected.add(name);
+      if (_selected.remove(name)) {
+        _guests.remove(name);
+      } else {
+        _selected.add(name);
+        if (guest) _guests.add(name);
+      }
     });
     widget.onChanged?.call(result);
   }
@@ -149,7 +168,7 @@ class PeoplePickerState extends State<PeoplePicker> {
   void _useTyped() {
     final name = _query.trim();
     if (name.isEmpty || _selected.contains(name)) return;
-    _toggle(name);
+    _toggle(name, guest: true);
   }
 
   @override
@@ -241,21 +260,24 @@ class PeoplePickerState extends State<PeoplePicker> {
           ]
         : const <Member>[];
     final typed = _query.trim();
-    final typedIsKnown =
-        typed.isEmpty || serving.contains(typed) || others.any((m) => m.name == typed) || _selected.contains(typed);
-    // Names typed earlier for this day that are not members.
-    final custom = [
+    // Guests are an explicit separate choice, even when a member shares a name.
+    final guests = <String>{
+      ...widget.guestSuggestions,
+      ..._guests,
       for (final n in _selected)
         if (!_serving.contains(n) && !_others.any((m) => m.name == n)) n,
-    ];
+    }.where((n) => _matches(n, q)).toList();
+    final typedIsKnown =
+        typed.isEmpty ||
+        serving.contains(typed) ||
+        others.any((m) => m.name == typed) ||
+        guests.contains(typed) ||
+        _selected.contains(typed);
 
     final rows = <Widget Function()>[];
-    if (serving.isNotEmpty || custom.isNotEmpty) {
+    if (serving.isNotEmpty) {
       rows.add(() => SectionHeader(l10n.pickerServes));
-      for (final n in [
-        ...serving,
-        ...custom.where((n) => !serving.contains(n)),
-      ]) {
+      for (final n in serving) {
         rows.add(() => _row(n, c, onTap: () => _toggle(n)));
       }
     } else if (!searching) {
@@ -275,6 +297,12 @@ class PeoplePickerState extends State<PeoplePicker> {
         rows.add(() => _row(m.name, c, onTap: () => _pickOther(m)));
       }
     }
+    if (guests.isNotEmpty) {
+      rows.add(() => SectionHeader(l10n.pickerGuestNames));
+      for (final name in guests) {
+        rows.add(() => _row(name, c, onTap: () => _toggle(name, guest: true)));
+      }
+    }
     if (!typedIsKnown) {
       rows.add(
         () => ListRow(
@@ -284,7 +312,7 @@ class PeoplePickerState extends State<PeoplePicker> {
         ),
       );
     }
-    if (searching && serving.isEmpty && others.isEmpty && typedIsKnown) {
+    if (searching && serving.isEmpty && others.isEmpty && guests.isEmpty && typedIsKnown) {
       rows.add(
         () => Padding(
           padding: const EdgeInsets.all(Space.l),

@@ -46,12 +46,10 @@ class RosterCard extends ConsumerWidget {
     }
     final today = ref.watch(todayProvider);
     final uid = ref.watch(uidProvider);
-    final myName = ref.watch(meProvider.select((m) => m.value?.name));
     return RosterDayView(
       roster: roster,
       title: dayLabel(L10n.of(context), roster.day, today),
       highlightUid: uid,
-      highlightName: myName,
       onTap: onTap,
     );
   }
@@ -65,21 +63,15 @@ class RosterDayView extends StatelessWidget {
     required this.roster,
     required this.title,
     this.highlightUid,
-    this.highlightName,
     this.onTap,
   });
 
   final Roster roster;
   final String title;
   final String? highlightUid;
-  final String? highlightName;
   final VoidCallback? onTap;
 
-  bool _isMe(Duty duty, String name) {
-    final uid = duty.uids[name];
-    if (uid != null) return uid == highlightUid;
-    return name == highlightName;
-  }
+  bool _isMe(Duty duty, String name) => highlightUid != null && duty.uids[name] == highlightUid;
 
   @override
   Widget build(BuildContext context) {
