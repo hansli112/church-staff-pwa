@@ -1,0 +1,23 @@
+name: google_sign_in_unused_web
+description: "The web build's google_sign_in: never used, so it loads nothing."
+publish_to: 'none'
+version: 1.0.0
+
+environment:
+  sdk: ^3.11.0
+  flutter: ">=3.41.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
+  google_sign_in_platform_interface: ^3.1.0
+
+flutter:
+  plugin:
+    implements: google_sign_in
+    platforms:
+      web:
+        pluginClass: UnusedGoogleSignIn
+        fileName: google_sign_in_unused_web.dart
