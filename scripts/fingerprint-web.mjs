@@ -1,14 +1,16 @@
-// Names Flutter's compiled JavaScript and asset trees after their contents.
-// The bootstrap stays at its stable, no-cache URL; its dart2js path and
-// loader assetBase bind code to the same release's manifests/fonts/assets.
-// Keep main.dart.js and stable assets too for the loader's legacy fallback.
+// Names Flutter's compiled code (dart2js main and chunks; with --wasm also
+// the dart2wasm main and its JS module) and asset trees after their
+// contents. The bootstrap stays at its stable, no-cache URL; its entry paths
+// and loader assetBase bind code to the same release's manifests/fonts/assets.
+// Keep main.dart.js(/.wasm/.mjs) and stable assets too for the loader's
+// legacy fallback. A wasm build must come with its dart2js build: Safari and
+// Firefox cannot run Flutter's wasm renderer and load the JS one.
 //
 //   node scripts/fingerprint-web.mjs app/build/web
 //     --archive .firebase/web-assets --project <Firebase project id>
 //   node scripts/fingerprint-web.mjs app/build/web --check-build
 //
-// --check-build only validates build metadata; real wasm builds are rejected
-// before any output changes. This is not a wasm rollout compatibility layer.
+// --check-build only validates build metadata, before any output changes.
 //
 // The project archive is additive: failed deploys must never rotate away
 // published assets. Preserve/transfer it when changing deployment machines.
@@ -113,7 +115,7 @@ function bindAssets(bootstrap, base) {
   return bootstrap.slice(0, start) + bound + bootstrap.slice(end);
 }
 
-const immutable = /^(?:main\.dart(?:\.js_\d+\.part)?\.[0-9a-f]{10}\.js|assets\/(?:[A-Za-z0-9_-][A-Za-z0-9_.-]*\/)*[A-Za-z0-9_-][A-Za-z0-9_.-]*\.[0-9a-f]{10}\.(?:otf|ttf))$/;
+const immutable = /^(?:main\.dart(?:\.js_\d+\.part)?\.[0-9a-f]{10}\.js|main\.dart\.[0-9a-f]{10}\.(?:wasm|mjs)|assets\/(?:[A-Za-z0-9_-][A-Za-z0-9_.-]*\/)*[A-Za-z0-9_-][A-Za-z0-9_.-]*\.[0-9a-f]{10}\.(?:otf|ttf))$/;
 const digest = (bytes) => createHash('sha256').update(bytes).digest('hex').slice(0, 10);
 
 function immutableFiles(dir, prefix = '') {
@@ -124,7 +126,7 @@ function immutableFiles(dir, prefix = '') {
     if (entry.isDirectory()) files.push(...immutableFiles(join(dir, entry.name), `${path}/`));
     else if (entry.isFile() && immutable.test(path)) {
       const bytes = readFileSync(join(dir, entry.name));
-      const hash = /\.([0-9a-f]{10})\.(?:js|otf|ttf)$/.exec(path)[1];
+      const hash = /\.([0-9a-f]{10})\.(?:js|wasm|mjs|otf|ttf)$/.exec(path)[1];
       if (hash !== digest(bytes)) throw new Error(`content hash mismatch: ${path}`);
       files.push(path);
     }
@@ -134,7 +136,7 @@ function immutableFiles(dir, prefix = '') {
 
 function publish(source, target) {
   const bytes = readFileSync(source);
-  const hash = /\.([0-9a-f]{10})\.(?:js|otf|ttf)$/.exec(target)[1];
+  const hash = /\.([0-9a-f]{10})\.(?:js|wasm|mjs|otf|ttf)$/.exec(target)[1];
   if (digest(bytes) !== hash) throw new Error(`content hash mismatch: ${source}`);
   if (existsSync(target)) {
     const previous = readFileSync(target);
@@ -198,12 +200,13 @@ function run() {
     throw new Error('invalid Flutter build configuration in flutter_bootstrap.js');
   }
   if (!Array.isArray(config.builds)) throw new Error('invalid Flutter build configuration: expected builds');
-  // This rollout versions dart2js only. Pinning assets while leaving a real
-  // wasm/mjs entry point unversioned would mix releases on an older bootstrap.
-  // Reject it before changing any generated output; empty fallbacks stay.
-  if (config.builds.some((build) => build?.compileTarget === 'dart2wasm')) {
-    throw new Error('dart2wasm builds are not supported by this dart2js-only fingerprinting rollout');
+  const wasmBuilds = config.builds.filter((build) => build?.compileTarget === 'dart2wasm');
+  if (wasmBuilds.length > 1) throw new Error('invalid Flutter build configuration: expected at most one dart2wasm build');
+  if (wasmBuilds.some((build) => typeof build.mainWasmPath !== 'string' || !/^main\.dart(?:\.[0-9a-f]{10})?\.wasm$/.test(build.mainWasmPath) ||
+      typeof build.jsSupportRuntimePath !== 'string' || !/^main\.dart(?:\.[0-9a-f]{10})?\.mjs$/.test(build.jsSupportRuntimePath))) {
+    throw new Error('invalid Flutter build configuration: unsupported dart2wasm paths');
   }
+  // Empty fallbacks stay; the JS build is what Safari and Firefox load.
   if (!config.builds.some((build) => build?.compileTarget === 'dart2js')) {
     throw new Error('invalid Flutter build configuration: expected a dart2js build');
   }
@@ -224,6 +227,12 @@ function run() {
     const bytes = readFileSync(join(web, part));
     return { part, bytes, named: part.replace(/\.js$/, `.${digest(bytes)}.js`) };
   });
+  // The wasm main and its module are loaded separately from buildConfig and
+  // never name each other, so each is named after its own bytes.
+  const wasmEntries = wasmBuilds.length ? ['wasm', 'mjs'].map((ext) => {
+    const bytes = readFileSync(join(web, `main.dart.${ext}`));
+    return { ext, bytes, named: `main.dart.${digest(bytes)}.${ext}` };
+  }) : [];
   const tree = assetTree(join(web, 'assets'));
   const base = `asset-bundles/${tree.hash}/`;
   const boundBootstrap = bindAssets(bootstrap, base);
@@ -237,8 +246,13 @@ function run() {
   const named = `main.dart.${hash}.js`;
   writeFileSync(join(web, named), main);
   writeFileSync(mainPath, main);
+  for (const { bytes, named: entry } of wasmEntries) writeFileSync(join(web, entry), bytes);
   for (const build of config.builds) {
     if (build?.compileTarget === 'dart2js') build.mainJsPath = named;
+    if (build?.compileTarget === 'dart2wasm') {
+      build.mainWasmPath = wasmEntries[0].named;
+      build.jsSupportRuntimePath = wasmEntries[1].named;
+    }
   }
   writeFileSync(bootstrapPath, boundBootstrap.replace(assignment, () => `_flutter.buildConfig = ${JSON.stringify(config)};`));
   if (archive) retain(web, archive, project, tree);

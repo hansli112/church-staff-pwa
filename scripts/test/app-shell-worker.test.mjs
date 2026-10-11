@@ -9,15 +9,18 @@ import { runInNewContext } from 'node:vm';
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..');
 const origin = 'https://demo-martha.invalid';
 const sha = (body) => createHash('sha256').update(body).digest('hex');
-function release(letter) {
+function release(letter, { wasm = false } = {}) {
   const id = letter.repeat(20);
+  const entry = (ext) => [`/main.dart.${sha(`${ext} ${id}`).slice(0, 10)}.${ext}`, `${ext} ${id}`, true, true];
   const source = [
     [`/releases/${id}/app.html`, `<html>${id}</html>`, false],
     [`/releases/${id}/flutter_bootstrap.js`, `boot ${id}`, false],
-    [`/main.dart.${sha(`entry ${id}`).slice(0, 10)}.js`, `entry ${id}`, false],
+    // Before wasm, the JS main was the one required entry; with wasm, each
+    // browser's own entries are cached as it uses them, like the engine.
+    ...(wasm ? [entry('js'), entry('wasm'), entry('mjs')] : [[`/main.dart.${sha(`entry ${id}`).slice(0, 10)}.js`, `entry ${id}`, false]]),
     [`/main.dart.js_1.part.${sha(`optional ${id}`).slice(0, 10)}.js`, `optional ${id}`, true],
   ];
-  const manifest = { schema: 1, project: 'demo-martha', id, identity: id + '0'.repeat(44), shell: source[0][0], bootstrap: source[1][0], files: source.map(([url, body, optional]) => ({ url, sha256: sha(body), size: Buffer.byteLength(body), optional })) };
+  const manifest = { schema: 1, project: 'demo-martha', id, identity: id + '0'.repeat(44), shell: source[0][0], bootstrap: source[1][0], files: source.map(([url, body, optional, engine]) => ({ url, sha256: sha(body), size: Buffer.byteLength(body), optional, ...(engine ? { engine: true } : {}) })) };
   const manifestBytes = JSON.stringify(manifest);
   const pointer = { schema: 1, project: 'demo-martha', id, metadata: `/releases/${id}/release.json`, manifest: `/releases/${id}/release-manifest.json`, manifestSha256: sha(manifestBytes) };
   return { id, pointer, manifest, responses: new Map([...source.map(([url, body]) => [origin + url, body]), [origin + pointer.metadata, JSON.stringify(pointer)], [origin + pointer.manifest, manifestBytes]]) };
@@ -115,4 +118,32 @@ test('initial shell install leaves deferred code lazy and never intercepts API/u
   assert.equal(await w.request('/firebase-messaging-sw.js'), null);
   w.setOffline();
   assert.equal(await (await w.request('/home', true)).text(), `<html>${a.id}</html>`);
+});
+
+test('a wasm release caches the entries this browser ran and reopens offline from them', async () => {
+  const a = release('a', { wasm: true });
+  const w = worker(a);
+  const [js, wasm, module] = ['js', 'wasm', 'mjs'].map((ext) => a.manifest.files.find((f) => new RegExp(`^/main\\.dart\\.[0-9a-f]{10}\\.${ext}$`).test(f.url)).url);
+  assert.equal((await w.message('INIT', { boot: a.pointer, used: [origin + wasm, origin + module] })).ok, true);
+  assert.ok(w.requests.includes(origin + wasm));
+  assert.ok(w.requests.includes(origin + module));
+  assert.ok(!w.requests.includes(origin + js), 'Chrome never downloads the JS main it does not run');
+  w.setOffline();
+  assert.equal(await (await w.request('/home', true)).text(), `<html>${a.id}</html>`);
+  assert.equal(await (await w.request(wasm)).text(), `wasm ${a.id}`);
+  assert.equal(await (await w.request(module)).text(), `mjs ${a.id}`);
+});
+
+test('an update to a wasm release stages every entry before it can apply', async () => {
+  const a = release('a');
+  const b = release('b', { wasm: true });
+  const w = worker(a);
+  await w.message('INIT', { boot: a.pointer, used: [] });
+  for (const [url, response] of b.responses) w.responses.set(url, response);
+  w.responses.set(origin + '/release.json', JSON.stringify(b.pointer));
+  assert.equal((await w.message('CHECK', { project: 'demo-martha', runningId: a.id })).available, true);
+  for (const file of b.manifest.files) assert.ok(w.requests.includes(origin + file.url), file.url);
+  assert.equal((await w.message('APPLY', { release: b.pointer, safe: true })).ok, true);
+  w.setOffline();
+  assert.equal(await (await w.request('/home', true)).text(), `<html>${b.id}</html>`);
 });

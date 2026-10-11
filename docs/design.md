@@ -116,7 +116,7 @@
 目標：比 self-host 版明顯順。self-host 在資料一多時幾乎都會卡。
 
 self-host 已經做了延遲建構清單（`ListView.builder`）和縮小重建範圍（`context.select`），所以卡頓的主因推測是下面兩點，M2 先用大量測試資料實測確認：
-- Flutter Web 在 iPhone 上只能跑 JS 版 CanvasKit，Dart 全擠在 UI 執行緒；wasm 版被 WebKit bug 擋住。
+- Flutter Web 在 iPhone 上只能跑 JS 版 CanvasKit，Dart 全擠在 UI 執行緒；wasm 版被 WebKit bug 擋住（Android 的 Chrome 從 2026-10-11 起跑 wasm 版，見量測紀錄）。
 - 每次進畫面都向伺服器重讀（`.get()`），打開選人視窗就重抓全部使用者。
 
 做法：
@@ -163,7 +163,7 @@ self-host 已經做了延遲建構清單（`ListView.builder`）和縮小重建�
 - 首頁與主要分頁保持直接載入。平台後台（含統計、費用）、教會資訊（含匯出與 logo 處理）、照片匯入、舊版搬家、行事曆連接設定改為開啟時才載入程式；原有網址、參數、OAuth 回傳與返回行為不變。
 - 同一組程式成功載入後重用；下載最多等 15 秒，失敗顯示重試，保留返回或回首頁入口。載入中的頁面顯示標題與頂端進度列，不加全畫面轉圈。初始深連結等目前目的頁面或錯誤頁畫出來，舊路由完成不會提早移除載入畫面。
 - SharedPreferences 與 Firebase 啟動互不相依，並行等待；Firestore／Auth／emulator 設定的先後與安全檢查不改。
-- `google_sign_in_web` 1.1.3 在 Flutter 的套件註冊時自動載入 GIS SDK，App 已使用 Firebase Web popup 而未呼叫原生 Google 初始化。現有套件沒有可停用此下載的正式設定；這批不 fork 套件、不修改產生的 registrant，也不更換原生登入整合。
+- `google_sign_in_web` 1.1.3 在 Flutter 的套件註冊時自動載入 GIS SDK，App 已使用 Firebase Web popup 而未呼叫原生 Google 初始化。現有套件沒有可停用此下載的正式設定；這批不 fork 套件、不修改產生的 registrant，也不更換原生登入整合。（2026-10-11 改用 repo 內的 web 實作取代它，見量測紀錄。）
 
 量測：已部署的 `d720640` 與這批 release build 各在獨立、匿名 Chrome profile 執行；Android UA／393×852 視窗、zh-TW、CPU 降速 4×、4 Mbps 下載／1 Mbps 上傳、150ms 延遲。兩輪採正反順序，每版 2 次冷啟動、6 次重開，以下為中位數。計時到登入頁可用，不是登入後讀完教會資料，也不是 Android 實機成績。
 
@@ -202,6 +202,23 @@ Chrome 小幅改善；桌面 WebKit 差距小且教會資訊冷開反而較慢�
 - 行事曆 agenda 的 lazy sliver 原型減少首幀建構，但不等高活動使月底日期定位失準。撤回 production 原型，留下 480 筆不等高活動的公開導航回歸；可靠方案要真正 indexed positioning，不用省建構交換導航正確性。原型 profile 計時有本機併發干擾，只作探索性證據，不列為交付成績。
 - 同 query 的單 instance flight 原型可合併上游，但跨 instance 寫入後仍可能回填舊活動，須 durable query／write revision 才能鎖住；本批不增加 schema、讀寫或改快取失效語意，所以未保留。
 - 不開 Wasm、不大量 preload、不設定付費 minInstances，未部署或操作真實資料。
+
+**2026-10-11：Chrome／Android 改跑 wasm，網頁版不再下載 Google 登入 SDK**
+
+- Wasm：部署改成 `flutter build web --wasm`。Flutter 的 loader 只在 Chromium 系瀏覽器（Chrome、Android 的 Chrome、Edge）用 wasm 版；Safari 與 iOS 上所有瀏覽器仍被 WebKit bug 267291 擋住（2026-09 仍未修），Firefox 也還不行，這些照舊跑 JS 版，同一份部署自動選。self-host 時期沒加 wasm，是因為使用者以 iPhone 為主、加了換不到東西；現在 Android 使用者跑 wasm 會快。
+- 固定單執行緒 skwasm：多執行緒需要 COOP/COEP（cross-origin isolation），會擋掉 Google 登入彈窗；Flutter 3.47 的多執行緒 skwasm 也有文字畫面當機的問題（flutter/flutter#190039）。
+- 代價：dart2wasm 目前不拆 deferred 程式（3.50 才有實驗選項），Chrome 上第二批的「打開才下載」不再適用；這已算在下面的數字裡。部署多一份 wasm 產物，App 殼更新時整版下載也多約 1.3 MB。
+- Google 登入 SDK：網頁版登入一直走 Firebase 彈窗，`google_sign_in` 只有原生 App 用。`app/packages/google_sign_in_unused_web` 取代 web 實作，不載入任何東西、被呼叫就拒絕；原生 App 不受影響，不 fork 上游套件。
+
+量測：demo release build（PERF_MARKS），Mac 上的 headless Chromium，Android UA、393×852、DPR 2、CPU 降速 4×、延遲 150ms，伺服器像 Hosting 一樣送 Brotli；每個情境三版交錯 6 輪取中位數，計時從開始載入到首頁畫出來（`[perf] home-visible`）。不是實機成績。
+
+| 情境 | JS 版 | wasm 版 | 不載 Google 登入 SDK |
+| --- | --- | --- | --- |
+| 首次開啟，4 Mbps | 7.48 秒 | 7.44 秒 | 7.48 秒 |
+| 首次開啟，20 Mbps | 3.27 秒 | 2.78 秒 | 3.25 秒 |
+| 重開（檔案已快取） | 0.96 秒 | 0.64 秒 | 1.06 秒 |
+
+解讀：慢網路時三版都卡在下載約 3 MB；網路夠快或檔案已快取時，wasm 版明顯快（重開 −33%）。Google 登入 SDK 本來就不擋首畫面，拿掉後時間沒有可量的差別，只是每次啟動少一個第三方連線、少約 100 KB。wasm 版的瀏覽器 e2e（登入、建教會、排服事、邀請、加入、設牧區）通過；打包後的 release 在 Chromium 載入帶 hash 的 wasm 入口、App 殼只快取 wasm 那組並能離線開啟，WebKit 則載入 JS 版、只快取 JS 那組。
 
 參考官方 guideline：[Flutter 效能](https://docs.flutter.dev/perf/best-practices)、[Web profiling](https://docs.flutter.dev/perf/web-performance)、[Firestore](https://firebase.google.com/docs/firestore/best-practices)、[Functions](https://firebase.google.com/docs/functions/tips)、[resource hints](https://web.dev/learn/performance/resource-hints)、[Safari Web Inspector](https://developer.apple.com/safari/tools/)。
 

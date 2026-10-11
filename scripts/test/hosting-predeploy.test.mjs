@@ -94,21 +94,16 @@ test('font processing must succeed before any JS hash is published or archived',
   assert.match(readFileSync(join(web, 'flutter_bootstrap.js'), 'utf8'), /"mainJsPath":"main\.dart\.js"/);
 });
 
-test('Hosting CLI rejects wasm before moving HTML or rewriting fonts', (t) => {
+test('Hosting CLI packages a wasm build with versioned wasm and module entries', (t) => {
   const { dir, web } = deployment(t);
-  const bootstrap = '_flutter.buildConfig = {"builds":[{"compileTarget":"dart2wasm","renderer":"skwasm","mainWasmPath":"main.dart.wasm","jsSupportRuntimePath":"main.dart.mjs"},{"compileTarget":"dart2js","mainJsPath":"main.dart.js"},{}]}; _flutter.loader.load({});';
-  writeFileSync(join(web, 'flutter_bootstrap.js'), bootstrap);
-  const manifest = readFileSync(join(web, 'assets/FontManifest.json'), 'utf8');
-  const result = spawnSync('bash', [join(dir, 'scripts/hosting-predeploy.sh')], {
-    encoding: 'utf8',
-    env: { ...process.env, GCLOUD_PROJECT: 'test-martha-dev' },
-  });
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /dart2wasm builds are not supported/);
-  assert.equal(existsSync(join(web, 'index.html')), true);
-  assert.equal(existsSync(join(web, 'app.html')), false);
-  assert.equal(readFileSync(join(web, 'assets/FontManifest.json'), 'utf8'), manifest);
-  assert.equal(readFileSync(join(web, 'assets/fonts/Icons.otf'), 'utf8'), 'icons A');
-  assert.equal(readFileSync(join(web, 'flutter_bootstrap.js'), 'utf8'), bootstrap);
-  assert.equal(existsSync(join(dir, '.firebase/web-assets')), false);
+  writeFileSync(join(web, 'flutter_bootstrap.js'), '_flutter.buildConfig = {"builds":[{"compileTarget":"dart2wasm","renderer":"skwasm","mainWasmPath":"main.dart.wasm","jsSupportRuntimePath":"main.dart.mjs"},{"compileTarget":"dart2js","mainJsPath":"main.dart.js"},{}]}; _flutter.loader.load({});');
+  writeFileSync(join(web, 'main.dart.wasm'), 'wasm entry');
+  writeFileSync(join(web, 'main.dart.mjs'), 'module entry');
+  predeploy(dir);
+  const bootstrap = readFileSync(join(web, 'flutter_bootstrap.js'), 'utf8');
+  assert.match(bootstrap, /"mainWasmPath":"main\.dart\.ad50759298\.wasm","jsSupportRuntimePath":"main\.dart\.b108204f3a\.mjs"/);
+  assert.equal(readFileSync(join(dir, '.firebase/web-assets/test-martha-dev/main.dart.ad50759298.wasm'), 'utf8'), 'wasm entry');
+  const release = JSON.parse(readFileSync(join(web, 'release.json'), 'utf8'));
+  const manifest = JSON.parse(readFileSync(join(web, release.manifest.slice(1)), 'utf8'));
+  assert.ok(manifest.files.some((f) => f.url === '/main.dart.b108204f3a.mjs'));
 });

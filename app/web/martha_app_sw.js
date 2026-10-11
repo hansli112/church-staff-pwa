@@ -67,15 +67,17 @@ function manifest(m, p) {
     if (!file || typeof file.url !== 'string' || !/^[0-9a-f]{64}$/.test(file.sha256) ||
         !Number.isSafeInteger(file.size) || file.size < 0 || typeof file.optional !== 'boolean' || paths.has(file.url)) fail('Invalid release file');
     const url = new URL(file.url, origin);
-    const allowed = /^\/main\.dart(?:\.js_\d+\.part)?\.[0-9a-f]{10}\.js$/.test(file.url) ||
+    const allowed = /^\/main\.dart(?:\.js_\d+\.part)?\.[0-9a-f]{10}\.js$/.test(file.url) || /^\/main\.dart\.[0-9a-f]{10}\.(?:wasm|mjs)$/.test(file.url) ||
       /^\/asset-bundles\/[0-9a-f]{10}\/assets\/(?:[A-Za-z0-9_.-]+\/)*[A-Za-z0-9_.-]+$/.test(file.url) ||
       (file.url.startsWith(prefix) && /^[A-Za-z0-9_.\/-]+$/.test(file.url.slice(prefix.length)));
     if (url.origin !== origin || url.pathname !== file.url || url.search || url.hash || file.url.includes('/../') || !allowed ||
         file.url.endsWith('/martha_app_sw.js') || file.url.includes('firebase-messaging')) fail('Invalid release file scope');
     paths.add(file.url);
   }
+  // The JS main is the one entry every browser can run. Since wasm builds it
+  // is cached like the engine, as the page uses it, so it may be optional.
   if (![m.shell, m.bootstrap].every((path) => m.files.some((f) => f.url === path && !f.optional)) ||
-      !m.files.some((f) => /^\/main\.dart\.[0-9a-f]{10}\.js$/.test(f.url) && !f.optional)) fail('Incomplete critical release');
+      !m.files.some((f) => /^\/main\.dart\.[0-9a-f]{10}\.js$/.test(f.url) && (!f.optional || f.engine))) fail('Incomplete critical release');
   return m;
 }
 async function checked(response, expected) {

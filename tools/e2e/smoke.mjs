@@ -9,7 +9,7 @@ import { chromium } from 'playwright';
 const webdir = process.argv[2];
 const out = process.argv[3] ?? 'e2e';
 fs.mkdirSync(out, { recursive: true });
-const types = { '.js': 'text/javascript', '.html': 'text/html', '.json': 'application/json', '.wasm': 'application/wasm', '.css': 'text/css', '.png': 'image/png', '.otf': 'font/otf', '.ttf': 'font/ttf' };
+const types = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.html': 'text/html', '.json': 'application/json', '.wasm': 'application/wasm', '.css': 'text/css', '.png': 'image/png', '.otf': 'font/otf', '.ttf': 'font/ttf' };
 const server = http.createServer((req, res) => {
   let file = path.join(webdir, decodeURIComponent(req.url.split('?')[0]));
   if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) file = path.join(webdir, 'index.html');
@@ -19,7 +19,9 @@ const server = http.createServer((req, res) => {
 await new Promise((r) => server.listen(5055, r));
 const base = 'http://localhost:5055';
 
-const browser = await chromium.launch();
+// Software WebGL: without it Chrome falls back from the wasm build to JS,
+// and the test would never run what Chrome users run.
+const browser = await chromium.launch({ args: ['--enable-unsafe-swiftshader', '--use-angle=swiftshader'] });
 const errors = [];
 const users = [];
 let step = 0;

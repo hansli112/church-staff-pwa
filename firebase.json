@@ -106,7 +106,7 @@
         ]
       },
       {
-        "regex": "^/main\\.dart(?:\\.js_[0-9]+\\.part)?\\.[0-9a-f]{10}\\.js$",
+        "regex": "^/main\\.dart(?:(?:\\.js_[0-9]+\\.part)?\\.[0-9a-f]{10}\\.js|\\.[0-9a-f]{10}\\.(?:wasm|mjs))$",
         "headers": [
           {
             "key": "Cache-Control",

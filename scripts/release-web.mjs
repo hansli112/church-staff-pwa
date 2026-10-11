@@ -40,7 +40,8 @@ function run() {
   const bootstrap = readFileSync(join(web, 'flutter_bootstrap.js'), 'utf8');
   const config = JSON.parse(/_flutter\.buildConfig\s*=\s*(\{[\s\S]*?\})\s*;/.exec(bootstrap)?.[1]);
   const builds = config.builds.filter((build) => build?.compileTarget === 'dart2js');
-  if (builds.length !== 1 || config.builds.some((build) => build?.compileTarget === 'dart2wasm')) throw new Error('expected one dart2js release build');
+  const wasmBuilds = config.builds.filter((build) => build?.compileTarget === 'dart2wasm');
+  if (builds.length !== 1 || wasmBuilds.length > 1) throw new Error('expected one dart2js release build, and at most one dart2wasm');
   const main = builds[0].mainJsPath;
   if (!/^main\.dart\.[0-9a-f]{10}\.js$/.test(main)) throw new Error('main entry point must be content-named');
   const mainBytes = readFileSync(join(web, main));
@@ -48,7 +49,16 @@ function run() {
   const base = /\/\*martha-assets\*\/\s*"(asset-bundles\/[0-9a-f]{10}\/)"/.exec(bootstrap)?.[1];
   if (!base) throw new Error('asset bundle must be bound to the bootstrap');
   const chunks = [...new Set(mainBytes.toString().match(/main\.dart\.js_\d+\.part\.[0-9a-f]{10}\.js/g) ?? [])].sort();
-  const shared = [{ path: main, bytes: mainBytes, optional: false }, ...chunks.map((path) => {
+  const wasmEntries = wasmBuilds.flatMap((build) => [build.mainWasmPath, build.jsSupportRuntimePath]).map((path) => {
+    if (!/^main\.dart\.[0-9a-f]{10}\.(?:wasm|mjs)$/.test(path)) throw new Error('wasm entry points must be content-named');
+    const bytes = readFileSync(join(web, path));
+    if (!path.includes(sha(bytes).slice(0, 10))) throw new Error(`wasm entry point hash mismatch: ${path}`);
+    return { path, bytes };
+  });
+  // The loader runs either the JS main or the wasm main and its module, by
+  // browser. Like the engine files, a first install caches only what this
+  // page used; an update stages them all.
+  const shared = [...[{ path: main, bytes: mainBytes }, ...wasmEntries].map((file) => ({ ...file, optional: true, engine: true })), ...chunks.map((path) => {
     const bytes = readFileSync(join(web, path));
     if (!path.includes(sha(bytes).slice(0, 10))) throw new Error(`deferred chunk hash mismatch: ${path}`);
     return { path, bytes, optional: true };
@@ -74,7 +84,10 @@ function run() {
   if (boundHtml === html || !boundHtml.includes('/*martha-boot*/')) throw new Error('expected a complete app HTML head');
   // The platform loader must never register Flutter's obsolete worker or
   // fetch an unversioned/CDN engine beneath a versioned main entry point.
-  const boundBootstrap = bootstrap.replace('_flutter.loader.load(', `_flutter.loader.load(((options={})=>({...options,serviceWorkerSettings:undefined,config:{...options.config,canvasKitBaseUrl:"/${prefix}canvaskit/"}}))(`);
+  // The wasm renderer stays single-threaded: multi-threaded skwasm needs
+  // cross-origin isolation, which would break the Google sign-in popup, and
+  // corrupts text on some Flutter versions (flutter/flutter#190039).
+  const boundBootstrap = bootstrap.replace('_flutter.loader.load(', `_flutter.loader.load(((options={})=>({...options,serviceWorkerSettings:undefined,config:{...options.config,canvasKitBaseUrl:"/${prefix}canvaskit/",forceSingleThreadedSkwasm:true}}))(`);
   // Close the one outer wrapper at the last loader call's trailing semicolon.
   const finalBootstrap = boundBootstrap.replace(/\);\s*$/, '));');
   new Script(finalBootstrap);

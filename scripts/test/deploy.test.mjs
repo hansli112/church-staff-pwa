@@ -32,7 +32,13 @@ printf '%s' '<html><head><base href="/"></head><body><script src="martha_app.js"
 cp -R web/martha_app.js web/martha_app_sw.js web/favicon.png web/manifest.json web/icons build/web/
 mkdir -p build/web/canvaskit
 printf '%s' 'engine' > build/web/canvaskit/canvaskit.wasm
-printf '%s' '_flutter.buildConfig = {"builds":[{"compileTarget":"dart2js","mainJsPath":"main.dart.js"},{}]}; _flutter.loader.load({});' > build/web/flutter_bootstrap.js
+if [[ " $* " == *" --wasm "* ]]; then
+  printf '%s' '_flutter.buildConfig = {"builds":[{"compileTarget":"dart2wasm","renderer":"skwasm","mainWasmPath":"main.dart.wasm","jsSupportRuntimePath":"main.dart.mjs"},{"compileTarget":"dart2js","mainJsPath":"main.dart.js"}]}; _flutter.loader.load({});' > build/web/flutter_bootstrap.js
+  printf '%s' 'wasm entry' > build/web/main.dart.wasm
+  printf '%s' 'module entry' > build/web/main.dart.mjs
+else
+  printf '%s' '_flutter.buildConfig = {"builds":[{"compileTarget":"dart2js","mainJsPath":"main.dart.js"},{}]}; _flutter.loader.load({});' > build/web/flutter_bootstrap.js
+fi
 printf '%s\\n' "$FAKE_MAIN" > build/web/main.dart.js
 printf '%s' 'icons A' > build/web/assets/fonts/Icons.otf
 printf '%s' '[{"family":"Icons","fonts":[{"asset":"fonts/Icons.otf"}]}]' > build/web/assets/FontManifest.json
@@ -68,6 +74,8 @@ test('deploy CLI builds a clean output on dev-to-prod switches without deleting 
   assert.equal(existsSync(join(dir, 'app/build/web/main.dart.d3e18322f0.js')), false);
   assert.equal(readFileSync(join(dir, 'app/build/web/.web-assets-project'), 'utf8'), 'test-prod');
   assert.deepEqual(readdirSync(archive).sort(), ['test-dev', 'test-prod']);
+  // Chrome and Android run the wasm build; Safari and Firefox the JS one.
+  assert.equal(readFileSync(join(archive, 'test-prod/main.dart.ad50759298.wasm'), 'utf8'), 'wasm entry');
 });
 
 test('failed build keeps the last prepared project assets available for the next attempt', (t) => {

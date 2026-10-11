@@ -40,3 +40,23 @@ test('page reports frozen boot version and never reloads for visibility or updat
   await window.marthaUpdate.apply();
   assert.equal(reloads, 1);
 });
+
+test('page tells the worker which main entries and engine it ran, and nothing else of its own', async () => {
+  const id = 'a'.repeat(20);
+  const boot = Object.freeze({ schema: 1, id, project: 'demo-martha', metadata: `/releases/${id}/release.json` });
+  const messages = [];
+  let idle;
+  const worker = { postMessage(data, ports) { messages.push(data); ports[0].postMessage({ ok: true }); } };
+  const origin = 'https://demo-martha.invalid';
+  const loaded = [
+    `${origin}/main.dart.ad50759298.wasm`, `${origin}/main.dart.b108204f3a.mjs`, `${origin}/releases/${id}/canvaskit/skwasm.wasm`,
+    `${origin}/main.dart.js_1.part.5567a01230.js`, `${origin}/asset-bundles/0123456789/assets/FontManifest.json`, `${origin}/api/calendar`,
+  ];
+  const window = { marthaBootRelease: boot, location: { pathname: '/home' }, addEventListener() {}, requestIdleCallback(fn) { idle = fn; } };
+  const document = { body: {}, activeElement: null, getElementById() { return null; } };
+  const navigator = { serviceWorker: { async register() { return { active: worker }; } } };
+  runInNewContext(readFileSync(join(root, 'app/web/martha_app.js'), 'utf8'), { window, document, navigator, MessageChannel, MutationObserver: class {}, performance: { getEntriesByType() { return loaded.map((name) => ({ name })); } }, URL, setTimeout, clearTimeout, console });
+  idle();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.deepEqual(messages.find((m) => m.type === 'INIT').used, loaded.slice(0, 3));
+});

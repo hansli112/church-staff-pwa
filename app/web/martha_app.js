@@ -9,7 +9,9 @@
   let editing = false;
   const usedAssets = () => performance.getEntriesByType('resource').map((entry) => entry.name).filter((name) => {
     const url = new URL(name);
-    return url.pathname.includes(`/releases/${boot.id}/canvaskit/`) ||
+    // The main entries this browser ran (JS, or wasm and its module) and its
+    // engine; the worker keeps only same-origin files of this release.
+    return url.pathname.includes(`/releases/${boot.id}/canvaskit/`) || /^\/main\.dart\.[0-9a-f]{10}\.(?:js|wasm|mjs)$/.test(url.pathname) ||
       url.origin === 'https://www.gstatic.com' && /^\/firebasejs\/\d+\.\d+\.\d+\/firebase-[A-Za-z-]+\.js$/.test(url.pathname) ||
       url.origin === 'https://fonts.gstatic.com' && /^\/s\/(?:notosanstc|notosanssc|roboto)\/v\d+\/[A-Za-z0-9_.-]+\.woff2?$/.test(url.pathname);
   });

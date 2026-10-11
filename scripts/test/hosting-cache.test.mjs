@@ -21,16 +21,16 @@ function cacheControl(path, rules) {
   return value;
 }
 
-test('only content-named compiled JS overrides no-cache with immutable long caching', () => {
+test('only content-named compiled JS and wasm override no-cache with immutable long caching', () => {
   const { hosting } = JSON.parse(readFileSync(join(root, 'firebase.json'), 'utf8'));
   const rules = hosting.headers;
-  for (const path of ['/main.dart.d3e18322f0.js', '/main.dart.js_1.part.5567a01230.js']) {
+  for (const path of ['/main.dart.d3e18322f0.js', '/main.dart.js_1.part.5567a01230.js', '/main.dart.ad50759298.wasm', '/main.dart.b108204f3a.mjs']) {
     assert.equal(cacheControl(path, rules), 'public, max-age=31536000, immutable', path);
     const matched = rules.map((rule, i) => rule.regex && new RegExp(rule.regex).test(path) ? i : -1).filter((i) => i >= 0);
     assert.ok(matched.length >= 2, 'specific immutable header overrides the earlier no-cache default');
     assert.equal(rules[matched.at(-1)].headers[0].value, 'public, max-age=31536000, immutable');
   }
-  for (const path of ['/index.html', '/app.html', '/flutter_bootstrap.js', '/main.dart.js', '/main.dart.js_1.part.js', '/main.dart.wasm', '/main.dart.mjs', '/main.dart.d3e18322f0.js.map', '/unrelated.d3e18322f0.js']) {
+  for (const path of ['/index.html', '/app.html', '/flutter_bootstrap.js', '/main.dart.js', '/main.dart.js_1.part.js', '/main.dart.wasm', '/main.dart.mjs', '/main.dart.d3e18322f0.js.map', '/main.dart.js_1.part.5567a01230.wasm', '/unrelated.d3e18322f0.js']) {
     assert.equal(cacheControl(path, rules), 'no-cache', path);
   }
   assert.equal(cacheControl('/assets/fonts/Icons.a2f6674ce7.otf', rules), 'public, max-age=31536000, immutable');

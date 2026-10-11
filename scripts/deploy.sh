@@ -24,7 +24,9 @@ if [[ ",$only," == *",hosting,"* ]]; then
   # versa). Published immutable assets live separately in .firebase/web-assets
   # and survive this cleanup, including when the build or deploy fails.
   rm -rf -- "$root/app/build/web"
-  ( cd "$root/app" && flutter build web --dart-define-from-file="config/$env_name.json" )
+  # --wasm also builds the JS version: Chrome and Android run the faster
+  # wasm one, Safari, iOS and Firefox (which cannot) the JS one.
+  ( cd "$root/app" && flutter build web --wasm --dart-define-from-file="config/$env_name.json" )
 fi
 
 firebase() { "$root/scripts/firebase.sh" "$project" "$@"; }

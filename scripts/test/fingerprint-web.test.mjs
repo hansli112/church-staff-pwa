@@ -352,21 +352,69 @@ test('generated loader calls keep options/comments intact and support the no-arg
   assert.equal(loaderOptions(readFileSync(join(noArguments, 'flutter_bootstrap.js'), 'utf8')).config.assetBase, options.config.assetBase);
 });
 
-test('real dart2wasm builds fail before changing any output or project archive', (t) => {
+const wasmBuild = { compileTarget: 'dart2wasm', renderer: 'skwasm', mainWasmPath: 'main.dart.wasm', jsSupportRuntimePath: 'main.dart.mjs' };
+const jsBuild = { compileTarget: 'dart2js', renderer: 'canvaskit', mainJsPath: 'main.dart.js' };
+
+function wasmFixture(t, wasm = 'wasm entry', module = 'module entry') {
+  const web = fixture(t, [wasmBuild, jsBuild]);
+  writeFileSync(join(web, 'main.dart.wasm'), wasm);
+  writeFileSync(join(web, 'main.dart.mjs'), module);
+  return web;
+}
+
+test('a wasm build loads content-named wasm and module entries, beside the JS build for other browsers', (t) => {
   const archive = mkdtempSync(join(tmpdir(), 'martha-archive-'));
   t.after(() => rmSync(archive, { recursive: true, force: true }));
-  const wasm = { compileTarget: 'dart2wasm', renderer: 'skwasm', mainWasmPath: 'main.dart.wasm', jsSupportRuntimePath: 'main.dart.mjs' };
-  for (const builds of [[wasm, { compileTarget: 'dart2js', renderer: 'canvaskit', mainJsPath: 'main.dart.js' }, {}], [wasm]]) {
-    const web = fixture(t, builds);
-    writeFileSync(join(web, 'main.dart.wasm'), 'wasm entry');
-    writeFileSync(join(web, 'main.dart.mjs'), 'module entry');
+  const options = ['--archive', archive, '--project', 'test-dev'];
+  const a = wasmFixture(t);
+  fingerprint(a, ...options);
+  assert.deepEqual(buildConfig(a).builds, [
+    { ...wasmBuild, mainWasmPath: 'main.dart.ad50759298.wasm', jsSupportRuntimePath: 'main.dart.b108204f3a.mjs' },
+    { ...jsBuild, mainJsPath: 'main.dart.d3e18322f0.js' },
+  ]);
+  assert.equal(readFileSync(join(a, 'main.dart.ad50759298.wasm'), 'utf8'), 'wasm entry');
+  assert.equal(readFileSync(join(a, 'main.dart.b108204f3a.mjs'), 'utf8'), 'module entry');
+  assert.equal(readFileSync(join(a, 'main.dart.wasm'), 'utf8'), 'wasm entry', 'legacy entry stays');
+  const before = artifacts(a);
+  fingerprint(a, ...options);
+  assert.deepEqual(artifacts(a), before);
+
+  // A tab still on A's bootstrap must find A's entries after B lands.
+  const b = wasmFixture(t, 'wasm B', 'module B');
+  fingerprint(b, ...options);
+  assert.equal(buildConfig(b).builds[0].mainWasmPath, 'main.dart.fd2c43c3c0.wasm');
+  assert.equal(readFileSync(join(b, 'main.dart.ad50759298.wasm'), 'utf8'), 'wasm entry');
+  assert.equal(readFileSync(join(b, 'main.dart.b108204f3a.mjs'), 'utf8'), 'module entry');
+  assert.equal(readFileSync(join(archive, 'test-dev/main.dart.d31be1c292.mjs'), 'utf8'), 'module B');
+});
+
+test('a wasm build without the JS build, its module, or its usual paths fails before changing output', (t) => {
+  const cases = [
+    ['no JS build for Safari', (web) => writeFileSync(join(web, 'flutter_bootstrap.js'), `_flutter.buildConfig = ${JSON.stringify({ builds: [wasmBuild] })}; _flutter.loader.load({});`)],
+    ['missing module', (web) => rmSync(join(web, 'main.dart.mjs'))],
+    ['missing wasm', (web) => rmSync(join(web, 'main.dart.wasm'))],
+    ['unsupported wasm path', (web) => writeFileSync(join(web, 'flutter_bootstrap.js'), `_flutter.buildConfig = ${JSON.stringify({ builds: [{ ...wasmBuild, mainWasmPath: 'elsewhere.wasm' }, jsBuild] })}; _flutter.loader.load({});`)],
+    ['two wasm builds', (web) => writeFileSync(join(web, 'flutter_bootstrap.js'), `_flutter.buildConfig = ${JSON.stringify({ builds: [wasmBuild, wasmBuild, jsBuild] })}; _flutter.loader.load({});`)],
+  ];
+  for (const [label, prepare] of cases) {
+    const archive = mkdtempSync(join(tmpdir(), 'martha-archive-'));
+    t.after(() => rmSync(archive, { recursive: true, force: true }));
+    const web = wasmFixture(t);
+    prepare(web);
     const before = artifacts(web);
     const result = spawnSync(process.execPath, [script, web, '--archive', archive, '--project', 'test-dev'], { encoding: 'utf8' });
-    assert.equal(result.status, 1);
-    assert.match(result.stderr, /dart2wasm builds are not supported/);
-    assert.deepEqual(artifacts(web), before);
-    assert.deepEqual(readdirSync(archive), []);
+    assert.equal(result.status, 1, label);
+    assert.match(result.stderr, /^fingerprint-web: /, label);
+    assert.deepEqual(artifacts(web), before, label);
+    assert.deepEqual(readdirSync(archive), [], label);
   }
+});
+
+test('build-kind preflight accepts a wasm build without changing it', (t) => {
+  const web = wasmFixture(t);
+  const before = artifacts(web);
+  fingerprint(web, '--check-build');
+  assert.deepEqual(artifacts(web), before);
 });
 
 test('build-kind preflight is read-only for supported generated JavaScript output', (t) => {
