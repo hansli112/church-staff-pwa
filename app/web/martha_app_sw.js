@@ -175,9 +175,8 @@ self.addEventListener('message', (event) => {
     if (data?.type === 'APPLY') {
       // A window client's url is where the tab opened (the app starts at
       // /home), not where the app has navigated since, so the page says
-      // where it is. A page from before that checked location itself.
-      const path = typeof data.path === 'string' ? data.path : null;
-      if (data.safe !== true || (path !== null && !/^\/(?:c\/[^/]+\/)?me\/?$/.test(path))) fail('Finish editing before updating');
+      // where it is.
+      if (data.safe !== true || typeof data.path !== 'string' || !/^\/(?:c\/[^/]+\/)?me\/?$/.test(data.path)) fail('Finish editing before updating');
       const p = pointer(data.release);
       await apply(p);
       return { ok: true, id: p.id };

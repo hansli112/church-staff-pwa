@@ -85,7 +85,7 @@ test('a corrupt new deferred asset cannot switch the verified offline release', 
   const checked = await w.message('CHECK', { project: 'demo-martha', runningId: a.id });
   assert.equal(checked.ok, false);
   assert.match(checked.error, /hash mismatch/);
-  assert.equal((await w.message('APPLY', { release: b.pointer, safe: true })).ok, false);
+  assert.equal((await w.message('APPLY', { release: b.pointer, safe: true, path: '/me' })).ok, false);
   w.setOffline();
   assert.equal(await (await w.request('/home', true)).text(), `<html>${a.id}</html>`);
 });
@@ -101,8 +101,8 @@ test('same-build checks keep optional modules lazy and updates require deliberat
   w.responses.set(origin + '/release.json', JSON.stringify(b.pointer));
   assert.equal((await w.message('CHECK', { project: 'demo-martha', runningId: a.id })).available, true);
   assert.ok(w.requests.includes(origin + b.manifest.files.find((f) => f.optional).url));
-  assert.equal((await w.message('APPLY', { release: b.pointer, safe: false })).ok, false);
-  assert.equal((await w.message('APPLY', { release: b.pointer, safe: true })).ok, true);
+  assert.equal((await w.message('APPLY', { release: b.pointer, safe: false, path: '/me' })).ok, false);
+  assert.equal((await w.message('APPLY', { release: b.pointer, safe: true, path: '/me' })).ok, true);
   w.setOffline();
   assert.equal(await (await w.request('/home', true)).text(), `<html>${b.id}</html>`);
 });
@@ -143,7 +143,7 @@ test('an update to a wasm release stages every entry before it can apply', async
   w.responses.set(origin + '/release.json', JSON.stringify(b.pointer));
   assert.equal((await w.message('CHECK', { project: 'demo-martha', runningId: a.id })).available, true);
   for (const file of b.manifest.files) assert.ok(w.requests.includes(origin + file.url), file.url);
-  assert.equal((await w.message('APPLY', { release: b.pointer, safe: true })).ok, true);
+  assert.equal((await w.message('APPLY', { release: b.pointer, safe: true, path: '/me' })).ok, true);
   w.setOffline();
   assert.equal(await (await w.request('/home', true)).text(), `<html>${b.id}</html>`);
 });
@@ -159,18 +159,9 @@ test('an update applies from 我的 even when the tab first opened elsewhere', a
   w.responses.set(origin + '/release.json', JSON.stringify(b.pointer));
   assert.equal((await w.message('CHECK', { project: 'demo-martha', runningId: a.id })).available, true);
   assert.equal((await w.message('APPLY', { release: b.pointer, safe: true, path: '/rosters' })).ok, false);
+  assert.equal((await w.message('APPLY', { release: b.pointer, safe: true })).ok, false, 'a page must say where it is');
   assert.equal((await w.message('APPLY', { release: b.pointer, safe: true, path: '/me' })).ok, true);
   w.setOffline();
   assert.equal(await (await w.request('/home', true)).text(), `<html>${b.id}</html>`);
 });
 
-test('a page from before the path was sent can still update, having checked its own page', async () => {
-  const a = release('a');
-  const b = release('b');
-  const w = worker(a, { clientUrl: origin + '/home' });
-  await w.message('INIT', { boot: a.pointer, used: [] });
-  for (const [url, response] of b.responses) w.responses.set(url, response);
-  w.responses.set(origin + '/release.json', JSON.stringify(b.pointer));
-  await w.message('CHECK', { project: 'demo-martha', runningId: a.id });
-  assert.equal((await w.message('APPLY', { release: b.pointer, safe: true })).ok, true);
-});
