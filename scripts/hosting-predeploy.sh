@@ -31,9 +31,8 @@ node "$root/scripts/fingerprint-web.mjs" "$web" \
   --archive "$root/.firebase/web-assets" --project "$GCLOUD_PROJECT"
 
 # The website, built from landing/ (scripts/build-site.mjs).
-# TODO(M7): the production origin becomes the bought domain.
 if [ "${GCLOUD_PROJECT:-}" = marthasit ]; then
-  origin="https://marthasit.web.app"
+  origin="https://marthasit.com"
 else
   origin="https://${GCLOUD_PROJECT:-marthasit-dev}.web.app"
 fi

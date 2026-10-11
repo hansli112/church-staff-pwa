@@ -2,7 +2,7 @@
 // blog and the legal pages, with one shared header and footer. Prints the
 // path of every page search engines may list, for the sitemap.
 //
-//   node scripts/build-site.mjs <out> --origin https://marthasit.web.app --project marthasit [--payments on|off]
+//   node scripts/build-site.mjs <out> --origin https://marthasit.com --project marthasit [--payments on|off]
 //
 // --payments (default off) turns on 線上支持 on the support page: the
 // amount picker and NewebPay. Pages mark what shows only one way with
@@ -86,9 +86,21 @@ function paymentParts(html) {
     .replace(new RegExp(`[ \\t]*<!-- /?payments:${payments} -->\\n?`, 'g'), '');
 }
 
+// On a custom domain, the project's Firebase hosts send visitors there with
+// the same path, before anything else in the head runs (app/web/index.html
+// does the same for the app).
+const firebaseHosts = project ? [`${project}.web.app`, `${project}.firebaseapp.com`] : [];
+const toOrigin = firebaseHosts.some((host) => origin === `https://${host}`) ? '' : `<script>
+if (${JSON.stringify(firebaseHosts)}.indexOf(location.hostname) >= 0) {
+  location.replace(${JSON.stringify(origin)} + location.pathname + location.search + location.hash);
+}
+</script>
+`;
+
 /** A page from landing/ with the shared parts and this project's values. */
 function fill(html, path) {
   return paymentParts(html)
+    .replace('<head>\n', `<head>\n${toOrigin}`)
     .replace('<!-- site-header -->', header(path))
     .replace('<!-- site-footer -->', footer(path))
     .replaceAll('__ORIGIN__', origin)

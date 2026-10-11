@@ -23,7 +23,7 @@ import { checkInvite } from './invites.js';
  */
 export interface PageDeps extends Deps {
   bucket: Pick<ReturnType<Storage['bucket']>, 'file'>;
-  /** The hosting origin, e.g. https://marthasit.web.app. */
+  /** The hosting origin, e.g. https://marthasit.com. */
   appUrl: string;
 }
 

@@ -15,8 +15,10 @@ export const DAY_MS = 86_400_000;
 /** An amount of money to the cent. */
 export const round2 = (n: number) => Math.round(n * 100) / 100;
 
-/** The hosted web app. */
-export const appUrl = () => process.env.APP_URL ?? `https://${process.env.GCLOUD_PROJECT}.web.app`;
+/** The hosted web app: marthasit.com in prod, the Firebase host elsewhere. */
+export const appUrl = () =>
+  process.env.APP_URL ??
+  (process.env.GCLOUD_PROJECT === PROD_PROJECT ? 'https://marthasit.com' : `https://${process.env.GCLOUD_PROJECT}.web.app`);
 
 /**
  * Who is calling. Built from the callable request so handlers can be tested
