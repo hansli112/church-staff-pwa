@@ -60,7 +60,8 @@ void main() {
     await write.done;
     await pumpEventQueue();
     final newer = savedDay(backend, 11).copyWith(events: const [EventTag(name: '另一位同工新增', color: 3)]);
-    await backend.church('grace').saveRoster(newer);
+    backend.rosters['grace']![newer.id] = newer;
+    backend.notify();
     await pumpEventQueue();
     await expectLater(
       write.undo(),
@@ -85,7 +86,8 @@ void main() {
     ];
     final preview = actions.previewImport('sunday', rows);
     final newer = savedDay(backend, 11).copyWith(events: const [EventTag(name: '預覽後新增', color: 2)]);
-    await backend.church('grace').saveRoster(newer);
+    backend.rosters['grace']![newer.id] = newer;
+    backend.notify();
     await pumpEventQueue();
     await expectLater(
       Future<void>.sync(() => actions.applyImport('sunday', rows, preview: preview).done),

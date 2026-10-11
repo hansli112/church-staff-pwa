@@ -34,8 +34,7 @@ class MemoryWorld implements ContractWorld {
 
   @override
   Future<void> addPending(String churchId, PendingMember pending, {List<String> rosterIds = const []}) async {
-    (backend.pendingMembers[churchId] ??= {})[pending.id] = pending;
-    backend.notify();
+    backend.addPending(churchId, pending, rosterIds: rosterIds);
   }
 
   @override

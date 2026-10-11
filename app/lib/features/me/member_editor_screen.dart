@@ -5,6 +5,7 @@ import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
+import '../../state/church_writes.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
 import '../common/labels.dart';
@@ -20,43 +21,34 @@ class MemberEditorScreen extends ConsumerWidget {
 
   final String uid;
 
-  /// Saves [next]; false, and says so, when it failed.
-  Future<bool> _save(BuildContext context, WidgetRef ref, Member next) async {
+  /// Writes [next] over [member] as shown; false, and says so, when it
+  /// failed (someone else changed the member meanwhile, say).
+  Future<bool> _save(BuildContext context, WidgetRef ref, Member member, Member next) async {
     try {
-      await ref.churchData.saveMember(next);
+      await ref.read(churchWritesProvider).member(member, next).done;
       return true;
-    } catch (_) {
-      if (context.mounted) showToast(context, L10n.of(context).saveFailed);
+    } catch (e) {
+      if (context.mounted) showToast(context, saveErrorText(L10n.of(context), e));
       return false;
     }
   }
 
   /// Takes [member] out of [service]'s 牧區, which clears its duties too,
-  /// and offers 「復原」: the 牧區 comes back where it was, on the member as
-  /// they are by then.
+  /// and offers 「復原」, refused once someone has changed the member since.
   Future<void> _leaveZone(BuildContext context, WidgetRef ref, Member member, Service service) async {
     final index = member.zones.indexWhere((z) => z.serviceType == service.id);
     if (index < 0) return;
-    final zone = member.zones[index];
-    // The toast outlives this page, so undo holds on to what it needs.
-    final container = ProviderScope.containerOf(context, listen: false);
-    final data = ref.churchData;
     final l10n = L10n.of(context);
-    if (!await _save(context, ref, member.copyWith(zones: [...member.zones]..removeAt(index)))) return;
-    if (!context.mounted) return;
-    showToast(
-      context,
-      l10n.zoneLeft(service.name),
-      onUndo: () {
-        // The member as they are now, which may not show the change yet.
-        final now = container.read(membersProvider).value?.where((m) => m.uid == member.uid).firstOrNull ?? member;
-        final rest = [
-          for (final z in now.zones)
-            if (z.serviceType != service.id) z,
-        ];
-        return data.saveMember(now.copyWith(zones: rest..insert(index.clamp(0, rest.length), zone)));
-      },
-    );
+    final write = ref
+        .read(churchWritesProvider)
+        .member(member, member.copyWith(zones: [...member.zones]..removeAt(index)));
+    try {
+      await write.done;
+    } catch (e) {
+      if (context.mounted) showToast(context, saveErrorText(l10n, e));
+      return;
+    }
+    if (context.mounted) showToast(context, l10n.zoneLeft(service.name), onUndo: write.undo);
   }
 
   /// Picks a pending member and, once confirmed, merges it into [member].
@@ -132,7 +124,7 @@ class MemberEditorScreen extends ConsumerWidget {
                     // The only role that grants anything; the rest are titles.
                     subtitle: role == Role.admin ? l10n.roleAdminCan : null,
                     selected: member.role == role,
-                    onTap: () => _save(context, ref, member.copyWith(role: role)),
+                    onTap: () => _save(context, ref, member, member.copyWith(role: role)),
                   ),
               ],
             ),
@@ -147,6 +139,7 @@ class MemberEditorScreen extends ConsumerWidget {
                     onChanged: (on) => _save(
                       context,
                       ref,
+                      member,
                       member.copyWith(
                         groups: on ? {...member.groups, g} : ({...member.groups}..remove(g)),
                       ),
@@ -158,7 +151,7 @@ class MemberEditorScreen extends ConsumerWidget {
             _ZoneSection(
               member: member,
               service: s,
-              onSave: (m) => _save(context, ref, m),
+              onSave: (m) => _save(context, ref, member, m),
               onLeave: () => _leaveZone(context, ref, member, s),
             ),
           if (shown.isNotEmpty)

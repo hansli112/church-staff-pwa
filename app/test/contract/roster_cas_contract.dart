@@ -18,20 +18,24 @@ void rosterCasContractTests(Future<ContractWorld> Function() open) {
         const EventTag(name: '特會', color: 3),
       ],
     );
-    await g.church.saveServices([sunday.copyWith(name: '別人改的聚會'), youth]);
+    await g.church.putServices([sunday.copyWith(name: '別人改的聚會'), youth]);
     await expectLater(
       g.church.compareAndSetRosters(
-        before: {roster.id: null},
-        after: {roster.id: roster},
-        serviceChange: (before: sunday, after: next),
+        RosterChange(
+          before: {roster.id: null},
+          after: {roster.id: roster},
+          serviceChange: (before: sunday, after: next),
+        ),
       ),
       fails(CloudErrorCode.conflict),
     );
     expect(await g.church.allRosters(), isEmpty);
-    await g.church.saveServices([sunday, youth]);
+    await g.church.putServices([sunday, youth]);
     await w.signIn(Grace.editorEmail);
     await expectLater(
-      g.church.compareAndSetRosters(before: const {}, after: const {}, serviceChange: (before: sunday, after: next)),
+      g.church.compareAndSetRosters(
+        RosterChange(before: const {}, after: const {}, serviceChange: (before: sunday, after: next)),
+      ),
       denied(),
     );
     expect((await g.church.services().first).byId('sunday'), sunday);
@@ -45,20 +49,22 @@ void rosterCasContractTests(Future<ContractWorld> Function() open) {
         Duty(role: '司琴', people: ['甲', '乙']),
       ],
     );
-    await g.church.updateStaffOrder('sunday', {
+    await g.church.putStaffOrder('sunday', {
       '司琴': ['乙', '甲'],
     });
     await expectLater(
       g.church.compareAndSetRosters(
-        before: {roster.id: null},
-        after: {roster.id: roster},
-        via: 'import',
-        staffOrder: (
-          serviceType: 'sunday',
-          before: StaffOrder(),
-          after: StaffOrder({
-            '司琴': ['甲', '乙'],
-          }),
+        RosterChange(
+          before: {roster.id: null},
+          after: {roster.id: roster},
+          via: 'import',
+          staffOrder: (
+            serviceType: 'sunday',
+            before: StaffOrder(),
+            after: StaffOrder({
+              '司琴': ['甲', '乙'],
+            }),
+          ),
         ),
       ),
       fails(CloudErrorCode.conflict),
@@ -81,13 +87,13 @@ void rosterCasContractTests(Future<ContractWorld> Function() open) {
         Duty(role: '司琴', people: ['乙']),
       ],
     );
-    await g.church.saveRoster(first);
+    await g.church.putRoster(first);
     final before = <String, Roster?>{first.id: first, second.id: null};
     final after = <String, Roster?>{first.id: null, second.id: second};
 
-    await g.church.compareAndSetRosters(before: before, after: after);
+    await g.church.compareAndSetRosters(RosterChange(before: before, after: after));
     expect(await g.church.allRosters(), [second]);
-    await g.church.compareAndSetRosters(before: after, after: before);
+    await g.church.compareAndSetRosters(RosterChange(before: after, after: before));
     expect(await g.church.allRosters(), [first]);
   });
 }

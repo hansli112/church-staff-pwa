@@ -22,7 +22,10 @@ interface Duty {
 const duties = (v: unknown) => (Array.isArray(v) ? (v as Duty[]) : []).filter((d) => typeof d?.role === 'string');
 const names = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
 
-/** uid → the duties they hold on this roster (people with an account still listed). */
+/**
+ * uid → the duties they hold on this roster, each once: a name bound to
+ * them that is still listed (testdata/church_rules.json, rosterIdentity).
+ */
 export function dutiesByUid(value: unknown): Map<string, string[]> {
   const out = new Map<string, string[]>();
   for (const d of duties(value)) {
@@ -30,7 +33,8 @@ export function dutiesByUid(value: unknown): Map<string, string[]> {
     if (!d.uids || typeof d.uids !== 'object' || Array.isArray(d.uids)) continue;
     for (const [name, uid] of Object.entries(d.uids as Record<string, unknown>)) {
       if (typeof uid !== 'string' || !uid || uid.includes('/') || !people.includes(name)) continue;
-      out.set(uid, [...(out.get(uid) ?? []), d.role as string]);
+      const held = out.get(uid) ?? [];
+      if (!held.includes(d.role as string)) out.set(uid, [...held, d.role as string]);
     }
   }
   return out;

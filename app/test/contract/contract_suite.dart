@@ -56,14 +56,14 @@ class Grace {
     final g = Grace._(w);
     g.pastor = await w.signUp(pastorEmail, name: '王牧師');
     g.cid = await g.cloud.createChurch('恩典堂');
-    await g.church.saveServices(const [sunday, youth]);
+    await g.church.putServices(const [sunday, youth]);
     final invite = await g.church.createInvite(validFor: const Duration(days: 7));
     g.editor = await w.signUp(editorEmail, name: '林同工');
     await g.cloud.redeemInvite(invite.code);
     g.mei = await w.signUp(meiEmail, name: '李美玉');
     await g.cloud.redeemInvite(invite.code);
     await w.signIn(pastorEmail);
-    await g.church.saveMember(
+    await g.church.putMember(
       Member(
         uid: g.editor,
         name: '林同工',
@@ -87,6 +87,41 @@ class Grace {
 
 Roster sundayOn(int day, {List<Duty> duties = const [], List<EventTag> events = const []}) =>
     Roster(type: 'sunday', day: Day(2026, 10, day), duties: duties, events: events);
+
+/// Shorthands over the compare-and-set writes, for setting a church up.
+extension ContractWrites on ChurchData {
+  /// Writes [rosters] where nothing is saved yet, or over [over].
+  Future<void> putRosters(List<Roster> rosters, {List<Roster> over = const []}) => compareAndSetRosters(
+    RosterChange(
+      before: {for (final r in rosters) r.id: over.where((o) => o.id == r.id).firstOrNull},
+      after: {for (final r in rosters) r.id: r},
+    ),
+  );
+
+  Future<void> putRoster(Roster roster, {Roster? over}) => putRosters([roster], over: [?over]);
+
+  Future<void> dropRoster(Roster roster) =>
+      compareAndSetRosters(RosterChange(before: {roster.id: roster}, after: {roster.id: null}));
+
+  /// Changes the rankings in [changes] of [serviceType]'s staff order as
+  /// saved now; null removes one.
+  Future<void> putStaffOrder(String serviceType, Map<String, List<String>?> changes) async {
+    final before = await staffOrder(serviceType).first;
+    await compareAndSetRosters(
+      RosterChange(
+        before: const {},
+        after: const {},
+        staffOrder: (serviceType: serviceType, before: before, after: before.withChanges(changes)),
+      ),
+    );
+  }
+
+  Future<void> putServices(List<Service> list) async =>
+      compareAndSetServiceList(before: (await services().first).services, after: list);
+
+  Future<void> putMember(Member next) async =>
+      compareAndSetMember(before: (await member(next.uid).first)!, after: next);
+}
 
 /// A 1×1 PNG.
 const png = [
@@ -189,7 +224,7 @@ void contractTests(Future<ContractWorld> Function() open) {
     test('the only admin of a church cannot delete their account', () async {
       final g = await Grace.open(w);
       await expectLater(cloud().deleteAccount(), fails(CloudErrorCode.lastAdmin, churches: ['恩典堂']));
-      await g.church.saveMember(Member(uid: g.editor, name: '林同工', role: Role.admin));
+      await g.church.putMember(Member(uid: g.editor, name: '林同工', role: Role.admin));
       await cloud().deleteAccount();
       await expectLater(
         auth().signInWithEmail(Grace.pastorEmail, contractPassword),
@@ -215,17 +250,17 @@ void contractTests(Future<ContractWorld> Function() open) {
       final g = await Grace.open(w);
       await w.signIn(Grace.meiEmail);
       await expectLater(g.church.webhookSave(url: 'https://hook.example/x'), denied(), reason: 'a function');
-      await expectLater(g.church.saveRoster(sundayOn(4)), denied(), reason: 'a write');
-      await expectLater(g.church.saveRosters([sundayOn(4), sundayOn(11)]), denied(), reason: 'a batch');
+      await expectLater(g.church.putRoster(sundayOn(4)), denied(), reason: 'a write');
+      await expectLater(g.church.putRosters([sundayOn(4), sundayOn(11)]), denied(), reason: 'a batch');
       await expectLater(
-        g.church.updateStaffOrder('sunday', {
+        g.church.putStaffOrder('sunday', {
           '司會': ['李美玉'],
         }),
         denied(),
         reason: 'a transaction',
       );
       await expectLater(
-        g.church.saveMember(Member(uid: g.mei, name: '李美玉', role: Role.admin)),
+        g.church.putMember(Member(uid: g.mei, name: '李美玉', role: Role.admin)),
         denied(),
         reason: 'an update',
       );
@@ -242,7 +277,7 @@ void contractTests(Future<ContractWorld> Function() open) {
     test('a stranger\'s direct write fails the same way', () async {
       final g = await Grace.open(w);
       await w.signUp('outsider@example.com');
-      await expectLater(g.church.saveRoster(sundayOn(4)), denied());
+      await expectLater(g.church.putRoster(sundayOn(4)), denied());
       await expectLater(g.church.removeMember(g.mei), denied());
       await expectLater(g.church.photoQuota(), denied());
     });
@@ -374,7 +409,7 @@ void contractTests(Future<ContractWorld> Function() open) {
       await w.addPending(g.cid, const PendingMember(id: 'old-1', name: '舊同工'));
       await g.suspend();
       await expectLater(g.church.createInvite(validFor: const Duration(days: 7)), denied());
-      await expectLater(g.church.saveRoster(sundayOn(4)), denied());
+      await expectLater(g.church.putRoster(sundayOn(4)), denied());
       final closed = fails(CloudErrorCode.churchClosed);
       await expectLater(g.church.deleteChurch(), closed);
       await expectLater(g.church.restoreChurch(), closed);
@@ -440,20 +475,41 @@ void contractTests(Future<ContractWorld> Function() open) {
           Zone(serviceType: 'sunday', duties: ['司琴', '招待']),
         ],
       );
-      await g.church.saveMember(edited);
+      await g.church.putMember(edited);
       final mei = (await g.church.member(g.mei).first)!;
       expect(mei.role, edited.role);
       expect(mei.groups, edited.groups);
       expect(mei.zones, edited.zones);
       expect((await g.church.member(g.editor).first)!.canEditRosters('sunday'), isTrue);
-      await expectLater(g.church.saveMember(Member(uid: g.pastor, name: '王牧師')), denied());
+      await expectLater(g.church.putMember(Member(uid: g.pastor, name: '王牧師')), denied());
       await w.signIn(Grace.meiEmail);
-      await expectLater(g.church.saveMember(Member(uid: g.mei, name: '李美玉', role: Role.admin)), denied());
+      await expectLater(g.church.putMember(Member(uid: g.mei, name: '李美玉', role: Role.admin)), denied());
+    });
+
+    test("an admin's edit is refused once the member changed meanwhile, not by the member's own settings", () async {
+      final g = await Grace.open(w);
+      final shown = (await g.church.member(g.mei).first)!;
+      await w.signIn(Grace.meiEmail);
+      await g.church.setNotificationPrefs(g.mei, {NotificationKind.reminder});
+      await w.signIn(Grace.pastorEmail);
+      final leader = shown.copyWith(role: Role.leader);
+      await g.church.compareAndSetMember(before: shown, after: leader);
+      await expectLater(
+        g.church.compareAndSetMember(
+          before: shown,
+          after: shown.copyWith(groups: {Group.calendarEditors}),
+        ),
+        fails(CloudErrorCode.conflict),
+      );
+      final mei = (await g.church.member(g.mei).first)!;
+      expect(mei.role, Role.leader);
+      expect(mei.groups, isEmpty);
+      expect(mei.mutedNotifications, {NotificationKind.reminder});
     });
 
     test('granting a duty changes only that member’s zones, as they are now; staff cannot', () async {
       final g = await Grace.open(w);
-      await g.church.saveMember(
+      await g.church.putMember(
         Member(uid: g.mei, name: '李美玉', role: Role.leader, groups: const {Group.calendarEditors}),
       );
       await g.church.grantDuty(g.mei, 'sunday', '音控');
@@ -468,9 +524,9 @@ void contractTests(Future<ContractWorld> Function() open) {
 
     test('a member name holds 40 characters; far past it is refused', () async {
       final g = await Grace.open(w);
-      await g.church.saveMember(Member(uid: g.mei, name: '🙏' * 40, role: Role.staff));
+      await g.church.putMember(Member(uid: g.mei, name: '🙏' * 40, role: Role.staff));
       expect((await g.church.member(g.mei).first)!.name, '🙏' * 40);
-      await expectLater(g.church.saveMember(Member(uid: g.mei, name: 'A' * 161, role: Role.staff)), denied());
+      await expectLater(g.church.putMember(Member(uid: g.mei, name: 'A' * 161, role: Role.staff)), denied());
     });
 
     test('members leave on their own; only another admin removes someone', () async {
@@ -507,10 +563,10 @@ void contractTests(Future<ContractWorld> Function() open) {
       );
       final second = sundayOn(11, duties: const [Duty(role: '司琴')]);
       final old = Roster(type: 'sunday', day: Day(2026, 9, 27));
-      await g.church.saveRosters([second, first, old]);
+      await g.church.putRosters([second, first, old]);
       expect(await g.church.rosters(from: Day(2026, 10, 1)).first, [first, second]);
       expect(await g.church.allRosters(), unorderedEquals([old, first, second]));
-      await g.church.deleteRoster(first);
+      await g.church.dropRoster(first);
       expect(await g.church.rosters(from: Day(2026, 10, 1)).first, [second]);
     });
 
@@ -526,53 +582,53 @@ void contractTests(Future<ContractWorld> Function() open) {
       );
       // 林同工 edits only sunday; an event is in no service.
       await w.signIn(Grace.editorEmail);
-      await g.church.saveRoster(party);
+      await g.church.putRoster(party);
       await w.signIn(Grace.meiEmail);
       expect(await g.church.rosters(from: Day(2026, 12, 1)).first, [party]);
-      await expectLater(g.church.saveRoster(party.copyWith(duties: const [])), denied());
-      await expectLater(g.church.deleteRoster(party), denied());
+      await expectLater(g.church.putRoster(party.copyWith(duties: const []), over: party), denied());
+      await expectLater(g.church.dropRoster(party), denied());
       // Still on the day after it began; and there to copy from later.
       expect(await g.church.rosters(from: Day(2026, 12, 25)).first, [party]);
       expect(await g.church.rosters(from: Day(2026, 12, 26)).first, isEmpty);
       expect(await g.church.eventRosters(), [party]);
       await w.signIn(Grace.editorEmail);
-      await g.church.deleteRoster(party);
+      await g.church.dropRoster(party);
       expect(await g.church.rosters(from: Day(2026, 12, 24)).first, isNot(contains(party)));
     });
 
     test('roster editors edit only their services; staff read', () async {
       final g = await Grace.open(w);
       await w.signIn(Grace.editorEmail);
-      await g.church.saveRoster(sundayOn(4));
-      await expectLater(g.church.saveRoster(Roster(type: 'youth', day: Day(2026, 10, 3))), denied());
+      await g.church.putRoster(sundayOn(4));
+      await expectLater(g.church.putRoster(Roster(type: 'youth', day: Day(2026, 10, 3))), denied());
       await w.signIn(Grace.meiEmail);
       expect(await g.church.rosters(from: Day(2026, 10, 1)).first, [sundayOn(4)]);
-      await expectLater(g.church.saveRoster(sundayOn(11)), denied());
-      await expectLater(g.church.deleteRoster(sundayOn(4)), denied());
+      await expectLater(g.church.putRoster(sundayOn(11)), denied());
+      await expectLater(g.church.dropRoster(sundayOn(4)), denied());
       await w.signIn(Grace.editorEmail);
-      await g.church.deleteRoster(sundayOn(4));
+      await g.church.dropRoster(sundayOn(4));
     });
 
     test('nobody writes a roster for a service the church does not have', () async {
       final g = await Grace.open(w);
-      await expectLater(g.church.saveRoster(Roster(type: 'ghost', day: Day(2026, 10, 4))), denied());
+      await expectLater(g.church.putRoster(Roster(type: 'ghost', day: Day(2026, 10, 4))), denied());
     });
 
     test('the staff order is kept per duty by that service\'s editors', () async {
       final g = await Grace.open(w);
       await w.signIn(Grace.editorEmail);
-      await g.church.updateStaffOrder('sunday', {
+      await g.church.putStaffOrder('sunday', {
         '司會': ['林同工', '王牧師'],
         '招待': ['李美玉'],
       });
-      await g.church.updateStaffOrder('sunday', {'招待': null});
+      await g.church.putStaffOrder('sunday', {'招待': null});
       final order = StaffOrder({
         '司會': ['林同工', '王牧師'],
       });
       expect(await g.church.staffOrder('sunday').first, order);
       expect(await g.church.allStaffOrders(), {'sunday': order});
       await expectLater(
-        g.church.updateStaffOrder('youth', {
+        g.church.putStaffOrder('youth', {
           '司會': ['林同工'],
         }),
         denied(),
@@ -581,15 +637,15 @@ void contractTests(Future<ContractWorld> Function() open) {
 
     test('admins save the services, never none; IDs once used stay valid', () async {
       final g = await Grace.open(w);
-      await expectLater(g.church.saveServices(const []), denied());
+      await expectLater(g.church.putServices(const []), denied());
       const renamed = Service(id: 'sunday', name: '主日', weekday: DateTime.sunday, duties: ['司會'], enabled: false);
-      await g.church.saveServices(const [renamed]);
+      await g.church.putServices(const [renamed]);
       final settings = await g.church.services().first;
       expect(settings.services, const [renamed]);
       expect(settings.ids, containsAll(['sunday', 'youth']));
-      await g.church.saveRoster(Roster(type: 'youth', day: Day(2026, 10, 3)));
+      await g.church.putRoster(Roster(type: 'youth', day: Day(2026, 10, 3)));
       await w.signIn(Grace.meiEmail);
-      await expectLater(g.church.saveServices(const [sunday]), denied());
+      await expectLater(g.church.putServices(const [sunday]), denied());
     });
   });
 
@@ -765,7 +821,7 @@ void contractTests(Future<ContractWorld> Function() open) {
 
     Future<Grace> moved() async {
       final g = await Grace.open(w);
-      await g.church.saveRoster(hers);
+      await g.church.putRoster(hers);
       await w.addPending(g.cid, pending, rosterIds: [hers.id]);
       return g;
     }
@@ -796,6 +852,14 @@ void contractTests(Future<ContractWorld> Function() open) {
 
     test('claiming one makes them a member and gives their rosters back', () async {
       final g = await moved();
+      // Only the days the move recorded are pointed at the member.
+      final unrecorded = sundayOn(
+        25,
+        duties: const [
+          Duty(role: '司琴', people: ['美玉'], uids: {'美玉': pid}),
+        ],
+      );
+      await g.church.putRoster(unrecorded);
       final uid = await w.signUp('mei.old@example.com');
       await expectLater(cloud().claimPending(g.cid, 'nobody'), fails(CloudErrorCode.notFound));
       expect(await cloud().claimPending(g.cid, pid), g.cid);
@@ -803,8 +867,9 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect((me.name, me.role), ('美玉', pending.role));
       expect(me.groups, pending.groups);
       expect(me.zones, pending.zones);
-      final roster = (await g.church.rosters(from: Day(2026, 10, 1)).first).single;
-      expect(roster.duties.single.uids, {'美玉': uid});
+      final rosters = await g.church.rosters(from: Day(2026, 10, 1)).first;
+      expect(rosters.first.duties.single.uids, {'美玉': uid});
+      expect(rosters.last.duties.single.uids, {'美玉': pid});
       expect(await cloud().claimPending(g.cid, pid), g.cid, reason: 'a retry by the same person');
       expect(await cloud().pendingClaims(), isEmpty);
       expect(await g.church.pendingMembers().first, isEmpty);
@@ -812,7 +877,7 @@ void contractTests(Future<ContractWorld> Function() open) {
 
     test('an admin merges one into a member, who keeps their role and gains the rest', () async {
       final g = await moved();
-      await g.church.saveMember(
+      await g.church.putMember(
         Member(
           uid: g.mei,
           name: '李美玉',

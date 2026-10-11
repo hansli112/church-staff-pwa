@@ -52,4 +52,19 @@ void main() {
     expect(fetchTimeLabel(0), '00:00');
     expect(fetchTimeLabel(23 * 60 + 45), '23:45');
   });
+
+  test('only a new source or fetch time sets the source again; the fixed link alone does not', () {
+    const plain = ChurchLink(title: '教會官網', url: 'https://grace.example');
+    expect(fixed.changesSourceOf(fixed), isFalse);
+    expect(fixed.changesSourceOf(const ChurchLink(title: '別的', url: 'https://other.example', source: src)), isFalse);
+    expect(fixed.changesSourceOf(plain), isTrue);
+    expect(plain.changesSourceOf(fixed), isTrue);
+    expect(plain.changesSourceOf(null), isFalse);
+    expect(plain.changesSourceOf(const ChurchLink(title: '', url: '', fetchMinute: 0)), isFalse);
+    expect(
+      fixed.changesSourceOf(const ChurchLink(title: '教會官網', url: 'https://grace.example', source: src, fetchMinute: 0)),
+      isTrue,
+    );
+    expect(fixed.changesSourceOf(null), isTrue);
+  });
 }

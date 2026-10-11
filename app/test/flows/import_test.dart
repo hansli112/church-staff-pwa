@@ -27,13 +27,17 @@ Future<void> tapText(WidgetTester tester, String text) async {
 }
 
 class _PhotoPicker extends ImagePickerPlatform {
-  _PhotoPicker({this.pending});
+  _PhotoPicker({this.pending, this.error});
   final Future<List<XFile>>? pending;
+
+  /// What picking fails with, if it does.
+  final Object? error;
 
   @override
   Future<List<XFile>> getMultiImageWithOptions({
     MultiImagePickerOptions options = const MultiImagePickerOptions(),
   }) =>
+      (error == null ? null : Future<List<XFile>>.error(error!)) ??
       pending ??
       Future.value([
         XFile.fromData(Uint8List.fromList([1, 2, 3]), mimeType: 'image/jpeg', name: 'roster.jpg'),
@@ -91,6 +95,50 @@ void main() {
     expect(find.text('確認後套用'), findsNothing);
     expect(b.photosUsed['grace'] ?? 0, 0);
     expect(b.photosUsed['other'] ?? 0, 0);
+  });
+
+  testWidgets('photos that cannot be read say so', (tester) async {
+    final oldPicker = ImagePickerPlatform.instance;
+    ImagePickerPlatform.instance = _PhotoPicker(error: Exception('camera roll unavailable'));
+    addTearDown(() => ImagePickerPlatform.instance = oldPicker);
+    final b = seededChurch(as: editor);
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/import/sunday');
+    await tapText(tester, '選照片');
+    expect(find.text('辨識失敗，請換一張清楚一點的照片再試'), findsOneWidget);
+    expect(b.photosUsed['grace'] ?? 0, 0);
+  });
+
+  testWidgets('the preview stays, its controls off, while the editor cannot edit for a moment', (tester) async {
+    final b = seededChurch(as: editor);
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/import/sunday');
+    await tapText(tester, '進階');
+    await tapText(tester, '貼上 JSON');
+    await tester.enterText(
+      find.byType(TextField),
+      jsonEncode([
+        {
+          'date': '2026-10-18',
+          'duties': [
+            {
+              'role': '司琴',
+              'people': ['李美玉'],
+            },
+          ],
+        },
+      ]),
+    );
+    await tester.ensureVisible(find.text('預覽').last);
+    await tapText(tester, '預覽');
+    final saved = Map.of(b.rosters['grace']!);
+    b.members['grace']!['editor'] = b.members['grace']!['editor']!.copyWith(groups: const {});
+    b.notify();
+    await settle(tester);
+    expect(find.text('確認後套用'), findsOneWidget, reason: 'the preview, not the start page');
+    await tester.scrollUntilVisible(find.text('套用到服事表'), 300);
+    await tapText(tester, '套用到服事表');
+    expect(b.rosters['grace'], saved);
   });
 
   testWidgets('offline, recognizing a photo says the app is read-only', (tester) async {

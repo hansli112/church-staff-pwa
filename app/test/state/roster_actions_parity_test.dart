@@ -205,22 +205,6 @@ void main() {
     expect(savedDay(b, 11), newer);
   });
 
-  test('saving staff order and resorting days are one guarded operation', () async {
-    final b = seededChurch();
-    final first = savedDay(b, 4);
-    final originalOrder = b.staffOrders['grace']!['sunday'];
-    final (_, actions) = await open(b);
-    final newer = first.copyWith(events: const [EventTag(name: '新安排', color: 1)]);
-    b.rosters['grace']![first.id] = newer; // Another editor before the listener arrives.
-
-    await expectLater(
-      actions.setRanking('sunday', '招待', ['李美玉', '陳志豪']),
-      throwsA(isA<CloudException>().having((e) => e.code, 'code', CloudErrorCode.conflict)),
-    );
-    expect(b.staffOrders['grace']!['sunday'], originalOrder);
-    expect(savedDay(b, 4), newer);
-  });
-
   test('adding duties refuses a stale baseline instead of losing a newer event tag', () async {
     final b = seededChurch();
     final first = savedDay(b, 4);

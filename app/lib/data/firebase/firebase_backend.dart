@@ -16,7 +16,6 @@ import '../../domain/staff_order.dart';
 import '../../env.dart';
 import '../backend.dart';
 import '../connectivity.dart';
-import '../roster_compare_and_set.dart';
 import 'codec.dart';
 import '../native_or_browser.dart';
 import '../retry_refused.dart';
@@ -621,54 +620,20 @@ class FirestoreChurchData implements ChurchData {
   };
 
   @override
-  Future<void> saveRoster(Roster roster) {
-    final ref = _col('rosters').doc(roster.id);
-    return _write(ref, (tx) => tx.set(ref, _rosterDoc(roster)));
-  }
-
-  @override
-  Future<void> saveRosters(List<Roster> rosters, {String via = 'app'}) {
-    final docs = {
-      for (final roster in rosters) _col('rosters').doc(roster.id): {..._rosterDoc(roster), 'via': via},
-    };
-    return _transaction((tx) async {
-      // All reads precede all writes, including the empty batch's online guard.
-      if (docs.isEmpty) await tx.get(_church);
-      for (final ref in docs.keys) {
-        await tx.get(ref);
-      }
-      for (final entry in docs.entries) {
-        tx.set(entry.key, entry.value);
-      }
-    });
-  }
-
-  @override
-  Future<void> compareAndSetRosters({
-    required Map<String, Roster?> before,
-    required Map<String, Roster?> after,
-    String via = 'app',
-    ({String serviceType, StaffOrder before, StaffOrder after})? staffOrder,
-    ({Service before, Service after})? serviceChange,
-  }) async {
-    validateRosterCompareAndSet(before, after);
-    validateRosterServiceChange(serviceChange);
-    if (after.length + (staffOrder == null ? 0 : 1) + (serviceChange == null ? 0 : 1) > 500) {
-      throw const CloudException(CloudErrorCode.quotaExceeded, reason: CloudReason.tooManyChanges);
-    }
-    final expected = Map.of(before);
+  Future<void> compareAndSetRosters(RosterChange change) async {
+    final RosterChange(:before, :after, :via, :staffOrder, :serviceChange) = change;
     final next = {
       for (final entry in after.entries)
         entry.key: entry.value == null ? null : {..._rosterDoc(entry.value!), 'via': via},
     };
     await _transaction((tx) async {
       Json? serviceDoc;
-      if (serviceChange case final change?) {
+      if (serviceChange case final edit?) {
         final settingsRef = _col('settings').doc('services');
         final settings = serviceSettingsFromJson((await tx.get(settingsRef)).data());
-        if (settings.byId(change.before.id) != change.before) throw const CloudException(CloudErrorCode.conflict);
+        if (settings.byId(edit.before.id) != edit.before) throw const CloudException(CloudErrorCode.conflict);
         final nextSettings = settings.withServices([
-          for (final service in settings.services) service.id == change.before.id ? change.after : service,
+          for (final service in settings.services) service.id == edit.before.id ? edit.after : service,
         ]);
         serviceDoc = {
           'services': [for (final service in nextSettings.services) serviceToJson(service)],
@@ -676,13 +641,13 @@ class FirestoreChurchData implements ChurchData {
           'updatedAt': FieldValue.serverTimestamp(),
         };
       }
-      if (expected.isEmpty) await tx.get(_church);
-      for (final entry in expected.entries) {
-        final snapshot = await tx.get(_col('rosters').doc(entry.key));
-        final matches = entry.value == null
-            ? !snapshot.exists
-            : snapshot.exists && rosterMatchesBaseline(rosterFromJson(snapshot.data()!), entry.value);
-        if (!matches) throw const CloudException(CloudErrorCode.conflict);
+      if (before.isEmpty) await tx.get(_church);
+      for (final id in before.keys) {
+        final snapshot = await tx.get(_col('rosters').doc(id));
+        final data = snapshot.data();
+        if (!change.expects(id, data == null ? null : rosterFromJson(data))) {
+          throw const CloudException(CloudErrorCode.conflict);
+        }
       }
       if (staffOrder case final order?) {
         final snapshot = await tx.get(_col('staff_orders').doc(order.serviceType));
@@ -693,7 +658,7 @@ class FirestoreChurchData implements ChurchData {
       for (final entry in next.entries) {
         final ref = _col('rosters').doc(entry.key);
         if (entry.value == null) {
-          if (expected[entry.key] != null) tx.delete(ref);
+          if (before[entry.key] != null) tx.delete(ref);
         } else {
           tx.set(ref, entry.value!);
         }
@@ -704,35 +669,13 @@ class FirestoreChurchData implements ChurchData {
   }
 
   @override
-  Future<void> deleteRoster(Roster roster) {
-    final ref = _col('rosters').doc(roster.id);
-    return _write(ref, (tx) => tx.delete(ref));
-  }
-
-  @override
-  Future<void> updateStaffOrder(
-    String serviceType,
-    Map<String, List<String>?> changes,
-  ) async {
-    if (changes.isEmpty) return;
-    final ref = _col('staff_orders').doc(serviceType);
-    // Read-modify-write in a transaction so two editors ordering different
-    // duties do not overwrite each other.
-    await _transaction((tx) async {
-      final snap = await tx.get(ref);
-      final next = StaffOrder.fromJson(snap.data() ?? const {}).withChanges(changes);
-      tx.set(ref, next.toJson());
-    });
-  }
-
-  @override
-  Future<void> saveServices(List<Service> services) {
+  Future<void> compareAndSetServiceList({required List<Service> before, required List<Service> after}) {
     final ref = _col('settings').doc('services');
-    // Merge ids inside a transaction: two admins saving at once must not
-    // drop each other's new IDs (the rules also reject shrinking ids).
+    // Merge ids inside the transaction: the rules reject shrinking ids.
     return _transaction((tx) async {
       final current = serviceSettingsFromJson((await tx.get(ref)).data());
-      final next = current.withServices(services);
+      if (!listEquals(current.services, before)) throw const CloudException(CloudErrorCode.conflict);
+      final next = current.withServices(after);
       tx.set(ref, {
         'services': [for (final s in next.services) serviceToJson(s)],
         'ids': next.ids,
@@ -756,9 +699,15 @@ class FirestoreChurchData implements ChurchData {
   }
 
   @override
-  Future<void> saveMember(Member member) {
-    final ref = _col('members').doc(member.uid);
-    return _write(ref, (tx) => tx.update(ref, memberToJson(member)));
+  Future<void> compareAndSetMember({required Member before, required Member after}) {
+    if (before.uid != after.uid) throw ArgumentError('member uid cannot change');
+    final ref = _col('members').doc(after.uid);
+    return _transaction((tx) async {
+      final data = (await tx.get(ref)).data();
+      if (data == null) throw const CloudException(CloudErrorCode.notFound);
+      if (!memberFromJson(after.uid, data).sameAdminFields(before)) throw const CloudException(CloudErrorCode.conflict);
+      tx.update(ref, memberToJson(after));
+    });
   }
 
   @override
@@ -846,9 +795,7 @@ class FirestoreChurchData implements ChurchData {
       tx.set(ref, {...churchLinkToJson(link), 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
       return saved;
     });
-    if (link.source == saved?.source && (link.source == null || link.fetchMinute == saved?.fetchMinute)) {
-      return const LinkSourceResult();
-    }
+    if (!link.changesSourceOf(saved)) return const LinkSourceResult();
     final d = await _call('setLinkSource', {'source': link.source, 'fetchMinute': link.fetchMinute});
     final content = d['content'];
     return LinkSourceResult(

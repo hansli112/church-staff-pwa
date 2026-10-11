@@ -55,9 +55,17 @@ function rename(value: unknown, before: Service, after: Service): DutyRename | u
   exactKeys(r, ['from', 'to']);
   const from = label(r.from);
   const to = label(r.to);
-  if (from === to || !before.duties.includes(from) || before.duties.includes(to)
-      || !isDeepStrictEqual(after.duties, before.duties.map((d) => d === from ? to : d))) fail('invalid-argument', 'unknown');
+  if (!validDutyRename(before.duties, after.duties, from, to)) fail('invalid-argument', 'unknown');
   return { from, to };
+}
+
+/**
+ * Whether [after] is [before] with duty [from] renamed [to] in place and
+ * nothing else changed (testdata/church_rules.json, dutyRename).
+ */
+export function validDutyRename(before: string[], after: string[], from: string, to: string) {
+  return from !== to && before.includes(from) && !before.includes(to)
+    && isDeepStrictEqual(after, before.map((d) => d === from ? to : d));
 }
 
 /** Edits one configured service; saved roster wording is never rewritten here. */

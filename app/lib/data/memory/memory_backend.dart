@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart' show listEquals;
+
 import '../../domain/church_time.dart';
 import '../../domain/day.dart';
 import '../../domain/event_roster.dart';
@@ -11,7 +13,6 @@ import '../../domain/staff_order.dart';
 import '../../domain/text.dart';
 import '../backend.dart';
 import '../connectivity.dart';
-import '../roster_compare_and_set.dart';
 
 /// An in-memory [Backend] for widget tests and the offline demo: a verified
 /// fake.
@@ -93,6 +94,10 @@ class MemoryBackend implements Backend {
   /// Pending members per church, by ID.
   final pendingMembers = <String, Map<String, PendingMember>>{};
 
+  /// The rosters a move recorded naming each pending member, per church:
+  /// the only days a claim or a merge points at the member instead.
+  final pendingRosterIds = <String, Map<String, List<String>>>{};
+
   /// Uploaded move files by path.
   final moveFiles = <String, List<int>>{};
 
@@ -144,6 +149,9 @@ class MemoryBackend implements Backend {
   int photoLimit = 30;
   bool photoPlatformOpen = true;
   List<dynamic> recognized = const [];
+
+  /// Scripted: photo recognition answers once this completes.
+  Future<void>? recognizing;
 
   /// Set to make the next write fail, to test error handling.
   Object? failNextWrite;
@@ -232,6 +240,14 @@ class MemoryBackend implements Backend {
 
   void addMember(String cid, Member member) {
     members[cid]![member.uid] = member;
+    notify();
+  }
+
+  /// A member moved from self-host who has not signed in yet, named on the
+  /// rosters [rosterIds] (what a move records).
+  void addPending(String cid, PendingMember pending, {List<String> rosterIds = const []}) {
+    (pendingMembers[cid] ??= {})[pending.id] = pending;
+    (pendingRosterIds[cid] ??= {})[pending.id] = rosterIds;
     notify();
   }
 
@@ -579,7 +595,10 @@ class MemoryChurchData implements ChurchData {
   @override
   Future<void> deletePendingMember(String id) async {
     _requireAdmin();
-    await _b.write(() => _b.pendingMembers[churchId]?.remove(id));
+    await _b.write(() {
+      _b.pendingMembers[churchId]?.remove(id);
+      _b.pendingRosterIds[churchId]?.remove(id);
+    });
   }
 
   @override
@@ -635,44 +654,15 @@ class MemoryChurchData implements ChurchData {
   }
 
   @override
-  Future<void> saveRoster(Roster roster) => saveRosters([roster]);
-
-  @override
-  Future<void> saveRosters(List<Roster> rosters, {String via = 'app'}) async {
-    for (final r in rosters) {
-      _requireRosterWrite(r);
-    }
-    await _b.write(() {
-      for (final r in rosters) {
-        _b.rosters[churchId]![r.id] = r.copyWith(saved: true);
-      }
-    });
-  }
-
-  @override
-  Future<void> compareAndSetRosters({
-    required Map<String, Roster?> before,
-    required Map<String, Roster?> after,
-    String via = 'app',
-    ({String serviceType, StaffOrder before, StaffOrder after})? staffOrder,
-    ({Service before, Service after})? serviceChange,
-  }) async {
-    validateRosterCompareAndSet(before, after);
-    validateRosterServiceChange(serviceChange);
-    if (after.length + (staffOrder == null ? 0 : 1) + (serviceChange == null ? 0 : 1) > 500) {
-      throw const CloudException(CloudErrorCode.quotaExceeded, reason: CloudReason.tooManyChanges);
-    }
-    // Snapshot the preview before yielding: a caller mutating its map cannot
-    // alter the transaction's preconditions midway through a write.
-    final expected = Map.of(before);
-    final next = Map.of(after);
+  Future<void> compareAndSetRosters(RosterChange change) async {
+    final RosterChange(:staffOrder, :serviceChange) = change;
     final uid = _uid;
     await _b.write(() {
       if (_uid != uid) throw const CloudException(CloudErrorCode.permissionDenied);
       _requireMember();
       final saved = _b.rosters[churchId]!;
-      for (final entry in expected.entries) {
-        if (!rosterMatchesBaseline(saved[entry.key], entry.value)) {
+      for (final id in change.before.keys) {
+        if (!change.expects(id, saved[id])) {
           throw const CloudException(CloudErrorCode.conflict);
         }
       }
@@ -682,14 +672,14 @@ class MemoryChurchData implements ChurchData {
           throw const CloudException(CloudErrorCode.conflict);
         }
       }
-      if (serviceChange case final change?) {
+      if (serviceChange case final service?) {
         _requireAdmin();
-        if (_b.services[churchId]!.byId(change.before.id) != change.before) {
+        if (_b.services[churchId]!.byId(service.before.id) != service.before) {
           throw const CloudException(CloudErrorCode.conflict);
         }
       }
       // Check every permission before changing anything (including deletes).
-      for (final entry in next.entries) {
+      for (final entry in change.after.entries) {
         final roster = entry.value ?? saved[entry.key];
         if (roster == null) continue;
         if (entry.value == null) {
@@ -698,7 +688,7 @@ class MemoryChurchData implements ChurchData {
           _requireRosterWrite(roster);
         }
       }
-      for (final entry in next.entries) {
+      for (final entry in change.after.entries) {
         if (entry.value == null) {
           saved.remove(entry.key);
         } else {
@@ -706,43 +696,25 @@ class MemoryChurchData implements ChurchData {
         }
       }
       if (staffOrder case final order?) _b.staffOrders[churchId]![order.serviceType] = order.after;
-      if (serviceChange case final change?) {
+      if (serviceChange case final service?) {
         final settings = _b.services[churchId]!;
         _b.services[churchId] = settings.withServices([
-          for (final service in settings.services) service.id == change.before.id ? change.after : service,
+          for (final s in settings.services) s.id == service.before.id ? service.after : s,
         ]);
       }
     });
   }
 
   @override
-  Future<void> deleteRoster(Roster roster) async {
-    roster.isEvent ? _requireRosterEditors() : _requireRosterEditor(roster.type);
-    await _b.write(() => _b.rosters[churchId]!.remove(roster.id));
-  }
-
-  @override
-  Future<void> updateStaffOrder(
-    String serviceType,
-    Map<String, List<String>?> changes,
-  ) async {
-    _requireRosterEditor(serviceType);
-    await _b.write(() {
-      final orders = _b.staffOrders[churchId]!;
-      orders[serviceType] = (orders[serviceType] ?? StaffOrder()).withChanges(
-        changes,
-      );
-    });
-  }
-
-  @override
-  Future<void> saveServices(List<Service> services) async {
+  Future<void> compareAndSetServiceList({required List<Service> before, required List<Service> after}) async {
     _requireAdmin();
-    if (services.isEmpty || services.length > 20) {
+    if (after.isEmpty || after.length > 20) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
     await _b.write(() {
-      _b.services[churchId] = _b.services[churchId]!.withServices(services);
+      final settings = _b.services[churchId]!;
+      if (!listEquals(settings.services, before)) throw const CloudException(CloudErrorCode.conflict);
+      _b.services[churchId] = settings.withServices(after);
     });
   }
 
@@ -758,12 +730,8 @@ class MemoryChurchData implements ChurchData {
       final settings = _b.services[churchId]!;
       if (settings.byId(before.id) != before) throw const CloudException(CloudErrorCode.conflict);
       if (dutyRename case final rename?) {
-        if (rename.from == rename.to ||
-            !before.duties.contains(rename.from) ||
-            before.duties.contains(rename.to) ||
-            !after.duties.contains(rename.to) ||
-            after.duties.contains(rename.from)) {
-          throw ArgumentError('invalid duty rename');
+        if (!validDutyRename(before: before.duties, after: after.duties, from: rename.from, to: rename.to)) {
+          throw const CloudException(CloudErrorCode.unknown);
         }
         final orders = _b.staffOrders[churchId]!;
         final order = orders[before.id];
@@ -817,13 +785,25 @@ class MemoryChurchData implements ChurchData {
   }
 
   @override
-  Future<void> saveMember(Member member) async {
+  Future<void> compareAndSetMember({required Member before, required Member after}) async {
+    if (before.uid != after.uid) throw ArgumentError('member uid cannot change');
     _requireAdmin();
-    if (member.uid == _uid && !member.isAdmin) {
+    if (after.uid == _uid && !after.isAdmin) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
-    _checkName(member.name);
-    await _b.write(() => _b.members[churchId]![member.uid] = member);
+    _checkName(after.name);
+    await _b.write(() {
+      final members = _b.members[churchId]!;
+      final current = members[after.uid];
+      if (current == null) throw const CloudException(CloudErrorCode.notFound);
+      if (!current.sameAdminFields(before)) throw const CloudException(CloudErrorCode.conflict);
+      members[after.uid] = current.copyWith(
+        name: after.name,
+        role: after.role,
+        groups: after.groups,
+        zones: after.zones,
+      );
+    });
   }
 
   @override
@@ -940,10 +920,7 @@ class MemoryChurchData implements ChurchData {
         fetchMinute: saved?.fetchMinute ?? ChurchLink.defaultFetchMinute,
       );
     });
-    if (link == null ||
-        (link.source == saved?.source && (link.source == null || link.fetchMinute == saved?.fetchMinute))) {
-      return const LinkSourceResult();
-    }
+    if (link == null || !link.changesSourceOf(saved)) return const LinkSourceResult();
     return _setLinkSource(link.source, link.fetchMinute);
   }
 
@@ -1035,8 +1012,7 @@ class MemoryChurchData implements ChurchData {
     final m = _b.memberOf(churchId, uid);
     if (p == null || m == null) throw const CloudException(CloudErrorCode.notFound);
     _b.members[churchId]![uid] = _absorb(m, p);
-    _repoint(_b, churchId, pendingId, uid);
-    _b.pendingMembers[churchId]!.remove(pendingId);
+    _settlePending(_b, churchId, pendingId, uid);
     _b.notify();
   }
 
@@ -1291,6 +1267,7 @@ class MemoryChurchData implements ChurchData {
     final used = _b.photosUsed[churchId] ?? 0;
     if (used >= _b.photoLimit) throw const CloudException(CloudErrorCode.quotaExceeded, reason: CloudReason.church);
     _b.photosUsed[churchId] = used + 1;
+    await _b.recognizing;
     return _b.recognized;
   }
 }
@@ -1478,40 +1455,10 @@ class MemoryCloud implements CloudApi {
         for (final user in users)
           if (user is Map && user['id'] is String && user['data'] is Map) user['id'] as String: user['data'] as Map,
     };
-    List<String> strings(Object? values) => [
-      if (values is List)
-        for (final value in values)
-          if (value is String) value,
+    return [
+      for (final person in preview.people)
+        movedMember(id: person.id, name: person.name, email: person.email, source: byId[person.id]),
     ];
-    return preview.people.map((person) {
-      final source = byId[person.id];
-      final prefs = source?['notificationPrefs'];
-      final muted = prefs is Map ? strings(prefs['muted']) : const <String>[];
-      return PendingMember(
-        id: person.id,
-        name: person.name,
-        email: person.email,
-        role: source == null
-            ? Role.staff
-            : Role.values.where((role) => role.name == source['role']).firstOrNull ?? Role.member,
-        groups: {for (final id in strings(source?['groups'])) ?Group.byId(id)},
-        zones: [
-          if (source?['zones'] is List)
-            for (final zone in source!['zones'] as List)
-              if (zone is Map && zone['serviceType'] is String)
-                Zone(
-                  serviceType: zone['serviceType'] as String,
-                  duties: strings(zone['ministries']),
-                  smallGroups: strings(zone['smallGroups']),
-                ),
-        ],
-        mutedNotifications: {
-          for (final kind in NotificationKind.values)
-            if (muted.contains(kind.name)) kind,
-          if (prefs is Map && prefs['weeklyRosterReminder'] == false) NotificationKind.reminder,
-        },
-      );
-    }).toList();
   }
 
   /// The church is made as [createChurch] makes it; everyone in the
@@ -1577,8 +1524,7 @@ class MemoryCloud implements CloudApi {
             mutedNotifications: p.mutedNotifications,
             joinedAt: _b.clock(),
           );
-    _repoint(_b, churchId, pendingId, user.uid);
-    _b.pendingMembers[churchId]!.remove(pendingId);
+    _settlePending(_b, churchId, pendingId, user.uid);
     _b.notify();
     return churchId;
   }
@@ -1689,10 +1635,14 @@ class MemoryCloud implements CloudApi {
   }) async => loggedErrors.add(message);
 }
 
-/// Points [cid]'s rosters at [uid] instead of pending member [pid].
-void _repoint(MemoryBackend b, String cid, String pid, String uid) {
+/// Points the rosters the move recorded for pending member [pid] at [uid]
+/// instead, and drops [pid]; as functions/src/claim.ts does.
+void _settlePending(MemoryBackend b, String cid, String pid, String uid) {
+  b.pendingMembers[cid]!.remove(pid);
   final rosters = b.rosters[cid]!;
-  for (final MapEntry(:key, :value) in rosters.entries.toList()) {
+  for (final key in b.pendingRosterIds[cid]?.remove(pid) ?? const <String>[]) {
+    final value = rosters[key];
+    if (value == null) continue;
     rosters[key] = value.copyWith(
       duties: [
         for (final d in value.duties)
@@ -1737,8 +1687,51 @@ Member _absorb(Member m, PendingMember p) => m.copyWith(
   ],
 );
 
+/// Someone in a self-host export, [source] their user document (null when
+/// it has none), as the move makes them a pending member: what
+/// mapMember in functions/src/importer.ts does
+/// (testdata/church_rules.json, movedMembers).
+PendingMember movedMember({
+  required String id,
+  required String name,
+  required String email,
+  Map<dynamic, dynamic>? source,
+}) {
+  List<String> strings(Object? values) => [
+    if (values is List)
+      for (final value in values)
+        if (value is String) value,
+  ];
+  final prefs = source?['notificationPrefs'];
+  final muted = prefs is Map ? strings(prefs['muted']) : const <String>[];
+  return PendingMember(
+    id: id,
+    name: name,
+    email: email,
+    role: source == null
+        ? Role.staff
+        : Role.values.where((role) => role.name == source['role']).firstOrNull ?? Role.member,
+    groups: {for (final id in strings(source?['groups'])) ?Group.byId(id)},
+    zones: [
+      if (source?['zones'] is List)
+        for (final zone in source!['zones'] as List)
+          if (zone is Map && zone['serviceType'] is String)
+            Zone(
+              serviceType: zone['serviceType'] as String,
+              duties: strings(zone['ministries']),
+              smallGroups: strings(zone['smallGroups']),
+            ),
+    ],
+    mutedNotifications: {
+      for (final kind in NotificationKind.values)
+        if (muted.contains(kind.name)) kind,
+      if (prefs is Map && prefs['weeklyRosterReminder'] == false) NotificationKind.reminder,
+    },
+  );
+}
+
 /// The services a new church starts with. The Cloud Function seeds the same
-/// list (functions/src/church.ts).
+/// list (functions/src/church.ts; testdata/church_rules.json).
 const defaultServices = [
   Service(
     id: 'sunday',

@@ -1,0 +1,103 @@
+{
+  "about": "Church data rules both the app (app/lib, its memory backend standing in for the Cloud Functions) and functions/src must follow; app/test/domain/church_rules_test.dart and functions/test/churchRules.test.ts run every row. Add a row here, not to one side.",
+  "defaultServices": [
+    {
+      "id": "sunday",
+      "name": "主日崇拜",
+      "weekday": 7,
+      "enabled": true,
+      "duties": ["司會", "敬拜", "司琴", "音控", "投影", "招待"],
+      "events": [
+        { "name": "聖餐", "color": 0 },
+        { "name": "浸禮", "color": 4 }
+      ]
+    }
+  ],
+  "dutyRename": [
+    { "why": "renamed in place", "before": ["司會", "司琴"], "from": "司會", "to": "主持", "after": ["主持", "司琴"], "ok": true },
+    { "why": "renaming also moves the duty", "before": ["司會", "司琴"], "from": "司會", "to": "主持", "after": ["司琴", "主持"], "ok": false },
+    { "why": "renaming also adds a duty", "before": ["司會", "司琴"], "from": "司會", "to": "主持", "after": ["主持", "司琴", "音控"], "ok": false },
+    { "why": "renaming also drops a duty", "before": ["司會", "司琴"], "from": "司會", "to": "主持", "after": ["主持"], "ok": false },
+    { "why": "the old name is not a duty", "before": ["司會", "司琴"], "from": "招待", "to": "主持", "after": ["司會", "司琴"], "ok": false },
+    { "why": "the new name is already a duty", "before": ["司會", "司琴"], "from": "司會", "to": "司琴", "after": ["司琴", "司琴"], "ok": false },
+    { "why": "a name renamed to itself", "before": ["司會", "司琴"], "from": "司會", "to": "司會", "after": ["司會", "司琴"], "ok": false }
+  ],
+  "rosterIdentity": [
+    {
+      "why": "a bound name is that member's duty",
+      "duties": [{ "role": "司琴", "people": ["李美玉"], "uids": { "李美玉": "mei" } }],
+      "uid": "mei",
+      "holds": ["司琴"]
+    },
+    {
+      "why": "an unbound name is 外請, even with a member's exact name",
+      "duties": [{ "role": "司琴", "people": ["李美玉"], "uids": {} }],
+      "uid": "mei",
+      "holds": []
+    },
+    {
+      "why": "a binding whose name is no longer listed does not count",
+      "duties": [{ "role": "司琴", "people": ["陳志豪"], "uids": { "李美玉": "mei", "陳志豪": "hao" } }],
+      "uid": "mei",
+      "holds": []
+    },
+    {
+      "why": "every duty bound to the member, in roster order",
+      "duties": [
+        { "role": "司會", "people": ["美玉"], "uids": { "美玉": "mei" } },
+        { "role": "司琴", "people": ["陳志豪"], "uids": { "陳志豪": "hao" } },
+        { "role": "招待", "people": ["陳志豪", "李美玉"], "uids": { "陳志豪": "hao", "李美玉": "mei" } }
+      ],
+      "uid": "mei",
+      "holds": ["司會", "招待"]
+    },
+    {
+      "why": "two names bound to one member in a duty hold it once",
+      "duties": [{ "role": "招待", "people": ["美玉", "李美玉"], "uids": { "美玉": "mei", "李美玉": "mei" } }],
+      "uid": "mei",
+      "holds": ["招待"]
+    },
+    {
+      "why": "an empty uid is nobody",
+      "duties": [{ "role": "司琴", "people": ["李美玉"], "uids": { "李美玉": "" } }],
+      "uid": "",
+      "holds": []
+    }
+  ],
+  "movedMembers": [
+    {
+      "why": "ministries become duties; small groups and roster-editors carry over",
+      "in": {
+        "role": "leader",
+        "groups": ["roster-editors", "unknown-group"],
+        "zones": [{ "serviceType": "sunday", "ministries": ["司琴", "招待"], "smallGroups": ["喜樂小組"] }]
+      },
+      "out": {
+        "role": "leader",
+        "groups": ["roster-editors"],
+        "zones": [{ "serviceType": "sunday", "duties": ["司琴", "招待"], "smallGroups": ["喜樂小組"] }],
+        "muted": []
+      }
+    },
+    {
+      "why": "an unknown role becomes member",
+      "in": { "role": "pastor" },
+      "out": { "role": "member", "groups": [], "zones": [], "muted": [] }
+    },
+    {
+      "why": "turning off the weekly reminder mutes the reminder",
+      "in": { "role": "staff", "notificationPrefs": { "weeklyRosterReminder": false } },
+      "out": { "role": "staff", "groups": [], "zones": [], "muted": ["reminder"] }
+    },
+    {
+      "why": "muted kinds carry over, once each",
+      "in": { "role": "staff", "notificationPrefs": { "weeklyRosterReminder": false, "muted": ["reminder", "rosterChange"] } },
+      "out": { "role": "staff", "groups": [], "zones": [], "muted": ["reminder", "rosterChange"] }
+    },
+    {
+      "why": "a zone without a service type is dropped",
+      "in": { "role": "staff", "zones": [{ "ministries": ["司琴"] }, { "serviceType": "youth" }] },
+      "out": { "role": "staff", "groups": [], "zones": [{ "serviceType": "youth", "duties": [], "smallGroups": [] }], "muted": [] }
+    }
+  ]
+}

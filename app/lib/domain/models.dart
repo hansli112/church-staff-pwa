@@ -166,6 +166,16 @@ class Member {
   /// until an admin puts them in a 牧區: they are in none of them.
   bool waitsForZone(List<Service> services) => services.isNotEmpty && rosterServices(services).isEmpty;
 
+  /// Whether [other] has the same of what an admin sets on a member: name,
+  /// role, groups and 牧區. The member's own notification settings are not
+  /// part of it.
+  bool sameAdminFields(Member other) =>
+      uid == other.uid &&
+      name == other.name &&
+      role == other.role &&
+      setEquals(groups, other.groups) &&
+      listEquals(zones, other.zones);
+
   /// Whether this member may edit rosters of [serviceType].
   bool canEditRosters(String serviceType) =>
       isAdmin || (groups.contains(Group.rosterEditors) && zoneTypes.contains(serviceType));
@@ -228,6 +238,20 @@ class EventTag {
   @override
   int get hashCode => Object.hash(name, color);
 }
+
+/// Whether [after] is [before] with duty [from] renamed [to] in place and
+/// nothing else changed: what functions/src/serviceSettings.ts takes
+/// (testdata/church_rules.json, dutyRename).
+bool validDutyRename({
+  required List<String> before,
+  required List<String> after,
+  required String from,
+  required String to,
+}) =>
+    from != to &&
+    before.contains(from) &&
+    !before.contains(to) &&
+    listEquals(after, [for (final d in before) d == from ? to : d]);
 
 /// One kind of gathering, e.g. 主日崇拜 on Sundays.
 @immutable
@@ -478,9 +502,11 @@ class Roster {
 
   /// Duties explicitly bound to [uid]. Unbound names are guests, never a
   /// runtime identity guess, even when a member has exactly the same name.
+  /// A binding counts only while its name is still listed
+  /// (testdata/church_rules.json, rosterIdentity).
   List<String> dutiesOf({required String uid}) => [
     for (final duty in duties)
-      if (duty.uids.values.contains(uid)) duty.role,
+      if (uid.isNotEmpty && duty.uids.entries.any((e) => e.value == uid && duty.people.contains(e.key))) duty.role,
   ];
 
   @override
@@ -725,6 +751,12 @@ class ChurchLink {
   /// When [source] is fetched: minutes after midnight, Asia/Taipei, in
   /// steps of 15.
   final int fetchMinute;
+
+  /// Whether saving this over [saved] changes what is fetched or when, so
+  /// the backend must set the source again. Without a source, the fetch
+  /// time does not matter.
+  bool changesSourceOf(ChurchLink? saved) =>
+      source != saved?.source || (source != null && fetchMinute != saved?.fetchMinute);
 
   /// Whether [url] is an https URL with a host.
   static bool validUrl(String url) {

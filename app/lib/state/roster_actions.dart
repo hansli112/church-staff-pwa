@@ -8,25 +8,18 @@ import '../domain/roster_edit.dart';
 import '../domain/roster_import.dart';
 import '../domain/schedule.dart';
 import '../domain/staff_order.dart';
+import 'church_writes.dart';
 import 'providers.dart';
-
-/// A write that has been issued, and how to take it back.
-///
-/// [done] completes when the server confirms the online write. Offline
-/// writes are refused. [undo] restores only what this write touched,
-/// preserving unrelated changes and refusing overlapping newer edits.
-typedef RosterWrite = ({Future<void> done, Future<void> Function() undo});
 
 /// A bulk preview is scoped to the church and account that opened it.
 class RosterPreview {
-  RosterPreview._(this.plan, this.churchId, this.uid);
+  RosterPreview._(this.plan, this.scope);
 
   final FutureRosterPlan plan;
-  final String churchId;
-  final String? uid;
+  final WriteScope scope;
 }
 
-/// Writes for 安排服事表. Each returns a [RosterWrite], so screens offer
+/// Writes for 安排服事表. Each returns a [ChurchWrite], so screens offer
 /// 「復原」 instead of asking for confirmation.
 ///
 /// It reads the church's services, saved rosters, members and staff orders
@@ -39,6 +32,8 @@ class RosterActions {
   final Ref _ref;
 
   ChurchData get _data => _ref.churchData;
+
+  ChurchWrites get _writes => _ref.read(churchWritesProvider);
 
   static T _loaded<T>(AsyncValue<T> value, String what) =>
       value.hasValue ? value.requireValue : throw StateError('$what not loaded');
@@ -81,42 +76,29 @@ class RosterActions {
   bool _untouchedDraft(Roster before, Roster next) =>
       !before.saved && _now(before).copyWith(saved: false) == next.copyWith(saved: false);
 
-  /// Prevents an undo from following the reader into another account/church.
-  VoidCallback _scopeGuard(ChurchData data) {
-    final uid = _ref.read(uidProvider);
-    return () {
-      if (_data.churchId != data.churchId || _ref.read(uidProvider) != uid) {
-        throw const CloudException(CloudErrorCode.permissionDenied);
-      }
-    };
-  }
-
   Roster? _persisted(Roster r) => r.saved ? r : null;
 
   /// Writes [next] over [before], which differ only in [role]; undo
   /// restores that duty while preserving unrelated edits.
-  RosterWrite _dutyWrite(Roster before, Roster next, String role) {
-    final data = _data;
-    final guard = _scopeGuard(data);
+  ChurchWrite _dutyWrite(Roster before, Roster next, String role) {
     final index = before.duties.indexWhere((d) => d.role == role);
     final previous = index < 0 ? null : before.duties[index];
     final written = next.duties.where((d) => d.role == role).firstOrNull;
-    return (
-      done: data.compareAndSetRosters(before: {before.id: _persisted(before)}, after: {next.id: next}),
+    return _writes.rosters(
+      RosterChange(before: {before.id: _persisted(before)}, after: {next.id: next}),
       undo: () {
-        guard();
         final now = _now(before);
         if (now.duties.where((d) => d.role == role).firstOrNull != written) {
           throw const CloudException(CloudErrorCode.conflict);
         }
         // An untouched draft goes back to following its template.
         final restore = _untouchedDraft(before, next) ? null : _withDutyRestored(now, role, previous, index);
-        return data.compareAndSetRosters(before: {now.id: _persisted(now)}, after: {now.id: restore});
+        return RosterChange(before: {now.id: _persisted(now)}, after: {now.id: restore});
       },
     );
   }
 
-  RosterWrite setPeople(
+  ChurchWrite setPeople(
     Roster roster,
     String role,
     List<String> people, {
@@ -128,8 +110,6 @@ class RosterActions {
     final next = withPeople(roster, role, people, nameIds: _nameIds, order: afterOrder, guestNames: guestNames);
     if (ranking == null || order == afterOrder) return _dutyWrite(roster, next, role);
     if (roster.isEvent) throw StateError('Event rosters have no staff order');
-    final data = _data;
-    final guard = _scopeGuard(data);
     final before = <String, Roster?>{roster.id: _persisted(roster)};
     final after = <String, Roster?>{roster.id: next};
     for (final saved in _saved) {
@@ -139,20 +119,12 @@ class RosterActions {
       before[saved.id] = saved;
       after[saved.id] = sorted;
     }
-    return (
-      done: data.compareAndSetRosters(
+    return _writes.rosters(
+      RosterChange(
         before: before,
         after: after,
         staffOrder: (serviceType: roster.type, before: order, after: afterOrder),
       ),
-      undo: () {
-        guard();
-        return data.compareAndSetRosters(
-          before: after,
-          after: before,
-          staffOrder: (serviceType: roster.type, before: afterOrder, after: order),
-        );
-      },
     );
   }
 
@@ -172,30 +144,23 @@ class RosterActions {
 
   RosterPreview previewGuestRemoval(String type, String role, String name) => RosterPreview._(
     planGuestRemoval(saved: _saved, type: type, role: role, name: name, today: _ref.read(todayProvider)),
-    _data.churchId,
-    _ref.read(uidProvider),
+    _writes.scope(),
   );
 
   RosterPreview previewDutyRename(String type, String from, String to) => RosterPreview._(
     planDutyRename(saved: _saved, type: type, from: from, to: to, today: _ref.read(todayProvider)),
-    _data.churchId,
-    _ref.read(uidProvider),
+    _writes.scope(),
   );
 
   RosterPreview previewEventRename(String type, String from, String to) => RosterPreview._(
     planEventRename(saved: _saved, type: type, from: from, to: to, today: _ref.read(todayProvider)),
-    _data.churchId,
-    _ref.read(uidProvider),
+    _writes.scope(),
   );
 
   /// Applies exactly the previewed documents; a newer edit rejects the whole
   /// operation. Undo uses the reverse baseline, never overwriting newer work.
-  RosterWrite applyFuturePreview(RosterPreview preview) {
-    final data = _data;
-    void validate() {
-      if (_data.churchId != preview.churchId || _ref.read(uidProvider) != preview.uid) {
-        throw const CloudException(CloudErrorCode.permissionDenied);
-      }
+  ChurchWrite applyFuturePreview(RosterPreview preview) {
+    void stillFuture() {
       final today = _ref.read(todayProvider);
       if (preview.plan.conflicts.isNotEmpty ||
           preview.plan.before.values.any((r) => r == null || !r.day.isAfter(today))) {
@@ -203,24 +168,26 @@ class RosterActions {
       }
     }
 
-    validate();
-    return (
-      done: data.compareAndSetRosters(before: preview.plan.before, after: preview.plan.after),
+    preview.scope.check();
+    stillFuture();
+    final change = RosterChange(before: preview.plan.before, after: preview.plan.after);
+    return _writes.rosters(
+      change,
       undo: () {
-        validate();
-        return data.compareAndSetRosters(before: preview.plan.after, after: preview.plan.before);
+        stillFuture();
+        return change.reversed;
       },
     );
   }
 
-  RosterWrite removeDuty(Roster roster, String role) => _dutyWrite(roster, withoutDuty(roster, role), role);
+  ChurchWrite removeDuty(Roster roster, String role) => _dutyWrite(roster, withoutDuty(roster, role), role);
 
-  RosterWrite addDuty(Roster roster, String role) => setPeople(roster, role, const []);
+  ChurchWrite addDuty(Roster roster, String role) => setPeople(roster, role, const []);
 
   /// Adds those of [roles] that [roster] lacks, with nobody yet, in one
   /// write: 沿用 another event's duties. Undo takes back the ones still
   /// empty.
-  RosterWrite addDuties(Roster roster, List<String> roles) {
+  ChurchWrite addDuties(Roster roster, List<String> roles) {
     final have = {for (final d in roster.duties) d.role};
     final added = [
       for (final r in {...roles})
@@ -232,12 +199,9 @@ class RosterActions {
         for (final r in added) Duty(role: r),
       ],
     );
-    final data = _data;
-    final guard = _scopeGuard(data);
-    return (
-      done: data.compareAndSetRosters(before: {roster.id: _persisted(roster)}, after: {next.id: next}),
+    return _writes.rosters(
+      RosterChange(before: {roster.id: _persisted(roster)}, after: {next.id: next}),
       undo: () {
-        guard();
         final now = _now(roster);
         final restored = _untouchedDraft(roster, next)
             ? null
@@ -247,7 +211,7 @@ class RosterActions {
                     if (!added.contains(d.role) || d.people.isNotEmpty) d,
                 ],
               );
-        return data.compareAndSetRosters(before: {now.id: _persisted(now)}, after: {now.id: restored});
+        return RosterChange(before: {now.id: _persisted(now)}, after: {now.id: restored});
       },
     );
   }
@@ -255,7 +219,7 @@ class RosterActions {
   /// Sets the day's tags and, when requested, its common-event options in
   /// one events-only transaction. Any newer settings/day baseline refuses
   /// the whole write; undo reverses both baselines in the same transaction.
-  RosterWrite setEvents(Roster roster, List<EventTag> events, {List<EventTag> addToCommon = const []}) {
+  ChurchWrite setEvents(Roster roster, List<EventTag> events, {List<EventTag> addToCommon = const []}) {
     final next = roster.copyWith(events: events);
     // Ticking a tag off and on again only moves it to the end: the day
     // stays as it is (a draft stays a draft).
@@ -265,97 +229,39 @@ class RosterActions {
         ? null
         : service.copyWith(events: [...service.events, ...addToCommon]);
     if (!changed && common == null) return (done: Future<void>.value(), undo: () async {});
-    final data = _data;
-    final guard = _scopeGuard(data);
-    final before = <String, Roster?>{if (changed) roster.id: _persisted(roster)};
-    final after = <String, Roster?>{if (changed) next.id: next};
-    return (
-      done: data.compareAndSetRosters(
-        before: before,
-        after: after,
+    return _writes.rosters(
+      RosterChange(
+        before: {if (changed) roster.id: _persisted(roster)},
+        after: {if (changed) next.id: next},
         serviceChange: common == null ? null : (before: service!, after: common),
       ),
-      undo: () {
-        guard();
-        return data.compareAndSetRosters(
-          before: after,
-          after: before,
-          serviceChange: common == null ? null : (before: common, after: service!),
-        );
-      },
     );
   }
 
   /// Swaps two people in [role] in one batch; undo puts both days' [role]
   /// back, also in one batch.
-  RosterWrite swap(String role, SwapSide a, SwapSide b) {
+  ChurchWrite swap(String role, SwapSide a, SwapSide b) {
     final (a2, b2) = swapPeople(role, a, b, nameIds: _nameIds, order: _order(a.roster.type));
     int indexOf(Roster r) => r.duties.indexWhere((d) => d.role == role);
     Duty? dutyOf(Roster r) => indexOf(r) < 0 ? null : r.duties[indexOf(r)];
     final prevA = dutyOf(a.roster), prevB = dutyOf(b.roster);
     final idxA = indexOf(a.roster), idxB = indexOf(b.roster);
-    final data = _data;
-    final guard = _scopeGuard(data);
-    return (
-      done: data.compareAndSetRosters(
+    return _writes.rosters(
+      RosterChange(
         before: {a.roster.id: _persisted(a.roster), b.roster.id: _persisted(b.roster)},
         after: {a2.id: a2, b2.id: b2},
       ),
       undo: () {
-        guard();
         final nowA = _now(a.roster), nowB = _now(b.roster);
         if (dutyOf(nowA) != dutyOf(a2) || dutyOf(nowB) != dutyOf(b2)) {
           throw const CloudException(CloudErrorCode.conflict);
         }
-        return data.compareAndSetRosters(
+        return RosterChange(
           before: {nowA.id: _persisted(nowA), nowB.id: _persisted(nowB)},
           after: {
             nowA.id: _untouchedDraft(a.roster, a2) ? null : _withDutyRestored(nowA, role, prevA, idxA),
             nowB.id: _untouchedDraft(b.roster, b2) ? null : _withDutyRestored(nowB, role, prevB, idxB),
           },
-        );
-      },
-    );
-  }
-
-  /// Saves a new ranking for [role] and re-sorts the upcoming saved days.
-  /// Writes nothing when nothing moved.
-  Future<void> setRanking(String type, String role, List<String> ranking) async {
-    final before = _order(type);
-    final after = before.withRanking(role, ranking);
-    final changes = before.changesTo(after);
-    if (changes.isEmpty) return;
-    final originals = <String, Roster?>{};
-    final resorted = <String, Roster?>{};
-    for (final r in _saved) {
-      if (r.type != type) continue;
-      final next = after.applyTo(r);
-      if (identical(next, r)) continue;
-      originals[r.id] = r;
-      resorted[r.id] = next;
-    }
-    await _data.compareAndSetRosters(
-      before: originals,
-      after: resorted,
-      staffOrder: (serviceType: type, before: before, after: after),
-    );
-  }
-
-  /// Settings changes are admin-only in the backend. The single-service
-  /// baseline avoids replacing another service or overwriting newer edits.
-  RosterWrite updateService(Service before, Service after, {({String from, String to})? dutyRename}) {
-    final data = _data;
-    final uid = _ref.read(uidProvider);
-    return (
-      done: data.compareAndSetService(before: before, after: after, dutyRename: dutyRename),
-      undo: () {
-        if (_data.churchId != data.churchId || _ref.read(uidProvider) != uid) {
-          throw const CloudException(CloudErrorCode.permissionDenied);
-        }
-        return data.compareAndSetService(
-          before: after,
-          after: before,
-          dutyRename: dutyRename == null ? null : (from: dutyRename.to, to: dutyRename.from),
         );
       },
     );
@@ -386,7 +292,7 @@ class RosterActions {
   /// preview are not overwritten, and the staff order the plan grew. Undo
   /// puts back each imported day whole, as it was before the import (an
   /// edit made to it since is lost), and the staff order.
-  RosterWrite applyImport(
+  ChurchWrite applyImport(
     String type,
     List<dynamic> rows, {
     ImportMode mode = ImportMode.merge,
@@ -395,15 +301,11 @@ class RosterActions {
   }) {
     final plan = previewImport(type, rows, mode: mode, people: people);
     if (!plan.canApply) throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.unparseable);
-    final data = _data;
-    final uid = _ref.read(uidProvider);
+    final scope = _writes.scope();
     void validate() {
+      scope.check();
       final member = _ref.read(meProvider).value;
-      if (uid == null ||
-          _ref.read(uidProvider) != uid ||
-          _ref.read(churchDataProvider)?.churchId != data.churchId ||
-          !_ref.read(churchOpenProvider) ||
-          !(member?.canEditRosters(type) ?? false)) {
+      if (scope.uid == null || !_ref.read(churchOpenProvider) || !(member?.canEditRosters(type) ?? false)) {
         throw const CloudException(CloudErrorCode.permissionDenied);
       }
     }
@@ -419,21 +321,17 @@ class RosterActions {
       throw const CloudException(CloudErrorCode.conflict);
     }
     final changedOrder = order.changesTo(plan.order).isNotEmpty;
-    return (
-      done: data.compareAndSetRosters(
-        before: before,
-        after: after,
-        via: 'import',
-        staffOrder: changedOrder ? (serviceType: type, before: order, after: plan.order) : null,
-      ),
+    final change = RosterChange(
+      before: before,
+      after: after,
+      via: 'import',
+      staffOrder: changedOrder ? (serviceType: type, before: order, after: plan.order) : null,
+    );
+    return _writes.rosters(
+      change,
       undo: () {
         validate();
-        return data.compareAndSetRosters(
-          before: after,
-          after: before,
-          via: 'import',
-          staffOrder: changedOrder ? (serviceType: type, before: plan.order, after: order) : null,
-        );
+        return change.reversed;
       },
     );
   }

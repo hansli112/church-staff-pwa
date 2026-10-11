@@ -12,13 +12,17 @@ import '../../domain/models.dart';
 import '../../domain/roster_import.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/app_update.dart';
+import '../../state/import_session.dart';
 import '../../state/providers.dart';
 import '../../state/roster_actions.dart';
+import '../common/errors.dart';
 import 'format.dart';
 
 final _quotaProvider = FutureProvider.autoDispose<PhotoQuota>((ref) => openChurch(ref).photoQuota());
 
 /// Photos and the documented JSON format enter the same editable preview.
+/// What is being imported lives in [importSessionProvider]; this screen
+/// shows it and asks.
 class ImportScreen extends ConsumerStatefulWidget {
   const ImportScreen({super.key, required this.serviceType});
   final String serviceType;
@@ -28,19 +32,16 @@ class ImportScreen extends ConsumerStatefulWidget {
 }
 
 class _ImportScreenState extends ConsumerState<ImportScreen> {
-  bool _busy = false;
   bool _ready = false;
   bool _paste = false;
-  String? _error;
-  ImportPlan? _plan;
-  List<dynamic> _rows = const [];
+  bool _applying = false;
   TextEditingController _json = TextEditingController();
-  ({String? cid, String? uid})? _sourceScope;
-  int _scopeEpoch = 0;
-  ({String? cid, String? uid}) get _scope => (cid: ref.read(currentChurchIdProvider), uid: ref.read(uidProvider));
-  bool get _sameScope => _scope == _sourceScope && _scope.cid != null && _scope.uid != null;
-  final _people = <String, ImportPersonChoice>{};
-  ImportMode _mode = ImportMode.merge;
+
+  ImportSession get _session => ref.read(importSessionProvider(widget.serviceType).notifier);
+
+  ImportDraft get _draft => ref.read(importSessionProvider(widget.serviceType));
+
+  bool get _busy => _draft.busy || _applying;
 
   @override
   void dispose() {
@@ -50,80 +51,48 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
 
   Future<T> _during<T>(Future<T> Function() work) => ref.read(updateEditLockProvider).during(work);
 
+  /// Whether the draft that was current at [key] still is.
+  bool _sameDraft(Object key) => identical(_session.draftKey, key);
+
+  /// The draft this page last showed: a new one (another church or account)
+  /// drops the pasted text.
+  Object? _shownDraft;
+
+  /// The preview last planned, still shown (its controls off) while the
+  /// page cannot edit for a moment: offline, or data reloading.
+  ImportPlan? _lastPlan;
+
   Future<void> _photos(ImageSource source) => _during(() => _readPhotos(source));
 
   Future<void> _readPhotos(ImageSource source) async {
-    final l10n = L10n.of(context);
-    final scope = _scope;
-    final epoch = _scopeEpoch;
-    final data = ref.churchData;
-    bool current() => mounted && _scope == scope && _scopeEpoch == epoch;
+    final key = _session.draftKey;
     try {
       final picker = ImagePicker();
       final files = source == ImageSource.camera
           ? [?await picker.pickImage(source: source, maxWidth: 2400, imageQuality: 85)]
           : await picker.pickMultiImage(maxWidth: 2400, imageQuality: 85, limit: 3);
-      if (!current() || files.isEmpty) return;
-      setState(() {
-        _busy = true;
-        _error = null;
-      });
+      if (!(mounted && _sameDraft(key)) || files.isEmpty) return;
       final images = [
         for (final f in files.take(3)) PhotoInput(mimeType: f.mimeType ?? 'image/jpeg', bytes: await f.readAsBytes()),
       ];
-      final rows = await data.recognizeRoster(widget.serviceType, images);
-      if (!current()) return;
-      ref.invalidate(_quotaProvider);
-      _makePlan(rows, clearChoices: true);
-    } on CloudException catch (e) {
-      if (!current()) return;
-      setState(
-        () => _error = switch ((e.code, e.reason)) {
-          (CloudErrorCode.quotaExceeded, CloudReason.platform) => l10n.photoPlatformOff,
-          (CloudErrorCode.quotaExceeded, _) => l10n.photoChurchLimit(ref.read(_quotaProvider).value?.limit ?? 30),
-          (_, CloudReason.tooLarge) => l10n.photoTooLarge,
-          (_, CloudReason.unparseable) => l10n.importPhotoFormatError,
-          (CloudErrorCode.unavailable, CloudReason.offlineReadOnly) => l10n.errOfflineReadOnly,
-          (CloudErrorCode.unavailable, _) => l10n.photoUnavailable,
-          _ => l10n.photoFailed,
-        },
-      );
-    } catch (_) {
-      if (current()) setState(() => _error = l10n.photoFailed);
-    } finally {
-      if (current()) setState(() => _busy = false);
+      if (!(mounted && _sameDraft(key))) return;
+      await _session.recognize(images);
+    } catch (e) {
+      // The picker or the files failing: nothing was read.
+      if (mounted && _sameDraft(key)) _session.fail(e);
     }
-  }
-
-  ImportPlan _planFor(List<dynamic> rows) =>
-      ref.read(rosterActionsProvider).previewImport(widget.serviceType, rows, people: _people, mode: _mode);
-
-  void _makePlan(List<dynamic> rows, {bool clearChoices = false}) {
-    if (!_sameScope) return;
-    setState(() {
-      // Do not mutate the recognizer's response or a backend-owned fixture.
-      _rows = jsonDecode(jsonEncode(rows)) as List<dynamic>;
-      if (clearChoices) _people.clear();
-      _plan = _planFor(_rows);
-      _error = null;
-    });
+    if (mounted) ref.invalidate(_quotaProvider);
   }
 
   void _parsePasted() {
-    if (!_sameScope || !_ready || _busy) return;
-    try {
-      final rows = jsonDecode(_json.text);
-      if (rows is! List) throw const FormatException();
-      _makePlan(rows, clearChoices: true);
-    } on FormatException {
-      setState(() => _error = L10n.of(context).importJsonSyntaxError);
-    }
+    if (!_ready || _busy) return;
+    _session.paste(_json.text);
   }
 
   Future<void> _resolveName(String raw, List<Member> candidates) => _during(() => _confirmName(raw, candidates));
 
   Future<void> _confirmName(String raw, List<Member> candidates) async {
-    final epoch = _scopeEpoch;
+    final key = _session.draftKey;
     final choice = await showAppSheet<ImportPersonChoice>(
       context,
       builder: (sheetContext) => ListView(
@@ -144,11 +113,8 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         ],
       ),
     );
-    if (!mounted || choice == null || !_ready || !_sameScope || epoch != _scopeEpoch) return;
-    setState(() {
-      _people[raw] = choice;
-      _plan = _planFor(_rows);
-    });
+    if (choice == null || !_ready || !(mounted && _sameDraft(key))) return;
+    _session.choose(raw, choice);
   }
 
   Future<_ImportEdit?> _edit({
@@ -157,14 +123,14 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     int? color,
     bool removable = false,
   }) async {
-    final epoch = _scopeEpoch;
+    final key = _session.draftKey;
     final result = await _during(
       () => showAppSheet<_ImportEdit>(
         context,
         builder: (_) => _ImportEditor(title: title, fields: fields, color: color, removable: removable),
       ),
     );
-    return mounted && _sameScope && epoch == _scopeEpoch ? result : null;
+    return mounted && _sameDraft(key) && _ready ? result : null;
   }
 
   Future<void> _editJson() async {
@@ -173,7 +139,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       fields: [
         _ImportField(
           'JSON',
-          const JsonEncoder.withIndent('  ').convert(_rows),
+          const JsonEncoder.withIndent('  ').convert(_draft.rows),
           lines: 10,
           validate: (text) {
             try {
@@ -186,12 +152,8 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         ),
       ],
     );
-    if (!mounted || result == null || !_ready) return;
-    _makePlan(jsonDecode(result.values.single) as List<dynamic>);
-  }
-
-  void _updateRow(int index, Map<String, dynamic> row) {
-    _makePlan([for (final (i, old) in _rows.indexed) i == index ? row : old]);
+    if (result == null) return;
+    _session.edit(jsonDecode(result.values.single) as List<dynamic>);
   }
 
   Future<void> _editDate(int index, Map<dynamic, dynamic> row) async {
@@ -205,8 +167,8 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         ),
       ],
     );
-    if (!mounted || result == null || !_ready) return;
-    _updateRow(index, Map<String, dynamic>.from(row)..['date'] = result.values.single.trim());
+    if (result == null) return;
+    _session.updateRow(index, Map<String, dynamic>.from(row)..['date'] = result.values.single.trim());
   }
 
   Future<void> _editDuty(int index, Map<dynamic, dynamic> row, int? dutyIndex) async {
@@ -226,7 +188,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       ],
       removable: dutyIndex != null,
     );
-    if (!mounted || result == null || !_ready) return;
+    if (result == null) return;
     if (result.remove) {
       duties.removeAt(dutyIndex!);
     } else {
@@ -240,7 +202,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         duties[dutyIndex] = next;
       }
     }
-    _updateRow(index, Map<String, dynamic>.from(row)..['duties'] = duties);
+    _session.updateRow(index, Map<String, dynamic>.from(row)..['duties'] = duties);
   }
 
   Future<void> _editEvent(int index, Map<dynamic, dynamic> row, int? eventIndex) async {
@@ -254,7 +216,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       color: color is int && color >= 0 && color < EventColors.count ? color : 0,
       removable: eventIndex != null,
     );
-    if (!mounted || result == null || !_ready) return;
+    if (result == null) return;
     if (result.remove) {
       events.removeAt(eventIndex!);
     } else {
@@ -265,117 +227,91 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         events[eventIndex] = next;
       }
     }
-    _updateRow(index, Map<String, dynamic>.from(row)..['events'] = events);
+    _session.updateRow(index, Map<String, dynamic>.from(row)..['events'] = events);
   }
 
-  Future<void> _repair(Future<void> Function() write) => _during(() => _repairSettings(write));
-
-  Future<void> _repairSettings(Future<void> Function() write) async {
-    if (!_sameScope || !_ready || _busy || ref.read(meProvider).value?.isAdmin != true) return;
-    final epoch = _scopeEpoch;
-    setState(() => _busy = true);
+  /// Admins: changes the service's settings so the import fits them.
+  Future<void> _repair(Future<void> Function() write) => _during(() async {
+    if (!_ready || _busy || ref.read(meProvider).value?.isAdmin != true) return;
+    final key = _session.draftKey;
     try {
       await write();
-      if (mounted && _sameScope && epoch == _scopeEpoch) Haptics.success();
-    } catch (_) {
-      if (mounted && _sameScope && epoch == _scopeEpoch) showToast(context, L10n.of(context).saveFailed);
-    } finally {
-      if (mounted && _sameScope && epoch == _scopeEpoch) setState(() => _busy = false);
+      if (mounted && _sameDraft(key)) Haptics.success();
+    } catch (e) {
+      if (mounted && _sameDraft(key)) showToast(context, saveErrorText(L10n.of(context), e));
     }
-  }
-
-  Service get _service =>
-      ref.read(servicesProvider).requireValue.byId(widget.serviceType) ?? (throw StateError('No service'));
-
-  Future<void> _repairDuty(String role) => _repair(() async {
-    final before = _service;
-    if (before.duties.contains(role)) return;
-    await ref.churchData.compareAndSetService(
-      before: before,
-      after: before.copyWith(duties: [...before.duties, role]),
-    );
   });
 
-  Future<void> _repairQualification(ImportQualification qualification) =>
-      _repair(() => ref.churchData.grantDuty(qualification.member.uid, widget.serviceType, qualification.role));
+  Future<void> _apply(ImportPlan shown) => _during(() => _applyShown(shown));
 
-  Future<void> _repairEvent(EventTag event) => _repair(() async {
-    final before = _service;
-    if (before.events.any((e) => e.name == event.name)) return;
-    await ref.churchData.compareAndSetService(
-      before: before,
-      after: before.copyWith(events: [...before.events, event]),
-    );
-  });
-
-  Future<void> _apply() => _during(_applyRows);
-
-  Future<void> _applyRows() async {
+  Future<void> _applyShown(ImportPlan shown) async {
     final l10n = L10n.of(context);
-    if (!_sameScope || !_ready || _busy || _plan?.canApply != true) return;
-    final epoch = _scopeEpoch;
-    final days = _plan!.rosters.length;
-    setState(() => _busy = true);
+    if (!_ready || _busy || !shown.canApply) return;
+    final key = _session.draftKey;
+    setState(() => _applying = true);
     try {
-      final write = ref
-          .read(rosterActionsProvider)
-          .applyImport(widget.serviceType, _rows, people: _people, mode: _mode, preview: _plan);
+      final write = _session.apply(shown);
       await write.done;
       Haptics.success();
-      if (!mounted || !_sameScope || epoch != _scopeEpoch) return;
-      showToast(context, l10n.importApplied(days), onUndo: write.undo);
+      if (!(mounted && _sameDraft(key))) return;
+      showToast(context, l10n.importApplied(shown.rosters.length), onUndo: write.undo);
       Navigator.of(context).pop();
     } on CloudException catch (error) {
-      if (mounted && _sameScope && epoch == _scopeEpoch) {
-        showToast(context, error.code == CloudErrorCode.conflict ? l10n.importConflict : l10n.saveFailed);
+      if (mounted && _sameDraft(key)) {
+        showToast(context, error.code == CloudErrorCode.conflict ? l10n.importConflict : errorText(l10n, error));
       }
     } catch (_) {
-      if (mounted && _sameScope && epoch == _scopeEpoch) showToast(context, l10n.saveFailed);
+      if (mounted && _sameDraft(key)) showToast(context, l10n.saveFailed);
     } finally {
-      if (mounted && _sameScope && epoch == _scopeEpoch) setState(() => _busy = false);
+      if (mounted) setState(() => _applying = false);
     }
   }
+
+  /// What to say about why the last photos or pasted text gave no rows.
+  String? _errorText(ImportDraft draft, L10n l10n) => switch (draft.error) {
+    FormatException() => l10n.importJsonSyntaxError,
+    CloudException(:final code, :final reason) => switch ((code, reason)) {
+      (CloudErrorCode.quotaExceeded, CloudReason.platform) => l10n.photoPlatformOff,
+      (CloudErrorCode.quotaExceeded, _) => l10n.photoChurchLimit(ref.read(_quotaProvider).value?.limit ?? 30),
+      (_, CloudReason.tooLarge) => l10n.photoTooLarge,
+      (_, CloudReason.unparseable) => l10n.importPhotoFormatError,
+      (CloudErrorCode.unavailable, CloudReason.offlineReadOnly) => l10n.errOfflineReadOnly,
+      (CloudErrorCode.unavailable, _) => l10n.photoUnavailable,
+      _ => l10n.photoFailed,
+    },
+    null => draft.scopeChanged ? l10n.importScopeChanged : null,
+    _ => l10n.photoFailed,
+  };
 
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
-    final scope = (cid: ref.watch(currentChurchIdProvider), uid: ref.watch(uidProvider));
-    if (_sourceScope != null && _sourceScope != scope) {
-      _scopeEpoch++;
-      _rows = const [];
-      _plan = null;
-      _people.clear();
-      _mode = ImportMode.merge;
+    final draft = ref.watch(importSessionProvider(widget.serviceType));
+    final key = _session.draftKey;
+    if (_shownDraft != null && !identical(_shownDraft, key)) {
       _paste = false;
-      _busy = false;
-      _error = l10n.importScopeChanged;
+      _applying = false;
+      _lastPlan = null;
       // The old field is removed in this frame; do not notify it mid-build.
       final old = _json;
       _json = TextEditingController();
       WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
     }
-    _sourceScope = scope;
+    _shownDraft = key;
+    final plan = ref.watch(importPlanProvider(widget.serviceType));
     _ready =
         ref.watch(rosterEditingProvider(widget.serviceType)) &&
         ref.watch(churchOpenProvider) &&
         (ref.watch(meProvider).value?.canEditRosters(widget.serviceType) ?? false);
-    if (_plan != null) {
-      // Readiness stays true when loaded data changes. Watch the actual
-      // preview inputs so a rendered frame records the latest baseline.
-      ref.watch(savedRostersProvider);
-      ref.watch(servicesProvider);
-      ref.watch(membersProvider);
-      ref.watch(staffOrderProvider(widget.serviceType));
-      ref.watch(todayProvider);
-    }
-    if (_ready && _plan != null) _plan = _planFor(_rows);
-    final plan = _plan;
+    if (_ready && plan != null) _lastPlan = plan;
+    if (!draft.loaded) _lastPlan = null;
+    final shown = _ready ? plan : _lastPlan;
     return Scaffold(
       appBar: AppBar(
-        title: Text(plan == null ? l10n.photoImport : l10n.importPreview),
+        title: Text(shown == null ? l10n.photoImport : l10n.importPreview),
         actions: [
-          if (plan != null)
+          if (shown != null)
             IconButton(
               tooltip: l10n.importJsonEdit,
               onPressed: _ready && !_busy ? _editJson : null,
@@ -383,11 +319,11 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
             ),
         ],
       ),
-      body: plan != null ? _preview(plan, l10n) : _start(l10n, c),
+      body: shown != null ? _preview(shown, draft, l10n) : _start(draft, l10n, c),
     );
   }
 
-  Widget _start(L10n l10n, AppColors c) {
+  Widget _start(ImportDraft draft, L10n l10n, AppColors c) {
     final quota = ref.watch(_quotaProvider).value;
     final blocked = !_ready || (quota != null && (!quota.platformOpen || quota.remaining <= 0));
     return ListView(
@@ -450,10 +386,10 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
             ],
           ),
         ],
-        if (_error != null)
+        if (_errorText(draft, l10n) case final error?)
           Padding(
             padding: const EdgeInsets.only(top: Space.m),
-            child: Text(_error!, style: AppText.subheadline.copyWith(color: c.destructive)),
+            child: Text(error, style: AppText.subheadline.copyWith(color: c.destructive)),
           ),
         if (_paste) ...[
           const SizedBox(height: Space.m),
@@ -569,50 +505,23 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     return rows.isEmpty ? [ListRow(title: l10n.importNoChange)] : rows;
   }
 
-  Set<String> get _sheetNames {
-    final names = <String>{};
-    for (final row in _rows) {
-      if (row is! Map || row['duties'] is! List) continue;
-      for (final duty in row['duties'] as List<dynamic>) {
-        if (duty is! Map || duty['people'] is! List) continue;
-        for (final name in duty['people'] as List<dynamic>) {
-          if (name is String && name.trim().isNotEmpty) names.add(name.trim());
-        }
-      }
-    }
-    return names;
-  }
-
-  List<Member> _candidates(String raw) {
-    final members = ref.read(membersProvider).value ?? const <Member>[];
-    final hints = ImportReport();
-    NameMatcher(members).resolve(raw, hints);
-    return [
-      for (final member in members)
-        if (member.name.trim() == raw ||
-            hints.notInList[raw]?.contains(member.name.trim()) == true ||
-            (hints.ambiguous.contains(raw) && member.name.trim().endsWith(raw)) ||
-            member.uid == _people[raw]?.uid)
-          member,
-    ];
-  }
-
-  String _nameStatus(String raw, ImportReport report, L10n l10n) {
+  String _nameStatus(String raw, ImportDraft draft, ImportReport report, L10n l10n) {
     if (report.unresolved.containsKey(raw)) {
       final candidates = report.unresolved[raw]!;
       return candidates.isEmpty
           ? l10n.importNoCandidate
           : l10n.importCandidates(candidates.map((m) => m.name).join('、'));
     }
-    final choice = _people[raw];
+    final choice = draft.people[raw];
     if (choice != null && choice.uid == null) return l10n.importGuestUnlinked;
-    final member = _candidates(
-      raw,
-    ).where((m) => choice == null ? m.name.trim() == raw : m.uid == choice.uid).firstOrNull;
+    final member = _session
+        .candidates(raw)
+        .where((m) => choice == null ? m.name.trim() == raw : m.uid == choice.uid)
+        .firstOrNull;
     return member == null ? l10n.importNameNeedsConfirm : l10n.importLinkedMember(member.name);
   }
 
-  Widget _preview(ImportPlan plan, L10n l10n) {
+  Widget _preview(ImportPlan plan, ImportDraft draft, L10n l10n) {
     final report = plan.report;
     final admin = ref.watch(meProvider).value?.isAdmin ?? false;
     final repairable = _ready && !_busy && admin;
@@ -622,20 +531,20 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
           child: ListView(
             padding: const EdgeInsets.only(bottom: Space.xl),
             children: [
-              if (_rows.isEmpty) EmptyState(message: l10n.importNothing),
+              if (draft.rows.isEmpty) EmptyState(message: l10n.importNothing),
               ListSection(
                 header: l10n.importMode,
                 children: [
                   ListRow(
                     title: l10n.importMerge,
-                    selected: _mode == ImportMode.merge,
-                    onTap: _ready && !_busy ? () => setState(() => _mode = ImportMode.merge) : null,
+                    selected: draft.mode == ImportMode.merge,
+                    onTap: _ready && !_busy ? () => _session.setMode(ImportMode.merge) : null,
                   ),
                   ListRow(
                     title: l10n.importReplace,
-                    selected: _mode == ImportMode.replace,
+                    selected: draft.mode == ImportMode.replace,
                     subtitle: l10n.importReplaceHelp,
-                    onTap: _ready && !_busy ? () => setState(() => _mode = ImportMode.replace) : null,
+                    onTap: _ready && !_busy ? () => _session.setMode(ImportMode.replace) : null,
                   ),
                 ],
               ),
@@ -653,15 +562,15 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                       ),
                   ],
                 ),
-              if (_sheetNames.isNotEmpty)
+              if (draft.names.isNotEmpty)
                 ListSection(
                   header: report.unresolved.isEmpty ? l10n.importNameLinks : l10n.importNamesNeedConfirm,
                   children: [
-                    for (final name in {...report.unresolved.keys, ..._sheetNames})
+                    for (final name in {...report.unresolved.keys, ...draft.names})
                       ListRow(
                         title: name,
-                        subtitle: _nameStatus(name, report, l10n),
-                        onTap: _ready && !_busy ? () => _resolveName(name, _candidates(name)) : null,
+                        subtitle: _nameStatus(name, draft, report, l10n),
+                        onTap: _ready && !_busy ? () => _resolveName(name, _session.candidates(name)) : null,
                       ),
                   ],
                 ),
@@ -674,19 +583,19 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                     for (final role in report.unknownDuties)
                       ListRow(
                         title: admin ? l10n.importAddConfiguredDuty(role) : l10n.importUnconfiguredDuty(role),
-                        onTap: repairable ? () => _repairDuty(role) : null,
+                        onTap: repairable ? () => _repair(() => _session.addDuty(role)) : null,
                       ),
                     for (final qualification in report.missingQualifications)
                       ListRow(
                         title: admin
                             ? l10n.importGrantQualification(qualification.member.name, qualification.role)
                             : l10n.importMissingQualification(qualification.member.name, qualification.role),
-                        onTap: repairable ? () => _repairQualification(qualification) : null,
+                        onTap: repairable ? () => _repair(() => _session.grantDuty(qualification)) : null,
                       ),
                     for (final event in report.unknownEvents)
                       ListRow(
                         title: admin ? l10n.importAddCommonEvent(event.name) : l10n.importNotCommonEvent(event.name),
-                        onTap: repairable ? () => _repairEvent(event) : null,
+                        onTap: repairable ? () => _repair(() => _session.addCommonEvent(event)) : null,
                       ),
                   ],
                 ),
@@ -695,7 +604,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                   header: l10n.importPastDays,
                   children: [for (final day in report.pastDays) ListRow(title: day)],
                 ),
-              for (final (i, row) in _rows.indexed)
+              for (final (i, row) in draft.rows.indexed)
                 if (row is Map) _inputRow(i, row, l10n),
               for (final change in plan.changes.values)
                 ListSection(
@@ -712,7 +621,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
             child: PrimaryButton(
               label: l10n.importApply,
               busy: _busy,
-              onPressed: _ready && plan.canApply ? _apply : null,
+              onPressed: _ready && plan.canApply ? () => _apply(plan) : null,
             ),
           ),
         ),

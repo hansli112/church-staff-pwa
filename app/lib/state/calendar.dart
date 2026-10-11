@@ -8,7 +8,10 @@ import '../env.dart';
 import '../domain/models.dart';
 import 'connectivity.dart';
 import 'app_update.dart';
+import 'calendar_months.dart';
 import 'providers.dart';
+
+export 'calendar_months.dart' show CalendarReadStatus;
 
 final calendarSettingsProvider = StreamProvider<CalendarSettings>((ref) {
   if (!ref.watch(churchOpenProvider)) return Stream.value(const CalendarSettings());
@@ -75,19 +78,12 @@ final calendarCacheLifecycleProvider = Provider<CalendarReadCache>((ref) {
   return cache;
 });
 
-class CalendarReadStatus {
-  const CalendarReadStatus({this.cached = false, this.fetchedAt, this.refreshError});
-  final bool cached;
-  final DateTime? fetchedAt;
-  final Object? refreshError;
-}
-
 /// Alongside the existing events interface, so callers never mistake an
 /// offline persisted month for a new successful server read.
 final calendarReadStatusProvider = Provider.autoDispose.family<CalendarReadStatus, String>((ref, month) {
   ref.watch(calendarEventsProvider(month));
   final online = ref.watch(onlineProvider);
-  final status = ref.watch(_calendarMonthsProvider)?.statuses[month] ?? const CalendarReadStatus();
+  final status = ref.watch(_calendarMonthsProvider)?.status(month) ?? const CalendarReadStatus();
   return CalendarReadStatus(
     cached: status.cached || !online,
     fetchedAt: status.fetchedAt,
@@ -95,224 +91,72 @@ final calendarReadStatusProvider = Provider.autoDispose.family<CalendarReadStatu
   );
 });
 
-bool _accessRefused(Object error) =>
-    error is CloudException &&
-    (error.code == CloudErrorCode.permissionDenied ||
-        error.code == CloudErrorCode.churchClosed ||
-        error.reason == CloudReason.reconnect);
-
-const _retention = Duration(seconds: 60);
-const _maxIdleMonths = 6;
-
-final _calendarMonthsProvider = Provider<_CalendarMonths?>((ref) {
+/// The months of the calendar the reader may see now; none without access.
+final _calendarMonthsProvider = Provider<CalendarMonths?>((ref) {
   final scope = ref.watch(_calendarScopeProvider);
   final cache = ref.watch(calendarCacheLifecycleProvider);
   if (scope == null) return null;
-  final months = _CalendarMonths(scope, cache);
+  final months = CalendarMonths(
+    key: (uid: scope.uid, churchId: scope.data.churchId, calendarId: scope.calendarId, revision: scope.revision),
+    read: scope.data.calendarEvents,
+    cache: cache,
+    cacheScope: _cacheScope(scope),
+    clock: ref.watch(clockProvider),
+  );
   ref.onDispose(months.close);
   return months;
 });
 
-/// Only idle months count towards the bound; a month on screen is not evicted.
-class _CalendarMonths {
-  _CalendarMonths(this.scope, this.cache);
-
-  final _CalendarScope scope;
-  final CalendarReadCache cache;
-  final statuses = <String, CalendarReadStatus>{};
-  final entries = <String, _CalendarEvents>{};
-  final _keepers = <String, void Function()>{};
-  final _idle = <String>{};
-  final _mutations = <Object, _CalendarMutation>{};
-  int generation = 0;
-  Object? refusal;
-  StackTrace? refusalStack;
-
-  void revoke(Object error, StackTrace stack) {
-    generation++;
-    refusal = error;
-    refusalStack = stack;
-    cache.select(null);
-    statuses.clear();
-    for (final entry in entries.values.toList()) {
-      entry.deny(error, stack);
-    }
-  }
-
-  _CalendarWrite begin(CalendarEvent event, CalendarEvent? previous) {
-    unawaited(cache.invalidate({...event.months, ...?previous?.months}));
-    final key = event.id ?? Object();
-    final mutation = _mutations.putIfAbsent(key, _CalendarMutation.new);
-    mutation.events.addAll([event, ?previous]);
-    mutation.pending++;
-    if (mutation.pending > 1) mutation.overlapped = true;
-    return _CalendarWrite(key, mutation, ++mutation.order, generation);
-  }
-
-  void finish(_CalendarWrite write) {
-    final mutation = write.mutation;
-    if (--mutation.pending != 0) return;
-    _mutations.remove(write.key);
-    if (!mutation.overlapped) return;
-    // Calendar replies have no revision: after overlapping writes, only a
-    // complete read can tell which change the server committed last.
-    for (final entry in entries.values.toList()) {
-      if (entry.affectedBy(mutation.events)) entry.reload();
-    }
-  }
-
-  void idle(String month) {
-    _idle.remove(month);
-    _idle.add(month);
-    while (_idle.length > _maxIdleMonths) {
-      final oldest = _idle.first;
-      _idle.remove(oldest);
-      _keepers.remove(oldest)?.call();
-    }
-  }
-
-  void remove(String month, _CalendarEvents events) {
-    if (!identical(entries[month], events)) return;
-    entries.remove(month);
-    _keepers.remove(month);
-    _idle.remove(month);
-  }
-
-  void close() {
-    for (final release in _keepers.values.toList()) {
-      release();
-    }
-    _keepers.clear();
-    _idle.clear();
-    entries.clear();
-  }
-}
-
-class _CalendarMutation {
-  final events = <CalendarEvent>[];
-  int pending = 0;
-  int order = 0;
-  bool overlapped = false;
-}
-
-class _CalendarWrite {
-  _CalendarWrite(this.key, this.mutation, this.order, this.generation);
-
-  final Object key;
-  final _CalendarMutation mutation;
-  final int order;
-  final int generation;
-
-  bool get latest => order == mutation.order;
-}
-
-/// A month's events, retained for up to a minute after the backend read.
-/// At most six idle months are kept; quick revisits also share pending reads.
-/// Refresh/invalidate still requests the complete backend list.
+/// A month's events, from [CalendarMonths]: reused for a minute after the
+/// read, shared while read; a refresh or invalidation reads the complete
+/// month again.
 final calendarEventsProvider = AsyncNotifierProvider.autoDispose.family<_CalendarEvents, List<CalendarEvent>, String>(
   _CalendarEvents.new,
 );
 
-class _CalendarEvents extends AsyncNotifier<List<CalendarEvent>> {
+class _CalendarEvents extends AsyncNotifier<List<CalendarEvent>> implements CalendarMonthView {
   _CalendarEvents(this.month);
 
   final String month;
-  _CalendarScope? _scope;
+  CalendarMonths? _months;
+  bool _built = false;
 
   @override
   FutureOr<List<CalendarEvent>> build() {
     final months = ref.watch(_calendarMonthsProvider);
-    final scope = months?.scope;
-    if (_scope != scope && _scope != null) {
+    final same = identical(_months, months);
+    if (!same && _months != null) {
+      // Another account, church or calendar: nothing of the old one stays.
       state = const AsyncData([]);
       state = const AsyncLoading();
     }
-    _scope = scope;
+    // Built again on the same months: a refresh or an invalidation.
+    final refresh = _built && same;
+    _built = true;
+    _months = months;
     if (months == null) return const [];
-    final clock = ref.watch(clockProvider);
+    months.show(month, this);
     final requestRef = ref;
-    final keep = ref.keepAlive();
-    months.entries[month] = this;
-    months._keepers[month] = keep.close;
-    Timer? expiry;
-    DateTime? idleUntil;
-    DateTime? freshUntil;
-    void expireWhenIdle() {
-      expiry?.cancel();
-      if (idleUntil == null) return;
-      final until = freshUntil != null && freshUntil!.isBefore(idleUntil!) ? freshUntil! : idleUntil!;
-      final wait = until.difference(clock());
-      expiry = Timer(wait > Duration.zero ? wait : Duration.zero, keep.close);
-    }
-
-    ref.onCancel(() {
-      idleUntil = clock().add(_retention);
-      expireWhenIdle();
-      months.idle(month);
-    });
+    ref.onCancel(() => months.pause(month));
     ref.onResume(() {
-      expiry?.cancel();
-      months._idle.remove(month);
-      final until = freshUntil ?? idleUntil;
-      if (until != null && !clock().isBefore(until)) {
+      months.show(month, this);
+      if (!months.fresh(month)) {
         scheduleMicrotask(() {
           if (requestRef.mounted) requestRef.invalidateSelf();
         });
       }
-      idleUntil = null;
     });
-    ref.onDispose(() {
-      expiry?.cancel();
-      months.remove(month, this);
-    });
-    final generation = months.generation;
-    void report(CalendarReadStatus status) {
-      if (!requestRef.mounted || generation != months.generation) return;
-      // calendarReadStatusProvider watches this month's events, so it reads
-      // the status once the read settles; invalidating it here is circular.
-      months.statuses[month] = status;
-    }
-
-    Future<List<CalendarEvent>> load() async {
-      final authorized = _cacheScope(months.scope);
-      final cached = authorized != null && authorized == months.cache.scope ? months.cache.read(month) : null;
-      try {
-        final events = await months.scope.data.calendarEvents(month);
-        if (generation != months.generation) Error.throwWithStackTrace(months.refusal!, months.refusalStack!);
-        if (requestRef.mounted) {
-          final fetched = clock();
-          freshUntil = fetched.add(_retention);
-          expireWhenIdle();
-          report(CalendarReadStatus(fetchedAt: fetched));
-          if (authorized != null) unawaited(months.cache.save(authorized, month, events, fetchedAt: fetched));
-        }
-        return events;
-      } catch (error, stack) {
-        if (requestRef.mounted) {
-          freshUntil = clock().add(_retention);
-          expireWhenIdle();
-          if (_accessRefused(error)) {
-            months.revoke(error, stack);
-          } else if (error is CloudException && error.code == CloudErrorCode.unavailable) {
-            report(
-              CalendarReadStatus(
-                cached: true,
-                fetchedAt: cached?.fetchedAt ?? months.statuses[month]?.fetchedAt,
-                refreshError: error,
-              ),
-            );
-            if (cached != null && authorized == months.cache.scope && generation == months.generation) {
-              return cached.events;
-            }
-          }
-        }
-        Error.throwWithStackTrace(error, stack);
-      }
-    }
-
-    return Future.microtask(load);
+    ref.onDispose(() => months.release(month, this));
+    return months.events(month, refresh: refresh);
   }
 
+  @override
+  void show(List<CalendarEvent> events) => state = AsyncData(events);
+
+  @override
+  void reload() => ref.invalidateSelf();
+
+  @override
   void deny(Object error, StackTrace stack) {
     // Riverpod preserves previous data on AsyncError/AsyncLoading. Replace it
     // first: even the month grid must no longer show unauthorized events.
@@ -321,46 +165,6 @@ class _CalendarEvents extends AsyncNotifier<List<CalendarEvent>> {
     state = AsyncError(error, stack);
     state = const AsyncData([]);
     state = AsyncError(error, stack);
-  }
-
-  void reload() => ref.invalidateSelf();
-
-  bool affectedBy(Iterable<CalendarEvent> events) =>
-      state.isLoading ||
-      events.any(
-        (event) =>
-            event.months.contains(month) || (event.id != null && (state.value?.any((e) => e.id == event.id) ?? false)),
-      );
-
-  void delete(CalendarEvent event) {
-    final loaded = state.value;
-    if (loaded == null || state.hasError || event.id == null) {
-      ref.invalidateSelf();
-      return;
-    }
-    final reading = state.isLoading;
-    state = AsyncData([
-      for (final e in loaded)
-        if (e.id != event.id) e,
-    ]);
-    if (reading) ref.invalidateSelf();
-  }
-
-  void save(CalendarEvent saved, CalendarEvent? previous) {
-    final loaded = state.value;
-    if (loaded == null || state.hasError || saved.id == null) {
-      ref.invalidateSelf();
-      return;
-    }
-    final reading = state.isLoading;
-    state = AsyncData(
-      [
-        for (final e in loaded)
-          if (e.id != saved.id && (previous?.id == null || e.id != previous!.id)) e,
-        if (saved.months.contains(month)) saved,
-      ]..sort((a, b) => a.start.compareTo(b.start)),
-    );
-    if (reading) ref.invalidateSelf();
   }
 }
 
@@ -372,48 +176,33 @@ class CalendarActions {
 
   final Ref _ref;
 
-  bool _current(_CalendarMonths? months, {int? generation}) =>
+  bool _current(CalendarMonths? months, {int? generation}) =>
       _ref.mounted &&
       months != null &&
       identical(_ref.read(_calendarMonthsProvider), months) &&
       (generation == null || months.generation == generation);
 
-  _CalendarMonths? _sameCurrentContext(_CalendarMonths? origin) {
+  /// The months now read for the same account, church and calendar as
+  /// [origin], after a trip away and back.
+  CalendarMonths? _sameKey(CalendarMonths? origin) {
     if (!_ref.mounted || origin == null) return null;
     final current = _ref.read(_calendarMonthsProvider);
-    if (current == null ||
-        current.scope.uid != origin.scope.uid ||
-        current.scope.data.churchId != origin.scope.data.churchId ||
-        current.scope.calendarId != origin.scope.calendarId ||
-        current.scope.revision != origin.scope.revision) {
-      return null;
-    }
-    return current;
+    return current?.key == origin.key ? current : null;
   }
 
-  void _reconcileReturnedContext(_CalendarMonths? origin, Iterable<CalendarEvent> events, {int? generation}) {
+  void _reconcileReturnedContext(CalendarMonths? origin, Iterable<CalendarEvent> events, {int? generation}) {
     if (_current(origin, generation: generation)) return;
-    final current = _sameCurrentContext(origin);
-    if (current == null) return;
     // A trip away and back may have fetched before this write completed.
     // Re-read in the current authorized context; never transplant old data.
-    for (final entry in current.entries.values.toList()) {
-      if (entry.affectedBy(events)) entry.reload();
-    }
+    _sameKey(origin)?.reload(events);
   }
 
-  void _recheckReadAccess(_CalendarMonths? months) {
-    final current = _sameCurrentContext(months);
-    if (current == null) return;
-    // A calendar editor may lose write access but remain a member who can
-    // read. Only a refusal from calendarEvents may purge readable months.
-    for (final entry in current.entries.values.toList()) {
-      entry.reload();
-    }
-  }
+  /// A calendar editor may lose write access but remain a member who can
+  /// read. Only a refusal from calendarEvents may purge readable months.
+  void _recheckReadAccess(CalendarMonths? months) => _sameKey(months)?.reloadAll();
 
   void _saved(
-    _CalendarMonths? months,
+    CalendarMonths? months,
     CalendarEvent event,
     CalendarEvent saved,
     CalendarEvent? previous, {
@@ -423,9 +212,7 @@ class CalendarActions {
       _reconcileReturnedContext(months, [event, saved, ?previous], generation: generation);
       return;
     }
-    for (final entry in months!.entries.values.toList()) {
-      if (entry.affectedBy([event, saved, ?previous])) entry.save(saved, previous);
-    }
+    months!.saved(event, saved, previous);
   }
 
   /// Saves [event], new or changed from [previous].
@@ -434,14 +221,14 @@ class CalendarActions {
     final write = months?.begin(event, previous);
     try {
       final saved = await _ref.churchData.calendarSave(event, previous: previous);
-      write?.mutation.events.add(saved);
+      write?.savedAs(saved);
       if (write?.latest ?? true) {
         _saved(months, event, saved, previous, generation: write?.generation);
       } else {
         _reconcileReturnedContext(months, [event, saved, ?previous], generation: write?.generation);
       }
     } catch (error) {
-      if (_accessRefused(error)) _recheckReadAccess(months);
+      if (calendarAccessRefused(error)) _recheckReadAccess(months);
       rethrow;
     } finally {
       if (_current(months) && write != null) months!.finish(write);
@@ -457,14 +244,12 @@ class CalendarActions {
     try {
       await data.calendarDelete(event);
       if (_current(months, generation: write?.generation) && (write?.latest ?? true)) {
-        for (final entry in months!.entries.values.toList()) {
-          if (entry.affectedBy([event])) entry.delete(event);
-        }
+        months!.deleted(event);
       } else {
         _reconcileReturnedContext(months, [event], generation: write?.generation);
       }
     } catch (error) {
-      if (_accessRefused(error)) _recheckReadAccess(months);
+      if (calendarAccessRefused(error)) _recheckReadAccess(months);
       rethrow;
     } finally {
       if (_current(months) && write != null) months!.finish(write);
@@ -476,10 +261,10 @@ class CalendarActions {
       final restoring = months!.begin(event.anew, null);
       try {
         final saved = await data.calendarSave(event.anew, restoreRosterOf: event.id);
-        restoring.mutation.events.add(saved);
+        restoring.savedAs(saved);
         _saved(months, event, saved, null, generation: restoring.generation);
       } catch (error) {
-        if (_accessRefused(error)) _recheckReadAccess(months);
+        if (calendarAccessRefused(error)) _recheckReadAccess(months);
         rethrow;
       } finally {
         if (_current(months)) months.finish(restoring);

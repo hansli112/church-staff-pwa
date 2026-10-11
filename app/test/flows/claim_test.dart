@@ -35,7 +35,7 @@ MemoryBackend movedChurch({bool signIn = true}) {
   final cid = b.addChurch('恩典堂', id: 'grace');
   b.setServices(cid, const [sundayService]);
   b.addMember(cid, pastor);
-  b.pendingMembers[cid] = {'old-mei': meiPending};
+  b.addPending(cid, meiPending, rosterIds: [Roster.idFor('sunday', Day(2026, 10, 4))]);
   b.rosters[cid]![Roster.idFor('sunday', Day(2026, 10, 4))] = Roster(
     type: 'sunday',
     day: Day(2026, 10, 4),
@@ -104,7 +104,7 @@ void main() {
     final b = seededChurch(
       extra: const [Member(uid: 'mei-google', name: '美玉', email: 'mei@gmail.com')],
     );
-    b.pendingMembers['grace'] = {'old-mei': meiPending};
+    b.addPending('grace', meiPending, rosterIds: [Roster.idFor('sunday', Day(2026, 10, 18))]);
     b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, 18))] = Roster(
       type: 'sunday',
       day: Day(2026, 10, 18),

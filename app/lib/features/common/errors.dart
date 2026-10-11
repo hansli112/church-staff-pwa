@@ -1,6 +1,9 @@
 import '../../data/backend.dart';
 import '../../l10n/app_localizations.dart';
 
+/// What to tell the user when a save failed with [error].
+String saveErrorText(L10n l10n, Object error) => error is CloudException ? errorText(l10n, error) : l10n.saveFailed;
+
 /// What to tell the user about [error]: how to fix it, no technical detail.
 String errorText(L10n l10n, Object error) {
   if (error is AuthException) {

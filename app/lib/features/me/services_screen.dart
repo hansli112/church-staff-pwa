@@ -8,9 +8,11 @@ import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
+import '../../state/church_writes.dart';
 import '../../state/providers.dart';
 import '../../state/roster_actions.dart';
 import '../rosters/future_changes.dart';
+import '../common/errors.dart';
 import '../common/labels.dart';
 
 /// 服事設定: the church's services (聚會別). IDs only ever grow: a disabled
@@ -35,9 +37,9 @@ class ServicesScreen extends ConsumerWidget {
 
     Future<void> save(List<Service> next) async {
       try {
-        await ref.churchData.saveServices(next);
-      } catch (_) {
-        if (context.mounted) showToast(context, l10n.saveFailed);
+        await ref.read(churchWritesProvider).serviceList(list, next).done;
+      } catch (e) {
+        if (context.mounted) showToast(context, saveErrorText(l10n, e));
       }
     }
 
@@ -219,7 +221,7 @@ class ServiceEditorScreen extends ConsumerWidget {
     Future<bool> save(Service next, {String? message, ({String from, String to})? dutyRename}) => runWithUndo(
       context,
       message ?? L10n.of(context).serviceSettingsSaved,
-      () => ref.read(rosterActionsProvider).updateService(service, next, dutyRename: dutyRename),
+      () => ref.read(churchWritesProvider).service(service, next, dutyRename: dutyRename),
     );
 
     Future<void> synchronize(String target, {String? from, bool event = false}) async {

@@ -16,7 +16,8 @@ export const RESTORE_DAYS = 30;
 
 /**
  * The services a new church starts with. Mirrors defaultServices in
- * app/lib/data/memory/memory_backend.dart.
+ * app/lib/data/memory/memory_backend.dart; testdata/church_rules.json holds
+ * both to it.
  */
 export const DEFAULT_SERVICES = [
   {

@@ -3,17 +3,17 @@ import 'package:flutter/material.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
-import '../../data/backend.dart' show CloudException;
 import '../../domain/day.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
+import '../../state/church_writes.dart';
 import '../../state/roster_actions.dart';
 import '../common/errors.dart';
 import 'format.dart';
 
 /// Runs an online write and offers its real, failure-reporting undo only
 /// after it succeeds. A slow SDK response is not treated as an offline save.
-Future<bool> runWithUndo(BuildContext context, String message, RosterWrite Function() write) async {
+Future<bool> runWithUndo(BuildContext context, String message, ChurchWrite Function() write) async {
   final l10n = L10n.of(context);
   // A duty row may disappear before the server acknowledgment; keep the
   // feedback on its navigator rather than dropping it with that row.
@@ -28,7 +28,7 @@ Future<bool> runWithUndo(BuildContext context, String message, RosterWrite Funct
     return context.mounted;
   } catch (error) {
     if (feedbackContext.mounted) {
-      showToast(feedbackContext, error is CloudException ? errorText(l10n, error) : l10n.saveFailed);
+      showToast(feedbackContext, saveErrorText(l10n, error));
     }
     return false;
   }

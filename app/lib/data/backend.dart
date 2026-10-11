@@ -16,6 +16,9 @@ library;
 import '../domain/day.dart';
 import '../domain/models.dart';
 import '../domain/staff_order.dart';
+import 'roster_change.dart';
+
+export 'roster_change.dart';
 
 /// The signed-in account, as far as the app needs to know.
 class AuthUser {
@@ -152,36 +155,15 @@ abstract interface class ChurchData {
   /// Every service's staff order, read once (export).
   Future<Map<String, StaffOrder>> allStaffOrders();
 
-  Future<void> saveRoster(Roster roster);
+  /// Writes [change] atomically, only if every document it names still
+  /// matches [RosterChange.before]; otherwise [CloudErrorCode.conflict]
+  /// with nothing written.
+  Future<void> compareAndSetRosters(RosterChange change);
 
-  /// Writes all of [rosters] at once, or none of them (swap, undo).
-  ///
-  /// [via] marks where the change came from; `import` tells the backend
-  /// not to send a push for every day.
-  Future<void> saveRosters(List<Roster> rosters, {String via = 'app'});
-
-  /// Atomically replaces (or deletes) exactly these documents only if their
-  /// persisted values still match [before]. Null means an absent document.
-  /// The maps must have identical keys; each non-null roster must match its
-  /// key. [Roster.saved] is presentation state, not part of the baseline.
-  /// A changed baseline is [CloudErrorCode.conflict], with no writes applied.
-  Future<void> compareAndSetRosters({
-    required Map<String, Roster?> before,
-    required Map<String, Roster?> after,
-    String via = 'app',
-    ({String serviceType, StaffOrder before, StaffOrder after})? staffOrder,
-    ({Service before, Service after})? serviceChange,
-  });
-
-  Future<void> deleteRoster(Roster roster);
-
-  /// Writes only the duties in [changes]; null removes that duty's ranking.
-  Future<void> updateStaffOrder(
-    String serviceType,
-    Map<String, List<String>?> changes,
-  );
-
-  Future<void> saveServices(List<Service> services);
+  /// Replaces the whole list of services (adding one, reordering), only
+  /// if it is still [before]; otherwise [CloudErrorCode.conflict]. Never
+  /// none; IDs once used stay valid.
+  Future<void> compareAndSetServiceList({required List<Service> before, required List<Service> after});
 
   /// Updates one unchanged service, preserving every other service. A duty
   /// rename also moves members'/pending members' zone duties and staff order
@@ -192,7 +174,10 @@ abstract interface class ChurchData {
     ({String from, String to})? dutyRename,
   });
 
-  Future<void> saveMember(Member member);
+  /// Writes what an admin sets on a member ([Member.sameAdminFields]) only
+  /// if it is still [before]; otherwise [CloudErrorCode.conflict]. The
+  /// member's own notification settings are left alone.
+  Future<void> compareAndSetMember({required Member before, required Member after});
 
   /// Gives member [uid] [duty] in [serviceType], applied to the member as
   /// they are when written (admins): nothing else on them changes.
