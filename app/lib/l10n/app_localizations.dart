@@ -1591,11 +1591,53 @@ abstract class L10n {
   /// **'服事提醒'**
   String get notifReminder;
 
-  /// No description provided for @notifReminderSub.
+  /// No description provided for @notifReminderWeeklySub.
+  ///
+  /// In zh, this message translates to:
+  /// **'每週一晚上，列出這週的服事'**
+  String get notifReminderWeeklySub;
+
+  /// No description provided for @notifReminderDayBeforeSub.
   ///
   /// In zh, this message translates to:
   /// **'服事前一天晚上提醒你'**
-  String get notifReminderSub;
+  String get notifReminderDayBeforeSub;
+
+  /// No description provided for @notifReminderBothSub.
+  ///
+  /// In zh, this message translates to:
+  /// **'每週一晚上，和服事前一天晚上'**
+  String get notifReminderBothSub;
+
+  /// No description provided for @notifReminderTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'服事提醒時間'**
+  String get notifReminderTime;
+
+  /// No description provided for @notifReminderWeekly.
+  ///
+  /// In zh, this message translates to:
+  /// **'每週一晚上'**
+  String get notifReminderWeekly;
+
+  /// No description provided for @notifReminderDayBefore.
+  ///
+  /// In zh, this message translates to:
+  /// **'前一天晚上'**
+  String get notifReminderDayBefore;
+
+  /// No description provided for @notifReminderBoth.
+  ///
+  /// In zh, this message translates to:
+  /// **'兩個都要'**
+  String get notifReminderBoth;
+
+  /// No description provided for @notifReminderTimeFooter.
+  ///
+  /// In zh, this message translates to:
+  /// **'都在晚上 7 點'**
+  String get notifReminderTimeFooter;
 
   /// No description provided for @notifRosterChange.
   ///

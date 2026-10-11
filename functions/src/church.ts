@@ -57,7 +57,7 @@ export async function openChurch(
   name: string,
   opts: {
     services?: { services: unknown[]; ids: string[] };
-    admin?: { name?: string; groups?: string[]; zones?: unknown[]; zoneTypes?: string[]; notificationPrefs?: { muted: string[] } };
+    admin?: { name?: string; groups?: string[]; zones?: unknown[]; zoneTypes?: string[]; notificationPrefs?: { muted: string[]; reminderTiming?: string } };
     extra?: Record<string, unknown>;
     /** A church ID picked beforehand, e.g. for data written first. */
     cid?: string;

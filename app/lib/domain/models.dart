@@ -114,6 +114,11 @@ class Zone {
 /// Kinds of push notification a member can turn off per church.
 enum NotificationKind { reminder, rosterChange, memberLeft }
 
+/// When a member is reminded of their duties: Monday evening of the week's
+/// duties (Monday to Sunday), the evening before each, or both. Matches
+/// ReminderTiming in functions/src/notifications.ts.
+enum ReminderTiming { weekly, dayBefore, both }
+
 @immutable
 class Member {
   const Member({
@@ -124,6 +129,7 @@ class Member {
     this.groups = const {},
     this.zones = const [],
     this.mutedNotifications = const {},
+    this.reminderTiming = ReminderTiming.weekly,
     this.joinedAt,
   });
 
@@ -134,6 +140,7 @@ class Member {
   final Set<Group> groups;
   final List<Zone> zones;
   final Set<NotificationKind> mutedNotifications;
+  final ReminderTiming reminderTiming;
   final DateTime? joinedAt;
 
   bool get isAdmin => role == Role.admin;
@@ -209,6 +216,7 @@ class Member {
     Set<Group>? groups,
     List<Zone>? zones,
     Set<NotificationKind>? mutedNotifications,
+    ReminderTiming? reminderTiming,
   }) => Member(
     uid: uid,
     name: name ?? this.name,
@@ -217,6 +225,7 @@ class Member {
     groups: groups ?? this.groups,
     zones: zones ?? this.zones,
     mutedNotifications: mutedNotifications ?? this.mutedNotifications,
+    reminderTiming: reminderTiming ?? this.reminderTiming,
     joinedAt: joinedAt,
   );
 }

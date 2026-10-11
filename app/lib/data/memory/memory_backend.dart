@@ -840,6 +840,15 @@ class MemoryChurchData implements ChurchData {
   }
 
   @override
+  Future<void> setReminderTiming(String uid, ReminderTiming timing) async {
+    if (uid != _uid) throw const CloudException(CloudErrorCode.permissionDenied);
+    final m = _b.requireMember(churchId);
+    await _b.write(
+      () => _b.members[churchId]![uid] = m.copyWith(reminderTiming: timing),
+    );
+  }
+
+  @override
   Stream<List<Invite>> invites() => _b.watch(() {
     _requireAdmin();
     return _b.invites.values.where((i) => i.churchId == churchId).toList()

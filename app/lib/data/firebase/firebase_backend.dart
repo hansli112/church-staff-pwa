@@ -731,7 +731,13 @@ class FirestoreChurchData implements ChurchData {
   @override
   Future<void> setNotificationPrefs(String uid, Set<NotificationKind> muted) {
     final ref = _col('members').doc(uid);
-    return _write(ref, (tx) => tx.update(ref, {'notificationPrefs': notificationPrefsToJson(muted)}));
+    return _write(ref, (tx) => tx.update(ref, {'notificationPrefs.muted': mutedToJson(muted)}));
+  }
+
+  @override
+  Future<void> setReminderTiming(String uid, ReminderTiming timing) {
+    final ref = _col('members').doc(uid);
+    return _write(ref, (tx) => tx.update(ref, {'notificationPrefs.reminderTiming': timing.name}));
   }
 
   @override

@@ -827,7 +827,28 @@ class L10nZh extends L10n {
   String get notifReminder => '服事提醒';
 
   @override
-  String get notifReminderSub => '服事前一天晚上提醒你';
+  String get notifReminderWeeklySub => '每週一晚上，列出這週的服事';
+
+  @override
+  String get notifReminderDayBeforeSub => '服事前一天晚上提醒你';
+
+  @override
+  String get notifReminderBothSub => '每週一晚上，和服事前一天晚上';
+
+  @override
+  String get notifReminderTime => '服事提醒時間';
+
+  @override
+  String get notifReminderWeekly => '每週一晚上';
+
+  @override
+  String get notifReminderDayBefore => '前一天晚上';
+
+  @override
+  String get notifReminderBoth => '兩個都要';
+
+  @override
+  String get notifReminderTimeFooter => '都在晚上 7 點';
 
   @override
   String get notifRosterChange => '服事表異動';

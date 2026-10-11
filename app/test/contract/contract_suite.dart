@@ -548,6 +548,22 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect((await g.church.member(g.mei).first)!.mutedNotifications, {NotificationKind.reminder});
       await expectLater(g.church.setNotificationPrefs(g.editor, {NotificationKind.reminder}), denied());
     });
+
+    test('reminders come weekly until a member picks another time, which muting keeps', () async {
+      final g = await Grace.open(w);
+      await w.signIn(Grace.meiEmail);
+      expect((await g.church.member(g.mei).first)!.reminderTiming, ReminderTiming.weekly);
+      await g.church.setReminderTiming(g.mei, ReminderTiming.dayBefore);
+      await g.church.setNotificationPrefs(g.mei, {NotificationKind.rosterChange});
+      final mei = (await g.church.member(g.mei).first)!;
+      expect(mei.reminderTiming, ReminderTiming.dayBefore);
+      expect(mei.mutedNotifications, {NotificationKind.rosterChange});
+      await g.church.setReminderTiming(g.mei, ReminderTiming.both);
+      final both = (await g.church.member(g.mei).first)!;
+      expect(both.reminderTiming, ReminderTiming.both);
+      expect(both.mutedNotifications, {NotificationKind.rosterChange});
+      await expectLater(g.church.setReminderTiming(g.editor, ReminderTiming.both), denied());
+    });
   });
 
   group('rosters', () {

@@ -9,9 +9,10 @@ import '../../state/push.dart';
 import '../../state/session.dart';
 import '../church/add_to_home.dart';
 
-/// Which notifications I get from this church. Stored on my member doc
-/// (`notificationPrefs`, the one field I may write there). The system
-/// permission is asked for here, the first time it is needed.
+/// Which notifications I get from this church, and when I am reminded of my
+/// duties. Stored on my member doc (`notificationPrefs`, the one field I may
+/// write there). The system permission is asked for here, the first time it
+/// is needed.
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
 
@@ -52,8 +53,22 @@ class NotificationsScreen extends ConsumerWidget {
       }
     }
 
+    Future<void> setTiming(ReminderTiming timing) async {
+      try {
+        await ref.churchData.setReminderTiming(me.uid, timing);
+      } catch (_) {
+        if (context.mounted) showToast(context, l10n.saveFailed);
+      }
+    }
+
+    final timings = [
+      (ReminderTiming.weekly, l10n.notifReminderWeekly, l10n.notifReminderWeeklySub),
+      (ReminderTiming.dayBefore, l10n.notifReminderDayBefore, l10n.notifReminderDayBeforeSub),
+      (ReminderTiming.both, l10n.notifReminderBoth, l10n.notifReminderBothSub),
+    ];
+    final reminderSub = timings.firstWhere((t) => t.$1 == me.reminderTiming).$3;
     final kinds = [
-      (NotificationKind.reminder, l10n.notifReminder, l10n.notifReminderSub),
+      (NotificationKind.reminder, l10n.notifReminder, reminderSub),
       (
         NotificationKind.rosterChange,
         l10n.notifRosterChange,
@@ -108,6 +123,19 @@ class NotificationsScreen extends ConsumerWidget {
                 ),
             ],
           ),
+          if (!off && !muted.contains(NotificationKind.reminder))
+            ListSection(
+              header: l10n.notifReminderTime,
+              footer: l10n.notifReminderTimeFooter,
+              children: [
+                for (final (timing, title, _) in timings)
+                  ListRow(
+                    title: title,
+                    selected: me.reminderTiming == timing,
+                    onTap: () => setTiming(timing),
+                  ),
+              ],
+            ),
         ],
       ),
     );

@@ -70,6 +70,11 @@ Member memberFromJson(String uid, Json data) {
         for (final kind in NotificationKind.values)
           if (kind.name == name) kind,
     },
+    reminderTiming: _enumByName(
+      ReminderTiming.values,
+      prefs is Map ? prefs['reminderTiming'] : null,
+      ReminderTiming.weekly,
+    ),
     joinedAt: readTime(data['joinedAt']),
   );
 }
@@ -172,12 +177,13 @@ PendingMember pendingMemberFromJson(String id, Json data) {
   );
 }
 
-Json notificationPrefsToJson(Set<NotificationKind> muted) => {
-  'muted': [
-    for (final k in NotificationKind.values)
-      if (muted.contains(k)) k.name,
-  ],
-};
+Json notificationPrefsToJson(Set<NotificationKind> muted) => {'muted': mutedToJson(muted)};
+
+/// `notificationPrefs.muted`.
+List<String> mutedToJson(Set<NotificationKind> muted) => [
+  for (final k in NotificationKind.values)
+    if (muted.contains(k)) k.name,
+];
 
 EventTag? _event(Object? raw) {
   if (raw is! Map || raw['name'] is! String) return null;

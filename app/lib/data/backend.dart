@@ -187,7 +187,11 @@ abstract interface class ChurchData {
   /// leaving.
   Future<void> removeMember(String uid);
 
+  /// Which notifications member [uid] (only themself) turned off here.
   Future<void> setNotificationPrefs(String uid, Set<NotificationKind> muted);
+
+  /// When member [uid] (only themself) is reminded of their duties here.
+  Future<void> setReminderTiming(String uid, ReminderTiming timing);
 
   Stream<List<Invite>> invites();
 
