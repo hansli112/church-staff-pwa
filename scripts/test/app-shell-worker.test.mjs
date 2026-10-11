@@ -25,7 +25,7 @@ function release(letter, { wasm = false } = {}) {
   const pointer = { schema: 1, project: 'demo-martha', id, metadata: `/releases/${id}/release.json`, manifest: `/releases/${id}/release-manifest.json`, manifestSha256: sha(manifestBytes) };
   return { id, pointer, manifest, responses: new Map([...source.map(([url, body]) => [origin + url, body]), [origin + pointer.metadata, JSON.stringify(pointer)], [origin + pointer.manifest, manifestBytes]]) };
 }
-function worker(a) {
+function worker(a, { clientUrl = origin + '/me' } = {}) {
   const listeners = {};
   const requests = [];
   const responses = new Map(a.responses);
@@ -38,7 +38,7 @@ function worker(a) {
     return { async match(request) { return store.get(key(request))?.clone(); }, async put(request, response) { store.set(key(request), response.clone()); }, async keys() { return [...store.keys()].map((url) => new Request(url)); } };
   }, async keys() { return [...stores.keys()]; } };
   let offline = false;
-  const self = { location: new URL(origin + '/martha_app_sw.js'), clients: { async claim() {}, async get(id) { return { id, url: origin + '/me' }; } }, async skipWaiting() {}, addEventListener(name, fn) { listeners[name] = fn; } };
+  const self = { location: new URL(origin + '/martha_app_sw.js'), clients: { async claim() {}, async get(id) { return { id, url: clientUrl }; } }, async skipWaiting() {}, addEventListener(name, fn) { listeners[name] = fn; } };
   runInNewContext(readFileSync(join(root, 'app/web/martha_app_sw.js'), 'utf8'), { self, caches, crypto: webcrypto, URL, Response, Request, Headers, TextEncoder, console, fetch: async (request) => {
     const url = key(request); requests.push(url);
     if (offline) throw new TypeError('offline');
@@ -146,4 +146,31 @@ test('an update to a wasm release stages every entry before it can apply', async
   assert.equal((await w.message('APPLY', { release: b.pointer, safe: true })).ok, true);
   w.setOffline();
   assert.equal(await (await w.request('/home', true)).text(), `<html>${b.id}</html>`);
+});
+
+test('an update applies from 我的 even when the tab first opened elsewhere', async () => {
+  // A window client's url is where the tab was created, not where the app
+  // has navigated since: the app starts at /home.
+  const a = release('a');
+  const b = release('b');
+  const w = worker(a, { clientUrl: origin + '/home' });
+  await w.message('INIT', { boot: a.pointer, used: [] });
+  for (const [url, response] of b.responses) w.responses.set(url, response);
+  w.responses.set(origin + '/release.json', JSON.stringify(b.pointer));
+  assert.equal((await w.message('CHECK', { project: 'demo-martha', runningId: a.id })).available, true);
+  assert.equal((await w.message('APPLY', { release: b.pointer, safe: true, path: '/rosters' })).ok, false);
+  assert.equal((await w.message('APPLY', { release: b.pointer, safe: true, path: '/me' })).ok, true);
+  w.setOffline();
+  assert.equal(await (await w.request('/home', true)).text(), `<html>${b.id}</html>`);
+});
+
+test('a page from before the path was sent can still update, having checked its own page', async () => {
+  const a = release('a');
+  const b = release('b');
+  const w = worker(a, { clientUrl: origin + '/home' });
+  await w.message('INIT', { boot: a.pointer, used: [] });
+  for (const [url, response] of b.responses) w.responses.set(url, response);
+  w.responses.set(origin + '/release.json', JSON.stringify(b.pointer));
+  await w.message('CHECK', { project: 'demo-martha', runningId: a.id });
+  assert.equal((await w.message('APPLY', { release: b.pointer, safe: true })).ok, true);
 });

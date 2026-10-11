@@ -39,6 +39,9 @@ test('page reports frozen boot version and never reloads for visibility or updat
   window.marthaUpdate.setEditing(false);
   await window.marthaUpdate.apply();
   assert.equal(reloads, 1);
+  // The worker cannot see where the app has navigated, only where the tab
+  // opened, so the page says.
+  assert.equal(messages.find((m) => m.type === 'APPLY').path, '/me');
 });
 
 test('page tells the worker which main entries and engine it ran, and nothing else of its own', async () => {

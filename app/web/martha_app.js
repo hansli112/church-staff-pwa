@@ -66,7 +66,7 @@
       if (editing || focused?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(focused?.tagName || '') ||
           !/^\/(?:c\/[^/]+\/)?me\/?$/.test(window.location.pathname)) throw new Error('Finish editing before updating');
       if (!staged) throw new Error('Check for an update first');
-      await send('APPLY', { release: staged, safe: true });
+      await send('APPLY', { release: staged, safe: true, path: window.location.pathname });
     },
     reload() {
       const focused = document.activeElement;
