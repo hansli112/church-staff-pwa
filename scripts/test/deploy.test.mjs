@@ -78,6 +78,18 @@ test('deploy CLI builds a clean output on dev-to-prod switches without deleting 
   assert.equal(readFileSync(join(archive, 'test-prod/main.dart.ad50759298.wasm'), 'utf8'), 'wasm entry');
 });
 
+test('deploy CLI never builds on generated code a previous build left behind', (t) => {
+  // Flutter kept a web plugin registrant from before a plugin was swapped,
+  // and the deploy shipped the old plugin.
+  const dir = deployment(t);
+  const stale = join(dir, 'app/.dart_tool/flutter_build/0123456789abcdef/web_plugin_registrant.dart');
+  mkdirSync(dirname(stale), { recursive: true });
+  writeFileSync(stale, "import 'package:google_sign_in_web/google_sign_in_web.dart';");
+  const result = deploy(dir, 'dev', 'console.log("martha");');
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(existsSync(stale), false);
+});
+
 test('failed build keeps the last prepared project assets available for the next attempt', (t) => {
   const dir = deployment(t);
   const initial = deploy(dir, 'dev', 'console.log("martha");');

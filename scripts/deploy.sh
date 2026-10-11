@@ -24,6 +24,10 @@ if [[ ",$only," == *",hosting,"* ]]; then
   # versa). Published immutable assets live separately in .firebase/web-assets
   # and survive this cleanup, including when the build or deploy fails.
   rm -rf -- "$root/app/build/web"
+  # Flutter's build cache can keep generated code across builds: a deploy
+  # once shipped a web plugin registrant from before a plugin was swapped.
+  # A release build compiles everything anyway.
+  rm -rf -- "$root/app/.dart_tool/flutter_build"
   # --wasm also builds the JS version: Chrome and Android run the faster
   # wasm one, Safari, iOS and Firefox (which cannot) the JS one.
   ( cd "$root/app" && flutter build web --wasm --dart-define-from-file="config/$env_name.json" )
