@@ -55,6 +55,10 @@
         "destination": "/terms.html"
       },
       {
+        "source": "/delete-account",
+        "destination": "/delete-account.html"
+      },
+      {
         "source": "/support",
         "destination": "/support.html"
       },

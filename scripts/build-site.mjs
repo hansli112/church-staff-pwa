@@ -169,11 +169,13 @@ for (const [file, path] of [['index.html', '/'], ['support.html', '/support']]) 
   writeFileSync(join(out, file), fill(readFileSync(join(landing, file), 'utf8'), path));
   listed.push(path);
 }
-// The legal pages are opened from the app, so they keep their own header
-// with no way to the support page (app stores forbid steering to outside
-// payment); they are not listed while they are drafts.
-for (const file of ['privacy.html', 'terms.html']) {
-  writeFileSync(join(out, file), fill(readFileSync(join(landing, file), 'utf8'), `/${basename(file, '.html')}`));
+// The legal pages (and how to delete an account) are opened from the app
+// and the stores, so they keep their own header with no way to the support
+// page (app stores forbid steering to outside payment).
+for (const file of ['privacy.html', 'terms.html', 'delete-account.html']) {
+  const path = `/${basename(file, '.html')}`;
+  writeFileSync(join(out, file), fill(readFileSync(join(landing, file), 'utf8'), path));
+  listed.push(path);
 }
 
 // The blog.
