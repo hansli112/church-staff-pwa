@@ -24,12 +24,14 @@
               />
             <!-- Church URLs and invite links (/c/...) open the app when it is
                  installed (App Links; the site serves
-                 /.well-known/assetlinks.json). The hosts change to the real
-                 domain once it is bought (#37). -->
+                 /.well-known/assetlinks.json). marthasit.web.app stays so
+                 links shared before the domain (#37) still open the app;
+                 www.marthasit.com only redirects, so it is not listed. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="marthasit.com" android:pathPrefix="/c/"/>
                 <data android:scheme="https" android:host="marthasit.web.app" android:pathPrefix="/c/"/>
                 <data android:scheme="https" android:host="marthasit-dev.web.app" android:pathPrefix="/c/"/>
             </intent-filter>

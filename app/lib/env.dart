@@ -35,7 +35,7 @@ enum Env {
     if (override.isNotEmpty) return override;
     if (kIsWeb) return Uri.base.origin;
     return switch (this) {
-      Env.prod => 'https://marthasit.web.app',
+      Env.prod => 'https://marthasit.com',
       _ => 'https://marthasit-dev.web.app',
     };
   }
