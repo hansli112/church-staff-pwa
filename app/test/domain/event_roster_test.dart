@@ -13,7 +13,25 @@ void main() {
     final data = jsonDecode(File('../testdata/event_days.json').readAsStringSync()) as Map<String, dynamic>;
     for (final c in (data['cases'] as List).cast<Map<String, dynamic>>()) {
       test(c['name'] as String, () {
-        final e = calendarEventFromJson({...c['event'] as Map<String, dynamic>, 'id': 'x', 'title': 't'})!;
+        final timeZone = ChurchTimeZone.of(c['timeZone'] as String?);
+        // As the backend sends them: on the church's clock, with its offset.
+        String sent(String t) {
+          if (!t.contains('T')) return t;
+          final at = DateTime.parse(t);
+          final o = timeZone.offsetAt(at);
+          final hh = o.inHours.abs().toString().padLeft(2, '0');
+          final mm = (o.inMinutes.abs() % 60).toString().padLeft(2, '0');
+          return '${timeZone.clock(at).toIso8601String().substring(0, 19)}${o.isNegative ? '-' : '+'}$hh:$mm';
+        }
+
+        final event = c['event'] as Map<String, dynamic>;
+        final e = calendarEventFromJson({
+          ...event,
+          'start': sent(event['start'] as String),
+          'end': sent(event['end'] as String),
+          'id': 'x',
+          'title': 't',
+        })!;
         final days = eventDays(e);
         expect((days.first.key, days.last.key), (c['dateKey'], c['endDateKey']));
       });

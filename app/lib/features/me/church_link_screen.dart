@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../domain/church_link.dart';
-import '../../domain/church_time.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
@@ -154,7 +153,9 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
         ? l10n.linkSourceFailed(linkErrorText(l10n, content.error!, content.errorStatus))
         : content.fetchedAt == null
         ? null
-        : l10n.linkSourceUpdated(shortMonthDay(l10n).add_Hm().format(churchTime(content.fetchedAt!)));
+        : l10n.linkSourceUpdated(
+            shortMonthDay(l10n).add_Hm().format(ref.watch(churchTimeZoneProvider).clock(content.fetchedAt!)),
+          );
     final fieldPadding = const EdgeInsets.symmetric(horizontal: Space.m);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.churchLink)),

@@ -241,6 +241,7 @@ describe('教會本身', () => {
     await assertFails(updateDoc(ref(ADMIN_A), { homeName: 8 }));
     await assertFails(updateDoc(ref(ADMIN_A), { homeName: '民生', name: '改名' }));
     await assertFails(updateDoc(ref(MEMBER_A), { homeName: '民生' }));
+    await assertFails(updateDoc(ref(ADMIN_A), { timeZone: 'America/Chicago' }), 'the time zone through setChurchTimeZone only');
     await assertFails(updateDoc(ref(ADMIN_B), { homeName: '民生' }), 'another church’s admin');
     await assertSucceeds(updateDoc(ref(ADMIN_A), { homeName: deleteField() }));
     await assertFails(updateDoc(doc(as(MEMBER_S), `churches/${SUSPENDED}`), { homeName: '停用' }));

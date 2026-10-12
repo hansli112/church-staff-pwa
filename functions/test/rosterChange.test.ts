@@ -120,6 +120,16 @@ describe('reading a roster change', () => {
     assert.equal(pushed.length, 1);
     assert.equal((await queued()).length, 1);
   });
+
+  test("a past day is the church's", async () => {
+    await church();
+    // Saturday 19:00 in Taipei is still Saturday 4:00 in Los Angeles, and
+    // already Saturday in Taipei.
+    await db.doc('churches/C1').update({ timeZone: 'America/Los_Angeles' });
+    assert.notEqual(await write('C1', '2026-10-03', [duty('司琴', ['美玉'])]), null);
+    await db.doc('churches/C1').update({ timeZone: 'Pacific/Auckland' });
+    assert.equal(await write('C1', '2026-10-03', [duty('司琴', ['志豪'])]), null, 'Sunday already in Auckland');
+  });
 });
 
 describe('push', () => {
@@ -276,6 +286,14 @@ describe('an event’s roster', () => {
     pushed = [];
     await writeEvent('C1', { duties: [duty('主持', ['美玉'])], via: 'relink' }, { editedBy: null });
     await writeEvent('C1', null, { editedBy: null });
+    assert.equal(pushed.length, 0);
+  });
+
+  test("given its days on the church's new clock (via timeZone): nothing moved, nobody told", async () => {
+    await church();
+    await writeEvent('C1', { duties: [duty('主持', ['美玉'])] });
+    pushed = [];
+    assert.equal(await writeEvent('C1', { dateKey: '2026-12-23', endDateKey: '2026-12-23', duties: [duty('主持', ['美玉'])], via: 'timeZone' }, { editedBy: null }), null);
     assert.equal(pushed.length, 0);
   });
 

@@ -840,6 +840,9 @@ class FirestoreChurchData implements ChurchData {
       _write(_church, (tx) => tx.update(_church, {'homeName': name ?? FieldValue.delete()}));
 
   @override
+  Future<void> setTimeZone(ChurchTimeZone timeZone) => _call('setChurchTimeZone', {'timeZone': timeZone.id});
+
+  @override
   Future<void> uploadLogo(List<int> bytes) async {
     await _transaction((tx) async {
       await tx.get(_church);
@@ -893,11 +896,11 @@ class FirestoreChurchData implements ChurchData {
   Future<Uri> calendarAuthUrl() async => Uri.parse((await _call('calendarAuthUrl'))['url'] as String);
 
   @override
-  Future<List<({String id, String name})>> calendarList() async {
+  Future<List<CalendarChoice>> calendarList() async {
     final d = await _call('calendarList');
     return [
       for (final c in d['calendars'] as List<dynamic>? ?? const [])
-        if (c is Map) (id: c['id'] as String, name: c['name'] as String? ?? ''),
+        if (c is Map) (id: c['id'] as String, name: c['name'] as String? ?? '', timeZone: c['timeZone'] as String?),
     ];
   }
 
@@ -1347,8 +1350,8 @@ class FirebaseCloudApi implements CloudApi {
   Future<Object?> _call(String name, [Map<String, Object?>? data]) => _calls.call(name, data);
 
   @override
-  Future<String> createChurch(String name) async =>
-      _asMap(await _call('createChurch', {'name': name}))['churchId'] as String;
+  Future<String> createChurch(String name, {ChurchTimeZone timeZone = ChurchTimeZone.fallback}) async =>
+      _asMap(await _call('createChurch', {'name': name, 'timeZone': timeZone.id}))['churchId'] as String;
 
   @override
   Future<Invite> previewInvite(String code) async {
@@ -1412,8 +1415,16 @@ class FirebaseCloudApi implements CloudApi {
   }
 
   @override
-  Future<String> moveCommit(String path, {required String churchName, String? me}) async =>
-      _asMap(await _call('moveCommit', {'path': path, 'churchName': churchName, 'me': me}))['churchId'] as String;
+  Future<String> moveCommit(
+    String path, {
+    required String churchName,
+    String? me,
+    ChurchTimeZone timeZone = ChurchTimeZone.fallback,
+  }) async =>
+      _asMap(
+            await _call('moveCommit', {'path': path, 'churchName': churchName, 'me': me, 'timeZone': timeZone.id}),
+          )['churchId']
+          as String;
 
   @override
   Future<List<PendingClaim>> pendingClaims() async {

@@ -4,14 +4,33 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
+import '../../data/backend.dart';
+import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
+import '../common/time_zones.dart';
 import 'calendar_screen.dart';
 
-final _calendarListProvider = FutureProvider.autoDispose<List<({String id, String name})>>(
+final _calendarListProvider = FutureProvider.autoDispose<List<CalendarChoice>>(
   (ref) => openChurch(ref).calendarList(),
 );
+
+/// Says so when the picked calendar keeps another time zone than the
+/// church's: its times look different in Google Calendar than here.
+String? _timeZoneDiffers(L10n l10n, String? calendarTimeZone, ChurchTimeZone church) {
+  if (calendarTimeZone == null || calendarTimeZone == church.id) return null;
+  final known = ChurchTimeZone.byId(calendarTimeZone);
+  // Another name for the same clock, winter and summer (Taipei and Hong Kong).
+  final sameClock =
+      known != null &&
+      [DateTime.utc(2026), DateTime.utc(2026, 7)].every((t) => known.offsetAt(t) == church.offsetAt(t));
+  if (sameClock) return null;
+  return l10n.calendarTimeZoneDiffers(
+    known == null ? calendarTimeZone : timeZoneCity(l10n, known),
+    timeZoneCity(l10n, church),
+  );
+}
 
 /// Admins connect the church's Google Calendar here and pick which calendar
 /// it shows. The consent screen opens in the browser; the backend stores the
@@ -80,6 +99,11 @@ class CalendarSettingsScreen extends ConsumerWidget {
                       ErrorRetry(message: l10n.loadFailed, onRetry: () => ref.invalidate(_calendarListProvider)),
                   data: (calendars) => ListSection(
                     header: l10n.calPickCalendar,
+                    footer: _timeZoneDiffers(
+                      l10n,
+                      calendars.where((cal) => cal.id == settings.calendarId).firstOrNull?.timeZone,
+                      ref.watch(churchTimeZoneProvider),
+                    ),
                     children: [
                       for (final cal in calendars)
                         ListRow(

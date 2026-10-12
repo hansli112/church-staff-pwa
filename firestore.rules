@@ -130,7 +130,7 @@ service cloud.firestore {
     }
 
     // The event's title and days are copied from the calendar, the days in
-    // UTC+8 like every dateKey, with where the event is (calendarId, and a
+    // the church's time zone like every dateKey, with where the event is (calendarId, and a
     // recurring event's series and original start) for eventSync. Only the
     // backend cancels one (cancelledAt), when its event is deleted.
     function validEventRoster(rosterId) {
@@ -199,7 +199,9 @@ service cloud.firestore {
       allow read: if hasMembership(cid);
 
       // An admin sets the home-screen name (removing the field falls back to
-      // the church name). Everything else on the church doc is the backend's.
+      // the church name). Everything else on the church doc is the backend's,
+      // the time zone too (setChurchTimeZone: it also clears the calendar's
+      // cached months and moves the church link's next fetch).
       allow update: if isAdmin(cid)
         && onlyTouches(['homeName'])
         && (!('homeName' in request.resource.data)

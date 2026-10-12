@@ -3,9 +3,10 @@ import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { Timestamp, type DocumentSnapshot, type QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 import { churchAccess, isChurchOpen } from './access.js';
-import { CHURCH_TIME_ZONE, fail, type Caller, type Deps } from './common.js';
+import { fail, type Caller, type Deps } from './common.js';
 import { LIMITS } from './limits.js';
 import { seal, unseal } from './sealing.js';
+import { timeZoneOf } from './timeZones.js';
 
 /**
  * 外部通知 (webhooks): a church's admin gives an https URL and a secret;
@@ -191,7 +192,7 @@ export function envelope(church: DocumentSnapshot, event: WebhookEvent, details:
     source: 'martha',
     churchId: church.id,
     churchName: (church.get('name') as string | undefined) ?? '',
-    timeZone: CHURCH_TIME_ZONE,
+    timeZone: timeZoneOf(church),
     ...details,
   };
 }

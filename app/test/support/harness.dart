@@ -12,6 +12,7 @@ import 'package:martha/core/languages.dart';
 import 'package:martha/deferred_pages.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/church_time.dart';
+import 'package:martha/features/common/time_zones.dart';
 import 'package:martha/l10n/app_localizations.dart';
 import 'package:martha/state/providers.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
@@ -20,13 +21,19 @@ import 'package:url_launcher_platform_interface/url_launcher_platform_interface.
 
 /// Thursday 2026-10-01, 09:00 at the church: the time every widget test
 /// starts at, whatever zone the machine running the tests is in (CI is UTC).
-final testNow = churchInstant(DateTime(2026, 10, 1, 9));
-final testToday = churchToday(testNow);
+final testNow = ChurchTimeZone.taipei.instantOf(DateTime.utc(2026, 10, 1, 9));
+final testToday = ChurchTimeZone.taipei.today(testNow);
 
 /// The clock a test backend runs on unless the test moves time itself.
 DateTime testClock() => testNow;
 
-Future<List<Override>> testOverrides(MemoryBackend backend) async {
+/// A phone in Taiwan unless [phoneOffset] and [phoneTimeZone] put it
+/// elsewhere, whatever zone the machine running the tests is in.
+Future<List<Override>> testOverrides(
+  MemoryBackend backend, {
+  Duration phoneOffset = const Duration(hours: 8),
+  ChurchTimeZone phoneTimeZone = ChurchTimeZone.taipei,
+}) async {
   // On the real clock, what a test sees would change from day to day.
   if (identical(backend.clock, DateTime.now)) {
     throw ArgumentError('Give the test backend a clock: MemoryBackend(clock: testClock)');
@@ -36,6 +43,8 @@ Future<List<Override>> testOverrides(MemoryBackend backend) async {
   return [
     backendProvider.overrideWithValue(backend),
     prefsProvider.overrideWithValue(prefs),
+    deviceOffsetProvider.overrideWithValue((_) => phoneOffset),
+    deviceTimeZoneProvider.overrideWithValue(() async => phoneTimeZone),
   ];
 }
 
@@ -47,6 +56,8 @@ Future<void> pumpApp(
   double textScale = 1,
   List<Override> overrides = const [],
   List<Locale> deviceLocales = const [Locale('zh', 'TW')],
+  Duration phoneOffset = const Duration(hours: 8),
+  ChurchTimeZone phoneTimeZone = ChurchTimeZone.taipei,
 }) async {
   // VM deferred snapshots use real async work, not the widget test's fake
   // clock. Download delays/failures are injected at loadPageLibraryProvider;
@@ -67,7 +78,10 @@ Future<void> pumpApp(
   addTearDown(() => Intl.defaultLocale = null);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [...await testOverrides(backend), ...overrides],
+      overrides: [
+        ...await testOverrides(backend, phoneOffset: phoneOffset, phoneTimeZone: phoneTimeZone),
+        ...overrides,
+      ],
       retry: (_, _) => null,
       child: const MarthaApp(),
     ),

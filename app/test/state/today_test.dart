@@ -9,7 +9,7 @@ import 'package:martha/state/providers.dart';
 void main() {
   test("today turns over at the church's midnight while the app stays open", () {
     fakeAsync((async) {
-      final start = churchInstant(DateTime(2026, 10, 1, 23, 30));
+      final start = ChurchTimeZone.taipei.instantOf(DateTime.utc(2026, 10, 1, 23, 30));
       DateTime now() => start.add(async.elapsed);
       final container = ProviderContainer(
         overrides: [backendProvider.overrideWithValue(MemoryBackend(clock: now))],

@@ -9,7 +9,7 @@ test('source dates must match today in UTC+8, not UTC or a stale/future provider
   for (const date of ['2026-10-03', '2026-10-05', '2026-10-04']) {
     const content = { date, title: '今日經文', body: '摘要', link: 'https://feed.example/original' };
     const { fetch } = fakeFetch({ [source]: { body: content } });
-    const result = await fetchSource({ fetch, now: () => new Date('2026-10-03T16:30:00Z') }, source);
+    const result = await fetchSource({ fetch, now: () => new Date('2026-10-03T16:30:00Z') }, source, 'Asia/Taipei');
     assert.deepEqual(result, date === '2026-10-04' ? { ok: true, content } : { ok: false, error: 'notToday' });
   }
 });

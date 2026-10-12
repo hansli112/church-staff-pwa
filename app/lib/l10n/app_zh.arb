@@ -1739,5 +1739,44 @@
   "dotSeparator": "・",
   "@dotSeparator": { "description": "Between short facts on one line, such as a status and a count." },
   "churchStatus": "狀態",
-  "@churchStatus": { "description": "A church's status (active, suspended, deleted) in the platform console." }
+  "@churchStatus": { "description": "A church's status (active, suspended, deleted) in the platform console." },
+  "timeZone": "時區",
+  "@timeZone": { "description": "The church's time zone, in church settings." },
+  "timeZoneWithOffset": "{city}（{offset}）",
+  "@timeZoneWithOffset": {
+    "description": "A time zone by its city, with how far it is from UTC now.",
+    "placeholders": { "city": { "type": "String", "example": "洛杉磯" }, "offset": { "type": "String", "example": "UTC−7" } }
+  },
+  "timeZoneFooter": "今天、晚上 7 點的服事提醒、行事曆的時間，都照教會的時區，不看手機在哪裡。",
+  "timeZoneChangeTitle": "改成{city}時間？",
+  "@timeZoneChangeTitle": { "placeholders": { "city": { "type": "String", "example": "洛杉磯" } } },
+  "timeZoneChangeBody": "活動時間會照新時區顯示，服事表的日期不變。",
+  "timeZoneChange": "更改",
+  "@timeZoneChange": { "description": "Confirms changing the church's time zone." },
+  "churchLocalTime": "教會當地時間（{city}）",
+  "@churchLocalTime": {
+    "description": "Under times, when the phone is in another time zone than the church.",
+    "placeholders": { "city": { "type": "String", "example": "台北" } }
+  },
+  "calendarTimeZoneDiffers": "這本日曆的時區是{zone}，跟教會的時區（{city}）不同。行事曆的時間照教會的時區顯示。",
+  "@calendarTimeZoneDiffers": {
+    "description": "Under the calendar list, when the picked Google calendar's time zone is not the church's.",
+    "placeholders": { "zone": { "type": "String", "example": "America/Phoenix" }, "city": { "type": "String", "example": "洛杉磯" } }
+  },
+  "cityAuckland": "奧克蘭",
+  "citySydney": "雪梨",
+  "cityMelbourne": "墨爾本",
+  "cityTokyo": "東京",
+  "citySeoul": "首爾",
+  "cityTaipei": "台北",
+  "cityHongKong": "香港",
+  "citySingapore": "新加坡",
+  "cityKualaLumpur": "吉隆坡",
+  "cityLondon": "倫敦",
+  "cityToronto": "多倫多",
+  "cityNewYork": "紐約",
+  "cityChicago": "芝加哥",
+  "cityDenver": "丹佛",
+  "cityVancouver": "溫哥華",
+  "cityLosAngeles": "洛杉磯"
 }

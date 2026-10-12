@@ -2,13 +2,15 @@ import { FieldValue, Timestamp, type QueryDocumentSnapshot } from 'firebase-admi
 
 import { isChurchOpen } from './access.js';
 import { calendarAccess, eventRosterDays, fromEvent, type CalDeps, type CalendarEvent } from './calendar.js';
-import { DAY_MS, dateKeyUtc8 } from './common.js';
+import { DAY_MS } from './common.js';
+import { dateKeyIn, earliestDay, instantOf, instantOfTime, timeZoneOf, timeZonesAt, type ChurchTimeZone } from './timeZones.js';
 
 /**
  * Events' rosters (活動的服事表) against the calendar, for what was done in
  * Google Calendar itself; calendarWrite already takes the roster along with
- * a change made in the app. Run a few times a day and before the evening
- * reminders. For each roster still to come, or cancelled:
+ * a change made in the app. Run every hour, for the churches whose clock
+ * says one of [SYNC_HOURS] (half past: before the evening reminders). For
+ * each roster still to come, or cancelled:
  *
  * - The event changed: the roster takes its title and days, and a move is
  *   told (rosterChange.ts).
@@ -35,17 +37,24 @@ export interface SyncCounts {
   purged: number;
 }
 
-/** The UTC+8 day of an event start as Google gives it, an all-day date or an instant. */
-const dayOf = (start: string) => (/^\d{4}-\d{2}-\d{2}$/.test(start) ? start : dateKeyUtc8(new Date(start)));
+/** The hours, on a church's clock, its events' rosters are synced in. */
+export const SYNC_HOURS = [6, 12, 18];
+
+/** The church's day of an event start as Google gives it, an all-day date or an instant. */
+const dayOf = (start: string, timeZone: ChurchTimeZone) => dateKeyIn(timeZone, new Date(instantOfTime(timeZone, start)));
 
 /** The series id a recurring event keeps when it is split ("this and following" adds `_R<date>`). */
 const seriesOf = (id: string) => id.split('_R')[0];
 
 export async function syncEventRosters(deps: CalDeps): Promise<SyncCounts> {
   const counts: SyncCounts = { checked: 0, updated: 0, cancelled: 0, restored: 0, relinked: 0, purged: 0 };
-  const today = dateKeyUtc8(deps.now());
+  const now = deps.now();
+  const due = timeZonesAt(SYNC_HOURS, now);
+  if (!due.size) return counts;
+  // Each church then goes by its own today.
+  const from = earliestDay(now, due);
   const [ahead, cancelled] = await Promise.all([
-    deps.db.collectionGroup('rosters').where('endDateKey', '>=', today).get(),
+    deps.db.collectionGroup('rosters').where('endDateKey', '>=', from).get(),
     deps.db.collectionGroup('rosters').where('cancelledAt', '>', Timestamp.fromMillis(0)).get(),
   ]);
   const byChurch = new Map<string, Map<string, QueryDocumentSnapshot>>();
@@ -58,7 +67,7 @@ export async function syncEventRosters(deps: CalDeps): Promise<SyncCounts> {
   const keepFrom = deps.now().getTime() - CANCELLED_KEEP_DAYS * DAY_MS;
   for (const [cid, rosters] of byChurch) {
     try {
-      await syncChurch(deps, cid, [...rosters.values()], { today, keepFrom }, counts);
+      await syncChurch(deps, cid, [...rosters.values()], { due, keepFrom }, counts);
     } catch (e) {
       console.error(`event roster sync ${cid}`, e);
     }
@@ -70,18 +79,20 @@ async function syncChurch(
   deps: CalDeps,
   cid: string,
   rosters: QueryDocumentSnapshot[],
-  at: { today: string; keepFrom: number },
+  at: { due: Set<ChurchTimeZone>; keepFrom: number },
   counts: SyncCounts,
 ) {
   const church = await deps.db.doc(`churches/${cid}`).get();
-  if (!isChurchOpen(church)) return;
+  const timeZone = timeZoneOf(church);
+  if (!isChurchOpen(church) || !at.due.has(timeZone)) return;
+  const today = dateKeyIn(timeZone, deps.now());
   const left: QueryDocumentSnapshot[] = [];
   for (const r of rosters) {
     const cancelledAt = r.get('cancelledAt') as Timestamp | undefined;
     if (cancelledAt && cancelledAt.toMillis() < at.keepFrom) {
       await r.ref.delete();
       counts.purged++;
-    } else if (!cancelledAt || (r.get('endDateKey') as string) >= at.today) {
+    } else if ((r.get('endDateKey') as string) >= today) {
       // A cancelled one already over waits to be purged: nobody sees it.
       left.push(r);
     }
@@ -102,7 +113,7 @@ async function syncChurch(
   for (const r of left) {
     counts.checked++;
     try {
-      const done = await syncOne(deps, token, calendarId, r, calendarReadable);
+      const done = await syncOne(deps, token, calendarId, timeZone, r, calendarReadable);
       if (done) counts[done]++;
     } catch (e) {
       console.error(`event roster sync ${cid}/${r.id}`, e);
@@ -116,6 +127,7 @@ async function syncOne(
   deps: CalDeps,
   token: string,
   calendarId: string,
+  timeZone: ChurchTimeZone,
   r: QueryDocumentSnapshot,
   calendarReadable: () => Promise<boolean>,
 ): Promise<Outcome> {
@@ -125,7 +137,7 @@ async function syncOne(
   const isCancelled = r.get('cancelledAt') != null;
   const e = await deps.google.get(token, calendarId, eventId);
   if (e && !e.cancelled) {
-    const next = { ...fromEvent(e), ...stamps(e, calendarId) };
+    const next = { ...fromEvent(e, timeZone), ...stamps(e, calendarId) };
     if (isCancelled) {
       // Back from Google's trash: on again, as quietly as it went.
       await r.ref.update({ ...next, cancelledAt: FieldValue.delete(), via: 'restore' });
@@ -143,7 +155,7 @@ async function syncOne(
     return 'updated';
   }
   if (isCancelled) return null;
-  if (await relink(deps, token, calendarId, r)) return 'relinked';
+  if (await relink(deps, token, calendarId, timeZone, r)) return 'relinked';
   // Only the calendar it was made on can say the event is gone, and only
   // while it can be read at all.
   if (madeOn !== calendarId || !(await calendarReadable())) return null;
@@ -165,24 +177,21 @@ const stamps = (e: CalendarEvent, calendarId: string) => ({
  * Moves the roster there, quietly, then copies the event, so a change of
  * day is told.
  */
-async function relink(deps: CalDeps, token: string, calendarId: string, r: QueryDocumentSnapshot) {
+async function relink(deps: CalDeps, token: string, calendarId: string, timeZone: ChurchTimeZone, r: QueryDocumentSnapshot) {
   const series = r.get('recurringEventId') as string | undefined;
   if (!series) return false;
   const day = r.get('dateKey') as string;
-  const was = dayOf((r.get('originalStart') as string | undefined) ?? day);
-  const dayStart = Date.parse(`${day}T00:00:00+08:00`);
+  const originalStart = (r.get('originalStart') as string | undefined) ?? day;
+  const was = dayOf(originalStart, timeZone);
+  const dayStart = instantOf(timeZone, day);
   const events = await deps.google.events(token, calendarId, new Date(dayStart - 3 * DAY_MS), new Date(dayStart + 4 * DAY_MS));
   const others = events.filter(
     (e) => e.id && e.id !== r.get('eventId') && !e.cancelled && e.recurringEventId && seriesOf(e.recurringEventId) === seriesOf(series),
   );
-  const startOf = (e: CalendarEvent) => Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(e.start) ? `${e.start}T00:00:00+08:00` : e.start);
-  const wasAt = Date.parse(
-    /^\d{4}-\d{2}-\d{2}$/.test((r.get('originalStart') as string | undefined) ?? day)
-      ? `${(r.get('originalStart') as string | undefined) ?? day}T00:00:00+08:00`
-      : (r.get('originalStart') as string),
-  );
+  const startOf = (e: CalendarEvent) => instantOfTime(timeZone, e.start);
+  const wasAt = instantOfTime(timeZone, originalStart);
   const match =
-    others.find((e) => dayOf(e.originalStart ?? e.start) === was || eventRosterDays(e).dateKey === day) ??
+    others.find((e) => dayOf(e.originalStart ?? e.start, timeZone) === was || eventRosterDays(e, timeZone).dateKey === day) ??
     others
       .filter((e) => e.recurringEventId === series)
       .sort((a, b) => Math.abs(startOf(a) - wasAt) - Math.abs(startOf(b) - wasAt))[0];
@@ -200,6 +209,36 @@ async function relink(deps: CalDeps, token: string, calendarId: string, r: Query
     return true;
   });
   if (!moved) return false;
-  await to.update({ ...fromEvent(match), ...stamps(match, calendarId) });
+  await to.update({ ...fromEvent(match, timeZone), ...stamps(match, calendarId) });
   return true;
+}
+
+/**
+ * After the church's time zone changed: its events' rosters still to come
+ * take their days on the new clock, as the calendar now shows them, and
+ * quietly: nothing moved (a `timeZone` write tells nobody, rosterChange.ts).
+ * Without the calendar or with Google out of reach they are left for the
+ * next sync, which takes them along and tells.
+ */
+export async function followTimeZone(deps: CalDeps, cid: string, timeZone: ChurchTimeZone) {
+  const calendar = await calendarAccess(deps, cid);
+  if (!calendar?.calendarId) return 0;
+  const { token, calendarId } = calendar;
+  const rosters = await deps.db.collection(`churches/${cid}/rosters`).where('endDateKey', '>=', earliestDay(deps.now())).get();
+  let moved = 0;
+  for (const r of rosters.docs) {
+    const madeOn = r.get('calendarId') as string | undefined;
+    if (r.get('kind') !== 'event' || r.get('cancelledAt') != null || (madeOn && madeOn !== calendarId)) continue;
+    try {
+      const e = await deps.google.get(token, calendarId, r.get('eventId') as string);
+      if (!e || e.cancelled) continue;
+      const days = eventRosterDays(e, timeZone);
+      if (r.get('dateKey') === days.dateKey && r.get('endDateKey') === days.endDateKey) continue;
+      await r.ref.update({ ...days, via: 'timeZone', movedBy: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() });
+      moved++;
+    } catch (e) {
+      console.error(`event roster time zone ${cid}/${r.id}`, e);
+    }
+  }
+  return moved;
 }

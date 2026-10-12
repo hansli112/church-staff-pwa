@@ -27,6 +27,7 @@ import 'features/me/notifications_screen.dart';
 import 'features/me/profile_screen.dart';
 import 'features/me/services_screen.dart';
 import 'features/me/support_screen.dart';
+import 'features/me/time_zone_screen.dart';
 import 'features/me/webhook_screen.dart';
 import 'features/rosters/event_roster_screen.dart';
 import 'features/rosters/roster_day_screen.dart';
@@ -153,6 +154,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                   if (!ref.read(isWebProvider)) page('support', (_) => const SupportScreen()),
                   page('language', (_) => const LanguageScreen()),
                   page('church', (_) => const DeferredPage.churchInfo()),
+                  page('timezone', (_) => const TimeZoneScreen()),
                   page('link', (_) => const ChurchLinkScreen()),
                   page('webhook', (_) => const WebhookScreen()),
                   page('calendar', (s) => DeferredPage.calendarSettings(result: s.uri.queryParameters['result'])),

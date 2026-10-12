@@ -4,7 +4,6 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart' show listEquals;
 
-import '../../domain/church_time.dart';
 import '../../domain/day.dart';
 import '../../domain/event_roster.dart';
 import '../../domain/limits.dart';
@@ -88,6 +87,12 @@ class MemoryBackend implements Backend {
   final invites = <String, Invite>{};
   final users = <String, UserProfile>{};
   final calendars = <String, CalendarSettings>{};
+
+  /// What the Google account offers to pick from (calendarList).
+  List<CalendarChoice> calendarChoices = const [
+    (id: 'cal-1', name: '教會行事曆', timeZone: 'Asia/Taipei'),
+    (id: 'cal-2', name: '青年行事曆', timeZone: 'Asia/Taipei'),
+  ];
   final churchLinks = <String, ChurchLink>{};
   final linkContents = <String, LinkContent>{};
 
@@ -227,9 +232,10 @@ class MemoryBackend implements Backend {
     String name, {
     String? id,
     ChurchStatus status = ChurchStatus.active,
+    ChurchTimeZone timeZone = ChurchTimeZone.fallback,
   }) {
     final cid = id ?? 'c${churches.length + 1}';
-    churches[cid] = Church(id: cid, name: name, status: status);
+    churches[cid] = Church(id: cid, name: name, status: status, timeZone: timeZone);
     members[cid] = {};
     rosters[cid] = {};
     staffOrders[cid] = {};
@@ -310,11 +316,11 @@ class MemoryBackend implements Backend {
   int _calendarRevision = 0;
 
   /// Simulates Google Calendar's OAuth callback for [cid].
-  void connectCalendar(String cid, {String? calendarName}) {
+  void connectCalendar(String cid, {String? calendarName, String? calendarId}) {
     calendars[cid] = CalendarSettings(
       connected: true,
       calendarName: calendarName,
-      calendarId: calendarName == null ? null : 'cal-$cid',
+      calendarId: calendarName == null ? null : (calendarId ?? 'cal-$cid'),
       revision: 'memory:${++_calendarRevision}',
     );
     notify();
@@ -981,6 +987,15 @@ class MemoryChurchData implements ChurchData {
     await _b.write(() => _b.churches[churchId] = _b.churches[churchId]!.copyWith(homeName: () => name));
   }
 
+  /// Its calendar's events are kept on the church's clock: unlike Google's,
+  /// they do not move with it.
+  @override
+  Future<void> setTimeZone(ChurchTimeZone timeZone) async {
+    _functionAdmin();
+    _b.churches[churchId] = _b.churches[churchId]!.copyWith(timeZone: timeZone);
+    _b.notify();
+  }
+
   @override
   Future<void> uploadLogo(List<int> bytes) async {
     _requireAdmin();
@@ -1010,6 +1025,7 @@ class MemoryChurchData implements ChurchData {
       logoUrl: c.logoUrl,
       homeName: c.homeName,
       deletedAt: _b.clock(),
+      timeZone: c.timeZone,
     );
     _b.notify();
   }
@@ -1023,7 +1039,13 @@ class MemoryChurchData implements ChurchData {
     if (c.status != ChurchStatus.deleted || (until != null && _b.clock().isAfter(until))) {
       throw const CloudException(CloudErrorCode.churchClosed);
     }
-    _b.churches[churchId] = Church(id: c.id, name: c.name, logoUrl: c.logoUrl, homeName: c.homeName);
+    _b.churches[churchId] = Church(
+      id: c.id,
+      name: c.name,
+      logoUrl: c.logoUrl,
+      homeName: c.homeName,
+      timeZone: c.timeZone,
+    );
     _b.notify();
   }
 
@@ -1066,7 +1088,7 @@ class MemoryChurchData implements ChurchData {
     _b.nextLinkResult = null;
     final answer = scripted?.content ?? _b.linkSourceAnswers[source] ?? LinkFetchError.network;
     final now = _b.clock();
-    final today = churchToday(now).key;
+    final today = _b.churches[churchId]!.timeZone.today(now).key;
     var error = scripted?.error;
     if (scripted != null && error == null && scripted.content == null) error = LinkFetchError.badFormat;
     if (answer is LinkContent && error == null && answer.date != null && answer.date != today) {
@@ -1176,9 +1198,9 @@ class MemoryChurchData implements ChurchData {
   }
 
   @override
-  Future<List<({String id, String name})>> calendarList() async {
+  Future<List<CalendarChoice>> calendarList() async {
     _functionAdmin();
-    return const [(id: 'cal-1', name: '教會行事曆'), (id: 'cal-2', name: '青年行事曆')];
+    return _b.calendarChoices;
   }
 
   @override
@@ -1333,7 +1355,7 @@ class MemoryCloud implements CloudApi {
   final stats = <DailyStats>[];
 
   @override
-  Future<String> createChurch(String name) async {
+  Future<String> createChurch(String name, {ChurchTimeZone timeZone = ChurchTimeZone.fallback}) async {
     _b.requireNetwork();
     final user = _b.auth.currentUser;
     if (user == null || !user.verified) {
@@ -1344,7 +1366,7 @@ class MemoryCloud implements CloudApi {
     if (_b.churches.values.any((c) => nameKey(c.name) == key)) {
       throw const CloudException(CloudErrorCode.duplicateName);
     }
-    final cid = _b.addChurch(name);
+    final cid = _b.addChurch(name, timeZone: timeZone);
     _b.setServices(cid, defaultServices);
     _b.addMember(
       cid,
@@ -1486,10 +1508,15 @@ class MemoryCloud implements CloudApi {
   /// The church is made as [createChurch] makes it; everyone in the
   /// scripted preview but [me] becomes a pending member.
   @override
-  Future<String> moveCommit(String path, {required String churchName, String? me}) async {
+  Future<String> moveCommit(
+    String path, {
+    required String churchName,
+    String? me,
+    ChurchTimeZone timeZone = ChurchTimeZone.fallback,
+  }) async {
     final preview = _readMove(path);
     final people = _movePeople(path, preview);
-    final cid = await createChurch(churchName);
+    final cid = await createChurch(churchName, timeZone: timeZone);
     final uid = _b.auth.currentUser!.uid;
     for (final person in people) {
       if (person.id == me) {

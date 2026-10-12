@@ -102,7 +102,13 @@ void main() {
 
     test('carries the church, services, members, orders, rosters, calendar, link and webhook', () {
       final j = jsonDecode(jsonEncode(exportJson(snapshot(), at))) as Map<String, dynamic>;
-      expect(j['church'], {'id': 'grace', 'name': '恩典堂', 'homeName': '恩典', 'logoUrl': 'https://x/logo.png'});
+      expect(j['church'], {
+        'id': 'grace',
+        'name': '恩典堂',
+        'homeName': '恩典',
+        'logoUrl': 'https://x/logo.png',
+        'timeZone': 'Asia/Taipei',
+      });
       expect(j['services']['ids'], ['sunday', 'youth', 'old']);
       expect(j['services']['services'][0]['duties'], ['司會', '司琴']);
       expect(j['members'][1], {
@@ -248,10 +254,12 @@ void main() {
     expect(utf8.decode(csv), contains('日期,服事,服事項目,同工'));
   });
 
-  test('file name', () {
+  test("file name, dated the church's day", () {
+    final at = DateTime.utc(2026, 10, 4, 3);
+    expect(exportFileName(const Church(id: 'g', name: '恩典堂 台北/分堂'), at), 'martha-恩典堂_台北_分堂-2026-10-04.zip');
     expect(
-      exportFileName(const Church(id: 'g', name: '恩典堂 台北/分堂'), DateTime(2026, 10, 4)),
-      'martha-恩典堂_台北_分堂-2026-10-04.zip',
+      exportFileName(const Church(id: 'g', name: '恩典堂', timeZone: ChurchTimeZone.losAngeles), at),
+      'martha-恩典堂-2026-10-03.zip',
     );
   });
 }

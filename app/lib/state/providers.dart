@@ -6,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/backend.dart';
 import '../domain/church_link.dart';
-import '../domain/church_time.dart';
 import '../domain/day.dart';
 import '../domain/models.dart';
 import '../domain/schedule.dart';
@@ -30,10 +29,11 @@ final clockProvider = Provider<DateTime Function()>((ref) => ref.watch(backendPr
 
 /// Today in the church. Turns over at its midnight, wherever the device is.
 final todayProvider = Provider<Day>((ref) {
+  final timeZone = ref.watch(churchTimeZoneProvider);
   final now = ref.watch(clockProvider)();
-  final civil = churchTime(now);
-  rebuildAt(ref, churchInstant(DateTime.utc(civil.year, civil.month, civil.day + 1)), now);
-  return churchToday(now);
+  final today = timeZone.today(now);
+  rebuildAt(ref, timeZone.instantOf(DateTime.utc(today.year, today.month, today.day + 1)), now);
+  return today;
 });
 
 /// Rebuilds the provider at [at], for what changes with time alone. Wakes
@@ -111,7 +111,7 @@ final shownChurchLinkProvider = Provider<({String title, String body, String url
   final content = loaded.value;
   ref.watch(todayProvider);
   final now = ref.watch(clockProvider)();
-  return shownChurchLink(link, content, now);
+  return shownChurchLink(link, content, now, ref.watch(churchTimeZoneProvider));
 });
 
 /// Saved rosters from today on, every service and event, and events'

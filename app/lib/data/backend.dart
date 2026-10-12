@@ -228,6 +228,10 @@ abstract interface class ChurchData {
   /// name.
   Future<void> setHomeName(String? name);
 
+  /// Sets the church's time zone (admins). Rosters keep their dates; the
+  /// calendar's times are then shown on the new clock.
+  Future<void> setTimeZone(ChurchTimeZone timeZone);
+
   /// Uploads [bytes] (already a 512px PNG) as the church logo.
   Future<void> uploadLogo(List<int> bytes);
 
@@ -261,7 +265,8 @@ abstract interface class ChurchData {
   // Google Calendar, proxied by the backend. Admins connect it, calendar
   // editors write, members read.
   Future<Uri> calendarAuthUrl();
-  Future<List<({String id, String name})>> calendarList();
+
+  Future<List<CalendarChoice>> calendarList();
   Future<void> calendarSelect(String calendarId, String calendarName);
   Future<void> calendarDisconnect();
 
@@ -283,6 +288,10 @@ abstract interface class ChurchData {
   /// Recognizes photos of a paper roster into import rows (JSON objects).
   Future<List<dynamic>> recognizeRoster(String serviceType, List<PhotoInput> images);
 }
+
+/// A calendar the admin may pick, with its own time zone (an IANA id, when
+/// Google says).
+typedef CalendarChoice = ({String id, String name, String? timeZone});
 
 enum CloudErrorCode {
   /// The church is suspended or deleted (教會停用): its members can see that,
@@ -514,8 +523,8 @@ class LinkSourceResult {
 /// invites ([CloudErrorCode.inviteInvalid]) and the church preview
 /// [CloudErrorCode.notFound].
 abstract interface class CloudApi {
-  /// Returns the new church ID.
-  Future<String> createChurch(String name);
+  /// Returns the new church ID. [timeZone] is its time zone.
+  Future<String> createChurch(String name, {ChurchTimeZone timeZone = ChurchTimeZone.fallback});
 
   Future<Invite> previewInvite(String code);
 
@@ -535,10 +544,15 @@ abstract interface class CloudApi {
   /// What the move file at [path] would bring.
   Future<MovePreview> movePreview(String path);
 
-  /// Creates church [churchName] from the move file with the caller as its
-  /// admin; [me] is the person in the file the caller takes over. Returns
-  /// the church ID.
-  Future<String> moveCommit(String path, {required String churchName, String? me});
+  /// Creates church [churchName] in [timeZone] from the move file with the
+  /// caller as its admin; [me] is the person in the file the caller takes
+  /// over. Returns the church ID.
+  Future<String> moveCommit(
+    String path, {
+    required String churchName,
+    String? me,
+    ChurchTimeZone timeZone = ChurchTimeZone.fallback,
+  });
 
   /// Pending members (moved from self-host) under the caller's verified
   /// email. Empty for an unverified email.

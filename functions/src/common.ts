@@ -102,10 +102,11 @@ export function id(value: unknown): string {
 
 export const serverTime = () => FieldValue.serverTimestamp();
 
-/** The time zone every church is shown in (UTC+8, the same for HK and MY). */
-export const CHURCH_TIME_ZONE = 'Asia/Taipei';
-
-/** `YYYY-MM-DD` of [date] in Asia/Taipei (UTC+8, the same for HK and MY). */
+/**
+ * `YYYY-MM-DD` of [date] in Asia/Taipei (UTC+8): the platform's own day,
+ * for its stats, costs and payments. A church's is in its own time zone
+ * (zones.ts).
+ */
 export function dateKeyUtc8(date: Date): string {
   const shifted = new Date(date.getTime() + 8 * 3600 * 1000);
   return shifted.toISOString().slice(0, 10);

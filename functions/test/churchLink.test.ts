@@ -50,7 +50,7 @@ describe('fetching a content source', () => {
   });
   test('a JSON {date, title, body, link} is cut to the church link limits', async () => {
     const { d } = withFetch({ [SRC]: { body: { ...good, title: '題'.repeat(40), body: '文'.repeat(200), link: 'https://x.example' } } });
-    const r = await fetchSource(d, SRC);
+    const r = await fetchSource(d, SRC, 'Asia/Taipei');
     assert.ok(r.ok);
     assert.equal([...r.content.title].length, 30);
     assert.equal([...r.content.body].length, 120);
@@ -65,27 +65,27 @@ describe('fetching a content source', () => {
 
   test('the request is a plain GET', async () => {
     const { d, requests } = withFetch({ [SRC]: { body: good } });
-    await fetchSource(d, SRC);
+    await fetchSource(d, SRC, 'Asia/Taipei');
     assert.equal(requests[0].method, 'GET');
   });
 
   test('times out after 5 seconds', async () => {
     const { d } = withFetch({ [SRC]: { body: good, delayMs: 6000 } });
     const started = Date.now();
-    assert.deepEqual(await fetchSource(d, SRC), { ok: false, error: 'timeout' });
+    assert.deepEqual(await fetchSource(d, SRC, 'Asia/Taipei'), { ok: false, error: 'timeout' });
     assert.ok(Date.now() - started < 5800);
   });
 
   test('refuses more than 64KB', async () => {
     const big = JSON.stringify({ title: 'x', body: 'y'.repeat(70 * 1024) });
     const { d } = withFetch({ [SRC]: { body: big } });
-    assert.deepEqual(await fetchSource(d, SRC), { ok: false, error: 'tooLarge' });
+    assert.deepEqual(await fetchSource(d, SRC, 'Asia/Taipei'), { ok: false, error: 'tooLarge' });
   });
 
   test('wrong shapes are a format error', async () => {
     for (const body of ['<html>daily bible</html>', '[]', '{"body": "no title"}', '{"title": "  "}', '{"title": "x", "body": 3}']) {
       const { d } = withFetch({ [SRC]: { body } });
-      assert.deepEqual(await fetchSource(d, SRC), { ok: false, error: 'badFormat' }, body);
+      assert.deepEqual(await fetchSource(d, SRC, 'Asia/Taipei'), { ok: false, error: 'badFormat' }, body);
     }
   });
 
@@ -95,15 +95,15 @@ describe('fetching a content source', () => {
       'https://moved.example/a': { redirect: 'https://moved.example/b' },
       'https://moved.example/b': { body: good },
     });
-    assert.deepEqual(await fetchSource(d, 'http://feed.example/x'), { ok: false, error: 'notHttps' });
-    assert.deepEqual(await fetchSource(d, SRC), { ok: false, error: 'notHttps' });
-    assert.ok((await fetchSource(d, 'https://moved.example/a')).ok);
+    assert.deepEqual(await fetchSource(d, 'http://feed.example/x', 'Asia/Taipei'), { ok: false, error: 'notHttps' });
+    assert.deepEqual(await fetchSource(d, SRC, 'Asia/Taipei'), { ok: false, error: 'notHttps' });
+    assert.ok((await fetchSource(d, 'https://moved.example/a', 'Asia/Taipei')).ok);
   });
 
   test('HTTP errors and dead hosts are reported, never thrown', async () => {
     const { d } = withFetch({ [SRC]: { status: 503 } });
-    assert.deepEqual(await fetchSource(d, SRC), { ok: false, error: 'http', status: 503 });
-    assert.deepEqual(await fetchSource(d, 'https://nowhere.example/'), { ok: false, error: 'network' });
+    assert.deepEqual(await fetchSource(d, SRC, 'Asia/Taipei'), { ok: false, error: 'http', status: 503 });
+    assert.deepEqual(await fetchSource(d, 'https://nowhere.example/', 'Asia/Taipei'), { ok: false, error: 'network' });
   });
 
   test('an invalid original link or missing summary is a format error, never a manual-link fallback', () => {
@@ -115,9 +115,26 @@ describe('fetching a content source', () => {
 describe('when sources run', () => {
   test('today at the time if still ahead and not run yet, else tomorrow', () => {
     const at3 = new Date('2026-10-04T03:00:00+08:00');
-    assert.equal(nextFetchAt(at3, 270, false).toISOString(), new Date('2026-10-04T04:30:00+08:00').toISOString());
-    assert.equal(nextFetchAt(at3, 270, true).toISOString(), new Date('2026-10-05T04:30:00+08:00').toISOString());
-    assert.equal(nextFetchAt(at3, 120, false).toISOString(), new Date('2026-10-05T02:00:00+08:00').toISOString());
+    assert.equal(nextFetchAt(at3, 270, false, 'Asia/Taipei').toISOString(), new Date('2026-10-04T04:30:00+08:00').toISOString());
+    assert.equal(nextFetchAt(at3, 270, true, 'Asia/Taipei').toISOString(), new Date('2026-10-05T04:30:00+08:00').toISOString());
+    assert.equal(nextFetchAt(at3, 120, false, 'Asia/Taipei').toISOString(), new Date('2026-10-05T02:00:00+08:00').toISOString());
+  });
+
+  test("at the time on the church's clock, summer time or not", () => {
+    const la = 'America/Los_Angeles';
+    // 3:00 on 31 October in Los Angeles; the clocks go back the next night.
+    const at3 = new Date('2026-10-31T03:00:00-07:00');
+    assert.equal(nextFetchAt(at3, 270, false, la).toISOString(), new Date('2026-10-31T04:30:00-07:00').toISOString());
+    assert.equal(nextFetchAt(new Date('2026-10-31T05:00:00-07:00'), 270, false, la).toISOString(), new Date('2026-11-01T04:30:00-08:00').toISOString());
+    // Late the night before each change: the next day, not two on or the same.
+    assert.equal(nextFetchAt(new Date('2026-03-07T23:30:00-08:00'), 23 * 60 + 15, true, la).toISOString(), new Date('2026-03-08T23:15:00-07:00').toISOString());
+    assert.equal(nextFetchAt(new Date('2026-10-31T23:30:00-07:00'), 23 * 60 + 15, true, la).toISOString(), new Date('2026-11-01T23:15:00-08:00').toISOString());
+  });
+
+  test("a source's date is the church's today", async () => {
+    const d = { now: () => new Date('2026-10-03T16:30:00Z'), fetch: fakeFetch({ [SRC]: { body: { ...good, date: '2026-10-03' } } }).fetch };
+    assert.equal((await fetchSource(d, SRC, 'Asia/Taipei')).ok, false, 'already the 4th in Taipei');
+    assert.equal((await fetchSource(d, SRC, 'America/New_York')).ok, true);
   });
 });
 
@@ -309,7 +326,7 @@ describe('the 15-minute schedule', () => {
       source: SRC,
       fetchMinute,
       lastDay: '2026-10-03',
-      nextAt: Timestamp.fromDate(nextFetchAt(new Date('2026-10-03T23:00:00+08:00'), fetchMinute, false)),
+      nextAt: Timestamp.fromDate(nextFetchAt(new Date('2026-10-03T23:00:00+08:00'), fetchMinute, false, 'Asia/Taipei')),
       ...extra,
     });
   }

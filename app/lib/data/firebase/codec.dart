@@ -6,7 +6,6 @@ library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../../domain/church_time.dart';
 import '../../domain/day.dart';
 import '../../domain/models.dart';
 
@@ -43,6 +42,7 @@ Church churchFromJson(String id, Json data, {String? logoUrl}) => Church(
   logoUrl: logoUrl,
   homeName: data['homeName'] is String ? data['homeName'] as String : null,
   deletedAt: readTime(data['deletedAt']),
+  timeZone: ChurchTimeZone.of(data['timeZone'] as String?),
 );
 
 /// Unknown roles, groups or broken zones are dropped rather than thrown:
@@ -341,15 +341,18 @@ CalendarSettings calendarSettingsFromJson(Json? data) => CalendarSettings(
   },
 );
 
+/// A timed event's time comes on the church's clock with its offset
+/// (functions/src/calendar.ts `inZone`): the clock's reading is the time.
+final _onChurchClock = RegExp(r'^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?)([+-]\d{2}:\d{2})$');
+
 DateTime _eventTime(String value, bool allDay) {
   if (allDay) {
     final d = Day.parse(value.substring(0, 10));
     return DateTime.utc(d.year, d.month, d.day);
   }
-  if (!RegExp(r'(Z|[+-]\d{2}:\d{2})$').hasMatch(value)) {
-    throw const FormatException('Calendar time requires an explicit offset');
-  }
-  return churchTime(DateTime.parse(value));
+  final m = _onChurchClock.firstMatch(value);
+  if (m == null) throw const FormatException("Calendar time requires the church's offset");
+  return DateTime.parse('${m[1]}Z');
 }
 
 CalendarEvent? calendarEventFromJson(Object? raw) {
@@ -372,8 +375,10 @@ CalendarEvent? calendarEventFromJson(Object? raw) {
   }
 }
 
+/// Times go on the church's clock without an offset: the backend reads them
+/// in the church's time zone.
 Json calendarEventToJson(CalendarEvent e) {
-  String time(DateTime t) => e.allDay ? Day(t.year, t.month, t.day).key : churchInstant(t).toIso8601String();
+  String time(DateTime t) => e.allDay ? Day(t.year, t.month, t.day).key : t.toIso8601String().substring(0, 19);
   return {
     'id': ?e.id,
     'title': e.title,

@@ -11,6 +11,7 @@ import {
   type GoogleApi,
   type OAuthConfig,
 } from '../src/calendar.js';
+import { setChurchTimeZone } from '../src/church.js';
 import { syncEventRosters } from '../src/eventSync.js';
 import { caller, clearFirestore, db, deps as plain, seedChurch, setNow } from './support.js';
 
@@ -213,6 +214,34 @@ describe('syncing events’ rosters with Google Calendar', () => {
       [moved.eventId, moved.recurringEventId, moved.duties[0].people],
       ['pray_R20261201_20261224T110000Z', 'pray_R20261201', ['美玉']],
     );
+  });
+
+  test("at 6:30, 12:30 and 18:30 on the church's clock, with its days", async () => {
+    // 19:00–21:00 on the 23rd in Los Angeles: the 24th in UTC and Taipei.
+    const g = fakeGoogle([{ ...party, start: '2026-12-24T03:00:00.000Z', end: '2026-12-24T05:00:00.000Z' }]);
+    await connect(g.google);
+    await roster('x1');
+    await db.doc('churches/C1').update({ timeZone: 'America/Los_Angeles' });
+    assert.equal((await syncEventRosters(d(g.google))).checked, 0, "18:30 in Taipei is 2:30 in Los Angeles");
+    setNow(new Date('2026-12-01T12:30:00-08:00'));
+    assert.equal((await syncEventRosters(d(g.google))).updated, 1);
+    assert.deepEqual([(await get('x1'))!.dateKey, (await get('x1'))!.endDateKey], ['2026-12-23', '2026-12-23']);
+    setNow(new Date('2026-12-01T13:30:00-08:00'));
+    assert.equal((await syncEventRosters(d(g.google))).checked, 0);
+  });
+
+  test("a new time zone: its events' rosters take their days on the new clock, quietly", async () => {
+    // 10:00 on the 24th in Taipei is 18:00 on the 23rd in Los Angeles.
+    const g = fakeGoogle([{ ...party, start: '2026-12-24T02:00:00.000Z', end: '2026-12-24T03:00:00.000Z' }]);
+    await connect(g.google);
+    await roster('x1');
+    await db.doc('churches/C1/rosters/2026-12-27_sunday').set({ type: 'sunday', dateKey: '2026-12-27', duties: [] });
+    await setChurchTimeZone(d(g.google), caller('pastor'), { churchId: 'C1', timeZone: 'America/Los_Angeles' });
+    const r = (await get('x1'))!;
+    assert.deepEqual([r.dateKey, r.endDateKey, r.via], ['2026-12-23', '2026-12-23', 'timeZone']);
+    assert.equal((await db.doc('churches/C1/rosters/2026-12-27_sunday').get()).get('dateKey'), '2026-12-27', "a service's stays");
+    setNow(new Date('2026-12-01T18:30:00-08:00'));
+    assert.equal((await syncEventRosters(d(g.google))).updated, 0, 'nothing left for the sync to move, and tell');
   });
 
   test('past rosters and services’ days are not read; a closed church is skipped', async () => {

@@ -2,6 +2,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 
 import { churchAccess } from './access.js';
 import { dateKeyUtc8, fail, type Caller, type Deps } from './common.js';
+import { dateKeyIn, timeZoneOf, type ChurchTimeZone } from './timeZones.js';
 
 /**
  * 照片辨識: a roster editor sends photos of a paper roster; Gemini on Vertex
@@ -42,15 +43,16 @@ export type Gemini = (
   images: GeminiImage[],
 ) => Promise<{ rows: unknown[]; inputTokens: number; outputTokens: number }>;
 
-const monthKey = (d: Date) => dateKeyUtc8(d).slice(0, 7);
+/** A church's photos are counted by its own months; the platform's budget by UTC+8's. */
+const monthKey = (d: Date, timeZone: ChurchTimeZone) => dateKeyIn(timeZone, d).slice(0, 7);
+const platformMonth = (d: Date) => dateKeyUtc8(d).slice(0, 7);
 
 /** How many photos the church has left this month, and whether the platform is on. */
 export async function photoQuota(deps: Deps, caller: Caller | null, data: unknown) {
-  const { cid } = await churchAccess(deps, caller, data, 'member');
-  const month = monthKey(deps.now());
+  const { cid, church } = await churchAccess(deps, caller, data, 'member');
   const [usage, budget] = await Promise.all([
-    deps.db.doc(`churches/${cid}/usage/${month}`).get(),
-    deps.db.doc(`platform/photoBudget_${month}`).get(),
+    deps.db.doc(`churches/${cid}/usage/${monthKey(deps.now(), timeZoneOf(church))}`).get(),
+    deps.db.doc(`platform/photoBudget_${platformMonth(deps.now())}`).get(),
   ]);
   const used = (usage.get('photos') as number | undefined) ?? 0;
   return {
@@ -112,12 +114,12 @@ export async function recognizeRoster(deps: Deps & { gemini: Gemini }, caller: C
   const input = data as { serviceType?: unknown; images?: unknown };
   const type = input?.serviceType;
   if (typeof type !== 'string') fail('invalid-argument', 'unknown');
-  const { cid } = await churchAccess(deps, caller, data, { rosterEditor: type });
+  const { cid, church } = await churchAccess(deps, caller, data, { rosterEditor: type });
+  const timeZone = timeZoneOf(church);
   const images = parseImages(input.images);
   const { db } = deps;
-  const month = monthKey(deps.now());
-  const usageRef = db.doc(`churches/${cid}/usage/${month}`);
-  const budgetRef = db.doc(`platform/photoBudget_${month}`);
+  const usageRef = db.doc(`churches/${cid}/usage/${monthKey(deps.now(), timeZone)}`);
+  const budgetRef = db.doc(`platform/photoBudget_${platformMonth(deps.now())}`);
 
   // Reserve one photo before calling, so two editors at once cannot both
   // take the last one. Refunded if Gemini fails.
@@ -142,7 +144,7 @@ export async function recognizeRoster(deps: Deps & { gemini: Gemini }, caller: C
     const prompt = buildPrompt({
       service,
       names: members.docs.map((m) => m.get('name') as string).filter(Boolean),
-      today: dateKeyUtc8(deps.now()),
+      today: dateKeyIn(timeZone, deps.now()),
     });
     const result = await deps.gemini(prompt, images);
     const cost = (result.inputTokens * PRICE_PER_M.input + result.outputTokens * PRICE_PER_M.output) / 1e6;

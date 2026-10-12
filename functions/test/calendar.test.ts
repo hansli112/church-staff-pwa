@@ -23,6 +23,7 @@ import {
 } from '../src/calendar.js';
 import { seal, unseal } from '../src/sealing.js';
 import { notify, webhookSave } from '../src/webhook.js';
+import type { ChurchTimeZone } from '../src/timeZones.js';
 import { caller, clearFirestore, db, deps as plain, fakeFetch, rejectsWith, seedChurch, setNow } from './support.js';
 
 const config: OAuthConfig = {
@@ -32,6 +33,7 @@ const config: OAuthConfig = {
   appUrl: 'https://app.example',
   tokenKey: randomBytes(32).toString('base64'),
 };
+const TPE: ChurchTimeZone = 'Asia/Taipei';
 /** Webhook secrets are sealed with the same key, as the wiring does. */
 const deps = { ...plain, secretKey: config.tokenKey };
 
@@ -417,6 +419,76 @@ describe('reading', () => {
     assert.deepEqual(Object.keys(again.events[0]).sort(), ['allDay', 'end', 'id', 'start', 'title']);
   });
 
+  test("times go out on the church's clock, for its month; a copy kept for another time zone is read again", async () => {
+    await church();
+    const { google, calls } = fakeGoogle();
+    const asked: [string, string][] = [];
+    google.events = async (_t, _c, from, to) => {
+      calls.events++;
+      asked.push([from.toISOString(), to.toISOString()]);
+      return [{ id: 'e2', title: '主日', start: '2026-10-11T17:00:00Z', end: '2026-10-11T19:00:00.000Z', allDay: false }, { id: 'e3', title: '退修會', start: '2026-10-23', end: '2026-10-26', allDay: true }];
+    };
+    await connect(google);
+    const d = { ...deps, google, config };
+    const taipei = await calendarEvents(d, caller('staff'), { churchId: 'C1', month: '2026-10' });
+    assert.deepEqual(taipei.events.map((e) => [e.start, e.end]), [['2026-10-12T01:00:00+08:00', '2026-10-12T03:00:00+08:00'], ['2026-10-23', '2026-10-26']]);
+    assert.deepEqual(asked.at(-1), ['2026-09-30T16:00:00.000Z', '2026-10-31T16:00:00.000Z']);
+
+    await db.doc('churches/C1').update({ timeZone: 'America/Los_Angeles' });
+    const la = await calendarEvents(d, caller('staff'), { churchId: 'C1', month: '2026-10' });
+    assert.equal(la.cached, false);
+    assert.deepEqual(la.events.map((e) => [e.start, e.end])[0], ['2026-10-11T10:00:00-07:00', '2026-10-11T12:00:00-07:00']);
+    // October in Los Angeles: summer time throughout.
+    assert.deepEqual(asked.at(-1), ['2026-10-01T07:00:00.000Z', '2026-11-01T07:00:00.000Z']);
+    assert.equal((await calendarEvents(d, caller('staff'), { churchId: 'C1', month: '2026-10' })).cached, true);
+  });
+
+  test("a time from the app is on the church's clock; the event comes back on it, and its roster's days are the church's", async () => {
+    await church();
+    await db.doc('churches/C1').update({ timeZone: 'America/Los_Angeles' });
+    const { google } = fakeGoogle();
+    const sent: CalendarEvent[] = [];
+    const upsert = google.upsert;
+    google.upsert = async (t, c, e) => {
+      sent.push(e);
+      return upsert(t, c, e);
+    };
+    await connect(google);
+    await db.doc('churches/C1/rosters/ev_e1').set({
+      kind: 'event', eventId: 'e1', title: '同工會', dateKey: '2026-10-10', endDateKey: '2026-10-10', duties: [], events: [],
+    });
+    const d = { ...deps, google, config };
+    const { event } = await calendarWrite(d, caller('editor'), {
+      churchId: 'C1',
+      op: 'upsert',
+      event: { id: 'e1', title: '同工會', start: '2026-10-16T19:00', end: '2026-10-16T21:30:00', allDay: false },
+    });
+    assert.deepEqual([sent[0].start, sent[0].end], ['2026-10-17T02:00:00.000Z', '2026-10-17T04:30:00.000Z']);
+    assert.deepEqual([event!.start, event!.end], ['2026-10-16T19:00:00-07:00', '2026-10-16T21:30:00-07:00']);
+    const r = (await db.doc('churches/C1/rosters/ev_e1').get()).data()!;
+    assert.deepEqual([r.dateKey, r.endDateKey], ['2026-10-16', '2026-10-16']);
+    // An older app sends an instant: as it is.
+    await calendarWrite(d, caller('editor'), {
+      churchId: 'C1',
+      op: 'upsert',
+      event: { id: 'e1', title: '同工會', start: '2026-10-17T02:00:00.000Z', end: '2026-10-17T04:30:00.000Z', allDay: false },
+    });
+    assert.equal(sent[1].start, '2026-10-17T02:00:00.000Z');
+    await rejectsWith(
+      calendarWrite(d, caller('editor'), { churchId: 'C1', op: 'upsert', event: { title: 'x', start: '2026-02-30T19:00', end: '2026-02-30T20:00', allDay: false } }),
+      'unknown',
+    );
+  });
+
+  test('the calendars to pick from say their time zones', async () => {
+    await church();
+    const { google } = fakeGoogle();
+    google.calendars = async () => [{ id: 'cal-1', name: '教會行事曆', primary: false, timeZone: 'America/Chicago' }];
+    await connect(google);
+    const { calendars } = await calendarList({ ...deps, google, config }, caller('pastor'), { churchId: 'C1' });
+    assert.equal(calendars[0].timeZone, 'America/Chicago');
+  });
+
   test('another church cannot read it', async () => {
     await church();
     const { google } = fakeGoogle();
@@ -443,11 +515,11 @@ describe('reading', () => {
 
 describe('an event roster’s days (testdata/event_days.json, which the app runs too)', () => {
   const data = JSON.parse(readFileSync(new URL('../../testdata/event_days.json', import.meta.url), 'utf8')) as {
-    cases: { name: string; event: { start: string; end: string; allDay: boolean }; dateKey: string; endDateKey: string }[];
+    cases: { name: string; timeZone?: ChurchTimeZone; event: { start: string; end: string; allDay: boolean }; dateKey: string; endDateKey: string }[];
   };
   for (const c of data.cases) {
     test(c.name, () => {
-      assert.deepEqual(eventRosterDays(c.event), { dateKey: c.dateKey, endDateKey: c.endDateKey });
+      assert.deepEqual(eventRosterDays(c.event, c.timeZone ?? 'Asia/Taipei'), { dateKey: c.dateKey, endDateKey: c.endDateKey });
     });
   }
 });
@@ -464,7 +536,7 @@ describe('an event’s roster follows its event', () => {
     ...extra,
   });
 
-  test('a new title and days are copied to it, the days in UTC+8; a calendar editor needs no roster rights', async () => {
+  test("a new title and days are copied to it, the days the church's; a calendar editor needs no roster rights", async () => {
     await church();
     const { google } = fakeGoogle();
     await connect(google);
@@ -623,9 +695,11 @@ describe('releasing the grant', () => {
     assert.deepEqual(calls.revoked, ['refresh-123']);
   });
 
-  test('cache months follow UTC+8, and a moved event clears both months', async () => {
-    assert.equal(monthOf('2026-10-31T17:00:00.000Z'), '2026-11');
-    assert.equal(monthOf('2026-10-31'), '2026-10');
+  test("cache months are the church's, and a moved event clears both months", async () => {
+    assert.equal(monthOf('2026-10-31T17:00:00.000Z', 'Asia/Taipei'), '2026-11');
+    assert.equal(monthOf('2026-10-31T17:00:00.000Z', 'America/Los_Angeles'), '2026-10');
+    assert.equal(monthOf('2026-10-31T23:00', 'America/Los_Angeles'), '2026-10');
+    assert.equal(monthOf('2026-10-31', 'Asia/Taipei'), '2026-10');
     await church();
     const { google } = fakeGoogle();
     await connect(google);
@@ -645,25 +719,26 @@ describe('releasing the grant', () => {
 
 describe('the months an event is cached in', () => {
   test('one month, or each month it spans', () => {
-    assert.deepEqual(monthsOf('2026-10-10', '2026-10-11'), ['2026-10']);
-    assert.deepEqual(monthsOf('2026-09-30', '2026-10-03'), ['2026-09', '2026-10']);
-    assert.deepEqual(monthsOf('2026-12-30', '2027-02-02'), ['2026-12', '2027-01', '2027-02']);
+    assert.deepEqual(monthsOf('2026-10-10', '2026-10-11', TPE), ['2026-10']);
+    assert.deepEqual(monthsOf('2026-09-30', '2026-10-03', TPE), ['2026-09', '2026-10']);
+    assert.deepEqual(monthsOf('2026-12-30', '2027-02-02', TPE), ['2026-12', '2027-01', '2027-02']);
   });
 
   test('an all-day event ending on the 1st (exclusive) is not in that month', () => {
-    assert.deepEqual(monthsOf('2026-10-30', '2026-11-01'), ['2026-10']);
+    assert.deepEqual(monthsOf('2026-10-30', '2026-11-01', TPE), ['2026-10']);
   });
 
-  test('a timed event crossing midnight UTC+8 into a new month is in both', () => {
+  test("a timed event crossing the church's midnight into a new month is in both", () => {
     // 22:00 on 10/31 to 01:00 on 11/1, Taipei.
-    assert.deepEqual(monthsOf('2026-10-31T14:00:00Z', '2026-10-31T17:00:00Z'), ['2026-10', '2026-11']);
-    assert.deepEqual(monthsOf('2026-10-31T22:00:00+08:00', '2026-11-01T00:00:00+08:00'), ['2026-10'], 'ends at midnight');
+    assert.deepEqual(monthsOf('2026-10-31T14:00:00Z', '2026-10-31T17:00:00Z', TPE), ['2026-10', '2026-11']);
+    assert.deepEqual(monthsOf('2026-10-31T22:00:00+08:00', '2026-11-01T00:00:00+08:00', TPE), ['2026-10'], 'ends at midnight');
+    assert.deepEqual(monthsOf('2026-10-31T22:00', '2026-11-01T01:00', 'America/New_York'), ['2026-10', '2026-11'], 'on its clock');
   });
 
   test('without a usable end, the start month', () => {
-    assert.deepEqual(monthsOf('2026-10-10'), ['2026-10']);
-    assert.deepEqual(monthsOf('2026-10-10', 'soon'), ['2026-10']);
-    assert.deepEqual(monthsOf('2026-10-10', '2026-09-01'), ['2026-10']);
+    assert.deepEqual(monthsOf('2026-10-10', undefined, TPE), ['2026-10']);
+    assert.deepEqual(monthsOf('2026-10-10', 'soon', TPE), ['2026-10']);
+    assert.deepEqual(monthsOf('2026-10-10', '2026-09-01', TPE), ['2026-10']);
   });
 });
 

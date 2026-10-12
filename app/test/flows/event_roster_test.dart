@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/data/memory/memory_backend.dart';
-import 'package:martha/domain/church_time.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
 
@@ -165,7 +164,10 @@ void main() {
       ],
       forEvent: RosterEvent(eventId: 'camp', title: '秋季退修會', lastDay: Day(2026, 10, 10)),
     );
-    await pumpApp(tester, church(as: staffMei, saved: retreat, clock: () => churchInstant(DateTime(2026, 10, 10, 9))));
+    await pumpApp(
+      tester,
+      church(as: staffMei, saved: retreat, clock: () => ChurchTimeZone.taipei.instantOf(DateTime.utc(2026, 10, 10, 9))),
+    );
     expect(find.textContaining('秋季退修會'), findsOneWidget);
   });
 

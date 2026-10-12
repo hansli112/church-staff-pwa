@@ -1,14 +1,15 @@
 import { randomUUID } from 'node:crypto';
 
-import { FieldValue, Timestamp, type DocumentSnapshot } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp, type DocumentSnapshot, type Transaction } from 'firebase-admin/firestore';
 
 import { churchAccess, churchClosed, isChurchOpen } from './access.js';
-import { dateKeyUtc8, fail, type Caller, type Deps } from './common.js';
+import { fail, type Caller, type Deps } from './common.js';
 import { cutText, LIMITS, TEXT_LIMITS } from './limits.js';
+import { dateKeyIn, instantOf, nextDay, timeZoneOf, type ChurchTimeZone } from './timeZones.js';
 
 /**
  * 教會連結的每日內容來源: one JSON contract, `{date, title, body, link}`.
- * The date must be today in UTC+8. A failure replaces content with an error,
+ * The date must be the church's today. A failure replaces content with an error,
  * never a last-good summary or a guessed manual link.
  *
  * linkSources/{cid} is the private schedule. An epoch identifies a source/
@@ -73,8 +74,8 @@ async function readLimited(res: Response, max: number): Promise<string | null> {
   return Buffer.concat(chunks).toString('utf8');
 }
 
-/** GET [url]: 5 seconds in all, at most 64KB, HTTPS redirects only. Never throws. */
-export async function fetchSource(deps: Pick<Deps, 'fetch' | 'now'>, url: string): Promise<FetchResult> {
+/** GET [url]: 5 seconds in all, at most 64KB, HTTPS redirects only; dated today in [timeZone]. Never throws. */
+export async function fetchSource(deps: Pick<Deps, 'fetch' | 'now'>, url: string, timeZone: ChurchTimeZone): Promise<FetchResult> {
   const signal = AbortSignal.timeout(FETCH_LIMITS.timeoutMs);
   let current = url;
   try {
@@ -97,7 +98,7 @@ export async function fetchSource(deps: Pick<Deps, 'fetch' | 'now'>, url: string
       }
       const content = parseContent(json);
       if (!content) return { ok: false, error: 'badFormat' };
-      return content.date === dateKeyUtc8(deps.now()) ? { ok: true, content } : { ok: false, error: 'notToday' };
+      return content.date === dateKeyIn(timeZone, deps.now()) ? { ok: true, content } : { ok: false, error: 'notToday' };
     }
     return { ok: false, error: 'badFormat' };
   } catch (e) {
@@ -106,20 +107,21 @@ export async function fetchSource(deps: Pick<Deps, 'fetch' | 'now'>, url: string
   }
 }
 
-const DAY = 86400e3;
-const TAIPEI = 8 * 3600e3;
-
-/** Midnight in UTC+8 of the day [date] falls on, as an instant. */
-function taipeiMidnight(date: Date) {
-  return Math.floor((date.getTime() + TAIPEI) / DAY) * DAY - TAIPEI;
-}
-
-/** Today at [fetchMinute] if still ahead and not attempted today, otherwise tomorrow. */
-export function nextFetchAt(now: Date, fetchMinute: number, ranToday: boolean): Date {
-  const today = taipeiMidnight(now) + fetchMinute * 60e3;
+/**
+ * Today at [fetchMinute] on [timeZone]'s clock if still ahead and not
+ * attempted today, otherwise tomorrow's.
+ */
+export function nextFetchAt(now: Date, fetchMinute: number, ranToday: boolean, timeZone: ChurchTimeZone): Date {
+  const hhmm = `${String(Math.floor(fetchMinute / 60)).padStart(2, '0')}:${String(fetchMinute % 60).padStart(2, '0')}`;
+  const day = dateKeyIn(timeZone, now);
+  const today = instantOf(timeZone, `${day}T${hhmm}`);
   if (!ranToday && today > now.getTime()) return new Date(today);
-  return new Date(today + DAY);
+  // The next day on the calendar: 24 hours on can be two days on, or the same day, as the clocks change.
+  return new Date(instantOf(timeZone, `${nextDay(day)}T${hhmm}`));
 }
+
+/** Whether the source was fetched, or tried, on [day]. */
+const triedOn = (schedule: DocumentSnapshot, day: string) => schedule.get('lastDay') === day || schedule.get('lastAttemptDay') === day;
 
 function validMinute(v: unknown): number {
   if (typeof v !== 'number' || !Number.isInteger(v) || v < 0 || v >= 1440 || v % 15 !== 0) fail('invalid-argument', 'unknown');
@@ -134,6 +136,7 @@ function assertAdmin(church: DocumentSnapshot, member: DocumentSnapshot | undefi
 
 interface FetchLease {
   cid: string;
+  timeZone: ChurchTimeZone;
   source: string;
   fetchMinute: number;
   attemptId: string;
@@ -168,25 +171,26 @@ async function prepareFetch(deps: Deps, cid: string, uid?: string, expectedEpoch
       if (uid) fail('aborted', 'conflict');
       return null;
     }
+    const timeZone = timeZoneOf(church);
     const now = deps.now();
-    const today = dateKeyUtc8(now);
-    const nextAt = Timestamp.fromDate(nextFetchAt(now, fetchMinute, true));
+    const today = dateKeyIn(timeZone, now);
+    const nextAt = Timestamp.fromDate(nextFetchAt(now, fetchMinute, true, timeZone));
     if (!uid) {
       const due = schedule.get('nextAt') as Timestamp | undefined;
       if (!due || due.toMillis() > now.getTime()) return null;
-      if (!isChurchOpen(church) || schedule.get('lastDay') === today || schedule.get('lastAttemptDay') === today) {
+      if (!isChurchOpen(church) || triedOn(schedule, today)) {
         tx.update(scheduleRef, { nextAt });
         return null;
       }
     }
     tx.update(scheduleRef, { attemptId, lastAttemptDay: today, nextAt });
-    return { cid, source, fetchMinute, attemptId, ...(uid ? { uid } : {}) };
+    return { cid, timeZone, source, fetchMinute, attemptId, ...(uid ? { uid } : {}) };
   });
 }
 
 /** Publish content and scheduling metadata together, only for the still-current attempt. */
 async function runFetch(deps: Deps, lease: FetchLease): Promise<PublishedResult | null> {
-  const fetched = await fetchSource(deps, lease.source);
+  const fetched = await fetchSource(deps, lease.source, lease.timeZone);
   return deps.db.runTransaction(async (tx) => {
     const linkRef = deps.db.doc(`churches/${lease.cid}/settings/link`);
     const scheduleRef = deps.db.doc(`linkSources/${lease.cid}`);
@@ -202,8 +206,9 @@ async function runFetch(deps: Deps, lease: FetchLease): Promise<PublishedResult 
       if (lease.uid) fail('aborted', 'conflict');
       return null;
     }
+    const timeZone = timeZoneOf(church);
     const now = deps.now();
-    const today = dateKeyUtc8(now);
+    const today = dateKeyIn(timeZone, now);
     // The response may have arrived before midnight while its transaction waited.
     const result: FetchResult = fetched.ok && fetched.content.date !== today ? { ok: false, error: 'notToday' } : fetched;
     const at = Timestamp.fromDate(now);
@@ -213,7 +218,7 @@ async function runFetch(deps: Deps, lease: FetchLease): Promise<PublishedResult 
     tx.update(scheduleRef, {
       attemptId: FieldValue.delete(), lastAttemptDay: today,
       ...(result.ok ? { lastDay: today } : {}),
-      nextAt: Timestamp.fromDate(nextFetchAt(now, lease.fetchMinute, true)),
+      nextAt: Timestamp.fromDate(nextFetchAt(now, lease.fetchMinute, true, timeZone)),
     });
     return result.ok
       ? { ok: true, content: { ...result.content, source: lease.source, fetchedAt: now.getTime() } }
@@ -263,21 +268,22 @@ export async function setLinkSource(deps: Deps, caller: Caller | null, data: unk
       tx.delete(deps.db.doc(`churches/${cid}/settings/linkContent`));
       return null;
     }
+    const timeZone = timeZoneOf(church);
     const now = deps.now();
-    const today = dateKeyUtc8(now);
+    const today = dateKeyIn(timeZone, now);
     if (schedule.get('source') === source && link.get('source') === source) {
       if (link.get('fetchMinute') !== fetchMinute || schedule.get('fetchMinute') !== fetchMinute) {
-        const ranToday = schedule.get('lastDay') === today || schedule.get('lastAttemptDay') === today;
+        const ranToday = triedOn(schedule, today);
         tx.update(linkRef, { source, fetchMinute });
         tx.update(scheduleRef, {
           source, fetchMinute, epoch, attemptId: FieldValue.delete(),
-          nextAt: Timestamp.fromDate(nextFetchAt(now, fetchMinute, ranToday)),
+          nextAt: Timestamp.fromDate(nextFetchAt(now, fetchMinute, ranToday, timeZone)),
         });
       }
       return null;
     }
     tx.update(linkRef, { source, fetchMinute });
-    tx.set(scheduleRef, { source, fetchMinute, epoch, lastAttemptDay: today, nextAt: Timestamp.fromDate(nextFetchAt(now, fetchMinute, true)) });
+    tx.set(scheduleRef, { source, fetchMinute, epoch, lastAttemptDay: today, nextAt: Timestamp.fromDate(nextFetchAt(now, fetchMinute, true, timeZone)) });
     tx.delete(deps.db.doc(`churches/${cid}/settings/linkContent`));
     return epoch;
   });
@@ -299,6 +305,23 @@ export async function fetchDueLinks(deps: Deps) {
     if (lease && await runFetch(deps, lease)) fetched++;
   }
   return fetched;
+}
+
+/**
+ * Moves the church's next fetch to its fetch time on [timeZone]'s clock, in
+ * [tx]: the church's time zone is changing to [timeZone]. Read before any write.
+ */
+export async function moveLinkFetch(deps: Deps, tx: Transaction, cid: string, timeZone: ChurchTimeZone) {
+  const ref = deps.db.doc(`linkSources/${cid}`);
+  const schedule = await tx.get(ref);
+  return () => {
+    if (!schedule.exists) return;
+    const fetchMinute = schedule.get('fetchMinute');
+    if (typeof fetchMinute !== 'number') return;
+    const now = deps.now();
+    const today = dateKeyIn(timeZone, now);
+    tx.update(ref, { nextAt: Timestamp.fromDate(nextFetchAt(now, fetchMinute, triedOn(schedule, today), timeZone)) });
+  };
 }
 
 /** Drops the church's fetch schedule: the church is purged. */

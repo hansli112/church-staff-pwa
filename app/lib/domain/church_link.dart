@@ -1,13 +1,17 @@
-import 'church_time.dart';
 import 'models.dart';
 
-/// A sourced link is shown only when valid; failures never replace it with
-/// old content or the fixed link.
-({String title, String body, String url})? shownChurchLink(ChurchLink link, LinkContent? content, DateTime now) {
+/// A sourced link is shown only when valid, dated the church's today;
+/// failures never replace it with old content or the fixed link.
+({String title, String body, String url})? shownChurchLink(
+  ChurchLink link,
+  LinkContent? content,
+  DateTime now,
+  ChurchTimeZone timeZone,
+) {
   if (link.source == null) return (title: link.title, body: link.body, url: link.url);
   final fetched = content?.fetchedAt;
   final url = content?.link;
-  final today = churchToday(now).key;
+  final today = timeZone.today(now).key;
   final fresh =
       content != null &&
       content.source == link.source &&
@@ -18,7 +22,7 @@ import 'models.dart';
       ChurchLink.validUrl(url) &&
       // The server's clock: a phone a little slow must not hide it.
       fetched != null &&
-      churchToday(fetched).key == today;
+      timeZone.today(fetched).key == today;
   if (!fresh) return null;
   return (title: content.title, body: content.body, url: url);
 }

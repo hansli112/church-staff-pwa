@@ -95,6 +95,7 @@ const callable = <D = Deps>(handler: Handler<D>, make: () => D = deps as () => D
 export const createChurch = callable(church.createChurch);
 export const deleteChurch = callable(church.deleteChurch);
 export const restoreChurch = callable(church.restoreChurch);
+export const setChurchTimeZone = callable(church.setChurchTimeZone, calDeps, { secrets: calendarSecrets });
 export const churchPreview = callable(church.churchPreview);
 export const purgeDeletedChurches = onSchedule(
   { region: REGION, schedule: 'every day 03:00', timeZone: 'Asia/Taipei', secrets: calendarSecrets },
@@ -301,10 +302,12 @@ export const sendRosterChanges = onSchedule(
   },
 );
 
-// Events' rosters against what was done in Google Calendar itself; the
-// evening run comes before the reminders at 19:00.
+// Events' rosters against what was done in Google Calendar itself, at
+// 6:30, 12:30 and 18:30 on each church's clock; the evening run comes
+// before its reminders at 19:00, which go out every hour to the churches
+// whose clock says so.
 export const syncEventRosters = onSchedule(
-  { region: REGION, schedule: '30 6,12,18 * * *', timeZone: 'Asia/Taipei', secrets: calendarSecrets, timeoutSeconds: 540 },
+  { region: REGION, schedule: '30 * * * *', timeZone: 'Asia/Taipei', secrets: calendarSecrets, timeoutSeconds: 540 },
   async () => {
     const counts = await eventSync.syncEventRosters(calDeps());
     console.log('event rosters synced', counts);
@@ -312,7 +315,7 @@ export const syncEventRosters = onSchedule(
 );
 
 export const sendReminders = onSchedule(
-  { region: REGION, schedule: 'every day 19:00', timeZone: 'Asia/Taipei' },
+  { region: REGION, schedule: '0 * * * *', timeZone: 'Asia/Taipei' },
   async () => {
     await notifications.sendReminders(pushDeps());
   },

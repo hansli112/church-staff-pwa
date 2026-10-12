@@ -4,7 +4,7 @@ import 'models.dart';
 import 'staff_order.dart';
 
 /// The days of [e] as a roster keeps them. An event's times are already
-/// the church's (UTC+8, the zone of every dateKey), not the phone's.
+/// the church's (its time zone, that of every dateKey), not the phone's.
 ({Day first, Day last}) eventDays(CalendarEvent e) => (first: e.day, last: e.lastDay);
 
 /// A new, unsaved roster for calendar event [e] on calendar [calendarId],

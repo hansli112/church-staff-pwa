@@ -150,6 +150,32 @@ describe('reminders', () => {
     await sendReminders({ db, messaging, now, appUrl });
     assert.equal(sent.length, 0);
   });
+
+  test("at 7 in the evening on each church's clock, summer time or not", async () => {
+    await dayBeforeChurch();
+    await db.doc('churches/C1').update({ timeZone: 'America/Los_Angeles' });
+    await seedChurch('C2', { pastor: 'admin', mei: 'staff' });
+    await db.doc('churches/C2/settings/services').set({ services: [{ id: 'sunday', name: '主日' }], ids: ['sunday'] });
+    await db.doc('churches/C2/members/mei').update({ 'notificationPrefs.reminderTiming': 'dayBefore' });
+    for (const day of ['2026-10-04', '2026-11-08']) {
+      for (const cid of ['C1', 'C2']) {
+        await db.doc(`churches/${cid}/rosters/${day}_sunday`).set({ type: 'sunday', dateKey: day, duties: duties(['美玉'], []) });
+      }
+    }
+    const at = async (time: string) => {
+      const { sent, messaging } = fakeMessaging();
+      await sendReminders({ db, messaging, now: () => new Date(time), appUrl });
+      return sent.map((s) => `${s.title} ${s.body}`);
+    };
+    // Taipei's evening is Los Angeles' early morning: only C2, the church
+    // in Taipei (the one without a time zone).
+    assert.deepEqual(await at('2026-10-03T19:00:00+08:00'), ['明天的服事（10/4） 主日 司琴']);
+    assert.deepEqual(await at('2026-10-03T19:00:00-07:00'), ['明天的服事（10/4） 主日崇拜 司琴']);
+    assert.deepEqual(await at('2026-10-03T20:00:00-07:00'), []);
+    // The clocks went back on 1 November: 7 is an hour later in UTC.
+    assert.deepEqual(await at('2026-11-07T19:00:00-07:00'), []);
+    assert.deepEqual(await at('2026-11-07T19:00:00-08:00'), ['明天的服事（11/8） 主日崇拜 司琴']);
+  });
 });
 
 describe('weekly reminders', () => {
@@ -187,6 +213,15 @@ describe('weekly reminders', () => {
     const hao = sent.find((s) => s.tokens.includes('tok-hao'))!;
     assert.equal(hao.body, '10/13（週二）禱告會 招待；10/18（週日）主日崇拜 招待');
     assert.equal(sent.length, 2);
+  });
+
+  test("Monday is the church's Monday", async () => {
+    await week();
+    await db.doc('churches/C1').update({ timeZone: 'America/New_York' });
+    const { sent, messaging } = fakeMessaging();
+    // Monday evening in New York, Tuesday morning in Taipei.
+    await sendReminders({ db, messaging, now: () => new Date('2026-10-12T19:00:00-04:00'), appUrl });
+    assert.deepEqual(new Set(sent.map((s) => s.title)), new Set(['這週的服事（10/12–10/18）']));
   });
 
   test('by default, no other evening reminds anyone', async () => {

@@ -10,6 +10,7 @@ import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
+import '../common/time_zones.dart';
 import 'welcome_screen.dart' show VerifyEmailBanner;
 
 /// Picks the move file; null when cancelled. Overridden in tests.
@@ -79,7 +80,11 @@ class _MoveScreenState extends ConsumerState<MoveScreen> {
       _error = null;
     });
     try {
-      final cid = await ref.read(backendProvider).cloud.moveCommit(_path!, churchName: name, me: _me);
+      final timeZone = await ref.read(deviceTimeZoneProvider)();
+      final cid = await ref
+          .read(backendProvider)
+          .cloud
+          .moveCommit(_path!, churchName: name, me: _me, timeZone: timeZone);
       ref.read(selectedChurchProvider.notifier).select(cid);
       Haptics.success();
       if (!mounted) return;

@@ -10,6 +10,8 @@ import 'package:flutter/foundation.dart';
 import 'church_time.dart';
 import 'day.dart';
 
+export 'church_time.dart' show ChurchTimeZone;
+
 enum ChurchStatus { active, suspended, deleted }
 
 @immutable
@@ -21,6 +23,7 @@ class Church {
     this.logoUrl,
     this.homeName,
     this.deletedAt,
+    this.timeZone = ChurchTimeZone.fallback,
   });
 
   final String id;
@@ -35,6 +38,10 @@ class Church {
   final String? homeName;
   final DateTime? deletedAt;
 
+  /// Its time zone: its today, its reminders' evening and every time shown
+  /// go by it (#73).
+  final ChurchTimeZone timeZone;
+
   /// Past this many characters some phones cut the home-screen name off;
   /// the most it may have is `TextLimits.homeName`.
   static const homeNameSafeLength = 6;
@@ -48,13 +55,20 @@ class Church {
   /// The last moment its admin can restore it; null unless deleted.
   DateTime? get restorableUntil => status == ChurchStatus.deleted ? deletedAt?.add(restoreWindow) : null;
 
-  Church copyWith({String? name, ChurchStatus? status, String? logoUrl, String? Function()? homeName}) => Church(
+  Church copyWith({
+    String? name,
+    ChurchStatus? status,
+    String? logoUrl,
+    String? Function()? homeName,
+    ChurchTimeZone? timeZone,
+  }) => Church(
     id: id,
     name: name ?? this.name,
     status: status ?? this.status,
     logoUrl: logoUrl ?? this.logoUrl,
     homeName: homeName == null ? this.homeName : homeName(),
     deletedAt: deletedAt,
+    timeZone: timeZone ?? this.timeZone,
   );
 }
 
@@ -627,7 +641,7 @@ class CalendarEvent {
   final String? recurringEventId;
   final String? originalStart;
 
-  /// The church's wall time (UTC+8), held in a UTC [DateTime] whatever the
+  /// The church's wall time (its time zone's), held in a UTC [DateTime] whatever the
   /// phone's zone; the constructor takes the fields as given. All-day
   /// events: midnight of the first day; [end] is exclusive.
   final DateTime start;
@@ -753,7 +767,7 @@ class ChurchLink {
     this.fetchMinute = defaultFetchMinute,
   });
 
-  /// 04:30 in Asia/Taipei.
+  /// 04:30 on the church's clock.
   static const defaultFetchMinute = 4 * 60 + 30;
 
   final String title;
@@ -766,8 +780,8 @@ class ChurchLink {
   /// [body] and [url] while fresh. Set through the backend only.
   final String? source;
 
-  /// When [source] is fetched: minutes after midnight, Asia/Taipei, in
-  /// steps of 15.
+  /// When [source] is fetched: minutes after midnight in the church's time
+  /// zone, in steps of 15.
   final int fetchMinute;
 
   /// Whether saving this over [saved] changes what is fetched or when, so

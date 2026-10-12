@@ -1,9 +1,10 @@
 import type { DocumentSnapshot } from 'firebase-admin/firestore';
 
 import { isChurchOpen } from './access.js';
-import { dateKeyUtc8, runEach, type Deps } from './common.js';
+import { runEach, type Deps } from './common.js';
 import { notifyMembers, type PushDeps } from './push.js';
 import { queue } from './webhook.js';
+import { dateKeyIn, earliestDay, timeZoneOf } from './timeZones.js';
 
 /**
  * 服事表異動: one write of a roster day, read once into a [RosterChange],
@@ -104,14 +105,15 @@ export const isEvent = (d: DocumentSnapshot | undefined) => d?.exists === true &
 /**
  * Writes that tell nobody: an event's roster put back by undoing its
  * event's delete or out of Google's trash (`restore`), or moved to its
- * event's new id (`relink`, eventSync.ts).
+ * event's new id (`relink`, eventSync.ts), or given its days on the clock
+ * of the church's new time zone (`timeZone`, eventSync.ts).
  */
-const QUIET = new Set(['restore', 'relink']);
+const QUIET = new Set(['restore', 'relink', 'timeZone']);
 const isCancelled = (d: DocumentSnapshot | undefined) => d?.exists === true && d.get('cancelledAt') != null;
 
 /**
  * The change one roster write makes, or null when there is nothing to tell:
- * not a roster, a past day (UTC+8; an event's last day), a church that is
+ * not a roster, a past day (the church's; an event's last day), a church that is
  * not open, or nobody put on or taken off anything. An event's roster also
  * tells of a move to another day. A cancelled event's roster, and a
  * [QUIET] write, tell nothing.
@@ -128,7 +130,8 @@ export async function readRosterChange(
   const event = isEvent(doc);
   const serviceId = event ? null : (doc?.get('type') as string | undefined);
   const lastDay = event ? ((doc?.get('endDateKey') as string | undefined) ?? dateKey) : dateKey;
-  if (!dateKey || !lastDay || (!event && !serviceId) || lastDay < dateKeyUtc8(deps.now())) return null;
+  // Past everywhere, before reading the church for its own today.
+  if (!dateKey || !lastDay || (!event && !serviceId) || lastDay < earliestDay(deps.now())) return null;
   if (event && (isCancelled(before) || isCancelled(after) || QUIET.has(doc?.get('via') as string))) return null;
   const diff = diffDuties(before?.exists ? before.get('duties') : [], after?.exists ? after.get('duties') : []);
   const movedFrom =
@@ -141,7 +144,7 @@ export async function readRosterChange(
     deps.db.doc(`churches/${cid}/settings/services`).get(),
     editedBy ? deps.db.doc(`churches/${cid}/members/${editedBy}`).get() : null,
   ]);
-  if (!isChurchOpen(church)) return null;
+  if (!isChurchOpen(church) || lastDay < dateKeyIn(timeZoneOf(church), deps.now())) return null;
   const list = (services.get('services') as { id: string; name: string }[] | undefined) ?? [];
   const title = event ? ((doc?.get('title') as string | undefined) ?? '') : '';
   return {

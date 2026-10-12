@@ -311,6 +311,12 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect(mine.map((m) => (m.churchId, m.member.role)), [(cid, Role.admin)]);
     });
 
+    test('a church is made in the time zone asked for', () async {
+      await w.signUp('a@example.com');
+      final cid = await cloud().createChurch('洛杉磯恩典堂', timeZone: ChurchTimeZone.losAngeles);
+      expect((await w.backend.church(cid).church().first)!.timeZone, ChurchTimeZone.losAngeles);
+    });
+
     test('church names are unique, ignoring spaces, width and case', () async {
       await w.signUp('a@example.com');
       await cloud().createChurch('Grace Church');
@@ -357,6 +363,16 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect((await g.church.church().first)!.homeName, isNull);
       await w.signIn(Grace.meiEmail);
       await expectLater(g.church.setHomeName('美玉堂'), denied());
+    });
+
+    test("the church's time zone: Taipei until an admin sets another (#73)", () async {
+      final g = await Grace.open(w);
+      expect((await g.church.church().first)!.timeZone, ChurchTimeZone.taipei);
+      await g.church.setTimeZone(ChurchTimeZone.chicago);
+      expect((await g.church.church().first)!.timeZone, ChurchTimeZone.chicago);
+      await w.signIn(Grace.meiEmail);
+      await expectLater(g.church.setTimeZone(ChurchTimeZone.london), denied());
+      expect((await g.church.church().first)!.timeZone, ChurchTimeZone.chicago);
     });
 
     test('only admins upload the logo', () async {

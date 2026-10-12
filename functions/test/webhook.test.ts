@@ -102,6 +102,9 @@ describe('delivering', () => {
     const other = createHmac('sha256', secret!).update(`${Number(ts) + 1}.${req.body}`).digest('hex');
     assert.notEqual(req.headers['x-martha-signature'], `sha256=${other}`, 'the timestamp is signed');
     assert.deepEqual(JSON.parse(req.body), { source: 'martha', churchId: 'C1', churchName: '恩典堂', timeZone: 'Asia/Taipei' });
+    await db.doc('churches/C1').update({ timeZone: 'America/Chicago' });
+    await webhookTest(d, caller('pastor'), { churchId: 'C1' });
+    assert.equal(JSON.parse(requests[1].body).timeZone, 'America/Chicago', "the church's own");
 
     const last = (await settings())!.lastDelivery;
     assert.equal(last.ok, true);

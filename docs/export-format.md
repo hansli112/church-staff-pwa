@@ -27,7 +27,8 @@
   "version": 2,                       // 格式改了會加一。2：加上活動的服事表
   "exportedAt": "2026-10-04T02:30:00.000Z",
 
-  "church": { "id": "…", "name": "恩典堂", "homeName": "恩典", "logoUrl": "https://…" },
+  // timeZone 是教會的時區（IANA 名稱），舊的匯出沒有這個欄位，當台北。
+  "church": { "id": "…", "name": "恩典堂", "homeName": "恩典", "logoUrl": "https://…", "timeZone": "Asia/Taipei" },
 
   // 服事設定。ids 是用過的所有服事 id，只增不減。
   "services": {
@@ -84,7 +85,7 @@
   // 行事曆：只有有沒有連接、連的是哪本。沒有授權。
   "calendar": { "connected": true, "calendarName": "教會行事曆" },
 
-  // 教會連結。fetchMinute 是台北時間午夜後的分鐘數。
+  // 教會連結。fetchMinute 是教會時區午夜後的分鐘數。
   "churchLink": { "title": "奉獻", "body": "", "url": "https://…", "source": null, "fetchMinute": 270 },
 
   // 外部通知：網址與開了哪些事件。沒有密鑰。

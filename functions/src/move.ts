@@ -1,7 +1,7 @@
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import type { Storage } from 'firebase-admin/storage';
 
-import { openChurch } from './church.js';
+import { newChurchTimeZone, openChurch } from './church.js';
 import { emailHash } from './claim.js';
 import { fail, requireCaller, text, type Caller, type Deps } from './common.js';
 import { buildImport, type SelfHostSnapshot, type SourceDoc } from './importer.js';
@@ -119,8 +119,9 @@ export async function moveCommit(deps: MoveDeps, caller: Caller | null, data: un
   const c = requireCaller(caller);
   if (!c.emailVerified) fail('failed-precondition', 'unverifiedEmail');
   const path = pathOf(c, data);
-  const input = data as { churchName?: unknown; me?: unknown };
+  const input = data as { churchName?: unknown; me?: unknown; timeZone?: unknown };
   const churchName = text(input.churchName, TEXT_LIMITS.churchName);
+  const timeZone = newChurchTimeZone(input.timeZone);
   const { snapshot, project } = await readMoveFile(deps, path);
   const now = Timestamp.fromDate(deps.now());
   const built = buildImport(snapshot, now);
@@ -185,6 +186,7 @@ export async function moveCommit(deps: MoveDeps, caller: Caller | null, data: un
       services: built.services,
       admin: me ? { name: me.name, groups: me.groups, zones: me.zones, zoneTypes: me.zoneTypes, notificationPrefs: me.notificationPrefs } : undefined,
       extra: { movedFrom: project, movedBy: c.uid },
+      timeZone,
     });
   } catch (e) {
     // Taken in the meantime: drop what was written under the unused ID.

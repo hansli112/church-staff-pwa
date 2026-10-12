@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../core/design/components.dart';
 import '../../core/perf.dart';
 import '../../core/design/tokens.dart';
-import '../../domain/church_time.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/calendar.dart';
@@ -94,7 +93,7 @@ class HomeScreen extends ConsumerWidget {
     final activityReadStatus = {
       for (final month in activityMonths) month: ref.watch(calendarReadStatusProvider(month)),
     };
-    final now = churchTime(ref.watch(clockProvider)());
+    final now = ref.watch(churchTimeZoneProvider).clock(ref.watch(clockProvider)());
     final activities = {
       for (final state in activityStates)
         if (!state.hasError)

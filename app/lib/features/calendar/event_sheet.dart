@@ -9,6 +9,7 @@ import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/calendar.dart';
 import '../../state/providers.dart';
+import '../common/time_zones.dart';
 import '../rosters/event_roster_screen.dart';
 
 /// Read-only details, for people who cannot edit the calendar, with the
@@ -43,6 +44,7 @@ Future<void> showEventDetail(BuildContext context, CalendarEvent e) {
                   },
                   style: AppText.body,
                 ),
+                if (!e.allDay) const ChurchClockNotice(padding: EdgeInsets.only(top: Space.xs)),
                 if (e.location != null && e.location!.isNotEmpty) ...[
                   const SizedBox(height: Space.xs),
                   Text(e.location!, style: AppText.body.copyWith(color: AppColors.of(context).secondaryLabel)),
@@ -360,6 +362,7 @@ class _EventEditorState extends State<_EventEditor> {
                   ),
                 ],
               ),
+              if (!_allDay) const ChurchClockNotice(),
               if (widget.event case final e? when e.id != null) EventRosterRow(event: e, onOpen: _openRoster),
               if (widget.event?.id != null)
                 ListSection(

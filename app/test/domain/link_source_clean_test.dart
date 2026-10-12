@@ -15,7 +15,7 @@ void main() {
       error: LinkFetchError.network,
       errorAt: now,
     );
-    expect(shownChurchLink(link, content, now), isNull);
+    expect(shownChurchLink(link, content, now, ChurchTimeZone.taipei), isNull);
   });
 
   test('昨天的每日內容即使剛讀到也不能當作今天顯示', () {
@@ -29,7 +29,7 @@ void main() {
       link: 'https://church.example.org/old',
       fetchedAt: now,
     );
-    expect(shownChurchLink(link, content, now), isNull);
+    expect(shownChurchLink(link, content, now, ChurchTimeZone.taipei), isNull);
   });
 
   test('手機時鐘慢幾秒，也照樣顯示今天剛抓到的內容', () {
@@ -42,6 +42,6 @@ void main() {
       link: 'https://church.example.org/today',
       fetchedAt: now.add(const Duration(seconds: 30)),
     );
-    expect(shownChurchLink(link, content, now)?.title, '今日經文');
+    expect(shownChurchLink(link, content, now, ChurchTimeZone.taipei)?.title, '今日經文');
   });
 }

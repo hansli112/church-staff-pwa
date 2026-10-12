@@ -17,6 +17,7 @@ const _pages = [
   '/me/profile',
   '/me/language',
   '/me/church',
+  '/me/timezone',
   '/me/link',
   '/me/webhook',
   '/me/calendar',

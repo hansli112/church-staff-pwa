@@ -11,6 +11,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/session.dart';
 import '../common/errors.dart';
+import '../common/time_zones.dart';
 import 'add_to_home.dart';
 import 'claims.dart';
 import 'links.dart';
@@ -256,7 +257,8 @@ class _CreateChurchScreenState extends ConsumerState<CreateChurchScreen> {
       _duplicate = false;
     });
     try {
-      final cid = await ref.read(backendProvider).cloud.createChurch(name);
+      final timeZone = await ref.read(deviceTimeZoneProvider)();
+      final cid = await ref.read(backendProvider).cloud.createChurch(name, timeZone: timeZone);
       ref.read(selectedChurchProvider.notifier).select(cid);
       Haptics.success();
       if (mounted) goAfterJoining(context, ref, cid);

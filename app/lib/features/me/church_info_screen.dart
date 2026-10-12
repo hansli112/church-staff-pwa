@@ -15,6 +15,7 @@ import '../../state/session.dart';
 import '../church/add_to_home.dart';
 import '../church/links.dart';
 import '../common/errors.dart';
+import '../common/time_zones.dart';
 import 'home_name_dialog.dart';
 
 /// 教會資訊: the church's name and logo, the admin tools, and at the very
@@ -206,6 +207,12 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
                   value: church.homeName ?? l10n.homeNameUnset,
                   onTap: () => _editHomeName(church),
                 ),
+              // Everyone's times are the church's: everyone may see whose.
+              ListRow(
+                title: l10n.timeZone,
+                value: timeZoneLabel(l10n, church.timeZone, ref.watch(clockProvider)()),
+                onTap: admin ? () => context.push('/me/timezone') : null,
+              ),
               // Only on a phone's browser: anywhere else it is on the home
               // screen already, or cannot be.
               if (ref.watch(addToHomeProvider) != null)

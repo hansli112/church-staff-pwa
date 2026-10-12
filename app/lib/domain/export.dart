@@ -74,6 +74,7 @@ Map<String, Object?> exportJson(ChurchSnapshot s, DateTime exportedAt) => {
     'name': s.church.name,
     'homeName': s.church.homeName,
     'logoUrl': s.church.logoUrl,
+    'timeZone': s.church.timeZone.id,
   },
   'services': {
     'services': [
@@ -191,9 +192,8 @@ Uint8List exportZip(ChurchSnapshot s, DateTime exportedAt) {
   return ZipEncoder().encodeBytes(archive);
 }
 
-/// `martha-恩典堂-2026-10-04.zip`
+/// `martha-恩典堂-2026-10-04.zip`, dated the church's day at [at].
 String exportFileName(Church church, DateTime at) {
   final safe = church.name.replaceAll(RegExp(r'[\\/:*?"<>|\s]+'), '_');
-  final d = '${at.year}-${at.month.toString().padLeft(2, '0')}-${at.day.toString().padLeft(2, '0')}';
-  return 'martha-$safe-$d.zip';
+  return 'martha-$safe-${church.timeZone.today(at).key}.zip';
 }

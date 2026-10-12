@@ -2371,4 +2371,85 @@ class L10nEn extends L10n {
 
   @override
   String get churchStatus => 'Status';
+
+  @override
+  String get timeZone => 'Time zone';
+
+  @override
+  String timeZoneWithOffset(String city, String offset) {
+    return '$city ($offset)';
+  }
+
+  @override
+  String get timeZoneFooter =>
+      'Today, the 7 pm reminders and calendar times all follow the church’s time zone, wherever your phone is.';
+
+  @override
+  String timeZoneChangeTitle(String city) {
+    return 'Switch to $city time?';
+  }
+
+  @override
+  String get timeZoneChangeBody => 'Event times will show in the new time zone. Schedule dates stay the same.';
+
+  @override
+  String get timeZoneChange => 'Switch';
+
+  @override
+  String churchLocalTime(String city) {
+    return 'Church local time ($city)';
+  }
+
+  @override
+  String calendarTimeZoneDiffers(String zone, String city) {
+    return 'This calendar is set to $zone, not the church’s time zone ($city). Calendar times follow the church’s time zone.';
+  }
+
+  @override
+  String get cityAuckland => 'Auckland';
+
+  @override
+  String get citySydney => 'Sydney';
+
+  @override
+  String get cityMelbourne => 'Melbourne';
+
+  @override
+  String get cityTokyo => 'Tokyo';
+
+  @override
+  String get citySeoul => 'Seoul';
+
+  @override
+  String get cityTaipei => 'Taipei';
+
+  @override
+  String get cityHongKong => 'Hong Kong';
+
+  @override
+  String get citySingapore => 'Singapore';
+
+  @override
+  String get cityKualaLumpur => 'Kuala Lumpur';
+
+  @override
+  String get cityLondon => 'London';
+
+  @override
+  String get cityToronto => 'Toronto';
+
+  @override
+  String get cityNewYork => 'New York';
+
+  @override
+  String get cityChicago => 'Chicago';
+
+  @override
+  String get cityDenver => 'Denver';
+
+  @override
+  String get cityVancouver => 'Vancouver';
+
+  @override
+  String get cityLosAngeles => 'Los Angeles';
 }

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
 
 import { buildPrompt, DEFAULT_MODELS, geminiClient, geminiModels, photoQuota, PHOTOS_PER_MONTH, recognizeRoster, type Gemini } from '../src/photo.js';
-import { caller, clearFirestore, db, deps, rejectsWith, seedChurch } from './support.js';
+import { caller, clearFirestore, db, deps, rejectsWith, seedChurch, setNow } from './support.js';
 
 const image = { mimeType: 'image/jpeg', data: Buffer.from('jpeg').toString('base64') };
 const ok: Gemini = async () => ({ rows: [{ date: '2026-10-04', duties: [] }], inputTokens: 2000, outputTokens: 3000 });
@@ -112,6 +112,27 @@ describe('recognizeRoster', () => {
       }),
       'unknown',
     );
+  });
+});
+
+describe("a church's own month and day", () => {
+  beforeEach(clearFirestore);
+  test('a photo on 31 October in Los Angeles counts for October there, whatever the date in Taipei', async () => {
+    await church();
+    await db.doc('churches/C1').update({ timeZone: 'America/Los_Angeles' });
+    setNow(new Date('2026-11-01T02:00:00+08:00'));
+    let prompt = '';
+    const gemini: Gemini = async (p) => {
+      prompt = p;
+      return ok(p, []);
+    };
+    await recognizeRoster({ ...deps, gemini }, caller('editor'), { churchId: 'C1', serviceType: 'sunday', images: [image] });
+    assert.equal((await db.doc('churches/C1/usage/2026-10').get()).get('photos'), 1);
+    assert.match(prompt, /今天是 2026-10-31/);
+    assert.equal((await photoQuota(deps, caller('staff'), { churchId: 'C1' })).remaining, PHOTOS_PER_MONTH - 1);
+    // The platform's budget goes by its own month.
+    assert.ok((await db.doc('platform/photoBudget_2026-11').get()).exists);
+    setNow(new Date('2026-10-01T10:00:00+08:00'));
   });
 });
 

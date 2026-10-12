@@ -22,29 +22,37 @@ void main() {
   );
 
   test('today’s content from the current source is shown', () {
-    final s = shownChurchLink(fixed, fetched(), now)!;
+    final s = shownChurchLink(fixed, fetched(), now, ChurchTimeZone.taipei)!;
     expect(s.title, '今日經文');
     expect(s.url, 'https://feed.example/1004');
   });
 
   test('a link with no source shows the fixed link', () {
     const noSource = ChurchLink(title: '教會官網', url: 'https://grace.example');
-    expect(shownChurchLink(noSource, fetched(), now)!.title, '教會官網');
-    expect(shownChurchLink(noSource, null, now)!.url, 'https://grace.example');
+    expect(shownChurchLink(noSource, fetched(), now, ChurchTimeZone.taipei)!.title, '教會官網');
+    expect(shownChurchLink(noSource, null, now, ChurchTimeZone.taipei)!.url, 'https://grace.example');
   });
 
   test('a sourced link shows nothing rather than stand in for missing content', () {
-    expect(shownChurchLink(fixed, null, now), isNull);
-    expect(shownChurchLink(fixed, fetched(link: null), now), isNull, reason: 'the source must give its link');
-    expect(shownChurchLink(fixed, fetched(source: 'https://old.example'), now), isNull);
-    expect(shownChurchLink(fixed, fetched(date: '2026-10-03'), now), isNull, reason: 'yesterday is not today');
+    expect(shownChurchLink(fixed, null, now, ChurchTimeZone.taipei), isNull);
     expect(
-      shownChurchLink(fixed, fetched(at: DateTime.utc(2026, 10, 3, 15, 59)), now),
+      shownChurchLink(fixed, fetched(link: null), now, ChurchTimeZone.taipei),
+      isNull,
+      reason: 'the source must give its link',
+    );
+    expect(shownChurchLink(fixed, fetched(source: 'https://old.example'), now, ChurchTimeZone.taipei), isNull);
+    expect(
+      shownChurchLink(fixed, fetched(date: '2026-10-03'), now, ChurchTimeZone.taipei),
+      isNull,
+      reason: 'yesterday is not today',
+    );
+    expect(
+      shownChurchLink(fixed, fetched(at: DateTime.utc(2026, 10, 3, 15, 59)), now, ChurchTimeZone.taipei),
       isNull,
       reason: 'fetched before the church’s midnight',
     );
     const failed = LinkContent(source: src, error: LinkFetchError.timeout);
-    expect(shownChurchLink(fixed, failed, now), isNull);
+    expect(shownChurchLink(fixed, failed, now, ChurchTimeZone.taipei), isNull);
   });
 
   test('fetch times read as HH:MM', () {

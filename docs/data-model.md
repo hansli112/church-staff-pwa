@@ -8,15 +8,15 @@
 | 路徑 | 內容 |
 |---|---|
 | `users/{uid}` | 全域個資：`name`、`email`、`locale`（自己選的語言，跟隨系統時沒有）、`appLocale`（App 實際顯示的語言，給推播用）、`fcm`（`{deviceId: token}`）、`createdAt`、`updatedAt` |
-| `churches/{cid}` | `name`、`nameKey`（正規化後的名稱，同名檢查用）、`status`（`active` / `suspended` / `deleted`）、`createdBy`、`createdAt`、`deletedAt`、`logoVersion`（logo 的 Storage generation）、`homeName`（主畫面名稱，選填，最多 8 字） |
+| `churches/{cid}` | `name`、`nameKey`（正規化後的名稱，同名檢查用）、`status`（`active` / `suspended` / `deleted`）、`createdBy`、`createdAt`、`deletedAt`、`logoVersion`（logo 的 Storage generation）、`homeName`（主畫面名稱，選填，最多 8 字）、`timeZone`（教會的時區，IANA 名稱，限 `functions/src/timeZones.ts` 的 16 個；建立時照建立者手機的時區，之後管理員經 `setChurchTimeZone` 改；沒有這個欄位的是 #73 之前建立的，一律當 `Asia/Taipei`） |
 | `churches/{cid}/members/{uid}` | `uid`（= doc id，collection group 查詢用）、`name`、`email`、`role`、`groups`、`zones`（每個 `{serviceType, duties, smallGroups}`）、`zoneTypes`、`notificationPrefs`（`muted`：關掉的通知種類；`reminderTiming`：服事提醒的時間，`weekly`／`dayBefore`／`both`，沒有就是 `weekly`）、`joinedAt` |
-| `churches/{cid}/rosters/{id}` | 服事表，`type` 是聚會別 ID，`dateKey` 是 `YYYY-MM-DD`，id 是 `<dateKey>_<type>`。活動的服事表（掛在行事曆活動上）的 id 是 `ev_<活動 id>`，沒有 `type`，改成 `kind: 'event'`、`eventId`、`title`（活動名稱）、`dateKey` 與 `endDateKey`（活動的第一天、最後一天，UTC+8）。名稱和日期由 `calendarWrite`（在 App 改的）和 `syncEventRosters`（一天三次，含 18:30，在 Google 日曆直接改的）照活動更新。另外記 `calendarId`（活動在哪本行事曆）、重複活動的 `recurringEventId` 與 `originalStart`，建立時 App 寫，之後只有後端改。活動刪掉時後端加上 `cancelledAt`（取消：不顯示、不提醒，留著給復原；30 天內活動回來就恢復，過了就刪掉），只有後端寫這個欄位 |
+| `churches/{cid}/rosters/{id}` | 服事表，`type` 是聚會別 ID，`dateKey` 是 `YYYY-MM-DD`，id 是 `<dateKey>_<type>`。活動的服事表（掛在行事曆活動上）的 id 是 `ev_<活動 id>`，沒有 `type`，改成 `kind: 'event'`、`eventId`、`title`（活動名稱）、`dateKey` 與 `endDateKey`（活動的第一天、最後一天，教會的時區）。名稱和日期由 `calendarWrite`（在 App 改的）和 `syncEventRosters`（各教會當地每天 6:30、12:30、18:30，在 Google 日曆直接改的；教會改時區時也立刻照新時區重算一次，不發通知）照活動更新。另外記 `calendarId`（活動在哪本行事曆）、重複活動的 `recurringEventId` 與 `originalStart`，建立時 App 寫，之後只有後端改。活動刪掉時後端加上 `cancelledAt`（取消：不顯示、不提醒，留著給復原；30 天內活動回來就恢復，過了就刪掉），只有後端寫這個欄位 |
 | `churches/{cid}/pendingMembers/{舊 uid}` | 從舊版搬來、還沒登入的同工：`name`、`email`、`emailHash`、`role`、`groups`、`zones`、`zoneTypes`、`notificationPrefs`、`rosterIds`（搬家時記下有他名字的服事表）。後端建立，管理員可以刪；認領或合併時偏好與小組併入同工，只有 `rosterIds` 那幾天改連到新帳號 |
 | `pendingIndex/{email 的 SHA-256}` | 只有後端讀寫：`churches`（教會 id → 待認領同工 id） |
 | `invites/{邀請碼}` | `cid`、`churchName`、`expiresAt`（31 天內）、`revoked`、`createdBy`、`createdAt`、`zoneTypes`（選填，加入後屬於的牧區，最多 20 個；加入時只留教會還有的聚會別，不帶服事項目）。管理員建立、撤回，加入經 `redeemInvite` |
 | `churches/{cid}/staff_orders/{type}` | 各聚會別的同工排序 |
 | `churches/{cid}/settings/{doc}` | `services`（聚會別，`ids` 只增不減）、`roster_templates` 等 |
-| `churches/{cid}/settings/link` | 教會連結：`title`（1–30 字）、`body`（最多 120 字）、`url`（限 `https`）；`source`（每日內容來源，`https`）與 `fetchMinute`（每天抓取時間，台北時間午夜後的分鐘數，15 分鐘為單位）只能經 `setLinkSource` 設定 |
+| `churches/{cid}/settings/link` | 教會連結：`title`（1–30 字）、`body`（最多 120 字）、`url`（限 `https`）；`source`（每日內容來源，`https`）與 `fetchMinute`（每天抓取時間，教會時區午夜後的分鐘數，15 分鐘為單位）只能經 `setLinkSource` 設定 |
 | `churches/{cid}/settings/linkContent` | 只有後端寫，兩種形狀擇一：成功時 `source`、`date`（教會的今天，`YYYY-MM-DD`）、`title`、`body`、`link`、`fetchedAt`；失敗時只有 `source`、`error`、`errorStatus`、`errorAt`，不保留之前的內容 |
 | `linkSources/{cid}` | 只有後端讀寫：內容來源的排程，`source`、`fetchMinute`、`epoch`（設定每變一次就換，晚到的結果不能寫回）、`nextAt`、`lastAttemptDay`（排程這天試過了）、`lastDay`（最後成功的那天）、`attemptId`（抓取中才有） |
 | `churches/{cid}/settings/webhook` | 外部通知，只有後端寫、只有管理員讀：`url`（`https`）、`events`（`calendar`、`roster`）、`lastDelivery`（`at`、`event`、`ok`、`status`、`error`） |
@@ -35,8 +35,8 @@
 - 教會內顯示的名字來自 member doc，不讀 `users/{uid}`。
 - 服事表上誰是誰只看 `duties[].uids`（名字 → uid）。名字沒有 uid 就是外請，即使和某位同工同名；提醒、異動通知、「我接下來的服事」、搬家都不以名字補 uid。舊資料要補 uid 時用 `functions/scripts/backfill-roster-uids.ts`：預設只預覽，只對沒有 `uids` 欄位的服事、名字和唯一一位同工完全相同時自動補；明確的空 `uids` 只能靠人工確認的對應檔補。
 - `zones[].smallGroups` 是同工在那個牧區的小組名稱，只用來顯示、匯出和搬家，不是權限。
-- 每日內容來源只接受一種 JSON：`{"date":"YYYY-MM-DD","title":"…","body":"…","link":"https://…"}`，四個欄位都要有，`date` 必須是教會的今天（UTC+8）。抓不到、格式不對或不是今天，都記成失敗，首頁說明原因，不改顯示舊內容或固定連結；管理員可以重抓目前設定的來源。
-- 行事曆活動的時間一律照教會的時區（UTC+8）顯示與分日，不看手機在哪裡；沒有時區的時間視為錯誤資料。
+- 每日內容來源只接受一種 JSON：`{"date":"YYYY-MM-DD","title":"…","body":"…","link":"https://…"}`，四個欄位都要有，`date` 必須是教會的今天（照教會的時區）。抓不到、格式不對或不是今天，都記成失敗，首頁說明原因，不改顯示舊內容或固定連結；管理員可以重抓目前設定的來源。
+- 行事曆活動的時間一律照教會的時區顯示與分日，不看手機在哪裡。後端送給 App 的時間是教會當地的時刻加上當時的時差（`calendar.ts` 的 `inZone`），App 只取時刻；沒有時差的時間視為錯誤資料。App 送出的時間是教會當地的時刻、不帶時差，由後端照教會的時區換算（舊版 App 送的帶時差的時間照原樣收）。行事曆的月份快取也照教會的時區分月，記下當時的時區，時區改了就重抓。
 - 上面的「字」都是[長度上限](#長度上限)說的字。
 
 ## 長度上限

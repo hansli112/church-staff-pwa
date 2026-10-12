@@ -2243,4 +2243,84 @@ class L10nZh extends L10n {
 
   @override
   String get churchStatus => '狀態';
+
+  @override
+  String get timeZone => '時區';
+
+  @override
+  String timeZoneWithOffset(String city, String offset) {
+    return '$city（$offset）';
+  }
+
+  @override
+  String get timeZoneFooter => '今天、晚上 7 點的服事提醒、行事曆的時間，都照教會的時區，不看手機在哪裡。';
+
+  @override
+  String timeZoneChangeTitle(String city) {
+    return '改成$city時間？';
+  }
+
+  @override
+  String get timeZoneChangeBody => '活動時間會照新時區顯示，服事表的日期不變。';
+
+  @override
+  String get timeZoneChange => '更改';
+
+  @override
+  String churchLocalTime(String city) {
+    return '教會當地時間（$city）';
+  }
+
+  @override
+  String calendarTimeZoneDiffers(String zone, String city) {
+    return '這本日曆的時區是$zone，跟教會的時區（$city）不同。行事曆的時間照教會的時區顯示。';
+  }
+
+  @override
+  String get cityAuckland => '奧克蘭';
+
+  @override
+  String get citySydney => '雪梨';
+
+  @override
+  String get cityMelbourne => '墨爾本';
+
+  @override
+  String get cityTokyo => '東京';
+
+  @override
+  String get citySeoul => '首爾';
+
+  @override
+  String get cityTaipei => '台北';
+
+  @override
+  String get cityHongKong => '香港';
+
+  @override
+  String get citySingapore => '新加坡';
+
+  @override
+  String get cityKualaLumpur => '吉隆坡';
+
+  @override
+  String get cityLondon => '倫敦';
+
+  @override
+  String get cityToronto => '多倫多';
+
+  @override
+  String get cityNewYork => '紐約';
+
+  @override
+  String get cityChicago => '芝加哥';
+
+  @override
+  String get cityDenver => '丹佛';
+
+  @override
+  String get cityVancouver => '溫哥華';
+
+  @override
+  String get cityLosAngeles => '洛杉磯';
 }

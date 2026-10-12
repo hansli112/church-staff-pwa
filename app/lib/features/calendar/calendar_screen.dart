@@ -13,6 +13,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/calendar.dart';
 import '../../state/providers.dart';
 import '../common/calendar_read_notice.dart';
+import '../common/time_zones.dart';
 import '../rosters/format.dart';
 import 'event_sheet.dart';
 import 'month_grid.dart';
@@ -274,6 +275,7 @@ class _AgendaState extends ConsumerState<_Agenda> {
                   physics: const AlwaysScrollableScrollPhysics(),
                   slivers: [
                     SliverToBoxAdapter(child: CalendarReadNotice(status: readStatus)),
+                    const SliverToBoxAdapter(child: ChurchClockNotice()),
                     if (grid != null && !pinned) SliverToBoxAdapter(child: grid),
                     if (instead != null)
                       SliverFillRemaining(hasScrollBody: false, child: Center(child: instead))

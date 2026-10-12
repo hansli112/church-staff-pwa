@@ -2,14 +2,16 @@ import { Timestamp } from 'firebase-admin/firestore';
 import type { Storage } from 'firebase-admin/storage';
 
 import { churchAccess, churchClosed, churchId, isChurchOpen } from './access.js';
-import { forgetCalendar, type CalDeps } from './calendar.js';
-import { forgetLinkSource } from './churchLink.js';
+import { clearCache, forgetCalendar, type CalDeps } from './calendar.js';
+import { forgetLinkSource, moveLinkFetch } from './churchLink.js';
+import { followTimeZone } from './eventSync.js';
 import { forgetPendingClaims } from './claim.js';
 import { DAY_MS, fail, requireCaller, runEach, serverTime, text, type Caller, type Deps } from './common.js';
 import { forgetInvites } from './invites.js';
 import { personName, TEXT_LIMITS } from './limits.js';
 import { nameKey } from './text.js';
 import { forgetWebhook } from './webhook.js';
+import { DEFAULT_TIME_ZONE, isChurchTimeZone, type ChurchTimeZone } from './timeZones.js';
 
 /** How long a deleted church can be restored. */
 export const RESTORE_DAYS = 30;
@@ -42,8 +44,44 @@ export const DEFAULT_SERVICES = [
  */
 export async function createChurch(deps: Deps, caller: Caller | null, data: unknown) {
   const c = requireCaller(caller);
-  const name = text((data as { name?: unknown })?.name, TEXT_LIMITS.churchName);
-  return { churchId: await openChurch(deps, c, name) };
+  const input = data as { name?: unknown; timeZone?: unknown } | null;
+  const name = text(input?.name, TEXT_LIMITS.churchName);
+  return { churchId: await openChurch(deps, c, name, { timeZone: newChurchTimeZone(input?.timeZone) }) };
+}
+
+/**
+ * The time zone a new church is in: the one the app asks for (its maker's
+ * phone's, zones.ts), or, from an app too old to ask, [DEFAULT_TIME_ZONE].
+ */
+export function newChurchTimeZone(v: unknown): ChurchTimeZone {
+  if (v === undefined || v === null) return DEFAULT_TIME_ZONE;
+  if (!isChurchTimeZone(v)) fail('invalid-argument', 'unknown');
+  return v;
+}
+
+/**
+ * Sets the church's time zone (admins). Its days, reminders and the
+ * calendar's times follow; services' rosters keep their dates, events'
+ * take their events' days on the new clock. The calendar's cached months,
+ * which are the old zone's, are dropped, and the church link's next fetch
+ * moves to its time on the new clock.
+ */
+export async function setChurchTimeZone(deps: CalDeps, caller: Caller | null, data: unknown) {
+  const { cid } = await churchAccess(deps, caller, data, 'admin');
+  const timeZone = (data as { timeZone?: unknown }).timeZone;
+  if (!isChurchTimeZone(timeZone)) fail('invalid-argument', 'unknown');
+  await deps.db.runTransaction(async (tx) => {
+    const ref = deps.db.doc(`churches/${cid}`);
+    const church = await tx.get(ref);
+    const moveFetch = await moveLinkFetch(deps, tx, cid, timeZone);
+    // Closed since the access check: as any write there.
+    if (!isChurchOpen(church)) churchClosed();
+    tx.update(ref, { timeZone });
+    moveFetch();
+  });
+  await clearCache(deps, cid);
+  await followTimeZone(deps, cid, timeZone);
+  return {};
 }
 
 /**
@@ -61,6 +99,7 @@ export async function openChurch(
     extra?: Record<string, unknown>;
     /** A church ID picked beforehand, e.g. for data written first. */
     cid?: string;
+    timeZone?: ChurchTimeZone;
   } = {},
 ) {
   if (!c.emailVerified) fail('failed-precondition', 'unverifiedEmail');
@@ -85,6 +124,7 @@ export async function openChurch(
       createdBy: c.uid,
       createdAt: serverTime(),
       deletedAt: null,
+      timeZone: opts.timeZone ?? DEFAULT_TIME_ZONE,
       ...opts.extra,
     });
     tx.create(churchRef.collection('members').doc(c.uid), {

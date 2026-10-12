@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:martha/domain/church_time.dart';
 import 'package:martha/domain/models.dart';
 
 import '../support/harness.dart';
@@ -99,7 +98,7 @@ void main() {
 
     LinkContent today({String title = '今日經文', DateTime? at}) => LinkContent(
       source: src,
-      date: churchToday(at ?? testNow).key,
+      date: ChurchTimeZone.taipei.today(at ?? testNow).key,
       title: title,
       body: '耶和華是我的牧者',
       link: 'https://feed.example/today',

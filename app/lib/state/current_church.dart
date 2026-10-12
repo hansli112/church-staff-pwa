@@ -60,6 +60,12 @@ final churchProvider = StreamProvider<Church?>((ref) {
   return data.church();
 });
 
+/// The current church's time zone: what today is and every time shown go
+/// by it, wherever the phone is.
+final churchTimeZoneProvider = Provider<ChurchTimeZone>(
+  (ref) => ref.watch(churchProvider.select((c) => c.value?.timeZone ?? ChurchTimeZone.fallback)),
+);
+
 /// Whether the current church was deleted by its admin and can still be
 /// restored. Turns false when [Church.restoreWindow] runs out.
 final churchRestorableProvider = Provider<bool>((ref) {

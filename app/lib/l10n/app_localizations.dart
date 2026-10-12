@@ -4087,6 +4087,150 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'狀態'**
   String get churchStatus;
+
+  /// The church's time zone, in church settings.
+  ///
+  /// In zh, this message translates to:
+  /// **'時區'**
+  String get timeZone;
+
+  /// A time zone by its city, with how far it is from UTC now.
+  ///
+  /// In zh, this message translates to:
+  /// **'{city}（{offset}）'**
+  String timeZoneWithOffset(String city, String offset);
+
+  /// No description provided for @timeZoneFooter.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天、晚上 7 點的服事提醒、行事曆的時間，都照教會的時區，不看手機在哪裡。'**
+  String get timeZoneFooter;
+
+  /// No description provided for @timeZoneChangeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'改成{city}時間？'**
+  String timeZoneChangeTitle(String city);
+
+  /// No description provided for @timeZoneChangeBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'活動時間會照新時區顯示，服事表的日期不變。'**
+  String get timeZoneChangeBody;
+
+  /// Confirms changing the church's time zone.
+  ///
+  /// In zh, this message translates to:
+  /// **'更改'**
+  String get timeZoneChange;
+
+  /// Under times, when the phone is in another time zone than the church.
+  ///
+  /// In zh, this message translates to:
+  /// **'教會當地時間（{city}）'**
+  String churchLocalTime(String city);
+
+  /// Under the calendar list, when the picked Google calendar's time zone is not the church's.
+  ///
+  /// In zh, this message translates to:
+  /// **'這本日曆的時區是{zone}，跟教會的時區（{city}）不同。行事曆的時間照教會的時區顯示。'**
+  String calendarTimeZoneDiffers(String zone, String city);
+
+  /// No description provided for @cityAuckland.
+  ///
+  /// In zh, this message translates to:
+  /// **'奧克蘭'**
+  String get cityAuckland;
+
+  /// No description provided for @citySydney.
+  ///
+  /// In zh, this message translates to:
+  /// **'雪梨'**
+  String get citySydney;
+
+  /// No description provided for @cityMelbourne.
+  ///
+  /// In zh, this message translates to:
+  /// **'墨爾本'**
+  String get cityMelbourne;
+
+  /// No description provided for @cityTokyo.
+  ///
+  /// In zh, this message translates to:
+  /// **'東京'**
+  String get cityTokyo;
+
+  /// No description provided for @citySeoul.
+  ///
+  /// In zh, this message translates to:
+  /// **'首爾'**
+  String get citySeoul;
+
+  /// No description provided for @cityTaipei.
+  ///
+  /// In zh, this message translates to:
+  /// **'台北'**
+  String get cityTaipei;
+
+  /// No description provided for @cityHongKong.
+  ///
+  /// In zh, this message translates to:
+  /// **'香港'**
+  String get cityHongKong;
+
+  /// No description provided for @citySingapore.
+  ///
+  /// In zh, this message translates to:
+  /// **'新加坡'**
+  String get citySingapore;
+
+  /// No description provided for @cityKualaLumpur.
+  ///
+  /// In zh, this message translates to:
+  /// **'吉隆坡'**
+  String get cityKualaLumpur;
+
+  /// No description provided for @cityLondon.
+  ///
+  /// In zh, this message translates to:
+  /// **'倫敦'**
+  String get cityLondon;
+
+  /// No description provided for @cityToronto.
+  ///
+  /// In zh, this message translates to:
+  /// **'多倫多'**
+  String get cityToronto;
+
+  /// No description provided for @cityNewYork.
+  ///
+  /// In zh, this message translates to:
+  /// **'紐約'**
+  String get cityNewYork;
+
+  /// No description provided for @cityChicago.
+  ///
+  /// In zh, this message translates to:
+  /// **'芝加哥'**
+  String get cityChicago;
+
+  /// No description provided for @cityDenver.
+  ///
+  /// In zh, this message translates to:
+  /// **'丹佛'**
+  String get cityDenver;
+
+  /// No description provided for @cityVancouver.
+  ///
+  /// In zh, this message translates to:
+  /// **'溫哥華'**
+  String get cityVancouver;
+
+  /// No description provided for @cityLosAngeles.
+  ///
+  /// In zh, this message translates to:
+  /// **'洛杉磯'**
+  String get cityLosAngeles;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

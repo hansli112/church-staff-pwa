@@ -3,16 +3,21 @@ import { createHash, randomBytes } from 'node:crypto';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 import { churchAccess, isChurchOpen } from './access.js';
-import { DAY_MS, dateKeyUtc8, fail, type Caller, type Deps } from './common.js';
+import { DAY_MS, fail, type Caller, type Deps } from './common.js';
 import { cutText, TEXT_LIMITS } from './limits.js';
 import { seal, unseal } from './sealing.js';
 import { notify, type WebhookDeps } from './webhook.js';
+import { dateKeyIn, instantOf, instantOfTime, LOCAL_TIME, localIso, timeZoneOf, type ChurchTimeZone } from './timeZones.js';
 
 /**
  * 行事曆: a church admin connects one Google Calendar. The backend keeps the
  * refresh token (sealed, in calendarTokens/{cid}, which no client can
  * read), reads through a 10-minute cache shared by everyone in
  * the church, and writes for admins and calendar-editors.
+ *
+ * Times go to the app on the church's clock, with its offset, so the app
+ * shows them as they are; the app sends them on that clock without one
+ * (older apps: with one), and they are read in the church's time zone.
  *
  * Scopes: calendar.events (read/write events), calendar.calendarlist.readonly
  * (let the admin pick which calendar). Sign-in with Google never asks for
@@ -41,7 +46,7 @@ export interface GoogleApi {
   exchangeCode(code: string, config: OAuthConfig): Promise<{ refreshToken: string | null }>;
   /** Throws GoogleAuthRevoked when the refresh token no longer works. */
   accessToken(refreshToken: string, config: OAuthConfig, grant?: { churchId: string; revision: string }): Promise<string>;
-  calendars(accessToken: string): Promise<{ id: string; name: string; primary: boolean }[]>;
+  calendars(accessToken: string): Promise<{ id: string; name: string; primary: boolean; timeZone?: string }[]>;
   events(accessToken: string, calendarId: string, from: Date, to: Date): Promise<CalendarEvent[]>;
   upsert(accessToken: string, calendarId: string, event: CalendarEvent): Promise<CalendarEvent>;
   /** One event, or null when it is gone. */
@@ -56,7 +61,7 @@ export class GoogleAuthRevoked extends Error {}
 export interface CalendarEvent {
   id?: string;
   title: string;
-  /** All-day: `YYYY-MM-DD`; timed: ISO instant. */
+  /** All-day: `YYYY-MM-DD`; timed: ISO instant (see [inZone]). */
   start: string;
   end: string;
   allDay: boolean;
@@ -292,7 +297,7 @@ export async function releaseCalendarIfConnector(deps: CalDeps, churchId: string
 }
 
 /** Drops the church's cached [months], or every cached month. */
-async function clearCache(deps: Deps, churchId: string, months?: Iterable<string>) {
+export async function clearCache(deps: Deps, churchId: string, months?: Iterable<string>) {
   if (months) {
     await Promise.all([...months].map((m) => deps.db.doc(`calendarCache/${churchId}_${m}`).delete()));
     return;
@@ -301,13 +306,29 @@ async function clearCache(deps: Deps, churchId: string, months?: Iterable<string
   await Promise.all(snap.docs.map((d) => d.ref.delete()));
 }
 
-function monthRange(month: string) {
+function monthRange(month: string, timeZone: ChurchTimeZone) {
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) fail('invalid-argument', 'unknown');
   const [y, m] = month.split('-').map(Number);
-  // UTC+8 month boundaries. Google returns every event that overlaps them
-  // (ends after `from`, starts before `to`), so one event can be in the
-  // cache of several months: see monthsOf.
-  return { from: new Date(Date.UTC(y, m - 1, 1) - 8 * 3600e3), to: new Date(Date.UTC(y, m, 1) - 8 * 3600e3) };
+  const next = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+  // The church's month. Google returns every event that overlaps it (ends
+  // after `from`, starts before `to`), so one event can be in the cache of
+  // several months: see monthsOf.
+  return { from: new Date(instantOf(timeZone, `${month}-01`)), to: new Date(instantOf(timeZone, `${next}-01`)) };
+}
+
+/** [e] with its times on [timeZone]'s clock, with the offset: what the app and the webhook get. */
+export function inZone(e: CalendarEvent, timeZone: ChurchTimeZone): CalendarEvent {
+  if (e.allDay) return e;
+  const local = (t: string) => (Number.isNaN(Date.parse(t)) ? t : localIso(timeZone, Date.parse(t)));
+  return { ...e, start: local(e.start), end: local(e.end) };
+}
+
+/** A timed event's start or end from the app: on the church's clock, or (older apps) an instant. */
+function fromApp(t: string, allDay: boolean, timeZone: ChurchTimeZone) {
+  if (allDay || !LOCAL_TIME.test(t)) return t;
+  const at = instantOf(timeZone, t);
+  if (Number.isNaN(at)) fail('invalid-argument', 'unknown');
+  return new Date(at).toISOString();
 }
 
 /**
@@ -315,22 +336,25 @@ function monthRange(month: string) {
  * copy; simultaneous cold misses can still make separate Google calls.
  */
 export async function calendarEvents(deps: CalDeps, caller: Caller | null, data: unknown) {
-  const { cid: churchId } = await churchAccess(deps, caller, data, 'member');
+  const { cid: churchId, church } = await churchAccess(deps, caller, data, 'member');
+  const timeZone = timeZoneOf(church);
   const month = String((data as { month?: unknown })?.month ?? '');
-  const { from, to } = monthRange(month);
+  const { from, to } = monthRange(month, timeZone);
   const cacheRef = deps.db.doc(`calendarCache/${churchId}_${month}`);
   const cached = await cacheRef.get();
   const fetchedAt = cached.get('fetchedAt') as Timestamp | undefined;
-  if (fetchedAt && deps.now().getTime() - fetchedAt.toMillis() < CACHE_MINUTES * 60e3) {
+  // One kept before the church's time zone changed (or before there were
+  // any) has other times and another month.
+  if (fetchedAt && deps.now().getTime() - fetchedAt.toMillis() < CACHE_MINUTES * 60e3 && cached.get('timeZone') === timeZone) {
     return { events: cached.get('events') as CalendarEvent[], cached: true };
   }
   const { token, calendarId } = await access(deps, churchId);
   if (!calendarId) fail('failed-precondition', 'unknown', 'noCalendar');
   // Google leaves out what an event does not have; Firestore refuses undefined.
   const events = (await deps.google.events(token, calendarId, from, to)).map(
-    (e) => Object.fromEntries(Object.entries(e).filter(([, v]) => v !== undefined)) as unknown as CalendarEvent,
+    (e) => Object.fromEntries(Object.entries(inZone(e, timeZone)).filter(([, v]) => v !== undefined)) as unknown as CalendarEvent,
   );
-  await cacheRef.set({ cid: churchId, month, events, fetchedAt: Timestamp.fromDate(deps.now()) });
+  await cacheRef.set({ cid: churchId, month, timeZone, events, fetchedAt: Timestamp.fromDate(deps.now()) });
   return { events, cached: false };
 }
 
@@ -367,6 +391,7 @@ const MAX_CLEARED_MONTHS = 12;
 export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: unknown) {
   const me = await churchAccess(deps, caller, data, { group: 'calendar-editors' });
   const churchId = me.cid;
+  const timeZone = timeZoneOf(me.church);
   const input = data as {
     op?: unknown;
     event?: Partial<CalendarEvent>;
@@ -383,7 +408,8 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
   if (input.op === 'delete') {
     if (typeof input.eventId !== 'string') fail('invalid-argument', 'unknown');
     // What it was, for the webhook: Google's DELETE returns nothing.
-    const before = await deps.google.get(token, calendarId, input.eventId).catch(() => null);
+    const found = await deps.google.get(token, calendarId, input.eventId).catch(() => null);
+    const before = found && inZone(found, timeZone);
     await deps.google.remove(token, calendarId, input.eventId);
     await rosterStep(`cancel ${churchId}/ev_${input.eventId}`, () => cancelEventRoster(deps, churchId, input.eventId as string));
     spans.push(span(input.event), span(before));
@@ -393,29 +419,31 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
     if (!e || typeof e.title !== 'string' || !e.title.trim() || typeof e.start !== 'string' || typeof e.end !== 'string') {
       fail('invalid-argument', 'unknown');
     }
-    result = await deps.google.upsert(token, calendarId, {
+    const allDay = e.allDay === true;
+    // As Google gives it back; the app and the webhook get it on the church's clock.
+    const saved = await deps.google.upsert(token, calendarId, {
       id: typeof e.id === 'string' ? e.id : undefined,
       title: e.title.trim().slice(0, 200),
-      start: e.start,
-      end: e.end,
-      allDay: e.allDay === true,
+      start: fromApp(e.start, allDay, timeZone),
+      end: fromApp(e.end, allDay, timeZone),
+      allDay,
       location: typeof e.location === 'string' ? e.location.slice(0, 300) : undefined,
       description: typeof e.description === 'string' ? e.description.slice(0, 4000) : undefined,
     });
+    result = inZone(saved, timeZone);
     spans.push(span(e));
-    const done = result;
     if (typeof e.id === 'string') {
-      await rosterStep(`follow ${churchId}/ev_${e.id}`, () => followEvent(deps, churchId, done, me.caller.uid));
+      await rosterStep(`follow ${churchId}/ev_${e.id}`, () => followEvent(deps, churchId, timeZone, saved, me.caller.uid));
     }
     const restore = input.restoreRosterOf;
     if (typeof restore === 'string') {
-      await rosterStep(`restore ${churchId}/ev_${restore}`, () => restoreEventRoster(deps, churchId, restore, done));
+      await rosterStep(`restore ${churchId}/ev_${restore}`, () => restoreEventRoster(deps, churchId, timeZone, restore, saved));
     }
     notice = { action: typeof e.id === 'string' ? 'updated' : 'created', event: result };
   } else {
     fail('invalid-argument', 'unknown');
   }
-  const months = new Set(spans.flatMap((s) => (s ? monthsOf(s.start, s.end) : [])));
+  const months = new Set(spans.flatMap((s) => (s ? monthsOf(s.start, s.end, timeZone) : [])));
   await clearCache(deps, churchId, months.size > MAX_CLEARED_MONTHS ? undefined : months);
   if (notice) {
     // After Google has it. A webhook failure is recorded, never thrown.
@@ -427,8 +455,8 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
   return { event: result };
 }
 
-/** The days an event's roster is on (`dateKey`s): UTC+8, an all-day end exclusive. */
-export function eventRosterDays(e: { start: string; end?: string; allDay?: boolean }) {
+/** The days an event's roster is on (`dateKey`s): the church's, an all-day end exclusive. */
+export function eventRosterDays(e: { start: string; end?: string; allDay?: boolean }, timeZone: ChurchTimeZone) {
   const ymd = /^\d{4}-\d{2}-\d{2}$/;
   if (e.allDay === true || ymd.test(e.start)) {
     const last = inclusiveEnd(e.end);
@@ -436,8 +464,8 @@ export function eventRosterDays(e: { start: string; end?: string; allDay?: boole
   }
   const start = Date.parse(e.start);
   const end = e.end === undefined ? NaN : Date.parse(e.end);
-  const dateKey = dateKeyUtc8(new Date(start));
-  return { dateKey, endDateKey: end > start ? dateKeyUtc8(new Date(end - 1)) : dateKey };
+  const dateKey = dateKeyIn(timeZone, new Date(start));
+  return { dateKey, endDateKey: end > start ? dateKeyIn(timeZone, new Date(end - 1)) : dateKey };
 }
 
 const eventRosterRef = (deps: Deps, churchId: string, eventId: string) =>
@@ -457,9 +485,9 @@ async function rosterStep(what: string, step: () => Promise<void>) {
 }
 
 /** What an event's roster copies from [e]. `via` clears a `restore`, so a later move is told. */
-export const fromEvent = (e: CalendarEvent) => ({
+export const fromEvent = (e: CalendarEvent, timeZone: ChurchTimeZone) => ({
   title: cutText(e.title, TEXT_LIMITS.eventTitle),
-  ...eventRosterDays(e),
+  ...eventRosterDays(e, timeZone),
   via: 'calendar',
   updatedAt: FieldValue.serverTimestamp(),
 });
@@ -468,13 +496,13 @@ export const fromEvent = (e: CalendarEvent) => ({
  * Copies [e]'s title and days to its roster, if it has one still on.
  * [by] made the change: the trigger tells them nothing of it.
  */
-async function followEvent(deps: Deps, churchId: string, e: CalendarEvent, by: string) {
+async function followEvent(deps: Deps, churchId: string, timeZone: ChurchTimeZone, e: CalendarEvent, by: string) {
   if (!e.id) return;
   const ref = eventRosterRef(deps, churchId, e.id);
   await deps.db.runTransaction(async (tx) => {
     const r = await tx.get(ref);
     if (!r.exists || r.get('kind') !== 'event' || r.get('cancelledAt') != null) return;
-    const next = fromEvent(e);
+    const next = fromEvent(e, timeZone);
     if (r.get('title') === next.title && r.get('dateKey') === next.dateKey && r.get('endDateKey') === next.endDateKey) return;
     tx.update(ref, { ...next, movedBy: by });
   });
@@ -490,7 +518,7 @@ async function cancelEventRoster(deps: Deps, churchId: string, eventId: string) 
 }
 
 /** Moves the cancelled roster of deleted event [fromId] onto [e], the event made again. */
-async function restoreEventRoster(deps: Deps, churchId: string, fromId: string, e: CalendarEvent) {
+async function restoreEventRoster(deps: Deps, churchId: string, timeZone: ChurchTimeZone, fromId: string, e: CalendarEvent) {
   if (!/^[A-Za-z0-9_-]{1,1024}$/.test(fromId) || !e.id || fromId === e.id) return;
   const from = eventRosterRef(deps, churchId, fromId);
   const to = eventRosterRef(deps, churchId, e.id);
@@ -507,7 +535,7 @@ async function restoreEventRoster(deps: Deps, churchId: string, fromId: string, 
       ...keep('calendarId'),
       ...keep('recurringEventId'),
       ...keep('originalStart'),
-      ...fromEvent(e),
+      ...fromEvent(e, timeZone),
       via: 'restore',
     });
     tx.delete(from);
@@ -653,8 +681,8 @@ export function googleApi(options: Partial<Pick<Deps, 'fetch' | 'now'>> = {}): G
       const res = await fetch(`${api}/users/me/calendarList?minAccessRole=writer`, {
         headers: { authorization: `Bearer ${token}` },
       });
-      const body = (await json(res, token)) as { items?: { id: string; summary: string; primary?: boolean }[] };
-      return (body.items ?? []).map((c) => ({ id: c.id, name: c.summary, primary: c.primary === true }));
+      const body = (await json(res, token)) as { items?: { id: string; summary: string; primary?: boolean; timeZone?: string }[] };
+      return (body.items ?? []).map((c) => ({ id: c.id, name: c.summary, primary: c.primary === true, timeZone: c.timeZone }));
     },
     async events(token, calendarId, from, to) {
       const params = new URLSearchParams({
@@ -711,24 +739,24 @@ export function googleApi(options: Partial<Pick<Deps, 'fetch' | 'now'>> = {}): G
   };
 }
 
-/** `YYYY-MM` of an event start, in UTC+8 like the cache months. */
-export function monthOf(start: string): string {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(start)) return start.slice(0, 7);
-  const t = Date.parse(start);
-  return Number.isNaN(t) ? start.slice(0, 7) : new Date(t + 8 * 3600e3).toISOString().slice(0, 7);
+/** `YYYY-MM` of an event start in the church's time zone, like the cache months. */
+export function monthOf(start: string, timeZone: ChurchTimeZone): string {
+  const t = instantOfTime(timeZone, start);
+  return Number.isNaN(t) ? start.slice(0, 7) : dateKeyIn(timeZone, new Date(t)).slice(0, 7);
 }
 
 /**
- * Every cache month (UTC+8 `YYYY-MM`) an event from [start] to [end]
- * overlaps, the way Google matches it to a month: the end is exclusive, so
- * an all-day event ending on the 1st, or a timed one ending at midnight,
- * is not in that month. Without a usable end, the start's month.
+ * Every cache month (the church's `YYYY-MM`) an event from [start] to
+ * [end] overlaps, the way Google matches it to a month: the end is
+ * exclusive, so an all-day event ending on the 1st, or a timed one ending
+ * at midnight, is not in that month. Without a usable end, the start's
+ * month.
  */
-export function monthsOf(start: string, end?: string): string[] {
-  const first = monthOf(start);
+export function monthsOf(start: string, end: string | undefined, timeZone: ChurchTimeZone): string[] {
+  const first = monthOf(start, timeZone);
   if (!/^\d{4}-\d{2}$/.test(first)) return [first];
-  const t = end === undefined ? NaN : /^\d{4}-\d{2}-\d{2}$/.test(end) ? Date.parse(`${end}T00:00:00+08:00`) : Date.parse(end);
-  const last = Number.isNaN(t) ? first : monthOf(new Date(t - 1).toISOString());
+  const t = end === undefined ? NaN : instantOfTime(timeZone, end);
+  const last = Number.isNaN(t) ? first : dateKeyIn(timeZone, new Date(t - 1)).slice(0, 7);
   const months = [first];
   let [y, m] = first.split('-').map(Number);
   for (;;) {
