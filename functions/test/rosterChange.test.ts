@@ -7,7 +7,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { purgeDeletedChurches } from '../src/church.js';
 import { diffDuties, onRosterWritten } from '../src/rosterChange.js';
 import { sendQueued, webhookSave, type WebhookDeps } from '../src/webhook.js';
-import { caller, clearFirestore, db, deps, fakeFetch, purgeDeps, seedChurch, setNow } from './support.js';
+import { caller, clearFirestore, db, deps, fakeFetch, fakePush, purgeDeps, seedChurch, setNow, type SentPush } from './support.js';
 
 const HOOK = 'https://n8n.example/roster';
 const key = randomBytes(32).toString('base64');
@@ -15,19 +15,10 @@ const appUrl = 'https://app.example';
 
 let f: ReturnType<typeof fakeFetch>;
 let d: WebhookDeps;
-let pushed: { tokens: string[]; body: string; link?: string }[];
-/** Set to make every push fail like FCM out of reach. */
-let fcmDown = false;
+let push: ReturnType<typeof fakePush>;
+let pushed: SentPush[];
 
-const messaging = {
-  sendEachForMulticast: async (m: { tokens: string[]; notification: { body: string }; data?: { link?: string } }) => {
-    if (fcmDown) throw new Error('fcm unreachable');
-    pushed.push({ tokens: m.tokens, body: m.notification.body, link: m.data?.link });
-    return { successCount: m.tokens.length, failureCount: 0, responses: m.tokens.map(() => ({ success: true })) };
-  },
-} as never;
-
-const triggerDeps = () => ({ ...d, messaging, appUrl });
+const triggerDeps = () => ({ ...d, messaging: push.messaging, appUrl });
 
 /** 美玉 (mei) and 志豪 (hao) have accounts; 林同工 does not. */
 async function church(cid = 'C1', events: { calendar: boolean; roster: boolean } | null = { calendar: false, roster: true }) {
@@ -85,8 +76,8 @@ beforeEach(async () => {
   setNow(new Date('2026-10-03T19:00:00+08:00')); // Saturday evening
   f = fakeFetch({ [HOOK]: { status: 200 } });
   d = { ...deps, fetch: f.fetch, secretKey: key };
-  pushed = [];
-  fcmDown = false;
+  push = fakePush();
+  pushed = push.sent;
 });
 
 describe('reading a roster change', () => {
@@ -140,7 +131,7 @@ describe('push', () => {
     const bound = duty('招待', ['志豪']);
     await writeEvent('C1', { duties: [guest, bound] });
     assert.deepEqual(pushed.map((p) => p.tokens), [['tok-hao']]);
-    pushed = [];
+    pushed.length = 0;
     await writeEvent('C1', { dateKey: '2026-12-23', endDateKey: '2026-12-23', duties: [guest, bound] });
     assert.deepEqual(pushed.map((p) => p.tokens), [['tok-hao']], 'moving an event uses persisted holders, not names');
   });
@@ -168,7 +159,7 @@ describe('push', () => {
       [['tok-mei', 'tok-mei-2'], '你被排進 10/4 主日崇拜：司琴'],
       [['tok-hao'], 'You’re on Oct 4 主日崇拜: 司琴'],
     ]);
-    pushed = [];
+    pushed.length = 0;
     await write('C1', '2026-10-04', [duty('司琴', [])]);
     assert.deepEqual(pushed.map((p) => p.body), ['10/4 主日崇拜 的司琴已改由別人負責', 'Someone else now has 司琴 for Oct 4 主日崇拜']);
   });
@@ -227,7 +218,7 @@ describe('imports', () => {
 describe('push and webhook are independent', () => {
   test('push fails: the webhook entry is still queued, and the trigger fails', async () => {
     await church();
-    fcmDown = true;
+    push.goDown();
     await assert.rejects(write('C1', '2026-10-04', [duty('司琴', ['美玉'])]), /fcm unreachable/);
     assert.equal((await queued()).length, 1);
   });
@@ -270,7 +261,7 @@ describe('an event’s roster', () => {
   test('moved to another day: everyone on it is told the new date, by nobody in particular', async () => {
     await church();
     await writeEvent('C1', { duties: [duty('主持', ['美玉']), duty('招待', ['志豪', '林同工'])] });
-    pushed = [];
+    pushed.length = 0;
     // calendarWrite moves it as the backend, naming who moved it: 美玉 is not told.
     await writeEvent(
       'C1',
@@ -278,7 +269,7 @@ describe('an event’s roster', () => {
       { editedBy: null },
     );
     assert.deepEqual(pushed.map((p) => [p.tokens, p.body]), [[['tok-hao'], '聖誕晚會改到 12/23（週三）']]);
-    pushed = [];
+    pushed.length = 0;
     await db.doc('users/hao').update({ appLocale: 'en' });
     await writeEvent('C1', { dateKey: '2026-12-22', endDateKey: '2026-12-22', duties: [duty('主持', ['美玉']), duty('招待', ['志豪', '林同工'])] });
     assert.deepEqual(pushed.map((p) => p.body), ['聖誕晚會改到 12/22（週二）', '聖誕晚會 moved to Dec 22 (Tue)']);
@@ -287,7 +278,7 @@ describe('an event’s roster', () => {
   test('deleted by an editor, as any day', async () => {
     await church();
     await writeEvent('C1', { duties: [duty('主持', ['美玉'])] });
-    pushed = [];
+    pushed.length = 0;
     await writeEvent('C1', null);
     assert.deepEqual(pushed.map((p) => p.body), ['12/24 聖誕晚會 的主持已改由別人負責']);
   });

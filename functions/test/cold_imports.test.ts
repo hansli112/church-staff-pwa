@@ -12,6 +12,8 @@ function coldImports() {
     const paths = Object.keys(createRequire(import.meta.url).cache);
     console.log(JSON.stringify({
       functions: Object.keys(functions),
+      secrets: Object.fromEntries(Object.entries(functions).map(([name, f]) =>
+        [name, (f.__endpoint?.secretEnvironmentVariables ?? []).map((s) => s.key).sort()])),
       apple: paths.some((path) => path.includes('/@apple/app-store-server-library/')),
       sharp: paths.some((path) => path.includes('/sharp/')),
     }));
@@ -27,7 +29,7 @@ function coldImports() {
     timeout: 15_000,
   });
   assert.equal(child.status, 0, child.stderr);
-  return JSON.parse(child.stdout) as { functions: string[]; apple: boolean; sharp: boolean };
+  return JSON.parse(child.stdout) as { functions: string[]; secrets: Record<string, string[]>; apple: boolean; sharp: boolean };
 }
 
 test('ordinary Functions do not load Apple payment verification on cold import', () => {
@@ -40,4 +42,16 @@ test('ordinary Functions do not load logo processing on cold import', () => {
   const loaded = coldImports();
   assert.ok(loaded.functions.includes('onLogoUploaded'), 'the logo function is still declared');
   assert.equal(loaded.sharp, false);
+});
+
+test('each function lists the secrets its dependencies read, and no others', () => {
+  const { secrets } = coldImports();
+  const calendar = ['CALENDAR_TOKEN_KEY', 'GOOGLE_OAUTH_CLIENT_ID', 'GOOGLE_OAUTH_CLIENT_SECRET'];
+  assert.deepEqual(secrets.calendarWrite, calendar);
+  assert.deepEqual(secrets.setChurchTimeZone, calendar);
+  assert.deepEqual(secrets.syncEventRosters, calendar);
+  assert.deepEqual(secrets.webhookSave, ['CALENDAR_TOKEN_KEY']);
+  assert.deepEqual(secrets.sendRosterChanges, ['CALENDAR_TOKEN_KEY']);
+  assert.deepEqual(secrets.newebpayNotify, ['NEWEBPAY_HASH_IV', 'NEWEBPAY_HASH_KEY']);
+  assert.deepEqual(secrets.createChurch, []);
 });

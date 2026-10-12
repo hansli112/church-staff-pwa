@@ -4,6 +4,8 @@ import { getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { DocumentReference, Firestore, getFirestore, Timestamp, type DocumentSnapshot, type Transaction } from 'firebase-admin/firestore';
 
+import type { Messaging } from 'firebase-admin/messaging';
+
 import type { GoogleApi } from '../src/calendar.js';
 import type { PurgeDeps } from '../src/church.js';
 import type { Caller, Deps, Fetch } from '../src/common.js';
@@ -19,6 +21,46 @@ let clock = new Date('2026-10-01T10:00:00+08:00');
 export const setNow = (d: Date) => {
   clock = d;
 };
+/** A push FCM was asked to send, through [fakePush]. */
+export interface SentPush {
+  tokens: string[];
+  title: string;
+  body: string;
+  /** The app's link (data.link). */
+  link: string;
+  /** The web push's, which FCM wants absolute. */
+  webLink: string;
+}
+
+/**
+ * FCM for tests: every push is recorded in [sent]. [dead] tokens are
+ * refused as no longer registered; after goDown() every send throws, like
+ * FCM out of reach.
+ */
+export function fakePush(dead: string[] = []) {
+  const sent: SentPush[] = [];
+  let down = false;
+  const messaging: Pick<Messaging, 'sendEachForMulticast'> = {
+    sendEachForMulticast: async (m) => {
+      if (down) throw new Error('fcm unreachable');
+      const tokens = (m as { tokens: string[] }).tokens;
+      sent.push({
+        tokens,
+        title: m.notification?.title ?? '',
+        body: m.notification?.body ?? '',
+        link: m.data?.link ?? '',
+        webLink: m.webpush?.fcmOptions?.link ?? '',
+      });
+      const responses = tokens.map((t) =>
+        dead.includes(t) ? { success: false, error: { code: 'messaging/registration-token-not-registered' } } : { success: true },
+      );
+      const successCount = responses.filter((r) => r.success).length;
+      return { successCount, failureCount: tokens.length - successCount, responses } as never;
+    },
+  };
+  return { messaging, sent, goDown: () => void (down = true) };
+}
+
 /** Tests make no real requests: anything not faked fails like a dead network. */
 const offline: Fetch = async (url) => {
   throw new TypeError(`fetch failed: no fake for ${url}`);
@@ -53,7 +95,7 @@ export interface SeenRequest {
 }
 
 /**
- * A fake fetch, injected the way fakeMessaging is: [routes] maps a URL to
+ * A fake fetch, injected the way fakePush's messaging is: [routes] maps a URL to
  * its answer (or a function of the request). Unknown URLs fail like a dead
  * network. Every request is recorded in [requests].
  */

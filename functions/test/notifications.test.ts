@@ -2,24 +2,11 @@ import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
 
 import { sendReminders, type ReminderTiming } from '../src/notifications.js';
-import { clearFirestore, db, seedChurch } from './support.js';
+import { clearFirestore, db, fakePush, seedChurch } from './support.js';
 
 const appUrl = 'https://app.example';
 
 const now = () => new Date('2026-10-03T19:00:00+08:00'); // Saturday evening
-
-function fakeMessaging() {
-  const sent: { tokens: string[]; title?: string; body: string }[] = [];
-  return {
-    sent,
-    messaging: {
-      sendEachForMulticast: async (m: { tokens: string[]; notification: { title: string; body: string } }) => {
-        sent.push({ tokens: m.tokens, title: m.notification.title, body: m.notification.body });
-        return { successCount: m.tokens.length, failureCount: 0, responses: m.tokens.map(() => ({ success: true })) };
-      },
-    } as never,
-  };
-}
 
 async function church() {
   await seedChurch('C1', { pastor: 'admin', mei: 'staff', hao: 'staff' });
@@ -59,7 +46,7 @@ describe('reminders', () => {
         { role: '招待', people: ['志豪'], uids: { 志豪: 'hao' } },
       ],
     });
-    const { sent, messaging } = fakeMessaging();
+    const { sent, messaging } = fakePush();
     assert.equal(await sendReminders({ db, messaging, now, appUrl }), 1);
     assert.deepEqual(sent.map(({ tokens, body }) => ({ tokens, body })), [{ tokens: ['tok-hao'], body: '主日崇拜 招待' }]);
   });
@@ -74,7 +61,7 @@ describe('reminders', () => {
         { role: '招待', people: ['0'], uids: 'm' },
       ],
     });
-    const { sent, messaging } = fakeMessaging();
+    const { sent, messaging } = fakePush();
     assert.equal(await sendReminders({ db, messaging, now, appUrl }), 0);
     assert.deepEqual(sent, []);
   });
@@ -88,7 +75,7 @@ describe('reminders', () => {
         { role: '招待', people: ['志豪'], uids: { 志豪: 'hao' } },
       ],
     });
-    const { sent, messaging } = fakeMessaging();
+    const { sent, messaging } = fakePush();
     assert.equal(await sendReminders({ db, messaging, now, appUrl }), 1);
     assert.deepEqual(sent.map(({ tokens, body }) => ({ tokens, body })), [{ tokens: ['tok-hao'], body: '主日崇拜 招待' }]);
   });
@@ -105,7 +92,7 @@ describe('reminders', () => {
       dateKey: '2026-10-11',
       duties: duties(['志豪'], []),
     });
-    const { sent, messaging } = fakeMessaging();
+    const { sent, messaging } = fakePush();
 
     await sendReminders({ db, messaging, now, appUrl });
 
@@ -133,7 +120,7 @@ describe('reminders', () => {
       duties: duties([], ['志豪']),
       cancelledAt: new Date(),
     });
-    const { sent, messaging } = fakeMessaging();
+    const { sent, messaging } = fakePush();
     await sendReminders({ db, messaging, now, appUrl });
     assert.deepEqual(sent.map((s) => s.body), ['秋季退修會 司琴']);
   });
@@ -146,7 +133,7 @@ describe('reminders', () => {
       dateKey: '2026-10-04',
       duties: duties(['美玉'], []),
     });
-    const { sent, messaging } = fakeMessaging();
+    const { sent, messaging } = fakePush();
     await sendReminders({ db, messaging, now, appUrl });
     assert.equal(sent.length, 0);
   });
@@ -163,7 +150,7 @@ describe('reminders', () => {
       }
     }
     const at = async (time: string) => {
-      const { sent, messaging } = fakeMessaging();
+      const { sent, messaging } = fakePush();
       await sendReminders({ db, messaging, now: () => new Date(time), appUrl });
       return sent.map((s) => `${s.title} ${s.body}`);
     };
@@ -205,7 +192,7 @@ describe('weekly reminders', () => {
 
   test('by default, Monday evening lists each person’s duties from that Monday to Sunday', async () => {
     await week();
-    const { sent, messaging } = fakeMessaging();
+    const { sent, messaging } = fakePush();
     await sendReminders({ db, messaging, now: monday, appUrl });
     assert.deepEqual(new Set(sent.map((s) => s.title)), new Set(['這週的服事（10/12–10/18）']));
     const mei = sent.find((s) => s.tokens.includes('tok-mei'))!;
@@ -219,13 +206,13 @@ describe('weekly reminders', () => {
     await week();
     await db.doc('users/hao').update({ appLocale: 'en' });
     await remindAt('mei', 'dayBefore');
-    const mon = fakeMessaging();
+    const mon = fakePush();
     await sendReminders({ db, messaging: mon.messaging, now: monday, appUrl });
     assert.deepEqual(mon.sent.map((s) => [s.tokens, s.title, s.body]), [
       [['tok-hao'], 'Serving this week (Oct 12–Oct 18)', 'Oct 13 (Tue) 禱告會: 招待; Oct 18 (Sun) 主日崇拜: 招待'],
     ]);
     await remindAt('hao', 'dayBefore');
-    const sat = fakeMessaging();
+    const sat = fakePush();
     await sendReminders({ db, messaging: sat.messaging, now: saturday, appUrl });
     assert.deepEqual(sat.sent.map((s) => [s.tokens, s.title, s.body]), [
       [['tok-mei', 'tok-mei-2'], '明天的服事（10/18）', '主日崇拜 司琴、招待'],
@@ -236,7 +223,7 @@ describe('weekly reminders', () => {
   test("Monday is the church's Monday", async () => {
     await week();
     await db.doc('churches/C1').update({ timeZone: 'America/New_York' });
-    const { sent, messaging } = fakeMessaging();
+    const { sent, messaging } = fakePush();
     // Monday evening in New York, Tuesday morning in Taipei.
     await sendReminders({ db, messaging, now: () => new Date('2026-10-12T19:00:00-04:00'), appUrl });
     assert.deepEqual(new Set(sent.map((s) => s.title)), new Set(['這週的服事（10/12–10/18）']));
@@ -244,7 +231,7 @@ describe('weekly reminders', () => {
 
   test('by default, no other evening reminds anyone', async () => {
     await week();
-    const { sent, messaging } = fakeMessaging();
+    const { sent, messaging } = fakePush();
     assert.equal(await sendReminders({ db, messaging, now: saturday, appUrl }), 0);
     assert.deepEqual(sent, []);
   });
@@ -252,11 +239,11 @@ describe('weekly reminders', () => {
   test('the day before only: no weekly list on Monday, tomorrow’s duties every evening', async () => {
     await week();
     await remindAt('hao', 'dayBefore');
-    const monday1 = fakeMessaging();
+    const monday1 = fakePush();
     await sendReminders({ db, messaging: monday1.messaging, now: monday, appUrl });
     const hao = monday1.sent.filter((s) => s.tokens.includes('tok-hao'));
     assert.deepEqual(hao.map((s) => [s.title, s.body]), [['明天的服事（10/13）', '禱告會 招待']]);
-    const sat = fakeMessaging();
+    const sat = fakePush();
     await sendReminders({ db, messaging: sat.messaging, now: saturday, appUrl });
     assert.deepEqual(sat.sent.map(({ tokens, body }) => ({ tokens, body })), [{ tokens: ['tok-hao'], body: '主日崇拜 招待' }]);
   });
@@ -264,13 +251,13 @@ describe('weekly reminders', () => {
   test('both: on Monday only the weekly list, which has tomorrow; the day before every other evening', async () => {
     await week();
     await remindAt('hao', 'both');
-    const mon = fakeMessaging();
+    const mon = fakePush();
     await sendReminders({ db, messaging: mon.messaging, now: monday, appUrl });
     const hao = mon.sent.filter((s) => s.tokens.includes('tok-hao'));
     assert.deepEqual(hao.map((s) => [s.title, s.body]), [
       ['這週的服事（10/12–10/18）', '10/13（週二）禱告會 招待；10/18（週日）主日崇拜 招待'],
     ]);
-    const sat = fakeMessaging();
+    const sat = fakePush();
     await sendReminders({ db, messaging: sat.messaging, now: saturday, appUrl });
     assert.deepEqual(sat.sent.map((s) => [s.tokens, s.title, s.body]), [[['tok-hao'], '明天的服事（10/18）', '主日崇拜 招待']]);
   });
@@ -285,7 +272,7 @@ describe('weekly reminders', () => {
       kind: 'event', eventId: 'x2', title: '取消的活動', dateKey: '2026-10-14', endDateKey: '2026-10-14',
       duties: duties([], ['志豪']), cancelledAt: new Date(),
     });
-    const { sent, messaging } = fakeMessaging();
+    const { sent, messaging } = fakePush();
     await sendReminders({ db, messaging, now: monday, appUrl });
     assert.deepEqual(sent.map((s) => s.body), ['10/17（週六）秋季退修會 司琴']);
   });
@@ -293,7 +280,7 @@ describe('weekly reminders', () => {
   test('those who turned reminders off get no weekly list', async () => {
     await week();
     await db.doc('churches/C1/members/mei').update({ 'notificationPrefs.muted': ['reminder'] });
-    const { sent, messaging } = fakeMessaging();
+    const { sent, messaging } = fakePush();
     await sendReminders({ db, messaging, now: monday, appUrl });
     assert.deepEqual(sent.map((s) => s.tokens), [['tok-hao']]);
   });

@@ -18,7 +18,7 @@ import {
   onMemberUpdated,
   syncProfileName,
 } from '../src/triggers.js';
-import { auth, caller, clearFirestore, db, deps, rejectsWith, seedChurch, setNow } from './support.js';
+import { auth, caller, clearFirestore, db, deps, fakePush, rejectsWith, seedChurch, setNow } from './support.js';
 
 const appUrl = 'https://app.example';
 
@@ -188,45 +188,23 @@ describe('triggers', () => {
     await db.doc('users/alice').set({ fcm: { phone: 'tok-alice' } });
     await db.doc('users/carol').set({ fcm: { phone: 'tok-carol', web: 'tok-carol-web' } });
     await db.doc('churches/C1/members/carol').update({ 'notificationPrefs.muted': ['memberLeft'] });
-    const sent: string[][] = [];
-    const bodies: string[] = [];
-    const messaging = {
-      sendEachForMulticast: async (m: { tokens: string[]; notification: { body: string } }) => {
-        sent.push(m.tokens);
-        bodies.push(m.notification.body);
-        return {
-          successCount: m.tokens.length,
-          failureCount: 0,
-          responses: m.tokens.map(() => ({ success: true })),
-        };
-      },
-    } as never;
+    const { messaging, sent } = fakePush();
     const bob = await db.doc('churches/C1/members/bob').get();
 
     assert.equal(await onMemberLeft({ db, messaging, appUrl }, 'C1', bob, 'bob'), 1);
-    assert.deepEqual(sent, [['tok-alice']], 'carol muted it');
+    assert.deepEqual(sent.map((p) => p.tokens), [['tok-alice']], 'carol muted it');
     assert.equal(await onMemberLeft({ db, messaging, appUrl }, 'C1', bob, 'alice'), 0);
 
     await db.doc('users/alice').update({ appLocale: 'en' });
     await db.doc('churches/C1/members/bob').update({ name: '' });
     await onMemberLeft({ db, messaging, appUrl }, 'C1', await db.doc('churches/C1/members/bob').get(), 'bob');
-    assert.deepEqual(bodies.at(-1), 'Someone left the church', 'in the language their app shows');
+    assert.deepEqual(sent.at(-1)!.body, 'Someone left the church', 'in the language their app shows');
   });
 
   test('dead tokens are removed, live ones kept', async () => {
     await seedChurch('C1', { alice: 'admin' });
     await db.doc('users/alice').set({ fcm: { old: 'dead', phone: 'live' } });
-    const messaging = {
-      sendEachForMulticast: async (m: { tokens: string[] }) => ({
-        successCount: 1,
-        failureCount: 1,
-        responses: m.tokens.map((t) =>
-          t === 'dead'
-            ? { success: false, error: { code: 'messaging/registration-token-not-registered' } }
-            : { success: true },
-        ),
-      }),
-    } as never;
+    const { messaging } = fakePush(['dead']);
     const n = await notifyMembers({ db, messaging, appUrl }, 'C1', ['alice'], 'reminder', () => ({ title: 't', body: 'b' }));
     assert.equal(n, 1);
     assert.deepEqual((await db.doc('users/alice').get()).get('fcm'), { phone: 'live' });
@@ -235,31 +213,19 @@ describe('triggers', () => {
   test('the web push opens an absolute HTTPS link, as FCM documents', async () => {
     await seedChurch('C1', { alice: 'admin' });
     await db.doc('users/alice').set({ fcm: { laptop: 'tok' } });
-    let link = '';
-    const messaging = {
-      sendEachForMulticast: async (m: { tokens: string[]; webpush: { fcmOptions: { link: string } } }) => {
-        link = m.webpush.fcmOptions.link;
-        return { successCount: 1, failureCount: 0, responses: [{ success: true }] };
-      },
-    } as never;
+    const { messaging, sent } = fakePush();
     await notifyMembers({ db, messaging, appUrl }, 'C1', ['alice'], 'reminder', () => ({ title: 't', body: 'b', link: '/rosters' }));
-    assert.equal(link, 'https://app.example/c/C1?to=%2Frosters', 'through the church URL, so it opens this church');
+    assert.equal(sent[0].webLink, 'https://app.example/c/C1?to=%2Frosters', 'through the church URL, so it opens this church');
   });
 
   test('another church never gets the push', async () => {
     await seedChurch('C1', { alice: 'admin' });
     await seedChurch('C2', { eve: 'admin' });
     await db.doc('users/eve').set({ fcm: { phone: 'tok-eve' } });
-    let calls = 0;
-    const messaging = {
-      sendEachForMulticast: async () => {
-        calls++;
-        return { successCount: 0, failureCount: 0, responses: [] };
-      },
-    } as never;
+    const { messaging, sent } = fakePush();
     // eve is not a member of C1, so asking C1 to notify eve sends nothing.
     assert.equal(await notifyMembers({ db, messaging, appUrl }, 'C1', ['eve'], 'reminder', () => ({ title: 't', body: 'b' })), 0);
-    assert.equal(calls, 0);
+    assert.deepEqual(sent, []);
   });
 
   test('a logo upload bumps logoVersion; other paths are ignored', async () => {
@@ -330,8 +296,9 @@ describe('member triggers', () => {
       } else {
         const alice = await db.doc('churches/C1/members/alice').get();
         await alice.ref.delete();
-        const messaging = { sendEachForMulticast: async () => { throw new Error('no push should be sent'); } } as never;
+        const { messaging, sent } = fakePush();
         assert.deepEqual(await onMemberDeleted({ ...cal, messaging, appUrl }, 'C1', alice, undefined), { calendar: false, memberLeft: 0 });
+        assert.deepEqual(sent, [], 'removed by nobody: no push');
       }
       assert.equal((await own.get()).exists, false, changeKind);
       assert.equal((await otherAdmin.get()).exists, true, 'another admin’s consent stays');
@@ -350,26 +317,22 @@ describe('member triggers', () => {
 
   test('the connector leaving: the calendar goes and the admins hear, independently', async () => {
     await connected();
-    const sent: string[][] = [];
-    const messaging = {
-      sendEachForMulticast: async (m: { tokens: string[] }) => {
-        sent.push(m.tokens);
-        return { successCount: m.tokens.length, failureCount: 0, responses: m.tokens.map(() => ({ success: true })) };
-      },
-    } as never;
+    const { messaging, sent } = fakePush();
     const alice = await db.doc('churches/C1/members/alice').get();
     await alice.ref.delete();
     assert.deepEqual(await onMemberDeleted({ ...cal, messaging, appUrl }, 'C1', alice, 'alice'), { calendar: true, memberLeft: 1 });
     assert.deepEqual(revoked, ['refresh-alice']);
-    assert.deepEqual(sent, [['tok-bob']]);
+    assert.deepEqual(sent.map((p) => p.tokens), [['tok-bob']]);
   });
 
   test('the push failing still releases the calendar', async () => {
     await connected();
-    const messaging = { sendEachForMulticast: async () => Promise.reject(new Error('fcm down')) } as never;
+    const push = fakePush();
+    push.goDown();
+    const { messaging } = push;
     const alice = await db.doc('churches/C1/members/alice').get();
     await alice.ref.delete();
-    await assert.rejects(onMemberDeleted({ ...cal, messaging, appUrl }, 'C1', alice, 'alice'), /fcm down/);
+    await assert.rejects(onMemberDeleted({ ...cal, messaging, appUrl }, 'C1', alice, 'alice'), /fcm unreachable/);
     assert.equal((await db.doc('calendarTokens/C1').get()).exists, false);
   });
 });

@@ -15,7 +15,7 @@ import {
 } from 'firebase-functions/v2/firestore';
 import { onCall, onRequest, type CallableOptions, type CallableRequest, type Request } from 'firebase-functions/v2/https';
 import type { Response } from 'express';
-import { defineSecret } from 'firebase-functions/params';
+import { defineSecret, type SecretParam } from 'firebase-functions/params';
 import { onMessagePublished } from 'firebase-functions/v2/pubsub';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { onObjectFinalized } from 'firebase-functions/v2/storage';
@@ -53,17 +53,27 @@ const bucket = () => getStorage().bucket();
 const withPush = <D extends Deps>(d: D) => ({ ...d, messaging: getMessaging(), appUrl: appUrl() });
 const pushDeps = () => withPush(deps());
 
+/**
+ * Dependencies that read secrets, with the secrets a function must list to
+ * read them: a secret not listed fails only when read, in production. A
+ * function takes both from one of these.
+ */
+interface WithSecrets<D> {
+  make: () => D;
+  secrets: SecretParam[];
+}
+const needing = <D>(secrets: SecretParam[], make: () => D): WithSecrets<D> => ({ make, secrets });
+
 // One key seals both the calendar refresh tokens and the webhook secrets
-// (sealing.ts). Secrets are read only by functions that list them.
+// (sealing.ts).
 const oauthClientId = defineSecret('GOOGLE_OAUTH_CLIENT_ID');
 const oauthClientSecret = defineSecret('GOOGLE_OAUTH_CLIENT_SECRET');
 const sealKey = defineSecret('CALENDAR_TOKEN_KEY');
-const calendarSecrets = [oauthClientId, oauthClientSecret, sealKey];
-const hookDeps = (): webhook.WebhookDeps => ({ ...deps(), secretKey: sealKey.value() });
+const hook = needing<webhook.WebhookDeps>([sealKey], () => ({ ...deps(), secretKey: sealKey.value() }));
 // One adapter per warm instance; every access still reads the church's grant.
 const google = calendar.googleApi();
-const calDeps = (): calendar.CalDeps => ({
-  ...hookDeps(),
+const cal = needing<calendar.CalDeps>([oauthClientId, oauthClientSecret, sealKey], () => ({
+  ...hook.make(),
   google,
   config: {
     clientId: oauthClientId.value(),
@@ -72,7 +82,7 @@ const calDeps = (): calendar.CalDeps => ({
     appUrl: appUrl(),
     tokenKey: sealKey.value(),
   },
-});
+}));
 
 function caller(req: CallableRequest): Caller | null {
   if (!req.auth) return null;
@@ -88,20 +98,23 @@ function caller(req: CallableRequest): Caller | null {
 
 const callOpts = { region: REGION, cors: true, maxInstances: 10 };
 type Handler<D> = (d: D, c: Caller | null, data: unknown) => Promise<unknown>;
-/** A callable function: [handler] with deps from [make], [opts] on top of callOpts. */
-const callable = <D = Deps>(handler: Handler<D>, make: () => D = deps as () => D, opts: CallableOptions = {}) =>
-  onCall({ ...callOpts, ...opts }, (req) => handler(make(), caller(req), req.data));
+/** A callable function: [handler] with deps from [make], and the secrets they read; [opts] on top of callOpts. */
+const callable = <D = Deps>(handler: Handler<D>, make: (() => D) | WithSecrets<D> = deps as () => D, opts: CallableOptions = {}) => {
+  const w = typeof make === 'function' ? needing([], make) : make;
+  const secrets = w.secrets.length ? { secrets: w.secrets } : {};
+  return onCall({ ...callOpts, ...secrets, ...opts }, (req) => handler(w.make(), caller(req), req.data));
+};
 
 // Churches
 export const createChurch = callable(church.createChurch);
 export const deleteChurch = callable(church.deleteChurch);
 export const restoreChurch = callable(church.restoreChurch);
-export const setChurchTimeZone = callable(church.setChurchTimeZone, calDeps, { secrets: calendarSecrets });
+export const setChurchTimeZone = callable(church.setChurchTimeZone, cal);
 export const churchPreview = callable(church.churchPreview);
 export const purgeDeletedChurches = onSchedule(
-  { region: REGION, schedule: 'every day 03:00', timeZone: 'Asia/Taipei', secrets: calendarSecrets },
+  { region: REGION, schedule: 'every day 03:00', timeZone: 'Asia/Taipei', secrets: cal.secrets },
   async () => {
-    await church.purgeDeletedChurches({ ...calDeps(), bucket: bucket() });
+    await church.purgeDeletedChurches({ ...cal.make(), bucket: bucket() });
   },
 );
 
@@ -121,10 +134,9 @@ export const fetchChurchLinks = onSchedule(
 );
 
 // 外部通知 (webhooks)
-const webhookOpts = { secrets: [sealKey] };
-export const webhookSave = callable(webhook.webhookSave, hookDeps, webhookOpts);
-export const webhookRotateSecret = callable(webhook.webhookRotateSecret, hookDeps, webhookOpts);
-export const webhookTest = callable(webhook.webhookTest, hookDeps, webhookOpts);
+export const webhookSave = callable(webhook.webhookSave, hook);
+export const webhookRotateSecret = callable(webhook.webhookRotateSecret, hook);
+export const webhookTest = callable(webhook.webhookTest, hook);
 
 // 自助搬家 (self-serve move from self-host)
 const moveDeps = (): move.MoveDeps => ({ ...deps(), bucket: bucket() });
@@ -204,8 +216,7 @@ export const playBillingNotifications = onMessagePublished(
 // hold the store's real keys (docs/firebase-setup.md).
 const newebpayHashKey = defineSecret('NEWEBPAY_HASH_KEY');
 const newebpayHashIv = defineSecret('NEWEBPAY_HASH_IV');
-const newebpaySecrets = [newebpayHashKey, newebpayHashIv];
-const newebpayConfig = () =>
+const newebpay = needing([newebpayHashKey, newebpayHashIv], () =>
   fundingNewebpay.newebpayConfig({
     merchantId: process.env.NEWEBPAY_MERCHANT_ID,
     gateway: process.env.NEWEBPAY_ENV,
@@ -213,18 +224,19 @@ const newebpayConfig = () =>
     hashIv: newebpayHashIv.value(),
     project: process.env.GCLOUD_PROJECT ?? '',
     appUrl: appUrl(),
-  });
+  }),
+);
 export const newebpayStart = onRequest(
-  { region: REGION, maxInstances: 2, secrets: newebpaySecrets },
+  { region: REGION, maxInstances: 2, secrets: newebpay.secrets },
   postOnly(async (req, res) => {
-    const r = await fundingNewebpay.newebpayStart(deps(), newebpayConfig(), req.body);
+    const r = await fundingNewebpay.newebpayStart(deps(), newebpay.make(), req.body);
     res.set('Cache-Control', 'no-store').status(r.status).json(r.body);
   }),
 );
 export const newebpayNotify = onRequest(
-  { region: REGION, maxInstances: 5, secrets: newebpaySecrets },
+  { region: REGION, maxInstances: 5, secrets: newebpay.secrets },
   postOnly(async (req, res) => {
-    const status = await fundingNewebpay.newebpayNotify(deps(), newebpayConfig(), req.body);
+    const status = await fundingNewebpay.newebpayNotify(deps(), newebpay.make(), req.body);
     res.status(status).send(status === 200 ? 'OK' : '');
   }),
 );
@@ -258,18 +270,18 @@ export const onUserWritten = onDocumentWritten(
 );
 
 export const onMemberDeleted = onDocumentDeletedWithAuthContext(
-  { region: REGION, document: 'churches/{cid}/members/{uid}', secrets: calendarSecrets },
+  { region: REGION, document: 'churches/{cid}/members/{uid}', secrets: cal.secrets },
   async (event) => {
     if (!event.data) return;
-    await triggers.onMemberDeleted(withPush(calDeps()), event.params.cid, event.data, triggers.editorOf(event));
+    await triggers.onMemberDeleted(withPush(cal.make()), event.params.cid, event.data, triggers.editorOf(event));
   },
 );
 
 export const onMemberDemoted = onDocumentUpdated(
-  { region: REGION, document: 'churches/{cid}/members/{uid}', secrets: calendarSecrets },
+  { region: REGION, document: 'churches/{cid}/members/{uid}', secrets: cal.secrets },
   async (event) => {
     if (!event.data) return;
-    await triggers.onMemberUpdated(calDeps(), event.params.cid, event.data.before, event.data.after);
+    await triggers.onMemberUpdated(cal.make(), event.params.cid, event.data.before, event.data.after);
   },
 );
 
@@ -297,9 +309,9 @@ export const onRosterWritten = onDocumentWrittenWithAuthContext(
 );
 
 export const sendRosterChanges = onSchedule(
-  { region: REGION, schedule: 'every 5 minutes', timeZone: 'Asia/Taipei', secrets: [sealKey] },
+  { region: REGION, schedule: 'every 5 minutes', timeZone: 'Asia/Taipei', secrets: hook.secrets },
   async () => {
-    await webhook.sendQueued(hookDeps());
+    await webhook.sendQueued(hook.make());
   },
 );
 
@@ -308,9 +320,9 @@ export const sendRosterChanges = onSchedule(
 // before its reminders at 19:00, which go out every hour to the churches
 // whose clock says so.
 export const syncEventRosters = onSchedule(
-  { region: REGION, schedule: '30 * * * *', timeZone: 'Asia/Taipei', secrets: calendarSecrets, timeoutSeconds: 540 },
+  { region: REGION, schedule: '30 * * * *', timeZone: 'Asia/Taipei', secrets: cal.secrets, timeoutSeconds: 540 },
   async () => {
-    const counts = await eventSync.syncEventRosters(calDeps());
+    const counts = await eventSync.syncEventRosters(cal.make());
     console.log('event rosters synced', counts);
   },
 );
@@ -336,13 +348,12 @@ export const recognizeRoster = callable(
 export const photoQuota = callable(photo.photoQuota);
 
 // Calendar (Google OAuth, per church)
-const calendarOpts = { secrets: calendarSecrets };
-export const calendarAuthUrl = callable(calendar.calendarAuthUrl, calDeps, calendarOpts);
-export const calendarList = callable(calendar.calendarList, calDeps, calendarOpts);
-export const calendarSelect = callable(calendar.calendarSelect, calDeps, calendarOpts);
-export const calendarDisconnect = callable(calendar.calendarDisconnect, calDeps, calendarOpts);
-export const calendarEvents = callable(calendar.calendarEvents, calDeps, calendarOpts);
-export const calendarWrite = callable(calendar.calendarWrite, calDeps, calendarOpts);
-export const calendarCallback = onRequest({ region: REGION, secrets: calendarSecrets }, async (req, res) => {
-  res.redirect(303, await calendar.calendarCallback(calDeps(), req.query as Record<string, unknown>));
+export const calendarAuthUrl = callable(calendar.calendarAuthUrl, cal);
+export const calendarList = callable(calendar.calendarList, cal);
+export const calendarSelect = callable(calendar.calendarSelect, cal);
+export const calendarDisconnect = callable(calendar.calendarDisconnect, cal);
+export const calendarEvents = callable(calendar.calendarEvents, cal);
+export const calendarWrite = callable(calendar.calendarWrite, cal);
+export const calendarCallback = onRequest({ region: REGION, secrets: cal.secrets }, async (req, res) => {
+  res.redirect(303, await calendar.calendarCallback(cal.make(), req.query as Record<string, unknown>));
 });
