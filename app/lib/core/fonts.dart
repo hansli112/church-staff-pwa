@@ -219,13 +219,16 @@ Set<String>? _initialKeys(Uri location, [int depth = 0]) {
   return null;
 }
 
-/// What [language]'s dates are written with, which no .arb string holds
-/// (10月4日 週日): the patterns of the dates pages show, and the weekdays.
-String _dateText(AppLanguage language) {
+/// What [language]'s pages show that no .arb string holds: what its dates
+/// are written with (10月4日 週日), the patterns of the dates pages show and
+/// the weekdays; and every language's name in itself (简体中文), as the
+/// language page lists them.
+String _textBeyondStrings(AppLanguage language) {
   final (symbols, patterns) = dateData(language);
   return [
     for (final p in const ['MMMd', 'MMMEd', 'yMMMd', 'yMMMEd', 'yMMMM']) patterns[p]!,
     ...symbols.SHORTWEEKDAYS,
+    for (final l in AppLanguage.values) l.label,
   ].join();
 }
 
@@ -240,7 +243,8 @@ String _text(String json, {Set<String>? keys}) => [
 
 /// On the web the engine fetches Chinese fonts when text first needs them,
 /// so the first page can show boxes until they arrive. This starts those
-/// downloads before the page is drawn, with the text of its dates.
+/// downloads before the page is drawn, with the text of its dates and the
+/// languages' names.
 /// [initialLocation] selects login/home, roster or church-info text,
 /// following this app's `from`/`to` links. Other destinations keep the full
 /// warmup. Without a location, [startupOnly] retains the login/home
@@ -303,7 +307,7 @@ Future<void> warmUpFonts({
       if (text.trim().isEmpty) {
         finish();
       } else {
-        layOut(text + _dateText(language));
+        layOut(text + _textBeyondStrings(language));
       }
     } catch (_) {
       reading = false;

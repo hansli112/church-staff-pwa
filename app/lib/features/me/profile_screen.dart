@@ -97,8 +97,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 }
 
-/// Interface language. Only Traditional Chinese ships today; the choice is
-/// stored on the profile so it follows the account to other devices.
+/// Interface language, each listed by its own name; the choice is stored
+/// on the profile so it follows the account to other devices.
 class LanguageScreen extends ConsumerWidget {
   const LanguageScreen({super.key});
 

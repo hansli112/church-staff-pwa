@@ -3646,7 +3646,7 @@ class L10nZhHans extends L10nZh {
   String get addToHomeChromeInstall => '添加到主屏幕 → 安装';
 
   @override
-  String get addToHomeChromeInstallHint => '旧版可能叫“安装应用”。请选安装，不是创建快捷方式';
+  String get addToHomeChromeInstallHint => '旧版可能叫“添加到主屏幕”或“安装应用”。请选安装，不是创建快捷方式';
 
   @override
   String get addToHomeFirefoxInstallHint => '再按手机提示添加；如果只有“添加到主屏幕”，可能只会创建浏览器快捷方式';

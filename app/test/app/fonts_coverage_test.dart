@@ -129,6 +129,10 @@ void _pages(AppLanguage language) {
     expect(await _unwarmed(tester, b, '/rosters/event/xmas', language), isEmpty);
   });
 
+  testWidgets('the language page, each language by its own name', (tester) async {
+    expect(await _unwarmed(tester, seededChurch(), '/me/language', language), isEmpty);
+  });
+
   testWidgets('church information', (tester) async {
     expect(await _unwarmed(tester, seededChurch(), '/me/church', language), isEmpty);
   });
