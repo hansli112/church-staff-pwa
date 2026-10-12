@@ -168,107 +168,41 @@ class _CalendarEvents extends AsyncNotifier<List<CalendarEvent>> implements Cale
   }
 }
 
-/// Changes to the church's Google Calendar. After backend success, every
-/// already fetched copy is patched immediately. Unknown or racing reads are
-/// reconciled with a complete list instead of inventing a partial month.
+/// Changes to the church's Google Calendar, sent through the months read
+/// now ([CalendarMonths.write]), so every fetched copy shows them at once.
 class CalendarActions {
   CalendarActions(this._ref);
 
   final Ref _ref;
 
-  bool _current(CalendarMonths? months, {int? generation}) =>
-      _ref.mounted &&
-      months != null &&
-      identical(_ref.read(_calendarMonthsProvider), months) &&
-      (generation == null || months.generation == generation);
-
-  /// The months now read for the same account, church and calendar as
-  /// [origin], after a trip away and back.
-  CalendarMonths? _sameKey(CalendarMonths? origin) {
-    if (!_ref.mounted || origin == null) return null;
-    final current = _ref.read(_calendarMonthsProvider);
-    return current?.key == origin.key ? current : null;
-  }
-
-  void _reconcileReturnedContext(CalendarMonths? origin, Iterable<CalendarEvent> events, {int? generation}) {
-    if (_current(origin, generation: generation)) return;
-    // A trip away and back may have fetched before this write completed.
-    // Re-read in the current authorized context; never transplant old data.
-    _sameKey(origin)?.reload(events);
-  }
-
-  /// A calendar editor may lose write access but remain a member who can
-  /// read. Only a refusal from calendarEvents may purge readable months.
-  void _recheckReadAccess(CalendarMonths? months) => _sameKey(months)?.reloadAll();
-
-  void _saved(
-    CalendarMonths? months,
-    CalendarEvent event,
-    CalendarEvent saved,
-    CalendarEvent? previous, {
-    int? generation,
-  }) {
-    if (!_current(months, generation: generation)) {
-      _reconcileReturnedContext(months, [event, saved, ?previous], generation: generation);
-      return;
-    }
-    months!.saved(event, saved, previous);
-  }
+  CalendarMonths? _months() => _ref.mounted ? _ref.read(_calendarMonthsProvider) : null;
 
   /// Saves [event], new or changed from [previous].
   Future<void> save(CalendarEvent event, {CalendarEvent? previous}) => withEditLock(_ref, () async {
-    final months = _ref.read(_calendarMonthsProvider);
-    final write = months?.begin(event, previous);
-    try {
-      final saved = await _ref.churchData.calendarSave(event, previous: previous);
-      write?.savedAs(saved);
-      if (write?.latest ?? true) {
-        _saved(months, event, saved, previous, generation: write?.generation);
-      } else {
-        _reconcileReturnedContext(months, [event, saved, ?previous], generation: write?.generation);
-      }
-    } catch (error) {
-      if (calendarAccessRefused(error)) _recheckReadAccess(months);
-      rethrow;
-    } finally {
-      if (_current(months) && write != null) months!.finish(write);
-    }
+    Future<CalendarEvent> send() => _ref.churchData.calendarSave(event, previous: previous);
+    await (_months()?.write(event, previous: previous, send: send, now: _months) ?? send());
   });
 
   /// Deletes [event], which cancels its roster. The returned undo creates it
   /// again, as a new event, with the roster back on it.
   Future<Future<void> Function()> delete(CalendarEvent event) => withEditLock(_ref, () async {
     final data = _ref.churchData;
-    final months = _ref.read(_calendarMonthsProvider);
-    final write = months?.begin(event, null);
-    try {
+    final months = _months();
+    Future<CalendarEvent?> send() async {
       await data.calendarDelete(event);
-      if (_current(months, generation: write?.generation) && (write?.latest ?? true)) {
-        months!.deleted(event);
-      } else {
-        _reconcileReturnedContext(months, [event], generation: write?.generation);
-      }
-    } catch (error) {
-      if (calendarAccessRefused(error)) _recheckReadAccess(months);
-      rethrow;
-    } finally {
-      if (_current(months) && write != null) months!.finish(write);
+      return null;
     }
+
+    await (months?.write(event, send: send, now: _months) ?? send());
     return () => withEditLock(_ref, () async {
       // The backend writes to the currently selected calendar, so an old
       // undo must not recreate its event in a different one.
-      if (!_current(months)) throw const CloudException(CloudErrorCode.unavailable);
-      final restoring = months!.begin(event.anew, null);
-      try {
-        final saved = await data.calendarSave(event.anew, restoreRosterOf: event.id);
-        restoring.savedAs(saved);
-        _saved(months, event, saved, null, generation: restoring.generation);
-      } catch (error) {
-        if (calendarAccessRefused(error)) _recheckReadAccess(months);
-        rethrow;
-      } finally {
-        if (_current(months)) months.finish(restoring);
-      }
+      if (months == null || !identical(_months(), months)) throw const CloudException(CloudErrorCode.unavailable);
+      await months.write(
+        event.anew,
+        send: () => data.calendarSave(event.anew, restoreRosterOf: event.id),
+        now: _months,
+      );
     });
   });
 }

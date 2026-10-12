@@ -35,8 +35,9 @@ abstract interface class CalendarMonthView {
 /// read, and a month asked for while it is read shares that read; a
 /// refresh always reads the complete month. Of the months no longer on
 /// screen only the [maxIdle] left most recently are kept. A refusal drops
-/// every month. Writes are applied to every month holding the event; when
-/// that cannot be known, the month is read again instead of guessed.
+/// every month. Writes go through [write], which applies the reply to every
+/// month holding the event; when that cannot be known, the month is read
+/// again instead of guessed.
 class CalendarMonths {
   CalendarMonths({
     required this.key,
@@ -71,10 +72,6 @@ class CalendarMonths {
   int _generation = 0;
   Object? _refusal;
   StackTrace? _refusalStack;
-
-  int get generation => _generation;
-
-  bool get closed => _closed;
 
   CalendarReadStatus status(String month) => _months[month]?.status ?? const CalendarReadStatus();
 
@@ -163,7 +160,7 @@ class CalendarMonths {
     } catch (error, stack) {
       if (!_closed && generation == _generation) {
         if (calendarAccessRefused(error)) {
-          revoke(error, stack);
+          _revoke(error, stack);
         } else if (error is CloudException && error.code == CloudErrorCode.unavailable) {
           if (current()) {
             m.status = CalendarReadStatus(
@@ -197,7 +194,7 @@ class CalendarMonths {
 
   /// Access was refused: every month is dropped, everything showing one is
   /// told, and reads begun before now fail with [error].
-  void revoke(Object error, StackTrace stack) {
+  void _revoke(Object error, StackTrace stack) {
     _generation++;
     _refusal = error;
     _refusalStack = stack;
@@ -210,30 +207,70 @@ class CalendarMonths {
     }
   }
 
-  /// A write of [event] (over [previous]) begins.
-  CalendarEdit begin(CalendarEvent event, CalendarEvent? previous) {
+  /// Sends one write with [send]: [event] saved over [previous], answered
+  /// with the event as the server saved it, or deleted, answered with null.
+  /// Every month holding the event then shows the reply; one that cannot
+  /// know is read again. Calendar replies have no revision: after
+  /// overlapping writes to one event only a complete read tells which the
+  /// server committed last, so every month holding it is read again.
+  ///
+  /// [now] is the months the app reads at the moment. A write that outlasts
+  /// these (another account, church or calendar, and back) is never applied
+  /// to months read since: they read the month again instead. A refusal has
+  /// the months now read for the same calendar read again: a calendar
+  /// editor may lose write access but still read.
+  Future<CalendarEvent?> write(
+    CalendarEvent event, {
+    CalendarEvent? previous,
+    required Future<CalendarEvent?> Function() send,
+    required CalendarMonths? Function() now,
+  }) async {
+    bool current({int? generation}) => identical(now(), this) && (generation == null || generation == _generation);
+    CalendarMonths? sameKey() => switch (now()) {
+      final months? when months.key == key => months,
+      _ => null,
+    };
+    final edit = _begin(event, previous);
+    try {
+      final saved = await send();
+      if (saved != null) edit._mutation.events.add(saved);
+      if (!current(generation: edit.generation)) {
+        // A trip away and back may have read before this write completed.
+        // Read again in the current context; never transplant old data.
+        sameKey()?._reload([event, ?saved, ?previous]);
+      } else if (edit.latest) {
+        saved == null ? _deleted(event) : _saved(event, saved, previous);
+      }
+      return saved;
+    } catch (error) {
+      // Only a refusal from a read may drop the months the reader can read.
+      if (calendarAccessRefused(error)) sameKey()?._reloadAll();
+      rethrow;
+    } finally {
+      if (current()) _finish(edit);
+    }
+  }
+
+  _Edit _begin(CalendarEvent event, CalendarEvent? previous) {
     unawaited(_cache.invalidate({...event.months, ...?previous?.months}));
     final key = event.id ?? Object();
     final mutation = _mutations.putIfAbsent(key, _Mutation.new);
     mutation.events.addAll([event, ?previous]);
     mutation.pending++;
     if (mutation.pending > 1) mutation.overlapped = true;
-    return CalendarEdit._(key, mutation, ++mutation.order, _generation);
+    return _Edit(key, mutation, ++mutation.order, _generation);
   }
 
-  /// [write] is over. Calendar replies have no revision: after overlapping
-  /// writes to one event only a complete read tells which the server
-  /// committed last.
-  void finish(CalendarEdit write) {
-    final mutation = write._mutation;
+  void _finish(_Edit edit) {
+    final mutation = edit._mutation;
     if (--mutation.pending != 0) return;
-    _mutations.remove(write.key);
-    if (mutation.overlapped) reload(mutation.events);
+    _mutations.remove(edit.key);
+    if (mutation.overlapped) _reload(mutation.events);
   }
 
   /// [saved] was saved for [event], over [previous]: every month holding
   /// any of them shows it now.
-  void saved(CalendarEvent event, CalendarEvent saved, CalendarEvent? previous) {
+  void _saved(CalendarEvent event, CalendarEvent saved, CalendarEvent? previous) {
     for (final (month, m) in _holding([event, saved, ?previous])) {
       _patch(
         month,
@@ -249,7 +286,7 @@ class CalendarMonths {
   }
 
   /// [event] was deleted from every month holding it.
-  void deleted(CalendarEvent event) {
+  void _deleted(CalendarEvent event) {
     for (final (month, m) in _holding([event])) {
       _patch(
         month,
@@ -264,14 +301,14 @@ class CalendarMonths {
   }
 
   /// The months holding any of [events] are read again.
-  void reload(Iterable<CalendarEvent> events) {
+  void _reload(Iterable<CalendarEvent> events) {
     for (final (month, m) in _holding(events)) {
       _stale(month, m);
     }
   }
 
   /// Every month is read again.
-  void reloadAll() {
+  void _reloadAll() {
     for (final MapEntry(key: month, value: m) in _months.entries.toList()) {
       _stale(month, m);
     }
@@ -355,21 +392,18 @@ class _Mutation {
   bool overlapped = false;
 }
 
-/// One change to an event while it is sent, from [CalendarMonths.begin]
-/// to [CalendarMonths.finish].
-class CalendarEdit {
-  CalendarEdit._(this.key, this._mutation, this._order, this.generation);
+/// One change to an event while it is sent, from [CalendarMonths._begin]
+/// to [CalendarMonths._finish].
+class _Edit {
+  _Edit(this.key, this._mutation, this._order, this.generation);
 
   final Object key;
   final _Mutation _mutation;
   final int _order;
 
-  /// [CalendarMonths.generation] when it began.
+  /// [CalendarMonths._generation] when it began.
   final int generation;
 
   /// Whether no later write to the same event began since.
   bool get latest => _order == _mutation.order;
-
-  /// The event as the server saved it, so a reconciliation finds it too.
-  void savedAs(CalendarEvent saved) => _mutation.events.add(saved);
 }

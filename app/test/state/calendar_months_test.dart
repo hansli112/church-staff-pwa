@@ -126,7 +126,7 @@ void main() {
     calendar.held = Completer();
     unawaited(Future.sync(() => months.events('2026-11')));
     final moved = meeting.copyWith(title: '改到十一月', start: DateTime.utc(2026, 11, 2), end: DateTime.utc(2026, 11, 3));
-    months.saved(meeting, moved, meeting);
+    await months.write(meeting, previous: meeting, send: () async => moved, now: () => months);
     expect(october.shown, isEmpty);
     expect(november.reloads, 1, reason: 'its read began before the save');
     calendar.held!.complete();
@@ -136,11 +136,61 @@ void main() {
     final view = View();
     months.show('2026-10', view);
     await months.events('2026-10');
-    final first = months.begin(meeting.copyWith(title: '第一版'), meeting);
-    final second = months.begin(meeting.copyWith(title: '第二版'), meeting);
-    months.finish(second);
+    final first = Completer<CalendarEvent>(), second = Completer<CalendarEvent>();
+    final writes = [
+      months.write(
+        meeting.copyWith(title: '第一版'),
+        previous: meeting,
+        send: () => first.future,
+        now: () => months,
+      ),
+      months.write(
+        meeting.copyWith(title: '第二版'),
+        previous: meeting,
+        send: () => second.future,
+        now: () => months,
+      ),
+    ];
+    second.complete(meeting.copyWith(title: '第二版'));
+    await writes[1];
     expect(view.reloads, 0);
-    months.finish(first);
-    expect(view.reloads, 1);
+    first.complete(meeting.copyWith(title: '第一版'));
+    await writes[0];
+    expect(view.reloads, 1, reason: 'which the server committed last, only a read can tell');
+  });
+
+  test(
+    'a write outlasting its months is applied to none; the months read since for that calendar read it again',
+    () async {
+      final view = View();
+      final since = CalendarMonths(
+        key: months.key,
+        read: calendar.read,
+        cache: CalendarReadCache(await SharedPreferences.getInstance()),
+        cacheScope: null,
+        clock: () => now,
+      );
+      since.show('2026-10', view);
+      await since.events('2026-10');
+      await months.write(
+        meeting.copyWith(title: '改名'),
+        previous: meeting,
+        send: () async => meeting,
+        now: () => since,
+      );
+      expect((view.shown, view.reloads), (null, 1));
+    },
+  );
+
+  test('a refused write has the months still readable read again', () async {
+    final view = View();
+    months.show('2026-10', view);
+    await months.events('2026-10');
+    const refusal = CloudException(CloudErrorCode.permissionDenied);
+    await expectLater(
+      months.write(meeting, previous: meeting, send: () async => throw refusal, now: () => months),
+      throwsA(same(refusal)),
+    );
+    expect((view.reloads, view.denied), (1, null));
   });
 }
