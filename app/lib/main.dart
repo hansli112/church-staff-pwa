@@ -62,7 +62,12 @@ Future<void> main() async {
     prefsRead,
     env.usesFirebase
         ? _firebase(env)
-        : Future<Backend>.value(demoBackend(newUser: const bool.fromEnvironment('DEMO_NEW_USER'))),
+        : Future<Backend>.value(
+            demoBackend(
+              newUser: const bool.fromEnvironment('DEMO_NEW_USER'),
+              language: AppLanguage.resolve(PlatformDispatcher.instance.locales),
+            ),
+          ),
   ).wait;
 
   // End-to-end tests drive the web build through the accessibility tree.
