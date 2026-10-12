@@ -15,8 +15,8 @@ MemoryBackend demoBackend({
   bool newUser = false,
 }) {
   final b = MemoryBackend(clock: clock);
-  final start = Day.today(b.clock());
   final cid = b.addChurch('恩典之家', id: 'demo');
+  final start = b.churches[cid]!.timeZone.today(b.clock());
   // The features an admin sets up: a church link with a daily source, a
   // webhook, and two people moved from self-host who have not signed in.
   b.churchLinks[cid] = const ChurchLink(
