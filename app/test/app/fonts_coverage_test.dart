@@ -34,7 +34,7 @@ Future<String> _warmed(WidgetTester tester, String location, AppLanguage languag
     warmUpFonts(
       bundle: _Arb(),
       systemFonts: fonts,
-      language: language,
+      languages: [language],
       initialLocation: Uri.parse(location),
       layOut: laidOut.add,
     ),

@@ -38,8 +38,8 @@ Future<void> main() async {
   GoRouter.optionURLReflectsImperativeAPIs = true;
   WidgetsFlutterBinding.ensureInitialized();
   // Start the entry page's fonts alongside Firebase, in the language last
-  // shown here, else the browser's; common names wait until a usable page
-  // is drawn.
+  // shown here and the browser's (the profile may have another since, or
+  // nobody be signed in); common names wait until a usable page is drawn.
   final firstPageDrawn = Completer<void>();
   final prefsRead = SharedPreferences.getInstance();
   final fontsReady = kIsWeb
@@ -47,9 +47,10 @@ Future<void> main() async {
           (prefs) => warmUpFonts(
             bundle: rootBundle,
             systemFonts: PaintingBinding.instance.systemFonts,
-            language:
-                AppLanguage.fromTag(prefs.getString(shownLanguagePref)) ??
-                AppLanguage.resolve(PlatformDispatcher.instance.locales),
+            languages: {
+              ?AppLanguage.fromTag(prefs.getString(shownLanguagePref)),
+              AppLanguage.resolve(PlatformDispatcher.instance.locales),
+            },
             browserLanguage: PlatformDispatcher.instance.locale.toLanguageTag(),
             initialLocation: Uri.base,
             afterFirstFrame: firstPageDrawn.future,

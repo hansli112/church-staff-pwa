@@ -248,7 +248,8 @@ String _text(String json, {Set<String>? keys}) => [
 /// [initialLocation] selects login/home, roster or church-info text,
 /// following this app's `from`/`to` links. Other destinations keep the full
 /// warmup. Without a location, [startupOnly] retains the login/home
-/// selection; the default uses all strings. The strings are [language]'s.
+/// selection; the default uses all strings. The strings are [languages]',
+/// each one's.
 ///
 /// Completes on the next font change after laying out the initial text, or
 /// at once if the strings cannot be used. The loading screen owns its wait
@@ -263,7 +264,7 @@ String _text(String json, {Set<String>? keys}) => [
 Future<void> warmUpFonts({
   required AssetBundle bundle,
   required Listenable systemFonts,
-  AppLanguage language = AppLanguage.zhHant,
+  Iterable<AppLanguage> languages = const [AppLanguage.zhHant],
   String browserLanguage = '',
   bool startupOnly = false,
   Uri? initialLocation,
@@ -299,15 +300,16 @@ Future<void> warmUpFonts({
   );
   unawaited(() async {
     try {
-      final json = await bundle.loadString(uiStringsAsset(language));
-      if (done.isCompleted) return;
       final keys = initialLocation != null ? _initialKeys(initialLocation) : (startupOnly ? _startupKeys : null);
-      final text = _text(json, keys: keys);
+      final text = [
+        for (final language in languages) _text(await bundle.loadString(uiStringsAsset(language)), keys: keys),
+      ].join();
+      if (done.isCompleted) return;
       reading = false;
       if (text.trim().isEmpty) {
         finish();
       } else {
-        layOut(text + _textBeyondStrings(language));
+        layOut(text + languages.map(_textBeyondStrings).join());
       }
     } catch (_) {
       reading = false;

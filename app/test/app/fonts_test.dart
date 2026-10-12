@@ -38,6 +38,16 @@ class _DelayedBundle extends CachingAssetBundle {
   void complete(String json) => contents.complete(ByteData.sublistView(utf8.encode(json)));
 }
 
+/// One string in English, another in Chinese.
+class _TwoLanguages extends CachingAssetBundle {
+  @override
+  Future<ByteData> load(String key) async => ByteData.sublistView(
+    utf8.encode(
+      key == uiStringsAsset(AppLanguage.en) ? '{"switchChurch": "Switch church"}' : '{"switchChurch": "切換教會"}',
+    ),
+  );
+}
+
 class _SystemFonts extends ChangeNotifier {
   bool get waiting => hasListeners;
 }
@@ -60,7 +70,7 @@ void main() {
       warmUpFonts(
         bundle: bundle,
         systemFonts: PaintingBinding.instance.systemFonts,
-        language: AppLanguage.en,
+        languages: const [AppLanguage.en],
         layOut: (_) {},
       ),
     );
@@ -255,6 +265,20 @@ void main() {
     expect(laidOut, hasLength(2), reason: 'once');
   });
 
+  testWidgets('the language last shown and the browser’s, when they differ: both', (tester) async {
+    final laidOut = <String>[];
+    unawaited(
+      warmUpFonts(
+        bundle: _TwoLanguages(),
+        systemFonts: PaintingBinding.instance.systemFonts,
+        languages: const [AppLanguage.en, AppLanguage.zhHant],
+        layOut: laidOut.add,
+      ),
+    );
+    await tester.pump();
+    expect(laidOut.single, allOf(contains('Switch church'), contains('切換教會')));
+  });
+
   testWidgets('the most used characters are those of the font the browser’s language draws in', (tester) async {
     for (final (browser, font) in [
       ('zh-TW', 'TC'),
@@ -269,7 +293,7 @@ void main() {
         warmUpFonts(
           bundle: UiStringsBundle(),
           systemFonts: PaintingBinding.instance.systemFonts,
-          language: AppLanguage.zhHans,
+          languages: const [AppLanguage.zhHans],
           browserLanguage: browser,
           layOut: laidOut.add,
         ),
