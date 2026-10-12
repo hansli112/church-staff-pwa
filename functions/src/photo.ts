@@ -90,7 +90,7 @@ export function buildPrompt(opts: { service: Service; names: string[]; today: st
     '以下同工名單僅供辨識已寫完整的人名，不能拿來補字或替換：',
     names.join('、'),
     '一格有多人（/ 或 + 分隔）拆成多個字串，保留照片先後順序。',
-    `空白或${LANGUAGES.map((l) => `「${words(l).placeholder}」`).join('')}填 "people": []；「暫停」的服事項目不輸出。`,
+    `空白或${[...new Set(LANGUAGES.map((l) => words(l).placeholder))].map((p) => `「${p}」`).join('')}填 "people": []；「暫停」的服事項目不輸出。`,
     '## 活動',
     'events 每個元素固定是 {"name":"活動名稱","color":0}，color 是 0 到 5 的整數色票編號，不是 RGB 或 ARGB。',
     `教會常用活動：${events}。名稱完全相同時使用該 color；其他活動照原文抄，color 填 4。`,

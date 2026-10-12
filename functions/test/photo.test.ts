@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
 
 import { buildPrompt, DEFAULT_MODELS, geminiClient, geminiModels, photoQuota, PHOTOS_PER_MONTH, recognizeRoster, type Gemini } from '../src/photo.js';
+import { LANGUAGES, words } from '../src/languages.js';
 import { caller, clearFirestore, db, deps, rejectsWith, seedChurch, setNow } from './support.js';
 
 const image = { mimeType: 'image/jpeg', data: Buffer.from('jpeg').toString('base64') };
@@ -170,7 +171,10 @@ describe('buildPrompt', () => {
   test('an English (or Japanese, or Korean) roster is read as written, not translated into Chinese', () => {
     const p = buildPrompt({ service: { id: 'sunday', name: 'Sunday Service', duties: ['Piano'] }, names: ['Amy'], today: '2026-10-02' });
     assert.match(p, /照原文辨識，不要翻譯/);
-    assert.match(p, /「TBD」填 "people": \[\]/);
+    const empty = /空白或(.*)填 "people": \[\]/.exec(p)?.[1] ?? '';
+    for (const language of LANGUAGES) {
+      assert.equal(empty.split(`「${words(language).placeholder}」`).length, 2, `${language}'s, once`);
+    }
   });
 });
 
