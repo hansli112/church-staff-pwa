@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Privacy Policy | Martha, sit</title>
+<meta name="description" content="Martha, sit Privacy Policy: what data we collect, what it’s used for, where it’s stored, how long it’s kept, who can see it, and how to delete it.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="Martha, sit">
+<meta property="og:title" content="Privacy Policy | Martha, sit">
+<meta property="og:description" content="What data Martha, sit collects, how it’s used, and how to delete it.">
+<meta property="og:url" content="__ORIGIN__/en/privacy">
+<link rel="stylesheet" href="/site.css">
+<link rel="icon" type="image/png" href="/favicon.png">
+</head>
+<body>
+
+<header class="top ruled">
+  <div class="wrap">
+    <!-- App 會打開這頁，所以不連到首頁：首頁有支持頁，商店不准 App 把人帶去外部付款。 -->
+    <span class="brand"><img src="/icons/Icon-192.png" alt="" width="28" height="28">Martha, sit</span>
+    <a class="top-link" href="/home">Open web app</a>
+  </div>
+</header>
+
+<div class="doc">
+  <div class="wrap">
+    <aside>
+      <details class="toc" id="toc" open>
+        <summary>Contents</summary>
+        <ol>
+        <li><a href="#operator">Who runs the Service</a></li>
+        <li><a href="#where">Where your data is stored</a></li>
+        <li><a href="#data">Data we collect and how we use it</a></li>
+        <li><a href="#visibility">Who can see your data</a></li>
+        <li><a href="#sharing">Sharing with third parties</a></li>
+        <li><a href="#delete">Deleting your data</a></li>
+        <li><a href="#rights">Your rights</a></li>
+        <li><a href="#security">Data security</a></li>
+        <li><a href="#children">Children</a></li>
+        <li><a href="#changes">Changes to this policy</a></li>
+        <li><a href="#contact">Contact</a></li>
+        </ol>
+      </details>
+      <script>if (matchMedia('(max-width: 899px)').matches) document.getElementById('toc').open = false;</script>
+    </aside>
+    <main class="legal">
+    <h1>Privacy Policy</h1>
+    <p class="updated">Last updated: Oct 11, 2026</p>
+    <p>This is an English translation. If it differs from the <a href="/privacy" hreflang="zh-Hant" lang="zh-Hant">繁體中文版</a> (the Traditional Chinese version), the Traditional Chinese version prevails.</p>
+
+    <p>Martha, sit (the “Service”) is a serving schedule tool for church team members, made up of an iOS app, an Android app, and a web app. This policy explains what data the Service collects, why, where it’s stored, how long it’s kept, who can see it, and how you can delete it.</p>
+
+    <h2 id="operator">1. Who runs the Service</h2>
+    <p>The Service is run by an individual, Hsueh-Han Lee (the “Operator,” “we,” or “us”), not by a company or a church organization.</p>
+    <p>Each church’s admins decide which team members to add to the church and whom to put on the schedule. Admins are responsible for their own church’s team member data. See the <a href="/en/terms">Terms of Service</a> for details.</p>
+
+    <h2 id="where">2. Where your data is stored</h2>
+    <p>The Service uses Google Firebase. Apart from accounts, the main data (team member data, schedules, church settings, and church logos) is stored in the Google Cloud <strong>asia-east1 (Taiwan)</strong> region.</p>
+    <p>The following Google services are processed on Google’s global infrastructure, so data may be stored or processed outside Taiwan (for example, in the United States): Firebase Authentication (sign-in), Google Analytics for Firebase (usage analytics), Firebase Crashlytics (crash reports), Firebase Cloud Messaging (push notifications), and Gemini on Google Cloud Vertex AI (photo recognition). All of these are covered by Google’s data processing terms and security measures. By using the Service, you understand that your data will be processed in these regions.</p>
+
+    <h2 id="data">3. Data we collect and how we use it</h2>
+
+    <h3>3.1 Account data</h3>
+    <dl>
+      <div><dt>What</dt><dd>Your name and email when you sign in with Google, Apple, or email. If you sign up with email, you also have a password, which Firebase Authentication stores as a hash; the Operator can’t see it. If you use Apple’s “Hide My Email,” we receive only the forwarding address Apple provides. We also store your language setting.</dd></div>
+      <div><dt>Purpose</dt><dd>Signing you in, identifying you, and showing your name in the churches you join.</dd></div>
+      <div><dt>Where</dt><dd>Firebase Authentication and <code>users/{uid}</code> in Firestore.</dd></div>
+      <div><dt>Kept until</dt><dd>You delete your account.</dd></div>
+    </dl>
+
+    <h3>3.2 Team member data in a church</h3>
+    <dl>
+      <div><dt>What</dt><dd>In each church: your name, email, status (for example, admin), permission groups, the services and roles you’re assigned to, notification settings, and when you joined.</dd></div>
+      <div><dt>Purpose</dt><dd>Listing the team members to choose from when planning the schedule, deciding who can plan which schedules, and sending you the notifications you’ve chosen to receive.</dd></div>
+      <div><dt>Where</dt><dd>Firestore, asia-east1 (Taiwan).</dd></div>
+      <div><dt>Kept until</dt><dd>You leave the church, an admin removes you, you delete your account, or the church is deleted.</dd></div>
+    </dl>
+
+    <h3>3.3 Schedules</h3>
+    <dl>
+      <div><dt>What</dt><dd>Dates, services, roles and the names of the team members serving in them, and occasion tags.</dd></div>
+      <div><dt>Purpose</dt><dd>Letting team members view and plan the schedule.</dd></div>
+      <div><dt>Where</dt><dd>Firestore, asia-east1 (Taiwan).</dd></div>
+      <div><dt>Kept until</dt><dd>A church admin or a team member who can plan schedules deletes it, or the church is deleted. After you delete your account, your name stays on schedules you were already on as plain text; see <a href="#delete">Section 6</a>.</dd></div>
+    </dl>
+
+    <h3>3.4 Church data</h3>
+    <dl>
+      <div><dt>What</dt><dd>The church name and church logo (uploaded by an admin and resized to 512px).</dd></div>
+      <div><dt>Purpose</dt><dd>Showing the church in the app. The church name is also used to check for duplicates: when someone creates a church with the same name, they see a notice that a church with that name already exists.</dd></div>
+      <div><dt>Where</dt><dd>Firestore and Firebase Storage, asia-east1 (Taiwan).</dd></div>
+      <div><dt>Kept until</dt><dd>The church is deleted (it can be restored within 30 days of deletion, then it’s permanently deleted).</dd></div>
+    </dl>
+
+    <h3>3.5 Push tokens</h3>
+    <dl>
+      <div><dt>What</dt><dd>One push token per device, generated by Firebase Cloud Messaging.</dd></div>
+      <div><dt>Purpose</dt><dd>Sending notifications to your device. You can turn off notifications in your device’s system settings.</dd></div>
+      <div><dt>Where</dt><dd><code>users/{uid}</code> in Firestore. Only you and our backend can read it; church admins can’t see it.</dd></div>
+      <div><dt>Kept until</dt><dd>You sign out, you delete your account, or the push service reports that the token is no longer valid.</dd></div>
+    </dl>
+
+    <h3>3.6 Usage analytics</h3>
+    <dl>
+      <div><dt>What</dt><dd>Usage events recorded by Google Analytics for Firebase (GA4), such as which screens you opened and which features you used, plus what Google collects automatically: device model, operating system and app version, approximate region, and a random installation ID. We also attach your user ID (uid) and the ID of the church you’re currently in (<code>church_id</code>) to count users and measure how active each church is. Analytics data doesn’t include your name, email, or schedule contents.</dd></div>
+      <div><dt>Purpose</dt><dd>Understanding daily and monthly users, retention, and which features get used, to improve the Service.</dd></div>
+      <div><dt>What we don’t do</dt><dd>We don’t track your activity in other apps or websites, use it for advertising, or sell data. That’s why the iOS app doesn’t ask for App Tracking Transparency (ATT) permission.</dd></div>
+      <div><dt>Opting out</dt><dd>There is currently <strong>no</strong> setting in the app to turn off usage analytics. If you don’t agree, please don’t use the Service, or email us.</dd></div>
+      <div><dt>Kept until</dt><dd>Deleted after at most 14 months, per our Google Analytics data retention setting.</dd></div>
+    </dl>
+
+    <h3>3.7 Error logs</h3>
+    <dl>
+      <div><dt>What</dt><dd>Records from when the app crashes or hits an error: user ID (uid), church ID, the error stack trace, and device model, operating system and app version. Names, emails, and schedule contents aren’t recorded.</dd></div>
+      <div><dt>Purpose</dt><dd>Finding and fixing bugs.</dd></div>
+      <div><dt>Where</dt><dd>Firebase Crashlytics for the iOS and Android apps; Google Cloud Logging for the web app and our backend.</dd></div>
+      <div><dt>Kept for</dt><dd>About 30 days in Cloud Logging, and 90 days in Crashlytics under Firebase’s rules.</dd></div>
+    </dl>
+
+    <h3>3.8 Google Calendar connection (only for admins who connect a calendar)</h3>
+    <dl>
+      <div><dt>What</dt><dd>When an admin chooses to connect Google Calendar, we receive a Google OAuth refresh token and the events on the calendar the admin selects. Scopes: <code>calendar.events</code> (read and write events) and <code>calendar.calendarlist.readonly</code> (list calendars so the admin can pick one). Signing in with a Google account alone doesn’t grant calendar access.</dd></div>
+      <div><dt>Purpose</dt><dd>Showing and editing the church calendar in the app. All reads and writes go through our backend, which caches events briefly so they load faster. The Service’s use and transfer of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements.</dd></div>
+      <div><dt>Where</dt><dd>The refresh token is stored <strong>encrypted</strong> on our backend. Neither the app nor other team members can get it.</dd></div>
+      <div><dt>Who can see it</dt><dd>That church’s team members can see the calendar’s events in the app.</dd></div>
+      <div><dt>Retention and deletion</dt><dd>Cached events are kept for at most 10 minutes before being read from Google again. When an admin disconnects the calendar or the church is deleted, the authorization and the cache are deleted together. You can also revoke access at any time on the “Third-party apps &amp; services” page of your Google Account.</dd></div>
+      <div><dt>Google API</dt><dd>The Service’s use of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements.</dd></div>
+    </dl>
+
+    <h3>3.9 Photo recognition</h3>
+    <dl>
+      <div><dt>What</dt><dd>Photos of schedules uploaded when a team member who can plan schedules chooses “Import from photo.” The photos may show team members’ names.</dd></div>
+      <div><dt>Purpose</dt><dd>The photo is sent to Gemini on Google Cloud Vertex AI to read the text and turn it into a schedule. Under Google Cloud’s terms, Google doesn’t use this content to train its models. We also record how many photos each church uses per month, to manage limits.</dd></div>
+      <div><dt>Kept for</dt><dd>The photo is sent to Google only at the moment it’s read; the Service doesn’t keep it. Google may cache it in memory for up to 24 hours to respond faster, and if Google’s automated systems flag the content as possible abuse, it may be kept for up to 90 days for review, then deleted.</dd></div>
+    </dl>
+
+    <h3>3.10 Tips and subscriptions</h3>
+    <dl>
+      <div><dt>What</dt><dd>Tips and subscriptions in the iOS and Android apps are paid through the Apple App Store and Google Play. We never receive your payment details (such as your card number).</dd></div>
+      <div><dt>Where</dt><dd>Whether you’re a supporter is determined only on your device and isn’t sent to our servers. Apple and Google notify us of each transaction’s amount, item, and time, which we use to calculate the cost progress shown publicly on our website. These notifications don’t include your account or name.</dd></div>
+    </dl>
+
+    <h3>3.11 Webhooks (only for churches that set one up)</h3>
+    <dl>
+      <div><dt>What</dt><dd>A church admin can set a webhook URL. When the schedule changes, the Service sends the change to that URL, including the church name, date, role, the names of team members added or removed, and the name of the team member who made the change.</dd></div>
+      <div><dt>Purpose</dt><dd>Letting the church sync schedule changes to its own systems, such as a group chat or a spreadsheet.</dd></div>
+      <div><dt>Who’s responsible</dt><dd>The church admin chooses and manages this URL. Once data is sent, the receiving end handles it under its own policies. The admin can delete the webhook at any time to stop sending.</dd></div>
+    </dl>
+
+    <h2 id="visibility">4. Who can see your data</h2>
+    <ul>
+      <li><strong>You</strong>: your own account data, team member data, and push tokens.</li>
+      <li><strong>Admins of the same church, and team members who can plan schedules</strong>: the team member data of everyone in that church, <strong>including email</strong>.</li>
+      <li><strong>Other team members in the same church</strong>: schedules (including the names on them) and the church name and logo.</li>
+      <li><strong>People in other churches</strong>: none of your data in this church.</li>
+      <li><strong>The Operator</strong>: accesses data only as needed to run the Service, handle problems, deal with abuse, or resolve disputes over duplicate names. The Operator’s admin console can rename a church, suspend a church, and transfer admin rights.</li>
+    </ul>
+
+    <h2 id="sharing">5. Sharing with third parties</h2>
+    <p>We don’t sell your data. Data is handled only by the service providers needed to provide the Service:</p>
+    <ul>
+      <li><strong>Google</strong>: Firebase (database, sign-in, file storage, push notifications, analytics, error logs), Google Cloud (backend, logging), the Gemini API (photo recognition), and Google Calendar (only for churches that connect a calendar).</li>
+      <li><strong>Apple and Google</strong>: Sign in with Apple, Google sign-in, and app store payments.</li>
+      <li><strong>Webhook recipients set up by a church</strong>: only for churches whose admin has set up a webhook; see Section 3.11 for what is sent.</li>
+    </ul>
+    <p>Where required by law, we may provide data to the authorities.</p>
+
+    <h2 id="delete">6. Deleting your data</h2>
+    <h3>Leaving a church</h3>
+    <p>If you’re not an admin, you can leave a church yourself in the app. This deletes your team member data in that church. Your account remains.</p>
+    <h3>Deleting your account</h3>
+    <p>You can delete your account yourself in the app. This removes:</p>
+    <ul>
+      <li>your sign-in account (Firebase Authentication);</li>
+      <li>your account data in <code>users/{uid}</code>, including the push tokens for all your devices;</li>
+      <li>your team member data in every church.</li>
+    </ul>
+    <p>Names already on schedules are kept as <strong>plain text</strong>, because they’re part of the church’s serving records. To have them removed, contact that church’s admin. If you’re the only admin of a church, you need to hand admin over to someone else before you can delete your account.</p>
+    <h3>Deleting a church</h3>
+    <p>A deleted church is kept for 30 days. During that time, the church’s admins see “Restore church” when they open the app. After 30 days, all of the church’s data is permanently deleted.</p>
+    <h3>Backups and logs</h3>
+    <p>Error logs and usage analytics expire automatically according to the retention periods in Section 3. We don’t make separate database backups; backups inside Google’s systems are cleared within a period of time under Google’s policies.</p>
+
+    <h2 id="rights">7. Your rights</h2>
+    <p>Depending on the law where you live (Taiwan’s Personal Data Protection Act, Hong Kong’s Personal Data (Privacy) Ordinance, or Malaysia’s Personal Data Protection Act 2010), you can usually:</p>
+    <ul>
+      <li>ask about or review your personal data, or request a copy;</li>
+      <li>ask us to complete or correct inaccurate data;</li>
+      <li>ask us to stop collecting, processing, or using it, or withdraw your consent;</li>
+      <li>ask us to delete your data.</li>
+    </ul>
+    <p>You can leave a church or delete your account directly in the app; without the app, you can make a request by following <a href="/en/delete-account">How to delete your account</a>. For other requests, contact us as described in <a href="#contact">Section 11</a>. We’ll reply within 15 days to requests to inquire, review, or get a copy, and within 30 days to requests to correct, stop using, or delete data. If necessary, we may extend this once by the same number of days, and we’ll tell you why. Data on a church’s schedules is managed by that church’s admins, so we may ask you to contact the admin first.</p>
+
+    <h2 id="security">8. Data security</h2>
+    <ul>
+      <li>All data in transit is encrypted with HTTPS.</li>
+      <li>Database access rules keep each church’s data separate, so only that church’s team members can read it.</li>
+      <li>Google Calendar refresh tokens are stored encrypted.</li>
+    </ul>
+    <p>No system can guarantee absolute security. If an incident affects your data, we’ll notify you as required by law.</p>
+
+    <h2 id="children">9. Children</h2>
+    <p>The Service is a tool for church team members and isn’t directed at children under 13. If you’re under 13, please don’t use it. If you’re 13 or older but a minor, or below the age at which local law lets you consent to the processing of your personal data yourself (as in some cases in Hong Kong and Malaysia), please use the Service with the consent of a parent or legal guardian. Church admins shouldn’t add children under 13 as team members. If we learn that we’ve collected data from a child under 13, we’ll delete it.</p>
+
+    <h2 id="changes">10. Changes to this policy</h2>
+    <p>We may change this policy. When we do, we’ll update the “Last updated” date on this page; for significant changes, we’ll post a notice on the Service’s website at least 7 days before they take effect. If you keep using the Service after a change, you agree to the updated policy.</p>
+
+    <h2 id="contact">11. Contact</h2>
+    <ul>
+      <li>Email: <a href="mailto:hansli112871114@gmail.com">hansli112871114@gmail.com</a></li>
+      <li>Report a problem: <a href="https://github.com/hansli112/church-staff-pwa/issues">GitHub issues</a> (public, so please don’t post personal information)</li>
+    </ul>
+    </main>
+  </div>
+</div>
+
+<footer class="foot">
+  <div class="wrap">
+    <nav aria-label="Footer">
+      <a href="/en/terms">Terms of Service</a>
+      <a href="https://github.com/hansli112/church-staff-pwa/issues">Report a problem</a>
+    </nav>
+    <!-- site-languages -->
+    <p>Run by one person.</p>
+  </div>
+</footer>
+
+</body>
+</html>

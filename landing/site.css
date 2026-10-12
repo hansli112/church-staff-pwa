@@ -205,6 +205,7 @@ button.btn:disabled { opacity: 0.6; cursor: default; filter: none; }
 .foot nav { display: flex; flex-wrap: wrap; column-gap: 24px; }
 .foot nav a { display: inline-flex; align-items: center; min-height: 44px; color: var(--text2); text-decoration: none; }
 .foot nav a:hover { color: var(--text); }
+.foot .langs a[aria-current] { color: var(--text); font-weight: 600; }
 .foot p { margin: 0; }
 
 /* 法律文件 */

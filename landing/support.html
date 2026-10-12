@@ -99,7 +99,9 @@
 (() => {
   // Replaced with the Firebase project ID when the site is deployed.
   const project = '__FIREBASE_PROJECT__';
-  const money = (n) => 'NT$' + Math.round(n).toLocaleString('zh-TW');
+  // The page's language: for numbers, and for NewebPay's page (newebpayStart).
+  const lang = document.documentElement.lang;
+  const money = (n) => 'NT$' + Math.round(n).toLocaleString(lang);
   const url = `https://firestore.googleapis.com/v1/projects/${project}/databases/(default)/documents/platform/funding`;
   fetch(url).then((r) => (r.ok ? r.json() : Promise.reject(r.status))).then((doc) => {
     const f = doc.fields || {};
@@ -155,7 +157,7 @@
   const min = Number(custom.min);
   const max = Number(custom.max);
   const messages = {
-    amount: `請輸入 ${min.toLocaleString('zh-TW')}–${max.toLocaleString('zh-TW')} 的整數金額。`,
+    amount: `請輸入 ${min.toLocaleString(lang)}–${max.toLocaleString(lang)} 的整數金額。`,
     busy: '現在支持的人比較多，請過一會兒再試。',
     unavailable: '線上支持暫時無法使用，請稍後再試。',
   };
@@ -191,7 +193,7 @@
       const r = await fetch(form.action, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount }),
+        body: JSON.stringify({ amount, language: lang }),
       });
       const body = await r.json().catch(() => ({}));
       if (!r.ok || !body.gateway) throw new Error(body.error || String(r.status));

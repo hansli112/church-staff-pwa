@@ -87,10 +87,12 @@
 - 一次性打賞（IAP consumable）＋訂閱（回饋：只有自己看得到的徽章、可換成預設的 3–4 款 App icon）。iOS、Android 的替換 icon 都必須在打包時放進 App，不能用使用者上傳的圖，所以教會 logo 不能當 App icon。
 - 原生 `in_app_purchase`，支持者狀態**只在裝置上判斷**，不同步 Firestore。
 - 第一版不做感謝名單（考慮過只顯示 email，但 email 是個資；後端雖然會驗證每筆付款，刻意不記是誰付的）。
+- 網站（`landing/`，`scripts/build-site.mjs` 建置）和 App 一樣有繁中、簡中、英文（日文、韓文跟 #76 一起上）：繁中在根目錄，其他語言在 `/zh-Hans/`、`/en/` 底下，每頁內容各自一份（`landing/<語言>/`，結構和繁中一樣，`scripts/test/build-site.test.mjs` 檢查）。進站時照「頁尾選過的語言 → 瀏覽器的語言（規則和 App 一樣）→ 英文」轉到那個語言的同一頁，搜尋引擎不轉；每頁用 hreflang 列出其他語言，x-default 是英文。App 開網站（隱私權政策、條款）時帶 `?lang=`，網站照 App 的語言並記住。法律頁的翻譯註明以繁中版為準。
 - 網站的支持頁（`/support`）：不用登入就看得到雲端費用進度，另外放網頁付款的支持按鈕。App 裡（包括網頁版 App）不放這個連結，因為商店不准 App 把人帶去外部付款。
 - **線上支持**（網站的一次性付款）用**藍新金流** MPG（幕前支付）：信用卡、Apple Pay、Google Pay，有付款通知 NotifyURL。藍新的商店規範把「贊助」列為暫不受理，沒通過就改用 Portaly（只有信用卡、沒有付款通知，收到的金額要手動加）。綠界實況主收款與 Portaly 比過：ATM、超商沒人會用，TWQR 在手機網頁上只能開台灣Pay，LINE Pay、街口三家都沒有。
   - 規格：《線上交易─幕前支付技術串接手冊》NDNF-1.2.6（2026-10-01，藍新官網「API 文件下載」）。程式在 `functions/src/fundingNewebpay.ts`，手冊的加解密範例是它的測試。
   - 流程：支持頁選金額（100、300、500、1,000 或自訂 30–10,000 元）→ `POST /support/pay`（Hosting 轉到 `newebpayStart`）→ 後端記一筆待付款的訂單（只有金額和時間），回傳加密簽好的 MPG 表單 → 瀏覽器把表單送到藍新的付款頁 → 付款完成後藍新在背景 POST 到 `newebpayNotify`，付款人的瀏覽器經 `newebpayReturn` 回到 `/support?paid=1`（網址裡沒有付款資料）。
+  - 語言：支持頁把自己的語言帶給 `newebpayStart`，藍新付款頁的語言（`LangType`）照它：英文 `en`、日文 `jp`，簡中用繁中（藍新沒有簡中），韓文用英文；品項名稱（`ItemDesc`）也照網頁語言。付完回到同一語言的支持頁（ReturnURL 是 `newebpayReturn/<語言>`）。英文頁的金額寫「NT$300 (about US$10)」，約略美金寫死、不接匯率；各語言都說明以台幣扣款、由發卡銀行換匯。國外卡要在藍新後台另外申請開通（使用者做）。
   - 計入進度：`newebpayNotify` 先驗 TradeSha、解 TradeInfo、確認商店代號，`Status` 是 `SUCCESS` 而且金額和訂單一樣，才交給 `recordPayment`（和商店付款同一個地方）加進當月；同一張訂單通知幾次都只算一次。金額扣掉藍新手續費（公開費率 2.8%，審核通過後照合約確認）。付款失敗、金額和訂單不符都不算，記 log；訂單已經被清掉（超過 3 天）的付款照通知上的金額算，因為通知有我們的金鑰簽章。判斷只看 NotifyURL，ReturnURL 只決定支持頁顯示哪句話。
   - 不記付款人：卡號、email、IP 都留在藍新；後端只記金額、時間、藍新的交易序號和付款方式。訂單號碼由後端產生。
   - 不用登入，所以 `newebpayStart` 全站每小時最多開 60 張訂單，超過請對方晚點再試；沒付款的訂單 3 天後由 `fundingDaily` 刪掉。

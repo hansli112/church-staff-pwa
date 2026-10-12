@@ -139,7 +139,7 @@ OAuth 同意畫面的首頁網址填 `/`，隱私權政策填 `/privacy`：Googl
 | `newebpayNotify` | `https://asia-east1-<專案>.cloudfunctions.net/newebpayNotify` | 藍新在背景通知付款結果（NotifyURL） |
 | `newebpayReturn` | `https://asia-east1-<專案>.cloudfunctions.net/newebpayReturn` | 付款人的瀏覽器付完回來（ReturnURL），轉到 `/support?paid=1` |
 
-NotifyURL、ReturnURL、ClientBackURL（藍新頁面上的「返回商店」，`<網站>/support`）每筆交易都由 `newebpayStart` 帶給藍新，所以不用在藍新後台設定；後台也可以填（會員中心 → 商店管理 → 商店資料設定 → 詳細資料的「API 應用 URL」），兩邊都有時以每筆交易帶的為準。注意 ReturnURL 和 NotifyURL 不能填同一個網址。
+NotifyURL、ReturnURL、ClientBackURL（藍新頁面上的「返回商店」，`<網站>/support`，其他語言是 `<網站>/<語言>/support`）每筆交易都由 `newebpayStart` 帶給藍新，所以不用在藍新後台設定；後台也可以填（會員中心 → 商店管理 → 商店資料設定 → 詳細資料的「API 應用 URL」），兩邊都有時以每筆交易帶的為準。注意 ReturnURL 和 NotifyURL 不能填同一個網址。
 
 設定分三處，三處都齊了才會開單，少一樣 `newebpayStart` 就回「暫時無法使用」：
 - **金鑰**（Secret Manager）：`NEWEBPAY_HASH_KEY`（32 字元）、`NEWEBPAY_HASH_IV`（16 字元），在藍新會員專區該商店的「API 串接金鑰」。`firebase-project.sh` 先建好佔位值；佔位值長度不對，等於關著。

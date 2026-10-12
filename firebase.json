@@ -35,6 +35,16 @@
         "type": 301
       },
       {
+        "source": "/zh-Hans",
+        "destination": "/zh-Hans/",
+        "type": 301
+      },
+      {
+        "source": "/en",
+        "destination": "/en/",
+        "type": 301
+      },
+      {
         "source": "/about",
         "destination": "/",
         "type": 301
@@ -61,6 +71,38 @@
       {
         "source": "/support",
         "destination": "/support.html"
+      },
+      {
+        "source": "/zh-Hans/privacy",
+        "destination": "/zh-Hans/privacy.html"
+      },
+      {
+        "source": "/zh-Hans/terms",
+        "destination": "/zh-Hans/terms.html"
+      },
+      {
+        "source": "/zh-Hans/delete-account",
+        "destination": "/zh-Hans/delete-account.html"
+      },
+      {
+        "source": "/zh-Hans/support",
+        "destination": "/zh-Hans/support.html"
+      },
+      {
+        "source": "/en/privacy",
+        "destination": "/en/privacy.html"
+      },
+      {
+        "source": "/en/terms",
+        "destination": "/en/terms.html"
+      },
+      {
+        "source": "/en/delete-account",
+        "destination": "/en/delete-account.html"
+      },
+      {
+        "source": "/en/support",
+        "destination": "/en/support.html"
       },
       {
         "source": "/support/pay",
