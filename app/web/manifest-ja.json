@@ -1,0 +1,19 @@
+{
+  "name": "マルタ、ひと休み",
+  "short_name": "マルタ、ひと休み",
+  "id": "/",
+  "start_url": "/home",
+  "display": "standalone",
+  "background_color": "#F2F2F7",
+  "theme_color": "#1F5FD1",
+  "description": "「マルタ、マルタ、あなたは多くのことに思い悩み、心を乱している。しかし、必要なことはただ一つだけである。マリアは良い方を選んだ。それを取り上げてはならない。」（ルカによる福音書 10:41–42）",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false,
+  "lang": "ja",
+  "icons": [
+    { "src": "icons/Icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/Icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/Icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/Icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

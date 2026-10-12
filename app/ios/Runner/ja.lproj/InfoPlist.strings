@@ -1,0 +1,4 @@
+"CFBundleDisplayName" = "マルタ、ひと休み";
+"CFBundleName" = "マルタ、ひと休み";
+"NSPhotoLibraryUsageDescription" = "教会のロゴにする画像や、紙の奉仕表の写真を選ぶために使います";
+"NSCameraUsageDescription" = "紙の奉仕表を撮影して、下書きとして読み込むために使います";

@@ -95,8 +95,8 @@ describe("the app's name under its home-screen icon, in each language", () => {
   // Android's resource folders: Traditional for zh-TW, zh-HK and plain zh;
   // Simplified for what Android counts as written in it (zh-CN, zh-SG, zh-MY);
   // English for every language the app does not speak.
-  const android: Record<Language, string> = { 'zh-Hant': 'values-zh', 'zh-Hans': 'values-b+zh+Hans', en: 'values' };
-  const ios = { 'zh-Hant': 'zh-Hant', 'zh-Hans': 'zh-Hans', en: 'en' } as Record<Language, string>;
+  const android: Record<Language, string> = { 'zh-Hant': 'values-zh', 'zh-Hans': 'values-b+zh+Hans', en: 'values', ja: 'values-ja', ko: 'values-ko' };
+  const ios: Record<Language, string> = { 'zh-Hant': 'zh-Hant', 'zh-Hans': 'zh-Hans', en: 'en', ja: 'ja', ko: 'ko' };
   const project = read('ios/Runner.xcodeproj/project.pbxproj');
   const plist = read('ios/Runner/Info.plist');
 

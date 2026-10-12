@@ -220,6 +220,7 @@ const ja: Words = {
   memberLeft: (name) => `${name}が教会を退出しました`,
   someone: 'メンバー',
   appName: 'マルタ、ひと休み',
+  supportItem: 'マルタ、ひと休み クラウド費用のサポート',
   description: '「マルタ、マルタ、あなたは多くのことに思い悩み、心を乱している。しかし、必要なことはただ一つだけである。マリアは良い方を選んだ。それを取り上げてはならない。」（ルカによる福音書 10:41–42）',
   loading: '読み込み中…',
   // app/lib/l10n/app_ja.arb's.
@@ -244,6 +245,7 @@ const ko: Words = {
   memberLeft: (name) => `${name}${name === ko.someone ? '이' : ' 님이'} 교회를 나갔어요`,
   someone: '멤버 한 명',
   appName: '마르다의 쉼표',
+  supportItem: '마르다의 쉼표 클라우드 비용 후원',
   description: '마르다야 마르다야 네가 많은 일로 염려하고 근심하나 몇 가지만 하든지 혹은 한 가지만이라도 족하니라 마리아는 이 좋은 편을 택하였으니 빼앗기지 아니하리라 (누가복음 10:41–42)',
   loading: '불러오는 중…',
   // app/lib/l10n/app_ko.arb's.

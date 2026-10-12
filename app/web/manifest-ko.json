@@ -1,0 +1,19 @@
+{
+  "name": "마르다의 쉼표",
+  "short_name": "마르다의 쉼표",
+  "id": "/",
+  "start_url": "/home",
+  "display": "standalone",
+  "background_color": "#F2F2F7",
+  "theme_color": "#1F5FD1",
+  "description": "마르다야 마르다야 네가 많은 일로 염려하고 근심하나 몇 가지만 하든지 혹은 한 가지만이라도 족하니라 마리아는 이 좋은 편을 택하였으니 빼앗기지 아니하리라 (누가복음 10:41–42)",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false,
+  "lang": "ko",
+  "icons": [
+    { "src": "icons/Icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/Icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/Icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/Icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

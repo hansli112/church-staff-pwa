@@ -41,7 +41,7 @@ export const MPG_VERSION = '2.3';
  * (§4.2.1 LangType: zh-tw, en, jp): Simplified reads Traditional; Korean,
  * English.
  */
-const LANG_TYPE: Record<Language, string> = { 'zh-Hant': 'zh-tw', 'zh-Hans': 'zh-tw', en: 'en' };
+const LANG_TYPE: Record<Language, string> = { 'zh-Hant': 'zh-tw', 'zh-Hans': 'zh-tw', en: 'en', ja: 'jp', ko: 'en' };
 
 /** Seconds the payer has on NewebPay's page (900 is the most it takes). */
 const TRADE_LIMIT = 900;

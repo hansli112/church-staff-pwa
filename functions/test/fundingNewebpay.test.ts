@@ -163,6 +163,11 @@ describe('starting a 線上支持 payment', () => {
       ['zh-tw', '马大别忙 云端费用 线上支持', `${config.returnUrl}/zh-Hans`, `${config.siteUrl}/zh-Hans/support`],
       'NewebPay has no Simplified Chinese',
     );
+    assert.deepEqual(
+      [(await start(300, 'ja')).params.LangType, (await start(300, 'ja')).params.ItemDesc],
+      ['jp', 'マルタ、ひと休み クラウド費用のサポート'],
+    );
+    assert.equal((await start(300, 'ko')).params.LangType, 'en', 'NewebPay has no Korean');
     assert.equal((await start(300, 'xx')).params.LangType, 'en', 'a page in a language not known here');
   });
 

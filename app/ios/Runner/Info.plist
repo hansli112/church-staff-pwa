@@ -43,6 +43,8 @@
 		<string>zh-Hant</string>
 		<string>zh-Hans</string>
 		<string>en</string>
+		<string>ja</string>
+		<string>ko</string>
 	</array>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
