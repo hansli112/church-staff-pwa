@@ -2,6 +2,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/domain/day.dart';
 
 void main() {
+  test('its midnight is wall time, the fields in UTC, wherever the phone is', () {
+    expect(Day(2026, 10, 4).midnight, DateTime.utc(2026, 10, 4));
+  });
+
   test('round-trips its key', () {
     expect(Day.parse('2026-10-04').key, '2026-10-04');
     expect(Day(2026, 1, 5).key, '2026-01-05');

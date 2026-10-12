@@ -38,6 +38,10 @@ class Day implements Comparable<Day> {
 
   final DateTime _utc;
 
+  /// Its midnight as wall time: the fields in a UTC [DateTime], as
+  /// [CalendarEvent.start] holds them, for date formats and pickers.
+  DateTime get midnight => _utc;
+
   int get year => _utc.year;
   int get month => _utc.month;
   int get day => _utc.day;

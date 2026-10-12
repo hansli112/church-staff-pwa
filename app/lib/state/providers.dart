@@ -32,7 +32,7 @@ final todayProvider = Provider<Day>((ref) {
   final timeZone = ref.watch(churchTimeZoneProvider);
   final now = ref.watch(clockProvider)();
   final today = timeZone.today(now);
-  rebuildAt(ref, timeZone.instantOf(DateTime.utc(today.year, today.month, today.day + 1)), now);
+  rebuildAt(ref, timeZone.instantOf(today.addDays(1).midnight), now);
   return today;
 });
 

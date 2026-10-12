@@ -37,8 +37,7 @@ Future<void> showEventDetail(BuildContext context, CalendarEvent e) {
                 Text(
                   switch (e) {
                     _ when e.allDay && e.lastDay == e.day => '${fmt.format(e.start)} ${l10n.calAllDay}',
-                    _ when e.allDay =>
-                      '${fmt.format(e.start)} – ${fmt.format(DateTime.utc(e.lastDay.year, e.lastDay.month, e.lastDay.day))}',
+                    _ when e.allDay => '${fmt.format(e.start)} – ${fmt.format(e.lastDay.midnight)}',
                     _ when e.lastDay == e.day => '${fmt.format(e.start)} ${time.format(e.start)}–${time.format(e.end)}',
                     _ => '${fmt.format(e.start)} ${time.format(e.start)} – ${fmt.format(e.end)} ${time.format(e.end)}',
                   },
@@ -85,9 +84,9 @@ Future<void> editEvent(
   final initialDay =
       event?.start ??
       (day != null
-          ? DateTime.utc(day.year, day.month, day.day)
+          ? day.midnight
           : month.year == today.year && month.month == today.month
-          ? DateTime.utc(today.year, today.month, today.day)
+          ? today.midnight
           : month);
   var previous = event;
   var result = await showAppSheet<_EditResult>(
@@ -163,7 +162,7 @@ class _EventEditorState extends State<_EventEditor> {
   late DateTime _startDay = _dateOf(widget.event?.start ?? widget.initialDay);
   late DateTime _endDay = switch (widget.event) {
     null => _startDay,
-    final e when e.allDay => _dateOf(DateTime.utc(e.lastDay.year, e.lastDay.month, e.lastDay.day)),
+    final e when e.allDay => e.lastDay.midnight,
     final e => _dateOf(e.end),
   };
   late TimeOfDay _startTime = widget.event == null || widget.event!.allDay

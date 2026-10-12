@@ -304,6 +304,6 @@ String _when(L10n l10n, CalendarEvent e) {
   final time = DateFormat.Hm();
   final day = shortMonthDay(l10n);
   if (e.lastDay == e.day) return e.allDay ? l10n.calAllDay : time.format(e.start);
-  if (e.allDay) return '${day.format(e.start)}–${day.format(DateTime(e.lastDay.year, e.lastDay.month, e.lastDay.day))}';
+  if (e.allDay) return '${day.format(e.start)}–${day.format(e.lastDay.midnight)}';
   return '${day.format(e.start)} ${time.format(e.start)} –\n${day.format(e.end)} ${time.format(e.end)}';
 }

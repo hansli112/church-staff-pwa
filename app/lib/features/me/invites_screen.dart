@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/design/components.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../church/links.dart';
+import '../common/time_zones.dart';
 
 final _invitesProvider = StreamProvider.autoDispose<List<Invite>>(
   (ref) => openChurch(ref).invites(),
@@ -118,7 +118,7 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
     final live = ref.watch(_liveInvitesProvider);
     final services = ref.watch(servicesProvider).value;
     final enabled = services?.enabled ?? const <Service>[];
-    final fmt = DateFormat.MMMd();
+    final clock = ChurchClock.of(context, ref);
     String? zonesOf(Invite i) {
       final names = [for (final t in i.zoneTypes) ?services?.byId(t)?.name];
       return names.isEmpty ? null : names.join(l10n.listSeparator);
@@ -161,7 +161,7 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
                   ListRow(
                     title: i.code,
                     subtitle: zonesOf(i),
-                    value: l10n.inviteExpiresOn(fmt.format(ref.watch(churchTimeZoneProvider).clock(i.expiresAt))),
+                    value: l10n.inviteExpiresOn(clock.day(i.expiresAt)),
                     onTap: () => _actions(i),
                   ),
               ],

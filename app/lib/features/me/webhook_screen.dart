@@ -11,7 +11,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../church/links.dart';
 import '../common/errors.dart';
-import '../../core/dates.dart';
+import '../common/time_zones.dart';
 import 'services_screen.dart' show promptText;
 
 final webhookProvider = StreamProvider.autoDispose<WebhookSettings?>((ref) => openChurch(ref).webhook());
@@ -308,10 +308,7 @@ class _ConfiguredState extends ConsumerState<_Configured> {
         ListSection(
           footer: last?.at == null
               ? null
-              : l10n.webhookLast(
-                  shortMonthDay(l10n).add_Hm().format(ref.watch(churchTimeZoneProvider).clock(last!.at!)),
-                  deliveryText(l10n, last),
-                ),
+              : l10n.webhookLast(ChurchClock.of(context, ref).moment(last!.at!), deliveryText(l10n, last)),
           children: [
             ListRow(
               title: l10n.webhookTest,

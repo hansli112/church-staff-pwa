@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
@@ -9,6 +8,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/session.dart';
 import '../common/errors.dart';
+import '../common/time_zones.dart';
 import 'church_switcher.dart';
 
 /// Shown instead of every other screen when the current church is
@@ -56,7 +56,7 @@ class _ClosedScreenState extends ConsumerState<ClosedScreen> {
       body = until == null
           ? ''
           : restorable
-          ? l10n.churchDeletedBody(DateFormat.yMMMd().format(ref.watch(churchTimeZoneProvider).clock(until)))
+          ? l10n.churchDeletedBody(ChurchClock.of(context, ref).dayWithYear(until))
           : l10n.churchDeletedExpired;
     } else {
       title = l10n.churchSuspendedTitle(church.name);

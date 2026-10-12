@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:intl/intl.dart';
 
+import '../../core/dates.dart';
 import '../../core/design/tokens.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
@@ -39,6 +41,28 @@ String utcOffset(Duration offset) {
 /// which summer time changes.
 String timeZoneLabel(L10n l10n, ChurchTimeZone timeZone, DateTime now) =>
     l10n.timeZoneWithOffset(timeZoneCity(l10n, timeZone), utcOffset(timeZone.offsetAt(now)));
+
+/// Instants as the church's clock reads them, in the language shown: every
+/// time on screen is the church's, wherever the phone is.
+class ChurchClock {
+  ChurchClock(this._l10n, this.timeZone);
+
+  /// The church [ref] reads, in [context]'s language.
+  factory ChurchClock.of(BuildContext context, WidgetRef ref) =>
+      ChurchClock(L10n.of(context), ref.watch(churchTimeZoneProvider));
+
+  final L10n _l10n;
+  final ChurchTimeZone timeZone;
+
+  /// 10/18 14:05, Oct 18 14:05: when something was read or sent.
+  String moment(DateTime instant) => shortMonthDay(_l10n).add_Hm().format(timeZone.clock(instant));
+
+  /// 10月18日, Oct 18: the day of [instant].
+  String day(DateTime instant) => DateFormat.MMMd().format(timeZone.clock(instant));
+
+  /// 2026年10月18日, Oct 18, 2026: the day of [instant], with its year.
+  String dayWithYear(DateTime instant) => DateFormat.yMMMd().format(timeZone.clock(instant));
+}
 
 /// How far the phone's clock is ahead of UTC at an instant. Tests put the
 /// phone elsewhere.

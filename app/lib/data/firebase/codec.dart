@@ -346,10 +346,7 @@ CalendarSettings calendarSettingsFromJson(Json? data) => CalendarSettings(
 final _onChurchClock = RegExp(r'^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?)([+-]\d{2}:\d{2})$');
 
 DateTime _eventTime(String value, bool allDay) {
-  if (allDay) {
-    final d = Day.parse(value.substring(0, 10));
-    return DateTime.utc(d.year, d.month, d.day);
-  }
+  if (allDay) return Day.parse(value.substring(0, 10)).midnight;
   final m = _onChurchClock.firstMatch(value);
   if (m == null) throw const FormatException("Calendar time requires the church's offset");
   return DateTime.parse('${m[1]}Z');
