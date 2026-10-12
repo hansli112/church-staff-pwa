@@ -87,7 +87,7 @@
 - 一次性打賞（IAP consumable）＋訂閱（回饋：只有自己看得到的徽章、可換成預設的 3–4 款 App icon）。iOS、Android 的替換 icon 都必須在打包時放進 App，不能用使用者上傳的圖，所以教會 logo 不能當 App icon。
 - 原生 `in_app_purchase`，支持者狀態**只在裝置上判斷**，不同步 Firestore。
 - 第一版不做感謝名單（考慮過只顯示 email，但 email 是個資；後端雖然會驗證每筆付款，刻意不記是誰付的）。
-- 網站（`landing/`，`scripts/build-site.mjs` 建置）和 App 一樣有繁中、簡中、英文（日文、韓文跟 #76 一起上）：繁中在根目錄，其他語言在 `/zh-Hans/`、`/en/` 底下，每頁內容各自一份（`landing/<語言>/`，結構和繁中一樣，`scripts/test/build-site.test.mjs` 檢查）。進站時照「頁尾選過的語言 → 瀏覽器的語言（規則和 App 一樣）→ 英文」轉到那個語言的同一頁，搜尋引擎不轉；每頁用 hreflang 列出其他語言，x-default 是英文。App 開網站（隱私權政策、條款）時帶 `?lang=`，網站照 App 的語言並記住。法律頁的翻譯註明以繁中版為準。
+- 網站（`landing/`，`scripts/build-site.mjs` 建置）和 App 一樣有繁中、簡中、英文、日文、韓文：繁中在根目錄，其他語言在 `/zh-Hans/`、`/en/`、`/ja/`、`/ko/` 底下，每頁內容各自一份（`landing/<語言>/`，結構和繁中一樣，`scripts/test/build-site.test.mjs` 檢查）。進站時照「頁尾選過的語言 → 瀏覽器的語言（規則和 App 一樣）→ 英文」轉到那個語言的同一頁，搜尋引擎不轉；每頁用 hreflang 列出其他語言，x-default 是英文。App 開網站（隱私權政策、條款）時帶 `?lang=`，網站照 App 的語言並記住。法律頁的翻譯註明以繁中版為準。
 - 網站的支持頁（`/support`）：不用登入就看得到雲端費用進度，另外放網頁付款的支持按鈕。App 裡（包括網頁版 App）不放這個連結，因為商店不准 App 把人帶去外部付款。
 - **線上支持**（網站的一次性付款）用**藍新金流** MPG（幕前支付）：信用卡、Apple Pay、Google Pay，有付款通知 NotifyURL。藍新的商店規範把「贊助」列為暫不受理，沒通過就改用 Portaly（只有信用卡、沒有付款通知，收到的金額要手動加）。綠界實況主收款與 Portaly 比過：ATM、超商沒人會用，TWQR 在手機網頁上只能開台灣Pay，LINE Pay、街口三家都沒有。
   - 規格：《線上交易─幕前支付技術串接手冊》NDNF-1.2.6（2026-10-01，藍新官網「API 文件下載」）。程式在 `functions/src/fundingNewebpay.ts`，手冊的加解密範例是它的測試。

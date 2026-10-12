@@ -45,6 +45,16 @@
         "type": 301
       },
       {
+        "source": "/ja",
+        "destination": "/ja/",
+        "type": 301
+      },
+      {
+        "source": "/ko",
+        "destination": "/ko/",
+        "type": 301
+      },
+      {
         "source": "/about",
         "destination": "/",
         "type": 301
@@ -103,6 +113,38 @@
       {
         "source": "/en/support",
         "destination": "/en/support.html"
+      },
+      {
+        "source": "/ja/privacy",
+        "destination": "/ja/privacy.html"
+      },
+      {
+        "source": "/ja/terms",
+        "destination": "/ja/terms.html"
+      },
+      {
+        "source": "/ja/delete-account",
+        "destination": "/ja/delete-account.html"
+      },
+      {
+        "source": "/ja/support",
+        "destination": "/ja/support.html"
+      },
+      {
+        "source": "/ko/privacy",
+        "destination": "/ko/privacy.html"
+      },
+      {
+        "source": "/ko/terms",
+        "destination": "/ko/terms.html"
+      },
+      {
+        "source": "/ko/delete-account",
+        "destination": "/ko/delete-account.html"
+      },
+      {
+        "source": "/ko/support",
+        "destination": "/ko/support.html"
       },
       {
         "source": "/support/pay",

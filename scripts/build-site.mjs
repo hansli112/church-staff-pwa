@@ -118,6 +118,60 @@ export const LANGUAGES = {
       return `${EN_MONTHS[m - 1]} ${d}, ${y}`;
     },
   },
+  ja: {
+    label: '日本語',
+    ogLocale: 'ja_JP',
+    appName: 'マルタ、ひと休み',
+    nav: 'サイト',
+    blog: '使い方',
+    support: '応援',
+    openApp: 'Web版を開く',
+    foot: 'フッター',
+    home: 'ホーム',
+    posts: '使い方ガイド',
+    supportUs: '「マルタ、ひと休み」を応援',
+    privacy: 'プライバシーポリシー',
+    terms: '利用規約',
+    issues: '不具合の報告',
+    contact: 'お問い合わせ',
+    operator: '個人で運営しています。',
+    languages: '言語',
+    blogTitle: '使い方ガイド｜マルタ、ひと休み',
+    blogDescription: 'マルタ、ひと休みの使い方：教会の作成、メンバーの招待、奉仕表の作成。',
+    blogLead: 'マルタ、ひと休みの使い方を、1回にひとつずつ。',
+    postTitle: (title) => `${title}｜マルタ、ひと休み`,
+    date: (iso) => {
+      const [y, m, d] = iso.split('-').map(Number);
+      return `${y}年${m}月${d}日`;
+    },
+  },
+  ko: {
+    label: '한국어',
+    ogLocale: 'ko_KR',
+    appName: '마르다의 쉼표',
+    nav: '사이트',
+    blog: '사용법',
+    support: '후원',
+    openApp: '웹 버전 열기',
+    foot: '바닥글',
+    home: '홈',
+    posts: '사용 가이드',
+    supportUs: '마르다의 쉼표 후원하기',
+    privacy: '개인정보처리방침',
+    terms: '서비스 이용약관',
+    issues: '문제 신고',
+    contact: '문의하기',
+    operator: '개인이 운영하는 서비스예요.',
+    languages: '언어',
+    blogTitle: '사용 가이드 | 마르다의 쉼표',
+    blogDescription: '마르다의 쉼표 사용법: 교회 만들기, 멤버 초대, 봉사표 만들기.',
+    blogLead: '마르다의 쉼표 사용법을 한 번에 하나씩 알려 드려요.',
+    postTitle: (title) => `${title} | 마르다의 쉼표`,
+    date: (iso) => {
+      const [y, m, d] = iso.split('-').map(Number);
+      return `${y}년 ${m}월 ${d}일`;
+    },
+  },
 };
 const TAGS = Object.keys(LANGUAGES);
 
@@ -134,7 +188,7 @@ const sourceDir = (language) => (language === 'zh-Hant' ? landing : join(landing
 export function speaks(tag) {
   var parts = String(tag).toLowerCase().split(/[-_]/);
   var rest = parts.slice(1);
-  if (parts[0] === 'en') return 'en';
+  if (parts[0] === 'en' || parts[0] === 'ja' || parts[0] === 'ko') return parts[0];
   if (parts[0] !== 'zh') return null;
   var script = rest.filter(function (p) { return p.length === 4; })[0];
   var region = rest.filter(function (p) { return p.length === 2; })[0];

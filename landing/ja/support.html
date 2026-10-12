@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>「マルタ、ひと休み」を応援</title>
+<meta name="description" content="「マルタ、ひと休み」はどの教会も無料で使えます。サーバー費用はみんなで分かち合っています。今月のサーバー費用の状況を確認でき、「マルタ、ひと休み」を応援することもできます。">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ja_JP">
+<meta property="og:site_name" content="マルタ、ひと休み">
+<meta property="og:title" content="「マルタ、ひと休み」を応援">
+<meta property="og:description" content="「マルタ、ひと休み」はどの教会も無料で使えます。サーバー費用はみんなで分かち合っています。">
+<meta property="og:url" content="__ORIGIN__/ja/support">
+<link rel="stylesheet" href="/site.css">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/icons/Icon-192.png">
+</head>
+<body>
+
+<!-- site-header -->
+
+<main class="page">
+  <div class="wrap narrow">
+    <h1>「マルタ、ひと休み」を応援</h1>
+    <blockquote class="verse">
+      <p>あなたがたの現在のゆとりが彼らの欠乏を補えば、いつか彼らのゆとりもあなたがたの欠乏を補うことになり、こうして釣り合いがとれるのです。「多く集めた者も、余ることはなく、わずかしか集めなかった者も、不足することはなかった」と書いてあるとおりです。</p>
+      <cite>コリントの信徒への手紙二 8:14–15</cite>
+    </blockquote>
+    <p class="lead">「マルタ、ひと休み」はどの教会も無料で使えます。サーバー費用はみんなで分かち合っています。いただいたお金は「マルタ、ひと休み」のサーバー費用に使われます。教会への献金ではないため、献金の領収書は発行できません。応援はまったくの任意で、使える機能はどの教会も同じです。</p>
+
+    <!-- 從藍新的付款頁回來（/support?paid=1 或 0，由 newebpayReturn 轉過來）。網址裡沒有付款資料。 -->
+    <p class="notice" id="paid" role="status" hidden></p>
+
+    <!-- 這個月的雲端費用：讀 platform/funding（公開）。讀不到就整塊不顯示。 -->
+    <section class="panel" id="funding" hidden aria-labelledby="funding-title">
+      <h2 id="funding-title">今月のサーバー費用</h2>
+      <p class="amount" id="funding-amount"></p>
+      <div class="bar" role="progressbar" aria-labelledby="funding-title" aria-valuemin="0" aria-valuemax="100" id="funding-bar"><span></span></div>
+      <p class="status" id="funding-status" hidden></p>
+      <p class="fine" id="funding-carried" hidden></p>
+      <p class="fine">為替レート：<a href="https://www.exchangerate-api.com">Exchange Rate API</a></p>
+    </section>
+
+    <section class="panel" aria-labelledby="pay-title">
+      <h2 id="pay-title">オンラインで応援</h2>
+      <!-- TODO(LINE Pay): 藍新的 LINE Pay 要另外申請；開通後這行加上 LINE Pay，fundingNewebpay.ts 打開 LINEPAY。 -->
+      <p>クレジットカード、Apple Pay、Google Pay が使えます。金額はご自由にお選びください。</p>
+      <!-- payments:off -->
+      <!-- 藍新金流還沒接上：按鈕只顯示「即將開放」。接上後網站改用 payments on 建置（docs/firebase-setup.md〈線上支持〉）。藍新沒通過就改接 Portaly（只有信用卡，上面的付款方式也要改）。 -->
+      <a class="btn btn-primary wide" href="#pay-title" id="pay" data-soon>「マルタ、ひと休み」を応援</a>
+      <p class="fine" id="pay-soon" hidden>オンラインでの応援はまもなく始まります。お気持ちに感謝します。</p>
+      <!-- /payments:off -->
+      <!-- payments:on -->
+      <!-- 選金額 → POST /support/pay（Hosting 轉到 newebpayStart）→ 拿到簽好的表單，送到藍新的付款頁。 -->
+      <form id="pay-form" action="/support/pay" method="post" novalidate>
+        <fieldset class="amounts">
+          <legend>金額（台湾ドル）</legend>
+          <label><input type="radio" name="amount" value="100">100</label>
+          <label><input type="radio" name="amount" value="300" checked>300</label>
+          <label><input type="radio" name="amount" value="500">500</label>
+          <label><input type="radio" name="amount" value="1000">1,000</label>
+          <label><input type="radio" name="amount" value="other" id="pay-other">その他</label>
+        </fieldset>
+        <div class="custom" id="pay-custom-row" hidden>
+          <label for="pay-custom">その他の金額</label>
+          <input id="pay-custom" type="number" inputmode="numeric" min="30" max="10000" step="1" placeholder="30–10,000" aria-describedby="pay-msg">
+        </div>
+        <button class="btn btn-primary wide" id="pay" type="submit">「マルタ、ひと休み」を応援</button>
+        <p class="fine" id="pay-msg" role="status" hidden></p>
+        <p class="fine">お支払いは台湾の決済サービス「藍新金流（NewebPay）」が処理し、NewebPay の支払いページに移動します。「マルタ、ひと休み」がカード番号を受け取ることはありません。請求は台湾ドル（NT$）で行われ、カード会社が円などに換算します（海外利用の手数料がかかる場合があります）。</p>
+      </form>
+      <!-- /payments:on -->
+    </section>
+
+    <section class="panel" aria-labelledby="where-title">
+      <h2 id="where-title">サーバー費用の内訳</h2>
+      <ul>
+        <li>写真から奉仕表を読み込む機能（Google Gemini）</li>
+        <li>Apple・Google の開発者アカウントの年会費</li>
+        <li>ドメイン</li>
+        <li>使う教会が増えたときのクラウドサーバーの費用</li>
+      </ul>
+    </section>
+
+    <section class="panel" aria-labelledby="refund-title">
+      <h2 id="refund-title">返金・お問い合わせ</h2>
+      <p>応援でいただいたお金は、原則として返金しません。金額を間違えた場合や二重に請求された場合は、お支払いの日時と金額を添えて <a href="mailto:hansli112871114@gmail.com">hansli112871114@gmail.com</a> までご連絡ください。確認のうえ、全額を返金します。</p>
+      <p>「マルタ、ひと休み」は個人で開発・運営しています。ご不明な点があれば、お気軽にメールでお問い合わせください。</p>
+    </section>
+
+    <p class="fine">iPhone・Android アプリの公開後は、アプリ内でも「1回の応援」「毎月の応援」ができるようになります。</p>
+  </div>
+</main>
+
+<!-- site-footer -->
+
+<script>
+(() => {
+  // Replaced with the Firebase project ID when the site is deployed.
+  const project = '__FIREBASE_PROJECT__';
+  // The page's language: for numbers, and for NewebPay's page (newebpayStart).
+  const lang = document.documentElement.lang;
+  const money = (n) => 'NT$' + Math.round(n).toLocaleString(lang);
+  const url = `https://firestore.googleapis.com/v1/projects/${project}/databases/(default)/documents/platform/funding`;
+  fetch(url).then((r) => (r.ok ? r.json() : Promise.reject(r.status))).then((doc) => {
+    const f = doc.fields || {};
+    const num = (k) => Number(f[k]?.integerValue ?? f[k]?.doubleValue ?? 0);
+    const target = num('target');
+    if (target <= 0) return;
+    const carried = num('carried');
+    const available = num('received') + carried;
+    const monthsLeft = num('monthsLeft');
+    const pct = Math.min(100, Math.round((available / target) * 100));
+    document.getElementById('funding-amount').textContent = `${money(available)} / ${money(target)}`;
+    const bar = document.getElementById('funding-bar');
+    bar.setAttribute('aria-valuenow', pct);
+    bar.firstElementChild.style.width = pct + '%';
+    if (available >= target) {
+      const s = document.getElementById('funding-status');
+      s.textContent = monthsLeft > 0 ? `今月分は集まりました。余った分で、さらに${monthsLeft}か月続けられます` : '今月分は集まりました';
+      s.hidden = false;
+    }
+    if (carried > 0) {
+      const c = document.getElementById('funding-carried');
+      c.textContent = `これまでの月からの繰り越し ${money(carried)} を含みます`;
+      c.hidden = false;
+    }
+    document.getElementById('funding').hidden = false;
+  }).catch(() => {});
+
+  // Back from NewebPay's page: say how it went, then tidy the address.
+  const paid = new URLSearchParams(location.search).get('paid');
+  if (paid === '1' || paid === '0') {
+    const note = document.getElementById('paid');
+    note.textContent = paid === '1'
+      ? '応援ありがとうございます！お支払いが完了すると、今月のサーバー費用の表示が自動で更新されます。'
+      : '今回のお支払いは完了していません。もう一度お試しください。';
+    note.hidden = false;
+    history.replaceState(null, '', location.pathname + location.hash);
+  }
+
+  const pay = document.getElementById('pay');
+  if (pay.hasAttribute('data-soon')) {
+    pay.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('pay-soon').hidden = false;
+    });
+  }
+
+  // 線上支持 (only when built with --payments on).
+  const form = document.getElementById('pay-form');
+  if (!form) return;
+  const custom = document.getElementById('pay-custom');
+  const customRow = document.getElementById('pay-custom-row');
+  const msg = document.getElementById('pay-msg');
+  const min = Number(custom.min);
+  const max = Number(custom.max);
+  const messages = {
+    amount: `${min.toLocaleString(lang)}〜${max.toLocaleString(lang)} の整数で金額を入力してください。`,
+    busy: 'ただいま応援してくださる方が多く、混み合っています。少し時間をおいてからお試しください。',
+    unavailable: 'オンラインでの応援は一時的にご利用いただけません。しばらくしてからお試しください。',
+  };
+  const say = (text) => {
+    msg.textContent = text;
+    msg.hidden = !text;
+  };
+  const ready = () => {
+    pay.disabled = false;
+    pay.textContent = '「マルタ、ひと休み」を応援';
+  };
+  form.addEventListener('change', (e) => {
+    if (e.target.name !== 'amount') return;
+    customRow.hidden = e.target.value !== 'other';
+    if (!customRow.hidden) custom.focus();
+    say('');
+  });
+  // Coming back from NewebPay with the back button shows the page as it was left.
+  addEventListener('pageshow', ready);
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const choice = form.elements.amount.value;
+    const amount = choice === 'other' ? Number(custom.value) : Number(choice);
+    if (!Number.isInteger(amount) || amount < min || amount > max) {
+      say(messages.amount);
+      if (choice === 'other') custom.focus();
+      return;
+    }
+    say('');
+    pay.disabled = true;
+    pay.textContent = '支払いページに移動しています…';
+    try {
+      const r = await fetch(form.action, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount, language: lang }),
+      });
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok || !body.gateway) throw new Error(body.error || String(r.status));
+      // NewebPay only takes a form posted by the browser (NDNF-1.2.6 §6, MPG02005).
+      const post = document.createElement('form');
+      post.method = 'post';
+      post.action = body.gateway;
+      for (const [name, value] of Object.entries(body.fields)) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        post.append(input);
+      }
+      document.body.append(post);
+      post.submit();
+    } catch (err) {
+      ready();
+      say(messages[err.message] || '決済サービスに接続できません。しばらくしてからお試しください。');
+    }
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>마르다의 쉼표 후원하기</title>
+<meta name="description" content="마르다의 쉼표는 모든 교회가 무료로 쓰고, 서버 비용은 모두가 함께 나눠요. 이번 달 서버 비용을 확인하고, 마르다의 쉼표를 후원할 수 있어요.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ko_KR">
+<meta property="og:site_name" content="마르다의 쉼표">
+<meta property="og:title" content="마르다의 쉼표 후원하기">
+<meta property="og:description" content="마르다의 쉼표는 모든 교회가 무료로 쓰고, 서버 비용은 모두가 함께 나눠요.">
+<meta property="og:url" content="__ORIGIN__/ko/support">
+<link rel="stylesheet" href="/site.css">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/icons/Icon-192.png">
+</head>
+<body>
+
+<!-- site-header -->
+
+<main class="page">
+  <div class="wrap narrow">
+    <h1>마르다의 쉼표 후원하기</h1>
+    <blockquote class="verse">
+      <p>이제 너희의 넉넉한 것으로 그들의 부족한 것을 보충함은 후에 그들의 넉넉한 것으로 너희의 부족한 것을 보충하여 균등하게 하려 함이라 기록된 것 같이 많이 거둔 자도 남지 아니하였고 적게 거둔 자도 모자라지 아니하였느니라</p>
+      <cite>고린도후서 8:14–15</cite>
+    </blockquote>
+    <p class="lead">마르다의 쉼표는 모든 교회가 무료로 쓰고, 서버 비용은 모두가 함께 나눠요. 후원금은 마르다의 쉼표의 서버 비용에 쓰여요. 교회에 드리는 헌금이 아니어서 기부금 영수증은 발급할 수 없어요. 후원은 전적으로 자유이고, 교회가 쓸 수 있는 기능은 후원과 상관없이 똑같아요.</p>
+
+    <!-- 從藍新的付款頁回來（/support?paid=1 或 0，由 newebpayReturn 轉過來）。網址裡沒有付款資料。 -->
+    <p class="notice" id="paid" role="status" hidden></p>
+
+    <!-- 這個月的雲端費用：讀 platform/funding（公開）。讀不到就整塊不顯示。 -->
+    <section class="panel" id="funding" hidden aria-labelledby="funding-title">
+      <h2 id="funding-title">이번 달 서버 비용</h2>
+      <p class="amount" id="funding-amount"></p>
+      <div class="bar" role="progressbar" aria-labelledby="funding-title" aria-valuemin="0" aria-valuemax="100" id="funding-bar"><span></span></div>
+      <p class="status" id="funding-status" hidden></p>
+      <p class="fine" id="funding-carried" hidden></p>
+      <p class="fine">환율: <a href="https://www.exchangerate-api.com">Exchange Rate API</a></p>
+    </section>
+
+    <section class="panel" aria-labelledby="pay-title">
+      <h2 id="pay-title">온라인 후원</h2>
+      <!-- TODO(LINE Pay): 藍新的 LINE Pay 要另外申請；開通後這行加上 LINE Pay，fundingNewebpay.ts 打開 LINEPAY。 -->
+      <p>신용카드, Apple Pay, Google Pay로 후원할 수 있고, 금액은 자유롭게 정하면 돼요.</p>
+      <!-- payments:off -->
+      <!-- 藍新金流還沒接上：按鈕只顯示「即將開放」。接上後網站改用 payments on 建置（docs/firebase-setup.md〈線上支持〉）。藍新沒通過就改接 Portaly（只有信用卡，上面的付款方式也要改）。 -->
+      <a class="btn btn-primary wide" href="#pay-title" id="pay" data-soon>마르다의 쉼표 후원하기</a>
+      <p class="fine" id="pay-soon" hidden>온라인 후원은 곧 열려요. 마음 써 주셔서 감사해요.</p>
+      <!-- /payments:off -->
+      <!-- payments:on -->
+      <!-- 選金額 → POST /support/pay（Hosting 轉到 newebpayStart）→ 拿到簽好的表單，送到藍新的付款頁。 -->
+      <form id="pay-form" action="/support/pay" method="post" novalidate>
+        <fieldset class="amounts">
+          <legend>금액(NT$, 신 타이완 달러)</legend>
+          <label><input type="radio" name="amount" value="100">100</label>
+          <label><input type="radio" name="amount" value="300" checked>300</label>
+          <label><input type="radio" name="amount" value="500">500</label>
+          <label><input type="radio" name="amount" value="1000">1,000</label>
+          <label><input type="radio" name="amount" value="other" id="pay-other">직접 입력</label>
+        </fieldset>
+        <div class="custom" id="pay-custom-row" hidden>
+          <label for="pay-custom">후원 금액</label>
+          <input id="pay-custom" type="number" inputmode="numeric" min="30" max="10000" step="1" placeholder="30–10,000" aria-describedby="pay-msg">
+        </div>
+        <button class="btn btn-primary wide" id="pay" type="submit">마르다의 쉼표 후원하기</button>
+        <p class="fine" id="pay-msg" role="status" hidden></p>
+        <p class="fine">결제는 NewebPay(藍新金流)가 처리하며, NewebPay 결제 페이지로 이동해요. 마르다의 쉼표는 카드 번호를 받지 않아요. 결제는 신 타이완 달러(NT$)로 청구되고 원화 환산은 카드사가 해요. 해외 결제 수수료가 붙을 수 있어요.</p>
+      </form>
+      <!-- /payments:on -->
+    </section>
+
+    <section class="panel" aria-labelledby="where-title">
+      <h2 id="where-title">서버 비용에 포함되는 것</h2>
+      <ul>
+        <li>사진 인식으로 봉사표 가져오기(Google Gemini)</li>
+        <li>Apple·Google 개발자 계정 연회비</li>
+        <li>도메인</li>
+        <li>사용하는 교회가 늘어나면 드는 클라우드 서버 비용</li>
+      </ul>
+    </section>
+
+    <section class="panel" aria-labelledby="refund-title">
+      <h2 id="refund-title">환불과 문의</h2>
+      <p>후원금은 원칙적으로 환불하지 않아요. 금액을 잘못 입력했거나 중복 결제된 경우에는 결제 시간과 금액을 적어 <a href="mailto:hansli112871114@gmail.com">hansli112871114@gmail.com</a>으로 메일을 보내 주세요. 확인한 뒤 전액 환불해 드려요.</p>
+      <p>마르다의 쉼표는 개인이 개발하고 운영해요. 궁금한 점이 있으면 언제든 메일 주세요.</p>
+    </section>
+
+    <p class="fine">iPhone·Android 앱이 출시되면 앱에서도 일시 후원이나 정기 후원을 할 수 있어요.</p>
+  </div>
+</main>
+
+<!-- site-footer -->
+
+<script>
+(() => {
+  // Replaced with the Firebase project ID when the site is deployed.
+  const project = '__FIREBASE_PROJECT__';
+  // The page's language: for numbers, and for NewebPay's page (newebpayStart).
+  const lang = document.documentElement.lang;
+  const money = (n) => 'NT$' + Math.round(n).toLocaleString(lang);
+  const url = `https://firestore.googleapis.com/v1/projects/${project}/databases/(default)/documents/platform/funding`;
+  fetch(url).then((r) => (r.ok ? r.json() : Promise.reject(r.status))).then((doc) => {
+    const f = doc.fields || {};
+    const num = (k) => Number(f[k]?.integerValue ?? f[k]?.doubleValue ?? 0);
+    const target = num('target');
+    if (target <= 0) return;
+    const carried = num('carried');
+    const available = num('received') + carried;
+    const monthsLeft = num('monthsLeft');
+    const pct = Math.min(100, Math.round((available / target) * 100));
+    document.getElementById('funding-amount').textContent = `${money(available)} / ${money(target)}`;
+    const bar = document.getElementById('funding-bar');
+    bar.setAttribute('aria-valuenow', pct);
+    bar.firstElementChild.style.width = pct + '%';
+    if (available >= target) {
+      const s = document.getElementById('funding-status');
+      s.textContent = monthsLeft > 0 ? `이번 달 비용은 충분해요. 남는 금액으로 ${monthsLeft}개월 더 운영할 수 있어요` : '이번 달 비용은 충분해요';
+      s.hidden = false;
+    }
+    if (carried > 0) {
+      const c = document.getElementById('funding-carried');
+      c.textContent = `지난달까지 남은 ${money(carried)} 포함`;
+      c.hidden = false;
+    }
+    document.getElementById('funding').hidden = false;
+  }).catch(() => {});
+
+  // Back from NewebPay's page: say how it went, then tidy the address.
+  const paid = new URLSearchParams(location.search).get('paid');
+  if (paid === '1' || paid === '0') {
+    const note = document.getElementById('paid');
+    note.textContent = paid === '1'
+      ? '후원해 주셔서 감사합니다! 결제가 끝나면 이번 달 서버 비용이 자동으로 업데이트돼요.'
+      : '결제가 완료되지 않았어요. 다시 시도해 주세요.';
+    note.hidden = false;
+    history.replaceState(null, '', location.pathname + location.hash);
+  }
+
+  const pay = document.getElementById('pay');
+  if (pay.hasAttribute('data-soon')) {
+    pay.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('pay-soon').hidden = false;
+    });
+  }
+
+  // 線上支持 (only when built with --payments on).
+  const form = document.getElementById('pay-form');
+  if (!form) return;
+  const custom = document.getElementById('pay-custom');
+  const customRow = document.getElementById('pay-custom-row');
+  const msg = document.getElementById('pay-msg');
+  const min = Number(custom.min);
+  const max = Number(custom.max);
+  const messages = {
+    amount: `${min.toLocaleString(lang)}–${max.toLocaleString(lang)} 사이의 정수 금액을 입력해 주세요.`,
+    busy: '지금 후원하는 분이 많아요. 잠시 후 다시 시도해 주세요.',
+    unavailable: '지금은 온라인 후원을 이용할 수 없어요. 잠시 후 다시 시도해 주세요.',
+  };
+  const say = (text) => {
+    msg.textContent = text;
+    msg.hidden = !text;
+  };
+  const ready = () => {
+    pay.disabled = false;
+    pay.textContent = '마르다의 쉼표 후원하기';
+  };
+  form.addEventListener('change', (e) => {
+    if (e.target.name !== 'amount') return;
+    customRow.hidden = e.target.value !== 'other';
+    if (!customRow.hidden) custom.focus();
+    say('');
+  });
+  // Coming back from NewebPay with the back button shows the page as it was left.
+  addEventListener('pageshow', ready);
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const choice = form.elements.amount.value;
+    const amount = choice === 'other' ? Number(custom.value) : Number(choice);
+    if (!Number.isInteger(amount) || amount < min || amount > max) {
+      say(messages.amount);
+      if (choice === 'other') custom.focus();
+      return;
+    }
+    say('');
+    pay.disabled = true;
+    pay.textContent = '결제 페이지로 이동하는 중…';
+    try {
+      const r = await fetch(form.action, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount, language: lang }),
+      });
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok || !body.gateway) throw new Error(body.error || String(r.status));
+      // NewebPay only takes a form posted by the browser (NDNF-1.2.6 §6, MPG02005).
+      const post = document.createElement('form');
+      post.method = 'post';
+      post.action = body.gateway;
+      for (const [name, value] of Object.entries(body.fields)) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        post.append(input);
+      }
+      document.body.append(post);
+      post.submit();
+    } catch (err) {
+      ready();
+      say(messages[err.message] || '결제 서비스에 연결할 수 없어요. 잠시 후 다시 시도해 주세요.');
+    }
+  });
+})();
+</script>
+</body>
+</html>
