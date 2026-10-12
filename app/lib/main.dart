@@ -37,21 +37,28 @@ Future<void> main() async {
   // URL, so a reload or a shared address lands on that page, not its tab.
   GoRouter.optionURLReflectsImperativeAPIs = true;
   WidgetsFlutterBinding.ensureInitialized();
-  // Start the entry page's fonts alongside Firebase; common names wait
-  // until a usable page is drawn.
+  // Start the entry page's fonts alongside Firebase, in the language last
+  // shown here, else the browser's; common names wait until a usable page
+  // is drawn.
   final firstPageDrawn = Completer<void>();
+  final prefsRead = SharedPreferences.getInstance();
   final fontsReady = kIsWeb
-      ? warmUpFonts(
-          bundle: rootBundle,
-          systemFonts: PaintingBinding.instance.systemFonts,
-          language: AppLanguage.resolve(PlatformDispatcher.instance.locales),
-          initialLocation: Uri.base,
-          afterFirstFrame: firstPageDrawn.future,
+      ? prefsRead.then(
+          (prefs) => warmUpFonts(
+            bundle: rootBundle,
+            systemFonts: PaintingBinding.instance.systemFonts,
+            language:
+                AppLanguage.fromTag(prefs.getString(shownLanguagePref)) ??
+                AppLanguage.resolve(PlatformDispatcher.instance.locales),
+            browserLanguage: PlatformDispatcher.instance.locale.toLanguageTag(),
+            initialLocation: Uri.base,
+            afterFirstFrame: firstPageDrawn.future,
+          ),
         )
       : null;
   final env = Env.current;
   final (prefs, backend) = await (
-    SharedPreferences.getInstance(),
+    prefsRead,
     env.usesFirebase
         ? _firebase(env)
         : Future<Backend>.value(demoBackend(newUser: const bool.fromEnvironment('DEMO_NEW_USER'))),

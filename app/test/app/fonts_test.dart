@@ -243,16 +243,41 @@ void main() {
     await tester.pump();
     expect(laidOut, hasLength(1));
     expect(laidOut.single, contains('切換教會'));
-    expect(laidOut.single, isNot(contains(commonCharacters)), reason: 'not held up by them');
+    expect(laidOut.single, isNot(contains(commonCharacters(''))), reason: 'not held up by them');
 
     await sendFontsChange(tester);
     await tester.pump();
     expect(done, isTrue);
-    expect(laidOut.last, commonCharacters);
+    expect(laidOut.last, commonCharacters(''));
 
     await sendFontsChange(tester);
     await tester.pump();
     expect(laidOut, hasLength(2), reason: 'once');
+  });
+
+  testWidgets('the most used characters are those of the font the browser’s language draws in', (tester) async {
+    for (final (browser, font) in [('zh-TW', 'TC'), ('ja', 'JP'), ('ko', 'KR'), ('zh-CN', 'SC'), ('en-US', 'SC')]) {
+      final laidOut = <String>[];
+      unawaited(
+        warmUpFonts(
+          bundle: UiStringsBundle(),
+          systemFonts: PaintingBinding.instance.systemFonts,
+          language: AppLanguage.zhHans,
+          browserLanguage: browser,
+          layOut: laidOut.add,
+        ),
+      );
+      await tester.pump();
+      await sendFontsChange(tester);
+      await tester.pump();
+      expect(laidOut.last, commonCharacters(browser), reason: browser);
+      expect(commonCharacters(browser), switch (font) {
+        'TC' => contains('誦'),
+        'JP' => contains('べ'),
+        'KR' => contains('읽'),
+        _ => contains('缤'),
+      }, reason: '$browser: Noto Sans $font');
+    }
   });
 
   testWidgets('background character fonts wait until the first usable frame, not just startup fonts', (tester) async {
@@ -274,7 +299,7 @@ void main() {
     expect(laidOut, hasLength(1));
     firstFrame.complete();
     await tester.pump();
-    expect(laidOut.last, commonCharacters);
+    expect(laidOut.last, commonCharacters(''));
     await sendFontsChange(tester);
     await tester.pump();
     expect(laidOut, hasLength(2), reason: 'background warmup runs once');
@@ -323,10 +348,10 @@ void main() {
     await tester.pump();
     expect(done, isTrue);
     expect(fonts.waiting, isFalse);
-    expect(laidOut, [commonCharacters]);
+    expect(laidOut, [commonCharacters('')]);
     bundle.complete('{"appName":"馬大別忙"}');
     await tester.pump();
-    expect(laidOut, [commonCharacters], reason: 'the visible page already requested its own text');
+    expect(laidOut, [commonCharacters('')], reason: 'the visible page already requested its own text');
   });
 
   testWidgets('an asset without startup text leaves font fetching to the page instead of holding readiness', (
@@ -354,7 +379,7 @@ void main() {
     expect(fonts.waiting, isFalse);
     firstFrame.complete();
     await tester.pump();
-    expect(laidOut, [commonCharacters]);
+    expect(laidOut, [commonCharacters('')]);
   });
 
   testWidgets('unreadable strings release readiness without waiting for a font download that cannot start', (

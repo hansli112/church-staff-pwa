@@ -14,6 +14,19 @@
         ]
       }
     ],
+    "zh-Hans": [
+      {
+        "id": "sunday",
+        "name": "主日崇拜",
+        "weekday": 7,
+        "enabled": true,
+        "duties": ["领会", "敬拜主领", "司琴", "音控", "投影", "招待"],
+        "events": [
+          { "name": "圣餐", "color": 0 },
+          { "name": "浸礼", "color": 4 }
+        ]
+      }
+    ],
     "en": [
       {
         "id": "sunday",

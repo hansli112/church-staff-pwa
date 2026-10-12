@@ -11,6 +11,14 @@ enum AppLanguage {
     monthByName: false,
     emailLanguage: 'zh-TW',
   ),
+  zhHans(
+    tag: 'zh-Hans',
+    locale: Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'),
+    intlLocale: 'zh',
+    label: '简体中文',
+    monthByName: false,
+    emailLanguage: 'zh-CN',
+  ),
   en(tag: 'en', locale: Locale('en'), intlLocale: 'en', label: 'English', monthByName: true, emailLanguage: 'en')
   ;
 
@@ -49,12 +57,19 @@ enum AppLanguage {
   static AppLanguage? fromTag(String? tag) => values.where((l) => l.tag == tag).firstOrNull;
 
   /// The language for a device or browser asking for [locale], if the app
-  /// speaks it. Every Chinese is Traditional until Simplified is added.
+  /// speaks it. Chinese is Simplified when it says so, or comes from where
+  /// Simplified is written (China, Singapore, Malaysia) without saying
+  /// Traditional; else Traditional, plain `zh` too.
   static AppLanguage? of(Locale locale) => switch (locale.languageCode) {
-    'zh' => zhHant,
+    'zh' =>
+      locale.scriptCode == 'Hans' || (locale.scriptCode == null && _simplifiedRegions.contains(locale.countryCode))
+          ? zhHans
+          : zhHant,
     'en' => en,
     _ => null,
   };
+
+  static const _simplifiedRegions = {'CN', 'SG', 'MY'};
 
   /// Following the device: the first language on its list the app speaks,
   /// else English, which more people read than Chinese.

@@ -13,6 +13,7 @@ import 'languages.dart';
 /// are known before any page is drawn.
 String uiStringsAsset(AppLanguage language) => switch (language) {
   AppLanguage.zhHant => 'lib/l10n/app_zh.arb',
+  AppLanguage.zhHans => 'lib/l10n/app_zh_Hans.arb',
   AppLanguage.en => 'lib/l10n/app_en.arb',
 };
 
@@ -20,18 +21,29 @@ String uiStringsAsset(AppLanguage language) => switch (language) {
 /// app is ready to show a page.
 const fontsWaitLimit = Duration(seconds: 3);
 
-/// Two characters from each of the files Google Fonts splits Noto Sans TC's
-/// most used characters into: the last 20 of its about 100 files hold some
-/// 4,300 characters, nearly every name and word a church types. Laying these
-/// out fetches all 20 (about 740 KB, 15 of them needed for the app's own
-/// text anyway), so names show at once too, not only the app's text. Only
-/// for browsers in Traditional Chinese (zh-TW): elsewhere the engine picks
-/// other fonts for the same characters.
-/// Picked from fonts.googleapis.com/css2?family=Noto+Sans+TC, whose files
-/// go from the least used characters to the most; the engine's copy of the
-/// list numbers these 20 files 100 to 119. Check them again on a Flutter
-/// upgrade: a new copy may split them differently.
-const commonCharacters = '玖誦砌蠶渦蔻瀚舜濤蔚滷蒜瑩菸毅芒槽芽疊蘿淚蒂洞舖棄苗武耳減聖泰詳瀏該比著服聯心正';
+/// Two characters from each of the files Google Fonts splits a Noto Sans
+/// font for Chinese, Japanese or Korean into, of its most used characters:
+/// in Noto Sans TC the last 20 of its about 100 files hold some 4,300
+/// characters, nearly every name and word a church types. Laying these out
+/// fetches all 20 (about 740 KB, 15 of them needed for the app's own text
+/// anyway), so names show at once too, not only the app's text.
+///
+/// The font is the one the engine draws these in for a browser whose
+/// language is [browserLanguage] (navigator.language), as its font fallback
+/// picks (font_fallbacks.dart, `_selectFont`): Traditional Chinese, Japanese
+/// or Korean for theirs, else Simplified Chinese, which it takes on a tie.
+/// The app's language does not change it.
+///
+/// Picked from the engine's copy of the lists (font_fallback_data.dart),
+/// whose files go from the least used characters to the most: two from each
+/// of the 20 numbered last (`.100.woff2` to `.119.woff2`). Check them again
+/// on a Flutter upgrade: a new copy may split them differently.
+String commonCharacters(String browserLanguage) => switch (browserLanguage) {
+  'zh-Hant' || 'zh-TW' || 'zh-MO' => '玖誦砌蠶渦蔻瀚舜濤蔚滷蒜瑩菸毅芒槽芽疊蘿淚蒂洞舖棄苗武耳減聖泰詳瀏該比著服聯心正',
+  'ja' => '息繁幅百導盛復策振群星緒扱級富準座絶役聞想福工組常素天細売次対機後索合株月点べソ',
+  'ko' => '智늪市뀜比룽最뺨小랏英쏙꽉얌돕썩뜬앵랬앗뢰옛맘젝뜨읽벨좌몰첨맨잘르외른임미은로시',
+  _ => '極舅搓級梧缤暮磷拐绽挪缆扯纲悔筛敦聪撒胞措绑忧珍尊瓣恋稳庆突局秘带签完码外次もデ',
+};
 
 /// Text on the first login/home pages and the auth/church-entry states that
 /// may appear instead. Other screens ask for their fonts when opened.
@@ -228,26 +240,26 @@ String _text(String json, {Set<String>? keys}) => [
 /// On the web the engine fetches Chinese fonts when text first needs them,
 /// so the first page can show boxes until they arrive. This starts those
 /// downloads before the page is drawn, with the text of its dates.
-/// [initialLocation] selects login/home,
-/// roster or church-info text, following this app's `from`/`to` links. Other
-/// destinations keep the full warmup. Without a location, [startupOnly]
-/// retains the login/home selection; the default uses all strings. The
-/// strings are [language]'s: the browser's, as a language picked on the
-/// profile is not known yet.
+/// [initialLocation] selects login/home, roster or church-info text,
+/// following this app's `from`/`to` links. Other destinations keep the full
+/// warmup. Without a location, [startupOnly] retains the login/home
+/// selection; the default uses all strings. The strings are [language]'s.
 ///
 /// Completes on the next font change after laying out the initial text, or
 /// at once if the strings cannot be used. The loading screen owns its wait
 /// limit. When supplied, [afterFirstFrame] also releases an unfinished wait
 /// after that screen has timed out, and ignores a late asset read.
 ///
-/// The most used characters ([commonCharacters]) warm up only after both
-/// readiness and [afterFirstFrame], so they cannot compete with the first
-/// usable frame. Without that signal they follow readiness, as before.
-/// [layOut] asks the engine for fonts; [systemFonts] reports font changes.
+/// The most used characters ([commonCharacters], for [browserLanguage])
+/// warm up only after both readiness and [afterFirstFrame], so they cannot
+/// compete with the first usable frame. Without that signal they follow
+/// readiness, as before. [layOut] asks the engine for fonts; [systemFonts]
+/// reports font changes.
 Future<void> warmUpFonts({
   required AssetBundle bundle,
   required Listenable systemFonts,
   AppLanguage language = AppLanguage.zhHant,
+  String browserLanguage = '',
   bool startupOnly = false,
   Uri? initialLocation,
   Future<void>? afterFirstFrame,
@@ -267,7 +279,7 @@ Future<void> warmUpFonts({
         } catch (_) {
           return;
         }
-        layOut(commonCharacters);
+        layOut(commonCharacters(browserLanguage));
       }());
     });
   }

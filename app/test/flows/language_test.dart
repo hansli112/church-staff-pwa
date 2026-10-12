@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:martha/app.dart' show shownLanguagePref;
 import 'package:martha/core/languages.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 
@@ -21,6 +23,31 @@ void main() {
     expect(find.textContaining('Oct'), findsWidgets);
     expect(find.text('服事表'), findsNothing);
     expect(b.users['mei']!.appLocale, 'en');
+  });
+
+  testWidgets('a phone in Chinese in Malaysia gets Simplified Chinese, dates too', (tester) async {
+    final b = seededChurch(as: staffMei);
+    await pumpApp(tester, b, deviceLocales: const [Locale('zh', 'MY')]);
+
+    expect(find.text('事奉表'), findsWidgets);
+    expect(find.textContaining('周'), findsWidgets);
+    expect(find.text('服事表'), findsNothing);
+    expect(b.users['mei']!.appLocale, 'zh-Hans');
+  });
+
+  testWidgets('the language shown is kept on the device, for the next start’s fonts', (tester) async {
+    final b = seededChurch(as: staffMei);
+    await pumpApp(tester, b, deviceLocales: const [Locale('zh', 'TW')]);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString(shownLanguagePref), 'zh-Hant');
+
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/language');
+    await settle(tester);
+    await tester.tap(find.text('简体中文'));
+    await settle(tester);
+    expect(b.users['mei']!.locale, 'zh-Hans');
+    expect(find.text('跟随系统'), findsOneWidget);
+    expect(prefs.getString(shownLanguagePref), 'zh-Hans');
   });
 
   testWidgets('a phone in a language the app lacks gets the next one on its list it has', (tester) async {

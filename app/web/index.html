@@ -94,28 +94,49 @@
     // else English. An invite link's page comes in it already
     // (churchPage.ts); a church's name the server put in stays.
     (function () {
+      // AppLanguage.of: Simplified when it says so, or from China, Singapore
+      // or Malaysia without saying Traditional; else Traditional.
+      function speaks(tag) {
+        var parts = String(tag).toLowerCase().split(/[-_]/);
+        var rest = parts.slice(1);
+        if (parts[0] === 'en') return 'en';
+        if (parts[0] !== 'zh') return null;
+        var script = rest.filter(function (p) { return p.length === 4; })[0];
+        var region = rest.filter(function (p) { return p.length === 2; })[0];
+        return script === 'hans' || (!script && ['cn', 'sg', 'my'].indexOf(region) >= 0) ? 'zh-Hans' : 'zh-Hant';
+      }
       var langs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ''];
       var lang = 'en';
       for (var i = 0; i < langs.length; i++) {
-        var l = String(langs[i]).toLowerCase();
-        if (l.indexOf('zh') === 0 || l.indexOf('en') === 0) { lang = l.slice(0, 2); break; }
+        if (speaks(langs[i])) { lang = speaks(langs[i]); break; }
       }
-      if (lang !== 'en') return;
-      var en = 'Martha, sit';
-      document.documentElement.lang = 'en';
-      if (document.title === '馬大別忙') document.title = en;
+      // functions/src/languages.ts's appName, loading and description.
+      var words = {
+        'zh-Hans': {
+          appName: '马大别忙',
+          loading: '加载中…',
+          description: '马大！马大！你为许多的事思虑烦扰，但是不可少的只有一件；马利亚已经选择那上好的福分，是不能夺去的。（路加福音 10:41–42）'
+        },
+        en: {
+          appName: 'Martha, sit',
+          loading: 'Loading…',
+          description: '“Martha, Martha,” the Lord answered, “you are worried and upset about many things, but few things are needed—or indeed only one. Mary has chosen what is better, and it will not be taken away from her.” (Luke 10:41–42)'
+        }
+      };
+      var w = words[lang];
+      if (!w) return;
+      document.documentElement.lang = lang;
+      if (document.title === '馬大別忙') document.title = w.appName;
       var meta = function (name) { return document.querySelector('meta[name="' + name + '"]'); };
       var appTitle = meta('apple-mobile-web-app-title');
-      if (appTitle && appTitle.content === '馬大別忙') appTitle.content = en;
+      if (appTitle && appTitle.content === '馬大別忙') appTitle.content = w.appName;
       var description = meta('description');
-      if (description && description.content.indexOf('馬大！馬大！') === 0) {
-        description.content = '“Martha, Martha,” the Lord answered, “you are worried and upset about many things, but few things are needed—or indeed only one. Mary has chosen what is better, and it will not be taken away from her.” (Luke 10:41–42)';
-      }
+      if (description && description.content.indexOf('馬大！馬大！') === 0) description.content = w.description;
       var splash = document.getElementById('splash');
       var title = splash && splash.querySelector('.title');
       var note = splash && splash.querySelector('.note');
-      if (title && title.textContent === '馬大別忙') title.textContent = en;
-      if (note && note.textContent === '載入中…') note.textContent = 'Loading…';
+      if (title && title.textContent === '馬大別忙') title.textContent = w.appName;
+      if (note && note.textContent === '載入中…') note.textContent = w.loading;
     })();
   </script>
   <script>

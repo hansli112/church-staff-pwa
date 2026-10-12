@@ -166,8 +166,14 @@ class _Column extends StatelessWidget {
   }
 }
 
+/// Where this device keeps the language last shown, for the web build's
+/// font warmup when the app opens next (main.dart): the profile's choice is
+/// not known so early.
+const shownLanguagePref = 'shownLanguage';
+
 /// Keeps users/{uid}.appLocale on the language shown, chosen or the
-/// device's, for the server's pushes; written only when it changes.
+/// device's, for the server's pushes; written only when it changes. Kept on
+/// this device too ([shownLanguagePref]).
 class _LanguageShown extends ConsumerStatefulWidget {
   const _LanguageShown({required this.child});
 
@@ -183,6 +189,8 @@ class _LanguageShownState extends ConsumerState<_LanguageShown> {
   @override
   Widget build(BuildContext context) {
     final tag = AppLanguage.shownIn(context).tag;
+    final prefs = ref.read(prefsProvider);
+    if (prefs.getString(shownLanguagePref) != tag) unawaited(prefs.setString(shownLanguagePref, tag));
     final profile = ref.watch(profileProvider).value;
     if (profile != null && profile.appLocale != tag && _sent != (profile.uid, tag)) {
       _sent = (profile.uid, tag);

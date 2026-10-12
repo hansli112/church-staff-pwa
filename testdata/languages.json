@@ -1,5 +1,5 @@
 {
-  "about": "Which language the app speaks to a device or browser, from the languages it prefers, in order: the first the app speaks, else English. Every Chinese is Traditional until Simplified is added. app/test/app/languages_test.dart (AppLanguage.resolve) and functions/test/languages.test.ts (browserLanguage) run every row. Add a row here, not to one side.",
+  "about": "Which language the app speaks to a device or browser, from the languages it prefers, in order: the first the app speaks, else English. Chinese is Simplified when it says so (Hans), or comes from China, Singapore or Malaysia without saying Traditional (Hant); else Traditional. app/test/app/languages_test.dart (AppLanguage.resolve) and functions/test/languages.test.ts (browserLanguage, and app/web/index.html's script) run every row. Add a row here, not to one side.",
   "preferred": [
     { "why": "Chinese in Taiwan", "preferred": ["zh-TW"], "language": "zh-Hant" },
     { "why": "English first, Chinese second", "preferred": ["en-US", "zh-TW"], "language": "en" },
@@ -7,8 +7,14 @@
     { "why": "English anywhere", "preferred": ["en-MY"], "language": "en" },
     { "why": "none the app speaks: English", "preferred": ["de-DE", "fr"], "language": "en" },
     { "why": "nothing preferred: English", "preferred": [], "language": "en" },
-    { "why": "Chinese in China is Traditional for now", "preferred": ["zh-CN"], "language": "zh-Hant" },
-    { "why": "Simplified Chinese is Traditional for now", "preferred": ["zh-Hans"], "language": "zh-Hant" },
-    { "why": "Japanese, then Chinese", "preferred": ["ja-JP", "ja", "zh-CN"], "language": "zh-Hant" }
+    { "why": "Chinese in China", "preferred": ["zh-CN"], "language": "zh-Hans" },
+    { "why": "Chinese in Malaysia", "preferred": ["zh-MY"], "language": "zh-Hans" },
+    { "why": "Chinese in Singapore", "preferred": ["zh-SG"], "language": "zh-Hans" },
+    { "why": "Simplified Chinese", "preferred": ["zh-Hans"], "language": "zh-Hans" },
+    { "why": "Simplified Chinese, as an iPhone in China says it", "preferred": ["zh-Hans-CN"], "language": "zh-Hans" },
+    { "why": "Traditional Chinese in Malaysia", "preferred": ["zh-Hant-MY"], "language": "zh-Hant" },
+    { "why": "Chinese in Hong Kong", "preferred": ["zh-HK"], "language": "zh-Hant" },
+    { "why": "Chinese saying no more: Traditional", "preferred": ["zh"], "language": "zh-Hant" },
+    { "why": "Japanese, then Chinese", "preferred": ["ja-JP", "ja", "zh-CN"], "language": "zh-Hans" }
   ]
 }

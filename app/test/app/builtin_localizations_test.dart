@@ -64,6 +64,13 @@ void main() {
     expect(cupertino.datePickerMediumDate(day), '10月18日 週日');
   });
 
+  test('in Simplified Chinese, with 周', () async {
+    final material = await _load<MaterialLocalizations>(AppLanguage.zhHans);
+    expect(material.formatMediumDate(day), '10月18日周日');
+    expect(material.okButtonLabel, '确定');
+    expect(DateFormat.MMMEd().format(day), '10月18日周日');
+  });
+
   test('in English, with the month by name', () async {
     final material = await _load<MaterialLocalizations>(AppLanguage.en);
     expect(material.formatMediumDate(day), 'Sun, Oct 18');
@@ -86,10 +93,11 @@ void main() {
   });
 
   test('each language’s date data is Flutter’s, as is', () {
-    _expectSame(zhTwDateSymbols, flutter_dates.dateSymbols['zh_TW']!);
-    expect(zhTwDatePatterns, flutter_dates.datePatterns['zh_TW']);
-    _expectSame(enDateSymbols, flutter_dates.dateSymbols['en']!);
-    expect(enDatePatterns, flutter_dates.datePatterns['en']);
+    for (final language in AppLanguage.values) {
+      final (symbols, patterns) = dateData(language);
+      _expectSame(symbols, flutter_dates.dateSymbols[language.intlLocale]!);
+      expect(patterns, flutter_dates.datePatterns[language.intlLocale], reason: language.tag);
+    }
   });
 
   test('every language the app speaks has Flutter’s text', () {

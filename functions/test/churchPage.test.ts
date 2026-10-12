@@ -6,6 +6,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 
 import { APP_SHELL, churchPage, clearTemplateCache, inLanguage, withSplash, type PageDeps } from '../src/churchPage.js';
+import { LANGUAGES, words } from '../src/languages.js';
 import { clearFirestore, db, deps, fakeFetch, seedChurch, setNow } from './support.js';
 
 const APP = 'https://martha.example';
@@ -130,6 +131,12 @@ describe('church page', () => {
       assert.ok(english.includes(shown), `app/web/index.html's ${shown} in English`);
     }
     assert.match(splashOf(english), /<p class="title">Martha, sit<\/p>/);
+    for (const language of LANGUAGES.filter((l) => l !== 'zh-Hant')) {
+      const w = words(language);
+      for (const said of [w.appName, w.loading, w.description]) {
+        assert.ok(index.includes(`'${said}'`), `app/web/index.html's script says ${said} in ${language}`);
+      }
+    }
     assert.match(
       index,
       /<meta name="viewport" content="width=device-width[^"]*">/,

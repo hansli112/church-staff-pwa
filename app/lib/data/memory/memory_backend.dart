@@ -1813,6 +1813,18 @@ const defaultServices = {
       ],
     ),
   ],
+  AppLanguage.zhHans: [
+    Service(
+      id: 'sunday',
+      name: '主日崇拜',
+      weekday: DateTime.sunday,
+      duties: ['领会', '敬拜主领', '司琴', '音控', '投影', '招待'],
+      events: [
+        EventTag(name: '圣餐', color: 0),
+        EventTag(name: '浸礼', color: 4),
+      ],
+    ),
+  ],
   AppLanguage.en: [
     Service(
       id: 'sunday',

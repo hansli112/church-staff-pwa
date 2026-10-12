@@ -101,6 +101,7 @@ flutter:
     # (lib/core/fonts.dart).
     - lib/l10n/app_zh.arb
     - lib/l10n/app_en.arb
+    - lib/l10n/app_zh_Hans.arb
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

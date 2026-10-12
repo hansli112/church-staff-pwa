@@ -58,8 +58,13 @@ class _MaterialDelegate extends LocalizationsDelegate<MaterialLocalizations> {
     final shortMonthDayFormat = intl.DateFormat.MMMd(l);
     final decimalFormat = intl.NumberFormat.decimalPattern(l);
     final twoDigitZeroPaddedFormat = intl.NumberFormat('00', l);
-    return SynchronousFuture(switch (language) {
-      AppLanguage.zhHant => MaterialLocalizationZhHantTw(
+    final make = switch (language) {
+      AppLanguage.zhHant => MaterialLocalizationZhHantTw.new,
+      AppLanguage.zhHans => MaterialLocalizationZhHans.new,
+      AppLanguage.en => MaterialLocalizationEn.new,
+    };
+    return SynchronousFuture(
+      make(
         fullYearFormat: fullYearFormat,
         compactDateFormat: compactDateFormat,
         shortDateFormat: shortDateFormat,
@@ -70,18 +75,7 @@ class _MaterialDelegate extends LocalizationsDelegate<MaterialLocalizations> {
         decimalFormat: decimalFormat,
         twoDigitZeroPaddedFormat: twoDigitZeroPaddedFormat,
       ),
-      AppLanguage.en => MaterialLocalizationEn(
-        fullYearFormat: fullYearFormat,
-        compactDateFormat: compactDateFormat,
-        shortDateFormat: shortDateFormat,
-        mediumDateFormat: mediumDateFormat,
-        longDateFormat: longDateFormat,
-        yearMonthFormat: yearMonthFormat,
-        shortMonthDayFormat: shortMonthDayFormat,
-        decimalFormat: decimalFormat,
-        twoDigitZeroPaddedFormat: twoDigitZeroPaddedFormat,
-      ),
-    });
+    );
   }
 
   @override
@@ -108,8 +102,13 @@ class _CupertinoDelegate extends LocalizationsDelegate<CupertinoLocalizations> {
     final doubleDigitMinuteFormat = intl.DateFormat('mm', l);
     final singleDigitSecondFormat = intl.DateFormat.s(l);
     final decimalFormat = intl.NumberFormat.decimalPattern(l);
-    return SynchronousFuture(switch (language) {
-      AppLanguage.zhHant => CupertinoLocalizationZhHantTw(
+    final make = switch (language) {
+      AppLanguage.zhHant => CupertinoLocalizationZhHantTw.new,
+      AppLanguage.zhHans => CupertinoLocalizationZhHans.new,
+      AppLanguage.en => CupertinoLocalizationEn.new,
+    };
+    return SynchronousFuture(
+      make(
         fullYearFormat: fullYearFormat,
         dayFormat: dayFormat,
         weekdayFormat: weekdayFormat,
@@ -120,18 +119,7 @@ class _CupertinoDelegate extends LocalizationsDelegate<CupertinoLocalizations> {
         singleDigitSecondFormat: singleDigitSecondFormat,
         decimalFormat: decimalFormat,
       ),
-      AppLanguage.en => CupertinoLocalizationEn(
-        fullYearFormat: fullYearFormat,
-        dayFormat: dayFormat,
-        weekdayFormat: weekdayFormat,
-        mediumDateFormat: mediumDateFormat,
-        singleDigitHourFormat: singleDigitHourFormat,
-        singleDigitMinuteFormat: singleDigitMinuteFormat,
-        doubleDigitMinuteFormat: doubleDigitMinuteFormat,
-        singleDigitSecondFormat: singleDigitSecondFormat,
-        decimalFormat: decimalFormat,
-      ),
-    });
+    );
   }
 
   @override
@@ -147,6 +135,7 @@ class _WidgetsDelegate extends LocalizationsDelegate<WidgetsLocalizations> {
   @override
   Future<WidgetsLocalizations> load(Locale locale) => SynchronousFuture(switch (AppLanguage.of(locale)!) {
     AppLanguage.zhHant => const WidgetsLocalizationZhHantTw(),
+    AppLanguage.zhHans => const WidgetsLocalizationZhHans(),
     AppLanguage.en => const WidgetsLocalizationEn(),
   });
 

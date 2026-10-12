@@ -4,14 +4,22 @@
 // docs/i18n-glossary.md.
 
 /** An AppLanguage tag, as users/{uid}.appLocale holds it. */
-export type Language = 'zh-Hant' | 'en';
+export type Language = 'zh-Hant' | 'zh-Hans' | 'en';
 
-export const LANGUAGES: readonly Language[] = ['zh-Hant', 'en'];
+export const LANGUAGES: readonly Language[] = ['zh-Hant', 'zh-Hans', 'en'];
 
-/** The language for a tag the app speaks, as AppLanguage.of: every Chinese is Traditional for now. */
+/**
+ * The language for a BCP 47 tag the app speaks, as AppLanguage.of: Chinese
+ * is Simplified when it says so, or comes from where Simplified is written
+ * (China, Singapore, Malaysia) without saying Traditional; else Traditional.
+ */
 const speaks = (tag: string): Language | null => {
-  const primary = tag.split('-')[0].toLowerCase();
-  return primary === 'zh' ? 'zh-Hant' : primary === 'en' ? 'en' : null;
+  const [primary, ...rest] = tag.toLowerCase().split(/[-_]/);
+  if (primary === 'en') return 'en';
+  if (primary !== 'zh') return null;
+  const script = rest.find((s) => s.length === 4);
+  const region = rest.find((s) => s.length === 2);
+  return script === 'hans' || (!script && ['cn', 'sg', 'my'].includes(region ?? '')) ? 'zh-Hans' : 'zh-Hant';
 };
 
 /**
@@ -141,6 +149,30 @@ const zhHant: Words = {
   newChurchServices: [sunday('主日崇拜', ['司會', '敬拜', '司琴', '音控', '投影', '招待'], ['聖餐', '浸禮'])],
 };
 
+const zhHans: Words = {
+  shortDate: zhHant.shortDate,
+  dateWithWeekday: (k) => `${zhHans.shortDate(k)}（周${ZH_WEEKDAYS[weekday(k)]}）`,
+  weekReminder: (from, until) => `这周的事奉（${from}–${until}）`,
+  tomorrowReminder: (day) => `明天的事奉（${day}）`,
+  dutyLine: zhHant.dutyLine,
+  datedDutyLine: zhHant.datedDutyLine,
+  lineSeparator: '；',
+  eventMoved: (title, day) => `${title}改到 ${day}`,
+  putOn: (day, duties) => `你被排进 ${day}：${duties.join('、')}`,
+  takenOff: (day, duties) => `${day} 的${duties.join('、')}已改由别人负责`,
+  memberLeft: (name) => `${name} 退出了教会`,
+  someone: '有人',
+  appName: '马大别忙',
+  description:
+    '马大！马大！你为许多的事思虑烦扰，但是不可少的只有一件；马利亚已经选择那上好的福分，是不能夺去的。（路加福音 10:41–42）',
+  loading: '加载中…',
+  // app/lib/l10n/app_zh_Hans.arb's.
+  inviteInvalid: '找不到这个邀请，请确认邀请码，或向管理员要新的邀请',
+  inviteExpired: '这个邀请已过期，请向管理员要新的邀请',
+  placeholder: '待定',
+  newChurchServices: [sunday('主日崇拜', ['领会', '敬拜主领', '司琴', '音控', '投影', '招待'], ['圣餐', '浸礼'])],
+};
+
 const en: Words = {
   shortDate: (k) => `${EN_MONTHS[ymd(k)[1] - 1]} ${ymd(k)[2]}`,
   dateWithWeekday: (k) => `${en.shortDate(k)} (${EN_WEEKDAYS[weekday(k)]})`,
@@ -165,6 +197,6 @@ const en: Words = {
   newChurchServices: [sunday('Sunday Service', ['Host', 'Worship Leader', 'Piano', 'Sound', 'Slides', 'Usher'], ['Communion', 'Baptism'])],
 };
 
-const WORDS: Record<Language, Words> = { 'zh-Hant': zhHant, en };
+const WORDS: Record<Language, Words> = { 'zh-Hant': zhHant, 'zh-Hans': zhHans, en };
 
 export const words = (language: Language): Words => WORDS[language];

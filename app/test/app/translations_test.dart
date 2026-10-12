@@ -51,6 +51,13 @@ void main() {
     });
   }
 
+  test('Simplified Chinese has none of the commonest Traditional-only characters', () {
+    final hans = _read('lib/l10n/app_zh_Hans.arb');
+    for (final key in _keys(hans)) {
+      expect(hans[key], isNot(matches(RegExp('[們這個說會時來對為國與將從還後過開關點區員號發樂體經應書讓請設資訊權員單]'))), reason: key);
+    }
+  });
+
   test('English is all English', () {
     final en = _read('lib/l10n/app_en.arb');
     for (final key in _keys(en)) {

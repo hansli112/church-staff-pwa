@@ -6,7 +6,7 @@
 
 - 代管、多教會共用的**同工工具**（不含會友）。單一 App「馬大別忙」（驚嘆號可有可無），教會 logo 在 App 內顯示。
 - 平台：iOS、Android、Web（PWA），同一份 Flutter code。
-- 語言：i18n 架構（ARB），目前繁中、英文；簡中、日文、韓文照 #71 陸續加。預設跟隨系統：照手機或瀏覽器的偏好語言清單，用第一個支援的，都不支援用英文（`app/lib/core/languages.dart`）。「我的 → 語言」可以自己選，存在帳號。App 另外把實際顯示的語言寫進 `users/{uid}.appLocale`，給後端寫推播用。後端寫的字照各自對象的語言（`functions/src/languages.ts`）：推播照**收到的人**的 `appLocale`，沒有就繁中；邀請頁和教會的 manifest 照瀏覽器的 `Accept-Language`，對應規則和 App 一樣（教會頁本身人人同一份，讓 CDN 存著，由頁面自己的程式在瀏覽器換語言）；新教會的預設聚會和服事項目照建立者的語言，之後是教會自己的，不跟著別人變；驗證信、重設密碼信照 App 當下的語言；CSV 匯出照匯出的人的語言。聚會名稱、服事項目這些教會自己打的字原樣照送。用語照 `docs/i18n-glossary.md`；每份翻譯檔的條目要和繁中一樣（`test/app/translations_test.dart`）。英文的日期一律寫月份（Oct 18），不用 10/18。
+- 語言：i18n 架構（ARB），目前繁中、簡中、英文；日文、韓文照 #71 加。預設跟隨系統：照手機或瀏覽器的偏好語言清單，用第一個支援的，都不支援用英文（`app/lib/core/languages.dart`，對應規則在 `testdata/languages.json`）；中文標明簡體，或來自中國、新加坡、馬來西亞又沒標明繁體的是簡中，其他中文都是繁中。「我的 → 語言」可以自己選，存在帳號。App 另外把實際顯示的語言寫進 `users/{uid}.appLocale`，給後端寫推播用。後端寫的字照各自對象的語言（`functions/src/languages.ts`）：推播照**收到的人**的 `appLocale`，沒有就繁中；邀請頁和教會的 manifest 照瀏覽器的 `Accept-Language`，對應規則和 App 一樣（教會頁本身人人同一份，讓 CDN 存著，由頁面自己的程式在瀏覽器換語言）；新教會的預設聚會和服事項目照建立者的語言，之後是教會自己的，不跟著別人變；驗證信、重設密碼信照 App 當下的語言；CSV 匯出照匯出的人的語言。聚會名稱、服事項目這些教會自己打的字原樣照送。用語照 `docs/i18n-glossary.md`；每份翻譯檔的條目要和繁中一樣（`test/app/translations_test.dart`）。英文的日期一律寫月份（Oct 18），不用 10/18。網頁版的中日韓字型由瀏覽器的語言決定（Flutter 照 `navigator.language` 挑 Noto Sans TC／SC／JP／KR），不是 App 顯示的語言；開頁預熱的字照上次在這台裝置顯示的語言，沒有就照瀏覽器的（`app/lib/core/fonts.dart`）。
 - 營運：Hans 個人。不主動拓展，有人問就給用；已知有台灣、香港、馬來西亞詢問。
 - 發布：**全部做完一次發布**，不分階段。
 - 用語：一律說「安排服事表」，不說「排班」。其他用語見 `CONTEXT.md`。
