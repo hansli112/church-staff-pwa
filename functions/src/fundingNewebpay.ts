@@ -200,7 +200,7 @@ export async function newebpayStart(deps: Deps, config: NewebpayConfig | null, b
     ItemDesc: words(language).supportItem,
     LangType: LANG_TYPE[language],
     TradeLimit: String(TRADE_LIMIT),
-    ReturnURL: language === 'zh-Hant' ? config.returnUrl : `${config.returnUrl}/${language}`,
+    ReturnURL: config.returnUrl + sitePath(language, ''),
     NotifyURL: config.notifyUrl,
     ClientBackURL: config.siteUrl + sitePath(language, '/support'),
     // NewebPay asks for the payer's email on its own page, for its receipt.

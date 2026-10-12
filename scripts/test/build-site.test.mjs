@@ -54,6 +54,10 @@ describe('every page in every language', () => {
         assert.ok(html.includes(`<link rel="alternate" hreflang="x-default" href="https://marthasit.com${sitePath('en', page)}">`));
         assert.ok(!/__ORIGIN__|__FIREBASE_PROJECT__|<!-- site-|<!-- \/?payments:/.test(html), `${tag}: every marker filled`);
         // Its links to the site's pages stay in its language.
+        // A link to another language picks it, or the page sends the visitor back.
+        for (const [a] of html.matchAll(/<a [^>]*hreflang="[^"]*"[^>]*>/g)) {
+          assert.match(a, /data-site-language="([^"]*)"/, `${tag}: ${a}`);
+        }
         // A link that says its language (hreflang) is meant to go there.
         for (const [, href] of html.matchAll(/<a (?![^>]*hreflang)[^>]*href="(\/[^"#?]*)/g)) {
           const other = TAGS.find((t) => t !== tag && pages.some((p) => sitePath(t, p) === href) && !pages.some((p) => sitePath(tag, p) === href));
@@ -67,7 +71,7 @@ describe('every page in every language', () => {
 describe('a translated page is its Traditional Chinese page, translated', () => {
   /** What a page's script and styles hang on, in order, and where the shared parts go. */
   const skeleton = (html) => [
-    ...html.matchAll(/ (?:id|class|for|name|type|value|data-[a-z-]+)="[^"]*"|<!-- \/?(?:site-[a-z]+|payments:o[nf]+) -->/g),
+    ...html.matchAll(/ (?:id|class|for|name|type|value|data-(?!site-language)[a-z-]+)="[^"]*"|<!-- \/?(?:site-[a-z]+|payments:o[nf]+) -->/g),
   ].map((m) => m[0]);
   // The pages and the blog's posts: not the translations' folders, nor node_modules.
   const sources = (dir) => readdirSync(join(root, dir), { recursive: true }).filter((f) => /^(?:blog\/)?[^/]+\.(?:html|md)$/.test(f));

@@ -73,6 +73,10 @@ describe('dates in pushes', () => {
   });
 });
 
+test("what a 線上支持 payment is for fits NewebPay's 50, counted in bytes", () => {
+  for (const language of LANGUAGES) assert.ok(Buffer.byteLength(words(language).supportItem) <= 50, language);
+});
+
 describe("the app's name under its home-screen icon, in each language", () => {
   const read = (path: string) => readFileSync(new URL(`../../app/${path}`, import.meta.url), 'utf8');
   // Android's resource folders: Traditional for zh-TW, zh-HK and plain zh;

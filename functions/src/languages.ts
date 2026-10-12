@@ -106,7 +106,7 @@ export interface Words {
   inviteInvalid: string;
   inviteExpired: string;
 
-  /** 線上支持 on NewebPay's page and in its back office, at most 50 characters (fundingNewebpay.ts). */
+  /** 線上支持 on NewebPay's page and in its back office: at most 50 bytes in UTF-8, in case NewebPay counts them (fundingNewebpay.ts). */
   supportItem: string;
 
   /** A new church's services (church.ts). */
@@ -192,7 +192,7 @@ const en: Words = {
   memberLeft: (name) => `${name} left the church`,
   someone: 'Someone',
   appName: 'Martha, sit',
-  supportItem: 'Martha, sit cloud costs support',
+  supportItem: 'Martha, sit server costs support',
   description:
     '“Martha, Martha,” the Lord answered, “you are worried and upset about many things, but few things are needed—or indeed only one. Mary has chosen what is better, and it will not be taken away from her.” (Luke 10:41–42)',
   loading: 'Loading…',

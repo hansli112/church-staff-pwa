@@ -155,7 +155,7 @@ describe('starting a 線上支持 payment', () => {
     const english = (await start(300, 'en')).params;
     assert.deepEqual(
       [english.LangType, english.ItemDesc, english.ReturnURL, english.ClientBackURL],
-      ['en', 'Martha, sit cloud costs support', `${config.returnUrl}/en`, `${config.siteUrl}/en/support`],
+      ['en', 'Martha, sit server costs support', `${config.returnUrl}/en`, `${config.siteUrl}/en/support`],
     );
     const simplified = (await start(300, 'zh-Hans')).params;
     assert.deepEqual(
