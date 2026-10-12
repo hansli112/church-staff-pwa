@@ -4,7 +4,7 @@ import { describe, test } from 'node:test';
 
 import { mapMember } from '../src/importer.js';
 import { LANGUAGES, words } from '../src/languages.js';
-import { dutiesByUid } from '../src/rosterChange.js';
+import { dutiesByUid } from '../src/rosters.js';
 import { validDutyRename } from '../src/serviceSettings.js';
 
 /** The rows app/test/domain/church_rules_test.dart runs too: both sides must agree. */

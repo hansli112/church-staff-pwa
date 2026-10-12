@@ -1,0 +1,188 @@
+import { FieldValue, Timestamp, type DocumentSnapshot } from 'firebase-admin/firestore';
+
+import type { CalendarEvent } from './calendar.js';
+import { DAY_MS, type Deps } from './common.js';
+import { cutText, TEXT_LIMITS } from './limits.js';
+import { dateKeyIn, type ChurchTimeZone } from './timeZones.js';
+
+/**
+ * 活動的服事表 (rosters/ev_<event id>): every way one changes after it is
+ * made, and so whether its trigger tells anyone (rosterChange.ts asks
+ * [isQuiet] and [movedBy]). A change made here says how in `via`:
+ *
+ * - `calendar`: took its event's title and days, from the app or Google. A
+ *   move is told; one made in the app names who moved it (`movedBy`).
+ * - `restore`: put back by undoing its event's delete, or out of Google's
+ *   trash. Told nothing: nobody was told it went.
+ * - `relink`: moved to its event's new id (a recurring day split off).
+ *   Neither the old one going nor the new one is told.
+ * - `timeZone`: its days on the clock of the church's new time zone.
+ *   Nothing moved, so nothing is told.
+ *
+ * Cancelled (`cancelledAt`, its event deleted) it is told nothing at all,
+ * neither the cancelling nor anything after, until it is put back.
+ * Edits of its duties come from the app (`app`, or `import`), as any
+ * roster's.
+ */
+
+const QUIET = new Set(['restore', 'relink', 'timeZone']);
+
+/** Whether [d] is an event's roster (活動的服事表). */
+export const isEvent = (d: DocumentSnapshot | undefined) => d?.exists === true && d.get('kind') === 'event';
+
+/** Whether [d] is an event's roster cancelled with its event. */
+export const isCancelled = (d: DocumentSnapshot | undefined) => isEvent(d) && d!.get('cancelledAt') != null;
+
+/** Whether the write of an event's roster from [before] to [after] tells nobody. */
+export function isQuiet(before: DocumentSnapshot | undefined, after: DocumentSnapshot | undefined) {
+  const doc = after?.exists ? after : before;
+  if (!isEvent(doc)) return false;
+  return isCancelled(before) || isCancelled(after) || QUIET.has(doc!.get('via') as string);
+}
+
+/** Who moved [after] in the app, when the backend wrote the move. */
+export const movedBy = (after: DocumentSnapshot | undefined) =>
+  after?.exists ? ((after.get('movedBy') as string | undefined) ?? undefined) : undefined;
+
+/** The days an event's roster is on (`dateKey`s): the church's, an all-day end exclusive. */
+export function eventRosterDays(e: { start: string; end?: string; allDay?: boolean }, timeZone: ChurchTimeZone) {
+  const ymd = /^\d{4}-\d{2}-\d{2}$/;
+  if (e.allDay === true || ymd.test(e.start)) {
+    const last = inclusiveEnd(e.end);
+    return { dateKey: e.start, endDateKey: last && last > e.start ? last : e.start };
+  }
+  const start = Date.parse(e.start);
+  const end = e.end === undefined ? NaN : Date.parse(e.end);
+  const dateKey = dateKeyIn(timeZone, new Date(start));
+  return { dateKey, endDateKey: end > start ? dateKeyIn(timeZone, new Date(end - 1)) : dateKey };
+}
+
+/** Google's exclusive all-day end date → the last day covered. */
+export function inclusiveEnd(end: string | undefined): string | null {
+  if (typeof end !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(end)) return null;
+  return new Date(Date.parse(`${end}T00:00:00Z`) - DAY_MS).toISOString().slice(0, 10);
+}
+
+const ref = (deps: Deps, churchId: string, eventId: string) => deps.db.doc(`churches/${churchId}/rosters/ev_${eventId}`);
+
+/** What an event's roster copies from [e]. `via` clears a quiet one, so a later move is told. */
+const fromEvent = (e: CalendarEvent, timeZone: ChurchTimeZone) => ({
+  title: cutText(e.title, TEXT_LIMITS.eventTitle),
+  ...eventRosterDays(e, timeZone),
+  via: 'calendar',
+  updatedAt: FieldValue.serverTimestamp(),
+});
+
+/** What a roster records of where its event is in [calendarId], for later syncs. */
+const stamps = (e: CalendarEvent, calendarId: string) => ({
+  calendarId,
+  ...(e.recurringEventId ? { recurringEventId: e.recurringEventId } : {}),
+  ...(e.originalStart ? { originalStart: e.originalStart } : {}),
+});
+
+const same = (r: DocumentSnapshot, next: { title: string; dateKey: string; endDateKey: string }) =>
+  r.get('title') === next.title && r.get('dateKey') === next.dateKey && r.get('endDateKey') === next.endDateKey;
+
+// Changes made in the app (calendarWrite), after Google has them.
+
+/**
+ * Event [e] edited in the app by [by]: its roster, if still on, takes its
+ * title and days. A move is told, to everyone but [by].
+ */
+export async function followEdit(deps: Deps, churchId: string, timeZone: ChurchTimeZone, e: CalendarEvent, by: string) {
+  if (!e.id) return;
+  const at = ref(deps, churchId, e.id);
+  await deps.db.runTransaction(async (tx) => {
+    const r = await tx.get(at);
+    if (!isEvent(r) || isCancelled(r)) return;
+    const next = fromEvent(e, timeZone);
+    if (!same(r, next)) tx.update(at, { ...next, movedBy: by });
+  });
+}
+
+/** Event [eventId] deleted in the app: its roster is cancelled, not shown, not reminded, kept for undo. */
+export async function cancelWithEvent(deps: Deps, churchId: string, eventId: string) {
+  const at = ref(deps, churchId, eventId);
+  await deps.db.runTransaction(async (tx) => {
+    if (isEvent(await tx.get(at))) tx.update(at, { cancelledAt: Timestamp.fromDate(deps.now()) });
+  });
+}
+
+/** A delete undone, the event made again as [e]: the cancelled roster of [fromId] moves onto it, quietly. */
+export async function restoreOnto(deps: Deps, churchId: string, timeZone: ChurchTimeZone, fromId: string, e: CalendarEvent) {
+  if (!/^[A-Za-z0-9_-]{1,1024}$/.test(fromId) || !e.id || fromId === e.id) return;
+  const from = ref(deps, churchId, fromId);
+  const to = ref(deps, churchId, e.id);
+  await deps.db.runTransaction(async (tx) => {
+    const r = await tx.get(from);
+    if (!isCancelled(r)) return;
+    const keep = (k: string) => (r.get(k) === undefined ? {} : { [k]: r.get(k) });
+    tx.set(to, {
+      kind: 'event',
+      eventId: e.id,
+      duties: r.get('duties') ?? [],
+      events: [],
+      ...keep('calendarId'),
+      ...keep('recurringEventId'),
+      ...keep('originalStart'),
+      ...fromEvent(e, timeZone),
+      via: 'restore',
+    });
+    tx.delete(from);
+  });
+}
+
+// Changes made in Google Calendar itself (eventSync.ts).
+
+/**
+ * Roster [r] against its event [e] as Google has it in [calendarId]: a
+ * cancelled one is on again, quietly (back from Google's trash); one on
+ * takes a new title or days, and whoever moved it in the app before is
+ * told this time.
+ */
+export async function followGoogle(r: DocumentSnapshot, e: CalendarEvent, calendarId: string, timeZone: ChurchTimeZone) {
+  const next = { ...fromEvent(e, timeZone), ...stamps(e, calendarId) };
+  if (isCancelled(r)) {
+    await r.ref.update({ ...next, cancelledAt: FieldValue.delete(), via: 'restore' });
+    return 'restored' as const;
+  }
+  if (same(r, next) && Object.entries(stamps(e, calendarId)).every(([k, v]) => r.get(k) === v)) return null;
+  await r.ref.update({ ...next, movedBy: FieldValue.delete() });
+  return 'updated' as const;
+}
+
+/** Roster [r]'s event gone from Google: cancelled, as when deleted in the app. */
+export async function cancelGone(deps: Deps, r: DocumentSnapshot) {
+  await r.ref.update({ cancelledAt: Timestamp.fromDate(deps.now()) });
+}
+
+/**
+ * Moves roster [r] onto [match], the same day of its recurring event under
+ * a new id: quietly, then takes [match]'s title and days, so a change of
+ * day is told. False, leaving it for the next sync, when the app saved it
+ * meanwhile or [match] already has one.
+ */
+export async function relinkTo(deps: Deps, r: DocumentSnapshot, match: CalendarEvent & { id: string }, calendarId: string, timeZone: ChurchTimeZone) {
+  const to = r.ref.parent.doc(`ev_${match.id}`);
+  // Marked first, so the old one's going is quiet.
+  await r.ref.update({ via: 'relink' });
+  const moved = await deps.db.runTransaction(async (tx) => {
+    const [old, there] = await Promise.all([tx.get(r.ref), tx.get(to)]);
+    if (!old.exists || there.exists || old.get('via') !== 'relink') return false;
+    const { cancelledAt: _gone, movedBy: _by, ...data } = old.data()!;
+    tx.set(to, { ...data, eventId: match.id, via: 'relink', updatedAt: FieldValue.serverTimestamp() });
+    tx.delete(r.ref);
+    return true;
+  });
+  if (!moved) return false;
+  await to.update({ ...fromEvent(match, timeZone), ...stamps(match, calendarId) });
+  return true;
+}
+
+/** The church's time zone changed: roster [r] takes [e]'s days on the new clock, quietly. False when they are the same. */
+export async function takeTimeZone(r: DocumentSnapshot, e: CalendarEvent, timeZone: ChurchTimeZone) {
+  const days = eventRosterDays(e, timeZone);
+  if (r.get('dateKey') === days.dateKey && r.get('endDateKey') === days.endDateKey) return false;
+  await r.ref.update({ ...days, via: 'timeZone', movedBy: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() });
+  return true;
+}

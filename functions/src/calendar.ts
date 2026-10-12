@@ -3,8 +3,8 @@ import { createHash, randomBytes } from 'node:crypto';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 import { churchAccess, isChurchOpen } from './access.js';
-import { DAY_MS, fail, type Caller, type Deps } from './common.js';
-import { cutText, TEXT_LIMITS } from './limits.js';
+import { fail, type Caller, type Deps } from './common.js';
+import { cancelWithEvent, followEdit, inclusiveEnd, restoreOnto } from './eventRosters.js';
 import { seal, unseal } from './sealing.js';
 import { notify, type WebhookDeps } from './webhook.js';
 import { dateKeyIn, instantOf, instantOfTime, LOCAL_TIME, localIso, timeZoneOf, type ChurchTimeZone } from './timeZones.js';
@@ -411,7 +411,7 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
     const found = await deps.google.get(token, calendarId, input.eventId).catch(() => null);
     const before = found && inZone(found, timeZone);
     await deps.google.remove(token, calendarId, input.eventId);
-    await rosterStep(`cancel ${churchId}/ev_${input.eventId}`, () => cancelEventRoster(deps, churchId, input.eventId as string));
+    await rosterStep(`cancel ${churchId}/ev_${input.eventId}`, () => cancelWithEvent(deps, churchId, input.eventId as string));
     spans.push(span(input.event), span(before));
     notice = { action: 'deleted', event: before ?? { ...input.event, id: input.eventId } };
   } else if (input.op === 'upsert') {
@@ -433,11 +433,11 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
     result = inZone(saved, timeZone);
     spans.push(span(e));
     if (typeof e.id === 'string') {
-      await rosterStep(`follow ${churchId}/ev_${e.id}`, () => followEvent(deps, churchId, timeZone, saved, me.caller.uid));
+      await rosterStep(`follow ${churchId}/ev_${e.id}`, () => followEdit(deps, churchId, timeZone, saved, me.caller.uid));
     }
     const restore = input.restoreRosterOf;
     if (typeof restore === 'string') {
-      await rosterStep(`restore ${churchId}/ev_${restore}`, () => restoreEventRoster(deps, churchId, timeZone, restore, saved));
+      await rosterStep(`restore ${churchId}/ev_${restore}`, () => restoreOnto(deps, churchId, timeZone, restore, saved));
     }
     notice = { action: typeof e.id === 'string' ? 'updated' : 'created', event: result };
   } else {
@@ -455,22 +455,6 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
   return { event: result };
 }
 
-/** The days an event's roster is on (`dateKey`s): the church's, an all-day end exclusive. */
-export function eventRosterDays(e: { start: string; end?: string; allDay?: boolean }, timeZone: ChurchTimeZone) {
-  const ymd = /^\d{4}-\d{2}-\d{2}$/;
-  if (e.allDay === true || ymd.test(e.start)) {
-    const last = inclusiveEnd(e.end);
-    return { dateKey: e.start, endDateKey: last && last > e.start ? last : e.start };
-  }
-  const start = Date.parse(e.start);
-  const end = e.end === undefined ? NaN : Date.parse(e.end);
-  const dateKey = dateKeyIn(timeZone, new Date(start));
-  return { dateKey, endDateKey: end > start ? dateKeyIn(timeZone, new Date(end - 1)) : dateKey };
-}
-
-const eventRosterRef = (deps: Deps, churchId: string, eventId: string) =>
-  deps.db.doc(`churches/${churchId}/rosters/ev_${eventId}`);
-
 /**
  * Runs a step on an event's roster after Google has the change. A failure
  * is logged, never thrown: the event changed, so the call must not look
@@ -482,64 +466,6 @@ async function rosterStep(what: string, step: () => Promise<void>) {
   } catch (e) {
     console.error(`event roster: ${what} failed`, e);
   }
-}
-
-/** What an event's roster copies from [e]. `via` clears a `restore`, so a later move is told. */
-export const fromEvent = (e: CalendarEvent, timeZone: ChurchTimeZone) => ({
-  title: cutText(e.title, TEXT_LIMITS.eventTitle),
-  ...eventRosterDays(e, timeZone),
-  via: 'calendar',
-  updatedAt: FieldValue.serverTimestamp(),
-});
-
-/**
- * Copies [e]'s title and days to its roster, if it has one still on.
- * [by] made the change: the trigger tells them nothing of it.
- */
-async function followEvent(deps: Deps, churchId: string, timeZone: ChurchTimeZone, e: CalendarEvent, by: string) {
-  if (!e.id) return;
-  const ref = eventRosterRef(deps, churchId, e.id);
-  await deps.db.runTransaction(async (tx) => {
-    const r = await tx.get(ref);
-    if (!r.exists || r.get('kind') !== 'event' || r.get('cancelledAt') != null) return;
-    const next = fromEvent(e, timeZone);
-    if (r.get('title') === next.title && r.get('dateKey') === next.dateKey && r.get('endDateKey') === next.endDateKey) return;
-    tx.update(ref, { ...next, movedBy: by });
-  });
-}
-
-/** Marks the roster of deleted event [eventId] cancelled: not shown, not reminded, kept for undo. */
-async function cancelEventRoster(deps: Deps, churchId: string, eventId: string) {
-  const ref = eventRosterRef(deps, churchId, eventId);
-  await deps.db.runTransaction(async (tx) => {
-    const r = await tx.get(ref);
-    if (r.exists && r.get('kind') === 'event') tx.update(ref, { cancelledAt: Timestamp.fromDate(deps.now()) });
-  });
-}
-
-/** Moves the cancelled roster of deleted event [fromId] onto [e], the event made again. */
-async function restoreEventRoster(deps: Deps, churchId: string, timeZone: ChurchTimeZone, fromId: string, e: CalendarEvent) {
-  if (!/^[A-Za-z0-9_-]{1,1024}$/.test(fromId) || !e.id || fromId === e.id) return;
-  const from = eventRosterRef(deps, churchId, fromId);
-  const to = eventRosterRef(deps, churchId, e.id);
-  await deps.db.runTransaction(async (tx) => {
-    const r = await tx.get(from);
-    if (!r.exists || r.get('kind') !== 'event' || r.get('cancelledAt') == null) return;
-    // As a restore: the trigger tells nobody, they were never told it went.
-    const keep = (k: string) => (r.get(k) === undefined ? {} : { [k]: r.get(k) });
-    tx.set(to, {
-      kind: 'event',
-      eventId: e.id,
-      duties: r.get('duties') ?? [],
-      events: [],
-      ...keep('calendarId'),
-      ...keep('recurringEventId'),
-      ...keep('originalStart'),
-      ...fromEvent(e, timeZone),
-      via: 'restore',
-    });
-    tx.delete(from);
-  });
 }
 
 /**
@@ -562,12 +488,6 @@ export function eventDetails(e: Partial<CalendarEvent>, who: { actorUid: string;
     actorUid: who.actorUid,
     actorName: who.actorName,
   };
-}
-
-/** Google's exclusive all-day end date → the last day covered. */
-function inclusiveEnd(end: string | undefined): string | null {
-  if (typeof end !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(end)) return null;
-  return new Date(Date.parse(`${end}T00:00:00Z`) - DAY_MS).toISOString().slice(0, 10);
 }
 
 /** The real Google APIs over fetch. */

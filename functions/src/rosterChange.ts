@@ -2,8 +2,10 @@ import type { DocumentSnapshot } from 'firebase-admin/firestore';
 
 import { isChurchOpen } from './access.js';
 import { runEach, type Deps } from './common.js';
+import { isQuiet, movedBy } from './eventRosters.js';
 import type { Words } from './languages.js';
 import { notifyMembers, type PushDeps } from './push.js';
+import { duties, dutiesByUid, names, rosterDay, serviceNames } from './rosters.js';
 import { queue } from './webhook.js';
 import { dateKeyIn, earliestDay, timeZoneOf } from './timeZones.js';
 
@@ -14,33 +16,6 @@ import { dateKeyIn, earliestDay, timeZoneOf } from './timeZones.js';
  * batched, see webhook.ts). The two go out independently: one failing never
  * stops the other.
  */
-
-interface Duty {
-  role?: unknown;
-  people?: unknown;
-  uids?: unknown;
-}
-
-const duties = (v: unknown) => (Array.isArray(v) ? (v as Duty[]) : []).filter((d) => typeof d?.role === 'string');
-const names = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
-
-/**
- * uid → the duties they hold on this roster, each once: a name bound to
- * them that is still listed (testdata/church_rules.json, rosterIdentity).
- */
-export function dutiesByUid(value: unknown): Map<string, string[]> {
-  const out = new Map<string, string[]>();
-  for (const d of duties(value)) {
-    const people = names(d.people);
-    if (!d.uids || typeof d.uids !== 'object' || Array.isArray(d.uids)) continue;
-    for (const [name, uid] of Object.entries(d.uids as Record<string, unknown>)) {
-      if (typeof uid !== 'string' || !uid || uid.includes('/') || !people.includes(name)) continue;
-      const held = out.get(uid) ?? [];
-      if (!held.includes(d.role as string)) out.set(uid, [...held, d.role as string]);
-    }
-  }
-  return out;
-}
 
 export interface DutyDiff {
   /** uid → duties they were put on (people with an account). */
@@ -101,23 +76,12 @@ export interface RosterChange extends DutyDiff {
   editor: { uid: string; name: string | null } | null;
 }
 
-/** Whether [d] is an event's roster (活動的服事表). */
-export const isEvent = (d: DocumentSnapshot | undefined) => d?.exists === true && d.get('kind') === 'event';
-/**
- * Writes that tell nobody: an event's roster put back by undoing its
- * event's delete or out of Google's trash (`restore`), or moved to its
- * event's new id (`relink`, eventSync.ts), or given its days on the clock
- * of the church's new time zone (`timeZone`, eventSync.ts).
- */
-const QUIET = new Set(['restore', 'relink', 'timeZone']);
-const isCancelled = (d: DocumentSnapshot | undefined) => d?.exists === true && d.get('cancelledAt') != null;
-
 /**
  * The change one roster write makes, or null when there is nothing to tell:
  * not a roster, a past day (the church's; an event's last day), a church that is
  * not open, or nobody put on or taken off anything. An event's roster also
- * tells of a move to another day. A cancelled event's roster, and a
- * [QUIET] write, tell nothing.
+ * tells of a move to another day, and some of its writes tell nothing
+ * (eventRosters.ts).
  */
 export async function readRosterChange(
   deps: Deps,
@@ -127,34 +91,28 @@ export async function readRosterChange(
   editedBy: string | undefined,
 ): Promise<RosterChange | null> {
   const doc = after?.exists ? after : before;
-  const dateKey = doc?.get('dateKey') as string | undefined;
-  const event = isEvent(doc);
-  const serviceId = event ? null : (doc?.get('type') as string | undefined);
-  const lastDay = event ? ((doc?.get('endDateKey') as string | undefined) ?? dateKey) : dateKey;
+  const day = rosterDay(doc);
   // Past everywhere, before reading the church for its own today.
-  if (!dateKey || !lastDay || (!event && !serviceId) || lastDay < earliestDay(deps.now())) return null;
-  if (event && (isCancelled(before) || isCancelled(after) || QUIET.has(doc?.get('via') as string))) return null;
+  if (!day || day.lastDay < earliestDay(deps.now()) || isQuiet(before, after)) return null;
   const diff = diffDuties(before?.exists ? before.get('duties') : [], after?.exists ? after.get('duties') : []);
-  const movedFrom =
-    event && before?.exists && after?.exists && before.get('dateKey') !== dateKey ? (before.get('dateKey') as string) : null;
+  const was = rosterDay(before)?.dateKey;
+  const movedFrom = day.event && after?.exists && was && was !== day.dateKey ? was : null;
   if (!diff.added.size && !diff.removed.size && !diff.duties.length && !movedFrom) return null;
   // A move calendarWrite made has no signed-in writer: it names who moved it.
-  if (!editedBy && movedFrom) editedBy = (after?.get('movedBy') as string | undefined) ?? undefined;
+  if (!editedBy && movedFrom) editedBy = movedBy(after);
   const [church, services, editor] = await Promise.all([
     deps.db.doc(`churches/${cid}`).get(),
-    deps.db.doc(`churches/${cid}/settings/services`).get(),
+    serviceNames(deps, cid),
     editedBy ? deps.db.doc(`churches/${cid}/members/${editedBy}`).get() : null,
   ]);
-  if (!isChurchOpen(church) || lastDay < dateKeyIn(timeZoneOf(church), deps.now())) return null;
-  const list = (services.get('services') as { id: string; name: string }[] | undefined) ?? [];
-  const title = event ? ((doc?.get('title') as string | undefined) ?? '') : '';
+  if (!isChurchOpen(church) || day.lastDay < dateKeyIn(timeZoneOf(church), deps.now())) return null;
   return {
     ...diff,
     church,
-    dateKey,
-    serviceId: serviceId ?? null,
-    serviceName: event ? title : (list.find((s) => s.id === serviceId)?.name ?? ''),
-    event: event ? { id: doc!.get('eventId') as string, title } : null,
+    dateKey: day.dateKey,
+    serviceId: day.serviceId,
+    serviceName: day.name(services),
+    event: day.event,
     movedFrom,
     holders: dutiesByUid(after?.exists ? after.get('duties') : []),
     // A deleted day keeps the way it was last written: taking back an

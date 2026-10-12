@@ -4,7 +4,7 @@ import type { DocumentSnapshot } from 'firebase-admin/firestore';
 import { isChurchOpen } from './access.js';
 import { DAY_MS } from './common.js';
 import { notifyMembers, type PushDeps } from './push.js';
-import { dutiesByUid, isEvent } from './rosterChange.js';
+import { rosterDay, serviceNames } from './rosters.js';
 import { dateKeyIn, timeZoneOf, timeZonesAt } from './timeZones.js';
 
 /** The hour of the evening reminders, on each church's clock. */
@@ -20,12 +20,6 @@ export type ReminderTiming = 'weekly' | 'dayBefore' | 'both';
 function reminderTiming(member: DocumentSnapshot): ReminderTiming {
   const t = member.get('notificationPrefs.reminderTiming');
   return t === 'dayBefore' || t === 'both' ? t : 'weekly';
-}
-
-async function serviceName(deps: PushDeps, cid: string, type: string) {
-  const settings = await deps.db.doc(`churches/${cid}/settings/services`).get();
-  const list = (settings.get('services') as { id: string; name: string }[] | undefined) ?? [];
-  return list.find((s) => s.id === type)?.name ?? '';
 }
 
 /** Someone's duties on one day: which, of what service or event. */
@@ -69,14 +63,12 @@ export async function sendReminders(deps: PushDeps & { now: () => Date }) {
   for (const [cid, docs] of byChurch) {
     const church = await deps.db.doc(`churches/${cid}`).get();
     if (!isChurchOpen(church) || !due.has(timeZoneOf(church))) continue;
+    const services = await serviceNames(deps, cid);
     const perUid = new Map<string, DutyLine[]>();
-    for (const r of docs) {
-      if (r.get('cancelledAt') != null) continue;
-      const name =
-        isEvent(r) ? ((r.get('title') as string | undefined) ?? '') : await serviceName(deps, cid, r.get('type') as string);
-      const dateKey = r.get('dateKey') as string;
-      for (const [uid, roles] of dutiesByUid(r.get('duties'))) {
-        perUid.set(uid, [...(perUid.get(uid) ?? []), { dateKey, name, roles }]);
+    for (const day of docs.map(rosterDay)) {
+      if (!day || day.cancelled) continue;
+      for (const [uid, roles] of day.holders) {
+        perUid.set(uid, [...(perUid.get(uid) ?? []), { dateKey: day.dateKey, name: day.name(services), roles }]);
       }
     }
     if (perUid.size === 0) continue;

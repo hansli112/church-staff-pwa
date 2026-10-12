@@ -2,7 +2,7 @@
 // sets FIRESTORE_EMULATOR_HOST and FIREBASE_AUTH_EMULATOR_HOST.
 import { getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
-import { getFirestore, Timestamp } from 'firebase-admin/firestore';
+import { DocumentReference, Firestore, getFirestore, Timestamp, type DocumentSnapshot, type Transaction } from 'firebase-admin/firestore';
 
 import type { GoogleApi } from '../src/calendar.js';
 import type { PurgeDeps } from '../src/church.js';
@@ -147,4 +147,75 @@ export async function seedChurch(
       zoneTypes: [],
     });
   }
+}
+
+/** One committed write of a document: what a Firestore trigger on it is given. */
+export interface SeenWrite {
+  path: string;
+  before: DocumentSnapshot;
+  after: DocumentSnapshot;
+}
+
+/**
+ * Records every write [run] makes, one commit at a time, as a trigger would
+ * see it: plain writes and transactions (not batches).
+ */
+export async function recordWrites(run: () => Promise<unknown>): Promise<SeenWrite[]> {
+  const seen: SeenWrite[] = [];
+  const undo: (() => void)[] = [];
+  const patch = <T extends object>(proto: T, name: keyof T & string, wrap: (orig: Function) => Function) => {
+    const orig = (proto as Record<string, Function>)[name];
+    (proto as Record<string, Function>)[name] = wrap(orig);
+    undo.push(() => ((proto as Record<string, Function>)[name] = orig));
+  };
+  for (const m of ['set', 'update', 'delete', 'create'] as const) {
+    patch(DocumentReference.prototype, m, (orig) => async function (this: DocumentReference, ...args: unknown[]) {
+      const before = await this.get();
+      const out = await orig.apply(this, args);
+      seen.push({ path: this.path, before, after: await this.get() });
+      return out;
+    });
+  }
+  patch(Firestore.prototype, 'runTransaction', (orig) => async function (this: Firestore, fn: (tx: Transaction) => unknown, opts?: unknown) {
+    let before = new Map<string, Promise<DocumentSnapshot>>();
+    let written = new Map<string, DocumentReference>();
+    const out = await orig.call(this, async (tx: Transaction) => {
+      // A retry starts again.
+      before = new Map();
+      written = new Map();
+      const proxy: Transaction = new Proxy(tx, {
+        get(t, key) {
+          const v = Reflect.get(t, key, t);
+          if (key === 'get') {
+            return async (ref: DocumentReference, ...rest: unknown[]) => {
+              const snap = await v.call(t, ref, ...rest);
+              if (ref instanceof DocumentReference) before.set(ref.path, Promise.resolve(snap));
+              return snap;
+            };
+          }
+          if (key === 'set' || key === 'update' || key === 'delete' || key === 'create') {
+            return (ref: DocumentReference, ...rest: unknown[]) => {
+              written.set(ref.path, ref);
+              if (!before.has(ref.path)) before.set(ref.path, ref.get());
+              v.call(t, ref, ...rest);
+              return proxy;
+            };
+          }
+          return typeof v === 'function' ? v.bind(t) : v;
+        },
+      });
+      const result = await fn(proxy);
+      // Read before the commit.
+      await Promise.all(before.values());
+      return result;
+    }, opts);
+    for (const [path, ref] of written) seen.push({ path, before: await before.get(path)!, after: await ref.get() });
+    return out;
+  });
+  try {
+    await run();
+  } finally {
+    for (const u of undo.reverse()) u();
+  }
+  return seen;
 }

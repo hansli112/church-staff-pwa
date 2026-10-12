@@ -11,7 +11,6 @@ import {
   calendarList,
   calendarSelect,
   calendarWrite,
-  eventRosterDays,
   GoogleAuthRevoked,
   googleApi,
   monthOf,
@@ -21,6 +20,7 @@ import {
   type GoogleApi,
   type OAuthConfig,
 } from '../src/calendar.js';
+import { eventRosterDays } from '../src/eventRosters.js';
 import { seal, unseal } from '../src/sealing.js';
 import { notify, webhookSave } from '../src/webhook.js';
 import type { ChurchTimeZone } from '../src/timeZones.js';

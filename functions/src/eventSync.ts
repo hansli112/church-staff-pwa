@@ -1,8 +1,9 @@
-import { FieldValue, Timestamp, type QueryDocumentSnapshot } from 'firebase-admin/firestore';
+import { Timestamp, type QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 import { isChurchOpen } from './access.js';
-import { calendarAccess, eventRosterDays, fromEvent, type CalDeps, type CalendarEvent } from './calendar.js';
+import { calendarAccess, type CalDeps, type CalendarEvent } from './calendar.js';
 import { DAY_MS } from './common.js';
+import { cancelGone, eventRosterDays, followGoogle, isCancelled, isEvent, relinkTo, takeTimeZone } from './eventRosters.js';
 import { dateKeyIn, earliestDay, instantOf, instantOfTime, timeZoneOf, timeZonesAt, type ChurchTimeZone } from './timeZones.js';
 
 /**
@@ -59,7 +60,7 @@ export async function syncEventRosters(deps: CalDeps): Promise<SyncCounts> {
   ]);
   const byChurch = new Map<string, Map<string, QueryDocumentSnapshot>>();
   for (const d of [...ahead.docs, ...cancelled.docs]) {
-    if (d.get('kind') !== 'event') continue;
+    if (!isEvent(d)) continue;
     const cid = d.ref.parent.parent!.id;
     if (!byChurch.has(cid)) byChurch.set(cid, new Map());
     byChurch.get(cid)!.set(d.id, d);
@@ -133,49 +134,21 @@ async function syncOne(
 ): Promise<Outcome> {
   const madeOn = r.get('calendarId') as string | undefined;
   if (madeOn && madeOn !== calendarId) return null;
-  const eventId = r.get('eventId') as string;
-  const isCancelled = r.get('cancelledAt') != null;
-  const e = await deps.google.get(token, calendarId, eventId);
-  if (e && !e.cancelled) {
-    const next = { ...fromEvent(e, timeZone), ...stamps(e, calendarId) };
-    if (isCancelled) {
-      // Back from Google's trash: on again, as quietly as it went.
-      await r.ref.update({ ...next, cancelledAt: FieldValue.delete(), via: 'restore' });
-      return 'restored';
-    }
-    const same =
-      r.get('title') === next.title &&
-      r.get('dateKey') === next.dateKey &&
-      r.get('endDateKey') === next.endDateKey &&
-      Object.entries(stamps(e, calendarId)).every(([k, v]) => r.get(k) === v);
-    if (same) return null;
-    // Moved in Google, by nobody here: whoever moved it in the app before
-    // is told this time.
-    await r.ref.update({ ...next, movedBy: FieldValue.delete() });
-    return 'updated';
-  }
-  if (isCancelled) return null;
+  const e = await deps.google.get(token, calendarId, r.get('eventId') as string);
+  if (e && !e.cancelled) return followGoogle(r, e, calendarId, timeZone);
+  if (isCancelled(r)) return null;
   if (await relink(deps, token, calendarId, timeZone, r)) return 'relinked';
   // Only the calendar it was made on can say the event is gone, and only
   // while it can be read at all.
   if (madeOn !== calendarId || !(await calendarReadable())) return null;
-  await r.ref.update({ cancelledAt: Timestamp.fromDate(deps.now()) });
+  await cancelGone(deps, r);
   return 'cancelled';
 }
-
-/** What a roster records of where its event is, for later runs. */
-const stamps = (e: CalendarEvent, calendarId: string) => ({
-  calendarId,
-  ...(e.recurringEventId ? { recurringEventId: e.recurringEventId } : {}),
-  ...(e.originalStart ? { originalStart: e.originalStart } : {}),
-});
 
 /**
  * A recurring event's day gone under its id but there under another: the
  * same series (or one split off it) on the same day it was, or, when the
  * whole series moved, the nearest day of the same series within three days.
- * Moves the roster there, quietly, then copies the event, so a change of
- * day is told.
  */
 async function relink(deps: CalDeps, token: string, calendarId: string, timeZone: ChurchTimeZone, r: QueryDocumentSnapshot) {
   const series = r.get('recurringEventId') as string | undefined;
@@ -196,27 +169,13 @@ async function relink(deps: CalDeps, token: string, calendarId: string, timeZone
       .filter((e) => e.recurringEventId === series)
       .sort((a, b) => Math.abs(startOf(a) - wasAt) - Math.abs(startOf(b) - wasAt))[0];
   if (!match?.id) return false;
-  const to = r.ref.parent.doc(`ev_${match.id}`);
-  // Marked first, so the trigger tells nobody of the old one going.
-  await r.ref.update({ via: 'relink' });
-  const moved = await deps.db.runTransaction(async (tx) => {
-    const [old, there] = await Promise.all([tx.get(r.ref), tx.get(to)]);
-    // Saved by the app since the mark: try again next run, never loudly.
-    if (!old.exists || there.exists || old.get('via') !== 'relink') return false;
-    const { cancelledAt: _gone, movedBy: _by, ...data } = old.data()!;
-    tx.set(to, { ...data, eventId: match.id, via: 'relink', updatedAt: FieldValue.serverTimestamp() });
-    tx.delete(r.ref);
-    return true;
-  });
-  if (!moved) return false;
-  await to.update({ ...fromEvent(match, timeZone), ...stamps(match, calendarId) });
-  return true;
+  return relinkTo(deps, r, { ...match, id: match.id }, calendarId, timeZone);
 }
 
 /**
  * After the church's time zone changed: its events' rosters still to come
  * take their days on the new clock, as the calendar now shows them, and
- * quietly: nothing moved (a `timeZone` write tells nobody, rosterChange.ts).
+ * quietly: nothing moved (eventRosters.ts).
  * Without the calendar or with Google out of reach they are left for the
  * next sync, which takes them along and tells.
  */
@@ -228,14 +187,10 @@ export async function followTimeZone(deps: CalDeps, cid: string, timeZone: Churc
   let moved = 0;
   for (const r of rosters.docs) {
     const madeOn = r.get('calendarId') as string | undefined;
-    if (r.get('kind') !== 'event' || r.get('cancelledAt') != null || (madeOn && madeOn !== calendarId)) continue;
+    if (!isEvent(r) || isCancelled(r) || (madeOn && madeOn !== calendarId)) continue;
     try {
       const e = await deps.google.get(token, calendarId, r.get('eventId') as string);
-      if (!e || e.cancelled) continue;
-      const days = eventRosterDays(e, timeZone);
-      if (r.get('dateKey') === days.dateKey && r.get('endDateKey') === days.endDateKey) continue;
-      await r.ref.update({ ...days, via: 'timeZone', movedBy: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() });
-      moved++;
+      if (e && !e.cancelled && (await takeTimeZone(r, e, timeZone))) moved++;
     } catch (e) {
       console.error(`event roster time zone ${cid}/${r.id}`, e);
     }

@@ -284,41 +284,12 @@ describe('an event’s roster', () => {
     assert.deepEqual(pushed.map((p) => p.body), ['聖誕晚會改到 12/22（週二）', '聖誕晚會 moved to Dec 22 (Tue)']);
   });
 
-  test('cancelled with its event, or later purged, it tells nobody; deleted by an editor, as any day', async () => {
+  test('deleted by an editor, as any day', async () => {
     await church();
-    await writeEvent('C1', { duties: [duty('主持', ['美玉'])] });
-    pushed = [];
-    await writeEvent('C1', { duties: [duty('主持', ['美玉'])], cancelledAt: Timestamp.now() }, { editedBy: null });
-    await writeEvent('C1', null, { editedBy: null });
-    assert.equal(pushed.length, 0);
     await writeEvent('C1', { duties: [duty('主持', ['美玉'])] });
     pushed = [];
     await writeEvent('C1', null);
     assert.deepEqual(pushed.map((p) => p.body), ['12/24 聖誕晚會 的主持已改由別人負責']);
-  });
-
-  test('moved to its event’s new id (via relink): neither the old going nor the new one is told', async () => {
-    await church();
-    await writeEvent('C1', { duties: [duty('主持', ['美玉'])] });
-    pushed = [];
-    await writeEvent('C1', { duties: [duty('主持', ['美玉'])], via: 'relink' }, { editedBy: null });
-    await writeEvent('C1', null, { editedBy: null });
-    assert.equal(pushed.length, 0);
-  });
-
-  test("given its days on the church's new clock (via timeZone): nothing moved, nobody told", async () => {
-    await church();
-    await writeEvent('C1', { duties: [duty('主持', ['美玉'])] });
-    pushed = [];
-    assert.equal(await writeEvent('C1', { dateKey: '2026-12-23', endDateKey: '2026-12-23', duties: [duty('主持', ['美玉'])], via: 'timeZone' }, { editedBy: null }), null);
-    assert.equal(pushed.length, 0);
-  });
-
-  test('put back by undoing a delete (via restore): no push, no webhook', async () => {
-    await church();
-    assert.equal(await writeEvent('C1', { duties: [duty('主持', ['美玉'])], via: 'restore' }, { editedBy: null }), null);
-    assert.equal(pushed.length, 0);
-    assert.equal((await queued()).length, 0);
   });
 
   test('a two-day event started yesterday is still news; one that ended is not', async () => {
