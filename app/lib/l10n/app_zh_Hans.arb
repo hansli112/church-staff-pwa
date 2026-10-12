@@ -401,7 +401,7 @@
   "addToHomeOpenTitle": "回到主屏幕，点新图标打开",
   "addToHomeMenu": "点 {browser} 的菜单",
   "addToHomeChromeInstall": "添加到主屏幕 → 安装",
-  "addToHomeChromeInstallHint": "旧版可能叫“安装应用”。请选安装，不是创建快捷方式",
+  "addToHomeChromeInstallHint": "旧版可能叫“添加到主屏幕”或“安装应用”。请选安装，不是创建快捷方式",
   "addToHomeFirefoxInstallHint": "再按手机提示添加；如果只有“添加到主屏幕”，可能只会创建浏览器快捷方式",
   "addToHomeTrouble": "找不到“添加到主屏幕”？",
   "addToHomeSafariTrouble": "先把共享面板往上拉，查看下方的操作；还是找不到时，点最下方的“编辑操作”查看",

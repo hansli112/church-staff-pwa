@@ -30,9 +30,9 @@ const fontsWaitLimit = Duration(seconds: 3);
 ///
 /// The font is the one the engine draws these in for a browser whose
 /// language is [browserLanguage] (navigator.language), as its font fallback
-/// picks (font_fallbacks.dart, `_selectFont`): Traditional Chinese, Japanese
-/// or Korean for theirs, else Simplified Chinese, which it takes on a tie.
-/// The app's language does not change it.
+/// picks (font_fallbacks.dart, `_selectFont`): Traditional Chinese, Hong
+/// Kong's, Japanese or Korean for theirs, else Simplified Chinese, which it
+/// takes on a tie. The app's language does not change it.
 ///
 /// Picked from the engine's copy of the lists (font_fallback_data.dart),
 /// whose files go from the least used characters to the most: two from each
@@ -40,6 +40,7 @@ const fontsWaitLimit = Duration(seconds: 3);
 /// on a Flutter upgrade: a new copy may split them differently.
 String commonCharacters(String browserLanguage) => switch (browserLanguage) {
   'zh-Hant' || 'zh-TW' || 'zh-MO' => '玖誦砌蠶渦蔻瀚舜濤蔚滷蒜瑩菸毅芒槽芽疊蘿淚蒂洞舖棄苗武耳減聖泰詳瀏該比著服聯心正',
+  'zh-HK' => '昊糯樟茸拱竄戳綫揉筍户綺昂罷拘盃惱籌斤胃捕纖拆糕幻穩扣禁ェ・怎羅投育康約工相台最',
   'ja' => '息繁幅百導盛復策振群星緒扱級富準座絶役聞想福工組常素天細売次対機後索合株月点べソ',
   'ko' => '智늪市뀜比룽最뺨小랏英쏙꽉얌돕썩뜬앵랬앗뢰옛맘젝뜨읽벨좌몰첨맨잘르외른임미은로시',
   _ => '極舅搓級梧缤暮磷拐绽挪缆扯纲悔筛敦聪撒胞措绑忧珍尊瓣恋稳庆突局秘带签完码外次もデ',

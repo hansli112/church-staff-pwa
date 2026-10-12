@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:martha/app.dart' show shownLanguagePref;
 import 'package:martha/core/languages.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 

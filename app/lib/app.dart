@@ -166,11 +166,6 @@ class _Column extends StatelessWidget {
   }
 }
 
-/// Where this device keeps the language last shown, for the web build's
-/// font warmup when the app opens next (main.dart): the profile's choice is
-/// not known so early.
-const shownLanguagePref = 'shownLanguage';
-
 /// Keeps users/{uid}.appLocale on the language shown, chosen or the
 /// device's, for the server's pushes; written only when it changes. Kept on
 /// this device too ([shownLanguagePref]).

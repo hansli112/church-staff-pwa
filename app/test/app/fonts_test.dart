@@ -256,7 +256,14 @@ void main() {
   });
 
   testWidgets('the most used characters are those of the font the browser’s language draws in', (tester) async {
-    for (final (browser, font) in [('zh-TW', 'TC'), ('ja', 'JP'), ('ko', 'KR'), ('zh-CN', 'SC'), ('en-US', 'SC')]) {
+    for (final (browser, font) in [
+      ('zh-TW', 'TC'),
+      ('zh-HK', 'HK'),
+      ('ja', 'JP'),
+      ('ko', 'KR'),
+      ('zh-CN', 'SC'),
+      ('en-US', 'SC'),
+    ]) {
       final laidOut = <String>[];
       unawaited(
         warmUpFonts(
@@ -273,6 +280,7 @@ void main() {
       expect(laidOut.last, commonCharacters(browser), reason: browser);
       expect(commonCharacters(browser), switch (font) {
         'TC' => contains('誦'),
+        'HK' => contains('竄'),
         'JP' => contains('べ'),
         'KR' => contains('읽'),
         _ => contains('缤'),

@@ -75,3 +75,8 @@ enum AppLanguage {
   /// else English, which more people read than Chinese.
   static AppLanguage resolve(Iterable<Locale> preferred) => preferred.map(of).nonNulls.firstOrNull ?? en;
 }
+
+/// Where this device keeps the language last shown, for the web build's
+/// font warmup when the app opens next (main.dart): the profile's choice is
+/// not known so early.
+const shownLanguagePref = 'shownLanguage';

@@ -6,8 +6,7 @@ import 'package:martha/core/languages.dart';
 import '../support/harness.dart';
 import '../support/seed.dart';
 
-// Other languages run longer than Chinese, Korean and English the most:
-// every main page, as an admin who sees all of it, on a phone in each
+// Other languages run longer than Chinese: every main page, as an admin who sees all of it, on a phone in each
 // language, must lay out without overflowing (a widget test fails on any
 // overflow).
 const _pages = [
