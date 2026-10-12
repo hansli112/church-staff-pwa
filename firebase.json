@@ -45,12 +45,12 @@
         "type": 301
       },
       {
-        "source": "/ja",
+        "regex": "^/ja$",
         "destination": "/ja/",
         "type": 301
       },
       {
-        "source": "/ko",
+        "regex": "^/ko$",
         "destination": "/ko/",
         "type": 301
       },
