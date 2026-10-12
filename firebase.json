@@ -35,12 +35,12 @@
         "type": 301
       },
       {
-        "source": "/zh-Hans",
+        "regex": "^/zh-Hans$",
         "destination": "/zh-Hans/",
         "type": 301
       },
       {
-        "source": "/en",
+        "regex": "^/en$",
         "destination": "/en/",
         "type": 301
       },

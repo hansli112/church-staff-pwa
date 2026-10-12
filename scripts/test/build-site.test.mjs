@@ -101,12 +101,14 @@ describe('a translated page is its Traditional Chinese page, translated', () => 
 test("firebase.json serves every page at its path", () => {
   const hosting = JSON.parse(read('firebase.json')).hosting;
   const rewrites = new Map(hosting.rewrites.filter((r) => r.destination).map((r) => [r.source, r.destination]));
-  const redirects = new Map(hosting.redirects.map((r) => [r.source, r.destination]));
+  // An exact path: Hosting's "source": "/en" also takes /en/, and would send it to itself.
+  const redirects = new Map(hosting.redirects.filter((r) => r.regex).map((r) => [r.regex, r.destination]));
+  assert.ok(!hosting.redirects.some((r) => translations.some((tag) => r.source?.startsWith(`/${tag}`))), 'no glob redirects for a language');
   for (const path of listed.filter((p) => !p.endsWith('/'))) {
     assert.equal(rewrites.get(path), `${path}.html`, `${path}: a rewrite to its file`);
     assert.ok(hosting.rewrites.findIndex((r) => r.source === path) < hosting.rewrites.findIndex((r) => r.source === '**'), `${path}: before the app's`);
   }
-  for (const tag of translations) assert.equal(redirects.get(`/${tag}`), `/${tag}/`, `/${tag} to its front page`);
+  for (const tag of translations) assert.equal(redirects.get(`^/${tag}$`), `/${tag}/`, `/${tag} to its front page`);
   assert.deepEqual(relative(out, fileOf('/en/')), 'en/index.html');
 });
 
