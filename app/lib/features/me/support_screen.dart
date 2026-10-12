@@ -75,7 +75,16 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(Space.l, Space.s, Space.l, Space.s),
-            child: Text(l10n.supportBody, style: AppText.body.copyWith(color: c.secondaryLabel)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.supportVerse, style: AppText.body.copyWith(color: c.label, height: 1.6)),
+                const SizedBox(height: Space.xs),
+                Text(l10n.supportVerseSource, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
+                const SizedBox(height: Space.m),
+                Text(l10n.supportBody, style: AppText.body.copyWith(color: c.secondaryLabel)),
+              ],
+            ),
           ),
           if (funding != null && funding.target > 0) _FundingSection(funding),
           products.when(

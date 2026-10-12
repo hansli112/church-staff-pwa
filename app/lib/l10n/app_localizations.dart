@@ -2131,10 +2131,22 @@ abstract class L10n {
   /// **'支持馬大別忙'**
   String get support;
 
+  /// No description provided for @supportVerse.
+  ///
+  /// In zh, this message translates to:
+  /// **'乃要均平，就是要你們的富餘，現在可以補他們的不足，使他們的富餘，將來也可以補你們的不足，這就均平了。'**
+  String get supportVerse;
+
+  /// No description provided for @supportVerseSource.
+  ///
+  /// In zh, this message translates to:
+  /// **'哥林多後書 8:14'**
+  String get supportVerseSource;
+
   /// No description provided for @supportBody.
   ///
   /// In zh, this message translates to:
-  /// **'馬大別忙免費給每間教會使用，雲端費用由大家一起分擔：大的扶持小的，有餘的補不足的。支持是自願的，不會多出任何功能'**
+  /// **'馬大別忙免費給每間教會使用，雲端費用由大家一起分擔。支持完全自願，教會能用的功能都一樣'**
   String get supportBody;
 
   /// No description provided for @supportTips.

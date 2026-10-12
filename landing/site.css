@@ -146,6 +146,7 @@ p { margin: 0 0 16px; }
 .page .wrap { padding-top: 40px; padding-bottom: 64px; }
 .narrow { max-width: 720px; }
 .page h1 { font-size: clamp(1.875rem, 5vw, 2.5rem); font-weight: 800; margin-bottom: 12px; }
+.page .verse { margin: 24px 0; }
 .panel { background: var(--bg2); border-radius: 18px; padding: 24px; margin-bottom: 16px; }
 .panel h2 { font-size: 1.1875rem; font-weight: 700; margin-bottom: 12px; }
 .panel ul { margin: 0 0 16px; padding-left: 24px; }
