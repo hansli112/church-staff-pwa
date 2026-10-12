@@ -8,7 +8,7 @@ import { getStorage } from 'firebase-admin/storage';
 
 import type { GoogleApi } from '../src/calendar.js';
 import { churchPreview, createChurch, deleteChurch, purgeDeletedChurches, restoreChurch, setChurchTimeZone, type PurgeDeps } from '../src/church.js';
-import { emailHash } from '../src/claim.js';
+import { addPending, callerKey, waitingFor } from '../src/pendingMembers.js';
 import { seal } from '../src/sealing.js';
 import { nameKey } from '../src/text.js';
 import { webhookSave } from '../src/webhook.js';
@@ -193,7 +193,7 @@ describe('suspension', () => {
 describe('purging forgets everything about the church', () => {
   const bucket = getStorage().bucket('demo-martha.appspot.com');
   const key = randomBytes(32).toString('base64');
-  const hash = emailHash('mei@example.com');
+  const meiKey = callerKey(caller('mei', { email: 'mei@example.com' }))!;
 
   /** A church with something in every store that keeps anything per church. */
   async function everyStore(cid: string, pendingId: string) {
@@ -215,8 +215,9 @@ describe('purging forgets everything about the church', () => {
     // Invites
     await db.doc(`invites/INVITE${cid.toUpperCase()}`).set({ cid, expiresAt: Timestamp.now() });
     // A pending member from a move, in the index shared with other churches
-    await db.doc(`churches/${cid}/pendingMembers/${pendingId}`).set({ name: '美玉', emailHash: hash });
-    await db.doc(`pendingIndex/${hash}`).set({ churches: { [cid]: pendingId } }, { merge: true });
+    const w = db.bulkWriter();
+    addPending(deps, w, cid, { uid: pendingId, email: 'mei@example.com', data: { name: '美玉' } });
+    await w.close();
     // Logo and icons
     await bucket.file(`churches/${cid}/logo.png`).save('png');
     await bucket.file(`churches/${cid}/logo-1-icon-192.png`).save('png');
@@ -269,7 +270,7 @@ describe('purging forgets everything about the church', () => {
     assert.deepEqual(after.filter((line) => /gone/i.test(line)), []);
     const live = (lines: string[]) => lines.filter((line) => !/gone/i.test(line) && !line.startsWith('pendingIndex/'));
     assert.deepEqual(live(after), live(before));
-    assert.deepEqual((await db.doc(`pendingIndex/${hash}`).get()).get('churches'), { Live: 'p-live' });
+    assert.deepEqual(await waitingFor(deps, meiKey), [['Live', 'p-live']]);
     assert.deepEqual(revoked, ['refresh-Gone'], 'its Google grant is revoked');
   });
 

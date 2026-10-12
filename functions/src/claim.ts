@@ -1,10 +1,7 @@
-import { createHash } from 'node:crypto';
-
-import { FieldValue } from 'firebase-admin/firestore';
-
 import { churchAccess, churchClosed, isChurchOpen } from './access.js';
 import { fail, id, requireCaller, serverTime, type Caller, type Deps } from './common.js';
 import { personName } from './limits.js';
+import { callerKey, dropPending, waitingFor, waitsFor } from './pendingMembers.js';
 
 /**
  * 認領與合併: a pending member (moved from self-host) becomes a real member.
@@ -19,28 +16,18 @@ import { personName } from './limits.js';
  * groups and zones, the rosters that pointed at the pending member point at
  * them, and the pending member and its index entry are deleted.
  */
-/** The email as the pending index (pendingIndex/{hash}) keys it. */
-export const emailHash = (email: string) => createHash('sha256').update(email.trim().toLowerCase()).digest('hex');
-
-/** The verified email's hash, or null: an unverified email finds nothing. */
-function callerHash(c: Caller) {
-  return c.emailVerified && c.email ? emailHash(c.email) : null;
-}
-
 /** Pending members waiting for the caller, in open churches. */
 export async function pendingClaims(deps: Deps, caller: Caller | null) {
   const c = requireCaller(caller);
-  const hash = callerHash(c);
-  if (!hash) return { claims: [] };
-  const index = await deps.db.doc(`pendingIndex/${hash}`).get();
-  const entries = Object.entries((index.get('churches') as Record<string, string> | undefined) ?? {});
+  const key = callerKey(c);
+  if (!key) return { claims: [] };
   const claims = [];
-  for (const [cid, pid] of entries) {
+  for (const [cid, pid] of await waitingFor(deps, key)) {
     const [church, pending] = await Promise.all([
       deps.db.doc(`churches/${cid}`).get(),
       deps.db.doc(`churches/${cid}/pendingMembers/${pid}`).get(),
     ]);
-    if (!isChurchOpen(church) || !pending.exists || pending.get('emailHash') !== hash) continue;
+    if (!isChurchOpen(church) || !pending.exists || !waitsFor(pending, key)) continue;
     claims.push({ churchId: cid, churchName: church.get('name') as string, pendingId: pid, name: pending.get('name') as string });
   }
   return { claims };
@@ -73,37 +60,6 @@ async function repoint(deps: Deps, cid: string, pid: string, uid: string, roster
       if (changed) tx.update(ref, { duties: next });
     });
   for (let i = 0; i < rosterIds.length; i += 10) await Promise.all(rosterIds.slice(i, i + 10).map(one));
-}
-
-/** Deletes the pending member and its index entry. */
-async function dropPending(deps: Deps, cid: string, pending: FirebaseFirestore.DocumentSnapshot) {
-  const hash = pending.get('emailHash') as string | null;
-  await pending.ref.delete();
-  if (hash) await deps.db.doc(`pendingIndex/${hash}`).set({ churches: { [cid]: FieldValue.delete() } }, { merge: true });
-}
-
-/** Drops the index entries of church [cid]'s pending members: the church is purged. */
-export async function forgetPendingClaims(deps: Deps, cid: string) {
-  const pending = await deps.db.collection(`churches/${cid}/pendingMembers`).get();
-  for (const p of pending.docs) {
-    const hash = p.get('emailHash') as string | null;
-    if (hash) await deps.db.doc(`pendingIndex/${hash}`).set({ churches: { [cid]: FieldValue.delete() } }, { merge: true });
-  }
-}
-
-/**
- * After any pending member is deleted (an admin dropping it, too, which the
- * app does directly): its index entry goes, if it still points at it.
- */
-export async function onPendingMemberDeleted(deps: Deps, cid: string, pending: FirebaseFirestore.DocumentSnapshot) {
-  const hash = pending.get('emailHash') as string | null;
-  if (!hash) return false;
-  const ref = deps.db.doc(`pendingIndex/${hash}`);
-  return deps.db.runTransaction(async (tx) => {
-    if ((await tx.get(ref)).get(`churches.${cid}`) !== pending.id) return false;
-    tx.set(ref, { churches: { [cid]: FieldValue.delete() } }, { merge: true });
-    return true;
-  });
 }
 
 const union = (a: unknown, b: unknown) => [
@@ -140,8 +96,8 @@ function mergedMember(member: FirebaseFirestore.DocumentSnapshot, pending: Fireb
 export async function claimPending(deps: Deps, caller: Caller | null, data: unknown) {
   const c = requireCaller(caller);
   const pid = id((data as { pendingId?: unknown })?.pendingId);
-  const hash = callerHash(c);
-  if (!hash) fail('failed-precondition', 'unverifiedEmail');
+  const key = callerKey(c);
+  if (!key) fail('failed-precondition', 'unverifiedEmail');
   // Not a member yet, most likely: anyone signed in, but the church open.
   const { cid } = await churchAccess(deps, c, data, 'anyone');
   const pending = await deps.db.runTransaction(async (tx) => {
@@ -156,7 +112,7 @@ export async function claimPending(deps: Deps, caller: Caller | null, data: unkn
       if (member.exists) return null;
       fail('not-found', 'notFound');
     }
-    if (pending.get('emailHash') !== hash) fail('permission-denied', 'permissionDenied');
+    if (!waitsFor(pending, key)) fail('permission-denied', 'permissionDenied');
     if (member.exists) {
       // Read current preferences in the transaction: concurrent edits are kept.
       tx.update(member.ref, mergedMember(member, pending));

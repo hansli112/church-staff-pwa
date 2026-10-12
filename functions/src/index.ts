@@ -25,6 +25,7 @@ import * as calendar from './calendar.js';
 import * as eventSync from './eventSync.js';
 import * as church from './church.js';
 import * as claim from './claim.js';
+import * as pendingMembers from './pendingMembers.js';
 import * as churchLink from './churchLink.js';
 import { churchPage as churchPageHandler } from './churchPage.js';
 import { PROD_PROJECT, REGION, appUrl, runEach, type Caller, type Deps } from './common.js';
@@ -136,7 +137,7 @@ export const mergePending = callable(claim.mergePending);
 export const onPendingMemberDeleted = onDocumentDeleted(
   { region: REGION, document: 'churches/{cid}/pendingMembers/{pid}' },
   async (event) => {
-    if (event.data) await claim.onPendingMemberDeleted(deps(), event.params.cid, event.data);
+    if (event.data) await pendingMembers.onPendingMemberDeleted(deps(), event.params.cid, event.data);
   },
 );
 

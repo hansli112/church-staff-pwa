@@ -1,11 +1,11 @@
-import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { Timestamp } from 'firebase-admin/firestore';
 import type { Storage } from 'firebase-admin/storage';
 
 import { makersLanguage, newChurchTimeZone, openChurch } from './church.js';
-import { emailHash } from './claim.js';
 import { fail, requireCaller, text, type Caller, type Deps } from './common.js';
 import { buildImport, type SelfHostSnapshot, type SourceDoc } from './importer.js';
 import { TEXT_LIMITS } from './limits.js';
+import { addPending, forgetPending } from './pendingMembers.js';
 import { nameKey } from './text.js';
 
 /**
@@ -150,20 +150,20 @@ export async function moveCommit(deps: MoveDeps, caller: Caller | null, data: un
   const write = (p: Promise<unknown>) => void p.catch((e) => failures.push(e));
   for (const m of built.members) {
     if (m === me) continue;
-    const hash = m.email ? emailHash(m.email) : null;
-    write(w.set(root.collection('pendingMembers').doc(m.uid), {
-      name: m.name,
+    addPending(deps, w, cid, {
+      uid: m.uid,
       email: m.email,
-      emailHash: hash,
-      role: m.role,
-      groups: m.groups,
-      zones: m.zones,
-      zoneTypes: m.zoneTypes,
-      notificationPrefs: m.notificationPrefs,
-      rosterIds: rosterIds.get(m.uid) ?? [],
-      importedAt: now,
-    }));
-    if (hash) write(w.set(db.doc(`pendingIndex/${hash}`), { churches: { [cid]: m.uid } }, { merge: true }));
+      data: {
+        name: m.name,
+        role: m.role,
+        groups: m.groups,
+        zones: m.zones,
+        zoneTypes: m.zoneTypes,
+        notificationPrefs: m.notificationPrefs,
+        rosterIds: rosterIds.get(m.uid) ?? [],
+        importedAt: now,
+      },
+    }).forEach(write);
   }
   for (const r of built.rosters) {
     const duties = me
@@ -190,10 +190,8 @@ export async function moveCommit(deps: MoveDeps, caller: Caller | null, data: un
     });
   } catch (e) {
     // Taken in the meantime: drop what was written under the unused ID.
+    await forgetPending(deps, cid);
     await db.recursiveDelete(root);
-    for (const m of built.members) {
-      if (m.email) await db.doc(`pendingIndex/${emailHash(m.email)}`).set({ churches: { [cid]: FieldValue.delete() } }, { merge: true });
-    }
     throw e;
   }
   await deps.bucket.file(path).delete({ ignoreNotFound: true });

@@ -5,11 +5,11 @@ import { churchAccess, churchClosed, churchId, isChurchOpen } from './access.js'
 import { clearCache, forgetCalendar, type CalDeps } from './calendar.js';
 import { forgetLinkSource, moveLinkFetch } from './churchLink.js';
 import { followTimeZone } from './eventSync.js';
-import { forgetPendingClaims } from './claim.js';
 import { DAY_MS, fail, requireCaller, runEach, serverTime, text, type Caller, type Deps } from './common.js';
 import { forgetInvites } from './invites.js';
 import { languageOf, words } from './languages.js';
 import { personName, TEXT_LIMITS } from './limits.js';
+import { forgetPending } from './pendingMembers.js';
 import { nameKey } from './text.js';
 import { forgetWebhook } from './webhook.js';
 import { DEFAULT_TIME_ZONE, isChurchTimeZone, type ChurchTimeZone } from './timeZones.js';
@@ -187,7 +187,7 @@ export function forgetChurch(deps: PurgeDeps, cid: string) {
     churchLink: () => forgetLinkSource(deps, cid),
     invites: () => forgetInvites(deps, cid),
     // Reads the pending members, so before the tree goes.
-    pendingClaims: () => forgetPendingClaims(deps, cid),
+    pendingClaims: () => forgetPending(deps, cid),
     // The logo and the icons made from it.
     logo: async () => deps.bucket?.deleteFiles({ prefix: `churches/${cid}/` }),
   });

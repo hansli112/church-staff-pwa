@@ -3,8 +3,9 @@ import { beforeEach, describe, test } from 'node:test';
 
 import { getStorage } from 'firebase-admin/storage';
 
-import { claimPending, emailHash, mergePending, onPendingMemberDeleted, pendingClaims } from '../src/claim.js';
+import { claimPending, mergePending, pendingClaims } from '../src/claim.js';
 import { moveCommit, type MoveDeps } from '../src/move.js';
+import { callerKey, onPendingMemberDeleted, waitingFor } from '../src/pendingMembers.js';
 import { caller, clearFirestore, db, deps, rejectsWith } from './support.js';
 
 const bucket = getStorage().bucket('demo-martha.appspot.com');
@@ -32,6 +33,8 @@ async function moved(name = '恩典堂', mover = 'mover') {
 }
 
 const mei = (extra = {}) => caller('new-mei', { email: 'mei@example.com', ...extra });
+/** The churches the index says wait for [email]. */
+const indexed = async (email: string) => (await waitingFor(deps, callerKey(caller('x', { email }))!)).map(([cid]) => cid);
 const uidsOn = async (cid: string, day: string) =>
   ((await db.doc(`churches/${cid}/rosters/${day}_sunday`).get()).get('duties') as { uids: Record<string, string> }[]).map((x) => x.uids);
 
@@ -60,7 +63,7 @@ describe('claiming', () => {
     assert.deepEqual(await uidsOn(cid, '2026-10-04'), [{ 李美玉: 'new-mei' }, { 陳志豪: 'old-hao' }]);
     assert.deepEqual(await uidsOn(cid, '2026-10-11'), [{ 李美玉: 'new-mei' }]);
     assert.equal((await db.doc(`churches/${cid}/pendingMembers/old-mei`).get()).exists, false);
-    assert.equal((await db.doc(`pendingIndex/${emailHash('mei@example.com')}`).get()).get(`churches.${cid}`), undefined);
+    assert.deepEqual(await indexed('mei@example.com'), []);
     assert.deepEqual((await pendingClaims(deps, mei())).claims, []);
   });
 
@@ -119,7 +122,7 @@ describe('dropping pending data', () => {
     const snap = await ref.get();
     await ref.delete();
     assert.equal(await onPendingMemberDeleted(deps, cid, snap), true);
-    assert.equal((await db.doc(`pendingIndex/${emailHash('hao@example.com')}`).get()).get(`churches.${cid}`), undefined);
+    assert.deepEqual(await indexed('hao@example.com'), []);
     assert.equal(await onPendingMemberDeleted(deps, cid, snap), false, 'nothing left to do');
   });
 });
@@ -134,7 +137,7 @@ describe('merging', () => {
     assert.deepEqual(m.get('zoneTypes'), ['sunday']);
     assert.deepEqual(await uidsOn(cid, '2026-10-04'), [{ 李美玉: 'old-mei' }, { 陳志豪: 'hao-google' }]);
     assert.equal((await db.doc(`churches/${cid}/pendingMembers/old-hao`).get()).exists, false);
-    assert.equal((await db.doc(`pendingIndex/${emailHash('hao@example.com')}`).get()).get(`churches.${cid}`), undefined);
+    assert.deepEqual(await indexed('hao@example.com'), []);
   });
 
   test('claim and admin merge union small groups and opt-outs without overwriting current preferences with stale pending defaults', async () => {

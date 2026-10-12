@@ -5,7 +5,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 
 import { purgeDeletedChurches } from '../src/church.js';
-import { emailHash } from '../src/claim.js';
+import { pendingClaims } from '../src/claim.js';
 import { MOVE_LIMITS, moveCommit, movePreview, type MoveDeps } from '../src/move.js';
 import { caller, clearFirestore, db, deps, purgeDeps, rejectsWith } from './support.js';
 
@@ -118,7 +118,7 @@ describe('self-serve move', () => {
     assert.equal((await db.doc(`churches/${churchId}/pendingMembers/old-pastor`).get()).exists, false);
     const roster = await db.doc(`churches/${churchId}/rosters/2026-10-04_sunday`).get();
     assert.deepEqual(roster.get('duties')[0].uids, { 王牧師: 'newadmin' });
-    assert.equal((await db.doc(`pendingIndex/${emailHash('pastor@example.com')}`).get()).exists, false);
+    assert.deepEqual(await pendingClaims(d, caller('p', { email: 'pastor@example.com' })), { claims: [] });
   });
 
   test('moving preserves small groups and reminder opt-out for pending members and the uploader’s chosen identity, not FCM tokens', async () => {
@@ -143,20 +143,18 @@ describe('self-serve move', () => {
     assert.equal((await db.collection('users').get()).size, 0, 'cross-project notification credentials are never installed');
   });
 
-  test('the pending index is keyed by the email hash, never the email', async () => {
+  test('each pending member is found by its email, any case; the index never holds an email', async () => {
     await upload(moveFile());
     const { churchId } = await moveCommit(d, me, { path: PATH, churchName: '恩典堂' });
+    const found = async (email: string) => (await pendingClaims(d, caller('x', { email }))).claims.map((c) => [c.churchId, c.pendingId]);
+    assert.deepEqual(await found('mei@example.com'), [[churchId, 'old-mei']]);
+    assert.deepEqual(await found(' Pastor@Example.COM '), [[churchId, 'old-pastor']]);
     const index = await db.collection('pendingIndex').get();
-    assert.deepEqual(
-      index.docs.map((x) => x.id).sort(),
-      [emailHash('mei@example.com'), emailHash('pastor@example.com')].sort(),
-    );
-    assert.equal(emailHash(' Pastor@Example.COM '), emailHash('pastor@example.com'));
+    assert.equal(index.size, 2);
     for (const x of index.docs) {
       assert.match(x.id, /^[0-9a-f]{64}$/);
       assert.equal(JSON.stringify(x.data()).includes('@'), false);
     }
-    assert.equal((await db.doc(`pendingIndex/${emailHash('mei@example.com')}`).get()).get(`churches.${churchId}`), 'old-mei');
   });
 
   test('password hashes in the file are ignored', async () => {
@@ -201,8 +199,8 @@ describe('self-serve move', () => {
     const { churchId } = await moveCommit(d, me, { path: PATH, churchName: '恩典堂' });
     await db.doc(`churches/${churchId}`).update({ status: 'deleted', deletedAt: Timestamp.fromDate(new Date('2026-08-01T00:00:00Z')) });
     await purgeDeletedChurches(purgeDeps);
-    const index = await db.doc(`pendingIndex/${emailHash('mei@example.com')}`).get();
-    assert.deepEqual(index.get('churches'), {});
+    assert.deepEqual(await pendingClaims(d, caller('x', { email: 'mei@example.com' })), { claims: [] });
+    assert.ok((await db.collection('pendingIndex').get()).docs.every((x) => !(churchId in (x.get('churches') ?? {}))));
   });
 
   test('the church name must be free', async () => {
