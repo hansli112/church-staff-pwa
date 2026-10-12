@@ -25,18 +25,25 @@ void main() {
         final services = demoServicesIn(language);
         expect(b.services['demo']!.services.map((s) => s.name), services.map((s) => s.name));
         for (final (i, s) in services.indexed) {
-          expect([s.id, s.weekday, s.duties.length, s.events.length], [
-            demoServices[i].id,
-            demoServices[i].weekday,
-            demoServices[i].duties.length,
-            demoServices[i].events.length,
-          ]);
+          expect(
+            [s.id, s.weekday, s.duties.length, s.events.length],
+            [
+              demoServices[i].id,
+              demoServices[i].weekday,
+              demoServices[i].duties.length,
+              demoServices[i].events.length,
+            ],
+          );
           expect(s.duties.toSet(), hasLength(s.duties.length), reason: 'no duty twice in ${s.name}');
         }
         final names = demoMembers(150, language).map((m) => m.name);
         expect(names.toSet(), hasLength(150), reason: 'no two people with one name');
         if (language == AppLanguage.en) {
-          final typed = [b.churches['demo']!.name, ...services.expand((s) => [s.name, ...s.duties]), ...names];
+          final typed = [
+            b.churches['demo']!.name,
+            ...services.expand((s) => [s.name, ...s.duties]),
+            ...names,
+          ];
           expect(typed.where((t) => RegExp(r'[^\x00-\x7F]').hasMatch(t)), isEmpty);
         }
       });
