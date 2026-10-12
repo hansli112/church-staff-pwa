@@ -35,4 +35,10 @@ void main() {
     expect(AppLanguage.fromTag(null), isNull);
     expect(AppLanguage.fromTag('xx'), isNull);
   });
+
+  test("the website's pages in the app's language, which the website then keeps (scripts/build-site.mjs)", () {
+    expect(AppLanguage.zhHant.sitePage('/privacy'), '/privacy?lang=zh-Hant');
+    expect(AppLanguage.zhHans.sitePage('/privacy'), '/zh-Hans/privacy?lang=zh-Hans');
+    expect(AppLanguage.en.sitePage('/terms'), '/en/terms?lang=en');
+  });
 }

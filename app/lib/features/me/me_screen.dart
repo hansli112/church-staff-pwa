@@ -103,8 +103,8 @@ class MeScreen extends ConsumerWidget {
             ),
           ListSection(
             children: [
-              ListRow(title: l10n.privacyPolicy, onTap: () => _openSitePage('/privacy')),
-              ListRow(title: l10n.termsOfService, onTap: () => _openSitePage('/terms')),
+              ListRow(title: l10n.privacyPolicy, onTap: () => _openSitePage(context, '/privacy')),
+              ListRow(title: l10n.termsOfService, onTap: () => _openSitePage(context, '/terms')),
             ],
           ),
           ListSection(
@@ -126,7 +126,8 @@ class MeScreen extends ConsumerWidget {
 
 /// A page of the website (the privacy policy, the terms), which the stores
 /// require the app to link to.
-void _openSitePage(String path) => launchUrl(Uri.parse('${Env.current.webOrigin}$path'));
+void _openSitePage(BuildContext context, String page) =>
+    launchUrl(Uri.parse('${Env.current.webOrigin}${AppLanguage.shownIn(context).sitePage(page)}'));
 
 class _UpdatesSection extends ConsumerWidget {
   const _UpdatesSection();

@@ -56,6 +56,12 @@ enum AppLanguage {
 
   static AppLanguage? fromTag(String? tag) => values.where((l) => l.tag == tag).firstOrNull;
 
+  /// [page] (/privacy) on the website in this language: Traditional Chinese
+  /// at the root, the others under their tag (/en/). `lang` makes the website keep
+  /// it, rather than send the visitor to their browser's language
+  /// (scripts/build-site.mjs).
+  String sitePage(String page) => '${this == zhHant ? page : '/$tag$page'}?lang=$tag';
+
   /// The language for a device or browser asking for [locale], if the app
   /// speaks it. Chinese is Simplified when it says so, or comes from where
   /// Simplified is written (China, Singapore, Malaysia) without saying
