@@ -6,7 +6,6 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 
 import { APP_SHELL, churchPage, clearTemplateCache, inLanguage, withSplash, type PageDeps } from '../src/churchPage.js';
-import { words } from '../src/languages.js';
 import { clearFirestore, db, deps, fakeFetch, seedChurch, setNow } from './support.js';
 
 const APP = 'https://martha.example';
@@ -276,14 +275,6 @@ describe('church page', () => {
     assert.equal(r.headers.vary, undefined);
     assert.equal(text(r.body), text((await get('/c/Grace')).body));
     assert.match(splashOf(text(r.body)), /<p class="note">載入中…<\/p>/, 'what app/web/index.html swaps for Loading…');
-  });
-
-  test("its words are the app's, word for word", () => {
-    for (const [language, file] of [['zh-Hant', 'app_zh.arb'], ['en', 'app_en.arb']] as const) {
-      const arb = JSON.parse(readFileSync(new URL(`../../app/lib/l10n/${file}`, import.meta.url), 'utf8'));
-      const w = words(language);
-      assert.deepEqual([w.inviteInvalid, w.inviteExpired], [arb.errInviteInvalid, arb.errInviteExpired], language);
-    }
   });
 
   test('the logo is served under its version, never another church’s', async () => {

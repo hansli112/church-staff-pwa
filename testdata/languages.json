@@ -1,0 +1,14 @@
+{
+  "about": "Which language the app speaks to a device or browser, from the languages it prefers, in order: the first the app speaks, else English. Every Chinese is Traditional until Simplified is added. app/test/app/languages_test.dart (AppLanguage.resolve) and functions/test/languages.test.ts (browserLanguage) run every row. Add a row here, not to one side.",
+  "preferred": [
+    { "why": "Chinese in Taiwan", "preferred": ["zh-TW"], "language": "zh-Hant" },
+    { "why": "English first, Chinese second", "preferred": ["en-US", "zh-TW"], "language": "en" },
+    { "why": "one the app lacks is passed over for the next", "preferred": ["de-DE", "zh-TW"], "language": "zh-Hant" },
+    { "why": "English anywhere", "preferred": ["en-MY"], "language": "en" },
+    { "why": "none the app speaks: English", "preferred": ["de-DE", "fr"], "language": "en" },
+    { "why": "nothing preferred: English", "preferred": [], "language": "en" },
+    { "why": "Chinese in China is Traditional for now", "preferred": ["zh-CN"], "language": "zh-Hant" },
+    { "why": "Simplified Chinese is Traditional for now", "preferred": ["zh-Hans"], "language": "zh-Hant" },
+    { "why": "Japanese, then Chinese", "preferred": ["ja-JP", "ja", "zh-CN"], "language": "zh-Hant" }
+  ]
+}
