@@ -62,8 +62,16 @@ describe("words the app shows too", () => {
   });
 });
 
+describe('a member who left, in Korean', () => {
+  test('님 after a name; the someone without one takes 이', () => {
+    const ko = words('ko');
+    assert.equal(ko.memberLeft('김민수'), '김민수 님이 교회를 나갔어요');
+    assert.equal(ko.memberLeft(ko.someone), '멤버 한 명이 교회를 나갔어요');
+  });
+});
+
 describe('dates in pushes', () => {
-  test('Chinese: 10/18（週日）, 10/18（周日）; English names the month: Oct 18 (Sun)', () => {
+  test('10/18（週日）, 10/18（周日）, 10/18（日）, 10/18 (일); English names the month: Oct 18 (Sun)', () => {
     const zh = words('zh-Hant');
     const hans = words('zh-Hans');
     const en = words('en');

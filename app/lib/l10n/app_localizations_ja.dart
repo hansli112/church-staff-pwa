@@ -2245,7 +2245,7 @@ class L10nJa extends L10n {
 
   @override
   String nameIsYou(String name) {
-    return '$name（あなた）';
+    return '$name（自分）';
   }
 
   @override

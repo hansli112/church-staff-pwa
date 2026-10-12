@@ -666,7 +666,7 @@
   "linkSourceRetry": "再取得",
   "listSeparator": "、",
   "labelValue": "{label}：{value}",
-  "nameIsYou": "{name}（あなた）",
+  "nameIsYou": "{name}（自分）",
   "churchListSeparator": "」「",
   "dayWithEvents": "{day}、{events}",
   "dotSeparator": "・",

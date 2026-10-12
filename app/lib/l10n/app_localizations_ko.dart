@@ -300,7 +300,7 @@ class L10nKo extends L10n {
   String get gettingStartedServices => '봉사 설정';
 
   @override
-  String get gettingStartedServicesBody => '요일과 배정할 봉사 정하기';
+  String get gettingStartedServicesBody => '요일과 배정할 담당 정하기';
 
   @override
   String get nobodyYet => '미정';
@@ -325,7 +325,7 @@ class L10nKo extends L10n {
 
   @override
   String dutyCount(int count) {
-    return '봉사 $count개';
+    return '담당 $count개';
   }
 
   @override
@@ -348,7 +348,7 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get pickerServes => '이 봉사를 맡는 멤버';
+  String get pickerServes => '이 담당을 맡는 멤버';
 
   @override
   String get pickerOthers => '다른 멤버';
@@ -463,7 +463,7 @@ class L10nKo extends L10n {
 
   @override
   String removed(String name) {
-    return '$name 제거됨';
+    return '삭제했어요: $name';
   }
 
   @override
@@ -1631,7 +1631,7 @@ class L10nKo extends L10n {
 
   @override
   String moveDone(String church) {
-    return '‘$church’ 생성 완료';
+    return '교회를 만들었어요: ‘$church’';
   }
 
   @override
