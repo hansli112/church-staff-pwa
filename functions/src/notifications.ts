@@ -33,7 +33,8 @@ interface DutyLine {
 /**
  * Evening reminders (UTC+8), for everyone with a uid on a duty of an active
  * church, as each chose: on Monday one message listing their duties from
- * that Monday to Sunday, and every evening one listing tomorrow's. An
+ * that Monday to Sunday, and every evening one listing tomorrow's (except
+ * Monday for those getting both, whose weekly list has tomorrow). An
  * event's roster counts on the day it starts, by its title; not once its
  * event is cancelled.
  */
@@ -74,7 +75,9 @@ export async function sendReminders(deps: PushDeps & { now: () => Date }) {
       if (!member.exists) continue;
       const timing = reminderTiming(member);
       const items = perUid.get(member.id)!;
-      if (isMonday && timing !== 'dayBefore') {
+      // Monday's list has tomorrow in it, so those choosing both get one message.
+      const weekly = isMonday && timing !== 'dayBefore';
+      if (weekly) {
         const week = [...items].sort((a, b) => a.dateKey.localeCompare(b.dateKey));
         sent += await notifyMembers(deps, cid, [member.id], 'reminder', {
           title: `這週的服事（${shortDate(today)}–${shortDate(until)}）`,
@@ -83,7 +86,7 @@ export async function sendReminders(deps: PushDeps & { now: () => Date }) {
         });
       }
       const next = items.filter((i) => i.dateKey === tomorrow);
-      if (timing !== 'weekly' && next.length > 0) {
+      if (!weekly && timing !== 'weekly' && next.length > 0) {
         sent += await notifyMembers(deps, cid, [member.id], 'reminder', {
           title: `明天的服事（${shortDate(tomorrow)}）`,
           body: next.map((i) => i.text).join('；'),

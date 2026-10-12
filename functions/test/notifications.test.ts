@@ -208,16 +208,18 @@ describe('weekly reminders', () => {
     assert.deepEqual(sat.sent.map(({ tokens, body }) => ({ tokens, body })), [{ tokens: ['tok-hao'], body: '主日崇拜 招待' }]);
   });
 
-  test('both: the weekly list on Monday and the day before as well', async () => {
+  test('both: on Monday only the weekly list, which has tomorrow; the day before every other evening', async () => {
     await week();
     await remindAt('hao', 'both');
-    const { sent, messaging } = fakeMessaging();
-    await sendReminders({ db, messaging, now: monday, appUrl });
-    const hao = sent.filter((s) => s.tokens.includes('tok-hao'));
+    const mon = fakeMessaging();
+    await sendReminders({ db, messaging: mon.messaging, now: monday, appUrl });
+    const hao = mon.sent.filter((s) => s.tokens.includes('tok-hao'));
     assert.deepEqual(hao.map((s) => [s.title, s.body]), [
       ['這週的服事（10/12–10/18）', '10/13（週二）禱告會 招待；10/18（週日）主日崇拜 招待'],
-      ['明天的服事（10/13）', '禱告會 招待'],
     ]);
+    const sat = fakeMessaging();
+    await sendReminders({ db, messaging: sat.messaging, now: saturday, appUrl });
+    assert.deepEqual(sat.sent.map((s) => [s.tokens, s.title, s.body]), [[['tok-hao'], '明天的服事（10/18）', '主日崇拜 招待']]);
   });
 
   test('an event is listed in the week it starts, by its title; a cancelled one is not', async () => {
