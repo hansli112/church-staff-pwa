@@ -166,6 +166,12 @@ describe('buildPrompt', () => {
     assert.doesNotMatch(p, /字形最接近|整欄不要輸出/);
     assert.match(p, /今天是 2026-10-02/);
   });
+
+  test('an English (or Japanese, or Korean) roster is read as written, not translated into Chinese', () => {
+    const p = buildPrompt({ service: { id: 'sunday', name: 'Sunday Service', duties: ['Piano'] }, names: ['Amy'], today: '2026-10-02' });
+    assert.match(p, /照原文辨識，不要翻譯/);
+    assert.match(p, /「TBD」填 "people": \[\]/);
+  });
 });
 
 describe('geminiClient', () => {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/core/languages.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
@@ -76,7 +77,7 @@ void main() {
 
   testWidgets('an unverified email is not asked', (tester) async {
     final b = movedChurch(signIn: false);
-    await b.auth.registerWithEmail('美玉', 'mei@example.com', 'secret123');
+    await b.auth.registerWithEmail('美玉', 'mei@example.com', 'secret123', AppLanguage.zhHant);
     await pumpApp(tester, b);
     expect(find.text('驗證你的 email'), findsOneWidget);
     expect(find.textContaining('已經搬過來了'), findsNothing);

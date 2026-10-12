@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
+import '../../core/languages.dart';
 import '../../data/backend.dart';
 import '../../domain/limits.dart';
 import '../../l10n/app_localizations.dart';
@@ -130,7 +131,7 @@ class _VerifyEmailBannerState extends ConsumerState<VerifyEmailBanner> {
   Future<void> _resend() async {
     final l10n = L10n.of(context);
     try {
-      await ref.read(backendProvider).auth.sendEmailVerification();
+      await ref.read(backendProvider).auth.sendEmailVerification(AppLanguage.shownIn(context));
       if (mounted) showToast(context, l10n.verifyResent);
     } catch (e) {
       if (mounted) showToast(context, errorText(l10n, e));
@@ -257,8 +258,9 @@ class _CreateChurchScreenState extends ConsumerState<CreateChurchScreen> {
       _duplicate = false;
     });
     try {
+      final language = AppLanguage.shownIn(context);
       final timeZone = await ref.read(deviceTimeZoneProvider)();
-      final cid = await ref.read(backendProvider).cloud.createChurch(name, timeZone: timeZone);
+      final cid = await ref.read(backendProvider).cloud.createChurch(name, timeZone: timeZone, language: language);
       ref.read(selectedChurchProvider.notifier).select(cid);
       Haptics.success();
       if (mounted) goAfterJoining(context, ref, cid);

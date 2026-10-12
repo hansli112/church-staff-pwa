@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { beforeEach, describe, test } from 'node:test';
 
 import { Timestamp, type CollectionReference } from 'firebase-admin/firestore';
@@ -12,6 +13,8 @@ import { seal } from '../src/sealing.js';
 import { nameKey } from '../src/text.js';
 import { webhookSave } from '../src/webhook.js';
 import { caller, clearFirestore, db, deps, purgeDeps, rejectsWith, seedChurch, setNow } from './support.js';
+
+const rules = JSON.parse(readFileSync(new URL('../../testdata/church_rules.json', import.meta.url), 'utf8'));
 
 beforeEach(async () => {
   await clearFirestore();
@@ -40,6 +43,20 @@ describe('createChurch', () => {
     assert.equal(member.get('uid'), 'alice');
     const services = await db.doc(`churches/${churchId}/settings/services`).get();
     assert.deepEqual(services.get('ids'), ['sunday']);
+  });
+
+  test("its services are in its maker's language, and stay as they are", async () => {
+    const services = async (cid: string) => (await db.doc(`churches/${cid}/settings/services`).get()).get('services');
+    const { churchId: en } = await createChurch(deps, caller('alice'), { name: 'Grace Church', language: 'en' });
+    assert.deepEqual(await services(en), rules.defaultServices.en);
+    assert.equal((await services(en))[0].name, 'Sunday Service');
+
+    // An app that does not say: the language it shows, else Chinese.
+    await db.doc('users/bob').set({ name: 'Bob', appLocale: 'en' });
+    const { churchId: bob } = await createChurch(deps, caller('bob'), { name: 'Bob Church' });
+    assert.deepEqual(await services(bob), rules.defaultServices.en);
+    const { churchId: zh } = await createChurch(deps, caller('carol'), { name: '恩典堂' });
+    assert.deepEqual(await services(zh), rules.defaultServices['zh-Hant']);
   });
 
   test('rejects an unverified email', async () => {

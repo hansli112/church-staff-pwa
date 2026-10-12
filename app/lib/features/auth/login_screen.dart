@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
+import '../../core/languages.dart';
 import '../../data/backend.dart';
 import '../../deep_link.dart';
 import '../../env.dart';
@@ -70,7 +71,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!_form.currentState!.validate()) return;
     _run(
       () => _mode == _Mode.register
-          ? _auth.registerWithEmail(_name.text, _email.text, _password.text)
+          ? _auth.registerWithEmail(_name.text, _email.text, _password.text, AppLanguage.shownIn(context))
           : _auth.signInWithEmail(_email.text, _password.text),
     );
   }
@@ -82,7 +83,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       setState(() => _error = l10n.emailRequired);
       return;
     }
-    await _run(() => _auth.sendPasswordReset(email));
+    final language = AppLanguage.shownIn(context);
+    await _run(() => _auth.sendPasswordReset(email, language));
     if (mounted && _error == null) showToast(context, l10n.resetSent(email));
   }
 

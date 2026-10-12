@@ -11,9 +11,16 @@
 //   staff_orders/{type}       {roles: {[duty]: [names]}}
 //   settings/small_group_templates, devotional, …: not imported (v1 drops them)
 
+import { words, type Language } from './languages.js';
 import { personName } from './limits.js';
 
-const PLACEHOLDER = '待定';
+/**
+ * A duty nobody has yet, written in its people: self-host's 待定 (it spoke
+ * only Chinese), whatever the language of whoever moves it, and their own
+ * language's word for it.
+ */
+export const placeholders = (language: Language) =>
+  new Set([words('zh-Hant').placeholder, words(language).placeholder]);
 
 /** Self-host ARGB colour → the hosted palette index (red, orange, yellow, green, blue, purple). */
 export function paletteIndex(argb: unknown): number {
@@ -107,14 +114,20 @@ export function exactUidIndex(people: readonly { uid: string; name: unknown }[])
   return { unique, ambiguous };
 }
 
-export function mapRoster(id: string, r: Doc, eventColors: Map<string, number>, exactUids: ReadonlyMap<string, string> = new Map()) {
+export function mapRoster(
+  id: string,
+  r: Doc,
+  eventColors: Map<string, number>,
+  exactUids: ReadonlyMap<string, string> = new Map(),
+  nobody: ReadonlySet<string> = placeholders('zh-Hant'),
+) {
   const dateKey = rosterDateKey(id, r);
   const type = r.type;
   if (!dateKey || typeof type !== 'string' || !type) return null;
   const duties = (Array.isArray(r.duties) ? (r.duties as Doc[]) : [])
     .filter((d) => typeof d.role === 'string')
     .map((d) => {
-      const listed = strings(d.people).map((raw) => ({ raw, name: raw.trim() })).filter((p) => p.name && p.name !== PLACEHOLDER);
+      const listed = strings(d.people).map((raw) => ({ raw, name: raw.trim() })).filter((p) => p.name && !nobody.has(p.name));
       const supplied = Object.hasOwn(d, 'personIdsByName');
       const ids = d.personIdsByName && typeof d.personIdsByName === 'object' && !Array.isArray(d.personIdsByName)
         ? d.personIdsByName as Record<string, unknown> : {};
@@ -210,9 +223,11 @@ export interface ImportReport {
 /**
  * The hosted church's documents built from a self-host snapshot: members,
  * services, rosters and staff orders, plus a report. Shared by the
- * operator's import script and self-serve moving.
+ * operator's import script and self-serve moving. [language] is the
+ * mover's, for the word they write for nobody yet.
  */
-export function buildImport(snapshot: SelfHostSnapshot, joinedAt: unknown) {
+export function buildImport(snapshot: SelfHostSnapshot, joinedAt: unknown, language: Language = 'zh-Hant') {
+  const nobody = placeholders(language);
   const settingsById = new Map(snapshot.settings.map((d) => [d.id, d.data]));
   const services = settingsById.has('services')
     ? mapServices(settingsById.get('services'), settingsById.get('roster_templates'), settingsById.get('event_options'))
@@ -225,7 +240,7 @@ export function buildImport(snapshot: SelfHostSnapshot, joinedAt: unknown) {
   const rosters: NonNullable<ReturnType<typeof mapRoster>>[] = [];
   const skippedRosters: string[] = [];
   for (const r of snapshot.rosters) {
-    const mapped = mapRoster(r.id, r.data, eventColors, exactUids);
+    const mapped = mapRoster(r.id, r.data, eventColors, exactUids, nobody);
     if (mapped) rosters.push(mapped);
     else skippedRosters.push(r.id);
   }

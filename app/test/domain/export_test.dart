@@ -11,6 +11,15 @@ void main() {
   const sunday = Service(id: 'sunday', name: '主日崇拜', weekday: 7, duties: ['司會', '司琴']);
   const youth = Service(id: 'youth', name: '青年, "崇拜"', weekday: 6);
   final at = DateTime.utc(2026, 10, 4, 2, 30);
+  const zh = CsvWords(fileName: '服事表.csv', date: '日期', service: '服事', role: '服事項目', people: '同工', separator: '、');
+  const en = CsvWords(
+    fileName: 'Schedules.csv',
+    date: 'Date',
+    service: 'Service or event',
+    role: 'Role',
+    people: 'Team members',
+    separator: ', ',
+  );
 
   ChurchSnapshot snapshot({List<Roster>? rosters}) => ChurchSnapshot(
     church: const Church(id: 'grace', name: '恩典堂', homeName: '恩典', logoUrl: 'https://x/logo.png'),
@@ -71,11 +80,11 @@ void main() {
 
   group('CSV', () {
     test('starts with a BOM, so Excel reads Chinese', () {
-      expect(exportCsv(snapshot()).codeUnitAt(0), 0xFEFF);
+      expect(exportCsv(snapshot(), zh).codeUnitAt(0), 0xFEFF);
     });
 
     test('one row per duty, oldest day first, people joined with 、', () {
-      final lines = exportCsv(snapshot()).substring(1).split('\r\n');
+      final lines = exportCsv(snapshot(), zh).substring(1).split('\r\n');
       expect(lines, [
         '日期,服事,服事項目,同工',
         '2025-12-28,主日崇拜,司琴,',
@@ -87,7 +96,13 @@ void main() {
     });
 
     test('a church without rosters has only the header', () {
-      expect(exportCsv(snapshot(rosters: const [])), '\uFEFF日期,服事,服事項目,同工\r\n');
+      expect(exportCsv(snapshot(rosters: const []), zh), '\uFEFF日期,服事,服事項目,同工\r\n');
+    });
+
+    test("in the exporting admin's language; the church's own names as typed", () {
+      final lines = exportCsv(snapshot(), en).substring(1).split('\r\n');
+      expect(lines.first, 'Date,Service or event,Role,Team members');
+      expect(lines, contains('2026-10-04,主日崇拜,招待,"李美玉, 陳志豪"'));
     });
   });
 
@@ -218,7 +233,7 @@ void main() {
         },
       ]);
       expect(
-        exportCsv(snapshot(rosters: rosters)),
+        exportCsv(snapshot(rosters: rosters), zh),
         '\uFEFF日期,服事,服事項目,同工\r\n2026-10-04,主日崇拜,司琴,\r\n2026-10-04,秋季退修會,主持,李美玉\r\n',
       );
     });
@@ -245,7 +260,11 @@ void main() {
   });
 
   test('the zip holds the JSON and the CSV', () {
-    final zip = ZipDecoder().decodeBytes(exportZip(snapshot(), at));
+    expect(ZipDecoder().decodeBytes(exportZip(snapshot(), at, en)).files.map((f) => f.name), [
+      'martha-export.json',
+      'Schedules.csv',
+    ]);
+    final zip = ZipDecoder().decodeBytes(exportZip(snapshot(), at, zh));
     expect(zip.files.map((f) => f.name), ['martha-export.json', '服事表.csv']);
     final json = jsonDecode(utf8.decode(zip.findFile('martha-export.json')!.content)) as Map;
     expect(json['format'], 'martha-church-export');

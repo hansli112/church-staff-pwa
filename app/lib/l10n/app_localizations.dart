@@ -2960,6 +2960,36 @@ abstract class L10n {
   /// **'已匯出'**
   String get exported;
 
+  /// The exported schedule's file name, in the zip; Excel opens it.
+  ///
+  /// In zh, this message translates to:
+  /// **'服事表.csv'**
+  String get exportCsvFile;
+
+  /// Column of the exported schedule: the day.
+  ///
+  /// In zh, this message translates to:
+  /// **'日期'**
+  String get exportCsvDate;
+
+  /// Column of the exported schedule: the service's name, or the event's title.
+  ///
+  /// In zh, this message translates to:
+  /// **'服事'**
+  String get exportCsvService;
+
+  /// Column of the exported schedule: the role.
+  ///
+  /// In zh, this message translates to:
+  /// **'服事項目'**
+  String get exportCsvRole;
+
+  /// Column of the exported schedule: the people on the role.
+  ///
+  /// In zh, this message translates to:
+  /// **'同工'**
+  String get exportCsvPeople;
+
   /// No description provided for @errMoveInvalid.
   ///
   /// In zh, this message translates to:

@@ -69,6 +69,24 @@ void main() {
     expect(find.text('已匯出'), findsOneWidget);
   });
 
+  testWidgets("the schedule is in the admin's language", (tester) async {
+    final saver = _Saver();
+    await pumpApp(
+      tester,
+      seededChurch(),
+      deviceLocales: const [Locale('en', 'US')],
+      overrides: [fileSaverProvider.overrideWithValue(saver)],
+    );
+    await go(tester, '/me/church');
+    await tester.scrollUntilVisible(find.text('Export data'), 200);
+    await tapText(tester, 'Export data');
+
+    final zip = ZipDecoder().decodeBytes(saver.files.single.$2);
+    final csv = utf8.decode(zip.findFile('Schedules.csv')!.content);
+    expect(csv, startsWith('Date,Service or event,Role,Team members\r\n'));
+    expect(csv, contains('2026-10-04,主日崇拜,招待,"陳志豪, 李美玉"'));
+  });
+
   testWidgets('closing the share sheet without saving is not an export', (tester) async {
     final telemetry = _Events();
     await pumpApp(

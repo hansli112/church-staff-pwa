@@ -98,6 +98,16 @@ describe('self-serve move', () => {
     assert.equal((await bucket.file(PATH).exists())[0], false, 'the file is deleted');
   });
 
+  test("a duty nobody has yet, in the mover's language or self-host's 待定, stays empty", async () => {
+    const file = moveFile();
+    file.rosters[0].data.duties!.push({ role: '招待', people: ['TBD', '待定'], personIdsByName: {} });
+    await upload(file);
+    await db.doc('users/newadmin').set({ appLocale: 'en' });
+    const { churchId } = await moveCommit(d, me, { path: PATH, churchName: '恩典堂' });
+    const roster = await db.doc(`churches/${churchId}/rosters/2026-10-04_sunday`).get();
+    assert.deepEqual(roster.get('duties')[2].people, []);
+  });
+
   test('「這位是我」 takes over that member: zones, groups and their roster days', async () => {
     await upload(moveFile());
     const { churchId } = await moveCommit(d, me, { path: PATH, churchName: '恩典堂', me: 'old-pastor' });

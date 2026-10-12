@@ -1648,6 +1648,21 @@ class L10nEn extends L10n {
   String get exported => 'Exported';
 
   @override
+  String get exportCsvFile => 'Schedules.csv';
+
+  @override
+  String get exportCsvDate => 'Date';
+
+  @override
+  String get exportCsvService => 'Service or event';
+
+  @override
+  String get exportCsvRole => 'Role';
+
+  @override
+  String get exportCsvPeople => 'Team members';
+
+  @override
   String get errMoveInvalid => 'This isn’t a move file. Make sure you chose the right file.';
 
   @override

@@ -10,6 +10,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../../core/languages.dart';
 import '../../domain/day.dart';
 import '../../domain/models.dart';
 import '../../domain/staff_order.dart';
@@ -260,7 +261,7 @@ class FirebaseAuthGateway implements AuthGateway {
   );
 
   @override
-  Future<void> registerWithEmail(String name, String email, String password) => _run(() async {
+  Future<void> registerWithEmail(String name, String email, String password, AppLanguage language) => _run(() async {
     final result = await _auth.createUserWithEmailAndPassword(
       email: email.trim(),
       password: password,
@@ -269,13 +270,15 @@ class FirebaseAuthGateway implements AuthGateway {
     // Push the account with its name, so users/{uid} is created with it.
     await _auth.currentUser?.reload();
     _reloaded.add(_map(_auth.currentUser));
+    await _auth.setLanguageCode(language.emailLanguage);
     await result.user?.sendEmailVerification();
     return result;
   });
 
   @override
-  Future<void> sendEmailVerification() async {
+  Future<void> sendEmailVerification(AppLanguage language) async {
     try {
+      await _auth.setLanguageCode(language.emailLanguage);
       await _auth.currentUser?.sendEmailVerification();
     } on fa.FirebaseAuthException catch (e) {
       throw _translate(e);
@@ -283,8 +286,9 @@ class FirebaseAuthGateway implements AuthGateway {
   }
 
   @override
-  Future<void> sendPasswordReset(String email) async {
+  Future<void> sendPasswordReset(String email, AppLanguage language) async {
     try {
+      await _auth.setLanguageCode(language.emailLanguage);
       await _auth.sendPasswordResetEmail(email: email.trim());
     } on fa.FirebaseAuthException catch (e) {
       // Do not reveal whether the email has an account.
@@ -1350,8 +1354,15 @@ class FirebaseCloudApi implements CloudApi {
   Future<Object?> _call(String name, [Map<String, Object?>? data]) => _calls.call(name, data);
 
   @override
-  Future<String> createChurch(String name, {ChurchTimeZone timeZone = ChurchTimeZone.fallback}) async =>
-      _asMap(await _call('createChurch', {'name': name, 'timeZone': timeZone.id}))['churchId'] as String;
+  Future<String> createChurch(
+    String name, {
+    ChurchTimeZone timeZone = ChurchTimeZone.fallback,
+    AppLanguage? language,
+  }) async =>
+      _asMap(
+            await _call('createChurch', {'name': name, 'timeZone': timeZone.id, 'language': ?language?.tag}),
+          )['churchId']
+          as String;
 
   @override
   Future<Invite> previewInvite(String code) async {
@@ -1420,9 +1431,16 @@ class FirebaseCloudApi implements CloudApi {
     required String churchName,
     String? me,
     ChurchTimeZone timeZone = ChurchTimeZone.fallback,
+    AppLanguage? language,
   }) async =>
       _asMap(
-            await _call('moveCommit', {'path': path, 'churchName': churchName, 'me': me, 'timeZone': timeZone.id}),
+            await _call('moveCommit', {
+              'path': path,
+              'churchName': churchName,
+              'me': me,
+              'timeZone': timeZone.id,
+              'language': ?language?.tag,
+            }),
           )['churchId']
           as String;
 

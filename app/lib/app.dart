@@ -182,7 +182,7 @@ class _LanguageShownState extends ConsumerState<_LanguageShown> {
 
   @override
   Widget build(BuildContext context) {
-    final tag = AppLanguage.of(Localizations.localeOf(context))!.tag;
+    final tag = AppLanguage.shownIn(context).tag;
     final profile = ref.watch(profileProvider).value;
     if (profile != null && profile.appLocale != tag && _sent != (profile.uid, tag)) {
       _sent = (profile.uid, tag);

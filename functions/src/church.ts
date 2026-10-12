@@ -1,4 +1,4 @@
-import { Timestamp } from 'firebase-admin/firestore';
+import { Timestamp, type DocumentSnapshot } from 'firebase-admin/firestore';
 import type { Storage } from 'firebase-admin/storage';
 
 import { churchAccess, churchClosed, churchId, isChurchOpen } from './access.js';
@@ -8,6 +8,7 @@ import { followTimeZone } from './eventSync.js';
 import { forgetPendingClaims } from './claim.js';
 import { DAY_MS, fail, requireCaller, runEach, serverTime, text, type Caller, type Deps } from './common.js';
 import { forgetInvites } from './invites.js';
+import { languageOf, words } from './languages.js';
 import { personName, TEXT_LIMITS } from './limits.js';
 import { nameKey } from './text.js';
 import { forgetWebhook } from './webhook.js';
@@ -15,25 +16,6 @@ import { DEFAULT_TIME_ZONE, isChurchTimeZone, type ChurchTimeZone } from './time
 
 /** How long a deleted church can be restored. */
 export const RESTORE_DAYS = 30;
-
-/**
- * The services a new church starts with. Mirrors defaultServices in
- * app/lib/data/memory/memory_backend.dart; testdata/church_rules.json holds
- * both to it.
- */
-export const DEFAULT_SERVICES = [
-  {
-    id: 'sunday',
-    name: '主日崇拜',
-    weekday: 7,
-    enabled: true,
-    duties: ['司會', '敬拜', '司琴', '音控', '投影', '招待'],
-    events: [
-      { name: '聖餐', color: 0 },
-      { name: '浸禮', color: 4 },
-    ],
-  },
-];
 
 /**
  * Creates a church with the caller as its admin.
@@ -44,9 +26,11 @@ export const DEFAULT_SERVICES = [
  */
 export async function createChurch(deps: Deps, caller: Caller | null, data: unknown) {
   const c = requireCaller(caller);
-  const input = data as { name?: unknown; timeZone?: unknown } | null;
+  const input = data as { name?: unknown; timeZone?: unknown; language?: unknown } | null;
   const name = text(input?.name, TEXT_LIMITS.churchName);
-  return { churchId: await openChurch(deps, c, name, { timeZone: newChurchTimeZone(input?.timeZone) }) };
+  return {
+    churchId: await openChurch(deps, c, name, { timeZone: newChurchTimeZone(input?.timeZone), language: input?.language }),
+  };
 }
 
 /**
@@ -58,6 +42,12 @@ export function newChurchTimeZone(v: unknown): ChurchTimeZone {
   if (!isChurchTimeZone(v)) fail('invalid-argument', 'unknown');
   return v;
 }
+
+/**
+ * The language of whoever makes a church: the one their app says it shows
+ * ([asked], an AppLanguage tag), else the one it last said (users/{uid}.appLocale).
+ */
+export const makersLanguage = (asked: unknown, profile: DocumentSnapshot) => languageOf(asked ?? profile.get('appLocale'));
 
 /**
  * Sets the church's time zone (admins). Its days, reminders and the
@@ -88,6 +78,10 @@ export async function setChurchTimeZone(deps: CalDeps, caller: Caller | null, da
  * Creates church [name] with [c] as its admin, in one transaction with the
  * name reservation. [services] and the admin's [zones] and [groups] come
  * from a move; [extra] goes on the church doc. Returns the church ID.
+ *
+ * Without [services], it starts with a Sunday service in its maker's
+ * language ([makersLanguage]). It is the church's own from then on,
+ * whoever reads it (testdata/church_rules.json, defaultServices).
  */
 export async function openChurch(
   deps: Deps,
@@ -100,6 +94,8 @@ export async function openChurch(
     /** A church ID picked beforehand, e.g. for data written first. */
     cid?: string;
     timeZone?: ChurchTimeZone;
+    /** The maker's app's language, an AppLanguage tag. */
+    language?: unknown;
   } = {},
 ) {
   if (!c.emailVerified) fail('failed-precondition', 'unverifiedEmail');
@@ -111,7 +107,8 @@ export async function openChurch(
   const cid = churchRef.id;
   const profile = await db.doc(`users/${c.uid}`).get();
   const memberName = personName(opts.admin?.name) || personName(profile.get('name')) || personName(c.name);
-  const services = opts.services ?? { services: DEFAULT_SERVICES, ids: DEFAULT_SERVICES.map((s) => s.id) };
+  const defaults = words(makersLanguage(opts.language, profile)).newChurchServices;
+  const services = opts.services ?? { services: defaults, ids: defaults.map((s) => s.id) };
 
   await db.runTransaction(async (tx) => {
     const reserved = await tx.get(db.doc(`churchNames/${key}`));

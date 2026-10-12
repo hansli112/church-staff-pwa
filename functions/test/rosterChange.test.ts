@@ -160,6 +160,19 @@ describe('push', () => {
     assert.equal(pushed.at(-1)!.body, '10/4 主日崇拜 的司琴已改由別人負責');
   });
 
+  test("each in the language their app shows; the church's names as typed", async () => {
+    await church();
+    await db.doc('users/hao').update({ appLocale: 'en' });
+    await write('C1', '2026-10-04', [duty('司琴', ['美玉', '志豪'])]);
+    assert.deepEqual(pushed.map((p) => [p.tokens, p.body]), [
+      [['tok-mei', 'tok-mei-2'], '你被排進 10/4 主日崇拜：司琴'],
+      [['tok-hao'], 'You’re on Oct 4 主日崇拜: 司琴'],
+    ]);
+    pushed = [];
+    await write('C1', '2026-10-04', [duty('司琴', [])]);
+    assert.deepEqual(pushed.map((p) => p.body), ['10/4 主日崇拜 的司琴已改由別人負責', 'Someone else now has 司琴 for Oct 4 主日崇拜']);
+  });
+
   test('muted members get nothing', async () => {
     await church();
     await db.doc('churches/C1/members/mei').update({ 'notificationPrefs.muted': ['rosterChange'] });
@@ -265,6 +278,10 @@ describe('an event’s roster', () => {
       { editedBy: null },
     );
     assert.deepEqual(pushed.map((p) => [p.tokens, p.body]), [[['tok-hao'], '聖誕晚會改到 12/23（週三）']]);
+    pushed = [];
+    await db.doc('users/hao').update({ appLocale: 'en' });
+    await writeEvent('C1', { dateKey: '2026-12-22', endDateKey: '2026-12-22', duties: [duty('主持', ['美玉']), duty('招待', ['志豪', '林同工'])] });
+    assert.deepEqual(pushed.map((p) => p.body), ['聖誕晚會改到 12/22（週二）', '聖誕晚會 moved to Dec 22 (Tue)']);
   });
 
   test('cancelled with its event, or later purged, it tells nobody; deleted by an editor, as any day', async () => {

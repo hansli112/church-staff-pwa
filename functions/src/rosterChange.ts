@@ -2,6 +2,7 @@ import type { DocumentSnapshot } from 'firebase-admin/firestore';
 
 import { isChurchOpen } from './access.js';
 import { runEach, type Deps } from './common.js';
+import type { Words } from './languages.js';
 import { notifyMembers, type PushDeps } from './push.js';
 import { queue } from './webhook.js';
 import { dateKeyIn, earliestDay, timeZoneOf } from './timeZones.js';
@@ -163,20 +164,6 @@ export async function readRosterChange(
   };
 }
 
-/** `M/D` of a `YYYY-MM-DD` day, as pushes say it. */
-export function shortDate(dateKey: string) {
-  const [, m, d] = dateKey.split('-').map(Number);
-  return `${m}/${d}`;
-}
-
-const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
-
-/** `M/D（週X）` of a `YYYY-MM-DD` day. */
-export function dateWithWeekday(dateKey: string) {
-  const [y, m, d] = dateKey.split('-').map(Number);
-  return `${shortDate(dateKey)}（週${WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]}）`;
-}
-
 /**
  * Pushes to each person put on or taken off a duty. The editor is not told
  * about their own change. An event's roster moved to another day tells
@@ -187,23 +174,16 @@ export async function pushRosterChange(deps: PushDeps, c: RosterChange) {
   const cid = c.church.id;
   const title = c.church.get('name') as string;
   const link = c.event ? `/rosters/event/${c.event.id}` : `/rosters/${c.serviceId}/${c.dateKey}`;
-  const day = `${shortDate(c.dateKey)} ${c.serviceName}`;
+  const day = (w: Words) => `${w.shortDate(c.dateKey)} ${c.serviceName}`;
+  const tell = (uid: string, body: (w: Words) => string) =>
+    uid === c.editor?.uid ? 0 : notifyMembers(deps, cid, [uid], 'rosterChange', (w) => ({ title, body: body(w), link }));
   let sent = 0;
   if (c.event && c.movedFrom) {
-    const body = `${c.event.title}改到 ${dateWithWeekday(c.dateKey)}`;
-    for (const uid of c.holders.keys()) {
-      if (uid === c.editor?.uid) continue;
-      sent += await notifyMembers(deps, cid, [uid], 'rosterChange', { title, body, link });
-    }
+    const event = c.event;
+    for (const uid of c.holders.keys()) sent += await tell(uid, (w) => w.eventMoved(event.title, w.dateWithWeekday(c.dateKey)));
   }
-  for (const [uid, roles] of c.added) {
-    if (uid === c.editor?.uid) continue;
-    sent += await notifyMembers(deps, cid, [uid], 'rosterChange', { title, body: `你被排進 ${day}：${roles.join('、')}`, link });
-  }
-  for (const [uid, roles] of c.removed) {
-    if (uid === c.editor?.uid) continue;
-    sent += await notifyMembers(deps, cid, [uid], 'rosterChange', { title, body: `${day} 的${roles.join('、')}已改由別人負責`, link });
-  }
+  for (const [uid, roles] of c.added) sent += await tell(uid, (w) => w.putOn(day(w), roles));
+  for (const [uid, roles] of c.removed) sent += await tell(uid, (w) => w.takenOff(day(w), roles));
   return sent;
 }
 

@@ -1,18 +1,33 @@
 {
   "about": "Church data rules both the app (app/lib, its memory backend standing in for the Cloud Functions) and functions/src must follow; app/test/domain/church_rules_test.dart and functions/test/churchRules.test.ts run every row. Add a row here, not to one side.",
-  "defaultServices": [
-    {
-      "id": "sunday",
-      "name": "主日崇拜",
-      "weekday": 7,
-      "enabled": true,
-      "duties": ["司會", "敬拜", "司琴", "音控", "投影", "招待"],
-      "events": [
-        { "name": "聖餐", "color": 0 },
-        { "name": "浸禮", "color": 4 }
-      ]
-    }
-  ],
+  "defaultServices": {
+    "zh-Hant": [
+      {
+        "id": "sunday",
+        "name": "主日崇拜",
+        "weekday": 7,
+        "enabled": true,
+        "duties": ["司會", "敬拜", "司琴", "音控", "投影", "招待"],
+        "events": [
+          { "name": "聖餐", "color": 0 },
+          { "name": "浸禮", "color": 4 }
+        ]
+      }
+    ],
+    "en": [
+      {
+        "id": "sunday",
+        "name": "Sunday Service",
+        "weekday": 7,
+        "enabled": true,
+        "duties": ["Host", "Worship Leader", "Piano", "Sound", "Slides", "Usher"],
+        "events": [
+          { "name": "Communion", "color": 0 },
+          { "name": "Baptism", "color": 4 }
+        ]
+      }
+    ]
+  },
   "dutyRename": [
     { "why": "renamed in place", "before": ["司會", "司琴"], "from": "司會", "to": "主持", "after": ["主持", "司琴"], "ok": true },
     { "why": "renaming also moves the duty", "before": ["司會", "司琴"], "from": "司會", "to": "主持", "after": ["司琴", "主持"], "ok": false },

@@ -5,7 +5,8 @@ import { beforeEach, describe, test } from 'node:test';
 import { Timestamp } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 
-import { APP_SHELL, churchPage, clearTemplateCache, withSplash, type PageDeps } from '../src/churchPage.js';
+import { APP_SHELL, churchPage, clearTemplateCache, inLanguage, withSplash, type PageDeps } from '../src/churchPage.js';
+import { words } from '../src/languages.js';
 import { clearFirestore, db, deps, fakeFetch, seedChurch, setNow } from './support.js';
 
 const APP = 'https://martha.example';
@@ -43,7 +44,8 @@ const bucket = getStorage().bucket('demo-martha.appspot.com');
 function page(routes = {}) {
   const f = fakeFetch({ [`${APP}${APP_SHELL}`]: { body: SHELL }, ...routes });
   const d: PageDeps = { ...deps, fetch: f.fetch, bucket, appUrl: APP };
-  return { get: (path: string) => churchPage(d, path), requests: f.requests };
+  // A browser in Taiwan unless another language is asked for.
+  return { get: (path: string, language = 'zh-TW,zh;q=0.9') => churchPage(d, path, language), requests: f.requests };
 }
 
 const text = (body: string | Buffer) => body.toString();
@@ -124,6 +126,11 @@ describe('church page', () => {
     const filled = withSplash(index, { icon: '/x.png', title: '加入〈恩典堂〉', note: '載入中…', busy: true });
     assert.match(splashOf(filled), /<p class="title">加入〈恩典堂〉<\/p>/);
     assert.match(filled, /<div id="splash"/);
+    const english = inLanguage(index, 'en');
+    for (const shown of ['<html lang="en">', '<title>Martha, sit</title>', 'content="Martha, sit"', 'content="“Martha, Martha,', '>Loading…<']) {
+      assert.ok(english.includes(shown), `app/web/index.html's ${shown} in English`);
+    }
+    assert.match(splashOf(english), /<p class="title">Martha, sit<\/p>/);
     assert.match(
       index,
       /<meta name="viewport" content="width=device-width[^"]*">/,
@@ -233,6 +240,50 @@ describe('church page', () => {
     const r = await page({ [`${APP}${APP_SHELL}`]: { status: 500 } }).get('/c/Grace');
     assert.equal(r.status, 200);
     assert.match(text(r.body), /<title>恩典堂<\/title>/);
+  });
+
+  test("an invite link and the manifest in the browser's language, as the app will pick it", async () => {
+    await seedChurch('Grace', {}, { name: '恩典堂' });
+    await seedChurch('Closed', {}, { name: '關閉堂', status: 'suspended' });
+    await seedInvite('ABCDEFGH', 'Grace');
+    await seedInvite('EXPIRED1', 'Grace', { expiresAt: Timestamp.fromDate(new Date('2026-10-01T09:00:00+08:00')) });
+    await seedInvite('NOSUCH02', 'Closed');
+    const { get } = page();
+    const en = 'en-US,en;q=0.9,zh-TW;q=0.8';
+
+    const invite = await get('/c/Grace/join/ABCDEFGH', en);
+    assert.equal(invite.headers.vary, 'Accept-Language');
+    assert.match(text(invite.body), /<html lang="en">/);
+    assert.match(text(invite.body), /<title>恩典堂<\/title>/, "the church's name as typed");
+    assert.match(splashOf(text(invite.body)), /<p class="note">Loading…<\/p>/);
+    assert.match(splashOf(text((await get('/c/Grace/join/EXPIRED1', en)).body)), /This invite has expired\. Ask an admin for a new one\./);
+    const closed = text((await get('/c/Closed/join/NOSUCH02', 'fr-FR')).body);
+    assert.match(splashOf(closed), /<p class="title">Martha, sit<\/p>/, 'none it speaks: English');
+    assert.match(splashOf(closed), /Couldn’t find this invite/);
+    assert.match(closed, /<title>Martha, sit<\/title>/);
+    assert.match(text((await get('/c/Grace/join/ABCDEFGH', 'zh-TW,en;q=0.5')).body), /<html lang="zh-Hant">/);
+
+    const m = await get('/c/Closed/manifest.json', en);
+    assert.equal(m.headers.vary, 'Accept-Language');
+    const manifest = JSON.parse(text(m.body));
+    assert.deepEqual([manifest.name, manifest.lang, manifest.description.slice(0, 15)], ['Martha, sit', 'en', '“Martha, Martha']);
+  });
+
+  test("the church page is one for everyone, kept by the CDN; its own script turns it to the browser's language", async () => {
+    await seedChurch('Grace', {}, { name: '恩典堂' });
+    const { get } = page();
+    const r = await get('/c/Grace', 'en-US,en');
+    assert.equal(r.headers.vary, undefined);
+    assert.equal(text(r.body), text((await get('/c/Grace')).body));
+    assert.match(splashOf(text(r.body)), /<p class="note">載入中…<\/p>/, 'what app/web/index.html swaps for Loading…');
+  });
+
+  test("its words are the app's, word for word", () => {
+    for (const [language, file] of [['zh-Hant', 'app_zh.arb'], ['en', 'app_en.arb']] as const) {
+      const arb = JSON.parse(readFileSync(new URL(`../../app/lib/l10n/${file}`, import.meta.url), 'utf8'));
+      const w = words(language);
+      assert.deepEqual([w.inviteInvalid, w.inviteExpired], [arb.errInviteInvalid, arb.errInviteExpired], language);
+    }
   });
 
   test('the logo is served under its version, never another church’s', async () => {

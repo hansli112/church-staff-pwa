@@ -215,6 +215,24 @@ describe('weekly reminders', () => {
     assert.equal(sent.length, 2);
   });
 
+  test('in the language each one’s app shows', async () => {
+    await week();
+    await db.doc('users/hao').update({ appLocale: 'en' });
+    await remindAt('mei', 'dayBefore');
+    const mon = fakeMessaging();
+    await sendReminders({ db, messaging: mon.messaging, now: monday, appUrl });
+    assert.deepEqual(mon.sent.map((s) => [s.tokens, s.title, s.body]), [
+      [['tok-hao'], 'Serving this week (Oct 12–Oct 18)', 'Oct 13 (Tue) 禱告會: 招待; Oct 18 (Sun) 主日崇拜: 招待'],
+    ]);
+    await remindAt('hao', 'dayBefore');
+    const sat = fakeMessaging();
+    await sendReminders({ db, messaging: sat.messaging, now: saturday, appUrl });
+    assert.deepEqual(sat.sent.map((s) => [s.tokens, s.title, s.body]), [
+      [['tok-mei', 'tok-mei-2'], '明天的服事（10/18）', '主日崇拜 司琴、招待'],
+      [['tok-hao'], 'Serving tomorrow (Oct 18)', '主日崇拜: 招待'],
+    ]);
+  });
+
   test("Monday is the church's Monday", async () => {
     await week();
     await db.doc('churches/C1').update({ timeZone: 'America/New_York' });

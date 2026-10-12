@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:martha/core/languages.dart';
 import 'package:martha/data/firebase/codec.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
@@ -15,8 +16,12 @@ List<Map<String, dynamic>> _rows(String name) => (_rules[name] as List).cast<Map
 List<String> _strings(Object? v) => (v as List).cast<String>();
 
 void main() {
-  test('a new church starts with the default services', () {
-    expect([for (final s in defaultServices) serviceToJson(s)], _rules['defaultServices']);
+  test("a new church starts with the default services, in its maker's language", () {
+    final rules = _rules['defaultServices'] as Map<String, dynamic>;
+    expect(rules.keys, [for (final l in AppLanguage.values) l.tag]);
+    for (final l in AppLanguage.values) {
+      expect([for (final s in defaultServices[l]!) serviceToJson(s)], rules[l.tag], reason: l.tag);
+    }
   });
 
   group('dutyRename', () {

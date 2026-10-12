@@ -75,12 +75,12 @@ export async function onMemberLeft(
   if (!deletedBy || deletedBy !== member.id) return 0;
   const church = await deps.db.doc(`churches/${cid}`).get();
   if (!isChurchOpen(church)) return 0;
-  const name = (member.get('name') as string | undefined) || '有人';
-  return notifyMembers(deps, cid, await adminUids(deps.db, cid), 'memberLeft', {
+  const name = member.get('name') as string | undefined;
+  return notifyMembers(deps, cid, await adminUids(deps.db, cid), 'memberLeft', (w) => ({
     title: church.get('name') as string,
-    body: `${name} 退出了教會`,
+    body: w.memberLeft(name || w.someone),
     link: '/me/members',
-  });
+  }));
 }
 
 export type LogoDeps = Deps & { bucket: Pick<ReturnType<Storage['bucket']>, 'file' | 'getFiles'> };

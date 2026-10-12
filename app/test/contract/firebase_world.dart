@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:js_interop';
 
+import 'package:martha/core/languages.dart';
 import 'package:martha/data/firebase/codec.dart';
 import 'package:martha/data/firebase/firebase_backend.dart';
 import 'package:martha/domain/models.dart';
@@ -35,7 +36,7 @@ class FirebaseWorld implements ContractWorld {
 
   @override
   Future<String> signUp(String email, {String name = '', bool verified = true}) async {
-    await backend.auth.registerWithEmail(name, email, contractPassword);
+    await backend.auth.registerWithEmail(name, email, contractPassword, AppLanguage.zhHant);
     final uid = backend.auth.currentUser!.uid;
     _uids[email] = uid;
     if (verified) {

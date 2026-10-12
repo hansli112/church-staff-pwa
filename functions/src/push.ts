@@ -1,6 +1,8 @@
 import type { Messaging } from 'firebase-admin/messaging';
 import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 
+import { languageOf, words, type Language, type Words } from './languages.js';
+
 /** Matches NotificationKind in app/lib/domain/models.dart. */
 export type NotificationKind = 'reminder' | 'rosterChange' | 'memberLeft';
 
@@ -18,6 +20,13 @@ export interface PushDeps {
   appUrl: string;
 }
 
+/** One device of one member. */
+interface Target {
+  uid: string;
+  device: string;
+  token: string;
+}
+
 const DEAD_TOKEN_CODES = new Set([
   'messaging/registration-token-not-registered',
   'messaging/invalid-registration-token',
@@ -26,7 +35,8 @@ const DEAD_TOKEN_CODES = new Set([
 
 /**
  * Sends [message] to every device of [uids] in church [cid], skipping
- * members who muted [kind] there. Tokens FCM reports as dead are removed
+ * members who muted [kind] there, written with [Words] in each one's
+ * language (users/{uid}.appLocale). Tokens FCM reports as dead are removed
  * from users/{uid}.fcm. Returns how many devices it was sent to.
  */
 export async function notifyMembers(
@@ -34,7 +44,7 @@ export async function notifyMembers(
   cid: string,
   uids: string[],
   kind: NotificationKind,
-  message: PushMessage,
+  message: (w: Words) => PushMessage,
 ): Promise<number> {
   const { db } = deps;
   const unique = [...new Set(uids)];
@@ -52,15 +62,31 @@ export async function notifyMembers(
   if (wanted.length === 0) return 0;
 
   const users = await db.getAll(...wanted.map((uid) => db.doc(`users/${uid}`)));
-  const targets: { uid: string; device: string; token: string }[] = [];
+  const byLanguage = new Map<Language, Target[]>();
   for (const u of users) {
     const fcm = (u.get('fcm') as Record<string, string> | undefined) ?? {};
+    const language = languageOf(u.get('appLocale'));
     for (const [device, token] of Object.entries(fcm)) {
-      if (typeof token === 'string' && token) targets.push({ uid: u.id, device, token });
+      if (typeof token !== 'string' || !token) continue;
+      byLanguage.set(language, [...(byLanguage.get(language) ?? []), { uid: u.id, device, token }]);
     }
   }
-  if (targets.length === 0) return 0;
+  let sent = 0;
+  for (const [language, targets] of byLanguage) {
+    sent += await send(deps, cid, kind, message(words(language)), targets);
+  }
+  return sent;
+}
 
+/** Sends [message] to [targets], 500 at a time, dropping the tokens FCM says are dead. */
+async function send(
+  deps: PushDeps,
+  cid: string,
+  kind: NotificationKind,
+  message: PushMessage,
+  targets: Target[],
+) {
+  const { db } = deps;
   // Through the church URL, which switches to this church first: someone in
   // two churches lands on the right one.
   const link = `/c/${cid}?to=${encodeURIComponent(message.link ?? '/home')}`;

@@ -38,7 +38,15 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
     setState(() => _exporting = true);
     try {
       final now = ref.read(clockProvider)();
-      final zip = exportZip(await loadChurchSnapshot(ref), now);
+      final csv = CsvWords(
+        fileName: l10n.exportCsvFile,
+        date: l10n.exportCsvDate,
+        service: l10n.exportCsvService,
+        role: l10n.exportCsvRole,
+        people: l10n.exportCsvPeople,
+        separator: l10n.listSeparator,
+      );
+      final zip = exportZip(await loadChurchSnapshot(ref), now, csv);
       final saved = await ref.read(fileSaverProvider).save(exportFileName(church, now), zip, 'application/zip');
       if (!saved) return;
       // That it happened, never what was in it.

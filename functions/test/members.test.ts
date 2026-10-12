@@ -189,9 +189,11 @@ describe('triggers', () => {
     await db.doc('users/carol').set({ fcm: { phone: 'tok-carol', web: 'tok-carol-web' } });
     await db.doc('churches/C1/members/carol').update({ 'notificationPrefs.muted': ['memberLeft'] });
     const sent: string[][] = [];
+    const bodies: string[] = [];
     const messaging = {
-      sendEachForMulticast: async (m: { tokens: string[] }) => {
+      sendEachForMulticast: async (m: { tokens: string[]; notification: { body: string } }) => {
         sent.push(m.tokens);
+        bodies.push(m.notification.body);
         return {
           successCount: m.tokens.length,
           failureCount: 0,
@@ -204,6 +206,11 @@ describe('triggers', () => {
     assert.equal(await onMemberLeft({ db, messaging, appUrl }, 'C1', bob, 'bob'), 1);
     assert.deepEqual(sent, [['tok-alice']], 'carol muted it');
     assert.equal(await onMemberLeft({ db, messaging, appUrl }, 'C1', bob, 'alice'), 0);
+
+    await db.doc('users/alice').update({ appLocale: 'en' });
+    await db.doc('churches/C1/members/bob').update({ name: '' });
+    await onMemberLeft({ db, messaging, appUrl }, 'C1', await db.doc('churches/C1/members/bob').get(), 'bob');
+    assert.deepEqual(bodies.at(-1), 'Someone left the church', 'in the language their app shows');
   });
 
   test('dead tokens are removed, live ones kept', async () => {
@@ -220,7 +227,7 @@ describe('triggers', () => {
         ),
       }),
     } as never;
-    const n = await notifyMembers({ db, messaging, appUrl }, 'C1', ['alice'], 'reminder', { title: 't', body: 'b' });
+    const n = await notifyMembers({ db, messaging, appUrl }, 'C1', ['alice'], 'reminder', () => ({ title: 't', body: 'b' }));
     assert.equal(n, 1);
     assert.deepEqual((await db.doc('users/alice').get()).get('fcm'), { phone: 'live' });
   });
@@ -235,7 +242,7 @@ describe('triggers', () => {
         return { successCount: 1, failureCount: 0, responses: [{ success: true }] };
       },
     } as never;
-    await notifyMembers({ db, messaging, appUrl }, 'C1', ['alice'], 'reminder', { title: 't', body: 'b', link: '/rosters' });
+    await notifyMembers({ db, messaging, appUrl }, 'C1', ['alice'], 'reminder', () => ({ title: 't', body: 'b', link: '/rosters' }));
     assert.equal(link, 'https://app.example/c/C1?to=%2Frosters', 'through the church URL, so it opens this church');
   });
 
@@ -251,7 +258,7 @@ describe('triggers', () => {
       },
     } as never;
     // eve is not a member of C1, so asking C1 to notify eve sends nothing.
-    assert.equal(await notifyMembers({ db, messaging, appUrl }, 'C1', ['eve'], 'reminder', { title: 't', body: 'b' }), 0);
+    assert.equal(await notifyMembers({ db, messaging, appUrl }, 'C1', ['eve'], 'reminder', () => ({ title: 't', body: 'b' })), 0);
     assert.equal(calls, 0);
   });
 

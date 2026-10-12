@@ -2,6 +2,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 
 import { churchAccess } from './access.js';
 import { dateKeyUtc8, fail, type Caller, type Deps } from './common.js';
+import { LANGUAGES, words } from './languages.js';
 import { dateKeyIn, timeZoneOf, type ChurchTimeZone } from './timeZones.js';
 
 /**
@@ -76,6 +77,7 @@ export function buildPrompt(opts: { service: Service; names: string[]; today: st
   const events = JSON.stringify(service.events ?? []);
   return [
     `把「${service.name}」的服事表照片轉成 JSON。只輸出 JSON 陣列，不加 Markdown 或說明文字。`,
+    '照原文辨識，不要翻譯：英文、日文、韓文或其他語言的服事表，服事項目、人名、活動都照照片上的文字輸出。',
     '## 只要這些',
     '日期、服事項目、人名、活動。其他不要輸出。逐格讀取，不要漏掉看得見的服事項目或人名。',
     '## 服事項目',
@@ -87,7 +89,7 @@ export function buildPrompt(opts: { service: Service; names: string[]; today: st
     '以下同工名單僅供辨識已寫完整的人名，不能拿來補字或替換：',
     names.join('、'),
     '一格有多人（/ 或 + 分隔）拆成多個字串，保留照片先後順序。',
-    '空白或「待定」填 "people": []；「暫停」的服事項目不輸出。',
+    `空白或${LANGUAGES.map((l) => `「${words(l).placeholder}」`).join('')}填 "people": []；「暫停」的服事項目不輸出。`,
     '## 活動',
     'events 每個元素固定是 {"name":"活動名稱","color":0}，color 是 0 到 5 的整數色票編號，不是 RGB 或 ARGB。',
     `教會常用活動：${events}。名稱完全相同時使用該 color；其他活動照原文抄，color 填 4。`,

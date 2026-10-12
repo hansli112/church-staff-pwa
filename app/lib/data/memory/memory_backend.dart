@@ -4,6 +4,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart' show listEquals;
 
+import '../../core/languages.dart';
 import '../../domain/day.dart';
 import '../../domain/event_roster.dart';
 import '../../domain/limits.dart';
@@ -418,6 +419,7 @@ class MemoryAuth implements AuthGateway {
     String name,
     String email,
     String password,
+    AppLanguage language,
   ) async {
     email = email.trim();
     if (!email.contains('@')) {
@@ -437,16 +439,27 @@ class MemoryAuth implements AuthGateway {
       name: name,
     );
     _set(_user(email));
+    emailLanguages.add(language);
   }
 
   int verificationEmailsSent = 0;
   final resetEmails = <String>[];
 
-  @override
-  Future<void> sendEmailVerification() async => verificationEmailsSent++;
+  /// The language of every email sent: verifications, the one on
+  /// registering included, and password resets.
+  final emailLanguages = <AppLanguage>[];
 
   @override
-  Future<void> sendPasswordReset(String email) async => resetEmails.add(email);
+  Future<void> sendEmailVerification(AppLanguage language) async {
+    verificationEmailsSent++;
+    emailLanguages.add(language);
+  }
+
+  @override
+  Future<void> sendPasswordReset(String email, AppLanguage language) async {
+    resetEmails.add(email);
+    emailLanguages.add(language);
+  }
 
   /// Marks [email] verified, as if its owner clicked the link.
   void verify(String email) {
@@ -1355,7 +1368,11 @@ class MemoryCloud implements CloudApi {
   final stats = <DailyStats>[];
 
   @override
-  Future<String> createChurch(String name, {ChurchTimeZone timeZone = ChurchTimeZone.fallback}) async {
+  Future<String> createChurch(
+    String name, {
+    ChurchTimeZone timeZone = ChurchTimeZone.fallback,
+    AppLanguage? language,
+  }) async {
     _b.requireNetwork();
     final user = _b.auth.currentUser;
     if (user == null || !user.verified) {
@@ -1367,7 +1384,9 @@ class MemoryCloud implements CloudApi {
       throw const CloudException(CloudErrorCode.duplicateName);
     }
     final cid = _b.addChurch(name, timeZone: timeZone);
-    _b.setServices(cid, defaultServices);
+    // As the Cloud Function: the language asked for, else the one shown last.
+    language ??= AppLanguage.fromTag(_b.users[user.uid]?.appLocale) ?? AppLanguage.zhHant;
+    _b.setServices(cid, defaultServices[language]!);
     _b.addMember(
       cid,
       Member(
@@ -1513,6 +1532,7 @@ class MemoryCloud implements CloudApi {
     required String churchName,
     String? me,
     ChurchTimeZone timeZone = ChurchTimeZone.fallback,
+    AppLanguage? language,
   }) async {
     final preview = _readMove(path);
     final people = _movePeople(path, preview);
@@ -1779,17 +1799,32 @@ PendingMember movedMember({
   );
 }
 
-/// The services a new church starts with. The Cloud Function seeds the same
-/// list (functions/src/church.ts; testdata/church_rules.json).
-const defaultServices = [
-  Service(
-    id: 'sunday',
-    name: '主日崇拜',
-    weekday: DateTime.sunday,
-    duties: ['司會', '敬拜', '司琴', '音控', '投影', '招待'],
-    events: [
-      EventTag(name: '聖餐', color: 0),
-      EventTag(name: '浸禮', color: 4),
-    ],
-  ),
-];
+/// The services a new church starts with, in its maker's language. The
+/// Cloud Function seeds the same lists (functions/src/languages.ts;
+/// testdata/church_rules.json).
+const defaultServices = {
+  AppLanguage.zhHant: [
+    Service(
+      id: 'sunday',
+      name: '主日崇拜',
+      weekday: DateTime.sunday,
+      duties: ['司會', '敬拜', '司琴', '音控', '投影', '招待'],
+      events: [
+        EventTag(name: '聖餐', color: 0),
+        EventTag(name: '浸禮', color: 4),
+      ],
+    ),
+  ],
+  AppLanguage.en: [
+    Service(
+      id: 'sunday',
+      name: 'Sunday Service',
+      weekday: DateTime.sunday,
+      duties: ['Host', 'Worship Leader', 'Piano', 'Sound', 'Slides', 'Usher'],
+      events: [
+        EventTag(name: 'Communion', color: 0),
+        EventTag(name: 'Baptism', color: 4),
+      ],
+    ),
+  ],
+};

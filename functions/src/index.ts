@@ -106,7 +106,7 @@ export const purgeDeletedChurches = onSchedule(
 
 // Church URL: /c/<id> pages, manifests and icons, through Hosting.
 export const churchPage = onRequest({ region: REGION, maxInstances: 10 }, async (req, res) => {
-  const r = await churchPageHandler({ ...deps(), bucket: bucket(), appUrl: appUrl() }, req.path);
+  const r = await churchPageHandler({ ...deps(), bucket: bucket(), appUrl: appUrl() }, req.path, req.get('accept-language'));
   res.status(r.status).set(r.headers).send(r.body);
 });
 

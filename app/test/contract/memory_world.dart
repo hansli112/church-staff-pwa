@@ -1,3 +1,4 @@
+import 'package:martha/core/languages.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/models.dart';
 
@@ -9,7 +10,7 @@ class MemoryWorld implements ContractWorld {
 
   @override
   Future<String> signUp(String email, {String name = '', bool verified = true}) async {
-    await backend.auth.registerWithEmail(name, email, contractPassword);
+    await backend.auth.registerWithEmail(name, email, contractPassword, AppLanguage.zhHant);
     if (verified) {
       backend.auth.verify(email);
       await backend.auth.reload();

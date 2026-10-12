@@ -13,6 +13,7 @@
 /// Storage or a function, is a [CloudException].
 library;
 
+import '../core/languages.dart';
 import '../domain/day.dart';
 import '../domain/models.dart';
 import '../domain/staff_order.dart';
@@ -74,9 +75,12 @@ abstract interface class AuthGateway {
 
   Future<void> signInWithGoogle();
   Future<void> signInWithEmail(String email, String password);
-  Future<void> registerWithEmail(String name, String email, String password);
-  Future<void> sendEmailVerification();
-  Future<void> sendPasswordReset(String email);
+
+  /// Creates the account and sends its verification email in [language],
+  /// as [sendEmailVerification] and [sendPasswordReset] send theirs.
+  Future<void> registerWithEmail(String name, String email, String password, AppLanguage language);
+  Future<void> sendEmailVerification(AppLanguage language);
+  Future<void> sendPasswordReset(String email, AppLanguage language);
 
   /// Re-reads the account, e.g. after the user clicked the verification
   /// link, and pushes the result through [authState].
@@ -523,8 +527,10 @@ class LinkSourceResult {
 /// invites ([CloudErrorCode.inviteInvalid]) and the church preview
 /// [CloudErrorCode.notFound].
 abstract interface class CloudApi {
-  /// Returns the new church ID. [timeZone] is its time zone.
-  Future<String> createChurch(String name, {ChurchTimeZone timeZone = ChurchTimeZone.fallback});
+  /// Returns the new church ID. [timeZone] is its time zone; its services
+  /// start in [language], its maker's (without one, the language their app
+  /// last showed, users/{uid}.appLocale).
+  Future<String> createChurch(String name, {ChurchTimeZone timeZone = ChurchTimeZone.fallback, AppLanguage? language});
 
   Future<Invite> previewInvite(String code);
 
@@ -546,12 +552,14 @@ abstract interface class CloudApi {
 
   /// Creates church [churchName] in [timeZone] from the move file with the
   /// caller as its admin; [me] is the person in the file the caller takes
-  /// over. Returns the church ID.
+  /// over; [language] is the caller's, as for [createChurch]. Returns the
+  /// church ID.
   Future<String> moveCommit(
     String path, {
     required String churchName,
     String? me,
     ChurchTimeZone timeZone = ChurchTimeZone.fallback,
+    AppLanguage? language,
   });
 
   /// Pending members (moved from self-host) under the caller's verified

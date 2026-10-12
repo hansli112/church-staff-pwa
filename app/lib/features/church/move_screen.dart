@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
+import '../../core/languages.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
@@ -80,11 +81,12 @@ class _MoveScreenState extends ConsumerState<MoveScreen> {
       _error = null;
     });
     try {
+      final language = AppLanguage.shownIn(context);
       final timeZone = await ref.read(deviceTimeZoneProvider)();
       final cid = await ref
           .read(backendProvider)
           .cloud
-          .moveCommit(_path!, churchName: name, me: _me, timeZone: timeZone);
+          .moveCommit(_path!, churchName: name, me: _me, timeZone: timeZone, language: language);
       ref.read(selectedChurchProvider.notifier).select(cid);
       Haptics.success();
       if (!mounted) return;

@@ -68,6 +68,19 @@ describe('self-host import mapping', () => {
     ]);
   });
 
+  test("nobody yet: self-host's 待定, and the mover's own word for it", () => {
+    const snapshot = {
+      users: [],
+      settings: [],
+      staffOrders: [],
+      rosters: [{ id: '20261004_sundayService', data: { type: 'sundayService', duties: [{ role: 'Piano', people: ['TBD', '待定', 'Amy'] }] } }],
+    };
+    const people = (language?: 'en' | 'zh-Hant') => buildImport(snapshot, null, language).rosters[0].data.duties[0].people;
+    assert.deepEqual(people('en'), ['Amy']);
+    assert.deepEqual(people('zh-Hant'), ['TBD', 'Amy']);
+    assert.deepEqual(people(), ['TBD', 'Amy'], "the operator's import");
+  });
+
   test('roster dates come from dateKey, then the ID, then the timestamp in UTC+8', () => {
     assert.equal(rosterDateKey('x', { dateKey: '2026-10-04' }), '2026-10-04');
     assert.equal(rosterDateKey('20261011_youth', {}), '2026-10-11');

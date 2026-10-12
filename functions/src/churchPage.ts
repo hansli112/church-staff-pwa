@@ -5,6 +5,7 @@ import type { Deps } from './common.js';
 import { publicLogoPath } from './church.js';
 import { ICON_FILES, iconStoragePath, type IconFile } from './icons.js';
 import { checkInvite } from './invites.js';
+import { browserLanguage, words, type Language, type Words } from './languages.js';
 
 /**
  * 教會頁: Hosting sends /c/** here, so each church URL is its own web app
@@ -20,6 +21,12 @@ import { checkInvite } from './invites.js';
  * Closed (suspended, deleted) churches get the plain page: the app explains
  * why. An unknown ID gets the plain page with a 404; the app says the church
  * was not found.
+ *
+ * Language: the church page, kept a day by the CDN, is the same for
+ * everyone, in Traditional Chinese; its own script puts what is not the
+ * church's in the browser's language (app/web/index.html). An invite link,
+ * never kept, and the manifest, never waited for, come in the browser's
+ * language (Accept-Language) as the app will pick it.
  */
 export interface PageDeps extends Deps {
   bucket: Pick<ReturnType<Storage['bucket']>, 'file'>;
@@ -50,6 +57,7 @@ const IMMUTABLE = 'public, max-age=31536000, immutable';
 /** An invite can be revoked or expire any moment. */
 const FRESH = 'private, no-cache';
 const HTML = 'text/html; charset=utf-8';
+const VARY = { vary: 'Accept-Language' };
 
 /** The web app's own icons, used when a church has no logo. */
 export const DEFAULT_ICONS = [
@@ -137,12 +145,6 @@ export interface Splash {
   busy: boolean;
 }
 
-/** The app's errInviteInvalid and errInviteExpired (app/lib/l10n/app_zh.arb), word for word. */
-const INVITE_ERRORS = {
-  inviteInvalid: '找不到這個邀請，請確認邀請碼，或向管理員要新的邀請',
-  inviteExpired: '這個邀請過期了，請向管理員要新的邀請',
-} as const;
-
 /** Puts [s] in the shell's loading screen, between its markers; a shell without one is left as it is. */
 export function withSplash(html: string, s: Splash): string {
   const body = [
@@ -171,28 +173,50 @@ export function personalize(html: string, cid: string, f: ChurchFace, appUrl: st
     .replace('</head>', () => `  ${og}\n</head>`);
 }
 
-export function manifest(cid: string, f: ChurchFace | null) {
+/**
+ * The shell, written in Traditional Chinese, in [language]: what shows
+ * before the app starts and what is not a church's own (its name, put in by
+ * [personalize] and [withSplash], stays). The same as app/web/index.html's
+ * script does in the browser; it matches the shell's text exactly, which
+ * churchPage.test.ts holds index.html to.
+ */
+export function inLanguage(html: string, language: Language): string {
+  const zh = words('zh-Hant');
+  const w = words(language);
+  return html
+    .replace(/<html lang="[^"]*">/, () => `<html lang="${language}">`)
+    .replace(`<title>${zh.appName}</title>`, () => `<title>${escape(w.appName)}</title>`)
+    .replace(`<meta name="apple-mobile-web-app-title" content="${zh.appName}">`, () => `<meta name="apple-mobile-web-app-title" content="${escape(w.appName)}">`)
+    .replace(`<meta name="description" content="${zh.description}">`, () => `<meta name="description" content="${escape(w.description)}">`)
+    .replace(`<p class="title">${zh.appName}</p>`, () => `<p class="title">${escape(w.appName)}</p>`)
+    .replace(`<p class="note">${zh.loading}</p>`, () => `<p class="note">${escape(w.loading)}</p>`);
+}
+
+export function manifest(cid: string, f: ChurchFace | null, language: Language) {
+  const w = words(language);
   return {
-    name: f?.name ?? '馬大別忙',
-    short_name: f?.shortName ?? '馬大別忙',
+    name: f?.name ?? w.appName,
+    short_name: f?.shortName ?? w.appName,
     id: `/c/${cid}`,
     start_url: `/c/${cid}`,
     scope: '/',
     display: 'standalone',
     background_color: '#F2F2F7',
     theme_color: '#1F5FD1',
-    description: '馬大！馬大！你為許多的事思慮煩擾，但是不可少的只有一件；馬利亞已經選擇那上好的福分，是不能奪去的。（路加福音 10:41–42）',
+    description: w.description,
     orientation: 'portrait-primary',
     prefer_related_applications: false,
-    lang: 'zh-Hant',
+    lang: language,
     icons: f?.icons ?? DEFAULT_ICONS,
   };
 }
 
 const notFound = (body = ''): PageResponse => ({ status: 404, headers: { 'content-type': 'text/plain' }, body });
 
-/** Answers one request under /c/. [path] is the request path. */
-export async function churchPage(deps: PageDeps, path: string): Promise<PageResponse> {
+/** Answers one request under /c/. [path] is the request path; [acceptLanguage], its header. */
+export async function churchPage(deps: PageDeps, path: string, acceptLanguage?: string): Promise<PageResponse> {
+  const language = browserLanguage(acceptLanguage);
+  const w = words(language);
   const match = new RegExp(`^/c/(${CHURCH_ID})(/.*)?$`).exec(path);
   const cid = match?.[1];
   const rest = match?.[2] ?? '';
@@ -201,8 +225,8 @@ export async function churchPage(deps: PageDeps, path: string): Promise<PageResp
   if (cid && church?.exists && rest === '/manifest.json') {
     return {
       status: 200,
-      headers: { 'content-type': 'application/manifest+json; charset=utf-8', 'cache-control': CHURCH_CACHE },
-      body: JSON.stringify(manifest(cid, face(cid, church))),
+      headers: { 'content-type': 'application/manifest+json; charset=utf-8', 'cache-control': CHURCH_CACHE, ...VARY },
+      body: JSON.stringify(manifest(cid, face(cid, church), language)),
     };
   }
 
@@ -220,29 +244,34 @@ export async function churchPage(deps: PageDeps, path: string): Promise<PageResp
     return { status: 404, headers: { 'content-type': HTML, 'cache-control': CACHE }, body: html };
   }
   const f = face(cid, church);
-  const page = f ? personalize(html, cid, f, deps.appUrl) : html;
   const code = /^\/join\/([A-Za-z0-9]{1,32})$/.exec(rest)?.[1];
   if (code) {
     const invite = await checkInvite(deps, code);
     const icon = f && invite.ok && invite.cid === cid ? f.touchIcon : DEFAULT_TOUCH_ICON;
+    const page = inLanguage(f ? personalize(html, cid, f, deps.appUrl) : html, language);
     return {
       status: 200,
-      headers: { 'content-type': HTML, 'cache-control': FRESH },
+      headers: { 'content-type': HTML, 'cache-control': FRESH, ...VARY },
       body: withSplash(
         page,
         invite.ok
           ? // Just the name: someone already in the church goes straight to it.
-            { icon, title: invite.churchName, note: '載入中…', busy: true }
-          : { icon, title: f?.name ?? '馬大別忙', note: INVITE_ERRORS[invite.reason], busy: false },
+            { icon, title: invite.churchName, note: w.loading, busy: true }
+          : { icon, title: f?.name ?? w.appName, note: inviteError(w, invite.reason), busy: false },
       ),
     };
   }
+  const zh = words('zh-Hant');
   return {
     status: 200,
     headers: { 'content-type': HTML, 'cache-control': CHURCH_CACHE },
-    body: f ? withSplash(page, { icon: f.touchIcon, title: f.name, note: '載入中…', busy: true }) : page,
+    body: f ? withSplash(personalize(html, cid, f, deps.appUrl), { icon: f.touchIcon, title: f.name, note: zh.loading, busy: true }) : html,
   };
 }
+
+/** Why an invite cannot be used, as the app says it (errInviteInvalid, errInviteExpired). */
+const inviteError = (w: Words, reason: 'inviteInvalid' | 'inviteExpired') =>
+  reason === 'inviteExpired' ? w.inviteExpired : w.inviteInvalid;
 
 /** The logo or one of the icons made from it, from Storage; null when missing. */
 async function readIcon(deps: PageDeps, cid: string, version: string, file: string): Promise<Buffer | null> {

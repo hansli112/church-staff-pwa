@@ -4,7 +4,7 @@ import type { DocumentSnapshot } from 'firebase-admin/firestore';
 import { isChurchOpen } from './access.js';
 import { DAY_MS } from './common.js';
 import { notifyMembers, type PushDeps } from './push.js';
-import { dateWithWeekday, dutiesByUid, isEvent, shortDate } from './rosterChange.js';
+import { dutiesByUid, isEvent } from './rosterChange.js';
 import { dateKeyIn, timeZoneOf, timeZonesAt } from './timeZones.js';
 
 /** The hour of the evening reminders, on each church's clock. */
@@ -28,10 +28,11 @@ async function serviceName(deps: PushDeps, cid: string, type: string) {
   return list.find((s) => s.id === type)?.name ?? '';
 }
 
-/** One duty to be reminded of: on which day, and what. */
+/** Someone's duties on one day: which, of what service or event. */
 interface DutyLine {
   dateKey: string;
-  text: string;
+  name: string;
+  roles: string[];
 }
 
 /**
@@ -75,7 +76,7 @@ export async function sendReminders(deps: PushDeps & { now: () => Date }) {
         isEvent(r) ? ((r.get('title') as string | undefined) ?? '') : await serviceName(deps, cid, r.get('type') as string);
       const dateKey = r.get('dateKey') as string;
       for (const [uid, roles] of dutiesByUid(r.get('duties'))) {
-        perUid.set(uid, [...(perUid.get(uid) ?? []), { dateKey, text: `${name} ${roles.join('、')}` }]);
+        perUid.set(uid, [...(perUid.get(uid) ?? []), { dateKey, name, roles }]);
       }
     }
     if (perUid.size === 0) continue;
@@ -88,19 +89,19 @@ export async function sendReminders(deps: PushDeps & { now: () => Date }) {
       const weekly = isMonday && timing !== 'dayBefore';
       if (weekly) {
         const week = [...items].sort((a, b) => a.dateKey.localeCompare(b.dateKey));
-        sent += await notifyMembers(deps, cid, [member.id], 'reminder', {
-          title: `這週的服事（${shortDate(today)}–${shortDate(until)}）`,
-          body: week.map((i) => `${dateWithWeekday(i.dateKey)}${i.text}`).join('；'),
+        sent += await notifyMembers(deps, cid, [member.id], 'reminder', (w) => ({
+          title: w.weekReminder(w.shortDate(today), w.shortDate(until)),
+          body: week.map((i) => w.datedDutyLine(w.dateWithWeekday(i.dateKey), w.dutyLine(i.name, i.roles))).join(w.lineSeparator),
           link: '/home',
-        });
+        }));
       }
       const next = items.filter((i) => i.dateKey === tomorrow);
       if (!weekly && timing !== 'weekly' && next.length > 0) {
-        sent += await notifyMembers(deps, cid, [member.id], 'reminder', {
-          title: `明天的服事（${shortDate(tomorrow)}）`,
-          body: next.map((i) => i.text).join('；'),
+        sent += await notifyMembers(deps, cid, [member.id], 'reminder', (w) => ({
+          title: w.tomorrowReminder(w.shortDate(tomorrow)),
+          body: next.map((i) => w.dutyLine(i.name, i.roles)).join(w.lineSeparator),
           link: '/home',
-        });
+        }));
       }
     }
   }

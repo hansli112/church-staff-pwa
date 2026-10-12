@@ -14,6 +14,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:martha/core/languages.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
@@ -156,14 +157,17 @@ void contractTests(Future<ContractWorld> Function() open) {
   group('accounts', () {
     test('a password account needs a valid email, 6 characters and an unused email', () async {
       await expectLater(
-        auth().registerWithEmail('A', 'not-an-email', contractPassword),
+        auth().registerWithEmail('A', 'not-an-email', contractPassword, AppLanguage.zhHant),
         authFails(AuthErrorCode.invalidEmail),
       );
-      await expectLater(auth().registerWithEmail('A', 'a@example.com', '12345'), authFails(AuthErrorCode.weakPassword));
+      await expectLater(
+        auth().registerWithEmail('A', 'a@example.com', '12345', AppLanguage.zhHant),
+        authFails(AuthErrorCode.weakPassword),
+      );
       await w.signUp('a@example.com');
       await w.signOut();
       await expectLater(
-        auth().registerWithEmail('A', 'a@example.com', contractPassword),
+        auth().registerWithEmail('A', 'a@example.com', contractPassword, AppLanguage.zhHant),
         authFails(AuthErrorCode.emailInUse),
       );
     });
@@ -309,6 +313,21 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect(services.map((s) => (s.id, s.duties.join('、'))), [('sunday', '司會、敬拜、司琴、音控、投影、招待')]);
       final mine = await w.backend.memberships.watchMine(uid).first;
       expect(mine.map((m) => (m.churchId, m.member.role)), [(cid, Role.admin)]);
+    });
+
+    test("its services are in its maker's language", () async {
+      await w.signUp('a@example.com');
+      final cid = await cloud().createChurch('Grace Church', language: AppLanguage.en);
+      final services = (await w.backend.church(cid).services().first).services;
+      expect(services.map((s) => (s.name, s.duties.first)), [('Sunday Service', 'Host')]);
+    });
+
+    test('without one, the language its maker’s app last showed', () async {
+      final uid = await w.signUp('a@example.com');
+      await w.backend.profiles.ensure(UserProfile(uid: uid, name: 'Amy', email: 'a@example.com'));
+      await w.backend.profiles.setAppLocale(uid, 'en');
+      final cid = await cloud().createChurch('Grace Church');
+      expect((await w.backend.church(cid).services().first).services.single.name, 'Sunday Service');
     });
 
     test('a church is made in the time zone asked for', () async {

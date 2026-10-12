@@ -47,7 +47,28 @@ const exportFormat = 'martha-church-export';
 /// 2: 活動的服事表 (serviceId null, eventId, title, endDate).
 const exportVersion = 2;
 const exportJsonName = 'martha-export.json';
-const exportCsvName = '服事表.csv';
+
+/// The CSV in the exporting admin's language: its file name, its column
+/// names, and what goes between the people in a cell.
+class CsvWords {
+  const CsvWords({
+    required this.fileName,
+    required this.date,
+    required this.service,
+    required this.role,
+    required this.people,
+    required this.separator,
+  });
+
+  final String fileName;
+  final String date;
+
+  /// The service's name, or the event's title.
+  final String service;
+  final String role;
+  final String people;
+  final String separator;
+}
 
 /// Rosters oldest first; on one day, in the order of the services, then
 /// events'. Not an event's roster cancelled with its event.
@@ -171,24 +192,24 @@ String _csvField(String v) => v.contains(RegExp('[",\r\n]')) ? '"${v.replaceAll(
 /// A roster's 服事 column: the service's name, or the event's title.
 String _name(ChurchSnapshot s, Roster r) => r.forEvent?.title ?? s.services.byId(r.type)?.name ?? r.type;
 
-/// One row per duty on each saved day: 日期, 服事, 服事項目, 同工 (several
-/// people joined with 「、」). UTF-8 with a BOM so Excel reads the Chinese.
-String exportCsv(ChurchSnapshot s) {
+/// One row per duty on each saved day: the day, the service (or event),
+/// the duty and its people, under [w]'s column names. UTF-8 with a BOM so
+/// Excel reads the Chinese.
+String exportCsv(ChurchSnapshot s, CsvWords w) {
   final rows = <List<String>>[
-    ['日期', '服事', '服事項目', '同工'],
+    [w.date, w.service, w.role, w.people],
     for (final r in _ordered(s))
-      for (final d in r.duties) [r.day.key, _name(s, r), d.role, d.people.join('、')],
+      for (final d in r.duties) [r.day.key, _name(s, r), d.role, d.people.join(w.separator)],
   ];
   return '\uFEFF${rows.map((row) => row.map(_csvField).join(',')).join('\r\n')}\r\n';
 }
 
-/// The zip an admin downloads: [exportJsonName] and [exportCsvName].
-Uint8List exportZip(ChurchSnapshot s, DateTime exportedAt) {
+/// The zip an admin downloads: [exportJsonName] and the CSV, in [csv]'s words.
+Uint8List exportZip(ChurchSnapshot s, DateTime exportedAt, CsvWords csv) {
   final json = utf8.encode(const JsonEncoder.withIndent('  ').convert(exportJson(s, exportedAt)));
-  final csv = utf8.encode(exportCsv(s));
   final archive = Archive()
     ..add(ArchiveFile.bytes(exportJsonName, json))
-    ..add(ArchiveFile.bytes(exportCsvName, csv));
+    ..add(ArchiveFile.bytes(csv.fileName, utf8.encode(exportCsv(s, csv))));
   return ZipEncoder().encodeBytes(archive);
 }
 

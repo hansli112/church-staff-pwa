@@ -1563,6 +1563,21 @@ class L10nZh extends L10n {
   String get exported => '已匯出';
 
   @override
+  String get exportCsvFile => '服事表.csv';
+
+  @override
+  String get exportCsvDate => '日期';
+
+  @override
+  String get exportCsvService => '服事';
+
+  @override
+  String get exportCsvRole => '服事項目';
+
+  @override
+  String get exportCsvPeople => '同工';
+
+  @override
   String get errMoveInvalid => '這不是搬家檔，請確認選對了檔案';
 
   @override

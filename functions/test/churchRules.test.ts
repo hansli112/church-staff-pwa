@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, test } from 'node:test';
 
-import { DEFAULT_SERVICES } from '../src/church.js';
 import { mapMember } from '../src/importer.js';
+import { LANGUAGES, words } from '../src/languages.js';
 import { dutiesByUid } from '../src/rosterChange.js';
 import { validDutyRename } from '../src/serviceSettings.js';
 
@@ -13,7 +13,12 @@ const rules = JSON.parse(readFileSync(new URL('../../testdata/church_rules.json'
 type Row = Record<string, any>;
 const rows = (name: string) => rules[name] as Row[];
 
-test('a new church starts with the default services', () => assert.deepEqual(DEFAULT_SERVICES, rules.defaultServices));
+test("a new church starts with the default services, in its maker's language", () => {
+  assert.deepEqual(Object.keys(rules.defaultServices), LANGUAGES);
+  for (const language of LANGUAGES) {
+    assert.deepEqual(words(language).newChurchServices, rules.defaultServices[language], language);
+  }
+});
 
 describe('dutyRename', () => {
   for (const r of rows('dutyRename')) {
