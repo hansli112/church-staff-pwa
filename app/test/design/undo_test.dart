@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/core/design/components.dart';
+import 'package:martha/core/zh_tw_localizations.dart';
 import 'package:martha/l10n/app_localizations.dart';
 
 void main() {
@@ -14,9 +14,7 @@ void main() {
         locale: const Locale('zh', 'TW'),
         localizationsDelegates: const [
           L10n.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
+          ...zhTwLocalizationsDelegates,
         ],
         supportedLocales: L10n.supportedLocales,
         home: Builder(
@@ -46,9 +44,7 @@ void main() {
         locale: const Locale('zh', 'TW'),
         localizationsDelegates: const [
           L10n.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
+          ...zhTwLocalizationsDelegates,
         ],
         supportedLocales: L10n.supportedLocales,
         home: Builder(

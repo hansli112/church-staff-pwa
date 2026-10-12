@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/design/theme.dart';
 import 'core/fonts.dart';
+import 'core/zh_tw_localizations.dart';
 import 'deep_link.dart';
 import 'deferred_pages.dart';
 import 'l10n/app_localizations.dart';
@@ -125,13 +125,10 @@ class _MarthaAppState extends ConsumerState<MarthaApp> {
       supportedLocales: L10n.supportedLocales,
       localizationsDelegates: const [
         L10n.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
+        ...zhTwLocalizationsDelegates,
       ],
       // Only Traditional Chinese for now; every device gets it until other
-      // ARB files are added. With the script and region, not plain `zh`,
-      // which gives Flutter's own labels (close, date picker) in Simplified.
+      // ARB files are added, and Flutter's own labels come only in zh-TW.
       localeResolutionCallback: (device, supported) =>
           const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant', countryCode: 'TW'),
       routerConfig: router,

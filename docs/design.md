@@ -222,6 +222,12 @@ Chrome 小幅改善；桌面 WebKit 差距小且教會資訊冷開反而較慢�
 
 解讀：慢網路時三版都卡在下載約 3 MB；網路夠快或檔案已快取時，wasm 版明顯快（重開 −33%）。Google 登入 SDK 本來就不擋首畫面，拿掉後時間沒有可量的差別，只是每次啟動少一個第三方連線、少約 100 KB。wasm 版的瀏覽器 e2e（登入、建教會、排服事、邀請、加入、設牧區）通過；打包後的 release 在 Chromium 載入帶 hash 的 wasm 入口、App 殼只快取 wasm 那組並能離線開啟，WebKit 則載入 JS 版、只快取 JS 那組。
 
+**2026-10-12：只帶繁中的 Flutter 內建文字（#70）**
+
+- Flutter 內建文字（按鈕、日期選擇器、無障礙標籤）原本用 `GlobalMaterialLocalizations.delegate` 等三個 delegate，它們依語言挑翻譯，所以 80 幾種語言和每個語言的日期資料都打包進去。改成 `app/lib/core/zh_tw_localizations.dart` 只建繁中（台灣）那一份，zh_TW 的日期資料從 Flutter 複製一份（測試比對兩者相同）。
+- JS 版 `main.dart.js`（prod config）：未壓縮 4.56 MB → 3.96 MB，gzip 1,266 KB → 1,148 KB（−118 KB，約 9%）。
+- 日期選擇器原本拿到 `zh` 的日期格式（周日），現在和 App 自己的日期一樣用 `zh_TW`（週日）。`Intl.defaultLocale` 設成 `zh_TW`：沒指定語言的 `DateFormat` 以前靠 Flutter 順便載入的 en_US 資料。
+
 參考官方 guideline：[Flutter 效能](https://docs.flutter.dev/perf/best-practices)、[Web profiling](https://docs.flutter.dev/perf/web-performance)、[Firestore](https://firebase.google.com/docs/firestore/best-practices)、[Functions](https://firebase.google.com/docs/functions/tips)、[resource hints](https://web.dev/learn/performance/resource-hints)、[Safari Web Inspector](https://developer.apple.com/safari/tools/)。
 
 下一步（需要實機）：

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/app.dart';
 import 'package:martha/core/design/balanced_text.dart';
 import 'package:martha/core/design/theme.dart';
+import 'package:martha/core/zh_tw_localizations.dart';
 import 'package:martha/deferred_pages.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/church_time.dart';
@@ -89,9 +89,7 @@ Future<void> pumpWidgetInApp(
         theme: buildTheme(brightness).copyWith(platform: platform),
         localizationsDelegates: const [
           L10n.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
+          ...zhTwLocalizationsDelegates,
         ],
         supportedLocales: L10n.supportedLocales,
         home: MediaQuery.withClampedTextScaling(
