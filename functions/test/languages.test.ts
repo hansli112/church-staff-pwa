@@ -15,7 +15,8 @@ describe('which language', () => {
     assert.equal(languageOf(undefined), 'zh-Hant', 'an app from before languages');
     assert.equal(languageOf(42), 'zh-Hant');
     assert.equal(languageOf('zh-Hans'), 'zh-Hans');
-    assert.equal(languageOf('ja'), 'en', 'an app newer than these functions');
+    assert.equal(languageOf('ja'), 'ja');
+    assert.equal(languageOf('fr'), 'en', 'an app newer than these functions');
   });
 
   describe("a browser's: the first on its list the app speaks, else English, as the app picks", () => {
@@ -36,7 +37,7 @@ describe('which language', () => {
 
   test('a browser lists them by weight, not by place', () => {
     assert.equal(browserLanguage('zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7'), 'zh-Hant');
-    assert.equal(browserLanguage('ja,en;q=0.5,zh-CN;q=0.8'), 'zh-Hans');
+    assert.equal(browserLanguage('fr,en;q=0.5,zh-CN;q=0.8'), 'zh-Hans');
     assert.equal(browserLanguage('zh;q=0,en'), 'en', 'q=0 is "not this"');
     assert.equal(browserLanguage('zh;Q=0,en'), 'en', 'Q as q');
     assert.equal(browserLanguage('zh;q=high,en'), 'en', 'a weight that is no number');
@@ -47,7 +48,7 @@ describe('which language', () => {
 
 describe("words the app shows too", () => {
   test("are the app's, word for word", () => {
-    const arbs = { 'zh-Hant': 'app_zh.arb', 'zh-Hans': 'app_zh_Hans.arb', en: 'app_en.arb' } as const;
+    const arbs = { 'zh-Hant': 'app_zh.arb', 'zh-Hans': 'app_zh_Hans.arb', en: 'app_en.arb', ja: 'app_ja.arb', ko: 'app_ko.arb' } as const;
     assert.deepEqual(Object.keys(arbs), LANGUAGES);
     for (const language of LANGUAGES) {
       const arb = json(`../../app/lib/l10n/${arbs[language]}`);
@@ -70,6 +71,8 @@ describe('dates in pushes', () => {
     assert.deepEqual([hans.shortDate('2026-10-18'), hans.dateWithWeekday('2026-10-18')], ['10/18', '10/18（周日）']);
     assert.deepEqual([en.shortDate('2026-10-18'), en.dateWithWeekday('2026-10-18')], ['Oct 18', 'Oct 18 (Sun)']);
     assert.equal(en.dateWithWeekday('2027-01-04'), 'Jan 4 (Mon)');
+    assert.equal(words('ja').dateWithWeekday('2026-10-18'), '10/18（日）');
+    assert.equal(words('ko').dateWithWeekday('2026-10-18'), '10/18 (일)');
   });
 });
 

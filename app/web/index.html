@@ -101,7 +101,7 @@
       function speaks(tag) {
         var parts = String(tag).toLowerCase().split(/[-_]/);
         var rest = parts.slice(1);
-        if (parts[0] === 'en') return 'en';
+        if (parts[0] === 'en' || parts[0] === 'ja' || parts[0] === 'ko') return parts[0];
         if (parts[0] !== 'zh') return null;
         var script = rest.filter(function (p) { return p.length === 4; })[0];
         var region = rest.filter(function (p) { return p.length === 2; })[0];
@@ -123,6 +123,16 @@
           appName: 'Martha, sit',
           loading: 'Loading…',
           description: '“Martha, Martha,” the Lord answered, “you are worried and upset about many things, but few things are needed—or indeed only one. Mary has chosen what is better, and it will not be taken away from her.” (Luke 10:41–42)'
+        },
+        ja: {
+          appName: 'マルタ、ひと休み',
+          loading: '読み込み中…',
+          description: '「マルタ、マルタ、あなたは多くのことに思い悩み、心を乱している。しかし、必要なことはただ一つだけである。マリアは良い方を選んだ。それを取り上げてはならない。」（ルカによる福音書 10:41–42）'
+        },
+        ko: {
+          appName: '마르다의 쉼표',
+          loading: '불러오는 중…',
+          description: '마르다야 마르다야 네가 많은 일로 염려하고 근심하나 몇 가지만 하든지 혹은 한 가지만이라도 족하니라 마리아는 이 좋은 편을 택하였으니 빼앗기지 아니하리라 (누가복음 10:41–42)'
         }
       };
       var w = words[lang];

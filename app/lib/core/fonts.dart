@@ -15,6 +15,8 @@ String uiStringsAsset(AppLanguage language) => switch (language) {
   AppLanguage.zhHant => 'lib/l10n/app_zh.arb',
   AppLanguage.zhHans => 'lib/l10n/app_zh_Hans.arb',
   AppLanguage.en => 'lib/l10n/app_en.arb',
+  AppLanguage.ja => 'lib/l10n/app_ja.arb',
+  AppLanguage.ko => 'lib/l10n/app_ko.arb',
 };
 
 /// How long the page's loading screen waits for fonts at most, once the

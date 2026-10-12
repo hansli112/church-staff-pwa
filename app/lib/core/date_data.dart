@@ -7,6 +7,8 @@ import 'languages.dart';
   AppLanguage.zhHant => (zhTwDateSymbols, zhTwDatePatterns),
   AppLanguage.zhHans => (zhDateSymbols, zhDatePatterns),
   AppLanguage.en => (enDateSymbols, enDatePatterns),
+  AppLanguage.ja => (jaDateSymbols, jaDatePatterns),
+  AppLanguage.ko => (koDateSymbols, koDatePatterns),
 };
 
 // Copied from flutter_localizations' generated_date_localizations.dart

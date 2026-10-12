@@ -4,9 +4,9 @@
 // docs/i18n-glossary.md.
 
 /** An AppLanguage tag, as users/{uid}.appLocale holds it. */
-export type Language = 'zh-Hant' | 'zh-Hans' | 'en';
+export type Language = 'zh-Hant' | 'zh-Hans' | 'en' | 'ja' | 'ko';
 
-export const LANGUAGES: readonly Language[] = ['zh-Hant', 'zh-Hans', 'en'];
+export const LANGUAGES: readonly Language[] = ['zh-Hant', 'zh-Hans', 'en', 'ja', 'ko'];
 
 /**
  * The language for a BCP 47 tag the app speaks, as AppLanguage.of: Chinese
@@ -15,7 +15,7 @@ export const LANGUAGES: readonly Language[] = ['zh-Hant', 'zh-Hans', 'en'];
  */
 const speaks = (tag: string): Language | null => {
   const [primary, ...rest] = tag.toLowerCase().split(/[-_]/);
-  if (primary === 'en') return 'en';
+  if (primary === 'en' || primary === 'ja' || primary === 'ko') return primary;
   if (primary !== 'zh') return null;
   const script = rest.find((s) => s.length === 4);
   const region = rest.find((s) => s.length === 2);
@@ -62,6 +62,8 @@ const weekday = (dateKey: string) => {
 
 const ZH_WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 const EN_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const JA_WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
+const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 const EN_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /** A new church's services. Its name and duties are the church's own from then on. */
@@ -203,7 +205,53 @@ const en: Words = {
   newChurchServices: [sunday('Sunday Service', ['Host', 'Worship Leader', 'Piano', 'Sound', 'Slides', 'Usher'], ['Communion', 'Baptism'])],
 };
 
-const WORDS: Record<Language, Words> = { 'zh-Hant': zhHant, 'zh-Hans': zhHans, en };
+const ja: Words = {
+  shortDate: zhHant.shortDate,
+  dateWithWeekday: (k) => `${ja.shortDate(k)}（${JA_WEEKDAYS[weekday(k)]}）`,
+  weekReminder: (from, until) => `今週の奉仕（${from}–${until}）`,
+  tomorrowReminder: (day) => `明日の奉仕（${day}）`,
+  dutyLine: zhHant.dutyLine,
+  datedDutyLine: (day, line) => `${day} ${line}`,
+  lineSeparator: '／',
+  eventMoved: (title, day) => `${title}は ${day} に変更されました`,
+  putOn: (day, duties) => `${day} の担当になりました：${duties.join('、')}`,
+  takenOff: (day, duties) => `${day} の${duties.join('、')}は別の方の担当になりました`,
+  memberLeft: (name) => `${name}が教会を退出しました`,
+  someone: 'メンバー',
+  appName: 'マルタ、ひと休み',
+  description: '「マルタ、マルタ、あなたは多くのことに思い悩み、心を乱している。しかし、必要なことはただ一つだけである。マリアは良い方を選んだ。それを取り上げてはならない。」（ルカによる福音書 10:41–42）',
+  loading: '読み込み中…',
+  // app/lib/l10n/app_ja.arb's.
+  inviteInvalid: 'この招待が見つかりません。招待コードを確認するか、管理者に新しい招待をもらってください',
+  inviteExpired: 'この招待は期限切れです。管理者に新しい招待をもらってください',
+  placeholder: '未定',
+  newChurchServices: [sunday('主日礼拝', ['司会', '賛美リード', '奏楽', '音響', 'スライド', '受付'], ['聖餐式', '洗礼式'])],
+};
+
+const ko: Words = {
+  shortDate: zhHant.shortDate,
+  dateWithWeekday: (k) => `${ko.shortDate(k)} (${KO_WEEKDAYS[weekday(k)]})`,
+  weekReminder: (from, until) => `이번 주 봉사 (${from}–${until})`,
+  tomorrowReminder: (day) => `내일 봉사 (${day})`,
+  dutyLine: en.dutyLine,
+  datedDutyLine: (day, line) => `${day} ${line}`,
+  lineSeparator: '; ',
+  eventMoved: (title, day) => `${title} 일정 변경: ${day}`,
+  putOn: (day, duties) => `${day} 봉사 배정: ${duties.join(', ')}`,
+  takenOff: (day, duties) => `${day} ${duties.join(', ')} 담당이 다른 분으로 바뀌었어요`,
+  memberLeft: (name) => `교회를 떠난 멤버: ${name}`,
+  someone: '이름 없음',
+  appName: '마르다의 쉼표',
+  description: '마르다야 마르다야 네가 많은 일로 염려하고 근심하나 몇 가지만 하든지 혹은 한 가지만이라도 족하니라 마리아는 이 좋은 편을 택하였으니 빼앗기지 아니하리라 (누가복음 10:41–42)',
+  loading: '불러오는 중…',
+  // app/lib/l10n/app_ko.arb's.
+  inviteInvalid: '초대를 찾을 수 없어요. 초대 코드를 확인하거나 관리자에게 새 초대를 요청해 주세요.',
+  inviteExpired: '만료된 초대예요. 관리자에게 새 초대를 요청해 주세요.',
+  placeholder: '미정',
+  newChurchServices: [sunday('주일예배', ['사회', '찬양 인도', '반주', '음향', '자막', '안내'], ['성찬', '세례'])],
+};
+
+const WORDS: Record<Language, Words> = { 'zh-Hant': zhHant, 'zh-Hans': zhHans, en, ja, ko };
 
 export const words = (language: Language): Words => WORDS[language];
 

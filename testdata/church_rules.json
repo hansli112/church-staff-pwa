@@ -39,6 +39,32 @@
           { "name": "Baptism", "color": 4 }
         ]
       }
+    ],
+    "ja": [
+      {
+        "id": "sunday",
+        "name": "主日礼拝",
+        "weekday": 7,
+        "enabled": true,
+        "duties": ["司会", "賛美リード", "奏楽", "音響", "スライド", "受付"],
+        "events": [
+          { "name": "聖餐式", "color": 0 },
+          { "name": "洗礼式", "color": 4 }
+        ]
+      }
+    ],
+    "ko": [
+      {
+        "id": "sunday",
+        "name": "주일예배",
+        "weekday": 7,
+        "enabled": true,
+        "duties": ["사회", "찬양 인도", "반주", "음향", "자막", "안내"],
+        "events": [
+          { "name": "성찬", "color": 0 },
+          { "name": "세례", "color": 4 }
+        ]
+      }
     ]
   },
   "dutyRename": [

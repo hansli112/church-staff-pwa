@@ -71,6 +71,13 @@ void main() {
     expect(DateFormat.MMMEd().format(day), '10月18日周日');
   });
 
+  test('in Japanese and Korean', () async {
+    expect((await _load<MaterialLocalizations>(AppLanguage.ja)).formatMediumDate(day), '10月18日(日)');
+    expect(DateFormat.MMMEd().format(day), '10月18日(日)');
+    expect((await _load<MaterialLocalizations>(AppLanguage.ko)).formatMediumDate(day), '10월 18일 (일)');
+    expect(DateFormat.MMMEd().format(day), '10월 18일 (일)');
+  });
+
   test('in English, with the month by name', () async {
     final material = await _load<MaterialLocalizations>(AppLanguage.en);
     expect(material.formatMediumDate(day), 'Sun, Oct 18');

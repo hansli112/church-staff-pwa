@@ -15,6 +15,9 @@
     { "why": "Traditional Chinese in Malaysia", "preferred": ["zh-Hant-MY"], "language": "zh-Hant" },
     { "why": "Chinese in Hong Kong", "preferred": ["zh-HK"], "language": "zh-Hant" },
     { "why": "Chinese saying no more: Traditional", "preferred": ["zh"], "language": "zh-Hant" },
-    { "why": "Japanese, then Chinese", "preferred": ["ja-JP", "ja", "zh-CN"], "language": "zh-Hans" }
+    { "why": "Japanese, then Chinese", "preferred": ["ja-JP", "ja", "zh-CN"], "language": "ja" },
+    { "why": "Japanese", "preferred": ["ja"], "language": "ja" },
+    { "why": "Korean in Korea", "preferred": ["ko-KR"], "language": "ko" },
+    { "why": "Korean in America, then English", "preferred": ["ko-US", "en-US"], "language": "ko" }
   ]
 }

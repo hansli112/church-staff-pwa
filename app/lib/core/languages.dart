@@ -19,7 +19,9 @@ enum AppLanguage {
     monthByName: false,
     emailLanguage: 'zh-CN',
   ),
-  en(tag: 'en', locale: Locale('en'), intlLocale: 'en', label: 'English', monthByName: true, emailLanguage: 'en')
+  en(tag: 'en', locale: Locale('en'), intlLocale: 'en', label: 'English', monthByName: true, emailLanguage: 'en'),
+  ja(tag: 'ja', locale: Locale('ja'), intlLocale: 'ja', label: '日本語', monthByName: false, emailLanguage: 'ja'),
+  ko(tag: 'ko', locale: Locale('ko'), intlLocale: 'ko', label: '한국어', monthByName: false, emailLanguage: 'ko')
   ;
 
   const AppLanguage({
@@ -72,6 +74,8 @@ enum AppLanguage {
           ? zhHans
           : zhHant,
     'en' => en,
+    'ja' => ja,
+    'ko' => ko,
     _ => null,
   };
 

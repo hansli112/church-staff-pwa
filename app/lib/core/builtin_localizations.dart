@@ -62,6 +62,8 @@ class _MaterialDelegate extends LocalizationsDelegate<MaterialLocalizations> {
       AppLanguage.zhHant => MaterialLocalizationZhHantTw.new,
       AppLanguage.zhHans => MaterialLocalizationZhHans.new,
       AppLanguage.en => MaterialLocalizationEn.new,
+      AppLanguage.ja => MaterialLocalizationJa.new,
+      AppLanguage.ko => MaterialLocalizationKo.new,
     };
     return SynchronousFuture(
       make(
@@ -106,6 +108,8 @@ class _CupertinoDelegate extends LocalizationsDelegate<CupertinoLocalizations> {
       AppLanguage.zhHant => CupertinoLocalizationZhHantTw.new,
       AppLanguage.zhHans => CupertinoLocalizationZhHans.new,
       AppLanguage.en => CupertinoLocalizationEn.new,
+      AppLanguage.ja => CupertinoLocalizationJa.new,
+      AppLanguage.ko => CupertinoLocalizationKo.new,
     };
     return SynchronousFuture(
       make(
@@ -137,6 +141,8 @@ class _WidgetsDelegate extends LocalizationsDelegate<WidgetsLocalizations> {
     AppLanguage.zhHant => const WidgetsLocalizationZhHantTw(),
     AppLanguage.zhHans => const WidgetsLocalizationZhHans(),
     AppLanguage.en => const WidgetsLocalizationEn(),
+    AppLanguage.ja => const WidgetsLocalizationJa(),
+    AppLanguage.ko => const WidgetsLocalizationKo(),
   });
 
   @override
