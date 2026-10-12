@@ -24,9 +24,9 @@ import { browserLanguage, words, type Language, type Words } from './languages.j
  *
  * Language: the church page, kept a day by the CDN, is the same for
  * everyone, in Traditional Chinese; its own script puts what is not the
- * church's in the browser's language (app/web/index.html). An invite link,
- * never kept, and the manifest, never waited for, come in the browser's
- * language (Accept-Language) as the app will pick it.
+ * church's in the browser's language (app/web/index.html). An invite link
+ * and the manifest, neither kept by the CDN, come in the browser's language
+ * ([askedLanguages]) as the app will pick it.
  */
 export interface PageDeps extends Deps {
   bucket: Pick<ReturnType<Storage['bucket']>, 'file'>;
@@ -46,13 +46,18 @@ export const APP_SHELL = '/app.html';
 export const TEMPLATE_MINUTES = 5;
 const CACHE = 'public, max-age=300';
 /**
- * The church page and its manifest, the same for everyone: Hosting's CDN
- * keeps them a day, so opening the church from the home screen does not
+ * The church page, the same for everyone: Hosting's CDN keeps it a day, so opening the church from the home screen does not
  * wait for this function to start (a cold start is 4 to 13 seconds of
  * blank page). A new name or logo shows within that day; a Hosting deploy
  * clears the CDN.
  */
 const CHURCH_CACHE = 'public, max-age=300, s-maxage=86400';
+/**
+ * The manifest, in the browser's language: not for the CDN, which keys
+ * what it keeps by the language alone (zh), not Simplified or Traditional.
+ * Browsers never wait for it.
+ */
+const MANIFEST_CACHE = 'private, max-age=300';
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 /** An invite can be revoked or expire any moment. */
 const FRESH = 'private, no-cache';
@@ -213,6 +218,14 @@ export function manifest(cid: string, f: ChurchFace | null, language: Language) 
 
 const notFound = (body = ''): PageResponse => ({ status: 404, headers: { 'content-type': 'text/plain' }, body });
 
+/**
+ * The languages a request through Hosting asks for: Hosting passes on
+ * Accept-Language cut to the language alone (zh-MY as zh), and the browser's
+ * own in x-orig-accept-language. [header] reads a request header.
+ */
+export const askedLanguages = (header: (name: string) => string | undefined) =>
+  header('x-orig-accept-language') ?? header('accept-language');
+
 /** Answers one request under /c/. [path] is the request path; [acceptLanguage], its header. */
 export async function churchPage(deps: PageDeps, path: string, acceptLanguage?: string): Promise<PageResponse> {
   const language = browserLanguage(acceptLanguage);
@@ -225,7 +238,7 @@ export async function churchPage(deps: PageDeps, path: string, acceptLanguage?: 
   if (cid && church?.exists && rest === '/manifest.json') {
     return {
       status: 200,
-      headers: { 'content-type': 'application/manifest+json; charset=utf-8', 'cache-control': CHURCH_CACHE, ...VARY },
+      headers: { 'content-type': 'application/manifest+json; charset=utf-8', 'cache-control': MANIFEST_CACHE, ...VARY },
       body: JSON.stringify(manifest(cid, face(cid, church), language)),
     };
   }

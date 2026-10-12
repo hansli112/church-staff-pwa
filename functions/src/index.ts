@@ -27,7 +27,7 @@ import * as church from './church.js';
 import * as claim from './claim.js';
 import * as pendingMembers from './pendingMembers.js';
 import * as churchLink from './churchLink.js';
-import { churchPage as churchPageHandler } from './churchPage.js';
+import { askedLanguages, churchPage as churchPageHandler } from './churchPage.js';
 import { PROD_PROJECT, REGION, appUrl, runEach, type Caller, type Deps } from './common.js';
 import * as funding from './funding.js';
 import * as fundingApple from './fundingApple.js';
@@ -135,7 +135,11 @@ export const purgeDeletedChurches = using(
 
 // Church URL: /c/<id> pages, manifests and icons, through Hosting.
 export const churchPage = onRequest({ region: REGION, maxInstances: 10 }, async (req, res) => {
-  const r = await churchPageHandler({ ...deps(), bucket: bucket(), appUrl: appUrl() }, req.path, req.get('accept-language'));
+  const r = await churchPageHandler(
+    { ...deps(), bucket: bucket(), appUrl: appUrl() },
+    req.path,
+    askedLanguages((h) => req.get(h)),
+  );
   res.status(r.status).set(r.headers).send(r.body);
 });
 

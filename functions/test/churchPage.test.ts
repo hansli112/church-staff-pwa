@@ -5,7 +5,7 @@ import { beforeEach, describe, test } from 'node:test';
 import { Timestamp } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 
-import { APP_SHELL, churchPage, clearTemplateCache, inLanguage, withSplash, type PageDeps } from '../src/churchPage.js';
+import { APP_SHELL, askedLanguages, churchPage, clearTemplateCache, inLanguage, withSplash, type PageDeps } from '../src/churchPage.js';
 import { LANGUAGES, words } from '../src/languages.js';
 import { clearFirestore, db, deps, fakeFetch, seedChurch, setNow } from './support.js';
 
@@ -163,7 +163,7 @@ describe('church page', () => {
   test('the manifest names the church and starts at its URL', async () => {
     await seedChurch('Grace', {}, { name: '恩典堂', logoVersion: '42' });
     const r = await page().get('/c/Grace/manifest.json');
-    assert.equal(r.headers['cache-control'], 'public, max-age=300, s-maxage=86400', 'kept a day by the CDN');
+    assert.equal(r.headers['cache-control'], 'private, max-age=300', 'not by the CDN, which cannot tell 简 from 繁');
     assert.equal(r.status, 200);
     assert.match(r.headers['content-type'], /application\/manifest\+json/);
     const m = JSON.parse(text(r.body));
@@ -269,10 +269,19 @@ describe('church page', () => {
     assert.match(closed, /<title>Martha, sit<\/title>/);
     assert.match(text((await get('/c/Grace/join/ABCDEFGH', 'zh-TW,en;q=0.5')).body), /<html lang="zh-Hant">/);
 
+    assert.match(text((await get('/c/Grace/join/ABCDEFGH', 'zh-MY')).body), /<html lang="zh-Hans">/);
+
     const m = await get('/c/Closed/manifest.json', en);
     assert.equal(m.headers.vary, 'Accept-Language');
     const manifest = JSON.parse(text(m.body));
     assert.deepEqual([manifest.name, manifest.lang, manifest.description.slice(0, 15)], ['Martha, sit', 'en', '“Martha, Martha']);
+  });
+
+  test("the browser's languages, through Hosting, which cuts Accept-Language to the language alone", () => {
+    const through = (headers: Record<string, string>) => askedLanguages((h) => headers[h]);
+    assert.equal(through({ 'accept-language': 'zh', 'x-orig-accept-language': 'zh-MY,en;q=0.5' }), 'zh-MY,en;q=0.5');
+    assert.equal(through({ 'accept-language': 'zh-TW' }), 'zh-TW', 'straight to the function');
+    assert.equal(through({}), undefined);
   });
 
   test("the church page is one for everyone, kept by the CDN; its own script turns it to the browser's language", async () => {
