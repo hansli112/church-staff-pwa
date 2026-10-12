@@ -29,10 +29,7 @@ final _dateDataLoaded = <AppLanguage>{};
 AppLanguage _load(Locale locale) {
   final language = AppLanguage.of(locale)!;
   if (_dateDataLoaded.add(language)) {
-    final (symbols, patterns) = switch (language) {
-      AppLanguage.zhHant => (zhTwDateSymbols, zhTwDatePatterns),
-      AppLanguage.en => (enDateSymbols, enDatePatterns),
-    };
+    final (symbols, patterns) = dateData(language);
     initializeDateFormattingCustom(locale: language.intlLocale, symbols: symbols, patterns: patterns);
   }
   intl.Intl.defaultLocale = language.intlLocale;

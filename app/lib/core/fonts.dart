@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../deep_link.dart' show appLocation, churchUrlId, inviteChurchId;
+import 'date_data.dart';
 import 'languages.dart';
 
 /// The app's strings in [language], shipped as assets so their characters
@@ -205,6 +206,16 @@ Set<String>? _initialKeys(Uri location, [int depth = 0]) {
   return null;
 }
 
+/// What [language]'s dates are written with, which no .arb string holds
+/// (10月4日 週日): the patterns of the dates pages show, and the weekdays.
+String _dateText(AppLanguage language) {
+  final (symbols, patterns) = dateData(language);
+  return [
+    for (final p in const ['MMMd', 'MMMEd', 'yMMMd', 'yMMMEd', 'yMMMM']) patterns[p]!,
+    ...symbols.SHORTWEEKDAYS,
+  ].join();
+}
+
 /// Every string of an .arb file, run together, without its notes (`@`
 /// keys).
 String arbText(String json) => _text(json);
@@ -216,7 +227,8 @@ String _text(String json, {Set<String>? keys}) => [
 
 /// On the web the engine fetches Chinese fonts when text first needs them,
 /// so the first page can show boxes until they arrive. This starts those
-/// downloads before the page is drawn. [initialLocation] selects login/home,
+/// downloads before the page is drawn, with the text of its dates.
+/// [initialLocation] selects login/home,
 /// roster or church-info text, following this app's `from`/`to` links. Other
 /// destinations keep the full warmup. Without a location, [startupOnly]
 /// retains the login/home selection; the default uses all strings. The
@@ -278,7 +290,7 @@ Future<void> warmUpFonts({
       if (text.trim().isEmpty) {
         finish();
       } else {
-        layOut(text);
+        layOut(text + _dateText(language));
       }
     } catch (_) {
       reading = false;

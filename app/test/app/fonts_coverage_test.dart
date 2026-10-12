@@ -58,13 +58,8 @@ Set<String> _churchText(MemoryBackend b) => {
       for (final d in r.duties) ...[d.role, ...d.people],
 };
 
-/// Drawn but not warmed, known: 「月」 of the dates intl writes (10月4日),
-/// which no string the first pages warm has. Its font file comes with
-/// [commonCharacters], after the first frame.
-const _knownGaps = {'月'};
-
 /// Characters drawn on the page at [location], other than the church's own
-/// text and [_knownGaps], that [warmUpFonts] does not lay out for it.
+/// text, that [warmUpFonts] does not lay out for it.
 Future<Set<String>> _unwarmed(WidgetTester tester, MemoryBackend b, String location) async {
   await pumpApp(tester, b);
   GoRouter.of(tester.element(find.byType(Scaffold).first)).go(location);
@@ -73,7 +68,7 @@ Future<Set<String>> _unwarmed(WidgetTester tester, MemoryBackend b, String locat
   final known = '${await _warmed(tester, location)}${_churchText(b).join()}';
   return {
     for (final m in _fetched.allMatches(drawn))
-      if (!known.contains(m[0]!) && !_knownGaps.contains(m[0]!)) m[0]!,
+      if (!known.contains(m[0]!)) m[0]!,
   };
 }
 

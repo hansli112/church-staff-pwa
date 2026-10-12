@@ -1,5 +1,13 @@
 import 'package:intl/date_symbols.dart' as intl;
 
+import 'languages.dart';
+
+/// [language]'s date symbols and patterns.
+(intl.DateSymbols, Map<String, String>) dateData(AppLanguage language) => switch (language) {
+  AppLanguage.zhHant => (zhTwDateSymbols, zhTwDatePatterns),
+  AppLanguage.en => (enDateSymbols, enDatePatterns),
+};
+
 // Copied from flutter_localizations' generated_date_localizations.dart
 // (Flutter 3.41.0), which holds every locale's: only the app's languages'.
 // A test checks they still match.

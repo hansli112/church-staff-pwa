@@ -293,7 +293,7 @@ void main() {
     expect(laidOut, isEmpty);
     bundle.complete('{"appName":"馬大別忙"}');
     await tester.pump();
-    expect(laidOut, ['馬大別忙']);
+    expect(laidOut.single, startsWith('馬大別忙'));
     expect(done, isFalse);
     fonts.notifyListeners();
     await tester.pump();
