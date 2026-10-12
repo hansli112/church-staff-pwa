@@ -44,6 +44,18 @@ abstract final class Limits {
 
   /// Service types per church.
   static const services = 20;
+
+  /// The language tag the profile says the app shows (users/{uid}.appLocale).
+  static const appLocale = 16;
+
+  /// An invite expires sooner than this many days.
+  static const inviteDays = 31;
+
+  /// Photos read into rosters, per church per month.
+  static const photosPerMonth = 30;
+
+  /// The most a photo read into a roster can be, in bytes (2 MB).
+  static const photoBytes = 2097152;
 }
 
 /// firestore.rules counts UTF-16 code units, not characters, so for a

@@ -44,9 +44,8 @@ const RULES_FIELDS: Record<string, { text?: keyof typeof TEXT_LIMITS; other?: ke
   "request.resource.data.get('zoneTypes', [])": { other: 'services' },
   // settings/services ids: a list only the rules bound.
   'data.ids': { rulesOnly: 100 },
-  // users/{uid}.appLocale: the language the app shows, an AppLanguage tag
-  // (#72); MemoryBackend's _appLocaleMaxLength.
-  'request.resource.data.appLocale': { rulesOnly: 16 },
+  // users/{uid}.appLocale: the language the app shows, an AppLanguage tag.
+  'request.resource.data.appLocale': { other: 'appLocale' },
 };
 
 const rulesSizes = [...rules.matchAll(/((?:\.get\([^)]*\)|[\w.])+)\.size\(\) <= (\d+)/g)].map(([, field, n]) => ({
@@ -55,6 +54,10 @@ const rulesSizes = [...rules.matchAll(/((?:\.get\([^)]*\)|[\w.])+)\.size\(\) <= 
 }));
 
 describe('limits', () => {
+  test("an invite's longest life is firestore.rules'", () => {
+    assert.ok(rules.includes(`request.time + duration.value(${LIMITS.inviteDays}, 'd')`));
+  });
+
   test('limits.dart has the text limits of limits.ts', () => {
     assert.deepEqual(dartClass('TextLimits'), { ...TEXT_LIMITS });
   });

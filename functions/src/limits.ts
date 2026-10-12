@@ -27,6 +27,14 @@ export const LIMITS = {
   webhookSecretMin: 16,
   webhookSecretMax: 200,
   services: 20,
+  /** users/{uid}.appLocale, the language tag the app shows. */
+  appLocale: 16,
+  /** An invite expires sooner than this many days (firestore.rules). */
+  inviteDays: 31,
+  /** Photos read into rosters, per church per month. */
+  photosPerMonth: 30,
+  /** The most a photo read into a roster can be, in bytes (2 MB). */
+  photoBytes: 2097152,
 } as const;
 
 /**

@@ -3,6 +3,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { churchAccess } from './access.js';
 import { dateKeyUtc8, fail, type Caller, type Deps } from './common.js';
 import { LANGUAGES, words } from './languages.js';
+import { LIMITS } from './limits.js';
 import { dateKeyIn, timeZoneOf, type ChurchTimeZone } from './timeZones.js';
 
 /**
@@ -15,10 +16,10 @@ import { dateKeyIn, timeZoneOf, type ChurchTimeZone } from './timeZones.js';
  * Limits: PHOTOS_PER_MONTH per church; the whole platform stops for the
  * month once the estimated spend reaches MONTHLY_BUDGET_USD.
  */
-export const PHOTOS_PER_MONTH = 30;
+export const PHOTOS_PER_MONTH = LIMITS.photosPerMonth;
 export const MONTHLY_BUDGET_USD = 20;
 export const MAX_IMAGES = 3;
-export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+export const MAX_IMAGE_BYTES = LIMITS.photoBytes;
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic']);
 
 /** Pinned models, tried in order (self-host measured these on real sheets). */

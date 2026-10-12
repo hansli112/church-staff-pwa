@@ -152,7 +152,7 @@ class MemoryBackend implements Backend {
   /// Scripted: photos used this month per church, the limit, whether the
   /// platform's budget is left, and what recognition returns.
   final photosUsed = <String, int>{};
-  int photoLimit = 30;
+  int photoLimit = Limits.photosPerMonth;
   bool photoPlatformOpen = true;
   List<dynamic> recognized = const [];
 
@@ -512,7 +512,7 @@ class _Profiles implements ProfileRepository {
   Future<void> setAppLocale(String uid, String tag) async {
     // As firestore.rules: only on one's own profile, and a short tag.
     final p = _b.users[uid];
-    if (_b.auth.currentUser?.uid != uid || p == null || tag.length > _appLocaleMaxLength) {
+    if (_b.auth.currentUser?.uid != uid || p == null || tag.length > Limits.appLocale) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
     await _b.write(() => _b.users[uid] = p.copyWith(appLocale: tag));
@@ -525,9 +525,6 @@ class _Profiles implements ProfileRepository {
     await _b.write(() => _b.users.putIfAbsent(profile.uid, () => profile));
   }
 }
-
-/// The longest language tag firestore.rules takes for users/{uid}.appLocale.
-const _appLocaleMaxLength = 16;
 
 /// A person's name, on a profile or a member: refused past
 /// [TextLimits.profileName] as firestore.rules refuses past its guard.
@@ -747,7 +744,7 @@ class MemoryChurchData implements ChurchData {
   @override
   Future<void> compareAndSetServiceList({required List<Service> before, required List<Service> after}) async {
     _requireAdmin();
-    if (after.isEmpty || after.length > 20) {
+    if (after.isEmpty || after.length > Limits.services) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
     await _b.write(() {
@@ -782,7 +779,7 @@ class MemoryChurchData implements ChurchData {
             .where((member) => affected(member.zones))
             .length;
         if (1 + changedMembers + changedPending + ((order?.rankingsByRole.containsKey(rename.from) ?? false) ? 1 : 0) >
-            500) {
+            RosterChange.maxWrites) {
           throw const CloudException(CloudErrorCode.quotaExceeded, reason: CloudReason.tooManyChanges);
         }
         List<Zone> renamed(List<Zone> zones) => [
@@ -897,7 +894,7 @@ class MemoryChurchData implements ChurchData {
   @override
   Future<Invite> createInvite({required Duration validFor, List<String> zoneTypes = const []}) async {
     _requireAdmin();
-    if (validFor >= _inviteMax || zoneTypes.length > Limits.services) {
+    if (validFor >= const Duration(days: Limits.inviteDays) || zoneTypes.length > Limits.services) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
     final code = _randomCode();
@@ -1324,7 +1321,7 @@ class MemoryChurchData implements ChurchData {
       churchId,
       allowed: (me) => _b.services[churchId]!.ids.contains(serviceType) && me.canEditRosters(serviceType),
     );
-    if (images.any((i) => i.bytes.length > _photoMaxBytes)) {
+    if (images.any((i) => i.bytes.length > Limits.photoBytes)) {
       throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.tooLarge);
     }
     if (!_b.photoPlatformOpen) throw const CloudException(CloudErrorCode.quotaExceeded, reason: CloudReason.platform);
@@ -1335,12 +1332,6 @@ class MemoryChurchData implements ChurchData {
     return _b.recognized;
   }
 }
-
-/// The most a photo can be: MAX_IMAGE_BYTES in functions/src/photo.ts.
-const _photoMaxBytes = 2 * 1024 * 1024;
-
-/// Invites must expire sooner than this (firestore.rules).
-const _inviteMax = Duration(days: 31);
 
 bool _sameList<T>(List<T> a, List<T> b) {
   if (a.length != b.length) return false;
