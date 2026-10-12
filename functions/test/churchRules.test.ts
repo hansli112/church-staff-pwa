@@ -2,10 +2,13 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, test } from 'node:test';
 
+import { churchAccess } from '../src/access.js';
+
 import { mapMember } from '../src/importer.js';
 import { LANGUAGES, words } from '../src/languages.js';
 import { dutiesByUid } from '../src/rosters.js';
 import { validDutyRename } from '../src/serviceSettings.js';
+import { caller, db, deps, seedChurch } from './support.js';
 
 /** The rows app/test/domain/church_rules_test.dart runs too: both sides must agree. */
 const rules = JSON.parse(readFileSync(new URL('../../testdata/church_rules.json', import.meta.url), 'utf8'));
@@ -38,6 +41,22 @@ describe('movedMembers', () => {
         { role: m.role, groups: m.groups, zones: m.zones, muted: m.notificationPrefs.muted },
         r.out,
       );
+    });
+  }
+});
+
+describe('rosterEditing', () => {
+  // The backend gates only services' rosters (photo recognition); an event's is the app's and the rules'.
+  for (const r of rows('rosterEditing').filter((r) => r.roster !== 'event')) {
+    test(r.why, async () => {
+      await seedChurch('Rules', { u: r.role });
+      await db.doc('churches/Rules/members/u').update({ groups: r.groups, zoneTypes: r.zoneTypes });
+      await db.doc('churches/Rules/settings/services').set({ services: [], ids: ['sunday', 'youth'] });
+      const may = await churchAccess(deps, caller('u'), { churchId: 'Rules' }, { rosterEditor: r.roster }).then(
+        () => true,
+        () => false,
+      );
+      assert.equal(may, r.may);
     });
   }
 });

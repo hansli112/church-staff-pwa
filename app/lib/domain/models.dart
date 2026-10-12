@@ -197,9 +197,14 @@ class Member {
       setEquals(groups, other.groups) &&
       listEquals(zones, other.zones);
 
-  /// Whether this member may edit rosters of [serviceType].
+  /// Whether this member may edit rosters of [serviceType]
+  /// (testdata/church_rules.json, rosterEditing).
   bool canEditRosters(String serviceType) =>
       isAdmin || (groups.contains(Group.rosterEditors) && zoneTypes.contains(serviceType));
+
+  /// Whether this member may arrange events' rosters: in no service, so in no
+  /// 牧區; admins and every roster editor.
+  bool get canArrangeEventRosters => inGroup(Group.rosterEditors);
 
   /// Whether this member is set up to serve [duty] in [serviceType].
   bool serves(String serviceType, String duty) => zones.any(

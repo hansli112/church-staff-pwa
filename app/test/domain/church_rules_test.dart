@@ -74,4 +74,20 @@ void main() {
       });
     }
   });
+
+  group('rosterEditing', () {
+    for (final r in _rows('rosterEditing')) {
+      test(r['why'] as String, () {
+        final member = Member(
+          uid: 'u',
+          name: '美玉',
+          role: Role.values.byName(r['role'] as String),
+          groups: {for (final g in _strings(r['groups'])) Group.values.firstWhere((x) => x.id == g)},
+          zones: [for (final t in _strings(r['zoneTypes'])) Zone(serviceType: t)],
+        );
+        final roster = r['roster'] as String;
+        expect(roster == 'event' ? member.canArrangeEventRosters : member.canEditRosters(roster), r['may']);
+      });
+    }
+  });
 }

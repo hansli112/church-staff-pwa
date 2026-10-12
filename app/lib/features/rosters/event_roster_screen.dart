@@ -38,10 +38,8 @@ final _seriesRolesProvider = FutureProvider.autoDispose.family<List<String>, Cal
   return previousInSeries(e, await ref.churchData.eventRosters());
 });
 
-/// Whether this member may arrange events' rosters: admins and every roster
-/// editor, in no 牧區.
 final _canArrangeProvider = Provider.autoDispose<bool>(
-  (ref) => ref.watch(meProvider.select((m) => m.value?.inGroup(Group.rosterEditors) ?? false)),
+  (ref) => ref.watch(meProvider.select((m) => m.value?.canArrangeEventRosters ?? false)),
 );
 
 /// Opens [e]'s roster, which [e] lets the page start before it is saved.

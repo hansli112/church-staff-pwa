@@ -378,6 +378,23 @@ describe('服事表 (rosters)', () => {
   });
 });
 
+// 誰能安排服事表：和 App、functions 共用 testdata/church_rules.json 的 rosterEditing。
+describe('rosterEditing (testdata/church_rules.json)', () => {
+  const rows = JSON.parse(readFileSync(new URL('../testdata/church_rules.json', import.meta.url), 'utf8')).rosterEditing;
+  rows.forEach((r, i) => {
+    it(r.why, async () => {
+      const uid = `table-${i}`;
+      await seed(`churches/${A}/members/${uid}`, memberDoc(uid, r.role, r.groups, r.zoneTypes));
+      const write = r.roster === 'event'
+        ? setDoc(doc(as(uid), `churches/${A}/rosters/ev_t${i}`), {
+          kind: 'event', eventId: `t${i}`, title: '聖誕晚會', dateKey: '2030-12-24', endDateKey: '2030-12-24', duties: [], events: [],
+        })
+        : setDoc(doc(as(uid), `churches/${A}/rosters/table-${i}`), { type: r.roster });
+      await (r.may ? assertSucceeds(write) : assertFails(write));
+    });
+  });
+});
+
 describe('活動的服事表 (rosters/ev_…)', () => {
   const ev = (eventId, extra = {}) => ({
     kind: 'event',

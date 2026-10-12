@@ -75,19 +75,15 @@ describe('church access', () => {
     });
   }
 
-  test('a roster editor edits only their zones, and only services the church has had', async () => {
+  // Who, by role, group and 牧區: testdata/church_rules.json, rosterEditing.
+  test('a roster editor edits only services the church has had, one taken off the list too', async () => {
     await church();
     await db.doc('churches/C1/members/editor').update({ zoneTypes: ['sunday', 'retreat'] });
-    await rejectsWith(access('editor', { rosterEditor: 'youth' }), 'permissionDenied');
     await rejectsWith(access('editor', { rosterEditor: 'retreat' }), 'permissionDenied');
     await rejectsWith(access('pastor', { rosterEditor: 'retreat' }), 'permissionDenied');
-    await access('pastor', { rosterEditor: 'youth' });
     // A service taken off the list keeps its ID: rosters for it stay editable.
     await db.doc('churches/C1/settings/services').update({ services: [{ id: 'youth' }] });
     await access('editor', { rosterEditor: 'sunday' });
-    // A zone without the group is not enough.
-    await db.doc('churches/C1/members/mei').update({ zoneTypes: ['sunday'] });
-    await rejectsWith(access('mei', { rosterEditor: 'sunday' }), 'permissionDenied');
   });
 
   test('a group: its members and admins', async () => {

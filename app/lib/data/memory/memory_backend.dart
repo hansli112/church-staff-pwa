@@ -584,6 +584,13 @@ class MemoryChurchData implements ChurchData {
     }
   }
 
+  /// Events' rosters, which are in no service.
+  void _requireEventRosterEditor() {
+    if (!_b.requireMember(churchId).canArrangeEventRosters) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+  }
+
   /// Writing [r] over what is saved at its ID, as firestore.rules allow: a
   /// service's day by its zone, an event's roster by any roster editor. One
   /// never turns into the other, and a cancelled event's is the backend's.
@@ -591,7 +598,7 @@ class MemoryChurchData implements ChurchData {
     final saved = _b.rosters[churchId]![r.id];
     if (saved != null && saved.isEvent != r.isEvent) throw const CloudException(CloudErrorCode.permissionDenied);
     if (!r.isEvent) return _requireRosterEditor(r.type);
-    _requireRosterEditors();
+    _requireEventRosterEditor();
     // The title and days are the calendar's: the app sets them only when
     // making the roster.
     final was = saved?.forEvent;
@@ -715,7 +722,7 @@ class MemoryChurchData implements ChurchData {
         final roster = entry.value ?? saved[entry.key];
         if (roster == null) continue;
         if (entry.value == null) {
-          roster.isEvent ? _requireRosterEditors() : _requireRosterEditor(roster.type);
+          roster.isEvent ? _requireEventRosterEditor() : _requireRosterEditor(roster.type);
         } else {
           _requireRosterWrite(roster);
         }
