@@ -86,7 +86,7 @@ void main() {
           zones: [for (final t in _strings(r['zoneTypes'])) Zone(serviceType: t)],
         );
         final roster = r['roster'] as String;
-        expect(roster == 'event' ? member.canArrangeEventRosters : member.canEditRosters(roster), r['may']);
+        expect(roster == 'event' ? member.canEditEventRosters : member.canEditRosters(roster), r['may']);
       });
     }
   });

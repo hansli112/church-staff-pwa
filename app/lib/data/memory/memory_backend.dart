@@ -583,7 +583,7 @@ class MemoryChurchData implements ChurchData {
 
   /// Events' rosters, which are in no service.
   void _requireEventRosterEditor() {
-    if (!_b.requireMember(churchId).canArrangeEventRosters) {
+    if (!_b.requireMember(churchId).canEditEventRosters) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
   }

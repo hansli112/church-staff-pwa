@@ -38,8 +38,8 @@ final _seriesRolesProvider = FutureProvider.autoDispose.family<List<String>, Cal
   return previousInSeries(e, await ref.churchData.eventRosters());
 });
 
-final _canArrangeProvider = Provider.autoDispose<bool>(
-  (ref) => ref.watch(meProvider.select((m) => m.value?.canArrangeEventRosters ?? false)),
+final _canEditProvider = Provider.autoDispose<bool>(
+  (ref) => ref.watch(meProvider.select((m) => m.value?.canEditEventRosters ?? false)),
 );
 
 /// Opens [e]'s roster, which [e] lets the page start before it is saved.
@@ -78,7 +78,7 @@ class EventRosterRow extends ConsumerWidget {
       );
     }
     final ended = eventDays(event).last.isBefore(ref.watch(todayProvider));
-    if (ended || !ref.watch(_canArrangeProvider)) return const SizedBox.shrink();
+    if (ended || !ref.watch(_canEditProvider)) return const SizedBox.shrink();
     return ListSection(
       children: [
         ListRow(
@@ -120,7 +120,7 @@ class EventRosterScreen extends ConsumerWidget {
                 calendarId: calendarId,
               )
             : null);
-    final canEdit = ref.watch(_canArrangeProvider);
+    final canEdit = ref.watch(_canEditProvider);
     final editable = canEdit && ref.watch(eventEditingProvider);
     return Scaffold(
       appBar: AppBar(
