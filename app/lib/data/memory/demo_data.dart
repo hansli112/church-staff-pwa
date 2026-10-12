@@ -268,6 +268,8 @@ class _DemoWords {
     AppLanguage.zhHant => _zhHant,
     AppLanguage.zhHans => _zhHans,
     AppLanguage.en => _en,
+    AppLanguage.ja => _ja,
+    AppLanguage.ko => _ko,
   };
 }
 
@@ -347,4 +349,64 @@ final _en = _DemoWords(
   events: ['Communion', 'Baptism', 'Conference'],
   // Every first name with every surname once in 30 × 30.
   name: (i) => '${_enFirst[i % _enFirst.length]} ${_enLast[(i ~/ _enFirst.length + i) % _enLast.length]}',
+);
+
+const _jaLast = [
+  '佐藤', '鈴木', '高橋', '田中', '伊藤', '渡辺', '山本', '中村', '小林', '加藤', //
+  '吉田', '山田', '佐々木', '山口', '松本', '井上', '木村', '林', '清水', '山崎', //
+  '森', '池田', '橋本', '阿部', '石川', '山下', '中島', '石井', '小川', '前田',
+];
+const _jaFirst = [
+  '美咲', '大輔', '恵', '誠', '真理', '聡', '陽子', '健太', '由美', '翔', //
+  '愛', '拓也', '優子', '直樹', '舞', '亮', '香織', '慎也', '彩', '和也', //
+  '友美', '悠', '千尋', '光', '恵美', '信', '望', '結衣', '恵子', '創',
+];
+
+final _ja = _DemoWords(
+  church: '恵みの教会',
+  otherChurch: '生ける水教会',
+  linkTitle: '主日献金',
+  linkBody: 'オンライン献金・領収書の発行',
+  verseTitle: '今日のみことば　詩編 23:1',
+  verse: '主は羊飼い、わたしには何も欠けることがない。',
+  moved: ['山田 花子', '佐藤 健', '鈴木 一郎', '高橋 葵'],
+  demoPerson: 'デモ用メンバー',
+  newcomer: '新しいメンバー',
+  services: ['主日礼拝', '青年礼拝', '祈祷会'],
+  duties: [
+    ['司会', '賛美リード', '奏楽', 'ドラム', '音響', 'スライド', '受付', '献金'],
+    ['司会', '賛美リード', 'ギター', '音響', 'スライド'],
+    ['司会', '奏楽'],
+  ],
+  events: ['聖餐式', '洗礼式', '特別集会'],
+  // Every surname with every given name once in 30 × 30.
+  name: (i) => '${_jaLast[i % _jaLast.length]} ${_jaFirst[(i ~/ _jaLast.length + i) % _jaFirst.length]}',
+);
+
+const _koLast = ['김', '이', '박', '최', '정', '강', '조', '윤', '장', '임', '한', '오', '서', '신', '권', '황', '안', '송', '류', '홍'];
+const _koFirst = [
+  '민준', '서연', '지훈', '하은', '예준', '지민', '도윤', '수아', '시우', '서윤', //
+  '주원', '지유', '하준', '채원', '은우', '다은', '건우', '소율', '현우', '예린', //
+  '성민', '은혜', '요한', '사랑', '믿음', '소망', '다니엘', '한나', '지성', '유진',
+];
+
+final _ko = _DemoWords(
+  church: '은혜교회',
+  otherChurch: '생수교회',
+  linkTitle: '주일 헌금',
+  linkBody: '온라인 헌금, 기부금 영수증 신청',
+  verseTitle: '오늘의 말씀　시편 23:1',
+  verse: '여호와는 나의 목자시니 내게 부족함이 없으리로다',
+  moved: ['김지영', '이준호', '박성민', '최유나'],
+  demoPerson: '데모 멤버',
+  newcomer: '새 멤버',
+  services: ['주일예배', '청년예배', '기도회'],
+  duties: [
+    ['사회', '찬양 인도', '반주', '드럼', '음향', '자막', '안내', '헌금'],
+    ['사회', '찬양 인도', '기타', '음향', '자막'],
+    ['인도', '반주'],
+  ],
+  events: ['성찬', '세례', '특별집회'],
+  // No two the same for up to 160 people: 21 × 1–7 is never a multiple of 30.
+  name: (i) => _koLast[i % _koLast.length] + _koFirst[(i ~/ _koLast.length + i) % _koFirst.length],
 );
