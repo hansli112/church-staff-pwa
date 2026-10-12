@@ -47,11 +47,26 @@ test('ordinary Functions do not load logo processing on cold import', () => {
 test('each function lists the secrets its dependencies read, and no others', () => {
   const { secrets } = coldImports();
   const calendar = ['CALENDAR_TOKEN_KEY', 'GOOGLE_OAUTH_CLIENT_ID', 'GOOGLE_OAUTH_CLIENT_SECRET'];
-  assert.deepEqual(secrets.calendarWrite, calendar);
-  assert.deepEqual(secrets.setChurchTimeZone, calendar);
-  assert.deepEqual(secrets.syncEventRosters, calendar);
-  assert.deepEqual(secrets.webhookSave, ['CALENDAR_TOKEN_KEY']);
-  assert.deepEqual(secrets.sendRosterChanges, ['CALENDAR_TOKEN_KEY']);
-  assert.deepEqual(secrets.newebpayNotify, ['NEWEBPAY_HASH_IV', 'NEWEBPAY_HASH_KEY']);
-  assert.deepEqual(secrets.createChurch, []);
+  const webhook = ['CALENDAR_TOKEN_KEY'];
+  const newebpay = ['NEWEBPAY_HASH_IV', 'NEWEBPAY_HASH_KEY'];
+  assert.deepEqual(Object.fromEntries(Object.entries(secrets).filter(([, s]) => s.length)), {
+    setChurchTimeZone: calendar,
+    purgeDeletedChurches: calendar,
+    webhookSave: webhook,
+    webhookRotateSecret: webhook,
+    webhookTest: webhook,
+    newebpayStart: newebpay,
+    newebpayNotify: newebpay,
+    onMemberDeleted: calendar,
+    onMemberDemoted: calendar,
+    sendRosterChanges: webhook,
+    syncEventRosters: calendar,
+    calendarAuthUrl: calendar,
+    calendarList: calendar,
+    calendarSelect: calendar,
+    calendarDisconnect: calendar,
+    calendarEvents: calendar,
+    calendarWrite: calendar,
+    calendarCallback: calendar,
+  });
 });
