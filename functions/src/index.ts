@@ -264,7 +264,7 @@ export const newebpayNotify = using(newebpayDeps, { region: REGION, maxInstances
   ),
 );
 export const newebpayReturn = onRequest({ region: REGION, maxInstances: 5 }, (req, res) => {
-  res.redirect(303, fundingNewebpay.returnLocation(appUrl(), req.method === 'POST' ? req.body : null));
+  res.redirect(303, fundingNewebpay.returnLocation(appUrl(), req.method === 'POST' ? req.body : null, req.path));
 });
 // Starts each month's target, refreshes the exchange rates, and drops
 // 線上支持 orders nobody paid.

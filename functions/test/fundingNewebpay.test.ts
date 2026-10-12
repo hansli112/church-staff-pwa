@@ -85,7 +85,7 @@ describe('NewebPay encryption (NDNF-1.2.6 §4.1)', () => {
 describe('NewebPay config', () => {
   const base = { merchantId: 'MS123456789', gateway: 'production', hashKey: 'k'.repeat(32), hashIv: 'v'.repeat(16), project: 'marthasit', appUrl: 'https://marthasit.web.app' };
 
-  test('notices and the way back are this project\'s functions; 返回商店 is the support page', () => {
+  test('notices and the way back are this project\'s functions; 返回商店 is the website', () => {
     assert.deepEqual(newebpayConfig(base), {
       merchantId: 'MS123456789',
       hashKey: base.hashKey,
@@ -93,7 +93,7 @@ describe('NewebPay config', () => {
       gateway: 'production',
       notifyUrl: 'https://asia-east1-marthasit.cloudfunctions.net/newebpayNotify',
       returnUrl: 'https://asia-east1-marthasit.cloudfunctions.net/newebpayReturn',
-      backUrl: 'https://marthasit.web.app/support',
+      siteUrl: 'https://marthasit.web.app',
     });
   });
 
@@ -111,8 +111,8 @@ describe('NewebPay config', () => {
 });
 
 /** Starts an order and reads back what the page would post. */
-async function start(amount: unknown) {
-  const r = await newebpayStart(deps, config, { amount });
+async function start(amount: unknown, language?: string) {
+  const r = await newebpayStart(deps, config, { amount, language });
   assert.equal(r.status, 200, JSON.stringify(r.body));
   const { gateway, fields } = r.body as { gateway: string; fields: Record<string, string> };
   const params = Object.fromEntries(new URLSearchParams(decryptTradeInfo(fields.TradeInfo, config.hashKey, config.hashIv)));
@@ -135,10 +135,11 @@ describe('starting a 線上支持 payment', () => {
       MerchantOrderNo: '',
       Amt: '300',
       ItemDesc: '馬大別忙 雲端費用 線上支持',
+      LangType: 'zh-tw',
       TradeLimit: '900',
       ReturnURL: config.returnUrl,
       NotifyURL: config.notifyUrl,
-      ClientBackURL: config.backUrl,
+      ClientBackURL: `${config.siteUrl}/support`,
       EmailModify: '1',
       CREDIT: '1',
       APPLEPAY: '1',
@@ -148,6 +149,21 @@ describe('starting a 線上支持 payment', () => {
     assert.deepEqual(Object.keys(order ?? {}).sort(), ['amount', 'createdAt', 'expiresAt', 'status']);
     assert.equal(order?.amount, 300);
     assert.equal(order?.status, 'pending');
+  });
+
+  test("in the support page's language: NewebPay's page, what it is for, and the way back", async () => {
+    const english = (await start(300, 'en')).params;
+    assert.deepEqual(
+      [english.LangType, english.ItemDesc, english.ReturnURL, english.ClientBackURL],
+      ['en', 'Martha, sit cloud costs support', `${config.returnUrl}/en`, `${config.siteUrl}/en/support`],
+    );
+    const simplified = (await start(300, 'zh-Hans')).params;
+    assert.deepEqual(
+      [simplified.LangType, simplified.ItemDesc, simplified.ReturnURL, simplified.ClientBackURL],
+      ['zh-tw', '马大别忙 云端费用 线上支持', `${config.returnUrl}/zh-Hans`, `${config.siteUrl}/zh-Hans/support`],
+      'NewebPay has no Simplified Chinese',
+    );
+    assert.equal((await start(300, 'xx')).params.LangType, 'en', 'a page in a language not known here');
   });
 
   test('every order number is new', async () => {
@@ -298,6 +314,8 @@ describe('after paying', () => {
     assert.equal(returnLocation(app, { Status: 'SUCCESS', TradeInfo: 'x', TradeSha: 'y' }), `${app}/support?paid=1`);
     assert.equal(returnLocation(app, { Status: 'MPG03009' }), `${app}/support?paid=0`);
     assert.equal(returnLocation(app, null), `${app}/support`);
+    assert.equal(returnLocation(app, { Status: 'SUCCESS' }, '/en'), `${app}/en/support?paid=1`, "back to the page's language");
+    assert.equal(returnLocation(app, { Status: 'SUCCESS' }, '/'), `${app}/support?paid=1`);
   });
 
   test('orders nobody paid are dropped after three days; paid ones stay', async () => {

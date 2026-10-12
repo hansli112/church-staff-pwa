@@ -106,6 +106,9 @@ export interface Words {
   inviteInvalid: string;
   inviteExpired: string;
 
+  /** 線上支持 on NewebPay's page and in its back office, at most 50 characters (fundingNewebpay.ts). */
+  supportItem: string;
+
   /** A new church's services (church.ts). */
   newChurchServices: NewService[];
 
@@ -139,6 +142,7 @@ const zhHant: Words = {
   memberLeft: (name) => `${name} 退出了教會`,
   someone: '有人',
   appName: '馬大別忙',
+  supportItem: '馬大別忙 雲端費用 線上支持',
   description:
     '馬大！馬大！你為許多的事思慮煩擾，但是不可少的只有一件；馬利亞已經選擇那上好的福分，是不能奪去的。（路加福音 10:41–42）',
   loading: '載入中…',
@@ -163,6 +167,7 @@ const zhHans: Words = {
   memberLeft: (name) => `${name} 退出了教会`,
   someone: '有人',
   appName: '马大别忙',
+  supportItem: '马大别忙 云端费用 线上支持',
   description:
     '马大！马大！你为许多的事思虑烦扰，但是不可少的只有一件；马利亚已经选择那上好的福分，是不能夺去的。（路加福音 10:41–42）',
   loading: '加载中…',
@@ -187,6 +192,7 @@ const en: Words = {
   memberLeft: (name) => `${name} left the church`,
   someone: 'Someone',
   appName: 'Martha, sit',
+  supportItem: 'Martha, sit cloud costs support',
   description:
     '“Martha, Martha,” the Lord answered, “you are worried and upset about many things, but few things are needed—or indeed only one. Mary has chosen what is better, and it will not be taken away from her.” (Luke 10:41–42)',
   loading: 'Loading…',
@@ -200,3 +206,6 @@ const en: Words = {
 const WORDS: Record<Language, Words> = { 'zh-Hant': zhHant, 'zh-Hans': zhHans, en };
 
 export const words = (language: Language): Words => WORDS[language];
+
+/** A website page in [language]: Traditional Chinese at the root, the others under /en/ and so on (scripts/build-site.mjs). */
+export const sitePath = (language: Language, path: string) => (language === 'zh-Hant' ? path : `/${language}${path}`);

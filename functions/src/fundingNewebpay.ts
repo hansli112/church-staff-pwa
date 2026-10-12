@@ -5,6 +5,7 @@ import { logger } from 'firebase-functions/v2';
 
 import { DAY_MS, PROD_PROJECT, REGION, dateKeyUtc8, round2, type Deps } from './common.js';
 import { recordPayment } from './funding.js';
+import { languageOf, sitePath, words, type Language } from './languages.js';
 import { SUPPORT_AMOUNT } from './limits.js';
 
 /**
@@ -35,8 +36,12 @@ export type Gateway = keyof typeof GATEWAYS;
 /** 串接程式版本 for NDNF-1.2.6. */
 export const MPG_VERSION = '2.3';
 
-/** On the payment page and in NewebPay's back office (at most 50 characters). */
-const ITEM_DESC = '馬大別忙 雲端費用 線上支持';
+/**
+ * NewebPay's page in the support page's language, as near as it has one
+ * (§4.2.1 LangType: zh-tw, en, jp): Simplified reads Traditional; Korean,
+ * English.
+ */
+const LANG_TYPE: Record<Language, string> = { 'zh-Hant': 'zh-tw', 'zh-Hans': 'zh-tw', en: 'en' };
 
 /** Seconds the payer has on NewebPay's page (900 is the most it takes). */
 const TRADE_LIMIT = 900;
@@ -69,8 +74,8 @@ export interface NewebpayConfig {
   gateway: Gateway;
   notifyUrl: string;
   returnUrl: string;
-  /** NewebPay's 返回商店 button. */
-  backUrl: string;
+  /** The website, for NewebPay's 返回商店 button: its support page. */
+  siteUrl: string;
 }
 
 /**
@@ -99,7 +104,7 @@ export function newebpayConfig(v: {
     gateway: v.gateway,
     notifyUrl: `${functions}/newebpayNotify`,
     returnUrl: `${functions}/newebpayReturn`,
-    backUrl: `${v.appUrl}/support`,
+    siteUrl: v.appUrl,
   };
 }
 
@@ -151,13 +156,15 @@ export function supportAmount(value: unknown): number | null {
 const newOrderNo = (now: Date) => dateKeyUtc8(now).replaceAll('-', '') + randomBytes(6).toString('hex');
 
 /**
- * Starts a one-off payment of { amount } NT$: keeps a pending order and
+ * Starts a one-off payment of { amount } NT$ from the support page in
+ * { language } (its <html lang>): keeps a pending order and
  * answers with where to post and the fields to post there. Errors are
  * { error: 'amount' | 'busy' | 'unavailable' }.
  */
 export async function newebpayStart(deps: Deps, config: NewebpayConfig | null, body: unknown): Promise<HttpAnswer> {
   if (!config) return { status: 503, body: { error: 'unavailable' } };
   const amount = supportAmount((body as { amount?: unknown } | null)?.amount);
+  const language = languageOf((body as { language?: unknown } | null)?.language);
   if (amount === null) return { status: 400, body: { error: 'amount' } };
 
   const { db } = deps;
@@ -190,11 +197,12 @@ export async function newebpayStart(deps: Deps, config: NewebpayConfig | null, b
     Version: MPG_VERSION,
     MerchantOrderNo: orderNo,
     Amt: String(amount),
-    ItemDesc: ITEM_DESC,
+    ItemDesc: words(language).supportItem,
+    LangType: LANG_TYPE[language],
     TradeLimit: String(TRADE_LIMIT),
-    ReturnURL: config.returnUrl,
+    ReturnURL: language === 'zh-Hant' ? config.returnUrl : `${config.returnUrl}/${language}`,
     NotifyURL: config.notifyUrl,
-    ClientBackURL: config.backUrl,
+    ClientBackURL: config.siteUrl + sitePath(language, '/support'),
     // NewebPay asks for the payer's email on its own page, for its receipt.
     EmailModify: '1',
     CREDIT: '1',
@@ -322,11 +330,13 @@ export async function newebpayNotify(deps: Deps, config: NewebpayConfig | null, 
  * Where the payer's browser goes back to (ReturnURL is a form POST from
  * NewebPay's page): the support page, saying whether it went through.
  * NewebPay's own word on that comes by NotifyURL; this only picks a message.
+ * [path] is the ReturnURL's past the function, /en for the English page.
  */
-export function returnLocation(appUrl: string, body: unknown): string {
+export function returnLocation(appUrl: string, body: unknown, path = ''): string {
+  const page = appUrl + sitePath(languageOf(path.replace(/^\//, '')), '/support');
   const status = (body as { Status?: unknown } | null)?.Status;
-  if (typeof status !== 'string') return `${appUrl}/support`;
-  return `${appUrl}/support?paid=${status === 'SUCCESS' ? 1 : 0}`;
+  if (typeof status !== 'string') return page;
+  return `${page}?paid=${status === 'SUCCESS' ? 1 : 0}`;
 }
 
 /** Drops pending orders nobody paid. Runs with fundingDaily. */
