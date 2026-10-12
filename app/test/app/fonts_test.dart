@@ -70,24 +70,6 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('a home entry keeps the narrow first-page warmup', (tester) async {
-    final laidOut = <String>[];
-    unawaited(
-      warmUpFonts(
-        bundle: UiStringsBundle(),
-        systemFonts: PaintingBinding.instance.systemFonts,
-        initialLocation: Uri.parse('/home'),
-        layOut: laidOut.add,
-      ),
-    );
-    await tester.pump();
-    expect(laidOut.single, contains('我接下來的服事'));
-    expect(laidOut.single, isNot(contains('估計費用（USD）')));
-    expect(laidOut.single, isNot(contains('辨識中，大約需要一分鐘')));
-    await sendFontsChange(tester);
-    await tester.pump();
-  });
-
   testWidgets('startup warms the first pages without paying for admin or photo-import text', (tester) async {
     final laidOut = <String>[];
     unawaited(
@@ -109,33 +91,29 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('a roster notification warms its destination without optional admin or import text', (tester) async {
-    final bundle = _DelayedBundle();
-    final fonts = _SystemFonts();
-    addTearDown(fonts.dispose);
-    final laidOut = <String>[];
-    unawaited(
-      warmUpFonts(
-        bundle: bundle,
-        systemFonts: fonts,
-        initialLocation: Uri.parse('/rosters/event/notice'),
-        layOut: laidOut.add,
-      ),
-    );
-    bundle.complete('''{
-      "appName":"馬大別忙",
-      "eventRosterGone":"找不到這個活動的服事表",
-      "statsCost":"估計費用（USD）",
-      "photoRecognizing":"辨識中，大約需要一分鐘"
-    }''');
-    await tester.pump();
-    expect(laidOut.single, contains('馬大別忙'));
-    expect(laidOut.single, contains('找不到這個活動的服事表'));
-    expect(laidOut.single, isNot(contains('估計費用（USD）')));
-    expect(laidOut.single, isNot(contains('辨識中，大約需要一分鐘')));
-    fonts.notifyListeners();
-    await tester.pump();
-    expect(fonts.waiting, isFalse);
+  // Which of the app's text each page draws, test/app/fonts_coverage_test.dart
+  // checks on the pages themselves; these leave out the rest.
+  testWidgets('a page the warmup knows warms none of the admin or photo-import text', (tester) async {
+    for (final path in ['/home', '/rosters/event/notice', '/rosters/sunday/2026-10-11', '/me/church']) {
+      final fonts = _SystemFonts();
+      final laidOut = <String>[];
+      unawaited(
+        warmUpFonts(
+          bundle: UiStringsBundle(),
+          systemFonts: fonts,
+          initialLocation: Uri.parse(path),
+          layOut: laidOut.add,
+        ),
+      );
+      await tester.pump();
+      expect(laidOut.single, contains('馬大別忙'), reason: path);
+      expect(laidOut.single, isNot(contains('估計費用（USD）')), reason: path);
+      expect(laidOut.single, isNot(contains('辨識中，大約需要一分鐘')), reason: path);
+      fonts.notifyListeners();
+      await tester.pump();
+      expect(fonts.waiting, isFalse);
+      fonts.dispose();
+    }
   });
 
   testWidgets('a church notification warms the linked roster while keeping church-entry text', (tester) async {
@@ -185,39 +163,6 @@ void main() {
     await tester.pump();
     expect(laidOut.single, contains('使用 Google 登入'));
     expect(laidOut.single, contains('找不到這個活動的服事表'));
-    expect(laidOut.single, isNot(contains('辨識中，大約需要一分鐘')));
-    fonts.notifyListeners();
-    await tester.pump();
-  });
-
-  testWidgets('church information warms its own labels without importing the console text', (tester) async {
-    final bundle = _DelayedBundle();
-    final fonts = _SystemFonts();
-    addTearDown(fonts.dispose);
-    final laidOut = <String>[];
-    unawaited(
-      warmUpFonts(
-        bundle: bundle,
-        systemFonts: fonts,
-        initialLocation: Uri.parse('/me/church'),
-        layOut: laidOut.add,
-      ),
-    );
-    bundle.complete('''{
-      "appName":"馬大別忙",
-      "churchInfo":"教會資訊",
-      "churchLogo":"教會 logo",
-      "members":"同工",
-      "exportData":"匯出資料",
-      "statsCost":"估計費用（USD）",
-      "photoRecognizing":"辨識中，大約需要一分鐘"
-    }''');
-    await tester.pump();
-    expect(laidOut.single, contains('教會資訊'));
-    expect(laidOut.single, contains('教會 logo'));
-    expect(laidOut.single, contains('同工'));
-    expect(laidOut.single, contains('匯出資料'));
-    expect(laidOut.single, isNot(contains('估計費用（USD）')));
     expect(laidOut.single, isNot(contains('辨識中，大約需要一分鐘')));
     fonts.notifyListeners();
     await tester.pump();
