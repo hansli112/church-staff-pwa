@@ -165,7 +165,7 @@ describe('starting a 線上支持 payment', () => {
     );
     assert.deepEqual(
       [(await start(300, 'ja')).params.LangType, (await start(300, 'ja')).params.ItemDesc],
-      ['jp', 'マルタ、ひと休み クラウド費用のサポート'],
+      ['jp', 'Martha, sit サーバー費用の応援'],
     );
     assert.equal((await start(300, 'ko')).params.LangType, 'en', 'NewebPay has no Korean');
     assert.equal((await start(300, 'xx')).params.LangType, 'en', 'a page in a language not known here');
