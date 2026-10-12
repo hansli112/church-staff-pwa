@@ -6,6 +6,7 @@ import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/core/fonts.dart';
+import 'package:martha/core/languages.dart';
 
 import '../support/fonts.dart';
 import '../support/harness.dart';
@@ -14,6 +15,18 @@ import '../support/harness.dart';
 class _BrokenBundle extends CachingAssetBundle {
   @override
   Future<ByteData> load(String key) async => ByteData.sublistView(utf8.encode('not json'));
+}
+
+class _RecordingBundle extends UiStringsBundle {
+  _RecordingBundle(this.asked);
+
+  final List<String> asked;
+
+  @override
+  Future<ByteData> load(String key) {
+    asked.add(key);
+    return super.load(key);
+  }
 }
 
 class _DelayedBundle extends CachingAssetBundle {
@@ -32,11 +45,30 @@ class _SystemFonts extends ChangeNotifier {
 void main() {
   test('the app’s own text comes from its strings, shipped with it', () async {
     TestWidgetsFlutterBinding.ensureInitialized();
-    final text = arbText(await rootBundle.loadString(uiStringsAsset));
+    final text = arbText(await rootBundle.loadString(uiStringsAsset(AppLanguage.zhHant)));
     expect(text, contains('馬大別忙'));
     expect(text, contains('切換教會'));
     expect(text, isNot(contains('placeholders')), reason: 'not the strings’ notes');
+    final en = arbText(await rootBundle.loadString(uiStringsAsset(AppLanguage.en)));
+    expect(en, contains('Switch church'));
   }, skip: kIsWeb);
+
+  testWidgets('the warmup reads the strings of the language it is given', (tester) async {
+    final asked = <String>[];
+    final bundle = _RecordingBundle(asked);
+    unawaited(
+      warmUpFonts(
+        bundle: bundle,
+        systemFonts: PaintingBinding.instance.systemFonts,
+        language: AppLanguage.en,
+        layOut: (_) {},
+      ),
+    );
+    await tester.pump();
+    expect(asked, [uiStringsAsset(AppLanguage.en)]);
+    await sendFontsChange(tester);
+    await tester.pump();
+  });
 
   testWidgets('a home entry keeps the narrow first-page warmup', (tester) async {
     final laidOut = <String>[];

@@ -171,7 +171,7 @@ class HomeScreen extends ConsumerWidget {
                             : dayLabel(l10n, s.roster.day, today),
                         subtitle: [
                           s.roster.forEvent?.title ?? services?.byId(s.roster.type)?.name ?? '',
-                          s.duties.join('、'),
+                          s.duties.join(l10n.listSeparator),
                         ].where((t) => t.isNotEmpty).join(' · '),
                         onTap: () {
                           if (s.roster.forEvent case final e?) {

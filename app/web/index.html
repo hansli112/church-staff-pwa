@@ -89,6 +89,35 @@
   -->
   <div id="splash" role="status"><!--splash--><img src="icons/Icon-192.png" alt=""><p class="title">馬大別忙</p><div class="spin" aria-hidden="true"></div><p class="note">載入中…</p><!--/splash--></div>
   <script>
+    // Before the app is up, in the browser's language as the app will pick
+    // it (lib/core/languages.dart): the first on its list the app speaks,
+    // else English. A church's name the server put in (churchPage.ts) stays.
+    (function () {
+      var langs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ''];
+      var lang = 'en';
+      for (var i = 0; i < langs.length; i++) {
+        var l = String(langs[i]).toLowerCase();
+        if (l.indexOf('zh') === 0 || l.indexOf('en') === 0) { lang = l.slice(0, 2); break; }
+      }
+      if (lang !== 'en') return;
+      var en = 'Martha, sit';
+      document.documentElement.lang = 'en';
+      if (document.title === '馬大別忙') document.title = en;
+      var meta = function (name) { return document.querySelector('meta[name="' + name + '"]'); };
+      var appTitle = meta('apple-mobile-web-app-title');
+      if (appTitle && appTitle.content === '馬大別忙') appTitle.content = en;
+      var description = meta('description');
+      if (description && description.content.indexOf('馬大！馬大！') === 0) {
+        description.content = '“Martha, Martha,” the Lord answered, “you are worried and upset about many things, but few things are needed—or indeed only one. Mary has chosen what is better, and it will not be taken away from her.” (Luke 10:41–42)';
+      }
+      var splash = document.getElementById('splash');
+      var title = splash && splash.querySelector('.title');
+      var note = splash && splash.querySelector('.note');
+      if (title && title.textContent === '馬大別忙') title.textContent = en;
+      if (note && note.textContent === '載入中…') note.textContent = 'Loading…';
+    })();
+  </script>
+  <script>
     // Chrome offers to install the page once, often before the app has
     // started: kept for the app's own 加入主畫面 button
     // (lib/features/church/add_to_home.dart) instead of Chrome's bar.

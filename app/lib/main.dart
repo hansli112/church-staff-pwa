@@ -20,6 +20,7 @@ import 'data/firebase/firebase_backend.dart';
 import 'data/memory/demo_data.dart';
 import 'env.dart';
 import 'core/fonts.dart';
+import 'core/languages.dart';
 import 'core/telemetry.dart';
 import 'data/firebase/push_firebase.dart';
 import 'state/fonts.dart';
@@ -43,6 +44,7 @@ Future<void> main() async {
       ? warmUpFonts(
           bundle: rootBundle,
           systemFonts: PaintingBinding.instance.systemFonts,
+          language: AppLanguage.resolve(PlatformDispatcher.instance.locales),
           initialLocation: Uri.base,
           afterFirstFrame: firstPageDrawn.future,
         )

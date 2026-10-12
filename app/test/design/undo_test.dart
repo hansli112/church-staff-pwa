@@ -3,7 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/core/design/components.dart';
-import 'package:martha/core/zh_tw_localizations.dart';
+import 'package:martha/core/builtin_localizations.dart';
+import 'package:martha/core/languages.dart';
 import 'package:martha/l10n/app_localizations.dart';
 
 void main() {
@@ -11,12 +12,12 @@ void main() {
     final pending = Completer<void>();
     await tester.pumpWidget(
       MaterialApp(
-        locale: const Locale('zh', 'TW'),
+        locale: AppLanguage.zhHant.locale,
         localizationsDelegates: const [
           L10n.delegate,
-          ...zhTwLocalizationsDelegates,
+          ...builtinLocalizationsDelegates,
         ],
-        supportedLocales: L10n.supportedLocales,
+        supportedLocales: [for (final l in AppLanguage.values) l.locale],
         home: Builder(
           builder: (context) => Scaffold(
             body: TextButton(
@@ -41,12 +42,12 @@ void main() {
     final pending = Completer<void>();
     await tester.pumpWidget(
       MaterialApp(
-        locale: const Locale('zh', 'TW'),
+        locale: AppLanguage.zhHant.locale,
         localizationsDelegates: const [
           L10n.delegate,
-          ...zhTwLocalizationsDelegates,
+          ...builtinLocalizationsDelegates,
         ],
-        supportedLocales: L10n.supportedLocales,
+        supportedLocales: [for (final l in AppLanguage.values) l.locale],
         home: Builder(
           builder: (context) => Scaffold(
             body: TextButton(

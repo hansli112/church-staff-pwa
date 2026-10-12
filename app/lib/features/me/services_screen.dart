@@ -71,7 +71,7 @@ class ServicesScreen extends ConsumerWidget {
                   title: s.name,
                   subtitle: s.enabled
                       ? weekdayLabel(l10n, s.weekday)
-                      : '${weekdayLabel(l10n, s.weekday)}・${l10n.serviceDisabled}',
+                      : '${weekdayLabel(l10n, s.weekday)}${l10n.dotSeparator}${l10n.serviceDisabled}',
                   trailing: list.length < 2
                       ? null
                       : Row(

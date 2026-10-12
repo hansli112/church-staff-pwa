@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/dates.dart';
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../data/backend.dart';
@@ -173,7 +174,7 @@ class _AgendaState extends ConsumerState<_Agenda> {
     final today = ref.watch(todayProvider);
     final selected = ref.watch(calendarSelectedDayProvider);
     final gridShown = ref.watch(monthGridShownProvider);
-    final title = DateFormat.yMMMM('zh_TW').format(month);
+    final title = DateFormat.yMMMM().format(month);
     final loaded = events.value ?? const <CalendarEvent>[];
     final anchors = agendaAnchors(loaded, from: shownMonth, to: shownMonth.lastOfMonth);
     void shift(int months) => ref.read(calendarMonthProvider.notifier).shift(months);
@@ -298,8 +299,8 @@ class _AgendaState extends ConsumerState<_Agenda> {
 /// When an event is, beside its title: all day or its start time, or for
 /// one over several days the whole span, on two lines when it has times.
 String _when(L10n l10n, CalendarEvent e) {
-  final time = DateFormat.Hm('zh_TW');
-  final day = DateFormat.Md('zh_TW');
+  final time = DateFormat.Hm();
+  final day = shortMonthDay(l10n);
   if (e.lastDay == e.day) return e.allDay ? l10n.calAllDay : time.format(e.start);
   if (e.allDay) return '${day.format(e.start)}–${day.format(DateTime(e.lastDay.year, e.lastDay.month, e.lastDay.day))}';
   return '${day.format(e.start)} ${time.format(e.start)} –\n${day.format(e.end)} ${time.format(e.end)}';

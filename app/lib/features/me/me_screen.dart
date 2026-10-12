@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
+import '../../core/languages.dart';
 import '../../state/support.dart';
 import '../../env.dart';
 import '../../l10n/app_localizations.dart';
@@ -71,7 +72,7 @@ class MeScreen extends ConsumerWidget {
             children: [
               ListRow(
                 title: l10n.language,
-                value: l10n.languageZhHant,
+                value: AppLanguage.fromTag(ref.watch(profileProvider).value?.locale)?.label ?? l10n.languageSystem,
                 onTap: () => context.push('/me/language'),
               ),
               if (store.available) ListRow(title: l10n.support, onTap: () => context.push('/me/support')),

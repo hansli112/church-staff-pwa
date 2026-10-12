@@ -128,7 +128,7 @@ class _MoveScreenState extends ConsumerState<MoveScreen> {
               children: [
                 ListRow(title: l10n.moveMembers, value: l10n.moveMembersCount(preview.members)),
                 ListRow(title: l10n.moveRosters, value: l10n.moveRostersCount(preview.rosters)),
-                ListRow(title: l10n.moveServices, subtitle: preview.services.join('、')),
+                ListRow(title: l10n.moveServices, subtitle: preview.services.join(l10n.listSeparator)),
               ],
             ),
             Padding(

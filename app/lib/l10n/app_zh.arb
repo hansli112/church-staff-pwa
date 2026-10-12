@@ -317,7 +317,6 @@
   "nameSaved": "已更新名字",
   "language": "語言",
   "languageSystem": "跟隨系統",
-  "languageZhHant": "繁體中文",
   "churchInfo": "教會資訊",
   "members": "同工",
   "serviceSettings": "服事設定",
@@ -1717,5 +1716,28 @@
       }
     }
   },
-  "linkSourceRetry": "重新抓取"
+  "linkSourceRetry": "重新抓取",
+  "listSeparator": "、",
+  "@listSeparator": { "description": "Between items in a list of names or roles." },
+  "labelValue": "{label}：{value}",
+  "@labelValue": {
+    "description": "A label and what it says, as in a notification shown in the app.",
+    "placeholders": { "label": { "type": "String", "example": "主日崇拜" }, "value": { "type": "String", "example": "青年小組" } }
+  },
+  "nameIsYou": "{name}（你）",
+  "@nameIsYou": {
+    "description": "The signed-in member in the member list.",
+    "placeholders": { "name": { "type": "String", "example": "李美玉" } }
+  },
+  "churchListSeparator": "〉〈",
+  "@churchListSeparator": { "description": "Between church names in deleteAccountLastAdmin, inside its quotes." },
+  "dayWithEvents": "{day}，{events}",
+  "@dayWithEvents": {
+    "description": "A calendar day and its events, read by screen readers.",
+    "placeholders": { "day": { "type": "String", "example": "10月18日 週日" }, "events": { "type": "String", "example": "聖誕晚會" } }
+  },
+  "dotSeparator": "・",
+  "@dotSeparator": { "description": "Between short facts on one line, such as a status and a count." },
+  "churchStatus": "狀態",
+  "@churchStatus": { "description": "A church's status (active, suspended, deleted) in the platform console." }
 }

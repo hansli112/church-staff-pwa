@@ -225,7 +225,7 @@ class EventRosterScreen extends ConsumerWidget {
                       for (final r in others)
                         ListRow(
                           title: r.forEvent!.title,
-                          subtitle: [for (final d in r.duties) d.role].join('、'),
+                          subtitle: [for (final d in r.duties) d.role].join(l10n.listSeparator),
                           value: dayLabel(l10n, r.day, today),
                           onTap: () => Navigator.pop(context, r),
                         ),

@@ -486,7 +486,17 @@ class _Profiles implements ProfileRepository {
   @override
   Future<void> save(UserProfile profile) async {
     _checkName(profile.name);
-    await _b.write(() => _b.users[profile.uid] = profile);
+    await _b.write(() => _b.users[profile.uid] = profile.copyWith(appLocale: _b.users[profile.uid]?.appLocale));
+  }
+
+  @override
+  Future<void> setAppLocale(String uid, String tag) async {
+    // As firestore.rules: only on one's own profile, and a short tag.
+    final p = _b.users[uid];
+    if (_b.auth.currentUser?.uid != uid || p == null || tag.length > _appLocaleMaxLength) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    await _b.write(() => _b.users[uid] = p.copyWith(appLocale: tag));
   }
 
   @override
@@ -496,6 +506,9 @@ class _Profiles implements ProfileRepository {
     await _b.write(() => _b.users.putIfAbsent(profile.uid, () => profile));
   }
 }
+
+/// The longest language tag firestore.rules takes for users/{uid}.appLocale.
+const _appLocaleMaxLength = 16;
 
 /// A person's name, on a profile or a member: refused past
 /// [TextLimits.profileName] as firestore.rules refuses past its guard.

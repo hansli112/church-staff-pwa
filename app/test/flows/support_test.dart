@@ -56,7 +56,9 @@ Future<void> pumpWithStore(
 }) async {
   tester.view.physicalSize = const Size(393 * 3, 852 * 3);
   tester.view.devicePixelRatio = 3;
+  tester.platformDispatcher.localesTestValue = const [Locale('zh', 'TW')];
   addTearDown(tester.view.reset);
+  addTearDown(tester.platformDispatcher.clearAllTestValues);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [

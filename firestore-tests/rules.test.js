@@ -624,6 +624,15 @@ describe('全域個資 (users)', () => {
     await assertFails(updateDoc(ref, { name: 40 }));
   });
 
+  it('本人記下 App 顯示的語言，給推播用：短的字串', async () => {
+    const ref = doc(as(STRANGER), `users/${STRANGER}`);
+    await assertSucceeds(setDoc(ref, { name: '新人', email: 's@example.com' }));
+    await assertSucceeds(updateDoc(ref, { appLocale: 'en' }));
+    await assertFails(updateDoc(ref, { appLocale: 'x'.repeat(17) }));
+    await assertFails(updateDoc(ref, { appLocale: 1 }));
+    await assertFails(updateDoc(doc(as(MEMBER_A), `users/${STRANGER}`), { appLocale: 'en' }));
+  });
+
   it('不能夾帶權限欄位、不能寫別人的、不能自己刪（帳號刪除走 Cloud Functions）', async () => {
     await assertFails(setDoc(doc(as(MEMBER_A), `users/${MEMBER_A}`), { name: '甲', role: 'admin' }));
     await assertFails(setDoc(doc(as(MEMBER_A), `users/${ADMIN_A}`), { name: '冒充' }));

@@ -3,7 +3,7 @@ rules_version = '2';
 // Firestore security rules for 馬大別忙 (hosted, multi-church).
 //
 // Data model (docs/data-model.md has the full field list):
-//   users/{uid}                              - global profile: name, locale, fcm
+//   users/{uid}                              - global profile: name, locale, appLocale, fcm
 //   churches/{cid}                           - name, nameKey, status
 //   churches/{cid}/members/{uid}             - role, groups, zones in that church
 //   churches/{cid}/rosters/{rosterId}        - service rosters
@@ -174,8 +174,12 @@ service cloud.firestore {
     match /users/{uid} {
       function validProfile() {
         return request.resource.data.keys().hasOnly(
-            ['name', 'email', 'locale', 'fcm', 'createdAt', 'updatedAt'])
-          && hasValidName();
+            ['name', 'email', 'locale', 'appLocale', 'fcm', 'createdAt', 'updatedAt'])
+          && hasValidName()
+          // The language the app shows, for the server's pushes.
+          && (!('appLocale' in request.resource.data)
+              || (request.resource.data.appLocale is string
+                  && request.resource.data.appLocale.size() <= 16));
       }
 
       allow read: if isSelf(uid);

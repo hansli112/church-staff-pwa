@@ -6,7 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/design/theme.dart';
 import 'core/fonts.dart';
-import 'core/zh_tw_localizations.dart';
+import 'core/builtin_localizations.dart';
+import 'core/languages.dart';
 import 'deep_link.dart';
 import 'deferred_pages.dart';
 import 'l10n/app_localizations.dart';
@@ -103,7 +104,7 @@ class _MarthaAppState extends ConsumerState<MarthaApp> {
         ..hideCurrentSnackBar()
         ..showSnackBar(
           SnackBar(
-            content: Text(n.title.isEmpty ? n.body : '${n.title}：${n.body}'),
+            content: Text(n.title.isEmpty ? n.body : L10n.of(messenger.context).labelValue(n.title, n.body)),
             duration: const Duration(seconds: 8),
             persist: false,
             action: link == null
@@ -121,19 +122,17 @@ class _MarthaAppState extends ConsumerState<MarthaApp> {
       theme: buildTheme(Brightness.light),
       darkTheme: buildTheme(Brightness.dark),
       themeMode: ThemeMode.system,
-      locale: localeFromTag(locale),
-      supportedLocales: L10n.supportedLocales,
+      // The one chosen, else the device's (AppLanguage.resolve).
+      locale: AppLanguage.fromTag(locale)?.locale,
+      supportedLocales: [for (final l in AppLanguage.values) l.locale],
       localizationsDelegates: const [
         L10n.delegate,
-        ...zhTwLocalizationsDelegates,
+        ...builtinLocalizationsDelegates,
       ],
-      // Only Traditional Chinese for now; every device gets it until other
-      // ARB files are added, and Flutter's own labels come only in zh-TW.
-      localeResolutionCallback: (device, supported) =>
-          const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant', countryCode: 'TW'),
+      localeListResolutionCallback: (device, _) => AppLanguage.resolve(device ?? const []).locale,
       routerConfig: router,
       scaffoldMessengerKey: _messenger,
-      builder: (context, child) => _Column(child: child!),
+      builder: (context, child) => _LanguageShown(child: _Column(child: child!)),
     );
   }
 }
@@ -167,9 +166,33 @@ class _Column extends StatelessWidget {
   }
 }
 
-/// `zh-Hant` → Locale('zh', 'Hant' script). Null follows the device.
-Locale? localeFromTag(String? tag) {
-  if (tag == null || tag.isEmpty) return null;
-  final parts = tag.split('-');
-  return parts.length > 1 ? Locale.fromSubtags(languageCode: parts[0], scriptCode: parts[1]) : Locale(parts[0]);
+/// Keeps users/{uid}.appLocale on the language shown, chosen or the
+/// device's, for the server's pushes; written only when it changes.
+class _LanguageShown extends ConsumerStatefulWidget {
+  const _LanguageShown({required this.child});
+
+  final Widget child;
+
+  @override
+  ConsumerState<_LanguageShown> createState() => _LanguageShownState();
+}
+
+class _LanguageShownState extends ConsumerState<_LanguageShown> {
+  (String, String)? _sent;
+
+  @override
+  Widget build(BuildContext context) {
+    final tag = AppLanguage.of(Localizations.localeOf(context))!.tag;
+    final profile = ref.watch(profileProvider).value;
+    if (profile != null && profile.appLocale != tag && _sent != (profile.uid, tag)) {
+      _sent = (profile.uid, tag);
+      final profiles = ref.read(backendProvider).profiles;
+      // Best effort: on failure (offline), the next change of profile or
+      // language tries again.
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => unawaited(profiles.setAppLocale(profile.uid, tag).catchError((_) => _sent = null)),
+      );
+    }
+    return widget.child;
+  }
 }

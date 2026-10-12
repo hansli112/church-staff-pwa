@@ -327,6 +327,7 @@ UserProfile profileFromJson(String uid, Json data) => UserProfile(
   name: data['name'] as String? ?? '',
   email: data['email'] as String? ?? '',
   locale: data['locale'] as String?,
+  appLocale: data['appLocale'] as String?,
 );
 
 CalendarSettings calendarSettingsFromJson(Json? data) => CalendarSettings(

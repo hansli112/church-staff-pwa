@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
@@ -13,6 +12,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../church/links.dart';
 import '../common/errors.dart';
+import '../../core/dates.dart';
 import 'services_screen.dart' show promptText;
 
 final webhookProvider = StreamProvider.autoDispose<WebhookSettings?>((ref) => openChurch(ref).webhook());
@@ -309,7 +309,7 @@ class _ConfiguredState extends ConsumerState<_Configured> {
         ListSection(
           footer: last?.at == null
               ? null
-              : l10n.webhookLast(DateFormat('M/d HH:mm').format(churchTime(last!.at!)), deliveryText(l10n, last)),
+              : l10n.webhookLast(shortMonthDay(l10n).add_Hm().format(churchTime(last!.at!)), deliveryText(l10n, last)),
           children: [
             ListRow(
               title: l10n.webhookTest,

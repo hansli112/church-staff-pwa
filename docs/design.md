@@ -6,7 +6,7 @@
 
 - 代管、多教會共用的**同工工具**（不含會友）。單一 App「馬大別忙」（驚嘆號可有可無），教會 logo 在 App 內顯示。
 - 平台：iOS、Android、Web（PWA），同一份 Flutter code。
-- 語言：i18n 架構（ARB）。繁中先出；英文、簡中之後補。
+- 語言：i18n 架構（ARB），目前繁中、英文；簡中、日文、韓文照 #71 陸續加。預設跟隨系統：照手機或瀏覽器的偏好語言清單，用第一個支援的，都不支援用英文（`app/lib/core/languages.dart`）。「我的 → 語言」可以自己選，存在帳號。App 另外把實際顯示的語言寫進 `users/{uid}.appLocale`，給後端寫推播用。用語照 `docs/i18n-glossary.md`；每份翻譯檔的條目要和繁中一樣（`test/app/translations_test.dart`）。英文的日期一律寫月份（Oct 18），不用 10/18。
 - 營運：Hans 個人。不主動拓展，有人問就給用；已知有台灣、香港、馬來西亞詢問。
 - 發布：**全部做完一次發布**，不分階段。
 - 用語：一律說「安排服事表」，不說「排班」。其他用語見 `CONTEXT.md`。
@@ -224,9 +224,9 @@ Chrome 小幅改善；桌面 WebKit 差距小且教會資訊冷開反而較慢�
 
 **2026-10-12：只帶繁中的 Flutter 內建文字（#70）**
 
-- Flutter 內建文字（按鈕、日期選擇器、無障礙標籤）原本用 `GlobalMaterialLocalizations.delegate` 等三個 delegate，它們依語言挑翻譯，所以 80 幾種語言和每個語言的日期資料都打包進去。改成 `app/lib/core/zh_tw_localizations.dart` 只建繁中（台灣）那一份，zh_TW 的日期資料從 Flutter 複製一份（測試比對兩者相同）。
+- Flutter 內建文字（按鈕、日期選擇器、無障礙標籤）原本用 `GlobalMaterialLocalizations.delegate` 等三個 delegate，它們依語言挑翻譯，所以 80 幾種語言和每個語言的日期資料都打包進去。改成 `app/lib/core/builtin_localizations.dart` 只建 App 有的語言那幾份，日期資料也只從 Flutter 複製那幾種（`date_data.dart`，測試比對兩者相同）。
 - JS 版 `main.dart.js`（prod config）：未壓縮 4.56 MB → 3.96 MB，gzip 1,266 KB → 1,148 KB（−118 KB，約 9%）。
-- 日期選擇器原本拿到 `zh` 的日期格式（周日），現在和 App 自己的日期一樣用 `zh_TW`（週日）。`Intl.defaultLocale` 設成 `zh_TW`：沒指定語言的 `DateFormat` 以前靠 Flutter 順便載入的 en_US 資料。
+- 日期選擇器原本拿到 `zh` 的日期格式（周日），現在和 App 自己的日期一樣用 `zh_TW`（週日）。`Intl.defaultLocale` 跟著目前的語言：App 自己的 `DateFormat` 都不指定語言，跟著畫面的語言走。
 
 參考官方 guideline：[Flutter 效能](https://docs.flutter.dev/perf/best-practices)、[Web profiling](https://docs.flutter.dev/perf/web-performance)、[Firestore](https://firebase.google.com/docs/firestore/best-practices)、[Functions](https://firebase.google.com/docs/functions/tips)、[resource hints](https://web.dev/learn/performance/resource-hints)、[Safari Web Inspector](https://developer.apple.com/safari/tools/)。
 

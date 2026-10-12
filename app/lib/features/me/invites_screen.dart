@@ -119,10 +119,10 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
     final live = ref.watch(_liveInvitesProvider);
     final services = ref.watch(servicesProvider).value;
     final enabled = services?.enabled ?? const <Service>[];
-    final fmt = DateFormat.MMMd('zh_TW');
+    final fmt = DateFormat.MMMd();
     String? zonesOf(Invite i) {
       final names = [for (final t in i.zoneTypes) ?services?.byId(t)?.name];
-      return names.isEmpty ? null : names.join('、');
+      return names.isEmpty ? null : names.join(l10n.listSeparator);
     }
 
     return Scaffold(

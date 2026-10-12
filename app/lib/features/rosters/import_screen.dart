@@ -427,7 +427,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
               subtitle: duty is Map && duty['people'] is List
                   ? (duty['people'] as List<dynamic>).isEmpty
                         ? l10n.nobodyYet
-                        : (duty['people'] as List<dynamic>).join('、')
+                        : (duty['people'] as List<dynamic>).join(l10n.listSeparator)
                   : l10n.importPeopleArrayHint,
               onTap: enabled ? () => _editDuty(index, row, i) : null,
             ),
@@ -466,7 +466,10 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       if (!after.duties.any((d) => d.role == duty.role)) {
         rows.add(
           ListRow(
-            title: l10n.importRemoveDuty(duty.role, duty.people.isEmpty ? l10n.nobodyYet : duty.people.join('、')),
+            title: l10n.importRemoveDuty(
+              duty.role,
+              duty.people.isEmpty ? l10n.nobodyYet : duty.people.join(l10n.listSeparator),
+            ),
           ),
         );
       }
@@ -474,16 +477,20 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     for (final duty in after.duties) {
       final old = before?.duties.where((d) => d.role == duty.role).firstOrNull;
       if (old == duty) continue;
-      final names = duty.people.isEmpty ? l10n.nobodyYet : duty.people.join('、');
+      final names = duty.people.isEmpty ? l10n.nobodyYet : duty.people.join(l10n.listSeparator);
       rows.add(
         ListRow(
           title: old == null
               ? l10n.importAddDuty(duty.role, names)
-              : l10n.importChangeDuty(duty.role, old.people.isEmpty ? l10n.nobodyYet : old.people.join('、'), names),
+              : l10n.importChangeDuty(
+                  duty.role,
+                  old.people.isEmpty ? l10n.nobodyYet : old.people.join(l10n.listSeparator),
+                  names,
+                ),
           subtitle: [
             for (final name in duty.people)
               duty.uids.containsKey(name) ? l10n.importMemberIdentity(name) : l10n.importGuestIdentity(name),
-          ].join('、'),
+          ].join(l10n.listSeparator),
         ),
       );
     }
@@ -510,7 +517,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       final candidates = report.unresolved[raw]!;
       return candidates.isEmpty
           ? l10n.importNoCandidate
-          : l10n.importCandidates(candidates.map((m) => m.name).join('、'));
+          : l10n.importCandidates(candidates.map((m) => m.name).join(l10n.listSeparator));
     }
     final choice = draft.people[raw];
     if (choice != null && choice.uid == null) return l10n.importGuestUnlinked;

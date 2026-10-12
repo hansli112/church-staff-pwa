@@ -211,6 +211,19 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect((saved.name, saved.locale), ('王小明', 'zh-Hant'));
     });
 
+    test('the language shown is kept apart from the one chosen, and saving keeps it', () async {
+      final uid = await w.signUp('a@example.com');
+      final profiles = w.backend.profiles;
+      await profiles.ensure(UserProfile(uid: uid, name: '小明', email: 'a@example.com'));
+      await profiles.setAppLocale(uid, 'en');
+      var p = (await profiles.watch(uid).first)!;
+      expect((p.locale, p.appLocale), (null, 'en'));
+      await profiles.save(UserProfile(uid: uid, name: '王小明', email: 'a@example.com', locale: 'zh-Hant'));
+      p = (await profiles.watch(uid).first)!;
+      expect((p.locale, p.appLocale), ('zh-Hant', 'en'));
+      await expectLater(profiles.setAppLocale(uid, 'x' * 40), denied());
+    });
+
     test('a profile name holds 40 characters; far past it is refused', () async {
       // Between 40 characters and 160 UTF-16 units the rules let it through
       // and the app stops it; outside that band both say the same.

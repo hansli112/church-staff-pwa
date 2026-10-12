@@ -16,8 +16,8 @@ import '../rosters/event_roster_screen.dart';
 Future<void> showEventDetail(BuildContext context, CalendarEvent e) {
   final l10n = L10n.of(context);
   final screen = context;
-  final fmt = DateFormat.MMMEd('zh_TW');
-  final time = DateFormat.Hm('zh_TW');
+  final fmt = DateFormat.MMMEd();
+  final time = DateFormat.Hm();
   return showAppSheet<void>(
     context,
     builder: (context) => SafeArea(
@@ -215,6 +215,9 @@ class _EventEditorState extends State<_EventEditor> {
     initialDate: day,
     firstDate: notBefore ?? DateTime.utc(day.year - 1),
     lastDate: DateTime.utc(day.year + 2),
+    // Typing a date takes it as 10/18/2026 in English, which reads the
+    // other way in Malaysia: the calendar only.
+    initialEntryMode: DatePickerEntryMode.calendarOnly,
   );
 
   /// Moves the end to [day]. On the start day an end time not after the
@@ -405,7 +408,7 @@ class _WhenRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
     final style = AppText.body.copyWith(color: c.label);
-    final date = (day.year == thisYear ? DateFormat.MMMEd('zh_TW') : DateFormat.yMMMEd('zh_TW')).format(day);
+    final date = (day.year == thisYear ? DateFormat.MMMEd() : DateFormat.yMMMEd()).format(day);
     Widget chip(String text, VoidCallback onTap) => Material(
       color: c.fill,
       borderRadius: BorderRadius.circular(Radii.s),

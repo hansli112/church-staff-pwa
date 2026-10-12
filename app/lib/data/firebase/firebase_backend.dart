@@ -345,6 +345,9 @@ class _Profiles implements ProfileRepository {
   );
 
   @override
+  Future<void> setAppLocale(String uid, String tag) => _guard(() => _db.doc('users/$uid').update({'appLocale': tag}));
+
+  @override
   Future<void> ensure(UserProfile profile) async {
     Future<bool> cachedOwnProfile() async {
       if (_auth.currentUser?.uid != profile.uid) return false;

@@ -59,16 +59,16 @@ Future<bool> showFutureRosterPreview(
             lines.add(
               l10n.rosterFutureDutyChange(
                 duty.role,
-                duty.people.join('、'),
-                renamed?.role == duty.role ? renamed!.people.join('、') : renamed?.role ?? '',
+                duty.people.join(l10n.listSeparator),
+                renamed?.role == duty.role ? renamed!.people.join(l10n.listSeparator) : renamed?.role ?? '',
               ),
             );
           }
           if (!listEquals(before.events, after.events)) {
             lines.add(
               l10n.rosterFutureEventChange(
-                before.events.map((e) => e.name).join('、'),
-                after.events.map((e) => e.name).join('、'),
+                before.events.map((e) => e.name).join(l10n.listSeparator),
+                after.events.map((e) => e.name).join(l10n.listSeparator),
               ),
             );
           }

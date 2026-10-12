@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
@@ -13,6 +12,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
 import '../common/link_errors.dart';
+import '../../core/dates.dart';
 
 /// Admins set the church link shown at the top of everyone's home page,
 /// and optionally a content source fetched once a day at a time they pick.
@@ -154,7 +154,7 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
         ? l10n.linkSourceFailed(linkErrorText(l10n, content.error!, content.errorStatus))
         : content.fetchedAt == null
         ? null
-        : l10n.linkSourceUpdated(DateFormat('M/d HH:mm').format(churchTime(content.fetchedAt!)));
+        : l10n.linkSourceUpdated(shortMonthDay(l10n).add_Hm().format(churchTime(content.fetchedAt!)));
     final fieldPadding = const EdgeInsets.symmetric(horizontal: Space.m);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.churchLink)),

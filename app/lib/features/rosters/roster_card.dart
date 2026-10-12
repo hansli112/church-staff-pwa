@@ -140,7 +140,7 @@ class RosterDayView extends StatelessWidget {
                                   TextSpan(
                                     children: [
                                       for (final (i, name) in duty.people.indexed) ...[
-                                        if (i > 0) const TextSpan(text: '、'),
+                                        if (i > 0) TextSpan(text: l10n.listSeparator),
                                         TextSpan(
                                           text: name,
                                           style: _isMe(duty, name)

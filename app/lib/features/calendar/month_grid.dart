@@ -154,7 +154,7 @@ class _Week extends StatelessWidget {
       final label = dayLabel(l10n, d, grid.today);
       return _DayCell(
         number: d.day,
-        label: titles.isEmpty ? label : '$label，${titles.join('、')}',
+        label: titles.isEmpty ? label : l10n.dayWithEvents(label, titles.join(l10n.listSeparator)),
         isToday: d == grid.today,
         isSelected: d == grid.selected,
         hasEvents: titles.isNotEmpty,

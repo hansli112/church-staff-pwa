@@ -221,7 +221,7 @@ class _ZoneSection extends StatelessWidget {
         if (zone != null) ...[
           ListRow(
             title: L10n.of(context).memberSmallGroups,
-            subtitle: zone.smallGroups.isEmpty ? null : zone.smallGroups.join('、'),
+            subtitle: zone.smallGroups.isEmpty ? null : zone.smallGroups.join(L10n.of(context).listSeparator),
             onTap: () async {
               final groups = await showAppSheet<List<String>>(
                 context,

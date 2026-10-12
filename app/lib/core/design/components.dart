@@ -211,75 +211,85 @@ class ListRow extends StatelessWidget {
             horizontal: Space.m,
             vertical: 11,
           ),
-          child: Row(
-            children: [
-              if (leading != null) ...[
-                IconTheme.merge(
-                  data: IconThemeData(
-                    color: destructive ? c.destructive : c.accent,
-                    size: 22,
-                  ),
-                  child: leading!,
-                ),
-                const SizedBox(width: Space.m),
-              ],
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      title,
-                      style: AppText.body.copyWith(
-                        color: destructive ? c.destructive : c.label,
-                      ),
+          // A long value (a longer language's) takes at most half the row
+          // and wraps, so the title keeps its room.
+          child: LayoutBuilder(
+            builder: (context, box) => Row(
+              children: [
+                if (leading != null) ...[
+                  IconTheme.merge(
+                    data: IconThemeData(
+                      color: destructive ? c.destructive : c.accent,
+                      size: 22,
                     ),
-                    if (subtitle != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(
-                          subtitle!,
-                          style: AppText.subheadline.copyWith(
-                            color: c.secondaryLabel,
-                          ),
+                    child: leading!,
+                  ),
+                  const SizedBox(width: Space.m),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        title,
+                        style: AppText.body.copyWith(
+                          color: destructive ? c.destructive : c.label,
                         ),
                       ),
-                  ],
-                ),
-              ),
-              if (value != null)
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(start: Space.s),
-                  child: Text(
-                    value!,
-                    style: AppText.body.copyWith(color: c.secondaryLabel),
+                      if (subtitle != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            subtitle!,
+                            style: AppText.subheadline.copyWith(
+                              color: c.secondaryLabel,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-              if (trailing != null)
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(start: Space.s),
-                  child: trailing!,
-                ),
-              if (selected == true)
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(start: Space.s),
-                  child: Icon(
-                    Icons.check,
-                    color: c.accent,
-                    size: 22,
-                    semanticLabel: L10n.of(context).selected,
+                if (value != null)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(start: Space.s),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: box.maxWidth / 2),
+                      child: Text(
+                        value!,
+                        textAlign: TextAlign.end,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.body.copyWith(color: c.secondaryLabel),
+                      ),
+                    ),
                   ),
-                ),
-              if (showChevron)
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(start: Space.xs),
-                  child: Icon(
-                    Icons.chevron_right,
-                    color: c.tertiaryLabel,
-                    size: 22,
+                if (trailing != null)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(start: Space.s),
+                    child: trailing!,
                   ),
-                ),
-            ],
+                if (selected == true)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(start: Space.s),
+                    child: Icon(
+                      Icons.check,
+                      color: c.accent,
+                      size: 22,
+                      semanticLabel: L10n.of(context).selected,
+                    ),
+                  ),
+                if (showChevron)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(start: Space.xs),
+                    child: Icon(
+                      Icons.chevron_right,
+                      color: c.tertiaryLabel,
+                      size: 22,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

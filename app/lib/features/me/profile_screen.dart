@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
+import '../../core/languages.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
@@ -132,11 +133,12 @@ class LanguageScreen extends ConsumerWidget {
                 selected: profile?.locale == null,
                 onTap: () => pick(null),
               ),
-              ListRow(
-                title: l10n.languageZhHant,
-                selected: profile?.locale == 'zh-Hant',
-                onTap: () => pick('zh-Hant'),
-              ),
+              for (final language in AppLanguage.values)
+                ListRow(
+                  title: language.label,
+                  selected: profile?.locale == language.tag,
+                  onTap: () => pick(language.tag),
+                ),
             ],
           ),
         ],

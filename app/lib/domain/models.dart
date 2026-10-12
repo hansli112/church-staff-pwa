@@ -547,6 +547,7 @@ class UserProfile {
     required this.name,
     this.email = '',
     this.locale,
+    this.appLocale,
   });
 
   final String uid;
@@ -555,6 +556,14 @@ class UserProfile {
 
   /// BCP-47 tag such as `zh-Hant`, or null to follow the device.
   final String? locale;
+
+  /// The language the app last showed, chosen or the device's: what the
+  /// server writes this person's pushes in. Kept by
+  /// [ProfileRepository.setAppLocale], not by saving the profile.
+  final String? appLocale;
+
+  UserProfile copyWith({String? appLocale}) =>
+      UserProfile(uid: uid, name: name, email: email, locale: locale, appLocale: appLocale ?? this.appLocale);
 }
 
 /// A membership found by the collection-group query: which churches I am in.

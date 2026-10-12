@@ -481,9 +481,6 @@ class L10nZh extends L10n {
   String get languageSystem => '跟隨系統';
 
   @override
-  String get languageZhHant => '繁體中文';
-
-  @override
   String get churchInfo => '教會資訊';
 
   @override
@@ -2219,4 +2216,31 @@ class L10nZh extends L10n {
 
   @override
   String get linkSourceRetry => '重新抓取';
+
+  @override
+  String get listSeparator => '、';
+
+  @override
+  String labelValue(String label, String value) {
+    return '$label：$value';
+  }
+
+  @override
+  String nameIsYou(String name) {
+    return '$name（你）';
+  }
+
+  @override
+  String get churchListSeparator => '〉〈';
+
+  @override
+  String dayWithEvents(String day, String events) {
+    return '$day，$events';
+  }
+
+  @override
+  String get dotSeparator => '・';
+
+  @override
+  String get churchStatus => '狀態';
 }

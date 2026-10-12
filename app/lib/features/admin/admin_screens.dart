@@ -93,7 +93,8 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                           for (final c in results)
                             ListRow(
                               title: c.name,
-                              subtitle: '${statusLabel(l10n, c.status)}・${l10n.memberCount(c.memberCount)}',
+                              subtitle:
+                                  '${statusLabel(l10n, c.status)}${l10n.dotSeparator}${l10n.memberCount(c.memberCount)}',
                               onTap: () async {
                                 await Navigator.of(context).push(
                                   MaterialPageRoute<void>(
@@ -171,7 +172,7 @@ class _AdminChurchScreenState extends ConsumerState<AdminChurchScreen> {
             children: [
               ListRow(title: 'ID', value: c.id),
               ListRow(title: l10n.statsMembers, value: '${c.memberCount}'),
-              ListRow(title: l10n.role, value: statusLabel(l10n, c.status)),
+              ListRow(title: l10n.churchStatus, value: statusLabel(l10n, c.status)),
               ListRow(
                 title: l10n.adminRename,
                 onTap: () async {

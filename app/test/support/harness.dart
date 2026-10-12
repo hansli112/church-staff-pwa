@@ -3,10 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart' show Intl;
 import 'package:martha/app.dart';
 import 'package:martha/core/design/balanced_text.dart';
 import 'package:martha/core/design/theme.dart';
-import 'package:martha/core/zh_tw_localizations.dart';
+import 'package:martha/core/builtin_localizations.dart';
+import 'package:martha/core/languages.dart';
 import 'package:martha/deferred_pages.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/church_time.dart';
@@ -44,6 +46,7 @@ Future<void> pumpApp(
   Brightness brightness = Brightness.light,
   double textScale = 1,
   List<Override> overrides = const [],
+  List<Locale> deviceLocales = const [Locale('zh', 'TW')],
 }) async {
   // VM deferred snapshots use real async work, not the widget test's fake
   // clock. Download delays/failures are injected at loadPageLibraryProvider;
@@ -57,8 +60,11 @@ Future<void> pumpApp(
   tester.view.devicePixelRatio = 3;
   tester.platformDispatcher.platformBrightnessTestValue = brightness;
   tester.platformDispatcher.textScaleFactorTestValue = textScale;
+  tester.platformDispatcher.localesTestValue = deviceLocales;
   addTearDown(tester.view.reset);
   addTearDown(tester.platformDispatcher.clearAllTestValues);
+  // The language last shown sets intl's default (builtin_localizations.dart).
+  addTearDown(() => Intl.defaultLocale = null);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [...await testOverrides(backend), ...overrides],
@@ -77,10 +83,12 @@ Future<void> pumpWidgetInApp(
   Brightness brightness = Brightness.light,
   double textScale = 1,
   TargetPlatform platform = TargetPlatform.iOS,
+  AppLanguage language = AppLanguage.zhHant,
 }) async {
   tester.view.physicalSize = const Size(393 * 3, 852 * 3);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
+  addTearDown(() => Intl.defaultLocale = null);
   await tester.pumpWidget(
     ProviderScope(
       overrides: await testOverrides(backend ?? MemoryBackend(clock: testClock)),
@@ -89,9 +97,10 @@ Future<void> pumpWidgetInApp(
         theme: buildTheme(brightness).copyWith(platform: platform),
         localizationsDelegates: const [
           L10n.delegate,
-          ...zhTwLocalizationsDelegates,
+          ...builtinLocalizationsDelegates,
         ],
-        supportedLocales: L10n.supportedLocales,
+        locale: language.locale,
+        supportedLocales: [for (final l in AppLanguage.values) l.locale],
         home: MediaQuery.withClampedTextScaling(
           minScaleFactor: textScale,
           maxScaleFactor: textScale,

@@ -90,8 +90,12 @@ abstract interface class AuthGateway {
 abstract interface class ProfileRepository {
   Stream<UserProfile?> watch(String uid);
 
-  /// Creates or updates users/{uid}.
+  /// Creates or updates users/{uid}, keeping its [UserProfile.appLocale].
   Future<void> save(UserProfile profile);
+
+  /// Records the language the app shows (an [AppLanguage] tag) on an
+  /// existing users/{uid}.
+  Future<void> setAppLocale(String uid, String tag);
 
   /// Creates users/{uid} on first sign-in. Leaves an existing profile
   /// alone, so a name the user changed is not reset to the Google name.

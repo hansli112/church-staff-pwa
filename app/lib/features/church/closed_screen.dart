@@ -57,7 +57,7 @@ class _ClosedScreenState extends ConsumerState<ClosedScreen> {
       body = until == null
           ? ''
           : restorable
-          ? l10n.churchDeletedBody(DateFormat.yMMMd('zh_TW').format(churchTime(until)))
+          ? l10n.churchDeletedBody(DateFormat.yMMMd().format(churchTime(until)))
           : l10n.churchDeletedExpired;
     } else {
       title = l10n.churchSuspendedTitle(church.name);

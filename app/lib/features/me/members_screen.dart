@@ -46,7 +46,10 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
     List<String> smallGroupLabels(List<Zone> zones) => [
       for (final zone in zones)
         if (zone.smallGroups.isNotEmpty)
-          '${services?.byId(zone.serviceType)?.name ?? zone.serviceType}：${zone.smallGroups.join('、')}',
+          l10n.labelValue(
+            services?.byId(zone.serviceType)?.name ?? zone.serviceType,
+            zone.smallGroups.join(l10n.listSeparator),
+          ),
     ];
     final hidden = ref.watch(pendingRemovalsProvider);
     final uid = ref.watch(uidProvider);
@@ -117,13 +120,13 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                               first: i == 0,
                               last: i == list.length - 1,
                               child: ListRow(
-                                title: m.uid == uid ? '${m.name}（${l10n.you}）' : m.name,
+                                title: m.uid == uid ? l10n.nameIsYou(m.name) : m.name,
                                 subtitle: [
                                   if (m.waitsForZone(enabled)) l10n.waitsForZone,
                                   if (m.inGroup(Group.rosterEditors) && !m.isAdmin) l10n.groupRosterEditors,
                                   if (m.inGroup(Group.calendarEditors) && !m.isAdmin) l10n.groupCalendarEditors,
                                   ...smallGroupLabels(m.zones),
-                                ].join('・').ifEmpty(null),
+                                ].join(l10n.dotSeparator).ifEmpty(null),
                                 value: roleLabel(l10n, m.role),
                                 onTap: isAdmin ? () => _open(m) : null,
                               ),
@@ -150,7 +153,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                                 l10n.notSignedInYet,
                                 if (p.email.isNotEmpty && p.name.isNotEmpty) p.email,
                                 ...smallGroupLabels(p.zones),
-                              ].join('・'),
+                              ].join(l10n.dotSeparator),
                               value: roleLabel(l10n, p.role),
                               onTap: isAdmin ? () => _openPending(p) : null,
                             ),

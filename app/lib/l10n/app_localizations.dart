@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
+import 'app_localizations_en.dart';
 import 'app_localizations_zh.dart';
 
 // ignore_for_file: type=lint
@@ -89,7 +90,7 @@ abstract class L10n {
   ];
 
   /// A list of this localizations delegate's supported locales.
-  static const List<Locale> supportedLocales = <Locale>[Locale('zh')];
+  static const List<Locale> supportedLocales = <Locale>[Locale('en'), Locale('zh')];
 
   /// No description provided for @appName.
   ///
@@ -942,12 +943,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'跟隨系統'**
   String get languageSystem;
-
-  /// No description provided for @languageZhHant.
-  ///
-  /// In zh, this message translates to:
-  /// **'繁體中文'**
-  String get languageZhHant;
 
   /// No description provided for @churchInfo.
   ///
@@ -4050,6 +4045,48 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'重新抓取'**
   String get linkSourceRetry;
+
+  /// Between items in a list of names or roles.
+  ///
+  /// In zh, this message translates to:
+  /// **'、'**
+  String get listSeparator;
+
+  /// A label and what it says, as in a notification shown in the app.
+  ///
+  /// In zh, this message translates to:
+  /// **'{label}：{value}'**
+  String labelValue(String label, String value);
+
+  /// The signed-in member in the member list.
+  ///
+  /// In zh, this message translates to:
+  /// **'{name}（你）'**
+  String nameIsYou(String name);
+
+  /// Between church names in deleteAccountLastAdmin, inside its quotes.
+  ///
+  /// In zh, this message translates to:
+  /// **'〉〈'**
+  String get churchListSeparator;
+
+  /// A calendar day and its events, read by screen readers.
+  ///
+  /// In zh, this message translates to:
+  /// **'{day}，{events}'**
+  String dayWithEvents(String day, String events);
+
+  /// Between short facts on one line, such as a status and a count.
+  ///
+  /// In zh, this message translates to:
+  /// **'・'**
+  String get dotSeparator;
+
+  /// A church's status (active, suspended, deleted) in the platform console.
+  ///
+  /// In zh, this message translates to:
+  /// **'狀態'**
+  String get churchStatus;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {
@@ -4061,7 +4098,7 @@ class _L10nDelegate extends LocalizationsDelegate<L10n> {
   }
 
   @override
-  bool isSupported(Locale locale) => <String>['zh'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['en', 'zh'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_L10nDelegate old) => false;
@@ -4070,6 +4107,8 @@ class _L10nDelegate extends LocalizationsDelegate<L10n> {
 L10n lookupL10n(Locale locale) {
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
+    case 'en':
+      return L10nEn();
     case 'zh':
       return L10nZh();
   }
