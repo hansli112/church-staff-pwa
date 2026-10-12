@@ -1,0 +1,19 @@
+{
+  "name": "Martha, sit",
+  "short_name": "Martha, sit",
+  "id": "/",
+  "start_url": "/home",
+  "display": "standalone",
+  "background_color": "#F2F2F7",
+  "theme_color": "#1F5FD1",
+  "description": "“Martha, Martha,” the Lord answered, “you are worried and upset about many things, but few things are needed—or indeed only one. Mary has chosen what is better, and it will not be taken away from her.” (Luke 10:41–42)",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false,
+  "lang": "en",
+  "icons": [
+    { "src": "icons/Icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/Icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/Icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/Icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

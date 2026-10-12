@@ -139,6 +139,14 @@
       var note = splash && splash.querySelector('.note');
       if (title && title.textContent === '馬大別忙') title.textContent = w.appName;
       if (note && note.textContent === '載入中…') note.textContent = w.loading;
+      // The name under the home-screen icon: the app's own manifest, in this
+      // release or not, has one per language; a church's comes from the
+      // server in the browser's language already.
+      var manifest = document.querySelector('link[rel="manifest"]');
+      var href = manifest && manifest.getAttribute('href');
+      if (href && /^(\/releases\/[0-9a-f]+\/)?manifest\.json$/.test(href)) {
+        manifest.setAttribute('href', href.replace('manifest.json', 'manifest-' + lang + '.json'));
+      }
     })();
   </script>
   <script>

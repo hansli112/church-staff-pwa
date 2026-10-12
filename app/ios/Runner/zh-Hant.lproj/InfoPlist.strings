@@ -1,0 +1,4 @@
+"CFBundleDisplayName" = "馬大別忙";
+"CFBundleName" = "馬大別忙";
+"NSPhotoLibraryUsageDescription" = "選一張圖片當教會 logo，或匯入紙本服事表的照片";
+"NSCameraUsageDescription" = "拍下紙本服事表，辨識成草稿";

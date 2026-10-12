@@ -21,15 +21,15 @@
 		<string>remote-notification</string>
 	</array>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>選一張圖片當教會 logo，或匯入紙本服事表的照片</string>
+	<string>Choose a picture for your church’s logo, or import a photo of a paper schedule</string>
 	<key>NSCameraUsageDescription</key>
-	<string>拍下紙本服事表，辨識成草稿</string>
+	<string>Take a photo of a paper schedule to turn it into a draft</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>馬大別忙</string>
+	<string>Martha, sit</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -37,7 +37,13 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>馬大別忙</string>
+	<string>Martha, sit</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>zh-Hant</string>
+		<string>zh-Hans</string>
+		<string>en</string>
+	</array>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

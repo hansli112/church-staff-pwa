@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, test } from 'node:test';
 
-import { browserLanguage, LANGUAGES, languageOf, words } from '../src/languages.js';
+import { browserLanguage, LANGUAGES, languageOf, words, type Language } from '../src/languages.js';
 
 const json = (path: string) => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'));
 /** The rows app/test/app/languages_test.dart runs too: both sides must agree. */
@@ -72,3 +72,45 @@ describe('dates in pushes', () => {
     assert.equal(en.dateWithWeekday('2027-01-04'), 'Jan 4 (Mon)');
   });
 });
+
+describe("the app's name under its home-screen icon, in each language", () => {
+  const read = (path: string) => readFileSync(new URL(`../../app/${path}`, import.meta.url), 'utf8');
+  // Android's resource folders: Traditional for zh-TW, zh-HK and plain zh;
+  // Simplified for what Android counts as written in it (zh-CN, zh-SG, zh-MY);
+  // English for every language the app does not speak.
+  const android: Record<Language, string> = { 'zh-Hant': 'values-zh', 'zh-Hans': 'values-b+zh+Hans', en: 'values' };
+  const ios = { 'zh-Hant': 'zh-Hant', 'zh-Hans': 'zh-Hans', en: 'en' } as Record<Language, string>;
+  const project = read('ios/Runner.xcodeproj/project.pbxproj');
+  const plist = read('ios/Runner/Info.plist');
+
+  for (const language of LANGUAGES) {
+    test(language, () => {
+      const name = words(language).appName;
+      const strings = read(`android/app/src/main/res/${android[language]}/strings.xml`);
+      assert.match(strings, new RegExp(`<string name="app_name">${escapeXml(name)}</string>`), `Android, ${android[language]}`);
+
+      const lproj = read(`ios/Runner/${ios[language]}.lproj/InfoPlist.strings`);
+      assert.match(lproj, new RegExp(`^"CFBundleDisplayName" = "${name}";$`, 'm'), `iOS, ${ios[language]}.lproj`);
+      assert.match(project, new RegExp(`/\\* ${ios[language]} \\*/ = \\{isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ${ios[language]}; path = ${ios[language]}.lproj/InfoPlist.strings;`), `${ios[language]}.lproj in the Xcode project`);
+      assert.match(plist, new RegExp(`<key>CFBundleLocalizations</key>\\s*<array>[\\s\\S]*?<string>${ios[language]}</string>[\\s\\S]*?</array>`), `Info.plist lists ${ios[language]}`);
+
+      const manifest = JSON.parse(read(`web/${language === 'zh-Hant' ? 'manifest.json' : `manifest-${language}.json`}`));
+      assert.deepEqual([manifest.name, manifest.short_name, manifest.description, manifest.lang], [name, name, words(language).description, language], 'the web app');
+    });
+  }
+
+  test("Android's label and iOS's name come from them", () => {
+    assert.match(read('android/app/src/main/AndroidManifest.xml'), /android:label="@string\/app_name"/);
+    assert.match(plist, /<key>CFBundleDisplayName<\/key>\s*<string>Martha, sit<\/string>/, 'as English, the development language');
+  });
+
+  test("app/web/index.html's script points the web app at its language's manifest", () => {
+    const html = read('web/index.html');
+    assert.match(html, /<link rel="manifest" href="manifest.json">/);
+    assert.ok(html.includes("'manifest-' + lang + '.json'"));
+  });
+});
+
+function escapeXml(s: string) {
+  return s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!);
+}

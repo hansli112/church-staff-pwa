@@ -1,0 +1,4 @@
+"CFBundleDisplayName" = "Martha, sit";
+"CFBundleName" = "Martha, sit";
+"NSPhotoLibraryUsageDescription" = "Choose a picture for your church’s logo, or import a photo of a paper schedule";
+"NSCameraUsageDescription" = "Take a photo of a paper schedule to turn it into a draft";

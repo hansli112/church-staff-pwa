@@ -66,7 +66,8 @@ function run() {
     ...tree(join(web, 'icons'), 'icons/').map((file) => ({ ...file, optional: file.path !== 'icons/Icon-192.png' })),
     ...tree(join(web, 'canvaskit'), 'canvaskit/').map((file) => ({ ...file, optional: true, engine: true })),
     { path: 'favicon.png', bytes: readFileSync(join(web, 'favicon.png')), optional: false },
-    { path: 'manifest.json', bytes: readFileSync(join(web, 'manifest.json')), optional: false },
+    // manifest-<language>.json: app/web/index.html's script picks one.
+    ...readdirSync(web).filter((f) => /^manifest(?:-[A-Za-z-]+)?\.json$/.test(f)).sort().map((path) => ({ path, bytes: readFileSync(join(web, path)), optional: false })),
     { path: 'martha_app.js', bytes: readFileSync(join(web, 'martha_app.js')), optional: false },
   ];
   // Identity includes the unbound inputs; binding a release URL into its own

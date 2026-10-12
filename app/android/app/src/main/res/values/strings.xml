@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Under the home-screen icon: English for every language the app does
+         not speak; values-*/ have the others (functions/test/languages.test.ts). -->
+    <string name="app_name">Martha, sit</string>
+</resources>
