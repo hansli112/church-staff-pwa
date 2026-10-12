@@ -6,13 +6,13 @@ import {
   calendarAuthUrl,
   calendarCallback,
   calendarSelect,
-  GoogleAuthRevoked,
   type CalendarEvent,
   type GoogleApi,
   type OAuthConfig,
 } from '../src/calendar.js';
 import { setChurchTimeZone } from '../src/church.js';
 import { syncEventRosters } from '../src/eventSync.js';
+import { memoryGoogle } from '../src/memoryGoogle.js';
 import { caller, clearFirestore, db, deps as plain, seedChurch, setNow } from './support.js';
 
 const config: OAuthConfig = {
@@ -22,43 +22,6 @@ const config: OAuthConfig = {
   appUrl: 'https://app.example',
   tokenKey: randomBytes(32).toString('base64'),
 };
-
-/** A calendar with [events]; a get of a deleted one says cancelled, of a purged one nothing. */
-function fakeGoogle(events: CalendarEvent[]) {
-  const calls = { get: 0, events: 0 };
-  let down = false;
-  let revoked = false;
-  let unshared = false;
-  const google: GoogleApi = {
-    exchangeCode: async () => ({ refreshToken: 'refresh-123' }),
-    accessToken: async () => {
-      if (revoked) throw new GoogleAuthRevoked();
-      if (down) throw new Error('google unreachable');
-      return 'access';
-    },
-    calendars: async () => [{ id: 'cal-1', name: '教會行事曆', primary: false }],
-    events: async () => {
-      calls.events++;
-      if (unshared) throw new Error('google 404: calendar not found');
-      return events.filter((e) => !e.cancelled);
-    },
-    upsert: async (_t, _c, e) => e,
-    get: async (_t, _c, id) => {
-      calls.get++;
-      return unshared ? null : (events.find((e) => e.id === id) ?? null);
-    },
-    remove: async () => {},
-    revoke: async () => {},
-  };
-  return {
-    google,
-    calls,
-    events,
-    goDown: () => (down = true),
-    revoke: () => (revoked = true),
-    unshare: () => (unshared = true),
-  };
-}
 
 const d = (google: GoogleApi) => ({ ...plain, secretKey: config.tokenKey, google, config });
 
@@ -97,7 +60,7 @@ beforeEach(async () => {
 
 describe('syncing events’ rosters with Google Calendar', () => {
   test('a title or day changed in Google is copied; an unchanged one is left alone', async () => {
-    const g = fakeGoogle([{ ...party, title: '聖誕感恩晚會', start: '2026-12-23T11:00:00.000Z', end: '2026-12-23T13:00:00.000Z' }]);
+    const g = memoryGoogle([{ ...party, title: '聖誕感恩晚會', start: '2026-12-23T11:00:00.000Z', end: '2026-12-23T13:00:00.000Z' }]);
     await connect(g.google);
     await roster('x1');
     const first = await syncEventRosters(d(g.google));
@@ -108,7 +71,7 @@ describe('syncing events’ rosters with Google Calendar', () => {
   });
 
   test('deleted in Google: cancelled; back from the trash within 30 days: on again; after 30 days: gone', async () => {
-    const g = fakeGoogle([{ ...party, cancelled: true }]);
+    const g = memoryGoogle([{ ...party, cancelled: true }]);
     await connect(g.google);
     await roster('x1');
     assert.equal((await syncEventRosters(d(g.google))).cancelled, 1);
@@ -129,7 +92,7 @@ describe('syncing events’ rosters with Google Calendar', () => {
   });
 
   test('another calendar picked, or a roster from before calendars were recorded: never taken for deleted', async () => {
-    const g = fakeGoogle([]);
+    const g = memoryGoogle([]);
     await connect(g.google, 'cal-2');
     await roster('x1');
     await roster('x2', { calendarId: undefined });
@@ -140,7 +103,7 @@ describe('syncing events’ rosters with Google Calendar', () => {
   });
 
   test('Google out of reach, or not connected: nothing changes', async () => {
-    const g = fakeGoogle([]);
+    const g = memoryGoogle([]);
     await roster('x1');
     assert.equal((await syncEventRosters(d(g.google))).cancelled, 0, 'not connected');
     await connect(g.google);
@@ -150,7 +113,7 @@ describe('syncing events’ rosters with Google Calendar', () => {
   });
 
   test('moved in Google after a move in the app: whoever moved it then is told this time', async () => {
-    const g = fakeGoogle([{ ...party, start: '2026-12-23T11:00:00.000Z', end: '2026-12-23T13:00:00.000Z' }]);
+    const g = memoryGoogle([{ ...party, start: '2026-12-23T11:00:00.000Z', end: '2026-12-23T13:00:00.000Z' }]);
     await connect(g.google);
     await roster('x1', { movedBy: 'mei' });
     await syncEventRosters(d(g.google));
@@ -160,19 +123,19 @@ describe('syncing events’ rosters with Google Calendar', () => {
   });
 
   test('the grant revoked, or the calendar no longer shared with whoever connected it: never taken for deleted', async () => {
-    const g = fakeGoogle([party]);
+    const g = memoryGoogle([party]);
     await connect(g.google);
     await roster('x1');
     g.unshare();
     assert.equal((await syncEventRosters(d(g.google))).cancelled, 0);
-    g.revoke();
+    g.revokeAll();
     assert.equal((await syncEventRosters(d(g.google))).cancelled, 0);
     assert.equal((await get('x1'))!.cancelledAt, undefined);
     assert.equal((await db.doc('churches/C1/settings/calendar').get()).get('needsReconnect'), true);
   });
 
   test('the whole series moved a day later: the roster moves to the nearest day of it', async () => {
-    const g = fakeGoogle([
+    const g = memoryGoogle([
       {
         id: 'pray_20261225T110000Z',
         title: '禱告會',
@@ -190,7 +153,7 @@ describe('syncing events’ rosters with Google Calendar', () => {
   });
 
   test('a recurring day under a new id ("this and following"): the roster moves to it', async () => {
-    const g = fakeGoogle([
+    const g = memoryGoogle([
       {
         id: 'pray_R20261201_20261224T110000Z',
         title: '禱告會',
@@ -218,7 +181,7 @@ describe('syncing events’ rosters with Google Calendar', () => {
 
   test("at 6:30, 12:30 and 18:30 on the church's clock, with its days", async () => {
     // 19:00–21:00 on the 23rd in Los Angeles: the 24th in UTC and Taipei.
-    const g = fakeGoogle([{ ...party, start: '2026-12-24T03:00:00.000Z', end: '2026-12-24T05:00:00.000Z' }]);
+    const g = memoryGoogle([{ ...party, start: '2026-12-24T03:00:00.000Z', end: '2026-12-24T05:00:00.000Z' }]);
     await connect(g.google);
     await roster('x1');
     await db.doc('churches/C1').update({ timeZone: 'America/Los_Angeles' });
@@ -232,7 +195,7 @@ describe('syncing events’ rosters with Google Calendar', () => {
 
   test("a new time zone: its events' rosters take their days on the new clock, quietly", async () => {
     // 10:00 on the 24th in Taipei is 18:00 on the 23rd in Los Angeles.
-    const g = fakeGoogle([{ ...party, start: '2026-12-24T02:00:00.000Z', end: '2026-12-24T03:00:00.000Z' }]);
+    const g = memoryGoogle([{ ...party, start: '2026-12-24T02:00:00.000Z', end: '2026-12-24T03:00:00.000Z' }]);
     await connect(g.google);
     await roster('x1');
     await db.doc('churches/C1/rosters/2026-12-27_sunday').set({ type: 'sunday', dateKey: '2026-12-27', duties: [] });
@@ -245,7 +208,7 @@ describe('syncing events’ rosters with Google Calendar', () => {
   });
 
   test('past rosters and services’ days are not read; a closed church is skipped', async () => {
-    const g = fakeGoogle([party]);
+    const g = memoryGoogle([party]);
     await connect(g.google);
     await roster('old', { dateKey: '2026-11-01', endDateKey: '2026-11-01' });
     await db.doc('churches/C1/rosters/2026-12-06_sunday').set({ type: 'sunday', dateKey: '2026-12-06' });

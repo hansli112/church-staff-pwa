@@ -39,6 +39,9 @@ class MemoryWorld implements ContractWorld {
   }
 
   @override
+  Future<void> connectCalendar(String churchId) => backend.church(churchId).calendarSelect('cal-1', '教會行事曆');
+
+  @override
   Future<void> backdateDeletion(String churchId, Duration ago) async {
     final c = backend.churches[churchId]!;
     backend.churches[churchId] = Church(

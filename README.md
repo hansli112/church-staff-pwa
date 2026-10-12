@@ -152,7 +152,7 @@ flutter run -d chrome --dart-define=MARTHA_ENV=emulator   # 接本機 Firebase e
 
 App 只經過 `app/lib/data/backend.dart` 的介面和後端說話。在目前這間教會做的事（資料、教會連結的內容來源、webhook、行事曆、照片辨識、合併待認領同工、刪除與還原教會）都在 `ChurchData`，畫面不傳教會 id；不在某間教會裡做的（建立或加入教會、帳號、營運者後台）在 `CloudApi`。走 Firestore 還是 Cloud Function 由轉接層決定，錯誤一律是 `CloudException`。
 
-App 的流程測試與示範模式用記憶體版後端（`app/lib/data/memory/`）。它只保留畫面需要的規則（權限、邀請期限、最後一位管理員、未驗證 email、教會停用），而且每一條都在 `app/test/contract/` 的契約測試裡：同一組案例在 `flutter test` 跑記憶體版，在 `scripts/check.sh contract` 用 Chrome 跑真的 Firebase 後端接本機 emulator（需要 Chrome、Java、Node）。後端另外算出來的東西（搬家檔內容、教會連結抓到的內容、webhook 送出結果、Google 行事曆、照片辨識、雲端費用目標）在記憶體版是測試指定的固定答案。改 rules 或 Functions 的行為時，契約測試要跟著改。
+App 的流程測試與示範模式用記憶體版後端（`app/lib/data/memory/`）。它只保留畫面需要的規則（權限、邀請期限、最後一位管理員、未驗證 email、教會停用），而且每一條都在 `app/test/contract/` 的契約測試裡：同一組案例在 `flutter test` 跑記憶體版，在 `scripts/check.sh contract` 用 Chrome 跑真的 Firebase 後端接本機 emulator（需要 Chrome、Java、Node）。後端另外算出來的東西（搬家檔內容、教會連結抓到的內容、webhook 送出結果、Google 行事曆、照片辨識、雲端費用目標）在記憶體版是測試指定的固定答案。Google 行事曆在 emulator 上也換成記憶體版（`functions/src/memoryGoogle.ts`），所以活動跟著改、刪除後還原、教會時區的時間這些行為兩邊都測得到；它在每個 function 各有一份，這個 function 寫的活動，另一個 function 列不出來。改 rules 或 Functions 的行為時，契約測試要跟著改。
 
 跟時間有關的判斷（今天是哪天、邀請過期沒、教會連結抓到的內容還新不新）都用後端的時鐘（`Backend.clock`，畫面和 state 透過 `clockProvider` 讀），不直接呼叫 `DateTime.now()`。流程測試的記憶體版後端跑在固定的 `testClock`（`test/support/harness.dart`）；要讓時間往前走，就給 `MemoryBackend(clock: ...)` 一個會變的時鐘。
 

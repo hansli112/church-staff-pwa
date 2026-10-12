@@ -34,6 +34,7 @@ import * as fundingApple from './fundingApple.js';
 import * as fundingNewebpay from './fundingNewebpay.js';
 import * as fundingPlay from './fundingPlay.js';
 import * as invites from './invites.js';
+import { memoryGoogle } from './memoryGoogle.js';
 import * as move from './move.js';
 import { logClientError as logClientErrorHandler } from './logging.js';
 import * as notifications from './notifications.js';
@@ -71,7 +72,9 @@ const oauthClientSecret = defineSecret('GOOGLE_OAUTH_CLIENT_SECRET');
 const sealKey = defineSecret('CALENDAR_TOKEN_KEY');
 const hook = needing<webhook.WebhookDeps>([sealKey], () => ({ ...deps(), secretKey: sealKey.value() }));
 // One adapter per warm instance; every access still reads the church's grant.
-const google = calendar.googleApi();
+// The emulator on a demo project never reaches Google: there it is in memory.
+const offline = process.env.FUNCTIONS_EMULATOR === 'true' && process.env.GCLOUD_PROJECT?.startsWith('demo-');
+const google = offline ? memoryGoogle().google : calendar.googleApi();
 const cal = needing<calendar.CalDeps>([oauthClientId, oauthClientSecret, sealKey], () => ({
   ...hook.make(),
   google,

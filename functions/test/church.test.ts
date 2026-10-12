@@ -6,8 +6,8 @@ import { beforeEach, describe, test } from 'node:test';
 import { Timestamp, type CollectionReference } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 
-import type { GoogleApi } from '../src/calendar.js';
 import { churchPreview, createChurch, deleteChurch, purgeDeletedChurches, restoreChurch, setChurchTimeZone, type PurgeDeps } from '../src/church.js';
+import { memoryGoogle } from '../src/memoryGoogle.js';
 import { addPending, callerKey, waitingFor } from '../src/pendingMembers.js';
 import { seal } from '../src/sealing.js';
 import { nameKey } from '../src/text.js';
@@ -241,8 +241,8 @@ describe('purging forgets everything about the church', () => {
   }
 
   function purgeWith(over: Partial<PurgeDeps> = {}) {
-    const revoked: string[] = [];
-    const google = { revoke: async (rt: string) => void revoked.push(rt) } as unknown as GoogleApi;
+    const { google, calls } = memoryGoogle();
+    const revoked = calls.revoked;
     const d: PurgeDeps = { ...purgeDeps, secretKey: key, google, config: { ...purgeDeps.config, tokenKey: key }, bucket, ...over };
     return { d, revoked };
   }

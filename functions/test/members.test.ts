@@ -6,8 +6,9 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 
 import { deleteAccount } from '../src/account.js';
-import { calendarAuthUrl, type CalDeps, type GoogleApi } from '../src/calendar.js';
+import { calendarAuthUrl, type CalDeps } from '../src/calendar.js';
 import { previewInvite, redeemInvite } from '../src/invites.js';
+import { memoryGoogle } from '../src/memoryGoogle.js';
 import { notifyMembers } from '../src/push.js';
 import { seal } from '../src/sealing.js';
 import {
@@ -260,8 +261,8 @@ describe('member triggers', () => {
   }
 
   beforeEach(() => {
-    revoked = [];
-    const google = { revoke: async (rt: string) => void revoked.push(rt) } as unknown as GoogleApi;
+    const { google, calls } = memoryGoogle();
+    revoked = calls.revoked;
     cal = { ...deps, secretKey: key, google, config: { clientId: '', clientSecret: '', redirectUri: '', appUrl, tokenKey: key } };
   });
 

@@ -28,6 +28,10 @@ abstract interface class ContractWorld {
   /// name them.
   Future<void> addPending(String churchId, PendingMember pending, {List<String> rosterIds = const []});
 
+  /// Connects Google Calendar to the church, as its signed-in admin going
+  /// through Google's consent screen would, and picks calendar `cal-1`.
+  Future<void> connectCalendar(String churchId);
+
   /// Moves the church's deletion [ago] into the past.
   Future<void> backdateDeletion(String churchId, Duration ago);
 }

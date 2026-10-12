@@ -21,6 +21,7 @@ import {
   type OAuthConfig,
 } from '../src/calendar.js';
 import { eventRosterDays } from '../src/eventRosters.js';
+import { memoryGoogle } from '../src/memoryGoogle.js';
 import { seal, unseal } from '../src/sealing.js';
 import { notify, webhookSave } from '../src/webhook.js';
 import type { ChurchTimeZone } from '../src/timeZones.js';
@@ -37,36 +38,8 @@ const TPE: ChurchTimeZone = 'Asia/Taipei';
 /** Webhook secrets are sealed with the same key, as the wiring does. */
 const deps = { ...plain, secretKey: config.tokenKey };
 
-function fakeGoogle() {
-  const calls = { events: 0, revoked: [] as string[], removed: [] as string[] };
-  let revoked = false;
-  const stored: CalendarEvent[] = [{ id: 'e1', title: '同工會', start: '2026-10-10', end: '2026-10-11', allDay: true }];
-  const google: GoogleApi = {
-    exchangeCode: async (code) => {
-      if (code === 'used') throw new Error('google 400: invalid_grant');
-      return { refreshToken: code === 'good' ? 'refresh-123' : null };
-    },
-    accessToken: async (rt) => {
-      if (revoked) throw new GoogleAuthRevoked();
-      assert.equal(rt, 'refresh-123');
-      return 'access';
-    },
-    calendars: async () => [{ id: 'cal-1', name: '教會行事曆', primary: false }],
-    events: async () => {
-      calls.events++;
-      return stored;
-    },
-    upsert: async (_t, _c, e) => ({ ...e, id: e.id ?? 'new-id', link: `https://calendar.google.com/event?eid=${e.id ?? 'new-id'}` }),
-    get: async (_t, _c, id) => stored.find((e) => e.id === id) ?? null,
-    remove: async (_t, _c, id) => {
-      calls.removed.push(id);
-    },
-    revoke: async (rt) => {
-      calls.revoked.push(rt);
-    },
-  };
-  return { google, calls, revoke: () => (revoked = true) };
-}
+/** Google with one event, the 10th's 同工會. */
+const fakeGoogle = () => memoryGoogle([{ id: 'e1', title: '同工會', start: '2026-10-10', end: '2026-10-11', allDay: true }]);
 
 async function church() {
   await seedChurch('C1', { pastor: 'admin', editor: 'staff', staff: 'staff' });
@@ -107,8 +80,8 @@ describe('connecting', () => {
     const back = await connect(google);
     assert.equal(back, 'https://app.example/me/calendar?result=connected');
     const token = await db.doc('calendarTokens/C1').get();
-    assert.notEqual(token.get('token'), 'refresh-123');
-    assert.equal(unseal(token.get('token'), config.tokenKey), 'refresh-123');
+    assert.notEqual(token.get('token'), 'refresh-good');
+    assert.equal(unseal(token.get('token'), config.tokenKey), 'refresh-good');
     const settings = await db.doc('churches/C1/settings/calendar').get();
     assert.deepEqual(Object.keys(settings.data()!).sort(), ['calendarId', 'calendarName', 'connected', 'needsReconnect', 'updatedAt']);
   });
@@ -216,7 +189,7 @@ describe('connecting', () => {
     const { url } = await calendarAuthUrl(d, caller('pastor'), { churchId: 'C1' });
     const state = new URL(url).searchParams.get('state')!;
     await assert.rejects(calendarCallback(d, { state, code: 'good' }), /key length/i);
-    assert.deepEqual(calls.revoked, ['refresh-123']);
+    assert.deepEqual(calls.revoked, ['refresh-good']);
     assert.equal((await db.doc('calendarTokens/C1').get()).exists, false);
     assert.equal((await db.doc('churches/C1/settings/calendar').get()).exists, false);
     assert.equal((await db.doc(`calendarStates/${state}`).get()).exists, false);
@@ -230,7 +203,7 @@ describe('connecting', () => {
     let release!: () => void;
     const exchanging = new Promise<void>((resolve) => { entered = resolve; });
     const gate = new Promise<void>((resolve) => { release = resolve; });
-    google.exchangeCode = async () => { exchanges++; entered(); await gate; return { refreshToken: 'refresh-123' }; };
+    google.exchangeCode = async () => { exchanges++; entered(); await gate; return { refreshToken: 'refresh-good' }; };
     const d = { ...deps, google, config };
     const { url } = await calendarAuthUrl(d, caller('pastor'), { churchId: 'C1' });
     const state = new URL(url).searchParams.get('state')!;
@@ -263,7 +236,7 @@ describe('connecting', () => {
     assert.deepEqual(calls.revoked, ['refused-refresh']);
     const token = await db.doc('calendarTokens/C1').get();
     assert.equal(token.get('connectedBy'), 'pastor');
-    assert.equal(unseal(token.get('token'), config.tokenKey), 'refresh-123');
+    assert.equal(unseal(token.get('token'), config.tokenKey), 'refresh-good');
     assert.equal((await db.doc('churches/C1/settings/calendar').get()).get('calendarId'), 'cal-1');
     assert.equal((await db.doc(`calendarStates/${state}`).get()).exists, false);
   });
@@ -503,7 +476,7 @@ describe('reading', () => {
     await church();
     const f = fakeGoogle();
     await connect(f.google);
-    f.revoke();
+    f.revokeAll();
     const err = await rejectsWith(
       calendarEvents({ ...deps, google: f.google, config }, caller('staff'), { churchId: 'C1', month: '2026-11' }),
       'unknown',
@@ -590,12 +563,12 @@ describe('an event’s roster follows its event', () => {
       event: { title: '同工會', start: '2026-10-10', end: '2026-10-11', allDay: true },
       restoreRosterOf: 'e1',
     });
-    assert.equal(event?.id, 'new-id');
+    assert.equal(event?.id, 'new-1');
     assert.equal((await db.doc('churches/C1/rosters/ev_e1').get()).exists, false);
-    const back = (await db.doc('churches/C1/rosters/ev_new-id').get()).data()!;
+    const back = (await db.doc('churches/C1/rosters/ev_new-1').get()).data()!;
     assert.deepEqual(
       [back.kind, back.eventId, back.title, back.dateKey, back.via, back.cancelledAt],
-      ['event', 'new-id', '同工會', '2026-10-10', 'restore', undefined],
+      ['event', 'new-1', '同工會', '2026-10-10', 'restore', undefined],
     );
     assert.deepEqual(back.duties, roster().duties);
     assert.equal(back.calendarId, 'cal-1', 'where it is, kept');
@@ -614,7 +587,7 @@ describe('an event’s roster follows its event', () => {
     await calendarWrite(d, caller('editor'), { churchId: 'C1', op: 'upsert', event, restoreRosterOf: '../x' });
     assert.equal((await db.doc('churches/C1/rosters/ev_live').get()).exists, true);
     assert.equal((await db.doc('churches/C2/rosters/ev_other').get()).exists, true);
-    assert.equal((await db.doc('churches/C1/rosters/ev_new-id').get()).exists, false);
+    assert.equal((await db.doc('churches/C1/rosters/ev_new-1').get()).exists, false);
   });
 });
 
@@ -626,7 +599,7 @@ describe('writing', () => {
     const d = { ...deps, google, config };
     const event = { title: '禱告會', start: '2026-10-14T19:30:00+08:00', end: '2026-10-14T21:00:00+08:00', allDay: false };
     const r = await calendarWrite(d, caller('editor'), { churchId: 'C1', op: 'upsert', event });
-    assert.equal(r.event?.id, 'new-id');
+    assert.equal(r.event?.id, 'new-1');
     await rejectsWith(calendarWrite(d, caller('staff'), { churchId: 'C1', op: 'upsert', event }), 'permissionDenied');
   });
 
@@ -652,7 +625,7 @@ describe('writing', () => {
     const { google, calls } = fakeGoogle();
     await connect(google);
     await calendarDisconnect({ ...deps, google, config }, caller('pastor'), { churchId: 'C1' });
-    assert.deepEqual(calls.revoked, ['refresh-123']);
+    assert.deepEqual(calls.revoked, ['refresh-good']);
     assert.equal((await db.doc('calendarTokens/C1').get()).exists, false);
     assert.equal((await db.doc('churches/C1/settings/calendar').get()).exists, false);
   });
@@ -667,7 +640,7 @@ describe('releasing the grant', () => {
     const d = { ...deps, google, config };
     assert.equal(await releaseCalendarIfConnector(d, 'C1', 'editor'), false);
     assert.equal(await releaseCalendarIfConnector(d, 'C1', 'pastor'), true);
-    assert.deepEqual(calls.revoked, ['refresh-123']);
+    assert.deepEqual(calls.revoked, ['refresh-good']);
     assert.equal((await db.doc('calendarTokens/C1').get()).exists, false);
   });
 
@@ -692,7 +665,7 @@ describe('releasing the grant', () => {
     assert.equal(token.exists, true, 'the newer grant remains installed');
     assert.equal(unseal(token.get('token'), config.tokenKey), 'new-refresh');
     assert.equal((await db.doc('churches/C1/settings/calendar').get()).get('connected'), true);
-    assert.deepEqual(calls.revoked, ['refresh-123']);
+    assert.deepEqual(calls.revoked, ['refresh-good']);
   });
 
   test("cache months are the church's, and a moved event clears both months", async () => {
@@ -824,7 +797,7 @@ describe('calendar webhooks', () => {
     const { d, sent } = await withHook();
     const event = { title: '小組聚會', start: '2026-10-20T19:00:00+08:00', end: '2026-10-20T21:00:00+08:00', allDay: false, location: '2F' };
     await calendarWrite(d, caller('editor'), { churchId: 'C1', op: 'upsert', event });
-    await calendarWrite(d, caller('editor'), { churchId: 'C1', op: 'upsert', event: { ...event, id: 'new-id', title: '小組聚會（改時間）' } });
+    await calendarWrite(d, caller('editor'), { churchId: 'C1', op: 'upsert', event: { ...event, id: 'new-1', title: '小組聚會（改時間）' } });
     assert.deepEqual(sent()[0], {
       event: 'calendar.created',
       body: {
@@ -833,14 +806,14 @@ describe('calendar webhooks', () => {
         churchId: 'C1',
         churchName: '恩典堂',
         timeZone: 'Asia/Taipei',
-        id: 'new-id',
+        id: 'new-1',
         title: '小組聚會',
         allDay: false,
         start: '2026-10-20T19:00:00+08:00',
         end: '2026-10-20T21:00:00+08:00',
         location: '2F',
         description: '',
-        link: 'https://calendar.google.com/event?eid=new-id',
+        link: 'https://calendar.google.com/event?eid=new-1',
         actorUid: 'editor',
         actorName: '林同工',
       },
@@ -885,7 +858,7 @@ describe('calendar webhooks', () => {
     const d = { ...deps, fetch: f.fetch, google, config };
     await webhookSave(d, caller('pastor'), { churchId: 'C1', url: HOOK, events: { calendar: true } });
     const r = await calendarWrite(d, caller('pastor'), { churchId: 'C1', op: 'upsert', event: { title: 'x', start: '2026-10-10', end: '2026-10-11', allDay: true } });
-    assert.equal(r.event!.id, 'new-id');
+    assert.equal(r.event!.id, 'new-1');
     assert.equal((await db.doc('churches/C1/settings/webhook').get()).get('lastDelivery.status'), 500);
   });
 

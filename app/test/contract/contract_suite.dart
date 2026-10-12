@@ -17,6 +17,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/core/languages.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/domain/day.dart';
+import 'package:martha/domain/event_roster.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/domain/staff_order.dart';
 
@@ -994,6 +995,56 @@ void contractTests(Future<ContractWorld> Function() open) {
       await expectLater(g.church.calendarDelete(event), denied());
       await w.signUp('outsider@example.com');
       await expectLater(g.church.calendarEvents('2026-10'), denied());
+    });
+
+    test("an event's roster follows its event: moved, deleted, and the delete undone", () async {
+      final g = await Grace.open(w);
+      await w.connectCalendar(g.cid);
+      final duties = [
+        Duty(role: '主持', people: const ['李美玉'], uids: {'李美玉': g.mei}),
+      ];
+      Roster rosterOf(CalendarEvent e) => eventRoster(e, duties: duties, calendarId: 'cal-1').copyWith(saved: true);
+      final party = await g.church.calendarSave(
+        CalendarEvent(title: '聖誕晚會', start: DateTime.utc(2026, 12, 24, 19), end: DateTime.utc(2026, 12, 24, 21)),
+      );
+      await g.church.putRoster(rosterOf(party));
+
+      final moved = await g.church.calendarSave(
+        party.copyWith(title: '聖誕感恩晚會', start: DateTime.utc(2026, 12, 23, 19), end: DateTime.utc(2026, 12, 23, 21)),
+        previous: party,
+      );
+      expect(await g.church.eventRosters(), [rosterOf(moved)]);
+      expect((await g.church.eventRosters()).single.day, Day(2026, 12, 23));
+
+      await g.church.calendarDelete(moved);
+      expect(await g.church.eventRosters(), isEmpty, reason: 'cancelled with its event');
+
+      final again = await g.church.calendarSave(
+        CalendarEvent(title: moved.title, start: moved.start, end: moved.end),
+        restoreRosterOf: moved.id,
+      );
+      expect(again.id, isNot(moved.id));
+      expect(await g.church.eventRosters(), [rosterOf(again)], reason: 'its duties, on the event made again');
+    });
+
+    test("an event's times are on the church's clock, and so are its roster's days", () async {
+      final g = await Grace.open(w);
+      await g.church.setTimeZone(ChurchTimeZone.losAngeles);
+      await w.connectCalendar(g.cid);
+      // Late evening in Los Angeles: already the next day in UTC and Taipei.
+      final watch = await g.church.calendarSave(
+        CalendarEvent(title: '守歲', start: DateTime.utc(2026, 12, 31, 22), end: DateTime.utc(2026, 12, 31, 23, 30)),
+      );
+      expect((watch.start, watch.end), (DateTime.utc(2026, 12, 31, 22), DateTime.utc(2026, 12, 31, 23, 30)));
+      await g.church.putRoster(eventRoster(watch, calendarId: 'cal-1').copyWith(saved: true));
+
+      final earlier = await g.church.calendarSave(
+        watch.copyWith(start: DateTime.utc(2026, 12, 30, 22), end: DateTime.utc(2026, 12, 30, 23, 30)),
+        previous: watch,
+      );
+      expect(earlier.start, DateTime.utc(2026, 12, 30, 22));
+      final roster = (await g.church.eventRosters()).single;
+      expect((roster.day, roster.forEvent!.lastDay), (Day(2026, 12, 30), Day(2026, 12, 30)));
     });
   });
 

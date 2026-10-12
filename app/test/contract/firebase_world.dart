@@ -24,6 +24,7 @@ class FirebaseWorld implements ContractWorld {
   static const _project = 'demo-martha';
   static final _auth = 'http://localhost:${EmulatorPorts.auth}';
   static final _firestore = 'http://localhost:${EmulatorPorts.firestore}';
+  static final _functions = 'http://localhost:${EmulatorPorts.functions}';
   static final _documents = '$_firestore/v1/projects/$_project/databases/(default)/documents';
 
   /// Signs out and empties Auth and Firestore.
@@ -86,6 +87,22 @@ class FirebaseWorld implements ContractWorld {
         mask: ['churches.`$churchId`'],
       );
     }
+  }
+
+  @override
+  Future<void> connectCalendar(String churchId) async {
+    final church = backend.church(churchId);
+    final state = (await church.calendarAuthUrl()).queryParameters['state']!;
+    // Where Google's consent screen sends the browser back. The emulator's
+    // Google (functions/src/memoryGoogle.ts) grants any code but `used`;
+    // the answer is a redirect to the app, so it is not read.
+    await web.window
+        .fetch(
+          '$_functions/$_project/asia-east1/calendarCallback?state=$state&code=good'.toJS,
+          web.RequestInit(mode: 'no-cors'),
+        )
+        .toDart;
+    await church.calendarSelect('cal-1', '教會行事曆');
   }
 
   @override

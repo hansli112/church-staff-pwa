@@ -6,9 +6,9 @@ import { DocumentReference, Firestore, getFirestore, Timestamp, type DocumentSna
 
 import type { Messaging } from 'firebase-admin/messaging';
 
-import type { GoogleApi } from '../src/calendar.js';
 import type { PurgeDeps } from '../src/church.js';
 import type { Caller, Deps, Fetch } from '../src/common.js';
+import { memoryGoogle } from '../src/memoryGoogle.js';
 
 export const PROJECT = 'demo-martha';
 
@@ -71,7 +71,7 @@ export const deps: Deps = { db, now: () => clock, fetch: offline };
 export const purgeDeps: PurgeDeps = {
   ...deps,
   secretKey: '',
-  google: {} as GoogleApi,
+  google: memoryGoogle().google,
   config: { clientId: '', clientSecret: '', redirectUri: '', appUrl: '', tokenKey: '' },
 };
 
