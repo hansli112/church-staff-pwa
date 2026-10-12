@@ -78,9 +78,9 @@ export interface NewService {
 
 /** Everything the backend writes in one language. */
 export interface Words {
-  /** A `YYYY-MM-DD` day as pushes say it: 10/18, Oct 18. */
+  /** A `YYYY-MM-DD` day as pushes say it: 10/18, Oct 18, 10月18日. */
   shortDate(dateKey: string): string;
-  /** The day with its weekday: 10/18（週日）, Oct 18 (Sun). */
+  /** The day with its weekday: 10/18（週日）, Oct 18 (Sun), 10月18日(日). */
   dateWithWeekday(dateKey: string): string;
 
   /** Evening reminders (notifications.ts). */
@@ -205,9 +205,10 @@ const en: Words = {
   newChurchServices: [sunday('Sunday Service', ['Host', 'Worship Leader', 'Piano', 'Sound', 'Slides', 'Usher'], ['Communion', 'Baptism'])],
 };
 
+// CLDR's MMMd and MMMEd, as the app shows them.
 const ja: Words = {
-  shortDate: zhHant.shortDate,
-  dateWithWeekday: (k) => `${ja.shortDate(k)}（${JA_WEEKDAYS[weekday(k)]}）`,
+  shortDate: (k) => `${ymd(k)[1]}月${ymd(k)[2]}日`,
+  dateWithWeekday: (k) => `${ja.shortDate(k)}(${JA_WEEKDAYS[weekday(k)]})`,
   weekReminder: (from, until) => `今週の奉仕（${from}–${until}）`,
   tomorrowReminder: (day) => `明日の奉仕（${day}）`,
   dutyLine: zhHant.dutyLine,
@@ -229,7 +230,7 @@ const ja: Words = {
 };
 
 const ko: Words = {
-  shortDate: zhHant.shortDate,
+  shortDate: (k) => `${ymd(k)[1]}월 ${ymd(k)[2]}일`,
   dateWithWeekday: (k) => `${ko.shortDate(k)} (${KO_WEEKDAYS[weekday(k)]})`,
   weekReminder: (from, until) => `이번 주 봉사 (${from}–${until})`,
   tomorrowReminder: (day) => `내일 봉사 (${day})`,

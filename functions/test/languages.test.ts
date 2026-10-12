@@ -71,7 +71,7 @@ describe('a member who left, in Korean', () => {
 });
 
 describe('dates in pushes', () => {
-  test('10/18（週日）, 10/18（周日）, 10/18（日）, 10/18 (일); English names the month: Oct 18 (Sun)', () => {
+  test('10/18（週日）, 10/18（周日）; English names the month: Oct 18 (Sun); Japanese and Korean as CLDR has them', () => {
     const zh = words('zh-Hant');
     const hans = words('zh-Hans');
     const en = words('en');
@@ -79,8 +79,10 @@ describe('dates in pushes', () => {
     assert.deepEqual([hans.shortDate('2026-10-18'), hans.dateWithWeekday('2026-10-18')], ['10/18', '10/18（周日）']);
     assert.deepEqual([en.shortDate('2026-10-18'), en.dateWithWeekday('2026-10-18')], ['Oct 18', 'Oct 18 (Sun)']);
     assert.equal(en.dateWithWeekday('2027-01-04'), 'Jan 4 (Mon)');
-    assert.equal(words('ja').dateWithWeekday('2026-10-18'), '10/18（日）');
-    assert.equal(words('ko').dateWithWeekday('2026-10-18'), '10/18 (일)');
+    const ja = words('ja');
+    const ko = words('ko');
+    assert.deepEqual([ja.shortDate('2026-10-18'), ja.dateWithWeekday('2026-10-18')], ['10月18日', '10月18日(日)']);
+    assert.deepEqual([ko.shortDate('2026-10-18'), ko.dateWithWeekday('2026-10-18')], ['10월 18일', '10월 18일 (일)']);
   });
 });
 
