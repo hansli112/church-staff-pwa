@@ -150,6 +150,15 @@
       <div><dt>谁负责</dt><dd>这个网址由教会管理员选择与管理，资料发出后由接收端按其政策处理。管理员可以随时删除 webhook，停止发送。</dd></div>
     </dl>
 
+    <!-- payments:on -->
+    <h3>3.12 网站的在线支持</h3>
+    <dl>
+      <div><dt>内容</dt><dd>在网站的支持页用信用卡、Apple Pay 或 Google Pay 支持时，付款由蓝新金流（蓝新科技股份有限公司，NewebPay）处理。卡号、email 等付款资料填写在蓝新的付款页，由蓝新依其隐私政策处理，我们收不到。</dd></div>
+      <div><dt>存放</dt><dd>我们只记录每笔付款的金额、付款方式、时间与蓝新的交易编号，用来计算网站上公开的费用进度与处理退款；不记录你的姓名、email 或账号。</dd></div>
+      <div><dt>保存期限</dt><dd>付款记录为了账务会保留。开始付款时建立的订单只有金额与时间，没有完成付款的订单 3 天后删除。</dd></div>
+    </dl>
+
+    <!-- /payments:on -->
     <h2 id="visibility">4. 谁看得到你的资料</h2>
     <ul>
       <li><strong>你本人</strong>：自己的账号资料、同工资料与推送 token。</li>
@@ -164,6 +173,9 @@
     <ul>
       <li><strong>Google</strong>：Firebase（数据库、登录、文件存储、推送通知、分析、错误记录）、Google Cloud（后端程序、日志）、Gemini API（照片识别）、Google 日历（仅限连接日历的教会）。</li>
       <li><strong>Apple、Google</strong>：Sign in with Apple、Google 登录，以及 App 商店的付款。</li>
+      <!-- payments:on -->
+      <li><strong>蓝新金流（NewebPay）</strong>：网站支持页的付款，见第 3.12 节。</li>
+      <!-- /payments:on -->
       <li><strong>教会自己设置的 webhook 接收端</strong>：仅限管理员设置了 webhook 的教会，发送内容见第 3.11 节。</li>
     </ul>
     <p>法律要求时，我们可能依法向主管机关提供资料。</p>

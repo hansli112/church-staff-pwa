@@ -175,7 +175,7 @@ printf placeholder | gcloud secrets create NEWEBPAY_HASH_IV  --project <專案> 
    SUPPORT_PAYMENTS=on scripts/deploy.sh prod
    ```
    正式付一筆小額確認，再到藍新後台退款（退款不會自動從進度扣掉）。
-7. 隱私權政策和服務條款補上付款服務商（藍新金流）。
+7. 隱私權政策和服務條款講藍新的段落跟著 `SUPPORT_PAYMENTS=on` 出現（五種語言的 `privacy.html`、`terms.html` 裡的 `payments:on`）。正式打開的那次，把這兩頁五種語言的「最後更新」改成當天。
 
 **從測試區換到正式環境**：測試區和正式環境是不同的商店，商店代號和兩把金鑰都不一樣。三樣一起換（secret 加新版本、`.env` 的 `NEWEBPAY_MERCHANT_ID` 和 `NEWEBPAY_ENV=production`），再部署 Functions。
 

@@ -150,6 +150,15 @@
       <div><dt>Who’s responsible</dt><dd>The church admin chooses and manages this URL. Once data is sent, the receiving end handles it under its own policies. The admin can delete the webhook at any time to stop sending.</dd></div>
     </dl>
 
+    <!-- payments:on -->
+    <h3>3.12 Supporting us on the website</h3>
+    <dl>
+      <div><dt>What</dt><dd>When you support us on the website’s support page by credit card, Apple Pay, or Google Pay, the payment is handled by NewebPay (藍新科技股份有限公司, a payment provider in Taiwan). You enter your card number, email, and other payment details on NewebPay’s payment page; NewebPay handles them under its own privacy policy, and we never receive them.</dd></div>
+      <div><dt>Where</dt><dd>We record only each payment’s amount, payment method, time, and NewebPay’s transaction number, to show the public cost progress on the website and to handle refunds. We don’t record your name, email, or account.</dd></div>
+      <div><dt>Kept for</dt><dd>Payment records are kept for our accounts. When you start a payment we create an order with only the amount and time; orders that aren’t paid are deleted after 3 days.</dd></div>
+    </dl>
+
+    <!-- /payments:on -->
     <h2 id="visibility">4. Who can see your data</h2>
     <ul>
       <li><strong>You</strong>: your own account data, team member data, and push tokens.</li>
@@ -164,6 +173,9 @@
     <ul>
       <li><strong>Google</strong>: Firebase (database, sign-in, file storage, push notifications, analytics, error logs), Google Cloud (backend, logging), the Gemini API (photo recognition), and Google Calendar (only for churches that connect a calendar).</li>
       <li><strong>Apple and Google</strong>: Sign in with Apple, Google sign-in, and app store payments.</li>
+      <!-- payments:on -->
+      <li><strong>NewebPay</strong>: payments on the website’s support page; see Section 3.12.</li>
+      <!-- /payments:on -->
       <li><strong>Webhook recipients set up by a church</strong>: only for churches whose admin has set up a webhook; see Section 3.11 for what is sent.</li>
     </ul>
     <p>Where required by law, we may provide data to the authorities.</p>

@@ -98,6 +98,22 @@ describe('a translated page is its Traditional Chinese page, translated', () => 
   });
 });
 
+test('the privacy policy and the terms name NewebPay only while the site takes payments', () => {
+  const off = mkdtempSync(join(tmpdir(), 'martha-site-off-'));
+  try {
+    buildSite({ out: off, origin: 'https://marthasit.com', project: 'marthasit', payments: 'off' });
+    for (const tag of TAGS) {
+      for (const page of ['/privacy', '/terms']) {
+        assert.match(built(sitePath(tag, page)), /NewebPay/, `${tag}${page}: on`);
+        const html = readFileSync(join(off, `${sitePath(tag, page)}.html`), 'utf8');
+        assert.doesNotMatch(html, /NewebPay|藍新|蓝新/, `${tag}${page}: off`);
+      }
+    }
+  } finally {
+    rmSync(off, { recursive: true, force: true });
+  }
+});
+
 test("firebase.json serves every page at its path", () => {
   const hosting = JSON.parse(read('firebase.json')).hosting;
   const rewrites = new Map(hosting.rewrites.filter((r) => r.destination).map((r) => [r.source, r.destination]));
