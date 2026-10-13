@@ -26,6 +26,10 @@
     "description": "Placeholder for a tab that is not built yet"
   },
   "signInWithGoogle": "使用 Google 登入",
+  "signInWithApple": "透過 Apple 登入",
+  "@signInWithApple": {
+    "description": "Apple’s own title for the Sign in with Apple button, as Apple localizes it"
+  },
   "signInWithEmail": "用 email 登入",
   "inAppBrowserNote": "在 {app} 裡不能用 Google 登入。請用 Safari 或 Chrome 打開這個網頁，或用 email 登入。",
   "@inAppBrowserNote": {

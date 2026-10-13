@@ -23,6 +23,7 @@
   "noPermission": "이 작업을 할 권한이 없어요",
   "comingSoon": "아직 준비 중이에요. 곧 열려요.",
   "signInWithGoogle": "Google로 로그인",
+  "signInWithApple": "Apple로 로그인",
   "signInWithEmail": "이메일로 로그인",
   "inAppBrowserNote": "{app}에서는 Google 로그인을 할 수 없어요. Safari나 Chrome에서 이 페이지를 열거나 이메일로 로그인해 주세요.",
   "copyPageUrl": "링크 복사",

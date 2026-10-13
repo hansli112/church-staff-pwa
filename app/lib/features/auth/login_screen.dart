@@ -15,8 +15,9 @@ import '../church/links.dart';
 import '../common/errors.dart';
 import 'in_app_browser.dart';
 
-/// Sign-in. Google is the main way in, so it is the one prominent button;
-/// email and password sit below it.
+/// Sign-in. Google is the main way in, so it is the prominent button, with
+/// Sign in with Apple the same size beside it where the build offers it
+/// (App Store 4.8); email and password sit below.
 ///
 /// Self-host showed a username/password form first and had no Google
 /// sign-in. Here the form only appears when asked for.
@@ -35,6 +36,10 @@ enum _Mode { choose, signIn, register }
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   _Mode _mode = _Mode.choose;
   bool _busy = false;
+
+  /// The Apple button shows the spinner while Apple's sheet is up; the
+  /// Google button does otherwise.
+  bool _appleRunning = false;
   String? _error;
   final _form = GlobalKey<FormState>();
   final _name = TextEditingController();
@@ -51,9 +56,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   AuthGateway get _auth => ref.read(backendProvider).auth;
 
-  Future<void> _run(Future<void> Function() action) async {
+  Future<void> _run(Future<void> Function() action, {bool apple = false}) async {
     setState(() {
       _busy = true;
+      _appleRunning = apple;
       _error = null;
     });
     try {
@@ -151,10 +157,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ],
             PrimaryButton(
               label: l10n.signInWithGoogle,
-              busy: _busy,
-              onPressed: () => _run(_auth.signInWithGoogle),
+              busy: _busy && !_appleRunning,
+              onPressed: _busy ? null : () => _run(_auth.signInWithGoogle),
             ),
             const SizedBox(height: Space.s),
+            if (_auth.offersApple) ...[
+              _AppleButton(
+                label: l10n.signInWithApple,
+                busy: _busy && _appleRunning,
+                onPressed: _busy ? null : () => _run(_auth.signInWithApple, apple: true),
+              ),
+              const SizedBox(height: Space.s),
+            ],
             SecondaryButton(
               label: l10n.signInWithEmail,
               expand: true,
@@ -291,6 +305,53 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Sign in with Apple as Apple's guidelines draw it: the Apple logo and
+/// Apple's own title, black on a light screen and white on a dark one, the
+/// same size and corners as the Google button.
+class _AppleButton extends StatelessWidget {
+  const _AppleButton({required this.label, required this.busy, required this.onPressed});
+
+  final String label;
+  final bool busy;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final background = dark ? Colors.white : Colors.black;
+    final foreground = dark ? Colors.black : Colors.white;
+    final style = FilledButton.styleFrom(
+      backgroundColor: background,
+      foregroundColor: foreground,
+      // Disabled only while the other button runs: keep Apple's colours.
+      disabledBackgroundColor: background,
+      disabledForegroundColor: foreground,
+    );
+    if (busy) {
+      return Semantics(
+        label: label,
+        button: true,
+        excludeSemantics: true,
+        child: FilledButton(
+          onPressed: () {},
+          style: style,
+          child: SizedBox.square(
+            dimension: 22,
+            child: CircularProgressIndicator(strokeWidth: 2.5, color: foreground),
+          ),
+        ),
+      );
+    }
+    return FilledButton.icon(
+      onPressed: onPressed,
+      style: style,
+      // The logo grows with the title, as Apple's own button does.
+      icon: Icon(Icons.apple, size: MediaQuery.textScalerOf(context).scale(22)),
+      label: Text(label, textAlign: TextAlign.center),
     );
   }
 }

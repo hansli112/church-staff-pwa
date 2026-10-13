@@ -23,6 +23,7 @@
   "noPermission": "この操作を行う権限がありません",
   "comingSoon": "準備中です。もうしばらくお待ちください。",
   "signInWithGoogle": "Google でログイン",
+  "signInWithApple": "Appleでサインイン",
   "signInWithEmail": "メールでログイン",
   "inAppBrowserNote": "{app} の中では Google でログインできません。Safari か Chrome でこのページを開くか、メールでログインしてください。",
   "copyPageUrl": "リンクをコピー",

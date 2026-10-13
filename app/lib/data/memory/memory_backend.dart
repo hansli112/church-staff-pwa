@@ -402,7 +402,63 @@ class MemoryAuth implements AuthGateway {
       verified: true,
       name: existing?.name ?? email.split('@').first,
     );
+    _signedIn(email);
+  }
+
+  @override
+  bool offersApple = false;
+
+  /// Email of the Apple ID the next Apple sign-in uses; null closes Apple's
+  /// sheet.
+  String? appleAccount;
+
+  /// The name Apple shares the first time; null when the person hides it.
+  String? appleName;
+
+  /// Emails whose accounts sign in with Apple.
+  final appleLinked = <String>{};
+
+  /// Emails whose Apple tokens [prepareToDelete] revoked.
+  final appleRevoked = <String>[];
+
+  /// An Apple sign-in waiting to be linked to whichever account signs in
+  /// next, as Firebase keeps the pending credential.
+  bool _applePending = false;
+
+  @override
+  Future<void> signInWithApple() async {
+    final email = appleAccount;
+    if (email == null) throw const AuthException(AuthErrorCode.cancelled);
+    if (_accounts.containsKey(email) && !appleLinked.contains(email)) {
+      // One account per email, and Apple is not a trusted provider for
+      // other addresses: Firebase refuses until the account links Apple.
+      _applePending = true;
+      throw AuthException(AuthErrorCode.needsLink, email);
+    }
+    _accounts[email] ??= (
+      uid: 'u${_next++}',
+      password: '',
+      google: true,
+      verified: true,
+      name: appleName ?? email.split('@').first,
+    );
+    appleLinked.add(email);
+    _signedIn(email);
+  }
+
+  /// Signs [email] in, linking a pending Apple sign-in to it.
+  void _signedIn(String email) {
+    if (_applePending) {
+      _applePending = false;
+      appleLinked.add(email);
+    }
     _set(_user(email));
+  }
+
+  /// Gives [email]'s account a password, as if set on another device.
+  void setPassword(String email, String password) {
+    final a = _accounts[email]!;
+    _accounts[email] = (uid: a.uid, password: password, google: a.google, verified: a.verified, name: a.name);
   }
 
   @override
@@ -411,7 +467,7 @@ class MemoryAuth implements AuthGateway {
     if (a == null || a.password.isEmpty || a.password != password) {
       throw const AuthException(AuthErrorCode.invalidCredential);
     }
-    _set(_user(email.trim()));
+    _signedIn(email.trim());
   }
 
   @override
@@ -481,6 +537,14 @@ class MemoryAuth implements AuthGateway {
 
   @override
   Future<void> signOut() async => _set(null);
+
+  @override
+  Future<void> prepareToDelete() async {
+    final email = _current?.email;
+    if (email == null || !appleLinked.contains(email)) return;
+    if (appleAccount != email) throw const AuthException(AuthErrorCode.cancelled);
+    appleRevoked.add(email);
+  }
 
   /// uids that hold the platform operator claim.
   final operators = <String>{};

@@ -78,6 +78,9 @@ class L10nEn extends L10n {
   String get signInWithGoogle => 'Sign in with Google';
 
   @override
+  String get signInWithApple => 'Sign in with Apple';
+
+  @override
   String get signInWithEmail => 'Sign in with email';
 
   @override

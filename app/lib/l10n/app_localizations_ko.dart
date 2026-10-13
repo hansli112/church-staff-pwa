@@ -78,6 +78,9 @@ class L10nKo extends L10n {
   String get signInWithGoogle => 'Google로 로그인';
 
   @override
+  String get signInWithApple => 'Apple로 로그인';
+
+  @override
   String get signInWithEmail => '이메일로 로그인';
 
   @override

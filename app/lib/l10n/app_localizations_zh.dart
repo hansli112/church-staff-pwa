@@ -78,6 +78,9 @@ class L10nZh extends L10n {
   String get signInWithGoogle => '使用 Google 登入';
 
   @override
+  String get signInWithApple => '透過 Apple 登入';
+
+  @override
   String get signInWithEmail => '用 email 登入';
 
   @override
@@ -2441,6 +2444,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get signInWithGoogle => '使用 Google 登录';
+
+  @override
+  String get signInWithApple => '通过 Apple 登录';
 
   @override
   String get signInWithEmail => '用邮箱登录';

@@ -238,6 +238,12 @@ abstract class L10n {
   /// **'使用 Google 登入'**
   String get signInWithGoogle;
 
+  /// Apple’s own title for the Sign in with Apple button, as Apple localizes it
+  ///
+  /// In zh, this message translates to:
+  /// **'透過 Apple 登入'**
+  String get signInWithApple;
+
   /// No description provided for @signInWithEmail.
   ///
   /// In zh, this message translates to:

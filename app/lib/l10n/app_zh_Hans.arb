@@ -23,6 +23,7 @@
   "noPermission": "你没有权限做这件事",
   "comingSoon": "还在开发中，很快就好",
   "signInWithGoogle": "使用 Google 登录",
+  "signInWithApple": "通过 Apple 登录",
   "signInWithEmail": "用邮箱登录",
   "inAppBrowserNote": "在 {app} 里不能用 Google 登录。请用 Safari 或 Chrome 打开这个网页，或用邮箱登录。",
   "copyPageUrl": "复制链接",

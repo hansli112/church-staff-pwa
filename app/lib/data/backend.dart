@@ -74,6 +74,14 @@ abstract interface class AuthGateway {
   AuthUser? get currentUser;
 
   Future<void> signInWithGoogle();
+
+  /// Whether this build can sign in with Apple: always on Apple's own
+  /// platforms, elsewhere once the project has Apple's Services ID.
+  bool get offersApple;
+
+  /// Sign in with Apple (App Store 4.8). The email may be Apple's relay
+  /// address; the name only comes the first time.
+  Future<void> signInWithApple();
   Future<void> signInWithEmail(String email, String password);
 
   /// Creates the account and sends its verification email in [language],
@@ -86,6 +94,12 @@ abstract interface class AuthGateway {
   /// link, and pushes the result through [authState].
   Future<void> reload();
   Future<void> signOut();
+
+  /// Before the backend deletes the account: an account that signs in with
+  /// Apple has its Apple tokens revoked (App Store 5.1.1(v)), which asks
+  /// the user to confirm with Apple once more. Closing that is
+  /// [AuthErrorCode.cancelled], and nothing should be deleted.
+  Future<void> prepareToDelete();
 
   /// Whether the signed-in account holds the platform operator claim.
   Future<bool> isOperator();

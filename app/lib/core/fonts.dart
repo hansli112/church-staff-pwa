@@ -63,6 +63,7 @@ const _startupKeys = {
   'loadFailed',
   'noPermission',
   'signInWithGoogle',
+  'signInWithApple',
   'signInWithEmail',
   'inAppBrowserNote',
   'copyPageUrl',

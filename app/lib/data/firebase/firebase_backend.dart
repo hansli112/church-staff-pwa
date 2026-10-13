@@ -252,6 +252,40 @@ class FirebaseAuthGateway implements AuthGateway {
   static const _googleIosClientId = String.fromEnvironment('GOOGLE_IOS_CLIENT_ID');
   bool _googleReady = false;
 
+  /// iOS and macOS sign in with Apple natively; the web and Android go
+  /// through Apple's page, which needs the Services ID in Firebase
+  /// (docs/firebase-setup.md, Sign in with Apple).
+  static bool get _applePlatform =>
+      !kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS);
+
+  @override
+  bool get offersApple => _applePlatform || const bool.fromEnvironment('APPLE_SIGN_IN');
+
+  /// Asks for the email and, the first time, the name.
+  static fa.AppleAuthProvider _apple() => fa.AppleAuthProvider()
+    ..addScope('email')
+    ..addScope('name');
+
+  @override
+  Future<void> signInWithApple() =>
+      _run(() => kIsWeb ? _auth.signInWithPopup(_apple()) : _auth.signInWithProvider(_apple()));
+
+  @override
+  Future<void> prepareToDelete() async {
+    final user = _auth.currentUser;
+    if (user == null || !user.providerData.any((p) => p.providerId == 'apple.com')) return;
+    // Only Apple's platforms can revoke (firebase_auth_web refuses), and
+    // App Store review is about the iOS app.
+    if (!_applePlatform) return;
+    try {
+      final result = await user.reauthenticateWithProvider(_apple());
+      final code = result.additionalUserInfo?.authorizationCode;
+      if (code != null) await _auth.revokeTokenWithAuthorizationCode(code);
+    } on fa.FirebaseAuthException catch (e) {
+      throw _translate(e);
+    }
+  }
+
   @override
   Future<void> signInWithEmail(String email, String password) => _run(
     () => _auth.signInWithEmailAndPassword(

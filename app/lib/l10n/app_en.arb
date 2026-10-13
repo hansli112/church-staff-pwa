@@ -23,6 +23,7 @@
   "noPermission": "You don’t have permission to do this",
   "comingSoon": "Still working on this. Coming soon.",
   "signInWithGoogle": "Sign in with Google",
+  "signInWithApple": "Sign in with Apple",
   "signInWithEmail": "Sign in with email",
   "inAppBrowserNote": "Google sign-in doesn’t work inside {app}. Open this page in Safari or Chrome, or sign in with email.",
   "copyPageUrl": "Copy link",

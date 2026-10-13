@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
-import '../../data/backend.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
@@ -58,14 +57,15 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       _busy = true;
       _error = null;
     });
+    final backend = ref.read(backendProvider);
     try {
-      await ref.read(backendProvider).cloud.deleteAccount();
-      await ref.read(backendProvider).auth.signOut();
-    } on CloudException catch (e) {
-      if (!mounted) return;
-      setState(() => _error = errorText(l10n, e));
+      await backend.auth.prepareToDelete();
+      await backend.cloud.deleteAccount();
+      await backend.auth.signOut();
     } catch (e) {
-      if (mounted) setState(() => _error = errorText(l10n, e));
+      // Closing Apple's sheet has nothing to say.
+      final text = errorText(l10n, e);
+      if (mounted) setState(() => _error = text.isEmpty ? null : text);
     } finally {
       if (mounted) setState(() => _busy = false);
     }

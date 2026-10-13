@@ -1,0 +1,107 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:martha/data/memory/memory_backend.dart';
+
+import '../support/harness.dart';
+import '../support/seed.dart';
+
+Future<void> tapText(WidgetTester tester, String text) async {
+  await tester.tap(find.text(text).last);
+  await settle(tester);
+}
+
+Future<void> go(WidgetTester tester, String location) async {
+  GoRouter.of(tester.element(find.byType(Scaffold).first)).go(location);
+  await settle(tester);
+}
+
+void main() {
+  testWidgets('without Apple set up for this build, sign-in has no Apple button', (tester) async {
+    await pumpApp(tester, MemoryBackend(clock: testClock));
+    expect(find.text('使用 Google 登入'), findsOneWidget);
+    expect(find.text('透過 Apple 登入'), findsNothing);
+  });
+
+  testWidgets('Apple sign-in creates the account with the name Apple gives', (tester) async {
+    final b = MemoryBackend(clock: testClock)
+      ..auth.offersApple = true
+      ..auth.appleAccount = 'x7f9d2@privaterelay.appleid.com'
+      ..auth.appleName = '王小明';
+    await pumpApp(tester, b);
+
+    await tapText(tester, '透過 Apple 登入');
+    expect(find.text('加入你的教會'), findsOneWidget);
+    expect(find.text('驗證你的 email'), findsNothing, reason: 'Apple accounts count as verified');
+    final user = b.users.values.single;
+    expect(user.email, 'x7f9d2@privaterelay.appleid.com');
+    expect(user.name, '王小明');
+  });
+
+  testWidgets('closing Apple’s sheet leaves sign-in as it was, with no error', (tester) async {
+    final b = MemoryBackend(clock: testClock)
+      ..auth.offersApple = true
+      ..auth.appleAccount = null;
+    await pumpApp(tester, b);
+    await tapText(tester, '透過 Apple 登入');
+    expect(find.text('透過 Apple 登入'), findsOneWidget);
+    expect(b.auth.currentUser, isNull);
+    expect(find.textContaining('請稍後再試'), findsNothing);
+  });
+
+  testWidgets('Apple with the email of a password account links once signed in the old way', (tester) async {
+    final b = MemoryBackend(clock: testClock)..auth.offersApple = true;
+    final uid = b.auth.signInAs('ming@example.com', name: '小明').uid;
+    b.auth.setPassword('ming@example.com', 'secret123');
+    await b.auth.signOut();
+    b.auth.appleAccount = 'ming@example.com';
+    await pumpApp(tester, b);
+
+    await tapText(tester, '透過 Apple 登入');
+    expect(find.textContaining('這個 email 已經有帳號'), findsOneWidget);
+    expect(b.auth.currentUser, isNull);
+
+    await tapText(tester, '用 email 登入');
+    final fields = find.byType(TextFormField);
+    await tester.enterText(fields.at(0), 'ming@example.com');
+    await tester.enterText(fields.at(1), 'secret123');
+    await tapText(tester, '登入');
+    expect(b.auth.currentUser!.uid, uid);
+
+    await b.auth.signOut();
+    await settle(tester);
+    await tapText(tester, '透過 Apple 登入');
+    expect(b.auth.currentUser!.uid, uid, reason: 'Apple now signs in to the same account');
+  });
+
+  group('deleting an account that signs in with Apple', () {
+    testWidgets('revokes Sign in with Apple, then deletes', (tester) async {
+      final b = seededChurch(as: staffHao);
+      b.auth.appleLinked.add(b.auth.currentUser!.email);
+      b.auth.appleAccount = b.auth.currentUser!.email;
+      await pumpApp(tester, b);
+      await go(tester, '/account');
+      await tester.tap(find.widgetWithText(TextButton, '刪除帳號'));
+      await settle(tester);
+      await tester.tap(find.text('刪除帳號').last);
+      await settle(tester);
+      expect(b.auth.appleRevoked, ['hao@example.com']);
+      expect(b.members['grace']!.containsKey('hao'), isFalse);
+    });
+
+    testWidgets('closing Apple’s sheet deletes nothing', (tester) async {
+      final b = seededChurch(as: staffHao);
+      b.auth.appleLinked.add(b.auth.currentUser!.email);
+      b.auth.appleAccount = null;
+      await pumpApp(tester, b);
+      await go(tester, '/account');
+      await tester.tap(find.widgetWithText(TextButton, '刪除帳號'));
+      await settle(tester);
+      await tester.tap(find.text('刪除帳號').last);
+      await settle(tester);
+      expect(b.auth.appleRevoked, isEmpty);
+      expect(b.members['grace']!.containsKey('hao'), isTrue);
+      expect(b.auth.currentUser, isNotNull);
+    });
+  });
+}

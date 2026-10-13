@@ -78,6 +78,9 @@ class L10nJa extends L10n {
   String get signInWithGoogle => 'Google でログイン';
 
   @override
+  String get signInWithApple => 'Appleでサインイン';
+
+  @override
   String get signInWithEmail => 'メールでログイン';
 
   @override

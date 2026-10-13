@@ -189,6 +189,27 @@ scripts/as-owner.sh marthasit-dev npx --prefix functions tsx functions/scripts/g
 
 設定後要重新登入才會生效。之後「我的」頁會出現「平台後台」。
 
+## iOS 推播與 Sign in with Apple
+
+兩個都要付費開發者帳號（#38）。`app/ios/Runner/Runner.entitlements` 已經有 `aps-environment` 和 `com.apple.developer.applesignin`。Xcode 封存上架時，會自動把 `aps-environment` 換成 `production`。
+
+**推播（APNs）**
+1. Apple Developer → Identifiers → `app.marthasit`：勾 Push Notifications、Sign in with Apple。
+2. Keys → 新增一把金鑰，勾 Apple Push Notifications service（APNs），下載 `.p8`，記下 Key ID 和 Team ID。`.p8` 只能下載一次，要另外備份，不進 git。
+3. 兩個 Firebase 專案 → 專案設定 → Cloud Messaging → Apple 應用程式設定：上傳同一把 `.p8`，填 Key ID、Team ID。
+4. 實機測：關掉 App，從另一個帳號改服事表，鎖定畫面要收到通知。模擬器收不到 APNs 推播。
+
+**Sign in with Apple**
+1. 兩個 Firebase 專案 → Authentication → 登入方式 → 開 Apple。只用 iOS 原生登入時，這樣就夠了。
+2. 網頁和 Android 走 Apple 的網頁登入，還要：
+   - Apple Developer → Identifiers → Services IDs：新增一個，例如 `app.marthasit.signin`，勾 Sign in with Apple，Primary App ID 選 `app.marthasit`。Domains 填 `marthasit.com`、`marthasit.firebaseapp.com`、`marthasit-dev.firebaseapp.com`。Return URL 填 `https://<專案>.firebaseapp.com/__/auth/handler`，dev、prod 各一個。
+   - Keys → 新增一把金鑰，勾 Sign in with Apple。這把金鑰和 APNs 那把可以是同一把。
+   - Firebase 的 Apple 登入填 Services ID、Team ID、Key ID 和金鑰內容。
+   - 填好之後，建置加 `--dart-define=APPLE_SIGN_IN=true`，網頁和 Android 的登入頁才會出現 Apple 按鈕。iOS 一律會出現。
+3. **Apple 的隱藏 email**（`…@privaterelay.appleid.com`）只轉寄 Apple 認得的寄件網域。到 Apple Developer → Services → Sign in with Apple for Email Communication，加入 Firebase 寄信的網域：Authentication → 範本裡的寄件者，預設是 `noreply@<專案>.firebaseapp.com`。Apple 會檢查 SPF，Firebase 的網域本來就有。改用自己的網域寄信時，也要把那個網域加進去。
+4. **刪除帳號**：用 Apple 登入的帳號在 iOS 上刪除時，App 會請使用者再用 Apple 確認一次，然後撤銷 Apple 的 token（App Store 5.1.1(v)）。網頁和 Android 不能撤銷（firebase_auth 只在 Apple 平台提供），只刪除帳號。
+5. 同一個 email 已經有帳號時，Firebase 會拒絕 Apple 登入（`account-exists-with-different-credential`）。App 請使用者先用原本的方式登入，登入後自動連上 Apple。用隱藏 email 的 Apple 帳號不會撞到其他帳號，會是另一個新帳號。
+
 ## App Links / Universal Links（教會網址與邀請連結直接開 App）
 
 開 App 的路徑都在 `/c/` 底下：教會網址 `/c/<教會 id>`，邀請連結 `/c/<教會 id>/join/<邀請碼>`。host 等網域買好後一起換（#37）。
