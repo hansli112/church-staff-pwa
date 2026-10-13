@@ -22,7 +22,7 @@ Whoever creates the church becomes its admin.
 
 Once your church is set up, you’ll see **Get started** at the top of Home. Start with **Invite team members**.
 
-Choose **Valid for 7 days** or **Valid for 30 days**. This creates an invite link and opens the share menu, so you can send it straight to your team’s group chat. If your browser doesn’t have a share menu, the link is copied for you. Just paste it into the group chat.
+Links are **Valid for 7 days** unless you choose **Valid for 30 days**. Tap **Create invite link** to open the share menu, so you can send it straight to your team’s group chat. If your browser doesn’t have a share menu, the link is copied for you. Just paste it into the group chat.
 
 Invites you’ve created are listed below. Tap an invite code to **Share** it again, **Copy link**, or **Revoke** it.
 
