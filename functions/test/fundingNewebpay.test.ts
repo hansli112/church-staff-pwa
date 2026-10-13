@@ -134,7 +134,7 @@ describe('starting a 線上支持 payment', () => {
       Version: '2.3',
       MerchantOrderNo: '',
       Amt: '300',
-      ItemDesc: '馬大別忙 雲端費用 線上支持',
+      ItemDesc: '支持馬大別忙的雲端費用',
       LangType: 'zh-tw',
       TradeLimit: '900',
       ReturnURL: config.returnUrl,
@@ -155,12 +155,12 @@ describe('starting a 線上支持 payment', () => {
     const english = (await start(300, 'en')).params;
     assert.deepEqual(
       [english.LangType, english.ItemDesc, english.ReturnURL, english.ClientBackURL],
-      ['en', 'Martha, sit server costs support', `${config.returnUrl}/en`, `${config.siteUrl}/en/support`],
+      ['en', 'Support for the server costs of Martha, sit', `${config.returnUrl}/en`, `${config.siteUrl}/en/support`],
     );
     const simplified = (await start(300, 'zh-Hans')).params;
     assert.deepEqual(
       [simplified.LangType, simplified.ItemDesc, simplified.ReturnURL, simplified.ClientBackURL],
-      ['zh-tw', '马大别忙 云端费用 线上支持', `${config.returnUrl}/zh-Hans`, `${config.siteUrl}/zh-Hans/support`],
+      ['zh-tw', '支持马大别忙的云端费用', `${config.returnUrl}/zh-Hans`, `${config.siteUrl}/zh-Hans/support`],
       'NewebPay has no Simplified Chinese',
     );
     assert.deepEqual(

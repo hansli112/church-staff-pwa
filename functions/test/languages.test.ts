@@ -62,11 +62,17 @@ describe("words the app shows too", () => {
   });
 });
 
-describe('a member who left, in Korean', () => {
-  test('님 after a name; the someone without one takes 이', () => {
+describe('a member who left', () => {
+  test('Korean: 님 after a name; the someone without one takes 이', () => {
     const ko = words('ko');
     assert.equal(ko.memberLeft('김민수'), '김민수 님이 교회를 나갔어요');
-    assert.equal(ko.memberLeft(ko.someone), '멤버 한 명이 교회를 나갔어요');
+    assert.equal(ko.memberLeft(null), '멤버 한 명이 교회를 나갔어요');
+  });
+
+  test('Chinese: the name in quotes, no space beside it; nobody named, no space either', () => {
+    assert.equal(words('zh-Hant').memberLeft('John'), '「John」退出了教會');
+    assert.equal(words('zh-Hant').memberLeft(null), '有人退出了教會');
+    assert.equal(words('zh-Hans').memberLeft('王小明'), '“王小明”退出了教会');
   });
 });
 

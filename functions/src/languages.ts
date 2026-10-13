@@ -92,14 +92,13 @@ export interface Words {
   datedDutyLine(day: string, line: string): string;
   lineSeparator: string;
 
-  /** Roster changes (rosterChange.ts). [day] is the short date and the service's name. */
+  /** Roster changes (rosterChange.ts). [day] is the short date and the service's name; put on and taken off read alike. */
   eventMoved(title: string, day: string): string;
   putOn(day: string, duties: string[]): string;
   takenOff(day: string, duties: string[]): string;
 
-  /** A member left (triggers.ts); [name] is theirs, or [someone] without one. */
-  memberLeft(name: string): string;
-  someone: string;
+  /** A member left (triggers.ts); [name] is theirs, null when they had none. */
+  memberLeft(name: string | null): string;
 
   /** The church page before the app starts (churchPage.ts). */
   appName: string;
@@ -138,13 +137,13 @@ const zhHant: Words = {
   dutyLine: (name, duties) => `${name} ${duties.join('、')}`,
   datedDutyLine: (day, line) => `${day}${line}`,
   lineSeparator: '；',
-  eventMoved: (title, day) => `${title}改到 ${day}`,
+  // A name the church typed sits in 「」: no space to judge between it and Chinese.
+  eventMoved: (title, day) => `「${title}」改到 ${day}`,
   putOn: (day, duties) => `你被排進 ${day}：${duties.join('、')}`,
-  takenOff: (day, duties) => `${day} 的${duties.join('、')}已改由別人負責`,
-  memberLeft: (name) => `${name} 退出了教會`,
-  someone: '有人',
+  takenOff: (day, duties) => `你被移出 ${day}：${duties.join('、')}`,
+  memberLeft: (name) => (name ? `「${name}」退出了教會` : '有人退出了教會'),
   appName: '馬大別忙',
-  supportItem: '馬大別忙 雲端費用 線上支持',
+  supportItem: '支持馬大別忙的雲端費用',
   description:
     '馬大！馬大！你為許多的事思慮煩擾，但是不可少的只有一件；馬利亞已經選擇那上好的福分，是不能奪去的。（路加福音 10:41–42）',
   loading: '載入中…',
@@ -163,13 +162,12 @@ const zhHans: Words = {
   dutyLine: zhHant.dutyLine,
   datedDutyLine: zhHant.datedDutyLine,
   lineSeparator: '；',
-  eventMoved: (title, day) => `${title}改到 ${day}`,
-  putOn: (day, duties) => `你被排进 ${day}：${duties.join('、')}`,
-  takenOff: (day, duties) => `${day} 的${duties.join('、')}已改由别人负责`,
-  memberLeft: (name) => `${name} 退出了教会`,
-  someone: '有人',
+  eventMoved: (title, day) => `“${title}”改到 ${day}`,
+  putOn: (day, duties) => `你被排入 ${day}：${duties.join('、')}`,
+  takenOff: (day, duties) => `你被移出 ${day}：${duties.join('、')}`,
+  memberLeft: (name) => (name ? `“${name}”退出了教会` : '有人退出了教会'),
   appName: '马大别忙',
-  supportItem: '马大别忙 云端费用 线上支持',
+  supportItem: '支持马大别忙的云端费用',
   description:
     '马大！马大！你为许多的事思虑烦扰，但是不可少的只有一件；马利亚已经选择那上好的福分，是不能夺去的。（路加福音 10:41–42）',
   loading: '加载中…',
@@ -190,11 +188,10 @@ const en: Words = {
   lineSeparator: '; ',
   eventMoved: (title, day) => `${title} moved to ${day}`,
   putOn: (day, duties) => `You’re on ${day}: ${duties.join(', ')}`,
-  takenOff: (day, duties) => `Someone else now has ${duties.join(', ')} for ${day}`,
-  memberLeft: (name) => `${name} left the church`,
-  someone: 'Someone',
+  takenOff: (day, duties) => `You’re no longer on ${day}: ${duties.join(', ')}`,
+  memberLeft: (name) => `${name ?? 'Someone'} left the church`,
   appName: 'Martha, sit',
-  supportItem: 'Martha, sit server costs support',
+  supportItem: 'Support for the server costs of Martha, sit',
   description:
     '“Martha, Martha,” the Lord answered, “you are worried and upset about many things, but few things are needed—or indeed only one. Mary has chosen what is better, and it will not be taken away from her.” (Luke 10:41–42)',
   loading: 'Loading…',
@@ -216,9 +213,8 @@ const ja: Words = {
   lineSeparator: '／',
   eventMoved: (title, day) => `${title}の日程が${day}に変更されました`,
   putOn: (day, duties) => `${day}の担当になりました：${duties.join('、')}`,
-  takenOff: (day, duties) => `${day}の${duties.join('、')}は別の方の担当になりました`,
-  memberLeft: (name) => `${name}が教会を退出しました`,
-  someone: 'メンバー',
+  takenOff: (day, duties) => `${day}の担当から外れました：${duties.join('、')}`,
+  memberLeft: (name) => `${name ?? 'メンバー'}が教会を退出しました`,
   appName: 'マルタ、ひと休み',
   supportItem: 'Martha, sit サーバー費用の応援',
   description: '「マルタ、マルタ、あなたは多くのことに思い悩み、心を乱している。しかし、必要なことはただ一つだけである。マリアは良い方を選んだ。それを取り上げてはならない。」（ルカによる福音書 10:41–42）',
@@ -239,11 +235,9 @@ const ko: Words = {
   datedDutyLine: (day, line) => `${day} ${line}`,
   lineSeparator: ' / ',
   eventMoved: (title, day) => `${title} 일정 변경: ${day}`,
-  putOn: (day, duties) => `${day} 봉사 배정: ${duties.join(', ')}`,
-  takenOff: (day, duties) => `${day} ${duties.join(', ')} 담당이 다른 분으로 바뀌었어요`,
-  // 님 after a name; the someone without a name takes 이.
-  memberLeft: (name) => `${name}${name === ko.someone ? '이' : ' 님이'} 교회를 나갔어요`,
-  someone: '멤버 한 명',
+  putOn: (day, duties) => `${day} 봉사에 배정됐어요: ${duties.join(', ')}`,
+  takenOff: (day, duties) => `${day} 봉사에서 빠졌어요: ${duties.join(', ')}`,
+  memberLeft: (name) => (name ? `${name} 님이 교회를 나갔어요` : '멤버 한 명이 교회를 나갔어요'),
   appName: '마르다의 쉼표',
   supportItem: '마르다의 쉼표 서버 비용 후원',
   description: '마르다야 마르다야 네가 많은 일로 염려하고 근심하나 몇 가지만 하든지 혹은 한 가지만이라도 족하니라 마리아는 이 좋은 편을 택하였으니 빼앗기지 아니하리라 (누가복음 10:41–42)',

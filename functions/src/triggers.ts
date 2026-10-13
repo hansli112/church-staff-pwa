@@ -78,7 +78,7 @@ export async function onMemberLeft(
   const name = member.get('name') as string | undefined;
   return notifyMembers(deps, cid, await adminUids(deps.db, cid), 'memberLeft', (w) => ({
     title: church.get('name') as string,
-    body: w.memberLeft(name || w.someone),
+    body: w.memberLeft(name || null),
     link: '/me/members',
   }));
 }

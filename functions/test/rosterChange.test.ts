@@ -144,11 +144,11 @@ describe('push', () => {
     assert.match(pushed[0].body, /10\/4 主日崇拜：司琴/);
   });
 
-  test('taken off: told someone else has it now', async () => {
+  test('taken off: told they are off it, not who has it now', async () => {
     await church();
     await write('C1', '2026-10-04', [duty('司琴', ['美玉'])]);
     await write('C1', '2026-10-04', [duty('司琴', ['志豪'])]);
-    assert.equal(pushed.at(-1)!.body, '10/4 主日崇拜 的司琴已改由別人負責');
+    assert.equal(pushed.at(-1)!.body, '你被移出 10/4 主日崇拜：司琴');
   });
 
   test("each in the language their app shows; the church's names as typed", async () => {
@@ -161,7 +161,7 @@ describe('push', () => {
     ]);
     pushed.length = 0;
     await write('C1', '2026-10-04', [duty('司琴', [])]);
-    assert.deepEqual(pushed.map((p) => p.body), ['10/4 主日崇拜 的司琴已改由別人負責', 'Someone else now has 司琴 for Oct 4 主日崇拜']);
+    assert.deepEqual(pushed.map((p) => p.body), ['你被移出 10/4 主日崇拜：司琴', 'You’re no longer on Oct 4 主日崇拜: 司琴']);
   });
 
   test('muted members get nothing', async () => {
@@ -253,7 +253,7 @@ describe('an event’s roster', () => {
       [
         ['你被排進 12/24 聖誕晚會：主持', '/c/C1?to=%2Frosters%2Fevent%2Fx1'],
         ['你被排進 12/24 聖誕晚會：主持', '/c/C1?to=%2Frosters%2Fevent%2Fx1'],
-        ['12/24 聖誕晚會 的主持已改由別人負責', '/c/C1?to=%2Frosters%2Fevent%2Fx1'],
+        ['你被移出 12/24 聖誕晚會：主持', '/c/C1?to=%2Frosters%2Fevent%2Fx1'],
       ],
     );
   });
@@ -268,11 +268,11 @@ describe('an event’s roster', () => {
       { dateKey: '2026-12-23', endDateKey: '2026-12-23', movedBy: 'mei', duties: [duty('主持', ['美玉']), duty('招待', ['志豪', '林同工'])] },
       { editedBy: null },
     );
-    assert.deepEqual(pushed.map((p) => [p.tokens, p.body]), [[['tok-hao'], '聖誕晚會改到 12/23（週三）']]);
+    assert.deepEqual(pushed.map((p) => [p.tokens, p.body]), [[['tok-hao'], '「聖誕晚會」改到 12/23（週三）']]);
     pushed.length = 0;
     await db.doc('users/hao').update({ appLocale: 'en' });
     await writeEvent('C1', { dateKey: '2026-12-22', endDateKey: '2026-12-22', duties: [duty('主持', ['美玉']), duty('招待', ['志豪', '林同工'])] });
-    assert.deepEqual(pushed.map((p) => p.body), ['聖誕晚會改到 12/22（週二）', '聖誕晚會 moved to Dec 22 (Tue)']);
+    assert.deepEqual(pushed.map((p) => p.body), ['「聖誕晚會」改到 12/22（週二）', '聖誕晚會 moved to Dec 22 (Tue)']);
   });
 
   test('deleted by an editor, as any day', async () => {
@@ -280,7 +280,7 @@ describe('an event’s roster', () => {
     await writeEvent('C1', { duties: [duty('主持', ['美玉'])] });
     pushed.length = 0;
     await writeEvent('C1', null);
-    assert.deepEqual(pushed.map((p) => p.body), ['12/24 聖誕晚會 的主持已改由別人負責']);
+    assert.deepEqual(pushed.map((p) => p.body), ['你被移出 12/24 聖誕晚會：主持']);
   });
 
   test('a two-day event started yesterday is still news; one that ended is not', async () => {
