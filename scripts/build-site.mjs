@@ -295,7 +295,7 @@ function footer(language, page) {
       <a href="${at('/privacy')}">${w.privacy}</a>
       <a href="${at('/terms')}">${w.terms}</a>
       <a href="https://github.com/hansli112/church-staff-pwa/issues">${w.issues}</a>
-      <a href="mailto:hansli112871114@gmail.com">${w.contact}</a>
+      <a href="mailto:support@marthasit.com">${w.contact}</a>
     </nav>
     ${languageLinks(language, page)}
     <p>${w.operator}</p>
