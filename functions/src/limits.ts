@@ -44,7 +44,7 @@ export const LIMITS = {
  */
 export const SUPPORT_AMOUNT = {
   min: 30,
-  max: 10000,
+  max: 1000,
 } as const;
 
 /**

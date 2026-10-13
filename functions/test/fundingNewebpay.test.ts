@@ -177,15 +177,15 @@ describe('starting a 線上支持 payment', () => {
     assert.notEqual(a.params.MerchantOrderNo, b.params.MerchantOrderNo);
   });
 
-  test('a whole number of NT dollars from 30 to 10,000, or nothing starts', async () => {
-    for (const bad of [29, 10_001, 100.5, -100, '1e3', '', null, undefined]) {
+  test('a whole number of NT dollars from 30 to 1,000, or nothing starts', async () => {
+    for (const bad of [29, 1_001, 100.5, -100, '1e3', '', null, undefined]) {
       const r = await newebpayStart(deps, config, { amount: bad });
       assert.deepEqual(r, { status: 400, body: { error: 'amount' } }, `amount ${String(bad)}`);
     }
     assert.equal((await newebpayStart(deps, config, null)).status, 400);
     assert.equal((await newebpayStart(deps, config, { amount: '30' })).status, 200);
     assert.equal((await newebpayStart(deps, config, { amount: ' 300 ' })).status, 200);
-    assert.equal((await newebpayStart(deps, config, { amount: 10_000 })).status, 200);
+    assert.equal((await newebpayStart(deps, config, { amount: 1_000 })).status, 200);
   });
 
   test('not set up yet: nothing starts', async () => {
