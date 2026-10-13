@@ -29,7 +29,7 @@ const iosSteps = [
   '點「加入主畫面」',
   '點手機上的「恩典堂」圖示打開，再登入一次',
 ];
-const androidMenu = '安裝並建立捷徑 → 安裝';
+const androidMenu = '加到主畫面 → 安裝';
 const card = '一點就打開，也收得到服事通知';
 
 Future<void> tapText(WidgetTester tester, String text) async {
@@ -153,7 +153,7 @@ void main() {
     for (final step in iosSteps) {
       expect(findShown(step), findsOneWidget);
     }
-    expect(find.text('開啟後要收服事通知：我的 → 通知 → 開啟通知'), findsOneWidget);
+    expect(find.textContaining('開啟通知，就收得到服事通知'), findsOneWidget);
 
     await tapText(tester, '稍後再說');
     expect(find.byType(NavigationBar), findsOneWidget);
@@ -463,7 +463,7 @@ void main() {
         'assets/add_to_home/safari_add.png',
       ]),
     );
-    expect(find.textContaining('若只看到一排圖示，先點「檢視較多」；舊版可往下滑'), findsOneWidget);
+    expect(find.textContaining('只看到一排圖示時，先點「檢視較多」；舊版要往下滑'), findsOneWidget);
     expect(find.text('Safari · iOS 26.5 · 繁中模擬器畫面'), findsNWidgets(2));
     expect(tester.takeException(), isNull);
   });
@@ -574,7 +574,7 @@ void main() {
     );
     expect(iosImages.map((image) => image.assetName), everyElement(isNot(contains('safari'))));
     expect(find.text('Chrome 155 · iOS 27.2 · iPhone 13 真機畫面'), findsNWidgets(2));
-    expect(find.textContaining('看不到時，先將分享面板展開，再往下滑'), findsOneWidget);
+    expect(find.textContaining('看不到時，先把分享面板展開，再往下滑'), findsOneWidget);
     expect(find.text('按鈕示意，請點瀏覽器上的按鈕'), findsNothing);
     expect(find.text('點網址列旁的分享圖示'), findsOneWidget);
 

@@ -109,7 +109,7 @@ void main() {
     await tester.pump();
     await tapText(tester, '建立');
     expect(find.textContaining('已經有教會叫這個名字'), findsOneWidget);
-    expect(find.text('聯絡我們'), findsOneWidget);
+    expect(find.text('回報問題'), findsOneWidget);
     expect(b.churches.length, 1);
   });
 
@@ -288,7 +288,7 @@ void main() {
       MemoryBackend(clock: testClock),
       overrides: [userAgentProvider.overrideWithValue(line)],
     );
-    expect(find.text('在 LINE 裡不能用 Google 登入。請用 Safari 或 Chrome 打開這個網頁，或用 email 登入'), findsOneWidget);
+    expect(find.text('在 LINE 裡不能用 Google 登入。請用 Safari 或 Chrome 打開這個網頁，或用 email 登入。'), findsOneWidget);
     expect(find.text('複製連結'), findsOneWidget);
     expect(find.text('使用 Google 登入'), findsOneWidget, reason: 'still offered');
   });

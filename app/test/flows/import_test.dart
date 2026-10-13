@@ -92,7 +92,7 @@ void main() {
       XFile.fromData(Uint8List.fromList([1, 2, 3]), mimeType: 'image/jpeg'),
     ]);
     await settle(tester);
-    expect(find.text('確認後套用'), findsNothing);
+    expect(find.text('預覽'), findsNothing);
     expect(b.photosUsed['grace'] ?? 0, 0);
     expect(b.photosUsed['other'] ?? 0, 0);
   });
@@ -135,7 +135,7 @@ void main() {
     b.members['grace']!['editor'] = b.members['grace']!['editor']!.copyWith(groups: const {});
     b.notify();
     await settle(tester);
-    expect(find.text('確認後套用'), findsOneWidget, reason: 'the preview, not the start page');
+    expect(find.text('預覽'), findsOneWidget, reason: 'the preview, not the start page');
     await tester.scrollUntilVisible(find.text('套用到服事表'), 300);
     await tapText(tester, '套用到服事表');
     expect(b.rosters['grace'], saved);
@@ -150,7 +150,7 @@ void main() {
     await go(tester, '/rosters/import/sunday');
     b.setOnline(false);
     await tapText(tester, '選照片');
-    expect(find.text('目前無法連線，只能查看已取得的資料。'), findsOneWidget);
+    expect(find.text('離線中，連線後才能儲存'), findsOneWidget);
     expect(b.photosUsed['grace'] ?? 0, 0);
   });
 
@@ -176,7 +176,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '選照片');
-    expect(find.text('確認後套用'), findsOneWidget);
+    expect(find.text('預覽'), findsOneWidget);
     await tester.ensureVisible(find.text('聖餐').first);
     await tester.tap(find.text('聖餐').first);
     await settle(tester);
@@ -351,8 +351,8 @@ void main() {
     await tapText(tester, '取代當天全部安排');
     await tester.scrollUntilVisible(find.text('移除司會：王牧師'), 200);
     expect(find.text('移除司會：王牧師'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('移除活動：聖餐'), 200);
-    expect(find.text('移除活動：聖餐'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('移除特別活動：聖餐'), 200);
+    expect(find.text('移除特別活動：聖餐'), findsOneWidget);
     await tapText(tester, '套用到服事表');
     expect(savedDay(b, 11).duties.map((d) => d.role), ['司琴']);
     expect(savedDay(b, 11).events, isEmpty);
@@ -389,8 +389,8 @@ void main() {
     await tapText(tester, '加入服事設定：鼓');
     await tester.scrollUntilVisible(find.text('讓陳志豪負責鼓'), 200);
     await tapText(tester, '讓陳志豪負責鼓');
-    await tester.scrollUntilVisible(find.text('加入常用活動：浸禮'), 200);
-    await tapText(tester, '加入常用活動：浸禮');
+    await tester.scrollUntilVisible(find.text('加入常用特別活動：浸禮'), 200);
+    await tapText(tester, '加入常用特別活動：浸禮');
     expect(b.services['grace']!.byId('sunday')!.duties, contains('鼓'));
     expect(b.members['grace']!['hao']!.serves('sunday', '鼓'), isTrue);
     expect(b.services['grace']!.byId('sunday')!.events, contains(const EventTag(name: '浸禮', color: 2)));
@@ -487,7 +487,7 @@ void main() {
     await tapText(tester, '預覽');
     expect(find.text('加入服事設定：鼓'), findsNothing);
     expect(find.text('讓陳志豪負責鼓'), findsNothing);
-    expect(find.text('加入常用活動：浸禮'), findsNothing);
+    expect(find.text('加入常用特別活動：浸禮'), findsNothing);
     await tapText(tester, '套用到服事表');
     expect(peopleOn(b, 18, '鼓'), ['陳志豪']);
     expect(b.services['grace']!.byId('sunday')!.duties, isNot(contains('鼓')));
@@ -526,7 +526,7 @@ void main() {
     final container = ProviderScope.containerOf(tester.element(find.byType(Scaffold).first));
     container.read(selectedChurchProvider.notifier).select('other');
     await settle(tester);
-    expect(find.text('確認後套用'), findsNothing);
+    expect(find.text('預覽'), findsNothing);
     expect(find.text('套用到服事表'), findsNothing);
     expect(b.rosters['other'], isEmpty);
   });
@@ -566,7 +566,7 @@ void main() {
     await tapText(tester, '套用到服事表');
     expect(peopleOn(b, 11, '司琴'), ['陳志豪']);
     expect(find.text('服事表已變更，請重新檢查差異後再套用'), findsOneWidget);
-    expect(find.text('確認後套用'), findsOneWidget);
+    expect(find.text('預覽'), findsOneWidget);
   });
 
   testWidgets('an edit made while reviewing the preview survives the import', (tester) async {

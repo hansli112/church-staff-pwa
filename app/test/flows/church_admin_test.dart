@@ -74,7 +74,7 @@ void main() {
       await tapText(tester, '陳志豪');
       await tester.scrollUntilVisible(find.text('移除同工'), 300);
       await tapText(tester, '移除同工');
-      expect(find.text('已移除陳志豪'), findsOneWidget);
+      expect(find.text('已移除「陳志豪」'), findsOneWidget);
       expect(find.text('陳志豪'), findsNothing, reason: 'hidden at once');
       await tapText(tester, '復原');
       expect(find.text('陳志豪'), findsOneWidget);
@@ -91,7 +91,7 @@ void main() {
     testWidgets('an admin sees no demote or remove on their own page', (tester) async {
       await pumpApp(tester, seededChurch());
       await go(tester, '/me/members/pastor');
-      expect(find.text('角色'), findsNothing);
+      expect(find.text('身分'), findsNothing);
       expect(find.text('移除同工'), findsNothing);
     });
 
@@ -118,7 +118,7 @@ void main() {
       await tapText(tester, '退出教會');
       expect(find.text('退出〈恩典堂〉？'), findsOneWidget);
       expect(find.text('需要重新邀請才能回來'), findsOneWidget);
-      await tapText(tester, '退出');
+      await tapText(tester, '退出教會');
       expect(b.members['grace']!.containsKey('mei'), isFalse);
       expect(find.text('加入你的教會'), findsOneWidget);
     });
@@ -126,9 +126,9 @@ void main() {
     testWidgets('an admin has no leave entry and is told to hand over', (tester) async {
       await pumpApp(tester, seededChurch());
       await go(tester, '/me/church');
-      await tester.scrollUntilVisible(find.text('管理員不能直接退出。要退出，先把另一位同工設成管理員，再請對方取消你的管理員'), 300);
+      await tester.scrollUntilVisible(find.text('管理員不能直接退出。要退出，先把另一位同工設成管理員，再請對方取消你的管理員。'), 300);
       expect(find.text('退出教會'), findsNothing);
-      expect(find.text('管理員不能直接退出。要退出，先把另一位同工設成管理員，再請對方取消你的管理員'), findsOneWidget);
+      expect(find.text('管理員不能直接退出。要退出，先把另一位同工設成管理員，再請對方取消你的管理員。'), findsOneWidget);
     });
 
     testWidgets('a removed member loses the church at once', (tester) async {
@@ -254,7 +254,7 @@ void main() {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/me/services/youth');
-      await tapText(tester, '舉行中');
+      await tapText(tester, '啟用');
       expect(b.services['grace']!.byId('youth')!.enabled, isFalse);
       expect(b.services['grace']!.ids, containsAll(['sunday', 'youth']));
       await go(tester, '/rosters');

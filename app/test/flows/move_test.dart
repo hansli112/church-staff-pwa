@@ -72,7 +72,7 @@ void main() {
 
     await go(tester, '/me/members');
     expect(find.text('2 位還沒登入'), findsOneWidget);
-    expect(find.text('還沒登入・mei@example.com'), findsOneWidget);
+    expect(find.text('還沒登入 · mei@example.com'), findsOneWidget);
     expect(find.text('還沒登入'), findsOneWidget, reason: '陳志豪 has no email');
   });
 
@@ -98,6 +98,6 @@ void main() {
   testWidgets('over 2,000 members is refused with the reason', (tester) async {
     await start(tester, const CloudException(CloudErrorCode.moveTooLarge));
     await tapText(tester, '選擇搬家檔');
-    expect(find.text('同工超過 2,000 位或服事表超過 20,000 天，沒辦法自動搬，請聯絡我們'), findsOneWidget);
+    expect(find.text('同工超過 2,000 位或服事表超過 20,000 天，沒辦法自動搬。請到 GitHub 的 church-staff-pwa 開 issue。'), findsOneWidget);
   });
 }

@@ -53,7 +53,7 @@ void main() {
     expect(b.churches['grace']!.timeZone, ChurchTimeZone.taipei);
 
     await tapText(tester, '洛杉磯');
-    await tapText(tester, '更改');
+    await tapText(tester, '改成洛杉磯時間');
     expect(b.churches['grace']!.timeZone, ChurchTimeZone.losAngeles);
     expect(container.read(todayProvider), Day(2026, 9, 30));
   });

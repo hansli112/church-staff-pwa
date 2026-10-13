@@ -63,16 +63,16 @@ class L10nJa extends L10n {
   String get deleted => '削除しました';
 
   @override
-  String get loadFailed => '読み込めませんでした。接続を確認して、もう一度お試しください';
+  String get loadFailed => '読み込めませんでした。接続を確認して、もう一度お試しください。';
 
   @override
-  String get saveFailed => '保存できませんでした。接続を確認して、もう一度お試しください';
+  String get saveFailed => '保存できませんでした。接続を確認して、もう一度お試しください。';
 
   @override
   String get noPermission => 'この操作を行う権限がありません';
 
   @override
-  String get comingSoon => '準備中です。もうしばらくお待ちください';
+  String get comingSoon => '準備中です。もうしばらくお待ちください。';
 
   @override
   String get signInWithGoogle => 'Google でログイン';
@@ -82,14 +82,14 @@ class L10nJa extends L10n {
 
   @override
   String inAppBrowserNote(String app) {
-    return '$app の中では Google でログインできません。Safari か Chrome でこのページを開くか、メールでログインしてください';
+    return '$app の中では Google でログインできません。Safari か Chrome でこのページを開くか、メールでログインしてください。';
   }
 
   @override
   String get copyPageUrl => 'リンクをコピー';
 
   @override
-  String get pageUrlCopied => 'リンクをコピーしました。Safari か Chrome に貼り付けて開いてください';
+  String get pageUrlCopied => 'リンクをコピーしました。Safari か Chrome に貼り付けて開いてください。';
 
   @override
   String get loginTagline => '「マルタ、マルタ、\nあなたは多くのことに思い悩み、心を乱している。\nしかし、必要なことはただ一つだけである。\nマリアは良い方を選んだ。\nそれを取り上げてはならない。」';
@@ -135,7 +135,7 @@ class L10nJa extends L10n {
   String get errInvalidCredential => 'メールアドレスまたはパスワードが正しくありません';
 
   @override
-  String get errEmailInUse => 'このメールアドレスは登録済みです。そのままログインするか、Google でログインしてください';
+  String get errEmailInUse => 'このメールアドレスは登録済みです。そのままログインするか、Google でログインしてください。';
 
   @override
   String get errWeakPassword => 'パスワードは6文字以上にしてください';
@@ -144,16 +144,16 @@ class L10nJa extends L10n {
   String get errInvalidEmail => 'メールアドレスの形式が正しくありません';
 
   @override
-  String get errNeedsLink => 'このメールアドレスにはすでにアカウントがあります。以前と同じ方法でログインすると、自動的に連携されます';
+  String get errNeedsLink => 'このメールアドレスにはすでにアカウントがあります。以前と同じ方法でログインすると、自動的に連携されます。';
 
   @override
-  String get errTooMany => '試行回数が多すぎます。しばらくしてからもう一度お試しください';
+  String get errTooMany => '試行回数が多すぎます。しばらくしてからもう一度お試しください。';
 
   @override
-  String get errNetwork => 'ネットワークに接続できません。確認してもう一度お試しください';
+  String get errNetwork => 'ネットワークに接続できません。確認してもう一度お試しください。';
 
   @override
-  String get errUnknown => 'うまくいきませんでした。もう一度お試しください';
+  String get errUnknown => 'うまくいきませんでした。もう一度お試しください。';
 
   @override
   String get nameRequired => '名前を入力してください';
@@ -166,7 +166,7 @@ class L10nJa extends L10n {
 
   @override
   String verifyEmailBody(String email) {
-    return '確認メールを $email に送信しました。メール内のリンクをタップしてから、ここに戻ってください';
+    return '確認メールを $email に送信しました。メール内のリンクをタップしてから、ここに戻ってください。';
   }
 
   @override
@@ -179,7 +179,7 @@ class L10nJa extends L10n {
   String get verifyDone => '確認しました';
 
   @override
-  String get verifyStill => 'まだ確認できていません。メール内のリンクをタップしてください';
+  String get verifyStill => 'まだ確認できていません。メール内のリンクをタップしてください。';
 
   @override
   String get welcomeTitle => '教会に参加する';
@@ -212,7 +212,7 @@ class L10nJa extends L10n {
   String get create => '作成';
 
   @override
-  String get errDuplicateName => '同じ名前の教会がすでにあります。ほかの人に先に登録された場合は、お問い合わせください';
+  String get errDuplicateName => '同じ名前の教会がすでにあります。ほかの人に先に登録された場合は、お問い合わせください。';
 
   @override
   String get contactUs => 'お問い合わせ';
@@ -236,10 +236,10 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get errInviteInvalid => 'この招待が見つかりません。招待コードを確認するか、管理者に新しい招待をもらってください';
+  String get errInviteInvalid => 'この招待が見つかりません。招待コードを確認するか、管理者に新しい招待をもらってください。';
 
   @override
-  String get errInviteExpired => 'この招待は期限切れです。管理者に新しい招待をもらってください';
+  String get errInviteExpired => 'この招待は期限切れです。管理者に新しい招待をもらってください。';
 
   @override
   String get errChurchClosed => 'この教会は停止されています';
@@ -281,7 +281,7 @@ class L10nJa extends L10n {
   String get myServicesTitle => 'これからの奉仕';
 
   @override
-  String get noUpcomingServices => '予定されている奉仕はありません。担当になるとここに表示されます';
+  String get noUpcomingServices => '予定されている奉仕はありません。担当になるとここに表示されます。';
 
   @override
   String get viewRosters => '奉仕表を見る';
@@ -308,7 +308,7 @@ class L10nJa extends L10n {
   String get noServicesConfigured => '集会がまだ設定されていません';
 
   @override
-  String get setUpServices => '奉仕の設定';
+  String get setUpServices => '集会を設定';
 
   @override
   String get noRostersAhead => '今後の集会はありません';
@@ -320,7 +320,7 @@ class L10nJa extends L10n {
   String get tomorrow => '明日';
 
   @override
-  String get offlineShowingCached => 'オフラインです。前回のデータを表示しています';
+  String get offlineShowingCached => 'オフラインです。前回のデータを表示しています。';
 
   @override
   String dutyCount(int count) {
@@ -334,11 +334,11 @@ class L10nJa extends L10n {
   String get dutyName => '担当名';
 
   @override
-  String get removeDuty => 'この担当を削除';
+  String get removeDuty => 'この担当を外す';
 
   @override
   String dutyRemoved(String duty) {
-    return '$dutyを削除しました';
+    return '$dutyを外しました';
   }
 
   @override
@@ -390,7 +390,7 @@ class L10nJa extends L10n {
   String get reorder => '並べ替え';
 
   @override
-  String get reorderHint => 'ドラッグして並べ替えます。毎週この順番になります';
+  String get reorderHint => 'ドラッグして並べ替えます。毎週この順番になります。';
 
   @override
   String get orderSaved => '順番を更新しました';
@@ -417,7 +417,7 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get emptySlot => '空き';
+  String get emptySlot => '未定';
 
   @override
   String removeFromDuty(String duty) {
@@ -462,7 +462,7 @@ class L10nJa extends L10n {
 
   @override
   String removed(String name) {
-    return '$nameを削除しました';
+    return '$nameを外しました';
   }
 
   @override
@@ -531,7 +531,7 @@ class L10nJa extends L10n {
   String get leaveChurchBody => '戻るには、もう一度招待してもらう必要があります';
 
   @override
-  String get leave => '退出';
+  String get leave => '教会を退出';
 
   @override
   String leftChurch(String church) {
@@ -539,7 +539,7 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get adminCannotLeave => '管理者はそのまま退出できません。退出するには、ほかのメンバーを管理者にしてから、その人にあなたの管理者権限を外してもらってください';
+  String get adminCannotLeave => '管理者はそのまま退出できません。退出するには、ほかのメンバーを管理者にしてから、その人にあなたの管理者権限を外してもらってください。';
 
   @override
   String get churchLogo => '教会のロゴ';
@@ -554,7 +554,7 @@ class L10nJa extends L10n {
   String get logoUploaded => 'ロゴを更新しました';
 
   @override
-  String get logoTooLarge => '画像が大きすぎます。1MB以下の画像を選んでください';
+  String get logoTooLarge => '画像が大きすぎます。1MB以下の画像を選んでください。';
 
   @override
   String get logoNotImage => '画像を選んでください';
@@ -573,7 +573,7 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get deleteChurchBody => 'すべてのメンバーがこの教会を見られなくなります。30日以内なら復元できますが、その後はデータが完全に削除されます';
+  String get deleteChurchBody => 'すべてのメンバーがこの教会を見られなくなります。30日以内なら復元できますが、その後はデータが完全に削除されます。';
 
   @override
   String get roleAdmin => '管理者';
@@ -582,7 +582,7 @@ class L10nJa extends L10n {
   String get roleLeader => '小グループリーダー';
 
   @override
-  String get roleStaff => 'メンバー';
+  String get roleStaff => '一般メンバー';
 
   @override
   String get roleMember => 'グループメンバー';
@@ -591,10 +591,10 @@ class L10nJa extends L10n {
   String get role => '役割';
 
   @override
-  String get roleAdminCan => 'すべての設定、メンバーの招待と削除';
+  String get roleAdminCan => 'すべての設定、メンバーの招待と除外';
 
   @override
-  String get groups => '権限';
+  String get groups => '権限グループ';
 
   @override
   String get groupRosterEditors => '奉仕表の編集';
@@ -609,11 +609,11 @@ class L10nJa extends L10n {
   String get zonesFooter => '奉仕表を編集できる人は、自分の所属集会の奉仕表だけを編集できます';
 
   @override
-  String get removeMember => 'メンバーを削除';
+  String get removeMember => 'メンバーを外す';
 
   @override
   String memberRemoved(String name) {
-    return '$nameを削除しました';
+    return '$nameを外しました';
   }
 
   @override
@@ -626,7 +626,7 @@ class L10nJa extends L10n {
   String get noMembersFound => 'メンバーが見つかりません';
 
   @override
-  String get you => 'あなた';
+  String get you => '自分';
 
   @override
   String get inviteCreate => '招待リンクを作成';
@@ -646,7 +646,7 @@ class L10nJa extends L10n {
   String get inviteCopied => '招待リンクをコピーしました';
 
   @override
-  String get copyByHand => '自動でコピーできませんでした。下のテキストを選択してコピーしてください';
+  String get copyByHand => '自動でコピーできませんでした。下のテキストを選択してコピーしてください。';
 
   @override
   String get inviteShare => '共有';
@@ -686,13 +686,13 @@ class L10nJa extends L10n {
   String get serviceEnabled => '実施中';
 
   @override
-  String get serviceDisabledFooter => '停止した集会には新しい奉仕表が作られません。これまでの奉仕表は残ります';
+  String get serviceDisabledFooter => '停止した集会には新しい奉仕表が作られません。これまでの奉仕表は残ります。';
 
   @override
   String get templateDuties => '担当';
 
   @override
-  String get templateFooter => '新しい奉仕表にはこれらの担当が入ります。作成済みの奉仕表は変わりません';
+  String get templateFooter => '新しい奉仕表にはこれらの担当が入ります。作成済みの奉仕表は変わりません。';
 
   @override
   String get commonEvents => 'よく使う特別行事';
@@ -701,7 +701,7 @@ class L10nJa extends L10n {
   String get rename => '名前を変更';
 
   @override
-  String get remove => '削除';
+  String get remove => '外す';
 
   @override
   String get moveUp => '上へ移動';
@@ -737,11 +737,11 @@ class L10nJa extends L10n {
   String get deleteAccountTitle => 'アカウントを削除しますか？';
 
   @override
-  String get deleteAccountBody => 'すべての教会から退出し、アカウントと個人情報は削除されて元に戻せません。奉仕表上の名前は残ります';
+  String get deleteAccountBody => 'すべての教会から退出し、アカウントと個人情報は削除されて元に戻せません。奉仕表上の名前は残ります。';
 
   @override
   String deleteAccountLastAdmin(String churches) {
-    return 'あなたは「$churches」の唯一の管理者です。先に「メンバー」でほかの人を管理者にしてください';
+    return 'あなたは「$churches」の唯一の管理者です。先にほかのメンバーを管理者にしてください。';
   }
 
   @override
@@ -857,22 +857,22 @@ class L10nJa extends L10n {
   String get notifMemberLeft => 'メンバーの退出';
 
   @override
-  String get notifMemberLeftSub => '誰かが教会を退出したとき（管理者）';
+  String get notifMemberLeftSub => '誰かが教会を退出したとき（管理者のみ）';
 
   @override
   String get notifThisChurch => 'この教会の通知';
 
   @override
-  String get notifPermissionOff => '通知がオフになっています。システムの設定でオンにしてください';
+  String get notifPermissionOff => '通知がオフになっています。システムの設定でオンにしてください。';
 
   @override
   String get notifEnable => '通知をオンにする';
 
   @override
-  String get notifNotAllowed => '通知がまだオンになっていません。確認が表示されたら「許可」をタップしてください';
+  String get notifNotAllowed => '通知がまだオンになっていません。確認が表示されたら「許可」をタップしてください。';
 
   @override
-  String get notifRegisterFailed => '通知の設定が完了していません。次にアプリを開いたときにもう一度試します';
+  String get notifRegisterFailed => '通知の設定が完了していません。次にアプリを開いたときにもう一度試します。';
 
   @override
   String get pushView => '表示';
@@ -917,7 +917,7 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get noZoneYet => 'まだどの集会にも所属していません。管理者に設定を依頼してください';
+  String get noZoneYet => 'まだどの集会にも所属していません。管理者に設定を依頼してください。';
 
   @override
   String get waitsForZone => '所属集会が未設定';
@@ -948,27 +948,27 @@ class L10nJa extends L10n {
   String get photoPasteJson => 'JSON を貼り付け';
 
   @override
-  String get photoRecognizing => '読み取り中です。1分ほどかかります';
+  String get photoRecognizing => '読み取り中です。1分ほどかかります。';
 
   @override
   String photoChurchLimit(int limit) {
-    return '今月の$limit枚を使い切りました。来月1日に戻ります。それまでは奉仕表を直接編集できます';
+    return '今月の$limit枚を使い切りました。来月1日に戻ります。それまでは奉仕表を直接編集できます。';
   }
 
   @override
-  String get photoPlatformOff => '写真の読み取りは今月停止しています（全体の読み取り枠を使い切りました）。来月に再開します。それまでは奉仕表を直接編集できます';
+  String get photoPlatformOff => '写真の読み取りは今月停止しています（全体の読み取り枠を使い切りました）。来月に再開します。それまでは奉仕表を直接編集できます。';
 
   @override
-  String get photoTooLarge => '写真が大きすぎます。表の部分だけに切り抜いて、もう一度お試しください';
+  String get photoTooLarge => '写真が大きすぎます。表の部分だけに切り抜いて、もう一度お試しください。';
 
   @override
-  String get photoFailed => '読み取れませんでした。もっと鮮明な写真でお試しください';
+  String get photoFailed => '読み取れませんでした。もっと鮮明な写真でお試しください。';
 
   @override
-  String get photoUnavailable => '写真の読み取りは現在利用できません。しばらくしてからお試しいただくか、奉仕表を直接編集してください';
+  String get photoUnavailable => '写真の読み取りは現在利用できません。しばらくしてからお試しいただくか、奉仕表を直接編集してください。';
 
   @override
-  String get importPreview => '確認して適用';
+  String get importPreview => 'プレビュー';
 
   @override
   String get importApply => '奉仕表に適用';
@@ -1020,7 +1020,7 @@ class L10nJa extends L10n {
   String get calNeedsReconnect => 'カレンダーの認証が切れています';
 
   @override
-  String get calNeedsReconnectStaff => '現在カレンダーを読み込めません。管理者に再接続を依頼してください';
+  String get calNeedsReconnectStaff => '現在カレンダーを読み込めません。管理者に再接続を依頼してください。';
 
   @override
   String get calPickCalendar => '使うカレンダーを選択';
@@ -1035,17 +1035,17 @@ class L10nJa extends L10n {
   String get calDisconnectTitle => 'カレンダーの接続を解除しますか？';
 
   @override
-  String get calDisconnectBody => 'メンバーはカレンダーを見られなくなります。Google カレンダー自体は変わりません';
+  String get calDisconnectBody => 'メンバーはカレンダーを見られなくなります。Google カレンダー自体は変わりません。';
 
   @override
   String get calUnverifiedNote =>
-      'このあと Google に「このアプリは Google で確認されていません」と表示されます。「マルタ、ひと休み」が審査中のためで、「詳細」→「（アプリ名）に移動」をタップすれば進めます。読み書きするのは選んだカレンダーだけです';
+      'このあと Google に「このアプリは Google で確認されていません」と表示されます。「詳細」→「（アプリ名）に移動」をタップして進んでください。読み書きするのは選んだカレンダーだけです。';
 
   @override
   String get calConnectedOk => 'Google カレンダーに接続しました';
 
   @override
-  String get calConnectFailed => '接続できませんでした。もう一度お試しください';
+  String get calConnectFailed => '接続できませんでした。もう一度お試しください。';
 
   @override
   String get calNoEvents => '今月の行事はありません';
@@ -1125,7 +1125,7 @@ class L10nJa extends L10n {
   String get supportVerseSource => 'コリントの信徒への手紙二 8:14';
 
   @override
-  String get supportBody => '「マルタ、ひと休み」はどの教会も無料で使えます。サーバー費用はみんなで分かち合っています。応援はまったくの任意で、使える機能はどの教会も同じです';
+  String get supportBody => '「マルタ、ひと休み」はどの教会も無料で使えます。サーバー費用はみんなで分かち合っています。応援はまったくの任意で、使える機能はどの教会も同じです。';
 
   @override
   String get supportTips => '1回の応援';
@@ -1143,10 +1143,10 @@ class L10nJa extends L10n {
   String get supportPending => '支払いを処理中';
 
   @override
-  String get supportFailed => '支払いは完了していません。請求はされていません';
+  String get supportFailed => '支払いは完了していません。請求はされていません。';
 
   @override
-  String get supportUnavailable => '現在ストアに接続できません';
+  String get supportUnavailable => '現在ストアに接続できません。しばらくしてからもう一度お試しください。';
 
   @override
   String get supporterBadge => '応援者';
@@ -1197,7 +1197,7 @@ class L10nJa extends L10n {
   String get homeNameUnset => '教会名と同じ';
 
   @override
-  String get homeNameMayBeCut => '一部のスマホでは途中で切れます';
+  String get homeNameMayBeCut => '一部のスマホでは途中で切れることがあります';
 
   @override
   String get homeNameFooter => 'ホーム画面に追加したとき、アイコンの下に表示される名前です。空欄なら教会名を使います。';
@@ -1213,7 +1213,7 @@ class L10nJa extends L10n {
 
   @override
   String addToHomeDone(String name) {
-    return '追加しました。これからはスマホの「$name」アイコンをタップして開いてください';
+    return '追加しました。これからはスマホの「$name」アイコンをタップして開いてください。';
   }
 
   @override
@@ -1237,7 +1237,7 @@ class L10nJa extends L10n {
   String get addToHomeSafariLayoutTitle => 'Safari の画面';
 
   @override
-  String get addToHomeSafariLayoutHint => 'ツールバーのボタンに合わせて選んでください。Safari の設定を変える必要はありません';
+  String get addToHomeSafariLayoutHint => 'ツールバーのボタンに合わせて選んでください。Safari の設定を変える必要はありません。';
 
   @override
   String get addToHomeSafariMoreChoice => '「⋯」が見える';
@@ -1249,7 +1249,7 @@ class L10nJa extends L10n {
   String get addToHomeSafariMoreShare => '「⋯」をタップして「共有」を選択';
 
   @override
-  String get addToHomeSafariDirectShareHint => 'アドレスバーは上でも下でもかまいません。「四角から上向きの矢印」のアイコンを探してください';
+  String get addToHomeSafariDirectShareHint => 'アドレスバーは上でも下でもかまいません。「四角から上向きの矢印」のアイコンを探してください。';
 
   @override
   String get addToHomeInApp => 'アプリ内ブラウザ';
@@ -1294,7 +1294,7 @@ class L10nJa extends L10n {
   String get addToHomeSelectAdd => '「ホーム画面に追加」をタップ';
 
   @override
-  String get addToHomeShareMore => 'アイコンが1列しか見えない場合は、先に「さらに表示」をタップしてください。古いバージョンでは下にスクロールします';
+  String get addToHomeShareMore => 'アイコンが1列しか見えない場合は、先に「さらに表示」をタップしてください。古いバージョンでは下にスクロールします。';
 
   @override
   String get addToHomeIosConfirm => '「Web アプリとして開く」のスイッチがあればオンのままにして、最後に右上の「追加」をタップしてください';
@@ -1311,16 +1311,16 @@ class L10nJa extends L10n {
   String get addToHomeChromeInstall => 'ホーム画面に追加 → インストール';
 
   @override
-  String get addToHomeChromeInstallHint => '古いバージョンでは「アプリをインストール」と表示されることがあります。「ショートカットを作成」ではなく「インストール」を選んでください';
+  String get addToHomeChromeInstallHint => '古いバージョンでは「アプリをインストール」と表示されることがあります。「ショートカットを作成」ではなく「インストール」を選んでください。';
 
   @override
-  String get addToHomeFirefoxInstallHint => 'そのあとはスマホの案内に従って追加してください。「ホーム画面に追加」しかない場合は、ブラウザのショートカットが作られるだけのことがあります';
+  String get addToHomeFirefoxInstallHint => 'そのあとはスマホの案内に従って追加してください。「ホーム画面に追加」しかない場合は、ブラウザのショートカットが作られるだけのことがあります。';
 
   @override
   String get addToHomeTrouble => '「ホーム画面に追加」が見つからない場合';
 
   @override
-  String get addToHomeSafariTrouble => '共有シートを上にスワイプして、下のほうのアクションを確認してください。それでも見つからない場合は、いちばん下の「アクションを編集」をタップしてください';
+  String get addToHomeSafariTrouble => '共有シートを上にスワイプして、下のほうのアクションを確認してください。それでも見つからない場合は、いちばん下の「アクションを編集」をタップしてください。';
 
   @override
   String addToHomeExternalTitle(String browser) {
@@ -1333,21 +1333,21 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get addToHomeEmbeddedHint => 'アプリの中でページを見ています。先にスマホのブラウザに切り替えてください';
+  String get addToHomeEmbeddedHint => 'アプリの中でページを見ています。先にスマホのブラウザに切り替えてください。';
 
   @override
-  String get addToHomeUnknownHint => 'このブラウザはメニューが異なる場合があります。下の方法で続けてください';
+  String get addToHomeUnknownHint => 'このブラウザはメニューが異なる場合があります。下の方法で続けてください。';
 
   @override
   String addToHomeCopiedForBrowser(String browser) {
-    return 'コピーしました。$browser を開いてアドレスバーに貼り付けてください';
+    return 'コピーしました。$browser を開いてアドレスバーに貼り付けてください。';
   }
 
   @override
   String get addToHomePhoneOnly => 'スマホで教会の URL を開いてから、ホーム画面に追加してください';
 
   @override
-  String get addToHomeNotificationsAfter => '開いたあと奉仕の通知を受け取るには：マイページ → 通知 → 通知をオンにする';
+  String get addToHomeNotificationsAfter => 'ホーム画面から開いたら、「マイページ」で通知をオンにすると奉仕の通知が届きます';
 
   @override
   String get addToHomeIosShare => '共有';
@@ -1402,13 +1402,13 @@ class L10nJa extends L10n {
   String get churchLinkNeedsHttps => 'https:// で始まるリンクを入力してください';
 
   @override
-  String get churchLinkFooter => 'すべてのメンバーのホームのいちばん上に表示され、タップするとブラウザで開きます。';
+  String get churchLinkFooter => 'すべてのメンバーのホームのいちばん上に表示され、タップするとブラウザで開きます';
 
   @override
-  String get churchLinkRemove => '教会のリンクを削除';
+  String get churchLinkRemove => '教会のリンクを外す';
 
   @override
-  String get churchLinkRemoved => '教会のリンクを削除しました';
+  String get churchLinkRemoved => '教会のリンクを外しました';
 
   @override
   String get churchLinkOpens => 'ブラウザで開く';
@@ -1437,7 +1437,7 @@ class L10nJa extends L10n {
 
   @override
   String linkSourceFetched(String title) {
-    return '保存しました。「$title」を取得しました';
+    return '保存しました。「$title」を取得しました。';
   }
 
   @override
@@ -1461,7 +1461,7 @@ class L10nJa extends L10n {
   String get linkErrNetwork => '相手のサイトに接続できません';
 
   @override
-  String get linkErrUnknown => '原因不明です。もう一度お試しください';
+  String get linkErrUnknown => '原因不明です。もう一度お試しください。';
 
   @override
   String get webhook => '外部通知';
@@ -1473,7 +1473,7 @@ class L10nJa extends L10n {
   String get webhookNeedsHttps => 'https:// で始まる URL を入力してください';
 
   @override
-  String get webhookSecretOptional => 'シークレット（任意。空欄なら自動生成）';
+  String get webhookSecretOptional => 'シークレット（任意、空欄なら自動生成）';
 
   @override
   String get webhookSecretTooShort => 'シークレットは16文字以上にしてください';
@@ -1491,7 +1491,7 @@ class L10nJa extends L10n {
   String get webhookRosterHint => '数分以内の変更は1件にまとめて送ります';
 
   @override
-  String get webhookFooter => 'カレンダーや奉仕表が変更されたとき、この URL に通知を送ります。たとえば n8n で受けて LINE グループに転送できます。通知にはすべてシークレットで署名します。';
+  String get webhookFooter => 'カレンダーや奉仕表が変更されたとき、この URL に通知を送ります。たとえば n8n で受けて LINE グループに転送できます。通知はシークレットで署名します。';
 
   @override
   String get webhookTest => 'テスト送信';
@@ -1549,7 +1549,7 @@ class L10nJa extends L10n {
   String get webhookOffTitle => '外部通知をオフにしますか？';
 
   @override
-  String get webhookOffMessage => 'URL とシークレットは削除され、もう一度設定が必要になります。';
+  String get webhookOffMessage => 'URL とシークレットは削除され、もう一度設定が必要になります';
 
   @override
   String get webhookOffAction => 'オフにする';
@@ -1579,17 +1579,18 @@ class L10nJa extends L10n {
   String get exportCsvPeople => 'メンバー';
 
   @override
-  String get errMoveInvalid => '移行ファイルではありません。正しいファイルを選んだか確認してください';
+  String get errMoveInvalid => '移行ファイルではありません。正しいファイルを選んだか確認してください。';
 
   @override
-  String get errMoveTooLarge => 'メンバーが2,000人、または奉仕表が20,000日を超えるため、自動で移行できません。お問い合わせください';
+  String get errMoveTooLarge =>
+      'メンバーが2,000人、または奉仕表が20,000日を超えるため、自動で移行できません。GitHub の church-staff-pwa で issue を作成してください。';
 
   @override
   String get moveFromSelfHost => '旧バージョンから移行';
 
   @override
   String get moveIntro =>
-      '旧バージョン（church-staff-pwa）の Cloud Shell で移行コマンドを実行すると、移行ファイルができます。アップロード後にプレビューを確認し、確定すると教会が作成されます。';
+      '旧バージョン（church-staff-pwa）の Cloud Shell で移行コマンドを実行し、できた移行ファイルをアップロードしてください。プレビューを確認すると教会が作成されます。';
 
   @override
   String get movePickFile => '移行ファイルを選択';
@@ -1673,7 +1674,7 @@ class L10nJa extends L10n {
   String get mergePending => '未ログインのデータを統合';
 
   @override
-  String get mergePendingFooter => 'メンバーが別のメールアドレスで参加したとき、旧名簿にあるその人のデータを統合します。奉仕表・所属集会・権限が引き継がれます。';
+  String get mergePendingFooter => 'メンバーが別のメールアドレスで参加したとき、旧名簿のデータを統合します。奉仕表・所属集会・権限グループが引き継がれます。';
 
   @override
   String get mergePendingPick => '未ログインのデータを選択';
@@ -1685,7 +1686,7 @@ class L10nJa extends L10n {
 
   @override
   String mergePendingBody(String pending) {
-    return '奉仕表上の「$pending」がこのメンバーに置き換わり、所属集会と権限グループも追加されます。';
+    return '奉仕表上の「$pending」がこのメンバーに置き換わり、所属集会と権限グループも追加されます';
   }
 
   @override
@@ -1707,7 +1708,7 @@ class L10nJa extends L10n {
 
   @override
   String fundingMonthsLeft(int months) {
-    return '今月分は足りています。余りであと$monthsか月まかなえます';
+    return '今月分は足りています。余りであと$monthsか月まかなえます。';
   }
 
   @override
@@ -1727,7 +1728,7 @@ class L10nJa extends L10n {
   String get fundingCostsHeader => '費用';
 
   @override
-  String get fundingCostsFooter => '価格が変わったら更新してください。年払いの項目は各月に均等に割ります';
+  String get fundingCostsFooter => '価格が変わったら更新してください。年払いの項目は各月に均等に割ります。';
 
   @override
   String get fundingMonthsHeader => '最近の数か月';
@@ -1792,10 +1793,10 @@ class L10nJa extends L10n {
       'date：YYYY-MM-DD。担当者がいない場合は people を [] にします。\nevents は省略できます。特別行事の color は 0〜5 の色番号のみです。';
 
   @override
-  String get importPhotoFormatError => '読み取り結果の形式が正しくありません。もう一度読み取るか、詳細設定の JSON を使ってください';
+  String get importPhotoFormatError => '読み取り結果の形式が正しくありません。もう一度読み取るか、詳細設定の JSON を使ってください。';
 
   @override
-  String get importJsonSyntaxError => 'JSON の形式が正しくありません。下の例の配列形式を使ってください';
+  String get importJsonSyntaxError => 'JSON の形式が正しくありません。下の例の配列形式を使ってください。';
 
   @override
   String get importJsonEdit => 'JSON を編集';
@@ -1841,10 +1842,10 @@ class L10nJa extends L10n {
   String get importEditEvent => '特別行事を編集';
 
   @override
-  String get importConflict => '奉仕表が変更されました。差分をもう一度確認してから適用してください';
+  String get importConflict => '奉仕表が変更されました。差分をもう一度確認してから適用してください。';
 
   @override
-  String get importScopeChanged => '教会またはアカウントが切り替わりました。もう一度読み込んでください';
+  String get importScopeChanged => '教会またはアカウントが切り替わりました。もう一度読み込んでください。';
 
   @override
   String importRow(int number) {
@@ -1868,7 +1869,7 @@ class L10nJa extends L10n {
 
   @override
   String importRemoveDuty(String role, String names) {
-    return '$roleを削除：$names';
+    return '$roleを外す：$names';
   }
 
   @override
@@ -1893,7 +1894,7 @@ class L10nJa extends L10n {
 
   @override
   String importRemoveEvent(String name) {
-    return '特別行事を削除：$name';
+    return '特別行事を外す：$name';
   }
 
   @override
@@ -1923,7 +1924,7 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get importGuestUnlinked => 'ゲスト（アカウントにつながない）';
+  String get importGuestUnlinked => 'ゲスト（アカウントにつながっていない）';
 
   @override
   String get importNameNeedsConfirm => '名前を確認してください';
@@ -1943,7 +1944,7 @@ class L10nJa extends L10n {
   String get importReplace => 'その日の割り当てをすべて置き換え';
 
   @override
-  String get importReplaceHelp => '記載のない担当と特別行事を削除します。ほかの日付には影響しません';
+  String get importReplaceHelp => '記載のない担当と特別行事を外します。ほかの日付には影響しません。';
 
   @override
   String get importFixData => 'データを修正してから読み込んでください';
@@ -2016,7 +2017,7 @@ class L10nJa extends L10n {
   String get importIssueDate => 'date には有効な YYYY-MM-DD 形式の日付を入力してください';
 
   @override
-  String get importIssueDuplicateDate => '日付が重複しています。1つの行にまとめてください';
+  String get importIssueDuplicateDate => '日付が重複しています。1つの行にまとめてください。';
 
   @override
   String get importIssueDutiesArray => 'duties には配列を入力してください';
@@ -2033,7 +2034,7 @@ class L10nJa extends L10n {
 
   @override
   String importIssuePeopleArray(int index) {
-    return '$index番目の people には空白でない名前の文字列配列を入力してください。担当者がいない場合は [] にします';
+    return '$index番目の people には空白でない名前の文字列配列を入力してください。担当者がいない場合は [] にします。';
   }
 
   @override
@@ -2061,7 +2062,7 @@ class L10nJa extends L10n {
 
   @override
   String importIssueResolvedDuplicatePeople(String role) {
-    return '$role：確認後に名前が重複しています。重複した名前を削除してください';
+    return '$role：確認後に名前が重複しています。重複した名前を削除してください。';
   }
 
   @override
@@ -2074,7 +2075,7 @@ class L10nJa extends L10n {
   String get appUpdateNativeTitle => 'アプリのアップデート';
 
   @override
-  String get appUpdateNativeNote => 'App Store または Google Play でアップデートを確認してください。';
+  String get appUpdateNativeNote => 'App Store または Google Play でアップデートを確認してください';
 
   @override
   String get appUpdateCheck => 'アップデートを確認';
@@ -2083,22 +2084,22 @@ class L10nJa extends L10n {
   String get appUpdateChecking => '確認中…';
 
   @override
-  String get appUpdateApply => 'アップデートして開き直す';
+  String get appUpdateApply => '更新して開き直す';
 
   @override
   String get appUpdateApplying => 'アップデート中…';
 
   @override
-  String get appUpdateCurrent => '最新のリリースを使用しています。';
+  String get appUpdateCurrent => '最新のバージョンです';
 
   @override
-  String get appUpdateReady => '新しいバージョンの準備ができました。編集を終えてからアップデートしてください。自動では再読み込みしません。';
+  String get appUpdateReady => '新しいバージョンがあります';
 
   @override
-  String get appUpdateFinishEditing => '先に編集を終えるか保存してから、「マイページ」に戻ってアップデートしてください。';
+  String get appUpdateFinishEditing => '保存していない内容があります。保存してから更新してください。';
 
   @override
-  String get appUpdateFinishEditingNote => '先に編集を終えるか保存してください。';
+  String get appUpdateFinishEditingNote => '先に編集中の内容を保存してください';
 
   @override
   String get appUpdateFailed => 'アップデートできませんでした。接続を確認して、もう一度お試しください。';
@@ -2107,10 +2108,22 @@ class L10nJa extends L10n {
   String get appUpdateScopeChanged => 'アカウントまたは教会が変わりました。もう一度アップデートを確認してください。';
 
   @override
-  String get appUpdateBackToMe => '「マイページ」に戻ってアップデートしてください。';
+  String get appUpdateBackToMe => 'もう一度「更新して開き直す」をタップしてください';
 
   @override
-  String get appUpdateCheckFirst => '先にアップデートを確認してください。';
+  String get appUpdateCheckFirst => '先にアップデートを確認してください';
+
+  @override
+  String get servicesAdminOnly => '奉仕の設定を変更できるのは管理者だけです';
+
+  @override
+  String get importExampleRole => '奏楽';
+
+  @override
+  String get importExamplePerson => '佐藤 美咲';
+
+  @override
+  String get importExampleEvent => '聖餐式';
 
   @override
   String get rosterShowMore => 'さらに表示';
@@ -2155,22 +2168,22 @@ class L10nJa extends L10n {
   String get rosterFutureChangesFooter => '変更するのは明日以降の保存済みの奉仕表だけです';
 
   @override
-  String get rosterFutureChangesConflict => '同じ名前の項目がすでにあります。先に調整してください';
+  String get rosterFutureChangesConflict => '同じ名前の項目がすでにあります。先に調整してください。';
 
   @override
   String get rosterApplyFutureChanges => '変更を適用';
 
   @override
-  String get rosterRemoveFutureGuest => '今後のゲストの割り当てを削除';
+  String get rosterRemoveFutureGuest => '今後のゲストの割り当てを外す';
 
   @override
   String rosterRemoveFutureGuestTitle(String name) {
-    return '「$name」の今後の割り当てを削除';
+    return '「$name」の今後の割り当てを外す';
   }
 
   @override
   String rosterFutureGuestRemoved(int count) {
-    return '今後の割り当てを$count件削除しました';
+    return '今後の割り当てを$count件外しました';
   }
 
   @override
@@ -2184,29 +2197,29 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get errConflict => 'ほかのメンバーがデータを変更しました。再読み込みしてから、もう一度お試しください。';
+  String get errConflict => 'ほかのメンバーが変更したばかりです。再読み込みしてから、もう一度変更してください。';
 
   @override
-  String get errOfflineReadOnly => '現在オフラインです。取得済みのデータだけ表示できます。';
+  String get errOfflineReadOnly => 'オフラインです。接続すると保存できます。';
 
   @override
-  String get errTooManyChanges => '変更が多すぎます。範囲を絞って、もう一度お試しください。';
+  String get errTooManyChanges => '一度に変更できる奉仕表は500件までです。何回かに分けて変更してください。';
 
   @override
   String get undoDone => '元に戻しました';
 
   @override
-  String get undoFailed => '元に戻せませんでした。もう一度お試しください';
+  String get undoFailed => '元に戻せませんでした。もう一度お試しください。';
 
   @override
-  String get offlineReadOnlyBanner => 'オフライン（閲覧のみ）：接続すると変更を保存できます';
+  String get offlineReadOnlyBanner => 'オフラインです。前回のデータを表示しています。接続すると保存できます。';
 
   @override
-  String get calendarCached => 'オフラインのデータ';
+  String get calendarCached => '前回のデータを表示しています';
 
   @override
   String calendarReadAt(String time) {
-    return '$timeに取得したデータ';
+    return '$timeに更新';
   }
 
   @override
@@ -2271,7 +2284,7 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get timeZoneFooter => '今日の日付、夜7時の奉仕のリマインダー、カレンダーの時刻は、スマホの場所ではなく教会のタイムゾーンに従います。';
+  String get timeZoneFooter => '今日の日付、奉仕のリマインダー、カレンダーの時刻は教会のタイムゾーンに従います';
 
   @override
   String timeZoneChangeTitle(String city) {
@@ -2282,7 +2295,9 @@ class L10nJa extends L10n {
   String get timeZoneChangeBody => '行事の時刻は新しいタイムゾーンで表示されます。奉仕表の日付は変わりません。';
 
   @override
-  String get timeZoneChange => '変更';
+  String timeZoneChange(String city) {
+    return '$city時間に変更';
+  }
 
   @override
   String churchLocalTime(String city) {

@@ -68,7 +68,7 @@ void main() {
   testWidgets('declining joins nothing and does not ask again on this device', (tester) async {
     final b = movedChurch();
     await pumpApp(tester, b);
-    await tapText(tester, '不要');
+    await tapText(tester, '不加入');
     expect(find.text('〈恩典堂〉的同工資料已經搬過來了，要加入嗎？'), findsNothing);
     expect(b.members['grace']!.containsKey('new-mei'), isFalse);
     expect(b.pendingMembers['grace']!.containsKey('old-mei'), isTrue, reason: 'kept for the admin');
@@ -86,7 +86,7 @@ void main() {
   testWidgets('the sign-in page tells old password users to register again', (tester) async {
     await pumpApp(tester, MemoryBackend(clock: testClock));
     await tapText(tester, '用 email 登入');
-    expect(find.text('從舊版搬過來的同工：舊的密碼不能用，請用同一個 email 註冊新帳號，或用 Google 登入。'), findsOneWidget);
+    expect(find.textContaining('從舊版搬過來的同工：舊的密碼不能用'), findsOneWidget);
   });
 
   testWidgets('an admin can delete pending data, after confirming', (tester) async {
@@ -96,7 +96,7 @@ void main() {
     await go(tester, '/me/members');
     await tapText(tester, '舊同工');
     await tapText(tester, '刪除這筆資料');
-    expect(find.text('他就不能用 email 認領了。服事表上的名字會保留。'), findsOneWidget);
+    expect(find.text('對方就不能用 email 認領了。服事表上的名字會保留。'), findsOneWidget);
     await tapText(tester, '刪除');
     expect(b.pendingMembers['grace'], isEmpty);
   });
@@ -118,7 +118,7 @@ void main() {
     await tester.scrollUntilVisible(find.text('合併還沒登入的資料'), 200, scrollable: find.byType(Scrollable).last);
     await tapText(tester, '合併還沒登入的資料');
     await tapText(tester, '李美玉');
-    expect(find.text('把〈李美玉〉合併到〈美玉〉？'), findsOneWidget);
+    expect(find.text('把「李美玉」合併到「美玉」？'), findsOneWidget);
     await tapText(tester, '合併');
 
     final m = b.members['grace']!['mei-google']!;

@@ -129,7 +129,7 @@ class L10nEn extends L10n {
 
   @override
   String resetSent(String email) {
-    return 'We sent a password reset email to $email';
+    return 'Password reset email sent to $email';
   }
 
   @override
@@ -155,7 +155,7 @@ class L10nEn extends L10n {
   String get errNetwork => 'Can’t connect. Check your connection and try again.';
 
   @override
-  String get errUnknown => 'Something went wrong. Please try again.';
+  String get errUnknown => 'Something went wrong. Try again.';
 
   @override
   String get nameRequired => 'Enter your name';
@@ -168,7 +168,7 @@ class L10nEn extends L10n {
 
   @override
   String verifyEmailBody(String email) {
-    return 'We sent a verification email to $email. Tap the link in it, then come back here.';
+    return 'A verification email was sent to $email. Tap the link in it, then come back here.';
   }
 
   @override
@@ -215,10 +215,10 @@ class L10nEn extends L10n {
 
   @override
   String get errDuplicateName =>
-      'A church with this name already exists. If someone else registered it first, contact us.';
+      'A church with this name already exists. If someone else took it first, report the problem.';
 
   @override
-  String get contactUs => 'Contact us';
+  String get contactUs => 'Report a problem';
 
   @override
   String joinTitle(String church) {
@@ -281,7 +281,7 @@ class L10nEn extends L10n {
   String get switchChurch => 'Switch church';
 
   @override
-  String get myServicesTitle => 'Your upcoming serving';
+  String get myServicesTitle => 'When you’re serving';
 
   @override
   String get noUpcomingServices => 'You’re not scheduled to serve. When you are, it’ll show up here.';
@@ -426,7 +426,7 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get emptySlot => 'Open';
+  String get emptySlot => 'TBD';
 
   @override
   String removeFromDuty(String duty) {
@@ -540,7 +540,7 @@ class L10nEn extends L10n {
   String get leaveChurchBody => 'You’ll need a new invite to come back';
 
   @override
-  String get leave => 'Leave';
+  String get leave => 'Leave church';
 
   @override
   String leftChurch(String church) {
@@ -599,7 +599,7 @@ class L10nEn extends L10n {
   String get roleLeader => 'Small group leader';
 
   @override
-  String get roleStaff => 'Team member';
+  String get roleStaff => 'Regular team member';
 
   @override
   String get roleMember => 'Group member';
@@ -611,7 +611,7 @@ class L10nEn extends L10n {
   String get roleAdminCan => 'All settings, inviting and removing team members';
 
   @override
-  String get groups => 'Permissions';
+  String get groups => 'Permission groups';
 
   @override
   String get groupRosterEditors => 'Edit schedules';
@@ -765,7 +765,7 @@ class L10nEn extends L10n {
 
   @override
   String deleteAccountLastAdmin(String churches) {
-    return 'You’re the only admin of $churches. Go to Team members and make someone else an admin first.';
+    return 'You’re the only admin of $churches. Make another team member an admin first.';
   }
 
   @override
@@ -806,7 +806,7 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get adminSuspendBody => 'All team members will see the suspended screen right away.';
+  String get adminSuspendBody => 'All team members will see the suspended screen right away';
 
   @override
   String get statusActive => 'Active';
@@ -881,7 +881,7 @@ class L10nEn extends L10n {
   String get notifMemberLeft => 'Team member left';
 
   @override
-  String get notifMemberLeftSub => 'When someone leaves the church (admins)';
+  String get notifMemberLeftSub => 'When someone leaves the church (admins only)';
 
   @override
   String get notifThisChurch => 'Notifications for this church';
@@ -896,7 +896,7 @@ class L10nEn extends L10n {
   String get notifNotAllowed => 'Notifications aren’t on yet. When asked, tap “Allow.”';
 
   @override
-  String get notifRegisterFailed => 'Notifications aren’t set up yet. We’ll try again next time you open the app.';
+  String get notifRegisterFailed => 'Notifications aren’t set up yet. The app will try again next time you open it.';
 
   @override
   String get pushView => 'View';
@@ -1024,7 +1024,7 @@ class L10nEn extends L10n {
       'Photo import isn’t available right now. Try again later, or fill in the schedule yourself.';
 
   @override
-  String get importPreview => 'Review and apply';
+  String get importPreview => 'Preview';
 
   @override
   String get importApply => 'Apply to schedule';
@@ -1061,7 +1061,7 @@ class L10nEn extends L10n {
   String get importPastDays => 'Past dates, not imported';
 
   @override
-  String get importBadRows => 'Couldn’t read';
+  String get importBadRows => 'Unreadable rows';
 
   @override
   String get jsonHint => 'Paste the JSON result';
@@ -1101,7 +1101,7 @@ class L10nEn extends L10n {
 
   @override
   String get calUnverifiedNote =>
-      'Next, Google will say “Google hasn’t verified this app.” That’s because Martha, sit is still under review. Tap “Advanced,” then “Go to…” to continue. It only reads and writes the calendar you choose.';
+      'Next, Google will say “Google hasn’t verified this app.” Tap “Advanced,” then “Go to…” to continue. It only reads and writes the calendar you choose.';
 
   @override
   String get calConnectedOk => 'Google Calendar connected';
@@ -1216,7 +1216,7 @@ class L10nEn extends L10n {
   String get supportFailed => 'Payment didn’t go through. You weren’t charged.';
 
   @override
-  String get supportUnavailable => 'Can’t reach the store right now';
+  String get supportUnavailable => 'Can’t reach the store right now. Try again later.';
 
   @override
   String get supporterBadge => 'Supporter';
@@ -1428,7 +1428,7 @@ class L10nEn extends L10n {
 
   @override
   String get addToHomeNotificationsAfter =>
-      'To get serving notifications after opening it: Me → Notifications → Turn on notifications';
+      'After opening it from your Home Screen, turn on notifications in Me to get serving notifications';
 
   @override
   String get addToHomeIosShare => 'Share';
@@ -1519,7 +1519,7 @@ class L10nEn extends L10n {
 
   @override
   String linkSourceFetched(String title) {
-    return 'Saved. Fetched “$title”';
+    return 'Saved. Fetched “$title.”';
   }
 
   @override
@@ -1574,7 +1574,7 @@ class L10nEn extends L10n {
 
   @override
   String get webhookFooter =>
-      'When the calendar or a schedule changes, a notification is sent to this URL — for example, to n8n to forward to a LINE group. Every notification is signed with the secret.';
+      'When the calendar or a schedule changes, a notification is sent to this URL, for example to n8n to forward to a LINE group. Every notification is signed with the secret.';
 
   @override
   String get webhookTest => 'Send test';
@@ -1642,7 +1642,7 @@ class L10nEn extends L10n {
   String get exportData => 'Export data';
 
   @override
-  String get exportFooter => 'Export all of the church’s data: a JSON file, plus a schedule you can open in Excel.';
+  String get exportFooter => 'Export all of the church’s data: a JSON file, plus a schedule you can open in Excel';
 
   @override
   String get exported => 'Exported';
@@ -1667,14 +1667,14 @@ class L10nEn extends L10n {
 
   @override
   String get errMoveTooLarge =>
-      'More than 2,000 team members or 20,000 schedule days can’t be moved automatically. Please contact us.';
+      'More than 2,000 team members or 20,000 schedule days can’t be moved automatically. Open an issue for church-staff-pwa on GitHub.';
 
   @override
-  String get moveFromSelfHost => 'Move from the old version';
+  String get moveFromSelfHost => 'Move from old version';
 
   @override
   String get moveIntro =>
-      'Run the move command in the old version’s (church-staff-pwa) Cloud Shell to get a move file. After you upload it, check the preview. The church is created only after you confirm.';
+      'Run the move command in the old version’s (church-staff-pwa) Cloud Shell, then upload the move file it makes. The church is created only after you confirm the preview.';
 
   @override
   String get movePickFile => 'Choose move file';
@@ -1754,7 +1754,7 @@ class L10nEn extends L10n {
   String get claimJoin => 'Join';
 
   @override
-  String get claimDecline => 'No thanks';
+  String get claimDecline => 'Don’t join';
 
   @override
   String get movedPasswordNote =>
@@ -1775,14 +1775,14 @@ class L10nEn extends L10n {
   String get pendingDeleted => 'Deleted';
 
   @override
-  String get mergePending => 'Merge a record not signed in';
+  String get mergePending => 'Merge a pending record';
 
   @override
   String get mergePendingFooter =>
-      'When a team member joins with a different email, merge their record from the old list. Their schedules, services, and permissions carry over.';
+      'When a team member joins with a different email, merge their pending record from the old list. Their schedules, services, and permission groups carry over.';
 
   @override
-  String get mergePendingPick => 'Choose a record not signed in';
+  String get mergePendingPick => 'Choose a pending record';
 
   @override
   String mergePendingTitle(String pending, String member) {
@@ -1791,7 +1791,7 @@ class L10nEn extends L10n {
 
   @override
   String mergePendingBody(String pending) {
-    return '“$pending” on schedules will become this team member, and their services and permission groups will be added.';
+    return '“$pending” on schedules will become this team member, and their services and permission groups will be added';
   }
 
   @override
@@ -1839,7 +1839,7 @@ class L10nEn extends L10n {
   String get fundingCostsHeader => 'Costs';
 
   @override
-  String get fundingCostsFooter => 'Update when prices change. Yearly items are split evenly across the months';
+  String get fundingCostsFooter => 'Update when prices change. Yearly items are split evenly across the months.';
 
   @override
   String get fundingMonthsHeader => 'Recent months';
@@ -2088,7 +2088,7 @@ class L10nEn extends L10n {
 
   @override
   String importGrantQualification(String name, String role) {
-    return 'Let $name serve on $role';
+    return 'Let $name serve as $role';
   }
 
   @override
@@ -2136,7 +2136,7 @@ class L10nEn extends L10n {
 
   @override
   String importIssueDutyFields(int index) {
-    return 'Role $index supports only role and people';
+    return 'Role $index: only the role and people fields are supported';
   }
 
   @override
@@ -2187,7 +2187,7 @@ class L10nEn extends L10n {
   String get appUpdateNativeTitle => 'App updates';
 
   @override
-  String get appUpdateNativeNote => 'Check for updates in the App Store or Google Play.';
+  String get appUpdateNativeNote => 'Check for updates in the App Store or Google Play';
 
   @override
   String get appUpdateCheck => 'Check for updates';
@@ -2202,16 +2202,16 @@ class L10nEn extends L10n {
   String get appUpdateApplying => 'Updating…';
 
   @override
-  String get appUpdateCurrent => 'You’re on the latest release.';
+  String get appUpdateCurrent => 'You’re on the latest version';
 
   @override
-  String get appUpdateReady => 'A new version is ready. Update when you finish editing; it won’t refresh on its own.';
+  String get appUpdateReady => 'A new version is available';
 
   @override
-  String get appUpdateFinishEditing => 'Finish editing or save first, then go back to “Me” to update.';
+  String get appUpdateFinishEditing => 'You have unsaved changes. Save them, then update.';
 
   @override
-  String get appUpdateFinishEditingNote => 'Finish editing or save first.';
+  String get appUpdateFinishEditingNote => 'Save what you’re editing first';
 
   @override
   String get appUpdateFailed => 'Couldn’t update. Check your connection and try again.';
@@ -2220,10 +2220,22 @@ class L10nEn extends L10n {
   String get appUpdateScopeChanged => 'The account or church changed. Check for updates again.';
 
   @override
-  String get appUpdateBackToMe => 'Go back to “Me” to update.';
+  String get appUpdateBackToMe => 'Tap “Update and reopen” again';
 
   @override
-  String get appUpdateCheckFirst => 'Check for updates first.';
+  String get appUpdateCheckFirst => 'Check for updates first';
+
+  @override
+  String get servicesAdminOnly => 'Only admins can change service settings';
+
+  @override
+  String get importExampleRole => 'Piano';
+
+  @override
+  String get importExamplePerson => 'Grace Lee';
+
+  @override
+  String get importExampleEvent => 'Communion';
 
   @override
   String get rosterShowMore => 'Show more';
@@ -2309,13 +2321,13 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get errConflict => 'Another team member changed this. Reload and try again.';
+  String get errConflict => 'Another team member just changed this. Reload and make your change again.';
 
   @override
-  String get errOfflineReadOnly => 'You’re offline. You can only view data that’s already loaded.';
+  String get errOfflineReadOnly => 'You’re offline. Connect to save changes.';
 
   @override
-  String get errTooManyChanges => 'Too many changes. Narrow the range and try again.';
+  String get errTooManyChanges => 'You can change up to 500 schedules at a time. Make the changes in smaller batches.';
 
   @override
   String get undoDone => 'Undone';
@@ -2324,14 +2336,14 @@ class L10nEn extends L10n {
   String get undoFailed => 'Couldn’t undo. Try again.';
 
   @override
-  String get offlineReadOnlyBanner => 'Offline, read-only: connect to save changes';
+  String get offlineReadOnlyBanner => 'Offline. Showing what was last loaded. Connect to save changes.';
 
   @override
-  String get calendarCached => 'Offline data';
+  String get calendarCached => 'Showing what was last loaded';
 
   @override
   String calendarReadAt(String time) {
-    return 'As of $time';
+    return 'Updated $time';
   }
 
   @override
@@ -2396,8 +2408,7 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get timeZoneFooter =>
-      'Today, the 7 pm reminders and calendar times all follow the church’s time zone, wherever your phone is.';
+  String get timeZoneFooter => 'Today’s date, serving reminders, and calendar times follow the church’s time zone';
 
   @override
   String timeZoneChangeTitle(String city) {
@@ -2408,7 +2419,9 @@ class L10nEn extends L10n {
   String get timeZoneChangeBody => 'Event times will show in the new time zone. Schedule dates stay the same.';
 
   @override
-  String get timeZoneChange => 'Switch';
+  String timeZoneChange(String city) {
+    return 'Switch to $city time';
+  }
 
   @override
   String churchLocalTime(String city) {

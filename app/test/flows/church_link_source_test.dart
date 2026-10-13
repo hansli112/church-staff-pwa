@@ -17,7 +17,7 @@ void main() {
       ..linkContents['grace'] = failed;
     await pumpApp(tester, b);
     expect(find.text('固定標題'), findsNothing, reason: 'the fixed link must not stand in for the source');
-    expect(find.textContaining('來源尚未提供今天的內容'), findsOneWidget);
+    expect(find.textContaining('來源還沒有今天的內容'), findsOneWidget);
 
     b.linkSourceAnswers[source] = const LinkContent(
       source: source,
@@ -28,7 +28,7 @@ void main() {
     await tester.tap(find.widgetWithText(TextButton, '重試'));
     await settle(tester);
     expect(find.text('今日經文'), findsOneWidget);
-    expect(find.textContaining('來源尚未提供今天的內容'), findsNothing);
+    expect(find.textContaining('來源還沒有今天的內容'), findsNothing);
   });
 
   testWidgets('管理員在設定頁重新抓取已儲存的來源，不覆寫尚未儲存的欄位', (tester) async {
@@ -38,7 +38,7 @@ void main() {
     await pumpApp(tester, b);
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/link');
     await settle(tester);
-    expect(find.textContaining('來源尚未提供今天的內容'), findsOneWidget);
+    expect(find.textContaining('來源還沒有今天的內容'), findsOneWidget);
     await tester.enterText(find.widgetWithText(TextField, '標題'), '還沒儲存的標題');
     b.linkSourceAnswers[source] = const LinkContent(
       source: source,
@@ -58,7 +58,7 @@ void main() {
       ..churchLinks['grace'] = link
       ..linkContents['grace'] = failed;
     await pumpApp(tester, b);
-    expect(find.textContaining('來源尚未提供今天的內容'), findsOneWidget);
+    expect(find.textContaining('來源還沒有今天的內容'), findsOneWidget);
     expect(find.widgetWithText(TextButton, '重試'), findsNothing);
   });
 }

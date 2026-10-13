@@ -28,7 +28,7 @@ class ServicesScreen extends ConsumerWidget {
     if (!(me.value?.isAdmin ?? false)) {
       return Scaffold(
         appBar: AppBar(title: Text(l10n.serviceSettings)),
-        body: me.hasValue ? EmptyState(message: l10n.noPermission) : null,
+        body: me.hasValue ? EmptyState(message: l10n.servicesAdminOnly) : null,
       );
     }
     final settings = ref.watch(servicesProvider).value;
@@ -194,7 +194,7 @@ class ServiceEditorScreen extends ConsumerWidget {
     if (!(me.value?.isAdmin ?? false)) {
       return Scaffold(
         appBar: AppBar(title: Text(l10n.serviceSettings)),
-        body: me.hasValue ? EmptyState(message: l10n.noPermission) : null,
+        body: me.hasValue ? EmptyState(message: l10n.servicesAdminOnly) : null,
       );
     }
     final c = AppColors.of(context);

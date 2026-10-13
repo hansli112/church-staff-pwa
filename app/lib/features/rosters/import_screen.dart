@@ -376,9 +376,11 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
               Padding(
                 padding: const EdgeInsets.all(Space.m),
                 child: SelectableText(
-                  // The JSON protocol example is never translated.
-                  '[{"date":"2026-10-18","duties":[{"role":"司琴","people":["李美玉"]}],'
-                  '"events":[{"name":"聖餐","color":0}]}]\n'
+                  // The JSON protocol's field names are never translated;
+                  // its example values are.
+                  '[{"date":"2026-10-18","duties":[{"role":${jsonEncode(l10n.importExampleRole)},'
+                  '"people":[${jsonEncode(l10n.importExamplePerson)}]}],'
+                  '"events":[{"name":${jsonEncode(l10n.importExampleEvent)},"color":0}]}]\n'
                   '${l10n.importFormatHelp}',
                   style: AppText.footnote,
                 ),
@@ -758,8 +760,11 @@ String importIssueText(L10n l10n, ImportIssue issue) {
     ImportIssueCode.peopleArray => l10n.importIssuePeopleArray(index()),
     ImportIssueCode.duplicatePeople => l10n.importIssueDuplicatePeople(index()),
     ImportIssueCode.eventsArray => l10n.importIssueEventsArray,
-    // The protocol literal is never translated.
-    ImportIssueCode.eventObject => l10n.importIssueEventObject(index(), '{"name":"活動名稱","color":0}'),
+    // The protocol's field names are never translated; the example value is.
+    ImportIssueCode.eventObject => l10n.importIssueEventObject(
+      index(),
+      '{"name":${jsonEncode(l10n.eventName)},"color":0}',
+    ),
     ImportIssueCode.eventName => l10n.importIssueEventName(index()),
     ImportIssueCode.eventColor => l10n.importIssueEventColor(index()),
     ImportIssueCode.resolvedDuplicatePeople => l10n.importIssueResolvedDuplicatePeople(issue.args['role'] as String),

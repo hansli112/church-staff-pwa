@@ -184,10 +184,10 @@ void main() {
     await go(tester, '/me/services/sunday');
     expect(find.text('聚會名稱'), findsNothing);
     expect(find.text('新增服事項目'), findsNothing);
-    expect(find.text('你沒有權限做這件事'), findsOneWidget);
+    expect(find.text('只有管理員能改服事設定'), findsOneWidget);
     await go(tester, '/me/services');
     expect(find.text('新增聚會'), findsNothing);
-    expect(find.text('你沒有權限做這件事'), findsOneWidget);
+    expect(find.text('只有管理員能改服事設定'), findsOneWidget);
   });
 
   testWidgets('a refused swipe removal leaves the configured option visible and reports failure', (tester) async {
@@ -200,7 +200,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('司琴'), findsOneWidget);
-    expect(find.text('目前無法連線，只能查看已取得的資料。'), findsOneWidget);
+    expect(find.text('離線中，連線後才能儲存'), findsOneWidget);
     expect(find.text('復原'), findsNothing);
     expect(b.services['grace']!.byId('sunday')!.duties, contains('司琴'));
   });
@@ -310,7 +310,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/sunday/2026-10-11');
     await tapText(tester, '司琴');
-    expect(find.text('外請姓名'), findsOneWidget);
+    expect(find.text('外請名字'), findsOneWidget);
     await tapText(tester, 'John Chen');
     expect(find.text('也讓John Chen負責司琴？'), findsNothing);
     await tapText(tester, '完成');

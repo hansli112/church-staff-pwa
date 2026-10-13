@@ -53,7 +53,7 @@ void main() {
     await tester.enterText(field('接收網址'), hook);
     await tester.enterText(field('密鑰（選填，留空會自動產生）'), 'short');
     await tapText(tester, '儲存');
-    expect(find.text('密鑰至少要 16 個字元'), findsOneWidget);
+    expect(find.text('密鑰至少要 16 個字'), findsOneWidget);
     await tester.enterText(field('密鑰（選填，留空會自動產生）'), 'our-shared-secret-2026');
     await tapText(tester, '儲存');
     expect(b.webhookSecrets['grace'], 'our-shared-secret-2026');
@@ -77,14 +77,14 @@ void main() {
     expect(find.text('成功'), findsOneWidget);
     expect(find.textContaining('上次送出：'), findsOneWidget);
     expect(find.textContaining('10/1 09:00'), findsOneWidget);
-    expect(find.textContaining('・成功'), findsOneWidget);
+    expect(find.textContaining(' · 成功'), findsOneWidget);
 
     b.webhookAnswer = const WebhookDelivery(ok: false, status: 500, error: WebhookDeliveryError.http);
     await tapText(tester, '傳送測試');
-    expect(find.textContaining('・對方回應 500'), findsOneWidget);
+    expect(find.textContaining(' · 對方回應 500'), findsOneWidget);
     b.webhookAnswer = const WebhookDelivery(ok: false, error: WebhookDeliveryError.timeout);
     await tapText(tester, '傳送測試');
-    expect(find.textContaining('・逾時'), findsOneWidget);
+    expect(find.textContaining(' · 逾時'), findsOneWidget);
   });
 
   testWidgets('a new secret replaces the old one and is shown once', (tester) async {
@@ -94,7 +94,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/me/webhook');
     await tapText(tester, '換新的密鑰');
-    expect(find.text('舊的密鑰會立刻失效，接收端要改用新的。'), findsOneWidget);
+    expect(find.text('舊的密鑰會立刻失效，接收端要改用新的'), findsOneWidget);
     await tapText(tester, '自動產生');
     final secret = b.webhookSecrets['grace']!;
     expect(secret, isNot('whsec_existing'));

@@ -171,7 +171,7 @@ void main() {
       await settle(tester);
       expect(find.text('今日經文'), findsNothing);
       expect(find.text('教會官網'), findsNothing);
-      expect(find.textContaining('來源尚未提供今天的內容'), findsOneWidget);
+      expect(find.textContaining('來源還沒有今天的內容'), findsOneWidget);
     });
 
     testWidgets('an admin adds a source and a time; it is fetched at once', (tester) async {

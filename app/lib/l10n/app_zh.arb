@@ -27,7 +27,7 @@
   },
   "signInWithGoogle": "使用 Google 登入",
   "signInWithEmail": "用 email 登入",
-  "inAppBrowserNote": "在 {app} 裡不能用 Google 登入。請用 Safari 或 Chrome 打開這個網頁，或用 email 登入",
+  "inAppBrowserNote": "在 {app} 裡不能用 Google 登入。請用 Safari 或 Chrome 打開這個網頁，或用 email 登入。",
   "@inAppBrowserNote": {
     "placeholders": {
       "app": {
@@ -60,11 +60,11 @@
       }
     }
   },
-  "errInvalidCredential": "Email 或密碼不對",
+  "errInvalidCredential": "email 或密碼不對",
   "errEmailInUse": "這個 email 註冊過了，請直接登入或用 Google 登入",
   "errWeakPassword": "密碼至少要 6 個字",
-  "errInvalidEmail": "Email 格式不對",
-  "errNeedsLink": "這個 email 已經有帳號。請用原本的方式登入，登入後會自動連在一起",
+  "errInvalidEmail": "email 格式不對",
+  "errNeedsLink": "這個 email 已經有帳號。請用原本的方式登入，登入後會自動連在一起。",
   "errTooMany": "嘗試太多次，請稍後再試",
   "errNetwork": "連不上網路，請檢查後再試一次",
   "errUnknown": "沒有成功，請再試一次",
@@ -93,8 +93,8 @@
   "churchName": "教會名稱",
   "createChurchVerifyFirst": "驗證 email 後才能建立教會",
   "create": "建立",
-  "errDuplicateName": "已經有教會叫這個名字。如果是被別人搶先註冊，請聯絡我們",
-  "contactUs": "聯絡我們",
+  "errDuplicateName": "已經有教會叫這個名字。如果是別人搶先註冊的，請回報問題。",
+  "contactUs": "回報問題",
   "joinTitle": "加入〈{church}〉",
   "@joinTitle": {
     "placeholders": {
@@ -168,7 +168,7 @@
   "gettingStartedServicesBody": "星期幾、要安排哪些服事",
   "nobodyYet": "待定",
   "noServicesConfigured": "還沒有設定聚會",
-  "setUpServices": "服事設定",
+  "setUpServices": "設定聚會",
   "noRostersAhead": "接下來沒有聚會",
   "today": "今天",
   "tomorrow": "明天",
@@ -227,7 +227,7 @@
     }
   },
   "pickerSearchHint": "搜尋同工",
-  "pickerAddDutyTitle": "也讓{name}負責{duty}？",
+  "pickerAddDutyTitle": "也讓「{name}」負責{duty}？",
   "@pickerAddDutyTitle": {
     "placeholders": {
       "name": {
@@ -238,7 +238,7 @@
       }
     }
   },
-  "pickerAddDutyBody": "之後安排{duty}時，他會出現在上面",
+  "pickerAddDutyBody": "之後安排{duty}時，會列在上面",
   "@pickerAddDutyBody": {
     "placeholders": {
       "duty": {
@@ -261,7 +261,7 @@
     }
   },
   "swapNone": "其他日期沒有可以交換的人",
-  "swapped": "已交換 {a} 和 {b}",
+  "swapped": "已交換「{a}」和「{b}」",
   "@swapped": {
     "placeholders": {
       "a": {
@@ -272,7 +272,7 @@
       }
     }
   },
-  "moved": "已把 {name} 移到 {day}",
+  "moved": "已把「{name}」移到 {day}",
   "@moved": {
     "placeholders": {
       "name": {
@@ -283,7 +283,7 @@
       }
     }
   },
-  "emptySlot": "空著",
+  "emptySlot": "待定",
   "removeFromDuty": "從{duty}移除",
   "@removeFromDuty": {
     "placeholders": {
@@ -294,8 +294,8 @@
   },
   "events": "特別活動",
   "eventsUpdated": "已更新特別活動",
-  "customEvent": "自訂活動",
-  "eventName": "活動名稱",
+  "customEvent": "自訂特別活動",
+  "eventName": "特別活動名稱",
   "addToCommon": "加入常用選項",
   "eventColor": "顏色",
   "colorName0": "紅",
@@ -304,7 +304,7 @@
   "colorName3": "綠",
   "colorName4": "藍",
   "colorName5": "紫",
-  "removed": "已移除{name}",
+  "removed": "已移除「{name}」",
   "@removed": {
     "placeholders": {
       "name": {
@@ -340,7 +340,7 @@
     }
   },
   "leaveChurchBody": "需要重新邀請才能回來",
-  "leave": "退出",
+  "leave": "退出教會",
   "leftChurch": "已退出〈{church}〉",
   "@leftChurch": {
     "placeholders": {
@@ -349,12 +349,12 @@
       }
     }
   },
-  "adminCannotLeave": "管理員不能直接退出。要退出，先把另一位同工設成管理員，再請對方取消你的管理員",
+  "adminCannotLeave": "管理員不能直接退出。要退出，先把另一位同工設成管理員，再請對方取消你的管理員。",
   "churchLogo": "教會 logo",
   "uploadLogo": "上傳 logo",
   "changeLogo": "更換 logo",
   "logoUploaded": "已更新 logo",
-  "logoTooLarge": "圖片太大了，請選 1MB 以下的圖片",
+  "logoTooLarge": "圖片太大了，請選 1 MB 以下的圖片",
   "logoNotImage": "請選一張圖片",
   "memberCount": "{count} 位同工",
   "@memberCount": {
@@ -373,20 +373,20 @@
       }
     }
   },
-  "deleteChurchBody": "所有同工都看不到這間教會。30 天內可以還原，之後資料會永久刪除",
+  "deleteChurchBody": "所有同工都看不到這間教會。30 天內可以還原，之後資料會永久刪除。",
   "roleAdmin": "管理員",
   "roleLeader": "小組長",
-  "roleStaff": "同工",
+  "roleStaff": "一般同工",
   "roleMember": "組員",
-  "role": "角色",
+  "role": "身分",
   "roleAdminCan": "所有設定、邀請和移除同工",
-  "groups": "權限",
+  "groups": "權限群組",
   "groupRosterEditors": "安排服事表",
   "groupCalendarEditors": "編輯行事曆",
   "zones": "牧區與服事",
   "zonesFooter": "能安排服事表的人，只能排自己牧區的聚會",
   "removeMember": "移除同工",
-  "memberRemoved": "已移除{name}",
+  "memberRemoved": "已移除「{name}」",
   "@memberRemoved": {
     "placeholders": {
       "name": {
@@ -438,10 +438,10 @@
   "serviceAdd": "新增聚會",
   "serviceName": "聚會名稱",
   "weekday": "星期",
-  "serviceEnabled": "舉行中",
+  "serviceEnabled": "啟用",
   "serviceDisabledFooter": "停用的聚會不會再出現新的服事表，舊的保留",
   "templateDuties": "服事項目",
-  "templateFooter": "新的服事表會帶入這些項目。已經安排的服事表不受影響",
+  "templateFooter": "新的服事表會帶入這些項目。已經安排的服事表不受影響。",
   "commonEvents": "常用特別活動",
   "rename": "改名",
   "remove": "移除",
@@ -456,8 +456,8 @@
   "weekday6": "週六",
   "weekday7": "週日",
   "deleteAccountTitle": "刪除你的帳號？",
-  "deleteAccountBody": "你會退出所有教會，帳號與個人資料會刪除且無法復原。服事表上的名字會保留",
-  "deleteAccountLastAdmin": "你是〈{churches}〉唯一的管理員。請先到「同工」把管理員交給別人",
+  "deleteAccountBody": "你會退出所有教會，帳號與個人資料會刪除且無法復原。服事表上的名字會保留。",
+  "deleteAccountLastAdmin": "你是〈{churches}〉唯一的管理員，請先把管理員交給別的同工",
   "@deleteAccountLastAdmin": {
     "placeholders": {
       "churches": {
@@ -472,7 +472,7 @@
   "adminStats": "統計",
   "adminRename": "改名",
   "adminMakeAdmin": "設為管理員",
-  "adminMadeAdmin": "已設 {name} 為管理員",
+  "adminMadeAdmin": "已把「{name}」設為管理員",
   "@adminMadeAdmin": {
     "placeholders": {
       "name": {
@@ -515,11 +515,11 @@
   "notifRosterChange": "服事表異動",
   "notifRosterChangeSub": "你被排進或移出服事時",
   "notifMemberLeft": "同工退出",
-  "notifMemberLeftSub": "有人退出教會時（管理員）",
+  "notifMemberLeftSub": "有人退出教會時（只通知管理員）",
   "notifThisChurch": "這間教會的通知",
   "notifPermissionOff": "通知被關掉了，請到系統設定打開",
   "notifEnable": "開啟通知",
-  "notifNotAllowed": "通知還沒開。跳出詢問時，請按「允許」",
+  "notifNotAllowed": "通知還沒開。跳出詢問時，請點「允許」。",
   "notifRegisterFailed": "通知還沒設定好，下次打開 App 會再試",
   "pushView": "查看",
   "zoneSwitch": "屬於這個牧區",
@@ -578,7 +578,7 @@
   "photoPick": "選照片",
   "photoPasteJson": "貼上 JSON",
   "photoRecognizing": "辨識中，大約需要一分鐘",
-  "photoChurchLimit": "這個月的 {limit} 張用完了，下個月 1 日恢復。這段時間可以直接安排服事表",
+  "photoChurchLimit": "這個月的 {limit} 張用完了，下個月 1 日恢復。這段時間可以直接安排服事表。",
   "@photoChurchLimit": {
     "placeholders": {
       "limit": {
@@ -586,11 +586,11 @@
       }
     }
   },
-  "photoPlatformOff": "照片辨識這個月暫停（全站的辨識額度用完了），下個月恢復。這段時間可以直接安排服事表",
+  "photoPlatformOff": "照片辨識這個月暫停（全站的辨識額度用完了），下個月恢復。這段時間可以直接安排服事表。",
   "photoTooLarge": "照片太大，請裁到只剩表格再試",
   "photoFailed": "辨識失敗，請換一張清楚一點的照片再試",
   "photoUnavailable": "照片辨識暫時無法使用，請稍後再試，或直接安排服事表",
-  "importPreview": "確認後套用",
+  "importPreview": "預覽",
   "importApply": "套用到服事表",
   "importApplied": "已匯入 {count} 天",
   "@importApplied": {
@@ -626,7 +626,7 @@
   "calDisconnect": "中斷連接",
   "calDisconnectTitle": "中斷行事曆連接？",
   "calDisconnectBody": "同工會看不到行事曆，Google 日曆本身不受影響",
-  "calUnverifiedNote": "接下來 Google 會顯示「這個應用程式未經驗證」。這是因為馬大別忙還在審核中，點「進階」→「前往」即可。只會讀寫你選的那個日曆",
+  "calUnverifiedNote": "接下來 Google 會顯示「這個應用程式未經驗證」，點「進階」→「前往」繼續。只會讀寫你選的那個日曆。",
   "calConnectedOk": "已連接 Google 日曆",
   "calConnectFailed": "沒有連接成功，請再試一次",
   "calNoEvents": "這個月沒有活動",
@@ -654,7 +654,7 @@
       }
     }
   },
-  "calLengthHoursMinutes": "{hours} 小時 {minutes} 分",
+  "calLengthHoursMinutes": "{hours} 小時 {minutes} 分鐘",
   "@calLengthHoursMinutes": {
     "placeholders": {
       "hours": {
@@ -666,7 +666,7 @@
     }
   },
   "calDelete": "刪除活動",
-  "calDeleted": "已刪除{title}",
+  "calDeleted": "已刪除「{title}」",
   "@calDeleted": {
     "placeholders": {
       "title": {
@@ -683,14 +683,14 @@
   "support": "支持馬大別忙",
   "supportVerse": "乃要均平，就是要你們的富餘，現在可以補他們的不足，使他們的富餘，將來也可以補你們的不足，這就均平了。",
   "supportVerseSource": "哥林多後書 8:14",
-  "supportBody": "馬大別忙免費給每間教會使用，雲端費用由大家一起分擔。支持完全自願，教會能用的功能都一樣",
+  "supportBody": "馬大別忙免費給每間教會使用，雲端費用由大家一起分擔。支持完全自願，教會能用的功能都一樣。",
   "supportTips": "一次性支持",
   "supportMonthly": "每月支持",
   "supportRestore": "恢復購買",
   "supportThanks": "謝謝你的支持",
   "supportPending": "付款處理中",
   "supportFailed": "沒有完成付款，沒有扣款",
-  "supportUnavailable": "現在無法連上商店",
+  "supportUnavailable": "現在無法連上商店，請稍後再試",
   "supporterBadge": "支持者",
   "appIcon": "App 圖示",
   "appIconSupporterOnly": "每月支持者可以換 App 圖示",
@@ -739,21 +739,21 @@
   "addToHomeAddressBar": "網址列",
   "addToHomeChromeShare": "點網址列旁的分享圖示",
   "addToHomeChromeShareHint": "不是「⋯」選單，也不是「分享 Chrome」",
-  "addToHomeChromeScroll": "看不到時，先將分享面板展開，再往下滑",
+  "addToHomeChromeScroll": "看不到時，先把分享面板展開，再往下滑",
   "addToHomeSafariShare": "點 Safari 的分享圖示",
   "addToHomeFirefoxShare": "點網址列的分享圖示",
-  "addToHomeIpadMore": "iPad 若沒看到此選項，先點分享面板中的「更多」",
+  "addToHomeIpadMore": "iPad 沒看到這個選項時，先點分享面板中的「更多」",
   "addToHomeSelectAdd": "點「加入主畫面」",
-  "addToHomeShareMore": "若只看到一排圖示，先點「檢視較多」；舊版可往下滑",
-  "addToHomeIosConfirm": "若有網頁 App 開關，先保持開啟；最後點右上角「加入」或「新增」",
+  "addToHomeShareMore": "只看到一排圖示時，先點「檢視較多」；舊版要往下滑",
+  "addToHomeIosConfirm": "有網頁 App 開關時保持開啟，最後點右上角的「加入」或「新增」",
   "addToHomeOpenTitle": "回主畫面，點新圖示開啟",
   "addToHomeMenu": "點 {browser} 的選單",
   "@addToHomeMenu": {
     "placeholders": { "browser": { "type": "String" } }
   },
-  "addToHomeChromeInstall": "安裝並建立捷徑 → 安裝",
-  "addToHomeChromeInstallHint": "舊版可能叫「加到主畫面」或「安裝應用程式」。請選安裝，不是建立捷徑",
-  "addToHomeFirefoxInstallHint": "再依手機提示新增；若只有「新增至主畫面」，可能只會建立瀏覽器捷徑",
+  "addToHomeChromeInstall": "加到主畫面 → 安裝",
+  "addToHomeChromeInstallHint": "舊版可能叫「安裝應用程式」。請選「安裝」，不是「建立捷徑」。",
+  "addToHomeFirefoxInstallHint": "再照手機的提示新增；只有「新增至主畫面」時，可能只會建立瀏覽器捷徑",
   "addToHomeTrouble": "找不到「加入主畫面」？",
   "addToHomeSafariTrouble": "先把分享面板往上拉，查看下方的動作；仍找不到時，點最下方「編輯動作」查看",
   "addToHomeExternalTitle": "先用 {browser} 開啟",
@@ -771,7 +771,7 @@
     "placeholders": { "browser": { "type": "String" } }
   },
   "addToHomePhoneOnly": "請用手機開啟教會網址，再加入主畫面",
-  "addToHomeNotificationsAfter": "開啟後要收服事通知：我的 → 通知 → 開啟通知",
+  "addToHomeNotificationsAfter": "從主畫面打開後，在「我的」開啟通知，就收得到服事通知",
   "addToHomeIosShare": "分享",
   "addToHomeIosAdd": "加入",
   "addToHomeIosOpen": "點手機上的「{name}」圖示打開，再登入一次",
@@ -794,7 +794,7 @@
   "churchLinkUrl": "連結",
   "churchLinkNeedsTitle": "請輸入標題",
   "churchLinkNeedsHttps": "請輸入 https:// 開頭的連結",
-  "churchLinkFooter": "顯示在每位同工首頁的最上方，點了用瀏覽器打開。",
+  "churchLinkFooter": "顯示在每位同工首頁的最上方，點了用瀏覽器打開",
   "churchLinkRemove": "移除教會連結",
   "churchLinkRemoved": "已移除教會連結",
   "churchLinkOpens": "用瀏覽器打開",
@@ -827,7 +827,7 @@
     }
   },
   "linkErrTimeout": "對方網站 5 秒內沒有回應",
-  "linkErrTooLarge": "內容超過 64KB",
+  "linkErrTooLarge": "內容超過 64 KB",
   "linkErrBadFormat": "內容不是完整的 date、title、body、link JSON",
   "linkErrNotHttps": "網址或轉址不是 https",
   "linkErrHttp": "對方網站回應錯誤（{status}）",
@@ -844,14 +844,14 @@
   "webhookUrl": "接收網址",
   "webhookNeedsHttps": "請輸入 https:// 開頭的網址",
   "webhookSecretOptional": "密鑰（選填，留空會自動產生）",
-  "webhookSecretTooShort": "密鑰至少要 16 個字元",
+  "webhookSecretTooShort": "密鑰至少要 16 個字",
   "webhookCalendar": "行事曆異動",
   "webhookCalendarHint": "新增、修改、刪除活動",
   "webhookRoster": "服事表異動",
   "webhookRosterHint": "幾分鐘內的異動合併成一則",
-  "webhookFooter": "行事曆或服事表有異動時，把通知送到這個網址，例如交給 n8n 轉發到 LINE 群組。每則通知都用密鑰簽章。",
+  "webhookFooter": "行事曆或服事表有異動時，送通知到這個網址，例如交給 n8n 轉發到 LINE 群組。通知都用密鑰簽章。",
   "webhookTest": "傳送測試",
-  "webhookLast": "上次送出：{time}・{result}",
+  "webhookLast": "上次送出：{time} · {result}",
   "@webhookLast": {
     "placeholders": {
       "time": {
@@ -874,7 +874,7 @@
   "webhookTimeout": "逾時",
   "webhookNetwork": "連不上",
   "webhookRotate": "換新的密鑰",
-  "webhookRotateMessage": "舊的密鑰會立刻失效，接收端要改用新的。",
+  "webhookRotateMessage": "舊的密鑰會立刻失效，接收端要改用新的",
   "webhookGenerate": "自動產生",
   "webhookTypeOwn": "自己輸入",
   "webhookSecretTitle": "密鑰",
@@ -884,25 +884,25 @@
   "webhookSecretChanged": "已換成新的密鑰",
   "webhookOff": "關閉外部通知",
   "webhookOffTitle": "關閉外部通知？",
-  "webhookOffMessage": "網址和密鑰都會刪掉，之後要重新設定。",
+  "webhookOffMessage": "網址和密鑰都會刪掉，之後要重新設定",
   "webhookOffAction": "關閉",
   "exportData": "匯出資料",
-  "exportFooter": "匯出教會的全部資料：一份 JSON，加上一份可以用 Excel 打開的服事表。",
+  "exportFooter": "匯出教會的全部資料：一份 JSON，加上一份可以用 Excel 打開的服事表",
   "exported": "已匯出",
   "exportCsvFile": "服事表.csv",
   "@exportCsvFile": { "description": "The exported schedule's file name, in the zip; Excel opens it." },
   "exportCsvDate": "日期",
   "@exportCsvDate": { "description": "Column of the exported schedule: the day." },
-  "exportCsvService": "服事",
+  "exportCsvService": "聚會／活動",
   "@exportCsvService": { "description": "Column of the exported schedule: the service's name, or the event's title." },
   "exportCsvRole": "服事項目",
   "@exportCsvRole": { "description": "Column of the exported schedule: the role." },
   "exportCsvPeople": "同工",
   "@exportCsvPeople": { "description": "Column of the exported schedule: the people on the role." },
   "errMoveInvalid": "這不是搬家檔，請確認選對了檔案",
-  "errMoveTooLarge": "同工超過 2,000 位或服事表超過 20,000 天，沒辦法自動搬，請聯絡我們",
+  "errMoveTooLarge": "同工超過 2,000 位或服事表超過 20,000 天，沒辦法自動搬。請到 GitHub 的 church-staff-pwa 開 issue。",
   "moveFromSelfHost": "從舊版搬過來",
-  "moveIntro": "在舊版（church-staff-pwa）的 Cloud Shell 執行搬家指令，會得到一個搬家檔。上傳後先看預覽，確認了才會建立教會。",
+  "moveIntro": "在舊版（church-staff-pwa）的 Cloud Shell 執行搬家指令，把得到的搬家檔上傳。確認預覽後才會建立教會。",
   "movePickFile": "選擇搬家檔",
   "moveReading": "讀取搬家檔…",
   "moveContents": "搬家檔內容",
@@ -924,7 +924,7 @@
       }
     }
   },
-  "moveServices": "服事",
+  "moveServices": "聚會",
   "moveWhoAmI": "這位是我（選填）",
   "moveWhoAmIFooter": "選了就接手那位的服事表、牧區和權限。其他同工用同一個 email 登入馬大別忙時，會被問要不要加入。",
   "moveCreate": "建立教會並搬過來",
@@ -954,10 +954,10 @@
     }
   },
   "claimJoin": "加入",
-  "claimDecline": "不要",
-  "movedPasswordNote": "從舊版搬過來的同工：舊的密碼不能用，請用同一個 email 註冊新帳號，或用 Google 登入。",
+  "claimDecline": "不加入",
+  "movedPasswordNote": "從舊版搬過來的同工：舊的密碼不能用，請用同一個 email 註冊新帳號，或用 Google 登入",
   "pendingDelete": "刪除這筆資料",
-  "pendingDeleteTitle": "刪除〈{name}〉的資料？",
+  "pendingDeleteTitle": "刪除「{name}」的資料？",
   "@pendingDeleteTitle": {
     "placeholders": {
       "name": {
@@ -965,12 +965,12 @@
       }
     }
   },
-  "pendingDeleteBody": "他就不能用 email 認領了。服事表上的名字會保留。",
+  "pendingDeleteBody": "對方就不能用 email 認領了。服事表上的名字會保留。",
   "pendingDeleted": "已刪除",
   "mergePending": "合併還沒登入的資料",
-  "mergePendingFooter": "同工換了 email 加入時，把舊名單上他的那筆資料合併過來，服事表、牧區、權限都會接上。",
+  "mergePendingFooter": "同工換了 email 加入時，合併舊名單上那筆資料，服事表、牧區和權限群組都會接上",
   "mergePendingPick": "選一筆還沒登入的資料",
-  "mergePendingTitle": "把〈{pending}〉合併到〈{member}〉？",
+  "mergePendingTitle": "把「{pending}」合併到「{member}」？",
   "@mergePendingTitle": {
     "placeholders": {
       "pending": {
@@ -981,7 +981,7 @@
       }
     }
   },
-  "mergePendingBody": "服事表上的〈{pending}〉會改成這位同工，牧區和權限群組也會加上去。",
+  "mergePendingBody": "服事表上的「{pending}」會改成這位同工，牧區和權限群組也會加上去",
   "@mergePendingBody": {
     "placeholders": {
       "pending": {
@@ -1030,7 +1030,7 @@
     }
   },
   "fundingCostsHeader": "費用",
-  "fundingCostsFooter": "價格變了再改。每年的項目平均分到每個月",
+  "fundingCostsFooter": "價格變了再改。每年的項目平均分到每個月。",
   "fundingMonthsHeader": "最近幾個月",
   "fundingMonthValue": "{received} / {target}",
   "@fundingMonthValue": {
@@ -1049,7 +1049,7 @@
   "costAmount": "金額",
   "costPerMonth": "每月",
   "costPerYear": "每年",
-  "costValueMonth": "{amount}・每月",
+  "costValueMonth": "{amount} · 每月",
   "@costValueMonth": {
     "placeholders": {
       "amount": {
@@ -1057,7 +1057,7 @@
       }
     }
   },
-  "costValueYear": "{amount}・每年",
+  "costValueYear": "{amount} · 每年",
   "@costValueYear": {
     "placeholders": {
       "amount": {
@@ -1088,15 +1088,15 @@
   "@importAdvanced": {
     "description": "Import source advanced controls heading"
   },
-  "importFormatHelp": "date：YYYY-MM-DD；無人時 people 填 []。\nevents 可省略；活動 color 只接受 0–5 的色票編號。",
+  "importFormatHelp": "date：YYYY-MM-DD；沒有人時 people 填 []。\nevents 可省略；特別活動的 color 只接受 0–5 的顏色編號。",
   "@importFormatHelp": {
     "description": "Explanation below the unlocalized canonical JSON protocol example"
   },
-  "importPhotoFormatError": "辨識結果格式不符，請重新辨識或使用進階 JSON",
+  "importPhotoFormatError": "辨識結果的格式不對，請重新辨識或用進階 JSON",
   "@importPhotoFormatError": {
     "description": "Photo recognizer returned an invalid canonical JSON response"
   },
-  "importJsonSyntaxError": "JSON 格式錯誤，請使用下方範例的陣列格式",
+  "importJsonSyntaxError": "JSON 格式不對，請用下方範例的陣列格式",
   "@importJsonSyntaxError": {
     "description": "Pasted import JSON syntax or root-array error"
   },
@@ -1118,7 +1118,7 @@
       }
     }
   },
-  "importSameNameScope": "這份匯入中的同名人名都使用這個對應",
+  "importSameNameScope": "這次匯入的同名人名都用這個對應",
   "@importSameNameScope": {
     "description": "Explains that a confirmed raw-name mapping covers this import only"
   },
@@ -1152,15 +1152,15 @@
   "@importDutyLabel": {
     "description": "Import duty editor role field label"
   },
-  "importPeopleLines": "人名（每行一人）",
+  "importPeopleLines": "名字（每行一人）",
   "@importPeopleLines": {
     "description": "Import people multiline field label"
   },
-  "importAddEventAction": "新增活動",
+  "importAddEventAction": "新增特別活動",
   "@importAddEventAction": {
     "description": "Add an import event action and editor sheet title"
   },
-  "importEditEvent": "編輯活動",
+  "importEditEvent": "編輯特別活動",
   "@importEditEvent": {
     "description": "Import event name and palette editor sheet title"
   },
@@ -1198,7 +1198,7 @@
   "@importPeopleArrayHint": {
     "description": "Malformed imported people field hint; people is a protocol field name"
   },
-  "importFixEvent": "修正活動",
+  "importFixEvent": "修正特別活動",
   "@importFixEvent": {
     "description": "Malformed import event edit action"
   },
@@ -1268,7 +1268,7 @@
       }
     }
   },
-  "importRemoveEvent": "移除活動：{name}",
+  "importRemoveEvent": "移除特別活動：{name}",
   "@importRemoveEvent": {
     "description": "Import diff removes an event",
     "placeholders": {
@@ -1278,7 +1278,7 @@
       }
     }
   },
-  "importAddEvent": "新增活動：{name}",
+  "importAddEvent": "新增特別活動：{name}",
   "@importAddEvent": {
     "description": "Import diff adds an event",
     "placeholders": {
@@ -1288,7 +1288,7 @@
       }
     }
   },
-  "importChangeEvent": "活動：{name}",
+  "importChangeEvent": "特別活動：{name}",
   "@importChangeEvent": {
     "description": "Import diff changes an existing event color",
     "placeholders": {
@@ -1330,7 +1330,7 @@
       }
     }
   },
-  "importGuestUnlinked": "外請（不連結帳號）",
+  "importGuestUnlinked": "外請（沒有連到帳號）",
   "@importGuestUnlinked": {
     "description": "Imported name explicitly remains an unlinked guest"
   },
@@ -1360,7 +1360,7 @@
   "@importReplace": {
     "description": "Explicit import replacement mode"
   },
-  "importReplaceHelp": "移除未提到的服事項目與活動；不影響其他日期",
+  "importReplaceHelp": "移除沒提到的服事項目與特別活動；不影響其他日期",
   "@importReplaceHelp": {
     "description": "Import replacement affects only the previewed dates"
   },
@@ -1380,7 +1380,7 @@
   "@importNamesNeedConfirm": {
     "description": "Unconfirmed import names block all writes"
   },
-  "importRepairSettings": "修正教會設定（可選）",
+  "importRepairSettings": "修正教會設定（選填）",
   "@importRepairSettings": {
     "description": "Admin-only optional import repair section heading"
   },
@@ -1422,7 +1422,7 @@
       }
     }
   },
-  "importMissingQualification": "{name}尚未設定{role}",
+  "importMissingQualification": "{name}還沒設定{role}",
   "@importMissingQualification": {
     "description": "Matched member has no configured qualification for this duty",
     "placeholders": {
@@ -1436,7 +1436,7 @@
       }
     }
   },
-  "importAddCommonEvent": "加入常用活動：{name}",
+  "importAddCommonEvent": "加入常用特別活動：{name}",
   "@importAddCommonEvent": {
     "description": "Admin keeps an imported event as a common service option",
     "placeholders": {
@@ -1446,7 +1446,7 @@
       }
     }
   },
-  "importNotCommonEvent": "未設為常用活動：{name}",
+  "importNotCommonEvent": "未設為常用特別活動：{name}",
   "@importNotCommonEvent": {
     "description": "Imported event remains a one-day event rather than a common option",
     "placeholders": {
@@ -1456,7 +1456,7 @@
       }
     }
   },
-  "importDiff": "套用後差異・{date}",
+  "importDiff": "套用後差異 · {date}",
   "@importDiff": {
     "description": "Import diff section heading with the existing localized date label",
     "placeholders": {
@@ -1476,7 +1476,7 @@
       }
     }
   },
-  "importColor": "色彩",
+  "importColor": "顏色",
   "@importColor": {
     "description": "Import event palette field label"
   },
@@ -1544,9 +1544,9 @@
   "@importIssueEventsArray": {
     "description": "ImportIssueCode.eventsArray"
   },
-  "importIssueEventObject": "第 {index} 個活動請填 {example}",
+  "importIssueEventObject": "第 {index} 個特別活動請填 {example}",
   "@importIssueEventObject": {
-    "description": "ImportIssueCode.eventObject; example is a verbatim protocol JSON literal supplied by UI, not translated; avoids ICU interpreting JSON braces",
+    "description": "ImportIssueCode.eventObject; example is a protocol JSON literal supplied by UI (field names untranslated, the name value is eventName); avoids ICU interpreting JSON braces",
     "placeholders": {
       "index": {
         "type": "int",
@@ -1554,11 +1554,11 @@
       },
       "example": {
         "type": "String",
-        "example": "{\"name\":\"活動名稱\",\"color\":0}"
+        "example": "{\"name\":\"特別活動名稱\",\"color\":0}"
       }
     }
   },
-  "importIssueEventName": "第 {index} 個活動 name 請填不重複的名稱",
+  "importIssueEventName": "第 {index} 個特別活動的 name 請填不重複的名稱",
   "@importIssueEventName": {
     "description": "ImportIssueCode.eventName; source event item position is one-based",
     "placeholders": {
@@ -1568,7 +1568,7 @@
       }
     }
   },
-  "importIssueEventColor": "第 {index} 個活動 color 請填 0 到 5 的整數",
+  "importIssueEventColor": "第 {index} 個特別活動的 color 請填 0 到 5 的整數",
   "@importIssueEventColor": {
     "description": "ImportIssueCode.eventColor; source event item position is one-based",
     "placeholders": {
@@ -1592,29 +1592,37 @@
   "@appRunningVersion": {
     "description": "The release that actually booted the running PWA, never the server-latest release. Its opaque release id is shown as the row subtitle."
   },
-  "appVersionDevelopment": "開發版本（尚未建立發布版本）",
+  "appVersionDevelopment": "開發版本（還沒有發布版本）",
   "@appVersionDevelopment": {
     "description": "Web development build without a generated release manifest; no update or native store claim."
   },
   "appUpdateNativeTitle": "App 更新",
-  "appUpdateNativeNote": "請從 App Store 或 Google Play 檢查更新。",
+  "appUpdateNativeNote": "請到 App Store 或 Google Play 檢查更新",
   "appUpdateCheck": "檢查更新",
   "appUpdateChecking": "檢查中…",
   "appUpdateApply": "更新並重新開啟",
   "appUpdateApplying": "更新中…",
-  "appUpdateCurrent": "目前已是最新發布版本。",
+  "appUpdateCurrent": "已是最新版本",
   "@appUpdateCurrent": {
     "description": "Only after an explicit server check confirms the currently running release is latest."
   },
-  "appUpdateReady": "新版本已準備好；完成編輯後再更新，不會自動重新整理。",
-  "appUpdateFinishEditing": "請先完成編輯或儲存，再回到「我的」更新。",
-  "appUpdateFinishEditingNote": "請先完成編輯或儲存。",
-  "appUpdateFailed": "無法完成更新，請檢查網路後重試。",
-  "appUpdateScopeChanged": "帳號或教會已變更，請重新檢查更新。",
-  "appUpdateBackToMe": "請回到「我的」再更新。",
-  "appUpdateCheckFirst": "請先檢查更新。",
+  "appUpdateReady": "有新版本",
+  "appUpdateFinishEditing": "還有沒儲存的內容，儲存後再更新",
+  "appUpdateFinishEditingNote": "先儲存正在編輯的內容",
+  "appUpdateFailed": "沒有更新成功，請檢查網路後再試一次",
+  "appUpdateScopeChanged": "帳號或教會換了，請重新檢查更新",
+  "appUpdateBackToMe": "請再點一次「更新並重新開啟」",
+  "appUpdateCheckFirst": "請先檢查更新",
+  "servicesAdminOnly": "只有管理員能改服事設定",
+  "@servicesAdminOnly": { "description": "Empty state of service settings for someone who is not an admin" },
+  "importExampleRole": "司琴",
+  "@importExampleRole": { "description": "Example duty in the import JSON example; only the value is translated" },
+  "importExamplePerson": "李美玉",
+  "@importExamplePerson": { "description": "Example name in the import JSON example" },
+  "importExampleEvent": "聖餐",
+  "@importExampleEvent": { "description": "Example occasion (特別活動) in the import JSON example" },
   "rosterShowMore": "顯示更多",
-  "pickerGuestNames": "外請姓名",
+  "pickerGuestNames": "外請名字",
   "serviceSettingsSaved": "服事設定已儲存",
   "serviceSyncOriginalEvent": "原本的特別活動",
   "serviceSyncOriginalDuty": "原本的服事項目",
@@ -1629,7 +1637,7 @@
       }
     }
   },
-  "serviceFutureSyncSaved": "已同步{count}份未來服事表",
+  "serviceFutureSyncSaved": "已同步 {count} 份未來服事表",
   "@serviceFutureSyncSaved": {
     "placeholders": {
       "count": {
@@ -1637,7 +1645,7 @@
       }
     }
   },
-  "serviceEventColorTitle": "{name}・顏色",
+  "serviceEventColorTitle": "{name} · 顏色",
   "@serviceEventColorTitle": {
     "placeholders": {
       "name": {
@@ -1660,7 +1668,7 @@
       }
     }
   },
-  "rosterFutureGuestRemoved": "已移除{count}份未來安排",
+  "rosterFutureGuestRemoved": "已移除 {count} 份未來安排",
   "@rosterFutureGuestRemoved": {
     "placeholders": {
       "count": {
@@ -1693,17 +1701,17 @@
       }
     }
   },
-  "errConflict": "資料已被其他同工修改，請重新讀取後再試。",
-  "errOfflineReadOnly": "目前無法連線，只能查看已取得的資料。",
-  "errTooManyChanges": "變更項目太多，請縮小範圍後再試。",
+  "errConflict": "其他同工剛改過，重新整理後再改一次",
+  "errOfflineReadOnly": "離線中，連線後才能儲存",
+  "errTooManyChanges": "一次最多改 500 份服事表，請分成幾次改",
   "undoDone": "已復原",
   "undoFailed": "復原失敗，請再試一次",
-  "offlineReadOnlyBanner": "離線唯讀：連線後才能儲存變更",
-  "calendarCached": "離線資料",
+  "offlineReadOnlyBanner": "離線中，顯示上次的資料，連線後才能儲存",
+  "calendarCached": "顯示上次的資料",
   "@calendarCached": {
     "description": "Calendar content shown from a previous read, never presented as fresh"
   },
-  "calendarReadAt": "資料讀取於{time}",
+  "calendarReadAt": "{time} 更新",
   "@calendarReadAt": {
     "description": "Church-time stamp of the last complete read",
     "placeholders": {
@@ -1717,7 +1725,7 @@
   "homeUpcomingEvents": "近期活動",
   "memberSmallGroups": "小組",
   "memberSmallGroupsHint": "每行一個小組",
-  "linkErrNotToday": "來源尚未提供今天的內容",
+  "linkErrNotToday": "來源還沒有今天的內容",
   "linkSourceToday": "今天的內容沒有更新：{reason}",
   "@linkSourceToday": {
     "placeholders": {
@@ -1746,7 +1754,7 @@
     "description": "A calendar day and its events, read by screen readers.",
     "placeholders": { "day": { "type": "String", "example": "10月18日 週日" }, "events": { "type": "String", "example": "聖誕晚會" } }
   },
-  "dotSeparator": "・",
+  "dotSeparator": " · ",
   "@dotSeparator": { "description": "Between short facts on one line, such as a status and a count." },
   "churchStatus": "狀態",
   "@churchStatus": { "description": "A church's status (active, suspended, deleted) in the platform console." },
@@ -1757,12 +1765,15 @@
     "description": "A time zone by its city, with how far it is from UTC now.",
     "placeholders": { "city": { "type": "String", "example": "洛杉磯" }, "offset": { "type": "String", "example": "UTC−7" } }
   },
-  "timeZoneFooter": "今天、晚上 7 點的服事提醒、行事曆的時間，都照教會的時區，不看手機在哪裡。",
+  "timeZoneFooter": "今天的日期、服事提醒和行事曆的時間都照教會的時區",
   "timeZoneChangeTitle": "改成{city}時間？",
   "@timeZoneChangeTitle": { "placeholders": { "city": { "type": "String", "example": "洛杉磯" } } },
-  "timeZoneChangeBody": "活動時間會照新時區顯示，服事表的日期不變。",
-  "timeZoneChange": "更改",
-  "@timeZoneChange": { "description": "Confirms changing the church's time zone." },
+  "timeZoneChangeBody": "活動時間會照新時區顯示，服事表的日期不變",
+  "timeZoneChange": "改成{city}時間",
+  "@timeZoneChange": {
+    "description": "Confirms changing the church's time zone.",
+    "placeholders": { "city": { "type": "String", "example": "洛杉磯" } }
+  },
   "churchLocalTime": "教會當地時間（{city}）",
   "@churchLocalTime": {
     "description": "Under times, when the phone is in another time zone than the church.",

@@ -27,7 +27,7 @@ class _TimeZoneScreenState extends ConsumerState<TimeZoneScreen> {
       context,
       title: l10n.timeZoneChangeTitle(timeZoneCity(l10n, timeZone)),
       message: l10n.timeZoneChangeBody,
-      yes: l10n.timeZoneChange,
+      yes: l10n.timeZoneChange(timeZoneCity(l10n, timeZone)),
       no: l10n.cancel,
     );
     if (ok != true || !mounted) return;

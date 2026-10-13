@@ -72,7 +72,7 @@ void main() {
 
     await tester.tap(find.text('開啟通知'));
     await settle(tester);
-    expect(find.textContaining('請按「允許」'), findsOneWidget);
+    expect(find.textContaining('請點「允許」'), findsOneWidget);
   });
 
   testWidgets('allowed, but the device cannot get a token: says it will try again', (tester) async {

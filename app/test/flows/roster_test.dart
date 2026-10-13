@@ -139,7 +139,7 @@ void main() {
       await settle(tester);
       expect(find.text('其他同工'), findsOneWidget);
       await tapText(tester, 'John Chen');
-      expect(find.text('也讓John Chen負責司琴？'), findsOneWidget);
+      expect(find.text('也讓「John Chen」負責司琴？'), findsOneWidget);
       await tapText(tester, '加上');
       await tapText(tester, '完成');
 
@@ -279,7 +279,7 @@ void main() {
       await tapText(tester, '司琴');
       await tapText(tester, '李美玉');
       await tapText(tester, '完成');
-      expect(find.text('目前無法連線，只能查看已取得的資料。'), findsOneWidget);
+      expect(find.text('離線中，連線後才能儲存'), findsOneWidget);
       b.setOnline(true);
       await settle(tester);
       expect(peopleOn(b, 4, '司琴'), before, reason: 'reconnecting sends nothing that was refused');
@@ -299,11 +299,11 @@ void main() {
       // with; draft weeks offer an empty slot.
       final sheet = find.byType(BottomSheet);
       expect(find.descendant(of: sheet, matching: find.text('李美玉')), findsNothing);
-      await tester.tap(find.descendant(of: sheet, matching: find.text('空著')).first);
+      await tester.tap(find.descendant(of: sheet, matching: find.text('待定')).first);
       await settle(tester);
 
       expect(peopleOn(b, 4, '招待'), ['李美玉']);
-      expect(find.textContaining('已把 陳志豪 移到'), findsOneWidget);
+      expect(find.textContaining('已把「陳志豪」移到'), findsOneWidget);
       await tapText(tester, '復原');
       expect(peopleOn(b, 4, '招待'), ['陳志豪', '李美玉']);
     });
