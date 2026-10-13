@@ -290,7 +290,7 @@ class L10nZh extends L10n {
   String get gettingStarted => '開始使用';
 
   @override
-  String get gettingStartedInvite => '邀請同工';
+  String get inviteMembers => '邀請同工';
 
   @override
   String get gettingStartedInviteBody => '建立邀請連結，傳給同工';
@@ -312,6 +312,12 @@ class L10nZh extends L10n {
 
   @override
   String get noRostersAhead => '接下來沒有聚會';
+
+  @override
+  String get rostersNobodyArranged => '還沒有安排任何人';
+
+  @override
+  String get rostersStartArranging => '開始安排';
 
   @override
   String get today => '今天';
@@ -432,6 +438,9 @@ class L10nZh extends L10n {
 
   @override
   String get customEvent => '自訂特別活動';
+
+  @override
+  String get addEvent => '新增特別活動';
 
   @override
   String get eventName => '特別活動名稱';
@@ -563,6 +572,9 @@ class L10nZh extends L10n {
   String memberCount(int count) {
     return '$count 位同工';
   }
+
+  @override
+  String get membersOnlyYou => '還沒有其他同工';
 
   @override
   String get deleteChurch => '刪除教會';
@@ -743,6 +755,9 @@ class L10nZh extends L10n {
   String deleteAccountLastAdmin(String churches) {
     return '你是〈$churches〉唯一的管理員，請先把管理員交給別的同工';
   }
+
+  @override
+  String get goToMembers => '前往同工';
 
   @override
   String get accountDeleted => '帳號已刪除';
@@ -1124,7 +1139,7 @@ class L10nZh extends L10n {
   String get supportVerseSource => '哥林多後書 8:14';
 
   @override
-  String get supportBody => '馬大別忙免費給每間教會使用，雲端費用由大家一起分擔。支持完全自願，教會能用的功能都一樣。';
+  String get supportBody => '支持完全自願，只用來分擔雲端費用，每間教會能用的功能都一樣';
 
   @override
   String get supportTips => '一次性支持';
@@ -2640,7 +2655,7 @@ class L10nZhHans extends L10nZh {
   String get gettingStarted => '开始使用';
 
   @override
-  String get gettingStartedInvite => '邀请同工';
+  String get inviteMembers => '邀请同工';
 
   @override
   String get gettingStartedInviteBody => '创建邀请链接，发给同工';
@@ -2662,6 +2677,12 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get noRostersAhead => '接下来没有聚会';
+
+  @override
+  String get rostersNobodyArranged => '还没有安排任何人';
+
+  @override
+  String get rostersStartArranging => '开始安排';
 
   @override
   String get today => '今天';
@@ -2782,6 +2803,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get customEvent => '自定义特别活动';
+
+  @override
+  String get addEvent => '添加特别活动';
 
   @override
   String get eventName => '特别活动名称';
@@ -2913,6 +2937,9 @@ class L10nZhHans extends L10nZh {
   String memberCount(int count) {
     return '$count 位同工';
   }
+
+  @override
+  String get membersOnlyYou => '还没有其他同工';
 
   @override
   String get deleteChurch => '删除教会';
@@ -3093,6 +3120,9 @@ class L10nZhHans extends L10nZh {
   String deleteAccountLastAdmin(String churches) {
     return '你是“$churches”唯一的管理员，请先把管理员交给别的同工';
   }
+
+  @override
+  String get goToMembers => '前往同工';
 
   @override
   String get accountDeleted => '账号已删除';
@@ -3474,7 +3504,7 @@ class L10nZhHans extends L10nZh {
   String get supportVerseSource => '哥林多后书 8:14';
 
   @override
-  String get supportBody => '马大别忙免费给每间教会使用，云端费用由大家一起分担。支持完全自愿，教会能用的功能都一样。';
+  String get supportBody => '支持完全自愿，只用来分担云端费用，每间教会能用的功能都一样';
 
   @override
   String get supportTips => '一次性支持';

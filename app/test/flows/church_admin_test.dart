@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/data/backend.dart';
+import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/models.dart';
 
 import '../support/harness.dart';
@@ -95,6 +96,31 @@ void main() {
       expect(find.text('移除同工'), findsNothing);
     });
 
+    testWidgets('an admin alone in the church is offered to invite people', (tester) async {
+      final b = MemoryBackend(clock: testClock);
+      final cid = b.addChurch('恩典堂', id: 'grace');
+      b.addMember(cid, pastor);
+      b.auth.signInAs('pastor@example.com', uid: 'pastor', name: pastor.name);
+      b.users['pastor'] = UserProfile(uid: 'pastor', name: pastor.name, email: 'pastor@example.com');
+      b.notify();
+      await pumpApp(tester, b);
+      await go(tester, '/me/members');
+      expect(find.text('還沒有其他同工'), findsOneWidget);
+      await tapText(tester, '邀請同工');
+      expect(find.text('建立邀請連結'), findsOneWidget);
+
+      await pumpApp(tester, seededChurch());
+      await go(tester, '/me/members');
+      expect(find.text('邀請同工'), findsNothing);
+    });
+
+    testWidgets('the profile name keeps its label once filled', (tester) async {
+      await pumpApp(tester, seededChurch());
+      await go(tester, '/me/profile');
+      expect(find.text('王牧師'), findsOneWidget);
+      expect(find.text('名字'), findsOneWidget);
+    });
+
     testWidgets('150 members scroll and search', (tester) async {
       final many = [for (var i = 0; i < 145; i++) Member(uid: 'x$i', name: '同工${i.toString().padLeft(3, '0')}')];
       await pumpApp(tester, seededChurch(extra: many));
@@ -143,17 +169,25 @@ void main() {
   });
 
   group('account', () {
-    testWidgets('the only admin cannot delete the account and is told where to go', (tester) async {
+    testWidgets('the only admin is told at once why, and where to go; deleting is off', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/account');
-      await tester.tap(find.widgetWithText(TextButton, '刪除帳號'));
-      await settle(tester);
-      expect(find.text('刪除你的帳號？'), findsOneWidget);
-      await tester.tap(find.text('刪除帳號').last);
-      await settle(tester);
       expect(find.textContaining('你是〈恩典堂〉唯一的管理員'), findsOneWidget);
+      expect(tester.widget<TextButton>(find.widgetWithText(TextButton, '刪除帳號')).onPressed, isNull);
+      await tapText(tester, '前往同工');
+      expect(find.text('5 位同工'), findsOneWidget);
       expect(b.auth.currentUser, isNotNull);
+    });
+
+    testWidgets('an admin with another admin may delete the account', (tester) async {
+      final b = seededChurch(
+        extra: const [Member(uid: 'admin2', name: '張長老', role: Role.admin)],
+      );
+      await pumpApp(tester, b);
+      await go(tester, '/account');
+      expect(find.textContaining('唯一的管理員'), findsNothing);
+      expect(tester.widget<TextButton>(find.widgetWithText(TextButton, '刪除帳號')).onPressed, isNotNull);
     });
 
     testWidgets('staff delete their account and are signed out', (tester) async {
@@ -162,6 +196,12 @@ void main() {
       await go(tester, '/account');
       await tester.tap(find.widgetWithText(TextButton, '刪除帳號'));
       await settle(tester);
+      expect(find.text('刪除你的帳號？'), findsOneWidget);
+      expect(
+        find.textContaining('帳號與個人資料會刪除且無法復原'),
+        findsOneWidget,
+        reason: 'said once on the page, not again in the dialog',
+      );
       await tester.tap(find.text('刪除帳號').last);
       await settle(tester);
       expect(b.members['grace']!.containsKey('hao'), isFalse);
@@ -174,7 +214,7 @@ void main() {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/me/invites');
-      await tapText(tester, '7 天內有效');
+      await tapText(tester, '建立邀請連結');
       expect(b.invites.length, 1);
       final code = b.invites.keys.single;
       await go(tester, '/me');
@@ -184,13 +224,34 @@ void main() {
       expect(b.invites[code]!.revoked, isTrue);
     });
 
+    testWidgets('the invite button says what it does; how long it lasts is a choice beside it', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      captureOutbox(tester);
+      await go(tester, '/me/invites');
+      expect(find.widgetWithText(FilledButton, '建立邀請連結'), findsOneWidget);
+      await tapText(tester, '30 天內有效');
+      expect(b.invites, isEmpty, reason: 'choosing does not create');
+      await tapText(tester, '建立邀請連結');
+      final invite = b.invites.values.single;
+      expect(invite.expiresAt.difference(testNow).inDays, 30);
+    });
+
+    testWidgets('the 牧區 an invite joins look like boxes to tick', (tester) async {
+      await pumpApp(tester, seededChurch());
+      await go(tester, '/me/invites');
+      expect(find.byIcon(Icons.circle_outlined), findsNWidgets(2));
+      await tapText(tester, '青年崇拜');
+      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+    });
+
     testWidgets('an invite can put those who join in some 牧區, named on it', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
       captureOutbox(tester);
       await go(tester, '/me/invites');
       await tapText(tester, '青年崇拜');
-      await tapText(tester, '7 天內有效');
+      await tapText(tester, '建立邀請連結');
       final invite = b.invites.values.single;
       expect(invite.zoneTypes, ['youth']);
       expect(find.text('青年崇拜'), findsNWidgets(2), reason: 'the picker, and under the code');
@@ -202,7 +263,7 @@ void main() {
       await pumpApp(tester, b);
       captureOutbox(tester);
       await go(tester, '/me/invites');
-      await tapText(tester, '7 天內有效');
+      await tapText(tester, '建立邀請連結');
       final code = b.invites.keys.single;
       expect(find.text(code), findsOneWidget);
 
@@ -227,7 +288,7 @@ void main() {
       await pumpApp(tester, b);
       final out = captureOutbox(tester);
       await go(tester, '/me/invites');
-      await tapText(tester, '7 天內有效');
+      await tapText(tester, '建立邀請連結');
       final code = b.invites.keys.single;
       expect(out.sharedTexts.single, contains('https://marthasit-dev.web.app/c/grace/join/$code'));
       await tapText(tester, code);
@@ -240,7 +301,7 @@ void main() {
       await pumpApp(tester, b);
       captureOutbox(tester, blocked: true);
       await go(tester, '/me/invites');
-      await tapText(tester, '7 天內有效');
+      await tapText(tester, '建立邀請連結');
       final code = b.invites.keys.single;
       expect(find.text('沒有儲存成功，請檢查網路後再試一次'), findsNothing, reason: 'the invite was saved');
       expect(find.text('沒辦法自動複製，請選取下面的文字自己複製'), findsOneWidget);

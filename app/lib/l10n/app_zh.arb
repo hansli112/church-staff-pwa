@@ -162,7 +162,8 @@
   "viewRosters": "看服事表",
   "gettingStarted": "開始使用",
   "@gettingStarted": { "description": "Home page section for an admin who is still the church's only member" },
-  "gettingStartedInvite": "邀請同工",
+  "inviteMembers": "邀請同工",
+  "@inviteMembers": { "description": "Opens the invites page: on the home page's getting started, the members page and the people picker while nobody serves a duty" },
   "gettingStartedInviteBody": "建立邀請連結，傳給同工",
   "gettingStartedServices": "服事設定",
   "gettingStartedServicesBody": "星期幾、要安排哪些服事",
@@ -170,6 +171,10 @@
   "noServicesConfigured": "還沒有設定聚會",
   "setUpServices": "設定聚會",
   "noRostersAhead": "接下來沒有聚會",
+  "rostersNobodyArranged": "還沒有安排任何人",
+  "@rostersNobodyArranged": { "description": "Top of the schedule tab, for those who can edit it, while every upcoming day of the service is TBD" },
+  "rostersStartArranging": "開始安排",
+  "@rostersStartArranging": { "description": "Button under rostersNobodyArranged: opens the first upcoming day to arrange" },
   "today": "今天",
   "tomorrow": "明天",
   "offlineShowingCached": "離線中，顯示上次的資料",
@@ -295,6 +300,8 @@
   "events": "特別活動",
   "eventsUpdated": "已更新特別活動",
   "customEvent": "自訂特別活動",
+  "addEvent": "新增特別活動",
+  "@addEvent": { "description": "Row at the end of a service's common special events (服事設定): adds one" },
   "eventName": "特別活動名稱",
   "addToCommon": "加入常用選項",
   "eventColor": "顏色",
@@ -364,6 +371,8 @@
       }
     }
   },
+  "membersOnlyYou": "還沒有其他同工",
+  "@membersOnlyYou": { "description": "Members page for an admin who is the only member; followed by the inviteMembers button" },
   "deleteChurch": "刪除教會",
   "deleteChurchTitle": "刪除〈{church}〉？",
   "@deleteChurchTitle": {
@@ -465,6 +474,8 @@
       }
     }
   },
+  "goToMembers": "前往同工",
+  "@goToMembers": { "description": "Button on the delete-account page for the only admin of a church: opens the members page to make someone else an admin" },
   "accountDeleted": "帳號已刪除",
   "serviceDisabled": "停用",
   "adminSearchHint": "教會名稱或 ID",
@@ -683,7 +694,7 @@
   "support": "支持馬大別忙",
   "supportVerse": "乃要均平，就是要你們的富餘，現在可以補他們的不足，使他們的富餘，將來也可以補你們的不足，這就均平了。",
   "supportVerseSource": "哥林多後書 8:14",
-  "supportBody": "馬大別忙免費給每間教會使用，雲端費用由大家一起分擔。支持完全自願，教會能用的功能都一樣。",
+  "supportBody": "支持完全自願，只用來分擔雲端費用，每間教會能用的功能都一樣",
   "supportTips": "一次性支持",
   "supportMonthly": "每月支持",
   "supportRestore": "恢復購買",

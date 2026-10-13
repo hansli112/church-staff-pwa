@@ -13,11 +13,11 @@ void main() {
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/notifications');
     await settle(tester);
 
-    expect(find.text('每週一晚上，列出這週的服事'), findsOneWidget);
+    // The choice below says when; the switch does not say it again.
+    expect(find.text('每週一晚上，列出這週的服事'), findsNothing);
     await tester.tap(find.text('前一天晚上'));
     await settle(tester);
     expect(b.members['grace']!['mei']!.reminderTiming, ReminderTiming.dayBefore);
-    expect(find.text('服事前一天晚上提醒你'), findsOneWidget);
 
     await tester.tap(find.text('兩個都要'));
     await settle(tester);
@@ -34,5 +34,6 @@ void main() {
     await settle(tester);
     expect(b.members['grace']!['mei']!.mutedNotifications, {NotificationKind.reminder});
     expect(find.text('前一天晚上'), findsNothing);
+    expect(find.text('每週一晚上，列出這週的服事'), findsOneWidget, reason: 'what turning it on would bring');
   });
 }

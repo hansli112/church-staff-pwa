@@ -66,7 +66,9 @@ class NotificationsScreen extends ConsumerWidget {
       (ReminderTiming.dayBefore, l10n.notifReminderDayBefore, l10n.notifReminderDayBeforeSub),
       (ReminderTiming.both, l10n.notifReminderBoth, l10n.notifReminderBothSub),
     ];
-    final reminderSub = timings.firstWhere((t) => t.$1 == me.reminderTiming).$3;
+    // While the timing choice shows below, the switch does not repeat it.
+    final timingShown = !off && !muted.contains(NotificationKind.reminder);
+    final reminderSub = timingShown ? null : timings.firstWhere((t) => t.$1 == me.reminderTiming).$3;
     final kinds = [
       (NotificationKind.reminder, l10n.notifReminder, reminderSub),
       (
@@ -123,7 +125,7 @@ class NotificationsScreen extends ConsumerWidget {
                 ),
             ],
           ),
-          if (!off && !muted.contains(NotificationKind.reminder))
+          if (timingShown)
             ListSection(
               header: l10n.notifReminderTime,
               footer: l10n.notifReminderTimeFooter,

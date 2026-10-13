@@ -42,6 +42,18 @@ void main() {
         expect(contrast(c.onAccent, c.accent), greaterThanOrEqualTo(4.5));
         expect(contrast(c.accent, c.accentSoft), greaterThanOrEqualTo(4.5));
       });
+
+      test('$name icons that mean something (chevrons) are at least 3:1', () {
+        for (final bg in [c.surface, c.surfaceRaised]) {
+          expect(contrast(c.tertiaryLabel, bg), greaterThanOrEqualTo(3), reason: 'on $bg');
+        }
+      });
+
+      test('$name selected segment stands out from its track, its label readable', () {
+        expect(c.segment, isNot(c.fill));
+        expect(contrast(c.label, c.segment), greaterThanOrEqualTo(4.5));
+        expect(contrast(c.label, c.fill), greaterThanOrEqualTo(4.5));
+      });
     }
 
     testWidgets('every event tag colour is readable in both appearances', (
@@ -101,6 +113,41 @@ void main() {
         greaterThanOrEqualTo(48),
       );
     });
+  });
+
+  group('large text', () {
+    const value = '台北（UTC+8）marthasit-dev.web.app/c/grace';
+
+    testWidgets('a row puts its value under the title, whole', (tester) async {
+      await pumpWidgetInApp(
+        tester,
+        ListSection(
+          children: [ListRow(title: '主畫面名稱', value: value, onTap: () {})],
+        ),
+        textScale: 2,
+      );
+      final text = tester.widget<Text>(find.text(value));
+      expect(text.maxLines, isNull);
+      expect(text.overflow, isNot(TextOverflow.ellipsis));
+      expect(tester.getTopLeft(find.text(value)).dy, greaterThanOrEqualTo(tester.getBottomLeft(find.text('主畫面名稱')).dy));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('at the usual size the value stays on the trailing side', (tester) async {
+      await pumpWidgetInApp(
+        tester,
+        const ListSection(
+          children: [ListRow(title: '語言', value: '跟隨系統')],
+        ),
+      );
+      expect(tester.getCenter(find.text('跟隨系統')).dy, tester.getCenter(find.text('語言')).dy);
+    });
+  });
+
+  testWidgets('a row’s leading icon is neutral; the accent is for actions and state', (tester) async {
+    await pumpWidgetInApp(tester, ListRow(title: '通知', leading: const Icon(Icons.notifications), onTap: () {}));
+    final context = tester.element(find.byIcon(Icons.notifications));
+    expect(IconTheme.of(context).color, AppColors.light.secondaryLabel);
   });
 
   testWidgets('body text is 17pt', (tester) async {

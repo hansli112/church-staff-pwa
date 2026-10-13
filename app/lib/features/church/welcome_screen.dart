@@ -214,7 +214,7 @@ class _EnterCodeScreenState extends State<EnterCodeScreen> {
             textCapitalization: TextCapitalization.characters,
             textInputAction: TextInputAction.go,
             style: AppText.title3.copyWith(letterSpacing: 2),
-            decoration: InputDecoration(hintText: l10n.inviteCode),
+            decoration: InputDecoration(labelText: l10n.inviteCode),
             onChanged: (_) => setState(() {}),
             onSubmitted: (_) => _next(),
           ),
@@ -295,7 +295,7 @@ class _CreateChurchScreenState extends ConsumerState<CreateChurchScreen> {
             maxLength: TextLimits.churchName,
             textInputAction: TextInputAction.done,
             decoration: InputDecoration(
-              hintText: l10n.churchName,
+              labelText: l10n.churchName,
               counterText: '',
             ),
             onChanged: (_) => setState(() {}),

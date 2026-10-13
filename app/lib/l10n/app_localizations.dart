@@ -622,11 +622,11 @@ abstract class L10n {
   /// **'開始使用'**
   String get gettingStarted;
 
-  /// No description provided for @gettingStartedInvite.
+  /// Opens the invites page: on the home page's getting started, the members page and the people picker while nobody serves a duty
   ///
   /// In zh, this message translates to:
   /// **'邀請同工'**
-  String get gettingStartedInvite;
+  String get inviteMembers;
 
   /// No description provided for @gettingStartedInviteBody.
   ///
@@ -669,6 +669,18 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'接下來沒有聚會'**
   String get noRostersAhead;
+
+  /// Top of the schedule tab, for those who can edit it, while every upcoming day of the service is TBD
+  ///
+  /// In zh, this message translates to:
+  /// **'還沒有安排任何人'**
+  String get rostersNobodyArranged;
+
+  /// Button under rostersNobodyArranged: opens the first upcoming day to arrange
+  ///
+  /// In zh, this message translates to:
+  /// **'開始安排'**
+  String get rostersStartArranging;
 
   /// No description provided for @today.
   ///
@@ -861,6 +873,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'自訂特別活動'**
   String get customEvent;
+
+  /// Row at the end of a service's common special events (服事設定): adds one
+  ///
+  /// In zh, this message translates to:
+  /// **'新增特別活動'**
+  String get addEvent;
 
   /// No description provided for @eventName.
   ///
@@ -1107,6 +1125,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'{count} 位同工'**
   String memberCount(int count);
+
+  /// Members page for an admin who is the only member; followed by the inviteMembers button
+  ///
+  /// In zh, this message translates to:
+  /// **'還沒有其他同工'**
+  String get membersOnlyYou;
 
   /// No description provided for @deleteChurch.
   ///
@@ -1443,6 +1467,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'你是〈{churches}〉唯一的管理員，請先把管理員交給別的同工'**
   String deleteAccountLastAdmin(String churches);
+
+  /// Button on the delete-account page for the only admin of a church: opens the members page to make someone else an admin
+  ///
+  /// In zh, this message translates to:
+  /// **'前往同工'**
+  String get goToMembers;
 
   /// No description provided for @accountDeleted.
   ///
@@ -2149,7 +2179,7 @@ abstract class L10n {
   /// No description provided for @supportBody.
   ///
   /// In zh, this message translates to:
-  /// **'馬大別忙免費給每間教會使用，雲端費用由大家一起分擔。支持完全自願，教會能用的功能都一樣。'**
+  /// **'支持完全自願，只用來分擔雲端費用，每間教會能用的功能都一樣'**
   String get supportBody;
 
   /// No description provided for @supportTips.

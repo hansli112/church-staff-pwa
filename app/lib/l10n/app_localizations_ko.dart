@@ -291,7 +291,7 @@ class L10nKo extends L10n {
   String get gettingStarted => '시작하기';
 
   @override
-  String get gettingStartedInvite => '멤버 초대';
+  String get inviteMembers => '멤버 초대';
 
   @override
   String get gettingStartedInviteBody => '초대 링크를 만들어 멤버에게 보내 주세요';
@@ -313,6 +313,12 @@ class L10nKo extends L10n {
 
   @override
   String get noRostersAhead => '예정된 예배가 없어요';
+
+  @override
+  String get rostersNobodyArranged => '아직 아무도 배정되지 않았어요';
+
+  @override
+  String get rostersStartArranging => '배정 시작하기';
 
   @override
   String get today => '오늘';
@@ -433,6 +439,9 @@ class L10nKo extends L10n {
 
   @override
   String get customEvent => '직접 입력';
+
+  @override
+  String get addEvent => '특별 순서 추가';
 
   @override
   String get eventName => '특별 순서 이름';
@@ -564,6 +573,9 @@ class L10nKo extends L10n {
   String memberCount(int count) {
     return '멤버 $count명';
   }
+
+  @override
+  String get membersOnlyYou => '아직 다른 멤버가 없어요';
 
   @override
   String get deleteChurch => '교회 삭제';
@@ -744,6 +756,9 @@ class L10nKo extends L10n {
   String deleteAccountLastAdmin(String churches) {
     return '$churches의 유일한 관리자예요. 먼저 다른 멤버를 관리자로 지정해 주세요.';
   }
+
+  @override
+  String get goToMembers => '멤버로 이동';
 
   @override
   String get accountDeleted => '계정을 삭제했어요';
@@ -1126,7 +1141,7 @@ class L10nKo extends L10n {
   String get supportVerseSource => '고린도후서 8:14';
 
   @override
-  String get supportBody => '마르다의 쉼표는 모든 교회가 무료로 쓰고, 서버 비용은 다 함께 나눠요. 후원은 전적으로 자유이고, 어느 교회든 쓸 수 있는 기능은 똑같아요.';
+  String get supportBody => '후원은 자유이고 서버 비용에만 쓰이며, 어느 교회든 쓸 수 있는 기능은 똑같아요';
 
   @override
   String get supportTips => '일시 후원';

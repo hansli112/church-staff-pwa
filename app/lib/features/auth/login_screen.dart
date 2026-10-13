@@ -230,7 +230,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 textInputAction: TextInputAction.next,
                 autofillHints: const [AutofillHints.name],
                 maxLength: TextLimits.profileName,
-                decoration: InputDecoration(hintText: l10n.yourName),
+                decoration: InputDecoration(labelText: l10n.yourName),
                 validator: (v) => (v ?? '').trim().isEmpty ? l10n.nameRequired : null,
               ),
               const SizedBox(height: Space.s),
@@ -241,7 +241,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               textInputAction: TextInputAction.next,
               autocorrect: false,
               autofillHints: const [AutofillHints.email],
-              decoration: InputDecoration(hintText: l10n.email),
+              decoration: InputDecoration(labelText: l10n.email),
               validator: (v) {
                 final t = (v ?? '').trim();
                 if (t.isEmpty) return l10n.emailRequired;
@@ -257,7 +257,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               autofillHints: [
                 register ? AutofillHints.newPassword : AutofillHints.password,
               ],
-              decoration: InputDecoration(hintText: l10n.password),
+              decoration: InputDecoration(labelText: l10n.password),
               onFieldSubmitted: (_) => _submit(),
               validator: (v) => register && (v ?? '').length < 6 ? l10n.errWeakPassword : null,
             ),

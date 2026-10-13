@@ -73,7 +73,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             autofocus: true,
             maxLength: TextLimits.profileName,
             textInputAction: TextInputAction.done,
-            decoration: InputDecoration(hintText: l10n.name, counterText: ''),
+            decoration: InputDecoration(labelText: l10n.name, counterText: ''),
             onChanged: (_) => setState(() {}),
             onSubmitted: (_) => _save(profile),
           ),

@@ -61,6 +61,7 @@ class PeoplePicker extends StatefulWidget {
     this.initialGuests = const {},
     this.guestSuggestions = const [],
     this.onChanged,
+    this.onInvite,
   });
 
   /// The service, or null for an event's roster: then whoever serves the
@@ -83,6 +84,11 @@ class PeoplePicker extends StatefulWidget {
   /// Called with the latest result after every change, so closing the
   /// sheet any way (drag down, tap outside) keeps what was picked.
   final ValueChanged<PickerResult>? onChanged;
+
+  /// For those who may invite people (admins): while nobody serves the
+  /// duty, a 「邀請同工」 button closes the picker, keeping what was picked,
+  /// and this goes on to the invites.
+  final VoidCallback? onInvite;
 
   @override
   State<PeoplePicker> createState() => PeoplePickerState();
@@ -281,12 +287,25 @@ class PeoplePickerState extends State<PeoplePicker> {
         rows.add(() => _row(n, c, onTap: () => _toggle(n)));
       }
     } else if (!searching) {
+      // One sentence and, for those who can, one button.
       rows.add(
         () => Padding(
           padding: const EdgeInsets.all(Space.l),
-          child: BalancedText(
-            l10n.pickerNoOneServes(widget.duty),
-            style: AppText.body.copyWith(color: c.secondaryLabel),
+          child: Column(
+            children: [
+              BalancedText(
+                l10n.pickerNoOneServes(widget.duty),
+                style: AppText.body.copyWith(color: c.secondaryLabel),
+              ),
+              if (widget.onInvite case final invite?)
+                SecondaryButton(
+                  label: l10n.inviteMembers,
+                  onPressed: () {
+                    Navigator.pop(context, result);
+                    invite();
+                  },
+                ),
+            ],
           ),
         ),
       );

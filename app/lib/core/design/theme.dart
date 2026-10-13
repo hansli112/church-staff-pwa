@@ -140,6 +140,27 @@ ThemeData buildTheme(Brightness brightness) {
         textStyle: AppText.body,
       ),
     ),
+    // Like an iOS segmented control: a neutral track, the chosen part a
+    // raised block. The track's own colour as the border insets the block
+    // and divides the parts. The accent stays for actions and status.
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: ButtonStyle(
+        backgroundColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? c.segment : c.fill,
+        ),
+        foregroundColor: WidgetStatePropertyAll(c.label),
+        overlayColor: WidgetStatePropertyAll(c.label.withValues(alpha: 0.06)),
+        side: WidgetStatePropertyAll(BorderSide(color: c.fill, width: 2)),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.s + 2)),
+        ),
+        textStyle: WidgetStateProperty.resolveWith(
+          (s) => AppText.subheadline.copyWith(
+            fontWeight: s.contains(WidgetState.selected) ? FontWeight.w600 : FontWeight.w400,
+          ),
+        ),
+      ),
+    ),
     listTileTheme: ListTileThemeData(
       tileColor: c.surface,
       textColor: c.label,

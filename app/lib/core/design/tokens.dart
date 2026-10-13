@@ -23,7 +23,9 @@ abstract final class Radii {
 
 /// Colors for one appearance. Contrast was checked against [background]
 /// and [surface]: text 4.5:1 or better, [accent] and [destructive] as text
-/// 4.5:1 or better, [tertiaryLabel] is for disabled text only.
+/// 4.5:1 or better. [tertiaryLabel] is for disabled text and for icons that
+/// only point the way (chevrons, grab handles): 3:1 on [surface] and
+/// [surfaceRaised], as icons need, but not for text that must be read.
 @immutable
 class AppColors extends ThemeExtension<AppColors> {
   const AppColors({
@@ -35,6 +37,7 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.tertiaryLabel,
     required this.separator,
     required this.fill,
+    required this.segment,
     required this.accent,
     required this.onAccent,
     required this.accentSoft,
@@ -57,6 +60,10 @@ class AppColors extends ThemeExtension<AppColors> {
 
   /// Search fields, chips, pressed rows.
   final Color fill;
+
+  /// The chosen part of a segmented control, on a [fill] track. Neutral:
+  /// the accent is for actions and status, not for where one is.
+  final Color segment;
   final Color accent;
   final Color onAccent;
 
@@ -71,9 +78,10 @@ class AppColors extends ThemeExtension<AppColors> {
     surfaceRaised: Color(0xFFFFFFFF),
     label: Color(0xFF000000),
     secondaryLabel: Color(0xFF5C5C62), // 6.5:1 on white, 5.8:1 on F2F2F7
-    tertiaryLabel: Color(0xFF9A9AA0),
+    tertiaryLabel: Color(0xFF8A8A8F), // 3.4:1 on white
     separator: Color(0xFFD1D1D6),
     fill: Color(0xFFE9E9EE),
+    segment: Color(0xFFFFFFFF),
     accent: Color(0xFF1F5FD1), // 5.9:1 on white
     onAccent: Color(0xFFFFFFFF),
     accentSoft: Color(0xFFE3ECFB),
@@ -87,9 +95,10 @@ class AppColors extends ThemeExtension<AppColors> {
     surfaceRaised: Color(0xFF2C2C2E),
     label: Color(0xFFFFFFFF),
     secondaryLabel: Color(0xFFAEAEB2), // 7.4:1 on 1C1C1E
-    tertiaryLabel: Color(0xFF6C6C70),
+    tertiaryLabel: Color(0xFF7C7C80), // 4.1:1 on 1C1C1E, 3.4:1 on 2C2C2E
     separator: Color(0xFF38383A),
     fill: Color(0xFF2C2C2E),
+    segment: Color(0xFF636366),
     accent: Color(0xFF6EA2FF), // 6.4:1 on 1C1C1E
     onAccent: Color(0xFF00194A),
     accentSoft: Color(0xFF1B2B4A),

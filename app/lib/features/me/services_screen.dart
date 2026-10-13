@@ -490,16 +490,25 @@ class ServiceEditorScreen extends ConsumerWidget {
                       remove: () => removeDuty(d),
                       synchronize: oldDuties.isEmpty ? null : () => synchronize(d),
                     ),
-                    trailing: IconButton(
-                      tooltip: l10n.moveUp,
-                      icon: const Icon(Icons.arrow_upward),
-                      onPressed: i == 0
-                          ? null
-                          : () => save(
-                              service.copyWith(
-                                duties: [...service.duties]..swap(i, i - 1),
-                              ),
-                            ),
+                    // Up and down, like the common events below.
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          tooltip: l10n.moveUp,
+                          icon: const Icon(Icons.arrow_upward),
+                          onPressed: i == 0
+                              ? null
+                              : () => save(service.copyWith(duties: [...service.duties]..swap(i, i - 1))),
+                        ),
+                        IconButton(
+                          tooltip: l10n.moveDown,
+                          icon: const Icon(Icons.arrow_downward),
+                          onPressed: i == service.duties.length - 1
+                              ? null
+                              : () => save(service.copyWith(duties: [...service.duties]..swap(i, i + 1))),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -565,7 +574,7 @@ class ServiceEditorScreen extends ConsumerWidget {
                   ),
                 ),
               ListRow(
-                title: l10n.add,
+                title: l10n.addEvent,
                 leading: const Icon(Icons.add),
                 onTap: () async {
                   final name = await promptText(

@@ -116,7 +116,7 @@ const _startupKeys = {
   'noUpcomingServices',
   'viewRosters',
   'gettingStarted',
-  'gettingStartedInvite',
+  'inviteMembers',
   'gettingStartedInviteBody',
   'gettingStartedServices',
   'gettingStartedServicesBody',

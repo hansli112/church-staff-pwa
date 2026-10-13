@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -145,7 +146,18 @@ void main() {
   testWidgets('away from a phone’s browser, nobody is told to add the app to home', (tester) async {
     await pumpApp(tester, seededChurch(), overrides: [isWebProvider.overrideWithValue(true)]);
     await go(tester, '/me/church');
-    expect(find.text(iconsStay), findsOneWidget, reason: 'for the admin');
     expect(find.text('加入主畫面'), findsNothing, reason: 'a computer, a store app, or the home screen already');
+  });
+
+  testWidgets('the note on iPhone icons is for an admin on an iPhone or iPad only', (tester) async {
+    await pumpApp(tester, seededChurch());
+    await go(tester, '/me/church');
+    expect(find.text(iconsStay), findsNothing, reason: 'Android updates its icons');
+
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    await pumpApp(tester, seededChurch());
+    await go(tester, '/me/church');
+    expect(find.text(iconsStay), findsOneWidget);
+    debugDefaultTargetPlatformOverride = null;
   });
 }

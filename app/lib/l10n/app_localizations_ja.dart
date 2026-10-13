@@ -290,7 +290,7 @@ class L10nJa extends L10n {
   String get gettingStarted => 'はじめに';
 
   @override
-  String get gettingStartedInvite => 'メンバーを招待';
+  String get inviteMembers => 'メンバーを招待';
 
   @override
   String get gettingStartedInviteBody => '招待リンクを作成して、メンバーに送りましょう';
@@ -312,6 +312,12 @@ class L10nJa extends L10n {
 
   @override
   String get noRostersAhead => '今後の集会はありません';
+
+  @override
+  String get rostersNobodyArranged => 'まだ誰も割り当てられていません';
+
+  @override
+  String get rostersStartArranging => '割り当てを始める';
 
   @override
   String get today => '今日';
@@ -432,6 +438,9 @@ class L10nJa extends L10n {
 
   @override
   String get customEvent => 'その他の特別行事';
+
+  @override
+  String get addEvent => '特別行事を追加';
 
   @override
   String get eventName => '特別行事の名前';
@@ -563,6 +572,9 @@ class L10nJa extends L10n {
   String memberCount(int count) {
     return 'メンバー$count人';
   }
+
+  @override
+  String get membersOnlyYou => 'まだほかのメンバーはいません';
 
   @override
   String get deleteChurch => '教会を削除';
@@ -743,6 +755,9 @@ class L10nJa extends L10n {
   String deleteAccountLastAdmin(String churches) {
     return 'あなたは「$churches」の唯一の管理者です。先にほかのメンバーを管理者にしてください。';
   }
+
+  @override
+  String get goToMembers => 'メンバーを開く';
 
   @override
   String get accountDeleted => 'アカウントを削除しました';
@@ -1125,7 +1140,7 @@ class L10nJa extends L10n {
   String get supportVerseSource => 'コリントの信徒への手紙二 8:14';
 
   @override
-  String get supportBody => '「マルタ、ひと休み」はどの教会も無料で使えます。サーバー費用はみんなで分かち合っています。応援はまったくの任意で、使える機能はどの教会も同じです。';
+  String get supportBody => '応援は任意で、サーバー費用にだけ使われ、使える機能はどの教会も同じです';
 
   @override
   String get supportTips => '1回の応援';

@@ -200,8 +200,9 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
             ),
           ),
           ListSection(
-            // For whoever changes the church's name or logo.
-            footer: admin ? l10n.addToHomeIosNote : null,
+            // For whoever changes the church's name or logo, on an iPhone
+            // or iPad (native or web): Android updates its icons itself.
+            footer: admin && Theme.of(context).platform == TargetPlatform.iOS ? l10n.addToHomeIosNote : null,
             children: [
               ListRow(
                 title: l10n.churchUrl,

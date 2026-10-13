@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/design/components.dart';
+import '../../core/design/tokens.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
@@ -26,7 +27,8 @@ final _liveInvitesProvider = Provider.autoDispose<List<Invite>>((ref) {
   return live;
 });
 
-/// Admins make invite links (7 or 30 days), share them, and revoke them.
+/// Admins make invite links (7 or 30 days, 7 unless they choose 30), share
+/// them, and revoke them.
 /// A link can put the people who join with it in some 牧區 at once.
 class InvitesScreen extends ConsumerStatefulWidget {
   const InvitesScreen({super.key});
@@ -40,6 +42,9 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
 
   /// The 牧區 the next invite joins, as service IDs.
   final _zones = <String>{};
+
+  /// How long the next invite works.
+  int _days = 7;
 
   Future<void> _create(int days) async {
     final l10n = L10n.of(context);
@@ -115,6 +120,7 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
+    final c = AppColors.of(context);
     final live = ref.watch(_liveInvitesProvider);
     final services = ref.watch(servicesProvider).value;
     final enabled = services?.enabled ?? const <Service>[];
@@ -128,31 +134,54 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
       appBar: AppBar(title: Text(l10n.invites)),
       body: ListView(
         children: [
+          // Any number of 牧區: an empty circle says it can be ticked.
           if (enabled.isNotEmpty)
             ListSection(
               header: l10n.inviteZones,
               children: [
                 for (final s in enabled)
-                  ListRow(
-                    title: s.name,
+                  Semantics(
                     selected: _zones.contains(s.id),
-                    onTap: () {
-                      Haptics.selection();
-                      setState(() => _zones.contains(s.id) ? _zones.remove(s.id) : _zones.add(s.id));
-                    },
+                    child: ListRow(
+                      title: s.name,
+                      leading: _zones.contains(s.id)
+                          ? Icon(Icons.check_circle, color: c.accent)
+                          : const Icon(Icons.circle_outlined),
+                      chevron: false,
+                      onTap: () {
+                        Haptics.selection();
+                        setState(() => _zones.contains(s.id) ? _zones.remove(s.id) : _zones.add(s.id));
+                      },
+                    ),
                   ),
               ],
             ),
-          ListSection(
-            header: l10n.inviteCreate,
-            children: [
-              for (final days in [7, 30])
-                ListRow(
-                  title: l10n.inviteDays(days),
-                  leading: const Icon(Icons.link),
-                  onTap: _busy ? null : () => _create(days),
+          // How long it works is a choice; the button says what happens.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Space.m, Space.s, Space.m, Space.m),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SegmentedButton<int>(
+                  showSelectedIcon: false,
+                  segments: [
+                    for (final days in [7, 30]) ButtonSegment(value: days, label: Text(l10n.inviteDays(days))),
+                  ],
+                  selected: {_days},
+                  onSelectionChanged: (v) {
+                    Haptics.selection();
+                    setState(() => _days = v.first);
+                  },
                 ),
-            ],
+                const SizedBox(height: Space.m),
+                PrimaryButton(
+                  label: l10n.inviteCreate,
+                  icon: const Icon(Icons.link),
+                  busy: _busy,
+                  onPressed: () => _create(_days),
+                ),
+              ],
+            ),
           ),
           if (live.isNotEmpty)
             ListSection(

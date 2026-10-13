@@ -78,6 +78,9 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                 final ra = a.role.index.compareTo(b.role.index);
                 return ra != 0 ? ra : a.name.compareTo(b.name);
               });
+          // Nobody else has joined: the next step is inviting them.
+          final alone = isAdmin && _query.isEmpty && list.length <= 1 && pending.isEmpty;
+          final extra = alone ? 1 : (pending.isEmpty ? 0 : pending.length + 1);
           return Column(
             children: [
               Padding(
@@ -110,9 +113,26 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                 child: list.isEmpty && pending.isEmpty
                     ? EmptyState(message: l10n.noMembersFound)
                     : ListView.builder(
-                        itemCount: list.length + (pending.isEmpty ? 0 : pending.length + 1),
+                        itemCount: list.length + extra,
                         itemExtent: null,
                         itemBuilder: (context, i) {
+                          if (alone && i == list.length) {
+                            return Padding(
+                              padding: const EdgeInsets.fromLTRB(Space.l, Space.l, Space.l, Space.s),
+                              child: Column(
+                                children: [
+                                  BalancedText(
+                                    l10n.membersOnlyYou,
+                                    style: AppText.body.copyWith(color: c.secondaryLabel),
+                                  ),
+                                  SecondaryButton(
+                                    label: l10n.inviteMembers,
+                                    onPressed: () => context.push('/me/invites'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
                           if (i < list.length) {
                             final m = list[i];
                             return _grouped(

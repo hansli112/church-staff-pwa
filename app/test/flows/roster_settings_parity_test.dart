@@ -332,8 +332,8 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/sunday/2026-10-04');
 
-    expect(shownName(tester, 'John Chen').style?.fontWeight, isNot(FontWeight.w600));
-    expect(shownName(tester, '不同顯示姓名').style?.fontWeight, FontWeight.w600);
+    expect(shownName(tester, 'John Chen').style?.fontWeight, isNot(FontWeight.w700));
+    expect(shownName(tester, '不同顯示姓名').style?.fontWeight, FontWeight.w700);
   });
 
   testWidgets('readonly event names also highlight only the assigned uid, not a same-text guest', (tester) async {
@@ -351,7 +351,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/event/identity-event');
 
-    expect(shownName(tester, 'John Chen').style?.fontWeight, isNot(FontWeight.w600));
-    expect(shownName(tester, '不同顯示姓名').style?.fontWeight, FontWeight.w600);
+    expect(shownName(tester, 'John Chen').style?.fontWeight, isNot(FontWeight.w700));
+    expect(shownName(tester, '不同顯示姓名').style?.fontWeight, FontWeight.w700);
   });
 }

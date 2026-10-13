@@ -202,6 +202,9 @@ class ListRow extends StatelessWidget {
     final c = AppColors.of(context);
     final platform = Theme.of(context).platform;
     final showChevron = chevron ?? (onTap != null && trailing == null && selected == null && !destructive);
+    // Past about 1.5× text, a value beside the title leaves neither room:
+    // it goes under the title instead, whole.
+    final stacked = value != null && MediaQuery.textScalerOf(context).scale(17) > 17 * 1.5;
     final row = InkWell(
       onTap: onTap,
       child: ConstrainedBox(
@@ -217,9 +220,11 @@ class ListRow extends StatelessWidget {
             builder: (context, box) => Row(
               children: [
                 if (leading != null) ...[
+                  // Neutral: the accent is for actions and status, and the
+                  // row already says what it is.
                   IconTheme.merge(
                     data: IconThemeData(
-                      color: destructive ? c.destructive : c.accent,
+                      color: destructive ? c.destructive : c.secondaryLabel,
                       size: 22,
                     ),
                     child: leading!,
@@ -237,6 +242,14 @@ class ListRow extends StatelessWidget {
                           color: destructive ? c.destructive : c.label,
                         ),
                       ),
+                      if (stacked)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            value!,
+                            style: AppText.body.copyWith(color: c.secondaryLabel),
+                          ),
+                        ),
                       if (subtitle != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 2),
@@ -250,7 +263,7 @@ class ListRow extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (value != null)
+                if (value != null && !stacked)
                   Padding(
                     padding: const EdgeInsetsDirectional.only(start: Space.s),
                     child: ConstrainedBox(
@@ -360,15 +373,18 @@ class EmptyState extends StatelessWidget {
   }
 }
 
-/// A short message near the bottom; with [onUndo], an 「復原」 action.
+/// A short message near the bottom; with [onUndo], an 「復原」 action, or
+/// with [onRetry] (a failed save), 「重試」. At most one action.
 ///
 /// Used instead of a confirmation dialog for anything that can be undone.
 void showToast(
   BuildContext context,
   String message, {
   FutureOr<void> Function()? onUndo,
+  VoidCallback? onRetry,
   Duration duration = const Duration(seconds: 5),
 }) {
+  assert(onUndo == null || onRetry == null, 'a toast has at most one action');
   final messenger = ScaffoldMessenger.of(context);
   final l10n = L10n.of(context);
   messenger.hideCurrentSnackBar();
@@ -377,7 +393,9 @@ void showToast(
       content: Text(message),
       duration: duration,
       persist: false,
-      action: onUndo == null
+      action: onRetry != null
+          ? SnackBarAction(label: l10n.retry, onPressed: onRetry)
+          : onUndo == null
           ? null
           : SnackBarAction(
               label: l10n.undo,
@@ -664,7 +682,8 @@ class Tag extends StatelessWidget {
   }
 }
 
-/// Section title above content on a plain page, e.g. a date heading.
+/// Section title above full-width rows, e.g. in the people picker. Lines
+/// up with the rows' text and reads like a [ListSection] header.
 class SectionHeader extends StatelessWidget {
   const SectionHeader(this.text, {super.key, this.trailing});
 
@@ -675,7 +694,7 @@ class SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(Space.l, Space.l, Space.m, Space.s),
+      padding: const EdgeInsets.fromLTRB(Space.m, Space.l, Space.m, Space.s),
       child: Row(
         children: [
           Expanded(
@@ -683,10 +702,7 @@ class SectionHeader extends StatelessWidget {
               header: true,
               child: Text(
                 text,
-                style: AppText.footnote.copyWith(
-                  color: c.secondaryLabel,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: AppText.footnote.copyWith(color: c.secondaryLabel),
               ),
             ),
           ),

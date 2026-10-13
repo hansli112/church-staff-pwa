@@ -126,6 +126,15 @@ class ServiceRosterList extends ConsumerWidget {
         service.id,
       ).select((v) => v.whenData((l) => [for (final r in l) r.id].join('|'))),
     );
+    // A new church, or one nobody has arranged ahead yet: every day reads
+    // 待定. Those who may arrange it get one way in, to the first day.
+    final nobodyArranged =
+        ref.watch(meProvider.select((m) => m.value?.canEditRosters(service.id) ?? false)) &&
+        ref.watch(
+          serviceRostersProvider(service.id).select(
+            (v) => v.value?.every((r) => r.duties.every((d) => d.people.isEmpty)) ?? false,
+          ),
+        );
     return ids.when(
       skipLoadingOnReload: true,
       loading: () => const SizedBox.shrink(),
@@ -136,11 +145,15 @@ class ServiceRosterList extends ConsumerWidget {
       data: (joined) {
         final list = joined.isEmpty ? const <String>[] : joined.split('|');
         if (list.isEmpty) return EmptyState(message: l10n.noRostersAhead);
+        void open(String id) => context.push('/rosters/${service.id}/${id.split('_').first}');
+        final top = nobodyArranged ? 1 : 0;
         return ListView.builder(
           key: PageStorageKey('rosters-${service.id}'),
           padding: const EdgeInsets.only(bottom: Space.l),
-          itemCount: list.length + (service.enabled ? 1 : 0),
-          itemBuilder: (context, i) {
+          itemCount: top + list.length + (service.enabled ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index < top) return _StartArranging(onStart: () => open(list.first));
+            final i = index - top;
             if (i == list.length) {
               return Padding(
                 padding: const EdgeInsets.all(Space.m),
@@ -155,11 +168,33 @@ class ServiceRosterList extends ConsumerWidget {
               key: ValueKey(id),
               serviceType: service.id,
               rosterId: id,
-              onTap: () => context.push('/rosters/${service.id}/${id.split('_').first}'),
+              onTap: () => open(id),
             );
           },
         );
       },
+    );
+  }
+}
+
+/// One sentence and one button above a service nobody is arranged in yet.
+class _StartArranging extends StatelessWidget {
+  const _StartArranging({required this.onStart});
+
+  final VoidCallback onStart;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final c = AppColors.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Space.l, Space.s, Space.l, Space.s),
+      child: Column(
+        children: [
+          BalancedText(l10n.rostersNobodyArranged, style: AppText.body.copyWith(color: c.secondaryLabel)),
+          SecondaryButton(label: l10n.rostersStartArranging, onPressed: onStart),
+        ],
+      ),
     );
   }
 }

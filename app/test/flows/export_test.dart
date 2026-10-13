@@ -79,6 +79,9 @@ void main() {
     );
     await go(tester, '/me/church');
     await tester.scrollUntilVisible(find.text('Export data'), 200);
+    // Clear of the tab bar, which the list runs under.
+    await tester.drag(find.byType(ListView).last, const Offset(0, -200));
+    await settle(tester);
     await tapText(tester, 'Export data');
 
     final zip = ZipDecoder().decodeBytes(saver.files.single.$2);

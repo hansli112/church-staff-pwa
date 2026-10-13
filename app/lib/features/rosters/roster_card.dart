@@ -56,7 +56,8 @@ class RosterCard extends ConsumerWidget {
 }
 
 /// The content of a roster day: date, event tags, then each duty and its
-/// people. My own name is in the accent colour so I find it at a glance.
+/// people. My own name is bold so I find it at a glance; the accent colour
+/// stays for actions and status.
 class RosterDayView extends StatelessWidget {
   const RosterDayView({
     super.key,
@@ -144,10 +145,7 @@ class RosterDayView extends StatelessWidget {
                                         TextSpan(
                                           text: name,
                                           style: _isMe(duty, name)
-                                              ? TextStyle(
-                                                  color: c.accent,
-                                                  fontWeight: FontWeight.w600,
-                                                )
+                                              ? const TextStyle(fontWeight: FontWeight.w700)
                                               : null,
                                         ),
                                       ],

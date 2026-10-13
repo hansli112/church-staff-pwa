@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
+import '../../data/backend.dart';
 import '../../domain/day.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
@@ -13,6 +14,9 @@ import 'format.dart';
 
 /// Runs an online write and offers its real, failure-reporting undo only
 /// after it succeeds. A slow SDK response is not treated as an offline save.
+///
+/// A failure the user can try again (the network, offline, unknown) offers
+/// 「重試」, which sends the same change: what was picked is not lost.
 Future<bool> runWithUndo(BuildContext context, String message, ChurchWrite Function() write) async {
   final l10n = L10n.of(context);
   // A duty row may disappear before the server acknowledgment; keep the
@@ -28,7 +32,14 @@ Future<bool> runWithUndo(BuildContext context, String message, ChurchWrite Funct
     return context.mounted;
   } catch (error) {
     if (feedbackContext.mounted) {
-      showToast(feedbackContext, saveErrorText(l10n, error));
+      final retry =
+          error is! CloudException || const {CloudErrorCode.unavailable, CloudErrorCode.unknown}.contains(error.code);
+      showToast(
+        feedbackContext,
+        saveErrorText(l10n, error),
+        duration: Duration(seconds: retry ? 8 : 5),
+        onRetry: retry ? () => runWithUndo(feedbackContext, message, write) : null,
+      );
     }
     return false;
   }

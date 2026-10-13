@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
@@ -224,11 +227,12 @@ class _DutyRow extends ConsumerWidget {
   final Duty duty;
 
   Future<void> _pick(BuildContext context, WidgetRef ref) async {
-    final l10n = L10n.of(context);
     final members = ref.read(membersProvider).requireValue;
     final order = ref.read(rosterActionsProvider).orderOf(roster);
     final me = ref.read(meProvider).value;
+    final router = GoRouter.of(context);
     PickerResult? latest;
+    var invite = false;
     final returned = await showAppSheet<PickerResult>(
       context,
       expand: true,
@@ -251,10 +255,16 @@ class _DutyRow extends ConsumerWidget {
         canReorder: !roster.isEvent,
         canRemove: true,
         onChanged: (r) => latest = r,
+        onInvite: (me?.isAdmin ?? false) ? () => invite = true : null,
       ),
     );
     final result = returned ?? latest;
-    if (result == null || !context.mounted) return;
+    if (result != null && context.mounted) await _save(context, ref, result);
+    if (invite) unawaited(router.push('/me/invites'));
+  }
+
+  Future<void> _save(BuildContext context, WidgetRef ref, PickerResult result) async {
+    final l10n = L10n.of(context);
     final actions = ref.read(rosterActionsProvider);
     if (result.removeDuty) {
       await runWithUndo(context, l10n.dutyRemoved(duty.role), () => actions.removeDuty(roster, duty.role));
@@ -381,9 +391,11 @@ class _DutyRow extends ConsumerWidget {
       child: ConstrainedBox(
         constraints: BoxConstraints(minHeight: Space.minTap(platform)),
         child: Padding(
+          // A name is a full tap target of its own; the rest of the row
+          // (the duty, 待定, the space after the names) opens the picker.
           padding: const EdgeInsets.symmetric(
             horizontal: Space.m,
-            vertical: Space.s,
+            vertical: Space.xs,
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -403,8 +415,8 @@ class _DutyRow extends ConsumerWidget {
                         style: AppText.body.copyWith(color: c.secondaryLabel),
                       )
                     : Wrap(
-                        spacing: Space.xs,
-                        runSpacing: Space.xs,
+                        spacing: Space.s,
+                        runSpacing: Space.s,
                         children: [
                           for (final p in duty.people)
                             _NameButton(
@@ -414,6 +426,7 @@ class _DutyRow extends ConsumerWidget {
                         ],
                       ),
               ),
+              const SizedBox(width: Space.s),
               Icon(Icons.chevron_right, color: c.tertiaryLabel, size: 22),
             ],
           ),
@@ -423,7 +436,8 @@ class _DutyRow extends ConsumerWidget {
   }
 }
 
-/// A name inside a duty row: its own tap target for swap and remove.
+/// A name inside a duty row: its own tap target for swap and remove, as
+/// large as any other (44pt, Android 48dp), apart from the next by 8.
 class _NameButton extends StatelessWidget {
   const _NameButton({required this.name, this.onTap});
 
@@ -433,19 +447,25 @@ class _NameButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
+    final tap = Space.minTap(Theme.of(context).platform);
     return Semantics(
       button: true,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(Radii.s),
         child: Container(
-          constraints: const BoxConstraints(minHeight: 36, minWidth: 44),
-          padding: const EdgeInsets.symmetric(horizontal: Space.s, vertical: 6),
+          constraints: BoxConstraints(minHeight: tap, minWidth: tap),
+          padding: const EdgeInsets.symmetric(horizontal: Space.m - 4, vertical: 6),
           decoration: BoxDecoration(
             color: c.fill,
             borderRadius: BorderRadius.circular(Radii.s),
           ),
-          child: Text(name, style: AppText.body),
+          // Fills the minimum size with the name centred in it.
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [Text(name, style: AppText.body)],
+          ),
         ),
       ),
     );

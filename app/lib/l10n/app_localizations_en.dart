@@ -293,7 +293,7 @@ class L10nEn extends L10n {
   String get gettingStarted => 'Get started';
 
   @override
-  String get gettingStartedInvite => 'Invite team members';
+  String get inviteMembers => 'Invite team members';
 
   @override
   String get gettingStartedInviteBody => 'Create an invite link and send it to your team';
@@ -315,6 +315,12 @@ class L10nEn extends L10n {
 
   @override
   String get noRostersAhead => 'No upcoming services';
+
+  @override
+  String get rostersNobodyArranged => 'No one is scheduled yet';
+
+  @override
+  String get rostersStartArranging => 'Start scheduling';
 
   @override
   String get today => 'Today';
@@ -441,6 +447,9 @@ class L10nEn extends L10n {
 
   @override
   String get customEvent => 'Custom occasion';
+
+  @override
+  String get addEvent => 'Add occasion';
 
   @override
   String get eventName => 'Occasion name';
@@ -579,6 +588,9 @@ class L10nEn extends L10n {
     );
     return '$_temp0';
   }
+
+  @override
+  String get membersOnlyYou => 'No one else has joined yet';
 
   @override
   String get deleteChurch => 'Delete church';
@@ -767,6 +779,9 @@ class L10nEn extends L10n {
   String deleteAccountLastAdmin(String churches) {
     return 'You’re the only admin of $churches. Make another team member an admin first.';
   }
+
+  @override
+  String get goToMembers => 'Go to Team members';
 
   @override
   String get accountDeleted => 'Account deleted';
@@ -1194,8 +1209,7 @@ class L10nEn extends L10n {
   String get supportVerseSource => '2 Corinthians 8:14';
 
   @override
-  String get supportBody =>
-      'Martha, sit is free for every church, and we share the server costs together. Support is completely optional, and every church gets the same features.';
+  String get supportBody => 'Support is optional, covers only server costs, and every church gets the same features';
 
   @override
   String get supportTips => 'One-time support';

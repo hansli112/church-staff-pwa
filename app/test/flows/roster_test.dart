@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/core/design/tokens.dart';
+import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/features/rosters/roster_card.dart';
@@ -211,6 +213,84 @@ void main() {
       }
       await tapText(tester, '完成');
       expect(peopleOn(b, 11, '招待'), containsAll(['同工0499', '同工0000', '李美玉']));
+    });
+
+    testWidgets('a name on the day is its own tap target, full size and apart from the next', (tester) async {
+      await pumpApp(tester, seededChurch());
+      await go(tester, '/rosters/sunday/2026-10-04');
+      Finder chip(String name) => find.ancestor(of: find.text(name), matching: find.byType(InkWell)).first;
+      final minimum = Space.minTap(Theme.of(tester.element(find.text('陳志豪'))).platform);
+      final hao = tester.getRect(chip('陳志豪'));
+      expect(hao.height, greaterThanOrEqualTo(minimum));
+      expect(hao.width, greaterThanOrEqualTo(minimum));
+      // 招待: 陳志豪、李美玉 (李美玉 is on 司琴 above too).
+      final next = tester.getRect(find.ancestor(of: find.text('李美玉').last, matching: find.byType(InkWell)).first);
+      expect(next.left - hao.right, greaterThanOrEqualTo(Space.s), reason: 'a gap between two names on one row');
+    });
+
+    testWidgets('when nobody serves a duty, an admin can invite people from the picker', (tester) async {
+      await pumpApp(tester, seededChurch());
+      await go(tester, '/rosters/youth/2026-10-10');
+      await tapText(tester, '司會');
+      expect(find.text('還沒有人負責司會'), findsOneWidget);
+      await tapText(tester, '邀請同工');
+      expect(find.text('建立邀請連結'), findsOneWidget, reason: 'the invites page');
+    });
+
+    testWidgets('a roster editor, who cannot invite, gets no invite button', (tester) async {
+      final b = seededChurch(as: editor);
+      final day = savedDay(b, 11);
+      b.rosters['grace']![day.id] = day.copyWith(
+        duties: [
+          ...day.duties,
+          const Duty(role: '音控', people: []),
+        ],
+      );
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-11');
+      await tapText(tester, '音控');
+      expect(find.text('還沒有人負責音控'), findsOneWidget);
+      expect(find.text('邀請同工'), findsNothing);
+    });
+
+    testWidgets('a failed save offers 重試, which saves what was picked', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-11');
+      await tapText(tester, '司琴');
+      await tapText(tester, '李美玉');
+      b.failNextWrite = Exception('offline');
+      await tapText(tester, '完成');
+      expect(find.text('沒有儲存成功，請檢查網路後再試一次'), findsOneWidget);
+      expect(peopleOn(b, 11, '司琴'), isEmpty);
+      await tapText(tester, '重試');
+      expect(peopleOn(b, 11, '司琴'), ['李美玉']);
+      expect(find.text('已更新司琴'), findsOneWidget);
+    });
+
+    testWidgets('a service nobody is arranged in yet offers to start, to those who can', (tester) async {
+      MemoryBackend newChurch(Member as) {
+        final b = MemoryBackend(clock: testClock);
+        final cid = b.addChurch('恩典堂', id: 'grace');
+        b.setServices(cid, const [sundayService]);
+        b.addMember(cid, pastor);
+        b.addMember(cid, staffMei);
+        b.auth.signInAs('${as.uid}@example.com', uid: as.uid, name: as.name);
+        b.users[as.uid] = UserProfile(uid: as.uid, name: as.name, email: '${as.uid}@example.com');
+        b.notify();
+        return b;
+      }
+
+      await pumpApp(tester, newChurch(staffMei));
+      await tapText(tester, '服事表');
+      expect(find.text('開始安排'), findsNothing);
+
+      await pumpApp(tester, newChurch(pastor));
+      await tapText(tester, '服事表');
+      expect(find.text('還沒有安排任何人'), findsOneWidget);
+      await tapText(tester, '開始安排');
+      expect(find.textContaining('10月4日'), findsOneWidget, reason: 'the first day, to arrange');
+      expect(find.byTooltip('編輯'), findsOneWidget);
     });
 
     testWidgets('removing a duty can be undone', (tester) async {

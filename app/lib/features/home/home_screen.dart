@@ -49,7 +49,7 @@ class _GettingStarted extends StatelessWidget {
       header: l10n.gettingStarted,
       children: [
         ListRow(
-          title: l10n.gettingStartedInvite,
+          title: l10n.inviteMembers,
           subtitle: l10n.gettingStartedInviteBody,
           leading: const Icon(Icons.person_add_alt),
           onTap: () => context.push('/me/invites'),
@@ -146,7 +146,7 @@ class HomeScreen extends ConsumerWidget {
                   children: [
                     ListRow(
                       title: l10n.waitingForZone(waiting),
-                      leading: const Icon(Icons.group_add_outlined),
+                      leading: const Icon(Icons.manage_accounts_outlined),
                       onTap: () => context.push('/me/members'),
                     ),
                   ],
