@@ -59,6 +59,9 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     });
     final backend = ref.read(backendProvider);
     try {
+      // Apple first: revoking needs the account to still exist. Should the
+      // backend then refuse (an admin's church changed meanwhile), Apple
+      // is revoked but the account stays, and Apple asks again next time.
       await backend.auth.prepareToDelete();
       await backend.cloud.deleteAccount();
       await backend.auth.signOut();

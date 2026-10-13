@@ -337,7 +337,9 @@ class MemoryBackend implements Backend {
 class MemoryAuth implements AuthGateway {
   MemoryAuth();
 
-  final _accounts = <String, ({String uid, String password, bool google, bool verified, String name})>{};
+  /// Accounts by email. [federated]: signs in with Google or Apple, so it
+  /// counts as verified even with a password added.
+  final _accounts = <String, ({String uid, String password, bool federated, bool verified, String name})>{};
   final _state = StreamController<AuthUser?>.broadcast(sync: true);
   AuthUser? _current;
   int _next = 1;
@@ -364,9 +366,9 @@ class MemoryAuth implements AuthGateway {
     return AuthUser(
       uid: a.uid,
       email: email,
-      emailVerified: a.verified || a.google,
+      emailVerified: a.verified || a.federated,
       displayName: a.name,
-      usesPassword: !a.google,
+      usesPassword: !a.federated,
     );
   }
 
@@ -380,7 +382,7 @@ class MemoryAuth implements AuthGateway {
     _accounts[email] ??= (
       uid: uid ?? 'u${_next++}',
       password: '',
-      google: true,
+      federated: true,
       verified: verified,
       name: name,
     );
@@ -398,7 +400,7 @@ class MemoryAuth implements AuthGateway {
     _accounts[email] = (
       uid: existing?.uid ?? 'u${_next++}',
       password: existing?.password ?? '',
-      google: true,
+      federated: true,
       verified: true,
       name: existing?.name ?? email.split('@').first,
     );
@@ -438,7 +440,7 @@ class MemoryAuth implements AuthGateway {
     _accounts[email] ??= (
       uid: 'u${_next++}',
       password: '',
-      google: true,
+      federated: true,
       verified: true,
       name: appleName ?? email.split('@').first,
     );
@@ -458,7 +460,7 @@ class MemoryAuth implements AuthGateway {
   /// Gives [email]'s account a password, as if set on another device.
   void setPassword(String email, String password) {
     final a = _accounts[email]!;
-    _accounts[email] = (uid: a.uid, password: password, google: a.google, verified: a.verified, name: a.name);
+    _accounts[email] = (uid: a.uid, password: password, federated: a.federated, verified: a.verified, name: a.name);
   }
 
   @override
@@ -490,7 +492,7 @@ class MemoryAuth implements AuthGateway {
     _accounts[email] = (
       uid: 'u${_next++}',
       password: password,
-      google: false,
+      federated: false,
       verified: false,
       name: name,
     );
@@ -523,7 +525,7 @@ class MemoryAuth implements AuthGateway {
     _accounts[email] = (
       uid: a.uid,
       password: a.password,
-      google: a.google,
+      federated: a.federated,
       verified: true,
       name: a.name,
     );

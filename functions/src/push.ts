@@ -27,12 +27,15 @@ interface Target {
   token: string;
 }
 
-// Only codes about the token itself. invalid-argument also means a bad
-// message, which every token would get, so it is not taken as a dead device.
 const DEAD_TOKEN_CODES = new Set([
   'messaging/registration-token-not-registered',
   'messaging/invalid-registration-token',
 ]);
+
+// FCM answers a garbled token with invalid-argument, but also a bad
+// message, which every token gets. So it means a dead device only when
+// another token in the same send went through.
+const INVALID_ARGUMENT = 'messaging/invalid-argument';
 
 /**
  * Sends [message] to every device of [uids] in church [cid], skipping
@@ -102,10 +105,12 @@ async function send(
       // FCM documents this link as HTTPS only, so not a bare route.
       webpush: { fcmOptions: { link: `${deps.appUrl}${link}` } },
     });
+    const anySent = result.responses.some((r) => r.success);
     const dead: typeof batch = [];
     result.responses.forEach((r, j) => {
+      const code = r.error?.code ?? '';
       if (r.success) sent++;
-      else if (r.error && DEAD_TOKEN_CODES.has(r.error.code)) dead.push(batch[j]);
+      else if (DEAD_TOKEN_CODES.has(code) || (anySent && code === INVALID_ARGUMENT)) dead.push(batch[j]);
     });
     await Promise.all(
       dead.map((t) =>

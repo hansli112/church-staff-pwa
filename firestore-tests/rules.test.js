@@ -286,6 +286,18 @@ describe('同工 (members)', () => {
     await assertFails(updateDoc(ref, { notificationPrefs: 'off' }));
   });
 
+  it('從 self-host 搬來的舊通知種類，不擋住改提醒時間', async () => {
+    await testEnv.withSecurityRulesDisabled((ctx) =>
+      updateDoc(doc(ctx.firestore(), `churches/${A}/members/${MEMBER_A}`), {
+        notificationPrefs: { muted: ['weeklyRoster'], legacy: true },
+      }),
+    );
+    const ref = doc(as(MEMBER_A), `churches/${A}/members/${MEMBER_A}`);
+    await assertSucceeds(updateDoc(ref, { 'notificationPrefs.reminderTiming': 'both' }));
+    await assertFails(updateDoc(ref, { 'notificationPrefs.muted': ['weeklyRoster', 'spam'] }));
+    await assertSucceeds(updateDoc(ref, { 'notificationPrefs.muted': ['reminder'] }));
+  });
+
   it('改不了別人的 notificationPrefs：同教會的同工、別的教會的管理員都不行', async () => {
     const prefs = { notificationPrefs: { muted: ['reminder'] } };
     await assertFails(updateDoc(doc(as(MEMBER_A), `churches/${A}/members/${EDITOR_A}`), prefs));

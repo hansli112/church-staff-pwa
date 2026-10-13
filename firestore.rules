@@ -235,16 +235,19 @@ service cloud.firestore {
           || (isSelf(uid) && isMember(cid) && onlyTouches(['notificationPrefs'])));
 
         // Which pushes the member turned off here, and when reminders come
-        // (functions/src/push.ts, notifications.ts). Checked only when
-        // changed: prefs moved from self-host may carry older kinds.
+        // (functions/src/push.ts, notifications.ts). Only what a write
+        // changes is checked: prefs moved from self-host may carry older
+        // kinds, and the app writes one field at a time.
         function hasValidPrefs() {
           let p = request.resource.data.get('notificationPrefs', {});
+          let changed = p is map ? p.diff(resource.data.get('notificationPrefs', {})).affectedKeys() : null;
           return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['notificationPrefs'])
             || (p is map
-              && p.keys().hasOnly(['muted', 'reminderTiming'])
-              && (!('muted' in p)
+              && changed.hasOnly(['muted', 'reminderTiming'])
+              && (!changed.hasAny(['muted']) || !('muted' in p)
                   || (p.muted is list && p.muted.hasOnly(['reminder', 'rosterChange', 'memberLeft'])))
-              && (!('reminderTiming' in p) || p.reminderTiming in ['weekly', 'dayBefore', 'both']));
+              && (!changed.hasAny(['reminderTiming']) || !('reminderTiming' in p)
+                  || p.reminderTiming in ['weekly', 'dayBefore', 'both']));
         }
 
         // A non-admin may leave on their own. An admin must be demoted by
