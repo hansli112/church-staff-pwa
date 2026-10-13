@@ -40,5 +40,6 @@ void main() {
     expect(AppLanguage.zhHant.sitePage('/privacy'), '/privacy?lang=zh-Hant');
     expect(AppLanguage.zhHans.sitePage('/privacy'), '/zh-Hans/privacy?lang=zh-Hans');
     expect(AppLanguage.en.sitePage('/terms'), '/en/terms?lang=en');
+    expect(AppLanguage.ja.sitePage('/terms', fromApp: true), '/ja/terms?lang=ja&from=app');
   });
 }

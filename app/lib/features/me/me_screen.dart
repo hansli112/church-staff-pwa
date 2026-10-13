@@ -130,13 +130,14 @@ class MeScreen extends ConsumerWidget {
 }
 
 /// A page of the website: the privacy policy and the terms, which the stores
-/// require the app to link to, and on the web the support page. Opened from
-/// the iOS and Android apps (from=app), the page hides its ways to the
-/// website's payments, which the stores forbid the apps to lead to.
-void _openSitePage(BuildContext context, WidgetRef ref, String page) {
-  final fromApp = ref.read(isWebProvider) ? '' : '&from=app';
-  launchUrl(Uri.parse('${Env.current.webOrigin}${AppLanguage.shownIn(context).sitePage(page)}$fromApp'));
-}
+/// require the app to link to, and on the web the support page. The stores
+/// forbid the iOS and Android apps to lead to paying elsewhere, so they
+/// open it with `fromApp` (AppLanguage.sitePage).
+void _openSitePage(BuildContext context, WidgetRef ref, String page) => launchUrl(
+  Uri.parse(
+    '${Env.current.webOrigin}${AppLanguage.shownIn(context).sitePage(page, fromApp: !ref.read(isWebProvider))}',
+  ),
+);
 
 class _UpdatesSection extends ConsumerWidget {
   const _UpdatesSection();

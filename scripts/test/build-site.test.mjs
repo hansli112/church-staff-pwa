@@ -117,7 +117,7 @@ test('the privacy policy and the terms name NewebPay only while the site takes p
 describe('opened from the iOS and Android apps (from=app), a page hides its ways to the payments', () => {
   /** Runs [path]'s from=app script; whether the page is the app's, and what the tab keeps. */
   function open(path, { search = '', kept = null } = {}) {
-    const script = /<script>\n\/\/ from=app[\s\S]*?<\/script>/.exec(built(path))[0].slice('<script>'.length, -'</script>'.length);
+    const script = /<script id="from-app">([\s\S]*?)<\/script>/.exec(built(path))[1];
     const store = { fromApp: kept };
     const classes = new Set();
     new Function('location', 'sessionStorage', 'document', script)(
@@ -134,13 +134,33 @@ describe('opened from the iOS and Android apps (from=app), a page hides its ways
     assert.deepEqual(open('/privacy', { search: '?lang=zh-Hant' }), { app: false, kept: null });
   });
 
-  test('what it hides: the web app (which has the support page) and the terms on paying on the website', () => {
-    assert.match(read('landing/site.css'), /\.from-app \.top-link, \.from-app \[data-in-app="hide"\] \{ display: none; \}/);
+  test('what it hides: every way to the web app (which has the support page), and the terms on paying on the website', () => {
+    const rule = /([^{}]*)\{\s*display:\s*none;?\s*\}/g;
+    const hidden = [...read('landing/site.css').matchAll(rule)].flatMap((m) => m[1].split(',').map((s) => s.trim()));
+    assert.ok(hidden.includes('.from-app a[href="/home"]') && hidden.includes('.from-app [data-from-app="hide"]'), 'site.css hides them');
     for (const tag of TAGS) {
-      for (const page of ['/privacy', '/terms', '/delete-account']) assert.match(built(sitePath(tag, page)), /class="top-link"/);
+      // What the app opens, and all they link to (no header nav, no site footer).
+      for (const page of ['/privacy', '/terms', '/delete-account']) {
+        // A link in a sentence goes with the words around it.
+        for (const [line] of built(sitePath(tag, page)).matchAll(/^.*<(?:li|p)\b.*href="\/home".*$/gm)) {
+          assert.match(line, /<span data-from-app="hide">[^<]*<a href="\/home">/, `${tag}${page}: ${line.trim()}`);
+        }
+      }
       const newebpay = [...built(sitePath(tag, '/terms')).matchAll(/<li[^>]*>[^\n]*NewebPay[^\n]*/g)].map((m) => m[0]);
       assert.equal(newebpay.length, 1, tag);
-      assert.match(newebpay[0], /^<li data-in-app="hide">/, tag);
+      assert.match(newebpay[0], /^<li data-from-app="hide">/, tag);
+    }
+  });
+
+  test("the terms' line on store refunds says it is for in-app payments only once the website takes payments", () => {
+    const off = mkdtempSync(join(tmpdir(), 'martha-site-off-'));
+    try {
+      buildSite({ out: off, origin: 'https://marthasit.com', project: 'marthasit', payments: 'off' });
+      const store = (html) => /<li>([^<]*)Apple App Store/.exec(html)[1];
+      assert.equal(store(built('/terms')), 'App 內的付款、續訂與取消訂閱由 ');
+      assert.equal(store(readFileSync(join(off, 'terms.html'), 'utf8')), '付款、續訂與取消訂閱由 ');
+    } finally {
+      rmSync(off, { recursive: true, force: true });
     }
   });
 });
