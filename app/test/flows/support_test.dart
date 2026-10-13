@@ -14,8 +14,17 @@ import '../support/harness.dart';
 import '../support/seed.dart';
 
 class FakeStore implements SupportStore {
-  final _results = StreamController<({String productId, PurchaseOutcome outcome})>.broadcast(sync: true);
+  FakeStore({this.now});
+
+  /// When a purchase is paid; the test's clock.
+  final DateTime Function()? now;
+  final _results = StreamController<PurchaseResult>.broadcast(sync: true);
   final bought = <String>[];
+  int refreshes = 0;
+
+  /// The store reporting the subscription paid again, as a renewal does.
+  void renew(DateTime at) =>
+      _results.add((productId: SupportProducts.subscription, outcome: PurchaseOutcome.thanks, paidAt: at));
 
   @override
   bool get available => true;
@@ -29,14 +38,23 @@ class FakeStore implements SupportStore {
   @override
   Future<void> buy(SupportItem item) async {
     bought.add(item.id);
-    _results.add((productId: item.id, outcome: PurchaseOutcome.thanks));
+    _results.add((productId: item.id, outcome: PurchaseOutcome.thanks, paidAt: now?.call()));
   }
 
   @override
   Future<void> restore() async {}
 
   @override
-  Stream<({String productId, PurchaseOutcome outcome})> get results => _results.stream;
+  Future<void> refresh() async => refreshes++;
+
+  @override
+  Stream<PurchaseResult> get results => _results.stream;
+
+  @override
+  String get name => 'Google Play';
+
+  @override
+  Uri get manageSubscription => Uri.parse('https://play.google.com/store/account/subscriptions');
 }
 
 class FakeIcons implements AppIconSwitcher {
@@ -47,6 +65,12 @@ class FakeIcons implements AppIconSwitcher {
 
   @override
   Future<void> set(String? name) async => icon = name;
+}
+
+/// Scrolls [finder] to the middle of the page, clear of the tab bar.
+Future<void> showMiddle(WidgetTester tester, Finder finder) async {
+  await Scrollable.ensureVisible(tester.element(finder), alignment: 0.5);
+  await tester.pump();
 }
 
 Future<void> pumpWithStore(
@@ -142,6 +166,7 @@ void main() {
     await tester.tap(find.text('支持馬大別忙'));
     await settle(tester);
 
+    await showMiddle(tester, find.text('紫'));
     await tester.tap(find.text('紫'));
     await settle(tester);
     expect(icons.icon, isNull, reason: 'icons are for subscribers');
@@ -152,11 +177,99 @@ void main() {
 
     await tester.tap(find.text('每月支持').last);
     await settle(tester);
+    await showMiddle(tester, find.text('紫'));
     await tester.tap(find.text('紫'));
     await settle(tester);
     expect(icons.icon, 'Purple');
     expect(store.bought, ['tip_small', 'supporter_monthly']);
     expect(find.text('支持者'), findsOneWidget);
+  });
+
+  testWidgets('the subscription says it renews and where to cancel, beside the terms and privacy policy', (
+    tester,
+  ) async {
+    final launcher = captureLaunches();
+    await pumpWithStore(tester, FakeStore(), FakeIcons());
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
+    await settle(tester);
+    expect(find.text('每月自動續訂，可以隨時到 Google Play 的訂閱設定取消'), findsOneWidget);
+    expect(find.text('管理訂閱'), findsNothing, reason: 'nothing to manage before subscribing');
+    await tester.tap(find.text('服務條款'));
+    await tester.tap(find.text('隱私權政策'));
+    await settle(tester);
+    expect(launcher.opened, [endsWith('/terms?lang=zh-Hant&from=app'), endsWith('/privacy?lang=zh-Hant&from=app')]);
+
+    await tester.tap(find.text('每月支持').last);
+    await settle(tester);
+    await tester.tap(find.text('管理訂閱'));
+    await settle(tester);
+    expect(launcher.opened.last, 'https://play.google.com/store/account/subscriptions');
+  });
+
+  group('the subscription', () {
+    late DateTime now;
+    late FakeStore store;
+    late FakeIcons icons;
+
+    /// Subscribes on [now] and picks the purple icon.
+    Future<void> subscribe(WidgetTester tester) async {
+      now = testNow;
+      store = FakeStore(now: () => now);
+      icons = FakeIcons();
+      await pumpWithStore(
+        tester,
+        store,
+        icons,
+        backend: seededChurch(as: staffMei, clock: () => now),
+      );
+      GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
+      await settle(tester);
+      await tester.tap(find.text('每月支持').last);
+      await settle(tester);
+      await showMiddle(tester, find.text('紫'));
+      await tester.tap(find.text('紫'));
+      await settle(tester);
+      expect(icons.icon, 'Purple');
+    }
+
+    /// The app opened again on [now].
+    Future<void> reopen(WidgetTester tester) async {
+      ProviderScope.containerOf(tester.element(find.byType(Scaffold).first)).invalidate(supporterProvider);
+      GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me');
+      await settle(tester);
+    }
+
+    testWidgets('lapsed, the badge goes and the icon is the default again', (tester) async {
+      await subscribe(tester);
+      now = testNow.add(const Duration(days: 34));
+      await reopen(tester);
+      expect(find.text('支持者'), findsOneWidget, reason: 'a month and a few days to renew');
+
+      now = testNow.add(const Duration(days: 36));
+      await reopen(tester);
+      expect(find.text('支持者'), findsNothing);
+      expect(icons.icon, isNull);
+    });
+
+    testWidgets('each renewal the store reports keeps it another month', (tester) async {
+      await subscribe(tester);
+      store.renew(testNow.add(const Duration(days: 30)));
+      now = testNow.add(const Duration(days: 60));
+      await reopen(tester);
+      expect(find.text('支持者'), findsOneWidget);
+      expect(icons.icon, 'Purple');
+    });
+
+    testWidgets('opening the app asks the store again once I have subscribed, never before', (tester) async {
+      await subscribe(tester);
+      final before = store.refreshes;
+      await reopen(tester);
+      expect(store.refreshes, before + 1);
+
+      final other = FakeStore();
+      await pumpWithStore(tester, other, FakeIcons());
+      expect(other.refreshes, 0);
+    });
   });
 
   group('this month\'s cloud costs', () {

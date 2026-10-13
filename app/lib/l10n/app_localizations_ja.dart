@@ -1155,6 +1155,14 @@ class L10nJa extends L10n {
   String get supportRestore => '購入を復元';
 
   @override
+  String supportMonthlyTerms(String store) {
+    return '毎月自動で更新されます。$store のサブスクリプション設定からいつでも解約できます。';
+  }
+
+  @override
+  String get manageSubscription => 'サブスクリプションを管理';
+
+  @override
   String get supportThanks => '応援ありがとうございます';
 
   @override
@@ -1176,7 +1184,7 @@ class L10nJa extends L10n {
   String get appIconSupporterOnly => '毎月の応援者はアプリのアイコンを変えられます';
 
   @override
-  String get appIconDefault => '青';
+  String get appIconDefault => '標準';
 
   @override
   String get appIconGreen => '緑';

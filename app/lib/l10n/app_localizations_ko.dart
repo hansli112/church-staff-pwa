@@ -1156,6 +1156,14 @@ class L10nKo extends L10n {
   String get supportRestore => '구매 복원';
 
   @override
+  String supportMonthlyTerms(String store) {
+    return '매월 자동으로 갱신돼요. $store의 구독 설정에서 언제든지 해지할 수 있어요.';
+  }
+
+  @override
+  String get manageSubscription => '구독 관리';
+
+  @override
   String get supportThanks => '후원해 주셔서 감사합니다';
 
   @override
@@ -1177,7 +1185,7 @@ class L10nKo extends L10n {
   String get appIconSupporterOnly => '정기 후원자는 앱 아이콘을 바꿀 수 있어요';
 
   @override
-  String get appIconDefault => '파랑';
+  String get appIconDefault => '기본';
 
   @override
   String get appIconGreen => '초록';

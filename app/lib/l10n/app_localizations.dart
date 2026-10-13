@@ -2206,6 +2206,18 @@ abstract class L10n {
   /// **'恢復購買'**
   String get supportRestore;
 
+  /// Under the monthly subscription, as App Store 3.1.2 asks: it renews itself and how to cancel. store is App Store or Google Play
+  ///
+  /// In zh, this message translates to:
+  /// **'每月自動續訂，可以隨時到 {store} 的訂閱設定取消'**
+  String supportMonthlyTerms(String store);
+
+  /// No description provided for @manageSubscription.
+  ///
+  /// In zh, this message translates to:
+  /// **'管理訂閱'**
+  String get manageSubscription;
+
   /// No description provided for @supportThanks.
   ///
   /// In zh, this message translates to:
@@ -2251,7 +2263,7 @@ abstract class L10n {
   /// No description provided for @appIconDefault.
   ///
   /// In zh, this message translates to:
-  /// **'藍'**
+  /// **'預設'**
   String get appIconDefault;
 
   /// No description provided for @appIconGreen.

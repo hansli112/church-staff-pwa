@@ -5,6 +5,7 @@ import '../domain/limits.dart';
 import '../domain/models.dart';
 import 'providers.dart';
 import 'push.dart';
+import 'support.dart';
 
 /// Overridden in main() for builds that report to Firebase.
 final telemetryProvider = Provider<Telemetry>((ref) => const NoTelemetry());
@@ -48,6 +49,13 @@ final sessionEffectsProvider = Provider<void>((ref) {
   }, fireImmediately: true);
 
   ref.listen(currentChurchIdProvider, (_, cid) => ref.read(telemetryProvider).setChurch(cid), fireImmediately: true);
+
+  // A lapsed subscription takes its icon back.
+  ref.listen(supporterProvider, (_, active) async {
+    if (active) return;
+    final icons = ref.read(appIconSwitcherProvider);
+    if (await icons.current() != null) await icons.set(null);
+  }, fireImmediately: true);
 });
 
 /// Signs out: this device stops getting pushes, and the picked church is

@@ -1224,6 +1224,14 @@ class L10nEn extends L10n {
   String get supportRestore => 'Restore purchases';
 
   @override
+  String supportMonthlyTerms(String store) {
+    return 'Renews automatically every month. Cancel anytime in your $store subscriptions.';
+  }
+
+  @override
+  String get manageSubscription => 'Manage subscription';
+
+  @override
   String get supportThanks => 'Thank you for your support';
 
   @override
@@ -1245,7 +1253,7 @@ class L10nEn extends L10n {
   String get appIconSupporterOnly => 'Monthly supporters can change the app icon';
 
   @override
-  String get appIconDefault => 'Blue';
+  String get appIconDefault => 'Default';
 
   @override
   String get appIconGreen => 'Green';

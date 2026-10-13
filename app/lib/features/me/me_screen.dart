@@ -80,7 +80,7 @@ class MeScreen extends ConsumerWidget {
               // The stores forbid sending people to pay outside them; the
               // web app is in no store.
               else if (ref.watch(isWebProvider) && ref.watch(sitePaymentsProvider))
-                ListRow(title: l10n.support, onTap: () => _openSitePage(context, ref, '/support')),
+                ListRow(title: l10n.support, onTap: () => openSitePage(context, ref, '/support')),
             ],
           ),
           const _UpdatesSection(),
@@ -108,8 +108,8 @@ class MeScreen extends ConsumerWidget {
             ),
           ListSection(
             children: [
-              ListRow(title: l10n.privacyPolicy, onTap: () => _openSitePage(context, ref, '/privacy')),
-              ListRow(title: l10n.termsOfService, onTap: () => _openSitePage(context, ref, '/terms')),
+              ListRow(title: l10n.privacyPolicy, onTap: () => openSitePage(context, ref, '/privacy')),
+              ListRow(title: l10n.termsOfService, onTap: () => openSitePage(context, ref, '/terms')),
             ],
           ),
           ListSection(
@@ -133,7 +133,7 @@ class MeScreen extends ConsumerWidget {
 /// require the app to link to, and on the web the support page. The stores
 /// forbid the iOS and Android apps to lead to paying elsewhere, so they
 /// open it with `fromApp` (AppLanguage.sitePage).
-void _openSitePage(BuildContext context, WidgetRef ref, String page) => launchUrl(
+void openSitePage(BuildContext context, WidgetRef ref, String page) => launchUrl(
   Uri.parse(
     '${Env.current.webOrigin}${AppLanguage.shownIn(context).sitePage(page, fromApp: !ref.read(isWebProvider))}',
   ),

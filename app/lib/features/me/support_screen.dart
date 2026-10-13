@@ -10,6 +10,7 @@ import '../../data/backend.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/support.dart';
 import '../common/labels.dart';
+import 'me_screen.dart' show openSitePage;
 
 final _productsProvider = FutureProvider.autoDispose<List<SupportItem>>(
   (ref) => ref.watch(supportStoreProvider).products(),
@@ -25,7 +26,7 @@ class SupportScreen extends ConsumerStatefulWidget {
 }
 
 class _SupportScreenState extends ConsumerState<SupportScreen> {
-  StreamSubscription<({String productId, PurchaseOutcome outcome})>? _sub;
+  StreamSubscription<PurchaseResult>? _sub;
 
   @override
   void initState() {
@@ -103,9 +104,12 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                         for (final t in tips) ListRow(title: t.title, value: t.price, onTap: () => store.buy(t)),
                       ],
                     ),
+                  // App Store 3.1.2: that it renews, how to cancel, and
+                  // the terms and privacy policy, beside the subscription.
                   if (monthly.isNotEmpty)
                     ListSection(
                       header: l10n.supportMonthly,
+                      footer: l10n.supportMonthlyTerms(store.name),
                       children: [
                         for (final m in monthly)
                           ListRow(
@@ -116,6 +120,18 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                                 : null,
                             onTap: supporter ? null : () => store.buy(m),
                           ),
+                        if (supporter)
+                          ListRow(
+                            title: l10n.manageSubscription,
+                            onTap: () => launchUrl(store.manageSubscription, mode: LaunchMode.externalApplication),
+                          ),
+                      ],
+                    ),
+                  if (monthly.isNotEmpty)
+                    ListSection(
+                      children: [
+                        ListRow(title: l10n.termsOfService, onTap: () => openSitePage(context, ref, '/terms')),
+                        ListRow(title: l10n.privacyPolicy, onTap: () => openSitePage(context, ref, '/privacy')),
                       ],
                     ),
                 ],

@@ -702,6 +702,16 @@
   "supportTips": "一次性支持",
   "supportMonthly": "每月支持",
   "supportRestore": "恢復購買",
+  "supportMonthlyTerms": "每月自動續訂，可以隨時到 {store} 的訂閱設定取消",
+  "@supportMonthlyTerms": {
+    "description": "Under the monthly subscription, as App Store 3.1.2 asks: it renews itself and how to cancel. store is App Store or Google Play",
+    "placeholders": {
+      "store": {
+        "type": "String"
+      }
+    }
+  },
+  "manageSubscription": "管理訂閱",
   "supportThanks": "謝謝你的支持",
   "supportPending": "付款處理中",
   "supportFailed": "沒有完成付款，沒有扣款",
@@ -709,7 +719,7 @@
   "supporterBadge": "支持者",
   "appIcon": "App 圖示",
   "appIconSupporterOnly": "每月支持者可以換 App 圖示",
-  "appIconDefault": "藍",
+  "appIconDefault": "預設",
   "appIconGreen": "綠",
   "appIconPurple": "紫",
   "appIconNight": "夜",

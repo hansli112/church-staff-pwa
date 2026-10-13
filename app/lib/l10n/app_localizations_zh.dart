@@ -1154,6 +1154,14 @@ class L10nZh extends L10n {
   String get supportRestore => '恢復購買';
 
   @override
+  String supportMonthlyTerms(String store) {
+    return '每月自動續訂，可以隨時到 $store 的訂閱設定取消';
+  }
+
+  @override
+  String get manageSubscription => '管理訂閱';
+
+  @override
   String get supportThanks => '謝謝你的支持';
 
   @override
@@ -1175,7 +1183,7 @@ class L10nZh extends L10n {
   String get appIconSupporterOnly => '每月支持者可以換 App 圖示';
 
   @override
-  String get appIconDefault => '藍';
+  String get appIconDefault => '預設';
 
   @override
   String get appIconGreen => '綠';
@@ -3522,6 +3530,14 @@ class L10nZhHans extends L10nZh {
   String get supportRestore => '恢复购买';
 
   @override
+  String supportMonthlyTerms(String store) {
+    return '每月自动续订，可以随时在 $store 的订阅设置中取消';
+  }
+
+  @override
+  String get manageSubscription => '管理订阅';
+
+  @override
   String get supportThanks => '谢谢你的支持';
 
   @override
@@ -3543,7 +3559,7 @@ class L10nZhHans extends L10nZh {
   String get appIconSupporterOnly => '每月支持者可以更换 App 图标';
 
   @override
-  String get appIconDefault => '蓝';
+  String get appIconDefault => '默认';
 
   @override
   String get appIconGreen => '绿';

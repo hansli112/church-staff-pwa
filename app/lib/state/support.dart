@@ -10,8 +10,9 @@ import 'providers.dart';
 
 /// 支持平台: one-off tips and a monthly subscription, through the App Store
 /// and Google Play. Nothing changes for supporters except a badge only they
-/// see and a choice of app icon. Supporter status lives on this device only
-/// (no backend, no Firestore): restoring purchases brings it back.
+/// see and a choice of app icon, while the subscription is paid. Supporter
+/// status lives on this device only (no backend, no Firestore): restoring
+/// purchases brings it back.
 /// The web build never shows any of this.
 abstract final class SupportProducts {
   static const tips = ['tip_small', 'tip_medium', 'tip_large'];
@@ -30,6 +31,10 @@ class SupportItem {
 
 enum PurchaseOutcome { thanks, pending, cancelled, failed }
 
+/// A finished purchase. [paidAt]: when a subscription was last paid, as far
+/// as the store says; null for anything else.
+typedef PurchaseResult = ({String productId, PurchaseOutcome outcome, DateTime? paidAt});
+
 abstract interface class SupportStore {
   /// Whether this platform sells anything (false on the web).
   bool get available;
@@ -37,8 +42,19 @@ abstract interface class SupportStore {
   Future<void> buy(SupportItem item);
   Future<void> restore();
 
-  /// Purchases finished, from any earlier buy or restore.
-  Stream<({String productId, PurchaseOutcome outcome})> get results;
+  /// Asks the store, without any prompt, whether the subscription is still
+  /// paid. Google Play reports it only when asked; the App Store delivers
+  /// each renewal at launch by itself.
+  Future<void> refresh();
+
+  /// Purchases finished, from any earlier buy, restore or renewal.
+  Stream<PurchaseResult> get results;
+
+  /// The store's name, where people cancel the subscription.
+  String get name;
+
+  /// The store's page for managing the subscription.
+  Uri get manageSubscription;
 }
 
 class NoStore implements SupportStore {
@@ -57,7 +73,16 @@ class NoStore implements SupportStore {
   Future<void> restore() async {}
 
   @override
-  Stream<({String productId, PurchaseOutcome outcome})> get results => const Stream.empty();
+  Future<void> refresh() async {}
+
+  @override
+  Stream<PurchaseResult> get results => const Stream.empty();
+
+  @override
+  String get name => '';
+
+  @override
+  Uri get manageSubscription => Uri();
 }
 
 class StoreKitPlayStore implements SupportStore {
@@ -66,7 +91,7 @@ class StoreKitPlayStore implements SupportStore {
   }
 
   final _iap = InAppPurchase.instance;
-  final _results = StreamController<({String productId, PurchaseOutcome outcome})>.broadcast();
+  final _results = StreamController<PurchaseResult>.broadcast();
   final _details = <String, ProductDetails>{};
   late final StreamSubscription<List<PurchaseDetails>> _sub;
 
@@ -102,6 +127,12 @@ class StoreKitPlayStore implements SupportStore {
   @override
   Future<void> restore() => _iap.restorePurchases();
 
+  // Play's restore is silent and lists only subscriptions still paid.
+  @override
+  Future<void> refresh() async {
+    if (defaultTargetPlatform == TargetPlatform.android && await _iap.isAvailable()) await _iap.restorePurchases();
+  }
+
   Future<void> _onPurchases(List<PurchaseDetails> purchases) async {
     for (final p in purchases) {
       final outcome = switch (p.status) {
@@ -110,13 +141,35 @@ class StoreKitPlayStore implements SupportStore {
         PurchaseStatus.canceled => PurchaseOutcome.cancelled,
         PurchaseStatus.error => PurchaseOutcome.failed,
       };
-      _results.add((productId: p.productID, outcome: outcome));
+      _results.add((productId: p.productID, outcome: outcome, paidAt: _paidAt(p)));
       if (p.pendingCompletePurchase) await _iap.completePurchase(p);
     }
   }
 
+  /// The App Store dates each renewal; Play dates only the first purchase,
+  /// but lists a subscription only while it is paid, so now.
+  static DateTime? _paidAt(PurchaseDetails p) {
+    if (p.productID != SupportProducts.subscription) return null;
+    final ms = int.tryParse(p.transactionDate ?? '');
+    if (defaultTargetPlatform == TargetPlatform.iOS && ms != null) return DateTime.fromMillisecondsSinceEpoch(ms);
+    return DateTime.now();
+  }
+
   @override
-  Stream<({String productId, PurchaseOutcome outcome})> get results => _results.stream;
+  Stream<PurchaseResult> get results => _results.stream;
+
+  static bool get _apple => defaultTargetPlatform == TargetPlatform.iOS;
+
+  @override
+  String get name => _apple ? 'App Store' : 'Google Play';
+
+  @override
+  Uri get manageSubscription => _apple
+      ? Uri.parse('https://apps.apple.com/account/subscriptions')
+      : Uri.https('play.google.com', '/store/account/subscriptions', {
+          'sku': SupportProducts.subscription,
+          'package': 'app.marthasit',
+        });
 
   void dispose() {
     _sub.cancel();
@@ -132,24 +185,39 @@ final supportStoreProvider = Provider<SupportStore>((ref) => const NoStore());
 /// as the website's: `SUPPORT_PAYMENTS=on scripts/deploy.sh …` builds both.
 final sitePaymentsProvider = Provider<bool>((ref) => const String.fromEnvironment('SUPPORT_PAYMENTS') == 'on');
 
-/// Whether this device has seen an active subscription (purchased or
-/// restored). Kept in local preferences only.
+/// Whether the subscription is paid: until a month and a few days after
+/// the store last said so (a purchase, a restore, a renewal). Kept in local
+/// preferences only. Once lapsed, the badge goes and the icon is the default
+/// again (sessionEffectsProvider).
 class Supporter extends Notifier<bool> {
-  static const _key = 'supporter_since';
+  static const _key = 'supporter_until';
+
+  /// A month, and a few days for the store's renewal to come in.
+  static const paidFor = Duration(days: 35);
 
   @override
   bool build() {
     final store = ref.watch(supportStoreProvider);
     final sub = store.results.listen((r) {
-      if (r.productId == SupportProducts.subscription && r.outcome == PurchaseOutcome.thanks) mark();
+      if (r.productId == SupportProducts.subscription && r.outcome == PurchaseOutcome.thanks) {
+        _paid(r.paidAt ?? ref.read(clockProvider)());
+      }
     });
     ref.onDispose(sub.cancel);
-    return ref.watch(prefsProvider).getString(_key) != null;
+    final until = DateTime.tryParse(ref.watch(prefsProvider).getString(_key) ?? '');
+    // Only someone who has subscribed has anything to ask the store about.
+    if (until != null) unawaited(store.refresh());
+    return until != null && ref.read(clockProvider)().isBefore(until);
   }
 
-  void mark() {
-    ref.read(prefsProvider).setString(_key, ref.read(clockProvider)().toIso8601String());
-    state = true;
+  /// Paid on [at]: good until [paidFor] later, unless already longer.
+  void _paid(DateTime at) {
+    final prefs = ref.read(prefsProvider);
+    final known = DateTime.tryParse(prefs.getString(_key) ?? '');
+    var until = at.add(paidFor);
+    if (known != null && known.isAfter(until)) until = known;
+    prefs.setString(_key, until.toIso8601String());
+    state = ref.read(clockProvider)().isBefore(until);
   }
 }
 
