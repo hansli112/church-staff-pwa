@@ -149,7 +149,7 @@ NotifyURL、ReturnURL、ClientBackURL（藍新頁面上的「返回商店」，`
   NEWEBPAY_ENV=test
   ```
   `NEWEBPAY_ENV` 是 `test`（送到 `ccore.newebpay.com`）或 `production`（送到 `core.newebpay.com`）。prod（`marthasit`）只接受 `production`，測試付款不會算進正式的進度。
-- **網站**：Hosting 部署時加 `SUPPORT_PAYMENTS=on`，支持頁才出現選金額和付款按鈕（`hosting-predeploy.sh` → `build-site.mjs --payments on`）。沒加就是「即將開放」，每次部署 Hosting 都要加。
+- **網站**：Hosting 部署時加 `SUPPORT_PAYMENTS=on`，支持頁才出現選金額和付款按鈕（`hosting-predeploy.sh` → `build-site.mjs --payments on`）。同一個開關也讓網頁版 App 的「我的」出現「支持馬大別忙」，連到網站的支持頁（`deploy.sh` → `--dart-define=SUPPORT_PAYMENTS=on`）。沒加就是「即將開放」、網頁版 App 沒有這一列，每次部署 Hosting 都要加。
 
 **第一次部署前**：Functions 宣告了這兩個 secret，專案裡沒有的話 `firebase deploy` 會停下來。已經建好的專案重跑一次 `scripts/firebase-project.sh`（只會補上缺的佔位 secret），或手動建：
 ```sh

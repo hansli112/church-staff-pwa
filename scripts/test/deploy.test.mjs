@@ -27,6 +27,7 @@ function deployment(t) {
   writeFileSync(join(dir, 'bin/flutter'), `#!/usr/bin/env bash
 set -euo pipefail
 [ "\${FAKE_FLUTTER_FAIL:-}" != 1 ] || exit 1
+[ -z "\${FAKE_FLUTTER_ARGS:-}" ] || printf '%s' "$*" > "$FAKE_FLUTTER_ARGS"
 mkdir -p build/web/assets/fonts
 printf '%s' '<html><head><base href="/"></head><body><script src="martha_app.js"></script><script src="flutter_bootstrap.js" async></script></body></html>' > build/web/index.html
 cp -R web/martha_app.js web/martha_app_sw.js web/favicon.png web/manifest.json web/icons build/web/
@@ -76,6 +77,16 @@ test('deploy CLI builds a clean output on dev-to-prod switches without deleting 
   assert.deepEqual(readdirSync(archive).sort(), ['test-dev', 'test-prod']);
   // Chrome and Android run the wasm build; Safari and Firefox the JS one.
   assert.equal(readFileSync(join(archive, 'test-prod/main.dart.ad50759298.wasm'), 'utf8'), 'wasm entry');
+});
+
+test("the web app's support entry takes the website's payments switch", (t) => {
+  const dir = deployment(t);
+  const args = join(dir, 'flutter-args');
+  for (const payments of ['on', 'off']) {
+    const result = deploy(dir, 'dev', 'console.log("martha");', { SUPPORT_PAYMENTS: payments, FAKE_FLUTTER_ARGS: args });
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(readFileSync(args, 'utf8'), new RegExp(`--dart-define=SUPPORT_PAYMENTS=${payments}( |$)`));
+  }
 });
 
 test('deploy CLI never builds on generated code a previous build left behind', (t) => {

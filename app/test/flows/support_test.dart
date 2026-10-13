@@ -74,11 +74,28 @@ Future<void> pumpWithStore(
 }
 
 void main() {
-  testWidgets('without a store (the web) there is no support entry', (tester) async {
+  testWidgets('without a store (the web), while the website takes no payments, no support entry', (tester) async {
     await pumpApp(tester, seededChurch(as: staffMei));
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me');
     await settle(tester);
     expect(find.text('支持馬大別忙'), findsNothing);
+  });
+
+  testWidgets("on the web, once the website takes payments, the website's support page in my language", (
+    tester,
+  ) async {
+    final launcher = captureLaunches();
+    await pumpApp(
+      tester,
+      seededChurch(as: staffMei),
+      overrides: [sitePaymentsProvider.overrideWithValue(true)],
+      deviceLocales: const [Locale('en', 'US')],
+    );
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me');
+    await settle(tester);
+    await tester.tap(find.text('Support Martha, sit'));
+    await settle(tester);
+    expect(launcher.opened.single, endsWith('/en/support?lang=en'));
   });
 
   testWidgets('a tip thanks; the subscription unlocks icons and a badge only I see', (tester) async {

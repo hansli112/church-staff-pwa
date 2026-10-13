@@ -30,7 +30,10 @@ if [[ ",$only," == *",hosting,"* ]]; then
   rm -rf -- "$root/app/.dart_tool/flutter_build"
   # --wasm also builds the JS version: Chrome and Android run the faster
   # wasm one, Safari, iOS and Firefox (which cannot) the JS one.
-  ( cd "$root/app" && flutter build web --wasm --dart-define-from-file="config/$env_name.json" )
+  # SUPPORT_PAYMENTS=on also puts 支持馬大別忙 in the web app, a link to the
+  # website's support page (hosting-predeploy.sh turns the page's payments on).
+  ( cd "$root/app" && flutter build web --wasm --dart-define-from-file="config/$env_name.json" \
+      --dart-define="SUPPORT_PAYMENTS=${SUPPORT_PAYMENTS:-off}" )
 fi
 
 firebase() { "$root/scripts/firebase.sh" "$project" "$@"; }

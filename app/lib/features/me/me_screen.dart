@@ -75,7 +75,12 @@ class MeScreen extends ConsumerWidget {
                 value: AppLanguage.fromTag(ref.watch(profileProvider).value?.locale)?.label ?? l10n.languageSystem,
                 onTap: () => context.push('/me/language'),
               ),
-              if (store.available) ListRow(title: l10n.support, onTap: () => context.push('/me/support')),
+              if (store.available)
+                ListRow(title: l10n.support, onTap: () => context.push('/me/support'))
+              // The stores forbid sending people to pay outside them; the
+              // web app is in no store.
+              else if (ref.watch(sitePaymentsProvider))
+                ListRow(title: l10n.support, onTap: () => _openSitePage(context, '/support')),
             ],
           ),
           const _UpdatesSection(),
@@ -124,8 +129,8 @@ class MeScreen extends ConsumerWidget {
   }
 }
 
-/// A page of the website (the privacy policy, the terms), which the stores
-/// require the app to link to.
+/// A page of the website (the privacy policy, the terms, which the stores
+/// require the app to link to; on the web, the support page).
 void _openSitePage(BuildContext context, String page) =>
     launchUrl(Uri.parse('${Env.current.webOrigin}${AppLanguage.shownIn(context).sitePage(page)}'));
 
