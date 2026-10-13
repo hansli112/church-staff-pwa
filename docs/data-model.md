@@ -85,13 +85,13 @@ App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預�
 | 讀 member | 本人、roster-editors、admin |
 | 讀待認領同工 | roster-editors、admin；只有 admin 能刪，其他寫入都是後端 |
 | 加入教會（建立 member） | 只有 Cloud Functions（邀請） |
-| 改 member | admin（不能改 `uid`、不能把自己降級）；本人只能改 `notificationPrefs` |
+| 改 member | admin（不能改 `uid`、不能把自己降級）；本人只能改 `notificationPrefs`。改到 `notificationPrefs` 時，`muted` 只能是 `reminder`、`rosterChange`、`memberLeft`，`reminderTiming` 只能是 `weekly`、`dayBefore`、`both`；沒改到就不檢查，因為從 self-host 搬來的可能有舊的種類 |
 | 刪 member | admin 刪別人；非 admin 可以自己退出。admin 要先被別的 admin 降級才能走 |
 | 讀服事表、排序、設定 | 同工 |
 | 寫服事表、排序 | admin（任何已設定的聚會別）；roster-editors（只限自己 `zoneTypes` 裡的聚會別，移動時新舊聚會別都要有） |
 | 寫活動的服事表 | admin 和所有 roster-editors，不看牧區。一般服事表和活動的服事表不能互相改過去；取消了的不能再改，只能刪 |
 | 寫設定 | admin；`services` 的 `ids` 只增不減，不能刪；`calendar`、`linkContent`、`webhook` 只有 Cloud Functions 能寫。服事項目改名要連同工的牧區與同工排序一起改，經 `editService`（比對改名前的那一個聚會，其他聚會照現在的保留；超過 500 筆寫入整筆拒絕） |
-| 讀寫 `users/{uid}` | 本人（限上列欄位）；刪除由 Cloud Functions 處理 |
+| 讀寫 `users/{uid}` | 本人（限上列欄位，`fcm` 最多 50 支裝置）；刪除由 Cloud Functions 處理 |
 
 ## 交給 Cloud Functions 的（M2）
 

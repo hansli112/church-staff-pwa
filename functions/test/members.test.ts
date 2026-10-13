@@ -211,6 +211,15 @@ describe('triggers', () => {
     assert.deepEqual((await db.doc('users/alice').get()).get('fcm'), { phone: 'live' });
   });
 
+  test('a token that failed for another reason is kept: a bad message or a busy FCM is not a dead device', async () => {
+    await seedChurch('C1', { alice: 'admin' });
+    await db.doc('users/alice').set({ fcm: { phone: 'p', tablet: 't' } });
+    const { messaging } = fakePush([], { p: 'messaging/invalid-argument', t: 'messaging/internal-error' });
+    const n = await notifyMembers({ db, messaging, appUrl }, 'C1', ['alice'], 'reminder', () => ({ title: 't', body: 'b' }));
+    assert.equal(n, 0);
+    assert.deepEqual((await db.doc('users/alice').get()).get('fcm'), { phone: 'p', tablet: 't' });
+  });
+
   test('the web push opens an absolute HTTPS link, as FCM documents', async () => {
     await seedChurch('C1', { alice: 'admin' });
     await db.doc('users/alice').set({ fcm: { laptop: 'tok' } });

@@ -27,10 +27,11 @@ interface Target {
   token: string;
 }
 
+// Only codes about the token itself. invalid-argument also means a bad
+// message, which every token would get, so it is not taken as a dead device.
 const DEAD_TOKEN_CODES = new Set([
   'messaging/registration-token-not-registered',
   'messaging/invalid-registration-token',
-  'messaging/invalid-argument',
 ]);
 
 /**

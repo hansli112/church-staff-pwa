@@ -46,6 +46,8 @@ const RULES_FIELDS: Record<string, { text?: keyof typeof TEXT_LIMITS; other?: ke
   'data.ids': { rulesOnly: 100 },
   // users/{uid}.appLocale: the language the app shows, an AppLanguage tag.
   'request.resource.data.appLocale': { other: 'appLocale' },
+  // users/{uid}.fcm: push tokens, one per install; the backend drops dead ones.
+  'request.resource.data.fcm': { rulesOnly: 50 },
 };
 
 const rulesSizes = [...rules.matchAll(/((?:\.get\([^)]*\)|[\w.])+)\.size\(\) <= (\d+)/g)].map(([, field, n]) => ({

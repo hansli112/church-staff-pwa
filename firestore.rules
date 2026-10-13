@@ -176,6 +176,10 @@ service cloud.firestore {
         return request.resource.data.keys().hasOnly(
             ['name', 'email', 'locale', 'appLocale', 'fcm', 'createdAt', 'updatedAt'])
           && hasValidName()
+          // Push tokens, {deviceId: token}: one per install, dropped by the
+          // backend once FCM says they are dead.
+          && (!('fcm' in request.resource.data)
+              || (request.resource.data.fcm is map && request.resource.data.fcm.size() <= 50))
           // The language the app shows, for the server's pushes.
           && (!('appLocale' in request.resource.data)
               || (request.resource.data.appLocale is string
@@ -224,11 +228,24 @@ service cloud.firestore {
         //
         // An admin can neither demote nor remove themself, so a church always
         // keeps someone who can manage it. Another admin can do both.
-        allow update: if (isAdmin(cid) && hasValidRole() && hasValidGroups()
+        allow update: if hasValidPrefs() && ((isAdmin(cid) && hasValidRole() && hasValidGroups()
               && hasValidZoneTypes(cid) && hasValidName()
               && request.resource.data.uid == uid
               && (!isSelf(uid) || request.resource.data.role == 'admin'))
-          || (isSelf(uid) && isMember(cid) && onlyTouches(['notificationPrefs']));
+          || (isSelf(uid) && isMember(cid) && onlyTouches(['notificationPrefs'])));
+
+        // Which pushes the member turned off here, and when reminders come
+        // (functions/src/push.ts, notifications.ts). Checked only when
+        // changed: prefs moved from self-host may carry older kinds.
+        function hasValidPrefs() {
+          let p = request.resource.data.get('notificationPrefs', {});
+          return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['notificationPrefs'])
+            || (p is map
+              && p.keys().hasOnly(['muted', 'reminderTiming'])
+              && (!('muted' in p)
+                  || (p.muted is list && p.muted.hasOnly(['reminder', 'rosterChange', 'memberLeft'])))
+              && (!('reminderTiming' in p) || p.reminderTiming in ['weekly', 'dayBefore', 'both']));
+        }
 
         // A non-admin may leave on their own. An admin must be demoted by
         // another admin first, which is how the last admin is kept in place.

@@ -266,10 +266,32 @@ describe('同工 (members)', () => {
 
   it('自己只能改 notificationPrefs', async () => {
     const ref = (db) => doc(db, `churches/${A}/members/${MEMBER_A}`);
-    await assertSucceeds(updateDoc(ref(as(MEMBER_A)), { notificationPrefs: { roster: true } }));
+    await assertSucceeds(updateDoc(ref(as(MEMBER_A)), { notificationPrefs: { muted: ['rosterChange'] } }));
+    await assertSucceeds(updateDoc(ref(as(MEMBER_A)), { 'notificationPrefs.reminderTiming': 'dayBefore' }));
     await assertFails(updateDoc(ref(as(MEMBER_A)), { role: 'admin' }));
     await assertFails(updateDoc(ref(as(MEMBER_A)), { groups: ['roster-editors'] }));
     await assertFails(updateDoc(ref(as(MEMBER_A)), { zoneTypes: ['sunday'] }));
+  });
+
+  it('notificationPrefs 只能是已知的通知種類和提醒時間', async () => {
+    const ref = doc(as(MEMBER_A), `churches/${A}/members/${MEMBER_A}`);
+    await assertSucceeds(
+      updateDoc(ref, { notificationPrefs: { muted: ['reminder', 'rosterChange', 'memberLeft'], reminderTiming: 'both' } }),
+    );
+    await assertSucceeds(updateDoc(ref, { notificationPrefs: { muted: [] } }));
+    await assertFails(updateDoc(ref, { notificationPrefs: { roster: true } }));
+    await assertFails(updateDoc(ref, { notificationPrefs: { muted: ['spam'] } }));
+    await assertFails(updateDoc(ref, { notificationPrefs: { muted: 'reminder' } }));
+    await assertFails(updateDoc(ref, { 'notificationPrefs.reminderTiming': 'hourly' }));
+    await assertFails(updateDoc(ref, { notificationPrefs: 'off' }));
+  });
+
+  it('改不了別人的 notificationPrefs：同教會的同工、別的教會的管理員都不行', async () => {
+    const prefs = { notificationPrefs: { muted: ['reminder'] } };
+    await assertFails(updateDoc(doc(as(MEMBER_A), `churches/${A}/members/${EDITOR_A}`), prefs));
+    await assertFails(updateDoc(doc(as(EDITOR_A), `churches/${A}/members/${MEMBER_A}`), prefs));
+    await assertFails(updateDoc(doc(as(ADMIN_B), `churches/${A}/members/${MEMBER_A}`), prefs));
+    await assertFails(updateDoc(doc(as(STRANGER), `churches/${A}/members/${MEMBER_A}`), prefs));
   });
 
   it('客戶端不能自己加入教會（邀請走 Cloud Functions）', async () => {
@@ -632,10 +654,23 @@ describe('全域個資 (users)', () => {
     await assertFails(getDocs(collection(as(ADMIN_A), 'users')));
   });
 
+  it('推播 token 只能由本人寫，而且是最多 50 支裝置的 map', async () => {
+    const mine = doc(as(MEMBER_A), `users/${MEMBER_A}`);
+    await assertSucceeds(setDoc(mine, { name: '同工', email: 'm@example.com', fcm: { d1: 't1' } }));
+    await assertFails(updateDoc(mine, { fcm: 'token' }));
+    const many = Object.fromEntries(Array.from({ length: 51 }, (_, i) => [`d${i}`, 't']));
+    await assertFails(updateDoc(mine, { fcm: many }), 'at most 50 devices');
+    for (const uid of [ADMIN_A, ADMIN_B, STRANGER]) {
+      await assertFails(updateDoc(doc(as(uid), `users/${MEMBER_A}`), { 'fcm.theirs': 'token' }));
+      await assertFails(setDoc(doc(as(uid), `users/${MEMBER_A}`), { name: 'x', fcm: { theirs: 'token' } }));
+    }
+  });
+
   it('本人可以建立、更新允許的欄位', async () => {
     const ref = doc(as(STRANGER), `users/${STRANGER}`);
     await assertSucceeds(setDoc(ref, { name: '新人', email: 's@example.com', locale: 'zh-TW' }));
     await assertSucceeds(updateDoc(ref, { fcm: { 'device-1': 'token' } }));
+    await assertSucceeds(updateDoc(ref, { 'fcm.device-2': 'token-2' }));
     await assertSucceeds(updateDoc(ref, { name: '🙏'.repeat(40) }), '40 characters, 80 units');
     await assertSucceeds(updateDoc(ref, { name: 'A'.repeat(160) }), 'over 40 characters: the app’s to stop');
     await assertFails(updateDoc(ref, { name: 'A'.repeat(161) }));

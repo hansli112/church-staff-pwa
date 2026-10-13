@@ -37,7 +37,8 @@ export interface SentPush {
  * refused as no longer registered; after goDown() every send throws, like
  * FCM out of reach.
  */
-export function fakePush(dead: string[] = []) {
+/** [dead] tokens fail as unregistered; [errors] fail with the code given. */
+export function fakePush(dead: string[] = [], errors: Record<string, string> = {}) {
   const sent: SentPush[] = [];
   let down = false;
   const messaging: Pick<Messaging, 'sendEachForMulticast'> = {
@@ -52,7 +53,11 @@ export function fakePush(dead: string[] = []) {
         webLink: m.webpush?.fcmOptions?.link ?? '',
       });
       const responses = tokens.map((t) =>
-        dead.includes(t) ? { success: false, error: { code: 'messaging/registration-token-not-registered' } } : { success: true },
+        dead.includes(t)
+          ? { success: false, error: { code: 'messaging/registration-token-not-registered' } }
+          : errors[t]
+            ? { success: false, error: { code: errors[t] } }
+            : { success: true },
       );
       const successCount = responses.filter((r) => r.success).length;
       return { successCount, failureCount: tokens.length - successCount, responses } as never;
