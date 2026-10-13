@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:martha/app.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
+import 'package:martha/state/providers.dart';
 import 'package:martha/state/support.dart';
 
 import '../support/harness.dart';
@@ -88,7 +89,7 @@ void main() {
     await pumpApp(
       tester,
       seededChurch(as: staffMei),
-      overrides: [sitePaymentsProvider.overrideWithValue(true)],
+      overrides: [isWebProvider.overrideWithValue(true), sitePaymentsProvider.overrideWithValue(true)],
       deviceLocales: const [Locale('en', 'US')],
     );
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me');
@@ -96,6 +97,13 @@ void main() {
     await tester.tap(find.text('Support Martha, sit'));
     await settle(tester);
     expect(launcher.opened.single, endsWith('/en/support?lang=en'));
+  });
+
+  testWidgets('the apps never send people to pay on the website, whatever the build says', (tester) async {
+    await pumpApp(tester, seededChurch(as: staffMei), overrides: [sitePaymentsProvider.overrideWithValue(true)]);
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me');
+    await settle(tester);
+    expect(find.text('支持馬大別忙'), findsNothing);
   });
 
   testWidgets('a tip thanks; the subscription unlocks icons and a badge only I see', (tester) async {
