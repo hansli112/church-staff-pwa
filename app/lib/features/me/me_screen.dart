@@ -80,7 +80,7 @@ class MeScreen extends ConsumerWidget {
               // The stores forbid sending people to pay outside them; the
               // web app is in no store.
               else if (ref.watch(isWebProvider) && ref.watch(sitePaymentsProvider))
-                ListRow(title: l10n.support, onTap: () => _openSitePage(context, '/support')),
+                ListRow(title: l10n.support, onTap: () => _openSitePage(context, ref, '/support')),
             ],
           ),
           const _UpdatesSection(),
@@ -108,8 +108,8 @@ class MeScreen extends ConsumerWidget {
             ),
           ListSection(
             children: [
-              ListRow(title: l10n.privacyPolicy, onTap: () => _openSitePage(context, '/privacy')),
-              ListRow(title: l10n.termsOfService, onTap: () => _openSitePage(context, '/terms')),
+              ListRow(title: l10n.privacyPolicy, onTap: () => _openSitePage(context, ref, '/privacy')),
+              ListRow(title: l10n.termsOfService, onTap: () => _openSitePage(context, ref, '/terms')),
             ],
           ),
           ListSection(
@@ -130,9 +130,13 @@ class MeScreen extends ConsumerWidget {
 }
 
 /// A page of the website: the privacy policy and the terms, which the stores
-/// require the app to link to, and on the web the support page.
-void _openSitePage(BuildContext context, String page) =>
-    launchUrl(Uri.parse('${Env.current.webOrigin}${AppLanguage.shownIn(context).sitePage(page)}'));
+/// require the app to link to, and on the web the support page. Opened from
+/// the iOS and Android apps (from=app), the page hides its ways to the
+/// website's payments, which the stores forbid the apps to lead to.
+void _openSitePage(BuildContext context, WidgetRef ref, String page) {
+  final fromApp = ref.read(isWebProvider) ? '' : '&from=app';
+  launchUrl(Uri.parse('${Env.current.webOrigin}${AppLanguage.shownIn(context).sitePage(page)}$fromApp'));
+}
 
 class _UpdatesSection extends ConsumerWidget {
   const _UpdatesSection();

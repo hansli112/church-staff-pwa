@@ -232,6 +232,26 @@ function chooser(language, pages) {
 `;
 }
 
+/**
+ * The iOS and Android apps open the privacy policy and the terms with
+ * from=app (app/lib/features/me/me_screen.dart). The stores forbid them to
+ * lead to paying elsewhere, so for the rest of the tab the page hides the
+ * web app (which links to the support page) and what says how to pay on the
+ * website (site.css, data-in-app="hide").
+ */
+const APP_VIEW = `<script>
+// from=app: opened from the iOS or Android app.
+(function () {
+  var app = /[?&]from=app(?:[&#]|$)/.test(location.search);
+  try {
+    if (app) sessionStorage.setItem('fromApp', '1');
+    else app = sessionStorage.getItem('fromApp') === '1';
+  } catch (e) {}
+  if (app) document.documentElement.classList.add('from-app');
+})();
+</script>
+`;
+
 function header(language, page) {
   const w = LANGUAGES[language];
   const at = (p) => sitePath(language, p);
@@ -311,7 +331,7 @@ if (${JSON.stringify(firebaseHosts)}.indexOf(location.hostname) >= 0) {
   function fill(html, language, page) {
     const pages = Object.fromEntries(TAGS.map((tag) => [tag, sitePath(tag, page)]));
     return paymentParts(html)
-      .replace('<head>\n', `<head>\n${toOrigin}${chooser(language, pages)}`)
+      .replace('<head>\n', `<head>\n${toOrigin}${chooser(language, pages)}${APP_VIEW}`)
       .replace('</head>', `${alternates(page)}</head>`)
       .replace('<!-- site-header -->', header(language, page))
       .replace('<!-- site-footer -->', footer(language, page))

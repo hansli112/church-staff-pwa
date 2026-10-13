@@ -64,6 +64,7 @@ p { margin: 0 0 16px; }
 .top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; }
 .brand { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--text); font-weight: 700; text-decoration: none; }
 .brand img { width: 28px; height: 28px; border-radius: 7px; }
+.from-app .top-link, .from-app [data-in-app="hide"] { display: none; }
 .top-link { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; text-decoration: none; }
 .top-nav { display: flex; align-items: center; gap: 4px 16px; }
 .top-nav a:not(.top-link) { display: inline-flex; align-items: center; min-height: 44px; color: var(--text2); text-decoration: none; font-size: 0.9375rem; }

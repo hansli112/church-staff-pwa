@@ -99,6 +99,32 @@ void main() {
     expect(launcher.opened.single, endsWith('/en/support?lang=en'));
   });
 
+  testWidgets(
+    "the apps open the privacy policy and the terms as the app's, which hide the ways to the website's payments",
+    (
+      tester,
+    ) async {
+      final launcher = captureLaunches();
+      await pumpApp(tester, seededChurch(as: staffMei));
+      GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me');
+      await settle(tester);
+      await tester.tap(find.text('隱私權政策'));
+      await tester.tap(find.text('服務條款'));
+      await settle(tester);
+      expect(launcher.opened, [endsWith('/privacy?lang=zh-Hant&from=app'), endsWith('/terms?lang=zh-Hant&from=app')]);
+    },
+  );
+
+  testWidgets('the web app opens them as the website', (tester) async {
+    final launcher = captureLaunches();
+    await pumpApp(tester, seededChurch(as: staffMei), overrides: [isWebProvider.overrideWithValue(true)]);
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me');
+    await settle(tester);
+    await tester.tap(find.text('隱私權政策'));
+    await settle(tester);
+    expect(launcher.opened.single, endsWith('/privacy?lang=zh-Hant'));
+  });
+
   testWidgets('the apps never send people to pay on the website, whatever the build says', (tester) async {
     await pumpApp(tester, seededChurch(as: staffMei), overrides: [sitePaymentsProvider.overrideWithValue(true)]);
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me');

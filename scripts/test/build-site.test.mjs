@@ -114,6 +114,37 @@ test('the privacy policy and the terms name NewebPay only while the site takes p
   }
 });
 
+describe('opened from the iOS and Android apps (from=app), a page hides its ways to the payments', () => {
+  /** Runs [path]'s from=app script; whether the page is the app's, and what the tab keeps. */
+  function open(path, { search = '', kept = null } = {}) {
+    const script = /<script>\n\/\/ from=app[\s\S]*?<\/script>/.exec(built(path))[0].slice('<script>'.length, -'</script>'.length);
+    const store = { fromApp: kept };
+    const classes = new Set();
+    new Function('location', 'sessionStorage', 'document', script)(
+      { search },
+      { getItem: (k) => store[k], setItem: (k, v) => (store[k] = v) },
+      { documentElement: { classList: { add: (c) => classes.add(c) } } },
+    );
+    return { app: classes.has('from-app'), kept: store.fromApp };
+  }
+
+  test('the app asks with from=app, and the tab keeps it from page to page', () => {
+    assert.deepEqual(open('/privacy', { search: '?lang=zh-Hant&from=app' }), { app: true, kept: '1' });
+    assert.deepEqual(open('/en/terms', { kept: '1' }), { app: true, kept: '1' });
+    assert.deepEqual(open('/privacy', { search: '?lang=zh-Hant' }), { app: false, kept: null });
+  });
+
+  test('what it hides: the web app (which has the support page) and the terms on paying on the website', () => {
+    assert.match(read('landing/site.css'), /\.from-app \.top-link, \.from-app \[data-in-app="hide"\] \{ display: none; \}/);
+    for (const tag of TAGS) {
+      for (const page of ['/privacy', '/terms', '/delete-account']) assert.match(built(sitePath(tag, page)), /class="top-link"/);
+      const newebpay = [...built(sitePath(tag, '/terms')).matchAll(/<li[^>]*>[^\n]*NewebPay[^\n]*/g)].map((m) => m[0]);
+      assert.equal(newebpay.length, 1, tag);
+      assert.match(newebpay[0], /^<li data-in-app="hide">/, tag);
+    }
+  });
+});
+
 test("firebase.json serves every page at its path", () => {
   const hosting = JSON.parse(read('firebase.json')).hosting;
   const rewrites = new Map(hosting.rewrites.filter((r) => r.destination).map((r) => [r.source, r.destination]));
