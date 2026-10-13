@@ -44,14 +44,13 @@
 
     <section class="panel" aria-labelledby="pay-title">
       <h2 id="pay-title">온라인 후원</h2>
-      <!-- TODO(LINE Pay): 藍新的 LINE Pay 要另外申請；開通後這行加上 LINE Pay，fundingNewebpay.ts 打開 LINEPAY。 -->
-      <p>신용카드, Apple Pay, Google Pay로 후원할 수 있고, 금액은 자유롭게 정하면 돼요.</p>
       <!-- payments:off -->
-      <!-- 藍新金流還沒接上：按鈕只顯示「即將開放」。接上後網站改用 payments on 建置（docs/firebase-setup.md〈線上支持〉）。藍新沒通過就改接 Portaly（只有信用卡，上面的付款方式也要改）。 -->
-      <a class="btn btn-primary wide" href="#pay-title" id="pay" data-soon>마르다의 쉼표 후원하기</a>
-      <p class="fine" id="pay-soon" hidden>온라인 후원은 곧 열려요. 마음 써 주셔서 감사해요.</p>
+      <!-- 藍新金流還沒接上：不放按鈕，也不寫付款方式。接上後網站改用 payments on 建置（docs/firebase-setup.md〈線上支持〉）。藍新沒通過就改接 Portaly（只有信用卡，下面的付款方式也要改）。 -->
+      <p>온라인 후원은 곧 열려요. 마음 써 주셔서 감사해요.</p>
       <!-- /payments:off -->
       <!-- payments:on -->
+      <!-- TODO(LINE Pay): 藍新的 LINE Pay 要另外申請；開通後這行加上 LINE Pay，fundingNewebpay.ts 打開 LINEPAY。 -->
+      <p>신용카드, Apple Pay, Google Pay로 후원할 수 있고, 금액은 자유롭게 정하면 돼요.</p>
       <!-- 選金額 → POST /support/pay（Hosting 轉到 newebpayStart）→ 拿到簽好的表單，送到藍新的付款頁。 -->
       <form id="pay-form" action="/support/pay" method="post" novalidate>
         <fieldset class="amounts">
@@ -84,9 +83,15 @@
     </section>
 
     <section class="panel" aria-labelledby="refund-title">
+      <!-- payments:on -->
       <h2 id="refund-title">환불과 문의</h2>
       <p>후원금은 원칙적으로 환불하지 않아요. 금액을 잘못 입력했거나 중복 결제된 경우에는 결제 시간과 금액을 적어 <a href="mailto:hansli112871114@gmail.com">hansli112871114@gmail.com</a>으로 메일을 보내 주세요. 확인한 뒤 전액 환불해 드려요.</p>
       <p>마르다의 쉼표는 개인이 개발하고 운영해요. 궁금한 점이 있으면 언제든 메일 주세요.</p>
+      <!-- /payments:on -->
+      <!-- payments:off -->
+      <h2 id="refund-title">문의</h2>
+      <p>마르다의 쉼표는 개인이 개발하고 운영해요. 궁금한 점이 있으면 언제든 <a href="mailto:hansli112871114@gmail.com">hansli112871114@gmail.com</a>으로 메일 주세요.</p>
+      <!-- /payments:off -->
     </section>
 
     <p class="fine">iPhone·Android 앱이 출시되면 앱에서도 일시 후원이나 정기 후원을 할 수 있어요.</p>
@@ -140,17 +145,10 @@
     history.replaceState(null, '', location.pathname + location.hash);
   }
 
-  const pay = document.getElementById('pay');
-  if (pay.hasAttribute('data-soon')) {
-    pay.addEventListener('click', (e) => {
-      e.preventDefault();
-      document.getElementById('pay-soon').hidden = false;
-    });
-  }
-
   // 線上支持 (only when built with --payments on).
   const form = document.getElementById('pay-form');
   if (!form) return;
+  const pay = document.getElementById('pay');
   const custom = document.getElementById('pay-custom');
   const customRow = document.getElementById('pay-custom-row');
   const msg = document.getElementById('pay-msg');

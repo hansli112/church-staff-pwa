@@ -44,14 +44,13 @@
 
     <section class="panel" aria-labelledby="pay-title">
       <h2 id="pay-title">線上支持</h2>
-      <!-- TODO(LINE Pay): 藍新的 LINE Pay 要另外申請；開通後這行加上 LINE Pay，fundingNewebpay.ts 打開 LINEPAY。 -->
-      <p>可以用信用卡、Apple Pay 或 Google Pay，金額自己決定。</p>
       <!-- payments:off -->
-      <!-- 藍新金流還沒接上：按鈕只顯示「即將開放」。接上後網站改用 payments on 建置（docs/firebase-setup.md〈線上支持〉）。藍新沒通過就改接 Portaly（只有信用卡，上面的付款方式也要改）。 -->
-      <a class="btn btn-primary wide" href="#pay-title" id="pay" data-soon>支持馬大別忙</a>
-      <p class="fine" id="pay-soon" hidden>線上支持即將開放，謝謝你的心意。</p>
+      <!-- 藍新金流還沒接上：不放按鈕，也不寫付款方式。接上後網站改用 payments on 建置（docs/firebase-setup.md〈線上支持〉）。藍新沒通過就改接 Portaly（只有信用卡，下面的付款方式也要改）。 -->
+      <p>線上支持即將開放，謝謝你的心意。</p>
       <!-- /payments:off -->
       <!-- payments:on -->
+      <!-- TODO(LINE Pay): 藍新的 LINE Pay 要另外申請；開通後這行加上 LINE Pay，fundingNewebpay.ts 打開 LINEPAY。 -->
+      <p>可以用信用卡、Apple Pay 或 Google Pay，金額自己決定。</p>
       <!-- 選金額 → POST /support/pay（Hosting 轉到 newebpayStart）→ 拿到簽好的表單，送到藍新的付款頁。 -->
       <form id="pay-form" action="/support/pay" method="post" novalidate>
         <fieldset class="amounts">
@@ -68,7 +67,7 @@
         </div>
         <button class="btn btn-primary wide" id="pay" type="submit">支持馬大別忙</button>
         <p class="fine" id="pay-msg" role="status" hidden></p>
-        <p class="fine">付款由藍新金流處理，會轉到藍新的付款頁；馬大別忙不會拿到你的卡號。</p>
+        <p class="fine">付款由藍新金流處理，會轉到藍新的付款頁；馬大別忙不會拿到你的卡號。以新台幣扣款，外幣卡由發卡銀行換算。</p>
       </form>
       <!-- /payments:on -->
     </section>
@@ -84,12 +83,18 @@
     </section>
 
     <section class="panel" aria-labelledby="refund-title">
+      <!-- payments:on -->
       <h2 id="refund-title">退款與聯絡</h2>
       <p>支持款原則上不退。如果刷錯金額或重複扣款，請來信 <a href="mailto:hansli112871114@gmail.com">hansli112871114@gmail.com</a>，附上付款時間和金額，查證後會全額退回。</p>
       <p>馬大別忙由個人開發、營運，有任何問題都歡迎來信。</p>
+      <!-- /payments:on -->
+      <!-- payments:off -->
+      <h2 id="refund-title">聯絡</h2>
+      <p>馬大別忙由個人開發、營運，有任何問題都歡迎來信到 <a href="mailto:hansli112871114@gmail.com">hansli112871114@gmail.com</a>。</p>
+      <!-- /payments:off -->
     </section>
 
-    <p class="fine">iPhone、Android App 上架後，也可以在 App 裡打賞或每月支持。</p>
+    <p class="fine">iPhone、Android App 上架後，也可以在 App 裡一次性支持或每月支持。</p>
   </div>
 </main>
 
@@ -140,17 +145,10 @@
     history.replaceState(null, '', location.pathname + location.hash);
   }
 
-  const pay = document.getElementById('pay');
-  if (pay.hasAttribute('data-soon')) {
-    pay.addEventListener('click', (e) => {
-      e.preventDefault();
-      document.getElementById('pay-soon').hidden = false;
-    });
-  }
-
   // 線上支持 (only when built with --payments on).
   const form = document.getElementById('pay-form');
   if (!form) return;
+  const pay = document.getElementById('pay');
   const custom = document.getElementById('pay-custom');
   const customRow = document.getElementById('pay-custom-row');
   const msg = document.getElementById('pay-msg');

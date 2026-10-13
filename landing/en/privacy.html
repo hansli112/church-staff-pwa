@@ -48,7 +48,7 @@
     </aside>
     <main class="legal">
     <h1>Privacy Policy</h1>
-    <p class="updated">Last updated: Oct 11, 2026</p>
+    <p class="updated">Last updated: <time datetime="2026-10-13">Oct 13, 2026</time></p>
     <p>This is an English translation. If it differs from the <a href="/privacy" hreflang="zh-Hant" lang="zh-Hant" data-site-language="zh-Hant">繁體中文版</a> (the Traditional Chinese version), the Traditional Chinese version prevails.</p>
 
     <p>Martha, sit (the “Service”) is a serving schedule tool for church team members, made up of an iOS app, an Android app, and a web app. This policy explains what data the Service collects, why, where it’s stored, how long it’s kept, who can see it, and how you can delete it.</p>
@@ -90,7 +90,7 @@
     <h3>3.4 Church data</h3>
     <dl>
       <div><dt>What</dt><dd>The church name and church logo (uploaded by an admin and resized to 512px).</dd></div>
-      <div><dt>Purpose</dt><dd>Showing the church in the app. The church name is also used to check for duplicates: when someone creates a church with the same name, they see a notice that a church with that name already exists.</dd></div>
+      <div><dt>Purpose</dt><dd>Showing the church in the app. The church name is also used to check for duplicates: no two churches can have the same name, so creating a church with an existing church’s name is blocked, with a notice saying why.</dd></div>
       <div><dt>Where</dt><dd>Firestore and Firebase Storage, asia-east1 (Taiwan).</dd></div>
       <div><dt>Kept until</dt><dd>The church is deleted (it can be restored within 30 days of deletion, then it’s permanently deleted).</dd></div>
     </dl>
@@ -105,7 +105,7 @@
 
     <h3>3.6 Usage analytics</h3>
     <dl>
-      <div><dt>What</dt><dd>Usage events recorded by Google Analytics for Firebase (GA4), such as which screens you opened and which features you used, plus what Google collects automatically: device model, operating system and app version, approximate region, and a random installation ID. We also attach your user ID (uid) and the ID of the church you’re currently in (<code>church_id</code>) to count users and measure how active each church is. Analytics data doesn’t include your name, email, or schedule contents.</dd></div>
+      <div><dt>What</dt><dd>Usage events recorded by Google Analytics for Firebase (GA4), such as which screens you opened and which features you used, plus what Google collects automatically: device model, operating system and app version, approximate region, and a random installation ID. We also attach your account ID (uid) and the ID of the church you’re currently in (<code>church_id</code>) to count users and measure how active each church is. Analytics data doesn’t include your name, email, or schedule contents.</dd></div>
       <div><dt>Purpose</dt><dd>Understanding daily and monthly users, retention, and which features get used, to improve the Service.</dd></div>
       <div><dt>What we don’t do</dt><dd>We don’t track your activity in other apps or websites, use it for advertising, or sell data. That’s why the iOS app doesn’t ask for App Tracking Transparency (ATT) permission.</dd></div>
       <div><dt>Opting out</dt><dd>There is currently <strong>no</strong> setting in the app to turn off usage analytics. If you don’t agree, please don’t use the Service, or email us.</dd></div>
@@ -114,10 +114,10 @@
 
     <h3>3.7 Error logs</h3>
     <dl>
-      <div><dt>What</dt><dd>Records from when the app crashes or hits an error: user ID (uid), church ID, the error stack trace, and device model, operating system and app version. Names, emails, and schedule contents aren’t recorded.</dd></div>
+      <div><dt>What</dt><dd>Records from when the app crashes or hits an error: account ID (uid), church ID, the error stack trace, and device model, operating system and app version. Names, emails, and schedule contents aren’t recorded.</dd></div>
       <div><dt>Purpose</dt><dd>Finding and fixing bugs.</dd></div>
       <div><dt>Where</dt><dd>Firebase Crashlytics for the iOS and Android apps; Google Cloud Logging for the web app and our backend.</dd></div>
-      <div><dt>Kept for</dt><dd>About 30 days in Cloud Logging, and 90 days in Crashlytics under Firebase’s rules.</dd></div>
+      <div><dt>Kept for</dt><dd>About 30 days in Cloud Logging, and 90 days in Crashlytics under Firebase’s rules. Both are deleted automatically.</dd></div>
     </dl>
 
     <h3>3.8 Google Calendar connection (only for admins who connect a calendar)</h3>
@@ -127,7 +127,6 @@
       <div><dt>Where</dt><dd>The refresh token is stored <strong>encrypted</strong> on our backend. Neither the app nor other team members can get it.</dd></div>
       <div><dt>Who can see it</dt><dd>That church’s team members can see the calendar’s events in the app.</dd></div>
       <div><dt>Retention and deletion</dt><dd>Cached events are kept for at most 10 minutes before being read from Google again. When an admin disconnects the calendar or the church is deleted, the authorization and the cache are deleted together. You can also revoke access at any time on the “Third-party apps &amp; services” page of your Google Account.</dd></div>
-      <div><dt>Google API</dt><dd>The Service’s use of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements.</dd></div>
     </dl>
 
     <h3>3.9 Photo recognition</h3>
@@ -137,17 +136,17 @@
       <div><dt>Kept for</dt><dd>The photo is sent to Google only at the moment it’s read; the Service doesn’t keep it. Google may cache it in memory for up to 24 hours to respond faster, and if Google’s automated systems flag the content as possible abuse, it may be kept for up to 90 days for review, then deleted.</dd></div>
     </dl>
 
-    <h3>3.10 Tips and subscriptions</h3>
+    <h3>3.10 Support in the app</h3>
     <dl>
-      <div><dt>What</dt><dd>Tips and subscriptions in the iOS and Android apps are paid through the Apple App Store and Google Play. We never receive your payment details (such as your card number).</dd></div>
+      <div><dt>What</dt><dd>One-time and monthly support in the iOS and Android apps are paid through the Apple App Store and Google Play. We never receive your payment details (such as your card number).</dd></div>
       <div><dt>Where</dt><dd>Whether you’re a supporter is determined only on your device and isn’t sent to our servers. Apple and Google notify us of each transaction’s amount, item, and time, which we use to calculate the cost progress shown publicly on our website. These notifications don’t include your account or name.</dd></div>
     </dl>
 
     <h3>3.11 Webhooks (only for churches that set one up)</h3>
     <dl>
-      <div><dt>What</dt><dd>A church admin can set a webhook URL. When the schedule changes, the Service sends the change to that URL, including the church name, date, role, the names of team members added or removed, and the name of the team member who made the change.</dd></div>
-      <div><dt>Purpose</dt><dd>Letting the church sync schedule changes to its own systems, such as a group chat or a spreadsheet.</dd></div>
-      <div><dt>Who’s responsible</dt><dd>The church admin chooses and manages this URL. Once data is sent, the receiving end handles it under its own policies. The admin can delete the webhook at any time to stop sending.</dd></div>
+      <div><dt>What</dt><dd>A church admin can set a webhook URL and choose whether to send calendar changes, schedule changes, or both. When something changes, the Service sends the change to that URL. Schedule changes include the church name, date, role, and the names of team members added or removed; calendar changes include the church name and the event’s title, time, location, description, and link. Both include the name of the team member who made the change.</dd></div>
+      <div><dt>Purpose</dt><dd>Letting the church sync calendar and schedule changes to its own systems, such as a group chat or a spreadsheet.</dd></div>
+      <div><dt>Who’s responsible</dt><dd>The church admin chooses and manages this URL. Once data is sent, the receiving end handles it under its own policies. The admin can turn off the webhook at any time to stop sending.</dd></div>
     </dl>
 
     <!-- payments:on -->
@@ -171,7 +170,7 @@
     <h2 id="sharing">5. Sharing with third parties</h2>
     <p>We don’t sell your data. Data is handled only by the service providers needed to provide the Service:</p>
     <ul>
-      <li><strong>Google</strong>: Firebase (database, sign-in, file storage, push notifications, analytics, error logs), Google Cloud (backend, logging), the Gemini API (photo recognition), and Google Calendar (only for churches that connect a calendar).</li>
+      <li><strong>Google</strong>: Firebase (database, sign-in, file storage, push notifications, analytics, error logs), Google Cloud (backend, logging), Gemini on Vertex AI (photo recognition), and Google Calendar (only for churches that connect a calendar).</li>
       <li><strong>Apple and Google</strong>: Sign in with Apple, Google sign-in, and app store payments.</li>
       <!-- payments:on -->
       <li><strong>NewebPay</strong>: payments on the website’s support page; see Section 3.12.</li>

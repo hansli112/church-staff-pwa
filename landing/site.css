@@ -8,6 +8,7 @@
   --text2: #5C5C62;
   --app-bg: #F2F2F7;
   --line: #D1D1D6;
+  --field-line: #86868B; /* 輸入框、選項的外框：對白底與 --bg2 至少 3:1 */
   --fill: #E9E9EE;
   --accent: #1F5FD1;
   --on-accent: #FFFFFF;
@@ -27,6 +28,7 @@
     --text2: #AEAEB2;
     --app-bg: #000000;
     --line: #38383A;
+    --field-line: #8E8E93;
     --fill: #2C2C2E;
     --accent: #6EA2FF;
     --on-accent: #00194A;
@@ -51,6 +53,8 @@ body {
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
+/* 日文標題照詞組換行（支援的瀏覽器），不把「奉仕表」拆成兩行。 */
+:lang(ja) :is(h1, h2, h3) { word-break: auto-phrase; }
 a { color: var(--accent); text-underline-offset: 3px; }
 a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
 h1, h2, h3 { line-height: 1.25; margin: 0; }
@@ -61,14 +65,19 @@ p { margin: 0 0 16px; }
 /* 頂部 */
 .top { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter: saturate(180%) blur(16px); -webkit-backdrop-filter: saturate(180%) blur(16px); border-bottom: 1px solid transparent; }
 .top.ruled { border-bottom-color: var(--line); }
-.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; }
-.brand { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--text); font-weight: 700; text-decoration: none; }
+.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; overflow-wrap: normal; }
+.brand { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--text); font-weight: 700; text-decoration: none; white-space: nowrap; }
 .brand img { width: 28px; height: 28px; border-radius: 7px; }
 .from-app a[href="/home"], .from-app [data-from-app="hide"] { display: none; }
-.top-link { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; text-decoration: none; }
+.top-link { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; text-decoration: none; white-space: nowrap; }
 .top-nav { display: flex; align-items: center; gap: 4px 16px; }
-.top-nav a:not(.top-link) { display: inline-flex; align-items: center; min-height: 44px; color: var(--text2); text-decoration: none; font-size: 0.9375rem; }
+.top-nav a:not(.top-link) { display: inline-flex; align-items: center; min-height: 44px; color: var(--text2); text-decoration: none; font-size: 0.9375rem; white-space: nowrap; }
 .top-nav a:not(.top-link):hover, .top-nav a[aria-current] { color: var(--text); }
+/* 手機上一行放不下：頂部只留品牌和「開啟網頁版」，教學、支持在頁尾。 */
+@media (max-width: 479px) {
+  .top .wrap { gap: 12px; }
+  .top-nav a:not(.top-link) { display: none; }
+}
 
 /* 按鈕 */
 .btn {
@@ -91,6 +100,7 @@ p { margin: 0 0 16px; }
 .cta .btn-primary { flex: 1 1 100%; }
 @media (min-width: 480px) { .cta .btn-primary { flex: none; } }
 .note { margin: 16px 0 0; font-size: 0.9375rem; color: var(--text2); }
+.steps + .cta { margin-top: 32px; }
 
 /* 首頁：App 畫面示意（純 HTML/CSS）。不畫手機外框：Apple 不准自己畫 iPhone 的樣子 */
 .shot { justify-self: center; width: 264px; height: 500px; border-radius: 28px; box-shadow: var(--shadow); }
@@ -103,7 +113,7 @@ p { margin: 0 0 16px; }
 .screen .list { flex: 1; padding: 0 8px; display: grid; gap: 8px; align-content: start; }
 .card { background: var(--surface); border-radius: 12px; padding: 8px 12px; }
 .card h4 { margin: 0 0 4px; font-size: 12px; font-weight: 700; }
-.card dl { margin: 0; display: grid; grid-template-columns: 44px 1fr; row-gap: 2px; }
+.card dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 2px 8px; }
 .card dt { color: var(--text2); }
 .card dd { margin: 0; color: var(--text2); }
 .card dd.me { color: var(--accent); font-weight: 600; }
@@ -170,7 +180,7 @@ button.btn:disabled { opacity: 0.6; cursor: default; filter: none; }
 .amounts legend { padding: 0; margin-bottom: 8px; font-size: 0.9375rem; color: var(--text2); }
 .amounts label {
   position: relative; display: grid; place-items: center; min-height: 44px; padding: 0 8px; border-radius: 12px;
-  background: var(--surface); border: 1px solid var(--line); font-weight: 600; font-variant-numeric: tabular-nums; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--field-line); font-weight: 600; font-variant-numeric: tabular-nums; cursor: pointer;
 }
 .amounts input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
 .amounts label:has(input:checked) { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
@@ -179,7 +189,7 @@ button.btn:disabled { opacity: 0.6; cursor: default; filter: none; }
 .custom[hidden] { display: none; }
 .custom label { font-size: 0.9375rem; color: var(--text2); }
 .custom input {
-  width: 100%; min-height: 44px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--line);
+  width: 100%; min-height: 44px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--field-line);
   background: var(--surface); color: var(--text); font: inherit; font-variant-numeric: tabular-nums;
 }
 .custom input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }

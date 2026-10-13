@@ -44,14 +44,13 @@
 
     <section class="panel" aria-labelledby="pay-title">
       <h2 id="pay-title">Support online</h2>
-      <!-- TODO(LINE Pay): 藍新的 LINE Pay 要另外申請；開通後這行加上 LINE Pay，fundingNewebpay.ts 打開 LINEPAY。 -->
-      <p>Pay by credit card, Apple Pay, or Google Pay, in any amount you choose.</p>
       <!-- payments:off -->
-      <!-- 藍新金流還沒接上：按鈕只顯示「即將開放」。接上後網站改用 payments on 建置（docs/firebase-setup.md〈線上支持〉）。藍新沒通過就改接 Portaly（只有信用卡，上面的付款方式也要改）。 -->
-      <a class="btn btn-primary wide" href="#pay-title" id="pay" data-soon>Support Martha, sit</a>
-      <p class="fine" id="pay-soon" hidden>Online support is coming soon. Thank you for thinking of us.</p>
+      <!-- 藍新金流還沒接上：不放按鈕，也不寫付款方式。接上後網站改用 payments on 建置（docs/firebase-setup.md〈線上支持〉）。藍新沒通過就改接 Portaly（只有信用卡，下面的付款方式也要改）。 -->
+      <p>Online support is coming soon. Thank you for thinking of us.</p>
       <!-- /payments:off -->
       <!-- payments:on -->
+      <!-- TODO(LINE Pay): 藍新的 LINE Pay 要另外申請；開通後這行加上 LINE Pay，fundingNewebpay.ts 打開 LINEPAY。 -->
+      <p>Pay by credit card, Apple Pay, or Google Pay, in any amount you choose.</p>
       <!-- 選金額 → POST /support/pay（Hosting 轉到 newebpayStart）→ 拿到簽好的表單，送到藍新的付款頁。 -->
       <form id="pay-form" action="/support/pay" method="post" novalidate>
         <fieldset class="amounts">
@@ -84,12 +83,18 @@
     </section>
 
     <section class="panel" aria-labelledby="refund-title">
+      <!-- payments:on -->
       <h2 id="refund-title">Refunds and contact</h2>
       <p>Support payments generally aren’t refundable. If you entered the wrong amount or were charged twice, email <a href="mailto:hansli112871114@gmail.com">hansli112871114@gmail.com</a> with the time and amount of the payment. Once we’ve checked, we’ll refund it in full.</p>
       <p>Martha, sit is built and run by one person. If you have any questions, feel free to email.</p>
+      <!-- /payments:on -->
+      <!-- payments:off -->
+      <h2 id="refund-title">Contact</h2>
+      <p>Martha, sit is built and run by one person. If you have any questions, feel free to email <a href="mailto:hansli112871114@gmail.com">hansli112871114@gmail.com</a>.</p>
+      <!-- /payments:off -->
     </section>
 
-    <p class="fine">Once the iPhone and Android apps are out, you’ll also be able to leave a tip or give monthly support in the app.</p>
+    <p class="fine">Once the iPhone and Android apps are out, you’ll also be able to give one-time or monthly support in the app.</p>
   </div>
 </main>
 
@@ -140,17 +145,10 @@
     history.replaceState(null, '', location.pathname + location.hash);
   }
 
-  const pay = document.getElementById('pay');
-  if (pay.hasAttribute('data-soon')) {
-    pay.addEventListener('click', (e) => {
-      e.preventDefault();
-      document.getElementById('pay-soon').hidden = false;
-    });
-  }
-
   // 線上支持 (only when built with --payments on).
   const form = document.getElementById('pay-form');
   if (!form) return;
+  const pay = document.getElementById('pay');
   const custom = document.getElementById('pay-custom');
   const customRow = document.getElementById('pay-custom-row');
   const msg = document.getElementById('pay-msg');

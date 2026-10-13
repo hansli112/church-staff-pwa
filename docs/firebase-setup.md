@@ -102,7 +102,7 @@ Hosting 部署前，`scripts/hosting-predeploy.sh` 用 `scripts/build-site.mjs` 
 **保留 `.firebase/web-assets/`**：每個 Firebase 專案分開累積已準備部署的 hashed JS／wasm 入口、Flutter asset bundles 與相容舊網址的字型，下一次部署一併上傳。新檔案／bundle 先寫到暫存位置並驗證，再原子改名；中斷留下的暫存檔不會發布，重跑也不覆寫已驗證相同的完整檔案。`deploy.sh` 建置前只清掉產物 `app/build/web` 與 Flutter 的建置快取 `app/.dart_tool/flutter_build`，避免 dev／prod 的舊 hash 或舊的產生碼混入（快取曾留下換套件前的 web plugin registrant，部署出舊套件）；archive 不受影響。手動建置／部署也要使用乾淨的 Web 產物；腳本會拒絕沿用另一個專案的產物。失敗或重試不會刪掉舊版本，也不自動清理；空間會隨改版增加。換部署電腦／worktree 時，要先移轉這個目錄；沒有它就無法保留先前部署的 hash。這不是完整網站備份。腳本測試：`node --test scripts/test/*.test.mjs`（需現有的 `landing/node_modules`）。
 
 - `/`：landing page。Flutter 的 `index.html` 改名成 `app.html`，其他路徑都 rewrite 到它，所以網頁版從 `/home` 開始（manifest 的 `start_url`）。舊的 `/about` 轉到 `/`。
-- `/support`：支持頁。顯示這個月的雲端費用（不用登入就讀 `platform/funding`），以及網站的線上支持按鈕。線上支持預設關著（按鈕只顯示「即將開放」），部署時加 `SUPPORT_PAYMENTS=on` 才有選金額和付款，見〈線上支持（藍新金流）〉。`/support/pay` rewrite 到 `newebpayStart`。
+- `/support`：支持頁。顯示這個月的雲端費用（不用登入就讀 `platform/funding`），以及網站的線上支持按鈕。線上支持預設關著（只寫「線上支持即將開放」，沒有按鈕），部署時加 `SUPPORT_PAYMENTS=on` 才有選金額和付款，見〈線上支持（藍新金流）〉。`/support/pay` rewrite 到 `newebpayStart`。
 - `/blog/`：教學文章。每篇是 `landing/blog/<網址>.md`，開頭寫 `title`、`date`、`description`，會變成 `/blog/<網址>/`。
 - `/privacy`、`/terms`：App 會打開這兩頁，所以它們沒有網站的頁首、頁尾，也不連到首頁，從 App 點不到支持頁（商店不准 App 把人帶去外部付款）。
 
@@ -149,7 +149,7 @@ NotifyURL、ReturnURL、ClientBackURL（藍新頁面上的「返回商店」，`
   NEWEBPAY_ENV=test
   ```
   `NEWEBPAY_ENV` 是 `test`（送到 `ccore.newebpay.com`）或 `production`（送到 `core.newebpay.com`）。prod（`marthasit`）只接受 `production`，測試付款不會算進正式的進度。
-- **網站**：Hosting 部署時加 `SUPPORT_PAYMENTS=on`，支持頁才出現選金額和付款按鈕（`hosting-predeploy.sh` → `build-site.mjs --payments on`）。同一個開關也讓網頁版 App 的「我的」出現「支持馬大別忙」，連到網站的支持頁（`deploy.sh` → `--dart-define=SUPPORT_PAYMENTS=on`）。沒加就是「即將開放」、網頁版 App 沒有這一列，每次部署 Hosting 都要加。
+- **網站**：Hosting 部署時加 `SUPPORT_PAYMENTS=on`，支持頁才出現選金額和付款按鈕（`hosting-predeploy.sh` → `build-site.mjs --payments on`）。同一個開關也讓網頁版 App 的「我的」出現「支持馬大別忙」，連到網站的支持頁（`deploy.sh` → `--dart-define=SUPPORT_PAYMENTS=on`）。沒加就只寫「線上支持即將開放」、網頁版 App 沒有這一列，每次部署 Hosting 都要加。
 
 **第一次部署前**：Functions 宣告了這兩個 secret，專案裡沒有的話 `firebase deploy` 會停下來。已經建好的專案重跑一次 `scripts/firebase-project.sh`（只會補上缺的佔位 secret），或手動建：
 ```sh
@@ -179,7 +179,7 @@ printf placeholder | gcloud secrets create NEWEBPAY_HASH_IV  --project <專案> 
 
 **從測試區換到正式環境**：測試區和正式環境是不同的商店，商店代號和兩把金鑰都不一樣。三樣一起換（secret 加新版本、`.env` 的 `NEWEBPAY_MERCHANT_ID` 和 `NEWEBPAY_ENV=production`），再部署 Functions。
 
-關掉線上支持：Hosting 部署時不加 `SUPPORT_PAYMENTS=on`（按鈕回到「即將開放」）；要連後端一起停，把 `.env` 的 `NEWEBPAY_MERCHANT_ID` 拿掉再部署 Functions。
+關掉線上支持：Hosting 部署時不加 `SUPPORT_PAYMENTS=on`（支持頁回到「線上支持即將開放」）；要連後端一起停，把 `.env` 的 `NEWEBPAY_MERCHANT_ID` 拿掉再部署 Functions。
 
 ## 平台營運者
 

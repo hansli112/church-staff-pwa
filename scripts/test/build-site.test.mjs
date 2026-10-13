@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,10 +14,17 @@ const translations = TAGS.filter((tag) => tag !== 'zh-Hant');
 
 const out = mkdtempSync(join(tmpdir(), 'martha-site-'));
 const listed = buildSite({ out, origin: 'https://marthasit.com', project: 'marthasit', payments: 'on' });
-process.on('exit', () => rmSync(out, { recursive: true, force: true }));
+// As the live site is now: no payments on the website.
+const outOff = mkdtempSync(join(tmpdir(), 'martha-site-off-'));
+buildSite({ out: outOff, origin: 'https://marthasit.com', project: 'marthasit', payments: 'off' });
+process.on('exit', () => {
+  rmSync(out, { recursive: true, force: true });
+  rmSync(outOff, { recursive: true, force: true });
+});
 /** The built file a site path is served from (firebase.json's rewrites, else a folder's index.html). */
-const fileOf = (path) => join(out, path.endsWith('/') ? `${path}index.html` : `${path === '/' ? '/index' : path}.html`);
+const fileOf = (path, dir = out) => join(dir, path.endsWith('/') ? `${path}index.html` : `${path === '/' ? '/index' : path}.html`);
 const built = (path) => readFileSync(fileOf(path), 'utf8');
+const builtOff = (path) => readFileSync(fileOf(path, outOff), 'utf8');
 
 /** Every page, by its path in Traditional Chinese. */
 const pages = listed.filter((path) => !TAGS.some((tag) => path.startsWith(`/${tag}/`)));
@@ -65,6 +72,53 @@ describe('every page in every language', () => {
         }
       }
     });
+  }
+});
+
+describe("every page's head", () => {
+  test('names its one address, for the copies ?lang= and ?from=app make', () => {
+    for (const path of listed) {
+      const canonical = [...built(path).matchAll(/<link rel="canonical" href="([^"]*)">/g)].map((m) => m[1]);
+      assert.deepEqual(canonical, [`https://marthasit.com${path}`], path);
+    }
+  });
+
+  test('has the picture a link to it shows, at an absolute address the site serves', () => {
+    for (const path of listed) {
+      assert.match(built(path), /<meta property="og:image" content="https:\/\/marthasit\.com\/og-image\.png">/, path);
+    }
+    assert.ok(existsSync(join(out, 'og-image.png')));
+  });
+
+  test("has the browser's colors, light and dark, once", () => {
+    for (const path of listed) {
+      const colors = [...built(path).matchAll(/<meta name="theme-color" content="([^"]*)" media="\(prefers-color-scheme: (\w+)\)">/g)].map((m) => `${m[2]} ${m[1]}`);
+      assert.deepEqual(colors, ['light #FFFFFF', 'dark #000000'], path);
+    }
+  });
+});
+
+test('no comment in landing/ reaches the built site, payments on or off', () => {
+  for (const path of listed) {
+    assert.doesNotMatch(built(path), /<!--/, `on: ${path}`);
+    assert.doesNotMatch(builtOff(path), /<!--/, `off: ${path}`);
+  }
+});
+
+test('while the website takes no payments, the support page only says it is coming: no button, no ways to pay, no refunds', () => {
+  // What the page says (its script mentions NewebPay either way).
+  const main = (html) => /<main[\s\S]*<\/main>/.exec(html)[0];
+  for (const tag of TAGS) {
+    const on = main(built(sitePath(tag, '/support')));
+    const off = main(builtOff(sitePath(tag, '/support')));
+    assert.match(on, /<form id="pay-form"/, `${tag}: on`);
+    assert.match(on, /Apple Pay/, `${tag}: on`);
+    assert.doesNotMatch(off, /<form|<button|id="pay"|data-soon/, `${tag}: no button`);
+    assert.doesNotMatch(off, /Apple Pay|Google Pay|NewebPay|藍新|蓝新/, `${tag}: no ways to pay`);
+    // One heading for the panel either way: refunds and contact, or contact.
+    assert.equal(on.match(/id="refund-title"/g).length, 1, `${tag}: on`);
+    assert.equal(off.match(/id="refund-title"/g).length, 1, `${tag}: off`);
+    assert.ok(off.includes('mailto:'), `${tag}: still says where to write`);
   }
 });
 

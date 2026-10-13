@@ -8,7 +8,8 @@
 // --payments (default off) turns on 線上支持 on the support page: the
 // amount picker and NewebPay. Pages mark what shows only one way with
 // <!-- payments:on --> … <!-- /payments:on --> and the same for off; with
-// it off the support button only says 即將開放.
+// it off the support page only says 線上支持即將開放. Every other comment is
+// left out of what is built.
 //
 // Pages in landing/ mark where the shared parts go with <!-- site-header -->,
 // <!-- site-footer --> and (in pages with their own footer) <!-- site-languages -->,
@@ -34,6 +35,9 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const landing = join(root, 'landing');
 const { marked } = createRequire(join(landing, 'package.json'))('marked');
+
+/** The picture links to the site show (the app's icon, app/web/icons/Icon-maskable-512.png), at the site's root. */
+const OG_IMAGE = 'og-image.png';
 
 const zhDate = (iso) => {
   const [y, m, d] = iso.split('-').map(Number);
@@ -326,15 +330,32 @@ if (${JSON.stringify(firebaseHosts)}.indexOf(location.hostname) >= 0) {
       .map(([tag, path]) => `<link rel="alternate" hreflang="${tag}" href="${origin}${path}">\n`)
       .join('');
 
+  /**
+   * What every page's head has: its one address (?lang= and ?from=app make
+   * copies of it), the picture a link to it shows in chats and social
+   * media, and the browser's colors, light and dark.
+   */
+  const shared = (language, page) => `<link rel="canonical" href="${origin}${sitePath(language, page)}">
+<meta property="og:image" content="${origin}/${OG_IMAGE}">
+<meta property="og:image:width" content="512">
+<meta property="og:image:height" content="512">
+<meta property="og:image:alt" content="${LANGUAGES[language].appName}">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+`;
+
   /** A page from landing/ in [language] with the shared parts and this project's values. */
   function fill(html, language, page) {
     const pages = Object.fromEntries(TAGS.map((tag) => [tag, sitePath(tag, page)]));
-    return paymentParts(html)
-      .replace('<head>\n', `<head>\n${toOrigin}${chooser(language, pages)}${FROM_APP}`)
-      .replace('</head>', `${alternates(page)}</head>`)
-      .replace('<!-- site-header -->', header(language, page))
-      .replace('<!-- site-footer -->', footer(language, page))
-      .replace('<!-- site-languages -->', languageLinks(language, page))
+    return withoutComments(
+      paymentParts(html)
+        .replace('<head>\n', `<head>\n${toOrigin}${chooser(language, pages)}${FROM_APP}`)
+        .replace('</head>', `${shared(language, page)}${alternates(page)}</head>`)
+        .replace('<!-- site-header -->', header(language, page))
+        .replace('<!-- site-footer -->', footer(language, page))
+        .replace('<!-- site-languages -->', languageLinks(language, page)),
+    )
       .replaceAll('__ORIGIN__', origin)
       .replaceAll('__FIREBASE_PROJECT__', project);
   }
@@ -378,7 +399,7 @@ ${main}
 
   const listed = [];
   mkdirSync(out, { recursive: true });
-  copyFileSync(join(landing, 'site.css'), join(out, 'site.css'));
+  for (const file of ['site.css', OG_IMAGE]) copyFileSync(join(landing, file), join(out, file));
 
   for (const language of TAGS) {
     const w = LANGUAGES[language];
@@ -437,6 +458,16 @@ ${items}
     }));
   }
   return listed;
+}
+
+/**
+ * [html] without its comments, which are notes for whoever edits landing/
+ * (what is to do, what a part is for), not for visitors. Run once the
+ * markers (payments, site-header, …) have done their work.
+ */
+function withoutComments(html) {
+  const comment = '<!--(?:(?!-->)[\\s\\S])*-->';
+  return html.replace(new RegExp(`^[ \\t]*${comment}[ \\t]*\\n`, 'gm'), '').replace(new RegExp(comment, 'g'), '');
 }
 
 function escapeHtml(s) {

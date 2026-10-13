@@ -48,7 +48,7 @@
     </aside>
     <main class="legal">
     <h1>隱私權政策</h1>
-    <p class="updated">最後更新：2026-10-11</p>
+    <p class="updated">最後更新：<time datetime="2026-10-13">2026 年 10 月 13 日</time></p>
 
     <p>「馬大別忙」（以下稱「本服務」）是給教會同工使用的服事表工具，包含 iOS App、Android App 與網頁版。這份政策說明本服務蒐集哪些資料、為什麼蒐集、存在哪裡、保存多久、誰看得到，以及你可以怎麼刪除。</p>
 
@@ -89,7 +89,7 @@
     <h3>3.4 教會資料</h3>
     <dl>
       <div><dt>內容</dt><dd>教會名稱、教會 logo（管理員上傳，壓縮成 512px）。</dd></div>
-      <div><dt>用途</dt><dd>在 App 裡顯示教會。教會名稱也用來做同名檢查：有人建立同名的教會時，會看到已有同名教會的提醒。</dd></div>
+      <div><dt>用途</dt><dd>在 App 裡顯示教會。教會名稱也用來做同名檢查：名稱不能和現有的教會相同，有人用同一個名稱建立教會時會被擋下，並看到提醒。</dd></div>
       <div><dt>存放</dt><dd>Firestore 與 Firebase Storage，asia-east1（台灣）。</dd></div>
       <div><dt>保存期間</dt><dd>直到教會被刪除（刪除後 30 天內可以還原，之後永久刪除）。</dd></div>
     </dl>
@@ -104,7 +104,7 @@
 
     <h3>3.6 使用分析</h3>
     <dl>
-      <div><dt>內容</dt><dd>Google Analytics for Firebase（GA4）記錄的使用事件，例如開啟了哪個畫面、用了哪個功能；以及 Google 自動蒐集的裝置型號、作業系統與 App 版本、大略地區、一組隨機的安裝識別碼。我們另外附上你的使用者 ID（uid），以及你目前所在教會的 ID（<code>church_id</code>），用來計算使用人數與各教會的活躍度。分析資料不包含你的姓名、email 或服事表內容。</dd></div>
+      <div><dt>內容</dt><dd>Google Analytics for Firebase（GA4）記錄的使用事件，例如開啟了哪個畫面、用了哪個功能；以及 Google 自動蒐集的裝置型號、作業系統與 App 版本、大略地區、一組隨機的安裝識別碼。我們另外附上你的帳號 ID（uid），以及你目前所在教會的 ID（<code>church_id</code>），用來計算使用人數與各教會的活躍度。分析資料不包含你的姓名、email 或服事表內容。</dd></div>
       <div><dt>用途</dt><dd>了解每日與每月使用人數、留存、哪些功能有人用，以改進本服務。</dd></div>
       <div><dt>不做的事</dt><dd>不追蹤你在其他 App 或網站的活動，不用於廣告，不出售資料。因此 iOS 版不會詢問「App 追蹤透明度」（ATT）。</dd></div>
       <div><dt>關閉</dt><dd>目前 App 內<strong>沒有</strong>關閉使用分析的開關。若你不同意，請不要使用本服務，或來信告訴我們。</dd></div>
@@ -113,10 +113,10 @@
 
     <h3>3.7 錯誤紀錄</h3>
     <dl>
-      <div><dt>內容</dt><dd>App 當機或出錯時的紀錄：使用者 ID（uid）、教會 ID、錯誤堆疊，以及裝置型號、作業系統與 App 版本。不記錄姓名、email 或服事表內容。</dd></div>
+      <div><dt>內容</dt><dd>App 當機或出錯時的紀錄：帳號 ID（uid）、教會 ID、錯誤堆疊，以及裝置型號、作業系統與 App 版本。不記錄姓名、email 或服事表內容。</dd></div>
       <div><dt>用途</dt><dd>找出並修正錯誤。</dd></div>
       <div><dt>存放</dt><dd>iOS、Android App 使用 Firebase Crashlytics；網頁版與後端程式使用 Google Cloud Logging。</dd></div>
-      <div><dt>保存期間</dt><dd>Cloud Logging 約 30 天。Crashlytics 依 Firebase 的規定保存 90 天。</dd></div>
+      <div><dt>保存期間</dt><dd>Cloud Logging 約 30 天，Crashlytics 依 Firebase 的規定保存 90 天，都會自動刪除。</dd></div>
     </dl>
 
     <h3>3.8 Google 日曆連接（只限連接日曆的管理員）</h3>
@@ -126,27 +126,26 @@
       <div><dt>存放</dt><dd>refresh token <strong>加密</strong>存放在後端，App 與其他同工都拿不到。</dd></div>
       <div><dt>誰看得到</dt><dd>該教會的同工可以在 App 裡看到這個日曆的活動。</dd></div>
       <div><dt>保存期間與刪除</dt><dd>暫存的活動最多保留 10 分鐘就會重新向 Google 讀取；管理員中斷連接或教會被刪除時，授權與暫存一併刪除。你也可以隨時在 Google 帳戶的「第三方存取權」頁面撤銷授權。</dd></div>
-      <div><dt>Google API</dt><dd>本服務使用 Google API 取得的資料，遵守 Google API 服務使用者資料政策，包括其中的「有限使用」規定。</dd></div>
     </dl>
 
     <h3>3.9 照片辨識</h3>
     <dl>
-      <div><dt>內容</dt><dd>能安排服事表的同工選擇「用照片匯入」時上傳的服事表照片。照片上可能有同工的名字。</dd></div>
+      <div><dt>內容</dt><dd>能安排服事表的同工使用「照片匯入」時上傳的服事表照片。照片上可能有同工的名字。</dd></div>
       <div><dt>用途</dt><dd>照片會送到 Google Cloud Vertex AI 上的 Gemini 辨識文字，轉成服事表。依 Google Cloud 的條款，Google 不會用這些內容訓練模型。我們另外記錄每間教會每月用了幾張，用於額度控管。</dd></div>
       <div><dt>保存期間</dt><dd>照片只在辨識當下傳給 Google，本服務不保存照片。Google 端為了加快回應，可能在記憶體中暫存最多 24 小時；若 Google 的自動偵測認為內容疑似濫用，可能保存最多 90 天供審查，之後刪除。</dd></div>
     </dl>
 
-    <h3>3.10 打賞與訂閱</h3>
+    <h3>3.10 App 內的支持</h3>
     <dl>
-      <div><dt>內容</dt><dd>iOS、Android App 內的打賞與訂閱，由 Apple App Store 與 Google Play 處理付款。我們收不到你的付款資料（例如信用卡號）。</dd></div>
+      <div><dt>內容</dt><dd>iOS、Android App 內的一次性支持與每月支持，由 Apple App Store 與 Google Play 處理付款。我們收不到你的付款資料（例如信用卡號）。</dd></div>
       <div><dt>存放</dt><dd>支持者狀態只在你的裝置上判斷，不會傳到我們的伺服器。Apple 與 Google 會通知我們每筆交易的金額、品項與時間，用來計算網站上公開的費用進度；這些通知不包含你的帳號或姓名。</dd></div>
     </dl>
 
-    <h3>3.11 Webhook（只限設定 webhook 的教會）</h3>
+    <h3>3.11 外部通知（Webhook，只限設定外部通知的教會）</h3>
     <dl>
-      <div><dt>內容</dt><dd>教會管理員可以設定一個 webhook 網址。服事表有變動時，本服務會把變動內容送到這個網址，包括教會名稱、日期、服事項目、被加入或移除的同工名字，以及做出變動的同工名字。</dd></div>
-      <div><dt>用途</dt><dd>讓教會把服事表的變動同步到自己的系統，例如聊天群組或試算表。</dd></div>
-      <div><dt>誰負責</dt><dd>這個網址由教會管理員選擇與管理，資料送出後由收件端依其政策處理。管理員可以隨時刪除 webhook，停止傳送。</dd></div>
+      <div><dt>內容</dt><dd>教會管理員可以設定一個外部通知的接收網址，並選擇要送出行事曆異動、服事表異動，或兩者都送。有變動時，本服務會把變動內容送到這個網址：服事表異動包括教會名稱、日期、服事項目、被加入或移除的同工名字；行事曆異動包括教會名稱與活動的名稱、時間、地點、說明和連結。兩者都附上做出變動的同工名字。</dd></div>
+      <div><dt>用途</dt><dd>讓教會把行事曆與服事表的變動同步到自己的系統，例如聊天群組或試算表。</dd></div>
+      <div><dt>誰負責</dt><dd>這個網址由教會管理員選擇與管理，資料送出後由收件端依其政策處理。管理員可以隨時關閉外部通知，停止傳送。</dd></div>
     </dl>
 
     <!-- payments:on -->
@@ -170,12 +169,12 @@
     <h2 id="sharing">5. 與第三方分享</h2>
     <p>我們不出售你的資料。資料只交給為了提供本服務必要的服務商處理：</p>
     <ul>
-      <li><strong>Google</strong>：Firebase（資料庫、登入、檔案存放、推播、分析、錯誤紀錄）、Google Cloud（後端程式、紀錄）、Gemini API（照片辨識）、Google 日曆（只限連接日曆的教會）。</li>
+      <li><strong>Google</strong>：Firebase（資料庫、登入、檔案存放、推播、分析、錯誤紀錄）、Google Cloud（後端程式、紀錄）、Vertex AI 上的 Gemini（照片辨識）、Google 日曆（只限連接日曆的教會）。</li>
       <li><strong>Apple、Google</strong>：Sign in with Apple、Google 登入，以及 App 商店的付款。</li>
       <!-- payments:on -->
       <li><strong>藍新金流（NewebPay）</strong>：網站支持頁的付款，見第 3.12 節。</li>
       <!-- /payments:on -->
-      <li><strong>教會自己設定的 webhook 收件端</strong>：只限管理員設定了 webhook 的教會，傳送內容見第 3.11 節。</li>
+      <li><strong>教會自己設定的外部通知收件端</strong>：只限管理員設定了外部通知的教會，傳送內容見第 3.11 節。</li>
     </ul>
     <p>法律要求時，我們可能依法提供資料給主管機關。</p>
 

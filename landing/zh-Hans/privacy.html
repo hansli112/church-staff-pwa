@@ -48,7 +48,7 @@
     </aside>
     <main class="legal">
     <h1>隐私政策</h1>
-    <p class="updated">最后更新：2026-10-11</p>
+    <p class="updated">最后更新：<time datetime="2026-10-13">2026 年 10 月 13 日</time></p>
     <p>本页为译文；如与繁体中文版有出入，以<a href="/privacy" hreflang="zh-Hant" lang="zh-Hant" data-site-language="zh-Hant">繁體中文版</a>为准。</p>
 
     <p>“马大别忙”（以下称“本服务”）是给教会同工使用的事奉表工具，包括 iOS App、Android App 与网页版。本政策说明本服务收集哪些资料、为什么收集、存放在哪里、保存多久、谁看得到，以及你可以怎样删除。</p>
@@ -65,7 +65,7 @@
 
     <h3>3.1 账号资料</h3>
     <dl>
-      <div><dt>内容</dt><dd>你用 Google、Apple 或电邮登录时的姓名与电邮。用电邮注册时另有密码，密码由 Firebase Authentication 以哈希方式保存，运营者看不到。使用 Apple 的“隐藏邮件地址”时，我们只会收到 Apple 提供的转发地址。另外保存你的语言设置。</dd></div>
+      <div><dt>内容</dt><dd>你用 Google、Apple 或邮箱登录时的姓名与邮箱地址。用邮箱注册时另有密码，密码由 Firebase Authentication 以哈希方式保存，运营者看不到。使用 Apple 的“隐藏邮件地址”时，我们只会收到 Apple 提供的转发地址。另外保存你的语言设置。</dd></div>
       <div><dt>用途</dt><dd>登录、识别你的身份、在你加入的教会里显示你的名字。</dd></div>
       <div><dt>存放</dt><dd>Firebase Authentication 与 Firestore 的 <code>users/{uid}</code>。</dd></div>
       <div><dt>保存期限</dt><dd>直到你删除账号。</dd></div>
@@ -73,7 +73,7 @@
 
     <h3>3.2 教会里的同工资料</h3>
     <dl>
-      <div><dt>内容</dt><dd>你在每间教会里的名字、电邮、身份（例如管理员）、权限组、所属聚会与事奉项目、通知设置、加入时间。</dd></div>
+      <div><dt>内容</dt><dd>你在每间教会里的名字、邮箱、身份（例如管理员）、权限组、所属聚会与事奉项目、通知设置、加入时间。</dd></div>
       <div><dt>用途</dt><dd>安排事奉表时列出可选的同工、决定谁能安排哪些事奉表、发送你设置要接收的通知。</dd></div>
       <div><dt>存放</dt><dd>Firestore，asia-east1（台湾）。</dd></div>
       <div><dt>保存期限</dt><dd>直到你退出教会、被管理员移除、删除账号，或教会被删除。</dd></div>
@@ -90,7 +90,7 @@
     <h3>3.4 教会资料</h3>
     <dl>
       <div><dt>内容</dt><dd>教会名称、教会 logo（管理员上传，压缩成 512px）。</dd></div>
-      <div><dt>用途</dt><dd>在 App 里显示教会。教会名称也用来做同名检查：有人创建同名的教会时，会看到已有同名教会的提醒。</dd></div>
+      <div><dt>用途</dt><dd>在 App 里显示教会。教会名称也用来做同名检查：名称不能和现有的教会相同，有人用同一个名称创建教会时会被拦下，并看到提示。</dd></div>
       <div><dt>存放</dt><dd>Firestore 与 Firebase Storage，asia-east1（台湾）。</dd></div>
       <div><dt>保存期限</dt><dd>直到教会被删除（删除后 30 天内可以恢复，之后永久删除）。</dd></div>
     </dl>
@@ -105,7 +105,7 @@
 
     <h3>3.6 使用分析</h3>
     <dl>
-      <div><dt>内容</dt><dd>Google Analytics for Firebase（GA4）记录的使用事件，例如打开了哪个画面、用了哪个功能；以及 Google 自动收集的设备型号、操作系统与 App 版本、大致地区、一组随机的安装识别码。我们另外附上你的用户 ID（uid），以及你目前所在教会的 ID（<code>church_id</code>），用来计算使用人数与各教会的活跃度。分析资料不包含你的姓名、电邮或事奉表内容。</dd></div>
+      <div><dt>内容</dt><dd>Google Analytics for Firebase（GA4）记录的使用事件，例如打开了哪个画面、用了哪个功能；以及 Google 自动收集的设备型号、操作系统与 App 版本、大致地区、一组随机的安装识别码。我们另外附上你的账号 ID（uid），以及你目前所在教会的 ID（<code>church_id</code>），用来计算使用人数与各教会的活跃度。分析资料不包含你的姓名、邮箱或事奉表内容。</dd></div>
       <div><dt>用途</dt><dd>了解每日与每月使用人数、留存、哪些功能有人用，以改进本服务。</dd></div>
       <div><dt>不做的事</dt><dd>不追踪你在其他 App 或网站的活动，不用于广告，不出售资料。因此 iOS 版不会询问“App 跟踪透明度”（ATT）。</dd></div>
       <div><dt>关闭</dt><dd>目前 App 内<strong>没有</strong>关闭使用分析的开关。如果你不同意，请不要使用本服务，或来信告诉我们。</dd></div>
@@ -114,10 +114,10 @@
 
     <h3>3.7 错误记录</h3>
     <dl>
-      <div><dt>内容</dt><dd>App 崩溃或出错时的记录：用户 ID（uid）、教会 ID、错误堆栈，以及设备型号、操作系统与 App 版本。不记录姓名、电邮或事奉表内容。</dd></div>
+      <div><dt>内容</dt><dd>App 崩溃或出错时的记录：账号 ID（uid）、教会 ID、错误堆栈，以及设备型号、操作系统与 App 版本。不记录姓名、邮箱或事奉表内容。</dd></div>
       <div><dt>用途</dt><dd>找出并修正错误。</dd></div>
       <div><dt>存放</dt><dd>iOS、Android App 使用 Firebase Crashlytics；网页版与后端程序使用 Google Cloud Logging。</dd></div>
-      <div><dt>保存期限</dt><dd>Cloud Logging 约 30 天。Crashlytics 按 Firebase 的规定保存 90 天。</dd></div>
+      <div><dt>保存期限</dt><dd>Cloud Logging 约 30 天，Crashlytics 按 Firebase 的规定保存 90 天，都会自动删除。</dd></div>
     </dl>
 
     <h3>3.8 Google 日历连接（仅限连接日历的管理员）</h3>
@@ -127,34 +127,33 @@
       <div><dt>存放</dt><dd>refresh token <strong>加密</strong>存放在后端，App 与其他同工都拿不到。</dd></div>
       <div><dt>谁看得到</dt><dd>该教会的同工可以在 App 里看到这个日历的活动。</dd></div>
       <div><dt>保存期限与删除</dt><dd>暂存的活动最多保留 10 分钟就会重新向 Google 读取；管理员断开连接或教会被删除时，授权与暂存一并删除。你也可以随时在 Google 账号的“第三方应用和服务”页面撤销授权。</dd></div>
-      <div><dt>Google API</dt><dd>本服务使用 Google API 取得的资料，遵守 Google API 服务用户数据政策，包括其中的“有限使用”规定。</dd></div>
     </dl>
 
     <h3>3.9 照片识别</h3>
     <dl>
-      <div><dt>内容</dt><dd>能安排事奉表的同工选择“照片导入”时上传的事奉表照片。照片上可能有同工的名字。</dd></div>
+      <div><dt>内容</dt><dd>能安排事奉表的同工使用“照片导入”时上传的事奉表照片。照片上可能有同工的名字。</dd></div>
       <div><dt>用途</dt><dd>照片会发送到 Google Cloud Vertex AI 上的 Gemini 识别文字，转成事奉表。按 Google Cloud 的条款，Google 不会用这些内容训练模型。我们另外记录每间教会每月用了几张，用于额度控制。</dd></div>
       <div><dt>保存期限</dt><dd>照片只在识别当下传给 Google，本服务不保存照片。Google 端为了加快响应，可能在内存中暂存最多 24 小时；如果 Google 的自动检测认为内容疑似滥用，可能保存最多 90 天供审查，之后删除。</dd></div>
     </dl>
 
-    <h3>3.10 打赏与订阅</h3>
+    <h3>3.10 App 内的支持</h3>
     <dl>
-      <div><dt>内容</dt><dd>iOS、Android App 内的打赏与订阅，由 Apple App Store 与 Google Play 处理付款。我们收不到你的付款资料（例如信用卡号）。</dd></div>
+      <div><dt>内容</dt><dd>iOS、Android App 内的一次性支持与每月支持，由 Apple App Store 与 Google Play 处理付款。我们收不到你的付款资料（例如信用卡号）。</dd></div>
       <div><dt>存放</dt><dd>支持者状态只在你的设备上判断，不会传到我们的服务器。Apple 与 Google 会通知我们每笔交易的金额、项目与时间，用来计算网站上公开的费用进度；这些通知不包含你的账号或姓名。</dd></div>
     </dl>
 
-    <h3>3.11 Webhook（仅限设置 webhook 的教会）</h3>
+    <h3>3.11 外部通知（Webhook，仅限设置外部通知的教会）</h3>
     <dl>
-      <div><dt>内容</dt><dd>教会管理员可以设置一个 webhook 网址。事奉表有变动时，本服务会把变动内容发送到这个网址，包括教会名称、日期、事奉项目、被加入或移除的同工名字，以及做出变动的同工名字。</dd></div>
-      <div><dt>用途</dt><dd>让教会把事奉表的变动同步到自己的系统，例如聊天群组或电子表格。</dd></div>
-      <div><dt>谁负责</dt><dd>这个网址由教会管理员选择与管理，资料发出后由接收端按其政策处理。管理员可以随时删除 webhook，停止发送。</dd></div>
+      <div><dt>内容</dt><dd>教会管理员可以设置一个外部通知的接收网址，并选择要发送行事历变动、事奉表变动，或两者都发送。有变动时，本服务会把变动内容发送到这个网址：事奉表变动包括教会名称、日期、事奉项目、被加入或移除的同工名字；行事历变动包括教会名称与活动的名称、时间、地点、说明和链接。两者都附上做出变动的同工名字。</dd></div>
+      <div><dt>用途</dt><dd>让教会把行事历与事奉表的变动同步到自己的系统，例如聊天群组或电子表格。</dd></div>
+      <div><dt>谁负责</dt><dd>这个网址由教会管理员选择与管理，资料发出后由接收端按其政策处理。管理员可以随时关闭外部通知，停止发送。</dd></div>
     </dl>
 
     <!-- payments:on -->
     <h3>3.12 网站的在线支持</h3>
     <dl>
-      <div><dt>内容</dt><dd>在网站的支持页用信用卡、Apple Pay 或 Google Pay 支持时，付款由蓝新金流（蓝新科技股份有限公司，NewebPay）处理。卡号、email 等付款资料填写在蓝新的付款页，由蓝新依其隐私政策处理。蓝新的付款通知会附上卡号前 6 位与末 4 位、付款时的 IP，我们不保存也不记录。</dd></div>
-      <div><dt>存放</dt><dd>我们只记录每笔付款的金额、付款方式、时间与蓝新的交易编号，用来计算网站上公开的云端费用进度与处理退款；不记录你的姓名、email 或账号。</dd></div>
+      <div><dt>内容</dt><dd>在网站的支持页用信用卡、Apple Pay 或 Google Pay 支持时，付款由蓝新金流（蓝新科技股份有限公司，NewebPay）处理。卡号、邮箱等付款资料填写在蓝新的付款页，由蓝新依其隐私政策处理。蓝新的付款通知会附上卡号前 6 位与末 4 位、付款时的 IP，我们不保存也不记录。</dd></div>
+      <div><dt>存放</dt><dd>我们只记录每笔付款的金额、付款方式、时间与蓝新的交易编号，用来计算网站上公开的云端费用进度与处理退款；不记录你的姓名、邮箱或账号。</dd></div>
       <div><dt>保存期限</dt><dd>付款记录不含你的个人资料，为了账务会一直保留。开始付款时建立的订单只有金额与时间，没有完成付款的订单在 4 天内删除。</dd></div>
     </dl>
 
@@ -162,7 +161,7 @@
     <h2 id="visibility">4. 谁看得到你的资料</h2>
     <ul>
       <li><strong>你本人</strong>：自己的账号资料、同工资料与推送 token。</li>
-      <li><strong>同一间教会的管理员，以及能安排事奉表的同工</strong>：这间教会里所有同工的同工资料，<strong>包括电邮</strong>。</li>
+      <li><strong>同一间教会的管理员，以及能安排事奉表的同工</strong>：这间教会里所有同工的同工资料，<strong>包括邮箱</strong>。</li>
       <li><strong>同一间教会的其他同工</strong>：事奉表（包括上面的名字）、教会名称与 logo。</li>
       <li><strong>其他教会的人</strong>：看不到你在这间教会的任何资料。</li>
       <li><strong>运营者</strong>：在运维、处理问题、处理滥用或同名争议所必要的范围内访问资料。运营者的后台可以给教会改名、停用教会、转移管理员。</li>
@@ -171,12 +170,12 @@
     <h2 id="sharing">5. 与第三方共享</h2>
     <p>我们不出售你的资料。资料只交给为提供本服务所必要的服务商处理：</p>
     <ul>
-      <li><strong>Google</strong>：Firebase（数据库、登录、文件存储、推送通知、分析、错误记录）、Google Cloud（后端程序、日志）、Gemini API（照片识别）、Google 日历（仅限连接日历的教会）。</li>
+      <li><strong>Google</strong>：Firebase（数据库、登录、文件存储、推送通知、分析、错误记录）、Google Cloud（后端程序、日志）、Vertex AI 上的 Gemini（照片识别）、Google 日历（仅限连接日历的教会）。</li>
       <li><strong>Apple、Google</strong>：Sign in with Apple、Google 登录，以及 App 商店的付款。</li>
       <!-- payments:on -->
       <li><strong>蓝新金流（NewebPay）</strong>：网站支持页的付款，见第 3.12 节。</li>
       <!-- /payments:on -->
-      <li><strong>教会自己设置的 webhook 接收端</strong>：仅限管理员设置了 webhook 的教会，发送内容见第 3.11 节。</li>
+      <li><strong>教会自己设置的外部通知接收端</strong>：仅限管理员设置了外部通知的教会，发送内容见第 3.11 节。</li>
     </ul>
     <p>法律要求时，我们可能依法向主管机关提供资料。</p>
 
@@ -222,7 +221,7 @@
 
     <h2 id="contact">11. 联系方式</h2>
     <ul>
-      <li>电邮：<a href="mailto:hansli112871114@gmail.com">hansli112871114@gmail.com</a></li>
+      <li>邮箱：<a href="mailto:hansli112871114@gmail.com">hansli112871114@gmail.com</a></li>
       <li>问题反馈：<a href="https://github.com/hansli112/church-staff-pwa/issues">GitHub issues</a>（公开，请勿贴上个人资料）</li>
     </ul>
     </main>
