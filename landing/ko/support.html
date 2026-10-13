@@ -45,8 +45,9 @@
     <section class="panel" aria-labelledby="pay-title">
       <h2 id="pay-title">온라인 후원</h2>
       <!-- payments:off -->
-      <!-- 藍新金流還沒接上：不放按鈕，也不寫付款方式。接上後網站改用 payments on 建置（docs/firebase-setup.md〈線上支持〉）。藍新沒通過就改接 Portaly（只有信用卡，下面的付款方式也要改）。 -->
+      <!-- 藍新拒絕了（贊助不受理），改申請綠界，審核中。沒有按鈕，但寫出金額、付款方式和退款，讓金流審核看得到網站以新台幣標價。接上後網站改用 payments on 建置（docs/firebase-setup.md〈線上支持〉）。 -->
       <p>온라인 후원은 곧 열려요. 마음 써 주셔서 감사해요.</p>
+      <p>열리면 신용카드나 Apple Pay로 후원할 수 있어요. 결제는 신 타이완 달러(NT$)로 하며, NT$100, 300, 500, 1,000 중에서 고르거나 NT$30~10,000 사이에서 직접 정할 수 있어요.</p>
       <!-- /payments:off -->
       <!-- payments:on -->
       <!-- TODO(LINE Pay): 藍新的 LINE Pay 要另外申請；開通後這行加上 LINE Pay，fundingNewebpay.ts 打開 LINEPAY。 -->
@@ -83,15 +84,9 @@
     </section>
 
     <section class="panel" aria-labelledby="refund-title">
-      <!-- payments:on -->
       <h2 id="refund-title">환불과 문의</h2>
       <p>후원금은 원칙적으로 환불하지 않아요. 금액을 잘못 입력했거나 중복 결제된 경우에는 결제 시간과 금액을 적어 <a href="mailto:support@marthasit.com">support@marthasit.com</a>으로 메일을 보내 주세요. 확인한 뒤 전액 환불해 드려요.</p>
       <p>마르다의 쉼표는 개인이 개발하고 운영해요. 궁금한 점이 있으면 언제든 메일 주세요.</p>
-      <!-- /payments:on -->
-      <!-- payments:off -->
-      <h2 id="refund-title">문의</h2>
-      <p>마르다의 쉼표는 개인이 개발하고 운영해요. 궁금한 점이 있으면 언제든 <a href="mailto:support@marthasit.com">support@marthasit.com</a>으로 메일 주세요.</p>
-      <!-- /payments:off -->
     </section>
 
     <p class="fine">iPhone·Android 앱이 출시되면 앱에서도 일시 후원이나 정기 후원을 할 수 있어요.</p>

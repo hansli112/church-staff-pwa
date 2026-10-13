@@ -105,7 +105,7 @@ test('no comment in landing/ reaches the built site, payments on or off', () => 
   }
 });
 
-test('while the website takes no payments, the support page only says it is coming: no button, no ways to pay, no refunds', () => {
+test('while the website takes no payments, the support page has no button but shows what paying will be, for the payment provider to review', () => {
   // What the page says (its script mentions NewebPay either way).
   const main = (html) => /<main[\s\S]*<\/main>/.exec(html)[0];
   for (const tag of TAGS) {
@@ -114,11 +114,13 @@ test('while the website takes no payments, the support page only says it is comi
     assert.match(on, /<form id="pay-form"/, `${tag}: on`);
     assert.match(on, /Apple Pay/, `${tag}: on`);
     assert.doesNotMatch(off, /<form|<button|id="pay"|data-soon/, `${tag}: no button`);
-    assert.doesNotMatch(off, /Apple Pay|Google Pay|NewebPay|藍新|蓝新/, `${tag}: no ways to pay`);
-    // One heading for the panel either way: refunds and contact, or contact.
+    // Priced in NT$, by card, with no provider named until one is chosen.
+    assert.match(off, /Apple Pay/, `${tag}: ways to pay`);
+    assert.match(off, /1,000/, `${tag}: amounts`);
+    assert.doesNotMatch(off, /Google Pay|NewebPay|藍新|蓝新/, `${tag}: no provider`);
     assert.equal(on.match(/id="refund-title"/g).length, 1, `${tag}: on`);
     assert.equal(off.match(/id="refund-title"/g).length, 1, `${tag}: off`);
-    assert.ok(off.includes('mailto:'), `${tag}: still says where to write`);
+    assert.ok(off.includes('mailto:support@marthasit.com'), `${tag}: refunds and where to write`);
   }
 });
 

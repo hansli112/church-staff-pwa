@@ -45,8 +45,9 @@
     <section class="panel" aria-labelledby="pay-title">
       <h2 id="pay-title">線上支持</h2>
       <!-- payments:off -->
-      <!-- 藍新金流還沒接上：不放按鈕，也不寫付款方式。接上後網站改用 payments on 建置（docs/firebase-setup.md〈線上支持〉）。藍新沒通過就改接 Portaly（只有信用卡，下面的付款方式也要改）。 -->
+      <!-- 藍新拒絕了（贊助不受理），改申請綠界，審核中。沒有按鈕，但寫出金額、付款方式和退款，讓金流審核看得到網站以新台幣標價。接上後網站改用 payments on 建置（docs/firebase-setup.md〈線上支持〉）。 -->
       <p>線上支持即將開放，謝謝你的心意。</p>
+      <p>開放後可以用信用卡或 Apple Pay 支持，以新台幣付款：100、300、500、1,000 元，或 30 到 10,000 元之間自己決定。</p>
       <!-- /payments:off -->
       <!-- payments:on -->
       <!-- TODO(LINE Pay): 藍新的 LINE Pay 要另外申請；開通後這行加上 LINE Pay，fundingNewebpay.ts 打開 LINEPAY。 -->
@@ -83,15 +84,9 @@
     </section>
 
     <section class="panel" aria-labelledby="refund-title">
-      <!-- payments:on -->
       <h2 id="refund-title">退款與聯絡</h2>
       <p>支持款原則上不退。如果刷錯金額或重複扣款，請來信 <a href="mailto:support@marthasit.com">support@marthasit.com</a>，附上付款時間和金額，查證後會全額退回。</p>
       <p>馬大別忙由個人開發、營運，有任何問題都歡迎來信。</p>
-      <!-- /payments:on -->
-      <!-- payments:off -->
-      <h2 id="refund-title">聯絡</h2>
-      <p>馬大別忙由個人開發、營運，有任何問題都歡迎來信到 <a href="mailto:support@marthasit.com">support@marthasit.com</a>。</p>
-      <!-- /payments:off -->
     </section>
 
     <p class="fine">iPhone、Android App 上架後，也可以在 App 裡一次性支持或每月支持。</p>
