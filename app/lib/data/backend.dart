@@ -431,6 +431,7 @@ class Funding {
     required this.received,
     required this.carried,
     required this.monthsLeft,
+    this.costs = const [],
   });
 
   /// `YYYY-MM`.
@@ -448,7 +449,23 @@ class Funding {
   /// Whole months beyond this one that the money covers.
   final int monthsLeft;
 
+  /// Where the money goes: [target] is what these add up to.
+  final List<FundingCost> costs;
+
   int get available => received + carried;
+}
+
+/// One of the platform's costs as everyone sees it.
+class FundingCost {
+  const FundingCost({required this.name, required this.perMonth, this.yearly = false});
+
+  final String name;
+
+  /// NT\$ a month; a twelfth of a yearly one.
+  final int perMonth;
+
+  /// Paid once a year.
+  final bool yearly;
 }
 
 enum CostPeriod { month, year }

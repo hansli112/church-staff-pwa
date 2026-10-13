@@ -3295,7 +3295,7 @@ abstract class L10n {
   /// No description provided for @fundingCostsFooter.
   ///
   /// In zh, this message translates to:
-  /// **'價格變了再改。每年的項目平均分到每個月。'**
+  /// **'價格變了再改。每年的項目平均分到每個月。名稱和每月金額會公開在支持頁。'**
   String get fundingCostsFooter;
 
   /// No description provided for @fundingMonthsHeader.
@@ -3381,6 +3381,18 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'US\$'**
   String get currencyUsd;
+
+  /// No description provided for @fundingWhereItGoes.
+  ///
+  /// In zh, this message translates to:
+  /// **'每個月用在哪裡'**
+  String get fundingWhereItGoes;
+
+  /// No description provided for @fundingYearlySplit.
+  ///
+  /// In zh, this message translates to:
+  /// **'每年付一次的費用平均分到每個月'**
+  String get fundingYearlySplit;
 
   /// No description provided for @fundingRatesBy.
   ///

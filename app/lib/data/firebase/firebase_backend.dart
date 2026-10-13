@@ -435,6 +435,15 @@ Funding fundingFromJson(Map<String, Object?> d) {
     received: n('received'),
     carried: n('carried'),
     monthsLeft: n('monthsLeft'),
+    costs: [
+      for (final c in (d['costs'] as List?) ?? const [])
+        if (c is Map)
+          FundingCost(
+            name: c['name'] as String? ?? '',
+            perMonth: (c['perMonth'] as num?)?.round() ?? 0,
+            yearly: c['per'] == 'year',
+          ),
+    ],
   );
 }
 

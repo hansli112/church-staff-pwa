@@ -1864,7 +1864,8 @@ class L10nEn extends L10n {
   String get fundingCostsHeader => 'Costs';
 
   @override
-  String get fundingCostsFooter => 'Update when prices change. Yearly items are split evenly across the months.';
+  String get fundingCostsFooter =>
+      'Update when prices change. Yearly items are split evenly across the months. Each name and its monthly amount are shown to everyone on the support page.';
 
   @override
   String get fundingMonthsHeader => 'Recent months';
@@ -1917,6 +1918,12 @@ class L10nEn extends L10n {
 
   @override
   String get currencyUsd => 'US\$';
+
+  @override
+  String get fundingWhereItGoes => 'Where it goes each month';
+
+  @override
+  String get fundingYearlySplit => 'Yearly costs are split across the months';
 
   @override
   String get fundingRatesBy => 'Exchange rates: Exchange Rate API';

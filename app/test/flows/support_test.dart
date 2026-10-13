@@ -302,6 +302,44 @@ void main() {
       expect(find.text('這個月已經足夠，多的還能再維持 1 個月'), findsOneWidget);
     });
 
+    testWidgets('where the money goes: each cost a month', (tester) async {
+      await open(
+        tester,
+        const Funding(
+          month: '2026-10',
+          target: 564,
+          received: 0,
+          carried: 0,
+          monthsLeft: 0,
+          costs: [
+            FundingCost(name: '雲端', perMonth: 300),
+            FundingCost(name: 'Apple 開發者', perMonth: 264, yearly: true),
+          ],
+        ),
+      );
+      expect(find.text('每個月用在哪裡'), findsOneWidget);
+      expect(find.text('雲端'), findsOneWidget);
+      expect(find.text('NT\$300'), findsOneWidget);
+      expect(find.text('NT\$264'), findsOneWidget);
+      expect(find.text('每年付一次的費用平均分到每個月'), findsOneWidget);
+    });
+
+    testWidgets('only monthly costs: no word about yearly ones', (tester) async {
+      await open(
+        tester,
+        const Funding(
+          month: '2026-10',
+          target: 300,
+          received: 0,
+          carried: 0,
+          monthsLeft: 0,
+          costs: [FundingCost(name: '雲端', perMonth: 300)],
+        ),
+      );
+      expect(find.text('每個月用在哪裡'), findsOneWidget);
+      expect(find.text('每年付一次的費用平均分到每個月'), findsNothing);
+    });
+
     testWidgets('no costs set yet: nothing to show', (tester) async {
       await open(tester, null);
       expect(find.text('這個月的雲端費用'), findsNothing);

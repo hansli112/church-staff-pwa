@@ -15,7 +15,8 @@ import { TEXT_LIMITS } from './limits.js';
  * of whoever paid (its ID is the store's transaction or order ID, which
  * the store's own console can trace; for NewebPay, our order number).
  *
- * - `platform/fundingCosts`: { items: CostItem[] }, the operator's list.
+ * - `platform/fundingCosts`: { items: CostItem[] }, the operator's list;
+ *   `platform/funding` shows each item in NT$ a month ([PublicCost]).
  * - `fundingMonths/{YYYY-MM}`: { received, target } in NT$. A month keeps
  *   the target it had last; changing the costs only moves this month's.
  *   A month without a doc (before any costs, or with no exchange rate)
@@ -68,15 +69,25 @@ export function toTwd(amount: number, currency: string, rates: Rates): number | 
   return rate ? amount / rate : null;
 }
 
-/** NT$ a month: monthly items in full, yearly ones a twelfth. Null when a rate is missing. */
-export function monthlyTarget(items: CostItem[], rates: Rates): number | null {
-  let total = 0;
+/** One line of the costs as everyone sees it: NT$ a month. */
+export interface PublicCost {
+  name: string;
+  perMonth: number;
+  per: CostItem['per'];
+}
+
+/**
+ * Each item in NT$ a month: monthly items in full, yearly ones a twelfth.
+ * Null when a rate is missing.
+ */
+export function monthlyCosts(items: CostItem[], rates: Rates): PublicCost[] | null {
+  const costs: PublicCost[] = [];
   for (const item of items) {
     const twd = toTwd(item.amount, item.currency, rates);
     if (twd === null) return null;
-    total += item.per === 'year' ? twd / 12 : twd;
+    costs.push({ name: item.name, perMonth: Math.round(item.per === 'year' ? twd / 12 : twd), per: item.per });
   }
-  return Math.round(total);
+  return costs;
 }
 
 /**
@@ -121,15 +132,21 @@ async function currentRates(deps: Deps): Promise<Rates> {
 
 /**
  * Sets this month's target from the costs and republishes the summary
- * everyone reads. Runs after every change and once a day, so a month with
- * no payments still gets its target.
+ * everyone reads, with each cost, so everyone sees where the money goes.
+ * Runs after every change and once a day, so a month with no payments
+ * still gets its target. Without a rate, this month's target is left
+ * alone and the costs stay as last published.
  */
 export async function publishFunding(deps: Deps, rates?: Rates) {
   const { db } = deps;
   const items = ((await db.doc('platform/fundingCosts').get()).get('items') as CostItem[] | undefined) ?? [];
-  const target = monthlyTarget(items, rates ?? (await currentRates(deps)));
+  const costs = monthlyCosts(items, rates ?? (await currentRates(deps)));
+  // The sum of the lines, so what everyone sees adds up.
+  const target = costs && costs.reduce((sum, c) => sum + c.perMonth, 0);
   const month = monthOf(deps.now());
   await db.runTransaction(async (tx) => {
+    const summary = db.doc('platform/funding');
+    const published = costs ?? (((await tx.get(summary)).get('costs') as PublicCost[] | undefined) ?? []);
     const months = (await tx.get(db.collection('fundingMonths'))).docs.map(monthTotal);
     if (target !== null) {
       tx.set(db.doc(`fundingMonths/${month}`), { target }, { merge: true });
@@ -137,7 +154,7 @@ export async function publishFunding(deps: Deps, rates?: Rates) {
       if (now) now.target = target;
       else months.push({ month, received: 0, target });
     }
-    tx.set(db.doc('platform/funding'), { month, ...summarize(months, month), updatedAt: serverTime() });
+    tx.set(summary, { month, ...summarize(months, month), costs: published, updatedAt: serverTime() });
   });
 }
 

@@ -1055,7 +1055,7 @@
     }
   },
   "fundingCostsHeader": "費用",
-  "fundingCostsFooter": "價格變了再改。每年的項目平均分到每個月。",
+  "fundingCostsFooter": "價格變了再改。每年的項目平均分到每個月。名稱和每月金額會公開在支持頁。",
   "fundingMonthsHeader": "最近幾個月",
   "fundingMonthValue": "{received} / {target}",
   "@fundingMonthValue": {
@@ -1108,6 +1108,8 @@
   },
   "currencyTwd": "NT$",
   "currencyUsd": "US$",
+  "fundingWhereItGoes": "每個月用在哪裡",
+  "fundingYearlySplit": "每年付一次的費用平均分到每個月",
   "fundingRatesBy": "匯率：Exchange Rate API",
   "importAdvanced": "進階",
   "@importAdvanced": {

@@ -1751,7 +1751,7 @@ class L10nZh extends L10n {
   String get fundingCostsHeader => '費用';
 
   @override
-  String get fundingCostsFooter => '價格變了再改。每年的項目平均分到每個月。';
+  String get fundingCostsFooter => '價格變了再改。每年的項目平均分到每個月。名稱和每月金額會公開在支持頁。';
 
   @override
   String get fundingMonthsHeader => '最近幾個月';
@@ -1804,6 +1804,12 @@ class L10nZh extends L10n {
 
   @override
   String get currencyUsd => 'US\$';
+
+  @override
+  String get fundingWhereItGoes => '每個月用在哪裡';
+
+  @override
+  String get fundingYearlySplit => '每年付一次的費用平均分到每個月';
 
   @override
   String get fundingRatesBy => '匯率：Exchange Rate API';
@@ -4127,7 +4133,7 @@ class L10nZhHans extends L10nZh {
   String get fundingCostsHeader => '费用';
 
   @override
-  String get fundingCostsFooter => '价格变了再改。每年的项目平均分到每个月。';
+  String get fundingCostsFooter => '价格变了再改。每年的项目平均分到每个月。名称和每月金额会公开在支持页。';
 
   @override
   String get fundingMonthsHeader => '最近几个月';
@@ -4180,6 +4186,12 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get currencyUsd => 'US\$';
+
+  @override
+  String get fundingWhereItGoes => '每个月用在哪里';
+
+  @override
+  String get fundingYearlySplit => '每年付一次的费用平均分到每个月';
 
   @override
   String get fundingRatesBy => '汇率：Exchange Rate API';

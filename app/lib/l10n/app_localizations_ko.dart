@@ -1754,7 +1754,7 @@ class L10nKo extends L10n {
   String get fundingCostsHeader => '비용';
 
   @override
-  String get fundingCostsFooter => '가격이 바뀌면 수정해 주세요. 연간 항목은 매달로 나눠 계산해요.';
+  String get fundingCostsFooter => '가격이 바뀌면 수정해 주세요. 연간 항목은 매달로 나눠 계산해요. 이름과 월 금액은 후원 페이지에 공개돼요.';
 
   @override
   String get fundingMonthsHeader => '최근 몇 달';
@@ -1807,6 +1807,12 @@ class L10nKo extends L10n {
 
   @override
   String get currencyUsd => 'US\$';
+
+  @override
+  String get fundingWhereItGoes => '매달 쓰이는 곳';
+
+  @override
+  String get fundingYearlySplit => '연간 비용은 매달로 나눠 표시해요';
 
   @override
   String get fundingRatesBy => '환율: Exchange Rate API';

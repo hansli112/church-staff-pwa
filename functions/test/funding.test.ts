@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
 
-import { adminFunding, adminSetFundingCosts, monthlyTarget, publishFunding, recordPayment, setRefund, summarize, type Payment } from '../src/funding.js';
+import { adminFunding, adminSetFundingCosts, monthlyCosts, publishFunding, recordPayment, setRefund, summarize, type Payment } from '../src/funding.js';
 import { appStoreNotification, type AppleVerifier } from '../src/fundingApple.js';
 import { RATES, funding, op, withRates } from './fundingFixtures.js';
 import { caller, clearFirestore, db, deps, fakeFetch, rejectsWith, setNow } from './support.js';
@@ -11,9 +11,9 @@ beforeEach(async () => {
   setNow(new Date('2026-10-06T09:00:00+08:00'));
 });
 
-describe('this month\'s target', () => {
+describe('this month\'s costs', () => {
   test('monthly items count in full, yearly ones a twelfth, US dollars in NT dollars', () => {
-    const target = monthlyTarget(
+    const costs = monthlyCosts(
       [
         { name: '雲端', amount: 300, currency: 'TWD', per: 'month' },
         { name: 'Apple 開發者', amount: 99, currency: 'USD', per: 'year' },
@@ -21,12 +21,16 @@ describe('this month\'s target', () => {
       ],
       RATES.rates,
     );
-    // 300 + 99 × 32 ÷ 12 + 600 ÷ 12 = 300 + 264 + 50
-    assert.equal(target, 614);
+    // 99 × 32 ÷ 12 = 264, 600 ÷ 12 = 50
+    assert.deepEqual(costs, [
+      { name: '雲端', perMonth: 300, per: 'month' },
+      { name: 'Apple 開發者', perMonth: 264, per: 'year' },
+      { name: '網域', perMonth: 50, per: 'year' },
+    ]);
   });
 
-  test('a currency without a rate gives no target, rather than a wrong one', () => {
-    assert.equal(monthlyTarget([{ name: 'x', amount: 1, currency: 'USD', per: 'month' }], {}), null);
+  test('a currency without a rate gives no costs, rather than wrong ones', () => {
+    assert.equal(monthlyCosts([{ name: 'x', amount: 1, currency: 'USD', per: 'month' }], {}), null);
   });
 });
 
@@ -61,12 +65,23 @@ describe('the operator sets the costs', () => {
     await rejectsWith(adminFunding(deps, caller('alice'), {}), 'permissionDenied');
   });
 
-  test('saving the costs sets this month\'s target for everyone to see', async () => {
+  test('saving the costs sets this month\'s target, and shows each cost, for everyone to see', async () => {
     const d = withRates();
     await adminSetFundingCosts(d, op, { items: costs });
     assert.deepEqual(
       { ...(await funding()), updatedAt: null },
-      { month: '2026-10', target: 564, received: 0, carried: 0, monthsLeft: 0, updatedAt: null },
+      {
+        month: '2026-10',
+        target: 564,
+        received: 0,
+        carried: 0,
+        monthsLeft: 0,
+        costs: [
+          { name: '雲端', perMonth: 300, per: 'month' },
+          { name: 'Apple 開發者', perMonth: 264, per: 'year' },
+        ],
+        updatedAt: null,
+      },
     );
     const back = await adminFunding(d, op, {});
     assert.deepEqual(back.costs, costs);
@@ -120,6 +135,15 @@ describe('the daily refresh', () => {
     setNow(new Date('2026-10-09T09:00:00+08:00'));
     await publishFunding({ ...deps, fetch: fakeFetch().fetch });
     assert.equal((await funding())?.target, 320);
+  });
+
+  test('with no rate at all, the costs everyone sees stay as they were', async () => {
+    const d = withRates();
+    await adminSetFundingCosts(d, op, { items: [{ name: 'x', amount: 10, currency: 'USD', per: 'month' }] });
+    await publishFunding(d, {});
+    const f = await funding();
+    assert.equal(f?.target, 320);
+    assert.deepEqual(f?.costs, [{ name: 'x', perMonth: 320, per: 'month' }]);
   });
 });
 

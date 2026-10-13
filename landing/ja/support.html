@@ -42,6 +42,13 @@
       <p class="fine">為替レート：<a href="https://www.exchangerate-api.com">Exchange Rate API</a></p>
     </section>
 
+    <!-- 每一項費用：platform/funding 的 costs（每月的新台幣，年繳的除以 12）。沒有就不顯示。 -->
+    <section class="panel" id="costs" hidden aria-labelledby="costs-title">
+      <h2 id="costs-title">毎月の使いみち</h2>
+      <dl class="costs" id="costs-list"></dl>
+      <p class="fine" id="costs-yearly" hidden>年払いの費用は月割りで表示しています</p>
+    </section>
+
     <section class="panel" aria-labelledby="pay-title">
       <h2 id="pay-title">オンラインで応援</h2>
       <!-- payments:off -->
@@ -126,6 +133,20 @@
       c.hidden = false;
     }
     document.getElementById('funding').hidden = false;
+    const costs = f.costs?.arrayValue?.values ?? [];
+    if (costs.length) {
+      const list = document.getElementById('costs-list');
+      for (const v of costs) {
+        const c = v.mapValue?.fields ?? {};
+        const name = document.createElement('dt');
+        name.textContent = c.name?.stringValue ?? '';
+        const amount = document.createElement('dd');
+        amount.textContent = money(Number(c.perMonth?.integerValue ?? c.perMonth?.doubleValue ?? 0));
+        list.append(name, amount);
+      }
+      document.getElementById('costs-yearly').hidden = !costs.some((v) => v.mapValue?.fields?.per?.stringValue === 'year');
+      document.getElementById('costs').hidden = false;
+    }
   }).catch(() => {});
 
   // Back from NewebPay's page: say how it went, then tidy the address.

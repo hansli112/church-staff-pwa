@@ -87,7 +87,17 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
               ],
             ),
           ),
-          if (funding != null && funding.target > 0) _FundingSection(funding),
+          if (funding != null && funding.target > 0) ...[
+            _FundingSection(funding),
+            if (funding.costs.isNotEmpty)
+              ListSection(
+                header: l10n.fundingWhereItGoes,
+                footer: funding.costs.any((c) => c.yearly) ? l10n.fundingYearlySplit : null,
+                children: [
+                  for (final cost in funding.costs) ListRow(title: cost.name, value: money(l10n, cost.perMonth)),
+                ],
+              ),
+          ],
           products.when(
             loading: () => const SizedBox(height: 120),
             error: (_, _) => EmptyState(message: l10n.supportUnavailable),

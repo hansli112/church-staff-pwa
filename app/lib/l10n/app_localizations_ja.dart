@@ -1754,7 +1754,7 @@ class L10nJa extends L10n {
   String get fundingCostsHeader => '費用';
 
   @override
-  String get fundingCostsFooter => '価格が変わったら更新してください。年払いの項目は各月に均等に割ります。';
+  String get fundingCostsFooter => '価格が変わったら更新してください。年払いの項目は各月に均等に割ります。名前と月額は応援ページで公開されます。';
 
   @override
   String get fundingMonthsHeader => '最近の数か月';
@@ -1807,6 +1807,12 @@ class L10nJa extends L10n {
 
   @override
   String get currencyUsd => 'US\$';
+
+  @override
+  String get fundingWhereItGoes => '毎月の使いみち';
+
+  @override
+  String get fundingYearlySplit => '年払いの費用は月割りで表示しています';
 
   @override
   String get fundingRatesBy => '為替レート：Exchange Rate API';
