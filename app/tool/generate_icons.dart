@@ -3,9 +3,10 @@
 //
 //   cd app && dart run tool/generate_icons.dart
 //
-// The mark: a short roster (three lines, the last one ticked) on a solid
-// colour. No text: icons are read at 29pt. The variants change only the
-// colour, so the app is still recognizable on the home screen.
+// The default icon is for now the drawing in tool/icon.png (a full-bleed
+// 1024 square; each platform rounds its own corners), until the icon for
+// launch is ready. The alternate icons are still drawn: a short roster
+// (three lines, the last one ticked) on a solid colour.
 import 'dart:io';
 import 'dart:math';
 
@@ -91,12 +92,41 @@ void write(String path, img.Image image) {
 img.Image resized(img.Image src, int size) =>
     img.copyResize(src, width: size, height: size, interpolation: img.Interpolation.average);
 
+/// The default icon's drawing, and its paper colour for padding.
+final picture = img.decodePng(File('tool/icon.png').readAsBytesSync())!;
+final paper = img.ColorRgb8(0xF4, 0xED, 0xE1);
+
+/// [picture] with the corners cut as [draw] rounds them.
+img.Image roundedPicture() {
+  final mask = img.Image(width: 1024, height: 1024, numChannels: 4);
+  img.fillRect(mask, x1: 0, y1: 0, x2: 1023, y2: 1023, color: img.ColorRgba8(255, 255, 255, 255), radius: 1024 * 0.22);
+  final out = img.Image(width: 1024, height: 1024, numChannels: 4);
+  for (final p in out) {
+    final src = picture.getPixel(p.x, p.y);
+    p
+      ..r = src.r
+      ..g = src.g
+      ..b = src.b
+      ..a = mask.getPixel(p.x, p.y).a;
+  }
+  return out;
+}
+
+/// [picture] inside the middle 80% on its paper colour: the safe zone of a
+/// maskable icon.
+img.Image paddedPicture() {
+  final out = img.Image(width: 1024, height: 1024);
+  img.fill(out, color: paper);
+  img.compositeImage(out, resized(picture, 820), dstX: 102, dstY: 102);
+  return out;
+}
+
 void main() {
   const android = {'mdpi': 48, 'hdpi': 72, 'xhdpi': 96, 'xxhdpi': 144, 'xxxhdpi': 192};
   for (final v in variants) {
-    final full = draw(v);
+    final full = v.id.isEmpty ? picture : draw(v);
     final name = v.id.isEmpty ? 'ic_launcher' : 'ic_launcher_${v.id.toLowerCase()}';
-    final round = draw(v, rounded: true);
+    final round = v.id.isEmpty ? roundedPicture() : draw(v, rounded: true);
     android.forEach((density, px) {
       write('android/app/src/main/res/mipmap-$density/$name.png', resized(round, px));
     });
@@ -120,7 +150,7 @@ void main() {
     if (v.id.isEmpty) {
       write('web/icons/Icon-192.png', resized(round, 192));
       write('web/icons/Icon-512.png', resized(round, 512));
-      final maskable = draw(v, padForMaskable: true);
+      final maskable = paddedPicture();
       write('web/icons/Icon-maskable-192.png', resized(maskable, 192));
       write('web/icons/Icon-maskable-512.png', resized(maskable, 512));
       write('web/favicon.png', resized(round, 64));
