@@ -26,7 +26,7 @@ enum ChurchTimeZone {
   chicago('America/Chicago', -6 * 60, _northAmerica),
   denver('America/Denver', -7 * 60, _northAmerica),
   losAngeles('America/Los_Angeles', -8 * 60, _northAmerica),
-  vancouver('America/Vancouver', -8 * 60, _northAmerica)
+  vancouver('America/Vancouver', -8 * 60, _britishColumbia)
   ;
 
   const ChurchTimeZone(this.id, this._standard, [this._summer]);
@@ -68,6 +68,8 @@ enum ChurchTimeZone {
     if (summer == null) return Duration(minutes: _standard);
     // The changes are given in standard time, so compare in it.
     final standard = instant.toUtc().add(Duration(minutes: _standard));
+    final stays = summer.stays;
+    if (stays != null && !standard.isBefore(summer.start.on(stays))) return Duration(minutes: _standard + 60);
     final start = summer.start.on(standard.year);
     final end = summer.end.on(standard.year);
     final inSummer = start.isBefore(end)
@@ -114,10 +116,13 @@ DateTime churchCivilTime(DateTime fields) => DateTime.utc(
 
 /// When summer time starts and ends, in standard time.
 class _SummerTime {
-  const _SummerTime(this.start, this.end);
+  const _SummerTime(this.start, this.end, {this.stays});
 
   final _Change start;
   final _Change end;
+
+  /// The year summer time starts and never ends.
+  final int? stays;
 }
 
 /// A clock change: the [nth] Sunday of [month] (-1 the last), at [minute]
@@ -145,6 +150,9 @@ class _Change {
 // From the second Sunday of March at 2:00 to the first of November at 2:00
 // summer time (1:00 standard): the US and Canada.
 const _northAmerica = _SummerTime(_Change(3, 2, 120), _Change(11, 1, 60));
+
+// The same until British Columbia kept summer time all year from March 2026.
+const _britishColumbia = _SummerTime(_Change(3, 2, 120), _Change(11, 1, 60), stays: 2026);
 
 // From the last Sunday of March to the last of October, at 1:00 UTC.
 const _europe = _SummerTime(_Change(3, -1, 60), _Change(10, -1, 60));
