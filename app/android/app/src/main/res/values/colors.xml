@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The app's accent (tokens.dart), behind the notification icon. -->
+    <color name="notification">#1F5FD1</color>
+</resources>

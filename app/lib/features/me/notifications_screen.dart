@@ -91,7 +91,7 @@ class NotificationsScreen extends ConsumerWidget {
                   ListRow(
                     title: l10n.notifOpenSettings,
                     leading: const Icon(Icons.settings_outlined),
-                    onTap: () => ref.read(pushServiceProvider).openSettings(),
+                    onTap: () => openNotificationSettings(context, ref),
                   ),
               ],
             )

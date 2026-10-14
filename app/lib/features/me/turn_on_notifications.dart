@@ -5,25 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../l10n/app_localizations.dart';
-import '../../state/providers.dart';
+import '../../state/device_flag.dart';
 import '../../state/push.dart';
 import '../../state/session.dart';
 import '../church/add_to_home.dart';
-
-/// A flag kept on this device.
-class DeviceFlag extends Notifier<bool> {
-  DeviceFlag(this._key);
-
-  final String _key;
-
-  @override
-  bool build() => ref.watch(prefsProvider).getBool(_key) ?? false;
-
-  void set() {
-    state = true;
-    ref.read(prefsProvider).setBool(_key, true);
-  }
-}
 
 /// The page after joining was shown on this device: it comes once.
 final notificationsAskedProvider = NotifierProvider<DeviceFlag, bool>(() => DeviceFlag('notifications_asked'));
@@ -34,15 +19,10 @@ final notificationsCardHiddenProvider = NotifierProvider<DeviceFlag, bool>(
 );
 
 /// Whether joining or starting a church goes through
-/// [TurnOnNotificationsScreen] first, and marks it shown. The permission
-/// is the one the session loaded at sign-in; not loaded yet, the home
-/// page's card asks instead.
-bool askAfterJoining(WidgetRef ref) {
-  if (ref.read(notificationsAskedProvider)) return false;
-  if (ref.read(pushPermissionProvider).value != PushPermission.notAsked) return false;
-  ref.read(notificationsAskedProvider.notifier).set();
-  return true;
-}
+/// [TurnOnNotificationsScreen] first. The permission is the one the session
+/// loaded at sign-in; not loaded yet, the home page's card asks instead.
+bool notificationsAskDue(WidgetRef ref) =>
+    !ref.read(notificationsAskedProvider) && ref.read(pushPermissionProvider).value == PushPermission.notAsked;
 
 /// Asks the phone for permission and registers this device. Registering can
 /// fail even when allowed (no APNs token yet); the next launch tries again,
@@ -64,14 +44,38 @@ Future<PushPermission?> enableNotifications(BuildContext context, WidgetRef ref,
   }
 }
 
+/// Opens this app's notification settings on the phone. Should the phone
+/// have no such page, says where to look instead.
+Future<void> openNotificationSettings(BuildContext context, WidgetRef ref) async {
+  try {
+    await ref.read(pushServiceProvider).openSettings();
+  } catch (e, stack) {
+    ref.read(telemetryProvider).recordError(e, stack);
+    if (context.mounted) showToast(context, L10n.of(context).notifPermissionOff);
+  }
+}
+
 /// Right after joining or starting a church: what notifications bring, and
 /// the phone's own prompt only once 開啟通知 is tapped. Shown once per
 /// device, never on a phone's browser, where 加入主畫面 comes first.
-class TurnOnNotificationsScreen extends ConsumerWidget {
+class TurnOnNotificationsScreen extends ConsumerStatefulWidget {
   const TurnOnNotificationsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TurnOnNotificationsScreen> createState() => _TurnOnNotificationsScreenState();
+}
+
+class _TurnOnNotificationsScreenState extends ConsumerState<TurnOnNotificationsScreen> {
+  bool _busy = false;
+
+  Future<void> _enable() async {
+    setState(() => _busy = true);
+    await enableNotifications(context, ref);
+    if (mounted) context.go('/home');
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
     return Scaffold(
@@ -89,13 +93,7 @@ class TurnOnNotificationsScreen extends ConsumerWidget {
                 const SizedBox(height: Space.s),
                 BalancedText(l10n.notifAskBody, style: AppText.body.copyWith(color: c.secondaryLabel)),
                 const SizedBox(height: Space.xl),
-                PrimaryButton(
-                  label: l10n.notifEnable,
-                  onPressed: () async {
-                    await enableNotifications(context, ref);
-                    if (context.mounted) context.go('/home');
-                  },
-                ),
+                PrimaryButton(label: l10n.notifEnable, busy: _busy, onPressed: _enable),
                 const SizedBox(height: Space.s),
                 SecondaryButton(label: l10n.notifAskLater, expand: true, onPressed: () => context.go('/home')),
               ],
@@ -135,10 +133,10 @@ class TurnOnNotificationsCard extends ConsumerWidget {
           trailing: IconButton(
             icon: const Icon(Icons.close, size: 20),
             tooltip: l10n.notifCardHide,
-            onPressed: () => ref.read(notificationsCardHiddenProvider.notifier).set(),
+            onPressed: () => ref.read(notificationsCardHiddenProvider.notifier).mark(),
           ),
           onTap: off
-              ? () => ref.read(pushServiceProvider).openSettings()
+              ? () => openNotificationSettings(context, ref)
               : () => enableNotifications(context, ref, nudge: true),
         ),
       ],

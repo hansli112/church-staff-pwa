@@ -890,7 +890,7 @@ class L10nJa extends L10n {
   String get notifAskTitle => '奉仕に入ったらお知らせします';
 
   @override
-  String get notifAskBody => '奉仕に入ったときや奉仕表が変わったときにお知らせします。毎週月曜の夜には、その週の奉仕もお知らせします';
+  String get notifAskBody => '奉仕に入ったときや奉仕表が変わったときにお知らせします。毎週月曜の夜には、その週の奉仕もお知らせします。';
 
   @override
   String get notifAskLater => 'あとで';

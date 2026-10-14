@@ -82,7 +82,13 @@ class FirebasePushService implements PushService {
     await _register(uid);
   }
 
-  Future<void> _register(String uid) async {
+  Future<void>? _registering;
+
+  /// One at a time: coming back from the permission prompt resumes the app,
+  /// which registers too, and two would leave a token listener behind.
+  Future<void> _register(String uid) => _registering ??= _registerNow(uid).whenComplete(() => _registering = null);
+
+  Future<void> _registerNow(String uid) async {
     final token = await _messaging.getToken(vapidKey: kIsWeb ? _vapidKey : null);
     if (token != null) await _save(uid, token);
     await _refresh?.cancel();

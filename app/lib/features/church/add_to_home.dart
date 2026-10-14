@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../l10n/app_localizations.dart';
+import '../../state/device_flag.dart';
 import '../../state/providers.dart';
 import '../../state/web_page.dart';
 import '../auth/in_app_browser.dart';
@@ -40,27 +41,18 @@ void openAddToHome(BuildContext context, WidgetRef ref, String churchId, {bool p
 /// browser; anywhere else its home page, after asking for notifications the
 /// first time.
 void goAfterJoining(BuildContext context, WidgetRef ref, String churchId) {
-  if (ref.read(addToHomeProvider) == null) {
-    context.go(askAfterJoining(ref) ? '/turn-on-notifications' : '/home');
-  } else {
+  if (ref.read(addToHomeProvider) != null) {
     openAddToHome(context, ref, churchId, push: false);
+  } else if (notificationsAskDue(ref)) {
+    ref.read(notificationsAskedProvider.notifier).mark();
+    context.go('/turn-on-notifications');
+  } else {
+    context.go('/home');
   }
 }
 
 /// The home page's reminder was dismissed on this device.
-final addToHomeHiddenProvider = NotifierProvider<AddToHomeHidden, bool>(AddToHomeHidden.new);
-
-class AddToHomeHidden extends Notifier<bool> {
-  static const _key = 'add_to_home_hidden';
-
-  @override
-  bool build() => ref.watch(prefsProvider).getBool(_key) ?? false;
-
-  void hide() {
-    state = true;
-    ref.read(prefsProvider).setBool(_key, true);
-  }
-}
+final addToHomeHiddenProvider = NotifierProvider<DeviceFlag, bool>(() => DeviceFlag('add_to_home_hidden'));
 
 class AddToHomeScreen extends ConsumerStatefulWidget {
   const AddToHomeScreen({super.key});
@@ -87,7 +79,7 @@ class _AddToHomeScreenState extends ConsumerState<AddToHomeScreen> {
   Future<void> _install() async {
     final l10n = L10n.of(context);
     if (!await ref.read(installOfferProvider.notifier).show() || !mounted) return;
-    ref.read(addToHomeHiddenProvider.notifier).hide();
+    ref.read(addToHomeHiddenProvider.notifier).mark();
     final church = ref.read(churchProvider).value;
     showToast(context, l10n.addToHomeDone(church?.homeName ?? church?.name ?? l10n.appName));
     _leave();
@@ -528,7 +520,7 @@ class AddToHomeCard extends ConsumerWidget {
           trailing: IconButton(
             icon: const Icon(Icons.close, size: 20),
             tooltip: l10n.addToHomeCardHide,
-            onPressed: () => ref.read(addToHomeHiddenProvider.notifier).hide(),
+            onPressed: () => ref.read(addToHomeHiddenProvider.notifier).mark(),
           ),
           onTap: churchId == null ? null : () => openAddToHome(context, ref, churchId),
         ),

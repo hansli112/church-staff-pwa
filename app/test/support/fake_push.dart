@@ -5,7 +5,12 @@ import 'package:martha/state/push.dart';
 /// Push on a phone whose permission starts at [state] and becomes
 /// [answer] once asked.
 class FakePush implements PushService {
-  FakePush({this.state = PushPermission.notAsked, this.answer = PushPermission.notAsked, this.registers = true});
+  FakePush({
+    this.state = PushPermission.notAsked,
+    this.answer = PushPermission.notAsked,
+    this.registers = true,
+    this.hasSettings = true,
+  });
 
   /// The permission now; turned on in the phone's settings, a test sets it.
   PushPermission state;
@@ -15,6 +20,9 @@ class FakePush implements PushService {
 
   /// False: allowed, but the device gets no token.
   final bool registers;
+
+  /// False: a phone without a notification settings page to open.
+  final bool hasSettings;
   final notices = StreamController<PushNotice>.broadcast();
 
   /// How many times the permission prompt and the phone's settings opened.
@@ -36,7 +44,10 @@ class FakePush implements PushService {
   bool get canOpenSettings => true;
 
   @override
-  Future<void> openSettings() async => settingsOpened++;
+  Future<void> openSettings() async {
+    if (!hasSettings) throw Exception('no_settings');
+    settingsOpened++;
+  }
 
   @override
   Future<void> refresh(String uid) async {}

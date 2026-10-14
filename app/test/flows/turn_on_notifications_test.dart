@@ -141,4 +141,12 @@ void main() {
     await settle(tester);
     expect(find.text('到設定開啟通知'), findsNothing);
   });
+
+  testWidgets('a phone with no settings page to open says where to look', (tester) async {
+    final push = FakePush(state: PushPermission.denied, hasSettings: false);
+    await pumpApp(tester, seededChurch(as: staffMei), overrides: [pushServiceProvider.overrideWithValue(push)]);
+
+    await tapText(tester, '到設定開啟通知');
+    expect(find.text('通知被關掉了，請到系統設定打開'), findsOneWidget);
+  });
 }

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The status bar's small icon: Android draws only its shape, in white,
+     so the full-color launcher icon shows as a white square. The bowl of
+     soup from the app icon. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M2.5,12.5L21.5,12.5A9.5,7 0,0 1,12 19.5A9.5,7 0,0 1,2.5 12.5Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M8.5,19.5L15.5,19.5L15.5,21L8.5,21Z" />
+    <path
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:pathData="M7.5,10.5Q6.3,9 7.5,7.5Q8.7,6 7.5,4.5M12,10.5Q10.8,9 12,7.5Q13.2,6 12,4.5M16.5,10.5Q15.3,9 16.5,7.5Q17.7,6 16.5,4.5" />
+</vector>

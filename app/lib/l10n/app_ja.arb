@@ -271,7 +271,7 @@
   "notifPermissionOff": "通知がオフになっています。システムの設定でオンにしてください。",
   "notifEnable": "通知をオンにする",
   "notifAskTitle": "奉仕に入ったらお知らせします",
-  "notifAskBody": "奉仕に入ったときや奉仕表が変わったときにお知らせします。毎週月曜の夜には、その週の奉仕もお知らせします",
+  "notifAskBody": "奉仕に入ったときや奉仕表が変わったときにお知らせします。毎週月曜の夜には、その週の奉仕もお知らせします。",
   "notifAskLater": "あとで",
   "notifCardHide": "今後表示しない",
   "notifOpenSettings": "設定で通知をオンにする",

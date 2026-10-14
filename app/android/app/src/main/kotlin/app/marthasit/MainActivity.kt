@@ -1,5 +1,6 @@
 package app.marthasit
 
+import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -52,15 +53,24 @@ class MainActivity : FlutterActivity() {
             when (call.method) {
                 "notifications" -> {
                     // Android 7 and below have no page for notifications
-                    // alone: the app's page holds them.
-                    startActivity(
+                    // alone, nor do some makers' phones: the app's own page
+                    // holds them.
+                    val pages = listOfNotNull(
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                             Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                                 .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-                        } else {
-                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))
-                        })
-                    result.success(null)
+                        } else null,
+                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")),
+                    )
+                    val opened = pages.any {
+                        try {
+                            startActivity(it)
+                            true
+                        } catch (_: ActivityNotFoundException) {
+                            false
+                        }
+                    }
+                    if (opened) result.success(null) else result.error("no_settings", null, null)
                 }
                 else -> result.notImplemented()
             }
