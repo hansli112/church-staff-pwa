@@ -433,8 +433,8 @@ class _Platform implements PlatformData {
 
 MinimumBuilds minimumBuildsFromJson(Map<String, Object?> d) {
   final min = d['minBuild'];
-  int n(String key) => min is Map ? (min[key] as num?)?.toInt() ?? 0 : 0;
-  return MinimumBuilds(android: n('android'), ios: n('ios'));
+  int build(String store) => min is Map ? (min[store] as num?)?.toInt() ?? 0 : 0;
+  return MinimumBuilds(android: build('android'), ios: build('ios'));
 }
 
 Funding fundingFromJson(Map<String, Object?> d) {

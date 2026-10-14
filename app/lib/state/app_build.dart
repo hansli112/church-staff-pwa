@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../data/backend.dart';
+import '../env.dart';
 import 'providers.dart';
 
 /// Where a store app came from, and so where it is updated.
@@ -15,14 +16,24 @@ enum AppStore {
   /// The store's own name, the same in every language.
   final String label;
 
-  /// The app's page in the store. The App Store's needs the app's Apple ID,
-  /// which exists once it is listed there (#40); until then, the store's
-  /// search for it.
+  /// The app's page in the store. The App Store's needs [appleAppId]; until
+  /// it is set, the website, which links to the stores.
   Uri get page => switch (this) {
     googlePlay => Uri.https('play.google.com', '/store/apps/details', {'id': 'app.marthasit'}),
-    appStore => Uri.https('apps.apple.com', '/search', {'term': '馬大別忙'}),
+    appStore =>
+      appleAppId.isEmpty ? Uri.parse(Env.current.webOrigin) : Uri.https('apps.apple.com', '/app/id$appleAppId'),
+  };
+
+  /// The lowest build of this store's app that may still run.
+  int lowestIn(MinimumBuilds min) => switch (this) {
+    googlePlay => min.android,
+    appStore => min.ios,
   };
 }
+
+/// The app's Apple ID in the App Store (App Store Connect → App Information),
+/// once it is listed there (#40). Set it before raising `minBuild.ios`.
+const appleAppId = '';
 
 /// The store app running: its store, its version (`1.0.0`) and build
 /// number (pubspec's `+12`).
@@ -72,9 +83,5 @@ final updateRequiredProvider = Provider<bool>((ref) {
   final build = ref.watch(appBuildProvider);
   final min = ref.watch(minimumBuildsProvider).value;
   if (build == null || min == null) return false;
-  final lowest = switch (build.store) {
-    AppStore.googlePlay => min.android,
-    AppStore.appStore => min.ios,
-  };
-  return build.number < lowest;
+  return build.number < build.store.lowestIn(min);
 });

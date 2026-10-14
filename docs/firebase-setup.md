@@ -193,7 +193,8 @@ scripts/as-owner.sh marthasit-dev npx --prefix functions tsx functions/scripts/g
 
 `platform/app` 的 `minBuild.android`、`minBuild.ios` 是商店 App 最低能用的 build number（`pubspec.yaml` 的 `+N`）。比它舊的 App 一打開（或回到前景時）就整個畫面要求更新，按鈕打開 Google Play / App Store。沒有這份文件、或是 0，什麼都不擋。網頁版不受影響，它自己會更新。
 
-先確認新版已經在商店上架、大家更新得到，再調高：
+先確認新版已經在商店上架、大家更新得到，再調高。調高 `ios` 之前，`app/lib/state/app_build.dart` 的 `appleAppId` 要先填上（App Store Connect →「App 資訊」的 Apple ID），不然按鈕只會打開網站。
+
 
 ```sh
 PROJECT=marthasit   # 或 marthasit-dev

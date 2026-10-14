@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -9,20 +10,55 @@ import '../../state/app_build.dart';
 
 /// Over the whole app while this store app is older than the backend
 /// allows ([updateRequiredProvider]). The app stays underneath, hidden, so
-/// sign-in, the page and whatever was typed are all there if it is lifted.
-class UpdateRequiredGate extends ConsumerWidget {
+/// sign-in, the page and whatever was typed are all there if it is lifted;
+/// meanwhile nothing reaches it: not the keyboard, the back button or a toast.
+///
+/// It sits above the router, so its back-button observer is asked first.
+class UpdateRequiredGate extends ConsumerStatefulWidget {
   const UpdateRequiredGate({super.key, required this.child});
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final required = ref.watch(updateRequiredProvider);
-    final build = ref.watch(appBuildProvider);
+  ConsumerState<UpdateRequiredGate> createState() => _UpdateRequiredGateState();
+}
+
+class _UpdateRequiredGateState extends ConsumerState<UpdateRequiredGate> with WidgetsBindingObserver {
+  bool _blocked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  Future<bool> didPopRoute() async => _blocked;
+
+  @override
+  bool handleStartBackGesture(PredictiveBackEvent backEvent) => _blocked;
+
+  @override
+  Widget build(BuildContext context) {
+    _blocked = ref.watch(updateRequiredProvider);
+    final store = ref.watch(appBuildProvider)?.store;
     return Stack(
       children: [
-        Offstage(offstage: required, child: TickerMode(enabled: !required, child: child)),
-        if (required && build != null) Positioned.fill(child: _UpdateRequiredScreen(build.store)),
+        Offstage(
+          offstage: _blocked,
+          child: TickerMode(
+            enabled: !_blocked,
+            child: ExcludeFocus(excluding: _blocked, child: widget.child),
+          ),
+        ),
+        // Its own messenger: the app's toasts stay with the app.
+        if (_blocked && store != null) Positioned.fill(child: ScaffoldMessenger(child: _UpdateRequiredScreen(store))),
       ],
     );
   }

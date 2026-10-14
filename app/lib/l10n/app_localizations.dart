@@ -3871,7 +3871,7 @@ abstract class L10n {
   /// No description provided for @updateRequiredBody.
   ///
   /// In zh, this message translates to:
-  /// **'這個版本太舊了，更新後才能繼續使用。'**
+  /// **'這個版本太舊了，更新後才能繼續使用'**
   String get updateRequiredBody;
 
   /// Opens the app's page in the store it came from.

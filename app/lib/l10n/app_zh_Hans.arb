@@ -628,7 +628,7 @@
   "appUpdateNativeTitle": "App 更新",
   "appUpdateNativeNote": "请到 App Store 或 Google Play 检查更新",
   "updateRequiredTitle": "请更新马大别忙",
-  "updateRequiredBody": "这个版本太旧了，更新后才能继续使用。",
+  "updateRequiredBody": "这个版本太旧了，更新后才能继续使用",
   "updateRequiredOpen": "到 {store} 更新",
   "appUpdateCheck": "检查更新",
   "appUpdateChecking": "检查中…",

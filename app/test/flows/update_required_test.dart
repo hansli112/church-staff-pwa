@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
+import 'package:martha/env.dart';
 import 'package:martha/state/app_build.dart';
 
 import '../support/harness.dart';
@@ -46,6 +47,17 @@ void main() {
     expect(find.text('到 App Store 更新'), findsOneWidget);
   });
 
+  testWidgets('before the app has an Apple ID, the App Store button opens the website, which links to the stores', (
+    tester,
+  ) async {
+    final launches = captureLaunches();
+    final b = seededChurch(as: staffMei)..minimumBuilds = const MinimumBuilds(ios: 13);
+    await pumpApp(tester, b, overrides: [appBuildProvider.overrideWithValue(_apple12)]);
+    await tester.tap(find.text('到 App Store 更新'));
+    await settle(tester);
+    expect(launches.opened, [Uri.parse(Env.current.webOrigin).toString()]);
+  });
+
   testWidgets('raised while the app is open: it asks then, and whatever was typed is still there after', (tester) async {
     final b = seededChurch(as: staffMei);
     await pumpApp(tester, b, overrides: [appBuildProvider.overrideWithValue(_play12)]);
@@ -67,7 +79,34 @@ void main() {
     expect(find.text('美美'), findsOneWidget);
   });
 
-  testWidgets('the web app never asks: it updates itself', (tester) async {
+  testWidgets('while it asks, nothing reaches the app underneath: not the keyboard, back, or a toast', (tester) async {
+    final b = seededChurch(as: staffMei);
+    await pumpApp(tester, b, overrides: [appBuildProvider.overrideWithValue(_play12)]);
+    await tester.tap(find.text('我的').last);
+    await settle(tester);
+    await tester.tap(find.text(staffMei.name).first);
+    await settle(tester);
+    await tester.enterText(find.byType(TextField).first, '美美');
+    expect(tester.testTextInput.isVisible, isTrue);
+    b
+      ..minimumBuilds = const MinimumBuilds(android: 13)
+      ..notify();
+    await settle(tester);
+    expect(tester.testTextInput.isVisible, isFalse, reason: 'the keyboard closes');
+    expect(await tester.binding.handlePopRoute(), isTrue);
+    await settle(tester);
+    final messenger = tester.state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger).first);
+    messenger.showSnackBar(const SnackBar(content: Text('有人排了你')));
+    await settle(tester);
+    expect(find.text('有人排了你'), findsNothing);
+    b
+      ..minimumBuilds = const MinimumBuilds()
+      ..notify();
+    await settle(tester);
+    expect(find.text('美美'), findsOneWidget, reason: 'back did not leave the page being edited');
+  });
+
+  testWidgets('without a store build (the web, the demo) it never asks', (tester) async {
     final b = seededChurch(as: staffMei)..minimumBuilds = const MinimumBuilds(android: 99, ios: 99);
     await pumpApp(tester, b, overrides: [appBuildProvider.overrideWithValue(null)]);
     expect(find.text('請更新馬大別忙'), findsNothing);
