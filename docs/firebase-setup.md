@@ -74,6 +74,40 @@ flutter build apk --dart-define-from-file=config/dev.json
 
 iOS 要在 Mac 上 build，最低版本是 iOS 15（Firebase 的要求）。Xcode 的「Upload Crashlytics symbols」會把 dSYM 傳到這次 build 的 Firebase app。app ID 從 dart define 讀，所以直接在 Xcode 按 Archive 時，傳去的是最近一次 `flutter build` 用的環境。上架用的 build 要先跑 `flutter build ipa --dart-define-from-file=config/prod.json`。
 
+### 上架與熱更新（Shorebird）
+
+上架的 Android、iOS 版用 Shorebird 建置，之後緊急的 bug 可以直接推修補，不用等商店審查（#79）。Shorebird 的 app 是 `app/shorebird.yaml` 的 `app_id`，帳號是個人的 hansli112871114@gmail.com（`~/.shorebird/bin/shorebird login`）。
+
+**上架**：取代 `flutter build appbundle` / `flutter build ipa`，產生的 AAB / IPA 一樣自己上傳到商店。`--flutter-version` 跟本機的 Flutter 一樣（`flutter --version`）：
+
+```sh
+cd app
+~/.shorebird/bin/shorebird release android --flutter-version=3.41.0 --dart-define-from-file=config/prod.json
+~/.shorebird/bin/shorebird release ios --flutter-version=3.41.0 --dart-define-from-file=config/prod.json
+```
+
+每一版都要這樣建，之後才能對它推修補；直接用 `flutter build` 上架的版本收不到修補。
+
+**什麼能熱更新**：只有 Dart 程式碼，例如修 bug、改文字、調畫面。圖片、字型、原生程式碼、新套件、權限、App 圖示都要重新上架。只拿來修小 bug：iOS 上修補改到的函式要用直譯器跑，大約慢 100 倍，大改畫面或吃運算的地方會卡。新功能照常上架。
+
+**推修補**：先推到 staging，只有用 `shorebird preview` 裝的手機收得到。確認沒問題再改成 stable，所有人下次打開 App 就套用：
+
+```sh
+~/.shorebird/bin/shorebird patch android --release-version=1.0.0+13 --track=staging --dart-define-from-file=config/prod.json
+~/.shorebird/bin/shorebird preview --release-version=1.0.0+13 --track=staging   # 接上測試手機或模擬器
+~/.shorebird/bin/shorebird patches set-track --release-version=1.0.0+13 --patch-number=1 --track=stable
+```
+
+推錯了：`~/.shorebird/bin/shorebird patches rollback --release-version=… --patch-number=…`，已經套用的人下次打開 App 換回來。
+
+**注意**：
+
+- Play 封閉測試、TestFlight 的分組沒辦法用來分批推修補，要分批用上面的 staging，或 Shorebird Console 的百分比推送。
+- Shorebird 只支援 Flutter 穩定版，新的季版本最多 5 個工作天才支援。升級 Flutter 前先看 `~/.shorebird/bin/shorebird flutter versions list` 有沒有。
+- iOS 不要開 `--obfuscate`，Shorebird 不支援。
+- App 每次打開都會連 Shorebird，隱私權政策第 3.8 節寫了送出什麼。
+- 網頁版不用 Shorebird，部署完就更新。
+
 ### 檢查 Crashlytics 與 GA4
 
 - **Crashlytics**：dev 版「我的」→「開發」→「測試當機」。App 會直接當掉，重開之後才會送出報告，幾分鐘內出現在 Firebase console 的 Crashlytics。

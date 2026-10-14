@@ -105,6 +105,8 @@ flutter:
     - lib/l10n/app_zh_Hans.arb
     - lib/l10n/app_ja.arb
     - lib/l10n/app_ko.arb
+    # Which Shorebird app this build patches (docs/firebase-setup.md, 上架).
+    - shorebird.yaml
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

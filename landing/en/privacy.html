@@ -48,7 +48,7 @@
     </aside>
     <main class="legal">
     <h1>Privacy Policy</h1>
-    <p class="updated">Last updated: <time datetime="2026-10-13">Oct 13, 2026</time></p>
+    <p class="updated">Last updated: <time datetime="2026-10-14">Oct 14, 2026</time></p>
     <p>This is an English translation. If it differs from the <a href="/privacy" hreflang="zh-Hant" lang="zh-Hant" data-site-language="zh-Hant">繁體中文版</a> (the Traditional Chinese version), the Traditional Chinese version prevails.</p>
 
     <p>Martha, sit (the “Service”) is a serving schedule tool for church team members, made up of an iOS app, an Android app, and a web app. This policy explains what data the Service collects, why, where it’s stored, how long it’s kept, who can see it, and how you can delete it.</p>
@@ -120,7 +120,14 @@
       <div><dt>Kept for</dt><dd>About 30 days in Cloud Logging, and 90 days in Crashlytics under Firebase’s rules. Both are deleted automatically.</dd></div>
     </dl>
 
-    <h3>3.8 Google Calendar connection (only for admins who connect a calendar)</h3>
+    <h3>3.8 App updates</h3>
+    <dl>
+      <div><dt>What</dt><dd>Each time the iOS or Android app opens, it asks Shorebird whether a fix is available. It sends only the app’s version, the platform (iOS or Android), the processor type, and an identifier generated at random for each install. It doesn’t send your account, name, email, or any church data. Shorebird’s server logs briefly keep the connecting IP address for traffic management and abuse prevention, and don’t link it to the identifier.</dd></div>
+      <div><dt>Purpose</dt><dd>Getting fixes to your app without waiting for store review. New features still come through the App Store and Google Play.</dd></div>
+      <div><dt>Where</dt><dd>Shorebird (shorebird.dev). The web app doesn’t use it.</dd></div>
+    </dl>
+
+    <h3>3.9 Google Calendar connection (only for admins who connect a calendar)</h3>
     <dl>
       <div><dt>What</dt><dd>When an admin chooses to connect Google Calendar, we receive a Google OAuth refresh token and the events on the calendar the admin selects. Scopes: <code>calendar.events</code> (read and write events) and <code>calendar.calendarlist.readonly</code> (list calendars so the admin can pick one). Signing in with a Google account alone doesn’t grant calendar access.</dd></div>
       <div><dt>Purpose</dt><dd>Showing and editing the church calendar in the app. All reads and writes go through our backend, which caches events briefly so they load faster. The Service’s use and transfer of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements.</dd></div>
@@ -129,20 +136,20 @@
       <div><dt>Retention and deletion</dt><dd>Cached events are kept for at most 10 minutes before being read from Google again. When an admin disconnects the calendar or the church is deleted, the authorization and the cache are deleted together. You can also revoke access at any time on the “Third-party apps &amp; services” page of your Google Account.</dd></div>
     </dl>
 
-    <h3>3.9 Photo recognition</h3>
+    <h3>3.10 Photo recognition</h3>
     <dl>
       <div><dt>What</dt><dd>Photos of schedules uploaded when a team member who can plan schedules chooses “Import from photo.” The photos may show team members’ names.</dd></div>
       <div><dt>Purpose</dt><dd>The photo is sent to Gemini on Google Cloud Vertex AI to read the text and turn it into a schedule. Under Google Cloud’s terms, Google doesn’t use this content to train its models. We also record how many photos each church uses per month, to manage limits.</dd></div>
       <div><dt>Kept for</dt><dd>The photo is sent to Google only at the moment it’s read; the Service doesn’t keep it. Google may cache it in memory for up to 24 hours to respond faster, and if Google’s automated systems flag the content as possible abuse, it may be kept for up to 90 days for review, then deleted.</dd></div>
     </dl>
 
-    <h3>3.10 Support in the app</h3>
+    <h3>3.11 Support in the app</h3>
     <dl>
       <div><dt>What</dt><dd>One-time and monthly support in the iOS and Android apps are paid through the Apple App Store and Google Play. We never receive your payment details (such as your card number).</dd></div>
       <div><dt>Where</dt><dd>Whether you’re a supporter is determined only on your device and isn’t sent to our servers. Apple and Google notify us of each transaction’s amount, item, and time, which we use to calculate the cost progress shown publicly on our website. These notifications don’t include your account or name.</dd></div>
     </dl>
 
-    <h3>3.11 Webhooks (only for churches that set one up)</h3>
+    <h3>3.12 Webhooks (only for churches that set one up)</h3>
     <dl>
       <div><dt>What</dt><dd>A church admin can set a webhook URL and choose whether to send calendar changes, schedule changes, or both. When something changes, the Service sends the change to that URL. Schedule changes include the church name, date, role, and the names of team members added or removed; calendar changes include the church name and the event’s title, time, location, description, and link. Both include the name of the team member who made the change.</dd></div>
       <div><dt>Purpose</dt><dd>Letting the church sync calendar and schedule changes to its own systems, such as a group chat or a spreadsheet.</dd></div>
@@ -150,7 +157,7 @@
     </dl>
 
     <!-- payments:on -->
-    <h3>3.12 Support online</h3>
+    <h3>3.13 Support online</h3>
     <dl>
       <div><dt>What</dt><dd>When you support us on the website’s support page by credit card, Apple Pay, or Google Pay, the payment is handled by NewebPay (藍新科技股份有限公司, a payment provider in Taiwan). You enter your card number, email, and other payment details on NewebPay’s payment page; NewebPay handles them under its own privacy policy. NewebPay’s payment notice includes the first 6 and last 4 digits of the card and the IP address used to pay; we don’t keep or log them.</dd></div>
       <div><dt>Where</dt><dd>We record only each payment’s amount, payment method, time, and NewebPay’s transaction number, to show the public progress on server costs on the website and to handle refunds. We don’t record your name, email, or account.</dd></div>
@@ -172,10 +179,11 @@
     <ul>
       <li><strong>Google</strong>: Firebase (database, sign-in, file storage, push notifications, analytics, error logs), Google Cloud (backend, logging), Gemini on Vertex AI (photo recognition), and Google Calendar (only for churches that connect a calendar).</li>
       <li><strong>Apple and Google</strong>: Sign in with Apple, Google sign-in, and app store payments.</li>
+      <li><strong>Shorebird</strong>: fixes for the iOS and Android apps; see Section 3.8.</li>
       <!-- payments:on -->
-      <li><strong>NewebPay</strong>: payments on the website’s support page; see Section 3.12.</li>
+      <li><strong>NewebPay</strong>: payments on the website’s support page; see Section 3.13.</li>
       <!-- /payments:on -->
-      <li><strong>Webhook recipients set up by a church</strong>: only for churches whose admin has set up a webhook; see Section 3.11 for what is sent.</li>
+      <li><strong>Webhook recipients set up by a church</strong>: only for churches whose admin has set up a webhook; see Section 3.12 for what is sent.</li>
     </ul>
     <p>Where required by law, we may provide data to the authorities.</p>
 

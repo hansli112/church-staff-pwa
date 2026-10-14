@@ -48,7 +48,7 @@
     </aside>
     <main class="legal">
     <h1>隐私政策</h1>
-    <p class="updated">最后更新：<time datetime="2026-10-13">2026 年 10 月 13 日</time></p>
+    <p class="updated">最后更新：<time datetime="2026-10-14">2026 年 10 月 14 日</time></p>
     <p>本页为译文；如与繁体中文版有出入，以<a href="/privacy" hreflang="zh-Hant" lang="zh-Hant" data-site-language="zh-Hant">繁體中文版</a>为准。</p>
 
     <p>“马大别忙”（以下称“本服务”）是给教会同工使用的事奉表工具，包括 iOS App、Android App 与网页版。本政策说明本服务收集哪些数据、为什么收集、存放在哪里、保存多久、谁看得到，以及你可以怎样删除。</p>
@@ -120,7 +120,14 @@
       <div><dt>保存期限</dt><dd>Cloud Logging 约 30 天，Crashlytics 按 Firebase 的规定保存 90 天，都会自动删除。</dd></div>
     </dl>
 
-    <h3>3.8 Google 日历连接（仅限连接日历的管理员）</h3>
+    <h3>3.8 App 更新</h3>
+    <dl>
+      <div><dt>内容</dt><dd>iOS、Android App 每次打开时，会向 Shorebird 询问有没有修正错误的更新。发送的只有 App 的版本、平台（iOS 或 Android）、处理器类型，以及每次安装时随机生成的一个标识符，不含你的账号、姓名、email 或教会数据。Shorebird 的服务器日志会短暂保留连接的 IP，用于流量管理和防止滥用，不会和标识符关联。</dd></div>
+      <div><dt>用途</dt><dd>不用等商店审核，就能把错误的修正发送到你的 App。新功能仍然通过 App Store 和 Google Play 更新。</dd></div>
+      <div><dt>存放</dt><dd>Shorebird（shorebird.dev）。网页版不使用。</dd></div>
+    </dl>
+
+    <h3>3.9 Google 日历连接（仅限连接日历的管理员）</h3>
     <dl>
       <div><dt>内容</dt><dd>管理员选择连接 Google 日历时，我们取得一组 Google OAuth refresh token，以及管理员选定日历的活动。权限范围：<code>calendar.events</code>（读写活动）、<code>calendar.calendarlist.readonly</code>（列出日历让管理员挑选）。只用 Google 账号登录不会取得日历权限。</dd></div>
       <div><dt>用途</dt><dd>在 App 里显示与编辑教会日历。所有读写都经由我们的后端代理，并暂存活动以加快显示。本服务使用及转移从 Google API 取得的数据，会遵守 <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API 服务用户数据政策</a>，包括其中的“有限使用”（Limited Use）规定。</dd></div>
@@ -129,20 +136,20 @@
       <div><dt>保存期限与删除</dt><dd>暂存的活动最多保留 10 分钟就会重新向 Google 读取；管理员断开连接或教会被删除时，授权与暂存一并删除。你也可以随时在 Google 账号的“第三方应用和服务”页面撤销授权。</dd></div>
     </dl>
 
-    <h3>3.9 照片识别</h3>
+    <h3>3.10 照片识别</h3>
     <dl>
       <div><dt>内容</dt><dd>能安排事奉表的同工使用“照片导入”时上传的事奉表照片。照片上可能有同工的名字。</dd></div>
       <div><dt>用途</dt><dd>照片会发送到 Google Cloud Vertex AI 上的 Gemini 识别文字，转成事奉表。按 Google Cloud 的条款，Google 不会用这些内容训练模型。我们另外记录每间教会每月用了几张，用于额度控制。</dd></div>
       <div><dt>保存期限</dt><dd>照片只在识别当下传给 Google，本服务不保存照片。Google 端为了加快响应，可能在内存中暂存最多 24 小时；如果 Google 的自动检测认为内容疑似滥用，可能保存最多 90 天供审查，之后删除。</dd></div>
     </dl>
 
-    <h3>3.10 App 内的支持</h3>
+    <h3>3.11 App 内的支持</h3>
     <dl>
       <div><dt>内容</dt><dd>iOS、Android App 内的一次性支持与每月支持，由 Apple App Store 与 Google Play 处理付款。我们收不到你的付款数据（例如信用卡号）。</dd></div>
       <div><dt>存放</dt><dd>支持者状态只在你的设备上判断，不会传到我们的服务器。Apple 与 Google 会通知我们每笔交易的金额、项目与时间，用来计算网站上公开的费用进度；这些通知不包含你的账号或姓名。</dd></div>
     </dl>
 
-    <h3>3.11 外部通知（Webhook，仅限设置外部通知的教会）</h3>
+    <h3>3.12 外部通知（Webhook，仅限设置外部通知的教会）</h3>
     <dl>
       <div><dt>内容</dt><dd>教会管理员可以设置一个外部通知的接收网址，并选择要发送行事历变动、事奉表变动，或两者都发送。有变动时，本服务会把变动内容发送到这个网址：事奉表变动包括教会名称、日期、事奉项目、被加入或移除的同工名字；行事历变动包括教会名称与活动的名称、时间、地点、说明和链接。两者都附上做出变动的同工名字。</dd></div>
       <div><dt>用途</dt><dd>让教会把行事历与事奉表的变动同步到自己的系统，例如聊天群组或电子表格。</dd></div>
@@ -150,7 +157,7 @@
     </dl>
 
     <!-- payments:on -->
-    <h3>3.12 网站的在线支持</h3>
+    <h3>3.13 网站的在线支持</h3>
     <dl>
       <div><dt>内容</dt><dd>在网站的支持页用信用卡、Apple Pay 或 Google Pay 支持时，付款由蓝新金流（蓝新科技股份有限公司，NewebPay）处理。卡号、邮箱等付款数据填写在蓝新的付款页，由蓝新依其隐私政策处理。蓝新的付款通知会附上卡号前 6 位与末 4 位、付款时的 IP，我们不保存也不记录。</dd></div>
       <div><dt>存放</dt><dd>我们只记录每笔付款的金额、付款方式、时间与蓝新的交易编号，用来计算网站上公开的云端费用进度与处理退款；不记录你的姓名、邮箱或账号。</dd></div>
@@ -172,10 +179,11 @@
     <ul>
       <li><strong>Google</strong>：Firebase（数据库、登录、文件存储、推送通知、分析、错误记录）、Google Cloud（后端程序、日志）、Vertex AI 上的 Gemini（照片识别）、Google 日历（仅限连接日历的教会）。</li>
       <li><strong>Apple、Google</strong>：Sign in with Apple、Google 登录，以及 App 商店的付款。</li>
+      <li><strong>Shorebird</strong>：iOS、Android App 的修正更新，见第 3.8 节。</li>
       <!-- payments:on -->
-      <li><strong>蓝新金流（NewebPay）</strong>：网站支持页的付款，见第 3.12 节。</li>
+      <li><strong>蓝新金流（NewebPay）</strong>：网站支持页的付款，见第 3.13 节。</li>
       <!-- /payments:on -->
-      <li><strong>教会自己设置的外部通知接收端</strong>：仅限管理员设置了外部通知的教会，发送内容见第 3.11 节。</li>
+      <li><strong>教会自己设置的外部通知接收端</strong>：仅限管理员设置了外部通知的教会，发送内容见第 3.12 节。</li>
     </ul>
     <p>法律要求时，我们可能依法向主管机关提供数据。</p>
 
