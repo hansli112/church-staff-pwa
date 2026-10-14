@@ -20,18 +20,21 @@ void main() {
     expect(find.text('1.0.0 (12)'), findsOneWidget);
   });
 
-  testWidgets('older than the lowest build the backend allows: the app asks for the update, and the button opens the store', (
-    tester,
-  ) async {
-    final launches = captureLaunches();
-    final b = seededChurch(as: staffMei)..minimumBuilds = const MinimumBuilds(android: 13);
-    await pumpApp(tester, b, overrides: [appBuildProvider.overrideWithValue(_play12)]);
-    expect(find.text('請更新馬大別忙'), findsOneWidget);
-    expect(find.text('首頁'), findsNothing);
-    await tester.tap(find.text('到 Google Play 更新'));
-    await settle(tester);
-    expect(launches.opened, ['https://play.google.com/store/apps/details?id=app.marthasit']);
-  });
+  testWidgets(
+    'older than the lowest build the backend allows: the app asks for the update, and the button opens the store',
+    (
+      tester,
+    ) async {
+      final launches = captureLaunches();
+      final b = seededChurch(as: staffMei)..minimumBuilds = const MinimumBuilds(android: 13);
+      await pumpApp(tester, b, overrides: [appBuildProvider.overrideWithValue(_play12)]);
+      expect(find.text('請更新馬大別忙'), findsOneWidget);
+      expect(find.text('首頁'), findsNothing);
+      await tester.tap(find.text('到 Google Play 更新'));
+      await settle(tester);
+      expect(launches.opened, ['https://play.google.com/store/apps/details?id=app.marthasit']);
+    },
+  );
 
   testWidgets('new enough, or nothing set: the app is as always', (tester) async {
     final b = seededChurch(as: staffMei)..minimumBuilds = const MinimumBuilds(android: 12, ios: 99);
@@ -58,7 +61,9 @@ void main() {
     expect(launches.opened, [Uri.parse(Env.current.webOrigin).toString()]);
   });
 
-  testWidgets('raised while the app is open: it asks then, and whatever was typed is still there after', (tester) async {
+  testWidgets('raised while the app is open: it asks then, and whatever was typed is still there after', (
+    tester,
+  ) async {
     final b = seededChurch(as: staffMei);
     await pumpApp(tester, b, overrides: [appBuildProvider.overrideWithValue(_play12)]);
     await tester.tap(find.text('我的').last);
