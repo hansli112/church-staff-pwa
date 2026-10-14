@@ -254,6 +254,16 @@ void main() {
     expect(find.text('恩典堂'), findsOneWidget, reason: 'still in the first church');
   });
 
+  testWidgets('the code field asks for a Latin keyboard: a Zhuyin one turns EQE4 into ㄍㄆㄍ', (tester) async {
+    await pumpApp(tester, seededChurch(as: staffMei));
+    await tapText(tester, '我的');
+    await tapText(tester, '切換教會');
+    await tapText(tester, '輸入邀請碼');
+    final field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.keyboardType, TextInputType.visiblePassword);
+    expect(field.enableSuggestions, isFalse);
+  });
+
   testWidgets('back from starting a church returns to the church I am in', (tester) async {
     await pumpApp(tester, seededChurch(as: staffMei));
     await tapText(tester, '我的');

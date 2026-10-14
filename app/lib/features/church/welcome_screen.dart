@@ -211,6 +211,11 @@ class _EnterCodeScreenState extends State<EnterCodeScreen> {
             controller: _code,
             autofocus: true,
             autocorrect: false,
+            // The code is letters and digits: a Zhuyin or Pinyin keyboard
+            // would turn them into ㄍㄆㄍ or 中文. Asking for a password's
+            // keyboard opens a Latin one; _next uppercases what is typed.
+            keyboardType: TextInputType.visiblePassword,
+            enableSuggestions: false,
             textCapitalization: TextCapitalization.characters,
             textInputAction: TextInputAction.go,
             style: AppText.title3.copyWith(letterSpacing: 2),
