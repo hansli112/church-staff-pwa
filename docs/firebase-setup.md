@@ -88,6 +88,8 @@ cd app
 
 每一版都要這樣建，之後才能對它推修補；直接用 `flutter build` 上架的版本收不到修補。
 
+**建好馬上上傳，或先複製一份**：之後跑 `shorebird patch` 會用修補的程式碼重建，蓋掉 `app/build/app/outputs/bundle/release/app-release.aab`。`shorebird preview` 下載到 `~/.shorebird/bin/cache/previews/` 的 AAB 也被改過，Play 會說簽章無效，不能上傳。1.0.0+13 就是這樣作廢的，所以從 +14 開始上架。
+
 **什麼能熱更新**：只有 Dart 程式碼，例如修 bug、改文字、調畫面。圖片、字型、原生程式碼、新套件、權限、App 圖示都要重新上架。只拿來修小 bug：iOS 上修補改到的函式要用直譯器跑，大約慢 100 倍，大改畫面或吃運算的地方會卡。新功能照常上架。
 
 改文字時 `shorebird patch` 會說資源有改動而停下來：`lib/l10n/*.arb` 也列在 pubspec 的 assets，但只有網頁版預載字型時讀（`lib/core/fonts.dart`），手機 App 的文字來自產生的 Dart 程式碼。所以**只有 ARB 改動**時，可以加 `--allow-asset-diffs`；改到其他資源就一定要重新上架。
@@ -95,9 +97,9 @@ cd app
 **推修補**：先推到 staging，只有用 `shorebird preview` 裝的手機收得到。確認沒問題再改成 stable，所有人下次打開 App 就套用：
 
 ```sh
-~/.shorebird/bin/shorebird patch android --release-version=1.0.0+13 --track=staging --dart-define-from-file=config/prod.json
-~/.shorebird/bin/shorebird preview --release-version=1.0.0+13 --track=staging   # 接上測試手機或模擬器
-~/.shorebird/bin/shorebird patches set-track --release-version=1.0.0+13 --patch-number=1 --track=stable
+~/.shorebird/bin/shorebird patch android --release-version=1.0.0+14 --track=staging --dart-define-from-file=config/prod.json
+~/.shorebird/bin/shorebird preview --release-version=1.0.0+14 --track=staging   # 接上測試手機或模擬器
+~/.shorebird/bin/shorebird patches set-track --release-version=1.0.0+14 --patch-number=1 --track=stable
 ```
 
 推錯了：`~/.shorebird/bin/shorebird patches rollback --release-version=… --patch-number=…`，已經套用的人下次打開 App 換回來。
