@@ -888,6 +888,21 @@ class L10nKo extends L10n {
   String get notifEnable => '알림 켜기';
 
   @override
+  String get notifAskTitle => '봉사에 배정되면 알려 드려요';
+
+  @override
+  String get notifAskBody => '봉사에 배정되거나 봉사표가 바뀌면 알려 드리고, 매주 월요일 저녁에 이번 주 봉사도 알려 드려요';
+
+  @override
+  String get notifAskLater => '나중에';
+
+  @override
+  String get notifCardHide => '다시 보지 않기';
+
+  @override
+  String get notifOpenSettings => '설정에서 알림 켜기';
+
+  @override
   String get notifNotAllowed => '알림이 아직 꺼져 있어요. 권한을 물으면 ‘허용’을 눌러 주세요.';
 
   @override

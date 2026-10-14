@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../state/push.dart';
@@ -64,6 +65,15 @@ class FirebasePushService implements PushService {
     if (status == PushPermission.granted && uid != null) await _register(uid);
     return status;
   }
+
+  /// MainActivity.kt and AppDelegate.swift.
+  static const _settings = MethodChannel('martha/settings');
+
+  @override
+  bool get canOpenSettings => !kIsWeb;
+
+  @override
+  Future<void> openSettings() => _settings.invokeMethod('notifications');
 
   @override
   Future<void> refresh(String uid) async {

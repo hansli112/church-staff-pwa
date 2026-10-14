@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/telemetry.dart';
@@ -47,6 +48,20 @@ final sessionEffectsProvider = Provider<void>((ref) {
     ref.read(telemetryProvider).setUser(uid);
     if (uid != null) ref.read(pushServiceProvider).refresh(uid).ignore();
   }, fireImmediately: true);
+
+  // Known before joining, which decides at once whether to ask for it.
+  ref.listen(pushPermissionProvider, (_, _) {});
+
+  // Back from the phone's settings, maybe with notifications turned on.
+  final lifecycle = AppLifecycleListener(
+    onResume: () {
+      final uid = ref.read(uidProvider);
+      final wasOn = ref.read(pushPermissionProvider).value == PushPermission.granted;
+      ref.invalidate(pushPermissionProvider);
+      if (uid != null && !wasOn) ref.read(pushServiceProvider).refresh(uid).ignore();
+    },
+  );
+  ref.onDispose(lifecycle.dispose);
 
   ref.listen(currentChurchIdProvider, (_, cid) => ref.read(telemetryProvider).setChurch(cid), fireImmediately: true);
 

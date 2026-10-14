@@ -887,6 +887,21 @@ class L10nZh extends L10n {
   String get notifEnable => '開啟通知';
 
   @override
+  String get notifAskTitle => '被排到服事時通知你';
+
+  @override
+  String get notifAskBody => '排進服事、服事表有變動時通知你，每週一晚上也會提醒這週的服事';
+
+  @override
+  String get notifAskLater => '稍後再說';
+
+  @override
+  String get notifCardHide => '不再顯示';
+
+  @override
+  String get notifOpenSettings => '到設定開啟通知';
+
+  @override
   String get notifNotAllowed => '通知還沒開。跳出詢問時，請點「允許」。';
 
   @override
@@ -3283,6 +3298,21 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get notifEnable => '开启通知';
+
+  @override
+  String get notifAskTitle => '被排到事奉时通知你';
+
+  @override
+  String get notifAskBody => '排入事奉、事奉表有变动时通知你，每周一晚上也会提醒这周的事奉';
+
+  @override
+  String get notifAskLater => '稍后再说';
+
+  @override
+  String get notifCardHide => '不再显示';
+
+  @override
+  String get notifOpenSettings => '到设置开启通知';
 
   @override
   String get notifNotAllowed => '通知还没开启。弹出询问时，请点“允许”。';

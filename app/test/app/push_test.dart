@@ -1,44 +1,11 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/state/push.dart';
 
+import '../support/fake_push.dart';
 import '../support/harness.dart';
 import '../support/seed.dart';
-
-class FakePush implements PushService {
-  FakePush({this.answer = PushPermission.notAsked, this.registers = true});
-
-  /// What the permission prompt comes back with.
-  final PushPermission answer;
-
-  /// False: allowed, but the device gets no token.
-  final bool registers;
-  final notices = StreamController<PushNotice>.broadcast();
-
-  @override
-  Future<PushPermission> permission() async => PushPermission.notAsked;
-
-  @override
-  Future<PushPermission> enable() async {
-    if (!registers) throw Exception('apns-token-not-set');
-    return answer;
-  }
-
-  @override
-  Future<void> refresh(String uid) async {}
-
-  @override
-  Future<void> unregister(String uid) async {}
-
-  @override
-  Stream<String> get openedLinks => const Stream.empty();
-
-  @override
-  Stream<PushNotice> get foreground => notices.stream;
-}
 
 void main() {
   testWidgets('a notification arriving with the app open shows, and opens its page', (tester) async {

@@ -28,6 +28,7 @@ import 'features/me/profile_screen.dart';
 import 'features/me/services_screen.dart';
 import 'features/me/support_screen.dart';
 import 'features/me/time_zone_screen.dart';
+import 'features/me/turn_on_notifications.dart';
 import 'features/me/webhook_screen.dart';
 import 'features/rosters/event_roster_screen.dart';
 import 'features/rosters/roster_day_screen.dart';
@@ -101,6 +102,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       page('/closed', (_) => const ClosedScreen()),
       page('/add-to-home', (_) => const AddToHomeScreen()),
+      page('/turn-on-notifications', (_) => const TurnOnNotificationsScreen()),
       page('/account', (_) => const AccountScreen()),
       page(
         '/admin',

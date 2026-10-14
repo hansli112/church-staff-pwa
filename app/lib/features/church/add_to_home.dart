@@ -8,6 +8,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/web_page.dart';
 import '../auth/in_app_browser.dart';
+import '../me/turn_on_notifications.dart';
 import 'home_browser.dart';
 import 'links.dart';
 
@@ -36,10 +37,11 @@ void openAddToHome(BuildContext context, WidgetRef ref, String churchId, {bool p
 }
 
 /// Where joining or starting [churchId] leads: the guide on a phone's
-/// browser, its home page anywhere else.
+/// browser; anywhere else its home page, after asking for notifications the
+/// first time.
 void goAfterJoining(BuildContext context, WidgetRef ref, String churchId) {
   if (ref.read(addToHomeProvider) == null) {
-    context.go('/home');
+    context.go(askAfterJoining(ref) ? '/turn-on-notifications' : '/home');
   } else {
     openAddToHome(context, ref, churchId, push: false);
   }

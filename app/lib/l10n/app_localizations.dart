@@ -1720,6 +1720,36 @@ abstract class L10n {
   /// **'開啟通知'**
   String get notifEnable;
 
+  /// No description provided for @notifAskTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'被排到服事時通知你'**
+  String get notifAskTitle;
+
+  /// No description provided for @notifAskBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'排進服事、服事表有變動時通知你，每週一晚上也會提醒這週的服事'**
+  String get notifAskBody;
+
+  /// No description provided for @notifAskLater.
+  ///
+  /// In zh, this message translates to:
+  /// **'稍後再說'**
+  String get notifAskLater;
+
+  /// No description provided for @notifCardHide.
+  ///
+  /// In zh, this message translates to:
+  /// **'不再顯示'**
+  String get notifCardHide;
+
+  /// No description provided for @notifOpenSettings.
+  ///
+  /// In zh, this message translates to:
+  /// **'到設定開啟通知'**
+  String get notifOpenSettings;
+
   /// No description provided for @notifNotAllowed.
   ///
   /// In zh, this message translates to:

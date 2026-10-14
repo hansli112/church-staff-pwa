@@ -1,7 +1,11 @@
 package app.marthasit
 
 import android.content.ComponentName
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -37,6 +41,25 @@ class MainActivity : FlutterActivity() {
                         packageManager.setComponentEnabledSetting(
                             alias(other), PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
                     }
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
+        // Notifications turned off: the system does not ask again, so this
+        // app's notification settings are the way back.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "martha/settings").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "notifications" -> {
+                    // Android 7 and below have no page for notifications
+                    // alone: the app's page holds them.
+                    startActivity(
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                        } else {
+                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))
+                        })
                     result.success(null)
                 }
                 else -> result.notImplemented()

@@ -12,6 +12,25 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "MarthaSettings") {
+      // Notifications turned off: iOS does not ask again, so this app's
+      // notification settings are the way back.
+      let settings = FlutterMethodChannel(name: "martha/settings", binaryMessenger: registrar.messenger())
+      settings.setMethodCallHandler { call, result in
+        guard call.method == "notifications" else {
+          result(FlutterMethodNotImplemented)
+          return
+        }
+        let page: String
+        if #available(iOS 16.0, *) {
+          page = UIApplication.openNotificationSettingsURLString
+        } else {
+          page = UIApplication.openSettingsURLString
+        }
+        if let url = URL(string: page) { UIApplication.shared.open(url) }
+        result(nil)
+      }
+    }
     guard let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "MarthaAppIcon") else { return }
     // Alternate app icons for supporters. The icons are bundled asset
     // catalogs (AppIcon-Green, …), named in

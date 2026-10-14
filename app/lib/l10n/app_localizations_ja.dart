@@ -887,6 +887,21 @@ class L10nJa extends L10n {
   String get notifEnable => '通知をオンにする';
 
   @override
+  String get notifAskTitle => '奉仕に入ったらお知らせします';
+
+  @override
+  String get notifAskBody => '奉仕に入ったときや奉仕表が変わったときにお知らせします。毎週月曜の夜には、その週の奉仕もお知らせします';
+
+  @override
+  String get notifAskLater => 'あとで';
+
+  @override
+  String get notifCardHide => '今後表示しない';
+
+  @override
+  String get notifOpenSettings => '設定で通知をオンにする';
+
+  @override
   String get notifNotAllowed => '通知がまだオンになっていません。確認が表示されたら「許可」をタップしてください。';
 
   @override

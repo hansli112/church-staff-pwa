@@ -6,8 +6,8 @@ import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/push.dart';
-import '../../state/session.dart';
 import '../church/add_to_home.dart';
+import 'turn_on_notifications.dart';
 
 /// Which notifications I get from this church, and when I am reminded of my
 /// duties. Stored on my member doc (`notificationPrefs`, the one field I may
@@ -28,23 +28,9 @@ class NotificationsScreen extends ConsumerWidget {
     final off = permission == PushPermission.denied || needsHomeScreen;
     final churchId = ref.watch(currentChurchIdProvider);
 
-    // Registering can fail even when allowed (no APNs token yet); the next
-    // launch tries again, so say so instead of looking stuck.
-    Future<PushPermission?> enable() async {
-      try {
-        return await ref.read(pushServiceProvider).enable();
-      } catch (e, stack) {
-        ref.read(telemetryProvider).recordError(e, stack);
-        if (context.mounted) showToast(context, l10n.notifRegisterFailed);
-        return null;
-      } finally {
-        ref.invalidate(pushPermissionProvider);
-      }
-    }
-
     Future<void> set(NotificationKind kind, bool on) async {
       // Once allowed, each launch registers the device again.
-      if (on && permission == PushPermission.notAsked) await enable();
+      if (on && permission == PushPermission.notAsked) await enableNotifications(context, ref);
       final next = on ? ({...muted}..remove(kind)) : {...muted, kind};
       try {
         await ref.churchData.setNotificationPrefs(me.uid, next);
@@ -98,18 +84,24 @@ class NotificationsScreen extends ConsumerWidget {
               ],
             )
           else if (permission == PushPermission.denied)
-            ListSection(footer: l10n.notifPermissionOff, children: const [])
+            ListSection(
+              footer: l10n.notifPermissionOff,
+              children: [
+                if (ref.watch(pushServiceProvider).canOpenSettings)
+                  ListRow(
+                    title: l10n.notifOpenSettings,
+                    leading: const Icon(Icons.settings_outlined),
+                    onTap: () => ref.read(pushServiceProvider).openSettings(),
+                  ),
+              ],
+            )
           else if (permission == PushPermission.notAsked)
             ListSection(
               children: [
                 ListRow(
                   title: l10n.notifEnable,
                   leading: const Icon(Icons.notifications_active_outlined),
-                  onTap: () async {
-                    final result = await enable();
-                    // Dismissed, or tucked into the address bar by the browser.
-                    if (result == PushPermission.notAsked && context.mounted) showToast(context, l10n.notifNotAllowed);
-                  },
+                  onTap: () => enableNotifications(context, ref, nudge: true),
                 ),
               ],
             ),

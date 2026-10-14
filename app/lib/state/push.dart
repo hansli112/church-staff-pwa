@@ -13,6 +13,12 @@ abstract interface class PushService {
   /// Asks for permission if needed and registers this device's token.
   Future<PushPermission> enable();
 
+  /// Once turned off, the phone does not ask again: only its settings page
+  /// for this app turns notifications back on. A browser has none.
+  bool get canOpenSettings;
+
+  Future<void> openSettings();
+
   /// Registers the token again if permission was granted earlier, e.g. at
   /// sign-in. Never prompts.
   Future<void> refresh(String uid);
@@ -48,6 +54,12 @@ class NoPush implements PushService {
 
   @override
   Future<PushPermission> enable() async => PushPermission.unsupported;
+
+  @override
+  bool get canOpenSettings => false;
+
+  @override
+  Future<void> openSettings() async {}
 
   @override
   Future<void> refresh(String uid) async {}

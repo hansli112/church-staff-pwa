@@ -113,6 +113,8 @@ void main() {
     // Right after joining, before the new church has come in.
     (noChurch, '/add-to-home', stay),
     (ready, '/add-to-home', stay),
+    (noChurch, '/turn-on-notifications', stay),
+    (ready, '/turn-on-notifications', stay),
   ]);
 
   table('a closed church shows the closed page', [

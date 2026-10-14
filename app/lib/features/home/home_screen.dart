@@ -13,6 +13,7 @@ import '../church/add_to_home.dart';
 import '../church/church_logo.dart';
 import '../church/claims.dart';
 import '../calendar/event_sheet.dart';
+import '../me/turn_on_notifications.dart';
 import '../common/calendar_read_notice.dart';
 import 'church_link_card.dart';
 import '../rosters/format.dart';
@@ -66,9 +67,10 @@ class _GettingStarted extends StatelessWidget {
 }
 
 /// 首頁: the days I serve next. That is what most people open the app for.
-/// Above them, 加入主畫面 on a phone's browser, the church link when the
-/// admin has set one, 開始使用 for the admin of a church nobody else has
-/// joined yet, and for admins the members still in no 牧區.
+/// Above them, 加入主畫面 on a phone's browser, 開啟通知 elsewhere until
+/// they are on, the church link when the admin has set one, 開始使用 for
+/// the admin of a church nobody else has joined yet, and for admins the
+/// members still in no 牧區.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -120,6 +122,7 @@ class HomeScreen extends ConsumerWidget {
           final gettingStarted = ref.watch(_gettingStartedProvider);
           final waiting = ref.watch(_waitingForZoneProvider);
           final addToHome = AddToHomeCard.shown(ref);
+          final notifications = TurnOnNotificationsCard.shown(ref);
           if (list.isEmpty &&
               link == null &&
               !sourceMissing &&
@@ -127,6 +130,7 @@ class HomeScreen extends ConsumerWidget {
               !gettingStarted &&
               waiting == 0 &&
               !addToHome &&
+              !notifications &&
               activities.isEmpty &&
               !activityError &&
               !activityLoading) {
@@ -140,6 +144,7 @@ class HomeScreen extends ConsumerWidget {
             children: [
               const PendingClaimsCard(),
               if (addToHome) const AddToHomeCard(),
+              if (notifications) const TurnOnNotificationsCard(),
               if (gettingStarted) const _GettingStarted(),
               if (waiting > 0)
                 ListSection(

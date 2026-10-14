@@ -911,6 +911,22 @@ class L10nEn extends L10n {
   String get notifEnable => 'Turn on notifications';
 
   @override
+  String get notifAskTitle => 'Know when you’re serving';
+
+  @override
+  String get notifAskBody =>
+      'Get notified when you’re scheduled or the schedule changes, plus a reminder of the week’s serving every Monday evening';
+
+  @override
+  String get notifAskLater => 'Not now';
+
+  @override
+  String get notifCardHide => 'Don’t show again';
+
+  @override
+  String get notifOpenSettings => 'Turn on in Settings';
+
+  @override
   String get notifNotAllowed => 'Notifications aren’t on yet. When asked, tap “Allow.”';
 
   @override
