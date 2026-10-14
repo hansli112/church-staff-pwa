@@ -1,0 +1,68 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../../core/design/components.dart';
+import '../../core/design/tokens.dart';
+import '../../l10n/app_localizations.dart';
+import '../../state/app_build.dart';
+
+/// Over the whole app while this store app is older than the backend
+/// allows ([updateRequiredProvider]). The app stays underneath, hidden, so
+/// sign-in, the page and whatever was typed are all there if it is lifted.
+class UpdateRequiredGate extends ConsumerWidget {
+  const UpdateRequiredGate({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final required = ref.watch(updateRequiredProvider);
+    final build = ref.watch(appBuildProvider);
+    return Stack(
+      children: [
+        Offstage(offstage: required, child: TickerMode(enabled: !required, child: child)),
+        if (required && build != null) Positioned.fill(child: _UpdateRequiredScreen(build.store)),
+      ],
+    );
+  }
+}
+
+class _UpdateRequiredScreen extends StatelessWidget {
+  const _UpdateRequiredScreen(this.store);
+
+  final AppStore store;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final c = AppColors.of(context);
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.all(Space.l),
+              children: [
+                Center(
+                  child: Image.asset('assets/icons/app.png', width: 88, height: 88, excludeFromSemantics: true),
+                ),
+                const SizedBox(height: Space.l),
+                BalancedText(l10n.updateRequiredTitle, style: AppText.title2),
+                const SizedBox(height: Space.s),
+                BalancedText(l10n.updateRequiredBody, style: AppText.body.copyWith(color: c.secondaryLabel)),
+                const SizedBox(height: Space.xl),
+                PrimaryButton(
+                  label: l10n.updateRequiredOpen(store.label),
+                  onPressed: () => launchUrl(store.page, mode: LaunchMode.externalApplication),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

@@ -10,6 +10,7 @@ import 'core/builtin_localizations.dart';
 import 'core/languages.dart';
 import 'deep_link.dart';
 import 'deferred_pages.dart';
+import 'features/common/update_required.dart';
 import 'l10n/app_localizations.dart';
 import 'router.dart';
 import 'state/fonts.dart';
@@ -132,7 +133,7 @@ class _MarthaAppState extends ConsumerState<MarthaApp> {
       localeListResolutionCallback: (device, _) => AppLanguage.resolve(device ?? const []).locale,
       routerConfig: router,
       scaffoldMessengerKey: _messenger,
-      builder: (context, child) => _LanguageShown(child: _Column(child: child!)),
+      builder: (context, child) => _LanguageShown(child: _Column(child: UpdateRequiredGate(child: child!))),
     );
   }
 }

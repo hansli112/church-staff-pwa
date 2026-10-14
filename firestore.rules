@@ -368,6 +368,13 @@ service cloud.firestore {
       allow read: if true;
     }
 
+    // The oldest store builds still allowed to run (minBuild.android,
+    // minBuild.ios): read before signing in, so an old app asks for the
+    // update first. Set by the operator in the console, never by the app.
+    match /platform/app {
+      allow read: if true;
+    }
+
     // churchNames/{nameKey} (name reservations), linkSources/{cid} (the
     // church link fetch schedule), webhookSecrets/{cid}, webhookOutbox/{cid}
     // (roster changes waiting to go out), pendingIndex/{email hash} (who has

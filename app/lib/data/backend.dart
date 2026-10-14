@@ -629,6 +629,19 @@ abstract interface class CloudApi {
 abstract interface class PlatformData {
   /// Null until the backend has published anything.
   Stream<Funding?> funding();
+
+  /// The oldest store builds still allowed to run (`platform/app`). Readable
+  /// signed out too: an old app asks for the update before anything else.
+  Stream<MinimumBuilds> minimumBuilds();
+}
+
+/// The lowest build number (pubspec's `+N`) each store app may run; an
+/// older one asks for the update. 0, or unset, lets every build run.
+class MinimumBuilds {
+  const MinimumBuilds({this.android = 0, this.ios = 0});
+
+  final int android;
+  final int ios;
 }
 
 /// Transport hints, not authorization or proof that a cached snapshot is

@@ -800,6 +800,16 @@ describe('平台統計與名稱保留', () => {
     await assertFails(getDoc(doc(as(STRANGER), 'fundingPayments/apple_1')));
   });
 
+  it('最低版本：誰都讀得到（沒登入的舊 App 也要能擋），沒有人能從 App 改', async () => {
+    await seed('platform/app', { minBuild: { android: 12, ios: 12 } });
+    await assertSucceeds(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'platform/app')));
+    await assertSucceeds(getDoc(doc(as(STRANGER), 'platform/app')));
+    const op = testEnv.authenticatedContext('hans', { operator: true }).firestore();
+    for (const db of [testEnv.unauthenticatedContext().firestore(), as(ADMIN_A), op]) {
+      await assertFails(setDoc(doc(db, 'platform/app'), { minBuild: { android: 1 } }));
+    }
+  });
+
   it('線上支持（藍新）的訂單和每小時計數只有後端碰：沒登入、同工、營運者都不能讀寫', async () => {
     await seed('newebpayOrders/20261007a1b2c3d4e5f6', { amount: 300, status: 'pending' });
     await seed('platform/newebpayRate', { hour: '2026-10-07T01', count: 1 });

@@ -2222,6 +2222,17 @@ class L10nEn extends L10n {
   String get appUpdateNativeNote => 'Check for updates in the App Store or Google Play';
 
   @override
+  String get updateRequiredTitle => 'Please update Martha, sit';
+
+  @override
+  String get updateRequiredBody => 'This version is too old. Update it to keep using the app.';
+
+  @override
+  String updateRequiredOpen(String store) {
+    return 'Update in $store';
+  }
+
+  @override
   String get appUpdateCheck => 'Check for updates';
 
   @override

@@ -425,6 +425,16 @@ class _Platform implements PlatformData {
   @override
   Stream<Funding?> funding() =>
       _db.doc('platform/funding').live().map((s) => s.exists ? fundingFromJson(s.data()!) : null);
+
+  @override
+  Stream<MinimumBuilds> minimumBuilds() =>
+      _db.doc('platform/app').live().map((s) => minimumBuildsFromJson(s.data() ?? const {}));
+}
+
+MinimumBuilds minimumBuildsFromJson(Map<String, Object?> d) {
+  final min = d['minBuild'];
+  int n(String key) => min is Map ? (min[key] as num?)?.toInt() ?? 0 : 0;
+  return MinimumBuilds(android: n('android'), ios: n('ios'));
 }
 
 Funding fundingFromJson(Map<String, Object?> d) {

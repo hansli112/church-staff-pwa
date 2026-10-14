@@ -1625,6 +1625,16 @@
   },
   "appUpdateNativeTitle": "App 更新",
   "appUpdateNativeNote": "請到 App Store 或 Google Play 檢查更新",
+  "updateRequiredTitle": "請更新馬大別忙",
+  "@updateRequiredTitle": {
+    "description": "Over the whole store app while it is older than the lowest build the backend allows (platform/app); the user cannot go on without updating."
+  },
+  "updateRequiredBody": "這個版本太舊了，更新後才能繼續使用。",
+  "updateRequiredOpen": "到 {store} 更新",
+  "@updateRequiredOpen": {
+    "description": "Opens the app's page in the store it came from.",
+    "placeholders": { "store": { "type": "String", "example": "Google Play" } }
+  },
   "appUpdateCheck": "檢查更新",
   "appUpdateChecking": "檢查中…",
   "appUpdateApply": "更新並重新開啟",

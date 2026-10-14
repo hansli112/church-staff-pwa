@@ -2110,6 +2110,17 @@ class L10nKo extends L10n {
   String get appUpdateNativeNote => 'App Store나 Google Play에서 업데이트를 확인해 주세요';
 
   @override
+  String get updateRequiredTitle => '마르다의 쉼표를 업데이트해 주세요';
+
+  @override
+  String get updateRequiredBody => '이 버전은 너무 오래되었어요. 업데이트하면 계속 사용할 수 있어요.';
+
+  @override
+  String updateRequiredOpen(String store) {
+    return '$store에서 업데이트';
+  }
+
+  @override
   String get appUpdateCheck => '업데이트 확인';
 
   @override

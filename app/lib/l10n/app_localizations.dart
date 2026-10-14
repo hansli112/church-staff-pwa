@@ -3862,6 +3862,24 @@ abstract class L10n {
   /// **'請到 App Store 或 Google Play 檢查更新'**
   String get appUpdateNativeNote;
 
+  /// Over the whole store app while it is older than the lowest build the backend allows (platform/app); the user cannot go on without updating.
+  ///
+  /// In zh, this message translates to:
+  /// **'請更新馬大別忙'**
+  String get updateRequiredTitle;
+
+  /// No description provided for @updateRequiredBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'這個版本太舊了，更新後才能繼續使用。'**
+  String get updateRequiredBody;
+
+  /// Opens the app's page in the store it came from.
+  ///
+  /// In zh, this message translates to:
+  /// **'到 {store} 更新'**
+  String updateRequiredOpen(String store);
+
   /// No description provided for @appUpdateCheck.
   ///
   /// In zh, this message translates to:

@@ -189,6 +189,23 @@ scripts/as-owner.sh marthasit-dev npx --prefix functions tsx functions/scripts/g
 
 設定後要重新登入才會生效。之後「我的」頁會出現「平台後台」。
 
+## 要求更新手機 App（最低版本）
+
+`platform/app` 的 `minBuild.android`、`minBuild.ios` 是商店 App 最低能用的 build number（`pubspec.yaml` 的 `+N`）。比它舊的 App 一打開（或回到前景時）就整個畫面要求更新，按鈕打開 Google Play / App Store。沒有這份文件、或是 0，什麼都不擋。網頁版不受影響，它自己會更新。
+
+先確認新版已經在商店上架、大家更新得到，再調高：
+
+```sh
+PROJECT=marthasit   # 或 marthasit-dev
+curl -sS -X PATCH \
+  -H "Authorization: Bearer $(CLOUDSDK_ACTIVE_CONFIG_NAME=martha gcloud auth print-access-token)" \
+  -H 'Content-Type: application/json' \
+  "https://firestore.googleapis.com/v1/projects/$PROJECT/databases/(default)/documents/platform/app?updateMask.fieldPaths=minBuild" \
+  -d '{"fields":{"minBuild":{"mapValue":{"fields":{"android":{"integerValue":"12"},"ios":{"integerValue":"12"}}}}}}'
+```
+
+或在 Firebase Console 的 Firestore 直接改。App 不能寫這份文件（`firestore.rules`）。
+
 ## iOS 推播與 Sign in with Apple
 
 兩個都要付費開發者帳號（#38）。`app/ios/Runner/Runner.entitlements` 已經有 `aps-environment` 和 `com.apple.developer.applesignin`。Xcode 封存上架時，會自動把 `aps-environment` 換成 `production`。

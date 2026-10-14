@@ -23,6 +23,7 @@
 | `webhookSecrets/{cid}` | 只有後端讀寫：外部通知的密鑰，用行事曆 token 的金鑰以 AES-256-GCM 加密 |
 | `webhookOutbox/{cid}/rosterChanges/{eventId}` | 只有後端讀寫：還沒送出的服事表異動，每 5 分鐘合併成一則外部通知後刪除 |
 | `platform/funding` | 雲端費用進度，誰都讀得到（網站的支持頁不用登入）、只有後端寫：`month`（`YYYY-MM`）、`target`、`received`、`carried`、`monthsLeft`（金額都是新台幣整數）、`costs`（每一項費用公開給大家看：`name`、`perMonth` 每月新台幣、`per`；`target` 是 `perMonth` 加總；沒有匯率時沿用上一次的）、`updatedAt` |
+| `platform/app` | 商店 App 最低能用的 build number，誰都讀得到（沒登入也要擋）、App 不能寫，營運者在 Console 或 REST 改：`minBuild`（`android`、`ios`；沒有或 0 就不擋）。比它舊的 App 整個畫面要求更新（`docs/firebase-setup.md`〈要求更新手機 App〉） |
 | `platform/fundingCosts` | 只有後端讀寫（營運者經 `adminSetFundingCosts` 改）：`items`（`name`、`amount`、`currency` 為 `TWD` / `USD`、`per` 為 `month` / `year`） |
 | `platform/fxRates` | 只有後端讀寫：`rates`（一元台幣換多少外幣）、`fetchedOn` |
 | `fundingMonths/{YYYY-MM}` | 只有後端讀寫：該月 `received`、`target`（月份過了就不再改） |

@@ -23,6 +23,7 @@ import 'core/fonts.dart';
 import 'core/languages.dart';
 import 'core/telemetry.dart';
 import 'data/firebase/push_firebase.dart';
+import 'state/app_build.dart';
 import 'state/fonts.dart';
 import 'state/providers.dart';
 import 'state/push.dart';
@@ -58,7 +59,7 @@ Future<void> main() async {
         )
       : null;
   final env = Env.current;
-  final (prefs, backend) = await (
+  final (prefs, backend, build) = await (
     prefsRead,
     env.usesFirebase
         ? _firebase(env)
@@ -68,6 +69,7 @@ Future<void> main() async {
               language: AppLanguage.resolve(PlatformDispatcher.instance.locales),
             ),
           ),
+    env == Env.demo ? Future<AppBuild?>.value() : AppBuild.read(),
   ).wait;
 
   // End-to-end tests drive the web build through the accessibility tree.
@@ -104,6 +106,7 @@ Future<void> main() async {
         pushServiceProvider.overrideWithValue(push),
         supportStoreProvider.overrideWithValue(store),
         appIconSwitcherProvider.overrideWithValue(icons),
+        appBuildProvider.overrideWithValue(build),
         if (fontsReady != null) ...[
           fontsReadyProvider.overrideWithValue(fontsReady),
           onFirstPageDrawnProvider.overrideWithValue(() {

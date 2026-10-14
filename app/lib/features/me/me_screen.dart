@@ -11,6 +11,7 @@ import '../../state/support.dart';
 import '../../env.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
+import '../../state/app_build.dart';
 import '../../state/app_update.dart';
 import '../../state/session.dart';
 import '../church/church_switcher.dart';
@@ -167,8 +168,12 @@ class _UpdatesSection extends ConsumerWidget {
           children: [ListRow(title: l10n.appRunningVersion, subtitle: l10n.appVersionDevelopment)],
         );
       }
+      final build = ref.watch(appBuildProvider);
       return ListSection(
-        children: [ListRow(title: l10n.appUpdateNativeTitle, subtitle: l10n.appUpdateNativeNote)],
+        children: [
+          if (build != null) ListRow(title: l10n.appRunningVersion, subtitle: build.label, chevron: false),
+          ListRow(title: l10n.appUpdateNativeTitle, subtitle: l10n.appUpdateNativeNote),
+        ],
       );
     }
     Future<void> run(Future<void> Function() action) async {
