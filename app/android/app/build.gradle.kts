@@ -1,3 +1,4 @@
+import java.util.Base64
 import java.util.Properties
 
 plugins {
@@ -6,6 +7,16 @@ plugins {
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+// The Flutter tool passes --dart-define(-from-file) values to Gradle as
+// comma-separated base64 "KEY=value" entries.
+val dartDefines: Map<String, String> =
+    (findProperty("dart-defines") as String? ?: "")
+        .split(",")
+        .filter { it.isNotEmpty() }
+        .map { String(Base64.getDecoder().decode(it)).split("=", limit = 2) }
+        .filter { it.size == 2 }
+        .associate { it[0] to it[1] }
 
 android {
     namespace = "app.marthasit"
@@ -31,6 +42,12 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Firebase Analytics starts before Dart runs and reads the app ID
+        // from resources, not from the FirebaseOptions main.dart passes
+        // (without it: "Missing google_app_id. Firebase Analytics disabled").
+        // There is no google-services.json, so copy it from the build's
+        // --dart-define-from-file.
+        dartDefines["FIREBASE_ANDROID_APP_ID"]?.let { resValue("string", "google_app_id", it) }
     }
 
     // The upload key for Google Play, from android/key.properties (not in
