@@ -18,6 +18,15 @@ void main() {
     }
   });
 
+  test('the person the demo signs in as serves in the coming weeks, so 首頁 has something soon', () {
+    final b = demoBackend(clock: () => DateTime.utc(2026, 10, 10, 20));
+    final today = Day(2026, 10, 11);
+    final mine = b.rosters['demo']!.values
+        .where((r) => r.day.compareTo(today) >= 0 && r.day.compareTo(today.addDays(14)) < 0)
+        .where((r) => r.duties.any((d) => d.uids.containsValue('m0')));
+    expect(mine.length, greaterThanOrEqualTo(2));
+  });
+
   group('the demo church writes in the language the demo opens in', () {
     for (final language in AppLanguage.values) {
       test(language.tag, () {

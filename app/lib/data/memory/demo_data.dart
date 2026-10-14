@@ -208,9 +208,12 @@ List<Roster> demoRosters(List<Member> people, Day today, [List<Service> services
                     if (m.serves(s.id, duty)) m,
                 ];
                 if (pool.isEmpty) return Duty(role: duty);
+                // Turns start this week, each duty a week after the one
+                // before, so the first in each pool serves soon.
+                final turn = week - 4 - k;
                 final picks = {
-                  pool[(week + k) % pool.length],
-                  if (_pairs[s.id]?.contains(k) ?? false) pool[(week + k + 1) % pool.length],
+                  pool[turn % pool.length],
+                  if (_pairs[s.id]?.contains(k) ?? false) pool[(turn + 1) % pool.length],
                 }.toList();
                 return Duty(
                   role: duty,
