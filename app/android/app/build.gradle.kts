@@ -46,8 +46,18 @@ android {
         // from resources, not from the FirebaseOptions main.dart passes
         // (without it: "Missing google_app_id. Firebase Analytics disabled").
         // There is no google-services.json, so copy it from the build's
-        // --dart-define-from-file.
-        dartDefines["FIREBASE_ANDROID_APP_ID"]?.let { resValue("string", "google_app_id", it) }
+        // --dart-define-from-file. With the app ID, Android also creates the
+        // default Firebase app from these resources before Dart runs, and
+        // Firebase.initializeApp throws duplicate-app (the app never gets
+        // past its splash) unless they match the options main.dart passes:
+        // so all of them, as env.dart's firebaseOptionsFor reads them.
+        mapOf(
+            "google_app_id" to "FIREBASE_ANDROID_APP_ID",
+            "google_api_key" to "FIREBASE_API_KEY",
+            "project_id" to "FIREBASE_PROJECT_ID",
+            "gcm_defaultSenderId" to "FIREBASE_SENDER_ID",
+            "google_storage_bucket" to "FIREBASE_STORAGE_BUCKET",
+        ).forEach { (resource, define) -> dartDefines[define]?.let { resValue("string", resource, it) } }
     }
 
     // The upload key for Google Play, from android/key.properties (not in

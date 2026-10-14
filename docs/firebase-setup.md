@@ -119,7 +119,7 @@ cd app
 - **GA4**：專案要先在 Firebase console 的「專案設定」→「整合」連結 Google Analytics，`church_id` 才收得到。看 DebugView 要先開除錯模式：
   - Android：`adb shell setprop debug.firebase.analytics.app app.marthasit`
   - iOS：在 Xcode 的 Runner scheme 加上啟動參數 `-FIRDebugEnabled`
-- Android 沒有 `google-services.json`，GA4 在 Dart 之前就啟動，讀不到 `main.dart` 給的 Firebase 設定，所以 `android/app/build.gradle.kts` 從 `--dart-define-from-file` 取 `FIREBASE_ANDROID_APP_ID` 寫成 `google_app_id` 資源。少了它 GA4 不會報錯，只在 logcat 寫 `Missing google_app_id. Firebase Analytics disabled`（1.0.0+14 以前的版本都是這樣）。確認：`adb logcat -s FA FA-SVC` 要看到 `Logging event` 和 `upload successful`。
+- Android 沒有 `google-services.json`，GA4 在 Dart 之前就啟動，讀不到 `main.dart` 給的 Firebase 設定，所以 `android/app/build.gradle.kts` 從 `--dart-define-from-file` 取 `FIREBASE_ANDROID_APP_ID` 寫成 `google_app_id` 資源。少了它 GA4 不會報錯，只在 logcat 寫 `Missing google_app_id. Firebase Analytics disabled`（1.0.0+14 以前的版本都是這樣）。有了 app ID，Android 會在 Dart 之前用這些資源建立預設的 Firebase app，所以 API key、project ID、sender ID、storage bucket 也要一起寫，和 `env.dart` 給的一樣；只寫 app ID 時 `Firebase.initializeApp` 會丟 `duplicate-app`，App 停在啟動畫面（1.0.0+15 就是這樣，沒有上架）。確認：`adb logcat -s FA FA-SVC` 要看到 `Logging event` 和 `upload successful`。
 
 ## 部署
 
