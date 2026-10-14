@@ -2102,7 +2102,7 @@ class L10nJa extends L10n {
 
   @override
   String appVersionWithFix(String version, int patch) {
-    return '$version・修正 $patch';
+    return '$version · 修正 $patch';
   }
 
   @override

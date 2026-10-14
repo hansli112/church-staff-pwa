@@ -114,7 +114,7 @@
 
     <h3>3.7 Error logs</h3>
     <dl>
-      <div><dt>What</dt><dd>Records from when the app crashes or hits an error: account ID (uid), church ID, the error stack trace, and device model, operating system and app version. Names, emails, and schedule contents aren’t recorded.</dd></div>
+      <div><dt>What</dt><dd>Records from when the app crashes or hits an error: account ID (uid), church ID, the error stack trace, and device model, operating system, app version and fix number (see Section 3.8). Names, emails, and schedule contents aren’t recorded.</dd></div>
       <div><dt>Purpose</dt><dd>Finding and fixing bugs.</dd></div>
       <div><dt>Where</dt><dd>Firebase Crashlytics for the iOS and Android apps; Google Cloud Logging for the web app and our backend.</dd></div>
       <div><dt>Kept for</dt><dd>About 30 days in Cloud Logging, and 90 days in Crashlytics under Firebase’s rules. Both are deleted automatically.</dd></div>

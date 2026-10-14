@@ -624,7 +624,7 @@
   "importIssueEventColor": "{index}番目の特別行事の color には 0〜5 の整数を入力してください",
   "importIssueResolvedDuplicatePeople": "{role}：確認後に名前が重複しています。重複した名前を削除してください。",
   "appRunningVersion": "現在のバージョン",
-  "appVersionWithFix": "{version}・修正 {patch}",
+  "appVersionWithFix": "{version} · 修正 {patch}",
   "appVersionDevelopment": "開発版（リリース版はまだありません）",
   "appUpdateNativeTitle": "アプリのアップデート",
   "appUpdateNativeNote": "App Store または Google Play でアップデートを確認してください",

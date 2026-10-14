@@ -113,7 +113,7 @@
 
     <h3>3.7 錯誤紀錄</h3>
     <dl>
-      <div><dt>內容</dt><dd>App 當機或出錯時的紀錄：帳號 ID（uid）、教會 ID、錯誤堆疊，以及裝置型號、作業系統與 App 版本。不記錄姓名、email 或服事表內容。</dd></div>
+      <div><dt>內容</dt><dd>App 當機或出錯時的紀錄：帳號 ID（uid）、教會 ID、錯誤堆疊，以及裝置型號、作業系統、App 版本與修正編號（見第 3.8 節）。不記錄姓名、email 或服事表內容。</dd></div>
       <div><dt>用途</dt><dd>找出並修正錯誤。</dd></div>
       <div><dt>存放</dt><dd>iOS、Android App 使用 Firebase Crashlytics；網頁版與後端程式使用 Google Cloud Logging。</dd></div>
       <div><dt>保存期間</dt><dd>Cloud Logging 約 30 天，Crashlytics 依 Firebase 的規定保存 90 天，都會自動刪除。</dd></div>
