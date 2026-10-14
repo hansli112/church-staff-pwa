@@ -105,7 +105,7 @@ flutter:
     - lib/l10n/app_zh_Hans.arb
     - lib/l10n/app_ja.arb
     - lib/l10n/app_ko.arb
-    # Which Shorebird app this build patches (docs/firebase-setup.md, 上架).
+    # Tells the Shorebird updater which app to check for patches (docs/firebase-setup.md〈上架與熱更新（Shorebird）〉).
     - shorebird.yaml
 
   # The following line ensures that the Material Icons font is

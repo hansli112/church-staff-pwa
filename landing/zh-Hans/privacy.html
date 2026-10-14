@@ -122,9 +122,10 @@
 
     <h3>3.8 App 更新</h3>
     <dl>
-      <div><dt>内容</dt><dd>iOS、Android App 每次打开时，会向 Shorebird 询问有没有修正错误的更新。发送的只有 App 的版本、平台（iOS 或 Android）、处理器类型，以及每次安装时随机生成的一个标识符，不含你的账号、姓名、email 或教会数据。Shorebird 的服务器日志会短暂保留连接的 IP，用于流量管理和防止滥用，不会和标识符关联。</dd></div>
+      <div><dt>内容</dt><dd>iOS、Android App 每次打开时，会向 Shorebird 询问有没有修正错误的更新；下载或安装修正后，也会上报成功或失败。发送的只有 App 的版本、当前的修正编号、平台（iOS 或 Android）、处理器类型，以及每次安装时随机生成的一个识别码，不含你的账号、姓名、邮箱或教会数据。Shorebird 用识别码统计有多少安装在使用，不用于广告。Shorebird 的服务器日志会短暂保留连接的 IP，用于流量管理和防止滥用；Shorebird 表示不会把它和识别码关联。</dd></div>
       <div><dt>用途</dt><dd>不用等商店审核，就能把错误的修正发送到你的 App。新功能仍然通过 App Store 和 Google Play 更新。</dd></div>
       <div><dt>存放</dt><dd>Shorebird（shorebird.dev）。网页版不使用。</dd></div>
+      <div><dt>保存期限</dt><dd>识别码保存在 App 里，卸载或清除 App 数据后就会消失。Shorebird 的记录按它的隐私政策，只保留必要的期间。</dd></div>
     </dl>
 
     <h3>3.9 Google 日历连接（仅限连接日历的管理员）</h3>

@@ -122,9 +122,10 @@
 
     <h3>3.8 App updates</h3>
     <dl>
-      <div><dt>What</dt><dd>Each time the iOS or Android app opens, it asks Shorebird whether a fix is available. It sends only the app’s version, the platform (iOS or Android), the processor type, and an identifier generated at random for each install. It doesn’t send your account, name, email, or any church data. Shorebird’s server logs briefly keep the connecting IP address for traffic management and abuse prevention, and don’t link it to the identifier.</dd></div>
+      <div><dt>What</dt><dd>Each time the iOS or Android app opens, it asks Shorebird whether a fix is available, and after downloading or installing a fix it reports whether that worked. It sends only the app’s version, the current fix number, the platform (iOS or Android), the processor type, and an identifier generated at random for each install. It doesn’t send your account, name, email, or any church data. Shorebird uses the identifier to count active installs, not for advertising. Shorebird’s server logs briefly keep the connecting IP address for traffic management and abuse prevention; Shorebird says it doesn’t link it to the identifier.</dd></div>
       <div><dt>Purpose</dt><dd>Getting fixes to your app without waiting for store review. New features still come through the App Store and Google Play.</dd></div>
       <div><dt>Where</dt><dd>Shorebird (shorebird.dev). The web app doesn’t use it.</dd></div>
+      <div><dt>Kept for</dt><dd>The identifier is stored in the app and is gone once you uninstall the app or clear its data. Shorebird keeps its records only as long as needed, under its privacy policy.</dd></div>
     </dl>
 
     <h3>3.9 Google Calendar connection (only for admins who connect a calendar)</h3>

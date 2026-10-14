@@ -72,11 +72,11 @@ flutter build apk --dart-define-from-file=config/dev.json
 
 `config/*.json` 裡放的是專案識別資訊，不是密碼，但也不放進 git。
 
-iOS 要在 Mac 上 build，最低版本是 iOS 15（Firebase 的要求）。Xcode 的「Upload Crashlytics symbols」會把 dSYM 傳到這次 build 的 Firebase app。app ID 從 dart define 讀，所以直接在 Xcode 按 Archive 時，傳去的是最近一次 `flutter build` 用的環境。上架用的 build 要先跑 `flutter build ipa --dart-define-from-file=config/prod.json`。
+iOS 要在 Mac 上 build，最低版本是 iOS 15（Firebase 的要求）。Xcode 的「Upload Crashlytics symbols」會把 dSYM 傳到這次 build 的 Firebase app。app ID 從 dart define 讀，所以直接在 Xcode 按 Archive 時，傳去的是最近一次 `flutter build` 用的環境。上架用的 build 用 `shorebird release ios`（見下一節），它一樣跑 Xcode 的 archive，dSYM 照常上傳。
 
 ### 上架與熱更新（Shorebird）
 
-上架的 Android、iOS 版用 Shorebird 建置，之後緊急的 bug 可以直接推修補，不用等商店審查（#79）。Shorebird 的 app 是 `app/shorebird.yaml` 的 `app_id`，帳號是個人的 hansli112871114@gmail.com（`~/.shorebird/bin/shorebird login`）。
+上架的 Android、iOS 版用 Shorebird 建置，之後緊急的 bug 可以直接推修補，不用等商店審查（#79）。Shorebird 的 app 是 `app/shorebird.yaml` 的 `app_id`，帳號是個人的 Shorebird 帳號（`~/.shorebird/bin/shorebird login`）。
 
 **上架**：取代 `flutter build appbundle` / `flutter build ipa`，產生的 AAB / IPA 一樣自己上傳到商店。`--flutter-version` 跟本機的 Flutter 一樣（`flutter --version`）：
 
@@ -94,7 +94,7 @@ cd app
 
 改文字時 `shorebird patch` 會說資源有改動而停下來：`lib/l10n/*.arb` 也列在 pubspec 的 assets，但只有網頁版預載字型時讀（`lib/core/fonts.dart`），手機 App 的文字來自產生的 Dart 程式碼。所以**只有 ARB 改動**時，可以加 `--allow-asset-diffs`；改到其他資源就一定要重新上架。
 
-**推修補**：先推到 staging，只有用 `shorebird preview` 裝的手機收得到。確認沒問題再改成 stable，所有人下次打開 App 就套用：
+**推修補**：先推到 staging，只有用 `shorebird preview` 裝的手機收得到。preview 裝的版本簽章跟商店版不同，Google 登入會失敗（`invalid-cert-hash`），只能看不用登入的畫面；要測登入後的畫面，改用 Shorebird Console 的百分比推送先給少數人。確認沒問題再改成 stable。App 打開時在背景下載修補，**下一次打開才生效**，所以大家要再開一次 App 才換到修補版：
 
 ```sh
 ~/.shorebird/bin/shorebird patch android --release-version=1.0.0+14 --track=staging --dart-define-from-file=config/prod.json
@@ -102,13 +102,14 @@ cd app
 ~/.shorebird/bin/shorebird patches set-track --release-version=1.0.0+14 --patch-number=1 --track=stable
 ```
 
-推錯了：`~/.shorebird/bin/shorebird patches rollback --release-version=… --patch-number=…`，已經套用的人下次打開 App 換回來。
+推錯了：`~/.shorebird/bin/shorebird patches rollback --release-version=… --patch-number=…`，已經套用的人重開 App 後換回來，可能要重開兩次（一次得知撤回、一次生效）。
 
 **注意**：
 
 - Play 封閉測試、TestFlight 的分組沒辦法用來分批推修補，要分批用上面的 staging，或 Shorebird Console 的百分比推送。
 - Shorebird 只支援 Flutter 穩定版，新的季版本最多 5 個工作天才支援。升級 Flutter 前先看 `~/.shorebird/bin/shorebird flutter versions list` 有沒有。
 - iOS 不要開 `--obfuscate`，Shorebird 不支援。
+- Crashlytics：我們沒有用 `--obfuscate` 或 `--split-debug-info`，Dart 的錯誤堆疊本來就看得懂，修補版不用另外上傳符號。Crashlytics 不會標出當機的是哪個修補；要分辨時，照 Shorebird 文件〈Crash Reporting › Crashlytics〉用 `shorebird_code_push` 把修補編號設成 custom key。
 - App 每次打開都會連 Shorebird，隱私權政策第 3.8 節寫了送出什麼。
 - 網頁版不用 Shorebird，部署完就更新。
 
