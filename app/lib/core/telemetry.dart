@@ -16,6 +16,10 @@ abstract interface class Telemetry {
   /// Sets the GA4 user property `church_id` and the Crashlytics key.
   void setChurch(String? churchId);
   void setUser(String? uid);
+
+  /// Tags native crash reports with the Shorebird patch running (0: none),
+  /// which the build number Crashlytics records does not show.
+  void setPatch(int? patch);
   void logEvent(String name, [Map<String, Object>? parameters]);
 
   /// Crashes the native app, to check that Crashlytics receives crashes.
@@ -34,6 +38,9 @@ class NoTelemetry implements Telemetry {
 
   @override
   void setUser(String? uid) {}
+
+  @override
+  void setPatch(int? patch) {}
 
   @override
   void logEvent(String name, [Map<String, Object>? parameters]) {}
@@ -84,6 +91,11 @@ class FirebaseTelemetry implements Telemetry {
   void setUser(String? uid) {
     _analytics?.setUserId(id: uid);
     if (!kIsWeb) FirebaseCrashlytics.instance.setUserIdentifier(uid ?? '');
+  }
+
+  @override
+  void setPatch(int? patch) {
+    if (!kIsWeb) FirebaseCrashlytics.instance.setCustomKey('shorebird_patch_number', patch ?? 0);
   }
 
   @override

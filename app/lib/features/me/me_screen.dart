@@ -171,7 +171,11 @@ class _UpdatesSection extends ConsumerWidget {
       final build = ref.watch(appBuildProvider);
       return ListSection(
         children: [
-          if (build != null) ListRow(title: l10n.appRunningVersion, subtitle: build.label),
+          if (build != null)
+            ListRow(
+              title: l10n.appRunningVersion,
+              subtitle: build.patch == null ? build.label : l10n.appVersionWithFix(build.label, build.patch!),
+            ),
           ListRow(title: l10n.appUpdateNativeTitle, subtitle: l10n.appUpdateNativeNote),
         ],
       );

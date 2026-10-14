@@ -2101,6 +2101,11 @@ class L10nKo extends L10n {
   String get appRunningVersion => '현재 버전';
 
   @override
+  String appVersionWithFix(String version, int patch) {
+    return '$version · 수정 $patch';
+  }
+
+  @override
   String get appVersionDevelopment => '개발 버전(아직 릴리스 없음)';
 
   @override

@@ -3844,6 +3844,12 @@ abstract class L10n {
   /// **'目前版本'**
   String get appRunningVersion;
 
+  /// Store app 我的 row: the store version and build (`1.0.0 (15)`) plus the Shorebird hot fix it runs, so a bug report says which code was running. Same word as the privacy policy 3.8 (修正編號).
+  ///
+  /// In zh, this message translates to:
+  /// **'{version} · 修正 {patch}'**
+  String appVersionWithFix(String version, int patch);
+
   /// Web development build without a generated release manifest; no update or native store claim.
   ///
   /// In zh, this message translates to:

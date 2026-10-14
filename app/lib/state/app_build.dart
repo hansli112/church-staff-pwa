@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shorebird_code_push/shorebird_code_push.dart';
 
 import '../data/backend.dart';
 import '../env.dart';
@@ -36,14 +37,19 @@ enum AppStore {
 /// once it is listed there (#40). Set it before raising `minBuild.ios`.
 const appleAppId = '';
 
-/// The store app running: its store, its version (`1.0.0`) and build
-/// number (pubspec's `+12`).
+/// The store app running: its store, its version (`1.0.0`), build number
+/// (pubspec's `+12`) and the Shorebird patch it runs, if any
+/// (docs/firebase-setup.md〈上架與熱更新（Shorebird）〉).
 class AppBuild {
-  const AppBuild({required this.store, required this.version, required this.number});
+  const AppBuild({required this.store, required this.version, required this.number, this.patch});
 
   final AppStore store;
   final String version;
   final int number;
+
+  /// The hot fix running, which the store build number does not show; null
+  /// without one, or where Shorebird is not (`flutter run`).
+  final int? patch;
 
   /// As 我的 shows it: `1.0.0 (12)`.
   String get label => '$version ($number)';
@@ -61,7 +67,19 @@ class AppBuild {
     try {
       final info = await PackageInfo.fromPlatform();
       final number = int.tryParse(info.buildNumber);
-      return number == null ? null : AppBuild(store: store, version: info.version, number: number);
+      if (number == null) return null;
+      return AppBuild(store: store, version: info.version, number: number, patch: await _runningPatch());
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// The patch this launch runs (one downloaded now runs from the next).
+  static Future<int?> _runningPatch() async {
+    final updater = ShorebirdUpdater();
+    if (!updater.isAvailable) return null;
+    try {
+      return (await updater.readCurrentPatch())?.number;
     } catch (_) {
       return null;
     }

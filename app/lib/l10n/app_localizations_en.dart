@@ -2213,6 +2213,11 @@ class L10nEn extends L10n {
   String get appRunningVersion => 'Current version';
 
   @override
+  String appVersionWithFix(String version, int patch) {
+    return '$version · fix $patch';
+  }
+
+  @override
   String get appVersionDevelopment => 'Development build (no release yet)';
 
   @override

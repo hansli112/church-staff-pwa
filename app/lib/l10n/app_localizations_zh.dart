@@ -2097,6 +2097,11 @@ class L10nZh extends L10n {
   String get appRunningVersion => '目前版本';
 
   @override
+  String appVersionWithFix(String version, int patch) {
+    return '$version · 修正 $patch';
+  }
+
+  @override
   String get appVersionDevelopment => '開發版本（還沒有發布版本）';
 
   @override
@@ -4488,6 +4493,11 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get appRunningVersion => '当前版本';
+
+  @override
+  String appVersionWithFix(String version, int patch) {
+    return '$version · 修正 $patch';
+  }
 
   @override
   String get appVersionDevelopment => '开发版本（还没有发布版本）';

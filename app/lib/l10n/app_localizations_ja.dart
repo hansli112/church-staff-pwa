@@ -2101,6 +2101,11 @@ class L10nJa extends L10n {
   String get appRunningVersion => '現在のバージョン';
 
   @override
+  String appVersionWithFix(String version, int patch) {
+    return '$version・修正 $patch';
+  }
+
+  @override
   String get appVersionDevelopment => '開発版（リリース版はまだありません）';
 
   @override

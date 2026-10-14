@@ -20,6 +20,15 @@ void main() {
     expect(find.text('1.0.0 (12)'), findsOneWidget);
   });
 
+  testWidgets('with a hot fix applied, 我的 says which, so a report tells which code was running', (tester) async {
+    const patched = AppBuild(store: AppStore.googlePlay, version: '1.0.0', number: 12, patch: 2);
+    await pumpApp(tester, seededChurch(as: staffMei), overrides: [appBuildProvider.overrideWithValue(patched)]);
+    await tester.tap(find.text('我的').last);
+    await settle(tester);
+    await tester.scrollUntilVisible(find.text('目前版本'), 180, scrollable: find.byType(Scrollable).last);
+    expect(find.text('1.0.0 (12) · 修正 2'), findsOneWidget);
+  });
+
   testWidgets(
     'older than the lowest build the backend allows: the app asks for the update, and the button opens the store',
     (

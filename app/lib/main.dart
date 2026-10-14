@@ -82,6 +82,7 @@ Future<void> main() async {
   final Telemetry telemetry = real || (env == Env.emulator && kIsWeb)
       ? FirebaseTelemetry(cloud: backend.cloud, analytics: real)
       : const NoTelemetry();
+  telemetry.setPatch(build?.patch);
   final PushService push = real ? FirebasePushService(prefs: prefs) : const NoPush();
   // Tips and the subscription exist only in the store apps; the web build
   // never shows them.

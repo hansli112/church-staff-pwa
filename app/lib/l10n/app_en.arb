@@ -624,6 +624,7 @@
   "importIssueEventColor": "Occasion {index}: color must be a whole number from 0 to 5",
   "importIssueResolvedDuplicatePeople": "{role}: names are duplicated after confirming. Remove the duplicates.",
   "appRunningVersion": "Current version",
+  "appVersionWithFix": "{version} · fix {patch}",
   "appVersionDevelopment": "Development build (no release yet)",
   "appUpdateNativeTitle": "App updates",
   "appUpdateNativeNote": "Check for updates in the App Store or Google Play",

@@ -109,7 +109,7 @@ cd app
 - Play 封閉測試、TestFlight 的分組沒辦法用來分批推修補，要分批用上面的 staging，或 Shorebird Console 的百分比推送。
 - Shorebird 只支援 Flutter 穩定版，新的季版本最多 5 個工作天才支援。升級 Flutter 前先看 `~/.shorebird/bin/shorebird flutter versions list` 有沒有。
 - iOS 不要開 `--obfuscate`，Shorebird 不支援。
-- Crashlytics：我們沒有用 `--obfuscate` 或 `--split-debug-info`，Dart 的錯誤堆疊本來就看得懂，修補版不用另外上傳符號。Crashlytics 不會標出當機的是哪個修補；要分辨時，照 Shorebird 文件〈Crash Reporting › Crashlytics〉用 `shorebird_code_push` 把修補編號設成 custom key。
+- Crashlytics：我們沒有用 `--obfuscate` 或 `--split-debug-info`，Dart 的錯誤堆疊本來就看得懂，修補版不用另外上傳符號。當機報告的 custom key `shorebird_patch_number` 是當時跑的修補（0 是沒有），「我的」的版本也會寫「修正 N」，回報問題時看得出有沒有拿到修補。
 - App 每次打開都會連 Shorebird，隱私權政策第 3.8 節寫了送出什麼。
 - 網頁版不用 Shorebird，部署完就更新。
 
