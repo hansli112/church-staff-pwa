@@ -90,6 +90,8 @@ cd app
 
 **什麼能熱更新**：只有 Dart 程式碼，例如修 bug、改文字、調畫面。圖片、字型、原生程式碼、新套件、權限、App 圖示都要重新上架。只拿來修小 bug：iOS 上修補改到的函式要用直譯器跑，大約慢 100 倍，大改畫面或吃運算的地方會卡。新功能照常上架。
 
+改文字時 `shorebird patch` 會說資源有改動而停下來：`lib/l10n/*.arb` 也列在 pubspec 的 assets，但只有網頁版預載字型時讀（`lib/core/fonts.dart`），手機 App 的文字來自產生的 Dart 程式碼。所以**只有 ARB 改動**時，可以加 `--allow-asset-diffs`；改到其他資源就一定要重新上架。
+
 **推修補**：先推到 staging，只有用 `shorebird preview` 裝的手機收得到。確認沒問題再改成 stable，所有人下次打開 App 就套用：
 
 ```sh
