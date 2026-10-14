@@ -99,6 +99,11 @@ void main() {
     expect(dropLineEndCommas('一。二', [2, 3]), '一。二', reason: 'other marks stay');
   });
 
+  test('a comma before a line break of the text goes, and leaves no empty line', () {
+    expect(dropLineEndCommas('一，\n二', [2, 4]), '一\n二');
+    expect(dropLineEndCommas('一，\n二', [3, 4]), '一\n二');
+  });
+
   group('a paragraph', () {
     test('leaves no last line of one or two characters', () {
       const text = '你會退出所有教會，帳號與個人資料會刪除且無法復原';

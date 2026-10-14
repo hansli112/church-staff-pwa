@@ -54,7 +54,8 @@ class _BalancedTextState extends State<BalancedText> {
 }
 
 /// [text] with the commas (，) at the [ends] of its lines, but the last,
-/// turned into line breaks.
+/// turned into line breaks; one before a line break of [text] itself just
+/// goes, so it leaves no empty line.
 String dropLineEndCommas(String text, List<int> ends) {
   final chars = text.split('');
   for (final end in ends.take(ends.length - 1)) {
@@ -62,7 +63,9 @@ String dropLineEndCommas(String text, List<int> ends) {
     while (i >= 0 && chars[i].trim().isEmpty) {
       i--;
     }
-    if (i >= 0 && chars[i] == '，') chars[i] = '\n';
+    if (i >= 0 && chars[i] == '，') {
+      chars[i] = i + 1 < chars.length && chars[i + 1] == '\n' ? '' : '\n';
+    }
   }
   return chars.join();
 }
