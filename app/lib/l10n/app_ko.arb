@@ -632,7 +632,7 @@
   "appVersionWithFix": "{version} · 수정 {patch}",
   "appVersionDevelopment": "개발 버전(아직 릴리스 없음)",
   "appUpdateNativeTitle": "앱 업데이트",
-  "appUpdateNativeNote": "App Store나 Google Play에서 업데이트를 확인해 주세요",
+  "appUpdateNativeNote": "{store}에서 업데이트를 확인해 주세요",
   "updateRequiredTitle": "마르다의 쉼표를 업데이트해 주세요",
   "updateRequiredBody": "이 버전은 너무 오래되었어요. 업데이트하면 계속 사용할 수 있어요.",
   "updateRequiredOpen": "{store}에서 업데이트",

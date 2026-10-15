@@ -2123,7 +2123,9 @@ class L10nZh extends L10n {
   String get appUpdateNativeTitle => 'App 更新';
 
   @override
-  String get appUpdateNativeNote => '請到 App Store 或 Google Play 檢查更新';
+  String appUpdateNativeNote(String store) {
+    return '請到 $store 檢查更新';
+  }
 
   @override
   String get updateRequiredTitle => '請更新馬大別忙';
@@ -4536,7 +4538,9 @@ class L10nZhHans extends L10nZh {
   String get appUpdateNativeTitle => 'App 更新';
 
   @override
-  String get appUpdateNativeNote => '请到 App Store 或 Google Play 检查更新';
+  String appUpdateNativeNote(String store) {
+    return '请到 $store 检查更新';
+  }
 
   @override
   String get updateRequiredTitle => '请更新马大别忙';

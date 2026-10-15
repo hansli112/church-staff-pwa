@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">마르다의 쉼표</string>
+    <string name="notification_channel">봉사 알림</string>
+    <string name="notification_channel_description">봉사 배정과 변경, 봉사 알림</string>
 </resources>

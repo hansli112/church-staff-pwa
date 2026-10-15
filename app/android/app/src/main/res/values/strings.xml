@@ -3,4 +3,8 @@
     <!-- Under the home-screen icon: English for every language the app does
          not speak; values-*/ have the others (functions/test/languages.test.ts). -->
     <string name="app_name">Martha, sit</string>
+    <!-- The notification channel pushes arrive on (MainActivity.kt), as
+         system settings list it. -->
+    <string name="notification_channel">Serving</string>
+    <string name="notification_channel_description">Put on or taken off serving, schedule changes, and serving reminders</string>
 </resources>

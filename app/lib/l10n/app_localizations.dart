@@ -3892,11 +3892,11 @@ abstract class L10n {
   /// **'App 更新'**
   String get appUpdateNativeTitle;
 
-  /// No description provided for @appUpdateNativeNote.
+  /// Store app 我的: where updates come from, the store this phone's app came from.
   ///
   /// In zh, this message translates to:
-  /// **'請到 App Store 或 Google Play 檢查更新'**
-  String get appUpdateNativeNote;
+  /// **'請到 {store} 檢查更新'**
+  String appUpdateNativeNote(String store);
 
   /// Over the whole store app while it is older than the lowest build the backend allows (platform/app); the user cannot go on without updating.
   ///

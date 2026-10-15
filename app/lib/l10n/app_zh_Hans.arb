@@ -632,7 +632,7 @@
   "appVersionWithFix": "{version} · 修正 {patch}",
   "appVersionDevelopment": "开发版本（还没有发布版本）",
   "appUpdateNativeTitle": "App 更新",
-  "appUpdateNativeNote": "请到 App Store 或 Google Play 检查更新",
+  "appUpdateNativeNote": "请到 {store} 检查更新",
   "updateRequiredTitle": "请更新马大别忙",
   "updateRequiredBody": "这个版本太旧了，更新后才能继续使用",
   "updateRequiredOpen": "到 {store} 更新",

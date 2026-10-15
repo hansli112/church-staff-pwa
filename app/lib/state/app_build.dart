@@ -26,6 +26,15 @@ enum AppStore {
       appleAppId.isEmpty ? Uri.parse(Env.current.webOrigin) : Uri.https('apps.apple.com', '/app/id$appleAppId'),
   };
 
+  /// This phone's store; null on the web and on desktops, which have none.
+  static AppStore? get current => kIsWeb
+      ? null
+      : switch (defaultTargetPlatform) {
+          TargetPlatform.android => googlePlay,
+          TargetPlatform.iOS => appStore,
+          _ => null,
+        };
+
   /// The lowest build of this store's app that may still run.
   int lowestIn(MinimumBuilds min) => switch (this) {
     googlePlay => min.android,
@@ -57,12 +66,7 @@ class AppBuild {
   /// This phone's, read once at start; null on the web, which updates itself,
   /// and if the phone will not say (then nothing is held back).
   static Future<AppBuild?> read() async {
-    if (kIsWeb) return null;
-    final store = switch (defaultTargetPlatform) {
-      TargetPlatform.android => AppStore.googlePlay,
-      TargetPlatform.iOS => AppStore.appStore,
-      _ => null,
-    };
+    final store = AppStore.current;
     if (store == null) return null;
     try {
       final info = await PackageInfo.fromPlatform();

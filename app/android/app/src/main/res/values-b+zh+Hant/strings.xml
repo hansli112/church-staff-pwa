@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">馬大別忙</string>
+    <string name="notification_channel">服事通知</string>
+    <string name="notification_channel_description">排進或移出服事、服事表異動、服事提醒</string>
 </resources>

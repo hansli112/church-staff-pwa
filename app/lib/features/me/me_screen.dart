@@ -179,7 +179,8 @@ class _UpdatesSection extends ConsumerWidget {
                 final fix => l10n.appVersionWithFix(build.label, fix),
               },
             ),
-          ListRow(title: l10n.appUpdateNativeTitle, subtitle: l10n.appUpdateNativeNote),
+          if (AppStore.current case final store?)
+            ListRow(title: l10n.appUpdateNativeTitle, subtitle: l10n.appUpdateNativeNote(store.label)),
         ],
       );
     }

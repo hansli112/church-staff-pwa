@@ -2127,7 +2127,9 @@ class L10nJa extends L10n {
   String get appUpdateNativeTitle => 'アプリのアップデート';
 
   @override
-  String get appUpdateNativeNote => 'App Store または Google Play でアップデートを確認してください';
+  String appUpdateNativeNote(String store) {
+    return '$store でアップデートを確認してください';
+  }
 
   @override
   String get updateRequiredTitle => '「マルタ、ひと休み」をアップデートしてください';

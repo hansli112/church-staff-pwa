@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">マルタ、ひと休み</string>
+    <string name="notification_channel">奉仕のお知らせ</string>
+    <string name="notification_channel_description">奉仕への割り当てや変更、奉仕のリマインダー</string>
 </resources>

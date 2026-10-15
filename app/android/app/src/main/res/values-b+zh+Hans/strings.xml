@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">马大别忙</string>
+    <string name="notification_channel">事奉通知</string>
+    <string name="notification_channel_description">排进或移出事奉、事奉表变动、事奉提醒</string>
 </resources>

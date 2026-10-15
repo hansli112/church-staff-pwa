@@ -632,7 +632,7 @@
   "appVersionWithFix": "{version} · 修正 {patch}",
   "appVersionDevelopment": "開発版（リリース版はまだありません）",
   "appUpdateNativeTitle": "アプリのアップデート",
-  "appUpdateNativeNote": "App Store または Google Play でアップデートを確認してください",
+  "appUpdateNativeNote": "{store} でアップデートを確認してください",
   "updateRequiredTitle": "「マルタ、ひと休み」をアップデートしてください",
   "updateRequiredBody": "このバージョンは古くなりました。引き続き使うにはアップデートしてください。",
   "updateRequiredOpen": "{store} でアップデート",
