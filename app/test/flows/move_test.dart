@@ -89,27 +89,44 @@ void main() {
     expect(b.pendingMembers[cid]!.length, 3);
   });
 
-  testWidgets('who I am: the one under my email comes first, and the list can be searched', (tester) async {
-    await start(tester, preview, email: 'mei@example.com');
+  testWidgets('a few people: no search box', (tester) async {
+    await start(tester, preview);
     await tapText(tester, '選擇搬家檔');
-    List<String> names() => tester.widgetList<ListRow>(find.byType(ListRow)).map((r) => r.title).toList();
-    expect(names().skip(3).first, '李美玉', reason: 'after 同工, 服事表, 聚會');
+    expect(find.byType(SearchField), findsNothing);
+  });
 
-    await tester.enterText(find.widgetWithText(TextField, '搜尋同工'), '志豪');
+  testWidgets('who I am, from many: the one under my email comes first, and the list can be searched', (tester) async {
+    final many = MovePreview(
+      members: 3 + moveSearchFrom,
+      rosters: 2,
+      services: const ['主日崇拜'],
+      people: [
+        ...preview.people,
+        for (var i = 0; i < moveSearchFrom; i++) MovePerson(id: 'old-$i', name: '同工$i', email: 'p$i@example.com'),
+      ],
+    );
+    await start(tester, many, email: 'mei@example.com');
+    await tapText(tester, '選擇搬家檔');
+    double top(String name) => tester.getTopLeft(find.text(name)).dy;
+    expect(top('李美玉'), lessThan(top('王牧師')), reason: 'listed first, though second in the file');
+
+    final search = find.widgetWithText(TextField, '搜尋同工');
+    await tester.enterText(search, '志豪');
     await tester.pump();
     expect(find.text('陳志豪'), findsOneWidget);
     expect(find.text('王牧師'), findsNothing);
-    expect(find.text('李美玉'), findsOneWidget, reason: 'the one picked stays in sight');
+    expect(find.text('李美玉'), findsOneWidget, reason: 'the one picked stays in the list');
+    expect(find.text('找不到這位同工'), findsNothing);
 
-    await tester.enterText(find.widgetWithText(TextField, '搜尋同工'), 'PASTOR@');
+    await tester.enterText(search, 'PASTOR@');
     await tester.pump();
     expect(find.text('王牧師'), findsOneWidget, reason: 'by email too');
     expect(find.text('陳志豪'), findsNothing);
 
-    await tapText(tester, '李美玉');
-    await tester.enterText(find.widgetWithText(TextField, '搜尋同工'), '沒有這個人');
+    await tester.enterText(search, '沒有這個人');
     await tester.pump();
-    expect(find.text('找不到這位同工'), findsOneWidget);
+    expect(find.text('找不到這位同工'), findsOneWidget, reason: 'though the one picked is still there');
+    expect(find.text('李美玉'), findsOneWidget);
   });
 
   testWidgets('a wrong file or one too large says so', (tester) async {

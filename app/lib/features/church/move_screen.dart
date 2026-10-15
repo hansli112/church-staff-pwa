@@ -15,6 +15,9 @@ import '../common/errors.dart';
 import '../common/time_zones.dart';
 import 'welcome_screen.dart' show VerifyEmailBanner;
 
+/// More people than this and 這位是我 can be searched: a few fit on the screen.
+const moveSearchFrom = 10;
+
 /// Picks the move file; null when cancelled. Overridden in tests.
 final moveFilePickerProvider = Provider<Future<List<int>?> Function()>(
   (ref) => () async {
@@ -40,7 +43,7 @@ class _MoveScreenState extends ConsumerState<MoveScreen> {
   String? _me;
 
   /// The person under the signed-in email, listed first.
-  String? _found;
+  String? _sameEmail;
   String _query = '';
   bool _busy = false;
   String? _error;
@@ -68,7 +71,7 @@ class _MoveScreenState extends ConsumerState<MoveScreen> {
         _path = path;
         _preview = preview;
         // Most often the uploader is in the file under the same email.
-        _me = _found = preview.people.where((p) => p.email.trim().toLowerCase() == email).firstOrNull?.id;
+        _me = _sameEmail = preview.people.where((p) => p.email.trim().toLowerCase() == email).firstOrNull?.id;
       });
     } catch (e) {
       if (mounted) setState(() => _error = errorText(l10n, e));
@@ -110,11 +113,14 @@ class _MoveScreenState extends ConsumerState<MoveScreen> {
     final c = AppColors.of(context);
     final verified = ref.watch(authUserProvider.select((u) => u.value?.verified ?? false));
     final preview = _preview;
-    // The one picked stays in sight whatever the search.
     final all = preview?.people ?? const <MovePerson>[];
+    final ordered = [...all.where((p) => p.id == _sameEmail), ...all.where((p) => p.id != _sameEmail)];
+    final searchable = all.length > moveSearchFrom;
+    bool matches(MovePerson p) => matchesSearch(p.name, _query) || matchesSearch(p.email, _query);
+    // The one picked stays in the list whatever the search.
     final people = [
-      for (final p in [...all.where((p) => p.id == _found), ...all.where((p) => p.id != _found)])
-        if (p.id == _me || matchesSearch(p.name, _query) || matchesSearch(p.email, _query)) p,
+      for (final p in ordered)
+        if (p.id == _me || matches(p)) p,
     ];
     final error = _error == null
         ? null
@@ -159,15 +165,25 @@ class _MoveScreenState extends ConsumerState<MoveScreen> {
                 onChanged: (_) => setState(() {}),
               ),
             ),
+            if (searchable) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Space.m),
+                child: SectionHeader(l10n.moveWhoAmI),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Space.m),
+                child: SearchField(hint: l10n.searchMembers, onChanged: (q) => setState(() => _query = q)),
+              ),
+              if (!ordered.any(matches))
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(Space.l, Space.m, Space.l, 0),
+                  child: Text(l10n.noMembersFound, style: AppText.subheadline.copyWith(color: c.secondaryLabel)),
+                ),
+            ],
             ListSection(
-              header: l10n.moveWhoAmI,
+              header: searchable ? null : l10n.moveWhoAmI,
               footer: l10n.moveWhoAmIFooter,
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(Space.s),
-                  child: SearchField(hint: l10n.searchMembers, onChanged: (q) => setState(() => _query = q)),
-                ),
-                if (people.isEmpty) ListRow(title: l10n.noMembersFound),
                 for (final p in people)
                   ListRow(
                     title: p.name.isEmpty ? p.email : p.name,
