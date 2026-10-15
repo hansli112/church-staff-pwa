@@ -92,7 +92,7 @@ p { margin: 0 0 16px; }
 .hero { background: radial-gradient(120% 80% at 80% 0%, var(--bg2), transparent 70%); }
 .hero .wrap { display: grid; gap: 48px; padding-top: 40px; padding-bottom: 56px; align-items: center; }
 @media (min-width: 860px) { .hero .wrap { grid-template-columns: 1fr auto; gap: 64px; padding-top: 72px; padding-bottom: 88px; } }
-.eyebrow { display: inline-block; margin-bottom: 16px; padding: 4px 12px; border-radius: 999px; background: var(--fill); color: var(--text2); font-size: 0.875rem; font-weight: 600; }
+.eyebrow { margin-bottom: 12px; color: var(--accent); font-size: 1.0625rem; font-weight: 700; }
 .hero h1 { font-size: clamp(2.25rem, 7vw, 3.5rem); font-weight: 800; letter-spacing: -0.01em; margin-bottom: 16px; }
 .hero .lead, .page .lead { font-size: 1.1875rem; color: var(--text2); margin-bottom: 32px; }
 .hero .lead { max-width: 30em; }
