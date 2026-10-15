@@ -21,14 +21,18 @@ void main() {
     expect(find.text('1.0.0 (12)'), findsOneWidget);
   });
 
-  testWidgets('我的 sends updates to the store this phone has', (tester) async {
-    await pumpApp(tester, seededChurch(as: staffMei), overrides: [appBuildProvider.overrideWithValue(_play12)]);
-    await tester.tap(find.text('我的').last);
-    await settle(tester);
-    final note = defaultTargetPlatform == TargetPlatform.iOS ? '請到 App Store 檢查更新' : '請到 Google Play 檢查更新';
-    await tester.scrollUntilVisible(find.text(note), 180, scrollable: find.byType(Scrollable).last);
-    expect(find.textContaining('App Store 或'), findsNothing);
-  }, variant: const TargetPlatformVariant({TargetPlatform.android, TargetPlatform.iOS}));
+  testWidgets(
+    '我的 sends updates to the store this phone has',
+    (tester) async {
+      await pumpApp(tester, seededChurch(as: staffMei), overrides: [appBuildProvider.overrideWithValue(_play12)]);
+      await tester.tap(find.text('我的').last);
+      await settle(tester);
+      final note = defaultTargetPlatform == TargetPlatform.iOS ? '請到 App Store 檢查更新' : '請到 Google Play 檢查更新';
+      await tester.scrollUntilVisible(find.text(note), 180, scrollable: find.byType(Scrollable).last);
+      expect(find.textContaining('App Store 或'), findsNothing);
+    },
+    variant: const TargetPlatformVariant({TargetPlatform.android, TargetPlatform.iOS}),
+  );
 
   testWidgets('with a hot fix applied, 我的 says which, so a report tells which code was running', (tester) async {
     const patched = AppBuild(store: AppStore.googlePlay, version: '1.0.0', number: 12, patch: 2);
