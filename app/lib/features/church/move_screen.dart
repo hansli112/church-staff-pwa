@@ -8,6 +8,7 @@ import '../../core/design/tokens.dart';
 import '../../core/languages.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
+import '../../domain/text.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
@@ -37,6 +38,10 @@ class _MoveScreenState extends ConsumerState<MoveScreen> {
   String? _path;
   MovePreview? _preview;
   String? _me;
+
+  /// The person under the signed-in email, listed first.
+  String? _found;
+  String _query = '';
   bool _busy = false;
   String? _error;
 
@@ -63,7 +68,7 @@ class _MoveScreenState extends ConsumerState<MoveScreen> {
         _path = path;
         _preview = preview;
         // Most often the uploader is in the file under the same email.
-        _me = preview.people.where((p) => p.email.trim().toLowerCase() == email).firstOrNull?.id;
+        _me = _found = preview.people.where((p) => p.email.trim().toLowerCase() == email).firstOrNull?.id;
       });
     } catch (e) {
       if (mounted) setState(() => _error = errorText(l10n, e));
@@ -105,6 +110,12 @@ class _MoveScreenState extends ConsumerState<MoveScreen> {
     final c = AppColors.of(context);
     final verified = ref.watch(authUserProvider.select((u) => u.value?.verified ?? false));
     final preview = _preview;
+    // The one picked stays in sight whatever the search.
+    final all = preview?.people ?? const <MovePerson>[];
+    final people = [
+      for (final p in [...all.where((p) => p.id == _found), ...all.where((p) => p.id != _found)])
+        if (p.id == _me || matchesSearch(p.name, _query) || matchesSearch(p.email, _query)) p,
+    ];
     final error = _error == null
         ? null
         : Padding(
@@ -152,7 +163,12 @@ class _MoveScreenState extends ConsumerState<MoveScreen> {
               header: l10n.moveWhoAmI,
               footer: l10n.moveWhoAmIFooter,
               children: [
-                for (final p in preview.people)
+                Padding(
+                  padding: const EdgeInsets.all(Space.s),
+                  child: SearchField(hint: l10n.searchMembers, onChanged: (q) => setState(() => _query = q)),
+                ),
+                if (people.isEmpty) ListRow(title: l10n.noMembersFound),
+                for (final p in people)
                   ListRow(
                     title: p.name.isEmpty ? p.email : p.name,
                     subtitle: p.name.isEmpty || p.email.isEmpty ? null : p.email,
