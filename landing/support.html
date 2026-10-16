@@ -54,10 +54,10 @@
       <!-- payments:off -->
       <!-- 還沒開放：沒有按鈕，但寫出金額、付款方式和退款，不寫是哪家金流（金流審核時要看得到網站以新台幣標價）。開放時網站改用 payments on 建置（docs/firebase-setup.md〈線上支持〉）。 -->
       <p>線上支持即將開放，謝謝你的心意。</p>
-      <p>開放後可以用信用卡或 Apple Pay 支持，以新台幣付款：50、100、200 元，或 30 到 1,000 元之間自己決定。</p>
+      <p>開放後可以用台灣發行的信用卡或 Apple Pay 支持，以新台幣付款：50、100、200 元，或 30 到 1,000 元之間自己決定。</p>
       <!-- /payments:off -->
       <!-- payments:on -->
-      <p>可以用信用卡或 Apple Pay，金額自己決定。</p>
+      <p>可以用台灣發行的信用卡或 Apple Pay，金額自己決定。</p>
       <!-- 選金額 → POST /support/pay（Hosting 轉到 ecpayStart）→ 拿到簽好的表單，送到綠界的付款頁。 -->
       <form id="pay-form" action="/support/pay" method="post" novalidate>
         <fieldset class="amounts">
@@ -73,7 +73,7 @@
         </div>
         <button class="btn btn-primary wide" id="pay" type="submit">支持馬大別忙</button>
         <p class="fine" id="pay-msg" role="status" hidden></p>
-        <p class="fine">付款由綠界科技（ECPay）處理，會轉到綠界的付款頁；馬大別忙不會拿到你的卡號。以新台幣扣款，外幣卡由發卡銀行換算。</p>
+        <p class="fine">付款由綠界科技（ECPay）處理，會轉到綠界的付款頁；馬大別忙不會拿到你的卡號。只接受台灣發行的卡（綁在 Apple Pay 的卡也一樣），以新台幣扣款。</p>
       </form>
       <!-- /payments:on -->
     </section>
