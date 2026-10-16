@@ -27,14 +27,13 @@ class NotificationsScreen extends ConsumerWidget {
     final needsHomeScreen = ref.watch(addToHomeProvider) == AddToHome.ios;
     // The phone will not ask: the switches are greyed out.
     final blocked = permission == PushPermission.denied || needsHomeScreen;
-    // Nothing comes until the phone allows it; turning a switch on asks.
-    final off = blocked || permission == PushPermission.notAsked;
+    final shownOff = blocked || permission == PushPermission.notAsked;
     final churchId = ref.watch(currentChurchIdProvider);
 
     Future<void> set(NotificationKind kind, bool on) async {
       if (on && permission == PushPermission.notAsked) {
-        // Once allowed, each launch registers the device again; null is
-        // allowed but not registered yet, so the choice is still kept.
+        // Once allowed, each launch registers the device again. Asking that
+        // failed (registering, mostly) still keeps the choice.
         final result = await enableNotifications(context, ref, nudge: true);
         if (result != null && result != PushPermission.granted) return;
       }
@@ -60,7 +59,7 @@ class NotificationsScreen extends ConsumerWidget {
       (ReminderTiming.both, l10n.notifReminderBoth, l10n.notifReminderBothSub),
     ];
     // While the timing choice shows below, the switch does not repeat it.
-    final timingShown = !off && !muted.contains(NotificationKind.reminder);
+    final timingShown = !shownOff && !muted.contains(NotificationKind.reminder);
     final reminderSub = timingShown ? null : timings.firstWhere((t) => t.$1 == me.reminderTiming).$3;
     final kinds = [
       (NotificationKind.reminder, l10n.notifReminder, reminderSub),
@@ -109,7 +108,7 @@ class NotificationsScreen extends ConsumerWidget {
                 SwitchRow(
                   title: title,
                   subtitle: sub,
-                  value: !off && !muted.contains(kind),
+                  value: !shownOff && !muted.contains(kind),
                   onChanged: blocked ? null : (v) => set(kind, v),
                 ),
             ],

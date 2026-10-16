@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/domain/models.dart';
 import 'package:martha/state/push.dart';
 
 import '../support/fake_push.dart';
@@ -54,7 +55,22 @@ void main() {
     expect(find.textContaining('下次打開 App 會再試'), findsOneWidget);
   });
 
-  testWidgets('not yet allowed on the phone, the switches are off, and turning one on asks', (tester) async {
+  testWidgets('allowed, but the device cannot get a token: the switch turned on stays on', (tester) async {
+    final push = FakePush(answer: PushPermission.granted, registers: false);
+    final b = seededChurch();
+    final pastor = b.members['grace']!['pastor']!;
+    b.members['grace']!['pastor'] = pastor.copyWith(mutedNotifications: {NotificationKind.reminder});
+    await pumpApp(tester, b, overrides: [pushServiceProvider.overrideWithValue(push)]);
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/notifications');
+    await settle(tester);
+
+    await tester.tap(find.text('服事提醒'));
+    await settle(tester);
+    expect(b.members['grace']!['pastor']!.mutedNotifications, isEmpty);
+    expect(tester.widget<Switch>(find.byType(Switch).first).value, isTrue);
+  });
+
+  testWidgets('not yet allowed on the phone: the switches are off, and turning one on asks', (tester) async {
     final push = FakePush(answer: PushPermission.granted);
     final b = seededChurch();
     await pumpApp(tester, b, overrides: [pushServiceProvider.overrideWithValue(push)]);
@@ -77,7 +93,7 @@ void main() {
     expect(find.text('前一天晚上'), findsOneWidget);
   });
 
-  testWidgets('not allowed when asked, the switch stays off', (tester) async {
+  testWidgets('not allowed when asked: the switch stays off', (tester) async {
     final push = FakePush(answer: PushPermission.denied);
     final b = seededChurch();
     await pumpApp(tester, b, overrides: [pushServiceProvider.overrideWithValue(push)]);

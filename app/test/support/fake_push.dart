@@ -35,8 +35,9 @@ class FakePush implements PushService {
   @override
   Future<PushPermission> enable() async {
     asked++;
-    if (!registers) throw Exception('apns-token-not-set');
     if (answer != PushPermission.notAsked) state = answer;
+    // Allowed on the phone, then no token to register.
+    if (!registers) throw Exception('apns-token-not-set');
     return answer;
   }
 
