@@ -31,15 +31,17 @@ class NotificationsScreen extends ConsumerWidget {
     final churchId = ref.watch(currentChurchIdProvider);
 
     Future<void> set(NotificationKind kind, bool on) async {
+      // Saved even if this page is left while the phone asks.
+      final data = ref.churchData;
       if (on && permission == PushPermission.notAsked) {
         // Once allowed, each launch registers the device again. Asking that
         // failed (registering, mostly) still keeps the choice.
-        final result = await enableNotifications(context, ref, nudge: true);
+        final result = await enableNotifications(context, nudge: true);
         if (result != null && result != PushPermission.granted) return;
       }
       final next = on ? ({...muted}..remove(kind)) : {...muted, kind};
       try {
-        await ref.churchData.setNotificationPrefs(me.uid, next);
+        await data.setNotificationPrefs(me.uid, next);
       } catch (_) {
         if (context.mounted) showToast(context, l10n.saveFailed);
       }

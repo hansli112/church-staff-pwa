@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -91,6 +93,27 @@ void main() {
       expect(s.value, isTrue);
     }
     expect(find.text('前一天晚上'), findsOneWidget);
+  });
+
+  testWidgets('turning one on, then leaving 通知 before the prompt answers: the choice still saves', (tester) async {
+    final prompt = Completer<void>();
+    final push = FakePush(answer: PushPermission.granted, prompt: prompt);
+    final b = seededChurch();
+    final pastor = b.members['grace']!['pastor']!;
+    b.members['grace']!['pastor'] = pastor.copyWith(mutedNotifications: {NotificationKind.reminder});
+    await pumpApp(tester, b, overrides: [pushServiceProvider.overrideWithValue(push)]);
+    final router = GoRouter.of(tester.element(find.byType(Scaffold).first));
+    router.go('/me/notifications');
+    await settle(tester);
+
+    await tester.tap(find.text('服事提醒'));
+    await tester.pump();
+    router.go('/me');
+    await settle(tester);
+    expect(find.text('服事提醒'), findsNothing);
+    prompt.complete();
+    await settle(tester);
+    expect(b.members['grace']!['pastor']!.mutedNotifications, isEmpty);
   });
 
   testWidgets('not allowed when asked: the switch stays off', (tester) async {

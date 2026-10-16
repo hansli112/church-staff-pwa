@@ -28,19 +28,23 @@ bool notificationsAskDue(WidgetRef ref) =>
 /// fail even when allowed (no APNs token yet); the next launch tries again,
 /// so says so instead of looking stuck. With [nudge], a dismissed prompt
 /// says to tap 允許.
-Future<PushPermission?> enableNotifications(BuildContext context, WidgetRef ref, {bool nudge = false}) async {
+Future<PushPermission?> enableNotifications(BuildContext context, {bool nudge = false}) async {
   final l10n = L10n.of(context);
+  // The phone's prompt sends the app to the background and back, which
+  // sees notifications on and takes the home page's card away before this
+  // returns, and its ref with it.
+  final container = ProviderScope.containerOf(context, listen: false);
   try {
-    final result = await ref.read(pushServiceProvider).enable();
+    final result = await container.read(pushServiceProvider).enable();
     // Dismissed, or tucked into the address bar by the browser.
     if (nudge && result == PushPermission.notAsked && context.mounted) showToast(context, l10n.notifNotAllowed);
     return result;
   } catch (e, stack) {
-    ref.read(telemetryProvider).recordError(e, stack);
+    container.read(telemetryProvider).recordError(e, stack);
     if (context.mounted) showToast(context, l10n.notifRegisterFailed);
     return null;
   } finally {
-    ref.invalidate(pushPermissionProvider);
+    container.invalidate(pushPermissionProvider);
   }
 }
 
@@ -70,7 +74,7 @@ class _TurnOnNotificationsScreenState extends ConsumerState<TurnOnNotificationsS
 
   Future<void> _enable() async {
     setState(() => _busy = true);
-    await enableNotifications(context, ref);
+    await enableNotifications(context);
     if (mounted) context.go('/home');
   }
 
@@ -135,9 +139,7 @@ class TurnOnNotificationsCard extends ConsumerWidget {
             tooltip: l10n.notifCardHide,
             onPressed: () => ref.read(notificationsCardHiddenProvider.notifier).mark(),
           ),
-          onTap: off
-              ? () => openNotificationSettings(context, ref)
-              : () => enableNotifications(context, ref, nudge: true),
+          onTap: off ? () => openNotificationSettings(context, ref) : () => enableNotifications(context, nudge: true),
         ),
       ],
     );

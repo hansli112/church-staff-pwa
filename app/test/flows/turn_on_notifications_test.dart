@@ -1,13 +1,24 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/core/telemetry.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/state/push.dart';
+import 'package:martha/state/session.dart';
 
 import '../support/fake_push.dart';
 import '../support/harness.dart';
 import '../support/seed.dart';
+
+class _Errors extends NoTelemetry {
+  final errors = <Object>[];
+
+  @override
+  void recordError(Object error, StackTrace stack, {bool fatal = false}) => errors.add(error);
+}
 
 Future<void> tapText(WidgetTester tester, String text) async {
   await tester.tap(find.text(text).last);
@@ -99,6 +110,45 @@ void main() {
     await join(tester, 'hope', 'HOPE2026');
     expect(find.text('被排到服事時通知你'), findsNothing, reason: 'asked once on this phone');
     expect(find.byType(NavigationBar), findsOneWidget);
+  });
+
+  testWidgets(
+    'allowed from the home page: the app comes back before the prompt answers, and registering still finishes',
+    (
+      tester,
+    ) async {
+      final prompt = Completer<void>();
+      final push = FakePush(answer: PushPermission.granted, prompt: prompt);
+      await pumpApp(tester, seededChurch(as: staffMei), overrides: [pushServiceProvider.overrideWithValue(push)]);
+
+      await tapText(tester, '開啟通知');
+      // Android's prompt pauses the app; back, it sees notifications on and
+      // the card goes, while registering is still under way.
+      await resume(tester);
+      expect(find.text('開啟通知'), findsNothing);
+
+      prompt.complete();
+      await settle(tester);
+      expect(push.asked, 1);
+      expect(find.text('開啟通知'), findsNothing);
+    },
+  );
+
+  testWidgets('allowed from the home page, the card gone, then no token: recorded, and nothing breaks', (tester) async {
+    final prompt = Completer<void>();
+    final push = FakePush(answer: PushPermission.granted, registers: false, prompt: prompt);
+    final telemetry = _Errors();
+    await pumpApp(
+      tester,
+      seededChurch(as: staffMei),
+      overrides: [pushServiceProvider.overrideWithValue(push), telemetryProvider.overrideWithValue(telemetry)],
+    );
+
+    await tapText(tester, '開啟通知');
+    await resume(tester);
+    prompt.complete();
+    await settle(tester);
+    expect(telemetry.errors, hasLength(1));
   });
 
   testWidgets('a phone that already allows them is not asked', (tester) async {

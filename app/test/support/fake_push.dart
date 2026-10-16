@@ -10,6 +10,7 @@ class FakePush implements PushService {
     this.answer = PushPermission.notAsked,
     this.registers = true,
     this.hasSettings = true,
+    this.prompt,
   });
 
   /// The permission now; turned on in the phone's settings, a test sets it.
@@ -23,6 +24,10 @@ class FakePush implements PushService {
 
   /// False: a phone without a notification settings page to open.
   final bool hasSettings;
+
+  /// Set: the prompt stays up until it completes, as the phone's does while
+  /// the app goes to the background and back.
+  final Completer<void>? prompt;
   final notices = StreamController<PushNotice>.broadcast();
 
   /// How many times the permission prompt and the phone's settings opened.
@@ -36,6 +41,7 @@ class FakePush implements PushService {
   Future<PushPermission> enable() async {
     asked++;
     if (answer != PushPermission.notAsked) state = answer;
+    await prompt?.future;
     // Allowed on the phone, then no token to register.
     if (!registers) throw Exception('apns-token-not-set');
     return answer;
