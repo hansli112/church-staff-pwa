@@ -89,6 +89,13 @@ class _SignInMethodsScreenState extends ConsumerState<SignInMethodsScreen> {
               children: [
                 ListRow(
                   title: l10n.linkGoogle,
+                  // Linking goes on after Google's sheet closes.
+                  trailing: _busy
+                      ? const SizedBox.square(
+                          dimension: 22,
+                          child: CircularProgressIndicator.adaptive(strokeWidth: 2.5),
+                        )
+                      : null,
                   onTap: _busy ? null : () => _run(auth.linkGoogle, done: l10n.linkedGoogle),
                 ),
               ],
