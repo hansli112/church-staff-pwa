@@ -65,9 +65,10 @@ FirebaseOptions firebaseOptionsFor(Env env) {
     case Env.emulator:
     case Env.demo:
       // A demo- project ID makes the emulators accept any credentials and
-      // never touch a real project.
+      // never touch a real project. The key only has to look like one:
+      // Android's SDK refuses a call otherwise.
       return const FirebaseOptions(
-        apiKey: 'demo-key',
+        apiKey: 'AIzaDemoKeyForTheFirebaseEmulatorsOnly0',
         appId: '1:000000000000:web:0000000000000000',
         messagingSenderId: '000000000000',
         projectId: 'demo-martha',
