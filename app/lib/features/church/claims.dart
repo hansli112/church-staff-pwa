@@ -28,11 +28,12 @@ class DeclinedClaims extends Notifier<Set<String>> {
 final declinedClaimsProvider = NotifierProvider<DeclinedClaims, Set<String>>(DeclinedClaims.new);
 
 /// Member data moved from self-host waiting for this account: asked once
-/// the email is verified, never joined without a yes.
+/// the email is verified, or a Google or Apple account linked, never joined
+/// without a yes.
 final pendingClaimsProvider = FutureProvider<List<PendingClaim>>((ref) async {
-  final verified = ref.watch(authUserProvider.select((u) => u.value?.verified ?? false));
+  final emails = ref.watch(authUserProvider.select((u) => u.value?.claimEmails.join(' ') ?? ''));
   final uid = ref.watch(uidProvider);
-  if (uid == null || !verified) return const [];
+  if (uid == null || emails.isEmpty) return const [];
   // A church joined in the meantime may have been one of them.
   ref.watch(membershipsProvider.select((m) => m.value?.length));
   final declined = ref.watch(declinedClaimsProvider);

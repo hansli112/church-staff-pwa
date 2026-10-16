@@ -7,10 +7,11 @@ import { getStorage } from 'firebase-admin/storage';
 import { purgeDeletedChurches } from '../src/church.js';
 import { pendingClaims } from '../src/claim.js';
 import { MOVE_LIMITS, moveCommit, movePreview, type MoveDeps } from '../src/move.js';
-import { caller, clearFirestore, db, deps, purgeDeps, rejectsWith } from './support.js';
+import { auth, caller, clearFirestore, db, deps, purgeDeps, rejectsWith } from './support.js';
 
 const bucket = getStorage().bucket('demo-martha.appspot.com');
 const d: MoveDeps = { ...deps, bucket };
+const cd = { ...d, auth };
 const PATH = 'moves/newadmin/f1.json';
 
 /** A small self-host church, as the move command writes it. */
@@ -118,7 +119,7 @@ describe('self-serve move', () => {
     assert.equal((await db.doc(`churches/${churchId}/pendingMembers/old-pastor`).get()).exists, false);
     const roster = await db.doc(`churches/${churchId}/rosters/2026-10-04_sunday`).get();
     assert.deepEqual(roster.get('duties')[0].uids, { 王牧師: 'newadmin' });
-    assert.deepEqual(await pendingClaims(d, caller('p', { email: 'pastor@example.com' })), { claims: [] });
+    assert.deepEqual(await pendingClaims(cd, caller('p', { email: 'pastor@example.com' })), { claims: [] });
   });
 
   test('moving preserves small groups and reminder opt-out for pending members and the uploader’s chosen identity, not FCM tokens', async () => {
@@ -146,7 +147,7 @@ describe('self-serve move', () => {
   test('each pending member is found by its email, any case; the index never holds an email', async () => {
     await upload(moveFile());
     const { churchId } = await moveCommit(d, me, { path: PATH, churchName: '恩典堂' });
-    const found = async (email: string) => (await pendingClaims(d, caller('x', { email }))).claims.map((c) => [c.churchId, c.pendingId]);
+    const found = async (email: string) => (await pendingClaims(cd, caller('x', { email }))).claims.map((c) => [c.churchId, c.pendingId]);
     assert.deepEqual(await found('mei@example.com'), [[churchId, 'old-mei']]);
     assert.deepEqual(await found(' Pastor@Example.COM '), [[churchId, 'old-pastor']]);
     const index = await db.collection('pendingIndex').get();
@@ -199,7 +200,7 @@ describe('self-serve move', () => {
     const { churchId } = await moveCommit(d, me, { path: PATH, churchName: '恩典堂' });
     await db.doc(`churches/${churchId}`).update({ status: 'deleted', deletedAt: Timestamp.fromDate(new Date('2026-08-01T00:00:00Z')) });
     await purgeDeletedChurches(purgeDeps);
-    assert.deepEqual(await pendingClaims(d, caller('x', { email: 'mei@example.com' })), { claims: [] });
+    assert.deepEqual(await pendingClaims(cd, caller('x', { email: 'mei@example.com' })), { claims: [] });
     assert.ok((await db.collection('pendingIndex').get()).docs.every((x) => !(churchId in (x.get('churches') ?? {}))));
   });
 

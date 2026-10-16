@@ -183,6 +183,7 @@ class _UpdateEditGuardState extends ConsumerState<UpdateEditGuard> {
 
 bool isUpdateEditorRoute(String path) =>
     path == '/account' ||
+    path == '/account/sign-in' ||
     path.startsWith('/welcome/create') ||
     path.startsWith('/welcome/move') ||
     path.startsWith('/admin') && path != '/admin/stats' ||

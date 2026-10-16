@@ -340,9 +340,12 @@ class MemoryBackend implements Backend {
 class MemoryAuth implements AuthGateway {
   MemoryAuth();
 
-  /// Accounts by email. [federated]: signs in with Google or Apple, so it
-  /// counts as verified even with a password added.
-  final _accounts = <String, ({String uid, String password, bool federated, bool verified, String name})>{};
+  /// Accounts by their own email. [password] is empty when they have none.
+  final _accounts = <String, ({String uid, String password, bool verified, String name})>{};
+
+  /// The Google account each account signs in with, by the account's own
+  /// email: that same email, or a linked one.
+  final _google = <String, String>{};
   final _state = StreamController<AuthUser?>.broadcast(sync: true);
   AuthUser? _current;
   int _next = 1;
@@ -366,12 +369,19 @@ class MemoryAuth implements AuthGateway {
 
   AuthUser _user(String email) {
     final a = _accounts[email]!;
+    final signIns = [
+      if (a.password.isNotEmpty) SignIn(SignInMethod.password, email),
+      if (_google[email] case final google?) SignIn(SignInMethod.google, google),
+      if (appleLinked.contains(email)) SignIn(SignInMethod.apple, email),
+    ];
+    final vouched = signIns.any((s) => s.vouches && s.email == email);
     return AuthUser(
       uid: a.uid,
       email: email,
-      emailVerified: a.verified || a.federated,
+      emailVerified: a.verified || vouched,
       displayName: a.name,
-      usesPassword: !a.federated,
+      usesPassword: !vouched,
+      signIns: signIns,
     );
   }
 
@@ -382,13 +392,10 @@ class MemoryAuth implements AuthGateway {
     String name = '',
     bool verified = true,
   }) {
-    _accounts[email] ??= (
-      uid: uid ?? 'u${_next++}',
-      password: '',
-      federated: true,
-      verified: verified,
-      name: name,
-    );
+    if (!_accounts.containsKey(email)) {
+      _accounts[email] = (uid: uid ?? 'u${_next++}', password: '', verified: verified, name: name);
+      _google[email] = email;
+    }
     final user = _user(email);
     _set(user);
     return user;
@@ -398,16 +405,49 @@ class MemoryAuth implements AuthGateway {
   Future<void> signInWithGoogle() async {
     final email = googleAccount;
     if (email == null) throw const AuthException(AuthErrorCode.cancelled);
+    // Linked to an account under another email: that account.
+    final linked = _googleOwner(email);
+    if (linked != null) return _signedIn(linked);
     final existing = _accounts[email];
     // One account per email: Google takes over a password account.
     _accounts[email] = (
       uid: existing?.uid ?? 'u${_next++}',
       password: existing?.password ?? '',
-      federated: true,
       verified: true,
       name: existing?.name ?? email.split('@').first,
     );
+    _google[email] = email;
     _signedIn(email);
+  }
+
+  /// The account [google] signs in to, if any.
+  String? _googleOwner(String google) => _google.entries.where((e) => e.value == google).firstOrNull?.key;
+
+  @override
+  Future<void> linkGoogle() async {
+    final me = _current?.email;
+    if (me == null) return;
+    final email = googleAccount;
+    if (email == null) throw const AuthException(AuthErrorCode.cancelled);
+    final owner = _googleOwner(email) ?? (_accounts.containsKey(email) ? email : null);
+    if (owner != null && owner != me) throw const AuthException(AuthErrorCode.credentialInUse);
+    _google[me] = email;
+    _set(_user(me));
+  }
+
+  @override
+  Future<void> unlink(SignInMethod method) async {
+    final me = _current?.email;
+    if (me == null) return;
+    switch (method) {
+      case SignInMethod.password:
+        setPassword(me, '');
+      case SignInMethod.google:
+        _google.remove(me);
+      case SignInMethod.apple:
+        appleLinked.remove(me);
+    }
+    _set(_user(me));
   }
 
   @override
@@ -440,13 +480,7 @@ class MemoryAuth implements AuthGateway {
       _applePending = true;
       throw AuthException(AuthErrorCode.needsLink, email);
     }
-    _accounts[email] ??= (
-      uid: 'u${_next++}',
-      password: '',
-      federated: true,
-      verified: true,
-      name: appleName ?? email.split('@').first,
-    );
+    _accounts[email] ??= (uid: 'u${_next++}', password: '', verified: true, name: appleName ?? email.split('@').first);
     appleLinked.add(email);
     _signedIn(email);
   }
@@ -463,7 +497,7 @@ class MemoryAuth implements AuthGateway {
   /// Gives [email]'s account a password, as if set on another device.
   void setPassword(String email, String password) {
     final a = _accounts[email]!;
-    _accounts[email] = (uid: a.uid, password: password, federated: a.federated, verified: a.verified, name: a.name);
+    _accounts[email] = (uid: a.uid, password: password, verified: a.verified, name: a.name);
   }
 
   @override
@@ -492,13 +526,7 @@ class MemoryAuth implements AuthGateway {
     if (_accounts.containsKey(email)) {
       throw AuthException(AuthErrorCode.emailInUse, email);
     }
-    _accounts[email] = (
-      uid: 'u${_next++}',
-      password: password,
-      federated: false,
-      verified: false,
-      name: name,
-    );
+    _accounts[email] = (uid: 'u${_next++}', password: password, verified: false, name: name);
     _set(_user(email));
     emailLanguages.add(language);
   }
@@ -525,13 +553,7 @@ class MemoryAuth implements AuthGateway {
   /// Marks [email] verified, as if its owner clicked the link.
   void verify(String email) {
     final a = _accounts[email]!;
-    _accounts[email] = (
-      uid: a.uid,
-      password: a.password,
-      federated: a.federated,
-      verified: true,
-      name: a.name,
-    );
+    _accounts[email] = (uid: a.uid, password: a.password, verified: true, name: a.name);
   }
 
   @override
@@ -559,7 +581,10 @@ class MemoryAuth implements AuthGateway {
 
   void deleteCurrent() {
     final email = _current?.email;
-    if (email != null) _accounts.remove(email);
+    if (email != null) {
+      _accounts.remove(email);
+      _google.remove(email);
+    }
     _set(null);
   }
 }
@@ -1625,14 +1650,12 @@ class MemoryCloud implements CloudApi {
 
   @override
   Future<List<PendingClaim>> pendingClaims() async {
-    final user = _b.auth.currentUser;
-    if (user == null || !user.verified) return const [];
-    final email = user.email.trim().toLowerCase();
+    final emails = _b.auth.currentUser?.claimEmails ?? const [];
     return [
       for (final MapEntry(key: cid, value: pending) in _b.pendingMembers.entries)
         if (_b.churches[cid]?.isActive ?? false)
           for (final p in pending.values)
-            if (p.email.trim().toLowerCase() == email)
+            if (emails.contains(p.email.trim().toLowerCase()))
               PendingClaim(churchId: cid, churchName: _b.churches[cid]!.name, pendingId: p.id, name: p.name),
     ];
   }
@@ -1640,7 +1663,8 @@ class MemoryCloud implements CloudApi {
   @override
   Future<String> claimPending(String churchId, String pendingId) async {
     final user = _b.auth.currentUser;
-    if (user == null || !user.verified) throw const CloudException(CloudErrorCode.unverifiedEmail);
+    final emails = user?.claimEmails ?? const [];
+    if (user == null || emails.isEmpty) throw const CloudException(CloudErrorCode.unverifiedEmail);
     final existing = _b.functionAccess(churchId, anyone: true);
     final p = _b.pendingMembers[churchId]?[pendingId];
     if (p == null) {
@@ -1648,7 +1672,7 @@ class MemoryCloud implements CloudApi {
       if (existing != null) return churchId;
       throw const CloudException(CloudErrorCode.notFound);
     }
-    if (p.email.trim().toLowerCase() != user.email.trim().toLowerCase()) {
+    if (!emails.contains(p.email.trim().toLowerCase())) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
     _b.members[churchId]![user.uid] = existing != null

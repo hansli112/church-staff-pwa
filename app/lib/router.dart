@@ -26,6 +26,7 @@ import 'features/me/members_screen.dart';
 import 'features/me/notifications_screen.dart';
 import 'features/me/profile_screen.dart';
 import 'features/me/services_screen.dart';
+import 'features/me/sign_in_methods_screen.dart';
 import 'features/me/support_screen.dart';
 import 'features/me/time_zone_screen.dart';
 import 'features/me/turn_on_notifications.dart';
@@ -103,7 +104,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       page('/closed', (_) => const ClosedScreen()),
       page('/add-to-home', (_) => const AddToHomeScreen()),
       page('/turn-on-notifications', (_) => const TurnOnNotificationsScreen()),
-      page('/account', (_) => const AccountScreen()),
+      page('/account', (_) => const AccountScreen(), routes: [page('sign-in', (_) => const SignInMethodsScreen())]),
       page(
         '/admin',
         (_) => const DeferredPage.admin(),

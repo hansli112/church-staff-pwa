@@ -2546,4 +2546,40 @@ class L10nEn extends L10n {
 
   @override
   String get cityLosAngeles => 'Los Angeles';
+
+  @override
+  String get signInMethods => 'Sign-In Methods';
+
+  @override
+  String get signInMethodPassword => 'Email and password';
+
+  @override
+  String get signInMethodsFooter =>
+      'Whichever way you sign in, it’s the same account, with the same churches, schedules, and permissions';
+
+  @override
+  String get linkGoogle => 'Link a Google Account';
+
+  @override
+  String get linkGoogleFooter => 'The Google account’s email can differ from this account’s';
+
+  @override
+  String get linkedGoogle => 'Google account linked';
+
+  @override
+  String get unlink => 'Unlink';
+
+  @override
+  String unlinkTitle(String method) {
+    return 'Unlink $method?';
+  }
+
+  @override
+  String unlinkBody(String email) {
+    return 'You won’t be able to sign in to this account with $email anymore';
+  }
+
+  @override
+  String get errCredentialInUse =>
+      'That account is already a Martha, sit account of its own, so it can’t be linked. To link it, sign in with it and delete that account first, then come back.';
 }

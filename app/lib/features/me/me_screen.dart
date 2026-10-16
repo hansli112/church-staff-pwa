@@ -116,6 +116,7 @@ class MeScreen extends ConsumerWidget {
           ListSection(
             header: l10n.account,
             children: [
+              ListRow(title: l10n.signInMethods, onTap: () => context.push('/account/sign-in')),
               ListRow(title: l10n.signOut, onTap: () => signOut(ref)),
               ListRow(
                 title: l10n.deleteAccount,

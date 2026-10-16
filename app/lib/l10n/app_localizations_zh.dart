@@ -2417,6 +2417,40 @@ class L10nZh extends L10n {
 
   @override
   String get cityLosAngeles => '洛杉磯';
+
+  @override
+  String get signInMethods => '登入方式';
+
+  @override
+  String get signInMethodPassword => 'Email 與密碼';
+
+  @override
+  String get signInMethodsFooter => '用哪一種方式登入都是同一個帳號，教會、服事表和權限都一樣';
+
+  @override
+  String get linkGoogle => '連結 Google 帳號';
+
+  @override
+  String get linkGoogleFooter => 'Google 帳號的 email 可以和這個帳號不同';
+
+  @override
+  String get linkedGoogle => '已連結 Google 帳號';
+
+  @override
+  String get unlink => '解除連結';
+
+  @override
+  String unlinkTitle(String method) {
+    return '解除連結 $method？';
+  }
+
+  @override
+  String unlinkBody(String email) {
+    return '之後就不能用 $email 登入這個帳號';
+  }
+
+  @override
+  String get errCredentialInUse => '你選的帳號已經是另一個馬大別忙帳號，不能連結。要連結的話，請先用它登入並刪除那個帳號，再回來連結。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -4832,4 +4866,38 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get cityLosAngeles => '洛杉矶';
+
+  @override
+  String get signInMethods => '登录方式';
+
+  @override
+  String get signInMethodPassword => '邮箱与密码';
+
+  @override
+  String get signInMethodsFooter => '用哪一种方式登录都是同一个账号，教会、事奉表和权限都一样';
+
+  @override
+  String get linkGoogle => '关联 Google 账号';
+
+  @override
+  String get linkGoogleFooter => 'Google 账号的邮箱可以和这个账号不同';
+
+  @override
+  String get linkedGoogle => '已关联 Google 账号';
+
+  @override
+  String get unlink => '解除关联';
+
+  @override
+  String unlinkTitle(String method) {
+    return '解除关联 $method？';
+  }
+
+  @override
+  String unlinkBody(String email) {
+    return '之后就不能用 $email 登录这个账号';
+  }
+
+  @override
+  String get errCredentialInUse => '你选的账号已经是另一个马大别忙账号，不能关联。要关联的话，请先用它登录并删除那个账号，再回来关联。';
 }

@@ -4407,6 +4407,66 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'洛杉磯'**
   String get cityLosAngeles;
+
+  /// No description provided for @signInMethods.
+  ///
+  /// In zh, this message translates to:
+  /// **'登入方式'**
+  String get signInMethods;
+
+  /// No description provided for @signInMethodPassword.
+  ///
+  /// In zh, this message translates to:
+  /// **'Email 與密碼'**
+  String get signInMethodPassword;
+
+  /// No description provided for @signInMethodsFooter.
+  ///
+  /// In zh, this message translates to:
+  /// **'用哪一種方式登入都是同一個帳號，教會、服事表和權限都一樣'**
+  String get signInMethodsFooter;
+
+  /// No description provided for @linkGoogle.
+  ///
+  /// In zh, this message translates to:
+  /// **'連結 Google 帳號'**
+  String get linkGoogle;
+
+  /// No description provided for @linkGoogleFooter.
+  ///
+  /// In zh, this message translates to:
+  /// **'Google 帳號的 email 可以和這個帳號不同'**
+  String get linkGoogleFooter;
+
+  /// No description provided for @linkedGoogle.
+  ///
+  /// In zh, this message translates to:
+  /// **'已連結 Google 帳號'**
+  String get linkedGoogle;
+
+  /// No description provided for @unlink.
+  ///
+  /// In zh, this message translates to:
+  /// **'解除連結'**
+  String get unlink;
+
+  /// Confirming unlinking a sign-in method. method is Google, Apple, or the email-and-password one
+  ///
+  /// In zh, this message translates to:
+  /// **'解除連結 {method}？'**
+  String unlinkTitle(String method);
+
+  /// No description provided for @unlinkBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'之後就不能用 {email} 登入這個帳號'**
+  String unlinkBody(String email);
+
+  /// Linking a Google or Apple account that already has an account of its own
+  ///
+  /// In zh, this message translates to:
+  /// **'你選的帳號已經是另一個馬大別忙帳號，不能連結。要連結的話，請先用它登入並刪除那個帳號，再回來連結。'**
+  String get errCredentialInUse;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

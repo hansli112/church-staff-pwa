@@ -2421,4 +2421,38 @@ class L10nKo extends L10n {
 
   @override
   String get cityLosAngeles => '로스앤젤레스';
+
+  @override
+  String get signInMethods => '로그인 방법';
+
+  @override
+  String get signInMethodPassword => '이메일과 비밀번호';
+
+  @override
+  String get signInMethodsFooter => '어떤 방법으로 로그인해도 같은 계정이에요. 교회, 봉사표, 권한도 그대로예요.';
+
+  @override
+  String get linkGoogle => 'Google 계정 연결';
+
+  @override
+  String get linkGoogleFooter => 'Google 계정의 이메일은 이 계정과 달라도 돼요';
+
+  @override
+  String get linkedGoogle => 'Google 계정을 연결했어요';
+
+  @override
+  String get unlink => '연결 해제';
+
+  @override
+  String unlinkTitle(String method) {
+    return '$method 연결을 해제할까요?';
+  }
+
+  @override
+  String unlinkBody(String email) {
+    return '앞으로 $email(으)로 이 계정에 로그인할 수 없어요';
+  }
+
+  @override
+  String get errCredentialInUse => '그 계정은 이미 별도의 마르다의 쉼표 계정이라 연결할 수 없어요. 연결하려면 먼저 그 계정으로 로그인해 계정을 삭제한 뒤 다시 연결해 주세요.';
 }

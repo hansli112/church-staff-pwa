@@ -162,8 +162,9 @@ const moveDeps = (): move.MoveDeps => ({ ...deps(), bucket: bucket() });
 const moveOpts: CallableOptions = { timeoutSeconds: 300, memory: '1GiB' };
 export const movePreview = callable(move.movePreview, moveDeps, moveOpts);
 export const moveCommit = callable(move.moveCommit, moveDeps, moveOpts);
-export const pendingClaims = callable(claim.pendingClaims);
-export const claimPending = callable(claim.claimPending);
+const claimDeps = () => ({ ...deps(), auth: getAuth() });
+export const pendingClaims = callable(claim.pendingClaims, claimDeps);
+export const claimPending = callable(claim.claimPending, claimDeps);
 export const mergePending = callable(claim.mergePending);
 export const onPendingMemberDeleted = onDocumentDeleted(
   { region: REGION, document: 'churches/{cid}/pendingMembers/{pid}' },

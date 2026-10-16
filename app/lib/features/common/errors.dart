@@ -14,6 +14,7 @@ String errorText(L10n l10n, Object error) {
       AuthErrorCode.weakPassword => l10n.errWeakPassword,
       AuthErrorCode.invalidEmail => l10n.errInvalidEmail,
       AuthErrorCode.needsLink => l10n.errNeedsLink,
+      AuthErrorCode.credentialInUse => l10n.errCredentialInUse,
       AuthErrorCode.tooManyRequests => l10n.errTooMany,
       AuthErrorCode.network => l10n.errNetwork,
       AuthErrorCode.unknown => l10n.errUnknown,

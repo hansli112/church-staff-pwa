@@ -717,5 +717,15 @@
   "cityChicago": "シカゴ",
   "cityDenver": "デンバー",
   "cityVancouver": "バンクーバー",
-  "cityLosAngeles": "ロサンゼルス"
+  "cityLosAngeles": "ロサンゼルス",
+  "signInMethods": "ログイン方法",
+  "signInMethodPassword": "メールアドレスとパスワード",
+  "signInMethodsFooter": "どの方法でログインしても同じアカウントです。教会、奉仕表、権限も変わりません。",
+  "linkGoogle": "Google アカウントを連携",
+  "linkGoogleFooter": "Google アカウントのメールアドレスは、このアカウントと違っていてもかまいません",
+  "linkedGoogle": "Google アカウントを連携しました",
+  "unlink": "連携を解除",
+  "unlinkTitle": "{method} の連携を解除しますか？",
+  "unlinkBody": "{email} でこのアカウントにログインできなくなります",
+  "errCredentialInUse": "そのアカウントはすでに別の「マルタ、ひと休み」のアカウントなので、連携できません。連携するには、先にそのアカウントでログインして削除してから、もう一度連携してください。"
 }

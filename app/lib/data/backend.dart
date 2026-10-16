@@ -21,6 +21,21 @@ import 'roster_change.dart';
 
 export 'roster_change.dart';
 
+/// A way to sign in to an account.
+enum SignInMethod { password, google, apple }
+
+/// One of an account's ways to sign in, and the email it goes by: a linked
+/// Google or Apple account may have another email than the account's own.
+class SignIn {
+  const SignIn(this.method, this.email);
+
+  final SignInMethod method;
+  final String email;
+
+  /// Google and Apple vouch for their email; a password does not.
+  bool get vouches => method != SignInMethod.password;
+}
+
 /// The signed-in account, as far as the app needs to know.
 class AuthUser {
   const AuthUser({
@@ -29,19 +44,35 @@ class AuthUser {
     required this.emailVerified,
     this.displayName,
     this.usesPassword = false,
+    this.signIns = const [],
   });
 
   final String uid;
+
+  /// The account's own email, whichever way it signs in.
   final String email;
   final bool emailVerified;
   final String? displayName;
 
-  /// Signed up with email and password (as opposed to Google or Apple).
+  /// Its own email comes from email and password alone, with no Google or
+  /// Apple account under the same email to vouch for it.
   final bool usesPassword;
+
+  /// Every way it signs in, oldest first.
+  final List<SignIn> signIns;
 
   /// Google and Apple accounts count as verified; only password accounts
   /// must click the link in the verification email.
   bool get verified => emailVerified || !usesPassword;
+
+  /// The emails member data moved from self-host can be claimed with: its
+  /// own once verified, and those of the Google and Apple accounts linked
+  /// to it (functions/src/pendingMembers.ts, callerKeys).
+  List<String> get claimEmails => {
+    if (verified && email.isNotEmpty) email.trim().toLowerCase(),
+    for (final s in signIns)
+      if (s.vouches && s.email.isNotEmpty) s.email.trim().toLowerCase(),
+  }.toList();
 }
 
 enum AuthErrorCode {
@@ -54,6 +85,9 @@ enum AuthErrorCode {
   /// The email already has an account that signs in another way. Signing in
   /// that way next links the pending sign-in method to it.
   needsLink,
+
+  /// Linking: that Google or Apple account is already an account of its own.
+  credentialInUse,
   tooManyRequests,
   network,
   unknown,
@@ -83,6 +117,16 @@ abstract interface class AuthGateway {
   /// address; the name only comes the first time.
   Future<void> signInWithApple();
   Future<void> signInWithEmail(String email, String password);
+
+  /// Links the Google account the person picks to the signed-in one, so
+  /// either signs in to it, whatever its email. [AuthErrorCode.credentialInUse]
+  /// when that Google account is already an account of its own: this
+  /// version does not merge accounts.
+  Future<void> linkGoogle();
+
+  /// Stops [method] signing in to this account. Never the last one: the
+  /// caller only offers it while there is another.
+  Future<void> unlink(SignInMethod method);
 
   /// Creates the account and sends its verification email in [language],
   /// as [sendEmailVerification] and [sendPasswordReset] send theirs.

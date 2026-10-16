@@ -1,14 +1,15 @@
 import { churchAccess, churchClosed, isChurchOpen } from './access.js';
 import { fail, id, requireCaller, serverTime, type Caller, type Deps } from './common.js';
 import { personName } from './limits.js';
-import { callerKey, dropPending, waitingFor, waitsFor } from './pendingMembers.js';
+import { callerKeys, dropPending, waitingFor, waitsFor, type ClaimDeps } from './pendingMembers.js';
 
 /**
  * 認領與合併: a pending member (moved from self-host) becomes a real member.
  *
- * - Claim: someone signs in with the pending member's email, verified, and
- *   says yes. Never automatic: a file someone else uploaded must not pull a
- *   stranger into their church.
+ * - Claim: someone signs in with the pending member's email, verified, or
+ *   has linked a Google or Apple account under it, and says yes. Never
+ *   automatic: a file someone else uploaded must not pull a stranger into
+ *   their church.
  * - Merge: an admin joins a pending member to someone who already joined
  *   under another email (e.g. switched to Google).
  *
@@ -17,17 +18,17 @@ import { callerKey, dropPending, waitingFor, waitsFor } from './pendingMembers.j
  * them, and the pending member and its index entry are deleted.
  */
 /** Pending members waiting for the caller, in open churches. */
-export async function pendingClaims(deps: Deps, caller: Caller | null) {
+export async function pendingClaims(deps: ClaimDeps, caller: Caller | null) {
   const c = requireCaller(caller);
-  const key = callerKey(c);
-  if (!key) return { claims: [] };
+  const keys = await callerKeys(deps, c);
   const claims = [];
-  for (const [cid, pid] of await waitingFor(deps, key)) {
+  // Each pending member is under one email, so under one key at most.
+  for (const [cid, pid] of (await Promise.all(keys.map((k) => waitingFor(deps, k)))).flat()) {
     const [church, pending] = await Promise.all([
       deps.db.doc(`churches/${cid}`).get(),
       deps.db.doc(`churches/${cid}/pendingMembers/${pid}`).get(),
     ]);
-    if (!isChurchOpen(church) || !pending.exists || !waitsFor(pending, key)) continue;
+    if (!isChurchOpen(church) || !pending.exists || !waitsFor(pending, keys)) continue;
     claims.push({ churchId: cid, churchName: church.get('name') as string, pendingId: pid, name: pending.get('name') as string });
   }
   return { claims };
@@ -92,12 +93,12 @@ function mergedMember(member: FirebaseFirestore.DocumentSnapshot, pending: Fireb
   };
 }
 
-/** Joins the caller to the church as the pending member with their email. */
-export async function claimPending(deps: Deps, caller: Caller | null, data: unknown) {
+/** Joins the caller to the church as the pending member with one of their emails. */
+export async function claimPending(deps: ClaimDeps, caller: Caller | null, data: unknown) {
   const c = requireCaller(caller);
   const pid = id((data as { pendingId?: unknown })?.pendingId);
-  const key = callerKey(c);
-  if (!key) fail('failed-precondition', 'unverifiedEmail');
+  const keys = await callerKeys(deps, c);
+  if (!keys.length) fail('failed-precondition', 'unverifiedEmail');
   // Not a member yet, most likely: anyone signed in, but the church open.
   const { cid } = await churchAccess(deps, c, data, 'anyone');
   const pending = await deps.db.runTransaction(async (tx) => {
@@ -112,7 +113,7 @@ export async function claimPending(deps: Deps, caller: Caller | null, data: unkn
       if (member.exists) return null;
       fail('not-found', 'notFound');
     }
-    if (!waitsFor(pending, key)) fail('permission-denied', 'permissionDenied');
+    if (!waitsFor(pending, keys)) fail('permission-denied', 'permissionDenied');
     if (member.exists) {
       // Read current preferences in the transaction: concurrent edits are kept.
       tx.update(member.ref, mergedMember(member, pending));

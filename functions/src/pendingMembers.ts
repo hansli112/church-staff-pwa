@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 
+import type { Auth } from 'firebase-admin/auth';
 import { FieldValue, type BulkWriter, type DocumentSnapshot } from 'firebase-admin/firestore';
 
 import type { Caller, Deps } from './common.js';
@@ -24,8 +25,26 @@ async function unindex(deps: Pick<Deps, 'db'>, cid: string, hash: unknown) {
 /** The caller's verified email as the index keys it, or null: an unverified email finds nothing. */
 export const callerKey = (c: Caller) => (c.emailVerified && c.email ? emailHash(c.email) : null);
 
-/** Whether [pending] waits for the caller with [key] (see [callerKey]). */
-export const waitsFor = (pending: DocumentSnapshot, key: string) => pending.get('emailHash') === key;
+/** What claiming needs besides the database: the account's linked sign-ins. */
+export type ClaimDeps = Deps & { auth: Pick<Auth, 'getUser'> };
+
+/** Providers whose email counts as verified: they vouch for it. */
+const vouching = new Set(['google.com', 'apple.com']);
+
+/**
+ * Every email the caller can claim with, as the index keys them: the
+ * verified [callerKey], and those of the Google and Apple accounts linked
+ * to theirs, whatever the account's own email.
+ */
+export async function callerKeys(deps: Pick<ClaimDeps, 'auth'>, c: Caller) {
+  const own = callerKey(c);
+  const user = await deps.auth.getUser(c.uid).catch(() => null);
+  const linked = (user?.providerData ?? []).filter((p) => vouching.has(p.providerId) && p.email).map((p) => emailHash(p.email!));
+  return [...new Set([...(own ? [own] : []), ...linked])];
+}
+
+/** Whether [pending] waits for the caller with one of [keys] (see [callerKeys]). */
+export const waitsFor = (pending: DocumentSnapshot, keys: string[]) => keys.includes(pending.get('emailHash') as string);
 
 export interface NewPending {
   uid: string;

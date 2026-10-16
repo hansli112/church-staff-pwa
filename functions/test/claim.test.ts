@@ -6,10 +6,12 @@ import { getStorage } from 'firebase-admin/storage';
 import { claimPending, mergePending, pendingClaims } from '../src/claim.js';
 import { moveCommit, type MoveDeps } from '../src/move.js';
 import { callerKey, onPendingMemberDeleted, waitingFor } from '../src/pendingMembers.js';
-import { caller, clearFirestore, db, deps, rejectsWith } from './support.js';
+import { auth, caller, clearFirestore, db, deps, rejectsWith } from './support.js';
 
 const bucket = getStorage().bucket('demo-martha.appspot.com');
 const d: MoveDeps = { ...deps, bucket };
+/** Claims look up the caller's linked sign-ins too. */
+const cd = { ...deps, auth };
 
 /** A church moved from self-host by 'mover', with 美玉 and 志豪 pending. */
 async function moved(name = '恩典堂', mover = 'mover') {
@@ -46,14 +48,14 @@ beforeEach(async () => {
 describe('claiming', () => {
   test('a verified email finds its pending member; an unverified one finds nothing', async () => {
     const cid = await moved();
-    assert.deepEqual(await pendingClaims(deps, mei()), { claims: [{ churchId: cid, churchName: '恩典堂', pendingId: 'old-mei', name: '李美玉' }] });
-    assert.deepEqual(await pendingClaims(deps, mei({ emailVerified: false })), { claims: [] });
-    assert.deepEqual(await pendingClaims(deps, caller('x', { email: 'nobody@example.com' })), { claims: [] });
+    assert.deepEqual(await pendingClaims(cd, mei()), { claims: [{ churchId: cid, churchName: '恩典堂', pendingId: 'old-mei', name: '李美玉' }] });
+    assert.deepEqual(await pendingClaims(cd, mei({ emailVerified: false })), { claims: [] });
+    assert.deepEqual(await pendingClaims(cd, caller('x', { email: 'nobody@example.com' })), { claims: [] });
   });
 
   test('joining moves the member under the uid and rewrites that church’s rosters', async () => {
     const cid = await moved();
-    assert.deepEqual(await claimPending(deps, mei(), { churchId: cid, pendingId: 'old-mei' }), { churchId: cid });
+    assert.deepEqual(await claimPending(cd, mei(), { churchId: cid, pendingId: 'old-mei' }), { churchId: cid });
     const m = await db.doc(`churches/${cid}/members/new-mei`).get();
     assert.equal(m.get('name'), '李美玉');
     assert.equal(m.get('email'), 'mei@example.com');
@@ -64,7 +66,7 @@ describe('claiming', () => {
     assert.deepEqual(await uidsOn(cid, '2026-10-11'), [{ 李美玉: 'new-mei' }]);
     assert.equal((await db.doc(`churches/${cid}/pendingMembers/old-mei`).get()).exists, false);
     assert.deepEqual(await indexed('mei@example.com'), []);
-    assert.deepEqual((await pendingClaims(deps, mei())).claims, []);
+    assert.deepEqual((await pendingClaims(cd, mei())).claims, []);
   });
 
   test('claiming a new identity preserves migrated small groups and reminder opt-out', async () => {
@@ -73,7 +75,7 @@ describe('claiming', () => {
       zones: [{ serviceType: 'sunday', duties: ['司琴'], smallGroups: ['喜樂'] }],
       notificationPrefs: { muted: ['reminder'] },
     });
-    await claimPending(deps, mei(), { churchId: cid, pendingId: 'old-mei' });
+    await claimPending(cd, mei(), { churchId: cid, pendingId: 'old-mei' });
     const m = await db.doc(`churches/${cid}/members/new-mei`).get();
     assert.deepEqual(m.get('notificationPrefs'), { muted: ['reminder'] });
     assert.deepEqual(m.get('zones'), [{ serviceType: 'sunday', duties: ['司琴'], smallGroups: ['喜樂'] }]);
@@ -84,23 +86,23 @@ describe('claiming', () => {
 
   test('claiming twice is fine', async () => {
     const cid = await moved();
-    await claimPending(deps, mei(), { churchId: cid, pendingId: 'old-mei' });
-    assert.deepEqual(await claimPending(deps, mei(), { churchId: cid, pendingId: 'old-mei' }), { churchId: cid });
+    await claimPending(cd, mei(), { churchId: cid, pendingId: 'old-mei' });
+    assert.deepEqual(await claimPending(cd, mei(), { churchId: cid, pendingId: 'old-mei' }), { churchId: cid });
   });
 
   test('not claiming adds nobody; someone else’s email or an unverified one cannot claim', async () => {
     const cid = await moved();
-    await pendingClaims(deps, mei());
+    await pendingClaims(cd, mei());
     assert.equal((await db.doc(`churches/${cid}/members/new-mei`).get()).exists, false, 'never automatic');
-    await rejectsWith(claimPending(deps, caller('stranger', { email: 'x@example.com' }), { churchId: cid, pendingId: 'old-mei' }), 'permissionDenied');
-    await rejectsWith(claimPending(deps, mei({ emailVerified: false }), { churchId: cid, pendingId: 'old-mei' }), 'unverifiedEmail');
+    await rejectsWith(claimPending(cd, caller('stranger', { email: 'x@example.com' }), { churchId: cid, pendingId: 'old-mei' }), 'permissionDenied');
+    await rejectsWith(claimPending(cd, mei({ emailVerified: false }), { churchId: cid, pendingId: 'old-mei' }), 'unverifiedEmail');
     assert.ok((await db.doc(`churches/${cid}/pendingMembers/old-mei`).get()).exists);
   });
 
   test('someone who joined by invite first keeps their role and gains the rest', async () => {
     const cid = await moved();
     await db.doc(`churches/${cid}/members/new-mei`).set({ uid: 'new-mei', name: '美玉', email: 'mei@example.com', role: 'staff', groups: [], zones: [{ serviceType: 'sunday', duties: ['招待'] }], zoneTypes: ['sunday'] });
-    await claimPending(deps, mei(), { churchId: cid, pendingId: 'old-mei' });
+    await claimPending(cd, mei(), { churchId: cid, pendingId: 'old-mei' });
     const m = await db.doc(`churches/${cid}/members/new-mei`).get();
     assert.equal(m.get('role'), 'staff');
     assert.deepEqual(m.get('groups'), ['roster-editors']);
@@ -110,8 +112,43 @@ describe('claiming', () => {
   test('a suspended church cannot be claimed into', async () => {
     const cid = await moved();
     await db.doc(`churches/${cid}`).update({ status: 'suspended' });
-    assert.deepEqual((await pendingClaims(deps, mei())).claims, []);
-    await rejectsWith(claimPending(deps, mei(), { churchId: cid, pendingId: 'old-mei' }), 'churchClosed');
+    assert.deepEqual((await pendingClaims(cd, mei())).claims, []);
+    await rejectsWith(claimPending(cd, mei(), { churchId: cid, pendingId: 'old-mei' }), 'churchClosed');
+  });
+});
+
+describe('claiming with a linked Google or Apple account', () => {
+  /** Signed up with an old yahoo address, never verified, then linked [provider] under mei's email. */
+  async function linked(providerId = 'google.com', email = 'mei@example.com') {
+    await auth.deleteUser('yahoo-mei').catch(() => {});
+    await auth.createUser({ uid: 'yahoo-mei', email: 'mei.old@yahoo.com', emailVerified: false });
+    await auth.updateUser('yahoo-mei', { providerToLink: { providerId, uid: `${providerId}-mei`, email } });
+    return caller('yahoo-mei', { email: 'mei.old@yahoo.com', emailVerified: false });
+  }
+
+  test('the linked email finds its pending member, and claims it', async () => {
+    const cid = await moved();
+    const c = await linked();
+    assert.deepEqual((await pendingClaims(cd, c)).claims, [{ churchId: cid, churchName: '恩典堂', pendingId: 'old-mei', name: '李美玉' }]);
+    await claimPending(cd, c, { churchId: cid, pendingId: 'old-mei' });
+    const m = await db.doc(`churches/${cid}/members/yahoo-mei`).get();
+    assert.equal(m.get('role'), 'leader');
+    assert.equal(m.get('email'), 'mei.old@yahoo.com', 'the account’s own email stays');
+    assert.deepEqual(await uidsOn(cid, '2026-10-11'), [{ 李美玉: 'yahoo-mei' }]);
+  });
+
+  test('so does an Apple one', async () => {
+    const cid = await moved();
+    const c = await linked('apple.com');
+    assert.equal((await pendingClaims(cd, c)).claims.length, 1);
+    await claimPending(cd, c, { churchId: cid, pendingId: 'old-mei' });
+  });
+
+  test('a linked email under nobody’s pending member finds nothing', async () => {
+    const cid = await moved();
+    const c = await linked('google.com', 'someone@gmail.com');
+    assert.deepEqual((await pendingClaims(cd, c)).claims, []);
+    await rejectsWith(claimPending(cd, c, { churchId: cid, pendingId: 'old-mei' }), 'permissionDenied');
   });
 });
 
@@ -157,7 +194,7 @@ describe('merging', () => {
         ], zoneTypes: ['sunday', 'youth'],
         notificationPrefs: { muted: ['memberLeft'], otherPreference: 'preserved' },
       });
-      if (mode === 'claim') await claimPending(deps, mei(), { churchId: cid, pendingId: 'old-mei' });
+      if (mode === 'claim') await claimPending(cd, mei(), { churchId: cid, pendingId: 'old-mei' });
       else await mergePending(deps, caller('mover'), { churchId: cid, pendingId: 'old-mei', uid: 'new-mei' });
       const member = await memberRef.get();
       assert.deepEqual(member.get('zones'), [

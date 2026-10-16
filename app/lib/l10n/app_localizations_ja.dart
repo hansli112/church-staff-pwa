@@ -2421,4 +2421,39 @@ class L10nJa extends L10n {
 
   @override
   String get cityLosAngeles => 'ロサンゼルス';
+
+  @override
+  String get signInMethods => 'ログイン方法';
+
+  @override
+  String get signInMethodPassword => 'メールアドレスとパスワード';
+
+  @override
+  String get signInMethodsFooter => 'どの方法でログインしても同じアカウントです。教会、奉仕表、権限も変わりません。';
+
+  @override
+  String get linkGoogle => 'Google アカウントを連携';
+
+  @override
+  String get linkGoogleFooter => 'Google アカウントのメールアドレスは、このアカウントと違っていてもかまいません';
+
+  @override
+  String get linkedGoogle => 'Google アカウントを連携しました';
+
+  @override
+  String get unlink => '連携を解除';
+
+  @override
+  String unlinkTitle(String method) {
+    return '$method の連携を解除しますか？';
+  }
+
+  @override
+  String unlinkBody(String email) {
+    return '$email でこのアカウントにログインできなくなります';
+  }
+
+  @override
+  String get errCredentialInUse =>
+      'そのアカウントはすでに別の「マルタ、ひと休み」のアカウントなので、連携できません。連携するには、先にそのアカウントでログインして削除してから、もう一度連携してください。';
 }

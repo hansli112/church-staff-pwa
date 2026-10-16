@@ -118,16 +118,28 @@ class FirebaseAuthGateway implements AuthGateway {
 
   final _reloaded = StreamController<AuthUser?>.broadcast();
 
+  static const _methods = {
+    'password': SignInMethod.password,
+    'google.com': SignInMethod.google,
+    'apple.com': SignInMethod.apple,
+  };
+
   static AuthUser? _map(fa.User? u) {
     if (u == null) return null;
-    final providers = u.providerData.map((p) => p.providerId).toSet();
+    final email = u.email ?? '';
+    final signIns = [
+      for (final p in u.providerData)
+        if (_methods[p.providerId] case final method?) SignIn(method, p.email ?? ''),
+    ];
+    bool same(String a) => a.trim().toLowerCase() == email.trim().toLowerCase();
     return AuthUser(
       uid: u.uid,
-      email: u.email ?? '',
+      email: email,
       emailVerified: u.emailVerified,
       displayName: u.displayName,
       usesPassword:
-          providers.contains('password') && !providers.contains('google.com') && !providers.contains('apple.com'),
+          signIns.any((s) => s.method == SignInMethod.password) && !signIns.any((s) => s.vouches && same(s.email)),
+      signIns: signIns,
     );
   }
 
@@ -202,13 +214,21 @@ class FirebaseAuthGateway implements AuthGateway {
   }
 
   @override
-  Future<void> signInWithGoogle() => _run(() async {
+  Future<void> signInWithGoogle() =>
+      _run(() => _google(_auth.signInWithCredential, _auth.signInWithProvider, _auth.signInWithPopup));
+
+  /// Google's account picker, then [withCredential] with what it gives: the
+  /// system picker on a phone, when the OAuth web client ID is configured
+  /// for this build. Otherwise [withProvider], the browser flow, which needs
+  /// no native setup; [withPopup] on the web.
+  Future<fa.UserCredential> _google(
+    Future<fa.UserCredential> Function(fa.AuthCredential) withCredential,
+    Future<fa.UserCredential> Function(fa.AuthProvider) withProvider,
+    Future<fa.UserCredential> Function(fa.AuthProvider) withPopup,
+  ) async {
     final provider = fa.GoogleAuthProvider()..setCustomParameters({'prompt': 'select_account'});
-    if (kIsWeb) return _auth.signInWithPopup(provider);
-    Future<fa.UserCredential> browser() => _auth.signInWithProvider(provider);
-    // Native: the system account picker (no browser), when the OAuth web
-    // client ID is configured for this build. Otherwise the browser flow,
-    // which needs no native setup.
+    if (kIsWeb) return withPopup(provider);
+    Future<fa.UserCredential> browser() => withProvider(provider);
     if (_googleServerClientId.isEmpty) return browser();
     final google = GoogleSignIn.instance;
     try {
@@ -226,7 +246,7 @@ class FirebaseAuthGateway implements AuthGateway {
         native: () async {
           final account = await google.authenticate();
           final idToken = account.authentication.idToken;
-          return _auth.signInWithCredential(fa.GoogleAuthProvider.credential(idToken: idToken));
+          return withCredential(fa.GoogleAuthProvider.credential(idToken: idToken));
         },
         browser: browser,
         useBrowser: nativeGoogleUnavailable,
@@ -243,7 +263,41 @@ class FirebaseAuthGateway implements AuthGateway {
       if (e.code == GoogleSignInExceptionCode.canceled) throw const AuthException(AuthErrorCode.cancelled);
       rethrow;
     }
-  });
+  }
+
+  @override
+  Future<void> linkGoogle() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    try {
+      await _google(user.linkWithCredential, user.linkWithProvider, user.linkWithPopup);
+    } on fa.FirebaseAuthException catch (e) {
+      // Already an account of its own, or another account's email.
+      if (e.code == 'credential-already-in-use' || e.code == 'email-already-in-use') {
+        throw const AuthException(AuthErrorCode.credentialInUse);
+      }
+      throw _translate(e);
+    }
+    await _reload();
+  }
+
+  @override
+  Future<void> unlink(SignInMethod method) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    try {
+      await user.unlink(_methods.entries.firstWhere((e) => e.value == method).key);
+    } on fa.FirebaseAuthException catch (e) {
+      throw _translate(e);
+    }
+    await _reload();
+  }
+
+  /// Pushes the account as it now is through [authState].
+  Future<void> _reload() async {
+    await _auth.currentUser?.reload();
+    _reloaded.add(_map(_auth.currentUser));
+  }
 
   /// The project's OAuth web client ID, from --dart-define.
   static const _googleServerClientId = String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID');
@@ -302,8 +356,7 @@ class FirebaseAuthGateway implements AuthGateway {
     );
     await result.user?.updateDisplayName(name.trim());
     // Push the account with its name, so users/{uid} is created with it.
-    await _auth.currentUser?.reload();
-    _reloaded.add(_map(_auth.currentUser));
+    await _reload();
     await _auth.setLanguageCode(language.emailLanguage);
     await result.user?.sendEmailVerification();
     return result;
