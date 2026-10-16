@@ -37,9 +37,10 @@ void main() {
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/notifications');
     await settle(tester);
 
-    await tester.tap(find.text('開啟通知'));
+    await tester.tap(find.text('服事提醒'));
     await settle(tester);
     expect(find.textContaining('請點「允許」'), findsOneWidget);
+    expect(tester.widget<Switch>(find.byType(Switch).first).value, isFalse);
   });
 
   testWidgets('allowed, but the device cannot get a token: says it will try again', (tester) async {
@@ -48,8 +49,44 @@ void main() {
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/notifications');
     await settle(tester);
 
-    await tester.tap(find.text('開啟通知'));
+    await tester.tap(find.text('服事提醒'));
     await settle(tester);
     expect(find.textContaining('下次打開 App 會再試'), findsOneWidget);
+  });
+
+  testWidgets('not yet allowed on the phone, the switches are off, and turning one on asks', (tester) async {
+    final push = FakePush(answer: PushPermission.granted);
+    final b = seededChurch();
+    await pumpApp(tester, b, overrides: [pushServiceProvider.overrideWithValue(push)]);
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/notifications');
+    await settle(tester);
+
+    expect(find.text('開啟通知'), findsNothing, reason: 'the switches are the way in');
+    for (final s in tester.widgetList<Switch>(find.byType(Switch))) {
+      expect(s.value, isFalse, reason: 'nothing comes yet');
+      expect(s.onChanged, isNotNull);
+    }
+    expect(find.text('前一天晚上'), findsNothing);
+
+    await tester.tap(find.text('服事提醒'));
+    await settle(tester);
+    expect(push.asked, 1);
+    for (final s in tester.widgetList<Switch>(find.byType(Switch))) {
+      expect(s.value, isTrue);
+    }
+    expect(find.text('前一天晚上'), findsOneWidget);
+  });
+
+  testWidgets('not allowed when asked, the switch stays off', (tester) async {
+    final push = FakePush(answer: PushPermission.denied);
+    final b = seededChurch();
+    await pumpApp(tester, b, overrides: [pushServiceProvider.overrideWithValue(push)]);
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/notifications');
+    await settle(tester);
+
+    await tester.tap(find.text('服事提醒'));
+    await settle(tester);
+    expect(tester.widget<Switch>(find.byType(Switch).first).value, isFalse);
+    expect(find.text('到設定開啟通知'), findsOneWidget);
   });
 }

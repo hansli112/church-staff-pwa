@@ -11,8 +11,8 @@ import 'turn_on_notifications.dart';
 
 /// Which notifications I get from this church, and when I am reminded of my
 /// duties. Stored on my member doc (`notificationPrefs`, the one field I may
-/// write there). The system permission is asked for here, the first time it
-/// is needed.
+/// write there). Until the phone allows notifications the switches are off,
+/// and turning one on asks for it.
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
 
@@ -25,12 +25,19 @@ class NotificationsScreen extends ConsumerWidget {
     final muted = me.mutedNotifications;
     // Safari gets no notifications: only the page opened from the home screen.
     final needsHomeScreen = ref.watch(addToHomeProvider) == AddToHome.ios;
-    final off = permission == PushPermission.denied || needsHomeScreen;
+    // The phone will not ask: the switches are greyed out.
+    final blocked = permission == PushPermission.denied || needsHomeScreen;
+    // Nothing comes until the phone allows it; turning a switch on asks.
+    final off = blocked || permission == PushPermission.notAsked;
     final churchId = ref.watch(currentChurchIdProvider);
 
     Future<void> set(NotificationKind kind, bool on) async {
-      // Once allowed, each launch registers the device again.
-      if (on && permission == PushPermission.notAsked) await enableNotifications(context, ref);
+      if (on && permission == PushPermission.notAsked) {
+        // Once allowed, each launch registers the device again; null is
+        // allowed but not registered yet, so the choice is still kept.
+        final result = await enableNotifications(context, ref, nudge: true);
+        if (result != null && result != PushPermission.granted) return;
+      }
       final next = on ? ({...muted}..remove(kind)) : {...muted, kind};
       try {
         await ref.churchData.setNotificationPrefs(me.uid, next);
@@ -94,16 +101,6 @@ class NotificationsScreen extends ConsumerWidget {
                     onTap: () => openNotificationSettings(context, ref),
                   ),
               ],
-            )
-          else if (permission == PushPermission.notAsked)
-            ListSection(
-              children: [
-                ListRow(
-                  title: l10n.notifEnable,
-                  leading: const Icon(Icons.notifications_active_outlined),
-                  onTap: () => enableNotifications(context, ref, nudge: true),
-                ),
-              ],
             ),
           ListSection(
             header: l10n.notifThisChurch,
@@ -113,7 +110,7 @@ class NotificationsScreen extends ConsumerWidget {
                   title: title,
                   subtitle: sub,
                   value: !off && !muted.contains(kind),
-                  onChanged: off ? null : (v) => set(kind, v),
+                  onChanged: blocked ? null : (v) => set(kind, v),
                 ),
             ],
           ),
