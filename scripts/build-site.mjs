@@ -6,7 +6,7 @@
 //   node scripts/build-site.mjs <out> --origin https://marthasit.com --project marthasit [--payments on|off]
 //
 // --payments (default off) turns on 線上支持 on the support page: the
-// amount picker and NewebPay. Pages mark what shows only one way with
+// amount picker and ECPay. Pages mark what shows only one way with
 // <!-- payments:on --> … <!-- /payments:on --> and the same for off; with
 // it off the support page only says 線上支持即將開放. Every other comment is
 // left out of what is built.

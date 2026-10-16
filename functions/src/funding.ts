@@ -7,13 +7,13 @@ import { TEXT_LIMITS } from './limits.js';
 /**
  * 雲端費用進度: what supporters gave this month against what the platform
  * costs. Payments come in on their own: the stores' notices (fundingApple.ts,
- * fundingPlay.ts) and the website's NewebPay notices (fundingNewebpay.ts)
+ * fundingPlay.ts) and the website's ECPay notices (fundingEcpay.ts)
  * all go through [recordPayment]. The platform operator only enters the
  * costs. Everyone reads `platform/funding` (the website, without signing in).
  *
  * A payment keeps its amount, product and time, not the account or name
  * of whoever paid (its ID is the store's transaction or order ID, which
- * the store's own console can trace; for NewebPay, our order number).
+ * the store's own console can trace; for ECPay, our order number).
  *
  * - `platform/fundingCosts`: { items: CostItem[] }, the operator's list;
  *   `platform/funding` shows each item in NT$ a month ([PublicCost]).
@@ -22,7 +22,7 @@ import { TEXT_LIMITS } from './limits.js';
  *   A month without a doc (before any costs, or with no exchange rate)
  *   counts as target 0, so whatever came in carries on.
  * - `fundingPayments/{store_id}`: one per payment (`apple_`, `google_`,
- *   `newebpay_`), so a notice sent twice counts once and a refund knows
+ *   `ecpay_`), so a notice sent twice counts once and a refund knows
  *   what to take off. A refund that comes before its payment leaves a
  *   placeholder, so the payment is not counted when it arrives later.
  * - `platform/fxRates`: today's rates, kept for days the rate service is down.
@@ -159,9 +159,9 @@ export async function publishFunding(deps: Deps, rates?: Rates) {
 }
 
 export interface Payment {
-  /** `apple_<transactionId>`, `google_<orderId>` or `newebpay_<MerchantOrderNo>`. */
+  /** `apple_<transactionId>`, `google_<orderId>` or `ecpay_<MerchantTradeNo>`. */
   id: string;
-  store: 'apple' | 'google' | 'newebpay';
+  store: 'apple' | 'google' | 'ecpay';
   productId: string;
   /** What we get, in [currency]. */
   amount: number;

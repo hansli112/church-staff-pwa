@@ -29,7 +29,7 @@
     </blockquote>
     <p class="lead">마르다의 쉼표는 모든 교회가 무료로 쓰고, 서버 비용은 모두가 함께 나눠요. 후원금은 마르다의 쉼표의 서버 비용에 쓰여요. 교회에 드리는 헌금이 아니어서 기부금 영수증은 발급할 수 없어요. 후원은 전적으로 자유이고, 교회가 쓸 수 있는 기능은 후원과 상관없이 똑같아요.</p>
 
-    <!-- 從藍新的付款頁回來（/support?paid=1 或 0，由 newebpayReturn 轉過來）。網址裡沒有付款資料。 -->
+    <!-- 從綠界的付款頁回來（/support?paid=1 或 0，由 ecpayReturn 轉過來）。網址裡沒有付款資料。 -->
     <p class="notice" id="paid" role="status" hidden></p>
 
     <!-- 這個月的雲端費用：讀 platform/funding（公開）。讀不到就整塊不顯示。 -->
@@ -52,14 +52,13 @@
     <section class="panel" aria-labelledby="pay-title">
       <h2 id="pay-title">온라인 후원</h2>
       <!-- payments:off -->
-      <!-- 藍新拒絕了（贊助不受理），改申請綠界，審核中。沒有按鈕，但寫出金額、付款方式和退款，讓金流審核看得到網站以新台幣標價。接上後網站改用 payments on 建置（docs/firebase-setup.md〈線上支持〉）。 -->
+      <!-- 還沒開放：沒有按鈕，但寫出金額、付款方式和退款，不寫是哪家金流（金流審核時要看得到網站以新台幣標價）。開放時網站改用 payments on 建置（docs/firebase-setup.md〈線上支持〉）。 -->
       <p>온라인 후원은 곧 열려요. 마음 써 주셔서 감사해요.</p>
       <p>열리면 신용카드나 Apple Pay로 후원할 수 있어요. 결제는 신 타이완 달러(NT$)로 하며, NT$50, 100, 200 중에서 고르거나 NT$30~1,000 사이에서 직접 정할 수 있어요.</p>
       <!-- /payments:off -->
       <!-- payments:on -->
-      <!-- TODO(LINE Pay): 藍新的 LINE Pay 要另外申請；開通後這行加上 LINE Pay，fundingNewebpay.ts 打開 LINEPAY。 -->
-      <p>신용카드, Apple Pay, Google Pay로 후원할 수 있고, 금액은 자유롭게 정하면 돼요.</p>
-      <!-- 選金額 → POST /support/pay（Hosting 轉到 newebpayStart）→ 拿到簽好的表單，送到藍新的付款頁。 -->
+      <p>신용카드나 Apple Pay로 후원할 수 있고, 금액은 자유롭게 정하면 돼요.</p>
+      <!-- 選金額 → POST /support/pay（Hosting 轉到 ecpayStart）→ 拿到簽好的表單，送到綠界的付款頁。 -->
       <form id="pay-form" action="/support/pay" method="post" novalidate>
         <fieldset class="amounts">
           <legend>금액(NT$, 신 타이완 달러)</legend>
@@ -74,7 +73,7 @@
         </div>
         <button class="btn btn-primary wide" id="pay" type="submit">마르다의 쉼표 후원하기</button>
         <p class="fine" id="pay-msg" role="status" hidden></p>
-        <p class="fine">결제는 NewebPay(藍新金流)가 처리하며, NewebPay 결제 페이지로 이동해요. 마르다의 쉼표는 카드 번호를 받지 않아요. 결제는 신 타이완 달러(NT$)로 청구되고 원화 환산은 카드사가 해요. 해외 결제 수수료가 붙을 수 있어요.</p>
+        <p class="fine">결제는 대만의 결제 서비스 ECPay(綠界科技)가 처리하며, ECPay 결제 페이지로 이동해요. 마르다의 쉼표는 카드 번호를 받지 않아요. 결제는 신 타이완 달러(NT$)로 청구되고 원화 환산은 카드사가 해요. 해외 결제 수수료가 붙을 수 있어요.</p>
       </form>
       <!-- /payments:on -->
     </section>
@@ -105,7 +104,7 @@
 (() => {
   // Replaced with the Firebase project ID when the site is deployed.
   const project = '__FIREBASE_PROJECT__';
-  // The page's language: for numbers, and for NewebPay's page (newebpayStart).
+  // The page's language: for numbers, and for ECPay's page (ecpayStart).
   const lang = document.documentElement.lang;
   const money = (n) => 'NT$' + Math.round(n).toLocaleString(lang);
   const url = `https://firestore.googleapis.com/v1/projects/${project}/databases/(default)/documents/platform/funding`;
@@ -149,7 +148,7 @@
     }
   }).catch(() => {});
 
-  // Back from NewebPay's page: say how it went, then tidy the address.
+  // Back from ECPay's page: say how it went, then tidy the address.
   const paid = new URLSearchParams(location.search).get('paid');
   if (paid === '1' || paid === '0') {
     const note = document.getElementById('paid');
@@ -188,7 +187,7 @@
     if (!customRow.hidden) custom.focus();
     say('');
   });
-  // Coming back from NewebPay with the back button shows the page as it was left.
+  // Coming back from ECPay with the back button shows the page as it was left.
   addEventListener('pageshow', ready);
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -210,7 +209,7 @@
       });
       const body = await r.json().catch(() => ({}));
       if (!r.ok || !body.gateway) throw new Error(body.error || String(r.status));
-      // NewebPay only takes a form posted by the browser (NDNF-1.2.6 §6, MPG02005).
+      // ECPay's checkout only takes a form posted by the browser.
       const post = document.createElement('form');
       post.method = 'post';
       post.action = body.gateway;

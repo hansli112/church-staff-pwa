@@ -31,7 +31,7 @@ import { askedLanguages, churchPage as churchPageHandler } from './churchPage.js
 import { PROD_PROJECT, REGION, appUrl, runEach, type Caller, type Deps } from './common.js';
 import * as funding from './funding.js';
 import * as fundingApple from './fundingApple.js';
-import * as fundingNewebpay from './fundingNewebpay.js';
+import * as fundingEcpay from './fundingEcpay.js';
 import * as fundingPlay from './fundingPlay.js';
 import * as invites from './invites.js';
 import { memoryGoogle } from './memoryGoogle.js';
@@ -199,7 +199,7 @@ export const dailyStats = onSchedule(
   },
 );
 
-// 雲端費用進度: payments arrive from the stores (and the website's NewebPay
+// 雲端費用進度: payments arrive from the stores (and the website's ECPay
 // payments, below) on their own; the operator only keeps the cost list.
 export const adminFunding = callable(funding.adminFunding);
 export const adminSetFundingCosts = callable(funding.adminSetFundingCosts);
@@ -228,44 +228,45 @@ export const playBillingNotifications = onMessagePublished(
   { topic: 'play-billing', region: REGION, retry: true, maxInstances: 5 },
   (event) => fundingPlay.playNotification(deps(), event.data.message.json, new Date(event.data.message.publishTime)),
 );
-// 線上支持 on the website, through NewebPay (藍新金流). The support page
-// posts to /support/pay (a Hosting rewrite to newebpayStart) and sends the
-// browser on to NewebPay; NewebPay posts the result to newebpayNotify, and
-// the payer comes back through newebpayReturn. Off until NEWEBPAY_MERCHANT_ID
-// and NEWEBPAY_ENV are set (functions/.env.<project>) and the two secrets
-// hold the store's real keys (docs/firebase-setup.md).
-const newebpayHashKey = defineSecret('NEWEBPAY_HASH_KEY');
-const newebpayHashIv = defineSecret('NEWEBPAY_HASH_IV');
-const newebpayDeps = withSecrets([newebpayHashKey, newebpayHashIv], () =>
-  fundingNewebpay.newebpayConfig({
-    merchantId: process.env.NEWEBPAY_MERCHANT_ID,
-    gateway: process.env.NEWEBPAY_ENV,
-    hashKey: newebpayHashKey.value(),
-    hashIv: newebpayHashIv.value(),
+// 線上支持 on the website, through ECPay (綠界). The support page posts to
+// /support/pay (a Hosting rewrite to ecpayStart) and sends the browser on to
+// ECPay; ECPay posts the result to ecpayNotify, and the payer comes back
+// through ecpayReturn. Off until ECPAY_MERCHANT_ID and ECPAY_ENV are set
+// (functions/.env.<project>) and the two secrets hold the store's real keys
+// (docs/firebase-setup.md).
+const ecpayHashKey = defineSecret('ECPAY_HASH_KEY');
+const ecpayHashIv = defineSecret('ECPAY_HASH_IV');
+const ecpayDeps = withSecrets([ecpayHashKey, ecpayHashIv], () =>
+  fundingEcpay.ecpayConfig({
+    merchantId: process.env.ECPAY_MERCHANT_ID,
+    gateway: process.env.ECPAY_ENV,
+    hashKey: ecpayHashKey.value(),
+    hashIv: ecpayHashIv.value(),
     project: process.env.GCLOUD_PROJECT ?? '',
     appUrl: appUrl(),
   }),
 );
-export const newebpayStart = using(newebpayDeps, { region: REGION, maxInstances: 2 }, (opts, make) =>
+export const ecpayStart = using(ecpayDeps, { region: REGION, maxInstances: 2 }, (opts, make) =>
   onRequest(
     opts,
     postOnly(async (req, res) => {
-      const r = await fundingNewebpay.newebpayStart(deps(), make(), req.body);
+      const r = await fundingEcpay.ecpayStart(deps(), make(), req.body);
       res.set('Cache-Control', 'no-store').status(r.status).json(r.body);
     }),
   ),
 );
-export const newebpayNotify = using(newebpayDeps, { region: REGION, maxInstances: 5 }, (opts, make) =>
+// ECPay takes only "1|OK" as received; anything else is sent again later.
+export const ecpayNotify = using(ecpayDeps, { region: REGION, maxInstances: 5 }, (opts, make) =>
   onRequest(
     opts,
     postOnly(async (req, res) => {
-      const status = await fundingNewebpay.newebpayNotify(deps(), make(), req.body);
-      res.status(status).send(status === 200 ? 'OK' : '');
+      const status = await fundingEcpay.ecpayNotify(deps(), make(), req.body);
+      res.status(status).type('text/plain').send(status === 200 ? '1|OK' : '');
     }),
   ),
 );
-export const newebpayReturn = onRequest({ region: REGION, maxInstances: 5 }, (req, res) => {
-  res.redirect(303, fundingNewebpay.returnLocation(appUrl(), req.method === 'POST' ? req.body : null, req.path));
+export const ecpayReturn = onRequest({ region: REGION, maxInstances: 5 }, (req, res) => {
+  res.redirect(303, fundingEcpay.returnLocation(appUrl(), req.method === 'POST' ? req.body : null, req.path));
 });
 // Starts each month's target, refreshes the exchange rates, and drops
 // 線上支持 orders nobody paid.
@@ -275,7 +276,7 @@ export const fundingDaily = onSchedule(
     const d = deps();
     await runEach('fundingDaily', {
       publish: () => funding.publishFunding(d),
-      orders: () => fundingNewebpay.dropExpiredOrders(d),
+      orders: () => fundingEcpay.dropExpiredOrders(d),
     });
   },
 );

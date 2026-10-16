@@ -106,7 +106,7 @@ test('no comment in landing/ reaches the built site, payments on or off', () => 
 });
 
 test('while the website takes no payments, the support page has no button but shows what paying will be, for the payment provider to review', () => {
-  // What the page says (its script mentions NewebPay either way).
+  // What the page says (its script mentions ECPay either way).
   const main = (html) => /<main[\s\S]*<\/main>/.exec(html)[0];
   for (const tag of TAGS) {
     const on = main(built(sitePath(tag, '/support')));
@@ -117,7 +117,7 @@ test('while the website takes no payments, the support page has no button but sh
     // Priced in NT$, by card, with no provider named until one is chosen.
     assert.match(off, /Apple Pay/, `${tag}: ways to pay`);
     assert.match(off, /1,000/, `${tag}: amounts`);
-    assert.doesNotMatch(off, /Google Pay|NewebPay|藍新|蓝新/, `${tag}: no provider`);
+    assert.doesNotMatch(off, /Google Pay|ECPay|綠界|绿界/, `${tag}: no provider`);
     assert.equal(on.match(/id="refund-title"/g).length, 1, `${tag}: on`);
     assert.equal(off.match(/id="refund-title"/g).length, 1, `${tag}: off`);
     assert.ok(off.includes('mailto:support@marthasit.com'), `${tag}: refunds and where to write`);
@@ -154,15 +154,15 @@ describe('a translated page is its Traditional Chinese page, translated', () => 
   });
 });
 
-test('the privacy policy and the terms name NewebPay only while the site takes payments', () => {
+test('the privacy policy and the terms name ECPay only while the site takes payments', () => {
   const off = mkdtempSync(join(tmpdir(), 'martha-site-off-'));
   try {
     buildSite({ out: off, origin: 'https://marthasit.com', project: 'marthasit', payments: 'off' });
     for (const tag of TAGS) {
       for (const page of ['/privacy', '/terms']) {
-        assert.match(built(sitePath(tag, page)), /NewebPay/, `${tag}${page}: on`);
+        assert.match(built(sitePath(tag, page)), /ECPay/, `${tag}${page}: on`);
         const html = readFileSync(join(off, `${sitePath(tag, page)}.html`), 'utf8');
-        assert.doesNotMatch(html, /NewebPay|藍新|蓝新/, `${tag}${page}: off`);
+        assert.doesNotMatch(html, /ECPay|綠界|绿界/, `${tag}${page}: off`);
       }
     }
   } finally {
@@ -202,9 +202,9 @@ describe('opened from the iOS and Android apps (from=app), a page hides its ways
           assert.match(line, /<span data-from-app="hide">[^<]*<a href="\/home">/, `${tag}${page}: ${line.trim()}`);
         }
       }
-      const newebpay = [...built(sitePath(tag, '/terms')).matchAll(/<li[^>]*>[^\n]*NewebPay[^\n]*/g)].map((m) => m[0]);
-      assert.equal(newebpay.length, 1, tag);
-      assert.match(newebpay[0], /^<li data-from-app="hide">/, tag);
+      const ecpay = [...built(sitePath(tag, '/terms')).matchAll(/<li[^>]*>[^\n]*ECPay[^\n]*/g)].map((m) => m[0]);
+      assert.equal(ecpay.length, 1, tag);
+      assert.match(ecpay[0], /^<li data-from-app="hide">/, tag);
     }
   });
 

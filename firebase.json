@@ -149,7 +149,7 @@
       {
         "source": "/support/pay",
         "function": {
-          "functionId": "newebpayStart",
+          "functionId": "ecpayStart",
           "region": "asia-east1"
         }
       },

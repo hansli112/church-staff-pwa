@@ -142,7 +142,7 @@ Hosting 部署前，`scripts/hosting-predeploy.sh` 用 `scripts/build-site.mjs` 
 **保留 `.firebase/web-assets/`**：每個 Firebase 專案分開累積已準備部署的 hashed JS／wasm 入口、Flutter asset bundles 與相容舊網址的字型，下一次部署一併上傳。新檔案／bundle 先寫到暫存位置並驗證，再原子改名；中斷留下的暫存檔不會發布，重跑也不覆寫已驗證相同的完整檔案。`deploy.sh` 建置前只清掉產物 `app/build/web` 與 Flutter 的建置快取 `app/.dart_tool/flutter_build`，避免 dev／prod 的舊 hash 或舊的產生碼混入（快取曾留下換套件前的 web plugin registrant，部署出舊套件）；archive 不受影響。手動建置／部署也要使用乾淨的 Web 產物；腳本會拒絕沿用另一個專案的產物。失敗或重試不會刪掉舊版本，也不自動清理；空間會隨改版增加。換部署電腦／worktree 時，要先移轉這個目錄；沒有它就無法保留先前部署的 hash。這不是完整網站備份。腳本測試：`node --test scripts/test/*.test.mjs`（需現有的 `landing/node_modules`）。
 
 - `/`：landing page。Flutter 的 `index.html` 改名成 `app.html`，其他路徑都 rewrite 到它，所以網頁版從 `/home` 開始（manifest 的 `start_url`）。舊的 `/about` 轉到 `/`。
-- `/support`：支持頁。顯示這個月的雲端費用和每一項費用（不用登入就讀 `platform/funding`），以及網站的線上支持按鈕。線上支持預設關著（只寫「線上支持即將開放」，沒有按鈕），部署時加 `SUPPORT_PAYMENTS=on` 才有選金額和付款，見〈線上支持（藍新金流）〉。`/support/pay` rewrite 到 `newebpayStart`。
+- `/support`：支持頁。顯示這個月的雲端費用和每一項費用（不用登入就讀 `platform/funding`），以及網站的線上支持按鈕。線上支持預設關著（只寫「線上支持即將開放」，沒有按鈕），部署時加 `SUPPORT_PAYMENTS=on` 才有選金額和付款，見〈線上支持（綠界）〉。`/support/pay` rewrite 到 `ecpayStart`。
 - `/blog/`：教學文章。每篇是 `landing/blog/<網址>.md`，開頭寫 `title`、`date`、`description`，會變成 `/blog/<網址>/`。
 - `/privacy`、`/terms`：App 會打開這兩頁，所以它們沒有網站的頁首、頁尾，也不連到首頁，從 App 點不到支持頁（商店不准 App 把人帶去外部付款）。
 
@@ -169,57 +169,66 @@ OAuth 同意畫面的首頁網址填 `/`，隱私權政策填 `/privacy`：Googl
   - 一個 App 只能設一個主題，所以 Google 的通知只進 prod。授權測試帳號的購買會被略過，不算進收入。
 - 匯率來自 `open.er-api.com`，每天抓一次，抓不到就沿用上次的匯率（超過 7 天會記錯誤 log）。免費方案要求在用到匯率的頁面註明來源，支持頁已加上。
 
-## 線上支持（藍新金流）
+## 線上支持（綠界）
 
-網站支持頁的一次性付款，走藍新金流 MPG（規格《線上交易─幕前支付技術串接手冊》NDNF-1.2.6，藍新官網「API 文件下載」）。流程和資料見 `docs/design.md`〈金流〉。三支 Function：
+網站支持頁的一次性付款，走綠界全方位金流 AIO（規格在綠界開發者網站 developers.ecpay.com.tw：產生訂單 ?p=2862、檢查碼機制 ?p=2902、付款結果通知 ?p=2878、測試介接資訊 ?p=2856）。流程和資料見 `docs/design.md`〈金流〉。三支 Function：
 
 | Function | 網址 | 誰呼叫 |
 |---|---|---|
-| `newebpayStart` | `<網站>/support/pay`（Hosting rewrite） | 支持頁，開單並拿到要送去藍新的表單 |
-| `newebpayNotify` | `https://asia-east1-<專案>.cloudfunctions.net/newebpayNotify` | 藍新在背景通知付款結果（NotifyURL） |
-| `newebpayReturn` | `https://asia-east1-<專案>.cloudfunctions.net/newebpayReturn` | 付款人的瀏覽器付完回來（ReturnURL），轉到 `/support?paid=1` |
+| `ecpayStart` | `<網站>/support/pay`（Hosting rewrite） | 支持頁，開單並拿到要送去綠界的表單 |
+| `ecpayNotify` | `https://asia-east1-<專案>.cloudfunctions.net/ecpayNotify` | 綠界在背景通知付款結果（ReturnURL），回 `1\|OK` |
+| `ecpayReturn` | `https://asia-east1-<專案>.cloudfunctions.net/ecpayReturn` | 付款人的瀏覽器付完回來（OrderResultURL），轉到 `/support?paid=1` |
 
-NotifyURL、ReturnURL、ClientBackURL（藍新頁面上的「返回商店」，`<網站>/support`，其他語言是 `<網站>/<語言>/support`）每筆交易都由 `newebpayStart` 帶給藍新，所以不用在藍新後台設定；後台也可以填（會員中心 → 商店管理 → 商店資料設定 → 詳細資料的「API 應用 URL」），兩邊都有時以每筆交易帶的為準。注意 ReturnURL 和 NotifyURL 不能填同一個網址。
+綠界的名稱和我們的 Function 對不太上：綠界的 **ReturnURL 是背景通知**（`ecpayNotify`），**OrderResultURL 才是付款人的瀏覽器回來**（`ecpayReturn`）。這兩個和 ClientBackURL（綠界頁面上的「返回商店」，`<網站>/support`，其他語言是 `<網站>/<語言>/support`）每筆交易都由 `ecpayStart` 帶給綠界，不用在綠界後台設定。
 
-設定分三處，三處都齊了才會開單，少一樣 `newebpayStart` 就回「暫時無法使用」：
-- **金鑰**（Secret Manager）：`NEWEBPAY_HASH_KEY`（32 字元）、`NEWEBPAY_HASH_IV`（16 字元），在藍新會員專區該商店的「API 串接金鑰」。`firebase-project.sh` 先建好佔位值；佔位值長度不對，等於關著。
-- **商店代號和環境**：`functions/.env.<專案 ID>`（不進 git，部署的那台電腦要有），例如 `functions/.env.marthasit-dev`：
+設定分三處，三處都齊了才會開單，少一樣 `ecpayStart` 就回「暫時無法使用」：
+- **金鑰**（Secret Manager）：`ECPAY_HASH_KEY`、`ECPAY_HASH_IV`（各 16 字元），在綠界廠商後台 → 系統開發管理 → 系統介接設定。`firebase-project.sh` 先建好佔位值；佔位值長度不對，等於關著。
+- **特店編號和環境**：`functions/.env.<專案 ID>`（不進 git，部署的那台電腦要有），例如 `functions/.env.marthasit-dev`：
   ```
-  NEWEBPAY_MERCHANT_ID=<商店代號>
-  NEWEBPAY_ENV=test
+  ECPAY_MERCHANT_ID=3002607
+  ECPAY_ENV=test
   ```
-  `NEWEBPAY_ENV` 是 `test`（送到 `ccore.newebpay.com`）或 `production`（送到 `core.newebpay.com`）。prod（`marthasit`）只接受 `production`，測試付款不會算進正式的進度。
+  `ECPAY_ENV` 是 `test`（送到 `payment-stage.ecpay.com.tw`）或 `production`（送到 `payment.ecpay.com.tw`）。prod（`marthasit`）只接受 `production`，測試付款不會算進正式的進度。
 - **網站**：Hosting 部署時加 `SUPPORT_PAYMENTS=on`，支持頁才出現選金額和付款按鈕（`hosting-predeploy.sh` → `build-site.mjs --payments on`）。同一個開關也讓網頁版 App 的「我的」出現「支持馬大別忙」，連到網站的支持頁（`deploy.sh` → `--dart-define=SUPPORT_PAYMENTS=on`）。沒加就只寫「線上支持即將開放」、網頁版 App 沒有這一列，每次部署 Hosting 都要加。
 
 **第一次部署前**：Functions 宣告了這兩個 secret，專案裡沒有的話 `firebase deploy` 會停下來。已經建好的專案重跑一次 `scripts/firebase-project.sh`（只會補上缺的佔位 secret），或手動建：
 ```sh
-printf placeholder | gcloud secrets create NEWEBPAY_HASH_KEY --project <專案> --replication-policy=automatic --data-file=-
-printf placeholder | gcloud secrets create NEWEBPAY_HASH_IV  --project <專案> --replication-policy=automatic --data-file=-
+printf placeholder | gcloud secrets create ECPAY_HASH_KEY --project <專案> --replication-policy=automatic --data-file=-
+printf placeholder | gcloud secrets create ECPAY_HASH_IV  --project <專案> --replication-policy=automatic --data-file=-
 ```
 
-**金鑰到了以後**（先在 dev 用藍新測試區的商店，再換正式）：
-1. 藍新會員專區該商店：開啟信用卡一次付清、Apple Pay、Google Pay；複製商店代號、HashKey、HashIV。
-2. 換掉佔位 secret：
+**dev 用綠界公開的測試特店**（大家共用，不是秘密）：特店編號 `3002607`，HashKey、HashIV 在〈測試介接資訊〉（?p=2856）。
+1. 換掉佔位 secret（值照抄測試介接資訊）：
    ```sh
-   printf %s '<HashKey>' | gcloud secrets versions add NEWEBPAY_HASH_KEY --project marthasit-dev --data-file=-
-   printf %s '<HashIV>'  | gcloud secrets versions add NEWEBPAY_HASH_IV  --project marthasit-dev --data-file=-
+   printf %s '<測試 HashKey>' | gcloud secrets versions add ECPAY_HASH_KEY --project marthasit-dev --data-file=-
+   printf %s '<測試 HashIV>'  | gcloud secrets versions add ECPAY_HASH_IV  --project marthasit-dev --data-file=-
    ```
-3. 寫 `functions/.env.marthasit-dev`（上面的格式，`NEWEBPAY_ENV=test`）。
-4. 部署：`SUPPORT_PAYMENTS=on scripts/deploy.sh dev`。secret 和 `.env` 都是部署時讀的，改了要再部署 Functions。
-5. 測試：開 `https://marthasit-dev.web.app/support` 付一筆，測試卡號 `4000-2211-1111-1111`（有效期限、末三碼隨便填）。確認：付完回到支持頁顯示謝謝；`fundingPayments/newebpay_<訂單號碼>` 出現；支持頁的金額變多。Function 的 log 搜尋 `NewebPay`。Apple Pay、Google Pay 在測試區要用真的卡在手機上測。
-6. 正式上線（prod）：
+2. 寫 `functions/.env.marthasit-dev`（上面的格式）。
+3. 部署：`SUPPORT_PAYMENTS=on scripts/deploy.sh dev`。secret 和 `.env` 都是部署時讀的，改了要再部署 Functions。
+4. 測試：開 `https://marthasit-dev.web.app/support` 付一筆，測試卡號 `4311-9522-2222-2222`（有效期限要晚於今天、末三碼隨便填，3D 驗證碼 `1234`）。確認：付完回到支持頁顯示謝謝；`fundingPayments/ecpay_<訂單號碼>` 出現；支持頁的金額變多。Function 的 log 搜尋 `ECPay`。綠界測試後台的「模擬付款」送來的通知帶 `SimulatePaid=1`，不算進度。
+
+**正式上線（prod）**：
+1. 綠界廠商後台 → 系統開發管理 → 系統介接設定：複製特店編號、HashKey、HashIV。只在自己的終端機貼，不要貼到對話或檔案裡：
    ```sh
-   printf %s '<正式 HashKey>' | gcloud secrets versions add NEWEBPAY_HASH_KEY --project marthasit --data-file=-
-   printf %s '<正式 HashIV>'  | gcloud secrets versions add NEWEBPAY_HASH_IV  --project marthasit --data-file=-
-   printf 'NEWEBPAY_MERCHANT_ID=<正式商店代號>\nNEWEBPAY_ENV=production\n' > functions/.env.marthasit
-   SUPPORT_PAYMENTS=on scripts/deploy.sh prod
+   gcloud secrets versions add ECPAY_HASH_KEY --project marthasit --data-file=-
    ```
-   正式付一筆小額確認，再到藍新後台退款（退款不會自動從進度扣掉）。
-7. 隱私權政策和服務條款講藍新的段落跟著 `SUPPORT_PAYMENTS=on` 出現（五種語言的 `privacy.html`、`terms.html` 裡的 `payments:on`）。正式打開的那次，把這兩頁五種語言的「最後更新」改成當天。
+   （貼上 HashKey，按 Enter 再按 Ctrl-D；HashIV 同樣做一次，名稱換成 `ECPAY_HASH_IV`。）
+2. `printf 'ECPAY_MERCHANT_ID=<正式特店編號>\nECPAY_ENV=production\n' > functions/.env.marthasit`
+3. `SUPPORT_PAYMENTS=on scripts/deploy.sh prod`
+4. 正式付一筆小額確認，再到綠界後台退款（退款不會自動從進度扣掉）。
+5. 隱私權政策和服務條款講綠界的段落跟著 `SUPPORT_PAYMENTS=on` 出現（五種語言的 `privacy.html`、`terms.html` 裡的 `payments:on`）。正式打開的那次，把這兩頁五種語言的「最後更新」改成當天。
 
-**從測試區換到正式環境**：測試區和正式環境是不同的商店，商店代號和兩把金鑰都不一樣。三樣一起換（secret 加新版本、`.env` 的 `NEWEBPAY_MERCHANT_ID` 和 `NEWEBPAY_ENV=production`），再部署 Functions。
+**從測試換到正式**：測試特店和正式特店的編號和兩把金鑰都不一樣。三樣一起換（secret 加新版本、`.env` 的 `ECPAY_MERCHANT_ID` 和 `ECPAY_ENV=production`），再部署 Functions。
 
-關掉線上支持：Hosting 部署時不加 `SUPPORT_PAYMENTS=on`（支持頁回到「線上支持即將開放」）；要連後端一起停，把 `.env` 的 `NEWEBPAY_MERCHANT_ID` 拿掉再部署 Functions。
+**從藍新換過來的專案**（2026-10-16 以前建的）：`deploy.sh` 不會自己刪 Function，先刪掉舊的三支再部署，部署完把舊 secret 也刪掉：
+```sh
+npx --prefix functions firebase functions:delete newebpayStart newebpayNotify newebpayReturn --region asia-east1 --project <專案> --force
+gcloud secrets delete NEWEBPAY_HASH_KEY --project <專案> --quiet
+gcloud secrets delete NEWEBPAY_HASH_IV --project <專案> --quiet
+```
+新的 secret 也要先建（見上面的「第一次部署前」）。
+
+關掉線上支持：Hosting 部署時不加 `SUPPORT_PAYMENTS=on`（支持頁回到「線上支持即將開放」）；要連後端一起停，把 `.env` 的 `ECPAY_MERCHANT_ID` 拿掉再部署 Functions。
 
 ## 平台營運者
 

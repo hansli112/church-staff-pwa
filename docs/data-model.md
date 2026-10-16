@@ -27,9 +27,9 @@
 | `platform/fundingCosts` | 只有後端讀寫（營運者經 `adminSetFundingCosts` 改）：`items`（`name`、`amount`、`currency` 為 `TWD` / `USD`、`per` 為 `month` / `year`） |
 | `platform/fxRates` | 只有後端讀寫：`rates`（一元台幣換多少外幣）、`fetchedOn` |
 | `fundingMonths/{YYYY-MM}` | 只有後端讀寫：該月 `received`、`target`（月份過了就不再改） |
-| `fundingPayments/{商店_交易 id}` | 只有後端讀寫：`store`（`apple` / `google` / `newebpay`）、`productId`（網站付款是 `web_once`）、`amount`、`currency`、`amountTwd`、`refundedTwd`、`month`、`at`。id 是 `apple_<交易 id>`、`google_<訂單 id>`、`newebpay_<訂單號碼>`。退款比付款先到時，先只有 `store`、`refundShare`（退了幾成），付款到了再補上其他欄位。不記帳號或名字 |
-| `newebpayOrders/{訂單號碼}` | 只有後端讀寫：網站線上支持（藍新金流）的訂單。訂單號碼（MerchantOrderNo）由後端產生，`YYYYMMDD` 加 12 個十六進位字元。開單時 `amount`（新台幣整數，30–1,000）、`status`（`pending`）、`createdAt`、`expiresAt`；付款通知到了改成 `status: paid`，加上 `tradeNo`（藍新交易序號）、`paymentType`、`paidAt`，拿掉 `expiresAt`。沒付款的過了 `expiresAt`（3 天）就刪掉。不記卡號、email、IP 或名字 |
-| `platform/newebpayRate` | 只有後端讀寫：這個小時開了幾張藍新訂單，`hour`（UTC 的 `YYYY-MM-DDTHH`）、`count`。全站每小時最多 60 張 |
+| `fundingPayments/{商店_交易 id}` | 只有後端讀寫：`store`（`apple` / `google` / `ecpay`）、`productId`（網站付款是 `web_once`）、`amount`、`currency`、`amountTwd`、`refundedTwd`、`month`、`at`。id 是 `apple_<交易 id>`、`google_<訂單 id>`、`ecpay_<訂單號碼>`。退款比付款先到時，先只有 `store`、`refundShare`（退了幾成），付款到了再補上其他欄位。不記帳號或名字 |
+| `ecpayOrders/{訂單號碼}` | 只有後端讀寫：網站線上支持（綠界）的訂單。訂單號碼（MerchantTradeNo）由後端產生，`YYYYMMDD` 加 12 個十六進位字元。開單時 `amount`（新台幣整數，30–1,000）、`status`（`pending`）、`createdAt`、`expiresAt`；付款通知到了改成 `status: paid`，加上 `tradeNo`（綠界交易編號）、`paymentType`、`paidAt`，拿掉 `expiresAt`。沒付款的過了 `expiresAt`（3 天）就刪掉。不記卡號、email 或名字 |
+| `platform/ecpayRate` | 只有後端讀寫：這個小時開了幾張綠界訂單，`hour`（UTC 的 `YYYY-MM-DDTHH`）、`count`。全站每小時最多 60 張 |
 
 - 一個教會的所有資料都在 `churches/{cid}` 底下，可以整棵匯出。
 - 推播 token 放在 `users/{uid}`，只有本人和 Cloud Functions 讀得到。self-host 版的 roster editor 讀得到全部 token，這裡改掉了。

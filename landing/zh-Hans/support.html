@@ -29,7 +29,7 @@
     </blockquote>
     <p class="lead">马大别忙免费给每间教会使用，云端费用由大家一起分担。款项用于马大别忙的云端费用，不是给教会的奉献，也无法开具奉献收据。支持完全自愿，教会能用的功能都一样。</p>
 
-    <!-- 從藍新的付款頁回來（/support?paid=1 或 0，由 newebpayReturn 轉過來）。網址裡沒有付款資料。 -->
+    <!-- 從綠界的付款頁回來（/support?paid=1 或 0，由 ecpayReturn 轉過來）。網址裡沒有付款資料。 -->
     <p class="notice" id="paid" role="status" hidden></p>
 
     <!-- 這個月的雲端費用：讀 platform/funding（公開）。讀不到就整塊不顯示。 -->
@@ -52,14 +52,13 @@
     <section class="panel" aria-labelledby="pay-title">
       <h2 id="pay-title">在线支持</h2>
       <!-- payments:off -->
-      <!-- 藍新拒絕了（贊助不受理），改申請綠界，審核中。沒有按鈕，但寫出金額、付款方式和退款，讓金流審核看得到網站以新台幣標價。接上後網站改用 payments on 建置（docs/firebase-setup.md〈線上支持〉）。 -->
+      <!-- 還沒開放：沒有按鈕，但寫出金額、付款方式和退款，不寫是哪家金流（金流審核時要看得到網站以新台幣標價）。開放時網站改用 payments on 建置（docs/firebase-setup.md〈線上支持〉）。 -->
       <p>在线支持即将开放，谢谢你的心意。</p>
       <p>开放后可以用信用卡或 Apple Pay 支持，以新台币付款：50、100、200 元，或 30 到 1,000 元之间自己决定。</p>
       <!-- /payments:off -->
       <!-- payments:on -->
-      <!-- TODO(LINE Pay): 藍新的 LINE Pay 要另外申請；開通後這行加上 LINE Pay，fundingNewebpay.ts 打開 LINEPAY。 -->
-      <p>可以用信用卡、Apple Pay 或 Google Pay，金额由你决定。</p>
-      <!-- 選金額 → POST /support/pay（Hosting 轉到 newebpayStart）→ 拿到簽好的表單，送到藍新的付款頁。 -->
+      <p>可以用信用卡或 Apple Pay，金额由你决定。</p>
+      <!-- 選金額 → POST /support/pay（Hosting 轉到 ecpayStart）→ 拿到簽好的表單，送到綠界的付款頁。 -->
       <form id="pay-form" action="/support/pay" method="post" novalidate>
         <fieldset class="amounts">
           <legend>金额（新台币）</legend>
@@ -74,7 +73,7 @@
         </div>
         <button class="btn btn-primary wide" id="pay" type="submit">支持马大别忙</button>
         <p class="fine" id="pay-msg" role="status" hidden></p>
-        <p class="fine">付款由蓝新金流处理，会转到蓝新的付款页；马大别忙不会拿到你的卡号。金额以新台币扣款，由发卡银行换算成你的货币。</p>
+        <p class="fine">付款由绿界科技（ECPay）处理，会转到绿界的付款页；马大别忙不会拿到你的卡号。金额以新台币扣款，由发卡银行换算成你的货币。</p>
       </form>
       <!-- /payments:on -->
     </section>
@@ -105,7 +104,7 @@
 (() => {
   // Replaced with the Firebase project ID when the site is deployed.
   const project = '__FIREBASE_PROJECT__';
-  // The page's language: for numbers, and for NewebPay's page (newebpayStart).
+  // The page's language: for numbers, and for ECPay's page (ecpayStart).
   const lang = document.documentElement.lang;
   const money = (n) => 'NT$' + Math.round(n).toLocaleString(lang);
   const url = `https://firestore.googleapis.com/v1/projects/${project}/databases/(default)/documents/platform/funding`;
@@ -149,7 +148,7 @@
     }
   }).catch(() => {});
 
-  // Back from NewebPay's page: say how it went, then tidy the address.
+  // Back from ECPay's page: say how it went, then tidy the address.
   const paid = new URLSearchParams(location.search).get('paid');
   if (paid === '1' || paid === '0') {
     const note = document.getElementById('paid');
@@ -188,7 +187,7 @@
     if (!customRow.hidden) custom.focus();
     say('');
   });
-  // Coming back from NewebPay with the back button shows the page as it was left.
+  // Coming back from ECPay with the back button shows the page as it was left.
   addEventListener('pageshow', ready);
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -210,7 +209,7 @@
       });
       const body = await r.json().catch(() => ({}));
       if (!r.ok || !body.gateway) throw new Error(body.error || String(r.status));
-      // NewebPay only takes a form posted by the browser (NDNF-1.2.6 §6, MPG02005).
+      // ECPay's checkout only takes a form posted by the browser.
       const post = document.createElement('form');
       post.method = 'post';
       post.action = body.gateway;

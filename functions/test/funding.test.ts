@@ -149,8 +149,8 @@ describe('the daily refresh', () => {
 
 describe('the ledger: every payment, whoever it came through', () => {
   const payment = (over: Partial<Payment> = {}): Payment => ({
-    id: 'newebpay_M1',
-    store: 'newebpay',
+    id: 'ecpay_M1',
+    store: 'ecpay',
     productId: 'web_once',
     amount: 500,
     currency: 'TWD',
@@ -190,26 +190,26 @@ describe('the ledger: every payment, whoever it came through', () => {
   test('refunded after the payment: taken off its month, once', async () => {
     const d = withRates();
     await recordPayment(d, payment());
-    await setRefund(d, 'newebpay_M1', 'newebpay', 1);
-    await setRefund(d, 'newebpay_M1', 'newebpay', 1);
+    await setRefund(d, 'ecpay_M1', 'ecpay', 1);
+    await setRefund(d, 'ecpay_M1', 'ecpay', 1);
     assert.equal(await month(), 0);
-    await setRefund(d, 'newebpay_M1', 'newebpay', 0);
+    await setRefund(d, 'ecpay_M1', 'ecpay', 0);
     assert.equal(await month(), 500, 'a reversed refund puts it back');
   });
 
   test('a partial refund takes off its share', async () => {
     const d = withRates();
     await recordPayment(d, payment());
-    await setRefund(d, 'newebpay_M1', 'newebpay', 0.4);
+    await setRefund(d, 'ecpay_M1', 'ecpay', 0.4);
     assert.equal(await month(), 300);
   });
 
   test('refunded before the payment arrives: the payment never counts', async () => {
     const d = withRates();
-    await setRefund(d, 'newebpay_M1', 'newebpay', 1);
+    await setRefund(d, 'ecpay_M1', 'ecpay', 1);
     assert.equal(await month(), undefined);
     await recordPayment(d, payment());
     assert.equal(await month(), 0);
-    assert.equal((await db.doc('fundingPayments/newebpay_M1').get()).get('refundedTwd'), 500);
+    assert.equal((await db.doc('fundingPayments/ecpay_M1').get()).get('refundedTwd'), 500);
   });
 });

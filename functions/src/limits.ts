@@ -38,7 +38,7 @@ export const LIMITS = {
 } as const;
 
 /**
- * 線上支持 (the website's NewebPay payments), in whole NT$. Only the
+ * 線上支持 (the website's ECPay payments), in whole NT$. Only the
  * website and the Functions check it, not the app: landing/support.html
  * has the same bounds on its amount field (test/limits.test.ts).
  */

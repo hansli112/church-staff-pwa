@@ -92,8 +92,11 @@ describe('dates in pushes', () => {
   });
 });
 
-test("what a 線上支持 payment is for fits NewebPay's 50, counted in bytes", () => {
-  for (const language of LANGUAGES) assert.ok(Buffer.byteLength(words(language).supportItem) <= 50, language);
+test("what a 線上支持 payment is for fits ECPay's TradeDesc, without the # that splits ItemName", () => {
+  for (const language of LANGUAGES) {
+    const item = words(language).supportItem;
+    assert.ok(item.length <= 200 && !item.includes('#'), language);
+  }
 });
 
 describe("the app's name under its home-screen icon, in each language", () => {

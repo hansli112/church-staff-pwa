@@ -180,7 +180,7 @@ class StoreKitPlayStore implements SupportStore {
 /// Overridden in main() with the real store on iOS and Android.
 final supportStoreProvider = Provider<SupportStore>((ref) => const NoStore());
 
-/// Whether the website's support page takes payments (NewebPay), so the web
+/// Whether the website's support page takes payments (ECPay), so the web
 /// app, which sells nothing itself, can send people there. The same switch
 /// as the website's: `SUPPORT_PAYMENTS=on scripts/deploy.sh …` builds both.
 final sitePaymentsProvider = Provider<bool>((ref) => const String.fromEnvironment('SUPPORT_PAYMENTS') == 'on');

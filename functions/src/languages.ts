@@ -107,7 +107,7 @@ export interface Words {
   inviteInvalid: string;
   inviteExpired: string;
 
-  /** 線上支持 on NewebPay's page and in its back office: at most 50 bytes in UTF-8, in case NewebPay counts them (fundingNewebpay.ts). */
+  /** 線上支持 on ECPay's page and in its back office (ItemName, TradeDesc): plain words, at most 200 characters (fundingEcpay.ts). */
   supportItem: string;
 
   /** A new church's services (church.ts). */

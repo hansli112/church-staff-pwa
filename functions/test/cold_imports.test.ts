@@ -48,15 +48,15 @@ test('each function lists the secrets its dependencies read, and no others', () 
   const { secrets } = coldImports();
   const calendar = ['CALENDAR_TOKEN_KEY', 'GOOGLE_OAUTH_CLIENT_ID', 'GOOGLE_OAUTH_CLIENT_SECRET'];
   const webhook = ['CALENDAR_TOKEN_KEY'];
-  const newebpay = ['NEWEBPAY_HASH_IV', 'NEWEBPAY_HASH_KEY'];
+  const ecpay = ['ECPAY_HASH_IV', 'ECPAY_HASH_KEY'];
   assert.deepEqual(Object.fromEntries(Object.entries(secrets).filter(([, s]) => s.length)), {
     setChurchTimeZone: calendar,
     purgeDeletedChurches: calendar,
     webhookSave: webhook,
     webhookRotateSecret: webhook,
     webhookTest: webhook,
-    newebpayStart: newebpay,
-    newebpayNotify: newebpay,
+    ecpayStart: ecpay,
+    ecpayNotify: ecpay,
     onMemberDeleted: calendar,
     onMemberDemoted: calendar,
     sendRosterChanges: webhook,
