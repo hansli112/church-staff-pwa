@@ -39,6 +39,7 @@
       <div class="bar" role="progressbar" aria-labelledby="funding-title" aria-valuemin="0" aria-valuemax="100" id="funding-bar"><span></span></div>
       <p class="status" id="funding-status" hidden></p>
       <p class="fine" id="funding-carried" hidden></p>
+      <p class="fine">算的是扣掉支付和商店手续费以后，实际收到的金额。</p>
       <p class="fine">汇率：<a href="https://www.exchangerate-api.com">Exchange Rate API</a></p>
     </section>
 
@@ -73,7 +74,7 @@
         </div>
         <button class="btn btn-primary wide" id="pay" type="submit">支持马大别忙</button>
         <p class="fine" id="pay-msg" role="status" hidden></p>
-        <p class="fine">付款由绿界科技（ECPay）处理，会转到绿界的付款页；马大别忙不会拿到你的卡号。只接受台湾发行的卡（绑定在 Apple Pay 的卡也一样），以新台币扣款。</p>
+        <p class="fine">付款由绿界科技（ECPay）处理，会转到绿界的付款页；马大别忙不会拿到你的卡号。只接受台湾发行的卡（绑定在 Apple Pay 的卡也一样），以新台币扣款。绿界每笔收 2.75%（最少 5 元）加 1 元手续费，例如支持 30 元，上面的金额会多 24 元。</p>
       </form>
       <!-- /payments:on -->
     </section>

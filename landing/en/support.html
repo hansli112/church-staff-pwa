@@ -39,6 +39,7 @@
       <div class="bar" role="progressbar" aria-labelledby="funding-title" aria-valuemin="0" aria-valuemax="100" id="funding-bar"><span></span></div>
       <p class="status" id="funding-status" hidden></p>
       <p class="fine" id="funding-carried" hidden></p>
+      <p class="fine">This counts what actually arrives, after payment and app store fees.</p>
       <p class="fine">Exchange rates: <a href="https://www.exchangerate-api.com">Exchange Rate API</a></p>
     </section>
 
@@ -73,7 +74,7 @@
         </div>
         <button class="btn btn-primary wide" id="pay" type="submit">Support Martha, sit</button>
         <p class="fine" id="pay-msg" role="status" hidden></p>
-        <p class="fine">Payments are handled by ECPay, a payment provider in Taiwan, and you’ll be taken to ECPay’s payment page. Martha, sit never sees your card number. Only cards issued in Taiwan are accepted, including cards in Apple Pay, and you’re charged in New Taiwan dollars.</p>
+        <p class="fine">Payments are handled by ECPay, a payment provider in Taiwan, and you’ll be taken to ECPay’s payment page. Martha, sit never sees your card number. Only cards issued in Taiwan are accepted, including cards in Apple Pay, and you’re charged in New Taiwan dollars. ECPay keeps 2.75% (at least NT$5) plus NT$1 of each payment, so NT$30 adds NT$24 to the total above.</p>
       </form>
       <!-- /payments:on -->
     </section>
