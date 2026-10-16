@@ -57,7 +57,7 @@
       <p>开放后可以用台湾发行的信用卡或 Apple Pay 支持，以新台币付款：50、100、200 元，或 30 到 1,000 元之间自己决定。</p>
       <!-- /payments:off -->
       <!-- payments:on -->
-      <p>可以用台湾发行的信用卡或 Apple Pay，金额由你决定。</p>
+      <p>可以用台湾发行的信用卡或 Apple Pay。</p>
       <!-- 選金額 → POST /support/pay（Hosting 轉到 ecpayStart）→ 拿到簽好的表單，送到綠界的付款頁。 -->
       <form id="pay-form" action="/support/pay" method="post" novalidate>
         <fieldset class="amounts">
@@ -73,7 +73,7 @@
         </div>
         <button class="btn btn-primary wide" id="pay" type="submit">支持马大别忙</button>
         <p class="fine" id="pay-msg" role="status" hidden></p>
-        <p class="fine">付款由绿界科技（ECPay）处理，会转到绿界的付款页；马大别忙不会拿到你的卡号。只接受台湾发行的卡（绑定在 Apple Pay 的卡也一样），以新台币扣款。付款会被扣一小笔手续费，上面的金额只算实际收到的钱。</p>
+        <p class="fine">由绿界处理付款，马大别忙不会拿到你的卡号。进度只算扣掉手续费后的金额。</p>
       </form>
       <!-- /payments:on -->
     </section>

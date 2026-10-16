@@ -57,7 +57,7 @@
       <p>Once it opens, you can give by a credit card issued in Taiwan or Apple Pay, in New Taiwan dollars: NT$50, 100 or 200, or any amount from NT$30 to 1,000.</p>
       <!-- /payments:off -->
       <!-- payments:on -->
-      <p>Pay by a credit card issued in Taiwan or Apple Pay, in any amount you choose.</p>
+      <p>Pay by a credit card issued in Taiwan or Apple Pay.</p>
       <!-- 選金額 → POST /support/pay（Hosting 轉到 ecpayStart）→ 拿到簽好的表單，送到綠界的付款頁。 -->
       <form id="pay-form" action="/support/pay" method="post" novalidate>
         <fieldset class="amounts">
@@ -73,7 +73,7 @@
         </div>
         <button class="btn btn-primary wide" id="pay" type="submit">Support Martha, sit</button>
         <p class="fine" id="pay-msg" role="status" hidden></p>
-        <p class="fine">Payments are handled by ECPay, a payment provider in Taiwan, and you’ll be taken to ECPay’s payment page. Martha, sit never sees your card number. Only cards issued in Taiwan are accepted, including cards in Apple Pay, and you’re charged in New Taiwan dollars. A small fee is taken from each payment; the total above counts only what we actually receive.</p>
+        <p class="fine">Payments are handled by ECPay; Martha, sit never sees your card number. The total above counts what’s left after fees.</p>
       </form>
       <!-- /payments:on -->
     </section>

@@ -57,7 +57,7 @@
       <p>열리면 대만에서 발급된 신용카드나 Apple Pay로 후원할 수 있어요. 결제는 신 타이완 달러(NT$)로 하며, NT$50, 100, 200 중에서 고르거나 NT$30~1,000 사이에서 직접 정할 수 있어요.</p>
       <!-- /payments:off -->
       <!-- payments:on -->
-      <p>대만에서 발급된 신용카드나 Apple Pay로 후원할 수 있고, 금액은 자유롭게 정하면 돼요.</p>
+      <p>대만에서 발급된 신용카드나 Apple Pay로 후원할 수 있어요.</p>
       <!-- 選金額 → POST /support/pay（Hosting 轉到 ecpayStart）→ 拿到簽好的表單，送到綠界的付款頁。 -->
       <form id="pay-form" action="/support/pay" method="post" novalidate>
         <fieldset class="amounts">
@@ -73,7 +73,7 @@
         </div>
         <button class="btn btn-primary wide" id="pay" type="submit">마르다의 쉼표 후원하기</button>
         <p class="fine" id="pay-msg" role="status" hidden></p>
-        <p class="fine">결제는 대만의 결제 서비스 ECPay(綠界科技)가 처리하며, ECPay 결제 페이지로 이동해요. 마르다의 쉼표는 카드 번호를 받지 않아요. 대만에서 발급된 카드만 쓸 수 있고(Apple Pay에 등록한 카드도 마찬가지예요), 결제는 신 타이완 달러(NT$)로 청구돼요. 결제할 때 소액의 수수료가 빠지고, 위 금액은 실제로 받은 돈만 세요.</p>
+        <p class="fine">결제는 ECPay가 처리하며, 마르다의 쉼표는 카드 번호를 받지 않아요. 위 금액은 수수료를 뺀 금액이에요.</p>
       </form>
       <!-- /payments:on -->
     </section>

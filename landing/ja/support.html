@@ -57,7 +57,7 @@
       <p>開始後は、台湾で発行されたクレジットカードまたは Apple Pay を使い、台湾ドルでお支払いいただけます。金額は 50、100、200 台湾ドルから選ぶか、30〜1,000 台湾ドルの範囲でご自由に決められます。</p>
       <!-- /payments:off -->
       <!-- payments:on -->
-      <p>台湾で発行されたクレジットカードと Apple Pay が使えます。金額はご自由にお選びください。</p>
+      <p>台湾で発行されたクレジットカードと Apple Pay が使えます。</p>
       <!-- 選金額 → POST /support/pay（Hosting 轉到 ecpayStart）→ 拿到簽好的表單，送到綠界的付款頁。 -->
       <form id="pay-form" action="/support/pay" method="post" novalidate>
         <fieldset class="amounts">
@@ -73,7 +73,7 @@
         </div>
         <button class="btn btn-primary wide" id="pay" type="submit">「マルタ、ひと休み」を応援</button>
         <p class="fine" id="pay-msg" role="status" hidden></p>
-        <p class="fine">お支払いは台湾の決済サービス「綠界科技（ECPay）」が処理し、ECPay の支払いページに移動します。「マルタ、ひと休み」がカード番号を受け取ることはありません。使えるのは台湾で発行されたカードだけで（Apple Pay に登録したカードも同じです）、請求は台湾ドル（NT$）で行われます。お支払いからは少額の手数料が引かれ、上の金額は実際に受け取った額だけを数えています。</p>
+        <p class="fine">お支払いは ECPay が処理し、「マルタ、ひと休み」がカード番号を受け取ることはありません。上の金額は手数料を引いた額です。</p>
       </form>
       <!-- /payments:on -->
     </section>
