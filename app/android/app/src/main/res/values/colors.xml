@@ -2,4 +2,6 @@
 <resources>
     <!-- The app's accent (tokens.dart), behind the notification icon. -->
     <color name="notification">#1F5FD1</color>
+    <!-- The icon's paper (tool/generate_icons.dart), behind it while the app starts. -->
+    <color name="splash">#F4EDE1</color>
 </resources>

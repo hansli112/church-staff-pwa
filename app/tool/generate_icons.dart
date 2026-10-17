@@ -113,6 +113,17 @@ void write(String path, img.Image image) {
 img.Image resized(img.Image src, int size) =>
     img.copyResize(src, width: size, height: size, interpolation: img.Interpolation.average);
 
+/// [round] in the middle of Android's 288dp splash icon, small enough for
+/// the 192dp circle it is cut to. On the splash's paper only the drawing
+/// shows: no circle or edge around it.
+img.Image splash(img.Image round, int px) {
+  final out = img.Image(width: px, height: px, numChannels: 4);
+  final inner = (px * 132 / 288).round();
+  final at = (px - inner) ~/ 2;
+  img.compositeImage(out, resized(round, inner), dstX: at, dstY: at);
+  return out;
+}
+
 void main() {
   const android = {'mdpi': 48, 'hdpi': 72, 'xhdpi': 96, 'xxhdpi': 144, 'xxxhdpi': 192};
   for (final v in variants) {
@@ -121,6 +132,8 @@ void main() {
     final name = v.id.isEmpty ? 'ic_launcher' : 'ic_launcher_${v.id.toLowerCase()}';
     android.forEach((density, px) {
       write('android/app/src/main/res/mipmap-$density/$name.png', resized(round, px));
+      // Every icon starts the app on the default one's paper.
+      if (v.id.isEmpty) write('android/app/src/main/res/drawable-$density/splash_icon.png', splash(round, px * 6));
     });
     final set = v.id.isEmpty ? 'AppIcon' : 'AppIcon-${v.id}';
     final dir = 'ios/Runner/Assets.xcassets/$set.appiconset';
