@@ -375,7 +375,7 @@ class _InAppBrowserNote extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(l10n.inAppBrowserNote(app), style: AppText.subheadline),
+          BalancedText(l10n.inAppBrowserNote(app), textAlign: TextAlign.start, style: AppText.subheadline),
           const SizedBox(height: Space.s),
           Align(
             alignment: AlignmentDirectional.centerEnd,

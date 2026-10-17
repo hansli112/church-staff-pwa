@@ -15,7 +15,7 @@ List<String> linesAt(String text, double width, {double fontSize = 10}) {
   final lines = <String>[];
   var start = 0;
   for (final end in lineEnds(painter)) {
-    lines.add(text.substring(start, end));
+    lines.add(text.substring(start, end).replaceAll('\n', ''));
     start = end;
   }
   painter.dispose();
@@ -131,6 +131,55 @@ void main() {
       const text = '點手機上的「恩典之家」圖示打開，再登入一次';
       expect(linesAt(text, 180), ['點手機上的「恩典之家」圖示打開，再登', '入一次'], reason: 'the problem');
       expect(linesAt(text, paragraph(text, 180)!), ['點手機上的「恩典之家」圖示打開，', '再登入一次']);
+    });
+
+    test('a note breaks at its comma even well short of the width, rather than inside a word', () {
+      const text = '管理員不能直接退出。要退出，先把另一位同工設成管理員，再請對方取消你的管理員。';
+      expect(linesAt(text, 250), ['管理員不能直接退出。要退出，先把另一位同工設成管理', '員，再請對方取消你的管理員。'], reason: 'the problem');
+      final shown = phraseBreaks(
+        text,
+        style: const TextStyle(fontSize: 10),
+        textScaler: TextScaler.noScaling,
+        direction: TextDirection.ltr,
+        maxWidth: 250,
+      );
+      expect(linesAt(shown, 250), ['管理員不能直接退出。要退出，', '先把另一位同工設成管理員，再請對方取消你的管理員。']);
+    });
+
+    test('a comma inside a quoted term is no place to break', () {
+      final text = keepQuotesWhole('一二三四五六七八九十一二三四「好，我知道了」五六七八九十一二三四五六');
+      final shown = phraseBreaks(
+        text,
+        style: const TextStyle(fontSize: 10),
+        textScaler: TextScaler.noScaling,
+        direction: TextDirection.ltr,
+        maxWidth: 220,
+      );
+      expect(shown, isNot(contains('，\n')));
+    });
+
+    test('a period inside a number is no place to break', () {
+      const text = 'Safari · iOS 26.5 · 繁中模擬器畫面再加上一些說明文字';
+      final shown = phraseBreaks(
+        text,
+        style: const TextStyle(fontSize: 10),
+        textScaler: TextScaler.noScaling,
+        direction: TextDirection.ltr,
+        maxWidth: 250,
+      );
+      expect(shown, text);
+    });
+
+    test('a break goes back to a phrase only when that costs no extra line', () {
+      const text = '一二三四五六七八九十，一二三四五六七八九十一二三四五六七八九十一';
+      final shown = phraseBreaks(
+        text,
+        style: const TextStyle(fontSize: 10),
+        textScaler: TextScaler.noScaling,
+        direction: TextDirection.ltr,
+        maxWidth: 200,
+      );
+      expect(shown, text, reason: 'after the comma 21 characters would not fit on the next line');
     });
 
     test('a long note splits none of its quoted terms', () {

@@ -89,7 +89,7 @@ void main() {
 
     await tester.tap(find.descendant(of: rowWith('Google'), matching: find.text('解除連結')));
     await settle(tester);
-    expect(find.text('之後就不能用 mei@gmail.com 登入這個帳號'), findsOneWidget);
+    expect(findShown('之後就不能用 mei@gmail.com 登入這個帳號'), findsOneWidget);
     await tapText(tester, '解除連結');
     expect(find.text('Google'), findsNothing);
     expect(find.text('解除連結'), findsNothing);
@@ -108,7 +108,7 @@ void main() {
     b.auth.googleAccount = 'mei@example.com';
     await tapText(tester, '連結 Google 帳號');
     await go(tester, '/welcome');
-    expect(find.text('〈恩典堂〉的同工資料已經搬過來了，要加入嗎？'), findsOneWidget);
+    expect(findShown('〈恩典堂〉的同工資料已經搬過來了，要加入嗎？'), findsOneWidget);
     await tapText(tester, '加入');
 
     final m = b.members['grace']![uid]!;

@@ -157,8 +157,9 @@ class MemberEditorScreen extends ConsumerWidget {
           if (shown.isNotEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
+              child: BalancedText(
                 l10n.zonesFooter,
+                textAlign: TextAlign.start,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),

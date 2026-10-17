@@ -79,11 +79,19 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(l10n.supportVerse, style: AppText.body.copyWith(color: c.label, height: 1.6)),
+                BalancedText(
+                  l10n.supportVerse,
+                  textAlign: TextAlign.start,
+                  style: AppText.body.copyWith(color: c.label, height: 1.6),
+                ),
                 const SizedBox(height: Space.xs),
                 Text(l10n.supportVerseSource, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
                 const SizedBox(height: Space.m),
-                Text(l10n.supportBody, style: AppText.body.copyWith(color: c.secondaryLabel)),
+                BalancedText(
+                  l10n.supportBody,
+                  textAlign: TextAlign.start,
+                  style: AppText.body.copyWith(color: c.secondaryLabel),
+                ),
               ],
             ),
           ),
@@ -222,13 +230,18 @@ class _FundingSection extends StatelessWidget {
               ),
               if (status != null) ...[
                 const SizedBox(height: Space.s),
-                Text(status, style: AppText.subheadline.copyWith(color: c.label)),
+                BalancedText(
+                  status,
+                  textAlign: TextAlign.start,
+                  style: AppText.subheadline.copyWith(color: c.label),
+                ),
               ],
               if (f.carried > 0)
                 Padding(
                   padding: const EdgeInsets.only(top: Space.xs),
-                  child: Text(
+                  child: BalancedText(
                     l10n.fundingCarried(money(l10n, f.carried)),
+                    textAlign: TextAlign.start,
                     style: AppText.footnote.copyWith(color: c.secondaryLabel),
                   ),
                 ),

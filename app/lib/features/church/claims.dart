@@ -92,7 +92,7 @@ class _PendingClaimsCardState extends ConsumerState<PendingClaimsCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(l10n.claimPrompt(claim.churchName), style: AppText.body),
+                    BalancedText(l10n.claimPrompt(claim.churchName), textAlign: TextAlign.start, style: AppText.body),
                     const SizedBox(height: Space.m),
                     Row(
                       children: [

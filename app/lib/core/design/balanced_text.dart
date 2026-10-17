@@ -10,8 +10,10 @@ import 'package:flutter/scheduler.dart';
 /// 「接下來沒有你的服事／排到你時會出現在這裡」, not 「…排到你時會出現在／這裡」.
 /// Aligned to the start, a paragraph takes a little less than its width
 /// where that splits no 「quoted term」, leaves no line of one or two
-/// characters, or ends lines on punctuation. Text that fits on one line is
-/// left alone. Screen readers read [text] as it is.
+/// characters, or ends lines on punctuation, and a line that would still end
+/// inside a phrase ends at its last punctuation mark instead when the rest
+/// fits in as many lines. Text that fits on one line is left alone. Screen
+/// readers read [text] as it is.
 class BalancedText extends StatefulWidget {
   const BalancedText(this.text, {super.key, this.style, this.textAlign = TextAlign.center});
 
@@ -26,24 +28,32 @@ class BalancedText extends StatefulWidget {
 }
 
 class _BalancedTextState extends State<BalancedText> {
-  /// The text with the commas that end its lines left out, once laid out.
-  String? _withoutCommas;
+  /// What to show once laid out: centered, the text with the commas that end
+  /// its lines left out; aligned to the start, the text as given when it
+  /// fits on one line (quoted terms need no joining), else with lines that
+  /// end at a phrase ([phraseBreaks]).
+  String? _laidOut;
 
   @override
   void didUpdateWidget(BalancedText old) {
     super.didUpdateWidget(old);
-    if (old.text != widget.text) _withoutCommas = null;
+    if (old.text != widget.text) _laidOut = null;
   }
 
   @override
   Widget build(BuildContext context) {
     final centered = widget.textAlign == TextAlign.center;
     final text = centered ? widget.text : keepQuotesWhole(widget.text);
-    final shown = centered ? (_withoutCommas ?? text) : text;
+    final shown = _laidOut ?? text;
     return _Balanced(
       text: text,
+      plain: widget.text,
       shown: shown,
-      onShown: centered ? (s) => setState(() => _withoutCommas = s) : null,
+      // Laid out, then gone in the same frame (a row scrolled away, a toast
+      // replaced): nothing to show.
+      onShown: (s) {
+        if (mounted) setState(() => _laidOut = s);
+      },
       style: DefaultTextStyle.of(context).style.merge(widget.style),
       textScaler: MediaQuery.textScalerOf(context),
       direction: Directionality.of(context),
@@ -96,6 +106,7 @@ String keepQuotesWhole(String text) {
 class _Balanced extends SingleChildRenderObjectWidget {
   const _Balanced({
     required this.text,
+    required this.plain,
     required this.shown,
     required this.onShown,
     required this.style,
@@ -108,8 +119,11 @@ class _Balanced extends SingleChildRenderObjectWidget {
   /// What to lay out by.
   final String text;
 
-  /// What the child shows now: [text], or it without the commas that end
-  /// its lines, which [onShown] asks for once it knows them.
+  /// The text as given, before quoted terms were joined.
+  final String plain;
+
+  /// What the child shows now: [text], or what [onShown] asks for once it
+  /// is laid out (see _RenderBalanced._waiting).
   final String shown;
   final ValueChanged<String>? onShown;
   final TextStyle style;
@@ -120,6 +134,7 @@ class _Balanced extends SingleChildRenderObjectWidget {
   @override
   _RenderBalanced createRenderObject(BuildContext context) =>
       _RenderBalanced(text, style, textScaler, direction, centered)
+        ..plain = plain
         ..shown = shown
         ..onShown = onShown;
 
@@ -127,6 +142,7 @@ class _Balanced extends SingleChildRenderObjectWidget {
   void updateRenderObject(BuildContext context, _RenderBalanced renderObject) {
     renderObject
       ..text = text
+      ..plain = plain
       ..shown = shown
       ..onShown = onShown
       ..style = style
@@ -141,6 +157,7 @@ class _RenderBalanced extends RenderShiftedBox {
   _RenderBalanced(this.text, this.style, this.textScaler, this.direction, this.centered) : super(null);
 
   String text;
+  String plain = '';
   String shown = '';
   ValueChanged<String>? onShown;
   TextStyle style;
@@ -148,9 +165,32 @@ class _RenderBalanced extends RenderShiftedBox {
   TextDirection direction;
   bool centered;
 
-  /// Not painted for the one frame until the child shows [text] without the
-  /// commas that end its lines.
+  /// Not painted for the one frame until the child shows what its layout
+  /// wants: [text] without the commas that end its lines, [plain], or [text]
+  /// with [phraseBreaks].
   bool _waiting = false;
+
+  // Measured by the text as given, not as shown: a parent that sizes to
+  // its child (a dialog) would otherwise shrink to the shown lines, and the
+  // lines would change again for the new width.
+  double _intrinsic(bool max) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: direction,
+      textScaler: textScaler,
+    )..layout();
+    try {
+      return max ? painter.maxIntrinsicWidth : painter.minIntrinsicWidth;
+    } finally {
+      painter.dispose();
+    }
+  }
+
+  @override
+  double computeMinIntrinsicWidth(double height) => _intrinsic(false);
+
+  @override
+  double computeMaxIntrinsicWidth(double height) => _intrinsic(true);
 
   double? _width(BoxConstraints constraints) => constraints.hasBoundedWidth
       ? (centered ? balancedWidth : paragraphWidth)(
@@ -182,7 +222,11 @@ class _RenderBalanced extends RenderShiftedBox {
     final width = _width(constraints);
     final onShown = this.onShown;
     if (onShown != null) {
-      final wanted = width == null ? text : _withoutLineEndCommas(width);
+      final wanted = !centered
+          ? _startAligned(width)
+          : width == null
+          ? text
+          : _withoutLineEndCommas(width);
       _waiting = wanted != shown;
       if (_waiting) SchedulerBinding.instance.addPostFrameCallback((_) => onShown(wanted));
     }
@@ -192,6 +236,25 @@ class _RenderBalanced extends RenderShiftedBox {
     (child.parentData! as BoxParentData).offset = Offset(
       centered ? spare / 2 : (direction == TextDirection.rtl ? spare : 0),
       (size.height - child.size.height) / 2,
+    );
+  }
+
+  /// Aligned to the start: [plain] on one line; otherwise [text] with lines
+  /// that would end inside a phrase ending at a punctuation mark.
+  String _startAligned(double? width) {
+    if (!constraints.hasBoundedWidth) return text;
+    final lines = _Lines(text, style, textScaler, direction);
+    try {
+      if (lines.endsAt(constraints.maxWidth).length <= 1) return plain;
+    } finally {
+      lines.dispose();
+    }
+    return phraseBreaks(
+      text,
+      style: style,
+      textScaler: textScaler,
+      direction: direction,
+      maxWidth: width ?? constraints.maxWidth,
     );
   }
 
@@ -331,4 +394,66 @@ double? paragraphWidth(
   } finally {
     lines.dispose();
   }
+}
+
+/// [text] laid out in [maxWidth] with a line that would end inside a phrase
+/// ending at the last punctuation mark in its second half instead, where
+/// the rest still fits in as many lines: 「…要退出，／先把另一位同工設成管理員，…」,
+/// not 「…先把另一位同工設成管理／員，…」. The break is a line break in the
+/// text returned; [text] itself when nothing moves.
+String phraseBreaks(
+  String text, {
+  required TextStyle style,
+  required TextScaler textScaler,
+  required TextDirection direction,
+  required double maxWidth,
+}) {
+  List<int> endsOf(String s) {
+    final lines = _Lines(s, style, textScaler, direction);
+    try {
+      return lines.endsAt(maxWidth);
+    } finally {
+      lines.dispose();
+    }
+  }
+
+  var shown = text;
+  var ends = endsOf(shown);
+  var start = 0;
+  for (var i = 0; i < ends.length - 1; i++) {
+    final end = ends[i];
+    final raw = shown.substring(start, end);
+    final line = raw.trimRight();
+    // Ends at a break of its own, or on a phrase already.
+    if (line.isEmpty || raw.endsWith('\n') || _phraseEnds.contains(line.characters.last)) {
+      start = end;
+      continue;
+    }
+    var at = -1;
+    final half = line.replaceAll('\u2060', '').length ~/ 2;
+    for (var k = line.length - 1; k >= 0 && line.substring(0, k).replaceAll('\u2060', '').length >= half; k--) {
+      // Not inside a quoted term, which the joiners keep whole.
+      if (line[k] == '\u2060' || (k + 1 < line.length && line[k + 1] == '\u2060')) continue;
+      // Every mark in _phraseEnds is one UTF-16 unit. A Western one ends a
+      // phrase only before a space: not 26.5 or 2,000.
+      final western = line.codeUnitAt(k) < 0x80;
+      if (_phraseEnds.contains(line[k]) &&
+          (!western || (k + 1 < shown.length - start && shown[start + k + 1] == ' '))) {
+        at = start + k + 1;
+        break;
+      }
+    }
+    if (at > start) {
+      final candidate = '${shown.substring(0, at)}\n${shown.substring(at).trimLeft()}';
+      final candidateEnds = endsOf(candidate);
+      if (candidateEnds.length <= ends.length) {
+        shown = candidate;
+        ends = candidateEnds;
+        start = at + 1;
+        continue;
+      }
+    }
+    start = end;
+  }
+  return shown;
 }

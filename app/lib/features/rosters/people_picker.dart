@@ -380,8 +380,9 @@ class PeoplePickerState extends State<PeoplePicker> {
             horizontal: Space.m,
             vertical: Space.s,
           ),
-          child: Text(
+          child: BalancedText(
             l10n.reorderHint,
+            textAlign: TextAlign.start,
             style: AppText.footnote.copyWith(color: c.secondaryLabel),
           ),
         ),

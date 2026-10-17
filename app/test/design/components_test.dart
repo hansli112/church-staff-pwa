@@ -126,10 +126,13 @@ void main() {
         ),
         textScale: 2,
       );
-      final text = tester.widget<Text>(find.text(value));
+      final text = tester.widget<Text>(find.descendant(of: findShown(value), matching: find.byType(Text)));
       expect(text.maxLines, isNull);
       expect(text.overflow, isNot(TextOverflow.ellipsis));
-      expect(tester.getTopLeft(find.text(value)).dy, greaterThanOrEqualTo(tester.getBottomLeft(find.text('主畫面名稱')).dy));
+      expect(
+        tester.getTopLeft(findShown(value)).dy,
+        greaterThanOrEqualTo(tester.getBottomLeft(findShown('主畫面名稱')).dy),
+      );
       expect(tester.takeException(), isNull);
     });
 

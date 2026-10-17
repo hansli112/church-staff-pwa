@@ -167,7 +167,7 @@ void main() {
 
     expect(find.text('點網址列旁的分享圖示'), findsOneWidget);
     expect(find.byIcon(Icons.more_horiz), findsNothing);
-    expect(find.text('不是「⋯」選單，也不是「分享 Chrome」'), findsOneWidget);
+    expect(findShown('不是「⋯」選單，也不是「分享 Chrome」'), findsOneWidget);
   });
 
   testWidgets('starting a church loads its own page first, so the home screen gets its name and icon', (tester) async {
@@ -443,7 +443,7 @@ void main() {
     expect(find.text('iPad · Safari 教學'), findsOneWidget);
     expect(find.text('點 Safari 的分享圖示'), findsOneWidget);
     expect(find.text('若只看到「⋯」，先點它，再選「分享」'), findsNothing);
-    expect(find.textContaining('先點分享面板中的「更多」'), findsOneWidget);
+    expect(findShownContaining('先點分享面板中的「更多」'), findsOneWidget);
   });
 
   testWidgets('Safari shows Chinese captured menus, including View More before Add to Home Screen', (tester) async {
@@ -463,8 +463,8 @@ void main() {
         'assets/add_to_home/safari_add.png',
       ]),
     );
-    expect(find.textContaining('只看到一排圖示時，先點「檢視較多」；舊版要往下滑'), findsOneWidget);
-    expect(find.text('Safari · iOS 26.5 · 繁中模擬器畫面'), findsNWidgets(2));
+    expect(findShownContaining('只看到一排圖示時，先點「檢視較多」；舊版要往下滑'), findsOneWidget);
+    expect(findShown('Safari · iOS 26.5 · 繁中模擬器畫面'), findsNWidgets(2));
     expect(tester.takeException(), isNull);
   });
 
@@ -485,12 +485,12 @@ void main() {
       [false, false],
       reason: 'the page cannot detect Safari layout; neither choice is guessed',
     );
-    expect(find.text('請依工具列上的按鈕選擇，不需要更改 Safari 設定'), findsOneWidget);
+    expect(findShown('請依工具列上的按鈕選擇，不需要更改 Safari 設定'), findsOneWidget);
     await tapText(tester, '我看到分享圖示');
 
     expect(routerOf(tester).routeInformationProvider.value.uri.path, '/add-to-home');
     expect(find.text('點 Safari 的分享圖示'), findsOneWidget);
-    expect(find.text('網址列在上或下都可以，請找「方框向上箭頭」'), findsOneWidget);
+    expect(findShown('網址列在上或下都可以，請找「方框向上箭頭」'), findsOneWidget);
     expect(find.text('若只看到「⋯」，先點它，再選「分享」'), findsNothing);
     final images = tester.widgetList<Image>(find.byType(Image)).map((image) => image.image).whereType<AssetImage>();
     expect(images.map((image) => image.assetName), contains('assets/add_to_home/safari_direct_share.png'));
@@ -527,7 +527,7 @@ void main() {
     await tapText(tester, '畫面不一樣？');
     expect(find.text('Safari 畫面'), findsNothing);
     await tapText(tester, 'Safari');
-    expect(find.text('網址列在上或下都可以，請找「方框向上箭頭」'), findsOneWidget);
+    expect(findShown('網址列在上或下都可以，請找「方框向上箭頭」'), findsOneWidget);
   });
 
   testWidgets('iPad Safari keeps its own share order instead of iPhone layout choices', (tester) async {
@@ -539,7 +539,7 @@ void main() {
     expect(find.text('我看到「⋯」'), findsNothing);
     await tapText(tester, 'Safari');
     expect(find.text('點 Safari 的分享圖示'), findsOneWidget);
-    expect(find.textContaining('先點分享面板中的「更多」'), findsOneWidget);
+    expect(findShownContaining('先點分享面板中的「更多」'), findsOneWidget);
   });
 
   for (final brightness in Brightness.values) {
@@ -573,7 +573,7 @@ void main() {
       containsAll(['assets/add_to_home/chrome_ios_share.png', 'assets/add_to_home/chrome_ios_add.png']),
     );
     expect(iosImages.map((image) => image.assetName), everyElement(isNot(contains('safari'))));
-    expect(find.text('Chrome 155 · iOS 27.2 · iPhone 13 真機畫面'), findsNWidgets(2));
+    expect(findShown('Chrome 155 · iOS 27.2 · iPhone 13 真機畫面'), findsNWidgets(2));
     expect(find.textContaining('看不到時，先把分享面板展開，再往下滑'), findsOneWidget);
     expect(find.text('按鈕示意，請點瀏覽器上的按鈕'), findsNothing);
     expect(find.text('點網址列旁的分享圖示'), findsOneWidget);

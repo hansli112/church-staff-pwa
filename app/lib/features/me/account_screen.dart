@@ -110,8 +110,9 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           ],
           const SizedBox(height: Space.l),
           if (_error != null) ...[
-            Text(
+            BalancedText(
               _error!,
+              textAlign: TextAlign.start,
               style: AppText.subheadline.copyWith(color: c.destructive),
             ),
             const SizedBox(height: Space.m),

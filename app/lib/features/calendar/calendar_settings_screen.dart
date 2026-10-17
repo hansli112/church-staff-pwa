@@ -64,7 +64,11 @@ class CalendarSettingsScreen extends ConsumerWidget {
           if (result != null && result != 'connected')
             Padding(
               padding: const EdgeInsets.all(Space.m),
-              child: Text(l10n.calConnectFailed, style: AppText.subheadline.copyWith(color: c.destructive)),
+              child: BalancedText(
+                l10n.calConnectFailed,
+                textAlign: TextAlign.start,
+                style: AppText.subheadline.copyWith(color: c.destructive),
+              ),
             ),
           if (settings == null || !settings.connected || settings.needsReconnect)
             Padding(

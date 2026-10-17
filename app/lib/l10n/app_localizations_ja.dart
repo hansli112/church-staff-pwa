@@ -1845,8 +1845,7 @@ class L10nJa extends L10n {
   String get importAdvanced => '詳細設定';
 
   @override
-  String get importFormatHelp =>
-      'date：YYYY-MM-DD。担当者がいない場合は people を [] にします。\nevents は省略できます。特別行事の color は 0〜5 の色番号のみです。';
+  String get importFormatHelp => 'date：YYYY-MM-DD。担当者がいない場合は people を [] にします。\nevents は省略可。特別行事の color は色番号 0〜5。';
 
   @override
   String get importPhotoFormatError => '読み取り結果の形式が正しくありません。もう一度読み取るか、詳細設定の JSON を使ってください。';

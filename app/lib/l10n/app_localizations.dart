@@ -3199,7 +3199,7 @@ abstract class L10n {
   /// No description provided for @claimPrompt.
   ///
   /// In zh, this message translates to:
-  /// **'〈{church}〉的同工資料已經搬過來了，要加入嗎？'**
+  /// **'〈{church}〉的同工資料\n已經搬過來了，要加入嗎？'**
   String claimPrompt(String church);
 
   /// No description provided for @claimJoin.
@@ -3217,7 +3217,7 @@ abstract class L10n {
   /// No description provided for @movedPasswordNote.
   ///
   /// In zh, this message translates to:
-  /// **'從舊版搬過來的同工：舊的密碼不能用，請用同一個 email 註冊新帳號，或用 Google 登入'**
+  /// **'從舊版搬過來的同工：舊的密碼不能用，\n請用同一個 email 註冊新帳號，或用 Google 登入'**
   String get movedPasswordNote;
 
   /// No description provided for @pendingDelete.
@@ -3457,7 +3457,7 @@ abstract class L10n {
   /// Explanation below the unlocalized canonical JSON protocol example
   ///
   /// In zh, this message translates to:
-  /// **'date：YYYY-MM-DD；沒有人時 people 填 []。\nevents 可省略；特別活動的 color 只接受 0–5 的顏色編號。'**
+  /// **'date：YYYY-MM-DD；沒有人時 people 填 []。\nevents 可省略；特別活動的 color 填色號 0–5。'**
   String get importFormatHelp;
 
   /// Photo recognizer returned an invalid canonical JSON response

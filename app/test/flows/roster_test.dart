@@ -383,7 +383,7 @@ void main() {
       await settle(tester);
 
       expect(peopleOn(b, 4, '招待'), ['李美玉']);
-      expect(find.textContaining('已把「陳志豪」移到'), findsOneWidget);
+      expect(findShownContaining('已把「陳志豪」移到'), findsOneWidget);
       await tapText(tester, '復原');
       expect(peopleOn(b, 4, '招待'), ['陳志豪', '李美玉']);
     });

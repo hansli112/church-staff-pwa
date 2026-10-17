@@ -52,7 +52,7 @@ void main() {
   testWidgets('signing in with the same email offers to join; joining brings back the rosters', (tester) async {
     final b = movedChurch();
     await pumpApp(tester, b);
-    expect(find.text('〈恩典堂〉的同工資料已經搬過來了，要加入嗎？'), findsOneWidget);
+    expect(findShown('〈恩典堂〉的同工資料已經搬過來了，要加入嗎？'), findsOneWidget);
     await tapText(tester, '加入');
 
     final m = b.members['grace']!['new-mei']!;
@@ -69,7 +69,7 @@ void main() {
     final b = movedChurch();
     await pumpApp(tester, b);
     await tapText(tester, '不加入');
-    expect(find.text('〈恩典堂〉的同工資料已經搬過來了，要加入嗎？'), findsNothing);
+    expect(findShown('〈恩典堂〉的同工資料已經搬過來了，要加入嗎？'), findsNothing);
     expect(b.members['grace']!.containsKey('new-mei'), isFalse);
     expect(b.pendingMembers['grace']!.containsKey('old-mei'), isTrue, reason: 'kept for the admin');
     expect(find.text('加入你的教會'), findsOneWidget);

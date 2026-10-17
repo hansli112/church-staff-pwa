@@ -331,7 +331,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.only(bottom: Space.m),
-          child: Text(
+          child: BalancedText(
             quota == null
                 ? ' '
                 : !quota.platformOpen
@@ -339,6 +339,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                 : quota.remaining <= 0
                 ? l10n.photoChurchLimit(quota.limit)
                 : l10n.photoRemaining(quota.remaining),
+            textAlign: TextAlign.start,
             style: AppText.subheadline.copyWith(color: c.secondaryLabel),
           ),
         ),
@@ -349,7 +350,11 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
               children: [
                 const CircularProgressIndicator.adaptive(),
                 const SizedBox(height: Space.m),
-                Text(l10n.photoRecognizing, style: AppText.body.copyWith(color: c.secondaryLabel)),
+                BalancedText(
+                  l10n.photoRecognizing,
+                  textAlign: TextAlign.start,
+                  style: AppText.body.copyWith(color: c.secondaryLabel),
+                ),
               ],
             ),
           )
@@ -391,7 +396,11 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         if (_errorText(draft, l10n) case final error?)
           Padding(
             padding: const EdgeInsets.only(top: Space.m),
-            child: Text(error, style: AppText.subheadline.copyWith(color: c.destructive)),
+            child: BalancedText(
+              error,
+              textAlign: TextAlign.start,
+              style: AppText.subheadline.copyWith(color: c.destructive),
+            ),
           ),
         if (_paste) ...[
           const SizedBox(height: Space.m),

@@ -1688,7 +1688,7 @@ class L10nZh extends L10n {
 
   @override
   String claimPrompt(String church) {
-    return '〈$church〉的同工資料已經搬過來了，要加入嗎？';
+    return '〈$church〉的同工資料\n已經搬過來了，要加入嗎？';
   }
 
   @override
@@ -1698,7 +1698,7 @@ class L10nZh extends L10n {
   String get claimDecline => '不加入';
 
   @override
-  String get movedPasswordNote => '從舊版搬過來的同工：舊的密碼不能用，請用同一個 email 註冊新帳號，或用 Google 登入';
+  String get movedPasswordNote => '從舊版搬過來的同工：舊的密碼不能用，\n請用同一個 email 註冊新帳號，或用 Google 登入';
 
   @override
   String get pendingDelete => '刪除這筆資料';
@@ -1842,7 +1842,7 @@ class L10nZh extends L10n {
   String get importAdvanced => '進階';
 
   @override
-  String get importFormatHelp => 'date：YYYY-MM-DD；沒有人時 people 填 []。\nevents 可省略；特別活動的 color 只接受 0–5 的顏色編號。';
+  String get importFormatHelp => 'date：YYYY-MM-DD；沒有人時 people 填 []。\nevents 可省略；特別活動的 color 填色號 0–5。';
 
   @override
   String get importPhotoFormatError => '辨識結果的格式不對，請重新辨識或用進階 JSON';
@@ -4146,7 +4146,7 @@ class L10nZhHans extends L10nZh {
 
   @override
   String claimPrompt(String church) {
-    return '“$church”的同工信息已经迁移过来了，要加入吗？';
+    return '“$church”的同工信息\n已经迁移过来了，要加入吗？';
   }
 
   @override
@@ -4156,7 +4156,7 @@ class L10nZhHans extends L10nZh {
   String get claimDecline => '不加入';
 
   @override
-  String get movedPasswordNote => '从旧版迁移过来的同工：旧的密码不能用，请用同一个邮箱注册新账号，或用 Google 登录';
+  String get movedPasswordNote => '从旧版迁移过来的同工：旧的密码不能用，\n请用同一个邮箱注册新账号，或用 Google 登录';
 
   @override
   String get pendingDelete => '删除这条记录';
@@ -4300,7 +4300,7 @@ class L10nZhHans extends L10nZh {
   String get importAdvanced => '高级';
 
   @override
-  String get importFormatHelp => 'date：YYYY-MM-DD；没有人时 people 填 []。\nevents 可省略；特别活动的 color 只接受 0–5 的颜色编号。';
+  String get importFormatHelp => 'date：YYYY-MM-DD；没有人时 people 填 []。\nevents 可省略；特别活动的 color 填色号 0–5。';
 
   @override
   String get importPhotoFormatError => '识别结果的格式不对，请重新识别或用高级 JSON';

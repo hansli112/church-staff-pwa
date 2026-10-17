@@ -126,7 +126,11 @@ class _MoveScreenState extends ConsumerState<MoveScreen> {
         ? null
         : Padding(
             padding: const EdgeInsets.symmetric(horizontal: Space.m, vertical: Space.s),
-            child: Text(_error!, style: AppText.subheadline.copyWith(color: c.destructive)),
+            child: BalancedText(
+              _error!,
+              textAlign: TextAlign.start,
+              style: AppText.subheadline.copyWith(color: c.destructive),
+            ),
           );
     return Scaffold(
       appBar: AppBar(title: Text(l10n.moveFromSelfHost)),
@@ -139,7 +143,11 @@ class _MoveScreenState extends ConsumerState<MoveScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const VerifyEmailBanner(),
-                  Text(l10n.moveIntro, style: AppText.body.copyWith(color: c.secondaryLabel)),
+                  BalancedText(
+                    l10n.moveIntro,
+                    textAlign: TextAlign.start,
+                    style: AppText.body.copyWith(color: c.secondaryLabel),
+                  ),
                   const SizedBox(height: Space.l),
                   PrimaryButton(label: l10n.movePickFile, busy: _busy, onPressed: verified ? _pick : null),
                 ],
@@ -177,7 +185,11 @@ class _MoveScreenState extends ConsumerState<MoveScreen> {
               if (!ordered.any(matches))
                 Padding(
                   padding: const EdgeInsets.fromLTRB(Space.l, Space.m, Space.l, 0),
-                  child: Text(l10n.noMembersFound, style: AppText.subheadline.copyWith(color: c.secondaryLabel)),
+                  child: BalancedText(
+                    l10n.noMembersFound,
+                    textAlign: TextAlign.start,
+                    style: AppText.subheadline.copyWith(color: c.secondaryLabel),
+                  ),
                 ),
             ],
             ListSection(

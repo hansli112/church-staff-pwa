@@ -195,12 +195,28 @@ Future<void> sendFontsChange(WidgetTester tester) => tester.binding.defaultBinar
   (_) {},
 );
 
-/// [text] as shown, also by a [BalancedText], which joins the characters
-/// inside 「」 with invisible joiners so the term stays on one line.
-Finder findShown(String text) =>
-    find.byWidgetPredicate((w) => (w is Text && w.data == text) || (w is BalancedText && w.text == text));
+/// [text] as shown, also by a [BalancedText], which may join the characters
+/// inside 「」 with invisible joiners so a term stays on one line, and break
+/// a line after a punctuation mark.
+Finder findShown(String text) => _findRead((shown) => shown == _asRead(text));
 
 /// Text shown that contains [part], as [findShown].
-Finder findShownContaining(String part) => find.byWidgetPredicate(
-  (w) => (w is Text && (w.data?.contains(part) ?? false)) || (w is BalancedText && w.text.contains(part)),
-);
+Finder findShownContaining(String part) => _findRead((shown) => shown.contains(_asRead(part)));
+
+// A break after a Western mark stood for a space.
+String _asRead(String text) =>
+    text.replaceAll('\u2060', '').replaceAllMapped(RegExp(r'([,.;:!?)])\n'), (m) => '${m[1]} ').replaceAll('\n', '');
+
+/// A BalancedText by the text it was given; any other Text by what it shows.
+Finder _findRead(bool Function(String shown) matches) => find.byElementPredicate((e) {
+  final w = e.widget;
+  if (w is BalancedText) return matches(_asRead(w.text));
+  if (w is! Text) return false;
+  var balanced = false;
+  var depth = 0;
+  e.visitAncestorElements((a) {
+    balanced = a.widget is BalancedText;
+    return !balanced && ++depth < 4;
+  });
+  return !balanced && matches(_asRead(w.data ?? w.textSpan?.toPlainText() ?? ''));
+});

@@ -251,8 +251,12 @@ class _AddToHomeScreenState extends ConsumerState<AddToHomeScreen> {
                         ),
                         if (_trouble) ...[
                           if (platform == AddToHome.ios && browser == HomeBrowser.safari)
-                            Text(l10n.addToHomeSafariTrouble, style: AppText.body),
-                          Text(l10n.addToHomeExternalHint(fallback), style: AppText.body),
+                            BalancedText(l10n.addToHomeSafariTrouble, textAlign: TextAlign.start, style: AppText.body),
+                          BalancedText(
+                            l10n.addToHomeExternalHint(fallback),
+                            textAlign: TextAlign.start,
+                            style: AppText.body,
+                          ),
                           SecondaryButton(
                             label: l10n.churchUrlCopy,
                             onPressed: church == null ? null : () => _copyLink(fallback),
@@ -457,7 +461,11 @@ class _GuideStep extends StatelessWidget {
                 ),
                 if (detail != null) ...[
                   const SizedBox(height: Space.xs),
-                  Text(detail!, style: AppText.subheadline.copyWith(color: c.secondaryLabel)),
+                  BalancedText(
+                    detail!,
+                    textAlign: TextAlign.start,
+                    style: AppText.subheadline.copyWith(color: c.secondaryLabel),
+                  ),
                 ],
                 if (illustration != null) ...[const SizedBox(height: Space.s), illustration!],
               ],
@@ -493,9 +501,17 @@ class _GuideScreenshots extends StatelessWidget {
           ),
           const SizedBox(height: Space.s),
         ],
-        Text(L10n.of(context).addToHomeScreenshotNote, style: AppText.caption.copyWith(color: c.secondaryLabel)),
+        BalancedText(
+          L10n.of(context).addToHomeScreenshotNote,
+          textAlign: TextAlign.start,
+          style: AppText.caption.copyWith(color: c.secondaryLabel),
+        ),
         const SizedBox(height: Space.xs),
-        Text(caption, style: AppText.caption.copyWith(color: c.secondaryLabel)),
+        BalancedText(
+          caption,
+          textAlign: TextAlign.start,
+          style: AppText.caption.copyWith(color: c.secondaryLabel),
+        ),
       ],
     );
   }

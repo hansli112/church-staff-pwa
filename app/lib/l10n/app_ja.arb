@@ -559,7 +559,7 @@
   "fundingYearlySplit": "年払いの費用は月割りで表示しています",
   "fundingRatesBy": "為替レート：Exchange Rate API",
   "importAdvanced": "詳細設定",
-  "importFormatHelp": "date：YYYY-MM-DD。担当者がいない場合は people を [] にします。\nevents は省略できます。特別行事の color は 0〜5 の色番号のみです。",
+  "importFormatHelp": "date：YYYY-MM-DD。担当者がいない場合は people を [] にします。\nevents は省略可。特別行事の color は色番号 0〜5。",
   "importPhotoFormatError": "読み取り結果の形式が正しくありません。もう一度読み取るか、詳細設定の JSON を使ってください。",
   "importJsonSyntaxError": "JSON の形式が正しくありません。下の例の配列形式を使ってください。",
   "importJsonEdit": "JSON を編集",

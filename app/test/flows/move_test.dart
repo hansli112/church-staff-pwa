@@ -138,6 +138,6 @@ void main() {
   testWidgets('over 2,000 members is refused with the reason', (tester) async {
     await start(tester, const CloudException(CloudErrorCode.moveTooLarge));
     await tapText(tester, '選擇搬家檔');
-    expect(find.text('同工超過 2,000 位或服事表超過 20,000 天，沒辦法自動搬。請到 GitHub 的 church-staff-pwa 開 issue。'), findsOneWidget);
+    expect(findShown('同工超過 2,000 位或服事表超過 20,000 天，沒辦法自動搬。請到 GitHub 的 church-staff-pwa 開 issue。'), findsOneWidget);
   });
 }

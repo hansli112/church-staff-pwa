@@ -51,7 +51,7 @@ Future<void> _showSecret(BuildContext context, String secret) {
         children: [
           SelectableText(secret, style: AppText.body.copyWith(fontFamily: 'monospace')),
           const SizedBox(height: Space.s),
-          Text(l10n.webhookSecretOnce, style: AppText.footnote),
+          BalancedText(l10n.webhookSecretOnce, textAlign: TextAlign.start, style: AppText.footnote),
         ],
       ),
       actions: [
@@ -148,7 +148,11 @@ class _SetupState extends ConsumerState<_Setup> {
                 onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: Space.s),
-              Text(l10n.webhookFooter, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
+              BalancedText(
+                l10n.webhookFooter,
+                textAlign: TextAlign.start,
+                style: AppText.footnote.copyWith(color: c.secondaryLabel),
+              ),
             ],
           ),
         ),

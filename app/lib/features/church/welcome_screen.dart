@@ -156,7 +156,7 @@ class _VerifyEmailBannerState extends ConsumerState<VerifyEmailBanner> {
         children: [
           Text(l10n.verifyEmailTitle, style: AppText.headline),
           const SizedBox(height: Space.xs),
-          Text(l10n.verifyEmailBody(user.email), style: AppText.subheadline),
+          BalancedText(l10n.verifyEmailBody(user.email), textAlign: TextAlign.start, style: AppText.subheadline),
           const SizedBox(height: Space.s),
           Wrap(
             alignment: WrapAlignment.end,
@@ -308,8 +308,9 @@ class _CreateChurchScreenState extends ConsumerState<CreateChurchScreen> {
           ),
           if (_error != null) ...[
             const SizedBox(height: Space.s),
-            Text(
+            BalancedText(
               _error!,
+              textAlign: TextAlign.start,
               style: AppText.subheadline.copyWith(color: c.destructive),
             ),
             if (_duplicate)

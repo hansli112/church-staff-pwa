@@ -190,7 +190,11 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
                   onChanged: (_) => setState(() {}),
                 ),
                 const SizedBox(height: Space.s),
-                Text(l10n.churchLinkFooter, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
+                BalancedText(
+                  l10n.churchLinkFooter,
+                  textAlign: TextAlign.start,
+                  style: AppText.footnote.copyWith(color: c.secondaryLabel),
+                ),
                 const SizedBox(height: Space.xl),
                 Text(l10n.linkSource, style: AppText.headline),
                 const SizedBox(height: Space.m),
@@ -218,15 +222,20 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (status != null) ...[
-                  Text(
+                  BalancedText(
                     status,
+                    textAlign: TextAlign.start,
                     style: AppText.footnote.copyWith(
                       color: _sourceProblem != null || content?.error != null ? c.destructive : c.secondaryLabel,
                     ),
                   ),
                   const SizedBox(height: Space.xs),
                 ],
-                Text(l10n.linkSourceFooter, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
+                BalancedText(
+                  l10n.linkSourceFooter,
+                  textAlign: TextAlign.start,
+                  style: AppText.footnote.copyWith(color: c.secondaryLabel),
+                ),
                 if (link?.source != null)
                   SecondaryButton(
                     label: l10n.linkSourceRetry,

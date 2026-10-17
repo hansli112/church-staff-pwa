@@ -363,8 +363,9 @@ class AdminStatsScreen extends ConsumerWidget {
                   ),
               Padding(
                 padding: const EdgeInsets.all(Space.l),
-                child: Text(
+                child: BalancedText(
                   l10n.statsMoreInConsole,
+                  textAlign: TextAlign.start,
                   style: AppText.footnote.copyWith(color: c.secondaryLabel),
                 ),
               ),

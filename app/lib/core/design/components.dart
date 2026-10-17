@@ -136,8 +136,9 @@ class ListSection extends StatelessWidget {
               ),
               child: Semantics(
                 header: true,
-                child: Text(
+                child: BalancedText(
                   header!,
+                  textAlign: TextAlign.start,
                   style: AppText.footnote.copyWith(color: c.secondaryLabel),
                 ),
               ),
@@ -236,8 +237,11 @@ class ListRow extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
+                      // Balanced: when a row's text takes two lines, they
+                      // break at a phrase, not one word short.
+                      BalancedText(
                         title,
+                        textAlign: TextAlign.start,
                         style: AppText.body.copyWith(
                           color: destructive ? c.destructive : c.label,
                         ),
@@ -245,16 +249,18 @@ class ListRow extends StatelessWidget {
                       if (stacked)
                         Padding(
                           padding: const EdgeInsets.only(top: 2),
-                          child: Text(
+                          child: BalancedText(
                             value!,
+                            textAlign: TextAlign.start,
                             style: AppText.body.copyWith(color: c.secondaryLabel),
                           ),
                         ),
                       if (subtitle != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 2),
-                          child: Text(
+                          child: BalancedText(
                             subtitle!,
+                            textAlign: TextAlign.start,
                             style: AppText.subheadline.copyWith(
                               color: c.secondaryLabel,
                             ),
@@ -390,7 +396,7 @@ void showToast(
   messenger.hideCurrentSnackBar();
   messenger.showSnackBar(
     SnackBar(
-      content: Text(message),
+      content: BalancedText(message, textAlign: TextAlign.start),
       duration: duration,
       persist: false,
       action: onRetry != null
@@ -406,14 +412,14 @@ void showToast(
                   await Future<void>.value();
                   if (!messenger.mounted) return;
                   messenger.hideCurrentSnackBar();
-                  messenger.showSnackBar(SnackBar(content: Text(l10n.undoDone)));
+                  messenger.showSnackBar(SnackBar(content: BalancedText(l10n.undoDone, textAlign: TextAlign.start)));
                 } catch (_) {
                   // The action itself closes its snackbar, including when a
                   // synchronous refusal happens before the first await.
                   await Future<void>.value();
                   if (!messenger.mounted) return;
                   messenger.hideCurrentSnackBar();
-                  messenger.showSnackBar(SnackBar(content: Text(l10n.undoFailed)));
+                  messenger.showSnackBar(SnackBar(content: BalancedText(l10n.undoFailed, textAlign: TextAlign.start)));
                 }
               },
             ),
@@ -440,7 +446,7 @@ void showDeferredUndo(
   messenger.hideCurrentSnackBar();
   final controller = messenger.showSnackBar(
     SnackBar(
-      content: Text(message),
+      content: BalancedText(message, textAlign: TextAlign.start),
       duration: window,
       persist: false,
       action: SnackBarAction(
@@ -485,7 +491,7 @@ Future<bool> confirmDestructive(
       final ios = Theme.of(context).platform == TargetPlatform.iOS;
       return AlertDialog.adaptive(
         title: Text(title),
-        content: message == null ? null : Text(message),
+        content: message == null ? null : BalancedText(message, textAlign: TextAlign.start),
         actions: [
           _dialogAction(
             context,
@@ -524,7 +530,7 @@ Future<bool?> askChoice(
       final ios = Theme.of(context).platform == TargetPlatform.iOS;
       return AlertDialog.adaptive(
         title: Text(title),
-        content: message == null ? null : Text(message),
+        content: message == null ? null : BalancedText(message, textAlign: TextAlign.start),
         actions: [
           _dialogAction(context, ios, no, () => Navigator.pop(context, false)),
           _dialogAction(
@@ -700,8 +706,9 @@ class SectionHeader extends StatelessWidget {
           Expanded(
             child: Semantics(
               header: true,
-              child: Text(
+              child: BalancedText(
                 text,
+                textAlign: TextAlign.start,
                 style: AppText.footnote.copyWith(color: c.secondaryLabel),
               ),
             ),

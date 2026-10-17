@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/design/balanced_text.dart';
 import '../../core/design/tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/connectivity.dart';
@@ -32,7 +33,7 @@ class AppShell extends ConsumerWidget {
                   width: double.infinity,
                   color: AppColors.of(context).fill,
                   padding: const EdgeInsets.symmetric(horizontal: Space.m, vertical: Space.s),
-                  child: Text(l10n.offlineReadOnlyBanner, style: AppText.callout),
+                  child: BalancedText(l10n.offlineReadOnlyBanner, textAlign: TextAlign.start, style: AppText.callout),
                 ),
               ),
             Expanded(child: shell),

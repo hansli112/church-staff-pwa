@@ -17,19 +17,19 @@ void main() {
   testWidgets('transport offline status marks every main tab read-only and fits dark large text', (tester) async {
     final b = seededChurch(as: staffMei);
     await pumpApp(tester, b, brightness: Brightness.dark, textScale: 3);
-    expect(find.text('離線中，顯示上次的資料，連線後才能儲存'), findsNothing);
+    expect(findShown('離線中，顯示上次的資料，連線後才能儲存'), findsNothing);
     b.setOnline(false);
     await settle(tester);
-    expect(find.text('離線中，顯示上次的資料，連線後才能儲存'), findsOneWidget);
+    expect(findShown('離線中，顯示上次的資料，連線後才能儲存'), findsOneWidget);
     expect(tester.takeException(), isNull);
     for (final path in ['/rosters', '/calendar', '/me']) {
       await go(tester, path);
-      expect(find.text('離線中，顯示上次的資料，連線後才能儲存'), findsOneWidget);
+      expect(findShown('離線中，顯示上次的資料，連線後才能儲存'), findsOneWidget);
       expect(tester.takeException(), isNull);
     }
     b.setOnline(true);
     await settle(tester);
-    expect(find.text('離線中，顯示上次的資料，連線後才能儲存'), findsNothing);
+    expect(findShown('離線中，顯示上次的資料，連線後才能儲存'), findsNothing);
   });
 
   testWidgets('home and calendar identify cached activities with their church-clock read time', (tester) async {
