@@ -112,8 +112,8 @@ export async function appStoreNotification(deps: Deps, apple: AppleVerifier, bod
  * other environment fails, so sandbox money never reaches prod.
  */
 export function appleVerifier(environment: Environment.PRODUCTION | Environment.SANDBOX): AppleVerifier {
-  // Built on first use, so a missing APPLE_APP_ID in production fails the
-  // check (and is logged) instead of the whole function.
+  // Built on first use: the library loads only when a notice comes in, and
+  // a failure there fails that check (and is logged), not the function.
   let v: SignedDataVerifier | undefined;
   const verifier = async () => {
     const { SignedDataVerifier } = await import('@apple/app-store-server-library');

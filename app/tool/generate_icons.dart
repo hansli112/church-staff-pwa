@@ -114,7 +114,8 @@ img.Image resized(img.Image src, int size) =>
     img.copyResize(src, width: size, height: size, interpolation: img.Interpolation.average);
 
 /// [round] in the middle of Android's 288dp splash icon, small enough for
-/// the 192dp circle it is cut to. On the splash's paper only the drawing
+/// the 192dp circle it is cut to: 132dp, a little under 192/√2, so its
+/// corners stay inside. [px] is 6 times the launcher icon's (288dp / 48dp). On the splash's paper only the drawing
 /// shows: no circle or edge around it.
 img.Image splash(img.Image round, int px) {
   final out = img.Image(width: px, height: px, numChannels: 4);
