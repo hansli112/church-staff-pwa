@@ -10,7 +10,10 @@
     <application
         android:label="@string/app_name"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
+        <!-- enableOnBackInvokedCallback: the back gesture reaches Flutter as
+             it goes, so the page follows the finger (predictive back). -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
