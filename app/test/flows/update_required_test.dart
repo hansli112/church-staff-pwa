@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
-import 'package:martha/env.dart';
 import 'package:martha/state/app_build.dart';
 
 import '../support/harness.dart';
@@ -73,15 +72,13 @@ void main() {
     expect(find.text('到 App Store 更新'), findsOneWidget);
   });
 
-  testWidgets('before the app has an Apple ID, the App Store button opens the website, which links to the stores', (
-    tester,
-  ) async {
+  testWidgets('the App Store button opens the app\'s page there', (tester) async {
     final launches = captureLaunches();
     final b = seededChurch(as: staffMei)..minimumBuilds = const MinimumBuilds(ios: 13);
     await pumpApp(tester, b, overrides: [appBuildProvider.overrideWithValue(_apple12)]);
     await tester.tap(find.text('到 App Store 更新'));
     await settle(tester);
-    expect(launches.opened, [Uri.parse(Env.current.webOrigin).toString()]);
+    expect(launches.opened, ['https://apps.apple.com/app/id6823826952']);
   });
 
   testWidgets('raised while the app is open: it asks then, and whatever was typed is still there after', (

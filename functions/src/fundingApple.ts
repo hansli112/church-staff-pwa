@@ -12,8 +12,8 @@ import { BUNDLE_ID, recordPayment, setRefund } from './funding.js';
  * too) to dev; each project only accepts its own environment.
  */
 
-/** From App Store Connect once the app exists there (#38); Apple requires it for production notices. */
-export const APPLE_APP_ID: number | undefined = undefined;
+/** The app's Apple ID in App Store Connect (App Information); Apple requires it for production notices. */
+export const APPLE_APP_ID = 6823826952;
 
 /** Apple's cut with the Small Business Program. */
 const APPLE_COMMISSION = 0.15;

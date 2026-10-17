@@ -4,7 +4,6 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shorebird_code_push/shorebird_code_push.dart';
 
 import '../data/backend.dart';
-import '../env.dart';
 import 'providers.dart';
 
 /// Where a store app came from, and so where it is updated.
@@ -18,12 +17,10 @@ enum AppStore {
   /// The store's own name, the same in every language.
   final String label;
 
-  /// The app's page in the store. The App Store's needs [appleAppId]; until
-  /// it is set, the website, which links to the stores.
+  /// The app's page in the store.
   Uri get page => switch (this) {
     googlePlay => Uri.https('play.google.com', '/store/apps/details', {'id': 'app.marthasit'}),
-    appStore =>
-      appleAppId.isEmpty ? Uri.parse(Env.current.webOrigin) : Uri.https('apps.apple.com', '/app/id$appleAppId'),
+    appStore => Uri.https('apps.apple.com', '/app/id$appleAppId'),
   };
 
   /// This phone's store; null on the web and on desktops, which have none.
@@ -42,9 +39,10 @@ enum AppStore {
   };
 }
 
-/// The app's Apple ID in the App Store (App Store Connect → App Information),
-/// once it is listed there (#40). Set it before raising `minBuild.ios`.
-const appleAppId = '';
+/// The app's Apple ID in the App Store (App Store Connect → App Information).
+/// Its page only opens once the app is listed (#40), so raise `minBuild.ios`
+/// after that.
+const appleAppId = '6823826952';
 
 /// The store app running: its store, its version (`1.0.0`), build number
 /// (pubspec's `+12`) and the Shorebird patch it runs, if any

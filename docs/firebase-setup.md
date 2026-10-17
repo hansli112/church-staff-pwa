@@ -160,7 +160,7 @@ OAuth 同意畫面的首頁網址填 `/`，隱私權政策填 `/privacy`：Googl
   1. App Store Connect → App 資訊 →「App Store 伺服器通知」選 Version 2：
      - 正式環境網址：`https://asia-east1-marthasit.cloudfunctions.net/appStoreNotifications`
      - 沙盒網址：`https://asia-east1-marthasit-dev.cloudfunctions.net/appStoreNotifications`。TestFlight 和沙盒的付款只會進 dev。prod 會拒收 sandbox 通知，dev 也會拒收正式環境的，網址設反了不會把測試的錢算進去。
-  2. 把 App Store Connect 上的 Apple ID（一串數字）填進 `functions/src/funding.ts` 的 `APPLE_APP_ID`，再部署 prod。沒填的話，正式環境的通知驗證會失敗，Apple 會一直重送。
+  2. App Store Connect 上的 Apple ID（`6823826952`）已經填進 `functions/src/fundingApple.ts` 的 `APPLE_APP_ID`。少了它，正式環境的通知驗證會失敗，Apple 會一直重送。
   3. 加入 App Store Small Business Program，抽成才是 15%。收入估算用的是 15%。
 - **Google Play**（Play Console 建好 App 之後）：
   1. 部署 prod 時會自動建立 Pub/Sub 主題 `play-billing`。在 GCP console 把 `google-play-developer-notifications@system.gserviceaccount.com` 加成這個主題的「Pub/Sub 發布者」。
@@ -242,7 +242,7 @@ scripts/as-owner.sh marthasit-dev npx --prefix functions tsx functions/scripts/g
 
 `platform/app` 的 `minBuild.android`、`minBuild.ios` 是商店 App 最低能用的 build number（`pubspec.yaml` 的 `+N`）。比它舊的 App 一打開（或回到前景時）就整個畫面要求更新，按鈕打開 Google Play / App Store。沒有這份文件、或是 0，什麼都不擋。網頁版不受影響，它自己會更新。
 
-先確認新版已經在商店上架、大家更新得到，再調高。調高 `ios` 之前，`app/lib/state/app_build.dart` 的 `appleAppId` 要先填上（App Store Connect →「App 資訊」的 Apple ID），不然按鈕只會打開網站。
+先確認新版已經在商店上架、大家更新得到，再調高。`ios` 的按鈕用 `app/lib/state/app_build.dart` 的 `appleAppId`（App Store Connect →「App 資訊」的 Apple ID）打開 App Store，App 上架之前那一頁打不開。
 
 
 ```sh
