@@ -12,7 +12,7 @@ import 'package:martha/features/church/move_screen.dart';
 import '../support/harness.dart';
 
 Future<void> tapText(WidgetTester tester, String text) async {
-  await tester.tap(find.text(text).last);
+  await tester.tap(findShown(text).last);
   await settle(tester);
 }
 
@@ -72,8 +72,8 @@ void main() {
 
     await go(tester, '/me/members');
     expect(find.text('2 位還沒登入'), findsOneWidget);
-    expect(find.text('還沒登入 · mei@example.com'), findsOneWidget);
-    expect(find.text('還沒登入'), findsOneWidget, reason: '陳志豪 has no email');
+    expect(findShown('還沒登入 · mei@example.com'), findsOneWidget);
+    expect(findShown('還沒登入'), findsOneWidget, reason: '陳志豪 has no email');
   });
 
   testWidgets('I can be nobody in the file, with any account', (tester) async {

@@ -15,7 +15,7 @@ Future<void> go(WidgetTester tester, String route) async {
 }
 
 Future<void> tapText(WidgetTester tester, String text) async {
-  await tester.tap(find.text(text).last);
+  await tester.tap(findShown(text).last);
   await settle(tester);
 }
 
@@ -280,7 +280,7 @@ void main() {
     await tapText(tester, '移除未來的外請安排');
 
     expect(tester.takeException(), isNull);
-    expect(find.text('取消'), findsOneWidget);
+    expect(findShown('取消'), findsOneWidget);
     expect(find.text('套用變更'), findsOneWidget);
     await tapText(tester, '取消');
     expect(savedDay(b, 4), before);

@@ -7,7 +7,7 @@ import '../support/harness.dart';
 import '../support/seed.dart';
 
 Future<void> tapText(WidgetTester tester, String text) async {
-  await tester.tap(find.text(text).last);
+  await tester.tap(findShown(text).last);
   await settle(tester);
 }
 
@@ -58,7 +58,7 @@ void main() {
     await pumpApp(tester, b);
 
     await tapText(tester, '透過 Apple 登入');
-    expect(find.textContaining('這個 email 已經有帳號'), findsOneWidget);
+    expect(findShownContaining('這個 email 已經有帳號'), findsOneWidget);
     expect(b.auth.currentUser, isNull);
 
     await tapText(tester, '用 email 登入');

@@ -9,7 +9,7 @@ import '../support/harness.dart';
 import '../support/seed.dart';
 
 Future<void> tapText(WidgetTester tester, String text) async {
-  await tester.tap(find.text(text).last);
+  await tester.tap(findShown(text).last);
   await settle(tester);
 }
 
@@ -118,7 +118,7 @@ void main() {
       await settle(tester);
       expect(find.text('今日經文'), findsNothing, reason: 'a failed fetch keeps no old content');
       expect(find.text('教會官網'), findsNothing);
-      expect(find.textContaining('對方網站回應錯誤（503）'), findsOneWidget);
+      expect(findShownContaining('對方網站回應錯誤（503）'), findsOneWidget);
     });
 
     testWidgets('until the content comes, neither it nor the fixed link shows', (tester) async {
@@ -171,7 +171,7 @@ void main() {
       await settle(tester);
       expect(find.text('今日經文'), findsNothing);
       expect(find.text('教會官網'), findsNothing);
-      expect(find.textContaining('來源還沒有今天的內容'), findsOneWidget);
+      expect(findShownContaining('來源還沒有今天的內容'), findsOneWidget);
     });
 
     testWidgets('an admin adds a source and a time; it is fetched at once', (tester) async {

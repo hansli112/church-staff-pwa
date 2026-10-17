@@ -10,7 +10,7 @@ import '../support/harness.dart';
 import '../support/seed.dart';
 
 Future<void> tapText(WidgetTester tester, String text) async {
-  await tester.tap(find.text(text).last);
+  await tester.tap(findShown(text).last);
   await settle(tester);
 }
 
@@ -86,7 +86,7 @@ void main() {
   testWidgets('the sign-in page tells old password users to register again', (tester) async {
     await pumpApp(tester, MemoryBackend(clock: testClock));
     await tapText(tester, '用 email 登入');
-    expect(find.textContaining('從舊版搬過來的同工：舊的密碼不能用'), findsOneWidget);
+    expect(findShownContaining('從舊版搬過來的同工：舊的密碼不能用'), findsOneWidget);
   });
 
   testWidgets('an admin can delete pending data, after confirming', (tester) async {
@@ -96,7 +96,7 @@ void main() {
     await go(tester, '/me/members');
     await tapText(tester, '舊同工');
     await tapText(tester, '刪除這筆資料');
-    expect(find.text('對方就不能用 email 認領了。服事表上的名字會保留。'), findsOneWidget);
+    expect(findShown('對方就不能用 email 認領了。服事表上的名字會保留。'), findsOneWidget);
     await tapText(tester, '刪除');
     expect(b.pendingMembers['grace'], isEmpty);
   });

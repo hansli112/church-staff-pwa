@@ -7,7 +7,7 @@ import '../support/harness.dart';
 import '../support/seed.dart';
 
 Future<void> tapText(WidgetTester tester, String text) async {
-  await tester.tap(find.text(text).last);
+  await tester.tap(findShown(text).last);
   await settle(tester);
 }
 
@@ -38,7 +38,7 @@ void main() {
     expect(b.webhooks['grace'], const WebhookSettings(url: hook, calendar: true, roster: false));
     final secret = b.webhookSecrets['grace']!;
     expect(find.text(secret), findsOneWidget);
-    expect(find.text('只會顯示這一次。請貼到接收端，用來驗證通知是馬大別忙送的。'), findsOneWidget);
+    expect(findShown('只會顯示這一次。請貼到接收端，用來驗證通知是馬大別忙送的。'), findsOneWidget);
     await tapText(tester, '複製密鑰');
     expect(out.copied, [secret]);
     await tapText(tester, '完成');
@@ -81,10 +81,10 @@ void main() {
 
     b.webhookAnswer = const WebhookDelivery(ok: false, status: 500, error: WebhookDeliveryError.http);
     await tapText(tester, '傳送測試');
-    expect(find.textContaining(' · 對方回應 500'), findsOneWidget);
+    expect(findShownContaining(' · 對方回應 500'), findsOneWidget);
     b.webhookAnswer = const WebhookDelivery(ok: false, error: WebhookDeliveryError.timeout);
     await tapText(tester, '傳送測試');
-    expect(find.textContaining(' · 逾時'), findsOneWidget);
+    expect(findShownContaining(' · 逾時'), findsOneWidget);
   });
 
   testWidgets('a new secret replaces the old one and is shown once', (tester) async {
@@ -94,7 +94,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/me/webhook');
     await tapText(tester, '換新的密鑰');
-    expect(find.text('舊的密鑰會立刻失效，接收端要改用新的'), findsOneWidget);
+    expect(findShown('舊的密鑰會立刻失效，接收端要改用新的'), findsOneWidget);
     await tapText(tester, '自動產生');
     final secret = b.webhookSecrets['grace']!;
     expect(secret, isNot('whsec_existing'));

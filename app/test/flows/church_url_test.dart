@@ -10,7 +10,7 @@ import '../support/harness.dart';
 import '../support/seed.dart';
 
 Future<void> tapText(WidgetTester tester, String text) async {
-  await tester.tap(find.text(text).last);
+  await tester.tap(findShown(text).last);
   await settle(tester);
 }
 
@@ -68,9 +68,9 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/c/hope');
     expect(find.text('希望堂'), findsOneWidget);
-    expect(find.text('你還不是這間教會的同工。請向管理員要邀請連結來加入。'), findsOneWidget);
+    expect(findShown('你還不是這間教會的同工。請向管理員要邀請連結來加入。'), findsOneWidget);
     await tapText(tester, '回首頁');
-    expect(find.text('恩典堂'), findsOneWidget);
+    expect(findShown('恩典堂'), findsOneWidget);
   });
 
   testWidgets('without any church, the next step is an invite code', (tester) async {
@@ -157,7 +157,7 @@ void main() {
     debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
     await pumpApp(tester, seededChurch());
     await go(tester, '/me/church');
-    expect(find.text(iconsStay), findsOneWidget);
+    expect(findShown(iconsStay), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
   });
 }

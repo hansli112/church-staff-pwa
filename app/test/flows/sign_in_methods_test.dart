@@ -11,7 +11,7 @@ import '../support/harness.dart';
 import 'claim_test.dart' show movedChurch;
 
 Future<void> tapText(WidgetTester tester, String text) async {
-  await tester.tap(find.text(text).last);
+  await tester.tap(findShown(text).last);
   await settle(tester);
 }
 
@@ -64,7 +64,7 @@ void main() {
 
     b.auth.googleAccount = 'mei@gmail.com';
     await tapText(tester, '連結 Google 帳號');
-    expect(find.textContaining('你選的帳號已經是另一個馬大別忙帳號'), findsOneWidget);
+    expect(findShownContaining('你選的帳號已經是另一個馬大別忙帳號'), findsOneWidget);
     expect(b.auth.currentUser!.signIns.map((s) => s.method), [SignInMethod.password]);
   });
 

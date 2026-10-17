@@ -22,7 +22,7 @@ Future<void> go(WidgetTester tester, String location) async {
 }
 
 Future<void> tapText(WidgetTester tester, String text) async {
-  await tester.tap(find.text(text).last);
+  await tester.tap(findShown(text).last);
   await settle(tester);
 }
 
@@ -429,7 +429,7 @@ void main() {
     await tester.ensureVisible(find.text('預覽').last);
     await tapText(tester, '預覽');
     expect(find.text('請修正資料後再匯入'), findsOneWidget);
-    expect(find.textContaining('活動請填'), findsOneWidget);
+    expect(findShownContaining('活動請填'), findsOneWidget);
     expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, '套用到服事表')).onPressed, isNull);
     await tester.tap(find.byTooltip('編輯 JSON'));
     await settle(tester);
@@ -611,8 +611,8 @@ void main() {
     b.photosUsed['grace'] = 30;
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
-    expect(find.textContaining('這個月的 30 張用完了'), findsOneWidget);
-    expect(find.textContaining('直接安排服事表'), findsOneWidget);
+    expect(findShownContaining('這個月的 30 張用完了'), findsOneWidget);
+    expect(findShownContaining('直接安排服事表'), findsOneWidget);
     final take = tester.widget<FilledButton>(find.byType(FilledButton).first);
     expect(take.onPressed, isNull);
   });

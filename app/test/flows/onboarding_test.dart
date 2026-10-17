@@ -12,7 +12,7 @@ import '../support/harness.dart';
 import '../support/seed.dart';
 
 Future<void> tapText(WidgetTester tester, String text) async {
-  await tester.tap(find.text(text).last);
+  await tester.tap(findShown(text).last);
   await settle(tester);
 }
 
@@ -108,8 +108,8 @@ void main() {
     await tester.enterText(find.byType(TextField), '台北靈糧堂');
     await tester.pump();
     await tapText(tester, '建立');
-    expect(find.textContaining('已經有教會叫這個名字'), findsOneWidget);
-    expect(find.text('回報問題'), findsOneWidget);
+    expect(findShownContaining('已經有教會叫這個名字'), findsOneWidget);
+    expect(findShown('回報問題'), findsOneWidget);
     expect(b.churches.length, 1);
   });
 
@@ -298,9 +298,9 @@ void main() {
       MemoryBackend(clock: testClock),
       overrides: [userAgentProvider.overrideWithValue(line)],
     );
-    expect(find.text('在 LINE 裡不能用 Google 登入。請用 Safari 或 Chrome 打開這個網頁，或用 email 登入。'), findsOneWidget);
-    expect(find.text('複製連結'), findsOneWidget);
-    expect(find.text('使用 Google 登入'), findsOneWidget, reason: 'still offered');
+    expect(findShown('在 LINE 裡不能用 Google 登入。請用 Safari 或 Chrome 打開這個網頁，或用 email 登入。'), findsOneWidget);
+    expect(findShown('複製連結'), findsOneWidget);
+    expect(findShown('使用 Google 登入'), findsOneWidget, reason: 'still offered');
   });
 
   testWidgets('the address to copy out of LINE is the invite link, not the sign-in page', (tester) async {

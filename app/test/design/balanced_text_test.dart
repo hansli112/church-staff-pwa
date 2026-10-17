@@ -123,6 +123,13 @@ void main() {
       expect(lines.first, endsWith('→'));
     });
 
+    test('joiners do not count as characters of a short last line', () {
+      const text = '一二三四五六七八九十一二三四五六七八九十一二';
+      final joined = '${text.substring(0, 21)}\u2060${text.substring(21)}';
+      expect(paragraph(text, 200), isNotNull, reason: 'the two-character last line moves up a character');
+      expect(paragraph(joined, 200), isNotNull, reason: 'the same, joined');
+    });
+
     test('a paragraph that already reads well keeps its full width', () {
       expect(paragraph('一二三四五六七八九十一二三四五六七八九十一二三四五六', 200), isNull);
     });

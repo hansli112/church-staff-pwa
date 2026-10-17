@@ -9,7 +9,7 @@ import '../support/harness.dart';
 import '../support/seed.dart';
 
 Future<void> tapText(WidgetTester tester, String text) async {
-  await tester.tap(find.text(text).last);
+  await tester.tap(findShown(text).last);
   await settle(tester);
 }
 
@@ -152,9 +152,9 @@ void main() {
     testWidgets('an admin has no leave entry and is told to hand over', (tester) async {
       await pumpApp(tester, seededChurch());
       await go(tester, '/me/church');
-      await tester.scrollUntilVisible(find.text('管理員不能直接退出。要退出，先把另一位同工設成管理員，再請對方取消你的管理員。'), 300);
-      expect(find.text('退出教會'), findsNothing);
-      expect(find.text('管理員不能直接退出。要退出，先把另一位同工設成管理員，再請對方取消你的管理員。'), findsOneWidget);
+      await tester.scrollUntilVisible(findShown('管理員不能直接退出。要退出，先把另一位同工設成管理員，再請對方取消你的管理員。'), 300);
+      expect(findShown('退出教會'), findsNothing);
+      expect(findShown('管理員不能直接退出。要退出，先把另一位同工設成管理員，再請對方取消你的管理員。'), findsOneWidget);
     });
 
     testWidgets('a removed member loses the church at once', (tester) async {
@@ -173,10 +173,10 @@ void main() {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/account');
-      expect(find.textContaining('你是〈恩典堂〉唯一的管理員'), findsOneWidget);
+      expect(findShownContaining('你是〈恩典堂〉唯一的管理員'), findsOneWidget);
       expect(tester.widget<TextButton>(find.widgetWithText(TextButton, '刪除帳號')).onPressed, isNull);
       await tapText(tester, '前往同工');
-      expect(find.text('5 位同工'), findsOneWidget);
+      expect(findShown('5 位同工'), findsOneWidget);
       expect(b.auth.currentUser, isNotNull);
     });
 
@@ -198,7 +198,7 @@ void main() {
       await settle(tester);
       expect(find.text('刪除你的帳號？'), findsOneWidget);
       expect(
-        find.textContaining('帳號與個人資料會刪除且無法復原'),
+        findShownContaining('帳號與個人資料會刪除且無法復原'),
         findsOneWidget,
         reason: 'said once on the page, not again in the dialog',
       );

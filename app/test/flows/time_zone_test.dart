@@ -19,7 +19,7 @@ Future<void> go(WidgetTester tester, String location) async {
 }
 
 Future<void> tapText(WidgetTester tester, String text) async {
-  await tester.tap(find.text(text).last);
+  await tester.tap(findShown(text).last);
   await settle(tester);
 }
 
@@ -93,7 +93,7 @@ void main() {
     ];
     await pumpApp(tester, b);
     await go(tester, '/me/calendar');
-    expect(find.textContaining('這本日曆的時區是America/Phoenix'), findsOneWidget);
+    expect(findShownContaining('這本日曆的時區是America/Phoenix'), findsOneWidget);
 
     b.connectCalendar('grace', calendarName: '青年行事曆', calendarId: 'cal-2');
     await settle(tester);

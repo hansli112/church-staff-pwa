@@ -15,6 +15,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
+import 'core/design/phrases.dart';
 import 'core/design/tokens.dart';
 import 'data/backend.dart';
 import 'data/firebase/firebase_backend.dart';
@@ -60,7 +61,7 @@ Future<void> main() async {
         )
       : null;
   final env = Env.current;
-  final (prefs, backend, build, _) = await (
+  final (prefs, backend, build, _, _) = await (
     prefsRead,
     env.usesFirebase
         ? _firebase(env)
@@ -72,6 +73,7 @@ Future<void> main() async {
           ),
     env == Env.demo ? Future<AppBuild?>.value() : AppBuild.read(),
     loadAppFont(),
+    PhraseModel.load(),
   ).wait;
 
   // End-to-end tests drive the web build through the accessibility tree.

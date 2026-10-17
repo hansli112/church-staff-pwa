@@ -33,12 +33,12 @@ const androidMenu = '加到主畫面 → 安裝';
 const card = '一點就打開，也收得到服事通知';
 
 Future<void> tapText(WidgetTester tester, String text) async {
-  if (find.text(text).evaluate().isEmpty) {
-    await tester.scrollUntilVisible(find.text(text), 300, scrollable: find.byType(Scrollable).last);
+  if (findShown(text).evaluate().isEmpty) {
+    await tester.scrollUntilVisible(findShown(text), 300, scrollable: find.byType(Scrollable).last);
   }
-  await tester.ensureVisible(find.text(text).last);
+  await tester.ensureVisible(findShown(text).last);
   await settle(tester);
-  await tester.tap(find.text(text).last);
+  await tester.tap(findShown(text).last);
   await settle(tester);
 }
 
@@ -153,7 +153,7 @@ void main() {
     for (final step in iosSteps) {
       expect(findShown(step), findsOneWidget);
     }
-    expect(find.textContaining('開啟通知，就收得到服事通知'), findsOneWidget);
+    expect(findShownContaining('開啟通知，就收得到服事通知'), findsOneWidget);
 
     await tapText(tester, '稍後再說');
     expect(find.byType(NavigationBar), findsOneWidget);
@@ -574,14 +574,14 @@ void main() {
     );
     expect(iosImages.map((image) => image.assetName), everyElement(isNot(contains('safari'))));
     expect(findShown('Chrome 155 · iOS 27.2 · iPhone 13 真機畫面'), findsNWidgets(2));
-    expect(find.textContaining('看不到時，先把分享面板展開，再往下滑'), findsOneWidget);
-    expect(find.text('按鈕示意，請點瀏覽器上的按鈕'), findsNothing);
-    expect(find.text('點網址列旁的分享圖示'), findsOneWidget);
+    expect(findShownContaining('看不到時，先把分享面板展開，再往下滑'), findsOneWidget);
+    expect(findShown('按鈕示意，請點瀏覽器上的按鈕'), findsNothing);
+    expect(findShown('點網址列旁的分享圖示'), findsOneWidget);
 
     await seeded(tester, android);
     routerOf(tester).go('/add-to-home');
     await settle(tester);
-    expect(find.text('Chrome 113 · Android 14 · 繁中模擬器畫面（舊版選單）'), findsNWidgets(2));
+    expect(findShown('Chrome 113 · Android 14 · 繁中模擬器畫面（舊版選單）'), findsNWidgets(2));
     final screenshots = tester
         .widgetList<Image>(find.byType(Image))
         .map((image) => image.image)

@@ -2,7 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 
-/// Text whose lines break where a reader would. Centered (the default), its
+import 'phrases.dart';
+
+/// The longest text, in UTF-16 units, kept whole by phrase: some four lines
+/// on a phone.
+const phraseLimit = 80;
+
+/// Text whose lines break where a reader would. In Chinese or Japanese,
+/// text up to [phraseLimit] breaks only between phrases ([PhraseModel]):
+/// 「請教會的管理員／給你邀請連結」, not 「…管理／員…」. Centered (the default), its
 /// lines come out even, as CSS's `text-wrap: balance` does, instead of a
 /// full line and a word or two left over below it; where it can, every line
 /// but the last ends on a punctuation mark, so a phrase stays whole, and a
@@ -32,19 +40,25 @@ class _BalancedTextState extends State<BalancedText> {
   /// its lines left out; aligned to the start, the text as given when it
   /// fits on one line (quoted terms need no joining), else with lines that
   /// end at a phrase ([phraseBreaks]).
-  String? _laidOut;
-
-  @override
-  void didUpdateWidget(BalancedText old) {
-    super.didUpdateWidget(old);
-    if (old.text != widget.text) _laidOut = null;
-  }
+  /// With what it was worked out from: the text, or the language, may have
+  /// changed since.
+  ({String from, String shown})? _laidOut;
 
   @override
   Widget build(BuildContext context) {
     final centered = widget.textAlign == TextAlign.center;
-    final text = centered ? widget.text : keepQuotesWhole(widget.text);
-    final shown = _laidOut ?? text;
+    final model = PhraseModel.of(Localizations.maybeLocaleOf(context));
+    // Phrases only in short text, as Android's phrase breaking: in a long
+    // paragraph the ragged edge costs more than a split word.
+    final text = model != null && widget.text.length <= phraseLimit
+        ? model.keepWhole(widget.text)
+        : centered
+        ? widget.text
+        : keepQuotesWhole(widget.text);
+    // Until laid out, the text as given: most text fits on one line, and a
+    // first frame that wraps is not painted.
+    final laidOut = _laidOut;
+    final shown = laidOut != null && laidOut.from == text ? laidOut.shown : widget.text;
     return _Balanced(
       text: text,
       plain: widget.text,
@@ -52,7 +66,9 @@ class _BalancedTextState extends State<BalancedText> {
       // Laid out, then gone in the same frame (a row scrolled away, a toast
       // replaced): nothing to show.
       onShown: (s) {
-        if (mounted) setState(() => _laidOut = s);
+        if (mounted) {
+          setState(() => _laidOut = (from: text, shown: s));
+        }
       },
       style: DefaultTextStyle.of(context).style.merge(widget.style),
       textScaler: MediaQuery.textScalerOf(context),
@@ -88,7 +104,14 @@ String keepQuotesWhole(String text) {
   var depth = 0;
   String? previous;
   for (final c in text.characters) {
-    if (depth > 0 && previous != null && previous != '「' && previous != '『' && c != '」' && c != '』') {
+    if (depth > 0 &&
+        previous != null &&
+        previous != '「' &&
+        previous != '『' &&
+        previous != '\u2060' &&
+        c != '」' &&
+        c != '』' &&
+        c != '\u2060') {
       out.write('\u2060');
     }
     if (c == '「' || c == '『') depth++;
@@ -225,7 +248,7 @@ class _RenderBalanced extends RenderShiftedBox {
       final wanted = !centered
           ? _startAligned(width)
           : width == null
-          ? text
+          ? plain
           : _withoutLineEndCommas(width);
       _waiting = wanted != shown;
       if (_waiting) SchedulerBinding.instance.addPostFrameCallback((_) => onShown(wanted));
@@ -370,7 +393,7 @@ double? paragraphWidth(
     if (full.length <= 1) return null;
     double score(List<int> ends, double width) {
       final inner = ends.take(ends.length - 1);
-      final last = text.substring(ends[ends.length - 2]).trim().characters.length;
+      final last = text.substring(ends[ends.length - 2]).replaceAll('\u2060', '').trim().characters.length;
       return 10.0 * inner.where(insideQuote).length +
           (last <= 2 ? 5 : 0) +
           8.0 * (ends.length - full.length) +

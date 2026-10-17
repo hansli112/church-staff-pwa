@@ -83,10 +83,10 @@ void main() {
     };
     await pumpApp(tester, b);
     await go(tester, '/me/members');
-    expect(find.textContaining('主日崇拜：喜樂小組'), findsOneWidget);
-    expect(find.textContaining('青年崇拜：青年小組'), findsOneWidget);
+    expect(findShownContaining('主日崇拜：喜樂小組'), findsOneWidget);
+    expect(findShownContaining('青年崇拜：青年小組'), findsOneWidget);
     await tapText(tester, '李美玉');
-    expect(find.text('屬於這個牧區'), findsNothing, reason: 'the read-only list does not open the member editor');
+    expect(findShown('屬於這個牧區'), findsNothing, reason: 'the read-only list does not open the member editor');
     await tester.scrollUntilVisible(find.textContaining('主日崇拜：恩典小組'), 150, scrollable: find.byType(Scrollable).last);
     expect(find.textContaining('主日崇拜：恩典小組'), findsOneWidget);
     expect(find.text('小組'), findsNothing, reason: 'no small-group configuration or permission controls');

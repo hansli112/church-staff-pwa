@@ -200,10 +200,10 @@ void main() {
     await pumpWithStore(tester, FakeStore(), FakeIcons());
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
     await settle(tester);
-    expect(find.text('每月自動續訂，可以隨時到 Google Play 的訂閱設定取消'), findsOneWidget);
-    expect(find.text('管理訂閱'), findsNothing, reason: 'nothing to manage before subscribing');
-    await tester.tap(find.text('服務條款'));
-    await tester.tap(find.text('隱私權政策'));
+    expect(findShown('每月自動續訂，可以隨時到 Google Play 的訂閱設定取消'), findsOneWidget);
+    expect(findShown('管理訂閱'), findsNothing, reason: 'nothing to manage before subscribing');
+    await tester.tap(findShown('服務條款'));
+    await tester.tap(findShown('隱私權政策'));
     await settle(tester);
     expect(launcher.opened, [endsWith('/terms?lang=zh-Hant&from=app'), endsWith('/privacy?lang=zh-Hant&from=app')]);
 

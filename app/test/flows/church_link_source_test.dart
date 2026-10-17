@@ -17,7 +17,7 @@ void main() {
       ..linkContents['grace'] = failed;
     await pumpApp(tester, b);
     expect(find.text('固定標題'), findsNothing, reason: 'the fixed link must not stand in for the source');
-    expect(find.textContaining('來源還沒有今天的內容'), findsOneWidget);
+    expect(findShownContaining('來源還沒有今天的內容'), findsOneWidget);
 
     b.linkSourceAnswers[source] = const LinkContent(
       source: source,
@@ -58,7 +58,7 @@ void main() {
       ..churchLinks['grace'] = link
       ..linkContents['grace'] = failed;
     await pumpApp(tester, b);
-    expect(find.textContaining('來源還沒有今天的內容'), findsOneWidget);
+    expect(findShownContaining('來源還沒有今天的內容'), findsOneWidget);
     expect(find.widgetWithText(TextButton, '重試'), findsNothing);
   });
 }
