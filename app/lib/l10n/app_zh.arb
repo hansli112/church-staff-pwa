@@ -485,6 +485,7 @@
   "adminSearchHint": "教會名稱或 ID",
   "adminNoChurches": "找不到教會",
   "adminStats": "統計",
+  "adminChurches": "教會",
   "adminRename": "改名",
   "adminMakeAdmin": "設為管理員",
   "adminMadeAdmin": "已把「{name}」設為管理員",
@@ -1060,6 +1061,7 @@
       }
     }
   },
+  "fundingTargetUpdating": "每月目標更新中…",
   "fundingCostsHeader": "費用",
   "fundingCostsFooter": "價格變了再改。每年的項目平均分到每個月。名稱和每月金額會公開在支持頁。",
   "fundingMonthsHeader": "最近幾個月",

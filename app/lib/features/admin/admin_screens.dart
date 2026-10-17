@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -429,24 +431,54 @@ String _costValue(L10n l10n, CostItem item) {
 
 /// The platform's costs, which set the monthly target on the support page.
 /// Only edited when a price changes; payments are counted by the backend.
-class AdminFundingScreen extends ConsumerWidget {
+class AdminFundingScreen extends ConsumerStatefulWidget {
   const AdminFundingScreen({super.key});
 
-  Future<void> _save(BuildContext context, WidgetRef ref, List<CostItem> items) async {
+  @override
+  ConsumerState<AdminFundingScreen> createState() => _AdminFundingScreenState();
+}
+
+class _AdminFundingScreenState extends ConsumerState<AdminFundingScreen> {
+  /// The list just saved, shown until the backend has worked out its target:
+  /// a save takes seconds, and the old list meanwhile looks like it failed.
+  List<CostItem>? _pendingCosts;
+
+  /// Which save [_pendingCosts] is from, so an earlier reload leaves a later
+  /// save's list showing.
+  int _saves = 0;
+
+  /// Shows [items] at once and saves them; the target follows when the
+  /// backend has it. Throws what the save throws, with the old list back.
+  Future<void> _save(List<CostItem> items) async {
+    final save = ++_saves;
+    setState(() => _pendingCosts = items);
     try {
       await ref.read(backendProvider).cloud.adminSetFundingCosts(items);
-      ref.invalidate(_fundingProvider);
-    } catch (e) {
-      if (context.mounted) showToast(context, errorText(L10n.of(context), e));
+    } catch (_) {
+      if (mounted && save == _saves) setState(() => _pendingCosts = null);
+      rethrow;
     }
+    ref.invalidate(_fundingProvider);
+    unawaited(
+      ref
+          .read(_fundingProvider.future)
+          .then<void>(
+            (_) {},
+            // Saved; a failed reload shows on the page itself, with its retry.
+            onError: (Object _) {},
+          )
+          .whenComplete(() {
+            if (mounted && save == _saves) setState(() => _pendingCosts = null);
+          }),
+    );
   }
 
-  Future<void> _edit(BuildContext context, WidgetRef ref, List<CostItem> costs, int? index) async {
+  Future<void> _edit(List<CostItem> costs, int? index) async {
     final result = await showAppSheet<_CostEdit>(
       context,
       builder: (_) => _CostSheet(initial: index == null ? null : costs[index]),
     );
-    if (result == null || !context.mounted) return;
+    if (result == null || !mounted) return;
     final next = [...costs];
     switch (result) {
       case _SaveCost(:final item) when index == null:
@@ -456,15 +488,21 @@ class AdminFundingScreen extends ConsumerWidget {
       case _DeleteCost():
         next.removeAt(index!);
     }
-    await _save(context, ref, next);
-    if (result is _DeleteCost && context.mounted) {
-      // Undo reports its own failure, so it calls the backend directly.
+    try {
+      await _save(next);
+    } catch (e) {
+      if (mounted) showToast(context, errorText(L10n.of(context), e));
+      return;
+    }
+    if (result is _DeleteCost && mounted) {
+      // Undo reports its own failure, so it lets the save's error through.
       final cloud = ref.read(backendProvider).cloud;
       final container = ProviderScope.containerOf(context, listen: false);
       showToast(
         context,
         L10n.of(context).deleted,
         onUndo: () async {
+          if (mounted) return _save(costs);
           await cloud.adminSetFundingCosts(costs);
           container.invalidate(_fundingProvider);
         },
@@ -473,9 +511,10 @@ class AdminFundingScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final overview = ref.watch(_fundingProvider);
+    final pending = _pendingCosts;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.fundingCosts)),
       body: overview.when(
@@ -487,7 +526,9 @@ class AdminFundingScreen extends ConsumerWidget {
         data: (o) => ListView(
           padding: const EdgeInsets.only(bottom: Space.xl),
           children: [
-            if (o.funding case final f?)
+            if (pending != null)
+              ListSection(children: [ListRow(title: l10n.fundingTargetUpdating)])
+            else if (o.funding case final f?)
               ListSection(
                 children: [ListRow(title: l10n.fundingTarget(money(l10n, f.target)))],
               ),
@@ -495,16 +536,16 @@ class AdminFundingScreen extends ConsumerWidget {
               header: l10n.fundingCostsHeader,
               footer: l10n.fundingCostsFooter,
               children: [
-                for (final (i, item) in o.costs.indexed)
+                for (final (i, item) in (pending ?? o.costs).indexed)
                   ListRow(
                     title: item.name,
                     value: _costValue(l10n, item),
-                    onTap: () => _edit(context, ref, o.costs, i),
+                    onTap: pending == null ? () => _edit(o.costs, i) : null,
                   ),
                 ListRow(
                   title: l10n.costAdd,
                   leading: const Icon(Icons.add),
-                  onTap: () => _edit(context, ref, o.costs, null),
+                  onTap: pending == null ? () => _edit(o.costs, null) : null,
                 ),
               ],
             ),

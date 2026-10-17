@@ -51,6 +51,16 @@ class MeScreen extends ConsumerWidget {
               ),
             ],
           ),
+          // Only the platform operator: near the top, one tap to each page.
+          if (isOperator)
+            ListSection(
+              header: l10n.operatorConsole,
+              children: [
+                ListRow(title: l10n.adminChurches, onTap: () => context.push('/admin')),
+                ListRow(title: l10n.adminStats, onTap: () => context.push('/admin/stats')),
+                ListRow(title: l10n.fundingCosts, onTap: () => context.push('/admin/funding')),
+              ],
+            ),
           ListSection(
             children: [
               ListRow(
@@ -85,22 +95,16 @@ class MeScreen extends ConsumerWidget {
             ],
           ),
           const _UpdatesSection(),
-          if (isOperator || Env.current.isDevelopment)
+          if (Env.current.isDevelopment)
             ListSection(
               header: l10n.developer,
               children: [
-                if (isOperator)
-                  ListRow(
-                    title: l10n.operatorConsole,
-                    onTap: () => context.push('/admin'),
-                  ),
-                if (Env.current.isDevelopment)
-                  ListRow(
-                    title: l10n.components,
-                    onTap: () => context.push('/dev/components'),
-                  ),
+                ListRow(
+                  title: l10n.components,
+                  onTap: () => context.push('/dev/components'),
+                ),
                 // Crashlytics has no web SDK.
-                if (Env.current.isDevelopment && !kIsWeb)
+                if (!kIsWeb)
                   ListRow(
                     title: l10n.testCrash,
                     onTap: () => ref.read(telemetryProvider).testCrash(),

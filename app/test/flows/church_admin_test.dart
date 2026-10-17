@@ -405,6 +405,49 @@ void main() {
       expect(b.fundingCosts.map((c) => c.name), ['雲端', '網域']);
     });
 
+    testWidgets('finds the back office at the top of 我的: churches, stats and costs, one tap each', (tester) async {
+      final b = seededChurch();
+      b.auth.operators.add('pastor');
+      await pumpApp(tester, b);
+      await go(tester, '/me');
+      for (final row in ['教會', '統計', '雲端費用']) {
+        expect(find.text(row).hitTestable(), findsOneWidget, reason: '$row without scrolling');
+      }
+      await tapText(tester, '雲端費用');
+      expect(GoRouter.of(tester.element(find.byType(Scaffold).last)).state.uri.path, '/admin/funding');
+    });
+
+    testWidgets('a saved cost shows at once; the target says it is updating until the backend has it', (
+      tester,
+    ) async {
+      Funding published(List<CostItem> costs) => Funding(
+        month: '2026-10',
+        target: costs.fold<num>(0, (t, c) => t + c.amount).round(),
+        received: 0,
+        carried: 0,
+        monthsLeft: 0,
+      );
+      final b = seededChurch()..publishFunding = published;
+      b.auth.operators.add('pastor');
+      b.fundingCosts = const [CostItem(name: '雲端', amount: 300, currency: Currency.twd, per: CostPeriod.month)];
+      b.funding = published(b.fundingCosts);
+      await pumpApp(tester, b);
+      await go(tester, '/admin/funding');
+      b.writeDelay = const Duration(seconds: 3);
+
+      await tapText(tester, '雲端');
+      await tester.enterText(find.byKey(const Key('costAmount')), '400');
+      await tapText(tester, '儲存');
+      expect(find.text('NT\$400 · 每月'), findsOneWidget, reason: 'the new amount, before the backend answers');
+      expect(find.text('每月目標 NT\$300'), findsNothing, reason: 'no stale target while it updates');
+      expect(find.text('每月目標更新中…'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 3));
+      await settle(tester);
+      expect(find.text('每月目標 NT\$400'), findsOneWidget);
+      expect(find.text('每月目標更新中…'), findsNothing);
+    });
+
     testWidgets('suspends a church; its members see the closed page', (tester) async {
       final b = seededChurch();
       b.auth.operators.add('pastor');

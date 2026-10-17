@@ -778,6 +778,9 @@ class L10nJa extends L10n {
   String get adminStats => '統計';
 
   @override
+  String get adminChurches => '教会';
+
+  @override
   String get adminRename => '名前を変更';
 
   @override
@@ -1767,6 +1770,9 @@ class L10nJa extends L10n {
   String fundingTarget(String amount) {
     return '毎月の目標 $amount';
   }
+
+  @override
+  String get fundingTargetUpdating => '毎月の目標を更新中…';
 
   @override
   String get fundingCostsHeader => '費用';

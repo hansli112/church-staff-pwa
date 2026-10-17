@@ -1510,6 +1510,12 @@ abstract class L10n {
   /// **'統計'**
   String get adminStats;
 
+  /// No description provided for @adminChurches.
+  ///
+  /// In zh, this message translates to:
+  /// **'教會'**
+  String get adminChurches;
+
   /// No description provided for @adminRename.
   ///
   /// In zh, this message translates to:
@@ -3321,6 +3327,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'每月目標 {amount}'**
   String fundingTarget(String amount);
+
+  /// No description provided for @fundingTargetUpdating.
+  ///
+  /// In zh, this message translates to:
+  /// **'每月目標更新中…'**
+  String get fundingTargetUpdating;
 
   /// No description provided for @fundingCostsHeader.
   ///

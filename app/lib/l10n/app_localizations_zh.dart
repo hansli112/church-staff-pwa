@@ -778,6 +778,9 @@ class L10nZh extends L10n {
   String get adminStats => '統計';
 
   @override
+  String get adminChurches => '教會';
+
+  @override
   String get adminRename => '改名';
 
   @override
@@ -1764,6 +1767,9 @@ class L10nZh extends L10n {
   String fundingTarget(String amount) {
     return '每月目標 $amount';
   }
+
+  @override
+  String get fundingTargetUpdating => '每月目標更新中…';
 
   @override
   String get fundingCostsHeader => '費用';
@@ -3230,6 +3236,9 @@ class L10nZhHans extends L10nZh {
   String get adminStats => '统计';
 
   @override
+  String get adminChurches => '教会';
+
+  @override
   String get adminRename => '改名';
 
   @override
@@ -4216,6 +4225,9 @@ class L10nZhHans extends L10nZh {
   String fundingTarget(String amount) {
     return '每月目标 $amount';
   }
+
+  @override
+  String get fundingTargetUpdating => '每月目标更新中…';
 
   @override
   String get fundingCostsHeader => '费用';

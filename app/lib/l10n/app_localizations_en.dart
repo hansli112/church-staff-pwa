@@ -802,6 +802,9 @@ class L10nEn extends L10n {
   String get adminStats => 'Stats';
 
   @override
+  String get adminChurches => 'Churches';
+
+  @override
   String get adminRename => 'Rename';
 
   @override
@@ -1878,6 +1881,9 @@ class L10nEn extends L10n {
   String fundingTarget(String amount) {
     return 'Monthly goal $amount';
   }
+
+  @override
+  String get fundingTargetUpdating => 'Updating the monthly goal…';
 
   @override
   String get fundingCostsHeader => 'Costs';

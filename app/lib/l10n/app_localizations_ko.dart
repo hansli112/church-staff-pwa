@@ -779,6 +779,9 @@ class L10nKo extends L10n {
   String get adminStats => '통계';
 
   @override
+  String get adminChurches => '교회';
+
+  @override
   String get adminRename => '이름 변경';
 
   @override
@@ -1767,6 +1770,9 @@ class L10nKo extends L10n {
   String fundingTarget(String amount) {
     return '월 목표 $amount';
   }
+
+  @override
+  String get fundingTargetUpdating => '월 목표 업데이트 중…';
 
   @override
   String get fundingCostsHeader => '비용';
