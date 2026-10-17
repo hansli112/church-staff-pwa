@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Design tokens from docs/design-principles.md: neutral colors plus one
-/// accent, system font, 17pt body, an 8pt grid.
+/// accent, the system's Chinese font, 17pt body, an 8pt grid.
 abstract final class Space {
   static const double xs = 4;
   static const double s = 8;
@@ -145,7 +147,21 @@ abstract final class EventColors {
   }
 }
 
-/// Text styles on top of the system font. Sizes follow the iOS text styles
+/// The font for letters and digits on Android: Source Sans 3 drawn at the
+/// size Noto Sans CJK draws its own (tool/martha_latin.py), beside the
+/// phone's Chinese, Japanese or Korean font. Roboto looks small and thin
+/// next to them, and Noto Sans CJK's own Latin makes ’ and · full width.
+/// Elsewhere the platform's font (SF and PingFang on iOS).
+String? get appFontFamily => !kIsWeb && defaultTargetPlatform == TargetPlatform.android ? 'Martha Latin' : null;
+
+/// Registers [appFontFamily] where it is used, before the first frame.
+Future<void> loadAppFont() async {
+  final family = appFontFamily;
+  if (family == null) return;
+  await (FontLoader(family)..addFont(rootBundle.load('assets/fonts/MarthaLatin.ttf'))).load();
+}
+
+/// Text styles on top of the app's font ([appFontFamily]). Sizes follow the iOS text styles
 /// so Dynamic Type and Android font scale both apply through MediaQuery.
 abstract final class AppText {
   static const largeTitle = TextStyle(

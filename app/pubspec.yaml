@@ -98,6 +98,9 @@ flutter:
   generate: true
   assets:
     - assets/icons/
+    # Martha Latin and its license. Loaded by main.dart on Android only: a
+    # font declared under `fonts:` the web build would download at start.
+    - assets/fonts/
     - assets/add_to_home/
     # The app's strings, whose fonts the web build fetches at start
     # (lib/core/fonts.dart).

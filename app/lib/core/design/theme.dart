@@ -47,6 +47,7 @@ ThemeData buildTheme(Brightness brightness) {
     brightness: brightness,
     colorScheme: scheme,
     textTheme: text,
+    fontFamily: appFontFamily,
     scaffoldBackgroundColor: c.background,
     canvasColor: c.background,
     dividerTheme: DividerThemeData(
@@ -61,7 +62,7 @@ ThemeData buildTheme(Brightness brightness) {
       foregroundColor: c.label,
       elevation: 0,
       scrolledUnderElevation: 0.5,
-      titleTextStyle: AppText.headline.copyWith(color: c.label),
+      titleTextStyle: AppText.headline.copyWith(fontFamily: appFontFamily, color: c.label),
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: c.surface,
@@ -71,6 +72,7 @@ ThemeData buildTheme(Brightness brightness) {
       height: 64,
       labelTextStyle: WidgetStateProperty.resolveWith(
         (s) => AppText.caption.copyWith(
+          fontFamily: appFontFamily,
           color: s.contains(WidgetState.selected) ? c.accent : c.secondaryLabel,
           fontWeight: s.contains(WidgetState.selected) ? FontWeight.w600 : FontWeight.w400,
         ),
@@ -97,7 +99,7 @@ ThemeData buildTheme(Brightness brightness) {
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
       backgroundColor: brightness == Brightness.dark ? c.surfaceRaised : const Color(0xFF2C2C2E),
-      contentTextStyle: AppText.subheadline.copyWith(color: Colors.white),
+      contentTextStyle: AppText.subheadline.copyWith(fontFamily: appFontFamily, color: Colors.white),
       actionTextColor: AppColors.dark.accent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(Radii.m),
@@ -106,7 +108,7 @@ ThemeData buildTheme(Brightness brightness) {
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: c.fill,
-      hintStyle: AppText.body.copyWith(color: c.secondaryLabel),
+      hintStyle: AppText.body.copyWith(fontFamily: appFontFamily, color: c.secondaryLabel),
       contentPadding: const EdgeInsets.symmetric(
         horizontal: Space.m,
         vertical: 14,
@@ -127,7 +129,7 @@ ThemeData buildTheme(Brightness brightness) {
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         minimumSize: const Size.fromHeight(50),
-        textStyle: AppText.headline,
+        textStyle: AppText.headline.copyWith(fontFamily: appFontFamily),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(Radii.m),
         ),
@@ -137,7 +139,7 @@ ThemeData buildTheme(Brightness brightness) {
       style: TextButton.styleFrom(
         foregroundColor: c.accent,
         minimumSize: const Size(48, 48),
-        textStyle: AppText.body,
+        textStyle: AppText.body.copyWith(fontFamily: appFontFamily),
       ),
     ),
     // Like an iOS segmented control: a neutral track, the chosen part a
@@ -156,6 +158,7 @@ ThemeData buildTheme(Brightness brightness) {
         ),
         textStyle: WidgetStateProperty.resolveWith(
           (s) => AppText.subheadline.copyWith(
+            fontFamily: appFontFamily,
             fontWeight: s.contains(WidgetState.selected) ? FontWeight.w600 : FontWeight.w400,
           ),
         ),
@@ -165,8 +168,8 @@ ThemeData buildTheme(Brightness brightness) {
       tileColor: c.surface,
       textColor: c.label,
       iconColor: c.secondaryLabel,
-      titleTextStyle: AppText.body.copyWith(color: c.label),
-      subtitleTextStyle: AppText.subheadline.copyWith(color: c.secondaryLabel),
+      titleTextStyle: AppText.body.copyWith(fontFamily: appFontFamily, color: c.label),
+      subtitleTextStyle: AppText.subheadline.copyWith(fontFamily: appFontFamily, color: c.secondaryLabel),
       minTileHeight: 48,
     ),
   );
