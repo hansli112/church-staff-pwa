@@ -1260,6 +1260,9 @@ class L10nEn extends L10n {
   String get supportUnavailable => 'Can’t reach the store right now. Try again later.';
 
   @override
+  String get supportComingSoon => 'Support in the app is coming soon';
+
+  @override
   String get supporterBadge => 'Supporter';
 
   @override

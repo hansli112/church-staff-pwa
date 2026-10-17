@@ -14,10 +14,21 @@ import '../support/harness.dart';
 import '../support/seed.dart';
 
 class FakeStore implements SupportStore {
-  FakeStore({this.now});
+  FakeStore({this.now, this.items = _items, this.unreachable = false});
+
+  static const _items = [
+    SupportItem(id: 'tip_small', title: '請喝咖啡', price: 'NT\$90', subscription: false),
+    SupportItem(id: 'supporter_monthly', title: '每月支持', price: 'NT\$60', subscription: true),
+  ];
 
   /// When a purchase is paid; the test's clock.
   final DateTime Function()? now;
+
+  /// What the store sells; empty before any product is set up there.
+  final List<SupportItem> items;
+
+  /// The store can't be reached.
+  final bool unreachable;
   final _results = StreamController<PurchaseResult>.broadcast(sync: true);
   final bought = <String>[];
   int refreshes = 0;
@@ -30,10 +41,7 @@ class FakeStore implements SupportStore {
   bool get available => true;
 
   @override
-  Future<List<SupportItem>> products() async => const [
-    SupportItem(id: 'tip_small', title: '請喝咖啡', price: 'NT\$90', subscription: false),
-    SupportItem(id: 'supporter_monthly', title: '每月支持', price: 'NT\$60', subscription: true),
-  ];
+  Future<List<SupportItem>> products() async => unreachable ? throw StateError('offline') : items;
 
   @override
   Future<void> buy(SupportItem item) async {
@@ -204,6 +212,21 @@ void main() {
     await tester.tap(find.text('管理訂閱'));
     await settle(tester);
     expect(launcher.opened.last, 'https://play.google.com/store/account/subscriptions');
+  });
+
+  testWidgets('before the store sells anything, it says so instead of an error', (tester) async {
+    await pumpWithStore(tester, FakeStore(items: const []), FakeIcons());
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
+    await settle(tester);
+    expect(find.text('App 內支持即將開放'), findsOneWidget);
+    expect(find.text('現在無法連上商店，請稍後再試'), findsNothing);
+  });
+
+  testWidgets("when the store can't be reached, try again later", (tester) async {
+    await pumpWithStore(tester, FakeStore(unreachable: true), FakeIcons());
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
+    await settle(tester);
+    expect(find.text('現在無法連上商店，請稍後再試'), findsOneWidget);
   });
 
   group('the subscription', () {

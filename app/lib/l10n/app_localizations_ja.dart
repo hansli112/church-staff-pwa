@@ -1190,6 +1190,9 @@ class L10nJa extends L10n {
   String get supportUnavailable => '現在ストアに接続できません。しばらくしてからもう一度お試しください。';
 
   @override
+  String get supportComingSoon => 'アプリ内での応援はまもなく始まります';
+
+  @override
   String get supporterBadge => '応援者';
 
   @override

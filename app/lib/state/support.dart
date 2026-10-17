@@ -38,6 +38,9 @@ typedef PurchaseResult = ({String productId, PurchaseOutcome outcome, DateTime? 
 abstract interface class SupportStore {
   /// Whether this platform sells anything (false on the web).
   bool get available;
+
+  /// What the store sells; none until the products are set up there.
+  /// Throws when the store can't be reached.
   Future<List<SupportItem>> products();
   Future<void> buy(SupportItem item);
   Future<void> restore();
@@ -100,8 +103,12 @@ class StoreKitPlayStore implements SupportStore {
 
   @override
   Future<List<SupportItem>> products() async {
-    if (!await _iap.isAvailable()) return const [];
+    // Can't reach the store: an error. Reached, with nothing on sale yet: none.
+    // Google Play's plugin drops a failed query's code, so offline there can
+    // look like nothing on sale.
+    if (!await _iap.isAvailable()) throw StateError('The store is unavailable');
     final response = await _iap.queryProductDetails(SupportProducts.all);
+    if (response.error case final error? when response.productDetails.isEmpty) throw error;
     _details
       ..clear()
       ..addEntries(response.productDetails.map((p) => MapEntry(p.id, p)));

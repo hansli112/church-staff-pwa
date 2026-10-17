@@ -362,6 +362,7 @@
   "supportPending": "付款处理中",
   "supportFailed": "没有完成付款，没有扣款",
   "supportUnavailable": "现在无法连接商店，请稍后再试",
+  "supportComingSoon": "App 内支持即将开放",
   "supporterBadge": "支持者",
   "appIcon": "App 图标",
   "appIconSupporterOnly": "每月支持者可以更换 App 图标",

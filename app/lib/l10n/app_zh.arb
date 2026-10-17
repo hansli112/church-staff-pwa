@@ -721,6 +721,7 @@
   "supportPending": "付款處理中",
   "supportFailed": "沒有完成付款，沒有扣款",
   "supportUnavailable": "現在無法連上商店，請稍後再試",
+  "supportComingSoon": "App 內支持即將開放",
   "supporterBadge": "支持者",
   "appIcon": "App 圖示",
   "appIconSupporterOnly": "每月支持者可以換 App 圖示",

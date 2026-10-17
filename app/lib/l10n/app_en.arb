@@ -362,6 +362,7 @@
   "supportPending": "Processing payment",
   "supportFailed": "Payment didn’t go through. You weren’t charged.",
   "supportUnavailable": "Can’t reach the store right now. Try again later.",
+  "supportComingSoon": "Support in the app is coming soon",
   "supporterBadge": "Supporter",
   "appIcon": "App icon",
   "appIconSupporterOnly": "Monthly supporters can change the app icon",

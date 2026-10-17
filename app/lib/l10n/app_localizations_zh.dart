@@ -1189,6 +1189,9 @@ class L10nZh extends L10n {
   String get supportUnavailable => '現在無法連上商店，請稍後再試';
 
   @override
+  String get supportComingSoon => 'App 內支持即將開放';
+
+  @override
   String get supporterBadge => '支持者';
 
   @override
@@ -3636,6 +3639,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get supportUnavailable => '现在无法连接商店，请稍后再试';
+
+  @override
+  String get supportComingSoon => 'App 内支持即将开放';
 
   @override
   String get supporterBadge => '支持者';

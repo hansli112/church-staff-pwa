@@ -362,6 +362,7 @@
   "supportPending": "支払いを処理中",
   "supportFailed": "支払いは完了していません。請求はされていません。",
   "supportUnavailable": "現在ストアに接続できません。しばらくしてからもう一度お試しください。",
+  "supportComingSoon": "アプリ内での応援はまもなく始まります",
   "supporterBadge": "応援者",
   "appIcon": "アプリのアイコン",
   "appIconSupporterOnly": "毎月の応援者はアプリのアイコンを変えられます",

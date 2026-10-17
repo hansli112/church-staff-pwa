@@ -362,6 +362,7 @@
   "supportPending": "결제 처리 중",
   "supportFailed": "결제가 완료되지 않았어요. 요금은 청구되지 않았어요.",
   "supportUnavailable": "지금은 스토어에 연결할 수 없어요. 잠시 후 다시 시도해 주세요.",
+  "supportComingSoon": "앱 안에서 후원하기는 곧 열려요",
   "supporterBadge": "후원자",
   "appIcon": "앱 아이콘",
   "appIconSupporterOnly": "정기 후원자는 앱 아이콘을 바꿀 수 있어요",

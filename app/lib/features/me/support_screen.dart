@@ -102,7 +102,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
             loading: () => const SizedBox(height: 120),
             error: (_, _) => EmptyState(message: l10n.supportUnavailable),
             data: (items) {
-              if (items.isEmpty) return EmptyState(message: l10n.supportUnavailable);
+              if (items.isEmpty) return EmptyState(message: l10n.supportComingSoon);
               final tips = items.where((i) => !i.subscription).toList();
               final monthly = items.where((i) => i.subscription).toList();
               return Column(

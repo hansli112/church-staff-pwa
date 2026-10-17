@@ -2272,6 +2272,12 @@ abstract class L10n {
   /// **'現在無法連上商店，請稍後再試'**
   String get supportUnavailable;
 
+  /// No description provided for @supportComingSoon.
+  ///
+  /// In zh, this message translates to:
+  /// **'App 內支持即將開放'**
+  String get supportComingSoon;
+
   /// No description provided for @supporterBadge.
   ///
   /// In zh, this message translates to:
