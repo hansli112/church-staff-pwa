@@ -64,7 +64,7 @@ beforeEach(async () => {
 describe('connecting', () => {
   test("from the app, the browser ends on a page that says to go back, not on the web app", async () => {
     await church();
-    const d = { ...deps, google: fakeGoogle(), config };
+    const d = { ...deps, google: fakeGoogle().google, config };
     const start = async (data: object) =>
       new URL((await calendarAuthUrl(d, caller('pastor'), { churchId: 'C1', ...data })).url).searchParams.get('state')!;
     assert.equal(await calendarCallback(d, { state: await start({ from: 'app' }), code: 'good' }), 'https://app.example/calendar-done.html?result=connected');
