@@ -4,6 +4,7 @@ import { beforeEach, describe, test } from 'node:test';
 
 import {
   GATEWAYS,
+  adminRefundOnlineSupport,
   ORDERS_PER_HOUR,
   checkMacValue,
   dropExpiredOrders,
@@ -13,8 +14,9 @@ import {
   returnLocation,
   type EcpayConfig,
 } from '../src/fundingEcpay.js';
-import { funding, withRates } from './fundingFixtures.js';
-import { clearFirestore, db, deps, setNow } from './support.js';
+import { recordPayment } from '../src/funding.js';
+import { funding, op, withRates } from './fundingFixtures.js';
+import { caller, clearFirestore, db, deps, rejectsWith, setNow } from './support.js';
 
 // The worked example on ECPay's 檢查碼機制 page (developers.ecpay.com.tw/?p=2902),
 // with the public test store's keys (?p=2856).
@@ -333,5 +335,39 @@ describe('after paying', () => {
     const left = (await db.collection('ecpayOrders').get()).docs.map((d) => d.id);
     assert.deepEqual(left, [paid.fields.MerchantTradeNo]);
     assert.notEqual(unpaid.fields.MerchantTradeNo, paid.fields.MerchantTradeNo);
+  });
+});
+
+describe('a 線上支持 payment refunded in ECPay\'s back office', () => {
+  const paid = () =>
+    recordPayment(withRates(), {
+      id: 'ecpay_M20261006A',
+      store: 'ecpay',
+      productId: 'web_once',
+      amount: 97,
+      currency: 'TWD',
+      at: new Date('2026-09-28T10:00:00+08:00'),
+    });
+  const september = async () => (await db.doc('fundingMonths/2026-09').get()).get('received');
+
+  test('comes off the month it was paid in, by its order number; undoing puts it back', async () => {
+    await paid();
+    const d = withRates();
+    const r = await adminRefundOnlineSupport(d, op, { orderNo: ' M20261006A ', refunded: true });
+    assert.deepEqual(r, { amountTwd: 97, month: '2026-09' });
+    assert.equal(await september(), 0);
+    await adminRefundOnlineSupport(d, op, { orderNo: 'M20261006A', refunded: true });
+    assert.equal(await september(), 0, 'once');
+    await adminRefundOnlineSupport(d, op, { orderNo: 'M20261006A', refunded: false });
+    assert.equal(await september(), 97);
+  });
+
+  test('only the platform operator, only a payment that came in', async () => {
+    await paid();
+    await rejectsWith(adminRefundOnlineSupport(withRates(), caller('alice'), { orderNo: 'M20261006A', refunded: true }), 'permissionDenied');
+    await rejectsWith(adminRefundOnlineSupport(withRates(), op, { orderNo: 'NOSUCHORDER', refunded: true }), 'notFound');
+    await rejectsWith(adminRefundOnlineSupport(withRates(), op, { orderNo: 'M-1', refunded: true }), 'unknown');
+    assert.equal(await september(), 97);
+    assert.equal(await db.doc('fundingPayments/ecpay_NOSUCHORDER').get().then((d) => d.exists), false);
   });
 });

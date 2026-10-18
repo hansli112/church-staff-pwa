@@ -229,7 +229,7 @@ abstract class L10n {
   /// Placeholder for a tab that is not built yet
   ///
   /// In zh, this message translates to:
-  /// **'還在做，很快就好'**
+  /// **'還在做'**
   String get comingSoon;
 
   /// No description provided for @signInWithGoogle.
@@ -277,7 +277,7 @@ abstract class L10n {
   /// No description provided for @loginTaglineSource.
   ///
   /// In zh, this message translates to:
-  /// **'路加福音 10:41–42'**
+  /// **'路加福音 10:41–42（和合本）'**
   String get loginTaglineSource;
 
   /// On the login page when it was opened from an invite link
@@ -1711,7 +1711,7 @@ abstract class L10n {
   /// No description provided for @notifRosterChangeSub.
   ///
   /// In zh, this message translates to:
-  /// **'你被排進或移出服事時'**
+  /// **'你被排進或移出服事時。晚上 10 點後的異動，早上 7 點才通知'**
   String get notifRosterChangeSub;
 
   /// No description provided for @notifMemberLeft.
@@ -2227,19 +2227,19 @@ abstract class L10n {
   /// No description provided for @supportVerse.
   ///
   /// In zh, this message translates to:
-  /// **'乃要均平，就是要你們的富餘，現在可以補他們的不足，使他們的富餘，將來也可以補你們的不足，這就均平了。'**
+  /// **'乃要均平，就是要你們的富餘，現在可以補他們的不足，使他們的富餘，將來也可以補你們的不足，這就均平了。如經上所記：多收的也沒有餘；少收的也沒有缺。'**
   String get supportVerse;
 
   /// No description provided for @supportVerseSource.
   ///
   /// In zh, this message translates to:
-  /// **'哥林多後書 8:14'**
+  /// **'哥林多後書 8:14–15（和合本）'**
   String get supportVerseSource;
 
   /// No description provided for @supportBody.
   ///
   /// In zh, this message translates to:
-  /// **'支持完全自願，只用來分擔雲端費用，每間教會能用的功能都一樣'**
+  /// **'支持完全自願，只用來分擔雲端費用，不是給教會的奉獻；每間教會能用的功能都一樣'**
   String get supportBody;
 
   /// No description provided for @supportTips.
@@ -4509,6 +4509,48 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'你選的帳號已經是另一個馬大別忙帳號，不能連結。要連結的話，請先用它登入並刪除那個帳號，再回來連結。'**
   String get errCredentialInUse;
+
+  /// No description provided for @onlineRefundHeader.
+  ///
+  /// In zh, this message translates to:
+  /// **'線上支持退款'**
+  String get onlineRefundHeader;
+
+  /// No description provided for @onlineRefundFooter.
+  ///
+  /// In zh, this message translates to:
+  /// **'在綠界後台退款後，填這筆的特店訂單編號，就會從雲端費用進度扣回。'**
+  String get onlineRefundFooter;
+
+  /// No description provided for @onlineRefundAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'扣回一筆退款'**
+  String get onlineRefundAdd;
+
+  /// ECPay's 特店訂單編號 (MerchantTradeNo), as its back office calls it
+  ///
+  /// In zh, this message translates to:
+  /// **'特店訂單編號'**
+  String get onlineRefundOrderNo;
+
+  /// No description provided for @onlineRefundApply.
+  ///
+  /// In zh, this message translates to:
+  /// **'從進度扣回'**
+  String get onlineRefundApply;
+
+  /// Toast after the operator takes a refunded online payment off the server costs
+  ///
+  /// In zh, this message translates to:
+  /// **'已從 {month} 扣回 {amount}'**
+  String onlineRefunded(String month, String amount);
+
+  /// No description provided for @onlineRefundNotFound.
+  ///
+  /// In zh, this message translates to:
+  /// **'找不到這筆線上支持，請確認特店訂單編號'**
+  String get onlineRefundNotFound;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

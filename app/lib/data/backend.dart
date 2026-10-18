@@ -560,6 +560,9 @@ class FundingMonth {
   final int target;
 }
 
+/// A 線上支持 payment of NT\$[amount], counted in [month] (YYYY-MM).
+typedef OnlineRefund = ({int amount, String month});
+
 class FundingOverview {
   const FundingOverview({required this.costs, required this.months, required this.funding});
 
@@ -664,6 +667,12 @@ abstract interface class CloudApi {
 
   /// Replaces the cost list; this month's target follows.
   Future<void> adminSetFundingCosts(List<CostItem> items);
+
+  /// 線上支持 refunded in ECPay's back office, which tells the backend
+  /// nothing: takes the payment with order number [orderNo] (特店訂單編號)
+  /// off 雲端費用進度, or puts it back when [refunded] is false. Throws
+  /// [CloudErrorCode.notFound] when no such payment came in.
+  Future<OnlineRefund> adminRefundOnlineSupport(String orderNo, {required bool refunded});
 
   /// Reports an uncaught error. Never throws.
   Future<void> logError({

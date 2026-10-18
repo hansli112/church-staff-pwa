@@ -5,7 +5,7 @@ import { beforeEach, describe, test } from 'node:test';
 import { Timestamp } from 'firebase-admin/firestore';
 
 import { purgeDeletedChurches } from '../src/church.js';
-import { diffDuties, onRosterWritten } from '../src/rosterChange.js';
+import { diffDuties, onRosterWritten, quietUntil, sendHeldPushes } from '../src/rosterChange.js';
 import { sendQueued, webhookSave, type WebhookDeps } from '../src/webhook.js';
 import { caller, clearFirestore, db, deps, fakeFetch, fakePush, purgeDeps, seedChurch, setNow, type SentPush } from './support.js';
 
@@ -169,6 +169,72 @@ describe('push', () => {
     await db.doc('churches/C1/members/mei').update({ 'notificationPrefs.muted': ['rosterChange'] });
     await write('C1', '2026-10-04', [duty('司琴', ['美玉'])]);
     assert.equal(pushed.length, 0);
+  });
+});
+
+describe('quiet hours', () => {
+  const at = (iso: string) => setNow(new Date(iso));
+  const held = async () => (await db.collection('heldPushes').get()).docs.map((x) => x.data());
+
+  test('from 22:00 to 7:00 on the church\'s clock, until 7:00', () => {
+    const until = (iso: string, zone = 'Asia/Taipei') => quietUntil(zone, new Date(iso))?.toISOString() ?? null;
+    assert.equal(until('2026-10-03T21:59:00+08:00'), null);
+    assert.equal(until('2026-10-03T22:00:00+08:00'), '2026-10-03T23:00:00.000Z');
+    assert.equal(until('2026-10-04T06:59:00+08:00'), '2026-10-03T23:00:00.000Z');
+    assert.equal(until('2026-10-04T07:00:00+08:00'), null);
+    // Los Angeles's clocks go back on 1 November 2026: 7:00 there is UTC−8.
+    assert.equal(until('2026-10-31T23:00:00-07:00', 'America/Los_Angeles'), '2026-11-01T15:00:00.000Z');
+  });
+
+  test('a change at night is told at 7:00, not before; the webhook does not wait', async () => {
+    await church();
+    at('2026-10-03T23:30:00+08:00');
+    const r = await write('C1', '2026-10-04', [duty('司琴', ['美玉'])]);
+    assert.deepEqual(r, { push: 0, webhook: true });
+    assert.equal(pushed.length, 0);
+    assert.equal((await queued()).length, 1);
+    at('2026-10-04T06:00:00+08:00');
+    await sendHeldPushes(triggerDeps());
+    assert.equal(pushed.length, 0, 'not yet');
+    at('2026-10-04T07:00:00+08:00');
+    await sendHeldPushes(triggerDeps());
+    assert.deepEqual(pushed.map((p) => [p.tokens, p.body, p.link]), [
+      [['tok-mei', 'tok-mei-2'], '你被排進 10/4 主日崇拜：司琴', '/c/C1?to=%2Frosters%2Fsunday%2F2026-10-04'],
+    ]);
+    assert.deepEqual(await held(), []);
+    await sendHeldPushes(triggerDeps());
+    assert.equal(pushed.length, 1, 'once');
+  });
+
+  test('what changed over the night, all told: on and off again is no news, a swap is', async () => {
+    await church();
+    await write('C1', '2026-10-11', [duty('司琴', ['美玉']), duty('招待', [])]);
+    pushed.length = 0;
+    at('2026-10-03T23:00:00+08:00');
+    await write('C1', '2026-10-11', [duty('司琴', ['志豪']), duty('招待', [])]);
+    await write('C1', '2026-10-11', [duty('司琴', ['美玉']), duty('招待', ['志豪'])]);
+    await write('C1', '2026-10-11', [duty('司琴', []), duty('招待', ['美玉', '志豪'])]);
+    at('2026-10-04T07:00:00+08:00');
+    await sendHeldPushes(triggerDeps());
+    // 志豪: 司琴, then 招待 instead; 美玉: off 司琴, back on, then 招待 instead.
+    assert.deepEqual(pushed.map((p) => `${p.tokens[0]} ${p.body}`).sort(), [
+      'tok-hao 你被排進 10/11 主日崇拜：招待',
+      'tok-mei 你被排進 10/11 主日崇拜：招待',
+      'tok-mei 你被移出 10/11 主日崇拜：司琴',
+    ]);
+  });
+
+  test('a day that passed overnight, or a church closed overnight, tells nothing', async () => {
+    await church();
+    at('2026-10-03T23:00:00+08:00');
+    await write('C1', '2026-10-03', [duty('司琴', ['美玉'])]);
+    await write('C1', '2026-10-04', [duty('司琴', ['美玉'])]);
+    assert.equal((await held()).length, 2);
+    await db.doc('churches/C1').update({ status: 'suspended' });
+    at('2026-10-04T07:00:00+08:00');
+    await sendHeldPushes(triggerDeps());
+    assert.equal(pushed.length, 0);
+    assert.deepEqual(await held(), []);
   });
 });
 

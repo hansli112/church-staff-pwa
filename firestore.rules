@@ -377,7 +377,8 @@ service cloud.firestore {
 
     // churchNames/{nameKey} (name reservations), linkSources/{cid} (the
     // church link fetch schedule), webhookSecrets/{cid}, webhookOutbox/{cid}
-    // (roster changes waiting to go out), pendingIndex/{email hash} (who has
+    // (roster changes waiting to go out), heldPushes (roster pushes held over
+    // quiet hours), pendingIndex/{email hash} (who has
     // a pending member where) and everything else: no client access.
     match /{document=**} {
       allow read, write: if false;

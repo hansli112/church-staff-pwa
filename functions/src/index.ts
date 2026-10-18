@@ -211,6 +211,7 @@ export const dailyStats = onSchedule(
 // payments, below) on their own; the operator only keeps the cost list.
 export const adminFunding = callable(funding.adminFunding);
 export const adminSetFundingCosts = callable(funding.adminSetFundingCosts);
+export const adminRefundOnlineSupport = callable(fundingEcpay.adminRefundOnlineSupport);
 /** [handler] for POST requests; anything else gets 405. */
 const postOnly =
   (handler: (req: Request, res: Response) => Promise<void>) => async (req: Request, res: Response) => {
@@ -368,10 +369,15 @@ export const syncEventRosters = using(
     }),
 );
 
+// Every hour: the evening reminders, and roster pushes held over quiet hours.
 export const sendReminders = onSchedule(
   { region: REGION, schedule: '0 * * * *', timeZone: 'Asia/Taipei' },
   async () => {
-    await notifications.sendReminders(pushDeps());
+    const d = pushDeps();
+    await runEach('hourly pushes', {
+      reminders: () => notifications.sendReminders(d),
+      held: () => rosterChange.sendHeldPushes(d),
+    });
   },
 );
 

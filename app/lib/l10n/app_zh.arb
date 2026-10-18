@@ -21,7 +21,7 @@
   "loadFailed": "載入失敗，請檢查網路後再試一次",
   "saveFailed": "沒有儲存成功，請檢查網路後再試一次",
   "noPermission": "你沒有權限做這件事",
-  "comingSoon": "還在做，很快就好",
+  "comingSoon": "還在做",
   "@comingSoon": {
     "description": "Placeholder for a tab that is not built yet"
   },
@@ -42,7 +42,7 @@
   "copyPageUrl": "複製連結",
   "pageUrlCopied": "已複製連結，貼到 Safari 或 Chrome 打開",
   "loginTagline": "馬大！馬大！你為許多的事思慮煩擾，\n但是不可少的只有一件；\n馬利亞已經選擇那上好的福分，\n是不能奪去的。",
-  "loginTaglineSource": "路加福音 10:41–42",
+  "loginTaglineSource": "路加福音 10:41–42（和合本）",
   "loginInvitedTo": "受邀加入〈{church}〉",
   "@loginInvitedTo": {
     "description": "On the login page when it was opened from an invite link",
@@ -532,7 +532,7 @@
   "notifReminderBoth": "兩個都要",
   "notifReminderTimeFooter": "都在晚上 7 點",
   "notifRosterChange": "服事表異動",
-  "notifRosterChangeSub": "你被排進或移出服事時",
+  "notifRosterChangeSub": "你被排進或移出服事時。晚上 10 點後的異動，早上 7 點才通知",
   "notifMemberLeft": "同工退出",
   "notifMemberLeftSub": "有人退出教會時（只通知管理員）",
   "notifThisChurch": "這間教會的通知",
@@ -705,9 +705,9 @@
   "calHideMonth": "只看列表",
   "calendarSetting": "行事曆",
   "support": "支持馬大別忙",
-  "supportVerse": "乃要均平，就是要你們的富餘，現在可以補他們的不足，使他們的富餘，將來也可以補你們的不足，這就均平了。",
-  "supportVerseSource": "哥林多後書 8:14",
-  "supportBody": "支持完全自願，只用來分擔雲端費用，每間教會能用的功能都一樣",
+  "supportVerse": "乃要均平，就是要你們的富餘，現在可以補他們的不足，使他們的富餘，將來也可以補你們的不足，這就均平了。如經上所記：多收的也沒有餘；少收的也沒有缺。",
+  "supportVerseSource": "哥林多後書 8:14–15（和合本）",
+  "supportBody": "支持完全自願，只用來分擔雲端費用，不是給教會的奉獻；每間教會能用的功能都一樣",
   "supportTips": "一次性支持",
   "supportMonthly": "每月支持",
   "supportRestore": "恢復購買",
@@ -1869,5 +1869,14 @@
   "unlinkBody": "之後就不能用 {email} 登入這個帳號",
   "@unlinkBody": {"placeholders": {"email": {"type": "String", "example": "mei@gmail.com"}}},
   "errCredentialInUse": "你選的帳號已經是另一個馬大別忙帳號，不能連結。要連結的話，請先用它登入並刪除那個帳號，再回來連結。",
-  "@errCredentialInUse": {"description": "Linking a Google or Apple account that already has an account of its own"}
+  "@errCredentialInUse": {"description": "Linking a Google or Apple account that already has an account of its own"},
+  "onlineRefundHeader": "線上支持退款",
+  "onlineRefundFooter": "在綠界後台退款後，填這筆的特店訂單編號，就會從雲端費用進度扣回。",
+  "onlineRefundAdd": "扣回一筆退款",
+  "onlineRefundOrderNo": "特店訂單編號",
+  "@onlineRefundOrderNo": {"description": "ECPay's 特店訂單編號 (MerchantTradeNo), as its back office calls it"},
+  "onlineRefundApply": "從進度扣回",
+  "onlineRefunded": "已從 {month} 扣回 {amount}",
+  "@onlineRefunded": {"description": "Toast after the operator takes a refunded online payment off the server costs", "placeholders": {"month": {"type": "String", "example": "2026-10"}, "amount": {"type": "String", "example": "NT$100"}}},
+  "onlineRefundNotFound": "找不到這筆線上支持，請確認特店訂單編號"
 }

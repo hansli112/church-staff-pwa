@@ -72,7 +72,7 @@ class L10nEn extends L10n {
   String get noPermission => 'You don’t have permission to do this';
 
   @override
-  String get comingSoon => 'Still working on this. Coming soon.';
+  String get comingSoon => 'Still working on this.';
 
   @override
   String get signInWithGoogle => 'Sign in with Google';
@@ -99,7 +99,7 @@ class L10nEn extends L10n {
       '“Martha, Martha,” the Lord answered,\n“you are worried and upset about many things,\nbut few things are needed—or indeed only one.\nMary has chosen what is better,\nand it will not be taken away from her.”';
 
   @override
-  String get loginTaglineSource => 'Luke 10:41–42';
+  String get loginTaglineSource => 'Luke 10:41–42 (NIV)';
 
   @override
   String loginInvitedTo(String church) {
@@ -905,7 +905,8 @@ class L10nEn extends L10n {
   String get notifRosterChange => 'Schedule changes';
 
   @override
-  String get notifRosterChangeSub => 'When you’re added to or removed from serving';
+  String get notifRosterChangeSub =>
+      'When you’re added to or removed from serving. Changes after 10 p.m. wait until 7 a.m.';
 
   @override
   String get notifMemberLeft => 'Team member left';
@@ -1234,13 +1235,14 @@ class L10nEn extends L10n {
 
   @override
   String get supportVerse =>
-      'At the present time your plenty will supply what they need, so that in turn their plenty will supply what you need. The goal is equality,';
+      'At the present time your plenty will supply what they need, so that in turn their plenty will supply what you need. The goal is equality, as it is written: “The one who gathered much did not have too much, and the one who gathered little did not have too little.”';
 
   @override
-  String get supportVerseSource => '2 Corinthians 8:14';
+  String get supportVerseSource => '2 Corinthians 8:14–15 (NIV)';
 
   @override
-  String get supportBody => 'Support is optional, covers only server costs, and every church gets the same features';
+  String get supportBody =>
+      'Support is optional and covers only server costs. It isn’t a gift to a church, and every church gets the same features';
 
   @override
   String get supportTips => 'One-time support';
@@ -2601,4 +2603,28 @@ class L10nEn extends L10n {
   @override
   String get errCredentialInUse =>
       'That account is already a Martha, sit account of its own, so it can’t be linked. To link it, sign in with it and delete that account first, then come back.';
+
+  @override
+  String get onlineRefundHeader => 'Online support refunds';
+
+  @override
+  String get onlineRefundFooter =>
+      'After refunding a payment in ECPay’s back office, enter its merchant order number to take it off the server costs.';
+
+  @override
+  String get onlineRefundAdd => 'Take off a refund';
+
+  @override
+  String get onlineRefundOrderNo => 'Merchant order number (MerchantTradeNo)';
+
+  @override
+  String get onlineRefundApply => 'Take it off';
+
+  @override
+  String onlineRefunded(String month, String amount) {
+    return 'Took $amount off $month';
+  }
+
+  @override
+  String get onlineRefundNotFound => 'No online support payment has that order number';
 }

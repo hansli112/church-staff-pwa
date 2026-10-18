@@ -72,7 +72,7 @@ class L10nJa extends L10n {
   String get noPermission => 'この操作を行う権限がありません';
 
   @override
-  String get comingSoon => '準備中です。もうしばらくお待ちください。';
+  String get comingSoon => '準備中です。';
 
   @override
   String get signInWithGoogle => 'Google でログイン';
@@ -98,7 +98,7 @@ class L10nJa extends L10n {
   String get loginTagline => '「マルタ、マルタ、\nあなたは多くのことに思い悩み、心を乱している。\nしかし、必要なことはただ一つだけである。\nマリアは良い方を選んだ。\nそれを取り上げてはならない。」';
 
   @override
-  String get loginTaglineSource => 'ルカによる福音書 10:41–42';
+  String get loginTaglineSource => 'ルカによる福音書 10:41–42（新共同訳）';
 
   @override
   String loginInvitedTo(String church) {
@@ -881,7 +881,7 @@ class L10nJa extends L10n {
   String get notifRosterChange => '奉仕表の変更';
 
   @override
-  String get notifRosterChangeSub => '奉仕に入ったり外れたりしたとき';
+  String get notifRosterChangeSub => '奉仕に入ったり外れたりしたとき。夜10時以降の変更は朝7時に届きます';
 
   @override
   String get notifMemberLeft => 'メンバーの退出';
@@ -1164,13 +1164,14 @@ class L10nJa extends L10n {
   String get support => '「マルタ、ひと休み」を応援';
 
   @override
-  String get supportVerse => 'あなたがたの現在のゆとりが彼らの欠乏を補えば、いつか彼らのゆとりもあなたがたの欠乏を補うことになり、こうして釣り合いがとれるのです。';
+  String get supportVerse =>
+      'あなたがたの現在のゆとりが彼らの欠乏を補えば、いつか彼らのゆとりもあなたがたの欠乏を補うことになり、こうして釣り合いがとれるのです。「多く集めた者も、余ることはなく、わずかしか集めなかった者も、不足することはなかった」と書いてあるとおりです。';
 
   @override
-  String get supportVerseSource => 'コリントの信徒への手紙二 8:14';
+  String get supportVerseSource => 'コリントの信徒への手紙二 8:14–15（新共同訳）';
 
   @override
-  String get supportBody => '応援は任意で、サーバー費用にだけ使われ、使える機能はどの教会も同じです';
+  String get supportBody => '応援は任意で、サーバー費用にだけ使われます。教会への献金ではなく、使える機能はどの教会も同じです';
 
   @override
   String get supportTips => '1回の応援';
@@ -2474,4 +2475,27 @@ class L10nJa extends L10n {
   @override
   String get errCredentialInUse =>
       'そのアカウントはすでに別の「マルタ、ひと休み」のアカウントなので、連携できません。連携するには、先にそのアカウントでログインして削除してから、もう一度連携してください。';
+
+  @override
+  String get onlineRefundHeader => 'オンライン応援の返金';
+
+  @override
+  String get onlineRefundFooter => '綠界（ECPay）の管理画面で返金したら、その支払いの加盟店注文番号を入力すると、サーバー費用から差し引かれます。';
+
+  @override
+  String get onlineRefundAdd => '返金を差し引く';
+
+  @override
+  String get onlineRefundOrderNo => '加盟店注文番号（特店訂單編號）';
+
+  @override
+  String get onlineRefundApply => '差し引く';
+
+  @override
+  String onlineRefunded(String month, String amount) {
+    return '$month から $amount を差し引きました';
+  }
+
+  @override
+  String get onlineRefundNotFound => 'その注文番号のオンライン応援は見つかりません';
 }

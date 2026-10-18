@@ -3,8 +3,8 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions/v2';
 
-import { DAY_MS, PROD_PROJECT, REGION, dateKeyUtc8, round2, type Deps } from './common.js';
-import { recordPayment } from './funding.js';
+import { DAY_MS, PROD_PROJECT, REGION, dateKeyUtc8, fail, requireOperator, round2, type Caller, type Deps } from './common.js';
+import { recordPayment, setRefund } from './funding.js';
 import { languageOf, sitePath, words, type Language } from './languages.js';
 import { SUPPORT_AMOUNT } from './limits.js';
 
@@ -335,4 +335,25 @@ export async function dropExpiredOrders(deps: Deps) {
     await batch.commit();
     if (expired.size < 400) return;
   }
+}
+
+/**
+ * A 線上支持 payment refunded in ECPay's back office, which tells us
+ * nothing: the platform operator gives its order number (特店訂單編號,
+ * MerchantTradeNo) and the whole payment comes off the month it was paid
+ * in, so 雲端費用進度 shows only what was kept. [refunded] false puts it
+ * back (undo). Always the whole payment: the support page promises a full
+ * refund. Answers { amountTwd, month } of the payment.
+ */
+export async function adminRefundOnlineSupport(deps: Deps, caller: Caller | null, data: unknown) {
+  requireOperator(caller);
+  const { orderNo, refunded } = (data ?? {}) as { orderNo?: unknown; refunded?: unknown };
+  const no = typeof orderNo === 'string' ? orderNo.trim() : '';
+  if (!/^[A-Za-z0-9]{1,20}$/.test(no) || typeof refunded !== 'boolean') fail('invalid-argument', 'unknown');
+  const id = `ecpay_${no}`;
+  const payment = await deps.db.doc(`fundingPayments/${id}`).get();
+  const amountTwd = payment.get('amountTwd') as number | undefined;
+  if (amountTwd === undefined) fail('not-found', 'notFound');
+  await setRefund(deps, id, 'ecpay', refunded ? 1 : 0);
+  return { amountTwd, month: payment.get('month') as string };
 }

@@ -72,7 +72,7 @@ class L10nZh extends L10n {
   String get noPermission => '你沒有權限做這件事';
 
   @override
-  String get comingSoon => '還在做，很快就好';
+  String get comingSoon => '還在做';
 
   @override
   String get signInWithGoogle => '使用 Google 登入';
@@ -98,7 +98,7 @@ class L10nZh extends L10n {
   String get loginTagline => '馬大！馬大！你為許多的事思慮煩擾，\n但是不可少的只有一件；\n馬利亞已經選擇那上好的福分，\n是不能奪去的。';
 
   @override
-  String get loginTaglineSource => '路加福音 10:41–42';
+  String get loginTaglineSource => '路加福音 10:41–42（和合本）';
 
   @override
   String loginInvitedTo(String church) {
@@ -881,7 +881,7 @@ class L10nZh extends L10n {
   String get notifRosterChange => '服事表異動';
 
   @override
-  String get notifRosterChangeSub => '你被排進或移出服事時';
+  String get notifRosterChangeSub => '你被排進或移出服事時。晚上 10 點後的異動，早上 7 點才通知';
 
   @override
   String get notifMemberLeft => '同工退出';
@@ -1163,13 +1163,13 @@ class L10nZh extends L10n {
   String get support => '支持馬大別忙';
 
   @override
-  String get supportVerse => '乃要均平，就是要你們的富餘，現在可以補他們的不足，使他們的富餘，將來也可以補你們的不足，這就均平了。';
+  String get supportVerse => '乃要均平，就是要你們的富餘，現在可以補他們的不足，使他們的富餘，將來也可以補你們的不足，這就均平了。如經上所記：多收的也沒有餘；少收的也沒有缺。';
 
   @override
-  String get supportVerseSource => '哥林多後書 8:14';
+  String get supportVerseSource => '哥林多後書 8:14–15（和合本）';
 
   @override
-  String get supportBody => '支持完全自願，只用來分擔雲端費用，每間教會能用的功能都一樣';
+  String get supportBody => '支持完全自願，只用來分擔雲端費用，不是給教會的奉獻；每間教會能用的功能都一樣';
 
   @override
   String get supportTips => '一次性支持';
@@ -2470,6 +2470,29 @@ class L10nZh extends L10n {
 
   @override
   String get errCredentialInUse => '你選的帳號已經是另一個馬大別忙帳號，不能連結。要連結的話，請先用它登入並刪除那個帳號，再回來連結。';
+
+  @override
+  String get onlineRefundHeader => '線上支持退款';
+
+  @override
+  String get onlineRefundFooter => '在綠界後台退款後，填這筆的特店訂單編號，就會從雲端費用進度扣回。';
+
+  @override
+  String get onlineRefundAdd => '扣回一筆退款';
+
+  @override
+  String get onlineRefundOrderNo => '特店訂單編號';
+
+  @override
+  String get onlineRefundApply => '從進度扣回';
+
+  @override
+  String onlineRefunded(String month, String amount) {
+    return '已從 $month 扣回 $amount';
+  }
+
+  @override
+  String get onlineRefundNotFound => '找不到這筆線上支持，請確認特店訂單編號';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -2540,7 +2563,7 @@ class L10nZhHans extends L10nZh {
   String get noPermission => '你没有权限做这件事';
 
   @override
-  String get comingSoon => '还在开发中，很快就好';
+  String get comingSoon => '还在开发中';
 
   @override
   String get signInWithGoogle => '使用 Google 登录';
@@ -2566,7 +2589,7 @@ class L10nZhHans extends L10nZh {
   String get loginTagline => '马大！马大！你为许多的事思虑烦扰，\n但是不可少的只有一件；\n马利亚已经选择那上好的福分，\n是不能夺去的。';
 
   @override
-  String get loginTaglineSource => '路加福音 10:41–42';
+  String get loginTaglineSource => '路加福音 10:41–42（和合本）';
 
   @override
   String loginInvitedTo(String church) {
@@ -3349,7 +3372,7 @@ class L10nZhHans extends L10nZh {
   String get notifRosterChange => '事奉表变动';
 
   @override
-  String get notifRosterChangeSub => '你被排入或移出事奉时';
+  String get notifRosterChangeSub => '你被排入或移出事奉时。晚上 10 点后的变动，早上 7 点才通知';
 
   @override
   String get notifMemberLeft => '同工退出';
@@ -3631,13 +3654,13 @@ class L10nZhHans extends L10nZh {
   String get support => '支持马大别忙';
 
   @override
-  String get supportVerse => '乃要均平，就是要你们的富余，现在可以补他们的不足，使他们的富余，将来也可以补你们的不足，这就均平了。';
+  String get supportVerse => '乃要均平，就是要你们的富余，现在可以补他们的不足，使他们的富余，将来也可以补你们的不足，这就均平了。如经上所记：多收的也没有余；少收的也没有缺。';
 
   @override
-  String get supportVerseSource => '哥林多后书 8:14';
+  String get supportVerseSource => '哥林多后书 8:14–15（和合本）';
 
   @override
-  String get supportBody => '支持完全自愿，只用来分担云端费用，每间教会能用的功能都一样';
+  String get supportBody => '支持完全自愿，只用来分担云端费用，不是给教会的奉献；每间教会能用的功能都一样';
 
   @override
   String get supportTips => '一次性支持';
@@ -4938,4 +4961,27 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get errCredentialInUse => '你选的账号已经是另一个马大别忙账号，不能关联。要关联的话，请先用它登录并删除那个账号，再回来关联。';
+
+  @override
+  String get onlineRefundHeader => '在线支持退款';
+
+  @override
+  String get onlineRefundFooter => '在绿界后台退款后，填这笔的特店订单编号，就会从云端费用进度扣回。';
+
+  @override
+  String get onlineRefundAdd => '扣回一笔退款';
+
+  @override
+  String get onlineRefundOrderNo => '特店订单编号';
+
+  @override
+  String get onlineRefundApply => '从进度扣回';
+
+  @override
+  String onlineRefunded(String month, String amount) {
+    return '已从 $month 扣回 $amount';
+  }
+
+  @override
+  String get onlineRefundNotFound => '找不到这笔在线支持，请确认特店订单编号';
 }

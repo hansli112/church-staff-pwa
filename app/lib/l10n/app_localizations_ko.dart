@@ -72,7 +72,7 @@ class L10nKo extends L10n {
   String get noPermission => '이 작업을 할 권한이 없어요';
 
   @override
-  String get comingSoon => '아직 준비 중이에요. 곧 열려요.';
+  String get comingSoon => '아직 준비 중이에요.';
 
   @override
   String get signInWithGoogle => 'Google로 로그인';
@@ -99,7 +99,7 @@ class L10nKo extends L10n {
       '마르다야 마르다야\n네가 많은 일로 염려하고 근심하나\n몇 가지만 하든지\n혹은 한 가지만이라도 족하니라\n마리아는 이 좋은 편을 택하였으니\n빼앗기지 아니하리라';
 
   @override
-  String get loginTaglineSource => '누가복음 10:41–42';
+  String get loginTaglineSource => '누가복음 10:41–42 (개역개정)';
 
   @override
   String loginInvitedTo(String church) {
@@ -882,7 +882,7 @@ class L10nKo extends L10n {
   String get notifRosterChange => '봉사표 변경';
 
   @override
-  String get notifRosterChangeSub => '내가 봉사에 배정되거나 빠졌을 때';
+  String get notifRosterChangeSub => '내가 봉사에 배정되거나 빠졌을 때. 밤 10시 이후의 변경은 아침 7시에 알려요';
 
   @override
   String get notifMemberLeft => '멤버 나감';
@@ -1165,13 +1165,14 @@ class L10nKo extends L10n {
   String get support => '마르다의 쉼표 후원하기';
 
   @override
-  String get supportVerse => '이제 너희의 넉넉한 것으로 그들의 부족한 것을 보충함은 후에 그들의 넉넉한 것으로 너희의 부족한 것을 보충하여 균등하게 하려 함이라';
+  String get supportVerse =>
+      '이제 너희의 넉넉한 것으로 그들의 부족한 것을 보충함은 후에 그들의 넉넉한 것으로 너희의 부족한 것을 보충하여 균등하게 하려 함이라 기록된 것 같이 많이 거둔 자도 남지 아니하였고 적게 거둔 자도 모자라지 아니하였느니라';
 
   @override
-  String get supportVerseSource => '고린도후서 8:14';
+  String get supportVerseSource => '고린도후서 8:14–15 (개역개정)';
 
   @override
-  String get supportBody => '후원은 자유이고 서버 비용에만 쓰이며, 어느 교회든 쓸 수 있는 기능은 똑같아요';
+  String get supportBody => '후원은 자유이고 서버 비용에만 쓰여요. 교회에 드리는 헌금이 아니며, 어느 교회든 쓸 수 있는 기능은 똑같아요';
 
   @override
   String get supportTips => '일시 후원';
@@ -2474,4 +2475,27 @@ class L10nKo extends L10n {
 
   @override
   String get errCredentialInUse => '그 계정은 이미 별도의 마르다의 쉼표 계정이라 연결할 수 없어요. 연결하려면 먼저 그 계정으로 로그인해 계정을 삭제한 뒤 다시 연결해 주세요.';
+
+  @override
+  String get onlineRefundHeader => '온라인 후원 환불';
+
+  @override
+  String get onlineRefundFooter => '綠界(ECPay) 관리 화면에서 환불한 뒤 그 결제의 가맹점 주문 번호를 입력하면 서버 비용에서 빠져요.';
+
+  @override
+  String get onlineRefundAdd => '환불 반영하기';
+
+  @override
+  String get onlineRefundOrderNo => '가맹점 주문 번호(特店訂單編號)';
+
+  @override
+  String get onlineRefundApply => '반영하기';
+
+  @override
+  String onlineRefunded(String month, String amount) {
+    return '$month에서 $amount을(를) 뺐어요';
+  }
+
+  @override
+  String get onlineRefundNotFound => '그 주문 번호의 온라인 후원을 찾을 수 없어요';
 }

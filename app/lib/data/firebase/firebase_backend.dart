@@ -1745,6 +1745,12 @@ class FirebaseCloudApi implements CloudApi {
   });
 
   @override
+  Future<OnlineRefund> adminRefundOnlineSupport(String orderNo, {required bool refunded}) async {
+    final d = _asMap(await _call('adminRefundOnlineSupport', {'orderNo': orderNo, 'refunded': refunded}));
+    return (amount: (d['amountTwd'] as num).round(), month: d['month'] as String);
+  }
+
+  @override
   Future<void> logError({
     required String message,
     required String stack,

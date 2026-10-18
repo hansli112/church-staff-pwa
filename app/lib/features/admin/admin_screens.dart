@@ -512,6 +512,37 @@ class _AdminFundingScreenState extends ConsumerState<AdminFundingScreen> {
     }
   }
 
+  /// A 線上支持 payment refunded in ECPay's back office, which tells the
+  /// backend nothing: taken off 雲端費用進度 by its order number.
+  Future<void> _refund() async {
+    final orderNo = await showAppSheet<String>(context, builder: (_) => const _RefundSheet());
+    if (orderNo == null || !mounted) return;
+    final l10n = L10n.of(context);
+    final cloud = ref.read(backendProvider).cloud;
+    final OnlineRefund refund;
+    try {
+      refund = await cloud.adminRefundOnlineSupport(orderNo, refunded: true);
+    } on CloudException catch (e) {
+      final message = e.code == CloudErrorCode.notFound ? l10n.onlineRefundNotFound : errorText(l10n, e);
+      if (mounted) showToast(context, message);
+      return;
+    } catch (e) {
+      if (mounted) showToast(context, errorText(l10n, e));
+      return;
+    }
+    ref.invalidate(_fundingProvider);
+    if (!mounted) return;
+    final container = ProviderScope.containerOf(context, listen: false);
+    showToast(
+      context,
+      l10n.onlineRefunded(refund.month, money(l10n, refund.amount)),
+      onUndo: () async {
+        await cloud.adminRefundOnlineSupport(orderNo, refunded: false);
+        container.invalidate(_fundingProvider);
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
@@ -562,6 +593,69 @@ class _AdminFundingScreenState extends ConsumerState<AdminFundingScreen> {
                     ),
                 ],
               ),
+            ListSection(
+              header: l10n.onlineRefundHeader,
+              footer: l10n.onlineRefundFooter,
+              children: [ListRow(title: l10n.onlineRefundAdd, onTap: _refund)],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Asks for the order number (特店訂單編號) of a 線上支持 payment refunded
+/// in ECPay's back office; closes with it.
+class _RefundSheet extends StatefulWidget {
+  const _RefundSheet();
+
+  @override
+  State<_RefundSheet> createState() => _RefundSheetState();
+}
+
+class _RefundSheetState extends State<_RefundSheet> {
+  final _orderNo = TextEditingController();
+
+  @override
+  void dispose() {
+    _orderNo.dispose();
+    super.dispose();
+  }
+
+  /// What ECPay takes as MerchantTradeNo: up to 20 letters and digits.
+  String? get _valid {
+    final no = _orderNo.text.trim();
+    return RegExp(r'^[A-Za-z0-9]{1,20}$').hasMatch(no) ? no : null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.symmetric(horizontal: Space.m),
+          children: [
+            Text(l10n.onlineRefundAdd, style: AppText.title3),
+            const SizedBox(height: Space.m),
+            TextField(
+              key: const Key('refundOrderNo'),
+              controller: _orderNo,
+              autofocus: true,
+              autocorrect: false,
+              maxLength: 20,
+              decoration: InputDecoration(labelText: l10n.onlineRefundOrderNo),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: Space.l),
+            PrimaryButton(
+              label: l10n.onlineRefundApply,
+              onPressed: _valid == null ? null : () => Navigator.pop(context, _valid),
+            ),
+            const SizedBox(height: Space.m),
           ],
         ),
       ),
