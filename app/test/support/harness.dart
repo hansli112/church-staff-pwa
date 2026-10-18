@@ -170,14 +170,24 @@ Outbox captureOutbox(WidgetTester tester, {bool blocked = false}) {
 class FakeUrlLauncher extends Fake with MockPlatformInterfaceMixin implements UrlLauncherPlatform {
   final opened = <String>[];
 
+  /// How each of [opened] was opened.
+  final modes = <PreferredLaunchMode>[];
+
+  /// How many times the app closed the browser sheet it opened.
+  var closed = 0;
+
   @override
   Future<bool> canLaunch(String url) async => true;
 
   @override
   Future<bool> launchUrl(String url, LaunchOptions options) async {
     opened.add(url);
+    modes.add(options.mode);
     return true;
   }
+
+  @override
+  Future<void> closeWebView() async => closed++;
 }
 
 FakeUrlLauncher captureLaunches() {

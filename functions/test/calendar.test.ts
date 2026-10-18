@@ -62,6 +62,19 @@ beforeEach(async () => {
 });
 
 describe('connecting', () => {
+  test("from the app, the browser ends on a page that says to go back, not on the web app", async () => {
+    await church();
+    const d = { ...deps, google: fakeGoogle(), config };
+    const start = async (data: object) =>
+      new URL((await calendarAuthUrl(d, caller('pastor'), { churchId: 'C1', ...data })).url).searchParams.get('state')!;
+    assert.equal(await calendarCallback(d, { state: await start({ from: 'app' }), code: 'good' }), 'https://app.example/calendar-done.html?result=connected');
+    assert.equal(await calendarCallback(d, { state: await start({ from: 'app' }), code: '' }), 'https://app.example/calendar-done.html?result=denied');
+    assert.match(await calendarCallback(d, { state: await start({}), code: 'good' }), /\/me\/calendar\?result=connected$/);
+    const used = await start({ from: 'app' });
+    await calendarCallback(d, { state: used, code: 'good' });
+    assert.equal(await calendarCallback(d, { state: used, code: 'good' }), 'https://app.example/calendar-done.html?result=expired', 'gone, still from the app');
+  });
+
   test('only an admin gets a consent URL, with the calendar scopes and offline access', async () => {
     await church();
     const { google } = fakeGoogle();

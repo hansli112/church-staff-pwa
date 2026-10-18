@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -33,8 +34,10 @@ String? _timeZoneDiffers(L10n l10n, String? calendarTimeZone, ChurchTimeZone chu
 }
 
 /// Admins connect the church's Google Calendar here and pick which calendar
-/// it shows. The consent screen opens in the browser; the backend stores the
-/// grant and this page updates when it arrives.
+/// it shows. The consent screen opens in a browser sheet over the phone app
+/// (the web app's own tab on the web); the backend stores the grant and this
+/// page updates when it arrives, closing the sheet where the phone lets it
+/// (iOS; on Android its last page says to close it).
 class CalendarSettingsScreen extends ConsumerWidget {
   const CalendarSettingsScreen({super.key, this.result});
 
@@ -45,7 +48,11 @@ class CalendarSettingsScreen extends ConsumerWidget {
     final l10n = L10n.of(context);
     try {
       final url = await ref.churchData.calendarAuthUrl();
-      await launchUrl(url, mode: LaunchMode.externalApplication, webOnlyWindowName: '_self');
+      await launchUrl(
+        url,
+        mode: kIsWeb ? LaunchMode.platformDefault : LaunchMode.inAppBrowserView,
+        webOnlyWindowName: '_self',
+      );
     } catch (e) {
       if (context.mounted) showToast(context, errorText(l10n, e));
     }
@@ -56,6 +63,11 @@ class CalendarSettingsScreen extends ConsumerWidget {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
     final settings = ref.watch(calendarSettingsProvider).value;
+    ref.listen(calendarSettingsProvider, (before, now) {
+      final was = before?.value;
+      // Only a change seen here: not the settings arriving as the page opens.
+      if (!kIsWeb && was != null && !was.usable && (now.value?.usable ?? false)) closeInAppWebView();
+    });
     final church = ref.watch(churchDataProvider);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.calendarSetting)),
@@ -70,7 +82,7 @@ class CalendarSettingsScreen extends ConsumerWidget {
                 style: AppText.subheadline.copyWith(color: c.destructive),
               ),
             ),
-          if (settings == null || !settings.connected || settings.needsReconnect)
+          if (settings == null || !settings.usable)
             Padding(
               padding: const EdgeInsets.all(Space.m),
               child: Column(

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<!--
+  Where Google sends the phone app's browser sheet after connecting the
+  church's calendar (calendarCallback, from: 'app'). The app sees the grant
+  arrive and closes the sheet on iOS; on Android the person closes it.
+  ?result=connected, or why not (denied, expired, failed, invalid).
+-->
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>馬大別忙 Martha, sit</title>
+<style>
+  :root { color-scheme: light dark; --bg: #F2F2F7; --text: #000; --text2: #5C5C62; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #000; --text: #FFF; --text2: #AEAEB2; } }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: var(--bg); color: var(--text); text-align: center;
+    font: 17px/1.5 -apple-system, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
+  }
+  main { padding: 24px 16px; max-width: 22em; }
+  img { width: 72px; height: 72px; border-radius: 16px; }
+  h1 { font-size: 22px; margin: 16px 0 8px; text-wrap: balance; }
+  p { margin: 0; color: var(--text2); text-wrap: balance; }
+</style>
+</head>
+<body>
+<main>
+  <img src="/icons/Icon-192.png" alt="">
+  <h1 id="title"></h1>
+  <p id="next"></p>
+</main>
+<script>
+  const words = {
+    // The app's names as its l10n/app_*.arb appName.
+    'zh-Hant': ['已連接 Google 日曆', '關掉這個頁面，回到馬大別忙', '沒有連接成功', '關掉這個頁面，回到馬大別忙再試一次'],
+    'zh-Hans': ['已连接 Google 日历', '关掉这个页面，回到马大别忙', '没有连接成功', '关掉这个页面，回到马大别忙再试一次'],
+    en: ['Google Calendar connected', 'Close this page to go back to Martha, sit', 'Not connected', 'Close this page and try again in Martha, sit'],
+    ja: ['Google カレンダーを接続しました', 'このページを閉じて、マルタ、ひと休みに戻ってください', '接続できませんでした', 'このページを閉じて、マルタ、ひと休みでもう一度お試しください'],
+    ko: ['Google 캘린더를 연결했어요', '이 페이지를 닫고 마르다의 쉼표로 돌아가세요', '연결하지 못했어요', '이 페이지를 닫고 마르다의 쉼표에서 다시 시도해 주세요'],
+  };
+  const tag = (navigator.language || 'zh-Hant').toLowerCase();
+  const lang = tag.startsWith('zh') ? (/hans|cn|sg/.test(tag) ? 'zh-Hans' : 'zh-Hant')
+    : ['en', 'ja', 'ko'].find((l) => tag.startsWith(l)) || 'zh-Hant';
+  const ok = new URLSearchParams(location.search).get('result') === 'connected';
+  const [title, next] = words[lang].slice(ok ? 0 : 2);
+  document.documentElement.lang = lang;
+  document.getElementById('title').textContent = title;
+  document.getElementById('next').textContent = next;
+</script>
+</body>
+</html>

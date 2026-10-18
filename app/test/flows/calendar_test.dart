@@ -10,6 +10,7 @@ import 'package:martha/domain/event_roster.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/features/calendar/month_grid.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
@@ -45,6 +46,28 @@ void main() {
     await go(tester, '/calendar');
     await tapText(tester, '連接 Google 日曆');
     expect(findShownContaining('這個應用程式未經驗證'), findsOneWidget);
+  });
+
+  testWidgets('in the phone app, Google opens in a sheet over the app, which closes once connected', (tester) async {
+    final launches = captureLaunches();
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/me/calendar');
+    await tapText(tester, '連接 Google 日曆');
+    expect(launches.opened.single, startsWith('https://accounts.google.com/'));
+    expect(launches.modes.single, PreferredLaunchMode.inAppBrowserView);
+    expect(launches.closed, 0);
+    b.connectCalendar('grace');
+    await settle(tester);
+    expect(launches.closed, 1);
+  });
+
+  testWidgets('opening the page of a connected church closes nothing', (tester) async {
+    final launches = captureLaunches();
+    final b = seededChurch()..connectCalendar('grace', calendarName: '教會行事曆');
+    await pumpApp(tester, b);
+    await go(tester, '/me/calendar');
+    expect(launches.closed, 0);
   });
 
   testWidgets('after connecting, the admin picks a calendar and everyone sees events', (tester) async {

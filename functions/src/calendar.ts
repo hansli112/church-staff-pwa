@@ -79,10 +79,17 @@ export interface CalendarEvent {
 /** Changes go out to the church's webhook, hence WebhookDeps. */
 export type CalDeps = WebhookDeps & { google: GoogleApi; config: OAuthConfig };
 
-/** Starts connecting: a Google consent URL bound to this admin and church. */
+/**
+ * Starts connecting: a Google consent URL bound to this admin and church.
+ * `from: 'app'` when the phone app opens it in its own browser sheet, which
+ * then ends on a page saying to go back rather than on the web app.
+ */
 export async function calendarAuthUrl(deps: CalDeps, caller: Caller | null, data: unknown) {
   const { cid: churchId, caller: c } = await churchAccess(deps, caller, data, 'admin');
-  const state = randomBytes(24).toString('base64url');
+  // The first letter says where the browser goes back to, even when the
+  // state has expired by then.
+  const from = (data as { from?: unknown })?.from === 'app' ? 'a' : 'w';
+  const state = from + randomBytes(24).toString('base64url');
   await deps.db.doc(`calendarStates/${state}`).set({
     cid: churchId,
     uid: c.uid,
@@ -103,8 +110,11 @@ export async function calendarAuthUrl(deps: CalDeps, caller: Caller | null, data
 
 /** OAuth redirect: stores the refresh token and sends the browser back. */
 export async function calendarCallback(deps: CalDeps, query: Record<string, unknown>) {
-  const back = (result: string) => `${deps.config.appUrl}/me/calendar?result=${result}`;
   const state = typeof query.state === 'string' ? query.state : '';
+  const back = (result: string) =>
+    state.startsWith('a')
+      ? `${deps.config.appUrl}/calendar-done.html?result=${result}`
+      : `${deps.config.appUrl}/me/calendar?result=${result}`;
   const code = typeof query.code === 'string' ? query.code : '';
   if (!state || !/^[A-Za-z0-9_-]{16,64}$/.test(state)) return back('invalid');
   const ref = deps.db.doc(`calendarStates/${state}`);

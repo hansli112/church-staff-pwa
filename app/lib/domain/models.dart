@@ -751,6 +751,9 @@ class CalendarSettings {
   final bool connected;
   final bool needsReconnect;
 
+  /// Connected, and Google still honours the grant.
+  bool get usable => connected && !needsReconnect;
+
   /// The picked calendar's Google id, which an event's roster records.
   final String? calendarId;
 

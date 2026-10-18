@@ -1002,8 +1002,11 @@ class FirestoreChurchData implements ChurchData {
   Future<WebhookDelivery> webhookTest() async =>
       webhookDeliveryFromJson(await _call('webhookTest')) ?? const WebhookDelivery(ok: false);
 
+  // The phone app's browser sheet ends on a page saying to go back; the web
+  // app's tab comes back to the web app.
   @override
-  Future<Uri> calendarAuthUrl() async => Uri.parse((await _call('calendarAuthUrl'))['url'] as String);
+  Future<Uri> calendarAuthUrl() async =>
+      Uri.parse((await _call('calendarAuthUrl', {if (!kIsWeb) 'from': 'app'}))['url'] as String);
 
   @override
   Future<List<CalendarChoice>> calendarList() async {
