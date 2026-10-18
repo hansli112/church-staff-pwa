@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/app.dart';
+import 'package:martha/core/design/components.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/state/providers.dart';
@@ -19,6 +20,7 @@ class FakeStore implements SupportStore {
   static const _items = [
     SupportItem(id: 'tip_small', title: '請喝咖啡', price: 'NT\$90', subscription: false),
     SupportItem(id: 'supporter_monthly', title: '每月支持', price: 'NT\$60', subscription: true),
+    SupportItem(id: 'supporter_monthly_plus', title: '每月大額支持', price: 'NT\$200', subscription: true),
   ];
 
   /// When a purchase is paid; the test's clock.
@@ -33,9 +35,9 @@ class FakeStore implements SupportStore {
   final bought = <String>[];
   int refreshes = 0;
 
-  /// The store reporting the subscription paid again, as a renewal does.
-  void renew(DateTime at) =>
-      _results.add((productId: SupportProducts.subscription, outcome: PurchaseOutcome.thanks, paidAt: at));
+  /// The store reporting [plan] paid again, as a renewal does.
+  void renew(DateTime at, {String plan = 'supporter_monthly'}) =>
+      _results.add((productId: plan, outcome: PurchaseOutcome.thanks, paidAt: at));
 
   @override
   bool get available => true;
@@ -62,7 +64,7 @@ class FakeStore implements SupportStore {
   String get name => 'Google Play';
 
   @override
-  Uri get manageSubscription => Uri.parse('https://play.google.com/store/account/subscriptions');
+  Uri manageSubscription(String plan) => Uri.parse('https://play.google.com/store/account/subscriptions?sku=$plan');
 }
 
 class FakeIcons implements AppIconSwitcher {
@@ -179,6 +181,7 @@ void main() {
     await settle(tester);
     expect(icons.icon, isNull, reason: 'icons are for subscribers');
 
+    await showMiddle(tester, find.text('請喝咖啡'));
     await tester.tap(find.text('請喝咖啡'));
     await settle(tester);
     expect(find.text('謝謝你的支持'), findsOneWidget);
@@ -211,7 +214,34 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('管理訂閱'));
     await settle(tester);
-    expect(launcher.opened.last, 'https://play.google.com/store/account/subscriptions');
+    expect(launcher.opened.last, 'https://play.google.com/store/account/subscriptions?sku=supporter_monthly');
+  });
+
+  testWidgets('two monthly plans; the badge is on the one I pay for, and the other switches to it', (tester) async {
+    final launches = captureLaunches();
+    final store = FakeStore();
+    await pumpWithStore(tester, store, FakeIcons());
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
+    await settle(tester);
+    expect(find.text('每月大額支持'), findsOneWidget);
+    Finder badgeOn(String plan) => find.descendant(of: find.widgetWithText(ListRow, plan), matching: find.text('支持者'));
+
+    await tester.tap(find.text('每月支持').last);
+    await settle(tester);
+    expect(badgeOn('每月支持'), findsOneWidget);
+    expect(badgeOn('每月大額支持'), findsNothing);
+    await tester.tap(find.text('每月支持').last);
+    await settle(tester);
+    expect(store.bought, ['supporter_monthly'], reason: 'the plan already paid for is not bought again');
+
+    await tester.tap(find.text('每月大額支持'));
+    await settle(tester);
+    expect(store.bought, ['supporter_monthly', 'supporter_monthly_plus']);
+    expect(badgeOn('每月大額支持'), findsOneWidget);
+    expect(badgeOn('每月支持'), findsNothing);
+    await tester.tap(find.text('管理訂閱'));
+    await settle(tester);
+    expect(launches.opened.last, endsWith('sku=supporter_monthly_plus'));
   });
 
   testWidgets('before the store sells anything, it says so instead of an error', (tester) async {
@@ -257,7 +287,7 @@ void main() {
 
     /// The app opened again on [now].
     Future<void> reopen(WidgetTester tester) async {
-      ProviderScope.containerOf(tester.element(find.byType(Scaffold).first)).invalidate(supporterProvider);
+      ProviderScope.containerOf(tester.element(find.byType(Scaffold).first)).invalidate(supporterPlanProvider);
       GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me');
       await settle(tester);
     }
@@ -281,6 +311,21 @@ void main() {
       await reopen(tester);
       expect(find.text('支持者'), findsOneWidget);
       expect(icons.icon, 'Purple');
+    });
+
+    testWidgets('the larger plan keeps it too, and the app remembers which plan', (tester) async {
+      await subscribe(tester);
+      store.renew(testNow.add(const Duration(days: 10)), plan: 'supporter_monthly_plus');
+      now = testNow.add(const Duration(days: 40));
+      await reopen(tester);
+      expect(find.text('支持者'), findsOneWidget);
+      expect(icons.icon, 'Purple');
+      GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
+      await settle(tester);
+      expect(
+        find.descendant(of: find.widgetWithText(ListRow, '每月大額支持'), matching: find.text('支持者')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('opening the app asks the store again once I have subscribed, never before', (tester) async {

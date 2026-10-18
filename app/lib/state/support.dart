@@ -4,21 +4,25 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:in_app_purchase_android/billing_client_wrappers.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 
 import '../data/backend.dart';
 import 'providers.dart';
 
-/// 支持平台: one-off tips and a monthly subscription, through the App Store
-/// and Google Play. Nothing changes for supporters except a badge only they
-/// see and a choice of app icon, while the subscription is paid. Supporter
-/// status lives on this device only (no backend, no Firestore): restoring
-/// purchases brings it back.
+/// 支持平台: one-off tips and two monthly plans, through the App Store and
+/// Google Play. Nothing changes for supporters except a badge only they see
+/// and a choice of app icon, while a plan is paid; both plans give the same.
+/// Supporter status lives on this device only (no backend, no Firestore):
+/// restoring purchases brings it back.
 /// The web build never shows any of this.
 abstract final class SupportProducts {
   static const tips = ['tip_small', 'tip_medium', 'tip_large'];
-  static const subscription = 'supporter_monthly';
-  static const all = {...tips, subscription};
+
+  /// The monthly plans, cheapest first, in one subscription group: taking
+  /// one replaces the other.
+  static const plans = ['supporter_monthly', 'supporter_monthly_plus'];
+  static const all = {...tips, ...plans};
 }
 
 class SupportItem {
@@ -46,7 +50,7 @@ abstract interface class SupportStore {
   Future<void> buy(SupportItem item);
   Future<void> restore();
 
-  /// Asks the store, without any prompt, whether the subscription is still
+  /// Asks the store, without any prompt, whether a plan is still
   /// paid. Google Play reports it only when asked; the App Store delivers
   /// each renewal at launch by itself.
   Future<void> refresh();
@@ -57,8 +61,8 @@ abstract interface class SupportStore {
   /// The store's name, where people cancel the subscription.
   String get name;
 
-  /// The store's page for managing the subscription.
-  Uri get manageSubscription;
+  /// The store's page for managing [plan].
+  Uri manageSubscription(String plan);
 }
 
 class NoStore implements SupportStore {
@@ -86,7 +90,7 @@ class NoStore implements SupportStore {
   String get name => '';
 
   @override
-  Uri get manageSubscription => Uri();
+  Uri manageSubscription(String plan) => Uri();
 }
 
 /// The product's name as the store lists it. Google Play's title adds the
@@ -119,7 +123,7 @@ class StoreKitPlayStore implements SupportStore {
       ..addEntries(response.productDetails.map((p) => MapEntry(p.id, p)));
     final items = [
       for (final p in response.productDetails)
-        SupportItem(id: p.id, title: storeTitle(p), price: p.price, subscription: p.id == SupportProducts.subscription),
+        SupportItem(id: p.id, title: storeTitle(p), price: p.price, subscription: SupportProducts.plans.contains(p.id)),
     ]..sort((a, b) => (_details[a.id]!.rawPrice).compareTo(_details[b.id]!.rawPrice));
     return items;
   }
@@ -130,7 +134,21 @@ class StoreKitPlayStore implements SupportStore {
     if (details == null) return;
     final param = PurchaseParam(productDetails: details);
     if (item.subscription) {
-      await _iap.buyNonConsumable(purchaseParam: param);
+      // Play: another plan replaces the paid one, the time left credited,
+      // rather than being a second subscription. The App Store does the
+      // same by itself within the subscription group.
+      final old = await _paidPlayPlan(other: item.id);
+      await _iap.buyNonConsumable(
+        purchaseParam: old != null && old.productID != item.id
+            ? GooglePlayPurchaseParam(
+                productDetails: details,
+                changeSubscriptionParam: ChangeSubscriptionParam(
+                  oldPurchaseDetails: old,
+                  replacementMode: ReplacementMode.withTimeProration,
+                ),
+              )
+            : param,
+      );
     } else {
       await _iap.buyConsumable(purchaseParam: param);
     }
@@ -158,10 +176,20 @@ class StoreKitPlayStore implements SupportStore {
     }
   }
 
+  /// The plan other than [other] that Google Play says is paid, asked then:
+  /// a reinstalled app may not have heard from Play yet. None on iOS.
+  Future<GooglePlayPurchaseDetails?> _paidPlayPlan({required String other}) async {
+    if (defaultTargetPlatform != TargetPlatform.android) return null;
+    final owned = await _iap.getPlatformAddition<InAppPurchaseAndroidPlatformAddition>().queryPastPurchases();
+    return owned.pastPurchases
+        .where((p) => p.productID != other && SupportProducts.plans.contains(p.productID))
+        .firstOrNull;
+  }
+
   /// The App Store dates each renewal; Play dates only the first purchase,
   /// but lists a subscription only while it is paid, so now.
   static DateTime? _paidAt(PurchaseDetails p) {
-    if (p.productID != SupportProducts.subscription) return null;
+    if (!SupportProducts.plans.contains(p.productID)) return null;
     final ms = int.tryParse(p.transactionDate ?? '');
     if (defaultTargetPlatform == TargetPlatform.iOS && ms != null) return DateTime.fromMillisecondsSinceEpoch(ms);
     return DateTime.now();
@@ -176,10 +204,10 @@ class StoreKitPlayStore implements SupportStore {
   String get name => _apple ? 'App Store' : 'Google Play';
 
   @override
-  Uri get manageSubscription => _apple
+  Uri manageSubscription(String plan) => _apple
       ? Uri.parse('https://apps.apple.com/account/subscriptions')
       : Uri.https('play.google.com', '/store/account/subscriptions', {
-          'sku': SupportProducts.subscription,
+          'sku': plan,
           'package': 'app.marthasit',
         });
 
@@ -197,43 +225,55 @@ final supportStoreProvider = Provider<SupportStore>((ref) => const NoStore());
 /// as the website's: `SUPPORT_PAYMENTS=on scripts/deploy.sh …` builds both.
 final sitePaymentsProvider = Provider<bool>((ref) => const String.fromEnvironment('SUPPORT_PAYMENTS') == 'on');
 
-/// Whether the subscription is paid: until a month and a few days after
-/// the store last said so (a purchase, a restore, a renewal). Kept in local
+/// The plan paid for, if any: until a month and a few days after the store
+/// last said so (a purchase, a restore, a renewal). Kept in local
 /// preferences only. Once lapsed, the badge goes and the icon is the default
 /// again (sessionEffectsProvider).
-class Supporter extends Notifier<bool> {
+class Supporter extends Notifier<String?> {
   static const _key = 'supporter_until';
+  static const _planKey = 'supporter_plan';
 
   /// A month, and a few days for the store's renewal to come in.
   static const paidFor = Duration(days: 35);
 
   @override
-  bool build() {
+  String? build() {
     final store = ref.watch(supportStoreProvider);
     final sub = store.results.listen((r) {
-      if (r.productId == SupportProducts.subscription && r.outcome == PurchaseOutcome.thanks) {
-        _paid(r.paidAt ?? ref.read(clockProvider)());
+      if (SupportProducts.plans.contains(r.productId) && r.outcome == PurchaseOutcome.thanks) {
+        _paid(r.productId, r.paidAt ?? ref.read(clockProvider)());
       }
     });
     ref.onDispose(sub.cancel);
-    final until = DateTime.tryParse(ref.watch(prefsProvider).getString(_key) ?? '');
+    final prefs = ref.watch(prefsProvider);
+    final until = DateTime.tryParse(prefs.getString(_key) ?? '');
     // Only someone who has subscribed has anything to ask the store about.
     if (until != null) unawaited(store.refresh());
-    return until != null && ref.read(clockProvider)().isBefore(until);
+    return until != null && ref.read(clockProvider)().isBefore(until) ? _plan(prefs.getString(_planKey)) : null;
   }
 
-  /// Paid on [at]: good until [paidFor] later, unless already longer.
-  void _paid(DateTime at) {
+  /// One of [SupportProducts.plans]; the first for anything else.
+  static String _plan(String? id) => SupportProducts.plans.contains(id) ? id! : SupportProducts.plans.first;
+
+  /// [plan] paid on [at]: good until [paidFor] later, unless already longer.
+  void _paid(String plan, DateTime at) {
     final prefs = ref.read(prefsProvider);
     final known = DateTime.tryParse(prefs.getString(_key) ?? '');
     var until = at.add(paidFor);
-    if (known != null && known.isAfter(until)) until = known;
+    if (known != null && known.isAfter(until)) {
+      until = known;
+    } else {
+      prefs.setString(_planKey, plan);
+    }
     prefs.setString(_key, until.toIso8601String());
-    state = ref.read(clockProvider)().isBefore(until);
+    state = ref.read(clockProvider)().isBefore(until) ? _plan(prefs.getString(_planKey)) : null;
   }
 }
 
-final supporterProvider = NotifierProvider<Supporter, bool>(Supporter.new);
+final supporterPlanProvider = NotifierProvider<Supporter, String?>(Supporter.new);
+
+/// Whether a plan is paid.
+final supporterProvider = Provider<bool>((ref) => ref.watch(supporterPlanProvider) != null);
 
 /// 雲端費用進度, live: everyone sees a payment as soon as the store reports it.
 final fundingProvider = StreamProvider.autoDispose<Funding?>((ref) => ref.watch(backendProvider).platform.funding());

@@ -16,8 +16,8 @@ final _productsProvider = FutureProvider.autoDispose<List<SupportItem>>(
   (ref) => ref.watch(supportStoreProvider).products(),
 );
 
-/// 支持馬大別忙 (iOS and Android only). Tips and a monthly subscription
-/// that change nothing about the app; subscribers may pick an app icon.
+/// 支持馬大別忙 (iOS and Android only). Tips and two monthly plans that
+/// change nothing about the app; subscribers may pick an app icon.
 class SupportScreen extends ConsumerStatefulWidget {
   const SupportScreen({super.key});
 
@@ -68,6 +68,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
     final store = ref.watch(supportStoreProvider);
     final products = ref.watch(_productsProvider);
     final supporter = ref.watch(supporterProvider);
+    final plan = ref.watch(supporterPlanProvider);
     final icon = ref.watch(currentAppIconProvider).value;
     final funding = ref.watch(fundingProvider).value;
     return Scaffold(
@@ -133,15 +134,17 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                           ListRow(
                             title: m.title,
                             value: m.price,
-                            trailing: supporter
+                            trailing: plan == m.id
                                 ? Tag(label: l10n.supporterBadge, background: c.accentSoft, foreground: c.accent)
                                 : null,
-                            onTap: supporter ? null : () => store.buy(m),
+                            // The other plan switches to it.
+                            onTap: plan == m.id ? null : () => store.buy(m),
                           ),
-                        if (supporter)
+                        if (plan != null)
                           ListRow(
                             title: l10n.manageSubscription,
-                            onTap: () => launchUrl(store.manageSubscription, mode: LaunchMode.externalApplication),
+                            onTap: () =>
+                                launchUrl(store.manageSubscription(plan), mode: LaunchMode.externalApplication),
                           ),
                       ],
                     ),
