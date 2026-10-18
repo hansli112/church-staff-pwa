@@ -2284,6 +2284,9 @@ class L10nEn extends L10n {
   String get appUpdateApplying => 'Updating…';
 
   @override
+  String get saving => 'Saving…';
+
+  @override
   String get appUpdateCurrent => 'You’re on the latest version';
 
   @override

@@ -270,6 +270,44 @@ void main() {
       expect(find.text('已更新司琴'), findsOneWidget);
     });
 
+    testWidgets('a pick shows on the day at once, saying 儲存中 until the backend has it', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-11');
+      expect(find.text('林同工'), findsNothing);
+      b.writeDelay = const Duration(seconds: 3);
+      await tapText(tester, '司會');
+      await tapText(tester, '林同工');
+      await tapText(tester, '完成');
+      expect(peopleOn(b, 11, '司會'), isNot(contains('林同工')), reason: 'not written yet');
+      expect(find.text('林同工'), findsOneWidget);
+      expect(find.text('儲存中…'), findsOneWidget);
+      expect(find.text('已更新司會'), findsNothing);
+
+      await tester.pump(const Duration(seconds: 3));
+      await settle(tester);
+      expect(peopleOn(b, 11, '司會'), contains('林同工'));
+      expect(find.text('林同工'), findsOneWidget);
+      expect(find.text('儲存中…'), findsNothing);
+      expect(find.text('已更新司會'), findsOneWidget);
+    });
+
+    testWidgets('a pick the backend refuses goes off the day again', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-11');
+      b.writeDelay = const Duration(seconds: 3);
+      b.failNextWrite = Exception('offline');
+      await tapText(tester, '司會');
+      await tapText(tester, '林同工');
+      await tapText(tester, '完成');
+      expect(find.text('林同工'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 3));
+      await settle(tester);
+      expect(find.text('林同工'), findsNothing);
+      expect(find.text('沒有儲存成功，請檢查網路後再試一次'), findsOneWidget);
+    });
+
     testWidgets('a service nobody is arranged in yet offers to start, to those who can', (tester) async {
       MemoryBackend newChurch(Member as) {
         final b = MemoryBackend(clock: testClock);

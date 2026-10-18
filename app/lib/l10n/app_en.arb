@@ -646,6 +646,7 @@
   "appUpdateChecking": "Checking…",
   "appUpdateApply": "Update and reopen",
   "appUpdateApplying": "Updating…",
+  "saving": "Saving…",
   "appUpdateCurrent": "You’re on the latest version",
   "appUpdateReady": "A new version is available",
   "appUpdateFinishEditing": "You have unsaved changes. Save them, then update.",

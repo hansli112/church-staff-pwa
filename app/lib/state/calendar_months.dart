@@ -122,25 +122,83 @@ class CalendarMonths {
     return until != null && _clock().isBefore(until) && (m.events != null || m.error != null);
   }
 
-  /// [month]'s events: those read under a minute ago, or the read under way;
-  /// with [refresh], or when there are none, the complete month read anew.
+  /// [month]'s events: those read under a minute ago, or the read under way.
+  /// Otherwise those read before, or saved on this device, at once while the
+  /// month is read again behind them ([_readBehind]). With [refresh], or when
+  /// there are none, the complete month read anew.
   FutureOr<List<CalendarEvent>> events(String month, {bool refresh = false}) {
     final m = _months[month] ??= _Month();
     if (!refresh) {
-      if (m.reading case final reading?) return reading;
+      if (m.reading case final reading?) return m.behind ? m.events ?? reading : reading;
       if (fresh(month)) {
         if (m.error case final error?) Error.throwWithStackTrace(error, m.stack!);
         return m.events!;
       }
+      final saved = m.error == null && m.events == null ? _persisted(month) : null;
+      if ((m.error == null ? m.events : null) ?? saved?.events case final shown?) {
+        if (saved != null) {
+          m
+            ..events = shown
+            ..status = CalendarReadStatus(fetchedAt: saved.fetchedAt);
+        }
+        unawaited(_readBehind(month, m, shown));
+        return shown;
+      }
     }
+    m.behind = false;
     return m.reading = _read(month, m);
+  }
+
+  /// Reads [month] ahead, for a view that may show it next.
+  void prefetch(String month) {
+    if (_closed || fresh(month)) return;
+    final m = _months[month] ??= _Month();
+    if (m.view == null) _leave(month);
+    unawaited(_readBehind(month, m, m.error == null ? m.events : null));
+  }
+
+  /// [month] as this device saved it for the calendar read now, if it did.
+  CachedCalendarMonth? _persisted(String month) {
+    final authorized = _cacheScope;
+    return authorized != null && authorized == _cache.scope ? _cache.read(month) : null;
+  }
+
+  /// Reads [month] while [shown] stays on screen (nothing, when read ahead);
+  /// whatever shows the month then gets the new read. A failed read keeps
+  /// [shown], marked with when it was read. With nothing shown, a month
+  /// that failed is read again once opened.
+  Future<void> _readBehind(String month, _Month m, List<CalendarEvent>? shown) async {
+    final reading = m.reading = _read(month, m);
+    m.behind = true;
+    final id = m.readId;
+    bool current() => !_closed && identical(_months[month], m) && m.readId == id;
+    try {
+      final events = await reading;
+      if (current()) m.view?.show(events);
+    } catch (error) {
+      if (!current() || calendarAccessRefused(error)) return;
+      if (shown == null) {
+        // One showing it now waits on [reading], and has its error.
+        if (m.view == null) {
+          _months.remove(month);
+          _idle.remove(month);
+        }
+        return;
+      }
+      m
+        ..events = shown
+        ..error = null
+        ..stack = null
+        ..status = CalendarReadStatus(cached: true, fetchedAt: m.status.fetchedAt, refreshError: error);
+      m.view?.show(shown);
+    }
   }
 
   Future<List<CalendarEvent>> _read(String month, _Month m) async {
     final id = ++m.readId;
     final generation = _generation;
     final authorized = _cacheScope;
-    final cached = authorized != null && authorized == _cache.scope ? _cache.read(month) : null;
+    final cached = _persisted(month);
     // A newer read, a refusal or a forgotten month leaves this one's reply
     // to its own caller only.
     bool current() => !_closed && generation == _generation && identical(_months[month], m) && id == m.readId;
@@ -370,6 +428,9 @@ class _Month {
   /// Until when [events] or [error] are shown again without a read.
   DateTime? until;
   Future<List<CalendarEvent>>? reading;
+
+  /// Whether [reading] goes on behind [events] shown meanwhile.
+  bool behind = false;
   int readId = 0;
   CalendarReadStatus status = const CalendarReadStatus();
 
@@ -380,6 +441,7 @@ class _Month {
     stack = null;
     until = null;
     reading = null;
+    behind = false;
     readId++;
     status = const CalendarReadStatus();
   }

@@ -17,6 +17,7 @@ import 'format.dart';
 import 'future_changes.dart';
 import 'roster_card.dart';
 import 'roster_day_screen.dart';
+import '../common/saving_indicator.dart';
 
 /// The days an event's roster is on, as its heading says them.
 String eventDaysLabel(L10n l10n, Roster r, Day today) => r.lastDay == r.day
@@ -127,6 +128,7 @@ class EventRosterScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(roster?.forEvent?.title ?? ''),
         actions: [
+          const SavingIndicator(),
           if (canEdit && roster != null)
             PopupMenuButton<String>(
               enabled: editable,

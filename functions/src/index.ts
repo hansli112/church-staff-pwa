@@ -110,12 +110,20 @@ function caller(req: CallableRequest): Caller | null {
 }
 
 const callOpts = { region: REGION, cors: true, maxInstances: 10 };
+/**
+ * The app sends `{ warmup: true }` when a page that will call a function
+ * opens, so a new instance has started (about 3 s) by the time it does.
+ * Answered before anything is read or checked.
+ */
+const isWarmUp = (data: unknown) => typeof data === 'object' && data !== null && 'warmup' in data && data.warmup === true;
 type Handler<D> = (d: D, c: Caller | null, data: unknown) => Promise<unknown>;
 /** A callable function: [handler] with deps from [make], and the secrets they read; [opts] on top of callOpts. */
 const callable = <D = Deps>(handler: Handler<D>, make: (() => D) | WithSecrets<D> = deps as () => D, opts: CallableOptions = {}) => {
   const w = typeof make === 'function' ? withSecrets([], make) : make;
   const secrets = w.secrets.length ? { secrets: w.secrets } : {};
-  return onCall({ ...callOpts, ...secrets, ...opts }, (req) => handler(w.make(), caller(req), req.data));
+  return onCall({ ...callOpts, ...secrets, ...opts }, (req) =>
+    isWarmUp(req.data) ? { warm: true } : handler(w.make(), caller(req), req.data),
+  );
 };
 
 // Churches

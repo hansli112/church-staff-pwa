@@ -2167,6 +2167,9 @@ class L10nZh extends L10n {
   String get appUpdateApplying => '更新中…';
 
   @override
+  String get saving => '儲存中…';
+
+  @override
   String get appUpdateCurrent => '已是最新版本';
 
   @override
@@ -4630,6 +4633,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get appUpdateApplying => '更新中…';
+
+  @override
+  String get saving => '保存中…';
 
   @override
   String get appUpdateCurrent => '已是最新版本';

@@ -455,8 +455,10 @@ void main() {
     final added = CalendarEvent(id: 'added', title: '外部活動', start: DateTime(2026, 10, 12), end: DateTime(2026, 10, 13));
     b.calendarEvents['grace'] = [added];
     shown = container.listen(calendarEventsProvider('2026-10'), (_, _) {});
+    expect(container.read(calendarEventsProvider('2026-10')).value, isEmpty, reason: 'as read before, at once');
     await container.pump();
-    expect(await container.read(calendarEventsProvider('2026-10').future), [added]);
+    await pumpEventQueue();
+    expect(container.read(calendarEventsProvider('2026-10')).value, [added]);
     expect(b.reads.length, 2);
     shown.close();
   });
@@ -900,8 +902,10 @@ void main() {
     );
     b.calendarEvents['grace'] = [added];
     shown = container.listen(calendarEventsProvider('2026-10'), (_, _) {});
+    expect(container.read(calendarEventsProvider('2026-10')).value, isEmpty, reason: 'as read before, at once');
     await container.pump();
-    expect(await container.read(calendarEventsProvider('2026-10').future), [added]);
+    await pumpEventQueue();
+    expect(container.read(calendarEventsProvider('2026-10')).value, [added]);
     expect(b.reads, [('grace', '2026-10'), ('grace', '2026-10')]);
     shown.close();
   });

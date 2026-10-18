@@ -1658,6 +1658,7 @@
   "appUpdateChecking": "檢查中…",
   "appUpdateApply": "更新並重新開啟",
   "appUpdateApplying": "更新中…",
+  "saving": "儲存中…",
   "appUpdateCurrent": "已是最新版本",
   "@appUpdateCurrent": {
     "description": "Only after an explicit server check confirms the currently running release is latest."

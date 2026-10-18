@@ -9,6 +9,7 @@ import '../../state/providers.dart';
 import '../../state/push.dart';
 import '../church/add_to_home.dart';
 import 'turn_on_notifications.dart';
+import '../common/saving_indicator.dart';
 
 /// Which notifications I get from this church, and when I am reminded of my
 /// duties. Stored on my member doc (`notificationPrefs`, the one field I may
@@ -79,7 +80,7 @@ class NotificationsScreen extends ConsumerWidget {
         ),
     ];
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.notifications)),
+      appBar: AppBar(title: Text(l10n.notifications), actions: const [SavingIndicator()]),
       body: ListView(
         children: [
           if (needsHomeScreen)

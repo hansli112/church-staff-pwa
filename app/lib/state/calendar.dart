@@ -107,6 +107,16 @@ final _calendarMonthsProvider = Provider<CalendarMonths?>((ref) {
   return months;
 });
 
+/// Reads the months either side of [month] ahead, so moving to one shows
+/// it at once.
+void readAhead(WidgetRef ref, DateTime month) {
+  final months = ref.read(_calendarMonthsProvider);
+  if (months == null) return;
+  for (final step in const [-1, 1]) {
+    months.prefetch(monthKey(DateTime(month.year, month.month + step)));
+  }
+}
+
 /// A month's events, from [CalendarMonths]: reused for a minute after the
 /// read, shared while read; a refresh or invalidation reads the complete
 /// month again.

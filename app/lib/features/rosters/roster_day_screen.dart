@@ -21,6 +21,7 @@ import 'format.dart';
 import 'future_changes.dart';
 import 'people_picker.dart';
 import 'roster_card.dart';
+import '../common/saving_indicator.dart';
 
 /// One service on one day. Everyone can look; people who may arrange this
 /// service's rosters (admin, or roster-editors holding its zone) tap a duty
@@ -61,6 +62,7 @@ class RosterDayScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(service.name),
         actions: [
+          const SavingIndicator(),
           if (canEdit)
             PopupMenuButton<String>(
               enabled: editable,

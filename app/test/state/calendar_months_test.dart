@@ -193,4 +193,112 @@ void main() {
     );
     expect((view.reloads, view.denied), (1, null));
   });
+
+  group('shown at once, read again behind', () {
+    test('a month read over a minute ago shows at once while it is read again; the new read then shows', () async {
+      final view = View();
+      months.show('2026-10', view);
+      expect(await months.events('2026-10'), [meeting]);
+      now = now.add(const Duration(seconds: 61));
+      final moved = meeting.copyWith(title: '同工會（改時間）');
+      calendar.events
+        ..clear()
+        ..add(moved);
+      calendar.held = Completer();
+
+      expect(months.events('2026-10'), [meeting], reason: 'no wait');
+      expect(calendar.reads, ['2026-10', '2026-10']);
+      expect(months.status('2026-10').cached, isFalse, reason: 'online, read again: no offline notice');
+      calendar.held!.complete();
+      await pumpEventQueue();
+      expect(view.shown, [moved]);
+    });
+
+    test('a month this device saved shows at once after the app starts again, then the new read', () async {
+      const scope = CalendarCacheScope(
+        project: 'p',
+        uid: 'pastor',
+        churchId: 'grace',
+        calendarId: 'cal',
+        revision: '1',
+      );
+      final prefs = await SharedPreferences.getInstance();
+      CalendarMonths start() {
+        final cache = CalendarReadCache(prefs)..select(scope);
+        return CalendarMonths(
+          key: (uid: 'pastor', churchId: 'grace', calendarId: 'cal', revision: '1'),
+          read: calendar.read,
+          cache: cache,
+          cacheScope: scope,
+          clock: () => now,
+        );
+      }
+
+      await start().events('2026-10');
+      await pumpEventQueue();
+      final moved = meeting.copyWith(title: '同工會（改時間）');
+      calendar.events
+        ..clear()
+        ..add(moved);
+      calendar.held = Completer();
+      final again = start();
+      final view = View();
+      again.show('2026-10', view);
+
+      final shown = again.events('2026-10');
+      expect(shown, isA<List<CalendarEvent>>(), reason: 'what this device saved, without waiting');
+      expect([for (final e in shown as List<CalendarEvent>) e.title], [meeting.title]);
+      calendar.held!.complete();
+      await pumpEventQueue();
+      expect(view.shown, [moved]);
+    });
+
+    test('when reading again fails, the month stays, saying when it was read', () async {
+      final view = View();
+      months.show('2026-10', view);
+      await months.events('2026-10');
+      final readAt = now;
+      now = now.add(const Duration(minutes: 5));
+      calendar.error = const CloudException(CloudErrorCode.unknown);
+
+      expect(months.events('2026-10'), [meeting]);
+      await pumpEventQueue();
+      expect(view.shown, [meeting]);
+      expect(months.status('2026-10').cached, isTrue);
+      expect(months.status('2026-10').fetchedAt, readAt);
+      expect(months.status('2026-10').refreshError, isNotNull);
+    });
+
+    test('a month read ahead shows at once when opened, without another read', () async {
+      months.prefetch('2026-11');
+      await pumpEventQueue();
+      expect(calendar.reads, ['2026-11']);
+      final view = View();
+      months.show('2026-11', view);
+      expect(months.events('2026-11'), isA<List<CalendarEvent>>());
+      months.prefetch('2026-11');
+      expect(calendar.reads, ['2026-11'], reason: 'read once');
+    });
+
+    test('a month opened while it is read ahead waits for that read, not another', () async {
+      calendar.held = Completer();
+      months.prefetch('2026-10');
+      final view = View();
+      months.show('2026-10', view);
+      final shown = months.events('2026-10');
+      expect(shown, isA<Future<List<CalendarEvent>>>());
+      calendar.held!.complete();
+      expect(await shown, [meeting]);
+      expect(calendar.reads, ['2026-10']);
+    });
+
+    test('a month that failed to read ahead is read again when opened', () async {
+      calendar.error = const CloudException(CloudErrorCode.unknown);
+      months.prefetch('2026-10');
+      await pumpEventQueue();
+      calendar.error = null;
+      expect(await months.events('2026-10'), [meeting]);
+      expect(calendar.reads, ['2026-10', '2026-10']);
+    });
+  });
 }

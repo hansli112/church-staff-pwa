@@ -720,4 +720,12 @@ abstract interface class Backend {
   CloudApi get cloud;
   PlatformData get platform;
   ChurchData church(String churchId);
+
+  /// Starts the backend for [what] when a page that will ask for it opens,
+  /// so that call does not wait for it to start (about 3 s, when nobody
+  /// has used it for a while). Never fails.
+  void warmUp(WarmUp what);
 }
+
+/// What a page that just opened is likely to ask the backend for.
+enum WarmUp { calendarWrite, serviceEdit, joinChurch, createChurch, photoImport, timeZone }

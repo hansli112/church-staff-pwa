@@ -15,6 +15,7 @@ import '../../state/roster_actions.dart';
 import '../rosters/future_changes.dart';
 import '../common/errors.dart';
 import '../common/labels.dart';
+import '../common/saving_indicator.dart';
 
 /// 服事設定: the church's services (聚會別). IDs only ever grow: a disabled
 /// service keeps its old rosters and zones, and simply stops getting new
@@ -60,7 +61,7 @@ class ServicesScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.serviceSettings)),
+      appBar: AppBar(title: Text(l10n.serviceSettings), actions: const [SavingIndicator()]),
       body: ListView(
         children: [
           ListSection(
@@ -420,7 +421,7 @@ class ServiceEditorScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(service.name)),
+      appBar: AppBar(title: Text(service.name), actions: const [SavingIndicator()]),
       body: ListView(
         children: [
           ListSection(

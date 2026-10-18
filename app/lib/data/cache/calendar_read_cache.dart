@@ -129,12 +129,7 @@ class CalendarReadCache {
                 entry.key: {
                   'fetchedAt': entry.value.fetchedAt.toUtc().toIso8601String(),
                   'events': [
-                    for (final event in entry.value.events)
-                      {
-                        ...calendarEventToJson(event),
-                        'recurringEventId': ?event.recurringEventId,
-                        'originalStart': ?event.originalStart,
-                      },
+                    for (final event in entry.value.events) _saved(event),
                   ],
                 },
             },
@@ -156,3 +151,16 @@ class CalendarReadCache {
 }
 
 bool _validMonth(String month) => RegExp(r'^\d{4}-(0[1-9]|1[0-2])$').hasMatch(month);
+
+/// [event] as saved here, for calendarEventFromJson to read back. It wants
+/// a time with an offset, and any offset gives the same church-clock time;
+/// without one, a month with a timed event was never read back.
+Map<String, Object?> _saved(CalendarEvent event) {
+  final json = calendarEventToJson(event);
+  return {
+    ...json,
+    if (!event.allDay) ...{'start': '${json['start']}+00:00', 'end': '${json['end']}+00:00'},
+    'recurringEventId': ?event.recurringEventId,
+    'originalStart': ?event.originalStart,
+  };
+}

@@ -55,4 +55,27 @@ void main() {
     reopened.select(scope);
     expect(reopened.read('2026-10'), isNull);
   });
+
+  test('a month with a timed event is read back as it was saved', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    const scope = CalendarCacheScope(
+      project: 'demo-martha',
+      uid: 'u1',
+      churchId: 'c1',
+      calendarId: 'cal1',
+      revision: '1:0',
+    );
+    final timed = CalendarEvent(
+      id: 'ev2',
+      title: '同工會',
+      start: DateTime.utc(2026, 10, 12, 19, 30),
+      end: DateTime.utc(2026, 10, 12, 21),
+    );
+    final first = CalendarReadCache(prefs)..select(scope);
+    await first.save(scope, '2026-10', [timed], fetchedAt: DateTime.utc(2026, 10, 11));
+    final reopened = CalendarReadCache(prefs)..select(scope);
+    final read = reopened.read('2026-10')!.events.single;
+    expect((read.start, read.end, read.allDay), (timed.start, timed.end, false));
+  });
 }

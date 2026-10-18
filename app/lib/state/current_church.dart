@@ -6,7 +6,9 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/backend.dart';
+import '../data/echoing_church_data.dart';
 import '../domain/models.dart';
+import 'app_update.dart' show updateEditLockProvider;
 import 'providers.dart';
 
 /// The church the user picked last, remembered on this device.
@@ -48,11 +50,21 @@ final currentChurchIdProvider = Provider<String?>((ref) {
   return ids.first;
 });
 
-final churchDataProvider = Provider<ChurchData?>((ref) {
+/// The current church's data. A change made here shows at once
+/// ([EchoingChurchData]), and the app does not update over it.
+final churchDataProvider = Provider<EchoingChurchData?>((ref) {
   final cid = ref.watch(currentChurchIdProvider);
   if (cid == null) return null;
-  return ref.watch(backendProvider).church(cid);
+  return EchoingChurchData(
+    ref.watch(backendProvider).church(cid),
+    beginWrite: ref.watch(updateEditLockProvider).begin,
+  );
 });
+
+/// Whether a change to the current church is still on its way.
+final savingProvider = StreamProvider<bool>(
+  (ref) => ref.watch(churchDataProvider)?.watchSaving() ?? Stream.value(false),
+);
 
 final churchProvider = StreamProvider<Church?>((ref) {
   final data = ref.watch(churchDataProvider);

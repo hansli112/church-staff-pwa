@@ -135,6 +135,9 @@ class _AgendaState extends ConsumerState<_Agenda> {
   final _scroll = ScrollController();
   final _sections = <Day, GlobalKey>{};
 
+  /// The month whose neighbours were last read ahead.
+  DateTime? _readAheadOf;
+
   @override
   void didUpdateWidget(_Agenda old) {
     super.didUpdateWidget(old);
@@ -175,6 +178,12 @@ class _AgendaState extends ConsumerState<_Agenda> {
     final shownMonth = Day(month.year, month.month, 1);
     final canEdit = widget.canEdit;
     final events = ref.watch(calendarEventsProvider(monthKey(month)));
+    if (_readAheadOf != month) {
+      _readAheadOf = month;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) readAhead(ref, month);
+      });
+    }
     final readStatus = ref.watch(calendarReadStatusProvider(monthKey(month)));
     final today = ref.watch(todayProvider);
     final selected = ref.watch(calendarSelectedDayProvider);

@@ -34,6 +34,8 @@ import 'features/me/webhook_screen.dart';
 import 'features/rosters/event_roster_screen.dart';
 import 'features/rosters/roster_day_screen.dart';
 import 'features/rosters/rosters_screen.dart';
+import 'data/backend.dart' show WarmUp;
+import 'features/common/warm_up.dart';
 import 'features/shell/shell.dart';
 import 'state/providers.dart';
 import 'state/app_update.dart';
@@ -88,10 +90,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           page(
             'join',
-            (_) => const EnterCodeScreen(),
-            routes: [page(':code', (s) => JoinScreen(code: s.pathParameters['code']!))],
+            (_) => const WarmUpOnOpen(WarmUp.joinChurch, child: EnterCodeScreen()),
+            routes: [
+              page(':code', (s) => WarmUpOnOpen(WarmUp.joinChurch, child: JoinScreen(code: s.pathParameters['code']!))),
+            ],
           ),
-          page('create', (_) => const CreateChurchScreen()),
+          page('create', (_) => const WarmUpOnOpen(WarmUp.createChurch, child: CreateChurchScreen())),
           page('move', (_) => const DeferredPage.move()),
         ],
       ),
@@ -99,7 +103,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         '/c/:churchId',
         (s) => ChurchEntryScreen(churchId: s.pathParameters['churchId']!),
         // An invite link. The code decides the church, not the URL.
-        routes: [page('join/:code', (s) => JoinScreen(code: s.pathParameters['code']!))],
+        routes: [
+          page(
+            'join/:code',
+            (s) => WarmUpOnOpen(WarmUp.joinChurch, child: JoinScreen(code: s.pathParameters['code']!)),
+          ),
+        ],
       ),
       page('/closed', (_) => const ClosedScreen()),
       page('/add-to-home', (_) => const AddToHomeScreen()),
@@ -126,7 +135,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                 '/rosters',
                 (_) => const RostersScreen(),
                 routes: [
-                  page('import/:type', (s) => DeferredPage.rosterImport(serviceType: s.pathParameters['type']!)),
+                  page(
+                    'import/:type',
+                    (s) => WarmUpOnOpen(
+                      WarmUp.photoImport,
+                      child: DeferredPage.rosterImport(serviceType: s.pathParameters['type']!),
+                    ),
+                  ),
                   // Before :type/:day, which would take it for a service.
                   page(
                     'event/:id',
@@ -157,7 +172,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                   if (!ref.read(isWebProvider)) page('support', (_) => const SupportScreen()),
                   page('language', (_) => const LanguageScreen()),
                   page('church', (_) => const DeferredPage.churchInfo()),
-                  page('timezone', (_) => const TimeZoneScreen()),
+                  page('timezone', (_) => const WarmUpOnOpen(WarmUp.timeZone, child: TimeZoneScreen())),
                   page('link', (_) => const ChurchLinkScreen()),
                   page('webhook', (_) => const WebhookScreen()),
                   page('calendar', (s) => DeferredPage.calendarSettings(result: s.uri.queryParameters['result'])),
@@ -179,8 +194,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                     routes: [
                       page(
                         ':id',
-                        (s) => ServiceEditorScreen(
-                          serviceId: s.pathParameters['id']!,
+                        (s) => WarmUpOnOpen(
+                          WarmUp.serviceEdit,
+                          child: ServiceEditorScreen(serviceId: s.pathParameters['id']!),
                         ),
                       ),
                     ],

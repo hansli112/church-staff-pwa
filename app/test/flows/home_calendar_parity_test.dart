@@ -72,6 +72,10 @@ void main() {
     await settle(tester);
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/calendar');
     await settle(tester);
-    expect(b.reads, ['2026-10', '2026-11'], reason: 'the calendar tab reuses the month already read on home');
+    expect(
+      b.reads,
+      ['2026-10', '2026-11', '2026-09'],
+      reason: 'the calendar tab reuses the months home read, and reads only the month before ahead',
+    );
   });
 }

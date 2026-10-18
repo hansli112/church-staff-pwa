@@ -2171,6 +2171,9 @@ class L10nKo extends L10n {
   String get appUpdateApplying => '업데이트 중…';
 
   @override
+  String get saving => '저장 중…';
+
+  @override
   String get appUpdateCurrent => '최신 버전이에요';
 
   @override

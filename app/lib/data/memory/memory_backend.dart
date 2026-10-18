@@ -230,6 +230,12 @@ class MemoryBackend implements Backend {
   @override
   ChurchData church(String churchId) => MemoryChurchData(this, churchId);
 
+  /// What pages have warmed up, oldest first. Nothing here needs starting.
+  final warmedUp = <WarmUp>[];
+
+  @override
+  void warmUp(WarmUp what) => warmedUp.add(what);
+
   // Seeding helpers for tests and the demo.
 
   String addChurch(

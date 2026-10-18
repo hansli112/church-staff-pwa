@@ -70,3 +70,31 @@ test('each function lists the secrets its dependencies read, and no others', () 
     calendarCallback: calendar,
   });
 });
+
+test('a warm-up call is answered at once, reading and checking nothing', () => {
+  const child = spawnSync(process.execPath, ['--import', 'tsx', '--input-type=module', '--eval', `
+    globalThis.fetch = async () => { throw new Error('No network in cold-import tests'); };
+    const functions = await import('./src/index.ts');
+    const answers = {};
+    for (const name of ['calendarWrite', 'editService', 'redeemInvite', 'createChurch']) {
+      answers[name] = await functions[name].run({ data: { warmup: true } });
+    }
+    let refused = false;
+    try { await functions.redeemInvite.run({ data: { warmup: 'yes' } }); } catch { refused = true; }
+    console.log(JSON.stringify({ answers, refused }));
+  `], {
+    cwd: fileURLToPath(new URL('..', import.meta.url)),
+    env: {
+      PATH: process.env.PATH,
+      TMPDIR: process.env.TMPDIR,
+      GCLOUD_PROJECT: 'demo-martha',
+      FIREBASE_CONFIG: JSON.stringify({ projectId: 'demo-martha', storageBucket: 'demo-martha.appspot.com' }),
+    },
+    encoding: 'utf8',
+    timeout: 15_000,
+  });
+  assert.equal(child.status, 0, child.stderr);
+  const { answers, refused } = JSON.parse(child.stdout.trim().split('\n').at(-1)!);
+  for (const answer of Object.values(answers)) assert.deepEqual(answer, { warm: true });
+  assert.equal(refused, true, 'anything else is an ordinary call, which needs a signed-in caller');
+});

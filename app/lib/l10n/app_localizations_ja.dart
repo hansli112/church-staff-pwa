@@ -2170,6 +2170,9 @@ class L10nJa extends L10n {
   String get appUpdateApplying => 'アップデート中…';
 
   @override
+  String get saving => '保存中…';
+
+  @override
   String get appUpdateCurrent => '最新のバージョンです';
 
   @override

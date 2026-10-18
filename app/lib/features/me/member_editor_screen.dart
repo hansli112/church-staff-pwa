@@ -9,6 +9,7 @@ import '../../state/church_writes.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
 import '../common/labels.dart';
+import '../common/saving_indicator.dart';
 
 /// An admin editing one member: role, permission groups, and per service
 /// whether they belong to its 牧區 and the duties they serve there. Every
@@ -111,7 +112,7 @@ class MemberEditorScreen extends ConsumerWidget {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: Text(member.name)),
+      appBar: AppBar(title: Text(member.name), actions: const [SavingIndicator()]),
       body: ListView(
         children: [
           if (!self)

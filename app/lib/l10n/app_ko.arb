@@ -646,6 +646,7 @@
   "appUpdateChecking": "확인 중…",
   "appUpdateApply": "업데이트 후 다시 열기",
   "appUpdateApplying": "업데이트 중…",
+  "saving": "저장 중…",
   "appUpdateCurrent": "최신 버전이에요",
   "appUpdateReady": "새 버전이 있어요",
   "appUpdateFinishEditing": "저장하지 않은 내용이 있어요. 저장한 뒤 업데이트해 주세요.",

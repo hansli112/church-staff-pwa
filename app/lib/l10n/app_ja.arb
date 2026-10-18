@@ -646,6 +646,7 @@
   "appUpdateChecking": "確認中…",
   "appUpdateApply": "更新して開き直す",
   "appUpdateApplying": "アップデート中…",
+  "saving": "保存中…",
   "appUpdateCurrent": "最新のバージョンです",
   "appUpdateReady": "新しいバージョンがあります",
   "appUpdateFinishEditing": "保存していない内容があります。保存してから更新してください。",

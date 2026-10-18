@@ -3976,6 +3976,12 @@ abstract class L10n {
   /// **'更新中…'**
   String get appUpdateApplying;
 
+  /// No description provided for @saving.
+  ///
+  /// In zh, this message translates to:
+  /// **'儲存中…'**
+  String get saving;
+
   /// Only after an explicit server check confirms the currently running release is latest.
   ///
   /// In zh, this message translates to:

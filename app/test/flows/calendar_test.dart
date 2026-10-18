@@ -440,10 +440,11 @@ void main() {
     final inScroll = find.descendant(of: find.byType(CustomScrollView), matching: find.byType(MonthGrid));
     expect(inScroll, findsOneWidget);
 
-    // 首頁 has already read next month for its activities: hold the one after.
+    // 首頁 has already read next month for its activities. Hold the one
+    // after, which is read ahead while next month shows.
+    b.calendarEventsHeld = Completer();
     await tester.fling(find.byType(MonthGrid), const Offset(-300, 0), 1000);
     await settle(tester);
-    b.calendarEventsHeld = Completer();
     await tester.fling(find.byType(MonthGrid), const Offset(-300, 0), 1000);
     await tester.pump();
     await tester.pump();
@@ -543,5 +544,22 @@ void main() {
     await settle(tester);
     expect(find.descendant(of: find.byType(MonthGrid), matching: find.text('+2')), findsOneWidget);
     expect(tester.getSize(find.byType(MonthGrid)).height, loading);
+  });
+
+  testWidgets('the next month shows at once: it was read while this one showed', (tester) async {
+    final b = seededChurch()..connectCalendar('grace', calendarName: '教會行事曆');
+    b.calendarEvents['grace'] = [
+      CalendarEvent(id: 'd1', title: '聖誕晚會', start: DateTime(2026, 12, 24), end: DateTime(2026, 12, 25), allDay: true),
+    ];
+    await pumpApp(tester, b);
+    await go(tester, '/calendar');
+    await tester.tap(find.byTooltip('下個月'));
+    await settle(tester);
+    b.calendarEventsHeld = Completer();
+    await tester.tap(find.byTooltip('下個月'));
+    await tester.pump();
+    expect(inAgenda('聖誕晚會'), findsOneWidget, reason: 'no read to wait for');
+    b.calendarEventsHeld!.complete();
+    await settle(tester);
   });
 }

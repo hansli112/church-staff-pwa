@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
+import '../../data/backend.dart' show WarmUp;
 import '../../domain/day.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
@@ -79,6 +80,8 @@ Future<void> editEvent(
   required DateTime month,
   Day? day,
 }) async {
+  // Saving goes through the backend; start it while the editor is open.
+  ref.read(backendProvider).warmUp(WarmUp.calendarWrite);
   final l10n = L10n.of(context);
   final today = ref.read(todayProvider);
   final initialDay =

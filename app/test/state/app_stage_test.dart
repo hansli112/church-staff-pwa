@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/data/backend.dart';
+import 'package:martha/data/echoing_church_data.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/state/providers.dart';
@@ -46,7 +47,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         ...await testOverrides(backend),
-        churchDataProvider.overrideWith((ref) => chosen ? backend.church(cid) : null),
+        churchDataProvider.overrideWith((ref) => chosen ? EchoingChurchData(backend.church(cid)) : null),
       ],
     );
     addTearDown(container.dispose);

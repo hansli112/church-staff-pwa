@@ -99,6 +99,16 @@ class FirebaseBackend implements Backend {
   final _churches = <String, ChurchData>{};
 
   @override
+  void warmUp(WarmUp what) => _calls.warm(switch (what) {
+    WarmUp.calendarWrite => const ['calendarWrite'],
+    WarmUp.serviceEdit => const ['editService'],
+    WarmUp.joinChurch => const ['previewInvite', 'redeemInvite'],
+    WarmUp.createChurch => const ['createChurch'],
+    WarmUp.photoImport => const ['recognizeRoster'],
+    WarmUp.timeZone => const ['setChurchTimeZone'],
+  });
+
+  @override
   ChurchData church(String churchId) => _churches.putIfAbsent(
     churchId,
     () => FirestoreChurchData._(_db, _storage, _calls, clock, churchId),
@@ -755,18 +765,21 @@ class FirestoreChurchData implements ChurchData {
         };
       }
       if (before.isEmpty) await tx.get(_church);
-      for (final id in before.keys) {
-        final snapshot = await tx.get(_col('rosters').doc(id));
-        final data = snapshot.data();
+      // Every day read at once: one at a time, a change to a whole
+      // service waited a round trip per day.
+      final ids = before.keys.toList();
+      final reads = await Future.wait([
+        for (final id in ids) tx.get(_col('rosters').doc(id)),
+        if (staffOrder case final o?) tx.get(_col('staff_orders').doc(o.serviceType)),
+      ]);
+      for (final (i, id) in ids.indexed) {
+        final data = reads[i].data();
         if (!change.expects(id, data == null ? null : rosterFromJson(data))) {
           throw const CloudException(CloudErrorCode.conflict);
         }
       }
-      if (staffOrder case final order?) {
-        final snapshot = await tx.get(_col('staff_orders').doc(order.serviceType));
-        if (StaffOrder.fromJson(snapshot.data() ?? const {}) != order.before) {
-          throw const CloudException(CloudErrorCode.conflict);
-        }
+      if (staffOrder case final o? when StaffOrder.fromJson(reads.last.data() ?? const {}) != o.before) {
+        throw const CloudException(CloudErrorCode.conflict);
       }
       for (final entry in next.entries) {
         final ref = _col('rosters').doc(entry.key);
@@ -1415,6 +1428,23 @@ class _Callables {
       throw translate(e);
     }
   });
+
+  /// When each function was last warmed up. An instance stays up for about
+  /// 15 minutes after its last call.
+  final _warmed = <String, DateTime>{};
+
+  /// Sends each of [names] a call it answers at once (functions/src/index.ts),
+  /// which starts an instance if none is up. Not more than every 5 minutes,
+  /// and never failing.
+  void warm(List<String> names) {
+    final now = DateTime.now();
+    for (final name in names) {
+      final last = _warmed[name];
+      if (last != null && now.difference(last) < const Duration(minutes: 5)) continue;
+      _warmed[name] = now;
+      unawaited(_functions.httpsCallable(name).call<Object?>({'warmup': true}).then((_) {}, onError: (Object _) {}));
+    }
+  }
 
   /// Reloads the account and, when its email is verified, refreshes the ID
   /// token so the next call carries it.

@@ -646,6 +646,7 @@
   "appUpdateChecking": "检查中…",
   "appUpdateApply": "更新并重新打开",
   "appUpdateApplying": "更新中…",
+  "saving": "保存中…",
   "appUpdateCurrent": "已是最新版本",
   "appUpdateReady": "有新版本",
   "appUpdateFinishEditing": "还有没保存的内容，保存后再更新",
