@@ -29,7 +29,7 @@
 
 - 自由註冊。
 - 登入方式：
-  - **Google 登入為主**，第一版就支援，登入畫面放在最顯眼的位置。
+  - **Google 登入為主**，第一版就支援。登入按鈕照 Google 和 Apple 的品牌規範（見 `docs/design-principles.md`），Android 和網頁放第一個，iPhone 放在 Apple 之後。
   - 原生 App 用系統的帳號選擇（Android Credential Manager、iOS Google Sign-In）。裝置做不到時（手機沒有 Google 帳號、Play 服務太舊）改走瀏覽器登入，並在 Crashlytics 記一筆非當機錯誤：Firebase 沒登錄這台的簽章 SHA-1 時，看起來也是「沒有帳號」，要靠這筆紀錄發現。設定錯誤（client ID 錯）和使用者取消不改走瀏覽器。
   - iOS 加 **Sign in with Apple**（Apple 準則 4.8：有第三方登入就必須提供）。這個功能要付費的開發者帳號才能設定，所以在 M7 付年費後補上。
   - email＋密碼收在下方，用 email 註冊的人才需要驗證 email；Google、Apple 帳號視為已驗證。

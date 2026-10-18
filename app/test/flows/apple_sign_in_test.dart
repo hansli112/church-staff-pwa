@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +22,40 @@ void main() {
     await pumpApp(tester, MemoryBackend(clock: testClock));
     expect(find.text('使用 Google 登入'), findsOneWidget);
     expect(find.text('透過 Apple 登入'), findsNothing);
+  });
+
+  group('the sign-in buttons', () {
+    double top(WidgetTester tester, String label) => tester.getTopLeft(findShown(label).last).dy;
+
+    testWidgets('on iPhone Apple comes first, elsewhere Google', (tester) async {
+      final b = MemoryBackend(clock: testClock)..auth.offersApple = true;
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      try {
+        await pumpApp(tester, b);
+        expect(top(tester, '透過 Apple 登入'), lessThan(top(tester, '使用 Google 登入')));
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+      await pumpApp(tester, MemoryBackend(clock: testClock)..auth.offersApple = true);
+      expect(top(tester, '使用 Google 登入'), lessThan(top(tester, '透過 Apple 登入')));
+    });
+
+    testWidgets("are white with each one's own mark, Google's G in its colours", (tester) async {
+      await pumpApp(tester, MemoryBackend(clock: testClock)..auth.offersApple = true);
+      for (final label in ['使用 Google 登入', '透過 Apple 登入']) {
+        final button = tester.widget<ButtonStyleButton>(
+          find.ancestor(of: findShown(label).last, matching: find.bySubtype<ButtonStyleButton>()).first,
+        );
+        expect(button.style!.backgroundColor!.resolve({}), Colors.white, reason: label);
+      }
+      expect(
+        find.byWidgetPredicate(
+          (w) =>
+              w is Image && w.image is AssetImage && (w.image as AssetImage).assetName == 'assets/icons/google_g.png',
+        ),
+        findsOneWidget,
+      );
+    });
   });
 
   testWidgets('Apple sign-in creates the account with the name Apple gives', (tester) async {

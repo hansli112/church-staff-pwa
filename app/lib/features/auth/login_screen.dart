@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -15,9 +16,10 @@ import '../church/links.dart';
 import '../common/errors.dart';
 import 'in_app_browser.dart';
 
-/// Sign-in. Google is the main way in, so it is the prominent button, with
-/// Sign in with Apple the same size beside it where the build offers it
-/// (App Store 4.8); email and password sit below.
+/// Sign-in. Google and, where the build offers it, Apple (App Store 4.8)
+/// are two white buttons of one size, each with its own mark as its maker's
+/// guidelines ask; Apple first in the iPhone app, where everyone has an
+/// Apple Account, Google first on Android and the web. Email and password sit below.
 ///
 /// Self-host showed a username/password form first and had no Google
 /// sign-in. Here the form only appears when asked for.
@@ -155,20 +157,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               _InAppBrowserNote(app: app, url: _pageToOpen()),
               const SizedBox(height: Space.m),
             ],
-            PrimaryButton(
-              label: l10n.signInWithGoogle,
-              busy: _busy && !_appleRunning,
-              onPressed: _busy ? null : () => _run(_auth.signInWithGoogle),
-            ),
-            const SizedBox(height: Space.s),
-            if (_auth.offersApple) ...[
-              _AppleButton(
-                label: l10n.signInWithApple,
-                busy: _busy && _appleRunning,
-                onPressed: _busy ? null : () => _run(_auth.signInWithApple, apple: true),
-              ),
-              const SizedBox(height: Space.s),
-            ],
+            for (final button in _providerButtons(l10n)) ...[button, const SizedBox(height: Space.s)],
             SecondaryButton(
               label: l10n.signInWithEmail,
               expand: true,
@@ -179,6 +168,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
       ),
     );
+  }
+
+  List<Widget> _providerButtons(L10n l10n) {
+    final google = _SignInButton(
+      label: l10n.signInWithGoogle,
+      markSize: 20,
+      mark: (size) => Image.asset('assets/icons/google_g.png', width: size, height: size, excludeFromSemantics: true),
+      foreground: const Color(0xFF1F1F1F), // Google's text colour
+      busy: _busy && !_appleRunning,
+      onPressed: _busy ? null : () => _run(_auth.signInWithGoogle),
+    );
+    if (!_auth.offersApple) return [google];
+    final apple = _SignInButton(
+      label: l10n.signInWithApple,
+      markSize: 22,
+      mark: (size) => Icon(Icons.apple, size: size),
+      foreground: Colors.black, // Apple allows only black or white
+      busy: _busy && _appleRunning,
+      onPressed: _busy ? null : () => _run(_auth.signInWithApple, apple: true),
+    );
+    final applePlatform =
+        !kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS);
+    return applePlatform ? [apple, google] : [google, apple];
   }
 
   /// The address to open in the phone's browser: the page sign-in leads to
@@ -309,27 +321,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 }
 
-/// Sign in with Apple as Apple's guidelines draw it: the Apple logo and
-/// Apple's own title, black on a light screen and white on a dark one, the
-/// same size and corners as the Google button.
-class _AppleButton extends StatelessWidget {
-  const _AppleButton({required this.label, required this.busy, required this.onPressed});
+/// A sign-in button in the style Google and Apple both allow: white, the
+/// maker's mark before the title, and a thin grey border on light
+/// backgrounds. White in dark mode too, without the border: Apple's outline
+/// is only for light backgrounds, and Google's G sits on white.
+class _SignInButton extends StatelessWidget {
+  const _SignInButton({
+    required this.label,
+    required this.markSize,
+    required this.mark,
+    required this.foreground,
+    required this.busy,
+    required this.onPressed,
+  });
 
   final String label;
+
+  /// The maker's mark, drawn at [markSize] grown with the text size.
+  final double markSize;
+  final Widget Function(double size) mark;
+  final Color foreground;
   final bool busy;
   final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final background = dark ? Colors.white : Colors.black;
-    final foreground = dark ? Colors.black : Colors.white;
     final style = FilledButton.styleFrom(
-      backgroundColor: background,
+      backgroundColor: Colors.white,
       foregroundColor: foreground,
-      // Disabled only while the other button runs: keep Apple's colours.
-      disabledBackgroundColor: background,
+      // Disabled only while the other button runs: keep the colours.
+      disabledBackgroundColor: Colors.white,
       disabledForegroundColor: foreground,
+      side: Theme.of(context).brightness == Brightness.dark ? null : const BorderSide(color: Color(0xFF747775)),
     );
     if (busy) {
       return Semantics(
@@ -349,8 +372,8 @@ class _AppleButton extends StatelessWidget {
     return FilledButton.icon(
       onPressed: onPressed,
       style: style,
-      // The logo grows with the title, as Apple's own button does.
-      icon: Icon(Icons.apple, size: MediaQuery.textScalerOf(context).scale(22)),
+      // The mark grows with the title, as on Apple's and Google's own buttons.
+      icon: mark(MediaQuery.textScalerOf(context).scale(markSize)),
       label: Text(label, textAlign: TextAlign.center),
     );
   }
