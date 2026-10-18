@@ -1,6 +1,6 @@
 import { FieldValue } from 'firebase-admin/firestore';
 
-import { churchAccess } from './access.js';
+import { churchAccess, type ChurchAccess } from './access.js';
 import { dateKeyUtc8, fail, type Caller, type Deps } from './common.js';
 import { LANGUAGES, words } from './languages.js';
 import { LIMITS } from './limits.js';
@@ -102,6 +102,38 @@ export function buildPrompt(opts: { service: Service; names: string[]; today: st
   ].join('\n');
 }
 
+/** The service the photos are for, and the church, for one of its roster editors. */
+async function rosterEditorAccess(deps: Deps, caller: Caller | null, data: unknown) {
+  const type = (data as { serviceType?: unknown })?.serviceType;
+  if (typeof type !== 'string') fail('invalid-argument', 'unknown');
+  return { type, ...(await churchAccess(deps, caller, data, { rosterEditor: type })) };
+}
+
+/** [buildPrompt] for one of the church's services, from its settings and members now. */
+async function churchPrompt(deps: Deps, { cid, church }: Pick<ChurchAccess, 'cid' | 'church'>, type: string) {
+  const [settings, members] = await Promise.all([
+    deps.db.doc(`churches/${cid}/settings/services`).get(),
+    deps.db.collection(`churches/${cid}/members`).select('name').get(),
+  ]);
+  const service = ((settings.get('services') as Service[] | undefined) ?? []).find((s) => s.id === type);
+  if (!service) fail('failed-precondition', 'unknown');
+  return buildPrompt({
+    service,
+    names: members.docs.map((m) => m.get('name') as string).filter(Boolean),
+    today: dateKeyIn(timeZoneOf(church), deps.now()),
+  });
+}
+
+/**
+ * The prompt [recognizeRoster] would send, for an editor to use with an AI
+ * of their own and paste its JSON back. Costs nothing, so no photo is
+ * counted and the limits do not apply.
+ */
+export async function photoPrompt(deps: Deps, caller: Caller | null, data: unknown) {
+  const { type, ...access } = await rosterEditorAccess(deps, caller, data);
+  return { prompt: await churchPrompt(deps, access, type) };
+}
+
 function parseImages(raw: unknown): GeminiImage[] {
   if (!Array.isArray(raw) || raw.length === 0 || raw.length > MAX_IMAGES) fail('invalid-argument', 'unknown');
   return raw.map((image: { mimeType?: unknown; data?: unknown }) => {
@@ -114,12 +146,9 @@ function parseImages(raw: unknown): GeminiImage[] {
 }
 
 export async function recognizeRoster(deps: Deps & { gemini: Gemini }, caller: Caller | null, data: unknown) {
-  const input = data as { serviceType?: unknown; images?: unknown };
-  const type = input?.serviceType;
-  if (typeof type !== 'string') fail('invalid-argument', 'unknown');
-  const { cid, church } = await churchAccess(deps, caller, data, { rosterEditor: type });
+  const { type, cid, church } = await rosterEditorAccess(deps, caller, data);
   const timeZone = timeZoneOf(church);
-  const images = parseImages(input.images);
+  const images = parseImages((data as { images?: unknown })?.images);
   const { db } = deps;
   const usageRef = db.doc(`churches/${cid}/usage/${monthKey(deps.now(), timeZone)}`);
   const budgetRef = db.doc(`platform/photoBudget_${platformMonth(deps.now())}`);
@@ -138,17 +167,7 @@ export async function recognizeRoster(deps: Deps & { gemini: Gemini }, caller: C
   });
 
   try {
-    const [settings, members] = await Promise.all([
-      db.doc(`churches/${cid}/settings/services`).get(),
-      db.collection(`churches/${cid}/members`).select('name').get(),
-    ]);
-    const service = ((settings.get('services') as Service[] | undefined) ?? []).find((s) => s.id === type);
-    if (!service) fail('failed-precondition', 'unknown');
-    const prompt = buildPrompt({
-      service,
-      names: members.docs.map((m) => m.get('name') as string).filter(Boolean),
-      today: dateKeyIn(timeZone, deps.now()),
-    });
+    const prompt = await churchPrompt(deps, { cid, church }, type);
     const result = await deps.gemini(prompt, images);
     const cost = (result.inputTokens * PRICE_PER_M.input + result.outputTokens * PRICE_PER_M.output) / 1e6;
     await budgetRef.set(

@@ -1845,6 +1845,12 @@ class L10nKo extends L10n {
   String get importAdvanced => '고급';
 
   @override
+  String get importCopyPrompt => 'AI 프롬프트 복사';
+
+  @override
+  String get importPromptCopied => '복사했어요. 사진과 함께 AI에 보내고, 받은 JSON을 붙여 넣어 주세요';
+
+  @override
   String get importFormatHelp =>
       'date: YYYY-MM-DD. 아무도 없으면 people에 []를 넣어요.\nevents는 생략할 수 있고, 특별 순서 color는 색상 번호 0–5만 쓸 수 있어요.';
 

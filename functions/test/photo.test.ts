@@ -1,7 +1,17 @@
 import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
 
-import { buildPrompt, DEFAULT_MODELS, geminiClient, geminiModels, photoQuota, PHOTOS_PER_MONTH, recognizeRoster, type Gemini } from '../src/photo.js';
+import {
+  buildPrompt,
+  DEFAULT_MODELS,
+  geminiClient,
+  geminiModels,
+  photoPrompt,
+  photoQuota,
+  PHOTOS_PER_MONTH,
+  recognizeRoster,
+  type Gemini,
+} from '../src/photo.js';
 import { LANGUAGES, words } from '../src/languages.js';
 import { caller, clearFirestore, db, deps, rejectsWith, seedChurch, setNow } from './support.js';
 
@@ -134,6 +144,38 @@ describe("a church's own month and day", () => {
     // The platform's budget goes by its own month.
     assert.ok((await db.doc('platform/photoBudget_2026-11').get()).exists);
     setNow(new Date('2026-10-01T10:00:00+08:00'));
+  });
+});
+
+describe('photoPrompt', () => {
+  beforeEach(clearFirestore);
+  test("an editor gets the prompt recognition would send, to use with an AI of their own; no photo counted", async () => {
+    await church();
+    let sent = '';
+    await recognizeRoster(
+      {
+        ...deps,
+        gemini: async (p) => {
+          sent = p;
+          return ok(p, []);
+        },
+      },
+      caller('editor'),
+      { churchId: 'C1', serviceType: 'sunday', images: [image] },
+    );
+    await db.doc('churches/C1/usage/2026-10').delete();
+    const r = await photoPrompt(deps, caller('editor'), { churchId: 'C1', serviceType: 'sunday' });
+    assert.equal(r.prompt, sent);
+    assert.equal((await db.doc('churches/C1/usage/2026-10').get()).exists, false);
+  });
+
+  test('works with the photo limit and the platform budget used up, but not for staff or outsiders', async () => {
+    await church();
+    await db.doc('churches/C1/usage/2026-10').set({ photos: PHOTOS_PER_MONTH });
+    await db.doc('platform/photoBudget_2026-10').set({ costUsd: 100 });
+    assert.match((await photoPrompt(deps, caller('pastor'), { churchId: 'C1', serviceType: 'sunday' })).prompt, /主日崇拜/);
+    await rejectsWith(photoPrompt(deps, caller('staff'), { churchId: 'C1', serviceType: 'sunday' }), 'permissionDenied');
+    await rejectsWith(photoPrompt(deps, caller('other'), { churchId: 'C1', serviceType: 'sunday' }), 'permissionDenied');
   });
 });
 

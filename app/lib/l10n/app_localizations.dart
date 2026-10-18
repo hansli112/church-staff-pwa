@@ -3454,6 +3454,18 @@ abstract class L10n {
   /// **'進階'**
   String get importAdvanced;
 
+  /// Copies the prompt photo recognition sends the AI, built by the backend from the church's settings, for the editor to use with an AI of their own.
+  ///
+  /// In zh, this message translates to:
+  /// **'複製 AI 指令'**
+  String get importCopyPrompt;
+
+  /// No description provided for @importPromptCopied.
+  ///
+  /// In zh, this message translates to:
+  /// **'已複製，連同照片傳給 AI，再把它回的 JSON 貼上來'**
+  String get importPromptCopied;
+
   /// Explanation below the unlocalized canonical JSON protocol example
   ///
   /// In zh, this message translates to:

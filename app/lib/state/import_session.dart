@@ -133,9 +133,12 @@ class ImportSession extends Notifier<ImportDraft> {
   );
 
   /// Loads pasted [text], which must be a JSON array.
+  /// [text] may be an AI's whole reply: a ```json fence or a sentence
+  /// around the array is left out.
   void paste(String text) {
+    final start = text.indexOf('['), end = text.lastIndexOf(']');
     try {
-      final rows = jsonDecode(text);
+      final rows = jsonDecode(start >= 0 && end > start ? text.substring(start, end + 1) : text);
       if (rows is! List) throw const FormatException();
       load(rows);
     } on FormatException catch (e) {

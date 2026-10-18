@@ -559,6 +559,8 @@
   "fundingYearlySplit": "연간 비용은 매달로 나눠 표시해요",
   "fundingRatesBy": "환율: Exchange Rate API",
   "importAdvanced": "고급",
+  "importCopyPrompt": "AI 프롬프트 복사",
+  "importPromptCopied": "복사했어요. 사진과 함께 AI에 보내고, 받은 JSON을 붙여 넣어 주세요",
   "importFormatHelp": "date: YYYY-MM-DD. 아무도 없으면 people에 []를 넣어요.\nevents는 생략할 수 있고, 특별 순서 color는 색상 번호 0–5만 쓸 수 있어요.",
   "importPhotoFormatError": "인식 결과 형식이 맞지 않아요. 다시 인식하거나 고급 JSON을 사용해 주세요.",
   "importJsonSyntaxError": "JSON 형식이 잘못됐어요. 아래 예시처럼 배열 형식을 사용해 주세요.",

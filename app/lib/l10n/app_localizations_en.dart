@@ -1957,6 +1957,12 @@ class L10nEn extends L10n {
   String get importAdvanced => 'Advanced';
 
   @override
+  String get importCopyPrompt => 'Copy AI prompt';
+
+  @override
+  String get importPromptCopied => 'Copied. Send it to an AI with the photo, then paste the JSON it replies with';
+
+  @override
   String get importFormatHelp =>
       'date: YYYY-MM-DD; if no one is serving, set people to [].\nevents is optional; an occasion’s color accepts only palette numbers 0–5.';
 

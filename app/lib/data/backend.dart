@@ -349,6 +349,10 @@ abstract interface class ChurchData {
 
   /// Recognizes photos of a paper roster into import rows (JSON objects).
   Future<List<dynamic>> recognizeRoster(String serviceType, List<PhotoInput> images);
+
+  /// The prompt [recognizeRoster] gives the AI, for an editor to use with
+  /// an AI of their own. Counts no photo.
+  Future<String> photoPrompt(String serviceType);
 }
 
 /// A calendar the admin may pick, with its own time zone (an IANA id, when

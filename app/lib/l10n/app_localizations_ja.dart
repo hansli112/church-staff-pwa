@@ -1845,6 +1845,12 @@ class L10nJa extends L10n {
   String get importAdvanced => '詳細設定';
 
   @override
+  String get importCopyPrompt => 'AI への指示をコピー';
+
+  @override
+  String get importPromptCopied => 'コピーしました。写真と一緒に AI に送り、返ってきた JSON を貼り付けてください';
+
+  @override
   String get importFormatHelp => 'date：YYYY-MM-DD。担当者がいない場合は people を [] にします。\nevents は省略可。特別行事の color は色番号 0〜5。';
 
   @override

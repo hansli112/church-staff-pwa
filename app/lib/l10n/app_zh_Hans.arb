@@ -559,6 +559,8 @@
   "fundingYearlySplit": "每年付一次的费用平均分到每个月",
   "fundingRatesBy": "汇率：Exchange Rate API",
   "importAdvanced": "高级",
+  "importCopyPrompt": "复制 AI 指令",
+  "importPromptCopied": "已复制，连同照片发给 AI，再把它回复的 JSON 粘贴进来",
   "importFormatHelp": "date：YYYY-MM-DD；没有人时 people 填 []。\nevents 可省略；特别活动的 color 填色号 0–5。",
   "importPhotoFormatError": "识别结果的格式不对，请重新识别或用高级 JSON",
   "importJsonSyntaxError": "JSON 格式不对，请用下方示例的数组格式",

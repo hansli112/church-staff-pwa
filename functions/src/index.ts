@@ -379,6 +379,7 @@ export const recognizeRoster = callable(
   { timeoutSeconds: 180, memory: '512MiB' },
 );
 export const photoQuota = callable(photo.photoQuota);
+export const photoPrompt = callable(photo.photoPrompt);
 
 // Calendar (Google OAuth, per church)
 export const calendarAuthUrl = callable(calendar.calendarAuthUrl, calDeps);

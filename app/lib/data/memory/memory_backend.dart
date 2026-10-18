@@ -1411,10 +1411,7 @@ class MemoryChurchData implements ChurchData {
 
   @override
   Future<List<dynamic>> recognizeRoster(String serviceType, List<PhotoInput> images) async {
-    _b.functionAccess(
-      churchId,
-      allowed: (me) => _b.services[churchId]!.ids.contains(serviceType) && me.canEditRosters(serviceType),
-    );
+    _rosterEditorOf(serviceType);
     if (images.any((i) => i.bytes.length > Limits.photoBytes)) {
       throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.tooLarge);
     }
@@ -1425,6 +1422,21 @@ class MemoryChurchData implements ChurchData {
     await _b.recognizing;
     return _b.recognized;
   }
+
+  /// A short stand-in for the backend's prompt, with what it is built from.
+  @override
+  Future<String> photoPrompt(String serviceType) async {
+    _rosterEditorOf(serviceType);
+    final service = _b.services[churchId]!.byId(serviceType)!;
+    final names = [for (final m in _b.members[churchId]!.values) m.name];
+    return '把「${service.name}」的服事表照片轉成 JSON。\n${service.duties.join('、')}\n${names.join('、')}';
+  }
+
+  /// As the backend's photo calls: an editor of a service the church has.
+  void _rosterEditorOf(String serviceType) => _b.functionAccess(
+    churchId,
+    allowed: (me) => _b.services[churchId]!.ids.contains(serviceType) && me.canEditRosters(serviceType),
+  );
 }
 
 bool _sameList<T>(List<T> a, List<T> b) {

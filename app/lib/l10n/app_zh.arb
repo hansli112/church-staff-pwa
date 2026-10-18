@@ -1123,6 +1123,11 @@
   "@importAdvanced": {
     "description": "Import source advanced controls heading"
   },
+  "importCopyPrompt": "複製 AI 指令",
+  "@importCopyPrompt": {
+    "description": "Copies the prompt photo recognition sends the AI, built by the backend from the church's settings, for the editor to use with an AI of their own."
+  },
+  "importPromptCopied": "已複製，連同照片傳給 AI，再把它回的 JSON 貼上來",
   "importFormatHelp": "date：YYYY-MM-DD；沒有人時 people 填 []。\nevents 可省略；特別活動的 color 填色號 0–5。",
   "@importFormatHelp": {
     "description": "Explanation below the unlocalized canonical JSON protocol example"

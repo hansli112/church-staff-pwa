@@ -1072,6 +1072,10 @@ class FirestoreChurchData implements ChurchData {
     });
     return d['rows'] as List<dynamic>? ?? const [];
   }
+
+  @override
+  Future<String> photoPrompt(String serviceType) async =>
+      (await _call('photoPrompt', {'serviceType': serviceType}))['prompt'] as String;
 }
 
 const _alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -1381,6 +1385,7 @@ class _Callables {
       'calendarList',
       'calendarEvents',
       'photoQuota',
+      'photoPrompt',
       'adminSearchChurches',
       'adminChurchMembers',
       'adminStats',

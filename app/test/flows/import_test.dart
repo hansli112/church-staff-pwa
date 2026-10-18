@@ -26,6 +26,13 @@ Future<void> tapText(WidgetTester tester, String text) async {
   await settle(tester);
 }
 
+/// 貼上 JSON sits under the prompt help in 進階, below a phone-sized screen.
+Future<void> openPasteJson(WidgetTester tester) async {
+  await tester.ensureVisible(findShown('貼上 JSON').last);
+  await tester.pump();
+  await tapText(tester, '貼上 JSON');
+}
+
 class _PhotoPicker extends ImagePickerPlatform {
   _PhotoPicker({this.pending, this.error});
   final Future<List<XFile>>? pending;
@@ -97,6 +104,19 @@ void main() {
     expect(b.photosUsed['other'] ?? 0, 0);
   });
 
+  testWidgets("進階 copies the photo prompt, the church's own, for an AI of the editor's choosing", (tester) async {
+    final out = captureOutbox(tester);
+    final b = seededChurch(as: editor);
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/import/sunday');
+    await tapText(tester, '進階');
+    await tapText(tester, '複製 AI 指令');
+    expect(out.copied.single, contains('主日崇拜'));
+    expect(out.copied.single, contains('司琴'));
+    expect(findShown('已複製，連同照片傳給 AI，再把它回的 JSON 貼上來'), findsOneWidget);
+    expect(b.photosUsed['grace'] ?? 0, 0, reason: 'only recognizing here counts a photo');
+  });
+
   testWidgets('photos that cannot be read say so', (tester) async {
     final oldPicker = ImagePickerPlatform.instance;
     ImagePickerPlatform.instance = _PhotoPicker(error: Exception('camera roll unavailable'));
@@ -114,7 +134,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
-    await tapText(tester, '貼上 JSON');
+    await openPasteJson(tester);
     await tester.enterText(
       find.byType(TextField),
       jsonEncode([
@@ -129,7 +149,7 @@ void main() {
         },
       ]),
     );
-    await tester.ensureVisible(find.text('預覽').last);
+    await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
     await tapText(tester, '預覽');
     final saved = Map.of(b.rosters['grace']!);
     b.members['grace']!['editor'] = b.members['grace']!['editor']!.copyWith(groups: const {});
@@ -192,7 +212,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
-    await tapText(tester, '貼上 JSON');
+    await openPasteJson(tester);
     await tester.enterText(
       find.byType(TextField),
       jsonEncode([
@@ -211,7 +231,7 @@ void main() {
         },
       ]),
     );
-    await tester.ensureVisible(find.text('預覽').last);
+    await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
     await tapText(tester, '預覽');
     final apply = find.widgetWithText(FilledButton, '套用到服事表');
     expect(tester.widget<FilledButton>(apply).onPressed, isNull);
@@ -233,8 +253,7 @@ void main() {
     await go(tester, '/rosters/import/sunday');
     await tester.ensureVisible(find.text('進階').last);
     await tapText(tester, '進階');
-    await tester.ensureVisible(find.text('貼上 JSON').last);
-    await tapText(tester, '貼上 JSON');
+    await openPasteJson(tester);
     await tester.scrollUntilVisible(find.byType(TextField), 300, scrollable: find.byType(Scrollable).first);
     await tester.enterText(
       find.byType(TextField),
@@ -242,7 +261,7 @@ void main() {
         {'date': '2026-10-18', 'duties': []},
       ]),
     );
-    await tester.ensureVisible(find.text('預覽').last);
+    await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
     await tapText(tester, '預覽');
     await tester.scrollUntilVisible(find.text('日期'), 200);
     await settle(tester);
@@ -254,7 +273,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
-    await tapText(tester, '貼上 JSON');
+    await openPasteJson(tester);
     await tester.enterText(
       find.byType(TextField),
       jsonEncode([
@@ -269,7 +288,7 @@ void main() {
         },
       ]),
     );
-    await tester.ensureVisible(find.text('預覽').last);
+    await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
     await tapText(tester, '預覽');
     await tester.tap(find.text('李美玉').first);
     await settle(tester);
@@ -283,7 +302,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
-    await tapText(tester, '貼上 JSON');
+    await openPasteJson(tester);
     await tester.enterText(
       find.byType(TextField),
       jsonEncode([
@@ -301,7 +320,7 @@ void main() {
         },
       ]),
     );
-    await tester.ensureVisible(find.text('預覽').last);
+    await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
     await tapText(tester, '預覽');
     await tapText(tester, '日期');
     await tester.enterText(find.byType(TextField), '2026-10-25');
@@ -331,7 +350,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
-    await tapText(tester, '貼上 JSON');
+    await openPasteJson(tester);
     await tester.enterText(
       find.byType(TextField),
       jsonEncode([
@@ -346,7 +365,7 @@ void main() {
         },
       ]),
     );
-    await tester.ensureVisible(find.text('預覽').last);
+    await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
     await tapText(tester, '預覽');
     await tapText(tester, '取代當天全部安排');
     await tester.scrollUntilVisible(find.text('移除司會：王牧師'), 200);
@@ -365,7 +384,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
-    await tapText(tester, '貼上 JSON');
+    await openPasteJson(tester);
     await tester.enterText(
       find.byType(TextField),
       jsonEncode([
@@ -383,7 +402,7 @@ void main() {
         },
       ]),
     );
-    await tester.ensureVisible(find.text('預覽').last);
+    await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
     await tapText(tester, '預覽');
     await tester.scrollUntilVisible(find.text('加入服事設定：鼓'), 200);
     await tapText(tester, '加入服事設定：鼓');
@@ -406,7 +425,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
-    await tapText(tester, '貼上 JSON');
+    await openPasteJson(tester);
     await tester.enterText(
       find.byType(TextField),
       jsonEncode([
@@ -426,7 +445,7 @@ void main() {
         },
       ]),
     );
-    await tester.ensureVisible(find.text('預覽').last);
+    await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
     await tapText(tester, '預覽');
     expect(find.text('請修正資料後再匯入'), findsOneWidget);
     expect(findShownContaining('活動請填'), findsOneWidget);
@@ -465,7 +484,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
-    await tapText(tester, '貼上 JSON');
+    await openPasteJson(tester);
     await tester.enterText(
       find.byType(TextField),
       jsonEncode([
@@ -483,7 +502,7 @@ void main() {
         },
       ]),
     );
-    await tester.ensureVisible(find.text('預覽').last);
+    await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
     await tapText(tester, '預覽');
     expect(find.text('加入服事設定：鼓'), findsNothing);
     expect(find.text('讓陳志豪負責鼓'), findsNothing);
@@ -506,7 +525,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
-    await tapText(tester, '貼上 JSON');
+    await openPasteJson(tester);
     await tester.enterText(
       find.byType(TextField),
       jsonEncode([
@@ -521,7 +540,7 @@ void main() {
         },
       ]),
     );
-    await tester.ensureVisible(find.text('預覽').last);
+    await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
     await tapText(tester, '預覽');
     final container = ProviderScope.containerOf(tester.element(find.byType(Scaffold).first));
     container.read(selectedChurchProvider.notifier).select('other');
@@ -536,7 +555,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
-    await tapText(tester, '貼上 JSON');
+    await openPasteJson(tester);
     await tester.enterText(
       find.byType(TextField),
       jsonEncode([
@@ -551,7 +570,7 @@ void main() {
         },
       ]),
     );
-    await tester.ensureVisible(find.text('預覽').last);
+    await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
     await tapText(tester, '預覽');
     final day = savedDay(b, 11);
     b.rosters['grace']![day.id] = day.copyWith(
@@ -574,7 +593,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
-    await tapText(tester, '貼上 JSON');
+    await openPasteJson(tester);
     await tester.enterText(
       find.byType(TextField),
       jsonEncode([
@@ -589,7 +608,7 @@ void main() {
         },
       ]),
     );
-    await tester.ensureVisible(find.text('預覽').last);
+    await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
     await tapText(tester, '預覽');
     // Meanwhile someone else sets 招待 on that day.
     final day = savedDay(b, 11);
@@ -621,9 +640,34 @@ void main() {
     await pumpApp(tester, seededChurch(as: editor));
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
-    await tapText(tester, '貼上 JSON');
+    await openPasteJson(tester);
     expect(find.byType(TextField), findsOneWidget);
     expect(find.textContaining('color'), findsWidgets);
+  });
+
+  testWidgets("an AI's whole reply pastes: the ```json fence and its words around the array are left out", (
+    tester,
+  ) async {
+    await pumpApp(tester, seededChurch(as: editor));
+    await go(tester, '/rosters/import/sunday');
+    await tapText(tester, '進階');
+    await openPasteJson(tester);
+    final rows = jsonEncode([
+      {
+        'date': '2026-10-18',
+        'duties': [
+          {
+            'role': '司琴',
+            'people': ['李美玉'],
+          },
+        ],
+      },
+    ]);
+    await tester.enterText(find.byType(TextField), '這是轉好的 JSON：\n```json\n$rows\n```');
+    await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
+    await tapText(tester, '預覽');
+    expect(find.text('JSON 格式不對，請用下方範例的陣列格式'), findsNothing);
+    expect(findShown('套用到服事表'), findsWidgets);
   });
 
   testWidgets('staff do not see photo import', (tester) async {

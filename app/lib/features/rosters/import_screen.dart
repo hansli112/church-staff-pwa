@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -267,6 +268,19 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     }
   }
 
+  /// The backend's photo prompt, for the editor's own AI; its JSON comes
+  /// back through 貼上 JSON.
+  Future<void> _copyPrompt() async {
+    final l10n = L10n.of(context);
+    try {
+      final prompt = await ref.churchData.photoPrompt(widget.serviceType);
+      await Clipboard.setData(ClipboardData(text: prompt));
+      if (mounted) showToast(context, l10n.importPromptCopied);
+    } catch (e) {
+      if (mounted) showToast(context, errorText(l10n, e));
+    }
+  }
+
   /// What to say about why the last photos or pasted text gave no rows.
   String? _errorText(ImportDraft draft, L10n l10n) => switch (draft.error) {
     FormatException() => l10n.importJsonSyntaxError,
@@ -373,6 +387,11 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
           ExpansionTile(
             title: Text(l10n.importAdvanced),
             children: [
+              SecondaryButton(
+                label: l10n.importCopyPrompt,
+                expand: true,
+                onPressed: _ready ? _copyPrompt : null,
+              ),
               SecondaryButton(
                 label: l10n.photoPasteJson,
                 expand: true,

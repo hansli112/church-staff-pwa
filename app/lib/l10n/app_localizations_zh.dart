@@ -1842,6 +1842,12 @@ class L10nZh extends L10n {
   String get importAdvanced => '進階';
 
   @override
+  String get importCopyPrompt => '複製 AI 指令';
+
+  @override
+  String get importPromptCopied => '已複製，連同照片傳給 AI，再把它回的 JSON 貼上來';
+
+  @override
   String get importFormatHelp => 'date：YYYY-MM-DD；沒有人時 people 填 []。\nevents 可省略；特別活動的 color 填色號 0–5。';
 
   @override
@@ -4290,6 +4296,12 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get importAdvanced => '高级';
+
+  @override
+  String get importCopyPrompt => '复制 AI 指令';
+
+  @override
+  String get importPromptCopied => '已复制，连同照片发给 AI，再把它回复的 JSON 粘贴进来';
 
   @override
   String get importFormatHelp => 'date：YYYY-MM-DD；没有人时 people 填 []。\nevents 可省略；特别活动的 color 填色号 0–5。';
