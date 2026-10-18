@@ -505,6 +505,15 @@ class L10nEn extends L10n {
   String get churchInfo => 'Church info';
 
   @override
+  String get manageChurch => 'Manage church';
+
+  @override
+  String get lineCommunity => 'LINE community';
+
+  @override
+  String get lineCommunityNote => 'Ask questions, report problems, meet other churches';
+
+  @override
   String get members => 'Team members';
 
   @override

@@ -497,6 +497,15 @@ class L10nKo extends L10n {
   String get churchInfo => '교회 정보';
 
   @override
+  String get manageChurch => '교회 관리';
+
+  @override
+  String get lineCommunity => 'LINE 오픈채팅';
+
+  @override
+  String get lineCommunityNote => '질문하고, 문제를 알리고, 다른 교회와 이야기해요';
+
+  @override
   String get members => '멤버';
 
   @override

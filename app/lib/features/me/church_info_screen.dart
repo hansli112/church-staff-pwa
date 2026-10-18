@@ -231,18 +231,7 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
           if (admin)
             ListSection(
               children: [
-                ListRow(
-                  title: l10n.members,
-                  onTap: () => context.push('/me/members'),
-                ),
-                ListRow(
-                  title: l10n.invites,
-                  onTap: () => context.push('/me/invites'),
-                ),
-                ListRow(
-                  title: l10n.serviceSettings,
-                  onTap: () => context.push('/me/services'),
-                ),
+                // 同工, 邀請 and 服事設定 are in 我的, under 管理教會.
                 ListRow(title: l10n.calendarSetting, onTap: () => context.push('/me/calendar')),
                 ListRow(
                   title: l10n.churchLink,

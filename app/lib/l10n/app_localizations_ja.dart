@@ -496,6 +496,15 @@ class L10nJa extends L10n {
   String get churchInfo => '教会情報';
 
   @override
+  String get manageChurch => '教会の管理';
+
+  @override
+  String get lineCommunity => 'LINE オープンチャット';
+
+  @override
+  String get lineCommunityNote => '質問、不具合の報告、ほかの教会との交流';
+
+  @override
   String get members => 'メンバー';
 
   @override

@@ -16,6 +16,9 @@ import '../../state/app_update.dart';
 import '../../state/session.dart';
 import '../church/church_switcher.dart';
 
+/// The LINE OpenChat (馬大別忙 Martha, sit): help, and churches meeting each other.
+final lineCommunity = Uri.parse('https://line.me/ti/g2/irPvG8tKHa9Iwf2hK7D9lcjdW5O-DUx4Coafcg');
+
 /// 我的: my profile, my church, settings. Admin tools sit under 教會資訊 so
 /// staff see a short page.
 class MeScreen extends ConsumerWidget {
@@ -59,6 +62,16 @@ class MeScreen extends ConsumerWidget {
                 ListRow(title: l10n.adminChurches, onTap: () => context.push('/admin')),
                 ListRow(title: l10n.adminStats, onTap: () => context.push('/admin/stats')),
                 ListRow(title: l10n.fundingCosts, onTap: () => context.push('/admin/funding')),
+              ],
+            ),
+          // The pages an admin opens most, one tap away; the rest in 教會資訊.
+          if (me?.isAdmin ?? false)
+            ListSection(
+              header: l10n.manageChurch,
+              children: [
+                ListRow(title: l10n.members, onTap: () => context.push('/me/members')),
+                ListRow(title: l10n.invites, onTap: () => context.push('/me/invites')),
+                ListRow(title: l10n.serviceSettings, onTap: () => context.push('/me/services')),
               ],
             ),
           ListSection(
@@ -113,6 +126,12 @@ class MeScreen extends ConsumerWidget {
             ),
           ListSection(
             children: [
+              // Help, and churches meeting each other, in the LINE app.
+              ListRow(
+                title: l10n.lineCommunity,
+                subtitle: l10n.lineCommunityNote,
+                onTap: () => launchUrl(lineCommunity, mode: LaunchMode.externalApplication),
+              ),
               ListRow(title: l10n.privacyPolicy, onTap: () => openSitePage(context, ref, '/privacy')),
               ListRow(title: l10n.termsOfService, onTap: () => openSitePage(context, ref, '/terms')),
             ],

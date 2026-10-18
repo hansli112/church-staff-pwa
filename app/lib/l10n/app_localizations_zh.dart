@@ -496,6 +496,15 @@ class L10nZh extends L10n {
   String get churchInfo => '教會資訊';
 
   @override
+  String get manageChurch => '管理教會';
+
+  @override
+  String get lineCommunity => 'LINE 社群';
+
+  @override
+  String get lineCommunityNote => '問問題、回報問題、和其他教會交流';
+
+  @override
   String get members => '同工';
 
   @override
@@ -2950,6 +2959,15 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get churchInfo => '教会信息';
+
+  @override
+  String get manageChurch => '管理教会';
+
+  @override
+  String get lineCommunity => 'LINE 社群';
+
+  @override
+  String get lineCommunityNote => '提问、反馈问题、和其他教会交流';
 
   @override
   String get members => '同工';

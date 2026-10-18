@@ -982,6 +982,24 @@ abstract class L10n {
   /// **'教會資訊'**
   String get churchInfo;
 
+  /// No description provided for @manageChurch.
+  ///
+  /// In zh, this message translates to:
+  /// **'管理教會'**
+  String get manageChurch;
+
+  /// No description provided for @lineCommunity.
+  ///
+  /// In zh, this message translates to:
+  /// **'LINE 社群'**
+  String get lineCommunity;
+
+  /// No description provided for @lineCommunityNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'問問題、回報問題、和其他教會交流'**
+  String get lineCommunityNote;
+
   /// No description provided for @members.
   ///
   /// In zh, this message translates to:

@@ -133,7 +133,7 @@ void main() {
     b.auth.signInAs('pastor@grace.org', uid: 'pastor');
     await pumpApp(tester, b);
     await go(tester, '/me');
-    await tester.ensureVisible(find.text('登入方式'));
+    await tester.scrollUntilVisible(find.text('登入方式'), 200, scrollable: find.byType(Scrollable).first);
     await settle(tester);
     await tapText(tester, '登入方式');
     expect(find.text('pastor@grace.org'), findsOneWidget);
