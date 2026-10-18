@@ -14,6 +14,10 @@
 			</array>
 		</dict>
 	</array>
+	<!-- Only HTTPS and the system's encryption: exempt, so App Store Connect
+	     doesn't ask about export compliance on every upload. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>FlutterDeepLinkingEnabled</key>
 	<true/>
 	<key>UIBackgroundModes</key>

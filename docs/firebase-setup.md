@@ -83,10 +83,19 @@ iOS 要在 Mac 上 build，最低版本是 iOS 15（Firebase 的要求）。Xcod
 ```sh
 cd app
 ~/.shorebird/bin/shorebird release android --flutter-version=3.41.0 --dart-define-from-file=config/prod.json
-~/.shorebird/bin/shorebird release ios --flutter-version=3.41.0 --dart-define-from-file=config/prod.json
+~/.shorebird/bin/shorebird release ios --flutter-version=3.41.0 --export-options-plist=ios/ExportOptions.plist --dart-define-from-file=config/prod.json
 ```
 
 每一版都要這樣建，之後才能對它推修補；直接用 `flutter build` 上架的版本收不到修補。
+
+**iOS 簽章與上傳**（不用 Xcode 登入）：Release 用手動簽章，憑證「Apple Distribution: Hsueh Han Lee」和描述檔「Martha sit App Store」都是用 App Store Connect API 金鑰建的（見 `app/ios/ExportOptions.plist`）。私鑰在 Mac 的登入鑰匙圈，備份在 `~/.appstoreconnect/signing/`；換電腦要把那裡的 `distribution.p12` 匯入鑰匙圈，描述檔放進 `~/Library/MobileDevice/Provisioning Profiles/`。兩個都在 2027-10 到期，到期前用 API 重建。建置加 `--export-options-plist=ios/ExportOptions.plist`，再上傳到 TestFlight：
+
+```sh
+~/.shorebird/bin/shorebird release ios --flutter-version=3.41.0 --export-options-plist=ios/ExportOptions.plist --dart-define-from-file=config/prod.json
+xcrun altool --upload-app -t ios -f build/ios/ipa/*.ipa --apiKey <金鑰 ID> --apiIssuer <Issuer ID>
+```
+
+API 金鑰放在 `~/.appstoreconnect/private_keys/AuthKey_<金鑰 ID>.p8`，altool 會自己找到。`Info.plist` 寫了 `ITSAppUsesNonExemptEncryption = false`（只用 HTTPS），上傳後不用每次回答出口合規。
 
 **建好馬上上傳，或先複製一份**：之後跑 `shorebird patch` 會用修補的程式碼重建，蓋掉 `app/build/app/outputs/bundle/release/app-release.aab`。`shorebird preview` 下載到 `~/.shorebird/bin/cache/previews/` 的 AAB 也被改過，Play 會說簽章無效，不能上傳。1.0.0+13 就是這樣作廢的，所以從 +14 開始上架。
 
