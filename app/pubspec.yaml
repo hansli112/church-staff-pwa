@@ -62,6 +62,7 @@ dependencies:
   google_sign_in_unused_web:
     path: packages/google_sign_in_unused_web
   in_app_purchase: ^3.3.1
+  in_app_purchase_android: ^0.5.0
   archive: ^4.0.0
   file_picker: ^13.1.0
   flutter_timezone: ^5.1.1

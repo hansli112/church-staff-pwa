@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 
 import '../data/backend.dart';
 import 'providers.dart';
@@ -88,6 +89,10 @@ class NoStore implements SupportStore {
   Uri get manageSubscription => Uri();
 }
 
+/// The product's name as the store lists it. Google Play's title adds the
+/// app's name in parentheses, so there it's the product's own name.
+String storeTitle(ProductDetails p) => p is GooglePlayProductDetails ? p.productDetails.name : p.title;
+
 class StoreKitPlayStore implements SupportStore {
   StoreKitPlayStore() {
     _sub = _iap.purchaseStream.listen(_onPurchases);
@@ -114,7 +119,7 @@ class StoreKitPlayStore implements SupportStore {
       ..addEntries(response.productDetails.map((p) => MapEntry(p.id, p)));
     final items = [
       for (final p in response.productDetails)
-        SupportItem(id: p.id, title: p.title, price: p.price, subscription: p.id == SupportProducts.subscription),
+        SupportItem(id: p.id, title: storeTitle(p), price: p.price, subscription: p.id == SupportProducts.subscription),
     ]..sort((a, b) => (_details[a.id]!.rawPrice).compareTo(_details[b.id]!.rawPrice));
     return items;
   }
