@@ -20,7 +20,7 @@ class FakeStore implements SupportStore {
   static const _items = [
     SupportItem(id: 'tip_small', title: '請喝咖啡', price: 'NT\$90', subscription: false),
     SupportItem(id: 'supporter_monthly', title: '每月支持', price: 'NT\$60', subscription: true),
-    SupportItem(id: 'supporter_monthly_plus', title: '每月大額支持', price: 'NT\$200', subscription: true),
+    SupportItem(id: 'supporter_monthly_plus', title: '每月支持', price: 'NT\$150', subscription: true),
   ];
 
   /// When a purchase is paid; the test's clock.
@@ -186,7 +186,7 @@ void main() {
     await settle(tester);
     expect(find.text('謝謝你的支持'), findsOneWidget);
 
-    await tester.tap(find.text('每月支持').last);
+    await tester.tap(find.text('NT\$60'));
     await settle(tester);
     await showMiddle(tester, find.text('紫'));
     await tester.tap(find.text('紫'));
@@ -210,7 +210,7 @@ void main() {
     await settle(tester);
     expect(launcher.opened, [endsWith('/terms?lang=zh-Hant&from=app'), endsWith('/privacy?lang=zh-Hant&from=app')]);
 
-    await tester.tap(find.text('每月支持').last);
+    await tester.tap(find.text('NT\$60'));
     await settle(tester);
     await tester.tap(find.text('管理訂閱'));
     await settle(tester);
@@ -223,22 +223,23 @@ void main() {
     await pumpWithStore(tester, store, FakeIcons());
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
     await settle(tester);
-    expect(find.text('每月大額支持'), findsOneWidget);
-    Finder badgeOn(String plan) => find.descendant(of: find.widgetWithText(ListRow, plan), matching: find.text('支持者'));
+    expect(find.text('每月支持'), findsNWidgets(3), reason: 'the section and both plans: one name, two amounts');
+    Finder badgeOn(String price) =>
+        find.descendant(of: find.widgetWithText(ListRow, price), matching: find.text('支持者'));
 
-    await tester.tap(find.text('每月支持').last);
+    await tester.tap(find.text('NT\$60'));
     await settle(tester);
-    expect(badgeOn('每月支持'), findsOneWidget);
-    expect(badgeOn('每月大額支持'), findsNothing);
-    await tester.tap(find.text('每月支持').last);
+    expect(badgeOn('NT\$60'), findsOneWidget);
+    expect(badgeOn('NT\$150'), findsNothing);
+    await tester.tap(find.text('NT\$60'));
     await settle(tester);
     expect(store.bought, ['supporter_monthly'], reason: 'the plan already paid for is not bought again');
 
-    await tester.tap(find.text('每月大額支持'));
+    await tester.tap(find.text('NT\$150'));
     await settle(tester);
     expect(store.bought, ['supporter_monthly', 'supporter_monthly_plus']);
-    expect(badgeOn('每月大額支持'), findsOneWidget);
-    expect(badgeOn('每月支持'), findsNothing);
+    expect(badgeOn('NT\$150'), findsOneWidget);
+    expect(badgeOn('NT\$60'), findsNothing);
     await tester.tap(find.text('管理訂閱'));
     await settle(tester);
     expect(launches.opened.last, endsWith('sku=supporter_monthly_plus'));
@@ -277,7 +278,7 @@ void main() {
       );
       GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
       await settle(tester);
-      await tester.tap(find.text('每月支持').last);
+      await tester.tap(find.text('NT\$60'));
       await settle(tester);
       await showMiddle(tester, find.text('紫'));
       await tester.tap(find.text('紫'));
@@ -323,7 +324,7 @@ void main() {
       GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
       await settle(tester);
       expect(
-        find.descendant(of: find.widgetWithText(ListRow, '每月大額支持'), matching: find.text('支持者')),
+        find.descendant(of: find.widgetWithText(ListRow, 'NT\$150'), matching: find.text('支持者')),
         findsOneWidget,
       );
     });
