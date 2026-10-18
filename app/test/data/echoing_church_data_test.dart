@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/data/echoing_church_data.dart';
@@ -41,6 +42,7 @@ void main() {
     b = seededChurch()..writeDelay = const Duration(milliseconds: 200);
     now = DateTime(2026, 10, 1, 9);
     data = EchoingChurchData(b.church('grace'), clock: () => now);
+    addTearDown(data.close);
   });
 
   test('a roster change shows at once, before the backend answers, and stays once written', () async {
@@ -159,6 +161,33 @@ void main() {
     expect(shownOn(rosters.last, 4, '司會'), ['陳志豪']);
   });
 
+  test('a written change the server shows differently stops showing after a few seconds, with nothing else coming', () {
+    fakeAsync((async) {
+      // Made here, so its timers and microtasks run on the fake clock.
+      final b = seededChurch()..writeDelay = const Duration(milliseconds: 200);
+      // A backend whose copy of a written day always shows it as someone
+      // else left it: this change never arrives as made.
+      final data = EchoingChurchData(_Overwritten(b.church('grace')));
+      final before = savedDay(b, 4);
+      final rosters = Seen(data.rosters(from: Day(2026, 10, 1)));
+      async.flushMicrotasks();
+      data.compareAndSetRosters(
+        RosterChange(
+          before: {before.id: before},
+          after: {
+            before.id: withPeople(before, '司會', ['王牧師']),
+          },
+        ),
+      );
+      async.elapse(const Duration(milliseconds: 200));
+      expect(data.saving, isFalse);
+      expect(shownOn(rosters.last, 4, '司會'), ['王牧師'], reason: 'within the few seconds');
+      async.elapse(EchoingChurchData.linger);
+      expect(shownOn(rosters.last, 4, '司會'), ['陳志豪']);
+      data.close();
+    });
+  });
+
   test('a new saved day shows at once, and a deleted one goes at once', () async {
     final rosters = Seen(data.rosters(from: Day(2026, 10, 1)));
     await pumpEventQueue();
@@ -259,4 +288,26 @@ void main() {
     expect(order.last, ranking);
     await Future.wait([listDone, serviceDone, orderDone]);
   });
+}
+
+/// Church data whose rosters come back with 陳志豪 wherever 王牧師 was put.
+class _Overwritten implements ChurchData {
+  _Overwritten(this._inner);
+
+  final ChurchData _inner;
+
+  @override
+  Stream<List<Roster>> rosters({required Day from}) => _inner
+      .rosters(from: from)
+      .map(
+        (list) => [
+          for (final r in list) r.duties.any((d) => d.people.contains('王牧師')) ? withPeople(r, '司會', ['陳志豪']) : r,
+        ],
+      );
+
+  @override
+  Future<void> compareAndSetRosters(RosterChange change) => _inner.compareAndSetRosters(change);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

@@ -9,6 +9,7 @@ import '../../state/providers.dart';
 import '../../state/push.dart';
 import '../church/add_to_home.dart';
 import 'turn_on_notifications.dart';
+import '../common/errors.dart';
 import '../common/saving_indicator.dart';
 
 /// Which notifications I get from this church, and when I am reminded of my
@@ -44,16 +45,16 @@ class NotificationsScreen extends ConsumerWidget {
       final next = on ? ({...muted}..remove(kind)) : {...muted, kind};
       try {
         await data.setNotificationPrefs(me.uid, next);
-      } catch (_) {
-        if (context.mounted) showToast(context, l10n.saveFailed);
+      } catch (e) {
+        if (context.mounted) showToast(context, saveErrorText(l10n, e));
       }
     }
 
     Future<void> setTiming(ReminderTiming timing) async {
       try {
         await ref.churchData.setReminderTiming(me.uid, timing);
-      } catch (_) {
-        if (context.mounted) showToast(context, l10n.saveFailed);
+      } catch (e) {
+        if (context.mounted) showToast(context, saveErrorText(l10n, e));
       }
     }
 

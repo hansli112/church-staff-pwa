@@ -55,10 +55,12 @@ final currentChurchIdProvider = Provider<String?>((ref) {
 final churchDataProvider = Provider<EchoingChurchData?>((ref) {
   final cid = ref.watch(currentChurchIdProvider);
   if (cid == null) return null;
-  return EchoingChurchData(
+  final data = EchoingChurchData(
     ref.watch(backendProvider).church(cid),
     beginWrite: ref.watch(updateEditLockProvider).begin,
   );
+  ref.onDispose(data.close);
+  return data;
 });
 
 /// Whether a change to the current church is still on its way.

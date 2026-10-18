@@ -273,13 +273,17 @@ class _DutyRow extends ConsumerWidget {
       await runWithUndo(context, l10n.dutyRemoved(duty.role), () => actions.removeDuty(roster, duty.role));
       return;
     }
-    try {
-      for (final m in result.addDutyTo) {
-        await actions.grantDuty(m, roster.type, duty.role);
-      }
-    } catch (error) {
-      if (context.mounted) showToast(context, errorText(l10n, error));
-      return;
+    // Not waited for: changes go to the backend in turn, and the pick
+    // shows at once. One that fails says so.
+    if (result.addDutyTo.isNotEmpty) {
+      unawaited(
+        Future.wait([for (final m in result.addDutyTo) actions.grantDuty(m, roster.type, duty.role)]).then(
+          (_) {},
+          onError: (Object error) {
+            if (context.mounted) showToast(context, errorText(l10n, error));
+          },
+        ),
+      );
     }
     final changed =
         result.people.length != duty.people.length ||

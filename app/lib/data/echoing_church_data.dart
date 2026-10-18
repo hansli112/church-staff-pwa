@@ -37,6 +37,20 @@ class EchoingChurchData implements ChurchData {
   final _changed = StreamController<void>.broadcast(sync: true);
   Future<void> _queue = Future.value();
 
+  /// Ends each written change's [linger], should nothing else come by.
+  final _timers = <Timer>{};
+
+  /// Stops showing anything early. For when the church is no longer shown.
+  void close() {
+    for (final timer in _timers) {
+      timer.cancel();
+    }
+    _timers.clear();
+    _changed.close();
+  }
+
+  void _dropExpired() => _echoes.removeWhere((e) => e.until?.isBefore(_clock()) ?? false);
+
   /// Whether a change is still on its way to the backend.
   bool get saving => _echoes.any((e) => e.until == null);
 
@@ -51,22 +65,29 @@ class EchoingChurchData implements ChurchData {
 
   Future<void> _send(_Echo echo, Future<void> Function() write) {
     final release = _beginWrite?.call();
-    _echoes
-      ..removeWhere((e) => e.until?.isBefore(_clock()) ?? false)
-      ..add(echo);
+    _dropExpired();
+    _echoes.add(echo);
     _changed.add(null);
     final done = _queue.then((_) => write());
     _queue = done.then((_) {}, onError: (_) {});
     done
         .then<void>(
-          (_) => echo.until = _clock().add(linger),
+          (_) {
+            echo.until = _clock().add(linger);
+            late final Timer timer;
+            timer = Timer(linger, () {
+              _timers.remove(timer);
+              if (_echoes.remove(echo) && !_changed.isClosed) _changed.add(null);
+            });
+            _timers.add(timer);
+          },
           onError: (Object _) {
             _echoes.remove(echo);
           },
         )
         .whenComplete(() {
           release?.call();
-          _changed.add(null);
+          if (!_changed.isClosed) _changed.add(null);
         });
     return done;
   }
@@ -82,7 +103,9 @@ class EchoingChurchData implements ChurchData {
     Object? shown;
     void emit({required bool fromServer}) {
       if (last case (final value,)) {
-        _echoes.removeWhere((e) => e.until?.isBefore(_clock()) ?? false);
+        _dropExpired();
+        // Changes no longer kept are not looked up again.
+        arrived.removeWhere((id) => id is (_Echo, Object) && !_echoes.contains(id.$1));
         final next = apply(value, arrived);
         if (!fromServer && identical(next, shown)) return;
         shown = next;
@@ -98,7 +121,11 @@ class EchoingChurchData implements ChurchData {
             emit(fromServer: true);
           },
           onError: out.addError,
-          onDone: out.close,
+          onDone: () {
+            unawaited(changedSub?.cancel());
+            changedSub = null;
+            out.close();
+          },
         );
         changedSub = _changed.stream.listen((_) => emit(fromServer: false));
       },

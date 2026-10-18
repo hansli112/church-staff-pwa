@@ -1442,7 +1442,18 @@ class _Callables {
       final last = _warmed[name];
       if (last != null && now.difference(last) < const Duration(minutes: 5)) continue;
       _warmed[name] = now;
-      unawaited(_functions.httpsCallable(name).call<Object?>({'warmup': true}).then((_) {}, onError: (Object _) {}));
+      unawaited(
+        _functions
+            .httpsCallable(name)
+            .call<Object?>({'warmup': true})
+            .then(
+              (_) {},
+              // Offline, say: the next page may try again.
+              onError: (Object _) {
+                _warmed.remove(name);
+              },
+            ),
+      );
     }
   }
 

@@ -190,7 +190,8 @@ class CalendarMonths {
         ..error = null
         ..stack = null
         ..status = CalendarReadStatus(cached: true, fetchedAt: m.status.fetchedAt, refreshError: error);
-      m.view?.show(shown);
+      // A new list, so what shows it hears of the new status too.
+      m.view?.show([...shown]);
     }
   }
 
