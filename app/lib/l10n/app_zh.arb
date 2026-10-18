@@ -1636,12 +1636,6 @@
   "@appVersionDevelopment": {
     "description": "Web development build without a generated release manifest; no update or native store claim."
   },
-  "appUpdateNativeTitle": "App 更新",
-  "appUpdateNativeNote": "請到 {store} 檢查更新",
-  "@appUpdateNativeNote": {
-    "description": "Store app 我的: where updates come from, the store this phone's app came from.",
-    "placeholders": { "store": { "type": "String", "example": "Google Play" } }
-  },
   "updateRequiredTitle": "請更新馬大別忙",
   "@updateRequiredTitle": {
     "description": "Over the whole store app while it is older than the lowest build the backend allows (platform/app); the user cannot go on without updating."

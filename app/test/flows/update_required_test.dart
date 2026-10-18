@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/data/backend.dart';
@@ -21,14 +20,14 @@ void main() {
   });
 
   testWidgets(
-    '我的 sends updates to the store this phone has',
+    '我的 has no row for updates: the store updates the app itself',
     (tester) async {
       await pumpApp(tester, seededChurch(as: staffMei), overrides: [appBuildProvider.overrideWithValue(_play12)]);
       await tester.tap(find.text('我的').last);
       await settle(tester);
-      final note = defaultTargetPlatform == TargetPlatform.iOS ? '請到 App Store 檢查更新' : '請到 Google Play 檢查更新';
-      await tester.scrollUntilVisible(find.text(note), 180, scrollable: find.byType(Scrollable).last);
-      expect(find.textContaining('App Store 或'), findsNothing);
+      await tester.scrollUntilVisible(find.text('目前版本'), 180, scrollable: find.byType(Scrollable).last);
+      expect(find.text('App 更新'), findsNothing);
+      expect(find.textContaining('檢查更新'), findsNothing);
     },
     variant: const TargetPlatformVariant({TargetPlatform.android, TargetPlatform.iOS}),
   );

@@ -3904,18 +3904,6 @@ abstract class L10n {
   /// **'開發版本（還沒有發布版本）'**
   String get appVersionDevelopment;
 
-  /// No description provided for @appUpdateNativeTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'App 更新'**
-  String get appUpdateNativeTitle;
-
-  /// Store app 我的: where updates come from, the store this phone's app came from.
-  ///
-  /// In zh, this message translates to:
-  /// **'請到 {store} 檢查更新'**
-  String appUpdateNativeNote(String store);
-
   /// Over the whole store app while it is older than the lowest build the backend allows (platform/app); the user cannot go on without updating.
   ///
   /// In zh, this message translates to:

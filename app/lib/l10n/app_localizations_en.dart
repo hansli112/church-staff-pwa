@@ -2246,14 +2246,6 @@ class L10nEn extends L10n {
   String get appVersionDevelopment => 'Development build (no release yet)';
 
   @override
-  String get appUpdateNativeTitle => 'App updates';
-
-  @override
-  String appUpdateNativeNote(String store) {
-    return 'Check for updates in $store';
-  }
-
-  @override
   String get updateRequiredTitle => 'Please update Martha, sit';
 
   @override

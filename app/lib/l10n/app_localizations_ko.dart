@@ -2133,14 +2133,6 @@ class L10nKo extends L10n {
   String get appVersionDevelopment => '개발 버전(아직 릴리스 없음)';
 
   @override
-  String get appUpdateNativeTitle => '앱 업데이트';
-
-  @override
-  String appUpdateNativeNote(String store) {
-    return '$store에서 업데이트를 확인해 주세요';
-  }
-
-  @override
   String get updateRequiredTitle => '마르다의 쉼표를 업데이트해 주세요';
 
   @override
