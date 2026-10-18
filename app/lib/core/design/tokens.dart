@@ -155,10 +155,14 @@ abstract final class EventColors {
 String? get appFontFamily => !kIsWeb && defaultTargetPlatform == TargetPlatform.android ? 'Martha Latin' : null;
 
 /// Registers [appFontFamily] where it is used, before the first frame.
-Future<void> loadAppFont() async {
+/// Without the file (a Shorebird patch on a release from before the font)
+/// the text stays in the phone's font.
+Future<void> loadAppFont({AssetBundle? bundle}) async {
   final family = appFontFamily;
   if (family == null) return;
-  await (FontLoader(family)..addFont(rootBundle.load('assets/fonts/MarthaLatin.ttf'))).load();
+  try {
+    await (FontLoader(family)..addFont((bundle ?? rootBundle).load('assets/fonts/MarthaLatin.ttf'))).load();
+  } catch (_) {}
 }
 
 /// Text styles on top of the app's font ([appFontFamily]). Sizes follow the iOS text styles
