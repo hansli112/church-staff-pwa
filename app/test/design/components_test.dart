@@ -211,6 +211,26 @@ void main() {
     handle.dispose();
   });
 
+  testWidgets('between rows with tiles the divider starts under the text, as in iOS Settings', (tester) async {
+    await pumpWidgetInApp(
+      tester,
+      const ListSection(
+        children: [
+          ListRow(
+            title: '同工',
+            leading: IconTile(Symbols.group_rounded, color: TileColors.manage),
+          ),
+          ListRow(
+            title: '邀請',
+            leading: IconTile(Symbols.person_add_rounded, color: TileColors.manage),
+          ),
+        ],
+      ),
+    );
+    final divider = tester.getTopLeft(find.byType(Divider)).dx;
+    expect(divider, moreOrLessEquals(tester.getTopLeft(find.text('邀請')).dx, epsilon: 1));
+  });
+
   testWidgets('an avatar shows the first character of the name', (tester) async {
     await pumpWidgetInApp(tester, const Avatar('陳志玲'));
     expect(find.text('陳'), findsOneWidget);

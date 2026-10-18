@@ -63,6 +63,7 @@ class RostersScreen extends ConsumerWidget {
         data: (settings) {
           if (settings.enabled.isEmpty) {
             return EmptyState(
+              icon: Symbols.view_agenda_rounded,
               message: l10n.noServicesConfigured,
               actionLabel: (me?.isAdmin ?? false) ? l10n.setUpServices : null,
               onAction: () => context.push('/me/services'),
@@ -73,7 +74,7 @@ class RostersScreen extends ConsumerWidget {
             return ErrorRetry(message: l10n.loadFailed, onRetry: () => ref.invalidate(meProvider));
           }
           if (me == null) return const SizedBox.shrink();
-          if (shown == null) return EmptyState(message: l10n.noZoneYet);
+          if (shown == null) return EmptyState(icon: Symbols.group_rounded, message: l10n.noZoneYet);
           return Column(
             children: [
               if (mine.length > 1)
@@ -145,7 +146,7 @@ class ServiceRosterList extends ConsumerWidget {
       ),
       data: (joined) {
         final list = joined.isEmpty ? const <String>[] : joined.split('|');
-        if (list.isEmpty) return EmptyState(message: l10n.noRostersAhead);
+        if (list.isEmpty) return EmptyState(icon: Symbols.view_agenda_rounded, message: l10n.noRostersAhead);
         void open(String id) => context.push('/rosters/${service.id}/${id.split('_').first}');
         final top = nobodyArranged ? 1 : 0;
         return ListView.builder(

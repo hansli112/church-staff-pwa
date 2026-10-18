@@ -115,7 +115,8 @@ class ListSection extends StatelessWidget {
       if (i > 0) {
         rows.add(
           Padding(
-            padding: const EdgeInsetsDirectional.only(start: Space.m),
+            // Under the text, as iOS draws it, when the row has a leading.
+            padding: EdgeInsetsDirectional.only(start: Space.m + _leadingInset(children[i])),
             child: Divider(height: 0.5, thickness: 0.5, color: c.separator),
           ),
         );
@@ -165,6 +166,16 @@ class ListSection extends StatelessWidget {
     );
   }
 }
+
+/// How far a row's text starts past its leading widget, so the divider
+/// above it starts there too.
+double _leadingInset(Widget row) => switch (row) {
+  ListRow(leading: IconTile()) => IconTile.size + Space.m,
+  ListRow(leading: Avatar()) => Avatar.size + Space.m,
+  ListRow(leading: DateBlock()) => DateBlock.minWidth + Space.m,
+  ListRow(leading: Icon()) => 22 + Space.m,
+  _ => 0,
+};
 
 /// One row in a [ListSection].
 class ListRow extends StatelessWidget {
@@ -708,23 +719,29 @@ class Tag extends StatelessWidget {
 class IconTile extends StatelessWidget {
   const IconTile(this.icon, {super.key, required this.color});
 
+  static const double size = 30;
+
   final IconData icon;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 30,
-      height: 30,
+      width: size,
+      height: size,
       decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(7)),
+      // Filled, as iOS Settings draws them: an outline is thin in white.
       child: Icon(icon, size: 20, fill: 1, color: Colors.white),
     );
   }
 }
 
 /// A person's first character in a circle, standing in for a photo.
+/// Neutral: the accent is for actions and status.
 class Avatar extends StatelessWidget {
   const Avatar(this.name, {super.key});
+
+  static const double size = 44;
 
   final String name;
 
@@ -732,16 +749,17 @@ class Avatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
     final initial = name.trim().characters.firstOrNull ?? '';
+    // Grows with the letter, as text does.
+    final size = MediaQuery.textScalerOf(context).scale(Avatar.size);
     return ExcludeSemantics(
       child: Container(
-        width: 44,
-        height: 44,
+        width: size,
+        height: size,
         alignment: Alignment.center,
-        decoration: BoxDecoration(color: c.accentSoft, shape: BoxShape.circle),
+        decoration: BoxDecoration(color: c.fill, shape: BoxShape.circle),
         child: Text(
           initial.toUpperCase(),
-          textScaler: TextScaler.noScaling,
-          style: AppText.title3.copyWith(color: c.accent),
+          style: AppText.title3.copyWith(color: c.secondaryLabel),
         ),
       ),
     );
@@ -760,6 +778,8 @@ class DateBlock extends StatelessWidget {
     required this.semanticLabel,
   });
 
+  static const double minWidth = 48;
+
   /// The month as the language abbreviates it: 10月, Oct.
   final String month;
   final int day;
@@ -773,7 +793,7 @@ class DateBlock extends StatelessWidget {
       label: semanticLabel,
       excludeSemantics: true,
       child: Container(
-        constraints: const BoxConstraints(minWidth: 48),
+        constraints: const BoxConstraints(minWidth: DateBlock.minWidth),
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
         decoration: BoxDecoration(
           color: today ? c.accent : c.fill,

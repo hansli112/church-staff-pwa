@@ -83,16 +83,19 @@ class CalendarScreen extends ConsumerWidget {
       body: switch (settings) {
         null => const SizedBox.shrink(),
         CalendarSettings(connected: false) => EmptyState(
+          icon: Symbols.calendar_month_rounded,
           message: l10n.calNotConnected,
           actionLabel: (me?.isAdmin ?? false) ? l10n.calConnect : null,
           onAction: () => context.push('/me/calendar'),
         ),
         CalendarSettings(needsReconnect: true) => EmptyState(
+          icon: Symbols.calendar_month_rounded,
           message: (me?.isAdmin ?? false) ? l10n.calNeedsReconnect : l10n.calNeedsReconnectStaff,
           actionLabel: (me?.isAdmin ?? false) ? l10n.calReconnect : null,
           onAction: () => context.push('/me/calendar'),
         ),
         CalendarSettings(calendarName: null) => EmptyState(
+          icon: Symbols.calendar_month_rounded,
           message: l10n.calNoCalendarYet,
           actionLabel: (me?.isAdmin ?? false) ? l10n.calPickCalendar : null,
           onAction: () => context.push('/me/calendar'),

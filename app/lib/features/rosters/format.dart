@@ -1,6 +1,5 @@
 import 'package:intl/intl.dart';
 
-import '../../core/design/components.dart';
 import '../../domain/day.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -24,11 +23,3 @@ String dayBesideBlock(L10n l10n, Day day, Day today) {
     DateFormat.E().format(day.midnight),
   ].join(' · ');
 }
-
-/// [day] as a calendar leaf; screen readers hear [dayLabel].
-DateBlock dayBlock(L10n l10n, Day day, Day today) => DateBlock(
-  month: DateFormat.MMM().format(day.midnight),
-  day: day.day,
-  today: day == today,
-  semanticLabel: dayLabel(l10n, day, today),
-);

@@ -18,6 +18,7 @@ import '../me/turn_on_notifications.dart';
 import '../common/calendar_read_notice.dart';
 import 'church_link_card.dart';
 import '../rosters/format.dart';
+import '../rosters/day_block.dart';
 import '../rosters/event_roster_screen.dart';
 import '../rosters/rosters_screen.dart';
 
@@ -173,7 +174,7 @@ class HomeScreen extends ConsumerWidget {
                   children: [
                     for (final s in list.take(20))
                       ListRow(
-                        leading: dayBlock(l10n, s.roster.day, today),
+                        leading: dayBlock(s.roster.day, today),
                         title: s.roster.forEvent?.title ?? services?.byId(s.roster.type)?.name ?? '',
                         subtitle: [
                           // An event over several days says both; the block shows the first.
@@ -204,9 +205,10 @@ class HomeScreen extends ConsumerWidget {
                         CalendarReadNotice(status: entry.value, month: entry.key),
                     for (final event in activities.take(3))
                       ListRow(
-                        leading: dayBlock(l10n, event.day, today),
+                        // One already under way is on today.
+                        leading: dayBlock(event.day.isBefore(today) ? today : event.day, today),
                         title: event.title,
-                        subtitle: dayBesideBlock(l10n, event.day, today),
+                        subtitle: dayBesideBlock(l10n, event.day.isBefore(today) ? today : event.day, today),
                         onTap: () => showEventDetail(context, event),
                       ),
                     if (activityError)

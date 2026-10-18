@@ -9,6 +9,7 @@ import '../../core/design/tokens.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
+import 'day_block.dart';
 import 'format.dart';
 
 /// Counts card builds, so tests can check that a change rebuilds only the
@@ -50,7 +51,7 @@ class RosterCard extends ConsumerWidget {
     final l10n = L10n.of(context);
     return RosterDayView(
       roster: roster,
-      leading: dayBlock(l10n, roster.day, today),
+      leading: dayBlock(roster.day, today),
       title: dayBesideBlock(l10n, roster.day, today),
       highlightUid: uid,
       onTap: onTap,

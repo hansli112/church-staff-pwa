@@ -62,7 +62,7 @@ class MeScreen extends ConsumerWidget {
               header: l10n.operatorConsole,
               children: [
                 ListRow(
-                  leading: const IconTile(Symbols.church_rounded, color: TileColors.neutral),
+                  leading: const IconTile(Symbols.list_alt_rounded, color: TileColors.neutral),
                   title: l10n.adminChurches,
                   onTap: () => context.push('/admin'),
                 ),
@@ -248,7 +248,7 @@ class _UpdatesSection extends ConsumerWidget {
         return ListSection(
           children: [
             ListRow(
-              leading: const IconTile(Symbols.info_rounded, color: TileColors.neutral),
+              leading: _versionTile,
               title: l10n.appRunningVersion,
               subtitle: l10n.appVersionDevelopment,
             ),
@@ -260,7 +260,7 @@ class _UpdatesSection extends ConsumerWidget {
         children: [
           if (build != null)
             ListRow(
-              leading: const IconTile(Symbols.info_rounded, color: TileColors.neutral),
+              leading: _versionTile,
               title: l10n.appRunningVersion,
               subtitle: switch (build.patch) {
                 null => build.label,
@@ -282,7 +282,7 @@ class _UpdatesSection extends ConsumerWidget {
       footer: footer,
       children: [
         ListRow(
-          leading: const IconTile(Symbols.info_rounded, color: TileColors.neutral),
+          leading: _versionTile,
           title: l10n.appRunningVersion,
           subtitle: update.runningVersion,
           chevron: false,
@@ -305,3 +305,5 @@ class _UpdatesSection extends ConsumerWidget {
     );
   }
 }
+
+const _versionTile = IconTile(Symbols.info_rounded, color: TileColors.neutral);

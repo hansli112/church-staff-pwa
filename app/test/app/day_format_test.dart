@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:martha/core/builtin_localizations.dart';
 import 'package:martha/core/languages.dart';
 import 'package:martha/domain/day.dart';
+import 'package:martha/features/rosters/day_block.dart';
 import 'package:martha/features/rosters/format.dart';
 import 'package:martha/l10n/app_localizations.dart';
 
@@ -24,10 +25,17 @@ void main() {
     expect(dayBesideBlock(l10n, Day(2027, 4, 11), today), '2027年 · 週日');
   });
 
-  test('the block shows the month as the language shortens it, and reads out the whole day', () async {
-    final zh = dayBlock(await _in(AppLanguage.zhHant), Day(2026, 10, 25), today);
-    expect((zh.month, zh.day, zh.today, zh.semanticLabel), ('10月', 25, false, '10月25日 週日'));
-    final en = dayBlock(await _in(AppLanguage.en), today, today);
+  test('the block shows the month as the language shortens it, and reads out the date', () async {
+    await _in(AppLanguage.zhHant);
+    final zh = dayBlock(Day(2026, 10, 25), today);
+    expect((zh.month, zh.day, zh.today, zh.semanticLabel), ('10月', 25, false, '10月25日'));
+    expect(dayBlock(Day(2027, 4, 11), today).semanticLabel, '2027年4月11日');
+    await _in(AppLanguage.en);
+    final en = dayBlock(today, today);
     expect((en.month, en.day, en.today), ('Oct', 18, true));
+    await _in(AppLanguage.ja);
+    expect(dayBlock(today, today).month, '10月');
+    await _in(AppLanguage.ko);
+    expect(dayBlock(today, today).month, '10월');
   });
 }
