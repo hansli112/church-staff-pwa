@@ -25,14 +25,23 @@ describe('which language', () => {
     }
   });
 
-  describe("app/web/index.html's, before the app starts, as the app picks", () => {
-    const html = readFileSync(new URL('../../app/web/index.html', import.meta.url), 'utf8');
-    const speaks = new Function(
-      `${html.slice(html.indexOf('function speaks'), html.indexOf('var langs'))}; return speaks;`,
-    )() as (tag: string) => string | null;
-    for (const r of shared.preferred as { why: string; preferred: string[]; language: string }[]) {
-      test(r.why, () => assert.equal(r.preferred.map(speaks).find((l) => l) ?? 'en', r.language));
-    }
+  // The pages the browser shows without the app: before it starts, and after
+  // connecting the calendar from the phone app.
+  for (const page of ['index.html', 'calendar-done.html']) {
+    describe(`app/web/${page}'s, as the app picks`, () => {
+      const html = readFileSync(new URL(`../../app/web/${page}`, import.meta.url), 'utf8');
+      const speaks = new Function(
+        `${html.slice(html.indexOf('function speaks'), html.indexOf('var langs'))}; return speaks;`,
+      )() as (tag: string) => string | null;
+      for (const r of shared.preferred as { why: string; preferred: string[]; language: string }[]) {
+        test(r.why, () => assert.equal(r.preferred.map(speaks).find((l) => l) ?? 'en', r.language));
+      }
+    });
+  }
+
+  test("app/web/calendar-done.html names the app as each language's app does", () => {
+    const html = readFileSync(new URL('../../app/web/calendar-done.html', import.meta.url), 'utf8');
+    for (const l of LANGUAGES) assert.ok(html.includes(words(l).appName), l);
   });
 
   test('a browser lists them by weight, not by place', () => {

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui' show Tristate;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -48,18 +49,24 @@ void main() {
     expect(findShownContaining('這個應用程式未經驗證'), findsOneWidget);
   });
 
-  testWidgets('in the phone app, Google opens in a sheet over the app, which closes once connected', (tester) async {
-    final launches = captureLaunches();
-    final b = seededChurch();
-    await pumpApp(tester, b);
-    await go(tester, '/me/calendar');
-    await tapText(tester, '連接 Google 日曆');
-    expect(launches.opened.single, startsWith('https://accounts.google.com/'));
-    expect(launches.modes.single, PreferredLaunchMode.inAppBrowserView);
-    expect(launches.closed, 0);
-    b.connectCalendar('grace');
-    await settle(tester);
-    expect(launches.closed, 1);
+  // Android's Custom Tab cannot be closed by the app; its page says to close it.
+  testWidgets('in the iPhone app, Google opens in a sheet over the app, which closes once connected', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    try {
+      final launches = captureLaunches();
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/me/calendar');
+      await tapText(tester, '連接 Google 日曆');
+      expect(launches.opened.single, startsWith('https://accounts.google.com/'));
+      expect(launches.modes.single, PreferredLaunchMode.inAppBrowserView);
+      expect(launches.closed, 0);
+      b.connectCalendar('grace');
+      await settle(tester);
+      expect(launches.closed, 1);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 
   testWidgets('opening the page of a connected church closes nothing', (tester) async {

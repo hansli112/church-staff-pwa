@@ -19,8 +19,8 @@ import '../church/church_switcher.dart';
 /// The LINE OpenChat (馬大別忙 Martha, sit): help, and churches meeting each other.
 final lineCommunity = Uri.parse('https://line.me/ti/g2/irPvG8tKHa9Iwf2hK7D9lcjdW5O-DUx4Coafcg');
 
-/// 我的: my profile, my church, settings. Admin tools sit under 教會資訊 so
-/// staff see a short page.
+/// 我的: my profile, my church, settings. An admin's most used pages sit at
+/// the top under 管理教會, the rest in 教會資訊, so staff see a short page.
 class MeScreen extends ConsumerWidget {
   const MeScreen({super.key});
 
@@ -126,7 +126,6 @@ class MeScreen extends ConsumerWidget {
             ),
           ListSection(
             children: [
-              // Help, and churches meeting each other, in the LINE app.
               ListRow(
                 title: l10n.lineCommunity,
                 subtitle: l10n.lineCommunityNote,

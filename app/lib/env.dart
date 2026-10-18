@@ -24,6 +24,11 @@ enum Env {
 
   bool get usesFirebase => this != Env.demo;
 
+  /// Where the app opens: home, or for a demo build DEMO_ROUTE, so store
+  /// screenshots need no taps.
+  String get startRoute =>
+      this == Env.demo ? const String.fromEnvironment('DEMO_ROUTE', defaultValue: '/home') : '/home';
+
   /// Show developer-only screens (the component gallery).
   bool get isDevelopment => this != Env.prod;
 

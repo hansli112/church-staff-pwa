@@ -33,16 +33,30 @@
 </main>
 <script>
   const words = {
-    // The app's names as its l10n/app_*.arb appName.
+    // The app's names as its l10n/app_*.arb appName (tested against
+    // functions/src/languages.ts).
     'zh-Hant': ['已連接 Google 日曆', '關掉這個頁面，回到馬大別忙', '沒有連接成功', '關掉這個頁面，回到馬大別忙再試一次'],
     'zh-Hans': ['已连接 Google 日历', '关掉这个页面，回到马大别忙', '没有连接成功', '关掉这个页面，回到马大别忙再试一次'],
     en: ['Google Calendar connected', 'Close this page to go back to Martha, sit', 'Not connected', 'Close this page and try again in Martha, sit'],
     ja: ['Google カレンダーを接続しました', 'このページを閉じて、マルタ、ひと休みに戻ってください', '接続できませんでした', 'このページを閉じて、マルタ、ひと休みでもう一度お試しください'],
     ko: ['Google 캘린더를 연결했어요', '이 페이지를 닫고 마르다의 쉼표로 돌아가세요', '연결하지 못했어요', '이 페이지를 닫고 마르다의 쉼표에서 다시 시도해 주세요'],
   };
-  const tag = (navigator.language || 'zh-Hant').toLowerCase();
-  const lang = tag.startsWith('zh') ? (/hans|cn|sg/.test(tag) ? 'zh-Hans' : 'zh-Hant')
-    : ['en', 'ja', 'ko'].find((l) => tag.startsWith(l)) || 'zh-Hant';
+  // As app/web/index.html (and lib/core/languages.dart): the first language
+  // on the browser's list the app speaks, else English.
+  function speaks(tag) {
+    var parts = String(tag).toLowerCase().split(/[-_]/);
+    var rest = parts.slice(1);
+    if (parts[0] === 'en' || parts[0] === 'ja' || parts[0] === 'ko') return parts[0];
+    if (parts[0] !== 'zh') return null;
+    var script = rest.filter(function (p) { return p.length === 4; })[0];
+    var region = rest.filter(function (p) { return p.length === 2; })[0];
+    return script === 'hans' || (!script && ['cn', 'sg', 'my'].indexOf(region) >= 0) ? 'zh-Hans' : 'zh-Hant';
+  }
+  var langs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ''];
+  var lang = 'en';
+  for (var i = 0; i < langs.length; i++) {
+    if (speaks(langs[i])) { lang = speaks(langs[i]); break; }
+  }
   const ok = new URLSearchParams(location.search).get('result') === 'connected';
   const [title, next] = words[lang].slice(ok ? 0 : 2);
   document.documentElement.lang = lang;

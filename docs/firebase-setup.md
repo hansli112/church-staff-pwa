@@ -88,14 +88,19 @@ cd app
 
 每一版都要這樣建，之後才能對它推修補；直接用 `flutter build` 上架的版本收不到修補。
 
-**iOS 簽章與上傳**（不用 Xcode 登入）：Release 用手動簽章，憑證「Apple Distribution: Hsueh Han Lee」和描述檔「Martha sit App Store」都是用 App Store Connect API 金鑰建的（見 `app/ios/ExportOptions.plist`）。私鑰在 Mac 的登入鑰匙圈，備份在 `~/.appstoreconnect/signing/`；換電腦要把那裡的 `distribution.p12` 匯入鑰匙圈，描述檔放進 `~/Library/MobileDevice/Provisioning Profiles/`。兩個都在 2027-10 到期，到期前用 API 重建。建置加 `--export-options-plist=ios/ExportOptions.plist`，再上傳到 TestFlight：
+**iOS 簽章與上傳**（不用 Xcode 登入）：Release 用手動簽章，憑證「Apple Distribution: Hsueh Han Lee」和描述檔「Martha sit App Store」都是用 App Store Connect API 金鑰建的（見 `app/ios/ExportOptions.plist`）。私鑰在 Mac 的登入鑰匙圈，備份在 `~/.appstoreconnect/signing/`；換電腦要把那裡的 `distribution.p12` 匯入鑰匙圈，描述檔放進 `~/Library/MobileDevice/Provisioning Profiles/`。第一次簽章時 macOS 會問 codesign 能不能用這把鑰匙，輸入 Mac 密碼按「永遠允許」。用上面的 `shorebird release ios` 建好，再上傳到 TestFlight：
 
 ```sh
-~/.shorebird/bin/shorebird release ios --flutter-version=3.41.0 --export-options-plist=ios/ExportOptions.plist --dart-define-from-file=config/prod.json
 xcrun altool --upload-app -t ios -f build/ios/ipa/*.ipa --apiKey <金鑰 ID> --apiIssuer <Issuer ID>
 ```
 
+兩個都在 2027-10 到期，到期前用 API（同一把金鑰簽的 JWT）重建：
+1. `openssl genrsa` 產生新私鑰和 CSR，`POST /v1/certificates`（`certificateType: DISTRIBUTION`）拿到憑證，和私鑰包成 `.p12` 用 `security import … -T /usr/bin/codesign` 匯入登入鑰匙圈。鑰匙圈要有 Apple WWDR G3 中繼憑證（apple.com/certificateauthority），否則 `security find-identity -v -p codesigning` 看不到它。
+2. `POST /v1/profiles`（`profileType: IOS_APP_STORE`，名稱一樣叫 Martha sit App Store，bundle ID `app.marthasit`，用新憑證），把回傳的描述檔存成 `<UUID>.mobileprovision` 放進上面的資料夾。描述檔要有推播和 Sign in with Apple（App ID 開著，就會帶進去）。
+
 API 金鑰放在 `~/.appstoreconnect/private_keys/AuthKey_<金鑰 ID>.p8`，altool 會自己找到。`Info.plist` 寫了 `ITSAppUsesNonExemptEncryption = false`（只用 HTTPS），上傳後不用每次回答出口合規。
+
+**App Store 截圖**（`store/ios/<語言>-<iphone|ipad>-<n>.png`）：示範模式加 `--dart-define=DEMO_ROUTE=<頁面>` 會直接開在那一頁，不用點。`flutter build ios --simulator --debug --dart-define=MARTHA_ENV=demo --dart-define=DEMO_ROUTE=/rosters`，裝到 iPhone 17 Pro Max（6.9 吋）和 iPad Pro 13 吋模擬器，`xcrun simctl status_bar <裝置> override --time 9:41 …`，每種語言先 `xcrun simctl spawn <裝置> defaults write app.marthasit AppleLanguages -array <語言>` 再重開 App，`xcrun simctl io <裝置> screenshot` 拍。現在是兩張：`/rosters/sunday/<日期>` 和 `/rosters`。用 API 的 `appScreenshotSets`（`APP_IPHONE_67`、`APP_IPAD_PRO_3GEN_129`）上傳。
 
 **建好馬上上傳，或先複製一份**：之後跑 `shorebird patch` 會用修補的程式碼重建，蓋掉 `app/build/app/outputs/bundle/release/app-release.aab`。`shorebird preview` 下載到 `~/.shorebird/bin/cache/previews/` 的 AAB 也被改過，Play 會說簽章無效，不能上傳。1.0.0+13 就是這樣作廢的，所以從 +14 開始上架。
 

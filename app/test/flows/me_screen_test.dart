@@ -32,6 +32,7 @@ void main() {
   testWidgets('教會資訊 keeps the rest, without the three already in 我的', (tester) async {
     await pumpApp(tester, seededChurch());
     await go(tester, '/me/church');
+    expect(find.text('同工'), findsNothing);
     expect(find.text('邀請'), findsNothing);
     expect(find.text('服事設定'), findsNothing);
     expect(find.text('外部通知'), findsOneWidget);

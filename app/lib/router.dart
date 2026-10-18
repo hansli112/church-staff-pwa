@@ -61,10 +61,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: routes,
   );
   return GoRouter(
-    // Store screenshots open the demo on the page they show.
-    initialLocation: Env.current == Env.demo
-        ? const String.fromEnvironment('DEMO_ROUTE', defaultValue: '/home')
-        : '/home',
+    initialLocation: Env.current.startRoute,
     refreshListenable: refresh,
     redirect: (context, state) {
       // Done here, before any page is built, so the shell is never pushed
