@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'tokens.dart';
@@ -56,6 +57,8 @@ ThemeData buildTheme(Brightness brightness) {
       space: 0.5,
     ),
     extensions: [c],
+    // The web build always draws Android's ←; an iPhone gets its ‹, as in the app.
+    actionIconTheme: kIsWeb ? const ActionIconThemeData(backButtonIconBuilder: _webBackIcon) : null,
     appBarTheme: AppBarTheme(
       backgroundColor: c.background,
       surfaceTintColor: Colors.transparent,
@@ -174,3 +177,14 @@ ThemeData buildTheme(Brightness brightness) {
     ),
   );
 }
+
+Widget _webBackIcon(BuildContext context) => switch (Theme.of(context).platform) {
+  TargetPlatform.iOS || TargetPlatform.macOS => const Icon(Icons.arrow_back_ios_new_rounded),
+  // As Flutter's own: Android's screen reader reads the label besides the tooltip.
+  _ => Icon(
+    Icons.arrow_back,
+    semanticLabel: defaultTargetPlatform == TargetPlatform.android
+        ? MaterialLocalizations.of(context).backButtonTooltip
+        : null,
+  ),
+};

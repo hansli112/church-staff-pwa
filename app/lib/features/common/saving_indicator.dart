@@ -36,3 +36,9 @@ class SavingIndicator extends ConsumerWidget {
     );
   }
 }
+
+/// An app bar's [actions] with [SavingIndicator] before them, as one: iOS
+/// centres the title only while there are fewer than two.
+List<Widget> savingActions(List<Widget> actions) => [
+  Row(mainAxisSize: MainAxisSize.min, children: [const SavingIndicator(), ...actions]),
+];

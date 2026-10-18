@@ -127,8 +127,7 @@ class EventRosterScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(roster?.forEvent?.title ?? ''),
-        actions: [
-          const SavingIndicator(),
+        actions: savingActions([
           if (canEdit && roster != null)
             PopupMenuButton<String>(
               enabled: editable,
@@ -144,7 +143,7 @@ class EventRosterScreen extends ConsumerWidget {
                 PopupMenuItem(value: 'copy', child: Text(l10n.copyDuties)),
               ],
             ),
-        ],
+        ]),
       ),
       body: switch (rosters) {
         AsyncValue(hasError: true, hasValue: false) => ErrorRetry(

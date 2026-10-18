@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -268,6 +269,26 @@ void main() {
       await tapText(tester, '重試');
       expect(peopleOn(b, 11, '司琴'), ['李美玉']);
       expect(find.text('已更新司琴'), findsOneWidget);
+    });
+
+    testWidgets("on an iPhone the day's title stays centred beside 儲存中 and the menu", (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      try {
+        final b = seededChurch();
+        await pumpApp(tester, b);
+        await go(tester, '/rosters/sunday/2026-10-11');
+        b.writeDelay = const Duration(seconds: 3);
+        await tapText(tester, '司會');
+        await tapText(tester, '林同工');
+        await tapText(tester, '完成');
+        expect(find.text('儲存中…'), findsOneWidget);
+        final title = find.descendant(of: find.byType(AppBar), matching: find.text('主日崇拜'));
+        expect(tester.getCenter(title).dx, moreOrLessEquals(tester.getCenter(find.byType(AppBar)).dx, epsilon: 1));
+        await tester.pump(const Duration(seconds: 3));
+        await settle(tester);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
     });
 
     testWidgets('a pick shows on the day at once, saying 儲存中 until the backend has it', (tester) async {

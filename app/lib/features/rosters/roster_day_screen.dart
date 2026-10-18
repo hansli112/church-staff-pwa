@@ -61,8 +61,7 @@ class RosterDayScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(service.name),
-        actions: [
-          const SavingIndicator(),
+        actions: savingActions([
           if (canEdit)
             PopupMenuButton<String>(
               enabled: editable,
@@ -78,7 +77,7 @@ class RosterDayScreen extends ConsumerWidget {
                 PopupMenuItem(value: 'events', child: Text(l10n.events)),
               ],
             ),
-        ],
+        ]),
       ),
       body: ListView(
         padding: const EdgeInsets.only(bottom: Space.xl),
