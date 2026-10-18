@@ -25,9 +25,10 @@ void main() {
     testWidgets('home lists my upcoming services', (tester) async {
       await pumpApp(tester, seededChurch(as: staffMei));
       expect(find.text('我接下來的服事'), findsOneWidget);
-      expect(find.textContaining('10月4日'), findsOneWidget);
+      expect(findDay('10月4日'), findsOneWidget);
       expect(find.textContaining('司琴、招待'), findsOneWidget);
-      expect(find.textContaining('10月11日'), findsOneWidget);
+      expect(findDay('10月11日'), findsOneWidget);
+      expect(find.text('主日崇拜'), findsWidgets, reason: 'each day is titled by its service');
     });
 
     testWidgets("an event's roster shows in 我的服事 by its title and opens; a cancelled one is gone", (tester) async {
@@ -50,7 +51,8 @@ void main() {
       );
       await pumpApp(tester, b);
       expect(find.textContaining('取消的活動'), findsNothing);
-      await tapText(tester, '秋季退修會 · 報到');
+      expect(findShownContaining('10月10日'), findsOneWidget, reason: 'both days');
+      await tapText(tester, '秋季退修會');
       expect(find.text('秋季退修會'), findsOneWidget, reason: 'the title on top');
       expect(find.textContaining('10月10日'), findsOneWidget, reason: 'its last day');
     });
@@ -67,7 +69,7 @@ void main() {
       expect(find.text('青年崇拜'), findsOneWidget);
       expect(find.text('林同工'), findsWidgets);
       // 10/18 is not saved: the template shows with nobody yet.
-      await tester.scrollUntilVisible(find.textContaining('10月18日'), 300);
+      await tester.scrollUntilVisible(findDay('10月18日'), 300);
       expect(find.text('待定'), findsWidgets);
     });
 
@@ -75,7 +77,7 @@ void main() {
       await pumpApp(tester, seededChurch(as: staffMei));
       await tapText(tester, '服事表');
       expect(find.text('青年崇拜'), findsNothing);
-      expect(find.textContaining('10月4日'), findsWidgets);
+      expect(findDay('10月4日'), findsWidgets);
 
       await pumpApp(tester, seededChurch(as: john));
       await tapText(tester, '服事表');

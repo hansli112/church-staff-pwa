@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
@@ -58,7 +59,25 @@ class _ComponentGalleryState extends State<ComponentGallery> {
               ListRow(title: '有副標', subtitle: '副標一行', value: '值', onTap: () {}),
               ListRow(
                 title: '有圖示',
-                leading: const Icon(Icons.person_add_alt),
+                leading: const Icon(Symbols.person_add_alt_rounded),
+                onTap: () {},
+              ),
+              ListRow(
+                title: '有彩色圖示（只在我的）',
+                leading: const IconTile(Symbols.group_rounded, color: TileColors.manage),
+                onTap: () {},
+              ),
+              ListRow(title: '有頭像', leading: const Avatar('陳志玲'), onTap: () {}),
+              ListRow(
+                title: '主日崇拜',
+                subtitle: '今天 · 週日 · 司會',
+                leading: const DateBlock(month: '10月', day: 18, today: true, semanticLabel: '今天 · 10月18日 週日'),
+                onTap: () {},
+              ),
+              ListRow(
+                title: '青年崇拜',
+                subtitle: '週六 · 敬拜主領',
+                leading: const DateBlock(month: '10月', day: 24, today: false, semanticLabel: '10月24日 週六'),
                 onTap: () {},
               ),
               SwitchRow(

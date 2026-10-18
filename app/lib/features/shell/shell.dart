@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -46,23 +47,23 @@ class AppShell extends ConsumerWidget {
         onDestinationSelected: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
         destinations: [
           NavigationDestination(
-            icon: const Icon(Icons.home_outlined),
-            selectedIcon: const Icon(Icons.home),
+            icon: const Icon(Symbols.home_rounded),
+            selectedIcon: const Icon(Symbols.home_rounded, fill: 1),
             label: l10n.tabHome,
           ),
           NavigationDestination(
-            icon: const Icon(Icons.view_agenda_outlined),
-            selectedIcon: const Icon(Icons.view_agenda),
+            icon: const Icon(Symbols.view_agenda_rounded),
+            selectedIcon: const Icon(Symbols.view_agenda_rounded, fill: 1),
             label: l10n.tabRosters,
           ),
           NavigationDestination(
-            icon: const Icon(Icons.calendar_month_outlined),
-            selectedIcon: const Icon(Icons.calendar_month),
+            icon: const Icon(Symbols.calendar_month_rounded),
+            selectedIcon: const Icon(Symbols.calendar_month_rounded, fill: 1),
             label: l10n.tabCalendar,
           ),
           NavigationDestination(
-            icon: const Icon(Icons.person_outline),
-            selectedIcon: const Icon(Icons.person),
+            icon: const Icon(Symbols.person_rounded),
+            selectedIcon: const Icon(Symbols.person_rounded, fill: 1),
             label: l10n.tabMe,
           ),
         ],

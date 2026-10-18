@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart' show Intl;
 import 'package:martha/app.dart';
 import 'package:martha/core/design/balanced_text.dart';
+import 'package:martha/core/design/components.dart' show DateBlock;
 import 'package:martha/core/design/theme.dart';
 import 'package:martha/core/builtin_localizations.dart';
 import 'package:martha/core/languages.dart';
@@ -230,3 +231,9 @@ Finder _findRead(bool Function(String shown) matches) => find.byElementPredicate
   });
   return !balanced && matches(_asRead(w.data ?? w.textSpan?.toPlainText() ?? ''));
 });
+
+/// A day shown as a DateBlock, by the date it reads out, e.g. 「10月4日」.
+Finder findDay(String date) => find.byWidgetPredicate(
+  (w) => w is DateBlock && w.semanticLabel.contains(date),
+  description: 'the day $date',
+);

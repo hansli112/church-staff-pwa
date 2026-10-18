@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -99,13 +100,13 @@ class _AddToHomeScreenState extends ConsumerState<AddToHomeScreen> {
                 children: [
                   ListRow(
                     title: l10n.addToHomeSafariMoreChoice,
-                    leading: const Icon(Icons.more_horiz),
+                    leading: const Icon(Symbols.more_horiz_rounded),
                     selected: _safariLayout == _SafariLayout.compact,
                     onTap: () => Navigator.pop(context, (browser: HomeBrowser.safari, layout: _SafariLayout.compact)),
                   ),
                   ListRow(
                     title: l10n.addToHomeSafariShareChoice,
-                    leading: const Icon(Icons.ios_share),
+                    leading: const Icon(Symbols.ios_share_rounded),
                     selected: _safariLayout == _SafariLayout.expanded,
                     onTap: () => Navigator.pop(context, (browser: HomeBrowser.safari, layout: _SafariLayout.expanded)),
                   ),
@@ -189,7 +190,7 @@ class _AddToHomeScreenState extends ConsumerState<AddToHomeScreen> {
               shrinkWrap: true,
               padding: const EdgeInsets.symmetric(vertical: Space.l),
               children: [
-                Icon(Icons.add_to_home_screen, size: 40, color: c.secondaryLabel),
+                Icon(Symbols.add_to_home_screen_rounded, size: 40, color: c.secondaryLabel),
                 const SizedBox(height: Space.s),
                 BalancedText(l10n.addToHome, style: AppText.title),
                 Padding(
@@ -220,12 +221,12 @@ class _AddToHomeScreenState extends ConsumerState<AddToHomeScreen> {
                     ListSection(
                       header: browser == HomeBrowser.inApp ? l10n.addToHomeEmbeddedHint : l10n.addToHomeUnknownHint,
                       children: [
-                        _GuideStep(n: 1, title: l10n.churchUrlCopy, icon: Icons.copy),
+                        _GuideStep(n: 1, title: l10n.churchUrlCopy, icon: Symbols.content_copy_rounded),
                         _GuideStep(
                           n: 2,
                           title: l10n.addToHomeExternalTitle(fallback),
                           detail: l10n.addToHomeExternalHint(fallback),
-                          icon: Icons.open_in_browser,
+                          icon: Symbols.open_in_browser_rounded,
                         ),
                       ],
                     ),
@@ -242,7 +243,7 @@ class _AddToHomeScreenState extends ConsumerState<AddToHomeScreen> {
                         PrimaryButton(
                           label: l10n.churchUrlCopy,
                           onPressed: church == null ? null : () => _copyLink(fallback),
-                          icon: const Icon(Icons.copy),
+                          icon: const Icon(Symbols.content_copy_rounded),
                         )
                       else if (platform != null) ...[
                         SecondaryButton(
@@ -260,7 +261,7 @@ class _AddToHomeScreenState extends ConsumerState<AddToHomeScreen> {
                           SecondaryButton(
                             label: l10n.churchUrlCopy,
                             onPressed: church == null ? null : () => _copyLink(fallback),
-                            icon: const Icon(Icons.copy),
+                            icon: const Icon(Symbols.content_copy_rounded),
                           ),
                         ],
                       ],
@@ -323,7 +324,7 @@ _GuideStep _safariShareStep(L10n l10n, _SafariLayout layout) {
     n: 2,
     title: l10n.addToHomeSelectAdd,
     detail: l10n.addToHomeIosConfirm,
-    icon: Icons.add_box_outlined,
+    icon: Symbols.add_box_rounded,
   );
   final (first, second, ios) = switch (guide) {
     HomeGuide.safariIphone => (
@@ -343,12 +344,12 @@ _GuideStep _safariShareStep(L10n l10n, _SafariLayout layout) {
       true,
     ),
     HomeGuide.safariIpad => (
-      _GuideStep(n: 1, title: l10n.addToHomeSafariShare, icon: Icons.ios_share),
+      _GuideStep(n: 1, title: l10n.addToHomeSafariShare, icon: Symbols.ios_share_rounded),
       _GuideStep(
         n: 2,
         title: l10n.addToHomeSelectAdd,
         detail: '${l10n.addToHomeIpadMore}\n${l10n.addToHomeIosConfirm}',
-        icon: Icons.add_box_outlined,
+        icon: Symbols.add_box_rounded,
       ),
       true,
     ),
@@ -374,7 +375,7 @@ _GuideStep _safariShareStep(L10n l10n, _SafariLayout layout) {
       true,
     ),
     HomeGuide.firefoxIos => (
-      _GuideStep(n: 1, title: l10n.addToHomeFirefoxShare, icon: Icons.ios_share),
+      _GuideStep(n: 1, title: l10n.addToHomeFirefoxShare, icon: Symbols.ios_share_rounded),
       iosConfirmStep,
       true,
     ),
@@ -399,12 +400,12 @@ _GuideStep _safariShareStep(L10n l10n, _SafariLayout layout) {
       false,
     ),
     HomeGuide.firefoxAndroid => (
-      _GuideStep(n: 1, title: l10n.addToHomeMenu('Firefox'), icon: Icons.more_vert),
+      _GuideStep(n: 1, title: l10n.addToHomeMenu('Firefox'), icon: Symbols.more_vert_rounded),
       _GuideStep(
         n: 2,
         title: l10n.addToHomeAndroidInstall,
         detail: l10n.addToHomeFirefoxInstallHint,
-        icon: Icons.add_to_home_screen,
+        icon: Symbols.add_to_home_screen_rounded,
       ),
       false,
     ),
@@ -417,7 +418,7 @@ _GuideStep _safariShareStep(L10n l10n, _SafariLayout layout) {
         n: 3,
         title: l10n.addToHomeOpenTitle,
         detail: ios ? l10n.addToHomeIosOpen(iconName) : l10n.addToHomeAndroidOpen(iconName),
-        icon: Icons.touch_app_outlined,
+        icon: Symbols.touch_app_rounded,
       ),
     ],
     footer: ios ? l10n.addToHomeNotificationsAfter : null,
@@ -532,9 +533,9 @@ class AddToHomeCard extends ConsumerWidget {
         ListRow(
           title: l10n.addToHome,
           subtitle: l10n.addToHomeCardBody,
-          leading: const Icon(Icons.add_to_home_screen),
+          leading: const Icon(Symbols.add_to_home_screen_rounded),
           trailing: IconButton(
-            icon: const Icon(Icons.close, size: 20),
+            icon: const Icon(Symbols.close_rounded, size: 20),
             tooltip: l10n.addToHomeCardHide,
             onPressed: () => ref.read(addToHomeHiddenProvider.notifier).mark(),
           ),

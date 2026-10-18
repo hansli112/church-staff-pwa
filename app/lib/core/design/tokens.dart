@@ -224,3 +224,26 @@ abstract final class AppText {
     height: 1.3,
   );
 }
+
+/// The tiles behind the row icons on 我的, as in iOS Settings: one hue per
+/// kind of row, so the page reads in groups at a glance. White icons on
+/// them are 3:1 or better, as icons need; the same in both appearances.
+abstract final class TileColors {
+  /// 管理教會: members, invites, service settings.
+  static const manage = Color(0xFF2F6FE4);
+
+  /// My church: its info, switching, notifications.
+  static const church = Color(0xFF0E8A7E);
+
+  /// 支持.
+  static const support = Color(0xFFD9467A);
+
+  /// The LINE community, in a darker LINE green.
+  static const line = Color(0xFF05964A);
+
+  /// Everything else: language, account, the website's pages.
+  static const neutral = Color(0xFF7C7C82);
+
+  /// 刪除帳號. AppColors.destructive is too light for white in dark mode.
+  static const destructive = Color(0xFFD12F2F);
+}

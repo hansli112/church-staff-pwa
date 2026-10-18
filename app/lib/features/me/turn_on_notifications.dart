@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -91,7 +92,7 @@ class _TurnOnNotificationsScreenState extends ConsumerState<TurnOnNotificationsS
               shrinkWrap: true,
               padding: const EdgeInsets.all(Space.l),
               children: [
-                Icon(Icons.notifications_active_outlined, size: 40, color: c.secondaryLabel),
+                Icon(Symbols.notifications_active_rounded, size: 40, color: c.secondaryLabel),
                 const SizedBox(height: Space.s),
                 BalancedText(l10n.notifAskTitle, style: AppText.title),
                 const SizedBox(height: Space.s),
@@ -133,9 +134,9 @@ class TurnOnNotificationsCard extends ConsumerWidget {
         ListRow(
           title: off ? l10n.notifOpenSettings : l10n.notifEnable,
           subtitle: l10n.notifAskTitle,
-          leading: const Icon(Icons.notifications_active_outlined),
+          leading: const Icon(Symbols.notifications_active_rounded),
           trailing: IconButton(
-            icon: const Icon(Icons.close, size: 20),
+            icon: const Icon(Symbols.close_rounded, size: 20),
             tooltip: l10n.notifCardHide,
             onPressed: () => ref.read(notificationsCardHiddenProvider.notifier).mark(),
           ),

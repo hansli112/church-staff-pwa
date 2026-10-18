@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -70,7 +71,7 @@ class EventRosterRow extends ConsumerWidget {
         children: [
           ListRow(
             title: l10n.eventRoster,
-            leading: const Icon(Icons.people_outline),
+            leading: const Icon(Symbols.people_rounded),
             value: l10n.eventRosterPeople(people.length),
             onTap: onOpen,
           ),
@@ -83,7 +84,7 @@ class EventRosterRow extends ConsumerWidget {
       children: [
         ListRow(
           title: l10n.arrangeEventRoster,
-          leading: const Icon(Icons.person_add_alt),
+          leading: const Icon(Symbols.person_add_alt_rounded),
           onTap: onOpen,
         ),
       ],
@@ -130,7 +131,7 @@ class EventRosterScreen extends ConsumerWidget {
             PopupMenuButton<String>(
               enabled: editable,
               tooltip: l10n.edit,
-              icon: const Icon(Icons.more_horiz),
+              icon: const Icon(Symbols.more_horiz_rounded),
               onSelected: (v) => switch (v) {
                 'duty' => _addDuty(context, ref, roster),
                 'copy' => _copyDuties(context, ref, roster),

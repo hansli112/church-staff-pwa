@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/core/design/components.dart';
 import 'package:martha/core/design/tokens.dart';
@@ -162,9 +163,57 @@ void main() {
   });
 
   testWidgets('a row’s leading icon is neutral; the accent is for actions and state', (tester) async {
-    await pumpWidgetInApp(tester, ListRow(title: '通知', leading: const Icon(Icons.notifications), onTap: () {}));
-    final context = tester.element(find.byIcon(Icons.notifications));
+    await pumpWidgetInApp(
+      tester,
+      ListRow(title: '通知', leading: const Icon(Symbols.notifications_rounded), onTap: () {}),
+    );
+    final context = tester.element(find.byIcon(Symbols.notifications_rounded));
     expect(IconTheme.of(context).color, AppColors.light.secondaryLabel);
+  });
+
+  test('white icons on the tiles of 我的 are at least 3:1', () {
+    for (final tile in [
+      TileColors.manage,
+      TileColors.church,
+      TileColors.support,
+      TileColors.line,
+      TileColors.neutral,
+      TileColors.destructive,
+    ]) {
+      expect(contrast(const Color(0xFFFFFFFF), tile), greaterThanOrEqualTo(3), reason: '$tile');
+    }
+  });
+
+  testWidgets('a date block shows month and date, reads the whole day, and only today is filled', (tester) async {
+    final handle = tester.ensureSemantics();
+    await pumpWidgetInApp(
+      tester,
+      const Column(
+        children: [
+          DateBlock(month: '10月', day: 18, today: true, semanticLabel: '今天 · 10月18日 週日'),
+          DateBlock(month: '10月', day: 25, today: false, semanticLabel: '10月25日 週日'),
+        ],
+      ),
+    );
+    expect(find.text('18'), findsOneWidget);
+    expect(find.bySemanticsLabel('今天 · 10月18日 週日'), findsOneWidget);
+    expect(find.bySemanticsLabel('10月'), findsNothing, reason: 'not the parts, read apart');
+    Color fill(int i) =>
+        (tester
+                    .widget<Container>(
+                      find.descendant(of: find.byType(DateBlock).at(i), matching: find.byType(Container)),
+                    )
+                    .decoration!
+                as BoxDecoration)
+            .color!;
+    expect(fill(0), AppColors.light.accent);
+    expect(fill(1), AppColors.light.fill);
+    handle.dispose();
+  });
+
+  testWidgets('an avatar shows the first character of the name', (tester) async {
+    await pumpWidgetInApp(tester, const Avatar('陳志玲'));
+    expect(find.text('陳'), findsOneWidget);
   });
 
   testWidgets('body text is 17pt', (tester) async {

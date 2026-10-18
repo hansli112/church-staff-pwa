@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -92,12 +93,12 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
           children: [
             ListRow(
               title: l10n.churchUrlShare,
-              leading: const Icon(Icons.ios_share),
+              leading: const Icon(Symbols.ios_share_rounded),
               onTap: () => Navigator.pop(context, 'share'),
             ),
             ListRow(
               title: l10n.churchUrlCopy,
-              leading: const Icon(Icons.copy),
+              leading: const Icon(Symbols.content_copy_rounded),
               onTap: () => Navigator.pop(context, 'copy'),
             ),
           ],

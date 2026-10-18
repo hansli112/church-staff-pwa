@@ -68,6 +68,7 @@ dependencies:
   flutter_timezone: ^5.1.1
   package_info_plus: ^10.2.2
   shorebird_code_push: ^2.0.7
+  material_symbols_icons: ^4.2960.0
 
 dev_dependencies:
   flutter_test:

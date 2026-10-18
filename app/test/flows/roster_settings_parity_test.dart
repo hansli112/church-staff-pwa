@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/data/backend.dart';
@@ -250,7 +251,7 @@ void main() {
     await settle(tester);
     await tapText(tester, '用「新外請」');
     await tapText(tester, '調整順序');
-    final gesture = await tester.startGesture(tester.getCenter(find.byIcon(Icons.drag_handle).first));
+    final gesture = await tester.startGesture(tester.getCenter(find.byIcon(Symbols.drag_handle_rounded).first));
     await tester.pump(const Duration(milliseconds: 100));
     await gesture.moveBy(const Offset(0, 120));
     await tester.pump(const Duration(milliseconds: 500));
@@ -293,10 +294,10 @@ void main() {
     await tester.scrollUntilVisible(find.text('顯示更多'), 500);
     await tapText(tester, '顯示更多');
 
-    expect(find.textContaining('1月3日'), findsWidgets);
+    expect(findDay('1月3日'), findsWidgets);
     expect(b.rosters['grace']!.length, 2, reason: 'extending the view never persists drafts');
     await tester.scrollUntilVisible(find.text('顯示更多'), 500);
-    expect(find.textContaining('3月28日'), findsWidgets);
+    expect(findDay('3月28日'), findsWidgets);
   });
 
   testWidgets('arranged guest suggestions are reused without guessing a same-name member uid', (tester) async {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -52,13 +53,13 @@ class _GettingStarted extends StatelessWidget {
         ListRow(
           title: l10n.inviteMembers,
           subtitle: l10n.gettingStartedInviteBody,
-          leading: const Icon(Icons.person_add_alt),
+          leading: const Icon(Symbols.person_add_alt_rounded),
           onTap: () => context.push('/me/invites'),
         ),
         ListRow(
           title: l10n.gettingStartedServices,
           subtitle: l10n.gettingStartedServicesBody,
-          leading: const Icon(Icons.tune),
+          leading: const Icon(Symbols.tune_rounded),
           onTap: () => context.push('/me/services'),
         ),
       ],
@@ -135,6 +136,7 @@ class HomeScreen extends ConsumerWidget {
               !activityError &&
               !activityLoading) {
             return EmptyState(
+              icon: Symbols.event_available_rounded,
               message: l10n.noUpcomingServices,
               actionLabel: l10n.viewRosters,
               onAction: () => context.go('/rosters'),
@@ -151,7 +153,7 @@ class HomeScreen extends ConsumerWidget {
                   children: [
                     ListRow(
                       title: l10n.waitingForZone(waiting),
-                      leading: const Icon(Icons.manage_accounts_outlined),
+                      leading: const Icon(Symbols.manage_accounts_rounded),
                       onTap: () => context.push('/me/members'),
                     ),
                   ],
@@ -160,6 +162,7 @@ class HomeScreen extends ConsumerWidget {
               if (sourceMissing) ChurchLinkSourceStatus(key: ValueKey(ref.watch(churchDataProvider)?.churchId)),
               if (list.isEmpty)
                 EmptyState(
+                  icon: Symbols.event_available_rounded,
                   message: l10n.noUpcomingServices,
                   actionLabel: l10n.viewRosters,
                   onAction: () => context.go('/rosters'),
@@ -170,11 +173,13 @@ class HomeScreen extends ConsumerWidget {
                   children: [
                     for (final s in list.take(20))
                       ListRow(
-                        title: s.roster.isEvent
-                            ? eventDaysLabel(l10n, s.roster, today)
-                            : dayLabel(l10n, s.roster.day, today),
+                        leading: dayBlock(l10n, s.roster.day, today),
+                        title: s.roster.forEvent?.title ?? services?.byId(s.roster.type)?.name ?? '',
                         subtitle: [
-                          s.roster.forEvent?.title ?? services?.byId(s.roster.type)?.name ?? '',
+                          // An event over several days says both; the block shows the first.
+                          s.roster.isEvent && s.roster.lastDay != s.roster.day
+                              ? eventDaysLabel(l10n, s.roster, today)
+                              : dayBesideBlock(l10n, s.roster.day, today),
                           s.duties.join(l10n.listSeparator),
                         ].where((t) => t.isNotEmpty).join(' · '),
                         onTap: () {
@@ -199,8 +204,9 @@ class HomeScreen extends ConsumerWidget {
                         CalendarReadNotice(status: entry.value, month: entry.key),
                     for (final event in activities.take(3))
                       ListRow(
+                        leading: dayBlock(l10n, event.day, today),
                         title: event.title,
-                        subtitle: dayLabel(l10n, event.day, today),
+                        subtitle: dayBesideBlock(l10n, event.day, today),
                         onTap: () => showEventDetail(context, event),
                       ),
                     if (activityError)

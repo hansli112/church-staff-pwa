@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/data/backend.dart';
@@ -240,9 +241,9 @@ void main() {
     testWidgets('the 牧區 an invite joins look like boxes to tick', (tester) async {
       await pumpApp(tester, seededChurch());
       await go(tester, '/me/invites');
-      expect(find.byIcon(Icons.circle_outlined), findsNWidgets(2));
+      expect(find.byIcon(Symbols.circle_rounded), findsNWidgets(2));
       await tapText(tester, '青年崇拜');
-      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+      expect(find.byIcon(Symbols.check_circle_rounded), findsOneWidget);
     });
 
     testWidgets('an invite can put those who join in some 牧區, named on it', (tester) async {

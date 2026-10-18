@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -61,12 +62,12 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
         actions: [
           IconButton(
             tooltip: l10n.adminStats,
-            icon: const Icon(Icons.insights),
+            icon: const Icon(Symbols.insights_rounded),
             onPressed: () => context.push('/admin/stats'),
           ),
           IconButton(
             tooltip: l10n.fundingCosts,
-            icon: const Icon(Icons.savings_outlined),
+            icon: const Icon(Symbols.savings_rounded),
             onPressed: () => context.push('/admin/funding'),
           ),
         ],
@@ -545,7 +546,7 @@ class _AdminFundingScreenState extends ConsumerState<AdminFundingScreen> {
                   ),
                 ListRow(
                   title: l10n.costAdd,
-                  leading: const Icon(Icons.add),
+                  leading: const Icon(Symbols.add_rounded),
                   onTap: pending == null ? () => _edit(o.costs, null) : null,
                 ),
               ],

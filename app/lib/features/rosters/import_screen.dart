@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -329,7 +330,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
             IconButton(
               tooltip: l10n.importJsonEdit,
               onPressed: _ready && !_busy ? _editJson : null,
-              icon: const Icon(Icons.code),
+              icon: const Icon(Symbols.code_rounded),
             ),
         ],
       ),
@@ -375,7 +376,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         else ...[
           PrimaryButton(
             label: l10n.photoTake,
-            icon: const Icon(Icons.photo_camera_outlined),
+            icon: const Icon(Symbols.photo_camera_rounded),
             onPressed: blocked ? null : () => _photos(ImageSource.camera),
           ),
           const SizedBox(height: Space.s),
@@ -463,7 +464,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
             ),
         ListRow(
           title: l10n.addDuty,
-          leading: const Icon(Icons.add),
+          leading: const Icon(Symbols.add_rounded),
           onTap: enabled ? () => _editDuty(index, row, null) : null,
         ),
         if (events is List)
@@ -481,7 +482,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
             ),
         ListRow(
           title: l10n.importAddEventAction,
-          leading: const Icon(Icons.add),
+          leading: const Icon(Symbols.add_rounded),
           onTap: enabled ? () => _editEvent(index, row, null) : null,
         ),
       ],

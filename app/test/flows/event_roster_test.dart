@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/data/memory/memory_backend.dart';
@@ -95,7 +96,7 @@ void main() {
     await go(tester, '/calendar');
     await tapText(tester, '聖誕晚會');
     expect(find.text('安排服事'), findsNothing);
-    expect(find.byIcon(Icons.people_outline), findsNothing, reason: 'no 服事表 row');
+    expect(find.byIcon(Symbols.people_rounded), findsNothing, reason: 'no 服事表 row');
   });
 
   testWidgets('going to the roster from the editor keeps what was changed there', (tester) async {

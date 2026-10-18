@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -79,12 +80,12 @@ class ServicesScreen extends ConsumerWidget {
                           children: [
                             IconButton(
                               tooltip: l10n.moveUp,
-                              icon: const Icon(Icons.arrow_upward),
+                              icon: const Icon(Symbols.arrow_upward_rounded),
                               onPressed: i == 0 ? null : () => save([...list]..swap(i, i - 1)),
                             ),
                             IconButton(
                               tooltip: l10n.moveDown,
-                              icon: const Icon(Icons.arrow_downward),
+                              icon: const Icon(Symbols.arrow_downward_rounded),
                               onPressed: i == list.length - 1 ? null : () => save([...list]..swap(i, i + 1)),
                             ),
                           ],
@@ -93,7 +94,7 @@ class ServicesScreen extends ConsumerWidget {
                 ),
               ListRow(
                 title: l10n.serviceAdd,
-                leading: const Icon(Icons.add),
+                leading: const Icon(Symbols.add_rounded),
                 onTap: add,
               ),
             ],
@@ -380,25 +381,25 @@ class ServiceEditorScreen extends ConsumerWidget {
             children: [
               ListRow(
                 title: l10n.rename,
-                leading: const Icon(Icons.edit_outlined),
+                leading: const Icon(Symbols.edit_rounded),
                 onTap: () => Navigator.pop(context, 'rename'),
               ),
               if (color != null)
                 ListRow(
                   title: L10n.of(context).serviceEventColor,
-                  leading: const Icon(Icons.palette_outlined),
+                  leading: const Icon(Symbols.palette_rounded),
                   onTap: () => Navigator.pop(context, 'color'),
                 ),
               if (synchronize != null)
                 ListRow(
                   title: L10n.of(context).serviceSyncFutureRosters,
-                  leading: const Icon(Icons.event_repeat_outlined),
+                  leading: const Icon(Symbols.event_repeat_rounded),
                   onTap: () => Navigator.pop(context, 'synchronize'),
                 ),
               ListRow(
                 title: l10n.remove,
                 destructive: true,
-                leading: const Icon(Icons.delete_outline),
+                leading: const Icon(Symbols.delete_rounded),
                 onTap: () => Navigator.pop(context, 'remove'),
               ),
             ],
@@ -496,14 +497,14 @@ class ServiceEditorScreen extends ConsumerWidget {
                       children: [
                         IconButton(
                           tooltip: l10n.moveUp,
-                          icon: const Icon(Icons.arrow_upward),
+                          icon: const Icon(Symbols.arrow_upward_rounded),
                           onPressed: i == 0
                               ? null
                               : () => save(service.copyWith(duties: [...service.duties]..swap(i, i - 1))),
                         ),
                         IconButton(
                           tooltip: l10n.moveDown,
-                          icon: const Icon(Icons.arrow_downward),
+                          icon: const Icon(Symbols.arrow_downward_rounded),
                           onPressed: i == service.duties.length - 1
                               ? null
                               : () => save(service.copyWith(duties: [...service.duties]..swap(i, i + 1))),
@@ -514,7 +515,7 @@ class ServiceEditorScreen extends ConsumerWidget {
                 ),
               ListRow(
                 title: l10n.addDuty,
-                leading: const Icon(Icons.add),
+                leading: const Icon(Symbols.add_rounded),
                 onTap: () async {
                   final name = await promptText(
                     context,
@@ -550,14 +551,14 @@ class ServiceEditorScreen extends ConsumerWidget {
                       children: [
                         IconButton(
                           tooltip: l10n.moveUp,
-                          icon: const Icon(Icons.arrow_upward),
+                          icon: const Icon(Symbols.arrow_upward_rounded),
                           onPressed: i == 0
                               ? null
                               : () => save(service.copyWith(events: [...service.events]..swap(i, i - 1))),
                         ),
                         IconButton(
                           tooltip: l10n.moveDown,
-                          icon: const Icon(Icons.arrow_downward),
+                          icon: const Icon(Symbols.arrow_downward_rounded),
                           onPressed: i == service.events.length - 1
                               ? null
                               : () => save(service.copyWith(events: [...service.events]..swap(i, i + 1))),
@@ -575,7 +576,7 @@ class ServiceEditorScreen extends ConsumerWidget {
                 ),
               ListRow(
                 title: l10n.addEvent,
-                leading: const Icon(Icons.add),
+                leading: const Icon(Symbols.add_rounded),
                 onTap: () async {
                   final name = await promptText(
                     context,

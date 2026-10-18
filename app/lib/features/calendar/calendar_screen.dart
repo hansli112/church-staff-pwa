@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -68,13 +69,13 @@ class CalendarScreen extends ConsumerWidget {
           if (settings?.ready ?? false)
             IconButton(
               tooltip: gridShown ? l10n.calHideMonth : l10n.calShowMonth,
-              icon: Icon(gridShown ? Icons.view_list_outlined : Icons.calendar_view_month_outlined),
+              icon: Icon(gridShown ? Symbols.view_list_rounded : Symbols.calendar_view_month_rounded),
               onPressed: () => ref.read(monthGridShownProvider.notifier).toggle(),
             ),
           if (canEdit)
             IconButton(
               tooltip: l10n.calNewEvent,
-              icon: const Icon(Icons.add),
+              icon: const Icon(Symbols.add_rounded),
               onPressed: () => editEvent(context, ref, null, month: month, day: ref.read(calendarSelectedDayProvider)),
             ),
         ],
@@ -186,7 +187,7 @@ class _AgendaState extends ConsumerState<_Agenda> {
         children: [
           IconButton(
             tooltip: l10n.calPrevMonth,
-            icon: const Icon(Icons.chevron_left),
+            icon: const Icon(Symbols.chevron_left_rounded),
             onPressed: () => shift(-1),
           ),
           Expanded(
@@ -194,7 +195,7 @@ class _AgendaState extends ConsumerState<_Agenda> {
           ),
           IconButton(
             tooltip: l10n.calNextMonth,
-            icon: const Icon(Icons.chevron_right),
+            icon: const Icon(Symbols.chevron_right_rounded),
             onPressed: () => shift(1),
           ),
         ],

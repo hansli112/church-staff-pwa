@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart' show CupertinoDialogAction;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/services.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -298,7 +299,7 @@ class ListRow extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsetsDirectional.only(start: Space.s),
                       child: Icon(
-                        Icons.check,
+                        Symbols.check_rounded,
                         color: c.accent,
                         size: 22,
                         semanticLabel: L10n.of(context).selected,
@@ -308,7 +309,7 @@ class ListRow extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsetsDirectional.only(start: Space.xs),
                       child: Icon(
-                        Icons.chevron_right,
+                        Symbols.chevron_right_rounded,
                         color: c.tertiaryLabel,
                         size: 22,
                       ),
@@ -352,16 +353,19 @@ class SwitchRow extends StatelessWidget {
   }
 }
 
-/// One sentence and at most one button, inviting the next step.
+/// One sentence and at most one button, inviting the next step; above
+/// them, an [icon] for what would be here.
 class EmptyState extends StatelessWidget {
   const EmptyState({
     super.key,
     required this.message,
+    this.icon,
     this.actionLabel,
     this.onAction,
   });
 
   final String message;
+  final IconData? icon;
   final String? actionLabel;
   final VoidCallback? onAction;
 
@@ -374,6 +378,10 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (icon != null) ...[
+              Icon(icon, size: 48, weight: 300, color: c.tertiaryLabel),
+              const SizedBox(height: Space.s),
+            ],
             BalancedText(message, style: AppText.body.copyWith(color: c.secondaryLabel)),
             if (actionLabel != null) ...[
               const SizedBox(height: Space.s),
@@ -639,14 +647,14 @@ class _SearchFieldState extends State<SearchField> {
       style: AppText.body,
       decoration: InputDecoration(
         hintText: widget.hint ?? l10n.search,
-        prefixIcon: Icon(Icons.search, color: c.secondaryLabel),
+        prefixIcon: Icon(Symbols.search_rounded, color: c.secondaryLabel),
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(vertical: 10),
         suffixIcon: _controller.text.isEmpty
             ? null
             : IconButton(
                 tooltip: l10n.clear,
-                icon: Icon(Icons.cancel, color: c.tertiaryLabel, size: 20),
+                icon: Icon(Symbols.cancel_rounded, fill: 1, color: c.tertiaryLabel, size: 20),
                 onPressed: () {
                   _controller.clear();
                   setState(() {});
@@ -689,6 +697,109 @@ class Tag extends StatelessWidget {
         style: AppText.footnote.copyWith(
           color: foreground,
           fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+/// A row's icon, white on a [TileColors] square, as in iOS Settings. Only
+/// on 我的, where it groups a long page; elsewhere row icons stay neutral.
+class IconTile extends StatelessWidget {
+  const IconTile(this.icon, {super.key, required this.color});
+
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 30,
+      height: 30,
+      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(7)),
+      child: Icon(icon, size: 20, fill: 1, color: Colors.white),
+    );
+  }
+}
+
+/// A person's first character in a circle, standing in for a photo.
+class Avatar extends StatelessWidget {
+  const Avatar(this.name, {super.key});
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    final initial = name.trim().characters.firstOrNull ?? '';
+    return ExcludeSemantics(
+      child: Container(
+        width: 44,
+        height: 44,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(color: c.accentSoft, shape: BoxShape.circle),
+        child: Text(
+          initial.toUpperCase(),
+          textScaler: TextScaler.noScaling,
+          style: AppText.title3.copyWith(color: c.accent),
+        ),
+      ),
+    );
+  }
+}
+
+/// A day as a calendar leaf: the month small, the date large. Today's is
+/// filled with the accent. Screen readers hear [semanticLabel], the whole
+/// date, instead of the two numbers.
+class DateBlock extends StatelessWidget {
+  const DateBlock({
+    super.key,
+    required this.month,
+    required this.day,
+    required this.today,
+    required this.semanticLabel,
+  });
+
+  /// The month as the language abbreviates it: 10月, Oct.
+  final String month;
+  final int day;
+  final bool today;
+  final String semanticLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    return Semantics(
+      label: semanticLabel,
+      excludeSemantics: true,
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 48),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+        decoration: BoxDecoration(
+          color: today ? c.accent : c.fill,
+          borderRadius: BorderRadius.circular(Radii.s),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              month,
+              maxLines: 1,
+              style: AppText.caption.copyWith(
+                fontWeight: FontWeight.w600,
+                color: today ? c.onAccent : c.secondaryLabel,
+                height: 1.1,
+              ),
+            ),
+            Text(
+              '$day',
+              style: AppText.title3.copyWith(
+                fontWeight: FontWeight.w700,
+                color: today ? c.onAccent : c.label,
+                height: 1.15,
+              ),
+            ),
+          ],
         ),
       ),
     );

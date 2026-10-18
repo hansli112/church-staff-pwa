@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -215,7 +216,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
             ListRow(
               title: l10n.pendingDelete,
               destructive: true,
-              leading: const Icon(Icons.delete_outline),
+              leading: const Icon(Symbols.delete_rounded),
               onTap: () => Navigator.pop(context, 'delete'),
             ),
           ],

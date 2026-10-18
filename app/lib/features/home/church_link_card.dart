@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -29,7 +30,7 @@ class ChurchLinkCard extends StatelessWidget {
           child: ListRow(
             title: title,
             subtitle: body.isEmpty ? null : body,
-            trailing: const ExcludeSemantics(child: Icon(Icons.open_in_new, size: 20)),
+            trailing: const ExcludeSemantics(child: Icon(Symbols.open_in_new_rounded, size: 20)),
             onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
           ),
         ),
@@ -96,7 +97,7 @@ class _ChurchLinkSourceStatusState extends ConsumerState<ChurchLinkSourceStatus>
                     ? const SizedBox.square(dimension: 22, child: CircularProgressIndicator.adaptive(strokeWidth: 2.5))
                     : TextButton(onPressed: _retry, child: Text(l10n.retry)))
               : null,
-          leading: Icon(Icons.info_outline, color: AppColors.of(context).secondaryLabel),
+          leading: Icon(Symbols.info_rounded, color: AppColors.of(context).secondaryLabel),
         ),
       ],
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/design/components.dart';
@@ -87,18 +88,18 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
           children: [
             ListRow(
               title: l10n.inviteShare,
-              leading: const Icon(Icons.ios_share),
+              leading: const Icon(Symbols.ios_share_rounded),
               onTap: () => Navigator.pop(context, 'share'),
             ),
             ListRow(
               title: l10n.inviteCopy,
-              leading: const Icon(Icons.copy),
+              leading: const Icon(Symbols.content_copy_rounded),
               onTap: () => Navigator.pop(context, 'copy'),
             ),
             ListRow(
               title: l10n.inviteRevoke,
               destructive: true,
-              leading: const Icon(Icons.block),
+              leading: const Icon(Symbols.block_rounded),
               onTap: () => Navigator.pop(context, 'revoke'),
             ),
           ],
@@ -145,8 +146,8 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
                     child: ListRow(
                       title: s.name,
                       leading: _zones.contains(s.id)
-                          ? Icon(Icons.check_circle, color: c.accent)
-                          : const Icon(Icons.circle_outlined),
+                          ? Icon(Symbols.check_circle_rounded, fill: 1, color: c.accent)
+                          : const Icon(Symbols.circle_rounded),
                       chevron: false,
                       onTap: () {
                         Haptics.selection();
@@ -176,7 +177,7 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
                 const SizedBox(height: Space.m),
                 PrimaryButton(
                   label: l10n.inviteCreate,
-                  icon: const Icon(Icons.link),
+                  icon: const Icon(Symbols.link_rounded),
                   busy: _busy,
                   onPressed: () => _create(_days),
                 ),

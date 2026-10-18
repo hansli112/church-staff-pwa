@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
@@ -150,7 +151,7 @@ class _EventSheetState extends State<EventSheet> {
                   ),
                 ListRow(
                   title: l10n.add,
-                  leading: Icon(Icons.add, color: c.accent),
+                  leading: Icon(Symbols.add_rounded, color: c.accent),
                   onTap: _addCustom,
                 ),
               ],

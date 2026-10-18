@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -66,12 +67,12 @@ class _ChurchSwitcherSheet extends ConsumerWidget {
               children: [
                 ListRow(
                   title: l10n.enterInviteCode,
-                  leading: const Icon(Icons.group_add_outlined),
+                  leading: const Icon(Symbols.group_add_rounded),
                   onTap: () => open('/welcome/join'),
                 ),
                 ListRow(
                   title: l10n.createChurch,
-                  leading: const Icon(Icons.add),
+                  leading: const Icon(Symbols.add_rounded),
                   onTap: () => open('/welcome/create'),
                 ),
               ],

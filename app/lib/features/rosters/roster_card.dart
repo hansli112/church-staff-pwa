@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/design/components.dart';
@@ -46,9 +47,11 @@ class RosterCard extends ConsumerWidget {
     }
     final today = ref.watch(todayProvider);
     final uid = ref.watch(uidProvider);
+    final l10n = L10n.of(context);
     return RosterDayView(
       roster: roster,
-      title: dayLabel(L10n.of(context), roster.day, today),
+      leading: dayBlock(l10n, roster.day, today),
+      title: dayBesideBlock(l10n, roster.day, today),
       highlightUid: uid,
       onTap: onTap,
     );
@@ -63,12 +66,16 @@ class RosterDayView extends StatelessWidget {
     super.key,
     required this.roster,
     required this.title,
+    this.leading,
     this.highlightUid,
     this.onTap,
   });
 
   final Roster roster;
   final String title;
+
+  /// Before the title, e.g. the day as a [DateBlock].
+  final Widget? leading;
   final String? highlightUid;
   final VoidCallback? onTap;
 
@@ -93,25 +100,33 @@ class RosterDayView extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Expanded(child: Text(title, style: AppText.headline)),
+                    if (leading != null) ...[leading!, const SizedBox(width: 12)],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(title, style: AppText.headline),
+                          if (roster.events.isNotEmpty) ...[
+                            const SizedBox(height: Space.xs),
+                            Wrap(
+                              spacing: Space.xs,
+                              runSpacing: Space.xs,
+                              children: [
+                                for (final e in roster.events) Tag.event(context, e.name, e.color),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                     if (onTap != null)
                       Icon(
-                        Icons.chevron_right,
+                        Symbols.chevron_right_rounded,
                         color: c.tertiaryLabel,
                         size: 22,
                       ),
                   ],
                 ),
-                if (roster.events.isNotEmpty) ...[
-                  const SizedBox(height: Space.s),
-                  Wrap(
-                    spacing: Space.xs,
-                    runSpacing: Space.xs,
-                    children: [
-                      for (final e in roster.events) Tag.event(context, e.name, e.color),
-                    ],
-                  ),
-                ],
                 const SizedBox(height: Space.s),
                 for (final duty in roster.duties)
                   Padding(

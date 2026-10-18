@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/design/components.dart';
@@ -86,7 +87,7 @@ class NotificationsScreen extends ConsumerWidget {
               children: [
                 ListRow(
                   title: l10n.notifNeedsHomeScreen,
-                  leading: const Icon(Icons.add_to_home_screen),
+                  leading: const Icon(Symbols.add_to_home_screen_rounded),
                   onTap: churchId == null ? null : () => openAddToHome(context, ref, churchId),
                 ),
               ],
@@ -98,7 +99,7 @@ class NotificationsScreen extends ConsumerWidget {
                 if (ref.watch(pushServiceProvider).canOpenSettings)
                   ListRow(
                     title: l10n.notifOpenSettings,
-                    leading: const Icon(Icons.settings_outlined),
+                    leading: const Icon(Symbols.settings_rounded),
                     onTap: () => openNotificationSettings(context, ref),
                   ),
               ],

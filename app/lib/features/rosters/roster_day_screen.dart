@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -64,7 +65,7 @@ class RosterDayScreen extends ConsumerWidget {
             PopupMenuButton<String>(
               enabled: editable,
               tooltip: l10n.edit,
-              icon: const Icon(Icons.more_horiz),
+              icon: const Icon(Symbols.more_horiz_rounded),
               onSelected: (v) => switch (v) {
                 'duty' => _addDuty(context, ref, roster, service),
                 'events' => _editEvents(context, ref, roster, service),
@@ -305,20 +306,20 @@ class _DutyRow extends ConsumerWidget {
             if (!roster.isEvent)
               ListRow(
                 title: l10n.swap,
-                leading: const Icon(Icons.swap_horiz),
+                leading: const Icon(Symbols.swap_horiz_rounded),
                 onTap: () => Navigator.pop(context, 'swap'),
               ),
             ListRow(
               title: l10n.removeFromDuty(duty.role),
               destructive: true,
-              leading: const Icon(Icons.remove_circle_outline),
+              leading: const Icon(Symbols.remove_circle_rounded),
               onTap: () => Navigator.pop(context, 'remove'),
             ),
             if (!roster.isEvent && !duty.uids.containsKey(person))
               ListRow(
                 title: L10n.of(context).rosterRemoveFutureGuest,
                 destructive: true,
-                leading: const Icon(Icons.event_busy_outlined),
+                leading: const Icon(Symbols.event_busy_rounded),
                 onTap: () => Navigator.pop(context, 'removeFutureGuest'),
               ),
           ],
@@ -427,7 +428,7 @@ class _DutyRow extends ConsumerWidget {
                       ),
               ),
               const SizedBox(width: Space.s),
-              Icon(Icons.chevron_right, color: c.tertiaryLabel, size: 22),
+              Icon(Symbols.chevron_right_rounded, color: c.tertiaryLabel, size: 22),
             ],
           ),
         ),
@@ -547,7 +548,7 @@ class _AddDutySheetState extends State<AddDutySheet> {
                   for (final s in widget.suggestions)
                     ListRow(
                       title: s,
-                      leading: const Icon(Icons.add),
+                      leading: const Icon(Symbols.add_rounded),
                       onTap: () => Navigator.pop(context, s),
                     ),
                 ],

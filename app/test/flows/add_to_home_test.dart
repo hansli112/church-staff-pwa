@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -166,7 +167,7 @@ void main() {
     await settle(tester);
 
     expect(find.text('點網址列旁的分享圖示'), findsOneWidget);
-    expect(find.byIcon(Icons.more_horiz), findsNothing);
+    expect(find.byIcon(Symbols.more_horiz_rounded), findsNothing);
     expect(findShown('不是「⋯」選單，也不是「分享 Chrome」'), findsOneWidget);
   });
 
@@ -414,7 +415,11 @@ void main() {
       routerOf(tester).go('/add-to-home');
       await settle(tester);
       expect(find.text('先用 Chrome 開啟'), findsOneWidget);
-      expect(find.byIcon(Icons.more_vert), findsNothing, reason: 'do not invent Chrome menus in other browsers');
+      expect(
+        find.byIcon(Symbols.more_vert_rounded),
+        findsNothing,
+        reason: 'do not invent Chrome menus in other browsers',
+      );
     });
   }
 

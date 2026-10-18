@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -48,7 +49,7 @@ class RostersScreen extends ConsumerWidget {
           if (canImport)
             IconButton(
               tooltip: l10n.photoImport,
-              icon: const Icon(Icons.document_scanner_outlined),
+              icon: const Icon(Symbols.document_scanner_rounded),
               onPressed: () => context.push('/rosters/import/${shown.id}'),
             ),
         ],

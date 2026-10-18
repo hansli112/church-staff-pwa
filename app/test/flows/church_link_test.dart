@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/domain/models.dart';
@@ -39,7 +40,7 @@ void main() {
 
   testWidgets('without a church link the home page has no extra space', (tester) async {
     await pumpApp(tester, seededChurch(as: staffMei));
-    expect(find.byIcon(Icons.open_in_new), findsNothing);
+    expect(find.byIcon(Symbols.open_in_new_rounded), findsNothing);
     final firstSection = tester.getTopLeft(find.text('我接下來的服事')).dy;
     await pumpApp(tester, seededChurch(as: staffMei)..churchLinks['grace'] = link);
     expect(tester.getTopLeft(find.text('我接下來的服事')).dy, greaterThan(firstSection));

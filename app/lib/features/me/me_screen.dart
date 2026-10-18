@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -40,6 +41,7 @@ class MeScreen extends ConsumerWidget {
           ListSection(
             children: [
               ListRow(
+                leading: Avatar(profile?.name ?? me?.name ?? ''),
                 title: profile?.name ?? me?.name ?? '',
                 subtitle: profile?.email,
                 trailing: supporter
@@ -59,9 +61,21 @@ class MeScreen extends ConsumerWidget {
             ListSection(
               header: l10n.operatorConsole,
               children: [
-                ListRow(title: l10n.adminChurches, onTap: () => context.push('/admin')),
-                ListRow(title: l10n.adminStats, onTap: () => context.push('/admin/stats')),
-                ListRow(title: l10n.fundingCosts, onTap: () => context.push('/admin/funding')),
+                ListRow(
+                  leading: const IconTile(Symbols.church_rounded, color: TileColors.neutral),
+                  title: l10n.adminChurches,
+                  onTap: () => context.push('/admin'),
+                ),
+                ListRow(
+                  leading: const IconTile(Symbols.insights_rounded, color: TileColors.neutral),
+                  title: l10n.adminStats,
+                  onTap: () => context.push('/admin/stats'),
+                ),
+                ListRow(
+                  leading: const IconTile(Symbols.savings_rounded, color: TileColors.neutral),
+                  title: l10n.fundingCosts,
+                  onTap: () => context.push('/admin/funding'),
+                ),
               ],
             ),
           // The pages an admin opens most, one tap away; the rest in 教會資訊.
@@ -69,24 +83,39 @@ class MeScreen extends ConsumerWidget {
             ListSection(
               header: l10n.manageChurch,
               children: [
-                ListRow(title: l10n.members, onTap: () => context.push('/me/members')),
-                ListRow(title: l10n.invites, onTap: () => context.push('/me/invites')),
-                ListRow(title: l10n.serviceSettings, onTap: () => context.push('/me/services')),
+                ListRow(
+                  leading: const IconTile(Symbols.group_rounded, color: TileColors.manage),
+                  title: l10n.members,
+                  onTap: () => context.push('/me/members'),
+                ),
+                ListRow(
+                  leading: const IconTile(Symbols.person_add_rounded, color: TileColors.manage),
+                  title: l10n.invites,
+                  onTap: () => context.push('/me/invites'),
+                ),
+                ListRow(
+                  leading: const IconTile(Symbols.tune_rounded, color: TileColors.manage),
+                  title: l10n.serviceSettings,
+                  onTap: () => context.push('/me/services'),
+                ),
               ],
             ),
           ListSection(
             children: [
               ListRow(
+                leading: const IconTile(Symbols.church_rounded, color: TileColors.church),
                 title: l10n.churchInfo,
                 value: church?.name,
                 onTap: () => context.push('/me/church'),
               ),
               // Also with one church: joining or starting another starts here.
               ListRow(
+                leading: const IconTile(Symbols.swap_horiz_rounded, color: TileColors.church),
                 title: l10n.switchChurch,
                 onTap: () => showChurchSwitcher(context, ref),
               ),
               ListRow(
+                leading: const IconTile(Symbols.notifications_rounded, color: TileColors.church),
                 title: l10n.notifications,
                 onTap: () => context.push('/me/notifications'),
               ),
@@ -95,16 +124,25 @@ class MeScreen extends ConsumerWidget {
           ListSection(
             children: [
               ListRow(
+                leading: const IconTile(Symbols.language_rounded, color: TileColors.neutral),
                 title: l10n.language,
                 value: AppLanguage.fromTag(ref.watch(profileProvider).value?.locale)?.label ?? l10n.languageSystem,
                 onTap: () => context.push('/me/language'),
               ),
               if (store.available)
-                ListRow(title: l10n.support, onTap: () => context.push('/me/support'))
+                ListRow(
+                  leading: const IconTile(Symbols.favorite_rounded, color: TileColors.support),
+                  title: l10n.support,
+                  onTap: () => context.push('/me/support'),
+                )
               // The stores forbid sending people to pay outside them; the
               // web app is in no store.
               else if (ref.watch(isWebProvider) && ref.watch(sitePaymentsProvider))
-                ListRow(title: l10n.support, onTap: () => openSitePage(context, ref, '/support')),
+                ListRow(
+                  leading: const IconTile(Symbols.favorite_rounded, color: TileColors.support),
+                  title: l10n.support,
+                  onTap: () => openSitePage(context, ref, '/support'),
+                ),
             ],
           ),
           const _UpdatesSection(),
@@ -113,12 +151,14 @@ class MeScreen extends ConsumerWidget {
               header: l10n.developer,
               children: [
                 ListRow(
+                  leading: const IconTile(Symbols.widgets_rounded, color: TileColors.neutral),
                   title: l10n.components,
                   onTap: () => context.push('/dev/components'),
                 ),
                 // Crashlytics has no web SDK.
                 if (!kIsWeb)
                   ListRow(
+                    leading: const IconTile(Symbols.bug_report_rounded, color: TileColors.neutral),
                     title: l10n.testCrash,
                     onTap: () => ref.read(telemetryProvider).testCrash(),
                   ),
@@ -127,20 +167,38 @@ class MeScreen extends ConsumerWidget {
           ListSection(
             children: [
               ListRow(
+                leading: const IconTile(Symbols.forum_rounded, color: TileColors.line),
                 title: l10n.lineCommunity,
                 subtitle: l10n.lineCommunityNote,
                 onTap: () => launchUrl(lineCommunity, mode: LaunchMode.externalApplication),
               ),
-              ListRow(title: l10n.privacyPolicy, onTap: () => openSitePage(context, ref, '/privacy')),
-              ListRow(title: l10n.termsOfService, onTap: () => openSitePage(context, ref, '/terms')),
+              ListRow(
+                leading: const IconTile(Symbols.shield_rounded, color: TileColors.neutral),
+                title: l10n.privacyPolicy,
+                onTap: () => openSitePage(context, ref, '/privacy'),
+              ),
+              ListRow(
+                leading: const IconTile(Symbols.description_rounded, color: TileColors.neutral),
+                title: l10n.termsOfService,
+                onTap: () => openSitePage(context, ref, '/terms'),
+              ),
             ],
           ),
           ListSection(
             header: l10n.account,
             children: [
-              ListRow(title: l10n.signInMethods, onTap: () => context.push('/account/sign-in')),
-              ListRow(title: l10n.signOut, onTap: () => signOut(ref)),
               ListRow(
+                leading: const IconTile(Symbols.key_rounded, color: TileColors.neutral),
+                title: l10n.signInMethods,
+                onTap: () => context.push('/account/sign-in'),
+              ),
+              ListRow(
+                leading: const IconTile(Symbols.logout_rounded, color: TileColors.neutral),
+                title: l10n.signOut,
+                onTap: () => signOut(ref),
+              ),
+              ListRow(
+                leading: const IconTile(Symbols.delete_rounded, color: TileColors.destructive),
                 title: l10n.deleteAccount,
                 destructive: true,
                 onTap: () => context.push('/account'),
@@ -188,7 +246,13 @@ class _UpdatesSection extends ConsumerWidget {
     if (!update.supported) {
       if (ref.watch(isWebProvider)) {
         return ListSection(
-          children: [ListRow(title: l10n.appRunningVersion, subtitle: l10n.appVersionDevelopment)],
+          children: [
+            ListRow(
+              leading: const IconTile(Symbols.info_rounded, color: TileColors.neutral),
+              title: l10n.appRunningVersion,
+              subtitle: l10n.appVersionDevelopment,
+            ),
+          ],
         );
       }
       final build = ref.watch(appBuildProvider);
@@ -196,6 +260,7 @@ class _UpdatesSection extends ConsumerWidget {
         children: [
           if (build != null)
             ListRow(
+              leading: const IconTile(Symbols.info_rounded, color: TileColors.neutral),
               title: l10n.appRunningVersion,
               subtitle: switch (build.patch) {
                 null => build.label,
@@ -216,14 +281,21 @@ class _UpdatesSection extends ConsumerWidget {
     return ListSection(
       footer: footer,
       children: [
-        ListRow(title: l10n.appRunningVersion, subtitle: update.runningVersion, chevron: false),
         ListRow(
+          leading: const IconTile(Symbols.info_rounded, color: TileColors.neutral),
+          title: l10n.appRunningVersion,
+          subtitle: update.runningVersion,
+          chevron: false,
+        ),
+        ListRow(
+          leading: const IconTile(Symbols.refresh_rounded, color: TileColors.neutral),
           title: update.phase == AppUpdatePhase.checking ? l10n.appUpdateChecking : l10n.appUpdateCheck,
           chevron: false,
           onTap: update.busy ? null : () => run(ref.read(appUpdateProvider.notifier).check),
         ),
         if (update.availableVersion != null)
           ListRow(
+            leading: const IconTile(Symbols.system_update_rounded, color: TileColors.neutral),
             title: update.phase == AppUpdatePhase.applying ? l10n.appUpdateApplying : l10n.appUpdateApply,
             subtitle: blocked ? l10n.appUpdateFinishEditingNote : null,
             chevron: false,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/design/components.dart';
 import '../../core/perf.dart';
@@ -326,7 +327,7 @@ class PeoplePickerState extends State<PeoplePicker> {
       rows.add(
         () => ListRow(
           title: l10n.pickerUseName(typed),
-          leading: const Icon(Icons.add),
+          leading: const Icon(Symbols.add_rounded),
           onTap: _useTyped,
         ),
       );
@@ -410,7 +411,7 @@ class PeoplePickerState extends State<PeoplePicker> {
                   title: list[i],
                   trailing: ReorderableDragStartListener(
                     index: i,
-                    child: Icon(Icons.drag_handle, color: c.tertiaryLabel),
+                    child: Icon(Symbols.drag_handle_rounded, color: c.tertiaryLabel),
                   ),
                 ),
               ),

@@ -61,7 +61,7 @@ function run() {
   // The loader runs either the JS main or the wasm main and its module, by
   // browser. Like the engine files, a first install caches only what this
   // page used; an update stages them all.
-  const shared = [...[{ path: main, bytes: mainBytes }, ...wasmEntries].map((file) => ({ ...file, optional: true, engine: true })), ...chunks.map((path) => ({ ...hashed(path, 'deferred chunk'), optional: true })), ...tree(join(web, base, 'assets'), `${base}assets/`).map((file) => ({ ...file, optional: !/(?:AssetManifest\.(?:bin|json)|FontManifest\.json|app_zh\.arb|MaterialIcons(?:-Regular)?\.[a-f0-9]+\.(?:otf|ttf)|CupertinoIcons\.[a-f0-9]+\.ttf)$/.test(file.path) }))];
+  const shared = [...[{ path: main, bytes: mainBytes }, ...wasmEntries].map((file) => ({ ...file, optional: true, engine: true })), ...chunks.map((path) => ({ ...hashed(path, 'deferred chunk'), optional: true })), ...tree(join(web, base, 'assets'), `${base}assets/`).map((file) => ({ ...file, optional: !/(?:AssetManifest\.(?:bin|json)|FontManifest\.json|app_zh\.arb|MaterialIcons(?:-Regular)?\.[a-f0-9]+\.(?:otf|ttf)|CupertinoIcons\.[a-f0-9]+\.ttf|MaterialSymbolsRounded\.[a-f0-9]+\.ttf)$/.test(file.path) }))];
   const local = [
     ...tree(join(web, 'icons'), 'icons/').map((file) => ({ ...file, optional: file.path !== 'icons/Icon-192.png' })),
     ...tree(join(web, 'canvaskit'), 'canvaskit/').map((file) => ({ ...file, optional: true, engine: true })),

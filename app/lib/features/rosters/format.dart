@@ -1,5 +1,6 @@
 import 'package:intl/intl.dart';
 
+import '../../core/design/components.dart';
 import '../../domain/day.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -12,3 +13,22 @@ String dayLabel(L10n l10n, Day day, Day today) {
   if (diff == 1) return '${l10n.tomorrow} · $base';
   return base;
 }
+
+/// What [dayLabel] says beside a [dayBlock], which shows the month and
+/// date: 「週日」, 「今天 · 週日」, 「2027年 · 週日」.
+String dayBesideBlock(L10n l10n, Day day, Day today) {
+  final diff = today.daysUntil(day);
+  return [
+    if (diff == 0) l10n.today else if (diff == 1) l10n.tomorrow,
+    if (day.year != today.year) DateFormat.y().format(day.midnight),
+    DateFormat.E().format(day.midnight),
+  ].join(' · ');
+}
+
+/// [day] as a calendar leaf; screen readers hear [dayLabel].
+DateBlock dayBlock(L10n l10n, Day day, Day today) => DateBlock(
+  month: DateFormat.MMM().format(day.midnight),
+  day: day.day,
+  today: day == today,
+  semanticLabel: dayLabel(l10n, day, today),
+);
