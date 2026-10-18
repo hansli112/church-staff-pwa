@@ -145,6 +145,20 @@ void main() {
       );
       expect(tester.getCenter(find.text('跟隨系統')).dy, tester.getCenter(find.text('語言')).dy);
     });
+
+    testWidgets('a value too long for one line beside the title goes under it, whole, at any size', (tester) async {
+      const value = '台北（UTC+8）・美國東部（UTC−4）・英國（UTC+1）';
+      await pumpWidgetInApp(
+        tester,
+        const ListSection(
+          children: [ListRow(title: '時區', value: value)],
+        ),
+        textScale: 1.3,
+      );
+      final text = tester.widget<Text>(find.descendant(of: findShown(value), matching: find.byType(Text)));
+      expect(text.maxLines, isNull, reason: 'whole, not cut');
+      expect(tester.getTopLeft(findShown(value)).dy, greaterThanOrEqualTo(tester.getBottomLeft(find.text('時區')).dy));
+    });
   });
 
   testWidgets('a row’s leading icon is neutral; the accent is for actions and state', (tester) async {

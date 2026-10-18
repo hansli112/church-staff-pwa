@@ -198,14 +198,27 @@ class ListRow extends StatelessWidget {
   /// disclosure chevron, since choosing does not open another page.
   final bool? selected;
 
+  static bool _fitsOneLine(BuildContext context, String text, TextStyle style, TextScaler textScaler, double width) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: DefaultTextStyle.of(context).style.merge(style)),
+      textDirection: Directionality.of(context),
+      textScaler: textScaler,
+      maxLines: 1,
+    )..layout(maxWidth: width);
+    try {
+      return !painter.didExceedMaxLines;
+    } finally {
+      painter.dispose();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
     final platform = Theme.of(context).platform;
     final showChevron = chevron ?? (onTap != null && trailing == null && selected == null && !destructive);
-    // Past about 1.5× text, a value beside the title leaves neither room:
-    // it goes under the title instead, whole.
-    final stacked = value != null && MediaQuery.textScalerOf(context).scale(17) > 17 * 1.5;
+    final textScaler = MediaQuery.textScalerOf(context);
+    final valueStyle = AppText.body.copyWith(color: c.secondaryLabel);
     final row = InkWell(
       onTap: onTap,
       child: ConstrainedBox(
@@ -215,100 +228,94 @@ class ListRow extends StatelessWidget {
             horizontal: Space.m,
             vertical: 11,
           ),
-          // A long value (a longer language's) takes at most half the row
-          // and wraps, so the title keeps its room.
           child: LayoutBuilder(
-            builder: (context, box) => Row(
-              children: [
-                if (leading != null) ...[
-                  // Neutral: the accent is for actions and status, and the
-                  // row already says what it is.
-                  IconTheme.merge(
-                    data: IconThemeData(
-                      color: destructive ? c.destructive : c.secondaryLabel,
-                      size: 22,
-                    ),
-                    child: leading!,
-                  ),
-                  const SizedBox(width: Space.m),
-                ],
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Balanced: when a row's text takes two lines, they
-                      // break at a phrase, not one word short.
-                      BalancedText(
-                        title,
-                        textAlign: TextAlign.start,
-                        style: AppText.body.copyWith(
-                          color: destructive ? c.destructive : c.label,
-                        ),
+            builder: (context, box) {
+              // A value beside the title gets at most half the row. One that
+              // needs more (large text, a longer language's) goes under the
+              // title, whole: wrapped beside it, it reads as two values.
+              final stacked = value != null && !_fitsOneLine(context, value!, valueStyle, textScaler, box.maxWidth / 2);
+              return Row(
+                children: [
+                  if (leading != null) ...[
+                    // Neutral: the accent is for actions and status, and the
+                    // row already says what it is.
+                    IconTheme.merge(
+                      data: IconThemeData(
+                        color: destructive ? c.destructive : c.secondaryLabel,
+                        size: 22,
                       ),
-                      if (stacked)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: BalancedText(
-                            value!,
-                            textAlign: TextAlign.start,
-                            style: AppText.body.copyWith(color: c.secondaryLabel),
+                      child: leading!,
+                    ),
+                    const SizedBox(width: Space.m),
+                  ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Balanced: when a row's text takes two lines, they
+                        // break at a phrase, not one word short.
+                        BalancedText(
+                          title,
+                          textAlign: TextAlign.start,
+                          style: AppText.body.copyWith(
+                            color: destructive ? c.destructive : c.label,
                           ),
                         ),
-                      if (subtitle != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: BalancedText(
-                            subtitle!,
-                            textAlign: TextAlign.start,
-                            style: AppText.subheadline.copyWith(
-                              color: c.secondaryLabel,
+                        if (stacked)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: BalancedText(value!, textAlign: TextAlign.start, style: valueStyle),
+                          ),
+                        if (subtitle != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: BalancedText(
+                              subtitle!,
+                              textAlign: TextAlign.start,
+                              style: AppText.subheadline.copyWith(
+                                color: c.secondaryLabel,
+                              ),
                             ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                if (value != null && !stacked)
-                  Padding(
-                    padding: const EdgeInsetsDirectional.only(start: Space.s),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: box.maxWidth / 2),
-                      child: Text(
-                        value!,
-                        textAlign: TextAlign.end,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppText.body.copyWith(color: c.secondaryLabel),
+                  if (value != null && !stacked)
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(start: Space.s),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: box.maxWidth / 2),
+                        child: Text(value!, textAlign: TextAlign.end, maxLines: 1, style: valueStyle),
                       ),
                     ),
-                  ),
-                if (trailing != null)
-                  Padding(
-                    padding: const EdgeInsetsDirectional.only(start: Space.s),
-                    child: trailing!,
-                  ),
-                if (selected == true)
-                  Padding(
-                    padding: const EdgeInsetsDirectional.only(start: Space.s),
-                    child: Icon(
-                      Icons.check,
-                      color: c.accent,
-                      size: 22,
-                      semanticLabel: L10n.of(context).selected,
+                  if (trailing != null)
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(start: Space.s),
+                      child: trailing!,
                     ),
-                  ),
-                if (showChevron)
-                  Padding(
-                    padding: const EdgeInsetsDirectional.only(start: Space.xs),
-                    child: Icon(
-                      Icons.chevron_right,
-                      color: c.tertiaryLabel,
-                      size: 22,
+                  if (selected == true)
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(start: Space.s),
+                      child: Icon(
+                        Icons.check,
+                        color: c.accent,
+                        size: 22,
+                        semanticLabel: L10n.of(context).selected,
+                      ),
                     ),
-                  ),
-              ],
-            ),
+                  if (showChevron)
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(start: Space.xs),
+                      child: Icon(
+                        Icons.chevron_right,
+                        color: c.tertiaryLabel,
+                        size: 22,
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ),
       ),
