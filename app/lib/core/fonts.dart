@@ -232,16 +232,21 @@ Set<String>? _initialKeys(Uri location, [int depth = 0]) {
 
 /// What [language]'s pages show that no .arb string holds: what its dates
 /// are written with (10月4日 週日), the patterns of the dates pages show and
-/// the weekdays; and every language's name in itself (简体中文), as the
-/// language page lists them.
-String _textBeyondStrings(AppLanguage language) {
+/// the weekdays.
+String _dateText(AppLanguage language) {
   final (symbols, patterns) = dateData(language);
   return [
     for (final p in const ['MMMd', 'MMMEd', 'yMMMd', 'yMMMEd', 'yMMMM']) patterns[p]!,
     ...symbols.SHORTWEEKDAYS,
-    for (final l in AppLanguage.values) l.label,
   ].join();
 }
+
+/// Every language's name in itself (简体中文), as the language page lists
+/// them. Not with the first page's text unless it is that page: the engine
+/// ranks the fonts it fetches together by file name, so Simplified Chinese's
+/// and Korean's, fetched for these, would draw the punctuation of
+/// Traditional Chinese (？ ！) in their shapes.
+final _languageNames = [for (final l in AppLanguage.values) l.label].join();
 
 /// Every string of an .arb file, run together, without its notes (`@`
 /// keys).
@@ -283,6 +288,7 @@ Future<void> warmUpFonts({
   void Function(String text) layOut = _layOut,
 }) {
   final done = Completer<void>();
+  final namesFirst = initialLocation?.path == '/me/language';
   var reading = true;
   void finish() {
     if (reading || done.isCompleted) return;
@@ -296,7 +302,7 @@ Future<void> warmUpFonts({
         } catch (_) {
           return;
         }
-        layOut(commonCharacters(browserLanguage));
+        layOut(commonCharacters(browserLanguage) + (namesFirst ? '' : _languageNames));
       }());
     });
   }
@@ -320,7 +326,7 @@ Future<void> warmUpFonts({
       if (text.trim().isEmpty) {
         finish();
       } else {
-        layOut(text + languages.map(_textBeyondStrings).join());
+        layOut(text + languages.map(_dateText).join() + (namesFirst ? _languageNames : ''));
       }
     } catch (_) {
       reading = false;

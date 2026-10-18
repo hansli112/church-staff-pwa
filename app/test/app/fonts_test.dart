@@ -258,11 +258,43 @@ void main() {
     await sendFontsChange(tester);
     await tester.pump();
     expect(done, isTrue);
-    expect(laidOut.last, commonCharacters(''));
+    expect(laidOut.last, startsWith(commonCharacters('')));
 
     await sendFontsChange(tester);
     await tester.pump();
     expect(laidOut, hasLength(2), reason: 'once');
+  });
+
+  testWidgets('the languages’ own names come after the first page, unless it is the language page', (tester) async {
+    // Fonts fetched together are ranked by file name, Simplified Chinese's and
+    // Korean's before Traditional Chinese's: laid out with 简体中文 and 한국어,
+    // ？ and ！ took their shapes, not 繁中's.
+    for (final (location, first) in [('/home', false), ('/me/language', true)]) {
+      final laidOut = <String>[];
+      unawaited(
+        warmUpFonts(
+          bundle: UiStringsBundle(),
+          systemFonts: PaintingBinding.instance.systemFonts,
+          initialLocation: Uri.parse(location),
+          layOut: laidOut.add,
+        ),
+      );
+      await tester.pump();
+      expect(laidOut.single, contains('我接下來的服事'), reason: location);
+      expect(
+        laidOut.single,
+        first ? allOf(contains('简体中文'), contains('한국어')) : isNot(contains('简体中文')),
+        reason: location,
+      );
+      await sendFontsChange(tester);
+      await tester.pump();
+      expect(laidOut.last, startsWith(commonCharacters('')), reason: location);
+      expect(
+        laidOut.last,
+        first ? isNot(contains('简体中文')) : allOf(contains('简体中文'), contains('한국어')),
+        reason: location,
+      );
+    }
   });
 
   testWidgets('the language last shown and the browser’s, when they differ: both', (tester) async {
@@ -301,7 +333,7 @@ void main() {
       await tester.pump();
       await sendFontsChange(tester);
       await tester.pump();
-      expect(laidOut.last, commonCharacters(browser), reason: browser);
+      expect(laidOut.last, startsWith(commonCharacters(browser)), reason: browser);
       expect(commonCharacters(browser), switch (font) {
         'TC' => contains('誦'),
         'HK' => contains('竄'),
@@ -331,7 +363,7 @@ void main() {
     expect(laidOut, hasLength(1));
     firstFrame.complete();
     await tester.pump();
-    expect(laidOut.last, commonCharacters(''));
+    expect(laidOut.last, startsWith(commonCharacters('')));
     await sendFontsChange(tester);
     await tester.pump();
     expect(laidOut, hasLength(2), reason: 'background warmup runs once');
@@ -380,10 +412,10 @@ void main() {
     await tester.pump();
     expect(done, isTrue);
     expect(fonts.waiting, isFalse);
-    expect(laidOut, [commonCharacters('')]);
+    expect(laidOut, [startsWith(commonCharacters(''))]);
     bundle.complete('{"appName":"馬大別忙"}');
     await tester.pump();
-    expect(laidOut, [commonCharacters('')], reason: 'the visible page already requested its own text');
+    expect(laidOut, [startsWith(commonCharacters(''))], reason: 'the visible page already requested its own text');
   });
 
   testWidgets('an asset without startup text leaves font fetching to the page instead of holding readiness', (
@@ -411,7 +443,7 @@ void main() {
     expect(fonts.waiting, isFalse);
     firstFrame.complete();
     await tester.pump();
-    expect(laidOut, [commonCharacters('')]);
+    expect(laidOut, [startsWith(commonCharacters(''))]);
   });
 
   testWidgets('unreadable strings release readiness without waiting for a font download that cannot start', (
