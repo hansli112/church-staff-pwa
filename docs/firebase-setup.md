@@ -100,7 +100,7 @@ xcrun altool --upload-app -t ios -f build/ios/ipa/*.ipa --apiKey <金鑰 ID> --a
 
 API 金鑰放在 `~/.appstoreconnect/private_keys/AuthKey_<金鑰 ID>.p8`，altool 會自己找到。`Info.plist` 寫了 `ITSAppUsesNonExemptEncryption = false`（只用 HTTPS），上傳後不用每次回答出口合規。
 
-**App Store 截圖**（`store/ios/<語言>-<iphone|ipad>-<n>.png`）：示範模式加 `--dart-define=DEMO_ROUTE=<頁面>` 會直接開在那一頁，不用點。`flutter build ios --simulator --debug --dart-define=MARTHA_ENV=demo --dart-define=DEMO_ROUTE=/rosters`，裝到 iPhone 17 Pro Max（6.9 吋）和 iPad Pro 13 吋模擬器，`xcrun simctl status_bar <裝置> override --time 9:41 …`，每種語言先 `xcrun simctl spawn <裝置> defaults write app.marthasit AppleLanguages -array <語言>` 再重開 App，`xcrun simctl io <裝置> screenshot` 拍。現在是兩張：`/rosters/sunday/<日期>` 和 `/rosters`。用 API 的 `appScreenshotSets`（`APP_IPHONE_67`、`APP_IPAD_PRO_3GEN_129`）上傳。
+**App Store 截圖**（`store/ios/<語言>-<iphone|ipad>-<n>.png`）：示範模式加 `--dart-define=DEMO_ROUTE=<頁面>` 會直接開在那一頁，不用點。`flutter build ios --simulator --debug --dart-define=MARTHA_ENV=demo --dart-define=DEMO_ROUTE=/rosters`，裝到 iPhone 17 Pro Max（6.9 吋）和 iPad Pro 13 吋模擬器，`xcrun simctl status_bar <裝置> override --time 9:41 …`，每種語言先 `xcrun simctl spawn <裝置> defaults write app.marthasit AppleLanguages -array <語言>` 再重開 App，`xcrun simctl io <裝置> screenshot` 拍。現在是兩張：`/rosters/sunday/<下一個主日>` 和 `/rosters`（示範教會的服事表從今天算起）。用 API 的 `appScreenshotSets`（`APP_IPHONE_67`、`APP_IPAD_PRO_3GEN_129`）上傳。
 
 **建好馬上上傳，或先複製一份**：之後跑 `shorebird patch` 會用修補的程式碼重建，蓋掉 `app/build/app/outputs/bundle/release/app-release.aab`。`shorebird preview` 下載到 `~/.shorebird/bin/cache/previews/` 的 AAB 也被改過，Play 會說簽章無效，不能上傳。1.0.0+13 就是這樣作廢的，所以從 +14 開始上架。
 
