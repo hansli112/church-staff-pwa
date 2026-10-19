@@ -434,6 +434,36 @@ void main() {
     await tapText(tester, '套用到服事表');
     expect(peopleOn(b, 18, '司琴'), ['陳志豪']);
     expect(b.members['grace']!['hao']!.serves('sunday', '司琴'), isTrue);
+
+    await tapText(tester, '復原');
+    expect(b.members['grace']!['hao']!.serves('sunday', '司琴'), isFalse, reason: 'undone with the import');
+  });
+
+  testWidgets('a duty not in the settings puts nobody on a list', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/import/sunday');
+    await tapText(tester, '進階');
+    await openPasteJson(tester);
+    await tester.enterText(
+      find.byType(TextField),
+      jsonEncode([
+        {
+          'date': '2026-10-18',
+          'duties': [
+            {
+              'role': '鼓',
+              'people': ['陳志豪'],
+            },
+          ],
+        },
+      ]),
+    );
+    await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
+    await tapText(tester, '預覽');
+    await tapText(tester, '套用到服事表');
+    expect(peopleOn(b, 18, '鼓'), ['陳志豪']);
+    expect(b.members['grace']!['hao']!.serves('sunday', '鼓'), isFalse);
   });
 
   testWidgets('an admin can repair a missing duty and common event in preview', (tester) async {

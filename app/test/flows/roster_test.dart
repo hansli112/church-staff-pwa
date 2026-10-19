@@ -192,7 +192,7 @@ void main() {
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '招待');
       await tapText(tester, '編輯');
-      await tester.tap(find.byTooltip('把李美玉從名單拿掉'));
+      await tester.tap(find.byTooltip('從名單移除李美玉'));
       await settle(tester);
       await tapText(tester, '完成');
       expect(find.text('排過招待的人'), findsOneWidget);
@@ -203,6 +203,71 @@ void main() {
       expect(b.members['grace']!['mei']!.serves('sunday', '招待'), isFalse);
       expect(b.members['grace']!['mei']!.serves('sunday', '司琴'), isTrue);
       expect(peopleOn(b, 11, '招待'), ['李美玉'], reason: 'this Sunday is as it was');
+
+      expect(find.text('已從招待名單移除李美玉'), findsOneWidget);
+      await tapText(tester, '復原');
+      expect(b.members['grace']!['mei']!.serves('sunday', '招待'), isTrue);
+    });
+
+    testWidgets('taking the last one off the list still leaves a way out of 編輯', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-11');
+      await tapText(tester, '司琴');
+      await tapText(tester, '編輯');
+      await tester.tap(find.byTooltip('從名單移除李美玉'));
+      await settle(tester);
+      await tapText(tester, '完成');
+      await tapText(tester, '完成');
+      expect(b.members['grace']!['mei']!.serves('sunday', '司琴'), isFalse);
+    });
+
+    testWidgets('picked from 其他同工 and unpicked again: not put on the list', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-11');
+      await tapText(tester, '司琴');
+      await tester.enterText(find.byType(TextField), 'John');
+      await settle(tester);
+      await tapText(tester, 'John Chen');
+      await tapText(tester, 'John Chen');
+      await tapText(tester, '完成');
+      expect(peopleOn(b, 11, '司琴'), isEmpty);
+      expect(b.members['grace']!['john']!.serves('sunday', '司琴'), isFalse);
+    });
+
+    testWidgets('taken off and tapped again: back on the list, still scheduled', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-11');
+      await tapText(tester, '招待');
+      await tapText(tester, '編輯');
+      await tester.tap(find.byTooltip('從名單移除李美玉'));
+      await settle(tester);
+      await tapText(tester, '完成');
+      await tester.enterText(find.byType(TextField), '美玉');
+      await settle(tester);
+      await tapText(tester, '李美玉');
+      await tapText(tester, '完成');
+      expect(peopleOn(b, 11, '招待'), ['李美玉']);
+      expect(b.members['grace']!['mei']!.serves('sunday', '招待'), isTrue);
+    });
+
+    testWidgets('someone put on the list by being picked comes last in staff order', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-11');
+      // 司琴 has no staff order yet: by name, John Chen would come first.
+      await tapText(tester, '司琴');
+      await tester.enterText(find.byType(TextField), 'John');
+      await settle(tester);
+      await tapText(tester, 'John Chen');
+      await tapText(tester, '完成');
+      await go(tester, '/rosters/sunday/2026-10-04');
+      await tapText(tester, '司琴');
+      final mei = tester.getTopLeft(find.text('李美玉').last).dy;
+      final john = tester.getTopLeft(find.text('John Chen').last).dy;
+      expect(mei < john, isTrue);
     });
 
     testWidgets('a roster editor reorders but cannot take anyone off the list', (tester) async {
@@ -210,7 +275,7 @@ void main() {
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '招待');
       await tapText(tester, '調整順序');
-      expect(find.byTooltip('把李美玉從名單拿掉'), findsNothing);
+      expect(find.byTooltip('從名單移除李美玉'), findsNothing);
     });
 
     testWidgets('no search results is one sentence; a typed name can be used', (tester) async {

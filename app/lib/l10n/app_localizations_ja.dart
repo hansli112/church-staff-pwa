@@ -391,11 +391,16 @@ class L10nJa extends L10n {
   String get reorderHint => 'ドラッグして並べ替えます。毎週この順番になります。';
 
   @override
-  String get editListHint => 'ドラッグして並べ替えます。毎週この順番になります。マイナスを押すとリストから外れます。検索すればまた見つかります。';
+  String get editListHint => 'ドラッグで並べ替えます。外した人も検索で見つかります。';
 
   @override
   String pickerTakeOff(String name) {
     return '$nameをリストから外す';
+  }
+
+  @override
+  String dutyListRemoved(String duty, String names) {
+    return '$dutyのリストから$namesを外しました';
   }
 
   @override

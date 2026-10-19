@@ -123,11 +123,22 @@
   "pickerSearchHint": "Search team members",
   "reorder": "Reorder",
   "reorderHint": "Drag to reorder. Every week will use this order.",
-  "editListHint": "Drag to reorder. Every week will use this order. Tap minus to take someone off the list; search still finds them.",
-  "pickerTakeOff": "Take {name} off the list",
+  "editListHint": "Drag to reorder. Removed people can still be found by searching.",
+  "pickerTakeOff": "Remove {name} from the list",
   "@pickerTakeOff": {
     "placeholders": {
       "name": {
+        "type": "String"
+      }
+    }
+  },
+  "dutyListRemoved": "Removed {names} from the {duty} list",
+  "@dutyListRemoved": {
+    "placeholders": {
+      "duty": {
+        "type": "String"
+      },
+      "names": {
         "type": "String"
       }
     }

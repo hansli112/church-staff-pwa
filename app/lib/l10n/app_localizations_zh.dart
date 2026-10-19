@@ -391,11 +391,16 @@ class L10nZh extends L10n {
   String get reorderHint => '拖曳調整先後，每一週都照這個順序';
 
   @override
-  String get editListHint => '拖曳調整先後，每一週都照這個順序。按減號從名單拿掉，之後一樣搜得到。';
+  String get editListHint => '拖曳調整先後，移除的人之後一樣搜得到';
 
   @override
   String pickerTakeOff(String name) {
-    return '把$name從名單拿掉';
+    return '從名單移除$name';
+  }
+
+  @override
+  String dutyListRemoved(String duty, String names) {
+    return '已從$duty名單移除$names';
   }
 
   @override
@@ -2883,11 +2888,16 @@ class L10nZhHans extends L10nZh {
   String get reorderHint => '拖动调整先后，每一周都按这个顺序';
 
   @override
-  String get editListHint => '拖动调整先后，每一周都按这个顺序。按减号从名单移除，之后一样搜得到。';
+  String get editListHint => '拖动调整先后，移除的人之后一样搜得到';
 
   @override
   String pickerTakeOff(String name) {
-    return '把$name从名单移除';
+    return '从名单移除$name';
+  }
+
+  @override
+  String dutyListRemoved(String duty, String names) {
+    return '已从$duty名单移除$names';
   }
 
   @override

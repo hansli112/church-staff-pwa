@@ -250,15 +250,26 @@
   "pickerSearchHint": "搜尋同工",
   "reorder": "調整順序",
   "reorderHint": "拖曳調整先後，每一週都照這個順序",
-  "editListHint": "拖曳調整先後，每一週都照這個順序。按減號從名單拿掉，之後一樣搜得到。",
+  "editListHint": "拖曳調整先後，移除的人之後一樣搜得到",
   "@editListHint": {
     "description": "Admins editing a duty's list in the picker: reorder, or take people off"
   },
-  "pickerTakeOff": "把{name}從名單拿掉",
+  "pickerTakeOff": "從名單移除{name}",
   "@pickerTakeOff": {
     "description": "Tooltip of the minus button beside a person in the picker's 編輯",
     "placeholders": {
       "name": {
+        "type": "String"
+      }
+    }
+  },
+  "dutyListRemoved": "已從{duty}名單移除{names}",
+  "@dutyListRemoved": {
+    "placeholders": {
+      "duty": {
+        "type": "String"
+      },
+      "names": {
         "type": "String"
       }
     }

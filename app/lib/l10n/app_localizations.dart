@@ -799,14 +799,20 @@ abstract class L10n {
   /// Admins editing a duty's list in the picker: reorder, or take people off
   ///
   /// In zh, this message translates to:
-  /// **'拖曳調整先後，每一週都照這個順序。按減號從名單拿掉，之後一樣搜得到。'**
+  /// **'拖曳調整先後，移除的人之後一樣搜得到'**
   String get editListHint;
 
   /// Tooltip of the minus button beside a person in the picker's 編輯
   ///
   /// In zh, this message translates to:
-  /// **'把{name}從名單拿掉'**
+  /// **'從名單移除{name}'**
   String pickerTakeOff(String name);
+
+  /// No description provided for @dutyListRemoved.
+  ///
+  /// In zh, this message translates to:
+  /// **'已從{duty}名單移除{names}'**
+  String dutyListRemoved(String duty, String names);
 
   /// No description provided for @orderSaved.
   ///

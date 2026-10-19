@@ -63,7 +63,7 @@ class PeoplePicker extends StatefulWidget {
     required this.initial,
     required this.members,
     required this.order,
-    required this.canGrantDuty,
+    required this.canEditDutyList,
     required this.canReorder,
     this.canRemove = false,
     this.initialGuests = const {},
@@ -82,9 +82,9 @@ class PeoplePicker extends StatefulWidget {
   final Set<String> initialGuests;
   final List<String> guestSuggestions;
 
-  /// Admins may add the duty to someone's zone, or take it off; roster
-  /// editors may not.
-  final bool canGrantDuty;
+  /// Admins edit who is on the duty's list (picking someone puts them on,
+  /// 編輯 takes them off); roster editors may not.
+  final bool canEditDutyList;
   final bool canReorder;
 
   /// Offer 「移除這項」 at the end of the list (the row also swipes away).
@@ -141,11 +141,15 @@ class PeoplePickerState extends State<PeoplePicker> {
     _others = others;
   }
 
-  /// The result if the sheet closes now.
+  /// The result if the sheet closes now. Only someone still picked is put
+  /// on the list.
   PickerResult get result => PickerResult(
     people: _selected,
     ranking: _ranking,
-    addDutyTo: _grant,
+    addDutyTo: [
+      for (final m in _grant)
+        if (_selected.contains(m.name)) m,
+    ],
     takeDutyFrom: _takeOff,
     guestNames: _guests.intersection(_selected.toSet()),
   );
@@ -155,6 +159,8 @@ class PeoplePickerState extends State<PeoplePicker> {
     setState(() {
       if (_selected.remove(name)) {
         _guests.remove(name);
+        // Put on the list by being picked here: unpicked, off it again.
+        if (_grant.any((m) => m.name == name)) _unlist(name);
       } else {
         _selected.add(name);
         if (guest) _guests.add(name);
@@ -164,41 +170,48 @@ class PeoplePickerState extends State<PeoplePicker> {
   }
 
   void _pickOther(Member m) {
-    if (_selected.contains(m.name)) {
-      _toggle(m.name);
+    if (widget.canEditDutyList && _takeOff.contains(m)) {
+      // Taken off in 編輯 and tapped again: back on the list, and picked.
+      _takeOff.remove(m);
+      _putOnList(m);
+      if (!_selected.contains(m.name)) return _toggle(m.name);
+      Haptics.selection();
+      widget.onChanged?.call(result);
       return;
     }
-    if (widget.canGrantDuty) {
-      // Taken off in 編輯 and picked again: back on as they were.
-      if (!_takeOff.remove(m)) _grant.add(m);
-      (_servingMembers[m.name] ??= []).add(m);
-      setState(() => _serving = [..._serving, m.name]);
+    if (_selected.contains(m.name)) return _toggle(m.name);
+    if (widget.canEditDutyList) {
+      _grant.add(m);
+      _putOnList(m);
     }
     _toggle(m.name);
   }
 
-  /// Takes [name] off the duty's list: listed with everyone else again.
-  void _takeOffList(String name) {
-    final members = _servingMembers.remove(name) ?? const <Member>[];
-    for (final m in members) {
-      // Given the duty in this picker: never written, so nothing to undo.
+  /// Puts [m] last on the duty's list, and its staff order with it.
+  void _putOnList(Member m) {
+    (_servingMembers[m.name] ??= []).add(m);
+    setState(() => _serving = _ranking = [..._serving, m.name]);
+  }
+
+  /// Takes [name] off the duty's list, and its staff order: listed with
+  /// everyone else again.
+  void _unlist(String name) {
+    for (final m in _servingMembers.remove(name) ?? const <Member>[]) {
+      // Put on the list in this picker: never written, so nothing to undo.
       if (!_grant.remove(m)) _takeOff.add(m);
       if (!_others.contains(m)) _others.add(m);
     }
     _others.sort((a, b) => a.name.compareTo(b.name));
+    _serving = _ranking = [
+      for (final n in _serving)
+        if (n != name) n,
+    ];
+  }
+
+  /// 編輯's minus: [name] off the list, still picked for this day.
+  void _takeOffList(String name) {
     Haptics.selection();
-    setState(() {
-      _serving = [
-        for (final n in _serving)
-          if (n != name) n,
-      ];
-      if (_ranking case final ranking?) {
-        _ranking = [
-          for (final n in ranking)
-            if (n != name) n,
-        ];
-      }
-    });
+    setState(() => _unlist(name));
     widget.onChanged?.call(result);
   }
 
@@ -221,11 +234,13 @@ class PeoplePickerState extends State<PeoplePicker> {
               Expanded(child: Text(widget.duty, style: AppText.title3)),
               // Admins edit the list (order, and who is on it); roster
               // editors only reorder it.
-              if (widget.canGrantDuty ? _serving.isNotEmpty : widget.canReorder && _serving.length > 1)
+              // 完成 stays once 編輯 empties the list.
+              if (_reordering ||
+                  (widget.canEditDutyList ? _serving.isNotEmpty : widget.canReorder && _serving.length > 1))
                 SecondaryButton(
                   label: _reordering
                       ? l10n.done
-                      : widget.canGrantDuty
+                      : widget.canEditDutyList
                       ? l10n.edit
                       : l10n.reorder,
                   onPressed: () => setState(() => _reordering = !_reordering),
@@ -331,7 +346,7 @@ class PeoplePickerState extends State<PeoplePicker> {
           child: Column(
             children: [
               BalancedText(
-                widget.canGrantDuty ? l10n.pickerLearns : l10n.pickerNoOneServes(widget.duty),
+                widget.canEditDutyList ? l10n.pickerLearns : l10n.pickerNoOneServes(widget.duty),
                 style: AppText.body.copyWith(color: c.secondaryLabel),
               ),
               if (widget.onInvite case final invite?)
@@ -418,7 +433,7 @@ class PeoplePickerState extends State<PeoplePicker> {
             vertical: Space.s,
           ),
           child: BalancedText(
-            widget.canGrantDuty ? l10n.editListHint : l10n.reorderHint,
+            widget.canEditDutyList ? l10n.editListHint : l10n.reorderHint,
             textAlign: TextAlign.start,
             style: AppText.footnote.copyWith(color: c.secondaryLabel),
           ),
@@ -445,13 +460,9 @@ class PeoplePickerState extends State<PeoplePicker> {
                 index: i,
                 child: ListRow(
                   title: list[i],
-                  leading: widget.canGrantDuty
+                  leading: widget.canEditDutyList
                       ? IconButton(
-                          // No taller than the row's own icons would make it.
-                          padding: EdgeInsets.zero,
-                          visualDensity: VisualDensity.compact,
-                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                          icon: Icon(Symbols.do_not_disturb_on_rounded, fill: 1, color: c.destructive),
+                          icon: Icon(Symbols.do_not_disturb_on_rounded, color: c.destructive),
                           tooltip: l10n.pickerTakeOff(list[i]),
                           onPressed: () => _takeOffList(list[i]),
                         )

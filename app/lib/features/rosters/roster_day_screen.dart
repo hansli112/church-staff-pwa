@@ -253,7 +253,7 @@ class _DutyRow extends ConsumerWidget {
         order: order,
         // An event is in no 牧區 to add the duty to, and has no staff
         // order of its own to drag.
-        canGrantDuty: !roster.isEvent && (me?.isAdmin ?? false),
+        canEditDutyList: !roster.isEvent && (me?.isAdmin ?? false),
         canReorder: !roster.isEvent,
         canRemove: true,
         onChanged: (r) => latest = r,
@@ -296,6 +296,15 @@ class _DutyRow extends ConsumerWidget {
       context,
       changed ? l10n.dutyUpdated(duty.role) : l10n.orderSaved,
       () => actions.setPeople(roster, duty.role, result.people, guestNames: result.guestNames, ranking: result.ranking),
+    );
+    // Taken off the list alone: say so, with a way back. With the day
+    // changed too, the day's 復原 comes first.
+    if (result.takeDutyFrom.isEmpty || changed || !context.mounted) return;
+    final taken = result.takeDutyFrom;
+    showToast(
+      context,
+      l10n.dutyListRemoved(duty.role, {for (final m in taken) m.name}.join(l10n.listSeparator)),
+      onUndo: () => Future.wait([for (final m in taken) actions.grantDuty(m, roster.type, duty.role)]),
     );
   }
 

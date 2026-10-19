@@ -400,12 +400,16 @@ class L10nEn extends L10n {
   String get reorderHint => 'Drag to reorder. Every week will use this order.';
 
   @override
-  String get editListHint =>
-      'Drag to reorder. Every week will use this order. Tap minus to take someone off the list; search still finds them.';
+  String get editListHint => 'Drag to reorder. Removed people can still be found by searching.';
 
   @override
   String pickerTakeOff(String name) {
-    return 'Take $name off the list';
+    return 'Remove $name from the list';
+  }
+
+  @override
+  String dutyListRemoved(String duty, String names) {
+    return 'Removed $names from the $duty list';
   }
 
   @override

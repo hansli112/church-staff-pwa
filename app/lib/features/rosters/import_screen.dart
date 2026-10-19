@@ -288,15 +288,25 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     try {
       final write = _session.apply(shown);
       await write.done;
+      Future<void> Function()? forget;
       if (ref.read(meProvider).value?.isAdmin ?? false) {
-        // After this page closes: one that fails only means a search
-        // next time.
+        // Goes on after this page closes: one that fails only means a
+        // search next time, so it is recorded, not shown.
         final telemetry = ref.read(telemetryProvider);
-        unawaited(_session.rememberDuties(shown).catchError((Object e, StackTrace s) => telemetry.recordError(e, s)));
+        final remembered = _session.rememberDuties(shown);
+        unawaited(remembered.done.catchError((Object e, StackTrace s) => telemetry.recordError(e, s)));
+        forget = remembered.undo;
       }
       Haptics.success();
       if (!(mounted && _sameDraft(key))) return;
-      showToast(context, l10n.importApplied(shown.rosters.length), onUndo: write.undo);
+      showToast(
+        context,
+        l10n.importApplied(shown.rosters.length),
+        onUndo: () async {
+          await write.undo();
+          await forget?.call();
+        },
+      );
       Navigator.of(context).pop();
     } on CloudException catch (error) {
       if (mounted && _sameDraft(key)) {

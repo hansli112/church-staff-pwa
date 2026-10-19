@@ -961,22 +961,20 @@ class MemoryChurchData implements ChurchData {
   }
 
   @override
-  Future<void> grantDuty(String uid, String serviceType, String duty) async {
-    _requireAdmin();
-    await _b.write(() {
-      final now = _b.members[churchId]![uid];
-      if (now == null) throw const CloudException(CloudErrorCode.notFound);
-      _b.members[churchId]![uid] = now.withDuty(serviceType, duty);
-    });
-  }
+  Future<void> grantDuty(String uid, String serviceType, String duty) =>
+      _changeZones(uid, (m) => m.withDuty(serviceType, duty));
 
   @override
-  Future<void> revokeDuty(String uid, String serviceType, String duty) async {
+  Future<void> revokeDuty(String uid, String serviceType, String duty) =>
+      _changeZones(uid, (m) => m.withoutDuty(serviceType, duty));
+
+  /// Admins: [change] applied to member [uid] as they are when written.
+  Future<void> _changeZones(String uid, Member Function(Member) change) async {
     _requireAdmin();
     await _b.write(() {
       final now = _b.members[churchId]![uid];
       if (now == null) throw const CloudException(CloudErrorCode.notFound);
-      _b.members[churchId]![uid] = now.withoutDuty(serviceType, duty);
+      _b.members[churchId]![uid] = change(now);
     });
   }
 

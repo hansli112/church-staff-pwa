@@ -123,11 +123,22 @@
   "pickerSearchHint": "搜索同工",
   "reorder": "调整顺序",
   "reorderHint": "拖动调整先后，每一周都按这个顺序",
-  "editListHint": "拖动调整先后，每一周都按这个顺序。按减号从名单移除，之后一样搜得到。",
-  "pickerTakeOff": "把{name}从名单移除",
+  "editListHint": "拖动调整先后，移除的人之后一样搜得到",
+  "pickerTakeOff": "从名单移除{name}",
   "@pickerTakeOff": {
     "placeholders": {
       "name": {
+        "type": "String"
+      }
+    }
+  },
+  "dutyListRemoved": "已从{duty}名单移除{names}",
+  "@dutyListRemoved": {
+    "placeholders": {
+      "duty": {
+        "type": "String"
+      },
+      "names": {
         "type": "String"
       }
     }

@@ -392,11 +392,16 @@ class L10nKo extends L10n {
   String get reorderHint => '드래그해서 순서를 바꿔 주세요. 매주 이 순서대로 표시돼요.';
 
   @override
-  String get editListHint => '드래그해서 순서를 바꿔 주세요. 매주 이 순서대로 표시돼요. 빼기를 누르면 목록에서 빠지고, 검색하면 다시 찾을 수 있어요.';
+  String get editListHint => '드래그해서 순서를 바꿔요. 뺀 사람도 검색하면 찾을 수 있어요.';
 
   @override
   String pickerTakeOff(String name) {
     return '$name 님을 목록에서 빼기';
+  }
+
+  @override
+  String dutyListRemoved(String duty, String names) {
+    return '$duty 목록에서 $names 님을 뺐어요';
   }
 
   @override

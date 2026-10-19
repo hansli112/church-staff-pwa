@@ -123,11 +123,22 @@
   "pickerSearchHint": "メンバーを検索",
   "reorder": "並べ替え",
   "reorderHint": "ドラッグして並べ替えます。毎週この順番になります。",
-  "editListHint": "ドラッグして並べ替えます。毎週この順番になります。マイナスを押すとリストから外れます。検索すればまた見つかります。",
+  "editListHint": "ドラッグで並べ替えます。外した人も検索で見つかります。",
   "pickerTakeOff": "{name}をリストから外す",
   "@pickerTakeOff": {
     "placeholders": {
       "name": {
+        "type": "String"
+      }
+    }
+  },
+  "dutyListRemoved": "{duty}のリストから{names}を外しました",
+  "@dutyListRemoved": {
+    "placeholders": {
+      "duty": {
+        "type": "String"
+      },
+      "names": {
         "type": "String"
       }
     }

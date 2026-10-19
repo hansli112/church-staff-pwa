@@ -183,13 +183,21 @@ class ImportSession extends Notifier<ImportDraft> {
     return ref.read(churchWritesProvider).service(before, before.copyWith(duties: [...before.duties, role])).done;
   });
 
-  /// Admins, once [shown] is applied: everyone it scheduled for a duty they
-  /// were not on the list for is put on it, as picking them by hand does.
-  Future<void> rememberDuties(ImportPlan shown) {
+  /// Admins, once [shown] is applied: everyone it scheduled for one of the
+  /// service's duties they were not on the list for is put on it, as
+  /// picking them by hand does. A duty not in the settings puts nobody on.
+  /// Answers with the undo, for the import's 復原.
+  ({Future<void> done, Future<void> Function() undo}) rememberDuties(ImportPlan shown) {
     final actions = ref.read(rosterActionsProvider);
-    return Future.wait([
-      for (final q in shown.report.missingQualifications) actions.grantDuty(q.member, serviceType, q.role),
-    ]);
+    final duties = _service.duties;
+    final added = [
+      for (final q in shown.report.missingQualifications)
+        if (duties.contains(q.role)) q,
+    ];
+    return (
+      done: Future.wait([for (final q in added) actions.grantDuty(q.member, serviceType, q.role)]),
+      undo: () => Future.wait([for (final q in added) actions.revokeDuty(q.member, serviceType, q.role)]),
+    );
   }
 
   /// Admins: adds [event] to the service's common events.

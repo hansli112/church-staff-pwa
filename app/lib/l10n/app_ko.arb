@@ -123,11 +123,22 @@
   "pickerSearchHint": "멤버 검색",
   "reorder": "순서 변경",
   "reorderHint": "드래그해서 순서를 바꿔 주세요. 매주 이 순서대로 표시돼요.",
-  "editListHint": "드래그해서 순서를 바꿔 주세요. 매주 이 순서대로 표시돼요. 빼기를 누르면 목록에서 빠지고, 검색하면 다시 찾을 수 있어요.",
+  "editListHint": "드래그해서 순서를 바꿔요. 뺀 사람도 검색하면 찾을 수 있어요.",
   "pickerTakeOff": "{name} 님을 목록에서 빼기",
   "@pickerTakeOff": {
     "placeholders": {
       "name": {
+        "type": "String"
+      }
+    }
+  },
+  "dutyListRemoved": "{duty} 목록에서 {names} 님을 뺐어요",
+  "@dutyListRemoved": {
+    "placeholders": {
+      "duty": {
+        "type": "String"
+      },
+      "names": {
         "type": "String"
       }
     }
