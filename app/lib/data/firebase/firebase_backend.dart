@@ -841,13 +841,22 @@ class FirestoreChurchData implements ChurchData {
   }
 
   @override
-  Future<void> grantDuty(String uid, String serviceType, String duty) {
+  Future<void> grantDuty(String uid, String serviceType, String duty) =>
+      _changeZones(uid, (m) => m.withDuty(serviceType, duty));
+
+  @override
+  Future<void> revokeDuty(String uid, String serviceType, String duty) =>
+      _changeZones(uid, (m) => m.withoutDuty(serviceType, duty));
+
+  /// Applies [change] to member [uid] as they are when written; only their
+  /// zones are written back.
+  Future<void> _changeZones(String uid, Member Function(Member) change) {
     final ref = _col('members').doc(uid);
     return _transaction((tx) async {
       final snap = await tx.get(ref);
       final data = snap.data();
       if (data == null) throw const CloudException(CloudErrorCode.notFound);
-      final next = memberToJson(memberFromJson(uid, data).withDuty(serviceType, duty));
+      final next = memberToJson(change(memberFromJson(uid, data)));
       tx.update(ref, {'zones': next['zones'], 'zoneTypes': next['zoneTypes']});
     });
   }

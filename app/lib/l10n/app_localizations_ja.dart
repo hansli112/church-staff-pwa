@@ -356,7 +356,9 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get pickerServes => 'この担当のメンバー';
+  String pickerServes(String duty) {
+    return '$dutyを担当したメンバー';
+  }
 
   @override
   String get pickerOthers => 'ほかのメンバー';
@@ -372,6 +374,9 @@ class L10nJa extends L10n {
   }
 
   @override
+  String get pickerLearns => '一度割り当てると、次から上に表示されます';
+
+  @override
   String pickerNoResults(String query) {
     return '「$query」は見つかりません';
   }
@@ -380,26 +385,18 @@ class L10nJa extends L10n {
   String get pickerSearchHint => 'メンバーを検索';
 
   @override
-  String pickerAddDutyTitle(String name, String duty) {
-    return '$nameを$dutyの担当にも加えますか？';
-  }
-
-  @override
-  String pickerAddDutyBody(String duty) {
-    return '次に$dutyを割り当てるとき、上のほうに表示されます';
-  }
-
-  @override
-  String get pickerAddDutyYes => '加える';
-
-  @override
-  String get pickerAddDutyNo => '今回だけ';
-
-  @override
   String get reorder => '並べ替え';
 
   @override
   String get reorderHint => 'ドラッグして並べ替えます。毎週この順番になります。';
+
+  @override
+  String get editListHint => 'ドラッグして並べ替えます。毎週この順番になります。マイナスを押すとリストから外れます。検索すればまた見つかります。';
+
+  @override
+  String pickerTakeOff(String name) {
+    return '$nameをリストから外す';
+  }
 
   @override
   String get orderSaved => '順番を更新しました';
@@ -2043,16 +2040,6 @@ class L10nJa extends L10n {
   @override
   String importUnconfiguredDuty(String role) {
     return '未設定の担当：$role';
-  }
-
-  @override
-  String importGrantQualification(String name, String role) {
-    return '$nameを$roleの担当にする';
-  }
-
-  @override
-  String importMissingQualification(String name, String role) {
-    return '$nameは$roleの担当に未設定です';
   }
 
   @override

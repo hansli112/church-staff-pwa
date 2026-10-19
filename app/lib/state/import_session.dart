@@ -183,9 +183,14 @@ class ImportSession extends Notifier<ImportDraft> {
     return ref.read(churchWritesProvider).service(before, before.copyWith(duties: [...before.duties, role])).done;
   });
 
-  /// Admins: lets the member serve the duty, so their name binds.
-  Future<void> grantDuty(ImportQualification qualification) =>
-      _repair(() => ref.read(rosterActionsProvider).grantDuty(qualification.member, serviceType, qualification.role));
+  /// Admins, once [shown] is applied: everyone it scheduled for a duty they
+  /// were not on the list for is put on it, as picking them by hand does.
+  Future<void> rememberDuties(ImportPlan shown) {
+    final actions = ref.read(rosterActionsProvider);
+    return Future.wait([
+      for (final q in shown.report.missingQualifications) actions.grantDuty(q.member, serviceType, q.role),
+    ]);
+  }
 
   /// Admins: adds [event] to the service's common events.
   Future<void> addCommonEvent(EventTag event) => _repair(() {

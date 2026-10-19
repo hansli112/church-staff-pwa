@@ -107,18 +107,31 @@
   "removeDuty": "이 담당 빼기",
   "dutyRemoved": "{duty} 담당을 뺐어요",
   "dutyUpdated": "{duty} 담당을 수정했어요",
-  "pickerServes": "이 담당을 맡는 멤버",
+  "pickerServes": "{duty} 담당했던 멤버",
+  "@pickerServes": {
+    "placeholders": {
+      "duty": {
+        "type": "String"
+      }
+    }
+  },
   "pickerOthers": "다른 멤버",
   "pickerUseName": "‘{name}’ 사용",
   "pickerNoOneServes": "아직 {duty} 담당자가 없어요",
+  "pickerLearns": "한 번 배정하면 다음부터 위쪽에 표시돼요",
   "pickerNoResults": "‘{query}’ 검색 결과가 없어요",
   "pickerSearchHint": "멤버 검색",
-  "pickerAddDutyTitle": "{name} 님에게 {duty} 담당을 추가할까요?",
-  "pickerAddDutyBody": "다음에 {duty} 담당을 배정할 때 위쪽에 표시돼요",
-  "pickerAddDutyYes": "추가",
-  "pickerAddDutyNo": "이번만",
   "reorder": "순서 변경",
   "reorderHint": "드래그해서 순서를 바꿔 주세요. 매주 이 순서대로 표시돼요.",
+  "editListHint": "드래그해서 순서를 바꿔 주세요. 매주 이 순서대로 표시돼요. 빼기를 누르면 목록에서 빠지고, 검색하면 다시 찾을 수 있어요.",
+  "pickerTakeOff": "{name} 님을 목록에서 빼기",
+  "@pickerTakeOff": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "orderSaved": "순서를 변경했어요",
   "swap": "교환",
   "swapWith": "{duty} 담당을 누구와 바꿀까요?",
@@ -615,8 +628,6 @@
   "importNoSettingsChange": "이번 배정은 멤버나 교회 설정을 바꾸지 않아요",
   "importAddConfiguredDuty": "봉사 설정에 추가: {role}",
   "importUnconfiguredDuty": "설정되지 않은 담당: {role}",
-  "importGrantQualification": "{name} 님에게 {role} 담당 맡기기",
-  "importMissingQualification": "{name} 님은 아직 {role} 담당으로 설정되지 않았어요",
   "importAddCommonEvent": "자주 쓰는 특별 순서에 추가: {name}",
   "importNotCommonEvent": "자주 쓰는 특별 순서 아님: {name}",
   "importDiff": "적용 후 변경 사항 · {date}",

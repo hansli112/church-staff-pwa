@@ -229,6 +229,24 @@ class Member {
     return copyWith(zones: next);
   }
 
+  /// Without [duty] in [serviceType]; still in that 牧區.
+  Member withoutDuty(String serviceType, String duty) {
+    if (!serves(serviceType, duty)) return this;
+    return copyWith(
+      zones: [
+        for (final zone in zones)
+          zone.serviceType == serviceType
+              ? zone.copyWith(
+                  duties: [
+                    for (final d in zone.duties)
+                      if (d != duty) d,
+                  ],
+                )
+              : zone,
+      ],
+    );
+  }
+
   Member copyWith({
     String? name,
     Role? role,

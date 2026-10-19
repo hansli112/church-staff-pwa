@@ -408,7 +408,35 @@ void main() {
     expect(savedDay(b, 11), before);
   });
 
-  testWidgets('an admin can repair missing duty, member qualification and common event in preview', (tester) async {
+  testWidgets('applying, an admin remembers who was scheduled for each duty, without asking', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/import/sunday');
+    await tapText(tester, '進階');
+    await openPasteJson(tester);
+    await tester.enterText(
+      find.byType(TextField),
+      jsonEncode([
+        {
+          'date': '2026-10-18',
+          'duties': [
+            {
+              'role': '司琴',
+              'people': ['陳志豪'],
+            },
+          ],
+        },
+      ]),
+    );
+    await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
+    await tapText(tester, '預覽');
+    expect(find.textContaining('陳志豪負責'), findsNothing, reason: 'nothing to tap for it');
+    await tapText(tester, '套用到服事表');
+    expect(peopleOn(b, 18, '司琴'), ['陳志豪']);
+    expect(b.members['grace']!['hao']!.serves('sunday', '司琴'), isTrue);
+  });
+
+  testWidgets('an admin can repair a missing duty and common event in preview', (tester) async {
     final b = seededChurch();
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
@@ -435,12 +463,10 @@ void main() {
     await tapText(tester, '預覽');
     await tester.scrollUntilVisible(find.text('加入服事設定：鼓'), 200);
     await tapText(tester, '加入服事設定：鼓');
-    await tester.scrollUntilVisible(find.text('讓陳志豪負責鼓'), 200);
-    await tapText(tester, '讓陳志豪負責鼓');
     await tester.scrollUntilVisible(find.text('加入常用特別活動：浸禮'), 200);
     await tapText(tester, '加入常用特別活動：浸禮');
     expect(b.services['grace']!.byId('sunday')!.duties, contains('鼓'));
-    expect(b.members['grace']!['hao']!.serves('sunday', '鼓'), isTrue);
+    expect(b.members['grace']!['hao']!.serves('sunday', '鼓'), isFalse, reason: 'not until applied');
     expect(b.services['grace']!.byId('sunday')!.events, contains(const EventTag(name: '浸禮', color: 2)));
     expect(
       b.rosters['grace']!.keys.any((id) => id.startsWith('2026-10-18_')),
@@ -534,7 +560,6 @@ void main() {
     await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
     await tapText(tester, '預覽');
     expect(find.text('加入服事設定：鼓'), findsNothing);
-    expect(find.text('讓陳志豪負責鼓'), findsNothing);
     expect(find.text('加入常用特別活動：浸禮'), findsNothing);
     await tapText(tester, '套用到服事表');
     expect(peopleOn(b, 18, '鼓'), ['陳志豪']);

@@ -254,6 +254,9 @@ abstract interface class ChurchData {
   /// they are when written (admins): nothing else on them changes.
   Future<void> grantDuty(String uid, String serviceType, String duty);
 
+  /// Takes [duty] in [serviceType] off member [uid], the same way (admins).
+  Future<void> revokeDuty(String uid, String serviceType, String duty);
+
   /// Removes [uid] from the church: an admin removing someone, or a member
   /// leaving.
   Future<void> removeMember(String uid);

@@ -571,6 +571,28 @@ void contractTests(Future<ContractWorld> Function() open) {
       await expectLater(g.church.grantDuty(g.mei, 'sunday', '司琴'), denied());
     });
 
+    test('taking a duty off changes only that member’s duty there, as they are now; staff cannot', () async {
+      final g = await Grace.open(w);
+      await g.church.putMember(
+        Member(
+          uid: g.mei,
+          name: '李美玉',
+          role: Role.leader,
+          zones: const [
+            Zone(serviceType: 'sunday', duties: ['司琴', '音控'], smallGroups: ['以馬內利']),
+          ],
+        ),
+      );
+      await g.church.revokeDuty(g.mei, 'sunday', '司琴');
+      final mei = (await g.church.member(g.mei).first)!;
+      expect(mei.role, Role.leader);
+      expect(mei.serves('sunday', '司琴'), isFalse);
+      expect(mei.serves('sunday', '音控'), isTrue);
+      expect(mei.zones.single.smallGroups, ['以馬內利'], reason: 'still in the 牧區');
+      await w.signIn(Grace.meiEmail);
+      await expectLater(g.church.revokeDuty(g.mei, 'sunday', '音控'), denied());
+    });
+
     test('a member name holds 40 characters; far past it is refused', () async {
       final g = await Grace.open(w);
       await g.church.putMember(Member(uid: g.mei, name: '🙏' * 40, role: Role.staff));

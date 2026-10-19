@@ -275,6 +275,12 @@ class EchoingChurchData implements ChurchData {
   );
 
   @override
+  Future<void> revokeDuty(String uid, String serviceType, String duty) => _send(
+    _Echo(members: {uid: (m) => m.withoutDuty(serviceType, duty)}),
+    () => _inner.revokeDuty(uid, serviceType, duty),
+  );
+
+  @override
   Future<void> removeMember(String uid) => _send(_Echo(members: {uid: (_) => null}), () => _inner.removeMember(uid));
 
   @override

@@ -357,7 +357,9 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get pickerServes => '이 담당을 맡는 멤버';
+  String pickerServes(String duty) {
+    return '$duty 담당했던 멤버';
+  }
 
   @override
   String get pickerOthers => '다른 멤버';
@@ -373,6 +375,9 @@ class L10nKo extends L10n {
   }
 
   @override
+  String get pickerLearns => '한 번 배정하면 다음부터 위쪽에 표시돼요';
+
+  @override
   String pickerNoResults(String query) {
     return '‘$query’ 검색 결과가 없어요';
   }
@@ -381,26 +386,18 @@ class L10nKo extends L10n {
   String get pickerSearchHint => '멤버 검색';
 
   @override
-  String pickerAddDutyTitle(String name, String duty) {
-    return '$name 님에게 $duty 담당을 추가할까요?';
-  }
-
-  @override
-  String pickerAddDutyBody(String duty) {
-    return '다음에 $duty 담당을 배정할 때 위쪽에 표시돼요';
-  }
-
-  @override
-  String get pickerAddDutyYes => '추가';
-
-  @override
-  String get pickerAddDutyNo => '이번만';
-
-  @override
   String get reorder => '순서 변경';
 
   @override
   String get reorderHint => '드래그해서 순서를 바꿔 주세요. 매주 이 순서대로 표시돼요.';
+
+  @override
+  String get editListHint => '드래그해서 순서를 바꿔 주세요. 매주 이 순서대로 표시돼요. 빼기를 누르면 목록에서 빠지고, 검색하면 다시 찾을 수 있어요.';
+
+  @override
+  String pickerTakeOff(String name) {
+    return '$name 님을 목록에서 빼기';
+  }
 
   @override
   String get orderSaved => '순서를 변경했어요';
@@ -2044,16 +2041,6 @@ class L10nKo extends L10n {
   @override
   String importUnconfiguredDuty(String role) {
     return '설정되지 않은 담당: $role';
-  }
-
-  @override
-  String importGrantQualification(String name, String role) {
-    return '$name 님에게 $role 담당 맡기기';
-  }
-
-  @override
-  String importMissingQualification(String name, String role) {
-    return '$name 님은 아직 $role 담당으로 설정되지 않았어요';
   }
 
   @override

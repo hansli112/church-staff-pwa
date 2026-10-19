@@ -365,7 +365,9 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get pickerServes => 'Serves in this role';
+  String pickerServes(String duty) {
+    return 'Served as $duty before';
+  }
 
   @override
   String get pickerOthers => 'Other team members';
@@ -381,6 +383,9 @@ class L10nEn extends L10n {
   }
 
   @override
+  String get pickerLearns => 'Once scheduled, they’ll be listed up here next time';
+
+  @override
   String pickerNoResults(String query) {
     return 'No results for “$query”';
   }
@@ -389,26 +394,19 @@ class L10nEn extends L10n {
   String get pickerSearchHint => 'Search team members';
 
   @override
-  String pickerAddDutyTitle(String name, String duty) {
-    return 'Add $duty to $name’s roles?';
-  }
-
-  @override
-  String pickerAddDutyBody(String duty) {
-    return 'They’ll show up at the top next time you schedule $duty';
-  }
-
-  @override
-  String get pickerAddDutyYes => 'Add';
-
-  @override
-  String get pickerAddDutyNo => 'Just this time';
-
-  @override
   String get reorder => 'Reorder';
 
   @override
   String get reorderHint => 'Drag to reorder. Every week will use this order.';
+
+  @override
+  String get editListHint =>
+      'Drag to reorder. Every week will use this order. Tap minus to take someone off the list; search still finds them.';
+
+  @override
+  String pickerTakeOff(String name) {
+    return 'Take $name off the list';
+  }
 
   @override
   String get orderSaved => 'Order updated';
@@ -2158,16 +2156,6 @@ class L10nEn extends L10n {
   @override
   String importUnconfiguredDuty(String role) {
     return 'Role not set up: $role';
-  }
-
-  @override
-  String importGrantQualification(String name, String role) {
-    return 'Let $name serve as $role';
-  }
-
-  @override
-  String importMissingQualification(String name, String role) {
-    return '$name isn’t set up for $role';
   }
 
   @override

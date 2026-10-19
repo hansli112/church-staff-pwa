@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -17,6 +18,7 @@ import '../../state/app_update.dart';
 import '../../state/import_session.dart';
 import '../../state/providers.dart';
 import '../../state/roster_actions.dart';
+import '../../state/session.dart';
 import '../common/errors.dart';
 import 'format.dart';
 
@@ -286,6 +288,12 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     try {
       final write = _session.apply(shown);
       await write.done;
+      if (ref.read(meProvider).value?.isAdmin ?? false) {
+        // After this page closes: one that fails only means a search
+        // next time.
+        final telemetry = ref.read(telemetryProvider);
+        unawaited(_session.rememberDuties(shown).catchError((Object e, StackTrace s) => telemetry.recordError(e, s)));
+      }
       Haptics.success();
       if (!(mounted && _sameDraft(key))) return;
       showToast(context, l10n.importApplied(shown.rosters.length), onUndo: write.undo);
@@ -644,9 +652,9 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                       ),
                   ],
                 ),
-              if (report.unknownDuties.isNotEmpty ||
-                  report.missingQualifications.isNotEmpty ||
-                  report.unknownEvents.isNotEmpty)
+              // Who was scheduled for a duty they are not on the list for
+              // is put on it when applied (admins), not asked about here.
+              if (report.unknownDuties.isNotEmpty || report.unknownEvents.isNotEmpty)
                 ListSection(
                   header: admin ? l10n.importRepairSettings : l10n.importNoSettingsChange,
                   children: [
@@ -654,13 +662,6 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                       ListRow(
                         title: admin ? l10n.importAddConfiguredDuty(role) : l10n.importUnconfiguredDuty(role),
                         onTap: repairable ? () => _repair(() => _session.addDuty(role)) : null,
-                      ),
-                    for (final qualification in report.missingQualifications)
-                      ListRow(
-                        title: admin
-                            ? l10n.importGrantQualification(qualification.member.name, qualification.role)
-                            : l10n.importMissingQualification(qualification.member.name, qualification.role),
-                        onTap: repairable ? () => _repair(() => _session.grantDuty(qualification)) : null,
                       ),
                     for (final event in report.unknownEvents)
                       ListRow(

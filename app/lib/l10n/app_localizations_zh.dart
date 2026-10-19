@@ -356,7 +356,9 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get pickerServes => '有這項服事';
+  String pickerServes(String duty) {
+    return '排過$duty的人';
+  }
 
   @override
   String get pickerOthers => '其他同工';
@@ -372,6 +374,9 @@ class L10nZh extends L10n {
   }
 
   @override
+  String get pickerLearns => '排過一次，下次就會列在上面';
+
+  @override
   String pickerNoResults(String query) {
     return '找不到「$query」';
   }
@@ -380,26 +385,18 @@ class L10nZh extends L10n {
   String get pickerSearchHint => '搜尋同工';
 
   @override
-  String pickerAddDutyTitle(String name, String duty) {
-    return '也讓「$name」負責$duty？';
-  }
-
-  @override
-  String pickerAddDutyBody(String duty) {
-    return '之後安排$duty時，會列在上面';
-  }
-
-  @override
-  String get pickerAddDutyYes => '加上';
-
-  @override
-  String get pickerAddDutyNo => '只排這次';
-
-  @override
   String get reorder => '調整順序';
 
   @override
   String get reorderHint => '拖曳調整先後，每一週都照這個順序';
+
+  @override
+  String get editListHint => '拖曳調整先後，每一週都照這個順序。按減號從名單拿掉，之後一樣搜得到。';
+
+  @override
+  String pickerTakeOff(String name) {
+    return '把$name從名單拿掉';
+  }
 
   @override
   String get orderSaved => '已更新順序';
@@ -2042,16 +2039,6 @@ class L10nZh extends L10n {
   }
 
   @override
-  String importGrantQualification(String name, String role) {
-    return '讓$name負責$role';
-  }
-
-  @override
-  String importMissingQualification(String name, String role) {
-    return '$name還沒設定$role';
-  }
-
-  @override
   String importAddCommonEvent(String name) {
     return '加入常用特別活動：$name';
   }
@@ -2861,7 +2848,9 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get pickerServes => '有这项事奉';
+  String pickerServes(String duty) {
+    return '排过$duty的人';
+  }
 
   @override
   String get pickerOthers => '其他同工';
@@ -2877,6 +2866,9 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
+  String get pickerLearns => '排过一次，下次就会列在上面';
+
+  @override
   String pickerNoResults(String query) {
     return '找不到“$query”';
   }
@@ -2885,26 +2877,18 @@ class L10nZhHans extends L10nZh {
   String get pickerSearchHint => '搜索同工';
 
   @override
-  String pickerAddDutyTitle(String name, String duty) {
-    return '也让“$name”负责$duty？';
-  }
-
-  @override
-  String pickerAddDutyBody(String duty) {
-    return '之后安排$duty时，会列在上面';
-  }
-
-  @override
-  String get pickerAddDutyYes => '加上';
-
-  @override
-  String get pickerAddDutyNo => '只排这次';
-
-  @override
   String get reorder => '调整顺序';
 
   @override
   String get reorderHint => '拖动调整先后，每一周都按这个顺序';
+
+  @override
+  String get editListHint => '拖动调整先后，每一周都按这个顺序。按减号从名单移除，之后一样搜得到。';
+
+  @override
+  String pickerTakeOff(String name) {
+    return '把$name从名单移除';
+  }
 
   @override
   String get orderSaved => '已更新顺序';
@@ -4544,16 +4528,6 @@ class L10nZhHans extends L10nZh {
   @override
   String importUnconfiguredDuty(String role) {
     return '未设置的事奉项目：$role';
-  }
-
-  @override
-  String importGrantQualification(String name, String role) {
-    return '让$name负责$role';
-  }
-
-  @override
-  String importMissingQualification(String name, String role) {
-    return '$name还没设置$role';
   }
 
   @override

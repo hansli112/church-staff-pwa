@@ -274,9 +274,12 @@ class _DutyRow extends ConsumerWidget {
     }
     // Not waited for: changes go to the backend in turn, and the pick
     // shows at once. One that fails says so.
-    if (result.addDutyTo.isNotEmpty) {
+    if (result.addDutyTo.isNotEmpty || result.takeDutyFrom.isNotEmpty) {
       unawaited(
-        Future.wait([for (final m in result.addDutyTo) actions.grantDuty(m, roster.type, duty.role)]).then(
+        Future.wait([
+          for (final m in result.addDutyTo) actions.grantDuty(m, roster.type, duty.role),
+          for (final m in result.takeDutyFrom) actions.revokeDuty(m, roster.type, duty.role),
+        ]).then(
           (_) {},
           onError: (Object error) {
             if (context.mounted) showToast(context, errorText(l10n, error));

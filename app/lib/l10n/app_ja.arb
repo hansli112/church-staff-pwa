@@ -107,18 +107,31 @@
   "removeDuty": "この担当を外す",
   "dutyRemoved": "{duty}を外しました",
   "dutyUpdated": "{duty}を更新しました",
-  "pickerServes": "この担当のメンバー",
+  "pickerServes": "{duty}を担当したメンバー",
+  "@pickerServes": {
+    "placeholders": {
+      "duty": {
+        "type": "String"
+      }
+    }
+  },
   "pickerOthers": "ほかのメンバー",
   "pickerUseName": "「{name}」を使う",
   "pickerNoOneServes": "{duty}の担当者はまだいません",
+  "pickerLearns": "一度割り当てると、次から上に表示されます",
   "pickerNoResults": "「{query}」は見つかりません",
   "pickerSearchHint": "メンバーを検索",
-  "pickerAddDutyTitle": "{name}を{duty}の担当にも加えますか？",
-  "pickerAddDutyBody": "次に{duty}を割り当てるとき、上のほうに表示されます",
-  "pickerAddDutyYes": "加える",
-  "pickerAddDutyNo": "今回だけ",
   "reorder": "並べ替え",
   "reorderHint": "ドラッグして並べ替えます。毎週この順番になります。",
+  "editListHint": "ドラッグして並べ替えます。毎週この順番になります。マイナスを押すとリストから外れます。検索すればまた見つかります。",
+  "pickerTakeOff": "{name}をリストから外す",
+  "@pickerTakeOff": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "orderSaved": "順番を更新しました",
   "swap": "交換",
   "swapWith": "{duty}を誰と交換しますか？",
@@ -615,8 +628,6 @@
   "importNoSettingsChange": "今回の割り当てでは、メンバーや教会の設定は変わりません",
   "importAddConfiguredDuty": "奉仕の設定に追加：{role}",
   "importUnconfiguredDuty": "未設定の担当：{role}",
-  "importGrantQualification": "{name}を{role}の担当にする",
-  "importMissingQualification": "{name}は{role}の担当に未設定です",
   "importAddCommonEvent": "よく使う特別行事に追加：{name}",
   "importNotCommonEvent": "よく使う特別行事に未設定：{name}",
   "importDiff": "適用後の差分・{date}",

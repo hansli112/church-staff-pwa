@@ -209,7 +209,15 @@
       }
     }
   },
-  "pickerServes": "有這項服事",
+  "pickerServes": "排過{duty}的人",
+  "@pickerServes": {
+    "description": "Header over the people the picker lists first: those the duty was given to, by hand or by being scheduled",
+    "placeholders": {
+      "duty": {
+        "type": "String"
+      }
+    }
+  },
   "pickerOthers": "其他同工",
   "pickerUseName": "用「{name}」",
   "@pickerUseName": {
@@ -227,6 +235,10 @@
       }
     }
   },
+  "pickerLearns": "排過一次，下次就會列在上面",
+  "@pickerLearns": {
+    "description": "For admins, while nobody is on a duty's list: picking someone puts them on it"
+  },
   "pickerNoResults": "找不到「{query}」",
   "@pickerNoResults": {
     "placeholders": {
@@ -236,29 +248,21 @@
     }
   },
   "pickerSearchHint": "搜尋同工",
-  "pickerAddDutyTitle": "也讓「{name}」負責{duty}？",
-  "@pickerAddDutyTitle": {
+  "reorder": "調整順序",
+  "reorderHint": "拖曳調整先後，每一週都照這個順序",
+  "editListHint": "拖曳調整先後，每一週都照這個順序。按減號從名單拿掉，之後一樣搜得到。",
+  "@editListHint": {
+    "description": "Admins editing a duty's list in the picker: reorder, or take people off"
+  },
+  "pickerTakeOff": "把{name}從名單拿掉",
+  "@pickerTakeOff": {
+    "description": "Tooltip of the minus button beside a person in the picker's 編輯",
     "placeholders": {
       "name": {
         "type": "String"
-      },
-      "duty": {
-        "type": "String"
       }
     }
   },
-  "pickerAddDutyBody": "之後安排{duty}時，會列在上面",
-  "@pickerAddDutyBody": {
-    "placeholders": {
-      "duty": {
-        "type": "String"
-      }
-    }
-  },
-  "pickerAddDutyYes": "加上",
-  "pickerAddDutyNo": "只排這次",
-  "reorder": "調整順序",
-  "reorderHint": "拖曳調整先後，每一週都照這個順序",
   "orderSaved": "已更新順序",
   "swap": "交換",
   "swapWith": "和誰交換{duty}？",
@@ -1445,34 +1449,6 @@
   "@importUnconfiguredDuty": {
     "description": "Imported one-day duty is not in the service template",
     "placeholders": {
-      "role": {
-        "type": "String",
-        "example": "鼓"
-      }
-    }
-  },
-  "importGrantQualification": "讓{name}負責{role}",
-  "@importGrantQualification": {
-    "description": "Admin grants this imported duty to the matched member",
-    "placeholders": {
-      "name": {
-        "type": "String",
-        "example": "陳志豪"
-      },
-      "role": {
-        "type": "String",
-        "example": "鼓"
-      }
-    }
-  },
-  "importMissingQualification": "{name}還沒設定{role}",
-  "@importMissingQualification": {
-    "description": "Matched member has no configured qualification for this duty",
-    "placeholders": {
-      "name": {
-        "type": "String",
-        "example": "陳志豪"
-      },
       "role": {
         "type": "String",
         "example": "鼓"

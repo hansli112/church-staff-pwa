@@ -270,6 +270,9 @@ class RosterActions {
   /// Gives [member] the duty, so the picker lists them first next time.
   Future<void> grantDuty(Member member, String type, String role) => _data.grantDuty(member.uid, type, role);
 
+  /// Takes the duty off [member]: the picker lists them with everyone else.
+  Future<void> revokeDuty(Member member, String type, String role) => _data.revokeDuty(member.uid, type, role);
+
   /// What importing [rows] into [type] would do, against the rosters as
   /// they are now.
   ImportPlan previewImport(

@@ -107,18 +107,31 @@
   "removeDuty": "Remove role",
   "dutyRemoved": "Removed {duty}",
   "dutyUpdated": "Updated {duty}",
-  "pickerServes": "Serves in this role",
+  "pickerServes": "Served as {duty} before",
+  "@pickerServes": {
+    "placeholders": {
+      "duty": {
+        "type": "String"
+      }
+    }
+  },
   "pickerOthers": "Other team members",
   "pickerUseName": "Use “{name}”",
   "pickerNoOneServes": "No one serves as {duty} yet",
+  "pickerLearns": "Once scheduled, they’ll be listed up here next time",
   "pickerNoResults": "No results for “{query}”",
   "pickerSearchHint": "Search team members",
-  "pickerAddDutyTitle": "Add {duty} to {name}’s roles?",
-  "pickerAddDutyBody": "They’ll show up at the top next time you schedule {duty}",
-  "pickerAddDutyYes": "Add",
-  "pickerAddDutyNo": "Just this time",
   "reorder": "Reorder",
   "reorderHint": "Drag to reorder. Every week will use this order.",
+  "editListHint": "Drag to reorder. Every week will use this order. Tap minus to take someone off the list; search still finds them.",
+  "pickerTakeOff": "Take {name} off the list",
+  "@pickerTakeOff": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "orderSaved": "Order updated",
   "swap": "Swap",
   "swapWith": "Swap {duty} with whom?",
@@ -615,8 +628,6 @@
   "importNoSettingsChange": "This won’t change team members or church settings",
   "importAddConfiguredDuty": "Add to service settings: {role}",
   "importUnconfiguredDuty": "Role not set up: {role}",
-  "importGrantQualification": "Let {name} serve as {role}",
-  "importMissingQualification": "{name} isn’t set up for {role}",
   "importAddCommonEvent": "Add to common occasions: {name}",
   "importNotCommonEvent": "Not a common occasion: {name}",
   "importDiff": "Changes after applying · {date}",

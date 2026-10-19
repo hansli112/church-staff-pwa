@@ -16,6 +16,7 @@ class PickerResult {
     required this.people,
     this.ranking,
     this.addDutyTo = const [],
+    this.takeDutyFrom = const [],
     this.removeDuty = false,
     this.guestNames = const {},
   });
@@ -32,6 +33,9 @@ class PickerResult {
   /// Members to give this duty to, so they show up first next time.
   final List<Member> addDutyTo;
 
+  /// Members taken off this duty's list in 編輯.
+  final List<Member> takeDutyFrom;
+
   /// Take this duty off the day altogether.
   final bool removeDuty;
 }
@@ -44,10 +48,13 @@ const searchAutofocusThreshold = 30;
 ///
 /// Like self-host it lists only the people who serve this duty here, in
 /// staff order. New: a search over the whole church (part of a name, any
-/// width or case) shows everyone else under 「其他同工」, and picking one of
-/// them offers to give them the duty. Everyone is listed there from the start
-/// while nobody serves the duty yet. A typed name nobody has can be used
-/// as is, for a visiting speaker.
+/// width or case) shows everyone else under 「其他同工」. Picking one of
+/// them, an admin also gives them the duty, without asking: whoever is
+/// scheduled for it once is listed first next time, so nobody has to set
+/// duties up beforehand. Everyone is listed there from the start while
+/// nobody serves the duty yet. In 編輯 an admin takes people off the list
+/// again. A typed name nobody has can be used as is, for a visiting
+/// speaker.
 class PeoplePicker extends StatefulWidget {
   const PeoplePicker({
     super.key,
@@ -75,7 +82,8 @@ class PeoplePicker extends StatefulWidget {
   final Set<String> initialGuests;
   final List<String> guestSuggestions;
 
-  /// Admins may add the duty to someone's zone; roster editors may not.
+  /// Admins may add the duty to someone's zone, or take it off; roster
+  /// editors may not.
   final bool canGrantDuty;
   final bool canReorder;
 
@@ -100,7 +108,11 @@ class PeoplePickerState extends State<PeoplePicker> {
   late final Set<String> _guests = {...widget.initialGuests};
   late List<String> _serving;
   late final List<Member> _others;
+
+  /// Who serves the duty here, by name, for taking them off the list.
+  final _servingMembers = <String, List<Member>>{};
   final _grant = <Member>[];
+  final _takeOff = <Member>[];
   String _query = '';
   bool _reordering = false;
   List<String>? _ranking;
@@ -118,6 +130,7 @@ class PeoplePickerState extends State<PeoplePicker> {
       final type = widget.serviceType;
       if (type == null ? servesAnywhere(m, widget.duty) : m.serves(type, widget.duty)) {
         if (servingSet.add(name)) serving.add(name);
+        (_servingMembers[name] ??= []).add(m);
       } else {
         others.add(m);
       }
@@ -133,6 +146,7 @@ class PeoplePickerState extends State<PeoplePicker> {
     people: _selected,
     ranking: _ranking,
     addDutyTo: _grant,
+    takeDutyFrom: _takeOff,
     guestNames: _guests.intersection(_selected.toSet()),
   );
 
@@ -149,27 +163,43 @@ class PeoplePickerState extends State<PeoplePicker> {
     widget.onChanged?.call(result);
   }
 
-  Future<void> _pickOther(Member m) async {
-    final l10n = L10n.of(context);
+  void _pickOther(Member m) {
     if (_selected.contains(m.name)) {
       _toggle(m.name);
       return;
     }
     if (widget.canGrantDuty) {
-      final grant = await askChoice(
-        context,
-        title: l10n.pickerAddDutyTitle(m.name, widget.duty),
-        message: l10n.pickerAddDutyBody(widget.duty),
-        yes: l10n.pickerAddDutyYes,
-        no: l10n.pickerAddDutyNo,
-      );
-      if (grant == null) return;
-      if (grant) {
-        _grant.add(m);
-        setState(() => _serving = [..._serving, m.name]);
-      }
+      // Taken off in 編輯 and picked again: back on as they were.
+      if (!_takeOff.remove(m)) _grant.add(m);
+      (_servingMembers[m.name] ??= []).add(m);
+      setState(() => _serving = [..._serving, m.name]);
     }
     _toggle(m.name);
+  }
+
+  /// Takes [name] off the duty's list: listed with everyone else again.
+  void _takeOffList(String name) {
+    final members = _servingMembers.remove(name) ?? const <Member>[];
+    for (final m in members) {
+      // Given the duty in this picker: never written, so nothing to undo.
+      if (!_grant.remove(m)) _takeOff.add(m);
+      if (!_others.contains(m)) _others.add(m);
+    }
+    _others.sort((a, b) => a.name.compareTo(b.name));
+    Haptics.selection();
+    setState(() {
+      _serving = [
+        for (final n in _serving)
+          if (n != name) n,
+      ];
+      if (_ranking case final ranking?) {
+        _ranking = [
+          for (final n in ranking)
+            if (n != name) n,
+        ];
+      }
+    });
+    widget.onChanged?.call(result);
   }
 
   void _useTyped() {
@@ -189,9 +219,15 @@ class PeoplePickerState extends State<PeoplePicker> {
           child: Row(
             children: [
               Expanded(child: Text(widget.duty, style: AppText.title3)),
-              if (widget.canReorder && _serving.length > 1)
+              // Admins edit the list (order, and who is on it); roster
+              // editors only reorder it.
+              if (widget.canGrantDuty ? _serving.isNotEmpty : widget.canReorder && _serving.length > 1)
                 SecondaryButton(
-                  label: _reordering ? l10n.done : l10n.reorder,
+                  label: _reordering
+                      ? l10n.done
+                      : widget.canGrantDuty
+                      ? l10n.edit
+                      : l10n.reorder,
                   onPressed: () => setState(() => _reordering = !_reordering),
                 ),
               if (!_reordering)
@@ -283,7 +319,7 @@ class PeoplePickerState extends State<PeoplePicker> {
 
     final rows = <Widget Function()>[];
     if (serving.isNotEmpty) {
-      rows.add(() => SectionHeader(l10n.pickerServes));
+      rows.add(() => SectionHeader(l10n.pickerServes(widget.duty)));
       for (final n in serving) {
         rows.add(() => _row(n, c, onTap: () => _toggle(n)));
       }
@@ -295,7 +331,7 @@ class PeoplePickerState extends State<PeoplePicker> {
           child: Column(
             children: [
               BalancedText(
-                l10n.pickerNoOneServes(widget.duty),
+                widget.canGrantDuty ? l10n.pickerLearns : l10n.pickerNoOneServes(widget.duty),
                 style: AppText.body.copyWith(color: c.secondaryLabel),
               ),
               if (widget.onInvite case final invite?)
@@ -382,7 +418,7 @@ class PeoplePickerState extends State<PeoplePicker> {
             vertical: Space.s,
           ),
           child: BalancedText(
-            l10n.reorderHint,
+            widget.canGrantDuty ? l10n.editListHint : l10n.reorderHint,
             textAlign: TextAlign.start,
             style: AppText.footnote.copyWith(color: c.secondaryLabel),
           ),
@@ -409,6 +445,17 @@ class PeoplePickerState extends State<PeoplePicker> {
                 index: i,
                 child: ListRow(
                   title: list[i],
+                  leading: widget.canGrantDuty
+                      ? IconButton(
+                          // No taller than the row's own icons would make it.
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                          icon: Icon(Symbols.do_not_disturb_on_rounded, fill: 1, color: c.destructive),
+                          tooltip: l10n.pickerTakeOff(list[i]),
+                          onPressed: () => _takeOffList(list[i]),
+                        )
+                      : null,
                   trailing: ReorderableDragStartListener(
                     index: i,
                     child: Icon(Symbols.drag_handle_rounded, color: c.tertiaryLabel),

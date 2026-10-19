@@ -107,18 +107,31 @@
   "removeDuty": "移除这项",
   "dutyRemoved": "已移除{duty}",
   "dutyUpdated": "已更新{duty}",
-  "pickerServes": "有这项事奉",
+  "pickerServes": "排过{duty}的人",
+  "@pickerServes": {
+    "placeholders": {
+      "duty": {
+        "type": "String"
+      }
+    }
+  },
   "pickerOthers": "其他同工",
   "pickerUseName": "用“{name}”",
   "pickerNoOneServes": "还没有人负责{duty}",
+  "pickerLearns": "排过一次，下次就会列在上面",
   "pickerNoResults": "找不到“{query}”",
   "pickerSearchHint": "搜索同工",
-  "pickerAddDutyTitle": "也让“{name}”负责{duty}？",
-  "pickerAddDutyBody": "之后安排{duty}时，会列在上面",
-  "pickerAddDutyYes": "加上",
-  "pickerAddDutyNo": "只排这次",
   "reorder": "调整顺序",
   "reorderHint": "拖动调整先后，每一周都按这个顺序",
+  "editListHint": "拖动调整先后，每一周都按这个顺序。按减号从名单移除，之后一样搜得到。",
+  "pickerTakeOff": "把{name}从名单移除",
+  "@pickerTakeOff": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "orderSaved": "已更新顺序",
   "swap": "交换",
   "swapWith": "和谁交换{duty}？",
@@ -615,8 +628,6 @@
   "importNoSettingsChange": "这次安排不会更改同工或教会设置",
   "importAddConfiguredDuty": "加入事奉设置：{role}",
   "importUnconfiguredDuty": "未设置的事奉项目：{role}",
-  "importGrantQualification": "让{name}负责{role}",
-  "importMissingQualification": "{name}还没设置{role}",
   "importAddCommonEvent": "加入常用特别活动：{name}",
   "importNotCommonEvent": "未设为常用特别活动：{name}",
   "importDiff": "应用后差异 · {date}",

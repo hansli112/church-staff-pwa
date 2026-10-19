@@ -742,11 +742,11 @@ abstract class L10n {
   /// **'已更新{duty}'**
   String dutyUpdated(String duty);
 
-  /// No description provided for @pickerServes.
+  /// Header over the people the picker lists first: those the duty was given to, by hand or by being scheduled
   ///
   /// In zh, this message translates to:
-  /// **'有這項服事'**
-  String get pickerServes;
+  /// **'排過{duty}的人'**
+  String pickerServes(String duty);
 
   /// No description provided for @pickerOthers.
   ///
@@ -766,6 +766,12 @@ abstract class L10n {
   /// **'還沒有人負責{duty}'**
   String pickerNoOneServes(String duty);
 
+  /// For admins, while nobody is on a duty's list: picking someone puts them on it
+  ///
+  /// In zh, this message translates to:
+  /// **'排過一次，下次就會列在上面'**
+  String get pickerLearns;
+
   /// No description provided for @pickerNoResults.
   ///
   /// In zh, this message translates to:
@@ -778,30 +784,6 @@ abstract class L10n {
   /// **'搜尋同工'**
   String get pickerSearchHint;
 
-  /// No description provided for @pickerAddDutyTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'也讓「{name}」負責{duty}？'**
-  String pickerAddDutyTitle(String name, String duty);
-
-  /// No description provided for @pickerAddDutyBody.
-  ///
-  /// In zh, this message translates to:
-  /// **'之後安排{duty}時，會列在上面'**
-  String pickerAddDutyBody(String duty);
-
-  /// No description provided for @pickerAddDutyYes.
-  ///
-  /// In zh, this message translates to:
-  /// **'加上'**
-  String get pickerAddDutyYes;
-
-  /// No description provided for @pickerAddDutyNo.
-  ///
-  /// In zh, this message translates to:
-  /// **'只排這次'**
-  String get pickerAddDutyNo;
-
   /// No description provided for @reorder.
   ///
   /// In zh, this message translates to:
@@ -813,6 +795,18 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'拖曳調整先後，每一週都照這個順序'**
   String get reorderHint;
+
+  /// Admins editing a duty's list in the picker: reorder, or take people off
+  ///
+  /// In zh, this message translates to:
+  /// **'拖曳調整先後，每一週都照這個順序。按減號從名單拿掉，之後一樣搜得到。'**
+  String get editListHint;
+
+  /// Tooltip of the minus button beside a person in the picker's 編輯
+  ///
+  /// In zh, this message translates to:
+  /// **'把{name}從名單拿掉'**
+  String pickerTakeOff(String name);
 
   /// No description provided for @orderSaved.
   ///
@@ -3789,18 +3783,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'未設定的服事項目：{role}'**
   String importUnconfiguredDuty(String role);
-
-  /// Admin grants this imported duty to the matched member
-  ///
-  /// In zh, this message translates to:
-  /// **'讓{name}負責{role}'**
-  String importGrantQualification(String name, String role);
-
-  /// Matched member has no configured qualification for this duty
-  ///
-  /// In zh, this message translates to:
-  /// **'{name}還沒設定{role}'**
-  String importMissingQualification(String name, String role);
 
   /// Admin keeps an imported event as a common service option
   ///

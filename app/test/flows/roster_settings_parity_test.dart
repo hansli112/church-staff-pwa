@@ -250,10 +250,13 @@ void main() {
     await tester.enterText(find.byType(TextField), '新外請');
     await settle(tester);
     await tapText(tester, '用「新外請」');
-    await tapText(tester, '調整順序');
-    final gesture = await tester.startGesture(tester.getCenter(find.byIcon(Symbols.drag_handle_rounded).first));
+    await tapText(tester, '編輯');
+    final handle = find.byIcon(Symbols.drag_handle_rounded).first;
+    // Well past the next row, however tall rows are.
+    final row = tester.getSize(find.ancestor(of: handle, matching: find.byType(ListRow)).first).height;
+    final gesture = await tester.startGesture(tester.getCenter(handle));
     await tester.pump(const Duration(milliseconds: 100));
-    await gesture.moveBy(const Offset(0, 120));
+    await gesture.moveBy(Offset(0, row * 3));
     await tester.pump(const Duration(milliseconds: 500));
     await gesture.up();
     await settle(tester);
@@ -313,7 +316,6 @@ void main() {
     await tapText(tester, '司琴');
     expect(find.text('外請名字'), findsOneWidget);
     await tapText(tester, 'John Chen');
-    expect(find.text('也讓John Chen負責司琴？'), findsNothing);
     await tapText(tester, '完成');
 
     final duty = savedDay(b, 11).duties.firstWhere((d) => d.role == '司琴');
