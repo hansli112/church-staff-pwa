@@ -1711,7 +1711,7 @@ abstract class L10n {
   /// No description provided for @notifRosterChangeSub.
   ///
   /// In zh, this message translates to:
-  /// **'你被排進或移出服事時。晚上 10 點後的異動，早上 7 點才通知'**
+  /// **'你被排進或移出服事時。晚上 10 點後的異動，早上 7 點才通知。'**
   String get notifRosterChangeSub;
 
   /// No description provided for @notifMemberLeft.
@@ -4519,7 +4519,7 @@ abstract class L10n {
   /// No description provided for @onlineRefundFooter.
   ///
   /// In zh, this message translates to:
-  /// **'在綠界後台退款後，填這筆的特店訂單編號，就會從雲端費用進度扣回。'**
+  /// **'在綠界後台退款後，填這筆的特店訂單編號，就會從雲端費用進度扣回'**
   String get onlineRefundFooter;
 
   /// No description provided for @onlineRefundAdd.
@@ -4569,6 +4569,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'同意並繼續'**
   String get photoAiAgree;
+
+  /// The operator entered a refunded online payment a second time
+  ///
+  /// In zh, this message translates to:
+  /// **'這筆已經從 {month} 扣回過了'**
+  String onlineRefundAlready(String month);
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

@@ -519,7 +519,7 @@ class _AdminFundingScreenState extends ConsumerState<AdminFundingScreen> {
     if (orderNo == null || !mounted) return;
     final l10n = L10n.of(context);
     final cloud = ref.read(backendProvider).cloud;
-    final OnlineRefund refund;
+    final OnlinePayment refund;
     try {
       refund = await cloud.adminRefundOnlineSupport(orderNo, refunded: true);
     } on CloudException catch (e) {
@@ -530,8 +530,10 @@ class _AdminFundingScreenState extends ConsumerState<AdminFundingScreen> {
       if (mounted) showToast(context, errorText(l10n, e));
       return;
     }
-    ref.invalidate(_fundingProvider);
     if (!mounted) return;
+    // Taken off before: undoing this one would count a real refund again.
+    if (refund.alreadyRefunded) return showToast(context, l10n.onlineRefundAlready(refund.month));
+    ref.invalidate(_fundingProvider);
     final container = ProviderScope.containerOf(context, listen: false);
     showToast(
       context,
@@ -624,7 +626,7 @@ class _RefundSheetState extends State<_RefundSheet> {
   }
 
   /// What ECPay takes as MerchantTradeNo: up to 20 letters and digits.
-  String? get _valid {
+  String? get _validOrderNo {
     final no = _orderNo.text.trim();
     return RegExp(r'^[A-Za-z0-9]{1,20}$').hasMatch(no) ? no : null;
   }
@@ -653,7 +655,7 @@ class _RefundSheetState extends State<_RefundSheet> {
             const SizedBox(height: Space.l),
             PrimaryButton(
               label: l10n.onlineRefundApply,
-              onPressed: _valid == null ? null : () => Navigator.pop(context, _valid),
+              onPressed: _validOrderNo == null ? null : () => Navigator.pop(context, _validOrderNo),
             ),
             const SizedBox(height: Space.m),
           ],

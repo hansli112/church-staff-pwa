@@ -532,7 +532,7 @@
   "notifReminderBoth": "兩個都要",
   "notifReminderTimeFooter": "都在晚上 7 點",
   "notifRosterChange": "服事表異動",
-  "notifRosterChangeSub": "你被排進或移出服事時。晚上 10 點後的異動，早上 7 點才通知",
+  "notifRosterChangeSub": "你被排進或移出服事時。晚上 10 點後的異動，早上 7 點才通知。",
   "notifMemberLeft": "同工退出",
   "notifMemberLeftSub": "有人退出教會時（只通知管理員）",
   "notifThisChurch": "這間教會的通知",
@@ -1871,7 +1871,7 @@
   "errCredentialInUse": "你選的帳號已經是另一個馬大別忙帳號，不能連結。要連結的話，請先用它登入並刪除那個帳號，再回來連結。",
   "@errCredentialInUse": {"description": "Linking a Google or Apple account that already has an account of its own"},
   "onlineRefundHeader": "線上支持退款",
-  "onlineRefundFooter": "在綠界後台退款後，填這筆的特店訂單編號，就會從雲端費用進度扣回。",
+  "onlineRefundFooter": "在綠界後台退款後，填這筆的特店訂單編號，就會從雲端費用進度扣回",
   "onlineRefundAdd": "扣回一筆退款",
   "onlineRefundOrderNo": "特店訂單編號",
   "@onlineRefundOrderNo": {"description": "ECPay's 特店訂單編號 (MerchantTradeNo), as its back office calls it"},
@@ -1882,5 +1882,7 @@
   "photoAiTitle": "用 AI 辨識照片",
   "photoAiBody": "照片和同工名單會送到 Google 的 Gemini，辨識成服事表。Google 不會拿這些內容訓練 AI。",
   "@photoAiBody": {"description": "Asked once per account before the first photo recognition (App Store 5.1.2(i)): what goes to which AI"},
-  "photoAiAgree": "同意並繼續"
+  "photoAiAgree": "同意並繼續",
+  "onlineRefundAlready": "這筆已經從 {month} 扣回過了",
+  "@onlineRefundAlready": {"description": "The operator entered a refunded online payment a second time", "placeholders": {"month": {"type": "String", "example": "2026-09"}}}
 }

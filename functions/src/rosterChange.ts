@@ -20,7 +20,8 @@ import { dateKeyIn, earliestDay, instantOf, nextDay, timeZoneOf, wallClock } fro
  * Quiet hours: a push due from 22:00 to 7:00 on the church's clock waits
  * until 7:00 (`heldPushes/{cid}_{rosterId}_{uid}`), and then tells what
  * changed for that person since the first held change: put on and taken off
- * again overnight is no news. The webhook is not held; it is the church's.
+ * again overnight is no news, nor are their own edits or an import. The
+ * webhook is not held; it is the church's.
  */
 
 export interface DutyDiff {
@@ -77,7 +78,7 @@ export interface RosterChange extends DutyDiff {
   /** uid → their duties on the roster as it is now. */
   holders: Map<string, string[]>;
   /** uid → their duties on it before this change. */
-  held: Map<string, string[]>;
+  previously: Map<string, string[]>;
   /** `app`, or `import` when the day came in with a whole import (or was
    * put back by undoing one). For a deleted day, how it was last written. */
   via: string;
@@ -125,7 +126,7 @@ export async function readRosterChange(
     event: day.event,
     movedFrom,
     holders: dutiesByUid(after?.exists ? after.get('duties') : []),
-    held: dutiesByUid(before?.exists ? before.get('duties') : []),
+    previously: dutiesByUid(before?.exists ? before.get('duties') : []),
     // A deleted day keeps the way it was last written: taking back an
     // import removes days no push announced, so none announces their going.
     via: (doc?.get('via') as string | undefined) ?? 'app',
@@ -156,7 +157,7 @@ interface News {
 }
 
 /** The roster day a push is about: its church, its link, how it reads. */
-interface Told {
+interface PushDay {
   cid: string;
   title: string;
   link: string;
@@ -165,7 +166,7 @@ interface Told {
   event: { id: string; title: string } | null;
 }
 
-function told(church: DocumentSnapshot, day: Pick<RosterDay, 'dateKey' | 'serviceId' | 'event'>, name: string): Told {
+function pushDay(church: DocumentSnapshot, day: Pick<RosterDay, 'dateKey' | 'serviceId' | 'event'>, name: string): PushDay {
   return {
     cid: church.id,
     title: church.get('name') as string,
@@ -176,23 +177,67 @@ function told(church: DocumentSnapshot, day: Pick<RosterDay, 'dateKey' | 'servic
   };
 }
 
-async function tell(deps: PushDeps, t: Told, uid: string, n: News) {
+async function tell(deps: PushDeps, day: PushDay, uid: string, news: News) {
   const push = (body: (w: Words) => string) =>
-    notifyMembers(deps, t.cid, [uid], 'rosterChange', (w) => ({ title: t.title, body: body(w), link: t.link }));
-  const day = (w: Words) => `${w.shortDate(t.dateKey)} ${t.name}`;
+    notifyMembers(deps, day.cid, [uid], 'rosterChange', (w) => ({ title: day.title, body: body(w), link: day.link }));
+  const label = (w: Words) => `${w.shortDate(day.dateKey)} ${day.name}`;
   let sent = 0;
-  if (n.movedTo && t.event) sent += await push((w) => w.eventMoved(t.event!.title, w.dateWithWeekday(n.movedTo!)));
-  if (n.added.length) sent += await push((w) => w.putOn(day(w), n.added));
-  if (n.removed.length) sent += await push((w) => w.takenOff(day(w), n.removed));
+  if (news.movedTo && day.event) {
+    const { title } = day.event;
+    sent += await push((w) => w.eventMoved(title, w.dateWithWeekday(news.movedTo!)));
+  }
+  if (news.added.length) sent += await push((w) => w.putOn(label(w), news.added));
+  if (news.removed.length) sent += await push((w) => w.takenOff(label(w), news.removed));
   return sent;
+}
+
+// Firestore's (gRPC's) code for a create() whose document exists.
+const ALREADY_EXISTS = 6;
+
+/** The pushes held over quiet hours for [c]'s roster, by uid. */
+async function heldFor(deps: PushDeps, c: RosterChange) {
+  const q = await deps.db
+    .collection('heldPushes')
+    .where('cid', '==', c.church.id)
+    .where('rosterId', '==', c.rosterId)
+    .get();
+  return new Map(q.docs.map((d) => [d.get('uid') as string, d]));
+}
+
+/** [uid]'s news since push [h] was held: from what they had then to [now], on [dateKey]. */
+function newsSince(h: DocumentSnapshot, now: string[], dateKey: string, event: boolean): News {
+  const before = (h.get('roles') as string[] | undefined) ?? [];
+  return {
+    movedTo: event && dateKey !== h.get('dateKey') ? dateKey : null,
+    added: now.filter((r) => !before.includes(r)),
+    removed: before.filter((r) => !now.includes(r)),
+  };
+}
+
+/**
+ * Takes [uid]'s part of [c] into held push [h] as if it had always been so:
+ * a change they are not to hear about (their own, or an import's).
+ */
+async function absorb(h: DocumentSnapshot, c: RosterChange, uid: string) {
+  const roles = (h.get('roles') as string[] | undefined) ?? [];
+  const off = c.removed.get(uid) ?? [];
+  const on = c.added.get(uid) ?? [];
+  await h.ref.update({ roles: [...roles.filter((r) => !off.includes(r)), ...on.filter((r) => !roles.includes(r))] });
+}
+
+/** An import (or its undo) announces nothing: held pushes take it as given. */
+async function absorbImport(deps: PushDeps, c: RosterChange) {
+  for (const [uid, h] of await heldFor(deps, c)) await absorb(h, c, uid);
+  return 0;
 }
 
 /**
  * Pushes to each person put on or taken off a duty. The editor is not told
  * about their own change. An event's roster moved to another day tells
  * everyone on it. (One cancelled with its event never gets here: see
- * readRosterChange.) In quiet hours, holds them instead. Returns how many
- * devices it reached.
+ * readRosterChange.) In quiet hours, holds them instead; after, someone
+ * with a push still held hears the night's news and this one as one.
+ * Returns how many devices it reached.
  */
 export async function pushRosterChange(deps: PushDeps & Pick<Deps, 'now'>, c: RosterChange) {
   const news = new Map<string, News>();
@@ -203,16 +248,29 @@ export async function pushRosterChange(deps: PushDeps & Pick<Deps, 'now'>, c: Ro
   if (c.event && c.movedFrom) for (const uid of c.holders.keys()) of(uid).movedTo = c.dateKey;
   for (const [uid, roles] of c.added) of(uid).added = roles;
   for (const [uid, roles] of c.removed) of(uid).removed = roles;
-  if (c.editor) news.delete(c.editor.uid);
 
+  const held = await heldFor(deps, c);
+  if (c.editor) {
+    news.delete(c.editor.uid);
+    const own = held.get(c.editor.uid);
+    if (own) await absorb(own, c, c.editor.uid);
+  }
   const until = quietUntil(timeZoneOf(c.church), deps.now());
   if (until) {
-    for (const uid of news.keys()) await hold(deps, c, uid, until);
+    for (const uid of news.keys()) if (!held.has(uid)) await hold(deps, c, uid, until);
     return 0;
   }
-  const t = told(c.church, c, c.serviceName);
+  const day = pushDay(c.church, c, c.serviceName);
   let sent = 0;
-  for (const [uid, n] of news) sent += await tell(deps, t, uid, n);
+  for (const [uid, n] of news) {
+    const h = held.get(uid);
+    if (!h) {
+      sent += await tell(deps, day, uid, n);
+      continue;
+    }
+    sent += await tell(deps, day, uid, newsSince(h, c.holders.get(uid) ?? [], c.dateKey, c.event !== null));
+    await h.ref.delete();
+  }
   return sent;
 }
 
@@ -227,7 +285,7 @@ async function hold(deps: PushDeps, c: RosterChange, uid: string, until: Date) {
       cid: c.church.id,
       rosterId: c.rosterId,
       uid,
-      roles: c.held.get(uid) ?? [],
+      roles: c.previously.get(uid) ?? [],
       dateKey: c.movedFrom ?? c.dateKey,
       serviceId: c.serviceId,
       serviceName: c.serviceName,
@@ -236,7 +294,7 @@ async function hold(deps: PushDeps, c: RosterChange, uid: string, until: Date) {
     });
   } catch (e) {
     // Already held: the first change's "before" stands.
-    if ((e as { code?: number }).code !== 6) throw e;
+    if ((e as { code?: number }).code !== ALREADY_EXISTS) throw e;
   }
 }
 
@@ -250,32 +308,33 @@ export async function sendHeldPushes(deps: PushDeps & Pick<Deps, 'now'>) {
   const due = await deps.db.collection('heldPushes').where('sendAt', '<=', deps.now()).get();
   const byRoster = new Map<string, typeof due.docs>();
   for (const d of due.docs) {
-    const key = `${d.get('cid')}/${d.get('rosterId')}`;
+    const key = `${d.get('cid')}_${d.get('rosterId')}`;
     byRoster.set(key, [...(byRoster.get(key) ?? []), d]);
   }
   let sent = 0;
-  for (const [key, held] of byRoster) {
-    const cid = key.split('/')[0];
+  for (const held of byRoster.values()) {
+    const first = held[0];
+    const cid = first.get('cid') as string;
     const [church, roster, services] = await Promise.all([
       deps.db.doc(`churches/${cid}`).get(),
-      deps.db.doc(`churches/${key.replace('/', '/rosters/')}`).get(),
+      deps.db.doc(`churches/${cid}/rosters/${first.get('rosterId') as string}`).get(),
       serviceNames(deps, cid),
     ]);
+    // A deleted day reads as it was when first held.
     const day = rosterDay(roster);
-    const first = held[0];
-    const was = { dateKey: first.get('dateKey') as string, serviceId: first.get('serviceId') as string | null, event: first.get('event') as Told['event'] };
+    const was = {
+      dateKey: first.get('dateKey') as string,
+      serviceId: first.get('serviceId') as string | null,
+      event: first.get('event') as PushDay['event'],
+    };
     const lastDay = day?.lastDay ?? was.dateKey;
-    const news = isChurchOpen(church) && !day?.cancelled && lastDay >= dateKeyIn(timeZoneOf(church), deps.now());
-    const t = day ? told(church, day, day.name(services)) : told(church, was, first.get('serviceName') as string);
+    const isNews = isChurchOpen(church) && !day?.cancelled && lastDay >= dateKeyIn(timeZoneOf(church), deps.now());
+    const about = day ? pushDay(church, day, day.name(services)) : pushDay(church, was, first.get('serviceName') as string);
     for (const h of held) {
-      if (news) {
+      if (isNews) {
         const uid = h.get('uid') as string;
-        const before = (h.get('roles') as string[] | undefined) ?? [];
-        const now = day?.holders.get(uid) ?? [];
-        const moved = day?.event && day.dateKey !== h.get('dateKey') ? day.dateKey : null;
-        const n = { movedTo: moved, added: now.filter((r) => !before.includes(r)), removed: before.filter((r) => !now.includes(r)) };
         try {
-          sent += await tell(deps, t, uid, n);
+          sent += await tell(deps, about, uid, newsSince(h, day?.holders.get(uid) ?? [], about.dateKey, about.event !== null));
         } catch (e) {
           logger.error('Held roster push failed', { cid, uid, error: String(e) });
         }
@@ -323,7 +382,7 @@ export async function onRosterWritten(
   const change = await readRosterChange(deps, cid, before, after, editedBy);
   if (!change) return null;
   return runEach(`roster change ${cid}/${change.event ? `ev_${change.event.id}` : `${change.dateKey}_${change.serviceId}`}`, {
-    push: async () => (change.via === 'import' ? 0 : pushRosterChange(deps, change)),
+    push: async () => (change.via === 'import' ? absorbImport(deps, change) : pushRosterChange(deps, change)),
     webhook: () => queueRosterChange(deps, change, eventId),
   });
 }

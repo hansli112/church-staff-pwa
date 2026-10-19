@@ -72,7 +72,7 @@ class L10nEn extends L10n {
   String get noPermission => 'You don’t have permission to do this';
 
   @override
-  String get comingSoon => 'Still working on this.';
+  String get comingSoon => 'Still working on this';
 
   @override
   String get signInWithGoogle => 'Sign in with Google';
@@ -1242,7 +1242,7 @@ class L10nEn extends L10n {
 
   @override
   String get supportBody =>
-      'Support is optional and covers only server costs. It isn’t a gift to a church, and every church gets the same features';
+      'Support is optional and covers only server costs. It isn’t a gift to a church, and every church gets the same features.';
 
   @override
   String get supportTips => 'One-time support';
@@ -2609,7 +2609,7 @@ class L10nEn extends L10n {
 
   @override
   String get onlineRefundFooter =>
-      'After refunding a payment in ECPay’s back office, enter its merchant order number to take it off the server costs.';
+      'After refunding a payment in ECPay’s back office, enter its merchant order number to take it off the server costs';
 
   @override
   String get onlineRefundAdd => 'Take off a refund';
@@ -2626,7 +2626,8 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get onlineRefundNotFound => 'No online support payment has that order number';
+  String get onlineRefundNotFound =>
+      'No online support payment has that order number. Check it in ECPay’s back office.';
 
   @override
   String get photoAiTitle => 'Read photos with AI';
@@ -2637,4 +2638,9 @@ class L10nEn extends L10n {
 
   @override
   String get photoAiAgree => 'Agree and continue';
+
+  @override
+  String onlineRefundAlready(String month) {
+    return 'This one was already taken off $month';
+  }
 }

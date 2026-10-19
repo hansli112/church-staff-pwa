@@ -354,9 +354,10 @@ describe('a 線上支持 payment refunded in ECPay\'s back office', () => {
     await paid();
     const d = withRates();
     const r = await adminRefundOnlineSupport(d, op, { orderNo: ' M20261006A ', refunded: true });
-    assert.deepEqual(r, { amountTwd: 97, month: '2026-09' });
+    assert.deepEqual(r, { amountTwd: 97, month: '2026-09', already: false });
     assert.equal(await september(), 0);
-    await adminRefundOnlineSupport(d, op, { orderNo: 'M20261006A', refunded: true });
+    const again = await adminRefundOnlineSupport(d, op, { orderNo: 'M20261006A', refunded: true });
+    assert.deepEqual(again, { amountTwd: 97, month: '2026-09', already: true }, 'said, so its undo is not offered');
     assert.equal(await september(), 0, 'once');
     await adminRefundOnlineSupport(d, op, { orderNo: 'M20261006A', refunded: false });
     assert.equal(await september(), 97);

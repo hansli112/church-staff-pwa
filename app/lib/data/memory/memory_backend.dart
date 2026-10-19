@@ -84,7 +84,7 @@ class MemoryBackend implements Backend {
   Funding Function(List<CostItem> costs)? publishFunding;
 
   /// 線上支持 payments by order number, and those the operator took off.
-  final onlinePayments = <String, OnlineRefund>{};
+  final onlinePayments = <String, ({int amount, String month})>{};
   final refundedOnline = <String>{};
 
   final churches = <String, Church>{};
@@ -1823,13 +1823,14 @@ class MemoryCloud implements CloudApi {
   }
 
   @override
-  Future<OnlineRefund> adminRefundOnlineSupport(String orderNo, {required bool refunded}) async {
+  Future<OnlinePayment> adminRefundOnlineSupport(String orderNo, {required bool refunded}) async {
     _requireOperator();
     final no = orderNo.trim();
     final payment = _b.onlinePayments[no];
     if (payment == null) throw const CloudException(CloudErrorCode.notFound);
-    await _b.write(() => refunded ? _b.refundedOnline.add(no) : _b.refundedOnline.remove(no));
-    return payment;
+    final already = refunded && _b.refundedOnline.contains(no);
+    if (!already) await _b.write(() => refunded ? _b.refundedOnline.add(no) : _b.refundedOnline.remove(no));
+    return (amount: payment.amount, month: payment.month, alreadyRefunded: already);
   }
 
   @override

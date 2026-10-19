@@ -72,7 +72,7 @@ class L10nKo extends L10n {
   String get noPermission => '이 작업을 할 권한이 없어요';
 
   @override
-  String get comingSoon => '아직 준비 중이에요.';
+  String get comingSoon => '아직 준비 중이에요';
 
   @override
   String get signInWithGoogle => 'Google로 로그인';
@@ -882,7 +882,7 @@ class L10nKo extends L10n {
   String get notifRosterChange => '봉사표 변경';
 
   @override
-  String get notifRosterChangeSub => '내가 봉사에 배정되거나 빠졌을 때. 밤 10시 이후의 변경은 아침 7시에 알려요';
+  String get notifRosterChangeSub => '내가 봉사에 배정되거나 빠졌을 때. 밤 10시 이후의 변경은 아침 7시에 알려요.';
 
   @override
   String get notifMemberLeft => '멤버 나감';
@@ -1172,7 +1172,7 @@ class L10nKo extends L10n {
   String get supportVerseSource => '고린도후서 8:14–15 (개역개정)';
 
   @override
-  String get supportBody => '후원은 자유이고 서버 비용에만 쓰여요. 교회에 드리는 헌금이 아니며, 어느 교회든 쓸 수 있는 기능은 똑같아요';
+  String get supportBody => '후원은 자유이고 서버 비용에만 쓰여요. 교회에 드리는 헌금이 아니며, 어느 교회든 쓸 수 있는 기능은 똑같아요.';
 
   @override
   String get supportTips => '일시 후원';
@@ -2480,7 +2480,7 @@ class L10nKo extends L10n {
   String get onlineRefundHeader => '온라인 후원 환불';
 
   @override
-  String get onlineRefundFooter => '綠界(ECPay) 관리 화면에서 환불한 뒤 그 결제의 가맹점 주문 번호를 입력하면 서버 비용에서 빠져요.';
+  String get onlineRefundFooter => '綠界(ECPay) 관리 화면에서 환불한 뒤 그 결제의 가맹점 주문 번호를 입력하면 서버 비용에서 빠져요';
 
   @override
   String get onlineRefundAdd => '환불 반영하기';
@@ -2497,7 +2497,7 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get onlineRefundNotFound => '그 주문 번호의 온라인 후원을 찾을 수 없어요';
+  String get onlineRefundNotFound => '그 주문 번호의 온라인 후원을 찾을 수 없어요. 綠界 관리 화면에서 번호를 확인해 주세요.';
 
   @override
   String get photoAiTitle => 'AI로 사진 읽기';
@@ -2507,4 +2507,9 @@ class L10nKo extends L10n {
 
   @override
   String get photoAiAgree => '동의하고 계속';
+
+  @override
+  String onlineRefundAlready(String month) {
+    return '이 결제는 이미 $month에서 뺐어요';
+  }
 }

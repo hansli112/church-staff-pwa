@@ -224,6 +224,28 @@ describe('quiet hours', () => {
     ]);
   });
 
+  test('their own edits and an import overnight are not news at 7:00', async () => {
+    await church();
+    at('2026-10-03T23:00:00+08:00');
+    await write('C1', '2026-10-11', [duty('司琴', ['美玉']), duty('招待', [])]);
+    await write('C1', '2026-10-11', [duty('司琴', ['美玉']), duty('招待', ['美玉'])], { editedBy: 'mei' });
+    await write('C1', '2026-10-11', [duty('司琴', ['美玉']), duty('招待', ['美玉']), duty('音控', ['美玉'])], { via: 'import' });
+    at('2026-10-04T07:00:00+08:00');
+    await sendHeldPushes(triggerDeps());
+    assert.deepEqual(pushed.map((p) => p.body), ['你被排進 10/11 主日崇拜：司琴']);
+  });
+
+  test('a change just after 7:00, before the held push went: one push with both', async () => {
+    await church();
+    at('2026-10-03T23:00:00+08:00');
+    await write('C1', '2026-10-11', [duty('司琴', ['美玉']), duty('招待', [])]);
+    at('2026-10-04T07:00:20+08:00');
+    await write('C1', '2026-10-11', [duty('司琴', ['美玉']), duty('招待', ['美玉'])]);
+    assert.deepEqual(pushed.map((p) => p.body), ['你被排進 10/11 主日崇拜：司琴、招待']);
+    await sendHeldPushes(triggerDeps());
+    assert.equal(pushed.length, 1, 'nothing held is left to tell again');
+  });
+
   test('a day that passed overnight, or a church closed overnight, tells nothing', async () => {
     await church();
     at('2026-10-03T23:00:00+08:00');

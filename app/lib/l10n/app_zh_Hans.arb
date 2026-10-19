@@ -268,7 +268,7 @@
   "notifReminderBoth": "两个都要",
   "notifReminderTimeFooter": "都在晚上 7 点",
   "notifRosterChange": "事奉表变动",
-  "notifRosterChangeSub": "你被排入或移出事奉时。晚上 10 点后的变动，早上 7 点才通知",
+  "notifRosterChangeSub": "你被排入或移出事奉时。晚上 10 点后的变动，早上 7 点才通知。",
   "notifMemberLeft": "同工退出",
   "notifMemberLeftSub": "有人退出教会时（只通知管理员）",
   "notifThisChurch": "这间教会的通知",
@@ -736,7 +736,7 @@
   "unlinkBody": "之后就不能用 {email} 登录这个账号",
   "errCredentialInUse": "你选的账号已经是另一个马大别忙账号，不能关联。要关联的话，请先用它登录并删除那个账号，再回来关联。",
   "onlineRefundHeader": "在线支持退款",
-  "onlineRefundFooter": "在绿界后台退款后，填这笔的特店订单编号，就会从云端费用进度扣回。",
+  "onlineRefundFooter": "在绿界后台退款后，填这笔的特店订单编号，就会从云端费用进度扣回",
   "onlineRefundAdd": "扣回一笔退款",
   "onlineRefundOrderNo": "特店订单编号",
   "onlineRefundApply": "从进度扣回",
@@ -744,5 +744,6 @@
   "onlineRefundNotFound": "找不到这笔在线支持，请确认特店订单编号",
   "photoAiTitle": "用 AI 识别照片",
   "photoAiBody": "照片和同工名单会送到 Google 的 Gemini，识别成事奉表。Google 不会用这些内容训练 AI。",
-  "photoAiAgree": "同意并继续"
+  "photoAiAgree": "同意并继续",
+  "onlineRefundAlready": "这笔已经从 {month} 扣回过了"
 }

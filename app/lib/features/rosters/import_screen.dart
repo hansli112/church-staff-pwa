@@ -91,10 +91,16 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   /// member list to Google's Gemini (App Store 5.1.2(i)); asks the first
   /// time. Pasting JSON from one's own AI sends nothing and never asks.
   Future<bool> _agreedToPhotoAi() async {
-    final profile = ref.read(profileProvider).value;
-    if (profile == null) return false;
-    if (profile.photoAiConsent) return true;
     final l10n = L10n.of(context);
+    final UserProfile? profile;
+    try {
+      profile = await ref.read(profileProvider.future);
+    } catch (e) {
+      if (mounted) showToast(context, errorText(l10n, e));
+      return false;
+    }
+    if (profile == null || !mounted) return false;
+    if (profile.photoAiConsent) return true;
     final yes = await askChoice(
       context,
       title: l10n.photoAiTitle,

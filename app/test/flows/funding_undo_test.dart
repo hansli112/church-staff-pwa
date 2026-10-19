@@ -109,4 +109,25 @@ void main() {
     await settle(tester);
     expect(b.refundedOnline, isEmpty);
   });
+
+  testWidgets('an online payment taken off before says so, with no undo to count a real refund again', (tester) async {
+    final b = seededChurch();
+    b.auth.operators.add('pastor');
+    b.onlinePayments['M20261006A'] = (amount: 97, month: '2026-09');
+    b.refundedOnline.add('M20261006A');
+    await pumpApp(tester, b);
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/admin/funding');
+    await settle(tester);
+
+    await tester.scrollUntilVisible(find.text('扣回一筆退款'), 200);
+    await tester.tap(find.text('扣回一筆退款'));
+    await settle(tester);
+    await tester.enterText(find.byKey(const Key('refundOrderNo')), 'M20261006A');
+    await tester.pump();
+    await tester.tap(find.text('從進度扣回'));
+    await settle(tester);
+    expect(find.text('這筆已經從 2026-09 扣回過了'), findsOneWidget);
+    expect(find.text('復原'), findsNothing);
+    expect(b.refundedOnline, {'M20261006A'});
+  });
 }

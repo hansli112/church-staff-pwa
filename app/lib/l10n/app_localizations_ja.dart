@@ -72,7 +72,7 @@ class L10nJa extends L10n {
   String get noPermission => 'この操作を行う権限がありません';
 
   @override
-  String get comingSoon => '準備中です。';
+  String get comingSoon => '準備中です';
 
   @override
   String get signInWithGoogle => 'Google でログイン';
@@ -881,7 +881,7 @@ class L10nJa extends L10n {
   String get notifRosterChange => '奉仕表の変更';
 
   @override
-  String get notifRosterChangeSub => '奉仕に入ったり外れたりしたとき。夜10時以降の変更は朝7時に届きます';
+  String get notifRosterChangeSub => '奉仕に入ったり外れたりしたとき。夜10時以降の変更は朝7時に届きます。';
 
   @override
   String get notifMemberLeft => 'メンバーの退出';
@@ -1171,7 +1171,7 @@ class L10nJa extends L10n {
   String get supportVerseSource => 'コリントの信徒への手紙二 8:14–15（新共同訳）';
 
   @override
-  String get supportBody => '応援は任意で、サーバー費用にだけ使われます。教会への献金ではなく、使える機能はどの教会も同じです';
+  String get supportBody => '応援は任意で、サーバー費用にだけ使われます。教会への献金ではなく、使える機能はどの教会も同じです。';
 
   @override
   String get supportTips => '1回の応援';
@@ -2480,7 +2480,7 @@ class L10nJa extends L10n {
   String get onlineRefundHeader => 'オンライン応援の返金';
 
   @override
-  String get onlineRefundFooter => '綠界（ECPay）の管理画面で返金したら、その支払いの加盟店注文番号を入力すると、サーバー費用から差し引かれます。';
+  String get onlineRefundFooter => '綠界（ECPay）の管理画面で返金したら、その支払いの加盟店注文番号を入力すると、サーバー費用から差し引かれます';
 
   @override
   String get onlineRefundAdd => '返金を差し引く';
@@ -2497,7 +2497,7 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get onlineRefundNotFound => 'その注文番号のオンライン応援は見つかりません';
+  String get onlineRefundNotFound => 'その注文番号のオンライン応援は見つかりません。綠界の管理画面で番号を確かめてください。';
 
   @override
   String get photoAiTitle => 'AIで写真を読み取る';
@@ -2507,4 +2507,9 @@ class L10nJa extends L10n {
 
   @override
   String get photoAiAgree => '同意して続ける';
+
+  @override
+  String onlineRefundAlready(String month) {
+    return 'この支払いは $month から差し引き済みです';
+  }
 }

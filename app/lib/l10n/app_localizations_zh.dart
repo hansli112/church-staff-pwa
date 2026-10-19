@@ -881,7 +881,7 @@ class L10nZh extends L10n {
   String get notifRosterChange => '服事表異動';
 
   @override
-  String get notifRosterChangeSub => '你被排進或移出服事時。晚上 10 點後的異動，早上 7 點才通知';
+  String get notifRosterChangeSub => '你被排進或移出服事時。晚上 10 點後的異動，早上 7 點才通知。';
 
   @override
   String get notifMemberLeft => '同工退出';
@@ -2475,7 +2475,7 @@ class L10nZh extends L10n {
   String get onlineRefundHeader => '線上支持退款';
 
   @override
-  String get onlineRefundFooter => '在綠界後台退款後，填這筆的特店訂單編號，就會從雲端費用進度扣回。';
+  String get onlineRefundFooter => '在綠界後台退款後，填這筆的特店訂單編號，就會從雲端費用進度扣回';
 
   @override
   String get onlineRefundAdd => '扣回一筆退款';
@@ -2502,6 +2502,11 @@ class L10nZh extends L10n {
 
   @override
   String get photoAiAgree => '同意並繼續';
+
+  @override
+  String onlineRefundAlready(String month) {
+    return '這筆已經從 $month 扣回過了';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -3381,7 +3386,7 @@ class L10nZhHans extends L10nZh {
   String get notifRosterChange => '事奉表变动';
 
   @override
-  String get notifRosterChangeSub => '你被排入或移出事奉时。晚上 10 点后的变动，早上 7 点才通知';
+  String get notifRosterChangeSub => '你被排入或移出事奉时。晚上 10 点后的变动，早上 7 点才通知。';
 
   @override
   String get notifMemberLeft => '同工退出';
@@ -4975,7 +4980,7 @@ class L10nZhHans extends L10nZh {
   String get onlineRefundHeader => '在线支持退款';
 
   @override
-  String get onlineRefundFooter => '在绿界后台退款后，填这笔的特店订单编号，就会从云端费用进度扣回。';
+  String get onlineRefundFooter => '在绿界后台退款后，填这笔的特店订单编号，就会从云端费用进度扣回';
 
   @override
   String get onlineRefundAdd => '扣回一笔退款';
@@ -5002,4 +5007,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get photoAiAgree => '同意并继续';
+
+  @override
+  String onlineRefundAlready(String month) {
+    return '这笔已经从 $month 扣回过了';
+  }
 }

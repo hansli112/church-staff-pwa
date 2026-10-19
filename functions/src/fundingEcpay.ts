@@ -343,7 +343,9 @@ export async function dropExpiredOrders(deps: Deps) {
  * MerchantTradeNo) and the whole payment comes off the month it was paid
  * in, so 雲端費用進度 shows only what was kept. [refunded] false puts it
  * back (undo). Always the whole payment: the support page promises a full
- * refund. Answers { amountTwd, month } of the payment.
+ * refund. Answers { amountTwd, month } of the payment, and `already` when it
+ * was refunded before: then nothing changes, so its undo cannot count a
+ * real refund again.
  */
 export async function adminRefundOnlineSupport(deps: Deps, caller: Caller | null, data: unknown) {
   requireOperator(caller);
@@ -354,6 +356,8 @@ export async function adminRefundOnlineSupport(deps: Deps, caller: Caller | null
   const payment = await deps.db.doc(`fundingPayments/${id}`).get();
   const amountTwd = payment.get('amountTwd') as number | undefined;
   if (amountTwd === undefined) fail('not-found', 'notFound');
+  const month = payment.get('month') as string;
+  if (refunded && payment.get('refundedTwd') === amountTwd) return { amountTwd, month, already: true };
   await setRefund(deps, id, 'ecpay', refunded ? 1 : 0);
-  return { amountTwd, month: payment.get('month') as string };
+  return { amountTwd, month, already: false };
 }
