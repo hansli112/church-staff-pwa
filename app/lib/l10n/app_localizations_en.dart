@@ -534,6 +534,9 @@ class L10nEn extends L10n {
   String get account => 'Account';
 
   @override
+  String get about => 'About Martha, sit';
+
+  @override
   String get deleteAccount => 'Delete account';
 
   @override
@@ -1171,9 +1174,6 @@ class L10nEn extends L10n {
   String get calNoEventsThatDay => 'No events this day';
 
   @override
-  String get calWholeMonth => 'Show whole month';
-
-  @override
   String get calAllDay => 'All day';
 
   @override
@@ -1263,6 +1263,11 @@ class L10nEn extends L10n {
 
   @override
   String get supportMonthly => 'Monthly support';
+
+  @override
+  String supportPerMonth(String price) {
+    return '$price/month';
+  }
 
   @override
   String get supportRestore => 'Restore purchases';
@@ -1873,7 +1878,7 @@ class L10nEn extends L10n {
   String get merged => 'Merged';
 
   @override
-  String get fundingTitle => 'This month’s server costs';
+  String get fundingTitle => 'This month’s support';
 
   @override
   String fundingProgress(String available, String target) {

@@ -525,6 +525,9 @@ class L10nJa extends L10n {
   String get account => 'アカウント';
 
   @override
+  String get about => '「マルタ、ひと休み」について';
+
+  @override
   String get deleteAccount => 'アカウントを削除';
 
   @override
@@ -1107,9 +1110,6 @@ class L10nJa extends L10n {
   String get calNoEventsThatDay => 'この日の行事はありません';
 
   @override
-  String get calWholeMonth => '月全体を見る';
-
-  @override
   String get calAllDay => '終日';
 
   @override
@@ -1192,6 +1192,11 @@ class L10nJa extends L10n {
 
   @override
   String get supportMonthly => '毎月の応援';
+
+  @override
+  String supportPerMonth(String price) {
+    return '$price/月';
+  }
 
   @override
   String get supportRestore => '購入を復元';
@@ -1767,7 +1772,7 @@ class L10nJa extends L10n {
   String get merged => '統合しました';
 
   @override
-  String get fundingTitle => '今月のサーバー費用';
+  String get fundingTitle => '今月の応援';
 
   @override
   String fundingProgress(String available, String target) {

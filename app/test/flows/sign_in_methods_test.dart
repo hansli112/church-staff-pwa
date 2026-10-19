@@ -128,13 +128,17 @@ void main() {
     expect(user.claimEmails, ['mei@gmail.com']);
   });
 
-  testWidgets('我的 leads to 登入方式', (tester) async {
+  testWidgets('my name at the top of 設定 leads to 登入方式, which 設定 itself no longer lists', (tester) async {
     final b = movedChurch(signIn: false);
     b.auth.signInAs('pastor@grace.org', uid: 'pastor');
     await pumpApp(tester, b);
     await go(tester, '/me');
-    await tester.scrollUntilVisible(find.text('登入方式'), 200, scrollable: find.byType(Scrollable).first);
-    await settle(tester);
+    for (final moved in ['登入方式', '登出', '刪除帳號', '隱私權政策', '服務條款', '目前版本']) {
+      expect(find.text(moved, skipOffstage: false), findsNothing, reason: moved);
+    }
+    await tapText(tester, 'pastor@grace.org');
+    expect(find.text('登出'), findsOneWidget);
+    expect(find.text('刪除帳號'), findsOneWidget);
     await tapText(tester, '登入方式');
     expect(find.text('pastor@grace.org'), findsOneWidget);
   });

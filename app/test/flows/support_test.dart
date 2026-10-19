@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:martha/app.dart';
-import 'package:martha/core/design/components.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/state/providers.dart';
@@ -18,9 +18,9 @@ class FakeStore implements SupportStore {
   FakeStore({this.now, this.items = _items, this.unreachable = false});
 
   static const _items = [
-    SupportItem(id: 'tip_small', title: '請喝咖啡', price: 'NT\$90', subscription: false),
-    SupportItem(id: 'supporter_monthly', title: '每月支持', price: 'NT\$60', subscription: true),
-    SupportItem(id: 'supporter_monthly_plus', title: '每月支持', price: 'NT\$150', subscription: true),
+    SupportItem(id: 'tip_small', price: 'NT\$90', subscription: false),
+    SupportItem(id: 'supporter_monthly', price: 'NT\$60', subscription: true),
+    SupportItem(id: 'supporter_monthly_plus', price: 'NT\$150', subscription: true),
   ];
 
   /// When a purchase is paid; the test's clock.
@@ -75,6 +75,24 @@ class FakeIcons implements AppIconSwitcher {
 
   @override
   Future<void> set(String? name) async => icon = name;
+}
+
+/// The monthly plan buttons, by price.
+const plan60 = 'NT\$60／月';
+const plan150 = 'NT\$150／月';
+
+/// The mark on the plan I pay for.
+Finder paidMark(String plan) =>
+    find.descendant(of: find.widgetWithText(FilledButton, plan), matching: find.byIcon(Symbols.check_rounded));
+
+/// Picks app icon [name] on its page, behind 支持馬大別忙.
+Future<void> pickIcon(WidgetTester tester, String name) async {
+  await tester.scrollUntilVisible(find.text('App 圖示'), 200, scrollable: find.byType(Scrollable).last);
+  await showMiddle(tester, find.text('App 圖示'));
+  await tester.tap(find.text('App 圖示'));
+  await settle(tester);
+  await tester.tap(find.text(name));
+  await settle(tester);
 }
 
 /// Scrolls [finder] to the middle of the page, clear of the tab bar.
@@ -140,7 +158,7 @@ void main() {
     ) async {
       final launcher = captureLaunches();
       await pumpApp(tester, seededChurch(as: staffMei));
-      GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me');
+      GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/about');
       await settle(tester);
       await tester.tap(find.text('隱私權政策'));
       await tester.tap(find.text('服務條款'));
@@ -152,7 +170,7 @@ void main() {
   testWidgets('the web app opens them as the website', (tester) async {
     final launcher = captureLaunches();
     await pumpApp(tester, seededChurch(as: staffMei), overrides: [isWebProvider.overrideWithValue(true)]);
-    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me');
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/about');
     await settle(tester);
     await tester.tap(find.text('隱私權政策'));
     await settle(tester);
@@ -176,23 +194,28 @@ void main() {
     await tester.tap(find.text('支持馬大別忙'));
     await settle(tester);
 
-    await showMiddle(tester, find.text('紫'));
-    await tester.tap(find.text('紫'));
-    await settle(tester);
-    expect(icons.icon, isNull, reason: 'icons are for subscribers');
+    expect(find.text('App 圖示'), findsNothing, reason: 'icons are for subscribers');
+    expect(findShownContaining('每月支持者可以換 App 圖示'), findsOneWidget);
 
-    await showMiddle(tester, find.text('請喝咖啡'));
-    await tester.tap(find.text('請喝咖啡'));
+    await showMiddle(tester, find.text('NT\$90'));
+    await tester.tap(find.text('NT\$90'));
     await settle(tester);
     expect(find.text('謝謝你的支持'), findsOneWidget);
 
-    await tester.tap(find.text('NT\$60'));
+    await tester.tap(find.text(plan60));
     await settle(tester);
-    await showMiddle(tester, find.text('紫'));
-    await tester.tap(find.text('紫'));
-    await settle(tester);
+    expect(findShownContaining('每月支持者可以換 App 圖示'), findsNothing);
+    await tester.scrollUntilVisible(find.text('App 圖示'), 200, scrollable: find.byType(Scrollable).last);
+    expect(find.text('預設'), findsOneWidget, reason: 'the icon in use');
+    await pickIcon(tester, '紫');
     expect(icons.icon, 'Purple');
     expect(store.bought, ['tip_small', 'supporter_monthly']);
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
+    await settle(tester);
+    await tester.scrollUntilVisible(find.text('App 圖示'), 200, scrollable: find.byType(Scrollable).last);
+    expect(find.text('紫'), findsOneWidget, reason: 'the icon in use');
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me');
+    await settle(tester);
     expect(find.text('支持者'), findsOneWidget);
   });
 
@@ -203,47 +226,58 @@ void main() {
     await pumpWithStore(tester, FakeStore(), FakeIcons());
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
     await settle(tester);
-    expect(findShown('每月自動續訂，可以隨時到 Google Play 的訂閱設定取消'), findsOneWidget);
+    expect(findShownContaining('每月自動續訂，可以隨時到 Google Play 的訂閱設定取消'), findsOneWidget);
     expect(findShown('管理訂閱'), findsNothing, reason: 'nothing to manage before subscribing');
     await tester.tap(findShown('服務條款'));
     await tester.tap(findShown('隱私權政策'));
     await settle(tester);
     expect(launcher.opened, [endsWith('/terms?lang=zh-Hant&from=app'), endsWith('/privacy?lang=zh-Hant&from=app')]);
 
-    await tester.tap(find.text('NT\$60'));
+    await tester.tap(find.text(plan60));
     await settle(tester);
     await tester.tap(find.text('管理訂閱'));
     await settle(tester);
     expect(launcher.opened.last, 'https://play.google.com/store/account/subscriptions?sku=supporter_monthly');
   });
 
-  testWidgets('two monthly plans; the badge is on the one I pay for, and the other switches to it', (tester) async {
+  testWidgets('two monthly plans; the one I pay for is marked, and the other switches to it', (tester) async {
     final launches = captureLaunches();
     final store = FakeStore();
     await pumpWithStore(tester, store, FakeIcons());
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
     await settle(tester);
-    expect(find.text('每月支持'), findsNWidgets(3), reason: 'the section and both plans: one name, two amounts');
-    Finder badgeOn(String price) =>
-        find.descendant(of: find.widgetWithText(ListRow, price), matching: find.text('支持者'));
+    expect(find.text('每月支持'), findsOneWidget, reason: 'one name, two amounts: only the amounts show');
 
-    await tester.tap(find.text('NT\$60'));
+    await tester.tap(find.text(plan60));
     await settle(tester);
-    expect(badgeOn('NT\$60'), findsOneWidget);
-    expect(badgeOn('NT\$150'), findsNothing);
-    await tester.tap(find.text('NT\$60'));
+    expect(paidMark(plan60), findsOneWidget);
+    expect(paidMark(plan150), findsNothing);
+    await tester.tap(find.text(plan60));
     await settle(tester);
     expect(store.bought, ['supporter_monthly'], reason: 'the plan already paid for is not bought again');
 
-    await tester.tap(find.text('NT\$150'));
+    await tester.tap(find.text(plan150));
     await settle(tester);
     expect(store.bought, ['supporter_monthly', 'supporter_monthly_plus']);
-    expect(badgeOn('NT\$150'), findsOneWidget);
-    expect(badgeOn('NT\$60'), findsNothing);
+    expect(paidMark(plan150), findsOneWidget);
+    expect(paidMark(plan60), findsNothing);
     await tester.tap(find.text('管理訂閱'));
     await settle(tester);
     expect(launches.opened.last, endsWith('sku=supporter_monthly_plus'));
   });
+
+  for (final (scale, sideBySide) in [(1.0, true), (2.0, false)]) {
+    testWidgets('the amounts side by side, stacked when text at $scale× leaves no room', (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = scale;
+      await pumpWithStore(tester, FakeStore(), FakeIcons());
+      GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
+      await settle(tester);
+      final a = tester.getRect(find.widgetWithText(FilledButton, plan60));
+      final b = tester.getRect(find.widgetWithText(FilledButton, plan150));
+      expect(a.top == b.top, sideBySide);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('before the store sells anything, it says so instead of an error', (tester) async {
     await pumpWithStore(tester, FakeStore(items: const []), FakeIcons());
@@ -278,11 +312,9 @@ void main() {
       );
       GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
       await settle(tester);
-      await tester.tap(find.text('NT\$60'));
+      await tester.tap(find.text(plan60));
       await settle(tester);
-      await showMiddle(tester, find.text('紫'));
-      await tester.tap(find.text('紫'));
-      await settle(tester);
+      await pickIcon(tester, '紫');
       expect(icons.icon, 'Purple');
     }
 
@@ -323,10 +355,7 @@ void main() {
       expect(icons.icon, 'Purple');
       GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
       await settle(tester);
-      expect(
-        find.descendant(of: find.widgetWithText(ListRow, 'NT\$150'), matching: find.text('支持者')),
-        findsOneWidget,
-      );
+      expect(paidMark(plan150), findsOneWidget);
     });
 
     testWidgets('opening the app asks the store again once I have subscribed, never before', (tester) async {
@@ -341,7 +370,7 @@ void main() {
     });
   });
 
-  group('this month\'s cloud costs', () {
+  group('this month\'s support', () {
     Future<MemoryBackend> open(WidgetTester tester, Funding? funding) async {
       final b = seededChurch(as: staffMei)..funding = funding;
       await pumpWithStore(tester, FakeStore(), FakeIcons(), backend: b);
@@ -352,7 +381,7 @@ void main() {
 
     testWidgets('what has come in against the target; a shortfall is not spelled out', (tester) async {
       await open(tester, const Funding(month: '2026-10', target: 500, received: 220, carried: 80, monthsLeft: 0));
-      expect(find.text('這個月的雲端費用'), findsOneWidget);
+      expect(find.text('這個月的支持'), findsOneWidget);
       expect(find.text('NT\$300 / NT\$500'), findsOneWidget);
       expect(find.textContaining('還差'), findsNothing, reason: 'the platform operator covers a shortfall');
       expect(find.text('這個月已經足夠'), findsNothing);
@@ -411,9 +440,9 @@ void main() {
 
     testWidgets('no costs set yet: nothing to show', (tester) async {
       await open(tester, null);
-      expect(find.text('這個月的雲端費用'), findsNothing);
+      expect(find.text('這個月的支持'), findsNothing);
       await open(tester, const Funding(month: '2026-10', target: 0, received: 50, carried: 0, monthsLeft: 0));
-      expect(find.text('這個月的雲端費用'), findsNothing);
+      expect(find.text('這個月的支持'), findsNothing);
     });
   });
 }

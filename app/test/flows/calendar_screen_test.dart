@@ -68,15 +68,16 @@ void main() {
       expect(agendaEvent('同工會'), findsOneWidget);
       expect(agendaEvent('詩班練習'), findsNothing);
 
-      await tapText(tester, '看整個月');
-      expect(agendaEvent('詩班練習'), findsOneWidget);
+      await tester.tap(monthDay(10));
+      await settle(tester);
+      expect(agendaEvent('詩班練習'), findsOneWidget, reason: 'the same day again shows the month');
 
       await tester.tap(monthDay(20));
       await settle(tester);
       expect(agendaEvent('同工會'), findsNothing);
       await tester.tap(monthDay(20));
       await settle(tester);
-      expect(agendaEvent('同工會'), findsOneWidget, reason: 'the same day again shows the month');
+      expect(agendaEvent('同工會'), findsOneWidget);
     });
 
     testWidgets('with nothing on says so', (tester) async {

@@ -526,6 +526,9 @@ class L10nKo extends L10n {
   String get account => '계정';
 
   @override
+  String get about => '마르다의 쉼표 정보';
+
+  @override
   String get deleteAccount => '계정 삭제';
 
   @override
@@ -1108,9 +1111,6 @@ class L10nKo extends L10n {
   String get calNoEventsThatDay => '이날은 행사가 없어요';
 
   @override
-  String get calWholeMonth => '한 달 전체 보기';
-
-  @override
   String get calAllDay => '종일';
 
   @override
@@ -1193,6 +1193,11 @@ class L10nKo extends L10n {
 
   @override
   String get supportMonthly => '정기 후원';
+
+  @override
+  String supportPerMonth(String price) {
+    return '월 $price';
+  }
 
   @override
   String get supportRestore => '구매 복원';
@@ -1767,7 +1772,7 @@ class L10nKo extends L10n {
   String get merged => '합쳤어요';
 
   @override
-  String get fundingTitle => '이번 달 서버 비용';
+  String get fundingTitle => '이번 달 후원';
 
   @override
   String fundingProgress(String available, String target) {

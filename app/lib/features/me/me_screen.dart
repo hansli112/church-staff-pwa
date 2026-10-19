@@ -12,16 +12,16 @@ import '../../state/support.dart';
 import '../../env.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
-import '../../state/app_build.dart';
-import '../../state/app_update.dart';
 import '../../state/session.dart';
 import '../church/church_switcher.dart';
 
 /// The LINE OpenChat (馬大別忙 Martha, sit): help, and churches meeting each other.
 final lineCommunity = Uri.parse('https://line.me/ti/g2/irPvG8tKHa9Iwf2hK7D9lcjdW5O-DUx4Coafcg');
 
-/// 設定: my profile, my church, settings. An admin's most used pages sit at
+/// 設定: my account, my church, settings. An admin's most used pages sit at
 /// the top under 管理教會, the rest in 教會資訊, so staff see a short page.
+/// What is rarely needed is a level down: signing in and out under my
+/// name, the version and the fine print under 關於.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -147,18 +147,22 @@ class SettingsScreen extends ConsumerWidget {
                 ),
             ],
           ),
-          // Where to ask, above the version and the fine print.
           ListSection(
             children: [
+              // Where to ask.
               ListRow(
                 leading: const IconTile(Symbols.forum_rounded, color: TileColors.line),
                 title: l10n.lineCommunity,
                 subtitle: l10n.lineCommunityNote,
                 onTap: () => launchUrl(lineCommunity, mode: LaunchMode.externalApplication),
               ),
+              ListRow(
+                leading: const IconTile(Symbols.info_rounded, color: TileColors.neutral),
+                title: l10n.about,
+                onTap: () => context.push('/me/about'),
+              ),
             ],
           ),
-          const _UpdatesSection(),
           if (Env.current.isDevelopment)
             ListSection(
               header: l10n.developer,
@@ -177,41 +181,6 @@ class SettingsScreen extends ConsumerWidget {
                   ),
               ],
             ),
-          ListSection(
-            children: [
-              ListRow(
-                leading: const IconTile(Symbols.shield_rounded, color: TileColors.neutral),
-                title: l10n.privacyPolicy,
-                onTap: () => openSitePage(context, ref, '/privacy'),
-              ),
-              ListRow(
-                leading: const IconTile(Symbols.description_rounded, color: TileColors.neutral),
-                title: l10n.termsOfService,
-                onTap: () => openSitePage(context, ref, '/terms'),
-              ),
-            ],
-          ),
-          ListSection(
-            header: l10n.account,
-            children: [
-              ListRow(
-                leading: const IconTile(Symbols.key_rounded, color: TileColors.neutral),
-                title: l10n.signInMethods,
-                onTap: () => context.push('/account/sign-in'),
-              ),
-              ListRow(
-                leading: const IconTile(Symbols.logout_rounded, color: TileColors.neutral),
-                title: l10n.signOut,
-                onTap: () => signOut(ref),
-              ),
-              ListRow(
-                leading: const IconTile(Symbols.delete_rounded, color: TileColors.destructive),
-                title: l10n.deleteAccount,
-                destructive: true,
-                onTap: () => context.push('/account'),
-              ),
-            ],
-          ),
         ],
       ),
     );
@@ -227,90 +196,3 @@ void openSitePage(BuildContext context, WidgetRef ref, String page) => launchUrl
     '${Env.current.webOrigin}${AppLanguage.shownIn(context).sitePage(page, fromApp: !ref.read(isWebProvider))}',
   ),
 );
-
-class _UpdatesSection extends ConsumerWidget {
-  const _UpdatesSection();
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = L10n.of(context);
-    final update = ref.watch(appUpdateProvider);
-    final blocked = ref.watch(updateBlockedProvider);
-    final error = update.error;
-    final footer = error is UpdateRejected
-        ? switch (error.reason) {
-            UpdateRejection.editing => l10n.appUpdateFinishEditing,
-            UpdateRejection.scopeChanged => l10n.appUpdateScopeChanged,
-            UpdateRejection.unsafeRoute => l10n.appUpdateBackToMe,
-            UpdateRejection.noUpdate => l10n.appUpdateCheckFirst,
-          }
-        : error != null
-        ? l10n.appUpdateFailed
-        : update.phase == AppUpdatePhase.current
-        ? l10n.appUpdateCurrent
-        : update.availableVersion != null
-        ? l10n.appUpdateReady
-        : null;
-    if (!update.supported) {
-      if (ref.watch(isWebProvider)) {
-        return ListSection(
-          children: [
-            ListRow(
-              leading: _versionTile,
-              title: l10n.appRunningVersion,
-              subtitle: l10n.appVersionDevelopment,
-            ),
-          ],
-        );
-      }
-      final build = ref.watch(appBuildProvider);
-      return ListSection(
-        children: [
-          if (build != null)
-            ListRow(
-              leading: _versionTile,
-              title: l10n.appRunningVersion,
-              subtitle: switch (build.patch) {
-                null => build.label,
-                final fix => l10n.appVersionWithFix(build.label, fix),
-              },
-            ),
-        ],
-      );
-    }
-    Future<void> run(Future<void> Function() action) async {
-      try {
-        await action();
-      } catch (_) {
-        /* The controller renders the explicit inline error above. */
-      }
-    }
-
-    return ListSection(
-      footer: footer,
-      children: [
-        ListRow(
-          leading: _versionTile,
-          title: l10n.appRunningVersion,
-          subtitle: update.runningVersion,
-          chevron: false,
-        ),
-        ListRow(
-          leading: const IconTile(Symbols.refresh_rounded, color: TileColors.neutral),
-          title: update.phase == AppUpdatePhase.checking ? l10n.appUpdateChecking : l10n.appUpdateCheck,
-          chevron: false,
-          onTap: update.busy ? null : () => run(ref.read(appUpdateProvider.notifier).check),
-        ),
-        if (update.availableVersion != null)
-          ListRow(
-            leading: const IconTile(Symbols.system_update_rounded, color: TileColors.neutral),
-            title: update.phase == AppUpdatePhase.applying ? l10n.appUpdateApplying : l10n.appUpdateApply,
-            subtitle: blocked ? l10n.appUpdateFinishEditingNote : null,
-            chevron: false,
-            onTap: update.busy || blocked ? null : () => run(ref.read(appUpdateProvider.notifier).apply),
-          ),
-      ],
-    );
-  }
-}
-
-const _versionTile = IconTile(Symbols.info_rounded, color: TileColors.neutral);

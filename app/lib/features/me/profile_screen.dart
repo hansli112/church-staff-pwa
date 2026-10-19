@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
@@ -8,17 +10,77 @@ import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
+import '../../state/session.dart';
 
-/// My name. Saving updates users/{uid}; a Cloud Function copies it to my
-/// member doc in every church, which is the name others see.
-class ProfileScreen extends ConsumerStatefulWidget {
+/// 帳號, behind my name at the top of 設定: my name, how I sign in, signing
+/// out and deleting the account, which are rarely needed.
+class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   @override
-  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = L10n.of(context);
+    final profile = ref.watch(profileProvider).value;
+    final me = ref.watch(meProvider).value;
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.account)),
+      body: ListView(
+        children: [
+          ListSection(
+            children: [
+              ListRow(
+                title: l10n.name,
+                value: profile?.name ?? me?.name,
+                onTap: () => context.push('/me/profile/name'),
+              ),
+              if (profile != null) ListRow(title: l10n.email, value: profile.email),
+            ],
+          ),
+          ListSection(
+            children: [
+              ListRow(
+                leading: const IconTile(Symbols.key_rounded, color: TileColors.neutral),
+                title: l10n.signInMethods,
+                onTap: () => context.push('/account/sign-in'),
+              ),
+            ],
+          ),
+          ListSection(
+            children: [
+              ListRow(
+                leading: const IconTile(Symbols.logout_rounded, color: TileColors.neutral),
+                title: l10n.signOut,
+                chevron: false,
+                onTap: () => signOut(ref),
+              ),
+            ],
+          ),
+          ListSection(
+            children: [
+              ListRow(
+                leading: const IconTile(Symbols.delete_rounded, color: TileColors.destructive),
+                title: l10n.deleteAccount,
+                destructive: true,
+                onTap: () => context.push('/account'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+/// My name. Saving updates users/{uid}; a Cloud Function copies it to my
+/// member doc in every church, which is the name others see.
+class NameScreen extends ConsumerStatefulWidget {
+  const NameScreen({super.key});
+
+  @override
+  ConsumerState<NameScreen> createState() => _NameScreenState();
+}
+
+class _NameScreenState extends ConsumerState<NameScreen> {
   TextEditingController? _name;
   bool _busy = false;
 
@@ -64,7 +126,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (profile == null) return Scaffold(appBar: AppBar());
     _name ??= TextEditingController(text: profile.name);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.profile)),
+      appBar: AppBar(title: Text(l10n.name)),
       body: ListView(
         padding: const EdgeInsets.all(Space.m),
         children: [

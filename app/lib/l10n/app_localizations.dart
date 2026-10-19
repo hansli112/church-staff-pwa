@@ -1036,6 +1036,12 @@ abstract class L10n {
   /// **'帳號'**
   String get account;
 
+  /// Row in 設定 and the title of its page: the version, updates, the privacy policy and the terms
+  ///
+  /// In zh, this message translates to:
+  /// **'關於馬大別忙'**
+  String get about;
+
   /// No description provided for @deleteAccount.
   ///
   /// In zh, this message translates to:
@@ -2122,12 +2128,6 @@ abstract class L10n {
   /// **'這天沒有活動'**
   String get calNoEventsThatDay;
 
-  /// Row under a picked day's events: shows the whole month's events again
-  ///
-  /// In zh, this message translates to:
-  /// **'看整個月'**
-  String get calWholeMonth;
-
   /// No description provided for @calAllDay.
   ///
   /// In zh, this message translates to:
@@ -2277,6 +2277,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'每月支持'**
   String get supportMonthly;
+
+  /// A monthly plan's button on the support page: its price a month
+  ///
+  /// In zh, this message translates to:
+  /// **'{price}／月'**
+  String supportPerMonth(String price);
 
   /// No description provided for @supportRestore.
   ///
@@ -3331,7 +3337,7 @@ abstract class L10n {
   /// No description provided for @fundingTitle.
   ///
   /// In zh, this message translates to:
-  /// **'這個月的雲端費用'**
+  /// **'這個月的支持'**
   String get fundingTitle;
 
   /// No description provided for @fundingProgress.

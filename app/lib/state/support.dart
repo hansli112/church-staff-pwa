@@ -26,10 +26,9 @@ abstract final class SupportProducts {
 }
 
 class SupportItem {
-  const SupportItem({required this.id, required this.title, required this.price, required this.subscription});
+  const SupportItem({required this.id, required this.price, required this.subscription});
 
   final String id;
-  final String title;
   final String price;
   final bool subscription;
 }
@@ -93,10 +92,6 @@ class NoStore implements SupportStore {
   Uri manageSubscription(String plan) => Uri();
 }
 
-/// The product's name as the store lists it. Google Play's title adds the
-/// app's name in parentheses, so there it's the product's own name.
-String storeTitle(ProductDetails p) => p is GooglePlayProductDetails ? p.productDetails.name : p.title;
-
 class StoreKitPlayStore implements SupportStore {
   StoreKitPlayStore() {
     _sub = _iap.purchaseStream.listen(_onPurchases);
@@ -123,7 +118,7 @@ class StoreKitPlayStore implements SupportStore {
       ..addEntries(response.productDetails.map((p) => MapEntry(p.id, p)));
     final items = [
       for (final p in response.productDetails)
-        SupportItem(id: p.id, title: storeTitle(p), price: p.price, subscription: SupportProducts.plans.contains(p.id)),
+        SupportItem(id: p.id, price: p.price, subscription: SupportProducts.plans.contains(p.id)),
     ]..sort((a, b) => (_details[a.id]!.rawPrice).compareTo(_details[b.id]!.rawPrice));
     return items;
   }

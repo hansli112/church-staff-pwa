@@ -16,6 +16,8 @@ const _pages = [
   '/calendar',
   '/me',
   '/me/profile',
+  '/me/profile/name',
+  '/me/about',
   '/me/language',
   '/me/church',
   '/me/timezone',

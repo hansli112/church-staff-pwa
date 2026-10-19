@@ -354,6 +354,8 @@
   "invites": "邀請",
   "notifications": "通知",
   "account": "帳號",
+  "about": "關於馬大別忙",
+  "@about": { "description": "Row in 設定 and the title of its page: the version, updates, the privacy policy and the terms" },
   "deleteAccount": "刪除帳號",
   "privacyPolicy": "隱私權政策",
   "termsOfService": "服務條款",
@@ -675,8 +677,6 @@
   "calNoEvents": "這個月沒有活動",
   "calNoEventsThatDay": "這天沒有活動",
   "@calNoEventsThatDay": { "description": "Under a day picked on the month grid, when no event covers it" },
-  "calWholeMonth": "看整個月",
-  "@calWholeMonth": { "description": "Row under a picked day's events: shows the whole month's events again" },
   "calAllDay": "整天",
   "calNewEvent": "新增活動",
   "calEditEvent": "編輯活動",
@@ -733,6 +733,8 @@
   "supportBody": "支持完全自願，只用來分擔雲端費用，不是給教會的奉獻；每間教會能用的功能都一樣",
   "supportTips": "一次性支持",
   "supportMonthly": "每月支持",
+  "supportPerMonth": "{price}／月",
+  "@supportPerMonth": { "description": "A monthly plan's button on the support page: its price a month", "placeholders": { "price": { "type": "String", "example": "NT$30" } } },
   "supportRestore": "恢復購買",
   "supportMonthlyTerms": "每月自動續訂，可以隨時到 {store} 的訂閱設定取消",
   "@supportMonthlyTerms": {
@@ -1049,7 +1051,7 @@
   },
   "mergePendingAction": "合併",
   "merged": "已合併",
-  "fundingTitle": "這個月的雲端費用",
+  "fundingTitle": "這個月的支持",
   "fundingProgress": "{available} / {target}",
   "@fundingProgress": {
     "placeholders": {

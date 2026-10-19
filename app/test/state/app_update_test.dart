@@ -59,6 +59,28 @@ void main() {
     release();
   });
 
+  for (final (location, reloads) in [('/me/about', true), ('/me/profile', false)]) {
+    test('updating reloads from 設定 or 關於, nowhere else: $location', () async {
+      final updates = Updates();
+      final container = ProviderContainer(
+        overrides: [
+          ...await testOverrides(CalendarBackend()),
+          appUpdateGatewayProvider.overrideWithValue(updates),
+          appUpdateLocationProvider.overrideWithValue(() => location),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.listen(appStageProvider, (_, _) {});
+      container.listen(meProvider, (_, _) {});
+      await pumpEventQueue();
+      final action = container.read(appUpdateProvider.notifier);
+      await action.check();
+      final applying = action.apply();
+      await (reloads ? expectLater(applying, completes) : expectLater(applying, throwsA(isA<UpdateRejected>())));
+      expect(updates.reloads, reloads ? 1 : 0);
+    });
+  }
+
   test('edit leases remain locked through pending work and release exactly once', () async {
     final locks = UpdateEditLock();
     final release = locks.begin();

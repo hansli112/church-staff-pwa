@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/state/app_build.dart';
@@ -10,34 +11,33 @@ import '../support/seed.dart';
 const _play12 = AppBuild(store: AppStore.googlePlay, version: '1.0.0', number: 12);
 const _apple12 = AppBuild(store: AppStore.appStore, version: '1.0.0', number: 12);
 
+Future<void> go(WidgetTester tester, String location) async {
+  GoRouter.of(tester.element(find.byType(Scaffold).first)).go(location);
+  await settle(tester);
+}
+
 void main() {
-  testWidgets('我的 shows the version the phone is running', (tester) async {
+  testWidgets('關於 shows the version the phone is running', (tester) async {
     await pumpApp(tester, seededChurch(as: staffMei), overrides: [appBuildProvider.overrideWithValue(_play12)]);
-    await tester.tap(find.text('設定').last);
-    await settle(tester);
-    await tester.scrollUntilVisible(find.text('目前版本'), 180, scrollable: find.byType(Scrollable).last);
+    await go(tester, '/me/about');
     expect(find.text('1.0.0 (12)'), findsOneWidget);
   });
 
   testWidgets(
-    '我的 has no row for updates: the store updates the app itself',
+    '關於 has no row for updates: the store updates the app itself',
     (tester) async {
       await pumpApp(tester, seededChurch(as: staffMei), overrides: [appBuildProvider.overrideWithValue(_play12)]);
-      await tester.tap(find.text('設定').last);
-      await settle(tester);
-      await tester.scrollUntilVisible(find.text('目前版本'), 180, scrollable: find.byType(Scrollable).last);
+      await go(tester, '/me/about');
       expect(find.text('App 更新'), findsNothing);
       expect(find.textContaining('檢查更新'), findsNothing);
     },
     variant: const TargetPlatformVariant({TargetPlatform.android, TargetPlatform.iOS}),
   );
 
-  testWidgets('with a hot fix applied, 我的 says which, so a report tells which code was running', (tester) async {
+  testWidgets('with a hot fix applied, 關於 says which, so a report tells which code was running', (tester) async {
     const patched = AppBuild(store: AppStore.googlePlay, version: '1.0.0', number: 12, patch: 2);
     await pumpApp(tester, seededChurch(as: staffMei), overrides: [appBuildProvider.overrideWithValue(patched)]);
-    await tester.tap(find.text('設定').last);
-    await settle(tester);
-    await tester.scrollUntilVisible(find.text('目前版本'), 180, scrollable: find.byType(Scrollable).last);
+    await go(tester, '/me/about');
     expect(find.text('1.0.0 (12) · 修正 2'), findsOneWidget);
   });
 
@@ -89,6 +89,8 @@ void main() {
     await settle(tester);
     await tester.tap(find.text(staffMei.name).first);
     await settle(tester);
+    await tester.tap(find.text('名字'));
+    await settle(tester);
     await tester.enterText(find.byType(TextField).first, '美美');
     b
       ..minimumBuilds = const MinimumBuilds(android: 13)
@@ -109,6 +111,8 @@ void main() {
     await tester.tap(find.text('設定').last);
     await settle(tester);
     await tester.tap(find.text(staffMei.name).first);
+    await settle(tester);
+    await tester.tap(find.text('名字'));
     await settle(tester);
     await tester.enterText(find.byType(TextField).first, '美美');
     expect(tester.testTextInput.isVisible, isTrue);

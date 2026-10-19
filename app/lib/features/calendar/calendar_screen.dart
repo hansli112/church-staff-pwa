@@ -265,15 +265,6 @@ class _AgendaState extends ConsumerState<_Agenda> {
               ),
           ],
         ),
-        ListSection(
-          children: [
-            ListRow(
-              leading: const Icon(Symbols.calendar_view_month_rounded),
-              title: l10n.calWholeMonth,
-              onTap: () => ref.read(calendarSelectedDayProvider.notifier).select(null),
-            ),
-          ],
-        ),
       ];
     } else {
       // Each event under its first day in this month.

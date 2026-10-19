@@ -525,6 +525,9 @@ class L10nZh extends L10n {
   String get account => '帳號';
 
   @override
+  String get about => '關於馬大別忙';
+
+  @override
   String get deleteAccount => '刪除帳號';
 
   @override
@@ -1106,9 +1109,6 @@ class L10nZh extends L10n {
   String get calNoEventsThatDay => '這天沒有活動';
 
   @override
-  String get calWholeMonth => '看整個月';
-
-  @override
   String get calAllDay => '整天';
 
   @override
@@ -1190,6 +1190,11 @@ class L10nZh extends L10n {
 
   @override
   String get supportMonthly => '每月支持';
+
+  @override
+  String supportPerMonth(String price) {
+    return '$price／月';
+  }
 
   @override
   String get supportRestore => '恢復購買';
@@ -1763,7 +1768,7 @@ class L10nZh extends L10n {
   String get merged => '已合併';
 
   @override
-  String get fundingTitle => '這個月的雲端費用';
+  String get fundingTitle => '這個月的支持';
 
   @override
   String fundingProgress(String available, String target) {
@@ -3034,6 +3039,9 @@ class L10nZhHans extends L10nZh {
   String get account => '账号';
 
   @override
+  String get about => '关于马大别忙';
+
+  @override
   String get deleteAccount => '删除账号';
 
   @override
@@ -3615,9 +3623,6 @@ class L10nZhHans extends L10nZh {
   String get calNoEventsThatDay => '这天没有活动';
 
   @override
-  String get calWholeMonth => '看整个月';
-
-  @override
   String get calAllDay => '全天';
 
   @override
@@ -3699,6 +3704,11 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get supportMonthly => '每月支持';
+
+  @override
+  String supportPerMonth(String price) {
+    return '$price/月';
+  }
 
   @override
   String get supportRestore => '恢复购买';
@@ -4272,7 +4282,7 @@ class L10nZhHans extends L10nZh {
   String get merged => '已合并';
 
   @override
-  String get fundingTitle => '这个月的云端费用';
+  String get fundingTitle => '这个月的支持';
 
   @override
   String fundingProgress(String available, String target) {

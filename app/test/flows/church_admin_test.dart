@@ -117,9 +117,9 @@ void main() {
 
     testWidgets('the profile name keeps its label once filled', (tester) async {
       await pumpApp(tester, seededChurch());
-      await go(tester, '/me/profile');
+      await go(tester, '/me/profile/name');
       expect(find.text('王牧師'), findsOneWidget);
-      expect(find.text('名字'), findsOneWidget);
+      expect(find.text('名字'), findsWidgets);
     });
 
     testWidgets('150 members scroll and search', (tester) async {

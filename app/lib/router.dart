@@ -25,6 +25,7 @@ import 'features/me/member_editor_screen.dart';
 import 'features/me/members_screen.dart';
 import 'features/me/notifications_screen.dart';
 import 'features/me/profile_screen.dart';
+import 'features/me/about_screen.dart';
 import 'features/me/services_screen.dart';
 import 'features/me/sign_in_methods_screen.dart';
 import 'features/me/support_screen.dart';
@@ -181,9 +182,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                 '/me',
                 (_) => const SettingsScreen(),
                 routes: [
-                  page('profile', (_) => const ProfileScreen()),
+                  page('profile', (_) => const ProfileScreen(), routes: [page('name', (_) => const NameScreen())]),
+                  page('about', (_) => const AboutScreen()),
                   // Store apps only: the web build has no support page at all.
-                  if (!ref.read(isWebProvider)) page('support', (_) => const SupportScreen()),
+                  if (!ref.read(isWebProvider))
+                    page('support', (_) => const SupportScreen(), routes: [page('icon', (_) => const AppIconScreen())]),
                   page('language', (_) => const LanguageScreen()),
                   page('church', (_) => const DeferredPage.churchInfo()),
                   page('timezone', (_) => const WarmUpOnOpen(WarmUp.timeZone, child: TimeZoneScreen())),

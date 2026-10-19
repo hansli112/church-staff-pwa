@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/design/components.dart';
@@ -18,6 +21,8 @@ final _productsProvider = FutureProvider.autoDispose<List<SupportItem>>(
 
 /// 支持馬大別忙 (iOS and Android only). Tips and two monthly plans that
 /// change nothing about the app; subscribers may pick an app icon.
+/// Whatever gives the same carries one name, so only the amounts show, in
+/// the app's own words rather than the store's names.
 class SupportScreen extends ConsumerStatefulWidget {
   const SupportScreen({super.key});
 
@@ -53,13 +58,6 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
     _sub?.cancel();
     super.dispose();
   }
-
-  String _iconName(L10n l10n, String? id) => switch (id) {
-    'Green' => l10n.appIconGreen,
-    'Purple' => l10n.appIconPurple,
-    'Night' => l10n.appIconNight,
-    _ => l10n.appIconDefault,
-  };
 
   @override
   Widget build(BuildContext context) {
@@ -119,27 +117,20 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                   if (tips.isNotEmpty)
                     ListSection(
                       header: l10n.supportTips,
-                      children: [
-                        for (final t in tips) ListRow(title: t.title, value: t.price, onTap: () => store.buy(t)),
-                      ],
+                      children: [_Amounts(tips, label: (t) => t.price, onPick: store.buy)],
                     ),
                   // App Store 3.1.2: that it renews, how to cancel, and
                   // the terms and privacy policy, beside the subscription.
                   if (monthly.isNotEmpty)
                     ListSection(
                       header: l10n.supportMonthly,
-                      footer: l10n.supportMonthlyTerms(store.name),
+                      footer: [
+                        if (!supporter) l10n.appIconSupporterOnly,
+                        l10n.supportMonthlyTerms(store.name),
+                      ].join('\n'),
                       children: [
-                        for (final m in monthly)
-                          ListRow(
-                            title: m.title,
-                            value: m.price,
-                            trailing: plan == m.id
-                                ? Tag(label: l10n.supporterBadge, background: c.accentSoft, foreground: c.accent)
-                                : null,
-                            // The other plan switches to it.
-                            onTap: plan == m.id ? null : () => store.buy(m),
-                          ),
+                        // The other plan switches to it.
+                        _Amounts(monthly, label: (m) => l10n.supportPerMonth(m.price), paid: plan, onPick: store.buy),
                         if (plan != null)
                           ListRow(
                             title: l10n.manageSubscription,
@@ -159,32 +150,19 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
               );
             },
           ),
-          ListSection(
-            header: l10n.appIcon,
-            footer: supporter ? null : l10n.appIconSupporterOnly,
-            children: [
-              for (final id in appIcons)
+          // Only what a supporter can use: a choice nobody else may make
+          // is not shown to them, only named under 每月支持.
+          if (supporter)
+            ListSection(
+              children: [
                 ListRow(
-                  title: _iconName(l10n, id),
-                  leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(Radii.s),
-                    child: Image.asset(
-                      'assets/icons/${id?.toLowerCase() ?? 'app'}.png',
-                      width: 32,
-                      height: 32,
-                      excludeFromSemantics: true,
-                    ),
-                  ),
-                  selected: icon == id,
-                  onTap: supporter
-                      ? () async {
-                          await ref.read(appIconSwitcherProvider).set(id);
-                          ref.invalidate(currentAppIconProvider);
-                        }
-                      : null,
+                  leading: _AppIconImage(icon, size: IconTile.size),
+                  title: l10n.appIcon,
+                  value: appIconName(l10n, icon),
+                  onTap: () => context.push('/me/support/icon'),
                 ),
-            ],
-          ),
+              ],
+            ),
           SecondaryButton(label: l10n.supportRestore, expand: true, onPressed: store.restore),
           const SizedBox(height: Space.xl),
         ],
@@ -193,7 +171,193 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
   }
 }
 
-/// This month's cloud costs: a bar of what is in against the target and,
+/// The amounts to give, side by side, one button each; stacked when large
+/// text leaves them no room. [paid] (the plan paid for) is marked and not
+/// bought again.
+class _Amounts extends StatelessWidget {
+  const _Amounts(this.items, {required this.label, required this.onPick, this.paid});
+
+  final List<SupportItem> items;
+  final String Function(SupportItem item) label;
+  final void Function(SupportItem item) onPick;
+  final String? paid;
+
+  static const _check = 18.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    final scaler = MediaQuery.textScalerOf(context);
+    final direction = Directionality.of(context);
+    double widthOf(SupportItem item) {
+      final text = TextPainter(
+        text: TextSpan(text: label(item), style: AppText.headline),
+        textScaler: scaler,
+        textDirection: direction,
+        maxLines: 1,
+      )..layout();
+      return text.width + 2 * Space.s + (item.id == paid ? _check + Space.xs : 0);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(Space.m),
+      child: LayoutBuilder(
+        builder: (context, box) {
+          const gap = Space.s;
+          final each = (box.maxWidth - gap * (items.length - 1)) / items.length;
+          final widest = items.map(widthOf).reduce(math.max);
+          final width = widest <= each ? each : box.maxWidth;
+          return Wrap(
+            spacing: gap,
+            runSpacing: gap,
+            children: [
+              for (final item in items)
+                SizedBox(
+                  width: width,
+                  child: Semantics(
+                    selected: item.id == paid,
+                    child: FilledButton(
+                      onPressed: item.id == paid ? null : () => onPick(item),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: c.accentSoft,
+                        foregroundColor: c.accent,
+                        disabledBackgroundColor: c.accent,
+                        disabledForegroundColor: c.onAccent,
+                        minimumSize: const Size.fromHeight(50),
+                        padding: const EdgeInsets.all(Space.s),
+                        textStyle: AppText.headline,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (item.id == paid) ...[
+                            const Icon(Symbols.check_rounded, size: _check),
+                            const SizedBox(width: Space.xs),
+                          ],
+                          Flexible(child: Text(label(item), textAlign: TextAlign.center)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// The name of app icon [id] (null: the usual one).
+String appIconName(L10n l10n, String? id) => switch (id) {
+  'Green' => l10n.appIconGreen,
+  'Purple' => l10n.appIconPurple,
+  'Night' => l10n.appIconNight,
+  _ => l10n.appIconDefault,
+};
+
+class _AppIconImage extends StatelessWidget {
+  const _AppIconImage(this.id, {required this.size});
+
+  final String? id;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+    // The home screen's rounding, about a fifth of the side.
+    borderRadius: BorderRadius.circular(size * 0.225),
+    child: Image.asset(
+      'assets/icons/${id?.toLowerCase() ?? 'app'}.png',
+      width: size,
+      height: size,
+      excludeFromSemantics: true,
+    ),
+  );
+}
+
+/// App 圖示, for supporters: every icon side by side, the one in use
+/// marked; tapping one puts it on the home screen.
+class AppIconScreen extends ConsumerWidget {
+  const AppIconScreen({super.key});
+
+  static const _size = 64.0;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = L10n.of(context);
+    final c = AppColors.of(context);
+    final supporter = ref.watch(supporterProvider);
+    final current = ref.watch(currentAppIconProvider).value;
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.appIcon)),
+      body: ListView(
+        children: [
+          ListSection(
+            footer: supporter ? null : l10n.appIconSupporterOnly,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(Space.s),
+                child: Wrap(
+                  alignment: WrapAlignment.spaceAround,
+                  runSpacing: Space.s,
+                  children: [
+                    for (final id in appIcons)
+                      Semantics(
+                        button: true,
+                        selected: current == id,
+                        label: appIconName(l10n, id),
+                        excludeSemantics: true,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(Radii.m),
+                          // A plan that lapsed while here: nothing more to change.
+                          onTap: supporter
+                              ? () async {
+                                  Haptics.selection();
+                                  await ref.read(appIconSwitcherProvider).set(id);
+                                  ref.invalidate(currentAppIconProvider);
+                                }
+                              : null,
+                          child: Padding(
+                            padding: const EdgeInsets.all(Space.s),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(_size * 0.225 + 4),
+                                    border: Border.all(color: current == id ? c.accent : Colors.transparent, width: 3),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(2),
+                                    child: _AppIconImage(id, size: _size),
+                                  ),
+                                ),
+                                const SizedBox(height: Space.xs),
+                                SizedBox(
+                                  width: _size + 10,
+                                  child: Text(
+                                    appIconName(l10n, id),
+                                    textAlign: TextAlign.center,
+                                    style: AppText.footnote.copyWith(color: current == id ? c.accent : c.label),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// This month's support: a bar of what is in against the target and,
 /// once it is reached, how long the surplus lasts. A shortfall is not
 /// spelled out: the platform operator covers it.
 class _FundingSection extends StatelessWidget {

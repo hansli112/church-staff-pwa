@@ -66,7 +66,7 @@ class AppUpdateController extends Notifier<AppUpdateState> {
   void _safe() {
     if (_locked) throw const UpdateRejected(UpdateRejection.editing);
     if (_identity() != _checkedIdentity) throw const UpdateRejected(UpdateRejection.scopeChanged);
-    if (!RegExp(r'^/(?:c/[^/]+/)?me/?$').hasMatch(ref.read(appUpdateLocationProvider)())) {
+    if (!RegExp(r'^/(?:c/[^/]+/)?me(?:/about)?/?$').hasMatch(ref.read(appUpdateLocationProvider)())) {
       throw const UpdateRejected(UpdateRejection.unsafeRoute);
     }
   }
@@ -189,7 +189,7 @@ bool isUpdateEditorRoute(String path) =>
     path.startsWith('/admin') && path != '/admin/stats' ||
     path.startsWith('/rosters/import/') ||
     const {
-      '/me/profile',
+      '/me/profile/name',
       '/me/language',
       '/me/link',
       '/me/webhook',
