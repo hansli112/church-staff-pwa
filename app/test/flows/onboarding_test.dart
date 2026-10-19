@@ -207,7 +207,7 @@ void main() {
   testWidgets('a member of one church starts another from 切換教會', (tester) async {
     final b = seededChurch(as: staffMei);
     await pumpApp(tester, b);
-    await tapText(tester, '我的');
+    await tapText(tester, '設定');
     await tapText(tester, '切換教會');
     await tapText(tester, '建立新教會');
     await tester.enterText(find.byType(TextField), '希望堂');
@@ -220,7 +220,7 @@ void main() {
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('希望堂'), findsOneWidget, reason: 'switched to the new church');
 
-    await tapText(tester, '我的');
+    await tapText(tester, '設定');
     await tapText(tester, '切換教會');
     await tapText(tester, '恩典堂');
     expect(find.text('恩典堂'), findsOneWidget);
@@ -236,7 +236,7 @@ void main() {
       expiresAt: testNow.add(const Duration(days: 7)),
     );
     await pumpApp(tester, b);
-    await tapText(tester, '我的');
+    await tapText(tester, '設定');
     await tapText(tester, '切換教會');
     await tapText(tester, '輸入邀請碼');
     await tester.enterText(find.byType(TextField), 'hope2026');
@@ -248,7 +248,7 @@ void main() {
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('希望堂'), findsOneWidget);
 
-    await tapText(tester, '我的');
+    await tapText(tester, '設定');
     await tapText(tester, '切換教會');
     await tapText(tester, '恩典堂');
     expect(find.text('恩典堂'), findsOneWidget, reason: 'still in the first church');
@@ -256,7 +256,7 @@ void main() {
 
   testWidgets('the code field asks for a Latin keyboard: a Zhuyin one turns EQE4 into ㄍㄆㄍ', (tester) async {
     await pumpApp(tester, seededChurch(as: staffMei));
-    await tapText(tester, '我的');
+    await tapText(tester, '設定');
     await tapText(tester, '切換教會');
     await tapText(tester, '輸入邀請碼');
     final field = tester.widget<TextField>(find.byType(TextField));
@@ -266,7 +266,7 @@ void main() {
 
   testWidgets('back from starting a church returns to the church I am in', (tester) async {
     await pumpApp(tester, seededChurch(as: staffMei));
-    await tapText(tester, '我的');
+    await tapText(tester, '設定');
     await tapText(tester, '切換教會');
     await tapText(tester, '建立新教會');
     expect(find.text('教會名稱'), findsOneWidget);
@@ -279,7 +279,7 @@ void main() {
 
   testWidgets('a member who mistypes a code goes back to fix it', (tester) async {
     await pumpApp(tester, seededChurch(as: staffMei));
-    await tapText(tester, '我的');
+    await tapText(tester, '設定');
     await tapText(tester, '切換教會');
     await tapText(tester, '輸入邀請碼');
     await tester.enterText(find.byType(TextField), 'TYPO1234');

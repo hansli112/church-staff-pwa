@@ -50,18 +50,28 @@ class _StageListenable extends ChangeNotifier {
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _StageListenable(ref);
   ref.onDispose(refresh.dispose);
+
+  /// [fade]: a stage of the app (loading, signing in, the tabs), which
+  /// fades in instead of sliding in like a page opened from another.
   GoRoute page(
     String path,
     Widget Function(GoRouterState s) build, {
     List<RouteBase> routes = const [],
-  }) => GoRoute(
-    path: path,
-    builder: (_, s) {
+    bool fade = false,
+  }) {
+    Widget guarded(GoRouterState s) {
       final child = build(s);
       return isUpdateEditorRoute(s.matchedLocation) ? UpdateEditGuard(child: child) : child;
-    },
-    routes: routes,
-  );
+    }
+
+    return GoRoute(
+      path: path,
+      builder: fade ? null : (_, s) => guarded(s),
+      pageBuilder: fade ? (_, s) => fadeInPage(s, guarded(s)) : null,
+      routes: routes,
+    );
+  }
+
   return GoRouter(
     initialLocation: Env.current.startRoute,
     refreshListenable: refresh,
@@ -82,11 +92,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       return target.location;
     },
     routes: [
-      page('/loading', (_) => const LoadingScreen()),
-      page('/login', (s) => LoginScreen(from: s.uri.queryParameters['from'])),
+      page('/loading', (_) => const LoadingScreen(), fade: true),
+      page('/login', (s) => LoginScreen(from: s.uri.queryParameters['from']), fade: true),
       page(
         '/welcome',
         (_) => const WelcomeScreen(),
+        fade: true,
         routes: [
           page(
             'join',
@@ -110,7 +121,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
-      page('/closed', (_) => const ClosedScreen()),
+      page('/closed', (_) => const ClosedScreen(), fade: true),
       page('/add-to-home', (_) => const AddToHomeScreen()),
       page('/turn-on-notifications', (_) => const TurnOnNotificationsScreen()),
       page('/account', (_) => const AccountScreen(), routes: [page('sign-in', (_) => const SignInMethodsScreen())]),
@@ -124,7 +135,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       if (Env.current.isDevelopment) page('/dev/components', (_) => const ComponentGallery()),
       StatefulShellRoute.indexedStack(
-        builder: (context, state, shell) => AppShell(shell: shell),
+        pageBuilder: (context, state, shell) => fadeInPage(state, AppShell(shell: shell)),
         branches: [
           StatefulShellBranch(
             routes: [page('/home', (_) => const HomeScreen())],
@@ -219,3 +230,18 @@ class LoadingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const Scaffold(body: SizedBox.expand());
 }
+
+/// [child] fading in over what showed before, as a launch screen gives way
+/// to the app; at once when the phone asks for less motion.
+Page<void> fadeInPage(GoRouterState state, Widget child) => CustomTransitionPage<void>(
+  key: state.pageKey,
+  child: child,
+  transitionDuration: const Duration(milliseconds: 250),
+  reverseTransitionDuration: const Duration(milliseconds: 200),
+  transitionsBuilder: (context, animation, _, child) => MediaQuery.disableAnimationsOf(context)
+      ? child
+      : FadeTransition(
+          opacity: CurveTween(curve: Curves.easeOut).animate(animation),
+          child: child,
+        ),
+);

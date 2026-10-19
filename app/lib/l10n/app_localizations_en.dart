@@ -21,7 +21,7 @@ class L10nEn extends L10n {
   String get tabCalendar => 'Calendar';
 
   @override
-  String get tabMe => 'Me';
+  String get tabSettings => 'Settings';
 
   @override
   String get undo => 'Undo';
@@ -1025,6 +1025,9 @@ class L10nEn extends L10n {
   String get photoImport => 'Import from photo';
 
   @override
+  String get photoImportAction => 'Import';
+
+  @override
   String photoRemaining(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -1160,6 +1163,12 @@ class L10nEn extends L10n {
 
   @override
   String get calNoEvents => 'No events this month';
+
+  @override
+  String get calNoEventsThatDay => 'No events this day';
+
+  @override
+  String get calWholeMonth => 'Whole month';
 
   @override
   String get calAllDay => 'All day';
@@ -1488,7 +1497,7 @@ class L10nEn extends L10n {
 
   @override
   String get addToHomeNotificationsAfter =>
-      'After opening it from your Home Screen, turn on notifications in Me to get serving notifications';
+      'After opening it from your Home Screen, turn on notifications in Settings to get serving notifications';
 
   @override
   String get addToHomeIosShare => 'Share';

@@ -294,7 +294,7 @@ void main() {
         }),
       ],
     );
-    await tester.tap(find.text('我的'));
+    await tester.tap(find.text('設定'));
     await settle(tester);
     await tester.tap(find.text('教會資訊'));
     await settle(tester);

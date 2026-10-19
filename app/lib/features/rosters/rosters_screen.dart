@@ -46,11 +46,11 @@ class RostersScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(l10n.tabRosters),
         actions: [
+          // In words: no icon says "read a roster from a photo" at a glance.
           if (canImport)
-            IconButton(
-              tooltip: l10n.photoImport,
-              icon: const Icon(Symbols.document_scanner_rounded),
+            TextButton(
               onPressed: () => context.push('/rosters/import/${shown.id}'),
+              child: Text(l10n.photoImportAction),
             ),
         ],
       ),
@@ -154,7 +154,12 @@ class ServiceRosterList extends ConsumerWidget {
           padding: const EdgeInsets.only(bottom: Space.l),
           itemCount: top + list.length + (service.enabled ? 1 : 0),
           itemBuilder: (context, index) {
-            if (index < top) return _StartArranging(onStart: () => open(list.first));
+            if (index < top) {
+              return _StartArranging(
+                onStart: () => open(list.first),
+                onImport: () => context.push('/rosters/import/${service.id}'),
+              );
+            }
             final i = index - top;
             if (i == list.length) {
               return Padding(
@@ -181,9 +186,12 @@ class ServiceRosterList extends ConsumerWidget {
 
 /// One sentence and one button above a service nobody is arranged in yet.
 class _StartArranging extends StatelessWidget {
-  const _StartArranging({required this.onStart});
+  const _StartArranging({required this.onStart, required this.onImport});
 
   final VoidCallback onStart;
+
+  /// A roster already on paper needs no typing: read from a photo of it.
+  final VoidCallback onImport;
 
   @override
   Widget build(BuildContext context) {
@@ -195,6 +203,7 @@ class _StartArranging extends StatelessWidget {
         children: [
           BalancedText(l10n.rostersNobodyArranged, style: AppText.body.copyWith(color: c.secondaryLabel)),
           SecondaryButton(label: l10n.rostersStartArranging, onPressed: onStart),
+          TextButton(onPressed: onImport, child: Text(l10n.photoImport)),
         ],
       ),
     );

@@ -746,23 +746,6 @@ class CalendarEvent {
   );
 }
 
-/// The days from [from] to [to] that [events] cover, each mapped to the day
-/// the agenda lists its event under: its first day from [from] on, so an
-/// event begun the month before is listed under the 1st. A day covered by
-/// several events points at the earliest of them.
-Map<Day, Day> agendaAnchors(Iterable<CalendarEvent> events, {required Day from, required Day to}) {
-  final anchors = <Day, Day>{};
-  for (final e in events) {
-    final days = e.daysWithin(from, to);
-    if (days == null) continue;
-    for (var d = days.first; !d.isAfter(days.last); d = d.addDays(1)) {
-      final current = anchors[d];
-      if (current == null || days.first.isBefore(current)) anchors[d] = days.first;
-    }
-  }
-  return anchors;
-}
-
 /// churches/{cid}/settings/calendar, written by the backend.
 @immutable
 class CalendarSettings {

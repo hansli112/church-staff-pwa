@@ -22,6 +22,8 @@ void main() {
     await settle(tester);
 
     await tester.scrollUntilVisible(find.text('測試當機'), 200);
+    await tester.ensureVisible(find.text('測試當機'));
+    await settle(tester);
     await tester.tap(find.text('測試當機'));
     await settle(tester);
 

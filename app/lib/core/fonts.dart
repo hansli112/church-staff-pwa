@@ -55,7 +55,7 @@ const _startupKeys = {
   'tabHome',
   'tabRosters',
   'tabCalendar',
-  'tabMe',
+  'tabSettings',
   'cancel',
   'done',
   'retry',

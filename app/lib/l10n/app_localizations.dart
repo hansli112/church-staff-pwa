@@ -124,11 +124,11 @@ abstract class L10n {
   /// **'行事曆'**
   String get tabCalendar;
 
-  /// No description provided for @tabMe.
+  /// No description provided for @tabSettings.
   ///
   /// In zh, this message translates to:
-  /// **'我的'**
-  String get tabMe;
+  /// **'設定'**
+  String get tabSettings;
 
   /// No description provided for @undo.
   ///
@@ -1888,6 +1888,12 @@ abstract class L10n {
   /// **'照片匯入'**
   String get photoImport;
 
+  /// Button in words at the top of 服事表 that opens photo import. Short: it sits beside the title, at large text too
+  ///
+  /// In zh, this message translates to:
+  /// **'照片匯入'**
+  String get photoImportAction;
+
   /// No description provided for @photoRemaining.
   ///
   /// In zh, this message translates to:
@@ -2103,6 +2109,18 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'這個月沒有活動'**
   String get calNoEvents;
+
+  /// Under a day picked on the month grid, when no event covers it
+  ///
+  /// In zh, this message translates to:
+  /// **'這天沒有活動'**
+  String get calNoEventsThatDay;
+
+  /// Row under a picked day's events: shows the whole month's events again
+  ///
+  /// In zh, this message translates to:
+  /// **'看整個月'**
+  String get calWholeMonth;
 
   /// No description provided for @calAllDay.
   ///
@@ -2677,7 +2695,7 @@ abstract class L10n {
   /// No description provided for @addToHomeNotificationsAfter.
   ///
   /// In zh, this message translates to:
-  /// **'從主畫面打開後，在「我的」開啟通知，就收得到服事通知'**
+  /// **'從主畫面打開後，在「設定」開啟通知，就收得到服事通知'**
   String get addToHomeNotificationsAfter;
 
   /// No description provided for @addToHomeIosShare.
@@ -3910,7 +3928,7 @@ abstract class L10n {
   /// **'目前版本'**
   String get appRunningVersion;
 
-  /// Store app 我的 row: the store version and build (`1.0.0 (15)`) plus the Shorebird hot fix it runs, so a bug report says which code was running. Same word as the privacy policy 3.8 (修正編號).
+  /// Store app 設定 row: the store version and build (`1.0.0 (15)`) plus the Shorebird hot fix it runs, so a bug report says which code was running. Same word as the privacy policy 3.8 (修正編號).
   ///
   /// In zh, this message translates to:
   /// **'{version} · 修正 {patch}'**

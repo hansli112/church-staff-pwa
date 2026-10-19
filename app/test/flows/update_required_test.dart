@@ -13,7 +13,7 @@ const _apple12 = AppBuild(store: AppStore.appStore, version: '1.0.0', number: 12
 void main() {
   testWidgets('我的 shows the version the phone is running', (tester) async {
     await pumpApp(tester, seededChurch(as: staffMei), overrides: [appBuildProvider.overrideWithValue(_play12)]);
-    await tester.tap(find.text('我的').last);
+    await tester.tap(find.text('設定').last);
     await settle(tester);
     await tester.scrollUntilVisible(find.text('目前版本'), 180, scrollable: find.byType(Scrollable).last);
     expect(find.text('1.0.0 (12)'), findsOneWidget);
@@ -23,7 +23,7 @@ void main() {
     '我的 has no row for updates: the store updates the app itself',
     (tester) async {
       await pumpApp(tester, seededChurch(as: staffMei), overrides: [appBuildProvider.overrideWithValue(_play12)]);
-      await tester.tap(find.text('我的').last);
+      await tester.tap(find.text('設定').last);
       await settle(tester);
       await tester.scrollUntilVisible(find.text('目前版本'), 180, scrollable: find.byType(Scrollable).last);
       expect(find.text('App 更新'), findsNothing);
@@ -35,7 +35,7 @@ void main() {
   testWidgets('with a hot fix applied, 我的 says which, so a report tells which code was running', (tester) async {
     const patched = AppBuild(store: AppStore.googlePlay, version: '1.0.0', number: 12, patch: 2);
     await pumpApp(tester, seededChurch(as: staffMei), overrides: [appBuildProvider.overrideWithValue(patched)]);
-    await tester.tap(find.text('我的').last);
+    await tester.tap(find.text('設定').last);
     await settle(tester);
     await tester.scrollUntilVisible(find.text('目前版本'), 180, scrollable: find.byType(Scrollable).last);
     expect(find.text('1.0.0 (12) · 修正 2'), findsOneWidget);
@@ -85,7 +85,7 @@ void main() {
   ) async {
     final b = seededChurch(as: staffMei);
     await pumpApp(tester, b, overrides: [appBuildProvider.overrideWithValue(_play12)]);
-    await tester.tap(find.text('我的').last);
+    await tester.tap(find.text('設定').last);
     await settle(tester);
     await tester.tap(find.text(staffMei.name).first);
     await settle(tester);
@@ -106,7 +106,7 @@ void main() {
   testWidgets('while it asks, nothing reaches the app underneath: not the keyboard, back, or a toast', (tester) async {
     final b = seededChurch(as: staffMei);
     await pumpApp(tester, b, overrides: [appBuildProvider.overrideWithValue(_play12)]);
-    await tester.tap(find.text('我的').last);
+    await tester.tap(find.text('設定').last);
     await settle(tester);
     await tester.tap(find.text(staffMei.name).first);
     await settle(tester);

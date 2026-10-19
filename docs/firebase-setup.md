@@ -123,13 +123,13 @@ API 金鑰放在 `~/.appstoreconnect/private_keys/AuthKey_<金鑰 ID>.p8`，alto
 - Play 封閉測試、TestFlight 的分組沒辦法用來分批推修補，要分批用上面的 staging，或 Shorebird Console 的百分比推送。
 - Shorebird 只支援 Flutter 穩定版，新的季版本最多 5 個工作天才支援。升級 Flutter 前先看 `~/.shorebird/bin/shorebird flutter versions list` 有沒有。
 - iOS 不要開 `--obfuscate`，Shorebird 不支援。
-- Crashlytics：我們沒有用 `--obfuscate` 或 `--split-debug-info`，Dart 的錯誤堆疊本來就看得懂，修補版不用另外上傳符號。當機報告的 custom key `shorebird_patch_number` 是當時跑的修補（0 是沒有），「我的」的版本也會寫「修正 N」，回報問題時看得出有沒有拿到修補。
+- Crashlytics：我們沒有用 `--obfuscate` 或 `--split-debug-info`，Dart 的錯誤堆疊本來就看得懂，修補版不用另外上傳符號。當機報告的 custom key `shorebird_patch_number` 是當時跑的修補（0 是沒有），「設定」的版本也會寫「修正 N」，回報問題時看得出有沒有拿到修補。
 - App 每次打開都會連 Shorebird，隱私權政策第 3.8 節寫了送出什麼。
 - 網頁版不用 Shorebird，部署完就更新。
 
 ### 檢查 Crashlytics 與 GA4
 
-- **Crashlytics**：dev 版「我的」→「開發」→「測試當機」。App 會直接當掉，重開之後才會送出報告，幾分鐘內出現在 Firebase console 的 Crashlytics。
+- **Crashlytics**：dev 版「設定」→「開發」→「測試當機」。App 會直接當掉，重開之後才會送出報告，幾分鐘內出現在 Firebase console 的 Crashlytics。
 - **GA4**：專案要先在 Firebase console 的「專案設定」→「整合」連結 Google Analytics，`church_id` 才收得到。看 DebugView 要先開除錯模式：
   - Android：`adb shell setprop debug.firebase.analytics.app app.marthasit`
   - iOS：在 Xcode 的 Runner scheme 加上啟動參數 `-FIRDebugEnabled`
@@ -203,7 +203,7 @@ OAuth 同意畫面的首頁網址填 `/`，隱私權政策填 `/privacy`：Googl
   ECPAY_ENV=test
   ```
   `ECPAY_ENV` 是 `test`（送到 `payment-stage.ecpay.com.tw`）或 `production`（送到 `payment.ecpay.com.tw`）。prod（`marthasit`）只接受 `production`，測試付款不會算進正式的進度。
-- **網站**：Hosting 部署時加 `SUPPORT_PAYMENTS=on`，支持頁才出現選金額和付款按鈕（`hosting-predeploy.sh` → `build-site.mjs --payments on`）。同一個開關也讓網頁版 App 的「我的」出現「支持馬大別忙」，連到網站的支持頁（`deploy.sh` → `--dart-define=SUPPORT_PAYMENTS=on`）。沒加就只寫「線上支持即將開放」、網頁版 App 沒有這一列，每次部署 Hosting 都要加。
+- **網站**：Hosting 部署時加 `SUPPORT_PAYMENTS=on`，支持頁才出現選金額和付款按鈕（`hosting-predeploy.sh` → `build-site.mjs --payments on`）。同一個開關也讓網頁版 App 的「設定」出現「支持馬大別忙」，連到網站的支持頁（`deploy.sh` → `--dart-define=SUPPORT_PAYMENTS=on`）。沒加就只寫「線上支持即將開放」、網頁版 App 沒有這一列，每次部署 Hosting 都要加。
 
 **第一次部署前**：Functions 宣告了這兩個 secret，專案裡沒有的話 `firebase deploy` 會停下來。已經建好的專案重跑一次 `scripts/firebase-project.sh`（只會補上缺的佔位 secret），或手動建：
 ```sh
@@ -250,7 +250,7 @@ gcloud secrets delete NEWEBPAY_HASH_IV --project <專案> --quiet
 scripts/as-owner.sh marthasit-dev npx --prefix functions tsx functions/scripts/grant-operator.ts --project marthasit-dev <email>
 ```
 
-設定後要重新登入才會生效。之後「我的」頁會出現「平台後台」。
+設定後要重新登入才會生效。之後「設定」頁會出現「平台後台」。
 
 ## 要求更新手機 App（最低版本）
 

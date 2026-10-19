@@ -4,7 +4,7 @@
   "tabHome": "首頁",
   "tabRosters": "服事表",
   "tabCalendar": "行事曆",
-  "tabMe": "我的",
+  "tabSettings": "設定",
   "undo": "復原",
   "cancel": "取消",
   "save": "儲存",
@@ -605,6 +605,8 @@
   },
   "inviteZones": "加入後屬於",
   "photoImport": "照片匯入",
+  "photoImportAction": "照片匯入",
+  "@photoImportAction": { "description": "Button in words at the top of 服事表 that opens photo import. Short: it sits beside the title, at large text too" },
   "photoRemaining": "這個月還可以辨識 {count} 張",
   "@photoRemaining": {
     "placeholders": {
@@ -669,6 +671,10 @@
   "calConnectedOk": "已連接 Google 日曆",
   "calConnectFailed": "沒有連接成功，請再試一次",
   "calNoEvents": "這個月沒有活動",
+  "calNoEventsThatDay": "這天沒有活動",
+  "@calNoEventsThatDay": { "description": "Under a day picked on the month grid, when no event covers it" },
+  "calWholeMonth": "看整個月",
+  "@calWholeMonth": { "description": "Row under a picked day's events: shows the whole month's events again" },
   "calAllDay": "整天",
   "calNewEvent": "新增活動",
   "calEditEvent": "編輯活動",
@@ -821,7 +827,7 @@
     "placeholders": { "browser": { "type": "String" } }
   },
   "addToHomePhoneOnly": "請用手機開啟教會網址，再加入主畫面",
-  "addToHomeNotificationsAfter": "從主畫面打開後，在「我的」開啟通知，就收得到服事通知",
+  "addToHomeNotificationsAfter": "從主畫面打開後，在「設定」開啟通知，就收得到服事通知",
   "addToHomeIosShare": "分享",
   "addToHomeIosAdd": "加入",
   "addToHomeIosOpen": "點手機上的「{name}」圖示打開，再登入一次",
@@ -1624,7 +1630,7 @@
   },
   "appVersionWithFix": "{version} · 修正 {patch}",
   "@appVersionWithFix": {
-    "description": "Store app 我的 row: the store version and build (`1.0.0 (15)`) plus the Shorebird hot fix it runs, so a bug report says which code was running. Same word as the privacy policy 3.8 (修正編號).",
+    "description": "Store app 設定 row: the store version and build (`1.0.0 (15)`) plus the Shorebird hot fix it runs, so a bug report says which code was running. Same word as the privacy policy 3.8 (修正編號).",
     "placeholders": { "version": { "type": "String", "example": "1.0.0 (15)" }, "patch": { "type": "int", "example": "2" } }
   },
   "appVersionDevelopment": "開發版本（還沒有發布版本）",

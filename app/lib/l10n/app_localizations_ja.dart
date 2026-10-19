@@ -21,7 +21,7 @@ class L10nJa extends L10n {
   String get tabCalendar => 'カレンダー';
 
   @override
-  String get tabMe => 'マイページ';
+  String get tabSettings => '設定';
 
   @override
   String get undo => '元に戻す';
@@ -981,6 +981,9 @@ class L10nJa extends L10n {
   String get photoImport => '写真から読み込み';
 
   @override
+  String get photoImportAction => '写真から読み込み';
+
+  @override
   String photoRemaining(int count) {
     return '今月はあと$count枚読み取れます';
   }
@@ -1096,6 +1099,12 @@ class L10nJa extends L10n {
 
   @override
   String get calNoEvents => '今月の行事はありません';
+
+  @override
+  String get calNoEventsThatDay => 'この日の行事はありません';
+
+  @override
+  String get calWholeMonth => '月全体を見る';
 
   @override
   String get calAllDay => '終日';
@@ -1406,7 +1415,7 @@ class L10nJa extends L10n {
   String get addToHomePhoneOnly => 'スマホで教会の URL を開いてから、ホーム画面に追加してください';
 
   @override
-  String get addToHomeNotificationsAfter => 'ホーム画面から開いたら、「マイページ」で通知をオンにすると奉仕の通知が届きます';
+  String get addToHomeNotificationsAfter => 'ホーム画面から開いたら、「設定」で通知をオンにすると奉仕の通知が届きます';
 
   @override
   String get addToHomeIosShare => '共有';

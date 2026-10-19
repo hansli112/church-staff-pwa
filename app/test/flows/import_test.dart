@@ -757,6 +757,19 @@ void main() {
   testWidgets('staff do not see photo import', (tester) async {
     await pumpApp(tester, seededChurch(as: staffMei));
     await go(tester, '/rosters');
-    expect(find.byTooltip('照片匯入'), findsNothing);
+    expect(find.text('照片匯入'), findsNothing);
+  });
+
+  testWidgets('photo import says what it does, in words, and opens from there', (tester) async {
+    await pumpApp(tester, seededChurch());
+    await go(tester, '/rosters');
+    final inBar = find.descendant(of: find.byType(AppBar), matching: find.text('照片匯入'));
+    expect(inBar, findsOneWidget);
+    await tester.tap(inBar);
+    await settle(tester);
+    expect(
+      GoRouter.of(tester.element(find.byType(Scaffold).last)).state.matchedLocation,
+      startsWith('/rosters/import/'),
+    );
   });
 }

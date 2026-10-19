@@ -62,9 +62,9 @@ class AppShell extends ConsumerWidget {
             label: l10n.tabCalendar,
           ),
           NavigationDestination(
-            icon: const Icon(Symbols.person_rounded),
-            selectedIcon: const Icon(Symbols.person_rounded, fill: 1),
-            label: l10n.tabMe,
+            icon: const Icon(Symbols.settings_rounded),
+            selectedIcon: const Icon(Symbols.settings_rounded, fill: 1),
+            label: l10n.tabSettings,
           ),
         ],
       ),
@@ -76,5 +76,5 @@ String tabLabel(L10n l10n, AppTab tab) => switch (tab) {
   AppTab.home => l10n.tabHome,
   AppTab.rosters => l10n.tabRosters,
   AppTab.calendar => l10n.tabCalendar,
-  AppTab.me => l10n.tabMe,
+  AppTab.me => l10n.tabSettings,
 };

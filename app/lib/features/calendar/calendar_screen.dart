@@ -106,8 +106,9 @@ class CalendarScreen extends ConsumerWidget {
   }
 }
 
-/// The day picked on the month grid, if any. Cleared when the month
-/// changes and when the month grid is shown or folded away.
+/// The day picked on the month grid, if any: the agenda shows its events
+/// only, and a new event starts on it. Cleared when the month changes and
+/// when the month grid is shown or folded away.
 class CalendarSelectedDay extends Notifier<Day?> {
   @override
   Day? build() {
@@ -133,7 +134,6 @@ class _Agenda extends ConsumerStatefulWidget {
 
 class _AgendaState extends ConsumerState<_Agenda> {
   final _scroll = ScrollController();
-  final _sections = <Day, GlobalKey>{};
 
   /// The month whose neighbours were last read ahead.
   DateTime? _readAheadOf;
@@ -141,10 +141,7 @@ class _AgendaState extends ConsumerState<_Agenda> {
   @override
   void didUpdateWidget(_Agenda old) {
     super.didUpdateWidget(old);
-    if (old.month != widget.month) {
-      _sections.clear();
-      if (_scroll.hasClients) _scroll.jumpTo(0);
-    }
+    if (old.month != widget.month && _scroll.hasClients) _scroll.jumpTo(0);
   }
 
   @override
@@ -153,16 +150,12 @@ class _AgendaState extends ConsumerState<_Agenda> {
     super.dispose();
   }
 
-  /// Selects [day] and brings the events covering it into view.
-  void _select(Day day, Map<Day, Day> anchors) {
-    ref.read(calendarSelectedDayProvider.notifier).select(day);
-    final target = _sections[anchors[day]]?.currentContext;
-    if (target == null) return;
-    Scrollable.ensureVisible(
-      target,
-      duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : const Duration(milliseconds: 250),
-      curve: Curves.easeOut,
-    );
+  /// Shows only [day]'s events below the month; the same day again, the
+  /// whole month.
+  void _select(Day day) {
+    final picked = ref.read(calendarSelectedDayProvider);
+    ref.read(calendarSelectedDayProvider.notifier).select(picked == day ? null : day);
+    if (_scroll.hasClients) _scroll.jumpTo(0);
   }
 
   /// Room the agenda keeps below a month grid that stays put, at the usual
@@ -190,7 +183,6 @@ class _AgendaState extends ConsumerState<_Agenda> {
     final gridShown = ref.watch(monthGridShownProvider);
     final title = DateFormat.yMMMM().format(month);
     final loaded = events.value ?? const <CalendarEvent>[];
-    final anchors = agendaAnchors(loaded, from: shownMonth, to: shownMonth.lastOfMonth);
     void shift(int months) => ref.read(calendarMonthProvider.notifier).shift(months);
 
     final header = Padding(
@@ -213,51 +205,79 @@ class _AgendaState extends ConsumerState<_Agenda> {
         ],
       ),
     );
-    final grid = gridShown
-        ? MonthGrid(
-            month: shownMonth,
-            today: today,
-            events: loaded,
-            selected: selected,
-            onSelect: (d) => _select(d, anchors),
-            onShift: shift,
-          )
-        : null;
+    final grid = MonthGrid(
+      month: shownMonth,
+      today: today,
+      events: loaded,
+      selected: selected,
+      onSelect: _select,
+      onShift: shift,
+    );
 
-    // Each event under its first day in this month, as [agendaAnchors].
-    final byDay = <Day, List<CalendarEvent>>{};
-    for (final e in loaded) {
-      final listed = e.daysWithin(shownMonth, shownMonth.lastOfMonth)?.first;
-      if (listed != null) byDay.putIfAbsent(listed, () => []).add(e);
-    }
-    final days = byDay.keys.toList()..sort();
-    final agenda = [
-      for (final d in days)
+    Widget row(CalendarEvent e) => ListRow(
+      title: e.title,
+      subtitle: e.location,
+      trailing: Text(
+        _when(l10n, e),
+        textAlign: TextAlign.end,
+        style: AppText.body.copyWith(color: AppColors.of(context).secondaryLabel),
+      ),
+      // Opens the event either way: to edit, or to read. A new one shows
+      // while it is saved, and opens once it has an id.
+      chevron: true,
+      onTap: e.id == null
+          ? null
+          : () => canEdit ? editEvent(context, ref, e, month: month) : showEventDetail(context, e),
+    );
+
+    final List<Widget> agenda;
+    if (selected != null) {
+      // One day picked: its events only, every one that covers it.
+      final onDay = [
+        for (final e in loaded)
+          if (e.daysWithin(selected, selected) != null) e,
+      ];
+      agenda = [
         ListSection(
-          key: _sections.putIfAbsent(d, GlobalKey.new),
-          header: dayLabel(l10n, d, today),
+          header: dayLabel(l10n, selected, today),
           children: [
-            for (final e in byDay[d]!)
+            for (final e in onDay) row(e),
+            if (onDay.isEmpty) ListRow(title: l10n.calNoEventsThatDay),
+            if (canEdit)
               ListRow(
-                title: e.title,
-                subtitle: e.location,
-                trailing: Text(
-                  _when(l10n, e),
-                  textAlign: TextAlign.end,
-                  style: AppText.body.copyWith(color: AppColors.of(context).secondaryLabel),
-                ),
-                // Opens the event either way: to edit, or to read. A new one
-                // shows while it is saved, and opens once it has an id.
-                chevron: true,
-                onTap: e.id == null
-                    ? null
-                    : () => canEdit ? editEvent(context, ref, e, month: month) : showEventDetail(context, e),
+                leading: const Icon(Symbols.add_rounded),
+                title: l10n.calNewEvent,
+                onTap: () => editEvent(context, ref, null, month: month, day: selected),
               ),
           ],
         ),
-    ];
+        ListSection(
+          children: [
+            ListRow(
+              leading: const Icon(Symbols.calendar_view_month_rounded),
+              title: l10n.calWholeMonth,
+              onTap: () => ref.read(calendarSelectedDayProvider.notifier).select(null),
+            ),
+          ],
+        ),
+      ];
+    } else {
+      // Each event under its first day in this month.
+      final byDay = <Day, List<CalendarEvent>>{};
+      for (final e in loaded) {
+        final listed = e.daysWithin(shownMonth, shownMonth.lastOfMonth)?.first;
+        if (listed != null) byDay.putIfAbsent(listed, () => []).add(e);
+      }
+      agenda = [
+        for (final d in byDay.keys.toList()..sort())
+          ListSection(
+            header: dayLabel(l10n, d, today),
+            children: [for (final e in byDay[d]!) row(e)],
+          ),
+      ];
+    }
     // In place of the agenda, centred in the room left: loading, an error,
-    // or a month with nothing on.
+    // or a month with nothing on (a picked day says so itself).
     final Widget? instead = events.when(
       skipLoadingOnReload: true,
       loading: () => const CircularProgressIndicator.adaptive(),
@@ -267,23 +287,24 @@ class _AgendaState extends ConsumerState<_Agenda> {
             : l10n.loadFailed,
         onRetry: () => ref.invalidate(calendarEventsProvider(monthKey(month))),
       ),
-      data: (list) => list.isEmpty ? EmptyState(message: l10n.calNoEvents) : null,
+      data: (list) => list.isEmpty && selected == null ? EmptyState(message: l10n.calNoEvents) : null,
     );
+    final divider = Divider(height: 0.5, thickness: 0.5, color: AppColors.of(context).separator);
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final headerHeight = Space.minTap(Theme.of(context).platform);
         final pinned =
-            grid != null &&
             constraints.maxHeight - headerHeight - MonthGrid.tallest(context) >=
-                MediaQuery.textScalerOf(context).scale(_agendaMinHeight);
+            MediaQuery.textScalerOf(context).scale(_agendaMinHeight);
         return Column(
           children: [
             header,
-            if (pinned) ...[
-              grid,
-              Divider(height: 0.5, thickness: 0.5, color: AppColors.of(context).separator),
-            ],
+            if (pinned)
+              _Folding(
+                shown: gridShown,
+                child: Column(children: [grid, divider]),
+              ),
             Expanded(
               child: RefreshIndicator.adaptive(
                 onRefresh: () => ref.refresh(calendarEventsProvider(monthKey(month)).future),
@@ -293,16 +314,16 @@ class _AgendaState extends ConsumerState<_Agenda> {
                   slivers: [
                     SliverToBoxAdapter(child: CalendarReadNotice(status: readStatus)),
                     const SliverToBoxAdapter(child: ChurchClockNotice()),
-                    if (grid != null && !pinned) SliverToBoxAdapter(child: grid),
+                    if (!pinned)
+                      SliverToBoxAdapter(
+                        child: _Folding(shown: gridShown, child: grid),
+                      ),
                     if (instead != null)
                       SliverFillRemaining(hasScrollBody: false, child: Center(child: instead))
                     else
                       SliverPadding(
                         padding: const EdgeInsets.only(bottom: Space.xl),
-                        // Every section is built, so a tapped day can scroll to one.
-                        sliver: SliverToBoxAdapter(
-                          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: agenda),
-                        ),
+                        sliver: SliverList.list(children: agenda),
                       ),
                   ],
                 ),
@@ -313,6 +334,32 @@ class _AgendaState extends ConsumerState<_Agenda> {
       },
     );
   }
+}
+
+/// The month grid folding open and shut under the month's name, as the
+/// button above it shows or hides it; at once when the phone asks for less
+/// motion.
+class _Folding extends StatelessWidget {
+  const _Folding({required this.shown, required this.child});
+
+  final bool shown;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => AnimatedSwitcher(
+    duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : const Duration(milliseconds: 250),
+    switchInCurve: Curves.easeInOut,
+    switchOutCurve: Curves.easeInOut,
+    layoutBuilder: (current, previous) => Stack(alignment: Alignment.topCenter, children: [...previous, ?current]),
+    transitionBuilder: (child, animation) => SizeTransition(
+      sizeFactor: animation,
+      axisAlignment: -1,
+      child: FadeTransition(opacity: animation, child: child),
+    ),
+    child: shown
+        ? KeyedSubtree(key: const ValueKey(true), child: child)
+        : const SizedBox(key: ValueKey(false), width: double.infinity),
+  );
 }
 
 /// When an event is, beside its title: all day or its start time, or for

@@ -21,7 +21,7 @@ class L10nZh extends L10n {
   String get tabCalendar => '行事曆';
 
   @override
-  String get tabMe => '我的';
+  String get tabSettings => '設定';
 
   @override
   String get undo => '復原';
@@ -981,6 +981,9 @@ class L10nZh extends L10n {
   String get photoImport => '照片匯入';
 
   @override
+  String get photoImportAction => '照片匯入';
+
+  @override
   String photoRemaining(int count) {
     return '這個月還可以辨識 $count 張';
   }
@@ -1095,6 +1098,12 @@ class L10nZh extends L10n {
 
   @override
   String get calNoEvents => '這個月沒有活動';
+
+  @override
+  String get calNoEventsThatDay => '這天沒有活動';
+
+  @override
+  String get calWholeMonth => '看整個月';
 
   @override
   String get calAllDay => '整天';
@@ -1404,7 +1413,7 @@ class L10nZh extends L10n {
   String get addToHomePhoneOnly => '請用手機開啟教會網址，再加入主畫面';
 
   @override
-  String get addToHomeNotificationsAfter => '從主畫面打開後，在「我的」開啟通知，就收得到服事通知';
+  String get addToHomeNotificationsAfter => '從主畫面打開後，在「設定」開啟通知，就收得到服事通知';
 
   @override
   String get addToHomeIosShare => '分享';
@@ -2518,7 +2527,7 @@ class L10nZhHans extends L10nZh {
   String get tabCalendar => '行事历';
 
   @override
-  String get tabMe => '我的';
+  String get tabSettings => '设置';
 
   @override
   String get undo => '撤销';
@@ -3478,6 +3487,9 @@ class L10nZhHans extends L10nZh {
   String get photoImport => '照片导入';
 
   @override
+  String get photoImportAction => '照片导入';
+
+  @override
   String photoRemaining(int count) {
     return '这个月还可以识别 $count 张';
   }
@@ -3592,6 +3604,12 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get calNoEvents => '这个月没有活动';
+
+  @override
+  String get calNoEventsThatDay => '这天没有活动';
+
+  @override
+  String get calWholeMonth => '看整个月';
 
   @override
   String get calAllDay => '全天';
@@ -3901,7 +3919,7 @@ class L10nZhHans extends L10nZh {
   String get addToHomePhoneOnly => '请用手机打开教会网址，再添加到主屏幕';
 
   @override
-  String get addToHomeNotificationsAfter => '从主屏幕打开后，在“我的”开启通知，就能收到事奉通知';
+  String get addToHomeNotificationsAfter => '从主屏幕打开后，在“设置”开启通知，就能收到事奉通知';
 
   @override
   String get addToHomeIosShare => '共享';

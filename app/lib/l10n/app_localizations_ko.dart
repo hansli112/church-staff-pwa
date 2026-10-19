@@ -21,7 +21,7 @@ class L10nKo extends L10n {
   String get tabCalendar => '캘린더';
 
   @override
-  String get tabMe => '내 정보';
+  String get tabSettings => '설정';
 
   @override
   String get undo => '실행 취소';
@@ -982,6 +982,9 @@ class L10nKo extends L10n {
   String get photoImport => '사진으로 가져오기';
 
   @override
+  String get photoImportAction => '사진으로 가져오기';
+
+  @override
   String photoRemaining(int count) {
     return '이번 달 $count장 남음';
   }
@@ -1097,6 +1100,12 @@ class L10nKo extends L10n {
 
   @override
   String get calNoEvents => '이번 달에는 행사가 없어요';
+
+  @override
+  String get calNoEventsThatDay => '이날은 행사가 없어요';
+
+  @override
+  String get calWholeMonth => '이번 달 전체 보기';
 
   @override
   String get calAllDay => '종일';
@@ -1407,7 +1416,7 @@ class L10nKo extends L10n {
   String get addToHomePhoneOnly => '휴대폰에서 교회 주소를 연 뒤 홈 화면에 추가해 주세요';
 
   @override
-  String get addToHomeNotificationsAfter => '홈 화면에서 연 뒤 ‘내 정보’에서 알림을 켜면 봉사 알림을 받을 수 있어요';
+  String get addToHomeNotificationsAfter => '홈 화면에서 연 뒤 ‘설정’에서 알림을 켜면 봉사 알림을 받을 수 있어요';
 
   @override
   String get addToHomeIosShare => '공유';

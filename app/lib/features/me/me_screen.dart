@@ -35,7 +35,7 @@ class MeScreen extends ConsumerWidget {
     final store = ref.watch(supportStoreProvider);
     final supporter = store.available && ref.watch(supporterProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.tabMe)),
+      appBar: AppBar(title: Text(l10n.tabSettings)),
       body: ListView(
         children: [
           ListSection(
@@ -102,11 +102,12 @@ class MeScreen extends ConsumerWidget {
             ),
           ListSection(
             children: [
+              // Most used first: everyone's notifications; the church's
+              // details are rarely looked at.
               ListRow(
-                leading: const IconTile(Symbols.church_rounded, color: TileColors.church),
-                title: l10n.churchInfo,
-                value: church?.name,
-                onTap: () => context.push('/me/church'),
+                leading: const IconTile(Symbols.notifications_rounded, color: TileColors.church),
+                title: l10n.notifications,
+                onTap: () => context.push('/me/notifications'),
               ),
               // Also with one church: joining or starting another starts here.
               ListRow(
@@ -115,9 +116,10 @@ class MeScreen extends ConsumerWidget {
                 onTap: () => showChurchSwitcher(context, ref),
               ),
               ListRow(
-                leading: const IconTile(Symbols.notifications_rounded, color: TileColors.church),
-                title: l10n.notifications,
-                onTap: () => context.push('/me/notifications'),
+                leading: const IconTile(Symbols.church_rounded, color: TileColors.church),
+                title: l10n.churchInfo,
+                value: church?.name,
+                onTap: () => context.push('/me/church'),
               ),
             ],
           ),
@@ -145,6 +147,17 @@ class MeScreen extends ConsumerWidget {
                 ),
             ],
           ),
+          // Where to ask, above the version and the fine print.
+          ListSection(
+            children: [
+              ListRow(
+                leading: const IconTile(Symbols.forum_rounded, color: TileColors.line),
+                title: l10n.lineCommunity,
+                subtitle: l10n.lineCommunityNote,
+                onTap: () => launchUrl(lineCommunity, mode: LaunchMode.externalApplication),
+              ),
+            ],
+          ),
           const _UpdatesSection(),
           if (Env.current.isDevelopment)
             ListSection(
@@ -166,12 +179,6 @@ class MeScreen extends ConsumerWidget {
             ),
           ListSection(
             children: [
-              ListRow(
-                leading: const IconTile(Symbols.forum_rounded, color: TileColors.line),
-                title: l10n.lineCommunity,
-                subtitle: l10n.lineCommunityNote,
-                onTap: () => launchUrl(lineCommunity, mode: LaunchMode.externalApplication),
-              ),
               ListRow(
                 leading: const IconTile(Symbols.shield_rounded, color: TileColors.neutral),
                 title: l10n.privacyPolicy,

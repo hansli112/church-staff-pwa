@@ -31,7 +31,7 @@ void main() {
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('希望堂'), findsOneWidget);
 
-    await tapText(tester, '我的');
+    await tapText(tester, '設定');
     await tapText(tester, '切換教會');
     await tapText(tester, '恩典堂');
     expect(find.text('恩典堂'), findsOneWidget);

@@ -14,6 +14,11 @@ Future<void> openCalendar(WidgetTester tester) async {
 }
 
 Finder agendaEvent(String title) => find.descendant(of: find.byType(ListRow), matching: find.text(title));
+Future<void> tapText(WidgetTester tester, String text) async {
+  await tester.tap(find.text(text).last);
+  await settle(tester);
+}
+
 Finder monthDay(int day) => find.descendant(of: find.byType(MonthGrid), matching: find.text('$day'));
 
 void main() {
@@ -39,5 +44,86 @@ void main() {
     await tester.tap(monthDay(2));
     await settle(tester);
     expect(agendaEvent('活動2').hitTestable(), findsOneWidget);
+  });
+  group('a picked day', () {
+    CalendarEvent event(String id, int day, {int days = 1}) => CalendarEvent(
+      id: id,
+      title: id,
+      start: DateTime(2026, 10, day),
+      end: DateTime(2026, 10, day + days),
+      allDay: true,
+    );
+
+    testWidgets("shows that day's events only, those over several days too, then the month again", (tester) async {
+      final b = seededChurch(as: staffMei);
+      b.connectCalendar('grace', calendarName: '教會行事曆');
+      b.calendarEvents['grace'] = [event('退修會', 9, days: 3), event('同工會', 10), event('詩班練習', 20)];
+      await pumpApp(tester, b);
+      await openCalendar(tester);
+      expect(agendaEvent('詩班練習'), findsOneWidget);
+
+      await tester.tap(monthDay(10));
+      await settle(tester);
+      expect(agendaEvent('退修會'), findsOneWidget);
+      expect(agendaEvent('同工會'), findsOneWidget);
+      expect(agendaEvent('詩班練習'), findsNothing);
+
+      await tapText(tester, '看整個月');
+      expect(agendaEvent('詩班練習'), findsOneWidget);
+
+      await tester.tap(monthDay(20));
+      await settle(tester);
+      expect(agendaEvent('同工會'), findsNothing);
+      await tester.tap(monthDay(20));
+      await settle(tester);
+      expect(agendaEvent('同工會'), findsOneWidget, reason: 'the same day again shows the month');
+    });
+
+    testWidgets('with nothing on says so', (tester) async {
+      final b = seededChurch(as: staffMei);
+      b.connectCalendar('grace', calendarName: '教會行事曆');
+      b.calendarEvents['grace'] = [event('同工會', 10)];
+      await pumpApp(tester, b);
+      await openCalendar(tester);
+      await tester.tap(monthDay(15));
+      await settle(tester);
+      expect(find.text('這天沒有活動'), findsOneWidget);
+      expect(find.text('新增活動'), findsNothing, reason: 'staff do not edit the calendar');
+    });
+
+    testWidgets('offers a new event on it to those who may add one', (tester) async {
+      final admin = seededChurch();
+      admin.connectCalendar('grace', calendarName: '教會行事曆');
+      await pumpApp(tester, admin);
+      await openCalendar(tester);
+      await tester.tap(monthDay(15));
+      await settle(tester);
+      await tapText(tester, '新增活動');
+      expect(find.textContaining('10月15日'), findsWidgets, reason: 'the new event is on the picked day');
+    });
+  });
+
+  testWidgets('the month grid folds shut and open rather than vanishing', (tester) async {
+    final b = seededChurch(as: staffMei);
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    await pumpApp(tester, b);
+    await openCalendar(tester);
+    final open = tester.getSize(find.byType(MonthGrid)).height;
+
+    await tester.tap(find.byTooltip('只看列表'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 120));
+    final folding = tester.getSize(
+      find.ancestor(of: find.byType(MonthGrid), matching: find.byType(SizeTransition)).first,
+    );
+    expect(folding.height, inExclusiveRange(0, open));
+    await settle(tester);
+    expect(find.byType(MonthGrid), findsNothing);
+
+    await tester.tap(find.byTooltip('顯示月曆'));
+    await tester.pump();
+    expect(find.byType(MonthGrid), findsOneWidget);
+    await settle(tester);
+    expect(tester.getSize(find.byType(MonthGrid)).height, open);
   });
 }
