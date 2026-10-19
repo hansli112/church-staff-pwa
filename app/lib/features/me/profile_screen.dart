@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
@@ -39,7 +38,6 @@ class ProfileScreen extends ConsumerWidget {
           ListSection(
             children: [
               ListRow(
-                leading: const IconTile(Symbols.key_rounded, color: TileColors.neutral),
                 title: l10n.signInMethods,
                 onTap: () => context.push('/account/sign-in'),
               ),
@@ -48,7 +46,6 @@ class ProfileScreen extends ConsumerWidget {
           ListSection(
             children: [
               ListRow(
-                leading: const IconTile(Symbols.logout_rounded, color: TileColors.neutral),
                 title: l10n.signOut,
                 chevron: false,
                 onTap: () => signOut(ref),
@@ -58,7 +55,6 @@ class ProfileScreen extends ConsumerWidget {
           ListSection(
             children: [
               ListRow(
-                leading: const IconTile(Symbols.delete_rounded, color: TileColors.destructive),
                 title: l10n.deleteAccount,
                 destructive: true,
                 onTap: () => context.push('/account'),

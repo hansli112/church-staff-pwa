@@ -124,10 +124,9 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                   if (monthly.isNotEmpty)
                     ListSection(
                       header: l10n.supportMonthly,
-                      footer: [
-                        if (!supporter) l10n.appIconSupporterOnly,
-                        l10n.supportMonthlyTerms(store.name),
-                      ].join('\n'),
+                      footer: supporter
+                          ? l10n.supportMonthlyTerms(store.name)
+                          : l10n.supportMonthlyTermsAndIcons(store.name),
                       children: [
                         // The other plan switches to it.
                         _Amounts(monthly, label: (m) => l10n.supportPerMonth(m.price), paid: plan, onPick: store.buy),
@@ -172,7 +171,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
 }
 
 /// The amounts to give, side by side, one button each; stacked when large
-/// text leaves them no room. [paid] (the plan paid for) is marked and not
+/// text leaves them no room. [paid] (the plan paid for) is ticked and not
 /// bought again.
 class _Amounts extends StatelessWidget {
   const _Amounts(this.items, {required this.label, required this.onPick, this.paid});
@@ -196,7 +195,9 @@ class _Amounts extends StatelessWidget {
         textDirection: direction,
         maxLines: 1,
       )..layout();
-      return text.width + 2 * Space.s + (item.id == paid ? _check + Space.xs : 0);
+      final width = text.width;
+      text.dispose();
+      return width + 2 * Space.s + (item.id == paid ? _check + Space.xs : 0);
     }
 
     return Padding(
@@ -218,11 +219,12 @@ class _Amounts extends StatelessWidget {
                     selected: item.id == paid,
                     child: FilledButton(
                       onPressed: item.id == paid ? null : () => onPick(item),
+                      // Neutral: the accent marks only the plan paid for, a state.
                       style: FilledButton.styleFrom(
-                        backgroundColor: c.accentSoft,
-                        foregroundColor: c.accent,
-                        disabledBackgroundColor: c.accent,
-                        disabledForegroundColor: c.onAccent,
+                        backgroundColor: c.fill,
+                        foregroundColor: c.label,
+                        disabledBackgroundColor: c.accentSoft,
+                        disabledForegroundColor: c.accent,
                         minimumSize: const Size.fromHeight(50),
                         padding: const EdgeInsets.all(Space.s),
                         textStyle: AppText.headline,
@@ -256,6 +258,9 @@ String appIconName(L10n l10n, String? id) => switch (id) {
   _ => l10n.appIconDefault,
 };
 
+/// The home screen's rounding of an icon, as a share of its side.
+const _iconRounding = 0.225;
+
 class _AppIconImage extends StatelessWidget {
   const _AppIconImage(this.id, {required this.size});
 
@@ -264,8 +269,7 @@ class _AppIconImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ClipRRect(
-    // The home screen's rounding, about a fifth of the side.
-    borderRadius: BorderRadius.circular(size * 0.225),
+    borderRadius: BorderRadius.circular(size * _iconRounding),
     child: Image.asset(
       'assets/icons/${id?.toLowerCase() ?? 'app'}.png',
       width: size,
@@ -276,7 +280,9 @@ class _AppIconImage extends StatelessWidget {
 }
 
 /// App 圖示, for supporters: every icon side by side, the one in use
-/// marked; tapping one puts it on the home screen.
+/// marked; tapping one puts it on the home screen. Anyone else, or a
+/// supporter whose plan lapses here, is back on 支持 at once: nothing
+/// shows that cannot be chosen.
 class AppIconScreen extends ConsumerWidget {
   const AppIconScreen({super.key});
 
@@ -288,12 +294,17 @@ class AppIconScreen extends ConsumerWidget {
     final c = AppColors.of(context);
     final supporter = ref.watch(supporterProvider);
     final current = ref.watch(currentAppIconProvider).value;
+    if (!supporter) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) context.go('/me/support');
+      });
+      return const Scaffold();
+    }
     return Scaffold(
       appBar: AppBar(title: Text(l10n.appIcon)),
       body: ListView(
         children: [
           ListSection(
-            footer: supporter ? null : l10n.appIconSupporterOnly,
             children: [
               Padding(
                 padding: const EdgeInsets.all(Space.s),
@@ -309,14 +320,11 @@ class AppIconScreen extends ConsumerWidget {
                         excludeSemantics: true,
                         child: InkWell(
                           borderRadius: BorderRadius.circular(Radii.m),
-                          // A plan that lapsed while here: nothing more to change.
-                          onTap: supporter
-                              ? () async {
-                                  Haptics.selection();
-                                  await ref.read(appIconSwitcherProvider).set(id);
-                                  ref.invalidate(currentAppIconProvider);
-                                }
-                              : null,
+                          onTap: () async {
+                            Haptics.selection();
+                            await ref.read(appIconSwitcherProvider).set(id);
+                            ref.invalidate(currentAppIconProvider);
+                          },
                           child: Padding(
                             padding: const EdgeInsets.all(Space.s),
                             child: Column(
@@ -324,7 +332,7 @@ class AppIconScreen extends ConsumerWidget {
                               children: [
                                 DecoratedBox(
                                   decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(_size * 0.225 + 4),
+                                    borderRadius: BorderRadius.circular(_size * _iconRounding + 4),
                                     border: Border.all(color: current == id ? c.accent : Colors.transparent, width: 3),
                                   ),
                                   child: Padding(
@@ -333,8 +341,8 @@ class AppIconScreen extends ConsumerWidget {
                                   ),
                                 ),
                                 const SizedBox(height: Space.xs),
-                                SizedBox(
-                                  width: _size + 10,
+                                ConstrainedBox(
+                                  constraints: const BoxConstraints(maxWidth: _size * 1.5),
                                   child: Text(
                                     appIconName(l10n, id),
                                     textAlign: TextAlign.center,

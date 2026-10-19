@@ -483,9 +483,6 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get profile => '個人資料';
-
-  @override
   String get name => '名字';
 
   @override
@@ -1230,6 +1227,11 @@ class L10nZh extends L10n {
 
   @override
   String get appIconSupporterOnly => '每月支持者可以換 App 圖示';
+
+  @override
+  String supportMonthlyTermsAndIcons(String store) {
+    return '每月支持者可以換 App 圖示。每月自動續訂，可以隨時到 $store 的訂閱設定取消。';
+  }
 
   @override
   String get appIconDefault => '預設';
@@ -2997,9 +2999,6 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get profile => '个人资料';
-
-  @override
   String get name => '名字';
 
   @override
@@ -3744,6 +3743,11 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get appIconSupporterOnly => '每月支持者可以更换 App 图标';
+
+  @override
+  String supportMonthlyTermsAndIcons(String store) {
+    return '每月支持者可以更换 App 图标。每月自动续订，可以随时在 $store 的订阅设置中取消。';
+  }
 
   @override
   String get appIconDefault => '默认';

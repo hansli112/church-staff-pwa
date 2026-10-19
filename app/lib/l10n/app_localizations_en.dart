@@ -492,9 +492,6 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get profile => 'Profile';
-
-  @override
   String get name => 'Name';
 
   @override
@@ -1303,6 +1300,11 @@ class L10nEn extends L10n {
 
   @override
   String get appIconSupporterOnly => 'Monthly supporters can change the app icon';
+
+  @override
+  String supportMonthlyTermsAndIcons(String store) {
+    return 'Monthly supporters can change the app icon. Renews automatically every month. Cancel anytime in your $store subscriptions.';
+  }
 
   @override
   String get appIconDefault => 'Default';

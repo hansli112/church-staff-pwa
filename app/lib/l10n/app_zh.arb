@@ -340,7 +340,6 @@
       }
     }
   },
-  "profile": "個人資料",
   "name": "名字",
   "nameSaved": "已更新名字",
   "language": "語言",
@@ -754,6 +753,8 @@
   "supporterBadge": "支持者",
   "appIcon": "App 圖示",
   "appIconSupporterOnly": "每月支持者可以換 App 圖示",
+  "supportMonthlyTermsAndIcons": "每月支持者可以換 App 圖示。每月自動續訂，可以隨時到 {store} 的訂閱設定取消。",
+  "@supportMonthlyTermsAndIcons": { "description": "Under 每月支持 for someone not subscribed: the app icon perk, then supportMonthlyTerms; two sentences, so each ends in a period", "placeholders": { "store": { "type": "String", "example": "App Store" } } },
   "appIconDefault": "預設",
   "appIconGreen": "綠",
   "appIconPurple": "紫",

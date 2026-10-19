@@ -952,12 +952,6 @@ abstract class L10n {
   /// **'已移除「{name}」'**
   String removed(String name);
 
-  /// No description provided for @profile.
-  ///
-  /// In zh, this message translates to:
-  /// **'個人資料'**
-  String get profile;
-
   /// No description provided for @name.
   ///
   /// In zh, this message translates to:
@@ -2349,6 +2343,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'每月支持者可以換 App 圖示'**
   String get appIconSupporterOnly;
+
+  /// Under 每月支持 for someone not subscribed: the app icon perk, then supportMonthlyTerms; two sentences, so each ends in a period
+  ///
+  /// In zh, this message translates to:
+  /// **'每月支持者可以換 App 圖示。每月自動續訂，可以隨時到 {store} 的訂閱設定取消。'**
+  String supportMonthlyTermsAndIcons(String store);
 
   /// No description provided for @appIconDefault.
   ///

@@ -483,9 +483,6 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get profile => 'プロフィール';
-
-  @override
   String get name => '名前';
 
   @override
@@ -1232,6 +1229,11 @@ class L10nJa extends L10n {
 
   @override
   String get appIconSupporterOnly => '毎月の応援者はアプリのアイコンを変えられます';
+
+  @override
+  String supportMonthlyTermsAndIcons(String store) {
+    return '毎月の応援者はアプリのアイコンを変えられます。毎月自動で更新されます。$store のサブスクリプション設定からいつでも解約できます。';
+  }
 
   @override
   String get appIconDefault => '標準';

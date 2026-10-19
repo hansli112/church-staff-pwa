@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/design/components.dart';
-import '../../core/design/tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/app_build.dart';
 import '../../state/app_update.dart';
@@ -26,12 +24,10 @@ class AboutScreen extends ConsumerWidget {
           ListSection(
             children: [
               ListRow(
-                leading: const IconTile(Symbols.shield_rounded, color: TileColors.neutral),
                 title: l10n.privacyPolicy,
                 onTap: () => openSitePage(context, ref, '/privacy'),
               ),
               ListRow(
-                leading: const IconTile(Symbols.description_rounded, color: TileColors.neutral),
                 title: l10n.termsOfService,
                 onTap: () => openSitePage(context, ref, '/terms'),
               ),
@@ -70,7 +66,6 @@ class _UpdatesSection extends ConsumerWidget {
         return ListSection(
           children: [
             ListRow(
-              leading: _versionTile,
               title: l10n.appRunningVersion,
               subtitle: l10n.appVersionDevelopment,
             ),
@@ -82,7 +77,6 @@ class _UpdatesSection extends ConsumerWidget {
       return ListSection(
         children: [
           ListRow(
-            leading: _versionTile,
             title: l10n.appRunningVersion,
             subtitle: switch (build.patch) {
               null => build.label,
@@ -104,20 +98,17 @@ class _UpdatesSection extends ConsumerWidget {
       footer: footer,
       children: [
         ListRow(
-          leading: _versionTile,
           title: l10n.appRunningVersion,
           subtitle: update.runningVersion,
           chevron: false,
         ),
         ListRow(
-          leading: const IconTile(Symbols.refresh_rounded, color: TileColors.neutral),
           title: update.phase == AppUpdatePhase.checking ? l10n.appUpdateChecking : l10n.appUpdateCheck,
           chevron: false,
           onTap: update.busy ? null : () => run(ref.read(appUpdateProvider.notifier).check),
         ),
         if (update.availableVersion != null)
           ListRow(
-            leading: const IconTile(Symbols.system_update_rounded, color: TileColors.neutral),
             title: update.phase == AppUpdatePhase.applying ? l10n.appUpdateApplying : l10n.appUpdateApply,
             subtitle: blocked ? l10n.appUpdateFinishEditingNote : null,
             chevron: false,
@@ -127,5 +118,3 @@ class _UpdatesSection extends ConsumerWidget {
     );
   }
 }
-
-const _versionTile = IconTile(Symbols.info_rounded, color: TileColors.neutral);

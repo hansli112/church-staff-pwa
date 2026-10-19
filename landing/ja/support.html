@@ -34,7 +34,7 @@
 
     <!-- 這個月的雲端費用：讀 platform/funding（公開）。讀不到就整塊不顯示。 -->
     <section class="panel" id="funding" hidden aria-labelledby="funding-title">
-      <h2 id="funding-title">今月のサーバー費用</h2>
+      <h2 id="funding-title">今月の応援</h2>
       <p class="amount" id="funding-amount"></p>
       <div class="bar" role="progressbar" aria-labelledby="funding-title" aria-valuemin="0" aria-valuemax="100" id="funding-bar"><span></span></div>
       <p class="status" id="funding-status" hidden></p>
@@ -153,7 +153,7 @@
   if (paid === '1' || paid === '0') {
     const note = document.getElementById('paid');
     note.textContent = paid === '1'
-      ? '応援ありがとうございます！お支払いが完了すると、今月のサーバー費用の表示が自動で更新されます。'
+      ? '応援ありがとうございます！お支払いが完了すると、今月の応援の表示が自動で更新されます。'
       : '今回のお支払いは完了していません。もう一度お試しください。';
     note.hidden = false;
     history.replaceState(null, '', location.pathname + location.hash);

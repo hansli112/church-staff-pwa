@@ -484,9 +484,6 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get profile => '프로필';
-
-  @override
   String get name => '이름';
 
   @override
@@ -1233,6 +1230,11 @@ class L10nKo extends L10n {
 
   @override
   String get appIconSupporterOnly => '정기 후원자는 앱 아이콘을 바꿀 수 있어요';
+
+  @override
+  String supportMonthlyTermsAndIcons(String store) {
+    return '정기 후원자는 앱 아이콘을 바꿀 수 있어요. 매월 자동으로 갱신돼요. $store의 구독 설정에서 언제든지 해지할 수 있어요.';
+  }
 
   @override
   String get appIconDefault => '기본';

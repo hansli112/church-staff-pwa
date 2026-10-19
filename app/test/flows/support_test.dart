@@ -279,6 +279,14 @@ void main() {
     });
   }
 
+  testWidgets('without a plan, the icon page is not there to see: back on 支持', (tester) async {
+    await pumpWithStore(tester, FakeStore(), FakeIcons());
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support/icon');
+    await settle(tester);
+    expect(find.text('紫'), findsNothing);
+    expect(find.text('一次性支持'), findsOneWidget);
+  });
+
   testWidgets('before the store sells anything, it says so instead of an error', (tester) async {
     await pumpWithStore(tester, FakeStore(items: const []), FakeIcons());
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
