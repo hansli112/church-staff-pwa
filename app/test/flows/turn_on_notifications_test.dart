@@ -167,18 +167,18 @@ void main() {
     final push = FakePush(state: PushPermission.denied);
     await pumpApp(tester, seededChurch(as: staffMei), overrides: [pushServiceProvider.overrideWithValue(push)]);
 
-    await tapText(tester, '到設定開啟通知');
+    await tapText(tester, '到系統設定開啟通知');
     expect(push.settingsOpened, 1);
     expect(push.asked, 0, reason: 'the phone would not ask again');
 
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/notifications');
     await settle(tester);
-    await tapText(tester, '到設定開啟通知');
+    await tapText(tester, '到系統設定開啟通知');
     expect(push.settingsOpened, 2);
 
     push.state = PushPermission.granted;
     await resume(tester);
-    expect(find.text('到設定開啟通知'), findsNothing);
+    expect(find.text('到系統設定開啟通知'), findsNothing);
     final reminders = tester.widget<Switch>(
       find.descendant(
         of: find.ancestor(of: find.text('服事提醒'), matching: find.byType(InkWell)),
@@ -189,14 +189,14 @@ void main() {
 
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/home');
     await settle(tester);
-    expect(find.text('到設定開啟通知'), findsNothing);
+    expect(find.text('到系統設定開啟通知'), findsNothing);
   });
 
   testWidgets('a phone with no settings page to open says where to look', (tester) async {
     final push = FakePush(state: PushPermission.denied, hasSettings: false);
     await pumpApp(tester, seededChurch(as: staffMei), overrides: [pushServiceProvider.overrideWithValue(push)]);
 
-    await tapText(tester, '到設定開啟通知');
+    await tapText(tester, '到系統設定開啟通知');
     expect(find.text('通知被關掉了，請到系統設定打開'), findsOneWidget);
   });
 }

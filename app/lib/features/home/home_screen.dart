@@ -41,7 +41,7 @@ final _waitingForZoneProvider = Provider.autoDispose<int>((ref) {
 });
 
 /// What to do first in a new church, where the screens for it are three
-/// levels down under 我的. Shown while [_gettingStartedProvider] holds.
+/// levels down under 設定. Shown while [_gettingStartedProvider] holds.
 class _GettingStarted extends StatelessWidget {
   const _GettingStarted();
 

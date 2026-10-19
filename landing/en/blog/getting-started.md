@@ -36,4 +36,4 @@ If the link won’t open, they can sign in, choose **Enter invite code** on the 
 
 Go to **Service settings** to set which days you have services each week and which roles need people. Then you’re ready to start planning the schedule.
 
-Until someone joins, **Service settings** is right there under **Get started** on Home. After that, you can find it under **Me** → **Church info** → **Service settings**.
+Until someone joins, **Service settings** is right there under **Get started** on Home. After that, you can find it under **Settings** → **Church info** → **Service settings**.

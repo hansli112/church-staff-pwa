@@ -47,10 +47,15 @@ class RostersScreen extends ConsumerWidget {
         title: Text(l10n.tabRosters),
         actions: [
           // In words: no icon says "read a roster from a photo" at a glance.
+          // Grows with the text only so far, like the bar's own buttons, so
+          // the title beside it keeps its room.
           if (canImport)
-            TextButton(
-              onPressed: () => context.push('/rosters/import/${shown.id}'),
-              child: Text(l10n.photoImportAction),
+            MediaQuery.withClampedTextScaling(
+              maxScaleFactor: 1.5,
+              child: TextButton(
+                onPressed: () => context.push('/rosters/import/${shown.id}'),
+                child: Text(l10n.photoImportAction),
+              ),
             ),
         ],
       ),
@@ -184,7 +189,8 @@ class ServiceRosterList extends ConsumerWidget {
   }
 }
 
-/// One sentence and one button above a service nobody is arranged in yet.
+/// One sentence above a service nobody is arranged in yet, and two ways
+/// to start: by hand from the first day, or from a photo of a paper roster.
 class _StartArranging extends StatelessWidget {
   const _StartArranging({required this.onStart, required this.onImport});
 
@@ -203,7 +209,7 @@ class _StartArranging extends StatelessWidget {
         children: [
           BalancedText(l10n.rostersNobodyArranged, style: AppText.body.copyWith(color: c.secondaryLabel)),
           SecondaryButton(label: l10n.rostersStartArranging, onPressed: onStart),
-          TextButton(onPressed: onImport, child: Text(l10n.photoImport)),
+          TextButton(onPressed: onImport, child: Text(l10n.rostersImportPhoto)),
         ],
       ),
     );

@@ -137,6 +137,6 @@ void main() {
     await tester.tap(find.text('服事提醒'));
     await settle(tester);
     expect(tester.widget<Switch>(find.byType(Switch).first).value, isFalse);
-    expect(find.text('到設定開啟通知'), findsOneWidget);
+    expect(find.text('到系統設定開啟通知'), findsOneWidget);
   });
 }

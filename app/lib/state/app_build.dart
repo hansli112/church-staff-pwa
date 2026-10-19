@@ -58,7 +58,7 @@ class AppBuild {
   /// without one, or where Shorebird is not (`flutter run`).
   final int? patch;
 
-  /// As 我的 shows it: `1.0.0 (12)`.
+  /// As 設定 shows it: `1.0.0 (12)`.
   String get label => '$version ($number)';
 
   /// This phone's, read once at start; null on the web, which updates itself,

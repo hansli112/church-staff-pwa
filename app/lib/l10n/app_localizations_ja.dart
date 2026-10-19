@@ -323,6 +323,9 @@ class L10nJa extends L10n {
   String get rostersStartArranging => '割り当てを始める';
 
   @override
+  String get rostersImportPhoto => '写真から読み込む';
+
+  @override
   String get today => '今日';
 
   @override
@@ -913,7 +916,7 @@ class L10nJa extends L10n {
   String get notifCardHide => '今後表示しない';
 
   @override
-  String get notifOpenSettings => '設定で通知をオンにする';
+  String get notifOpenSettings => '端末の設定で通知をオンにする';
 
   @override
   String get notifNotAllowed => '通知がまだオンになっていません。確認が表示されたら「許可」をタップしてください。';
@@ -981,7 +984,7 @@ class L10nJa extends L10n {
   String get photoImport => '写真から読み込み';
 
   @override
-  String get photoImportAction => '写真から読み込み';
+  String get photoImportAction => '写真読込';
 
   @override
   String photoRemaining(int count) {

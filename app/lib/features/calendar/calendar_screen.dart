@@ -135,6 +135,9 @@ class _Agenda extends ConsumerStatefulWidget {
 class _AgendaState extends ConsumerState<_Agenda> {
   final _scroll = ScrollController();
 
+  /// The picked day's section, brought into view when the day is picked.
+  final _pickedDay = GlobalKey();
+
   /// The month whose neighbours were last read ahead.
   DateTime? _readAheadOf;
 
@@ -150,12 +153,22 @@ class _AgendaState extends ConsumerState<_Agenda> {
     super.dispose();
   }
 
-  /// Shows only [day]'s events below the month; the same day again, the
-  /// whole month.
+  /// Shows only [day]'s events below the month, their heading brought to
+  /// the top (past the grid, when the grid scrolls with them); the same day
+  /// again, the whole month.
   void _select(Day day) {
-    final picked = ref.read(calendarSelectedDayProvider);
-    ref.read(calendarSelectedDayProvider.notifier).select(picked == day ? null : day);
-    if (_scroll.hasClients) _scroll.jumpTo(0);
+    final picked = ref.read(calendarSelectedDayProvider) == day ? null : day;
+    ref.read(calendarSelectedDayProvider.notifier).select(picked);
+    if (picked == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final section = _pickedDay.currentContext;
+      if (!mounted || section == null) return;
+      Scrollable.ensureVisible(
+        section,
+        duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   /// Room the agenda keeps below a month grid that stays put, at the usual
@@ -239,10 +252,11 @@ class _AgendaState extends ConsumerState<_Agenda> {
       ];
       agenda = [
         ListSection(
+          key: _pickedDay,
           header: dayLabel(l10n, selected, today),
           children: [
             for (final e in onDay) row(e),
-            if (onDay.isEmpty) ListRow(title: l10n.calNoEventsThatDay),
+            if (onDay.isEmpty) _NothingOn(l10n.calNoEventsThatDay),
             if (canEdit)
               ListRow(
                 leading: const Icon(Symbols.add_rounded),
@@ -336,29 +350,77 @@ class _AgendaState extends ConsumerState<_Agenda> {
   }
 }
 
+/// A picked day with no event: said in the secondary colour, so it does
+/// not read as an event of that name.
+class _NothingOn extends StatelessWidget {
+  const _NothingOn(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => ConstrainedBox(
+    constraints: BoxConstraints(minHeight: Space.minTap(Theme.of(context).platform)),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: Space.m, vertical: Space.s),
+      child: Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: Text(text, style: AppText.body.copyWith(color: AppColors.of(context).secondaryLabel)),
+      ),
+    ),
+  );
+}
+
 /// The month grid folding open and shut under the month's name, as the
-/// button above it shows or hides it; at once when the phone asks for less
-/// motion.
-class _Folding extends StatelessWidget {
+/// button above it shows or hides it: from wherever it is, so pressing again
+/// mid-way turns it back. While it folds away it takes no taps. At once when
+/// the phone asks for less motion.
+class _Folding extends StatefulWidget {
   const _Folding({required this.shown, required this.child});
 
   final bool shown;
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => AnimatedSwitcher(
-    duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : const Duration(milliseconds: 250),
-    switchInCurve: Curves.easeInOut,
-    switchOutCurve: Curves.easeInOut,
-    layoutBuilder: (current, previous) => Stack(alignment: Alignment.topCenter, children: [...previous, ?current]),
-    transitionBuilder: (child, animation) => SizeTransition(
-      sizeFactor: animation,
-      axisAlignment: -1,
-      child: FadeTransition(opacity: animation, child: child),
-    ),
-    child: shown
-        ? KeyedSubtree(key: const ValueKey(true), child: child)
-        : const SizedBox(key: ValueKey(false), width: double.infinity),
+  State<_Folding> createState() => _FoldingState();
+}
+
+class _FoldingState extends State<_Folding> with SingleTickerProviderStateMixin {
+  late final _open = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 250),
+    value: widget.shown ? 1 : 0,
+  );
+  late final _eased = CurvedAnimation(parent: _open, curve: Curves.easeInOut);
+
+  @override
+  void didUpdateWidget(_Folding old) {
+    super.didUpdateWidget(old);
+    if (old.shown == widget.shown) return;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _open.value = widget.shown ? 1 : 0;
+    } else {
+      widget.shown ? _open.forward() : _open.reverse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _eased.dispose();
+    _open.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _open,
+    builder: (context, child) => _open.isDismissed
+        ? const SizedBox(width: double.infinity)
+        : SizeTransition(
+            sizeFactor: _eased,
+            axisAlignment: -1,
+            child: FadeTransition(opacity: _eased, child: child),
+          ),
+    child: IgnorePointer(ignoring: !widget.shown, child: widget.child),
   );
 }
 

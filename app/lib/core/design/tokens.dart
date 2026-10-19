@@ -225,7 +225,7 @@ abstract final class AppText {
   );
 }
 
-/// The tiles behind the row icons on 我的, as in iOS Settings: one hue per
+/// The tiles behind the row icons on 設定, as in iOS Settings: one hue per
 /// kind of row, so the page reads in groups at a glance. White icons on
 /// them are 3:1 or better, as icons need; the same in both appearances.
 abstract final class TileColors {

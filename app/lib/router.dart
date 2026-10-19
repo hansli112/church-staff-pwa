@@ -113,17 +113,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       page(
         '/c/:churchId',
         (s) => ChurchEntryScreen(churchId: s.pathParameters['churchId']!),
+        fade: true,
         // An invite link. The code decides the church, not the URL.
         routes: [
+          // Opened from the link itself, not from a page here.
           page(
             'join/:code',
             (s) => WarmUpOnOpen(WarmUp.joinChurch, child: JoinScreen(code: s.pathParameters['code']!)),
+            fade: true,
           ),
         ],
       ),
       page('/closed', (_) => const ClosedScreen(), fade: true),
       page('/add-to-home', (_) => const AddToHomeScreen()),
-      page('/turn-on-notifications', (_) => const TurnOnNotificationsScreen()),
+      page('/turn-on-notifications', (_) => const TurnOnNotificationsScreen(), fade: true),
       page('/account', (_) => const AccountScreen(), routes: [page('sign-in', (_) => const SignInMethodsScreen())]),
       page(
         '/admin',
@@ -176,7 +179,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               page(
                 '/me',
-                (_) => const MeScreen(),
+                (_) => const SettingsScreen(),
                 routes: [
                   page('profile', (_) => const ProfileScreen()),
                   // Store apps only: the web build has no support page at all.
@@ -232,16 +235,28 @@ class LoadingScreen extends StatelessWidget {
 }
 
 /// [child] fading in over what showed before, as a launch screen gives way
-/// to the app; at once when the phone asks for less motion.
+/// to the app; at once when the phone asks for less motion. A page opened
+/// over it moves it aside as the platform does (iOS slides it left).
 Page<void> fadeInPage(GoRouterState state, Widget child) => CustomTransitionPage<void>(
   key: state.pageKey,
   child: child,
   transitionDuration: const Duration(milliseconds: 250),
   reverseTransitionDuration: const Duration(milliseconds: 200),
-  transitionsBuilder: (context, animation, _, child) => MediaQuery.disableAnimationsOf(context)
-      ? child
-      : FadeTransition(
-          opacity: CurveTween(curve: Curves.easeOut).animate(animation),
-          child: child,
-        ),
+  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+    final route = ModalRoute.of(context);
+    final covered = route is PageRoute<void>
+        ? Theme.of(context).pageTransitionsTheme.buildTransitions(
+            route,
+            context,
+            kAlwaysCompleteAnimation,
+            secondaryAnimation,
+            child,
+          )
+        : child;
+    if (MediaQuery.disableAnimationsOf(context)) return covered;
+    return FadeTransition(
+      opacity: CurveTween(curve: Curves.easeOut).animate(animation),
+      child: covered,
+    );
+  },
 );

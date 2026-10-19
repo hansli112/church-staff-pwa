@@ -102,7 +102,7 @@ try {
   await shot(alice.page, 'day-after-edit');
 
   // Invite.
-  await button(alice.page, '我的').click();
+  await button(alice.page, '設定').click();
   await alice.page.waitForTimeout(1500);
   await button(alice.page, '教會資訊').click();
   await alice.page.waitForTimeout(1500);

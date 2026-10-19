@@ -457,7 +457,7 @@ void main() {
       await tapText(tester, '服事表');
       expect(find.text('還沒有安排任何人'), findsOneWidget);
       // A roster already on paper: the way to read it in is right here too.
-      expect(find.text('照片匯入'), findsNWidgets(2));
+      expect(find.text('用照片匯入'), findsOneWidget);
       await tapText(tester, '開始安排');
       expect(find.textContaining('10月4日'), findsOneWidget, reason: 'the first day, to arrange');
       expect(find.byTooltip('編輯'), findsOneWidget);

@@ -715,7 +715,7 @@ class Tag extends StatelessWidget {
 }
 
 /// A row's icon, white on a [TileColors] square, as in iOS Settings. Only
-/// on 我的, where it groups a long page; elsewhere row icons stay neutral.
+/// on 設定, where it groups a long page; elsewhere row icons stay neutral.
 class IconTile extends StatelessWidget {
   const IconTile(this.icon, {super.key, required this.color});
 

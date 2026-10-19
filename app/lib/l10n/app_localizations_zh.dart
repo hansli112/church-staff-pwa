@@ -323,6 +323,9 @@ class L10nZh extends L10n {
   String get rostersStartArranging => '開始安排';
 
   @override
+  String get rostersImportPhoto => '用照片匯入';
+
+  @override
   String get today => '今天';
 
   @override
@@ -913,7 +916,7 @@ class L10nZh extends L10n {
   String get notifCardHide => '不再顯示';
 
   @override
-  String get notifOpenSettings => '到設定開啟通知';
+  String get notifOpenSettings => '到系統設定開啟通知';
 
   @override
   String get notifNotAllowed => '通知還沒開。跳出詢問時，請點「允許」。';
@@ -2829,6 +2832,9 @@ class L10nZhHans extends L10nZh {
   String get rostersStartArranging => '开始安排';
 
   @override
+  String get rostersImportPhoto => '用照片导入';
+
+  @override
   String get today => '今天';
 
   @override
@@ -3419,7 +3425,7 @@ class L10nZhHans extends L10nZh {
   String get notifCardHide => '不再显示';
 
   @override
-  String get notifOpenSettings => '到设置开启通知';
+  String get notifOpenSettings => '到系统设置开启通知';
 
   @override
   String get notifNotAllowed => '通知还没开启。弹出询问时，请点“允许”。';

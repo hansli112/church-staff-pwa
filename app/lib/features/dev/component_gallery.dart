@@ -63,7 +63,7 @@ class _ComponentGalleryState extends State<ComponentGallery> {
                 onTap: () {},
               ),
               ListRow(
-                title: '有彩色圖示（只在我的）',
+                title: '有彩色圖示（只在設定）',
                 leading: const IconTile(Symbols.group_rounded, color: TileColors.manage),
                 onTap: () {},
               ),

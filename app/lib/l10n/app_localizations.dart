@@ -688,6 +688,12 @@ abstract class L10n {
   /// **'開始安排'**
   String get rostersStartArranging;
 
+  /// Second button under rostersNobodyArranged: reads a roster already on paper from a photo
+  ///
+  /// In zh, this message translates to:
+  /// **'用照片匯入'**
+  String get rostersImportPhoto;
+
   /// No description provided for @today.
   ///
   /// In zh, this message translates to:
@@ -1771,7 +1777,7 @@ abstract class L10n {
   /// No description provided for @notifOpenSettings.
   ///
   /// In zh, this message translates to:
-  /// **'到設定開啟通知'**
+  /// **'到系統設定開啟通知'**
   String get notifOpenSettings;
 
   /// No description provided for @notifNotAllowed.

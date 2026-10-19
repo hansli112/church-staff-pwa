@@ -324,6 +324,9 @@ class L10nKo extends L10n {
   String get rostersStartArranging => '배정 시작하기';
 
   @override
+  String get rostersImportPhoto => '사진으로 가져오기';
+
+  @override
   String get today => '오늘';
 
   @override
@@ -914,7 +917,7 @@ class L10nKo extends L10n {
   String get notifCardHide => '다시 보지 않기';
 
   @override
-  String get notifOpenSettings => '설정에서 알림 켜기';
+  String get notifOpenSettings => '기기 설정에서 알림 켜기';
 
   @override
   String get notifNotAllowed => '알림이 아직 꺼져 있어요. 권한을 물으면 ‘허용’을 눌러 주세요.';
@@ -982,7 +985,7 @@ class L10nKo extends L10n {
   String get photoImport => '사진으로 가져오기';
 
   @override
-  String get photoImportAction => '사진으로 가져오기';
+  String get photoImportAction => '사진 가져오기';
 
   @override
   String photoRemaining(int count) {
@@ -1105,7 +1108,7 @@ class L10nKo extends L10n {
   String get calNoEventsThatDay => '이날은 행사가 없어요';
 
   @override
-  String get calWholeMonth => '이번 달 전체 보기';
+  String get calWholeMonth => '한 달 전체 보기';
 
   @override
   String get calAllDay => '종일';

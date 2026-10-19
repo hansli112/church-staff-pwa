@@ -8,7 +8,7 @@ import '../../core/design/tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/connectivity.dart';
 
-enum AppTab { home, rosters, calendar, me }
+enum AppTab { home, rosters, calendar, settings }
 
 /// The bottom tab bar around the four top-level tabs. Each tab keeps its
 /// own navigation stack.
@@ -76,5 +76,5 @@ String tabLabel(L10n l10n, AppTab tab) => switch (tab) {
   AppTab.home => l10n.tabHome,
   AppTab.rosters => l10n.tabRosters,
   AppTab.calendar => l10n.tabCalendar,
-  AppTab.me => l10n.tabSettings,
+  AppTab.settings => l10n.tabSettings,
 };

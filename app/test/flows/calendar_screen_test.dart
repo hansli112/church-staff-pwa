@@ -98,8 +98,14 @@ void main() {
       await openCalendar(tester);
       await tester.tap(monthDay(15));
       await settle(tester);
+      // The picked day's heading says 10月15日 too: the editor adds to it.
+      final before = find.textContaining('10月15日').evaluate().length;
       await tapText(tester, '新增活動');
-      expect(find.textContaining('10月15日'), findsWidgets, reason: 'the new event is on the picked day');
+      expect(
+        find.textContaining('10月15日').evaluate().length,
+        greaterThan(before),
+        reason: 'the new event is on the picked day',
+      );
     });
   });
 
@@ -117,7 +123,9 @@ void main() {
       find.ancestor(of: find.byType(MonthGrid), matching: find.byType(SizeTransition)).first,
     );
     expect(folding.height, inExclusiveRange(0, open));
+    await tester.tap(monthDay(15), warnIfMissed: false);
     await settle(tester);
+    expect(find.text('這天沒有活動'), findsNothing, reason: 'a grid folding away takes no taps');
     expect(find.byType(MonthGrid), findsNothing);
 
     await tester.tap(find.byTooltip('顯示月曆'));
@@ -125,5 +133,24 @@ void main() {
     expect(find.byType(MonthGrid), findsOneWidget);
     await settle(tester);
     expect(tester.getSize(find.byType(MonthGrid)).height, open);
+  });
+  testWidgets('a picked day comes into view under a grid that scrolls with it', (tester) async {
+    final b = seededChurch(as: staffMei);
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    b.calendarEvents['grace'] = [
+      CalendarEvent(
+        id: '詩班練習',
+        title: '詩班練習',
+        start: DateTime(2026, 10, 28),
+        end: DateTime(2026, 10, 29),
+        allDay: true,
+      ),
+    ];
+    // Large text: the month grid no longer stays put above the list.
+    await pumpApp(tester, b, textScale: 2);
+    await openCalendar(tester);
+    await tester.tap(monthDay(28));
+    await settle(tester);
+    expect(agendaEvent('詩班練習').hitTestable(), findsOneWidget);
   });
 }

@@ -326,6 +326,9 @@ class L10nEn extends L10n {
   String get rostersStartArranging => 'Start scheduling';
 
   @override
+  String get rostersImportPhoto => 'Import from a photo';
+
+  @override
   String get today => 'Today';
 
   @override
@@ -939,7 +942,7 @@ class L10nEn extends L10n {
   String get notifCardHide => 'Don’t show again';
 
   @override
-  String get notifOpenSettings => 'Turn on in Settings';
+  String get notifOpenSettings => 'Turn on in system settings';
 
   @override
   String get notifNotAllowed => 'Notifications aren’t on yet. When asked, tap “Allow.”';
@@ -1025,7 +1028,7 @@ class L10nEn extends L10n {
   String get photoImport => 'Import from photo';
 
   @override
-  String get photoImportAction => 'Import';
+  String get photoImportAction => 'Import photo';
 
   @override
   String photoRemaining(int count) {
@@ -1168,7 +1171,7 @@ class L10nEn extends L10n {
   String get calNoEventsThatDay => 'No events this day';
 
   @override
-  String get calWholeMonth => 'Whole month';
+  String get calWholeMonth => 'Show whole month';
 
   @override
   String get calAllDay => 'All day';
