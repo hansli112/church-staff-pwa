@@ -209,7 +209,8 @@ class HomeScreen extends ConsumerWidget {
                         leading: dayBlock(event.day.isBefore(today) ? today : event.day, today),
                         title: event.title,
                         subtitle: dayBesideBlock(l10n, event.day.isBefore(today) ? today : event.day, today),
-                        onTap: () => showEventDetail(context, event),
+                        // A new one opens once saved, with its roster.
+                        onTap: event.id == null ? null : () => showEventDetail(context, event),
                       ),
                     if (activityError)
                       ErrorRetry(

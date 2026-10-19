@@ -267,9 +267,10 @@ class CalendarMonths {
   }
 
   /// Sends one write with [send]: [event] saved over [previous], answered
-  /// with the event as the server saved it, or deleted, answered with null.
-  /// Every month holding the event then shows the reply; one that cannot
-  /// know is read again. Calendar replies have no revision: after
+  /// with the event as the server saved it, or with [deleting] deleted,
+  /// answered with null. The months on screen show the change at once,
+  /// and put back what was there should it fail. Every month holding the
+  /// event then shows the reply; one that cannot know is read again. Calendar replies have no revision: after
   /// overlapping writes to one event only a complete read tells which the
   /// server committed last, so every month holding it is read again.
   ///
@@ -281,6 +282,7 @@ class CalendarMonths {
   Future<CalendarEvent?> write(
     CalendarEvent event, {
     CalendarEvent? previous,
+    bool deleting = false,
     required Future<CalendarEvent?> Function() send,
     required CalendarMonths? Function() now,
   }) async {
@@ -290,6 +292,7 @@ class CalendarMonths {
       _ => null,
     };
     final edit = _begin(event, previous);
+    if (current()) _show(event, previous, deleting: deleting);
     try {
       final saved = await send();
       if (saved != null) edit._mutation.events.add(saved);
@@ -302,6 +305,10 @@ class CalendarMonths {
       }
       return saved;
     } catch (error) {
+      // Overlapping writes are read again once all are answered instead.
+      if (current(generation: edit.generation) && edit.latest && !edit._mutation.overlapped) {
+        _putBack(event, deleting ? event : previous);
+      }
       // Only a refusal from a read may drop the months the reader can read.
       if (calendarAccessRefused(error)) sameKey()?._reloadAll();
       rethrow;
@@ -327,6 +334,49 @@ class CalendarMonths {
     if (mutation.overlapped) _reload(mutation.events);
   }
 
+  /// [event] shows saved over [previous], or gone when [deleting], in the
+  /// months on screen before the server answers. A month being read is
+  /// left to the reply.
+  void _show(CalendarEvent event, CalendarEvent? previous, {required bool deleting}) {
+    for (final (month, m) in _holding([event, ?previous])) {
+      _patchShown(
+        m,
+        (loaded) => [
+          for (final e in loaded)
+            if (!_same(e, event) && (previous == null || !_same(e, previous))) e,
+          if (!deleting && event.months.contains(month)) event,
+        ]..sort((a, b) => a.start.compareTo(b.start)),
+      );
+    }
+  }
+
+  /// [write] of [event] failed: what [_show] put up goes, and [restore],
+  /// which was there before, comes back.
+  void _putBack(CalendarEvent event, CalendarEvent? restore) {
+    for (final (month, m) in _holding([event, ?restore])) {
+      _patchShown(m, (loaded) {
+        final kept = [
+          for (final e in loaded)
+            if (!identical(e, event)) e,
+        ];
+        return [
+          ...kept,
+          if (restore != null && restore.months.contains(month) && !kept.any((e) => _same(e, restore))) restore,
+        ]..sort((a, b) => a.start.compareTo(b.start));
+      });
+    }
+  }
+
+  /// [m] shows [change] made to its events, when they are read and no read
+  /// is under way.
+  void _patchShown(_Month m, List<CalendarEvent> Function(List<CalendarEvent> loaded) change) {
+    final loaded = m.events;
+    if (loaded == null || m.error != null || m.reading != null) return;
+    final next = change(loaded);
+    m.events = next;
+    m.view?.show(next);
+  }
+
   /// [saved] was saved for [event], over [previous]: every month holding
   /// any of them shows it now.
   void _saved(CalendarEvent event, CalendarEvent saved, CalendarEvent? previous) {
@@ -337,7 +387,8 @@ class CalendarMonths {
         known: saved.id != null,
         (loaded) => [
           for (final e in loaded)
-            if (e.id != saved.id && (previous?.id == null || e.id != previous!.id)) e,
+            // [event] itself, shown before the reply, has no id when new.
+            if (!identical(e, event) && e.id != saved.id && (previous?.id == null || e.id != previous!.id)) e,
           if (saved.months.contains(month)) saved,
         ]..sort((a, b) => a.start.compareTo(b.start)),
       );
@@ -412,6 +463,10 @@ class CalendarMonths {
     _idle.clear();
   }
 }
+
+/// Whether [e] is [other]: the same event, or the very one shown before
+/// it had an id.
+bool _same(CalendarEvent e, CalendarEvent other) => identical(e, other) || (other.id != null && e.id == other.id);
 
 /// Whether [error] says the reader may not read the calendar (any more).
 bool calendarAccessRefused(Object error) =>

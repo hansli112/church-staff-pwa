@@ -194,6 +194,93 @@ void main() {
     expect((view.reloads, view.denied), (1, null));
   });
 
+  group('a write shows before the server answers', () {
+    late View view;
+    late Completer<CalendarEvent?> reply;
+
+    setUp(() async {
+      view = View();
+      months.show('2026-10', view);
+      await months.events('2026-10');
+      reply = Completer();
+    });
+
+    test('a change shows at once, then as the server saved it', () async {
+      final renamed = meeting.copyWith(title: '改名');
+      final write = months.write(renamed, previous: meeting, send: () => reply.future, now: () => months);
+      expect(view.shown, [renamed]);
+      final saved = renamed.copyWith(title: '改名（伺服器）');
+      reply.complete(saved);
+      await write;
+      expect(view.shown, [saved]);
+      expect(view.reloads, 0);
+    });
+
+    test('a new event shows at once, and once only when the server gives it an id', () async {
+      final draft = CalendarEvent(
+        title: '禱告會',
+        start: DateTime.utc(2026, 10, 14),
+        end: DateTime.utc(2026, 10, 15),
+      );
+      final write = months.write(draft, send: () => reply.future, now: () => months);
+      expect(view.shown, [meeting, draft]);
+      final saved = CalendarEvent(id: 'prayer', title: draft.title, start: draft.start, end: draft.end);
+      reply.complete(saved);
+      await write;
+      expect(view.shown, [meeting, saved]);
+    });
+
+    test('a deleted event goes at once', () async {
+      final write = months.write(meeting, deleting: true, send: () => reply.future, now: () => months);
+      expect(view.shown, isEmpty);
+      reply.complete(null);
+      await write;
+      expect(view.shown, isEmpty);
+    });
+
+    test('a save that fails puts back what was there', () async {
+      final write = months.write(
+        meeting.copyWith(title: '改名'),
+        previous: meeting,
+        send: () => reply.future,
+        now: () => months,
+      );
+      const failure = CloudException(CloudErrorCode.unavailable);
+      reply.completeError(failure);
+      await expectLater(write, throwsA(same(failure)));
+      expect(view.shown, [meeting]);
+      expect(view.reloads, 0);
+    });
+
+    test('a new event that fails to save goes again', () async {
+      final draft = CalendarEvent(
+        title: '禱告會',
+        start: DateTime.utc(2026, 10, 14),
+        end: DateTime.utc(2026, 10, 15),
+      );
+      final write = months.write(draft, send: () => reply.future, now: () => months);
+      reply.completeError(const CloudException(CloudErrorCode.unavailable));
+      await expectLater(write, throwsA(isA<CloudException>()));
+      expect(view.shown, [meeting]);
+    });
+
+    test('a delete that fails puts the event back', () async {
+      final write = months.write(meeting, deleting: true, send: () => reply.future, now: () => months);
+      reply.completeError(const CloudException(CloudErrorCode.unavailable));
+      await expectLater(write, throwsA(isA<CloudException>()));
+      expect(view.shown, [meeting]);
+    });
+
+    test('moved to a month not read yet: it leaves this one at once, and the other reads it', () async {
+      final moved = meeting.copyWith(start: DateTime.utc(2026, 12, 2), end: DateTime.utc(2026, 12, 3));
+      final write = months.write(moved, previous: meeting, send: () => reply.future, now: () => months);
+      expect(view.shown, isEmpty);
+      reply.complete(moved);
+      await write;
+      expect(view.shown, isEmpty);
+    });
+  });
+
   group('shown at once, read again behind', () {
     test('a month read over a minute ago shows at once while it is read again; the new read then shows', () async {
       final view = View();

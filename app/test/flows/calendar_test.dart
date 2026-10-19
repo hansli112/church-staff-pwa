@@ -380,6 +380,32 @@ void main() {
     expect(b.calendarEvents['grace']!.single.day.key, '2026-10-15');
   });
 
+  testWidgets('a new event shows as soon as it is saved, and opens once the server has it', (tester) async {
+    final b = seededChurch(as: calendarEditor, extra: const [calendarEditor]);
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    await pumpApp(tester, b);
+    await go(tester, '/calendar');
+    await tester.tap(gridDay(15));
+    await settle(tester);
+    await tester.tap(find.byTooltip('新增活動'));
+    await settle(tester);
+    await tester.enterText(find.byType(TextField).first, '禱告會');
+    await tester.pump();
+    b.calendarSaveHeld = Completer();
+    await tapText(tester, '儲存');
+    expect(inAgenda('禱告會'), findsOneWidget, reason: 'before the server answers');
+    await tester.tap(inAgenda('禱告會'));
+    await settle(tester);
+    expect(find.text('儲存'), findsNothing, reason: 'no id yet: editing it now would make a second one');
+
+    b.calendarSaveHeld!.complete();
+    await settle(tester);
+    expect(inAgenda('禱告會'), findsOneWidget);
+    await tester.tap(inAgenda('禱告會'));
+    await settle(tester);
+    expect(find.text('儲存'), findsOneWidget);
+  });
+
   testWidgets('swiping the month grid changes the month, and a new month has nothing picked', (tester) async {
     final semantics = tester.ensureSemantics();
     final b = seededChurch(as: staffMei);

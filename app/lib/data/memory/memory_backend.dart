@@ -152,6 +152,10 @@ class MemoryBackend implements Backend {
   /// complete, as on a slow network. Completing it with an error fails it.
   Completer<void>? calendarEventsHeld;
 
+  /// Scripted: while set, saving an event waits for this to complete, as
+  /// on a slow network.
+  Completer<void>? calendarSaveHeld;
+
   /// Scripted: while set, previewing an invite waits for this to complete,
   /// as on a slow network.
   Completer<void>? invitePreviewHeld;
@@ -1375,6 +1379,7 @@ class MemoryChurchData implements ChurchData {
   @override
   Future<CalendarEvent> calendarSave(CalendarEvent event, {CalendarEvent? previous, String? restoreRosterOf}) async {
     _requireCalendarEditor();
+    await _b.calendarSaveHeld?.future;
     final saved = event.id == null
         ? CalendarEvent(
             id: _b.newEventId(),

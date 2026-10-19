@@ -412,7 +412,7 @@ void main() {
     expect(b.reads.length, 3);
   });
 
-  test('a failed delete keeps the event visible and propagates the error', () async {
+  test('a delete hides the event at once; failing, it comes back and the error propagates', () async {
     final b = CalendarBackend();
     final event = CalendarEvent(
       id: 'meeting',
@@ -430,7 +430,7 @@ void main() {
     final deleting = container.read(calendarActionsProvider).delete(event);
     final failed = expectLater(deleting, throwsA(same(failure)));
     await pumpEventQueue();
-    expect(container.read(calendarEventsProvider('2026-10')).value, [event]);
+    expect(container.read(calendarEventsProvider('2026-10')).value, isEmpty);
     b.deleteHeld!.complete();
     await failed;
     expect(container.read(calendarEventsProvider('2026-10')).value, [event]);
@@ -575,7 +575,7 @@ void main() {
     expect(await container.read(calendarEventsProvider('2026-10').future), isEmpty);
   });
 
-  test('a failed save leaves the displayed month unchanged before and after its error', () async {
+  test('a save shows at once; failing, the month is as it was', () async {
     final b = CalendarBackend();
     final event = CalendarEvent(
       id: 'meeting',
@@ -590,10 +590,11 @@ void main() {
     b.saveHeld = Completer();
     const failure = CloudException(CloudErrorCode.unavailable);
     b.saveError = failure;
-    final saving = container.read(calendarActionsProvider).save(event.copyWith(title: '尚未儲存'), previous: event);
+    final edited = event.copyWith(title: '尚未儲存');
+    final saving = container.read(calendarActionsProvider).save(edited, previous: event);
     final failed = expectLater(saving, throwsA(same(failure)));
     await pumpEventQueue();
-    expect(container.read(calendarEventsProvider('2026-10')).value, [event]);
+    expect(container.read(calendarEventsProvider('2026-10')).value, [edited]);
     b.saveHeld!.complete();
     await failed;
     expect(container.read(calendarEventsProvider('2026-10')).value, [event]);

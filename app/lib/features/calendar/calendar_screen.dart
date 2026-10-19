@@ -246,9 +246,12 @@ class _AgendaState extends ConsumerState<_Agenda> {
                   textAlign: TextAlign.end,
                   style: AppText.body.copyWith(color: AppColors.of(context).secondaryLabel),
                 ),
-                // Opens the event either way: to edit, or to read.
+                // Opens the event either way: to edit, or to read. A new one
+                // shows while it is saved, and opens once it has an id.
                 chevron: true,
-                onTap: () => canEdit ? editEvent(context, ref, e, month: month) : showEventDetail(context, e),
+                onTap: e.id == null
+                    ? null
+                    : () => canEdit ? editEvent(context, ref, e, month: month) : showEventDetail(context, e),
               ),
           ],
         ),

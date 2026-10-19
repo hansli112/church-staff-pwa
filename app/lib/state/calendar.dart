@@ -203,7 +203,7 @@ class CalendarActions {
       return null;
     }
 
-    await (months?.write(event, send: send, now: _months) ?? send());
+    await (months?.write(event, deleting: true, send: send, now: _months) ?? send());
     return () => withEditLock(_ref, () async {
       // The backend writes to the currently selected calendar, so an old
       // undo must not recreate its event in a different one.
