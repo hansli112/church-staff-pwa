@@ -2493,6 +2493,15 @@ class L10nZh extends L10n {
 
   @override
   String get onlineRefundNotFound => '找不到這筆線上支持，請確認特店訂單編號';
+
+  @override
+  String get photoAiTitle => '用 AI 辨識照片';
+
+  @override
+  String get photoAiBody => '照片和同工名單會送到 Google 的 Gemini，辨識成服事表。Google 不會拿這些內容訓練 AI。';
+
+  @override
+  String get photoAiAgree => '同意並繼續';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -4984,4 +4993,13 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get onlineRefundNotFound => '找不到这笔在线支持，请确认特店订单编号';
+
+  @override
+  String get photoAiTitle => '用 AI 识别照片';
+
+  @override
+  String get photoAiBody => '照片和同工名单会送到 Google 的 Gemini，识别成事奉表。Google 不会用这些内容训练 AI。';
+
+  @override
+  String get photoAiAgree => '同意并继续';
 }

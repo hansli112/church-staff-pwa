@@ -68,6 +68,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
 
   Future<void> _readPhotos(ImageSource source) async {
     final key = _session.draftKey;
+    if (!await _agreedToPhotoAi()) return;
     try {
       final picker = ImagePicker();
       final files = source == ImageSource.camera
@@ -84,6 +85,31 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       if (mounted && _sameDraft(key)) _session.fail(e);
     }
     if (mounted) ref.invalidate(_quotaProvider);
+  }
+
+  /// Whether this account agreed that recognition sends the photos and the
+  /// member list to Google's Gemini (App Store 5.1.2(i)); asks the first
+  /// time. Pasting JSON from one's own AI sends nothing and never asks.
+  Future<bool> _agreedToPhotoAi() async {
+    final profile = ref.read(profileProvider).value;
+    if (profile == null) return false;
+    if (profile.photoAiConsent) return true;
+    final l10n = L10n.of(context);
+    final yes = await askChoice(
+      context,
+      title: l10n.photoAiTitle,
+      message: l10n.photoAiBody,
+      yes: l10n.photoAiAgree,
+      no: l10n.cancel,
+    );
+    if (yes != true || !mounted) return false;
+    try {
+      await ref.read(backendProvider).profiles.agreeToPhotoAi(profile.uid);
+    } catch (e) {
+      if (mounted) showToast(context, errorText(l10n, e));
+      return false;
+    }
+    return mounted;
   }
 
   void _parsePasted() {

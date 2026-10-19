@@ -741,5 +741,8 @@
   "onlineRefundOrderNo": "特店订单编号",
   "onlineRefundApply": "从进度扣回",
   "onlineRefunded": "已从 {month} 扣回 {amount}",
-  "onlineRefundNotFound": "找不到这笔在线支持，请确认特店订单编号"
+  "onlineRefundNotFound": "找不到这笔在线支持，请确认特店订单编号",
+  "photoAiTitle": "用 AI 识别照片",
+  "photoAiBody": "照片和同工名单会送到 Google 的 Gemini，识别成事奉表。Google 不会用这些内容训练 AI。",
+  "photoAiAgree": "同意并继续"
 }

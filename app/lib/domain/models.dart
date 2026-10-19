@@ -567,6 +567,7 @@ class UserProfile {
     this.email = '',
     this.locale,
     this.appLocale,
+    this.photoAiConsent = false,
   });
 
   final String uid;
@@ -581,8 +582,19 @@ class UserProfile {
   /// [ProfileRepository.setAppLocale], not by saving the profile.
   final String? appLocale;
 
-  UserProfile copyWith({String? appLocale}) =>
-      UserProfile(uid: uid, name: name, email: email, locale: locale, appLocale: appLocale ?? this.appLocale);
+  /// Agreed that photo recognition sends the photos and the church's
+  /// member list to Google's Gemini (App Store 5.1.2(i)): asked once per
+  /// account. Kept by [ProfileRepository.agreeToPhotoAi].
+  final bool photoAiConsent;
+
+  UserProfile copyWith({String? appLocale, bool? photoAiConsent}) => UserProfile(
+    uid: uid,
+    name: name,
+    email: email,
+    locale: locale,
+    appLocale: appLocale ?? this.appLocale,
+    photoAiConsent: photoAiConsent ?? this.photoAiConsent,
+  );
 }
 
 /// A membership found by the collection-group query: which churches I am in.

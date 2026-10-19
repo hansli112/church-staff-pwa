@@ -2498,4 +2498,13 @@ class L10nKo extends L10n {
 
   @override
   String get onlineRefundNotFound => '그 주문 번호의 온라인 후원을 찾을 수 없어요';
+
+  @override
+  String get photoAiTitle => 'AI로 사진 읽기';
+
+  @override
+  String get photoAiBody => '사진과 교회 멤버 명단을 Google의 Gemini로 보내 봉사표로 읽어요. Google은 이 내용을 AI 학습에 쓰지 않아요.';
+
+  @override
+  String get photoAiAgree => '동의하고 계속';
 }

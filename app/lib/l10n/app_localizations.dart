@@ -4551,6 +4551,24 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'找不到這筆線上支持，請確認特店訂單編號'**
   String get onlineRefundNotFound;
+
+  /// No description provided for @photoAiTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'用 AI 辨識照片'**
+  String get photoAiTitle;
+
+  /// Asked once per account before the first photo recognition (App Store 5.1.2(i)): what goes to which AI
+  ///
+  /// In zh, this message translates to:
+  /// **'照片和同工名單會送到 Google 的 Gemini，辨識成服事表。Google 不會拿這些內容訓練 AI。'**
+  String get photoAiBody;
+
+  /// No description provided for @photoAiAgree.
+  ///
+  /// In zh, this message translates to:
+  /// **'同意並繼續'**
+  String get photoAiAgree;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

@@ -174,7 +174,7 @@ service cloud.firestore {
     match /users/{uid} {
       function validProfile() {
         return request.resource.data.keys().hasOnly(
-            ['name', 'email', 'locale', 'appLocale', 'fcm', 'createdAt', 'updatedAt'])
+            ['name', 'email', 'locale', 'appLocale', 'fcm', 'photoAiConsentAt', 'createdAt', 'updatedAt'])
           && hasValidName()
           // Push tokens, {deviceId: token}: one per install, dropped by the
           // backend once FCM says they are dead.
@@ -183,7 +183,10 @@ service cloud.firestore {
           // The language the app shows, for the server's pushes.
           && (!('appLocale' in request.resource.data)
               || (request.resource.data.appLocale is string
-                  && request.resource.data.appLocale.size() <= 16));
+                  && request.resource.data.appLocale.size() <= 16))
+          // When they agreed to photo recognition sending to Gemini.
+          && (!('photoAiConsentAt' in request.resource.data)
+              || request.resource.data.photoAiConsentAt is timestamp);
       }
 
       allow read: if isSelf(uid);

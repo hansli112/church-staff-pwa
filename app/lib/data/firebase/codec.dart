@@ -328,6 +328,7 @@ UserProfile profileFromJson(String uid, Json data) => UserProfile(
   email: data['email'] as String? ?? '',
   locale: data['locale'] as String?,
   appLocale: data['appLocale'] as String?,
+  photoAiConsent: data['photoAiConsentAt'] != null,
 );
 
 CalendarSettings calendarSettingsFromJson(Json? data) => CalendarSettings(

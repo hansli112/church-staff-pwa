@@ -741,5 +741,8 @@
   "onlineRefundOrderNo": "加盟店注文番号（特店訂單編號）",
   "onlineRefundApply": "差し引く",
   "onlineRefunded": "{month} から {amount} を差し引きました",
-  "onlineRefundNotFound": "その注文番号のオンライン応援は見つかりません"
+  "onlineRefundNotFound": "その注文番号のオンライン応援は見つかりません",
+  "photoAiTitle": "AIで写真を読み取る",
+  "photoAiBody": "写真と教会のメンバー名簿を Google の Gemini に送り、奉仕表に読み取ります。Google がこの内容を AI の学習に使うことはありません。",
+  "photoAiAgree": "同意して続ける"
 }

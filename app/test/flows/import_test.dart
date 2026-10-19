@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 
+import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/state/app_update.dart';
 import 'package:martha/state/providers.dart';
@@ -31,6 +32,14 @@ Future<void> openPasteJson(WidgetTester tester) async {
   await tester.ensureVisible(findShown('貼上 JSON').last);
   await tester.pump();
   await tapText(tester, '貼上 JSON');
+}
+
+/// The editor's church, the editor having agreed that photo recognition
+/// sends to Gemini.
+MemoryBackend agreedChurch() {
+  final b = seededChurch(as: editor);
+  b.users[editor.uid] = b.users[editor.uid]!.copyWith(photoAiConsent: true);
+  return b;
 }
 
 class _PhotoPicker extends ImagePickerPlatform {
@@ -61,7 +70,7 @@ void main() {
       if (!selection.isCompleted) selection.complete([]);
     });
     final updates = Updates();
-    await pumpApp(tester, seededChurch(as: editor), overrides: [appUpdateGatewayProvider.overrideWithValue(updates)]);
+    await pumpApp(tester, agreedChurch(), overrides: [appUpdateGatewayProvider.overrideWithValue(updates)]);
     await go(tester, '/rosters/import/sunday');
     final container = ProviderScope.containerOf(tester.element(find.byType(Scaffold).first));
     await tapText(tester, '選照片');
@@ -85,7 +94,7 @@ void main() {
     final oldPicker = ImagePickerPlatform.instance;
     ImagePickerPlatform.instance = _PhotoPicker(pending: selection.future);
     addTearDown(() => ImagePickerPlatform.instance = oldPicker);
-    final b = seededChurch(as: editor);
+    final b = agreedChurch();
     b.addChurch('另一間教會', id: 'other');
     b.setServices('other', const [sundayService]);
     b.addMember('other', editor);
@@ -106,7 +115,7 @@ void main() {
 
   testWidgets("進階 copies the photo prompt, the church's own, for an AI of the editor's choosing", (tester) async {
     final out = captureOutbox(tester);
-    final b = seededChurch(as: editor);
+    final b = agreedChurch();
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
@@ -117,11 +126,31 @@ void main() {
     expect(b.photosUsed['grace'] ?? 0, 0, reason: 'only recognizing here counts a photo');
   });
 
+  testWidgets('the first photo asks once whether it may go to Gemini; no is nothing sent', (tester) async {
+    final oldPicker = ImagePickerPlatform.instance;
+    ImagePickerPlatform.instance = _PhotoPicker();
+    addTearDown(() => ImagePickerPlatform.instance = oldPicker);
+    final b = seededChurch(as: editor);
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/import/sunday');
+
+    await tapText(tester, '選照片');
+    expect(findShown('照片和同工名單會送到 Google 的 Gemini，辨識成服事表。Google 不會拿這些內容訓練 AI。'), findsOneWidget);
+    await tapText(tester, '取消');
+    expect(b.photosUsed['grace'] ?? 0, 0);
+    expect(b.users[editor.uid]!.photoAiConsent, isFalse);
+
+    await tapText(tester, '選照片');
+    await tapText(tester, '同意並繼續');
+    expect(b.users[editor.uid]!.photoAiConsent, isTrue);
+    expect(b.photosUsed['grace'], 1);
+  });
+
   testWidgets('photos that cannot be read say so', (tester) async {
     final oldPicker = ImagePickerPlatform.instance;
     ImagePickerPlatform.instance = _PhotoPicker(error: Exception('camera roll unavailable'));
     addTearDown(() => ImagePickerPlatform.instance = oldPicker);
-    final b = seededChurch(as: editor);
+    final b = agreedChurch();
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '選照片');
@@ -130,7 +159,7 @@ void main() {
   });
 
   testWidgets('the preview stays, its controls off, while the editor cannot edit for a moment', (tester) async {
-    final b = seededChurch(as: editor);
+    final b = agreedChurch();
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
@@ -165,7 +194,7 @@ void main() {
     final oldPicker = ImagePickerPlatform.instance;
     ImagePickerPlatform.instance = _PhotoPicker();
     addTearDown(() => ImagePickerPlatform.instance = oldPicker);
-    final b = seededChurch(as: editor);
+    final b = agreedChurch();
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     b.setOnline(false);
@@ -178,7 +207,7 @@ void main() {
     final oldPicker = ImagePickerPlatform.instance;
     ImagePickerPlatform.instance = _PhotoPicker();
     addTearDown(() => ImagePickerPlatform.instance = oldPicker);
-    final b = seededChurch(as: editor);
+    final b = agreedChurch();
     b.recognized = [
       {
         'date': '2026-10-18',
@@ -208,7 +237,7 @@ void main() {
   });
 
   testWidgets('pasted JSON needs candidate confirmation or explicit guest before applying', (tester) async {
-    final b = seededChurch(as: editor);
+    final b = agreedChurch();
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
@@ -249,7 +278,7 @@ void main() {
   });
 
   testWidgets('large text import preview keeps dates readable without horizontal overflow', (tester) async {
-    await pumpApp(tester, seededChurch(as: editor), textScale: 3);
+    await pumpApp(tester, agreedChurch(), textScale: 3);
     await go(tester, '/rosters/import/sunday');
     await tester.ensureVisible(find.text('進階').last);
     await tapText(tester, '進階');
@@ -269,7 +298,7 @@ void main() {
   });
 
   testWidgets('an exact member name can deliberately remain a guest without receiving a UID', (tester) async {
-    final b = seededChurch(as: editor);
+    final b = agreedChurch();
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
@@ -298,7 +327,7 @@ void main() {
   });
 
   testWidgets('the shared preview edits date, duty, people and event color before applying', (tester) async {
-    final b = seededChurch(as: editor);
+    final b = agreedChurch();
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
@@ -344,7 +373,7 @@ void main() {
   });
 
   testWidgets('replacement explicitly previews removed arrangements and can be undone', (tester) async {
-    final b = seededChurch(as: editor);
+    final b = agreedChurch();
     final before = savedDay(b, 11).copyWith(events: const [EventTag(name: '聖餐', color: 0)]);
     b.rosters['grace']![before.id] = before;
     await pumpApp(tester, b);
@@ -421,7 +450,7 @@ void main() {
   });
 
   testWidgets('invalid rows block the entire import with an actionable error and editable JSON', (tester) async {
-    final b = seededChurch(as: editor);
+    final b = agreedChurch();
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
@@ -480,7 +509,7 @@ void main() {
   });
 
   testWidgets('ordinary editors can import one-day gaps without acquiring settings repair actions', (tester) async {
-    final b = seededChurch(as: editor);
+    final b = agreedChurch();
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
@@ -517,7 +546,7 @@ void main() {
   testWidgets('switching churches clears the old import preview instead of applying it to a new church', (
     tester,
   ) async {
-    final b = seededChurch(as: editor);
+    final b = agreedChurch();
     b.addChurch('另一間教會', id: 'other');
     b.setServices('other', const [sundayService]);
     b.addMember('other', editor);
@@ -551,7 +580,7 @@ void main() {
   });
 
   testWidgets('apply refuses a changed roster until its new difference has been shown', (tester) async {
-    final b = seededChurch(as: editor);
+    final b = agreedChurch();
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
@@ -589,7 +618,7 @@ void main() {
   });
 
   testWidgets('an edit made while reviewing the preview survives the import', (tester) async {
-    final b = seededChurch(as: editor);
+    final b = agreedChurch();
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
@@ -637,7 +666,7 @@ void main() {
   });
 
   testWidgets('an authorized roster editor can paste the documented JSON under advanced controls', (tester) async {
-    await pumpApp(tester, seededChurch(as: editor));
+    await pumpApp(tester, agreedChurch());
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
     await openPasteJson(tester);
@@ -648,7 +677,7 @@ void main() {
   testWidgets("an AI's whole reply pastes: the ```json fence and its words around the array are left out", (
     tester,
   ) async {
-    await pumpApp(tester, seededChurch(as: editor));
+    await pumpApp(tester, agreedChurch());
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
     await openPasteJson(tester);

@@ -741,5 +741,8 @@
   "onlineRefundOrderNo": "Merchant order number (MerchantTradeNo)",
   "onlineRefundApply": "Take it off",
   "onlineRefunded": "Took {amount} off {month}",
-  "onlineRefundNotFound": "No online support payment has that order number"
+  "onlineRefundNotFound": "No online support payment has that order number",
+  "photoAiTitle": "Read photos with AI",
+  "photoAiBody": "The photos and your church’s team list go to Google’s Gemini to be read into a schedule. Google doesn’t use them to train AI.",
+  "photoAiAgree": "Agree and continue"
 }

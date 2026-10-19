@@ -698,6 +698,14 @@ describe('全域個資 (users)', () => {
     await assertFails(updateDoc(doc(as(MEMBER_A), `users/${STRANGER}`), { appLocale: 'en' }));
   });
 
+  it('本人記下同意照片辨識送到 Gemini：只能是時間', async () => {
+    const ref = doc(as(STRANGER), `users/${STRANGER}`);
+    await assertSucceeds(setDoc(ref, { name: '新人', email: 's@example.com' }));
+    await assertSucceeds(updateDoc(ref, { photoAiConsentAt: serverTimestamp() }));
+    await assertFails(updateDoc(ref, { photoAiConsentAt: true }));
+    await assertFails(updateDoc(doc(as(MEMBER_A), `users/${STRANGER}`), { photoAiConsentAt: serverTimestamp() }));
+  });
+
   it('不能夾帶權限欄位、不能寫別人的、不能自己刪（帳號刪除走 Cloud Functions）', async () => {
     await assertFails(setDoc(doc(as(MEMBER_A), `users/${MEMBER_A}`), { name: '甲', role: 'admin' }));
     await assertFails(setDoc(doc(as(MEMBER_A), `users/${ADMIN_A}`), { name: '冒充' }));

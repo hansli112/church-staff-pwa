@@ -449,6 +449,10 @@ class _Profiles implements ProfileRepository {
   Future<void> setAppLocale(String uid, String tag) => _guard(() => _db.doc('users/$uid').update({'appLocale': tag}));
 
   @override
+  Future<void> agreeToPhotoAi(String uid) =>
+      _guard(() => _db.doc('users/$uid').update({'photoAiConsentAt': FieldValue.serverTimestamp()}));
+
+  @override
   Future<void> ensure(UserProfile profile) async {
     Future<bool> cachedOwnProfile() async {
       if (_auth.currentUser?.uid != profile.uid) return false;

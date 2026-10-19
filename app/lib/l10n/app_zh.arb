@@ -1878,5 +1878,9 @@
   "onlineRefundApply": "從進度扣回",
   "onlineRefunded": "已從 {month} 扣回 {amount}",
   "@onlineRefunded": {"description": "Toast after the operator takes a refunded online payment off the server costs", "placeholders": {"month": {"type": "String", "example": "2026-10"}, "amount": {"type": "String", "example": "NT$100"}}},
-  "onlineRefundNotFound": "找不到這筆線上支持，請確認特店訂單編號"
+  "onlineRefundNotFound": "找不到這筆線上支持，請確認特店訂單編號",
+  "photoAiTitle": "用 AI 辨識照片",
+  "photoAiBody": "照片和同工名單會送到 Google 的 Gemini，辨識成服事表。Google 不會拿這些內容訓練 AI。",
+  "@photoAiBody": {"description": "Asked once per account before the first photo recognition (App Store 5.1.2(i)): what goes to which AI"},
+  "photoAiAgree": "同意並繼續"
 }

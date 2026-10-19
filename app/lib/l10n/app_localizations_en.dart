@@ -2627,4 +2627,14 @@ class L10nEn extends L10n {
 
   @override
   String get onlineRefundNotFound => 'No online support payment has that order number';
+
+  @override
+  String get photoAiTitle => 'Read photos with AI';
+
+  @override
+  String get photoAiBody =>
+      'The photos and your church’s team list go to Google’s Gemini to be read into a schedule. Google doesn’t use them to train AI.';
+
+  @override
+  String get photoAiAgree => 'Agree and continue';
 }

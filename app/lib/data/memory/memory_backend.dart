@@ -609,7 +609,17 @@ class _Profiles implements ProfileRepository {
   @override
   Future<void> save(UserProfile profile) async {
     _checkName(profile.name);
-    await _b.write(() => _b.users[profile.uid] = profile.copyWith(appLocale: _b.users[profile.uid]?.appLocale));
+    final old = _b.users[profile.uid];
+    await _b.write(
+      () => _b.users[profile.uid] = profile.copyWith(appLocale: old?.appLocale, photoAiConsent: old?.photoAiConsent),
+    );
+  }
+
+  @override
+  Future<void> agreeToPhotoAi(String uid) async {
+    final p = _b.users[uid];
+    if (_b.auth.currentUser?.uid != uid || p == null) throw const CloudException(CloudErrorCode.permissionDenied);
+    await _b.write(() => _b.users[uid] = p.copyWith(photoAiConsent: true));
   }
 
   @override

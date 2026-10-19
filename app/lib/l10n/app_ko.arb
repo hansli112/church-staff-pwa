@@ -741,5 +741,8 @@
   "onlineRefundOrderNo": "가맹점 주문 번호(特店訂單編號)",
   "onlineRefundApply": "반영하기",
   "onlineRefunded": "{month}에서 {amount}을(를) 뺐어요",
-  "onlineRefundNotFound": "그 주문 번호의 온라인 후원을 찾을 수 없어요"
+  "onlineRefundNotFound": "그 주문 번호의 온라인 후원을 찾을 수 없어요",
+  "photoAiTitle": "AI로 사진 읽기",
+  "photoAiBody": "사진과 교회 멤버 명단을 Google의 Gemini로 보내 봉사표로 읽어요. Google은 이 내용을 AI 학습에 쓰지 않아요.",
+  "photoAiAgree": "동의하고 계속"
 }

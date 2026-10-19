@@ -2498,4 +2498,13 @@ class L10nJa extends L10n {
 
   @override
   String get onlineRefundNotFound => 'その注文番号のオンライン応援は見つかりません';
+
+  @override
+  String get photoAiTitle => 'AIで写真を読み取る';
+
+  @override
+  String get photoAiBody => '写真と教会のメンバー名簿を Google の Gemini に送り、奉仕表に読み取ります。Google がこの内容を AI の学習に使うことはありません。';
+
+  @override
+  String get photoAiAgree => '同意して続ける';
 }
