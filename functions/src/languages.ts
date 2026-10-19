@@ -83,13 +83,18 @@ export interface Words {
   /** The day with its weekday: 10/18（週日）, Oct 18 (Sun), 10月18日(日). */
   dateWithWeekday(dateKey: string): string;
 
-  /** Evening reminders (notifications.ts). */
-  weekReminder(from: string, until: string): string;
-  tomorrowReminder(day: string): string;
+  /**
+   * Evening reminders' titles (notifications.ts): a greeting by [name]
+   * (null when the member has none), then what follows. The days are in
+   * the body, one a line, so the title gives no dates.
+   */
+  weekReminder(name: string | null): string;
+  tomorrowReminder(name: string | null): string;
   /** Someone's duties on one day; [name] is the service's or event's. */
   dutyLine(name: string, duties: string[]): string;
   /** [day] is dateWithWeekday's. */
   datedDutyLine(day: string, line: string): string;
+  /** Between the days of a reminder: one a line, as the self-hosted reminders had them. */
   lineSeparator: string;
 
   /** Roster changes (rosterChange.ts). [day] is the short date and the service's name; put on and taken off read alike. */
@@ -132,11 +137,11 @@ const sunday = (name: string, duties: string[], events: string[]): NewService =>
 const zhHant: Words = {
   shortDate: (k) => `${ymd(k)[1]}/${ymd(k)[2]}`,
   dateWithWeekday: (k) => `${zhHant.shortDate(k)}（週${ZH_WEEKDAYS[weekday(k)]}）`,
-  weekReminder: (from, until) => `這週的服事（${from}–${until}）`,
-  tomorrowReminder: (day) => `明天的服事（${day}）`,
+  weekReminder: (name) => `平安${name ? ` ${name}` : ''}，這週的服事`,
+  tomorrowReminder: (name) => `平安${name ? ` ${name}` : ''}，明天的服事`,
   dutyLine: (name, duties) => `${name} ${duties.join('、')}`,
   datedDutyLine: (day, line) => `${day}${line}`,
-  lineSeparator: '；',
+  lineSeparator: '\n',
   // A name the church typed sits in 「」: no space to judge between it and Chinese.
   eventMoved: (title, day) => `「${title}」改到 ${day}`,
   putOn: (day, duties) => `你被排進 ${day}：${duties.join('、')}`,
@@ -157,11 +162,11 @@ const zhHant: Words = {
 const zhHans: Words = {
   shortDate: zhHant.shortDate,
   dateWithWeekday: (k) => `${zhHans.shortDate(k)}（周${ZH_WEEKDAYS[weekday(k)]}）`,
-  weekReminder: (from, until) => `这周的事奉（${from}–${until}）`,
-  tomorrowReminder: (day) => `明天的事奉（${day}）`,
+  weekReminder: (name) => `平安${name ? ` ${name}` : ''}，这周的事奉`,
+  tomorrowReminder: (name) => `平安${name ? ` ${name}` : ''}，明天的事奉`,
   dutyLine: zhHant.dutyLine,
   datedDutyLine: zhHant.datedDutyLine,
-  lineSeparator: '；',
+  lineSeparator: '\n',
   eventMoved: (title, day) => `“${title}”改到 ${day}`,
   putOn: (day, duties) => `你被排入 ${day}：${duties.join('、')}`,
   takenOff: (day, duties) => `你被移出 ${day}：${duties.join('、')}`,
@@ -181,11 +186,11 @@ const zhHans: Words = {
 const en: Words = {
   shortDate: (k) => `${EN_MONTHS[ymd(k)[1] - 1]} ${ymd(k)[2]}`,
   dateWithWeekday: (k) => `${en.shortDate(k)} (${EN_WEEKDAYS[weekday(k)]})`,
-  weekReminder: (from, until) => `Serving this week (${from}–${until})`,
-  tomorrowReminder: (day) => `Serving tomorrow (${day})`,
+  weekReminder: (name) => (name ? `Hi ${name}, your serving this week` : 'Your serving this week'),
+  tomorrowReminder: (name) => (name ? `Hi ${name}, your serving tomorrow` : 'Your serving tomorrow'),
   dutyLine: (name, duties) => `${name}: ${duties.join(', ')}`,
   datedDutyLine: (day, line) => `${day} ${line}`,
-  lineSeparator: '; ',
+  lineSeparator: '\n',
   eventMoved: (title, day) => `${title} moved to ${day}`,
   putOn: (day, duties) => `You’re on ${day}: ${duties.join(', ')}`,
   takenOff: (day, duties) => `You’re no longer on ${day}: ${duties.join(', ')}`,
@@ -206,11 +211,11 @@ const en: Words = {
 const ja: Words = {
   shortDate: (k) => `${ymd(k)[1]}月${ymd(k)[2]}日`,
   dateWithWeekday: (k) => `${ja.shortDate(k)}(${JA_WEEKDAYS[weekday(k)]})`,
-  weekReminder: (from, until) => `今週の奉仕（${from}–${until}）`,
-  tomorrowReminder: (day) => `明日の奉仕（${day}）`,
+  weekReminder: (name) => (name ? `${name}さん、今週の奉仕` : '今週の奉仕'),
+  tomorrowReminder: (name) => (name ? `${name}さん、明日の奉仕` : '明日の奉仕'),
   dutyLine: zhHant.dutyLine,
   datedDutyLine: (day, line) => `${day} ${line}`,
-  lineSeparator: '／',
+  lineSeparator: '\n',
   eventMoved: (title, day) => `${title}の日程が${day}に変更されました`,
   putOn: (day, duties) => `${day}の担当になりました：${duties.join('、')}`,
   takenOff: (day, duties) => `${day}の担当から外れました：${duties.join('、')}`,
@@ -229,11 +234,11 @@ const ja: Words = {
 const ko: Words = {
   shortDate: (k) => `${ymd(k)[1]}월 ${ymd(k)[2]}일`,
   dateWithWeekday: (k) => `${ko.shortDate(k)} (${KO_WEEKDAYS[weekday(k)]})`,
-  weekReminder: (from, until) => `이번 주 봉사 (${from}–${until})`,
-  tomorrowReminder: (day) => `내일 봉사 (${day})`,
+  weekReminder: (name) => (name ? `${name} 님, 이번 주 봉사` : '이번 주 봉사'),
+  tomorrowReminder: (name) => (name ? `${name} 님, 내일 봉사` : '내일 봉사'),
   dutyLine: en.dutyLine,
   datedDutyLine: (day, line) => `${day} ${line}`,
-  lineSeparator: ' / ',
+  lineSeparator: '\n',
   eventMoved: (title, day) => `${title} 일정 변경: ${day}`,
   putOn: (day, duties) => `${day} 봉사에 배정됐어요: ${duties.join(', ')}`,
   takenOff: (day, duties) => `${day} 봉사에서 빠졌어요: ${duties.join(', ')}`,

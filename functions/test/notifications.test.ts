@@ -156,12 +156,12 @@ describe('reminders', () => {
     };
     // Taipei's evening is Los Angeles' early morning: only C2, the church
     // in Taipei (the one without a time zone).
-    assert.deepEqual(await at('2026-10-03T19:00:00+08:00'), ['明天的服事（10/4） 主日 司琴']);
-    assert.deepEqual(await at('2026-10-03T19:00:00-07:00'), ['明天的服事（10/4） 主日崇拜 司琴']);
+    assert.deepEqual(await at('2026-10-03T19:00:00+08:00'), ['平安 mei，明天的服事 主日 司琴']);
+    assert.deepEqual(await at('2026-10-03T19:00:00-07:00'), ['平安 mei，明天的服事 主日崇拜 司琴']);
     assert.deepEqual(await at('2026-10-03T20:00:00-07:00'), []);
     // The clocks went back on 1 November: 7 is an hour later in UTC.
     assert.deepEqual(await at('2026-11-07T19:00:00-07:00'), []);
-    assert.deepEqual(await at('2026-11-07T19:00:00-08:00'), ['明天的服事（11/8） 主日崇拜 司琴']);
+    assert.deepEqual(await at('2026-11-07T19:00:00-08:00'), ['平安 mei，明天的服事 主日崇拜 司琴']);
   });
 });
 
@@ -194,11 +194,11 @@ describe('weekly reminders', () => {
     await week();
     const { sent, messaging } = fakePush();
     await sendReminders({ db, messaging, now: monday, appUrl });
-    assert.deepEqual(new Set(sent.map((s) => s.title)), new Set(['這週的服事（10/12–10/18）']));
+    assert.deepEqual(new Set(sent.map((s) => s.title)), new Set(['平安 美玉，這週的服事', '平安 hao，這週的服事']));
     const mei = sent.find((s) => s.tokens.includes('tok-mei'))!;
-    assert.equal(mei.body, '10/12（週一）禱告會 司琴；10/18（週日）主日崇拜 司琴、招待');
+    assert.equal(mei.body, '10/12（週一）禱告會 司琴\n10/18（週日）主日崇拜 司琴、招待');
     const hao = sent.find((s) => s.tokens.includes('tok-hao'))!;
-    assert.equal(hao.body, '10/13（週二）禱告會 招待；10/18（週日）主日崇拜 招待');
+    assert.equal(hao.body, '10/13（週二）禱告會 招待\n10/18（週日）主日崇拜 招待');
     assert.equal(sent.length, 2);
   });
 
@@ -209,14 +209,14 @@ describe('weekly reminders', () => {
     const mon = fakePush();
     await sendReminders({ db, messaging: mon.messaging, now: monday, appUrl });
     assert.deepEqual(mon.sent.map((s) => [s.tokens, s.title, s.body]), [
-      [['tok-hao'], 'Serving this week (Oct 12–Oct 18)', 'Oct 13 (Tue) 禱告會: 招待; Oct 18 (Sun) 主日崇拜: 招待'],
+      [['tok-hao'], 'Hi hao, your serving this week', 'Oct 13 (Tue) 禱告會: 招待\nOct 18 (Sun) 主日崇拜: 招待'],
     ]);
     await remindAt('hao', 'dayBefore');
     const sat = fakePush();
     await sendReminders({ db, messaging: sat.messaging, now: saturday, appUrl });
     assert.deepEqual(sat.sent.map((s) => [s.tokens, s.title, s.body]), [
-      [['tok-mei', 'tok-mei-2'], '明天的服事（10/18）', '主日崇拜 司琴、招待'],
-      [['tok-hao'], 'Serving tomorrow (Oct 18)', '主日崇拜: 招待'],
+      [['tok-mei', 'tok-mei-2'], '平安 美玉，明天的服事', '主日崇拜 司琴、招待'],
+      [['tok-hao'], 'Hi hao, your serving tomorrow', '主日崇拜: 招待'],
     ]);
   });
 
@@ -226,7 +226,7 @@ describe('weekly reminders', () => {
     const { sent, messaging } = fakePush();
     // Monday evening in New York, Tuesday morning in Taipei.
     await sendReminders({ db, messaging, now: () => new Date('2026-10-12T19:00:00-04:00'), appUrl });
-    assert.deepEqual(new Set(sent.map((s) => s.title)), new Set(['這週的服事（10/12–10/18）']));
+    assert.deepEqual(new Set(sent.map((s) => s.title)), new Set(['平安 美玉，這週的服事', '平安 hao，這週的服事']));
   });
 
   test('by default, no other evening reminds anyone', async () => {
@@ -242,7 +242,7 @@ describe('weekly reminders', () => {
     const monday1 = fakePush();
     await sendReminders({ db, messaging: monday1.messaging, now: monday, appUrl });
     const hao = monday1.sent.filter((s) => s.tokens.includes('tok-hao'));
-    assert.deepEqual(hao.map((s) => [s.title, s.body]), [['明天的服事（10/13）', '禱告會 招待']]);
+    assert.deepEqual(hao.map((s) => [s.title, s.body]), [['平安 hao，明天的服事', '禱告會 招待']]);
     const sat = fakePush();
     await sendReminders({ db, messaging: sat.messaging, now: saturday, appUrl });
     assert.deepEqual(sat.sent.map(({ tokens, body }) => ({ tokens, body })), [{ tokens: ['tok-hao'], body: '主日崇拜 招待' }]);
@@ -255,11 +255,11 @@ describe('weekly reminders', () => {
     await sendReminders({ db, messaging: mon.messaging, now: monday, appUrl });
     const hao = mon.sent.filter((s) => s.tokens.includes('tok-hao'));
     assert.deepEqual(hao.map((s) => [s.title, s.body]), [
-      ['這週的服事（10/12–10/18）', '10/13（週二）禱告會 招待；10/18（週日）主日崇拜 招待'],
+      ['平安 hao，這週的服事', '10/13（週二）禱告會 招待\n10/18（週日）主日崇拜 招待'],
     ]);
     const sat = fakePush();
     await sendReminders({ db, messaging: sat.messaging, now: saturday, appUrl });
-    assert.deepEqual(sat.sent.map((s) => [s.tokens, s.title, s.body]), [[['tok-hao'], '明天的服事（10/18）', '主日崇拜 招待']]);
+    assert.deepEqual(sat.sent.map((s) => [s.tokens, s.title, s.body]), [[['tok-hao'], '平安 hao，明天的服事', '主日崇拜 招待']]);
   });
 
   test('an event is listed in the week it starts, by its title; a cancelled one is not', async () => {
@@ -283,5 +283,16 @@ describe('weekly reminders', () => {
     const { sent, messaging } = fakePush();
     await sendReminders({ db, messaging, now: monday, appUrl });
     assert.deepEqual(sent.map((s) => s.tokens), [['tok-hao']]);
+  });
+});
+
+describe('reminder greetings', () => {
+  test('greet each by the name on their member page, and without one, still in peace', async () => {
+    await dayBeforeChurch();
+    await db.doc('churches/C1/members/mei').update({ name: '  ' });
+    await db.doc('churches/C1/rosters/2026-10-04_sunday').set({ type: 'sunday', dateKey: '2026-10-04', duties: duties(['美玉'], ['志豪']) });
+    const { sent, messaging } = fakePush();
+    await sendReminders({ db, messaging, now, appUrl });
+    assert.deepEqual(new Set(sent.map((s) => s.title)), new Set(['平安，明天的服事', '平安 hao，明天的服事']));
   });
 });

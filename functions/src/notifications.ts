@@ -77,12 +77,13 @@ export async function sendReminders(deps: PushDeps & { now: () => Date }) {
       if (!member.exists) continue;
       const timing = reminderTiming(member);
       const items = perUid.get(member.id)!;
+      const name = (member.get('name') as string | undefined)?.trim() || null;
       // Monday's list has tomorrow in it, so those choosing both get one message.
       const weekly = isMonday && timing !== 'dayBefore';
       if (weekly) {
         const week = [...items].sort((a, b) => a.dateKey.localeCompare(b.dateKey));
         sent += await notifyMembers(deps, cid, [member.id], 'reminder', (w) => ({
-          title: w.weekReminder(w.shortDate(today), w.shortDate(until)),
+          title: w.weekReminder(name),
           body: week.map((i) => w.datedDutyLine(w.dateWithWeekday(i.dateKey), w.dutyLine(i.name, i.roles))).join(w.lineSeparator),
           link: '/home',
         }));
@@ -90,7 +91,7 @@ export async function sendReminders(deps: PushDeps & { now: () => Date }) {
       const next = items.filter((i) => i.dateKey === tomorrow);
       if (!weekly && timing !== 'weekly' && next.length > 0) {
         sent += await notifyMembers(deps, cid, [member.id], 'reminder', (w) => ({
-          title: w.tomorrowReminder(w.shortDate(tomorrow)),
+          title: w.tomorrowReminder(name),
           body: next.map((i) => w.dutyLine(i.name, i.roles)).join(w.lineSeparator),
           link: '/home',
         }));
