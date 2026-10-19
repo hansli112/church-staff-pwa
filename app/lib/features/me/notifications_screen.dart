@@ -15,7 +15,7 @@ import '../common/saving_indicator.dart';
 /// Which notifications I get from this church, and when I am reminded of my
 /// duties. Stored on my member doc (`notificationPrefs`, the one field I may
 /// write there). Until the phone allows notifications the switches are off,
-/// and turning one on asks for it.
+/// and turning one on asks for it; allowed, only that one is on.
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
 
@@ -32,31 +32,6 @@ class NotificationsScreen extends ConsumerWidget {
     final blocked = permission == PushPermission.denied || needsHomeScreen;
     final shownOff = blocked || permission == PushPermission.notAsked;
     final churchId = ref.watch(currentChurchIdProvider);
-
-    Future<void> set(NotificationKind kind, bool on) async {
-      // Saved even if this page is left while the phone asks.
-      final data = ref.churchData;
-      if (on && permission == PushPermission.notAsked) {
-        // Once allowed, each launch registers the device again. Asking that
-        // failed (registering, mostly) still keeps the choice.
-        final result = await enableNotifications(context, nudge: true);
-        if (result != null && result != PushPermission.granted) return;
-      }
-      final next = on ? ({...muted}..remove(kind)) : {...muted, kind};
-      try {
-        await data.setNotificationPrefs(me.uid, next);
-      } catch (e) {
-        if (context.mounted) showToast(context, saveErrorText(l10n, e));
-      }
-    }
-
-    Future<void> setTiming(ReminderTiming timing) async {
-      try {
-        await ref.churchData.setReminderTiming(me.uid, timing);
-      } catch (e) {
-        if (context.mounted) showToast(context, saveErrorText(l10n, e));
-      }
-    }
 
     final timings = [
       (ReminderTiming.weekly, l10n.notifReminderWeekly, l10n.notifReminderWeeklySub),
@@ -80,6 +55,34 @@ class NotificationsScreen extends ConsumerWidget {
           l10n.notifMemberLeftSub,
         ),
     ];
+
+    Future<void> set(NotificationKind kind, bool on) async {
+      // Saved even if this page is left while the phone asks.
+      final data = ref.churchData;
+      var next = on ? ({...muted}..remove(kind)) : {...muted, kind};
+      if (on && permission == PushPermission.notAsked) {
+        // Once allowed, each launch registers the device again. Asking that
+        // failed (registering, mostly) still keeps the choice.
+        final result = await enableNotifications(context, nudge: true);
+        if (result != null && result != PushPermission.granted) return;
+        // The others showed off, so they stay off: only the one tapped.
+        next = {...muted, for (final (k, _, _) in kinds) k}..remove(kind);
+      }
+      try {
+        await data.setNotificationPrefs(me.uid, next);
+      } catch (e) {
+        if (context.mounted) showToast(context, saveErrorText(l10n, e));
+      }
+    }
+
+    Future<void> setTiming(ReminderTiming timing) async {
+      try {
+        await ref.churchData.setReminderTiming(me.uid, timing);
+      } catch (e) {
+        if (context.mounted) showToast(context, saveErrorText(l10n, e));
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text(l10n.notifications), actions: const [SavingIndicator()]),
       body: ListView(

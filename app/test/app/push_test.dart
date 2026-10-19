@@ -68,11 +68,16 @@ void main() {
 
     await tester.tap(find.text('服事提醒'));
     await settle(tester);
-    expect(b.members['grace']!['pastor']!.mutedNotifications, isEmpty);
+    expect(b.members['grace']!['pastor']!.mutedNotifications, {
+      NotificationKind.rosterChange,
+      NotificationKind.memberLeft,
+    });
     expect(tester.widget<Switch>(find.byType(Switch).first).value, isTrue);
   });
 
-  testWidgets('not yet allowed on the phone: the switches are off, and turning one on asks', (tester) async {
+  testWidgets('not yet allowed on the phone: the switches are off, and turning one on asks for that one only', (
+    tester,
+  ) async {
     final push = FakePush(answer: PushPermission.granted);
     final b = seededChurch();
     await pumpApp(tester, b, overrides: [pushServiceProvider.overrideWithValue(push)]);
@@ -89,9 +94,12 @@ void main() {
     await tester.tap(find.text('服事提醒'));
     await settle(tester);
     expect(push.asked, 1);
-    for (final s in tester.widgetList<Switch>(find.byType(Switch))) {
-      expect(s.value, isTrue);
-    }
+    final on = tester.widgetList<Switch>(find.byType(Switch)).map((s) => s.value);
+    expect(on, [true, false, false], reason: 'the others showed off, and stay off');
+    expect(b.members['grace']!['pastor']!.mutedNotifications, {
+      NotificationKind.rosterChange,
+      NotificationKind.memberLeft,
+    });
     expect(find.text('前一天晚上'), findsOneWidget);
   });
 
@@ -113,7 +121,10 @@ void main() {
     expect(find.text('服事提醒'), findsNothing);
     prompt.complete();
     await settle(tester);
-    expect(b.members['grace']!['pastor']!.mutedNotifications, isEmpty);
+    expect(b.members['grace']!['pastor']!.mutedNotifications, {
+      NotificationKind.rosterChange,
+      NotificationKind.memberLeft,
+    });
   });
 
   testWidgets('not allowed when asked: the switch stays off', (tester) async {
