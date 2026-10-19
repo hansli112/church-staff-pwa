@@ -4,12 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/backend.dart';
 import '../data/cache/calendar_read_cache.dart';
-import '../env.dart';
 import '../domain/models.dart';
 import 'connectivity.dart';
 import 'app_update.dart';
 import 'calendar_months.dart';
 import 'providers.dart';
+import 'saved_read.dart' show deviceCacheProject;
 
 export 'calendar_months.dart' show CalendarReadStatus;
 
@@ -42,7 +42,7 @@ final _calendarScopeProvider = Provider<_CalendarScope?>((ref) {
 CalendarCacheScope? _cacheScope(_CalendarScope? scope) {
   if (scope == null || scope.calendarId == null || scope.revision == null) return null;
   return CalendarCacheScope(
-    project: '${Env.current.name}:${firebaseOptionsFor(Env.current).projectId}',
+    project: deviceCacheProject(),
     uid: scope.uid,
     churchId: scope.data.churchId,
     calendarId: scope.calendarId!,

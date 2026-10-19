@@ -160,6 +160,10 @@ class MemoryBackend implements Backend {
   /// as on a slow network.
   Completer<void>? invitePreviewHeld;
 
+  /// Scripted: while set, the back office's stats and costs wait for this
+  /// to complete, as on a slow network.
+  Completer<void>? backOfficeReadsHeld;
+
   /// Scripted: photos used this month per church, the limit, whether the
   /// platform's budget is left, and what recognition returns.
   final photosUsed = <String, int>{};
@@ -1814,12 +1818,14 @@ class MemoryCloud implements CloudApi {
   @override
   Future<List<DailyStats>> adminStats({int days = 30}) async {
     _requireOperator();
+    await _b.backOfficeReadsHeld?.future;
     return stats.take(days).toList();
   }
 
   @override
   Future<FundingOverview> adminFunding() async {
     _requireOperator();
+    await _b.backOfficeReadsHeld?.future;
     return FundingOverview(costs: List.of(_b.fundingCosts), months: const [], funding: _b.funding);
   }
 

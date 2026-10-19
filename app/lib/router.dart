@@ -116,7 +116,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       page('/account', (_) => const AccountScreen(), routes: [page('sign-in', (_) => const SignInMethodsScreen())]),
       page(
         '/admin',
-        (_) => const DeferredPage.admin(),
+        (_) => const WarmUpOnOpen(WarmUp.backOffice, child: DeferredPage.admin()),
         routes: [
           page('stats', (_) => const DeferredPage.adminStats()),
           page('funding', (_) => const DeferredPage.adminFunding()),

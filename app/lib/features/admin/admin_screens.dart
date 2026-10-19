@@ -7,11 +7,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
+import '../../data/admin_codec.dart';
 import '../../data/backend.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
+import '../../state/saved_read.dart';
+import '../common/calendar_read_notice.dart';
 import '../common/errors.dart';
 import '../common/labels.dart';
 import '../me/services_screen.dart' show promptText;
@@ -33,29 +36,43 @@ class AdminScreen extends ConsumerStatefulWidget {
   ConsumerState<AdminScreen> createState() => _AdminScreenState();
 }
 
+/// Every church, as the page opens; kept on this device, so it shows at once.
+final _churchesProvider = AsyncNotifierProvider.autoDispose<SavedRead<List<ChurchSummary>>, Saved<List<ChurchSummary>>>(
+  () => SavedRead(
+    'adminChurches',
+    read: (ref) => ref.read(backendProvider).cloud.adminSearchChurches(''),
+    encode: churchSummariesToJson,
+    decode: churchSummariesFromJson,
+  ),
+);
+
 class _AdminScreenState extends ConsumerState<AdminScreen> {
-  List<ChurchSummary>? _results;
+  /// The churches found for [_query]; with none typed, [_churchesProvider].
+  List<ChurchSummary>? _found;
   String _query = '';
 
   Future<void> _search() async {
+    if (_query.isEmpty) {
+      setState(() => _found = null);
+      try {
+        await ref.read(_churchesProvider.notifier).reload();
+      } catch (e) {
+        if (mounted) showToast(context, errorText(L10n.of(context), e));
+      }
+      return;
+    }
     try {
       final r = await ref.read(backendProvider).cloud.adminSearchChurches(_query);
-      if (mounted) setState(() => _results = r);
+      if (mounted) setState(() => _found = r);
     } catch (e) {
       if (mounted) showToast(context, errorText(L10n.of(context), e));
     }
   }
 
   @override
-  void initState() {
-    super.initState();
-    _search();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    final results = _results;
+    final found = _found;
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.operatorConsole),
@@ -85,36 +102,67 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
             ),
           ),
           Expanded(
-            child: results == null
+            child: _query.isEmpty
+                ? _SavedView(
+                    value: ref.watch(_churchesProvider),
+                    onRetry: () => ref.invalidate(_churchesProvider),
+                    builder: (saved) => _churches(l10n, saved.value, saved: saved),
+                  )
+                : found == null
                 ? const SizedBox.shrink()
-                : results.isEmpty
-                ? EmptyState(message: l10n.adminNoChurches)
-                : ListView(
-                    children: [
-                      ListSection(
-                        children: [
-                          for (final c in results)
-                            ListRow(
-                              title: c.name,
-                              subtitle:
-                                  '${statusLabel(l10n, c.status)}${l10n.dotSeparator}${l10n.memberCount(c.memberCount)}',
-                              onTap: () async {
-                                await Navigator.of(context).push(
-                                  MaterialPageRoute<void>(
-                                    builder: (_) => AdminChurchScreen(summary: c),
-                                  ),
-                                );
-                                await _search();
-                              },
-                            ),
-                        ],
-                      ),
-                    ],
-                  ),
+                : _churches(l10n, found),
           ),
         ],
       ),
     );
+  }
+
+  /// A church opens once the list is the server's, not a kept one.
+  Widget _churches(L10n l10n, List<ChurchSummary> churches, {Saved<List<ChurchSummary>>? saved}) {
+    if (churches.isEmpty) return EmptyState(message: l10n.adminNoChurches);
+    return ListView(
+      children: [
+        if (saved != null) CalendarReadNotice(status: saved.status),
+        ListSection(
+          children: [
+            for (final c in churches)
+              ListRow(
+                title: c.name,
+                subtitle: '${statusLabel(l10n, c.status)}${l10n.dotSeparator}${l10n.memberCount(c.memberCount)}',
+                onTap: saved?.fresh ?? true
+                    ? () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute<void>(builder: (_) => AdminChurchScreen(summary: c)),
+                        );
+                        await _search();
+                      }
+                    : null,
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// A [SavedRead]'s page: [builder] once there is an answer to show,
+/// kept or new; until then a spinner, or the error with a retry.
+class _SavedView<T> extends StatelessWidget {
+  const _SavedView({required this.value, required this.onRetry, required this.builder});
+
+  final AsyncValue<Saved<T>> value;
+  final VoidCallback onRetry;
+  final Widget Function(Saved<T> saved) builder;
+
+  @override
+  Widget build(BuildContext context) {
+    // Checked first: a refusal leaves nothing kept that may still show.
+    if (value.hasError && !value.isLoading) {
+      return ErrorRetry(message: errorText(L10n.of(context), value.error!), onRetry: onRetry);
+    }
+    final saved = value.value;
+    if (value.hasError || saved == null) return const Center(child: CircularProgressIndicator.adaptive());
+    return builder(saved);
   }
 }
 
@@ -127,29 +175,27 @@ class AdminChurchScreen extends ConsumerStatefulWidget {
   ConsumerState<AdminChurchScreen> createState() => _AdminChurchScreenState();
 }
 
+/// A church's members, kept on this device per church.
+final _membersProvider = AsyncNotifierProvider.autoDispose.family<SavedRead<List<Member>>, Saved<List<Member>>, String>(
+  (churchId) => SavedRead(
+    'adminChurchMembers/$churchId',
+    read: (ref) => ref.read(backendProvider).cloud.adminChurchMembers(churchId),
+    encode: churchMembersToJson,
+    decode: churchMembersFromJson,
+  ),
+);
+
 class _AdminChurchScreenState extends ConsumerState<AdminChurchScreen> {
   late ChurchSummary _c = widget.summary;
-  List<Member>? _members;
 
   CloudApi get _cloud => ref.read(backendProvider).cloud;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final members = await _cloud.adminChurchMembers(_c.id);
-      if (mounted) setState(() => _members = members);
-    } catch (_) {}
-  }
 
   Future<void> _refresh() async {
     final found = await _cloud.adminSearchChurches(_c.id);
     if (found.isNotEmpty && mounted) setState(() => _c = found.first);
-    await _load();
+    try {
+      await ref.read(_membersProvider(_c.id).notifier).reload();
+    } catch (_) {}
   }
 
   Future<void> _run(Future<void> Function() action, [String? done]) async {
@@ -167,6 +213,7 @@ class _AdminChurchScreenState extends ConsumerState<AdminChurchScreen> {
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final c = _c;
+    final members = ref.watch(_membersProvider(c.id));
     return Scaffold(
       appBar: AppBar(title: Text(c.name)),
       body: ListView(
@@ -196,16 +243,19 @@ class _AdminChurchScreenState extends ConsumerState<AdminChurchScreen> {
               ),
             ],
           ),
-          if (_members != null)
+          // Not a spinner: the church's own rows above are already there.
+          if (members.hasError ? null : members.value case final saved?) ...[
+            CalendarReadNotice(status: saved.status),
             ListSection(
               header: l10n.members,
               children: [
-                for (final m in _members!)
+                for (final m in saved.value)
                   ListRow(
                     title: m.name,
                     subtitle: m.email,
                     value: roleLabel(l10n, m.role),
-                    onTap: m.isAdmin
+                    // Made admin only from the server's list, not a kept one.
+                    onTap: m.isAdmin || !saved.fresh
                         ? null
                         : () => _run(
                             () => _cloud.adminTransferAdmin(c.id, m.uid),
@@ -214,6 +264,7 @@ class _AdminChurchScreenState extends ConsumerState<AdminChurchScreen> {
                   ),
               ],
             ),
+          ],
           if (c.status != ChurchStatus.deleted)
             ListSection(
               children: [
@@ -253,8 +304,13 @@ class _AdminChurchScreenState extends ConsumerState<AdminChurchScreen> {
   }
 }
 
-final _statsProvider = FutureProvider.autoDispose<List<DailyStats>>(
-  (ref) => ref.watch(backendProvider).cloud.adminStats(days: 60),
+final _statsProvider = AsyncNotifierProvider.autoDispose<SavedRead<List<DailyStats>>, Saved<List<DailyStats>>>(
+  () => SavedRead(
+    'adminStats',
+    read: (ref) => ref.read(backendProvider).cloud.adminStats(days: 60),
+    encode: dailyStatsToJson,
+    decode: dailyStatsFromJson,
+  ),
 );
 
 /// Daily snapshots over the last 60 days, one small trend per metric.
@@ -277,18 +333,17 @@ class AdminStatsScreen extends ConsumerWidget {
     ];
     return Scaffold(
       appBar: AppBar(title: Text(l10n.adminStats)),
-      body: stats.when(
-        loading: () => const Center(child: CircularProgressIndicator.adaptive()),
-        error: (e, _) => ErrorRetry(
-          message: errorText(l10n, e),
-          onRetry: () => ref.invalidate(_statsProvider),
-        ),
-        data: (days) {
+      body: _SavedView(
+        value: stats,
+        onRetry: () => ref.invalidate(_statsProvider),
+        builder: (saved) {
+          final days = saved.value;
           if (days.isEmpty) return EmptyState(message: l10n.statsNone);
           final ordered = [...days]..sort((a, b) => a.day.compareTo(b.day));
           return ListView(
             padding: const EdgeInsets.only(bottom: Space.xl),
             children: [
+              CalendarReadNotice(status: saved.status),
               for (final (key, label) in metrics)
                 if (ordered.any((d) => d.values.containsKey(key)))
                   Padding(
@@ -422,8 +477,13 @@ class _TrendPainter extends CustomPainter {
   bool shouldRepaint(_TrendPainter old) => old.values != values || old.color != color;
 }
 
-final _fundingProvider = FutureProvider.autoDispose<FundingOverview>(
-  (ref) => ref.watch(backendProvider).cloud.adminFunding(),
+final _fundingProvider = AsyncNotifierProvider.autoDispose<SavedRead<FundingOverview>, Saved<FundingOverview>>(
+  () => SavedRead(
+    'adminFunding',
+    read: (ref) => ref.read(backendProvider).cloud.adminFunding(),
+    encode: fundingOverviewToJson,
+    decode: fundingOverviewFromJson,
+  ),
 );
 
 String _costValue(L10n l10n, CostItem item) {
@@ -460,13 +520,13 @@ class _AdminFundingScreenState extends ConsumerState<AdminFundingScreen> {
       if (mounted && save == _saves) setState(() => _pendingCosts = null);
       rethrow;
     }
-    ref.invalidate(_fundingProvider);
     unawaited(
       ref
-          .read(_fundingProvider.future)
+          .read(_fundingProvider.notifier)
+          .reload()
           .then<void>(
             (_) {},
-            // Saved; a failed reload shows on the page itself, with its retry.
+            // Saved; the list stays as it was until a reload gets through.
             onError: (Object _) {},
           )
           .whenComplete(() {
@@ -552,56 +612,59 @@ class _AdminFundingScreenState extends ConsumerState<AdminFundingScreen> {
     final pending = _pendingCosts;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.fundingCosts)),
-      body: overview.when(
-        loading: () => const Center(child: CircularProgressIndicator.adaptive()),
-        error: (e, _) => ErrorRetry(
-          message: errorText(l10n, e),
-          onRetry: () => ref.invalidate(_fundingProvider),
-        ),
-        data: (o) => ListView(
-          padding: const EdgeInsets.only(bottom: Space.xl),
-          children: [
-            if (pending != null)
-              ListSection(children: [ListRow(title: l10n.fundingTargetUpdating)])
-            else if (o.funding case final f?)
-              ListSection(
-                children: [ListRow(title: l10n.fundingTarget(money(l10n, f.target)))],
-              ),
-            ListSection(
-              header: l10n.fundingCostsHeader,
-              footer: l10n.fundingCostsFooter,
-              children: [
-                for (final (i, item) in (pending ?? o.costs).indexed)
-                  ListRow(
-                    title: item.name,
-                    value: _costValue(l10n, item),
-                    onTap: pending == null ? () => _edit(o.costs, i) : null,
-                  ),
-                ListRow(
-                  title: l10n.costAdd,
-                  leading: const Icon(Symbols.add_rounded),
-                  onTap: pending == null ? () => _edit(o.costs, null) : null,
+      body: _SavedView(
+        value: overview,
+        onRetry: () => ref.invalidate(_fundingProvider),
+        builder: (saved) {
+          final o = saved.value;
+          // Costs change from the server's list only: a kept one may be out of date.
+          final editable = pending == null && saved.fresh;
+          return ListView(
+            padding: const EdgeInsets.only(bottom: Space.xl),
+            children: [
+              CalendarReadNotice(status: saved.status),
+              if (pending != null)
+                ListSection(children: [ListRow(title: l10n.fundingTargetUpdating)])
+              else if (o.funding case final f?)
+                ListSection(
+                  children: [ListRow(title: l10n.fundingTarget(money(l10n, f.target)))],
                 ),
-              ],
-            ),
-            if (o.months.isNotEmpty)
               ListSection(
-                header: l10n.fundingMonthsHeader,
+                header: l10n.fundingCostsHeader,
+                footer: l10n.fundingCostsFooter,
                 children: [
-                  for (final m in o.months)
+                  for (final (i, item) in (pending ?? o.costs).indexed)
                     ListRow(
-                      title: m.month,
-                      value: l10n.fundingMonthValue(money(l10n, m.received), money(l10n, m.target)),
+                      title: item.name,
+                      value: _costValue(l10n, item),
+                      onTap: editable ? () => _edit(o.costs, i) : null,
                     ),
+                  ListRow(
+                    title: l10n.costAdd,
+                    leading: const Icon(Symbols.add_rounded),
+                    onTap: editable ? () => _edit(o.costs, null) : null,
+                  ),
                 ],
               ),
-            ListSection(
-              header: l10n.onlineRefundHeader,
-              footer: l10n.onlineRefundFooter,
-              children: [ListRow(title: l10n.onlineRefundAdd, onTap: _refund)],
-            ),
-          ],
-        ),
+              if (o.months.isNotEmpty)
+                ListSection(
+                  header: l10n.fundingMonthsHeader,
+                  children: [
+                    for (final m in o.months)
+                      ListRow(
+                        title: m.month,
+                        value: l10n.fundingMonthValue(money(l10n, m.received), money(l10n, m.target)),
+                      ),
+                  ],
+                ),
+              ListSection(
+                header: l10n.onlineRefundHeader,
+                footer: l10n.onlineRefundFooter,
+                children: [ListRow(title: l10n.onlineRefundAdd, onTap: _refund)],
+              ),
+            ],
+          );
+        },
       ),
     );
   }

@@ -746,4 +746,4 @@ abstract interface class Backend {
 }
 
 /// What a page that just opened is likely to ask the backend for.
-enum WarmUp { calendarWrite, serviceEdit, joinChurch, createChurch, photoImport, timeZone }
+enum WarmUp { calendarWrite, serviceEdit, joinChurch, createChurch, photoImport, timeZone, backOffice }

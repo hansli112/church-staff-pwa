@@ -15,6 +15,7 @@ import '../../domain/day.dart';
 import '../../domain/models.dart';
 import '../../domain/staff_order.dart';
 import '../../env.dart';
+import '../admin_codec.dart';
 import '../backend.dart';
 import '../connectivity.dart';
 import 'codec.dart';
@@ -106,6 +107,8 @@ class FirebaseBackend implements Backend {
     WarmUp.createChurch => const ['createChurch'],
     WarmUp.photoImport => const ['recognizeRoster'],
     WarmUp.timeZone => const ['setChurchTimeZone'],
+    // The church list is read as the page opens; these are a tap away.
+    WarmUp.backOffice => const ['adminStats', 'adminFunding', 'adminChurchMembers'],
   });
 
   @override
@@ -502,26 +505,6 @@ MinimumBuilds minimumBuildsFromJson(Map<String, Object?> d) {
   final min = d['minBuild'];
   int build(String store) => min is Map ? (min[store] as num?)?.toInt() ?? 0 : 0;
   return MinimumBuilds(android: build('android'), ios: build('ios'));
-}
-
-Funding fundingFromJson(Map<String, Object?> d) {
-  int n(String key) => (d[key] as num?)?.round() ?? 0;
-  return Funding(
-    month: d['month'] as String? ?? '',
-    target: n('target'),
-    received: n('received'),
-    carried: n('carried'),
-    monthsLeft: n('monthsLeft'),
-    costs: [
-      for (final c in (d['costs'] as List?) ?? const [])
-        if (c is Map)
-          FundingCost(
-            name: c['name'] as String? ?? '',
-            perMonth: (c['perMonth'] as num?)?.round() ?? 0,
-            yearly: c['per'] == 'year',
-          ),
-    ],
-  );
 }
 
 class _Memberships implements MembershipRepository {
@@ -1644,56 +1627,16 @@ class FirebaseCloudApi implements CloudApi {
   }
 
   @override
-  Future<List<ChurchSummary>> adminSearchChurches(String query) async {
-    final data = _asMap(await _call('adminSearchChurches', {'query': query}));
-    return [
-      for (final raw in data['churches'] as List<dynamic>? ?? const [])
-        if (raw is Map)
-          ChurchSummary(
-            id: raw['id'] as String,
-            name: raw['name'] as String,
-            status: ChurchStatus.values.firstWhere(
-              (s) => s.name == raw['status'],
-              orElse: () => ChurchStatus.suspended,
-            ),
-            memberCount: (raw['memberCount'] as num?)?.toInt() ?? 0,
-            admins: [
-              for (final a in raw['admins'] as List<dynamic>? ?? const [])
-                if (a is Map)
-                  Member(
-                    uid: a['uid'] as String,
-                    name: a['name'] as String? ?? '',
-                    email: a['email'] as String? ?? '',
-                    role: Role.admin,
-                  ),
-            ],
-          ),
-    ];
-  }
+  Future<List<ChurchSummary>> adminSearchChurches(String query) async =>
+      churchSummariesFromJson(_asMap(await _call('adminSearchChurches', {'query': query})));
 
   @override
   Future<void> adminRenameChurch(String churchId, String name) =>
       _call('adminRenameChurch', {'churchId': churchId, 'name': name});
 
   @override
-  Future<List<Member>> adminChurchMembers(String churchId) async {
-    final data = _asMap(
-      await _call('adminChurchMembers', {'churchId': churchId}),
-    );
-    return [
-      for (final raw in data['members'] as List<dynamic>? ?? const [])
-        if (raw is Map)
-          Member(
-            uid: raw['uid'] as String,
-            name: raw['name'] as String? ?? '',
-            email: raw['email'] as String? ?? '',
-            role: Role.values.firstWhere(
-              (r) => r.name == raw['role'],
-              orElse: () => Role.staff,
-            ),
-          ),
-    ];
-  }
+  Future<List<Member>> adminChurchMembers(String churchId) async =>
+      churchMembersFromJson(_asMap(await _call('adminChurchMembers', {'churchId': churchId})));
 
   @override
   Future<void> adminTransferAdmin(String churchId, String uid) =>
@@ -1704,57 +1647,15 @@ class FirebaseCloudApi implements CloudApi {
       _call('adminSetStatus', {'churchId': churchId, 'status': status.name});
 
   @override
-  Future<List<DailyStats>> adminStats({int days = 30}) async {
-    final data = _asMap(await _call('adminStats', {'days': days}));
-    return [
-      for (final raw in data['days'] as List<dynamic>? ?? const [])
-        if (raw case {
-          'date': final String date,
-        } when Day.tryParse(date) != null)
-          DailyStats(
-            day: Day.parse(date),
-            values: {
-              for (final e in (raw).entries)
-                if (e.key is String && e.value is num) e.key as String: e.value as num,
-            },
-          ),
-    ];
-  }
+  Future<List<DailyStats>> adminStats({int days = 30}) async =>
+      dailyStatsFromJson(_asMap(await _call('adminStats', {'days': days})));
 
   @override
-  Future<FundingOverview> adminFunding() async {
-    final d = _asMap(await _call('adminFunding'));
-    final summary = d['funding'];
-    return FundingOverview(
-      costs: [
-        for (final raw in d['costs'] as List<dynamic>? ?? const [])
-          if (raw case {
-            'name': final String name,
-            'amount': final num amount,
-            'currency': final String code,
-            'per': final String per,
-          } when Currency.fromCode(code) != null)
-            CostItem(
-              name: name,
-              amount: amount,
-              currency: Currency.fromCode(code)!,
-              per: per == 'year' ? CostPeriod.year : CostPeriod.month,
-            ),
-      ],
-      months: [
-        for (final raw in d['months'] as List<dynamic>? ?? const [])
-          if (raw case {'month': final String month, 'received': final num received, 'target': final num target})
-            FundingMonth(month: month, received: received.round(), target: target.round()),
-      ],
-      funding: summary is Map ? fundingFromJson(Map<String, Object?>.from(summary)) : null,
-    );
-  }
+  Future<FundingOverview> adminFunding() async => fundingOverviewFromJson(_asMap(await _call('adminFunding')));
 
   @override
   Future<void> adminSetFundingCosts(List<CostItem> items) => _call('adminSetFundingCosts', {
-    'items': [
-      for (final i in items) {'name': i.name, 'amount': i.amount, 'currency': i.currency.code, 'per': i.per.name},
-    ],
+    'items': [for (final i in items) costItemToJson(i)],
   });
 
   @override
