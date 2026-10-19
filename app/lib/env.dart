@@ -110,3 +110,6 @@ FirebaseOptions firebaseOptionsFor(Env env) {
       );
   }
 }
+
+/// Which project's data this device keeps, for one account of it.
+String deviceCacheProject() => '${Env.current.name}:${firebaseOptionsFor(Env.current).projectId}';

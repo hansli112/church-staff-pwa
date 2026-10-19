@@ -17,6 +17,7 @@ import 'state/fonts.dart';
 import 'state/calendar.dart';
 import 'state/providers.dart';
 import 'state/push.dart';
+import 'state/saved_read.dart';
 import 'state/session.dart';
 import 'state/web_page.dart';
 
@@ -82,6 +83,7 @@ class _MarthaAppState extends ConsumerState<MarthaApp> {
   Widget build(BuildContext context) {
     ref.watch(sessionEffectsProvider);
     ref.watch(calendarCacheLifecycleProvider);
+    ref.watch(savedReadsProvider);
     final router = ref.watch(routerProvider);
     if (_router != router) {
       _router?.routerDelegate.removeListener(_routeChanged);

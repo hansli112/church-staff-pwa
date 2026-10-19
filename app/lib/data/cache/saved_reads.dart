@@ -21,6 +21,9 @@ class SavedReads {
   Future<void> _pending = Future.value();
 
   /// Whose answers these are: one account of one project, or none.
+  String? get scope => _scope;
+
+  /// From now on [scope]'s answers: another scope's are dropped.
   void select(String? scope) {
     if (_selected && scope == _scope) return;
     _selected = true;
@@ -45,8 +48,9 @@ class SavedReads {
 
   SavedAnswer? read(String key) => _answers[key];
 
-  Future<void> save(String key, Object? json, {required DateTime readAt}) {
-    if (_scope == null) return Future.value();
+  /// [json] as [scope] read it: once the account changed, it is not kept.
+  Future<void> save(String scope, String key, Object? json, {required DateTime readAt}) {
+    if (scope != _scope) return Future.value();
     _answers
       ..remove(key)
       ..[key] = (json: json, readAt: readAt.toUtc());

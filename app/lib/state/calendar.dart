@@ -5,11 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/backend.dart';
 import '../data/cache/calendar_read_cache.dart';
 import '../domain/models.dart';
+import '../env.dart';
 import 'connectivity.dart';
 import 'app_update.dart';
 import 'calendar_months.dart';
 import 'providers.dart';
-import 'saved_read.dart' show deviceCacheProject;
 
 export 'calendar_months.dart' show CalendarReadStatus;
 

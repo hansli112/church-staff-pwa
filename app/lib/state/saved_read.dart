@@ -4,17 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/backend.dart';
 import '../data/cache/saved_reads.dart';
-import '../env.dart';
+import '../env.dart' show deviceCacheProject;
 import 'calendar_months.dart' show CalendarReadStatus;
 import 'providers.dart';
 
-/// Which project's data this device keeps, for one account of it.
-String deviceCacheProject() => '${Env.current.name}:${firebaseOptionsFor(Env.current).projectId}';
-
 final _savedReadsStoreProvider = Provider<SavedReads>((ref) => SavedReads(ref.watch(prefsProvider)));
 
-/// The signed-in account's saved answers; none while signed out. Restoring
-/// a session at launch neither keeps nor drops them.
+/// The signed-in account's saved answers; none while signed out, which
+/// drops them (watched by the app, so that happens at once). Restoring a
+/// session at launch neither keeps nor drops them.
 final savedReadsProvider = Provider<SavedReads?>((ref) {
   final store = ref.watch(_savedReadsStoreProvider);
   final uid = ref.watch(uidProvider);
@@ -65,6 +63,8 @@ class SavedRead<T> extends AsyncNotifier<Saved<T>> {
 
   @override
   FutureOr<Saved<T>> build() {
+    // The store is the same for every account: another one reads anew.
+    ref.watch(uidProvider);
     final store = ref.watch(savedReadsProvider);
     final reading = _read(store);
     final kept = _kept(store);
@@ -86,6 +86,8 @@ class SavedRead<T> extends AsyncNotifier<Saved<T>> {
 
   /// Reads again with what shows staying until the answer, which it then
   /// shows (after a change made here, so the kept answer is out of date).
+  /// If that read fails, what shows is no longer the server's: it is
+  /// labelled, and what acts on it waits for another reload.
   Future<void> reload() async {
     final reading = _read(ref.read(savedReadsProvider));
     final current = ref;
@@ -93,7 +95,13 @@ class SavedRead<T> extends AsyncNotifier<Saved<T>> {
       final answer = await reading.answer;
       if (current.mounted && reading.id == _reads) state = AsyncData(answer);
     } catch (error, stack) {
-      if (current.mounted && reading.id == _reads && _refused(error)) state = AsyncError(error, stack);
+      if (!current.mounted || reading.id != _reads) rethrow;
+      final shown = state.hasError ? null : state.value;
+      if (_refused(error) || shown == null) {
+        state = AsyncError(error, stack);
+      } else {
+        state = AsyncData(Saved(shown.value, readAt: shown.readAt, fresh: false, refreshError: error));
+      }
       rethrow;
     }
   }
@@ -101,11 +109,13 @@ class SavedRead<T> extends AsyncNotifier<Saved<T>> {
   ({int id, Future<Saved<T>> answer}) _read(SavedReads? store) {
     final clock = ref.read(clockProvider);
     final id = ++_reads;
+    final scope = store?.scope;
     Future<Saved<T>> answer() async {
       try {
         final value = await _readServer(ref);
         final readAt = clock();
-        unawaited(store?.save(_key, _encode(value), readAt: readAt));
+        // A later read keeps its own answer: this one would be older.
+        if (scope != null && id == _reads) unawaited(store?.save(scope, _key, _encode(value), readAt: readAt));
         return Saved(value, readAt: readAt);
       } catch (error) {
         if (_refused(error)) unawaited(store?.forget(_key));

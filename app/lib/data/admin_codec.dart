@@ -61,7 +61,7 @@ List<DailyStats> dailyStatsFromJson(ReplyJson d) => [
       DailyStats(
         day: Day.parse(date),
         values: {
-          for (final e in (raw).entries)
+          for (final e in raw.entries)
             if (e.key is String && e.value is num) e.key as String: e.value as num,
         },
       ),

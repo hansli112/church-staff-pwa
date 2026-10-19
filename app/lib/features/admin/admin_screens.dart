@@ -54,12 +54,8 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   Future<void> _search() async {
     if (_query.isEmpty) {
       setState(() => _found = null);
-      try {
-        await ref.read(_churchesProvider.notifier).reload();
-      } catch (e) {
-        if (mounted) showToast(context, errorText(L10n.of(context), e));
-      }
-      return;
+      // A failure shows on the list itself, with its retry.
+      return _retry(ref.read(_churchesProvider.notifier));
     }
     try {
       final r = await ref.read(backendProvider).cloud.adminSearchChurches(_query);
@@ -122,7 +118,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     if (churches.isEmpty) return EmptyState(message: l10n.adminNoChurches);
     return ListView(
       children: [
-        if (saved != null) CalendarReadNotice(status: saved.status),
+        if (saved != null) _ReadNotice(saved, onRetry: () => _retry(ref.read(_churchesProvider.notifier))),
         ListSection(
           children: [
             for (final c in churches)
@@ -139,6 +135,32 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                     : null,
               ),
           ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Reads [read] again; a failure shows where its answer shows.
+Future<void> _retry(SavedRead<Object?> read) => read.reload().then((_) {}, onError: (Object _) {});
+
+/// Shown kept, as the server could not be read again: says so and when it
+/// was read, with a retry. Nothing while the answer is the server's.
+class _ReadNotice extends StatelessWidget {
+  const _ReadNotice(this.saved, {required this.onRetry});
+
+  final Saved<Object?> saved;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    if (saved.refreshError == null) return const SizedBox.shrink();
+    return Row(
+      children: [
+        Expanded(child: CalendarReadNotice(status: saved.status)),
+        Padding(
+          padding: const EdgeInsetsDirectional.only(end: Space.s),
+          child: TextButton(onPressed: onRetry, child: Text(L10n.of(context).retry)),
         ),
       ],
     );
@@ -245,7 +267,7 @@ class _AdminChurchScreenState extends ConsumerState<AdminChurchScreen> {
           ),
           // Not a spinner: the church's own rows above are already there.
           if (members.hasError ? null : members.value case final saved?) ...[
-            CalendarReadNotice(status: saved.status),
+            _ReadNotice(saved, onRetry: () => _retry(ref.read(_membersProvider(c.id).notifier))),
             ListSection(
               header: l10n.members,
               children: [
@@ -343,7 +365,7 @@ class AdminStatsScreen extends ConsumerWidget {
           return ListView(
             padding: const EdgeInsets.only(bottom: Space.xl),
             children: [
-              CalendarReadNotice(status: saved.status),
+              _ReadNotice(saved, onRetry: () => _retry(ref.read(_statsProvider.notifier))),
               for (final (key, label) in metrics)
                 if (ordered.any((d) => d.values.containsKey(key)))
                   Padding(
@@ -622,7 +644,7 @@ class _AdminFundingScreenState extends ConsumerState<AdminFundingScreen> {
           return ListView(
             padding: const EdgeInsets.only(bottom: Space.xl),
             children: [
-              CalendarReadNotice(status: saved.status),
+              _ReadNotice(saved, onRetry: () => _retry(ref.read(_fundingProvider.notifier))),
               if (pending != null)
                 ListSection(children: [ListRow(title: l10n.fundingTargetUpdating)])
               else if (o.funding case final f?)

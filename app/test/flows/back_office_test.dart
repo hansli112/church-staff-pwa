@@ -67,4 +67,33 @@ void main() {
     await go(tester, '/admin');
     expect(b.warmedUp, contains(WarmUp.backOffice));
   });
+  testWidgets('saved, but not read back: the costs say so and wait for a retry before another change', (tester) async {
+    final b = seededChurch();
+    b.auth.operators.add('pastor');
+    b.fundingCosts = const [_cloud];
+    await pumpApp(tester, b);
+    await go(tester, '/admin/funding');
+
+    await tester.tap(find.text('雲端'));
+    await settle(tester);
+    await tester.enterText(find.byKey(const Key('costAmount')), '400');
+    final held = b.backOfficeReadsHeld = Completer();
+    await tester.tap(find.text('儲存').last);
+    await settle(tester);
+    held.completeError(const CloudException(CloudErrorCode.unavailable));
+    b.backOfficeReadsHeld = null;
+    await settle(tester);
+    expect(b.fundingCosts.single.amount, 400);
+    expect(find.textContaining('顯示上次的資料'), findsOneWidget);
+    await tester.tap(find.text('雲端'));
+    await settle(tester);
+    expect(find.text('費用項目'), findsNothing, reason: 'a change from an out-of-date list would undo the save');
+
+    await tester.tap(find.text('重試'));
+    await settle(tester);
+    expect(find.textContaining('顯示上次的資料'), findsNothing);
+    await tester.tap(find.text('雲端'));
+    await settle(tester);
+    expect(find.text('費用項目'), findsOneWidget);
+  });
 }

@@ -151,4 +151,48 @@ void main() {
     expect(container.read(_count).value?.value, 3);
     expect(container.read(uidProvider), 'pastor');
   });
+  test('a reload that fails leaves what shows labelled, and no longer the server\'s', () async {
+    final container = await launch();
+    expect(container.read(_count).value?.fresh, isTrue);
+    _server.error = const CloudException(CloudErrorCode.unavailable);
+    await expectLater(container.read(_count.notifier).reload(), throwsA(isA<CloudException>()));
+    final shown = container.read(_count).value!;
+    expect((shown.value, shown.fresh, shown.status.cached), (1, false, true));
+    _server.error = null;
+    _server.answer = 2;
+    await container.read(_count.notifier).reload();
+    expect((container.read(_count).value!.value, container.read(_count).value!.fresh), (2, true));
+  });
+
+  test('an answer read for one account is not kept for the next', () async {
+    final pastors = _server.held = Completer();
+    final container = await launch();
+    // Mary's own reads wait; only the one begun for pastor answers.
+    _server.held = Completer();
+    await backend.auth.signOut();
+    await pumpEventQueue();
+    backend.auth.signInAs('mary@example.com', uid: 'mary');
+    await pumpEventQueue();
+    pastors.complete();
+    await pumpEventQueue();
+    container.dispose();
+    final next = await launch();
+    expect(next.read(_count).hasValue, isFalse, reason: "pastor's answer is not mary's");
+  });
+
+  test('an earlier read that answers last is not what is kept', () async {
+    final slow = _server.held = Completer();
+    final container = await launch();
+    _server
+      ..held = null
+      ..answer = 2;
+    await container.read(_count.notifier).reload();
+    _server.answer = 1;
+    slow.complete();
+    await pumpEventQueue();
+    container.dispose();
+    _server.held = Completer();
+    final next = await launch();
+    expect(next.read(_count).value?.value, 2);
+  });
 }
