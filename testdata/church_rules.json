@@ -84,7 +84,7 @@
       "holds": ["司琴"]
     },
     {
-      "why": "an unbound name is 外請, even with a member's exact name",
+      "why": "an unbound name has no account, even with a member's exact name",
       "duties": [{ "role": "司琴", "people": ["李美玉"], "uids": {} }],
       "uid": "mei",
       "holds": []

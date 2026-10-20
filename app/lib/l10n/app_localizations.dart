@@ -3817,7 +3817,7 @@ abstract class L10n {
   /// Explicitly preserve an imported name without linking any member UID
   ///
   /// In zh, this message translates to:
-  /// **'保留「{name}」為外請'**
+  /// **'保留「{name}」為無帳號'**
   String importGuestChoice(String name);
 
   /// Import row date editor sheet title
@@ -3943,7 +3943,7 @@ abstract class L10n {
   /// Import diff name is explicitly not linked to a member UID
   ///
   /// In zh, this message translates to:
-  /// **'{name}（外請）'**
+  /// **'{name}（無帳號）'**
   String importGuestIdentity(String name);
 
   /// Import diff removes an event
@@ -3979,7 +3979,7 @@ abstract class L10n {
   /// Imported name has no member candidate and requires an explicit decision
   ///
   /// In zh, this message translates to:
-  /// **'請保留為外請或修正人名'**
+  /// **'請保留為無帳號或修正人名'**
   String get importNoCandidate;
 
   /// Unconfirmed import name member candidates
@@ -3991,7 +3991,7 @@ abstract class L10n {
   /// Imported name explicitly remains an unlinked guest
   ///
   /// In zh, this message translates to:
-  /// **'外請（沒有連到帳號）'**
+  /// **'無帳號'**
   String get importGuestUnlinked;
 
   /// Import name identity still needs confirmation
@@ -4339,7 +4339,7 @@ abstract class L10n {
   /// No description provided for @pickerGuestNames.
   ///
   /// In zh, this message translates to:
-  /// **'外請名字'**
+  /// **'無帳號的名字'**
   String get pickerGuestNames;
 
   /// No description provided for @serviceSettingsSaved.
@@ -4417,7 +4417,7 @@ abstract class L10n {
   /// No description provided for @rosterRemoveFutureGuest.
   ///
   /// In zh, this message translates to:
-  /// **'移除未來的外請安排'**
+  /// **'移除未來的安排'**
   String get rosterRemoveFutureGuest;
 
   /// No description provided for @rosterRemoveFutureGuestTitle.

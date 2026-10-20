@@ -2065,7 +2065,7 @@ class L10nJa extends L10n {
 
   @override
   String importGuestChoice(String name) {
-    return '「$name」をゲストのままにする';
+    return '「$name」をアカウントなしのままにする';
   }
 
   @override
@@ -2140,7 +2140,7 @@ class L10nJa extends L10n {
 
   @override
   String importGuestIdentity(String name) {
-    return '$name（ゲスト）';
+    return '$name（アカウントなし）';
   }
 
   @override
@@ -2167,7 +2167,7 @@ class L10nJa extends L10n {
   String get importNoChange => '割り当ての変更はありません';
 
   @override
-  String get importNoCandidate => 'ゲストのままにするか、名前を修正してください';
+  String get importNoCandidate => 'アカウントなしのままにするか、名前を修正してください';
 
   @override
   String importCandidates(String names) {
@@ -2175,7 +2175,7 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get importGuestUnlinked => 'ゲスト（アカウントにつながっていない）';
+  String get importGuestUnlinked => 'アカウントなし';
 
   @override
   String get importNameNeedsConfirm => '名前を確認してください';
@@ -2383,7 +2383,7 @@ class L10nJa extends L10n {
   String get rosterShowMore => 'さらに表示';
 
   @override
-  String get pickerGuestNames => 'ゲストの名前';
+  String get pickerGuestNames => 'アカウントのない名前';
 
   @override
   String get serviceSettingsSaved => '奉仕の設定を保存しました';
@@ -2428,7 +2428,7 @@ class L10nJa extends L10n {
   String get rosterApplyFutureChanges => '変更を適用';
 
   @override
-  String get rosterRemoveFutureGuest => '今後のゲストの割り当てを外す';
+  String get rosterRemoveFutureGuest => '今後の割り当てを外す';
 
   @override
   String rosterRemoveFutureGuestTitle(String name) {

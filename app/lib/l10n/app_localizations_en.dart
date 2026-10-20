@@ -2180,7 +2180,7 @@ class L10nEn extends L10n {
 
   @override
   String importGuestChoice(String name) {
-    return 'Keep “$name” as a guest';
+    return 'Keep “$name” without an account';
   }
 
   @override
@@ -2255,7 +2255,7 @@ class L10nEn extends L10n {
 
   @override
   String importGuestIdentity(String name) {
-    return '$name (guest)';
+    return '$name (no account)';
   }
 
   @override
@@ -2282,7 +2282,7 @@ class L10nEn extends L10n {
   String get importNoChange => 'No changes to assignments';
 
   @override
-  String get importNoCandidate => 'Keep as a guest or fix the name';
+  String get importNoCandidate => 'Keep without an account or fix the name';
 
   @override
   String importCandidates(String names) {
@@ -2290,7 +2290,7 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get importGuestUnlinked => 'Guest (not linked to an account)';
+  String get importGuestUnlinked => 'No account';
 
   @override
   String get importNameNeedsConfirm => 'Confirm the name';
@@ -2498,7 +2498,7 @@ class L10nEn extends L10n {
   String get rosterShowMore => 'Show more';
 
   @override
-  String get pickerGuestNames => 'Guest names';
+  String get pickerGuestNames => 'Names without an account';
 
   @override
   String get serviceSettingsSaved => 'Service settings saved';
@@ -2549,7 +2549,7 @@ class L10nEn extends L10n {
   String get rosterApplyFutureChanges => 'Apply changes';
 
   @override
-  String get rosterRemoveFutureGuest => 'Remove future guest assignments';
+  String get rosterRemoveFutureGuest => 'Remove future assignments';
 
   @override
   String rosterRemoveFutureGuestTitle(String name) {

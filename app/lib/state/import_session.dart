@@ -31,7 +31,7 @@ class ImportDraft {
   /// Whether rows were loaded: an empty list from a photo still previews.
   final bool loaded;
 
-  /// Names the person said who they are: a member, or 外請.
+  /// Names the person said who they are: a member, or 無帳號 (no account).
   final Map<String, ImportPersonChoice> people;
 
   final ImportMode mode;

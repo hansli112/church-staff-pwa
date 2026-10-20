@@ -2066,7 +2066,7 @@ class L10nKo extends L10n {
 
   @override
   String importGuestChoice(String name) {
-    return '‘$name’ 게스트로 두기';
+    return '‘$name’ 계정 없이 두기';
   }
 
   @override
@@ -2141,7 +2141,7 @@ class L10nKo extends L10n {
 
   @override
   String importGuestIdentity(String name) {
-    return '$name(게스트)';
+    return '$name(계정 없음)';
   }
 
   @override
@@ -2168,7 +2168,7 @@ class L10nKo extends L10n {
   String get importNoChange => '배정 변경 없음';
 
   @override
-  String get importNoCandidate => '게스트로 두거나 이름을 수정해 주세요';
+  String get importNoCandidate => '계정 없이 두거나 이름을 수정해 주세요';
 
   @override
   String importCandidates(String names) {
@@ -2176,7 +2176,7 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get importGuestUnlinked => '게스트(계정에 연결되지 않음)';
+  String get importGuestUnlinked => '계정 없음';
 
   @override
   String get importNameNeedsConfirm => '이름을 확인해 주세요';
@@ -2384,7 +2384,7 @@ class L10nKo extends L10n {
   String get rosterShowMore => '더 보기';
 
   @override
-  String get pickerGuestNames => '게스트 이름';
+  String get pickerGuestNames => '계정 없는 이름';
 
   @override
   String get serviceSettingsSaved => '봉사 설정을 저장했어요';
@@ -2429,7 +2429,7 @@ class L10nKo extends L10n {
   String get rosterApplyFutureChanges => '변경 적용';
 
   @override
-  String get rosterRemoveFutureGuest => '이후 게스트 배정 빼기';
+  String get rosterRemoveFutureGuest => '이후 배정 빼기';
 
   @override
   String rosterRemoveFutureGuestTitle(String name) {

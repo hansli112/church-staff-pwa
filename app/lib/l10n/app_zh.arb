@@ -1284,7 +1284,7 @@
   "@importSameNameScope": {
     "description": "Explains that a confirmed raw-name mapping covers this import only"
   },
-  "importGuestChoice": "保留「{name}」為外請",
+  "importGuestChoice": "保留「{name}」為無帳號",
   "@importGuestChoice": {
     "description": "Explicitly preserve an imported name without linking any member UID",
     "placeholders": {
@@ -1420,7 +1420,7 @@
       }
     }
   },
-  "importGuestIdentity": "{name}（外請）",
+  "importGuestIdentity": "{name}（無帳號）",
   "@importGuestIdentity": {
     "description": "Import diff name is explicitly not linked to a member UID",
     "placeholders": {
@@ -1478,7 +1478,7 @@
   "@importNoChange": {
     "description": "Import diff has no arrangement changes"
   },
-  "importNoCandidate": "請保留為外請或修正人名",
+  "importNoCandidate": "請保留為無帳號或修正人名",
   "@importNoCandidate": {
     "description": "Imported name has no member candidate and requires an explicit decision"
   },
@@ -1492,7 +1492,7 @@
       }
     }
   },
-  "importGuestUnlinked": "外請（沒有連到帳號）",
+  "importGuestUnlinked": "無帳號",
   "@importGuestUnlinked": {
     "description": "Imported name explicitly remains an unlinked guest"
   },
@@ -1770,7 +1770,7 @@
   "importExampleEvent": "聖餐",
   "@importExampleEvent": { "description": "Example occasion (特別活動) in the import JSON example" },
   "rosterShowMore": "顯示更多",
-  "pickerGuestNames": "外請名字",
+  "pickerGuestNames": "無帳號的名字",
   "serviceSettingsSaved": "服事設定已儲存",
   "serviceSyncOriginalEvent": "原本的特別活動",
   "serviceSyncOriginalDuty": "原本的服事項目",
@@ -1807,7 +1807,7 @@
   "rosterFutureChangesFooter": "只變更明天起已儲存的服事表",
   "rosterFutureChangesConflict": "已有同名項目，請先調整",
   "rosterApplyFutureChanges": "套用變更",
-  "rosterRemoveFutureGuest": "移除未來的外請安排",
+  "rosterRemoveFutureGuest": "移除未來的安排",
   "rosterRemoveFutureGuestTitle": "移除「{name}」的未來安排",
   "@rosterRemoveFutureGuestTitle": {
     "placeholders": {

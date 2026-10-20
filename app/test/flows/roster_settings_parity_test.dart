@@ -48,7 +48,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/sunday/2026-10-04');
     await tapText(tester, '外請老師');
-    await tapText(tester, '移除未來的外請安排');
+    await tapText(tester, '移除未來的安排');
 
     expect(find.text('移除「外請老師」的未來安排'), findsOneWidget);
     expect(find.textContaining('10月11日'), findsOneWidget);
@@ -58,7 +58,7 @@ void main() {
     expect(savedDay(b, 4), first);
 
     await tapText(tester, '外請老師');
-    await tapText(tester, '移除未來的外請安排');
+    await tapText(tester, '移除未來的安排');
     await tapText(tester, '套用變更');
     expect(savedDay(b, 4).duties.single.people, isEmpty);
     expect(savedDay(b, 11).duties.single.people, isEmpty);
@@ -281,7 +281,7 @@ void main() {
     await go(tester, '/rosters/sunday/2026-10-04');
     await tapText(tester, name);
     expect(tester.takeException(), isNull, reason: 'the person menu must also fit large text');
-    await tapText(tester, '移除未來的外請安排');
+    await tapText(tester, '移除未來的安排');
 
     expect(tester.takeException(), isNull);
     expect(findShown('取消'), findsOneWidget);
@@ -314,7 +314,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/sunday/2026-10-11');
     await tapText(tester, '司琴');
-    expect(find.text('外請名字'), findsOneWidget);
+    expect(find.text('無帳號的名字'), findsOneWidget);
     await tapText(tester, 'John Chen');
     await tapText(tester, '完成');
 

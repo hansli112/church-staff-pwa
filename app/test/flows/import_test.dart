@@ -269,7 +269,7 @@ void main() {
     await tapText(tester, '李美玉');
     await tester.tap(find.text('陳志明').first);
     await settle(tester);
-    await tapText(tester, '保留「陳志明」為外請');
+    await tapText(tester, '保留「陳志明」為無帳號');
     await tapText(tester, '套用到服事表');
     expect(peopleOn(b, 18, '司琴'), ['李美玉']);
     expect(peopleOn(b, 18, '招待'), ['陳志明']);
@@ -321,7 +321,7 @@ void main() {
     await tapText(tester, '預覽');
     await tester.tap(find.text('李美玉').first);
     await settle(tester);
-    await tapText(tester, '保留「李美玉」為外請');
+    await tapText(tester, '保留「李美玉」為無帳號');
     await tapText(tester, '套用到服事表');
     expect(savedDay(b, 18).duties.firstWhere((d) => d.role == '司琴').uids, isEmpty);
   });

@@ -2061,7 +2061,7 @@ class L10nZh extends L10n {
 
   @override
   String importGuestChoice(String name) {
-    return '保留「$name」為外請';
+    return '保留「$name」為無帳號';
   }
 
   @override
@@ -2136,7 +2136,7 @@ class L10nZh extends L10n {
 
   @override
   String importGuestIdentity(String name) {
-    return '$name（外請）';
+    return '$name（無帳號）';
   }
 
   @override
@@ -2163,7 +2163,7 @@ class L10nZh extends L10n {
   String get importNoChange => '安排沒有變更';
 
   @override
-  String get importNoCandidate => '請保留為外請或修正人名';
+  String get importNoCandidate => '請保留為無帳號或修正人名';
 
   @override
   String importCandidates(String names) {
@@ -2171,7 +2171,7 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get importGuestUnlinked => '外請（沒有連到帳號）';
+  String get importGuestUnlinked => '無帳號';
 
   @override
   String get importNameNeedsConfirm => '請確認人名';
@@ -2379,7 +2379,7 @@ class L10nZh extends L10n {
   String get rosterShowMore => '顯示更多';
 
   @override
-  String get pickerGuestNames => '外請名字';
+  String get pickerGuestNames => '無帳號的名字';
 
   @override
   String get serviceSettingsSaved => '服事設定已儲存';
@@ -2424,7 +2424,7 @@ class L10nZh extends L10n {
   String get rosterApplyFutureChanges => '套用變更';
 
   @override
-  String get rosterRemoveFutureGuest => '移除未來的外請安排';
+  String get rosterRemoveFutureGuest => '移除未來的安排';
 
   @override
   String rosterRemoveFutureGuestTitle(String name) {
@@ -4736,7 +4736,7 @@ class L10nZhHans extends L10nZh {
 
   @override
   String importGuestChoice(String name) {
-    return '保留“$name”为外来人员';
+    return '保留“$name”为无账号';
   }
 
   @override
@@ -4811,7 +4811,7 @@ class L10nZhHans extends L10nZh {
 
   @override
   String importGuestIdentity(String name) {
-    return '$name（外来人员）';
+    return '$name（无账号）';
   }
 
   @override
@@ -4838,7 +4838,7 @@ class L10nZhHans extends L10nZh {
   String get importNoChange => '安排没有更改';
 
   @override
-  String get importNoCandidate => '请保留为外来人员或修正人名';
+  String get importNoCandidate => '请保留为无账号或修正人名';
 
   @override
   String importCandidates(String names) {
@@ -4846,7 +4846,7 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get importGuestUnlinked => '外来人员（没有关联账号）';
+  String get importGuestUnlinked => '无账号';
 
   @override
   String get importNameNeedsConfirm => '请确认人名';
@@ -5054,7 +5054,7 @@ class L10nZhHans extends L10nZh {
   String get rosterShowMore => '显示更多';
 
   @override
-  String get pickerGuestNames => '外来人员名字';
+  String get pickerGuestNames => '无账号的名字';
 
   @override
   String get serviceSettingsSaved => '事奉设置已保存';
@@ -5099,7 +5099,7 @@ class L10nZhHans extends L10nZh {
   String get rosterApplyFutureChanges => '应用更改';
 
   @override
-  String get rosterRemoveFutureGuest => '移除未来的外来人员安排';
+  String get rosterRemoveFutureGuest => '移除未来的安排';
 
   @override
   String rosterRemoveFutureGuestTitle(String name) {
