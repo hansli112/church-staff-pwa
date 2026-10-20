@@ -27,3 +27,9 @@ test('the 小組 names members kept become 小組; they are in them, a 小組長
   assert.equal(hao.get('leadSmallGroups'), undefined);
   assert.deepEqual(await planSmallGroups(db), [], 'once');
 });
+
+test('it waits for migrate-leads.ts: a member still in the old permission groups stops it', async () => {
+  await seedChurch('C1', { mei: 'leader' });
+  await db.doc('churches/C1/members/mei').update({ groups: ['roster-editors'] });
+  await assert.rejects(planSmallGroups(db), /migrate-leads/);
+});

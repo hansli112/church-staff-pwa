@@ -3,7 +3,7 @@
 // that service), and each member is one of those they named; one whose
 // old 身分 was 小組長 (role leader) leads them. Pending members are left:
 // they get theirs when they sign in (claim.ts). Run again, it changes
-// nothing more.
+// nothing more. Run it after scripts/migrate-leads.ts, which it checks.
 //
 //   # Look first (writes nothing):
 //   npx tsx scripts/migrate-small-groups.ts --project marthasit-dev
@@ -32,6 +32,11 @@ export async function planSmallGroups(db: Firestore, churches: string[] = []) {
       db.collection(`churches/${cid}/smallGroups`).get(),
       db.doc(`churches/${cid}/settings/services`).get(),
     ]);
+    // 小組長 is added to the 身分 a member has; one still in the old
+    // permission groups gets theirs from migrate-leads.ts first.
+    const unmoved = members.docs.filter((m) => m.get('role') !== 'admin' && m.get('identities') === undefined
+      && Array.isArray(m.get('groups')) && (m.get('groups') as unknown[]).length > 0);
+    if (unmoved.length) throw new Error(`Run scripts/migrate-leads.ts first: ${unmoved.map((m) => m.ref.path).join(', ')}`);
     const known = new Set(((services.get('ids') as string[] | undefined) ?? []));
     const byName = smallGroupsByName(existing.docs);
     const made: string[] = [];

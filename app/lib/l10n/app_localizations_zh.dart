@@ -2757,7 +2757,7 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get deleteSmallGroupBody => '小組長和同工都會移出這個小組，填過的人數會留著。';
+  String get deleteSmallGroupBody => '小組長和同工都會移出這個小組，填過的人數會留著';
 
   @override
   String smallGroupDeleted(String name) {
@@ -2813,7 +2813,7 @@ class L10nZh extends L10n {
   String get attendanceResume => '恢復';
 
   @override
-  String get attendancePauseFooter => '暫停的期間不提醒，也不會留下「未填」。';
+  String get attendancePauseFooter => '暫停的期間不提醒，也不會留下「未填」';
 
   @override
   String get attendanceNoDays => '還沒有要填的聚會';
@@ -5581,7 +5581,7 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get deleteSmallGroupBody => '小组长和同工都会移出这个小组，填过的人数会留着。';
+  String get deleteSmallGroupBody => '小组长和同工都会移出这个小组，填过的人数会留着';
 
   @override
   String smallGroupDeleted(String name) {
@@ -5637,7 +5637,7 @@ class L10nZhHans extends L10nZh {
   String get attendanceResume => '恢复';
 
   @override
-  String get attendancePauseFooter => '暂停期间不提醒，也不会留下“未填”。';
+  String get attendancePauseFooter => '暂停期间不提醒，也不会留下“未填”';
 
   @override
   String get attendanceNoDays => '还没有要填的聚会';

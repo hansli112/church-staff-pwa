@@ -487,13 +487,14 @@ describe('回報人數 (attendance) 與小組 (smallGroups)', () => {
     await assertSucceeds(deleteDoc(day(EDITOR_A, 'service:sunday', '2030-10-06')));
   });
 
-  it('暫停：開始和結束一起設、開始在前；負責人可以設，同工不行', async () => {
+  it('暫停：一串期間，最多 50 段；負責人可以設，同工不行', async () => {
     const pause = (uid) => doc(as(uid), `churches/${A}/attendance/service:sunday`);
-    await assertSucceeds(setDoc(pause(EDITOR_A), { pausedFrom: '2030-07-01', pausedUntil: '2030-09-01' }));
+    await assertSucceeds(setDoc(pause(EDITOR_A), { pauses: [{ from: '2030-07-01', until: '2030-09-01' }] }));
+    await assertFails(setDoc(pause(EDITOR_A), { pauses: 'summer' }));
+    await assertFails(setDoc(pause(EDITOR_A), { pauses: Array(51).fill({ from: '2030-07-01', until: '2030-09-01' }) }));
     await assertFails(setDoc(pause(EDITOR_A), { pausedFrom: '2030-07-01' }));
-    await assertFails(setDoc(pause(EDITOR_A), { pausedFrom: '2030-09-01', pausedUntil: '2030-07-01' }));
-    await assertFails(setDoc(pause(MEMBER_A), { pausedFrom: '2030-07-01', pausedUntil: '2030-09-01' }));
-    await assertSucceeds(setDoc(pause(EDITOR_A), {}));
+    await assertFails(setDoc(pause(MEMBER_A), { pauses: [] }));
+    await assertSucceeds(setDoc(pause(EDITOR_A), { pauses: [] }));
     await assertSucceeds(getDoc(pause(OFFICE_A)));
     await assertFails(getDoc(pause(MEMBER_A)));
   });

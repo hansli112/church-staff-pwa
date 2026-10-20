@@ -108,6 +108,7 @@ class SettingsScreen extends ConsumerWidget {
                 // 回報人數 (#85): on from today, or off.
                 if (church != null)
                   SwitchRow(
+                    leading: const IconTile(Symbols.groups_rounded, color: TileColors.manage),
                     title: l10n.attendance,
                     subtitle: l10n.attendanceSub,
                     value: church.attendanceSince != null,
@@ -123,6 +124,19 @@ class SettingsScreen extends ConsumerWidget {
             ),
           // A lead's groups, one tap away (#82); admins have them all above.
           if (me != null && !me.isAdmin && me.leads) _LedGroups(me: me),
+          // 行政 sees every service's 人數 (#85).
+          if (me != null && !me.isAdmin && me.inGroup(Group.rosterEditors) && church?.attendanceSince != null)
+            ListSection(
+              header: l10n.attendanceHeader,
+              children: [
+                for (final s in ref.watch(servicesProvider).value?.enabled ?? const <Service>[])
+                  ListRow(
+                    leading: const IconTile(Symbols.groups_rounded, color: TileColors.manage),
+                    title: s.name,
+                    onTap: () => context.push('/me/groups/service/${s.id}'),
+                  ),
+              ],
+            ),
           ListSection(
             children: [
               // Most used first: everyone's notifications; the church's

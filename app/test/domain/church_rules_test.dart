@@ -195,7 +195,7 @@ void main() {
     for (final r in _rows('attendanceDue')) {
       test(r['why'] as String, () {
         final meets = r['meets'] as Map<String, dynamic>;
-        final pause = r['pause'] as Map<String, dynamic>?;
+        final pauses = (r['pauses'] as List? ?? const []).cast<Map<String, dynamic>>();
         expect(
           attendanceDue(
             Meets(
@@ -205,9 +205,10 @@ void main() {
               startsOn: Day.tryParse(meets['startsOn'] as String?),
             ),
             since: Day.parse(r['since'] as String),
-            pause: pause == null
-                ? null
-                : AttendancePause(from: Day.parse(pause['from'] as String), until: Day.parse(pause['until'] as String)),
+            pauses: [
+              for (final p in pauses)
+                AttendancePause(from: Day.parse(p['from'] as String), until: Day.parse(p['until'] as String)),
+            ],
             day: Day.parse(r['day'] as String),
           ),
           r['due'],

@@ -760,15 +760,14 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect((await g.church.church().first)!.attendanceSince, Day(2026, 10, 1));
       await w.signIn(Grace.editorEmail);
       await g.church.setAttendance('service:sunday', Day(2026, 10, 4), const AttendanceDay.count(120, note: '聖餐'));
-      await g.church.setAttendancePause(
-        'service:sunday',
+      await g.church.setAttendancePauses('service:sunday', [
         AttendancePause(from: Day(2026, 10, 5), until: Day(2026, 11, 1)),
-      );
+      ]);
       final record = await g.church
           .attendance('service:sunday')
-          .firstWhere((r) => r.days.isNotEmpty && r.pause != null);
+          .firstWhere((r) => r.days.isNotEmpty && r.pauses.isNotEmpty);
       expect(record.days, {Day(2026, 10, 4): const AttendanceDay.count(120, note: '聖餐')});
-      expect(record.pause, AttendancePause(from: Day(2026, 10, 5), until: Day(2026, 11, 1)));
+      expect(record.pauses, [AttendancePause(from: Day(2026, 10, 5), until: Day(2026, 11, 1))]);
       await expectLater(
         g.church.setAttendance('service:youth', Day(2026, 10, 3), const AttendanceDay.none()),
         denied(),

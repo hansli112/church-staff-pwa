@@ -22,8 +22,9 @@ class Meets {
   final Day? startsOn;
 }
 
-/// A group's pause (暫停到某一天): no meeting is asked for from [from] until,
-/// not including, [until].
+/// One of a group's pauses (暫停到某一天): no meeting is asked for from
+/// [from] until, not including, [until]. Kept once over, so the weeks it
+/// covered never turn 未填.
 @immutable
 class AttendancePause {
   const AttendancePause({required this.from, required this.until});
@@ -41,10 +42,15 @@ class AttendancePause {
 }
 
 /// Whether a group that [meets] so meets on [day] and is asked its 人數: not
-/// before [since] (回報人數 turned on), nor while [pause] covers it
+/// before [since] (回報人數 turned on), nor while one of [pauses] covers it
 /// (testdata/church_rules.json, attendanceDue).
-bool attendanceDue(Meets meets, {required Day since, AttendancePause? pause, required Day day}) {
-  if (day.isBefore(since) || (pause?.covers(day) ?? false)) return false;
+bool attendanceDue(
+  Meets meets, {
+  required Day since,
+  List<AttendancePause> pauses = const [],
+  required Day day,
+}) {
+  if (day.isBefore(since) || pauses.any((p) => p.covers(day))) return false;
   if (meets.weekday == null || day.weekday != meets.weekday) return false;
   if (meets.roster != null) return meets.roster!;
   final start = meets.startsOn;
@@ -71,17 +77,37 @@ class AttendanceDay {
   int get hashCode => Object.hash(count, note, none);
 }
 
-/// A group's 回報人數: its pause, and the 人數 of each meeting filled in.
+/// A group's 回報人數: its pauses, and the 人數 of each meeting filled in.
 @immutable
 class AttendanceRecord {
-  const AttendanceRecord({this.pause, this.days = const {}});
+  const AttendanceRecord({this.pauses = const [], this.days = const {}});
 
-  final AttendancePause? pause;
+  final List<AttendancePause> pauses;
   final Map<Day, AttendanceDay> days;
 
-  @override
-  bool operator ==(Object other) => other is AttendanceRecord && other.pause == pause && mapEquals(other.days, days);
+  /// The pause [day] is in, if any.
+  AttendancePause? pauseOn(Day day) => pauses.where((p) => p.covers(day)).firstOrNull;
+
+  /// [pauses] with a new one from [today] until [until].
+  List<AttendancePause> pausedUntil(Day today, Day until) => [
+    for (final p in pauses)
+      if (p.until.isBefore(today) || p.until == today) p,
+    AttendancePause(from: today, until: until),
+  ];
+
+  /// [pauses] with the one [today] is in ended today: the days before it stay paused.
+  List<AttendancePause> resumed(Day today) => [
+    for (final p in pauses)
+      if (!p.covers(today)) p else if (p.from.isBefore(today)) AttendancePause(from: p.from, until: today),
+  ];
 
   @override
-  int get hashCode => Object.hash(pause, Object.hashAllUnordered(days.entries.map((e) => Object.hash(e.key, e.value))));
+  bool operator ==(Object other) =>
+      other is AttendanceRecord && listEquals(other.pauses, pauses) && mapEquals(other.days, days);
+
+  @override
+  int get hashCode => Object.hash(
+    Object.hashAll(pauses),
+    Object.hashAllUnordered(days.entries.map((e) => Object.hash(e.key, e.value))),
+  );
 }

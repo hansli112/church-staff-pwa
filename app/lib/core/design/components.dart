@@ -373,12 +373,14 @@ class SwitchRow extends StatelessWidget {
     super.key,
     required this.title,
     this.subtitle,
+    this.leading,
     required this.value,
     required this.onChanged,
   });
 
   final String title;
   final String? subtitle;
+  final Widget? leading;
   final bool value;
   final ValueChanged<bool>? onChanged;
 
@@ -388,6 +390,7 @@ class SwitchRow extends StatelessWidget {
       child: ListRow(
         title: title,
         subtitle: subtitle,
+        leading: leading,
         onTap: onChanged == null ? null : () => onChanged!(!value),
         trailing: Switch.adaptive(value: value, onChanged: onChanged),
       ),

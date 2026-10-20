@@ -139,7 +139,7 @@ void main() {
     final b = withJoy(withAttendance(seededChurch(as: staffHao, clock: eveningOf(Day(2026, 10, 9)))));
     b.attendance['grace'] = {
       'small:joy': AttendanceRecord(
-        pause: AttendancePause(from: Day(2026, 10, 1), until: Day(2026, 11, 1)),
+        pauses: [AttendancePause(from: Day(2026, 10, 1), until: Day(2026, 11, 1))],
       ),
     };
     await pumpApp(tester, b);
@@ -149,7 +149,41 @@ void main() {
     await tester.scrollUntilVisible(find.textContaining('暫停到'), 200, scrollable: find.byType(Scrollable).last);
     expect(find.text('未填'), findsNothing);
     await tapText(tester, '恢復');
-    expect(b.attendance['grace']!['small:joy']!.pause, isNull);
-    expect(find.text('未填'), findsNWidgets(2), reason: '10/2 and 10/9 asked for again');
+    expect(b.attendance['grace']!['small:joy']!.pauses, [
+      AttendancePause(from: Day(2026, 10, 1), until: Day(2026, 10, 9)),
+    ]);
+    expect(find.text('未填'), findsOneWidget, reason: 'today, 10/9, asked for again; 10/2 stays paused');
+  });
+
+  testWidgets('a meeting filled in stays listed when the 小組 moves to another day', (tester) async {
+    final b = withJoy(
+      withAttendance(seededChurch(as: staffHao, clock: eveningOf(Day(2026, 10, 9)))),
+      group: joy.copyWith(startsOn: () => Day(2026, 10, 2)),
+    );
+    b.attendance['grace'] = {
+      'small:joy': AttendanceRecord(days: {Day(2026, 10, 2): const AttendanceDay.count(8)}),
+    };
+    await pumpApp(tester, b);
+    await go(tester, '/me/groups/small/joy');
+    await tapText(tester, '聚會時間');
+    await tapText(tester, '週三');
+    await tapText(tester, '儲存');
+    expect(b.smallGroups['grace']!['joy']!.weekday, DateTime.wednesday);
+    await tester.scrollUntilVisible(find.text('8 人'), 200, scrollable: find.byType(Scrollable).last);
+    expect(find.text('8 人'), findsOneWidget);
+  });
+
+  testWidgets("行政 sees every service's 人數 from 設定, and fills in none", (tester) async {
+    final b = withAttendance(seededChurch(as: office, extra: [office], clock: eveningOf(Day(2026, 10, 4))));
+    b.attendance['grace'] = {
+      'service:sunday': AttendanceRecord(days: {Day(2026, 10, 4): const AttendanceDay.count(120)}),
+    };
+    await pumpApp(tester, b);
+    await go(tester, '/me');
+    await tester.scrollUntilVisible(find.text('主日崇拜'), 200, scrollable: find.byType(Scrollable).last);
+    await tapText(tester, '主日崇拜');
+    await tester.scrollUntilVisible(find.text('120 人'), 200, scrollable: find.byType(Scrollable).last);
+    await tapText(tester, '120 人');
+    expect(find.text('這次沒聚會'), findsNothing, reason: 'nothing to fill in');
   });
 }

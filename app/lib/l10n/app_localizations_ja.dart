@@ -2699,7 +2699,7 @@ class L10nJa extends L10n {
 
   @override
   String identitySmallGroupLeadOf(String group) {
-    return '$group リーダー';
+    return '$groupの小グループリーダー';
   }
 
   @override
@@ -2762,7 +2762,7 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get deleteSmallGroupBody => 'リーダーとメンバーはこの小グループから外れます。記録した人数は残ります。';
+  String get deleteSmallGroupBody => 'リーダーとメンバーはこの小グループから外れますが、記録した人数は残ります';
 
   @override
   String smallGroupDeleted(String name) {
@@ -2818,7 +2818,7 @@ class L10nJa extends L10n {
   String get attendanceResume => '再開';
 
   @override
-  String get attendancePauseFooter => '一時停止中はお知らせせず、「未記入」も残りません。';
+  String get attendancePauseFooter => '一時停止中はお知らせせず、「未記入」も残りません';
 
   @override
   String get attendanceNoDays => '記録する集まりはまだありません';

@@ -151,7 +151,7 @@ class GroupScreen extends ConsumerWidget {
       _ => null,
     };
     final small = switch (group) {
-      SmallGroup(:final id) => smallGroups.where((g) => g.id == id).firstOrNull,
+      SmallGroup(:final id) => smallGroups.byId(id),
       _ => null,
     };
     final name = switch (group) {
@@ -160,7 +160,11 @@ class GroupScreen extends ConsumerWidget {
       SmallGroup() => small?.name,
     };
     final service = small?.service;
-    if (me == null || name == null || members == null || !me.managesGroup(group, service: service)) {
+    // 行政 sees a service's 人數 here too, and changes nothing.
+    final sees =
+        me != null &&
+        (me.managesGroup(group, service: service) || (group is ServiceGroup && me.readsAttendance(group.key)));
+    if (me == null || name == null || members == null || !sees) {
       return Scaffold(appBar: AppBar());
     }
     final admin = me.isAdmin;
@@ -237,10 +241,17 @@ class GroupScreen extends ConsumerWidget {
                       ? RowButton(
                           label: l10n.removeShort,
                           semanticsLabel: l10n.removeIdentityLabel(l10n.identitySmallGroupLeadOf(name)),
-                          onPressed: () => _setSmallLeads(context, ref, small, [
-                            for (final l in leaders)
-                              if (l.uid != m.uid) l.uid,
-                          ], l10n.identityRemoved(l10n.identitySmallGroupLeadOf(name))),
+                          onPressed: () => _setSmallLeads(
+                            context,
+                            ref,
+                            small,
+                            [
+                              for (final l in leaders)
+                                if (l.uid != m.uid) l.uid,
+                            ],
+                            was: [for (final l in leaders) l.uid],
+                            done: l10n.identityRemoved(l10n.identitySmallGroupLeadOf(name)),
+                          ),
                         )
                       : null,
                 ),
@@ -262,6 +273,27 @@ class GroupScreen extends ConsumerWidget {
                 ),
             ],
           ),
+          // Above the 同工, which may be many.
+          if (serviceSmallGroups.isNotEmpty || opensSmall)
+            ListSection(
+              header: l10n.smallGroups,
+              children: [
+                for (final g in serviceSmallGroups)
+                  ListRow(
+                    title: g.name,
+                    subtitle: attendanceOn ? smallGroupMeetsLabel(l10n, g) : null,
+                    onTap: () => context.push('/me/groups/small/${g.id}'),
+                  ),
+                if (opensSmall)
+                  ListRow(
+                    title: l10n.addSmallGroup,
+                    leading: const Icon(Symbols.add_rounded),
+                    chevron: false,
+                    onTap: () => _addSmall(context, ref, group.id),
+                  ),
+              ],
+            ),
+          if (attendance != null) AttendanceSection(group: attendance),
           ListSection(
             header: l10n.groupStaff,
             footer: staff.isEmpty ? l10n.noGroupStaff : null,
@@ -299,25 +331,6 @@ class GroupScreen extends ConsumerWidget {
                 ),
             ],
           ),
-          if (serviceSmallGroups.isNotEmpty || opensSmall)
-            ListSection(
-              header: l10n.smallGroups,
-              children: [
-                for (final g in serviceSmallGroups)
-                  ListRow(
-                    title: g.name,
-                    subtitle: attendanceOn ? smallGroupMeetsLabel(l10n, g) : null,
-                    onTap: () => context.push('/me/groups/small/${g.id}'),
-                  ),
-                if (opensSmall)
-                  ListRow(
-                    title: l10n.addSmallGroup,
-                    leading: const Icon(Symbols.add_rounded),
-                    chevron: false,
-                    onTap: () => _addSmall(context, ref, group.id),
-                  ),
-              ],
-            ),
           if (candidates.isNotEmpty)
             ListSection(
               header: l10n.groupCandidates(name),
@@ -342,7 +355,6 @@ class GroupScreen extends ConsumerWidget {
                   ),
               ],
             ),
-          if (attendance != null) AttendanceSection(group: attendance),
           if (admin && ministry != null)
             ListSection(
               children: [
@@ -388,17 +400,23 @@ class GroupScreen extends ConsumerWidget {
     }
   }
 
+  /// Saves [next], with [leads] its 小組長; [done] said after, with 復原
+  /// putting back [was] when given.
   Future<void> _saveSmall(
     BuildContext context,
     WidgetRef ref,
     SmallGroupDetails next, {
     List<String>? leads,
+    List<String>? was,
     String? done,
   }) async {
     final l10n = L10n.of(context);
+    final data = ref.churchData;
     try {
-      await ref.churchData.saveSmallGroup(next, leads: leads);
-      if (done != null && context.mounted) showToast(context, done);
+      await data.saveSmallGroup(next, leads: leads);
+      if (done != null && context.mounted) {
+        showToast(context, done, onUndo: was == null ? null : () => data.saveSmallGroup(next, leads: was));
+      }
     } catch (e) {
       if (context.mounted) showToast(context, saveErrorText(l10n, e));
     }
@@ -423,27 +441,25 @@ class GroupScreen extends ConsumerWidget {
     await _saveSmall(context, ref, next);
   }
 
+  /// [small]'s 小組長 now [leads], who were [was].
   Future<void> _setSmallLeads(
     BuildContext context,
     WidgetRef ref,
-    SmallGroupDetails? small,
-    List<String> leads,
-    String done,
-  ) async {
-    if (small == null) return;
-    await _saveSmall(context, ref, small, leads: leads, done: done);
-  }
+    SmallGroupDetails small,
+    List<String> leads, {
+    required List<String> was,
+    required String done,
+  }) => _saveSmall(context, ref, small, leads: leads, was: was, done: done);
 
   /// 指派小組長: anyone in the church, picked from a list, added to those there are.
   Future<void> _assignSmallLead(
     BuildContext context,
     WidgetRef ref,
-    SmallGroupDetails? small,
+    SmallGroupDetails small,
     List<Member> others,
     List<String> leads,
     String name,
   ) async {
-    if (small == null) return;
     final l10n = L10n.of(context);
     others.sort((a, b) => a.name.compareTo(b.name));
     final picked = await showAppSheet<Member>(
@@ -459,15 +475,18 @@ class GroupScreen extends ConsumerWidget {
       ),
     );
     if (picked == null || !context.mounted) return;
-    await _setSmallLeads(context, ref, small, [
-      ...leads,
-      picked.uid,
-    ], l10n.identityAdded(l10n.identitySmallGroupLeadOf(name)));
+    await _setSmallLeads(
+      context,
+      ref,
+      small,
+      [...leads, picked.uid],
+      was: leads,
+      done: l10n.identityAdded(l10n.identitySmallGroupLeadOf(name)),
+    );
   }
 
   /// 關閉小組, once asked: its 小組長 and 同工 come out of it; its 人數 stay.
-  Future<void> _deleteSmall(BuildContext context, WidgetRef ref, SmallGroupDetails? small) async {
-    if (small == null) return;
+  Future<void> _deleteSmall(BuildContext context, WidgetRef ref, SmallGroupDetails small) async {
     final l10n = L10n.of(context);
     final ok = await confirmDestructive(
       context,

@@ -66,10 +66,7 @@ Member memberFromJson(String uid, Json data) {
               smallGroups: _strings(z['smallGroups']),
             ),
     ],
-    identities: [
-      if (data['identities'] is List)
-        for (final i in data['identities'] as List<dynamic>) ?Identity.fromJson(i),
-    ],
+    identities: _identitiesOf(data),
     ministries: _strings(data['ministries']).toSet(),
     smallGroups: _strings(data['smallGroups']).toSet(),
     mutedNotifications: {
@@ -84,6 +81,29 @@ Member memberFromJson(String uid, Json data) {
     ),
     joinedAt: readTime(data['joinedAt']),
   );
+}
+
+/// A member doc's 身分. A 小組長 (`leadSmallGroups`) whose 身分 an app from
+/// before #85 saved without it, not knowing the kind, still leads: it is
+/// put back, after what they hold (as Member.identities reads a doc with
+/// none stored).
+List<Identity> _identitiesOf(Json data) {
+  final stored = [
+    if (data['identities'] is List)
+      for (final i in data['identities'] as List<dynamic>) ?Identity.fromJson(i),
+  ];
+  final lost = [
+    for (final id in _strings(data['leadSmallGroups']))
+      if (!stored.contains(SmallGroupLead(id))) SmallGroupLead(id),
+  ];
+  if (lost.isEmpty) return stored;
+  final admin = data['role'] == Role.admin.name;
+  return [
+    ...stored,
+    if (stored.isEmpty && admin) const AdminIdentity(),
+    if (stored.isEmpty && !admin && _strings(data['groups']).isNotEmpty) const OfficeIdentity(),
+    ...lost,
+  ];
 }
 
 /// The fields an admin edits. uid, email and joinedAt are left alone.
@@ -132,12 +152,18 @@ Json smallGroupToJson(SmallGroupDetails g) => {
 };
 
 /// attendance/{key} and its days (#85).
-AttendancePause? attendancePauseFromJson(Json? data) => switch ((
-  Day.tryParse(data?['pausedFrom'] as String?),
-  Day.tryParse(data?['pausedUntil'] as String?),
-)) {
-  (final from?, final until?) => AttendancePause(from: from, until: until),
-  _ => null,
+List<AttendancePause> attendancePausesFromJson(Json? data) => [
+  if (data?['pauses'] is List)
+    for (final p in data!['pauses'] as List<dynamic>)
+      if (p is Map)
+        if ((Day.tryParse(p['from'] as String?), Day.tryParse(p['until'] as String?)) case (final from?, final until?))
+          AttendancePause(from: from, until: until),
+];
+
+Json attendancePausesToJson(List<AttendancePause> pauses) => {
+  'pauses': [
+    for (final p in pauses) {'from': p.from.key, 'until': p.until.key},
+  ],
 };
 
 AttendanceDay? attendanceDayFromJson(Json data) => data['none'] == true

@@ -9,7 +9,7 @@ import 'providers.dart';
 /// How far back a group's page lists its meetings.
 const attendanceWeeks = 12;
 
-/// Group [key]'s pause and 人數 filled in.
+/// Group [key]'s pauses and 人數 filled in.
 final attendanceProvider = StreamProvider.autoDispose.family<AttendanceRecord, String>(
   (ref, key) => openChurch(ref).attendance(key),
 );
@@ -48,12 +48,24 @@ final attendanceGroupsProvider = Provider.autoDispose<List<AttendanceGroup>>((re
 });
 
 /// The meetings of [group] from [attendanceWeeks] back to today that ask
-/// for their 人數, newest first: none with 回報人數 off.
-List<Day> attendanceDays(AttendanceGroup group, {required Day? since, AttendancePause? pause, required Day today}) {
+/// for their 人數, newest first: none with 回報人數 off. [filled] (days with
+/// 人數) are listed too, though the group no longer meets on them.
+List<Day> attendanceDays(
+  AttendanceGroup group, {
+  required Day? since,
+  List<AttendancePause> pauses = const [],
+  Iterable<Day> filled = const [],
+  required Day today,
+}) {
   if (since == null) return const [];
+  final from = today.addDays(-7 * attendanceWeeks);
+  final kept = {
+    for (final d in filled)
+      if (!d.isBefore(from) && !d.isAfter(today)) d,
+  };
   return [
-    for (var d = today; !d.isBefore(today.addDays(-7 * attendanceWeeks)); d = d.addDays(-1))
-      if (attendanceDue(group.meetsOn(d), since: since, pause: pause, day: d)) d,
+    for (var d = today; !d.isBefore(from); d = d.addDays(-1))
+      if (kept.contains(d) || attendanceDue(group.meetsOn(d), since: since, pauses: pauses, day: d)) d,
   ];
 }
 
@@ -75,7 +87,7 @@ final attendanceDueProvider = Provider.autoDispose<List<AttendanceDue>>((ref) {
     for (final g in ref.watch(attendanceGroupsProvider))
       if (mine.contains(g.key))
         if (ref.watch(attendanceProvider(g.key)).value case final record?)
-          if (attendanceDays(g, since: since, pause: record.pause, today: today).firstOrNull case final day?
+          if (attendanceDays(g, since: since, pauses: record.pauses, today: today).firstOrNull case final day?
               when !record.days.containsKey(day))
             (group: g, day: day),
   ];

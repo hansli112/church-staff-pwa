@@ -17,7 +17,7 @@ import '../rosters/format.dart';
 
 /// 人數 (回報人數, #85) on a group's page: its meetings from
 /// [attendanceWeeks] back, newest first, each with what was filled in or
-/// 未填 (never 0), and its pause. Who fills them in taps one to fill it in
+/// 未填 (never 0), and whether it is paused. Who fills them in taps one to fill it in
 /// or change it (補填). Nothing with 回報人數 off, or for who may not see it.
 class AttendanceSection extends ConsumerWidget {
   const AttendanceSection({super.key, required this.group});
@@ -36,9 +36,9 @@ class AttendanceSection extends ConsumerWidget {
     final record = ref.watch(attendanceProvider(group.key)).value;
     if (record == null) return const SizedBox.shrink();
     final today = ref.watch(todayProvider);
-    final days = attendanceDays(group, since: since, pause: record.pause, today: today);
-    final pause = record.pause;
-    final paused = pause != null && !today.isBefore(pause.from) && today.isBefore(pause.until);
+    final days = attendanceDays(group, since: since, pauses: record.pauses, filled: record.days.keys, today: today);
+    final pause = record.pauseOn(today);
+    final paused = pause != null;
     return ListSection(
       header: l10n.attendanceHeader,
       footer: writes && !paused ? l10n.attendancePauseFooter : null,
@@ -49,14 +49,17 @@ class AttendanceSection extends ConsumerWidget {
             leading: const Icon(Symbols.pause_circle_rounded),
             chevron: false,
             trailing: writes
-                ? RowButton(label: l10n.attendanceResume, onPressed: () => _setPause(context, ref, null))
+                ? RowButton(
+                    label: l10n.attendanceResume,
+                    onPressed: () => _setPauses(context, ref, record.resumed(today)),
+                  )
                 : null,
           )
         else if (writes)
           ListRow(
             title: l10n.attendancePause,
             leading: const Icon(Symbols.pause_circle_rounded),
-            onTap: () => _pause(context, ref, today),
+            onTap: () => _pause(context, ref, record, today),
           ),
         if (days.isEmpty) ListRow(title: l10n.attendanceNoDays, chevron: false),
         for (final day in days)
@@ -78,7 +81,7 @@ class AttendanceSection extends ConsumerWidget {
     );
   }
 
-  Future<void> _pause(BuildContext context, WidgetRef ref, Day today) async {
+  Future<void> _pause(BuildContext context, WidgetRef ref, AttendanceRecord record, Day today) async {
     final picked = await showDatePicker(
       context: context,
       helpText: L10n.of(context).attendancePause,
@@ -87,12 +90,12 @@ class AttendanceSection extends ConsumerWidget {
       initialDate: today.addDays(7).midnight,
     );
     if (picked == null || !context.mounted) return;
-    await _setPause(context, ref, AttendancePause(from: today, until: Day(picked.year, picked.month, picked.day)));
+    await _setPauses(context, ref, record.pausedUntil(today, Day(picked.year, picked.month, picked.day)));
   }
 
-  Future<void> _setPause(BuildContext context, WidgetRef ref, AttendancePause? pause) async {
+  Future<void> _setPauses(BuildContext context, WidgetRef ref, List<AttendancePause> pauses) async {
     try {
-      await ref.churchData.setAttendancePause(group.key, pause);
+      await ref.churchData.setAttendancePauses(group.key, pauses);
     } catch (e) {
       if (context.mounted) showToast(context, saveErrorText(L10n.of(context), e));
     }
@@ -254,16 +257,41 @@ class _MeetsSheet extends StatefulWidget {
 class _MeetsSheetState extends State<_MeetsSheet> {
   late var _every = widget.group.every;
   late int? _weekday = widget.group.weekday;
-  late Day? _next = widget.group.startsOn;
 
-  /// The next day it meets on [weekday], from today.
-  Day _nextOn(int weekday) => widget.today.nextOnOrAfter(weekday);
+  /// The next day it meets, today or later: as it has met so far, or, on a
+  /// day it did not meet on, the first such day.
+  late Day? _next = switch ((widget.group.startsOn, widget.group.weekday)) {
+    (final start?, final w?) when start.weekday == w => _upcoming(start, widget.group.every),
+    _ => null,
+  };
+
+  /// The first of [start], [every] weeks apart, that is today or later.
+  Day _upcoming(Day start, int every) {
+    var d = start;
+    while (d.isBefore(widget.today)) {
+      d = d.addDays(7 * every);
+    }
+    return d;
+  }
+
+  /// The day it starts from, as saved: the one it had, while it still meets
+  /// as it did, so the weeks it met keep asking for their 人數; else [next].
+  Day _startsOn(int weekday, Day next) {
+    final had = widget.group.startsOn;
+    final same =
+        had != null &&
+        had.weekday == weekday &&
+        !had.isAfter(next) &&
+        (_every == 1 || (had.daysUntil(next) ~/ 7).isEven);
+    return same ? had : next;
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final weekday = _weekday;
-    final next = weekday == null ? null : (_next != null && _next!.weekday == weekday ? _next! : _nextOn(weekday));
+    final first = weekday == null ? null : widget.today.nextOnOrAfter(weekday);
+    final next = first == null ? null : (_next != null && _next!.weekday == weekday ? _next! : first);
     return SafeArea(
       child: SingleChildScrollView(
         child: Column(
@@ -279,7 +307,11 @@ class _MeetsSheetState extends State<_MeetsSheet> {
                     label: l10n.save,
                     onPressed: () => Navigator.pop(
                       context,
-                      widget.group.copyWith(weekday: () => weekday, every: _every, startsOn: () => next),
+                      widget.group.copyWith(
+                        weekday: () => weekday,
+                        every: _every,
+                        startsOn: () => weekday == null || next == null ? null : _startsOn(weekday, next),
+                      ),
                     ),
                   ),
                 ],
@@ -304,7 +336,7 @@ class _MeetsSheetState extends State<_MeetsSheet> {
                     selected: weekday == w,
                     onTap: () => setState(() {
                       _weekday = w;
-                      _next = _nextOn(w);
+                      _next = widget.today.nextOnOrAfter(w);
                     }),
                   ),
               ],
@@ -316,8 +348,7 @@ class _MeetsSheetState extends State<_MeetsSheet> {
                     title: l10n.nextMeeting,
                     value: dayLabel(l10n, next, widget.today),
                     // The week after, for one that meets the other week.
-                    onTap: () =>
-                        setState(() => _next = next == _nextOn(next.weekday) ? next.addDays(7) : _nextOn(next.weekday)),
+                    onTap: () => setState(() => _next = next == first ? first!.addDays(7) : first),
                   ),
                 ],
               ),

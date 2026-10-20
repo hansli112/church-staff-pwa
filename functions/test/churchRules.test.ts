@@ -98,6 +98,6 @@ describe('attendanceAccess', () => {
 
 describe('attendanceDue', () => {
   for (const r of rows('attendanceDue')) {
-    test(r.why, () => assert.equal(attendanceDue(r.meets, { since: r.since, pause: r.pause ?? null }, r.day), r.due));
+    test(r.why, () => assert.equal(attendanceDue(r.meets, { since: r.since, pauses: r.pauses ?? [] }, r.day), r.due));
   }
 });

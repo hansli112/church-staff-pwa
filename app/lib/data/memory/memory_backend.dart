@@ -811,6 +811,10 @@ class MemoryChurchData implements ChurchData {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
     if (_b.services[churchId]!.byId(group.service) == null) throw const CloudException(CloudErrorCode.unknown);
+    // A day it meets: on its weekday.
+    if (group.startsOn case final start? when group.weekday == null || start.weekday != group.weekday) {
+      throw const CloudException(CloudErrorCode.unknown);
+    }
     final name = group.name.trim();
     if (name.isEmpty || !withinTextLimit(name, TextLimits.profileName)) {
       throw const CloudException(CloudErrorCode.unknown);
@@ -893,19 +897,19 @@ class MemoryChurchData implements ChurchData {
       final all = _b.attendance.putIfAbsent(churchId, () => {});
       final was = all[key] ?? const AttendanceRecord();
       all[key] = AttendanceRecord(
-        pause: was.pause,
+        pauses: was.pauses,
         days: {...was.days, day: ?value}..removeWhere((d, _) => d == day && value == null),
       );
     });
   }
 
   @override
-  Future<void> setAttendancePause(String key, AttendancePause? pause) async {
+  Future<void> setAttendancePauses(String key, List<AttendancePause> pauses) async {
     _requireAttendanceWriter(key);
-    if (pause != null && !pause.from.isBefore(pause.until)) throw const CloudException(CloudErrorCode.permissionDenied);
+    if (pauses.length > 50) throw const CloudException(CloudErrorCode.permissionDenied);
     await _b.write(() {
       final all = _b.attendance.putIfAbsent(churchId, () => {});
-      all[key] = AttendanceRecord(pause: pause, days: (all[key] ?? const AttendanceRecord()).days);
+      all[key] = AttendanceRecord(pauses: pauses, days: (all[key] ?? const AttendanceRecord()).days);
     });
   }
 

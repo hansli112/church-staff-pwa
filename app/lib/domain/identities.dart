@@ -327,3 +327,8 @@ class SmallGroupDetails {
   @override
   int get hashCode => Object.hash(id, name, service, weekday, every, startsOn);
 }
+
+/// The church's 小組 by ID.
+extension SmallGroupsById on List<SmallGroupDetails> {
+  SmallGroupDetails? byId(String id) => where((g) => g.id == id).firstOrNull;
+}

@@ -38,6 +38,8 @@ const RULES_FIELDS: Record<string, { text?: keyof typeof TEXT_LIMITS; other?: ke
   'roster.title': { text: 'eventTitle' },
   // attendance/{key}/days/{day}.note (#85).
   "request.resource.data.get('note', '')": { text: 'attendanceNote' },
+  // attendance/{key}.pauses: a group's pauses, kept once over (#85).
+  "request.resource.data.get('pauses', [])": { rulesOnly: 50 },
   // Where an event roster's event is, copied from Google: abuse guards only.
   "roster.get('calendarId', '')": { rulesOnly: 1024 },
   "roster.get('recurringEventId', '')": { rulesOnly: 1024 },

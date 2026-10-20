@@ -405,20 +405,16 @@ service cloud.firestore {
         allow read: if isMember(cid);
       }
 
-      // 回報人數 (#85) of group {key}: its pause on the group's doc
-      // (pausedFrom and pausedUntil, both or neither), and each meeting's
+      // 回報人數 (#85) of group {key}: its pauses on the group's doc
+      // (`pauses`, each {from, until}, kept once over), and each meeting's
       // 人數 under days/{dateKey}: a count (0–100000) with an optional note,
       // or none (這次沒聚會). A lead may fill one in later (補填) or change it.
       match /attendance/{key} {
         allow read: if readsAttendance(cid, key);
         allow create, update: if writesAttendance(cid, key)
-          && request.resource.data.keys().hasOnly(['pausedFrom', 'pausedUntil', 'updatedAt'])
-          && ('pausedFrom' in request.resource.data) == ('pausedUntil' in request.resource.data)
-          && (!('pausedFrom' in request.resource.data)
-              || (request.resource.data.pausedFrom is string && request.resource.data.pausedUntil is string
-                  && request.resource.data.pausedFrom.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
-                  && request.resource.data.pausedUntil.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
-                  && request.resource.data.pausedFrom < request.resource.data.pausedUntil));
+          && request.resource.data.keys().hasOnly(['pauses', 'updatedAt'])
+          && request.resource.data.get('pauses', []) is list
+          && request.resource.data.get('pauses', []).size() <= 50;
 
         match /days/{day} {
           allow read: if readsAttendance(cid, key);

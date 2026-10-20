@@ -4987,7 +4987,7 @@ abstract class L10n {
   /// Dialog body before closing a 小組
   ///
   /// In zh, this message translates to:
-  /// **'小組長和同工都會移出這個小組，填過的人數會留著。'**
+  /// **'小組長和同工都會移出這個小組，填過的人數會留著'**
   String get deleteSmallGroupBody;
 
   /// Toast after closing a 小組
@@ -5083,7 +5083,7 @@ abstract class L10n {
   /// Footer under the 人數 section
   ///
   /// In zh, this message translates to:
-  /// **'暫停的期間不提醒，也不會留下「未填」。'**
+  /// **'暫停的期間不提醒，也不會留下「未填」'**
   String get attendancePauseFooter;
 
   /// The 人數 section with no meetings yet

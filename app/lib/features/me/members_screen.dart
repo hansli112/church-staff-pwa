@@ -46,11 +46,12 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
     final ministries = ref.watch(ministriesProvider).value;
     final smallGroups = ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
     final enabled = services?.enabled ?? const <Service>[];
-    // A member's 小組 (#85); a pending one's, the names they had.
+    // A member's 小組 (#85).
     String? memberSmallGroups(Member m) => [
       for (final g in smallGroups)
         if (m.smallGroups.contains(g.id)) g.name,
     ].join(l10n.listSeparator).ifEmpty(null);
+    // A pending member's: the names they had (zones[].smallGroups).
     List<String> smallGroupLabels(List<Zone> zones) => [
       for (final zone in zones)
         if (zone.smallGroups.isNotEmpty)

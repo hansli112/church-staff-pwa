@@ -26,8 +26,7 @@ String identityLabel(
 }
 
 /// The name of 小組 [id] in [smallGroups], or [id] for one no longer there.
-String smallGroupName(List<SmallGroupDetails> smallGroups, String id) =>
-    smallGroups.where((g) => g.id == id).firstOrNull?.name ?? id;
+String smallGroupName(List<SmallGroupDetails> smallGroups, String id) => smallGroups.byId(id)?.name ?? id;
 
 /// What a 身分 lets them do, in one sentence.
 String identityCan(

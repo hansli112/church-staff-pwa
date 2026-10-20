@@ -2,6 +2,7 @@ import { FieldValue, type DocumentSnapshot, type Transaction } from 'firebase-ad
 
 import { churchAccess, churchClosed, isChurchOpen } from './access.js';
 import { fail, record, text, type Caller, type Deps } from './common.js';
+import { weekdayOf } from './attendance.js';
 import { TEXT_LIMITS } from './limits.js';
 
 /**
@@ -10,7 +11,7 @@ import { TEXT_LIMITS } from './limits.js';
  * `every` 1 or 2 weeks, `startsOn` a day it met). settings/smallGroups
  * keeps every ID ever used (`ids`), which the rules check members' fields
  * against. An admin or the service's 負責人 or 牧者 opens, changes and
- * closes one (its 小組長 set only when it meets), and names its 小組長 (a 身分, `{kind: 'lead', smallGroup}`,
+ * closes one and names its 小組長; its 小組長 may set when it meets (a 身分, `{kind: 'lead', smallGroup}`,
  * with `leadSmallGroups` for the rules), which the rules cannot let them
  * write on another member: all of it is done here.
  */
@@ -136,7 +137,9 @@ function smallGroupFields(g: Record<string, unknown>) {
     out.every = g.every;
   }
   if (g.startsOn !== undefined && g.startsOn !== null) {
-    if (typeof g.startsOn !== 'string' || !DAY.test(g.startsOn)) fail('invalid-argument', 'unknown');
+    // A day it meets: on its weekday.
+    if (typeof g.startsOn !== 'string' || !DAY.test(g.startsOn) || out.weekday === undefined
+        || weekdayOf(g.startsOn) !== out.weekday) fail('invalid-argument', 'unknown');
     out.startsOn = g.startsOn;
   }
   return out;

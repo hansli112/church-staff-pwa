@@ -2830,12 +2830,12 @@ class L10nEn extends L10n {
 
   @override
   String identitySmallGroupLeadOf(String group) {
-    return '$group leader';
+    return '$group small group leader';
   }
 
   @override
   String canSmallGroupLead(String group) {
-    return 'Runs $group\'s events, fills in its attendance and adds or removes its members';
+    return 'Runs $group\'s events, fills in its attendance and adds or removes its team members';
   }
 
   @override
@@ -2893,7 +2893,7 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get deleteSmallGroupBody => 'Its leaders and members come out of it. The attendance filled in stays.';
+  String get deleteSmallGroupBody => 'Its leaders and team members come out of it, and the attendance filled in stays';
 
   @override
   String smallGroupDeleted(String name) {
@@ -2955,7 +2955,7 @@ class L10nEn extends L10n {
   String get attendanceResume => 'Resume';
 
   @override
-  String get attendancePauseFooter => 'No reminders while paused, and nothing is left “Not filled in”.';
+  String get attendancePauseFooter => 'No reminders while paused, and nothing is left “Not filled in”';
 
   @override
   String get attendanceNoDays => 'No meetings to fill in yet';

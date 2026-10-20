@@ -222,7 +222,7 @@ abstract interface class ChurchData {
   /// Closes 小組 [id], taking it off its 小組長 and 同工; its 人數 stay.
   Future<void> deleteSmallGroup(String id);
 
-  /// Group [key]'s 回報人數 (#85): its pause and each meeting's 人數 filled
+  /// Group [key]'s 回報人數 (#85): its pauses and each meeting's 人數 filled
   /// in. For those who see them (Member.readsAttendance).
   Stream<AttendanceRecord> attendance(String key);
 
@@ -230,8 +230,8 @@ abstract interface class ChurchData {
   /// null clears it.
   Future<void> setAttendance(String key, Day day, AttendanceDay? value);
 
-  /// Pauses group [key]'s 回報人數, or with null asks again.
-  Future<void> setAttendancePause(String key, AttendancePause? pause);
+  /// Sets group [key]'s pauses (AttendanceRecord.pausedUntil, resumed).
+  Future<void> setAttendancePauses(String key, List<AttendancePause> pauses);
 
   /// Turns 回報人數 on from [since] (admins), or with null off.
   Future<void> setAttendanceSince(Day? since);

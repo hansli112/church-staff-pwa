@@ -64,4 +64,25 @@ void main() {
     expect(cleared, isNot(zone));
     expect(const Zone(serviceType: 'sunday').smallGroups, isEmpty);
   });
+
+  test("a 小組長's 身分 an older app saved without it comes back from leadSmallGroups (#85)", () {
+    final lead = memberFromJson('hao', {
+      'name': '陳志豪',
+      'role': 'staff',
+      'identities': [
+        {'kind': 'lead', 'service': 'sunday'},
+      ],
+      'leadSmallGroups': ['joy'],
+    });
+    expect(lead.identities, const [ServiceLead('sunday'), SmallGroupLead('joy')]);
+    expect(memberToJson(lead)['leadSmallGroups'], ['joy'], reason: 'the next save keeps it');
+    // An admin with none stored stays one.
+    final admin = memberFromJson('pastor', {
+      'name': '王牧師',
+      'role': 'admin',
+      'leadSmallGroups': ['joy'],
+    });
+    expect(admin.identities, const [AdminIdentity(), SmallGroupLead('joy')]);
+    expect(admin.isAdmin, isTrue);
+  });
 }

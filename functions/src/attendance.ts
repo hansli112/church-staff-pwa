@@ -9,9 +9,10 @@ import { dateKeyIn, timeZoneOf, timeZonesAt } from './timeZones.js';
  * church doc, the day it did) asks the leads of each group how many came
  * to its meetings. A group is a service (`service:<id>`) or a 小組
  * (`small:<id>`); its 人數 are churches/{cid}/attendance/{key}/days/{dateKey}
- * (`count` and `note`, or `none` for 這次沒聚會), and a pause
- * (`pausedFrom`, `pausedUntil`) is on attendance/{key} itself. The app
- * writes them; firestore.rules keeps who may, as [mayWriteAttendance].
+ * (`count` and `note`, or `none` for 這次沒聚會), and its pauses
+ * (`pauses`, each `{from, until}`, kept once over so the weeks they
+ * covered never turn 未填) are on attendance/{key} itself. The app writes
+ * them; firestore.rules keeps who may, as [mayWriteAttendance].
  */
 
 /** The hour the leads are asked, on each church's clock. */
@@ -29,10 +30,16 @@ export interface Meets {
   startsOn?: string;
 }
 
-/** The church's 回報人數: on since [since]; the group paused from [pause.from] until (not including) [pause.until]. */
+/** A pause: no meeting asked for from [from] until, not including, [until]. */
+export interface Pause {
+  from: string;
+  until: string;
+}
+
+/** The church's 回報人數: on since [since]; the group's [pauses]. */
 export interface AttendanceState {
   since: string;
-  pause: { from: string; until: string } | null;
+  pauses: Pause[];
 }
 
 const WEEK_MS = 7 * 86_400_000;
@@ -47,13 +54,13 @@ export const weekdayOf = (day: string) => ((new Date(dayMs(day)).getUTCDay() + 6
  */
 export function attendanceDue(meets: Meets, state: AttendanceState, day: string): boolean {
   if (day < state.since) return false;
-  if (state.pause && state.pause.from <= day && day < state.pause.until) return false;
+  if (state.pauses.some((p) => p.from <= day && day < p.until)) return false;
   if (meets.weekday === undefined || weekdayOf(day) !== meets.weekday) return false;
   if ('roster' in meets) return meets.roster === true;
   const every = meets.every === 2 ? 2 : 1;
   if (!meets.startsOn) return every === 1;
   if (day < meets.startsOn) return false;
-  return Math.round((dayMs(day) - dayMs(meets.startsOn)) / WEEK_MS) % every === 0;
+  return Math.floor((dayMs(day) - dayMs(meets.startsOn)) / WEEK_MS) % every === 0;
 }
 
 const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
@@ -86,7 +93,7 @@ export function mayReadAttendance(m: Fields, key: string, smallGroupService: str
   return mayWriteAttendance(m, key, smallGroupService) || (key.startsWith('service:') && strings(m.groups).includes('roster-editors'));
 }
 
-/** A group due today: its key, its name, and when it meets. */
+/** A group that may meet today: its key, its name, and the member field naming who leads it. */
 interface Due {
   key: string;
   name: string;
@@ -118,7 +125,7 @@ export async function sendAttendanceReminders(deps: PushDeps & { now: () => Date
         deps.db.doc(`churches/${cid}/attendance/${g.key}/days/${today}`),
       );
       if (day.exists) continue;
-      if (!attendanceDue(g.meets, { since, pause: pauseOf(state) }, today)) continue;
+      if (!attendanceDue(g.meets, { since, pauses: pausesOf(state) }, today)) continue;
       const leads = await deps.db
         .collection(`churches/${cid}/members`)
         .where(g.leads.field, 'array-contains', g.leads.id)
@@ -133,11 +140,12 @@ export async function sendAttendanceReminders(deps: PushDeps & { now: () => Date
   return sent;
 }
 
-/** A pause as attendance/{key} has it, or none. */
-export function pauseOf(d: DocumentSnapshot | undefined) {
-  const from = d?.get('pausedFrom');
-  const until = d?.get('pausedUntil');
-  return typeof from === 'string' && typeof until === 'string' ? { from, until } : null;
+/** The pauses attendance/{key} has. */
+export function pausesOf(d: DocumentSnapshot | undefined): Pause[] {
+  const list = d?.get('pauses');
+  return (Array.isArray(list) ? list : []).filter(
+    (p): p is Pause => typeof p?.from === 'string' && typeof p?.until === 'string',
+  );
 }
 
 /** The services and 小組 of church [cid] meeting on [today], before pauses and what was filled in. */

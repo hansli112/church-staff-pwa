@@ -78,6 +78,13 @@ describe('小組 (#85)', () => {
       editSmallGroup(deps, caller('pastor'), { churchId: 'C1', op: 'save', group: { name: '平安', service: 'gone' } }),
       'unknown',
     );
+    // It starts on a day it meets.
+    await rejectsWith(
+      editSmallGroup(deps, caller('pastor'), {
+        churchId: 'C1', op: 'save', group: { name: '平安', service: 'sunday', weekday: 5, startsOn: '2026-10-04' },
+      }),
+      'unknown',
+    );
   });
 
   test('its 小組長 sets when it meets, and nothing else', async () => {
@@ -151,7 +158,7 @@ describe('回報人數 reminders (#85)', () => {
     await db.doc('churches/C1/attendance/service:sunday/days/2026-10-18').set({ none: true });
     await sendAttendanceReminders({ db, messaging, now: sundayEvening, appUrl });
     await db.doc('churches/C1/attendance/service:sunday/days/2026-10-18').delete();
-    await db.doc('churches/C1/attendance/service:sunday').set({ pausedFrom: '2026-10-10', pausedUntil: '2026-11-01' });
+    await db.doc('churches/C1/attendance/service:sunday').set({ pauses: [{ from: '2026-10-10', until: '2026-11-01' }] });
     await sendAttendanceReminders({ db, messaging, now: sundayEvening, appUrl });
     assert.equal(sent.length, 0);
   });

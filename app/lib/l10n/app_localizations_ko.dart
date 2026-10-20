@@ -2699,7 +2699,7 @@ class L10nKo extends L10n {
 
   @override
   String identitySmallGroupLeadOf(String group) {
-    return '$group 리더';
+    return '$group 소그룹 리더';
   }
 
   @override
@@ -2762,7 +2762,7 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get deleteSmallGroupBody => '리더와 멤버는 이 소그룹에서 빠져요. 기록한 인원은 남아요.';
+  String get deleteSmallGroupBody => '리더와 멤버는 이 소그룹에서 빠지고, 기록한 인원은 남아요';
 
   @override
   String smallGroupDeleted(String name) {
@@ -2818,7 +2818,7 @@ class L10nKo extends L10n {
   String get attendanceResume => '다시 받기';
 
   @override
-  String get attendancePauseFooter => '쉬는 동안에는 알리지 않고 ‘미입력’도 남지 않아요.';
+  String get attendancePauseFooter => '쉬는 동안에는 알리지 않고 ‘미입력’도 남지 않아요';
 
   @override
   String get attendanceNoDays => '기록할 모임이 아직 없어요';

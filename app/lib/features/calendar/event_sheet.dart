@@ -181,7 +181,7 @@ List<EventGroupChoice> eventGroupChoices(WidgetRef ref, L10n l10n) {
 String? eventGroupName(WidgetRef ref, String group) => switch (ChurchGroup.parse(group)) {
   ServiceGroup(:final id) => ref.watch(servicesProvider).value?.byId(id)?.name,
   MinistryGroup(:final id) => ref.watch(ministriesProvider).value?.byId(id)?.name,
-  SmallGroup(:final id) => ref.watch(smallGroupsProvider).value?.where((g) => g.id == id).firstOrNull?.name,
+  SmallGroup(:final id) => ref.watch(smallGroupsProvider).value?.byId(id)?.name,
   null => null,
 };
 

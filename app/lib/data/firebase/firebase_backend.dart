@@ -704,7 +704,7 @@ class FirestoreChurchData implements ChurchData {
 
   @override
   Stream<AttendanceRecord> attendance(String key) => _latestOfBoth(
-    _col('attendance').doc(key).live().map((s) => attendancePauseFromJson(s.data())),
+    _col('attendance').doc(key).live().map((s) => attendancePausesFromJson(s.data())),
     _col('attendance')
         .doc(key)
         .collection('days')
@@ -715,7 +715,7 @@ class FirestoreChurchData implements ChurchData {
               if ((Day.tryParse(d.id), attendanceDayFromJson(d.data())) case (final day?, final value?)) day: value,
           },
         ),
-    (pause, days) => AttendanceRecord(pause: pause, days: days),
+    (pauses, days) => AttendanceRecord(pauses: pauses, days: days),
   ).translated();
 
   @override
@@ -726,14 +726,9 @@ class FirestoreChurchData implements ChurchData {
   }
 
   @override
-  Future<void> setAttendancePause(String key, AttendancePause? pause) {
+  Future<void> setAttendancePauses(String key, List<AttendancePause> pauses) {
     final ref = _col('attendance').doc(key);
-    return _write(
-      ref,
-      (tx) => tx.set(ref, {
-        if (pause != null) ...{'pausedFrom': pause.from.key, 'pausedUntil': pause.until.key},
-      }),
-    );
+    return _write(ref, (tx) => tx.set(ref, attendancePausesToJson(pauses)));
   }
 
   @override
