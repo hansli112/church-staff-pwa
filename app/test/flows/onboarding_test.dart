@@ -84,6 +84,36 @@ void main() {
     expect(b.churches.values.single.name, '活水堂');
   });
 
+  testWidgets('登入 tapped with the keyboard up closes it, and a wrong password says so above where it was', (
+    tester,
+  ) async {
+    await pumpApp(tester, MemoryBackend(clock: testClock));
+    await tapText(tester, '用 email 登入');
+    final fields = find.byType(TextFormField);
+    await tester.enterText(fields.at(0), 'ming@example.com');
+    await tester.enterText(fields.at(1), 'wrong123');
+    // The phone's keyboard, over the bottom half, as the password is typed.
+    final half = tester.view.physicalSize.height / 2;
+    tester.view.viewInsets = FakeViewPadding(bottom: half);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pump();
+
+    await tester.tap(find.widgetWithText(FilledButton, '登入'));
+    await settle(tester);
+    expect(
+      FocusManager.instance.primaryFocus?.context?.widget,
+      isNot(isA<EditableText>()),
+      reason: 'the keyboard closed',
+    );
+    final error = findShown('email 或密碼不對');
+    expect(error, findsOneWidget);
+    expect(
+      tester.getRect(error).bottom,
+      lessThan(half / tester.view.devicePixelRatio),
+      reason: 'not under the keyboard',
+    );
+  });
+
   testWidgets('a sign-up error goes away once the field is filled', (tester) async {
     await pumpApp(tester, MemoryBackend(clock: testClock));
     await tapText(tester, '用 email 登入');

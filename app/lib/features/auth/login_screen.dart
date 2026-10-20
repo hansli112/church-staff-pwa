@@ -76,6 +76,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _submit() {
+    // As the keyboard's 送出 does: what comes of it is not under the keyboard.
+    FocusScope.of(context).unfocus();
     if (!_form.currentState!.validate()) return;
     _run(
       () => _mode == _Mode.register
@@ -120,7 +122,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 : ListView(
                     shrinkWrap: true,
                     padding: const EdgeInsets.all(Space.l),
-                    children: [_emailForm(l10n), ..._errorText(c)],
+                    children: [_emailForm(l10n, c)],
                   ),
           ),
         ),
@@ -235,7 +237,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     ],
   ];
 
-  Widget _emailForm(L10n l10n) {
+  Widget _emailForm(L10n l10n, AppColors c) {
     final register = _mode == _Mode.register;
     return Form(
       key: _form,
@@ -287,6 +289,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               onFieldSubmitted: (_) => _submit(),
               validator: (v) => register && (v ?? '').length < 6 ? l10n.errWeakPassword : null,
             ),
+            // Under the fields it is about, above the keyboard if it stays up.
+            ..._errorText(c),
             const SizedBox(height: Space.l),
             PrimaryButton(
               label: register ? l10n.register : l10n.signIn,
