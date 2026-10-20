@@ -73,6 +73,13 @@ class WelcomeScreen extends ConsumerWidget {
                   expand: true,
                   onPressed: () => signOut(ref),
                 ),
+                // In no church there is no 設定, where it is otherwise.
+                SecondaryButton(
+                  label: l10n.deleteAccount,
+                  expand: true,
+                  destructive: true,
+                  onPressed: () => context.push('/account'),
+                ),
               ],
             ),
           ),
