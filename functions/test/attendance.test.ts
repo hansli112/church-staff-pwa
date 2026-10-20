@@ -139,6 +139,15 @@ describe('回報人數 reminders (#85)', () => {
     assert.equal(await sendAttendanceReminders({ db, messaging, now: () => new Date('2026-10-18T22:00:00+08:00'), appUrl }), 0);
   });
 
+  test("not its 牧者, who only sees them", async () => {
+    await church();
+    await db.doc('churches/C1/members/mei').update({ leadTypes: ['sunday'], identities: [{ kind: 'pastor', services: ['sunday'] }] });
+    await roster('2026-10-18');
+    const { sent, messaging } = fakePush();
+    await sendAttendanceReminders({ db, messaging, now: sundayEvening, appUrl });
+    assert.deepEqual(sent.map((s) => s.tokens), [['tok-sundayLead']]);
+  });
+
   test('a 小組 on its week is asked of its 小組長; not on the weeks between', async () => {
     await church();
     await joy();

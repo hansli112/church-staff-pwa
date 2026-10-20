@@ -73,14 +73,14 @@ List<Day> attendanceDays(
 /// the latest one, until the next comes (首頁顯示「填寫人數」到下一次聚會為止).
 typedef AttendanceDue = ({AttendanceGroup group, Day day});
 
-/// Every [AttendanceDue] of the groups I lead (services as 負責人 or 牧者,
-/// 小組 as 小組長), for 首頁.
+/// Every [AttendanceDue] of the groups I am reminded of
+/// (Member.remindedAttendance), for 首頁.
 final attendanceDueProvider = Provider.autoDispose<List<AttendanceDue>>((ref) {
   final since = ref.watch(churchProvider.select((c) => c.value?.attendanceSince));
   final me = ref.watch(meProvider).value;
   if (since == null || me == null) return const [];
   final today = ref.watch(todayProvider);
-  final mine = {...me.leadTypes.map((s) => ServiceGroup(s).key), ...me.leadSmallGroups.map((g) => SmallGroup(g).key)};
+  final mine = me.remindedAttendance.toSet();
   // Nobody else reads the weeks of rosters it takes.
   if (mine.isEmpty) return const [];
   return [

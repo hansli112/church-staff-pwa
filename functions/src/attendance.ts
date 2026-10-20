@@ -71,6 +71,7 @@ interface Fields {
   groups?: unknown;
   leadTypes?: unknown;
   leadSmallGroups?: unknown;
+  identities?: unknown;
 }
 
 /**
@@ -93,6 +94,20 @@ export function mayReadAttendance(m: Fields, key: string, smallGroupService: str
   return mayWriteAttendance(m, key, smallGroupService) || (key.startsWith('service:') && strings(m.groups).includes('roster-editors'));
 }
 
+/**
+ * Whether [m] is reminded of the 人數 of group [key]
+ * (testdata/church_rules.json, attendanceReminded): a service's 負責人, by a
+ * `lead` 身分 of it (by `leadTypes` on a member doc from before 身分), not
+ * its 牧者; a 小組's 小組長.
+ */
+export function remindedOfAttendance(m: Fields, key: string) {
+  const [kind, id] = key.split(':');
+  if (kind === 'small') return strings(m.leadSmallGroups).includes(id);
+  if (kind !== 'service') return false;
+  if (!Array.isArray(m.identities) || m.identities.length === 0) return strings(m.leadTypes).includes(id);
+  return m.identities.some((i) => i?.kind === 'lead' && i?.service === id);
+}
+
 /** A group that may meet today: its key, its name, and the member field naming who leads it. */
 interface Due {
   key: string;
@@ -103,7 +118,8 @@ interface Due {
 /**
  * Run every hour on the hour: in the churches with 回報人數 on whose clock
  * says [ATTENDANCE_HOUR], one push to the leads of each group that met
- * today and has no 人數 yet (a service's 負責人 and 牧者; a 小組's 小組長),
+ * today and has no 人數 yet ([remindedOfAttendance]: a service's 負責人,
+ * not its 牧者; a 小組's 小組長),
  * unless they muted 回報人數提醒. Someone having filled it in, or marked
  * 這次沒聚會, asks no one; nobody is asked twice.
  */
@@ -130,7 +146,8 @@ export async function sendAttendanceReminders(deps: PushDeps & { now: () => Date
         .collection(`churches/${cid}/members`)
         .where(g.leads.field, 'array-contains', g.leads.id)
         .get();
-      sent += await notifyMembers(deps, cid, leads.docs.map((m) => m.id), 'attendance', (w) => ({
+      const reminded = leads.docs.filter((m) => remindedOfAttendance(m.data(), g.key));
+      sent += await notifyMembers(deps, cid, reminded.map((m) => m.id), 'attendance', (w) => ({
         title: w.attendanceTitle,
         body: w.attendanceBody(g.name, w.dateWithWeekday(today)),
         link: '/home',

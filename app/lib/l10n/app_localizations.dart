@@ -4870,7 +4870,7 @@ abstract class L10n {
   /// **'這筆已經從 {month} 扣回過了'**
   String onlineRefundAlready(String month);
 
-  /// 身分 #85, in the list to pick from and as the heading of a 小組's leaders
+  /// 身分 #85, in the list to pick from, and the row on a 小組's page naming its one 小組長
   ///
   /// In zh, this message translates to:
   /// **'小組長'**
@@ -4960,17 +4960,23 @@ abstract class L10n {
   /// **'下次聚會'**
   String get nextMeeting;
 
-  /// Footer of a 小組's leaders while it has none
-  ///
-  /// In zh, this message translates to:
-  /// **'還沒有小組長'**
-  String get noSmallGroupLeads;
-
   /// Row and sheet header on a 小組's page
   ///
   /// In zh, this message translates to:
   /// **'指派小組長'**
   String get assignSmallGroupLead;
+
+  /// Value of a 小組's 小組長 row while it has none
+  ///
+  /// In zh, this message translates to:
+  /// **'未指派'**
+  String get smallGroupLeadUnassigned;
+
+  /// First row in the 指派小組長 sheet while it has one: leaves the 小組 with no 小組長
+  ///
+  /// In zh, this message translates to:
+  /// **'取消指派'**
+  String get smallGroupLeadClear;
 
   /// Destructive row and dialog action on a 小組's page
   ///
@@ -5062,17 +5068,23 @@ abstract class L10n {
   /// **'這次沒聚會'**
   String get attendanceNoMeeting;
 
-  /// Row: no reminders until a day picked (summer, New Year)
+  /// Row: the group takes a break (summer, New Year): no reminders until the day it meets again, picked next
   ///
   /// In zh, this message translates to:
-  /// **'暫停到某一天'**
+  /// **'暫停聚會一段時間'**
   String get attendancePause;
 
   /// Row while paused; day is the day reminders come back
   ///
   /// In zh, this message translates to:
-  /// **'暫停到 {day}'**
+  /// **'暫停聚會中，{day}恢復'**
   String attendancePausedUntil(String day);
+
+  /// Date picker title when pausing: the day it meets again
+  ///
+  /// In zh, this message translates to:
+  /// **'哪一天恢復聚會？'**
+  String get attendancePauseUntil;
 
   /// Button ending a pause now
   ///
@@ -5083,7 +5095,7 @@ abstract class L10n {
   /// Footer under the 人數 section
   ///
   /// In zh, this message translates to:
-  /// **'暫停的期間不提醒，也不會留下「未填」'**
+  /// **'暫停聚會的期間不提醒，也不會留下「未填」'**
   String get attendancePauseFooter;
 
   /// The 人數 section with no meetings yet

@@ -2743,10 +2743,13 @@ class L10nZh extends L10n {
   String get nextMeeting => '下次聚會';
 
   @override
-  String get noSmallGroupLeads => '還沒有小組長';
+  String get assignSmallGroupLead => '指派小組長';
 
   @override
-  String get assignSmallGroupLead => '指派小組長';
+  String get smallGroupLeadUnassigned => '未指派';
+
+  @override
+  String get smallGroupLeadClear => '取消指派';
 
   @override
   String get deleteSmallGroup => '關閉小組';
@@ -2802,18 +2805,21 @@ class L10nZh extends L10n {
   String get attendanceNoMeeting => '這次沒聚會';
 
   @override
-  String get attendancePause => '暫停到某一天';
+  String get attendancePause => '暫停聚會一段時間';
 
   @override
   String attendancePausedUntil(String day) {
-    return '暫停到 $day';
+    return '暫停聚會中，$day恢復';
   }
+
+  @override
+  String get attendancePauseUntil => '哪一天恢復聚會？';
 
   @override
   String get attendanceResume => '恢復';
 
   @override
-  String get attendancePauseFooter => '暫停的期間不提醒，也不會留下「未填」';
+  String get attendancePauseFooter => '暫停聚會的期間不提醒，也不會留下「未填」';
 
   @override
   String get attendanceNoDays => '還沒有要填的聚會';
@@ -5567,10 +5573,13 @@ class L10nZhHans extends L10nZh {
   String get nextMeeting => '下次聚会';
 
   @override
-  String get noSmallGroupLeads => '还没有小组长';
+  String get assignSmallGroupLead => '指派小组长';
 
   @override
-  String get assignSmallGroupLead => '指派小组长';
+  String get smallGroupLeadUnassigned => '未指派';
+
+  @override
+  String get smallGroupLeadClear => '取消指派';
 
   @override
   String get deleteSmallGroup => '关闭小组';
@@ -5626,18 +5635,21 @@ class L10nZhHans extends L10nZh {
   String get attendanceNoMeeting => '这次没聚会';
 
   @override
-  String get attendancePause => '暂停到某一天';
+  String get attendancePause => '暂停聚会一段时间';
 
   @override
   String attendancePausedUntil(String day) {
-    return '暂停到 $day';
+    return '暂停聚会中，$day恢复';
   }
+
+  @override
+  String get attendancePauseUntil => '哪一天恢复聚会？';
 
   @override
   String get attendanceResume => '恢复';
 
   @override
-  String get attendancePauseFooter => '暂停期间不提醒，也不会留下“未填”';
+  String get attendancePauseFooter => '暂停聚会期间不提醒，也不会留下“未填”';
 
   @override
   String get attendanceNoDays => '还没有要填的聚会';

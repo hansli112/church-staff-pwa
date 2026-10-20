@@ -2748,10 +2748,13 @@ class L10nKo extends L10n {
   String get nextMeeting => '다음 모임';
 
   @override
-  String get noSmallGroupLeads => '아직 리더가 없어요';
+  String get assignSmallGroupLead => '리더 지정';
 
   @override
-  String get assignSmallGroupLead => '리더 지정';
+  String get smallGroupLeadUnassigned => '없음';
+
+  @override
+  String get smallGroupLeadClear => '지정 취소';
 
   @override
   String get deleteSmallGroup => '소그룹 닫기';
@@ -2807,15 +2810,18 @@ class L10nKo extends L10n {
   String get attendanceNoMeeting => '이번엔 모이지 않았어요';
 
   @override
-  String get attendancePause => '…까지 쉬기';
+  String get attendancePause => '잠시 쉬기';
 
   @override
   String attendancePausedUntil(String day) {
-    return '$day까지 쉬는 중';
+    return '쉬는 중 · $day부터 다시 모여요';
   }
 
   @override
-  String get attendanceResume => '다시 받기';
+  String get attendancePauseUntil => '언제부터 다시 모이나요?';
+
+  @override
+  String get attendanceResume => '다시 모이기';
 
   @override
   String get attendancePauseFooter => '쉬는 동안에는 알리지 않고 ‘미입력’도 남지 않아요';

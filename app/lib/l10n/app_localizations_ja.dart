@@ -2748,10 +2748,13 @@ class L10nJa extends L10n {
   String get nextMeeting => '次の集まり';
 
   @override
-  String get noSmallGroupLeads => 'リーダーはまだいません';
+  String get assignSmallGroupLead => 'リーダーを指名';
 
   @override
-  String get assignSmallGroupLead => 'リーダーを指名';
+  String get smallGroupLeadUnassigned => '未指名';
+
+  @override
+  String get smallGroupLeadClear => '指名を取り消す';
 
   @override
   String get deleteSmallGroup => '小グループを閉じる';
@@ -2807,18 +2810,21 @@ class L10nJa extends L10n {
   String get attendanceNoMeeting => '今回は集まりなし';
 
   @override
-  String get attendancePause => '一時停止';
+  String get attendancePause => 'しばらくお休みする';
 
   @override
   String attendancePausedUntil(String day) {
-    return '$dayまで一時停止中';
+    return 'お休み中・$dayから再開';
   }
+
+  @override
+  String get attendancePauseUntil => 'いつから再開しますか？';
 
   @override
   String get attendanceResume => '再開';
 
   @override
-  String get attendancePauseFooter => '一時停止中はお知らせせず、「未記入」も残りません';
+  String get attendancePauseFooter => 'お休みの間はお知らせせず、「未記入」も残りません';
 
   @override
   String get attendanceNoDays => '記録する集まりはまだありません';

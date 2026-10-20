@@ -191,6 +191,15 @@ void main() {
     }
   });
 
+  group('attendanceReminded', () {
+    for (final r in _rows('attendanceReminded')) {
+      test(r['why'] as String, () {
+        final m = _member('u', r['member'] as Map<String, dynamic>);
+        expect(m.remindedAttendance.contains(r['group']), r['reminded']);
+      });
+    }
+  });
+
   group('attendanceDue', () {
     for (final r in _rows('attendanceDue')) {
       test(r['why'] as String, () {

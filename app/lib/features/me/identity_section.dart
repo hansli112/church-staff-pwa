@@ -110,9 +110,11 @@ class IdentitySection extends ConsumerWidget {
         if (i case MinistryLead(:final ministry)) ministry,
     };
     final smallGroups = ref.read(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
+    // A 小組 has one 小組長: one led, by them or anyone, is not offered.
     final leadsSmallGroup = {
       for (final i in held)
         if (i case SmallGroupLead(:final smallGroup)) smallGroup,
+      for (final m in ref.read(membersProvider).value ?? const <Member>[]) ...m.leadSmallGroups,
     };
     final kind = await _choose<String>(context, l10n.addIdentity, [
       if (!held.contains(const AdminIdentity())) ('admin', l10n.roleAdmin, l10n.canAdmin),

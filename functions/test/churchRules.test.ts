@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, test } from 'node:test';
 
 import { churchAccess } from '../src/access.js';
-import { attendanceDue, mayReadAttendance, mayWriteAttendance } from '../src/attendance.js';
+import { attendanceDue, mayReadAttendance, mayWriteAttendance, remindedOfAttendance } from '../src/attendance.js';
 
 import { mayWriteEvent } from '../src/eventGroups.js';
 import { mayMoveMember } from '../src/groupMembers.js';
@@ -93,6 +93,12 @@ describe('attendanceAccess', () => {
       assert.equal(mayWriteAttendance(r.member, r.group, r.smallGroupService ?? null), r.writes, 'writes');
       assert.equal(mayReadAttendance(r.member, r.group, r.smallGroupService ?? null), r.reads, 'reads');
     });
+  }
+});
+
+describe('attendanceReminded', () => {
+  for (const r of rows('attendanceReminded')) {
+    test(r.why, () => assert.equal(remindedOfAttendance(r.member, r.group), r.reminded));
   }
 });
 

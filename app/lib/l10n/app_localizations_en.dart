@@ -2879,10 +2879,13 @@ class L10nEn extends L10n {
   String get nextMeeting => 'Next meeting';
 
   @override
-  String get noSmallGroupLeads => 'No leader yet';
+  String get assignSmallGroupLead => 'Assign a leader';
 
   @override
-  String get assignSmallGroupLead => 'Assign a leader';
+  String get smallGroupLeadUnassigned => 'None';
+
+  @override
+  String get smallGroupLeadClear => 'Unassign';
 
   @override
   String get deleteSmallGroup => 'Close small group';
@@ -2944,18 +2947,21 @@ class L10nEn extends L10n {
   String get attendanceNoMeeting => 'We didn\'t meet';
 
   @override
-  String get attendancePause => 'Pause until…';
+  String get attendancePause => 'Take a break';
 
   @override
   String attendancePausedUntil(String day) {
-    return 'Paused until $day';
+    return 'On a break, back $day';
   }
+
+  @override
+  String get attendancePauseUntil => 'Back on which day?';
 
   @override
   String get attendanceResume => 'Resume';
 
   @override
-  String get attendancePauseFooter => 'No reminders while paused, and nothing is left “Not filled in”';
+  String get attendancePauseFooter => 'No reminders during a break, and nothing is left “Not filled in”';
 
   @override
   String get attendanceNoDays => 'No meetings to fill in yet';

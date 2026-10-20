@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -219,6 +220,14 @@ class GroupScreen extends ConsumerWidget {
                   chevron: editsSmall,
                   onTap: editsSmall ? () => _renameSmall(context, ref, small) : null,
                 ),
+                ListRow(
+                  title: l10n.identitySmallGroupLead,
+                  value: leaders.isEmpty
+                      ? l10n.smallGroupLeadUnassigned
+                      : leaders.map((m) => m.name).join(l10n.listSeparator),
+                  chevron: editsSmall,
+                  onTap: editsSmall ? () => _assignSmallLead(context, ref, small, members, leaders, name) : null,
+                ),
                 ListRow(title: l10n.smallGroupService, value: services?.byId(small.service)?.name, chevron: false),
                 // When it meets matters only to 回報人數; its 小組長 set it too.
                 if (attendanceOn)
@@ -229,50 +238,22 @@ class GroupScreen extends ConsumerWidget {
                   ),
               ],
             ),
-          ListSection(
-            header: group is SmallGroup ? l10n.identitySmallGroupLead : l10n.leads,
-            footer: leaders.isEmpty ? (group is SmallGroup ? l10n.noSmallGroupLeads : l10n.noLeads) : null,
-            children: [
-              for (final m in leaders)
-                ListRow(
-                  title: m.name,
-                  chevron: false,
-                  trailing: editsSmall
-                      ? RowButton(
-                          label: l10n.removeShort,
-                          semanticsLabel: l10n.removeIdentityLabel(l10n.identitySmallGroupLeadOf(name)),
-                          onPressed: () => _setSmallLeads(
-                            context,
-                            ref,
-                            small,
-                            [
-                              for (final l in leaders)
-                                if (l.uid != m.uid) l.uid,
-                            ],
-                            was: [for (final l in leaders) l.uid],
-                            done: l10n.identityRemoved(l10n.identitySmallGroupLeadOf(name)),
-                          ),
-                        )
-                      : null,
-                ),
-              if (admin && group is! SmallGroup)
-                ListRow(
-                  title: l10n.assignLead,
-                  leading: const Icon(Symbols.add_rounded),
-                  chevron: false,
-                  onTap: () => _assignLead(context, ref, members.where((m) => !isLead(m)).toList(), name),
-                ),
-              if (editsSmall)
-                ListRow(
-                  title: l10n.assignSmallGroupLead,
-                  leading: const Icon(Symbols.add_rounded),
-                  chevron: false,
-                  onTap: () => _assignSmallLead(context, ref, small, members.where((m) => !isLead(m)).toList(), [
-                    for (final l in leaders) l.uid,
-                  ], name),
-                ),
-            ],
-          ),
+          // A 小組 has one 小組長, a row above; a service or a 事工, its 負責人.
+          if (small == null)
+            ListSection(
+              header: l10n.leads,
+              footer: leaders.isEmpty ? l10n.noLeads : null,
+              children: [
+                for (final m in leaders) ListRow(title: m.name, chevron: false),
+                if (admin)
+                  ListRow(
+                    title: l10n.assignLead,
+                    leading: const Icon(Symbols.add_rounded),
+                    chevron: false,
+                    onTap: () => _assignLead(context, ref, members.where((m) => !isLead(m)).toList(), name),
+                  ),
+              ],
+            ),
           // Above the 同工, which may be many.
           if (serviceSmallGroups.isNotEmpty || opensSmall)
             ListSection(
@@ -441,47 +422,62 @@ class GroupScreen extends ConsumerWidget {
     await _saveSmall(context, ref, next);
   }
 
-  /// [small]'s 小組長 now [leads], who were [was].
-  Future<void> _setSmallLeads(
-    BuildContext context,
-    WidgetRef ref,
-    SmallGroupDetails small,
-    List<String> leads, {
-    required List<String> was,
-    required String done,
-  }) => _saveSmall(context, ref, small, leads: leads, was: was, done: done);
-
-  /// 指派小組長: anyone in the church, picked from a list, added to those there are.
+  /// 指派小組長: the one, anyone in the church, picked from a list.
+  /// Picking another takes the place of [leaders] (one, or from before,
+  /// several); 取消指派 leaves none.
   Future<void> _assignSmallLead(
     BuildContext context,
     WidgetRef ref,
     SmallGroupDetails small,
-    List<Member> others,
-    List<String> leads,
+    List<Member> members,
+    List<Member> leaders,
     String name,
   ) async {
     final l10n = L10n.of(context);
-    others.sort((a, b) => a.name.compareTo(b.name));
-    final picked = await showAppSheet<Member>(
+    final everyone = [...members]..sort((a, b) => a.name.compareTo(b.name));
+    final was = [for (final l in leaders) l.uid];
+    // A uid, or '' for none.
+    final picked = await showAppSheet<String>(
       context,
-      expand: others.length > 8,
+      expand: everyone.length > 8,
       builder: (context) => SafeArea(
         child: SingleChildScrollView(
-          child: ListSection(
-            header: l10n.assignSmallGroupLead,
-            children: [for (final m in others) ListRow(title: m.name, onTap: () => Navigator.pop(context, m))],
+          child: Column(
+            children: [
+              // Above the list, which may be long.
+              if (was.isNotEmpty)
+                ListSection(
+                  children: [
+                    ListRow(
+                      title: l10n.smallGroupLeadClear,
+                      destructive: true,
+                      onTap: () => Navigator.pop(context, ''),
+                    ),
+                  ],
+                ),
+              ListSection(
+                header: l10n.assignSmallGroupLead,
+                children: [
+                  for (final m in everyone)
+                    ListRow(title: m.name, selected: was.contains(m.uid), onTap: () => Navigator.pop(context, m.uid)),
+                ],
+              ),
+            ],
           ),
         ),
       ),
     );
     if (picked == null || !context.mounted) return;
-    await _setSmallLeads(
+    final leads = [if (picked.isNotEmpty) picked];
+    if (listEquals(leads, was)) return;
+    final identity = l10n.identitySmallGroupLeadOf(name);
+    await _saveSmall(
       context,
       ref,
       small,
-      [...leads, picked.uid],
-      was: leads,
-      done: l10n.identityAdded(l10n.identitySmallGroupLeadOf(name)),
+      leads: leads,
+      was: was,
+      done: picked.isEmpty ? l10n.identityRemoved(identity) : l10n.identityAdded(identity),
     );
   }
 

@@ -357,6 +357,20 @@ class Member {
       writesAttendance(key, smallGroupService: smallGroupService) ||
       (ChurchGroup.parse(key) is ServiceGroup && inGroup(Group.rosterEditors));
 
+  /// The group keys whose 人數 this member is reminded of, at 21:00 and on
+  /// 首頁 (testdata/church_rules.json, attendanceReminded): a service's as
+  /// its 負責人, not its 牧者, who only sees them; a 小組's as its 小組長.
+  List<String> get remindedAttendance => [
+    ...{
+      for (final i in identities)
+        ...switch (i) {
+          ServiceLead(:final service) => [ServiceGroup(service).key],
+          SmallGroupLead(:final smallGroup) => [SmallGroup(smallGroup).key],
+          _ => const <String>[],
+        },
+    },
+  ];
+
   /// [leadsGroup] by an event's group key; the church's ('') nobody leads.
   bool _leadsKey(String key) => switch (ChurchGroup.parse(key)) {
     final g? => leadsGroup(g),
