@@ -67,8 +67,7 @@ class ChurchWrites {
   /// only some duties of those days (#82), through the backend, which
   /// checks that only those changed.
   Future<void> _sendRosters(ChurchData data, RosterChange change) {
-    final me = _ref.read(meProvider).value;
-    bool whole(Roster r) => r.isEvent ? (me?.canEditEventRosters ?? false) : (me?.canEditRosters(r.type) ?? false);
+    bool whole(Roster r) => _ref.read(arrangesProvider(r.isEvent ? null : r.type)) == null;
     final days = [...change.before.values, ...change.after.values].whereType<Roster>();
     final scoped = change.staffOrder == null && change.serviceChange == null && !days.every(whole);
     return scoped ? data.compareAndSetLedDuties(change) : data.compareAndSetRosters(change);
@@ -100,15 +99,22 @@ class ChurchWrites {
   );
 
   /// 加為同工 ([member] true) or 移出 [group], by its 負責人 or an admin; undo
-  /// does the opposite, a service's 同工 coming back with the duties they had.
+  /// does the opposite, a service's 同工 coming back with the duties and
+  /// 小組 they had there.
   ChurchWrite groupMember(Member who, ChurchGroup group, {required bool member, List<String> duties = const []}) {
     final had = switch (group) {
-      ServiceGroup(:final id) => who.zones.where((z) => z.serviceType == id).firstOrNull?.duties ?? duties,
-      MinistryGroup() => const <String>[],
+      ServiceGroup(:final id) => who.zones.where((z) => z.serviceType == id).firstOrNull,
+      MinistryGroup() => null,
     };
     return _reversible(
       (data) => data.setGroupMember(who.uid, group, member: member, duties: duties),
-      (data) => data.setGroupMember(who.uid, group, member: !member, duties: had),
+      (data) => data.setGroupMember(
+        who.uid,
+        group,
+        member: !member,
+        duties: had?.duties ?? duties,
+        smallGroups: had?.smallGroups ?? const [],
+      ),
     );
   }
 

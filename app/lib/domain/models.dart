@@ -165,18 +165,17 @@ class Member {
   final ReminderTiming reminderTiming;
   final DateTime? joinedAt;
 
-  /// 管理員, or a whole church's 牧者: role admin as stored, which the rules
-  /// read, or as their 身分 say.
-  bool get isAdmin =>
-      role == Role.admin || _identities.any((i) => i is AdminIdentity || (i is PastorIdentity && i.wholeChurch));
+  /// 管理員, or a whole church's 牧者: role admin, as the rules read it.
+  bool get isAdmin => role == Role.admin;
 
   /// Their 身分 (#82). A member doc from before them has none stored: an
-  /// admin is then 管理員, and roster-editors 行政, as the rules read it.
+  /// admin is then 管理員, and the old permission groups 行政
+  /// (scripts/migrate-leads.ts moves them for good).
   List<Identity> get identities => _identities.isNotEmpty
       ? _identities
       : [
           if (isAdmin) const AdminIdentity(),
-          if (!isAdmin && groups.contains(Group.rosterEditors)) const OfficeIdentity(),
+          if (!isAdmin && groups.isNotEmpty) const OfficeIdentity(),
         ];
 
   /// The services they lead, as 負責人 or 牧者; stored as `leadTypes` for
@@ -225,8 +224,8 @@ class Member {
     );
   }
 
-  /// In [group]: admins hold every one, 行政 both.
-  bool inGroup(Group group) => isAdmin || groups.contains(group) || _identities.contains(const OfficeIdentity());
+  /// In [group]: admins hold every one, 行政 both (as the rules read them).
+  bool inGroup(Group group) => isAdmin || groups.contains(group);
 
   /// The service types this member holds a zone in, in zone order. Stored
   /// as `zoneTypes` because the security rules cannot look inside [zones].
@@ -295,18 +294,46 @@ class Member {
     MinistryGroup(:final id) => ministries.contains(id),
   };
 
-  /// This member added to [group] ([member] true; a service with [duties])
-  /// or taken out, as setGroupMember writes it.
-  Member inGroupAs(ChurchGroup group, {required bool member, List<String> duties = const []}) => switch (group) {
+  /// Whether this member leads [group]: a service as its 負責人 or 牧者, or a
+  /// 事工.
+  bool leadsGroup(ChurchGroup group) => switch (group) {
+    ServiceGroup(:final id) => leadTypes.contains(id),
+    MinistryGroup(:final id) => leadMinistries.contains(id),
+  };
+
+  /// Whether this member may add [target] to [group] or take them out
+  /// (testdata/church_rules.json, groupMembership): an admin anyone; the
+  /// group's 負責人 only a plain 同工, since 身分 are the admin's to give.
+  bool mayMove(Member target, ChurchGroup group) =>
+      isAdmin || (leadsGroup(group) && !target.isAdmin && target.groups.isEmpty && target._identities.isEmpty);
+
+  /// This member added to [group] ([member] true; a service with [duties]
+  /// and [smallGroups]) or taken out, as setGroupMember writes it.
+  Member inGroupAs(
+    ChurchGroup group, {
+    required bool member,
+    List<String> duties = const [],
+    List<String> smallGroups = const [],
+  }) => switch (group) {
     ServiceGroup(:final id) => copyWith(
       zones: [
         for (final z in zones)
           if (z.serviceType != id) z,
-        if (member) zones.where((z) => z.serviceType == id).firstOrNull ?? Zone(serviceType: id, duties: duties),
+        if (member)
+          zones.where((z) => z.serviceType == id).firstOrNull ??
+              Zone(serviceType: id, duties: duties, smallGroups: smallGroups),
       ],
     ),
     MinistryGroup(:final id) => copyWith(ministries: member ? {...ministries, id} : ({...ministries}..remove(id))),
   };
+
+  /// What this member arranges on a day of [serviceType] (null: an
+  /// event's): null for all of it; otherwise only these duties, those the
+  /// 事工 in [ministries] they lead link (none: nothing).
+  Set<String>? arranges(List<Ministry> ministries, String? serviceType) =>
+      (serviceType == null ? canEditEventRosters : canEditRosters(serviceType))
+      ? null
+      : ledDuties(ministries, serviceType);
 
   /// Whether this member sees the church's member list: admins, 行政 and
   /// whoever leads something.
@@ -686,10 +713,17 @@ class Roster {
   );
 }
 
-/// Whether [after] is [before] with only the duties named in [roles]
-/// changed, added or taken off: what a 事工's 負責人 may do to a day
-/// (functions/src/ledDuties.ts).
-bool changesOnlyDuties(Roster before, Roster after, Set<String> roles) {
+/// Whether a 事工's 負責人 who leads [roles] on a day may change it from
+/// [before] to [after] (testdata/church_rules.json, ledDuties, as
+/// functions/src/ledDuties.ts): only those duties change; a day not made
+/// yet may be made with people only on them; never deleted.
+bool mayChangeLedDuties(Set<String> roles, Roster? before, Roster? after) {
+  if (roles.isEmpty || after == null) return false;
+  if (before == null) {
+    return after.duties.any((d) => roles.contains(d.role)) &&
+        after.duties.every((d) => roles.contains(d.role) || d.people.isEmpty) &&
+        after.events.isEmpty;
+  }
   List<Duty> others(Roster r) => [
     for (final d in r.duties)
       if (!roles.contains(d.role)) d,

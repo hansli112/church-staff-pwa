@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -78,5 +80,45 @@ void main() {
     await pumpApp(tester, b);
     await tapText(tester, '服事表');
     expect(find.text('你還沒有屬於任何牧區，請找管理員設定'), findsNothing);
+  });
+
+  testWidgets('imports only the duties it leads, merged into the day', (tester) async {
+    final b = withWorship();
+    b.users['mei'] = b.users['mei']!.copyWith(photoAiConsent: true);
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/import/sunday');
+    await tapText(tester, '進階');
+    await tester.ensureVisible(findShown('貼上 JSON').last);
+    await tester.pump();
+    await tapText(tester, '貼上 JSON');
+    await tester.enterText(
+      find.byType(TextField),
+      jsonEncode([
+        {
+          'date': '2026-10-11',
+          'duties': [
+            {
+              'role': '司會',
+              'people': ['陳志豪'],
+            },
+            {
+              'role': '司琴',
+              'people': ['陳志豪'],
+            },
+          ],
+          'events': [
+            {'name': '聖餐', 'color': 0},
+          ],
+        },
+      ]),
+    );
+    await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
+    await tapText(tester, '預覽');
+    expect(find.text('取代當天全部安排'), findsNothing);
+    await tester.scrollUntilVisible(find.text('套用到服事表'), 300);
+    await tapText(tester, '套用到服事表');
+    expect(peopleOn(b, 11, '司琴'), ['陳志豪']);
+    expect(peopleOn(b, 11, '司會'), ['王牧師'], reason: 'not 敬拜團’s');
+    expect(savedDay(b, 11).events, isEmpty);
   });
 }

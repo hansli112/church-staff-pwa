@@ -28,7 +28,12 @@ const editor = Member(
 
 /// 行政 (#82): arranges every roster and edits the calendar. Not in
 /// [seededChurch] unless passed in `extra`.
-const office = Member(uid: 'office', name: '張行政', identities: [OfficeIdentity()]);
+const office = Member(
+  uid: 'office',
+  name: '張行政',
+  identities: [OfficeIdentity()],
+  groups: {Group.rosterEditors, Group.calendarEditors},
+);
 
 const staffMei = Member(
   uid: 'mei',

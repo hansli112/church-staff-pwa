@@ -146,19 +146,17 @@ class GroupScreen extends ConsumerWidget {
       MinistryGroup() => ministry?.name,
     };
     final admin = me?.isAdmin ?? false;
-    final leads = switch (group) {
-      ServiceGroup(:final id) => me?.leadTypes.contains(id) ?? false,
-      MinistryGroup(:final id) => me?.leadMinistries.contains(id) ?? false,
-    };
-    if (name == null || members == null || !(admin || leads)) return Scaffold(appBar: AppBar());
-    bool isLead(Member m) => switch (group) {
-      ServiceGroup(:final id) => m.leadTypes.contains(id),
-      MinistryGroup(:final id) => m.leadMinistries.contains(id),
-    };
+    if (me == null || name == null || members == null || !(admin || me.leadsGroup(group))) {
+      return Scaffold(appBar: AppBar());
+    }
+    bool isLead(Member m) => m.leadsGroup(group);
     final leaders = [...members.where(isLead)]..sort((a, b) => a.name.compareTo(b.name));
+    final addable = [
+      for (final m in members)
+        if (!m.isIn(group) && me.mayMove(m, group)) m,
+    ]..sort((a, b) => a.name.compareTo(b.name));
     final staff = [...members.where((m) => m.isIn(group))]..sort((a, b) => a.name.compareTo(b.name));
     final candidates = groupCandidates(group, ref.watch(_allRostersProvider).value ?? const [], members, ministry);
-    final c = AppColors.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(name)),
       body: ListView(
@@ -207,7 +205,25 @@ class GroupScreen extends ConsumerWidget {
                     MinistryGroup() => null,
                   },
                   chevron: false,
-                  onTap: () => _takeOut(context, ref, m, name),
+                  // Taken out at once, with 復原; only who this lead may move.
+                  trailing: me.mayMove(m, group)
+                      ? RowButton(
+                          label: l10n.moveOutShort,
+                          semanticsLabel: l10n.removeFromGroupLabel(m.name, name),
+                          onPressed: () => runWithUndo(
+                            context,
+                            l10n.removedFromGroup(m.name, name),
+                            () => ref.read(churchWritesProvider).groupMember(m, group, member: false),
+                          ),
+                        )
+                      : null,
+                ),
+              if (addable.isNotEmpty)
+                ListRow(
+                  title: l10n.addGroupStaff,
+                  leading: const Icon(Symbols.add_rounded),
+                  chevron: false,
+                  onTap: () => _add(context, ref, addable, name),
                 ),
             ],
           ),
@@ -221,19 +237,15 @@ class GroupScreen extends ConsumerWidget {
                     subtitle: [
                       for (final e in cand.served.entries) l10n.groupCandidateServed(e.key, e.value),
                     ].join(l10n.listSeparator),
-                    trailing: TextButton(
+                    trailing: RowButton(
+                      label: l10n.addAsStaff,
+                      semanticsLabel: l10n.addAsStaffLabel(cand.member.name, name),
                       onPressed: () => runWithUndo(
                         context,
                         l10n.addedToGroup(cand.member.name, name),
                         () => ref
                             .read(churchWritesProvider)
                             .groupMember(cand.member, group, member: true, duties: cand.served.keys.toList()),
-                      ),
-                      // Read out whole: who, and to which group.
-                      child: Semantics(
-                        label: l10n.addAsStaffLabel(cand.member.name, name),
-                        excludeSemantics: true,
-                        child: Text(l10n.addAsStaff, style: AppText.body.copyWith(color: c.accent)),
                       ),
                     ),
                   ),
@@ -255,24 +267,26 @@ class GroupScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _takeOut(BuildContext context, WidgetRef ref, Member m, String name) async {
+  /// 加入同工: anyone in the church this lead may add, picked from a list.
+  Future<void> _add(BuildContext context, WidgetRef ref, List<Member> addable, String name) async {
     final l10n = L10n.of(context);
-    final go = await showAppSheet<bool>(
+    final picked = await showAppSheet<Member>(
       context,
+      expand: addable.length > 8,
       builder: (context) => SafeArea(
-        child: ListSection(
-          header: m.name,
-          children: [
-            ListRow(title: l10n.removeFromGroup(name), destructive: true, onTap: () => Navigator.pop(context, true)),
-          ],
+        child: SingleChildScrollView(
+          child: ListSection(
+            header: l10n.addGroupStaff,
+            children: [for (final m in addable) ListRow(title: m.name, onTap: () => Navigator.pop(context, m))],
+          ),
         ),
       ),
     );
-    if (go != true || !context.mounted) return;
+    if (picked == null || !context.mounted) return;
     await runWithUndo(
       context,
-      l10n.removedFromGroup(m.name, name),
-      () => ref.read(churchWritesProvider).groupMember(m, group, member: false),
+      l10n.addedToGroup(picked.name, name),
+      () => ref.read(churchWritesProvider).groupMember(picked, group, member: true),
     );
   }
 

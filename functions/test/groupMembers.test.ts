@@ -81,3 +81,21 @@ test('only people already in the church, and only duties the service has', async
     'permissionDenied',
   );
 });
+
+test('a lead moves only plain 同工; a 事工 deleted takes no one; a service keeps its 小組 when one comes back', async () => {
+  await church();
+  await rejectsWith(
+    setGroupMember(deps, caller('sundayLead'), { churchId: 'C1', uid: 'worshipLead', service: 'sunday', member: true }),
+    'permissionDenied',
+  );
+  await db.doc('churches/C1/settings/ministries').set({ ministries: [], ids: ['worship'] });
+  await rejectsWith(
+    setGroupMember(deps, caller('admin'), { churchId: 'C1', uid: 'mei', ministry: 'worship', member: true }),
+    'permissionDenied',
+  );
+  await setGroupMember(deps, caller('admin'), { churchId: 'C1', uid: 'mei', service: 'youth', member: false });
+  await setGroupMember(deps, caller('admin'), {
+    churchId: 'C1', uid: 'mei', service: 'youth', member: true, duties: ['敬拜'], smallGroups: ['喜樂'],
+  });
+  assert.deepEqual((await mei()).get('zones'), [{ serviceType: 'youth', duties: ['敬拜'], smallGroups: ['喜樂'] }]);
+});

@@ -1,7 +1,7 @@
 import { isDeepStrictEqual } from 'node:util';
 
 import { churchAccess, churchClosed, isChurchOpen } from './access.js';
-import { fail, id, serverTime, type Caller, type Deps } from './common.js';
+import { fail, id, record, serverTime, type Caller, type Deps } from './common.js';
 import { LIMITS } from './limits.js';
 
 interface Service {
@@ -14,11 +14,6 @@ interface Service {
 }
 
 interface DutyRename { from: string; to: string }
-
-function record(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) fail('invalid-argument', 'unknown');
-  return value as Record<string, unknown>;
-}
 
 function exactKeys(value: Record<string, unknown>, keys: string[]) {
   if (Object.keys(value).length !== keys.length || keys.some((k) => !Object.hasOwn(value, k))) fail('invalid-argument', 'unknown');

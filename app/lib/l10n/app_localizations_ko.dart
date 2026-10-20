@@ -666,16 +666,13 @@ class L10nKo extends L10n {
 
   @override
   String identityRemoved(String identity) {
-    return '‘$identity’ 삭제함';
+    return '‘$identity’ 뺐어요';
   }
 
   @override
   String identityAdded(String identity) {
     return '‘$identity’ 추가함';
   }
-
-  @override
-  String get removeIdentity => '이 역할 삭제';
 
   @override
   String get wholeChurch => '교회 전체';
@@ -771,6 +768,25 @@ class L10nKo extends L10n {
 
   @override
   String get myGroups => '내가 맡은 것';
+
+  @override
+  String get removeShort => '빼기';
+
+  @override
+  String removeIdentityLabel(String identity) {
+    return '‘$identity’ 빼기';
+  }
+
+  @override
+  String get moveOutShort => '빼기';
+
+  @override
+  String removeFromGroupLabel(String name, String group) {
+    return '$name을(를) $group에서 빼기';
+  }
+
+  @override
+  String get addGroupStaff => '멤버 추가';
 
   @override
   String get zones => '소속 예배와 담당';

@@ -1,5 +1,5 @@
 {
-  "about": "Church data rules both the app (app/lib, its memory backend standing in for the Cloud Functions) and functions/src must follow; app/test/domain/church_rules_test.dart and functions/test/churchRules.test.ts run every row. Add a row here, not to one side. rosterEditing: a member (role, groups, the 牧區 they hold, the services and 事工 they lead) editing a roster of a church whose services are sunday and youth, a service's (`roster` is its id) or an event's (`event`). firestore.rules keeps it too (firestore-tests/rules.test.js runs it); functions/src gates only services' rosters, so runs only those rows.",
+  "about": "Church data rules both the app (app/lib, its memory backend standing in for the Cloud Functions) and functions/src must follow; app/test/domain/church_rules_test.dart and functions/test/churchRules.test.ts run every row. Add a row here, not to one side. groupMembership: who may add or take out whom as a 同工 of a group (setGroupMember); caller and target are member fields. ledDuties: what a 事工's 負責人 who leads `roles` on a day may change on it (functions/src/ledDuties.ts, the memory backend); before or after null is a day not made yet or deleted. rosterEditing: a member (role, groups, the 牧區 they hold, the services and 事工 they lead) editing a roster of a church whose services are sunday and youth, a service's (`roster` is its id) or an event's (`event`). firestore.rules keeps it too (firestore-tests/rules.test.js runs it); functions/src gates only services' rosters, so runs only those rows.",
   "defaultServices": {
     "zh-Hant": [
       {
@@ -169,5 +169,28 @@
     { "why": "nor arranges events' rosters", "role": "staff", "groups": [], "zoneTypes": ["sunday"], "leadTypes": [], "leadMinistries": [], "roster": "event", "may": false },
     { "why": "calendar-editors alone edit the calendar, not rosters", "role": "staff", "groups": ["calendar-editors"], "zoneTypes": ["sunday"], "leadTypes": [], "leadMinistries": [], "roster": "event", "may": false },
     { "why": "an old 小組長 (role leader) edits nothing", "role": "leader", "groups": [], "zoneTypes": ["sunday"], "leadTypes": [], "leadMinistries": [], "roster": "sunday", "may": false }
+  ],
+  "ledDuties": [
+    { "why": "a 事工's 負責人 changes the duty it leads", "roles": ["司琴"], "before": [{"role": "司會", "people": ["老王"], "uids": {}}, {"role": "司琴", "people": [], "uids": {}}], "after": [{"role": "司會", "people": ["老王"], "uids": {}}, {"role": "司琴", "people": ["美玉"], "uids": {}}], "beforeEvents": [], "afterEvents": [], "may": true },
+    { "why": "but not another one", "roles": ["司琴"], "before": [{"role": "司會", "people": ["老王"], "uids": {}}, {"role": "司琴", "people": [], "uids": {}}], "after": [{"role": "司會", "people": ["美玉"], "uids": {}}, {"role": "司琴", "people": [], "uids": {}}], "beforeEvents": [], "afterEvents": [], "may": false },
+    { "why": "adds the duty it leads to a day", "roles": ["司琴"], "before": [{"role": "司會", "people": [], "uids": {}}], "after": [{"role": "司會", "people": [], "uids": {}}, {"role": "司琴", "people": ["美玉"], "uids": {}}], "beforeEvents": [], "afterEvents": [], "may": true },
+    { "why": "takes it off again", "roles": ["司琴"], "before": [{"role": "司會", "people": [], "uids": {}}, {"role": "司琴", "people": ["美玉"], "uids": {}}], "after": [{"role": "司會", "people": [], "uids": {}}], "beforeEvents": [], "afterEvents": [], "may": true },
+    { "why": "nor tags the day", "roles": ["司琴"], "before": [{"role": "司琴", "people": [], "uids": {}}], "after": [{"role": "司琴", "people": [], "uids": {}}], "beforeEvents": [], "afterEvents": [{"name": "聖餐", "color": 0}], "may": false },
+    { "why": "leading nothing on the day, changes nothing", "roles": [], "before": [{"role": "司琴", "people": [], "uids": {}}], "after": [{"role": "司琴", "people": ["美玉"], "uids": {}}], "beforeEvents": [], "afterEvents": [], "may": false },
+    { "why": "a day not made yet: from the template, people only on the duties it leads", "roles": ["司琴"], "before": null, "after": [{"role": "司會", "people": [], "uids": {}}, {"role": "司琴", "people": ["美玉"], "uids": {}}], "beforeEvents": null, "afterEvents": [], "may": true },
+    { "why": "not with people on another duty", "roles": ["司琴"], "before": null, "after": [{"role": "司會", "people": ["美玉"], "uids": {}}, {"role": "司琴", "people": [], "uids": {}}], "beforeEvents": null, "afterEvents": [], "may": false },
+    { "why": "nor a day with none of the duties it leads", "roles": ["司琴"], "before": null, "after": [{"role": "司會", "people": [], "uids": {}}], "beforeEvents": null, "afterEvents": [], "may": false },
+    { "why": "leading nothing, makes no day, not even an empty one", "roles": [], "before": null, "after": [], "beforeEvents": null, "afterEvents": [], "may": false },
+    { "why": "never deletes a day", "roles": ["司琴"], "before": [{"role": "司琴", "people": [], "uids": {}}], "after": null, "beforeEvents": [], "afterEvents": null, "may": false }
+  ],
+  "groupMembership": [
+    { "why": "a service's 負責人 adds or takes out a 同工 of it", "caller": {"leadTypes": ["sunday"]}, "target": {}, "group": {"service": "sunday"}, "may": true },
+    { "why": "not of another service", "caller": {"leadTypes": ["sunday"]}, "target": {}, "group": {"service": "youth"}, "may": false },
+    { "why": "a 事工's 負責人, of their 事工", "caller": {"leadMinistries": ["worship"]}, "target": {}, "group": {"ministry": "worship"}, "may": true },
+    { "why": "but not someone who holds a 身分: that is the admin's", "caller": {"leadTypes": ["sunday"]}, "target": {"identities": [{"kind": "lead", "ministry": "worship"}]}, "group": {"service": "sunday"}, "may": false },
+    { "why": "nor an admin", "caller": {"leadTypes": ["sunday"]}, "target": {"role": "admin"}, "group": {"service": "sunday"}, "may": false },
+    { "why": "nor 行政", "caller": {"leadTypes": ["sunday"]}, "target": {"groups": ["roster-editors", "calendar-editors"]}, "group": {"service": "sunday"}, "may": false },
+    { "why": "an admin moves anyone, in any group", "caller": {"role": "admin"}, "target": {"identities": [{"kind": "office"}], "groups": ["roster-editors", "calendar-editors"]}, "group": {"ministry": "worship"}, "may": true },
+    { "why": "a member who leads nothing moves no one", "caller": {}, "target": {}, "group": {"service": "sunday"}, "may": false }
   ]
 }

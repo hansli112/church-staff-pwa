@@ -674,9 +674,6 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get removeIdentity => '移除這個身分';
-
-  @override
   String get wholeChurch => '全教會';
 
   @override
@@ -770,6 +767,25 @@ class L10nZh extends L10n {
 
   @override
   String get myGroups => '我負責的';
+
+  @override
+  String get removeShort => '移除';
+
+  @override
+  String removeIdentityLabel(String identity) {
+    return '移除「$identity」';
+  }
+
+  @override
+  String get moveOutShort => '移出';
+
+  @override
+  String removeFromGroupLabel(String name, String group) {
+    return '把$name移出$group';
+  }
+
+  @override
+  String get addGroupStaff => '加入同工';
 
   @override
   String get zones => '牧區與服事';
@@ -3333,9 +3349,6 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get removeIdentity => '移除这个身份';
-
-  @override
   String get wholeChurch => '全教会';
 
   @override
@@ -3429,6 +3442,25 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get myGroups => '我负责的';
+
+  @override
+  String get removeShort => '移除';
+
+  @override
+  String removeIdentityLabel(String identity) {
+    return '移除“$identity”';
+  }
+
+  @override
+  String get moveOutShort => '移出';
+
+  @override
+  String removeFromGroupLabel(String name, String group) {
+    return '把$name移出$group';
+  }
+
+  @override
+  String get addGroupStaff => '加入同工';
 
   @override
   String get zones => '所属聚会与事奉';

@@ -2,7 +2,8 @@ import { FieldValue, type DocumentSnapshot } from 'firebase-admin/firestore';
 import { isDeepStrictEqual } from 'node:util';
 
 import { churchAccess, churchClosed, isChurchOpen } from './access.js';
-import { fail, type Caller, type Deps } from './common.js';
+import { fail, record, type Caller, type Deps } from './common.js';
+import { ledDuties, ministriesOf } from './ministries.js';
 
 /**
  * A 事工's 負責人 (#82) arranging the duties it leads: 敬拜團's leader puts
@@ -24,7 +25,7 @@ interface Duty {
 
 type Roster = Record<string, unknown> & { duties: Duty[] };
 
-/** What makes a day what it is; the rest (updatedAt, via, movedBy) is bookkeeping. At most a write's worth of days (RosterChange.maxWrites). */
+/** What makes a day what it is; the rest (updatedAt, via, movedBy) is bookkeeping. */
 const CONTENT = ['type', 'kind', 'eventId', 'title', 'dateKey', 'endDateKey', 'calendarId', 'recurringEventId', 'originalStart', 'duties', 'events'];
 
 /**
@@ -49,11 +50,6 @@ function content(data: Record<string, unknown> | undefined) {
   return out;
 }
 
-function record(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) fail('invalid-argument', 'unknown');
-  return value as Record<string, unknown>;
-}
-
 function duty(value: unknown): Duty {
   const d = record(value);
   const people = d.people;
@@ -68,18 +64,6 @@ function roster(value: unknown): Roster | null {
   const r = record(value);
   if (!Array.isArray(r.duties)) fail('invalid-argument', 'unknown');
   return { ...r, duties: r.duties.map(duty) };
-}
-
-/** The duties [lead] leads on [day]: a service's by service, an event's (in no service) by name. */
-function ledRoles(ministries: { id: string; duties: { service: string; duty: string }[] }[], led: string[], day: Roster) {
-  const type = day.kind === 'event' ? null : day.type;
-  return new Set(
-    ministries
-      .filter((m) => led.includes(m.id))
-      .flatMap((m) => m.duties)
-      .filter((d) => type === null || d.service === type)
-      .map((d) => d.duty),
-  );
 }
 
 const DAY = /^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/;
@@ -107,8 +91,19 @@ function newDay(id: string, day: Roster, serviceTypes: string[]) {
   }
 }
 
-/** Whether [after] differs from [before] only in [roles]. */
-function onlyIn(roles: Set<string>, before: Roster, after: Roster) {
+/**
+ * Whether a 事工's 負責人 who leads [roles] on a day may change it from
+ * [before] to [after] (testdata/church_rules.json, ledDuties): only those
+ * duties change; a day not made yet may be made with people only on them
+ * (its other duties, from the template, empty); never deleted.
+ */
+export function ledChangeAllowed(roles: Set<string>, before: Roster | null, after: Roster | null) {
+  if (roles.size === 0 || after === null) return false;
+  if (before === null) {
+    return after.duties.some((d) => roles.has(d.role))
+      && after.duties.every((d) => roles.has(d.role) || d.people.length === 0)
+      && (after.events === undefined || (Array.isArray(after.events) && after.events.length === 0));
+  }
   const { duties: b, ...restBefore } = before;
   const { duties: a, ...restAfter } = after;
   if (!isDeepStrictEqual(content(restBefore), content(restAfter))) return false;
@@ -141,7 +136,7 @@ export async function editLedDuties(deps: Deps, caller: Caller | null, data: unk
     if (!me.exists) fail('permission-denied', 'permissionDenied');
     if (!isChurchOpen(church)) churchClosed();
     const led = (me.get('leadMinistries') as string[] | undefined) ?? [];
-    const ministries = (settings.get('ministries') as { id: string; duties: { service: string; duty: string }[] }[] | undefined) ?? [];
+    const ministries = ministriesOf(settings);
     for (const [i, id] of ids.entries()) {
       const stored = days[i];
       const was = roster(before[id]);
@@ -149,18 +144,16 @@ export async function editLedDuties(deps: Deps, caller: Caller | null, data: unk
       if (!isDeepStrictEqual(content(stored.exists ? stored.data() : undefined), was === null ? null : content(was))) {
         fail('aborted', 'conflict');
       }
-      if (next === null || stored.get('cancelledAt') !== undefined) fail('permission-denied', 'permissionDenied');
+      if (stored.get('cancelledAt') !== undefined) fail('permission-denied', 'permissionDenied');
+      const day = next ?? was;
+      const roles = ledDuties(ministries, led, day?.kind === 'event' ? null : (day?.type as string));
+      if (!ledChangeAllowed(roles, was, next)) fail('permission-denied', 'permissionDenied');
       if (was === null) {
-        newDay(id, next, (services.get('ids') as string[] | undefined) ?? []);
-        // Made from the service's template, as the app shows a day nobody
-        // has saved: its other duties come along, with nobody on them.
-        const roles = ledRoles(ministries, led, next);
-        if (next.duties.some((d) => !roles.has(d.role) && d.people.length > 0)) fail('permission-denied', 'permissionDenied');
+        newDay(id, next!, (services.get('ids') as string[] | undefined) ?? []);
         tx.create(refs[i], { ...next, events: [], via, updatedAt: FieldValue.serverTimestamp() });
         continue;
       }
-      if (!onlyIn(ledRoles(ministries, led, was), was, next)) fail('permission-denied', 'permissionDenied');
-      tx.update(refs[i], { duties: next.duties, via, updatedAt: FieldValue.serverTimestamp() });
+      tx.update(refs[i], { duties: next!.duties, via, updatedAt: FieldValue.serverTimestamp() });
     }
   });
 }

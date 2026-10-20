@@ -135,3 +135,9 @@ export async function runEach<T extends Record<string, () => Promise<unknown>>>(
     names.map((n, i) => [n, (results[i] as PromiseFulfilledResult<unknown>).value]),
   ) as { [K in keyof T]: Awaited<ReturnType<T[K]>> };
 }
+
+/** [value] as a plain object, or an invalid-argument failure. */
+export function record(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) fail('invalid-argument', 'unknown');
+  return value as Record<string, unknown>;
+}

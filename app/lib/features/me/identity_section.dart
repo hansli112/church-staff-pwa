@@ -38,27 +38,13 @@ class IdentitySection extends ConsumerWidget {
             title: label(i),
             subtitle: identityCan(l10n, i, services: services, ministries: ministries),
             chevron: false,
-            onTap: _removable(i)
-                ? () async {
-                    final remove = await showAppSheet<bool>(
-                      context,
-                      builder: (context) => SafeArea(
-                        child: ListSection(
-                          header: label(i),
-                          children: [
-                            ListRow(
-                              title: l10n.removeIdentity,
-                              destructive: true,
-                              onTap: () => Navigator.pop(context, true),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                    if (remove == true && context.mounted) {
-                      await _set(context, ref, [...held]..remove(i), l10n.identityRemoved(label(i)));
-                    }
-                  }
+            // Taken away at once, with 復原 (docs/design-principles.md).
+            trailing: _removable(i)
+                ? RowButton(
+                    label: l10n.removeShort,
+                    semanticsLabel: l10n.removeIdentityLabel(label(i)),
+                    onPressed: () => _set(context, ref, [...held]..remove(i), l10n.identityRemoved(label(i))),
+                  )
                 : null,
           ),
         ListRow(

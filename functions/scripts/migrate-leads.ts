@@ -1,8 +1,8 @@
-// One-time move to 身分 (#82). roster-editors used to edit only the rosters
-// of their 牧區; now it is 行政, every service's. So a member in it without
-// any 身分 yet becomes 負責人 of the services they are in, and leaves the
-// group: what they may arrange stays the same. calendar-editors stays.
-// Admins need nothing: role admin is 管理員.
+// One-time move to 身分 (#82). Members in the old permission groups and
+// without any 身分 yet get one: calendar-editors is folded into 行政;
+// roster-editors alone, which edited only the rosters of their 牧區, makes
+// them 負責人 of the services they are in (the group itself now means 行政,
+// every service's). Admins need nothing: role admin is 管理員.
 //
 //   # Look first (writes nothing):
 //   npx tsx scripts/migrate-leads.ts --project marthasit-dev
@@ -27,7 +27,7 @@ export async function planLeads(db: Firestore, churches: string[] = []) {
     for (const m of members.docs) {
       const groups = m.get('groups');
       if (m.get('role') === 'admin' || m.get('identities') !== undefined) continue;
-      if (!Array.isArray(groups) || !groups.includes('roster-editors')) continue;
+      if (!Array.isArray(groups) || groups.length === 0) continue;
       changes.push({ path: m.ref.path, update: claimedGroups(groups, m.get('zoneTypes')) });
     }
   }

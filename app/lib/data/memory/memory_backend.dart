@@ -901,16 +901,15 @@ class MemoryChurchData implements ChurchData {
       for (final entry in change.after.entries) {
         final next = entry.value;
         final was = change.before[entry.key];
-        if (next == null || (saved[entry.key]?.forEvent?.cancelled ?? false)) {
+        final day = next ?? was;
+        if (day == null || (saved[entry.key]?.forEvent?.cancelled ?? false)) {
           throw const CloudException(CloudErrorCode.permissionDenied);
         }
-        final roles = me.ledDuties(ministries, next.isEvent ? null : next.type);
-        final ok = was == null
-            ? next.events.isEmpty &&
-                  next.duties.every((d) => roles.contains(d.role) || d.people.isEmpty) &&
-                  (next.isEvent || _b.services[churchId]!.ids.contains(next.type))
-            : changesOnlyDuties(was, next, roles);
-        if (!ok) throw const CloudException(CloudErrorCode.permissionDenied);
+        final roles = me.ledDuties(ministries, day.isEvent ? null : day.type);
+        if (!mayChangeLedDuties(roles, was, next)) throw const CloudException(CloudErrorCode.permissionDenied);
+        if (was == null && !day.isEvent && !_b.services[churchId]!.ids.contains(day.type)) {
+          throw const CloudException(CloudErrorCode.unknown);
+        }
       }
       for (final entry in change.after.entries) {
         saved[entry.key] = entry.value!.copyWith(saved: true);
@@ -1043,30 +1042,32 @@ class MemoryChurchData implements ChurchData {
     ChurchGroup group, {
     required bool member,
     List<String> duties = const [],
+    List<String> smallGroups = const [],
   }) async {
     await _b.write(() {
-      // As functions/src/groupMembers.ts.
+      // As functions/src/groupMembers.ts: the group as it is now, then who
+      // may move whom.
       final me = _b.requireMember(churchId);
       final members = _b.members[churchId]!;
-      switch (group) {
-        case ServiceGroup(:final id):
-          final service = _b.services[churchId]!.byId(id);
-          if (!(me.isAdmin || me.leadTypes.contains(id)) || service == null) {
-            throw const CloudException(CloudErrorCode.permissionDenied);
-          }
-          if (duties.any((d) => !service.duties.contains(d))) throw const CloudException(CloudErrorCode.unknown);
-          final them = members[uid];
-          if (them == null) throw const CloudException(CloudErrorCode.notFound);
-          members[uid] = them.inGroupAs(group, member: member, duties: duties.toSet().toList());
-        case MinistryGroup(:final id):
-          final known = (_b.ministries[churchId] ?? const MinistrySettings()).ids.contains(id);
-          if (!(me.isAdmin || me.leadMinistries.contains(id)) || !known) {
-            throw const CloudException(CloudErrorCode.permissionDenied);
-          }
-          final them = members[uid];
-          if (them == null) throw const CloudException(CloudErrorCode.notFound);
-          members[uid] = them.inGroupAs(group, member: member);
-      }
+      final service = switch (group) {
+        ServiceGroup(:final id) => _b.services[churchId]!.byId(id),
+        MinistryGroup() => null,
+      };
+      final known = switch (group) {
+        ServiceGroup() => service != null,
+        MinistryGroup(:final id) => (_b.ministries[churchId] ?? const MinistrySettings()).byId(id) != null,
+      };
+      if (!known) throw const CloudException(CloudErrorCode.permissionDenied);
+      final them = members[uid];
+      if (them == null) throw const CloudException(CloudErrorCode.notFound);
+      if (!me.mayMove(them, group)) throw const CloudException(CloudErrorCode.permissionDenied);
+      if (duties.any((d) => !(service?.duties.contains(d) ?? true))) throw const CloudException(CloudErrorCode.unknown);
+      members[uid] = them.inGroupAs(
+        group,
+        member: member,
+        duties: duties.toSet().toList(),
+        smallGroups: smallGroups.toSet().toList(),
+      );
     });
   }
 
@@ -1575,10 +1576,14 @@ class MemoryChurchData implements ChurchData {
     return '把「${service.name}」的服事表照片轉成 JSON。\n${service.duties.join('、')}\n${names.join('、')}';
   }
 
-  /// As the backend's photo calls: an editor of a service the church has.
+  /// As the backend's photo calls (access.ts `arranges`): someone who
+  /// arranges any of a service the church has.
   void _rosterEditorOf(String serviceType) => _b.functionAccess(
     churchId,
-    allowed: (me) => _b.services[churchId]!.ids.contains(serviceType) && me.canEditRosters(serviceType),
+    allowed: (me) =>
+        _b.services[churchId]!.ids.contains(serviceType) &&
+        (me.arranges((_b.ministries[churchId] ?? const MinistrySettings()).ministries, serviceType)?.isNotEmpty ??
+            true),
   );
 }
 
@@ -1999,16 +2004,20 @@ void _checkSecret(String? secret) {
   }
 }
 
-/// A self-host roster editor edited only their 牧區's rosters; here
-/// roster-editors is 行政, so they lead the services they were in instead
-/// (#82), as claimedGroups in functions/src/claim.ts.
-Set<Group> _claimedGroups(PendingMember p) => {...p.groups}..remove(Group.rosterEditors);
+/// A pending member's old permission groups as 身分 (#82), as
+/// claimedGroups in functions/src/claim.ts: calendar-editors folds into
+/// 行政; roster-editors alone, their 牧區's rosters in self-host, makes them
+/// 負責人 of the services they are in.
+Set<Group> _claimedGroups(PendingMember p) =>
+    p.groups.contains(Group.calendarEditors) ? const {Group.rosterEditors, Group.calendarEditors} : const {};
 
-List<Identity> _claimedLeads(PendingMember p) => p.groups.contains(Group.rosterEditors)
-    ? [
-        for (final type in {for (final z in p.zones) z.serviceType}) ServiceLead(type),
-      ]
-    : const [];
+List<Identity> _claimedLeads(PendingMember p) {
+  if (p.groups.contains(Group.calendarEditors)) return const [OfficeIdentity()];
+  if (!p.groups.contains(Group.rosterEditors)) return const [];
+  return [
+    for (final type in {for (final z in p.zones) z.serviceType}) ServiceLead(type),
+  ];
+}
 
 /// [m] with the groups, zones and leads of pending member [p] added.
 Member _absorb(Member m, PendingMember p) => m.copyWith(

@@ -83,16 +83,20 @@ function mergeZones(a: unknown, b: unknown) {
 }
 
 /**
- * A pending member's permission groups as a member's (#82). In self-host,
- * roster-editors edited only their 牧區's rosters; here that group is 行政,
- * every service's, so they become 負責人 of the services they were in.
+ * Old permission groups as 身分 (#82): calendar-editors is folded into 行政
+ * (both groups); roster-editors alone, which in self-host edited only the
+ * rosters of their 牧區, makes them 負責人 of the services they are in.
+ * Used when a pending member joins, and by scripts/migrate-leads.ts.
  */
 export function claimedGroups(groups: unknown, zoneTypes: unknown) {
   const held = Array.isArray(groups) ? groups.filter((g): g is string => typeof g === 'string') : [];
   const types = Array.isArray(zoneTypes) ? zoneTypes.filter((t): t is string => typeof t === 'string') : [];
+  if (held.includes('calendar-editors')) {
+    return { groups: ['roster-editors', 'calendar-editors'], leadTypes: [] as string[], identities: [{ kind: 'office' }] as object[] };
+  }
   const editor = held.includes('roster-editors');
   return {
-    groups: held.filter((g) => g !== 'roster-editors'),
+    groups: [] as string[],
     leadTypes: editor ? types : [],
     identities: editor ? types.map((service) => ({ kind: 'lead', service })) : [],
   };

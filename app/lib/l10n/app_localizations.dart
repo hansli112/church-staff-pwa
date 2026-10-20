@@ -1294,12 +1294,6 @@ abstract class L10n {
   /// **'已加上「{identity}」'**
   String identityAdded(String identity);
 
-  /// Destructive row: take this 身分 away
-  ///
-  /// In zh, this message translates to:
-  /// **'移除這個身分'**
-  String get removeIdentity;
-
   /// A pastor's scope: the whole church
   ///
   /// In zh, this message translates to:
@@ -1461,6 +1455,36 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'我負責的'**
   String get myGroups;
+
+  /// Button beside a 身分: take it away (undo follows)
+  ///
+  /// In zh, this message translates to:
+  /// **'移除'**
+  String get removeShort;
+
+  /// What a screen reader reads for that button
+  ///
+  /// In zh, this message translates to:
+  /// **'移除「{identity}」'**
+  String removeIdentityLabel(String identity);
+
+  /// Button beside a group's team member: take them out of the group (not the church)
+  ///
+  /// In zh, this message translates to:
+  /// **'移出'**
+  String get moveOutShort;
+
+  /// What a screen reader reads for that button
+  ///
+  /// In zh, this message translates to:
+  /// **'把{name}移出{group}'**
+  String removeFromGroupLabel(String name, String group);
+
+  /// Row on a group's page: add any team member of the church to it
+  ///
+  /// In zh, this message translates to:
+  /// **'加入同工'**
+  String get addGroupStaff;
 
   /// No description provided for @zones.
   ///

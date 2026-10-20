@@ -81,12 +81,12 @@ App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預�
 | 事工負責人 | `{kind: 'lead', ministry}`，進 `leadMinistries` | 在任何聚會和活動排那個事工連到的服事項目（經 `editLedDuties`）、加入和移出它的同工 |
 
 - `identities` 是同工頁顯示和編輯的；規則讀不到裡面，所以 App 同時寫攤平的 `role`、`groups`、`leadTypes`、`leadMinistries`（`Member.withIdentities`），舊版 App 也照舊讀 `role` 和 `groups`。只有管理員能寫這些欄位。沒有 `identities` 的舊資料：`role: 'admin'` 算管理員，`roster-editors` 算行政。
-- 只有管理員（含全教會的牧者）能給身分。負責人只能加入、移出自己群組的同工（`setGroupMember`），看得到全教會的同工名單。教會至少要有一位 `role: 'admin'`。
+- 只有管理員（含全教會的牧者）能給身分。負責人只能加入、移出自己群組的一般同工（沒有身分、不是管理員、不在權限群組的；`setGroupMember`，規則在 `testdata/church_rules.json` 的 `groupMembership`），看得到全教會的同工名單。教會至少要有一位 `role: 'admin'`。
 - `role` 另外的 `leader`、`staff`、`member` 是舊的身分標示，不再顯示；`leader` 留給 #85 轉成小組長。
 - `zones`：同工屬於的聚會（牧區），每個帶他在那裡的服事項目，可以是空的。聚會的同工從這裡來；安排服事表時選了不是這個聚會同工的人，只排這一次，不會加進來（#82）。服事表分頁顯示自己的牧區、負責的聚會和事工連到的聚會，admin 和行政看全部；這只是讓畫面清爽，規則照樣讓所有同工讀所有服事表。
 - `zoneTypes`：`zones` 攤平後的聚會別 ID 清單；規則讀不到 `zones` 裡面，所以另存一份。
 - `ministries`：同工所在的事工 ID，只由管理員或那個事工的負責人加、移。
-- 從自架版搬來、在 `roster-editors` 的同工，認領或合併時變成他牧區的聚會負責人（自架版的 `roster-editors` 只能排自己的牧區）。
+- 舊的權限群組換成身分：`calendar-editors` 併進行政；只有 `roster-editors` 的（以前只能排自己的牧區）變成他牧區的聚會負責人。從自架版搬來的同工在認領或合併時換（`claimedGroups`），現有的同工用 `functions/scripts/migrate-leads.ts` 換一次；規則上線後要馬上跑，不然 `roster-editors` 會變成能排所有聚會。
 
 ## 權限
 
@@ -104,7 +104,7 @@ App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預�
 | 改 member | admin（不能改 `uid`、不能把自己降級）；本人只能改 `notificationPrefs`。改到 `notificationPrefs` 時，`muted` 只能是 `reminder`、`rosterChange`、`memberLeft`，`reminderTiming` 只能是 `weekly`、`dayBefore`、`both`。只檢查這次改到的欄位，因為從 self-host 搬來的可能有舊的種類，App 也是一次寫一個欄位 |
 | 刪 member | admin 刪別人；非 admin 可以自己退出。admin 要先被別的 admin 降級才能走 |
 | 讀服事表、排序、設定 | 同工 |
-| 寫服事表、排序 | admin、行政（任何已設定的聚會別）；聚會負責人和牧者（只限 `leadTypes` 裡的聚會別，移動時新舊聚會別都要有）。事工負責人不能直接寫，經 `editLedDuties` 只改他事工連到的服事項目：其他服事項目、特別活動不能動，不能刪整天；還沒存過的那天可以照範本建立，但其他服事項目要沒有人 |
+| 寫服事表、排序 | admin、行政（任何已設定的聚會別）；聚會負責人和牧者（只限 `leadTypes` 裡的聚會別，移動時新舊聚會別都要有）。事工負責人不能直接寫，經 `editLedDuties` 只改他事工連到的服事項目：其他服事項目、特別活動不能動，不能刪整天；還沒存過的那天可以照範本建立，但要有他的服事項目、其他服事項目要沒有人（`testdata/church_rules.json` 的 `ledDuties`） |
 | 寫活動的服事表 | admin 和行政；事工負責人經 `editLedDuties` 只排他的服事項目（照名稱比對）。一般服事表和活動的服事表不能互相改過去；取消了的不能再改，只能刪 |
 | 寫設定 | admin；`services` 的 `ids` 只增不減，不能刪；`calendar`、`linkContent`、`webhook` 只有 Cloud Functions 能寫。服事項目改名要連同工的牧區與同工排序一起改，經 `editService`（比對改名前的那一個聚會，其他聚會照現在的保留；超過 500 筆寫入整筆拒絕） |
 | 讀寫 `users/{uid}` | 本人（限上列欄位，`fcm` 最多 50 支裝置）；刪除由 Cloud Functions 處理 |

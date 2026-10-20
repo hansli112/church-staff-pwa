@@ -493,7 +493,7 @@ describe('活動的服事表 (rosters/ev_…)', () => {
   it('一般服事表和活動的服事表不能互相改過去，繞過牧區', async () => {
     await seed(path('m1'), ev('m1'));
     await seed(`churches/${A}/rosters/2030-12-22_youth`, { type: 'youth', dateKey: '2030-12-22' });
-    // A sunday-only editor may write events, but not turn one into youth's.
+    // 行政 may write events, but not turn one into a service's day.
     await assertFails(setDoc(doc(as(OFFICE_A), path('m1')), { type: 'youth', dateKey: '2030-12-24' }));
     await assertFails(setDoc(doc(as(ADMIN_A), path('m1')), { type: 'youth', dateKey: '2030-12-24' }));
     // Nor a youth day into an event, which they could then edit.

@@ -675,7 +675,7 @@ class L10nEn extends L10n {
   String get canStaff => 'Team member: sees every schedule and event';
 
   @override
-  String get addIdentity => 'Add a role';
+  String get addIdentity => 'Add a church role';
 
   @override
   String get addAnotherIdentity => 'Add another';
@@ -691,13 +691,10 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get removeIdentity => 'Remove this role';
-
-  @override
   String get wholeChurch => 'Whole church';
 
   @override
-  String get pickPastorScope => 'Shepherds';
+  String get pickPastorScope => 'Pastor of';
 
   @override
   String get pickService => 'Pick a service';
@@ -787,6 +784,25 @@ class L10nEn extends L10n {
 
   @override
   String get myGroups => 'I lead';
+
+  @override
+  String get removeShort => 'Remove';
+
+  @override
+  String removeIdentityLabel(String identity) {
+    return 'Remove “$identity”';
+  }
+
+  @override
+  String get moveOutShort => 'Remove';
+
+  @override
+  String removeFromGroupLabel(String name, String group) {
+    return 'Remove $name from $group';
+  }
+
+  @override
+  String get addGroupStaff => 'Add team members';
 
   @override
   String get zones => 'Services and roles';

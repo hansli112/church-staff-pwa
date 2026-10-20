@@ -4,7 +4,9 @@ import { describe, test } from 'node:test';
 
 import { churchAccess } from '../src/access.js';
 
+import { mayMoveMember } from '../src/groupMembers.js';
 import { mapMember } from '../src/importer.js';
+import { ledChangeAllowed } from '../src/ledDuties.js';
 import { LANGUAGES, words } from '../src/languages.js';
 import { dutiesByUid } from '../src/rosters.js';
 import { validDutyRename } from '../src/serviceSettings.js';
@@ -61,4 +63,15 @@ describe('rosterEditing', () => {
       assert.equal(may, r.may);
     });
   }
+});
+
+describe('ledDuties', () => {
+  const day = (duties: unknown, events: unknown) => (duties === null ? null : { type: 'sunday', dateKey: '2030-10-06', duties, events });
+  for (const r of rows('ledDuties')) {
+    test(r.why, () => assert.equal(ledChangeAllowed(new Set(r.roles), day(r.before, r.beforeEvents), day(r.after, r.afterEvents)), r.may));
+  }
+});
+
+describe('groupMembership', () => {
+  for (const r of rows('groupMembership')) test(r.why, () => assert.equal(mayMoveMember(r.caller, r.target, r.group), r.may));
 });

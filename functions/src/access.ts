@@ -1,6 +1,7 @@
 import type { DocumentSnapshot } from 'firebase-admin/firestore';
 
 import { fail, requireCaller, type Caller, type Deps } from './common.js';
+import { ledDuties, ministriesOf } from './ministries.js';
 
 /**
  * Church access: every callable that acts in one church starts here. It
@@ -127,8 +128,7 @@ async function has(deps: Deps, a: ChurchAccess, level: Level) {
     const led = (a.member.get('leadMinistries') as string[] | undefined) ?? [];
     if (led.length === 0) return false;
     const doc = await deps.db.doc(`churches/${a.cid}/settings/ministries`).get();
-    const ministries = (doc.get('ministries') as { id: string; duties?: { service: string }[] }[] | undefined) ?? [];
-    return ministries.some((m) => led.includes(m.id) && (m.duties ?? []).some((d) => d.service === level.arranges));
+    return ledDuties(ministriesOf(doc), led, level.arranges).size > 0;
   }
   const type = level.rosterEditor;
   if (!(await serviceTypes(deps, a.cid)).includes(type)) return false;

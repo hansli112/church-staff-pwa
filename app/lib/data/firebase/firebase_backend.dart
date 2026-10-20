@@ -852,15 +852,20 @@ class FirestoreChurchData implements ChurchData {
   }
 
   @override
-  Future<void> setGroupMember(String uid, ChurchGroup group, {required bool member, List<String> duties = const []}) =>
-      _call('setGroupMember', {
-        'uid': uid,
-        ...switch (group) {
-          ServiceGroup(:final id) => {'service': id, if (member) 'duties': duties},
-          MinistryGroup(:final id) => {'ministry': id},
-        },
-        'member': member,
-      });
+  Future<void> setGroupMember(
+    String uid,
+    ChurchGroup group, {
+    required bool member,
+    List<String> duties = const [],
+    List<String> smallGroups = const [],
+  }) => _call('setGroupMember', {
+    'uid': uid,
+    ...switch (group) {
+      ServiceGroup(:final id) => {'service': id, if (member) 'duties': duties, if (member) 'smallGroups': smallGroups},
+      MinistryGroup(:final id) => {'ministry': id},
+    },
+    'member': member,
+  });
 
   @override
   Future<void> grantDuty(String uid, String serviceType, String duty) =>

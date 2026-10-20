@@ -50,17 +50,15 @@ class RosterDayScreen extends ConsumerWidget {
       return Scaffold(appBar: AppBar(), body: const SizedBox.shrink());
     }
     final roster = rosters.value?.where((r) => r.day == day).firstOrNull ?? draftRoster(service, day);
-    final whole = ref.watch(
-      meProvider.select((m) => m.value?.canEditRosters(serviceType) ?? false),
-    );
     // A 事工's 負責人 arranges only the duties it leads (#82).
-    final led = whole ? null : ref.watch(ledDutiesProvider(serviceType));
-    final canEdit = whole || led!.isNotEmpty;
+    final led = ref.watch(arrangesProvider(serviceType));
+    final whole = led == null;
+    final canEdit = arrangesAny(led);
     // Keeps what editing reads loaded, so the picker opens at once and
     // writes see the church as it is.
     final editable = canEdit && ref.watch(rosterEditingProvider(serviceType));
     final title = dayLabel(l10n, day, today);
-    final addable = _addableDuties(roster, service, led);
+    final addable = addableDuties(roster, service.duties, led);
 
     return Scaffold(
       appBar: AppBar(
@@ -97,16 +95,6 @@ class RosterDayScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  /// The service's duties not on [roster] yet; for a 事工's 負責人 only
-  /// those it leads ([led]).
-  static List<String> _addableDuties(Roster roster, Service service, Set<String>? led) {
-    final present = {for (final d in roster.duties) d.role};
-    return [
-      for (final d in service.duties)
-        if (!present.contains(d) && (led == null || led.contains(d))) d,
-    ];
   }
 
   /// Adds a duty to [roster]: one of [suggestions], or, with [any], one
@@ -278,7 +266,7 @@ class _DutyRow extends ConsumerWidget {
         // order of its own to drag.
         canEditDutyList: !roster.isEvent && (me?.isAdmin ?? false),
         // The staff order is the whole service's: not a 事工 leader's.
-        canReorder: !roster.isEvent && (me?.canEditRosters(roster.type) ?? false),
+        canReorder: !roster.isEvent && ref.read(arrangesProvider(roster.type)) == null,
         canRemove: true,
         onChanged: (r) => latest = r,
         onInvite: (me?.isAdmin ?? false) ? () => invite = true : null,
@@ -619,4 +607,14 @@ class _AddDutySheetState extends State<AddDutySheet> {
       ),
     );
   }
+}
+
+/// [candidates] not on [roster] yet; for a 事工's 負責人 only those it leads
+/// ([only]; null: any).
+List<String> addableDuties(Roster roster, Iterable<String> candidates, Set<String>? only) {
+  final present = {for (final d in roster.duties) d.role};
+  return [
+    for (final d in candidates)
+      if (!present.contains(d) && (only == null || only.contains(d))) d,
+  ];
 }

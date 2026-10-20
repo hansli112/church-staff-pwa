@@ -646,12 +646,12 @@ class L10nJa extends L10n {
 
   @override
   String canServiceLead(String service) {
-    return '$serviceの奉仕表を編集し、メンバーを追加・削除できる';
+    return '$serviceの奉仕表を編集し、メンバーを加えたり外したりできる';
   }
 
   @override
   String canMinistryLead(String ministry) {
-    return '$ministryの担当を割り当て、メンバーを追加・削除できる';
+    return '$ministryの担当を割り当て、メンバーを加えたり外したりできる';
   }
 
   @override
@@ -672,9 +672,6 @@ class L10nJa extends L10n {
   String identityAdded(String identity) {
     return '「$identity」を追加しました';
   }
-
-  @override
-  String get removeIdentity => 'この役割を外す';
 
   @override
   String get wholeChurch => '教会全体';
@@ -770,6 +767,25 @@ class L10nJa extends L10n {
 
   @override
   String get myGroups => '担当しているもの';
+
+  @override
+  String get removeShort => '外す';
+
+  @override
+  String removeIdentityLabel(String identity) {
+    return '「$identity」を外す';
+  }
+
+  @override
+  String get moveOutShort => '外す';
+
+  @override
+  String removeFromGroupLabel(String name, String group) {
+    return '$nameを$groupから外す';
+  }
+
+  @override
+  String get addGroupStaff => 'メンバーを加える';
 
   @override
   String get zones => '所属集会と担当';

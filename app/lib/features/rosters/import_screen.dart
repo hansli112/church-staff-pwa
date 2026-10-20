@@ -368,8 +368,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     _ready =
         ref.watch(rosterEditingProvider(widget.serviceType)) &&
         ref.watch(churchOpenProvider) &&
-        ((ref.watch(meProvider).value?.canEditRosters(widget.serviceType) ?? false) ||
-            ref.watch(ledDutiesProvider(widget.serviceType)).isNotEmpty);
+        arrangesAny(ref.watch(arrangesProvider(widget.serviceType)));
     if (_ready && plan != null) _lastPlan = plan;
     if (!draft.loaded) _lastPlan = null;
     final shown = _ready ? plan : _lastPlan;

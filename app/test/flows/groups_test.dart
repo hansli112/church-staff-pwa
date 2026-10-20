@@ -67,9 +67,32 @@ void main() {
     expect(b.members['grace']!['mei']!.ministries, {'worship'});
     expect(find.text('已把李美玉加為敬拜團同工'), findsOneWidget);
 
-    await tapText(tester, '李美玉');
-    await tapText(tester, '移出敬拜團');
+    await tapText(tester, '移出');
     expect(b.members['grace']!['mei']!.ministries, isEmpty);
+    expect(find.text('已把李美玉移出敬拜團'), findsOneWidget);
+    await tapText(tester, '復原');
+    expect(b.members['grace']!['mei']!.ministries, {'worship'});
+  });
+
+  testWidgets('a lead adds anyone plain in the church, and moves no one who holds a 身分', (tester) async {
+    final b = seededChurch(
+      as: staffHao,
+      extra: [
+        staffHao.withIdentities(const [MinistryLead('worship')]),
+      ],
+    );
+    b.ministries['grace'] = const MinistrySettings(
+      ministries: [Ministry(id: 'worship', name: '敬拜團')],
+      ids: ['worship'],
+    );
+    await pumpApp(tester, b);
+    await go(tester, '/me/groups/ministry/worship');
+    await tapText(tester, '加入同工');
+    expect(find.text('林同工'), findsNothing, reason: '主日崇拜 負責人: a 身分');
+    expect(find.text('王牧師'), findsNothing, reason: 'an admin');
+    await tapText(tester, 'John Chen');
+    expect(b.members['grace']!['john']!.ministries, {'worship'});
+    expect(find.text('移出'), findsOneWidget);
   });
 
   testWidgets("a service's 負責人 adds a helper to its 同工 with the duties they served", (tester) async {

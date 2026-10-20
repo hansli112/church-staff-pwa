@@ -705,22 +705,22 @@ void contractTests(Future<ContractWorld> Function() open) {
       );
     });
 
-    test("a group's 負責人 adds and takes out its 同工, and nobody else's", () async {
+    test("a group's 負責人 adds and takes out plain 同工 of it; the rest is the admin's", () async {
       final g = await withWorship();
       await w.signIn(Grace.meiEmail);
+      // 林同工 leads 主日崇拜: a 身分, so not hers to move.
+      await expectLater(g.church.setGroupMember(g.editor, const MinistryGroup('worship'), member: true), denied());
+      await w.signIn(Grace.pastorEmail);
       await g.church.setGroupMember(g.editor, const MinistryGroup('worship'), member: true);
-      await expectLater(
-        g.church.setGroupMember(g.editor, const ServiceGroup('sunday'), member: false),
-        denied(),
-      );
+      expect((await g.church.member(g.editor).first)!.ministries, {'worship'});
+      await g.church.putMember((await g.church.member(g.mei).first)!.withIdentities(const []));
       await w.signIn(Grace.editorEmail);
-      // 林同工 leads sunday: adds 李美玉 there, with the duty she played.
+      await expectLater(g.church.setGroupMember(g.mei, const ServiceGroup('youth'), member: true), denied());
+      // A plain 同工 now: 林同工 adds her to 主日崇拜, with the duty she played.
       await g.church.setGroupMember(g.mei, const ServiceGroup('sunday'), member: true, duties: const ['司琴']);
       final mei = (await g.church.member(g.mei).first)!;
       expect(mei.zoneTypes, ['sunday']);
       expect(mei.serves('sunday', '司琴'), isTrue);
-      expect(mei.leadMinistries, ['worship'], reason: 'her 身分 untouched');
-      expect((await g.church.member(g.editor).first)!.ministries, {'worship'});
       await g.church.setGroupMember(g.mei, const ServiceGroup('sunday'), member: false);
       expect((await g.church.member(g.mei).first)!.zoneTypes, isEmpty);
     });

@@ -93,6 +93,37 @@ class SecondaryButton extends StatelessWidget {
   }
 }
 
+/// A small action beside a row's text, e.g. 加為同工: neutral, since the
+/// accent is for a page's main action and for state. [semanticsLabel] is
+/// read out instead of [label] when the label alone does not say whom it
+/// acts on.
+class RowButton extends StatelessWidget {
+  const RowButton({super.key, required this.label, required this.onPressed, this.semanticsLabel});
+
+  final String label;
+  final VoidCallback? onPressed;
+  final String? semanticsLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    return TextButton(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        foregroundColor: c.label,
+        backgroundColor: c.fill,
+        shape: const StadiumBorder(),
+        padding: const EdgeInsets.symmetric(horizontal: Space.m),
+      ),
+      child: Semantics(
+        label: semanticsLabel,
+        excludeSemantics: semanticsLabel != null,
+        child: Text(label),
+      ),
+    );
+  }
+}
+
 /// A grouped list section with an optional header and footer, inset with
 /// rounded corners like iOS Settings.
 class ListSection extends StatelessWidget {

@@ -41,8 +41,8 @@ void main() {
       await tapText(tester, '行政');
       expect(b.members['grace']!['mei']!.groups, {Group.rosterEditors, Group.calendarEditors});
 
-      await tapText(tester, '主日崇拜 負責人');
-      await tapText(tester, '移除這個身分');
+      await tester.tap(find.bySemanticsLabel('移除「主日崇拜 負責人」'));
+      await settle(tester);
       expect(b.members['grace']!['mei']!.identities, const [OfficeIdentity()]);
       expect(find.text('已移除「主日崇拜 負責人」'), findsOneWidget);
       await tapText(tester, '復原');
@@ -125,8 +125,8 @@ void main() {
     testWidgets('an admin sees no demote or remove on their own page', (tester) async {
       await pumpApp(tester, seededChurch());
       await go(tester, '/me/members/pastor');
-      await tapText(tester, '管理員');
-      expect(find.text('移除這個身分'), findsNothing);
+      expect(find.text('管理員'), findsOneWidget);
+      expect(find.text('移除'), findsNothing);
       expect(find.text('移除同工'), findsNothing);
     });
 

@@ -40,16 +40,9 @@ final _seriesRolesProvider = FutureProvider.autoDispose.family<List<String>, Cal
   return previousInSeries(e, await ref.churchData.eventRosters());
 });
 
-/// Whether I arrange all of an event's roster.
-final _wholeProvider = Provider.autoDispose<bool>(
-  (ref) => ref.watch(meProvider.select((m) => m.value?.canEditEventRosters ?? false)),
-);
-
-/// Whether I arrange any of it: all, or as a 事工's 負責人 the duties it
-/// leads (#82).
-final _canEditProvider = Provider.autoDispose<bool>(
-  (ref) => ref.watch(_wholeProvider) || ref.watch(ledDutiesProvider(null)).isNotEmpty,
-);
+/// Whether I arrange any of an event's roster: all, or as a 事工's 負責人
+/// the duties it leads (#82).
+final _canEditProvider = Provider.autoDispose<bool>((ref) => arrangesAny(ref.watch(arrangesProvider(null))));
 
 /// Opens [e]'s roster, which [e] lets the page start before it is saved.
 void openEventRoster(BuildContext context, CalendarEvent e) =>
@@ -130,10 +123,11 @@ class EventRosterScreen extends ConsumerWidget {
               )
             : null);
     final canEdit = ref.watch(_canEditProvider);
-    final whole = ref.watch(_wholeProvider);
-    final led = whole ? null : ref.watch(ledDutiesProvider(null));
+    final led = ref.watch(arrangesProvider(null));
+    final whole = led == null;
     final editable = canEdit && ref.watch(eventEditingProvider);
-    final addable = roster == null ? const <String>[] : _addable(ref, roster, led);
+    final services = ref.watch(servicesProvider).value?.services ?? const <Service>[];
+    final addable = roster == null ? const <String>[] : addableDuties(roster, eventDutySuggestions(services), led);
     return Scaffold(
       appBar: AppBar(
         title: Text(roster?.forEvent?.title ?? ''),
@@ -186,17 +180,6 @@ class EventRosterScreen extends ConsumerWidget {
         _ => EmptyState(message: l10n.eventRosterGone),
       },
     );
-  }
-
-  /// Every service's duties not on [roster] yet; for a 事工's 負責人 only
-  /// those it leads ([led]).
-  static List<String> _addable(WidgetRef ref, Roster roster, Set<String>? led) {
-    final present = {for (final d in roster.duties) d.role};
-    final services = ref.watch(servicesProvider).value?.services ?? const <Service>[];
-    return [
-      for (final d in eventDutySuggestions(services))
-        if (!present.contains(d) && (led == null || led.contains(d))) d,
-    ];
   }
 
   /// Adds one of [suggestions] or, with [any], a duty typed in.

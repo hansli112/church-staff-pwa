@@ -125,10 +125,7 @@ class ImportSession extends Notifier<ImportDraft> {
 
   /// The duties a 事工's 負責人 arranges in this service (#82); null for
   /// whoever arranges all of it.
-  Set<String>? get only {
-    if (ref.read(meProvider).value?.canEditRosters(serviceType) ?? false) return null;
-    return ref.read(ledDutiesProvider(serviceType));
-  }
+  Set<String>? get only => ref.read(arrangesProvider(serviceType));
 
   /// [rows] as given, or for a 事工's 負責人 with only the duties it leads
   /// and no 特別活動: the rest of the day is not theirs to import.

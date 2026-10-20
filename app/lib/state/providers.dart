@@ -91,15 +91,18 @@ final servicesProvider = StreamProvider<ServiceSettings>(
 /// The church's 事工 (#82).
 final ministriesProvider = StreamProvider<MinistrySettings>((ref) => openChurch(ref).ministries());
 
-/// The duties I arrange on a day of [serviceType] (null: an event's)
-/// without editing all of it: those of the 事工 I lead. Empty while the
-/// 事工 load, and for whoever edits the whole day.
-final ledDutiesProvider = Provider.family<Set<String>, String?>((ref, serviceType) {
+/// What I arrange on a day of [serviceType] (null: an event's): null for
+/// all of it, otherwise only these duties (Member.arranges); nothing while
+/// signed out.
+final arrangesProvider = Provider.family<Set<String>?, String?>((ref, serviceType) {
   final me = ref.watch(meProvider).value;
-  if (me == null || me.leadMinistries.isEmpty) return const {};
-  final ministries = ref.watch(ministriesProvider).value?.ministries ?? const [];
-  return me.ledDuties(ministries, serviceType);
+  if (me == null) return const {};
+  final ministries = ref.watch(ministriesProvider).value?.ministries ?? const <Ministry>[];
+  return me.arranges(ministries, serviceType);
 });
+
+/// Whether I arrange anything on a day of [serviceType] (null: an event's).
+bool arrangesAny(Set<String>? arranges) => arranges == null || arranges.isNotEmpty;
 
 /// The church link at the top of the home page, or null.
 final churchLinkProvider = StreamProvider<ChurchLink?>((ref) => openChurch(ref).churchLink());

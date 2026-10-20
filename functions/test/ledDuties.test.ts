@@ -138,3 +138,17 @@ test("a day as an older version stored it compares equal to the app's copy", asy
   await editLedDuties(deps, caller('lead'), { churchId: 'C1', before: { [ID]: day([duty('司琴')]) }, after: { [ID]: after }, via: 'app' });
   assert.deepEqual((await db.doc(`churches/C1/rosters/${ID}`).get()).get('duties'), after.duties);
 });
+
+test('someone who leads nothing makes no day either, not even an empty one', async () => {
+  await church();
+  await rejectsWith(
+    editLedDuties(deps, caller('staff'), { churchId: 'C1', before: { [ID]: null }, after: { [ID]: day([]) }, via: 'app' }),
+    'permissionDenied',
+  );
+  const ev = { kind: 'event', eventId: 'fake', title: '假活動', dateKey: '2030-12-24', endDateKey: '2030-12-24', duties: [], events: [] };
+  await rejectsWith(
+    editLedDuties(deps, caller('lead'), { churchId: 'C1', before: { ev_fake: null }, after: { ev_fake: ev }, via: 'app' }),
+    'permissionDenied',
+  );
+  assert.equal((await db.doc(`churches/C1/rosters/${ID}`).get()).exists, false);
+});

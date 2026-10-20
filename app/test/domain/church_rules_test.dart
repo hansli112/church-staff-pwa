@@ -94,4 +94,61 @@ void main() {
       });
     }
   });
+
+  group('ledDuties', () {
+    Roster? day(Object? duties, Object? events) => duties == null
+        ? null
+        : Roster(
+            type: 'sunday',
+            day: Day(2030, 10, 6),
+            duties: [
+              for (final d in duties as List) Duty(role: d['role'] as String, people: _strings(d['people'])),
+            ],
+            events: [
+              for (final e in (events as List?) ?? const [])
+                EventTag(name: e['name'] as String, color: e['color'] as int),
+            ],
+          );
+    for (final r in _rows('ledDuties')) {
+      test(r['why'] as String, () {
+        expect(
+          mayChangeLedDuties(
+            _strings(r['roles']).toSet(),
+            day(r['before'], r['beforeEvents']),
+            day(r['after'], r['afterEvents']),
+          ),
+          r['may'],
+        );
+      });
+    }
+  });
+
+  group('groupMembership', () {
+    Member member(String uid, Map<String, dynamic> f) => Member(
+      uid: uid,
+      name: uid,
+      role: Role.values.byName(f['role'] as String? ?? 'staff'),
+      groups: {for (final g in _strings(f['groups'] ?? const [])) ?Group.byId(g)},
+      identities: [
+        for (final i in (f['identities'] as List?) ?? const []) ?Identity.fromJson(i),
+        for (final t in _strings(f['leadTypes'] ?? const [])) ServiceLead(t),
+        for (final m in _strings(f['leadMinistries'] ?? const [])) MinistryLead(m),
+      ],
+    );
+    for (final r in _rows('groupMembership')) {
+      test(r['why'] as String, () {
+        final g = r['group'] as Map<String, dynamic>;
+        final group = g['service'] is String
+            ? ServiceGroup(g['service'] as String)
+            : MinistryGroup(g['ministry'] as String);
+        expect(
+          member(
+            'caller',
+            r['caller'] as Map<String, dynamic>,
+          ).mayMove(member('target', r['target'] as Map<String, dynamic>), group),
+          r['may'],
+        );
+      });
+    }
+  });
 }

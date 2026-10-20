@@ -308,7 +308,10 @@ class RosterActions {
     void validate() {
       scope.check();
       final member = _ref.read(meProvider).value;
-      if (scope.uid == null || !_ref.read(churchOpenProvider) || !(member?.canEditRosters(type) ?? false)) {
+      if (scope.uid == null ||
+          !_ref.read(churchOpenProvider) ||
+          member == null ||
+          !arrangesAny(_ref.read(arrangesProvider(type)))) {
         throw const CloudException(CloudErrorCode.permissionDenied);
       }
     }
@@ -323,7 +326,8 @@ class RosterActions {
             preview.order.changesTo(plan.order).isNotEmpty)) {
       throw const CloudException(CloudErrorCode.conflict);
     }
-    final changedOrder = order.changesTo(plan.order).isNotEmpty;
+    // The staff order is the whole service's: not a 事工 leader's to change.
+    final changedOrder = order.changesTo(plan.order).isNotEmpty && _ref.read(arrangesProvider(type)) == null;
     final change = RosterChange(
       before: before,
       after: after,

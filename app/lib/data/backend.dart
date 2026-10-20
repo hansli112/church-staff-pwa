@@ -263,10 +263,17 @@ abstract interface class ChurchData {
   /// member's own notification settings are left alone.
   Future<void> compareAndSetMember({required Member before, required Member after});
 
-  /// 加為同工 ([member] true, with the [duties] they served, for a service)
-  /// or 移出 [group], by its 負責人 or an admin. Changes nothing else on
+  /// 加為同工 ([member] true; for a service with the [duties] they serve and
+  /// their [smallGroups] there) or 移出 [group]: by an admin, or by its
+  /// 負責人 for a plain 同工 (Member.mayMove). Changes nothing else on
   /// member [uid].
-  Future<void> setGroupMember(String uid, ChurchGroup group, {required bool member, List<String> duties = const []});
+  Future<void> setGroupMember(
+    String uid,
+    ChurchGroup group, {
+    required bool member,
+    List<String> duties = const [],
+    List<String> smallGroups = const [],
+  });
 
   /// Gives member [uid] [duty] in [serviceType], applied to the member as
   /// they are when written (admins): nothing else on them changes.

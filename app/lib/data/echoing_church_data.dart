@@ -293,13 +293,18 @@ class EchoingChurchData implements ChurchData {
   );
 
   @override
-  Future<void> setGroupMember(String uid, ChurchGroup group, {required bool member, List<String> duties = const []}) =>
-      _send(
-        _Echo(
-          members: {uid: (m) => m.inGroupAs(group, member: member, duties: duties)},
-        ),
-        () => _inner.setGroupMember(uid, group, member: member, duties: duties),
-      );
+  Future<void> setGroupMember(
+    String uid,
+    ChurchGroup group, {
+    required bool member,
+    List<String> duties = const [],
+    List<String> smallGroups = const [],
+  }) => _send(
+    _Echo(
+      members: {uid: (m) => m.inGroupAs(group, member: member, duties: duties, smallGroups: smallGroups)},
+    ),
+    () => _inner.setGroupMember(uid, group, member: member, duties: duties, smallGroups: smallGroups),
+  );
 
   @override
   Future<void> grantDuty(String uid, String serviceType, String duty) => _send(
