@@ -8,6 +8,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:martha/app.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
+import 'package:martha/state/app_build.dart';
 import 'package:martha/state/providers.dart';
 import 'package:martha/state/support.dart';
 
@@ -278,6 +279,18 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('rating the app in its store is a way to support too', (tester) async {
+    final launcher = captureLaunches();
+    await pumpWithStore(tester, FakeStore(), FakeIcons());
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
+    await settle(tester);
+    await tester.scrollUntilVisible(find.text('評分支持我們'), 200);
+    await tester.tap(find.text('評分支持我們'));
+    await settle(tester);
+    expect(launcher.opened, ['https://play.google.com/store/apps/details?id=app.marthasit']);
+    expect(AppStore.appStore.review.toString(), 'https://apps.apple.com/app/id6823826952?action=write-review');
+  });
 
   testWidgets('without a plan, the icon page is not there to see: back on 支持', (tester) async {
     await pumpWithStore(tester, FakeStore(), FakeIcons());

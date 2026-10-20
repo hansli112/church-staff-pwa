@@ -1197,6 +1197,9 @@ class L10nZh extends L10n {
   String get supportRestore => '恢復購買';
 
   @override
+  String get supportRate => '評分支持我們';
+
+  @override
   String supportMonthlyTerms(String store) {
     return '每月自動續訂，可以隨時到 $store 的訂閱設定取消';
   }
@@ -3711,6 +3714,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get supportRestore => '恢复购买';
+
+  @override
+  String get supportRate => '评分支持我们';
 
   @override
   String supportMonthlyTerms(String store) {

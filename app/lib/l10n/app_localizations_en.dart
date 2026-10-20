@@ -1270,6 +1270,9 @@ class L10nEn extends L10n {
   String get supportRestore => 'Restore purchases';
 
   @override
+  String get supportRate => 'Support us with a rating';
+
+  @override
   String supportMonthlyTerms(String store) {
     return 'Renews automatically every month. Cancel anytime in your $store subscriptions.';
   }

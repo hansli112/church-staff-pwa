@@ -1200,6 +1200,9 @@ class L10nKo extends L10n {
   String get supportRestore => '구매 복원';
 
   @override
+  String get supportRate => '평점으로 응원하기';
+
+  @override
   String supportMonthlyTerms(String store) {
     return '매월 자동으로 갱신돼요. $store의 구독 설정에서 언제든지 해지할 수 있어요.';
   }

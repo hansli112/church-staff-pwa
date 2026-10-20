@@ -11,6 +11,7 @@ import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../data/backend.dart';
 import '../../l10n/app_localizations.dart';
+import '../../state/app_build.dart';
 import '../../state/support.dart';
 import '../common/labels.dart';
 import 'me_screen.dart' show openSitePage;
@@ -159,6 +160,17 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                   title: l10n.appIcon,
                   value: appIconName(l10n, icon),
                   onTap: () => context.push('/me/support/icon'),
+                ),
+              ],
+            ),
+          // A way to support without paying.
+          if (AppStore.current case final appStore?)
+            ListSection(
+              children: [
+                ListRow(
+                  title: l10n.supportRate,
+                  value: appStore.label,
+                  onTap: () => launchUrl(appStore.review, mode: LaunchMode.externalApplication),
                 ),
               ],
             ),

@@ -388,6 +388,7 @@
   "supportMonthly": "每月支持",
   "supportPerMonth": "{price}/月",
   "supportRestore": "恢复购买",
+  "supportRate": "评分支持我们",
   "supportMonthlyTerms": "每月自动续订，可以随时在 {store} 的订阅设置中取消",
   "manageSubscription": "管理订阅",
   "supportThanks": "谢谢你的支持",

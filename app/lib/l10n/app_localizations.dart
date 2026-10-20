@@ -2284,6 +2284,12 @@ abstract class L10n {
   /// **'恢復購買'**
   String get supportRestore;
 
+  /// A row on the support page that opens the app's page in the App Store or Google Play to rate it, a way to support without paying
+  ///
+  /// In zh, this message translates to:
+  /// **'評分支持我們'**
+  String get supportRate;
+
   /// Under the monthly subscription, as App Store 3.1.2 asks: it renews itself and how to cancel. store is App Store or Google Play
   ///
   /// In zh, this message translates to:

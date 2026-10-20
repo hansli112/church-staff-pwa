@@ -1199,6 +1199,9 @@ class L10nJa extends L10n {
   String get supportRestore => '購入を復元';
 
   @override
+  String get supportRate => '評価で応援する';
+
+  @override
   String supportMonthlyTerms(String store) {
     return '毎月自動で更新されます。$store のサブスクリプション設定からいつでも解約できます。';
   }

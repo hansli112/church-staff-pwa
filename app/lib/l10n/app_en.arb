@@ -388,6 +388,7 @@
   "supportMonthly": "Monthly support",
   "supportPerMonth": "{price}/month",
   "supportRestore": "Restore purchases",
+  "supportRate": "Support us with a rating",
   "supportMonthlyTerms": "Renews automatically every month. Cancel anytime in your {store} subscriptions.",
   "manageSubscription": "Manage subscription",
   "supportThanks": "Thank you for your support",

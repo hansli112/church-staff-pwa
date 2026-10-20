@@ -735,6 +735,8 @@
   "supportPerMonth": "{price}／月",
   "@supportPerMonth": { "description": "A monthly plan's button on the support page: its price a month", "placeholders": { "price": { "type": "String", "example": "NT$30" } } },
   "supportRestore": "恢復購買",
+  "supportRate": "評分支持我們",
+  "@supportRate": { "description": "A row on the support page that opens the app's page in the App Store or Google Play to rate it, a way to support without paying" },
   "supportMonthlyTerms": "每月自動續訂，可以隨時到 {store} 的訂閱設定取消",
   "@supportMonthlyTerms": {
     "description": "Under the monthly subscription, as App Store 3.1.2 asks: it renews itself and how to cancel. store is App Store or Google Play",

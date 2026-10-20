@@ -23,6 +23,13 @@ enum AppStore {
     appStore => Uri.https('apps.apple.com', '/app/id$appleAppId'),
   };
 
+  /// Where to rate the app: the App Store opens its review form; Google
+  /// Play has none to link to, only the page with its ratings.
+  Uri get review => switch (this) {
+    googlePlay => page,
+    appStore => page.replace(queryParameters: {'action': 'write-review'}),
+  };
+
   /// This phone's store; null on the web and on desktops, which have none.
   static AppStore? get current => kIsWeb
       ? null

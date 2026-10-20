@@ -388,6 +388,7 @@
   "supportMonthly": "毎月の応援",
   "supportPerMonth": "{price}/月",
   "supportRestore": "購入を復元",
+  "supportRate": "評価で応援する",
   "supportMonthlyTerms": "毎月自動で更新されます。{store} のサブスクリプション設定からいつでも解約できます。",
   "manageSubscription": "サブスクリプションを管理",
   "supportThanks": "応援ありがとうございます",
