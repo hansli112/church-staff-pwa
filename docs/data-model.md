@@ -113,6 +113,11 @@ App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預�
 
 活動屬於全教會，或屬於一個群組，存在 Google 活動的 `extendedProperties.private.marthaGroup`（`''` 是全教會，`service:<id>`、`ministry:<id>` 是群組的），在 Google 日曆改活動也留著；直接在 Google 建的是全教會的。`calendarWrite` 照 Google 上現在的歸屬判斷（`testdata/church_rules.json` 的 `eventWriting`）：admin 和行政（`calendar-editors`）全部；群組的負責人只能建、改、刪自己群組的活動，不能動全教會的，也不能把活動移到全教會或別的群組；其他同工連行事曆都不會被問。
 
+- 沒帶 `group` 的寫入（還不認得群組的舊版 App）：改活動就照 Google 上原本的歸屬，新活動算全教會的。
+- 重複活動照系列存：把其中一天改到別的群組，整個系列（Google 上的主活動）跟著改，其他沒個別改過的日子也就跟著。
+- 活動的服事表上的 `group` 是規則判斷負責人能不能排的依據，但規則查不到 Google：負責人建服事表時寫的 `group` 由後端（`onEventRosterCreated`）回頭對 Google，對不上（或活動已刪）就把這張服事表刪掉；不是 admin 或行政的人復原刪除時，也只能帶回自己群組活動的服事表。
+- 群組的活動不推播（活動本來就沒有推播），但教會的 webhook 照樣收到 `calendar.*`，跟全教會的一樣。
+
 ## 交給 Cloud Functions 的（M2）
 
 規則做不到的檢查都放在後端：建立教會（email 已驗證、`nameKey` 不重複）、邀請加入、帳號刪除、平台後台（改名、轉移管理員、停用）、服事項目改名（`editService`，連同事工連到的服事項目）、事工負責人排服事表（`editLedDuties`）、負責人加入和移出群組的同工（`setGroupMember`）。

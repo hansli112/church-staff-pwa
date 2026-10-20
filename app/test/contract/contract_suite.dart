@@ -1154,6 +1154,30 @@ void contractTests(Future<ContractWorld> Function() open) {
       await g.church.calendarDelete(ours);
     });
 
+    test("a 負責人 undoing a delete takes back no roster of the church's (#84)", () async {
+      final g = await Grace.open(w);
+      await w.connectCalendar(g.cid);
+      final church = await g.church.calendarSave(
+        CalendarEvent(title: '同工會', start: DateTime.utc(2026, 12, 20, 19), end: DateTime.utc(2026, 12, 20, 21)),
+      );
+      await g.church.putRoster(
+        eventRoster(
+          church,
+          duties: const [Duty(role: '主持')],
+          calendarId: 'cal-1',
+        ),
+      );
+      await g.church.calendarDelete(church);
+      await w.signIn(Grace.editorEmail);
+      await expectLater(
+        g.church.calendarSave(
+          CalendarEvent(title: '同工會', start: church.start, end: church.end, group: 'service:sunday'),
+          restoreRosterOf: church.id,
+        ),
+        denied(),
+      );
+    });
+
     test("an event's roster follows its event: moved, deleted, and the delete undone", () async {
       final g = await Grace.open(w);
       await w.connectCalendar(g.cid);

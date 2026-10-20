@@ -24,6 +24,8 @@ export function memoryGoogle(events: CalendarEvent[] = []) {
   let allRevoked = false;
   let unshared = false;
   let made = 0;
+  // Days of a series changed on their own, which no longer follow it.
+  const alone = new Set<string>();
   const reach = () => {
     if (down) throw new Error('google unreachable');
   };
@@ -54,6 +56,7 @@ export function memoryGoogle(events: CalendarEvent[] = []) {
     async upsert(_token, _calendarId, e) {
       reach();
       const id = e.id ?? `new-${++made}`;
+      if (e.id) alone.add(id);
       const i = events.findIndex((x) => x.id === id);
       const saved = { ...(i >= 0 ? events[i] : {}), ...e, id, link: `https://calendar.google.com/event?eid=${id}` };
       if (i >= 0) events[i] = saved;
@@ -70,6 +73,17 @@ export function memoryGoogle(events: CalendarEvent[] = []) {
       calls.removed.push(id);
       const e = events.find((x) => x.id === id);
       if (e) e.cancelled = true;
+    },
+    async setGroup(_token, _calendarId, id, group) {
+      reach();
+      // The series and its days that were not changed on their own, which
+      // in Google follow the series.
+      for (const e of events) {
+        if (e.id === id || (e.recurringEventId === id && !alone.has(e.id!))) {
+          if (group) e.group = group;
+          else delete e.group;
+        }
+      }
     },
     async revoke(refreshToken) {
       calls.revoked.push(refreshToken);

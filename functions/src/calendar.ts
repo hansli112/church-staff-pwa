@@ -1,11 +1,11 @@
 import { createHash, randomBytes } from 'node:crypto';
 
-import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp, type DocumentSnapshot } from 'firebase-admin/firestore';
 
 import { churchAccess, isChurchOpen } from './access.js';
 import { fail, type Caller, type Deps } from './common.js';
-import { isEventGroup, mayWriteEvent } from './eventGroups.js';
-import { cancelWithEvent, followEdit, inclusiveEnd, restoreOnto } from './eventRosters.js';
+import { isEventGroup, leadsAnyGroup, mayWriteEvent, writesAnyEvent } from './eventGroups.js';
+import { cancelWithEvent, followEdit, inclusiveEnd, isEvent, restoreOnto } from './eventRosters.js';
 import { seal, unseal } from './sealing.js';
 import { notify, type WebhookDeps } from './webhook.js';
 import { dateKeyIn, instantOf, instantOfTime, LOCAL_TIME, localIso, timeZoneOf, type ChurchTimeZone } from './timeZones.js';
@@ -53,6 +53,8 @@ export interface GoogleApi {
   /** One event, or null when it is gone. */
   get(accessToken: string, calendarId: string, eventId: string): Promise<CalendarEvent | null>;
   remove(accessToken: string, calendarId: string, eventId: string): Promise<void>;
+  /** Gives an event, or a whole recurring series, to [group] ('' the church's). */
+  setGroup(accessToken: string, calendarId: string, eventId: string, group: string): Promise<void>;
   revoke(refreshToken: string): Promise<void>;
 }
 
@@ -408,9 +410,8 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
   const me = await churchAccess(deps, caller, data, 'member');
   // Admins and 行政 write any event; a 負責人 only their groups'. Anyone
   // else is refused before the calendar is asked anything.
-  const editor = mayWriteEvent(me.member.data() ?? {}, '', null);
-  const leads = ['leadTypes', 'leadMinistries'].some((k) => ((me.member.get(k) as unknown[] | undefined) ?? []).length > 0);
-  if (!editor && !leads) fail('permission-denied', 'permissionDenied');
+  const editor = writesAnyEvent(me.member.data() ?? {});
+  if (!editor && !leadsAnyGroup(me.member.data() ?? {})) fail('permission-denied', 'permissionDenied');
   const churchId = me.cid;
   const timeZone = timeZoneOf(me.church);
   const input = data as {
@@ -455,8 +456,17 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
     }
     const allDay = e.allDay === true;
     if (e.group !== undefined && !isEventGroup(e.group)) fail('invalid-argument', 'unknown');
-    const group = e.group ?? '';
-    if (!editor) may(typeof e.id === 'string' ? (await groupNow(e.id)).group : null, group);
+    // Left out (an older app, which knows no groups), an edit keeps whose
+    // it is and a new event is the church's.
+    const group = e.group;
+    const before = typeof e.id === 'string' && (!editor || group !== undefined) ? await groupNow(e.id) : null;
+    if (!editor) may(before?.group ?? null, group ?? before?.group ?? '');
+    // Undoing a delete takes the cancelled roster along: only one of an
+    // event the caller could have deleted.
+    if (!editor && typeof input.restoreRosterOf === 'string' && /^[A-Za-z0-9_-]{1,1024}$/.test(input.restoreRosterOf)) {
+      const r = await deps.db.doc(`churches/${churchId}/rosters/ev_${input.restoreRosterOf}`).get();
+      if (r.exists) may((r.get('group') as string | undefined) ?? '', null);
+    }
     // As Google gives it back; the app and the webhook get it on the church's clock.
     const saved = await deps.google.upsert(token, calendarId, {
       id: typeof e.id === 'string' ? e.id : undefined,
@@ -466,8 +476,14 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
       allDay,
       location: typeof e.location === 'string' ? e.location.slice(0, 300) : undefined,
       description: typeof e.description === 'string' ? e.description.slice(0, 4000) : undefined,
-      group,
+      ...(group !== undefined ? { group } : {}),
     });
+    // A day of a recurring event given to another group: the series goes
+    // with it (重複活動照系列存), so its other days are that group's too.
+    const series = saved.recurringEventId;
+    if (series && group !== undefined && group !== (before?.group ?? '')) {
+      await deps.google.setGroup(token, calendarId, series, group);
+    }
     result = inZone(saved, timeZone);
     spans.push(span(e));
     if (typeof e.id === 'string') {
@@ -491,6 +507,29 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
     }));
   }
   return { event: result };
+}
+
+/**
+ * An event's roster just made in the app by [by] (#84). The rules let a
+ * group's 負責人 make one for their group's events by the group it says,
+ * which only the backend can check against the event in Google: one made
+ * by someone who may not write every event, saying a group its event does
+ * not have (or of an event deleted), is removed.
+ */
+export async function checkEventRosterGroup(deps: CalDeps, churchId: string, r: DocumentSnapshot, by: string | undefined) {
+  const group = r.get('group');
+  if (!by || !isEvent(r) || typeof group !== 'string' || !group) return;
+  const member = await deps.db.doc(`churches/${churchId}/members/${by}`).get();
+  if (writesAnyEvent(member.data() ?? {})) return;
+  const { token, calendarId } = await access(deps, churchId);
+  const e = calendarId ? await deps.google.get(token, calendarId, r.get('eventId') as string) : null;
+  // Not found, the sync cancels it as it does any roster whose event went.
+  if (!e || (!e.cancelled && (e.group ?? '') === group)) return;
+  console.warn(`event roster ${churchId}/${r.id}: says ${group}, its event does not; removed`);
+  await deps.db.runTransaction(async (tx) => {
+    const now = await tx.get(r.ref);
+    if (now.exists && now.createTime?.isEqual(r.createTime!)) tx.delete(r.ref);
+  });
 }
 
 /**
@@ -547,8 +586,9 @@ export function googleApi(options: Partial<Pick<Deps, 'fetch' | 'now'>> = {}): G
     summary: e.title,
     location: e.location,
     description: e.description,
-    // Whose it is, kept with the event so an edit in Google keeps it.
-    extendedProperties: { private: { marthaGroup: e.group ?? '' } },
+    // Whose it is, kept with the event so an edit in Google keeps it; left
+    // out, a PATCH keeps what it had.
+    ...(e.group !== undefined ? { extendedProperties: { private: { marthaGroup: e.group } } } : {}),
     // PATCH merges nested objects: clear the opposite type explicitly.
     // New events have no previous date type, so POST keeps the normal shape.
     start: e.allDay ? { date: e.start, ...(e.id ? { dateTime: null } : {}) } : { dateTime: e.start, ...(e.id ? { date: null } : {}) },
@@ -685,6 +725,17 @@ export function googleApi(options: Partial<Pick<Deps, 'fetch' | 'now'>> = {}): G
         { method: 'DELETE', headers: { authorization: `Bearer ${token}` } },
       );
       if (res.status !== 404 && res.status !== 410) await json(res, token);
+    },
+    async setGroup(token, calendarId, eventId, group) {
+      const res = await fetch(
+        `${api}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
+        {
+          method: 'PATCH',
+          headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+          body: JSON.stringify({ extendedProperties: { private: { marthaGroup: group } } }),
+        },
+      );
+      await json(res, token);
     },
     async revoke(refreshToken) {
       const prefix = `${grantHash(refreshToken)}:`;

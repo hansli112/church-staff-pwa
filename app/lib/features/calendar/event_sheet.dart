@@ -45,16 +45,20 @@ Future<void> showEventDetail(BuildContext context, CalendarEvent e) {
                   style: AppText.body,
                 ),
                 if (!e.allDay) const ChurchClockNotice(padding: EdgeInsets.only(top: Space.xs)),
-                // A group's event says whose it is (#84).
+                // A group's event says whose it is (#84); one of a group
+                // since deleted, nothing.
                 if (e.group != null)
                   Consumer(
-                    builder: (context, ref, _) => Padding(
-                      padding: const EdgeInsets.only(top: Space.xs),
-                      child: Text(
-                        l10n.eventOfGroup(eventGroupLabel(ref, l10n, e.group)),
-                        style: AppText.body.copyWith(color: AppColors.of(context).secondaryLabel),
+                    builder: (context, ref, _) => switch (eventGroupName(ref, e.group!)) {
+                      final name? => Padding(
+                        padding: const EdgeInsets.only(top: Space.xs),
+                        child: Text(
+                          l10n.eventOfGroup(name),
+                          style: AppText.body.copyWith(color: AppColors.of(context).secondaryLabel),
+                        ),
                       ),
-                    ),
+                      null => const SizedBox.shrink(),
+                    },
                   ),
                 if (e.location != null && e.location!.isNotEmpty) ...[
                   const SizedBox(height: Space.xs),
@@ -160,25 +164,23 @@ List<EventGroupChoice> eventGroupChoices(WidgetRef ref, L10n l10n) {
   if (me == null) return const [];
   final services = ref.read(servicesProvider).value?.enabled ?? const <Service>[];
   final ministries = ref.read(ministriesProvider).value?.ministries ?? const <Ministry>[];
-  final all = me.inGroup(Group.calendarEditors);
   return [
-    if (all) (key: null, label: l10n.wholeChurch),
-    for (final s in services)
-      if (all || me.leadTypes.contains(s.id)) (key: ServiceGroup(s.id).key, label: s.name),
-    for (final m in ministries)
-      if (all || me.leadMinistries.contains(m.id)) (key: MinistryGroup(m.id).key, label: m.name),
+    if (me.mayWriteEvent(null, '')) (key: null, label: l10n.wholeChurch),
+    for (final (key, label) in [
+      for (final s in services) (ServiceGroup(s.id).key, s.name),
+      for (final m in ministries) (MinistryGroup(m.id).key, m.name),
+    ])
+      if (me.mayWriteEvent(null, key)) (key: key, label: label),
   ];
 }
 
-/// Whose [group] is, as the calendar says it: 全教會, or the group's name.
-String eventGroupLabel(WidgetRef ref, L10n l10n, String? group) {
-  if (group == null) return l10n.wholeChurch;
-  return switch (ChurchGroup.parse(group)) {
-    ServiceGroup(:final id) => ref.read(servicesProvider).value?.byId(id)?.name ?? l10n.wholeChurch,
-    MinistryGroup(:final id) => ref.read(ministriesProvider).value?.byId(id)?.name ?? l10n.wholeChurch,
-    null => l10n.wholeChurch,
-  };
-}
+/// The name of the group whose event this is ([ChurchGroup.key]), or null
+/// for one no longer there.
+String? eventGroupName(WidgetRef ref, String group) => switch (ChurchGroup.parse(group)) {
+  ServiceGroup(:final id) => ref.watch(servicesProvider).value?.byId(id)?.name,
+  MinistryGroup(:final id) => ref.watch(ministriesProvider).value?.byId(id)?.name,
+  null => null,
+};
 
 class _EditResult {
   const _EditResult({this.event, this.delete = false, this.openRoster = false, this.duplicate = false});

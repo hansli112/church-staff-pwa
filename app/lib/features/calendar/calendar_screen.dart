@@ -59,9 +59,12 @@ class CalendarFilter extends Notifier<String> {
   @override
   String build() {
     ref.watch(currentChurchIdProvider);
-    final whole = ref.watch(meProvider.select((m) => m.value?.inGroup(Group.calendarEditors) ?? false));
-    return ref.read(prefsProvider).getString(_key) ?? (whole ? 'all' : 'mine');
+    ref.watch(meProvider.select((m) => m.value?.inGroup(Group.calendarEditors)));
+    return ref.read(prefsProvider).getString(_key) ?? first;
   }
+
+  /// The one this member starts on.
+  String get first => (ref.read(meProvider).value?.inGroup(Group.calendarEditors) ?? false) ? 'all' : 'mine';
 
   void pick(String filter) {
     state = filter;
@@ -70,6 +73,30 @@ class CalendarFilter extends Notifier<String> {
 }
 
 final calendarFilterProvider = NotifierProvider<CalendarFilter, String>(CalendarFilter.new);
+
+/// The filters to pick from, with their names: 跟我有關的, 全部, 全教會 and
+/// each group's.
+final _calendarFiltersProvider = Provider<List<(String, String)>?>((ref) {
+  final services = ref.watch(servicesProvider).value?.enabled;
+  final ministries = ref.watch(ministriesProvider).value?.ministries;
+  if (services == null || ministries == null) return null;
+  return [
+    ('mine', ''),
+    ('all', ''),
+    ('church', ''),
+    for (final s in services) (ServiceGroup(s.id).key, s.name),
+    for (final m in ministries) (MinistryGroup(m.id).key, m.name),
+  ];
+});
+
+/// The filter in effect: the one picked, unless it is a group no longer
+/// there, which shows what this member starts on instead.
+final shownCalendarFilterProvider = Provider<String>((ref) {
+  final filter = ref.watch(calendarFilterProvider);
+  final filters = ref.watch(_calendarFiltersProvider);
+  if (filters == null || filters.any((f) => f.$1 == filter)) return filter;
+  return ref.read(calendarFilterProvider.notifier).first;
+});
 
 /// Whether [filter] shows [e] for [me]. 跟我有關的: the church's events, my
 /// groups' (the services I am in or lead, my 事工), and those whose roster
@@ -88,10 +115,21 @@ bool calendarShows(String filter, CalendarEvent e, Member? me, Set<String> serve
   final group => e.group == group,
 };
 
-/// The events whose roster I am on, by event id: for 跟我有關的.
-final _servedAtProvider = Provider<Set<String>>((ref) {
+/// Every event's roster, read once: for 跟我有關的 in a month gone by,
+/// which the rosters still to come do not cover.
+final _eventRostersProvider = FutureProvider<List<Roster>>((ref) {
+  ref.watch(churchDataProvider);
+  return ref.churchData.eventRosters();
+});
+
+/// The events whose roster I am on, by event id: for 跟我有關的. With
+/// [past], those gone by as well.
+final _servedAtProvider = Provider.family<Set<String>, bool>((ref, past) {
   final uid = ref.watch(uidProvider);
-  final rosters = ref.watch(savedRostersProvider).value ?? const <Roster>[];
+  final rosters = [
+    ...?ref.watch(savedRostersProvider).value,
+    if (past) ...?ref.watch(_eventRostersProvider).value,
+  ];
   return {
     for (final r in rosters)
       if (r.forEvent case final e? when uid != null && r.duties.any((d) => d.uids.containsValue(uid))) e.eventId,
@@ -112,15 +150,18 @@ class CalendarScreen extends ConsumerWidget {
     // Admins, 行政 and any 負責人 make events (#84): whose, they pick.
     final canEdit = (me?.makesEvents ?? false) && (settings?.ready ?? false);
     final gridShown = ref.watch(monthGridShownProvider);
-    final filter = ref.watch(calendarFilterProvider);
-    final services = ref.watch(servicesProvider).value?.enabled ?? const <Service>[];
-    final ministries = ref.watch(ministriesProvider).value?.ministries ?? const <Ministry>[];
-    final filters = <(String, String)>[
-      ('mine', l10n.calFilterMine),
-      ('all', l10n.calFilterAll),
-      ('church', l10n.wholeChurch),
-      for (final s in services) (ServiceGroup(s.id).key, s.name),
-      for (final m in ministries) (MinistryGroup(m.id).key, m.name),
+    final filter = ref.watch(shownCalendarFilterProvider);
+    final filters = [
+      for (final (key, name) in ref.watch(_calendarFiltersProvider) ?? const <(String, String)>[])
+        (
+          key,
+          switch (key) {
+            'mine' => l10n.calFilterMine,
+            'all' => l10n.calFilterAll,
+            'church' => l10n.wholeChurch,
+            _ => name,
+          },
+        ),
     ];
     return Scaffold(
       appBar: AppBar(
@@ -139,7 +180,10 @@ class CalendarScreen extends ConsumerWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(filters.where((f) => f.$1 == filter).firstOrNull?.$2 ?? l10n.calFilterAll),
+                    Text(
+                      filters.where((f) => f.$1 == filter).firstOrNull?.$2 ??
+                          (filter == 'mine' ? l10n.calFilterMine : l10n.calFilterAll),
+                    ),
                     const Icon(Symbols.arrow_drop_down_rounded),
                   ],
                 ),
@@ -275,8 +319,10 @@ class _AgendaState extends ConsumerState<_Agenda> {
     final gridShown = ref.watch(monthGridShownProvider);
     final title = DateFormat.yMMMM().format(month);
     final me = ref.watch(meProvider).value;
-    final filter = ref.watch(calendarFilterProvider);
-    final servedAt = ref.watch(_servedAtProvider);
+    final filter = ref.watch(shownCalendarFilterProvider);
+    final servedAt = ref.watch(
+      _servedAtProvider(filter == 'mine' && month.isBefore(DateTime(today.year, today.month))),
+    );
     final loaded = [
       for (final e in events.value ?? const <CalendarEvent>[])
         if (calendarShows(filter, e, me, servedAt)) e,

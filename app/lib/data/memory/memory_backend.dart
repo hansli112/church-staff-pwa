@@ -1450,11 +1450,25 @@ class MemoryChurchData implements ChurchData {
   /// As calendarWrite: an event of group [before] (null: none yet) becoming
   /// [after] (null: deleted), judged by the event as the calendar has it
   /// (Member.mayWriteEvent).
-  void _requireEventWrite(String? Function() before, String? after) => _b.functionAccess(
-    churchId,
-    // Admins and 行政 write any event: whose it was is looked up for others.
-    allowed: (me) => me.inGroup(Group.calendarEditors) || me.mayWriteEvent(before(), after),
-  );
+  void _requireEventWrite(String? Function() before, String? after) {
+    _b.functionAccess(
+      churchId,
+      // Admins and 行政 write any event: whose it was is looked up for
+      // others, and anyone who leads nothing is refused before that.
+      allowed: (me) => me.inGroup(Group.calendarEditors) || (me.makesEvents && me.mayWriteEvent(before(), after)),
+    );
+    if (after != null && after.isNotEmpty && ChurchGroup.parse(after) == null) {
+      throw const CloudException(CloudErrorCode.unknown);
+    }
+  }
+
+  /// Undoing a delete takes the cancelled roster of [restoreRosterOf]
+  /// along: for a 負責人, only one of an event they could have deleted.
+  void _requireRestore(String? restoreRosterOf) {
+    if (restoreRosterOf == null) return;
+    final from = _b.rosters[churchId]![Roster.idForEvent(restoreRosterOf)];
+    if (from != null) _requireEventWrite(() => from.forEvent!.group ?? '', null);
+  }
 
   /// Event [id]'s group as the calendar has it now, '' the church's.
   String? _groupNow(String? id) {
@@ -1518,6 +1532,7 @@ class MemoryChurchData implements ChurchData {
   @override
   Future<CalendarEvent> calendarSave(CalendarEvent event, {CalendarEvent? previous, String? restoreRosterOf}) async {
     _requireEventWrite(() => _groupNow(event.id), event.group ?? '');
+    _requireRestore(restoreRosterOf);
     await _b.calendarSaveHeld?.future;
     final saved = event.id == null
         ? CalendarEvent(
@@ -1533,9 +1548,19 @@ class MemoryChurchData implements ChurchData {
         : event;
     await _b.write(() {
       _requireEventWrite(() => _groupNow(event.id), event.group ?? '');
+      _requireRestore(restoreRosterOf);
       final list = _b.calendarEvents.putIfAbsent(churchId, () => []);
+      final was = list.where((e) => e.id == saved.id).firstOrNull?.group;
       list.removeWhere((e) => e.id == saved.id);
       list.add(saved);
+      // A day of a recurring event given to another group: the series goes
+      // with it (重複活動照系列存).
+      final series = saved.recurringEventId;
+      if (series != null && was != saved.group) {
+        for (final (i, e) in list.indexed.toList()) {
+          if (e.recurringEventId == series && e.group != saved.group) list[i] = e.copyWith(group: () => saved.group);
+        }
+      }
       // The roster and calendar change become visible together.
       final rosters = _b.rosters[churchId]!;
       final from = rosters[Roster.idForEvent(restoreRosterOf ?? saved.id!)];

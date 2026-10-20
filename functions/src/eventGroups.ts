@@ -30,6 +30,12 @@ export function leadsEventGroup(m: Fields, group: string) {
   return false;
 }
 
+/** Whether [m] writes every event, whoever's: admins and calendar-editors (行政). */
+export const writesAnyEvent = (m: Fields) => m.role === 'admin' || strings(m.groups).includes('calendar-editors');
+
+/** Whether [m] leads any group, and so may write that group's events. */
+export const leadsAnyGroup = (m: Fields) => strings(m.leadTypes).length > 0 || strings(m.leadMinistries).length > 0;
+
 /**
  * Whether [m] may change an event of group [before] (null: none yet) to
  * group [after] (null: deleted) (testdata/church_rules.json,
@@ -37,6 +43,6 @@ export function leadsEventGroup(m: Fields, group: string) {
  * only that group's events, never the church's.
  */
 export function mayWriteEvent(m: Fields, before: string | null, after: string | null) {
-  if (m.role === 'admin' || strings(m.groups).includes('calendar-editors')) return true;
+  if (writesAnyEvent(m)) return true;
   return [before, after].every((g) => g === null || leadsEventGroup(m, g)) && (before !== null || after !== null);
 }

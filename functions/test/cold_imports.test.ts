@@ -59,6 +59,7 @@ test('each function lists the secrets its dependencies read, and no others', () 
     ecpayNotify: ecpay,
     onMemberDeleted: calendar,
     onMemberDemoted: calendar,
+    onEventRosterCreated: calendar,
     sendRosterChanges: webhook,
     syncEventRosters: calendar,
     calendarAuthUrl: calendar,

@@ -797,7 +797,7 @@ class L10nEn extends L10n {
   String get calFilter => 'Filter';
 
   @override
-  String get calFilterMine => 'Mine';
+  String get calFilterMine => 'Related to me';
 
   @override
   String get calFilterAll => 'All';

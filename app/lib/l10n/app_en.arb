@@ -253,7 +253,7 @@
   "eventGroup": "Belongs to",
   "eventOfGroup": "{group} event",
   "calFilter": "Filter",
-  "calFilterMine": "Mine",
+  "calFilterMine": "Related to me",
   "calFilterAll": "All",
   "removeShort": "Remove",
   "removeIdentityLabel": "Remove “{identity}”",

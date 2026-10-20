@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/data/memory/memory_backend.dart';
+import 'package:martha/domain/event_roster.dart';
 import 'package:martha/domain/models.dart';
 
 import '../support/harness.dart';
@@ -108,5 +109,42 @@ void main() {
     await settle(tester);
     await tapText(tester, '新增服事項目');
     expect(find.byType(TextField), findsOneWidget, reason: 'any duty, typed in too');
+  });
+
+  testWidgets('跟我有關的 has the events I served at, a month gone by too', (tester) async {
+    final b = church();
+    final retreat = CalendarEvent(
+      id: 'retreat',
+      title: '青年退修會',
+      start: DateTime(2026, 9, 19, 9),
+      end: DateTime(2026, 9, 19, 17),
+      group: 'service:youth',
+    );
+    b.calendarEvents['grace']!.add(retreat);
+    b.rosters['grace']![Roster.idForEvent('retreat')] = eventRoster(
+      retreat,
+      duties: const [
+        Duty(role: '司琴', people: ['陳志豪'], uids: {'陳志豪': 'hao'}),
+      ],
+    ).copyWith(saved: true);
+    await pumpApp(tester, b);
+    await go(tester, '/calendar');
+    await tester.tap(find.byTooltip('上個月'));
+    await settle(tester);
+    expect(find.text('青年退修會'), findsWidgets, reason: "青年崇拜's, but he played 司琴");
+  });
+
+  testWidgets('a group picked, then deleted, leaves 跟我有關的', (tester) async {
+    final b = church();
+    await pumpApp(tester, b);
+    await go(tester, '/calendar');
+    await tapText(tester, '跟我有關的');
+    await tapText(tester, '敬拜團');
+    expect(find.text('同工會'), findsNothing);
+    b.ministries['grace'] = const MinistrySettings(ministries: [], ids: ['worship']);
+    b.notify();
+    await settle(tester);
+    expect(find.text('跟我有關的'), findsOneWidget);
+    expect(find.text('同工會'), findsWidgets);
   });
 }

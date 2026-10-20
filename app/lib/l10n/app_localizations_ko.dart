@@ -774,14 +774,14 @@ class L10nKo extends L10n {
 
   @override
   String eventOfGroup(String group) {
-    return '$group 일정';
+    return '$group 행사';
   }
 
   @override
   String get calFilter => '필터';
 
   @override
-  String get calFilterMine => '나와 관련된 일정';
+  String get calFilterMine => '나와 관련된 행사';
 
   @override
   String get calFilterAll => '전체';

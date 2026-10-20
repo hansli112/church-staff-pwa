@@ -7,6 +7,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 import { getStorage } from 'firebase-admin/storage';
 import {
+  onDocumentCreatedWithAuthContext,
   onDocumentDeleted,
   onDocumentDeletedWithAuthContext,
   onDocumentWritten,
@@ -351,6 +352,14 @@ export const onRosterWritten = onDocumentWrittenWithAuthContext(
       event.id,
     );
   },
+);
+
+// An event's roster a 負責人 made, against its event's group in Google (#84).
+export const onEventRosterCreated = using(calDeps, { region: REGION, document: 'churches/{cid}/rosters/{rosterId}' }, (opts, make) =>
+  onDocumentCreatedWithAuthContext(opts, async (event) => {
+    if (!event.params.rosterId.startsWith('ev_') || !event.data) return;
+    await calendar.checkEventRosterGroup(make(), event.params.cid, event.data, triggers.editorOf(event));
+  }),
 );
 
 export const sendRosterChanges = using(

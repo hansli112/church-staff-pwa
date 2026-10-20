@@ -25,8 +25,7 @@ test('Google PATCH clears the opposite date field when changing event type, whil
   assert.match(requests[0].url, /church%40example\.com\/events\/event$/);
   assert.deepEqual(requests[0].body, {
     summary: '退修會', description: '保留說明',
-    // Whose it is (#84): the church's.
-    extendedProperties: { private: { marthaGroup: '' } },
+    // No group given (#84): whose it is stays as Google has it.
     start: { date: '2026-10-10', dateTime: null },
     end: { date: '2026-10-12', dateTime: null },
   });
@@ -41,6 +40,13 @@ test('Google PATCH clears the opposite date field when changing event type, whil
   assert.equal(requests[2].method, 'POST');
   assert.deepEqual(requests[2].body.start, { date: '2026-10-10' });
   assert.deepEqual(requests[2].body.end, { date: '2026-10-12' });
+
+  await google.upsert('access', 'church@example.com', { ...allDay, group: '' });
+  assert.deepEqual(requests[3].body.extendedProperties, { private: { marthaGroup: '' } }, "given back to the church");
+  await google.setGroup('access', 'church@example.com', 'series', 'ministry:worship');
+  assert.equal(requests[4].method, 'PATCH');
+  assert.match(requests[4].url, /events\/series$/);
+  assert.deepEqual(requests[4].body, { extendedProperties: { private: { marthaGroup: 'ministry:worship' } } }, 'only whose it is');
 });
 
 test('one church reuses its unexpired Google access token', async (t) => {

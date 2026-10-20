@@ -68,7 +68,7 @@ class CalendarReadCache {
       try {
         if (!_discarded.contains(scope.key) &&
             raw is Map &&
-            raw['schema'] == 1 &&
+            raw['schema'] == _schema &&
             raw['scope'] == scope.key &&
             raw['months'] is Map) {
           for (final entry in (raw['months'] as Map).entries) {
@@ -122,7 +122,7 @@ class CalendarReadCache {
     final encoded = _scope == null || _months.isEmpty
         ? null
         : jsonEncode({
-            'schema': 1,
+            'schema': _schema,
             'scope': _scope!.key,
             'months': {
               for (final entry in _months.entries)
@@ -149,6 +149,10 @@ class CalendarReadCache {
     return _pending;
   }
 }
+
+/// What a saved month looks like; one saved otherwise is read as none. 2:
+/// events say whose they are (#84), which months saved before did not.
+const _schema = 2;
 
 bool _validMonth(String month) => RegExp(r'^\d{4}-(0[1-9]|1[0-2])$').hasMatch(month);
 
