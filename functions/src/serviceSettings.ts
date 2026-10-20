@@ -92,10 +92,11 @@ export async function editService(deps: Deps, caller: Caller | null, data: unkno
         || !Array.isArray(ids) || ids.length > 100) fail('failed-precondition', 'unknown', 'invalidServiceSettings');
     if (!isDeepStrictEqual(services.find((s) => s.id === before.id), before)) fail('aborted', 'conflict');
     if (dutyRename) {
-      const [members, pending, order] = await Promise.all([
+      const [members, pending, order, ministries] = await Promise.all([
         tx.get(deps.db.collection(`churches/${cid}/members`)),
         tx.get(deps.db.collection(`churches/${cid}/pendingMembers`)),
         tx.get(deps.db.doc(`churches/${cid}/staff_orders/${before.id}`)),
+        tx.get(deps.db.doc(`churches/${cid}/settings/ministries`)),
       ]);
       const roles = order.get('roles') as Record<string, string[]> | undefined;
       if (roles && Object.hasOwn(roles, dutyRename.to)) fail('aborted', 'conflict');
@@ -114,6 +115,18 @@ export async function editService(deps: Deps, caller: Caller | null, data: unkno
           if (++writeCount > 500) fail('resource-exhausted', 'quotaExceeded', 'tooManyChanges');
           tx.update(member.ref, { zones: next });
         }
+      }
+      // The 事工 that link the duty (#82) keep leading it under its new name.
+      const linked = ministries.get('ministries') as { duties?: { service: string; duty: string }[] }[] | undefined;
+      const renamed = (d: { service: string; duty: string }) => d.service === before.id && d.duty === dutyRename.from;
+      if (Array.isArray(linked) && linked.some((m) => (m.duties ?? []).some(renamed))) {
+        if (++writeCount > 500) fail('resource-exhausted', 'quotaExceeded', 'tooManyChanges');
+        tx.update(ministries.ref, {
+          ministries: linked.map((m) => ({
+            ...m,
+            ...(m.duties && { duties: m.duties.map((d) => (renamed(d) ? { ...d, duty: dutyRename.to } : d)) }),
+          })),
+        });
       }
       if (roles && Object.hasOwn(roles, dutyRename.from)) {
         const next = { ...roles, [dutyRename.to]: roles[dutyRename.from] };

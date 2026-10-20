@@ -186,3 +186,19 @@ test('an admin edits only the compared service, keeping unrelated services, hist
   assert.deepEqual(settings.get('ids'), ['sunday', 'youth', 'historical']);
   assert.deepEqual((await db.doc('churches/C1/rosters/2026-10-04_sunday').get()).data(), assigned, 'configured option deletion never changes saved assignments');
 });
+
+test('a duty rename moves the 事工 that link it too (#82)', async () => {
+  await church();
+  const ministries = [
+    { id: 'worship', name: '敬拜團', duties: [{ service: 'sunday', duty: '司會' }, { service: 'youth', duty: '司會' }] },
+    { id: 'care', name: '關懷', duties: [] },
+  ];
+  await db.doc('churches/C1/settings/ministries').set({ ministries, ids: ['worship', 'care'] });
+  await editService(deps, caller('admin'), {
+    churchId: 'C1', before: sunday, after: { ...sunday, duties: ['主持', '司琴'] }, dutyRename: { from: '司會', to: '主持' },
+  });
+  assert.deepEqual((await db.doc('churches/C1/settings/ministries').get()).get('ministries'), [
+    { id: 'worship', name: '敬拜團', duties: [{ service: 'sunday', duty: '主持' }, { service: 'youth', duty: '司會' }] },
+    { id: 'care', name: '關懷', duties: [] },
+  ]);
+});

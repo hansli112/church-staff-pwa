@@ -671,6 +671,24 @@ class FirestoreChurchData implements ChurchData {
       _col('settings').doc('services').live().map((s) => serviceSettingsFromJson(s.data())).translated();
 
   @override
+  Stream<MinistrySettings> ministries() =>
+      _col('settings').doc('ministries').live().map((s) => ministrySettingsFromJson(s.data())).translated();
+
+  @override
+  Future<void> compareAndSetMinistries({required List<Ministry> before, required List<Ministry> after}) {
+    final ref = _col('settings').doc('ministries');
+    // Merge ids inside the transaction: the rules reject shrinking ids.
+    return _transaction((tx) async {
+      final current = ministrySettingsFromJson((await tx.get(ref)).data());
+      if (!listEquals(current.ministries, before)) throw const CloudException(CloudErrorCode.conflict);
+      tx.set(ref, {
+        ...ministrySettingsToJson(current.withMinistries(after)),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
+  @override
   Stream<List<Roster>> rosters({required Day from}) {
     final merged = _MergedRosters();
     return _latestOfBoth(
@@ -782,6 +800,16 @@ class FirestoreChurchData implements ChurchData {
   }
 
   @override
+  Future<void> compareAndSetLedDuties(RosterChange change) async {
+    if (change.staffOrder != null || change.serviceChange != null) throw ArgumentError('only rosters');
+    await _call('editLedDuties', {
+      'before': {for (final e in change.before.entries) e.key: e.value == null ? null : rosterToJson(e.value!)},
+      'after': {for (final e in change.after.entries) e.key: e.value == null ? null : rosterToJson(e.value!)},
+      'via': change.via,
+    });
+  }
+
+  @override
   Future<void> compareAndSetServiceList({required List<Service> before, required List<Service> after}) {
     final ref = _col('settings').doc('services');
     // Merge ids inside the transaction: the rules reject shrinking ids.
@@ -822,6 +850,17 @@ class FirestoreChurchData implements ChurchData {
       tx.update(ref, memberToJson(after));
     });
   }
+
+  @override
+  Future<void> setGroupMember(String uid, ChurchGroup group, {required bool member, List<String> duties = const []}) =>
+      _call('setGroupMember', {
+        'uid': uid,
+        ...switch (group) {
+          ServiceGroup(:final id) => {'service': id, if (member) 'duties': duties},
+          MinistryGroup(:final id) => {'ministry': id},
+        },
+        'member': member,
+      });
 
   @override
   Future<void> grantDuty(String uid, String serviceType, String duty) =>

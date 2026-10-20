@@ -50,7 +50,9 @@ describe('rosterEditing', () => {
   for (const r of rows('rosterEditing').filter((r) => r.roster !== 'event')) {
     test(r.why, async () => {
       await seedChurch('Rules', { u: r.role });
-      await db.doc('churches/Rules/members/u').update({ groups: r.groups, zoneTypes: r.zoneTypes });
+      await db
+        .doc('churches/Rules/members/u')
+        .update({ groups: r.groups, zoneTypes: r.zoneTypes, leadTypes: r.leadTypes, leadMinistries: r.leadMinistries });
       await db.doc('churches/Rules/settings/services').set({ services: [], ids: ['sunday', 'youth'] });
       const may = await churchAccess(deps, caller('u'), { churchId: 'Rules' }, { rosterEditor: r.roster }).then(
         () => true,

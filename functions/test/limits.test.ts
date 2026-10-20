@@ -42,8 +42,12 @@ const RULES_FIELDS: Record<string, { text?: keyof typeof TEXT_LIMITS; other?: ke
   "roster.get('originalStart', '')": { rulesOnly: 64 },
   // invites: the 牧區 an invite joins, at most every service.
   "request.resource.data.get('zoneTypes', [])": { other: 'services' },
-  // settings/services ids: a list only the rules bound.
+  // settings/services and settings/ministries ids: lists only the rules bound.
   'data.ids': { rulesOnly: 100 },
+  // settings/ministries: the 事工 (#82).
+  'data.ministries': { rulesOnly: 50 },
+  // members/{uid}.identities: a member's 身分 (#82).
+  'data.identities': { rulesOnly: 20 },
   // users/{uid}.appLocale: the language the app shows, an AppLanguage tag.
   'request.resource.data.appLocale': { other: 'appLocale' },
   // users/{uid}.fcm: push tokens, one per install; the backend drops dead ones.

@@ -42,10 +42,13 @@ export type Group = 'roster-editors' | 'calendar-editors';
  * - `admin`;
  * - `{ group }`: admin, or in the group;
  * - `{ rosterEditor: type }`: may edit that service's rosters: the church
- *   has the service type, and the caller is admin or a roster editor with
- *   a zone in it.
+ *   has the service type, and the caller is admin, 行政 (roster-editors,
+ *   every service) or leads it (`leadTypes`: its 負責人 or 牧者, #82).
+ * - `{ arranges: type }`: a roster editor of it, or a 事工's 負責人 whose
+ *   事工 links one of its duties (they arrange only those, through
+ *   editLedDuties): photo import is theirs too.
  */
-export type Level = 'anyone' | 'member' | 'admin' | { group: Group } | { rosterEditor: string };
+export type Level = 'anyone' | 'member' | 'admin' | { group: Group } | { rosterEditor: string } | { arranges: string };
 
 export interface ChurchAccess {
   cid: string;
@@ -119,10 +122,17 @@ async function has(deps: Deps, a: ChurchAccess, level: Level) {
   if (level === 'anyone' || level === 'member') return true;
   if (level === 'admin') return a.admin;
   if ('group' in level) return a.inGroup(level.group);
+  if ('arranges' in level) {
+    if (await has(deps, a, { rosterEditor: level.arranges })) return true;
+    const led = (a.member.get('leadMinistries') as string[] | undefined) ?? [];
+    if (led.length === 0) return false;
+    const doc = await deps.db.doc(`churches/${a.cid}/settings/ministries`).get();
+    const ministries = (doc.get('ministries') as { id: string; duties?: { service: string }[] }[] | undefined) ?? [];
+    return ministries.some((m) => led.includes(m.id) && (m.duties ?? []).some((d) => d.service === level.arranges));
+  }
   const type = level.rosterEditor;
   if (!(await serviceTypes(deps, a.cid)).includes(type)) return false;
-  return a.admin
-    || (a.inGroup('roster-editors') && ((a.member.get('zoneTypes') as string[] | undefined) ?? []).includes(type));
+  return a.inGroup('roster-editors') || ((a.member.get('leadTypes') as string[] | undefined) ?? []).includes(type);
 }
 
 /**

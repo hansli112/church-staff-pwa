@@ -114,3 +114,20 @@ describe('church IDs', () => {
     }
   });
 });
+
+describe('arranging some of a service (#82)', () => {
+  test("a 事工's 負責人 arranges the services its duties are in, for photo import; nobody else more than before", async () => {
+    await church();
+    await db.doc('churches/C1/settings/ministries').set({
+      ministries: [{ id: 'worship', name: '敬拜團', duties: [{ service: 'youth', duty: '敬拜' }] }],
+      ids: ['worship'],
+    });
+    await db.doc('churches/C1/members/mei').update({ leadMinistries: ['worship'] });
+    const may = (uid: string, type: string) => access(uid, { arranges: type }).then(() => true, () => false);
+    assert.equal(await may('mei', 'youth'), true);
+    assert.equal(await may('mei', 'sunday'), false, 'no duty of it is led');
+    assert.equal(await may('editor', 'sunday'), true);
+    assert.equal(await may('pastor', 'youth'), true);
+    assert.equal(await may('eve', 'youth'), false);
+  });
+});

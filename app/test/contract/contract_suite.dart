@@ -69,7 +69,8 @@ class Grace {
       Member(
         uid: g.editor,
         name: '林同工',
-        groups: const {Group.rosterEditors},
+        // 主日崇拜's 負責人 (#82).
+        identities: const [ServiceLead('sunday')],
         zones: const [
           Zone(serviceType: 'sunday', duties: ['司會']),
         ],
@@ -637,6 +638,94 @@ void contractTests(Future<ContractWorld> Function() open) {
     });
   });
 
+  group('groups (#82)', () {
+    const worship = Ministry(id: 'worship', name: '敬拜團', duties: [MinistryDuty('sunday', '司琴')]);
+
+    /// 敬拜團, with 李美玉 its 負責人.
+    Future<Grace> withWorship() async {
+      final g = await Grace.open(w);
+      await g.church.compareAndSetMinistries(before: const [], after: const [worship]);
+      await g.church.putMember((await g.church.member(g.mei).first)!.withIdentities(const [MinistryLead('worship')]));
+      return g;
+    }
+
+    test('admins keep the 事工; everyone reads them; an ID once used stays', () async {
+      final g = await withWorship();
+      await expectLater(
+        g.church.compareAndSetMinistries(before: const [], after: const []),
+        fails(CloudErrorCode.conflict),
+      );
+      await g.church.compareAndSetMinistries(before: const [worship], after: const []);
+      expect((await g.church.ministries().first).ids, ['worship']);
+      await w.signIn(Grace.editorEmail);
+      expect((await g.church.ministries().first).ministries, isEmpty);
+      await expectLater(g.church.compareAndSetMinistries(before: const [], after: const [worship]), denied());
+    });
+
+    test("a 事工's 負責人 arranges only the duties it leads", () async {
+      final g = await withWorship();
+      final day = sundayOn(
+        4,
+        duties: const [
+          Duty(role: '司會'),
+          Duty(role: '司琴'),
+        ],
+      );
+      await g.church.putRoster(day);
+      await w.signIn(Grace.meiEmail);
+      await expectLater(g.church.putRoster(day.copyWith(duties: const []), over: day), denied());
+      final mine = day.copyWith(
+        duties: const [
+          Duty(role: '司會'),
+          Duty(role: '司琴', people: ['李美玉'], uids: {'李美玉': 'mei'}),
+        ],
+      );
+      // Ids are uids in the memory backend and in Firebase alike.
+      final played = mine.copyWith(
+        duties: [
+          mine.duties.first,
+          Duty(role: '司琴', people: const ['李美玉'], uids: {'李美玉': g.mei}),
+        ],
+      );
+      await g.church.compareAndSetLedDuties(RosterChange(before: {day.id: day}, after: {day.id: played}));
+      expect((await g.church.rosters(from: Day(2026, 10, 1)).first).single.duties, played.duties);
+      final hosted = played.copyWith(
+        duties: [
+          Duty(role: '司會', people: const ['李美玉'], uids: {'李美玉': g.mei}),
+          played.duties.last,
+        ],
+      );
+      await expectLater(
+        g.church.compareAndSetLedDuties(RosterChange(before: {day.id: played}, after: {day.id: hosted})),
+        denied(),
+      );
+      await expectLater(
+        g.church.compareAndSetLedDuties(RosterChange(before: {day.id: day}, after: {day.id: played})),
+        fails(CloudErrorCode.conflict),
+      );
+    });
+
+    test("a group's 負責人 adds and takes out its 同工, and nobody else's", () async {
+      final g = await withWorship();
+      await w.signIn(Grace.meiEmail);
+      await g.church.setGroupMember(g.editor, const MinistryGroup('worship'), member: true);
+      await expectLater(
+        g.church.setGroupMember(g.editor, const ServiceGroup('sunday'), member: false),
+        denied(),
+      );
+      await w.signIn(Grace.editorEmail);
+      // 林同工 leads sunday: adds 李美玉 there, with the duty she played.
+      await g.church.setGroupMember(g.mei, const ServiceGroup('sunday'), member: true, duties: const ['司琴']);
+      final mei = (await g.church.member(g.mei).first)!;
+      expect(mei.zoneTypes, ['sunday']);
+      expect(mei.serves('sunday', '司琴'), isTrue);
+      expect(mei.leadMinistries, ['worship'], reason: 'her 身分 untouched');
+      expect((await g.church.member(g.editor).first)!.ministries, {'worship'});
+      await g.church.setGroupMember(g.mei, const ServiceGroup('sunday'), member: false);
+      expect((await g.church.member(g.mei).first)!.zoneTypes, isEmpty);
+    });
+  });
+
   group('rosters', () {
     test('saved rosters come back from a day on, oldest first', () async {
       final g = await Grace.open(w);
@@ -657,7 +746,7 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect(await g.church.rosters(from: Day(2026, 10, 1)).first, [second]);
     });
 
-    test("an event's roster: any roster editor writes and deletes it, staff only read it", () async {
+    test("an event's roster: admins and 行政 write and delete it; a service's 負責人 and staff only read it", () async {
       final g = await Grace.open(w);
       final party = Roster(
         type: '',
@@ -667,8 +756,11 @@ void contractTests(Future<ContractWorld> Function() open) {
         ],
         forEvent: RosterEvent(eventId: 'x1', title: '聖誕晚會', lastDay: Day(2026, 12, 25)),
       );
-      // 林同工 edits only sunday; an event is in no service.
+      // 林同工 leads only sunday; an event is in no service (#84 gives
+      // groups their own events).
       await w.signIn(Grace.editorEmail);
+      await expectLater(g.church.putRoster(party), denied());
+      await w.signIn(Grace.pastorEmail);
       await g.church.putRoster(party);
       await w.signIn(Grace.meiEmail);
       expect(await g.church.rosters(from: Day(2026, 12, 1)).first, [party]);
@@ -678,12 +770,14 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect(await g.church.rosters(from: Day(2026, 12, 25)).first, [party]);
       expect(await g.church.rosters(from: Day(2026, 12, 26)).first, isEmpty);
       expect(await g.church.eventRosters(), [party]);
-      await w.signIn(Grace.editorEmail);
+      await w.signIn(Grace.pastorEmail);
+      await g.church.putMember((await g.church.member(g.mei).first)!.withIdentities(const [OfficeIdentity()]));
+      await w.signIn(Grace.meiEmail);
       await g.church.dropRoster(party);
       expect(await g.church.rosters(from: Day(2026, 12, 24)).first, isNot(contains(party)));
     });
 
-    test('roster editors edit only their services; staff read', () async {
+    test("a service's 負責人 edits only its rosters; staff read", () async {
       final g = await Grace.open(w);
       await w.signIn(Grace.editorEmail);
       await g.church.putRoster(sundayOn(4));

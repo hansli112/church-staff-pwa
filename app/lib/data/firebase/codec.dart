@@ -65,6 +65,11 @@ Member memberFromJson(String uid, Json data) {
               smallGroups: _strings(z['smallGroups']),
             ),
     ],
+    identities: [
+      if (data['identities'] is List)
+        for (final i in data['identities'] as List<dynamic>) ?Identity.fromJson(i),
+    ],
+    ministries: _strings(data['ministries']).toSet(),
     mutedNotifications: {
       for (final name in prefs is Map ? _strings(prefs['muted']) : const <String>[])
         for (final kind in NotificationKind.values)
@@ -92,6 +97,44 @@ Json memberToJson(Member m) => {
     for (final z in m.zones) {'serviceType': z.serviceType, 'duties': z.duties, 'smallGroups': z.smallGroups},
   ],
   'zoneTypes': m.zoneTypes,
+  // 身分 (#82), and what the rules read of them.
+  'identities': [for (final i in m.identities) i.toJson()],
+  'leadTypes': m.leadTypes,
+  'leadMinistries': m.leadMinistries,
+  'ministries': m.ministries.toList(),
+};
+
+MinistrySettings ministrySettingsFromJson(Json? data) => MinistrySettings(
+  ministries: [
+    if (data?['ministries'] is List)
+      for (final m in data!['ministries'] as List<dynamic>)
+        if (m is Map && m['id'] is String && m['name'] is String)
+          Ministry(
+            id: m['id'] as String,
+            name: m['name'] as String,
+            duties: [
+              if (m['duties'] is List)
+                for (final d in m['duties'] as List<dynamic>)
+                  if (d is Map && d['service'] is String && d['duty'] is String)
+                    MinistryDuty(d['service'] as String, d['duty'] as String),
+            ],
+          ),
+  ],
+  ids: _strings(data?['ids']),
+);
+
+Json ministrySettingsToJson(MinistrySettings s) => {
+  'ministries': [
+    for (final m in s.ministries)
+      {
+        'id': m.id,
+        'name': m.name,
+        'duties': [
+          for (final d in m.duties) {'service': d.service, 'duty': d.duty},
+        ],
+      },
+  ],
+  'ids': s.ids,
 };
 
 ChurchLink? churchLinkFromJson(Json? data) {

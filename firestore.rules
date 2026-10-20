@@ -82,6 +82,19 @@ service cloud.firestore {
         || (isMember(cid) && name in member(cid).get('groups', []));
     }
 
+    // Leads something (#82): a service, as its 負責人 or 牧者, or a 事工.
+    // Leads pick people for rosters and add 同工 to their group, so they
+    // read the member list as 行政 and admins do.
+    function isLead(cid) {
+      return isMember(cid)
+        && (member(cid).get('leadTypes', []).size() > 0 || member(cid).get('leadMinistries', []).size() > 0);
+    }
+
+    // Reads the member list: admins, 行政 (roster-editors) and leads.
+    function readsMembers(cid) {
+      return inGroup(cid, 'roster-editors') || isLead(cid);
+    }
+
     function hasValidGroups() {
       return !('groups' in request.resource.data)
         || request.resource.data.groups.hasOnly(['roster-editors', 'calendar-editors']);
@@ -109,6 +122,37 @@ service cloud.firestore {
         && data.ids.hasAll(before);
     }
 
+    // Every 事工 ID this church has ever had: like serviceTypes, ids only
+    // grows (validMinistrySettings).
+    function ministryIds(cid) {
+      let path = /databases/$(database)/documents/churches/$(cid)/settings/ministries;
+      return exists(path) ? get(path).data.get('ids', []) : [];
+    }
+
+    function validMinistrySettings() {
+      let data = request.resource.data;
+      let before = resource == null ? [] : resource.data.get('ids', []);
+      return data.keys().hasOnly(['ministries', 'ids', 'updatedAt'])
+        && data.ministries is list && data.ministries.size() <= 50
+        && data.ids is list && data.ids.size() <= 100
+        && data.ids.hasAll(before);
+    }
+
+    // 身分 (#82): `identities` is what the 同工 page shows and edits; the
+    // rules read its flattened projections, written alongside it like
+    // zoneTypes: the services led (leadTypes, by a 負責人 or 牧者), the 事工
+    // led (leadMinistries), and the 事工 they are a 同工 of (ministries).
+    // 管理員 is still role 'admin' and 行政 the roster-editors and
+    // calendar-editors groups, which older apps read.
+    function hasValidIdentities(cid) {
+      let data = request.resource.data;
+      return (!('identities' in data) || (data.identities is list && data.identities.size() <= 20))
+        && (!('leadTypes' in data) || (data.leadTypes is list && data.leadTypes.hasOnly(serviceTypes(cid))))
+        && (!('leadMinistries' in data)
+            || (data.leadMinistries is list && data.leadMinistries.hasOnly(ministryIds(cid))))
+        && (!('ministries' in data) || (data.ministries is list && data.ministries.hasOnly(ministryIds(cid))));
+    }
+
     // zones on a member doc is a list of maps, and the rules language has no
     // loops — there is no way to read serviceType out of it. So the app writes
     // a flattened projection alongside it, `zoneTypes`, and the rules read that.
@@ -117,12 +161,14 @@ service cloud.firestore {
         || request.resource.data.zoneTypes.hasOnly(serviceTypes(cid));
     }
 
-    // Being in roster-editors says "may edit rosters"; the zone says which
-    // service. admin keeps every type without holding a zone.
+    // 行政 (roster-editors) and admins edit every service's rosters; a
+    // service's 負責人 or 牧者 its own (leadTypes, #82). A 牧區 alone grants
+    // nothing. A 事工's 負責人 edits only their duties, which the rules
+    // cannot tell apart in a roster's duties list: that goes through the
+    // backend (editLedDuties).
     function canEditRosterType(cid, type) {
-      return type in serviceTypes(cid) && (isAdmin(cid)
-        || (inGroup(cid, 'roster-editors')
-            && type in member(cid).get('zoneTypes', [])));
+      return type in serviceTypes(cid) && (inGroup(cid, 'roster-editors')
+        || type in member(cid).get('leadTypes', []));
     }
 
     function isEventRoster(data) {
@@ -217,10 +263,10 @@ service cloud.firestore {
                 && request.resource.data.homeName.size() <= 32));
 
       match /members/{uid} {
-        // Own membership, or roster-editors: the roster people picker lists
+        // Own membership, or readsMembers: the roster people picker lists
         // this collection. Firestore has no field-level read restriction, so
-        // a roster editor sees every member's email.
-        allow read: if isSelf(uid) || inGroup(cid, 'roster-editors');
+        // whoever arranges rosters sees every member's email.
+        allow read: if isSelf(uid) || readsMembers(cid);
 
         // Joining is an invite redemption, done by a Cloud Function.
         allow create: if false;
@@ -232,7 +278,7 @@ service cloud.firestore {
         // An admin can neither demote nor remove themself, so a church always
         // keeps someone who can manage it. Another admin can do both.
         allow update: if hasValidPrefs() && ((isAdmin(cid) && hasValidRole() && hasValidGroups()
-              && hasValidZoneTypes(cid) && hasValidName()
+              && hasValidZoneTypes(cid) && hasValidIdentities(cid) && hasValidName()
               && request.resource.data.uid == uid
               && (!isSelf(uid) || request.resource.data.role == 'admin'))
           || (isSelf(uid) && isMember(cid) && onlyTouches(['notificationPrefs'])));
@@ -263,7 +309,7 @@ service cloud.firestore {
       // with the members; only an admin may drop one. The backend creates
       // them (a move) and turns them into members (a claim or a merge).
       match /pendingMembers/{id} {
-        allow read: if inGroup(cid, 'roster-editors');
+        allow read: if readsMembers(cid);
         allow delete: if isAdmin(cid);
       }
 
@@ -328,9 +374,11 @@ service cloud.firestore {
         allow read: if isMember(cid) && (doc != 'webhook' || isAdmin(cid));
         allow create, update: if isAdmin(cid) && !serverOnly()
           && (doc != 'services' || validServiceSettings())
+          && (doc != 'ministries' || validMinistrySettings())
           && (doc != 'link' || validChurchLink());
-        // settings/services is never deleted; see validServiceSettings().
-        allow delete: if isAdmin(cid) && doc != 'services' && !serverOnly();
+        // settings/services and settings/ministries are never deleted: their
+        // ids only grow.
+        allow delete: if isAdmin(cid) && !(doc in ['services', 'ministries']) && !serverOnly();
       }
     }
 

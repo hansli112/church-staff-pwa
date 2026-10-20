@@ -9,8 +9,10 @@ import 'package:flutter/foundation.dart';
 
 import 'church_time.dart';
 import 'day.dart';
+import 'identities.dart';
 
 export 'church_time.dart' show ChurchTimeZone;
+export 'identities.dart';
 
 enum ChurchStatus { active, suspended, deleted }
 
@@ -142,10 +144,12 @@ class Member {
     this.role = Role.staff,
     this.groups = const {},
     this.zones = const [],
+    List<Identity> identities = const [],
+    this.ministries = const {},
     this.mutedNotifications = const {},
     this.reminderTiming = ReminderTiming.weekly,
     this.joinedAt,
-  });
+  }) : _identities = identities;
 
   final String uid;
   final String name;
@@ -153,13 +157,76 @@ class Member {
   final Role role;
   final Set<Group> groups;
   final List<Zone> zones;
+  final List<Identity> _identities;
+
+  /// The 事工 this member is a 同工 of (#82).
+  final Set<String> ministries;
   final Set<NotificationKind> mutedNotifications;
   final ReminderTiming reminderTiming;
   final DateTime? joinedAt;
 
-  bool get isAdmin => role == Role.admin;
+  /// 管理員, or a whole church's 牧者: role admin as stored, which the rules
+  /// read, or as their 身分 say.
+  bool get isAdmin =>
+      role == Role.admin || _identities.any((i) => i is AdminIdentity || (i is PastorIdentity && i.wholeChurch));
 
-  bool inGroup(Group group) => isAdmin || groups.contains(group);
+  /// Their 身分 (#82). A member doc from before them has none stored: an
+  /// admin is then 管理員, and the permission groups 行政.
+  List<Identity> get identities => _identities.isNotEmpty
+      ? _identities
+      : [
+          if (isAdmin) const AdminIdentity(),
+          if (!isAdmin && groups.isNotEmpty) const OfficeIdentity(),
+        ];
+
+  /// The services they lead, as 負責人 or 牧者; stored as `leadTypes` for
+  /// the security rules.
+  List<String> get leadTypes => [
+    ...{
+      for (final i in identities)
+        ...switch (i) {
+          ServiceLead(:final service) => [service],
+          PastorIdentity(:final services?) => services,
+          _ => const <String>[],
+        },
+    },
+  ];
+
+  /// The 事工 they lead; stored as `leadMinistries`.
+  List<String> get leadMinistries => [
+    ...{
+      for (final i in identities)
+        if (i case MinistryLead(:final ministry)) ministry,
+    },
+  ];
+
+  /// Whether they lead anything, so pick people and add 同工.
+  bool get leads => leadTypes.isNotEmpty || leadMinistries.isNotEmpty;
+
+  /// This member holding [next] as their 身分, with what the rules and
+  /// older apps read set to match: 管理員 and a whole church's 牧者 are
+  /// role admin, 行政 the two permission groups.
+  Member withIdentities(List<Identity> next) {
+    final admin = next.any((i) => i is AdminIdentity || (i is PastorIdentity && i.wholeChurch));
+    return Member(
+      uid: uid,
+      name: name,
+      email: email,
+      role: admin ? Role.admin : (role == Role.admin ? Role.staff : role),
+      groups: next.contains(const OfficeIdentity()) ? const {Group.rosterEditors, Group.calendarEditors} : const {},
+      zones: zones,
+      identities: [
+        ...{...next},
+      ],
+      ministries: ministries,
+      mutedNotifications: mutedNotifications,
+      reminderTiming: reminderTiming,
+      joinedAt: joinedAt,
+    );
+  }
+
+  /// In [group]: admins hold every one, 行政 both.
+  bool inGroup(Group group) => isAdmin || groups.contains(group) || _identities.contains(const OfficeIdentity());
 
   /// The service types this member holds a zone in, in zone order. Stored
   /// as `zoneTypes` because the security rules cannot look inside [zones].
@@ -168,15 +235,16 @@ class Member {
   ];
 
   /// Whether the 服事表 tab shows this member every service, not only
-  /// their 牧區.
+  /// their 牧區: admins and 行政.
   bool get seesAllServices => inGroup(Group.rosterEditors);
 
   /// The services of [services] the 服事表 tab shows this member: the 牧區
-  /// they belong to, or all of them for admins and roster editors. Only
-  /// tidies the tab; every member may still read every roster.
+  /// they belong to and the services they lead, or all of them for admins
+  /// and 行政. Only tidies the tab; every member may still read every
+  /// roster.
   List<Service> rosterServices(List<Service> services) {
     if (seesAllServices) return services;
-    final mine = zoneTypes.toSet();
+    final mine = {...zoneTypes, ...leadTypes};
     return [
       for (final s in services)
         if (mine.contains(s.id)) s,
@@ -195,16 +263,49 @@ class Member {
       name == other.name &&
       role == other.role &&
       setEquals(groups, other.groups) &&
-      listEquals(zones, other.zones);
+      listEquals(zones, other.zones) &&
+      listEquals(identities, other.identities) &&
+      setEquals(ministries, other.ministries);
 
-  /// Whether this member may edit rosters of [serviceType]
-  /// (testdata/church_rules.json, rosterEditing).
-  bool canEditRosters(String serviceType) =>
-      isAdmin || (groups.contains(Group.rosterEditors) && zoneTypes.contains(serviceType));
+  /// Whether this member may edit all of a [serviceType] roster: admins,
+  /// 行政 and its 負責人 or 牧者 (testdata/church_rules.json,
+  /// rosterEditing).
+  bool canEditRosters(String serviceType) => inGroup(Group.rosterEditors) || leadTypes.contains(serviceType);
 
-  /// Whether this member may edit events' rosters: in no service, so in no
-  /// 牧區; admins and every roster editor.
+  /// Whether this member may edit all of an event's roster: admins and 行政.
   bool get canEditEventRosters => inGroup(Group.rosterEditors);
+
+  /// The duties this member arranges on a day of [serviceType] (null: an
+  /// event's) without editing all of it, as a 負責人 of the 事工 in
+  /// [ministries] that link them; through the backend (editLedDuties).
+  Set<String> ledDuties(List<Ministry> ministries, String? serviceType) => {
+    for (final m in ministries)
+      if (leadMinistries.contains(m.id)) ...m.dutiesIn(serviceType),
+  };
+
+  /// Whether this member is a 同工 of [group]: in its 牧區, or one of the
+  /// 事工's.
+  bool isIn(ChurchGroup group) => switch (group) {
+    ServiceGroup(:final id) => zoneTypes.contains(id),
+    MinistryGroup(:final id) => ministries.contains(id),
+  };
+
+  /// This member added to [group] ([member] true; a service with [duties])
+  /// or taken out, as setGroupMember writes it.
+  Member inGroupAs(ChurchGroup group, {required bool member, List<String> duties = const []}) => switch (group) {
+    ServiceGroup(:final id) => copyWith(
+      zones: [
+        for (final z in zones)
+          if (z.serviceType != id) z,
+        if (member) zones.where((z) => z.serviceType == id).firstOrNull ?? Zone(serviceType: id, duties: duties),
+      ],
+    ),
+    MinistryGroup(:final id) => copyWith(ministries: member ? {...ministries, id} : ({...ministries}..remove(id))),
+  };
+
+  /// Whether this member sees the church's member list: admins, 行政 and
+  /// whoever leads something.
+  bool get readsMembers => inGroup(Group.rosterEditors) || leads;
 
   /// Whether this member is set up to serve [duty] in [serviceType].
   bool serves(String serviceType, String duty) => zones.any(
@@ -252,6 +353,8 @@ class Member {
     Role? role,
     Set<Group>? groups,
     List<Zone>? zones,
+    List<Identity>? identities,
+    Set<String>? ministries,
     Set<NotificationKind>? mutedNotifications,
     ReminderTiming? reminderTiming,
   }) => Member(
@@ -261,6 +364,8 @@ class Member {
     role: role ?? this.role,
     groups: groups ?? this.groups,
     zones: zones ?? this.zones,
+    identities: identities ?? _identities,
+    ministries: ministries ?? this.ministries,
     mutedNotifications: mutedNotifications ?? this.mutedNotifications,
     reminderTiming: reminderTiming ?? this.reminderTiming,
     joinedAt: joinedAt,
@@ -574,6 +679,18 @@ class Roster {
     Object.hashAll(duties),
     Object.hashAll(events),
   );
+}
+
+/// Whether [after] is [before] with only the duties named in [roles]
+/// changed, added or taken off: what a 事工's 負責人 may do to a day
+/// (functions/src/ledDuties.ts).
+bool changesOnlyDuties(Roster before, Roster after, Set<String> roles) {
+  List<Duty> others(Roster r) => [
+    for (final d in r.duties)
+      if (!roles.contains(d.role)) d,
+  ];
+  return before.copyWith(duties: const [], saved: true) == after.copyWith(duties: const [], saved: true) &&
+      listEquals(others(before), others(after));
 }
 
 /// The global profile at users/{uid}.

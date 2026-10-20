@@ -1,5 +1,5 @@
 {
-  "about": "Church data rules both the app (app/lib, its memory backend standing in for the Cloud Functions) and functions/src must follow; app/test/domain/church_rules_test.dart and functions/test/churchRules.test.ts run every row. Add a row here, not to one side. rosterEditing: a member (role, groups, the 牧區 they hold) editing a roster of a church whose services are sunday and youth, a service's (`roster` is its id) or an event's (`event`). firestore.rules keeps it too (firestore-tests/rules.test.js runs it); functions/src gates only services' rosters, so runs only those rows.",
+  "about": "Church data rules both the app (app/lib, its memory backend standing in for the Cloud Functions) and functions/src must follow; app/test/domain/church_rules_test.dart and functions/test/churchRules.test.ts run every row. Add a row here, not to one side. rosterEditing: a member (role, groups, the 牧區 they hold, the services and 事工 they lead) editing a roster of a church whose services are sunday and youth, a service's (`roster` is its id) or an event's (`event`). firestore.rules keeps it too (firestore-tests/rules.test.js runs it); functions/src gates only services' rosters, so runs only those rows.",
   "defaultServices": {
     "zh-Hant": [
       {
@@ -155,16 +155,19 @@
     }
   ],
   "rosterEditing": [
-    { "why": "an admin edits every service's rosters, with no 牧區", "role": "admin", "groups": [], "zoneTypes": [], "roster": "youth", "may": true },
-    { "why": "an admin arranges events' rosters", "role": "admin", "groups": [], "zoneTypes": [], "roster": "event", "may": true },
-    { "why": "a roster editor edits the rosters of their own 牧區", "role": "staff", "groups": ["roster-editors"], "zoneTypes": ["sunday"], "roster": "sunday", "may": true },
-    { "why": "but not another service's", "role": "staff", "groups": ["roster-editors"], "zoneTypes": ["sunday"], "roster": "youth", "may": false },
-    { "why": "an event's roster is in no service: every roster editor arranges it", "role": "staff", "groups": ["roster-editors"], "zoneTypes": ["youth"], "roster": "event", "may": true },
-    { "why": "a roster editor with no 牧區 edits no service's rosters", "role": "staff", "groups": ["roster-editors"], "zoneTypes": [], "roster": "sunday", "may": false },
-    { "why": "but still arranges events' rosters", "role": "staff", "groups": ["roster-editors"], "zoneTypes": [], "roster": "event", "may": true },
-    { "why": "a 牧區 without roster-editors edits nothing", "role": "leader", "groups": [], "zoneTypes": ["sunday"], "roster": "sunday", "may": false },
-    { "why": "nor arranges events' rosters", "role": "leader", "groups": [], "zoneTypes": ["sunday"], "roster": "event", "may": false },
-    { "why": "calendar-editors edit the calendar, not its events' rosters", "role": "staff", "groups": ["calendar-editors"], "zoneTypes": ["sunday"], "roster": "event", "may": false },
-    { "why": "a plain member edits no roster", "role": "member", "groups": [], "zoneTypes": ["sunday"], "roster": "sunday", "may": false }
+    { "why": "an admin edits every service's rosters, with no 牧區", "role": "admin", "groups": [], "zoneTypes": [], "leadTypes": [], "leadMinistries": [], "roster": "youth", "may": true },
+    { "why": "an admin arranges events' rosters", "role": "admin", "groups": [], "zoneTypes": [], "leadTypes": [], "leadMinistries": [], "roster": "event", "may": true },
+    { "why": "行政 edits every service's rosters, in no 牧區 (#82)", "role": "staff", "groups": ["roster-editors", "calendar-editors"], "zoneTypes": [], "leadTypes": [], "leadMinistries": [], "roster": "youth", "may": true },
+    { "why": "行政 arranges events' rosters", "role": "staff", "groups": ["roster-editors", "calendar-editors"], "zoneTypes": [], "leadTypes": [], "leadMinistries": [], "roster": "event", "may": true },
+    { "why": "a service's 負責人 (or its 牧者) edits that service's rosters", "role": "staff", "groups": [], "zoneTypes": ["sunday"], "leadTypes": ["sunday"], "leadMinistries": [], "roster": "sunday", "may": true },
+    { "why": "but not another service's", "role": "staff", "groups": [], "zoneTypes": ["sunday"], "leadTypes": ["sunday"], "leadMinistries": [], "roster": "youth", "may": false },
+    { "why": "leading a service needs no 牧區 there", "role": "staff", "groups": [], "zoneTypes": [], "leadTypes": ["youth"], "leadMinistries": [], "roster": "youth", "may": true },
+    { "why": "a service's 負責人 does not arrange events' rosters yet (#84 gives groups their events)", "role": "staff", "groups": [], "zoneTypes": ["sunday"], "leadTypes": ["sunday"], "leadMinistries": [], "roster": "event", "may": false },
+    { "why": "a 事工's 負責人 writes no roster directly: their duties go through the backend", "role": "staff", "groups": [], "zoneTypes": ["sunday"], "leadTypes": [], "leadMinistries": ["worship"], "roster": "sunday", "may": false },
+    { "why": "nor an event's", "role": "staff", "groups": [], "zoneTypes": [], "leadTypes": [], "leadMinistries": ["worship"], "roster": "event", "may": false },
+    { "why": "a 牧區 alone edits nothing", "role": "staff", "groups": [], "zoneTypes": ["sunday"], "leadTypes": [], "leadMinistries": [], "roster": "sunday", "may": false },
+    { "why": "nor arranges events' rosters", "role": "staff", "groups": [], "zoneTypes": ["sunday"], "leadTypes": [], "leadMinistries": [], "roster": "event", "may": false },
+    { "why": "calendar-editors alone edit the calendar, not rosters", "role": "staff", "groups": ["calendar-editors"], "zoneTypes": ["sunday"], "leadTypes": [], "leadMinistries": [], "roster": "event", "may": false },
+    { "why": "an old 小組長 (role leader) edits nothing", "role": "leader", "groups": [], "zoneTypes": ["sunday"], "leadTypes": [], "leadMinistries": [], "roster": "sunday", "may": false }
   ]
 }

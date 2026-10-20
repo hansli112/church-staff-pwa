@@ -84,6 +84,10 @@ void main() {
           role: Role.values.byName(r['role'] as String),
           groups: {for (final g in _strings(r['groups'])) Group.values.firstWhere((x) => x.id == g)},
           zones: [for (final t in _strings(r['zoneTypes'])) Zone(serviceType: t)],
+          identities: [
+            for (final t in _strings(r['leadTypes'])) ServiceLead(t),
+            for (final m in _strings(r['leadMinistries'])) MinistryLead(m),
+          ],
         );
         final roster = r['roster'] as String;
         expect(roster == 'event' ? member.canEditEventRosters : member.canEditRosters(roster), r['may']);

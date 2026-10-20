@@ -15,14 +15,21 @@ const sundayService = Service(
 const youthService = Service(id: 'youth', name: '青年崇拜', weekday: DateTime.saturday, duties: ['司會']);
 
 const pastor = Member(uid: 'pastor', name: '王牧師', role: Role.admin);
+
+/// 主日崇拜's 負責人 (#82).
 const editor = Member(
   uid: 'editor',
   name: '林同工',
-  groups: {Group.rosterEditors},
+  identities: [ServiceLead('sunday')],
   zones: [
     Zone(serviceType: 'sunday', duties: ['司會']),
   ],
 );
+
+/// 行政 (#82): arranges every roster and edits the calendar. Not in
+/// [seededChurch] unless passed in `extra`.
+const office = Member(uid: 'office', name: '張行政', identities: [OfficeIdentity()]);
+
 const staffMei = Member(
   uid: 'mei',
   name: '李美玉',

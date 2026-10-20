@@ -130,21 +130,18 @@ final savedRostersProvider = StreamProvider<List<Roster>>((ref) {
 });
 
 /// Everyone in the church, read once per church and shared by every
-/// screen. Only for admins and roster editors; others get an empty list.
+/// screen. Only for admins, 行政 and leads (Member.readsMembers); others get
+/// an empty list.
 final membersProvider = StreamProvider<List<Member>>((ref) {
-  final canRead = ref.watch(
-    meProvider.select((m) => m.value?.inGroup(Group.rosterEditors) ?? false),
-  );
+  final canRead = ref.watch(meProvider.select((m) => m.value?.readsMembers ?? false));
   if (!canRead) return Stream.value(const []);
   return openChurch(ref).members();
 });
 
 /// Members moved from self-host who have not signed in yet. Like
-/// [membersProvider], only for admins and roster editors.
+/// [membersProvider], only for those who read the member list.
 final pendingMembersProvider = StreamProvider<List<PendingMember>>((ref) {
-  final canRead = ref.watch(
-    meProvider.select((m) => m.value?.inGroup(Group.rosterEditors) ?? false),
-  );
+  final canRead = ref.watch(meProvider.select((m) => m.value?.readsMembers ?? false));
   if (!canRead) return Stream.value(const []);
   return openChurch(ref).pendingMembers();
 });

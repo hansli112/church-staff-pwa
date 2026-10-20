@@ -30,10 +30,12 @@ import * as churchLink from './churchLink.js';
 import { askedLanguages, churchPage as churchPageHandler } from './churchPage.js';
 import { PROD_PROJECT, REGION, appUrl, runEach, type Caller, type Deps } from './common.js';
 import * as funding from './funding.js';
+import * as groupMembers from './groupMembers.js';
 import * as fundingApple from './fundingApple.js';
 import * as fundingEcpay from './fundingEcpay.js';
 import * as fundingPlay from './fundingPlay.js';
 import * as invites from './invites.js';
+import * as ledDuties from './ledDuties.js';
 import { memoryGoogle } from './memoryGoogle.js';
 import * as move from './move.js';
 import { logClientError as logClientErrorHandler } from './logging.js';
@@ -183,6 +185,11 @@ export const onPendingMemberDeleted = onDocumentDeleted(
 
 // Service settings: compared edits and atomic configured duty renames.
 export const editService = callable(serviceSettings.editService);
+
+// Groups (#82): a 事工's 負責人 arranging its duties, and a group's
+// 負責人 adding or taking out its 同工.
+export const editLedDuties = callable(ledDuties.editLedDuties);
+export const setGroupMember = callable(groupMembers.setGroupMember);
 
 // Invites
 export const previewInvite = callable(invites.previewInvite);

@@ -106,7 +106,7 @@ export function buildPrompt(opts: { service: Service; names: string[]; today: st
 async function rosterEditorAccess(deps: Deps, caller: Caller | null, data: unknown) {
   const type = (data as { serviceType?: unknown })?.serviceType;
   if (typeof type !== 'string') fail('invalid-argument', 'unknown');
-  return { type, ...(await churchAccess(deps, caller, data, { rosterEditor: type })) };
+  return { type, ...(await churchAccess(deps, caller, data, { arranges: type })) };
 }
 
 /** [buildPrompt] for one of the church's services, from its settings and members now. */

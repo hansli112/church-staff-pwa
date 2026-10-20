@@ -39,15 +39,18 @@ const SUSPENDED = 'church-s';
 
 const ADMIN_A = 'admin-a';
 const MEMBER_A = 'member-a';
-const EDITOR_A = 'editor-a'; // roster-editors，只有 sunday 牧區
+const EDITOR_A = 'editor-a'; // sunday 的負責人（leadTypes），不在任何權限群組
+const OFFICE_A = 'office-a'; // 行政：roster-editors 和 calendar-editors
 const ADMIN_B = 'admin-b';
 const MEMBER_S = 'member-s'; // 停用教會的同工
 const STRANGER = 'stranger'; // 有登入，但不屬於任何教會
 
-function memberDoc(uid, role, groups, zoneTypes) {
+function memberDoc(uid, role, groups, zoneTypes, leads = {}) {
   const document = { uid, name: `姓名-${uid}`, email: `${uid}@example.com`, role, zones: [] };
   if (groups !== undefined) document.groups = groups;
   if (zoneTypes !== undefined) document.zoneTypes = zoneTypes;
+  if (leads.types !== undefined) document.leadTypes = leads.types;
+  if (leads.ministries !== undefined) document.leadMinistries = leads.ministries;
   return document;
 }
 
@@ -83,10 +86,8 @@ before(async () => {
 
     await put(`churches/${A}/members/${ADMIN_A}`, memberDoc(ADMIN_A, 'admin'));
     await put(`churches/${A}/members/${MEMBER_A}`, memberDoc(MEMBER_A, 'member'));
-    await put(
-      `churches/${A}/members/${EDITOR_A}`,
-      memberDoc(EDITOR_A, 'staff', ['roster-editors'], ['sunday']),
-    );
+    await put(`churches/${A}/members/${EDITOR_A}`, memberDoc(EDITOR_A, 'staff', [], ['sunday'], { types: ['sunday'] }));
+    await put(`churches/${A}/members/${OFFICE_A}`, memberDoc(OFFICE_A, 'staff', ['roster-editors', 'calendar-editors']));
     await put(`churches/${B}/members/${ADMIN_B}`, memberDoc(ADMIN_B, 'admin'));
     await put(`churches/${SUSPENDED}/members/${MEMBER_S}`, memberDoc(MEMBER_S, 'admin'));
 
@@ -256,7 +257,7 @@ describe('教會本身', () => {
 });
 
 describe('同工 (members)', () => {
-  it('讀得到自己，讀不到別人；roster-editors 和管理員可以列出全部', async () => {
+  it('讀得到自己，讀不到別人；行政、負責人和管理員可以列出全部', async () => {
     await assertSucceeds(getDoc(doc(as(MEMBER_A), `churches/${A}/members/${MEMBER_A}`)));
     await assertFails(getDoc(doc(as(MEMBER_A), `churches/${A}/members/${ADMIN_A}`)));
     await assertFails(getDocs(collection(as(MEMBER_A), `churches/${A}/members`)));
@@ -271,6 +272,23 @@ describe('同工 (members)', () => {
     await assertFails(updateDoc(ref(as(MEMBER_A)), { role: 'admin' }));
     await assertFails(updateDoc(ref(as(MEMBER_A)), { groups: ['roster-editors'] }));
     await assertFails(updateDoc(ref(as(MEMBER_A)), { zoneTypes: ['sunday'] }));
+  });
+
+  it('身分（#82）只有管理員能設：負責的聚會要是設定過的，負責的事工要在 settings/ministries 裡', async () => {
+    await seed(`churches/${A}/settings/ministries`, { ministries: [{ id: 'worship', name: '敬拜團', duties: [] }], ids: ['worship'] });
+    await seed(`churches/${A}/members/to-lead`, memberDoc('to-lead', 'staff'));
+    const ref = (db) => doc(db, `churches/${A}/members/to-lead`);
+    const identities = [{ kind: 'lead', service: 'sunday' }, { kind: 'lead', ministry: 'worship' }];
+    await assertSucceeds(
+      updateDoc(ref(as(ADMIN_A)), { identities, leadTypes: ['sunday'], leadMinistries: ['worship'], ministries: ['worship'] }),
+    );
+    await assertFails(updateDoc(ref(as(ADMIN_A)), { leadTypes: ['kids'] }), 'not a service of this church');
+    await assertFails(updateDoc(ref(as(ADMIN_A)), { leadMinistries: ['band'] }), 'no such 事工');
+    await assertFails(updateDoc(ref(as(ADMIN_A)), { ministries: ['band'] }));
+    await assertFails(updateDoc(ref(as(ADMIN_A)), { identities: 'admin' }));
+    await assertFails(updateDoc(ref(as(EDITOR_A)), { leadTypes: ['sunday'] }), 'a lead grants no lead');
+    await assertFails(updateDoc(ref(as('to-lead')), { leadTypes: ['youth'] }), 'nor oneself');
+    await assertFails(updateDoc(ref(as('to-lead')), { ministries: [] }));
   });
 
   it('notificationPrefs 只能是已知的通知種類和提醒時間', async () => {
@@ -377,14 +395,14 @@ describe('服事表 (rosters)', () => {
     await assertFails(setDoc(doc(as(MEMBER_A), `churches/${A}/rosters/m1`), { type: 'sunday' }));
   });
 
-  it('編輯者只能寫自己牧區的聚會別', async () => {
+  it('聚會負責人只能寫自己負責的聚會別', async () => {
     const db = as(EDITOR_A);
     await assertSucceeds(setDoc(doc(db, `churches/${A}/rosters/e1`), { type: 'sunday' }));
     await assertFails(setDoc(doc(db, `churches/${A}/rosters/e2`), { type: 'youth' }));
     await assertFails(updateDoc(doc(db, `churches/${A}/rosters/r-youth`), { note: 'x' }));
   });
 
-  it('編輯者不能把別的牧區的服事表搬進自己的牧區', async () => {
+  it('聚會負責人不能把別的聚會的服事表搬進自己負責的', async () => {
     await seed(`churches/${A}/rosters/move-me`, { type: 'youth' });
     await assertFails(
       updateDoc(doc(as(EDITOR_A), `churches/${A}/rosters/move-me`), { type: 'sunday' }),
@@ -404,7 +422,7 @@ describe('服事表 (rosters)', () => {
     await assertFails(setDoc(ref, { type: 'sunday', dateKey: '2030-13-05' }));
   });
 
-  it('編輯者可以刪自己牧區的，不能刪別人的', async () => {
+  it('聚會負責人可以刪自己負責的，不能刪別的', async () => {
     await seed(`churches/${A}/rosters/del-sunday`, { type: 'sunday' });
     await seed(`churches/${A}/rosters/del-youth`, { type: 'youth' });
     await assertSucceeds(deleteDoc(doc(as(EDITOR_A), `churches/${A}/rosters/del-sunday`)));
@@ -418,7 +436,7 @@ describe('rosterEditing (testdata/church_rules.json)', () => {
   rows.forEach((r, i) => {
     it(r.why, async () => {
       const uid = `table-${i}`;
-      await seed(`churches/${A}/members/${uid}`, memberDoc(uid, r.role, r.groups, r.zoneTypes));
+      await seed(`churches/${A}/members/${uid}`, memberDoc(uid, r.role, r.groups, r.zoneTypes, { types: r.leadTypes, ministries: r.leadMinistries }));
       const write = r.roster === 'event'
         ? setDoc(doc(as(uid), `churches/${A}/rosters/ev_t${i}`), {
           kind: 'event', eventId: `t${i}`, title: '聖誕晚會', dateKey: '2030-12-24', endDateKey: '2030-12-24', duties: [], events: [],
@@ -442,15 +460,16 @@ describe('活動的服事表 (rosters/ev_…)', () => {
   });
   const path = (id) => `churches/${A}/rosters/ev_${id}`;
 
-  it('管理員和任何牧區的 roster-editors 都能寫；一般同工、只能編輯行事曆的人不行', async () => {
+  it('管理員和行政都能寫；一般同工、聚會負責人（#84 之前）、只能編輯行事曆的人不行', async () => {
     await seed(`churches/${A}/members/cal-a`, memberDoc('cal-a', 'staff', ['calendar-editors']));
     await seed(`churches/${A}/members/youth-ed`, memberDoc('youth-ed', 'staff', ['roster-editors'], ['youth']));
     await assertSucceeds(setDoc(doc(as(ADMIN_A), path('e1')), ev('e1')));
-    await assertSucceeds(setDoc(doc(as(EDITOR_A), path('e2')), ev('e2')));
+    await assertSucceeds(setDoc(doc(as(OFFICE_A), path('e2')), ev('e2')));
     await assertSucceeds(setDoc(doc(as('youth-ed'), path('e3')), ev('e3')));
     await assertSucceeds(updateDoc(doc(as('youth-ed'), path('e2')), { duties: [{ role: '主持', people: [], uids: {} }] }));
-    await assertSucceeds(deleteDoc(doc(as(EDITOR_A), path('e3'))));
+    await assertSucceeds(deleteDoc(doc(as(OFFICE_A), path('e3'))));
     await assertFails(setDoc(doc(as(MEMBER_A), path('e4')), ev('e4')));
+    await assertFails(setDoc(doc(as(EDITOR_A), path('e4')), ev('e4')));
     await assertFails(setDoc(doc(as('cal-a'), path('e4')), ev('e4')));
     await assertFails(deleteDoc(doc(as(MEMBER_A), path('e1'))));
     await assertSucceeds(getDoc(doc(as(MEMBER_A), path('e1'))));
@@ -475,16 +494,16 @@ describe('活動的服事表 (rosters/ev_…)', () => {
     await seed(path('m1'), ev('m1'));
     await seed(`churches/${A}/rosters/2030-12-22_youth`, { type: 'youth', dateKey: '2030-12-22' });
     // A sunday-only editor may write events, but not turn one into youth's.
-    await assertFails(setDoc(doc(as(EDITOR_A), path('m1')), { type: 'youth', dateKey: '2030-12-24' }));
+    await assertFails(setDoc(doc(as(OFFICE_A), path('m1')), { type: 'youth', dateKey: '2030-12-24' }));
     await assertFails(setDoc(doc(as(ADMIN_A), path('m1')), { type: 'youth', dateKey: '2030-12-24' }));
     // Nor a youth day into an event, which they could then edit.
-    await assertFails(setDoc(doc(as(EDITOR_A), `churches/${A}/rosters/2030-12-22_youth`), ev('m2')));
+    await assertFails(setDoc(doc(as(OFFICE_A), `churches/${A}/rosters/2030-12-22_youth`), ev('m2')));
     await assertFails(setDoc(doc(as(ADMIN_A), `churches/${A}/rosters/2030-12-22_youth`), ev('m2')));
   });
 
   it('名稱和日期跟著行事曆，App 改不了；一般服事表也佔不了 ev_ 的 ID', async () => {
     await seed(path('t1'), ev('t1', { movedBy: 'someone' }));
-    const db = as(EDITOR_A);
+    const db = as(OFFICE_A);
     await assertFails(setDoc(doc(db, path('t1')), ev('t1', { title: '改名' })));
     await assertFails(setDoc(doc(db, path('t1')), ev('t1', { dateKey: '2030-12-23', endDateKey: '2030-12-23' })));
     await assertSucceeds(setDoc(doc(db, path('t1')), ev('t1', { duties: [{ role: '主持', people: [], uids: {} }] })));
@@ -492,7 +511,7 @@ describe('活動的服事表 (rosters/ev_…)', () => {
   });
 
   it('活動在哪本行事曆、哪一串：建立時可以寫，之後 App 改不了', async () => {
-    const db = as(EDITOR_A);
+    const db = as(OFFICE_A);
     const where = { calendarId: 'cal-1', recurringEventId: 'pray', originalStart: '2030-12-24T11:00:00Z' };
     await assertSucceeds(setDoc(doc(db, path('w1')), ev('w1', where)));
     await assertSucceeds(setDoc(doc(db, path('w1')), ev('w1', { ...where, duties: [{ role: '領禱', people: [], uids: {} }] })));
@@ -509,7 +528,7 @@ describe('活動的服事表 (rosters/ev_…)', () => {
 });
 
 describe('同工排序 (staff_orders)', () => {
-  it('跟服事表同樣的牧區權限', async () => {
+  it('跟服事表同樣的權限', async () => {
     await assertSucceeds(getDoc(doc(as(MEMBER_A), `churches/${A}/staff_orders/sunday`)));
     await assertSucceeds(
       setDoc(doc(as(EDITOR_A), `churches/${A}/staff_orders/sunday`), { order: ['x'] }),
@@ -546,6 +565,26 @@ describe('設定 (settings)', () => {
         extra: true,
       }),
     );
+  });
+});
+
+describe('事工 (settings/ministries)', () => {
+  const worship = { id: 'worship', name: '敬拜團', duties: [{ service: 'sunday', duty: '司琴' }] };
+  const path = `churches/${A}/settings/ministries`;
+
+  it('只有管理員能寫，同工讀得到', async () => {
+    await assertSucceeds(setDoc(doc(as(ADMIN_A), path), { ministries: [worship], ids: ['worship'] }));
+    await assertSucceeds(getDoc(doc(as(MEMBER_A), path)));
+    await assertFails(setDoc(doc(as(EDITOR_A), path), { ministries: [], ids: ['worship'] }));
+    await assertFails(setDoc(doc(as(OFFICE_A), path), { ministries: [], ids: ['worship'] }));
+  });
+
+  it('ids 只能增加：刪掉的事工 id 不會再被用', async () => {
+    await seed(path, { ministries: [worship], ids: ['worship'] });
+    await assertSucceeds(setDoc(doc(as(ADMIN_A), path), { ministries: [], ids: ['worship'] }));
+    await assertFails(setDoc(doc(as(ADMIN_A), path), { ministries: [], ids: [] }));
+    await assertFails(setDoc(doc(as(ADMIN_A), path), { ministries: [worship], ids: ['worship'], extra: 1 }));
+    await assertFails(deleteDoc(doc(as(ADMIN_A), path)));
   });
 });
 
@@ -635,7 +674,7 @@ describe('外部通知 (webhook)', () => {
 });
 
 describe('待認領的同工 (pendingMembers) 與索引', () => {
-  it('管理員和 roster-editors 讀得到，只有管理員能刪；沒有人能建立或修改', async () => {
+  it('管理員、行政和負責人讀得到，只有管理員能刪；沒有人能建立或修改', async () => {
     const path = `churches/${A}/pendingMembers/old-1`;
     await seed(path, { name: '舊同工', email: 'old@example.com', role: 'staff' });
     await assertSucceeds(getDoc(doc(as(ADMIN_A), path)));

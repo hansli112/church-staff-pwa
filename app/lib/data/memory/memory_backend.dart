@@ -90,6 +90,9 @@ class MemoryBackend implements Backend {
   final churches = <String, Church>{};
   final members = <String, Map<String, Member>>{};
   final services = <String, ServiceSettings>{};
+
+  /// settings/ministries per church (#82); none until an admin makes one.
+  final ministries = <String, MinistrySettings>{};
   final rosters = <String, Map<String, Roster>>{};
   final staffOrders = <String, Map<String, StaffOrder>>{};
   final invites = <String, Invite>{};
@@ -689,8 +692,10 @@ class MemoryChurchData implements ChurchData {
   void _requireAdmin() => _b.requireAdmin(churchId);
 
   /// Admins and roster editors: the member list and pending members.
+  /// The member list: admins, 行政 and whoever leads something
+  /// (firestore.rules readsMembers).
   void _requireRosterEditors() {
-    if (!_b.requireMember(churchId).inGroup(Group.rosterEditors)) {
+    if (!_b.requireMember(churchId).readsMembers) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
   }
@@ -764,6 +769,22 @@ class MemoryChurchData implements ChurchData {
     _requireMember();
     return _b.services[churchId]!;
   });
+
+  @override
+  Stream<MinistrySettings> ministries() => _b.watch(() {
+    _requireMember();
+    return _b.ministries[churchId] ?? const MinistrySettings();
+  });
+
+  @override
+  Future<void> compareAndSetMinistries({required List<Ministry> before, required List<Ministry> after}) async {
+    _requireAdmin();
+    await _b.write(() {
+      final current = _b.ministries[churchId] ?? const MinistrySettings();
+      if (!listEquals(current.ministries, before)) throw const CloudException(CloudErrorCode.conflict);
+      _b.ministries[churchId] = current.withMinistries(after);
+    });
+  }
 
   @override
   Stream<List<Roster>> rosters({required Day from}) => _b.watch(() {
@@ -864,6 +885,40 @@ class MemoryChurchData implements ChurchData {
   }
 
   @override
+  Future<void> compareAndSetLedDuties(RosterChange change) async {
+    if (change.staffOrder != null || change.serviceChange != null) throw ArgumentError('only rosters');
+    final uid = _uid;
+    await _b.write(() {
+      // As functions/src/ledDuties.ts: compared first, then only the duties
+      // the caller's 事工 lead.
+      if (_uid != uid) throw const CloudException(CloudErrorCode.permissionDenied);
+      final me = _b.requireMember(churchId);
+      final ministries = (_b.ministries[churchId] ?? const MinistrySettings()).ministries;
+      final saved = _b.rosters[churchId]!;
+      for (final id in change.before.keys) {
+        if (!change.expects(id, saved[id])) throw const CloudException(CloudErrorCode.conflict);
+      }
+      for (final entry in change.after.entries) {
+        final next = entry.value;
+        final was = change.before[entry.key];
+        if (next == null || (saved[entry.key]?.forEvent?.cancelled ?? false)) {
+          throw const CloudException(CloudErrorCode.permissionDenied);
+        }
+        final roles = me.ledDuties(ministries, next.isEvent ? null : next.type);
+        final ok = was == null
+            ? next.events.isEmpty &&
+                  next.duties.every((d) => roles.contains(d.role)) &&
+                  (next.isEvent || _b.services[churchId]!.ids.contains(next.type))
+            : changesOnlyDuties(was, next, roles);
+        if (!ok) throw const CloudException(CloudErrorCode.permissionDenied);
+      }
+      for (final entry in change.after.entries) {
+        saved[entry.key] = entry.value!.copyWith(saved: true);
+      }
+    });
+  }
+
+  @override
   Future<void> compareAndSetServiceList({required List<Service> before, required List<Service> after}) async {
     _requireAdmin();
     if (after.isEmpty || after.length > Limits.services) {
@@ -935,6 +990,21 @@ class MemoryChurchData implements ChurchData {
         if (order?.rankingsByRole.containsKey(rename.from) ?? false) {
           orders[before.id] = order!.withRolesRenamed({rename.from: rename.to});
         }
+        // The 事工 that link the duty keep leading it (#82).
+        if (_b.ministries[churchId] case final m?) {
+          _b.ministries[churchId] = MinistrySettings(
+            ids: m.ids,
+            ministries: [
+              for (final ministry in m.ministries)
+                ministry.copyWith(
+                  duties: [
+                    for (final d in ministry.duties)
+                      d.service == before.id && d.duty == rename.from ? MinistryDuty(d.service, rename.to) : d,
+                  ],
+                ),
+            ],
+          );
+        }
       }
       _b.services[churchId] = settings.withServices([
         for (final service in settings.services) service.id == before.id ? after : service,
@@ -955,12 +1025,48 @@ class MemoryChurchData implements ChurchData {
       final current = members[after.uid];
       if (current == null) throw const CloudException(CloudErrorCode.notFound);
       if (!current.sameAdminFields(before)) throw const CloudException(CloudErrorCode.conflict);
+      // As memberToJson writes it.
       members[after.uid] = current.copyWith(
         name: after.name,
         role: after.role,
         groups: after.groups,
         zones: after.zones,
+        identities: after.identities,
+        ministries: after.ministries,
       );
+    });
+  }
+
+  @override
+  Future<void> setGroupMember(
+    String uid,
+    ChurchGroup group, {
+    required bool member,
+    List<String> duties = const [],
+  }) async {
+    await _b.write(() {
+      // As functions/src/groupMembers.ts.
+      final me = _b.requireMember(churchId);
+      final members = _b.members[churchId]!;
+      switch (group) {
+        case ServiceGroup(:final id):
+          final service = _b.services[churchId]!.byId(id);
+          if (!(me.isAdmin || me.leadTypes.contains(id)) || service == null) {
+            throw const CloudException(CloudErrorCode.permissionDenied);
+          }
+          if (duties.any((d) => !service.duties.contains(d))) throw const CloudException(CloudErrorCode.unknown);
+          final them = members[uid];
+          if (them == null) throw const CloudException(CloudErrorCode.notFound);
+          members[uid] = them.inGroupAs(group, member: member, duties: duties.toSet().toList());
+        case MinistryGroup(:final id):
+          final known = (_b.ministries[churchId] ?? const MinistrySettings()).ids.contains(id);
+          if (!(me.isAdmin || me.leadMinistries.contains(id)) || !known) {
+            throw const CloudException(CloudErrorCode.permissionDenied);
+          }
+          final them = members[uid];
+          if (them == null) throw const CloudException(CloudErrorCode.notFound);
+          members[uid] = them.inGroupAs(group, member: member);
+      }
     });
   }
 

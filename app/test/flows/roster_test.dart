@@ -64,7 +64,7 @@ void main() {
     });
 
     testWidgets('roster tab shows saved days and template drafts', (tester) async {
-      await pumpApp(tester, seededChurch(as: editor));
+      await pumpApp(tester, seededChurch(as: pastor));
       await tapText(tester, '服事表');
       expect(find.text('主日崇拜'), findsOneWidget);
       expect(find.text('青年崇拜'), findsOneWidget);
@@ -108,7 +108,7 @@ void main() {
       expect(find.text('交換'), findsNothing);
     });
 
-    testWidgets('a roster editor can only edit their own zone', (tester) async {
+    testWidgets("a service's 負責人 edits only its rosters", (tester) async {
       await pumpApp(tester, seededChurch(as: editor));
       await go(tester, '/rosters/sunday/2026-10-04');
       expect(find.byTooltip('編輯'), findsOneWidget);

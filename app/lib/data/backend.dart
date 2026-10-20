@@ -204,6 +204,13 @@ abstract interface class ChurchData {
 
   Stream<ServiceSettings> services();
 
+  /// The church's 事工 (#82); none until an admin makes one.
+  Stream<MinistrySettings> ministries();
+
+  /// Writes the 事工 list (admins) only if it is still [before];
+  /// otherwise [CloudErrorCode.conflict]. Their IDs are kept for good.
+  Future<void> compareAndSetMinistries({required List<Ministry> before, required List<Ministry> after});
+
   /// Saved rosters from [from] on, of every service, oldest first, and
   /// events' rosters still on at [from] (a retreat begun the day before).
   Stream<List<Roster>> rosters({required Day from});
@@ -231,6 +238,12 @@ abstract interface class ChurchData {
   /// with nothing written.
   Future<void> compareAndSetRosters(RosterChange change);
 
+  /// [change] by a 事工's 負責人 who arranges only some duties of its days
+  /// (Member.ledDuties): compared like [compareAndSetRosters], refused
+  /// with [CloudErrorCode.permissionDenied] if it touches anything else on
+  /// them. No staff order or service change goes with it.
+  Future<void> compareAndSetLedDuties(RosterChange change);
+
   /// Replaces the whole list of services (adding one, reordering), only
   /// if it is still [before]; otherwise [CloudErrorCode.conflict]. Never
   /// none; IDs once used stay valid.
@@ -249,6 +262,11 @@ abstract interface class ChurchData {
   /// if it is still [before]; otherwise [CloudErrorCode.conflict]. The
   /// member's own notification settings are left alone.
   Future<void> compareAndSetMember({required Member before, required Member after});
+
+  /// 加為同工 ([member] true, with the [duties] they served, for a service)
+  /// or 移出 [group], by its 負責人 or an admin. Changes nothing else on
+  /// member [uid].
+  Future<void> setGroupMember(String uid, ChurchGroup group, {required bool member, List<String> duties = const []});
 
   /// Gives member [uid] [duty] in [serviceType], applied to the member as
   /// they are when written (admins): nothing else on them changes.

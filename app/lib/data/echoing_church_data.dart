@@ -222,6 +222,18 @@ class EchoingChurchData implements ChurchData {
   });
 
   @override
+  Stream<MinistrySettings> ministries() => _echoed(_inner.ministries(), (server, arrived) {
+    var shown = server;
+    for (final echo in _echoes) {
+      final after = echo.ministries;
+      if (after == null) continue;
+      if (!_shows(echo, 'ministries', listEquals(server.ministries, after), arrived)) continue;
+      shown = shown.withMinistries(after);
+    }
+    return shown;
+  });
+
+  @override
   Stream<StaffOrder> staffOrder(String serviceType) => _echoed(_inner.staffOrder(serviceType), (server, arrived) {
     var shown = server;
     for (final echo in _echoes) {
@@ -247,6 +259,18 @@ class EchoingChurchData implements ChurchData {
   );
 
   @override
+  Future<void> compareAndSetLedDuties(RosterChange change) => _send(
+    _Echo(rosters: {for (final e in change.after.entries) e.key: e.value?.copyWith(saved: true)}),
+    () => _inner.compareAndSetLedDuties(change),
+  );
+
+  @override
+  Future<void> compareAndSetMinistries({required List<Ministry> before, required List<Ministry> after}) => _send(
+    _Echo(ministries: after),
+    () => _inner.compareAndSetMinistries(before: before, after: after),
+  );
+
+  @override
   Future<void> compareAndSetServiceList({required List<Service> before, required List<Service> after}) => _send(
     _Echo(services: (settings) => settings.withServices(after)),
     () => _inner.compareAndSetServiceList(before: before, after: after),
@@ -267,6 +291,15 @@ class EchoingChurchData implements ChurchData {
     _Echo(members: {after.uid: (_) => after}),
     () => _inner.compareAndSetMember(before: before, after: after),
   );
+
+  @override
+  Future<void> setGroupMember(String uid, ChurchGroup group, {required bool member, List<String> duties = const []}) =>
+      _send(
+        _Echo(
+          members: {uid: (m) => m.inGroupAs(group, member: member, duties: duties)},
+        ),
+        () => _inner.setGroupMember(uid, group, member: member, duties: duties),
+      );
 
   @override
   Future<void> grantDuty(String uid, String serviceType, String duty) => _send(
@@ -420,6 +453,7 @@ class _Echo {
     this.rosters = const {},
     this.members = const {},
     this.services,
+    this.ministries,
     this.staffOrders = const {},
   });
 
@@ -429,6 +463,9 @@ class _Echo {
   /// Each member changed, null for one removed.
   final Map<String, Member? Function(Member)> members;
   final ServiceSettings Function(ServiceSettings)? services;
+
+  /// The 事工 list written.
+  final List<Ministry>? ministries;
   final Map<String, StaffOrder> staffOrders;
 
   /// Null while being written; once written, until when it may still show.

@@ -181,7 +181,7 @@ void main() {
     await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
     await tapText(tester, '預覽');
     final saved = Map.of(b.rosters['grace']!);
-    b.members['grace']!['editor'] = b.members['grace']!['editor']!.copyWith(groups: const {});
+    b.members['grace']!['editor'] = b.members['grace']!['editor']!.copyWith(identities: const []);
     b.notify();
     await settle(tester);
     expect(find.text('預覽'), findsOneWidget, reason: 'the preview, not the start page');

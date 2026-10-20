@@ -30,7 +30,7 @@ final party = CalendarEvent(
 
 /// [seededChurch] with its calendar connected and [party] on it.
 MemoryBackend church({Member as = pastor, Roster? saved, DateTime Function() clock = testClock}) {
-  final b = seededChurch(as: as, extra: const [calendarEditor], clock: clock);
+  final b = seededChurch(as: as, extra: const [calendarEditor, office], clock: clock);
   b.connectCalendar('grace', calendarName: '教會行事曆');
   b.calendarEvents['grace'] = [party];
   if (saved != null) b.rosters['grace']![saved.id] = saved;
@@ -45,8 +45,8 @@ Roster partyRoster(List<Duty> duties) => Roster(
 );
 
 void main() {
-  testWidgets('a roster editor of any 牧區 arranges an event from the calendar', (tester) async {
-    final b = church(as: editor);
+  testWidgets('行政 arranges an event from the calendar', (tester) async {
+    final b = church(as: office);
     await pumpApp(tester, b);
     await go(tester, '/calendar');
     await tapText(tester, '聖誕晚會');
@@ -173,7 +173,7 @@ void main() {
   });
 
   testWidgets('a day of a recurring event starts with the last day’s duties, and records its calendar', (tester) async {
-    final b = church(as: editor);
+    final b = church(as: office);
     final pray = CalendarEvent(
       id: 'pray_20261008',
       title: '禱告會',
