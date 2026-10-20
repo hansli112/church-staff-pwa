@@ -75,7 +75,8 @@ FirebaseOptions firebaseOptionsFor(Env env) {
       // for iOS, at launch.
       return FirebaseOptions(
         apiKey: 'AIzaDemoKeyForTheFirebaseEmulatorsOnly0',
-        appId: '1:000000000000:${!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'web'}:0000000000000000',
+        appId:
+            '1:000000000000:${!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'web'}:0000000000000000',
         messagingSenderId: '000000000000',
         projectId: 'demo-martha',
         storageBucket: 'demo-martha.appspot.com',
