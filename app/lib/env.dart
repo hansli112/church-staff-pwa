@@ -71,10 +71,11 @@ FirebaseOptions firebaseOptionsFor(Env env) {
     case Env.demo:
       // A demo- project ID makes the emulators accept any credentials and
       // never touch a real project. The key only has to look like one:
-      // Android's SDK refuses a call otherwise.
-      return const FirebaseOptions(
+      // Android's SDK refuses a call otherwise; and iOS's an app ID not
+      // for iOS, at launch.
+      return FirebaseOptions(
         apiKey: 'AIzaDemoKeyForTheFirebaseEmulatorsOnly0',
-        appId: '1:000000000000:web:0000000000000000',
+        appId: '1:000000000000:${!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'web'}:0000000000000000',
         messagingSenderId: '000000000000',
         projectId: 'demo-martha',
         storageBucket: 'demo-martha.appspot.com',
