@@ -2032,5 +2032,4 @@ Church _deleted(Church c, DateTime at) => Church(
   homeName: c.homeName,
   deletedAt: at,
   timeZone: c.timeZone,
-  attendanceSince: c.attendanceSince,
 );
