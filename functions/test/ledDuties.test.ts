@@ -104,9 +104,9 @@ test('someone who leads no 事工 arranges nothing here', async () => {
   );
 });
 
-test('a day not made yet: one with only the duties it leads', async () => {
+test("a day not made yet: from the service's template, with people only on the duties it leads", async () => {
   await church();
-  const mine = day([duty('司琴', ['美玉'], { 美玉: 'staff' })]);
+  const mine = day([duty('司會'), duty('司琴', ['美玉'], { 美玉: 'staff' })]);
   await editLedDuties(deps, caller('lead'), { churchId: 'C1', before: { [ID]: null }, after: { [ID]: mine }, via: 'app' });
   const saved = await db.doc(`churches/C1/rosters/${ID}`).get();
   assert.deepEqual(saved.get('duties'), mine.duties);

@@ -4,17 +4,47 @@ import '../../data/backend.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 
-String roleLabel(L10n l10n, Role role) => switch (role) {
-  Role.admin => l10n.roleAdmin,
-  Role.leader => l10n.roleLeader,
-  Role.staff => l10n.roleStaff,
-  Role.member => l10n.roleMember,
-};
+/// How a 身分 (#82) is shown, e.g. 「敬拜團 負責人」, with the names of the
+/// church's [services] and [ministries].
+String identityLabel(
+  L10n l10n,
+  Identity i, {
+  required ServiceSettings? services,
+  required MinistrySettings? ministries,
+}) {
+  String service(String id) => services?.byId(id)?.name ?? id;
+  return switch (i) {
+    AdminIdentity() => l10n.roleAdmin,
+    OfficeIdentity() => l10n.identityOffice,
+    PastorIdentity(services: null) => l10n.identityPastorChurch,
+    PastorIdentity(:final services?) => l10n.identityPastorOf(services.map(service).join(l10n.listSeparator)),
+    ServiceLead(service: final id) => l10n.identityLeadOf(service(id)),
+    MinistryLead(:final ministry) => l10n.identityLeadOf(ministries?.byId(ministry)?.name ?? ministry),
+  };
+}
 
-String groupLabel(L10n l10n, Group group) => switch (group) {
-  Group.rosterEditors => l10n.groupRosterEditors,
-  Group.calendarEditors => l10n.groupCalendarEditors,
-};
+/// What a 身分 lets them do, in one sentence.
+String identityCan(L10n l10n, Identity i, {required ServiceSettings? services, required MinistrySettings? ministries}) {
+  String service(String id) => services?.byId(id)?.name ?? id;
+  return switch (i) {
+    AdminIdentity() || PastorIdentity(services: null) => l10n.canAdmin,
+    OfficeIdentity() => l10n.canOffice,
+    PastorIdentity(:final services?) => l10n.canServiceLead(services.map(service).join(l10n.listSeparator)),
+    ServiceLead(service: final id) => l10n.canServiceLead(service(id)),
+    MinistryLead(:final ministry) => l10n.canMinistryLead(ministries?.byId(ministry)?.name ?? ministry),
+  };
+}
+
+/// [member]'s 身分 in a line, e.g. 「牧者 · 全教會、敬拜團 負責人」; empty for a
+/// plain 同工.
+String identitiesLine(
+  L10n l10n,
+  Member member, {
+  required ServiceSettings? services,
+  required MinistrySettings? ministries,
+}) => member.identities
+    .map((i) => identityLabel(l10n, i, services: services, ministries: ministries))
+    .join(l10n.listSeparator);
 
 /// 1 = Monday … 7 = Sunday.
 String weekdayLabel(L10n l10n, int weekday) => switch (weekday) {

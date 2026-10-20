@@ -60,7 +60,8 @@ describe('claiming', () => {
     assert.equal(m.get('name'), '李美玉');
     assert.equal(m.get('email'), 'mei@example.com');
     assert.equal(m.get('role'), 'leader');
-    assert.deepEqual(m.get('groups'), ['roster-editors']);
+    assert.deepEqual(m.get('groups'), []);
+    assert.deepEqual(m.get('leadTypes'), ['sunday']);
     assert.deepEqual(m.get('zones'), [{ serviceType: 'sunday', duties: ['司琴'], smallGroups: [] }]);
     assert.deepEqual(await uidsOn(cid, '2026-10-04'), [{ 李美玉: 'new-mei' }, { 陳志豪: 'old-hao' }]);
     assert.deepEqual(await uidsOn(cid, '2026-10-11'), [{ 李美玉: 'new-mei' }]);
@@ -79,7 +80,10 @@ describe('claiming', () => {
     const m = await db.doc(`churches/${cid}/members/new-mei`).get();
     assert.deepEqual(m.get('notificationPrefs'), { muted: ['reminder'] });
     assert.deepEqual(m.get('zones'), [{ serviceType: 'sunday', duties: ['司琴'], smallGroups: ['喜樂'] }]);
-    assert.deepEqual(m.get('groups'), ['roster-editors']);
+    // A self-host roster editor edited their 牧區's rosters: its 負責人 now (#82).
+    assert.deepEqual(m.get('groups'), []);
+    assert.deepEqual(m.get('leadTypes'), ['sunday']);
+    assert.deepEqual(m.get('identities'), [{ kind: 'lead', service: 'sunday' }]);
     assert.deepEqual(await uidsOn(cid, '2026-10-04'), [{ 李美玉: 'new-mei' }, { 陳志豪: 'old-hao' }]);
     assert.equal((await db.doc(`churches/${cid}/pendingMembers/old-mei`).get()).exists, false);
   });
@@ -105,7 +109,8 @@ describe('claiming', () => {
     await claimPending(cd, mei(), { churchId: cid, pendingId: 'old-mei' });
     const m = await db.doc(`churches/${cid}/members/new-mei`).get();
     assert.equal(m.get('role'), 'staff');
-    assert.deepEqual(m.get('groups'), ['roster-editors']);
+    assert.deepEqual(m.get('groups'), []);
+    assert.deepEqual(m.get('leadTypes'), ['sunday']);
     assert.deepEqual(m.get('zones'), [{ serviceType: 'sunday', duties: ['招待', '司琴'], smallGroups: [] }]);
   });
 
@@ -202,7 +207,8 @@ describe('merging', () => {
         { serviceType: 'youth', duties: [], smallGroups: ['青年'] },
       ], mode);
       assert.deepEqual(member.get('notificationPrefs'), { muted: ['memberLeft', ...muted], otherPreference: 'preserved' }, mode);
-      assert.deepEqual(member.get('groups'), ['calendar-editors', 'roster-editors']);
+      assert.deepEqual(member.get('groups'), ['calendar-editors'], mode);
+      assert.deepEqual(member.get('leadTypes'), ['sunday'], 'the old roster editor leads their 牧區 (#82)');
       assert.equal(member.get('role'), 'staff');
       assert.equal((await db.doc(`churches/${cid}/pendingMembers/old-mei`).get()).exists, false);
       assert.deepEqual(await uidsOn(cid, '2026-10-11'), [{ 李美玉: 'new-mei' }]);

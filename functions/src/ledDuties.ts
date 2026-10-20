@@ -24,7 +24,7 @@ interface Duty {
 
 type Roster = Record<string, unknown> & { duties: Duty[] };
 
-/** What makes a day what it is; the rest (updatedAt, via, movedBy) is bookkeeping. */
+/** What makes a day what it is; the rest (updatedAt, via, movedBy) is bookkeeping. At most a write's worth of days (RosterChange.maxWrites). */
 const CONTENT = ['type', 'kind', 'eventId', 'title', 'dateKey', 'endDateKey', 'calendarId', 'recurringEventId', 'originalStart', 'duties', 'events'];
 
 /**
@@ -123,7 +123,7 @@ export async function editLedDuties(deps: Deps, caller: Caller | null, data: unk
   const before = record(input.before);
   const after = record(input.after);
   const ids = Object.keys(after);
-  if (ids.length === 0 || ids.length > 20 || !isDeepStrictEqual(Object.keys(before).sort(), [...ids].sort())
+  if (ids.length === 0 || ids.length > 500 || !isDeepStrictEqual(Object.keys(before).sort(), [...ids].sort())
       || ids.some((id) => !/^[A-Za-z0-9_-]{1,200}$/.test(id))) fail('invalid-argument', 'unknown');
   const via = input.via;
   if (typeof via !== 'string' || via.length > 32) fail('invalid-argument', 'unknown');
@@ -152,8 +152,10 @@ export async function editLedDuties(deps: Deps, caller: Caller | null, data: unk
       if (next === null || stored.get('cancelledAt') !== undefined) fail('permission-denied', 'permissionDenied');
       if (was === null) {
         newDay(id, next, (services.get('ids') as string[] | undefined) ?? []);
+        // Made from the service's template, as the app shows a day nobody
+        // has saved: its other duties come along, with nobody on them.
         const roles = ledRoles(ministries, led, next);
-        if (next.duties.some((d) => !roles.has(d.role))) fail('permission-denied', 'permissionDenied');
+        if (next.duties.some((d) => !roles.has(d.role) && d.people.length > 0)) fail('permission-denied', 'permissionDenied');
         tx.create(refs[i], { ...next, events: [], via, updatedAt: FieldValue.serverTimestamp() });
         continue;
       }

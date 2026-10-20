@@ -46,6 +46,13 @@ const staffHao = Member(
 );
 const john = Member(uid: 'john', name: 'John Chen');
 
+/// [john], one of 主日崇拜's 同工 with no duty yet: pass him in `extra`.
+const johnOnSunday = Member(
+  uid: 'john',
+  name: 'John Chen',
+  zones: [Zone(serviceType: 'sunday')],
+);
+
 /// A church with two services, five members and one saved Sunday.
 /// Signs in as [as]. Runs on [clock], [testNow] unless a test moves time.
 MemoryBackend seededChurch({Member as = pastor, List<Member> extra = const [], DateTime Function() clock = testClock}) {

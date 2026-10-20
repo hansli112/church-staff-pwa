@@ -40,8 +40,15 @@ final _seriesRolesProvider = FutureProvider.autoDispose.family<List<String>, Cal
   return previousInSeries(e, await ref.churchData.eventRosters());
 });
 
-final _canEditProvider = Provider.autoDispose<bool>(
+/// Whether I arrange all of an event's roster.
+final _wholeProvider = Provider.autoDispose<bool>(
   (ref) => ref.watch(meProvider.select((m) => m.value?.canEditEventRosters ?? false)),
+);
+
+/// Whether I arrange any of it: all, or as a 事工's 負責人 the duties it
+/// leads (#82).
+final _canEditProvider = Provider.autoDispose<bool>(
+  (ref) => ref.watch(_wholeProvider) || ref.watch(ledDutiesProvider(null)).isNotEmpty,
 );
 
 /// Opens [e]'s roster, which [e] lets the page start before it is saved.
@@ -123,24 +130,27 @@ class EventRosterScreen extends ConsumerWidget {
               )
             : null);
     final canEdit = ref.watch(_canEditProvider);
+    final whole = ref.watch(_wholeProvider);
+    final led = whole ? null : ref.watch(ledDutiesProvider(null));
     final editable = canEdit && ref.watch(eventEditingProvider);
+    final addable = roster == null ? const <String>[] : _addable(ref, roster, led);
     return Scaffold(
       appBar: AppBar(
         title: Text(roster?.forEvent?.title ?? ''),
         actions: savingActions([
-          if (canEdit && roster != null)
+          if (canEdit && roster != null && (whole || addable.isNotEmpty))
             PopupMenuButton<String>(
               enabled: editable,
               tooltip: l10n.edit,
               icon: const Icon(Symbols.more_horiz_rounded),
               onSelected: (v) => switch (v) {
-                'duty' => _addDuty(context, ref, roster),
+                'duty' => _addDuty(context, ref, roster, addable, any: whole),
                 'copy' => _copyDuties(context, ref, roster),
                 _ => null,
               },
               itemBuilder: (_) => [
                 PopupMenuItem(value: 'duty', child: Text(l10n.addDuty)),
-                PopupMenuItem(value: 'copy', child: Text(l10n.copyDuties)),
+                if (whole) PopupMenuItem(value: 'copy', child: Text(l10n.copyDuties)),
               ],
             ),
         ]),
@@ -157,10 +167,11 @@ class EventRosterScreen extends ConsumerWidget {
               EditableRoster(
                 roster: roster,
                 title: eventDaysLabel(l10n, roster, today),
+                only: led,
                 whenEmpty: EmptyState(
                   message: l10n.eventRosterEmpty,
-                  actionLabel: editable ? l10n.addDuty : null,
-                  onAction: () => _addDuty(context, ref, roster),
+                  actionLabel: editable && (whole || addable.isNotEmpty) ? l10n.addDuty : null,
+                  onAction: () => _addDuty(context, ref, roster, addable, any: whole),
                 ),
               )
             else
@@ -177,21 +188,34 @@ class EventRosterScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _addDuty(BuildContext context, WidgetRef ref, Roster roster) async {
+  /// Every service's duties not on [roster] yet; for a 事工's 負責人 only
+  /// those it leads ([led]).
+  static List<String> _addable(WidgetRef ref, Roster roster, Set<String>? led) {
+    final present = {for (final d in roster.duties) d.role};
+    final services = ref.watch(servicesProvider).value?.services ?? const <Service>[];
+    return [
+      for (final d in eventDutySuggestions(services))
+        if (!present.contains(d) && (led == null || led.contains(d))) d,
+    ];
+  }
+
+  /// Adds one of [suggestions] or, with [any], a duty typed in.
+  Future<void> _addDuty(
+    BuildContext context,
+    WidgetRef ref,
+    Roster roster,
+    List<String> suggestions, {
+    required bool any,
+  }) async {
     final l10n = L10n.of(context);
     final present = {for (final d in roster.duties) d.role};
-    final services = ref.read(servicesProvider).value?.services ?? const <Service>[];
     final role = await showAppSheet<String>(
       context,
-      builder: (context) => AddDutySheet(
-        suggestions: [
-          for (final d in eventDutySuggestions(services))
-            if (!present.contains(d)) d,
-        ],
-      ),
+      builder: (context) => AddDutySheet(suggestions: suggestions, typed: any),
     );
     final name = role?.trim() ?? '';
     if (name.isEmpty || present.contains(name) || !context.mounted) return;
+    if (!any && !suggestions.contains(name)) return;
     await runWithUndo(context, l10n.dutyUpdated(name), () => ref.read(rosterActionsProvider).addDuty(roster, name));
   }
 

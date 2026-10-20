@@ -123,13 +123,44 @@ class ImportSession extends Notifier<ImportDraft> {
   /// No rows came, because of [error].
   void fail(Object error) => state = state.copyWith(error: error);
 
+  /// The duties a 事工's 負責人 arranges in this service (#82); null for
+  /// whoever arranges all of it.
+  Set<String>? get only {
+    if (ref.read(meProvider).value?.canEditRosters(serviceType) ?? false) return null;
+    return ref.read(ledDutiesProvider(serviceType));
+  }
+
+  /// [rows] as given, or for a 事工's 負責人 with only the duties it leads
+  /// and no 特別活動: the rest of the day is not theirs to import.
+  List<dynamic> _scoped(List<dynamic> rows) {
+    final copy = jsonDecode(jsonEncode(rows)) as List<dynamic>;
+    final only = this.only;
+    if (only == null) return copy;
+    return [
+      for (final row in copy)
+        if (row is Map)
+          {
+            for (final e in row.entries)
+              if (e.key != 'events') e.key: e.value,
+            if (row['duties'] is List)
+              'duties': [
+                for (final d in row['duties'] as List)
+                  if (d is Map && only.contains(d['role'])) d,
+              ],
+          }
+        else
+          row,
+    ];
+  }
+
   /// Loads [rows] as new: who each name is is asked again.
   void load(List<dynamic> rows) => state = state.copyWith(
     // Never share the recognizer's response or a caller's list.
-    rows: jsonDecode(jsonEncode(rows)) as List<dynamic>,
+    rows: _scoped(rows),
     loaded: true,
     people: const {},
     clearError: true,
+    mode: only == null ? null : ImportMode.merge,
   );
 
   /// Loads pasted [text], which must be a JSON array.
@@ -147,8 +178,7 @@ class ImportSession extends Notifier<ImportDraft> {
   }
 
   /// Replaces the rows with [rows], edited: who each name is stays.
-  void edit(List<dynamic> rows) =>
-      state = state.copyWith(rows: jsonDecode(jsonEncode(rows)) as List<dynamic>, clearError: true);
+  void edit(List<dynamic> rows) => state = state.copyWith(rows: _scoped(rows), clearError: true);
 
   void updateRow(int index, Map<String, dynamic> row) =>
       edit([for (final (i, old) in state.rows.indexed) i == index ? row : old]);
@@ -156,7 +186,10 @@ class ImportSession extends Notifier<ImportDraft> {
   void choose(String name, ImportPersonChoice choice) =>
       state = state.copyWith(people: {...state.people, name: choice});
 
-  void setMode(ImportMode mode) => state = state.copyWith(mode: mode);
+  /// Replacing a whole day is not a 事工's 負責人's to do.
+  void setMode(ImportMode mode) {
+    if (only == null) state = state.copyWith(mode: mode);
+  }
 
   /// The members [name] could be: same name, or what it may shorten.
   List<Member> candidates(String name) {

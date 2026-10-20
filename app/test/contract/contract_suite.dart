@@ -1046,7 +1046,9 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect(await cloud().claimPending(g.cid, pid), g.cid);
       final me = (await g.church.member(uid).first)!;
       expect((me.name, me.role), ('美玉', pending.role));
-      expect(me.groups, pending.groups);
+      // Their self-host roster editing was their 牧區's: its 負責人 now (#82).
+      expect(me.groups, isEmpty);
+      expect(me.leadTypes, ['sunday']);
       expect(me.zones, pending.zones);
       final rosters = await g.church.rosters(from: Day(2026, 10, 1)).first;
       expect(rosters.first.duties.single.uids, {'美玉': uid});
@@ -1073,7 +1075,8 @@ void contractTests(Future<ContractWorld> Function() open) {
       await g.church.mergePending(pid, g.mei);
       final mei = (await g.church.member(g.mei).first)!;
       expect(mei.role, Role.staff);
-      expect(mei.groups, {Group.calendarEditors, Group.rosterEditors});
+      expect(mei.groups, {Group.calendarEditors});
+      expect(mei.leadTypes, ['sunday']);
       expect(mei.zones, const [
         Zone(serviceType: 'sunday', duties: ['招待', '司琴']),
         Zone(serviceType: 'youth', duties: ['司會']),

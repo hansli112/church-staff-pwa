@@ -907,7 +907,7 @@ class MemoryChurchData implements ChurchData {
         final roles = me.ledDuties(ministries, next.isEvent ? null : next.type);
         final ok = was == null
             ? next.events.isEmpty &&
-                  next.duties.every((d) => roles.contains(d.role)) &&
+                  next.duties.every((d) => roles.contains(d.role) || d.people.isEmpty) &&
                   (next.isEvent || _b.services[churchId]!.ids.contains(next.type))
             : changesOnlyDuties(was, next, roles);
         if (!ok) throw const CloudException(CloudErrorCode.permissionDenied);
@@ -1837,8 +1837,9 @@ class MemoryCloud implements CloudApi {
             name: p.name,
             email: user.email,
             role: p.role,
-            groups: p.groups,
+            groups: _claimedGroups(p),
             zones: p.zones,
+            identities: _claimedLeads(p),
             mutedNotifications: p.mutedNotifications,
             joinedAt: _b.clock(),
           );
@@ -1998,9 +1999,25 @@ void _checkSecret(String? secret) {
   }
 }
 
-/// [m] with the groups and zones of pending member [p] added.
+/// A self-host roster editor edited only their 牧區's rosters; here
+/// roster-editors is 行政, so they lead the services they were in instead
+/// (#82), as claimedGroups in functions/src/claim.ts.
+Set<Group> _claimedGroups(PendingMember p) => {...p.groups}..remove(Group.rosterEditors);
+
+List<Identity> _claimedLeads(PendingMember p) => p.groups.contains(Group.rosterEditors)
+    ? [
+        for (final type in {for (final z in p.zones) z.serviceType}) ServiceLead(type),
+      ]
+    : const [];
+
+/// [m] with the groups, zones and leads of pending member [p] added.
 Member _absorb(Member m, PendingMember p) => m.copyWith(
-  groups: {...m.groups, ...p.groups},
+  groups: {...m.groups, ..._claimedGroups(p)},
+  identities: [
+    ...m.identities,
+    for (final i in _claimedLeads(p))
+      if (!m.identities.contains(i)) i,
+  ],
   mutedNotifications: {...m.mutedNotifications, ...p.mutedNotifications},
   zones: [
     for (final type in {...m.zoneTypes, for (final z in p.zones) z.serviceType})

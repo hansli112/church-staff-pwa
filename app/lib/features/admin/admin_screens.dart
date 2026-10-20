@@ -275,7 +275,7 @@ class _AdminChurchScreenState extends ConsumerState<AdminChurchScreen> {
                   ListRow(
                     title: m.name,
                     subtitle: m.email,
-                    value: roleLabel(l10n, m.role),
+                    value: m.isAdmin ? l10n.roleAdmin : null,
                     // Made admin only from the server's list, not a kept one.
                     onTap: m.isAdmin || !saved.fresh
                         ? null

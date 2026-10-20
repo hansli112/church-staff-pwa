@@ -10,6 +10,7 @@ import '../../core/design/tokens.dart';
 import '../../core/languages.dart';
 import '../../state/support.dart';
 import '../../env.dart';
+import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/session.dart';
@@ -98,8 +99,15 @@ class SettingsScreen extends ConsumerWidget {
                   title: l10n.serviceSettings,
                   onTap: () => context.push('/me/services'),
                 ),
+                ListRow(
+                  leading: const IconTile(Symbols.diversity_3_rounded, color: TileColors.manage),
+                  title: l10n.groupsTitle,
+                  onTap: () => context.push('/me/groups'),
+                ),
               ],
             ),
+          // A lead's groups, one tap away (#82); admins have them all above.
+          if (me != null && !me.isAdmin && me.leads) _LedGroups(me: me),
           ListSection(
             children: [
               // Most used first: everyone's notifications; the church's
@@ -196,3 +204,36 @@ void openSitePage(BuildContext context, WidgetRef ref, String page) => launchUrl
     '${Env.current.webOrigin}${AppLanguage.shownIn(context).sitePage(page, fromApp: !ref.read(isWebProvider))}',
   ),
 );
+
+/// 我負責的: the services and 事工 [me] leads, each opening its page.
+class _LedGroups extends ConsumerWidget {
+  const _LedGroups({required this.me});
+
+  final Member me;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = L10n.of(context);
+    final services = ref.watch(servicesProvider).value;
+    final ministries = ref.watch(ministriesProvider).value;
+    return ListSection(
+      header: l10n.myGroups,
+      children: [
+        for (final id in me.leadTypes)
+          if (services?.byId(id) case final s?)
+            ListRow(
+              leading: const IconTile(Symbols.diversity_3_rounded, color: TileColors.manage),
+              title: s.name,
+              onTap: () => context.push('/me/groups/service/$id'),
+            ),
+        for (final id in me.leadMinistries)
+          if (ministries?.byId(id) case final m?)
+            ListRow(
+              leading: const IconTile(Symbols.diversity_3_rounded, color: TileColors.manage),
+              title: m.name,
+              onTap: () => context.push('/me/groups/ministry/$id'),
+            ),
+      ],
+    );
+  }
+}

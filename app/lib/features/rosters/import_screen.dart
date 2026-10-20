@@ -368,7 +368,8 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     _ready =
         ref.watch(rosterEditingProvider(widget.serviceType)) &&
         ref.watch(churchOpenProvider) &&
-        (ref.watch(meProvider).value?.canEditRosters(widget.serviceType) ?? false);
+        ((ref.watch(meProvider).value?.canEditRosters(widget.serviceType) ?? false) ||
+            ref.watch(ledDutiesProvider(widget.serviceType)).isNotEmpty);
     if (_ready && plan != null) _lastPlan = plan;
     if (!draft.loaded) _lastPlan = null;
     final shown = _ready ? plan : _lastPlan;
@@ -628,12 +629,14 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                     selected: draft.mode == ImportMode.merge,
                     onTap: _ready && !_busy ? () => _session.setMode(ImportMode.merge) : null,
                   ),
-                  ListRow(
-                    title: l10n.importReplace,
-                    selected: draft.mode == ImportMode.replace,
-                    subtitle: l10n.importReplaceHelp,
-                    onTap: _ready && !_busy ? () => _session.setMode(ImportMode.replace) : null,
-                  ),
+                  // Not for a 事工's 負責人: the rest of the day is not theirs.
+                  if (_session.only == null)
+                    ListRow(
+                      title: l10n.importReplace,
+                      selected: draft.mode == ImportMode.replace,
+                      subtitle: l10n.importReplaceHelp,
+                      onTap: _ready && !_busy ? () => _session.setMode(ImportMode.replace) : null,
+                    ),
                 ],
               ),
               if (report.badRows.isNotEmpty)

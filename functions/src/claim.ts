@@ -82,9 +82,32 @@ function mergeZones(a: unknown, b: unknown) {
   return [...out.values()];
 }
 
-function mergedMember(member: FirebaseFirestore.DocumentSnapshot, pending: FirebaseFirestore.DocumentSnapshot) {
+/**
+ * A pending member's permission groups as a member's (#82). In self-host,
+ * roster-editors edited only their 牧區's rosters; here that group is 行政,
+ * every service's, so they become 負責人 of the services they were in.
+ */
+export function claimedGroups(groups: unknown, zoneTypes: unknown) {
+  const held = Array.isArray(groups) ? groups.filter((g): g is string => typeof g === 'string') : [];
+  const types = Array.isArray(zoneTypes) ? zoneTypes.filter((t): t is string => typeof t === 'string') : [];
+  const editor = held.includes('roster-editors');
   return {
-    groups: union(member.get('groups'), pending.get('groups')),
+    groups: held.filter((g) => g !== 'roster-editors'),
+    leadTypes: editor ? types : [],
+    identities: editor ? types.map((service) => ({ kind: 'lead', service })) : [],
+  };
+}
+
+function mergedMember(member: FirebaseFirestore.DocumentSnapshot, pending: FirebaseFirestore.DocumentSnapshot) {
+  const claimed = claimedGroups(pending.get('groups'), pending.get('zoneTypes'));
+  const identities = (member.get('identities') as unknown[] | undefined) ?? [];
+  return {
+    groups: union(member.get('groups'), claimed.groups),
+    leadTypes: union(member.get('leadTypes'), claimed.leadTypes),
+    identities: [
+      ...identities,
+      ...claimed.identities.filter((i) => !identities.some((h) => JSON.stringify(h) === JSON.stringify(i))),
+    ],
     zones: mergeZones(member.get('zones'), pending.get('zones')),
     zoneTypes: union(member.get('zoneTypes'), pending.get('zoneTypes')),
     // Merge opt-outs, never reset a current preference to a pending default.
@@ -123,7 +146,7 @@ export async function claimPending(deps: ClaimDeps, caller: Caller | null, data:
         name: personName(pending.get('name')) || personName(c.name),
         email: c.email ?? '',
         role: pending.get('role') ?? 'member',
-        groups: pending.get('groups') ?? [],
+        ...claimedGroups(pending.get('groups'), pending.get('zoneTypes')),
         zones: pending.get('zones') ?? [],
         zoneTypes: pending.get('zoneTypes') ?? [],
         notificationPrefs: pending.get('notificationPrefs') ?? { muted: [] },

@@ -21,17 +21,49 @@ Future<void> go(WidgetTester tester, String location) async {
 
 void main() {
   group('members', () {
-    testWidgets('an admin changes a role and a group', (tester) async {
+    testWidgets('an admin gives a 身分, which says what it lets them do, and takes it back (#82)', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/me/members');
       expect(find.text('5 位同工'), findsOneWidget);
       await tapText(tester, '李美玉');
-      await tapText(tester, '小組長');
-      await tapText(tester, '安排服事表');
+      expect(findShown('同工：看所有服事表和活動'), findsOneWidget, reason: 'no 身分 yet');
+      await tapText(tester, '新增身分');
+      await tapText(tester, '聚會負責人');
+      await tapText(tester, '主日崇拜');
       final mei = b.members['grace']!['mei']!;
-      expect(mei.role, Role.leader);
-      expect(mei.groups, {Group.rosterEditors});
+      expect(mei.identities, const [ServiceLead('sunday')]);
+      expect(mei.canEditRosters('sunday'), isTrue);
+      expect(find.text('主日崇拜 負責人'), findsOneWidget);
+      expect(findShown('排主日崇拜的服事表、加入和移出它的同工'), findsOneWidget);
+
+      await tapText(tester, '再加一個');
+      await tapText(tester, '行政');
+      expect(b.members['grace']!['mei']!.groups, {Group.rosterEditors, Group.calendarEditors});
+
+      await tapText(tester, '主日崇拜 負責人');
+      await tapText(tester, '移除這個身分');
+      expect(b.members['grace']!['mei']!.identities, const [OfficeIdentity()]);
+      expect(find.text('已移除「主日崇拜 負責人」'), findsOneWidget);
+      await tapText(tester, '復原');
+      expect(b.members['grace']!['mei']!.identities, const [ServiceLead('sunday'), OfficeIdentity()]);
+    });
+
+    testWidgets("a pastor of some services leads them; a whole church's is an admin", (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/me/members/mei');
+      await tapText(tester, '新增身分');
+      await tapText(tester, '牧者');
+      await tapText(tester, '青年崇拜');
+      expect(b.members['grace']!['mei']!.leadTypes, ['youth']);
+      expect(find.text('牧者 · 青年崇拜'), findsOneWidget);
+      await tapText(tester, '再加一個');
+      await tapText(tester, '牧者');
+      await tapText(tester, '全教會');
+      final mei = b.members['grace']!['mei']!;
+      expect(mei.identities, const [PastorIdentity(null)]);
+      expect(mei.role, Role.admin, reason: 'what the rules and older apps read');
     });
 
     testWidgets('zones write the flattened zoneTypes', (tester) async {
@@ -93,7 +125,8 @@ void main() {
     testWidgets('an admin sees no demote or remove on their own page', (tester) async {
       await pumpApp(tester, seededChurch());
       await go(tester, '/me/members/pastor');
-      expect(find.text('身分'), findsNothing);
+      await tapText(tester, '管理員');
+      expect(find.text('移除這個身分'), findsNothing);
       expect(find.text('移除同工'), findsNothing);
     });
 

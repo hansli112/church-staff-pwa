@@ -135,7 +135,7 @@ void main() {
       expect(find.text('已更新招待'), findsOneWidget);
     });
 
-    testWidgets('search finds other members ignoring width and case; picking one remembers them for the duty', (
+    testWidgets('search finds other members ignoring width and case; a helper is scheduled this once (#82)', (
       tester,
     ) async {
       final b = seededChurch();
@@ -150,6 +150,18 @@ void main() {
       await tapText(tester, '完成');
 
       expect(peopleOn(b, 11, '司琴'), ['John Chen']);
+      expect(b.members['grace']!['john']!.serves('sunday', '司琴'), isFalse, reason: 'not one of 主日崇拜’s 同工');
+    });
+
+    testWidgets('picking one of the service’s 同工 remembers them for the duty', (tester) async {
+      final b = seededChurch(extra: const [johnOnSunday]);
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-11');
+      await tapText(tester, '司琴');
+      await tester.enterText(find.byType(TextField), 'John');
+      await settle(tester);
+      await tapText(tester, 'John Chen');
+      await tapText(tester, '完成');
       expect(b.members['grace']!['john']!.serves('sunday', '司琴'), isTrue);
 
       // Next time he is in the upper section without searching.
@@ -164,11 +176,13 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/rosters/youth/2026-10-10');
       await tapText(tester, '司會');
-      expect(find.text('排過一次，下次就會列在上面'), findsOneWidget);
+      expect(findShown('這個聚會的同工排過一次，下次就會列在上面'), findsOneWidget);
       expect(find.text('其他同工'), findsOneWidget);
       await tapText(tester, 'John Chen');
       await tapText(tester, '完成');
-      expect(b.members['grace']!['john']!.serves('youth', '司會'), isTrue);
+      final youth = b.rosters['grace']![Roster.idFor('youth', Day(2026, 10, 10))]!;
+      expect(youth.duties.firstWhere((d) => d.role == '司會').people, ['John Chen']);
+      expect(b.members['grace']!['john']!.serves('youth', '司會'), isFalse);
     });
 
     testWidgets('a roster editor, who cannot change members, schedules someone without remembering them', (
@@ -254,7 +268,7 @@ void main() {
     });
 
     testWidgets('someone put on the list by being picked comes last in staff order', (tester) async {
-      final b = seededChurch();
+      final b = seededChurch(extra: const [johnOnSunday]);
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       // 司琴 has no staff order yet: by name, John Chen would come first.
@@ -342,7 +356,7 @@ void main() {
       await pumpApp(tester, seededChurch());
       await go(tester, '/rosters/youth/2026-10-10');
       await tapText(tester, '司會');
-      expect(find.text('排過一次，下次就會列在上面'), findsOneWidget);
+      expect(findShown('這個聚會的同工排過一次，下次就會列在上面'), findsOneWidget);
       await tapText(tester, '邀請同工');
       expect(find.text('建立邀請連結'), findsOneWidget, reason: 'the invites page');
     });

@@ -43,6 +43,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
     final c = AppColors.of(context);
     final members = ref.watch(membersProvider);
     final services = ref.watch(servicesProvider).value;
+    final ministries = ref.watch(ministriesProvider).value;
     final enabled = services?.enabled ?? const <Service>[];
     List<String> smallGroupLabels(List<Zone> zones) => [
       for (final zone in zones)
@@ -76,7 +77,9 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                 for (final m in all)
                   if (!hidden.contains(m.uid) && matchesSearch(m.name, _query)) m,
               ]..sort((a, b) {
-                final ra = a.role.index.compareTo(b.role.index);
+                // Admins, then whoever holds a 身分, then everyone else.
+                int rank(Member m) => m.isAdmin ? 0 : (m.identities.isNotEmpty ? 1 : 2);
+                final ra = rank(a).compareTo(rank(b));
                 return ra != 0 ? ra : a.name.compareTo(b.name);
               });
           // Nobody else has joined: the next step is inviting them.
@@ -143,12 +146,10 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                               child: ListRow(
                                 title: m.uid == uid ? l10n.nameIsYou(m.name) : m.name,
                                 subtitle: [
+                                  identitiesLine(l10n, m, services: services, ministries: ministries).ifEmpty(null),
                                   if (m.waitsForZone(enabled)) l10n.waitsForZone,
-                                  if (m.inGroup(Group.rosterEditors) && !m.isAdmin) l10n.groupRosterEditors,
-                                  if (m.inGroup(Group.calendarEditors) && !m.isAdmin) l10n.groupCalendarEditors,
                                   ...smallGroupLabels(m.zones),
-                                ].join(l10n.dotSeparator).ifEmpty(null),
-                                value: roleLabel(l10n, m.role),
+                                ].nonNulls.join(l10n.dotSeparator).ifEmpty(null),
                                 onTap: isAdmin ? () => _open(m) : null,
                               ),
                             );
@@ -175,7 +176,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                                 if (p.email.isNotEmpty && p.name.isNotEmpty) p.email,
                                 ...smallGroupLabels(p.zones),
                               ].join(l10n.dotSeparator),
-                              value: roleLabel(l10n, p.role),
+                              value: p.role == Role.admin ? l10n.roleAdmin : null,
                               onTap: isAdmin ? () => _openPending(p) : null,
                             ),
                           );

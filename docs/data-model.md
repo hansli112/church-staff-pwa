@@ -9,13 +9,13 @@
 |---|---|
 | `users/{uid}` | 全域個資：`name`、`email`、`locale`（自己選的語言，跟隨系統時沒有）、`appLocale`（App 實際顯示的語言：推播照它寫；建教會、搬家沒說語言時，預設內容和「待定」也照它）、`fcm`（`{deviceId: token}`）、`photoAiConsentAt`（同意照片辨識把照片和同工名單送到 Gemini 的時間，只能本人寫）、`createdAt`、`updatedAt` |
 | `churches/{cid}` | `name`、`nameKey`（正規化後的名稱，同名檢查用）、`status`（`active` / `suspended` / `deleted`）、`createdBy`、`createdAt`、`deletedAt`、`logoVersion`（logo 的 Storage generation）、`homeName`（主畫面名稱，選填，最多 8 字）、`timeZone`（教會的時區，IANA 名稱，限 `functions/src/timeZones.ts` 的 16 個；建立時照建立者手機的時區，之後管理員經 `setChurchTimeZone` 改；沒有這個欄位的是 #73 之前建立的，一律當 `Asia/Taipei`） |
-| `churches/{cid}/members/{uid}` | `uid`（= doc id，collection group 查詢用）、`name`、`email`、`role`、`groups`、`zones`（每個 `{serviceType, duties, smallGroups}`）、`zoneTypes`、`notificationPrefs`（`muted`：關掉的通知種類；`reminderTiming`：服事提醒的時間，`weekly`／`dayBefore`／`both`，沒有就是 `weekly`）、`joinedAt` |
+| `churches/{cid}/members/{uid}` | `uid`（= doc id，collection group 查詢用）、`name`、`email`、`role`、`groups`、`zones`（每個 `{serviceType, duties, smallGroups}`）、`zoneTypes`、`identities`（身分，見〈角色與群組〉）、`leadTypes`、`leadMinistries`、`ministries`、`notificationPrefs`（`muted`：關掉的通知種類；`reminderTiming`：服事提醒的時間，`weekly`／`dayBefore`／`both`，沒有就是 `weekly`）、`joinedAt` |
 | `churches/{cid}/rosters/{id}` | 服事表，`type` 是聚會別 ID，`dateKey` 是 `YYYY-MM-DD`，id 是 `<dateKey>_<type>`。活動的服事表（掛在行事曆活動上）的 id 是 `ev_<活動 id>`，沒有 `type`，改成 `kind: 'event'`、`eventId`、`title`（活動名稱）、`dateKey` 與 `endDateKey`（活動的第一天、最後一天，教會的時區）。名稱和日期由 `calendarWrite`（在 App 改的）和 `syncEventRosters`（各教會當地每天 6:30、12:30、18:30，在 Google 日曆直接改的；教會改時區時也立刻照新時區重算一次，不發通知）照活動更新。另外記 `calendarId`（活動在哪本行事曆）、重複活動的 `recurringEventId` 與 `originalStart`，建立時 App 寫，之後只有後端改。活動刪掉時後端加上 `cancelledAt`（取消：不顯示、不提醒，留著給復原；30 天內活動回來就恢復，過了就刪掉），只有後端寫這個欄位 |
 | `churches/{cid}/pendingMembers/{舊 uid}` | 從舊版搬來、還沒登入的同工：`name`、`email`、`emailHash`、`role`、`groups`、`zones`、`zoneTypes`、`notificationPrefs`、`rosterIds`（搬家時記下有他名字的服事表）。後端建立，管理員可以刪；認領或合併時偏好與小組併入同工，只有 `rosterIds` 那幾天改連到新帳號 |
 | `pendingIndex/{email 的 SHA-256}` | 只有後端讀寫：`churches`（教會 id → 待認領同工 id） |
 | `invites/{邀請碼}` | `cid`、`churchName`、`expiresAt`（31 天內）、`revoked`、`createdBy`、`createdAt`、`zoneTypes`（選填，加入後屬於的牧區，最多 20 個；加入時只留教會還有的聚會別，不帶服事項目）。管理員建立、撤回，加入經 `redeemInvite` |
 | `churches/{cid}/staff_orders/{type}` | 各聚會別的同工排序 |
-| `churches/{cid}/settings/{doc}` | `services`（聚會別，`ids` 只增不減）、`roster_templates` 等 |
+| `churches/{cid}/settings/{doc}` | `services`（聚會別，`ids` 只增不減）、`ministries`（事工：`ministries` 每個 `{id, name, duties: [{service, duty}]}`，最多 50 個；`ids` 只增不減）、`roster_templates` 等 |
 | `churches/{cid}/settings/link` | 教會連結：`title`（1–30 字）、`body`（最多 120 字）、`url`（限 `https`）；`source`（每日內容來源，`https`）與 `fetchMinute`（每天抓取時間，教會時區午夜後的分鐘數，15 分鐘為單位）只能經 `setLinkSource` 設定 |
 | `churches/{cid}/settings/linkContent` | 只有後端寫，兩種形狀擇一：成功時 `source`、`date`（教會的今天，`YYYY-MM-DD`）、`title`、`body`、`link`、`fetchedAt`；失敗時只有 `source`、`error`、`errorStatus`、`errorAt`，不保留之前的內容 |
 | `linkSources/{cid}` | 只有後端讀寫：內容來源的排程，`source`、`fetchMinute`、`epoch`（設定每變一次就換，晚到的結果不能寫回）、`nextAt`、`lastAttemptDay`（排程這天試過了）、`lastDay`（最後成功的那天）、`attemptId`（抓取中才有） |
@@ -69,12 +69,24 @@ App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預�
 
 ## 角色與群組
 
-> 權限改版（#82，分 #83、#84、#85 三個階段）定案了，還沒做：身分和權限群組會換成「身分＋群組（聚會、事工、小組）＋負責人」。做完一個階段再改這一節和下面的權限表。
+權限都從身分來（#82）。一般同工什麼都沒有；要管事的人有一個或幾個身分，每個身分照下表給權限：
 
-- `role`：`admin`、`leader`、`staff`、`member`。只有 `admin` 有權限上的意義，其他是身分標示。
-- `groups`：`roster-editors`、`calendar-editors`。可同時擁有多個；admin 視同全部都有。
-- `zones`：同工屬於的牧區（聚會別），每個帶他在那裡的服事項目，可以是空的。服事表分頁只顯示自己的牧區，admin 和 roster-editors 看全部；這只是讓畫面清爽，規則照樣讓所有同工讀所有服事表。
-- `zoneTypes`：`zones` 攤平後的聚會別 ID 清單，也就是自己的牧區。服事表分頁照它顯示，也決定 roster editor 能改哪幾種服事表；規則讀不到 `zones` 裡面，所以另存一份。
+| 身分（`identities` 裡的一項） | 存法 | 能做什麼 |
+|---|---|---|
+| 管理員 | `{kind: 'admin'}`，`role: 'admin'` | 全部 |
+| 牧者 · 全教會 | `{kind: 'pastor'}`，`role: 'admin'` | 等於管理員 |
+| 牧者 · 某幾個聚會 | `{kind: 'pastor', services: [...]}`，那幾個進 `leadTypes` | 等於那幾個聚會的負責人 |
+| 行政 | `{kind: 'office'}`，`groups` 是 `roster-editors` 和 `calendar-editors` | 排所有服事表（含活動的）、改所有活動；不能管同工和設定 |
+| 聚會負責人 | `{kind: 'lead', service}`，進 `leadTypes` | 排那個聚會的服事表、加入和移出它的同工 |
+| 事工負責人 | `{kind: 'lead', ministry}`，進 `leadMinistries` | 在任何聚會和活動排那個事工連到的服事項目（經 `editLedDuties`）、加入和移出它的同工 |
+
+- `identities` 是同工頁顯示和編輯的；規則讀不到裡面，所以 App 同時寫攤平的 `role`、`groups`、`leadTypes`、`leadMinistries`（`Member.withIdentities`），舊版 App 也照舊讀 `role` 和 `groups`。只有管理員能寫這些欄位。沒有 `identities` 的舊資料：`role: 'admin'` 算管理員，`roster-editors` 算行政。
+- 只有管理員（含全教會的牧者）能給身分。負責人只能加入、移出自己群組的同工（`setGroupMember`），看得到全教會的同工名單。教會至少要有一位 `role: 'admin'`。
+- `role` 另外的 `leader`、`staff`、`member` 是舊的身分標示，不再顯示；`leader` 留給 #85 轉成小組長。
+- `zones`：同工屬於的聚會（牧區），每個帶他在那裡的服事項目，可以是空的。聚會的同工從這裡來；安排服事表時選了不是這個聚會同工的人，只排這一次，不會加進來（#82）。服事表分頁顯示自己的牧區、負責的聚會和事工連到的聚會，admin 和行政看全部；這只是讓畫面清爽，規則照樣讓所有同工讀所有服事表。
+- `zoneTypes`：`zones` 攤平後的聚會別 ID 清單；規則讀不到 `zones` 裡面，所以另存一份。
+- `ministries`：同工所在的事工 ID，只由管理員或那個事工的負責人加、移。
+- 從自架版搬來、在 `roster-editors` 的同工，認領或合併時變成他牧區的聚會負責人（自架版的 `roster-editors` 只能排自己的牧區）。
 
 ## 權限
 
@@ -86,20 +98,20 @@ App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預�
 | 建立、改名、改狀態、刪除教會 | 只有 Cloud Functions |
 | 改主畫面名稱（`homeName`） | admin，只能動這個欄位 |
 | 查自己屬於哪些教會 | 本人（collection group `members`，`where uid == 自己`） |
-| 讀 member | 本人、roster-editors、admin |
-| 讀待認領同工 | roster-editors、admin；只有 admin 能刪，其他寫入都是後端 |
+| 讀 member | 本人、admin、行政、負責人（`leadTypes` 或 `leadMinistries` 不是空的） |
+| 讀待認領同工 | admin、行政、負責人；只有 admin 能刪，其他寫入都是後端 |
 | 加入教會（建立 member） | 只有 Cloud Functions（邀請） |
 | 改 member | admin（不能改 `uid`、不能把自己降級）；本人只能改 `notificationPrefs`。改到 `notificationPrefs` 時，`muted` 只能是 `reminder`、`rosterChange`、`memberLeft`，`reminderTiming` 只能是 `weekly`、`dayBefore`、`both`。只檢查這次改到的欄位，因為從 self-host 搬來的可能有舊的種類，App 也是一次寫一個欄位 |
 | 刪 member | admin 刪別人；非 admin 可以自己退出。admin 要先被別的 admin 降級才能走 |
 | 讀服事表、排序、設定 | 同工 |
-| 寫服事表、排序 | admin（任何已設定的聚會別）；roster-editors（只限自己 `zoneTypes` 裡的聚會別，移動時新舊聚會別都要有） |
-| 寫活動的服事表 | admin 和所有 roster-editors，不看牧區。一般服事表和活動的服事表不能互相改過去；取消了的不能再改，只能刪 |
+| 寫服事表、排序 | admin、行政（任何已設定的聚會別）；聚會負責人和牧者（只限 `leadTypes` 裡的聚會別，移動時新舊聚會別都要有）。事工負責人不能直接寫，經 `editLedDuties` 只改他事工連到的服事項目：其他服事項目、特別活動不能動，不能刪整天；還沒存過的那天可以照範本建立，但其他服事項目要沒有人 |
+| 寫活動的服事表 | admin 和行政；事工負責人經 `editLedDuties` 只排他的服事項目（照名稱比對）。一般服事表和活動的服事表不能互相改過去；取消了的不能再改，只能刪 |
 | 寫設定 | admin；`services` 的 `ids` 只增不減，不能刪；`calendar`、`linkContent`、`webhook` 只有 Cloud Functions 能寫。服事項目改名要連同工的牧區與同工排序一起改，經 `editService`（比對改名前的那一個聚會，其他聚會照現在的保留；超過 500 筆寫入整筆拒絕） |
 | 讀寫 `users/{uid}` | 本人（限上列欄位，`fcm` 最多 50 支裝置）；刪除由 Cloud Functions 處理 |
 
 ## 交給 Cloud Functions 的（M2）
 
-規則做不到的檢查都放在後端：建立教會（email 已驗證、`nameKey` 不重複）、邀請加入、帳號刪除、平台後台（改名、轉移管理員、停用）、服事項目改名（`editService`）。
+規則做不到的檢查都放在後端：建立教會（email 已驗證、`nameKey` 不重複）、邀請加入、帳號刪除、平台後台（改名、轉移管理員、停用）、服事項目改名（`editService`，連同事工連到的服事項目）、事工負責人排服事表（`editLedDuties`）、負責人加入和移出群組的同工（`setGroupMember`）。
 
 行事曆連接完成時（`calendarCallback`），在向 Google 換 token 前後都重新確認這位仍是這間啟用中教會的管理員；中途被降級、移除或教會停用，就撤銷剛拿到的授權、不寫入。連接中的 `calendarStates/{state}` 帶後端專用的 `exchanging`，避免同一個 state 被用兩次。
 
@@ -107,7 +119,7 @@ App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預�
 
 1. 不是這間教會的同工 → `permission-denied`（reason `permissionDenied`），不透露教會的狀態。
 2. 教會停用（`suspended` 或 `deleted`）→ `failed-precondition`、reason `churchClosed`，不管這位同工原本能做什麼；App 顯示「這間教會已停用」。只有還原教會（`restoreChurch`）放行停用中的教會，而且只還原 30 天內刪除的；營運者停用的、刪除超過 30 天的一樣是 `churchClosed`。
-3. 權限不夠 → `permissionDenied`。等級有同工、權限群組（admin 都算）、admin，以及 roster editor：教會有過這個聚會別（`settings/services` 的 `ids`），而且是 admin 或在 roster-editors 裡、`zoneTypes` 有它。
+3. 權限不夠 → `permissionDenied`。等級有同工、權限群組（admin 都算）、admin，以及 roster editor：教會有過這個聚會別（`settings/services` 的 `ids`），而且是 admin、行政（roster-editors），或 `leadTypes` 有它；照片匯入另外讓事工連到這個聚會服事項目的負責人用（`arranges`）。
 
 例外：邀請停用教會的回 `inviteInvalid`，教會預覽回 `notFound`（給還不是同工的人看）；排程和觸發器遇到停用的教會直接略過。Firestore 直接讀寫被規則擋下時，規則分不出原因，一律是 permission-denied。
 

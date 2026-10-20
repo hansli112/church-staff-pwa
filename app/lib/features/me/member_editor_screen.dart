@@ -8,10 +8,10 @@ import '../../l10n/app_localizations.dart';
 import '../../state/church_writes.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
-import '../common/labels.dart';
 import '../common/saving_indicator.dart';
+import 'identity_section.dart';
 
-/// An admin editing one member: role, permission groups, and per service
+/// An admin editing one member: their 身分 and 事工 (#82), and per service
 /// whether they belong to its 牧區 and the duties they serve there. Every
 /// change saves at once.
 ///
@@ -115,39 +115,8 @@ class MemberEditorScreen extends ConsumerWidget {
       appBar: AppBar(title: Text(member.name), actions: const [SavingIndicator()]),
       body: ListView(
         children: [
-          if (!self)
-            ListSection(
-              header: l10n.role,
-              children: [
-                for (final role in Role.values)
-                  ListRow(
-                    title: roleLabel(l10n, role),
-                    // The only role that grants anything; the rest are titles.
-                    subtitle: role == Role.admin ? l10n.roleAdminCan : null,
-                    selected: member.role == role,
-                    onTap: () => _save(context, ref, member, member.copyWith(role: role)),
-                  ),
-              ],
-            ),
-          if (!member.isAdmin)
-            ListSection(
-              header: l10n.groups,
-              children: [
-                for (final g in Group.values)
-                  SwitchRow(
-                    title: groupLabel(l10n, g),
-                    value: member.groups.contains(g),
-                    onChanged: (on) => _save(
-                      context,
-                      ref,
-                      member,
-                      member.copyWith(
-                        groups: on ? {...member.groups, g} : ({...member.groups}..remove(g)),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+          IdentitySection(member: member, self: self),
+          MinistriesSection(member: member),
           for (final s in shown)
             _ZoneSection(
               member: member,

@@ -386,7 +386,7 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get pickerLearns => 'Once scheduled, they’ll be listed up here next time';
+  String get pickerLearns => 'A team member of this service, once scheduled, is listed up here next time';
 
   @override
   String pickerNoResults(String query) {
@@ -625,28 +625,168 @@ class L10nEn extends L10n {
   String get roleAdmin => 'Admin';
 
   @override
-  String get roleLeader => 'Small group leader';
-
-  @override
-  String get roleStaff => 'Regular team member';
-
-  @override
-  String get roleMember => 'Group member';
-
-  @override
   String get role => 'Church role';
 
   @override
-  String get roleAdminCan => 'All settings, inviting and removing team members';
+  String get identityOffice => 'Office';
 
   @override
-  String get groups => 'Permission groups';
+  String get identityPastor => 'Pastor';
 
   @override
-  String get groupRosterEditors => 'Edit schedules';
+  String get identityPastorChurch => 'Pastor · Whole church';
 
   @override
-  String get groupCalendarEditors => 'Edit calendar';
+  String identityPastorOf(String services) {
+    return 'Pastor · $services';
+  }
+
+  @override
+  String identityLeadOf(String group) {
+    return '$group lead';
+  }
+
+  @override
+  String get identityLead => 'Lead';
+
+  @override
+  String get identityServiceLead => 'Service lead';
+
+  @override
+  String get identityMinistryLead => 'Ministry lead';
+
+  @override
+  String get canAdmin => 'Can manage everything';
+
+  @override
+  String get canOffice => 'Arranges every schedule and edits every event, but not team members or settings';
+
+  @override
+  String canServiceLead(String service) {
+    return 'Arranges $service\'s schedules and adds or removes its team members';
+  }
+
+  @override
+  String canMinistryLead(String ministry) {
+    return 'Arranges $ministry\'s roles and adds or removes its team members';
+  }
+
+  @override
+  String get canStaff => 'Team member: sees every schedule and event';
+
+  @override
+  String get addIdentity => 'Add a role';
+
+  @override
+  String get addAnotherIdentity => 'Add another';
+
+  @override
+  String identityRemoved(String identity) {
+    return 'Removed “$identity”';
+  }
+
+  @override
+  String identityAdded(String identity) {
+    return 'Added “$identity”';
+  }
+
+  @override
+  String get removeIdentity => 'Remove this role';
+
+  @override
+  String get wholeChurch => 'Whole church';
+
+  @override
+  String get pickPastorScope => 'Shepherds';
+
+  @override
+  String get pickService => 'Pick a service';
+
+  @override
+  String get pickMinistry => 'Pick a ministry';
+
+  @override
+  String get groupsTitle => 'Services & ministries';
+
+  @override
+  String get ministries => 'Ministries';
+
+  @override
+  String get addMinistry => 'Add a ministry';
+
+  @override
+  String get ministryName => 'Ministry name';
+
+  @override
+  String get ministryDuties => 'Roles';
+
+  @override
+  String get ministryDutiesNone => 'None';
+
+  @override
+  String get ministryDutiesFooter => 'Its leads arrange these roles in any service and at any event';
+
+  @override
+  String get noMinistries => 'No ministries yet, such as a worship team or a sound team';
+
+  @override
+  String get deleteMinistry => 'Delete ministry';
+
+  @override
+  String ministryDeleted(String name) {
+    return 'Deleted “$name”';
+  }
+
+  @override
+  String get leads => 'Leads';
+
+  @override
+  String get noLeads => 'No lead yet';
+
+  @override
+  String get assignLead => 'Assign a lead';
+
+  @override
+  String get groupStaff => 'Team members';
+
+  @override
+  String get noGroupStaff => 'No team members yet';
+
+  @override
+  String groupCandidates(String group) {
+    return 'Served with $group, not on the team yet';
+  }
+
+  @override
+  String groupCandidateServed(String duty, int count) {
+    return '$duty ×$count';
+  }
+
+  @override
+  String get addAsStaff => 'Add to team';
+
+  @override
+  String addAsStaffLabel(String name, String group) {
+    return 'Add $name to $group';
+  }
+
+  @override
+  String removeFromGroup(String group) {
+    return 'Remove from $group';
+  }
+
+  @override
+  String addedToGroup(String name, String group) {
+    return 'Added $name to $group';
+  }
+
+  @override
+  String removedFromGroup(String name, String group) {
+    return 'Removed $name from $group';
+  }
+
+  @override
+  String get myGroups => 'I lead';
 
   @override
   String get zones => 'Services and roles';

@@ -17,15 +17,16 @@ import 'features/church/join_screen.dart';
 import 'features/church/welcome_screen.dart';
 import 'features/dev/component_gallery.dart';
 import 'features/home/home_screen.dart';
+import 'features/me/about_screen.dart';
 import 'features/me/account_screen.dart';
 import 'features/me/church_link_screen.dart';
+import 'features/me/groups_screen.dart';
 import 'features/me/invites_screen.dart';
 import 'features/me/me_screen.dart';
 import 'features/me/member_editor_screen.dart';
 import 'features/me/members_screen.dart';
 import 'features/me/notifications_screen.dart';
 import 'features/me/profile_screen.dart';
-import 'features/me/about_screen.dart';
 import 'features/me/services_screen.dart';
 import 'features/me/sign_in_methods_screen.dart';
 import 'features/me/support_screen.dart';
@@ -195,6 +196,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                   page('calendar', (s) => DeferredPage.calendarSettings(result: s.uri.queryParameters['result'])),
                   page('notifications', (_) => const NotificationsScreen()),
                   page('invites', (_) => const InvitesScreen()),
+                  page(
+                    'groups',
+                    (_) => const GroupsScreen(),
+                    routes: [
+                      page('service/:id', (s) => GroupScreen(group: ServiceGroup(s.pathParameters['id']!))),
+                      page('ministry/:id', (s) => GroupScreen(group: MinistryGroup(s.pathParameters['id']!))),
+                    ],
+                  ),
                   page(
                     'members',
                     (_) => const MembersScreen(),

@@ -38,10 +38,12 @@ class RostersScreen extends ConsumerWidget {
     final settings = ref.watch(servicesProvider);
     final meValue = ref.watch(meProvider);
     final me = meValue.value;
-    final mine = me?.rosterServices(settings.value?.enabled ?? const []) ?? const <Service>[];
+    final ministries = ref.watch(ministriesProvider).value?.ministries ?? const <Ministry>[];
+    final mine = me?.rosterServices(settings.value?.enabled ?? const [], ministries: ministries) ?? const <Service>[];
     final selectedId = ref.watch(selectedServiceProvider);
     final shown = mine.where((s) => s.id == selectedId).firstOrNull ?? mine.firstOrNull;
-    final canImport = shown != null && (me?.canEditRosters(shown.id) ?? false);
+    final canImport =
+        shown != null && ((me?.canEditRosters(shown.id) ?? false) || ref.watch(ledDutiesProvider(shown.id)).isNotEmpty);
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.tabRosters),

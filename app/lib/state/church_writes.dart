@@ -59,9 +59,20 @@ class ChurchWrites {
   /// Writes [change]. Undo writes [undo]'s change, built when undoing, or
   /// [change] reversed; it throws to refuse.
   ChurchWrite rosters(RosterChange change, {RosterChange Function()? undo}) => _reversible(
-    (data) => data.compareAndSetRosters(change),
-    (data) => data.compareAndSetRosters(undo == null ? change.reversed : undo()),
+    (data) => _sendRosters(data, change),
+    (data) => _sendRosters(data, undo == null ? change.reversed : undo()),
   );
+
+  /// [change] as a whole-day write, or, for a 事工's 負責人 who arranges
+  /// only some duties of those days (#82), through the backend, which
+  /// checks that only those changed.
+  Future<void> _sendRosters(ChurchData data, RosterChange change) {
+    final me = _ref.read(meProvider).value;
+    bool whole(Roster r) => r.isEvent ? (me?.canEditEventRosters ?? false) : (me?.canEditRosters(r.type) ?? false);
+    final days = [...change.before.values, ...change.after.values].whereType<Roster>();
+    final scoped = change.staffOrder == null && change.serviceChange == null && !days.every(whole);
+    return scoped ? data.compareAndSetLedDuties(change) : data.compareAndSetRosters(change);
+  }
 
   /// Writes what an admin sets on [before] to be [after].
   ChurchWrite member(Member before, Member after) => _reversible(
@@ -80,6 +91,26 @@ class ChurchWrites {
       dutyRename: dutyRename == null ? null : (from: dutyRename.to, to: dutyRename.from),
     ),
   );
+
+  /// Replaces the church's 事工 (#82): adding, renaming, linking duties or
+  /// deleting one.
+  ChurchWrite ministries(List<Ministry> before, List<Ministry> after) => _reversible(
+    (data) => data.compareAndSetMinistries(before: before, after: after),
+    (data) => data.compareAndSetMinistries(before: after, after: before),
+  );
+
+  /// 加為同工 ([member] true) or 移出 [group], by its 負責人 or an admin; undo
+  /// does the opposite, a service's 同工 coming back with the duties they had.
+  ChurchWrite groupMember(Member who, ChurchGroup group, {required bool member, List<String> duties = const []}) {
+    final had = switch (group) {
+      ServiceGroup(:final id) => who.zones.where((z) => z.serviceType == id).firstOrNull?.duties ?? duties,
+      MinistryGroup() => const <String>[],
+    };
+    return _reversible(
+      (data) => data.setGroupMember(who.uid, group, member: member, duties: duties),
+      (data) => data.setGroupMember(who.uid, group, member: !member, duties: had),
+    );
+  }
 
   /// Replaces the list of services: adding one, or reordering them.
   ChurchWrite serviceList(List<Service> before, List<Service> after) => _reversible(

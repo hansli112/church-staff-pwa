@@ -377,7 +377,7 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get pickerLearns => '排過一次，下次就會列在上面';
+  String get pickerLearns => '這個聚會的同工排過一次，下次就會列在上面';
 
   @override
   String pickerNoResults(String query) {
@@ -608,28 +608,168 @@ class L10nZh extends L10n {
   String get roleAdmin => '管理員';
 
   @override
-  String get roleLeader => '小組長';
-
-  @override
-  String get roleStaff => '一般同工';
-
-  @override
-  String get roleMember => '組員';
-
-  @override
   String get role => '身分';
 
   @override
-  String get roleAdminCan => '所有設定、邀請和移除同工';
+  String get identityOffice => '行政';
 
   @override
-  String get groups => '權限群組';
+  String get identityPastor => '牧者';
 
   @override
-  String get groupRosterEditors => '安排服事表';
+  String get identityPastorChurch => '牧者 · 全教會';
 
   @override
-  String get groupCalendarEditors => '編輯行事曆';
+  String identityPastorOf(String services) {
+    return '牧者 · $services';
+  }
+
+  @override
+  String identityLeadOf(String group) {
+    return '$group 負責人';
+  }
+
+  @override
+  String get identityLead => '負責人';
+
+  @override
+  String get identityServiceLead => '聚會負責人';
+
+  @override
+  String get identityMinistryLead => '事工負責人';
+
+  @override
+  String get canAdmin => '什麼都能管';
+
+  @override
+  String get canOffice => '排所有服事表、改所有活動，不能管同工和設定';
+
+  @override
+  String canServiceLead(String service) {
+    return '排$service的服事表、加入和移出它的同工';
+  }
+
+  @override
+  String canMinistryLead(String ministry) {
+    return '排$ministry的服事項目、加入和移出它的同工';
+  }
+
+  @override
+  String get canStaff => '同工：看所有服事表和活動';
+
+  @override
+  String get addIdentity => '新增身分';
+
+  @override
+  String get addAnotherIdentity => '再加一個';
+
+  @override
+  String identityRemoved(String identity) {
+    return '已移除「$identity」';
+  }
+
+  @override
+  String identityAdded(String identity) {
+    return '已加上「$identity」';
+  }
+
+  @override
+  String get removeIdentity => '移除這個身分';
+
+  @override
+  String get wholeChurch => '全教會';
+
+  @override
+  String get pickPastorScope => '牧養範圍';
+
+  @override
+  String get pickService => '選聚會';
+
+  @override
+  String get pickMinistry => '選事工';
+
+  @override
+  String get groupsTitle => '聚會與事工';
+
+  @override
+  String get ministries => '事工';
+
+  @override
+  String get addMinistry => '新增事工';
+
+  @override
+  String get ministryName => '事工名稱';
+
+  @override
+  String get ministryDuties => '服事項目';
+
+  @override
+  String get ministryDutiesNone => '沒有';
+
+  @override
+  String get ministryDutiesFooter => '負責人可以在任何聚會和活動排這些服事項目';
+
+  @override
+  String get noMinistries => '還沒有事工，例如敬拜團、音控組';
+
+  @override
+  String get deleteMinistry => '刪除事工';
+
+  @override
+  String ministryDeleted(String name) {
+    return '已刪除「$name」';
+  }
+
+  @override
+  String get leads => '負責人';
+
+  @override
+  String get noLeads => '還沒有負責人';
+
+  @override
+  String get assignLead => '指派負責人';
+
+  @override
+  String get groupStaff => '同工';
+
+  @override
+  String get noGroupStaff => '還沒有同工';
+
+  @override
+  String groupCandidates(String group) {
+    return '排過$group的服事，還不是同工';
+  }
+
+  @override
+  String groupCandidateServed(String duty, int count) {
+    return '$duty $count 次';
+  }
+
+  @override
+  String get addAsStaff => '加為同工';
+
+  @override
+  String addAsStaffLabel(String name, String group) {
+    return '把$name加為$group同工';
+  }
+
+  @override
+  String removeFromGroup(String group) {
+    return '移出$group';
+  }
+
+  @override
+  String addedToGroup(String name, String group) {
+    return '已把$name加為$group同工';
+  }
+
+  @override
+  String removedFromGroup(String name, String group) {
+    return '已把$name移出$group';
+  }
+
+  @override
+  String get myGroups => '我負責的';
 
   @override
   String get zones => '牧區與服事';
@@ -2896,7 +3036,7 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get pickerLearns => '排过一次，下次就会列在上面';
+  String get pickerLearns => '这个聚会的同工排过一次，下次就会列在上面';
 
   @override
   String pickerNoResults(String query) {
@@ -3127,28 +3267,168 @@ class L10nZhHans extends L10nZh {
   String get roleAdmin => '管理员';
 
   @override
-  String get roleLeader => '小组长';
-
-  @override
-  String get roleStaff => '一般同工';
-
-  @override
-  String get roleMember => '组员';
-
-  @override
   String get role => '身份';
 
   @override
-  String get roleAdminCan => '所有设置、邀请和移除同工';
+  String get identityOffice => '行政';
 
   @override
-  String get groups => '权限组';
+  String get identityPastor => '牧者';
 
   @override
-  String get groupRosterEditors => '安排事奉表';
+  String get identityPastorChurch => '牧者 · 全教会';
 
   @override
-  String get groupCalendarEditors => '编辑行事历';
+  String identityPastorOf(String services) {
+    return '牧者 · $services';
+  }
+
+  @override
+  String identityLeadOf(String group) {
+    return '$group 负责人';
+  }
+
+  @override
+  String get identityLead => '负责人';
+
+  @override
+  String get identityServiceLead => '聚会负责人';
+
+  @override
+  String get identityMinistryLead => '事工负责人';
+
+  @override
+  String get canAdmin => '什么都能管';
+
+  @override
+  String get canOffice => '排所有事奉表、改所有活动，不能管同工和设置';
+
+  @override
+  String canServiceLead(String service) {
+    return '排$service的事奉表、加入和移出它的同工';
+  }
+
+  @override
+  String canMinistryLead(String ministry) {
+    return '排$ministry的事奉项目、加入和移出它的同工';
+  }
+
+  @override
+  String get canStaff => '同工：看所有事奉表和活动';
+
+  @override
+  String get addIdentity => '新增身份';
+
+  @override
+  String get addAnotherIdentity => '再加一个';
+
+  @override
+  String identityRemoved(String identity) {
+    return '已移除“$identity”';
+  }
+
+  @override
+  String identityAdded(String identity) {
+    return '已加上“$identity”';
+  }
+
+  @override
+  String get removeIdentity => '移除这个身份';
+
+  @override
+  String get wholeChurch => '全教会';
+
+  @override
+  String get pickPastorScope => '牧养范围';
+
+  @override
+  String get pickService => '选聚会';
+
+  @override
+  String get pickMinistry => '选事工';
+
+  @override
+  String get groupsTitle => '聚会与事工';
+
+  @override
+  String get ministries => '事工';
+
+  @override
+  String get addMinistry => '新增事工';
+
+  @override
+  String get ministryName => '事工名称';
+
+  @override
+  String get ministryDuties => '事奉项目';
+
+  @override
+  String get ministryDutiesNone => '没有';
+
+  @override
+  String get ministryDutiesFooter => '负责人可以在任何聚会和活动排这些事奉项目';
+
+  @override
+  String get noMinistries => '还没有事工，例如敬拜团、音控组';
+
+  @override
+  String get deleteMinistry => '删除事工';
+
+  @override
+  String ministryDeleted(String name) {
+    return '已删除“$name”';
+  }
+
+  @override
+  String get leads => '负责人';
+
+  @override
+  String get noLeads => '还没有负责人';
+
+  @override
+  String get assignLead => '指派负责人';
+
+  @override
+  String get groupStaff => '同工';
+
+  @override
+  String get noGroupStaff => '还没有同工';
+
+  @override
+  String groupCandidates(String group) {
+    return '排过$group的事奉，还不是同工';
+  }
+
+  @override
+  String groupCandidateServed(String duty, int count) {
+    return '$duty $count 次';
+  }
+
+  @override
+  String get addAsStaff => '加为同工';
+
+  @override
+  String addAsStaffLabel(String name, String group) {
+    return '把$name加为$group同工';
+  }
+
+  @override
+  String removeFromGroup(String group) {
+    return '移出$group';
+  }
+
+  @override
+  String addedToGroup(String name, String group) {
+    return '已把$name加为$group同工';
+  }
+
+  @override
+  String removedFromGroup(String name, String group) {
+    return '已把$name移出$group';
+  }
+
+  @override
+  String get myGroups => '我负责的';
 
   @override
   String get zones => '所属聚会与事奉';

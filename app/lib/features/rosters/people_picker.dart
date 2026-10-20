@@ -180,7 +180,10 @@ class PeoplePickerState extends State<PeoplePicker> {
       return;
     }
     if (_selected.contains(m.name)) return _toggle(m.name);
-    if (widget.canEditDutyList) {
+    // Remembered for the duty only if they are one of the service's 同工;
+    // someone helping out is scheduled this once (#82), and shows on the
+    // service's page to be added as a 同工.
+    if (widget.canEditDutyList && m.zoneTypes.contains(widget.serviceType)) {
       _grant.add(m);
       _putOnList(m);
     }

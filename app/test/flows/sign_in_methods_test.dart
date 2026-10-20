@@ -113,7 +113,9 @@ void main() {
 
     final m = b.members['grace']![uid]!;
     expect(m.role, Role.leader);
-    expect(m.groups, {Group.rosterEditors});
+    // Self-host's roster editing was their 牧區's: its 負責人 now (#82).
+    expect(m.groups, isEmpty);
+    expect(m.leadTypes, ['sunday']);
     expect(m.email, 'mei.old@yahoo.com');
     expect(b.rosters['grace']!.values.single.duties.single.uids, {'李美玉': uid});
   });

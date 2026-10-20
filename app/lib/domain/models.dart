@@ -171,12 +171,12 @@ class Member {
       role == Role.admin || _identities.any((i) => i is AdminIdentity || (i is PastorIdentity && i.wholeChurch));
 
   /// Their 身分 (#82). A member doc from before them has none stored: an
-  /// admin is then 管理員, and the permission groups 行政.
+  /// admin is then 管理員, and roster-editors 行政, as the rules read it.
   List<Identity> get identities => _identities.isNotEmpty
       ? _identities
       : [
           if (isAdmin) const AdminIdentity(),
-          if (!isAdmin && groups.isNotEmpty) const OfficeIdentity(),
+          if (!isAdmin && groups.contains(Group.rosterEditors)) const OfficeIdentity(),
         ];
 
   /// The services they lead, as 負責人 or 牧者; stored as `leadTypes` for
@@ -242,9 +242,14 @@ class Member {
   /// they belong to and the services they lead, or all of them for admins
   /// and 行政. Only tidies the tab; every member may still read every
   /// roster.
-  List<Service> rosterServices(List<Service> services) {
+  List<Service> rosterServices(List<Service> services, {List<Ministry> ministries = const []}) {
     if (seesAllServices) return services;
-    final mine = {...zoneTypes, ...leadTypes};
+    final mine = {
+      ...zoneTypes,
+      ...leadTypes,
+      for (final s in services)
+        if (ledDuties(ministries, s.id).isNotEmpty) s.id,
+    };
     return [
       for (final s in services)
         if (mine.contains(s.id)) s,

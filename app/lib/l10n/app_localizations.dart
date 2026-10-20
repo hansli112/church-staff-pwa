@@ -775,7 +775,7 @@ abstract class L10n {
   /// For admins, while nobody is on a duty's list: picking someone puts them on it
   ///
   /// In zh, this message translates to:
-  /// **'排過一次，下次就會列在上面'**
+  /// **'這個聚會的同工排過一次，下次就會列在上面'**
   String get pickerLearns;
 
   /// No description provided for @pickerNoResults.
@@ -1186,53 +1186,281 @@ abstract class L10n {
   /// **'管理員'**
   String get roleAdmin;
 
-  /// No description provided for @roleLeader.
-  ///
-  /// In zh, this message translates to:
-  /// **'小組長'**
-  String get roleLeader;
-
-  /// No description provided for @roleStaff.
-  ///
-  /// In zh, this message translates to:
-  /// **'一般同工'**
-  String get roleStaff;
-
-  /// No description provided for @roleMember.
-  ///
-  /// In zh, this message translates to:
-  /// **'組員'**
-  String get roleMember;
-
   /// No description provided for @role.
   ///
   /// In zh, this message translates to:
   /// **'身分'**
   String get role;
 
-  /// No description provided for @roleAdminCan.
+  /// 身分 #82: arranges every roster and edits the calendar, manages no one
   ///
   /// In zh, this message translates to:
-  /// **'所有設定、邀請和移除同工'**
-  String get roleAdminCan;
+  /// **'行政'**
+  String get identityOffice;
 
-  /// No description provided for @groups.
+  /// 身分 #82: a pastor, of the whole church or some services
   ///
   /// In zh, this message translates to:
-  /// **'權限群組'**
-  String get groups;
+  /// **'牧者'**
+  String get identityPastor;
 
-  /// No description provided for @groupRosterEditors.
+  /// A pastor of the whole church, as a row on a member's page
   ///
   /// In zh, this message translates to:
-  /// **'安排服事表'**
-  String get groupRosterEditors;
+  /// **'牧者 · 全教會'**
+  String get identityPastorChurch;
 
-  /// No description provided for @groupCalendarEditors.
+  /// A pastor of some services; services is their names joined
   ///
   /// In zh, this message translates to:
-  /// **'編輯行事曆'**
-  String get groupCalendarEditors;
+  /// **'牧者 · {services}'**
+  String identityPastorOf(String services);
+
+  /// A service's or ministry's lead, e.g. 敬拜團 負責人
+  ///
+  /// In zh, this message translates to:
+  /// **'{group} 負責人'**
+  String identityLeadOf(String group);
+
+  /// 身分 #82, in the list to pick from: a service's or a ministry's lead
+  ///
+  /// In zh, this message translates to:
+  /// **'負責人'**
+  String get identityLead;
+
+  /// Picking a 身分: lead of a service
+  ///
+  /// In zh, this message translates to:
+  /// **'聚會負責人'**
+  String get identityServiceLead;
+
+  /// Picking a 身分: lead of a ministry
+  ///
+  /// In zh, this message translates to:
+  /// **'事工負責人'**
+  String get identityMinistryLead;
+
+  /// What an admin (or a whole church's pastor) can do; one sentence
+  ///
+  /// In zh, this message translates to:
+  /// **'什麼都能管'**
+  String get canAdmin;
+
+  /// What 行政 can do; one sentence
+  ///
+  /// In zh, this message translates to:
+  /// **'排所有服事表、改所有活動，不能管同工和設定'**
+  String get canOffice;
+
+  /// What a service's lead or pastor can do; one sentence
+  ///
+  /// In zh, this message translates to:
+  /// **'排{service}的服事表、加入和移出它的同工'**
+  String canServiceLead(String service);
+
+  /// What a ministry's lead can do; one sentence
+  ///
+  /// In zh, this message translates to:
+  /// **'排{ministry}的服事項目、加入和移出它的同工'**
+  String canMinistryLead(String ministry);
+
+  /// What every team member can do, under 身分 when they hold none; one sentence
+  ///
+  /// In zh, this message translates to:
+  /// **'同工：看所有服事表和活動'**
+  String get canStaff;
+
+  /// Button under 身分 on a member's page when they hold none
+  ///
+  /// In zh, this message translates to:
+  /// **'新增身分'**
+  String get addIdentity;
+
+  /// Button under 身分 when they hold one already
+  ///
+  /// In zh, this message translates to:
+  /// **'再加一個'**
+  String get addAnotherIdentity;
+
+  /// Toast after taking a 身分 away, with undo
+  ///
+  /// In zh, this message translates to:
+  /// **'已移除「{identity}」'**
+  String identityRemoved(String identity);
+
+  /// Toast after giving a 身分, with undo
+  ///
+  /// In zh, this message translates to:
+  /// **'已加上「{identity}」'**
+  String identityAdded(String identity);
+
+  /// Destructive row: take this 身分 away
+  ///
+  /// In zh, this message translates to:
+  /// **'移除這個身分'**
+  String get removeIdentity;
+
+  /// A pastor's scope: the whole church
+  ///
+  /// In zh, this message translates to:
+  /// **'全教會'**
+  String get wholeChurch;
+
+  /// Header: where this pastor shepherds
+  ///
+  /// In zh, this message translates to:
+  /// **'牧養範圍'**
+  String get pickPastorScope;
+
+  /// Header: pick a service
+  ///
+  /// In zh, this message translates to:
+  /// **'選聚會'**
+  String get pickService;
+
+  /// Header: pick a ministry
+  ///
+  /// In zh, this message translates to:
+  /// **'選事工'**
+  String get pickMinistry;
+
+  /// Page and row in 管理教會: the church's services and ministries
+  ///
+  /// In zh, this message translates to:
+  /// **'聚會與事工'**
+  String get groupsTitle;
+
+  /// Header: the church's ministries (事工)
+  ///
+  /// In zh, this message translates to:
+  /// **'事工'**
+  String get ministries;
+
+  /// Button: make a new ministry
+  ///
+  /// In zh, this message translates to:
+  /// **'新增事工'**
+  String get addMinistry;
+
+  /// Field hint: a ministry's name, e.g. 敬拜團
+  ///
+  /// In zh, this message translates to:
+  /// **'事工名稱'**
+  String get ministryName;
+
+  /// Row: the service roles a ministry leads
+  ///
+  /// In zh, this message translates to:
+  /// **'服事項目'**
+  String get ministryDuties;
+
+  /// Value when a ministry links no roles
+  ///
+  /// In zh, this message translates to:
+  /// **'沒有'**
+  String get ministryDutiesNone;
+
+  /// Under a ministry's roles; one sentence
+  ///
+  /// In zh, this message translates to:
+  /// **'負責人可以在任何聚會和活動排這些服事項目'**
+  String get ministryDutiesFooter;
+
+  /// Under the ministries header when there are none; one sentence
+  ///
+  /// In zh, this message translates to:
+  /// **'還沒有事工，例如敬拜團、音控組'**
+  String get noMinistries;
+
+  /// Destructive row on a ministry's page
+  ///
+  /// In zh, this message translates to:
+  /// **'刪除事工'**
+  String get deleteMinistry;
+
+  /// Toast after deleting a ministry, with undo
+  ///
+  /// In zh, this message translates to:
+  /// **'已刪除「{name}」'**
+  String ministryDeleted(String name);
+
+  /// Header on a group's page: its leads
+  ///
+  /// In zh, this message translates to:
+  /// **'負責人'**
+  String get leads;
+
+  /// When a group has no lead yet
+  ///
+  /// In zh, this message translates to:
+  /// **'還沒有負責人'**
+  String get noLeads;
+
+  /// Button for admins on a group's page
+  ///
+  /// In zh, this message translates to:
+  /// **'指派負責人'**
+  String get assignLead;
+
+  /// Header on a group's page: its team members (同工)
+  ///
+  /// In zh, this message translates to:
+  /// **'同工'**
+  String get groupStaff;
+
+  /// When a group has no team members
+  ///
+  /// In zh, this message translates to:
+  /// **'還沒有同工'**
+  String get noGroupStaff;
+
+  /// Header: people who served the group's roles but are not its team members
+  ///
+  /// In zh, this message translates to:
+  /// **'排過{group}的服事，還不是同工'**
+  String groupCandidates(String group);
+
+  /// Under a candidate: a role and how many times they served it
+  ///
+  /// In zh, this message translates to:
+  /// **'{duty} {count} 次'**
+  String groupCandidateServed(String duty, int count);
+
+  /// Button beside a candidate
+  ///
+  /// In zh, this message translates to:
+  /// **'加為同工'**
+  String get addAsStaff;
+
+  /// What a screen reader reads for the button
+  ///
+  /// In zh, this message translates to:
+  /// **'把{name}加為{group}同工'**
+  String addAsStaffLabel(String name, String group);
+
+  /// Row: take someone out of a group (not out of the church)
+  ///
+  /// In zh, this message translates to:
+  /// **'移出{group}'**
+  String removeFromGroup(String group);
+
+  /// Toast, with undo
+  ///
+  /// In zh, this message translates to:
+  /// **'已把{name}加為{group}同工'**
+  String addedToGroup(String name, String group);
+
+  /// Toast, with undo
+  ///
+  /// In zh, this message translates to:
+  /// **'已把{name}移出{group}'**
+  String removedFromGroup(String name, String group);
+
+  /// Header in 設定 for leads: the groups they lead
+  ///
+  /// In zh, this message translates to:
+  /// **'我負責的'**
+  String get myGroups;
 
   /// No description provided for @zones.
   ///

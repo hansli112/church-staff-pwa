@@ -57,7 +57,9 @@ void main() {
 
     final m = b.members['grace']!['new-mei']!;
     expect(m.role, Role.leader);
-    expect(m.groups, {Group.rosterEditors});
+    // Self-host's roster editing was their 牧區's: its 負責人 now (#82).
+    expect(m.groups, isEmpty);
+    expect(m.leadTypes, ['sunday']);
     expect(m.serves('sunday', '司琴'), isTrue);
     expect(b.rosters['grace']!.values.single.duties.single.uids, {'李美玉': 'new-mei'});
     expect(b.pendingMembers['grace'], isEmpty);
@@ -122,7 +124,8 @@ void main() {
     await tapText(tester, '合併');
 
     final m = b.members['grace']!['mei-google']!;
-    expect(m.groups, {Group.rosterEditors});
+    expect(m.groups, isEmpty);
+    expect(m.leadTypes, ['sunday']);
     expect(m.serves('sunday', '司琴'), isTrue);
     expect(b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, 18))]!.duties.single.uids, {'李美玉': 'mei-google'});
     expect(b.pendingMembers['grace'], isEmpty);

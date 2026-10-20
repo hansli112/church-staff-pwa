@@ -378,7 +378,7 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get pickerLearns => '한 번 배정하면 다음부터 위쪽에 표시돼요';
+  String get pickerLearns => '이 예배의 멤버는 한 번 배정하면 다음부터 위쪽에 표시돼요';
 
   @override
   String pickerNoResults(String query) {
@@ -609,28 +609,168 @@ class L10nKo extends L10n {
   String get roleAdmin => '관리자';
 
   @override
-  String get roleLeader => '소그룹 리더';
-
-  @override
-  String get roleStaff => '일반 멤버';
-
-  @override
-  String get roleMember => '소그룹원';
-
-  @override
   String get role => '역할';
 
   @override
-  String get roleAdminCan => '모든 설정, 멤버 초대와 내보내기';
+  String get identityOffice => '행정';
 
   @override
-  String get groups => '권한 그룹';
+  String get identityPastor => '목회자';
 
   @override
-  String get groupRosterEditors => '봉사표 편집';
+  String get identityPastorChurch => '목회자 · 교회 전체';
 
   @override
-  String get groupCalendarEditors => '캘린더 편집';
+  String identityPastorOf(String services) {
+    return '목회자 · $services';
+  }
+
+  @override
+  String identityLeadOf(String group) {
+    return '$group 리더';
+  }
+
+  @override
+  String get identityLead => '리더';
+
+  @override
+  String get identityServiceLead => '예배 리더';
+
+  @override
+  String get identityMinistryLead => '사역팀 리더';
+
+  @override
+  String get canAdmin => '모든 것을 관리할 수 있어요';
+
+  @override
+  String get canOffice => '모든 봉사표와 일정을 편집할 수 있지만 멤버와 설정은 관리할 수 없어요';
+
+  @override
+  String canServiceLead(String service) {
+    return '$service의 봉사표를 편집하고 멤버를 추가하거나 뺄 수 있어요';
+  }
+
+  @override
+  String canMinistryLead(String ministry) {
+    return '$ministry의 담당을 배정하고 멤버를 추가하거나 뺄 수 있어요';
+  }
+
+  @override
+  String get canStaff => '멤버: 모든 봉사표와 일정을 볼 수 있어요';
+
+  @override
+  String get addIdentity => '역할 추가';
+
+  @override
+  String get addAnotherIdentity => '하나 더 추가';
+
+  @override
+  String identityRemoved(String identity) {
+    return '‘$identity’ 삭제함';
+  }
+
+  @override
+  String identityAdded(String identity) {
+    return '‘$identity’ 추가함';
+  }
+
+  @override
+  String get removeIdentity => '이 역할 삭제';
+
+  @override
+  String get wholeChurch => '교회 전체';
+
+  @override
+  String get pickPastorScope => '목회 범위';
+
+  @override
+  String get pickService => '예배 선택';
+
+  @override
+  String get pickMinistry => '사역팀 선택';
+
+  @override
+  String get groupsTitle => '예배와 사역팀';
+
+  @override
+  String get ministries => '사역팀';
+
+  @override
+  String get addMinistry => '사역팀 추가';
+
+  @override
+  String get ministryName => '사역팀 이름';
+
+  @override
+  String get ministryDuties => '담당';
+
+  @override
+  String get ministryDutiesNone => '없음';
+
+  @override
+  String get ministryDutiesFooter => '리더는 어느 예배나 일정에서든 이 담당을 배정할 수 있어요';
+
+  @override
+  String get noMinistries => '아직 사역팀이 없어요. 예: 찬양팀, 음향팀';
+
+  @override
+  String get deleteMinistry => '사역팀 삭제';
+
+  @override
+  String ministryDeleted(String name) {
+    return '‘$name’ 삭제함';
+  }
+
+  @override
+  String get leads => '리더';
+
+  @override
+  String get noLeads => '아직 리더가 없어요';
+
+  @override
+  String get assignLead => '리더 지정';
+
+  @override
+  String get groupStaff => '멤버';
+
+  @override
+  String get noGroupStaff => '아직 멤버가 없어요';
+
+  @override
+  String groupCandidates(String group) {
+    return '$group에서 봉사했지만 아직 멤버가 아닌 사람';
+  }
+
+  @override
+  String groupCandidateServed(String duty, int count) {
+    return '$duty $count회';
+  }
+
+  @override
+  String get addAsStaff => '멤버로 추가';
+
+  @override
+  String addAsStaffLabel(String name, String group) {
+    return '$name을(를) $group 멤버로 추가';
+  }
+
+  @override
+  String removeFromGroup(String group) {
+    return '$group에서 빼기';
+  }
+
+  @override
+  String addedToGroup(String name, String group) {
+    return '$name을(를) $group 멤버로 추가했어요';
+  }
+
+  @override
+  String removedFromGroup(String name, String group) {
+    return '$name을(를) $group에서 뺐어요';
+  }
+
+  @override
+  String get myGroups => '내가 맡은 것';
 
   @override
   String get zones => '소속 예배와 담당';

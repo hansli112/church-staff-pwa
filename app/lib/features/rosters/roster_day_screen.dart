@@ -50,31 +50,35 @@ class RosterDayScreen extends ConsumerWidget {
       return Scaffold(appBar: AppBar(), body: const SizedBox.shrink());
     }
     final roster = rosters.value?.where((r) => r.day == day).firstOrNull ?? draftRoster(service, day);
-    final canEdit = ref.watch(
+    final whole = ref.watch(
       meProvider.select((m) => m.value?.canEditRosters(serviceType) ?? false),
     );
+    // A 事工's 負責人 arranges only the duties it leads (#82).
+    final led = whole ? null : ref.watch(ledDutiesProvider(serviceType));
+    final canEdit = whole || led!.isNotEmpty;
     // Keeps what editing reads loaded, so the picker opens at once and
     // writes see the church as it is.
     final editable = canEdit && ref.watch(rosterEditingProvider(serviceType));
     final title = dayLabel(l10n, day, today);
+    final addable = _addableDuties(roster, service, led);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(service.name),
         actions: savingActions([
-          if (canEdit)
+          if (canEdit && (whole || addable.isNotEmpty))
             PopupMenuButton<String>(
               enabled: editable,
               tooltip: l10n.edit,
               icon: const Icon(Symbols.more_horiz_rounded),
               onSelected: (v) => switch (v) {
-                'duty' => _addDuty(context, ref, roster, service),
+                'duty' => _addDuty(context, ref, roster, addable, any: whole),
                 'events' => _editEvents(context, ref, roster, service),
                 _ => null,
               },
               itemBuilder: (_) => [
                 PopupMenuItem(value: 'duty', child: Text(l10n.addDuty)),
-                PopupMenuItem(value: 'events', child: Text(l10n.events)),
+                if (whole) PopupMenuItem(value: 'events', child: Text(l10n.events)),
               ],
             ),
         ]),
@@ -89,31 +93,41 @@ class RosterDayScreen extends ConsumerWidget {
               highlightUid: ref.watch(uidProvider),
             )
           else
-            EditableRoster(roster: roster, title: title),
+            EditableRoster(roster: roster, title: title, only: led),
         ],
       ),
     );
   }
 
+  /// The service's duties not on [roster] yet; for a 事工's 負責人 only
+  /// those it leads ([led]).
+  static List<String> _addableDuties(Roster roster, Service service, Set<String>? led) {
+    final present = {for (final d in roster.duties) d.role};
+    return [
+      for (final d in service.duties)
+        if (!present.contains(d) && (led == null || led.contains(d))) d,
+    ];
+  }
+
+  /// Adds a duty to [roster]: one of [suggestions], or, with [any], one
+  /// typed in.
   Future<void> _addDuty(
     BuildContext context,
     WidgetRef ref,
     Roster roster,
-    Service service,
-  ) async {
+    List<String> suggestions, {
+    required bool any,
+  }) async {
     final l10n = L10n.of(context);
     final present = {for (final d in roster.duties) d.role};
-    final suggestions = [
-      for (final d in service.duties)
-        if (!present.contains(d)) d,
-    ];
     final role = await showAppSheet<String>(
       context,
-      builder: (context) => AddDutySheet(suggestions: suggestions),
+      builder: (context) => AddDutySheet(suggestions: suggestions, typed: any),
     );
     if (role == null || role.trim().isEmpty || present.contains(role.trim())) {
       return;
     }
+    if (!any && !suggestions.contains(role.trim())) return;
     if (!context.mounted) return;
     await runWithUndo(
       context,
@@ -158,10 +172,14 @@ bool _editingReady(WidgetRef ref, Roster roster) =>
 /// swap or remove it (no swap on an event's roster: it has no other days),
 /// swipe a duty away.
 class EditableRoster extends ConsumerWidget {
-  const EditableRoster({super.key, required this.roster, required this.title, this.whenEmpty});
+  const EditableRoster({super.key, required this.roster, required this.title, this.whenEmpty, this.only});
 
   final Roster roster;
   final String title;
+
+  /// The duties a 事工's 負責人 arranges here; the rest only show. Null:
+  /// every duty.
+  final Set<String>? only;
 
   /// Shown while it has no duties; by default a hint to add one.
   final Widget? whenEmpty;
@@ -194,7 +212,9 @@ class EditableRoster extends ConsumerWidget {
             for (final duty in roster.duties)
               Dismissible(
                 key: ValueKey('${roster.id}/${duty.role}'),
-                direction: ready ? DismissDirection.endToStart : DismissDirection.none,
+                direction: ready && (only?.contains(duty.role) ?? true)
+                    ? DismissDirection.endToStart
+                    : DismissDirection.none,
                 background: Container(
                   color: c.destructive,
                   alignment: AlignmentDirectional.centerEnd,
@@ -212,7 +232,7 @@ class EditableRoster extends ConsumerWidget {
                   );
                   return false;
                 },
-                child: _DutyRow(roster: roster, duty: duty),
+                child: _DutyRow(roster: roster, duty: duty, editable: only?.contains(duty.role) ?? true),
               ),
           ],
         ),
@@ -223,10 +243,13 @@ class EditableRoster extends ConsumerWidget {
 }
 
 class _DutyRow extends ConsumerWidget {
-  const _DutyRow({required this.roster, required this.duty});
+  const _DutyRow({required this.roster, required this.duty, this.editable = true});
 
   final Roster roster;
   final Duty duty;
+
+  /// False for a duty someone else arranges: it only shows.
+  final bool editable;
 
   Future<void> _pick(BuildContext context, WidgetRef ref) async {
     final members = ref.read(membersProvider).requireValue;
@@ -254,7 +277,8 @@ class _DutyRow extends ConsumerWidget {
         // An event is in no 牧區 to add the duty to, and has no staff
         // order of its own to drag.
         canEditDutyList: !roster.isEvent && (me?.isAdmin ?? false),
-        canReorder: !roster.isEvent,
+        // The staff order is the whole service's: not a 事工 leader's.
+        canReorder: !roster.isEvent && (me?.canEditRosters(roster.type) ?? false),
         canRemove: true,
         onChanged: (r) => latest = r,
         onInvite: (me?.isAdmin ?? false) ? () => invite = true : null,
@@ -403,7 +427,7 @@ class _DutyRow extends ConsumerWidget {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
     final platform = Theme.of(context).platform;
-    final ready = _editingReady(ref, roster);
+    final ready = editable && _editingReady(ref, roster);
     return InkWell(
       onTap: ready ? () => _pick(context, ref) : null,
       child: ConstrainedBox(
@@ -445,7 +469,7 @@ class _DutyRow extends ConsumerWidget {
                       ),
               ),
               const SizedBox(width: Space.s),
-              Icon(Symbols.chevron_right_rounded, color: c.tertiaryLabel, size: 22),
+              if (editable) Icon(Symbols.chevron_right_rounded, color: c.tertiaryLabel, size: 22),
             ],
           ),
         ),
@@ -532,9 +556,13 @@ class _SwapSheet extends StatelessWidget {
 
 /// Picks a duty to add: one of [suggestions], or a name typed in.
 class AddDutySheet extends StatefulWidget {
-  const AddDutySheet({super.key, required this.suggestions});
+  const AddDutySheet({super.key, required this.suggestions, this.typed = true});
 
   final List<String> suggestions;
+
+  /// Whether a duty may be typed in, not only picked: not for a 事工's
+  /// 負責人, who adds only the duties it leads.
+  final bool typed;
 
   @override
   State<AddDutySheet> createState() => _AddDutySheetState();
@@ -570,21 +598,22 @@ class _AddDutySheetState extends State<AddDutySheet> {
                     ),
                 ],
               ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                Space.m,
-                Space.s,
-                Space.m,
-                Space.m,
+            if (widget.typed)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  Space.m,
+                  Space.s,
+                  Space.m,
+                  Space.m,
+                ),
+                child: TextField(
+                  controller: _name,
+                  autofocus: widget.suggestions.isEmpty,
+                  textInputAction: TextInputAction.done,
+                  decoration: InputDecoration(hintText: l10n.dutyName),
+                  onSubmitted: (v) => Navigator.pop(context, v),
+                ),
               ),
-              child: TextField(
-                controller: _name,
-                autofocus: widget.suggestions.isEmpty,
-                textInputAction: TextInputAction.done,
-                decoration: InputDecoration(hintText: l10n.dutyName),
-                onSubmitted: (v) => Navigator.pop(context, v),
-              ),
-            ),
           ],
         ),
       ),
