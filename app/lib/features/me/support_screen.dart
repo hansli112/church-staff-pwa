@@ -164,7 +164,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
               ],
             ),
           // A way to support without paying.
-          if (AppStore.current case final appStore?)
+          if (AppStore.current case final appStore? when ref.watch(storePagesPublicProvider))
             ListSection(
               children: [
                 ListRow(

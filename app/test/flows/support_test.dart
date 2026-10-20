@@ -107,6 +107,7 @@ Future<void> pumpWithStore(
   SupportStore store,
   AppIconSwitcher icons, {
   MemoryBackend? backend,
+  bool storePagesPublic = true,
 }) async {
   tester.view.physicalSize = const Size(393 * 3, 852 * 3);
   tester.view.devicePixelRatio = 3;
@@ -119,6 +120,7 @@ Future<void> pumpWithStore(
         ...await testOverrides(backend ?? seededChurch(as: staffMei)),
         supportStoreProvider.overrideWithValue(store),
         appIconSwitcherProvider.overrideWithValue(icons),
+        storePagesPublicProvider.overrideWithValue(storePagesPublic),
       ],
       retry: (_, _) => null,
       child: const MarthaApp(),
@@ -290,6 +292,14 @@ void main() {
     await settle(tester);
     expect(launcher.opened, ['https://play.google.com/store/apps/details?id=app.marthasit']);
     expect(AppStore.appStore.review.toString(), 'https://apps.apple.com/app/id6823826952?action=write-review');
+  });
+
+  testWidgets('no rating row while the store pages are not public yet', (tester) async {
+    await pumpWithStore(tester, FakeStore(), FakeIcons(), storePagesPublic: false);
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
+    await settle(tester);
+    await tester.scrollUntilVisible(find.text('恢復購買'), 200);
+    expect(find.text('評分支持我們'), findsNothing);
   });
 
   testWidgets('without a plan, the icon page is not there to see: back on 支持', (tester) async {
