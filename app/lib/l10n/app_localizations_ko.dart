@@ -2504,12 +2504,6 @@ class L10nKo extends L10n {
   String get homeUpcomingEvents => '다가오는 행사';
 
   @override
-  String get memberSmallGroups => '소그룹';
-
-  @override
-  String get memberSmallGroupsHint => '한 줄에 소그룹 하나';
-
-  @override
   String get linkErrNotToday => '출처에 아직 오늘 내용이 없어요';
 
   @override
@@ -2699,4 +2693,142 @@ class L10nKo extends L10n {
   String onlineRefundAlready(String month) {
     return '이 결제는 이미 $month에서 뺐어요';
   }
+
+  @override
+  String get identitySmallGroupLead => '소그룹 리더';
+
+  @override
+  String identitySmallGroupLeadOf(String group) {
+    return '$group 리더';
+  }
+
+  @override
+  String canSmallGroupLead(String group) {
+    return '$group의 행사를 관리하고 인원을 기록하며 멤버를 추가하거나 뺄 수 있어요';
+  }
+
+  @override
+  String get pickSmallGroup => '소그룹 선택';
+
+  @override
+  String get smallGroups => '소그룹';
+
+  @override
+  String get addSmallGroup => '소그룹 추가';
+
+  @override
+  String get smallGroupName => '소그룹 이름';
+
+  @override
+  String get smallGroupService => '소속';
+
+  @override
+  String get smallGroupMeets => '모이는 날';
+
+  @override
+  String get meetsNotSet => '설정 안 함';
+
+  @override
+  String meetsWeekly(String weekday) {
+    return '매주 $weekday';
+  }
+
+  @override
+  String meetsBiweekly(String weekday) {
+    return '격주 $weekday';
+  }
+
+  @override
+  String get meetsEveryWeek => '매주';
+
+  @override
+  String get meetsEveryOtherWeek => '격주';
+
+  @override
+  String get nextMeeting => '다음 모임';
+
+  @override
+  String get noSmallGroupLeads => '아직 리더가 없어요';
+
+  @override
+  String get assignSmallGroupLead => '리더 지정';
+
+  @override
+  String get deleteSmallGroup => '소그룹 닫기';
+
+  @override
+  String deleteSmallGroupTitle(String name) {
+    return '‘$name’을(를) 닫을까요?';
+  }
+
+  @override
+  String get deleteSmallGroupBody => '리더와 멤버는 이 소그룹에서 빠져요. 기록한 인원은 남아요.';
+
+  @override
+  String smallGroupDeleted(String name) {
+    return '‘$name’ 닫음';
+  }
+
+  @override
+  String inSmallGroup(String group) {
+    return '$group 멤버';
+  }
+
+  @override
+  String get attendance => '인원 기록';
+
+  @override
+  String get attendanceSub => '모임 당일 오후 9시에 리더에게 몇 명이 왔는지 기록하라고 알려요';
+
+  @override
+  String get attendanceHeader => '인원';
+
+  @override
+  String attendanceCount(int count) {
+    return '$count명';
+  }
+
+  @override
+  String get attendanceMissing => '미입력';
+
+  @override
+  String get attendanceNone => '모임 없음';
+
+  @override
+  String get attendanceFill => '인원 기록하기';
+
+  @override
+  String get attendanceCountField => '인원';
+
+  @override
+  String get attendanceNote => '메모';
+
+  @override
+  String get attendanceNoMeeting => '이번엔 모이지 않았어요';
+
+  @override
+  String get attendancePause => '…까지 쉬기';
+
+  @override
+  String attendancePausedUntil(String day) {
+    return '$day까지 쉬는 중';
+  }
+
+  @override
+  String get attendanceResume => '다시 받기';
+
+  @override
+  String get attendancePauseFooter => '쉬는 동안에는 알리지 않고 ‘미입력’도 남지 않아요.';
+
+  @override
+  String get attendanceNoDays => '기록할 모임이 아직 없어요';
+
+  @override
+  String get attendanceSaved => '기록함';
+
+  @override
+  String get notifAttendance => '인원 기록 알림';
+
+  @override
+  String get notifAttendanceSub => '모임 당일 오후 9시까지 아무도 기록하지 않았을 때';
 }

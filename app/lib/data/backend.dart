@@ -211,6 +211,31 @@ abstract interface class ChurchData {
   /// otherwise [CloudErrorCode.conflict]. Their IDs are kept for good.
   Future<void> compareAndSetMinistries({required List<Ministry> before, required List<Ministry> after});
 
+  /// The church's 小組 (#85), in no order.
+  Stream<List<SmallGroupDetails>> smallGroups();
+
+  /// Opens [group] (one with no id) or changes it: admins, or its
+  /// service's 負責人 and 牧者 (Member.mayEditSmallGroup). With [leads]
+  /// (uids), they and nobody else are its 小組長. Returns its id.
+  Future<String> saveSmallGroup(SmallGroupDetails group, {List<String>? leads});
+
+  /// Closes 小組 [id], taking it off its 小組長 and 同工; its 人數 stay.
+  Future<void> deleteSmallGroup(String id);
+
+  /// Group [key]'s 回報人數 (#85): its pause and each meeting's 人數 filled
+  /// in. For those who see them (Member.readsAttendance).
+  Stream<AttendanceRecord> attendance(String key);
+
+  /// Fills in [day]'s 人數 of group [key] (Member.writesAttendance), or with
+  /// null clears it.
+  Future<void> setAttendance(String key, Day day, AttendanceDay? value);
+
+  /// Pauses group [key]'s 回報人數, or with null asks again.
+  Future<void> setAttendancePause(String key, AttendancePause? pause);
+
+  /// Turns 回報人數 on from [since] (admins), or with null off.
+  Future<void> setAttendanceSince(Day? since);
+
   /// Saved rosters from [from] on, of every service, oldest first, and
   /// events' rosters still on at [from] (a retreat begun the day before).
   Stream<List<Roster>> rosters({required Day from});

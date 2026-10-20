@@ -5,12 +5,13 @@ import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 
 /// How a 身分 (#82) is shown, e.g. 「敬拜團 負責人」, with the names of the
-/// church's [services] and [ministries].
+/// church's [services], [ministries] and [smallGroups].
 String identityLabel(
   L10n l10n,
   Identity i, {
   required ServiceSettings? services,
   required MinistrySettings? ministries,
+  List<SmallGroupDetails> smallGroups = const [],
 }) {
   String service(String id) => services?.byId(id)?.name ?? id;
   return switch (i) {
@@ -20,11 +21,22 @@ String identityLabel(
     PastorIdentity(:final services?) => l10n.identityPastorOf(services.map(service).join(l10n.listSeparator)),
     ServiceLead(service: final id) => l10n.identityLeadOf(service(id)),
     MinistryLead(:final ministry) => l10n.identityLeadOf(ministries?.byId(ministry)?.name ?? ministry),
+    SmallGroupLead(:final smallGroup) => l10n.identitySmallGroupLeadOf(smallGroupName(smallGroups, smallGroup)),
   };
 }
 
+/// The name of 小組 [id] in [smallGroups], or [id] for one no longer there.
+String smallGroupName(List<SmallGroupDetails> smallGroups, String id) =>
+    smallGroups.where((g) => g.id == id).firstOrNull?.name ?? id;
+
 /// What a 身分 lets them do, in one sentence.
-String identityCan(L10n l10n, Identity i, {required ServiceSettings? services, required MinistrySettings? ministries}) {
+String identityCan(
+  L10n l10n,
+  Identity i, {
+  required ServiceSettings? services,
+  required MinistrySettings? ministries,
+  List<SmallGroupDetails> smallGroups = const [],
+}) {
   String service(String id) => services?.byId(id)?.name ?? id;
   return switch (i) {
     AdminIdentity() || PastorIdentity(services: null) => l10n.canAdmin,
@@ -32,6 +44,7 @@ String identityCan(L10n l10n, Identity i, {required ServiceSettings? services, r
     PastorIdentity(:final services?) => l10n.canServiceLead(services.map(service).join(l10n.listSeparator)),
     ServiceLead(service: final id) => l10n.canServiceLead(service(id)),
     MinistryLead(:final ministry) => l10n.canMinistryLead(ministries?.byId(ministry)?.name ?? ministry),
+    SmallGroupLead(:final smallGroup) => l10n.canSmallGroupLead(smallGroupName(smallGroups, smallGroup)),
   };
 }
 
@@ -42,8 +55,9 @@ String identitiesLine(
   Member member, {
   required ServiceSettings? services,
   required MinistrySettings? ministries,
+  List<SmallGroupDetails> smallGroups = const [],
 }) => member.identities
-    .map((i) => identityLabel(l10n, i, services: services, ministries: ministries))
+    .map((i) => identityLabel(l10n, i, services: services, ministries: ministries, smallGroups: smallGroups))
     .join(l10n.listSeparator);
 
 /// 1 = Monday … 7 = Sunday.

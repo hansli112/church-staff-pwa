@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/models.dart';
 
 import '../support/harness.dart';
@@ -18,60 +19,42 @@ Future<void> tapText(WidgetTester tester, String text) async {
   await settle(tester);
 }
 
+/// 主日崇拜's 喜樂小組 and 青年崇拜's 青年小組 (#85).
+void withSmallGroups(MemoryBackend b) => b.smallGroups['grace'] = {
+  'joy': const SmallGroupDetails(id: 'joy', name: '喜樂小組', service: 'sunday'),
+  'young': const SmallGroupDetails(id: 'young', name: '青年小組', service: 'youth'),
+};
+
 void main() {
-  testWidgets('an admin edits per-zone small groups without changing duties or permissions', (tester) async {
+  testWidgets("an admin puts a member in their service's 小組, changing nothing else", (tester) async {
     final b = seededChurch();
+    withSmallGroups(b);
     b.addMember(
       'grace',
       staffMei.copyWith(
         zones: const [
-          Zone(serviceType: 'sunday', duties: ['司琴', '招待'], smallGroups: ['喜樂小組']),
-          Zone(serviceType: 'youth', smallGroups: ['青年小組']),
+          Zone(serviceType: 'sunday', duties: ['司琴', '招待']),
         ],
       ),
     );
     await pumpApp(tester, b);
     await go(tester, '/me/members/mei');
-    expect(find.text('喜樂小組'), findsOneWidget);
-    await tester.ensureVisible(find.text('小組').first);
-    await tester.tap(find.text('小組').first);
-    await settle(tester);
-    await tester.enterText(find.byType(TextField).last, ' 喜樂小組 \n恩典小組\n喜樂小組\n\n');
-    await tapText(tester, '儲存');
+    expect(find.text('在青年小組'), findsNothing, reason: "青年崇拜's: not one of her 牧區");
+    await tapText(tester, '在喜樂小組');
     final member = (await b.church('grace').allMembers()).singleWhere((m) => m.uid == 'mei');
-    expect(
-      member.zones.singleWhere((z) => z.serviceType == 'sunday'),
-      const Zone(
-        serviceType: 'sunday',
-        duties: ['司琴', '招待'],
-        smallGroups: ['喜樂小組', '恩典小組'],
-      ),
-    );
-    expect(member.zones.singleWhere((z) => z.serviceType == 'youth').smallGroups, ['青年小組']);
+    expect(member.smallGroups, {'joy'});
+    expect(member.zones.single.duties, ['司琴', '招待']);
     expect(member.groups, isEmpty);
     expect(member.role, Role.staff);
 
-    await tester.ensureVisible(find.text('小組').first);
-    await tester.tap(find.text('小組').first);
-    await settle(tester);
-    await tester.enterText(find.byType(TextField).last, '');
-    await tapText(tester, '儲存');
-    final cleared = (await b.church('grace').allMembers()).singleWhere((m) => m.uid == 'mei');
-    expect(cleared.zones.singleWhere((z) => z.serviceType == 'sunday').smallGroups, isEmpty);
-    expect(cleared.serves('sunday', '司琴'), isTrue);
+    await tapText(tester, '在喜樂小組');
+    expect((await b.church('grace').allMembers()).singleWhere((m) => m.uid == 'mei').smallGroups, isEmpty);
   });
 
-  testWidgets('roster editors can see member and pending-member small groups but cannot edit them', (tester) async {
+  testWidgets("leads see each member's 小組, and a pending member's old names, but cannot edit them", (tester) async {
     final b = seededChurch(as: editor);
-    b.addMember(
-      'grace',
-      staffMei.copyWith(
-        zones: const [
-          Zone(serviceType: 'sunday', duties: ['司琴'], smallGroups: ['喜樂小組']),
-          Zone(serviceType: 'youth', smallGroups: ['青年小組']),
-        ],
-      ),
-    );
+    withSmallGroups(b);
+    b.addMember('grace', staffMei.copyWith(smallGroups: {'joy'}));
     b.pendingMembers['grace'] = {
       'old-hao': const PendingMember(
         id: 'old-hao',
@@ -83,12 +66,10 @@ void main() {
     };
     await pumpApp(tester, b);
     await go(tester, '/me/members');
-    expect(findShownContaining('主日崇拜：喜樂小組'), findsOneWidget);
-    expect(findShownContaining('青年崇拜：青年小組'), findsOneWidget);
+    expect(findShownContaining('喜樂小組'), findsOneWidget);
     await tapText(tester, '李美玉');
     expect(findShown('屬於這個牧區'), findsNothing, reason: 'the read-only list does not open the member editor');
     await tester.scrollUntilVisible(find.textContaining('主日崇拜：恩典小組'), 150, scrollable: find.byType(Scrollable).last);
     expect(find.textContaining('主日崇拜：恩典小組'), findsOneWidget);
-    expect(find.text('小組'), findsNothing, reason: 'no small-group configuration or permission controls');
   });
 }

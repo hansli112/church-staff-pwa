@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/design/components.dart';
-import '../../core/design/tokens.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/church_writes.dart';
@@ -102,6 +101,7 @@ class MemberEditorScreen extends ConsumerWidget {
       ),
     );
     final services = ref.watch(servicesProvider).value;
+    final smallGroups = ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
     final self = ref.watch(uidProvider) == uid;
     if (member == null || services == null) return Scaffold(appBar: AppBar());
 
@@ -121,6 +121,7 @@ class MemberEditorScreen extends ConsumerWidget {
             _ZoneSection(
               member: member,
               service: s,
+              smallGroups: [...smallGroups.where((g) => g.service == s.id)],
               onSave: (m) => _save(context, ref, member, m),
               onLeave: () => _leaveZone(context, ref, member, s),
             ),
@@ -161,12 +162,16 @@ class _ZoneSection extends StatelessWidget {
   const _ZoneSection({
     required this.member,
     required this.service,
+    required this.smallGroups,
     required this.onSave,
     required this.onLeave,
   });
 
   final Member member;
   final Service service;
+
+  /// The service's 小組 (#85).
+  final List<SmallGroupDetails> smallGroups;
   final ValueChanged<Member> onSave;
   final VoidCallback onLeave;
 
@@ -190,17 +195,13 @@ class _ZoneSection extends StatelessWidget {
           onChanged: (on) => on ? onSave(withZone(Zone(serviceType: service.id))) : onLeave(),
         ),
         if (zone != null) ...[
-          ListRow(
-            title: L10n.of(context).memberSmallGroups,
-            subtitle: zone.smallGroups.isEmpty ? null : zone.smallGroups.join(L10n.of(context).listSeparator),
-            onTap: () async {
-              final groups = await showAppSheet<List<String>>(
-                context,
-                builder: (_) => _SmallGroupsEditor(groups: zone.smallGroups),
-              );
-              if (groups != null && context.mounted) onSave(withZone(zone.copyWith(smallGroups: groups)));
-            },
-          ),
+          // Which of the service's 小組 they are in, switched on and off.
+          for (final g in smallGroups)
+            SwitchRow(
+              title: L10n.of(context).inSmallGroup(g.name),
+              value: member.smallGroups.contains(g.id),
+              onChanged: (on) => onSave(member.inGroupAs(g.group, member: on)),
+            ),
           for (final d in duties)
             ListRow(
               title: d,
@@ -225,58 +226,4 @@ class _ZoneSection extends StatelessWidget {
       ],
     );
   }
-}
-
-class _SmallGroupsEditor extends StatefulWidget {
-  const _SmallGroupsEditor({required this.groups});
-
-  final List<String> groups;
-
-  @override
-  State<_SmallGroupsEditor> createState() => _SmallGroupsEditorState();
-}
-
-class _SmallGroupsEditorState extends State<_SmallGroupsEditor> {
-  late final _groups = TextEditingController(text: widget.groups.join('\n'));
-
-  @override
-  void dispose() {
-    _groups.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => SafeArea(
-    child: SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(Space.m, 0, Space.m, MediaQuery.viewInsetsOf(context).bottom + Space.l),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              Expanded(child: Text(L10n.of(context).memberSmallGroups, style: AppText.title3)),
-              SecondaryButton(
-                label: L10n.of(context).save,
-                onPressed: () => Navigator.pop(
-                  context,
-                  {
-                    for (final line in _groups.text.split('\n'))
-                      if (line.trim().isNotEmpty) line.trim(),
-                  }.toList(),
-                ),
-              ),
-            ],
-          ),
-          TextField(
-            controller: _groups,
-            autofocus: true,
-            keyboardType: TextInputType.multiline,
-            minLines: 3,
-            maxLines: 6,
-            decoration: InputDecoration(hintText: L10n.of(context).memberSmallGroupsHint),
-          ),
-        ],
-      ),
-    ),
-  );
 }

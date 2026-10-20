@@ -4540,18 +4540,6 @@ abstract class L10n {
   /// **'近期活動'**
   String get homeUpcomingEvents;
 
-  /// No description provided for @memberSmallGroups.
-  ///
-  /// In zh, this message translates to:
-  /// **'小組'**
-  String get memberSmallGroups;
-
-  /// No description provided for @memberSmallGroupsHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'每行一個小組'**
-  String get memberSmallGroupsHint;
-
   /// No description provided for @linkErrNotToday.
   ///
   /// In zh, this message translates to:
@@ -4881,6 +4869,246 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'這筆已經從 {month} 扣回過了'**
   String onlineRefundAlready(String month);
+
+  /// 身分 #85, in the list to pick from and as the heading of a 小組's leaders
+  ///
+  /// In zh, this message translates to:
+  /// **'小組長'**
+  String get identitySmallGroupLead;
+
+  /// A 小組's leader, e.g. 喜樂小組 小組長
+  ///
+  /// In zh, this message translates to:
+  /// **'{group} 小組長'**
+  String identitySmallGroupLeadOf(String group);
+
+  /// What a 小組長 may do, in one sentence
+  ///
+  /// In zh, this message translates to:
+  /// **'管{group}的活動、回報人數，加入和移出它的同工'**
+  String canSmallGroupLead(String group);
+
+  /// Sheet header: which 小組 the 小組長 leads
+  ///
+  /// In zh, this message translates to:
+  /// **'選小組'**
+  String get pickSmallGroup;
+
+  /// Section on a service's page: its 小組 (#85)
+  ///
+  /// In zh, this message translates to:
+  /// **'小組'**
+  String get smallGroups;
+
+  /// Row and dialog title: open a 小組 in this service
+  ///
+  /// In zh, this message translates to:
+  /// **'新增小組'**
+  String get addSmallGroup;
+
+  /// A 小組's name: row, field hint
+  ///
+  /// In zh, this message translates to:
+  /// **'小組名稱'**
+  String get smallGroupName;
+
+  /// Row on a 小組's page: the service it is in
+  ///
+  /// In zh, this message translates to:
+  /// **'屬於'**
+  String get smallGroupService;
+
+  /// Row and sheet title on a 小組's page: when it meets, for 回報人數
+  ///
+  /// In zh, this message translates to:
+  /// **'聚會時間'**
+  String get smallGroupMeets;
+
+  /// When a 小組 meets, not set yet
+  ///
+  /// In zh, this message translates to:
+  /// **'未設定'**
+  String get meetsNotSet;
+
+  /// A 小組 meeting every week; weekday is weekday1–7's
+  ///
+  /// In zh, this message translates to:
+  /// **'每{weekday}'**
+  String meetsWeekly(String weekday);
+
+  /// A 小組 meeting every other week; weekday is weekday1–7's
+  ///
+  /// In zh, this message translates to:
+  /// **'隔{weekday}'**
+  String meetsBiweekly(String weekday);
+
+  /// Segment: a 小組 meets every week
+  ///
+  /// In zh, this message translates to:
+  /// **'每週'**
+  String get meetsEveryWeek;
+
+  /// Segment: a 小組 meets every other week
+  ///
+  /// In zh, this message translates to:
+  /// **'隔週'**
+  String get meetsEveryOtherWeek;
+
+  /// Row for a 小組 meeting every other week: the next day it meets; tapping moves it a week
+  ///
+  /// In zh, this message translates to:
+  /// **'下次聚會'**
+  String get nextMeeting;
+
+  /// Footer of a 小組's leaders while it has none
+  ///
+  /// In zh, this message translates to:
+  /// **'還沒有小組長'**
+  String get noSmallGroupLeads;
+
+  /// Row and sheet header on a 小組's page
+  ///
+  /// In zh, this message translates to:
+  /// **'指派小組長'**
+  String get assignSmallGroupLead;
+
+  /// Destructive row and dialog action on a 小組's page
+  ///
+  /// In zh, this message translates to:
+  /// **'關閉小組'**
+  String get deleteSmallGroup;
+
+  /// Dialog title before closing a 小組
+  ///
+  /// In zh, this message translates to:
+  /// **'關閉「{name}」？'**
+  String deleteSmallGroupTitle(String name);
+
+  /// Dialog body before closing a 小組
+  ///
+  /// In zh, this message translates to:
+  /// **'小組長和同工都會移出這個小組，填過的人數會留著。'**
+  String get deleteSmallGroupBody;
+
+  /// Toast after closing a 小組
+  ///
+  /// In zh, this message translates to:
+  /// **'已關閉「{name}」'**
+  String smallGroupDeleted(String name);
+
+  /// Switch on a member's page, under a service: whether they are in this 小組
+  ///
+  /// In zh, this message translates to:
+  /// **'在{group}'**
+  String inSmallGroup(String group);
+
+  /// Switch in 管理教會 (#85) turning 回報人數 on for the church
+  ///
+  /// In zh, this message translates to:
+  /// **'回報人數'**
+  String get attendance;
+
+  /// Under the 回報人數 switch: what it does
+  ///
+  /// In zh, this message translates to:
+  /// **'聚會和小組當天 21:00 提醒負責人填這次來了幾個人'**
+  String get attendanceSub;
+
+  /// Section on a service's or 小組's page: how many came to each meeting
+  ///
+  /// In zh, this message translates to:
+  /// **'人數'**
+  String get attendanceHeader;
+
+  /// How many came to one meeting
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 人'**
+  String attendanceCount(int count);
+
+  /// A meeting whose 人數 nobody filled in: never shown as 0
+  ///
+  /// In zh, this message translates to:
+  /// **'未填'**
+  String get attendanceMissing;
+
+  /// A meeting marked 這次沒聚會
+  ///
+  /// In zh, this message translates to:
+  /// **'沒聚會'**
+  String get attendanceNone;
+
+  /// Home card header and the sheet's title
+  ///
+  /// In zh, this message translates to:
+  /// **'填寫人數'**
+  String get attendanceFill;
+
+  /// Number field in the fill-in sheet
+  ///
+  /// In zh, this message translates to:
+  /// **'人數'**
+  String get attendanceCountField;
+
+  /// Optional note field in the fill-in sheet
+  ///
+  /// In zh, this message translates to:
+  /// **'備註'**
+  String get attendanceNote;
+
+  /// Button in the fill-in sheet: no meeting this time
+  ///
+  /// In zh, this message translates to:
+  /// **'這次沒聚會'**
+  String get attendanceNoMeeting;
+
+  /// Row: no reminders until a day picked (summer, New Year)
+  ///
+  /// In zh, this message translates to:
+  /// **'暫停到某一天'**
+  String get attendancePause;
+
+  /// Row while paused; day is the day reminders come back
+  ///
+  /// In zh, this message translates to:
+  /// **'暫停到 {day}'**
+  String attendancePausedUntil(String day);
+
+  /// Button ending a pause now
+  ///
+  /// In zh, this message translates to:
+  /// **'恢復'**
+  String get attendanceResume;
+
+  /// Footer under the 人數 section
+  ///
+  /// In zh, this message translates to:
+  /// **'暫停的期間不提醒，也不會留下「未填」。'**
+  String get attendancePauseFooter;
+
+  /// The 人數 section with no meetings yet
+  ///
+  /// In zh, this message translates to:
+  /// **'還沒有要填的聚會'**
+  String get attendanceNoDays;
+
+  /// Toast after filling in a meeting's 人數
+  ///
+  /// In zh, this message translates to:
+  /// **'已填寫'**
+  String get attendanceSaved;
+
+  /// Notification switch (#85)
+  ///
+  /// In zh, this message translates to:
+  /// **'回報人數提醒'**
+  String get notifAttendance;
+
+  /// Under the 回報人數提醒 switch
+  ///
+  /// In zh, this message translates to:
+  /// **'聚會當天 21:00 還沒人填時'**
+  String get notifAttendanceSub;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

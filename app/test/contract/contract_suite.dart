@@ -726,6 +726,78 @@ void contractTests(Future<ContractWorld> Function() open) {
     });
   });
 
+  group('小組 and 回報人數 (#85)', () {
+    test("a service's 負責人 opens a 小組 and names its 小組長; its 小組長 sets when it meets, nothing else", () async {
+      final g = await Grace.open(w);
+      await w.signIn(Grace.editorEmail);
+      await expectLater(
+        g.church.saveSmallGroup(const SmallGroupDetails(id: '', name: '青年小組', service: 'youth')),
+        denied(),
+      );
+      final id = await g.church.saveSmallGroup(
+        const SmallGroupDetails(id: '', name: '喜樂小組', service: 'sunday'),
+        leads: [g.mei],
+      );
+      expect((await g.church.smallGroups().first).single.name, '喜樂小組');
+      await w.signIn(Grace.meiEmail);
+      final mei = (await g.church.member(g.mei).first)!;
+      expect(mei.identities, [SmallGroupLead(id)]);
+      final joy = (await g.church.smallGroups().first).single;
+      await g.church.saveSmallGroup(joy.copyWith(weekday: () => DateTime.friday));
+      expect((await g.church.smallGroups().first).single.weekday, DateTime.friday);
+      await expectLater(g.church.saveSmallGroup(joy.copyWith(name: '大喜樂')), denied());
+      await expectLater(g.church.deleteSmallGroup(id), denied());
+      await w.signIn(Grace.editorEmail);
+      await g.church.deleteSmallGroup(id);
+      expect(await g.church.smallGroups().first, isEmpty);
+      await w.signIn(Grace.meiEmail);
+      expect((await g.church.member(g.mei).first)!.leadSmallGroups, isEmpty);
+    });
+
+    test("leads fill in their group's 人數; 行政 reads a service's; a 同工 neither", () async {
+      final g = await Grace.open(w);
+      await g.church.setAttendanceSince(Day(2026, 10, 1));
+      expect((await g.church.church().first)!.attendanceSince, Day(2026, 10, 1));
+      await w.signIn(Grace.editorEmail);
+      await g.church.setAttendance('service:sunday', Day(2026, 10, 4), const AttendanceDay.count(120, note: '聖餐'));
+      await g.church.setAttendancePause(
+        'service:sunday',
+        AttendancePause(from: Day(2026, 10, 5), until: Day(2026, 11, 1)),
+      );
+      final record = await g.church
+          .attendance('service:sunday')
+          .firstWhere((r) => r.days.isNotEmpty && r.pause != null);
+      expect(record.days, {Day(2026, 10, 4): const AttendanceDay.count(120, note: '聖餐')});
+      expect(record.pause, AttendancePause(from: Day(2026, 10, 5), until: Day(2026, 11, 1)));
+      await expectLater(
+        g.church.setAttendance('service:youth', Day(2026, 10, 3), const AttendanceDay.none()),
+        denied(),
+      );
+      await w.signIn(Grace.meiEmail);
+      await expectLater(
+        g.church.setAttendance('service:sunday', Day(2026, 10, 11), const AttendanceDay.none()),
+        denied(),
+      );
+      await expectLater(g.church.attendance('service:sunday').first, denied());
+      await w.signIn(Grace.pastorEmail);
+      await g.church.putMember((await g.church.member(g.mei).first)!.withIdentities(const [OfficeIdentity()]));
+      await w.signIn(Grace.meiEmail);
+      expect((await g.church.attendance('service:sunday').first).days.keys, [Day(2026, 10, 4)]);
+    });
+
+    test('a 小組長 adds a plain 同工 to their 小組', () async {
+      final g = await Grace.open(w);
+      final id = await g.church.saveSmallGroup(
+        const SmallGroupDetails(id: '', name: '喜樂小組', service: 'sunday'),
+        leads: [g.editor],
+      );
+      await w.signIn(Grace.editorEmail);
+      await g.church.setGroupMember(g.mei, SmallGroup(id), member: true);
+      await w.signIn(Grace.meiEmail);
+      expect((await g.church.member(g.mei).first)!.smallGroups, {id});
+    });
+  });
+
   group('rosters', () {
     test('saved rosters come back from a day on, oldest first', () async {
       final g = await Grace.open(w);

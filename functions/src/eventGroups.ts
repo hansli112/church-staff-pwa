@@ -1,12 +1,12 @@
 /**
  * Whose a calendar event is (#84): the whole church's, or one group's, a
- * service's or a 事工's. Kept in Google with the event (a private extended
- * property), so it survives being edited in Google Calendar; an event
- * made there is the church's. `''` is the church's, `service:<id>` and
- * `ministry:<id>` a group's.
+ * service's, a 事工's or a 小組's (#85). Kept in Google with the event (a
+ * private extended property), so it survives being edited in Google
+ * Calendar; an event made there is the church's. `''` is the church's,
+ * `service:<id>`, `ministry:<id>` and `small:<id>` a group's.
  */
 
-const GROUP = /^(service|ministry):[A-Za-z0-9_-]{1,64}$/;
+const GROUP = /^(service|ministry|small):[A-Za-z0-9_-]{1,64}$/;
 
 /** [value] as an event's group: '' (the church's) or a group of either kind. */
 export const isEventGroup = (value: unknown): value is string =>
@@ -20,6 +20,7 @@ interface Fields {
   groups?: unknown;
   leadTypes?: unknown;
   leadMinistries?: unknown;
+  leadSmallGroups?: unknown;
 }
 
 /** Whether [m] leads [group]. The church's ('') nobody leads. */
@@ -27,6 +28,7 @@ export function leadsEventGroup(m: Fields, group: string) {
   const [kind, id] = group.split(':');
   if (kind === 'service') return strings(m.leadTypes).includes(id);
   if (kind === 'ministry') return strings(m.leadMinistries).includes(id);
+  if (kind === 'small') return strings(m.leadSmallGroups).includes(id);
   return false;
 }
 
@@ -34,7 +36,8 @@ export function leadsEventGroup(m: Fields, group: string) {
 export const writesAnyEvent = (m: Fields) => m.role === 'admin' || strings(m.groups).includes('calendar-editors');
 
 /** Whether [m] leads any group, and so may write that group's events. */
-export const leadsAnyGroup = (m: Fields) => strings(m.leadTypes).length > 0 || strings(m.leadMinistries).length > 0;
+export const leadsAnyGroup = (m: Fields) =>
+  strings(m.leadTypes).length > 0 || strings(m.leadMinistries).length > 0 || strings(m.leadSmallGroups).length > 0;
 
 /**
  * Whether [m] may change an event of group [before] (null: none yet) to

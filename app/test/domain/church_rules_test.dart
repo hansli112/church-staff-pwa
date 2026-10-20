@@ -15,6 +15,20 @@ List<Map<String, dynamic>> _rows(String name) => (_rules[name] as List).cast<Map
 
 List<String> _strings(Object? v) => (v as List).cast<String>();
 
+/// A member with the fields of row [f]: role, groups, 身分 and what they lead.
+Member _member(String uid, Map<String, dynamic> f) => Member(
+  uid: uid,
+  name: uid,
+  role: Role.values.byName(f['role'] as String? ?? 'staff'),
+  groups: {for (final g in _strings(f['groups'] ?? const [])) ?Group.byId(g)},
+  identities: [
+    for (final i in (f['identities'] as List?) ?? const []) ?Identity.fromJson(i),
+    for (final t in _strings(f['leadTypes'] ?? const [])) ServiceLead(t),
+    for (final m in _strings(f['leadMinistries'] ?? const [])) MinistryLead(m),
+    for (final g in _strings(f['leadSmallGroups'] ?? const [])) SmallGroupLead(g),
+  ],
+);
+
 void main() {
   test("a new church starts with the default services, in its maker's language", () {
     final rules = _rules['defaultServices'] as Map<String, dynamic>;
@@ -127,28 +141,20 @@ void main() {
   });
 
   group('groupMembership', () {
-    Member member(String uid, Map<String, dynamic> f) => Member(
-      uid: uid,
-      name: uid,
-      role: Role.values.byName(f['role'] as String? ?? 'staff'),
-      groups: {for (final g in _strings(f['groups'] ?? const [])) ?Group.byId(g)},
-      identities: [
-        for (final i in (f['identities'] as List?) ?? const []) ?Identity.fromJson(i),
-        for (final t in _strings(f['leadTypes'] ?? const [])) ServiceLead(t),
-        for (final m in _strings(f['leadMinistries'] ?? const [])) MinistryLead(m),
-      ],
-    );
+    const member = _member;
     for (final r in _rows('groupMembership')) {
       test(r['why'] as String, () {
         final g = r['group'] as Map<String, dynamic>;
-        final group = g['service'] is String
+        final ChurchGroup group = g['smallGroup'] is String
+            ? SmallGroup(g['smallGroup'] as String)
+            : g['service'] is String
             ? ServiceGroup(g['service'] as String)
             : MinistryGroup(g['ministry'] as String);
         expect(
           member(
             'caller',
             r['caller'] as Map<String, dynamic>,
-          ).mayMove(member('target', r['target'] as Map<String, dynamic>), group),
+          ).mayMove(member('target', r['target'] as Map<String, dynamic>), group, service: g['service'] as String?),
           r['may'],
         );
       });
@@ -158,18 +164,54 @@ void main() {
   group('eventWriting', () {
     for (final r in _rows('eventWriting')) {
       test(r['why'] as String, () {
-        final f = r['member'] as Map<String, dynamic>;
-        final m = Member(
-          uid: 'u',
-          name: 'u',
-          role: Role.values.byName(f['role'] as String? ?? 'staff'),
-          groups: {for (final g in _strings(f['groups'] ?? const [])) ?Group.byId(g)},
-          identities: [
-            for (final t in _strings(f['leadTypes'] ?? const [])) ServiceLead(t),
-            for (final x in _strings(f['leadMinistries'] ?? const [])) MinistryLead(x),
-          ],
-        );
+        final m = _member('u', r['member'] as Map<String, dynamic>);
         expect(m.mayWriteEvent(r['before'] as String?, r['after'] as String?), r['may']);
+      });
+    }
+  });
+
+  group('smallGroupEditing', () {
+    for (final r in _rows('smallGroupEditing')) {
+      test(r['why'] as String, () {
+        final m = _member('u', r['member'] as Map<String, dynamic>);
+        expect(m.mayEditSmallGroup(r['before'] as String?, r['after'] as String?), r['may']);
+      });
+    }
+  });
+
+  group('attendanceAccess', () {
+    for (final r in _rows('attendanceAccess')) {
+      test(r['why'] as String, () {
+        final m = _member('u', r['member'] as Map<String, dynamic>);
+        final key = r['group'] as String;
+        final service = r['smallGroupService'] as String?;
+        expect(m.writesAttendance(key, smallGroupService: service), r['writes'], reason: 'writes');
+        expect(m.readsAttendance(key, smallGroupService: service), r['reads'], reason: 'reads');
+      });
+    }
+  });
+
+  group('attendanceDue', () {
+    for (final r in _rows('attendanceDue')) {
+      test(r['why'] as String, () {
+        final meets = r['meets'] as Map<String, dynamic>;
+        final pause = r['pause'] as Map<String, dynamic>?;
+        expect(
+          attendanceDue(
+            Meets(
+              weekday: meets['weekday'] as int?,
+              roster: meets['roster'] as bool?,
+              every: meets['every'] as int? ?? 1,
+              startsOn: Day.tryParse(meets['startsOn'] as String?),
+            ),
+            since: Day.parse(r['since'] as String),
+            pause: pause == null
+                ? null
+                : AttendancePause(from: Day.parse(pause['from'] as String), until: Day.parse(pause['until'] as String)),
+            day: Day.parse(r['day'] as String),
+          ),
+          r['due'],
+        );
       });
     }
   });

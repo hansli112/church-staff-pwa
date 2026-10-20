@@ -54,6 +54,14 @@ class NotificationsScreen extends ConsumerWidget {
           l10n.notifMemberLeft,
           l10n.notifMemberLeftSub,
         ),
+      // 回報人數 (#85): for whoever is asked, while the church has it on.
+      if (ref.watch(churchProvider.select((c) => c.value?.attendanceSince != null)) &&
+          (me.leadTypes.isNotEmpty || me.leadSmallGroups.isNotEmpty))
+        (
+          NotificationKind.attendance,
+          l10n.notifAttendance,
+          l10n.notifAttendanceSub,
+        ),
     ];
 
     Future<void> set(NotificationKind kind, bool on) async {

@@ -2630,12 +2630,6 @@ class L10nEn extends L10n {
   String get homeUpcomingEvents => 'Upcoming events';
 
   @override
-  String get memberSmallGroups => 'Small groups';
-
-  @override
-  String get memberSmallGroupsHint => 'One small group per line';
-
-  @override
   String get linkErrNotToday => 'The source hasn’t posted today’s content yet';
 
   @override
@@ -2830,4 +2824,148 @@ class L10nEn extends L10n {
   String onlineRefundAlready(String month) {
     return 'This one was already taken off $month';
   }
+
+  @override
+  String get identitySmallGroupLead => 'Small group leader';
+
+  @override
+  String identitySmallGroupLeadOf(String group) {
+    return '$group leader';
+  }
+
+  @override
+  String canSmallGroupLead(String group) {
+    return 'Runs $group\'s events, fills in its attendance and adds or removes its members';
+  }
+
+  @override
+  String get pickSmallGroup => 'Pick a small group';
+
+  @override
+  String get smallGroups => 'Small groups';
+
+  @override
+  String get addSmallGroup => 'Add a small group';
+
+  @override
+  String get smallGroupName => 'Small group name';
+
+  @override
+  String get smallGroupService => 'Part of';
+
+  @override
+  String get smallGroupMeets => 'Meets';
+
+  @override
+  String get meetsNotSet => 'Not set';
+
+  @override
+  String meetsWeekly(String weekday) {
+    return 'Every $weekday';
+  }
+
+  @override
+  String meetsBiweekly(String weekday) {
+    return 'Every other $weekday';
+  }
+
+  @override
+  String get meetsEveryWeek => 'Every week';
+
+  @override
+  String get meetsEveryOtherWeek => 'Every other week';
+
+  @override
+  String get nextMeeting => 'Next meeting';
+
+  @override
+  String get noSmallGroupLeads => 'No leader yet';
+
+  @override
+  String get assignSmallGroupLead => 'Assign a leader';
+
+  @override
+  String get deleteSmallGroup => 'Close small group';
+
+  @override
+  String deleteSmallGroupTitle(String name) {
+    return 'Close “$name”?';
+  }
+
+  @override
+  String get deleteSmallGroupBody => 'Its leaders and members come out of it. The attendance filled in stays.';
+
+  @override
+  String smallGroupDeleted(String name) {
+    return 'Closed “$name”';
+  }
+
+  @override
+  String inSmallGroup(String group) {
+    return 'In $group';
+  }
+
+  @override
+  String get attendance => 'Attendance';
+
+  @override
+  String get attendanceSub => 'Leads are reminded at 9 PM on the day to fill in how many came';
+
+  @override
+  String get attendanceHeader => 'Attendance';
+
+  @override
+  String attendanceCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '1 person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get attendanceMissing => 'Not filled in';
+
+  @override
+  String get attendanceNone => 'No meeting';
+
+  @override
+  String get attendanceFill => 'Fill in attendance';
+
+  @override
+  String get attendanceCountField => 'How many came';
+
+  @override
+  String get attendanceNote => 'Note';
+
+  @override
+  String get attendanceNoMeeting => 'We didn\'t meet';
+
+  @override
+  String get attendancePause => 'Pause until…';
+
+  @override
+  String attendancePausedUntil(String day) {
+    return 'Paused until $day';
+  }
+
+  @override
+  String get attendanceResume => 'Resume';
+
+  @override
+  String get attendancePauseFooter => 'No reminders while paused, and nothing is left “Not filled in”.';
+
+  @override
+  String get attendanceNoDays => 'No meetings to fill in yet';
+
+  @override
+  String get attendanceSaved => 'Saved';
+
+  @override
+  String get notifAttendance => 'Attendance reminders';
+
+  @override
+  String get notifAttendanceSub => 'At 9 PM on a meeting day, when nobody has filled it in';
 }

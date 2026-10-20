@@ -91,6 +91,11 @@ final servicesProvider = StreamProvider<ServiceSettings>(
 /// The church's 事工 (#82).
 final ministriesProvider = StreamProvider<MinistrySettings>((ref) => openChurch(ref).ministries());
 
+/// The church's 小組 (#85), by name.
+final smallGroupsProvider = StreamProvider<List<SmallGroupDetails>>(
+  (ref) => openChurch(ref).smallGroups().map((list) => [...list]..sort((a, b) => a.name.compareTo(b.name))),
+);
+
 /// What I arrange on a day of [serviceType]: null for all of it,
 /// otherwise only these duties (Member.arranges); nothing while signed out.
 final arrangesProvider = Provider.family<Set<String>?, String>((ref, serviceType) {

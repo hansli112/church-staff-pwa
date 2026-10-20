@@ -2499,12 +2499,6 @@ class L10nZh extends L10n {
   String get homeUpcomingEvents => '近期活動';
 
   @override
-  String get memberSmallGroups => '小組';
-
-  @override
-  String get memberSmallGroupsHint => '每行一個小組';
-
-  @override
   String get linkErrNotToday => '來源還沒有今天的內容';
 
   @override
@@ -2694,6 +2688,144 @@ class L10nZh extends L10n {
   String onlineRefundAlready(String month) {
     return '這筆已經從 $month 扣回過了';
   }
+
+  @override
+  String get identitySmallGroupLead => '小組長';
+
+  @override
+  String identitySmallGroupLeadOf(String group) {
+    return '$group 小組長';
+  }
+
+  @override
+  String canSmallGroupLead(String group) {
+    return '管$group的活動、回報人數，加入和移出它的同工';
+  }
+
+  @override
+  String get pickSmallGroup => '選小組';
+
+  @override
+  String get smallGroups => '小組';
+
+  @override
+  String get addSmallGroup => '新增小組';
+
+  @override
+  String get smallGroupName => '小組名稱';
+
+  @override
+  String get smallGroupService => '屬於';
+
+  @override
+  String get smallGroupMeets => '聚會時間';
+
+  @override
+  String get meetsNotSet => '未設定';
+
+  @override
+  String meetsWeekly(String weekday) {
+    return '每$weekday';
+  }
+
+  @override
+  String meetsBiweekly(String weekday) {
+    return '隔$weekday';
+  }
+
+  @override
+  String get meetsEveryWeek => '每週';
+
+  @override
+  String get meetsEveryOtherWeek => '隔週';
+
+  @override
+  String get nextMeeting => '下次聚會';
+
+  @override
+  String get noSmallGroupLeads => '還沒有小組長';
+
+  @override
+  String get assignSmallGroupLead => '指派小組長';
+
+  @override
+  String get deleteSmallGroup => '關閉小組';
+
+  @override
+  String deleteSmallGroupTitle(String name) {
+    return '關閉「$name」？';
+  }
+
+  @override
+  String get deleteSmallGroupBody => '小組長和同工都會移出這個小組，填過的人數會留著。';
+
+  @override
+  String smallGroupDeleted(String name) {
+    return '已關閉「$name」';
+  }
+
+  @override
+  String inSmallGroup(String group) {
+    return '在$group';
+  }
+
+  @override
+  String get attendance => '回報人數';
+
+  @override
+  String get attendanceSub => '聚會和小組當天 21:00 提醒負責人填這次來了幾個人';
+
+  @override
+  String get attendanceHeader => '人數';
+
+  @override
+  String attendanceCount(int count) {
+    return '$count 人';
+  }
+
+  @override
+  String get attendanceMissing => '未填';
+
+  @override
+  String get attendanceNone => '沒聚會';
+
+  @override
+  String get attendanceFill => '填寫人數';
+
+  @override
+  String get attendanceCountField => '人數';
+
+  @override
+  String get attendanceNote => '備註';
+
+  @override
+  String get attendanceNoMeeting => '這次沒聚會';
+
+  @override
+  String get attendancePause => '暫停到某一天';
+
+  @override
+  String attendancePausedUntil(String day) {
+    return '暫停到 $day';
+  }
+
+  @override
+  String get attendanceResume => '恢復';
+
+  @override
+  String get attendancePauseFooter => '暫停的期間不提醒，也不會留下「未填」。';
+
+  @override
+  String get attendanceNoDays => '還沒有要填的聚會';
+
+  @override
+  String get attendanceSaved => '已填寫';
+
+  @override
+  String get notifAttendance => '回報人數提醒';
+
+  @override
+  String get notifAttendanceSub => '聚會當天 21:00 還沒人填時';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -5191,12 +5323,6 @@ class L10nZhHans extends L10nZh {
   String get homeUpcomingEvents => '近期活动';
 
   @override
-  String get memberSmallGroups => '小组';
-
-  @override
-  String get memberSmallGroupsHint => '每行一个小组';
-
-  @override
   String get linkErrNotToday => '来源还没有提供今天的内容';
 
   @override
@@ -5386,4 +5512,142 @@ class L10nZhHans extends L10nZh {
   String onlineRefundAlready(String month) {
     return '这笔已经从 $month 扣回过了';
   }
+
+  @override
+  String get identitySmallGroupLead => '小组长';
+
+  @override
+  String identitySmallGroupLeadOf(String group) {
+    return '$group 小组长';
+  }
+
+  @override
+  String canSmallGroupLead(String group) {
+    return '管$group的活动、回报人数，加入和移出它的同工';
+  }
+
+  @override
+  String get pickSmallGroup => '选小组';
+
+  @override
+  String get smallGroups => '小组';
+
+  @override
+  String get addSmallGroup => '新增小组';
+
+  @override
+  String get smallGroupName => '小组名称';
+
+  @override
+  String get smallGroupService => '属于';
+
+  @override
+  String get smallGroupMeets => '聚会时间';
+
+  @override
+  String get meetsNotSet => '未设置';
+
+  @override
+  String meetsWeekly(String weekday) {
+    return '每$weekday';
+  }
+
+  @override
+  String meetsBiweekly(String weekday) {
+    return '隔$weekday';
+  }
+
+  @override
+  String get meetsEveryWeek => '每周';
+
+  @override
+  String get meetsEveryOtherWeek => '隔周';
+
+  @override
+  String get nextMeeting => '下次聚会';
+
+  @override
+  String get noSmallGroupLeads => '还没有小组长';
+
+  @override
+  String get assignSmallGroupLead => '指派小组长';
+
+  @override
+  String get deleteSmallGroup => '关闭小组';
+
+  @override
+  String deleteSmallGroupTitle(String name) {
+    return '关闭“$name”？';
+  }
+
+  @override
+  String get deleteSmallGroupBody => '小组长和同工都会移出这个小组，填过的人数会留着。';
+
+  @override
+  String smallGroupDeleted(String name) {
+    return '已关闭“$name”';
+  }
+
+  @override
+  String inSmallGroup(String group) {
+    return '在$group';
+  }
+
+  @override
+  String get attendance => '回报人数';
+
+  @override
+  String get attendanceSub => '聚会和小组当天 21:00 提醒负责人填这次来了几个人';
+
+  @override
+  String get attendanceHeader => '人数';
+
+  @override
+  String attendanceCount(int count) {
+    return '$count 人';
+  }
+
+  @override
+  String get attendanceMissing => '未填';
+
+  @override
+  String get attendanceNone => '没聚会';
+
+  @override
+  String get attendanceFill => '填写人数';
+
+  @override
+  String get attendanceCountField => '人数';
+
+  @override
+  String get attendanceNote => '备注';
+
+  @override
+  String get attendanceNoMeeting => '这次没聚会';
+
+  @override
+  String get attendancePause => '暂停到某一天';
+
+  @override
+  String attendancePausedUntil(String day) {
+    return '暂停到 $day';
+  }
+
+  @override
+  String get attendanceResume => '恢复';
+
+  @override
+  String get attendancePauseFooter => '暂停期间不提醒，也不会留下“未填”。';
+
+  @override
+  String get attendanceNoDays => '还没有要填的聚会';
+
+  @override
+  String get attendanceSaved => '已填写';
+
+  @override
+  String get notifAttendance => '回报人数提醒';
+
+  @override
+  String get notifAttendanceSub => '聚会当天 21:00 还没人填时';
 }

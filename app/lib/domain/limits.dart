@@ -30,6 +30,9 @@ abstract final class TextLimits {
 
   /// An event's title as its roster keeps it, cut from the calendar's.
   static const eventTitle = 200;
+
+  /// The note with a meeting's 人數 (回報人數, #85).
+  static const attendanceNote = 200;
 }
 
 /// Limits whose unit is the same everywhere: URLs and secrets in UTF-16

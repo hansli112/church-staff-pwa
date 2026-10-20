@@ -164,11 +164,13 @@ List<EventGroupChoice> eventGroupChoices(WidgetRef ref, L10n l10n) {
   if (me == null) return const [];
   final services = ref.read(servicesProvider).value?.enabled ?? const <Service>[];
   final ministries = ref.read(ministriesProvider).value?.ministries ?? const <Ministry>[];
+  final smallGroups = ref.read(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
   return [
     if (me.mayWriteEvent(null, '')) (key: null, label: l10n.wholeChurch),
     for (final (key, label) in [
       for (final s in services) (ServiceGroup(s.id).key, s.name),
       for (final m in ministries) (MinistryGroup(m.id).key, m.name),
+      for (final g in smallGroups) (g.group.key, g.name),
     ])
       if (me.mayWriteEvent(null, key)) (key: key, label: label),
   ];
@@ -179,6 +181,7 @@ List<EventGroupChoice> eventGroupChoices(WidgetRef ref, L10n l10n) {
 String? eventGroupName(WidgetRef ref, String group) => switch (ChurchGroup.parse(group)) {
   ServiceGroup(:final id) => ref.watch(servicesProvider).value?.byId(id)?.name,
   MinistryGroup(:final id) => ref.watch(ministriesProvider).value?.byId(id)?.name,
+  SmallGroup(:final id) => ref.watch(smallGroupsProvider).value?.where((g) => g.id == id).firstOrNull?.name,
   null => null,
 };
 

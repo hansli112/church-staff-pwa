@@ -44,7 +44,13 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
     final members = ref.watch(membersProvider);
     final services = ref.watch(servicesProvider).value;
     final ministries = ref.watch(ministriesProvider).value;
+    final smallGroups = ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
     final enabled = services?.enabled ?? const <Service>[];
+    // A member's 小組 (#85); a pending one's, the names they had.
+    String? memberSmallGroups(Member m) => [
+      for (final g in smallGroups)
+        if (m.smallGroups.contains(g.id)) g.name,
+    ].join(l10n.listSeparator).ifEmpty(null);
     List<String> smallGroupLabels(List<Zone> zones) => [
       for (final zone in zones)
         if (zone.smallGroups.isNotEmpty)
@@ -146,9 +152,15 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                               child: ListRow(
                                 title: m.uid == uid ? l10n.nameIsYou(m.name) : m.name,
                                 subtitle: [
-                                  identitiesLine(l10n, m, services: services, ministries: ministries).ifEmpty(null),
+                                  identitiesLine(
+                                    l10n,
+                                    m,
+                                    services: services,
+                                    ministries: ministries,
+                                    smallGroups: smallGroups,
+                                  ).ifEmpty(null),
                                   if (m.waitsForZone(enabled)) l10n.waitsForZone,
-                                  ...smallGroupLabels(m.zones),
+                                  memberSmallGroups(m),
                                 ].nonNulls.join(l10n.dotSeparator).ifEmpty(null),
                                 onTap: isAdmin ? () => _open(m) : null,
                               ),

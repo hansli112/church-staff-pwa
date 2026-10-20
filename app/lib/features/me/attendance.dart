@@ -1,0 +1,329 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_symbols_icons/symbols.dart';
+
+import '../../core/design/components.dart';
+import '../../core/design/tokens.dart';
+import '../../domain/day.dart';
+import '../../domain/limits.dart';
+import '../../domain/models.dart';
+import '../../l10n/app_localizations.dart';
+import '../../state/attendance.dart';
+import '../../state/providers.dart';
+import '../common/errors.dart';
+import '../common/labels.dart';
+import '../rosters/format.dart';
+
+/// 人數 (回報人數, #85) on a group's page: its meetings from
+/// [attendanceWeeks] back, newest first, each with what was filled in or
+/// 未填 (never 0), and its pause. Who fills them in taps one to fill it in
+/// or change it (補填). Nothing with 回報人數 off, or for who may not see it.
+class AttendanceSection extends ConsumerWidget {
+  const AttendanceSection({super.key, required this.group});
+
+  final AttendanceGroup group;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = L10n.of(context);
+    final since = ref.watch(churchProvider.select((c) => c.value?.attendanceSince));
+    final me = ref.watch(meProvider).value;
+    if (since == null || me == null || !me.readsAttendance(group.key, smallGroupService: group.smallGroupService)) {
+      return const SizedBox.shrink();
+    }
+    final writes = me.writesAttendance(group.key, smallGroupService: group.smallGroupService);
+    final record = ref.watch(attendanceProvider(group.key)).value;
+    if (record == null) return const SizedBox.shrink();
+    final today = ref.watch(todayProvider);
+    final days = attendanceDays(group, since: since, pause: record.pause, today: today);
+    final pause = record.pause;
+    final paused = pause != null && !today.isBefore(pause.from) && today.isBefore(pause.until);
+    return ListSection(
+      header: l10n.attendanceHeader,
+      footer: writes && !paused ? l10n.attendancePauseFooter : null,
+      children: [
+        if (paused)
+          ListRow(
+            title: l10n.attendancePausedUntil(dayLabel(l10n, pause.until, today)),
+            leading: const Icon(Symbols.pause_circle_rounded),
+            chevron: false,
+            trailing: writes
+                ? RowButton(label: l10n.attendanceResume, onPressed: () => _setPause(context, ref, null))
+                : null,
+          )
+        else if (writes)
+          ListRow(
+            title: l10n.attendancePause,
+            leading: const Icon(Symbols.pause_circle_rounded),
+            onTap: () => _pause(context, ref, today),
+          ),
+        if (days.isEmpty) ListRow(title: l10n.attendanceNoDays, chevron: false),
+        for (final day in days)
+          ListRow(
+            title: dayLabel(l10n, day, today),
+            value: switch (record.days[day]) {
+              null => l10n.attendanceMissing,
+              AttendanceDay(none: true) => l10n.attendanceNone,
+              AttendanceDay(:final count?) => l10n.attendanceCount(count),
+              _ => l10n.attendanceMissing,
+            },
+            subtitle: switch (record.days[day]?.note) {
+              final note? when note.isNotEmpty => note,
+              _ => null,
+            },
+            onTap: writes ? () => fillAttendance(context, ref, group, day, record.days[day]) : null,
+          ),
+      ],
+    );
+  }
+
+  Future<void> _pause(BuildContext context, WidgetRef ref, Day today) async {
+    final picked = await showDatePicker(
+      context: context,
+      helpText: L10n.of(context).attendancePause,
+      firstDate: today.addDays(1).midnight,
+      lastDate: today.addDays(366).midnight,
+      initialDate: today.addDays(7).midnight,
+    );
+    if (picked == null || !context.mounted) return;
+    await _setPause(context, ref, AttendancePause(from: today, until: Day(picked.year, picked.month, picked.day)));
+  }
+
+  Future<void> _setPause(BuildContext context, WidgetRef ref, AttendancePause? pause) async {
+    try {
+      await ref.churchData.setAttendancePause(group.key, pause);
+    } catch (e) {
+      if (context.mounted) showToast(context, saveErrorText(L10n.of(context), e));
+    }
+  }
+}
+
+/// Fills in [group]'s 人數 of [day], [was] what it had: how many came and a
+/// note, or 這次沒聚會.
+Future<void> fillAttendance(
+  BuildContext context,
+  WidgetRef ref,
+  AttendanceGroup group,
+  Day day,
+  AttendanceDay? was,
+) async {
+  final l10n = L10n.of(context);
+  final value = await showAppSheet<AttendanceDay>(
+    context,
+    builder: (_) => _FillSheet(
+      title: [group.name, dayLabel(l10n, day, ref.read(todayProvider))].join(l10n.dotSeparator),
+      was: was,
+    ),
+  );
+  if (value == null || !context.mounted) return;
+  try {
+    await ref.churchData.setAttendance(group.key, day, value);
+    if (context.mounted) showToast(context, l10n.attendanceSaved);
+  } catch (e) {
+    if (context.mounted) showToast(context, saveErrorText(l10n, e));
+  }
+}
+
+class _FillSheet extends StatefulWidget {
+  const _FillSheet({required this.title, required this.was});
+
+  final String title;
+  final AttendanceDay? was;
+
+  @override
+  State<_FillSheet> createState() => _FillSheetState();
+}
+
+class _FillSheetState extends State<_FillSheet> {
+  late final _count = TextEditingController(text: widget.was?.count?.toString() ?? '');
+  late final _note = TextEditingController(text: widget.was?.note ?? '');
+
+  @override
+  void dispose() {
+    _count.dispose();
+    _note.dispose();
+    super.dispose();
+  }
+
+  int? get _value => switch (int.tryParse(_count.text.trim())) {
+    final n? when n >= 0 && n <= 100000 => n,
+    _ => null,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final count = _value;
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(Space.m, 0, Space.m, MediaQuery.viewInsetsOf(context).bottom + Space.l),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(l10n.attendanceFill, style: AppText.title3),
+            Text(widget.title, style: AppText.footnote.copyWith(color: AppColors.of(context).secondaryLabel)),
+            const SizedBox(height: Space.m),
+            TextField(
+              controller: _count,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
+              decoration: InputDecoration(labelText: l10n.attendanceCountField),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: Space.s),
+            TextField(
+              controller: _note,
+              maxLength: TextLimits.attendanceNote,
+              decoration: InputDecoration(labelText: l10n.attendanceNote),
+            ),
+            const SizedBox(height: Space.s),
+            PrimaryButton(
+              label: l10n.save,
+              onPressed: count == null
+                  ? null
+                  : () => Navigator.pop(context, AttendanceDay.count(count, note: _note.text.trim())),
+            ),
+            const SizedBox(height: Space.s),
+            SecondaryButton(
+              label: l10n.attendanceNoMeeting,
+              onPressed: () => Navigator.pop(context, const AttendanceDay.none()),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 填寫人數 on 首頁: each meeting of a group I lead still waiting for its 人數.
+class AttendanceDueCard extends ConsumerWidget {
+  const AttendanceDueCard({super.key});
+
+  /// Whether it has anything to show.
+  static bool shown(WidgetRef ref) => ref.watch(attendanceDueProvider).isNotEmpty;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = L10n.of(context);
+    final due = ref.watch(attendanceDueProvider);
+    final today = ref.watch(todayProvider);
+    if (due.isEmpty) return const SizedBox.shrink();
+    return ListSection(
+      header: l10n.attendanceFill,
+      children: [
+        for (final d in due)
+          ListRow(
+            leading: const Icon(Symbols.groups_rounded),
+            title: d.group.name,
+            subtitle: dayLabel(l10n, d.day, today),
+            onTap: () => fillAttendance(context, ref, d.group, d.day, null),
+          ),
+      ],
+    );
+  }
+}
+
+/// When a 小組 meets, as its page says it: 每週五, 隔週五, or 未設定.
+String smallGroupMeetsLabel(L10n l10n, SmallGroupDetails g) => switch (g.weekday) {
+  null => l10n.meetsNotSet,
+  final w when g.every == 2 => l10n.meetsBiweekly(weekdayLabel(l10n, w)),
+  final w => l10n.meetsWeekly(weekdayLabel(l10n, w)),
+};
+
+/// Picks when a 小組 meets: every week or every other, on which weekday,
+/// and, every other week, the next day it meets. Returns [g] so changed.
+Future<SmallGroupDetails?> pickSmallGroupMeets(BuildContext context, SmallGroupDetails g, Day today) =>
+    showAppSheet<SmallGroupDetails>(
+      context,
+      builder: (_) => _MeetsSheet(group: g, today: today),
+    );
+
+class _MeetsSheet extends StatefulWidget {
+  const _MeetsSheet({required this.group, required this.today});
+
+  final SmallGroupDetails group;
+  final Day today;
+
+  @override
+  State<_MeetsSheet> createState() => _MeetsSheetState();
+}
+
+class _MeetsSheetState extends State<_MeetsSheet> {
+  late var _every = widget.group.every;
+  late int? _weekday = widget.group.weekday;
+  late Day? _next = widget.group.startsOn;
+
+  /// The next day it meets on [weekday], from today.
+  Day _nextOn(int weekday) => widget.today.nextOnOrAfter(weekday);
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final weekday = _weekday;
+    final next = weekday == null ? null : (_next != null && _next!.weekday == weekday ? _next! : _nextOn(weekday));
+    return SafeArea(
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Space.m),
+              child: Row(
+                children: [
+                  Expanded(child: Text(l10n.smallGroupMeets, style: AppText.title3)),
+                  SecondaryButton(
+                    label: l10n.save,
+                    onPressed: () => Navigator.pop(
+                      context,
+                      widget.group.copyWith(weekday: () => weekday, every: _every, startsOn: () => next),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(Space.m),
+              child: SegmentedButton<int>(
+                segments: [
+                  ButtonSegment(value: 1, label: Text(l10n.meetsEveryWeek)),
+                  ButtonSegment(value: 2, label: Text(l10n.meetsEveryOtherWeek)),
+                ],
+                selected: {_every},
+                onSelectionChanged: (v) => setState(() => _every = v.first),
+              ),
+            ),
+            ListSection(
+              children: [
+                for (var w = 1; w <= 7; w++)
+                  ListRow(
+                    title: weekdayLabel(l10n, w),
+                    selected: weekday == w,
+                    onTap: () => setState(() {
+                      _weekday = w;
+                      _next = _nextOn(w);
+                    }),
+                  ),
+              ],
+            ),
+            if (_every == 2 && next != null)
+              ListSection(
+                children: [
+                  ListRow(
+                    title: l10n.nextMeeting,
+                    value: dayLabel(l10n, next, widget.today),
+                    // The week after, for one that meets the other week.
+                    onTap: () =>
+                        setState(() => _next = next == _nextOn(next.weekday) ? next.addDays(7) : _nextOn(next.weekday)),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -689,6 +689,58 @@ class FirestoreChurchData implements ChurchData {
   }
 
   @override
+  Stream<List<SmallGroupDetails>> smallGroups() => _col(
+    'smallGroups',
+  ).live().map((snap) => [for (final d in snap.docs) smallGroupFromJson(d.id, d.data())]).translated();
+
+  @override
+  Future<String> saveSmallGroup(SmallGroupDetails group, {List<String>? leads}) async {
+    final d = await _call('editSmallGroup', {'op': 'save', 'group': smallGroupToJson(group), 'leads': ?leads});
+    return d['id'] as String;
+  }
+
+  @override
+  Future<void> deleteSmallGroup(String id) => _call('editSmallGroup', {'op': 'delete', 'id': id});
+
+  @override
+  Stream<AttendanceRecord> attendance(String key) => _latestOfBoth(
+    _col('attendance').doc(key).live().map((s) => attendancePauseFromJson(s.data())),
+    _col('attendance')
+        .doc(key)
+        .collection('days')
+        .live()
+        .map(
+          (snap) => {
+            for (final d in snap.docs)
+              if ((Day.tryParse(d.id), attendanceDayFromJson(d.data())) case (final day?, final value?)) day: value,
+          },
+        ),
+    (pause, days) => AttendanceRecord(pause: pause, days: days),
+  ).translated();
+
+  @override
+  Future<void> setAttendance(String key, Day day, AttendanceDay? value) {
+    final ref = _col('attendance').doc(key).collection('days').doc(day.key);
+    final uid = _calls._auth.currentUser?.uid ?? '';
+    return _write(ref, (tx) => value == null ? tx.delete(ref) : tx.set(ref, attendanceDayToJson(value, uid)));
+  }
+
+  @override
+  Future<void> setAttendancePause(String key, AttendancePause? pause) {
+    final ref = _col('attendance').doc(key);
+    return _write(
+      ref,
+      (tx) => tx.set(ref, {
+        if (pause != null) ...{'pausedFrom': pause.from.key, 'pausedUntil': pause.until.key},
+      }),
+    );
+  }
+
+  @override
+  Future<void> setAttendanceSince(Day? since) =>
+      _write(_church, (tx) => tx.update(_church, {'attendanceSince': since?.key ?? FieldValue.delete()}));
+
+  @override
   Stream<List<Roster>> rosters({required Day from}) {
     final merged = _MergedRosters();
     return _latestOfBoth(
@@ -863,6 +915,7 @@ class FirestoreChurchData implements ChurchData {
     ...switch (group) {
       ServiceGroup(:final id) => {'service': id, if (member) 'duties': duties, if (member) 'smallGroups': smallGroups},
       MinistryGroup(:final id) => {'ministry': id},
+      SmallGroup(:final id) => {'smallGroup': id},
     },
     'member': member,
   });

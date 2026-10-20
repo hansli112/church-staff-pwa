@@ -12,6 +12,7 @@ import 'day.dart';
 import 'identities.dart';
 
 export 'church_time.dart' show ChurchTimeZone;
+export 'attendance.dart';
 export 'identities.dart';
 
 enum ChurchStatus { active, suspended, deleted }
@@ -26,6 +27,7 @@ class Church {
     this.homeName,
     this.deletedAt,
     this.timeZone = ChurchTimeZone.fallback,
+    this.attendanceSince,
   });
 
   final String id;
@@ -43,6 +45,10 @@ class Church {
   /// Its time zone: its today, its reminders' evening and every time shown
   /// go by it (#73).
   final ChurchTimeZone timeZone;
+
+  /// 回報人數 (#85): on since this day, which no meeting before is asked
+  /// for; null while off.
+  final Day? attendanceSince;
 
   /// Past this many characters some phones cut the home-screen name off;
   /// the most it may have is `TextLimits.homeName`.
@@ -63,6 +69,7 @@ class Church {
     String? logoUrl,
     String? Function()? homeName,
     ChurchTimeZone? timeZone,
+    Day? Function()? attendanceSince,
   }) => Church(
     id: id,
     name: name ?? this.name,
@@ -71,6 +78,7 @@ class Church {
     homeName: homeName == null ? this.homeName : homeName(),
     deletedAt: deletedAt,
     timeZone: timeZone ?? this.timeZone,
+    attendanceSince: attendanceSince == null ? this.attendanceSince : attendanceSince(),
   );
 }
 
@@ -128,7 +136,7 @@ class Zone {
 }
 
 /// Kinds of push notification a member can turn off per church.
-enum NotificationKind { reminder, rosterChange, memberLeft }
+enum NotificationKind { reminder, rosterChange, memberLeft, attendance }
 
 /// When a member is reminded of their duties: Monday evening of the week's
 /// duties (Monday to Sunday), the evening before each, or both. Matches
@@ -146,6 +154,7 @@ class Member {
     this.zones = const [],
     List<Identity> identities = const [],
     this.ministries = const {},
+    this.smallGroups = const {},
     this.mutedNotifications = const {},
     this.reminderTiming = ReminderTiming.weekly,
     this.joinedAt,
@@ -161,6 +170,9 @@ class Member {
 
   /// The 事工 this member is a 同工 of (#82).
   final Set<String> ministries;
+
+  /// The 小組 this member is one of (#85).
+  final Set<String> smallGroups;
   final Set<NotificationKind> mutedNotifications;
   final ReminderTiming reminderTiming;
   final DateTime? joinedAt;
@@ -199,8 +211,16 @@ class Member {
     },
   ];
 
+  /// The 小組 they lead as 小組長 (#85); stored as `leadSmallGroups`.
+  List<String> get leadSmallGroups => [
+    ...{
+      for (final i in identities)
+        if (i case SmallGroupLead(:final smallGroup)) smallGroup,
+    },
+  ];
+
   /// Whether they lead anything, so pick people and add 同工.
-  bool get leads => leadTypes.isNotEmpty || leadMinistries.isNotEmpty;
+  bool get leads => leadTypes.isNotEmpty || leadMinistries.isNotEmpty || leadSmallGroups.isNotEmpty;
 
   /// This member holding [next] as their 身分, with what the rules and
   /// older apps read set to match: 管理員 and a whole church's 牧者 are
@@ -218,6 +238,7 @@ class Member {
         ...{...next},
       ],
       ministries: ministries,
+      smallGroups: smallGroups,
       mutedNotifications: mutedNotifications,
       reminderTiming: reminderTiming,
       joinedAt: joinedAt,
@@ -269,7 +290,8 @@ class Member {
       setEquals(groups, other.groups) &&
       listEquals(zones, other.zones) &&
       listEquals(identities, other.identities) &&
-      setEquals(ministries, other.ministries);
+      setEquals(ministries, other.ministries) &&
+      setEquals(smallGroups, other.smallGroups);
 
   /// Whether this member may edit all of a [serviceType] roster: admins,
   /// 行政 and its 負責人 or 牧者 (testdata/church_rules.json,
@@ -287,19 +309,53 @@ class Member {
       if (leadMinistries.contains(m.id)) ...m.dutiesIn(serviceType),
   };
 
-  /// Whether this member is a 同工 of [group]: in its 牧區, or one of the
-  /// 事工's.
+  /// Whether this member is a 同工 of [group]: in its 牧區, one of the
+  /// 事工's, or of the 小組.
   bool isIn(ChurchGroup group) => switch (group) {
     ServiceGroup(:final id) => zoneTypes.contains(id),
     MinistryGroup(:final id) => ministries.contains(id),
+    SmallGroup(:final id) => smallGroups.contains(id),
   };
 
-  /// Whether this member leads [group]: a service as its 負責人 or 牧者, or a
-  /// 事工.
+  /// Whether this member leads [group]: a service as its 負責人 or 牧者, a
+  /// 事工, or a 小組 as its 小組長.
   bool leadsGroup(ChurchGroup group) => switch (group) {
     ServiceGroup(:final id) => leadTypes.contains(id),
     MinistryGroup(:final id) => leadMinistries.contains(id),
+    SmallGroup(:final id) => leadSmallGroups.contains(id),
   };
+
+  /// Whether this member manages [group]'s 同工: as an admin, its 負責人,
+  /// or, for a 小組 in service [service], that service's.
+  bool managesGroup(ChurchGroup group, {String? service}) =>
+      isAdmin || leadsGroup(group) || (group is SmallGroup && service != null && leadTypes.contains(service));
+
+  /// Whether this member may open, change or close a 小組 of service
+  /// [before] (null: none yet) as one of [after] (null: closed)
+  /// (testdata/church_rules.json, smallGroupEditing): admins any; a
+  /// service's 負責人 and 牧者 those in it.
+  bool mayEditSmallGroup(String? before, String? after) =>
+      isAdmin ||
+      ((before != null || after != null) && [before, after].every((s) => s == null || leadTypes.contains(s)));
+
+  /// Whether this member fills in the 人數 of group [key]
+  /// (testdata/church_rules.json, attendanceAccess): admins any; a
+  /// service's 負責人 and 牧者 its own and its 小組' ([smallGroupService],
+  /// the 小組's service); a 小組長 their 小組's.
+  bool writesAttendance(String key, {String? smallGroupService}) =>
+      isAdmin ||
+      switch (ChurchGroup.parse(key)) {
+        ServiceGroup(:final id) => leadTypes.contains(id),
+        SmallGroup(:final id) =>
+          leadSmallGroups.contains(id) || (smallGroupService != null && leadTypes.contains(smallGroupService)),
+        _ => false,
+      };
+
+  /// Whether this member sees the 人數 of group [key]: who fills them in,
+  /// and 行政 a service's.
+  bool readsAttendance(String key, {String? smallGroupService}) =>
+      writesAttendance(key, smallGroupService: smallGroupService) ||
+      (ChurchGroup.parse(key) is ServiceGroup && inGroup(Group.rosterEditors));
 
   /// [leadsGroup] by an event's group key; the church's ('') nobody leads.
   bool _leadsKey(String key) => switch (ChurchGroup.parse(key)) {
@@ -309,9 +365,11 @@ class Member {
 
   /// Whether this member may add [target] to [group] or take them out
   /// (testdata/church_rules.json, groupMembership): an admin anyone; the
-  /// group's 負責人 only a plain 同工, since 身分 are the admin's to give.
-  bool mayMove(Member target, ChurchGroup group) =>
-      isAdmin || (leadsGroup(group) && !target.isAdmin && target.groups.isEmpty && target._identities.isEmpty);
+  /// group's 負責人 (for a 小組 in [service], that service's too) only a
+  /// plain 同工, since 身分 are the admin's to give.
+  bool mayMove(Member target, ChurchGroup group, {String? service}) =>
+      isAdmin ||
+      (managesGroup(group, service: service) && !target.isAdmin && target.groups.isEmpty && target._identities.isEmpty);
 
   /// This member added to [group] ([member] true; a service with [duties]
   /// and [smallGroups]) or taken out, as setGroupMember writes it.
@@ -331,6 +389,7 @@ class Member {
       ],
     ),
     MinistryGroup(:final id) => copyWith(ministries: member ? {...ministries, id} : ({...ministries}..remove(id))),
+    SmallGroup(:final id) => copyWith(smallGroups: member ? {...smallGroups, id} : ({...smallGroups}..remove(id))),
   };
 
   /// What this member arranges on a day of [serviceType]: null for all
@@ -415,6 +474,7 @@ class Member {
     List<Zone>? zones,
     List<Identity>? identities,
     Set<String>? ministries,
+    Set<String>? smallGroups,
     Set<NotificationKind>? mutedNotifications,
     ReminderTiming? reminderTiming,
   }) => Member(
@@ -426,6 +486,7 @@ class Member {
     zones: zones ?? this.zones,
     identities: identities ?? _identities,
     ministries: ministries ?? this.ministries,
+    smallGroups: smallGroups ?? this.smallGroups,
     mutedNotifications: mutedNotifications ?? this.mutedNotifications,
     reminderTiming: reminderTiming ?? this.reminderTiming,
     joinedAt: joinedAt,

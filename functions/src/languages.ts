@@ -105,6 +105,10 @@ export interface Words {
   /** A member left (triggers.ts); [name] is theirs, null when they had none. */
   memberLeft(name: string | null): string;
 
+  /** 回報人數 (attendance.ts): the title, and the body for [group]'s meeting on [day] (dateWithWeekday's). */
+  attendanceTitle: string;
+  attendanceBody(group: string, day: string): string;
+
   /** The church page before the app starts (churchPage.ts). */
   appName: string;
   description: string;
@@ -147,6 +151,8 @@ const zhHant: Words = {
   putOn: (day, duties) => `你被排進 ${day}：${duties.join('、')}`,
   takenOff: (day, duties) => `你被移出 ${day}：${duties.join('、')}`,
   memberLeft: (name) => (name ? `「${name}」退出了教會` : '有人退出了教會'),
+  attendanceTitle: '填寫人數',
+  attendanceBody: (group, day) => `「${group}」${day}的聚會有幾個人？`,
   appName: '馬大別忙',
   supportItem: '支持馬大別忙的雲端費用',
   description:
@@ -171,6 +177,8 @@ const zhHans: Words = {
   putOn: (day, duties) => `你被排入 ${day}：${duties.join('、')}`,
   takenOff: (day, duties) => `你被移出 ${day}：${duties.join('、')}`,
   memberLeft: (name) => (name ? `“${name}”退出了教会` : '有人退出了教会'),
+  attendanceTitle: '填写人数',
+  attendanceBody: (group, day) => `“${group}”${day}的聚会有几个人？`,
   appName: '马大别忙',
   supportItem: '支持马大别忙的云端费用',
   description:
@@ -195,6 +203,8 @@ const en: Words = {
   putOn: (day, duties) => `You’re on ${day}: ${duties.join(', ')}`,
   takenOff: (day, duties) => `You’re no longer on ${day}: ${duties.join(', ')}`,
   memberLeft: (name) => `${name ?? 'Someone'} left the church`,
+  attendanceTitle: 'Attendance',
+  attendanceBody: (group, day) => `How many came to ${group} on ${day}?`,
   appName: 'Martha, sit',
   supportItem: 'Support for the server costs of Martha, sit',
   description:
@@ -220,6 +230,8 @@ const ja: Words = {
   putOn: (day, duties) => `${day}の担当になりました：${duties.join('、')}`,
   takenOff: (day, duties) => `${day}の担当から外れました：${duties.join('、')}`,
   memberLeft: (name) => `${name ?? 'メンバー'}が教会を退出しました`,
+  attendanceTitle: '人数の記録',
+  attendanceBody: (group, day) => `${day}の「${group}」には何人集まりましたか？`,
   appName: 'マルタ、ひと休み',
   supportItem: 'Martha, sit サーバー費用の応援',
   description: '「マルタ、マルタ、あなたは多くのことに思い悩み、心を乱している。しかし、必要なことはただ一つだけである。マリアは良い方を選んだ。それを取り上げてはならない。」（ルカによる福音書 10:41–42）',
@@ -243,6 +255,8 @@ const ko: Words = {
   putOn: (day, duties) => `${day} 봉사에 배정됐어요: ${duties.join(', ')}`,
   takenOff: (day, duties) => `${day} 봉사에서 빠졌어요: ${duties.join(', ')}`,
   memberLeft: (name) => (name ? `${name} 님이 교회를 나갔어요` : '멤버 한 명이 교회를 나갔어요'),
+  attendanceTitle: '인원 기록',
+  attendanceBody: (group, day) => `${day} ${group}에 몇 명이 모였나요?`,
   appName: '마르다의 쉼표',
   supportItem: '마르다의 쉼표 서버 비용 후원',
   description: '마르다야 마르다야 네가 많은 일로 염려하고 근심하나 몇 가지만 하든지 혹은 한 가지만이라도 족하니라 마리아는 이 좋은 편을 택하였으니 빼앗기지 아니하리라 (누가복음 10:41–42)',

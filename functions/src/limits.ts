@@ -19,6 +19,8 @@ export const TEXT_LIMITS = {
   profileName: 40,
   /** An event's title as its roster keeps it, cut from the calendar's. */
   eventTitle: 200,
+  /** The note with a meeting's 人數 (回報人數, #85). */
+  attendanceNote: 200,
 } as const;
 
 /** URLs and secrets in UTF-16 code units, services as a count. */

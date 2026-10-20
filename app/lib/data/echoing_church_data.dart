@@ -394,6 +394,28 @@ class EchoingChurchData implements ChurchData {
   Future<void> setHomeName(String? name) => _inner.setHomeName(name);
 
   @override
+  Stream<List<SmallGroupDetails>> smallGroups() => _inner.smallGroups();
+
+  @override
+  Future<String> saveSmallGroup(SmallGroupDetails group, {List<String>? leads}) =>
+      _inner.saveSmallGroup(group, leads: leads);
+
+  @override
+  Future<void> deleteSmallGroup(String id) => _inner.deleteSmallGroup(id);
+
+  @override
+  Stream<AttendanceRecord> attendance(String key) => _inner.attendance(key);
+
+  @override
+  Future<void> setAttendance(String key, Day day, AttendanceDay? value) => _inner.setAttendance(key, day, value);
+
+  @override
+  Future<void> setAttendancePause(String key, AttendancePause? pause) => _inner.setAttendancePause(key, pause);
+
+  @override
+  Future<void> setAttendanceSince(Day? since) => _inner.setAttendanceSince(since);
+
+  @override
   Future<void> setTimeZone(ChurchTimeZone timeZone) => _inner.setTimeZone(timeZone);
 
   @override

@@ -93,6 +93,13 @@ class MemoryBackend implements Backend {
 
   /// settings/ministries per church (#82); none until an admin makes one.
   final ministries = <String, MinistrySettings>{};
+
+  /// churches/{cid}/smallGroups per church (#85), by id.
+  final smallGroups = <String, Map<String, SmallGroupDetails>>{};
+
+  /// 回報人數 per church and group key (#85).
+  final attendance = <String, Map<String, AttendanceRecord>>{};
+  var _smallGroupIds = 0;
   final rosters = <String, Map<String, Roster>>{};
   final staffOrders = <String, Map<String, StaffOrder>>{};
   final invites = <String, Invite>{};
@@ -781,6 +788,134 @@ class MemoryChurchData implements ChurchData {
   });
 
   @override
+  Stream<List<SmallGroupDetails>> smallGroups() => _b.watch(() {
+    _requireMember();
+    return (_b.smallGroups[churchId] ?? const {}).values.toList();
+  }, equals: _sameList);
+
+  /// As functions/src/smallGroups.ts.
+  @override
+  Future<String> saveSmallGroup(SmallGroupDetails group, {List<String>? leads}) async {
+    final me = _b.functionAccess(churchId)!;
+    final groups = _b.smallGroups.putIfAbsent(churchId, () => {});
+    final was = group.id.isEmpty ? null : groups[group.id];
+    if (group.id.isNotEmpty && was == null) throw const CloudException(CloudErrorCode.notFound);
+    // Its 小組長 set when it meets, and nothing else.
+    final scheduling =
+        was != null &&
+        leads == null &&
+        group.name == was.name &&
+        group.service == was.service &&
+        me.leadSmallGroups.contains(was.id);
+    if (!scheduling && !me.mayEditSmallGroup(was?.service, group.service)) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    if (_b.services[churchId]!.byId(group.service) == null) throw const CloudException(CloudErrorCode.unknown);
+    final name = group.name.trim();
+    if (name.isEmpty || !withinTextLimit(name, TextLimits.profileName)) {
+      throw const CloudException(CloudErrorCode.unknown);
+    }
+    final members = _b.members[churchId]!;
+    if (leads != null && leads.any((u) => members[u] == null)) throw const CloudException(CloudErrorCode.notFound);
+    final id = group.id.isEmpty ? 'sg${++_b._smallGroupIds}' : group.id;
+    await _b.write(() {
+      groups[id] = SmallGroupDetails(
+        id: id,
+        name: name,
+        service: group.service,
+        weekday: group.weekday,
+        every: group.weekday == null ? 1 : group.every,
+        startsOn: group.weekday == null ? null : group.startsOn,
+      );
+      if (leads == null) return;
+      for (final m in [...members.values]) {
+        final leading = m.leadSmallGroups.contains(id);
+        if (leading != leads.contains(m.uid)) members[m.uid] = _leading(m, id, lead: !leading);
+      }
+    });
+    return id;
+  }
+
+  /// [m] made 小組長 of [id] or no longer, as the backend writes it.
+  Member _leading(Member m, String id, {required bool lead}) => m.copyWith(
+    identities: [
+      for (final i in m.identities)
+        if (i != SmallGroupLead(id)) i,
+      if (lead) SmallGroupLead(id),
+    ],
+  );
+
+  @override
+  Future<void> deleteSmallGroup(String id) async {
+    final me = _b.functionAccess(churchId)!;
+    final was = _b.smallGroups[churchId]?[id];
+    if (was == null) throw const CloudException(CloudErrorCode.notFound);
+    if (!me.mayEditSmallGroup(was.service, null)) throw const CloudException(CloudErrorCode.permissionDenied);
+    await _b.write(() {
+      _b.smallGroups[churchId]!.remove(id);
+      final members = _b.members[churchId]!;
+      for (final m in [...members.values]) {
+        if (!m.leadSmallGroups.contains(id) && !m.smallGroups.contains(id)) continue;
+        members[m.uid] = _leading(m, id, lead: false).copyWith(smallGroups: {...m.smallGroups}..remove(id));
+      }
+    });
+  }
+
+  /// The service of the 小組 that group [key] is, for who may see it.
+  String? _smallGroupService(String key) => switch (ChurchGroup.parse(key)) {
+    SmallGroup(:final id) => _b.smallGroups[churchId]?[id]?.service,
+    _ => null,
+  };
+
+  @override
+  Stream<AttendanceRecord> attendance(String key) => _b.watch(() {
+    if (!_b.requireMember(churchId).readsAttendance(key, smallGroupService: _smallGroupService(key))) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    return _b.attendance[churchId]?[key] ?? const AttendanceRecord();
+  });
+
+  void _requireAttendanceWriter(String key) {
+    if (!_b.requireMember(churchId).writesAttendance(key, smallGroupService: _smallGroupService(key))) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+  }
+
+  @override
+  Future<void> setAttendance(String key, Day day, AttendanceDay? value) async {
+    _requireAttendanceWriter(key);
+    if (value != null &&
+        !value.none &&
+        (value.count! < 0 || value.count! > 100000 || !withinTextLimit(value.note, TextLimits.attendanceNote))) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    await _b.write(() {
+      final all = _b.attendance.putIfAbsent(churchId, () => {});
+      final was = all[key] ?? const AttendanceRecord();
+      all[key] = AttendanceRecord(
+        pause: was.pause,
+        days: {...was.days, day: ?value}..removeWhere((d, _) => d == day && value == null),
+      );
+    });
+  }
+
+  @override
+  Future<void> setAttendancePause(String key, AttendancePause? pause) async {
+    _requireAttendanceWriter(key);
+    if (pause != null && !pause.from.isBefore(pause.until)) throw const CloudException(CloudErrorCode.permissionDenied);
+    await _b.write(() {
+      final all = _b.attendance.putIfAbsent(churchId, () => {});
+      all[key] = AttendanceRecord(pause: pause, days: (all[key] ?? const AttendanceRecord()).days);
+    });
+  }
+
+  @override
+  Future<void> setAttendanceSince(Day? since) async {
+    _requireAdmin();
+    await _b.write(() => _b.churches[churchId] = _b.churches[churchId]!.copyWith(attendanceSince: () => since));
+  }
+
+  @override
   Future<void> compareAndSetMinistries({required List<Ministry> before, required List<Ministry> after}) async {
     _requireAdmin();
     await _b.write(() {
@@ -1036,6 +1171,7 @@ class MemoryChurchData implements ChurchData {
         zones: after.zones,
         identities: after.identities,
         ministries: after.ministries,
+        smallGroups: after.smallGroups,
       );
     });
   }
@@ -1055,16 +1191,23 @@ class MemoryChurchData implements ChurchData {
       final members = _b.members[churchId]!;
       final service = switch (group) {
         ServiceGroup(:final id) => _b.services[churchId]!.byId(id),
-        MinistryGroup() => null,
+        MinistryGroup() || SmallGroup() => null,
+      };
+      final small = switch (group) {
+        SmallGroup(:final id) => _b.smallGroups[churchId]?[id],
+        _ => null,
       };
       final known = switch (group) {
         ServiceGroup() => service != null,
         MinistryGroup(:final id) => (_b.ministries[churchId] ?? const MinistrySettings()).byId(id) != null,
+        SmallGroup() => small != null,
       };
       if (!known) throw const CloudException(CloudErrorCode.permissionDenied);
       final them = members[uid];
       if (them == null) throw const CloudException(CloudErrorCode.notFound);
-      if (!me.mayMove(them, group)) throw const CloudException(CloudErrorCode.permissionDenied);
+      if (!me.mayMove(them, group, service: small?.service)) {
+        throw const CloudException(CloudErrorCode.permissionDenied);
+      }
       if (duties.any((d) => !(service?.duties.contains(d) ?? true))) throw const CloudException(CloudErrorCode.unknown);
       members[uid] = them.inGroupAs(
         group,

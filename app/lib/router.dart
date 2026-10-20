@@ -202,6 +202,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                     routes: [
                       page('service/:id', (s) => GroupScreen(group: ServiceGroup(s.pathParameters['id']!))),
                       page('ministry/:id', (s) => GroupScreen(group: MinistryGroup(s.pathParameters['id']!))),
+                      page('small/:id', (s) => GroupScreen(group: SmallGroup(s.pathParameters['id']!))),
                     ],
                   ),
                   page(

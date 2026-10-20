@@ -51,6 +51,7 @@ function memberDoc(uid, role, groups, zoneTypes, leads = {}) {
   if (zoneTypes !== undefined) document.zoneTypes = zoneTypes;
   if (leads.types !== undefined) document.leadTypes = leads.types;
   if (leads.ministries !== undefined) document.leadMinistries = leads.ministries;
+  if (leads.smallGroups !== undefined) document.leadSmallGroups = leads.smallGroups;
   return document;
 }
 
@@ -445,6 +446,94 @@ describe('rosterEditing (testdata/church_rules.json)', () => {
         : setDoc(doc(as(uid), `churches/${A}/rosters/table-${i}`), { type: r.roster });
       await (r.may ? assertSucceeds(write) : assertFails(write));
     });
+  });
+});
+
+// 回報人數 (#85)：和 App、functions 共用 testdata/church_rules.json 的 attendanceAccess。
+describe('attendanceAccess (testdata/church_rules.json)', () => {
+  const rows = JSON.parse(readFileSync(new URL('../testdata/church_rules.json', import.meta.url), 'utf8')).attendanceAccess;
+  rows.forEach((r, i) => {
+    it(r.why, async () => {
+      const uid = `att-${i}`;
+      const m = r.member;
+      await seed(`churches/${A}/members/${uid}`, memberDoc(uid, m.role ?? 'staff', m.groups, undefined, {
+        types: m.leadTypes, ministries: m.leadMinistries, smallGroups: m.leadSmallGroups,
+      }));
+      const [kind, id] = r.group.split(':');
+      if (kind === 'small') await seed(`churches/${A}/smallGroups/${id}`, { name: id, service: r.smallGroupService });
+      const day = doc(as(uid), `churches/${A}/attendance/${r.group}/days/2030-10-0${(i % 9) + 1}`);
+      const write = setDoc(day, { count: 30, note: '', by: uid });
+      await (r.writes ? assertSucceeds(write) : assertFails(write));
+      await seed(`churches/${A}/attendance/${r.group}/days/2030-11-01`, { count: 1, by: 'x' });
+      const read = getDocs(collection(as(uid), `churches/${A}/attendance/${r.group}/days`));
+      await (r.reads ? assertSucceeds(read) : assertFails(read));
+    });
+  });
+});
+
+describe('回報人數 (attendance) 與小組 (smallGroups)', () => {
+  const day = (uid, key, d) => doc(as(uid), `churches/${A}/attendance/${key}/days/${d}`);
+
+  it('人數、這次沒聚會：寫的人記自己，人數是 0 到 100000 的整數，備註有上限', async () => {
+    await assertSucceeds(setDoc(day(EDITOR_A, 'service:sunday', '2030-10-06'), { none: true, by: EDITOR_A }));
+    await assertSucceeds(setDoc(day(EDITOR_A, 'service:sunday', '2030-10-13'), { count: 0, by: EDITOR_A }));
+    await assertFails(setDoc(day(EDITOR_A, 'service:sunday', '2030-10-20'), { count: 3, by: ADMIN_A }));
+    await assertFails(setDoc(day(EDITOR_A, 'service:sunday', '2030-10-20'), { count: -1, by: EDITOR_A }));
+    await assertFails(setDoc(day(EDITOR_A, 'service:sunday', '2030-10-20'), { count: 2.5, by: EDITOR_A }));
+    await assertFails(setDoc(day(EDITOR_A, 'service:sunday', '2030-10-20'), { none: true, count: 3, by: EDITOR_A }));
+    await assertFails(setDoc(day(EDITOR_A, 'service:sunday', '2030-10-20'), { count: 3, note: 'x'.repeat(801), by: EDITOR_A }));
+    await assertFails(setDoc(day(EDITOR_A, 'service:sunday', 'tomorrow'), { count: 3, by: EDITOR_A }));
+    await assertFails(setDoc(day(EDITOR_A, 'service:sunday', '2030-10-20'), { count: 3, by: EDITOR_A, extra: 1 }));
+    await assertSucceeds(deleteDoc(day(EDITOR_A, 'service:sunday', '2030-10-06')));
+  });
+
+  it('暫停：開始和結束一起設、開始在前；負責人可以設，同工不行', async () => {
+    const pause = (uid) => doc(as(uid), `churches/${A}/attendance/service:sunday`);
+    await assertSucceeds(setDoc(pause(EDITOR_A), { pausedFrom: '2030-07-01', pausedUntil: '2030-09-01' }));
+    await assertFails(setDoc(pause(EDITOR_A), { pausedFrom: '2030-07-01' }));
+    await assertFails(setDoc(pause(EDITOR_A), { pausedFrom: '2030-09-01', pausedUntil: '2030-07-01' }));
+    await assertFails(setDoc(pause(MEMBER_A), { pausedFrom: '2030-07-01', pausedUntil: '2030-09-01' }));
+    await assertSucceeds(setDoc(pause(EDITOR_A), {}));
+    await assertSucceeds(getDoc(pause(OFFICE_A)));
+    await assertFails(getDoc(pause(MEMBER_A)));
+  });
+
+  it('小組誰都讀得到，只有後端寫；小組的編號清單也是', async () => {
+    await seed(`churches/${A}/smallGroups/g1`, { name: '喜樂小組', service: 'sunday' });
+    await assertSucceeds(getDoc(doc(as(MEMBER_A), `churches/${A}/smallGroups/g1`)));
+    await assertFails(getDoc(doc(as(ADMIN_B), `churches/${A}/smallGroups/g1`)));
+    await assertFails(setDoc(doc(as(ADMIN_A), `churches/${A}/smallGroups/g2`), { name: '平安小組', service: 'sunday' }));
+    await assertFails(updateDoc(doc(as(EDITOR_A), `churches/${A}/smallGroups/g1`), { name: '改' }));
+    await assertFails(setDoc(doc(as(ADMIN_A), `churches/${A}/settings/smallGroups`), { ids: ['g1', 'fake'] }));
+  });
+
+  it('同工的小組和小組長只能是教會有過的小組', async () => {
+    await seed(`churches/${A}/settings/smallGroups`, { ids: ['g1'] });
+    await seed(`churches/${A}/members/sg-m`, memberDoc('sg-m', 'staff'));
+    const m = doc(as(ADMIN_A), `churches/${A}/members/sg-m`);
+    await assertSucceeds(updateDoc(m, { smallGroups: ['g1'], leadSmallGroups: ['g1'], identities: [{ kind: 'lead', smallGroup: 'g1' }] }));
+    await assertFails(updateDoc(m, { smallGroups: ['nope'] }));
+    await assertFails(updateDoc(m, { leadSmallGroups: ['nope'] }));
+    await assertFails(updateDoc(doc(as('sg-m'), `churches/${A}/members/sg-m`), { smallGroups: [] }));
+  });
+
+  it('小組長讀得到同工名單，能排自己小組活動的服事表', async () => {
+    await seed(`churches/${A}/members/sg-lead`, memberDoc('sg-lead', 'staff', [], [], { smallGroups: ['g1'] }));
+    await assertSucceeds(getDocs(collection(as('sg-lead'), `churches/${A}/members`)));
+    const ev = { kind: 'event', eventId: 'sg1', title: '福音茶會', dateKey: '2030-12-24', endDateKey: '2030-12-24', duties: [], events: [] };
+    await assertSucceeds(setDoc(doc(as('sg-lead'), `churches/${A}/rosters/ev_sg1`), { ...ev, group: 'small:g1' }));
+    await assertFails(setDoc(doc(as('sg-lead'), `churches/${A}/rosters/ev_sg2`), { ...ev, eventId: 'sg2', group: 'small:g2' }));
+  });
+
+  it('管理員開關回報人數：開的那天，或拿掉；不能是別的', async () => {
+    await assertSucceeds(updateDoc(doc(as(ADMIN_A), `churches/${A}`), { attendanceSince: '2030-10-01' }));
+    await assertSucceeds(updateDoc(doc(as(ADMIN_A), `churches/${A}`), { attendanceSince: deleteField() }));
+    await assertFails(updateDoc(doc(as(ADMIN_A), `churches/${A}`), { attendanceSince: true }));
+    await assertFails(updateDoc(doc(as(EDITOR_A), `churches/${A}`), { attendanceSince: '2030-10-01' }));
+  });
+
+  it('同工可以關掉回報人數提醒', async () => {
+    await assertSucceeds(updateDoc(doc(as(EDITOR_A), `churches/${A}/members/${EDITOR_A}`), { notificationPrefs: { muted: ['attendance'] } }));
   });
 });
 

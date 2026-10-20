@@ -5,7 +5,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 
 import { purgeDeletedChurches } from '../src/church.js';
-import { pendingClaims } from '../src/claim.js';
+import { claimPending, pendingClaims } from '../src/claim.js';
 import { MOVE_LIMITS, moveCommit, movePreview, type MoveDeps } from '../src/move.js';
 import { auth, caller, clearFirestore, db, deps, purgeDeps, rejectsWith } from './support.js';
 
@@ -142,6 +142,29 @@ describe('self-serve move', () => {
       assert.equal(JSON.stringify(member.data()).includes('weeklyRosterReminder'), false);
     }
     assert.equal((await db.collection('users').get()).size, 0, 'cross-project notification credentials are never installed');
+  });
+
+  test('each 小組 named becomes one (#85): the mover is in theirs, and a 小組長 there leads it once signed in', async () => {
+    const file = moveFile();
+    Object.assign(file.users[0].data, { zones: [{ serviceType: 'sunday', ministries: [], smallGroups: ['喜樂小組'] }] });
+    Object.assign(file.users[1].data, { role: 'leader', zones: [{ serviceType: 'sunday', ministries: [], smallGroups: ['喜樂小組', ' 平安小組 '] }] });
+    await upload(file);
+    const { churchId } = await moveCommit(d, me, { path: PATH, churchName: '恩典堂', me: 'old-pastor' });
+    const groups = (await db.collection(`churches/${churchId}/smallGroups`).get()).docs;
+    const id = (name: string) => groups.find((g) => g.get('name') === name)!.id;
+    assert.deepEqual(groups.map((g) => [g.get('name'), g.get('service')]).sort(), [['喜樂小組', 'sunday'], ['平安小組', 'sunday']]);
+    assert.deepEqual(((await db.doc(`churches/${churchId}/settings/smallGroups`).get()).get('ids') as string[]).sort(), groups.map((g) => g.id).sort());
+    assert.deepEqual((await db.doc(`churches/${churchId}/members/newadmin`).get()).get('smallGroups'), [id('喜樂小組')]);
+
+    await claimPending(cd, caller('new-mei', { email: 'mei@example.com' }), { churchId, pendingId: 'old-mei' });
+    const mei = await db.doc(`churches/${churchId}/members/new-mei`).get();
+    assert.deepEqual(mei.get('smallGroups'), [id('喜樂小組'), id('平安小組')]);
+    assert.deepEqual(mei.get('leadSmallGroups'), [id('喜樂小組'), id('平安小組')]);
+    assert.deepEqual(mei.get('identities'), [
+      { kind: 'lead', service: 'sunday' },
+      { kind: 'lead', smallGroup: id('喜樂小組') },
+      { kind: 'lead', smallGroup: id('平安小組') },
+    ]);
   });
 
   test('each pending member is found by its email, any case; the index never holds an email', async () => {

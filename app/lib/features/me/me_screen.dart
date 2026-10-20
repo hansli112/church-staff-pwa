@@ -15,6 +15,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/session.dart';
 import '../church/church_switcher.dart';
+import '../common/errors.dart';
 
 /// The LINE OpenChat (馬大別忙 Martha, sit): help, and churches meeting each other.
 final lineCommunity = Uri.parse('https://line.me/ti/g2/irPvG8tKHa9Iwf2hK7D9lcjdW5O-DUx4Coafcg');
@@ -104,6 +105,20 @@ class SettingsScreen extends ConsumerWidget {
                   title: l10n.groupsTitle,
                   onTap: () => context.push('/me/groups'),
                 ),
+                // 回報人數 (#85): on from today, or off.
+                if (church != null)
+                  SwitchRow(
+                    title: l10n.attendance,
+                    subtitle: l10n.attendanceSub,
+                    value: church.attendanceSince != null,
+                    onChanged: (on) async {
+                      try {
+                        await ref.churchData.setAttendanceSince(on ? ref.read(todayProvider) : null);
+                      } catch (e) {
+                        if (context.mounted) showToast(context, saveErrorText(l10n, e));
+                      }
+                    },
+                  ),
               ],
             ),
           // A lead's groups, one tap away (#82); admins have them all above.
@@ -216,6 +231,7 @@ class _LedGroups extends ConsumerWidget {
     final l10n = L10n.of(context);
     final services = ref.watch(servicesProvider).value;
     final ministries = ref.watch(ministriesProvider).value;
+    final smallGroups = ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
     return ListSection(
       header: l10n.myGroups,
       children: [
@@ -232,6 +248,13 @@ class _LedGroups extends ConsumerWidget {
               leading: const IconTile(Symbols.diversity_3_rounded, color: TileColors.manage),
               title: m.name,
               onTap: () => context.push('/me/groups/ministry/$id'),
+            ),
+        for (final g in smallGroups)
+          if (me.leadSmallGroups.contains(g.id))
+            ListRow(
+              leading: const IconTile(Symbols.diversity_3_rounded, color: TileColors.manage),
+              title: g.name,
+              onTap: () => context.push('/me/groups/small/${g.id}'),
             ),
       ],
     );

@@ -43,6 +43,7 @@ Church churchFromJson(String id, Json data, {String? logoUrl}) => Church(
   homeName: data['homeName'] is String ? data['homeName'] as String : null,
   deletedAt: readTime(data['deletedAt']),
   timeZone: ChurchTimeZone.of(data['timeZone'] as String?),
+  attendanceSince: Day.tryParse(data['attendanceSince'] as String?),
 );
 
 /// Unknown roles, groups or broken zones are dropped rather than thrown:
@@ -70,6 +71,7 @@ Member memberFromJson(String uid, Json data) {
         for (final i in data['identities'] as List<dynamic>) ?Identity.fromJson(i),
     ],
     ministries: _strings(data['ministries']).toSet(),
+    smallGroups: _strings(data['smallGroups']).toSet(),
     mutedNotifications: {
       for (final name in prefs is Map ? _strings(prefs['muted']) : const <String>[])
         for (final kind in NotificationKind.values)
@@ -102,7 +104,51 @@ Json memberToJson(Member m) => {
   'leadTypes': m.leadTypes,
   'leadMinistries': m.leadMinistries,
   'ministries': m.ministries.toList(),
+  'leadSmallGroups': m.leadSmallGroups,
+  'smallGroups': m.smallGroups.toList(),
 };
+
+/// churches/{cid}/smallGroups/{id} (#85).
+SmallGroupDetails smallGroupFromJson(String id, Json data) => SmallGroupDetails(
+  id: id,
+  name: data['name'] as String? ?? '',
+  service: data['service'] as String? ?? '',
+  weekday: switch (data['weekday']) {
+    final int w when w >= 1 && w <= 7 => w,
+    _ => null,
+  },
+  every: data['every'] == 2 ? 2 : 1,
+  startsOn: Day.tryParse(data['startsOn'] as String?),
+);
+
+/// What editSmallGroup takes of [g].
+Json smallGroupToJson(SmallGroupDetails g) => {
+  if (g.id.isNotEmpty) 'id': g.id,
+  'name': g.name,
+  'service': g.service,
+  'weekday': ?g.weekday,
+  if (g.weekday != null) 'every': g.every,
+  if (g.weekday != null) 'startsOn': ?g.startsOn?.key,
+};
+
+/// attendance/{key} and its days (#85).
+AttendancePause? attendancePauseFromJson(Json? data) => switch ((
+  Day.tryParse(data?['pausedFrom'] as String?),
+  Day.tryParse(data?['pausedUntil'] as String?),
+)) {
+  (final from?, final until?) => AttendancePause(from: from, until: until),
+  _ => null,
+};
+
+AttendanceDay? attendanceDayFromJson(Json data) => data['none'] == true
+    ? const AttendanceDay.none()
+    : switch (data['count']) {
+        final int n => AttendanceDay.count(n, note: data['note'] as String? ?? ''),
+        _ => null,
+      };
+
+Json attendanceDayToJson(AttendanceDay d, String by) =>
+    d.none ? {'none': true, 'by': by} : {'count': d.count, if (d.note.isNotEmpty) 'note': d.note, 'by': by};
 
 MinistrySettings ministrySettingsFromJson(Json? data) => MinistrySettings(
   ministries: [

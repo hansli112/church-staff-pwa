@@ -27,8 +27,10 @@ class IdentitySection extends ConsumerWidget {
     final l10n = L10n.of(context);
     final services = ref.watch(servicesProvider).value;
     final ministries = ref.watch(ministriesProvider).value;
+    final smallGroups = ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
     final held = member.identities;
-    String label(Identity i) => identityLabel(l10n, i, services: services, ministries: ministries);
+    String label(Identity i) =>
+        identityLabel(l10n, i, services: services, ministries: ministries, smallGroups: smallGroups);
     return ListSection(
       header: l10n.role,
       footer: held.isEmpty ? l10n.canStaff : null,
@@ -36,7 +38,7 @@ class IdentitySection extends ConsumerWidget {
         for (final i in held)
           ListRow(
             title: label(i),
-            subtitle: identityCan(l10n, i, services: services, ministries: ministries),
+            subtitle: identityCan(l10n, i, services: services, ministries: ministries, smallGroups: smallGroups),
             chevron: false,
             // Taken away at once, with 復原 (docs/design-principles.md).
             trailing: _removable(i)
@@ -107,12 +109,18 @@ class IdentitySection extends ConsumerWidget {
       for (final i in held)
         if (i case MinistryLead(:final ministry)) ministry,
     };
+    final smallGroups = ref.read(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
+    final leadsSmallGroup = {
+      for (final i in held)
+        if (i case SmallGroupLead(:final smallGroup)) smallGroup,
+    };
     final kind = await _choose<String>(context, l10n.addIdentity, [
       if (!held.contains(const AdminIdentity())) ('admin', l10n.roleAdmin, l10n.canAdmin),
       if (!held.contains(const OfficeIdentity())) ('office', l10n.identityOffice, l10n.canOffice),
       ('pastor', l10n.identityPastor, null),
       if (services.any((s) => !led.contains(s.id))) ('service', l10n.identityServiceLead, null),
       if (ministries.any((m) => !leadsMinistry.contains(m.id))) ('ministry', l10n.identityMinistryLead, null),
+      if (smallGroups.any((g) => !leadsSmallGroup.contains(g.id))) ('small', l10n.identitySmallGroupLead, null),
     ]);
     if (kind == null || !context.mounted) return null;
     switch (kind) {
@@ -132,6 +140,13 @@ class IdentitySection extends ConsumerWidget {
             if (!led.contains(s.id)) (s.id, s.name, null),
         ]);
         return id == null ? null : ServiceLead(id);
+      case 'small':
+        final id = await _choose<String>(context, l10n.pickSmallGroup, [
+          for (final g in smallGroups)
+            if (!leadsSmallGroup.contains(g.id))
+              (g.id, g.name, ref.read(servicesProvider).value?.byId(g.service)?.name),
+        ]);
+        return id == null ? null : SmallGroupLead(id);
       default:
         final id = await _choose<String>(context, l10n.pickMinistry, [
           for (final m in ministries)

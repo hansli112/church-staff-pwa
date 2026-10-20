@@ -2503,12 +2503,6 @@ class L10nJa extends L10n {
   String get homeUpcomingEvents => '近日の行事';
 
   @override
-  String get memberSmallGroups => '小グループ';
-
-  @override
-  String get memberSmallGroupsHint => '1行に1つの小グループ';
-
-  @override
   String get linkErrNotToday => '取得元に今日の内容がまだありません';
 
   @override
@@ -2699,4 +2693,142 @@ class L10nJa extends L10n {
   String onlineRefundAlready(String month) {
     return 'この支払いは $month から差し引き済みです';
   }
+
+  @override
+  String get identitySmallGroupLead => '小グループリーダー';
+
+  @override
+  String identitySmallGroupLeadOf(String group) {
+    return '$group リーダー';
+  }
+
+  @override
+  String canSmallGroupLead(String group) {
+    return '$groupの行事を管理し、人数を記録し、メンバーを加えたり外したりできる';
+  }
+
+  @override
+  String get pickSmallGroup => '小グループを選ぶ';
+
+  @override
+  String get smallGroups => '小グループ';
+
+  @override
+  String get addSmallGroup => '小グループを追加';
+
+  @override
+  String get smallGroupName => '小グループ名';
+
+  @override
+  String get smallGroupService => '所属';
+
+  @override
+  String get smallGroupMeets => '集まる日';
+
+  @override
+  String get meetsNotSet => '未設定';
+
+  @override
+  String meetsWeekly(String weekday) {
+    return '毎週$weekday';
+  }
+
+  @override
+  String meetsBiweekly(String weekday) {
+    return '隔週$weekday';
+  }
+
+  @override
+  String get meetsEveryWeek => '毎週';
+
+  @override
+  String get meetsEveryOtherWeek => '隔週';
+
+  @override
+  String get nextMeeting => '次の集まり';
+
+  @override
+  String get noSmallGroupLeads => 'リーダーはまだいません';
+
+  @override
+  String get assignSmallGroupLead => 'リーダーを指名';
+
+  @override
+  String get deleteSmallGroup => '小グループを閉じる';
+
+  @override
+  String deleteSmallGroupTitle(String name) {
+    return '「$name」を閉じますか？';
+  }
+
+  @override
+  String get deleteSmallGroupBody => 'リーダーとメンバーはこの小グループから外れます。記録した人数は残ります。';
+
+  @override
+  String smallGroupDeleted(String name) {
+    return '「$name」を閉じました';
+  }
+
+  @override
+  String inSmallGroup(String group) {
+    return '$groupのメンバー';
+  }
+
+  @override
+  String get attendance => '人数の記録';
+
+  @override
+  String get attendanceSub => '集まりの日の21時に、リーダーに何人来たかの記録をお知らせします';
+
+  @override
+  String get attendanceHeader => '人数';
+
+  @override
+  String attendanceCount(int count) {
+    return '$count人';
+  }
+
+  @override
+  String get attendanceMissing => '未記入';
+
+  @override
+  String get attendanceNone => '集まりなし';
+
+  @override
+  String get attendanceFill => '人数を記録';
+
+  @override
+  String get attendanceCountField => '人数';
+
+  @override
+  String get attendanceNote => 'メモ';
+
+  @override
+  String get attendanceNoMeeting => '今回は集まりなし';
+
+  @override
+  String get attendancePause => '一時停止';
+
+  @override
+  String attendancePausedUntil(String day) {
+    return '$dayまで一時停止中';
+  }
+
+  @override
+  String get attendanceResume => '再開';
+
+  @override
+  String get attendancePauseFooter => '一時停止中はお知らせせず、「未記入」も残りません。';
+
+  @override
+  String get attendanceNoDays => '記録する集まりはまだありません';
+
+  @override
+  String get attendanceSaved => '記録しました';
+
+  @override
+  String get notifAttendance => '人数の記録のお知らせ';
+
+  @override
+  String get notifAttendanceSub => '集まりの日の21時に、まだ誰も記録していないとき';
 }

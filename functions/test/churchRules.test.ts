@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, test } from 'node:test';
 
 import { churchAccess } from '../src/access.js';
+import { attendanceDue, mayReadAttendance, mayWriteAttendance } from '../src/attendance.js';
 
 import { mayWriteEvent } from '../src/eventGroups.js';
 import { mayMoveMember } from '../src/groupMembers.js';
@@ -10,6 +11,7 @@ import { mapMember } from '../src/importer.js';
 import { ledChangeAllowed } from '../src/ledDuties.js';
 import { LANGUAGES, words } from '../src/languages.js';
 import { dutiesByUid } from '../src/rosters.js';
+import { mayEditSmallGroup } from '../src/smallGroups.js';
 import { validDutyRename } from '../src/serviceSettings.js';
 import { caller, db, deps, seedChurch } from './support.js';
 
@@ -79,4 +81,23 @@ describe('groupMembership', () => {
 
 describe('eventWriting', () => {
   for (const r of rows('eventWriting')) test(r.why, () => assert.equal(mayWriteEvent(r.member, r.before, r.after), r.may));
+});
+
+describe('smallGroupEditing', () => {
+  for (const r of rows('smallGroupEditing')) test(r.why, () => assert.equal(mayEditSmallGroup(r.member, r.before, r.after), r.may));
+});
+
+describe('attendanceAccess', () => {
+  for (const r of rows('attendanceAccess')) {
+    test(r.why, () => {
+      assert.equal(mayWriteAttendance(r.member, r.group, r.smallGroupService ?? null), r.writes, 'writes');
+      assert.equal(mayReadAttendance(r.member, r.group, r.smallGroupService ?? null), r.reads, 'reads');
+    });
+  }
+});
+
+describe('attendanceDue', () => {
+  for (const r of rows('attendanceDue')) {
+    test(r.why, () => assert.equal(attendanceDue(r.meets, { since: r.since, pause: r.pause ?? null }, r.day), r.due));
+  }
 });

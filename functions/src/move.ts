@@ -6,6 +6,7 @@ import { fail, requireCaller, text, type Caller, type Deps } from './common.js';
 import { buildImport, type SelfHostSnapshot, type SourceDoc } from './importer.js';
 import { TEXT_LIMITS } from './limits.js';
 import { addPending, forgetPending } from './pendingMembers.js';
+import { claimedSmallGroups, namedSmallGroups, nameKey as smallGroupKey } from './smallGroups.js';
 import { nameKey } from './text.js';
 
 /**
@@ -175,6 +176,17 @@ export async function moveCommit(deps: MoveDeps, caller: Caller | null, data: un
     write(w.set(root.collection('rosters').doc(r.id), { ...r.data, duties, via: 'import', updatedAt: now }));
   }
   for (const o of built.staffOrders) write(w.set(root.collection('staff_orders').doc(o.id), { roles: o.roles }));
+  // Every 小組 named becomes one (#85); whoever was in or led one is
+  // (claim.ts) when they sign in.
+  const byName = new Map<string, string>();
+  for (const g of built.members.flatMap((m) => namedSmallGroups(m.zones))) {
+    const key = smallGroupKey(g.service, g.name);
+    if (byName.has(key) || !built.services.ids.includes(g.service)) continue;
+    const at = root.collection('smallGroups').doc();
+    byName.set(key, at.id);
+    write(w.set(at, { name: g.name, service: g.service }));
+  }
+  if (byName.size) write(w.set(root.collection('settings').doc('smallGroups'), { ids: [...byName.values()] }));
   await w.close();
   if (failures.length) {
     console.error(`moveCommit: ${failures.length} writes failed for ${cid}`, failures[0]);
@@ -194,6 +206,8 @@ export async function moveCommit(deps: MoveDeps, caller: Caller | null, data: un
     await db.recursiveDelete(root);
     throw e;
   }
+  const mine = me ? claimedSmallGroups(me.zones, me.role, byName) : null;
+  if (mine && mine.smallGroups.length) await root.collection('members').doc(c.uid).update({ smallGroups: mine.smallGroups });
   await deps.bucket.file(path).delete({ ignoreNotFound: true });
   return { churchId: cid };
 }

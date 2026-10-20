@@ -14,6 +14,7 @@ import '../church/add_to_home.dart';
 import '../church/church_logo.dart';
 import '../church/claims.dart';
 import '../calendar/event_sheet.dart';
+import '../me/attendance.dart';
 import '../me/turn_on_notifications.dart';
 import '../common/calendar_read_notice.dart';
 import 'church_link_card.dart';
@@ -125,7 +126,9 @@ class HomeScreen extends ConsumerWidget {
           final waiting = ref.watch(_waitingForZoneProvider);
           final addToHome = AddToHomeCard.shown(ref);
           final notifications = TurnOnNotificationsCard.shown(ref);
+          final attendance = AttendanceDueCard.shown(ref);
           if (list.isEmpty &&
+              !attendance &&
               link == null &&
               !sourceMissing &&
               claims.isEmpty &&
@@ -148,6 +151,8 @@ class HomeScreen extends ConsumerWidget {
               const PendingClaimsCard(),
               if (addToHome) const AddToHomeCard(),
               if (notifications) const TurnOnNotificationsCard(),
+              // 填寫人數 (#85): what a lead is asked, first among their own things.
+              if (attendance) const AttendanceDueCard(),
               if (gettingStarted) const _GettingStarted(),
               if (waiting > 0)
                 ListSection(
