@@ -13,6 +13,18 @@
 				<string>com.googleusercontent.apps.493104398300-85pmmq39lqgnrv3g8dpngtm6eh3b2b3v</string>
 			</array>
 		</dict>
+		<dict>
+			<!-- Firebase's browser sign-in (signInWithProvider, when the
+			     phone's own Google sign-in can't) returns here: the encoded
+			     iOS app IDs of marthasit-dev and marthasit. Without them
+			     FirebaseAuth stops the app (a fatal error, not an
+			     exception). -->
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>app-1-578090575030-ios-3f6616b578c4827e57f217</string>
+				<string>app-1-493104398300-ios-e0eeeffa194b9f2d0bd919</string>
+			</array>
+		</dict>
 	</array>
 	<!-- Only HTTPS and the system's encryption: exempt, so App Store Connect
 	     doesn't ask about export compliance on every upload. -->

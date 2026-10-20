@@ -6,14 +6,11 @@ import 'package:go_router/go_router.dart';
 import 'core/design/components.dart';
 import 'l10n/app_localizations.dart';
 
-import 'features/admin/admin_screens.dart' deferred as admin_screens;
-import 'features/calendar/calendar_settings_screen.dart' deferred as calendar_settings;
-import 'features/church/move_screen.dart' deferred as move_screen;
-import 'features/me/church_info_screen.dart' deferred as church_info;
-import 'features/rosters/import_screen.dart' deferred as roster_import;
+import 'page_code_native.dart' if (dart.library.js_interop) 'page_code_web.dart' as code;
 
-/// Screen code fetched only when its page is opened. Native builds keep it
-/// in the app; the web build downloads a separate script.
+/// Screen code fetched only when its page is opened: on the web a separate
+/// script; native builds have it in the app (page_code_native.dart says why
+/// they don't defer it).
 enum PageLibrary {
   admin,
   calendarSettings,
@@ -23,11 +20,11 @@ enum PageLibrary {
   ;
 
   Future<void> load() => switch (this) {
-    admin => admin_screens.loadLibrary(),
-    calendarSettings => calendar_settings.loadLibrary(),
-    churchInfo => church_info.loadLibrary(),
-    move => move_screen.loadLibrary(),
-    rosterImport => roster_import.loadLibrary(),
+    admin => code.loadAdmin(),
+    calendarSettings => code.loadCalendarSettings(),
+    churchInfo => code.loadChurchInfo(),
+    move => code.loadMove(),
+    rosterImport => code.loadRosterImport(),
   };
 
   /// The cold-link destinations registered in router.dart. Keep new
@@ -64,13 +61,13 @@ class DeferredPage extends ConsumerWidget {
   factory DeferredPage.calendarSettings({Key? key, String? result}) => DeferredPage._(
     key: key,
     library: PageLibrary.calendarSettings,
-    builder: (_) => calendar_settings.CalendarSettingsScreen(result: result),
+    builder: (_) => code.calendarSettingsScreen(result),
   );
 
   factory DeferredPage.rosterImport({Key? key, required String serviceType}) => DeferredPage._(
     key: key,
     library: PageLibrary.rosterImport,
-    builder: (_) => roster_import.ImportScreen(serviceType: serviceType),
+    builder: (_) => code.importScreen(serviceType),
   );
 
   const DeferredPage._({super.key, required this.library, required WidgetBuilder builder}) : _builder = builder;
@@ -78,11 +75,11 @@ class DeferredPage extends ConsumerWidget {
   final PageLibrary library;
   final WidgetBuilder _builder;
 
-  static Widget _admin(BuildContext context) => admin_screens.AdminScreen();
-  static Widget _adminStats(BuildContext context) => admin_screens.AdminStatsScreen();
-  static Widget _adminFunding(BuildContext context) => admin_screens.AdminFundingScreen();
-  static Widget _churchInfo(BuildContext context) => church_info.ChurchInfoScreen();
-  static Widget _move(BuildContext context) => move_screen.MoveScreen();
+  static Widget _admin(BuildContext context) => code.adminScreen();
+  static Widget _adminStats(BuildContext context) => code.adminStatsScreen();
+  static Widget _adminFunding(BuildContext context) => code.adminFundingScreen();
+  static Widget _churchInfo(BuildContext context) => code.churchInfoScreen();
+  static Widget _move(BuildContext context) => code.moveScreen();
 
   AppBar _appBar(BuildContext context) {
     final l10n = L10n.of(context);

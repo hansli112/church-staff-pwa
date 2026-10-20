@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,6 +17,15 @@ Future<void> go(WidgetTester tester, String location) async {
 }
 
 void main() {
+  test('only the web build defers code: an iOS patch to deferred code is killed by iOS', () {
+    final deferred = [
+      for (final f in Directory('lib').listSync(recursive: true).whereType<File>())
+        if (f.path.endsWith('.dart') && !f.path.endsWith('_web.dart') && f.readAsStringSync().contains(' deferred as '))
+          f.path,
+    ];
+    expect(deferred, isEmpty, reason: 'import it in a *_web.dart file, as page_code_web.dart does');
+  });
+
   testWidgets('church info appears after its screen code arrives, without holding up home', (tester) async {
     final download = Completer<void>();
     addTearDown(() {

@@ -60,7 +60,7 @@ scripts/firebase-project.sh prod marthasit     [BILLING_ACCOUNT_ID]
 
 Function 改掉不用某個 secret 時，`firebase deploy` 不會拿掉已部署版本上的 secret 綁定。要先 `scripts/firebase.sh <id> functions:delete <名稱> --region asia-east1` 再部署一次，確認綁定拿掉之後才能刪 secret，不然新的 instance 起不來。
 
-`GOOGLE_SERVER_CLIENT_ID` 和 `FCM_VAPID_KEY` 填過之後，重跑腳本會保留。`GOOGLE_IOS_CLIENT_ID` 由腳本從 iOS app 的 `GoogleService-Info.plist` 讀出來；要先開 Google 登入，Firebase 才會建這個 client，所以開完要重跑一次腳本。iOS 的 Google 登入另外要把它反過來的 `com.googleusercontent.apps.…` 列在 `app/ios/Runner/Info.plist` 的 `CFBundleURLTypes`，dev 和 prod 兩個都列。網頁推播還需要 `app/web/firebase-messaging-sw.js`：它從 Hosting 的 `/__/firebase/init.js` 讀專案設定，所以 dev 和 prod 共用同一個檔案。
+`GOOGLE_SERVER_CLIENT_ID` 和 `FCM_VAPID_KEY` 填過之後，重跑腳本會保留。`GOOGLE_IOS_CLIENT_ID` 由腳本從 iOS app 的 `GoogleService-Info.plist` 讀出來；要先開 Google 登入，Firebase 才會建這個 client，所以開完要重跑一次腳本。iOS 的 Google 登入另外要把它反過來的 `com.googleusercontent.apps.…` 列在 `app/ios/Runner/Info.plist` 的 `CFBundleURLTypes`，dev 和 prod 兩個都列；手機上的 Google 登入不能用時改走瀏覽器（Firebase 的 `signInWithProvider`），回來的網址是 iOS app ID 換成的 `app-1-…-ios-…`，也要列（兩個環境都列），少了 FirebaseAuth 會直接讓 App 關掉（1.0.0 (20) 審查時發生過）。網頁推播還需要 `app/web/firebase-messaging-sw.js`：它從 Hosting 的 `/__/firebase/init.js` 讀專案設定，所以 dev 和 prod 共用同一個檔案。
 
 ## 建置
 
@@ -121,6 +121,7 @@ API 金鑰放在 `~/.appstoreconnect/private_keys/AuthKey_<金鑰 ID>.p8`，alto
 **注意**：
 
 - Play 封閉測試、TestFlight 的分組沒辦法用來分批推修補，要分批用上面的 staging，或 Shorebird Console 的百分比推送。
+- iOS 的修補改到 deferred library 裡的程式時，App 會跳進修補檔執行，被 iOS 以程式簽章（`CODESIGNING`、`Invalid Page`）關掉，Crashlytics 也收不到（1.0.0 (20) 的修補 6 讓後台一開就關）。所以手機版不用 deferred，只有網頁版用（`app/lib/page_code_native.dart`）；之後也別在手機會跑的程式裡加 `deferred as`。
 - Shorebird 只支援 Flutter 穩定版，新的季版本最多 5 個工作天才支援。升級 Flutter 前先看 `~/.shorebird/bin/shorebird flutter versions list` 有沒有。
 - iOS 不要開 `--obfuscate`，Shorebird 不支援。
 - Crashlytics：我們沒有用 `--obfuscate` 或 `--split-debug-info`，Dart 的錯誤堆疊本來就看得懂，修補版不用另外上傳符號。當機報告的 custom key `shorebird_patch_number` 是當時跑的修補（0 是沒有），「設定」的版本也會寫「修正 N」，回報問題時看得出有沒有拿到修補。

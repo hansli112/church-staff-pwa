@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'balanced_text.dart' show keepQuotesWhole;
-import 'phrase_models.dart' deferred as models;
+import 'phrase_code_native.dart' if (dart.library.js_interop) 'phrase_code_web.dart' as models;
 
 /// Where Chinese or Japanese text may break between phrases, by BudouX
 /// (https://github.com/google/budoux, Apache License 2.0), which Chrome uses
@@ -35,16 +35,16 @@ class PhraseModel {
   /// is no model and lines break by punctuation alone.
   static Future<void> load() async {
     try {
-      await models.loadLibrary();
+      await models.loadPhraseModels();
       _loaded = true;
     } catch (_) {}
   }
 
   static var _loaded = false;
 
-  static PhraseModel get zhHant => _zhHant ??= PhraseModel._(models.zhHant, _zhHantTerms);
-  static PhraseModel get zhHans => _zhHans ??= PhraseModel._(models.zhHans, _zhHansTerms);
-  static PhraseModel get ja => _ja ??= PhraseModel._(models.ja, _jaTerms);
+  static PhraseModel get zhHant => _zhHant ??= PhraseModel._(models.zhHantModel, _zhHantTerms);
+  static PhraseModel get zhHans => _zhHans ??= PhraseModel._(models.zhHansModel, _zhHansTerms);
+  static PhraseModel get ja => _ja ??= PhraseModel._(models.jaModel, _jaTerms);
   static PhraseModel? _zhHant, _zhHans, _ja;
 
   /// The model for [locale]'s language; null where words are spaced.
