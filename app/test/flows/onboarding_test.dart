@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/features/church/church_logo.dart';
@@ -112,6 +113,25 @@ void main() {
       lessThan(half / tester.view.devicePixelRatio),
       reason: 'not under the keyboard',
     );
+  });
+
+  testWidgets('someone in no church yet deletes their account from the welcome page', (tester) async {
+    final b = MemoryBackend(clock: testClock);
+    await pumpApp(tester, b);
+    await tapText(tester, '用 email 登入');
+    await tapText(tester, '註冊新帳號');
+    final fields = find.byType(TextFormField);
+    await tester.enterText(fields.at(0), '小明');
+    await tester.enterText(fields.at(1), 'ming@example.com');
+    await tester.enterText(fields.at(2), 'secret123');
+    await tapText(tester, '註冊');
+
+    await tapText(tester, '刪除帳號');
+    await tester.tap(find.widgetWithText(TextButton, '刪除帳號'));
+    await settle(tester);
+    await tapText(tester, '刪除帳號');
+    expect(findShown('用 email 登入'), findsOneWidget, reason: 'signed out');
+    await expectLater(b.auth.signInWithEmail('ming@example.com', 'secret123'), throwsA(isA<AuthException>()));
   });
 
   testWidgets('a sign-up error goes away once the field is filled', (tester) async {
