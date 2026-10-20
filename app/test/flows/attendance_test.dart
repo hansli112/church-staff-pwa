@@ -115,7 +115,9 @@ void main() {
 
   testWidgets("a service's 牧者 sees its 人數 but is not reminded: no 填寫人數 on 首頁, no 回報人數提醒", (tester) async {
     final b = withAttendance(seededChurch(as: editor, clock: eveningOf(Day(2026, 10, 4))));
-    b.members['grace']![editor.uid] = editor.withIdentities(const [PastorIdentity(['sunday'])]);
+    b.members['grace']![editor.uid] = editor.withIdentities(const [
+      PastorIdentity(['sunday']),
+    ]);
     await pumpApp(tester, b);
     await go(tester, '/home');
     expect(find.text('填寫人數'), findsNothing);
