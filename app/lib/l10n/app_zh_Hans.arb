@@ -304,6 +304,7 @@
   "deleteAccountTitle": "删除你的账号？",
   "deleteAccountBody": "你会退出所有教会，账号与个人资料会被删除且无法恢复。事奉表上的名字会保留。",
   "deleteAccountLastAdmin": "你是“{churches}”唯一的管理员，请先把管理员交给别的同工",
+  "deleteAccountChurchesToo": "{count, plural, other{“{churches}”只有你一个人，会跟账号一起删除。}}",
   "goToMembers": "前往同工",
   "accountDeleted": "账号已删除",
   "serviceDisabled": "停用",

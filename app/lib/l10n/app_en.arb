@@ -304,6 +304,7 @@
   "deleteAccountTitle": "Delete your account?",
   "deleteAccountBody": "You’ll leave every church, and your account and personal info will be deleted for good. Your name stays on schedules.",
   "deleteAccountLastAdmin": "You’re the only admin of {churches}. Make another team member an admin first.",
+  "deleteAccountChurchesToo": "No one else is in {churches}, so {count, plural, =1{it is} other{they are}} deleted with your account.",
   "goToMembers": "Go to Team members",
   "accountDeleted": "Account deleted",
   "serviceDisabled": "Inactive",

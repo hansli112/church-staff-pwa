@@ -214,6 +214,23 @@ void main() {
       expect(b.auth.currentUser, isNotNull);
     });
 
+    testWidgets('a church no one else is in is named, and goes with the account', (tester) async {
+      final b = seededChurch();
+      final alone = b.addChurch('小羊團契', id: 'lamb');
+      b.addMember(alone, pastor);
+      b.members['grace']!.removeWhere((uid, _) => uid != pastor.uid);
+      await pumpApp(tester, b);
+      await go(tester, '/account');
+      expect(findShownContaining('〈恩典堂〉〈小羊團契〉只有你一個人，會跟帳號一起刪除'), findsOneWidget);
+      await tester.tap(find.widgetWithText(TextButton, '刪除帳號'));
+      await settle(tester);
+      await tester.tap(find.text('刪除帳號').last);
+      await settle(tester);
+      expect(b.churches['grace']!.status, ChurchStatus.deleted);
+      expect(b.churches['lamb']!.status, ChurchStatus.deleted);
+      expect(b.auth.currentUser, isNull);
+    });
+
     testWidgets('an admin with another admin may delete the account', (tester) async {
       final b = seededChurch(
         extra: const [Member(uid: 'admin2', name: '張長老', role: Role.admin)],

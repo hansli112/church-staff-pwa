@@ -253,6 +253,14 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect((await g.church.members().first).map((m) => m.uid), unorderedEquals([g.editor, g.mei]));
     });
 
+    test('a church no one else is in is deleted with its admin', () async {
+      await w.signUp(Grace.pastorEmail, name: '王牧師');
+      final cid = await cloud().createChurch('恩典堂');
+      await cloud().deleteAccount();
+      await w.signUp(Grace.editorEmail);
+      await expectLater(cloud().churchPreview(cid), fails(CloudErrorCode.notFound));
+    });
+
     test('a deleted church does not hold its admin back', () async {
       final g = await Grace.open(w);
       await g.church.deleteChurch();

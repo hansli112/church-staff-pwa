@@ -600,6 +600,18 @@
       }
     }
   },
+  "deleteAccountChurchesToo": "{count, plural, other{〈{churches}〉只有你一個人，會跟帳號一起刪除。}}",
+  "@deleteAccountChurchesToo": {
+    "description": "On the delete-account page: the churches no one else is in, which are deleted along with the account. count is how many.",
+    "placeholders": {
+      "churches": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "goToMembers": "前往同工",
   "@goToMembers": { "description": "Button on the delete-account page for the only admin of a church: opens the members page to make someone else an admin" },
   "accountDeleted": "帳號已刪除",
