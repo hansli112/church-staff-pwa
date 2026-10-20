@@ -257,6 +257,7 @@
   "deleteAccountTitle": "계정을 삭제할까요?",
   "deleteAccountBody": "모든 교회에서 나가고, 계정과 개인정보가 영구 삭제돼요. 봉사표에 있는 이름은 남아요.",
   "deleteAccountLastAdmin": "{churches}의 유일한 관리자예요. 먼저 다른 멤버를 관리자로 지정해 주세요.",
+  "deleteAccountChurchesToo": "{count, plural, other{{churches}에는 다른 멤버가 없어서 계정과 함께 삭제돼요.}}",
   "goToMembers": "멤버로 이동",
   "accountDeleted": "계정을 삭제했어요",
   "serviceDisabled": "중지됨",

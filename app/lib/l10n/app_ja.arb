@@ -257,6 +257,7 @@
   "deleteAccountTitle": "アカウントを削除しますか？",
   "deleteAccountBody": "すべての教会から退出し、アカウントと個人情報は削除されて元に戻せません。奉仕表上の名前は残ります。",
   "deleteAccountLastAdmin": "あなたは「{churches}」の唯一の管理者です。先にほかのメンバーを管理者にしてください。",
+  "deleteAccountChurchesToo": "{count, plural, other{「{churches}」にはほかにだれもいないので、アカウントといっしょに削除されます。}}",
   "goToMembers": "メンバーを開く",
   "accountDeleted": "アカウントを削除しました",
   "serviceDisabled": "停止中",

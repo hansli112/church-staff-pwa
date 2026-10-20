@@ -9,13 +9,17 @@ import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
 
-/// The churches I am the only admin of (not counting deleted ones), which
-/// block deleting my account: the same rule the backend enforces. A church
-/// whose members cannot be read (closed) is left to the backend to judge.
-final soleAdminChurchesProvider = FutureProvider.autoDispose<List<Church>>((ref) async {
+/// The churches I am the only admin of (not counting deleted ones): those
+/// others are in block deleting my account ([blocking]); those no one else
+/// is in are deleted with it ([alone]). The same rule the backend enforces.
+/// A church whose members cannot be read (closed) is left to the backend.
+final soleAdminChurchesProvider = FutureProvider.autoDispose<({List<Church> blocking, List<Church> alone})>((
+  ref,
+) async {
   final memberships = await ref.watch(membershipsProvider.future);
   final backend = ref.watch(backendProvider);
   final blocking = <Church>[];
+  final alone = <Church>[];
   for (final m in memberships) {
     if (!m.member.isAdmin) continue;
     try {
@@ -23,17 +27,19 @@ final soleAdminChurchesProvider = FutureProvider.autoDispose<List<Church>>((ref)
       final church = await data.church().first;
       if (church == null || church.status == ChurchStatus.deleted) continue;
       final members = await data.members().first;
-      if (members.where((x) => x.isAdmin).length <= 1) blocking.add(church);
+      if (members.where((x) => x.isAdmin).length > 1) continue;
+      (members.length > 1 ? blocking : alone).add(church);
     } catch (_) {
       continue;
     }
   }
-  return blocking;
+  return (blocking: blocking, alone: alone);
 });
 
 /// Deleting my account (App Store 5.1.1(v)). The page says what deleting
-/// does; the confirmation only asks. The only admin of a church is told so
-/// on arrival, with the way to hand it over, and cannot delete yet.
+/// does; the confirmation only asks. The only admin of a church others are
+/// in is told so on arrival, with the way to hand it over, and cannot delete
+/// yet; a church no one else is in is named, as it goes too.
 class AccountScreen extends ConsumerStatefulWidget {
   const AccountScreen({super.key});
 
@@ -87,19 +93,28 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
     final check = ref.watch(soleAdminChurchesProvider);
-    final blocking = check.value ?? const <Church>[];
+    final blocking = check.value?.blocking ?? const <Church>[];
+    final alone = check.value?.alone ?? const <Church>[];
     return Scaffold(
       appBar: AppBar(title: Text(l10n.deleteAccount)),
       body: ListView(
         padding: const EdgeInsets.all(Space.m),
         children: [
-          if (blocking.isEmpty)
+          if (blocking.isEmpty) ...[
             BalancedText(
               l10n.deleteAccountBody,
               textAlign: TextAlign.start,
               style: AppText.body.copyWith(color: c.secondaryLabel),
-            )
-          else ...[
+            ),
+            if (alone.isNotEmpty) ...[
+              const SizedBox(height: Space.m),
+              BalancedText(
+                l10n.deleteAccountChurchesToo(alone.map((ch) => ch.name).join(l10n.churchListSeparator), alone.length),
+                textAlign: TextAlign.start,
+                style: AppText.body.copyWith(color: c.label),
+              ),
+            ],
+          ] else ...[
             BalancedText(
               l10n.deleteAccountLastAdmin(blocking.map((ch) => ch.name).join(l10n.churchListSeparator)),
               textAlign: TextAlign.start,

@@ -774,6 +774,16 @@ class L10nZh extends L10n {
   }
 
   @override
+  String deleteAccountChurchesToo(String churches, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '〈$churches〉只有你一個人，會跟帳號一起刪除。',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get goToMembers => '前往同工';
 
   @override
@@ -3290,6 +3300,16 @@ class L10nZhHans extends L10nZh {
   @override
   String deleteAccountLastAdmin(String churches) {
     return '你是“$churches”唯一的管理员，请先把管理员交给别的同工';
+  }
+
+  @override
+  String deleteAccountChurchesToo(String churches, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '“$churches”只有你一个人，会跟账号一起删除。',
+    );
+    return '$_temp0';
   }
 
   @override

@@ -1498,6 +1498,12 @@ abstract class L10n {
   /// **'你是〈{churches}〉唯一的管理員，請先把管理員交給別的同工'**
   String deleteAccountLastAdmin(String churches);
 
+  /// On the delete-account page: the churches no one else is in, which are deleted along with the account. count is how many.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count, plural, other{〈{churches}〉只有你一個人，會跟帳號一起刪除。}}'**
+  String deleteAccountChurchesToo(String churches, int count);
+
   /// Button on the delete-account page for the only admin of a church: opens the members page to make someone else an admin
   ///
   /// In zh, this message translates to:

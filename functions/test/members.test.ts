@@ -152,6 +152,20 @@ describe('deleteAccount', () => {
     assert.ok((await db.doc('churches/Shared/members/alice').get()).exists);
   });
 
+  test('a church with no one else in it is deleted with the account, and can be cleaned up', async () => {
+    const user = await auth.createUser({ email: 'alone@example.com' });
+    setNow(new Date('2026-10-21T00:00:00Z'));
+    await seedChurch('Alone', { [user.uid]: 'admin' });
+    await seedChurch('Shared', { [user.uid]: 'admin', carol: 'admin' });
+    await deleteAccount({ ...deps, auth }, caller(user.uid));
+    const alone = await db.doc('churches/Alone').get();
+    assert.equal(alone.get('status'), 'deleted');
+    assert.equal((alone.get('deletedAt') as Timestamp).toDate().toISOString(), '2026-10-21T00:00:00.000Z');
+    assert.equal((await db.doc('churches/Shared').get()).get('status'), 'active');
+    assert.equal((await db.doc(`churches/Alone/members/${user.uid}`).get()).exists, false);
+    await assert.rejects(auth.getUser(user.uid));
+  });
+
   test('being the only admin of a deleted church does not block', async () => {
     const user = await auth.createUser({ email: 'gone@example.com' });
     await seedChurch('Gone', { [user.uid]: 'admin' }, { status: 'deleted' });

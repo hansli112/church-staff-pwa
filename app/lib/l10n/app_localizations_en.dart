@@ -798,6 +798,17 @@ class L10nEn extends L10n {
   }
 
   @override
+  String deleteAccountChurchesToo(String churches, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'they are',
+      one: 'it is',
+    );
+    return 'No one else is in $churches, so $_temp0 deleted with your account.';
+  }
+
+  @override
   String get goToMembers => 'Go to Team members';
 
   @override

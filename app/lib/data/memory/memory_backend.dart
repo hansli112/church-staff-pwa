@@ -1164,16 +1164,7 @@ class MemoryChurchData implements ChurchData {
     // Only an open church: deleting and restoring a suspended one would
     // reopen it.
     _functionAdmin();
-    final c = _b.churches[churchId]!;
-    _b.churches[churchId] = Church(
-      id: c.id,
-      name: c.name,
-      status: ChurchStatus.deleted,
-      logoUrl: c.logoUrl,
-      homeName: c.homeName,
-      deletedAt: _b.clock(),
-      timeZone: c.timeZone,
-    );
+    _b.churches[churchId] = _deleted(_b.churches[churchId]!, _b.clock());
     _b.notify();
   }
 
@@ -1596,7 +1587,7 @@ class MemoryCloud implements CloudApi {
     return cid;
   }
 
-  /// Churches where [uid] is the only admin.
+  /// Churches where [uid] is the only admin, not counting deleted ones.
   List<Church> soleAdminChurches(String uid) => [
     for (final entry in _b.members.entries)
       if (entry.value[uid]?.isAdmin ?? false)
@@ -1611,9 +1602,20 @@ class MemoryCloud implements CloudApi {
     if (uid == null) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
-    final blocking = soleAdminChurches(uid);
+    // Those others are in must be handed over; those no one else is in go
+    // with the account.
+    final sole = soleAdminChurches(uid);
+    final blocking = [
+      for (final c in sole)
+        if (_b.members[c.id]!.length > 1) c,
+    ];
     if (blocking.isNotEmpty) {
       throw CloudException(CloudErrorCode.lastAdmin, churches: [for (final c in blocking) c.name]);
+    }
+    for (final c in sole) {
+      if (c.status == ChurchStatus.active) {
+        _b.churches[c.id] = _deleted(c, _b.clock());
+      }
     }
     for (final m in _b.members.values) {
       m.remove(uid);
@@ -2020,3 +2022,15 @@ const defaultServices = {
     ),
   ],
 };
+
+/// Church [c] as deleting it leaves it, at [at].
+Church _deleted(Church c, DateTime at) => Church(
+  id: c.id,
+  name: c.name,
+  status: ChurchStatus.deleted,
+  logoUrl: c.logoUrl,
+  homeName: c.homeName,
+  deletedAt: at,
+  timeZone: c.timeZone,
+  attendanceSince: c.attendanceSince,
+);
