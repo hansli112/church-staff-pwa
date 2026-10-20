@@ -40,10 +40,6 @@ final _seriesRolesProvider = FutureProvider.autoDispose.family<List<String>, Cal
   return previousInSeries(e, await ref.churchData.eventRosters());
 });
 
-/// Whether I arrange any of an event's roster: all, or as a 事工's 負責人
-/// the duties it leads (#82).
-final _canEditProvider = Provider.autoDispose<bool>((ref) => arrangesAny(ref.watch(arrangesProvider(null))));
-
 /// Opens [e]'s roster, which [e] lets the page start before it is saved.
 void openEventRoster(BuildContext context, CalendarEvent e) =>
     GoRouter.of(context).push('/rosters/event/${e.id}', extra: e);
@@ -80,7 +76,9 @@ class EventRosterRow extends ConsumerWidget {
       );
     }
     final ended = eventDays(event).last.isBefore(ref.watch(todayProvider));
-    if (ended || !ref.watch(_canEditProvider)) return const SizedBox.shrink();
+    // Any of it: all, as 行政 or the event's group's 負責人, or as a 事工's
+    // 負責人 the duties it leads (#82).
+    if (ended || !arrangesAny(ref.watch(eventArrangesProvider(event.group)))) return const SizedBox.shrink();
     return ListSection(
       children: [
         ListRow(
@@ -122,8 +120,8 @@ class EventRosterScreen extends ConsumerWidget {
                 calendarId: calendarId,
               )
             : null);
-    final canEdit = ref.watch(_canEditProvider);
-    final led = ref.watch(arrangesProvider(null));
+    final led = ref.watch(eventArrangesProvider(roster?.forEvent?.group));
+    final canEdit = arrangesAny(led);
     final whole = led == null;
     final editable = canEdit && ref.watch(eventEditingProvider);
     final services = ref.watch(servicesProvider).value?.services ?? const <Service>[];

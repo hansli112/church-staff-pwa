@@ -45,6 +45,17 @@ Future<void> showEventDetail(BuildContext context, CalendarEvent e) {
                   style: AppText.body,
                 ),
                 if (!e.allDay) const ChurchClockNotice(padding: EdgeInsets.only(top: Space.xs)),
+                // A group's event says whose it is (#84).
+                if (e.group != null)
+                  Consumer(
+                    builder: (context, ref, _) => Padding(
+                      padding: const EdgeInsets.only(top: Space.xs),
+                      child: Text(
+                        l10n.eventOfGroup(eventGroupLabel(ref, l10n, e.group)),
+                        style: AppText.body.copyWith(color: AppColors.of(context).secondaryLabel),
+                      ),
+                    ),
+                  ),
                 if (e.location != null && e.location!.isNotEmpty) ...[
                   const SizedBox(height: Space.xs),
                   Text(e.location!, style: AppText.body.copyWith(color: AppColors.of(context).secondaryLabel)),
@@ -92,10 +103,18 @@ Future<void> editEvent(
           ? today.midnight
           : month);
   var previous = event;
+  final groups = eventGroupChoices(ref, l10n);
+  final group = event == null ? groups.firstOrNull?.key : event.group;
   var result = await showAppSheet<_EditResult>(
     context,
     expand: true,
-    builder: (_) => _EventEditor(event: event, initialDay: initialDay, thisYear: today.year),
+    builder: (_) => _EventEditor(
+      event: event,
+      initialDay: initialDay,
+      thisYear: today.year,
+      groups: groups,
+      initialGroup: group,
+    ),
   );
   if (result?.duplicate == true && context.mounted) {
     // A copy is a new draft, not a write to the original or its roster.
@@ -104,7 +123,13 @@ Future<void> editEvent(
     result = await showAppSheet<_EditResult>(
       context,
       expand: true,
-      builder: (_) => _EventEditor(event: draft, initialDay: draft.start, thisYear: today.year),
+      builder: (_) => _EventEditor(
+        event: draft,
+        initialDay: draft.start,
+        thisYear: today.year,
+        groups: groups,
+        initialGroup: draft.group,
+      ),
     );
   }
   if (result == null || !context.mounted) return;
@@ -128,6 +153,33 @@ Future<void> editEvent(
   }
 }
 
+/// Whose I may make an event (#84): admins and 行政 the church's or any
+/// group's, the church's first; a 負責人 only their groups'.
+List<EventGroupChoice> eventGroupChoices(WidgetRef ref, L10n l10n) {
+  final me = ref.read(meProvider).value;
+  if (me == null) return const [];
+  final services = ref.read(servicesProvider).value?.enabled ?? const <Service>[];
+  final ministries = ref.read(ministriesProvider).value?.ministries ?? const <Ministry>[];
+  final all = me.inGroup(Group.calendarEditors);
+  return [
+    if (all) (key: null, label: l10n.wholeChurch),
+    for (final s in services)
+      if (all || me.leadTypes.contains(s.id)) (key: ServiceGroup(s.id).key, label: s.name),
+    for (final m in ministries)
+      if (all || me.leadMinistries.contains(m.id)) (key: MinistryGroup(m.id).key, label: m.name),
+  ];
+}
+
+/// Whose [group] is, as the calendar says it: 全教會, or the group's name.
+String eventGroupLabel(WidgetRef ref, L10n l10n, String? group) {
+  if (group == null) return l10n.wholeChurch;
+  return switch (ChurchGroup.parse(group)) {
+    ServiceGroup(:final id) => ref.read(servicesProvider).value?.byId(id)?.name ?? l10n.wholeChurch,
+    MinistryGroup(:final id) => ref.read(ministriesProvider).value?.byId(id)?.name ?? l10n.wholeChurch,
+    null => l10n.wholeChurch,
+  };
+}
+
 class _EditResult {
   const _EditResult({this.event, this.delete = false, this.openRoster = false, this.duplicate = false});
 
@@ -140,11 +192,25 @@ class _EditResult {
   final bool openRoster;
 }
 
+/// Whose an event may be, for its editor: the church's (key null) and the
+/// groups the person may give it to, each with its name.
+typedef EventGroupChoice = ({String? key, String label});
+
 class _EventEditor extends StatefulWidget {
-  const _EventEditor({required this.event, required this.initialDay, required this.thisYear});
+  const _EventEditor({
+    required this.event,
+    required this.initialDay,
+    required this.thisYear,
+    required this.groups,
+    required this.initialGroup,
+  });
 
   final CalendarEvent? event;
   final DateTime initialDay;
+
+  /// Whose it may be (#84); the row shows only with a choice to make.
+  final List<EventGroupChoice> groups;
+  final String? initialGroup;
 
   /// Dates in this year are shown without it.
   final int thisYear;
@@ -158,6 +224,7 @@ class _EventEditorState extends State<_EventEditor> {
   late final _location = TextEditingController(text: widget.event?.location ?? '');
   late final _description = TextEditingController(text: widget.event?.description ?? '');
   late bool _allDay = widget.event?.allDay ?? false;
+  late String? _group = widget.initialGroup;
 
   // The first and last day, both included, and the times when not all day.
   // An all-day event keeps the usual times for when it is switched to one
@@ -253,6 +320,7 @@ class _EventEditorState extends State<_EventEditor> {
     description: _description.text.trim(),
     recurringEventId: widget.event?.recurringEventId,
     originalStart: widget.event?.originalStart,
+    group: _group,
   );
 
   void _save() {
@@ -270,7 +338,8 @@ class _EventEditorState extends State<_EventEditor> {
         edited.end != e.end ||
         edited.allDay != e.allDay ||
         (edited.location ?? '') != (e.location ?? '') ||
-        (edited.description ?? '') != (e.description ?? '');
+        (edited.description ?? '') != (e.description ?? '') ||
+        edited.group != e.group;
     final ok = edited.title.isNotEmpty && _valid;
     Navigator.pop(context, _EditResult(event: changed && ok ? edited : null, openRoster: true));
   }
@@ -324,6 +393,36 @@ class _EventEditorState extends State<_EventEditor> {
                   maxLines: 6,
                 ),
               ),
+              if (widget.groups.length > 1)
+                ListSection(
+                  children: [
+                    ListRow(
+                      title: l10n.eventGroup,
+                      value: widget.groups.where((g) => g.key == _group).firstOrNull?.label,
+                      onTap: () async {
+                        final picked = await showAppSheet<EventGroupChoice>(
+                          context,
+                          builder: (context) => SafeArea(
+                            child: SingleChildScrollView(
+                              child: ListSection(
+                                header: l10n.eventGroup,
+                                children: [
+                                  for (final g in widget.groups)
+                                    ListRow(
+                                      title: g.label,
+                                      selected: g.key == _group,
+                                      onTap: () => Navigator.pop(context, g),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                        if (picked != null) setState(() => _group = picked.key);
+                      },
+                    ),
+                  ],
+                ),
               ListSection(
                 children: [
                   SwitchRow(title: l10n.calAllDay, value: _allDay, onChanged: (v) => setState(() => _allDay = v)),

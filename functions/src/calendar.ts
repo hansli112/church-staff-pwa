@@ -4,6 +4,7 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 import { churchAccess, isChurchOpen } from './access.js';
 import { fail, type Caller, type Deps } from './common.js';
+import { isEventGroup, mayWriteEvent } from './eventGroups.js';
 import { cancelWithEvent, followEdit, inclusiveEnd, restoreOnto } from './eventRosters.js';
 import { seal, unseal } from './sealing.js';
 import { notify, type WebhookDeps } from './webhook.js';
@@ -74,6 +75,8 @@ export interface CalendarEvent {
   /** For one day of a recurring event: the series, and the start it had in it. */
   recurringEventId?: string;
   originalStart?: string;
+  /** Whose it is (eventGroups.ts): '' or missing the church's, else a group's. */
+  group?: string;
 }
 
 /** Changes go out to the church's webhook, hence WebhookDeps. */
@@ -386,7 +389,8 @@ const span = (v: unknown): Span | null => {
 const MAX_CLEARED_MONTHS = 12;
 
 /**
- * Create, update or delete one event (admins and calendar-editors).
+ * Create, update or delete one event: admins and calendar-editors (行政)
+ * any, a group's 負責人 that group's (eventGroups.ts, mayWriteEvent).
  *
  * `{ churchId, op: 'upsert', event, previous?: { start, end },
  * restoreRosterOf? }`, where `previous` is where an edited event was before
@@ -401,7 +405,12 @@ const MAX_CLEARED_MONTHS = 12;
  * under a new id) moves the cancelled roster onto the new event.
  */
 export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: unknown) {
-  const me = await churchAccess(deps, caller, data, { group: 'calendar-editors' });
+  const me = await churchAccess(deps, caller, data, 'member');
+  // Admins and 行政 write any event; a 負責人 only their groups'. Anyone
+  // else is refused before the calendar is asked anything.
+  const editor = mayWriteEvent(me.member.data() ?? {}, '', null);
+  const leads = ['leadTypes', 'leadMinistries'].some((k) => ((me.member.get(k) as unknown[] | undefined) ?? []).length > 0);
+  if (!editor && !leads) fail('permission-denied', 'permissionDenied');
   const churchId = me.cid;
   const timeZone = timeZoneOf(me.church);
   const input = data as {
@@ -417,10 +426,23 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
   let result: CalendarEvent | null = null;
   let notice: { action: 'created' | 'updated' | 'deleted'; event: Partial<CalendarEvent> } | null = null;
   const spans: (Span | null)[] = [span(input.previous), span({ start: input.previousStart })];
+  const may = (before: string | null, after: string | null) => {
+    if (!mayWriteEvent(me.member.data() ?? {}, before, after)) fail('permission-denied', 'permissionDenied');
+  };
+  // Whose an event is now, as Google has it: an edit or a delete is
+  // judged by that, not by what the app says it was.
+  const groupNow = async (id: string) => {
+    const found = await deps.google.get(token, calendarId, id);
+    if (!found || found.cancelled) fail('not-found', 'notFound');
+    return { found, group: found.group ?? '' };
+  };
   if (input.op === 'delete') {
     if (typeof input.eventId !== 'string') fail('invalid-argument', 'unknown');
     // What it was, for the webhook: Google's DELETE returns nothing.
-    const found = await deps.google.get(token, calendarId, input.eventId).catch(() => null);
+    const found = editor
+      ? await deps.google.get(token, calendarId, input.eventId).catch(() => null)
+      : (await groupNow(input.eventId)).found;
+    if (!editor) may(found?.group ?? '', null);
     const before = found && inZone(found, timeZone);
     await deps.google.remove(token, calendarId, input.eventId);
     await rosterStep(`cancel ${churchId}/ev_${input.eventId}`, () => cancelWithEvent(deps, churchId, input.eventId as string));
@@ -432,6 +454,9 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
       fail('invalid-argument', 'unknown');
     }
     const allDay = e.allDay === true;
+    if (e.group !== undefined && !isEventGroup(e.group)) fail('invalid-argument', 'unknown');
+    const group = e.group ?? '';
+    if (!editor) may(typeof e.id === 'string' ? (await groupNow(e.id)).group : null, group);
     // As Google gives it back; the app and the webhook get it on the church's clock.
     const saved = await deps.google.upsert(token, calendarId, {
       id: typeof e.id === 'string' ? e.id : undefined,
@@ -441,6 +466,7 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
       allDay,
       location: typeof e.location === 'string' ? e.location.slice(0, 300) : undefined,
       description: typeof e.description === 'string' ? e.description.slice(0, 4000) : undefined,
+      group,
     });
     result = inZone(saved, timeZone);
     spans.push(span(e));
@@ -521,6 +547,8 @@ export function googleApi(options: Partial<Pick<Deps, 'fetch' | 'now'>> = {}): G
     summary: e.title,
     location: e.location,
     description: e.description,
+    // Whose it is, kept with the event so an edit in Google keeps it.
+    extendedProperties: { private: { marthaGroup: e.group ?? '' } },
     // PATCH merges nested objects: clear the opposite type explicitly.
     // New events have no previous date type, so POST keeps the normal shape.
     start: e.allDay ? { date: e.start, ...(e.id ? { dateTime: null } : {}) } : { dateTime: e.start, ...(e.id ? { date: null } : {}) },
@@ -537,6 +565,7 @@ export function googleApi(options: Partial<Pick<Deps, 'fetch' | 'now'>> = {}): G
     end?: { date?: string; dateTime?: string };
     recurringEventId?: string;
     originalStartTime?: { date?: string; dateTime?: string };
+    extendedProperties?: { private?: { marthaGroup?: string } };
   }): CalendarEvent => ({
     id: g.id,
     title: g.summary ?? '',
@@ -549,6 +578,9 @@ export function googleApi(options: Partial<Pick<Deps, 'fetch' | 'now'>> = {}): G
     ...(g.status === 'cancelled' ? { cancelled: true } : {}),
     recurringEventId: g.recurringEventId,
     originalStart: g.originalStartTime?.date ?? g.originalStartTime?.dateTime,
+    ...(isEventGroup(g.extendedProperties?.private?.marthaGroup) && g.extendedProperties.private.marthaGroup
+      ? { group: g.extendedProperties.private.marthaGroup }
+      : {}),
   });
   return {
     async exchangeCode(code, config) {

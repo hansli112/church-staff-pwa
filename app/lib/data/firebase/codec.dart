@@ -305,6 +305,10 @@ Roster? rosterFromJson(Json data) {
         calendarId: data['calendarId'] as String?,
         recurringEventId: data['recurringEventId'] as String?,
         originalStart: data['originalStart'] as String?,
+        group: switch (data['group']) {
+          final String g when g.isNotEmpty => g,
+          _ => null,
+        },
       ),
     );
   }
@@ -334,6 +338,7 @@ Json rosterToJson(Roster r) => {
     'calendarId': ?e.calendarId,
     'recurringEventId': ?e.recurringEventId,
     'originalStart': ?e.originalStart,
+    'group': ?e.group,
   } else
     'type': r.type,
   'dateKey': r.day.key,
@@ -410,6 +415,10 @@ CalendarEvent? calendarEventFromJson(Object? raw) {
       description: raw['description'] as String?,
       recurringEventId: raw['recurringEventId'] as String?,
       originalStart: raw['originalStart'] as String?,
+      group: switch (raw['group']) {
+        final String g when g.isNotEmpty => g,
+        _ => null,
+      },
     );
   } on FormatException {
     return null;
@@ -428,5 +437,7 @@ Json calendarEventToJson(CalendarEvent e) {
     'allDay': e.allDay,
     'location': ?e.location,
     'description': ?e.description,
+    // Whose it is (#84): '' the church's.
+    'group': e.group ?? '',
   };
 }

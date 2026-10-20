@@ -769,6 +769,23 @@ class L10nZh extends L10n {
   String get myGroups => '我負責的';
 
   @override
+  String get eventGroup => '屬於';
+
+  @override
+  String eventOfGroup(String group) {
+    return '$group的活動';
+  }
+
+  @override
+  String get calFilter => '篩選';
+
+  @override
+  String get calFilterMine => '跟我有關的';
+
+  @override
+  String get calFilterAll => '全部';
+
+  @override
   String get removeShort => '移除';
 
   @override
@@ -3442,6 +3459,23 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get myGroups => '我负责的';
+
+  @override
+  String get eventGroup => '属于';
+
+  @override
+  String eventOfGroup(String group) {
+    return '$group的活动';
+  }
+
+  @override
+  String get calFilter => '筛选';
+
+  @override
+  String get calFilterMine => '跟我有关的';
+
+  @override
+  String get calFilterAll => '全部';
 
   @override
   String get removeShort => '移除';

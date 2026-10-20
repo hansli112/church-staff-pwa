@@ -74,6 +74,8 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/calendar');
     await tapText(tester, '同工退修會');
+    await tester.ensureVisible(find.text('複製活動').last);
+    await tester.pump();
     await tapText(tester, '複製活動');
     expect(find.text('新增活動'), findsOneWidget);
     expect(find.text('刪除活動'), findsNothing);
@@ -135,6 +137,8 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/calendar');
     await tapText(tester, '同工會');
+    await tester.ensureVisible(find.text('複製活動').last);
+    await tester.pump();
     await tapText(tester, '複製活動');
     await tester.enterText(field('活動名稱'), '不要儲存這份');
     Navigator.of(tester.element(field('活動名稱'))).pop();

@@ -886,3 +886,69 @@ describe('calendar webhooks', () => {
     assert.equal(sent().length, 0);
   });
 });
+
+describe("a group's events (#84)", () => {
+  async function withLead() {
+    await church();
+    await db.doc('churches/C1/members/staff').update({ leadMinistries: ['worship'] });
+    const { google } = fakeGoogle();
+    await connect(google);
+    return { ...deps, google, config };
+  }
+  const at = { start: '2026-10-17T19:00:00+08:00', end: '2026-10-17T21:00:00+08:00', allDay: false };
+
+  test("its 負責人 makes, changes and deletes the group's events, kept in Google with the event", async () => {
+    const d = await withLead();
+    const { event } = await calendarWrite(d, caller('staff'), {
+      churchId: 'C1', op: 'upsert', event: { title: '敬拜團練習', group: 'ministry:worship', ...at },
+    });
+    assert.equal(event?.group, 'ministry:worship');
+    const id = event!.id!;
+    await calendarWrite(d, caller('staff'), {
+      churchId: 'C1', op: 'upsert', event: { id, title: '敬拜團練習（改）', group: 'ministry:worship', ...at },
+    });
+    assert.equal((await d.google.get('t', 'cal-1', id))?.title, '敬拜團練習（改）');
+    await calendarWrite(d, caller('staff'), { churchId: 'C1', op: 'delete', eventId: id, event: at });
+    assert.equal((await d.google.get('t', 'cal-1', id))?.cancelled, true);
+  });
+
+  test("not the church's events, nor giving theirs to the church", async () => {
+    const d = await withLead();
+    await rejectsWith(
+      calendarWrite(d, caller('staff'), { churchId: 'C1', op: 'upsert', event: { title: '聖誕晚會', ...at } }),
+      'permissionDenied',
+    );
+    // e1 is the church's: made in Google, with no group.
+    await rejectsWith(
+      calendarWrite(d, caller('staff'), {
+        churchId: 'C1', op: 'upsert', event: { id: 'e1', title: '同工會', group: 'ministry:worship', start: '2026-10-10', end: '2026-10-11', allDay: true },
+      }),
+      'permissionDenied',
+    );
+    await rejectsWith(calendarWrite(d, caller('staff'), { churchId: 'C1', op: 'delete', eventId: 'e1', event: at }), 'permissionDenied');
+    const { event } = await calendarWrite(d, caller('staff'), {
+      churchId: 'C1', op: 'upsert', event: { title: '敬拜團練習', group: 'ministry:worship', ...at },
+    });
+    await rejectsWith(
+      calendarWrite(d, caller('staff'), { churchId: 'C1', op: 'upsert', event: { id: event!.id, title: '敬拜團練習', ...at } }),
+      'permissionDenied',
+    );
+    // 行政 may.
+    await calendarWrite(d, caller('editor'), { churchId: 'C1', op: 'upsert', event: { id: event!.id, title: '全教會練習', ...at } });
+  });
+
+  test("its roster carries the group, so the group's 負責人 may arrange it", async () => {
+    const d = await withLead();
+    await db.doc('churches/C1/rosters/ev_e1').set({
+      kind: 'event', eventId: 'e1', title: '同工會', dateKey: '2026-10-10', endDateKey: '2026-10-10', duties: [], events: [],
+    });
+    await calendarWrite(d, caller('editor'), {
+      churchId: 'C1', op: 'upsert', event: { id: 'e1', title: '同工會', group: 'service:sunday', start: '2026-10-10', end: '2026-10-11', allDay: true },
+    });
+    assert.equal((await db.doc('churches/C1/rosters/ev_e1').get()).get('group'), 'service:sunday');
+    await calendarWrite(d, caller('editor'), {
+      churchId: 'C1', op: 'upsert', event: { id: 'e1', title: '同工會', start: '2026-10-10', end: '2026-10-11', allDay: true },
+    });
+    assert.equal((await db.doc('churches/C1/rosters/ev_e1').get()).get('group'), undefined, "the church's again");
+  });
+});

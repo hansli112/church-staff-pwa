@@ -4,6 +4,7 @@ import { describe, test } from 'node:test';
 
 import { churchAccess } from '../src/access.js';
 
+import { mayWriteEvent } from '../src/eventGroups.js';
 import { mayMoveMember } from '../src/groupMembers.js';
 import { mapMember } from '../src/importer.js';
 import { ledChangeAllowed } from '../src/ledDuties.js';
@@ -74,4 +75,8 @@ describe('ledDuties', () => {
 
 describe('groupMembership', () => {
   for (const r of rows('groupMembership')) test(r.why, () => assert.equal(mayMoveMember(r.caller, r.target, r.group), r.may));
+});
+
+describe('eventWriting', () => {
+  for (const r of rows('eventWriting')) test(r.why, () => assert.equal(mayWriteEvent(r.member, r.before, r.after), r.may));
 });

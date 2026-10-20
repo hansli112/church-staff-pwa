@@ -709,20 +709,24 @@ class MemoryChurchData implements ChurchData {
   }
 
   /// Events' rosters, which are in no service.
-  void _requireEventRosterEditor() {
-    if (!_b.requireMember(churchId).canEditEventRosters) {
+  void _requireEventRosterEditor([String? group]) {
+    if (!_b.requireMember(churchId).canEditEventRoster(group)) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
   }
 
   /// Writing [r] over what is saved at its ID, as firestore.rules allow: a
-  /// service's day by its zone, an event's roster by any roster editor. One
+  /// service's day by whoever arranges it, an event's roster by 行政, admins
+  /// and its group's 負責人 (the saved group; a new one's as given). One
   /// never turns into the other, and a cancelled event's is the backend's.
   void _requireRosterWrite(Roster r) {
     final saved = _b.rosters[churchId]![r.id];
     if (saved != null && saved.isEvent != r.isEvent) throw const CloudException(CloudErrorCode.permissionDenied);
     if (!r.isEvent) return _requireRosterEditor(r.type);
-    _requireEventRosterEditor();
+    _requireEventRosterEditor((saved ?? r).forEvent!.group);
+    if (saved != null && saved.forEvent!.group != r.forEvent!.group) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
     // The title and days are the calendar's: the app sets them only when
     // making the roster.
     final was = saved?.forEvent;
@@ -862,7 +866,7 @@ class MemoryChurchData implements ChurchData {
         final roster = entry.value ?? saved[entry.key];
         if (roster == null) continue;
         if (entry.value == null) {
-          roster.isEvent ? _requireEventRosterEditor() : _requireRosterEditor(roster.type);
+          roster.isEvent ? _requireEventRosterEditor(roster.forEvent!.group) : _requireRosterEditor(roster.type);
         } else {
           _requireRosterWrite(roster);
         }
@@ -1443,7 +1447,23 @@ class MemoryChurchData implements ChurchData {
   // calendars [calendarList] offers and the events in
   // [MemoryBackend.calendarEvents].
 
-  void _requireCalendarEditor() => _b.functionAccess(churchId, allowed: (me) => me.inGroup(Group.calendarEditors));
+  /// As calendarWrite: an event of group [before] (null: none yet) becoming
+  /// [after] (null: deleted), judged by the event as the calendar has it
+  /// (Member.mayWriteEvent).
+  void _requireEventWrite(String? Function() before, String? after) => _b.functionAccess(
+    churchId,
+    // Admins and 行政 write any event: whose it was is looked up for others.
+    allowed: (me) => me.inGroup(Group.calendarEditors) || me.mayWriteEvent(before(), after),
+  );
+
+  /// Event [id]'s group as the calendar has it now, '' the church's.
+  String? _groupNow(String? id) {
+    if (id == null) return null;
+    for (final e in _b.calendarEvents[churchId] ?? const <CalendarEvent>[]) {
+      if (e.id == id) return e.group ?? '';
+    }
+    throw const CloudException(CloudErrorCode.notFound);
+  }
 
   @override
   Future<Uri> calendarAuthUrl() async {
@@ -1497,7 +1517,7 @@ class MemoryChurchData implements ChurchData {
 
   @override
   Future<CalendarEvent> calendarSave(CalendarEvent event, {CalendarEvent? previous, String? restoreRosterOf}) async {
-    _requireCalendarEditor();
+    _requireEventWrite(() => _groupNow(event.id), event.group ?? '');
     await _b.calendarSaveHeld?.future;
     final saved = event.id == null
         ? CalendarEvent(
@@ -1508,10 +1528,11 @@ class MemoryChurchData implements ChurchData {
             allDay: event.allDay,
             location: event.location,
             description: event.description,
+            group: event.group,
           )
         : event;
     await _b.write(() {
-      _requireCalendarEditor();
+      _requireEventWrite(() => _groupNow(event.id), event.group ?? '');
       final list = _b.calendarEvents.putIfAbsent(churchId, () => []);
       list.removeWhere((e) => e.id == saved.id);
       list.add(saved);
@@ -1533,9 +1554,9 @@ class MemoryChurchData implements ChurchData {
 
   @override
   Future<void> calendarDelete(CalendarEvent event) async {
-    _requireCalendarEditor();
+    _requireEventWrite(() => _groupNow(event.id), null);
     await _b.write(() {
-      _requireCalendarEditor();
+      _requireEventWrite(() => _groupNow(event.id), null);
       _b.calendarEvents[churchId]?.removeWhere((e) => e.id == event.id);
       final rosters = _b.rosters[churchId]!;
       final r = rosters[Roster.idForEvent(event.id!)];

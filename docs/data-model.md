@@ -10,7 +10,7 @@
 | `users/{uid}` | 全域個資：`name`、`email`、`locale`（自己選的語言，跟隨系統時沒有）、`appLocale`（App 實際顯示的語言：推播照它寫；建教會、搬家沒說語言時，預設內容和「待定」也照它）、`fcm`（`{deviceId: token}`）、`photoAiConsentAt`（同意照片辨識把照片和同工名單送到 Gemini 的時間，只能本人寫）、`createdAt`、`updatedAt` |
 | `churches/{cid}` | `name`、`nameKey`（正規化後的名稱，同名檢查用）、`status`（`active` / `suspended` / `deleted`）、`createdBy`、`createdAt`、`deletedAt`、`logoVersion`（logo 的 Storage generation）、`homeName`（主畫面名稱，選填，最多 8 字）、`timeZone`（教會的時區，IANA 名稱，限 `functions/src/timeZones.ts` 的 16 個；建立時照建立者手機的時區，之後管理員經 `setChurchTimeZone` 改；沒有這個欄位的是 #73 之前建立的，一律當 `Asia/Taipei`） |
 | `churches/{cid}/members/{uid}` | `uid`（= doc id，collection group 查詢用）、`name`、`email`、`role`、`groups`、`zones`（每個 `{serviceType, duties, smallGroups}`）、`zoneTypes`、`identities`（身分，見〈角色與群組〉）、`leadTypes`、`leadMinistries`、`ministries`、`notificationPrefs`（`muted`：關掉的通知種類；`reminderTiming`：服事提醒的時間，`weekly`／`dayBefore`／`both`，沒有就是 `weekly`）、`joinedAt` |
-| `churches/{cid}/rosters/{id}` | 服事表，`type` 是聚會別 ID，`dateKey` 是 `YYYY-MM-DD`，id 是 `<dateKey>_<type>`。活動的服事表（掛在行事曆活動上）的 id 是 `ev_<活動 id>`，沒有 `type`，改成 `kind: 'event'`、`eventId`、`title`（活動名稱）、`dateKey` 與 `endDateKey`（活動的第一天、最後一天，教會的時區）。名稱和日期由 `calendarWrite`（在 App 改的）和 `syncEventRosters`（各教會當地每天 6:30、12:30、18:30，在 Google 日曆直接改的；教會改時區時也立刻照新時區重算一次，不發通知）照活動更新。另外記 `calendarId`（活動在哪本行事曆）、重複活動的 `recurringEventId` 與 `originalStart`，建立時 App 寫，之後只有後端改。活動刪掉時後端加上 `cancelledAt`（取消：不顯示、不提醒，留著給復原；30 天內活動回來就恢復，過了就刪掉），只有後端寫這個欄位 |
+| `churches/{cid}/rosters/{id}` | 服事表，`type` 是聚會別 ID，`dateKey` 是 `YYYY-MM-DD`，id 是 `<dateKey>_<type>`。活動的服事表（掛在行事曆活動上）的 id 是 `ev_<活動 id>`，沒有 `type`，改成 `kind: 'event'`、`eventId`、`title`（活動名稱）、`dateKey` 與 `endDateKey`（活動的第一天、最後一天，教會的時區）。名稱和日期由 `calendarWrite`（在 App 改的）和 `syncEventRosters`（各教會當地每天 6:30、12:30、18:30，在 Google 日曆直接改的；教會改時區時也立刻照新時區重算一次，不發通知）照活動更新。另外記 `group`（活動屬於哪個群組，`service:<id>` 或 `ministry:<id>`，全教會的沒有這個欄位；#84）、`calendarId`（活動在哪本行事曆）、重複活動的 `recurringEventId` 與 `originalStart`，建立時 App 寫，之後只有後端改。活動刪掉時後端加上 `cancelledAt`（取消：不顯示、不提醒，留著給復原；30 天內活動回來就恢復，過了就刪掉），只有後端寫這個欄位 |
 | `churches/{cid}/pendingMembers/{舊 uid}` | 從舊版搬來、還沒登入的同工：`name`、`email`、`emailHash`、`role`、`groups`、`zones`、`zoneTypes`、`notificationPrefs`、`rosterIds`（搬家時記下有他名字的服事表）。後端建立，管理員可以刪；認領或合併時偏好與小組併入同工，只有 `rosterIds` 那幾天改連到新帳號 |
 | `pendingIndex/{email 的 SHA-256}` | 只有後端讀寫：`churches`（教會 id → 待認領同工 id） |
 | `invites/{邀請碼}` | `cid`、`churchName`、`expiresAt`（31 天內）、`revoked`、`createdBy`、`createdAt`、`zoneTypes`（選填，加入後屬於的牧區，最多 20 個；加入時只留教會還有的聚會別，不帶服事項目）。管理員建立、撤回，加入經 `redeemInvite` |
@@ -105,9 +105,13 @@ App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預�
 | 刪 member | admin 刪別人；非 admin 可以自己退出。admin 要先被別的 admin 降級才能走 |
 | 讀服事表、排序、設定 | 同工 |
 | 寫服事表、排序 | admin、行政（任何已設定的聚會別）；聚會負責人和牧者（只限 `leadTypes` 裡的聚會別，移動時新舊聚會別都要有）。事工負責人不能直接寫，經 `editLedDuties` 只改他事工連到的服事項目：其他服事項目、特別活動不能動，不能刪整天；還沒存過的那天可以照範本建立，但要有他的服事項目、其他服事項目要沒有人（`testdata/church_rules.json` 的 `ledDuties`） |
-| 寫活動的服事表 | admin 和行政；事工負責人經 `editLedDuties` 只排他的服事項目（照名稱比對）。一般服事表和活動的服事表不能互相改過去；取消了的不能再改，只能刪 |
+| 寫活動的服事表 | admin、行政，和活動所屬群組的負責人（服事表的 `group`，由後端照活動寫；App 建立時帶活動的，之後改不了）；事工負責人經 `editLedDuties` 只排他的服事項目（照名稱比對）。一般服事表和活動的服事表不能互相改過去；取消了的不能再改，只能刪 |
 | 寫設定 | admin；`services` 的 `ids` 只增不減，不能刪；`calendar`、`linkContent`、`webhook` 只有 Cloud Functions 能寫。服事項目改名要連同工的牧區與同工排序一起改，經 `editService`（比對改名前的那一個聚會，其他聚會照現在的保留；超過 500 筆寫入整筆拒絕） |
 | 讀寫 `users/{uid}` | 本人（限上列欄位，`fcm` 最多 50 支裝置）；刪除由 Cloud Functions 處理 |
+
+## 行事曆活動的歸屬（#84）
+
+活動屬於全教會，或屬於一個群組，存在 Google 活動的 `extendedProperties.private.marthaGroup`（`''` 是全教會，`service:<id>`、`ministry:<id>` 是群組的），在 Google 日曆改活動也留著；直接在 Google 建的是全教會的。`calendarWrite` 照 Google 上現在的歸屬判斷（`testdata/church_rules.json` 的 `eventWriting`）：admin 和行政（`calendar-editors`）全部；群組的負責人只能建、改、刪自己群組的活動，不能動全教會的，也不能把活動移到全教會或別的群組；其他同工連行事曆都不會被問。
 
 ## 交給 Cloud Functions 的（M2）
 

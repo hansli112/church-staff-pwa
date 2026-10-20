@@ -108,6 +108,8 @@ void main() {
     expect(b.calendarEvents['grace']!.map((e) => e.title), containsAll(['同工會', '禱告會']));
 
     await tapText(tester, '同工會');
+    await tester.ensureVisible(find.text('刪除活動').last);
+    await tester.pump();
     await tapText(tester, '刪除活動');
     expect(b.calendarEvents['grace']!.map((e) => e.title), ['禱告會']);
     await tapText(tester, '復原');
@@ -143,6 +145,8 @@ void main() {
     expect((renamed.forEvent!.title, renamed.day, renamed.lastDay), ('秋令營', Day(2026, 10, 9), Day(2026, 10, 11)));
 
     await tapText(tester, '秋令營');
+    await tester.ensureVisible(find.text('刪除活動').last);
+    await tester.pump();
     await tapText(tester, '刪除活動');
     expect(b.rosters['grace']![Roster.idForEvent('camp')]!.forEvent!.cancelled, isTrue);
     await tapText(tester, '復原');
@@ -186,6 +190,8 @@ void main() {
     expect(inAgenda('秋季退修會'), findsWidgets, reason: 'October, though the event began in September');
 
     await tapText(tester, '秋季退修會');
+    await tester.ensureVisible(find.text('刪除活動').last);
+    await tester.pump();
     await tapText(tester, '刪除活動');
     expect(inAgenda('秋季退修會'), findsNothing);
     await tapText(tester, '復原');

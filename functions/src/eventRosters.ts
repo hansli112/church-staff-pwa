@@ -69,8 +69,17 @@ const ref = (deps: Deps, churchId: string, eventId: string) => deps.db.doc(`chur
 const fromEvent = (e: CalendarEvent, timeZone: ChurchTimeZone) => ({
   title: cutText(e.title, TEXT_LIMITS.eventTitle),
   ...eventRosterDays(e, timeZone),
+  // Whose the event is (#84), which lets that group's 負責人 arrange it;
+  // none for the church's, as the app writes it.
+  ...(e.group ? { group: e.group } : {}),
   via: 'calendar',
   updatedAt: FieldValue.serverTimestamp(),
+});
+
+/** [fromEvent] as an update: an event now the church's drops its group. */
+const updateFromEvent = (e: CalendarEvent, timeZone: ChurchTimeZone) => ({
+  ...fromEvent(e, timeZone),
+  ...(e.group ? {} : { group: FieldValue.delete() }),
 });
 
 /** What a roster records of where its event is in [calendarId], for later syncs. */
@@ -80,8 +89,9 @@ const stamps = (e: CalendarEvent, calendarId: string) => ({
   ...(e.originalStart ? { originalStart: e.originalStart } : {}),
 });
 
-const same = (r: DocumentSnapshot, next: { title: string; dateKey: string; endDateKey: string }) =>
-  r.get('title') === next.title && r.get('dateKey') === next.dateKey && r.get('endDateKey') === next.endDateKey;
+const same = (r: DocumentSnapshot, next: { title: string; dateKey: string; endDateKey: string }, e: CalendarEvent) =>
+  r.get('title') === next.title && r.get('dateKey') === next.dateKey && r.get('endDateKey') === next.endDateKey
+  && (r.get('group') ?? '') === (e.group ?? '');
 
 // Changes made in the app (calendarWrite), after Google has them.
 
@@ -95,8 +105,8 @@ export async function followEdit(deps: Deps, churchId: string, timeZone: ChurchT
   await deps.db.runTransaction(async (tx) => {
     const r = await tx.get(at);
     if (!isEvent(r) || isCancelled(r)) return;
-    const next = fromEvent(e, timeZone);
-    if (!same(r, next)) tx.update(at, { ...next, movedBy: by });
+    const next = updateFromEvent(e, timeZone);
+    if (!same(r, next, e)) tx.update(at, { ...next, movedBy: by });
   });
 }
 
@@ -141,12 +151,12 @@ export async function restoreOnto(deps: Deps, churchId: string, timeZone: Church
  * told this time.
  */
 export async function followGoogle(r: DocumentSnapshot, e: CalendarEvent, calendarId: string, timeZone: ChurchTimeZone) {
-  const next = { ...fromEvent(e, timeZone), ...stamps(e, calendarId) };
+  const next = { ...updateFromEvent(e, timeZone), ...stamps(e, calendarId) };
   if (isCancelled(r)) {
     await r.ref.update({ ...next, cancelledAt: FieldValue.delete(), via: 'restore' });
     return 'restored' as const;
   }
-  if (same(r, next) && Object.entries(stamps(e, calendarId)).every(([k, v]) => r.get(k) === v)) return null;
+  if (same(r, next, e) && Object.entries(stamps(e, calendarId)).every(([k, v]) => r.get(k) === v)) return null;
   await r.ref.update({ ...next, movedBy: FieldValue.delete() });
   return 'updated' as const;
 }
@@ -175,7 +185,7 @@ export async function relinkTo(deps: Deps, r: DocumentSnapshot, match: CalendarE
     return true;
   });
   if (!moved) return false;
-  await to.update({ ...fromEvent(match, timeZone), ...stamps(match, calendarId) });
+  await to.update({ ...updateFromEvent(match, timeZone), ...stamps(match, calendarId) });
   return true;
 }
 

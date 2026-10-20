@@ -770,6 +770,23 @@ class L10nKo extends L10n {
   String get myGroups => '내가 맡은 것';
 
   @override
+  String get eventGroup => '소속';
+
+  @override
+  String eventOfGroup(String group) {
+    return '$group 일정';
+  }
+
+  @override
+  String get calFilter => '필터';
+
+  @override
+  String get calFilterMine => '나와 관련된 일정';
+
+  @override
+  String get calFilterAll => '전체';
+
+  @override
   String get removeShort => '빼기';
 
   @override

@@ -1456,6 +1456,36 @@ abstract class L10n {
   /// **'我負責的'**
   String get myGroups;
 
+  /// Row in the event editor: whose the event is (#84), the whole church's or a group's
+  ///
+  /// In zh, this message translates to:
+  /// **'屬於'**
+  String get eventGroup;
+
+  /// Under a group's event in its detail; group is the service's or ministry's name
+  ///
+  /// In zh, this message translates to:
+  /// **'{group}的活動'**
+  String eventOfGroup(String group);
+
+  /// Tooltip of the calendar's filter menu
+  ///
+  /// In zh, this message translates to:
+  /// **'篩選'**
+  String get calFilter;
+
+  /// Calendar filter: the church's events, my groups' and those I serve at
+  ///
+  /// In zh, this message translates to:
+  /// **'跟我有關的'**
+  String get calFilterMine;
+
+  /// Calendar filter: every event
+  ///
+  /// In zh, this message translates to:
+  /// **'全部'**
+  String get calFilterAll;
+
   /// Button beside a 身分: take it away (undo follows)
   ///
   /// In zh, this message translates to:

@@ -1,5 +1,5 @@
 {
-  "about": "Church data rules both the app (app/lib, its memory backend standing in for the Cloud Functions) and functions/src must follow; app/test/domain/church_rules_test.dart and functions/test/churchRules.test.ts run every row. Add a row here, not to one side. groupMembership: who may add or take out whom as a 同工 of a group (setGroupMember); caller and target are member fields. ledDuties: what a 事工's 負責人 who leads `roles` on a day may change on it (functions/src/ledDuties.ts, the memory backend); before or after null is a day not made yet or deleted. rosterEditing: a member (role, groups, the 牧區 they hold, the services and 事工 they lead) editing a roster of a church whose services are sunday and youth, a service's (`roster` is its id) or an event's (`event`). firestore.rules keeps it too (firestore-tests/rules.test.js runs it); functions/src gates only services' rosters, so runs only those rows.",
+  "about": "Church data rules both the app (app/lib, its memory backend standing in for the Cloud Functions) and functions/src must follow; app/test/domain/church_rules_test.dart and functions/test/churchRules.test.ts run every row. Add a row here, not to one side. eventWriting: who may make, change or delete a calendar event (#84), by its group before and after: null is no event (made, or deleted), an empty string the whole church's, service:<id> or ministry:<id> a group's. groupMembership: who may add or take out whom as a 同工 of a group (setGroupMember); caller and target are member fields. ledDuties: what a 事工's 負責人 who leads `roles` on a day may change on it (functions/src/ledDuties.ts, the memory backend); before or after null is a day not made yet or deleted. rosterEditing: a member (role, groups, the 牧區 they hold, the services and 事工 they lead) editing (an event's roster: of the group `eventGroup`, else the church's) a roster of a church whose services are sunday and youth, a service's (`roster` is its id) or an event's (`event`). firestore.rules keeps it too (firestore-tests/rules.test.js runs it); functions/src gates only services' rosters, so runs only those rows.",
   "defaultServices": {
     "zh-Hant": [
       {
@@ -162,7 +162,10 @@
     { "why": "a service's 負責人 (or its 牧者) edits that service's rosters", "role": "staff", "groups": [], "zoneTypes": ["sunday"], "leadTypes": ["sunday"], "leadMinistries": [], "roster": "sunday", "may": true },
     { "why": "but not another service's", "role": "staff", "groups": [], "zoneTypes": ["sunday"], "leadTypes": ["sunday"], "leadMinistries": [], "roster": "youth", "may": false },
     { "why": "leading a service needs no 牧區 there", "role": "staff", "groups": [], "zoneTypes": [], "leadTypes": ["youth"], "leadMinistries": [], "roster": "youth", "may": true },
-    { "why": "a service's 負責人 does not arrange events' rosters yet (#84 gives groups their events)", "role": "staff", "groups": [], "zoneTypes": ["sunday"], "leadTypes": ["sunday"], "leadMinistries": [], "roster": "event", "may": false },
+    { "why": "a service's 負責人 arranges no roster of the church's events", "role": "staff", "groups": [], "zoneTypes": ["sunday"], "leadTypes": ["sunday"], "leadMinistries": [], "roster": "event", "may": false },
+    { "why": "but arranges the rosters of its own events (#84)", "role": "staff", "groups": [], "zoneTypes": [], "leadTypes": ["sunday"], "leadMinistries": [], "roster": "event", "eventGroup": "service:sunday", "may": true },
+    { "why": "not of another group's", "role": "staff", "groups": [], "zoneTypes": [], "leadTypes": ["sunday"], "leadMinistries": [], "roster": "event", "eventGroup": "service:youth", "may": false },
+    { "why": "a 事工's 負責人, all of its own events' rosters", "role": "staff", "groups": [], "zoneTypes": [], "leadTypes": [], "leadMinistries": ["worship"], "roster": "event", "eventGroup": "ministry:worship", "may": true },
     { "why": "a 事工's 負責人 writes no roster directly: their duties go through the backend", "role": "staff", "groups": [], "zoneTypes": ["sunday"], "leadTypes": [], "leadMinistries": ["worship"], "roster": "sunday", "may": false },
     { "why": "nor an event's", "role": "staff", "groups": [], "zoneTypes": [], "leadTypes": [], "leadMinistries": ["worship"], "roster": "event", "may": false },
     { "why": "a 牧區 alone edits nothing", "role": "staff", "groups": [], "zoneTypes": ["sunday"], "leadTypes": [], "leadMinistries": [], "roster": "sunday", "may": false },
@@ -192,5 +195,17 @@
     { "why": "nor 行政", "caller": {"leadTypes": ["sunday"]}, "target": {"groups": ["roster-editors", "calendar-editors"]}, "group": {"service": "sunday"}, "may": false },
     { "why": "an admin moves anyone, in any group", "caller": {"role": "admin"}, "target": {"identities": [{"kind": "office"}], "groups": ["roster-editors", "calendar-editors"]}, "group": {"ministry": "worship"}, "may": true },
     { "why": "a member who leads nothing moves no one", "caller": {}, "target": {}, "group": {"service": "sunday"}, "may": false }
+  ],
+  "eventWriting": [
+    { "why": "行政 and admins make any event, the church's or a group's", "member": {"groups": ["calendar-editors"]}, "before": null, "after": "", "may": true },
+    { "why": "and change or delete any", "member": {"role": "admin"}, "before": "ministry:worship", "after": null, "may": true },
+    { "why": "a group's 負責人 makes its events", "member": {"leadMinistries": ["worship"]}, "before": null, "after": "ministry:worship", "may": true },
+    { "why": "and changes them", "member": {"leadTypes": ["sunday"]}, "before": "service:sunday", "after": "service:sunday", "may": true },
+    { "why": "and deletes them", "member": {"leadTypes": ["sunday"]}, "before": "service:sunday", "after": null, "may": true },
+    { "why": "not the church's", "member": {"leadTypes": ["sunday"]}, "before": null, "after": "", "may": false },
+    { "why": "nor another group's", "member": {"leadTypes": ["sunday"]}, "before": "service:youth", "after": "service:youth", "may": false },
+    { "why": "nor gives its event to the church", "member": {"leadTypes": ["sunday"]}, "before": "service:sunday", "after": "", "may": false },
+    { "why": "nor takes the church's for its own", "member": {"leadMinistries": ["worship"]}, "before": "", "after": "ministry:worship", "may": false },
+    { "why": "a 同工 who leads nothing writes no event", "member": {}, "before": null, "after": "service:sunday", "may": false }
   ]
 }

@@ -171,6 +171,16 @@ service cloud.firestore {
         || type in member(cid).get('leadTypes', []));
     }
 
+    // Arranges all of an event's roster: admins and 行政 any; a group's 負責人
+    // its group's events (#84), whose roster says the group (`group`, set
+    // by the backend from the event; the church's events have none).
+    function arrangesEvent(cid, data) {
+      let g = data.get('group', '');
+      return inGroup(cid, 'roster-editors')
+        || (g.matches('service:.+') && g.split(':')[1] in member(cid).get('leadTypes', []))
+        || (g.matches('ministry:.+') && g.split(':')[1] in member(cid).get('leadMinistries', []));
+    }
+
     function isEventRoster(data) {
       return data.get('kind', '') == 'event';
     }
@@ -184,7 +194,8 @@ service cloud.firestore {
       let day = '^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$';
       return isEventRoster(roster)
         && roster.keys().hasOnly(['kind', 'eventId', 'title', 'dateKey', 'endDateKey', 'duties', 'events', 'via', 'updatedAt',
-             'calendarId', 'recurringEventId', 'originalStart'])
+             'calendarId', 'recurringEventId', 'originalStart', 'group'])
+        && (!('group' in roster) || (roster.group is string && roster.group.matches('(service|ministry):[A-Za-z0-9_-]{1,64}')))
         && roster.eventId is string && rosterId == 'ev_' + roster.eventId
         && roster.title is string && roster.title.size() <= 800
         && roster.dateKey is string && roster.dateKey.matches(day)
@@ -330,19 +341,22 @@ service cloud.firestore {
           && canEditRosterType(cid, resource.data.get('type', ''));
 
         // 活動的服事表: one per calendar event, at ev_<eventId>, in no
-        // service, so no zone: admins and every roster editor. It never turns
+        // service, so no zone: admins and 行政, and a group's 負責人 for the
+        // group's events (arrangesEvent; the group the app gives a new one
+        // is set again from the event by calendarWrite and the sync, and the
+        // app never changes it). It never turns
         // into a service's day or back, which would get round the zones, and
         // a service's day never takes an ev_ ID. Its title and days are the
         // calendar's: the app sets them when making it, then only
         // calendarWrite changes them.
-        allow create: if validEventRoster(rosterId) && inGroup(cid, 'roster-editors');
+        allow create: if validEventRoster(rosterId) && arrangesEvent(cid, request.resource.data);
         allow update: if validEventRoster(rosterId) && isEventRoster(resource.data)
           && !('cancelledAt' in resource.data)
           // movedBy: who moved it, which calendarWrite records for the
           // trigger; an app write drops it.
           && onlyTouches(['duties', 'events', 'via', 'updatedAt', 'movedBy'])
-          && inGroup(cid, 'roster-editors');
-        allow delete: if isEventRoster(resource.data) && inGroup(cid, 'roster-editors');
+          && arrangesEvent(cid, resource.data);
+        allow delete: if isEventRoster(resource.data) && arrangesEvent(cid, resource.data);
       }
 
       match /staff_orders/{type} {

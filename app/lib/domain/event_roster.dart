@@ -23,6 +23,7 @@ Roster eventRoster(CalendarEvent e, {List<Duty> duties = const [], String? calen
       calendarId: calendarId,
       recurringEventId: e.recurringEventId,
       originalStart: e.originalStart,
+      group: e.group,
     ),
   );
 }

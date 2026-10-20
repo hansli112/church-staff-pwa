@@ -199,6 +199,25 @@ sealed class ChurchGroup {
   const ChurchGroup(this.id);
 
   final String id;
+
+  /// How an event names it as its group (#84): `service:<id>` or
+  /// `ministry:<id>`.
+  String get key => switch (this) {
+    ServiceGroup() => 'service:$id',
+    MinistryGroup() => 'ministry:$id',
+  };
+
+  /// [key] read back; null for the church's ('') or anything else.
+  static ChurchGroup? parse(String key) {
+    final i = key.indexOf(':');
+    if (i <= 0 || i == key.length - 1) return null;
+    final id = key.substring(i + 1);
+    return switch (key.substring(0, i)) {
+      'service' => ServiceGroup(id),
+      'ministry' => MinistryGroup(id),
+      _ => null,
+    };
+  }
 }
 
 final class ServiceGroup extends ChurchGroup {

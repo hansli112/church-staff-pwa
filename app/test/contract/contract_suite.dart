@@ -1116,6 +1116,44 @@ void contractTests(Future<ContractWorld> Function() open) {
       await expectLater(g.church.calendarEvents('2026-10'), denied());
     });
 
+    test("a group's 負責人 writes its events and arranges their rosters, not the church's (#84)", () async {
+      final g = await Grace.open(w);
+      await w.connectCalendar(g.cid);
+      final church = await g.church.calendarSave(
+        CalendarEvent(title: '同工會', start: DateTime.utc(2026, 12, 20, 19), end: DateTime.utc(2026, 12, 20, 21)),
+      );
+      await w.signIn(Grace.editorEmail);
+      // 林同工 leads 主日崇拜.
+      final ours = await g.church.calendarSave(
+        CalendarEvent(
+          title: '主日同工聚集',
+          start: DateTime.utc(2026, 12, 22, 19),
+          end: DateTime.utc(2026, 12, 22, 21),
+          group: 'service:sunday',
+        ),
+      );
+      expect(ours.group, 'service:sunday');
+      await g.church.calendarSave(ours.copyWith(title: '主日同工聚集（改）'), previous: ours);
+      await g.church.putRoster(
+        eventRoster(
+          ours,
+          duties: const [Duty(role: '主持')],
+          calendarId: 'cal-1',
+        ),
+      );
+      await expectLater(g.church.calendarSave(church.copyWith(title: '改')), denied());
+      await expectLater(g.church.calendarSave(church.copyWith(group: () => 'service:sunday')), denied());
+      await expectLater(g.church.calendarDelete(church), denied());
+      await expectLater(
+        g.church.calendarSave(
+          CalendarEvent(title: '全教會', start: DateTime.utc(2026, 12, 23, 19), end: DateTime.utc(2026, 12, 23, 21)),
+        ),
+        denied(),
+      );
+      await expectLater(g.church.putRoster(eventRoster(church, calendarId: 'cal-1')), denied());
+      await g.church.calendarDelete(ours);
+    });
+
     test("an event's roster follows its event: moved, deleted, and the delete undone", () async {
       final g = await Grace.open(w);
       await w.connectCalendar(g.cid);

@@ -49,6 +49,55 @@ class MonthGridShown extends Notifier<bool> {
 
 final monthGridShownProvider = NotifierProvider<MonthGridShown, bool>(MonthGridShown.new);
 
+/// Which events the calendar shows (#84): `mine` (跟我有關的), `all`,
+/// `church` (全教會) or one group's ([ChurchGroup.key]). Remembered per church
+/// on this device; at first `all` for admins and 行政, who look after the
+/// whole church, and `mine` for everyone else.
+class CalendarFilter extends Notifier<String> {
+  String get _key => 'calendar_filter/${ref.read(currentChurchIdProvider)}';
+
+  @override
+  String build() {
+    ref.watch(currentChurchIdProvider);
+    final whole = ref.watch(meProvider.select((m) => m.value?.inGroup(Group.calendarEditors) ?? false));
+    return ref.read(prefsProvider).getString(_key) ?? (whole ? 'all' : 'mine');
+  }
+
+  void pick(String filter) {
+    state = filter;
+    ref.read(prefsProvider).setString(_key, filter);
+  }
+}
+
+final calendarFilterProvider = NotifierProvider<CalendarFilter, String>(CalendarFilter.new);
+
+/// Whether [filter] shows [e] for [me]. 跟我有關的: the church's events, my
+/// groups' (the services I am in or lead, my 事工), and those whose roster
+/// has me ([servedAt], event ids).
+bool calendarShows(String filter, CalendarEvent e, Member? me, Set<String> servedAt) => switch (filter) {
+  'all' => true,
+  'church' => e.group == null,
+  'mine' =>
+    e.group == null ||
+        servedAt.contains(e.id) ||
+        (me != null &&
+            switch (ChurchGroup.parse(e.group!)) {
+              final g? => me.isIn(g) || me.leadsGroup(g),
+              null => false,
+            }),
+  final group => e.group == group,
+};
+
+/// The events whose roster I am on, by event id: for 跟我有關的.
+final _servedAtProvider = Provider<Set<String>>((ref) {
+  final uid = ref.watch(uidProvider);
+  final rosters = ref.watch(savedRostersProvider).value ?? const <Roster>[];
+  return {
+    for (final r in rosters)
+      if (r.forEvent case final e? when uid != null && r.duties.any((d) => d.uids.containsValue(uid))) e.eventId,
+  };
+});
+
 /// 行事曆: the church's Google Calendar month by month, a month grid above
 /// an agenda of the days with events.
 class CalendarScreen extends ConsumerWidget {
@@ -60,12 +109,42 @@ class CalendarScreen extends ConsumerWidget {
     final settings = ref.watch(calendarSettingsProvider).value;
     final me = ref.watch(meProvider).value;
     final month = ref.watch(calendarMonthProvider);
-    final canEdit = (me?.inGroup(Group.calendarEditors) ?? false) && (settings?.ready ?? false);
+    // Admins, 行政 and any 負責人 make events (#84): whose, they pick.
+    final canEdit = (me?.makesEvents ?? false) && (settings?.ready ?? false);
     final gridShown = ref.watch(monthGridShownProvider);
+    final filter = ref.watch(calendarFilterProvider);
+    final services = ref.watch(servicesProvider).value?.enabled ?? const <Service>[];
+    final ministries = ref.watch(ministriesProvider).value?.ministries ?? const <Ministry>[];
+    final filters = <(String, String)>[
+      ('mine', l10n.calFilterMine),
+      ('all', l10n.calFilterAll),
+      ('church', l10n.wholeChurch),
+      for (final s in services) (ServiceGroup(s.id).key, s.name),
+      for (final m in ministries) (MinistryGroup(m.id).key, m.name),
+    ];
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.tabCalendar),
         actions: [
+          if (settings?.ready ?? false)
+            PopupMenuButton<String>(
+              tooltip: l10n.calFilter,
+              onSelected: ref.read(calendarFilterProvider.notifier).pick,
+              itemBuilder: (_) => [
+                for (final (key, label) in filters)
+                  CheckedPopupMenuItem(value: key, checked: key == filter, child: Text(label)),
+              ],
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Space.s),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(filters.where((f) => f.$1 == filter).firstOrNull?.$2 ?? l10n.calFilterAll),
+                    const Icon(Symbols.arrow_drop_down_rounded),
+                  ],
+                ),
+              ),
+            ),
           if (settings?.ready ?? false)
             IconButton(
               tooltip: gridShown ? l10n.calHideMonth : l10n.calShowMonth,
@@ -195,7 +274,13 @@ class _AgendaState extends ConsumerState<_Agenda> {
     final selected = ref.watch(calendarSelectedDayProvider);
     final gridShown = ref.watch(monthGridShownProvider);
     final title = DateFormat.yMMMM().format(month);
-    final loaded = events.value ?? const <CalendarEvent>[];
+    final me = ref.watch(meProvider).value;
+    final filter = ref.watch(calendarFilterProvider);
+    final servedAt = ref.watch(_servedAtProvider);
+    final loaded = [
+      for (final e in events.value ?? const <CalendarEvent>[])
+        if (calendarShows(filter, e, me, servedAt)) e,
+    ];
     void shift(int months) => ref.read(calendarMonthProvider.notifier).shift(months);
 
     final header = Padding(
@@ -240,7 +325,9 @@ class _AgendaState extends ConsumerState<_Agenda> {
       chevron: true,
       onTap: e.id == null
           ? null
-          : () => canEdit ? editEvent(context, ref, e, month: month) : showEventDetail(context, e),
+          : () => canEdit && (me?.mayWriteEvent(e.group ?? '', e.group ?? '') ?? false)
+                ? editEvent(context, ref, e, month: month)
+                : showEventDetail(context, e),
     );
 
     final List<Widget> agenda;
@@ -292,7 +379,7 @@ class _AgendaState extends ConsumerState<_Agenda> {
             : l10n.loadFailed,
         onRetry: () => ref.invalidate(calendarEventsProvider(monthKey(month))),
       ),
-      data: (list) => list.isEmpty && selected == null ? EmptyState(message: l10n.calNoEvents) : null,
+      data: (_) => loaded.isEmpty && selected == null ? EmptyState(message: l10n.calNoEvents) : null,
     );
     final divider = Divider(height: 0.5, thickness: 0.5, color: AppColors.of(context).separator);
 

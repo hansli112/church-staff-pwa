@@ -90,7 +90,10 @@ void main() {
           ],
         );
         final roster = r['roster'] as String;
-        expect(roster == 'event' ? member.canEditEventRosters : member.canEditRosters(roster), r['may']);
+        expect(
+          roster == 'event' ? member.canEditEventRoster(r['eventGroup'] as String?) : member.canEditRosters(roster),
+          r['may'],
+        );
       });
     }
   });
@@ -148,6 +151,25 @@ void main() {
           ).mayMove(member('target', r['target'] as Map<String, dynamic>), group),
           r['may'],
         );
+      });
+    }
+  });
+
+  group('eventWriting', () {
+    for (final r in _rows('eventWriting')) {
+      test(r['why'] as String, () {
+        final f = r['member'] as Map<String, dynamic>;
+        final m = Member(
+          uid: 'u',
+          name: 'u',
+          role: Role.values.byName(f['role'] as String? ?? 'staff'),
+          groups: {for (final g in _strings(f['groups'] ?? const [])) ?Group.byId(g)},
+          identities: [
+            for (final t in _strings(f['leadTypes'] ?? const [])) ServiceLead(t),
+            for (final x in _strings(f['leadMinistries'] ?? const [])) MinistryLead(x),
+          ],
+        );
+        expect(m.mayWriteEvent(r['before'] as String?, r['after'] as String?), r['may']);
       });
     }
   });

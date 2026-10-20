@@ -769,6 +769,23 @@ class L10nJa extends L10n {
   String get myGroups => '担当しているもの';
 
   @override
+  String get eventGroup => '所属';
+
+  @override
+  String eventOfGroup(String group) {
+    return '$groupの行事';
+  }
+
+  @override
+  String get calFilter => '絞り込み';
+
+  @override
+  String get calFilterMine => '自分に関係あるもの';
+
+  @override
+  String get calFilterAll => 'すべて';
+
+  @override
   String get removeShort => '外す';
 
   @override

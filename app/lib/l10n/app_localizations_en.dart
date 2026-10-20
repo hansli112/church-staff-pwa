@@ -786,6 +786,23 @@ class L10nEn extends L10n {
   String get myGroups => 'I lead';
 
   @override
+  String get eventGroup => 'Belongs to';
+
+  @override
+  String eventOfGroup(String group) {
+    return '$group event';
+  }
+
+  @override
+  String get calFilter => 'Filter';
+
+  @override
+  String get calFilterMine => 'Mine';
+
+  @override
+  String get calFilterAll => 'All';
+
+  @override
   String get removeShort => 'Remove';
 
   @override

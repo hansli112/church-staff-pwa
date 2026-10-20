@@ -67,7 +67,8 @@ class ChurchWrites {
   /// only some duties of those days (#82), through the backend, which
   /// checks that only those changed.
   Future<void> _sendRosters(ChurchData data, RosterChange change) {
-    bool whole(Roster r) => _ref.read(arrangesProvider(r.isEvent ? null : r.type)) == null;
+    bool whole(Roster r) =>
+        (r.isEvent ? _ref.read(eventArrangesProvider(r.forEvent!.group)) : _ref.read(arrangesProvider(r.type))) == null;
     final days = [...change.before.values, ...change.after.values].whereType<Roster>();
     final scoped = change.staffOrder == null && change.serviceChange == null && !days.every(whole);
     return scoped ? data.compareAndSetLedDuties(change) : data.compareAndSetRosters(change);

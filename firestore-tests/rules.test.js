@@ -440,6 +440,7 @@ describe('rosterEditing (testdata/church_rules.json)', () => {
       const write = r.roster === 'event'
         ? setDoc(doc(as(uid), `churches/${A}/rosters/ev_t${i}`), {
           kind: 'event', eventId: `t${i}`, title: '聖誕晚會', dateKey: '2030-12-24', endDateKey: '2030-12-24', duties: [], events: [],
+          ...(r.eventGroup ? { group: r.eventGroup } : {}),
         })
         : setDoc(doc(as(uid), `churches/${A}/rosters/table-${i}`), { type: r.roster });
       await (r.may ? assertSucceeds(write) : assertFails(write));

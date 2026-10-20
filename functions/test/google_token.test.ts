@@ -25,6 +25,8 @@ test('Google PATCH clears the opposite date field when changing event type, whil
   assert.match(requests[0].url, /church%40example\.com\/events\/event$/);
   assert.deepEqual(requests[0].body, {
     summary: '退修會', description: '保留說明',
+    // Whose it is (#84): the church's.
+    extendedProperties: { private: { marthaGroup: '' } },
     start: { date: '2026-10-10', dateTime: null },
     end: { date: '2026-10-12', dateTime: null },
   });

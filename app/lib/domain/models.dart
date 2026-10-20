@@ -301,6 +301,12 @@ class Member {
     MinistryGroup(:final id) => leadMinistries.contains(id),
   };
 
+  /// [leadsGroup] by an event's group key; the church's ('') nobody leads.
+  bool _leadsKey(String key) => switch (ChurchGroup.parse(key)) {
+    final g? => leadsGroup(g),
+    null => false,
+  };
+
   /// Whether this member may add [target] to [group] or take them out
   /// (testdata/church_rules.json, groupMembership): an admin anyone; the
   /// group's 負責人 only a plain 同工, since 身分 are the admin's to give.
@@ -327,13 +333,35 @@ class Member {
     MinistryGroup(:final id) => copyWith(ministries: member ? {...ministries, id} : ({...ministries}..remove(id))),
   };
 
-  /// What this member arranges on a day of [serviceType] (null: an
-  /// event's): null for all of it; otherwise only these duties, those the
-  /// 事工 in [ministries] they lead link (none: nothing).
-  Set<String>? arranges(List<Ministry> ministries, String? serviceType) =>
-      (serviceType == null ? canEditEventRosters : canEditRosters(serviceType))
-      ? null
-      : ledDuties(ministries, serviceType);
+  /// What this member arranges on a day of [serviceType]: null for all
+  /// of it; otherwise only these duties, those the 事工 in [ministries] they
+  /// lead link (none: nothing).
+  Set<String>? arranges(List<Ministry> ministries, String serviceType) =>
+      canEditRosters(serviceType) ? null : ledDuties(ministries, serviceType);
+
+  /// As [arranges], on the roster of an event of [group] (null: the
+  /// church's): all of it for admins, 行政 and the group's 負責人.
+  Set<String>? arrangesEvent(List<Ministry> ministries, String? group) =>
+      canEditEventRoster(group) ? null : ledDuties(ministries, null);
+
+  /// Whether this member arranges all of an event's roster of [group]
+  /// (null: the church's; testdata/church_rules.json, rosterEditing):
+  /// admins, 行政 and that group's 負責人.
+  bool canEditEventRoster(String? group) => canEditEventRosters || (group != null && _leadsKey(group));
+
+  /// Whether this member may change an event of group [before] (null: none
+  /// yet) to [after] (null: deleted), '' being the church's
+  /// (testdata/church_rules.json, eventWriting): admins and 行政 any; a
+  /// group's 負責人 that group's events, never the church's.
+  bool mayWriteEvent(String? before, String? after) {
+    if (inGroup(Group.calendarEditors)) return true;
+    return (before != null || after != null) &&
+        (before == null || _leadsKey(before)) &&
+        (after == null || _leadsKey(after));
+  }
+
+  /// Whether this member may make events: admins, 行政 and any 負責人.
+  bool get makesEvents => inGroup(Group.calendarEditors) || leads;
 
   /// Whether this member sees the church's member list: admins, 行政 and
   /// whoever leads something.
@@ -581,10 +609,15 @@ class RosterEvent {
     this.calendarId,
     this.recurringEventId,
     this.originalStart,
+    this.group,
   });
 
   final String eventId;
   final String title;
+
+  /// Whose the event is (#84, CalendarEvent.group): null the church's.
+  /// Copied by the backend; the app never changes it.
+  final String? group;
 
   /// Where the event is, for the backend to find it again (eventSync.ts):
   /// the calendar, and for a day of a recurring event its series and the
@@ -608,11 +641,13 @@ class RosterEvent {
     calendarId: calendarId,
     recurringEventId: recurringEventId,
     originalStart: originalStart,
+    group: group,
   );
 
   @override
   bool operator ==(Object other) =>
       other is RosterEvent &&
+      other.group == group &&
       other.eventId == eventId &&
       other.title == title &&
       other.lastDay == lastDay &&
@@ -622,7 +657,8 @@ class RosterEvent {
       other.originalStart == originalStart;
 
   @override
-  int get hashCode => Object.hash(eventId, title, lastDay, cancelled, calendarId, recurringEventId, originalStart);
+  int get hashCode =>
+      Object.hash(eventId, title, lastDay, cancelled, calendarId, recurringEventId, originalStart, group);
 }
 
 /// One service on one day, or one calendar event ([forEvent]).
@@ -821,11 +857,16 @@ class CalendarEvent {
     this.description,
     this.recurringEventId,
     this.originalStart,
+    this.group,
   }) : start = churchCivilTime(start),
        end = churchCivilTime(end);
 
   final String? id;
   final String title;
+
+  /// Whose it is (#84): null the whole church's, else a group's
+  /// ([ChurchGroup.key]). Made in Google Calendar, it is the church's.
+  final String? group;
 
   /// For one day of a recurring event: its series, and the start it had
   /// there, as Google gives it. Read only.
@@ -882,6 +923,7 @@ class CalendarEvent {
     allDay: allDay,
     location: location,
     description: description,
+    group: group,
   );
 
   CalendarEvent copyWith({
@@ -891,6 +933,7 @@ class CalendarEvent {
     bool? allDay,
     String? location,
     String? description,
+    String? Function()? group,
   }) => CalendarEvent(
     id: id,
     title: title ?? this.title,
@@ -899,6 +942,9 @@ class CalendarEvent {
     allDay: allDay ?? this.allDay,
     location: location ?? this.location,
     description: description ?? this.description,
+    recurringEventId: recurringEventId,
+    originalStart: originalStart,
+    group: group == null ? this.group : group(),
   );
 }
 
