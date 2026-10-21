@@ -225,6 +225,9 @@ final appStageProvider = Provider<AppStage>((ref) {
   if (!memberships.hasValue) {
     return memberships.hasError ? AppStage.noChurch : AppStage.loading;
   }
+  // Just signed in, and holding the none from while signed out: the new
+  // account's are still coming in. Welcome flashed on a first sign-in.
+  if (memberships.isLoading && !memberships.hasError && memberships.value!.isEmpty) return AppStage.loading;
   if (memberships.value!.isEmpty) return AppStage.noChurch;
   final church = ref.watch(churchProvider);
   // Still coming in, and holding the null from before there was a church.

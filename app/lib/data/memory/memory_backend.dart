@@ -164,6 +164,10 @@ class MemoryBackend implements Backend {
   /// to complete, as on a slow network.
   Completer<void>? backOfficeReadsHeld;
 
+  /// Scripted: while set, an account's memberships deliver nothing until
+  /// this completes, as on a slow network.
+  Completer<void>? membershipsHeld;
+
   /// Scripted: photos used this month per church, the limit, whether the
   /// platform's budget is left, and what recognition returns.
   final photosUsed = <String, int>{};
@@ -659,18 +663,23 @@ class _Memberships implements MembershipRepository {
   final MemoryBackend _b;
 
   @override
-  Stream<List<Membership>> watchMine(String uid) => _b.watch(
-    () => [
-      for (final entry in _b.members.entries)
-        if (entry.value[uid] case final member?) Membership(churchId: entry.key, member: member),
-    ],
-    equals: (a, b) =>
-        a.length == b.length &&
-        List.generate(
-          a.length,
-          (i) => a[i].churchId == b[i].churchId && identical(a[i].member, b[i].member),
-        ).every((x) => x),
-  );
+  Stream<List<Membership>> watchMine(String uid) {
+    final mine = _b.watch(
+      () => [
+        for (final entry in _b.members.entries)
+          if (entry.value[uid] case final member?) Membership(churchId: entry.key, member: member),
+      ],
+      equals: (a, b) =>
+          a.length == b.length &&
+          List.generate(
+            a.length,
+            (i) => a[i].churchId == b[i].churchId && identical(a[i].member, b[i].member),
+          ).every((x) => x),
+    );
+    final held = _b.membershipsHeld;
+    if (held == null) return mine;
+    return Stream.fromFuture(held.future).asyncExpand((_) => mine);
+  }
 }
 
 class MemoryChurchData implements ChurchData {
