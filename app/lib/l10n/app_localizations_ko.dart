@@ -1432,6 +1432,11 @@ class L10nKo extends L10n {
   String get appIconNight => '밤';
 
   @override
+  String churchIconChanged(String church) {
+    return '홈 화면 아이콘을 ‘$church’(으)로 바꿨어요';
+  }
+
+  @override
   String get goHome => '홈으로';
 
   @override

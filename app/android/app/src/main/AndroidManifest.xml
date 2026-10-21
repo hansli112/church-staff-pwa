@@ -47,8 +47,9 @@
             <meta-data android:name="flutter_deeplinking_enabled" android:value="true"/>
         </activity>
         <!-- Launcher entries, one per app icon. Exactly one is enabled;
-             MainActivity.kt switches them for supporters (activity-alias is
-             the only way to change an Android launcher icon). -->
+             MainActivity.kt switches them for supporters and churches with
+             their own (activity-alias is the only way to change an Android
+             launcher icon). -->
         <activity-alias android:name=".IconDefault" android:targetActivity=".MainActivity"
             android:icon="@mipmap/ic_launcher" android:enabled="true" android:exported="true">
             <intent-filter>
@@ -72,6 +73,15 @@
         </activity-alias>
         <activity-alias android:name=".IconNight" android:targetActivity=".MainActivity"
             android:icon="@mipmap/ic_launcher_night" android:enabled="false" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+        <!-- A church's own icon carries its name too. -->
+        <activity-alias android:name=".IconZhuwei" android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_launcher_zhuwei" android:label="竹圍靈糧福音中心"
+            android:enabled="false" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>

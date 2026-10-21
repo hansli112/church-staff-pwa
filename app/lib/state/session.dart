@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -65,11 +67,40 @@ final sessionEffectsProvider = Provider<void>((ref) {
 
   ref.listen(currentChurchIdProvider, (_, cid) => ref.read(telemetryProvider).setChurch(cid), fireImmediately: true);
 
-  // A lapsed subscription takes its icon back.
+  // A lapsed subscription takes its icon back; a church's own stays.
   ref.listen(supporterProvider, (_, active) async {
     if (active) return;
     final icons = ref.read(appIconSwitcherProvider);
-    if (await icons.current() != null) await icons.set(null);
+    if (await icons.current() case final icon? when appIcons.contains(icon)) await icons.set(null);
+  }, fireImmediately: true);
+
+  // A church with its own icon puts it on its members' home screens: once
+  // per phone, so one put back stays back, and never over an icon picked.
+  // A moment after the church's page is up, so the system's note on the
+  // change comes over it, not over the splash.
+  Timer? soon;
+  ref.onDispose(() => soon?.cancel());
+  ref.listen(appStageProvider, (_, stage) {
+    if (stage != AppStage.ready || ref.read(isWebProvider)) return;
+    final memberships = ref.read(membershipsProvider).value ?? const [];
+    final icon = [for (final m in memberships) ?churchIcons[m.churchId]].firstOrNull;
+    if (icon == null) return;
+    final prefs = ref.read(prefsProvider);
+    final key = 'church_icon_${icon.id}';
+    if (prefs.getBool(key) ?? false) return;
+    soon?.cancel();
+    soon = Timer(const Duration(milliseconds: 600), () async {
+      await prefs.setBool(key, true);
+      final icons = ref.read(appIconSwitcherProvider);
+      try {
+        if (await icons.current() != null) return;
+        await icons.set(icon.id);
+      } catch (_) {
+        return;
+      }
+      ref.invalidate(currentAppIconProvider);
+      ref.read(churchIconChangedProvider.notifier).tell(icon);
+    });
   }, fireImmediately: true);
 });
 

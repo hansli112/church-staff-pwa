@@ -451,6 +451,7 @@
   "appIconGreen": "绿",
   "appIconPurple": "紫",
   "appIconNight": "夜",
+  "churchIconChanged": "主屏幕的图标换成〈{church}〉了",
   "goHome": "回首页",
   "churchNotFound": "找不到这间教会",
   "churchEntryNotMember": "你还不是这间教会的同工。请向管理员要邀请链接来加入。",

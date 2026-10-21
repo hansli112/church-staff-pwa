@@ -11,6 +11,7 @@ import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/state/app_build.dart';
 import 'package:martha/state/providers.dart';
 import 'package:martha/state/support.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
@@ -108,6 +109,7 @@ Future<void> pumpWithStore(
   AppIconSwitcher icons, {
   MemoryBackend? backend,
   bool storePagesPublic = true,
+  Map<String, Object> savedPrefs = const {},
 }) async {
   tester.view.physicalSize = const Size(393 * 3, 852 * 3);
   tester.view.devicePixelRatio = 3;
@@ -117,7 +119,7 @@ Future<void> pumpWithStore(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        ...await testOverrides(backend ?? seededChurch(as: staffMei)),
+        ...await testOverrides(backend ?? seededChurch(as: staffMei), savedPrefs: savedPrefs),
         supportStoreProvider.overrideWithValue(store),
         appIconSwitcherProvider.overrideWithValue(icons),
         storePagesPublicProvider.overrideWithValue(storePagesPublic),
@@ -401,6 +403,111 @@ void main() {
     });
   });
 
+  group("a church's own icon", () {
+    final zhuwei = churchIcons.keys.single;
+    const changed = '主畫面的圖示換成〈竹圍靈糧福音中心〉了';
+
+    /// The app closed and opened again on this phone, a member of 竹圍.
+    Future<void> reopen(WidgetTester tester, FakeIcons icons) async {
+      final saved = await phonePrefs();
+      await tester.pumpWidget(const SizedBox());
+      await pumpWithStore(
+        tester,
+        FakeStore(),
+        icons,
+        backend: seededChurch(as: staffMei, id: zhuwei),
+        savedPrefs: saved,
+      );
+    }
+
+    testWidgets('its members get it on the home screen once, told so, with a way back', (tester) async {
+      final icons = FakeIcons();
+      await pumpWithStore(
+        tester,
+        FakeStore(),
+        icons,
+        backend: seededChurch(as: staffMei, id: zhuwei),
+      );
+      expect(icons.icon, 'Zhuwei');
+      expect(find.text(changed), findsOneWidget);
+
+      await tester.tap(find.text('復原'));
+      await settle(tester);
+      expect(icons.icon, isNull);
+
+      await reopen(tester, icons);
+      expect(icons.icon, isNull, reason: 'once: put back, it stays back');
+      expect(find.text(changed), findsNothing);
+    });
+
+    testWidgets('教會資訊 › App 圖示 puts it back or away, no subscription needed', (tester) async {
+      final icons = FakeIcons();
+      await pumpWithStore(
+        tester,
+        FakeStore(),
+        icons,
+        backend: seededChurch(as: staffMei, id: zhuwei),
+      );
+      GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/church');
+      await settle(tester);
+      await tester.tap(find.text('App 圖示'));
+      await settle(tester);
+      expect(find.text('紫'), findsNothing, reason: "a supporter's");
+      await tester.tap(find.text('預設'));
+      await settle(tester);
+      expect(icons.icon, isNull);
+      await tester.tap(find.text('竹圍靈糧福音中心'));
+      await settle(tester);
+      expect(icons.icon, 'Zhuwei');
+    });
+
+    testWidgets('kept, it stays: only a lapsed subscription\'s icon goes back', (tester) async {
+      final icons = FakeIcons();
+      await pumpWithStore(
+        tester,
+        FakeStore(),
+        icons,
+        backend: seededChurch(as: staffMei, id: zhuwei),
+      );
+      await reopen(tester, icons);
+      expect(icons.icon, 'Zhuwei');
+    });
+
+    testWidgets("a supporter's picked icon is not replaced", (tester) async {
+      final icons = FakeIcons()..icon = 'Purple';
+      await pumpWithStore(
+        tester,
+        FakeStore(),
+        icons,
+        backend: seededChurch(as: staffMei, id: zhuwei),
+        savedPrefs: {
+          'supporter_until': testNow.add(const Duration(days: 20)).toIso8601String(),
+          'supporter_plan': 'supporter_monthly',
+        },
+      );
+      expect(icons.icon, 'Purple');
+      expect(find.text(changed), findsNothing);
+    });
+
+    testWidgets("another church's members never get it, nor does the web app", (tester) async {
+      final icons = FakeIcons();
+      await pumpWithStore(tester, FakeStore(), icons);
+      expect(icons.icon, isNull);
+      expect(find.text(changed), findsNothing);
+      GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/church');
+      await settle(tester);
+      expect(find.text('App 圖示'), findsNothing);
+
+      await tester.pumpWidget(const SizedBox());
+      await pumpApp(
+        tester,
+        seededChurch(as: staffMei, id: zhuwei),
+        overrides: [isWebProvider.overrideWithValue(true)],
+      );
+      expect(find.text(changed), findsNothing);
+    });
+  });
+
   group('this month\'s support', () {
     Future<MemoryBackend> open(WidgetTester tester, Funding? funding) async {
       final b = seededChurch(as: staffMei)..funding = funding;
@@ -476,4 +583,10 @@ void main() {
       expect(find.text('這個月的支持'), findsNothing);
     });
   });
+}
+
+/// What this phone has saved, to open the app on again.
+Future<Map<String, Object>> phonePrefs() async {
+  final prefs = await SharedPreferences.getInstance();
+  return {for (final k in prefs.getKeys()) k: prefs.get(k)!};
 }

@@ -267,7 +267,7 @@ String appIconName(L10n l10n, String? id) => switch (id) {
   'Green' => l10n.appIconGreen,
   'Purple' => l10n.appIconPurple,
   'Night' => l10n.appIconNight,
-  _ => l10n.appIconDefault,
+  _ => churchIcons.values.where((c) => c.id == id).firstOrNull?.name ?? l10n.appIconDefault,
 };
 
 /// The home screen's rounding of an icon, as a share of its side.
@@ -291,12 +291,16 @@ class _AppIconImage extends StatelessWidget {
   );
 }
 
-/// App 圖示, for supporters: every icon side by side, the one in use
-/// marked; tapping one puts it on the home screen. Anyone else, or a
-/// supporter whose plan lapses here, is back on 支持 at once: nothing
+/// App 圖示, for supporters and the members of a church with its own icon:
+/// every icon they may pick side by side, the one in use marked; tapping
+/// one puts it on the home screen. Anyone with nothing to pick, or a
+/// supporter whose plan lapses here, is back on [back] at once: nothing
 /// shows that cannot be chosen.
 class AppIconScreen extends ConsumerWidget {
-  const AppIconScreen({super.key});
+  const AppIconScreen({super.key, this.back = '/me/support'});
+
+  /// The page it opens from.
+  final String back;
 
   static const _size = 64.0;
 
@@ -304,11 +308,11 @@ class AppIconScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
-    final supporter = ref.watch(supporterProvider);
+    final choices = ref.watch(appIconChoicesProvider);
     final current = ref.watch(currentAppIconProvider).value;
-    if (!supporter) {
+    if (choices.length < 2) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (context.mounted) context.go('/me/support');
+        if (context.mounted) context.go(back);
       });
       return const Scaffold();
     }
@@ -324,7 +328,7 @@ class AppIconScreen extends ConsumerWidget {
                   alignment: WrapAlignment.spaceAround,
                   runSpacing: Space.s,
                   children: [
-                    for (final id in appIcons)
+                    for (final id in choices)
                       Semantics(
                         button: true,
                         selected: current == id,

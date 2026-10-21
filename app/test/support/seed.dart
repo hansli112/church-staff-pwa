@@ -60,9 +60,14 @@ const johnOnSunday = Member(
 
 /// A church with two services, five members and one saved Sunday.
 /// Signs in as [as]. Runs on [clock], [testNow] unless a test moves time.
-MemoryBackend seededChurch({Member as = pastor, List<Member> extra = const [], DateTime Function() clock = testClock}) {
+MemoryBackend seededChurch({
+  Member as = pastor,
+  List<Member> extra = const [],
+  DateTime Function() clock = testClock,
+  String id = 'grace',
+}) {
   final b = MemoryBackend(clock: clock);
-  final cid = b.addChurch('恩典堂', id: 'grace');
+  final cid = b.addChurch('恩典堂', id: id);
   b.setServices(cid, const [sundayService, youthService]);
   for (final m in [pastor, editor, staffMei, staffHao, john, ...extra]) {
     b.addMember(cid, m);

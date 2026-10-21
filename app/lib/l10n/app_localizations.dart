@@ -2662,6 +2662,12 @@ abstract class L10n {
   /// **'夜'**
   String get appIconNight;
 
+  /// No description provided for @churchIconChanged.
+  ///
+  /// In zh, this message translates to:
+  /// **'主畫面的圖示換成〈{church}〉了'**
+  String churchIconChanged(String church);
+
   /// No description provided for @goHome.
   ///
   /// In zh, this message translates to:

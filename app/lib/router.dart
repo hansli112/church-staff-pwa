@@ -189,7 +189,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                   if (!ref.read(isWebProvider))
                     page('support', (_) => const SupportScreen(), routes: [page('icon', (_) => const AppIconScreen())]),
                   page('language', (_) => const LanguageScreen()),
-                  page('church', (_) => const DeferredPage.churchInfo()),
+                  page(
+                    'church',
+                    (_) => const DeferredPage.churchInfo(),
+                    routes: [page('icon', (_) => const AppIconScreen(back: '/me/church'))],
+                  ),
                   page('timezone', (_) => const WarmUpOnOpen(WarmUp.timeZone, child: TimeZoneScreen())),
                   page('link', (_) => const ChurchLinkScreen()),
                   page('webhook', (_) => const WebhookScreen()),

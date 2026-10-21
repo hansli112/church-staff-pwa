@@ -32,8 +32,8 @@ import UIKit
       }
     }
     guard let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "MarthaAppIcon") else { return }
-    // Alternate app icons for supporters. The icons are bundled asset
-    // catalogs (AppIcon-Green, …), named in
+    // Alternate app icons, for supporters and churches with their own. The
+    // icons are bundled asset catalogs (AppIcon-Green, …), named in
     // ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES.
     let channel = FlutterMethodChannel(name: "martha/app_icon", binaryMessenger: registrar.messenger())
     channel.setMethodCallHandler { call, result in

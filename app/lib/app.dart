@@ -19,6 +19,7 @@ import 'state/providers.dart';
 import 'state/push.dart';
 import 'state/saved_read.dart';
 import 'state/session.dart';
+import 'state/support.dart';
 import 'state/web_page.dart';
 
 /// Lets app-wide events (a notification arriving) show a toast without a
@@ -113,6 +114,29 @@ class _MarthaAppState extends ConsumerState<MarthaApp> {
             action: link == null
                 ? null
                 : SnackBarAction(label: L10n.of(messenger.context).pushView, onPressed: () => router.go(link)),
+          ),
+        );
+    });
+    // A church's own icon, put on the home screen on its own: say so, with
+    // the way back.
+    ref.listen(churchIconChangedProvider, (_, icon) {
+      final messenger = _messenger.currentState;
+      if (icon == null || messenger == null) return;
+      final l10n = L10n.of(messenger.context);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(l10n.churchIconChanged(icon.name)),
+            duration: const Duration(seconds: 8),
+            persist: false,
+            action: SnackBarAction(
+              label: l10n.undo,
+              onPressed: () async {
+                await ref.read(appIconSwitcherProvider).set(null);
+                ref.invalidate(currentAppIconProvider);
+              },
+            ),
           ),
         );
     });

@@ -451,6 +451,7 @@
   "appIconGreen": "Green",
   "appIconPurple": "Purple",
   "appIconNight": "Night",
+  "churchIconChanged": "Your home screen icon is now {church}’s",
   "goHome": "Go home",
   "churchNotFound": "Can’t find this church",
   "churchEntryNotMember": "You’re not a team member of this church yet. Ask an admin for an invite link to join.",

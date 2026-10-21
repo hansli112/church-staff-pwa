@@ -135,18 +135,25 @@ img.Image splash(img.Image round, int px) {
   return out;
 }
 
+/// Churches' own icons (churchIcons in lib/state/support.dart), each a
+/// full-bleed 1024 square in tool/ named after it, used as it is.
+const churches = ['Zhuwei'];
+
 void main() {
   const android = {'mdpi': 48, 'hdpi': 72, 'xhdpi': 96, 'xxhdpi': 144, 'xxxhdpi': 192};
-  for (final v in variants) {
-    final full = paint(v);
+  final icons = [
+    for (final v in variants) (id: v.id, full: paint(v)),
+    for (final id in churches) (id: id, full: img.decodePng(File('tool/${id.toLowerCase()}.png').readAsBytesSync())!),
+  ];
+  for (final (:id, :full) in icons) {
     final round = rounded(full);
-    final name = v.id.isEmpty ? 'ic_launcher' : 'ic_launcher_${v.id.toLowerCase()}';
+    final name = id.isEmpty ? 'ic_launcher' : 'ic_launcher_${id.toLowerCase()}';
     android.forEach((density, px) {
       write('android/app/src/main/res/mipmap-$density/$name.png', resized(round, px));
       // Every icon starts the app on the default one's paper.
-      if (v.id.isEmpty) write('android/app/src/main/res/drawable-$density/splash_icon.png', splash(round, px * 6));
+      if (id.isEmpty) write('android/app/src/main/res/drawable-$density/splash_icon.png', splash(round, px * 6));
     });
-    final set = v.id.isEmpty ? 'AppIcon' : 'AppIcon-${v.id}';
+    final set = id.isEmpty ? 'AppIcon' : 'AppIcon-$id';
     final dir = 'ios/Runner/Assets.xcassets/$set.appiconset';
     if (Directory(dir).existsSync()) {
       for (final f in Directory(dir).listSync()) {
@@ -163,17 +170,17 @@ void main() {
   "info" : { "author" : "xcode", "version" : 1 }
 }
 ''');
-    if (v.id.isEmpty) {
+    if (id.isEmpty) {
       write('web/icons/Icon-192.png', resized(round, 192));
       write('web/icons/Icon-512.png', resized(round, 512));
-      final maskable = padded(full, v);
+      final maskable = padded(full, variants.first);
       write('web/icons/Icon-maskable-192.png', resized(maskable, 192));
       write('web/icons/Icon-maskable-512.png', resized(maskable, 512));
       write('web/favicon.png', resized(round, 64));
       write('assets/icons/app.png', resized(round, 256));
     } else {
-      write('assets/icons/${v.id.toLowerCase()}.png', resized(round, 256));
+      write('assets/icons/${id.toLowerCase()}.png', resized(round, 256));
     }
   }
-  stdout.writeln('Wrote ${variants.length} icons.');
+  stdout.writeln('Wrote ${icons.length} icons.');
 }

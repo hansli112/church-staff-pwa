@@ -34,12 +34,13 @@ Future<List<Override>> testOverrides(
   MemoryBackend backend, {
   Duration phoneOffset = const Duration(hours: 8),
   ChurchTimeZone phoneTimeZone = ChurchTimeZone.taipei,
+  Map<String, Object> savedPrefs = const {},
 }) async {
   // On the real clock, what a test sees would change from day to day.
   if (identical(backend.clock, DateTime.now)) {
     throw ArgumentError('Give the test backend a clock: MemoryBackend(clock: testClock)');
   }
-  SharedPreferences.setMockInitialValues({});
+  SharedPreferences.setMockInitialValues(savedPrefs);
   final prefs = await SharedPreferences.getInstance();
   return [
     backendProvider.overrideWithValue(backend),

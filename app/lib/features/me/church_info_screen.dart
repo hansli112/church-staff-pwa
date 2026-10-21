@@ -12,6 +12,8 @@ import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/export.dart';
 import '../../state/providers.dart';
+import '../../state/support.dart';
+import 'support_screen.dart' show appIconName;
 import '../../state/session.dart';
 import '../church/add_to_home.dart';
 import '../church/links.dart';
@@ -227,6 +229,14 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
               // screen already, or cannot be.
               if (ref.watch(addToHomeProvider) != null)
                 ListRow(title: l10n.addToHome, onTap: () => openAddToHome(context, ref, church.id)),
+              // Its own icon, bundled in the store apps: the way back to
+              // the default, and to it again.
+              if (churchIcons[church.id] != null && !ref.watch(isWebProvider))
+                ListRow(
+                  title: l10n.appIcon,
+                  value: appIconName(l10n, ref.watch(currentAppIconProvider).value),
+                  onTap: () => context.push('/me/church/icon'),
+                ),
             ],
           ),
           if (admin)

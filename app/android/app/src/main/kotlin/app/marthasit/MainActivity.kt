@@ -15,9 +15,10 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
-    // Alternate app icons for supporters: one launcher activity-alias per
-    // icon (AndroidManifest.xml), exactly one enabled.
-    private val icons = listOf("Default", "Green", "Purple", "Night")
+    // Alternate app icons, for supporters and churches with their own: one
+    // launcher activity-alias per icon (AndroidManifest.xml), exactly one
+    // enabled.
+    private val icons = listOf("Default", "Green", "Purple", "Night", "Zhuwei")
 
     private fun alias(name: String) = ComponentName(packageName, "$packageName.Icon$name")
 

@@ -1429,6 +1429,11 @@ class L10nZh extends L10n {
   String get appIconNight => '夜';
 
   @override
+  String churchIconChanged(String church) {
+    return '主畫面的圖示換成〈$church〉了';
+  }
+
+  @override
   String get goHome => '回首頁';
 
   @override
@@ -4258,6 +4263,11 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get appIconNight => '夜';
+
+  @override
+  String churchIconChanged(String church) {
+    return '主屏幕的图标换成〈$church〉了';
+  }
 
   @override
   String get goHome => '回首页';

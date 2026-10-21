@@ -277,6 +277,38 @@ final fundingProvider = StreamProvider.autoDispose<Funding?>((ref) => ref.watch(
 /// downloaded or user-supplied icons). `null` is the default icon.
 const appIcons = <String?>[null, 'Green', 'Purple', 'Night'];
 
+/// A church's own app icon, bundled like the others, by church id: its
+/// members get it on their own, not only supporters. Android shows [name]
+/// under it too; iOS keeps the app's.
+typedef ChurchIcon = ({String id, String name});
+
+const churchIcons = <String, ChurchIcon>{
+  // 竹圍靈糧福音中心: its id goes here once the church is made.
+  'zhuwei': (id: 'Zhuwei', name: '竹圍靈糧福音中心'),
+};
+
+/// A church's icon, just put on the home screen on its own (sessionEffects),
+/// for the app to say so.
+class ChurchIconChanged extends Notifier<ChurchIcon?> {
+  @override
+  ChurchIcon? build() => null;
+
+  void tell(ChurchIcon icon) => state = icon;
+}
+
+final churchIconChangedProvider = NotifierProvider<ChurchIconChanged, ChurchIcon?>(ChurchIconChanged.new);
+
+/// The icons I may pick, the default first: a supporter's, and those of my
+/// churches that have their own.
+final appIconChoicesProvider = Provider<List<String?>>((ref) {
+  final memberships = ref.watch(membershipsProvider).value ?? const [];
+  return [
+    null,
+    if (ref.watch(supporterProvider)) ...appIcons.skip(1),
+    for (final m in memberships) ?churchIcons[m.churchId]?.id,
+  ];
+});
+
 /// Switches the home-screen icon through a small platform channel: iOS
 /// setAlternateIconName, Android enabling one activity-alias.
 abstract interface class AppIconSwitcher {
