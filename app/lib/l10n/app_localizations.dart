@@ -2452,12 +2452,6 @@ abstract class L10n {
   /// **'結束'**
   String get calEnd;
 
-  /// No description provided for @calOtherTime.
-  ///
-  /// In zh, this message translates to:
-  /// **'其他時間…'**
-  String get calOtherTime;
-
   /// No description provided for @calLengthMinutes.
   ///
   /// In zh, this message translates to:

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui' show Tristate;
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -198,13 +199,20 @@ void main() {
     expect(inAgenda('秋季退修會'), findsWidgets);
   });
 
+  /// Taps a day chip and a day in the month that opens under it.
   Future<void> pickDay(WidgetTester tester, String chip, int day, {bool end = false}) async {
     final f = find.text(chip);
     await tester.tap(end ? f.last : f.first);
     await settle(tester);
-    await tester.tap(find.text('$day').last);
-    await tester.pump();
-    await tapText(tester, '確定');
+    await tester.tap(find.descendant(of: find.byType(CalendarDatePicker), matching: find.text('$day')));
+    await settle(tester);
+  }
+
+  /// Turns the wheel showing [shown] by [steps] items (up is later).
+  Future<void> turn(WidgetTester tester, String shown, int steps) async {
+    final wheel = find.ancestor(of: find.text(shown), matching: find.byType(CupertinoPicker)).first;
+    await tester.drag(wheel, Offset(0, -32.0 * steps), warnIfMissed: false);
+    await settle(tester);
   }
 
   testWidgets('an all-day event over several days is made with its first and last day', (tester) async {
@@ -223,7 +231,7 @@ void main() {
     expect((e.allDay, e.start, e.end), (true, DateTime.utc(2026, 10, 1), DateTime.utc(2026, 10, 4)));
   });
 
-  testWidgets('the end cannot be set before the start, and moves with it', (tester) async {
+  testWidgets('a day opens in place, with the keyboard put away, and the end moves with the start', (tester) async {
     final b = seededChurch(as: calendarEditor, extra: const [calendarEditor]);
     b.connectCalendar('grace', calendarName: '教會行事曆');
     await pumpApp(tester, b);
@@ -232,27 +240,31 @@ void main() {
     await settle(tester);
     await tester.enterText(find.byType(TextField).first, '同工會');
     await tester.pump();
-    await pickDay(tester, '10月1日 週四', 5);
+    expect(tester.testTextInput.isVisible, isTrue);
+
+    await tester.tap(find.text('10月1日 週四').first);
+    await settle(tester);
+    expect(tester.testTextInput.isVisible, isFalse, reason: 'the keyboard went');
+    expect(find.byType(CalendarDatePicker), findsOneWidget, reason: 'in the sheet, not a dialog');
+    expect(find.byType(Dialog), findsNothing);
+    expect(
+      tester.getRect(find.byType(CalendarDatePicker)).bottom,
+      lessThanOrEqualTo(tester.view.physicalSize.height / tester.view.devicePixelRatio),
+      reason: 'scrolled into sight',
+    );
+    await tester.tap(find.descendant(of: find.byType(CalendarDatePicker), matching: find.text('5')));
+    await settle(tester);
+    expect(find.byType(CalendarDatePicker), findsNothing, reason: 'one tap picks it and closes');
     expect(find.text('10月5日 週一'), findsNWidgets(2), reason: 'the end moved with the start');
 
     await pickDay(tester, '10月5日 週一', 3, end: true);
     expect(find.text('10月5日 週一'), findsNWidgets(2), reason: 'days before the start cannot be picked');
-
-    // End times on the start day: only after the start, each with its length.
-    await tester.tap(find.textContaining('9:00'));
+    await tester.tap(find.text('10月5日 週一').last);
     await settle(tester);
-    expect(find.textContaining('7:30'), findsOneWidget, reason: 'the start only, not offered as an end');
-    expect(find.text('15 分鐘'), findsOneWidget);
-    await tester.ensureVisible(find.text('30 分鐘'));
-    await settle(tester);
-    await tester.tap(find.text('30 分鐘'));
-    await settle(tester);
-    await tapText(tester, '儲存');
-    final e = b.calendarEvents['grace']!.single;
-    expect((e.start, e.end), (DateTime.utc(2026, 10, 5, 19, 30), DateTime.utc(2026, 10, 5, 20)));
+    expect(find.byType(CalendarDatePicker), findsNothing, reason: 'tapping its day again closes it');
   });
 
-  testWidgets('其他時間 sets any minute; one before the start ends the next day', (tester) async {
+  testWidgets('time wheels open in place; an end before the start ends the next day', (tester) async {
     final b = seededChurch(as: calendarEditor, extra: const [calendarEditor]);
     b.connectCalendar('grace', calendarName: '教會行事曆');
     await pumpApp(tester, b);
@@ -261,29 +273,38 @@ void main() {
     await settle(tester);
     await tester.enterText(find.byType(TextField).first, '禱告會');
     await tester.pump();
+    expect(find.text('1 小時 30 分鐘'), findsOneWidget, reason: 'how long, under 結束');
 
-    // The clock is in 12 hours, starting from the end set now (下午).
-    Future<void> otherTime(String shown, int hour, int minute) async {
-      await tester.tap(find.textContaining(shown).last);
-      await settle(tester);
-      await tapText(tester, '其他時間…');
-      await tester.tap(find.byIcon(Icons.keyboard_outlined));
-      await settle(tester);
-      final fields = find.descendant(of: find.byType(Dialog), matching: find.byType(TextField));
-      await tester.enterText(fields.at(0), '$hour');
-      await tester.enterText(fields.at(1), '$minute'.padLeft(2, '0'));
-      await tapText(tester, '確定');
-    }
+    // 7:30 to 9:00 in the evening. The start's wheels first, then the
+    // end's, which start from the end.
+    await tester.tap(find.textContaining('7:30'));
+    await settle(tester);
+    expect(find.byType(CupertinoDatePicker), findsOneWidget);
+    await tester.ensureVisible(find.textContaining('9:00'));
+    await tester.pump();
+    await tester.tap(find.textContaining('9:00'));
+    await settle(tester);
+    expect(tester.testTextInput.isVisible, isFalse);
+    expect(find.byType(CupertinoDatePicker), findsOneWidget);
+    await turn(tester, '00', 6);
+    expect(find.text('2 小時'), findsOneWidget);
 
-    await otherTime('9:00', 7, 40);
-    expect(find.textContaining('7:40'), findsOneWidget);
-    expect(find.text('10月1日 週四'), findsNWidgets(2), reason: 'still the same day');
-
-    await otherTime('7:40', 6, 0);
+    // Back to 6 o'clock, before the start: the next day.
+    await turn(tester, '09', -3);
     expect(find.text('10月2日 週五'), findsOneWidget, reason: 'the end moved to the next day');
+    // And 8, after it again: the start day.
+    await turn(tester, '06', 2);
+    expect(find.text('10月1日 週四'), findsNWidgets(2), reason: 'back on the start day');
+
+    // Typing in a field closes the wheels.
+    await tester.ensureVisible(find.byType(TextField).first);
+    await tester.pump();
+    await tester.tap(find.byType(TextField).first);
+    await settle(tester);
+    expect(find.byType(CupertinoDatePicker), findsNothing);
     await tapText(tester, '儲存');
     final e = b.calendarEvents['grace']!.single;
-    expect((e.start, e.end), (DateTime.utc(2026, 10, 1, 19, 30), DateTime.utc(2026, 10, 2, 18)));
+    expect((e.start, e.end), (DateTime.utc(2026, 10, 1, 19, 30), DateTime.utc(2026, 10, 1, 20, 30)));
   });
 
   testWidgets('an event begun the month before is listed under the 1st, with its whole span', (tester) async {

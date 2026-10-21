@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -231,6 +232,14 @@ class _EventEditorState extends State<_EventEditor> {
   late bool _allDay = widget.event?.allDay ?? false;
   late String? _group = widget.initialGroup;
 
+  /// The picker open under 開始 or 結束, at most one, as in the iPhone's
+  /// Calendar: it opens in place, with the keyboard put away.
+  _Picker? _open;
+
+  /// One key each: one shared would carry a picker's turned wheels over to
+  /// the next one opened.
+  final _pickerKeys = {for (final p in _Picker.values) p: GlobalKey()};
+
   // The first and last day, both included, and the times when not all day.
   // An all-day event keeps the usual times for when it is switched to one
   // with times.
@@ -286,15 +295,28 @@ class _EventEditorState extends State<_EventEditor> {
     });
   }
 
-  Future<DateTime?> _pickDay(DateTime day, {DateTime? notBefore}) => showDatePicker(
-    context: context,
-    initialDate: day,
-    firstDate: notBefore ?? DateTime.utc(day.year - 1),
-    lastDate: DateTime.utc(day.year + 2),
-    // Typing a date takes it as 10/18/2026 in English, which reads the
-    // other way in Malaysia: the calendar only.
-    initialEntryMode: DatePickerEntryMode.calendarOnly,
-  );
+  /// Opens [picker], or closes it when open. The keyboard goes, so the
+  /// picker and the rows below it stay in sight.
+  void _toggle(_Picker picker) {
+    FocusScope.of(context).unfocus();
+    setState(() => _open = _open == picker ? null : picker);
+    // Scrolled up into sight when it opens below the fold.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final opened = _pickerKeys[_open]?.currentContext;
+      if (opened == null || !mounted) return;
+      Scrollable.ensureVisible(
+        opened,
+        duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+      );
+    });
+  }
+
+  /// A field being typed in closes the picker.
+  void _closePicker() {
+    if (_open != null) setState(() => _open = null);
+  }
 
   /// Moves the end to [day]. On the start day an end time not after the
   /// start becomes an hour after it.
@@ -307,11 +329,16 @@ class _EventEditorState extends State<_EventEditor> {
     }
   });
 
-  /// Sets the end time. One not after the start, which only 其他時間 can
-  /// give, means the next day: the end day moves there, in sight.
+  /// Sets the end time. Within a day of the start, the end is the first
+  /// such time after it: the next day for one not after the start time, the
+  /// start day again for one after it. A longer event keeps its end day.
   void _setEndTime(TimeOfDay t) => setState(() {
     _endTime = t;
-    if (!_at(_endDay, t).isAfter(_start)) _endDay = DateTime.utc(_startDay.year, _startDay.month, _startDay.day + 1);
+    if (_endDay.difference(_startDay).inDays <= 1) {
+      _endDay = _at(_startDay, t).isAfter(_start)
+          ? _startDay
+          : DateTime.utc(_startDay.year, _startDay.month, _startDay.day + 1);
+    }
   });
 
   /// The event as edited.
@@ -377,6 +404,7 @@ class _EventEditorState extends State<_EventEditor> {
                 child: TextField(
                   controller: _title,
                   autofocus: widget.event?.id == null,
+                  onTap: _closePicker,
                   decoration: InputDecoration(hintText: l10n.calTitle),
                   onChanged: (_) => setState(() {}),
                 ),
@@ -385,6 +413,7 @@ class _EventEditorState extends State<_EventEditor> {
                 padding: const EdgeInsets.symmetric(horizontal: Space.m),
                 child: TextField(
                   controller: _location,
+                  onTap: _closePicker,
                   decoration: InputDecoration(hintText: l10n.calLocation),
                 ),
               ),
@@ -392,6 +421,7 @@ class _EventEditorState extends State<_EventEditor> {
                 padding: const EdgeInsets.symmetric(horizontal: Space.m, vertical: Space.s),
                 child: TextField(
                   controller: _description,
+                  onTap: _closePicker,
                   decoration: InputDecoration(hintText: l10n.calDescription),
                   keyboardType: TextInputType.multiline,
                   minLines: 2,
@@ -430,42 +460,71 @@ class _EventEditorState extends State<_EventEditor> {
                 ),
               ListSection(
                 children: [
-                  SwitchRow(title: l10n.calAllDay, value: _allDay, onChanged: (v) => setState(() => _allDay = v)),
+                  SwitchRow(
+                    title: l10n.calAllDay,
+                    value: _allDay,
+                    onChanged: (v) => setState(() {
+                      _allDay = v;
+                      if (v && (_open == _Picker.startTime || _open == _Picker.endTime)) _open = null;
+                    }),
+                  ),
                   _WhenRow(
                     title: l10n.calStart,
                     thisYear: widget.thisYear,
                     day: _startDay,
                     time: _allDay ? null : _startTime,
-                    onDay: () async {
-                      final d = await _pickDay(_startDay);
-                      if (d != null) _moveStart(d, _startTime);
-                    },
-                    onTime: () async {
-                      final t = await showTimePicker(context: context, initialTime: _startTime);
-                      if (t != null) _moveStart(_startDay, t);
-                    },
+                    dayOpen: _open == _Picker.startDay,
+                    timeOpen: _open == _Picker.startTime,
+                    onDay: () => _toggle(_Picker.startDay),
+                    onTime: () => _toggle(_Picker.startTime),
                   ),
+                  if (_open == _Picker.startDay)
+                    _DayPicker(
+                      opened: _pickerKeys[_Picker.startDay]!,
+                      key: const ValueKey(_Picker.startDay),
+                      day: _startDay,
+                      first: DateTime.utc(_startDay.year - 1),
+                      onPicked: (d) {
+                        _moveStart(d, _startTime);
+                        setState(() => _open = null);
+                      },
+                    ),
+                  if (_open == _Picker.startTime)
+                    _TimeWheels(
+                      opened: _pickerKeys[_Picker.startTime]!,
+                      key: const ValueKey(_Picker.startTime),
+                      time: _startTime,
+                      onChanged: (t) => _moveStart(_startDay, t),
+                    ),
                   _WhenRow(
                     title: l10n.calEnd,
                     thisYear: widget.thisYear,
                     day: _endDay,
                     time: _allDay ? null : _endTime,
-                    onDay: () async {
-                      final d = await _pickDay(_endDay, notBefore: _startDay);
-                      if (d != null) _moveEndDay(d);
-                    },
-                    onTime: () async {
-                      final t = await showAppSheet<TimeOfDay>(
-                        context,
-                        builder: (_) => _EndTimeSheet(
-                          start: _start,
-                          endDay: _endDay,
-                          selected: _endTime,
-                        ),
-                      );
-                      if (t != null) _setEndTime(t);
-                    },
+                    note: _allDay ? null : _length(l10n, _end.difference(_start)),
+                    dayOpen: _open == _Picker.endDay,
+                    timeOpen: _open == _Picker.endTime,
+                    onDay: () => _toggle(_Picker.endDay),
+                    onTime: () => _toggle(_Picker.endTime),
                   ),
+                  if (_open == _Picker.endDay)
+                    _DayPicker(
+                      opened: _pickerKeys[_Picker.endDay]!,
+                      key: const ValueKey(_Picker.endDay),
+                      day: _endDay,
+                      first: _startDay,
+                      onPicked: (d) {
+                        _moveEndDay(d);
+                        setState(() => _open = null);
+                      },
+                    ),
+                  if (_open == _Picker.endTime)
+                    _TimeWheels(
+                      opened: _pickerKeys[_Picker.endTime]!,
+                      key: const ValueKey(_Picker.endTime),
+                      time: _endTime,
+                      onChanged: _setEndTime,
+                    ),
                 ],
               ),
               if (!_allDay) const ChurchClockNotice(),
@@ -502,23 +561,33 @@ class _WhenRow extends StatelessWidget {
     required this.thisYear,
     required this.day,
     required this.time,
+    required this.dayOpen,
+    required this.timeOpen,
     required this.onDay,
     required this.onTime,
+    this.note,
   });
 
   final String title;
   final int thisYear;
   final DateTime day;
   final TimeOfDay? time;
+
+  /// Whose picker is open under the row: that one is in the accent color.
+  final bool dayOpen;
+  final bool timeOpen;
   final VoidCallback onDay;
   final VoidCallback onTime;
+
+  /// Under the title: how long the event is, on 結束.
+  final String? note;
 
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
     final style = AppText.body.copyWith(color: c.label);
     final date = (day.year == thisYear ? DateFormat.MMMEd() : DateFormat.yMMMEd()).format(day);
-    Widget chip(String text, VoidCallback onTap) => Material(
+    Widget chip(String text, bool open, VoidCallback onTap) => Material(
       color: c.fill,
       borderRadius: BorderRadius.circular(Radii.s),
       child: InkWell(
@@ -528,7 +597,10 @@ class _WhenRow extends StatelessWidget {
           constraints: BoxConstraints(minHeight: Space.minTap(Theme.of(context).platform)),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: Space.s),
-            child: Center(widthFactor: 1, child: Text(text, style: style)),
+            child: Center(
+              widthFactor: 1,
+              child: Text(text, style: open ? style.copyWith(color: c.accent) : style),
+            ),
           ),
         ),
       ),
@@ -537,7 +609,14 @@ class _WhenRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: Space.m, vertical: Space.xs),
       child: Row(
         children: [
-          Text(title, style: AppText.body),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: AppText.body),
+              if (note != null) Text(note!, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
+            ],
+          ),
           const SizedBox(width: Space.s),
           // With large text the time goes under the day.
           Expanded(
@@ -545,7 +624,7 @@ class _WhenRow extends StatelessWidget {
               alignment: WrapAlignment.end,
               spacing: Space.xs,
               runSpacing: Space.xs,
-              children: [chip(date, onDay), if (time != null) chip(time!.format(context), onTime)],
+              children: [chip(date, dayOpen, onDay), if (time != null) chip(time!.format(context), timeOpen, onTime)],
             ),
           ),
         ],
@@ -554,98 +633,64 @@ class _WhenRow extends StatelessWidget {
   }
 }
 
-/// The end time, in steps of 15 minutes (and the one set now, when off
-/// them): on the start day only times after the start, each with how long
-/// the event would be. 其他時間 opens the clock for any minute.
-class _EndTimeSheet extends StatefulWidget {
-  const _EndTimeSheet({required this.start, required this.endDay, required this.selected});
+enum _Picker { startDay, startTime, endDay, endTime }
 
-  final DateTime start;
-  final DateTime endDay;
-  final TimeOfDay selected;
-
-  @override
-  State<_EndTimeSheet> createState() => _EndTimeSheetState();
+/// How long an event is, on 結束.
+String _length(L10n l10n, Duration x) {
+  final h = x.inHours;
+  final m = x.inMinutes % 60;
+  return h == 0
+      ? l10n.calLengthMinutes(m)
+      : m == 0
+      ? l10n.calLengthHours(h)
+      : l10n.calLengthHoursMinutes(h, m);
 }
 
-class _EndTimeSheetState extends State<_EndTimeSheet> {
-  final _selectedKey = GlobalKey();
+/// A month to pick a day from, in place under its row: one tap picks it.
+/// Typing a date is not offered: 10/18/2026 reads the other way in some
+/// places.
+class _DayPicker extends StatelessWidget {
+  const _DayPicker({super.key, required this.opened, required this.day, required this.first, required this.onPicked});
+
+  /// Where the editor finds the open picker, to scroll it into sight.
+  final GlobalKey opened;
+  final DateTime day;
+
+  /// The first day that can be picked: for 結束, the start day.
+  final DateTime first;
+  final ValueChanged<DateTime> onPicked;
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final row = _selectedKey.currentContext;
-      if (row != null) Scrollable.ensureVisible(row, alignment: 0.3);
-    });
-  }
+  Widget build(BuildContext context) => CalendarDatePicker(
+    key: opened,
+    initialDate: day,
+    firstDate: first,
+    lastDate: DateTime.utc(day.year + 2, 12, 31),
+    onDateChanged: onPicked,
+  );
+}
+
+/// Wheels for the hour and minute, in place under their row, as on the
+/// iPhone; the time changes as they turn. Minutes go in fives, unless the
+/// time set now is between them.
+class _TimeWheels extends StatelessWidget {
+  const _TimeWheels({super.key, required this.opened, required this.time, required this.onChanged});
+
+  /// Where the editor finds the open picker, to scroll it into sight.
+  final GlobalKey opened;
+  final TimeOfDay time;
+  final ValueChanged<TimeOfDay> onChanged;
 
   @override
-  Widget build(BuildContext context) {
-    final l10n = L10n.of(context);
-    final s = widget.start;
-    final d = widget.endDay;
-    final sameDay = d.year == s.year && d.month == s.month && d.day == s.day;
-    // On the start day the steps count from the start; on a later day, from
-    // midnight.
-    final times = <DateTime>[
-      for (
-        var t = sameDay ? s.add(const Duration(minutes: 15)) : DateTime.utc(d.year, d.month, d.day);
-        t.day == d.day && t.month == d.month && t.year == d.year;
-        t = t.add(const Duration(minutes: 15))
-      )
-        t,
-    ];
-    final current = DateTime.utc(d.year, d.month, d.day, widget.selected.hour, widget.selected.minute);
-    if (current.isAfter(s) && !times.contains(current)) times.add(current);
-    times.sort();
-    String length(Duration x) {
-      final h = x.inHours;
-      final m = x.inMinutes % 60;
-      return h == 0
-          ? l10n.calLengthMinutes(m)
-          : m == 0
-          ? l10n.calLengthHours(h)
-          : l10n.calLengthHoursMinutes(h, m);
-    }
-
-    // 其他時間 stays in sight above the list, which scrolls to the time set.
-    return SafeArea(
-      child: SizedBox(
-        height: MediaQuery.sizeOf(context).height * 0.6,
-        child: Column(
-          children: [
-            ListSection(
-              header: l10n.calEnd,
-              children: [
-                ListRow(
-                  title: l10n.calOtherTime,
-                  onTap: () async {
-                    final t = await showTimePicker(context: context, initialTime: widget.selected);
-                    if (t != null && context.mounted) Navigator.pop(context, t);
-                  },
-                ),
-              ],
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                child: ListSection(
-                  children: [
-                    for (final t in times)
-                      ListRow(
-                        key: t.hour == widget.selected.hour && t.minute == widget.selected.minute ? _selectedKey : null,
-                        title: TimeOfDay.fromDateTime(t).format(context),
-                        subtitle: sameDay ? length(t.difference(s)) : null,
-                        selected: t.hour == widget.selected.hour && t.minute == widget.selected.minute,
-                        onTap: () => Navigator.pop(context, TimeOfDay.fromDateTime(t)),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => SizedBox(
+    key: opened,
+    height: 216,
+    child: CupertinoDatePicker(
+      mode: CupertinoDatePickerMode.time,
+      initialDateTime: DateTime(2000, 1, 1, time.hour, time.minute),
+      minuteInterval: time.minute % 5 == 0 ? 5 : 1,
+      use24hFormat: MediaQuery.alwaysUse24HourFormatOf(context),
+      onDateTimeChanged: (d) => onChanged(TimeOfDay(hour: d.hour, minute: d.minute)),
+    ),
+  );
 }

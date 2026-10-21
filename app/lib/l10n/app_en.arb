@@ -416,7 +416,6 @@
   "calLocation": "Location",
   "calStart": "Starts",
   "calEnd": "Ends",
-  "calOtherTime": "Other time…",
   "calLengthMinutes": "{minutes} min",
   "calLengthHours": "{hours, plural, =1{1 hour} other{{hours} hours}}",
   "calLengthHoursMinutes": "{hours} hr {minutes} min",

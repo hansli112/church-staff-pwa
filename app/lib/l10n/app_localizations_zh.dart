@@ -1310,9 +1310,6 @@ class L10nZh extends L10n {
   String get calEnd => '結束';
 
   @override
-  String get calOtherTime => '其他時間…';
-
-  @override
   String calLengthMinutes(int minutes) {
     return '$minutes 分鐘';
   }
@@ -4148,9 +4145,6 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get calEnd => '结束';
-
-  @override
-  String get calOtherTime => '其他时间…';
 
   @override
   String calLengthMinutes(int minutes) {

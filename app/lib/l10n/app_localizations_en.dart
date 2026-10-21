@@ -1376,9 +1376,6 @@ class L10nEn extends L10n {
   String get calEnd => 'Ends';
 
   @override
-  String get calOtherTime => 'Other time…';
-
-  @override
   String calLengthMinutes(int minutes) {
     return '$minutes min';
   }

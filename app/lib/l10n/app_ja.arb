@@ -416,7 +416,6 @@
   "calLocation": "場所",
   "calStart": "開始",
   "calEnd": "終了",
-  "calOtherTime": "その他の時間…",
   "calLengthMinutes": "{minutes}分",
   "calLengthHours": "{hours}時間",
   "calLengthHoursMinutes": "{hours}時間{minutes}分",

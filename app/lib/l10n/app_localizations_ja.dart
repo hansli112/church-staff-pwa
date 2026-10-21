@@ -1311,9 +1311,6 @@ class L10nJa extends L10n {
   String get calEnd => '終了';
 
   @override
-  String get calOtherTime => 'その他の時間…';
-
-  @override
   String calLengthMinutes(int minutes) {
     return '$minutes分';
   }

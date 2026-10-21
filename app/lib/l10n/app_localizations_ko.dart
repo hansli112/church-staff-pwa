@@ -1312,9 +1312,6 @@ class L10nKo extends L10n {
   String get calEnd => '종료';
 
   @override
-  String get calOtherTime => '다른 시간…';
-
-  @override
   String calLengthMinutes(int minutes) {
     return '$minutes분';
   }

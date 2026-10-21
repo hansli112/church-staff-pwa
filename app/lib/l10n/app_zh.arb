@@ -796,7 +796,6 @@
   "calLocation": "地點",
   "calStart": "開始",
   "calEnd": "結束",
-  "calOtherTime": "其他時間…",
   "calLengthMinutes": "{minutes} 分鐘",
   "@calLengthMinutes": {
     "placeholders": {

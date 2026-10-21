@@ -416,7 +416,6 @@
   "calLocation": "地点",
   "calStart": "开始",
   "calEnd": "结束",
-  "calOtherTime": "其他时间…",
   "calLengthMinutes": "{minutes} 分钟",
   "calLengthHours": "{hours} 小时",
   "calLengthHoursMinutes": "{hours} 小时 {minutes} 分钟",
