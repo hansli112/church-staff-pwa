@@ -196,12 +196,13 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     final key = _session.draftKey;
     final today = ref.read(todayProvider);
     final day = row['date'] is String ? Day.tryParse((row['date'] as String).trim()) : null;
+    // From today on: days before it are skipped by the import.
     final picked = await _during(
       () => pickDay(
         context,
         title: L10n.of(context).importEditDate,
         initial: (day ?? today).midnight,
-        first: DateTime.utc(today.year - 1),
+        first: today.midnight,
         last: DateTime.utc(today.year + 2, 12, 31),
       ),
     );

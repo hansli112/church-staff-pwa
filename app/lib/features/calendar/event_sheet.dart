@@ -240,6 +240,11 @@ class _EventEditorState extends State<_EventEditor> {
   /// the next one opened.
   final _pickerKeys = {for (final p in _Picker.values) p: GlobalKey()};
 
+  /// Whether the event was under a day long when the end's wheels opened:
+  /// then the end time picks its day by the start. Decided once, so turning
+  /// a two-day event's end past the start's time does not cut it to one.
+  bool _endWithinDay = true;
+
   // The first and last day, both included, and the times when not all day.
   // An all-day event keeps the usual times for when it is switched to one
   // with times.
@@ -299,7 +304,10 @@ class _EventEditorState extends State<_EventEditor> {
   /// picker and the rows below it stay in sight.
   void _toggle(_Picker picker) {
     FocusScope.of(context).unfocus();
-    setState(() => _open = _open == picker ? null : picker);
+    setState(() {
+      _open = _open == picker ? null : picker;
+      if (_open == _Picker.endTime) _endWithinDay = _end.difference(_start) < const Duration(days: 1);
+    });
     // Scrolled up into sight when it opens below the fold.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final opened = _pickerKeys[_open]?.currentContext;
@@ -329,12 +337,13 @@ class _EventEditorState extends State<_EventEditor> {
     }
   });
 
-  /// Sets the end time. Within a day of the start, the end is the first
-  /// such time after it: the next day for one not after the start time, the
-  /// start day again for one after it. A longer event keeps its end day.
+  /// Sets the end time. For an event under a day long, the end is the
+  /// first such time after the start: the next day for one not after the
+  /// start time, the start day again for one after it. A longer event keeps
+  /// its end day.
   void _setEndTime(TimeOfDay t) => setState(() {
     _endTime = t;
-    if (_endDay.difference(_startDay).inDays <= 1) {
+    if (_endWithinDay) {
       _endDay = _at(_startDay, t).isAfter(_start)
           ? _startDay
           : DateTime.utc(_startDay.year, _startDay.month, _startDay.day + 1);
@@ -661,19 +670,20 @@ class _DayPicker extends StatelessWidget {
   final ValueChanged<DateTime> onPicked;
 
   @override
-  Widget build(BuildContext context) => CalendarDatePicker(
+  Widget build(BuildContext context) => DayCalendar(
     key: opened,
-    initialDate: day,
-    firstDate: first,
-    lastDate: DateTime.utc(day.year + 2, 12, 31),
-    onDateChanged: onPicked,
+    initial: day,
+    first: first,
+    last: DateTime.utc(day.year + 2, 12, 31),
+    onPicked: onPicked,
   );
 }
 
 /// Wheels for the hour and minute, in place under their row, as on the
 /// iPhone; the time changes as they turn. Minutes go in fives, unless the
-/// time set now is between them.
-class _TimeWheels extends StatelessWidget {
+/// time was between them when the wheels opened: decided once, as the wheel
+/// keeps its place, not its minute, when the step changes.
+class _TimeWheels extends StatefulWidget {
   const _TimeWheels({super.key, required this.opened, required this.time, required this.onChanged});
 
   /// Where the editor finds the open picker, to scroll it into sight.
@@ -682,15 +692,23 @@ class _TimeWheels extends StatelessWidget {
   final ValueChanged<TimeOfDay> onChanged;
 
   @override
+  State<_TimeWheels> createState() => _TimeWheelsState();
+}
+
+class _TimeWheelsState extends State<_TimeWheels> {
+  late final _step = widget.time.minute % 5 == 0 ? 5 : 1;
+
+  @override
   Widget build(BuildContext context) => SizedBox(
-    key: opened,
+    key: widget.opened,
+    // The iPhone's own wheels' height.
     height: 216,
     child: CupertinoDatePicker(
       mode: CupertinoDatePickerMode.time,
-      initialDateTime: DateTime(2000, 1, 1, time.hour, time.minute),
-      minuteInterval: time.minute % 5 == 0 ? 5 : 1,
+      initialDateTime: DateTime(2000, 1, 1, widget.time.hour, widget.time.minute),
+      minuteInterval: _step,
       use24hFormat: MediaQuery.alwaysUse24HourFormatOf(context),
-      onDateTimeChanged: (d) => onChanged(TimeOfDay(hour: d.hour, minute: d.minute)),
+      onDateTimeChanged: (d) => widget.onChanged(TimeOfDay(hour: d.hour, minute: d.minute)),
     ),
   );
 }

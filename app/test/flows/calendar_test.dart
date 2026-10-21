@@ -264,6 +264,26 @@ void main() {
     expect(find.byType(CalendarDatePicker), findsNothing, reason: 'tapping its day again closes it');
   });
 
+  testWidgets("picking a year turns the start's month to it; only a day picks", (tester) async {
+    final b = seededChurch(as: calendarEditor, extra: const [calendarEditor]);
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    await pumpApp(tester, b);
+    await go(tester, '/calendar');
+    await tester.tap(find.byTooltip('新增活動'));
+    await settle(tester);
+    await tester.enterText(find.byType(TextField).first, '跨年禱告會');
+    await tester.pump();
+    await tester.tap(find.text('10月1日 週四').first);
+    await settle(tester);
+    await tapText(tester, '2026年10月');
+    await tapText(tester, '2027年');
+    expect(find.byType(CalendarDatePicker), findsOneWidget, reason: 'still open');
+    await tester.tap(find.descendant(of: find.byType(CalendarDatePicker), matching: find.text('5')));
+    await settle(tester);
+    await tapText(tester, '儲存');
+    expect(b.calendarEvents['grace']!.single.start, DateTime.utc(2027, 10, 5, 19, 30));
+  });
+
   testWidgets('time wheels open in place; an end before the start ends the next day', (tester) async {
     final b = seededChurch(as: calendarEditor, extra: const [calendarEditor]);
     b.connectCalendar('grace', calendarName: '教會行事曆');
@@ -305,6 +325,52 @@ void main() {
     await tapText(tester, '儲存');
     final e = b.calendarEvents['grace']!.single;
     expect((e.start, e.end), (DateTime.utc(2026, 10, 1, 19, 30), DateTime.utc(2026, 10, 1, 20, 30)));
+  });
+
+  testWidgets("a two-day event's end time turns on its own day", (tester) async {
+    final b = seededChurch(as: calendarEditor, extra: const [calendarEditor]);
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    b.calendarEvents['grace'] = [
+      CalendarEvent(id: 'c', title: '青年營', start: DateTime.utc(2026, 10, 3, 10), end: DateTime.utc(2026, 10, 4, 15)),
+    ];
+    await pumpApp(tester, b);
+    await go(tester, '/calendar');
+    await tapText(tester, '青年營');
+    await tester.ensureVisible(find.textContaining('3:00'));
+    await tester.pump();
+    await tester.tap(find.textContaining('3:00'));
+    await settle(tester);
+    await turn(tester, '00', 1);
+    expect(find.text('10月4日 週日'), findsOneWidget, reason: 'Sunday still, not 5 minutes after 10 on Saturday');
+    // Down past the start's 10 o'clock and up again: Sunday all along.
+    await turn(tester, '03', -6);
+    await turn(tester, '09', 2);
+    expect(find.text('10月4日 週日'), findsOneWidget);
+    await tapText(tester, '儲存');
+    expect(b.calendarEvents['grace']!.single.end, DateTime.utc(2026, 10, 4, 11, 5));
+  });
+
+  testWidgets('a time between fives turns a minute at a time, past a five too', (tester) async {
+    final b = seededChurch(as: calendarEditor, extra: const [calendarEditor]);
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    b.calendarEvents['grace'] = [
+      CalendarEvent(
+        id: 'p',
+        title: '禱告會',
+        start: DateTime.utc(2026, 10, 3, 19, 33),
+        end: DateTime.utc(2026, 10, 3, 21),
+      ),
+    ];
+    await pumpApp(tester, b);
+    await go(tester, '/calendar');
+    await tapText(tester, '禱告會');
+    await tester.tap(find.textContaining('7:33'));
+    await settle(tester);
+    // To 7:35, a five, and on: the wheel stays in minutes.
+    await turn(tester, '33', 2);
+    await turn(tester, '35', 1);
+    await tapText(tester, '儲存');
+    expect(b.calendarEvents['grace']!.single.start, DateTime.utc(2026, 10, 3, 19, 36));
   });
 
   testWidgets('an event begun the month before is listed under the 1st, with its whole span', (tester) async {

@@ -375,6 +375,36 @@ void main() {
     expect(b.rosters['grace']!.keys.any((id) => id.startsWith('2026-10-18_')), isFalse);
   });
 
+  testWidgets('a row dated before today, which would be skipped, is moved to a day from today on', (tester) async {
+    final b = agreedChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/import/sunday');
+    await tapText(tester, '進階');
+    await openPasteJson(tester);
+    await tester.enterText(
+      find.byType(TextField),
+      jsonEncode([
+        {
+          'date': '2023-03-05',
+          'duties': [
+            {
+              'role': '司琴',
+              'people': ['李美玉'],
+            },
+          ],
+        },
+      ]),
+    );
+    await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
+    await tapText(tester, '預覽');
+    await tapText(tester, '日期');
+    expect(find.text('2026年10月'), findsOneWidget, reason: "today's month, not March 2023's");
+    await tester.tap(find.descendant(of: find.byType(CalendarDatePicker), matching: find.text('18')));
+    await settle(tester);
+    await tapText(tester, '套用到服事表');
+    expect(peopleOn(b, 18, '司琴'), ['李美玉']);
+  });
+
   testWidgets('replacement explicitly previews removed arrangements and can be undone', (tester) async {
     final b = agreedChurch();
     final before = savedDay(b, 11).copyWith(events: const [EventTag(name: '聖餐', color: 0)]);

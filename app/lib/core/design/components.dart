@@ -673,16 +673,57 @@ Future<DateTime?> pickDay(
               padding: const EdgeInsets.symmetric(horizontal: Space.m),
               child: Text(title, style: AppText.title3),
             ),
-            CalendarDatePicker(
-              initialDate: initial.isBefore(first) ? first : (initial.isAfter(last) ? last : initial),
-              firstDate: first,
-              lastDate: last,
-              onDateChanged: (day) => Navigator.pop(context, day),
+            DayCalendar(
+              initial: initial.isBefore(first) ? first : (initial.isAfter(last) ? last : initial),
+              first: first,
+              last: last,
+              onPicked: (day) => Navigator.pop(context, day),
             ),
           ],
         ),
       ),
     ),
+  );
+}
+
+/// A month where a tap on a day picks it. Picking a year only turns the
+/// month to it: Flutter's calendar counts that as picking the same day
+/// there, which closed the picker before any day was tapped.
+class DayCalendar extends StatefulWidget {
+  const DayCalendar({
+    super.key,
+    required this.initial,
+    required this.first,
+    required this.last,
+    required this.onPicked,
+  });
+
+  final DateTime initial;
+  final DateTime first;
+  final DateTime last;
+  final ValueChanged<DateTime> onPicked;
+
+  @override
+  State<DayCalendar> createState() => _DayCalendarState();
+}
+
+class _DayCalendarState extends State<DayCalendar> {
+  /// Set as a year's month turns up, just before the calendar reports its
+  /// day as picked; a tapped day turns no month.
+  bool _turned = false;
+
+  @override
+  Widget build(BuildContext context) => CalendarDatePicker(
+    initialDate: widget.initial,
+    firstDate: widget.first,
+    lastDate: widget.last,
+    onDisplayedMonthChanged: (_) {
+      _turned = true;
+      scheduleMicrotask(() => _turned = false);
+    },
+    onDateChanged: (day) {
+      if (!_turned) widget.onPicked(day);
+    },
   );
 }
 

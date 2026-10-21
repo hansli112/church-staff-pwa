@@ -200,6 +200,21 @@ void main() {
     expect(b.attendance['grace']!['small:joy']!.pauses.last.until, Day(2026, 10, 23));
   });
 
+  testWidgets('picking a year turns the month to it; only a day picks', (tester) async {
+    final b = withJoy(withAttendance(seededChurch(as: staffHao, clock: eveningOf(Day(2026, 10, 9)))));
+    await pumpApp(tester, b);
+    await go(tester, '/me/groups/small/joy');
+    await tester.scrollUntilVisible(find.text('暫停聚會一段時間'), 200, scrollable: find.byType(Scrollable).last);
+    await tapText(tester, '暫停聚會一段時間');
+    await tapText(tester, '2026年10月');
+    await tapText(tester, '2027年');
+    expect(find.byType(CalendarDatePicker), findsOneWidget, reason: 'still open');
+    expect(b.attendance['grace']?['small:joy']?.pauses ?? const [], isEmpty);
+    await tester.tap(find.descendant(of: find.byType(CalendarDatePicker), matching: find.text('5')));
+    await settle(tester);
+    expect(b.attendance['grace']!['small:joy']!.pauses.last.until, Day(2027, 10, 5));
+  });
+
   testWidgets('a meeting filled in stays listed when the 小組 moves to another day', (tester) async {
     final b = withJoy(
       withAttendance(seededChurch(as: staffHao, clock: eveningOf(Day(2026, 10, 9)))),
