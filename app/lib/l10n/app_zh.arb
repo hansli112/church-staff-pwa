@@ -1319,14 +1319,6 @@
   "@importEditDate": {
     "description": "Import row date editor sheet title"
   },
-  "importDateFormatLabel": "日期（YYYY-MM-DD）",
-  "@importDateFormatLabel": {
-    "description": "Import date field label; protocol format YYYY-MM-DD stays unchanged"
-  },
-  "importValidDate": "請填有效的 YYYY-MM-DD 日期",
-  "@importValidDate": {
-    "description": "Import date field validation"
-  },
   "importEditDuty": "編輯服事項目",
   "@importEditDuty": {
     "description": "Import duty and people editor sheet title"

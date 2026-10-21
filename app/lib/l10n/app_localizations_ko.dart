@@ -2097,12 +2097,6 @@ class L10nKo extends L10n {
   String get importEditDate => '날짜 편집';
 
   @override
-  String get importDateFormatLabel => '날짜(YYYY-MM-DD)';
-
-  @override
-  String get importValidDate => '올바른 YYYY-MM-DD 날짜를 입력해 주세요';
-
-  @override
   String get importEditDuty => '담당 편집';
 
   @override

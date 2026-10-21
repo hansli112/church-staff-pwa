@@ -409,7 +409,8 @@ class PeoplePickerState extends State<PeoplePicker> {
     }
     return ListView.builder(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: const EdgeInsets.only(bottom: Space.xl),
+      // The sheet runs on under the keyboard; its end scrolls out above it.
+      padding: EdgeInsets.only(bottom: Space.xl + MediaQuery.viewInsetsOf(context).bottom),
       itemCount: rows.length,
       itemBuilder: (_, i) => rows[i](),
     );

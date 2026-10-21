@@ -650,8 +650,6 @@
   "importSameNameScope": "이번 가져오기에서 같은 이름은 모두 이 연결을 사용해요",
   "importGuestChoice": "‘{name}’ 계정 없이 두기",
   "importEditDate": "날짜 편집",
-  "importDateFormatLabel": "날짜(YYYY-MM-DD)",
-  "importValidDate": "올바른 YYYY-MM-DD 날짜를 입력해 주세요",
   "importEditDuty": "담당 편집",
   "importDutyLabel": "담당",
   "importPeopleLines": "이름(한 줄에 한 명)",

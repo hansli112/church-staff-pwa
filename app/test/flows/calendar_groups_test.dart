@@ -97,6 +97,18 @@ void main() {
     expect(find.text('編輯活動'), findsOneWidget);
   });
 
+  testWidgets('picking 屬於 puts the keyboard away, and it stays away', (tester) async {
+    await pumpApp(tester, church(as: pastor));
+    await go(tester, '/calendar');
+    await tester.tap(find.byTooltip('新增活動'));
+    await settle(tester);
+    expect(tester.testTextInput.isVisible, isTrue, reason: 'the name is typed first');
+    await tapText(tester, '屬於');
+    expect(tester.testTextInput.isVisible, isFalse, reason: 'not over the list');
+    await tapText(tester, '敬拜團');
+    expect(tester.testTextInput.isVisible, isFalse, reason: 'not back over the sheet');
+  });
+
   testWidgets("its 負責人 arranges all of the group's event roster", (tester) async {
     final b = church();
     await pumpApp(tester, b);

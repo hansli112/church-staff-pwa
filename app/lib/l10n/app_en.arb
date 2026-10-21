@@ -650,8 +650,6 @@
   "importSameNameScope": "Every instance of this name in this import uses this match",
   "importGuestChoice": "Keep “{name}” without an account",
   "importEditDate": "Edit date",
-  "importDateFormatLabel": "Date (YYYY-MM-DD)",
-  "importValidDate": "Enter a valid YYYY-MM-DD date",
   "importEditDuty": "Edit role",
   "importDutyLabel": "Role",
   "importPeopleLines": "Names (one per line)",

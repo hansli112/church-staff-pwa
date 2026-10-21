@@ -82,12 +82,12 @@ class AttendanceSection extends ConsumerWidget {
   }
 
   Future<void> _pause(BuildContext context, WidgetRef ref, AttendanceRecord record, Day today) async {
-    final picked = await showDatePicker(
-      context: context,
-      helpText: L10n.of(context).attendancePauseUntil,
-      firstDate: today.addDays(1).midnight,
-      lastDate: today.addDays(366).midnight,
-      initialDate: today.addDays(7).midnight,
+    final picked = await pickDay(
+      context,
+      title: L10n.of(context).attendancePauseUntil,
+      initial: today.addDays(7).midnight,
+      first: today.addDays(1).midnight,
+      last: today.addDays(366).midnight,
     );
     if (picked == null || !context.mounted) return;
     await _setPauses(context, ref, record.pausedUntil(today, Day(picked.year, picked.month, picked.day)));

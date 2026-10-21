@@ -3856,18 +3856,6 @@ abstract class L10n {
   /// **'編輯日期'**
   String get importEditDate;
 
-  /// Import date field label; protocol format YYYY-MM-DD stays unchanged
-  ///
-  /// In zh, this message translates to:
-  /// **'日期（YYYY-MM-DD）'**
-  String get importDateFormatLabel;
-
-  /// Import date field validation
-  ///
-  /// In zh, this message translates to:
-  /// **'請填有效的 YYYY-MM-DD 日期'**
-  String get importValidDate;
-
   /// Import duty and people editor sheet title
   ///
   /// In zh, this message translates to:

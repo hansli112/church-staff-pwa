@@ -186,6 +186,20 @@ void main() {
     expect(find.text('未填'), findsOneWidget, reason: 'today, 10/9, asked for again; 10/2 stays paused');
   });
 
+  testWidgets('its 小組長 pauses it until a day picked with one tap, in a sheet', (tester) async {
+    final b = withJoy(withAttendance(seededChurch(as: staffHao, clock: eveningOf(Day(2026, 10, 9)))));
+    await pumpApp(tester, b);
+    await go(tester, '/me/groups/small/joy');
+    await tester.scrollUntilVisible(find.text('暫停聚會一段時間'), 200, scrollable: find.byType(Scrollable).last);
+    await tapText(tester, '暫停聚會一段時間');
+    expect(find.byType(Dialog), findsNothing, reason: 'not the dialog that wants 確定 after the day');
+    expect(find.text('哪一天恢復聚會？'), findsOneWidget);
+    await tester.tap(find.descendant(of: find.byType(CalendarDatePicker), matching: find.text('23')));
+    await settle(tester);
+    expect(find.byType(CalendarDatePicker), findsNothing);
+    expect(b.attendance['grace']!['small:joy']!.pauses.last.until, Day(2026, 10, 23));
+  });
+
   testWidgets('a meeting filled in stays listed when the 小組 moves to another day', (tester) async {
     final b = withJoy(
       withAttendance(seededChurch(as: staffHao, clock: eveningOf(Day(2026, 10, 9)))),

@@ -2212,12 +2212,6 @@ class L10nEn extends L10n {
   String get importEditDate => 'Edit date';
 
   @override
-  String get importDateFormatLabel => 'Date (YYYY-MM-DD)';
-
-  @override
-  String get importValidDate => 'Enter a valid YYYY-MM-DD date';
-
-  @override
   String get importEditDuty => 'Edit role';
 
   @override

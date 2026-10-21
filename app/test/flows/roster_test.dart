@@ -339,6 +339,34 @@ void main() {
       expect(peopleOn(b, 11, '招待'), containsAll(['同工0499', '同工0000', '李美玉']));
     });
 
+    testWidgets('with the keyboard up, the end of a long list scrolls out from under it', (tester) async {
+      final many = [
+        for (var i = 0; i < 40; i++)
+          Member(
+            uid: 'k$i',
+            name: '同工$i',
+            zones: const [
+              Zone(serviceType: 'sunday', duties: ['招待']),
+            ],
+          ),
+      ];
+      await pumpApp(tester, seededChurch(extra: many));
+      await go(tester, '/rosters/sunday/2026-10-11');
+      await tapText(tester, '招待');
+      // The phone's keyboard, over the bottom half, for the search box.
+      final half = tester.view.physicalSize.height / 2;
+      tester.view.viewInsets = FakeViewPadding(bottom: half);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pump();
+      await tester.fling(find.byType(ListView).last, const Offset(0, -20000), 5000);
+      await settle(tester);
+      expect(
+        tester.getRect(find.text('移除這項')).bottom,
+        lessThan(half / tester.view.devicePixelRatio),
+        reason: 'not under the keyboard',
+      );
+    });
+
     testWidgets('a name on the day is its own tap target, full size and apart from the next', (tester) async {
       await pumpApp(tester, seededChurch());
       await go(tester, '/rosters/sunday/2026-10-04');

@@ -631,12 +631,14 @@ Widget _dialogAction(
 }
 
 /// Opens a bottom sheet with a grab handle that the user can drag down to
-/// close.
+/// close. The keyboard goes first: left up, it covered the sheet, and came
+/// back over the page once the sheet closed.
 Future<T?> showAppSheet<T>(
   BuildContext context, {
   required WidgetBuilder builder,
   bool expand = false,
 }) {
+  FocusManager.instance.primaryFocus?.unfocus();
   return showModalBottomSheet<T>(
     context: context,
     // Over the tab bar too, like a system sheet; the tab navigator alone
@@ -646,6 +648,41 @@ Future<T?> showAppSheet<T>(
     useSafeArea: true,
     showDragHandle: true,
     builder: (context) => expand ? FractionallySizedBox(heightFactor: 0.92, child: builder(context)) : builder(context),
+  );
+}
+
+/// Asks for a day between [first] and [last]: a month in a sheet, where one
+/// tap picks it. Not Material's date dialog, which wants 確定 after the day
+/// and offers typing it, and 10/18/2026 reads the other way in some places.
+Future<DateTime?> pickDay(
+  BuildContext context, {
+  required String title,
+  required DateTime initial,
+  required DateTime first,
+  required DateTime last,
+}) {
+  return showAppSheet<DateTime>(
+    context,
+    builder: (context) => SafeArea(
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Space.m),
+              child: Text(title, style: AppText.title3),
+            ),
+            CalendarDatePicker(
+              initialDate: initial.isBefore(first) ? first : (initial.isAfter(last) ? last : initial),
+              firstDate: first,
+              lastDate: last,
+              onDateChanged: (day) => Navigator.pop(context, day),
+            ),
+          ],
+        ),
+      ),
+    ),
   );
 }
 

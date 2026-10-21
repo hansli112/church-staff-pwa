@@ -193,18 +193,21 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   }
 
   Future<void> _editDate(int index, Map<dynamic, dynamic> row) async {
-    final result = await _edit(
-      title: L10n.of(context).importEditDate,
-      fields: [
-        _ImportField(
-          L10n.of(context).importDateFormatLabel,
-          row['date'] is String ? row['date'] as String : '',
-          validate: (text) => Day.tryParse(text.trim()) == null ? L10n.of(context).importValidDate : null,
-        ),
-      ],
+    final key = _session.draftKey;
+    final today = ref.read(todayProvider);
+    final day = row['date'] is String ? Day.tryParse((row['date'] as String).trim()) : null;
+    final picked = await _during(
+      () => pickDay(
+        context,
+        title: L10n.of(context).importEditDate,
+        initial: (day ?? today).midnight,
+        first: DateTime.utc(today.year - 1),
+        last: DateTime.utc(today.year + 2, 12, 31),
+      ),
     );
-    if (result == null) return;
-    _session.updateRow(index, Map<String, dynamic>.from(row)..['date'] = result.values.single.trim());
+    if (picked == null || !(mounted && _sameDraft(key) && _ready)) return;
+    final date = Day(picked.year, picked.month, picked.day);
+    _session.updateRow(index, Map<String, dynamic>.from(row)..['date'] = date.toString());
   }
 
   Future<void> _editDuty(int index, Map<dynamic, dynamic> row, int? dutyIndex) async {
@@ -783,6 +786,8 @@ class _ImportEditorState extends State<_ImportEditor> {
                 Padding(
                   padding: const EdgeInsets.only(top: Space.m),
                   child: DropdownButtonFormField<int>(
+                    // The keyboard goes, not left over the colours.
+                    onTap: () => FocusScope.of(context).unfocus(),
                     initialValue: _color,
                     decoration: InputDecoration(labelText: l10n.importColor),
                     items: [

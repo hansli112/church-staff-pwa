@@ -650,8 +650,6 @@
   "importSameNameScope": "この読み込みに含まれる同じ名前には、すべてこの対応を使います",
   "importGuestChoice": "「{name}」をアカウントなしのままにする",
   "importEditDate": "日付を編集",
-  "importDateFormatLabel": "日付（YYYY-MM-DD）",
-  "importValidDate": "有効な YYYY-MM-DD 形式の日付を入力してください",
   "importEditDuty": "担当を編集",
   "importDutyLabel": "担当",
   "importPeopleLines": "名前（1行に1人）",

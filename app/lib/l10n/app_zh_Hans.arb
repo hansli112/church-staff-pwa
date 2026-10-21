@@ -650,8 +650,6 @@
   "importSameNameScope": "这次导入的同名人名都用这个对应",
   "importGuestChoice": "保留“{name}”为无账号",
   "importEditDate": "编辑日期",
-  "importDateFormatLabel": "日期（YYYY-MM-DD）",
-  "importValidDate": "请填有效的 YYYY-MM-DD 日期",
   "importEditDuty": "编辑事奉项目",
   "importDutyLabel": "事奉项目",
   "importPeopleLines": "名字（每行一人）",

@@ -2096,12 +2096,6 @@ class L10nJa extends L10n {
   String get importEditDate => '日付を編集';
 
   @override
-  String get importDateFormatLabel => '日付（YYYY-MM-DD）';
-
-  @override
-  String get importValidDate => '有効な YYYY-MM-DD 形式の日付を入力してください';
-
-  @override
   String get importEditDuty => '担当を編集';
 
   @override

@@ -2092,12 +2092,6 @@ class L10nZh extends L10n {
   String get importEditDate => '編輯日期';
 
   @override
-  String get importDateFormatLabel => '日期（YYYY-MM-DD）';
-
-  @override
-  String get importValidDate => '請填有效的 YYYY-MM-DD 日期';
-
-  @override
   String get importEditDuty => '編輯服事項目';
 
   @override
@@ -4927,12 +4921,6 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get importEditDate => '编辑日期';
-
-  @override
-  String get importDateFormatLabel => '日期（YYYY-MM-DD）';
-
-  @override
-  String get importValidDate => '请填有效的 YYYY-MM-DD 日期';
 
   @override
   String get importEditDuty => '编辑事奉项目';

@@ -352,8 +352,10 @@ void main() {
     await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
     await tapText(tester, '預覽');
     await tapText(tester, '日期');
-    await tester.enterText(find.byType(TextField), '2026-10-25');
-    await tapText(tester, '完成');
+    // A day from a month: typed, 10/18/2026 reads the other way in some places.
+    expect(find.byType(TextField), findsNothing);
+    await tester.tap(find.descendant(of: find.byType(CalendarDatePicker), matching: find.text('25')));
+    await settle(tester);
     await tapText(tester, '司琴');
     await tester.enterText(find.byType(TextField).at(0), '招待');
     await tester.enterText(find.byType(TextField).at(1), '陳志豪');
@@ -365,6 +367,7 @@ void main() {
     await tester.tap(find.byType(DropdownButtonFormField<int>));
     await settle(tester);
     await tapText(tester, '紫');
+    expect(tester.testTextInput.isVisible, isFalse, reason: 'the keyboard went for the colours, and stays away');
     await tapText(tester, '完成');
     await tapText(tester, '套用到服事表');
     expect(peopleOn(b, 25, '招待'), ['陳志豪']);
