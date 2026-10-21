@@ -12,14 +12,15 @@ import 'dart:math';
 
 import 'package:image/image.dart' as img;
 
-/// The drawing, and the colour of its paper.
+/// The drawing, the colour of its paper and of the light through the window.
 final picture = img.decodePng(File('tool/icon.png').readAsBytesSync())!;
 const paper = (244, 237, 225);
+const light = (250, 228, 174);
 
 typedef Rgb = (num, num, num);
 
 class Variant {
-  const Variant(this.id, this.paperTo, {this.inkTo, this.dim = 1});
+  const Variant(this.id, this.paperTo, {this.inkTo, this.lightTo, this.dim = 1});
 
   /// '' for the default icon.
   final String id;
@@ -30,6 +31,9 @@ class Variant {
   /// What black lines become; null keeps them.
   final Rgb? inkTo;
 
+  /// What the light becomes; null keeps it.
+  final Rgb? lightTo;
+
   /// How much the drawing's own colours keep their brightness, when the
   /// ink changes too.
   final double dim;
@@ -39,31 +43,37 @@ const variants = [
   Variant('', paper),
   Variant('Green', (214, 232, 214)),
   Variant('Purple', (226, 220, 240)),
-  Variant('Night', (34, 40, 54), inkTo: (226, 218, 204), dim: 0.62),
+  // A lamp's glow at night: dimmed yellow went muddy, and lost the cross.
+  Variant('Night', (34, 40, 54), inkTo: (226, 218, 204), lightTo: (92, 80, 58), dim: 0.62),
 ];
 
 /// [picture] repainted for [v]: pixels near the paper colour take the new
-/// paper, near-black ones the new ink, blending at the edges.
+/// paper, near the light's the new light, near-black ones the new ink,
+/// blending at the edges.
 img.Image paint(Variant v) {
   final out = img.Image(width: picture.width, height: picture.height);
   if (v.id.isEmpty) return picture.clone();
-  final inkTo = v.inkTo;
+  final inkTo = v.inkTo, lightTo = v.lightTo;
   for (final p in out) {
     final s = picture.getPixel(p.x, p.y);
     final r = s.r.toDouble(), g = s.g.toDouble(), b = s.b.toDouble();
     final toPaper = (1 - sqrt(pow(r - paper.$1, 2) + pow(g - paper.$2, 2) + pow(b - paper.$3, 2)) / 60).clamp(0.0, 1.0);
+    final toLight = lightTo == null
+        ? 0.0
+        : (1 - sqrt(pow(r - light.$1, 2) + pow(g - light.$2, 2) + pow(b - light.$3, 2)) / 60).clamp(0.0, 1.0);
     final toInk = inkTo == null ? 0.0 : (1 - (r + g + b) / 3 / 90).clamp(0.0, 1.0);
-    double channel(double c, num paperC, num paperTo, num? inkC) {
+    double channel(double c, num paperC, num paperTo, num? lightC, num? inkC) {
       // Light paper keeps its grain, shifted; dark paper replaces it.
       var x = inkTo == null ? c + toPaper * (paperTo - paperC) : c * v.dim * (1 - toPaper) + toPaper * paperTo;
+      if (lightC != null) x = x * (1 - toLight) + toLight * lightC;
       if (inkC != null) x = x * (1 - toInk) + toInk * inkC;
       return x.clamp(0, 255).toDouble();
     }
 
     p
-      ..r = channel(r, paper.$1, v.paperTo.$1, inkTo?.$1)
-      ..g = channel(g, paper.$2, v.paperTo.$2, inkTo?.$2)
-      ..b = channel(b, paper.$3, v.paperTo.$3, inkTo?.$3);
+      ..r = channel(r, paper.$1, v.paperTo.$1, lightTo?.$1, inkTo?.$1)
+      ..g = channel(g, paper.$2, v.paperTo.$2, lightTo?.$2, inkTo?.$2)
+      ..b = channel(b, paper.$3, v.paperTo.$3, lightTo?.$3, inkTo?.$3);
   }
   return out;
 }
