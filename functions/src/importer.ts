@@ -158,14 +158,20 @@ export const DROPPED_SETTINGS = ['small_group_templates', 'devotional', 'import_
  * settings/services: the list was in the build config. Rebuild it from
  * what the data shows: every type with a template or a roster, named after
  * its rosters' serviceName, on the weekday most of its rosters fall on.
+ * In the build config's own order (主日, 青崇, 兒主), then the rest as found:
+ * the database lists them alphabetically.
  */
+const SELF_HOST_SERVICES = ['sundayService', 'youth', 'children'];
+
 export function inferServices(
   templates: Doc | undefined,
   eventOptions: Doc | undefined,
   rosters: { id: string; data: Doc }[],
 ) {
   const types = new Map<string, { names: Map<string, number>; weekdays: number[] }>();
-  const add = (type: string) => types.get(type) ?? types.set(type, { names: new Map(), weekdays: [] }).get(type)!;
+  const known = new Set([...Object.keys(templates ?? {}), ...rosters.map((r) => r.data.type)]);
+  for (const id of SELF_HOST_SERVICES) if (known.has(id)) types.set(id, { names: new Map(), weekdays: [] });
+  const add =(type: string) => types.get(type) ?? types.set(type, { names: new Map(), weekdays: [] }).get(type)!;
   for (const key of Object.keys(templates ?? {})) add(key);
   for (const r of rosters) {
     const type = r.data.type;

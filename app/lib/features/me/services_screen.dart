@@ -62,37 +62,23 @@ class ServicesScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.serviceSettings), actions: const [SavingIndicator()]),
-      body: ListView(
-        children: [
-          ListSection(
+      body: CustomScrollView(
+        slivers: [
+          ReorderableSection<Service>(
             header: l10n.servicesTitle,
             footer: l10n.serviceDisabledFooter,
-            children: [
-              for (final (i, s) in list.indexed)
-                ListRow(
-                  title: s.name,
-                  subtitle: s.enabled
-                      ? weekdayLabel(l10n, s.weekday)
-                      : '${weekdayLabel(l10n, s.weekday)}${l10n.dotSeparator}${l10n.serviceDisabled}',
-                  trailing: list.length < 2
-                      ? null
-                      : Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              tooltip: l10n.moveUp,
-                              icon: const Icon(Symbols.arrow_upward_rounded),
-                              onPressed: i == 0 ? null : () => save([...list]..swap(i, i - 1)),
-                            ),
-                            IconButton(
-                              tooltip: l10n.moveDown,
-                              icon: const Icon(Symbols.arrow_downward_rounded),
-                              onPressed: i == list.length - 1 ? null : () => save([...list]..swap(i, i + 1)),
-                            ),
-                          ],
-                        ),
-                  onTap: () => context.push('/me/services/${s.id}'),
-                ),
+            items: list,
+            keyOf: (s) => s.id,
+            onReorder: save,
+            row: (s, handle) => ListRow(
+              title: s.name,
+              subtitle: s.enabled
+                  ? weekdayLabel(l10n, s.weekday)
+                  : '${weekdayLabel(l10n, s.weekday)}${l10n.dotSeparator}${l10n.serviceDisabled}',
+              trailing: handle,
+              onTap: () => context.push('/me/services/${s.id}'),
+            ),
+            after: [
               ListRow(
                 title: l10n.serviceAdd,
                 leading: const Icon(Symbols.add_rounded),
@@ -103,14 +89,6 @@ class ServicesScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
-}
-
-extension<T> on List<T> {
-  void swap(int a, int b) {
-    final t = this[a];
-    this[a] = this[b];
-    this[b] = t;
   }
 }
 
@@ -422,98 +400,83 @@ class ServiceEditorScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text(service.name), actions: const [SavingIndicator()]),
-      body: ListView(
-        children: [
-          ListSection(
-            children: [
-              ListRow(
-                title: l10n.serviceName,
-                value: service.name,
-                onTap: () async {
-                  final name = await promptText(
-                    context,
-                    title: l10n.rename,
-                    hint: l10n.serviceName,
-                    initial: service.name,
-                  );
-                  if (name != null) await save(service.copyWith(name: name));
-                },
-              ),
-              ListRow(
-                title: l10n.weekday,
-                value: weekdayLabel(l10n, service.weekday),
-                onTap: () async {
-                  final day = await showAppSheet<int>(
-                    context,
-                    builder: (context) => SafeArea(
-                      child: SingleChildScrollView(
-                        child: ListSection(
-                          header: l10n.weekday,
-                          children: [
-                            for (var d = 1; d <= 7; d++)
-                              ListRow(
-                                title: weekdayLabel(l10n, d),
-                                selected: service.weekday == d,
-                                onTap: () => Navigator.pop(context, d),
-                              ),
-                          ],
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: ListSection(
+              children: [
+                ListRow(
+                  title: l10n.serviceName,
+                  value: service.name,
+                  onTap: () async {
+                    final name = await promptText(
+                      context,
+                      title: l10n.rename,
+                      hint: l10n.serviceName,
+                      initial: service.name,
+                    );
+                    if (name != null) await save(service.copyWith(name: name));
+                  },
+                ),
+                ListRow(
+                  title: l10n.weekday,
+                  value: weekdayLabel(l10n, service.weekday),
+                  onTap: () async {
+                    final day = await showAppSheet<int>(
+                      context,
+                      builder: (context) => SafeArea(
+                        child: SingleChildScrollView(
+                          child: ListSection(
+                            header: l10n.weekday,
+                            children: [
+                              for (var d = 1; d <= 7; d++)
+                                ListRow(
+                                  title: weekdayLabel(l10n, d),
+                                  selected: service.weekday == d,
+                                  onTap: () => Navigator.pop(context, d),
+                                ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                  if (day != null) await save(service.copyWith(weekday: day));
-                },
-              ),
-              SwitchRow(
-                title: l10n.serviceEnabled,
-                value: service.enabled,
-                onChanged: (v) => save(service.copyWith(enabled: v)),
-              ),
-            ],
+                    );
+                    if (day != null) await save(service.copyWith(weekday: day));
+                  },
+                ),
+                SwitchRow(
+                  title: l10n.serviceEnabled,
+                  value: service.enabled,
+                  onChanged: (v) => save(service.copyWith(enabled: v)),
+                ),
+              ],
+            ),
           ),
-          ListSection(
+          ReorderableSection<String>(
             header: l10n.templateDuties,
             footer: l10n.templateFooter,
-            children: [
-              for (final (i, d) in service.duties.indexed)
-                Dismissible(
-                  key: ValueKey('duty/$d'),
-                  direction: DismissDirection.endToStart,
-                  background: Container(color: c.destructive),
-                  confirmDismiss: (_) async {
-                    await removeDuty(d);
-                    return false; // The successful server change removes the row.
-                  },
-                  child: ListRow(
-                    title: d,
-                    onTap: () => rowActions(
-                      d,
-                      rename: () => renameDuty(d),
-                      remove: () => removeDuty(d),
-                      synchronize: oldDuties.isEmpty ? null : () => synchronize(d),
-                    ),
-                    // Up and down, like the common events below.
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          tooltip: l10n.moveUp,
-                          icon: const Icon(Symbols.arrow_upward_rounded),
-                          onPressed: i == 0
-                              ? null
-                              : () => save(service.copyWith(duties: [...service.duties]..swap(i, i - 1))),
-                        ),
-                        IconButton(
-                          tooltip: l10n.moveDown,
-                          icon: const Icon(Symbols.arrow_downward_rounded),
-                          onPressed: i == service.duties.length - 1
-                              ? null
-                              : () => save(service.copyWith(duties: [...service.duties]..swap(i, i + 1))),
-                        ),
-                      ],
-                    ),
-                  ),
+            items: service.duties,
+            keyOf: (d) => 'duty/$d',
+            onReorder: (next) => save(service.copyWith(duties: next)),
+            row: (d, handle) => Dismissible(
+              key: ValueKey('duty/$d'),
+              direction: DismissDirection.endToStart,
+              background: Container(color: c.destructive),
+              confirmDismiss: (_) async {
+                await removeDuty(d);
+                return false; // The successful server change removes the row.
+              },
+              child: ListRow(
+                title: d,
+                onTap: () => rowActions(
+                  d,
+                  rename: () => renameDuty(d),
+                  remove: () => removeDuty(d),
+                  synchronize: oldDuties.isEmpty ? null : () => synchronize(d),
                 ),
+                trailing: handle,
+              ),
+            ),
+            after: [
               ListRow(
                 title: l10n.addDuty,
                 leading: const Icon(Symbols.add_rounded),
@@ -532,49 +495,33 @@ class ServiceEditorScreen extends ConsumerWidget {
               ),
             ],
           ),
-          ListSection(
+          ReorderableSection<EventTag>(
             header: l10n.commonEvents,
-            children: [
-              for (final (i, e) in service.events.indexed)
-                Dismissible(
-                  key: ValueKey('event/${e.name}'),
-                  direction: DismissDirection.endToStart,
-                  background: Container(color: c.destructive),
-                  confirmDismiss: (_) async {
-                    await removeEvent(e);
-                    return false;
-                  },
-                  child: ListRow(
-                    title: e.name,
-                    leading: Tag.event(context, ' ', e.color),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          tooltip: l10n.moveUp,
-                          icon: const Icon(Symbols.arrow_upward_rounded),
-                          onPressed: i == 0
-                              ? null
-                              : () => save(service.copyWith(events: [...service.events]..swap(i, i - 1))),
-                        ),
-                        IconButton(
-                          tooltip: l10n.moveDown,
-                          icon: const Icon(Symbols.arrow_downward_rounded),
-                          onPressed: i == service.events.length - 1
-                              ? null
-                              : () => save(service.copyWith(events: [...service.events]..swap(i, i + 1))),
-                        ),
-                      ],
-                    ),
-                    onTap: () => rowActions(
-                      e.name,
-                      rename: () => renameEvent(e),
-                      color: () => editColor(e),
-                      remove: () => removeEvent(e),
-                      synchronize: oldEvents.isEmpty ? null : () => synchronize(e.name, event: true),
-                    ),
-                  ),
+            items: service.events,
+            keyOf: (e) => 'event/${e.name}',
+            onReorder: (next) => save(service.copyWith(events: next)),
+            row: (e, handle) => Dismissible(
+              key: ValueKey('event/${e.name}'),
+              direction: DismissDirection.endToStart,
+              background: Container(color: c.destructive),
+              confirmDismiss: (_) async {
+                await removeEvent(e);
+                return false;
+              },
+              child: ListRow(
+                title: e.name,
+                leading: Tag.event(context, ' ', e.color),
+                trailing: handle,
+                onTap: () => rowActions(
+                  e.name,
+                  rename: () => renameEvent(e),
+                  color: () => editColor(e),
+                  remove: () => removeEvent(e),
+                  synchronize: oldEvents.isEmpty ? null : () => synchronize(e.name, event: true),
                 ),
+              ),
+            ),
+            after: [
               ListRow(
                 title: l10n.addEvent,
                 leading: const Icon(Symbols.add_rounded),

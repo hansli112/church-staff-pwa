@@ -143,15 +143,7 @@ class ListSection extends StatelessWidget {
     final c = AppColors.of(context);
     final rows = <Widget>[];
     for (var i = 0; i < children.length; i++) {
-      if (i > 0) {
-        rows.add(
-          Padding(
-            // Under the text, as iOS draws it, when the row has a leading.
-            padding: EdgeInsetsDirectional.only(start: Space.m + _leadingInset(children[i])),
-            child: Divider(height: 0.5, thickness: 0.5, color: c.separator),
-          ),
-        );
-      }
+      if (i > 0) rows.add(_RowDivider(over: children[i]));
       rows.add(children[i]);
     }
     return Padding(
@@ -159,23 +151,7 @@ class ListSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (header != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                Space.m,
-                Space.s,
-                Space.m,
-                Space.s,
-              ),
-              child: Semantics(
-                header: true,
-                child: BalancedText(
-                  header!,
-                  textAlign: TextAlign.start,
-                  style: AppText.footnote.copyWith(color: c.secondaryLabel),
-                ),
-              ),
-            ),
+          if (header != null) _SectionHeader(header!),
           ClipRRect(
             borderRadius: BorderRadius.circular(Radii.m),
             child: Material(
@@ -183,15 +159,7 @@ class ListSection extends StatelessWidget {
               child: Column(children: rows),
             ),
           ),
-          if (footer != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(Space.m, Space.s, Space.m, 0),
-              child: BalancedText(
-                footer!,
-                textAlign: TextAlign.start,
-                style: AppText.footnote.copyWith(color: c.secondaryLabel),
-              ),
-            ),
+          if (footer != null) _SectionFooter(footer!),
         ],
       ),
     );
@@ -207,6 +175,169 @@ double _leadingInset(Widget row) => switch (row) {
   ListRow(leading: Icon()) => 22 + Space.m,
   _ => 0,
 };
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(Space.m, Space.s, Space.m, Space.s),
+    child: Semantics(
+      header: true,
+      child: BalancedText(
+        text,
+        textAlign: TextAlign.start,
+        style: AppText.footnote.copyWith(color: AppColors.of(context).secondaryLabel),
+      ),
+    ),
+  );
+}
+
+class _SectionFooter extends StatelessWidget {
+  const _SectionFooter(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(Space.m, Space.s, Space.m, 0),
+    child: BalancedText(
+      text,
+      textAlign: TextAlign.start,
+      style: AppText.footnote.copyWith(color: AppColors.of(context).secondaryLabel),
+    ),
+  );
+}
+
+/// The line over the row [over]: under its text, as iOS draws it, when it
+/// has a leading.
+class _RowDivider extends StatelessWidget {
+  const _RowDivider({required this.over});
+
+  final Widget over;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: EdgeInsetsDirectional.only(start: Space.m + _leadingInset(over)),
+    child: Divider(height: 0.5, thickness: 0.5, color: AppColors.of(context).separator),
+  );
+}
+
+/// A [ListSection] whose rows are put in order by dragging: by the handle
+/// at once, or anywhere on the row after a long press. A sliver, so a row
+/// dragged past the screen's edge scrolls the page. [after] are fixed rows
+/// below them (新增…). The new order shows until [onReorder]'s write is
+/// done; then [items] again, saved or not.
+class ReorderableSection<T> extends StatefulWidget {
+  const ReorderableSection({
+    super.key,
+    this.header,
+    this.footer,
+    required this.items,
+    required this.keyOf,
+    required this.row,
+    required this.onReorder,
+    this.after = const [],
+  });
+
+  final String? header;
+  final String? footer;
+  final List<T> items;
+  final Object Function(T item) keyOf;
+
+  /// The row for one item, with [handle] as its trailing.
+  final Widget Function(T item, Widget? handle) row;
+  final Future<void> Function(List<T> next) onReorder;
+  final List<Widget> after;
+
+  @override
+  State<ReorderableSection<T>> createState() => _ReorderableSectionState<T>();
+}
+
+class _ReorderableSectionState<T> extends State<ReorderableSection<T>> {
+  List<T>? _moved;
+
+  Future<void> _reorder(int from, int to) async {
+    final next = [...(_moved ?? widget.items)];
+    next.insert(to > from ? to - 1 : to, next.removeAt(from));
+    Haptics.selection();
+    setState(() => _moved = next);
+    try {
+      await widget.onReorder(next);
+    } finally {
+      if (mounted) setState(() => _moved = null);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    final items = _moved ?? widget.items;
+    const corner = Radius.circular(Radii.m);
+    // Each row paints its own part of the card, rounded at its ends.
+    BorderRadius ends({required bool first, required bool last}) =>
+        BorderRadius.vertical(top: first ? corner : Radius.zero, bottom: last ? corner : Radius.zero);
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(Space.m, Space.s, Space.m, Space.m),
+      sliver: SliverMainAxisGroup(
+        slivers: [
+          if (widget.header != null) SliverToBoxAdapter(child: _SectionHeader(widget.header!)),
+          SliverReorderableList(
+            itemCount: items.length,
+            onReorder: _reorder,
+            itemBuilder: (_, i) {
+              final row = widget.row(
+                items[i],
+                items.length < 2
+                    ? null
+                    : ReorderableDragStartListener(
+                        index: i,
+                        child: Icon(Symbols.drag_handle_rounded, color: c.tertiaryLabel),
+                      ),
+              );
+              return Material(
+                key: ValueKey(widget.keyOf(items[i])),
+                color: c.surface,
+                borderRadius: ends(first: i == 0, last: i == items.length - 1 && widget.after.isEmpty),
+                clipBehavior: Clip.antiAlias,
+                child: ReorderableDelayedDragStartListener(
+                  index: i,
+                  enabled: items.length > 1,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (i > 0) _RowDivider(over: row),
+                      row,
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+          if (widget.after.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Material(
+                color: c.surface,
+                borderRadius: ends(first: items.isEmpty, last: true),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    for (final (i, row) in widget.after.indexed) ...[
+                      if (i > 0 || items.isNotEmpty) _RowDivider(over: row),
+                      row,
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          if (widget.footer != null) SliverToBoxAdapter(child: _SectionFooter(widget.footer!)),
+        ],
+      ),
+    );
+  }
+}
 
 /// One row in a [ListSection].
 class ListRow extends StatelessWidget {

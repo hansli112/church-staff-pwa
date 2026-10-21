@@ -513,6 +513,9 @@ class L10nZh extends L10n {
   String get serviceSettings => '服事設定';
 
   @override
+  String get serviceSettingsSub => '聚會、服事項目、特別活動';
+
+  @override
   String get invites => '邀請';
 
   @override
@@ -904,12 +907,6 @@ class L10nZh extends L10n {
 
   @override
   String get remove => '移除';
-
-  @override
-  String get moveUp => '上移';
-
-  @override
-  String get moveDown => '下移';
 
   @override
   String get saved => '已儲存';
@@ -3349,6 +3346,9 @@ class L10nZhHans extends L10nZh {
   String get serviceSettings => '事奉设置';
 
   @override
+  String get serviceSettingsSub => '聚会、事奉项目、特别活动';
+
+  @override
   String get invites => '邀请';
 
   @override
@@ -3740,12 +3740,6 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get remove => '移除';
-
-  @override
-  String get moveUp => '上移';
-
-  @override
-  String get moveDown => '下移';
 
   @override
   String get saved => '已保存';

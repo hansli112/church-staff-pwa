@@ -98,6 +98,7 @@ class SettingsScreen extends ConsumerWidget {
                 ListRow(
                   leading: const IconTile(Symbols.tune_rounded, color: TileColors.manage),
                   title: l10n.serviceSettings,
+                  subtitle: l10n.serviceSettingsSub,
                   onTap: () => context.push('/me/services'),
                 ),
                 ListRow(

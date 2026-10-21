@@ -35,7 +35,7 @@ class GroupsScreen extends ConsumerWidget {
       body: ListView(
         children: [
           ListSection(
-            header: l10n.serviceSettings,
+            header: l10n.servicesTitle,
             children: [
               for (final s in services) ListRow(title: s.name, onTap: () => context.push('/me/groups/service/${s.id}')),
             ],

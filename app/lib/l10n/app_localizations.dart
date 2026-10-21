@@ -1012,6 +1012,12 @@ abstract class L10n {
   /// **'服事設定'**
   String get serviceSettings;
 
+  /// Under 服事設定 in 管理教會: what the page holds
+  ///
+  /// In zh, this message translates to:
+  /// **'聚會、服事項目、特別活動'**
+  String get serviceSettingsSub;
+
   /// No description provided for @invites.
   ///
   /// In zh, this message translates to:
@@ -1701,18 +1707,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'移除'**
   String get remove;
-
-  /// No description provided for @moveUp.
-  ///
-  /// In zh, this message translates to:
-  /// **'上移'**
-  String get moveUp;
-
-  /// No description provided for @moveDown.
-  ///
-  /// In zh, this message translates to:
-  /// **'下移'**
-  String get moveDown;
 
   /// No description provided for @saved.
   ///

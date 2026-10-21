@@ -513,6 +513,9 @@ class L10nJa extends L10n {
   String get serviceSettings => '奉仕の設定';
 
   @override
+  String get serviceSettingsSub => '集会、担当、特別行事';
+
+  @override
   String get invites => '招待';
 
   @override
@@ -904,12 +907,6 @@ class L10nJa extends L10n {
 
   @override
   String get remove => '外す';
-
-  @override
-  String get moveUp => '上へ移動';
-
-  @override
-  String get moveDown => '下へ移動';
 
   @override
   String get saved => '保存しました';

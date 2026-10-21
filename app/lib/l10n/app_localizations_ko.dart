@@ -514,6 +514,9 @@ class L10nKo extends L10n {
   String get serviceSettings => '봉사 설정';
 
   @override
+  String get serviceSettingsSub => '예배, 담당, 특별 순서';
+
+  @override
   String get invites => '초대';
 
   @override
@@ -905,12 +908,6 @@ class L10nKo extends L10n {
 
   @override
   String get remove => '빼기';
-
-  @override
-  String get moveUp => '위로 이동';
-
-  @override
-  String get moveDown => '아래로 이동';
 
   @override
   String get saved => '저장했어요';

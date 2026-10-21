@@ -522,6 +522,9 @@ class L10nEn extends L10n {
   String get serviceSettings => 'Service settings';
 
   @override
+  String get serviceSettingsSub => 'Services, roles and occasions';
+
+  @override
   String get invites => 'Invites';
 
   @override
@@ -927,12 +930,6 @@ class L10nEn extends L10n {
 
   @override
   String get remove => 'Remove';
-
-  @override
-  String get moveUp => 'Move up';
-
-  @override
-  String get moveDown => 'Move down';
 
   @override
   String get saved => 'Saved';

@@ -20,6 +20,23 @@ Future<void> tapText(WidgetTester tester, String text) async {
   await settle(tester);
 }
 
+/// Drags [text]'s row by its handle [rows] rows down (up when negative).
+Future<void> dragRow(WidgetTester tester, String text, int rows) async {
+  final row = find.ancestor(of: find.text(text), matching: find.byType(ListRow)).first;
+  final handle = find.descendant(of: row, matching: find.byIcon(Symbols.drag_handle_rounded));
+  final height = tester.getSize(row).height;
+  final gesture = await tester.startGesture(tester.getCenter(handle));
+  await tester.pump(const Duration(milliseconds: 100));
+  // Picked up, then well into the row it goes to: the list only gives way
+  // once a row is mostly past.
+  await gesture.moveBy(Offset(0, rows.sign * 20.0));
+  await tester.pump(const Duration(milliseconds: 100));
+  await gesture.moveBy(Offset(0, height * (rows + rows.sign * 0.8)));
+  await tester.pump(const Duration(milliseconds: 500));
+  await gesture.up();
+  await settle(tester);
+}
+
 TextSpan shownName(WidgetTester tester, String name) {
   final text = tester.widget<RichText>(find.text(name, findRichText: true));
   TextSpan? found;
@@ -83,7 +100,22 @@ void main() {
     expect(b.services['grace']!.byId('sunday')!.events.single.color, 0);
   });
 
-  testWidgets('common-event options can move in both directions without reordering existing tags', (tester) async {
+  testWidgets('services are put in order by dragging', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/me/services');
+    expect(find.byTooltip('下移'), findsNothing);
+    await dragRow(tester, '主日崇拜', 1);
+
+    expect(b.services['grace']!.services.map((s) => s.id), ['youth', 'sunday']);
+    expect(find.text('主日崇拜'), findsOneWidget);
+    await dragRow(tester, '主日崇拜', -1);
+    expect(b.services['grace']!.services.map((s) => s.id), ['sunday', 'youth']);
+  });
+
+  testWidgets('duties and common events are put in order by dragging, without reordering existing tags', (
+    tester,
+  ) async {
     final b = seededChurch();
     b.setServices('grace', [
       sundayService.copyWith(
@@ -97,17 +129,13 @@ void main() {
     final arranged = savedDay(b, 4);
     await pumpApp(tester, b);
     await go(tester, '/me/services/sunday');
-    await tester.scrollUntilVisible(find.text('浸禮'), 300);
-    final baptism = find.ancestor(of: find.text('浸禮'), matching: find.byType(ListRow));
-    await tester.tap(find.descendant(of: baptism, matching: find.byTooltip('上移')));
-    await settle(tester);
+    await dragRow(tester, '司會', 2);
+    expect(b.services['grace']!.byId('sunday')!.duties, ['司琴', '招待', '司會']);
 
+    await tester.scrollUntilVisible(find.text('浸禮'), 300);
+    await dragRow(tester, '浸禮', -1);
     expect(b.services['grace']!.byId('sunday')!.events.map((e) => e.name), ['浸禮', '聖餐']);
     expect(savedDay(b, 4), arranged);
-    final moved = find.ancestor(of: find.text('浸禮'), matching: find.byType(ListRow));
-    await tester.tap(find.descendant(of: moved, matching: find.byTooltip('下移')));
-    await settle(tester);
-    expect(b.services['grace']!.byId('sunday')!.events.map((e) => e.name), ['聖餐', '浸禮']);
   });
 
   testWidgets('renaming a duty offers a separate future preview, applies only on request and undoes the bulk change', (

@@ -116,6 +116,18 @@ describe('inferServices', () => {
       ],
     );
   });
+
+  test("keeps self-host's built-in order, whatever order the database lists them in", async () => {
+    const { inferServices } = await import('../src/importer.js');
+    const s = inferServices({ youth: [], children: [], sundayService: [] }, {}, [
+      { id: '20261004_prayer', data: { type: 'prayer' } },
+      { id: '20261004_children', data: { type: 'children' } },
+    ]);
+    assert.deepEqual(
+      s.services.map((x) => x.id),
+      ['sundayService', 'youth', 'children', 'prayer'],
+    );
+  });
 });
 
 describe('buildImport', () => {
