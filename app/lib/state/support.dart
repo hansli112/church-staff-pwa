@@ -8,6 +8,7 @@ import 'package:in_app_purchase_android/billing_client_wrappers.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 
 import '../data/backend.dart';
+import 'device_flag.dart';
 import 'providers.dart';
 
 /// 支持平台: one-off tips and two monthly plans, through the App Store and
@@ -278,13 +279,13 @@ final fundingProvider = StreamProvider.autoDispose<Funding?>((ref) => ref.watch(
 const appIcons = <String?>[null, 'Green', 'Purple', 'Night'];
 
 /// A church's own app icon, bundled like the others, by church id: its
-/// members get it on their own, not only supporters. Android shows [name]
-/// under it too; iOS keeps the app's.
-typedef ChurchIcon = ({String id, String name});
+/// members get it on their own, not only supporters. [iconId] is the icon's,
+/// as in [appIcons]; Android shows [name] under it too, iOS keeps the app's.
+typedef ChurchIcon = ({String iconId, String name});
 
 const churchIcons = <String, ChurchIcon>{
   // 竹圍靈糧福音中心: its id goes here once the church is made.
-  'zhuwei': (id: 'Zhuwei', name: '竹圍靈糧福音中心'),
+  'zhuwei': (iconId: 'Zhuwei', name: '竹圍靈糧福音中心'),
 };
 
 /// A church's icon, just put on the home screen on its own (sessionEffects),
@@ -298,16 +299,27 @@ class ChurchIconChanged extends Notifier<ChurchIcon?> {
 
 final churchIconChangedProvider = NotifierProvider<ChurchIconChanged, ChurchIcon?>(ChurchIconChanged.new);
 
-/// The icons I may pick, the default first: a supporter's, and those of my
-/// churches that have their own.
-final appIconChoicesProvider = Provider<List<String?>>((ref) {
+/// Whether the church icon [iconId] was put on this phone's home screen
+/// once already: put back, it stays back.
+final churchIconPlacedProvider = NotifierProvider.family<DeviceFlag, bool, String>(
+  (iconId) => DeviceFlag('church_icon_$iconId'),
+);
+
+/// The icon of the one of my churches that has its own, if any.
+final myChurchIconProvider = Provider<ChurchIcon?>((ref) {
   final memberships = ref.watch(membershipsProvider).value ?? const [];
-  return [
+  return [for (final m in memberships) ?churchIcons[m.churchId]].firstOrNull;
+});
+
+/// The icons I may pick, the default first: a supporter's, and my church's
+/// own.
+final appIconChoicesProvider = Provider<List<String?>>(
+  (ref) => [
     null,
     if (ref.watch(supporterProvider)) ...appIcons.skip(1),
-    for (final m in memberships) ?churchIcons[m.churchId]?.id,
-  ];
-});
+    ?ref.watch(myChurchIconProvider)?.iconId,
+  ],
+);
 
 /// Switches the home-screen icon through a small platform channel: iOS
 /// setAlternateIconName, Android enabling one activity-alias.
@@ -338,4 +350,15 @@ class NoIconSwitcher implements AppIconSwitcher {
 
 final appIconSwitcherProvider = Provider<AppIconSwitcher>((ref) => const NoIconSwitcher());
 
-final currentAppIconProvider = FutureProvider<String?>((ref) => ref.watch(appIconSwitcherProvider).current());
+/// The icon on the home screen; [AppIconInUse.set] puts another there.
+class AppIconInUse extends AsyncNotifier<String?> {
+  @override
+  Future<String?> build() => ref.watch(appIconSwitcherProvider).current();
+
+  Future<void> set(String? id) async {
+    await ref.read(appIconSwitcherProvider).set(id);
+    state = AsyncData(id);
+  }
+}
+
+final currentAppIconProvider = AsyncNotifierProvider<AppIconInUse, String?>(AppIconInUse.new);

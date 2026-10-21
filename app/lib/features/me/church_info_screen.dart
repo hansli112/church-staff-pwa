@@ -13,11 +13,11 @@ import '../../l10n/app_localizations.dart';
 import '../../state/export.dart';
 import '../../state/providers.dart';
 import '../../state/support.dart';
-import 'support_screen.dart' show appIconName;
 import '../../state/session.dart';
 import '../church/add_to_home.dart';
 import '../church/links.dart';
 import '../common/errors.dart';
+import '../common/labels.dart';
 import '../common/time_zones.dart';
 import 'home_name_dialog.dart';
 

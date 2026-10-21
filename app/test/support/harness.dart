@@ -50,6 +50,13 @@ Future<List<Override>> testOverrides(
   ];
 }
 
+/// What this phone has saved: pass it as `savedPrefs` to open the app on
+/// it again.
+Future<Map<String, Object>> phonePrefs() async {
+  final prefs = await SharedPreferences.getInstance();
+  return {for (final k in prefs.getKeys()) k: prefs.get(k)!};
+}
+
 /// Pumps the whole app on [backend], phone-sized.
 Future<void> pumpApp(
   WidgetTester tester,

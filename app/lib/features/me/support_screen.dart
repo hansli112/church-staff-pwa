@@ -262,14 +262,6 @@ class _Amounts extends StatelessWidget {
   }
 }
 
-/// The name of app icon [id] (null: the usual one).
-String appIconName(L10n l10n, String? id) => switch (id) {
-  'Green' => l10n.appIconGreen,
-  'Purple' => l10n.appIconPurple,
-  'Night' => l10n.appIconNight,
-  _ => churchIcons.values.where((c) => c.id == id).firstOrNull?.name ?? l10n.appIconDefault,
-};
-
 /// The home screen's rounding of an icon, as a share of its side.
 const _iconRounding = 0.225;
 
@@ -338,8 +330,7 @@ class AppIconScreen extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(Radii.m),
                           onTap: () async {
                             Haptics.selection();
-                            await ref.read(appIconSwitcherProvider).set(id);
-                            ref.invalidate(currentAppIconProvider);
+                            await ref.read(currentAppIconProvider.notifier).set(id);
                           },
                           child: Padding(
                             padding: const EdgeInsets.all(Space.s),

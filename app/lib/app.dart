@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/design/components.dart';
 import 'core/design/theme.dart';
 import 'core/fonts.dart';
 import 'core/builtin_localizations.dart';
@@ -120,25 +121,14 @@ class _MarthaAppState extends ConsumerState<MarthaApp> {
     // A church's own icon, put on the home screen on its own: say so, with
     // the way back.
     ref.listen(churchIconChangedProvider, (_, icon) {
-      final messenger = _messenger.currentState;
-      if (icon == null || messenger == null) return;
-      final l10n = L10n.of(messenger.context);
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(l10n.churchIconChanged(icon.name)),
-            duration: const Duration(seconds: 8),
-            persist: false,
-            action: SnackBarAction(
-              label: l10n.undo,
-              onPressed: () async {
-                await ref.read(appIconSwitcherProvider).set(null);
-                ref.invalidate(currentAppIconProvider);
-              },
-            ),
-          ),
-        );
+      final context = router.routerDelegate.navigatorKey.currentContext;
+      if (icon == null || context == null) return;
+      showToast(
+        context,
+        L10n.of(context).churchIconChanged(icon.name),
+        duration: const Duration(seconds: 8),
+        onUndo: () => ref.read(currentAppIconProvider.notifier).set(null),
+      );
     });
     final locale = ref.watch(profileProvider.select((p) => p.value?.locale));
     return MaterialApp.router(

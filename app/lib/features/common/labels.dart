@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../data/backend.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
+import '../../state/support.dart';
 
 /// How a 身分 (#82) is shown, e.g. 「敬拜團 負責人」, with the names of the
 /// church's [services], [ministries] and [smallGroups].
@@ -83,3 +84,11 @@ String money(L10n l10n, num amount, [Currency currency = Currency.twd]) {
     Currency.usd => l10n.moneyUsd(n),
   };
 }
+
+/// The name of app icon [id] (null: the usual one); a church's is its name.
+String appIconName(L10n l10n, String? id) => switch (id) {
+  'Green' => l10n.appIconGreen,
+  'Purple' => l10n.appIconPurple,
+  'Night' => l10n.appIconNight,
+  _ => churchIcons.values.where((c) => c.iconId == id).firstOrNull?.name ?? l10n.appIconDefault,
+};

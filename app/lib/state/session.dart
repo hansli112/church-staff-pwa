@@ -70,38 +70,43 @@ final sessionEffectsProvider = Provider<void>((ref) {
   // A lapsed subscription takes its icon back; a church's own stays.
   ref.listen(supporterProvider, (_, active) async {
     if (active) return;
-    final icons = ref.read(appIconSwitcherProvider);
-    if (await icons.current() case final icon? when appIcons.contains(icon)) await icons.set(null);
+    if (await ref.read(currentAppIconProvider.future) case final id? when appIcons.contains(id)) {
+      await ref.read(currentAppIconProvider.notifier).set(null);
+    }
   }, fireImmediately: true);
 
-  // A church with its own icon puts it on its members' home screens: once
-  // per phone, so one put back stays back, and never over an icon picked.
-  // A moment after the church's page is up, so the system's note on the
-  // change comes over it, not over the splash.
+  // A church with its own icon puts it on its members' home screens, once
+  // per phone, and never over an icon picked: that has to go first.
+  // Leaving the church takes it back. A moment after the church's page is
+  // up, or the church joined, so the system's note on the change comes over
+  // the page, not over the splash. Refused, it is tried again next time.
   Timer? soon;
   ref.onDispose(() => soon?.cancel());
-  ref.listen(appStageProvider, (_, stage) {
-    if (stage != AppStage.ready || ref.read(isWebProvider)) return;
-    final memberships = ref.read(membershipsProvider).value ?? const [];
-    final icon = [for (final m in memberships) ?churchIcons[m.churchId]].firstOrNull;
-    if (icon == null) return;
-    final prefs = ref.read(prefsProvider);
-    final key = 'church_icon_${icon.id}';
-    if (prefs.getBool(key) ?? false) return;
+  void placeChurchIcon() {
     soon?.cancel();
+    final stage = ref.read(appStageProvider);
+    if (ref.read(isWebProvider) || stage == AppStage.loading || stage == AppStage.signedOut) return;
+    final church = ref.read(myChurchIconProvider);
     soon = Timer(const Duration(milliseconds: 600), () async {
-      await prefs.setBool(key, true);
-      final icons = ref.read(appIconSwitcherProvider);
+      final inUse = ref.read(currentAppIconProvider.notifier);
       try {
-        if (await icons.current() != null) return;
-        await icons.set(icon.id);
+        final current = await ref.read(currentAppIconProvider.future);
+        if (church == null) {
+          if (churchIcons.values.any((c) => c.iconId == current)) await inUse.set(null);
+          return;
+        }
+        if (current != null || ref.read(churchIconPlacedProvider(church.iconId))) return;
+        await inUse.set(church.iconId);
       } catch (_) {
         return;
       }
-      ref.invalidate(currentAppIconProvider);
-      ref.read(churchIconChangedProvider.notifier).tell(icon);
+      ref.read(churchIconPlacedProvider(church.iconId).notifier).mark();
+      ref.read(churchIconChangedProvider.notifier).tell(church);
     });
-  }, fireImmediately: true);
+  }
+
+  ref.listen(appStageProvider, (_, _) => placeChurchIcon(), fireImmediately: true);
+  ref.listen(myChurchIconProvider, (_, _) => placeChurchIcon());
 });
 
 /// Signs out: this device stops getting pushes, and the picked church is
