@@ -184,7 +184,7 @@ class EchoingChurchData implements ChurchData {
   Member? _memberEchoed(Member server, Set<Object> arrived) {
     Member? shown = server;
     for (final echo in _echoes) {
-      final change = echo.members[server.uid];
+      final change = echo.members[server.uid] ?? echo.everyMember;
       if (change == null) continue;
       final next = change(server);
       final inServer = next != null && _sameMember(next, server);
@@ -203,7 +203,7 @@ class EchoingChurchData implements ChurchData {
 
   @override
   Stream<List<Member>> members() => _echoed(_inner.members(), (server, arrived) {
-    if (!_echoes.any((e) => e.members.isNotEmpty)) return server;
+    if (!_echoes.any((e) => e.members.isNotEmpty || e.everyMember != null)) return server;
     final shown = [for (final m in server) ?_memberEchoed(m, arrived)];
     return listEquals(shown, server) ? server : shown;
   });
@@ -396,9 +396,17 @@ class EchoingChurchData implements ChurchData {
   @override
   Stream<List<SmallGroupDetails>> smallGroups() => _inner.smallGroups();
 
+  /// A 小組's new 小組長 shows at once; the rest of it as the backend has it.
   @override
-  Future<String> saveSmallGroup(SmallGroupDetails group, {List<String>? leads}) =>
-      _inner.saveSmallGroup(group, leads: leads);
+  Future<String> saveSmallGroup(SmallGroupDetails group, {List<String>? leads}) async {
+    if (leads == null || group.id.isEmpty) return _inner.saveSmallGroup(group, leads: leads);
+    late final String id;
+    await _send(
+      _Echo(everyMember: (m) => m.leadingSmallGroup(group.id, lead: leads.contains(m.uid))),
+      () async => id = await _inner.saveSmallGroup(group, leads: leads),
+    );
+    return id;
+  }
 
   @override
   Future<void> deleteSmallGroup(String id) => _inner.deleteSmallGroup(id);
@@ -482,6 +490,7 @@ class _Echo {
     this.services,
     this.ministries,
     this.staffOrders = const {},
+    this.everyMember,
   });
 
   /// Each roster written, null for one deleted.
@@ -489,6 +498,10 @@ class _Echo {
 
   /// Each member changed, null for one removed.
   final Map<String, Member? Function(Member)> members;
+
+  /// A change to whichever members it touches, for one made by the
+  /// backend, which knows who they are.
+  final Member Function(Member)? everyMember;
   final ServiceSettings Function(ServiceSettings)? services;
 
   /// The 事工 list written.

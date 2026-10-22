@@ -843,21 +843,13 @@ class MemoryChurchData implements ChurchData {
       if (leads == null) return;
       for (final m in [...members.values]) {
         final leading = m.leadSmallGroups.contains(id);
-        if (leading != leads.contains(m.uid)) members[m.uid] = _leading(m, id, lead: !leading);
+        if (leading != leads.contains(m.uid)) members[m.uid] = m.leadingSmallGroup(id, lead: !leading);
       }
     });
     return id;
   }
 
   /// [m] made 小組長 of [id] or no longer, as the backend writes it.
-  Member _leading(Member m, String id, {required bool lead}) => m.copyWith(
-    identities: [
-      for (final i in m.identities)
-        if (i != SmallGroupLead(id)) i,
-      if (lead) SmallGroupLead(id),
-    ],
-  );
-
   @override
   Future<void> deleteSmallGroup(String id) async {
     final me = _b.functionAccess(churchId)!;
@@ -869,7 +861,7 @@ class MemoryChurchData implements ChurchData {
       final members = _b.members[churchId]!;
       for (final m in [...members.values]) {
         if (!m.leadSmallGroups.contains(id) && !m.smallGroups.contains(id)) continue;
-        members[m.uid] = _leading(m, id, lead: false).copyWith(smallGroups: {...m.smallGroups}..remove(id));
+        members[m.uid] = m.leadingSmallGroup(id, lead: false).copyWith(smallGroups: {...m.smallGroups}..remove(id));
       }
     });
   }

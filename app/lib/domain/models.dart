@@ -406,6 +406,17 @@ class Member {
     SmallGroup(:final id) => copyWith(smallGroups: member ? {...smallGroups, id} : ({...smallGroups}..remove(id))),
   };
 
+  /// This member as 小組長 of 小組 [id] or not; themself when already so.
+  Member leadingSmallGroup(String id, {required bool lead}) => leadSmallGroups.contains(id) == lead
+      ? this
+      : copyWith(
+          identities: [
+            for (final i in identities)
+              if (i != SmallGroupLead(id)) i,
+            if (lead) SmallGroupLead(id),
+          ],
+        );
+
   /// What this member arranges on a day of [serviceType]: null for all
   /// of it; otherwise only these duties, those the 事工 in [ministries] they
   /// lead link (none: nothing).

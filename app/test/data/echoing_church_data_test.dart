@@ -255,6 +255,48 @@ void main() {
     await Future.wait([edit, grant, removal]);
   });
 
+  test("a 小組's 小組長 shows at once, and the one before no longer does", () async {
+    b.writeDelay = Duration.zero;
+    final id = await b
+        .church('grace')
+        .saveSmallGroup(
+          const SmallGroupDetails(id: '', name: '喜樂', service: 'sunday'),
+          leads: ['mei'],
+        );
+    b.writeDelay = const Duration(milliseconds: 200);
+    final all = Seen(data.members());
+    await pumpEventQueue();
+    List<String> leaders() => [
+      for (final m in all.last)
+        if (m.leadSmallGroups.contains(id)) m.uid,
+    ];
+    expect(leaders(), ['mei']);
+
+    final done = data.saveSmallGroup(
+      SmallGroupDetails(id: id, name: '喜樂', service: 'sunday'),
+      leads: ['hao'],
+    );
+    await pumpEventQueue();
+    expect(leaders(), ['hao'], reason: 'before the backend answers');
+    expect(b.members['grace']!['hao']!.leadSmallGroups, isEmpty, reason: 'not written yet');
+
+    await done;
+    await pumpEventQueue();
+    expect(leaders(), ['hao']);
+    expect(
+      all.values
+          .skip(1)
+          .map(
+            (l) => [
+              for (final m in l)
+                if (m.leadSmallGroups.contains(id)) m.uid,
+            ],
+          ),
+      everyElement(['hao']),
+      reason: 'never back',
+    );
+  });
+
   test('service settings and staff orders show at once', () async {
     final services = Seen(data.services());
     final order = Seen(data.staffOrder('sunday'));
