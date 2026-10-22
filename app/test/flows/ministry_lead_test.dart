@@ -49,7 +49,6 @@ void main() {
     await tester.enterText(find.byType(TextField), '陳志豪');
     await settle(tester);
     await tapText(tester, '陳志豪');
-    await tapText(tester, '完成');
     expect(peopleOn(b, 11, '司琴'), ['陳志豪']);
     expect(find.text('已更新司琴'), findsOneWidget);
     expect(peopleOn(b, 11, '司會'), ['王牧師'], reason: 'untouched');

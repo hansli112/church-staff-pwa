@@ -376,6 +376,9 @@ class L10nEn extends L10n {
   String get pickerOthers => 'Other team members';
 
   @override
+  String get pickerAddAnother => 'Add another person';
+
+  @override
   String pickerUseName(String name) {
     return 'Use “$name”';
   }

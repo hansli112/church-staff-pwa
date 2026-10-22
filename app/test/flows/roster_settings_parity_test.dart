@@ -344,7 +344,6 @@ void main() {
     await tapText(tester, '司琴');
     expect(find.text('無帳號的名字'), findsOneWidget);
     await tapText(tester, 'John Chen');
-    await tapText(tester, '完成');
 
     final duty = savedDay(b, 11).duties.firstWhere((d) => d.role == '司琴');
     expect(duty.people, ['John Chen']);

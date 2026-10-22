@@ -268,6 +268,7 @@ class _DutyRow extends ConsumerWidget {
         // The staff order is the whole service's: not a 事工 leader's.
         canReorder: !roster.isEvent && ref.read(arrangesProvider(roster.type)) == null,
         canRemove: true,
+        onePerson: ref.read(rosterActionsProvider).takesOnePerson(roster, duty.role),
         onChanged: (r) => latest = r,
         onInvite: (me?.isAdmin ?? false) ? () => invite = true : null,
       ),

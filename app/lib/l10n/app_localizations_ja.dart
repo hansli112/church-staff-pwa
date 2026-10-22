@@ -367,6 +367,9 @@ class L10nJa extends L10n {
   String get pickerOthers => 'ほかのメンバー';
 
   @override
+  String get pickerAddAnother => 'もう一人追加';
+
+  @override
   String pickerUseName(String name) {
     return '「$name」を使う';
   }

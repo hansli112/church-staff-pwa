@@ -142,6 +142,19 @@ class RosterActions {
     return type == null ? names : _order(type).sort(role, names);
   }
 
+  /// Whether [role] on [r] takes one person: nobody had more on it in the
+  /// last weeks or the days ahead, in [r]'s service (in events, for an
+  /// event's roster). Unsure while the last weeks are not read yet: no.
+  bool takesOnePerson(Roster r, String role) {
+    final recent = _ref.read(recentRostersProvider);
+    if (!recent.hasValue) return false;
+    return ![...recent.requireValue, ..._saved, r].any(
+      (o) =>
+          (r.isEvent ? o.isEvent : !o.isEvent && o.type == r.type) &&
+          o.duties.any((d) => d.role == role && d.people.length > 1),
+    );
+  }
+
   RosterPreview previewGuestRemoval(String type, String role, String name) => RosterPreview._(
     planGuestRemoval(saved: _saved, type: type, role: role, name: name, today: _ref.read(todayProvider)),
     _writes.scope(),
@@ -345,8 +358,10 @@ class RosterActions {
 }
 
 /// Whether everything [RosterActions] reads for an event's roster is
-/// loaded: every service's staff order too. Watching it keeps them loaded.
+/// loaded: every service's staff order too. Watching it keeps them loaded,
+/// and the last weeks' rosters, which editing does without until read.
 final eventEditingProvider = Provider.autoDispose<bool>((ref) {
+  ref.watch(recentRostersProvider);
   final services = ref.watch(servicesProvider);
   final loaded = [
     services,
@@ -359,8 +374,10 @@ final eventEditingProvider = Provider.autoDispose<bool>((ref) {
 
 /// Whether everything [RosterActions] reads for service [type] is loaded.
 /// A screen that edits the service watches this, which also keeps it
-/// loaded: Riverpod pauses what nobody watches.
+/// loaded: Riverpod pauses what nobody watches. The last weeks' rosters
+/// too, but editing does without them until read.
 final rosterEditingProvider = Provider.autoDispose.family<bool, String>((ref, type) {
+  ref.watch(recentRostersProvider);
   final loaded = [
     ref.watch(servicesProvider),
     ref.watch(savedRostersProvider),

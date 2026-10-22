@@ -158,6 +158,13 @@ final savedRostersProvider = StreamProvider<List<Roster>>((ref) {
       );
 });
 
+/// Saved rosters of the eight weeks before today, read once while
+/// arranging: how many people each duty has lately had.
+final recentRostersProvider = FutureProvider.autoDispose<List<Roster>>((ref) {
+  final today = ref.watch(todayProvider);
+  return openChurch(ref).pastRosters(from: today.addDays(-7 * 8), before: today);
+});
+
 /// Everyone in the church, read once per church and shared by every
 /// screen. Only for admins, 行政 and leads (Member.readsMembers); others get
 /// an empty list.

@@ -54,7 +54,8 @@ const searchAutofocusThreshold = 30;
 /// duties up beforehand. Everyone is listed there from the start while
 /// nobody serves the duty yet. In 編輯 an admin takes people off the list
 /// again. A typed name nobody has can be used as is, for a visiting
-/// speaker.
+/// speaker. For a duty that takes one person, picking someone puts them
+/// there in place of whoever was, and closes; 「再加一位」 picks several.
 class PeoplePicker extends StatefulWidget {
   const PeoplePicker({
     super.key,
@@ -66,6 +67,7 @@ class PeoplePicker extends StatefulWidget {
     required this.canEditDutyList,
     required this.canReorder,
     this.canRemove = false,
+    this.onePerson = false,
     this.initialGuests = const {},
     this.guestSuggestions = const [],
     this.onChanged,
@@ -90,6 +92,9 @@ class PeoplePicker extends StatefulWidget {
   /// Offer 「移除這項」 at the end of the list (the row also swipes away).
   final bool canRemove;
 
+  /// The duty takes one person (RosterActions.takesOnePerson).
+  final bool onePerson;
+
   /// Called with the latest result after every change, so closing the
   /// sheet any way (drag down, tap outside) keeps what was picked.
   final ValueChanged<PickerResult>? onChanged;
@@ -106,6 +111,7 @@ class PeoplePicker extends StatefulWidget {
 class PeoplePickerState extends State<PeoplePicker> {
   late final List<String> _selected = [...widget.initial];
   late final Set<String> _guests = {...widget.initialGuests};
+  late bool _one = widget.onePerson && widget.initial.length < 2;
   late List<String> _serving;
   late final List<Member> _others;
 
@@ -169,17 +175,32 @@ class PeoplePickerState extends State<PeoplePicker> {
     widget.onChanged?.call(result);
   }
 
+  /// A name tapped in the list: for a duty of one, [name] in place of
+  /// whoever was there, and done; otherwise picked or unpicked.
+  void _choose(String name, {bool guest = false}) {
+    if (!_one) return _toggle(name, guest: guest);
+    Haptics.selection();
+    if (!_selected.contains(name)) {
+      _selected
+        ..clear()
+        ..add(name);
+      _guests.clear();
+      if (guest) _guests.add(name);
+    }
+    Navigator.pop(context, result);
+  }
+
   void _pickOther(Member m) {
     if (widget.canEditDutyList && _takeOff.contains(m)) {
       // Taken off in 編輯 and tapped again: back on the list, and picked.
       _takeOff.remove(m);
       _putOnList(m);
-      if (!_selected.contains(m.name)) return _toggle(m.name);
+      if (!_selected.contains(m.name)) return _choose(m.name);
       Haptics.selection();
       widget.onChanged?.call(result);
       return;
     }
-    if (_selected.contains(m.name)) return _toggle(m.name);
+    if (_selected.contains(m.name)) return _choose(m.name);
     // Remembered for the duty only if they are one of the service's 同工;
     // someone helping out is scheduled this once (#82), and shows on the
     // service's page to be added as a 同工.
@@ -187,7 +208,7 @@ class PeoplePickerState extends State<PeoplePicker> {
       _grant.add(m);
       _putOnList(m);
     }
-    _toggle(m.name);
+    _choose(m.name);
   }
 
   /// Puts [m] last on the duty's list, and its staff order with it.
@@ -221,7 +242,7 @@ class PeoplePickerState extends State<PeoplePicker> {
   void _useTyped() {
     final name = _query.trim();
     if (name.isEmpty || _selected.contains(name)) return;
-    _toggle(name, guest: true);
+    _choose(name, guest: true);
   }
 
   @override
@@ -336,10 +357,19 @@ class PeoplePickerState extends State<PeoplePicker> {
         _selected.contains(typed);
 
     final rows = <Widget Function()>[];
+    if (_one && _selected.isNotEmpty && !searching) {
+      rows.add(
+        () => ListRow(
+          title: l10n.pickerAddAnother,
+          leading: const Icon(Symbols.person_add_rounded),
+          onTap: () => setState(() => _one = false),
+        ),
+      );
+    }
     if (serving.isNotEmpty) {
       rows.add(() => SectionHeader(l10n.pickerServes(widget.duty)));
       for (final n in serving) {
-        rows.add(() => _row(n, c, onTap: () => _toggle(n)));
+        rows.add(() => _row(n, c, onTap: () => _choose(n)));
       }
     } else if (!searching) {
       // One sentence and, for those who can, one button.
@@ -374,7 +404,7 @@ class PeoplePickerState extends State<PeoplePicker> {
     if (guests.isNotEmpty) {
       rows.add(() => SectionHeader(l10n.pickerGuestNames));
       for (final name in guests) {
-        rows.add(() => _row(name, c, onTap: () => _toggle(name, guest: true)));
+        rows.add(() => _row(name, c, onTap: () => _choose(name, guest: true)));
       }
     }
     if (!typedIsKnown) {

@@ -240,6 +240,10 @@ abstract interface class ChurchData {
   /// events' rosters still on at [from] (a retreat begun the day before).
   Stream<List<Roster>> rosters({required Day from});
 
+  /// Saved rosters dated from [from] up to the day before [before], of
+  /// every service and event, read once: how duties were arranged lately.
+  Future<List<Roster>> pastRosters({required Day from, required Day before});
+
   /// Every event's roster, past ones too, newest first, to copy duties
   /// from (沿用). Not one cancelled with its event.
   Future<List<Roster>> eventRosters();

@@ -760,6 +760,12 @@ abstract class L10n {
   /// **'其他同工'**
   String get pickerOthers;
 
+  /// No description provided for @pickerAddAnother.
+  ///
+  /// In zh, this message translates to:
+  /// **'再加一位'**
+  String get pickerAddAnother;
+
   /// No description provided for @pickerUseName.
   ///
   /// In zh, this message translates to:

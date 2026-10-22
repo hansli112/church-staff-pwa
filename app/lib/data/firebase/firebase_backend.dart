@@ -749,6 +749,14 @@ class FirestoreChurchData implements ChurchData {
   }
 
   @override
+  Future<List<Roster>> pastRosters({required Day from, required Day before}) => _guard(() async {
+    final snap = await _col(
+      'rosters',
+    ).where('dateKey', isGreaterThanOrEqualTo: from.key).where('dateKey', isLessThan: before.key).get();
+    return [for (final d in snap.docs) ?rosterFromJson(d.data())];
+  });
+
+  @override
   Future<List<Roster>> eventRosters() => _guard(() async {
     final snap = await _col('rosters').where('kind', isEqualTo: 'event').get();
     final all = [for (final d in snap.docs) ?rosterFromJson(d.data())];

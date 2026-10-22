@@ -117,6 +117,7 @@
     }
   },
   "pickerOthers": "ほかのメンバー",
+  "pickerAddAnother": "もう一人追加",
   "pickerUseName": "「{name}」を使う",
   "pickerNoOneServes": "{duty}の担当者はまだいません",
   "pickerLearns": "この集会のメンバーは一度割り当てると、次から上に表示されます",

@@ -960,6 +960,15 @@ class MemoryChurchData implements ChurchData {
   }
 
   @override
+  Future<List<Roster>> pastRosters({required Day from, required Day before}) async {
+    _requireMember();
+    return [
+      for (final r in _b.rosters[churchId]!.values)
+        if (!r.day.isBefore(from) && r.day.isBefore(before)) r,
+    ];
+  }
+
+  @override
   Future<List<Roster>> eventRosters() async {
     _requireMember();
     return [

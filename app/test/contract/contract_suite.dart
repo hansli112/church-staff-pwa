@@ -821,6 +821,11 @@ void contractTests(Future<ContractWorld> Function() open) {
       await g.church.putRosters([second, first, old]);
       expect(await g.church.rosters(from: Day(2026, 10, 1)).first, [first, second]);
       expect(await g.church.allRosters(), unorderedEquals([old, first, second]));
+      expect(
+        await g.church.pastRosters(from: Day(2026, 9, 27), before: Day(2026, 10, 11)),
+        unorderedEquals([old, first]),
+      );
+      expect(await g.church.pastRosters(from: Day(2026, 9, 28), before: Day(2026, 10, 4)), isEmpty);
       await g.church.dropRoster(first);
       expect(await g.church.rosters(from: Day(2026, 10, 1)).first, [second]);
     });

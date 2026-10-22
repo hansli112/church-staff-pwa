@@ -367,6 +367,9 @@ class L10nZh extends L10n {
   String get pickerOthers => '其他同工';
 
   @override
+  String get pickerAddAnother => '再加一位';
+
+  @override
   String pickerUseName(String name) {
     return '用「$name」';
   }
@@ -3198,6 +3201,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get pickerOthers => '其他同工';
+
+  @override
+  String get pickerAddAnother => '再加一位';
 
   @override
   String pickerUseName(String name) {

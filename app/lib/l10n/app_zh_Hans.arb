@@ -117,6 +117,7 @@
     }
   },
   "pickerOthers": "其他同工",
+  "pickerAddAnother": "再加一位",
   "pickerUseName": "用“{name}”",
   "pickerNoOneServes": "还没有人负责{duty}",
   "pickerLearns": "这个聚会的同工排过一次，下次就会列在上面",

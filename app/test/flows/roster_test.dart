@@ -135,6 +135,49 @@ void main() {
       expect(find.text('已更新招待'), findsOneWidget);
     });
 
+    testWidgets('a duty only ever one person has: picking someone puts them there instead, at once', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-11');
+      await tapText(tester, '司會');
+      await tapText(tester, '林同工');
+      expect(find.text('排過司會的人'), findsNothing, reason: 'the picker has closed');
+      expect(peopleOn(b, 11, '司會'), ['林同工']);
+      expect(find.text('已更新司會'), findsOneWidget);
+      await tapText(tester, '復原');
+      expect(peopleOn(b, 11, '司會'), ['王牧師']);
+    });
+
+    testWidgets('a duty only ever one person has takes a second with 再加一位', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-11');
+      await tapText(tester, '司會');
+      await tapText(tester, '再加一位');
+      await tapText(tester, '林同工');
+      expect(find.text('排過司會的人'), findsOneWidget, reason: 'still open for more');
+      await tapText(tester, '完成');
+      expect(peopleOn(b, 11, '司會'), unorderedEquals(['王牧師', '林同工']));
+    });
+
+    testWidgets('two people on a duty in the past weeks keep it to pick several', (tester) async {
+      final b = seededChurch();
+      b.rosters['grace']![Roster.idFor('sunday', Day(2026, 9, 20))] = Roster(
+        type: 'sunday',
+        day: Day(2026, 9, 20),
+        duties: const [
+          Duty(role: '司會', people: ['林同工', '王牧師'], uids: {'林同工': 'editor', '王牧師': 'pastor'}),
+        ],
+      );
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-11');
+      await tapText(tester, '司會');
+      await tapText(tester, '林同工');
+      expect(find.text('排過司會的人'), findsOneWidget, reason: 'still open for more');
+      await tapText(tester, '完成');
+      expect(peopleOn(b, 11, '司會'), unorderedEquals(['王牧師', '林同工']));
+    });
+
     testWidgets('search finds other members ignoring width and case; a helper is scheduled this once (#82)', (
       tester,
     ) async {
@@ -147,7 +190,6 @@ void main() {
       expect(find.text('其他同工'), findsOneWidget);
       await tapText(tester, 'John Chen');
       expect(find.byType(AlertDialog), findsNothing, reason: 'nothing to answer: picking is enough');
-      await tapText(tester, '完成');
 
       expect(peopleOn(b, 11, '司琴'), ['John Chen']);
       expect(b.members['grace']!['john']!.serves('sunday', '司琴'), isFalse, reason: 'not one of 主日崇拜’s 同工');
@@ -161,7 +203,6 @@ void main() {
       await tester.enterText(find.byType(TextField), 'John');
       await settle(tester);
       await tapText(tester, 'John Chen');
-      await tapText(tester, '完成');
       expect(b.members['grace']!['john']!.serves('sunday', '司琴'), isTrue);
 
       // Next time he is in the upper section without searching.
@@ -179,7 +220,6 @@ void main() {
       expect(findShown('這個聚會的同工排過一次，下次就會列在上面'), findsOneWidget);
       expect(find.text('其他同工'), findsOneWidget);
       await tapText(tester, 'John Chen');
-      await tapText(tester, '完成');
       final youth = b.rosters['grace']![Roster.idFor('youth', Day(2026, 10, 10))]!;
       expect(youth.duties.firstWhere((d) => d.role == '司會').people, ['John Chen']);
       expect(b.members['grace']!['john']!.serves('youth', '司會'), isFalse);
@@ -195,7 +235,6 @@ void main() {
       await tester.enterText(find.byType(TextField), 'John');
       await settle(tester);
       await tapText(tester, 'John Chen');
-      await tapText(tester, '完成');
       expect(peopleOn(b, 11, '司琴'), ['John Chen']);
       expect(b.members['grace']!['john']!.serves('sunday', '司琴'), isFalse);
     });
@@ -240,14 +279,14 @@ void main() {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
-      await tapText(tester, '司琴');
+      await tapText(tester, '招待');
       await tester.enterText(find.byType(TextField), 'John');
       await settle(tester);
       await tapText(tester, 'John Chen');
       await tapText(tester, 'John Chen');
       await tapText(tester, '完成');
-      expect(peopleOn(b, 11, '司琴'), isEmpty);
-      expect(b.members['grace']!['john']!.serves('sunday', '司琴'), isFalse);
+      expect(peopleOn(b, 11, '招待'), ['李美玉']);
+      expect(b.members['grace']!['john']!.serves('sunday', '招待'), isFalse);
     });
 
     testWidgets('taken off and tapped again: back on the list, still scheduled', (tester) async {
@@ -276,7 +315,6 @@ void main() {
       await tester.enterText(find.byType(TextField), 'John');
       await settle(tester);
       await tapText(tester, 'John Chen');
-      await tapText(tester, '完成');
       await go(tester, '/rosters/sunday/2026-10-04');
       await tapText(tester, '司琴');
       final mei = tester.getTopLeft(find.text('李美玉').last).dy;
@@ -301,7 +339,6 @@ void main() {
       await settle(tester);
       expect(find.text('用「外請講員」'), findsOneWidget);
       await tapText(tester, '用「外請講員」');
-      await tapText(tester, '完成');
       expect(peopleOn(b, 11, '司琴'), ['外請講員']);
       expect(savedDay(b, 11).duties[1].uids, isEmpty);
     });
@@ -410,9 +447,8 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司琴');
-      await tapText(tester, '李美玉');
       b.failNextWrite = Exception('offline');
-      await tapText(tester, '完成');
+      await tapText(tester, '李美玉');
       expect(find.text('沒有儲存成功，請檢查網路後再試一次'), findsOneWidget);
       expect(peopleOn(b, 11, '司琴'), isEmpty);
       await tapText(tester, '重試');
@@ -429,7 +465,6 @@ void main() {
         b.writeDelay = const Duration(seconds: 3);
         await tapText(tester, '司會');
         await tapText(tester, '林同工');
-        await tapText(tester, '完成');
         expect(find.text('儲存中…'), findsOneWidget);
         final title = find.descendant(of: find.byType(AppBar), matching: find.text('主日崇拜'));
         expect(tester.getCenter(title).dx, moreOrLessEquals(tester.getCenter(find.byType(AppBar)).dx, epsilon: 1));
@@ -448,7 +483,6 @@ void main() {
       b.writeDelay = const Duration(seconds: 3);
       await tapText(tester, '司會');
       await tapText(tester, '林同工');
-      await tapText(tester, '完成');
       expect(peopleOn(b, 11, '司會'), isNot(contains('林同工')), reason: 'not written yet');
       expect(find.text('林同工'), findsOneWidget);
       expect(find.text('儲存中…'), findsOneWidget);
@@ -470,7 +504,6 @@ void main() {
       b.failNextWrite = Exception('offline');
       await tapText(tester, '司會');
       await tapText(tester, '林同工');
-      await tapText(tester, '完成');
       expect(find.text('林同工'), findsOneWidget);
       await tester.pump(const Duration(seconds: 3));
       await settle(tester);
@@ -541,7 +574,8 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-04');
       await tapText(tester, '司琴');
-      await tapText(tester, '李美玉');
+      await tester.tap(find.byTooltip('已移除「李美玉」'));
+      await settle(tester);
       await tapText(tester, '完成');
       expect(peopleOn(b, 4, '司琴'), isEmpty);
       // Someone else changes 司會 on the same day.
@@ -569,7 +603,8 @@ void main() {
       b.setOnline(false);
       await settle(tester);
       await tapText(tester, '司琴');
-      await tapText(tester, '李美玉');
+      await tester.tap(find.byTooltip('已移除「李美玉」'));
+      await settle(tester);
       await tapText(tester, '完成');
       expect(find.text('離線中，連線後才能儲存'), findsOneWidget);
       b.setOnline(true);
