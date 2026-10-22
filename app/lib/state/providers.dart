@@ -158,11 +158,18 @@ final savedRostersProvider = StreamProvider<List<Roster>>((ref) {
       );
 });
 
-/// Saved rosters of the eight weeks before today, read once while
-/// arranging: how many people each duty has lately had.
-final recentRostersProvider = FutureProvider.autoDispose<List<Roster>>((ref) {
+/// How many weeks back arranging looks for how many people a duty takes.
+const recentWeeks = 8;
+
+/// Saved rosters of the [recentWeeks] before today, read once a day per
+/// church the first time someone arranges: how many people each duty has
+/// lately had. Not an event's roster cancelled with its event.
+final recentRostersProvider = FutureProvider<List<Roster>>((ref) async {
   final today = ref.watch(todayProvider);
-  return openChurch(ref).pastRosters(from: today.addDays(-7 * 8), before: today);
+  return [
+    for (final r in await openChurch(ref).pastRosters(from: today.addDays(-7 * recentWeeks), before: today))
+      if (!(r.forEvent?.cancelled ?? false)) r,
+  ];
 });
 
 /// Everyone in the church, read once per church and shared by every

@@ -178,6 +178,36 @@ void main() {
       expect(peopleOn(b, 11, '司會'), unorderedEquals(['王牧師', '林同工']));
     });
 
+    testWidgets('two people on a duty on a day ahead keep it to pick several', (tester) async {
+      final b = seededChurch();
+      b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, 18))] = Roster(
+        type: 'sunday',
+        day: Day(2026, 10, 18),
+        duties: const [
+          Duty(role: '司會', people: ['林同工', '王牧師'], uids: {'林同工': 'editor', '王牧師': 'pastor'}),
+        ],
+      );
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-11');
+      await tapText(tester, '司會');
+      expect(find.text('再加一位'), findsNothing);
+      await tapText(tester, '林同工');
+      expect(find.text('排過司會的人'), findsOneWidget, reason: 'still open for more');
+    });
+
+    testWidgets('a helper found by searching can join as a second with 再加一位', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-11');
+      await tapText(tester, '司會');
+      await tester.enterText(find.byType(TextField), 'John');
+      await settle(tester);
+      await tapText(tester, '再加一位');
+      await tapText(tester, 'John Chen');
+      await tapText(tester, '完成');
+      expect(peopleOn(b, 11, '司會'), unorderedEquals(['王牧師', 'John Chen']));
+    });
+
     testWidgets('search finds other members ignoring width and case; a helper is scheduled this once (#82)', (
       tester,
     ) async {

@@ -111,7 +111,7 @@ class PeoplePicker extends StatefulWidget {
 class PeoplePickerState extends State<PeoplePicker> {
   late final List<String> _selected = [...widget.initial];
   late final Set<String> _guests = {...widget.initialGuests};
-  late bool _one = widget.onePerson && widget.initial.length < 2;
+  late bool _tapReplaces = widget.onePerson && widget.initial.length < 2;
   late List<String> _serving;
   late final List<Member> _others;
 
@@ -178,7 +178,7 @@ class PeoplePickerState extends State<PeoplePicker> {
   /// A name tapped in the list: for a duty of one, [name] in place of
   /// whoever was there, and done; otherwise picked or unpicked.
   void _choose(String name, {bool guest = false}) {
-    if (!_one) return _toggle(name, guest: guest);
+    if (!_tapReplaces) return _toggle(name, guest: guest);
     Haptics.selection();
     if (!_selected.contains(name)) {
       _selected
@@ -357,12 +357,12 @@ class PeoplePickerState extends State<PeoplePicker> {
         _selected.contains(typed);
 
     final rows = <Widget Function()>[];
-    if (_one && _selected.isNotEmpty && !searching) {
+    if (_tapReplaces && _selected.isNotEmpty) {
       rows.add(
         () => ListRow(
           title: l10n.pickerAddAnother,
           leading: const Icon(Symbols.person_add_rounded),
-          onTap: () => setState(() => _one = false),
+          onTap: () => setState(() => _tapReplaces = false),
         ),
       );
     }
