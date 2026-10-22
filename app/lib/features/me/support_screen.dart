@@ -337,15 +337,39 @@ class AppIconScreen extends ConsumerWidget {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(_size * _iconRounding + 4),
-                                    border: Border.all(color: current == id ? c.accent : Colors.transparent, width: 3),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(2),
-                                    child: _AppIconImage(id, size: _size),
-                                  ),
+                                Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(_size * _iconRounding + 4),
+                                        border: Border.all(
+                                          color: current == id ? c.accent : Colors.transparent,
+                                          width: 3,
+                                        ),
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(2),
+                                        child: _AppIconImage(id, size: _size),
+                                      ),
+                                    ),
+                                    // The border alone is lost on an icon in the accent's own blue.
+                                    if (current == id)
+                                      Positioned(
+                                        right: -4,
+                                        bottom: -4,
+                                        child: Container(
+                                          width: 24,
+                                          height: 24,
+                                          decoration: BoxDecoration(
+                                            color: c.accent,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(color: c.surface, width: 2),
+                                          ),
+                                          child: Icon(Symbols.check_rounded, size: 16, color: c.onAccent),
+                                        ),
+                                      ),
+                                  ],
                                 ),
                                 const SizedBox(height: Space.xs),
                                 ConstrainedBox(

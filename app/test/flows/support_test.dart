@@ -485,12 +485,20 @@ void main() {
       await tester.tap(find.text('App 圖示'));
       await settle(tester);
       expect(find.text('紫'), findsNothing, reason: "a supporter's");
+      Finder checked(String name) => find.descendant(
+        of: find.ancestor(of: findShown(name), matching: find.byType(InkWell)),
+        matching: find.byIcon(Symbols.check_rounded),
+      );
       await tester.tap(find.text('預設'));
       await settle(tester);
       expect(icons.icon, isNull);
+      expect(checked('預設'), findsOneWidget, reason: 'a check, which a border on a blue icon is not');
+      expect(checked('竹圍靈糧福音中心'), findsNothing);
       await tester.tap(findShown('竹圍靈糧福音中心'));
       await settle(tester);
       expect(icons.icon, 'Zhuwei');
+      expect(checked('竹圍靈糧福音中心'), findsOneWidget);
+      expect(checked('預設'), findsNothing);
     });
 
     testWidgets("kept, it stays: only a lapsed subscription's icon goes back", (tester) async {
