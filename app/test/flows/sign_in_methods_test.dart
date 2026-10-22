@@ -172,6 +172,19 @@ void main() {
       expect(find.text('連結 Apple 帳號'), findsOneWidget);
     });
 
+    testWidgets('a linked Apple email on the moved list is asked too', (tester) async {
+      final b = movedChurch(signIn: false)..auth.offersApple = true;
+      final uid = await registered(b, 'mei.old@yahoo.com');
+      await pumpApp(tester, b);
+      await go(tester, '/account/sign-in');
+      b.auth.appleAccount = 'mei@example.com';
+      await tapText(tester, '連結 Apple 帳號');
+      await go(tester, '/welcome');
+      expect(findShown('〈恩典堂〉的同工資料已經搬過來了，要加入嗎？'), findsOneWidget);
+      await tapText(tester, '加入');
+      expect(b.members['grace']![uid]!.leadTypes, ['sunday']);
+    });
+
     testWidgets('where Apple does not sign in, there is no Apple to link', (tester) async {
       final b = MemoryBackend(clock: testClock);
       await registered(b, 'mei.old@yahoo.com');

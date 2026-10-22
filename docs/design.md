@@ -274,7 +274,7 @@ Chrome 小幅改善；桌面 WebKit 差距小且教會資訊冷開反而較慢�
   - App：Crashlytics（當機、未處理例外）。
   - Web：Crashlytics 不支援，錯誤送到一支 function 寫入 Cloud Logging。
   - Cloud Functions：直接寫 Cloud Logging，Error Reporting 自動分組。
-  - 只記 uid、教會 ID 和錯誤本身。錯誤都先經過 `loggable()`（`functions/src/redact.ts`），只留種類、code、status，以及去掉 email 和電話號碼的訊息與堆疊。不記整個錯誤物件：Google API 的錯誤會帶著整個請求和回應（token、活動標題、參加的人）。
+  - 只記 uid、教會 ID 和錯誤本身。錯誤都先經過 `loggable()`（`functions/src/redact.ts`），只留種類、code、status，以及去掉 email 和電話號碼的訊息與堆疊。訊息裡的姓名去不掉，所以自己丟的錯誤只寫 ID，不寫名字。不記整個錯誤物件：Google API 的錯誤會帶著整個請求和回應（token、活動標題、參加的人）。
 - 通知：Crashlytics 與 Error Reporting 的「新錯誤類型」email，寄到專案擁有者的 Google 帳號，不用開新帳號。
 - 檢視：Hans 後台加「統計」頁，畫每日快照趨勢；行為與錯誤細節連到 Firebase / GCP console。
 - 隱私：log 只記 uid、cid、錯誤堆疊，不記姓名、email、服事表內容；log 保留預設 30 天。分析不提供關閉開關，隱私權政策與商店隱私標籤揭露。

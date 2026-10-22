@@ -8,7 +8,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
 
-/// 登入方式: the ways this account signs in, a Google account or Apple ID to
+/// 登入方式: the ways this account signs in, a Google or Apple account to
 /// link, whatever its email, and unlinking any but the last. Linked or not, it stays the one
 /// account: churches, rosters and roles do not change.
 class SignInMethodsScreen extends ConsumerStatefulWidget {
@@ -35,7 +35,7 @@ class _SignInMethodsScreenState extends ConsumerState<SignInMethodsScreen> {
       Haptics.success();
       if (mounted && done != null) showToast(context, done);
     } catch (e) {
-      // Closing Google's sheet has nothing to say.
+      // Closing Google's or Apple's sheet has nothing to say.
       final text = errorText(l10n, e);
       if (mounted && text.isNotEmpty) showToast(context, text);
     } finally {
@@ -74,9 +74,10 @@ class _SignInMethodsScreenState extends ConsumerState<SignInMethodsScreen> {
     final signIns = ref.watch(authUserProvider.select((u) => u.value?.signIns ?? const <SignIn>[]));
     bool linked(SignInMethod m) => signIns.any((s) => s.method == m);
     final toLink = [
-      if (!linked(SignInMethod.google)) (SignInMethod.google, l10n.linkGoogle, auth.linkGoogle, l10n.linkedGoogle),
+      if (!linked(SignInMethod.google))
+        (method: SignInMethod.google, title: l10n.linkGoogle, link: auth.linkGoogle, done: l10n.linkedGoogle),
       if (auth.offersApple && !linked(SignInMethod.apple))
-        (SignInMethod.apple, l10n.linkApple, auth.linkApple, l10n.linkedApple),
+        (method: SignInMethod.apple, title: l10n.linkApple, link: auth.linkApple, done: l10n.linkedApple),
     ];
     return Scaffold(
       appBar: AppBar(title: Text(l10n.signInMethods)),
@@ -104,7 +105,7 @@ class _SignInMethodsScreenState extends ConsumerState<SignInMethodsScreen> {
             ListSection(
               footer: l10n.linkFooter,
               children: [
-                for (final (method, title, link, done) in toLink)
+                for (final (:method, :title, :link, :done) in toLink)
                   ListRow(
                     title: title,
                     // Linking goes on after Google's or Apple's sheet closes.

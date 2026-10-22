@@ -8,6 +8,7 @@ describe('what errors log', () => {
   test('scrubs emails and phone numbers', () => {
     assert.equal(scrub('user john@example.com failed'), 'user <email> failed');
     assert.equal(scrub('call 0912 345 678'), 'call <number>');
+    assert.equal(scrub('no roster on 2026-10-25'), 'no roster on 2026-10-25');
   });
 
   test('a Google API error logs its code and message, not the request it carried', () => {

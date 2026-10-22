@@ -504,7 +504,7 @@ class MemoryAuth implements AuthGateway {
   /// The name Apple shares the first time; null when the person hides it.
   String? appleName;
 
-  /// The Apple ID each account signs in with, by the account's own email:
+  /// The Apple account each account signs in with, by the account's own email:
   /// that same email, or a linked one.
   final appleIds = <String, String>{};
 
@@ -540,7 +540,8 @@ class MemoryAuth implements AuthGateway {
   void _signedIn(String email) {
     if (_applePending) {
       _applePending = false;
-      appleIds[email] = appleAccount!;
+      // As Firebase: one Apple account per account; one already linked stays.
+      appleIds.putIfAbsent(email, () => appleAccount!);
     }
     _set(_user(email));
   }

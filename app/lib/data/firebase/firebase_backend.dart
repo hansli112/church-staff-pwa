@@ -289,7 +289,7 @@ class FirebaseAuthGateway implements AuthGateway {
   Future<void> linkApple() async {
     final user = _auth.currentUser;
     if (user == null) return;
-    await _link(() => kIsWeb ? user.linkWithPopup(_apple()) : user.linkWithProvider(_apple()));
+    await _link(() => _appleSheet(user.linkWithProvider, user.linkWithPopup));
   }
 
   /// Links what [link] signs in with to the signed-in account.
@@ -346,8 +346,14 @@ class FirebaseAuthGateway implements AuthGateway {
     ..addScope('name');
 
   @override
-  Future<void> signInWithApple() =>
-      _run(() => kIsWeb ? _auth.signInWithPopup(_apple()) : _auth.signInWithProvider(_apple()));
+  Future<void> signInWithApple() => _run(() => _appleSheet(_auth.signInWithProvider, _auth.signInWithPopup));
+
+  /// Apple's sheet, then [withProvider] with what it gives; [withPopup] on
+  /// the web.
+  static Future<fa.UserCredential> _appleSheet(
+    Future<fa.UserCredential> Function(fa.AuthProvider) withProvider,
+    Future<fa.UserCredential> Function(fa.AuthProvider) withPopup,
+  ) => kIsWeb ? withPopup(_apple()) : withProvider(_apple());
 
   @override
   Future<void> prepareToDelete() async {

@@ -1,8 +1,8 @@
-/** Removes things that look like emails or phone numbers. */
+/** Removes things that look like emails or phone numbers, not dates. */
 export function scrub(text: string): string {
   return text
     .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, '<email>')
-    .replace(/\+?\d[\d -]{7,}\d/g, '<number>');
+    .replace(/(?<!\d)(?!\d{4}-\d\d-\d\d\b)\+?\d[\d -]{7,}\d/g, '<number>');
 }
 
 /**
@@ -17,8 +17,8 @@ export function loggable(e: unknown): Error {
   safe.name = e.name;
   safe.stack = e.stack === undefined ? undefined : scrub(e.stack);
   const { code, status } = e as { code?: unknown; status?: unknown };
-  for (const [key, value] of Object.entries({ code, status })) {
-    if (typeof value === 'string' || typeof value === 'number') Object.assign(safe, { [key]: value });
-  }
+  const plain = (v: unknown) => typeof v === 'string' || typeof v === 'number';
+  if (plain(code)) Object.assign(safe, { code });
+  if (plain(status)) Object.assign(safe, { status });
   return safe;
 }

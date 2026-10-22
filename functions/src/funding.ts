@@ -3,6 +3,7 @@ import { logger } from 'firebase-functions/v2';
 
 import { DAY_MS, dateKeyUtc8, fail, requireOperator, serverTime, text, type Caller, type Deps } from './common.js';
 import { TEXT_LIMITS } from './limits.js';
+import { loggable } from './redact.js';
 
 /**
  * 雲端費用進度: what supporters gave this month against what the platform
@@ -125,7 +126,7 @@ async function currentRates(deps: Deps): Promise<Rates> {
     const fetchedOn = saved.get('fetchedOn') as string | undefined;
     const days = fetchedOn ? (Date.parse(today) - Date.parse(fetchedOn)) / DAY_MS : Infinity;
     const log = days > STALE_RATE_DAYS ? logger.error : logger.warn;
-    log('Exchange rates unavailable; using the last ones', { error: String(e), fetchedOn: fetchedOn ?? null });
+    log('Exchange rates unavailable; using the last ones', { error: loggable(e).message, fetchedOn: fetchedOn ?? null });
     return (saved.get('rates') as Rates | undefined) ?? {};
   }
 }

@@ -124,7 +124,7 @@ abstract interface class AuthGateway {
   /// version does not merge accounts.
   Future<void> linkGoogle();
 
-  /// As [linkGoogle], with the Apple ID the person signs in with; only
+  /// As [linkGoogle], with the Apple account the person signs in with; only
   /// where [offersApple]. Its email may be Apple's relay address.
   Future<void> linkApple();
 
