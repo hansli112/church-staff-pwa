@@ -350,9 +350,9 @@ class AppIconScreen extends ConsumerWidget {
                                 const SizedBox(height: Space.xs),
                                 ConstrainedBox(
                                   constraints: const BoxConstraints(maxWidth: _size * 1.5),
-                                  child: Text(
+                                  // 竹圍靈糧 / 福音中心, not one character on its own line.
+                                  child: BalancedText(
                                     appIconName(l10n, id),
-                                    textAlign: TextAlign.center,
                                     style: AppText.footnote.copyWith(color: current == id ? c.accent : c.label),
                                   ),
                                 ),

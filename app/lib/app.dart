@@ -119,10 +119,13 @@ class _MarthaAppState extends ConsumerState<MarthaApp> {
         );
     });
     // A church's own icon, put on the home screen on its own: say so, with
-    // the way back.
-    ref.listen(churchIconChangedProvider, (_, icon) {
+    // the way back. Once the app is in front again: iOS covers it with its
+    // own note on the change, and this would fade under it.
+    ref.listen(churchIconChangedProvider, (_, icon) async {
+      if (icon == null) return;
+      await _inFront();
       final context = router.routerDelegate.navigatorKey.currentContext;
-      if (icon == null || context == null) return;
+      if (context == null || !context.mounted) return;
       showToast(
         context,
         L10n.of(context).churchIconChanged(icon.name),
@@ -188,6 +191,15 @@ class _Column extends StatelessWidget {
 /// Keeps users/{uid}.appLocale on the language shown, chosen or the
 /// device's, for the server's pushes; written only when it changes. Kept on
 /// this device too ([shownLanguagePref]).
+/// When the app is in front: now, or once whatever covers it is closed.
+Future<void> _inFront() async {
+  if (WidgetsBinding.instance.lifecycleState case null || AppLifecycleState.resumed) return;
+  final back = Completer<void>();
+  final listener = AppLifecycleListener(onResume: back.complete);
+  await back.future;
+  listener.dispose();
+}
+
 class _LanguageShown extends ConsumerStatefulWidget {
   const _LanguageShown({required this.child});
 

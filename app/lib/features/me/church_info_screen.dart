@@ -229,16 +229,21 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
               // screen already, or cannot be.
               if (ref.watch(addToHomeProvider) != null)
                 ListRow(title: l10n.addToHome, onTap: () => openAddToHome(context, ref, church.id)),
-              // Its own icon, bundled in the store apps: the way back to
-              // the default, and to it again.
-              if (churchIcons[church.id] != null && !ref.watch(isWebProvider))
+            ],
+          ),
+          // Its own icon, bundled in the store apps: the way back to the
+          // default, and to it again. Not under the note above on icons
+          // added from the browser, which do not follow.
+          if (churchIcons[church.id] != null && !ref.watch(isWebProvider))
+            ListSection(
+              children: [
                 ListRow(
                   title: l10n.appIcon,
                   value: appIconName(l10n, ref.watch(currentAppIconProvider).value),
                   onTap: () => context.push('/me/church/icon'),
                 ),
-            ],
-          ),
+              ],
+            ),
           if (admin)
             ListSection(
               children: [

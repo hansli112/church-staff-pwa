@@ -74,6 +74,10 @@ class FakeIcons implements AppIconSwitcher {
   /// How many changes still fail, as the phone may refuse one.
   int failures = 0;
 
+  /// Puts up the system's own note on the change, as iOS does: the app is
+  /// covered (inactive) until it is closed.
+  bool notes = false;
+
   @override
   Future<String?> current() async => icon;
 
@@ -84,6 +88,7 @@ class FakeIcons implements AppIconSwitcher {
       throw StateError('refused');
     }
     icon = name;
+    if (notes) WidgetsBinding.instance.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
   }
 }
 
@@ -448,6 +453,25 @@ void main() {
       expect(findShownContaining(changed), findsNothing);
     });
 
+    testWidgets("on iOS the note waits for the system's own to be closed, not to fade under it", (tester) async {
+      final icons = FakeIcons()..notes = true;
+      await pumpWithStore(
+        tester,
+        FakeStore(),
+        icons,
+        backend: seededChurch(as: staffMei, id: zhuwei),
+      );
+      await tester.pump(const Duration(seconds: 10));
+      expect(icons.icon, 'Zhuwei');
+      expect(findShownContaining(changed), findsNothing);
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(findShownContaining(changed), findsOneWidget);
+      await settle(tester);
+    });
+
     testWidgets('教會資訊 › App 圖示 puts it back or away, no subscription needed', (tester) async {
       final icons = FakeIcons();
       await pumpWithStore(
@@ -464,7 +488,7 @@ void main() {
       await tester.tap(find.text('預設'));
       await settle(tester);
       expect(icons.icon, isNull);
-      await tester.tap(find.text('竹圍靈糧福音中心'));
+      await tester.tap(findShown('竹圍靈糧福音中心'));
       await settle(tester);
       expect(icons.icon, 'Zhuwei');
     });
