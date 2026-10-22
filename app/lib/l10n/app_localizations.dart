@@ -4762,17 +4762,29 @@ abstract class L10n {
   /// **'連結 Google 帳號'**
   String get linkGoogle;
 
-  /// No description provided for @linkGoogleFooter.
+  /// No description provided for @linkFooter.
   ///
   /// In zh, this message translates to:
-  /// **'Google 帳號的 email 可以和這個帳號不同'**
-  String get linkGoogleFooter;
+  /// **'連結的帳號，email 可以和這個帳號不同'**
+  String get linkFooter;
 
   /// No description provided for @linkedGoogle.
   ///
   /// In zh, this message translates to:
   /// **'已連結 Google 帳號'**
   String get linkedGoogle;
+
+  /// No description provided for @linkApple.
+  ///
+  /// In zh, this message translates to:
+  /// **'連結 Apple 帳號'**
+  String get linkApple;
+
+  /// No description provided for @linkedApple.
+  ///
+  /// In zh, this message translates to:
+  /// **'已連結 Apple 帳號'**
+  String get linkedApple;
 
   /// No description provided for @unlink.
   ///

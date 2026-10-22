@@ -34,6 +34,7 @@
   - iOS 加 **Sign in with Apple**（Apple 準則 4.8：有第三方登入就必須提供）。這個功能要付費的開發者帳號才能設定，所以在 M7 付年費後補上。
   - email＋密碼收在下方，用 email 註冊的人才需要驗證 email；Google、Apple 帳號視為已驗證。
   - Firebase Auth 開「同一 email 只能有一個帳號」，處理不同登入方式的帳號連結（`account-exists-with-different-credential`）。
+  - 「帳號 → 登入方式」可以再連結一個 Google 帳號和一個 Apple ID，email 不同也可以；連結後用哪一種登入都是同一個帳號。Apple 只在能用 Apple 登入的地方出現（iOS，或設好 Services ID 的網頁和 Android）。那個帳號已經是另一個馬大別忙帳號時，說明原因、不合併。可以解除連結，但最後一種不能。連結進來的 Google、Apple email 也能認領搬家名單（#81）。
 - 同名檢查：名稱正規化（空白、全半形、大小寫）後完全相同就提醒並擋下，附聯絡連結。被搶註時由 Hans 在後台處理。
 - 不設教會數量或用量上限；非教會單位也可使用（服務條款寫明為教會設計）。
 - Hans 的後台：教會改名、轉移管理員、停用教會。
@@ -273,6 +274,7 @@ Chrome 小幅改善；桌面 WebKit 差距小且教會資訊冷開反而較慢�
   - App：Crashlytics（當機、未處理例外）。
   - Web：Crashlytics 不支援，錯誤送到一支 function 寫入 Cloud Logging。
   - Cloud Functions：直接寫 Cloud Logging，Error Reporting 自動分組。
+  - 只記 uid、教會 ID 和錯誤本身。錯誤都先經過 `loggable()`（`functions/src/redact.ts`），只留種類、code、status，以及去掉 email 和電話號碼的訊息與堆疊。不記整個錯誤物件：Google API 的錯誤會帶著整個請求和回應（token、活動標題、參加的人）。
 - 通知：Crashlytics 與 Error Reporting 的「新錯誤類型」email，寄到專案擁有者的 Google 帳號，不用開新帳號。
 - 檢視：Hans 後台加「統計」頁，畫每日快照趨勢；行為與錯誤細節連到 Firebase / GCP console。
 - 隱私：log 只記 uid、cid、錯誤堆疊，不記姓名、email、服事表內容；log 保留預設 30 天。分析不提供關閉開關，隱私權政策與商店隱私標籤揭露。

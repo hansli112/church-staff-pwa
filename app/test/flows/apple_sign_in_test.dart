@@ -112,7 +112,7 @@ void main() {
   group('deleting an account that signs in with Apple', () {
     testWidgets('revokes Sign in with Apple, then deletes', (tester) async {
       final b = seededChurch(as: staffHao);
-      b.auth.appleLinked.add(b.auth.currentUser!.email);
+      b.auth.appleIds[b.auth.currentUser!.email] = b.auth.currentUser!.email;
       b.auth.appleAccount = b.auth.currentUser!.email;
       await pumpApp(tester, b);
       await go(tester, '/account');
@@ -126,7 +126,7 @@ void main() {
 
     testWidgets('closing Apple’s sheet deletes nothing', (tester) async {
       final b = seededChurch(as: staffHao);
-      b.auth.appleLinked.add(b.auth.currentUser!.email);
+      b.auth.appleIds[b.auth.currentUser!.email] = b.auth.currentUser!.email;
       b.auth.appleAccount = null;
       await pumpApp(tester, b);
       await go(tester, '/account');

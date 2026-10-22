@@ -282,8 +282,20 @@ class FirebaseAuthGateway implements AuthGateway {
   Future<void> linkGoogle() async {
     final user = _auth.currentUser;
     if (user == null) return;
+    await _link(() => _google(user.linkWithCredential, user.linkWithProvider, user.linkWithPopup));
+  }
+
+  @override
+  Future<void> linkApple() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    await _link(() => kIsWeb ? user.linkWithPopup(_apple()) : user.linkWithProvider(_apple()));
+  }
+
+  /// Links what [link] signs in with to the signed-in account.
+  Future<void> _link(Future<fa.UserCredential> Function() link) async {
     try {
-      await _google(user.linkWithCredential, user.linkWithProvider, user.linkWithPopup);
+      await link();
     } on fa.FirebaseAuthException catch (e) {
       // Already an account of its own, or another account's email.
       if (e.code == 'credential-already-in-use' || e.code == 'email-already-in-use') {

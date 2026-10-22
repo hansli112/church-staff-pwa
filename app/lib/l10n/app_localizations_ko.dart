@@ -2642,10 +2642,16 @@ class L10nKo extends L10n {
   String get linkGoogle => 'Google 계정 연결';
 
   @override
-  String get linkGoogleFooter => 'Google 계정의 이메일은 이 계정과 달라도 돼요';
+  String get linkFooter => '연결하는 계정의 이메일은 이 계정과 달라도 돼요';
 
   @override
   String get linkedGoogle => 'Google 계정을 연결했어요';
+
+  @override
+  String get linkApple => 'Apple 계정 연결';
+
+  @override
+  String get linkedApple => 'Apple 계정을 연결했어요';
 
   @override
   String get unlink => '연결 해제';

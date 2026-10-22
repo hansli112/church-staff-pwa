@@ -2641,10 +2641,16 @@ class L10nJa extends L10n {
   String get linkGoogle => 'Google アカウントを連携';
 
   @override
-  String get linkGoogleFooter => 'Google アカウントのメールアドレスは、このアカウントと違っていてもかまいません';
+  String get linkFooter => '連携するアカウントのメールアドレスは、このアカウントと違っていてもかまいません';
 
   @override
   String get linkedGoogle => 'Google アカウントを連携しました';
+
+  @override
+  String get linkApple => 'Apple アカウントを連携';
+
+  @override
+  String get linkedApple => 'Apple アカウントを連携しました';
 
   @override
   String get unlink => '連携を解除';

@@ -404,7 +404,7 @@ class MemoryAuth implements AuthGateway {
     final signIns = [
       if (a.password.isNotEmpty) SignIn(SignInMethod.password, email),
       if (_google[email] case final google?) SignIn(SignInMethod.google, google),
-      if (appleLinked.contains(email)) SignIn(SignInMethod.apple, email),
+      if (appleIds[email] case final apple?) SignIn(SignInMethod.apple, apple),
     ];
     final vouched = signIns.any((s) => s.vouches && s.email == email);
     return AuthUser(
@@ -468,6 +468,18 @@ class MemoryAuth implements AuthGateway {
   }
 
   @override
+  Future<void> linkApple() async {
+    final me = _current?.email;
+    if (me == null) return;
+    final email = appleAccount;
+    if (email == null) throw const AuthException(AuthErrorCode.cancelled);
+    final owner = _appleOwner(email) ?? (_accounts.containsKey(email) ? email : null);
+    if (owner != null && owner != me) throw const AuthException(AuthErrorCode.credentialInUse);
+    appleIds[me] = email;
+    _set(_user(me));
+  }
+
+  @override
   Future<void> unlink(SignInMethod method) async {
     final me = _current?.email;
     if (me == null) return;
@@ -477,7 +489,7 @@ class MemoryAuth implements AuthGateway {
       case SignInMethod.google:
         _google.remove(me);
       case SignInMethod.apple:
-        appleLinked.remove(me);
+        appleIds.remove(me);
     }
     _set(_user(me));
   }
@@ -492,8 +504,12 @@ class MemoryAuth implements AuthGateway {
   /// The name Apple shares the first time; null when the person hides it.
   String? appleName;
 
-  /// Emails whose accounts sign in with Apple.
-  final appleLinked = <String>{};
+  /// The Apple ID each account signs in with, by the account's own email:
+  /// that same email, or a linked one.
+  final appleIds = <String, String>{};
+
+  /// The account [apple] signs in to, if any.
+  String? _appleOwner(String apple) => appleIds.entries.where((e) => e.value == apple).firstOrNull?.key;
 
   /// Emails whose Apple tokens [prepareToDelete] revoked.
   final appleRevoked = <String>[];
@@ -506,14 +522,17 @@ class MemoryAuth implements AuthGateway {
   Future<void> signInWithApple() async {
     final email = appleAccount;
     if (email == null) throw const AuthException(AuthErrorCode.cancelled);
-    if (_accounts.containsKey(email) && !appleLinked.contains(email)) {
+    // Linked to an account under another email: that account.
+    final linked = _appleOwner(email);
+    if (linked != null) return _signedIn(linked);
+    if (_accounts.containsKey(email)) {
       // One account per email, and Apple is not a trusted provider for
       // other addresses: Firebase refuses until the account links Apple.
       _applePending = true;
       throw AuthException(AuthErrorCode.needsLink, email);
     }
-    _accounts[email] ??= (uid: 'u${_next++}', password: '', verified: true, name: appleName ?? email.split('@').first);
-    appleLinked.add(email);
+    _accounts[email] = (uid: 'u${_next++}', password: '', verified: true, name: appleName ?? email.split('@').first);
+    appleIds[email] = email;
     _signedIn(email);
   }
 
@@ -521,7 +540,7 @@ class MemoryAuth implements AuthGateway {
   void _signedIn(String email) {
     if (_applePending) {
       _applePending = false;
-      appleLinked.add(email);
+      appleIds[email] = appleAccount!;
     }
     _set(_user(email));
   }
@@ -600,8 +619,9 @@ class MemoryAuth implements AuthGateway {
   @override
   Future<void> prepareToDelete() async {
     final email = _current?.email;
-    if (email == null || !appleLinked.contains(email)) return;
-    if (appleAccount != email) throw const AuthException(AuthErrorCode.cancelled);
+    final apple = appleIds[email];
+    if (email == null || apple == null) return;
+    if (appleAccount != apple) throw const AuthException(AuthErrorCode.cancelled);
     appleRevoked.add(email);
   }
 
@@ -616,6 +636,7 @@ class MemoryAuth implements AuthGateway {
     if (email != null) {
       _accounts.remove(email);
       _google.remove(email);
+      appleIds.remove(email);
     }
     _set(null);
   }

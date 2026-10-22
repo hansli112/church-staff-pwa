@@ -2770,10 +2770,16 @@ class L10nEn extends L10n {
   String get linkGoogle => 'Link a Google Account';
 
   @override
-  String get linkGoogleFooter => 'The Google account’s email can differ from this account’s';
+  String get linkFooter => 'A linked account’s email can differ from this account’s';
 
   @override
   String get linkedGoogle => 'Google account linked';
+
+  @override
+  String get linkApple => 'Link an Apple Account';
+
+  @override
+  String get linkedApple => 'Apple account linked';
 
   @override
   String get unlink => 'Unlink';

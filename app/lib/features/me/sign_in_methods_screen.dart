@@ -8,8 +8,8 @@ import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
 
-/// 登入方式: the ways this account signs in, a Google account to link, whatever
-/// its email, and unlinking any but the last. Linked or not, it stays the one
+/// 登入方式: the ways this account signs in, a Google account or Apple ID to
+/// link, whatever its email, and unlinking any but the last. Linked or not, it stays the one
 /// account: churches, rosters and roles do not change.
 class SignInMethodsScreen extends ConsumerStatefulWidget {
   const SignInMethodsScreen({super.key});
@@ -21,9 +21,15 @@ class SignInMethodsScreen extends ConsumerStatefulWidget {
 class _SignInMethodsScreenState extends ConsumerState<SignInMethodsScreen> {
   bool _busy = false;
 
-  Future<void> _run(Future<void> Function() action, {String? done}) async {
+  /// Being linked: its row shows so while the link goes on.
+  SignInMethod? _linking;
+
+  Future<void> _run(Future<void> Function() action, {String? done, SignInMethod? linking}) async {
     final l10n = L10n.of(context);
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _linking = linking;
+    });
     try {
       await action();
       Haptics.success();
@@ -33,7 +39,12 @@ class _SignInMethodsScreenState extends ConsumerState<SignInMethodsScreen> {
       final text = errorText(l10n, e);
       if (mounted && text.isNotEmpty) showToast(context, text);
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _linking = null;
+        });
+      }
     }
   }
 
@@ -61,6 +72,12 @@ class _SignInMethodsScreenState extends ConsumerState<SignInMethodsScreen> {
     final c = AppColors.of(context);
     final auth = ref.read(backendProvider).auth;
     final signIns = ref.watch(authUserProvider.select((u) => u.value?.signIns ?? const <SignIn>[]));
+    bool linked(SignInMethod m) => signIns.any((s) => s.method == m);
+    final toLink = [
+      if (!linked(SignInMethod.google)) (SignInMethod.google, l10n.linkGoogle, auth.linkGoogle, l10n.linkedGoogle),
+      if (auth.offersApple && !linked(SignInMethod.apple))
+        (SignInMethod.apple, l10n.linkApple, auth.linkApple, l10n.linkedApple),
+    ];
     return Scaffold(
       appBar: AppBar(title: Text(l10n.signInMethods)),
       body: ListView(
@@ -83,21 +100,22 @@ class _SignInMethodsScreenState extends ConsumerState<SignInMethodsScreen> {
                 ),
             ],
           ),
-          if (!signIns.any((s) => s.method == SignInMethod.google))
+          if (toLink.isNotEmpty)
             ListSection(
-              footer: l10n.linkGoogleFooter,
+              footer: l10n.linkFooter,
               children: [
-                ListRow(
-                  title: l10n.linkGoogle,
-                  // Linking goes on after Google's sheet closes.
-                  trailing: _busy
-                      ? const SizedBox.square(
-                          dimension: 22,
-                          child: CircularProgressIndicator.adaptive(strokeWidth: 2.5),
-                        )
-                      : null,
-                  onTap: _busy ? null : () => _run(auth.linkGoogle, done: l10n.linkedGoogle),
-                ),
+                for (final (method, title, link, done) in toLink)
+                  ListRow(
+                    title: title,
+                    // Linking goes on after Google's or Apple's sheet closes.
+                    trailing: _linking == method
+                        ? const SizedBox.square(
+                            dimension: 22,
+                            child: CircularProgressIndicator.adaptive(strokeWidth: 2.5),
+                          )
+                        : null,
+                    onTap: _busy ? null : () => _run(link, done: done, linking: method),
+                  ),
               ],
             ),
           SizedBox(height: MediaQuery.paddingOf(context).bottom),

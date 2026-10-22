@@ -120,6 +120,68 @@ void main() {
     expect(b.rosters['grace']!.values.single.duties.single.uids, {'李美玉': uid});
   });
 
+  group('Apple', () {
+    testWidgets('where Apple signs in, a password account links an Apple ID under another email, and it signs in', (
+      tester,
+    ) async {
+      final b = MemoryBackend(clock: testClock)..auth.offersApple = true;
+      final uid = await registered(b, 'mei.old@yahoo.com');
+      await pumpApp(tester, b);
+      await go(tester, '/account/sign-in');
+
+      b.auth.appleAccount = 'x7f9d2@privaterelay.appleid.com';
+      await tapText(tester, '連結 Apple 帳號');
+      expect(findShown('已連結 Apple 帳號'), findsOneWidget);
+      expect(find.text('Apple'), findsOneWidget);
+      expect(find.text('x7f9d2@privaterelay.appleid.com'), findsOneWidget);
+      expect(find.text('連結 Apple 帳號'), findsNothing, reason: 'one Apple ID at a time');
+      expect(find.text('連結 Google 帳號'), findsOneWidget);
+
+      await b.auth.signOut();
+      await b.auth.signInWithApple();
+      expect(b.auth.currentUser!.uid, uid);
+      expect(b.auth.currentUser!.email, 'mei.old@yahoo.com', reason: 'the account’s own email stays');
+    });
+
+    testWidgets('an Apple ID that is an account of its own is not linked, and says why', (tester) async {
+      final b = MemoryBackend(clock: testClock)..auth.offersApple = true;
+      b.auth.appleAccount = 'mei@icloud.com';
+      await b.auth.signInWithApple();
+      await b.auth.signOut();
+      await registered(b, 'mei.old@yahoo.com');
+      await pumpApp(tester, b);
+      await go(tester, '/account/sign-in');
+
+      await tapText(tester, '連結 Apple 帳號');
+      expect(findShownContaining('你選的帳號已經是另一個馬大別忙帳號'), findsOneWidget);
+      expect(b.auth.currentUser!.signIns.map((s) => s.method), [SignInMethod.password]);
+    });
+
+    testWidgets('a linked Apple ID can be unlinked, while another way in is left', (tester) async {
+      final b = MemoryBackend(clock: testClock)..auth.offersApple = true;
+      await registered(b, 'mei.old@yahoo.com');
+      b.auth.appleAccount = 'mei@icloud.com';
+      await b.auth.linkApple();
+      await pumpApp(tester, b);
+      await go(tester, '/account/sign-in');
+
+      await tester.tap(find.descendant(of: rowWith('Apple'), matching: find.text('解除連結')));
+      await settle(tester);
+      await tapText(tester, '解除連結');
+      expect(find.text('Apple'), findsNothing);
+      expect(find.text('連結 Apple 帳號'), findsOneWidget);
+    });
+
+    testWidgets('where Apple does not sign in, there is no Apple to link', (tester) async {
+      final b = MemoryBackend(clock: testClock);
+      await registered(b, 'mei.old@yahoo.com');
+      await pumpApp(tester, b);
+      await go(tester, '/account/sign-in');
+      expect(find.text('連結 Google 帳號'), findsOneWidget);
+      expect(find.text('連結 Apple 帳號'), findsNothing);
+    });
+  });
+
   testWidgets('a password account with another email’s Google linked still verifies its own', (tester) async {
     final b = MemoryBackend(clock: testClock);
     await b.auth.registerWithEmail('美玉', 'mei.old@yahoo.com', 'secret123', AppLanguage.zhHant);

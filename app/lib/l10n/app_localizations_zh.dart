@@ -2637,10 +2637,16 @@ class L10nZh extends L10n {
   String get linkGoogle => '連結 Google 帳號';
 
   @override
-  String get linkGoogleFooter => 'Google 帳號的 email 可以和這個帳號不同';
+  String get linkFooter => '連結的帳號，email 可以和這個帳號不同';
 
   @override
   String get linkedGoogle => '已連結 Google 帳號';
+
+  @override
+  String get linkApple => '連結 Apple 帳號';
+
+  @override
+  String get linkedApple => '已連結 Apple 帳號';
 
   @override
   String get unlink => '解除連結';
@@ -5473,10 +5479,16 @@ class L10nZhHans extends L10nZh {
   String get linkGoogle => '关联 Google 账号';
 
   @override
-  String get linkGoogleFooter => 'Google 账号的邮箱可以和这个账号不同';
+  String get linkFooter => '关联的账号，邮箱可以和这个账号不同';
 
   @override
   String get linkedGoogle => '已关联 Google 账号';
+
+  @override
+  String get linkApple => '关联 Apple 账号';
+
+  @override
+  String get linkedApple => '已关联 Apple 账号';
 
   @override
   String get unlink => '解除关联';
