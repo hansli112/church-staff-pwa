@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
 
-import { logClientError, scrub } from '../src/logging.js';
+import { logClientError } from '../src/logging.js';
 import {
   adminChurchMembers,
   adminRenameChurch,
@@ -143,10 +143,5 @@ describe('client error log', () => {
     assert.throws(() => logClientError(caller('a'), { message: 'x'.repeat(1001), stack: '' }), /unknown/);
     assert.throws(() => logClientError(caller('a'), { message: 'x', stack: 'y'.repeat(8001) }), /unknown/);
     assert.deepEqual(logClientError(caller('a'), { message: 'boom', stack: 'at main.dart' }), {});
-  });
-
-  test('scrubs emails and phone numbers', () => {
-    assert.equal(scrub('user john@example.com failed'), 'user <email> failed');
-    assert.equal(scrub('call 0912 345 678'), 'call <number>');
   });
 });

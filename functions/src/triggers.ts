@@ -7,6 +7,7 @@ import { runEach, type Deps } from './common.js';
 import { ICON_FILES, iconStoragePath, makeIcons } from './icons.js';
 import { personName } from './limits.js';
 import { adminUids, notifyMembers, type PushDeps } from './push.js';
+import { loggable } from './redact.js';
 
 /**
  * Who made a Firestore write, from a trigger's auth context: the uid of a
@@ -109,7 +110,7 @@ export async function onLogoUploaded(deps: LogoDeps, path: string, generation: s
     );
     icons = true;
   } catch (e) {
-    console.error(`onLogoUploaded: no icons for ${cid}`, e);
+    console.error(`onLogoUploaded: no icons for ${cid}`, loggable(e));
   }
 
   const applied = await deps.db.runTransaction(async (tx) => {

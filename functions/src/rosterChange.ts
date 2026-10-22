@@ -9,6 +9,7 @@ import { notifyMembers, type PushDeps } from './push.js';
 import { duties, dutiesByUid, names, rosterDay, serviceNames, type RosterDay } from './rosters.js';
 import { queue } from './webhook.js';
 import { dateKeyIn, earliestDay, instantOf, nextDay, timeZoneOf, wallClock } from './timeZones.js';
+import { loggable } from './redact.js';
 
 /**
  * 服事表異動: one write of a roster day, read once into a [RosterChange],
@@ -336,7 +337,7 @@ export async function sendHeldPushes(deps: PushDeps & Pick<Deps, 'now'>) {
         try {
           sent += await tell(deps, about, uid, newsSince(h, day?.holders.get(uid) ?? [], about.dateKey, about.event !== null));
         } catch (e) {
-          logger.error('Held roster push failed', { cid, uid, error: String(e) });
+          logger.error('Held roster push failed', { cid, uid, error: loggable(e).message });
         }
       }
       await h.ref.delete();

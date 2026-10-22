@@ -9,6 +9,7 @@ import { cancelWithEvent, followEdit, inclusiveEnd, isEvent, restoreOnto } from 
 import { seal, unseal } from './sealing.js';
 import { notify, type WebhookDeps } from './webhook.js';
 import { dateKeyIn, instantOf, instantOfTime, LOCAL_TIME, localIso, timeZoneOf, type ChurchTimeZone } from './timeZones.js';
+import { loggable } from './redact.js';
 
 /**
  * 行事曆: a church admin connects one Google Calendar. The backend keeps the
@@ -153,7 +154,7 @@ export async function calendarCallback(deps: CalDeps, query: Record<string, unkn
   } catch (e) {
     await ref.delete();
     // A used or stale code (a reloaded page, a double tap): let them try again.
-    console.warn('calendarCallback: code refused', e);
+    console.warn('calendarCallback: code refused', loggable(e));
     return back('failed');
   }
   if (!refreshToken) {
@@ -196,7 +197,7 @@ export async function calendarCallback(deps: CalDeps, query: Record<string, unkn
           await deps.google.revoke(refreshToken);
         } catch (e) {
           // Never install an unauthorized token, even when Google is unreachable.
-          console.warn('calendarCallback: unused grant revocation failed', e);
+          console.warn('calendarCallback: unused grant revocation failed', loggable(e));
         }
       }
     }
@@ -212,7 +213,7 @@ export async function calendarAccess(deps: CalDeps, churchId: string) {
   try {
     return await access(deps, churchId);
   } catch (e) {
-    console.warn(`calendar access ${churchId}`, e);
+    console.warn(`calendar access ${churchId}`, loggable(e));
     return null;
   }
 }
@@ -541,7 +542,7 @@ async function rosterStep(what: string, step: () => Promise<void>) {
   try {
     await step();
   } catch (e) {
-    console.error(`event roster: ${what} failed`, e);
+    console.error(`event roster: ${what} failed`, loggable(e));
   }
 }
 

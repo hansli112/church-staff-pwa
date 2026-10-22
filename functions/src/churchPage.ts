@@ -6,6 +6,7 @@ import { publicLogoPath } from './church.js';
 import { ICON_FILES, iconStoragePath, type IconFile } from './icons.js';
 import { checkInvite } from './invites.js';
 import { browserLanguage, words, type Language, type Words } from './languages.js';
+import { loggable } from './redact.js';
 
 /**
  * 教會頁: Hosting sends /c/** here, so each church URL is its own web app
@@ -95,7 +96,7 @@ async function appShell(deps: PageDeps): Promise<string | null> {
   } catch (e) {
     // A stale copy is better than no page.
     if (!template) {
-      console.error('churchPage: no app shell', e);
+      console.error('churchPage: no app shell', loggable(e));
       return null;
     }
   }

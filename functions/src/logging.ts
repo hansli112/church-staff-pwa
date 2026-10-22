@@ -2,16 +2,10 @@ import { logger } from 'firebase-functions/v2';
 
 import { isChurchId } from './access.js';
 import { fail, requireCaller, type Caller } from './common.js';
+import { scrub } from './redact.js';
 
 const MAX_MESSAGE = 1000;
 const MAX_STACK = 8000;
-
-/** Removes things that look like emails or phone numbers. */
-export function scrub(text: string): string {
-  return text
-    .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, '<email>')
-    .replace(/\+?\d[\d -]{7,}\d/g, '<number>');
-}
 
 /**
  * Web clients report uncaught errors here (Crashlytics does not support

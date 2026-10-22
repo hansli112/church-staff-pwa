@@ -7,6 +7,7 @@ import { fail, type Caller, type Deps } from './common.js';
 import { LIMITS } from './limits.js';
 import { seal, unseal } from './sealing.js';
 import { timeZoneOf } from './timeZones.js';
+import { loggable } from './redact.js';
 
 /**
  * 外部通知 (webhooks): a church's admin gives an https URL and a secret;
@@ -175,7 +176,7 @@ export async function notify(
   try {
     return await deliver(deps, await churchDoc(deps, church), event, details);
   } catch (e) {
-    console.error(`webhook ${event} for ${typeof church === 'string' ? church : church.id} failed`, e);
+    console.error(`webhook ${event} for ${typeof church === 'string' ? church : church.id} failed`, loggable(e));
     return null;
   }
 }

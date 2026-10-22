@@ -8,6 +8,7 @@ import { TEXT_LIMITS } from './limits.js';
 import { addPending, forgetPending } from './pendingMembers.js';
 import { claimedSmallGroups, namedSmallGroups, nameKey as smallGroupKey } from './smallGroups.js';
 import { nameKey } from './text.js';
+import { loggable } from './redact.js';
 
 /**
  * 自助搬家: a self-host admin runs one command in their own Cloud Shell,
@@ -189,7 +190,7 @@ export async function moveCommit(deps: MoveDeps, caller: Caller | null, data: un
   if (byName.size) write(w.set(root.collection('settings').doc('smallGroups'), { ids: [...byName.values()] }));
   await w.close();
   if (failures.length) {
-    console.error(`moveCommit: ${failures.length} writes failed for ${cid}`, failures[0]);
+    console.error(`moveCommit: ${failures.length} writes failed for ${cid}`, loggable(failures[0]));
     fail('unavailable', 'unavailable');
   }
   try {

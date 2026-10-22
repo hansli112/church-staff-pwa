@@ -5,6 +5,7 @@ import { logger } from 'firebase-functions/v2';
 
 import { round2, type Deps } from './common.js';
 import { BUNDLE_ID, recordPayment, setRefund } from './funding.js';
+import { loggable } from './redact.js';
 
 /**
  * App Store Server Notifications (V2) for 雲端費用進度. App Store Connect
@@ -82,7 +83,7 @@ export async function appStoreNotification(deps: Deps, apple: AppleVerifier, bod
     if (!INCOME.has(type) && !(type in REFUNDS)) return 200;
     tx = await apple.transaction(n.signedTransactionInfo);
   } catch (e) {
-    logger.warn('App Store notification failed verification', { error: String(e) });
+    logger.warn('App Store notification failed verification', { error: loggable(e).message });
     return 400;
   }
   if (!tx.transactionId) return 200;

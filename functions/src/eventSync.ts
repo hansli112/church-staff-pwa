@@ -5,6 +5,7 @@ import { calendarAccess, type CalDeps, type CalendarEvent } from './calendar.js'
 import { DAY_MS } from './common.js';
 import { cancelGone, eventRosterDays, followGoogle, isCancelled, isEvent, relinkTo, takeTimeZone } from './eventRosters.js';
 import { dateKeyIn, earliestDay, instantOf, instantOfTime, timeZoneOf, timeZonesAt, type ChurchTimeZone } from './timeZones.js';
+import { loggable } from './redact.js';
 
 /**
  * Events' rosters (活動的服事表) against the calendar, for what was done in
@@ -70,7 +71,7 @@ export async function syncEventRosters(deps: CalDeps): Promise<SyncCounts> {
     try {
       await syncChurch(deps, cid, [...rosters.values()], { due, keepFrom }, counts);
     } catch (e) {
-      console.error(`event roster sync ${cid}`, e);
+      console.error(`event roster sync ${cid}`, loggable(e));
     }
   }
   return counts;
@@ -117,7 +118,7 @@ async function syncChurch(
       const done = await syncOne(deps, token, calendarId, timeZone, r, calendarReadable);
       if (done) counts[done]++;
     } catch (e) {
-      console.error(`event roster sync ${cid}/${r.id}`, e);
+      console.error(`event roster sync ${cid}/${r.id}`, loggable(e));
     }
   }
 }
@@ -192,7 +193,7 @@ export async function followTimeZone(deps: CalDeps, cid: string, timeZone: Churc
       const e = await deps.google.get(token, calendarId, r.get('eventId') as string);
       if (e && !e.cancelled && (await takeTimeZone(r, e, timeZone))) moved++;
     } catch (e) {
-      console.error(`event roster time zone ${cid}/${r.id}`, e);
+      console.error(`event roster time zone ${cid}/${r.id}`, loggable(e));
     }
   }
   return moved;

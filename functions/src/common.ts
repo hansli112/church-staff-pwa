@@ -2,6 +2,7 @@ import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { HttpsError, type FunctionsErrorCode } from 'firebase-functions/v2/https';
 
 import { withinTextLimit } from './limits.js';
+import { loggable } from './redact.js';
 
 /** Region for every function, the same as Firestore. */
 export const REGION = 'asia-east1';
@@ -127,7 +128,7 @@ export async function runEach<T extends Record<string, () => Promise<unknown>>>(
   const failures: unknown[] = [];
   results.forEach((r, i) => {
     if (r.status === 'fulfilled') return;
-    console.error(`${label}: ${names[i]} failed`, r.reason);
+    console.error(`${label}: ${names[i]} failed`, loggable(r.reason));
     failures.push(r.reason);
   });
   if (failures.length) throw failures[0];

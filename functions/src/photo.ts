@@ -5,6 +5,7 @@ import { dateKeyUtc8, fail, type Caller, type Deps } from './common.js';
 import { LANGUAGES, words } from './languages.js';
 import { LIMITS } from './limits.js';
 import { dateKeyIn, timeZoneOf, type ChurchTimeZone } from './timeZones.js';
+import { scrub } from './redact.js';
 
 /**
  * 照片辨識: a roster editor sends photos of a paper roster; Gemini on Vertex
@@ -265,7 +266,7 @@ export function geminiClient(vertex: VertexConfig, models: string[] = DEFAULT_MO
     if (!last?.ok) {
       // The reason (no permission, API off, model gone) is only in the answer.
       const detail = last ? (await last.text().catch(() => '')).slice(0, 500) : '';
-      console.warn('gemini refused', last?.status, detail);
+      console.warn('gemini refused', last?.status, scrub(detail));
       fail('unavailable', 'unavailable');
     }
     const payload = (await last.json()) as {
