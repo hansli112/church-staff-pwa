@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Written by tool/generate_icons.dart: behind each adaptive icon, its edge's colour. -->
+<resources>
+    <color name="ic_launcher_background">#F6EDE1</color>
+    <color name="ic_launcher_green_background">#D9E8D6</color>
+    <color name="ic_launcher_purple_background">#E4DCEF</color>
+    <color name="ic_launcher_night_background">#2D3039</color>
+    <color name="ic_launcher_zhuwei_background">#5BA7D8</color>
+</resources>

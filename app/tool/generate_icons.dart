@@ -135,24 +135,61 @@ img.Image splash(img.Image round, int px) {
   return out;
 }
 
+/// [square] as an Android adaptive icon's 108dp layer, [px] wide: the
+/// drawing fills [zoom] of the 72dp a launcher shows inside its mask, and
+/// its edges carry on out to the rest, which only shows as the icon moves.
+/// Without one, a launcher shrinks the icon into a white circle.
+img.Image adaptive(img.Image square, int px, double zoom) {
+  final art = resized(square, (px * 72 / 108 * zoom).round());
+  final at = (px - art.width) ~/ 2;
+  final out = img.Image(width: px, height: px);
+  for (final p in out) {
+    final s = art.getPixel((p.x - at).clamp(0, art.width - 1), (p.y - at).clamp(0, art.height - 1));
+    p
+      ..r = s.r
+      ..g = s.g
+      ..b = s.b;
+  }
+  return out;
+}
+
+String hex(img.Pixel p) =>
+    '#${[p.r, p.g, p.b].map((c) => c.toInt().toRadixString(16).padLeft(2, '0')).join().toUpperCase()}';
+
 /// Churches' own icons (churchIcons in lib/state/support.dart), each a
-/// full-bleed 1024 square in tool/ named after it, used as it is.
-const churches = ['Zhuwei'];
+/// full-bleed 1024 square in tool/ named after it, used as it is, with how
+/// much of Android's circle it fills: a logo on flat colour stays clear of
+/// the cut.
+const churches = {'Zhuwei': 0.9};
 
 void main() {
   const android = {'mdpi': 48, 'hdpi': 72, 'xhdpi': 96, 'xxhdpi': 144, 'xxxhdpi': 192};
   final icons = [
-    for (final v in variants) (id: v.id, full: paint(v)),
-    for (final id in churches) (id: id, full: img.decodePng(File('tool/${id.toLowerCase()}.png').readAsBytesSync())!),
+    for (final v in variants) (id: v.id, full: paint(v), zoom: 1.0),
+    for (final MapEntry(key: id, value: zoom) in churches.entries)
+      (id: id, full: img.decodePng(File('tool/${id.toLowerCase()}.png').readAsBytesSync())!, zoom: zoom),
   ];
-  for (final (:id, :full) in icons) {
+  final backgrounds = <String, String>{};
+  for (final (:id, :full, :zoom) in icons) {
     final round = rounded(full);
     final name = id.isEmpty ? 'ic_launcher' : 'ic_launcher_${id.toLowerCase()}';
     android.forEach((density, px) {
       write('android/app/src/main/res/mipmap-$density/$name.png', resized(round, px));
+      write('android/app/src/main/res/mipmap-$density/${name}_foreground.png', adaptive(full, px * 108 ~/ 48, zoom));
       // Every icon starts the app on the default one's paper.
       if (id.isEmpty) write('android/app/src/main/res/drawable-$density/splash_icon.png', splash(round, px * 6));
     });
+    // From Android 8 the launcher uses these, the PNGs above before it.
+    backgrounds[name] = hex(full.getPixel(0, 0));
+    File('android/app/src/main/res/mipmap-anydpi-v26/$name.xml')
+      ..createSync(recursive: true)
+      ..writeAsStringSync('''
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/${name}_background"/>
+    <foreground android:drawable="@mipmap/${name}_foreground"/>
+</adaptive-icon>
+''');
     final set = id.isEmpty ? 'AppIcon' : 'AppIcon-$id';
     final dir = 'ios/Runner/Assets.xcassets/$set.appiconset';
     if (Directory(dir).existsSync()) {
@@ -182,5 +219,12 @@ void main() {
       write('assets/icons/${id.toLowerCase()}.png', resized(round, 256));
     }
   }
+  File('android/app/src/main/res/values/ic_launcher_background.xml').writeAsStringSync('''
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Written by tool/generate_icons.dart: behind each adaptive icon, its edge's colour. -->
+<resources>
+${[for (final MapEntry(:key, :value) in backgrounds.entries) '    <color name="${key}_background">$value</color>'].join('\n')}
+</resources>
+''');
   stdout.writeln('Wrote ${icons.length} icons.');
 }
