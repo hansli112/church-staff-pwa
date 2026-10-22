@@ -114,5 +114,17 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Google sign-in in the browser (no Google account on the phone)
+             opens a Custom Tab only when it can see a browser offering one.
+             Otherwise it opens Chrome itself, which is left behind on
+             "missing initial state" once the app has the result. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <category android:name="android.intent.category.BROWSABLE"/>
+            <data android:scheme="https"/>
+        </intent>
+        <intent>
+            <action android:name="android.support.customtabs.action.CustomTabsService"/>
+        </intent>
     </queries>
 </manifest>
