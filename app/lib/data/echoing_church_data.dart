@@ -399,10 +399,11 @@ class EchoingChurchData implements ChurchData {
   /// A 小組's new 小組長 shows at once; the rest of it as the backend has it.
   @override
   Future<String> saveSmallGroup(SmallGroupDetails group, {List<String>? leads}) async {
+    // A new 小組 has no id to lead until the backend gives it one.
     if (leads == null || group.id.isEmpty) return _inner.saveSmallGroup(group, leads: leads);
     late final String id;
     await _send(
-      _Echo(everyMember: (m) => m.leadingSmallGroup(group.id, lead: leads.contains(m.uid))),
+      _Echo(everyMember: (m) => m.withSmallGroupLead(group.id, lead: leads.contains(m.uid))),
       () async => id = await _inner.saveSmallGroup(group, leads: leads),
     );
     return id;
@@ -498,15 +499,15 @@ class _Echo {
 
   /// Each member changed, null for one removed.
   final Map<String, Member? Function(Member)> members;
-
-  /// A change to whichever members it touches, for one made by the
-  /// backend, which knows who they are.
-  final Member Function(Member)? everyMember;
   final ServiceSettings Function(ServiceSettings)? services;
 
   /// The 事工 list written.
   final List<Ministry>? ministries;
   final Map<String, StaffOrder> staffOrders;
+
+  /// A change to whichever members it touches, for one the backend makes
+  /// knowing who they are.
+  final Member Function(Member)? everyMember;
 
   /// Null while being written; once written, until when it may still show.
   DateTime? until;

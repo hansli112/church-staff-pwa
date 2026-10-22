@@ -296,6 +296,9 @@ class AppIconScreen extends ConsumerWidget {
 
   static const _size = 64.0;
 
+  /// The check on the icon in use.
+  static const _badge = 24.0;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
@@ -320,10 +323,10 @@ class AppIconScreen extends ConsumerWidget {
                   alignment: WrapAlignment.spaceAround,
                   runSpacing: Space.s,
                   children: [
-                    for (final id in choices)
+                    for (final (id, selected) in [for (final id in choices) (id, id == current)])
                       Semantics(
                         button: true,
-                        selected: current == id,
+                        selected: selected,
                         label: appIconName(l10n, id),
                         excludeSemantics: true,
                         child: InkWell(
@@ -344,7 +347,7 @@ class AppIconScreen extends ConsumerWidget {
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(_size * _iconRounding + 4),
                                         border: Border.all(
-                                          color: current == id ? c.accent : Colors.transparent,
+                                          color: selected ? c.accent : Colors.transparent,
                                           width: 3,
                                         ),
                                       ),
@@ -354,13 +357,13 @@ class AppIconScreen extends ConsumerWidget {
                                       ),
                                     ),
                                     // The border alone is lost on an icon in the accent's own blue.
-                                    if (current == id)
+                                    if (selected)
                                       Positioned(
-                                        right: -4,
-                                        bottom: -4,
+                                        right: -Space.xs,
+                                        bottom: -Space.xs,
                                         child: Container(
-                                          width: 24,
-                                          height: 24,
+                                          width: _badge,
+                                          height: _badge,
                                           decoration: BoxDecoration(
                                             color: c.accent,
                                             shape: BoxShape.circle,
@@ -377,7 +380,7 @@ class AppIconScreen extends ConsumerWidget {
                                   // 竹圍靈糧 / 福音中心, not one character on its own line.
                                   child: BalancedText(
                                     appIconName(l10n, id),
-                                    style: AppText.footnote.copyWith(color: current == id ? c.accent : c.label),
+                                    style: AppText.footnote.copyWith(color: selected ? c.accent : c.label),
                                   ),
                                 ),
                               ],

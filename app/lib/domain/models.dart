@@ -406,8 +406,9 @@ class Member {
     SmallGroup(:final id) => copyWith(smallGroups: member ? {...smallGroups, id} : ({...smallGroups}..remove(id))),
   };
 
-  /// This member as 小組長 of 小組 [id] or not; themself when already so.
-  Member leadingSmallGroup(String id, {required bool lead}) => leadSmallGroups.contains(id) == lead
+  /// This member as 小組長 of 小組 [id] or not, as editSmallGroup writes it;
+  /// themself when already so.
+  Member withSmallGroupLead(String id, {required bool lead}) => leadSmallGroups.contains(id) == lead
       ? this
       : copyWith(
           identities: [

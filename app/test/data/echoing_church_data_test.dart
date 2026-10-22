@@ -266,35 +266,24 @@ void main() {
     b.writeDelay = const Duration(milliseconds: 200);
     final all = Seen(data.members());
     await pumpEventQueue();
-    List<String> leaders() => [
-      for (final m in all.last)
+    List<String> leadersIn(List<Member> list) => [
+      for (final m in list)
         if (m.leadSmallGroups.contains(id)) m.uid,
     ];
-    expect(leaders(), ['mei']);
+    expect(leadersIn(all.last), ['mei']);
 
     final done = data.saveSmallGroup(
       SmallGroupDetails(id: id, name: '喜樂', service: 'sunday'),
       leads: ['hao'],
     );
     await pumpEventQueue();
-    expect(leaders(), ['hao'], reason: 'before the backend answers');
+    expect(leadersIn(all.last), ['hao'], reason: 'before the backend answers');
     expect(b.members['grace']!['hao']!.leadSmallGroups, isEmpty, reason: 'not written yet');
 
     await done;
     await pumpEventQueue();
-    expect(leaders(), ['hao']);
-    expect(
-      all.values
-          .skip(1)
-          .map(
-            (l) => [
-              for (final m in l)
-                if (m.leadSmallGroups.contains(id)) m.uid,
-            ],
-          ),
-      everyElement(['hao']),
-      reason: 'never back',
-    );
+    expect(leadersIn(all.last), ['hao']);
+    expect(all.values.skip(1).map(leadersIn), everyElement(['hao']), reason: 'never back');
   });
 
   test('service settings and staff orders show at once', () async {

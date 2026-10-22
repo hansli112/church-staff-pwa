@@ -10,8 +10,16 @@ void main() {
   test('the app can see the browsers and their Custom Tabs', () {
     final manifest = File('android/app/src/main/AndroidManifest.xml').readAsStringSync();
     final queries = RegExp(r'<queries>([\s\S]*?)</queries>').firstMatch(manifest)![1]!;
-    expect(queries, contains('<action android:name="android.support.customtabs.action.CustomTabsService"/>'));
-    expect(queries, contains('<action android:name="android.intent.action.VIEW"/>'));
-    expect(queries, contains('<data android:scheme="https"/>'));
+    final intents = [for (final m in RegExp(r'<intent>([\s\S]*?)</intent>').allMatches(queries)) m[1]!];
+    expect(
+      intents.where((i) => i.contains('android.intent.action.VIEW') && i.contains('android:scheme="https"')),
+      hasLength(1),
+      reason: 'the browsers',
+    );
+    expect(
+      intents.where((i) => i.contains('android.support.customtabs.action.CustomTabsService')),
+      hasLength(1),
+      reason: 'their Custom Tabs',
+    );
   });
 }
