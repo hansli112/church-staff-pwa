@@ -16,6 +16,7 @@
 | `churches/{cid}/attendance/{群組}` | 回報人數（#85），`{群組}` 是 `service:<id>` 或 `small:<id>`：`pauses`（暫停，每段 `{from, until}`：從 `from` 到 `until` 前一天不算；結束了也留著，那幾週才不會變成「未填」，最多 50 段）。底下 `days/{dateKey}` 是那次聚會的人數：`count`（0–100000）加選填的 `note`（最多 200 字），或 `none: true`（這次沒聚會）；`by` 是填的人 |
 | `churches/{cid}/pendingMembers/{舊 uid}` | 從舊版搬來、還沒登入的同工：`name`、`email`、`emailHash`、`role`、`groups`、`zones`、`zoneTypes`、`notificationPrefs`、`rosterIds`（搬家時記下有他名字的服事表）。後端建立，管理員可以刪；認領或合併時偏好與小組併入同工，只有 `rosterIds` 那幾天改連到新帳號 |
 | `churches/{cid}/joinRequests/{uid}` | 申請加入（#88）：`uid`、`name`、`email`（申請時帳號的）、`note`（選填，最多 100 字）、`createdAt`、`rejectedAt`（管理員拒絕的時間）。只有後端寫（`requestToJoin`、`withdrawJoinRequest`、`answerJoinRequest`），只有 admin 讀得到；申請的人從 `churchPreview` 知道自己的申請怎麼了。`createdAt` 滿 30 天就算沒有，每天清掉 |
+| `churches/{cid}/joinRequestPushes/{uid}` | 只有後端讀寫：`uid`、`at`（上次為這個人的申請推播給管理員的時間）。同一個人一天內只推播一次，取消再申請也不會一直響；超過一天的每天清掉 |
 | `pendingIndex/{email 的 SHA-256}` | 只有後端讀寫：`churches`（教會 id → 待認領同工 id） |
 | `invites/{邀請碼}` | `cid`、`churchName`、`expiresAt`（31 天內）、`revoked`、`createdBy`、`createdAt`、`zoneTypes`（選填，加入後屬於的牧區，最多 20 個；加入時只留教會還有的聚會別，不帶服事項目）。管理員建立、撤回，加入經 `redeemInvite` |
 | `churches/{cid}/staff_orders/{type}` | 各聚會別的同工排序 |

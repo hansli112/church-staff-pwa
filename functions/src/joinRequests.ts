@@ -14,6 +14,11 @@ import { adminUids, notifyMembers, type PushDeps } from './push.js';
  *
  * A church takes requests unless its admin turned them off
  * (`joinRequestsClosed` on the church doc).
+ *
+ * Its admins hear of one person's requests at most once a day, so asking,
+ * taking it back and asking again does not ring them each time: when they
+ * last did is at churches/{cid}/joinRequestPushes/{uid}, which only this
+ * reads and writes.
  */
 
 /** A request nobody answered is gone after this many days. */
@@ -23,6 +28,7 @@ export const JOIN_REQUEST_DAYS = 30;
 export type RequestState = 'pending' | 'rejected' | null;
 
 const requestPath = (cid: string, uid: string) => `churches/${cid}/joinRequests/${uid}`;
+const pushedPath = (cid: string, uid: string) => `churches/${cid}/joinRequestPushes/${uid}`;
 
 /** Whether [church] takes requests: open, and its admin has not turned them off. */
 export const takesRequests = (church: DocumentSnapshot) =>
@@ -52,9 +58,10 @@ export async function requestState(deps: Deps, cid: string, uid: string): Promis
 
 /**
  * Asks to join church `data.churchId`, with an optional `data.note` for
- * whoever lets them in, and tells its admins. Asking again while a request
- * stands changes nothing; after a no, it is a new request. Already a
- * member: nothing to ask.
+ * whoever lets them in, and tells its admins unless they were told of this
+ * person within a day. Asking again while a request stands changes
+ * nothing; after a no, it is a new request. Already a member: nothing to
+ * ask.
  */
 export async function requestToJoin(deps: PushDeps & Deps, caller: Caller | null, data: unknown) {
   const c = requireCaller(caller);
@@ -64,11 +71,12 @@ export async function requestToJoin(deps: PushDeps & Deps, caller: Caller | null
   const note = raw.trim();
   if (!c.emailVerified) fail('failed-precondition', 'unverifiedEmail');
   const { db } = deps;
-  const [church, member, request, profile] = await db.getAll(
+  const [church, member, request, profile, pushed] = await db.getAll(
     db.doc(`churches/${cid}`),
     db.doc(`churches/${cid}/members/${c.uid}`),
     db.doc(requestPath(cid, c.uid)),
     db.doc(`users/${c.uid}`),
+    db.doc(pushedPath(cid, c.uid)),
   );
   if (!isChurchOpen(church)) fail('not-found', 'notFound');
   if (member.exists) return {};
@@ -82,6 +90,9 @@ export async function requestToJoin(deps: PushDeps & Deps, caller: Caller | null
     ...(note ? { note } : {}),
     createdAt: Timestamp.fromDate(deps.now()),
   });
+  const last = pushed.get('at') as Timestamp | undefined;
+  if (last && deps.now().getTime() - last.toMillis() < DAY_MS) return {};
+  await pushed.ref.set({ uid: c.uid, at: Timestamp.fromDate(deps.now()) });
   await notifyMembers(deps, cid, await adminUids(db, cid), 'joinRequest', (w) => ({
     title: church.get('name') as string,
     body: w.joinRequested(name || null),
@@ -149,16 +160,25 @@ export async function answerJoinRequest(deps: PushDeps & Deps, caller: Caller | 
   return {};
 }
 
-/** Deletes every request [JOIN_REQUEST_DAYS] days old or older, answered or not. */
+/**
+ * Deletes every request [JOIN_REQUEST_DAYS] days old or older, answered or
+ * not, and when admins were told of someone over a day ago. Returns how
+ * many requests.
+ */
 export async function forgetOldJoinRequests(deps: Deps) {
-  const cutoff = Timestamp.fromMillis(deps.now().getTime() - JOIN_REQUEST_DAYS * DAY_MS);
-  const old = await deps.db.collectionGroup('joinRequests').where('createdAt', '<=', cutoff).get();
-  await Promise.all(old.docs.map((d) => d.ref.delete()));
+  const now = deps.now().getTime();
+  const [old, pushed] = await Promise.all([
+    deps.db.collectionGroup('joinRequests').where('createdAt', '<=', Timestamp.fromMillis(now - JOIN_REQUEST_DAYS * DAY_MS)).get(),
+    deps.db.collectionGroup('joinRequestPushes').where('at', '<=', Timestamp.fromMillis(now - DAY_MS)).get(),
+  ]);
+  await Promise.all([...old.docs, ...pushed.docs].map((d) => d.ref.delete()));
   return old.size;
 }
 
-/** Deletes every request [uid] made: their account is going. */
+/** Deletes every request [uid] made, and when admins were told: their account is going. */
 export async function forgetJoinRequestsOf(deps: Deps, uid: string) {
-  const mine = await deps.db.collectionGroup('joinRequests').where('uid', '==', uid).get();
-  await Promise.all(mine.docs.map((d) => d.ref.delete()));
+  const [mine, pushed] = await Promise.all(
+    ['joinRequests', 'joinRequestPushes'].map((g) => deps.db.collectionGroup(g).where('uid', '==', uid).get()),
+  );
+  await Promise.all([...mine.docs, ...pushed.docs].map((d) => d.ref.delete()));
 }

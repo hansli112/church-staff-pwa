@@ -803,6 +803,13 @@ describe('申請加入 (joinRequests)', () => {
       await assertFails(updateDoc(doc(as(uid), path), { rejectedAt: Timestamp.now() }), uid);
       await assertFails(deleteDoc(doc(as(uid), path)), uid);
     }
+    // When the admins were last told of someone: the backend's alone.
+    const pushed = `churches/${A}/joinRequestPushes/${STRANGER}`;
+    await seed(pushed, { uid: STRANGER, at: Timestamp.now() });
+    for (const uid of [ADMIN_A, STRANGER]) {
+      await assertFails(getDoc(doc(as(uid), pushed)), uid);
+      await assertFails(setDoc(doc(as(uid), pushed), { uid, at: Timestamp.now() }), uid);
+    }
   });
 
   it('管理員可以關掉申請、再打開；其他人不行', async () => {

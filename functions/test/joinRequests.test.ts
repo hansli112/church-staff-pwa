@@ -91,6 +91,21 @@ describe('requestToJoin', () => {
     assert.equal(sent.length, 0);
   });
 
+  test('asking, taking it back and asking again tells the admins once a day', async () => {
+    await seed();
+    const { deps: d, sent } = pushDeps();
+    for (let i = 0; i < 3; i++) {
+      await requestToJoin(d, caller('carol'), { churchId: 'C1' });
+      await withdrawJoinRequest(deps, caller('carol'), { churchId: 'C1' });
+    }
+    await requestToJoin(d, caller('dave'), { churchId: 'C1' });
+    assert.equal(sent.length, 2, 'carol once, and dave');
+
+    setNow(new Date(Date.parse('2026-10-01T10:00:00+08:00') + DAY));
+    await requestToJoin(d, caller('carol'), { churchId: 'C1' });
+    assert.equal(sent.length, 3, 'a day on, again');
+  });
+
   test('taken back, there is none', async () => {
     await seed();
     const { deps: d } = pushDeps();
@@ -129,7 +144,7 @@ describe('answerJoinRequest', () => {
 
     await requestToJoin(d, caller('carol'), { churchId: 'C1' });
     assert.equal((await churchPreview(deps, caller('carol'), { churchId: 'C1' })).request, 'pending');
-    assert.equal(sent.length, 2);
+    assert.equal(sent.length, 1, 'told of carol today already');
   });
 
   test('only an admin answers', async () => {
@@ -159,9 +174,12 @@ describe('answerJoinRequest', () => {
     await rejectsWith(answerJoinRequest(d, caller('alice'), { churchId: 'C1', uid: 'carol', allow: true }), 'unknown');
 
     await db.doc('churches/C1/joinRequests/dave').set({ uid: 'dave', name: 'd', createdAt: Timestamp.fromDate(deps.now()) });
+    await db.doc('churches/C1/joinRequestPushes/dave').set({ uid: 'dave', at: Timestamp.fromDate(deps.now()) });
     assert.equal(await forgetOldJoinRequests(deps), 1);
     assert.equal((await db.doc('churches/C1/joinRequests/carol').get()).exists, false);
+    assert.equal((await db.doc('churches/C1/joinRequestPushes/carol').get()).exists, false, 'told over a day ago');
     assert.equal((await db.doc('churches/C1/joinRequests/dave').get()).exists, true);
+    assert.equal((await db.doc('churches/C1/joinRequestPushes/dave').get()).exists, true);
   });
 });
 
@@ -174,4 +192,5 @@ test('deleting the account takes its requests with it', async () => {
   await requestToJoin(d, caller('carol'), { churchId: 'C2' });
   await deleteAccount({ ...deps, auth }, caller('carol'));
   assert.equal((await db.collectionGroup('joinRequests').where('uid', '==', 'carol').get()).size, 0);
+  assert.equal((await db.collectionGroup('joinRequestPushes').where('uid', '==', 'carol').get()).size, 0);
 });
