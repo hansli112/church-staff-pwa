@@ -1,6 +1,7 @@
 // Smoke test of the emulator web build against the Firebase
 // emulators: Google sign-in (auth emulator popup), create church (Cloud
-// Function), edit a roster (Firestore), invite + join as a second user.
+// Function), edit a roster (Firestore), invite + join as a second user,
+// and asking to join from the church URL, let in or turned down (#88).
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -97,7 +98,8 @@ try {
   await alice.page.waitForTimeout(600);
   await button(alice.page, '用「外請講員」').click();
   await alice.page.waitForTimeout(400);
-  await button(alice.page, '完成').click();
+  // Picking one person closes the sheet; 完成 is only there when picking several.
+  if (await button(alice.page, '完成').count()) await button(alice.page, '完成').click();
   await alice.page.waitForTimeout(2500);
   await shot(alice.page, 'day-after-edit');
 
@@ -106,10 +108,13 @@ try {
   await alice.page.waitForTimeout(1500);
   await button(alice.page, '教會資訊').click();
   await alice.page.waitForTimeout(1500);
+  await shot(alice.page, 'church-info');
+  await alice.page.goBack();
+  await alice.page.waitForTimeout(1000);
   await button(alice.page, '邀請').click();
   await alice.page.waitForTimeout(2000);
   await shot(alice.page, 'invites-page');
-  await button(alice.page, '7 天').click();
+  await button(alice.page, '建立邀請連結').click();
   await alice.page.waitForTimeout(3000);
   await shot(alice.page, 'invite-created');
   const invite = await alice.page.evaluate(async () => {
@@ -149,6 +154,50 @@ try {
   await shot(bob.page, 'bob-rosters');
   const sees = await bob.page.getByText('外請講員').count();
   console.log('bob sees the edit:', sees > 0);
+
+  // 申請加入 (#88): with only the church URL, carol asks and is let in,
+  // dave asks and is turned down.
+  async function askToJoin(user, note) {
+    await user.page.goto(`${base}/c/${invite.cid}`);
+    await user.page.waitForTimeout(4000);
+    await googleSignIn(user);
+    await user.page.waitForTimeout(2000);
+    await shot(user.page, `${user.email.split('@')[0]}-church-url`);
+    await button(user.page, '申請加入').click();
+    await user.page.waitForTimeout(800);
+    if (note) await user.page.getByRole('textbox').first().fill(note);
+    await shot(user.page, `${user.email.split('@')[0]}-ask`);
+    await button(user.page, '申請加入').click();
+    await user.page.waitForTimeout(3000);
+    await shot(user.page, `${user.email.split('@')[0]}-waiting`);
+  }
+  const carol = await newUser('carol@gmail.com', '卡蘿');
+  const dave = await newUser('dave@gmail.com', '大衛');
+  await askToJoin(carol, '我是敬拜團的小明介紹來的');
+  await askToJoin(dave, '');
+
+  await alice.page.goBack();
+  await alice.page.waitForTimeout(2500);
+  await shot(alice.page, 'alice-requests');
+  await alice.page.getByRole('button', { name: '允許卡蘿加入' }).click();
+  await alice.page.waitForTimeout(3000);
+  await shot(alice.page, 'alice-allowed');
+  await shot(carol.page, 'carol-let-in');
+  console.log('carol let in:', (await carol.page.getByRole('tab', { name: '服事表' }).count()) > 0);
+
+  await alice.page.getByRole('button', { name: '拒絕大衛的申請' }).click();
+  await alice.page.waitForTimeout(1000);
+  await shot(alice.page, 'alice-declining');
+  await alice.page.waitForTimeout(7000);
+  // Back to the app: the church URL page reads the request again.
+  await dave.page.evaluate(() => {
+    window.dispatchEvent(new Event('blur'));
+    document.dispatchEvent(new Event('visibilitychange'));
+    window.dispatchEvent(new Event('focus'));
+  });
+  await dave.page.waitForTimeout(3000);
+  await shot(dave.page, 'dave-declined');
+  console.log('dave sees the decline:', (await dave.page.getByText('這次申請沒有通過').count()) > 0);
 } catch (e) {
   console.error('E2E failed:', e.message);
   for (const u of users) await shot(u.page, `failed-${u.name}`).catch(() => {});

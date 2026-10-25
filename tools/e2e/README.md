@@ -2,7 +2,8 @@
 
 `smoke.mjs` drives the web build against the Firebase emulators: Google
 sign-in (emulator popup), create a church (Cloud Function), arrange a
-roster, create an invite, and a second user joining through the link.
+roster, create an invite, a second user joining through the link, and two
+more asking to join from the church URL: one let in, one turned down.
 
 ```sh
 cd functions && npm run build && cd ..
