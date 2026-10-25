@@ -828,9 +828,9 @@ class MemoryChurchData implements ChurchData {
     final requests = _b.joinRequests[churchId] ?? {};
     final r = requests[uid];
     if (!allow) {
-      if (r != null) {
+      if (r?.stateAt(_b.clock()) == JoinRequestState.pending) {
         requests[uid] = JoinRequest(
-          uid: r.uid,
+          uid: r!.uid,
           name: r.name,
           email: r.email,
           note: r.note,

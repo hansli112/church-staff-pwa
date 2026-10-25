@@ -2863,9 +2863,6 @@ class L10nZh extends L10n {
   String get joinNoteHint => '例如：我是敬拜團的小明';
 
   @override
-  String get sendJoinRequest => '送出申請';
-
-  @override
   String get joinRequestSent => '已送出申請';
 
   @override
@@ -2878,7 +2875,7 @@ class L10nZh extends L10n {
   String get joinRequestWithdrawn => '已取消申請';
 
   @override
-  String get joinRequestRejected => '這次申請沒有通過，請直接聯絡教會。';
+  String get joinRequestRejected => '這次申請沒有通過，請直接聯絡教會';
 
   @override
   String get askAgain => '再申請一次';
@@ -2923,7 +2920,7 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get errRequestsClosed => '這間教會沒有開放申請加入';
+  String get errRequestsClosed => '這間教會沒有開放申請加入，請向管理員要邀請連結';
 
   @override
   String get errRequestGone => '這個申請已經取消或過期了';
@@ -2932,7 +2929,7 @@ class L10nZh extends L10n {
   String get takesJoinRequests => '開放申請加入';
 
   @override
-  String get takesJoinRequestsFooter => '開著時，拿到教會網址的人可以申請加入，管理員在「同工」允許後才會加入。';
+  String get takesJoinRequestsFooter => '開著時，拿到教會網址的人可以申請加入，管理員在「同工」允許後才會加入';
 
   @override
   String get notifJoinRequest => '申請加入';
@@ -5800,9 +5797,6 @@ class L10nZhHans extends L10nZh {
   String get joinNoteHint => '例如：我是敬拜团的小明';
 
   @override
-  String get sendJoinRequest => '送出申请';
-
-  @override
   String get joinRequestSent => '已送出申请';
 
   @override
@@ -5815,7 +5809,7 @@ class L10nZhHans extends L10nZh {
   String get joinRequestWithdrawn => '已取消申请';
 
   @override
-  String get joinRequestRejected => '这次申请没有通过，请直接联系教会。';
+  String get joinRequestRejected => '这次申请没有通过，请直接联系教会';
 
   @override
   String get askAgain => '再申请一次';
@@ -5860,7 +5854,7 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get errRequestsClosed => '这间教会没有开放申请加入';
+  String get errRequestsClosed => '这间教会没有开放申请加入，请向管理员要邀请链接';
 
   @override
   String get errRequestGone => '这个申请已经取消或过期了';
@@ -5869,7 +5863,7 @@ class L10nZhHans extends L10nZh {
   String get takesJoinRequests => '开放申请加入';
 
   @override
-  String get takesJoinRequestsFooter => '开着时，拿到教会网址的人可以申请加入，管理员在“同工”允许后才会加入。';
+  String get takesJoinRequestsFooter => '开着时，拿到教会网址的人可以申请加入，管理员在“同工”允许后才会加入';
 
   @override
   String get notifJoinRequest => '申请加入';

@@ -5158,12 +5158,6 @@ abstract class L10n {
   /// **'例如：我是敬拜團的小明'**
   String get joinNoteHint;
 
-  /// No description provided for @sendJoinRequest.
-  ///
-  /// In zh, this message translates to:
-  /// **'送出申請'**
-  String get sendJoinRequest;
-
   /// No description provided for @joinRequestSent.
   ///
   /// In zh, this message translates to:
@@ -5191,7 +5185,7 @@ abstract class L10n {
   /// No description provided for @joinRequestRejected.
   ///
   /// In zh, this message translates to:
-  /// **'這次申請沒有通過，請直接聯絡教會。'**
+  /// **'這次申請沒有通過，請直接聯絡教會'**
   String get joinRequestRejected;
 
   /// No description provided for @askAgain.
@@ -5257,7 +5251,7 @@ abstract class L10n {
   /// No description provided for @errRequestsClosed.
   ///
   /// In zh, this message translates to:
-  /// **'這間教會沒有開放申請加入'**
+  /// **'這間教會沒有開放申請加入，請向管理員要邀請連結'**
   String get errRequestsClosed;
 
   /// No description provided for @errRequestGone.
@@ -5275,7 +5269,7 @@ abstract class L10n {
   /// No description provided for @takesJoinRequestsFooter.
   ///
   /// In zh, this message translates to:
-  /// **'開著時，拿到教會網址的人可以申請加入，管理員在「同工」允許後才會加入。'**
+  /// **'開著時，拿到教會網址的人可以申請加入，管理員在「同工」允許後才會加入'**
   String get takesJoinRequestsFooter;
 
   /// Notification switch (#88)

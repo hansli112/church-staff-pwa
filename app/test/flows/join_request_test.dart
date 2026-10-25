@@ -52,7 +52,7 @@ void main() {
     await tapText(tester, '申請加入');
     expect(find.text('申請加入〈希望堂〉'), findsOneWidget);
     await tester.enterText(find.byType(TextField), '  我是敬拜團的小明 ');
-    await tapText(tester, '送出申請');
+    await tapText(tester, '申請加入');
     final sent = b.joinRequests['hope']!['new']!;
     expect(sent.note, '我是敬拜團的小明');
     expect(sent.name, '新朋友');
@@ -98,10 +98,10 @@ void main() {
     b.joinRequests['hope'] = {'new': request(rejectedAt: testNow)};
     await pumpApp(tester, b);
     await go(tester, '/c/hope');
-    expect(findShown('這次申請沒有通過，請直接聯絡教會。'), findsOneWidget);
+    expect(findShown('這次申請沒有通過，請直接聯絡教會'), findsOneWidget);
 
     await tapText(tester, '再申請一次');
-    await tapText(tester, '送出申請');
+    await tapText(tester, '申請加入');
     expect(b.joinRequests['hope']!['new']!.rejectedAt, isNull);
     expect(findShown('已送出申請，等管理員允許。允許後就會加入。'), findsOneWidget);
   });
@@ -167,16 +167,43 @@ void main() {
     expect(findShown('開放申請加入'), findsNothing);
   });
 
-  testWidgets('a church taking no requests cannot let one in', (tester) async {
+  testWidgets('a church taking no requests can only turn down those waiting', (tester) async {
     final b = seededChurch();
     b.joinRequests['grace'] = {'new': request()};
     b.churches['grace'] = b.churches['grace']!.copyWith(takesJoinRequests: false);
     await pumpApp(tester, b);
     await go(tester, '/me/members');
-    await tester.tap(find.bySemanticsLabel('允許新朋友加入'));
+    expect(find.bySemanticsLabel('允許新朋友加入'), findsNothing);
+    await tester.tap(find.bySemanticsLabel('拒絕新朋友的申請'));
     await settle(tester);
-    expect(find.text('這間教會沒有開放申請加入'), findsOneWidget);
-    expect(b.members['grace']!['new'], isNull);
+    expect(b.joinRequests['grace']!['new']!.rejectedAt, testNow);
+  });
+
+  testWidgets('waiting on a church that stopped taking requests: an invite instead, or take it back', (tester) async {
+    final b = newcomer();
+    b.joinRequests['hope'] = {'new': request()};
+    b.churches['hope'] = b.churches['hope']!.copyWith(takesJoinRequests: false);
+    await pumpApp(tester, b);
+    await go(tester, '/c/hope');
+    expect(findShown('你還不是這間教會的同工。請向管理員要邀請連結來加入。'), findsOneWidget);
+    expect(findShown('輸入邀請碼'), findsOneWidget);
+    await tapText(tester, '取消申請');
+    expect(b.joinRequests['hope']!.containsKey('new'), isFalse);
+  });
+
+  testWidgets('turned down while away, they see it on coming back', (tester) async {
+    final b = newcomer();
+    b.joinRequests['hope'] = {'new': request()};
+    await pumpApp(tester, b);
+    await go(tester, '/c/hope');
+    expect(findShown('已送出申請，等管理員允許。允許後就會加入。'), findsOneWidget);
+    expect(findShown('輸入邀請碼'), findsOneWidget, reason: 'an invite still works while waiting');
+
+    b.joinRequests['hope']!['new'] = request(rejectedAt: testNow);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await settle(tester);
+    expect(findShown('這次申請沒有通過，請直接聯絡教會'), findsOneWidget);
   });
 
   testWidgets('cancelling the note sends nothing', (tester) async {
@@ -199,7 +226,7 @@ void main() {
     expect(findShown('驗證你的 email'), findsOneWidget, reason: 'the banner, as on the welcome page');
 
     await tapText(tester, '申請加入');
-    await tapText(tester, '送出申請');
+    await tapText(tester, '申請加入');
     expect(find.text('驗證 email 後才能申請加入'), findsOneWidget);
     expect(b.joinRequests['hope'], isNull);
   });
@@ -210,7 +237,7 @@ void main() {
     b.churches['hope'] = b.churches['hope']!.copyWith(takesJoinRequests: false);
     await pumpApp(tester, b);
     await go(tester, '/c/hope');
-    expect(findShown('這次申請沒有通過，請直接聯絡教會。'), findsOneWidget);
+    expect(findShown('這次申請沒有通過，請直接聯絡教會'), findsOneWidget);
     expect(findShown('再申請一次'), findsNothing);
     await tapText(tester, '輸入邀請碼');
     expect(find.byType(TextField), findsOneWidget);

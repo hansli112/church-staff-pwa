@@ -105,8 +105,8 @@ export interface Words {
   /** A member left (triggers.ts); [name] is theirs, null when they had none. */
   memberLeft(name: string | null): string;
 
-  /** 申請加入 (joinRequests.ts): to admins, [name] asked to join (null when they have none); to them, they were let in. */
-  joinRequested(name: string | null): string;
+  /** 申請加入 (joinRequests.ts): to admins, [name] asked to join (null when they have none), with what they wrote, if anything; to them, they were let in. */
+  joinRequested(name: string | null, note: string): string;
   joinAllowed: string;
 
   /** 回報人數 (attendance.ts): the title, and the body for [group]'s meeting on [day] (dateWithWeekday's). */
@@ -155,7 +155,7 @@ const zhHant: Words = {
   putOn: (day, duties) => `你被排進 ${day}：${duties.join('、')}`,
   takenOff: (day, duties) => `你被移出 ${day}：${duties.join('、')}`,
   memberLeft: (name) => (name ? `「${name}」退出了教會` : '有人退出了教會'),
-  joinRequested: (name) => (name ? `「${name}」申請加入教會` : '有人申請加入教會'),
+  joinRequested: (name, note) => `${name ? `「${name}」申請加入教會` : '有人申請加入教會'}${note ? `：${note}` : ''}`,
   joinAllowed: '管理員允許你加入了，歡迎！',
   attendanceTitle: '填寫人數',
   attendanceBody: (group, day) => `「${group}」${day}的聚會有幾個人？`,
@@ -183,7 +183,7 @@ const zhHans: Words = {
   putOn: (day, duties) => `你被排入 ${day}：${duties.join('、')}`,
   takenOff: (day, duties) => `你被移出 ${day}：${duties.join('、')}`,
   memberLeft: (name) => (name ? `“${name}”退出了教会` : '有人退出了教会'),
-  joinRequested: (name) => (name ? `“${name}”申请加入教会` : '有人申请加入教会'),
+  joinRequested: (name, note) => `${name ? `“${name}”申请加入教会` : '有人申请加入教会'}${note ? `：${note}` : ''}`,
   joinAllowed: '管理员允许你加入了，欢迎！',
   attendanceTitle: '填写人数',
   attendanceBody: (group, day) => `“${group}”${day}的聚会有几个人？`,
@@ -211,7 +211,7 @@ const en: Words = {
   putOn: (day, duties) => `You’re on ${day}: ${duties.join(', ')}`,
   takenOff: (day, duties) => `You’re no longer on ${day}: ${duties.join(', ')}`,
   memberLeft: (name) => `${name ?? 'Someone'} left the church`,
-  joinRequested: (name) => `${name ?? 'Someone'} asked to join the church`,
+  joinRequested: (name, note) => `${name ?? 'Someone'} asked to join the church${note ? `: ${note}` : ''}`,
   joinAllowed: 'An admin let you in. Welcome!',
   attendanceTitle: 'Attendance',
   attendanceBody: (group, day) => `How many came to ${group} on ${day}?`,
@@ -240,7 +240,7 @@ const ja: Words = {
   putOn: (day, duties) => `${day}の担当になりました：${duties.join('、')}`,
   takenOff: (day, duties) => `${day}の担当から外れました：${duties.join('、')}`,
   memberLeft: (name) => `${name ?? 'メンバー'}が教会を退出しました`,
-  joinRequested: (name) => `${name ?? 'どなたか'}が教会への参加を申請しました`,
+  joinRequested: (name, note) => `${name ?? 'どなたか'}が教会への参加を申請しました${note ? `：${note}` : ''}`,
   joinAllowed: '管理者が参加を承認しました。ようこそ！',
   attendanceTitle: '人数の記録',
   attendanceBody: (group, day) => `${day}の「${group}」には何人集まりましたか？`,
@@ -267,7 +267,8 @@ const ko: Words = {
   putOn: (day, duties) => `${day} 봉사에 배정됐어요: ${duties.join(', ')}`,
   takenOff: (day, duties) => `${day} 봉사에서 빠졌어요: ${duties.join(', ')}`,
   memberLeft: (name) => (name ? `${name} 님이 교회를 나갔어요` : '멤버 한 명이 교회를 나갔어요'),
-  joinRequested: (name) => (name ? `${name} 님이 교회 가입을 신청했어요` : '누군가 교회 가입을 신청했어요'),
+  joinRequested: (name, note) =>
+    `${name ? `${name} 님이 교회 가입을 신청했어요` : '누군가 교회 가입을 신청했어요'}${note ? `: ${note}` : ''}`,
   joinAllowed: '관리자가 가입을 승인했어요. 환영해요!',
   attendanceTitle: '인원 기록',
   attendanceBody: (group, day) => `${day} ${group}에 몇 명이 모였나요?`,

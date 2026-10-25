@@ -19,7 +19,8 @@ rules_version = '2';
 //   - Creating a church, joining one, renaming one and changing its status all
 //     go through Cloud Functions (Admin SDK, bypasses these rules), because
 //     each needs a check the rules cannot do: the duplicate-name lookup, an
-//     invite, or being the platform operator. No client may write those docs.
+//     invite or an admin letting in a request to join, or being the platform
+//     operator. No client may write those docs.
 //   - Removing a member deletes churches/{cid}/members/{uid}; the Auth account
 //     survives and keeps a valid ID token. Every church rule therefore needs
 //     an existing member doc, not just a signed-in user.

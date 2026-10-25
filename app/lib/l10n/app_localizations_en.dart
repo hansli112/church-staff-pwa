@@ -3007,9 +3007,6 @@ class L10nEn extends L10n {
   String get joinNoteHint => 'e.g. I’m Ming from the worship team';
 
   @override
-  String get sendJoinRequest => 'Send request';
-
-  @override
   String get joinRequestSent => 'Request sent';
 
   @override
@@ -3073,7 +3070,7 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get errRequestsClosed => 'This church isn’t taking requests to join';
+  String get errRequestsClosed => 'This church isn’t taking requests to join. Ask an admin for an invite link.';
 
   @override
   String get errRequestGone => 'This request was canceled or has expired';

@@ -6,9 +6,9 @@ import { fail, requireCaller, type Caller, type Deps } from './common.js';
 import { forgetJoinRequestsOf } from './joinRequests.js';
 
 /**
- * Deletes the caller's account (App Store guideline 5.1.1(v)): every
- * membership, users/{uid}, their requests to join, then the Auth user. Names already on rosters
- * stay, as plain text.
+ * Deletes the caller's account (App Store guideline 5.1.1(v)): their
+ * requests to join, every membership, users/{uid}, then the Auth user.
+ * Names already on rosters stay, as plain text.
  *
  * The only admin of a church others are in must hand it over first, so no
  * church is left without someone who can manage it. The error lists those

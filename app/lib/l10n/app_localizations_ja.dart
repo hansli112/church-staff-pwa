@@ -2868,9 +2868,6 @@ class L10nJa extends L10n {
   String get joinNoteHint => '例：賛美チームのミンです';
 
   @override
-  String get sendJoinRequest => '申請を送信';
-
-  @override
   String get joinRequestSent => '申請を送信しました';
 
   @override
@@ -2928,7 +2925,7 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get errRequestsClosed => 'この教会は参加申請を受け付けていません';
+  String get errRequestsClosed => 'この教会は参加申請を受け付けていません。管理者に招待リンクをもらってください。';
 
   @override
   String get errRequestGone => 'この申請は取り消されたか、期限が切れています';

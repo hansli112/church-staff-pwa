@@ -48,6 +48,22 @@ class _NotMember extends ConsumerStatefulWidget {
 class _NotMemberState extends ConsumerState<_NotMember> {
   bool _busy = false;
 
+  late final AppLifecycleListener _lifecycle;
+
+  @override
+  void initState() {
+    super.initState();
+    // Back in the app, how the request stands may have changed: turned down
+    // meanwhile. Being let in shows through the memberships.
+    _lifecycle = AppLifecycleListener(onResume: () => ref.invalidate(churchPreviewProvider(widget.churchId)));
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
+
   /// Asks to join, with what they want the admin to know.
   Future<void> _ask(ChurchPreview church) async {
     final l10n = L10n.of(context);
@@ -120,6 +136,9 @@ class _NotMemberState extends ConsumerState<_NotMember> {
           data: (church) {
             final canAsk = church.takesRequests && church.request != JoinRequestState.pending;
             final message = switch (church.request) {
+              // Waiting on a church that stopped taking requests: nobody
+              // can let them in now (#88).
+              JoinRequestState.pending when !church.takesRequests => l10n.churchEntryNotMember,
               JoinRequestState.pending => l10n.joinRequestPending,
               JoinRequestState.rejected => l10n.joinRequestRejected,
               null => church.takesRequests ? l10n.churchEntryCanAsk : l10n.churchEntryNotMember,
@@ -151,7 +170,7 @@ class _NotMemberState extends ConsumerState<_NotMember> {
                         expand: true,
                         onPressed: _busy ? null : _withdraw,
                       ),
-                      if (widget.hasChurch) next(primary: false),
+                      next(primary: false),
                     ] else
                       next(primary: true),
                   ],
@@ -200,7 +219,7 @@ class _AskDialogState extends State<_AskDialog> {
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
-        TextButton(onPressed: () => Navigator.pop(context, _note.text.trim()), child: Text(l10n.sendJoinRequest)),
+        TextButton(onPressed: () => Navigator.pop(context, _note.text.trim()), child: Text(l10n.askToJoin)),
       ],
     );
   }

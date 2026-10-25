@@ -1,7 +1,7 @@
 import { Timestamp, type DocumentSnapshot } from 'firebase-admin/firestore';
 
 import { churchAccess, churchId, isChurchOpen } from './access.js';
-import { DAY_MS, fail, requireCaller, serverTime, type Caller, type Deps } from './common.js';
+import { DAY_MS, fail, id, requireCaller, serverTime, type Caller, type Deps } from './common.js';
 import { personName, TEXT_LIMITS, withinTextLimit } from './limits.js';
 import { adminUids, notifyMembers, type PushDeps } from './push.js';
 
@@ -67,16 +67,16 @@ export async function requestToJoin(deps: PushDeps & Deps, caller: Caller | null
   const c = requireCaller(caller);
   const cid = churchId((data as { churchId?: unknown })?.churchId);
   const raw = (data as { note?: unknown })?.note ?? '';
-  if (typeof raw !== 'string' || !withinTextLimit(raw.trim(), TEXT_LIMITS.joinNote)) fail('invalid-argument', 'unknown');
+  if (typeof raw !== 'string') fail('invalid-argument', 'unknown');
   const note = raw.trim();
+  if (!withinTextLimit(note, TEXT_LIMITS.joinNote)) fail('invalid-argument', 'unknown');
   if (!c.emailVerified) fail('failed-precondition', 'unverifiedEmail');
   const { db } = deps;
-  const [church, member, request, profile, pushed] = await db.getAll(
+  const [church, member, request, profile] = await db.getAll(
     db.doc(`churches/${cid}`),
     db.doc(`churches/${cid}/members/${c.uid}`),
     db.doc(requestPath(cid, c.uid)),
     db.doc(`users/${c.uid}`),
-    db.doc(pushedPath(cid, c.uid)),
   );
   if (!isChurchOpen(church)) fail('not-found', 'notFound');
   if (member.exists) return {};
@@ -90,12 +90,18 @@ export async function requestToJoin(deps: PushDeps & Deps, caller: Caller | null
     ...(note ? { note } : {}),
     createdAt: Timestamp.fromDate(deps.now()),
   });
-  const last = pushed.get('at') as Timestamp | undefined;
-  if (last && deps.now().getTime() - last.toMillis() < DAY_MS) return {};
-  await pushed.ref.set({ uid: c.uid, at: Timestamp.fromDate(deps.now()) });
+  // Taken in a transaction: two asks at once ring once.
+  const pushedRef = db.doc(pushedPath(cid, c.uid));
+  const due = await db.runTransaction(async (tx) => {
+    const last = (await tx.get(pushedRef)).get('at') as Timestamp | undefined;
+    if (last && deps.now().getTime() - last.toMillis() < DAY_MS) return false;
+    tx.set(pushedRef, { uid: c.uid, at: Timestamp.fromDate(deps.now()) });
+    return true;
+  });
+  if (!due) return {};
   await notifyMembers(deps, cid, await adminUids(db, cid), 'joinRequest', (w) => ({
     title: church.get('name') as string,
-    body: w.joinRequested(name || null),
+    body: w.joinRequested(name || null, note),
     link: '/me/members',
   }));
   return {};
@@ -118,15 +124,16 @@ export async function withdrawJoinRequest(deps: Deps, caller: Caller | null, dat
  */
 export async function answerJoinRequest(deps: PushDeps & Deps, caller: Caller | null, data: unknown) {
   const input = (data ?? {}) as { uid?: unknown; allow?: unknown };
-  if (typeof input.uid !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(input.uid)) fail('invalid-argument', 'unknown');
-  const uid = input.uid;
+  const uid = id(input.uid);
   const { cid, church } = await churchAccess(deps, caller, data, 'admin');
   const { db } = deps;
   const requestRef = db.doc(requestPath(cid, uid));
   const memberRef = db.doc(`churches/${cid}/members/${uid}`);
   if (input.allow !== true) {
-    const request = await requestRef.get();
-    if (request.exists) await requestRef.update({ rejectedAt: Timestamp.fromDate(deps.now()) });
+    // Only the request they turned down: not one taken back, nor asked anew, meanwhile.
+    await db.runTransaction(async (tx) => {
+      if (stateOf(deps, await tx.get(requestRef)) === 'pending') tx.update(requestRef, { rejectedAt: Timestamp.fromDate(deps.now()) });
+    });
     return {};
   }
   if (!takesRequests(church)) fail('failed-precondition', 'unknown', 'requestsClosed');

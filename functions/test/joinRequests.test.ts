@@ -46,7 +46,7 @@ describe('requestToJoin', () => {
     assert.equal(request.get('note'), '我是敬拜團的小明');
     assert.equal(request.get('uid'), 'carol');
     assert.deepEqual(sent.map((s) => s.tokens), [['tok-alice']]);
-    assert.equal(sent[0].body, '「新朋友」申請加入教會');
+    assert.equal(sent[0].body, '「新朋友」申請加入教會：我是敬拜團的小明');
     assert.equal(sent[0].link, '/c/C1?to=%2Fme%2Fmembers');
 
     const preview = await churchPreview(deps, caller('carol'), { churchId: 'C1' });
@@ -204,6 +204,17 @@ describe('answerJoinRequest', () => {
     assert.deepEqual((await db.doc('churches/C1/members/carol').get()).get('zoneTypes'), ['sunday'], 'kept as they joined');
     assert.equal((await db.doc('churches/C1/joinRequests/carol').get()).exists, false);
     assert.equal(sent.length, 1, 'only the admin, when asked');
+  });
+
+  test('turning down one already turned down, or taken back, changes nothing', async () => {
+    await seed();
+    const { deps: d } = pushDeps();
+    await requestToJoin(d, caller('carol'), { churchId: 'C1' });
+    await answerJoinRequest(d, caller('alice'), { churchId: 'C1', uid: 'carol', allow: false });
+    const first = (await db.doc('churches/C1/joinRequests/carol').get()).get('rejectedAt');
+    setNow(new Date('2026-10-02T10:00:00+08:00'));
+    await answerJoinRequest(d, caller('alice'), { churchId: 'C1', uid: 'carol', allow: false });
+    assert.deepEqual((await db.doc('churches/C1/joinRequests/carol').get()).get('rejectedAt'), first);
   });
 
   test('turning down someone who never asked changes nothing', async () => {

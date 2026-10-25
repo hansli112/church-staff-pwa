@@ -101,6 +101,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
           ];
           final head = requests.isEmpty ? 0 : requests.length + 1;
           final clock = ChurchClock.of(context, ref);
+          final takesRequests = ref.watch(churchProvider.select((c) => c.value?.takesJoinRequests ?? true));
           // Nobody else has joined: the next step is inviting them.
           final alone = isAdmin && _query.isEmpty && list.length <= 1 && pending.isEmpty && requests.isEmpty;
           final extra = alone ? 1 : (pending.isEmpty ? 0 : pending.length + 1);
@@ -139,7 +140,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                         itemCount: head + list.length + extra,
                         itemExtent: null,
                         itemBuilder: (context, i) {
-                          if (i < head) return _request(c, clock, requests, i);
+                          if (i < head) return _request(c, clock, requests, i, takesRequests: takesRequests);
                           i -= head;
                           if (alone && i == list.length) {
                             return Padding(
@@ -219,7 +220,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
 
   /// Row [i] of the requests to join: their count, then each with 允許
   /// and 拒絕.
-  Widget _request(AppColors c, ChurchClock clock, List<JoinRequest> requests, int i) {
+  Widget _request(AppColors c, ChurchClock clock, List<JoinRequest> requests, int i, {required bool takesRequests}) {
     final l10n = L10n.of(context);
     if (i == 0) {
       return Padding(
@@ -256,12 +257,15 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                 semanticsLabel: l10n.declineJoinLabel(name),
                 onPressed: busy ? null : () => _answer(r, name, allow: false),
               ),
-              const SizedBox(width: Space.xs),
-              RowButton(
-                label: l10n.allowJoin,
-                semanticsLabel: l10n.allowJoinLabel(name),
-                onPressed: busy ? null : () => _answer(r, name, allow: true),
-              ),
+              // While the church takes none, only turning down (#88).
+              if (takesRequests) ...[
+                const SizedBox(width: Space.xs),
+                RowButton(
+                  label: l10n.allowJoin,
+                  semanticsLabel: l10n.allowJoinLabel(name),
+                  onPressed: busy ? null : () => _answer(r, name, allow: true),
+                ),
+              ],
             ],
           ),
         ),

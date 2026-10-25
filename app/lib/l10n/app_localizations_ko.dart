@@ -2868,9 +2868,6 @@ class L10nKo extends L10n {
   String get joinNoteHint => '예: 찬양팀 민수예요';
 
   @override
-  String get sendJoinRequest => '신청 보내기';
-
-  @override
   String get joinRequestSent => '신청을 보냈어요';
 
   @override
@@ -2928,7 +2925,7 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get errRequestsClosed => '이 교회는 가입 신청을 받지 않아요';
+  String get errRequestsClosed => '이 교회는 가입 신청을 받지 않아요. 관리자에게 초대 링크를 받아 주세요.';
 
   @override
   String get errRequestGone => '취소되었거나 기한이 지난 신청이에요';
