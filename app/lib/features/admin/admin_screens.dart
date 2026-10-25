@@ -17,7 +17,6 @@ import '../../state/saved_read.dart';
 import '../common/calendar_read_notice.dart';
 import '../common/errors.dart';
 import '../common/labels.dart';
-import '../me/services_screen.dart' show promptText;
 
 String statusLabel(L10n l10n, ChurchStatus s) => switch (s) {
   ChurchStatus.active => l10n.statusActive,

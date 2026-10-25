@@ -737,6 +737,96 @@ Future<bool?> askChoice(
   );
 }
 
+/// Asks for a line of text. Null when cancelled or empty; with
+/// [optional], empty is an answer and only cancelling is null. The action
+/// is [action], or 「儲存」.
+Future<String?> promptText(
+  BuildContext context, {
+  required String title,
+  String? label,
+  String? hint,
+  String initial = '',
+  int? maxLength,
+  int maxLines = 1,
+  String? action,
+  bool optional = false,
+}) async {
+  final result = await showAdaptiveDialog<String>(
+    context: context,
+    builder: (context) => _PromptDialog(
+      title: title,
+      label: label,
+      hint: hint,
+      initial: initial,
+      maxLength: maxLength,
+      maxLines: maxLines,
+      action: action,
+    ),
+  );
+  final t = result?.trim();
+  return t == null || (t.isEmpty && !optional) ? null : t;
+}
+
+/// Owns its text controller, so the controller outlives the closing
+/// animation.
+class _PromptDialog extends StatefulWidget {
+  const _PromptDialog({
+    required this.title,
+    this.label,
+    this.hint,
+    required this.initial,
+    this.maxLength,
+    required this.maxLines,
+    this.action,
+  });
+
+  final String title;
+  final String? label;
+  final String? hint;
+  final String initial;
+  final int? maxLength;
+  final int maxLines;
+  final String? action;
+
+  @override
+  State<_PromptDialog> createState() => _PromptDialogState();
+}
+
+class _PromptDialogState extends State<_PromptDialog> {
+  late final _controller = TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final oneLine = widget.maxLines == 1;
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        maxLength: widget.maxLength,
+        minLines: 1,
+        maxLines: widget.maxLines,
+        decoration: InputDecoration(labelText: widget.label, hintText: widget.hint),
+        onSubmitted: oneLine ? (v) => Navigator.pop(context, v) : null,
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
+        TextButton(
+          onPressed: () => Navigator.pop(context, _controller.text),
+          child: Text(widget.action ?? l10n.save),
+        ),
+      ],
+    );
+  }
+}
+
 Widget _dialogAction(
   BuildContext context,
   bool ios,

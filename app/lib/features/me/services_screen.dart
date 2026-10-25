@@ -101,65 +101,6 @@ String newServiceId(List<String> taken) {
   }
 }
 
-/// Asks for one line of text. Null when cancelled or empty.
-Future<String?> promptText(
-  BuildContext context, {
-  required String title,
-  required String hint,
-  String initial = '',
-  int? maxLength,
-}) async {
-  final result = await showAdaptiveDialog<String>(
-    context: context,
-    builder: (context) => _PromptDialog(title: title, hint: hint, initial: initial, maxLength: maxLength),
-  );
-  final t = result?.trim();
-  return t == null || t.isEmpty ? null : t;
-}
-
-/// Owns its text controller, so the controller outlives the closing
-/// animation.
-class _PromptDialog extends StatefulWidget {
-  const _PromptDialog({required this.title, required this.hint, required this.initial, this.maxLength});
-
-  final String title;
-  final String hint;
-  final String initial;
-  final int? maxLength;
-
-  @override
-  State<_PromptDialog> createState() => _PromptDialogState();
-}
-
-class _PromptDialogState extends State<_PromptDialog> {
-  late final _controller = TextEditingController(text: widget.initial);
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = L10n.of(context);
-    return AlertDialog(
-      title: Text(widget.title),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        maxLength: widget.maxLength,
-        decoration: InputDecoration(hintText: widget.hint),
-        onSubmitted: (v) => Navigator.pop(context, v),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
-        TextButton(onPressed: () => Navigator.pop(context, _controller.text), child: Text(l10n.save)),
-      ],
-    );
-  }
-}
-
 /// One service: name, weekday, whether it still runs, its roster template
 /// and its common special events.
 class ServiceEditorScreen extends ConsumerWidget {

@@ -919,9 +919,9 @@ void contractTests(Future<ContractWorld> Function() open) {
       final g = await Grace.open(w);
       await w.signOut();
       final uid = await w.signUp('new@example.com', name: '新朋友');
-      expect((await cloud().churchPreview(g.cid)).takesRequests, isTrue);
+      expect((await cloud().churchPreview(g.cid)).takesJoinRequests, isTrue);
       await cloud().requestToJoin(g.cid, note: '我是小明');
-      expect((await cloud().churchPreview(g.cid)).request, JoinRequestState.pending);
+      expect((await cloud().churchPreview(g.cid)).joinRequest, JoinRequestState.pending);
       await expectLater(g.church.joinRequests().first, denied());
 
       await w.signIn(Grace.meiEmail);
@@ -954,7 +954,7 @@ void contractTests(Future<ContractWorld> Function() open) {
 
       await w.signIn('new@example.com');
       final preview = await cloud().churchPreview(g.cid);
-      expect((preview.takesRequests, preview.request), (false, JoinRequestState.rejected));
+      expect((preview.takesJoinRequests, preview.joinRequest), (false, JoinRequestState.rejected));
       await expectLater(
         cloud().requestToJoin(g.cid),
         fails(CloudErrorCode.unknown, reason: CloudReason.requestsClosed),
@@ -968,9 +968,9 @@ void contractTests(Future<ContractWorld> Function() open) {
 
       await w.signIn('new@example.com');
       await cloud().requestToJoin(g.cid);
-      expect((await cloud().churchPreview(g.cid)).request, JoinRequestState.pending);
+      expect((await cloud().churchPreview(g.cid)).joinRequest, JoinRequestState.pending);
       await cloud().withdrawJoinRequest(g.cid);
-      expect((await cloud().churchPreview(g.cid)).request, isNull);
+      expect((await cloud().churchPreview(g.cid)).joinRequest, isNull);
     });
 
     test('an unverified email cannot ask yet', () async {

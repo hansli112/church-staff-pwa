@@ -83,18 +83,28 @@ export async function redeemInvite(deps: Deps, caller: Caller | null, data: unkn
     const existing = await tx.get(memberRef);
     if (existing.exists) return;
     tx.create(memberRef, {
-      uid: c.uid,
-      name: personName(profile.get('name')) || personName(c.name),
-      email: c.email ?? '',
-      role: 'staff',
-      groups: [],
-      zones: zoneTypes.map((serviceType) => ({ serviceType, duties: [] })),
-      zoneTypes,
-      joinedAt: serverTime(),
+      ...newStaff(c.uid, personName(profile.get('name')) || personName(c.name), c.email ?? '', zoneTypes),
       invitedWith: invite.code,
     });
   });
   return { churchId: invite.cid };
+}
+
+/**
+ * A member doc for someone let in as 同工, by invite or by an admin
+ * allowing their request (#88): no 身分, in the 牧區 of [zoneTypes].
+ */
+export function newStaff(uid: string, name: string, email: string, zoneTypes: string[] = []) {
+  return {
+    uid,
+    name,
+    email,
+    role: 'staff',
+    groups: [],
+    zones: zoneTypes.map((serviceType) => ({ serviceType, duties: [] })),
+    zoneTypes,
+    joinedAt: serverTime(),
+  };
 }
 
 /** Deletes every invite to church [cid]: the church is purged. */

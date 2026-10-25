@@ -12,7 +12,6 @@ import '../../state/providers.dart';
 import '../church/links.dart';
 import '../common/errors.dart';
 import '../common/time_zones.dart';
-import 'services_screen.dart' show promptText;
 
 final webhookProvider = StreamProvider.autoDispose<WebhookSettings?>((ref) => openChurch(ref).webhook());
 

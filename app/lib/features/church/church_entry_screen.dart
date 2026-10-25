@@ -67,9 +67,15 @@ class _NotMemberState extends ConsumerState<_NotMember> {
   /// Asks to join, with what they want the admin to know.
   Future<void> _ask(ChurchPreview church) async {
     final l10n = L10n.of(context);
-    final note = await showAdaptiveDialog<String>(
-      context: context,
-      builder: (context) => _AskDialog(churchName: church.name),
+    final note = await promptText(
+      context,
+      title: l10n.askToJoinTitle(church.name),
+      label: l10n.joinNoteLabel,
+      hint: l10n.joinNoteHint,
+      maxLength: TextLimits.joinNote,
+      maxLines: 3,
+      action: l10n.askToJoin,
+      optional: true,
     );
     if (note == null || !mounted) return;
     await _run(
@@ -134,14 +140,14 @@ class _NotMemberState extends ConsumerState<_NotMember> {
             onAction: () => context.go('/home'),
           ),
           data: (church) {
-            final canAsk = church.takesRequests && church.request != JoinRequestState.pending;
-            final message = switch (church.request) {
+            final canAsk = church.takesJoinRequests && church.joinRequest != JoinRequestState.pending;
+            final message = switch (church.joinRequest) {
               // Waiting on a church that stopped taking requests: nobody
               // can let them in now (#88).
-              JoinRequestState.pending when !church.takesRequests => l10n.churchEntryNotMember,
+              JoinRequestState.pending when !church.takesJoinRequests => l10n.churchEntryNotMember,
               JoinRequestState.pending => l10n.joinRequestPending,
               JoinRequestState.rejected => l10n.joinRequestRejected,
-              null => church.takesRequests ? l10n.churchEntryCanAsk : l10n.churchEntryNotMember,
+              null => church.takesJoinRequests ? l10n.churchEntryCanAsk : l10n.churchEntryNotMember,
             };
             return Center(
               child: ConstrainedBox(
@@ -158,13 +164,13 @@ class _NotMemberState extends ConsumerState<_NotMember> {
                     const SizedBox(height: Space.xl),
                     if (canAsk) ...[
                       PrimaryButton(
-                        label: church.request == JoinRequestState.rejected ? l10n.askAgain : l10n.askToJoin,
+                        label: church.joinRequest == JoinRequestState.rejected ? l10n.askAgain : l10n.askToJoin,
                         busy: _busy,
                         onPressed: () => _ask(church),
                       ),
                       const SizedBox(height: Space.s),
                       next(primary: false),
-                    ] else if (church.request == JoinRequestState.pending) ...[
+                    ] else if (church.joinRequest == JoinRequestState.pending) ...[
                       SecondaryButton(
                         label: l10n.withdrawJoinRequest,
                         expand: true,
@@ -180,47 +186,6 @@ class _NotMemberState extends ConsumerState<_NotMember> {
           },
         ),
       ),
-    );
-  }
-}
-
-/// What someone asking to join tells the admin, optional. Returns it
-/// trimmed, or null when cancelled.
-class _AskDialog extends StatefulWidget {
-  const _AskDialog({required this.churchName});
-
-  final String churchName;
-
-  @override
-  State<_AskDialog> createState() => _AskDialogState();
-}
-
-class _AskDialogState extends State<_AskDialog> {
-  final _note = TextEditingController();
-
-  @override
-  void dispose() {
-    _note.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = L10n.of(context);
-    return AlertDialog(
-      title: Text(l10n.askToJoinTitle(widget.churchName)),
-      content: TextField(
-        controller: _note,
-        autofocus: true,
-        maxLength: TextLimits.joinNote,
-        minLines: 1,
-        maxLines: 3,
-        decoration: InputDecoration(labelText: l10n.joinNoteLabel, hintText: l10n.joinNoteHint),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
-        TextButton(onPressed: () => Navigator.pop(context, _note.text.trim()), child: Text(l10n.askToJoin)),
-      ],
     );
   }
 }

@@ -672,8 +672,8 @@ class ChurchPreview {
     required this.id,
     required this.name,
     this.logoUrl,
-    this.takesRequests = false,
-    this.request,
+    this.takesJoinRequests = false,
+    this.joinRequest,
   });
 
   final String id;
@@ -681,10 +681,10 @@ class ChurchPreview {
   final String? logoUrl;
 
   /// Whether one may ask to join (申請加入, #88).
-  final bool takesRequests;
+  final bool takesJoinRequests;
 
   /// How the signed-in person's request stands; null when they have none.
-  final JoinRequestState? request;
+  final JoinRequestState? joinRequest;
 }
 
 /// The result of fetching a content source right after setting it.

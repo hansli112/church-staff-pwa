@@ -7,7 +7,7 @@ import { forgetLinkSource, moveLinkFetch } from './churchLink.js';
 import { followTimeZone } from './eventSync.js';
 import { DAY_MS, fail, requireCaller, runEach, serverTime, text, type Caller, type Deps } from './common.js';
 import { forgetInvites } from './invites.js';
-import { requestState, takesRequests } from './joinRequests.js';
+import { requestState, takesJoinRequests } from './joinRequests.js';
 import { languageOf, words } from './languages.js';
 import { personName, TEXT_LIMITS } from './limits.js';
 import { forgetPending } from './pendingMembers.js';
@@ -245,7 +245,7 @@ export async function churchPreview(deps: Deps, caller: Caller | null, data: unk
     churchId: cid,
     name: snap.get('name') as string,
     logoPath: version ? publicLogoPath(cid, version) : null,
-    takesRequests: takesRequests(snap),
-    request: caller ? await requestState(deps, cid, caller.uid) : null,
+    takesJoinRequests: takesJoinRequests(snap),
+    joinRequest: caller ? await requestState(deps, cid, caller.uid) : null,
   };
 }

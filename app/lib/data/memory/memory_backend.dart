@@ -2144,8 +2144,8 @@ class MemoryCloud implements CloudApi {
       id: c.id,
       name: c.name,
       logoUrl: c.logoUrl,
-      takesRequests: c.takesJoinRequests,
-      request: uid == null ? null : _b.joinRequestState(churchId, uid),
+      takesJoinRequests: c.takesJoinRequests,
+      joinRequest: uid == null ? null : _b.joinRequestState(churchId, uid),
     );
   }
 

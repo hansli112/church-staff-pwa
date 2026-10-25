@@ -18,7 +18,6 @@ import '../../state/providers.dart';
 import '../common/errors.dart';
 import '../rosters/future_changes.dart';
 import 'attendance.dart';
-import 'services_screen.dart' show promptText;
 
 /// 聚會與事工 (#82), for admins: every service and 事工, each opening its
 /// page; a new 事工 is added here.

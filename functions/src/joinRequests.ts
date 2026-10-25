@@ -1,7 +1,8 @@
 import { Timestamp, type DocumentSnapshot } from 'firebase-admin/firestore';
 
 import { churchAccess, churchId, isChurchOpen } from './access.js';
-import { DAY_MS, fail, id, requireCaller, serverTime, type Caller, type Deps } from './common.js';
+import { DAY_MS, fail, id, requireCaller, type Caller, type Deps } from './common.js';
+import { newStaff } from './invites.js';
 import { personName, TEXT_LIMITS, withinTextLimit } from './limits.js';
 import { adminUids, notifyMembers, type PushDeps } from './push.js';
 
@@ -31,7 +32,7 @@ const requestPath = (cid: string, uid: string) => `churches/${cid}/joinRequests/
 const pushedPath = (cid: string, uid: string) => `churches/${cid}/joinRequestPushes/${uid}`;
 
 /** Whether [church] takes requests: open, and its admin has not turned them off. */
-export const takesRequests = (church: DocumentSnapshot) =>
+export const takesJoinRequests = (church: DocumentSnapshot) =>
   isChurchOpen(church) && church.get('joinRequestsClosed') !== true;
 
 /**
@@ -80,7 +81,7 @@ export async function requestToJoin(deps: PushDeps & Deps, caller: Caller | null
   );
   if (!isChurchOpen(church)) fail('not-found', 'notFound');
   if (member.exists) return {};
-  if (!takesRequests(church)) fail('failed-precondition', 'unknown', 'requestsClosed');
+  if (!takesJoinRequests(church)) fail('failed-precondition', 'unknown', 'requestsClosed');
   if (stateOf(deps, request) === 'pending') return {};
   const name = personName(profile.get('name')) || personName(c.name);
   await request.ref.set({
@@ -136,7 +137,7 @@ export async function answerJoinRequest(deps: PushDeps & Deps, caller: Caller | 
     });
     return {};
   }
-  if (!takesRequests(church)) fail('failed-precondition', 'unknown', 'requestsClosed');
+  if (!takesJoinRequests(church)) fail('failed-precondition', 'unknown', 'requestsClosed');
   const joined = await db.runTransaction(async (tx) => {
     const [request, member] = await tx.getAll(requestRef, memberRef);
     if (member.exists) {
@@ -144,16 +145,7 @@ export async function answerJoinRequest(deps: PushDeps & Deps, caller: Caller | 
       return false;
     }
     if (stateOf(deps, request) !== 'pending') fail('not-found', 'unknown', 'requestGone');
-    tx.create(memberRef, {
-      uid,
-      name: personName(request.get('name')),
-      email: request.get('email') ?? '',
-      role: 'staff',
-      groups: [],
-      zones: [],
-      zoneTypes: [],
-      joinedAt: serverTime(),
-    });
+    tx.create(memberRef, newStaff(uid, personName(request.get('name')), request.get('email') ?? ''));
     tx.delete(requestRef);
     return true;
   });

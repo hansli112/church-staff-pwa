@@ -1755,8 +1755,8 @@ class FirebaseCloudApi implements CloudApi {
       name: d['name'] as String? ?? '',
       // Served by the church page on the hosting origin.
       logoUrl: logo is String ? '${Env.current.webOrigin}$logo' : null,
-      takesRequests: d['takesRequests'] == true,
-      request: JoinRequestState.values.where((s) => s.name == d['request']).firstOrNull,
+      takesJoinRequests: d['takesJoinRequests'] == true,
+      joinRequest: JoinRequestState.values.where((s) => s.name == d['joinRequest']).firstOrNull,
     );
   }
 

@@ -50,8 +50,8 @@ describe('requestToJoin', () => {
     assert.equal(sent[0].link, '/c/C1?to=%2Fme%2Fmembers');
 
     const preview = await churchPreview(deps, caller('carol'), { churchId: 'C1' });
-    assert.equal(preview.takesRequests, true);
-    assert.equal(preview.request, 'pending');
+    assert.equal(preview.takesJoinRequests, true);
+    assert.equal(preview.joinRequest, 'pending');
   });
 
   test('asking again while waiting changes nothing and tells nobody', async () => {
@@ -76,7 +76,7 @@ describe('requestToJoin', () => {
     await db.doc('churches/C1').update({ joinRequestsClosed: true });
     const closed = await rejectsWith(requestToJoin(d, caller('carol'), { churchId: 'C1' }), 'unknown');
     assert.equal((closed as { details: { detail: string } }).details.detail, 'requestsClosed');
-    assert.equal((await churchPreview(deps, caller('carol'), { churchId: 'C1' })).takesRequests, false);
+    assert.equal((await churchPreview(deps, caller('carol'), { churchId: 'C1' })).takesJoinRequests, false);
 
     await db.doc('churches/C1').update({ status: 'suspended' });
     await rejectsWith(requestToJoin(d, caller('carol'), { churchId: 'C1' }), 'notFound');
@@ -127,7 +127,7 @@ describe('requestToJoin', () => {
     await seedChurch('C2', { erin: 'admin' });
     const { deps: d } = pushDeps();
     await requestToJoin(d, caller('carol'), { churchId: 'C1' });
-    assert.equal((await churchPreview(deps, caller('carol'), { churchId: 'C2' })).request, null);
+    assert.equal((await churchPreview(deps, caller('carol'), { churchId: 'C2' })).joinRequest, null);
     await rejectsWith(answerJoinRequest(d, caller('erin'), { churchId: 'C2', uid: 'carol', allow: true }), 'unknown');
     await rejectsWith(answerJoinRequest(d, caller('erin'), { churchId: 'C1', uid: 'carol', allow: true }), 'permissionDenied');
     assert.equal((await db.doc('churches/C2/members/carol').get()).exists, false);
@@ -139,7 +139,7 @@ describe('requestToJoin', () => {
     const { deps: d } = pushDeps();
     await requestToJoin(d, caller('carol'), { churchId: 'C1' });
     const preview = await churchPreview(deps, null, { churchId: 'C1' });
-    assert.deepEqual([preview.takesRequests, preview.request], [true, null]);
+    assert.deepEqual([preview.takesJoinRequests, preview.joinRequest], [true, null]);
   });
 
   test('a bad church ID, note or uid is refused', async () => {
@@ -160,7 +160,7 @@ describe('requestToJoin', () => {
     await requestToJoin(d, caller('carol'), { churchId: 'C1' });
     await withdrawJoinRequest(deps, caller('carol'), { churchId: 'C1' });
     assert.equal((await db.doc('churches/C1/joinRequests/carol').get()).exists, false);
-    assert.equal((await churchPreview(deps, caller('carol'), { churchId: 'C1' })).request, null);
+    assert.equal((await churchPreview(deps, caller('carol'), { churchId: 'C1' })).joinRequest, null);
   });
 });
 
@@ -187,11 +187,11 @@ describe('answerJoinRequest', () => {
     await answerJoinRequest(d, caller('alice'), { churchId: 'C1', uid: 'carol', allow: false });
     assert.equal((await db.doc('churches/C1/members/carol').get()).exists, false);
     assert.equal(sent.length, 1, 'only the admin, when asked');
-    assert.equal((await churchPreview(deps, caller('carol'), { churchId: 'C1' })).request, 'rejected');
+    assert.equal((await churchPreview(deps, caller('carol'), { churchId: 'C1' })).joinRequest, 'rejected');
     await rejectsWith(answerJoinRequest(d, caller('alice'), { churchId: 'C1', uid: 'carol', allow: true }), 'unknown');
 
     await requestToJoin(d, caller('carol'), { churchId: 'C1' });
-    assert.equal((await churchPreview(deps, caller('carol'), { churchId: 'C1' })).request, 'pending');
+    assert.equal((await churchPreview(deps, caller('carol'), { churchId: 'C1' })).joinRequest, 'pending');
     assert.equal(sent.length, 1, 'told of carol today already');
   });
 
@@ -247,7 +247,7 @@ describe('answerJoinRequest', () => {
     const { deps: d } = pushDeps();
     await requestToJoin(d, caller('carol'), { churchId: 'C1' });
     setNow(new Date(Date.parse('2026-10-01T10:00:00+08:00') + 30 * DAY));
-    assert.equal((await churchPreview(deps, caller('carol'), { churchId: 'C1' })).request, null);
+    assert.equal((await churchPreview(deps, caller('carol'), { churchId: 'C1' })).joinRequest, null);
     await rejectsWith(answerJoinRequest(d, caller('alice'), { churchId: 'C1', uid: 'carol', allow: true }), 'unknown');
 
     await db.doc('churches/C1/joinRequests/dave').set({ uid: 'dave', name: 'd', createdAt: Timestamp.fromDate(deps.now()) });

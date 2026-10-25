@@ -143,7 +143,9 @@ export const purgeDeletedChurches = using(
   { region: REGION, schedule: 'every day 03:00', timeZone: 'Asia/Taipei' },
   (opts, make) =>
     onSchedule(opts, async () => {
-      // Requests to join nobody answered in time go too (#88).
+      // Requests to join nobody answered in time go too (#88). The name
+      // stays: a renamed function is a new one, and deploy.sh runs
+      // non-interactive, so it would stop at deleting this one.
       await runEach('daily purge', {
         churches: () => church.purgeDeletedChurches({ ...make(), bucket: bucket() }),
         joinRequests: () => joinRequests.forgetOldJoinRequests(deps()),
