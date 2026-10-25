@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/core/languages.dart';
 import 'package:martha/data/backend.dart' show WarmUp;
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/models.dart';
@@ -175,6 +176,74 @@ void main() {
     await tester.tap(find.bySemanticsLabel('允許新朋友加入'));
     await settle(tester);
     expect(find.text('這間教會沒有開放申請加入'), findsOneWidget);
+    expect(b.members['grace']!['new'], isNull);
+  });
+
+  testWidgets('cancelling the note sends nothing', (tester) async {
+    final b = newcomer();
+    await pumpApp(tester, b);
+    await go(tester, '/c/hope');
+    await tapText(tester, '申請加入');
+    await tapText(tester, '取消');
+    expect(b.joinRequests['hope'], isNull);
+    expect(findShown('申請加入'), findsOneWidget);
+  });
+
+  testWidgets('an email not yet verified is asked to verify first, and nothing is sent', (tester) async {
+    final b = MemoryBackend(clock: testClock);
+    b.addChurch('希望堂', id: 'hope');
+    b.addMember('hope', pastor);
+    await b.auth.registerWithEmail('新朋友', 'new@example.com', 'secret123', AppLanguage.zhHant);
+    await pumpApp(tester, b);
+    await go(tester, '/c/hope');
+    expect(findShown('驗證你的 email'), findsOneWidget, reason: 'the banner, as on the welcome page');
+
+    await tapText(tester, '申請加入');
+    await tapText(tester, '送出申請');
+    expect(find.text('驗證 email 後才能申請加入'), findsOneWidget);
+    expect(b.joinRequests['hope'], isNull);
+  });
+
+  testWidgets('turned down by a church that since stopped taking requests: no asking again', (tester) async {
+    final b = newcomer();
+    b.joinRequests['hope'] = {'new': request(rejectedAt: testNow)};
+    b.churches['hope'] = b.churches['hope']!.copyWith(takesJoinRequests: false);
+    await pumpApp(tester, b);
+    await go(tester, '/c/hope');
+    expect(findShown('這次申請沒有通過，請直接聯絡教會。'), findsOneWidget);
+    expect(findShown('再申請一次'), findsNothing);
+    await tapText(tester, '輸入邀請碼');
+    expect(find.byType(TextField), findsOneWidget);
+  });
+
+  testWidgets('the admins, and only they, can mute being told of requests', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/me/notifications');
+    expect(find.text('有人申請加入教會時（只通知管理員）'), findsOneWidget);
+    await tester.tap(find.text('申請加入'));
+    await settle(tester);
+    expect(b.members['grace']!['pastor']!.mutedNotifications, {NotificationKind.joinRequest});
+
+    await pumpApp(tester, seededChurch(as: staffMei));
+    await go(tester, '/me/notifications');
+    expect(find.text('申請加入'), findsNothing);
+  });
+
+  testWidgets('one already in the church is not listed; one taken back meanwhile cannot be let in', (tester) async {
+    final b = seededChurch();
+    b.joinRequests['grace'] = {
+      'mei': request(uid: 'mei', name: '李美玉'),
+      'new': request(),
+    };
+    await pumpApp(tester, b);
+    await go(tester, '/me/members');
+    expect(findShown('1 位申請加入'), findsOneWidget);
+
+    b.joinRequests['grace']!.remove('new');
+    await tester.tap(find.bySemanticsLabel('允許新朋友加入'));
+    await settle(tester);
+    expect(find.text('這個申請已經取消或過期了'), findsOneWidget);
     expect(b.members['grace']!['new'], isNull);
   });
 }

@@ -106,6 +106,54 @@ describe('requestToJoin', () => {
     assert.equal(sent.length, 3, 'a day on, again');
   });
 
+  test('each admin is told in their own language; with no name, someone asked', async () => {
+    await seed();
+    await db.doc('users/alice').update({ appLocale: 'en' });
+    const { deps: d, sent } = pushDeps();
+    await requestToJoin(d, caller('dave', { name: undefined }), { churchId: 'C1' });
+    assert.equal(sent[0].body, 'Someone asked to join the church');
+    assert.equal((await db.doc('churches/C1/joinRequests/dave').get()).get('name'), '');
+  });
+
+  test('without a profile, the name they signed in with', async () => {
+    await seed();
+    const { deps: d } = pushDeps();
+    await requestToJoin(d, caller('dave', { name: '大衛' }), { churchId: 'C1' });
+    assert.equal((await db.doc('churches/C1/joinRequests/dave').get()).get('name'), '大衛');
+  });
+
+  test('a request is to one church: another church knows nothing of it', async () => {
+    await seed();
+    await seedChurch('C2', { erin: 'admin' });
+    const { deps: d } = pushDeps();
+    await requestToJoin(d, caller('carol'), { churchId: 'C1' });
+    assert.equal((await churchPreview(deps, caller('carol'), { churchId: 'C2' })).request, null);
+    await rejectsWith(answerJoinRequest(d, caller('erin'), { churchId: 'C2', uid: 'carol', allow: true }), 'unknown');
+    await rejectsWith(answerJoinRequest(d, caller('erin'), { churchId: 'C1', uid: 'carol', allow: true }), 'permissionDenied');
+    assert.equal((await db.doc('churches/C2/members/carol').get()).exists, false);
+    assert.equal((await db.doc('churches/C1/members/carol').get()).exists, false);
+  });
+
+  test('signed out, the preview says whether one may ask, and of no request', async () => {
+    await seed();
+    const { deps: d } = pushDeps();
+    await requestToJoin(d, caller('carol'), { churchId: 'C1' });
+    const preview = await churchPreview(deps, null, { churchId: 'C1' });
+    assert.deepEqual([preview.takesRequests, preview.request], [true, null]);
+  });
+
+  test('a bad church ID, note or uid is refused', async () => {
+    await seed();
+    const { deps: d } = pushDeps();
+    await rejectsWith(requestToJoin(d, caller('carol'), { churchId: '../C1' }), 'unknown');
+    await rejectsWith(requestToJoin(d, caller('carol'), { churchId: 'C1', note: 3 }), 'unknown');
+    await rejectsWith(requestToJoin(d, null, { churchId: 'C1' }), 'permissionDenied');
+    await rejectsWith(withdrawJoinRequest(deps, null, { churchId: 'C1' }), 'permissionDenied');
+    for (const uid of [undefined, '', 'a/b', 'x'.repeat(129)]) {
+      await rejectsWith(answerJoinRequest(d, caller('alice'), { churchId: 'C1', uid, allow: true }), 'unknown');
+    }
+  });
+
   test('taken back, there is none', async () => {
     await seed();
     const { deps: d } = pushDeps();
@@ -145,6 +193,24 @@ describe('answerJoinRequest', () => {
     await requestToJoin(d, caller('carol'), { churchId: 'C1' });
     assert.equal((await churchPreview(deps, caller('carol'), { churchId: 'C1' })).request, 'pending');
     assert.equal(sent.length, 1, 'told of carol today already');
+  });
+
+  test('someone who joined meanwhile: letting them in only clears the request', async () => {
+    await seed();
+    const { deps: d, sent } = pushDeps();
+    await requestToJoin(d, caller('carol'), { churchId: 'C1' });
+    await db.doc('churches/C1/members/carol').set({ uid: 'carol', name: '小明', role: 'staff', zoneTypes: ['sunday'] });
+    await answerJoinRequest(d, caller('alice'), { churchId: 'C1', uid: 'carol', allow: true });
+    assert.deepEqual((await db.doc('churches/C1/members/carol').get()).get('zoneTypes'), ['sunday'], 'kept as they joined');
+    assert.equal((await db.doc('churches/C1/joinRequests/carol').get()).exists, false);
+    assert.equal(sent.length, 1, 'only the admin, when asked');
+  });
+
+  test('turning down someone who never asked changes nothing', async () => {
+    await seed();
+    const { deps: d } = pushDeps();
+    await answerJoinRequest(d, caller('alice'), { churchId: 'C1', uid: 'nobody', allow: false });
+    assert.equal((await db.doc('churches/C1/joinRequests/nobody').get()).exists, false);
   });
 
   test('only an admin answers', async () => {
