@@ -8,6 +8,7 @@ import { attendanceDue, mayReadAttendance, mayWriteAttendance, remindedOfAttenda
 import { mayWriteEvent } from '../src/eventGroups.js';
 import { mayMoveMember } from '../src/groupMembers.js';
 import { mapMember } from '../src/importer.js';
+import { standing } from '../src/joinRequests.js';
 import { ledChangeAllowed } from '../src/ledDuties.js';
 import { LANGUAGES, words } from '../src/languages.js';
 import { dutiesByUid } from '../src/rosters.js';
@@ -106,4 +107,8 @@ describe('attendanceDue', () => {
   for (const r of rows('attendanceDue')) {
     test(r.why, () => assert.equal(attendanceDue(r.meets, { since: r.since, pauses: r.pauses ?? [] }, r.day), r.due));
   }
+});
+
+describe('joinRequestState', () => {
+  for (const r of rows('joinRequestState')) test(r.why, () => assert.equal(standing(r.daysAgo, r.rejected), r.state));
 });

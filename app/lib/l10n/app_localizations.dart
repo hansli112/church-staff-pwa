@@ -5127,6 +5127,168 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'聚會當天 21:00 還沒人填時'**
   String get notifAttendanceSub;
+
+  /// Church URL page for a non-member when the church takes requests to join (#88)
+  ///
+  /// In zh, this message translates to:
+  /// **'你還不是這間教會的同工。可以申請加入，管理員允許後就會加入；有邀請碼的話直接輸入。'**
+  String get churchEntryCanAsk;
+
+  /// No description provided for @askToJoin.
+  ///
+  /// In zh, this message translates to:
+  /// **'申請加入'**
+  String get askToJoin;
+
+  /// No description provided for @askToJoinTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'申請加入〈{church}〉'**
+  String askToJoinTitle(String church);
+
+  /// No description provided for @joinNoteLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'想跟管理員說的話（選填）'**
+  String get joinNoteLabel;
+
+  /// No description provided for @joinNoteHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：我是敬拜團的小明'**
+  String get joinNoteHint;
+
+  /// No description provided for @sendJoinRequest.
+  ///
+  /// In zh, this message translates to:
+  /// **'送出申請'**
+  String get sendJoinRequest;
+
+  /// No description provided for @joinRequestSent.
+  ///
+  /// In zh, this message translates to:
+  /// **'已送出申請'**
+  String get joinRequestSent;
+
+  /// No description provided for @joinRequestPending.
+  ///
+  /// In zh, this message translates to:
+  /// **'已送出申請，等管理員允許。允許後就會加入。'**
+  String get joinRequestPending;
+
+  /// No description provided for @withdrawJoinRequest.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消申請'**
+  String get withdrawJoinRequest;
+
+  /// No description provided for @joinRequestWithdrawn.
+  ///
+  /// In zh, this message translates to:
+  /// **'已取消申請'**
+  String get joinRequestWithdrawn;
+
+  /// No description provided for @joinRequestRejected.
+  ///
+  /// In zh, this message translates to:
+  /// **'這次申請沒有通過，請直接聯絡教會。'**
+  String get joinRequestRejected;
+
+  /// No description provided for @askAgain.
+  ///
+  /// In zh, this message translates to:
+  /// **'再申請一次'**
+  String get askAgain;
+
+  /// No description provided for @joinVerifyFirst.
+  ///
+  /// In zh, this message translates to:
+  /// **'驗證 email 後才能申請加入'**
+  String get joinVerifyFirst;
+
+  /// No description provided for @joinRequestsCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 位申請加入'**
+  String joinRequestsCount(int count);
+
+  /// No description provided for @joinRequestAskedOn.
+  ///
+  /// In zh, this message translates to:
+  /// **'{date} 申請'**
+  String joinRequestAskedOn(String date);
+
+  /// No description provided for @allowJoin.
+  ///
+  /// In zh, this message translates to:
+  /// **'允許'**
+  String get allowJoin;
+
+  /// No description provided for @declineJoin.
+  ///
+  /// In zh, this message translates to:
+  /// **'拒絕'**
+  String get declineJoin;
+
+  /// No description provided for @allowJoinLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'允許{name}加入'**
+  String allowJoinLabel(String name);
+
+  /// No description provided for @declineJoinLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'拒絕{name}的申請'**
+  String declineJoinLabel(String name);
+
+  /// No description provided for @joinAllowedToast.
+  ///
+  /// In zh, this message translates to:
+  /// **'{name}加入了'**
+  String joinAllowedToast(String name);
+
+  /// No description provided for @joinDeclinedToast.
+  ///
+  /// In zh, this message translates to:
+  /// **'已拒絕{name}的申請'**
+  String joinDeclinedToast(String name);
+
+  /// No description provided for @errRequestsClosed.
+  ///
+  /// In zh, this message translates to:
+  /// **'這間教會沒有開放申請加入'**
+  String get errRequestsClosed;
+
+  /// No description provided for @errRequestGone.
+  ///
+  /// In zh, this message translates to:
+  /// **'這個申請已經取消或過期了'**
+  String get errRequestGone;
+
+  /// No description provided for @takesJoinRequests.
+  ///
+  /// In zh, this message translates to:
+  /// **'開放申請加入'**
+  String get takesJoinRequests;
+
+  /// No description provided for @takesJoinRequestsFooter.
+  ///
+  /// In zh, this message translates to:
+  /// **'開著時，拿到教會網址的人可以申請加入，管理員在「同工」允許後才會加入。'**
+  String get takesJoinRequestsFooter;
+
+  /// Notification switch (#88)
+  ///
+  /// In zh, this message translates to:
+  /// **'申請加入'**
+  String get notifJoinRequest;
+
+  /// No description provided for @notifJoinRequestSub.
+  ///
+  /// In zh, this message translates to:
+  /// **'有人申請加入教會時（只通知管理員）'**
+  String get notifJoinRequestSub;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

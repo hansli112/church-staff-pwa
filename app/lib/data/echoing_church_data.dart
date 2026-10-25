@@ -348,6 +348,15 @@ class EchoingChurchData implements ChurchData {
   Future<void> deletePendingMember(String id) => _inner.deletePendingMember(id);
 
   @override
+  Stream<List<JoinRequest>> joinRequests() => _inner.joinRequests();
+
+  @override
+  Future<void> answerJoinRequest(String uid, {required bool allow}) => _inner.answerJoinRequest(uid, allow: allow);
+
+  @override
+  Future<void> setTakesJoinRequests(bool on) => _inner.setTakesJoinRequests(on);
+
+  @override
   Future<List<Roster>> pastRosters({required Day from, required Day before}) =>
       _inner.pastRosters(from: from, before: before);
 

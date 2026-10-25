@@ -37,6 +37,7 @@ import * as fundingApple from './fundingApple.js';
 import * as fundingEcpay from './fundingEcpay.js';
 import * as fundingPlay from './fundingPlay.js';
 import * as invites from './invites.js';
+import * as joinRequests from './joinRequests.js';
 import * as ledDuties from './ledDuties.js';
 import { memoryGoogle } from './memoryGoogle.js';
 import * as move from './move.js';
@@ -142,7 +143,11 @@ export const purgeDeletedChurches = using(
   { region: REGION, schedule: 'every day 03:00', timeZone: 'Asia/Taipei' },
   (opts, make) =>
     onSchedule(opts, async () => {
-      await church.purgeDeletedChurches({ ...make(), bucket: bucket() });
+      // Requests to join nobody answered in time go too (#88).
+      await runEach('daily purge', {
+        churches: () => church.purgeDeletedChurches({ ...make(), bucket: bucket() }),
+        joinRequests: () => joinRequests.forgetOldJoinRequests(deps()),
+      });
     }),
 );
 
@@ -195,9 +200,12 @@ export const editLedDuties = callable(ledDuties.editLedDuties);
 export const setGroupMember = callable(groupMembers.setGroupMember);
 export const editSmallGroup = callable(smallGroups.editSmallGroup);
 
-// Invites
+// Invites, and requests to join without one (#88)
 export const previewInvite = callable(invites.previewInvite);
 export const redeemInvite = callable(invites.redeemInvite);
+export const requestToJoin = callable(joinRequests.requestToJoin, pushDeps);
+export const withdrawJoinRequest = callable(joinRequests.withdrawJoinRequest);
+export const answerJoinRequest = callable(joinRequests.answerJoinRequest, pushDeps);
 
 // Account
 export const deleteAccount = callable(account.deleteAccount, () => ({ ...deps(), auth: getAuth() }));

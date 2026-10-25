@@ -2849,4 +2849,99 @@ class L10nKo extends L10n {
 
   @override
   String get notifAttendanceSub => '모임 당일 오후 9시까지 아무도 기록하지 않았을 때';
+
+  @override
+  String get churchEntryCanAsk => '아직 이 교회의 멤버가 아니에요. 가입을 신청하면 관리자가 승인한 뒤 가입돼요. 초대 코드가 있으면 입력해 주세요.';
+
+  @override
+  String get askToJoin => '가입 신청';
+
+  @override
+  String askToJoinTitle(String church) {
+    return '$church 가입 신청';
+  }
+
+  @override
+  String get joinNoteLabel => '관리자에게 남길 말(선택)';
+
+  @override
+  String get joinNoteHint => '예: 찬양팀 민수예요';
+
+  @override
+  String get sendJoinRequest => '신청 보내기';
+
+  @override
+  String get joinRequestSent => '신청을 보냈어요';
+
+  @override
+  String get joinRequestPending => '신청을 보냈어요. 관리자가 승인하면 가입돼요.';
+
+  @override
+  String get withdrawJoinRequest => '신청 취소';
+
+  @override
+  String get joinRequestWithdrawn => '신청을 취소했어요';
+
+  @override
+  String get joinRequestRejected => '이번 신청은 승인되지 않았어요. 교회에 직접 문의해 주세요.';
+
+  @override
+  String get askAgain => '다시 신청';
+
+  @override
+  String get joinVerifyFirst => '이메일을 인증해야 가입을 신청할 수 있어요';
+
+  @override
+  String joinRequestsCount(int count) {
+    return '$count명이 가입을 신청했어요';
+  }
+
+  @override
+  String joinRequestAskedOn(String date) {
+    return '$date 신청';
+  }
+
+  @override
+  String get allowJoin => '승인';
+
+  @override
+  String get declineJoin => '거절';
+
+  @override
+  String allowJoinLabel(String name) {
+    return '$name 님 가입 승인';
+  }
+
+  @override
+  String declineJoinLabel(String name) {
+    return '$name 님 신청 거절';
+  }
+
+  @override
+  String joinAllowedToast(String name) {
+    return '$name 님이 가입했어요';
+  }
+
+  @override
+  String joinDeclinedToast(String name) {
+    return '$name 님의 신청을 거절했어요';
+  }
+
+  @override
+  String get errRequestsClosed => '이 교회는 가입 신청을 받지 않아요';
+
+  @override
+  String get errRequestGone => '취소되었거나 기한이 지난 신청이에요';
+
+  @override
+  String get takesJoinRequests => '가입 신청 받기';
+
+  @override
+  String get takesJoinRequestsFooter => '켜 두면 교회 주소를 아는 사람이 가입을 신청할 수 있어요. 관리자가 \'멤버\'에서 승인하면 가입돼요.';
+
+  @override
+  String get notifJoinRequest => '가입 신청';
+
+  @override
+  String get notifJoinRequestSub => '누군가 가입을 신청했을 때(관리자만)';
 }

@@ -43,7 +43,11 @@ String errorText(L10n l10n, Object error) {
         CloudReason.tooManyChanges => l10n.errTooManyChanges,
         _ => l10n.errUnknown,
       },
-      CloudErrorCode.unknown => l10n.errUnknown,
+      CloudErrorCode.unknown => switch (error.reason) {
+        CloudReason.requestsClosed => l10n.errRequestsClosed,
+        CloudReason.requestGone => l10n.errRequestGone,
+        _ => l10n.errUnknown,
+      },
     };
   }
   return l10n.errUnknown;

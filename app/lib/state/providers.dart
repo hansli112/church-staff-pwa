@@ -189,6 +189,20 @@ final pendingMembersProvider = StreamProvider<List<PendingMember>>((ref) {
   return openChurch(ref).pendingMembers();
 });
 
+/// Requests to join still waiting (申請加入, #88), oldest first. Only for
+/// admins.
+final joinRequestsProvider = StreamProvider<List<JoinRequest>>((ref) {
+  final isAdmin = ref.watch(meProvider.select((m) => m.value?.isAdmin ?? false));
+  if (!isAdmin) return Stream.value(const []);
+  final now = ref.watch(clockProvider);
+  return openChurch(ref).joinRequests().map(
+    (list) => [
+      for (final r in list)
+        if (r.stateAt(now()) == JoinRequestState.pending) r,
+    ]..sort((a, b) => a.createdAt.compareTo(b.createdAt)),
+  );
+});
+
 final staffOrderProvider = StreamProvider.family<StaffOrder, String>(
   (ref, serviceType) => openChurch(ref).staffOrder(serviceType),
 );

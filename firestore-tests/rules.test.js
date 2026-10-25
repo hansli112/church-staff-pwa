@@ -295,7 +295,7 @@ describe('同工 (members)', () => {
   it('notificationPrefs 只能是已知的通知種類和提醒時間', async () => {
     const ref = doc(as(MEMBER_A), `churches/${A}/members/${MEMBER_A}`);
     await assertSucceeds(
-      updateDoc(ref, { notificationPrefs: { muted: ['reminder', 'rosterChange', 'memberLeft'], reminderTiming: 'both' } }),
+      updateDoc(ref, { notificationPrefs: { muted: ['reminder', 'rosterChange', 'memberLeft', 'joinRequest'], reminderTiming: 'both' } }),
     );
     await assertSucceeds(updateDoc(ref, { notificationPrefs: { muted: [] } }));
     await assertFails(updateDoc(ref, { notificationPrefs: { roster: true } }));
@@ -786,6 +786,33 @@ describe('待認領的同工 (pendingMembers) 與索引', () => {
       await assertFails(setDoc(doc(as(uid), 'pendingIndex/abc'), { churches: {} }));
     }
     await assertFails(getDocs(collection(as(ADMIN_A), 'pendingIndex')));
+  });
+});
+
+describe('申請加入 (joinRequests)', () => {
+  it('只有那間教會的管理員讀得到；沒有人能直接寫，申請的人自己也讀不到', async () => {
+    const path = `churches/${A}/joinRequests/${STRANGER}`;
+    await seed(path, { uid: STRANGER, name: '新朋友', email: 'new@example.com', createdAt: Timestamp.now() });
+    await assertSucceeds(getDoc(doc(as(ADMIN_A), path)));
+    await assertSucceeds(getDocs(collection(as(ADMIN_A), `churches/${A}/joinRequests`)));
+    for (const uid of [MEMBER_A, EDITOR_A, OFFICE_A, ADMIN_B, STRANGER]) {
+      await assertFails(getDoc(doc(as(uid), path)), uid);
+    }
+    for (const uid of [ADMIN_A, STRANGER]) {
+      await assertFails(setDoc(doc(as(uid), `churches/${A}/joinRequests/${uid}`), { uid, name: 'x' }), uid);
+      await assertFails(updateDoc(doc(as(uid), path), { rejectedAt: Timestamp.now() }), uid);
+      await assertFails(deleteDoc(doc(as(uid), path)), uid);
+    }
+  });
+
+  it('管理員可以關掉申請、再打開；其他人不行', async () => {
+    const church = (uid) => doc(as(uid), `churches/${A}`);
+    await assertFails(updateDoc(church(MEMBER_A), { joinRequestsClosed: true }));
+    await assertFails(updateDoc(church(ADMIN_B), { joinRequestsClosed: true }));
+    await assertFails(updateDoc(church(ADMIN_A), { joinRequestsClosed: false }), 'open is no field');
+    await assertFails(updateDoc(church(ADMIN_A), { joinRequestsClosed: 'yes' }));
+    await assertSucceeds(updateDoc(church(ADMIN_A), { joinRequestsClosed: true }));
+    await assertSucceeds(updateDoc(church(ADMIN_A), { joinRequestsClosed: deleteField() }));
   });
 });
 

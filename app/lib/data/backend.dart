@@ -206,6 +206,19 @@ abstract interface class ChurchData {
   /// Drops a pending member (admins). Their names stay on the rosters.
   Future<void> deletePendingMember(String id);
 
+  /// Requests to join (申請加入, #88), answered or not; ones
+  /// [JoinRequest.days] old may linger a day. Admins only.
+  Stream<List<JoinRequest>> joinRequests();
+
+  /// Lets [uid] in, as an invite would (no 身分, no 牧區), or turns them
+  /// down (admins). Letting in a request no longer waiting is
+  /// [CloudReason.requestGone]; while the church takes none,
+  /// [CloudReason.requestsClosed].
+  Future<void> answerJoinRequest(String uid, {required bool allow});
+
+  /// Whether someone with the church URL may ask to join (admins).
+  Future<void> setTakesJoinRequests(bool on);
+
   Stream<ServiceSettings> services();
 
   /// The church's 事工 (#82); none until an admin makes one.
@@ -484,6 +497,12 @@ enum CloudReason {
 
   /// …or the church used this month's photos.
   church,
+
+  /// The church takes no requests to join (申請加入, #88)…
+  requestsClosed,
+
+  /// …or the one answered is no longer waiting.
+  requestGone,
 }
 
 class CloudException implements Exception {
@@ -649,11 +668,23 @@ class PhotoInput {
 
 /// What anyone opening a church URL may see of an active church.
 class ChurchPreview {
-  const ChurchPreview({required this.id, required this.name, this.logoUrl});
+  const ChurchPreview({
+    required this.id,
+    required this.name,
+    this.logoUrl,
+    this.takesRequests = false,
+    this.request,
+  });
 
   final String id;
   final String name;
   final String? logoUrl;
+
+  /// Whether one may ask to join (申請加入, #88).
+  final bool takesRequests;
+
+  /// How the signed-in person's request stands; null when they have none.
+  final JoinRequestState? request;
 }
 
 /// The result of fetching a content source right after setting it.
@@ -722,6 +753,15 @@ abstract interface class CloudApi {
   /// Name and logo of an active church, for someone who is not a member.
   /// Throws [CloudErrorCode.notFound] for an unknown or closed church.
   Future<ChurchPreview> churchPreview(String churchId);
+
+  /// Asks to join [churchId] (申請加入, #88), telling its admins; [note] is
+  /// for them. Asking again while waiting changes nothing. An unverified
+  /// email is [CloudErrorCode.unverifiedEmail]; a church taking none,
+  /// [CloudReason.requestsClosed].
+  Future<void> requestToJoin(String churchId, {String note = ''});
+
+  /// Takes back the request to join [churchId], if there is one.
+  Future<void> withdrawJoinRequest(String churchId);
 
   // Platform operator only.
   Future<List<ChurchSummary>> adminSearchChurches(String query);
@@ -804,4 +844,4 @@ abstract interface class Backend {
 }
 
 /// What a page that just opened is likely to ask the backend for.
-enum WarmUp { calendarWrite, serviceEdit, joinChurch, createChurch, photoImport, timeZone, backOffice }
+enum WarmUp { calendarWrite, serviceEdit, joinChurch, askToJoin, createChurch, photoImport, timeZone, backOffice }

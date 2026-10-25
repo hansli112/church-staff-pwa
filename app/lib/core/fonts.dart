@@ -147,6 +147,12 @@ const _startupKeys = {
   'goHome',
   'churchNotFound',
   'churchEntryNotMember',
+  'churchEntryCanAsk',
+  'askToJoin',
+  'askAgain',
+  'joinRequestPending',
+  'joinRequestRejected',
+  'withdrawJoinRequest',
   'weekday1',
   'weekday2',
   'weekday3',
@@ -207,6 +213,8 @@ const _churchInfoKeys = {
   'adminCannotLeave',
   'deleteChurch',
   'leaveChurch',
+  'takesJoinRequests',
+  'takesJoinRequestsFooter',
 };
 
 Set<String>? _initialKeys(Uri location, [int depth = 0]) {

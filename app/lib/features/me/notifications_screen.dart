@@ -54,6 +54,12 @@ class NotificationsScreen extends ConsumerWidget {
           l10n.notifMemberLeft,
           l10n.notifMemberLeftSub,
         ),
+      if (me.isAdmin)
+        (
+          NotificationKind.joinRequest,
+          l10n.notifJoinRequest,
+          l10n.notifJoinRequestSub,
+        ),
       // 回報人數 (#85): for whoever is asked, while the church has it on.
       if (ref.watch(churchProvider.select((c) => c.value?.attendanceSince != null)) && me.remindedAttendance.isNotEmpty)
         (

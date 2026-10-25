@@ -225,4 +225,13 @@ void main() {
       });
     }
   });
+
+  group('joinRequestState', () {
+    for (final r in _rows('joinRequestState')) {
+      test(r['why'] as String, () {
+        final state = JoinRequest.standing((r['daysAgo'] as num).toDouble(), rejected: r['rejected'] as bool);
+        expect(state?.name, r['state']);
+      });
+    }
+  });
 }

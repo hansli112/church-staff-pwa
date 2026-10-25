@@ -3,10 +3,11 @@ import { Timestamp } from 'firebase-admin/firestore';
 
 import { isChurchOpen } from './access.js';
 import { fail, requireCaller, type Caller, type Deps } from './common.js';
+import { forgetJoinRequestsOf } from './joinRequests.js';
 
 /**
  * Deletes the caller's account (App Store guideline 5.1.1(v)): every
- * membership, users/{uid}, then the Auth user. Names already on rosters
+ * membership, users/{uid}, their requests to join, then the Auth user. Names already on rosters
  * stay, as plain text.
  *
  * The only admin of a church others are in must hand it over first, so no
@@ -33,6 +34,8 @@ export async function deleteAccount(deps: Deps & { auth: Auth }, caller: Caller 
     else if (isChurchOpen(churchSnap)) alone.push(church);
   }
   if (blocking.length > 0) fail('failed-precondition', 'lastAdmin', blocking);
+  // First: should it fail, nothing else is gone yet.
+  await forgetJoinRequestsOf(deps, c.uid);
 
   const writer = db.bulkWriter();
   const deletedAt = Timestamp.fromDate(deps.now());

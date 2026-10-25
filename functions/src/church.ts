@@ -7,6 +7,7 @@ import { forgetLinkSource, moveLinkFetch } from './churchLink.js';
 import { followTimeZone } from './eventSync.js';
 import { DAY_MS, fail, requireCaller, runEach, serverTime, text, type Caller, type Deps } from './common.js';
 import { forgetInvites } from './invites.js';
+import { requestState, takesRequests } from './joinRequests.js';
 import { languageOf, words } from './languages.js';
 import { personName, TEXT_LIMITS } from './limits.js';
 import { forgetPending } from './pendingMembers.js';
@@ -232,8 +233,10 @@ export function publicLogoPath(cid: string, version: string, file = 'logo.png') 
 /**
  * Name and logo of an active church, for someone opening its church URL
  * who is not a member. Public: the same is on the church page anyway.
+ * Also whether it takes requests to join (申請加入, #88) and, signed in,
+ * how the caller's stands.
  */
-export async function churchPreview(deps: Deps, _caller: Caller | null, data: unknown) {
+export async function churchPreview(deps: Deps, caller: Caller | null, data: unknown) {
   const cid = churchId((data as { churchId?: unknown })?.churchId);
   const snap = await deps.db.doc(`churches/${cid}`).get();
   if (!isChurchOpen(snap)) fail('not-found', 'notFound');
@@ -242,5 +245,7 @@ export async function churchPreview(deps: Deps, _caller: Caller | null, data: un
     churchId: cid,
     name: snap.get('name') as string,
     logoPath: version ? publicLogoPath(cid, version) : null,
+    takesRequests: takesRequests(snap),
+    request: caller ? await requestState(deps, cid, caller.uid) : null,
   };
 }

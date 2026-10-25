@@ -2987,4 +2987,107 @@ class L10nEn extends L10n {
 
   @override
   String get notifAttendanceSub => 'At 9 PM on a meeting day, when nobody has filled it in';
+
+  @override
+  String get churchEntryCanAsk =>
+      'You’re not a team member of this church yet. Ask to join and you’re in once an admin accepts, or enter an invite code if you have one.';
+
+  @override
+  String get askToJoin => 'Ask to join';
+
+  @override
+  String askToJoinTitle(String church) {
+    return 'Ask to join $church';
+  }
+
+  @override
+  String get joinNoteLabel => 'Note to the admin (optional)';
+
+  @override
+  String get joinNoteHint => 'e.g. I’m Ming from the worship team';
+
+  @override
+  String get sendJoinRequest => 'Send request';
+
+  @override
+  String get joinRequestSent => 'Request sent';
+
+  @override
+  String get joinRequestPending => 'Request sent. You’ll join once an admin accepts it.';
+
+  @override
+  String get withdrawJoinRequest => 'Cancel request';
+
+  @override
+  String get joinRequestWithdrawn => 'Request canceled';
+
+  @override
+  String get joinRequestRejected => 'This request wasn’t accepted. Please contact the church directly.';
+
+  @override
+  String get askAgain => 'Ask again';
+
+  @override
+  String get joinVerifyFirst => 'Verify your email to ask to join';
+
+  @override
+  String joinRequestsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people asked to join',
+      one: '1 person asked to join',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String joinRequestAskedOn(String date) {
+    return 'Asked $date';
+  }
+
+  @override
+  String get allowJoin => 'Accept';
+
+  @override
+  String get declineJoin => 'Decline';
+
+  @override
+  String allowJoinLabel(String name) {
+    return 'Accept $name';
+  }
+
+  @override
+  String declineJoinLabel(String name) {
+    return 'Decline $name’s request';
+  }
+
+  @override
+  String joinAllowedToast(String name) {
+    return '$name joined';
+  }
+
+  @override
+  String joinDeclinedToast(String name) {
+    return 'Declined $name’s request';
+  }
+
+  @override
+  String get errRequestsClosed => 'This church isn’t taking requests to join';
+
+  @override
+  String get errRequestGone => 'This request was canceled or has expired';
+
+  @override
+  String get takesJoinRequests => 'Requests to join';
+
+  @override
+  String get takesJoinRequestsFooter =>
+      'When on, anyone with the church URL can ask to join. They join once an admin accepts them in Team members.';
+
+  @override
+  String get notifJoinRequest => 'Requests to join';
+
+  @override
+  String get notifJoinRequestSub => 'When someone asks to join the church (admins only)';
 }

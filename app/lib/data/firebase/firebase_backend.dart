@@ -104,6 +104,7 @@ class FirebaseBackend implements Backend {
     WarmUp.calendarWrite => const ['calendarWrite'],
     WarmUp.serviceEdit => const ['editService'],
     WarmUp.joinChurch => const ['previewInvite', 'redeemInvite'],
+    WarmUp.askToJoin => const ['requestToJoin'],
     WarmUp.createChurch => const ['createChurch'],
     WarmUp.photoImport => const ['recognizeRoster'],
     WarmUp.timeZone => const ['setChurchTimeZone'],
@@ -683,6 +684,19 @@ class FirestoreChurchData implements ChurchData {
     final ref = _col('pendingMembers').doc(id);
     return _write(ref, (tx) => tx.delete(ref));
   }
+
+  @override
+  Stream<List<JoinRequest>> joinRequests() => _col(
+    'joinRequests',
+  ).live().map((snap) => [for (final d in snap.docs) joinRequestFromJson(d.id, d.data())]).translated();
+
+  @override
+  Future<void> answerJoinRequest(String uid, {required bool allow}) =>
+      _call('answerJoinRequest', {'uid': uid, 'allow': allow});
+
+  @override
+  Future<void> setTakesJoinRequests(bool on) =>
+      _write(_church, (tx) => tx.update(_church, {'joinRequestsClosed': on ? FieldValue.delete() : true}));
 
   @override
   Stream<ServiceSettings> services() =>
@@ -1741,8 +1755,17 @@ class FirebaseCloudApi implements CloudApi {
       name: d['name'] as String? ?? '',
       // Served by the church page on the hosting origin.
       logoUrl: logo is String ? '${Env.current.webOrigin}$logo' : null,
+      takesRequests: d['takesRequests'] == true,
+      request: JoinRequestState.values.where((s) => s.name == d['request']).firstOrNull,
     );
   }
+
+  @override
+  Future<void> requestToJoin(String churchId, {String note = ''}) =>
+      _call('requestToJoin', {'churchId': churchId, if (note.isNotEmpty) 'note': note});
+
+  @override
+  Future<void> withdrawJoinRequest(String churchId) => _call('withdrawJoinRequest', {'churchId': churchId});
 
   @override
   Future<List<ChurchSummary>> adminSearchChurches(String query) async =>

@@ -914,6 +914,73 @@ void contractTests(Future<ContractWorld> Function() open) {
     });
   });
 
+  group('申請加入 (#88)', () {
+    test('someone asks to join; only admins read and answer; let in, they are staff', () async {
+      final g = await Grace.open(w);
+      await w.signOut();
+      final uid = await w.signUp('new@example.com', name: '新朋友');
+      expect((await cloud().churchPreview(g.cid)).takesRequests, isTrue);
+      await cloud().requestToJoin(g.cid, note: '我是小明');
+      expect((await cloud().churchPreview(g.cid)).request, JoinRequestState.pending);
+      await expectLater(g.church.joinRequests().first, denied());
+
+      await w.signIn(Grace.meiEmail);
+      await expectLater(g.church.joinRequests().first, denied());
+      await expectLater(g.church.answerJoinRequest(uid, allow: true), denied());
+
+      await w.signIn(Grace.pastorEmail);
+      final r = (await g.church.joinRequests().first).single;
+      expect((r.uid, r.name, r.email, r.note, r.rejectedAt), (uid, '新朋友', 'new@example.com', '我是小明', null));
+      await g.church.answerJoinRequest(uid, allow: true);
+      expect(await g.church.joinRequests().first, isEmpty);
+      final me = (await g.church.member(uid).first)!;
+      expect((me.name, me.role, me.zones.isEmpty), ('新朋友', Role.staff, true));
+    });
+
+    test('turned down, they see so and may ask again; a church taking none refuses', () async {
+      final g = await Grace.open(w);
+      await w.signOut();
+      final uid = await w.signUp('new@example.com', name: '新朋友');
+      await cloud().requestToJoin(g.cid);
+      await w.signIn(Grace.pastorEmail);
+      await g.church.answerJoinRequest(uid, allow: false);
+      expect((await g.church.joinRequests().first).single.rejectedAt, isNotNull);
+      await expectLater(
+        g.church.answerJoinRequest(uid, allow: true),
+        fails(CloudErrorCode.unknown, reason: CloudReason.requestGone),
+      );
+      await g.church.setTakesJoinRequests(false);
+      expect((await g.church.church().first)!.takesJoinRequests, isFalse);
+
+      await w.signIn('new@example.com');
+      final preview = await cloud().churchPreview(g.cid);
+      expect((preview.takesRequests, preview.request), (false, JoinRequestState.rejected));
+      await expectLater(
+        cloud().requestToJoin(g.cid),
+        fails(CloudErrorCode.unknown, reason: CloudReason.requestsClosed),
+      );
+
+      await w.signIn(Grace.meiEmail);
+      await expectLater(g.church.setTakesJoinRequests(true), denied());
+      await w.signIn(Grace.pastorEmail);
+      await g.church.setTakesJoinRequests(true);
+      expect((await g.church.church().first)!.takesJoinRequests, isTrue);
+
+      await w.signIn('new@example.com');
+      await cloud().requestToJoin(g.cid);
+      expect((await cloud().churchPreview(g.cid)).request, JoinRequestState.pending);
+      await cloud().withdrawJoinRequest(g.cid);
+      expect((await cloud().churchPreview(g.cid)).request, isNull);
+    });
+
+    test('an unverified email cannot ask yet', () async {
+      final g = await Grace.open(w);
+      await w.signOut();
+      await w.signUp('new@example.com', name: '新朋友', verified: false);
+      await expectLater(cloud().requestToJoin(g.cid), fails(CloudErrorCode.unverifiedEmail));
+    });
+  });
+
   group('invites', () {
     test('admins make, list and revoke invites, good for under 31 days', () async {
       final g = await Grace.open(w);

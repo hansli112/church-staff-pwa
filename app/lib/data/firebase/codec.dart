@@ -44,6 +44,7 @@ Church churchFromJson(String id, Json data, {String? logoUrl}) => Church(
   deletedAt: readTime(data['deletedAt']),
   timeZone: ChurchTimeZone.of(data['timeZone'] as String?),
   attendanceSince: Day.tryParse(data['attendanceSince'] as String?),
+  takesJoinRequests: data['joinRequestsClosed'] != true,
 );
 
 /// Unknown roles, groups or broken zones are dropped rather than thrown:
@@ -291,6 +292,16 @@ PendingMember pendingMemberFromJson(String id, Json data) {
     mutedNotifications: m.mutedNotifications,
   );
 }
+
+/// A request without its time is as old as can be: gone.
+JoinRequest joinRequestFromJson(String uid, Json data) => JoinRequest(
+  uid: uid,
+  name: data['name'] as String? ?? '',
+  email: data['email'] as String? ?? '',
+  note: data['note'] as String? ?? '',
+  createdAt: readTime(data['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0),
+  rejectedAt: readTime(data['rejectedAt']),
+);
 
 Json notificationPrefsToJson(Set<NotificationKind> muted) => {'muted': mutedToJson(muted)};
 

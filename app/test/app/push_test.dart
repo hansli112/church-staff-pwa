@@ -71,6 +71,7 @@ void main() {
     expect(b.members['grace']!['pastor']!.mutedNotifications, {
       NotificationKind.rosterChange,
       NotificationKind.memberLeft,
+      NotificationKind.joinRequest,
     });
     expect(tester.widget<Switch>(find.byType(Switch).first).value, isTrue);
   });
@@ -95,10 +96,11 @@ void main() {
     await settle(tester);
     expect(push.asked, 1);
     final on = tester.widgetList<Switch>(find.byType(Switch)).map((s) => s.value);
-    expect(on, [true, false, false], reason: 'the others showed off, and stay off');
+    expect(on, [true, false, false, false], reason: 'the others showed off, and stay off');
     expect(b.members['grace']!['pastor']!.mutedNotifications, {
       NotificationKind.rosterChange,
       NotificationKind.memberLeft,
+      NotificationKind.joinRequest,
     });
     expect(find.text('前一天晚上'), findsOneWidget);
   });
@@ -124,6 +126,7 @@ void main() {
     expect(b.members['grace']!['pastor']!.mutedNotifications, {
       NotificationKind.rosterChange,
       NotificationKind.memberLeft,
+      NotificationKind.joinRequest,
     });
   });
 

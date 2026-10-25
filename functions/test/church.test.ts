@@ -294,6 +294,8 @@ describe('churchPreview', () => {
       churchId: 'Grace',
       name: '恩典堂',
       logoPath: '/c/Grace/icons/17/logo.png',
+      takesRequests: true,
+      request: null,
     });
     await seedChurch('Plain', {});
     assert.equal((await churchPreview(deps, caller('x'), { churchId: 'Plain' })).logoPath, null);

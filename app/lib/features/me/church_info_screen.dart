@@ -231,6 +231,24 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
                 ListRow(title: l10n.addToHome, onTap: () => openAddToHome(context, ref, church.id)),
             ],
           ),
+          // 申請加入 (#88): who may ask to join from the church URL above.
+          if (admin)
+            ListSection(
+              footer: l10n.takesJoinRequestsFooter,
+              children: [
+                SwitchRow(
+                  title: l10n.takesJoinRequests,
+                  value: church.takesJoinRequests,
+                  onChanged: (on) async {
+                    try {
+                      await ref.churchData.setTakesJoinRequests(on);
+                    } catch (e) {
+                      if (context.mounted) showToast(context, saveErrorText(l10n, e));
+                    }
+                  },
+                ),
+              ],
+            ),
           // Its own icon, bundled in the store apps: the way back to the
           // default, and to it again. Not under the note above on icons
           // added from the browser, which do not follow.

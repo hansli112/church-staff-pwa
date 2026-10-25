@@ -10,6 +10,7 @@ import '../../domain/text.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
+import '../common/time_zones.dart';
 import '../common/labels.dart';
 
 /// Members hidden while their removal can still be undone.
@@ -36,6 +37,9 @@ class MembersScreen extends ConsumerStatefulWidget {
 
 class _MembersScreenState extends ConsumerState<MembersScreen> {
   String _query = '';
+
+  /// Requests to join being answered, by uid.
+  final _answering = <String>{};
 
   @override
   Widget build(BuildContext context) {
@@ -89,8 +93,16 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                 final ra = rank(a).compareTo(rank(b));
                 return ra != 0 ? ra : a.name.compareTo(b.name);
               });
+          // 申請加入 (#88), on top: someone is waiting. Not anyone in already.
+          final joined = {for (final m in all) m.uid};
+          final requests = [
+            for (final r in ref.watch(joinRequestsProvider).value ?? const <JoinRequest>[])
+              if (!joined.contains(r.uid) && (matchesSearch(r.name, _query) || matchesSearch(r.email, _query))) r,
+          ];
+          final head = requests.isEmpty ? 0 : requests.length + 1;
+          final clock = ChurchClock.of(context, ref);
           // Nobody else has joined: the next step is inviting them.
-          final alone = isAdmin && _query.isEmpty && list.length <= 1 && pending.isEmpty;
+          final alone = isAdmin && _query.isEmpty && list.length <= 1 && pending.isEmpty && requests.isEmpty;
           final extra = alone ? 1 : (pending.isEmpty ? 0 : pending.length + 1);
           return Column(
             children: [
@@ -121,12 +133,14 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                   ),
                 ),
               Expanded(
-                child: list.isEmpty && pending.isEmpty
+                child: list.isEmpty && pending.isEmpty && requests.isEmpty
                     ? EmptyState(message: l10n.noMembersFound)
                     : ListView.builder(
-                        itemCount: list.length + extra,
+                        itemCount: head + list.length + extra,
                         itemExtent: null,
                         itemBuilder: (context, i) {
+                          if (i < head) return _request(c, clock, requests, i);
+                          i -= head;
                           if (alone && i == list.length) {
                             return Padding(
                               padding: const EdgeInsets.fromLTRB(Space.l, Space.l, Space.l, Space.s),
@@ -201,6 +215,72 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
         },
       ),
     );
+  }
+
+  /// Row [i] of the requests to join: their count, then each with 允許
+  /// and 拒絕.
+  Widget _request(AppColors c, ChurchClock clock, List<JoinRequest> requests, int i) {
+    final l10n = L10n.of(context);
+    if (i == 0) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(Space.l, Space.s, Space.l, Space.s),
+        child: Text(
+          l10n.joinRequestsCount(requests.length),
+          style: AppText.footnote.copyWith(color: c.secondaryLabel),
+        ),
+      );
+    }
+    final r = requests[i - 1];
+    final name = r.name.isEmpty ? r.email : r.name;
+    final busy = _answering.contains(r.uid);
+    return Padding(
+      padding: EdgeInsets.only(bottom: i == requests.length ? Space.l : 0),
+      child: _grouped(
+        c,
+        first: i == 1,
+        last: i == requests.length,
+        child: ListRow(
+          title: name,
+          subtitle: [
+            if (r.note.isNotEmpty) r.note,
+            [
+              if (r.name.isNotEmpty) r.email,
+              l10n.joinRequestAskedOn(clock.day(r.createdAt)),
+            ].join(l10n.dotSeparator),
+          ].join('\n'),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RowButton(
+                label: l10n.declineJoin,
+                semanticsLabel: l10n.declineJoinLabel(name),
+                onPressed: busy ? null : () => _answer(r, name, allow: false),
+              ),
+              const SizedBox(width: Space.xs),
+              RowButton(
+                label: l10n.allowJoin,
+                semanticsLabel: l10n.allowJoinLabel(name),
+                onPressed: busy ? null : () => _answer(r, name, allow: true),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _answer(JoinRequest r, String name, {required bool allow}) async {
+    final l10n = L10n.of(context);
+    setState(() => _answering.add(r.uid));
+    try {
+      await ref.churchData.answerJoinRequest(r.uid, allow: allow);
+      if (allow) Haptics.success();
+      if (mounted) showToast(context, allow ? l10n.joinAllowedToast(name) : l10n.joinDeclinedToast(name));
+    } catch (e) {
+      if (mounted) showToast(context, errorText(l10n, e));
+    } finally {
+      if (mounted) setState(() => _answering.remove(r.uid));
+    }
   }
 
   /// One row of a rounded group.

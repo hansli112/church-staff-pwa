@@ -300,11 +300,13 @@ service cloud.firestore {
 
       // An admin sets the home-screen name (removing the field falls back to
       // the church name) and turns 回報人數 on (attendanceSince, the day it
-      // was; #85) or off (removed). Everything else on the church doc is the
-      // backend's, the time zone too (setChurchTimeZone: it also clears the
-      // calendar's cached months and moves the church link's next fetch).
+      // was; #85) or off (removed), and stops or again takes requests to
+      // join (joinRequestsClosed, #88). Everything else on the church doc is
+      // the backend's, the time zone too (setChurchTimeZone: it also clears
+      // the calendar's cached months and moves the church link's next fetch).
       allow update: if isAdmin(cid)
-        && onlyTouches(['homeName', 'attendanceSince'])
+        && onlyTouches(['homeName', 'attendanceSince', 'joinRequestsClosed'])
+        && (!('joinRequestsClosed' in request.resource.data) || request.resource.data.joinRequestsClosed == true)
         && (!('homeName' in request.resource.data)
             || (request.resource.data.homeName is string
                 && request.resource.data.homeName.size() >= 1
@@ -345,7 +347,7 @@ service cloud.firestore {
             || (p is map
               && changed.hasOnly(['muted', 'reminderTiming'])
               && (!changed.hasAny(['muted']) || !('muted' in p)
-                  || (p.muted is list && p.muted.hasOnly(['reminder', 'rosterChange', 'memberLeft', 'attendance'])))
+                  || (p.muted is list && p.muted.hasOnly(['reminder', 'rosterChange', 'memberLeft', 'attendance', 'joinRequest'])))
               && (!changed.hasAny(['reminderTiming']) || !('reminderTiming' in p)
                   || p.reminderTiming in ['weekly', 'dayBefore', 'both']));
         }
@@ -362,6 +364,14 @@ service cloud.firestore {
       match /pendingMembers/{id} {
         allow read: if readsMembers(cid);
         allow delete: if isAdmin(cid);
+      }
+
+      // 申請加入 (#88): someone without an invite asking to join, by uid.
+      // Admins read them to let them in or not. Asking, taking it back and
+      // answering all go through the backend (functions/src/joinRequests.ts):
+      // the person asking is no member and reads nothing here.
+      match /joinRequests/{uid} {
+        allow read: if isAdmin(cid);
       }
 
       match /rosters/{rosterId} {

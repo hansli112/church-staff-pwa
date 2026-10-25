@@ -114,7 +114,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       page(
         '/c/:churchId',
-        (s) => ChurchEntryScreen(churchId: s.pathParameters['churchId']!),
+        (s) => WarmUpOnOpen(WarmUp.askToJoin, child: ChurchEntryScreen(churchId: s.pathParameters['churchId']!)),
         fade: true,
         // An invite link. The code decides the church, not the URL.
         routes: [

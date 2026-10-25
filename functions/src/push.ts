@@ -4,7 +4,7 @@ import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { languageOf, words, type Language, type Words } from './languages.js';
 
 /** Matches NotificationKind in app/lib/domain/models.dart. */
-export type NotificationKind = 'reminder' | 'rosterChange' | 'memberLeft' | 'attendance';
+export type NotificationKind = 'reminder' | 'rosterChange' | 'memberLeft' | 'attendance' | 'joinRequest';
 
 export interface PushMessage {
   title: string;

@@ -33,6 +33,9 @@ abstract final class TextLimits {
 
   /// The note with a meeting's 人數 (回報人數, #85).
   static const attendanceNote = 200;
+
+  /// What someone asking to join tells the admin (申請加入, #88).
+  static const joinNote = 100;
 }
 
 /// Limits whose unit is the same everywhere: URLs and secrets in UTF-16

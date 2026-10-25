@@ -2849,4 +2849,99 @@ class L10nJa extends L10n {
 
   @override
   String get notifAttendanceSub => '集まりの日の21時に、まだ誰も記録していないとき';
+
+  @override
+  String get churchEntryCanAsk => 'まだこの教会のメンバーではありません。参加を申請すると、管理者が承認したときに参加できます。招待コードがあれば入力してください。';
+
+  @override
+  String get askToJoin => '参加を申請';
+
+  @override
+  String askToJoinTitle(String church) {
+    return '$churchへの参加を申請';
+  }
+
+  @override
+  String get joinNoteLabel => '管理者へのメッセージ（任意）';
+
+  @override
+  String get joinNoteHint => '例：賛美チームのミンです';
+
+  @override
+  String get sendJoinRequest => '申請を送信';
+
+  @override
+  String get joinRequestSent => '申請を送信しました';
+
+  @override
+  String get joinRequestPending => '申請を送信しました。管理者が承認すると参加できます。';
+
+  @override
+  String get withdrawJoinRequest => '申請を取り消す';
+
+  @override
+  String get joinRequestWithdrawn => '申請を取り消しました';
+
+  @override
+  String get joinRequestRejected => '今回の申請は承認されませんでした。教会に直接お問い合わせください。';
+
+  @override
+  String get askAgain => 'もう一度申請';
+
+  @override
+  String get joinVerifyFirst => '参加を申請するには、メールアドレスの確認が必要です';
+
+  @override
+  String joinRequestsCount(int count) {
+    return '$count人が参加を申請';
+  }
+
+  @override
+  String joinRequestAskedOn(String date) {
+    return '$dateに申請';
+  }
+
+  @override
+  String get allowJoin => '承認';
+
+  @override
+  String get declineJoin => '拒否';
+
+  @override
+  String allowJoinLabel(String name) {
+    return '$nameの参加を承認';
+  }
+
+  @override
+  String declineJoinLabel(String name) {
+    return '$nameの申請を拒否';
+  }
+
+  @override
+  String joinAllowedToast(String name) {
+    return '$nameが参加しました';
+  }
+
+  @override
+  String joinDeclinedToast(String name) {
+    return '$nameの申請を拒否しました';
+  }
+
+  @override
+  String get errRequestsClosed => 'この教会は参加申請を受け付けていません';
+
+  @override
+  String get errRequestGone => 'この申請は取り消されたか、期限が切れています';
+
+  @override
+  String get takesJoinRequests => '参加申請を受け付ける';
+
+  @override
+  String get takesJoinRequestsFooter => 'オンのとき、教会の URL を知っている人が参加を申請できます。管理者が「メンバー」で承認すると参加します。';
+
+  @override
+  String get notifJoinRequest => '参加申請';
+
+  @override
+  String get notifJoinRequestSub => '誰かが参加を申請したとき（管理者のみ）';
 }

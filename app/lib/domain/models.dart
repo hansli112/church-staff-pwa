@@ -28,6 +28,7 @@ class Church {
     this.deletedAt,
     this.timeZone = ChurchTimeZone.fallback,
     this.attendanceSince,
+    this.takesJoinRequests = true,
   });
 
   final String id;
@@ -50,6 +51,10 @@ class Church {
   /// for; null while off.
   final Day? attendanceSince;
 
+  /// Whether someone with its church URL may ask to join (申請加入, #88);
+  /// its admin can turn that off.
+  final bool takesJoinRequests;
+
   /// Past this many characters some phones cut the home-screen name off;
   /// the most it may have is `TextLimits.homeName`.
   static const homeNameSafeLength = 6;
@@ -70,6 +75,7 @@ class Church {
     String? Function()? homeName,
     ChurchTimeZone? timeZone,
     Day? Function()? attendanceSince,
+    bool? takesJoinRequests,
   }) => Church(
     id: id,
     name: name ?? this.name,
@@ -79,6 +85,7 @@ class Church {
     deletedAt: deletedAt,
     timeZone: timeZone ?? this.timeZone,
     attendanceSince: attendanceSince == null ? this.attendanceSince : attendanceSince(),
+    takesJoinRequests: takesJoinRequests ?? this.takesJoinRequests,
   );
 }
 
@@ -136,7 +143,7 @@ class Zone {
 }
 
 /// Kinds of push notification a member can turn off per church.
-enum NotificationKind { reminder, rosterChange, memberLeft, attendance }
+enum NotificationKind { reminder, rosterChange, memberLeft, attendance, joinRequest }
 
 /// When a member is reminded of their duties: Monday evening of the week's
 /// duties (Monday to Sunday), the evening before each, or both. Matches
@@ -1276,6 +1283,62 @@ class PendingMember {
     Object.hashAll(zones),
     Object.hashAllUnordered(mutedNotifications),
   );
+}
+
+/// How someone's request to join a church stands (申請加入, #88).
+enum JoinRequestState { pending, rejected }
+
+/// Someone without an invite asking to join (申請加入, #88), by uid: what
+/// an admin sees to let them in or not. Written only by the backend.
+@immutable
+class JoinRequest {
+  const JoinRequest({
+    required this.uid,
+    required this.name,
+    this.email = '',
+    this.note = '',
+    required this.createdAt,
+    this.rejectedAt,
+  });
+
+  final String uid;
+  final String name;
+  final String email;
+
+  /// What they told the admin; may be empty.
+  final String note;
+  final DateTime createdAt;
+
+  /// When an admin turned it down; null while waiting.
+  final DateTime? rejectedAt;
+
+  /// A request is gone after this many days, answered or not
+  /// (JOIN_REQUEST_DAYS in functions/src/joinRequests.ts).
+  static const days = 30;
+
+  /// How a request asked [ageDays] days ago stands (testdata/church_rules.json,
+  /// joinRequestState); null as if there were none.
+  static JoinRequestState? standing(double ageDays, {required bool rejected}) {
+    if (ageDays >= days) return null;
+    return rejected ? JoinRequestState.rejected : JoinRequestState.pending;
+  }
+
+  /// How it stands at [now].
+  JoinRequestState? stateAt(DateTime now) =>
+      standing(now.difference(createdAt).inMilliseconds / Duration.millisecondsPerDay, rejected: rejectedAt != null);
+
+  @override
+  bool operator ==(Object other) =>
+      other is JoinRequest &&
+      other.uid == uid &&
+      other.name == name &&
+      other.email == email &&
+      other.note == note &&
+      other.createdAt == createdAt &&
+      other.rejectedAt == rejectedAt;
+
+  @override
+  int get hashCode => Object.hash(uid, name, email, note, createdAt, rejectedAt);
 }
 
 /// One person in a move file, for 「這位是我」.

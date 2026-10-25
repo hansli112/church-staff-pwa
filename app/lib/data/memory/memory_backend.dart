@@ -117,6 +117,12 @@ class MemoryBackend implements Backend {
   /// Pending members per church, by ID.
   final pendingMembers = <String, Map<String, PendingMember>>{};
 
+  /// Requests to join (申請加入, #88) per church, by uid.
+  final joinRequests = <String, Map<String, JoinRequest>>{};
+
+  /// How [uid]'s request to church [cid] stands now.
+  JoinRequestState? joinRequestState(String cid, String uid) => joinRequests[cid]?[uid]?.stateAt(clock());
+
   /// The rosters a move recorded naming each pending member, per church:
   /// the only days a claim or a merge points at the member instead.
   final pendingRosterIds = <String, Map<String, List<String>>>{};
@@ -804,6 +810,54 @@ class MemoryChurchData implements ChurchData {
       _b.pendingMembers[churchId]?.remove(id);
       _b.pendingRosterIds[churchId]?.remove(id);
     });
+  }
+
+  @override
+  Stream<List<JoinRequest>> joinRequests() => _b.watch(() {
+    _requireAdmin();
+    return (_b.joinRequests[churchId] ?? const <String, JoinRequest>{}).values.toList();
+  }, equals: _sameList);
+
+  /// As answerJoinRequest: a no marks the request; a yes adds them as an
+  /// invite would, unless the church takes no requests or it is not
+  /// waiting.
+  @override
+  Future<void> answerJoinRequest(String uid, {required bool allow}) async {
+    _functionAdmin();
+    _b.requireNetwork();
+    final requests = _b.joinRequests[churchId] ?? {};
+    final r = requests[uid];
+    if (!allow) {
+      if (r != null) {
+        requests[uid] = JoinRequest(
+          uid: r.uid,
+          name: r.name,
+          email: r.email,
+          note: r.note,
+          createdAt: r.createdAt,
+          rejectedAt: _b.clock(),
+        );
+      }
+      _b.notify();
+      return;
+    }
+    if (!_b.churches[churchId]!.takesJoinRequests) {
+      throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.requestsClosed);
+    }
+    if (_b.memberOf(churchId, uid) == null) {
+      if (r?.stateAt(_b.clock()) != JoinRequestState.pending) {
+        throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.requestGone);
+      }
+      _b.addMember(churchId, Member(uid: uid, name: r!.name, email: r.email, joinedAt: _b.clock()));
+    }
+    requests.remove(uid);
+    _b.notify();
+  }
+
+  @override
+  Future<void> setTakesJoinRequests(bool on) async {
+    _requireAdmin();
+    await _b.write(() => _b.churches[churchId] = _b.churches[churchId]!.copyWith(takesJoinRequests: on));
   }
 
   @override
@@ -1954,6 +2008,9 @@ class MemoryCloud implements CloudApi {
     for (final m in _b.members.values) {
       m.remove(uid);
     }
+    for (final r in _b.joinRequests.values) {
+      r.remove(uid);
+    }
     _b.users.remove(uid);
     _b.notify();
     _b.auth.deleteCurrent();
@@ -2082,7 +2139,46 @@ class MemoryCloud implements CloudApi {
   Future<ChurchPreview> churchPreview(String churchId) async {
     final c = _b.churches[churchId];
     if (c == null || !c.isActive) throw const CloudException(CloudErrorCode.notFound);
-    return ChurchPreview(id: c.id, name: c.name, logoUrl: c.logoUrl);
+    final uid = _b.auth.currentUser?.uid;
+    return ChurchPreview(
+      id: c.id,
+      name: c.name,
+      logoUrl: c.logoUrl,
+      takesRequests: c.takesJoinRequests,
+      request: uid == null ? null : _b.joinRequestState(churchId, uid),
+    );
+  }
+
+  @override
+  Future<void> requestToJoin(String churchId, {String note = ''}) async {
+    _b.requireNetwork();
+    final user = _b.auth.currentUser;
+    if (user == null) throw const CloudException(CloudErrorCode.permissionDenied);
+    note = note.trim();
+    if (!withinTextLimit(note, TextLimits.joinNote)) throw const CloudException(CloudErrorCode.unknown);
+    if (!user.verified) throw const CloudException(CloudErrorCode.unverifiedEmail);
+    final c = _b.churches[churchId];
+    if (c == null || !c.isActive) throw const CloudException(CloudErrorCode.notFound);
+    if (_b.memberOf(churchId, user.uid) != null) return;
+    if (!c.takesJoinRequests) throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.requestsClosed);
+    if (_b.joinRequestState(churchId, user.uid) == JoinRequestState.pending) return;
+    (_b.joinRequests[churchId] ??= {})[user.uid] = JoinRequest(
+      uid: user.uid,
+      name: _b.users[user.uid]?.name ?? user.displayName ?? '',
+      email: user.email,
+      note: note,
+      createdAt: _b.clock(),
+    );
+    _b.notify();
+  }
+
+  @override
+  Future<void> withdrawJoinRequest(String churchId) async {
+    _b.requireNetwork();
+    final uid = _b.auth.currentUser?.uid;
+    if (uid == null) throw const CloudException(CloudErrorCode.permissionDenied);
+    _b.joinRequests[churchId]?.remove(uid);
+    _b.notify();
   }
 
   void _requireOperator() {

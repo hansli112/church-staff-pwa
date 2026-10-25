@@ -21,6 +21,8 @@ export const TEXT_LIMITS = {
   eventTitle: 200,
   /** The note with a meeting's 人數 (回報人數, #85). */
   attendanceNote: 200,
+  /** What someone asking to join tells the admin (申請加入, #88). */
+  joinNote: 100,
 } as const;
 
 /** URLs and secrets in UTF-16 code units, services as a count. */

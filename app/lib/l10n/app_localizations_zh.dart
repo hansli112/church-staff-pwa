@@ -2844,6 +2844,101 @@ class L10nZh extends L10n {
 
   @override
   String get notifAttendanceSub => '聚會當天 21:00 還沒人填時';
+
+  @override
+  String get churchEntryCanAsk => '你還不是這間教會的同工。可以申請加入，管理員允許後就會加入；有邀請碼的話直接輸入。';
+
+  @override
+  String get askToJoin => '申請加入';
+
+  @override
+  String askToJoinTitle(String church) {
+    return '申請加入〈$church〉';
+  }
+
+  @override
+  String get joinNoteLabel => '想跟管理員說的話（選填）';
+
+  @override
+  String get joinNoteHint => '例如：我是敬拜團的小明';
+
+  @override
+  String get sendJoinRequest => '送出申請';
+
+  @override
+  String get joinRequestSent => '已送出申請';
+
+  @override
+  String get joinRequestPending => '已送出申請，等管理員允許。允許後就會加入。';
+
+  @override
+  String get withdrawJoinRequest => '取消申請';
+
+  @override
+  String get joinRequestWithdrawn => '已取消申請';
+
+  @override
+  String get joinRequestRejected => '這次申請沒有通過，請直接聯絡教會。';
+
+  @override
+  String get askAgain => '再申請一次';
+
+  @override
+  String get joinVerifyFirst => '驗證 email 後才能申請加入';
+
+  @override
+  String joinRequestsCount(int count) {
+    return '$count 位申請加入';
+  }
+
+  @override
+  String joinRequestAskedOn(String date) {
+    return '$date 申請';
+  }
+
+  @override
+  String get allowJoin => '允許';
+
+  @override
+  String get declineJoin => '拒絕';
+
+  @override
+  String allowJoinLabel(String name) {
+    return '允許$name加入';
+  }
+
+  @override
+  String declineJoinLabel(String name) {
+    return '拒絕$name的申請';
+  }
+
+  @override
+  String joinAllowedToast(String name) {
+    return '$name加入了';
+  }
+
+  @override
+  String joinDeclinedToast(String name) {
+    return '已拒絕$name的申請';
+  }
+
+  @override
+  String get errRequestsClosed => '這間教會沒有開放申請加入';
+
+  @override
+  String get errRequestGone => '這個申請已經取消或過期了';
+
+  @override
+  String get takesJoinRequests => '開放申請加入';
+
+  @override
+  String get takesJoinRequestsFooter => '開著時，拿到教會網址的人可以申請加入，管理員在「同工」允許後才會加入。';
+
+  @override
+  String get notifJoinRequest => '申請加入';
+
+  @override
+  String get notifJoinRequestSub => '有人申請加入教會時（只通知管理員）';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -5686,4 +5781,99 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get notifAttendanceSub => '聚会当天 21:00 还没人填时';
+
+  @override
+  String get churchEntryCanAsk => '你还不是这间教会的同工。可以申请加入，管理员允许后就会加入；有邀请码的话直接输入。';
+
+  @override
+  String get askToJoin => '申请加入';
+
+  @override
+  String askToJoinTitle(String church) {
+    return '申请加入〈$church〉';
+  }
+
+  @override
+  String get joinNoteLabel => '想跟管理员说的话（选填）';
+
+  @override
+  String get joinNoteHint => '例如：我是敬拜团的小明';
+
+  @override
+  String get sendJoinRequest => '送出申请';
+
+  @override
+  String get joinRequestSent => '已送出申请';
+
+  @override
+  String get joinRequestPending => '已送出申请，等管理员允许。允许后就会加入。';
+
+  @override
+  String get withdrawJoinRequest => '取消申请';
+
+  @override
+  String get joinRequestWithdrawn => '已取消申请';
+
+  @override
+  String get joinRequestRejected => '这次申请没有通过，请直接联系教会。';
+
+  @override
+  String get askAgain => '再申请一次';
+
+  @override
+  String get joinVerifyFirst => '验证邮箱后才能申请加入';
+
+  @override
+  String joinRequestsCount(int count) {
+    return '$count 位申请加入';
+  }
+
+  @override
+  String joinRequestAskedOn(String date) {
+    return '$date 申请';
+  }
+
+  @override
+  String get allowJoin => '允许';
+
+  @override
+  String get declineJoin => '拒绝';
+
+  @override
+  String allowJoinLabel(String name) {
+    return '允许$name加入';
+  }
+
+  @override
+  String declineJoinLabel(String name) {
+    return '拒绝$name的申请';
+  }
+
+  @override
+  String joinAllowedToast(String name) {
+    return '$name加入了';
+  }
+
+  @override
+  String joinDeclinedToast(String name) {
+    return '已拒绝$name的申请';
+  }
+
+  @override
+  String get errRequestsClosed => '这间教会没有开放申请加入';
+
+  @override
+  String get errRequestGone => '这个申请已经取消或过期了';
+
+  @override
+  String get takesJoinRequests => '开放申请加入';
+
+  @override
+  String get takesJoinRequestsFooter => '开着时，拿到教会网址的人可以申请加入，管理员在“同工”允许后才会加入。';
+
+  @override
+  String get notifJoinRequest => '申请加入';
+
+  @override
+  String get notifJoinRequestSub => '有人申请加入教会时（只通知管理员）';
 }
