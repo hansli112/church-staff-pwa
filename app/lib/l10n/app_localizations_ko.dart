@@ -2851,7 +2851,7 @@ class L10nKo extends L10n {
   String get notifAttendanceSub => '모임 당일 오후 9시까지 아무도 기록하지 않았을 때';
 
   @override
-  String get churchEntryCanAsk => '아직 이 교회의 멤버가 아니에요. 가입을 신청하면 관리자가 승인한 뒤 가입돼요. 초대 코드가 있으면 입력해 주세요.';
+  String get churchEntryCanAsk => '아직 이 교회의 멤버가 아니에요. 가입을 신청하면 관리자가 승인한 뒤 가입돼요.';
 
   @override
   String get askToJoin => '가입 신청';

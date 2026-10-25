@@ -68,7 +68,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/c/hope');
     expect(find.text('希望堂'), findsOneWidget);
-    expect(findShown('你還不是這間教會的同工。可以申請加入，管理員允許後就會加入；有邀請碼的話直接輸入。'), findsOneWidget);
+    expect(findShown('你還不是這間教會的同工，申請後管理員允許就會加入'), findsOneWidget);
     await tapText(tester, '回首頁');
     expect(findShown('恩典堂'), findsOneWidget);
   });

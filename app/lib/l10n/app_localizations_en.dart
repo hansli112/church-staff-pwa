@@ -2990,7 +2990,7 @@ class L10nEn extends L10n {
 
   @override
   String get churchEntryCanAsk =>
-      'You’re not a team member of this church yet. Ask to join and you’re in once an admin accepts, or enter an invite code if you have one.';
+      'You’re not a team member of this church yet. Ask to join, and you’re in once an admin accepts.';
 
   @override
   String get askToJoin => 'Ask to join';

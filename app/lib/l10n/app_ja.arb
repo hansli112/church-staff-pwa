@@ -862,7 +862,7 @@
   "attendanceSaved": "記録しました",
   "notifAttendance": "人数の記録のお知らせ",
   "notifAttendanceSub": "集まりの日の21時に、まだ誰も記録していないとき",
-  "churchEntryCanAsk": "まだこの教会のメンバーではありません。参加を申請すると、管理者が承認したときに参加できます。招待コードがあれば入力してください。",
+  "churchEntryCanAsk": "まだこの教会のメンバーではありません。参加を申請すると、管理者が承認したときに参加できます。",
   "askToJoin": "参加を申請",
   "askToJoinTitle": "{church}への参加を申請",
   "joinNoteLabel": "管理者へのメッセージ（任意）",

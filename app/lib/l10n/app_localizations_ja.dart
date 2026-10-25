@@ -2851,7 +2851,7 @@ class L10nJa extends L10n {
   String get notifAttendanceSub => '集まりの日の21時に、まだ誰も記録していないとき';
 
   @override
-  String get churchEntryCanAsk => 'まだこの教会のメンバーではありません。参加を申請すると、管理者が承認したときに参加できます。招待コードがあれば入力してください。';
+  String get churchEntryCanAsk => 'まだこの教会のメンバーではありません。参加を申請すると、管理者が承認したときに参加できます。';
 
   @override
   String get askToJoin => '参加を申請';

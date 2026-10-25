@@ -2846,7 +2846,7 @@ class L10nZh extends L10n {
   String get notifAttendanceSub => '聚會當天 21:00 還沒人填時';
 
   @override
-  String get churchEntryCanAsk => '你還不是這間教會的同工。可以申請加入，管理員允許後就會加入；有邀請碼的話直接輸入。';
+  String get churchEntryCanAsk => '你還不是這間教會的同工，申請後管理員允許就會加入';
 
   @override
   String get askToJoin => '申請加入';
@@ -2866,7 +2866,7 @@ class L10nZh extends L10n {
   String get joinRequestSent => '已送出申請';
 
   @override
-  String get joinRequestPending => '已送出申請，等管理員允許。允許後就會加入。';
+  String get joinRequestPending => '已送出申請，管理員允許後就會加入';
 
   @override
   String get withdrawJoinRequest => '取消申請';
@@ -5780,7 +5780,7 @@ class L10nZhHans extends L10nZh {
   String get notifAttendanceSub => '聚会当天 21:00 还没人填时';
 
   @override
-  String get churchEntryCanAsk => '你还不是这间教会的同工。可以申请加入，管理员允许后就会加入；有邀请码的话直接输入。';
+  String get churchEntryCanAsk => '你还不是这间教会的同工，申请后管理员允许就会加入';
 
   @override
   String get askToJoin => '申请加入';
@@ -5800,7 +5800,7 @@ class L10nZhHans extends L10nZh {
   String get joinRequestSent => '已送出申请';
 
   @override
-  String get joinRequestPending => '已送出申请，等管理员允许。允许后就会加入。';
+  String get joinRequestPending => '已送出申请，管理员允许后就会加入';
 
   @override
   String get withdrawJoinRequest => '取消申请';

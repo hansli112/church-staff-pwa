@@ -5131,7 +5131,7 @@ abstract class L10n {
   /// Church URL page for a non-member when the church takes requests to join (#88)
   ///
   /// In zh, this message translates to:
-  /// **'你還不是這間教會的同工。可以申請加入，管理員允許後就會加入；有邀請碼的話直接輸入。'**
+  /// **'你還不是這間教會的同工，申請後管理員允許就會加入'**
   String get churchEntryCanAsk;
 
   /// No description provided for @askToJoin.
@@ -5167,7 +5167,7 @@ abstract class L10n {
   /// No description provided for @joinRequestPending.
   ///
   /// In zh, this message translates to:
-  /// **'已送出申請，等管理員允許。允許後就會加入。'**
+  /// **'已送出申請，管理員允許後就會加入'**
   String get joinRequestPending;
 
   /// No description provided for @withdrawJoinRequest.

@@ -45,7 +45,7 @@ void main() {
     final b = newcomer();
     await pumpApp(tester, b);
     await go(tester, '/c/hope');
-    expect(findShown('你還不是這間教會的同工。可以申請加入，管理員允許後就會加入；有邀請碼的話直接輸入。'), findsOneWidget);
+    expect(findShown('你還不是這間教會的同工，申請後管理員允許就會加入'), findsOneWidget);
     expect(findShown('輸入邀請碼'), findsOneWidget);
     expect(b.warmedUp, contains(WarmUp.askToJoin));
 
@@ -56,7 +56,7 @@ void main() {
     final sent = b.joinRequests['hope']!['new']!;
     expect(sent.note, '我是敬拜團的小明');
     expect(sent.name, '新朋友');
-    expect(findShown('已送出申請，等管理員允許。允許後就會加入。'), findsOneWidget);
+    expect(findShown('已送出申請，管理員允許後就會加入'), findsOneWidget);
     expect(findShown('申請加入'), findsNothing);
 
     await tapText(tester, '取消申請');
@@ -69,7 +69,7 @@ void main() {
     b.joinRequests['hope'] = {'new': request()};
     await pumpApp(tester, b);
     await go(tester, '/c/hope');
-    expect(findShown('已送出申請，等管理員允許。允許後就會加入。'), findsOneWidget);
+    expect(findShown('已送出申請，管理員允許後就會加入'), findsOneWidget);
 
     b.addMember('hope', const Member(uid: 'new', name: '新朋友'));
     await settle(tester);
@@ -84,7 +84,7 @@ void main() {
     b.joinRequests['hope'] = {'mei': request(uid: 'mei', name: '李美玉')};
     await pumpApp(tester, b);
     await go(tester, '/c/hope');
-    expect(findShown('已送出申請，等管理員允許。允許後就會加入。'), findsOneWidget);
+    expect(findShown('已送出申請，管理員允許後就會加入'), findsOneWidget);
     expect(findShown('回首頁'), findsOneWidget);
 
     b.addMember('hope', staffMei);
@@ -103,7 +103,7 @@ void main() {
     await tapText(tester, '再申請一次');
     await tapText(tester, '申請加入');
     expect(b.joinRequests['hope']!['new']!.rejectedAt, isNull);
-    expect(findShown('已送出申請，等管理員允許。允許後就會加入。'), findsOneWidget);
+    expect(findShown('已送出申請，管理員允許後就會加入'), findsOneWidget);
   });
 
   testWidgets('a church that takes no requests asks for an invite instead', (tester) async {
@@ -124,7 +124,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/me/members');
     expect(findShown('2 位申請加入'), findsOneWidget);
-    expect(findShownContaining('我是敬拜團的小明new@example.com · 10'), findsOneWidget);
+    expect(findShownContaining('我是敬拜團的小明new@example.com10'), findsOneWidget);
 
     await tester.tap(find.bySemanticsLabel('允許新朋友加入'));
     await settle(tester);
@@ -133,6 +133,16 @@ void main() {
     expect(find.text('新朋友加入了'), findsOneWidget);
 
     await tester.tap(find.bySemanticsLabel('拒絕陌生人的申請'));
+    await settle(tester);
+    expect(find.text('已拒絕陌生人的申請'), findsOneWidget);
+    expect(findShown('陌生人'), findsNothing, reason: 'hidden at once');
+    await tapText(tester, '復原');
+    expect(findShown('陌生人'), findsOneWidget);
+    expect(b.joinRequests['grace']!['other']!.rejectedAt, isNull);
+
+    await tester.tap(find.bySemanticsLabel('拒絕陌生人的申請'));
+    await settle(tester);
+    await tester.pump(const Duration(seconds: 6));
     await settle(tester);
     expect(b.members['grace']!['other'], isNull);
     expect(b.joinRequests['grace']!['other']!.rejectedAt, testNow);
@@ -176,6 +186,8 @@ void main() {
     expect(find.bySemanticsLabel('允許新朋友加入'), findsNothing);
     await tester.tap(find.bySemanticsLabel('拒絕新朋友的申請'));
     await settle(tester);
+    await tester.pump(const Duration(seconds: 6));
+    await settle(tester);
     expect(b.joinRequests['grace']!['new']!.rejectedAt, testNow);
   });
 
@@ -196,7 +208,7 @@ void main() {
     b.joinRequests['hope'] = {'new': request()};
     await pumpApp(tester, b);
     await go(tester, '/c/hope');
-    expect(findShown('已送出申請，等管理員允許。允許後就會加入。'), findsOneWidget);
+    expect(findShown('已送出申請，管理員允許後就會加入'), findsOneWidget);
     expect(findShown('輸入邀請碼'), findsOneWidget, reason: 'an invite still works while waiting');
 
     b.joinRequests['hope']!['new'] = request(rejectedAt: testNow);

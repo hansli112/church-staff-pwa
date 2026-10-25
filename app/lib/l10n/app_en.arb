@@ -862,7 +862,7 @@
   "attendanceSaved": "Saved",
   "notifAttendance": "Attendance reminders",
   "notifAttendanceSub": "At 9 PM on a meeting day, when nobody has filled it in",
-  "churchEntryCanAsk": "You’re not a team member of this church yet. Ask to join and you’re in once an admin accepts, or enter an invite code if you have one.",
+  "churchEntryCanAsk": "You’re not a team member of this church yet. Ask to join, and you’re in once an admin accepts.",
   "askToJoin": "Ask to join",
   "askToJoinTitle": "Ask to join {church}",
   "joinNoteLabel": "Note to the admin (optional)",

@@ -13,7 +13,8 @@ import '../common/errors.dart';
 import '../common/time_zones.dart';
 import '../common/labels.dart';
 
-/// Members hidden while their removal can still be undone.
+/// Members, and requests to join turned down, hidden while it can still be
+/// undone.
 class PendingRemovals extends Notifier<Set<String>> {
   @override
   Set<String> build() => const {};
@@ -97,7 +98,10 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
           final joined = {for (final m in all) m.uid};
           final requests = [
             for (final r in ref.watch(joinRequestsProvider).value ?? const <JoinRequest>[])
-              if (!joined.contains(r.uid) && (matchesSearch(r.name, _query) || matchesSearch(r.email, _query))) r,
+              if (!joined.contains(r.uid) &&
+                  !hidden.contains(r.uid) &&
+                  (matchesSearch(r.name, _query) || matchesSearch(r.email, _query)))
+                r,
           ];
           final head = requests.isEmpty ? 0 : requests.length + 1;
           final clock = ChurchClock.of(context, ref);
@@ -105,6 +109,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
           // Nobody else has joined: the next step is inviting them.
           final alone = isAdmin && _query.isEmpty && list.length <= 1 && pending.isEmpty && requests.isEmpty;
           final extra = alone ? 1 : (pending.isEmpty ? 0 : pending.length + 1);
+          final count = _query.isEmpty ? 1 : 0;
           return Column(
             children: [
               Padding(
@@ -119,29 +124,26 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                   onChanged: (q) => setState(() => _query = q),
                 ),
               ),
-              if (_query.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: Space.l,
-                    vertical: Space.xs,
-                  ),
-                  child: Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: Text(
-                      l10n.memberCount(all.length - hidden.length),
-                      style: AppText.footnote.copyWith(color: c.secondaryLabel),
-                    ),
-                  ),
-                ),
               Expanded(
                 child: list.isEmpty && pending.isEmpty && requests.isEmpty
                     ? EmptyState(message: l10n.noMembersFound)
                     : ListView.builder(
-                        itemCount: head + list.length + extra,
+                        itemCount: head + count + list.length + extra,
                         itemExtent: null,
                         itemBuilder: (context, i) {
                           if (i < head) return _request(c, clock, requests, i, takesRequests: takesRequests);
                           i -= head;
+                          // Under the requests, so it heads the members it counts.
+                          if (count == 1 && i == 0) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: Space.l, vertical: Space.xs),
+                              child: Text(
+                                l10n.memberCount(all.length - hidden.where(joined.contains).length),
+                                style: AppText.footnote.copyWith(color: c.secondaryLabel),
+                              ),
+                            );
+                          }
+                          i -= count;
                           if (alone && i == list.length) {
                             return Padding(
                               padding: const EdgeInsets.fromLTRB(Space.l, Space.l, Space.l, Space.s),
@@ -242,12 +244,11 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
         last: i == requests.length,
         child: ListRow(
           title: name,
+          // A line each, so the date is not broken beside the buttons.
           subtitle: [
             if (r.note.isNotEmpty) r.note,
-            [
-              if (r.name.isNotEmpty) r.email,
-              l10n.joinRequestAskedOn(clock.day(r.createdAt)),
-            ].join(l10n.dotSeparator),
+            if (r.name.isNotEmpty) r.email,
+            l10n.joinRequestAskedOn(clock.day(r.createdAt)),
           ].join('\n'),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
@@ -255,7 +256,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
               RowButton(
                 label: l10n.declineJoin,
                 semanticsLabel: l10n.declineJoinLabel(name),
-                onPressed: busy ? null : () => _answer(r, name, allow: false),
+                onPressed: busy ? null : () => _decline(r, name),
               ),
               // While the church takes none, only turning down (#88).
               if (takesRequests) ...[
@@ -263,7 +264,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                 RowButton(
                   label: l10n.allowJoin,
                   semanticsLabel: l10n.allowJoinLabel(name),
-                  onPressed: busy ? null : () => _answer(r, name, allow: true),
+                  onPressed: busy ? null : () => _allow(r, name),
                 ),
               ],
             ],
@@ -273,18 +274,39 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
     );
   }
 
-  Future<void> _answer(JoinRequest r, String name, {required bool allow}) async {
+  Future<void> _allow(JoinRequest r, String name) async {
     final l10n = L10n.of(context);
     setState(() => _answering.add(r.uid));
     try {
-      await ref.churchData.answerJoinRequest(r.uid, allow: allow);
-      if (allow) Haptics.success();
-      if (mounted) showToast(context, allow ? l10n.joinAllowedToast(name) : l10n.joinDeclinedToast(name));
+      await ref.churchData.answerJoinRequest(r.uid, allow: true);
+      Haptics.success();
+      if (mounted) showToast(context, l10n.joinAllowedToast(name));
     } catch (e) {
       if (mounted) showToast(context, errorText(l10n, e));
     } finally {
       if (mounted) setState(() => _answering.remove(r.uid));
     }
+  }
+
+  /// Turning down cannot be taken back once written, so it waits out 復原
+  /// as removing a member does.
+  void _decline(JoinRequest r, String name) {
+    final l10n = L10n.of(context);
+    final hidden = ref.read(pendingRemovalsProvider.notifier);
+    final data = ref.churchData;
+    hidden.add(r.uid);
+    showDeferredUndo(
+      context,
+      l10n.joinDeclinedToast(name),
+      commit: () async {
+        await data.answerJoinRequest(r.uid, allow: false);
+        hidden.remove(r.uid);
+      },
+      onUndo: () => hidden.remove(r.uid),
+      onError: (e) {
+        if (mounted) showToast(context, errorText(l10n, e));
+      },
+    );
   }
 
   /// One row of a rounded group.
