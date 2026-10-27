@@ -1,13 +1,14 @@
-import type { DocumentSnapshot } from 'firebase-admin/firestore';
+import type { DocumentReference, DocumentSnapshot, Transaction } from 'firebase-admin/firestore';
 
 import { fail, requireCaller, type Caller, type Deps } from './common.js';
 import { ledDuties, ministriesOf } from './ministries.js';
+import { powersOf, type Powers } from './powers.js';
 
 /**
  * Church access: every callable that acts in one church starts here. It
  * turns the request into the church, the caller's membership there and what
- * that lets them do, the way firestore.rules decides it for direct writes
- * (isMember, isAdmin, inGroup, canEditRosterType).
+ * that lets them do ([Powers]), the way firestore.rules decides it for
+ * direct writes (isMember, isAdmin, inGroup, canEditRosterType).
  *
  * The order of refusals:
  * 1. not signed in, or no member of the church → permissionDenied (a
@@ -61,6 +62,8 @@ export interface ChurchAccess {
   /** Whether the church is active. False only with `closed: 'allow'`. */
   open: boolean;
   inGroup(group: Group): boolean;
+  /** What the caller may do there. */
+  powers: Powers;
 }
 
 /**
@@ -104,16 +107,16 @@ export async function churchAccess(
   const open = isChurchOpen(church);
   if (!open && opts.closed !== 'allow') churchClosed();
 
-  const admin = member.exists && member.get('role') === 'admin';
-  const groups = (member.get('groups') as string[] | undefined) ?? [];
+  const powers = powersOf(member.data() ?? {});
   const access: ChurchAccess = {
     cid,
     caller: c,
     church,
     member,
-    admin,
+    admin: powers.admin,
     open,
-    inGroup: (group) => admin || (member.exists && groups.includes(group)),
+    inGroup: powers.inGroup,
+    powers,
   };
   if (!(await has(deps, access, level))) fail('permission-denied', 'permissionDenied');
   return access;
@@ -125,14 +128,30 @@ async function has(deps: Deps, a: ChurchAccess, level: Level) {
   if ('group' in level) return a.inGroup(level.group);
   if ('arranges' in level) {
     if (await has(deps, a, { rosterEditor: level.arranges })) return true;
-    const led = (a.member.get('leadMinistries') as string[] | undefined) ?? [];
-    if (led.length === 0) return false;
+    if (a.powers.ministries.length === 0) return false;
     const doc = await deps.db.doc(`churches/${a.cid}/settings/ministries`).get();
-    return ledDuties(ministriesOf(doc), led, level.arranges).size > 0;
+    return ledDuties(ministriesOf(doc), a.powers.ministries, level.arranges).size > 0;
   }
   const type = level.rosterEditor;
   if (!(await serviceTypes(deps, a.cid)).includes(type)) return false;
-  return a.inGroup('roster-editors') || ((a.member.get('leadTypes') as string[] | undefined) ?? []).includes(type);
+  return a.powers.editsRosters(type);
+}
+
+/**
+ * [a] read again in transaction [tx], with [refs]: a member gone or a
+ * church closed meanwhile is refused as [churchAccess] refuses, and what
+ * they may do is as they are now (a lead taken away meanwhile writes
+ * nothing). Returns their member doc, their powers and [refs]' docs.
+ */
+export async function accessIn(tx: Transaction, deps: Deps, a: ChurchAccess, ...refs: DocumentReference[]) {
+  const [church, me, ...docs] = (await tx.getAll(
+    deps.db.doc(`churches/${a.cid}`),
+    deps.db.doc(`churches/${a.cid}/members/${a.caller.uid}`),
+    ...refs,
+  )) as DocumentSnapshot[];
+  if (!me.exists) fail('permission-denied', 'permissionDenied');
+  if (!isChurchOpen(church)) churchClosed();
+  return { me, powers: powersOf(me.data()!), docs };
 }
 
 /**

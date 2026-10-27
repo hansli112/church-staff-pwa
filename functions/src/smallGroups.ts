@@ -1,6 +1,6 @@
 import { FieldValue, type DocumentSnapshot, type Transaction } from 'firebase-admin/firestore';
 
-import { churchAccess, churchClosed, isChurchOpen } from './access.js';
+import { accessIn, churchAccess } from './access.js';
 import { fail, record, text, type Caller, type Deps } from './common.js';
 import { weekdayOf } from './attendance.js';
 import { identitiesOf, withIdentities, type Identity } from './identities.js';
@@ -19,23 +19,6 @@ import { TEXT_LIMITS } from './limits.js';
 
 const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
 
-/** The member fields who may edit what reads. */
-interface Fields {
-  role?: unknown;
-  leadTypes?: unknown;
-}
-
-/**
- * Whether [m] may change a 小組 of service [before] (null: none yet) to
- * service [after] (null: closed) (testdata/church_rules.json,
- * smallGroupEditing): admins any; a service's 負責人 and 牧者 those in it.
- */
-export function mayEditSmallGroup(m: Fields, before: string | null, after: string | null) {
-  if (m.role === 'admin') return true;
-  const leads = strings(m.leadTypes);
-  return (before !== null || after !== null) && [before, after].every((s) => s === null || leads.includes(s));
-}
-
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Makes or takes away [m]'s 小組長 of [id], with the projection the rules read, and writes [also] with it. */
@@ -52,7 +35,8 @@ function setLead(tx: Transaction, m: DocumentSnapshot, id: string, lead: boolean
  * stay. Returns its id.
  */
 export async function editSmallGroup(deps: Deps, caller: Caller | null, data: unknown) {
-  const { cid, caller: c } = await churchAccess(deps, caller, data, 'member');
+  const access = await churchAccess(deps, caller, data, 'member');
+  const { cid } = access;
   const input = record(data);
   if (input.op !== 'save' && input.op !== 'delete') fail('invalid-argument', 'unknown');
   const saving = input.op === 'save';
@@ -68,22 +52,15 @@ export async function editSmallGroup(deps: Deps, caller: Caller | null, data: un
   const root = deps.db.doc(`churches/${cid}`);
   const at = id === undefined ? root.collection('smallGroups').doc() : root.collection('smallGroups').doc(id as string);
   await deps.db.runTransaction(async (tx) => {
-    const [church, me, services, was] = (await tx.getAll(
-      root,
-      root.collection('members').doc(c.uid),
-      root.collection('settings').doc('services'),
-      at,
-    )) as DocumentSnapshot[];
-    if (!me.exists) fail('permission-denied', 'permissionDenied');
-    if (!isChurchOpen(church)) churchClosed();
+    const { powers, docs: [services, was] } = await accessIn(tx, deps, access, root.collection('settings').doc('services'), at);
     if (id !== undefined && !was.exists) fail('not-found', 'notFound');
     const before = was.exists ? (was.get('service') as string) : null;
     const after = (fields?.service as string | undefined) ?? null;
     // Its 小組長 set when it meets, and nothing else.
     const scheduling = was.exists && fields !== null && leads === null
       && fields.name === was.get('name') && fields.service === before
-      && strings(me.get('leadSmallGroups')).includes(at.id);
-    if (!scheduling && !mayEditSmallGroup(me.data()!, before, after)) fail('permission-denied', 'permissionDenied');
+      && powers.leads({ kind: 'small', id: at.id, service: before });
+    if (!scheduling && !powers.mayEditSmallGroup(before, after)) fail('permission-denied', 'permissionDenied');
     if (after !== null && !((services.get('services') as { id: string }[] | undefined) ?? []).some((s) => s.id === after)) {
       fail('invalid-argument', 'unknown');
     }

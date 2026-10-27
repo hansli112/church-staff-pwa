@@ -1,7 +1,7 @@
-import { FieldValue, type DocumentSnapshot } from 'firebase-admin/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
 import { isDeepStrictEqual } from 'node:util';
 
-import { churchAccess, churchClosed, isChurchOpen } from './access.js';
+import { accessIn, churchAccess } from './access.js';
 import { fail, record, type Caller, type Deps } from './common.js';
 import { ledDuties, ministriesOf } from './ministries.js';
 
@@ -112,7 +112,8 @@ export function ledChangeAllowed(roles: Set<string>, before: Roster | null, afte
 }
 
 export async function editLedDuties(deps: Deps, caller: Caller | null, data: unknown) {
-  const { cid, caller: c } = await churchAccess(deps, caller, data, 'member');
+  const access = await churchAccess(deps, caller, data, 'member');
+  const { cid } = access;
   const input = record(data);
   if (Object.keys(input).some((k) => !['churchId', 'before', 'after', 'via'].includes(k))) fail('invalid-argument', 'unknown');
   const before = record(input.before);
@@ -125,17 +126,15 @@ export async function editLedDuties(deps: Deps, caller: Caller | null, data: unk
 
   await deps.db.runTransaction(async (tx) => {
     const refs = ids.map((id) => deps.db.doc(`churches/${cid}/rosters/${id}`));
-    const [church, me, settings, services, ...days] = (await tx.getAll(
-      deps.db.doc(`churches/${cid}`),
-      deps.db.doc(`churches/${cid}/members/${c.uid}`),
+    const { powers, docs: [settings, services, ...days] } = await accessIn(
+      tx,
+      deps,
+      access,
       deps.db.doc(`churches/${cid}/settings/ministries`),
       deps.db.doc(`churches/${cid}/settings/services`),
       ...refs,
-    )) as DocumentSnapshot[];
-    // Checked again inside: a lead taken away meanwhile writes nothing.
-    if (!me.exists) fail('permission-denied', 'permissionDenied');
-    if (!isChurchOpen(church)) churchClosed();
-    const led = (me.get('leadMinistries') as string[] | undefined) ?? [];
+    );
+    const led = powers.ministries;
     const ministries = ministriesOf(settings);
     for (const [i, id] of ids.entries()) {
       const stored = days[i];

@@ -4,7 +4,7 @@ import { FieldValue, Timestamp, type DocumentSnapshot } from 'firebase-admin/fir
 
 import { churchAccess, isChurchOpen } from './access.js';
 import { fail, type Caller, type Deps } from './common.js';
-import { isEventGroup, leadsAnyGroup, mayWriteEvent, writesAnyEvent } from './eventGroups.js';
+import { isEventGroup, powersOf } from './powers.js';
 import { cancelWithEvent, followEdit, inclusiveEnd, isEvent, restoreOnto } from './eventRosters.js';
 import { seal, unseal } from './sealing.js';
 import { notify, type WebhookDeps } from './webhook.js';
@@ -83,7 +83,7 @@ export interface CalendarEvent {
   /** For one day of a recurring event: the series, and the start it had in it. */
   recurringEventId?: string;
   originalStart?: string;
-  /** Whose it is (eventGroups.ts): '' or missing the church's, else a group's. */
+  /** Whose it is (powers.ts isEventGroup): '' or missing the church's, else a group's. */
   group?: string;
 }
 
@@ -410,7 +410,7 @@ const MAX_CLEARED_MONTHS = 12;
 
 /**
  * Create, update or delete one event: admins and calendar-editors (行政)
- * any, a group's 負責人 that group's (eventGroups.ts, mayWriteEvent).
+ * any, a group's 負責人 that group's (powers.ts, mayWriteEvent).
  *
  * `{ churchId, op: 'upsert', event, previous?: { start, end },
  * restoreRosterOf? }`, where `previous` is where an edited event was before
@@ -428,8 +428,8 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
   const me = await churchAccess(deps, caller, data, 'member');
   // Admins and 行政 write any event; a 負責人 only their groups'. Anyone
   // else is refused before the calendar is asked anything.
-  const editor = writesAnyEvent(me.member.data() ?? {});
-  if (!editor && !leadsAnyGroup(me.member.data() ?? {})) fail('permission-denied', 'permissionDenied');
+  const editor = me.powers.writesAnyEvent;
+  if (!editor && !me.powers.leadsAnyGroup) fail('permission-denied', 'permissionDenied');
   const churchId = me.cid;
   const timeZone = timeZoneOf(me.church);
   const input = data as {
@@ -446,7 +446,7 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
   let notice: { action: 'created' | 'updated' | 'deleted'; event: Partial<CalendarEvent> } | null = null;
   const spans: (Span | null)[] = [span(input.previous), span({ start: input.previousStart })];
   const may = (before: string | null, after: string | null) => {
-    if (!mayWriteEvent(me.member.data() ?? {}, before, after)) fail('permission-denied', 'permissionDenied');
+    if (!me.powers.mayWriteEvent(before, after)) fail('permission-denied', 'permissionDenied');
   };
   // Whose an event is now, as Google has it: an edit or a delete is
   // judged by that, not by what the app says it was.
@@ -538,7 +538,7 @@ export async function checkEventRosterGroup(deps: CalDeps, churchId: string, r: 
   const group = r.get('group');
   if (!by || !isEvent(r) || typeof group !== 'string' || !group) return;
   const member = await deps.db.doc(`churches/${churchId}/members/${by}`).get();
-  if (writesAnyEvent(member.data() ?? {})) return;
+  if (powersOf(member.data() ?? {}).writesAnyEvent) return;
   const { token, calendarId } = await access(deps, churchId);
   const e = calendarId ? await deps.google.get(token, calendarId, r.get('eventId') as string) : null;
   // Not found, the sync cancels it as it does any roster whose event went.

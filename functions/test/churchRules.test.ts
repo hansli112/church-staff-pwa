@@ -3,18 +3,16 @@ import { readFileSync } from 'node:fs';
 import { describe, test } from 'node:test';
 
 import { churchAccess } from '../src/access.js';
-import { attendanceDue, mayReadAttendance, mayWriteAttendance, remindedOfAttendance } from '../src/attendance.js';
+import { attendanceDue } from '../src/attendance.js';
 
-import { mayWriteEvent } from '../src/eventGroups.js';
 import { identitiesOf, withIdentities, type Identity } from '../src/identities.js';
-import { mayMoveMember } from '../src/groupMembers.js';
 import { mapMember } from '../src/importer.js';
 import { unreadCount } from '../src/notificationList.js';
 import { standing } from '../src/joinRequests.js';
 import { ledChangeAllowed } from '../src/ledDuties.js';
 import { LANGUAGES, words } from '../src/languages.js';
+import { groupOf, powersOf, type ChurchGroup } from '../src/powers.js';
 import { dutiesByUid } from '../src/rosters.js';
-import { mayEditSmallGroup } from '../src/smallGroups.js';
 import { validDutyRename } from '../src/serviceSettings.js';
 import { caller, db, deps, seedChurch } from './support.js';
 
@@ -92,29 +90,32 @@ describe('ledDuties', () => {
 });
 
 describe('groupMembership', () => {
-  for (const r of rows('groupMembership')) test(r.why, () => assert.equal(mayMoveMember(r.caller, r.target, r.group), r.may));
+  const group = (g: Row): ChurchGroup =>
+    g.smallGroup ? { kind: 'small', id: g.smallGroup, service: g.service } : g.service ? { kind: 'service', id: g.service } : { kind: 'ministry', id: g.ministry };
+  for (const r of rows('groupMembership')) test(r.why, () => assert.equal(powersOf(r.caller).mayMove(r.target, group(r.group)), r.may));
 });
 
 describe('eventWriting', () => {
-  for (const r of rows('eventWriting')) test(r.why, () => assert.equal(mayWriteEvent(r.member, r.before, r.after), r.may));
+  for (const r of rows('eventWriting')) test(r.why, () => assert.equal(powersOf(r.member).mayWriteEvent(r.before, r.after), r.may));
 });
 
 describe('smallGroupEditing', () => {
-  for (const r of rows('smallGroupEditing')) test(r.why, () => assert.equal(mayEditSmallGroup(r.member, r.before, r.after), r.may));
+  for (const r of rows('smallGroupEditing')) test(r.why, () => assert.equal(powersOf(r.member).mayEditSmallGroup(r.before, r.after), r.may));
 });
 
 describe('attendanceAccess', () => {
   for (const r of rows('attendanceAccess')) {
     test(r.why, () => {
-      assert.equal(mayWriteAttendance(r.member, r.group, r.smallGroupService ?? null), r.writes, 'writes');
-      assert.equal(mayReadAttendance(r.member, r.group, r.smallGroupService ?? null), r.reads, 'reads');
+      const group = groupOf(r.group, r.smallGroupService ?? null)!;
+      assert.equal(powersOf(r.member).writesAttendance(group), r.writes, 'writes');
+      assert.equal(powersOf(r.member).readsAttendance(group), r.reads, 'reads');
     });
   }
 });
 
 describe('attendanceReminded', () => {
   for (const r of rows('attendanceReminded')) {
-    test(r.why, () => assert.equal(remindedOfAttendance(r.member, r.group), r.reminded));
+    test(r.why, () => assert.equal(powersOf(r.member).remindedOfAttendance(groupOf(r.group)!), r.reminded));
   }
 });
 
