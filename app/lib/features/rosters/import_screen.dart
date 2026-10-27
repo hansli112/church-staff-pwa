@@ -278,7 +278,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
 
   /// Admins: changes the service's settings so the import fits them.
   Future<void> _repair(Future<void> Function() write) => _during(() async {
-    if (!_ready || _busy || ref.read(meProvider).value?.isAdmin != true) return;
+    if (!_ready || _busy || ref.read(meProvider).value?.editsServiceSettings != true) return;
     final key = _session.draftKey;
     try {
       await write();
@@ -299,7 +299,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       final write = _session.apply(shown);
       await write.done;
       Future<void> Function()? forget;
-      if (ref.read(meProvider).value?.isAdmin ?? false) {
+      if (ref.read(meProvider).value?.editsServiceSettings ?? false) {
         // Goes on after this page closes: one that fails only means a
         // search next time, so it is recorded, not shown.
         final telemetry = ref.read(telemetryProvider);
@@ -621,8 +621,8 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
 
   Widget _preview(ImportPlan plan, ImportDraft draft, L10n l10n) {
     final report = plan.report;
-    final admin = ref.watch(meProvider).value?.isAdmin ?? false;
-    final repairable = _ready && !_busy && admin;
+    final editsSettings = ref.watch(meProvider).value?.editsServiceSettings ?? false;
+    final repairable = _ready && !_busy && editsSettings;
     return Column(
       children: [
         Expanded(
@@ -678,16 +678,18 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
               // is put on it when applied (admins), not asked about here.
               if (report.unknownDuties.isNotEmpty || report.unknownEvents.isNotEmpty)
                 ListSection(
-                  header: admin ? l10n.importRepairSettings : l10n.importNoSettingsChange,
+                  header: editsSettings ? l10n.importRepairSettings : l10n.importNoSettingsChange,
                   children: [
                     for (final role in report.unknownDuties)
                       ListRow(
-                        title: admin ? l10n.importAddConfiguredDuty(role) : l10n.importUnconfiguredDuty(role),
+                        title: editsSettings ? l10n.importAddConfiguredDuty(role) : l10n.importUnconfiguredDuty(role),
                         onTap: repairable ? () => _repair(() => _session.addDuty(role)) : null,
                       ),
                     for (final event in report.unknownEvents)
                       ListRow(
-                        title: admin ? l10n.importAddCommonEvent(event.name) : l10n.importNotCommonEvent(event.name),
+                        title: editsSettings
+                            ? l10n.importAddCommonEvent(event.name)
+                            : l10n.importNotCommonEvent(event.name),
                         onTap: repairable ? () => _repair(() => _session.addCommonEvent(event)) : null,
                       ),
                   ],

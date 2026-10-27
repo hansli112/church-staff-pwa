@@ -103,6 +103,12 @@ describe('smallGroupEditing', () => {
   for (const r of rows('smallGroupEditing')) test(r.why, () => assert.equal(powersOf(r.member).mayEditSmallGroup(r.before, r.after), r.may));
 });
 
+describe('smallGroupScheduling', () => {
+  for (const r of rows('smallGroupScheduling')) {
+    test(r.why, () => assert.equal(powersOf(r.member).schedulesSmallGroup({ kind: 'small', id: r.smallGroup, service: r.service }), r.may));
+  }
+});
+
 describe('attendanceAccess', () => {
   for (const r of rows('attendanceAccess')) {
     test(r.why, () => {

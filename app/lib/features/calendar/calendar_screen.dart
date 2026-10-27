@@ -369,7 +369,7 @@ class _AgendaState extends ConsumerState<_Agenda> {
       chevron: true,
       onTap: e.id == null
           ? null
-          : () => canEdit && (me?.mayWriteEvent(e.group ?? '', e.group ?? '') ?? false)
+          : () => canEdit && (me?.editsEvent(e) ?? false)
                 ? editEvent(context, ref, e, month: month)
                 : showEventDetail(context, e),
     );

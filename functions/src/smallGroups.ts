@@ -59,7 +59,7 @@ export async function editSmallGroup(deps: Deps, caller: Caller | null, data: un
     // Its 小組長 set when it meets, and nothing else.
     const scheduling = was.exists && fields !== null && leads === null
       && fields.name === was.get('name') && fields.service === before
-      && powers.leads({ kind: 'small', id: at.id, service: before });
+      && powers.schedulesSmallGroup({ kind: 'small', id: at.id, service: before });
     if (!scheduling && !powers.mayEditSmallGroup(before, after)) fail('permission-denied', 'permissionDenied');
     if (after !== null && !((services.get('services') as { id: string }[] | undefined) ?? []).some((s) => s.id === after)) {
       fail('invalid-argument', 'unknown');

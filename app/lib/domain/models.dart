@@ -352,6 +352,12 @@ class Member {
       isAdmin ||
       ((before != null || after != null) && [before, after].every((s) => s == null || leadTypes.contains(s)));
 
+  /// Whether this member may set when 小組 [group] meets, and nothing else
+  /// of it (testdata/church_rules.json, smallGroupScheduling): who may
+  /// change it, and its 小組長.
+  bool schedulesSmallGroup(SmallGroup group) =>
+      leadsGroup(group) || (group.service != null && mayEditSmallGroup(group.service, group.service));
+
   /// Whether this member fills in the 人數 of [group]
   /// (testdata/church_rules.json, attendanceAccess): admins any; a
   /// service's 負責人 and 牧者 its own and its 小組'; a 小組長 their 小組's.
@@ -448,6 +454,14 @@ class Member {
         (before == null || _leadsKey(before)) &&
         (after == null || _leadsKey(after));
   }
+
+  /// Whether this member may change or delete [event] as it is, keeping
+  /// it its group's: whether tapping it opens it to edit.
+  bool editsEvent(CalendarEvent event) => mayWriteEvent(event.group ?? '', event.group ?? '');
+
+  /// Whether this member changes the services' settings (settings/services):
+  /// their duties, 常用特別活動 and when they meet. Admins only.
+  bool get editsServiceSettings => isAdmin;
 
   /// Whether this member may make events: admins, 行政 and any 負責人.
   bool get makesEvents => inGroup(Group.calendarEditors) || leads;

@@ -110,6 +110,13 @@ export function powersOf(m: MemberFields) {
     },
 
     /**
+     * Whether they may set when 小組 [group] meets, and nothing else of it
+     * (smallGroupScheduling): who may change it, and its 小組長.
+     */
+    schedulesSmallGroup: (group: ChurchGroup & { kind: 'small' }) =>
+      leads(group) || (group.service !== null && self.mayEditSmallGroup(group.service, group.service)),
+
+    /**
      * Whether they may add [target] to [group] or take them out
      * (groupMembership): an admin anyone; the group's 負責人 (a 小組's, its
      * service's too) only a plain 同工, since giving or taking a 身分 is the

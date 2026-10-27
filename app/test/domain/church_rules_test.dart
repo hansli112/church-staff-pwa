@@ -200,6 +200,18 @@ void main() {
     }
   });
 
+  group('smallGroupScheduling', () {
+    for (final r in _rows('smallGroupScheduling')) {
+      test(r['why'] as String, () {
+        final m = _member('u', r['member'] as Map<String, dynamic>);
+        expect(
+          m.schedulesSmallGroup(SmallGroup(r['smallGroup'] as String, service: r['service'] as String)),
+          r['may'],
+        );
+      });
+    }
+  });
+
   group('attendanceAccess', () {
     for (final r in _rows('attendanceAccess')) {
       test(r['why'] as String, () {

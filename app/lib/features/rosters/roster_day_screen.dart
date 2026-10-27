@@ -131,13 +131,13 @@ class RosterDayScreen extends ConsumerWidget {
     Service service,
   ) async {
     final l10n = L10n.of(context);
-    final isAdmin = ref.read(meProvider).value?.isAdmin ?? false;
+    final editsSettings = ref.read(meProvider).value?.editsServiceSettings ?? false;
     final result = await showAppSheet<EventSheetResult>(
       context,
       builder: (context) => EventSheet(
         options: service.events,
         selected: roster.events,
-        canAddToCommon: isAdmin,
+        canAddToCommon: editsSettings,
       ),
     );
     if (result == null || !context.mounted) return;
@@ -264,7 +264,7 @@ class _DutyRow extends ConsumerWidget {
         order: order,
         // An event is in no 牧區 to add the duty to, and has no staff
         // order of its own to drag.
-        canEditDutyList: !roster.isEvent && (me?.isAdmin ?? false),
+        canEditDutyList: !roster.isEvent && (me?.editsServiceSettings ?? false),
         // The staff order is the whole service's: not a 事工 leader's.
         canReorder: !roster.isEvent && ref.read(arrangesProvider(roster.type)) == null,
         canRemove: true,

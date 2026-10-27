@@ -919,7 +919,7 @@ class MemoryChurchData implements ChurchData {
         leads == null &&
         group.name == was.name &&
         group.service == was.service &&
-        me.leadSmallGroups.contains(was.id);
+        me.schedulesSmallGroup(was.group);
     if (!scheduling && !me.mayEditSmallGroup(was?.service, group.service)) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }

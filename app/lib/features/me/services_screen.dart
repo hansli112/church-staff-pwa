@@ -27,7 +27,7 @@ class ServicesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
     final me = ref.watch(meProvider);
-    if (!(me.value?.isAdmin ?? false)) {
+    if (!(me.value?.editsServiceSettings ?? false)) {
       return Scaffold(
         appBar: AppBar(title: Text(l10n.serviceSettings)),
         body: me.hasValue ? EmptyState(message: l10n.servicesAdminOnly) : null,
@@ -112,7 +112,7 @@ class ServiceEditorScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
     final me = ref.watch(meProvider);
-    if (!(me.value?.isAdmin ?? false)) {
+    if (!(me.value?.editsServiceSettings ?? false)) {
       return Scaffold(
         appBar: AppBar(title: Text(l10n.serviceSettings)),
         body: me.hasValue ? EmptyState(message: l10n.servicesAdminOnly) : null,
