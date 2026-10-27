@@ -2941,4 +2941,29 @@ class L10nKo extends L10n {
 
   @override
   String get notifJoinRequestSub => '누군가 가입을 신청했을 때(관리자만)';
+
+  @override
+  String get notifListEmpty => '최근 30일 동안 알림이 없어요';
+
+  @override
+  String get notifSettings => '알림 설정';
+
+  @override
+  String get notifUnread => '읽지 않음';
+
+  @override
+  String get notifUnreadLabel => '알림, 읽지 않은 알림 있음';
+
+  @override
+  String get notifJustNow => '방금';
+
+  @override
+  String notifMinutesAgo(int count) {
+    return '$count분 전';
+  }
+
+  @override
+  String notifHoursAgo(int count) {
+    return '$count시간 전';
+  }
 }

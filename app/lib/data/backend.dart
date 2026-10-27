@@ -171,6 +171,14 @@ abstract interface class ProfileRepository {
   /// Creates users/{uid} on first sign-in. Leaves an existing profile
   /// alone, so a name the user changed is not reset to the Google name.
   Future<void> ensure(UserProfile profile);
+
+  /// [uid]'s 通知列表 (#89), every church's, newest first. Only they read it.
+  Stream<List<NotificationItem>> notifications(String uid);
+
+  /// Records on users/{uid} that its owner has seen church [churchId]'s
+  /// notifications up to [upTo], the newest shown: they are read, there and
+  /// on the app icon ([UserProfile.notificationsSeen]).
+  Future<void> markNotificationsSeen(String uid, String churchId, DateTime upTo);
 }
 
 abstract interface class MembershipRepository {

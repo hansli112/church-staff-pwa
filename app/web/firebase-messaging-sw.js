@@ -25,6 +25,12 @@ self.addEventListener('push', (event) => {
   event.stopImmediatePropagation();
   event.waitUntil(
     (async () => {
+      // The number on the installed app's icon (#89): what is unread in the
+      // 通知列表, which the push brings along.
+      const badge = Number(payload.data?.badge);
+      if (Number.isInteger(badge) && self.navigator.setAppBadge) {
+        await (badge > 0 ? self.navigator.setAppBadge(badge) : self.navigator.clearAppBadge()).catch(() => {});
+      }
       const tabs = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
       const focused = tabs.filter((tab) => tab.focused);
       if (focused.length > 0) {

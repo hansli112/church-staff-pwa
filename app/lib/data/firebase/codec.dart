@@ -460,6 +460,22 @@ UserProfile profileFromJson(String uid, Json data) => UserProfile(
   locale: data['locale'] as String?,
   appLocale: data['appLocale'] as String?,
   photoAiConsent: data['photoAiConsentAt'] != null,
+  notificationsSeen: {
+    if (data['notificationsSeenAt'] case final Map<dynamic, dynamic> seen)
+      for (final e in seen.entries)
+        if ((e.key, readTime(e.value)) case (final String cid, final DateTime at)) cid: at,
+  },
+);
+
+/// users/{uid}/notifications/{id}: written by functions/src/push.ts.
+NotificationItem notificationFromJson(String id, Json data) => NotificationItem(
+  id: id,
+  churchId: data['cid'] as String? ?? '',
+  kind: NotificationKind.values.asNameMap()[data['kind']],
+  title: data['title'] as String? ?? '',
+  body: data['body'] as String? ?? '',
+  link: data['link'] as String? ?? '/home',
+  at: readTime(data['at']) ?? DateTime.fromMillisecondsSinceEpoch(0),
 );
 
 CalendarSettings calendarSettingsFromJson(Json? data) => CalendarSettings(

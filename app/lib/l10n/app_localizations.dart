@@ -5283,6 +5283,48 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'有人申請加入教會時（只通知管理員）'**
   String get notifJoinRequestSub;
+
+  /// 通知列表 is empty (#89)
+  ///
+  /// In zh, this message translates to:
+  /// **'最近 30 天沒有通知'**
+  String get notifListEmpty;
+
+  /// No description provided for @notifSettings.
+  ///
+  /// In zh, this message translates to:
+  /// **'通知設定'**
+  String get notifSettings;
+
+  /// No description provided for @notifUnread.
+  ///
+  /// In zh, this message translates to:
+  /// **'未讀'**
+  String get notifUnread;
+
+  /// The bell on 首頁 with its dot, for screen readers
+  ///
+  /// In zh, this message translates to:
+  /// **'通知，有未讀的'**
+  String get notifUnreadLabel;
+
+  /// No description provided for @notifJustNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'剛剛'**
+  String get notifJustNow;
+
+  /// No description provided for @notifMinutesAgo.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 分鐘前'**
+  String notifMinutesAgo(int count);
+
+  /// No description provided for @notifHoursAgo.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 小時前'**
+  String notifHoursAgo(int count);
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

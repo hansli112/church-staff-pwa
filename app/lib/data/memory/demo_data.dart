@@ -100,6 +100,33 @@ MemoryBackend demoBackend({
       name: admin.name,
       email: 'demo@example.com',
     );
+    // The 通知列表 (#89), none of it read yet.
+    final now = b.clock();
+    final sunday = start.addDays((DateTime.sunday - start.weekday) % 7);
+    for (final (id, kind, body, link, ago) in [
+      (
+        'put-on',
+        NotificationKind.rosterChange,
+        w.putOn(sunday.month, sunday.day, services[0].name, services[0].duties[2]),
+        '/rosters/sunday/${sunday.key}',
+        const Duration(hours: 2),
+      ),
+      ('asked', NotificationKind.joinRequest, w.joinRequested(w.newcomer), '/me/members', const Duration(hours: 26)),
+      ('left', NotificationKind.memberLeft, w.memberLeft(w.moved[2]), '/me/members', const Duration(days: 3)),
+    ]) {
+      b.addNotification(
+        admin.uid,
+        NotificationItem(
+          id: id,
+          churchId: cid,
+          kind: kind,
+          title: w.church,
+          body: body,
+          link: link,
+          at: now.subtract(ago),
+        ),
+      );
+    }
   }
   b.notify();
   return b;
@@ -241,6 +268,9 @@ class _DemoWords {
     required this.moved,
     required this.demoPerson,
     required this.newcomer,
+    required this.putOn,
+    required this.memberLeft,
+    required this.joinRequested,
     required this.services,
     required this.duties,
     required this.events,
@@ -258,6 +288,13 @@ class _DemoWords {
   final List<String> moved;
   final String demoPerson;
   final String newcomer;
+
+  /// What the backend's pushes say (functions/src/languages.ts), for the
+  /// 通知列表: put on [duty] of [service] on [month]/[day]; [name] left; [name]
+  /// asked to join.
+  final String Function(int month, int day, String service, String duty) putOn;
+  final String Function(String name) memberLeft;
+  final String Function(String name) joinRequested;
 
   /// [demoServices]' names, duties and Sunday's events, in order.
   final List<String> services;
@@ -290,6 +327,9 @@ final _zhHant = _DemoWords(
   moved: ['林佳穎', '黃俊傑', '陳志明', '林雅婷'],
   demoPerson: '示範同工',
   newcomer: '新同工',
+  putOn: (m, d, service, duty) => '你被排進 $m/$d $service：$duty',
+  memberLeft: (name) => '「$name」退出了教會',
+  joinRequested: (name) => '「$name」申請加入教會',
   services: [for (final s in demoServices) s.name],
   duties: [for (final s in demoServices) s.duties],
   events: [for (final e in demoServices.first.events) e.name],
@@ -309,6 +349,9 @@ final _zhHans = _DemoWords(
   moved: ['林佳颖', '黄俊杰', '陈志明', '林雅婷'],
   demoPerson: '示范同工',
   newcomer: '新同工',
+  putOn: (m, d, service, duty) => '你被排入 $m/$d $service：$duty',
+  memberLeft: (name) => '“$name”退出了教会',
+  joinRequested: (name) => '“$name”申请加入教会',
   services: ['主日崇拜', '青年崇拜', '祷告会'],
   duties: [
     ['领会', '敬拜主领', '司琴', '鼓手', '音控', '投影', '招待', '奉献'],
@@ -321,6 +364,8 @@ final _zhHans = _DemoWords(
     '志明美玲雅婷家豪俊杰淑芬怡君宗翰佳颖建宏欣怡冠宇思妤承恩惠如柏翰诗涵子轩心怡育诚文华',
   ),
 );
+
+const _enMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const _enFirst = [
   'Grace', 'Daniel', 'Sarah', 'David', 'Rachel', 'Joshua', 'Hannah', 'Samuel', 'Esther', 'Caleb', //
@@ -343,6 +388,9 @@ final _en = _DemoWords(
   moved: ['Joy Lin', 'Kevin Huang', 'Michael Chen', 'Emily Lin'],
   demoPerson: 'Demo Member',
   newcomer: 'New Member',
+  putOn: (m, d, service, duty) => 'You’re on ${_enMonths[m - 1]} $d $service: $duty',
+  memberLeft: (name) => '$name left the church',
+  joinRequested: (name) => '$name asked to join the church',
   services: ['Sunday Service', 'Youth Service', 'Prayer Meeting'],
   duties: [
     ['Host', 'Worship Leader', 'Piano', 'Drums', 'Sound', 'Slides', 'Usher', 'Offering'],
@@ -375,6 +423,9 @@ final _ja = _DemoWords(
   moved: ['山田 花子', '佐藤 健', '鈴木 一郎', '高橋 葵'],
   demoPerson: 'デモ用メンバー',
   newcomer: '新しいメンバー',
+  putOn: (m, d, service, duty) => '$m月$d日 $serviceの担当になりました：$duty',
+  memberLeft: (name) => '$nameが教会を退出しました',
+  joinRequested: (name) => '$nameが教会への参加を申請しました',
   services: ['主日礼拝', '青年礼拝', '祈祷会'],
   duties: [
     ['司会', '賛美リード', '奏楽', 'ドラム', '音響', 'スライド', '受付', '献金'],
@@ -403,6 +454,9 @@ final _ko = _DemoWords(
   moved: ['김지영', '이준호', '박성민', '최유나'],
   demoPerson: '데모 멤버',
   newcomer: '새 멤버',
+  putOn: (m, d, service, duty) => '$m월 $d일 $service 봉사에 배정됐어요: $duty',
+  memberLeft: (name) => '$name 님이 교회를 나갔어요',
+  joinRequested: (name) => '$name 님이 교회 가입을 신청했어요',
   services: ['주일예배', '청년예배', '기도회'],
   duties: [
     ['사회', '찬양 인도', '반주', '드럼', '음향', '자막', '안내', '헌금'],

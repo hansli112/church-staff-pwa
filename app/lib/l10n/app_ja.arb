@@ -887,5 +887,12 @@
   "takesJoinRequests": "参加申請を受け付ける",
   "takesJoinRequestsFooter": "オンのとき、教会の URL を知っている人が参加を申請できます。管理者が「メンバー」で承認すると参加します。",
   "notifJoinRequest": "参加申請",
-  "notifJoinRequestSub": "誰かが参加を申請したとき（管理者のみ）"
+  "notifJoinRequestSub": "誰かが参加を申請したとき（管理者のみ）",
+  "notifListEmpty": "過去30日間の通知はありません",
+  "notifSettings": "通知設定",
+  "notifUnread": "未読",
+  "notifUnreadLabel": "通知、未読あり",
+  "notifJustNow": "たった今",
+  "notifMinutesAgo": "{count}分前",
+  "notifHoursAgo": "{count}時間前"
 }

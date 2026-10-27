@@ -234,4 +234,26 @@ void main() {
       });
     }
   });
+
+  group('unreadNotifications', () {
+    DateTime minute(Object? m) => DateTime.utc(2026).add(Duration(minutes: (m as num).toInt()));
+    for (final r in _rows('unreadNotifications')) {
+      test(r['why'] as String, () {
+        final items = [
+          for (final (i, n) in (r['items'] as List<dynamic>).indexed)
+            NotificationItem(
+              id: '$i',
+              churchId: (n as Map<String, dynamic>)['cid'] as String,
+              kind: NotificationKind.reminder,
+              title: '',
+              body: '',
+              link: '/home',
+              at: minute(n['at']),
+            ),
+        ];
+        final seen = {for (final e in (r['seen'] as Map<String, dynamic>).entries) e.key: minute(e.value)};
+        expect(unreadNotifications(items, seen), r['unread']);
+      });
+    }
+  });
 }

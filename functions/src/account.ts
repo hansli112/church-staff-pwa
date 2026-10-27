@@ -3,11 +3,13 @@ import { Timestamp } from 'firebase-admin/firestore';
 
 import { isChurchOpen } from './access.js';
 import { fail, requireCaller, type Caller, type Deps } from './common.js';
+import { notificationsOf } from './notificationList.js';
 import { forgetJoinRequestsOf } from './joinRequests.js';
 
 /**
  * Deletes the caller's account (App Store guideline 5.1.1(v)): their
- * requests to join, every membership, users/{uid}, then the Auth user.
+ * requests to join, every membership, users/{uid} with their 通知列表, then
+ * the Auth user.
  * Names already on rosters stay, as plain text.
  *
  * The only admin of a church others are in must hand it over first, so no
@@ -43,6 +45,7 @@ export async function deleteAccount(deps: Deps & { auth: Auth }, caller: Caller 
   for (const m of memberships.docs) void writer.delete(m.ref);
   void writer.delete(db.doc(`users/${c.uid}`));
   await writer.close();
+  await db.recursiveDelete(notificationsOf(db, c.uid));
   await deps.auth.deleteUser(c.uid);
   return {};
 }

@@ -67,4 +67,10 @@ class FakePush implements PushService {
 
   @override
   Stream<PushNotice> get foreground => notices.stream;
+
+  /// The number on the app icon, once set.
+  int? badge;
+
+  @override
+  Future<void> setBadge(int count) async => badge = count;
 }

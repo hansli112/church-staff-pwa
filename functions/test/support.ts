@@ -30,6 +30,8 @@ export interface SentPush {
   link: string;
   /** The web push's, which FCM wants absolute. */
   webLink: string;
+  /** The number on the app icon (aps.badge). */
+  badge: number | undefined;
 }
 
 /**
@@ -51,6 +53,7 @@ export function fakePush(dead: string[] = [], errors: Record<string, string> = {
         body: m.notification?.body ?? '',
         link: m.data?.link ?? '',
         webLink: m.webpush?.fcmOptions?.link ?? '',
+        badge: m.apns?.payload?.aps?.badge,
       });
       const responses = tokens.map((t) =>
         dead.includes(t)

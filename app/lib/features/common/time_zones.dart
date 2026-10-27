@@ -60,6 +60,16 @@ class ChurchClock {
   /// 10月18日, Oct 18: the day of [instant].
   String day(DateTime instant) => DateFormat.MMMd().format(timeZone.clock(instant));
 
+  /// 剛剛, 3 分鐘前, 5 小時前 at [now]; a day or more before, [moment]:
+  /// when a notification came.
+  String ago(DateTime instant, DateTime now) {
+    final since = now.difference(instant);
+    if (since.inMinutes < 1) return _l10n.notifJustNow;
+    if (since.inHours < 1) return _l10n.notifMinutesAgo(since.inMinutes);
+    if (since.inDays < 1) return _l10n.notifHoursAgo(since.inHours);
+    return moment(instant);
+  }
+
   /// 2026年10月18日, Oct 18, 2026: the day of [instant], with its year.
   String dayWithYear(DateTime instant) => DateFormat.yMMMd().format(timeZone.clock(instant));
 }

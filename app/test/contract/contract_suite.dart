@@ -272,6 +272,70 @@ void contractTests(Future<ContractWorld> Function() open) {
     });
   });
 
+  group('通知列表 (#89)', () {
+    NotificationItem sent(String id, String churchId, DateTime at) => NotificationItem(
+      id: id,
+      churchId: churchId,
+      kind: NotificationKind.reminder,
+      title: '平安，這週的服事',
+      body: '10/25（週日）主日崇拜 司琴',
+      link: '/home',
+      at: at,
+    );
+
+    test('only its owner reads it, newest first; seeing one church\'s list reads only that', () async {
+      final uid = await w.signUp('a@example.com', name: '小明');
+      await w.backend.profiles.ensure(UserProfile(uid: uid, name: '小明', email: 'a@example.com'));
+      final profiles = w.backend.profiles;
+      final t = DateTime.utc(2026, 10, 25, 11);
+      await w.addNotification(uid, sent('n1', 'C1', t));
+      await w.addNotification(uid, sent('n2', 'C1', t.add(const Duration(hours: 1))));
+      await w.addNotification(uid, sent('n3', 'C2', t.add(const Duration(minutes: 30))));
+
+      final list = await profiles.notifications(uid).first;
+      expect([for (final n in list) n.id], ['n2', 'n3', 'n1']);
+      final n2 = list.first;
+      expect(
+        (n2.churchId, n2.kind, n2.title, n2.body, n2.link),
+        (
+          'C1',
+          NotificationKind.reminder,
+          '平安，這週的服事',
+          '10/25（週日）主日崇拜 司琴',
+          '/home',
+        ),
+      );
+      expect(unreadNotifications(list, (await profiles.watch(uid).first)!.notificationsSeen), 3);
+
+      await profiles.markNotificationsSeen(uid, 'C1', n2.at);
+      final seen = (await profiles.watch(uid).first)!.notificationsSeen;
+      expect(unreadNotifications(list, seen), 1, reason: "C2's is still unread");
+      await profiles.save(UserProfile(uid: uid, name: '王小明', email: 'a@example.com'));
+      expect((await profiles.watch(uid).first)!.notificationsSeen, seen, reason: 'saving the profile keeps it');
+
+      await w.signUp('b@example.com');
+      await expectLater(profiles.notifications(uid).first, denied());
+      await expectLater(profiles.markNotificationsSeen(uid, 'C1', n2.at), denied());
+    });
+
+    test("leaving a church takes its notifications out of the list; the other church's stay", () async {
+      final g = await Grace.open(w);
+      final other = await g.cloud.createChurch('活水堂');
+      final invite = await w.backend.church(other).createInvite(validFor: const Duration(days: 1));
+      await w.signIn(Grace.meiEmail);
+      await g.cloud.redeemInvite(invite.code);
+      await w.addNotification(g.mei, sent('here', g.cid, DateTime.utc(2026, 10, 25)));
+      await w.addNotification(g.mei, sent('there', other, DateTime.utc(2026, 10, 25)));
+      await g.church.removeMember(g.mei);
+      // Firebase: by the onMemberDeleted trigger, a moment later.
+      final left = await w.backend.profiles
+          .notifications(g.mei)
+          .firstWhere((l) => l.every((n) => n.churchId != g.cid))
+          .timeout(const Duration(seconds: 30));
+      expect([for (final n in left) n.id], ['there']);
+    });
+  });
+
   group('refusals', () {
     test('a direct read or write the rules refuse fails as a function refusing does', () async {
       final g = await Grace.open(w);

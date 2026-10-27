@@ -17,6 +17,7 @@ import 'features/church/join_screen.dart';
 import 'features/church/welcome_screen.dart';
 import 'features/dev/component_gallery.dart';
 import 'features/home/home_screen.dart';
+import 'features/home/notification_list_screen.dart';
 import 'features/me/about_screen.dart';
 import 'features/me/account_screen.dart';
 import 'features/me/church_link_screen.dart';
@@ -143,7 +144,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state, shell) => fadeInPage(state, AppShell(shell: shell)),
         branches: [
           StatefulShellBranch(
-            routes: [page('/home', (_) => const HomeScreen())],
+            routes: [
+              page(
+                '/home',
+                (_) => const HomeScreen(),
+                routes: [page('notifications', (_) => const NotificationListScreen())],
+              ),
+            ],
           ),
           StatefulShellBranch(
             routes: [

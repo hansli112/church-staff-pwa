@@ -268,7 +268,8 @@ service cloud.firestore {
     match /users/{uid} {
       function validProfile() {
         return request.resource.data.keys().hasOnly(
-            ['name', 'email', 'locale', 'appLocale', 'fcm', 'photoAiConsentAt', 'createdAt', 'updatedAt'])
+            ['name', 'email', 'locale', 'appLocale', 'fcm', 'photoAiConsentAt', 'notificationsSeenAt',
+             'createdAt', 'updatedAt'])
           && hasValidName()
           // Push tokens, {deviceId: token}: one per install, dropped by the
           // backend once FCM says they are dead.
@@ -280,11 +281,21 @@ service cloud.firestore {
                   && request.resource.data.appLocale.size() <= 16))
           // When they agreed to photo recognition sending to Gemini.
           && (!('photoAiConsentAt' in request.resource.data)
-              || request.resource.data.photoAiConsentAt is timestamp);
+              || request.resource.data.photoAiConsentAt is timestamp)
+          // How far they have seen each church's 通知列表 (#89), {cid: the
+          // newest notification seen}. Only their own unread count reads it.
+          && (!('notificationsSeenAt' in request.resource.data)
+              || (request.resource.data.notificationsSeenAt is map
+                  && request.resource.data.notificationsSeenAt.size() <= 100));
       }
 
       allow read: if isSelf(uid);
       allow create, update: if isSelf(uid) && validProfile();
+
+      // 通知列表 (#89): what the backend sent them, which only it writes.
+      match /notifications/{id} {
+        allow read: if isSelf(uid);
+      }
     }
 
     // The church switcher lists the caller's own memberships with a

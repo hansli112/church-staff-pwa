@@ -887,5 +887,12 @@
   "takesJoinRequests": "开放申请加入",
   "takesJoinRequestsFooter": "开着时，拿到教会网址的人可以申请加入，管理员在“同工”允许后才会加入",
   "notifJoinRequest": "申请加入",
-  "notifJoinRequestSub": "有人申请加入教会时（只通知管理员）"
+  "notifJoinRequestSub": "有人申请加入教会时（只通知管理员）",
+  "notifListEmpty": "最近 30 天没有通知",
+  "notifSettings": "通知设置",
+  "notifUnread": "未读",
+  "notifUnreadLabel": "通知，有未读的",
+  "notifJustNow": "刚刚",
+  "notifMinutesAgo": "{count} 分钟前",
+  "notifHoursAgo": "{count} 小时前"
 }

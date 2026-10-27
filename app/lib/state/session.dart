@@ -7,6 +7,7 @@ import '../core/telemetry.dart';
 import '../domain/limits.dart';
 import '../domain/models.dart';
 import 'providers.dart';
+import 'notifications.dart';
 import 'push.dart';
 import 'support.dart';
 
@@ -53,6 +54,12 @@ final sessionEffectsProvider = Provider<void>((ref) {
 
   // Known before joining, which decides at once whether to ask for it.
   ref.listen(pushPermissionProvider, (_, _) {});
+
+  // The app icon's number: what is unread in the 通知列表 (#89), here as
+  // it changes; pushes bring it while the app is closed.
+  ref.listen(unreadTotalProvider, (_, count) {
+    if (count != null) ref.read(pushServiceProvider).setBadge(count).ignore();
+  }, fireImmediately: true);
 
   // Back from the phone's settings, maybe with notifications turned on.
   final lifecycle = AppLifecycleListener(

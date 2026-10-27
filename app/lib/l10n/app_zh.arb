@@ -2116,5 +2116,16 @@
   "takesJoinRequestsFooter": "開著時，拿到教會網址的人可以申請加入，管理員在「同工」允許後才會加入",
   "notifJoinRequest": "申請加入",
   "@notifJoinRequest": {"description": "Notification switch (#88)"},
-  "notifJoinRequestSub": "有人申請加入教會時（只通知管理員）"
+  "notifJoinRequestSub": "有人申請加入教會時（只通知管理員）",
+  "notifListEmpty": "最近 30 天沒有通知",
+  "@notifListEmpty": {"description": "通知列表 is empty (#89)"},
+  "notifSettings": "通知設定",
+  "notifUnread": "未讀",
+  "notifUnreadLabel": "通知，有未讀的",
+  "@notifUnreadLabel": {"description": "The bell on 首頁 with its dot, for screen readers"},
+  "notifJustNow": "剛剛",
+  "notifMinutesAgo": "{count} 分鐘前",
+  "@notifMinutesAgo": {"placeholders": {"count": {"type": "int"}}},
+  "notifHoursAgo": "{count} 小時前",
+  "@notifHoursAgo": {"placeholders": {"count": {"type": "int"}}}
 }

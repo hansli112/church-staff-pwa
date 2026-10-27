@@ -123,6 +123,10 @@ describe('reading a roster change', () => {
   });
 });
 
+/** The bodies in [uid]'s 通知列表, oldest first. */
+const listed = async (uid: string) =>
+  (await db.collection(`users/${uid}/notifications`).orderBy('at').get()).docs.map((d) => d.get('body') as string);
+
 describe('push', () => {
   test('adding or moving an explicit same-name guest never notifies the member with that name', async () => {
     await church();
@@ -164,11 +168,12 @@ describe('push', () => {
     assert.deepEqual(pushed.map((p) => p.body), ['你被移出 10/4 主日崇拜：司琴', 'You’re no longer on Oct 4 主日崇拜: 司琴']);
   });
 
-  test('muted members get nothing', async () => {
+  test('muted members get no push, only the line in their 通知列表 (#89)', async () => {
     await church();
     await db.doc('churches/C1/members/mei').update({ 'notificationPrefs.muted': ['rosterChange'] });
     await write('C1', '2026-10-04', [duty('司琴', ['美玉'])]);
     assert.equal(pushed.length, 0);
+    assert.deepEqual(await listed('mei'), ['你被排進 10/4 主日崇拜：司琴']);
   });
 });
 
@@ -192,6 +197,7 @@ describe('quiet hours', () => {
     const r = await write('C1', '2026-10-04', [duty('司琴', ['美玉'])]);
     assert.deepEqual(r, { push: 0, webhook: true });
     assert.equal(pushed.length, 0);
+    assert.deepEqual(await listed('mei'), [], 'nor in the 通知列表');
     assert.equal((await queued()).length, 1);
     at('2026-10-04T06:00:00+08:00');
     await sendHeldPushes(triggerDeps());
@@ -202,6 +208,7 @@ describe('quiet hours', () => {
       [['tok-mei', 'tok-mei-2'], '你被排進 10/4 主日崇拜：司琴', '/c/C1?to=%2Frosters%2Fsunday%2F2026-10-04'],
     ]);
     assert.deepEqual(await held(), []);
+    assert.deepEqual(await listed('mei'), ['你被排進 10/4 主日崇拜：司琴'], 'in the 通知列表 as pushed');
     await sendHeldPushes(triggerDeps());
     assert.equal(pushed.length, 1, 'once');
   });

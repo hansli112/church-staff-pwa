@@ -887,5 +887,12 @@
   "takesJoinRequests": "Requests to join",
   "takesJoinRequestsFooter": "When on, anyone with the church URL can ask to join. They join once an admin accepts them in Team members.",
   "notifJoinRequest": "Requests to join",
-  "notifJoinRequestSub": "When someone asks to join the church (admins only)"
+  "notifJoinRequestSub": "When someone asks to join the church (admins only)",
+  "notifListEmpty": "No notifications in the last 30 days",
+  "notifSettings": "Notification settings",
+  "notifUnread": "Unread",
+  "notifUnreadLabel": "Notifications, some unread",
+  "notifJustNow": "Just now",
+  "notifMinutesAgo": "{count, plural, =1{1 minute ago} other{{count} minutes ago}}",
+  "notifHoursAgo": "{count, plural, =1{1 hour ago} other{{count} hours ago}}"
 }

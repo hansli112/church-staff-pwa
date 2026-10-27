@@ -1,6 +1,7 @@
 import type { Messaging } from 'firebase-admin/messaging';
 import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 
+import { notificationsOf, unreadOf } from './notificationList.js';
 import { languageOf, words, type Language, type Words } from './languages.js';
 
 /** Matches NotificationKind in app/lib/domain/models.dart. */
@@ -38,10 +39,12 @@ const DEAD_TOKEN_CODES = new Set([
 const INVALID_ARGUMENT = 'messaging/invalid-argument';
 
 /**
- * Sends [message] to every device of [uids] in church [cid], skipping
- * members who muted [kind] there, written with [Words] in each one's
- * language (users/{uid}.appLocale). Tokens FCM reports as dead are removed
- * from users/{uid}.fcm. Returns how many devices it was sent to.
+ * Sends [message] to every device of [uids] in church [cid], written with
+ * [Words] in each one's language (users/{uid}.appLocale), and keeps it in
+ * their 通知列表 (#89). Members who muted [kind] there get it in the list
+ * only. The app icon shows what is unread in all their churches. Tokens FCM
+ * reports as dead are removed from users/{uid}.fcm. Returns how many devices
+ * it was sent to.
  */
 export async function notifyMembers(
   deps: PushDeps,
@@ -56,52 +59,93 @@ export async function notifyMembers(
   const memberDocs = await db.getAll(
     ...unique.map((uid) => db.doc(`churches/${cid}/members/${uid}`)),
   );
-  const wanted = memberDocs
-    .filter((m) => m.exists)
-    .filter((m) => {
-      const muted = (m.get('notificationPrefs.muted') as string[] | undefined) ?? [];
-      return !muted.includes(kind);
-    })
-    .map((m) => m.id);
-  if (wanted.length === 0) return 0;
-
-  const users = await db.getAll(...wanted.map((uid) => db.doc(`users/${uid}`)));
-  const byLanguage = new Map<Language, Target[]>();
-  for (const u of users) {
-    const fcm = (u.get('fcm') as Record<string, string> | undefined) ?? {};
-    const language = languageOf(u.get('appLocale'));
-    for (const [device, token] of Object.entries(fcm)) {
-      if (typeof token !== 'string' || !token) continue;
-      byLanguage.set(language, [...(byLanguage.get(language) ?? []), { uid: u.id, device, token }]);
+  const members = memberDocs.filter((m) => m.exists);
+  if (members.length === 0) return 0;
+  const muted = new Set(
+    members
+      .filter((m) => ((m.get('notificationPrefs.muted') as string[] | undefined) ?? []).includes(kind))
+      .map((m) => m.id),
+  );
+  const users = await db.getAll(...members.map((m) => db.doc(`users/${m.id}`)));
+  const texts = new Map<Language, Required<PushMessage>>();
+  const textIn = (language: Language) => {
+    if (!texts.has(language)) {
+      const m = message(words(language));
+      texts.set(language, { ...m, link: m.link ?? '/home' });
     }
+    return texts.get(language)!;
+  };
+
+  // In the lists first, so the app icon's number counts this one.
+  for (let i = 0; i < users.length; i += 500) {
+    const batch = db.batch();
+    for (const u of users.slice(i, i + 500)) {
+      const { title, body, link } = textIn(languageOf(u.get('appLocale')));
+      batch.create(notificationsOf(db, u.id).doc(), {
+        cid,
+        kind,
+        title,
+        body,
+        link,
+        at: FieldValue.serverTimestamp(),
+      });
+    }
+    await batch.commit();
   }
+
+  // A send each for the people of one language and one number.
+  const groups = new Map<string, { language: Language; badge: number; targets: Target[] }>();
+  await Promise.all(
+    users
+      .filter((u) => !muted.has(u.id))
+      .map(async (u) => {
+        const fcm = (u.get('fcm') as Record<string, string> | undefined) ?? {};
+        const targets = Object.entries(fcm)
+          .filter(([, token]) => typeof token === 'string' && token)
+          .map(([device, token]) => ({ uid: u.id, device, token }));
+        if (targets.length === 0) return;
+        const language = languageOf(u.get('appLocale'));
+        const badge = await unreadOf(db, u.id, u.get('notificationsSeenAt'));
+        const key = `${language} ${badge}`;
+        const group = groups.get(key) ?? { language, badge, targets: [] };
+        group.targets.push(...targets);
+        groups.set(key, group);
+      }),
+  );
   let sent = 0;
-  for (const [language, targets] of byLanguage) {
-    sent += await send(deps, cid, kind, message(words(language)), targets);
+  for (const { language, badge, targets } of groups.values()) {
+    sent += await send(deps, cid, kind, textIn(language), badge, targets);
   }
   return sent;
 }
 
-/** Sends [message] to [targets], 500 at a time, dropping the tokens FCM says are dead. */
+/**
+ * Sends [message] to [targets], 500 at a time, with [badge] on the app
+ * icon, dropping the tokens FCM says are dead.
+ */
 async function send(
   deps: PushDeps,
   cid: string,
   kind: NotificationKind,
-  message: PushMessage,
+  message: Required<PushMessage>,
+  badge: number,
   targets: Target[],
 ) {
   const { db } = deps;
   // Through the church URL, which switches to this church first: someone in
   // two churches lands on the right one.
-  const link = `/c/${cid}?to=${encodeURIComponent(message.link ?? '/home')}`;
+  const link = `/c/${cid}?to=${encodeURIComponent(message.link)}`;
   let sent = 0;
   for (let i = 0; i < targets.length; i += 500) {
     const batch = targets.slice(i, i + 500);
     const result = await deps.messaging.sendEachForMulticast({
       tokens: batch.map((t) => t.token),
       notification: { title: message.title, body: message.body },
-      data: { cid, kind, link },
-      apns: { payload: { aps: { sound: 'default' } } },
+      // The web's service worker puts badge on the icon itself. Android's
+      // launchers count the notifications showing, so none for them: theirs
+      // add up across notifications.
+      data: { cid, kind, link, badge: String(badge) },
+      apns: { payload: { aps: { sound: 'default', badge } } },
       // FCM documents this link as HTTPS only, so not a bare route.
       webpush: { fcmOptions: { link: `${deps.appUrl}${link}` } },
     });

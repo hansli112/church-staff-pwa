@@ -330,7 +330,7 @@ describe('member triggers', () => {
         const alice = await db.doc('churches/C1/members/alice').get();
         await alice.ref.delete();
         const { messaging, sent } = fakePush();
-        assert.deepEqual(await onMemberDeleted({ ...cal, messaging, appUrl }, 'C1', alice, undefined), { calendar: false, memberLeft: 0 });
+        assert.deepEqual(await onMemberDeleted({ ...cal, messaging, appUrl }, 'C1', alice, undefined), { calendar: false, memberLeft: 0, notifications: 0 });
         assert.deepEqual(sent, [], 'removed by nobody: no push');
       }
       assert.equal((await own.get()).exists, false, changeKind);
@@ -353,7 +353,7 @@ describe('member triggers', () => {
     const { messaging, sent } = fakePush();
     const alice = await db.doc('churches/C1/members/alice').get();
     await alice.ref.delete();
-    assert.deepEqual(await onMemberDeleted({ ...cal, messaging, appUrl }, 'C1', alice, 'alice'), { calendar: true, memberLeft: 1 });
+    assert.deepEqual(await onMemberDeleted({ ...cal, messaging, appUrl }, 'C1', alice, 'alice'), { calendar: true, memberLeft: 1, notifications: 0 });
     assert.deepEqual(revoked, ['refresh-alice']);
     assert.deepEqual(sent.map((p) => p.tokens), [['tok-bob']]);
   });

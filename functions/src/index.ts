@@ -33,6 +33,7 @@ import { askedLanguages, churchPage as churchPageHandler } from './churchPage.js
 import { PROD_PROJECT, REGION, appUrl, runEach, type Caller, type Deps } from './common.js';
 import * as funding from './funding.js';
 import * as groupMembers from './groupMembers.js';
+import * as notificationList from './notificationList.js';
 import * as fundingApple from './fundingApple.js';
 import * as fundingEcpay from './fundingEcpay.js';
 import * as fundingPlay from './fundingPlay.js';
@@ -143,12 +144,14 @@ export const purgeDeletedChurches = using(
   { region: REGION, schedule: 'every day 03:00', timeZone: 'Asia/Taipei' },
   (opts, make) =>
     onSchedule(opts, async () => {
-      // Requests to join nobody answered in time go too (#88). The name
+      // Requests to join nobody answered in time go too (#88), and
+      // notifications older than a month (#89). The name
       // stays: a renamed function is a new one, and deploy.sh runs
       // non-interactive, so it would stop at deleting this one.
       await runEach('daily purge', {
         churches: () => church.purgeDeletedChurches({ ...make(), bucket: bucket() }),
         joinRequests: () => joinRequests.forgetOldJoinRequests(deps()),
+        notifications: () => notificationList.forgetOldNotifications(deps()),
       });
     }),
 );

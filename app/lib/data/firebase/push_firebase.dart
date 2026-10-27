@@ -126,6 +126,16 @@ class FirebasePushService implements PushService {
   });
 
   @override
+  Future<void> setBadge(int count) async {
+    if (kIsWeb) return setWebAppBadge(count);
+    try {
+      await _settings.invokeMethod('badge', count);
+    } catch (_) {
+      // An older build without it: the next push sets the number.
+    }
+  }
+
+  @override
   Future<void> unregister(String uid) async {
     await _refresh?.cancel();
     _refresh = null;

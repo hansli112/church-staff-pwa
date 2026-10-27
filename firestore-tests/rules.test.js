@@ -870,6 +870,33 @@ describe('全域個資 (users)', () => {
     await assertFails(updateDoc(doc(as(MEMBER_A), `users/${STRANGER}`), { photoAiConsentAt: serverTimestamp() }));
   });
 
+  it('本人記下每間教會的通知列表看到哪裡：最多 100 間的 map，別人不能改', async () => {
+    const ref = doc(as(STRANGER), `users/${STRANGER}`);
+    await assertSucceeds(setDoc(ref, { name: '新人', email: 's@example.com' }));
+    await assertSucceeds(updateDoc(ref, { [`notificationsSeenAt.${A}`]: Timestamp.now() }));
+    await assertFails(updateDoc(ref, { notificationsSeenAt: 'all' }));
+    const many = Object.fromEntries(Array.from({ length: 101 }, (_, i) => [`c${i}`, Timestamp.now()]));
+    await assertFails(updateDoc(ref, { notificationsSeenAt: many }), 'at most 100 churches');
+    await assertFails(updateDoc(doc(as(MEMBER_A), `users/${STRANGER}`), { [`notificationsSeenAt.${A}`]: Timestamp.now() }));
+  });
+
+  it('通知列表 (#89)：只有本人讀得到，只有後端寫', async () => {
+    await seed(`users/${MEMBER_A}/notifications/n1`, { cid: A, kind: 'reminder', title: 't', body: 'b', link: '/home', at: Timestamp.now() });
+    await assertSucceeds(getDoc(doc(as(MEMBER_A), `users/${MEMBER_A}/notifications/n1`)));
+    await assertSucceeds(getDocs(query(collection(as(MEMBER_A), `users/${MEMBER_A}/notifications`), where('cid', '==', A))));
+    // 同教會的管理員、別間教會的管理員、陌生人都讀不到。
+    for (const uid of [ADMIN_A, ADMIN_B, STRANGER]) {
+      await assertFails(getDoc(doc(as(uid), `users/${MEMBER_A}/notifications/n1`)));
+      await assertFails(getDocs(collection(as(uid), `users/${MEMBER_A}/notifications`)));
+    }
+    await assertFails(getDocs(collectionGroup(as(ADMIN_A), 'notifications')));
+    // 本人也不能自己加、改、刪。
+    const mine = collection(as(MEMBER_A), `users/${MEMBER_A}/notifications`);
+    await assertFails(setDoc(doc(mine, 'n2'), { cid: A, kind: 'reminder', title: '假的', body: 'b', link: '/home', at: Timestamp.now() }));
+    await assertFails(updateDoc(doc(mine, 'n1'), { title: '改過' }));
+    await assertFails(deleteDoc(doc(mine, 'n1')));
+  });
+
   it('不能夾帶權限欄位、不能寫別人的、不能自己刪（帳號刪除走 Cloud Functions）', async () => {
     await assertFails(setDoc(doc(as(MEMBER_A), `users/${MEMBER_A}`), { name: '甲', role: 'admin' }));
     await assertFails(setDoc(doc(as(MEMBER_A), `users/${ADMIN_A}`), { name: '冒充' }));

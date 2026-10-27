@@ -2936,6 +2936,31 @@ class L10nZh extends L10n {
 
   @override
   String get notifJoinRequestSub => '有人申請加入教會時（只通知管理員）';
+
+  @override
+  String get notifListEmpty => '最近 30 天沒有通知';
+
+  @override
+  String get notifSettings => '通知設定';
+
+  @override
+  String get notifUnread => '未讀';
+
+  @override
+  String get notifUnreadLabel => '通知，有未讀的';
+
+  @override
+  String get notifJustNow => '剛剛';
+
+  @override
+  String notifMinutesAgo(int count) {
+    return '$count 分鐘前';
+  }
+
+  @override
+  String notifHoursAgo(int count) {
+    return '$count 小時前';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -5870,4 +5895,29 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get notifJoinRequestSub => '有人申请加入教会时（只通知管理员）';
+
+  @override
+  String get notifListEmpty => '最近 30 天没有通知';
+
+  @override
+  String get notifSettings => '通知设置';
+
+  @override
+  String get notifUnread => '未读';
+
+  @override
+  String get notifUnreadLabel => '通知，有未读的';
+
+  @override
+  String get notifJustNow => '刚刚';
+
+  @override
+  String notifMinutesAgo(int count) {
+    return '$count 分钟前';
+  }
+
+  @override
+  String notifHoursAgo(int count) {
+    return '$count 小时前';
+  }
 }

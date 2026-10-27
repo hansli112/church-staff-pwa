@@ -93,6 +93,15 @@ class MainActivity : FlutterActivity() {
                     }
                     if (opened) result.success(null) else result.error("no_settings", null, null)
                 }
+                // The number on the icon (#89): launchers count the
+                // notifications showing, each with the number its push
+                // brought. Everything read: none of them is news.
+                "badge" -> {
+                    if ((call.arguments as? Int ?: 0) == 0) {
+                        getSystemService(NotificationManager::class.java).cancelAll()
+                    }
+                    result.success(null)
+                }
                 else -> result.notImplemented()
             }
         }

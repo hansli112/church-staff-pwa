@@ -2941,4 +2941,29 @@ class L10nJa extends L10n {
 
   @override
   String get notifJoinRequestSub => '誰かが参加を申請したとき（管理者のみ）';
+
+  @override
+  String get notifListEmpty => '過去30日間の通知はありません';
+
+  @override
+  String get notifSettings => '通知設定';
+
+  @override
+  String get notifUnread => '未読';
+
+  @override
+  String get notifUnreadLabel => '通知、未読あり';
+
+  @override
+  String get notifJustNow => 'たった今';
+
+  @override
+  String notifMinutesAgo(int count) {
+    return '$count分前';
+  }
+
+  @override
+  String notifHoursAgo(int count) {
+    return '$count時間前';
+  }
 }

@@ -34,6 +34,9 @@ abstract interface class ContractWorld {
 
   /// Moves the church's deletion [ago] into the past.
   Future<void> backdateDeletion(String churchId, Duration ago);
+
+  /// Puts [n] in [uid]'s 通知列表, as a push the backend sent (#89).
+  Future<void> addNotification(String uid, NotificationItem n);
 }
 
 /// The password every contract account uses.

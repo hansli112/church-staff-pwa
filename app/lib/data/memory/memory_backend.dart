@@ -104,6 +104,9 @@ class MemoryBackend implements Backend {
   final staffOrders = <String, Map<String, StaffOrder>>{};
   final invites = <String, Invite>{};
   final users = <String, UserProfile>{};
+
+  /// Each person's 通知列表 (#89), by uid, in the order sent.
+  final notifications = <String, List<NotificationItem>>{};
   final calendars = <String, CalendarSettings>{};
 
   /// What the Google account offers to pick from (calendarList).
@@ -288,6 +291,12 @@ class MemoryBackend implements Backend {
 
   void addMember(String cid, Member member) {
     members[cid]![member.uid] = member;
+    notify();
+  }
+
+  /// A push the backend sent [uid], in their 通知列表 (#89).
+  void addNotification(String uid, NotificationItem n) {
+    (notifications[uid] ??= []).add(n);
     notify();
   }
 
@@ -661,7 +670,11 @@ class _Profiles implements ProfileRepository {
     _checkName(profile.name);
     final old = _b.users[profile.uid];
     await _b.write(
-      () => _b.users[profile.uid] = profile.copyWith(appLocale: old?.appLocale, photoAiConsent: old?.photoAiConsent),
+      () => _b.users[profile.uid] = profile.copyWith(
+        appLocale: old?.appLocale,
+        photoAiConsent: old?.photoAiConsent,
+        notificationsSeen: old?.notificationsSeen,
+      ),
     );
   }
 
@@ -687,6 +700,21 @@ class _Profiles implements ProfileRepository {
     if (!_b.connectivity.online && _b.auth.currentUser?.uid == profile.uid && _b.users.containsKey(profile.uid)) return;
     _checkName(profile.name);
     await _b.write(() => _b.users.putIfAbsent(profile.uid, () => profile));
+  }
+
+  @override
+  Stream<List<NotificationItem>> notifications(String uid) => _b.watch(() {
+    // As firestore.rules: only their own.
+    if (_b.auth.currentUser?.uid != uid) throw const CloudException(CloudErrorCode.permissionDenied);
+    return [...?_b.notifications[uid]]..sort((a, b) => b.at.compareTo(a.at));
+  }, equals: listEquals);
+
+  @override
+  Future<void> markNotificationsSeen(String uid, String churchId, DateTime upTo) async {
+    final p = _b.users[uid];
+    if (_b.auth.currentUser?.uid != uid || p == null) throw const CloudException(CloudErrorCode.permissionDenied);
+    final at = DateTime.fromMillisecondsSinceEpoch(upTo.millisecondsSinceEpoch, isUtc: true);
+    await _b.write(() => _b.users[uid] = p.copyWith(notificationsSeen: {...p.notificationsSeen, churchId: at}));
   }
 }
 
@@ -1332,7 +1360,11 @@ class MemoryChurchData implements ChurchData {
         ? target != null && !target.isAdmin
         : _b.isActiveMember(churchId, _uid) && (_me?.isAdmin ?? false);
     if (!allowed) throw const CloudException(CloudErrorCode.permissionDenied);
-    await _b.write(() => _b.members[churchId]!.remove(uid));
+    await _b.write(() {
+      _b.members[churchId]!.remove(uid);
+      // As onMemberDeleted: the church's notifications go with them.
+      _b.notifications[uid]?.removeWhere((n) => n.churchId == churchId);
+    });
   }
 
   @override
@@ -2012,6 +2044,7 @@ class MemoryCloud implements CloudApi {
       r.remove(uid);
     }
     _b.users.remove(uid);
+    _b.notifications.remove(uid);
     _b.notify();
     _b.auth.deleteCurrent();
   }

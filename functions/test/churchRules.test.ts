@@ -8,6 +8,7 @@ import { attendanceDue, mayReadAttendance, mayWriteAttendance, remindedOfAttenda
 import { mayWriteEvent } from '../src/eventGroups.js';
 import { mayMoveMember } from '../src/groupMembers.js';
 import { mapMember } from '../src/importer.js';
+import { unreadCount } from '../src/notificationList.js';
 import { standing } from '../src/joinRequests.js';
 import { ledChangeAllowed } from '../src/ledDuties.js';
 import { LANGUAGES, words } from '../src/languages.js';
@@ -111,4 +112,8 @@ describe('attendanceDue', () => {
 
 describe('joinRequestState', () => {
   for (const r of rows('joinRequestState')) test(r.why, () => assert.equal(standing(r.daysAgo, r.rejected), r.state));
+});
+
+describe('unreadNotifications', () => {
+  for (const r of rows('unreadNotifications')) test(r.why, () => assert.equal(unreadCount(r.items, r.seen), r.unread));
 });

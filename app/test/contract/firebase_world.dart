@@ -109,6 +109,16 @@ class FirebaseWorld implements ContractWorld {
   Future<void> backdateDeletion(String churchId, Duration ago) =>
       _write('churches/$churchId', {'deletedAt': DateTime.now().subtract(ago)}, mask: ['deletedAt']);
 
+  @override
+  Future<void> addNotification(String uid, NotificationItem n) => _write('users/$uid/notifications/${n.id}', {
+    'cid': n.churchId,
+    'kind': n.kind?.name ?? 'later',
+    'title': n.title,
+    'body': n.body,
+    'link': n.link,
+    'at': n.at,
+  });
+
   Future<void> _updateAccount(String email, Map<String, Object?> fields) => _send(
     'POST',
     '$_auth/identitytoolkit.googleapis.com/v1/projects/$_project/accounts:update',

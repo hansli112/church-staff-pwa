@@ -3087,4 +3087,41 @@ class L10nEn extends L10n {
 
   @override
   String get notifJoinRequestSub => 'When someone asks to join the church (admins only)';
+
+  @override
+  String get notifListEmpty => 'No notifications in the last 30 days';
+
+  @override
+  String get notifSettings => 'Notification settings';
+
+  @override
+  String get notifUnread => 'Unread';
+
+  @override
+  String get notifUnreadLabel => 'Notifications, some unread';
+
+  @override
+  String get notifJustNow => 'Just now';
+
+  @override
+  String notifMinutesAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count minutes ago',
+      one: '1 minute ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String notifHoursAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hours ago',
+      one: '1 hour ago',
+    );
+    return '$_temp0';
+  }
 }

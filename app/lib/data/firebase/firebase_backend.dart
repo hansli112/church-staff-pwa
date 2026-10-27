@@ -475,6 +475,25 @@ class _Profiles implements ProfileRepository {
       _guard(() => _db.doc('users/$uid').update({'photoAiConsentAt': FieldValue.serverTimestamp()}));
 
   @override
+  Stream<List<NotificationItem>> notifications(String uid) => _db
+      .collection('users/$uid/notifications')
+      .orderBy('at', descending: true)
+      // 30 days of them (functions/src/notificationList.ts), far fewer in practice.
+      .limit(500)
+      .live()
+      .map((q) => [for (final d in q.docs) notificationFromJson(d.id, d.data())])
+      .translated();
+
+  // To the millisecond, as unreadNotifications compares: the web's
+  // DateTime has no finer, and the newest seen must not stay unread.
+  @override
+  Future<void> markNotificationsSeen(String uid, String churchId, DateTime upTo) => _guard(
+    () => _db.doc('users/$uid').update({
+      FieldPath(['notificationsSeenAt', churchId]): Timestamp.fromMillisecondsSinceEpoch(upTo.millisecondsSinceEpoch),
+    }),
+  );
+
+  @override
   Future<void> ensure(UserProfile profile) async {
     Future<bool> cachedOwnProfile() async {
       if (_auth.currentUser?.uid != profile.uid) return false;

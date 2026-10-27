@@ -887,5 +887,12 @@
   "takesJoinRequests": "가입 신청 받기",
   "takesJoinRequestsFooter": "켜 두면 교회 주소를 아는 사람이 가입을 신청할 수 있어요. 관리자가 '멤버'에서 승인하면 가입돼요.",
   "notifJoinRequest": "가입 신청",
-  "notifJoinRequestSub": "누군가 가입을 신청했을 때(관리자만)"
+  "notifJoinRequestSub": "누군가 가입을 신청했을 때(관리자만)",
+  "notifListEmpty": "최근 30일 동안 알림이 없어요",
+  "notifSettings": "알림 설정",
+  "notifUnread": "읽지 않음",
+  "notifUnreadLabel": "알림, 읽지 않은 알림 있음",
+  "notifJustNow": "방금",
+  "notifMinutesAgo": "{count}분 전",
+  "notifHoursAgo": "{count}시간 전"
 }

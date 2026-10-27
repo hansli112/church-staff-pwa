@@ -56,6 +56,8 @@ const RULES_FIELDS: Record<string, { text?: keyof typeof TEXT_LIMITS; other?: ke
   'request.resource.data.appLocale': { other: 'appLocale' },
   // users/{uid}.fcm: push tokens, one per install; the backend drops dead ones.
   'request.resource.data.fcm': { rulesOnly: 50 },
+  // users/{uid}.notificationsSeenAt: how far each church's 通知列表 is seen (#89).
+  'request.resource.data.notificationsSeenAt': { rulesOnly: 100 },
 };
 
 const rulesSizes = [...rules.matchAll(/((?:\.get\([^)]*\)|[\w.])+)\.size\(\) <= (\d+)/g)].map(([, field, n]) => ({

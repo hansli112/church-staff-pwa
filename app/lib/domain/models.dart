@@ -872,6 +872,7 @@ class UserProfile {
     this.locale,
     this.appLocale,
     this.photoAiConsent = false,
+    this.notificationsSeen = const {},
   });
 
   final String uid;
@@ -891,14 +892,21 @@ class UserProfile {
   /// account. Kept by [ProfileRepository.agreeToPhotoAi].
   final bool photoAiConsent;
 
-  UserProfile copyWith({String? appLocale, bool? photoAiConsent}) => UserProfile(
-    uid: uid,
-    name: name,
-    email: email,
-    locale: locale,
-    appLocale: appLocale ?? this.appLocale,
-    photoAiConsent: photoAiConsent ?? this.photoAiConsent,
-  );
+  /// How far each church's 通知列表 is seen, by church ID: the newest
+  /// notification shown (#89). Kept by
+  /// [ProfileRepository.markNotificationsSeen], not by saving the profile.
+  final Map<String, DateTime> notificationsSeen;
+
+  UserProfile copyWith({String? appLocale, bool? photoAiConsent, Map<String, DateTime>? notificationsSeen}) =>
+      UserProfile(
+        uid: uid,
+        name: name,
+        email: email,
+        locale: locale,
+        appLocale: appLocale ?? this.appLocale,
+        photoAiConsent: photoAiConsent ?? this.photoAiConsent,
+        notificationsSeen: notificationsSeen ?? this.notificationsSeen,
+      );
 }
 
 /// A membership found by the collection-group query: which churches I am in.
@@ -1284,6 +1292,63 @@ class PendingMember {
     Object.hashAllUnordered(mutedNotifications),
   );
 }
+
+/// How long a notification stays in the 通知列表: NOTIFICATION_DAYS in
+/// functions/src/notificationList.ts.
+const notificationDays = Duration(days: 30);
+
+/// One line of someone's 通知列表 (#89): a push the backend sent them,
+/// also of a kind they muted, kept [notificationDays]. Written only by the
+/// backend.
+@immutable
+class NotificationItem {
+  const NotificationItem({
+    required this.id,
+    required this.churchId,
+    required this.kind,
+    required this.title,
+    required this.body,
+    required this.link,
+    required this.at,
+  });
+
+  final String id;
+
+  /// The church it is from: each church's list shows only its own.
+  final String churchId;
+
+  /// Null: a kind newer than this app.
+  final NotificationKind? kind;
+  final String title;
+  final String body;
+
+  /// The app route it opens in its church, as the push does.
+  final String link;
+  final DateTime at;
+
+  @override
+  bool operator ==(Object other) =>
+      other is NotificationItem &&
+      other.id == id &&
+      other.churchId == churchId &&
+      other.kind == kind &&
+      other.title == title &&
+      other.body == body &&
+      other.link == link &&
+      other.at == at;
+
+  @override
+  int get hashCode => Object.hash(id, churchId, kind, title, body, link, at);
+}
+
+/// How many of [items] are unread: sent after their church's list was last
+/// seen ([seen], by church ID; never seen: all of it), to the millisecond.
+/// The number on the app icon counts every church's. Matches unreadCount in
+/// functions/src/notificationList.ts (testdata/church_rules.json).
+int unreadNotifications(Iterable<NotificationItem> items, Map<String, DateTime> seen) => items.where((n) {
+  final s = seen[n.churchId];
+  return s == null || n.at.millisecondsSinceEpoch > s.millisecondsSinceEpoch;
+}).length;
 
 /// How someone's request to join a church stands (申請加入, #88).
 enum JoinRequestState { pending, rejected }

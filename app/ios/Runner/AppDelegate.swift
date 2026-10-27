@@ -1,5 +1,6 @@
 import Flutter
 import UIKit
+import UserNotifications
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
@@ -13,22 +14,32 @@ import UIKit
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "MarthaSettings") {
-      // Notifications turned off: iOS does not ask again, so this app's
-      // notification settings are the way back.
       let settings = FlutterMethodChannel(name: "martha/settings", binaryMessenger: registrar.messenger())
       settings.setMethodCallHandler { call, result in
-        guard call.method == "notifications" else {
+        switch call.method {
+        case "notifications":
+          // Notifications turned off: iOS does not ask again, so this app's
+          // notification settings are the way back.
+          let page: String
+          if #available(iOS 16.0, *) {
+            page = UIApplication.openNotificationSettingsURLString
+          } else {
+            page = UIApplication.openSettingsURLString
+          }
+          if let url = URL(string: page) { UIApplication.shared.open(url) }
+          result(nil)
+        case "badge":
+          // What is unread in the 通知列表 (#89), on the app icon.
+          let count = call.arguments as? Int ?? 0
+          if #available(iOS 16.0, *) {
+            UNUserNotificationCenter.current().setBadgeCount(count)
+          } else {
+            UIApplication.shared.applicationIconBadgeNumber = count
+          }
+          result(nil)
+        default:
           result(FlutterMethodNotImplemented)
-          return
         }
-        let page: String
-        if #available(iOS 16.0, *) {
-          page = UIApplication.openNotificationSettingsURLString
-        } else {
-          page = UIApplication.openSettingsURLString
-        }
-        if let url = URL(string: page) { UIApplication.shared.open(url) }
-        result(nil)
       }
     }
     guard let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "MarthaAppIcon") else { return }

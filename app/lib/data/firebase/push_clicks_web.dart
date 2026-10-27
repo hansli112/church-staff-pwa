@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
 
 import 'package:web/web.dart' as web;
 
@@ -23,4 +24,16 @@ Stream<String> webNotificationClicks() {
   out.onListen = () => web.window.navigator.serviceWorker.addEventListener('message', listener);
   out.onCancel = () => web.window.navigator.serviceWorker.removeEventListener('message', listener);
   return out.stream;
+}
+
+/// The number on the installed web app's icon (the Badging API: an iPhone's
+/// home-screen app, an installed Chrome app). Elsewhere nothing shows it.
+Future<void> setWebAppBadge(int count) async {
+  final navigator = web.window.navigator;
+  if (!navigator.has('setAppBadge')) return;
+  try {
+    await (count > 0 ? navigator.setAppBadge(count) : navigator.clearAppBadge()).toDart;
+  } catch (_) {
+    // Refused (no notification permission on an iPhone): nothing to show.
+  }
 }

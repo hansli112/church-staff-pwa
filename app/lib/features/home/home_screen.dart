@@ -18,6 +18,7 @@ import '../me/attendance.dart';
 import '../me/turn_on_notifications.dart';
 import '../common/calendar_read_notice.dart';
 import 'church_link_card.dart';
+import 'notification_list_screen.dart';
 import '../rosters/format.dart';
 import '../rosters/day_block.dart';
 import '../rosters/event_roster_screen.dart';
@@ -111,6 +112,7 @@ class HomeScreen extends ConsumerWidget {
         centerTitle: false,
         titleSpacing: Space.m,
         title: church == null ? null : ChurchTitle(church: church),
+        actions: [if (church != null) const NotificationBell()],
       ),
       body: mine.when(
         skipLoadingOnReload: true,

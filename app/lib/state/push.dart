@@ -33,6 +33,10 @@ abstract interface class PushService {
   /// Notifications that arrive while the app is open in front. The system
   /// does not show these, so the app does.
   Stream<PushNotice> get foreground;
+
+  /// Puts [count] on the app icon, what is unread in the 通知列表 (#89);
+  /// 0 takes it off. Where the icon shows no number, nothing. Never fails.
+  Future<void> setBadge(int count);
 }
 
 /// A notification received while the app is open.
@@ -72,6 +76,9 @@ class NoPush implements PushService {
 
   @override
   Stream<PushNotice> get foreground => const Stream.empty();
+
+  @override
+  Future<void> setBadge(int count) async {}
 }
 
 /// Overridden in main() with the Firebase implementation.
