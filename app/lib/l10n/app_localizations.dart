@@ -2260,6 +2260,12 @@ abstract class L10n {
   /// **'套用到服事表'**
   String get importApply;
 
+  /// The import button while names are still to be confirmed
+  ///
+  /// In zh, this message translates to:
+  /// **'先確認 {count} 個人名'**
+  String importConfirmNamesFirst(int count);
+
   /// No description provided for @importApplied.
   ///
   /// In zh, this message translates to:

@@ -750,6 +750,15 @@
   "photoUnavailable": "照片辨識暫時無法使用，請稍後再試，或直接安排服事表",
   "importPreview": "預覽",
   "importApply": "套用到服事表",
+  "importConfirmNamesFirst": "先確認 {count} 個人名",
+  "@importConfirmNamesFirst": {
+    "description": "The import button while names are still to be confirmed",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "importApplied": "已匯入 {count} 天",
   "@importApplied": {
     "placeholders": {

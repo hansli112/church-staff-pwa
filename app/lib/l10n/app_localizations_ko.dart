@@ -1211,6 +1211,11 @@ class L10nKo extends L10n {
   String get importApply => '봉사표에 적용';
 
   @override
+  String importConfirmNamesFirst(int count) {
+    return '이름 $count개를 먼저 확인';
+  }
+
+  @override
   String importApplied(int count) {
     return '$count일분을 가져왔어요';
   }

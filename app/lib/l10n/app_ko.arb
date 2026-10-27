@@ -384,6 +384,7 @@
   "photoUnavailable": "지금은 사진 인식을 쓸 수 없어요. 잠시 후 다시 시도하거나 봉사표를 직접 입력해 주세요.",
   "importPreview": "미리보기",
   "importApply": "봉사표에 적용",
+  "importConfirmNamesFirst": "이름 {count}개를 먼저 확인",
   "importApplied": "{count}일분을 가져왔어요",
   "importNothing": "사진에서 앞으로의 날짜를 찾지 못했어요",
   "importNotInList": "명단에 없는 이름이에요(입력된 그대로 저장되고 계정에 연결되지 않아요)",

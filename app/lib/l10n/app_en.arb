@@ -384,6 +384,7 @@
   "photoUnavailable": "Photo import isn’t available right now. Try again later, or fill in the schedule yourself.",
   "importPreview": "Preview",
   "importApply": "Apply to schedule",
+  "importConfirmNamesFirst": "{count, plural, =1{Confirm 1 name first} other{Confirm {count} names first}}",
   "importApplied": "{count, plural, =1{Imported 1 day} other{Imported {count} days}}",
   "importNothing": "No upcoming dates found in the photo",
   "importNotInList": "Not on the team member list (added as written, not linked to an account)",

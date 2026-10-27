@@ -1210,6 +1210,11 @@ class L10nZh extends L10n {
   String get importApply => '套用到服事表';
 
   @override
+  String importConfirmNamesFirst(int count) {
+    return '先確認 $count 個人名';
+  }
+
+  @override
   String importApplied(int count) {
     return '已匯入 $count 天';
   }
@@ -4170,6 +4175,11 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get importApply => '应用到事奉表';
+
+  @override
+  String importConfirmNamesFirst(int count) {
+    return '先确认 $count 个人名';
+  }
 
   @override
   String importApplied(int count) {

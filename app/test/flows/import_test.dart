@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:martha/core/design/components.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 
@@ -262,13 +263,18 @@ void main() {
     );
     await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
     await tapText(tester, '預覽');
-    final apply = find.widgetWithText(FilledButton, '套用到服事表');
-    expect(tester.widget<FilledButton>(apply).onPressed, isNull);
+    // The button says what it waits for.
+    final waiting = find.widgetWithText(FilledButton, '先確認 2 個人名');
+    expect(tester.widget<FilledButton>(waiting).onPressed, isNull);
     await tester.tap(find.text('美玉').first);
     await settle(tester);
     await tapText(tester, '李美玉');
+    expect(find.widgetWithText(FilledButton, '先確認 1 個人名'), findsOneWidget);
     await tester.tap(find.text('陳志明').first);
     await settle(tester);
+    // Its name heads the sheet: a heading, not a choice.
+    expect(find.widgetWithText(ListRow, '確認「陳志明」'), findsNothing);
+    expect(findShown('確認「陳志明」'), findsOneWidget);
     await tapText(tester, '保留「陳志明」為無帳號');
     await tapText(tester, '套用到服事表');
     expect(peopleOn(b, 18, '司琴'), ['李美玉']);

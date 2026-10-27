@@ -78,8 +78,9 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
           e.error == LogoError.tooLarge ? l10n.logoTooLarge : l10n.logoNotImage,
         );
       }
-    } catch (_) {
-      if (mounted) showToast(context, l10n.saveFailed);
+    } catch (e) {
+      // Refused is not offline: say which it was.
+      if (mounted) showToast(context, errorText(l10n, e));
     } finally {
       if (mounted) setState(() => _uploading = false);
     }

@@ -1269,6 +1269,17 @@ class L10nEn extends L10n {
   String get importApply => 'Apply to schedule';
 
   @override
+  String importConfirmNamesFirst(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Confirm $count names first',
+      one: 'Confirm 1 name first',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String importApplied(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

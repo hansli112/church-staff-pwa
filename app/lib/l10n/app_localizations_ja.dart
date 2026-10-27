@@ -1210,6 +1210,11 @@ class L10nJa extends L10n {
   String get importApply => '奉仕表に適用';
 
   @override
+  String importConfirmNamesFirst(int count) {
+    return '先に名前を$count件確認';
+  }
+
+  @override
   String importApplied(int count) {
     return '$count日分を読み込みました';
   }

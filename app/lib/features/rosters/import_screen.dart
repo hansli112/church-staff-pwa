@@ -134,18 +134,24 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       builder: (sheetContext) => ListView(
         shrinkWrap: true,
         children: [
-          ListRow(title: L10n.of(context).importConfirmName(raw), subtitle: L10n.of(context).importSameNameScope),
-          for (final member in candidates)
-            ListRow(
-              title: member.name,
-              subtitle: member.email.isEmpty ? member.uid : member.email,
-              onTap: () => Navigator.pop(sheetContext, ImportPersonChoice.member(member.uid)),
-            ),
-          ListRow(
-            title: L10n.of(context).importGuestChoice(raw),
-            onTap: () => Navigator.pop(sheetContext, const ImportPersonChoice.guest()),
+          // The name heads the choices; as a row it read as one of them.
+          ListSection(
+            header: L10n.of(context).importConfirmName(raw),
+            footer: L10n.of(context).importSameNameScope,
+            children: [
+              for (final member in candidates)
+                ListRow(
+                  title: member.name,
+                  subtitle: member.email.isEmpty ? member.uid : member.email,
+                  onTap: () => Navigator.pop(sheetContext, ImportPersonChoice.member(member.uid)),
+                ),
+              ListRow(
+                title: L10n.of(context).importGuestChoice(raw),
+                onTap: () => Navigator.pop(sheetContext, const ImportPersonChoice.guest()),
+              ),
+              ListRow(title: L10n.of(context).cancel, onTap: () => Navigator.pop(sheetContext)),
+            ],
           ),
-          ListRow(title: L10n.of(context).cancel, onTap: () => Navigator.pop(sheetContext)),
         ],
       ),
     );
@@ -706,7 +712,10 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
           child: Padding(
             padding: const EdgeInsets.all(Space.m),
             child: PrimaryButton(
-              label: l10n.importApply,
+              // Waiting on names: says so, not only greyed out.
+              label: report.unresolved.isEmpty
+                  ? l10n.importApply
+                  : l10n.importConfirmNamesFirst(report.unresolved.length),
               busy: _busy,
               onPressed: _ready && plan.canApply ? () => _apply(plan) : null,
             ),
