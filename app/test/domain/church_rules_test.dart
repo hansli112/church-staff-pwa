@@ -122,6 +122,7 @@ void main() {
           identities: [
             for (final t in _strings(r['leadTypes'])) ServiceLead(t),
             for (final m in _strings(r['leadMinistries'])) MinistryLead(m),
+            for (final g in _strings(r['leadSmallGroups'] ?? const [])) SmallGroupLead(g),
           ],
         );
         final roster = r['roster'] as String;
@@ -130,6 +131,15 @@ void main() {
           r['may'],
         );
       });
+    }
+  });
+
+  group('memberListReading', () {
+    for (final r in _rows('memberListReading')) {
+      test(
+        r['why'] as String,
+        () => expect(_member('u', r['member'] as Map<String, dynamic>).readsMembers, r['reads']),
+      );
     }
   });
 

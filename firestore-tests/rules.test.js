@@ -437,7 +437,9 @@ describe('rosterEditing (testdata/church_rules.json)', () => {
   rows.forEach((r, i) => {
     it(r.why, async () => {
       const uid = `table-${i}`;
-      await seed(`churches/${A}/members/${uid}`, memberDoc(uid, r.role, r.groups, r.zoneTypes, { types: r.leadTypes, ministries: r.leadMinistries }));
+      await seed(`churches/${A}/members/${uid}`, memberDoc(uid, r.role, r.groups, r.zoneTypes, {
+        types: r.leadTypes, ministries: r.leadMinistries, smallGroups: r.leadSmallGroups,
+      }));
       const write = r.roster === 'event'
         ? setDoc(doc(as(uid), `churches/${A}/rosters/ev_t${i}`), {
           kind: 'event', eventId: `t${i}`, title: '聖誕晚會', dateKey: '2030-12-24', endDateKey: '2030-12-24', duties: [], events: [],
@@ -445,6 +447,22 @@ describe('rosterEditing (testdata/church_rules.json)', () => {
         })
         : setDoc(doc(as(uid), `churches/${A}/rosters/table-${i}`), { type: r.roster });
       await (r.may ? assertSucceeds(write) : assertFails(write));
+    });
+  });
+});
+
+// 誰能讀同工名單：和 App 共用 testdata/church_rules.json 的 memberListReading。
+describe('memberListReading (testdata/church_rules.json)', () => {
+  const rows = JSON.parse(readFileSync(new URL('../testdata/church_rules.json', import.meta.url), 'utf8')).memberListReading;
+  rows.forEach((r, i) => {
+    it(r.why, async () => {
+      const uid = `reader-${i}`;
+      const m = r.member;
+      await seed(`churches/${A}/members/${uid}`, memberDoc(uid, m.role ?? 'staff', m.groups, undefined, {
+        types: m.leadTypes, ministries: m.leadMinistries, smallGroups: m.leadSmallGroups,
+      }));
+      const read = getDocs(collection(as(uid), `churches/${A}/members`));
+      await (r.reads ? assertSucceeds(read) : assertFails(read));
     });
   });
 });
