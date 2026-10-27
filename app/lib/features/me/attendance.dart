@@ -29,11 +29,11 @@ class AttendanceSection extends ConsumerWidget {
     final l10n = L10n.of(context);
     final since = ref.watch(churchProvider.select((c) => c.value?.attendanceSince));
     final me = ref.watch(meProvider).value;
-    if (since == null || me == null || !me.readsAttendance(group.key, smallGroupService: group.smallGroupService)) {
+    if (since == null || me == null || !me.readsAttendance(group.group)) {
       return const SizedBox.shrink();
     }
-    final writes = me.writesAttendance(group.key, smallGroupService: group.smallGroupService);
-    final record = ref.watch(attendanceProvider(group.key)).value;
+    final writes = me.writesAttendance(group.group);
+    final record = ref.watch(attendanceProvider(group.group.key)).value;
     if (record == null) return const SizedBox.shrink();
     final today = ref.watch(todayProvider);
     final days = attendanceDays(group, since: since, pauses: record.pauses, filled: record.days.keys, today: today);
@@ -95,7 +95,7 @@ class AttendanceSection extends ConsumerWidget {
 
   Future<void> _setPauses(BuildContext context, WidgetRef ref, List<AttendancePause> pauses) async {
     try {
-      await ref.churchData.setAttendancePauses(group.key, pauses);
+      await ref.churchData.setAttendancePauses(group.group.key, pauses);
     } catch (e) {
       if (context.mounted) showToast(context, saveErrorText(L10n.of(context), e));
     }
@@ -121,7 +121,7 @@ Future<void> fillAttendance(
   );
   if (value == null || !context.mounted) return;
   try {
-    await ref.churchData.setAttendance(group.key, day, value);
+    await ref.churchData.setAttendance(group.group.key, day, value);
     if (context.mounted) showToast(context, l10n.attendanceSaved);
   } catch (e) {
     if (context.mounted) showToast(context, saveErrorText(l10n, e));

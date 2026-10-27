@@ -167,7 +167,7 @@ void main() {
       test(r['why'] as String, () {
         final g = r['group'] as Map<String, dynamic>;
         final ChurchGroup group = g['smallGroup'] is String
-            ? SmallGroup(g['smallGroup'] as String)
+            ? SmallGroup(g['smallGroup'] as String, service: g['service'] as String?)
             : g['service'] is String
             ? ServiceGroup(g['service'] as String)
             : MinistryGroup(g['ministry'] as String);
@@ -175,7 +175,7 @@ void main() {
           member(
             'caller',
             r['caller'] as Map<String, dynamic>,
-          ).mayMove(member('target', r['target'] as Map<String, dynamic>), group, service: g['service'] as String?),
+          ).mayMove(member('target', r['target'] as Map<String, dynamic>), group),
           r['may'],
         );
       });
@@ -204,10 +204,12 @@ void main() {
     for (final r in _rows('attendanceAccess')) {
       test(r['why'] as String, () {
         final m = _member('u', r['member'] as Map<String, dynamic>);
-        final key = r['group'] as String;
-        final service = r['smallGroupService'] as String?;
-        expect(m.writesAttendance(key, smallGroupService: service), r['writes'], reason: 'writes');
-        expect(m.readsAttendance(key, smallGroupService: service), r['reads'], reason: 'reads');
+        final group = switch (ChurchGroup.parse(r['group'] as String)!) {
+          SmallGroup(:final id) => SmallGroup(id, service: r['smallGroupService'] as String?),
+          final g => g,
+        };
+        expect(m.writesAttendance(group), r['writes'], reason: 'writes');
+        expect(m.readsAttendance(group), r['reads'], reason: 'reads');
       });
     }
   });

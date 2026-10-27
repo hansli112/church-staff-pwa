@@ -20,8 +20,9 @@ final _recentRostersProvider = StreamProvider.autoDispose<List<Roster>>((ref) {
   return openChurch(ref).rosters(from: today.addDays(-7 * attendanceWeeks));
 });
 
-/// A group 回報人數 is about: a service or a 小組, its name, and when it meets.
-typedef AttendanceGroup = ({String key, String name, String? smallGroupService, Meets Function(Day day) meetsOn});
+/// A group 回報人數 is about: a service or a 小組 (with its service), its
+/// name, and when it meets.
+typedef AttendanceGroup = ({ChurchGroup group, String name, Meets Function(Day day) meetsOn});
 
 /// The groups of the church that meet (its services and 小組), as
 /// [AttendanceGroup]s; a service meets on its weekday when that day has a
@@ -37,13 +38,11 @@ final attendanceGroupsProvider = Provider.autoDispose<List<AttendanceGroup>>((re
   return [
     for (final s in services)
       (
-        key: ServiceGroup(s.id).key,
+        group: ServiceGroup(s.id),
         name: s.name,
-        smallGroupService: null,
         meetsOn: (Day day) => Meets(weekday: s.weekday, roster: held.contains((s.id, day))),
       ),
-    for (final g in smallGroups)
-      (key: g.group.key, name: g.name, smallGroupService: g.service, meetsOn: (Day _) => g.meets),
+    for (final g in smallGroups) (group: g.group, name: g.name, meetsOn: (Day _) => g.meets),
   ];
 });
 
@@ -85,8 +84,8 @@ final attendanceDueProvider = Provider.autoDispose<List<AttendanceDue>>((ref) {
   if (mine.isEmpty) return const [];
   return [
     for (final g in ref.watch(attendanceGroupsProvider))
-      if (mine.contains(g.key))
-        if (ref.watch(attendanceProvider(g.key)).value case final record?)
+      if (mine.contains(g.group.key))
+        if (ref.watch(attendanceProvider(g.group.key)).value case final record?)
           if (attendanceDays(g, since: since, pauses: record.pauses, today: today).firstOrNull case final day?
               when !record.days.containsKey(day))
             (group: g, day: day),

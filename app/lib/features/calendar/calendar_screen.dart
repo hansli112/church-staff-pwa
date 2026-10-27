@@ -77,17 +77,13 @@ final calendarFilterProvider = NotifierProvider<CalendarFilter, String>(Calendar
 /// The filters to pick from, with their names: 跟我有關的, 全部, 全教會 and
 /// each group's.
 final _calendarFiltersProvider = Provider<List<(String, String)>?>((ref) {
-  final services = ref.watch(servicesProvider).value?.enabled;
-  final ministries = ref.watch(ministriesProvider).value?.ministries;
-  final smallGroups = ref.watch(smallGroupsProvider).value;
-  if (services == null || ministries == null || smallGroups == null) return null;
+  final groups = ref.watch(churchGroupsProvider);
+  if (groups == null) return null;
   return [
     ('mine', ''),
     ('all', ''),
     ('church', ''),
-    for (final s in services) (ServiceGroup(s.id).key, s.name),
-    for (final m in ministries) (MinistryGroup(m.id).key, m.name),
-    for (final g in smallGroups) (g.group.key, g.name),
+    for (final g in groups.all) (g.group.key, g.name),
   ];
 });
 

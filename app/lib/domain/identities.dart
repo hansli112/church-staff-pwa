@@ -262,9 +262,14 @@ final class MinistryGroup extends ChurchGroup {
   int get hashCode => Object.hash('ministry', id);
 }
 
-/// A 小組 (#85), by its ID; its name and service are [SmallGroupDetails].
+/// A 小組 (#85), by its ID, with the [service] it is in when known (null:
+/// read from a key, or one gone); [ChurchGroups] resolves it. One 小組
+/// whatever is known of it: equal by ID. Its name and when it meets are
+/// [SmallGroupDetails].
 final class SmallGroup extends ChurchGroup {
-  const SmallGroup(super.id);
+  const SmallGroup(super.id, {this.service});
+
+  final String? service;
 
   @override
   bool operator ==(Object other) => other is SmallGroup && other.id == id;
@@ -295,7 +300,7 @@ class SmallGroupDetails {
   final int every;
   final Day? startsOn;
 
-  SmallGroup get group => SmallGroup(id);
+  SmallGroup get group => SmallGroup(id, service: service);
 
   /// When it meets, for [attendanceDue].
   Meets get meets => Meets(weekday: weekday, every: every, startsOn: startsOn);

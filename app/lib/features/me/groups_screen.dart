@@ -19,6 +19,10 @@ import '../common/errors.dart';
 import '../rosters/future_changes.dart';
 import 'attendance.dart';
 
+/// The page of [group]: `/me/groups/service/<id>`, `ministry/<id>` or
+/// `small/<id>`.
+String groupPage(ChurchGroup group) => '/me/groups/${group.key.replaceFirst(':', '/')}';
+
 /// 聚會與事工 (#82), for admins: every service and 事工, each opening its
 /// page; a new 事工 is added here.
 class GroupsScreen extends ConsumerWidget {
@@ -135,11 +139,16 @@ List<Candidate> groupCandidates(ChurchGroup group, List<Roster> rosters, List<Me
 class GroupScreen extends ConsumerWidget {
   const GroupScreen({super.key, required this.group});
 
+  /// The group, as its page's path names it.
   final ChurchGroup group;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
+    final named = ref.watch(churchGroupsProvider)?.byKey(this.group.key);
+    // As the church has it: a 小組 with its service.
+    final group = named?.group ?? this.group;
+    final name = named?.name;
     final me = ref.watch(meProvider).value;
     final services = ref.watch(servicesProvider).value;
     final ministries = ref.watch(ministriesProvider).value;
@@ -154,16 +163,8 @@ class GroupScreen extends ConsumerWidget {
       SmallGroup(:final id) => smallGroups.byId(id),
       _ => null,
     };
-    final name = switch (group) {
-      ServiceGroup(:final id) => services?.byId(id)?.name,
-      MinistryGroup() => ministry?.name,
-      SmallGroup() => small?.name,
-    };
-    final service = small?.service;
     // 行政 sees a service's 人數 here too, and changes nothing.
-    final sees =
-        me != null &&
-        (me.managesGroup(group, service: service) || (group is ServiceGroup && me.readsAttendance(group.key)));
+    final sees = me != null && (me.managesGroup(group) || (group is ServiceGroup && me.readsAttendance(group)));
     if (me == null || name == null || members == null || !sees) {
       return Scaffold(appBar: AppBar());
     }
@@ -174,12 +175,15 @@ class GroupScreen extends ConsumerWidget {
     final leaders = [...members.where(isLead)]..sort((a, b) => a.name.compareTo(b.name));
     final addable = [
       for (final m in members)
-        if (!m.isIn(group) && me.mayMove(m, group, service: service)) m,
+        if (!m.isIn(group) && me.mayMove(m, group)) m,
     ]..sort((a, b) => a.name.compareTo(b.name));
     final staff = [...members.where((m) => m.isIn(group))]..sort((a, b) => a.name.compareTo(b.name));
     final candidates = group is SmallGroup
         ? const <Candidate>[]
-        : groupCandidates(group, ref.watch(_allRostersProvider).value ?? const [], members, ministry);
+        : [
+            for (final c in groupCandidates(group, ref.watch(_allRostersProvider).value ?? const [], members, ministry))
+              if (me.mayMove(c.member, group)) c,
+          ];
     final serviceSmallGroups = switch (group) {
       ServiceGroup(:final id) => [...smallGroups.where((g) => g.service == id)],
       _ => const <SmallGroupDetails>[],
@@ -189,7 +193,7 @@ class GroupScreen extends ConsumerWidget {
       _ => false,
     };
     final attendance = attendanceOn && group is! MinistryGroup
-        ? ref.watch(attendanceGroupsProvider).where((g) => g.key == group.key).firstOrNull
+        ? ref.watch(attendanceGroupsProvider).where((g) => g.group == group).firstOrNull
         : null;
     return Scaffold(
       appBar: AppBar(title: Text(name)),
@@ -290,7 +294,7 @@ class GroupScreen extends ConsumerWidget {
                   },
                   chevron: false,
                   // Taken out at once, with 復原; only who this lead may move.
-                  trailing: me.mayMove(m, group, service: service)
+                  trailing: me.mayMove(m, group)
                       ? RowButton(
                           label: l10n.moveOutShort,
                           semanticsLabel: l10n.removeFromGroupLabel(m.name, name),

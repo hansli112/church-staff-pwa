@@ -95,6 +95,34 @@ void main() {
     expect(find.text('移出'), findsOneWidget);
   });
 
+  testWidgets('who served it but holds a 身分 is not offered to a lead: that is the admin\'s', (tester) async {
+    final b = seededChurch(
+      as: staffHao,
+      extra: [
+        staffHao.withIdentities(const [MinistryLead('worship')]),
+      ],
+    );
+    b.ministries['grace'] = const MinistrySettings(
+      ministries: [
+        Ministry(id: 'worship', name: '敬拜團', duties: [MinistryDuty('sunday', '司琴')]),
+      ],
+      ids: ['worship'],
+    );
+    // 林同工, 主日崇拜's 負責人, played 司琴 on 10/11 too.
+    b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, 11))] = Roster(
+      type: 'sunday',
+      day: Day(2026, 10, 11),
+      duties: const [
+        Duty(role: '司琴', people: ['林同工'], uids: {'林同工': 'editor'}),
+      ],
+    );
+    await pumpApp(tester, b);
+    await go(tester, '/me/groups/ministry/worship');
+    expect(find.text('李美玉'), findsOneWidget);
+    expect(find.text('林同工'), findsNothing);
+    expect(find.text('加為同工'), findsOneWidget);
+  });
+
   testWidgets("a service's 負責人 adds a helper to its 同工 with the duties they served", (tester) async {
     final b = seededChurch(as: editor);
     b.rosters['grace']![Roster.idFor('youth', Day(2026, 10, 10))] = Roster(

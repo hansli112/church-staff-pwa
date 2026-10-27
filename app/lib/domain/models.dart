@@ -13,6 +13,7 @@ import 'identities.dart';
 
 export 'church_time.dart' show ChurchTimeZone;
 export 'attendance.dart';
+export 'church_groups.dart';
 export 'identities.dart';
 
 enum ChurchStatus { active, suspended, deleted }
@@ -334,9 +335,14 @@ class Member {
   };
 
   /// Whether this member manages [group]'s 同工: as an admin, its 負責人,
-  /// or, for a 小組 in service [service], that service's.
-  bool managesGroup(ChurchGroup group, {String? service}) =>
-      isAdmin || leadsGroup(group) || (group is SmallGroup && service != null && leadTypes.contains(service));
+  /// or, for a 小組, its service's.
+  bool managesGroup(ChurchGroup group) =>
+      isAdmin ||
+      leadsGroup(group) ||
+      switch (group) {
+        SmallGroup(:final service?) => leadTypes.contains(service),
+        _ => false,
+      };
 
   /// Whether this member may open, change or close a 小組 of service
   /// [before] (null: none yet) as one of [after] (null: closed)
@@ -346,24 +352,15 @@ class Member {
       isAdmin ||
       ((before != null || after != null) && [before, after].every((s) => s == null || leadTypes.contains(s)));
 
-  /// Whether this member fills in the 人數 of group [key]
+  /// Whether this member fills in the 人數 of [group]
   /// (testdata/church_rules.json, attendanceAccess): admins any; a
-  /// service's 負責人 and 牧者 its own and its 小組' ([smallGroupService],
-  /// the 小組's service); a 小組長 their 小組's.
-  bool writesAttendance(String key, {String? smallGroupService}) =>
-      isAdmin ||
-      switch (ChurchGroup.parse(key)) {
-        ServiceGroup(:final id) => leadTypes.contains(id),
-        SmallGroup(:final id) =>
-          leadSmallGroups.contains(id) || (smallGroupService != null && leadTypes.contains(smallGroupService)),
-        _ => false,
-      };
+  /// service's 負責人 and 牧者 its own and its 小組'; a 小組長 their 小組's.
+  bool writesAttendance(ChurchGroup group) => isAdmin || (group is! MinistryGroup && managesGroup(group));
 
-  /// Whether this member sees the 人數 of group [key]: who fills them in,
-  /// and 行政 a service's.
-  bool readsAttendance(String key, {String? smallGroupService}) =>
-      writesAttendance(key, smallGroupService: smallGroupService) ||
-      (ChurchGroup.parse(key) is ServiceGroup && inGroup(Group.rosterEditors));
+  /// Whether this member sees the 人數 of [group]: who fills them in, and
+  /// 行政 a service's.
+  bool readsAttendance(ChurchGroup group) =>
+      writesAttendance(group) || (group is ServiceGroup && inGroup(Group.rosterEditors));
 
   /// The group keys whose 人數 this member is reminded of, at 21:00 and on
   /// 首頁 (testdata/church_rules.json, attendanceReminded): a service's as
@@ -387,11 +384,10 @@ class Member {
 
   /// Whether this member may add [target] to [group] or take them out
   /// (testdata/church_rules.json, groupMembership): an admin anyone; the
-  /// group's 負責人 (for a 小組 in [service], that service's too) only a
-  /// plain 同工, since 身分 are the admin's to give.
-  bool mayMove(Member target, ChurchGroup group, {String? service}) =>
-      isAdmin ||
-      (managesGroup(group, service: service) && !target.isAdmin && target.groups.isEmpty && target._identities.isEmpty);
+  /// group's 負責人 (a 小組's service's too) only a plain 同工, since 身分
+  /// are the admin's to give.
+  bool mayMove(Member target, ChurchGroup group) =>
+      isAdmin || (managesGroup(group) && !target.isAdmin && target.groups.isEmpty && target._identities.isEmpty);
 
   /// This member added to [group] ([member] true; a service with [duties]
   /// and [smallGroups]) or taken out, as setGroupMember writes it.

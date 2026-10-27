@@ -96,6 +96,15 @@ final smallGroupsProvider = StreamProvider<List<SmallGroupDetails>>(
   (ref) => openChurch(ref).smallGroups().map((list) => [...list]..sort((a, b) => a.name.compareTo(b.name))),
 );
 
+/// The church's groups by name (ChurchGroups); null until all are loaded.
+final churchGroupsProvider = Provider<ChurchGroups?>((ref) {
+  final services = ref.watch(servicesProvider).value;
+  final ministries = ref.watch(ministriesProvider).value;
+  final smallGroups = ref.watch(smallGroupsProvider).value;
+  if (services == null || ministries == null || smallGroups == null) return null;
+  return ChurchGroups(services: services, ministries: ministries, smallGroups: smallGroups);
+});
+
 /// What I arrange on a day of [serviceType]: null for all of it,
 /// otherwise only these duties (Member.arranges); nothing while signed out.
 final arrangesProvider = Provider.family<Set<String>?, String>((ref, serviceType) {

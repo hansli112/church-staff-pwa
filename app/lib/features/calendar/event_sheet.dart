@@ -163,28 +163,16 @@ Future<void> editEvent(
 List<EventGroupChoice> eventGroupChoices(WidgetRef ref, L10n l10n) {
   final me = ref.read(meProvider).value;
   if (me == null) return const [];
-  final services = ref.read(servicesProvider).value?.enabled ?? const <Service>[];
-  final ministries = ref.read(ministriesProvider).value?.ministries ?? const <Ministry>[];
-  final smallGroups = ref.read(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
   return [
     if (me.mayWriteEvent(null, '')) (key: null, label: l10n.wholeChurch),
-    for (final (key, label) in [
-      for (final s in services) (ServiceGroup(s.id).key, s.name),
-      for (final m in ministries) (MinistryGroup(m.id).key, m.name),
-      for (final g in smallGroups) (g.group.key, g.name),
-    ])
-      if (me.mayWriteEvent(null, key)) (key: key, label: label),
+    for (final g in ref.read(churchGroupsProvider)?.all ?? const <NamedGroup>[])
+      if (me.mayWriteEvent(null, g.group.key)) (key: g.group.key, label: g.name),
   ];
 }
 
 /// The name of the group whose event this is ([ChurchGroup.key]), or null
 /// for one no longer there.
-String? eventGroupName(WidgetRef ref, String group) => switch (ChurchGroup.parse(group)) {
-  ServiceGroup(:final id) => ref.watch(servicesProvider).value?.byId(id)?.name,
-  MinistryGroup(:final id) => ref.watch(ministriesProvider).value?.byId(id)?.name,
-  SmallGroup(:final id) => ref.watch(smallGroupsProvider).value?.byId(id)?.name,
-  null => null,
-};
+String? eventGroupName(WidgetRef ref, String group) => ref.watch(churchGroupsProvider)?.byKey(group)?.name;
 
 class _EditResult {
   const _EditResult({this.event, this.delete = false, this.openRoster = false, this.duplicate = false});

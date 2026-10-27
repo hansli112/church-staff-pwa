@@ -968,22 +968,24 @@ class MemoryChurchData implements ChurchData {
     });
   }
 
-  /// The service of the 小組 that group [key] is, for who may see it.
-  String? _smallGroupService(String key) => switch (ChurchGroup.parse(key)) {
-    SmallGroup(:final id) => _b.smallGroups[churchId]?[id]?.service,
-    _ => null,
+  /// The group [key] names, a 小組 with its service, for who may see it.
+  ChurchGroup? _group(String key) => switch (ChurchGroup.parse(key)) {
+    SmallGroup(:final id) => _b.smallGroups[churchId]?[id]?.group ?? SmallGroup(id),
+    final g => g,
   };
 
   @override
   Stream<AttendanceRecord> attendance(String key) => _b.watch(() {
-    if (!_b.requireMember(churchId).readsAttendance(key, smallGroupService: _smallGroupService(key))) {
+    final group = _group(key);
+    if (group == null || !_b.requireMember(churchId).readsAttendance(group)) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
     return _b.attendance[churchId]?[key] ?? const AttendanceRecord();
   });
 
   void _requireAttendanceWriter(String key) {
-    if (!_b.requireMember(churchId).writesAttendance(key, smallGroupService: _smallGroupService(key))) {
+    final group = _group(key);
+    if (group == null || !_b.requireMember(churchId).writesAttendance(group)) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
   }
@@ -1321,7 +1323,7 @@ class MemoryChurchData implements ChurchData {
       if (!known) throw const CloudException(CloudErrorCode.permissionDenied);
       final them = members[uid];
       if (them == null) throw const CloudException(CloudErrorCode.notFound);
-      if (!me.mayMove(them, group, service: small?.service)) {
+      if (!me.mayMove(them, small?.group ?? group)) {
         throw const CloudException(CloudErrorCode.permissionDenied);
       }
       if (duties.any((d) => !(service?.duties.contains(d) ?? true))) throw const CloudException(CloudErrorCode.unknown);
