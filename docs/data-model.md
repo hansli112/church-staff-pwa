@@ -90,7 +90,7 @@ App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預�
 - `identities` 是同工頁顯示和編輯的；規則讀不到裡面，所以 App 同時寫攤平的 `role`、`groups`、`leadTypes`、`leadMinistries`（`Member.withIdentities`），舊版 App 也照舊讀 `role` 和 `groups`。只有管理員能寫這些欄位。沒有 `identities` 的舊資料：`role: 'admin'` 算管理員，`roster-editors` 算行政。
 - 只有管理員（含全教會的牧者）能給身分。負責人只能加入、移出自己群組的一般同工（沒有身分、不是管理員、不在權限群組的；`setGroupMember`，規則在 `testdata/church_rules.json` 的 `groupMembership`），看得到全教會的同工名單。教會至少要有一位 `role: 'admin'`。
 - `role` 另外的 `leader`、`staff`、`member` 是舊的身分標示，不再顯示；`leader` 的同工在轉換時變成他那幾個小組的小組長。
-- 小組（#85）屬於一個聚會，由管理員或那個聚會的負責人、牧者開、改名、關閉，也由他們指派小組長，一個小組只有一位（經 `editSmallGroup`，規則在 `testdata/church_rules.json` 的 `smallGroupEditing`）；管理員也能在同工頁直接給小組長這個身分，只能選還沒有小組長的小組。小組長只能設小組什麼時候聚會。小組的同工（`smallGroups`）由管理員、小組長和那個聚會的負責人加、移；沒有帳號的組員不記。關閉小組時小組長和同工都移出，填過的人數留著。
+- 小組（#85）屬於一個聚會，由管理員或那個聚會的負責人、牧者開、改名、關閉，也由他們指派小組長，一個小組只有一位（經 `editSmallGroup`，規則在 `testdata/church_rules.json` 的 `smallGroupEditing`）；管理員也能在同工頁直接給小組長這個身分，只能選還沒有小組長的小組。小組長只能設小組什麼時候聚會（`smallGroupScheduling`）。改小組或換小組長時帶上畫面上看到的樣子，有人先改過就拒絕（衝突），復原也一樣，不會蓋掉別人的。小組的同工（`smallGroups`）由管理員、小組長和那個聚會的負責人加、移；沒有帳號的組員不記。關閉小組時小組長和同工都移出，填過的人數留著。
 - `zones`：同工屬於的聚會（牧區），每個帶他在那裡的服事項目，可以是空的。聚會的同工從這裡來；安排服事表時選了不是這個聚會同工的人，只排這一次，不會加進來（#82）。服事表分頁顯示自己的牧區、負責的聚會和事工連到的聚會，admin 和行政看全部；這只是讓畫面清爽，規則照樣讓所有同工讀所有服事表。
 - `zoneTypes`：`zones` 攤平後的聚會別 ID 清單；規則讀不到 `zones` 裡面，所以另存一份。
 - `ministries`：同工所在的事工 ID，只由管理員或那個事工的負責人加、移。
