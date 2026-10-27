@@ -78,7 +78,7 @@ class EventRosterRow extends ConsumerWidget {
     final ended = eventDays(event).last.isBefore(ref.watch(todayProvider));
     // Any of it: all, as 行政 or the event's group's 負責人, or as a 事工's
     // 負責人 the duties it leads (#82).
-    if (ended || !arrangesAny(ref.watch(eventArrangesProvider(event.group)))) return const SizedBox.shrink();
+    if (ended || !ref.watch(eventArrangesProvider(event.group)).any) return const SizedBox.shrink();
     return ListSection(
       children: [
         ListRow(
@@ -121,8 +121,8 @@ class EventRosterScreen extends ConsumerWidget {
               )
             : null);
     final led = ref.watch(eventArrangesProvider(roster?.forEvent?.group));
-    final canEdit = arrangesAny(led);
-    final whole = led == null;
+    final canEdit = led.any;
+    final whole = led.all;
     final editable = canEdit && ref.watch(eventEditingProvider);
     final services = ref.watch(servicesProvider).value?.services ?? const <Service>[];
     final addable = roster == null ? const <String>[] : addableDuties(roster, eventDutySuggestions(services), led);
@@ -159,7 +159,7 @@ class EventRosterScreen extends ConsumerWidget {
               EditableRoster(
                 roster: roster,
                 title: eventDaysLabel(l10n, roster, today),
-                only: led,
+                arranges: led,
                 whenEmpty: EmptyState(
                   message: l10n.eventRosterEmpty,
                   actionLabel: editable && (whole || addable.isNotEmpty) ? l10n.addDuty : null,

@@ -324,7 +324,7 @@ class RosterActions {
       if (scope.uid == null ||
           !_ref.read(churchOpenProvider) ||
           member == null ||
-          !arrangesAny(_ref.read(arrangesProvider(type)))) {
+          !_ref.read(arrangesProvider(type)).any) {
         throw const CloudException(CloudErrorCode.permissionDenied);
       }
     }
@@ -340,7 +340,7 @@ class RosterActions {
       throw const CloudException(CloudErrorCode.conflict);
     }
     // The staff order is the whole service's: not a 事工 leader's to change.
-    final changedOrder = order.changesTo(plan.order).isNotEmpty && _ref.read(arrangesProvider(type)) == null;
+    final changedOrder = order.changesTo(plan.order).isNotEmpty && _ref.read(arrangesProvider(type)).all;
     final change = RosterChange(
       before: before,
       after: after,

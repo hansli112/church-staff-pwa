@@ -105,26 +105,23 @@ final churchGroupsProvider = Provider<ChurchGroups?>((ref) {
   return ChurchGroups(services: services, ministries: ministries, smallGroups: smallGroups);
 });
 
-/// What I arrange on a day of [serviceType]: null for all of it,
-/// otherwise only these duties (Member.arranges); nothing while signed out.
-final arrangesProvider = Provider.family<Set<String>?, String>((ref, serviceType) {
+/// What I arrange on a day of [serviceType] (Member.arranges); nothing
+/// while signed out.
+final arrangesProvider = Provider.family<Arranges, String>((ref, serviceType) {
   final me = ref.watch(meProvider).value;
-  if (me == null) return const {};
+  if (me == null) return Arranges.none;
   final ministries = ref.watch(ministriesProvider).value?.ministries ?? const <Ministry>[];
   return me.arranges(ministries, serviceType);
 });
 
 /// As [arrangesProvider], on the roster of an event of [group] (null: the
 /// church's) (Member.arrangesEvent).
-final eventArrangesProvider = Provider.family<Set<String>?, String?>((ref, group) {
+final eventArrangesProvider = Provider.family<Arranges, String?>((ref, group) {
   final me = ref.watch(meProvider).value;
-  if (me == null) return const {};
+  if (me == null) return Arranges.none;
   final ministries = ref.watch(ministriesProvider).value?.ministries ?? const <Ministry>[];
   return me.arrangesEvent(ministries, group);
 });
-
-/// Whether what I arrange ([arrangesProvider]) is anything.
-bool arrangesAny(Set<String>? arranges) => arranges == null || arranges.isNotEmpty;
 
 /// The church link at the top of the home page, or null.
 final churchLinkProvider = StreamProvider<ChurchLink?>((ref) => openChurch(ref).churchLink());

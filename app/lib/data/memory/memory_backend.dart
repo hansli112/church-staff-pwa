@@ -1909,8 +1909,7 @@ class MemoryChurchData implements ChurchData {
     churchId,
     allowed: (me) =>
         _b.services[churchId]!.ids.contains(serviceType) &&
-        (me.arranges((_b.ministries[churchId] ?? const MinistrySettings()).ministries, serviceType)?.isNotEmpty ??
-            true),
+        me.arranges((_b.ministries[churchId] ?? const MinistrySettings()).ministries, serviceType).any,
   );
 }
 

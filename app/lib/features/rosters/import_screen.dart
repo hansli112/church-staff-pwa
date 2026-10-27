@@ -378,7 +378,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     _ready =
         ref.watch(rosterEditingProvider(widget.serviceType)) &&
         ref.watch(churchOpenProvider) &&
-        arrangesAny(ref.watch(arrangesProvider(widget.serviceType)));
+        ref.watch(arrangesProvider(widget.serviceType)).any;
     if (_ready && plan != null) _lastPlan = plan;
     if (!draft.loaded) _lastPlan = null;
     final shown = _ready ? plan : _lastPlan;
@@ -639,7 +639,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                     onTap: _ready && !_busy ? () => _session.setMode(ImportMode.merge) : null,
                   ),
                   // Not for a 事工's 負責人: the rest of the day is not theirs.
-                  if (_session.only == null)
+                  if (_session.arranges.all)
                     ListRow(
                       title: l10n.importReplace,
                       selected: draft.mode == ImportMode.replace,

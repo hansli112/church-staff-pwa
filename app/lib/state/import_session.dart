@@ -123,16 +123,15 @@ class ImportSession extends Notifier<ImportDraft> {
   /// No rows came, because of [error].
   void fail(Object error) => state = state.copyWith(error: error);
 
-  /// The duties a 事工's 負責人 arranges in this service (#82); null for
-  /// whoever arranges all of it.
-  Set<String>? get only => ref.read(arrangesProvider(serviceType));
+  /// What I arrange in this service: a 事工's 負責人 only its duties (#82).
+  Arranges get arranges => ref.read(arrangesProvider(serviceType));
 
   /// [rows] as given, or for a 事工's 負責人 with only the duties it leads
   /// and no 特別活動: the rest of the day is not theirs to import.
   List<dynamic> _scoped(List<dynamic> rows) {
     final copy = jsonDecode(jsonEncode(rows)) as List<dynamic>;
-    final only = this.only;
-    if (only == null) return copy;
+    final arranges = this.arranges;
+    if (arranges.all) return copy;
     return [
       for (final row in copy)
         if (row is Map)
@@ -142,7 +141,7 @@ class ImportSession extends Notifier<ImportDraft> {
             if (row['duties'] is List)
               'duties': [
                 for (final d in row['duties'] as List)
-                  if (d is Map && only.contains(d['role'])) d,
+                  if (d is Map && d['role'] is String && arranges.has(d['role'] as String)) d,
               ],
           }
         else
@@ -157,7 +156,7 @@ class ImportSession extends Notifier<ImportDraft> {
     loaded: true,
     people: const {},
     clearError: true,
-    mode: only == null ? null : ImportMode.merge,
+    mode: arranges.all ? null : ImportMode.merge,
   );
 
   /// Loads pasted [text], which must be a JSON array.
@@ -185,7 +184,7 @@ class ImportSession extends Notifier<ImportDraft> {
 
   /// Replacing a whole day is not a 事工's 負責人's to do.
   void setMode(ImportMode mode) {
-    if (only == null) state = state.copyWith(mode: mode);
+    if (arranges.all) state = state.copyWith(mode: mode);
   }
 
   /// The members [name] could be: same name, or what it may shorten.

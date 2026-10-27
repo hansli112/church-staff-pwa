@@ -52,8 +52,8 @@ class RosterDayScreen extends ConsumerWidget {
     final roster = rosters.value?.where((r) => r.day == day).firstOrNull ?? draftRoster(service, day);
     // A 事工's 負責人 arranges only the duties it leads (#82).
     final led = ref.watch(arrangesProvider(serviceType));
-    final whole = led == null;
-    final canEdit = arrangesAny(led);
+    final whole = led.all;
+    final canEdit = led.any;
     // Keeps what editing reads loaded, so the picker opens at once and
     // writes see the church as it is.
     final editable = canEdit && ref.watch(rosterEditingProvider(serviceType));
@@ -91,7 +91,7 @@ class RosterDayScreen extends ConsumerWidget {
               highlightUid: ref.watch(uidProvider),
             )
           else
-            EditableRoster(roster: roster, title: title, only: led),
+            EditableRoster(roster: roster, title: title, arranges: led),
         ],
       ),
     );
@@ -160,14 +160,20 @@ bool _editingReady(WidgetRef ref, Roster roster) =>
 /// swap or remove it (no swap on an event's roster: it has no other days),
 /// swipe a duty away.
 class EditableRoster extends ConsumerWidget {
-  const EditableRoster({super.key, required this.roster, required this.title, this.whenEmpty, this.only});
+  const EditableRoster({
+    super.key,
+    required this.roster,
+    required this.title,
+    this.whenEmpty,
+    this.arranges = const Arranges.all(),
+  });
 
   final Roster roster;
   final String title;
 
-  /// The duties a 事工's 負責人 arranges here; the rest only show. Null:
-  /// every duty.
-  final Set<String>? only;
+  /// What I arrange here: a 事工's 負責人 only its duties, the rest only
+  /// show.
+  final Arranges arranges;
 
   /// Shown while it has no duties; by default a hint to add one.
   final Widget? whenEmpty;
@@ -200,9 +206,7 @@ class EditableRoster extends ConsumerWidget {
             for (final duty in roster.duties)
               Dismissible(
                 key: ValueKey('${roster.id}/${duty.role}'),
-                direction: ready && (only?.contains(duty.role) ?? true)
-                    ? DismissDirection.endToStart
-                    : DismissDirection.none,
+                direction: ready && arranges.has(duty.role) ? DismissDirection.endToStart : DismissDirection.none,
                 background: Container(
                   color: c.destructive,
                   alignment: AlignmentDirectional.centerEnd,
@@ -220,7 +224,7 @@ class EditableRoster extends ConsumerWidget {
                   );
                   return false;
                 },
-                child: _DutyRow(roster: roster, duty: duty, editable: only?.contains(duty.role) ?? true),
+                child: _DutyRow(roster: roster, duty: duty, editable: arranges.has(duty.role)),
               ),
           ],
         ),
@@ -266,7 +270,7 @@ class _DutyRow extends ConsumerWidget {
         // order of its own to drag.
         canEditDutyList: !roster.isEvent && (me?.editsServiceSettings ?? false),
         // The staff order is the whole service's: not a 事工 leader's.
-        canReorder: !roster.isEvent && ref.read(arrangesProvider(roster.type)) == null,
+        canReorder: !roster.isEvent && ref.read(arrangesProvider(roster.type)).all,
         canRemove: true,
         onePerson: ref.read(rosterActionsProvider).takesOnePerson(roster, duty.role),
         onChanged: (r) => latest = r,
@@ -612,10 +616,10 @@ class _AddDutySheetState extends State<AddDutySheet> {
 
 /// [candidates] not on [roster] yet; for a 事工's 負責人 only those it leads
 /// ([only]; null: any).
-List<String> addableDuties(Roster roster, Iterable<String> candidates, Set<String>? only) {
+List<String> addableDuties(Roster roster, Iterable<String> candidates, Arranges arranges) {
   final present = {for (final d in roster.duties) d.role};
   return [
     for (final d in candidates)
-      if (!present.contains(d) && (only == null || only.contains(d))) d,
+      if (!present.contains(d) && arranges.has(d)) d,
   ];
 }

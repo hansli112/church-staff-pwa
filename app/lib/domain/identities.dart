@@ -178,6 +178,34 @@ class Ministry {
   int get hashCode => Object.hash(id, name, Object.hashAll(duties));
 }
 
+/// What someone arranges of a roster (#82): all of it, or only some of
+/// its duties, those the 事工 they lead link ([none]: nothing at all).
+@immutable
+class Arranges {
+  const Arranges.all() : _duties = null;
+  const Arranges.only(Set<String> duties) : _duties = duties;
+
+  static const none = Arranges.only({});
+
+  final Set<String>? _duties;
+
+  /// All of it: every duty, the 特別活動 and the staff order.
+  bool get all => _duties == null;
+
+  /// Anything at all.
+  bool get any => _duties == null || _duties.isNotEmpty;
+
+  /// Whether [duty] is theirs to arrange.
+  bool has(String duty) => _duties == null || _duties.contains(duty);
+
+  @override
+  bool operator ==(Object other) =>
+      other is Arranges && (other._duties == null) == (_duties == null) && setEquals(other._duties, _duties);
+
+  @override
+  int get hashCode => _duties == null ? 0 : Object.hashAllUnordered(_duties);
+}
+
 /// settings/ministries: the church's 事工, and every ID it has ever used.
 @immutable
 class MinistrySettings {

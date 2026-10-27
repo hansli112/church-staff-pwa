@@ -428,16 +428,15 @@ class Member {
           ],
         );
 
-  /// What this member arranges on a day of [serviceType]: null for all
-  /// of it; otherwise only these duties, those the 事工 in [ministries] they
-  /// lead link (none: nothing).
-  Set<String>? arranges(List<Ministry> ministries, String serviceType) =>
-      canEditRosters(serviceType) ? null : ledDuties(ministries, serviceType);
+  /// What this member arranges on a day of [serviceType]: all of it, or
+  /// only the duties the 事工 in [ministries] they lead link.
+  Arranges arranges(List<Ministry> ministries, String serviceType) =>
+      canEditRosters(serviceType) ? const Arranges.all() : Arranges.only(ledDuties(ministries, serviceType));
 
   /// As [arranges], on the roster of an event of [group] (null: the
   /// church's): all of it for admins, 行政 and the group's 負責人.
-  Set<String>? arrangesEvent(List<Ministry> ministries, String? group) =>
-      canEditEventRoster(group) ? null : ledDuties(ministries, null);
+  Arranges arrangesEvent(List<Ministry> ministries, String? group) =>
+      canEditEventRoster(group) ? const Arranges.all() : Arranges.only(ledDuties(ministries, null));
 
   /// Whether this member arranges all of an event's roster of [group]
   /// (null: the church's; testdata/church_rules.json, rosterEditing):
