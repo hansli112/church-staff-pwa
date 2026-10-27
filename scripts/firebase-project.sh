@@ -160,9 +160,19 @@ if ! $dry; then
       });'
 fi
 
-# 8. Default Storage bucket (Blaze only).
+# 8. Default Storage bucket (Blaze only). storage.rules reads Firestore
+# (firestore.get/exists): without this role on Storage's service agent
+# every rule that does is refused, so no church logo can be uploaded.
 if [ -n "$billing" ]; then
   api POST "https://firebasestorage.googleapis.com/v1beta/projects/$project/defaultBucket" "{\"location\":\"$region\"}" >/dev/null || true
+  if ! $dry; then
+    number="$(gcloud projects describe "$project" --format='value(projectNumber)')"
+    gcloud beta services identity create --service=firebasestorage.googleapis.com --project "$project" >/dev/null 2>&1 || true
+    echo "+ grant roles/firebaserules.firestoreServiceAgent to Storage"
+    gcloud projects add-iam-policy-binding "$project" \
+      --member="serviceAccount:service-$number@gcp-sa-firebasestorage.iam.gserviceaccount.com" \
+      --role=roles/firebaserules.firestoreServiceAgent --condition=None >/dev/null
+  fi
 fi
 
 # 9. Rules and indexes (Functions need Blaze and the secrets below).

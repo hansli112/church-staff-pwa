@@ -44,7 +44,7 @@ scripts/firebase-project.sh prod marthasit     [BILLING_ACCOUNT_ID]
 - 建 Firestore，地區 `asia-east1`。
 - 開 email＋密碼登入，設定同一 email 只能有一個帳號。
 - 註冊 Web、Android、iOS App，寫出 `app/config/<env>.json`。
-- 建 Storage bucket。
+- 建 Storage bucket，並給 Storage 的服務帳號 `roles/firebaserules.firestoreServiceAgent`。storage.rules 要讀 Firestore 才知道誰是管理員；少了這個角色，所有上傳 logo 都會被擋。
 - 部署 rules 和 indexes。
 - 有 billing 時：
   - 開需要付費方案的 API（Functions、Cloud Run、排程、Secret Manager…）。
