@@ -1,3 +1,4 @@
+import { FieldValue } from 'firebase-admin/firestore';
 import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
 
@@ -60,6 +61,17 @@ describe('小組 (#85)', () => {
     assert.deepEqual((await db.doc('churches/C1/members/joyLead').get()).get('leadSmallGroups'), []);
     assert.deepEqual((await db.doc('churches/C1/members/pastor').get()).get('identities'), [{ kind: 'admin' }, { kind: 'lead', smallGroup: id }]);
     assert.deepEqual((await db.doc(`churches/C1/smallGroups/${id}`).get()).data(), { name: '喜樂', service: 'sunday' });
+  });
+
+  test('named 小組長, someone whose doc is from before 身分 keeps leading what it says', async () => {
+    await church();
+    await db.doc('churches/C1/members/mei').update({ leadTypes: ['youth'], identities: FieldValue.delete() });
+    const { id } = await editSmallGroup(deps, caller('sundayLead'), {
+      churchId: 'C1', op: 'save', group: { name: '喜樂小組', service: 'sunday' }, leads: ['mei'],
+    });
+    const mei = await db.doc('churches/C1/members/mei').get();
+    assert.deepEqual(mei.get('leadTypes'), ['youth']);
+    assert.deepEqual(mei.get('identities'), [{ kind: 'lead', service: 'youth' }, { kind: 'lead', smallGroup: id }]);
   });
 
   test('a change saying what it was made over is refused once that changed: an undo overwrites no one', async () => {

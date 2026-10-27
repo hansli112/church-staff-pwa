@@ -49,8 +49,10 @@ class ChurchGroups {
   /// The groups [me] leads, as 負責人, 牧者 or 小組長: services, then 事工,
   /// then 小組.
   List<NamedGroup> ledBy(Member me) => [
-    for (final id in me.leadTypes) ?byKey(ServiceGroup(id).key),
-    for (final id in me.leadMinistries) ?byKey(MinistryGroup(id).key),
+    for (final id in me.leadTypes)
+      if (_services.byId(id) case final s?) (group: ServiceGroup(id), name: s.name),
+    for (final id in me.leadMinistries)
+      if (_ministries.byId(id) case final m?) (group: MinistryGroup(id), name: m.name),
     for (final g in _smallGroups)
       if (me.leadSmallGroups.contains(g.id)) (group: g.group, name: g.name),
   ];

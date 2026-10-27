@@ -96,13 +96,22 @@ final smallGroupsProvider = StreamProvider<List<SmallGroupDetails>>(
   (ref) => openChurch(ref).smallGroups().map((list) => [...list]..sort((a, b) => a.name.compareTo(b.name))),
 );
 
-/// The church's groups by name (ChurchGroups); null until all are loaded.
+/// The church's groups by name (ChurchGroups); null until they are loaded.
+/// 事工 or 小組 that fail to load leave the rest.
 final churchGroupsProvider = Provider<ChurchGroups?>((ref) {
   final services = ref.watch(servicesProvider).value;
-  final ministries = ref.watch(ministriesProvider).value;
-  final smallGroups = ref.watch(smallGroupsProvider).value;
-  if (services == null || ministries == null || smallGroups == null) return null;
-  return ChurchGroups(services: services, ministries: ministries, smallGroups: smallGroups);
+  final ministries = ref.watch(ministriesProvider);
+  final smallGroups = ref.watch(smallGroupsProvider);
+  if (services == null ||
+      ministries.isLoading && !ministries.hasValue ||
+      smallGroups.isLoading && !smallGroups.hasValue) {
+    return null;
+  }
+  return ChurchGroups(
+    services: services,
+    ministries: ministries.value ?? const MinistrySettings(),
+    smallGroups: smallGroups.value ?? const [],
+  );
 });
 
 /// What I arrange on a day of [serviceType] (Member.arranges); nothing

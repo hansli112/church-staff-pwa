@@ -2,7 +2,7 @@ import { FieldValue, type DocumentSnapshot, type Transaction } from 'firebase-ad
 import { isDeepStrictEqual } from 'node:util';
 
 import { accessIn, churchAccess } from './access.js';
-import { fail, record, text, type Caller, type Deps } from './common.js';
+import { fail, record, strings, text, type Caller, type Deps } from './common.js';
 import { weekdayOf } from './attendance.js';
 import { identitiesOf, withIdentities, type Identity } from './identities.js';
 import { TEXT_LIMITS } from './limits.js';
@@ -17,8 +17,6 @@ import { TEXT_LIMITS } from './limits.js';
  * with `leadSmallGroups` for the rules), which the rules cannot let them
  * write on another member: all of it is done here.
  */
-
-const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 

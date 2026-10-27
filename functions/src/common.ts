@@ -137,6 +137,9 @@ export async function runEach<T extends Record<string, () => Promise<unknown>>>(
   ) as { [K in keyof T]: Awaited<ReturnType<T[K]>> };
 }
 
+/** The strings of a stored list [v]; none for anything else. */
+export const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
+
 /** [value] as a plain object, or an invalid-argument failure. */
 export function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) fail('invalid-argument', 'unknown');

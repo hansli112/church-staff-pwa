@@ -17,7 +17,7 @@ import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 
 import { claimedGroups } from '../src/claim.js';
-import { withIdentities } from '../src/identities.js';
+import { identitiesOf, withIdentities } from '../src/identities.js';
 
 /** The members to change, and how, in [churches] (all when empty). */
 export async function planLeads(db: Firestore, churches: string[] = []) {
@@ -29,7 +29,9 @@ export async function planLeads(db: Firestore, churches: string[] = []) {
       const groups = m.get('groups');
       if (m.get('role') === 'admin' || m.get('identities') !== undefined) continue;
       if (!Array.isArray(groups) || groups.length === 0) continue;
-      changes.push({ path: m.ref.path, update: withIdentities(m.data(), claimedGroups(groups, m.get('zoneTypes'))) });
+      // The old groups as claimedGroups has them, not as 行政; anything else they lead is kept.
+      const held = identitiesOf({ ...m.data(), groups: [] });
+      changes.push({ path: m.ref.path, update: withIdentities(m.data(), [...held, ...claimedGroups(groups, m.get('zoneTypes'))]) });
     }
   }
   return changes;

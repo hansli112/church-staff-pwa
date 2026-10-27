@@ -84,16 +84,24 @@ Member memberFromJson(String uid, Json data) {
   );
 }
 
-/// A member doc's 身分. A 小組長 (`leadSmallGroups`) whose 身分 an app from
-/// before #85 saved without it, not knowing the kind, still leads: it is
-/// put back, after what they hold.
+/// A member doc's 身分. Whoever the rules let lead something
+/// (`leadTypes`, `leadMinistries`, `leadSmallGroups`) with no 身分 stored
+/// saying so still leads, after what they hold: a doc from before 身分, or
+/// a 小組長 an app from before #85 saved without it, not knowing the kind
+/// (testdata/church_rules.json, memberIdentities).
 List<Identity> _identitiesOf(Json data) {
   final stored = [
     if (data['identities'] is List)
       for (final i in data['identities'] as List<dynamic>) ?Identity.fromJson(i),
   ];
+  bool leadsService(String id) =>
+      stored.any((i) => i == ServiceLead(id) || (i is PastorIdentity && (i.services?.contains(id) ?? false)));
   return [
     ...stored,
+    for (final id in _strings(data['leadTypes']))
+      if (!leadsService(id)) ServiceLead(id),
+    for (final id in _strings(data['leadMinistries']))
+      if (!stored.contains(MinistryLead(id))) MinistryLead(id),
     for (final id in _strings(data['leadSmallGroups']))
       if (!stored.contains(SmallGroupLead(id))) SmallGroupLead(id),
   ];

@@ -23,11 +23,11 @@ final myNotificationsProvider = StreamProvider<List<NotificationItem>>((ref) {
 
 /// The current church's 通知列表, as far as I have seen it; null with no
 /// church.
-final churchInboxProvider = Provider<AsyncValue<NotificationInbox>?>((ref) {
+final churchNotificationListProvider = Provider<AsyncValue<NotificationList>?>((ref) {
   final cid = ref.watch(currentChurchIdProvider);
   if (cid == null) return null;
   final seen = ref.watch(profileProvider.select((p) => p.value?.notificationsSeen[cid]));
-  return ref.watch(myNotificationsProvider).whenData((all) => NotificationInbox(cid, all, seen));
+  return ref.watch(myNotificationsProvider).whenData((all) => NotificationList(cid, all, seen));
 });
 
 /// What is unread in all my churches: the number on the app icon; 0 signed

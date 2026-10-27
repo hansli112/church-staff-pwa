@@ -58,10 +58,8 @@ export interface ChurchAccess {
   church: DocumentSnapshot;
   /** The caller's member doc; missing only for `anyone`. */
   member: DocumentSnapshot;
-  admin: boolean;
   /** Whether the church is active. False only with `closed: 'allow'`. */
   open: boolean;
-  inGroup(group: Group): boolean;
   /** What the caller may do there. */
   powers: Powers;
 }
@@ -113,9 +111,7 @@ export async function churchAccess(
     caller: c,
     church,
     member,
-    admin: powers.admin,
     open,
-    inGroup: powers.inGroup,
     powers,
   };
   if (!(await has(deps, access, level))) fail('permission-denied', 'permissionDenied');
@@ -124,8 +120,8 @@ export async function churchAccess(
 
 async function has(deps: Deps, a: ChurchAccess, level: Level) {
   if (level === 'anyone' || level === 'member') return true;
-  if (level === 'admin') return a.admin;
-  if ('group' in level) return a.inGroup(level.group);
+  if (level === 'admin') return a.powers.admin;
+  if ('group' in level) return a.powers.inGroup(level.group);
   if ('arranges' in level) {
     if (await has(deps, a, { rosterEditor: level.arranges })) return true;
     if (a.powers.ministries.length === 0) return false;
@@ -141,7 +137,7 @@ async function has(deps: Deps, a: ChurchAccess, level: Level) {
  * [a] read again in transaction [tx], with [refs]: a member gone or a
  * church closed meanwhile is refused as [churchAccess] refuses, and what
  * they may do is as they are now (a lead taken away meanwhile writes
- * nothing). Returns their member doc, their powers and [refs]' docs.
+ * nothing). Returns their powers and [refs]' docs.
  */
 export async function accessIn(tx: Transaction, deps: Deps, a: ChurchAccess, ...refs: DocumentReference[]) {
   const [church, me, ...docs] = (await tx.getAll(
@@ -151,7 +147,7 @@ export async function accessIn(tx: Transaction, deps: Deps, a: ChurchAccess, ...
   )) as DocumentSnapshot[];
   if (!me.exists) fail('permission-denied', 'permissionDenied');
   if (!isChurchOpen(church)) churchClosed();
-  return { me, powers: powersOf(me.data()!), docs };
+  return { powers: powersOf(me.data()!), docs };
 }
 
 /**

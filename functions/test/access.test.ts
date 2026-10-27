@@ -44,7 +44,7 @@ describe('church access', () => {
           const a = await access(uid, level);
           assert.equal(a.cid, 'C1');
           assert.equal(a.open, true);
-          assert.equal(a.admin, uid === 'pastor', `${uid} admin`);
+          assert.equal(a.powers.admin, uid === 'pastor', `${uid} admin`);
         } else {
           await rejectsWith(access(uid, level), 'permissionDenied');
         }
@@ -89,7 +89,7 @@ describe('church access', () => {
   test('a group: its members and admins', async () => {
     await church();
     await db.doc('churches/C1/members/mei').update({ groups: ['calendar-editors'] });
-    assert.ok((await access('mei', { group: 'calendar-editors' })).inGroup('calendar-editors'));
+    assert.ok((await access('mei', { group: 'calendar-editors' })).powers.inGroup('calendar-editors'));
     await rejectsWith(access('mei', { group: 'roster-editors' }), 'permissionDenied');
   });
 

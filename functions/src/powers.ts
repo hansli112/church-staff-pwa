@@ -7,6 +7,9 @@
  * fields themselves.
  */
 
+import { strings } from './common.js';
+import { identitiesOf } from './identities.js';
+
 /** The member fields what they may do is worked out from. */
 export interface MemberFields {
   role?: unknown;
@@ -49,8 +52,6 @@ export function groupOf(key: unknown, smallGroupService: string | null = null): 
 /** [value] as an event's group (#84): '' (the church's) or a group's key. */
 export const isEventGroup = (value: unknown): value is string => value === '' || groupOf(value) !== null;
 
-const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
-
 export type Powers = ReturnType<typeof powersOf>;
 
 export function powersOf(m: MemberFields) {
@@ -59,7 +60,7 @@ export function powersOf(m: MemberFields) {
   const services = strings(m.leadTypes);
   const ministries = strings(m.leadMinistries);
   const smallGroups = strings(m.leadSmallGroups);
-  const stored = Array.isArray(m.identities) ? (m.identities as Record<string, unknown>[]) : [];
+  const identities = identitiesOf(m as Record<string, unknown>);
   /** Admin, or in permission group [g] (行政 is both). */
   const inGroup = (g: 'roster-editors' | 'calendar-editors') => admin || groups.includes(g);
 
@@ -82,8 +83,8 @@ export function powersOf(m: MemberFields) {
     /** The 事工 they lead. */
     ministries,
 
-    /** A plain 同工: no admin, no permission group, no 身分 stored. */
-    plain: !admin && groups.length === 0 && stored.length === 0,
+    /** A plain 同工: no 身分, whatever the rules read for one. */
+    plain: identities.length === 0,
 
     /** Whether they make any events: admins, 行政, and whoever leads a group, its own (Member.makesEvents). */
     makesEvents: writesAnyEvent || services.length > 0 || ministries.length > 0 || smallGroups.length > 0,
@@ -143,15 +144,13 @@ export function powersOf(m: MemberFields) {
 
     /**
      * Whether they are reminded of the 人數 of [group] (attendanceReminded):
-     * a service's 負責人, by a `lead` 身分 of it (by `leadTypes` on a member
-     * doc from before 身分), not its 牧者; a 小組's 小組長.
+     * a service's 負責人, by a `lead` 身分 of it, not its 牧者; a 小組's
+     * 小組長.
      */
-    remindedOfAttendance(group: ChurchGroup) {
-      if (group.kind === 'small') return smallGroups.includes(group.id);
-      if (group.kind !== 'service') return false;
-      if (stored.length === 0) return services.includes(group.id);
-      return stored.some((i) => i?.kind === 'lead' && i?.service === group.id);
-    },
+    remindedOfAttendance: (group: ChurchGroup) =>
+      group.kind === 'small'
+        ? smallGroups.includes(group.id)
+        : group.kind === 'service' && identities.some((i) => 'service' in i && i.service === group.id),
   };
   return self;
 }

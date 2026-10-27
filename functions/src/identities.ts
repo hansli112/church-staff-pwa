@@ -6,6 +6,8 @@
  * (testdata/church_rules.json, memberIdentities and identityProjection).
  */
 
+import { strings } from './common.js';
+
 export type Identity =
   | { kind: 'admin' }
   | { kind: 'office' }
@@ -13,8 +15,6 @@ export type Identity =
   | { kind: 'lead'; service: string }
   | { kind: 'lead'; ministry: string }
   | { kind: 'lead'; smallGroup: string };
-
-const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
 
 /** One stored 身分; null for a kind not known. */
 function parse(v: unknown): Identity | null {
@@ -37,15 +37,25 @@ const isAdminIdentity = (i: Identity) => i.kind === 'admin' || (i.kind === 'past
 /**
  * The 身分 member doc [m] holds, as the app reads it (Member.identities):
  * those stored, with 管理員 for role admin and 行政 for the old permission
- * groups when none says so, and a 小組長 an app from before #85 dropped.
+ * groups when none says so, and a lead of what `leadTypes`,
+ * `leadMinistries` and `leadSmallGroups` say they lead when none does (a
+ * doc from before 身分, or a 小組長 an app from before #85 dropped).
  */
 export function identitiesOf(m: Record<string, unknown>): Identity[] {
   const stored = (Array.isArray(m.identities) ? m.identities : []).map(parse).filter((i): i is Identity => i !== null);
   const admin = m.role === 'admin';
+  const leadsService = (id: string) =>
+    stored.some((i) => ('service' in i && i.service === id) || (i.kind === 'pastor' && (i.services ?? []).includes(id)));
   return [
     ...(admin && !stored.some(isAdminIdentity) ? [{ kind: 'admin' } as const] : []),
     ...(!admin && strings(m.groups).length > 0 && !stored.some((i) => i.kind === 'office') ? [{ kind: 'office' } as const] : []),
     ...stored,
+    ...strings(m.leadTypes)
+      .filter((s) => !leadsService(s))
+      .map((service) => ({ kind: 'lead', service }) as const),
+    ...strings(m.leadMinistries)
+      .filter((g) => !stored.some((i) => 'ministry' in i && i.ministry === g))
+      .map((ministry) => ({ kind: 'lead', ministry }) as const),
     ...strings(m.leadSmallGroups)
       .filter((g) => !stored.some((i) => 'smallGroup' in i && i.smallGroup === g))
       .map((smallGroup) => ({ kind: 'lead', smallGroup }) as const),

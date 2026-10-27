@@ -392,8 +392,7 @@ class Member {
   /// (testdata/church_rules.json, groupMembership): an admin anyone; the
   /// group's 負責人 (a 小組's service's too) only a plain 同工, since 身分
   /// are the admin's to give.
-  bool mayMove(Member target, ChurchGroup group) =>
-      isAdmin || (managesGroup(group) && !target.isAdmin && target.groups.isEmpty && target._identities.isEmpty);
+  bool mayMove(Member target, ChurchGroup group) => isAdmin || (managesGroup(group) && target.identities.isEmpty);
 
   /// This member added to [group] ([member] true; a service with [duties]
   /// and [smallGroups]) or taken out, as setGroupMember writes it.
@@ -1363,8 +1362,8 @@ int unreadNotifications(Iterable<NotificationItem> items, Map<String, DateTime> 
 /// One church's 通知列表 (#89): its notifications of [all], newest first,
 /// and when it was last seen ([seen]; null: never).
 @immutable
-class NotificationInbox {
-  NotificationInbox(this.churchId, Iterable<NotificationItem> all, this.seen)
+class NotificationList {
+  NotificationList(this.churchId, Iterable<NotificationItem> all, this.seen)
     : items = [
         for (final n in all)
           if (n.churchId == churchId) n,
@@ -1385,7 +1384,7 @@ class NotificationInbox {
   DateTime? get seenOnOpening => unread == 0 ? null : items.first.at;
 
   /// The same list, as seen up to [at].
-  NotificationInbox seenAt(DateTime? at) => NotificationInbox(churchId, items, at);
+  NotificationList seenAt(DateTime? at) => NotificationList(churchId, items, at);
 }
 
 /// How someone's request to join a church stands (申請加入, #88).

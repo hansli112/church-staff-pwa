@@ -1,5 +1,5 @@
 import { accessIn, churchAccess } from './access.js';
-import { fail, record, type Caller, type Deps } from './common.js';
+import { fail, record, strings, type Caller, type Deps } from './common.js';
 import { ministriesOf } from './ministries.js';
 import type { ChurchGroup } from './powers.js';
 
@@ -21,8 +21,6 @@ interface Zone {
   duties: string[];
   smallGroups?: string[];
 }
-
-const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
 
 export async function setGroupMember(deps: Deps, caller: Caller | null, data: unknown) {
   const access = await churchAccess(deps, caller, data, 'member');
