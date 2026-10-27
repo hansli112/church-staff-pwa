@@ -1290,7 +1290,9 @@ void contractTests(Future<ContractWorld> Function() open) {
       await g.church.mergePending(pid, g.mei);
       final mei = (await g.church.member(g.mei).first)!;
       expect(mei.role, Role.staff);
-      expect(mei.groups, {Group.calendarEditors});
+      // Their calendar-editors was 行政: held as a 身分, with both groups.
+      expect(mei.identities, const [OfficeIdentity(), ServiceLead('sunday')]);
+      expect(mei.groups, {Group.rosterEditors, Group.calendarEditors});
       expect(mei.leadTypes, ['sunday']);
       expect(mei.zones, const [
         Zone(serviceType: 'sunday', duties: ['招待', '司琴']),

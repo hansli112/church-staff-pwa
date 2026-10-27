@@ -89,6 +89,27 @@ void main() {
     }
   });
 
+  group('memberIdentities', () {
+    for (final r in _rows('memberIdentities')) {
+      test(r['why'] as String, () {
+        final m = memberFromJson('u', {'name': 'u', ...r['doc'] as Map<String, dynamic>});
+        expect([for (final i in m.identities) i.toJson()], r['identities']);
+      });
+    }
+  });
+
+  group('identityProjection', () {
+    for (final r in _rows('identityProjection')) {
+      test(r['why'] as String, () {
+        final m = Member(uid: 'u', name: 'u', role: Role.values.byName(r['role'] as String)).withIdentities([
+          for (final i in r['identities'] as List) ?Identity.fromJson(i),
+        ]);
+        final json = memberToJson(m);
+        expect({for (final k in (r['out'] as Map).keys) k: json[k]}, r['out']);
+      });
+    }
+  });
+
   group('rosterEditing', () {
     for (final r in _rows('rosterEditing')) {
       test(r['why'] as String, () {

@@ -207,7 +207,9 @@ describe('merging', () => {
         { serviceType: 'youth', duties: [], smallGroups: ['青年'] },
       ], mode);
       assert.deepEqual(member.get('notificationPrefs'), { muted: ['memberLeft', ...muted], otherPreference: 'preserved' }, mode);
-      assert.deepEqual(member.get('groups'), ['calendar-editors'], mode);
+      // Their calendar-editors was 行政, now held as a 身分 with both groups.
+      assert.deepEqual(member.get('identities'), [{ kind: 'office' }, { kind: 'lead', service: 'sunday' }], mode);
+      assert.deepEqual(member.get('groups'), ['roster-editors', 'calendar-editors'], mode);
       assert.deepEqual(member.get('leadTypes'), ['sunday'], 'the old roster editor leads their 牧區 (#82)');
       assert.equal(member.get('role'), 'staff');
       assert.equal((await db.doc(`churches/${cid}/pendingMembers/old-mei`).get()).exists, false);

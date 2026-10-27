@@ -1,5 +1,6 @@
 import { churchAccess, churchClosed, isChurchOpen } from './access.js';
 import { fail, id, requireCaller, serverTime, type Caller, type Deps } from './common.js';
+import { identitiesOf, withIdentities, type Identity } from './identities.js';
 import { personName } from './limits.js';
 import { callerKeys, dropPending, waitingFor, waitsFor, type ClaimDeps } from './pendingMembers.js';
 import { claimedSmallGroups, smallGroupsByName } from './smallGroups.js';
@@ -90,34 +91,23 @@ function mergeZones(a: unknown, b: unknown) {
  * rosters of their 牧區, makes them 負責人 of the services they are in.
  * Used when a pending member joins, and by scripts/migrate-leads.ts.
  */
-export function claimedGroups(groups: unknown, zoneTypes: unknown) {
+export function claimedGroups(groups: unknown, zoneTypes: unknown): Identity[] {
   const held = Array.isArray(groups) ? groups.filter((g): g is string => typeof g === 'string') : [];
   const types = Array.isArray(zoneTypes) ? zoneTypes.filter((t): t is string => typeof t === 'string') : [];
-  if (held.includes('calendar-editors')) {
-    return { groups: ['roster-editors', 'calendar-editors'], leadTypes: [] as string[], identities: [{ kind: 'office' }] as object[] };
-  }
-  const editor = held.includes('roster-editors');
-  return {
-    groups: [] as string[],
-    leadTypes: editor ? types : [],
-    identities: editor ? types.map((service) => ({ kind: 'lead', service })) : [],
-  };
+  if (held.includes('calendar-editors')) return [{ kind: 'office' }];
+  return held.includes('roster-editors') ? types.map((service) => ({ kind: 'lead', service })) : [];
 }
 
 function mergedMember(member: FirebaseFirestore.DocumentSnapshot, pending: FirebaseFirestore.DocumentSnapshot, byName: Map<string, string>) {
-  const claimed = claimedGroups(pending.get('groups'), pending.get('zoneTypes'));
   // Their old role is not taken over, but leading a 小組 is a 身分.
   const small = claimedSmallGroups(pending.get('zones'), pending.get('role'), byName);
-  const identities = (member.get('identities') as unknown[] | undefined) ?? [];
   return {
-    groups: union(member.get('groups'), claimed.groups),
-    leadTypes: union(member.get('leadTypes'), claimed.leadTypes),
-    identities: [
-      ...identities,
-      ...[...claimed.identities, ...small.identities].filter((i) => !identities.some((h) => JSON.stringify(h) === JSON.stringify(i))),
-    ],
+    ...withIdentities(member.data()!, [
+      ...identitiesOf(member.data()!),
+      ...claimedGroups(pending.get('groups'), pending.get('zoneTypes')),
+      ...small.identities,
+    ]),
     smallGroups: union(member.get('smallGroups'), small.smallGroups),
-    leadSmallGroups: union(member.get('leadSmallGroups'), small.leadSmallGroups),
     zones: mergeZones(member.get('zones'), pending.get('zones')),
     zoneTypes: union(member.get('zoneTypes'), pending.get('zoneTypes')),
     // Merge opt-outs, never reset a current preference to a pending default.
@@ -152,17 +142,18 @@ export async function claimPending(deps: ClaimDeps, caller: Caller | null, data:
       // Read current preferences in the transaction: concurrent edits are kept.
       tx.update(member.ref, mergedMember(member, pending, byName));
     } else {
-      const claimed = claimedGroups(pending.get('groups'), pending.get('zoneTypes'));
-      const small = claimedSmallGroups(pending.get('zones'), pending.get('role'), byName);
+      const role = pending.get('role') ?? 'member';
+      const small = claimedSmallGroups(pending.get('zones'), role, byName);
       tx.create(member.ref, {
         uid: c.uid,
         name: personName(pending.get('name')) || personName(c.name),
         email: c.email ?? '',
-        role: pending.get('role') ?? 'member',
-        ...claimed,
-        identities: [...claimed.identities, ...small.identities],
+        ...withIdentities({ role }, [
+          ...identitiesOf({ role }),
+          ...claimedGroups(pending.get('groups'), pending.get('zoneTypes')),
+          ...small.identities,
+        ]),
         smallGroups: small.smallGroups,
-        leadSmallGroups: small.leadSmallGroups,
         zones: pending.get('zones') ?? [],
         zoneTypes: pending.get('zoneTypes') ?? [],
         notificationPrefs: pending.get('notificationPrefs') ?? { muted: [] },

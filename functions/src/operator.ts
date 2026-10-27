@@ -1,5 +1,6 @@
 import { churchClosed, churchId } from './access.js';
 import { fail, id, requireOperator, serverTime, text, type Caller, type Deps } from './common.js';
+import { identitiesOf, withIdentities } from './identities.js';
 import { TEXT_LIMITS } from './limits.js';
 import { matchesSearch, nameKey } from './text.js';
 
@@ -69,9 +70,13 @@ export async function adminTransferAdmin(deps: Deps, caller: Caller | null, data
   const cid = churchId(input?.churchId);
   const uid = id(input?.uid);
   const ref = deps.db.doc(`churches/${cid}/members/${uid}`);
-  const member = await ref.get();
-  if (!member.exists) fail('not-found', 'unknown');
-  await ref.update({ role: 'admin' });
+  await deps.db.runTransaction(async (tx) => {
+    const member = await tx.get(ref);
+    if (!member.exists) fail('not-found', 'unknown');
+    // 管理員 as a 身分, beside those they hold: not role admin alone, which
+    // the app's next change of their 身分 would take away.
+    tx.update(ref, withIdentities(member.data()!, [{ kind: 'admin' }, ...identitiesOf(member.data()!)]));
+  });
   return {};
 }
 

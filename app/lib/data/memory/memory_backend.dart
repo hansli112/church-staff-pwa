@@ -2152,16 +2152,17 @@ class MemoryCloud implements CloudApi {
     }
     _b.members[churchId]![user.uid] = existing != null
         ? _absorb(existing, p)
-        : Member(
-            uid: user.uid,
-            name: p.name,
-            email: user.email,
-            role: p.role,
-            groups: _claimedGroups(p),
-            zones: p.zones,
-            identities: _claimedLeads(p),
-            mutedNotifications: p.mutedNotifications,
-            joinedAt: _b.clock(),
+        : _withClaimedLeads(
+            Member(
+              uid: user.uid,
+              name: p.name,
+              email: user.email,
+              role: p.role,
+              zones: p.zones,
+              mutedNotifications: p.mutedNotifications,
+              joinedAt: _b.clock(),
+            ),
+            p,
           );
     _settlePending(_b, churchId, pendingId, user.uid);
     _b.notify();
@@ -2265,7 +2266,7 @@ class MemoryCloud implements CloudApi {
     _requireOperator();
     final m = _b.memberOf(churchId, uid);
     if (m == null) throw const CloudException(CloudErrorCode.unknown);
-    _b.members[churchId]![uid] = m.copyWith(role: Role.admin);
+    _b.members[churchId]![uid] = m.withIdentities([const AdminIdentity(), ...m.identities]);
     _b.notify();
   }
 
@@ -2362,9 +2363,6 @@ void _checkSecret(String? secret) {
 /// claimedGroups in functions/src/claim.ts: calendar-editors folds into
 /// 行政; roster-editors alone, their 牧區's rosters in self-host, makes them
 /// 負責人 of the services they are in.
-Set<Group> _claimedGroups(PendingMember p) =>
-    p.groups.contains(Group.calendarEditors) ? const {Group.rosterEditors, Group.calendarEditors} : const {};
-
 List<Identity> _claimedLeads(PendingMember p) {
   if (p.groups.contains(Group.calendarEditors)) return const [OfficeIdentity()];
   if (!p.groups.contains(Group.rosterEditors)) return const [];
@@ -2373,14 +2371,11 @@ List<Identity> _claimedLeads(PendingMember p) {
   ];
 }
 
+/// [m] also holding the 身分 pending member [p]'s groups give.
+Member _withClaimedLeads(Member m, PendingMember p) => m.withIdentities([...m.identities, ..._claimedLeads(p)]);
+
 /// [m] with the groups, zones and leads of pending member [p] added.
-Member _absorb(Member m, PendingMember p) => m.copyWith(
-  groups: {...m.groups, ..._claimedGroups(p)},
-  identities: [
-    ...m.identities,
-    for (final i in _claimedLeads(p))
-      if (!m.identities.contains(i)) i,
-  ],
+Member _absorb(Member m, PendingMember p) => _withClaimedLeads(m, p).copyWith(
   mutedNotifications: {...m.mutedNotifications, ...p.mutedNotifications},
   zones: [
     for (final type in {...m.zoneTypes, for (final z in p.zones) z.serviceType})

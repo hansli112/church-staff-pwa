@@ -17,7 +17,8 @@ import { pathToFileURL } from 'node:url';
 import { initializeApp } from 'firebase-admin/app';
 import { FieldValue, getFirestore, type Firestore } from 'firebase-admin/firestore';
 
-import { claimedSmallGroups, identitiesOf, nameKey, namedSmallGroups, smallGroupsByName } from '../src/smallGroups.js';
+import { identitiesOf, sameIdentity, withIdentities } from '../src/identities.js';
+import { claimedSmallGroups, nameKey, namedSmallGroups, smallGroupsByName } from '../src/smallGroups.js';
 
 type Write = { path: string; set?: Record<string, unknown>; update?: Record<string, unknown> };
 
@@ -52,20 +53,15 @@ export async function planSmallGroups(db: Firestore, churches: string[] = []) {
     for (const m of members.docs) {
       const claimed = claimedSmallGroups(m.get('zones'), m.get('role'), byName);
       const has = new Set((m.get('smallGroups') as string[] | undefined) ?? []);
-      const leads = new Set((m.get('leadSmallGroups') as string[] | undefined) ?? []);
+      const holds = identitiesOf(m.data());
       const joins = claimed.smallGroups.filter((id) => !has.has(id));
-      const led = claimed.leadSmallGroups.filter((id) => !leads.has(id));
+      const led = claimed.identities.filter((i) => !holds.some((h) => sameIdentity(h, i)));
       if (!joins.length && !led.length) continue;
       writes.push({
         path: m.ref.path,
         update: {
           ...(joins.length ? { smallGroups: FieldValue.arrayUnion(...joins) } : {}),
-          ...(led.length
-            ? {
-                leadSmallGroups: FieldValue.arrayUnion(...led),
-                identities: [...identitiesOf(m), ...led.map((smallGroup) => ({ kind: 'lead', smallGroup }))],
-              }
-            : {}),
+          ...(led.length ? withIdentities(m.data(), [...holds, ...led]) : {}),
         },
       });
     }

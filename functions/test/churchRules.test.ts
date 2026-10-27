@@ -6,6 +6,7 @@ import { churchAccess } from '../src/access.js';
 import { attendanceDue, mayReadAttendance, mayWriteAttendance, remindedOfAttendance } from '../src/attendance.js';
 
 import { mayWriteEvent } from '../src/eventGroups.js';
+import { identitiesOf, withIdentities, type Identity } from '../src/identities.js';
 import { mayMoveMember } from '../src/groupMembers.js';
 import { mapMember } from '../src/importer.js';
 import { unreadCount } from '../src/notificationList.js';
@@ -48,6 +49,19 @@ describe('movedMembers', () => {
         { role: m.role, groups: m.groups, zones: m.zones, muted: m.notificationPrefs.muted },
         r.out,
       );
+    });
+  }
+});
+
+describe('memberIdentities', () => {
+  for (const r of rows('memberIdentities')) test(r.why, () => assert.deepEqual(identitiesOf(r.doc), r.identities));
+});
+
+describe('identityProjection', () => {
+  for (const r of rows('identityProjection')) {
+    test(r.why, () => {
+      const out: Record<string, unknown> = withIdentities({ role: r.role }, r.identities as Identity[]);
+      assert.deepEqual(Object.fromEntries(Object.keys(r.out).map((k) => [k, out[k]])), r.out);
     });
   }
 });

@@ -3,6 +3,7 @@ import { FieldValue, type DocumentSnapshot, type Transaction } from 'firebase-ad
 import { churchAccess, churchClosed, isChurchOpen } from './access.js';
 import { fail, record, text, type Caller, type Deps } from './common.js';
 import { weekdayOf } from './attendance.js';
+import { identitiesOf, withIdentities, type Identity } from './identities.js';
 import { TEXT_LIMITS } from './limits.js';
 
 /**
@@ -37,22 +38,10 @@ export function mayEditSmallGroup(m: Fields, before: string | null, after: strin
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
-/** [m]'s 身分 as stored, or, for a member doc from before them, as the app reads it (Member.identities). */
-export function identitiesOf(m: DocumentSnapshot): Record<string, unknown>[] {
-  const stored = m.get('identities');
-  if (Array.isArray(stored) && stored.length > 0) return stored as Record<string, unknown>[];
-  const admin = m.get('role') === 'admin';
-  return [...(admin ? [{ kind: 'admin' }] : []), ...(!admin && strings(m.get('groups')).length > 0 ? [{ kind: 'office' }] : [])];
-}
-
 /** Makes or takes away [m]'s 小組長 of [id], with the projection the rules read, and writes [also] with it. */
 function setLead(tx: Transaction, m: DocumentSnapshot, id: string, lead: boolean, also: Record<string, unknown> = {}) {
-  const others = identitiesOf(m).filter((i) => !(i.kind === 'lead' && i.smallGroup === id));
-  tx.update(m.ref, {
-    identities: lead ? [...others, { kind: 'lead', smallGroup: id }] : others,
-    leadSmallGroups: lead ? FieldValue.arrayUnion(id) : FieldValue.arrayRemove(id),
-    ...also,
-  });
+  const others = identitiesOf(m.data()!).filter((i) => !('smallGroup' in i && i.smallGroup === id));
+  tx.update(m.ref, { ...withIdentities(m.data()!, lead ? [...others, { kind: 'lead', smallGroup: id }] : others), ...also });
 }
 
 /**
@@ -181,10 +170,8 @@ export function smallGroupsByName(docs: DocumentSnapshot[]) {
  */
 export function claimedSmallGroups(zones: unknown, role: unknown, byName: Map<string, string>) {
   const ids = [...new Set(namedSmallGroups(zones).flatMap((g) => byName.get(nameKey(g.service, g.name)) ?? []))];
-  const lead = role === 'leader';
   return {
     smallGroups: ids,
-    leadSmallGroups: lead ? ids : [],
-    identities: lead ? ids.map((smallGroup) => ({ kind: 'lead', smallGroup })) : [],
+    identities: role === 'leader' ? ids.map((smallGroup): Identity => ({ kind: 'lead', smallGroup })) : [],
   };
 }

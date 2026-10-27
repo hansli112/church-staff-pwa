@@ -86,24 +86,16 @@ Member memberFromJson(String uid, Json data) {
 
 /// A member doc's 身分. A 小組長 (`leadSmallGroups`) whose 身分 an app from
 /// before #85 saved without it, not knowing the kind, still leads: it is
-/// put back, after what they hold (as Member.identities reads a doc with
-/// none stored).
+/// put back, after what they hold.
 List<Identity> _identitiesOf(Json data) {
   final stored = [
     if (data['identities'] is List)
       for (final i in data['identities'] as List<dynamic>) ?Identity.fromJson(i),
   ];
-  final lost = [
-    for (final id in _strings(data['leadSmallGroups']))
-      if (!stored.contains(SmallGroupLead(id))) SmallGroupLead(id),
-  ];
-  if (lost.isEmpty) return stored;
-  final admin = data['role'] == Role.admin.name;
   return [
     ...stored,
-    if (stored.isEmpty && admin) const AdminIdentity(),
-    if (stored.isEmpty && !admin && _strings(data['groups']).isNotEmpty) const OfficeIdentity(),
-    ...lost,
+    for (final id in _strings(data['leadSmallGroups']))
+      if (!stored.contains(SmallGroupLead(id))) SmallGroupLead(id),
   ];
 }
 

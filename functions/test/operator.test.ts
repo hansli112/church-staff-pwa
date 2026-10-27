@@ -57,6 +57,16 @@ describe('operator back office', () => {
     assert.equal((await db.doc('churchNames/丙').get()).get('cid'), 'C2');
   });
 
+  test('transfer makes 管理員 of someone with a 身分, keeping it', async () => {
+    await seedChurch('C1', { alice: 'admin', bob: 'staff' });
+    await db.doc('churches/C1/members/bob').update({ identities: [{ kind: 'lead', service: 'sunday' }], leadTypes: ['sunday'] });
+    await adminTransferAdmin(deps, op, { churchId: 'C1', uid: 'bob' });
+    const bob = await db.doc('churches/C1/members/bob').get();
+    assert.equal(bob.get('role'), 'admin');
+    assert.deepEqual(bob.get('identities'), [{ kind: 'admin' }, { kind: 'lead', service: 'sunday' }]);
+    assert.deepEqual(bob.get('leadTypes'), ['sunday']);
+  });
+
   test('transfer makes a member admin; suspend and reopen', async () => {
     await seedChurch('C1', { alice: 'admin', bob: 'staff' });
     const { members } = await adminChurchMembers(deps, op, { churchId: 'C1' });

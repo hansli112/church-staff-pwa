@@ -187,15 +187,16 @@ class Member {
   /// 管理員, or a whole church's 牧者: role admin, as the rules read it.
   bool get isAdmin => role == Role.admin;
 
-  /// Their 身分 (#82). A member doc from before them has none stored: an
-  /// admin is then 管理員, and the old permission groups 行政
-  /// (scripts/migrate-leads.ts moves them for good).
-  List<Identity> get identities => _identities.isNotEmpty
-      ? _identities
-      : [
-          if (isAdmin) const AdminIdentity(),
-          if (!isAdmin && groups.isNotEmpty) const OfficeIdentity(),
-        ];
+  /// Their 身分 (#82), with what the rules grant them shown as one when no
+  /// stored one says so: an admin is 管理員, the old permission groups
+  /// 行政 (a member doc from before them, or one an older backend made an
+  /// admin of; testdata/church_rules.json, memberIdentities).
+  List<Identity> get identities => [
+    if (isAdmin && !_identities.any((i) => i is AdminIdentity || (i is PastorIdentity && i.wholeChurch)))
+      const AdminIdentity(),
+    if (!isAdmin && groups.isNotEmpty && !_identities.contains(const OfficeIdentity())) const OfficeIdentity(),
+    ..._identities,
+  ];
 
   /// The services they lead, as 負責人 or 牧者; stored as `leadTypes` for
   /// the security rules.
