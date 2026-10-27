@@ -1284,6 +1284,9 @@ class L10nJa extends L10n {
   String get calConnectFailed => '接続できませんでした。もう一度お試しください。';
 
   @override
+  String get calConnectScopes => '接続できませんでした。Google の画面で、すべての権限にチェックを入れてください。';
+
+  @override
   String get calNoEvents => '今月の行事はありません';
 
   @override

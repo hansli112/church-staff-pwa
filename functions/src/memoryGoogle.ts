@@ -1,4 +1,4 @@
-import { GoogleAuthRevoked, type CalendarEvent, type GoogleApi } from './calendar.js';
+import { GoogleAuthRevoked, SCOPES, type CalendarEvent, type GoogleApi } from './calendar.js';
 
 /**
  * Google Calendar in memory, at the same seam as googleApi: one account's
@@ -8,6 +8,7 @@ import { GoogleAuthRevoked, type CalendarEvent, type GoogleApi } from './calenda
  *
  * - Consent: code `used` is refused, as Google refuses a code twice; any
  *   other is granted, with refresh token `refresh-<code>`, until revoked.
+ *   Code `partial`: the admin ticked off reading events.
  * - A new event gets ID `new-1`, `new-2`… A deleted one stays, cancelled,
  *   as in Google's trash: a get still finds it.
  * - goDown(): Google out of reach. revokeAll(): every grant revoked.
@@ -36,7 +37,7 @@ export function memoryGoogle(events: CalendarEvent[] = []) {
       if (code === 'used') throw new Error('google 400: invalid_grant');
       // Consent again grants anew.
       revoked.delete(`refresh-${code}`);
-      return { refreshToken: `refresh-${code}` };
+      return { refreshToken: `refresh-${code}`, scopes: code === 'partial' ? SCOPES.slice(1) : SCOPES };
     },
     async accessToken(refreshToken) {
       if (allRevoked || revoked.has(refreshToken)) throw new GoogleAuthRevoked();

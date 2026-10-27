@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { GoogleAuthRevoked, googleApi, type OAuthConfig } from '../src/calendar.js';
+import { GoogleAuthRevoked, googleApi, SCOPES, type OAuthConfig } from '../src/calendar.js';
 
 const config: OAuthConfig = {
   clientId: 'synthetic-client',
@@ -252,4 +252,23 @@ test('refreshes started during revoke cannot refill its cache after revoke succe
     assert.equal(await google.accessToken('synthetic-refresh', config, grant), 'access-2');
     assert.equal(refreshes, 2);
   }
+});
+
+test('a consent says which permissions it granted; a grant missing one works as a revoked grant', async () => {
+  const events = 'https://www.googleapis.com/auth/calendar.events';
+  const list = 'https://www.googleapis.com/auth/calendar.calendarlist.readonly';
+  let scope = `${list} ${events}`;
+  const fetch = async (_url: string, init?: RequestInit) =>
+    String(init?.body).includes('grant_type=authorization_code')
+      ? Response.json({ refresh_token: 'synthetic-refresh', scope })
+      : Response.json({ access_token: 'access', expires_in: 3600, scope });
+  const google = googleApi({ fetch });
+  assert.deepEqual(await google.exchangeCode('code', config), { refreshToken: 'synthetic-refresh', scopes: [list, events] });
+  assert.deepEqual(SCOPES.toSorted(), [events, list].toSorted());
+  assert.equal(await google.accessToken('synthetic-refresh', config, grant), 'access');
+
+  // Ticked off on Google's consent screen: reading events is refused.
+  scope = list;
+  assert.deepEqual(await google.exchangeCode('code', config), { refreshToken: 'synthetic-refresh', scopes: [list] });
+  await assert.rejects(google.accessToken('synthetic-refresh', config, { ...grant, revision: 'partial' }), GoogleAuthRevoked);
 });

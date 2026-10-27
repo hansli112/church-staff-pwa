@@ -407,6 +407,7 @@
   "calUnverifiedNote": "このあと Google に「このアプリは Google で確認されていません」と表示されます。「詳細」→「（アプリ名）に移動」をタップして進んでください。読み書きするのは選んだカレンダーだけです。",
   "calConnectedOk": "Google カレンダーに接続しました",
   "calConnectFailed": "接続できませんでした。もう一度お試しください。",
+  "calConnectScopes": "接続できませんでした。Google の画面で、すべての権限にチェックを入れてください。",
   "calNoEvents": "今月の行事はありません",
   "calNoEventsThatDay": "この日の行事はありません",
   "calAllDay": "終日",

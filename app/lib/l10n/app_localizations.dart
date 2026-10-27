@@ -2398,6 +2398,12 @@ abstract class L10n {
   /// **'沒有連接成功，請再試一次'**
   String get calConnectFailed;
 
+  /// Back from connecting Google Calendar with one of its permissions ticked off on Google's consent screen
+  ///
+  /// In zh, this message translates to:
+  /// **'沒有連接成功：Google 的授權畫面上，每個權限都要勾選'**
+  String get calConnectScopes;
+
   /// No description provided for @calNoEvents.
   ///
   /// In zh, this message translates to:

@@ -122,6 +122,18 @@ describe('connecting', () => {
     assert.equal((await db.doc('calendarTokens/C1').get()).exists, false);
   });
 
+  test('a consent with a calendar permission left unticked is not kept: Google forgets it, the admin is told to tick them all', async () => {
+    await church();
+    const { google, calls } = fakeGoogle();
+    const d = { ...deps, google, config };
+    const { url } = await calendarAuthUrl(d, caller('pastor'), { churchId: 'C1', from: 'app' });
+    const state = new URL(url).searchParams.get('state')!;
+    assert.equal(await calendarCallback(d, { state, code: 'partial' }), 'https://app.example/calendar-done.html?result=scopes');
+    assert.equal((await db.doc('calendarTokens/C1').get()).exists, false);
+    assert.equal((await db.doc('churches/C1/settings/calendar').get()).exists, false);
+    assert.deepEqual(calls.revoked, ['refresh-partial']);
+  });
+
   test('OAuth completion refuses a connector who is no longer an active church admin before exchanging the code', async () => {
     for (const change of ['demoted', 'removed', 'suspended', 'deleted', 'purged']) {
       await clearFirestore();

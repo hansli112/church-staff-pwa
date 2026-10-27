@@ -1349,6 +1349,9 @@ class L10nEn extends L10n {
   String get calConnectFailed => 'Couldn’t connect. Try again.';
 
   @override
+  String get calConnectScopes => 'Couldn’t connect. On Google’s screen, leave every permission ticked.';
+
+  @override
   String get calNoEvents => 'No events this month';
 
   @override

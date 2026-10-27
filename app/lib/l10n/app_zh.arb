@@ -787,6 +787,8 @@
   "calUnverifiedNote": "接下來 Google 會顯示「這個應用程式未經驗證」，點「進階」→「前往」繼續。只會讀寫你選的那個日曆。",
   "calConnectedOk": "已連接 Google 日曆",
   "calConnectFailed": "沒有連接成功，請再試一次",
+  "calConnectScopes": "沒有連接成功：Google 的授權畫面上，每個權限都要勾選",
+  "@calConnectScopes": { "description": "Back from connecting Google Calendar with one of its permissions ticked off on Google's consent screen" },
   "calNoEvents": "這個月沒有活動",
   "calNoEventsThatDay": "這天沒有活動",
   "@calNoEventsThatDay": { "description": "Under a day picked on the month grid, when no event covers it" },

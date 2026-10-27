@@ -1283,6 +1283,9 @@ class L10nZh extends L10n {
   String get calConnectFailed => '沒有連接成功，請再試一次';
 
   @override
+  String get calConnectScopes => '沒有連接成功：Google 的授權畫面上，每個權限都要勾選';
+
+  @override
   String get calNoEvents => '這個月沒有活動';
 
   @override
@@ -4240,6 +4243,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get calConnectFailed => '没有连接成功，请再试一次';
+
+  @override
+  String get calConnectScopes => '没有连接成功：Google 的授权画面上，每个权限都要勾选';
 
   @override
   String get calNoEvents => '这个月没有活动';

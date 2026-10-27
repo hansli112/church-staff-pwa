@@ -1285,6 +1285,9 @@ class L10nKo extends L10n {
   String get calConnectFailed => '연결하지 못했어요. 다시 시도해 주세요.';
 
   @override
+  String get calConnectScopes => '연결하지 못했어요. Google 화면에서 모든 권한을 선택해 주세요.';
+
+  @override
   String get calNoEvents => '이번 달에는 행사가 없어요';
 
   @override

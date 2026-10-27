@@ -407,6 +407,7 @@
   "calUnverifiedNote": "다음 화면에서 Google이 ‘Google에서 확인하지 않은 앱’이라고 알려 줘요. ‘고급’ → ‘…(으)로 이동’을 눌러 계속해 주세요. 선택한 캘린더만 읽고 써요.",
   "calConnectedOk": "Google 캘린더를 연결했어요",
   "calConnectFailed": "연결하지 못했어요. 다시 시도해 주세요.",
+  "calConnectScopes": "연결하지 못했어요. Google 화면에서 모든 권한을 선택해 주세요.",
   "calNoEvents": "이번 달에는 행사가 없어요",
   "calNoEventsThatDay": "이날은 행사가 없어요",
   "calAllDay": "종일",

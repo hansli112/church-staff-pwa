@@ -396,6 +396,15 @@ void main() {
     expect(find.text('這個月沒有活動'), findsOneWidget);
   });
 
+  testWidgets('a permission ticked off on Google\'s screen: the admin is told to leave them all ticked', (
+    tester,
+  ) async {
+    await pumpApp(tester, seededChurch());
+    await go(tester, '/me/calendar?result=scopes');
+    expect(findShown('沒有連接成功：Google 的授權畫面上，每個權限都要勾選'), findsOneWidget);
+    expect(find.text('沒有連接成功，請再試一次'), findsNothing);
+  });
+
   testWidgets('a revoked grant asks the admin to reconnect', (tester) async {
     final b = seededChurch();
     b.calendars['grace'] = const CalendarSettings(connected: true, needsReconnect: true, calendarName: 'x');

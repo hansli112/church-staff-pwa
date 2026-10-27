@@ -407,6 +407,7 @@
   "calUnverifiedNote": "Next, Google will say “Google hasn’t verified this app.” Tap “Advanced,” then “Go to…” to continue. It only reads and writes the calendar you choose.",
   "calConnectedOk": "Google Calendar connected",
   "calConnectFailed": "Couldn’t connect. Try again.",
+  "calConnectScopes": "Couldn’t connect. On Google’s screen, leave every permission ticked.",
   "calNoEvents": "No events this month",
   "calNoEventsThatDay": "No events this day",
   "calAllDay": "All day",

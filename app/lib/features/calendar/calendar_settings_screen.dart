@@ -77,7 +77,7 @@ class CalendarSettingsScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.all(Space.m),
               child: BalancedText(
-                l10n.calConnectFailed,
+                result == 'scopes' ? l10n.calConnectScopes : l10n.calConnectFailed,
                 textAlign: TextAlign.start,
                 style: AppText.subheadline.copyWith(color: c.destructive),
               ),

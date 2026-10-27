@@ -23,7 +23,8 @@ import { loggable } from './redact.js';
  *
  * Scopes: calendar.events (read/write events), calendar.calendarlist.readonly
  * (let the admin pick which calendar). Sign-in with Google never asks for
- * these; only the admin who connects sees the consent screen.
+ * these; only the admin who connects sees the consent screen, where each
+ * can be ticked off: a grant without both is not kept.
  */
 export const SCOPES = [
   'https://www.googleapis.com/auth/calendar.events',
@@ -45,8 +46,9 @@ export interface OAuthConfig {
 
 /** Google's HTTP APIs, injectable for tests. */
 export interface GoogleApi {
-  exchangeCode(code: string, config: OAuthConfig): Promise<{ refreshToken: string | null }>;
-  /** Throws GoogleAuthRevoked when the refresh token no longer works. */
+  /** [scopes]: what the consent granted, when Google says. */
+  exchangeCode(code: string, config: OAuthConfig): Promise<{ refreshToken: string | null; scopes?: string[] }>;
+  /** Throws GoogleAuthRevoked when the refresh token no longer works, or no longer grants SCOPES. */
   accessToken(refreshToken: string, config: OAuthConfig, grant?: { churchId: string; revision: string }): Promise<string>;
   calendars(accessToken: string): Promise<{ id: string; name: string; primary: boolean; timeZone?: string }[]>;
   events(accessToken: string, calendarId: string, from: Date, to: Date): Promise<CalendarEvent[]>;
@@ -60,6 +62,9 @@ export interface GoogleApi {
 }
 
 export class GoogleAuthRevoked extends Error {}
+
+/** False when Google says what [scope] (space-separated) grants and it is not all of SCOPES. */
+const grantsAll = (scope: unknown) => typeof scope !== 'string' || SCOPES.every((s) => scope.split(' ').includes(s));
 
 /** The fields the app shows and edits. */
 export interface CalendarEvent {
@@ -149,8 +154,9 @@ export async function calendarCallback(deps: CalDeps, query: Record<string, unkn
   if (!grant) return back('expired');
   if (!code || !grant.authorized) return back('denied');
   let refreshToken: string | null;
+  let scopes: string[] | undefined;
   try {
-    ({ refreshToken } = await deps.google.exchangeCode(code, deps.config));
+    ({ refreshToken, scopes } = await deps.google.exchangeCode(code, deps.config));
   } catch (e) {
     await ref.delete();
     // A used or stale code (a reloaded page, a double tap): let them try again.
@@ -160,6 +166,17 @@ export async function calendarCallback(deps: CalDeps, query: Record<string, unkn
   if (!refreshToken) {
     await ref.delete();
     return back('failed');
+  }
+  // A permission ticked off on Google's consent screen: the calendar would
+  // connect and then fail to read (or list) anything.
+  if (scopes && !grantsAll(scopes.join(' '))) {
+    await ref.delete();
+    try {
+      await deps.google.revoke(refreshToken);
+    } catch (e) {
+      console.warn('calendarCallback: partial grant revocation failed', loggable(e));
+    }
+    return back('scopes');
   }
   const { churchId, uid } = grant;
   let installed = false;
@@ -636,8 +653,11 @@ export function googleApi(options: Partial<Pick<Deps, 'fetch' | 'now'>> = {}): G
           grant_type: 'authorization_code',
         }),
       });
-      const body = (await json(res)) as { refresh_token?: string };
-      return { refreshToken: body.refresh_token ?? null };
+      const body = (await json(res)) as { refresh_token?: string; scope?: string };
+      return {
+        refreshToken: body.refresh_token ?? null,
+        ...(typeof body.scope === 'string' ? { scopes: body.scope.split(' ').filter(Boolean) } : {}),
+      };
     },
     async accessToken(refreshToken, config, grant) {
       // Unscoped callers never reuse a grant belonging to another church.
@@ -665,8 +685,11 @@ export function googleApi(options: Partial<Pick<Deps, 'fetch' | 'now'>> = {}): G
           if (text.includes('invalid_grant')) throw new GoogleAuthRevoked();
           throw new Error(`token ${res.status}: ${text.slice(0, 200)}`);
         }
-        const body = (await json(res)) as { access_token?: string; expires_in?: number };
+        const body = (await json(res)) as { access_token?: string; expires_in?: number; scope?: string };
         if (typeof body.access_token !== 'string' || !body.access_token) throw new Error('Google returned no access token');
+        // Connected before the callback checked what was ticked: it cannot
+        // read the calendar, so it is reconnected like a revoked one.
+        if (!grantsAll(body.scope)) throw new GoogleAuthRevoked();
         const expiresAt = typeof body.expires_in === 'number' ? startedAt + body.expires_in * 1000 - 60_000 : NaN;
         if (key && refreshes.get(key)?.pending === pending && Number.isFinite(expiresAt) && expiresAt > now().getTime()) {
           if (tokens.size >= 128) tokens.delete(tokens.keys().next().value!);

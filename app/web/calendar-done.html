@@ -3,7 +3,8 @@
   Where Google sends the phone app's browser sheet after connecting the
   church's calendar (calendarCallback, from: 'app'). The app sees the grant
   arrive and closes the sheet on iOS; on Android the person closes it.
-  ?result=connected, or why not (denied, expired, failed, invalid).
+  ?result=connected, or why not (denied, expired, failed, invalid, scopes:
+  a permission ticked off on Google's screen).
 -->
 <html lang="zh-Hant">
 <head>
@@ -35,11 +36,11 @@
   const words = {
     // The app's names as its l10n/app_*.arb appName (tested against
     // functions/src/languages.ts).
-    'zh-Hant': ['已連接 Google 日曆', '關掉這個頁面，回到馬大別忙', '沒有連接成功', '關掉這個頁面，回到馬大別忙再試一次'],
-    'zh-Hans': ['已连接 Google 日历', '关掉这个页面，回到马大别忙', '没有连接成功', '关掉这个页面，回到马大别忙再试一次'],
-    en: ['Google Calendar connected', 'Close this page to go back to Martha, sit', 'Not connected', 'Close this page and try again in Martha, sit'],
-    ja: ['Google カレンダーを接続しました', 'このページを閉じて、マルタ、ひと休みに戻ってください', '接続できませんでした', 'このページを閉じて、マルタ、ひと休みでもう一度お試しください'],
-    ko: ['Google 캘린더를 연결했어요', '이 페이지를 닫고 마르다의 쉼표로 돌아가세요', '연결하지 못했어요', '이 페이지를 닫고 마르다의 쉼표에서 다시 시도해 주세요'],
+    'zh-Hant': ['已連接 Google 日曆', '關掉這個頁面，回到馬大別忙', '沒有連接成功', '關掉這個頁面，回到馬大別忙再試一次', 'Google 的授權畫面上，每個權限都要勾選。關掉這個頁面，回到馬大別忙再試一次'],
+    'zh-Hans': ['已连接 Google 日历', '关掉这个页面，回到马大别忙', '没有连接成功', '关掉这个页面，回到马大别忙再试一次', 'Google 的授权画面上，每个权限都要勾选。关掉这个页面，回到马大别忙再试一次'],
+    en: ['Google Calendar connected', 'Close this page to go back to Martha, sit', 'Not connected', 'Close this page and try again in Martha, sit', 'On Google’s screen, leave every permission ticked. Close this page and try again in Martha, sit'],
+    ja: ['Google カレンダーを接続しました', 'このページを閉じて、マルタ、ひと休みに戻ってください', '接続できませんでした', 'このページを閉じて、マルタ、ひと休みでもう一度お試しください', 'Google の画面で、すべての権限にチェックを入れてください。このページを閉じて、マルタ、ひと休みでもう一度お試しください'],
+    ko: ['Google 캘린더를 연결했어요', '이 페이지를 닫고 마르다의 쉼표로 돌아가세요', '연결하지 못했어요', '이 페이지를 닫고 마르다의 쉼표에서 다시 시도해 주세요', 'Google 화면에서 모든 권한을 선택해 주세요. 이 페이지를 닫고 마르다의 쉼표에서 다시 시도해 주세요'],
   };
   // As app/web/index.html (and lib/core/languages.dart): the first language
   // on the browser's list the app speaks, else English.
@@ -57,8 +58,10 @@
   for (var i = 0; i < langs.length; i++) {
     if (speaks(langs[i])) { lang = speaks(langs[i]); break; }
   }
-  const ok = new URLSearchParams(location.search).get('result') === 'connected';
-  const [title, next] = words[lang].slice(ok ? 0 : 2);
+  const result = new URLSearchParams(location.search).get('result');
+  const ok = result === 'connected';
+  const title = words[lang][ok ? 0 : 2];
+  const next = words[lang][ok ? 1 : result === 'scopes' ? 4 : 3];
   document.documentElement.lang = lang;
   document.getElementById('title').textContent = title;
   document.getElementById('next').textContent = next;
