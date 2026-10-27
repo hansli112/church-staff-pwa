@@ -1361,6 +1361,34 @@ int unreadNotifications(Iterable<NotificationItem> items, Map<String, DateTime> 
   return s == null || n.at.millisecondsSinceEpoch > s.millisecondsSinceEpoch;
 }).length;
 
+/// One church's 通知列表 (#89): its notifications of [all], newest first,
+/// and when it was last seen ([seen]; null: never).
+@immutable
+class NotificationInbox {
+  NotificationInbox(this.churchId, Iterable<NotificationItem> all, this.seen)
+    : items = [
+        for (final n in all)
+          if (n.churchId == churchId) n,
+      ]..sort((a, b) => b.at.compareTo(a.at));
+
+  final String churchId;
+  final List<NotificationItem> items;
+  final DateTime? seen;
+
+  /// How many came after it was last seen.
+  int get unread => unreadNotifications(items, {churchId: ?seen});
+
+  /// Whether [n] came after it was last seen.
+  bool isUnread(NotificationItem n) => unreadNotifications([n], {churchId: ?seen}) > 0;
+
+  /// How far opening it has it seen: up to its newest; null when nothing
+  /// is unread, so nothing is written.
+  DateTime? get seenOnOpening => unread == 0 ? null : items.first.at;
+
+  /// The same list, as seen up to [at].
+  NotificationInbox seenAt(DateTime? at) => NotificationInbox(churchId, items, at);
+}
+
 /// How someone's request to join a church stands (申請加入, #88).
 enum JoinRequestState { pending, rejected }
 

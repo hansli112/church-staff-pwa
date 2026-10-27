@@ -21,17 +21,13 @@ final myNotificationsProvider = StreamProvider<List<NotificationItem>>((ref) {
       );
 });
 
-/// The current church's notifications, newest first: what its list shows.
-final churchNotificationsProvider = Provider<AsyncValue<List<NotificationItem>>>((ref) {
+/// The current church's 通知列表, as far as I have seen it; null with no
+/// church.
+final churchInboxProvider = Provider<AsyncValue<NotificationInbox>?>((ref) {
   final cid = ref.watch(currentChurchIdProvider);
-  return ref
-      .watch(myNotificationsProvider)
-      .whenData(
-        (all) => [
-          for (final n in all)
-            if (n.churchId == cid) n,
-        ],
-      );
+  if (cid == null) return null;
+  final seen = ref.watch(profileProvider.select((p) => p.value?.notificationsSeen[cid]));
+  return ref.watch(myNotificationsProvider).whenData((all) => NotificationInbox(cid, all, seen));
 });
 
 /// What is unread in all my churches: the number on the app icon; 0 signed

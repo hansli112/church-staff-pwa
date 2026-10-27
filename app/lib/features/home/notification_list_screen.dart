@@ -26,11 +26,11 @@ class NotificationBell extends ConsumerWidget {
     // cannot rebuild the providers watching it then.
     final cid = ref.watch(currentChurchIdProvider);
     final seen = ref.watch(profileProvider.select((p) => p.value?.notificationsSeen[cid]));
-    final unread = ref.watch(
-      myNotificationsProvider.select(
-        (list) => unreadNotifications((list.value ?? const []).where((n) => n.churchId == cid), {?cid: ?seen}) > 0,
-      ),
-    );
+    final unread =
+        cid != null &&
+        ref.watch(
+          myNotificationsProvider.select((list) => NotificationInbox(cid, list.value ?? const [], seen).unread > 0),
+        );
     return IconButton(
       tooltip: unread ? l10n.notifUnreadLabel : l10n.notifications,
       onPressed: () => context.push('/home/notifications'),
@@ -65,18 +65,15 @@ class _NotificationListScreenState extends ConsumerState<NotificationListScreen>
     final cid = ref.read(currentChurchIdProvider);
     _seenBefore = ref.read(profileProvider).value?.notificationsSeen[cid];
     // Seen as they show, the ones arriving while it is open too.
-    ref.listenManual(churchNotificationsProvider, (_, next) => _markSeen(next.value), fireImmediately: true);
+    ref.listenManual(churchInboxProvider, (_, next) => _markSeen(next?.value), fireImmediately: true);
   }
 
-  void _markSeen(List<NotificationItem>? list) {
+  void _markSeen(NotificationInbox? inbox) {
     final uid = ref.read(uidProvider);
-    final cid = ref.read(currentChurchIdProvider);
-    if (list == null || list.isEmpty || uid == null || cid == null) return;
-    final newest = list.first.at;
-    final seen = ref.read(profileProvider).value?.notificationsSeen[cid];
-    if (unreadNotifications(list, {cid: ?seen}) == 0) return;
+    final newest = inbox?.seenOnOpening;
+    if (inbox == null || newest == null || uid == null) return;
     // Queued offline like any write; a refusal leaves them unread, no more.
-    ref.read(backendProvider).profiles.markNotificationsSeen(uid, cid, newest).catchError((Object _) {});
+    ref.read(backendProvider).profiles.markNotificationsSeen(uid, inbox.churchId, newest).catchError((Object _) {});
   }
 
   void _open(NotificationItem n) {
@@ -107,39 +104,41 @@ class _NotificationListScreenState extends ConsumerState<NotificationListScreen>
           ),
         ],
       ),
-      body: ref
-          .watch(churchNotificationsProvider)
-          .when(
-            skipLoadingOnReload: true,
-            loading: () => const SizedBox.shrink(),
-            error: (_, _) => ErrorRetry(
-              message: l10n.loadFailed,
-              onRetry: () => ref.invalidate(myNotificationsProvider),
-            ),
-            data: (list) => ListView(
-              children: [
-                if (turnOn) const TurnOnNotificationsCard(),
-                if (list.isEmpty)
-                  EmptyState(icon: Symbols.notifications_rounded, message: l10n.notifListEmpty)
-                else
-                  ListSection(
-                    children: [
-                      for (final n in list)
-                        _row(
-                          l10n,
-                          c,
-                          n,
-                          // Most pushes are headed with the church's name,
-                          // which this list is already about.
-                          headline: n.title.isEmpty || n.title == churchName ? n.body : n.title,
-                          when: clock.ago(n.at, now),
-                          unread: unreadNotifications([n], {n.churchId: ?_seenBefore}) > 0,
-                        ),
-                    ],
-                  ),
-              ],
-            ),
-          ),
+      body: (ref.watch(churchInboxProvider) ?? const AsyncLoading<NotificationInbox>()).when(
+        skipLoadingOnReload: true,
+        loading: () => const SizedBox.shrink(),
+        error: (_, _) => ErrorRetry(
+          message: l10n.loadFailed,
+          onRetry: () => ref.invalidate(myNotificationsProvider),
+        ),
+        data: (inbox) {
+          // Those unread when it opened keep their dot while it is open.
+          final opened = inbox.seenAt(_seenBefore);
+          return ListView(
+            children: [
+              if (turnOn) const TurnOnNotificationsCard(),
+              if (inbox.items.isEmpty)
+                EmptyState(icon: Symbols.notifications_rounded, message: l10n.notifListEmpty)
+              else
+                ListSection(
+                  children: [
+                    for (final n in inbox.items)
+                      _row(
+                        l10n,
+                        c,
+                        n,
+                        // Most pushes are headed with the church's name,
+                        // which this list is already about.
+                        headline: n.title.isEmpty || n.title == churchName ? n.body : n.title,
+                        when: clock.ago(n.at, now),
+                        unread: opened.isUnread(n),
+                      ),
+                  ],
+                ),
+            ],
+          );
+        },
+      ),
     );
   }
 
