@@ -4,8 +4,9 @@ import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { notificationsOf, unreadOf } from './notificationList.js';
 import { languageOf, words, type Language, type Words } from './languages.js';
 
-/** Matches NotificationKind in app/lib/domain/models.dart. */
-export type NotificationKind = 'reminder' | 'rosterChange' | 'memberLeft' | 'attendance' | 'joinRequest';
+/** Matches NotificationKind in app/lib/domain/models.dart and firestore.rules (test/parity.test.ts). */
+export const NOTIFICATION_KINDS = ['reminder', 'rosterChange', 'memberLeft', 'attendance', 'joinRequest'] as const;
+export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
 export interface PushMessage {
   title: string;

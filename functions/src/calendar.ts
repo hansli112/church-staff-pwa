@@ -429,7 +429,7 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
   // Admins and 行政 write any event; a 負責人 only their groups'. Anyone
   // else is refused before the calendar is asked anything.
   const editor = me.powers.writesAnyEvent;
-  if (!editor && !me.powers.leadsAnyGroup) fail('permission-denied', 'permissionDenied');
+  if (!me.powers.makesEvents) fail('permission-denied', 'permissionDenied');
   const churchId = me.cid;
   const timeZone = timeZoneOf(me.church);
   const input = data as {

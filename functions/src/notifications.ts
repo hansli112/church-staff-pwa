@@ -13,9 +13,10 @@ export const REMINDER_HOUR = 19;
 /**
  * When a member is reminded: Monday evening of the week's duties, the
  * evening before each, or both. Matches ReminderTiming in
- * app/lib/domain/models.dart.
+ * app/lib/domain/models.dart and firestore.rules (test/parity.test.ts).
  */
-export type ReminderTiming = 'weekly' | 'dayBefore' | 'both';
+export const REMINDER_TIMINGS = ['weekly', 'dayBefore', 'both'] as const;
+export type ReminderTiming = (typeof REMINDER_TIMINGS)[number];
 
 function reminderTiming(member: DocumentSnapshot): ReminderTiming {
   const t = member.get('notificationPrefs.reminderTiming');

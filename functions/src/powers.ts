@@ -26,7 +26,13 @@ export type ChurchGroup =
   | { kind: 'ministry'; id: string }
   | { kind: 'small'; id: string; service: string | null };
 
-const KEY = /^(service|ministry|small):([A-Za-z0-9_-]{1,64})$/;
+const KINDS = '(service|ministry|small)';
+const ID = '[A-Za-z0-9_-]{1,64}';
+
+/** A group's key, as firestore.rules checks an event roster's `group` (test/parity.test.ts). */
+export const GROUP_KEY = `${KINDS}:${ID}`;
+
+const KEY = new RegExp(`^${KINDS}:(${ID})$`);
 
 /**
  * The group key [key] names, `service:<id>`, `ministry:<id>` or
@@ -79,8 +85,8 @@ export function powersOf(m: MemberFields) {
     /** A plain 同工: no admin, no permission group, no 身分 stored. */
     plain: !admin && groups.length === 0 && stored.length === 0,
 
-    /** Whether they lead any group, and so may write that group's events. */
-    leadsAnyGroup: services.length > 0 || ministries.length > 0 || smallGroups.length > 0,
+    /** Whether they make any events: admins, 行政, and whoever leads a group, its own (Member.makesEvents). */
+    makesEvents: writesAnyEvent || services.length > 0 || ministries.length > 0 || smallGroups.length > 0,
 
     /** Whether they edit the rosters of service [type]: admins, 行政, and its 負責人 and 牧者. */
     editsRosters: (type: string) => inGroup('roster-editors') || services.includes(type),
