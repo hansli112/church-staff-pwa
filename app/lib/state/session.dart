@@ -74,46 +74,41 @@ final sessionEffectsProvider = Provider<void>((ref) {
 
   ref.listen(currentChurchIdProvider, (_, cid) => ref.read(telemetryProvider).setChurch(cid), fireImmediately: true);
 
-  // A lapsed subscription takes its icon back; a church's own stays.
-  ref.listen(supporterProvider, (_, active) async {
-    if (active) return;
-    if (await ref.read(currentAppIconProvider.future) case final id? when appIcons.contains(id)) {
-      await ref.read(currentAppIconProvider.notifier).set(null);
-    }
-  }, fireImmediately: true);
-
-  // A church with its own icon puts it on its members' home screens, once
-  // per phone, and never over an icon picked: that has to go first.
-  // Leaving the church takes it back. A moment after the church's page is
-  // up, or the church joined, so the system's note on the change comes over
-  // the page, not over the splash. Refused, it is tried again next time.
+  // The home-screen icon, as nextAppIcon has it: a lapsed subscription's
+  // goes, and a church's own comes on, at the same go, so one never waits
+  // out the other. A moment after the church's page is up, or the church
+  // joined, so the system's note on the change comes over the page, not
+  // over the splash. Refused, it is tried again next time.
   Timer? soon;
   ref.onDispose(() => soon?.cancel());
-  void placeChurchIcon() {
+  void settleIcon() {
     soon?.cancel();
-    final stage = ref.read(appStageProvider);
-    if (ref.read(isWebProvider) || stage == AppStage.loading || stage == AppStage.signedOut) return;
-    final church = ref.read(myChurchIconProvider);
     soon = Timer(const Duration(milliseconds: 600), () async {
-      final inUse = ref.read(currentAppIconProvider.notifier);
+      final stage = ref.read(appStageProvider);
+      final church = ref.read(myChurchIconProvider);
       try {
-        final current = await ref.read(currentAppIconProvider.future);
-        if (church == null) {
-          if (churchIcons.values.any((c) => c.iconId == current)) await inUse.set(null);
-          return;
+        final change = nextAppIcon(
+          current: await ref.read(currentAppIconProvider.future),
+          supporter: ref.read(supporterProvider),
+          churchKnown: !ref.read(isWebProvider) && stage != AppStage.loading && stage != AppStage.signedOut,
+          church: church,
+          placedBefore: church != null && ref.read(churchIconPlacedProvider(church.iconId)),
+        );
+        if (change == null) return;
+        await ref.read(currentAppIconProvider.notifier).set(change.to);
+        if (change.placed case final placed?) {
+          ref.read(churchIconPlacedProvider(placed.iconId).notifier).mark();
+          ref.read(churchIconChangedProvider.notifier).tell(placed);
         }
-        if (current != null || ref.read(churchIconPlacedProvider(church.iconId))) return;
-        await inUse.set(church.iconId);
       } catch (_) {
         return;
       }
-      ref.read(churchIconPlacedProvider(church.iconId).notifier).mark();
-      ref.read(churchIconChangedProvider.notifier).tell(church);
     });
   }
 
-  ref.listen(appStageProvider, (_, _) => placeChurchIcon(), fireImmediately: true);
-  ref.listen(myChurchIconProvider, (_, _) => placeChurchIcon());
+  ref.listen(supporterProvider, (_, _) => settleIcon());
+  ref.listen(appStageProvider, (_, _) => settleIcon(), fireImmediately: true);
+  ref.listen(myChurchIconProvider, (_, _) => settleIcon());
 });
 
 /// Signs out: this device stops getting pushes, and the picked church is

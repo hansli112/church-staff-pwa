@@ -305,6 +305,29 @@ final churchIconPlacedProvider = NotifierProvider.family<DeviceFlag, bool, Strin
   (iconId) => DeviceFlag('church_icon_$iconId'),
 );
 
+/// The home-screen icon to put on, [to], in place of [current], and the
+/// church's icon that is, when one is ([placed]: to mark it and say so).
+typedef IconChange = ({String? to, ChurchIcon? placed});
+
+/// What happens to the home-screen icon, [current], if anything: a
+/// lapsed subscription ([supporter] false) takes its icon back. Then, once
+/// my churches are known ([churchKnown]), a church with its own ([church])
+/// puts it on, once per phone ([placedBefore]) and never over an icon
+/// picked; with none, a church's icon comes off. Null: it stays.
+IconChange? nextAppIcon({
+  required String? current,
+  required bool supporter,
+  required bool churchKnown,
+  required ChurchIcon? church,
+  required bool placedBefore,
+}) {
+  var now = current;
+  if (!supporter && now != null && appIcons.contains(now)) now = null;
+  if (churchKnown && church == null && churchIcons.values.any((c) => c.iconId == now)) now = null;
+  if (churchKnown && church != null && now == null && !placedBefore) return (to: church.iconId, placed: church);
+  return now == current ? null : (to: now, placed: null);
+}
+
 /// The icon of the one of my churches that has its own, if any.
 final myChurchIconProvider = Provider<ChurchIcon?>((ref) {
   final memberships = ref.watch(membershipsProvider).value ?? const [];
