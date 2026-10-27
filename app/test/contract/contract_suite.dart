@@ -826,6 +826,29 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect((await g.church.member(g.mei).first)!.leadSmallGroups, isEmpty);
     });
 
+    test('a change saying what it was made over is refused once that changed', () async {
+      final g = await Grace.open(w);
+      await w.signIn(Grace.editorEmail);
+      final id = await g.church.saveSmallGroup(
+        const SmallGroupDetails(id: '', name: '喜樂小組', service: 'sunday'),
+        leads: [g.mei],
+      );
+      final joy = (await g.church.smallGroups().first).single;
+      await g.church.saveSmallGroup(joy.copyWith(name: '喜樂'), before: joy);
+      await expectLater(
+        g.church.saveSmallGroup(joy.copyWith(name: '大喜樂'), before: joy),
+        fails(CloudErrorCode.conflict),
+      );
+      final now = (await g.church.smallGroups().first).single;
+      await expectLater(
+        g.church.saveSmallGroup(now, before: now, leads: const [], leadsBefore: [g.editor]),
+        fails(CloudErrorCode.conflict),
+      );
+      await g.church.saveSmallGroup(now, before: now, leads: const [], leadsBefore: [g.mei]);
+      expect(now.id, id);
+      expect((await g.church.smallGroups().first).single.name, '喜樂');
+    });
+
     test("leads fill in their group's 人數; 行政 reads a service's; a 同工 neither", () async {
       final g = await Grace.open(w);
       await g.church.setAttendanceSince(Day(2026, 10, 1));

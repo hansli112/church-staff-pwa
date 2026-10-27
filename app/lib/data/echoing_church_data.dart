@@ -7,8 +7,8 @@ import '../domain/models.dart';
 import '../domain/staff_order.dart';
 import 'backend.dart';
 
-/// [ChurchData] that shows a change to rosters, members, services or staff
-/// orders the moment it is made, while the backend still writes it.
+/// [ChurchData] that shows a change to rosters, members, services, staff
+/// orders or 小組 the moment it is made, while the backend still writes it.
 ///
 /// Writes stay online compare-and-sets (docs/design.md): only what is shown
 /// changes early. They go one at a time, so a change made on top of one
@@ -407,17 +407,35 @@ class EchoingChurchData implements ChurchData {
   Future<void> setHomeName(String? name) => _inner.setHomeName(name);
 
   @override
-  Stream<List<SmallGroupDetails>> smallGroups() => _inner.smallGroups();
+  Stream<List<SmallGroupDetails>> smallGroups() => _echoed(_inner.smallGroups(), (server, arrived) {
+    var shown = server;
+    for (final echo in _echoes) {
+      for (final MapEntry(key: id, value: after) in echo.smallGroups.entries) {
+        if (!_shows(echo, ('smallGroup', id), server.byId(id) == after, arrived)) continue;
+        shown = [for (final g in shown) g.id == id ? after : g];
+      }
+    }
+    return shown;
+  });
 
-  /// A 小組's new 小組長 shows at once; the rest of it as the backend has it.
+  /// A 小組 changed, and its new 小組長, show at once.
   @override
-  Future<String> saveSmallGroup(SmallGroupDetails group, {List<String>? leads}) async {
-    // A new 小組 has no id to lead until the backend gives it one.
-    if (leads == null || group.id.isEmpty) return _inner.saveSmallGroup(group, leads: leads);
+  Future<String> saveSmallGroup(
+    SmallGroupDetails group, {
+    SmallGroupDetails? before,
+    List<String>? leads,
+    List<String>? leadsBefore,
+  }) async {
+    Future<String> write() => _inner.saveSmallGroup(group, before: before, leads: leads, leadsBefore: leadsBefore);
+    // A new 小組 has no id to show or lead until the backend gives it one.
+    if (group.id.isEmpty) return write();
     late final String id;
     await _send(
-      _Echo(everyMember: (m) => m.withSmallGroupLead(group.id, lead: leads.contains(m.uid))),
-      () async => id = await _inner.saveSmallGroup(group, leads: leads),
+      _Echo(
+        smallGroups: {group.id: group},
+        everyMember: leads == null ? null : (m) => m.withSmallGroupLead(group.id, lead: leads.contains(m.uid)),
+      ),
+      () async => id = await write(),
     );
     return id;
   }
@@ -505,6 +523,7 @@ class _Echo {
     this.ministries,
     this.staffOrders = const {},
     this.everyMember,
+    this.smallGroups = const {},
   });
 
   /// Each roster written, null for one deleted.
@@ -521,6 +540,9 @@ class _Echo {
   /// A change to whichever members it touches, for one the backend makes
   /// knowing who they are.
   final Member Function(Member)? everyMember;
+
+  /// Each 小組 changed.
+  final Map<String, SmallGroupDetails> smallGroups;
 
   /// Null while being written; once written, until when it may still show.
   DateTime? until;

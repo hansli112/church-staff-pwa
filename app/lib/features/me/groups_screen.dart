@@ -384,23 +384,11 @@ class GroupScreen extends ConsumerWidget {
     }
   }
 
-  /// Saves [next], with [leads] its 小組長; [done] said after, with 復原
-  /// putting back [was] when given.
-  Future<void> _saveSmall(
-    BuildContext context,
-    WidgetRef ref,
-    SmallGroupDetails next, {
-    List<String>? leads,
-    List<String>? was,
-    String? done,
-  }) async {
+  /// Changes [small] to [next], refused once someone else changed it.
+  Future<void> _saveSmall(BuildContext context, WidgetRef ref, SmallGroupDetails small, SmallGroupDetails next) async {
     final l10n = L10n.of(context);
-    final data = ref.churchData;
     try {
-      await data.saveSmallGroup(next, leads: leads);
-      if (done != null && context.mounted) {
-        showToast(context, done, onUndo: was == null ? null : () => data.saveSmallGroup(next, leads: was));
-      }
+      await ref.read(churchWritesProvider).smallGroup(small, next).done;
     } catch (e) {
       if (context.mounted) showToast(context, saveErrorText(l10n, e));
     }
@@ -416,13 +404,13 @@ class GroupScreen extends ConsumerWidget {
       maxLength: TextLimits.profileName,
     );
     if (name == null || name == small.name || !context.mounted) return;
-    await _saveSmall(context, ref, small.copyWith(name: name));
+    await _saveSmall(context, ref, small, small.copyWith(name: name));
   }
 
   Future<void> _meets(BuildContext context, WidgetRef ref, SmallGroupDetails small) async {
     final next = await pickSmallGroupMeets(context, small, ref.read(todayProvider));
     if (next == null || next == small || !context.mounted) return;
-    await _saveSmall(context, ref, next);
+    await _saveSmall(context, ref, small, next);
   }
 
   /// 指派小組長: the one, anyone in the church, picked from a list.
@@ -474,13 +462,10 @@ class GroupScreen extends ConsumerWidget {
     final leads = [if (picked.isNotEmpty) picked];
     if (listEquals(leads, was)) return;
     final identity = l10n.identitySmallGroupLeadOf(name);
-    await _saveSmall(
+    await runWithUndo(
       context,
-      ref,
-      small,
-      leads: leads,
-      was: was,
-      done: picked.isEmpty ? l10n.identityRemoved(identity) : l10n.identityAdded(identity),
+      picked.isEmpty ? l10n.identityRemoved(identity) : l10n.identityAdded(identity),
+      () => ref.read(churchWritesProvider).smallGroup(small, small, leadsBefore: was, leads: leads),
     );
   }
 

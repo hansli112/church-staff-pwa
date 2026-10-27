@@ -62,6 +62,19 @@ describe('小組 (#85)', () => {
     assert.deepEqual((await db.doc(`churches/C1/smallGroups/${id}`).get()).data(), { name: '喜樂', service: 'sunday' });
   });
 
+  test('a change saying what it was made over is refused once that changed: an undo overwrites no one', async () => {
+    await church();
+    const id = await joy();
+    const shown = { id, name: '喜樂小組', service: 'sunday', weekday: 5, every: 2, startsOn: '2026-10-02' };
+    const save = (group: object, more: object = {}) =>
+      editSmallGroup(deps, caller('sundayLead'), { churchId: 'C1', op: 'save', group, ...more });
+    await save({ ...shown, name: '喜樂' }, { before: shown });
+    await rejectsWith(save({ ...shown, weekday: 6, startsOn: '2026-10-03' }, { before: shown }), 'conflict');
+    await rejectsWith(save({ ...shown, name: '喜樂' }, { leads: [], leadsBefore: ['someoneElse'] }), 'conflict');
+    await save({ ...shown, name: '喜樂' }, { leads: [], leadsBefore: ['joyLead'] });
+    assert.deepEqual((await db.doc('churches/C1/members/joyLead').get()).get('leadSmallGroups'), []);
+  });
+
   test("not in another service, nor by its 小組長 or anyone leading nothing", async () => {
     await church();
     const id = await joy();

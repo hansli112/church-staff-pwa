@@ -98,4 +98,37 @@ void main() {
       throwsA(isA<CloudException>().having((e) => e.code, 'code', CloudErrorCode.permissionDenied)),
     );
   });
+
+  test('undoing a 小組長 named puts back who led it; refused once someone changed that, or in another account', () async {
+    final b = seededChurch();
+    final container = await signedIn(b);
+    final church = b.church('grace');
+    final id = await church.saveSmallGroup(
+      const SmallGroupDetails(id: '', name: '喜樂', service: 'sunday'),
+      leads: ['mei'],
+    );
+    final joy = b.smallGroups['grace']![id]!;
+    final writes = container.read(churchWritesProvider);
+
+    final named = writes.smallGroup(joy, joy, leadsBefore: ['mei'], leads: ['hao']);
+    await named.done;
+    await named.undo();
+    expect(b.members['grace']!['mei']!.leadSmallGroups, [id]);
+    expect(b.members['grace']!['hao']!.leadSmallGroups, isEmpty);
+
+    final again = writes.smallGroup(joy, joy, leadsBefore: ['mei'], leads: ['hao']);
+    await again.done;
+    await church.saveSmallGroup(joy, leads: ['john']);
+    await expectLater(again.undo(), conflict());
+    expect(b.members['grace']!['john']!.leadSmallGroups, [id], reason: 'theirs kept');
+
+    final renamed = writes.smallGroup(joy, joy.copyWith(name: '大喜樂'));
+    await renamed.done;
+    b.auth.signInAs('mei@example.com', uid: 'mei', name: '李美玉');
+    await pumpEventQueue();
+    await expectLater(
+      renamed.undo(),
+      throwsA(isA<CloudException>().having((e) => e.code, 'code', CloudErrorCode.permissionDenied)),
+    );
+  });
 }

@@ -1,4 +1,5 @@
 import { FieldValue, type DocumentSnapshot, type Transaction } from 'firebase-admin/firestore';
+import { isDeepStrictEqual } from 'node:util';
 
 import { accessIn, churchAccess } from './access.js';
 import { fail, record, text, type Caller, type Deps } from './common.js';
@@ -32,7 +33,9 @@ function setLead(tx: Transaction, m: DocumentSnapshot, id: string, lead: boolean
  * startsOn? }, leads? }` opens a 小組 (no id) or changes one, and with
  * `leads` (uids) makes them its 小組長 and nobody else; `{ churchId, op:
  * 'delete', id }` closes it, taking it off its 小組長 and 同工. Its 人數
- * stay. Returns its id.
+ * stay. Returns its id. A change saying what it was made over, `before`
+ * (the 小組 as `group`) or `leadsBefore` (its 小組長), is refused
+ * (conflict) once that has changed: an undo overwrites no one.
  */
 export async function editSmallGroup(deps: Deps, caller: Caller | null, data: unknown) {
   const access = await churchAccess(deps, caller, data, 'member');
@@ -45,9 +48,17 @@ export async function editSmallGroup(deps: Deps, caller: Caller | null, data: un
   if (id !== undefined && (typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(id))) fail('invalid-argument', 'unknown');
   if (!saving && id === undefined) fail('invalid-argument', 'unknown');
   const fields = saving ? smallGroupFields(group) : null;
-  const leads = input.leads === undefined ? null : strings(input.leads);
-  if (leads && (!Array.isArray(input.leads) || leads.length !== input.leads.length || leads.length > 20
-      || leads.some((u) => !/^[A-Za-z0-9_-]{1,128}$/.test(u)))) fail('invalid-argument', 'unknown');
+  const uids = (v: unknown) => {
+    if (v === undefined) return null;
+    const list = strings(v);
+    if (!Array.isArray(v) || list.length !== v.length || list.length > 20 || list.some((u) => !/^[A-Za-z0-9_-]{1,128}$/.test(u))) {
+      fail('invalid-argument', 'unknown');
+    }
+    return list;
+  };
+  const leads = uids(input.leads);
+  const leadsBefore = uids(input.leadsBefore);
+  const seen = saving && id !== undefined && input.before !== undefined ? smallGroupFields(record(input.before)) : null;
 
   const root = deps.db.doc(`churches/${cid}`);
   const at = id === undefined ? root.collection('smallGroups').doc() : root.collection('smallGroups').doc(id as string);
@@ -61,6 +72,7 @@ export async function editSmallGroup(deps: Deps, caller: Caller | null, data: un
       && fields.name === was.get('name') && fields.service === before
       && powers.schedulesSmallGroup({ kind: 'small', id: at.id, service: before });
     if (!scheduling && !powers.mayEditSmallGroup(before, after)) fail('permission-denied', 'permissionDenied');
+    if (seen && !isDeepStrictEqual(seen, was.data())) fail('aborted', 'conflict');
     if (after !== null && !((services.get('services') as { id: string }[] | undefined) ?? []).some((s) => s.id === after)) {
       fail('invalid-argument', 'unknown');
     }
@@ -69,6 +81,9 @@ export async function editSmallGroup(deps: Deps, caller: Caller | null, data: un
       tx.get(root.collection('members').where('leadSmallGroups', 'array-contains', at.id)),
       saving ? null : tx.get(root.collection('members').where('smallGroups', 'array-contains', at.id)),
     ]);
+    if (leadsBefore && !isDeepStrictEqual(new Set(leadsBefore), new Set(nowLeads.docs.map((m) => m.id)))) {
+      fail('aborted', 'conflict');
+    }
     const named = leads ? ((leads.length ? await tx.getAll(...leads.map((u) => root.collection('members').doc(u))) : []) as DocumentSnapshot[]) : [];
     if (named.some((m) => !m.exists)) fail('not-found', 'notFound');
 

@@ -286,6 +286,24 @@ void main() {
     expect(all.values.skip(1).map(leadersIn), everyElement(['hao']), reason: 'never back');
   });
 
+  test('a 小組 renamed shows at once, and never goes back', () async {
+    b.writeDelay = Duration.zero;
+    final id = await b.church('grace').saveSmallGroup(const SmallGroupDetails(id: '', name: '喜樂', service: 'sunday'));
+    b.writeDelay = const Duration(milliseconds: 200);
+    final groups = Seen(data.smallGroups());
+    await pumpEventQueue();
+    final joy = groups.last.single;
+
+    final done = data.saveSmallGroup(joy.copyWith(name: '大喜樂'), before: joy);
+    await pumpEventQueue();
+    expect(groups.last.single.name, '大喜樂', reason: 'before the backend answers');
+    expect(b.smallGroups['grace']![id]!.name, '喜樂', reason: 'not written yet');
+
+    await done;
+    await pumpEventQueue();
+    expect(groups.values.skip(1).map((l) => l.single.name), everyElement('大喜樂'));
+  });
+
   test('service settings and staff orders show at once', () async {
     final services = Seen(data.services());
     final order = Seen(data.staffOrder('sunday'));

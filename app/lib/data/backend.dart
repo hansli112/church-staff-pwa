@@ -241,8 +241,16 @@ abstract interface class ChurchData {
 
   /// Opens [group] (one with no id) or changes it: admins, or its
   /// service's 負責人 and 牧者 (Member.mayEditSmallGroup). With [leads]
-  /// (uids), they and nobody else are its 小組長. Returns its id.
-  Future<String> saveSmallGroup(SmallGroupDetails group, {List<String>? leads});
+  /// (uids), they and nobody else are its 小組長. Returns its id. Given
+  /// what it was made over, [before] (the 小組 as shown) or [leadsBefore]
+  /// (its 小組長 as shown), it is refused ([CloudErrorCode.conflict]) once
+  /// that has changed: an undo overwrites no one.
+  Future<String> saveSmallGroup(
+    SmallGroupDetails group, {
+    SmallGroupDetails? before,
+    List<String>? leads,
+    List<String>? leadsBefore,
+  });
 
   /// Closes 小組 [id], taking it off its 小組長 and 同工; its 人數 stay.
   Future<void> deleteSmallGroup(String id);

@@ -30,7 +30,8 @@ class WriteScope {
   }
 }
 
-/// Every reversible write to the church's rosters, members and services.
+/// Every reversible write to the church's rosters, members, services and
+/// 小組.
 ///
 /// Each compares against what the caller showed: a newer change by someone
 /// else refuses the whole write, and an undo is the same compare-and-set in
@@ -118,6 +119,18 @@ class ChurchWrites {
       ),
     );
   }
+
+  /// Changes 小組 [before] to [after]; with [leads], they and nobody else
+  /// are its 小組長, in place of [leadsBefore].
+  ChurchWrite smallGroup(
+    SmallGroupDetails before,
+    SmallGroupDetails after, {
+    List<String>? leadsBefore,
+    List<String>? leads,
+  }) => _reversible(
+    (data) => data.saveSmallGroup(after, before: before, leads: leads, leadsBefore: leads == null ? null : leadsBefore),
+    (data) => data.saveSmallGroup(before, before: after, leads: leads == null ? null : leadsBefore, leadsBefore: leads),
+  );
 
   /// Replaces the list of services: adding one, or reordering them.
   ChurchWrite serviceList(List<Service> before, List<Service> after) => _reversible(

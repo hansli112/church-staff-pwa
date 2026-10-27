@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/foundation.dart' show listEquals, setEquals;
 
 import '../../core/languages.dart';
 import '../../domain/day.dart';
@@ -908,7 +908,12 @@ class MemoryChurchData implements ChurchData {
 
   /// As functions/src/smallGroups.ts.
   @override
-  Future<String> saveSmallGroup(SmallGroupDetails group, {List<String>? leads}) async {
+  Future<String> saveSmallGroup(
+    SmallGroupDetails group, {
+    SmallGroupDetails? before,
+    List<String>? leads,
+    List<String>? leadsBefore,
+  }) async {
     final me = _b.functionAccess(churchId)!;
     final groups = _b.smallGroups.putIfAbsent(churchId, () => {});
     final was = group.id.isEmpty ? null : groups[group.id];
@@ -923,6 +928,15 @@ class MemoryChurchData implements ChurchData {
     if (!scheduling && !me.mayEditSmallGroup(was?.service, group.service)) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
+    if (before != null && was != null && _stored(before) != was) throw const CloudException(CloudErrorCode.conflict);
+    final members = _b.members[churchId]!;
+    if (leadsBefore != null &&
+        !setEquals(leadsBefore.toSet(), {
+          for (final m in members.values)
+            if (m.leadSmallGroups.contains(group.id)) m.uid,
+        })) {
+      throw const CloudException(CloudErrorCode.conflict);
+    }
     if (_b.services[churchId]!.byId(group.service) == null) throw const CloudException(CloudErrorCode.unknown);
     // A day it meets: on its weekday.
     if (group.startsOn case final start? when group.weekday == null || start.weekday != group.weekday) {
@@ -932,17 +946,18 @@ class MemoryChurchData implements ChurchData {
     if (name.isEmpty || !withinTextLimit(name, TextLimits.profileName)) {
       throw const CloudException(CloudErrorCode.unknown);
     }
-    final members = _b.members[churchId]!;
     if (leads != null && leads.any((u) => members[u] == null)) throw const CloudException(CloudErrorCode.notFound);
     final id = group.id.isEmpty ? 'sg${++_b._smallGroupIds}' : group.id;
     await _b.write(() {
-      groups[id] = SmallGroupDetails(
-        id: id,
-        name: name,
-        service: group.service,
-        weekday: group.weekday,
-        every: group.weekday == null ? 1 : group.every,
-        startsOn: group.weekday == null ? null : group.startsOn,
+      groups[id] = _stored(
+        SmallGroupDetails(
+          id: id,
+          name: name,
+          service: group.service,
+          weekday: group.weekday,
+          every: group.every,
+          startsOn: group.startsOn,
+        ),
       );
       if (leads == null) return;
       for (final m in [...members.values]) {
@@ -951,6 +966,16 @@ class MemoryChurchData implements ChurchData {
     });
     return id;
   }
+
+  /// [g] as the backend keeps it: when it meets only with a weekday.
+  SmallGroupDetails _stored(SmallGroupDetails g) => SmallGroupDetails(
+    id: g.id,
+    name: g.name.trim(),
+    service: g.service,
+    weekday: g.weekday,
+    every: g.weekday == null ? 1 : g.every,
+    startsOn: g.weekday == null ? null : g.startsOn,
+  );
 
   @override
   Future<void> deleteSmallGroup(String id) async {

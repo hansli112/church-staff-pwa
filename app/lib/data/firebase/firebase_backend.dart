@@ -745,8 +745,19 @@ class FirestoreChurchData implements ChurchData {
   ).live().map((snap) => [for (final d in snap.docs) smallGroupFromJson(d.id, d.data())]).translated();
 
   @override
-  Future<String> saveSmallGroup(SmallGroupDetails group, {List<String>? leads}) async {
-    final d = await _call('editSmallGroup', {'op': 'save', 'group': smallGroupToJson(group), 'leads': ?leads});
+  Future<String> saveSmallGroup(
+    SmallGroupDetails group, {
+    SmallGroupDetails? before,
+    List<String>? leads,
+    List<String>? leadsBefore,
+  }) async {
+    final d = await _call('editSmallGroup', {
+      'op': 'save',
+      'group': smallGroupToJson(group),
+      if (before != null) 'before': smallGroupToJson(before),
+      'leads': ?leads,
+      'leadsBefore': ?leadsBefore,
+    });
     return d['id'] as String;
   }
 
