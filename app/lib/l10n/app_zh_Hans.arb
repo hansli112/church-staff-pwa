@@ -897,5 +897,15 @@
   "notifUnreadLabel": "通知，有未读的",
   "notifJustNow": "刚刚",
   "notifMinutesAgo": "{count} 分钟前",
-  "notifHoursAgo": "{count} 小时前"
+  "notifHoursAgo": "{count} 小时前",
+  "planWeeksAction": "一次排好几周",
+  "planWeeksTitle": "排好几周",
+  "planWeeksHint": "在这里排的不会马上通知，排好按“通知同工”，每人只收到一条。",
+  "planNotify": "通知同工",
+  "planNotified": "已通知 {count} 位同工",
+  "planNotifiedLater": "早上 7 点会通知 {count} 位同工",
+  "planShowEarlier": "显示前面的月份",
+  "planOpenDay": "打开 {day}",
+  "pickerMonthCount": "这个月已排 {count} 次",
+  "pickerSameDay": "同一天：{what}"
 }

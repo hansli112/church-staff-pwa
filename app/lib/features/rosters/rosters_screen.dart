@@ -51,6 +51,12 @@ class RostersScreen extends ConsumerWidget {
           // Grows with the text only so far, like the bar's own buttons, so
           // the title beside it keeps its room.
           if (canImport)
+            IconButton(
+              icon: const Icon(Symbols.calendar_view_month_rounded),
+              tooltip: l10n.planWeeksAction,
+              onPressed: () => context.push('/rosters/plan/${shown.id}'),
+            ),
+          if (canImport)
             MediaQuery.withClampedTextScaling(
               maxScaleFactor: 1.5,
               child: TextButton(

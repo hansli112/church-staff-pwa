@@ -306,6 +306,16 @@ abstract interface class ChurchData {
   /// them. No staff order or service change goes with it.
   Future<void> compareAndSetLedDuties(RosterChange change);
 
+  /// Whether changes made in 排好幾週 (#90, [RosterChange.via] `plan`) to
+  /// days of [serviceType] still wait for 通知同工: nobody was told of
+  /// them yet. For those who read the member list.
+  Stream<bool> plannedNews(String serviceType);
+
+  /// 通知同工 for [serviceType], by someone who arranges it: everyone put
+  /// on or taken off its days in 排好幾週 since hears it, one push each.
+  /// In quiet hours ([PlannedNotice.later]) they wait until 7:00.
+  Future<PlannedNotice> notifyPlanned(String serviceType);
+
   /// Replaces the whole list of services (adding one, reordering), only
   /// if it is still [before]; otherwise [CloudErrorCode.conflict]. Never
   /// none; IDs once used stay valid.
@@ -453,6 +463,10 @@ abstract interface class ChurchData {
 /// A calendar the admin may pick, with its own time zone (an IANA id, when
 /// Google says).
 typedef CalendarChoice = ({String id, String name, String? timeZone});
+
+/// What 通知同工 did: how many [people] it told, or, in quiet hours
+/// ([later]), will tell at 7:00.
+typedef PlannedNotice = ({int people, bool later});
 
 enum CloudErrorCode {
   /// The church is suspended or deleted (教會停用): its members can see that,

@@ -265,6 +265,12 @@ class EchoingChurchData implements ChurchData {
   );
 
   @override
+  Stream<bool> plannedNews(String serviceType) => _inner.plannedNews(serviceType);
+
+  @override
+  Future<PlannedNotice> notifyPlanned(String serviceType) => _inner.notifyPlanned(serviceType);
+
+  @override
   Future<void> compareAndSetMinistries({required List<Ministry> before, required List<Ministry> after}) => _send(
     _Echo(ministries: after),
     () => _inner.compareAndSetMinistries(before: before, after: after),

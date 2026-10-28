@@ -202,6 +202,7 @@ export const editService = callable(serviceSettings.editService);
 // Groups (#82): a 事工's 負責人 arranging its duties, and a group's
 // 負責人 adding or taking out its 同工.
 export const editLedDuties = callable(ledDuties.editLedDuties);
+export const notifyPlanned = callable(rosterChange.notifyPlanned, pushDeps);
 export const setGroupMember = callable(groupMembers.setGroupMember);
 export const editSmallGroup = callable(smallGroups.editSmallGroup);
 
@@ -404,8 +405,8 @@ export const syncEventRosters = using(
     }),
 );
 
-// Every hour: the evening reminders, roster pushes held over quiet hours,
-// and 回報人數 at 21:00 (#85).
+// Every hour: the evening reminders, roster pushes held over quiet hours
+// (and 排好幾週's left for after them), and 回報人數 at 21:00 (#85).
 export const sendReminders = onSchedule(
   { region: REGION, schedule: '0 * * * *', timeZone: 'Asia/Taipei' },
   async () => {
@@ -413,6 +414,7 @@ export const sendReminders = onSchedule(
     await runEach('hourly pushes', {
       reminders: () => notifications.sendReminders(d),
       held: () => rosterChange.sendHeldPushes(d),
+      planned: () => rosterChange.sendPlannedPushes(d),
       attendance: () => attendance.sendAttendanceReminders(d),
     });
   },

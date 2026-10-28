@@ -780,6 +780,24 @@ describe('外部通知 (webhook)', () => {
     }
     await assertFails(getDocs(collectionGroup(as(ADMIN_A), 'rosterChanges')));
   });
+
+  it('排好幾週等著通知的：讀名單的人（管理員、行政、負責人）查得到自己教會的，沒有人能寫', async () => {
+    const path = `plannedPushes/${A}_r-sunday_${MEMBER_A}`;
+    const entry = { cid: A, rosterId: 'r-sunday', uid: MEMBER_A, roles: [], serviceId: 'sunday', sendAt: null };
+    await seed(path, entry);
+    await seed(`plannedPushes/${B}_r-sunday_x`, { ...entry, cid: B, uid: 'x' });
+    const waiting = (db, cid) =>
+      getDocs(query(collection(db, 'plannedPushes'), where('cid', '==', cid), where('serviceId', '==', 'sunday'), where('sendAt', '==', null)));
+    for (const uid of [ADMIN_A, EDITOR_A, OFFICE_A]) {
+      await assertSucceeds(waiting(as(uid), A));
+      await assertFails(setDoc(doc(as(uid), path), entry));
+      await assertFails(deleteDoc(doc(as(uid), path)));
+    }
+    await assertFails(waiting(as(MEMBER_A), A));
+    await assertFails(waiting(as(ADMIN_B), A));
+    await assertFails(waiting(as(ADMIN_A), B));
+    await assertFails(getDocs(collection(as(ADMIN_A), 'plannedPushes')));
+  });
 });
 
 describe('待認領的同工 (pendingMembers) 與索引', () => {

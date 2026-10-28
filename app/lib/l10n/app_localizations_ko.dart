@@ -2977,4 +2977,44 @@ class L10nKo extends L10n {
   String notifHoursAgo(int count) {
     return '$count시간 전';
   }
+
+  @override
+  String get planWeeksAction => '몇 주 한꺼번에 배정';
+
+  @override
+  String get planWeeksTitle => '한꺼번에 배정';
+
+  @override
+  String get planWeeksHint => '여기서 바꾼 내용은 바로 알리지 않아요. 다 배정한 뒤 「멤버에게 알리기」를 누르면 한 사람에게 한 번씩 알림이 가요.';
+
+  @override
+  String get planNotify => '멤버에게 알리기';
+
+  @override
+  String planNotified(int count) {
+    return '$count명에게 알렸어요';
+  }
+
+  @override
+  String planNotifiedLater(int count) {
+    return '오전 7시에 $count명에게 알려요';
+  }
+
+  @override
+  String get planShowEarlier => '이전 달 보기';
+
+  @override
+  String planOpenDay(String day) {
+    return '$day 열기';
+  }
+
+  @override
+  String pickerMonthCount(int count) {
+    return '이번 달 이미 $count회';
+  }
+
+  @override
+  String pickerSameDay(String what) {
+    return '같은 날: $what';
+  }
 }

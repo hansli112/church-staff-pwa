@@ -897,5 +897,15 @@
   "notifUnreadLabel": "通知、未読あり",
   "notifJustNow": "たった今",
   "notifMinutesAgo": "{count}分前",
-  "notifHoursAgo": "{count}時間前"
+  "notifHoursAgo": "{count}時間前",
+  "planWeeksAction": "数週間まとめて組む",
+  "planWeeksTitle": "まとめて組む",
+  "planWeeksHint": "ここでの変更はすぐには通知されません。組み終わったら「メンバーに通知」を押すと、一人に一通ずつ届きます。",
+  "planNotify": "メンバーに通知",
+  "planNotified": "{count}人に通知しました",
+  "planNotifiedLater": "朝7時に{count}人に通知します",
+  "planShowEarlier": "前の月を表示",
+  "planOpenDay": "{day}を開く",
+  "pickerMonthCount": "今月すでに{count}回",
+  "pickerSameDay": "同じ日：{what}"
 }

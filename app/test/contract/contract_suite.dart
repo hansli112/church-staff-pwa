@@ -777,6 +777,26 @@ void contractTests(Future<ContractWorld> Function() open) {
       );
     });
 
+    test('排好幾週 (#90): its changes wait for 通知同工, sent by someone who arranges the service', () async {
+      final g = await Grace.open(w);
+      await w.signIn(Grace.editorEmail);
+      // Ahead of any clock the backend runs on: a past day tells nobody.
+      final day = Roster(type: 'sunday', day: Day(2030, 1, 6), duties: const []);
+      final played = day.copyWith(
+        duties: [
+          Duty(role: '司琴', people: const ['李美玉'], uids: {'李美玉': g.mei}),
+        ],
+      );
+      await g.church.compareAndSetRosters(RosterChange(before: {day.id: null}, after: {day.id: played}, via: 'plan'));
+      const wait = Duration(seconds: 30);
+      expect(await g.church.plannedNews('sunday').firstWhere((v) => v).timeout(wait), isTrue);
+      await w.signIn(Grace.meiEmail);
+      await expectLater(g.church.notifyPlanned('sunday'), denied());
+      await w.signIn(Grace.editorEmail);
+      expect((await g.church.notifyPlanned('sunday')).people, 1);
+      expect(await g.church.plannedNews('sunday').firstWhere((v) => !v).timeout(wait), isFalse);
+    });
+
     test("a group's 負責人 adds and takes out plain 同工 of it; the rest is the admin's", () async {
       final g = await withWorship();
       await w.signIn(Grace.meiEmail);

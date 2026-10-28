@@ -101,6 +101,11 @@ class MemoryBackend implements Backend {
   final attendance = <String, Map<String, AttendanceRecord>>{};
   var _smallGroupIds = 0;
   final rosters = <String, Map<String, Roster>>{};
+
+  /// 排好幾週 (#90): per church and service, who was put on or taken off a
+  /// day there and not told yet. Unlike the backend, on and off again
+  /// still counts.
+  final planned = <String, Map<String, Set<String>>>{};
   final staffOrders = <String, Map<String, StaffOrder>>{};
   final invites = <String, Invite>{};
   final users = <String, UserProfile>{};
@@ -1156,6 +1161,7 @@ class MemoryChurchData implements ChurchData {
           saved[entry.key] = entry.value!.copyWith(saved: true);
         }
       }
+      _plan(change);
       if (staffOrder case final order?) _b.staffOrders[churchId]![order.serviceType] = order.after;
       if (serviceChange case final service?) {
         final settings = _b.services[churchId]!;
@@ -1193,10 +1199,52 @@ class MemoryChurchData implements ChurchData {
           throw const CloudException(CloudErrorCode.unknown);
         }
       }
+      _plan(change);
       for (final entry in change.after.entries) {
         saved[entry.key] = entry.value!.copyWith(saved: true);
       }
     });
+  }
+
+  /// Keeps whom a change made in 排好幾週 puts on or takes off, but the
+  /// editor, for 通知同工.
+  void _plan(RosterChange change) {
+    if (change.via != 'plan') return;
+    for (final MapEntry(key: id, value: now) in change.after.entries) {
+      final was = change.before[id];
+      final day = now ?? was;
+      if (day == null || day.isEvent) continue;
+      final uids = {
+        for (final r in [?was, ?now])
+          for (final d in r.duties) ...d.uids.values,
+      };
+      for (final uid in uids) {
+        if (uid == _uid) continue;
+        if (!listEquals(was?.dutiesOf(uid: uid) ?? const [], now?.dutiesOf(uid: uid) ?? const [])) {
+          ((_b.planned[churchId] ??= {})[day.type] ??= {}).add(uid);
+        }
+      }
+    }
+  }
+
+  @override
+  Stream<bool> plannedNews(String serviceType) => _b.watch(() {
+    _requireRosterEditors();
+    return _b.planned[churchId]?[serviceType]?.isNotEmpty ?? false;
+  });
+
+  @override
+  Future<PlannedNotice> notifyPlanned(String serviceType) async {
+    var people = 0;
+    await _b.write(() {
+      final me = _b.requireMember(churchId);
+      final ministries = (_b.ministries[churchId] ?? const MinistrySettings()).ministries;
+      if (!_b.services[churchId]!.ids.contains(serviceType) || !me.arranges(ministries, serviceType).any) {
+        throw const CloudException(CloudErrorCode.permissionDenied);
+      }
+      people = _b.planned[churchId]?.remove(serviceType)?.length ?? 0;
+    });
+    return (people: people, later: false);
   }
 
   @override

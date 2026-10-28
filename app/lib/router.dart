@@ -35,6 +35,7 @@ import 'features/me/time_zone_screen.dart';
 import 'features/me/turn_on_notifications.dart';
 import 'features/me/webhook_screen.dart';
 import 'features/rosters/event_roster_screen.dart';
+import 'features/rosters/plan_weeks_screen.dart';
 import 'features/rosters/roster_day_screen.dart';
 import 'features/rosters/rosters_screen.dart';
 import 'data/backend.dart' show WarmUp;
@@ -165,7 +166,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                       child: DeferredPage.rosterImport(serviceType: s.pathParameters['type']!),
                     ),
                   ),
-                  // Before :type/:day, which would take it for a service.
+                  // These two before :type/:day, which would take them for a service.
+                  page('plan/:type', (s) => PlanWeeksScreen(serviceType: s.pathParameters['type']!)),
                   page(
                     'event/:id',
                     (s) => EventRosterScreen(eventId: s.pathParameters['id']!, event: s.extra as CalendarEvent?),

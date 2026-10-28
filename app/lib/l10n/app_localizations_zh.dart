@@ -2972,6 +2972,46 @@ class L10nZh extends L10n {
   String notifHoursAgo(int count) {
     return '$count 小時前';
   }
+
+  @override
+  String get planWeeksAction => '一次排好幾週';
+
+  @override
+  String get planWeeksTitle => '排好幾週';
+
+  @override
+  String get planWeeksHint => '在這裡排的不會馬上通知，排好按「通知同工」，每人只收到一則。';
+
+  @override
+  String get planNotify => '通知同工';
+
+  @override
+  String planNotified(int count) {
+    return '已通知 $count 位同工';
+  }
+
+  @override
+  String planNotifiedLater(int count) {
+    return '早上 7 點會通知 $count 位同工';
+  }
+
+  @override
+  String get planShowEarlier => '顯示前面的月份';
+
+  @override
+  String planOpenDay(String day) {
+    return '打開 $day';
+  }
+
+  @override
+  String pickerMonthCount(int count) {
+    return '這個月已排 $count 次';
+  }
+
+  @override
+  String pickerSameDay(String what) {
+    return '同一天：$what';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -5941,5 +5981,45 @@ class L10nZhHans extends L10nZh {
   @override
   String notifHoursAgo(int count) {
     return '$count 小时前';
+  }
+
+  @override
+  String get planWeeksAction => '一次排好几周';
+
+  @override
+  String get planWeeksTitle => '排好几周';
+
+  @override
+  String get planWeeksHint => '在这里排的不会马上通知，排好按“通知同工”，每人只收到一条。';
+
+  @override
+  String get planNotify => '通知同工';
+
+  @override
+  String planNotified(int count) {
+    return '已通知 $count 位同工';
+  }
+
+  @override
+  String planNotifiedLater(int count) {
+    return '早上 7 点会通知 $count 位同工';
+  }
+
+  @override
+  String get planShowEarlier => '显示前面的月份';
+
+  @override
+  String planOpenDay(String day) {
+    return '打开 $day';
+  }
+
+  @override
+  String pickerMonthCount(int count) {
+    return '这个月已排 $count 次';
+  }
+
+  @override
+  String pickerSameDay(String what) {
+    return '同一天：$what';
   }
 }

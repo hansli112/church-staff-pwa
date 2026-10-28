@@ -5343,6 +5343,66 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'{count} 小時前'**
   String notifHoursAgo(int count);
+
+  /// No description provided for @planWeeksAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'一次排好幾週'**
+  String get planWeeksAction;
+
+  /// No description provided for @planWeeksTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'排好幾週'**
+  String get planWeeksTitle;
+
+  /// No description provided for @planWeeksHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'在這裡排的不會馬上通知，排好按「通知同工」，每人只收到一則。'**
+  String get planWeeksHint;
+
+  /// No description provided for @planNotify.
+  ///
+  /// In zh, this message translates to:
+  /// **'通知同工'**
+  String get planNotify;
+
+  /// No description provided for @planNotified.
+  ///
+  /// In zh, this message translates to:
+  /// **'已通知 {count} 位同工'**
+  String planNotified(int count);
+
+  /// No description provided for @planNotifiedLater.
+  ///
+  /// In zh, this message translates to:
+  /// **'早上 7 點會通知 {count} 位同工'**
+  String planNotifiedLater(int count);
+
+  /// No description provided for @planShowEarlier.
+  ///
+  /// In zh, this message translates to:
+  /// **'顯示前面的月份'**
+  String get planShowEarlier;
+
+  /// No description provided for @planOpenDay.
+  ///
+  /// In zh, this message translates to:
+  /// **'打開 {day}'**
+  String planOpenDay(String day);
+
+  /// No description provided for @pickerMonthCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'這個月已排 {count} 次'**
+  String pickerMonthCount(int count);
+
+  /// No description provided for @pickerSameDay.
+  ///
+  /// In zh, this message translates to:
+  /// **'同一天：{what}'**
+  String pickerSameDay(String what);
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

@@ -72,6 +72,7 @@ class PeoplePicker extends StatefulWidget {
     this.guestSuggestions = const [],
     this.onChanged,
     this.onInvite,
+    this.notes = const {},
   });
 
   /// The service, or null for an event's roster: then whoever serves the
@@ -103,6 +104,10 @@ class PeoplePicker extends StatefulWidget {
   /// duty, a 「邀請同工」 button closes the picker, keeping what was picked,
   /// and this goes on to the invites.
   final VoidCallback? onInvite;
+
+  /// A line under a member's name, by name: what they already serve
+  /// around the day (#90).
+  final Map<String, String> notes;
 
   @override
   State<PeoplePicker> createState() => PeoplePickerState();
@@ -369,7 +374,7 @@ class PeoplePickerState extends State<PeoplePicker> {
     if (serving.isNotEmpty) {
       rows.add(() => SectionHeader(l10n.pickerServes(widget.duty)));
       for (final n in serving) {
-        rows.add(() => _row(n, c, onTap: () => _choose(n)));
+        rows.add(() => _row(n, c, note: widget.notes[n], onTap: () => _choose(n)));
       }
     } else if (!searching) {
       // One sentence and, for those who can, one button.
@@ -398,7 +403,7 @@ class PeoplePickerState extends State<PeoplePicker> {
     if (others.isNotEmpty) {
       rows.add(() => SectionHeader(l10n.pickerOthers));
       for (final m in others) {
-        rows.add(() => _row(m.name, c, onTap: () => _pickOther(m)));
+        rows.add(() => _row(m.name, c, note: widget.notes[m.name], onTap: () => _pickOther(m)));
       }
     }
     if (guests.isNotEmpty) {
@@ -446,13 +451,13 @@ class PeoplePickerState extends State<PeoplePicker> {
     );
   }
 
-  Widget _row(String name, AppColors c, {required VoidCallback onTap}) {
+  Widget _row(String name, AppColors c, {String? note, required VoidCallback onTap}) {
     final on = _selected.contains(name);
     return Semantics(
       selected: on,
       child: Material(
         color: c.surfaceRaised,
-        child: ListRow(title: name, selected: on, chevron: false, onTap: onTap),
+        child: ListRow(title: name, subtitle: note, selected: on, chevron: false, onTap: onTap),
       ),
     );
   }

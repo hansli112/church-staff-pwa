@@ -3142,4 +3142,63 @@ class L10nEn extends L10n {
     );
     return '$_temp0';
   }
+
+  @override
+  String get planWeeksAction => 'Plan several weeks';
+
+  @override
+  String get planWeeksTitle => 'Plan Weeks';
+
+  @override
+  String get planWeeksHint =>
+      'Changes here aren’t sent right away. When you’re done, tap Notify Team and each person gets one notification.';
+
+  @override
+  String get planNotify => 'Notify Team';
+
+  @override
+  String planNotified(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Notified $count people',
+      one: 'Notified 1 person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String planNotifiedLater(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people will be notified at 7 AM',
+      one: '1 person will be notified at 7 AM',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get planShowEarlier => 'Show earlier months';
+
+  @override
+  String planOpenDay(String day) {
+    return 'Open $day';
+  }
+
+  @override
+  String pickerMonthCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Already on $count days this month',
+      one: 'Already on 1 day this month',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pickerSameDay(String what) {
+    return 'Same day: $what';
+  }
 }

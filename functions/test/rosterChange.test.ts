@@ -5,7 +5,7 @@ import { beforeEach, describe, test } from 'node:test';
 import { Timestamp } from 'firebase-admin/firestore';
 
 import { purgeDeletedChurches } from '../src/church.js';
-import { diffDuties, onRosterWritten, quietUntil, sendHeldPushes } from '../src/rosterChange.js';
+import { diffDuties, notifyPlanned, onRosterWritten, quietUntil, sendHeldPushes, sendPlannedPushes } from '../src/rosterChange.js';
 import { sendQueued, webhookSave, type WebhookDeps } from '../src/webhook.js';
 import { caller, clearFirestore, db, deps, fakeFetch, fakePush, purgeDeps, seedChurch, setNow, type SentPush } from './support.js';
 
@@ -264,6 +264,97 @@ describe('quiet hours', () => {
     await sendHeldPushes(triggerDeps());
     assert.equal(pushed.length, 0);
     assert.deepEqual(await held(), []);
+  });
+});
+
+describe('排好幾週 (#90)', () => {
+  const plan = (day: string, duties: ReturnType<typeof duty>[], editedBy = 'pastor') =>
+    write('C1', day, duties, { via: 'plan', editedBy });
+  const notify = (uid = 'pastor', serviceId = 'sunday') =>
+    notifyPlanned(triggerDeps(), caller(uid), { churchId: 'C1', serviceId });
+  const planned = async () => (await db.collection('plannedPushes').get()).docs.map((x) => x.data());
+
+  test('a change made there tells nobody yet; the webhook still hears of it', async () => {
+    await church();
+    const r = await plan('2026-10-11', [duty('司琴', ['美玉'])]);
+    assert.deepEqual(r, { push: 0, webhook: true });
+    assert.equal(pushed.length, 0);
+    assert.equal((await queued()).length, 1);
+    assert.deepEqual(await listed('mei'), []);
+  });
+
+  test('通知同工: one push each, for all their days, only what changed in the end', async () => {
+    await church();
+    await plan('2026-10-11', [duty('司琴', ['美玉']), duty('招待', ['志豪'])]);
+    await plan('2026-10-18', [duty('司琴', ['美玉']), duty('招待', ['美玉'])]);
+    await plan('2026-10-25', [duty('司琴', ['志豪']), duty('招待', [])]);
+    // On and off again: no news.
+    await plan('2026-10-25', [duty('司琴', []), duty('招待', [])]);
+    assert.deepEqual(await notify(), { people: 2, later: false });
+    assert.deepEqual(pushed.map((p) => [p.tokens[0], p.title, p.body, p.link]).sort(), [
+      ['tok-hao', '恩典堂', '主日崇拜的服事排好了\n排進 10/11 招待', '/c/C1?to=%2Frosters%2Fsunday%2F2026-10-11'],
+      ['tok-mei', '恩典堂', '主日崇拜的服事排好了\n排進 10/11 司琴\n排進 10/18 司琴、招待', '/c/C1?to=%2Frosters%2Fsunday%2F2026-10-11'],
+    ]);
+    assert.deepEqual(await planned(), []);
+    assert.deepEqual(await notify(), { people: 0, later: false }, 'nothing left to tell');
+  });
+
+  test('taken off a day arranged before: told so; their own edits are not news', async () => {
+    await church();
+    await write('C1', '2026-10-11', [duty('司琴', ['美玉'])]);
+    pushed.length = 0;
+    await plan('2026-10-11', [duty('司琴', ['志豪'])]);
+    await plan('2026-10-18', [duty('司琴', ['志豪'])], 'hao');
+    await db.doc('users/hao').update({ appLocale: 'en' });
+    await notify();
+    assert.deepEqual(pushed.map((p) => p.body).sort(), [
+      '主日崇拜: your serving is arranged\nOn Oct 11: 司琴',
+      '主日崇拜的服事排好了\n移出 10/11 司琴',
+    ]);
+  });
+
+  test('a change told the usual way meanwhile is not told again', async () => {
+    await church();
+    await plan('2026-10-11', [duty('司琴', ['美玉']), duty('招待', [])]);
+    await write('C1', '2026-10-11', [duty('司琴', ['美玉']), duty('招待', ['美玉'])]);
+    assert.deepEqual(pushed.map((p) => p.body), ['你被排進 10/11 主日崇拜：招待']);
+    await notify();
+    assert.deepEqual(pushed.slice(1).map((p) => p.body), ['主日崇拜的服事排好了\n排進 10/11 司琴']);
+  });
+
+  test('pressed in quiet hours: told at 7:00', async () => {
+    await church();
+    await plan('2026-10-11', [duty('司琴', ['美玉'])]);
+    setNow(new Date('2026-10-03T23:00:00+08:00'));
+    assert.deepEqual(await notify(), { people: 1, later: true });
+    await sendPlannedPushes(triggerDeps());
+    assert.equal(pushed.length, 0);
+    setNow(new Date('2026-10-04T07:00:00+08:00'));
+    assert.equal(await sendPlannedPushes(triggerDeps()), 1);
+    assert.deepEqual(pushed.map((p) => p.body), ['主日崇拜的服事排好了\n排進 10/11 司琴']);
+    assert.deepEqual(await planned(), []);
+  });
+
+  test('a day that has passed tells nothing', async () => {
+    await church();
+    await plan('2026-10-04', [duty('司琴', ['美玉'])]);
+    setNow(new Date('2026-10-05T09:00:00+08:00'));
+    assert.deepEqual(await notify(), { people: 0, later: false });
+    assert.equal(pushed.length, 0);
+    assert.deepEqual(await planned(), []);
+  });
+
+  test('only someone who arranges the service may press it, and only for that service', async () => {
+    await church();
+    await db.doc('churches/C1/settings/services').set({
+      services: [{ id: 'sunday', name: '主日崇拜' }, { id: 'youth', name: '青年崇拜' }],
+      ids: ['sunday', 'youth'],
+    });
+    await plan('2026-10-11', [duty('司琴', ['美玉'])]);
+    await assert.rejects(notify('hao'), /permission/i);
+    await db.doc('churches/C1/members/hao').update({ leadTypes: ['youth'] });
+    assert.deepEqual(await notify('hao', 'youth'), { people: 0, later: false });
+    assert.equal((await planned()).length, 1, 'the 主日 one is still waiting');
   });
 });
 

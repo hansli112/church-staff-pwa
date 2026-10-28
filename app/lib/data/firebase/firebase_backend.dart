@@ -927,6 +927,23 @@ class FirestoreChurchData implements ChurchData {
   }
 
   @override
+  Stream<bool> plannedNews(String serviceType) => _db
+      .collection('plannedPushes')
+      .where('cid', isEqualTo: churchId)
+      .where('serviceId', isEqualTo: serviceType)
+      .where('sendAt', isNull: true)
+      .limit(1)
+      .live()
+      .map((snap) => snap.docs.isNotEmpty)
+      .translated();
+
+  @override
+  Future<PlannedNotice> notifyPlanned(String serviceType) async {
+    final d = await _call('notifyPlanned', {'serviceId': serviceType});
+    return (people: (d['people'] as num?)?.toInt() ?? 0, later: d['later'] == true);
+  }
+
+  @override
   Future<void> compareAndSetServiceList({required List<Service> before, required List<Service> after}) {
     final ref = _col('settings').doc('services');
     // Merge ids inside the transaction: the rules reject shrinking ids.

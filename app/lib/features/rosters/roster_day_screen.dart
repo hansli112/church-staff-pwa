@@ -243,87 +243,7 @@ class _DutyRow extends ConsumerWidget {
   /// False for a duty someone else arranges: it only shows.
   final bool editable;
 
-  Future<void> _pick(BuildContext context, WidgetRef ref) async {
-    final members = ref.read(membersProvider).requireValue;
-    final order = ref.read(rosterActionsProvider).orderOf(roster);
-    final me = ref.read(meProvider).value;
-    final router = GoRouter.of(context);
-    PickerResult? latest;
-    var invite = false;
-    final returned = await showAppSheet<PickerResult>(
-      context,
-      expand: true,
-      builder: (_) => PeoplePicker(
-        serviceType: roster.isEvent ? null : roster.type,
-        duty: duty.role,
-        initial: duty.people,
-        initialGuests: {
-          for (final name in duty.people)
-            if (!duty.uids.containsKey(name)) name,
-        },
-        guestSuggestions: ref
-            .read(rosterActionsProvider)
-            .guestSuggestions(roster.isEvent ? null : roster.type, duty.role),
-        members: members,
-        order: order,
-        // An event is in no 牧區 to add the duty to, and has no staff
-        // order of its own to drag.
-        canEditDutyList: !roster.isEvent && (me?.editsServiceSettings ?? false),
-        // The staff order is the whole service's: not a 事工 leader's.
-        canReorder: !roster.isEvent && ref.read(arrangesProvider(roster.type)).all,
-        canRemove: true,
-        onePerson: ref.read(rosterActionsProvider).takesOnePerson(roster, duty.role),
-        onChanged: (r) => latest = r,
-        onInvite: (me?.isAdmin ?? false) ? () => invite = true : null,
-      ),
-    );
-    final result = returned ?? latest;
-    if (result != null && context.mounted) await _save(context, ref, result);
-    if (invite) unawaited(router.push('/me/invites'));
-  }
-
-  Future<void> _save(BuildContext context, WidgetRef ref, PickerResult result) async {
-    final l10n = L10n.of(context);
-    final actions = ref.read(rosterActionsProvider);
-    if (result.removeDuty) {
-      await runWithUndo(context, l10n.dutyRemoved(duty.role), () => actions.removeDuty(roster, duty.role));
-      return;
-    }
-    // Not waited for: changes go to the backend in turn, and the pick
-    // shows at once. One that fails says so.
-    if (result.addDutyTo.isNotEmpty || result.takeDutyFrom.isNotEmpty) {
-      unawaited(
-        Future.wait([
-          for (final m in result.addDutyTo) actions.grantDuty(m, roster.type, duty.role),
-          for (final m in result.takeDutyFrom) actions.revokeDuty(m, roster.type, duty.role),
-        ]).then(
-          (_) {},
-          onError: (Object error) {
-            if (context.mounted) showToast(context, errorText(l10n, error));
-          },
-        ),
-      );
-    }
-    final changed =
-        result.people.length != duty.people.length ||
-        !result.people.toSet().containsAll(duty.people) ||
-        result.guestNames.any((name) => duty.uids.containsKey(name));
-    if (!context.mounted || (!changed && result.ranking == null)) return;
-    await runWithUndo(
-      context,
-      changed ? l10n.dutyUpdated(duty.role) : l10n.orderSaved,
-      () => actions.setPeople(roster, duty.role, result.people, guestNames: result.guestNames, ranking: result.ranking),
-    );
-    // Taken off the list alone: say so, with a way back. With the day
-    // changed too, the day's 復原 comes first.
-    if (result.takeDutyFrom.isEmpty || changed || !context.mounted) return;
-    final taken = result.takeDutyFrom;
-    showToast(
-      context,
-      l10n.dutyListRemoved(duty.role, {for (final m in taken) m.name}.join(l10n.listSeparator)),
-      onUndo: () => Future.wait([for (final m in taken) actions.grantDuty(m, roster.type, duty.role)]),
-    );
-  }
+  Future<void> _pick(BuildContext context, WidgetRef ref) => pickPeople(context, ref, roster, duty);
 
   Future<void> _personMenu(
     BuildContext context,
@@ -469,6 +389,115 @@ class _DutyRow extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Opens the picker for [duty] on [roster] and saves what was picked: the
+/// day page's, and 排好幾週's (#90), whose changes go [via] `plan`.
+Future<void> pickPeople(BuildContext context, WidgetRef ref, Roster roster, Duty duty, {String via = 'app'}) async {
+  final members = ref.read(membersProvider).requireValue;
+  final order = ref.read(rosterActionsProvider).orderOf(roster);
+  final me = ref.read(meProvider).value;
+  final router = GoRouter.of(context);
+  final l10n = L10n.of(context);
+  final around = ref.read(rosterActionsProvider).servingAroundOf(roster);
+  final notes = <String, String>{
+    for (final m in members)
+      if (around[m.uid] case final a? when !a.isEmpty)
+        m.name: [
+          if (a.inMonth > 0) l10n.pickerMonthCount(a.inMonth),
+          for (final o in a.sameDay) l10n.pickerSameDay('${o.name} ${o.duties.join(l10n.listSeparator)}'),
+        ].join(' · '),
+  };
+  PickerResult? latest;
+  var invite = false;
+  final returned = await showAppSheet<PickerResult>(
+    context,
+    expand: true,
+    builder: (_) => PeoplePicker(
+      serviceType: roster.isEvent ? null : roster.type,
+      duty: duty.role,
+      initial: duty.people,
+      initialGuests: {
+        for (final name in duty.people)
+          if (!duty.uids.containsKey(name)) name,
+      },
+      guestSuggestions: ref
+          .read(rosterActionsProvider)
+          .guestSuggestions(roster.isEvent ? null : roster.type, duty.role),
+      members: members,
+      order: order,
+      // An event is in no 牧區 to add the duty to, and has no staff
+      // order of its own to drag.
+      canEditDutyList: !roster.isEvent && (me?.editsServiceSettings ?? false),
+      // The staff order is the whole service's: not a 事工 leader's.
+      canReorder: !roster.isEvent && ref.read(arrangesProvider(roster.type)).all,
+      canRemove: true,
+      onePerson: ref.read(rosterActionsProvider).takesOnePerson(roster, duty.role),
+      onChanged: (r) => latest = r,
+      onInvite: (me?.isAdmin ?? false) ? () => invite = true : null,
+      notes: notes,
+    ),
+  );
+  final result = returned ?? latest;
+  if (result != null && context.mounted) await _savePicked(context, ref, roster, duty, result, via);
+  if (invite) unawaited(router.push('/me/invites'));
+}
+
+Future<void> _savePicked(
+  BuildContext context,
+  WidgetRef ref,
+  Roster roster,
+  Duty duty,
+  PickerResult result,
+  String via,
+) async {
+  final l10n = L10n.of(context);
+  final actions = ref.read(rosterActionsProvider);
+  if (result.removeDuty) {
+    await runWithUndo(context, l10n.dutyRemoved(duty.role), () => actions.removeDuty(roster, duty.role, via: via));
+    return;
+  }
+  // Not waited for: changes go to the backend in turn, and the pick
+  // shows at once. One that fails says so.
+  if (result.addDutyTo.isNotEmpty || result.takeDutyFrom.isNotEmpty) {
+    unawaited(
+      Future.wait([
+        for (final m in result.addDutyTo) actions.grantDuty(m, roster.type, duty.role),
+        for (final m in result.takeDutyFrom) actions.revokeDuty(m, roster.type, duty.role),
+      ]).then(
+        (_) {},
+        onError: (Object error) {
+          if (context.mounted) showToast(context, errorText(l10n, error));
+        },
+      ),
+    );
+  }
+  final changed =
+      result.people.length != duty.people.length ||
+      !result.people.toSet().containsAll(duty.people) ||
+      result.guestNames.any((name) => duty.uids.containsKey(name));
+  if (!context.mounted || (!changed && result.ranking == null)) return;
+  await runWithUndo(
+    context,
+    changed ? l10n.dutyUpdated(duty.role) : l10n.orderSaved,
+    () => actions.setPeople(
+      roster,
+      duty.role,
+      result.people,
+      guestNames: result.guestNames,
+      ranking: result.ranking,
+      via: via,
+    ),
+  );
+  // Taken off the list alone: say so, with a way back. With the day
+  // changed too, the day's 復原 comes first.
+  if (result.takeDutyFrom.isEmpty || changed || !context.mounted) return;
+  final taken = result.takeDutyFrom;
+  showToast(
+    context,
+    l10n.dutyListRemoved(duty.role, {for (final m in taken) m.name}.join(l10n.listSeparator)),
+    onUndo: () => Future.wait([for (final m in taken) actions.grantDuty(m, roster.type, duty.role)]),
+  );
 }
 
 /// A name inside a duty row: its own tap target for swap and remove, as

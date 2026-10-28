@@ -16,6 +16,7 @@ const _pages = [
   '/turn-on-notifications',
   '/rosters',
   '/rosters/sunday/2026-10-04',
+  '/rosters/plan/sunday',
   '/calendar',
   '/me',
   '/me/profile',

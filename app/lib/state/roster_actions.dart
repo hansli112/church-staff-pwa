@@ -7,6 +7,7 @@ import '../domain/models.dart';
 import '../domain/roster_edit.dart';
 import '../domain/roster_import.dart';
 import '../domain/schedule.dart';
+import '../domain/serving_around.dart';
 import '../domain/staff_order.dart';
 import 'church_writes.dart';
 import 'providers.dart';
@@ -79,13 +80,14 @@ class RosterActions {
   Roster? _persisted(Roster r) => r.saved ? r : null;
 
   /// Writes [next] over [before], which differ only in [role]; undo
-  /// restores that duty while preserving unrelated edits.
-  ChurchWrite _dutyWrite(Roster before, Roster next, String role) {
+  /// restores that duty while preserving unrelated edits. [via] as
+  /// [RosterChange.via].
+  ChurchWrite _dutyWrite(Roster before, Roster next, String role, {String via = 'app'}) {
     final index = before.duties.indexWhere((d) => d.role == role);
     final previous = index < 0 ? null : before.duties[index];
     final written = next.duties.where((d) => d.role == role).firstOrNull;
     return _writes.rosters(
-      RosterChange(before: {before.id: _persisted(before)}, after: {next.id: next}),
+      RosterChange(before: {before.id: _persisted(before)}, after: {next.id: next}, via: via),
       undo: () {
         final now = _now(before);
         if (now.duties.where((d) => d.role == role).firstOrNull != written) {
@@ -93,22 +95,25 @@ class RosterActions {
         }
         // An untouched draft goes back to following its template.
         final restore = _untouchedDraft(before, next) ? null : _withDutyRestored(now, role, previous, index);
-        return RosterChange(before: {now.id: _persisted(now)}, after: {now.id: restore});
+        return RosterChange(before: {now.id: _persisted(now)}, after: {now.id: restore}, via: via);
       },
     );
   }
 
+  /// Puts [people] on [role] of [roster]. Made in 排好幾週 ([via] `plan`,
+  /// #90), nobody is told until 通知同工.
   ChurchWrite setPeople(
     Roster roster,
     String role,
     List<String> people, {
     Set<String> guestNames = const {},
     List<String>? ranking,
+    String via = 'app',
   }) {
     final order = orderOf(roster);
     final afterOrder = ranking == null ? order : order.withRanking(role, ranking);
     final next = withPeople(roster, role, people, nameIds: _nameIds, order: afterOrder, guestNames: guestNames);
-    if (ranking == null || order == afterOrder) return _dutyWrite(roster, next, role);
+    if (ranking == null || order == afterOrder) return _dutyWrite(roster, next, role, via: via);
     if (roster.isEvent) throw StateError('Event rosters have no staff order');
     final before = <String, Roster?>{roster.id: _persisted(roster)};
     final after = <String, Roster?>{roster.id: next};
@@ -123,10 +128,20 @@ class RosterActions {
       RosterChange(
         before: before,
         after: after,
+        via: via,
         staffOrder: (serviceType: roster.type, before: order, after: afterOrder),
       ),
     );
   }
+
+  /// Per uid, what they already serve around [r]'s day (#90): the other
+  /// days of its month, the church's last weeks too once read, and
+  /// elsewhere on the day.
+  Map<String, ServingAround> servingAroundOf(Roster r) => servingAround(
+    r,
+    [...?_ref.read(recentRostersProvider).value, ..._saved],
+    nameOf: (o) => o.forEvent?.title ?? _services.byId(o.type)?.name ?? o.type,
+  );
 
   /// Reuses only already arranged, unbound names in this service and duty.
   /// Explicit staff order is respected; no order is learned from rosters.
@@ -193,7 +208,8 @@ class RosterActions {
     );
   }
 
-  ChurchWrite removeDuty(Roster roster, String role) => _dutyWrite(roster, withoutDuty(roster, role), role);
+  ChurchWrite removeDuty(Roster roster, String role, {String via = 'app'}) =>
+      _dutyWrite(roster, withoutDuty(roster, role), role, via: via);
 
   ChurchWrite addDuty(Roster roster, String role) => setPeople(roster, role, const []);
 
@@ -279,6 +295,10 @@ class RosterActions {
       },
     );
   }
+
+  /// 通知同工 in 排好幾週 (#90): tells everyone whose days of [type]
+  /// changed there since, one push each.
+  Future<PlannedNotice> notifyPlanned(String type) => _data.notifyPlanned(type);
 
   /// Gives [member] the duty, so the picker lists them first next time.
   Future<void> grantDuty(Member member, String type, String role) => _data.grantDuty(member.uid, type, role);

@@ -1,8 +1,8 @@
 import type { DocumentSnapshot } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions/v2';
 
-import { isChurchOpen } from './access.js';
-import { runEach, type Deps } from './common.js';
+import { churchAccess, isChurchOpen } from './access.js';
+import { fail, record, runEach, type Caller, type Deps } from './common.js';
 import { isQuiet, movedBy } from './eventRosters.js';
 import type { Words } from './languages.js';
 import { notifyMembers, type PushDeps } from './push.js';
@@ -23,6 +23,11 @@ import { loggable } from './redact.js';
  * changed for that person since the first held change: put on and taken off
  * again overnight is no news, nor are their own edits or an import. The
  * webhook is not held; it is the church's.
+ *
+ * 排好幾週 (#90): a change made there (`via: 'plan'`) is not told at once
+ * either. It waits at `plannedPushes/{cid}_{rosterId}_{uid}` until someone
+ * presses 通知同工 for the service ([notifyPlanned]), and then each person
+ * hears in one push what changed for them on all its days.
  */
 
 export interface DutyDiff {
@@ -226,9 +231,10 @@ async function absorb(h: DocumentSnapshot, c: RosterChange, uid: string) {
   await h.ref.update({ roles: [...roles.filter((r) => !off.includes(r)), ...on.filter((r) => !roles.includes(r))] });
 }
 
-/** An import (or its undo) announces nothing: held pushes take it as given. */
+/** An import (or its undo) announces nothing: held and planned pushes take it as given. */
 async function absorbImport(deps: PushDeps, c: RosterChange) {
   for (const [uid, h] of await heldFor(deps, c)) await absorb(h, c, uid);
+  for (const [uid, p] of await plannedFor(deps, c)) await absorb(p, c, uid);
   return 0;
 }
 
@@ -250,6 +256,10 @@ export async function pushRosterChange(deps: PushDeps & Pick<Deps, 'now'>, c: Ro
   for (const [uid, roles] of c.added) of(uid).added = roles;
   for (const [uid, roles] of c.removed) of(uid).removed = roles;
 
+  // Told now, or the editor's own: what 通知同工 tells later leaves it out.
+  for (const [uid, p] of await plannedFor(deps, c)) {
+    if (news.has(uid) || uid === c.editor?.uid) await absorb(p, c, uid);
+  }
   const held = await heldFor(deps, c);
   if (c.editor) {
     news.delete(c.editor.uid);
@@ -346,6 +356,149 @@ export async function sendHeldPushes(deps: PushDeps & Pick<Deps, 'now'>) {
   return sent;
 }
 
+/** The pushes waiting for 通知同工 on [c]'s roster, by uid. */
+async function plannedFor(deps: PushDeps, c: RosterChange) {
+  const q = await deps.db
+    .collection('plannedPushes')
+    .where('cid', '==', c.church.id)
+    .where('rosterId', '==', c.rosterId)
+    .get();
+  return new Map(q.docs.map((d) => [d.get('uid') as string, d]));
+}
+
+/**
+ * A change made in 排好幾週: told to nobody yet. Each person put on or
+ * taken off, but the editor, keeps what they had on the day before the
+ * first such change, for 通知同工. A push held over quiet hours tells only
+ * of what came before it.
+ */
+async function planRosterChange(deps: PushDeps, c: RosterChange) {
+  const uids = new Set([...c.added.keys(), ...c.removed.keys()]);
+  for (const [uid, h] of await heldFor(deps, c)) if (uids.has(uid)) await absorb(h, c, uid);
+  const planned = await plannedFor(deps, c);
+  if (c.editor) {
+    uids.delete(c.editor.uid);
+    const own = planned.get(c.editor.uid);
+    if (own) await absorb(own, c, c.editor.uid);
+  }
+  for (const uid of uids) {
+    if (planned.has(uid)) continue;
+    try {
+      await deps.db.doc(`plannedPushes/${c.church.id}_${c.rosterId}_${uid}`).create({
+        cid: c.church.id,
+        rosterId: c.rosterId,
+        uid,
+        roles: c.previously.get(uid) ?? [],
+        dateKey: c.dateKey,
+        serviceId: c.serviceId,
+        serviceName: c.serviceName,
+        // Set by 通知同工 in quiet hours: when it goes out.
+        sendAt: null,
+      });
+    } catch (e) {
+      if ((e as { code?: number }).code !== ALREADY_EXISTS) throw e;
+    }
+  }
+  return 0;
+}
+
+/**
+ * Tells everyone in [entries] (plannedPushes of [church]) what changed for
+ * them since, one push each for all their days: those still ahead, as the
+ * days are now. Deletes the entries. Returns how many people it told.
+ */
+async function sendPlanned(deps: PushDeps & Pick<Deps, 'now'>, church: DocumentSnapshot, entries: DocumentSnapshot[]) {
+  const cid = church.id;
+  const today = dateKeyIn(timeZoneOf(church), deps.now());
+  const services = await serviceNames(deps, cid);
+  const rosters = new Map<string, DocumentSnapshot>();
+  for (const id of new Set(entries.map((e) => e.get('rosterId') as string))) {
+    rosters.set(id, await deps.db.doc(`churches/${cid}/rosters/${id}`).get());
+  }
+  const byUid = new Map<string, DocumentSnapshot[]>();
+  for (const e of entries) byUid.set(e.get('uid') as string, [...(byUid.get(e.get('uid') as string) ?? []), e]);
+  let told = 0;
+  for (const [uid, mine] of byUid) {
+    const on: [string, string[]][] = [];
+    const off: [string, string[]][] = [];
+    let service = '';
+    let first: { serviceId: string | null; dateKey: string; event: PushDay['event'] } | null = null;
+    for (const e of mine) {
+      const day = rosterDay(rosters.get(e.get('rosterId') as string));
+      const dateKey = day?.dateKey ?? (e.get('dateKey') as string);
+      if (day?.cancelled || (day?.lastDay ?? dateKey) < today) continue;
+      const news = newsSince(e, day?.holders.get(uid) ?? [], dateKey, false);
+      if (news.added.length) on.push([dateKey, news.added]);
+      if (news.removed.length) off.push([dateKey, news.removed]);
+      if (!news.added.length && !news.removed.length) continue;
+      service ||= day ? day.name(services) : (e.get('serviceName') as string);
+      if (!first || dateKey < first.dateKey) {
+        first = { serviceId: day?.serviceId ?? (e.get('serviceId') as string | null), dateKey, event: day?.event ?? null };
+      }
+    }
+    if (first) {
+      const about = pushDay(church, first, service);
+      const lines = (w: Words, list: [string, string[]][]) =>
+        list.sort(([a], [b]) => a.localeCompare(b)).map(([k, duties]) => w.dutyLine(w.shortDate(k), duties));
+      try {
+        await notifyMembers(deps, cid, [uid], 'rosterChange', (w) => ({
+          title: about.title,
+          body: w.planned(service, lines(w, on), lines(w, off)),
+          link: about.link,
+        }));
+        told++;
+      } catch (e) {
+        logger.error('Planned roster push failed', { cid, uid, error: loggable(e).message });
+      }
+    }
+    for (const e of mine) await e.ref.delete();
+  }
+  return told;
+}
+
+/**
+ * 通知同工 in 排好幾週 (#90), by anyone who arranges service
+ * `data.serviceId`: everyone whose days of it changed there since the last
+ * time hears, one push each. In quiet hours they wait until 7:00
+ * ([sendPlannedPushes]). Returns how many people, and whether later.
+ */
+export async function notifyPlanned(deps: Deps & PushDeps, caller: Caller | null, data: unknown) {
+  const input = record(data);
+  const serviceId = input.serviceId;
+  if (typeof serviceId !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(serviceId)
+      || Object.keys(input).some((k) => !['churchId', 'serviceId'].includes(k))) fail('invalid-argument', 'unknown');
+  const { cid, church } = await churchAccess(deps, caller, data, { arranges: serviceId });
+  const q = await deps.db
+    .collection('plannedPushes')
+    .where('cid', '==', cid)
+    .where('serviceId', '==', serviceId)
+    .where('sendAt', '==', null)
+    .get();
+  const until = quietUntil(timeZoneOf(church), deps.now());
+  if (until) {
+    for (const d of q.docs) await d.ref.update({ sendAt: until });
+    return { people: new Set(q.docs.map((d) => d.get('uid'))).size, later: true };
+  }
+  return { people: await sendPlanned(deps, church, q.docs), later: false };
+}
+
+/** Sends what 通知同工 left for after quiet hours, once due. Runs every hour (index.ts). */
+export async function sendPlannedPushes(deps: PushDeps & Pick<Deps, 'now'>) {
+  const due = await deps.db.collection('plannedPushes').where('sendAt', '<=', deps.now()).get();
+  const byChurch = new Map<string, DocumentSnapshot[]>();
+  for (const d of due.docs) byChurch.set(d.get('cid') as string, [...(byChurch.get(d.get('cid') as string) ?? []), d]);
+  let told = 0;
+  for (const [cid, entries] of byChurch) {
+    const church = await deps.db.doc(`churches/${cid}`).get();
+    if (isChurchOpen(church)) {
+      told += await sendPlanned(deps, church, entries);
+    } else {
+      for (const e of entries) await e.ref.delete();
+    }
+  }
+  return told;
+}
+
 /** Queues the change for the church's webhook, keyed by [id]; false when not queued. */
 export async function queueRosterChange(deps: Deps, c: RosterChange, id: string) {
   if (!c.duties.length) return false;
@@ -383,7 +536,12 @@ export async function onRosterWritten(
   const change = await readRosterChange(deps, cid, before, after, editedBy);
   if (!change) return null;
   return runEach(`roster change ${cid}/${change.event ? `ev_${change.event.id}` : `${change.dateKey}_${change.serviceId}`}`, {
-    push: async () => (change.via === 'import' ? absorbImport(deps, change) : pushRosterChange(deps, change)),
+    push: async () =>
+      change.via === 'import'
+        ? absorbImport(deps, change)
+        : change.via === 'plan'
+          ? planRosterChange(deps, change)
+          : pushRosterChange(deps, change),
     webhook: () => queueRosterChange(deps, change, eventId),
   });
 }

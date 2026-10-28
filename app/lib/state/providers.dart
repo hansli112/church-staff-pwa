@@ -222,6 +222,14 @@ final staffOrderProvider = StreamProvider.family<StaffOrder, String>(
   (ref, serviceType) => openChurch(ref).staffOrder(serviceType),
 );
 
+/// Whether changes made in 排好幾週 to [serviceType]'s days wait for
+/// 通知同工 (#90). Only for those who read the member list.
+final plannedNewsProvider = StreamProvider.autoDispose.family<bool, String>((ref, serviceType) {
+  final canRead = ref.watch(meProvider.select((m) => m.value?.readsMembers ?? false));
+  if (!canRead) return Stream.value(false);
+  return openChurch(ref).plannedNews(serviceType);
+});
+
 /// The initial rolling draft horizon; saved future days are never hidden.
 const rosterWeeks = 13;
 

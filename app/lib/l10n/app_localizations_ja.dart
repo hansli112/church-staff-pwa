@@ -2977,4 +2977,44 @@ class L10nJa extends L10n {
   String notifHoursAgo(int count) {
     return '$count時間前';
   }
+
+  @override
+  String get planWeeksAction => '数週間まとめて組む';
+
+  @override
+  String get planWeeksTitle => 'まとめて組む';
+
+  @override
+  String get planWeeksHint => 'ここでの変更はすぐには通知されません。組み終わったら「メンバーに通知」を押すと、一人に一通ずつ届きます。';
+
+  @override
+  String get planNotify => 'メンバーに通知';
+
+  @override
+  String planNotified(int count) {
+    return '$count人に通知しました';
+  }
+
+  @override
+  String planNotifiedLater(int count) {
+    return '朝7時に$count人に通知します';
+  }
+
+  @override
+  String get planShowEarlier => '前の月を表示';
+
+  @override
+  String planOpenDay(String day) {
+    return '$dayを開く';
+  }
+
+  @override
+  String pickerMonthCount(int count) {
+    return '今月すでに$count回';
+  }
+
+  @override
+  String pickerSameDay(String what) {
+    return '同じ日：$what';
+  }
 }
