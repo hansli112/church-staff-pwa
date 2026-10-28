@@ -11,6 +11,7 @@ class FakePush implements PushService {
     this.registers = true,
     this.hasSettings = true,
     this.prompt,
+    this.forgetting,
   });
 
   /// The permission now; turned on in the phone's settings, a test sets it.
@@ -28,6 +29,10 @@ class FakePush implements PushService {
   /// Set: the prompt stays up until it completes, as the phone's does while
   /// the app goes to the background and back.
   final Completer<void>? prompt;
+
+  /// Set: forgetting this device at sign-out waits until it completes, as
+  /// it does with no connection.
+  final Completer<void>? forgetting;
   final notices = StreamController<PushNotice>.broadcast();
 
   /// How many times the permission prompt and the phone's settings opened.
@@ -60,7 +65,7 @@ class FakePush implements PushService {
   Future<void> refresh(String uid) async {}
 
   @override
-  Future<void> unregister(String uid) async {}
+  Future<void> unregister(String uid) async => forgetting?.future;
 
   @override
   Stream<String> get openedLinks => const Stream.empty();

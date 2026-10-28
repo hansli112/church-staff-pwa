@@ -88,9 +88,20 @@ class FirebasePushService implements PushService {
   /// which registers too, and two would leave a token listener behind.
   Future<void> _register(String uid) => _registering ??= _registerNow(uid).whenComplete(() => _registering = null);
 
+  /// Whose account this device's token was last saved on, until signing
+  /// out takes it off.
+  static const _ownerKey = 'push_owner';
+
   Future<void> _registerNow(String uid) async {
+    // Signed out with no connection, the token stayed on that account: a
+    // new one, so the old one stops working and the backend drops it.
+    final owner = prefs.getString(_ownerKey);
+    if (owner != null && owner != uid) await _messaging.deleteToken();
     final token = await _messaging.getToken(vapidKey: kIsWeb ? _vapidKey : null);
-    if (token != null) await _save(uid, token);
+    if (token != null) {
+      await _save(uid, token);
+      await prefs.setString(_ownerKey, uid);
+    }
     await _refresh?.cancel();
     _refresh = _messaging.onTokenRefresh.listen((t) => _save(uid, t));
   }
@@ -143,6 +154,7 @@ class FirebasePushService implements PushService {
     try {
       await _db.doc('users/$uid').update({'fcm.$deviceId': FieldValue.delete()});
       await _messaging.deleteToken();
+      await prefs.remove(_ownerKey);
     } catch (_) {
       // Signing out must not fail because of push.
     }

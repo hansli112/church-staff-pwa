@@ -142,4 +142,16 @@ void main() {
     expect(tester.widget<Switch>(find.byType(Switch).first).value, isFalse);
     expect(find.text('到系統設定開啟通知'), findsOneWidget);
   });
+
+  testWidgets('signing out with no connection signs out, without waiting to forget this device', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b, overrides: [pushServiceProvider.overrideWithValue(FakePush(forgetting: Completer()))]);
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/profile');
+    await settle(tester);
+
+    await tester.tap(find.text('登出'));
+    await tester.pump(const Duration(seconds: 3));
+    await settle(tester);
+    expect(b.auth.currentUser, isNull);
+  });
 }

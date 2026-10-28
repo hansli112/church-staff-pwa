@@ -12,6 +12,8 @@ import '../support/seed.dart';
 // overflow).
 const _pages = [
   '/home',
+  '/home/notifications',
+  '/turn-on-notifications',
   '/rosters',
   '/rosters/sunday/2026-10-04',
   '/calendar',
