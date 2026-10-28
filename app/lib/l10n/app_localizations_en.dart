@@ -3147,14 +3147,14 @@ class L10nEn extends L10n {
   String get planWeeksAction => 'Plan several weeks';
 
   @override
-  String get planWeeksTitle => 'Plan Weeks';
+  String get planWeeksTitle => 'Plan weeks';
 
   @override
   String get planWeeksHint =>
-      'Changes here aren’t sent right away. When you’re done, tap Notify Team and each person gets one notification.';
+      'Changes here aren’t sent right away. When you’re done, tap Notify team and each person gets one notification.';
 
   @override
-  String get planNotify => 'Notify Team';
+  String get planNotify => 'Notify team';
 
   @override
   String planNotified(int count) {

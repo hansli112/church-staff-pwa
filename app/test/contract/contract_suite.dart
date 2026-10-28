@@ -797,6 +797,18 @@ void contractTests(Future<ContractWorld> Function() open) {
       await w.signIn(Grace.editorEmail);
       expect((await g.church.notifyPlanned('sunday')).people, 1);
       expect(await g.church.plannedNews('sunday').firstWhere((v) => !v).timeout(wait), isFalse);
+
+      // On and off again: nothing to tell.
+      final hosted = played.copyWith(
+        duties: [
+          Duty(role: '司琴', people: const ['李美玉'], uids: {'李美玉': g.mei}),
+          Duty(role: '招待', people: const ['李美玉'], uids: {'李美玉': g.mei}),
+        ],
+      );
+      await g.church.compareAndSetRosters(RosterChange(before: {day.id: played}, after: {day.id: hosted}, via: 'plan'));
+      expect(await g.church.plannedNews('sunday').firstWhere((v) => v).timeout(wait), isTrue);
+      await g.church.compareAndSetRosters(RosterChange(before: {day.id: hosted}, after: {day.id: played}, via: 'plan'));
+      expect(await g.church.plannedNews('sunday').firstWhere((v) => !v).timeout(wait), isFalse);
     });
 
     test("a group's 負責人 adds and takes out plain 同工 of it; the rest is the admin's", () async {

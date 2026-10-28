@@ -900,7 +900,7 @@
   "notifHoursAgo": "{count} 小时前",
   "planWeeksAction": "一次排好几周",
   "planWeeksTitle": "排好几周",
-  "planWeeksHint": "在这里排的不会马上通知，排好按“通知同工”，每人只收到一条。",
+  "planWeeksHint": "在这里排的不会马上通知，排好按“通知同工”，每人只收到一条",
   "planNotify": "通知同工",
   "planNotified": "已通知 {count} 位同工",
   "planNotifiedLater": "早上 7 点会通知 {count} 位同工",

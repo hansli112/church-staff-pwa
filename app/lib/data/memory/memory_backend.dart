@@ -102,10 +102,10 @@ class MemoryBackend implements Backend {
   var _smallGroupIds = 0;
   final rosters = <String, Map<String, Roster>>{};
 
-  /// 排好幾週 (#90): per church and service, who was put on or taken off a
-  /// day there and not told yet. Unlike the backend, on and off again
-  /// still counts.
-  final planned = <String, Map<String, Set<String>>>{};
+  /// 排好幾週 (#90): per church, by `rosterId/uid`, someone put on or taken
+  /// off a day there and not told yet: the service, and what they had on
+  /// the day before (functions/src/rosterChange.ts, plannedPushes).
+  final planned = <String, Map<String, ({String service, List<String> roles})>>{};
   final staffOrders = <String, Map<String, StaffOrder>>{};
   final invites = <String, Invite>{};
   final users = <String, UserProfile>{};
@@ -1207,9 +1207,10 @@ class MemoryChurchData implements ChurchData {
   }
 
   /// Keeps whom a change made in 排好幾週 puts on or takes off, but the
-  /// editor, for 通知同工.
+  /// editor, for 通知同工. A change told at once, their own, or on and off
+  /// again leaves nothing waiting once they have what they had before.
   void _plan(RosterChange change) {
-    if (change.via != 'plan') return;
+    final waiting = _b.planned[churchId] ??= {};
     for (final MapEntry(key: id, value: now) in change.after.entries) {
       final was = change.before[id];
       final day = now ?? was;
@@ -1219,9 +1220,28 @@ class MemoryChurchData implements ChurchData {
           for (final d in r.duties) ...d.uids.values,
       };
       for (final uid in uids) {
-        if (uid == _uid) continue;
-        if (!listEquals(was?.dutiesOf(uid: uid) ?? const [], now?.dutiesOf(uid: uid) ?? const [])) {
-          ((_b.planned[churchId] ??= {})[day.type] ??= {}).add(uid);
+        final before = was?.dutiesOf(uid: uid) ?? const <String>[];
+        final after = now?.dutiesOf(uid: uid) ?? const <String>[];
+        if (setEquals(before.toSet(), after.toSet())) continue;
+        final key = '$id/$uid';
+        final entry = waiting[key];
+        final told = change.via != 'plan' || uid == _uid;
+        if (entry == null) {
+          if (!told) waiting[key] = (service: day.type, roles: before);
+          continue;
+        }
+        final roles = told
+            ? [
+                for (final r in entry.roles)
+                  if (after.contains(r) || !before.contains(r)) r,
+                for (final r in after)
+                  if (!before.contains(r) && !entry.roles.contains(r)) r,
+              ]
+            : entry.roles;
+        if (setEquals(roles.toSet(), after.toSet())) {
+          waiting.remove(key);
+        } else {
+          waiting[key] = (service: entry.service, roles: roles);
         }
       }
     }
@@ -1230,7 +1250,7 @@ class MemoryChurchData implements ChurchData {
   @override
   Stream<bool> plannedNews(String serviceType) => _b.watch(() {
     _requireRosterEditors();
-    return _b.planned[churchId]?[serviceType]?.isNotEmpty ?? false;
+    return _b.planned[churchId]?.values.any((p) => p.service == serviceType) ?? false;
   });
 
   @override
@@ -1242,7 +1262,13 @@ class MemoryChurchData implements ChurchData {
       if (!_b.services[churchId]!.ids.contains(serviceType) || !me.arranges(ministries, serviceType).any) {
         throw const CloudException(CloudErrorCode.permissionDenied);
       }
-      people = _b.planned[churchId]?.remove(serviceType)?.length ?? 0;
+      final waiting = _b.planned[churchId] ?? {};
+      final told = [
+        for (final MapEntry(:key, :value) in waiting.entries)
+          if (value.service == serviceType) key,
+      ];
+      people = {for (final key in told) key.split('/').last}.length;
+      told.forEach(waiting.remove);
     });
     return (people: people, later: false);
   }

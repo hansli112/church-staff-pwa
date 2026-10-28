@@ -2142,7 +2142,7 @@
   "@notifHoursAgo": {"placeholders": {"count": {"type": "int"}}},
   "planWeeksAction": "一次排好幾週",
   "planWeeksTitle": "排好幾週",
-  "planWeeksHint": "在這裡排的不會馬上通知，排好按「通知同工」，每人只收到一則。",
+  "planWeeksHint": "在這裡排的不會馬上通知，排好按「通知同工」，每人只收到一則",
   "planNotify": "通知同工",
   "planNotified": "已通知 {count} 位同工",
   "@planNotified": {"placeholders": {"count": {"type": "int"}}},

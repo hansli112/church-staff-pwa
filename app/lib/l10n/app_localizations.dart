@@ -5359,7 +5359,7 @@ abstract class L10n {
   /// No description provided for @planWeeksHint.
   ///
   /// In zh, this message translates to:
-  /// **'在這裡排的不會馬上通知，排好按「通知同工」，每人只收到一則。'**
+  /// **'在這裡排的不會馬上通知，排好按「通知同工」，每人只收到一則'**
   String get planWeeksHint;
 
   /// No description provided for @planNotify.

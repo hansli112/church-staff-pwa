@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/dates.dart';
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../domain/day.dart';
@@ -376,7 +377,7 @@ class _DateCell extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                DateFormat.Md().format(day.midnight),
+                shortMonthDay(l10n).format(day.midnight),
                 maxLines: 1,
                 style: AppText.subheadline.copyWith(
                   fontWeight: FontWeight.w600,

@@ -2980,7 +2980,7 @@ class L10nZh extends L10n {
   String get planWeeksTitle => '排好幾週';
 
   @override
-  String get planWeeksHint => '在這裡排的不會馬上通知，排好按「通知同工」，每人只收到一則。';
+  String get planWeeksHint => '在這裡排的不會馬上通知，排好按「通知同工」，每人只收到一則';
 
   @override
   String get planNotify => '通知同工';
@@ -5990,7 +5990,7 @@ class L10nZhHans extends L10nZh {
   String get planWeeksTitle => '排好几周';
 
   @override
-  String get planWeeksHint => '在这里排的不会马上通知，排好按“通知同工”，每人只收到一条。';
+  String get planWeeksHint => '在这里排的不会马上通知，排好按“通知同工”，每人只收到一条';
 
   @override
   String get planNotify => '通知同工';

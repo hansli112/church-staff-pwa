@@ -200,10 +200,13 @@ async function tell(deps: PushDeps, day: PushDay, uid: string, news: News) {
 // Firestore's (gRPC's) code for a create() whose document exists.
 const ALREADY_EXISTS = 6;
 
-/** The pushes held over quiet hours for [c]'s roster, by uid. */
-async function heldFor(deps: PushDeps, c: RosterChange) {
+/**
+ * The pushes waiting for [c]'s roster, by uid: held over quiet hours
+ * (`heldPushes`), or for 通知同工 (`plannedPushes`).
+ */
+async function waitingFor(deps: PushDeps, collection: 'heldPushes' | 'plannedPushes', c: RosterChange) {
   const q = await deps.db
-    .collection('heldPushes')
+    .collection(collection)
     .where('cid', '==', c.church.id)
     .where('rosterId', '==', c.rosterId)
     .get();
@@ -231,10 +234,28 @@ async function absorb(h: DocumentSnapshot, c: RosterChange, uid: string) {
   await h.ref.update({ roles: [...roles.filter((r) => !off.includes(r)), ...on.filter((r) => !roles.includes(r))] });
 }
 
+/**
+ * As [absorb], for a push waiting for 通知同工: gone once [uid] has on the
+ * day what they had before, so the button greys with nothing to tell.
+ */
+async function absorbPlanned(p: DocumentSnapshot, c: RosterChange, uid: string) {
+  const roles = (p.get('roles') as string[] | undefined) ?? [];
+  const off = c.removed.get(uid) ?? [];
+  const on = c.added.get(uid) ?? [];
+  const before = [...roles.filter((r) => !off.includes(r)), ...on.filter((r) => !roles.includes(r))];
+  await settlePlanned(p, before, c.holders.get(uid) ?? []);
+}
+
+/** Keeps planned push [p] as having been [roles] before, or deletes it when that is what they have [now]. */
+async function settlePlanned(p: DocumentSnapshot, roles: string[], now: string[]) {
+  if (roles.length === now.length && roles.every((r) => now.includes(r))) return p.ref.delete();
+  return p.ref.update({ roles });
+}
+
 /** An import (or its undo) announces nothing: held and planned pushes take it as given. */
 async function absorbImport(deps: PushDeps, c: RosterChange) {
-  for (const [uid, h] of await heldFor(deps, c)) await absorb(h, c, uid);
-  for (const [uid, p] of await plannedFor(deps, c)) await absorb(p, c, uid);
+  for (const [uid, h] of await waitingFor(deps, 'heldPushes', c)) await absorb(h, c, uid);
+  for (const [uid, p] of await waitingFor(deps, 'plannedPushes', c)) await absorbPlanned(p, c, uid);
   return 0;
 }
 
@@ -257,10 +278,10 @@ export async function pushRosterChange(deps: PushDeps & Pick<Deps, 'now'>, c: Ro
   for (const [uid, roles] of c.removed) of(uid).removed = roles;
 
   // Told now, or the editor's own: what 通知同工 tells later leaves it out.
-  for (const [uid, p] of await plannedFor(deps, c)) {
-    if (news.has(uid) || uid === c.editor?.uid) await absorb(p, c, uid);
+  for (const [uid, p] of await waitingFor(deps, 'plannedPushes', c)) {
+    if (news.has(uid) || uid === c.editor?.uid) await absorbPlanned(p, c, uid);
   }
-  const held = await heldFor(deps, c);
+  const held = await waitingFor(deps, 'heldPushes', c);
   if (c.editor) {
     news.delete(c.editor.uid);
     const own = held.get(c.editor.uid);
@@ -356,16 +377,6 @@ export async function sendHeldPushes(deps: PushDeps & Pick<Deps, 'now'>) {
   return sent;
 }
 
-/** The pushes waiting for 通知同工 on [c]'s roster, by uid. */
-async function plannedFor(deps: PushDeps, c: RosterChange) {
-  const q = await deps.db
-    .collection('plannedPushes')
-    .where('cid', '==', c.church.id)
-    .where('rosterId', '==', c.rosterId)
-    .get();
-  return new Map(q.docs.map((d) => [d.get('uid') as string, d]));
-}
-
 /**
  * A change made in 排好幾週: told to nobody yet. Each person put on or
  * taken off, but the editor, keeps what they had on the day before the
@@ -374,15 +385,20 @@ async function plannedFor(deps: PushDeps, c: RosterChange) {
  */
 async function planRosterChange(deps: PushDeps, c: RosterChange) {
   const uids = new Set([...c.added.keys(), ...c.removed.keys()]);
-  for (const [uid, h] of await heldFor(deps, c)) if (uids.has(uid)) await absorb(h, c, uid);
-  const planned = await plannedFor(deps, c);
+  for (const [uid, h] of await waitingFor(deps, 'heldPushes', c)) if (uids.has(uid)) await absorb(h, c, uid);
+  const planned = await waitingFor(deps, 'plannedPushes', c);
   if (c.editor) {
     uids.delete(c.editor.uid);
     const own = planned.get(c.editor.uid);
-    if (own) await absorb(own, c, c.editor.uid);
+    if (own) await absorbPlanned(own, c, c.editor.uid);
   }
   for (const uid of uids) {
-    if (planned.has(uid)) continue;
+    // Already waiting: on and off again leaves nothing to tell.
+    const p = planned.get(uid);
+    if (p) {
+      await settlePlanned(p, (p.get('roles') as string[] | undefined) ?? [], c.holders.get(uid) ?? []);
+      continue;
+    }
     try {
       await deps.db.doc(`plannedPushes/${c.church.id}_${c.rosterId}_${uid}`).create({
         cid: c.church.id,
@@ -482,8 +498,14 @@ export async function notifyPlanned(deps: Deps & PushDeps, caller: Caller | null
   return { people: await sendPlanned(deps, church, q.docs), later: false };
 }
 
-/** Sends what 通知同工 left for after quiet hours, once due. Runs every hour (index.ts). */
+/**
+ * Sends what 通知同工 left for after quiet hours, once due, and forgets
+ * what waits for days past everywhere, unpressed. Runs every hour
+ * (index.ts).
+ */
 export async function sendPlannedPushes(deps: PushDeps & Pick<Deps, 'now'>) {
+  const past = await deps.db.collection('plannedPushes').where('dateKey', '<', earliestDay(deps.now())).get();
+  for (const p of past.docs) await p.ref.delete();
   const due = await deps.db.collection('plannedPushes').where('sendAt', '<=', deps.now()).get();
   const byChurch = new Map<string, DocumentSnapshot[]>();
   for (const d of due.docs) byChurch.set(d.get('cid') as string, [...(byChurch.get(d.get('cid') as string) ?? []), d]);

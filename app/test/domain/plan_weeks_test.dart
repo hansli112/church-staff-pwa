@@ -32,7 +32,7 @@ void main() {
       expect(firstGap(days.take(1), ['司琴']), isNull);
     });
 
-    test('the days by month: saved ones and drafts on the weekday, from today on', () {
+    test('the days by month: every one on the weekday, and others saved, from today on', () {
       final months = planMonths(
         service: sunday,
         saved: [
@@ -43,8 +43,8 @@ void main() {
         months: 2,
       );
       expect([for (final m in months) m.month], [Day(2026, 10, 1), Day(2026, 11, 1)]);
-      // The week of the 18th has the saved Wednesday instead.
-      expect([for (final d in months.first.days) d.day.day], [4, 11, 14, 25]);
+      // A saved Wednesday does not take its Sunday's place.
+      expect([for (final d in months.first.days) d.day.day], [4, 11, 14, 18, 25]);
       expect(months.last.days.map((d) => d.day.day), [1, 8, 15, 22, 29]);
       expect(months.last.days.every((d) => !d.saved), isTrue);
     });

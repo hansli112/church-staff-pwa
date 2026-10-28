@@ -335,6 +335,27 @@ describe('排好幾週 (#90)', () => {
     assert.deepEqual(await planned(), []);
   });
 
+  test('put on and taken off again: nothing waits, so the button greys again', async () => {
+    await church();
+    await plan('2026-10-11', [duty('司琴', ['美玉'])]);
+    await plan('2026-10-11', [duty('司琴', [])]);
+    assert.deepEqual(await planned(), []);
+    // Told the usual way meanwhile: nothing left either.
+    await plan('2026-10-18', [duty('司琴', ['美玉'])]);
+    await write('C1', '2026-10-18', [duty('司琴', [])]);
+    assert.deepEqual(await planned(), []);
+  });
+
+  test('days past everywhere are cleared every hour, unpressed', async () => {
+    await church();
+    await plan('2026-10-04', [duty('司琴', ['美玉'])]);
+    await plan('2026-10-11', [duty('司琴', ['美玉'])]);
+    setNow(new Date('2026-10-06T09:00:00+08:00'));
+    await sendPlannedPushes(triggerDeps());
+    assert.deepEqual((await planned()).map((p) => p.dateKey), ['2026-10-11']);
+    assert.equal(pushed.length, 0);
+  });
+
   test('a day that has passed tells nothing', async () => {
     await church();
     await plan('2026-10-04', [duty('司琴', ['美玉'])]);
