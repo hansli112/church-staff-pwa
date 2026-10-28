@@ -49,7 +49,8 @@ final sessionEffectsProvider = Provider<void>((ref) {
 
   ref.listen(uidProvider, (_, uid) {
     ref.read(telemetryProvider).setUser(uid);
-    if (uid != null) ref.read(pushServiceProvider).refresh(uid).ignore();
+    final push = ref.read(pushServiceProvider);
+    (uid != null ? push.refresh(uid) : push.signedOut()).ignore();
   }, fireImmediately: true);
 
   // Known before joining, which decides at once whether to ask for it.
@@ -111,15 +112,18 @@ final sessionEffectsProvider = Provider<void>((ref) {
   ref.listen(myChurchIconProvider, (_, _) => settleIcon());
 });
 
+/// How long signing out waits for this device's token to come off the
+/// account.
+const signOutPushWait = Duration(seconds: 3);
+
 /// Signs out: this device stops getting pushes, and the picked church is
-/// forgotten. With no connection, forgetting this device's token waits for
-/// one, so signing out goes ahead after a few seconds; the next sign-in on
-/// this device then gets a new token (FirebasePushService).
+/// forgotten. With no connection, taking this device's token off the
+/// account waits for one, so signing out goes on after [signOutPushWait];
+/// the token is then deleted at the next sign-in or launch
+/// (FirebasePushService).
 Future<void> signOut(WidgetRef ref) async {
   final uid = ref.read(uidProvider);
-  if (uid != null) {
-    await ref.read(pushServiceProvider).unregister(uid).timeout(const Duration(seconds: 3), onTimeout: () {});
-  }
+  if (uid != null) await ref.read(pushServiceProvider).unregister(uid).timeout(signOutPushWait, onTimeout: () {});
   await ref.read(selectedChurchProvider.notifier).forget();
   await ref.read(backendProvider).auth.signOut();
 }

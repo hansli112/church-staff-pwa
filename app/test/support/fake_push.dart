@@ -68,6 +68,9 @@ class FakePush implements PushService {
   Future<void> unregister(String uid) async => forgetting?.future;
 
   @override
+  Future<void> signedOut() async {}
+
+  @override
   Stream<String> get openedLinks => const Stream.empty();
 
   @override

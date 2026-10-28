@@ -26,6 +26,10 @@ abstract interface class PushService {
   /// Removes this device's token, at sign-out.
   Future<void> unregister(String uid);
 
+  /// Nobody is signed in: a token left on an account that signed out with
+  /// no connection is deleted, so this device stops getting its pushes.
+  Future<void> signedOut();
+
   /// App routes from notifications the user tapped, including the one that
   /// launched the app.
   Stream<String> get openedLinks;
@@ -70,6 +74,9 @@ class NoPush implements PushService {
 
   @override
   Future<void> unregister(String uid) async {}
+
+  @override
+  Future<void> signedOut() async {}
 
   @override
   Stream<String> get openedLinks => const Stream.empty();

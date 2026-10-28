@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/state/push.dart';
+import 'package:martha/state/session.dart';
 
 import '../support/fake_push.dart';
 import '../support/harness.dart';
@@ -150,7 +151,7 @@ void main() {
     await settle(tester);
 
     await tester.tap(find.text('登出'));
-    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(signOutPushWait);
     await settle(tester);
     expect(b.auth.currentUser, isNull);
   });

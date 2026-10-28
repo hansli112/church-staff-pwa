@@ -92,18 +92,28 @@ class FirebasePushService implements PushService {
   /// out takes it off.
   static const _ownerKey = 'push_owner';
 
+  /// Counts sign-ins here, so a sign-out still waiting for a connection
+  /// leaves alone the token of whoever signed in since.
+  var _signIns = 0;
+
   Future<void> _registerNow(String uid) async {
-    // Signed out with no connection, the token stayed on that account: a
-    // new one, so the old one stops working and the backend drops it.
+    _signIns++;
+    // Signed out with no connection, the token stayed on that account. A
+    // new one makes the old one stop working, and the backend drops it.
     final owner = prefs.getString(_ownerKey);
-    if (owner != null && owner != uid) await _messaging.deleteToken();
+    if (owner != null && owner != uid) await _deleteToken();
     final token = await _messaging.getToken(vapidKey: kIsWeb ? _vapidKey : null);
     if (token != null) {
-      await _save(uid, token);
       await prefs.setString(_ownerKey, uid);
+      await _save(uid, token);
     }
     await _refresh?.cancel();
     _refresh = _messaging.onTokenRefresh.listen((t) => _save(uid, t));
+  }
+
+  Future<void> _deleteToken() async {
+    await _messaging.deleteToken();
+    await prefs.remove(_ownerKey);
   }
 
   Future<void> _save(String uid, String token) => _db.doc('users/$uid').set({
@@ -151,12 +161,22 @@ class FirebasePushService implements PushService {
     await _refresh?.cancel();
     _refresh = null;
     _uid = null;
+    final signIns = _signIns;
     try {
       await _db.doc('users/$uid').update({'fcm.$deviceId': FieldValue.delete()});
-      await _messaging.deleteToken();
-      await prefs.remove(_ownerKey);
+      if (signIns == _signIns) await _deleteToken();
     } catch (_) {
       // Signing out must not fail because of push.
+    }
+  }
+
+  @override
+  Future<void> signedOut() async {
+    if (prefs.getString(_ownerKey) == null) return;
+    try {
+      await _deleteToken();
+    } catch (_) {
+      // Still no connection: the next launch tries again.
     }
   }
 }
