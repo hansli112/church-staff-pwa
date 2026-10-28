@@ -790,6 +790,8 @@ void contractTests(Future<ContractWorld> Function() open) {
       await g.church.compareAndSetRosters(RosterChange(before: {day.id: null}, after: {day.id: played}, via: 'plan'));
       const wait = Duration(seconds: 30);
       expect(await g.church.plannedNews('sunday').firstWhere((v) => v).timeout(wait), isTrue);
+      expect(await g.church.plannedNews('youth').first, isFalse, reason: 'each service its own');
+      await expectLater(g.church.notifyPlanned('youth'), denied(), reason: 'not a service he arranges');
       await w.signIn(Grace.meiEmail);
       await expectLater(g.church.notifyPlanned('sunday'), denied());
       await w.signIn(Grace.editorEmail);

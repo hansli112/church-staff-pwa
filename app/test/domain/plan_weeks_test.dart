@@ -48,6 +48,28 @@ void main() {
       expect(months.last.days.map((d) => d.day.day), [1, 8, 15, 22, 29]);
       expect(months.last.days.every((d) => !d.saved), isTrue);
     });
+
+    test('across a year, and a month with no day left out', () {
+      final months = planMonths(
+        service: sunday,
+        saved: const [],
+        today: Day(2026, 12, 28),
+        month: Day(2026, 12, 1),
+        months: 2,
+      );
+      expect([for (final m in months) m.month], [Day(2027, 1, 1)], reason: 'December has no Sunday left');
+      expect(months.single.days.first.day, Day(2027, 1, 3));
+      expect(addMonths(Day(2026, 11, 1), 3), Day(2027, 2, 1));
+    });
+
+    test('a 事工’s duty the template lacks is a column once a day has it', () {
+      final days = [
+        day(10, 4, const [Duty(role: '司會'), Duty(role: '敬拜')]),
+        day(10, 11, const [Duty(role: '敬拜')]),
+      ];
+      expect(planDuties(sunday, days, const Arranges.only({'敬拜', '鼓'})), ['敬拜']);
+      expect(firstGap(days, ['敬拜']), Day(2026, 10, 1));
+    });
   });
 
   group('what someone serves around a day (#90)', () {

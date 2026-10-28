@@ -344,6 +344,87 @@ describe('排好幾週 (#90)', () => {
     assert.deepEqual(await planned(), []);
   });
 
+  test('an import meanwhile is taken as given, not told', async () => {
+    await church();
+    await plan('2026-10-11', [duty('司琴', ['美玉']), duty('招待', [])]);
+    await write('C1', '2026-10-11', [duty('司琴', ['美玉']), duty('招待', ['美玉'])], { via: 'import' });
+    await notify();
+    assert.deepEqual(pushed.map((p) => p.body), ['主日崇拜的服事排好了\n排進 10/11 司琴']);
+  });
+
+  test('arranged at night, then pressed by day: told at once, not held as well', async () => {
+    await church();
+    setNow(new Date('2026-10-03T23:00:00+08:00'));
+    await plan('2026-10-11', [duty('司琴', ['美玉'])]);
+    assert.equal((await db.collection('heldPushes').get()).size, 0);
+    setNow(new Date('2026-10-04T08:00:00+08:00'));
+    await notify();
+    await sendHeldPushes(triggerDeps());
+    assert.deepEqual(pushed.map((p) => p.body), ['主日崇拜的服事排好了\n排進 10/11 司琴']);
+  });
+
+  test('a push held over the night tells only what came before; 通知同工 the rest', async () => {
+    await church();
+    setNow(new Date('2026-10-03T23:00:00+08:00'));
+    await write('C1', '2026-10-11', [duty('司琴', ['美玉']), duty('招待', [])]);
+    await plan('2026-10-11', [duty('司琴', ['美玉']), duty('招待', ['美玉'])]);
+    setNow(new Date('2026-10-04T07:00:00+08:00'));
+    await sendHeldPushes(triggerDeps());
+    await notify();
+    assert.deepEqual(pushed.map((p) => p.body), ['你被排進 10/11 主日崇拜：司琴', '主日崇拜的服事排好了\n排進 10/11 招待']);
+  });
+
+  test('a day deleted there tells who was on it; in the 通知列表 as pushed, muted or not', async () => {
+    await church();
+    await write('C1', '2026-10-11', [duty('司琴', ['美玉'])]);
+    pushed.length = 0;
+    await db.doc('churches/C1/members/mei').update({ 'notificationPrefs.muted': ['rosterChange'] });
+    const ref = db.doc('churches/C1/rosters/2026-10-11_sunday');
+    const before = await ref.get();
+    await ref.delete();
+    await onRosterWritten(triggerDeps(), 'C1', before, await ref.get(), 'pastor', 'del');
+    // A deleted day keeps how it was last written: by hand, so this is news.
+    assert.equal(pushed.length, 0, 'muted');
+    assert.deepEqual((await listed('mei')).at(-1), '你被移出 10/11 主日崇拜：司琴');
+    await write('C1', '2026-10-18', [duty('司琴', ['美玉'])], { via: 'plan' });
+    const ref2 = db.doc('churches/C1/rosters/2026-10-18_sunday');
+    const before2 = await ref2.get();
+    await ref2.delete();
+    await onRosterWritten(triggerDeps(), 'C1', before2, await ref2.get(), 'pastor', 'del2');
+    assert.deepEqual(await notify(), { people: 0, later: false }, 'on and off again');
+    assert.equal(pushed.length, 0);
+  });
+
+  test('pressed, then the church closed before 7:00: nobody is told, nothing is left', async () => {
+    await church();
+    await plan('2026-10-11', [duty('司琴', ['美玉'])]);
+    setNow(new Date('2026-10-03T23:00:00+08:00'));
+    await notify();
+    await db.doc('churches/C1').update({ status: 'suspended' });
+    setNow(new Date('2026-10-04T07:00:00+08:00'));
+    assert.equal(await sendPlannedPushes(triggerDeps()), 0);
+    assert.equal(pushed.length, 0);
+    assert.deepEqual(await planned(), []);
+  });
+
+  test('a 事工’s 負責人 may press it for a service its duties are in', async () => {
+    await church();
+    await db.doc('churches/C1/settings/ministries').set({
+      ministries: [{ id: 'worship', name: '敬拜團', duties: [{ service: 'sunday', duty: '司琴' }] }],
+      ids: ['worship'],
+    });
+    await db.doc('churches/C1/members/hao').update({ leadMinistries: ['worship'] });
+    await plan('2026-10-11', [duty('司琴', ['美玉'])], 'hao');
+    assert.deepEqual(await notify('hao'), { people: 1, later: false });
+  });
+
+  test('a service that is not one, or anything else sent along, is refused', async () => {
+    await church();
+    for (const data of [{ serviceId: 'a/b' }, { serviceId: 7 }, { serviceId: 'sunday', extra: 1 }]) {
+      await assert.rejects(notifyPlanned(triggerDeps(), caller('pastor'), { churchId: 'C1', ...data }), { code: 'invalid-argument' });
+    }
+  });
+
   test('only someone who arranges the service may press it, and only for that service', async () => {
     await church();
     await db.doc('churches/C1/settings/services').set({
