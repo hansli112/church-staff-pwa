@@ -352,4 +352,59 @@ void main() {
     expect(landed.duties.firstWhere((d) => d.role == '司琴').people, ['李美玉']);
     expect(peopleOn(b, 4, '司琴'), isEmpty);
   });
+  testWidgets('a 事工’s 負責人 moves a duty onto a day not saved yet, and 復原 puts it back', (tester) async {
+    const worship = Ministry(id: 'worship', name: '敬拜團', duties: [MinistryDuty('sunday', '司琴')]);
+    final b = seededChurch(
+      extra: [
+        staffMei.withIdentities(const [MinistryLead('worship')]),
+      ],
+      as: staffMei,
+    );
+    b.ministries['grace'] = const MinistrySettings(ministries: [worship], ids: ['worship']);
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    await drag(tester, cell('司琴', 4), cell('司琴', 18));
+    expect(peopleOn(b, 18, '司琴'), ['李美玉']);
+    await tester.tap(find.text('復原'));
+    await settle(tester);
+    expect(find.textContaining('權限'), findsNothing);
+    expect(peopleOn(b, 4, '司琴'), ['李美玉']);
+    expect(peopleOn(b, 18, '司琴'), isEmpty, reason: 'the day stays, with nobody on it');
+  });
+  testWidgets('a cell emptied elsewhere while held still lets go', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    final gesture = await tester.startGesture(tester.getCenter(cell('司琴', 4)));
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    await gesture.moveTo(tester.getCenter(cell('司琴', 11)));
+    await tester.pump();
+    b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, 4))] = savedDay(b, 4).copyWith(
+      duties: const [
+        Duty(role: '司會'),
+        Duty(role: '司琴'),
+        Duty(role: '招待'),
+      ],
+    );
+    b.notify();
+    await tester.pump();
+    await gesture.up();
+    await settle(tester);
+    expect(
+      tester.widgetList<AnimatedOpacity>(find.byType(AnimatedOpacity)).map((o) => o.opacity),
+      everyElement(1),
+      reason: 'nothing left held',
+    );
+  });
+  testWidgets('和別週交換 goes once someone is picked or unpicked: a swap would not keep it', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    await tester.tap(cell('招待', 4));
+    await settle(tester);
+    expect(find.text('和別週交換'), findsOneWidget);
+    await tester.tap(find.text('李美玉').last);
+    await settle(tester);
+    expect(find.text('和別週交換'), findsNothing);
+  });
 }

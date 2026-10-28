@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -74,6 +75,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
   List<Roster> _shown = const [];
   Set<String> _flash = const {};
   Timer? _flashTimer;
+  int? _down;
 
   @override
   void initState() {
@@ -95,11 +97,18 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
     super.dispose();
   }
 
-  GlobalKey _keyOf(Roster day, String role) => _cellKeys.putIfAbsent('${day.id}/$role', GlobalKey.new);
+  static String _cellId(Roster day, String role) => '${day.id}/$role';
+
+  GlobalKey _keyOf(Roster day, String role) => _cellKeys.putIfAbsent(_cellId(day, role), GlobalKey.new);
+
+  /// [day] as the table has it now.
+  Roster _current(Roster day) => _shown.firstWhere((d) => d.id == day.id, orElse: () => day);
 
   void _liftStart(BuildContext cell, Roster day, String role, LongPressStartDetails d) {
+    _liftEnd(drop: false);
     final box = cell.findRenderObject()! as RenderBox;
     final lift = _Lift(
+      pointer: _down,
       from: day,
       role: role,
       size: box.size,
@@ -124,13 +133,24 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
     setState(() => _lift = lift);
   }
 
-  void _liftMove(LongPressMoveUpdateDetails d) {
+  // The finger that holds a cell is followed here, not by the cell's own
+  // long press, which goes if the cell is emptied meanwhile.
+  void _onPointer(PointerEvent e) {
+    if (e is PointerDownEvent) _down = e.pointer;
     final lift = _lift;
-    if (lift == null) return;
-    lift.at = d.globalPosition;
-    _liftView?.markNeedsBuild();
-    _retarget();
-    _autoScroll();
+    if (lift == null || e.pointer != lift.pointer) return;
+    switch (e) {
+      case PointerMoveEvent():
+        lift.at = e.position;
+        _liftView?.markNeedsBuild();
+        _retarget();
+        _autoScroll();
+      case PointerUpEvent():
+        _liftEnd();
+      case PointerCancelEvent():
+        _liftEnd(drop: false);
+      default:
+    }
   }
 
   /// Near the top or the bottom, the table scrolls on under the finger,
@@ -151,12 +171,10 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
     Roster? to;
     if (lift.bounds.contains(lift.at)) {
       for (final day in _shown) {
-        final box = _cellKeys['${day.id}/${lift.role}']?.currentContext?.findRenderObject() as RenderBox?;
-        if (box == null || !box.attached) continue;
-        if ((box.localToGlobal(Offset.zero) & box.size).contains(lift.at)) {
-          if (canSwapDuty(lift.from, day, lift.role)) to = day;
-          break;
-        }
+        final cell = _cellKeys[_cellId(day, lift.role)]?.currentContext;
+        if (cell == null || !_globalRect(cell).contains(lift.at)) continue;
+        if (canSwapDuty(lift.role, _current(lift.from), day)) to = day;
+        break;
       }
     }
     if (to?.id == lift.to?.id) return;
@@ -164,7 +182,9 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
     setState(() => lift.to = to);
   }
 
-  void _liftEnd() {
+  /// Lets go of the held cell: dropped where it would trade, the two days
+  /// trade, and light up once they have.
+  Future<void> _liftEnd({bool drop = true}) async {
     final lift = _lift;
     if (lift == null) return;
     _scroller?.stopAutoScroll();
@@ -174,14 +194,16 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
       ..dispose();
     _liftView = null;
     setState(() => _lift = null);
-    final to = lift.to;
-    if (to == null) return;
+    if (!drop || lift.to == null) return;
+    // As they are now: either may have changed while it was held.
+    final (from, to) = (_current(lift.from), _current(lift.to!));
+    if (!canSwapDuty(lift.role, from, to)) return;
+    if (!await swapDutyDays(context, ref, lift.role, from, to, via: 'plan') || !mounted) return;
     _flashTimer?.cancel();
-    setState(() => _flash = {'${lift.from.id}/${lift.role}', '${to.id}/${lift.role}'});
+    setState(() => _flash = {_cellId(from, lift.role), _cellId(to, lift.role)});
     _flashTimer = Timer(_flashFor, () {
       if (mounted) setState(() => _flash = const {});
     });
-    swapDutyDays(context, ref, lift.role, lift.from, to, via: 'plan');
   }
 
   Future<void> _notify() async {
@@ -273,7 +295,15 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
             padding: const EdgeInsets.fromLTRB(Space.m, 0, Space.m, Space.s),
             child: Text(l10n.planWeeksHint, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
           ),
-          Expanded(child: body),
+          Expanded(
+            child: Listener(
+              onPointerDown: _onPointer,
+              onPointerMove: _onPointer,
+              onPointerUp: _onPointer,
+              onPointerCancel: _onPointer,
+              child: body,
+            ),
+          ),
         ],
       ),
     );
@@ -353,12 +383,13 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
                       height: rowHeight,
                       border: line,
                       // While a cell is held, only the days it can go to stay.
-                      faded: lift != null && (lift.role != role || !canSwapDuty(lift.from, day, role)),
-                      lit: lift?.to?.id == day.id && lift?.role == role || _flash.contains('${day.id}/$role'),
+                      faded: lift != null && (lift.role != role || !canSwapDuty(role, lift.from, day)),
+                      lit: lift?.to?.id == day.id && lift?.role == role || _flash.contains(_cellId(day, role)),
                       onTap: (duty) => pickPeople(context, ref, day, duty, via: 'plan', swapDays: _shown),
-                      onLiftStart: (cell, d) => _liftStart(cell, day, role, d),
-                      onLiftMove: _liftMove,
-                      onLiftEnd: _liftEnd,
+                      onLift: (cell, d) => _liftStart(cell, day, role, d),
+                      onSwap: _shown.any((d) => canSwapDuty(role, day, d))
+                          ? (duty) => pickDayToSwap(context, ref, day, duty, _shown, via: 'plan')
+                          : null,
                     ),
                 ],
               ),
@@ -548,9 +579,8 @@ class _DutyCell extends StatelessWidget {
     required this.faded,
     required this.lit,
     required this.onTap,
-    required this.onLiftStart,
-    required this.onLiftMove,
-    required this.onLiftEnd,
+    required this.onLift,
+    required this.onSwap,
   });
 
   final Roster roster;
@@ -566,9 +596,13 @@ class _DutyCell extends StatelessWidget {
   /// Where a held cell would go, or just traded.
   final bool lit;
   final ValueChanged<Duty> onTap;
-  final void Function(BuildContext cell, LongPressStartDetails details) onLiftStart;
-  final GestureLongPressMoveUpdateCallback onLiftMove;
-  final VoidCallback onLiftEnd;
+
+  /// Held: the screen follows the finger from here.
+  final void Function(BuildContext cell, LongPressStartDetails details) onLift;
+
+  /// 和別週交換, for screen readers in place of dragging; null when no
+  /// other day can trade.
+  final ValueChanged<Duty>? onSwap;
 
   @override
   Widget build(BuildContext context) {
@@ -582,11 +616,13 @@ class _DutyCell extends StatelessWidget {
       button: duty != null,
       label: '$role, ${dayLabel(l10n, roster.day, today)}',
       value: text,
+      customSemanticsActions: {
+        if (onSwap case final swap? when duty != null)
+          CustomSemanticsAction(label: l10n.pickerSwapDay): () => swap(duty),
+      },
       excludeSemantics: true,
       child: GestureDetector(
-        onLongPressStart: names.isEmpty ? null : (d) => onLiftStart(context, d),
-        onLongPressMoveUpdate: names.isEmpty ? null : onLiftMove,
-        onLongPressEnd: names.isEmpty ? null : (_) => onLiftEnd(),
+        onLongPressStart: names.isEmpty ? null : (d) => onLift(context, d),
         child: AnimatedOpacity(
           opacity: faded ? 0.4 : 1,
           duration: still ? Duration.zero : const Duration(milliseconds: 150),
@@ -638,6 +674,7 @@ class _CellText extends StatelessWidget {
 /// [bounds]: where the table's cells show on screen.
 class _Lift {
   _Lift({
+    required this.pointer,
     required this.from,
     required this.role,
     required this.size,
@@ -646,6 +683,8 @@ class _Lift {
     required this.bounds,
   });
 
+  /// The finger holding it.
+  final int? pointer;
   final Roster from;
   final String role;
   final Size size;

@@ -441,7 +441,7 @@ Future<void> pickPeople(
       // The staff order is the whole service's: not a 事工 leader's.
       canReorder: !roster.isEvent && ref.read(arrangesProvider(roster.type)).all,
       canRemove: true,
-      canSwapDay: swapDays.any((d) => canSwapDuty(roster, d, duty.role)),
+      canSwapDay: swapDays.any((d) => canSwapDuty(duty.role, roster, d)),
       onePerson: ref.read(rosterActionsProvider).takesOnePerson(roster, duty.role),
       onChanged: (r) => latest = r,
       onInvite: (me?.isAdmin ?? false) ? () => invite = true : null,
@@ -451,7 +451,7 @@ Future<void> pickPeople(
   final result = returned ?? latest;
   if (result != null && context.mounted) {
     if (result.swapDay) {
-      await _swapDayOf(context, ref, roster, duty, swapDays, via);
+      await pickDayToSwap(context, ref, roster, duty, swapDays, via: via);
     } else {
       await _savePicked(context, ref, roster, duty, result, via);
     }
@@ -459,15 +459,16 @@ Future<void> pickPeople(
   if (invite) unawaited(router.push('/me/invites'));
 }
 
-/// 和別週交換: which of [days] to trade [duty] with, then traded.
-Future<void> _swapDayOf(
+/// 和別週交換: which of [days] to trade [duty] on [roster] with, then
+/// traded.
+Future<void> pickDayToSwap(
   BuildContext context,
   WidgetRef ref,
   Roster roster,
   Duty duty,
-  List<Roster> days,
-  String via,
-) async {
+  List<Roster> days, {
+  required String via,
+}) async {
   final l10n = L10n.of(context);
   String? onIt(Roster d) {
     final people = d.duties.firstWhere((x) => x.role == duty.role).people;
@@ -476,7 +477,7 @@ Future<void> _swapDayOf(
 
   final targets = [
     for (final d in days)
-      if (canSwapDuty(roster, d, duty.role)) SwapSide(d, onIt(d)),
+      if (canSwapDuty(duty.role, roster, d)) SwapSide(d, onIt(d)),
   ];
   final target = await showAppSheet<SwapSide>(
     context,
@@ -492,19 +493,19 @@ Future<void> _swapDayOf(
 }
 
 /// Trades whoever is on [role] on [from] and [to] (canSwapDuty), saying
-/// so with 復原: moved, when [to] had nobody.
-Future<void> swapDutyDays(
+/// so with 復原: moved, when [to] had nobody. Whether it went through.
+Future<bool> swapDutyDays(
   BuildContext context,
   WidgetRef ref,
   String role,
   Roster from,
   Roster to, {
-  String via = 'app',
-}) async {
+  required String via,
+}) {
   final l10n = L10n.of(context);
   String names(Roster r) => r.duties.firstWhere((d) => d.role == role).people.join(l10n.listSeparator);
   final (a, b) = (names(from), names(to));
-  await runWithUndo(
+  return runWithUndo(
     context,
     b.isEmpty
         ? l10n.moved(a, dayLabel(l10n, to.day, ref.read(todayProvider)))

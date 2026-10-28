@@ -74,8 +74,16 @@ class RosterActions {
     return now.copyWith(duties: rest);
   }
 
+  /// Whether undoing [next] can take the day away again, back to following
+  /// its template: it was a draft, untouched since. Not for a 事工's 負責人,
+  /// who may not delete a day (#82): they put the duty back instead.
   bool _untouchedDraft(Roster before, Roster next) =>
-      !before.saved && _now(before).copyWith(saved: false) == next.copyWith(saved: false);
+      !before.saved &&
+      _now(before).copyWith(saved: false) == next.copyWith(saved: false) &&
+      (before.isEvent
+              ? _ref.read(eventArrangesProvider(before.forEvent!.group))
+              : _ref.read(arrangesProvider(before.type)))
+          .all;
 
   Roster? _persisted(Roster r) => r.saved ? r : null;
 

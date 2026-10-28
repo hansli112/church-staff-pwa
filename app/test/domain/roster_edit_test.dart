@@ -195,7 +195,7 @@ void main() {
       final from = day(4, {
         '招待': ['志豪'],
       });
-      bool can(Roster to) => canSwapDuty(from, to, '招待');
+      bool can(Roster to) => canSwapDuty('招待', from, to);
       expect(
         can(
           day(11, {
@@ -222,8 +222,8 @@ void main() {
         ),
         isFalse,
       );
-      expect(canSwapDuty(day(4, {'招待': []}), day(11, {'招待': []}), '招待'), isFalse);
-      expect(canSwapDuty(day(4, {'招待': []}), from, '招待'), isFalse, reason: 'the same day');
+      expect(canSwapDuty('招待', day(4, {'招待': []}), day(11, {'招待': []})), isFalse);
+      expect(canSwapDuty('招待', day(4, {'招待': []}), from), isFalse, reason: 'the same day');
     });
   });
 }

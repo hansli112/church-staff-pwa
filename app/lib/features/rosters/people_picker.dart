@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -438,10 +439,12 @@ class PeoplePickerState extends State<PeoplePicker> {
         ),
       );
     }
-    if ((widget.canSwapDay || widget.canRemove) && !searching) {
+    // Only before anyone is picked here: a swap does not keep picks.
+    final swaps = widget.canSwapDay && !searching && listEquals(_selected, widget.initial);
+    if ((swaps || widget.canRemove) && !searching) {
       rows.add(() => const SizedBox(height: Space.l));
     }
-    if (widget.canSwapDay && !searching) {
+    if (swaps) {
       rows.add(
         () => ListRow(
           title: l10n.pickerSwapDay,
