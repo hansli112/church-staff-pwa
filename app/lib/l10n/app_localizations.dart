@@ -3730,6 +3730,12 @@ abstract class L10n {
   /// **'名稱'**
   String get costName;
 
+  /// No description provided for @costNamesOther.
+  ///
+  /// In zh, this message translates to:
+  /// **'其他語言的名稱（選填）。沒填的語言顯示英文，英文也沒填就顯示上面的名稱；簡體中文沒填顯示上面的名稱。'**
+  String get costNamesOther;
+
   /// No description provided for @costAmount.
   ///
   /// In zh, this message translates to:

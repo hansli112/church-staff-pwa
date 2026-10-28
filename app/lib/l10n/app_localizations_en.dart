@@ -2145,6 +2145,10 @@ class L10nEn extends L10n {
   String get costName => 'Name';
 
   @override
+  String get costNamesOther =>
+      'Names in other languages (optional). A language left empty shows the English name, or the name above if that is empty too; Simplified Chinese shows the name above.';
+
+  @override
   String get costAmount => 'Amount';
 
   @override

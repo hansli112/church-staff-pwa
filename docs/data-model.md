@@ -29,9 +29,9 @@
 | `webhookSecrets/{cid}` | 只有後端讀寫：外部通知的密鑰，用行事曆 token 的金鑰以 AES-256-GCM 加密 |
 | `webhookOutbox/{cid}/rosterChanges/{eventId}` | 只有後端讀寫：還沒送出的服事表異動，每 5 分鐘合併成一則外部通知後刪除 |
 | `heldPushes/{cid}_{rosterId}_{uid}` | 只有後端讀寫：教會當地 22:00–7:00 的服事表異動推播，等 7:00 再送。`cid`、`rosterId`、`uid`、`roles`（第一筆延後的異動之前，這個人在那天的服事項目；他自己改的、匯入的異動會併進來，不算消息）、`dateKey`（那時的日期，活動改期看得出來）、`serviceId`、`serviceName`、`event`、`sendAt`。送出時比對當下的服事表，只說這段時間淨變了什麼，送完刪除。7:00 後、排程送出前又有異動時，兩者合成一則一起送 |
-| `platform/funding` | 雲端費用進度，誰都讀得到（網站的支持頁不用登入）、只有後端寫：`month`（`YYYY-MM`）、`target`、`received`、`carried`、`monthsLeft`（金額都是新台幣整數）、`costs`（每一項費用公開給大家看：`name`、`perMonth` 每月新台幣、`per`；`target` 是 `perMonth` 加總；沒有匯率時沿用上一次的）、`updatedAt` |
+| `platform/funding` | 雲端費用進度，誰都讀得到（網站的支持頁不用登入）、只有後端寫：`month`（`YYYY-MM`）、`target`、`received`、`carried`、`monthsLeft`（金額都是新台幣整數）、`costs`（每一項費用公開給大家看：`name`、`names`（有填才有）、`perMonth` 每月新台幣、`per`；`target` 是 `perMonth` 加總；沒有匯率時沿用上一次的）、`updatedAt` |
 | `platform/app` | 商店 App 最低能用的 build number，誰都讀得到（沒登入也要擋）、App 不能寫，營運者在 Console 或 REST 改：`minBuild`（`android`、`ios`；沒有或 0 就不擋）。比它舊的 App 整個畫面要求更新（`docs/firebase-setup.md`〈要求更新手機 App〉） |
-| `platform/fundingCosts` | 只有後端讀寫（營運者經 `adminSetFundingCosts` 改）：`items`（`name`、`amount`、`currency` 為 `TWD` / `USD`、`per` 為 `month` / `year`） |
+| `platform/fundingCosts` | 只有後端讀寫（營運者經 `adminSetFundingCosts` 改）：`items`（`name` 繁中名稱、`names` 其他語言的名稱（`en`、`zh-Hans`、`ja`、`ko`，選填，沒填的不存）、`amount`、`currency` 為 `TWD` / `USD`、`per` 為 `month` / `year`）。支持頁（網站和 App）照語言顯示：簡中沒填顯示繁中，其他語言沒填顯示英文，英文也沒填顯示繁中 |
 | `platform/fxRates` | 只有後端讀寫：`rates`（一元台幣換多少外幣）、`fetchedOn` |
 | `fundingMonths/{YYYY-MM}` | 只有後端讀寫：該月 `received`、`target`（月份過了就不再改） |
 | `fundingPayments/{商店_交易 id}` | 只有後端讀寫：`store`（`apple` / `google` / `ecpay`）、`productId`（網站付款是 `web_once`）、`amount`、`currency`、`amountTwd`、`refundedTwd`、`month`、`at`。id 是 `apple_<交易 id>`、`google_<訂單 id>`、`ecpay_<訂單號碼>`。退款比付款先到時，先只有 `store`、`refundShare`（退了幾成），付款到了再補上其他欄位。綠界後台退款不會通知後端，由營運者在平台後台填訂單號碼（`adminRefundOnlineSupport`）整筆扣回，可復原。不記帳號或名字 |

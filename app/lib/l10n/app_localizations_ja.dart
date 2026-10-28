@@ -2025,6 +2025,9 @@ class L10nJa extends L10n {
   String get costName => '名前';
 
   @override
+  String get costNamesOther => 'ほかの言語での名前（任意）。空欄の言語は英語の名前、英語も空欄なら上の名前を表示します。簡体字中国語が空欄なら上の名前を表示します。';
+
+  @override
   String get costAmount => '金額';
 
   @override

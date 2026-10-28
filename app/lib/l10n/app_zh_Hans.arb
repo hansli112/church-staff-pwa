@@ -629,6 +629,7 @@
   "costAdd": "添加项目",
   "costEdit": "费用项目",
   "costName": "名称",
+  "costNamesOther": "其他语言的名称（选填）。没填的语言显示英文，英文也没填就显示上面的名称；简体中文没填显示上面的名称。",
   "costAmount": "金额",
   "costPerMonth": "每月",
   "costPerYear": "每年",

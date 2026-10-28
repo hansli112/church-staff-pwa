@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:martha/app.dart';
+import 'package:martha/core/languages.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/state/app_build.dart';
@@ -123,10 +124,11 @@ Future<void> pumpWithStore(
   MemoryBackend? backend,
   bool storePagesPublic = true,
   Map<String, Object> savedPrefs = const {},
+  List<Locale> deviceLocales = const [Locale('zh', 'TW')],
 }) async {
   tester.view.physicalSize = const Size(393 * 3, 852 * 3);
   tester.view.devicePixelRatio = 3;
-  tester.platformDispatcher.localesTestValue = const [Locale('zh', 'TW')];
+  tester.platformDispatcher.localesTestValue = deviceLocales;
   addTearDown(tester.view.reset);
   addTearDown(tester.platformDispatcher.clearAllTestValues);
   await tester.pumpWidget(
@@ -612,9 +614,13 @@ void main() {
   });
 
   group('this month\'s support', () {
-    Future<MemoryBackend> open(WidgetTester tester, Funding? funding) async {
+    Future<MemoryBackend> open(
+      WidgetTester tester,
+      Funding? funding, {
+      List<Locale> deviceLocales = const [Locale('zh', 'TW')],
+    }) async {
       final b = seededChurch(as: staffMei)..funding = funding;
-      await pumpWithStore(tester, FakeStore(), FakeIcons(), backend: b);
+      await pumpWithStore(tester, FakeStore(), FakeIcons(), backend: b, deviceLocales: deviceLocales);
       GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
       await settle(tester);
       return b;
@@ -661,6 +667,32 @@ void main() {
       expect(find.text('NT\$300'), findsOneWidget);
       expect(find.text('NT\$264'), findsOneWidget);
       expect(find.text('每年付一次的費用平均分到每個月'), findsOneWidget);
+    });
+
+    testWidgets('each cost in the app\'s language: English when it has none, Chinese for Simplified', (tester) async {
+      const funding = Funding(
+        month: '2026-10',
+        target: 350,
+        received: 0,
+        carried: 0,
+        monthsLeft: 0,
+        costs: [
+          FundingCost(name: '雲端', names: {AppLanguage.en: 'Cloud hosting', AppLanguage.ja: 'クラウド'}, perMonth: 300),
+          FundingCost(name: '網域', perMonth: 50),
+        ],
+      );
+      for (final (locale, shown) in [
+        (const Locale('en'), ['Cloud hosting', '網域']),
+        (const Locale('ja'), ['クラウド', '網域']),
+        (const Locale('ko'), ['Cloud hosting', '網域']),
+        (const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'), ['雲端', '網域']),
+      ]) {
+        await open(tester, funding, deviceLocales: [locale]);
+        await tester.scrollUntilVisible(find.text(shown.last), 200, scrollable: find.byType(Scrollable).first);
+        for (final name in shown) {
+          expect(find.text(name), findsOneWidget, reason: '$locale');
+        }
+      }
     });
 
     testWidgets('only monthly costs: no word about yearly ones', (tester) async {

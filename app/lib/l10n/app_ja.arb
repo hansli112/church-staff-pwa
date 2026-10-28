@@ -629,6 +629,7 @@
   "costAdd": "項目を追加",
   "costEdit": "費用の項目",
   "costName": "名前",
+  "costNamesOther": "ほかの言語での名前（任意）。空欄の言語は英語の名前、英語も空欄なら上の名前を表示します。簡体字中国語が空欄なら上の名前を表示します。",
   "costAmount": "金額",
   "costPerMonth": "月額",
   "costPerYear": "年額",

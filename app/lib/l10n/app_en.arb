@@ -629,6 +629,7 @@
   "costAdd": "Add item",
   "costEdit": "Cost item",
   "costName": "Name",
+  "costNamesOther": "Names in other languages (optional). A language left empty shows the English name, or the name above if that is empty too; Simplified Chinese shows the name above.",
   "costAmount": "Amount",
   "costPerMonth": "Monthly",
   "costPerYear": "Yearly",

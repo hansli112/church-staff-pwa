@@ -2,6 +2,7 @@ import { FieldValue, type DocumentSnapshot } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions/v2';
 
 import { DAY_MS, dateKeyUtc8, fail, requireOperator, serverTime, text, type Caller, type Deps } from './common.js';
+import { LANGUAGES, type Language } from './languages.js';
 import { TEXT_LIMITS } from './limits.js';
 import { loggable } from './redact.js';
 
@@ -40,8 +41,17 @@ const STALE_RATE_DAYS = 7;
 export const COST_CURRENCIES = ['TWD', 'USD'] as const;
 export type CostCurrency = (typeof COST_CURRENCIES)[number];
 
+/**
+ * A cost's name in the languages besides Traditional Chinese ([CostItem.name]),
+ * those the operator filled in. The support pages, website and app alike,
+ * show Simplified Chinese without one in Traditional, and the others in
+ * English, or without that too in Traditional.
+ */
+export type CostNames = Partial<Record<Exclude<Language, 'zh-Hant'>, string>>;
+
 export interface CostItem {
   name: string;
+  names?: CostNames;
   amount: number;
   currency: CostCurrency;
   per: 'month' | 'year';
@@ -73,6 +83,7 @@ export function toTwd(amount: number, currency: string, rates: Rates): number | 
 /** One line of the costs as everyone sees it: NT$ a month. */
 export interface PublicCost {
   name: string;
+  names?: CostNames;
   perMonth: number;
   per: CostItem['per'];
 }
@@ -86,7 +97,8 @@ export function monthlyCosts(items: CostItem[], rates: Rates): PublicCost[] | nu
   for (const item of items) {
     const twd = toTwd(item.amount, item.currency, rates);
     if (twd === null) return null;
-    costs.push({ name: item.name, perMonth: Math.round(item.per === 'year' ? twd / 12 : twd), per: item.per });
+    const perMonth = Math.round(item.per === 'year' ? twd / 12 : twd);
+    costs.push({ name: item.name, ...(item.names ? { names: item.names } : {}), perMonth, per: item.per });
   }
   return costs;
 }
@@ -245,7 +257,19 @@ function costItem(value: unknown): CostItem {
   const currency = COST_CURRENCIES.find((c) => c === v?.currency);
   if (!currency) fail('invalid-argument', 'unknown');
   if (v?.per !== 'month' && v?.per !== 'year') fail('invalid-argument', 'unknown');
-  return { name, amount, currency, per: v.per };
+  const names = costNames(v.names);
+  return { name, ...(names ? { names } : {}), amount, currency, per: v.per };
+}
+
+/** The names filled in; an empty one is left out, as is an empty set. */
+function costNames(value: unknown): CostNames | undefined {
+  const v = (value ?? {}) as Record<string, unknown>;
+  const names: CostNames = {};
+  for (const language of LANGUAGES) {
+    if (language === 'zh-Hant' || v[language] === undefined || v[language] === '') continue;
+    names[language] = text(v[language], TEXT_LIMITS.costName);
+  }
+  return Object.keys(names).length ? names : undefined;
 }
 
 /** The cost list and the last 12 months, newest first. */

@@ -2021,6 +2021,9 @@ class L10nZh extends L10n {
   String get costName => '名稱';
 
   @override
+  String get costNamesOther => '其他語言的名稱（選填）。沒填的語言顯示英文，英文也沒填就顯示上面的名稱；簡體中文沒填顯示上面的名稱。';
+
+  @override
   String get costAmount => '金額';
 
   @override
@@ -4986,6 +4989,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get costName => '名称';
+
+  @override
+  String get costNamesOther => '其他语言的名称（选填）。没填的语言显示英文，英文也没填就显示上面的名称；简体中文没填显示上面的名称。';
 
   @override
   String get costAmount => '金额';

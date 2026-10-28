@@ -40,7 +40,13 @@ void main() {
 
     final funding = {
       'costs': [
-        {'name': 'Apple Developer', 'amount': 99, 'currency': 'USD', 'per': 'year'},
+        {
+          'name': 'Apple 開發者',
+          'names': {'en': 'Apple Developer', 'ja': 'Apple デベロッパー'},
+          'amount': 99,
+          'currency': 'USD',
+          'per': 'year',
+        },
         {'name': '網域', 'amount': 30.5, 'currency': 'TWD', 'per': 'month'},
       ],
       'months': [
@@ -53,7 +59,13 @@ void main() {
         'carried': 0,
         'monthsLeft': 2,
         'costs': [
-          {'name': 'Apple Developer', 'perMonth': 260, 'per': 'year'},
+          {
+            'name': 'Apple 開發者',
+            'names': {'en': 'Apple Developer'},
+            'perMonth': 260,
+            'per': 'year',
+          },
+          {'name': '網域', 'perMonth': 31, 'per': 'month'},
         ],
       },
     };

@@ -138,7 +138,9 @@
       for (const v of costs) {
         const c = v.mapValue?.fields ?? {};
         const name = document.createElement('dt');
-        name.textContent = c.name?.stringValue ?? '';
+        // Its name in this page's language, as the operator entered it (CostNames in functions/src/funding.ts).
+        const names = c.names?.mapValue?.fields ?? {};
+        name.textContent = names['ko']?.stringValue ?? names['en']?.stringValue ?? c.name?.stringValue ?? '';
         const amount = document.createElement('dd');
         amount.textContent = money(Number(c.perMonth?.integerValue ?? c.perMonth?.doubleValue ?? 0));
         list.append(name, amount);

@@ -94,9 +94,20 @@ describe('the operator sets the costs', () => {
       { name: 'x', amount: 0, currency: 'TWD', per: 'month' },
       { name: 'x', amount: 1, currency: 'JPY', per: 'month' },
       { name: 'x', amount: 1, currency: 'TWD', per: 'week' },
+      { name: 'x', names: { en: 'x'.repeat(41) }, amount: 1, currency: 'TWD', per: 'month' },
+      { name: 'x', names: { en: 1 }, amount: 1, currency: 'TWD', per: 'month' },
     ]) {
       await rejectsWith(adminSetFundingCosts(deps, op, { items: [bad] }), 'unknown');
     }
+  });
+
+  test('a cost\'s name in the other languages is kept, and shown to everyone; one left empty is not', async () => {
+    const d = withRates();
+    const names = { en: 'Apple developer fee', ja: 'Apple デベロッパー年会費', ko: '' };
+    await adminSetFundingCosts(d, op, { items: [{ name: 'Apple 開發者', names, amount: 99, currency: 'USD', per: 'year' }] });
+    const kept = { en: 'Apple developer fee', ja: 'Apple デベロッパー年会費' };
+    assert.deepEqual((await funding())?.costs, [{ name: 'Apple 開發者', names: kept, perMonth: 264, per: 'year' }]);
+    assert.deepEqual((await adminFunding(d, op, {})).costs, [{ name: 'Apple 開發者', names: kept, amount: 99, currency: 'USD', per: 'year' }]);
   });
 
   test('a past month keeps the target it had, when the costs change later', async () => {

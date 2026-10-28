@@ -629,6 +629,7 @@
   "costAdd": "항목 추가",
   "costEdit": "비용 항목",
   "costName": "이름",
+  "costNamesOther": "다른 언어 이름(선택). 비워 둔 언어는 영어 이름을, 영어도 비어 있으면 위의 이름을 보여요. 간체 중국어가 비어 있으면 위의 이름을 보여요.",
   "costAmount": "금액",
   "costPerMonth": "매월",
   "costPerYear": "매년",

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
+import '../../core/languages.dart';
 import '../../data/admin_codec.dart';
 import '../../data/backend.dart';
 import '../../domain/limits.dart';
@@ -771,6 +772,12 @@ class _CostSheet extends StatefulWidget {
 
 class _CostSheetState extends State<_CostSheet> {
   late final _name = TextEditingController(text: widget.initial?.name ?? '');
+
+  /// Its name in the other languages, for the support pages.
+  late final _names = {
+    for (final l in AppLanguage.values)
+      if (l != AppLanguage.zhHant) l: TextEditingController(text: widget.initial?.names[l] ?? ''),
+  };
   late final _amount = TextEditingController(text: widget.initial == null ? '' : '${widget.initial!.amount}');
   late Currency _currency = widget.initial?.currency ?? Currency.twd;
   late CostPeriod _per = widget.initial?.per ?? CostPeriod.month;
@@ -778,6 +785,9 @@ class _CostSheetState extends State<_CostSheet> {
   @override
   void dispose() {
     _name.dispose();
+    for (final c in _names.values) {
+      c.dispose();
+    }
     _amount.dispose();
     super.dispose();
   }
@@ -786,7 +796,16 @@ class _CostSheetState extends State<_CostSheet> {
     final name = _name.text.trim();
     final amount = num.tryParse(_amount.text.trim());
     if (name.isEmpty || amount == null || amount <= 0) return null;
-    return CostItem(name: name, amount: amount, currency: _currency, per: _per);
+    return CostItem(
+      name: name,
+      names: {
+        for (final MapEntry(key: l, value: c) in _names.entries)
+          if (c.text.trim() case final n when n.isNotEmpty) l: n,
+      },
+      amount: amount,
+      currency: _currency,
+      per: _per,
+    );
   }
 
   @override
@@ -809,6 +828,15 @@ class _CostSheetState extends State<_CostSheet> {
               decoration: InputDecoration(labelText: l10n.costName),
               onChanged: (_) => setState(() {}),
             ),
+            const SizedBox(height: Space.s),
+            Text(l10n.costNamesOther, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
+            for (final MapEntry(key: l, value: controller) in _names.entries)
+              TextField(
+                key: Key('costName-${l.tag}'),
+                controller: controller,
+                maxLength: TextLimits.costName,
+                decoration: InputDecoration(labelText: l.label),
+              ),
             TextField(
               key: const Key('costAmount'),
               controller: _amount,

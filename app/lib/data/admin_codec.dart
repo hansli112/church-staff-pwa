@@ -3,6 +3,7 @@
 /// back through the same fromJson as the reply did.
 library;
 
+import '../core/languages.dart';
 import '../domain/day.dart';
 import '../domain/models.dart';
 import 'backend.dart';
@@ -86,6 +87,7 @@ FundingOverview fundingOverviewFromJson(ReplyJson d) {
         } when Currency.fromCode(code) != null)
           CostItem(
             name: name,
+            names: costNamesFromJson(raw['names']),
             amount: amount,
             currency: Currency.fromCode(code)!,
             per: per == 'year' ? CostPeriod.year : CostPeriod.month,
@@ -113,6 +115,7 @@ Map<String, Object?> fundingOverviewToJson(FundingOverview o) => {
 
 Map<String, Object?> costItemToJson(CostItem i) => {
   'name': i.name,
+  if (i.names.isNotEmpty) 'names': costNamesToJson(i.names),
   'amount': i.amount,
   'currency': i.currency.code,
   'per': i.per.name,
@@ -132,6 +135,7 @@ Funding fundingFromJson(Map<String, Object?> d) {
         if (c is Map)
           FundingCost(
             name: c['name'] as String? ?? '',
+            names: costNamesFromJson(c['names']),
             perMonth: (c['perMonth'] as num?)?.round() ?? 0,
             yearly: c['per'] == 'year',
           ),
@@ -146,6 +150,24 @@ Map<String, Object?> fundingToJson(Funding f) => {
   'carried': f.carried,
   'monthsLeft': f.monthsLeft,
   'costs': [
-    for (final c in f.costs) {'name': c.name, 'perMonth': c.perMonth, 'per': c.yearly ? 'year' : 'month'},
+    for (final c in f.costs)
+      {
+        'name': c.name,
+        if (c.names.isNotEmpty) 'names': costNamesToJson(c.names),
+        'perMonth': c.perMonth,
+        'per': c.yearly ? 'year' : 'month',
+      },
   ],
+};
+
+/// A cost's `names`: its name by AppLanguage tag, Traditional Chinese
+/// being its `name`.
+Map<AppLanguage, String> costNamesFromJson(Object? raw) => {
+  if (raw is Map)
+    for (final l in AppLanguage.values)
+      if (raw[l.tag] case final String name when l != AppLanguage.zhHant && name.isNotEmpty) l: name,
+};
+
+Map<String, String> costNamesToJson(Map<AppLanguage, String> names) => {
+  for (final e in names.entries) e.key.tag: e.value,
 };

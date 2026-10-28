@@ -606,9 +606,23 @@ class Funding {
 
 /// One of the platform's costs as everyone sees it.
 class FundingCost {
-  const FundingCost({required this.name, required this.perMonth, this.yearly = false});
+  const FundingCost({required this.name, this.names = const {}, required this.perMonth, this.yearly = false});
 
+  /// In Traditional Chinese.
   final String name;
+
+  /// In the other languages, those the operator filled in ([CostItem.names]).
+  final Map<AppLanguage, String> names;
+
+  /// Its name for [language]: Simplified Chinese without one in
+  /// Traditional, the others in English, or without that too in
+  /// Traditional, as the website's support page (CostNames in
+  /// functions/src/funding.ts).
+  String nameIn(AppLanguage language) => switch (language) {
+    AppLanguage.zhHant => name,
+    AppLanguage.zhHans => names[language] ?? name,
+    _ => names[language] ?? names[AppLanguage.en] ?? name,
+  };
 
   /// NT\$ a month; a twelfth of a yearly one.
   final int perMonth;
@@ -633,9 +647,20 @@ enum Currency {
 
 /// One line of the platform's costs, entered by the operator.
 class CostItem {
-  const CostItem({required this.name, required this.amount, required this.currency, required this.per});
+  const CostItem({
+    required this.name,
+    this.names = const {},
+    required this.amount,
+    required this.currency,
+    required this.per,
+  });
 
+  /// In Traditional Chinese.
   final String name;
+
+  /// Its name in the other languages the operator filled in, for the
+  /// support pages ([FundingCost.nameIn]); none in Traditional Chinese.
+  final Map<AppLanguage, String> names;
   final num amount;
   final Currency currency;
   final CostPeriod per;
@@ -644,12 +669,15 @@ class CostItem {
   bool operator ==(Object other) =>
       other is CostItem &&
       other.name == name &&
+      other.names.length == names.length &&
+      names.entries.every((e) => other.names[e.key] == e.value) &&
       other.amount == amount &&
       other.currency == currency &&
       other.per == per;
 
   @override
-  int get hashCode => Object.hash(name, amount, currency, per);
+  int get hashCode =>
+      Object.hash(name, Object.hashAllUnordered(names.entries.map((e) => (e.key, e.value))), amount, currency, per);
 }
 
 /// A month's totals in NT\$, for the operator.

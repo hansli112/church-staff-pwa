@@ -2025,6 +2025,9 @@ class L10nKo extends L10n {
   String get costName => '이름';
 
   @override
+  String get costNamesOther => '다른 언어 이름(선택). 비워 둔 언어는 영어 이름을, 영어도 비어 있으면 위의 이름을 보여요. 간체 중국어가 비어 있으면 위의 이름을 보여요.';
+
+  @override
   String get costAmount => '금액';
 
   @override

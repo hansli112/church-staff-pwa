@@ -1242,6 +1242,7 @@
   "costAdd": "新增項目",
   "costEdit": "費用項目",
   "costName": "名稱",
+  "costNamesOther": "其他語言的名稱（選填）。沒填的語言顯示英文，英文也沒填就顯示上面的名稱；簡體中文沒填顯示上面的名稱。",
   "costAmount": "金額",
   "costPerMonth": "每月",
   "costPerYear": "每年",

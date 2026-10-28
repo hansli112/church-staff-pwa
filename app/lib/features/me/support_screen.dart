@@ -8,6 +8,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/design/components.dart';
+import '../../core/languages.dart';
 import '../../core/design/tokens.dart';
 import '../../data/backend.dart';
 import '../../l10n/app_localizations.dart';
@@ -102,7 +103,11 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                 header: l10n.fundingWhereItGoes,
                 footer: funding.costs.any((c) => c.yearly) ? l10n.fundingYearlySplit : null,
                 children: [
-                  for (final cost in funding.costs) ListRow(title: cost.name, value: money(l10n, cost.perMonth)),
+                  for (final cost in funding.costs)
+                    ListRow(
+                      title: cost.nameIn(AppLanguage.shownIn(context)),
+                      value: money(l10n, cost.perMonth),
+                    ),
                 ],
               ),
           ],
