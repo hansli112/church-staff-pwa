@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 
 import { FieldValue, Timestamp, type DocumentSnapshot } from 'firebase-admin/firestore';
+import { HttpsError } from 'firebase-functions/v2/https';
 
 import { churchAccess, isChurchOpen } from './access.js';
 import { fail, type Caller, type Deps } from './common.js';
@@ -539,8 +540,13 @@ export async function checkEventRosterGroup(deps: CalDeps, churchId: string, r: 
   if (!by || !isEvent(r) || typeof group !== 'string' || !group) return;
   const member = await deps.db.doc(`churches/${churchId}/members/${by}`).get();
   if (powersOf(member.data() ?? {}).writesAnyEvent) return;
-  const { token, calendarId } = await access(deps, churchId);
-  const e = calendarId ? await deps.google.get(token, calendarId, r.get('eventId') as string) : null;
+  // A calendar no longer connected, or to reconnect, has nothing to check
+  // it against; its trigger is retried, so that is no failure.
+  const a = await access(deps, churchId).catch((e: unknown) => {
+    if (e instanceof HttpsError && e.code === 'failed-precondition') return null;
+    throw e;
+  });
+  const e = a?.calendarId ? await deps.google.get(a.token, a.calendarId, r.get('eventId') as string) : null;
   // Not found, the sync cancels it as it does any roster whose event went.
   if (!e || (!e.cancelled && (e.group ?? '') === group)) return;
   console.warn(`event roster ${churchId}/${r.id}: says ${group}, its event does not; removed`);

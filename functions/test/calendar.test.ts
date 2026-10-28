@@ -1025,6 +1025,12 @@ describe("a group's events (#84)", () => {
     await checkEventRosterGroup(d, 'C1', await make('ev_e1', 'e1'), 'editor');
     await checkEventRosterGroup(d, 'C1', await make('ev_e1', 'e1'), undefined);
     assert.ok((await db.doc('churches/C1/rosters/ev_e1').get()).exists);
+
+    // Its trigger is retried: a calendar no longer connected has nothing to
+    // check it against, and must not fail it again and again.
+    await db.doc('calendarTokens/C1').delete();
+    await checkEventRosterGroup(d, 'C1', await make('ev_e1', 'e1'), 'staff');
+    assert.ok((await db.doc('churches/C1/rosters/ev_e1').get()).exists);
   });
 
   test("its roster carries the group, so the group's 負責人 may arrange it", async () => {

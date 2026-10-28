@@ -190,7 +190,7 @@ export const pendingClaims = callable(claim.pendingClaims, claimDeps);
 export const claimPending = callable(claim.claimPending, claimDeps);
 export const mergePending = callable(claim.mergePending);
 export const onPendingMemberDeleted = onDocumentDeleted(
-  { region: REGION, document: 'churches/{cid}/pendingMembers/{pid}' },
+  { region: REGION, document: 'churches/{cid}/pendingMembers/{pid}', retry: true },
   async (event) => {
     if (event.data) await pendingMembers.onPendingMemberDeleted(deps(), event.params.cid, event.data);
   },
@@ -319,9 +319,12 @@ export const logClientError = onCall({ ...callOpts, maxInstances: 3 }, (req) =>
   logClientErrorHandler(caller(req), req.data),
 );
 
-// Triggers
+// Triggers. Those with `retry` are sent again for up to a day when they
+// fail, an instance not starting in time too (2026-10-27); each must come
+// to the same whether it runs once or again. Not those that push: a push
+// sent before a later step failed would be sent twice.
 export const onUserWritten = onDocumentWritten(
-  { region: REGION, document: 'users/{uid}' },
+  { region: REGION, document: 'users/{uid}', retry: true },
   async (event) => {
     await triggers.syncProfileName(deps(), event.params.uid, event.data?.before, event.data?.after);
   },
@@ -339,7 +342,7 @@ export const onMemberDeleted = using(
 
 export const onMemberDemoted = using(
   calDeps,
-  { region: REGION, document: 'churches/{cid}/members/{uid}' },
+  { region: REGION, document: 'churches/{cid}/members/{uid}', retry: true },
   (opts, make) =>
     onDocumentUpdated(opts, async (event) => {
       if (!event.data) return;
@@ -347,7 +350,7 @@ export const onMemberDemoted = using(
     }),
 );
 
-export const onLogoUploaded = onObjectFinalized({ region: REGION, memory: '512MiB' }, async (event) => {
+export const onLogoUploaded = onObjectFinalized({ region: REGION, memory: '512MiB', retry: true }, async (event) => {
   await triggers.onLogoUploaded(
     { ...deps(), bucket: getStorage().bucket(event.data.bucket) },
     event.data.name,
@@ -371,7 +374,7 @@ export const onRosterWritten = onDocumentWrittenWithAuthContext(
 );
 
 // An event's roster a 負責人 made, against its event's group in Google (#84).
-export const onEventRosterCreated = using(calDeps, { region: REGION, document: 'churches/{cid}/rosters/{rosterId}' }, (opts, make) =>
+export const onEventRosterCreated = using(calDeps, { region: REGION, document: 'churches/{cid}/rosters/{rosterId}', retry: true }, (opts, make) =>
   onDocumentCreatedWithAuthContext(opts, async (event) => {
     if (!event.params.rosterId.startsWith('ev_') || !event.data) return;
     await calendar.checkEventRosterGroup(make(), event.params.cid, event.data, triggers.editorOf(event));
