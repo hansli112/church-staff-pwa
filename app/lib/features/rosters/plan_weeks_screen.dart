@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ import '../../core/design/tokens.dart';
 import '../../domain/day.dart';
 import '../../domain/models.dart';
 import '../../domain/plan_weeks.dart';
+import '../../domain/roster_edit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/roster_actions.dart';
@@ -21,8 +23,11 @@ import 'roster_day_screen.dart';
 
 /// 排好幾週 (#90): one service's days a month at a time, a row a day and a
 /// column a duty I arrange. Tapping a cell picks its people as on the
-/// day's page, saved at once; tapping a date opens that day. Nobody is
-/// told until 通知同工, which tells each person once, for all their days.
+/// day's page, saved at once; tapping a date opens that day. A cell held
+/// lifts, and dropped on another day of its duty trades the two (moves
+/// them, onto a day with nobody); the picker's 和別週交換 does the same
+/// without dragging. Nobody is told until 通知同工, which tells each
+/// person once, for all their days.
 /// Opens at the first month with a duty nobody is on yet; the months
 /// before it are a button away, later ones below.
 class PlanWeeksScreen extends ConsumerStatefulWidget {
@@ -41,6 +46,13 @@ const _monthsAtATime = 3;
 /// How far ahead the page looks for the first month with a gap.
 const _gapSearchMonths = 12;
 
+/// How fast the table scrolls while a lifted cell is held at its edge, per
+/// point past it (as ReorderableList).
+const _autoScrollSpeed = 50.0;
+
+/// How long the cells a drop traded stay lit.
+const _flashFor = Duration(milliseconds: 700);
+
 class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
   late String _type = widget.serviceType;
 
@@ -53,6 +65,16 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
   final _cells = ScrollController();
   final _names = ScrollController();
 
+  // A cell held: where it would land, found by the cells' places on
+  // screen, again as the table scrolls under a still finger.
+  _Lift? _lift;
+  OverlayEntry? _liftView;
+  EdgeDraggingAutoScroller? _scroller;
+  final _cellKeys = <String, GlobalKey>{};
+  List<Roster> _shown = const [];
+  Set<String> _flash = const {};
+  Timer? _flashTimer;
+
   @override
   void initState() {
     super.initState();
@@ -63,9 +85,103 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
 
   @override
   void dispose() {
+    _scroller?.stopAutoScroll();
+    _liftView
+      ?..remove()
+      ..dispose();
+    _flashTimer?.cancel();
     _cells.dispose();
     _names.dispose();
     super.dispose();
+  }
+
+  GlobalKey _keyOf(Roster day, String role) => _cellKeys.putIfAbsent('${day.id}/$role', GlobalKey.new);
+
+  void _liftStart(BuildContext cell, Roster day, String role, LongPressStartDetails d) {
+    final box = cell.findRenderObject()! as RenderBox;
+    final lift = _Lift(
+      from: day,
+      role: role,
+      size: box.size,
+      grab: d.localPosition,
+      at: d.globalPosition,
+      bounds: _globalRect(Scrollable.of(cell, axis: Axis.vertical).context).intersect(
+        _globalRect(Scrollable.of(cell, axis: Axis.horizontal).context),
+      ),
+    );
+    Haptics.light();
+    _scroller = EdgeDraggingAutoScroller(
+      Scrollable.of(cell, axis: Axis.vertical),
+      velocityScalar: _autoScrollSpeed,
+      onScrollViewScrolled: () {
+        _retarget();
+        _autoScroll();
+      },
+    );
+    final view = OverlayEntry(builder: (_) => _LiftedCell(lift: lift));
+    _liftView = view;
+    Overlay.of(context, rootOverlay: true).insert(view);
+    setState(() => _lift = lift);
+  }
+
+  void _liftMove(LongPressMoveUpdateDetails d) {
+    final lift = _lift;
+    if (lift == null) return;
+    lift.at = d.globalPosition;
+    _liftView?.markNeedsBuild();
+    _retarget();
+    _autoScroll();
+  }
+
+  /// Near the top or the bottom, the table scrolls on under the finger,
+  /// and on for as long as it stays there.
+  void _autoScroll() {
+    final lift = _lift;
+    final scroller = _scroller;
+    if (lift == null || scroller == null) return;
+    final reach = math.min(lift.size.height * 2, scroller.scrollable.position.viewportDimension / 2);
+    scroller.startAutoScrollIfNecessary(Rect.fromCenter(center: lift.at, width: 1, height: reach));
+  }
+
+  /// The day the lifted cell would trade with if let go now: the one of
+  /// its duty under the finger, if they can trade.
+  void _retarget() {
+    final lift = _lift;
+    if (lift == null) return;
+    Roster? to;
+    if (lift.bounds.contains(lift.at)) {
+      for (final day in _shown) {
+        final box = _cellKeys['${day.id}/${lift.role}']?.currentContext?.findRenderObject() as RenderBox?;
+        if (box == null || !box.attached) continue;
+        if ((box.localToGlobal(Offset.zero) & box.size).contains(lift.at)) {
+          if (canSwapDuty(lift.from, day, lift.role)) to = day;
+          break;
+        }
+      }
+    }
+    if (to?.id == lift.to?.id) return;
+    if (to != null) Haptics.selection();
+    setState(() => lift.to = to);
+  }
+
+  void _liftEnd() {
+    final lift = _lift;
+    if (lift == null) return;
+    _scroller?.stopAutoScroll();
+    _scroller = null;
+    _liftView
+      ?..remove()
+      ..dispose();
+    _liftView = null;
+    setState(() => _lift = null);
+    final to = lift.to;
+    if (to == null) return;
+    _flashTimer?.cancel();
+    setState(() => _flash = {'${lift.from.id}/${lift.role}', '${to.id}/${lift.role}'});
+    _flashTimer = Timer(_flashFor, () {
+      if (mounted) setState(() => _flash = const {});
+    });
+    swapDutyDays(context, ref, lift.role, lift.from, to, via: 'plan');
   }
 
   Future<void> _notify() async {
@@ -184,6 +300,8 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
     final dateWidth = (scale.scale(15) * 4 + Space.m).clamp(76.0, 132.0);
     final line = BorderSide(color: c.separator, width: 0.5);
 
+    _shown = [for (final m in months) ...m.days];
+    final lift = _lift;
     return LayoutBuilder(
       builder: (context, box) {
         final cellWidth = duties.isEmpty ? 0.0 : math.max(104.0, (box.maxWidth - dateWidth) / duties.length);
@@ -227,13 +345,20 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
                 children: [
                   for (final role in duties)
                     _DutyCell(
+                      key: _keyOf(day, role),
                       roster: day,
                       role: role,
                       today: today,
                       width: cellWidth,
                       height: rowHeight,
                       border: line,
-                      onTap: (duty) => pickPeople(context, ref, day, duty, via: 'plan'),
+                      // While a cell is held, only the days it can go to stay.
+                      faded: lift != null && (lift.role != role || !canSwapDuty(lift.from, day, role)),
+                      lit: lift?.to?.id == day.id && lift?.role == role || _flash.contains('${day.id}/$role'),
+                      onTap: (duty) => pickPeople(context, ref, day, duty, via: 'plan', swapDays: _shown),
+                      onLiftStart: (cell, d) => _liftStart(cell, day, role, d),
+                      onLiftMove: _liftMove,
+                      onLiftEnd: _liftEnd,
                     ),
                 ],
               ),
@@ -408,17 +533,24 @@ class _DateCell extends StatelessWidget {
   }
 }
 
-/// Who is on [role] that day. Tapping picks them; a day without the duty
-/// shows a dash and is changed on the day's own page.
+/// Who is on [role] that day. Tapping picks them; held, they lift to be
+/// dropped on another day. A day without the duty shows a dash and is
+/// changed on the day's own page.
 class _DutyCell extends StatelessWidget {
   const _DutyCell({
+    super.key,
     required this.roster,
     required this.role,
     required this.today,
     required this.width,
     required this.height,
     required this.border,
+    required this.faded,
+    required this.lit,
     required this.onTap,
+    required this.onLiftStart,
+    required this.onLiftMove,
+    required this.onLiftEnd,
   });
 
   final Roster roster;
@@ -427,12 +559,22 @@ class _DutyCell extends StatelessWidget {
   final double width;
   final double height;
   final BorderSide border;
+
+  /// Somewhere a held cell cannot go.
+  final bool faded;
+
+  /// Where a held cell would go, or just traded.
+  final bool lit;
   final ValueChanged<Duty> onTap;
+  final void Function(BuildContext cell, LongPressStartDetails details) onLiftStart;
+  final GestureLongPressMoveUpdateCallback onLiftMove;
+  final VoidCallback onLiftEnd;
 
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
+    final still = MediaQuery.disableAnimationsOf(context);
     final duty = roster.duties.where((d) => d.role == role).firstOrNull;
     final names = duty?.people.join(l10n.listSeparator) ?? '';
     final text = duty == null ? '—' : (names.isEmpty ? l10n.nobodyYet : names);
@@ -441,30 +583,114 @@ class _DutyCell extends StatelessWidget {
       label: '$role, ${dayLabel(l10n, roster.day, today)}',
       value: text,
       excludeSemantics: true,
-      child: InkWell(
-        onTap: duty == null ? null : () => onTap(duty),
-        child: Container(
-          width: width,
-          height: height,
-          padding: const EdgeInsets.symmetric(horizontal: Space.s, vertical: Space.xs),
-          alignment: AlignmentDirectional.centerStart,
-          decoration: BoxDecoration(
-            border: Border(bottom: border, right: border),
-          ),
-          child: Text(
-            text,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: AppText.subheadline.copyWith(
-              color: duty == null
-                  ? c.tertiaryLabel
-                  : names.isEmpty
-                  ? c.secondaryLabel
-                  : c.label,
+      child: GestureDetector(
+        onLongPressStart: names.isEmpty ? null : (d) => onLiftStart(context, d),
+        onLongPressMoveUpdate: names.isEmpty ? null : onLiftMove,
+        onLongPressEnd: names.isEmpty ? null : (_) => onLiftEnd(),
+        child: AnimatedOpacity(
+          opacity: faded ? 0.4 : 1,
+          duration: still ? Duration.zero : const Duration(milliseconds: 150),
+          child: InkWell(
+            onTap: duty == null ? null : () => onTap(duty),
+            child: AnimatedContainer(
+              duration: still ? Duration.zero : const Duration(milliseconds: 200),
+              width: width,
+              height: height,
+              padding: const EdgeInsets.symmetric(horizontal: Space.s, vertical: Space.xs),
+              alignment: AlignmentDirectional.centerStart,
+              decoration: BoxDecoration(
+                color: lit ? c.accentSoft : null,
+                border: Border(bottom: border, right: border),
+              ),
+              child: _CellText(
+                text: text,
+                color: duty == null
+                    ? c.tertiaryLabel
+                    : names.isEmpty
+                    ? c.secondaryLabel
+                    : c.label,
+              ),
             ),
           ),
         ),
       ),
     );
   }
+}
+
+class _CellText extends StatelessWidget {
+  const _CellText({required this.text, required this.color});
+
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    text,
+    maxLines: 2,
+    overflow: TextOverflow.ellipsis,
+    style: AppText.subheadline.copyWith(color: color),
+  );
+}
+
+/// A cell held (#90): [role] on [from], lifted from [grab] within its
+/// [size], under the finger at [at]; [to] the day it would trade with.
+/// [bounds]: where the table's cells show on screen.
+class _Lift {
+  _Lift({
+    required this.from,
+    required this.role,
+    required this.size,
+    required this.grab,
+    required this.at,
+    required this.bounds,
+  });
+
+  final Roster from;
+  final String role;
+  final Size size;
+  final Offset grab;
+  final Rect bounds;
+  Offset at;
+  Roster? to;
+}
+
+/// The held cell, raised over the page and following the finger from
+/// where it was held.
+class _LiftedCell extends StatelessWidget {
+  const _LiftedCell({required this.lift});
+
+  final _Lift lift;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final c = AppColors.of(context);
+    final overlay = Overlay.of(context).context.findRenderObject()! as RenderBox;
+    final topLeft = overlay.globalToLocal(lift.at - lift.grab);
+    final names = lift.from.duties.firstWhere((d) => d.role == lift.role).people.join(l10n.listSeparator);
+    return Positioned(
+      left: topLeft.dx,
+      top: topLeft.dy,
+      child: IgnorePointer(
+        child: Material(
+          color: c.surfaceRaised,
+          elevation: 8,
+          borderRadius: BorderRadius.circular(Radii.s),
+          child: Container(
+            width: lift.size.width,
+            height: lift.size.height,
+            padding: const EdgeInsets.symmetric(horizontal: Space.s, vertical: Space.xs),
+            alignment: AlignmentDirectional.centerStart,
+            child: _CellText(text: names, color: c.label),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Rect _globalRect(BuildContext context) {
+  final box = context.findRenderObject()! as RenderBox;
+  return box.localToGlobal(Offset.zero) & box.size;
 }

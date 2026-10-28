@@ -18,6 +18,7 @@ class PickerResult {
     this.addDutyTo = const [],
     this.takeDutyFrom = const [],
     this.removeDuty = false,
+    this.swapDay = false,
     this.guestNames = const {},
   });
 
@@ -38,6 +39,9 @@ class PickerResult {
 
   /// Take this duty off the day altogether.
   final bool removeDuty;
+
+  /// Trade who is on the duty with another day (#90).
+  final bool swapDay;
 }
 
 /// When to focus the search box on open: long lists are faster to search
@@ -67,6 +71,7 @@ class PeoplePicker extends StatefulWidget {
     required this.canEditDutyList,
     required this.canReorder,
     this.canRemove = false,
+    this.canSwapDay = false,
     this.onePerson = false,
     this.initialGuests = const {},
     this.guestSuggestions = const [],
@@ -92,6 +97,10 @@ class PeoplePicker extends StatefulWidget {
 
   /// Offer 「移除這項」 at the end of the list (the row also swipes away).
   final bool canRemove;
+
+  /// Offer 「和別週交換」 there: the dragless way to what dragging a cell
+  /// in 排好幾週 does (#90).
+  final bool canSwapDay;
 
   /// The duty takes one person (RosterActions.takesOnePerson).
   final bool onePerson;
@@ -429,8 +438,19 @@ class PeoplePickerState extends State<PeoplePicker> {
         ),
       );
     }
-    if (widget.canRemove && !searching) {
+    if ((widget.canSwapDay || widget.canRemove) && !searching) {
       rows.add(() => const SizedBox(height: Space.l));
+    }
+    if (widget.canSwapDay && !searching) {
+      rows.add(
+        () => ListRow(
+          title: l10n.pickerSwapDay,
+          leading: const Icon(Symbols.swap_vert_rounded),
+          onTap: () => Navigator.pop(context, PickerResult(people: widget.initial, swapDay: true)),
+        ),
+      );
+    }
+    if (widget.canRemove && !searching) {
       rows.add(
         () => ListRow(
           title: l10n.removeDuty,

@@ -393,7 +393,16 @@ class _DutyRow extends ConsumerWidget {
 
 /// Opens the picker for [duty] on [roster] and saves what was picked: the
 /// day page's, and 排好幾週's (#90), whose changes go [via] `plan`.
-Future<void> pickPeople(BuildContext context, WidgetRef ref, Roster roster, Duty duty, {String via = 'app'}) async {
+/// [swapDays]: the days of 排好幾週 the duty can be traded with, from the
+/// picker (#90).
+Future<void> pickPeople(
+  BuildContext context,
+  WidgetRef ref,
+  Roster roster,
+  Duty duty, {
+  String via = 'app',
+  List<Roster> swapDays = const [],
+}) async {
   final members = ref.read(membersProvider).requireValue;
   final order = ref.read(rosterActionsProvider).orderOf(roster);
   final me = ref.read(meProvider).value;
@@ -432,6 +441,7 @@ Future<void> pickPeople(BuildContext context, WidgetRef ref, Roster roster, Duty
       // The staff order is the whole service's: not a 事工 leader's.
       canReorder: !roster.isEvent && ref.read(arrangesProvider(roster.type)).all,
       canRemove: true,
+      canSwapDay: swapDays.any((d) => canSwapDuty(roster, d, duty.role)),
       onePerson: ref.read(rosterActionsProvider).takesOnePerson(roster, duty.role),
       onChanged: (r) => latest = r,
       onInvite: (me?.isAdmin ?? false) ? () => invite = true : null,
@@ -439,8 +449,70 @@ Future<void> pickPeople(BuildContext context, WidgetRef ref, Roster roster, Duty
     ),
   );
   final result = returned ?? latest;
-  if (result != null && context.mounted) await _savePicked(context, ref, roster, duty, result, via);
+  if (result != null && context.mounted) {
+    if (result.swapDay) {
+      await _swapDayOf(context, ref, roster, duty, swapDays, via);
+    } else {
+      await _savePicked(context, ref, roster, duty, result, via);
+    }
+  }
   if (invite) unawaited(router.push('/me/invites'));
+}
+
+/// 和別週交換: which of [days] to trade [duty] with, then traded.
+Future<void> _swapDayOf(
+  BuildContext context,
+  WidgetRef ref,
+  Roster roster,
+  Duty duty,
+  List<Roster> days,
+  String via,
+) async {
+  final l10n = L10n.of(context);
+  String? onIt(Roster d) {
+    final people = d.duties.firstWhere((x) => x.role == duty.role).people;
+    return people.isEmpty ? null : people.join(l10n.listSeparator);
+  }
+
+  final targets = [
+    for (final d in days)
+      if (canSwapDuty(roster, d, duty.role)) SwapSide(d, onIt(d)),
+  ];
+  final target = await showAppSheet<SwapSide>(
+    context,
+    expand: targets.length > 6,
+    builder: (context) => _SwapSheet(
+      title: l10n.swapWith(duty.role),
+      targets: targets,
+      today: ref.read(todayProvider),
+    ),
+  );
+  if (target == null || !context.mounted) return;
+  await swapDutyDays(context, ref, duty.role, roster, target.roster, via: via);
+}
+
+/// Trades whoever is on [role] on [from] and [to] (canSwapDuty), saying
+/// so with 復原: moved, when [to] had nobody.
+Future<void> swapDutyDays(
+  BuildContext context,
+  WidgetRef ref,
+  String role,
+  Roster from,
+  Roster to, {
+  String via = 'app',
+}) async {
+  final l10n = L10n.of(context);
+  String names(Roster r) => r.duties.firstWhere((d) => d.role == role).people.join(l10n.listSeparator);
+  final (a, b) = (names(from), names(to));
+  await runWithUndo(
+    context,
+    b.isEmpty
+        ? l10n.moved(a, dayLabel(l10n, to.day, ref.read(todayProvider)))
+        : a.isEmpty
+        ? l10n.moved(b, dayLabel(l10n, from.day, ref.read(todayProvider)))
+        : l10n.swapped(a, b),
+    () => ref.read(rosterActionsProvider).swapDuty(role, from, to, via: via),
+  );
 }
 
 Future<void> _savePicked(

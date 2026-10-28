@@ -155,4 +155,75 @@ void main() {
       ]);
     });
   });
+  group('swap a whole duty (#90)', () {
+    test('trades who is on it, members and all, and leaves the rest', () {
+      final a = Roster(
+        type: 'sunday',
+        day: Day(2026, 10, 4),
+        duties: const [
+          Duty(role: '司會', people: ['阿德']),
+          Duty(role: '招待', people: ['志豪', '小明'], uids: {'志豪': 'u1', '小明': 'u3'}),
+        ],
+      );
+      final b = Roster(
+        type: 'sunday',
+        day: Day(2026, 10, 11),
+        duties: const [
+          Duty(role: '招待', people: ['美玉', '來賓'], uids: {'美玉': 'u2'}),
+        ],
+      );
+      final (a2, b2) = withDutySwapped('招待', a, b);
+      expect(a2.duties.map((d) => d.role), ['司會', '招待']);
+      expect(a2.duties.last, const Duty(role: '招待', people: ['美玉', '來賓'], uids: {'美玉': 'u2'}));
+      expect(b2.duties.single, const Duty(role: '招待', people: ['志豪', '小明'], uids: {'志豪': 'u1', '小明': 'u3'}));
+      expect(people(a2, '司會'), ['阿德']);
+    });
+
+    test('with a day nobody is on yet, moves them there', () {
+      final (a2, b2) = withDutySwapped(
+        '招待',
+        day(4, {
+          '招待': ['志豪'],
+        }),
+        day(11, {'招待': []}),
+      );
+      expect(people(a2, '招待'), isEmpty);
+      expect(people(b2, '招待'), ['志豪']);
+    });
+
+    test('only with another day that has the duty and different people on it', () {
+      final from = day(4, {
+        '招待': ['志豪'],
+      });
+      bool can(Roster to) => canSwapDuty(from, to, '招待');
+      expect(
+        can(
+          day(11, {
+            '招待': ['美玉'],
+          }),
+        ),
+        isTrue,
+      );
+      expect(can(day(18, {'招待': []})), isTrue);
+      expect(can(from), isFalse);
+      expect(
+        can(
+          day(25, {
+            '招待': ['志豪'],
+          }),
+        ),
+        isFalse,
+      );
+      expect(
+        can(
+          day(25, {
+            '司會': ['美玉'],
+          }),
+        ),
+        isFalse,
+      );
+      expect(canSwapDuty(day(4, {'招待': []}), day(11, {'招待': []}), '招待'), isFalse);
+      expect(canSwapDuty(day(4, {'招待': []}), from, '招待'), isFalse, reason: 'the same day');
+    });
+  });
 }

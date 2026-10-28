@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart' show kLongPressTimeout;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -66,6 +67,16 @@ Set<String> waiting(MemoryBackend b) => {
       in b.planned['grace']?.entries ?? const <MapEntry<String, ({String service, List<String> roles})>>[])
     if (value.service == 'sunday') key.split('/').last,
 };
+
+/// Holds [from] until it lifts, then drags it onto [to] and lets go.
+Future<void> drag(WidgetTester tester, Finder from, Finder to) async {
+  final gesture = await tester.startGesture(tester.getCenter(from));
+  await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+  await gesture.moveTo(tester.getCenter(to));
+  await tester.pump();
+  await gesture.up();
+  await settle(tester);
+}
 
 void main() {
   testWidgets('a cell picks its people at once; nobody is told until 通知同工, once', (tester) async {
@@ -249,5 +260,96 @@ void main() {
     expect(tester.takeException(), isNull);
     await pick(tester, '司琴', 11, '李美玉');
     expect(tester.takeException(), isNull);
+  });
+  testWidgets('和別週交換 in the picker: to a day nobody is on, moves them; nobody told yet', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    await tester.tap(cell('司琴', 4));
+    await settle(tester);
+    await tester.tap(find.text('和別週交換'));
+    await settle(tester);
+    expect(find.text('和誰交換司琴？'), findsOneWidget);
+    await tester.tap(find.text('10月11日 週日').last);
+    await settle(tester);
+    expect(peopleOn(b, 4, '司琴'), isEmpty);
+    expect(peopleOn(b, 11, '司琴'), ['李美玉']);
+    expect(findShown('已把「李美玉」移到 10月11日 週日'), findsOneWidget);
+    expect(waiting(b), {'mei'});
+
+    await tester.tap(find.text('復原'));
+    await settle(tester);
+    expect(peopleOn(b, 4, '司琴'), ['李美玉']);
+    expect(peopleOn(b, 11, '司琴'), isEmpty);
+    expect(waiting(b), isEmpty);
+  });
+
+  testWidgets('dragging a cell onto another day of the duty trades them', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    await drag(tester, cell('招待', 4), cell('招待', 11));
+    expect(peopleOn(b, 4, '招待'), ['李美玉']);
+    expect(peopleOn(b, 11, '招待'), ['陳志豪', '李美玉']);
+    expect(findShown('已交換「陳志豪、李美玉」和「李美玉」'), findsOneWidget);
+    // 李美玉 招待 both days, as before: only 陳志豪 has news.
+    expect(waiting(b), {'hao'});
+  });
+
+  testWidgets('a cell dropped on another duty, or let go of where it was, changes nothing', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    await drag(tester, cell('司琴', 4), cell('招待', 11));
+    await drag(tester, cell('司琴', 4), cell('司琴', 4));
+    expect(peopleOn(b, 4, '司琴'), ['李美玉']);
+    expect(peopleOn(b, 11, '司琴'), isEmpty);
+    expect(peopleOn(b, 11, '招待'), ['李美玉']);
+    expect(waiting(b), isEmpty);
+  });
+  testWidgets('held at the bottom, the table scrolls on; let go, it lands under the finger', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    // Six months: more than the screen holds.
+    final rows = find.byKey(const PageStorageKey('plan-sunday'));
+    await tester.scrollUntilVisible(find.text('顯示更多'), 300, scrollable: find.byType(Scrollable).last);
+    await tester.tap(find.text('顯示更多'));
+    await settle(tester);
+    await tester.drag(rows, const Offset(0, 5000));
+    await settle(tester);
+    final table = tester.getRect(rows);
+    final edge = Offset(tester.getCenter(cell('司琴', 4)).dx, table.bottom - 4);
+    final gesture = await tester.startGesture(tester.getCenter(cell('司琴', 4)));
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    await gesture.moveTo(edge);
+    final under = find.byWidgetPredicate(
+      (w) =>
+          w is Semantics &&
+          (w.properties.label?.startsWith('司琴, ') ?? false) &&
+          tester.getRect(find.byWidget(w)).contains(edge),
+    );
+    // The day under the finger, if a day (not a month's name).
+    Day? there() {
+      if (under.evaluate().length != 1) return null;
+      final label = tester.widget<Semantics>(under).properties.label!;
+      final [month, date] = [for (final m in RegExp(r'\d+').allMatches(label)) int.parse(m[0]!)];
+      return Day(2026, month, date);
+    }
+
+    // The finger stays put; the table scrolls under it till a later day
+    // is there.
+    final first = there();
+    bool scrolledOn() => there() != null && (first == null || there()!.isAfter(first));
+    for (var i = 0; i < 40 && !scrolledOn(); i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(scrolledOn(), isTrue);
+    final day = there()!;
+    await gesture.up();
+    await settle(tester);
+    final landed = b.rosters['grace']![Roster.idFor('sunday', day)]!;
+    expect(landed.duties.firstWhere((d) => d.role == '司琴').people, ['李美玉']);
+    expect(peopleOn(b, 4, '司琴'), isEmpty);
   });
 }

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show setEquals;
+
 import 'day.dart';
 import 'models.dart';
 import 'staff_order.dart';
@@ -157,6 +159,26 @@ List<SwapSide> swapTargets(
     }
   }
   return result;
+}
+
+/// Whether [role] on [from] can be traded with [to] (#90): another day
+/// that has the duty, with other people on it, or nobody.
+bool canSwapDuty(Roster from, Roster to, String role) {
+  if (from.day == to.day) return false;
+  final a = from.duties.where((d) => d.role == role).firstOrNull;
+  final b = to.duties.where((d) => d.role == role).firstOrNull;
+  return a != null && b != null && !setEquals(a.people.toSet(), b.people.toSet());
+}
+
+/// [a] and [b] with whoever is on [role] traded, as they are (names, and
+/// the members among them): moved there when the other has nobody. Both
+/// have the duty (canSwapDuty), and are written together.
+(Roster, Roster) withDutySwapped(String role, Roster a, Roster b) {
+  Duty of(Roster r) => r.duties.firstWhere((d) => d.role == role);
+  Roster put(Roster r, Duty from) => r.copyWith(
+    duties: [for (final d in r.duties) d.role == role ? from : d],
+  );
+  return (put(a, of(b)), put(b, of(a)));
 }
 
 /// The exact saved documents shown before a future bulk change. Neither

@@ -118,6 +118,7 @@
   },
   "pickerOthers": "다른 멤버",
   "pickerAddAnother": "한 명 더 추가",
+  "pickerSwapDay": "다른 주와 바꾸기",
   "pickerUseName": "‘{name}’ 사용",
   "pickerNoOneServes": "아직 {duty} 담당자가 없어요",
   "pickerLearns": "이 예배의 멤버는 한 번 배정하면 다음부터 위쪽에 표시돼요",

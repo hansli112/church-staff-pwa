@@ -766,6 +766,12 @@ abstract class L10n {
   /// **'再加一位'**
   String get pickerAddAnother;
 
+  /// No description provided for @pickerSwapDay.
+  ///
+  /// In zh, this message translates to:
+  /// **'和別週交換'**
+  String get pickerSwapDay;
+
   /// No description provided for @pickerUseName.
   ///
   /// In zh, this message translates to:

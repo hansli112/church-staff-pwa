@@ -222,6 +222,7 @@
   },
   "pickerOthers": "其他同工",
   "pickerAddAnother": "再加一位",
+  "pickerSwapDay": "和別週交換",
   "pickerUseName": "用「{name}」",
   "@pickerUseName": {
     "placeholders": {

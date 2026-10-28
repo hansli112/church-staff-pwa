@@ -371,6 +371,9 @@ class L10nKo extends L10n {
   String get pickerAddAnother => '한 명 더 추가';
 
   @override
+  String get pickerSwapDay => '다른 주와 바꾸기';
+
+  @override
   String pickerUseName(String name) {
     return '‘$name’ 사용';
   }

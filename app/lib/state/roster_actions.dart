@@ -271,26 +271,44 @@ class RosterActions {
   /// back, also in one batch.
   ChurchWrite swap(String role, SwapSide a, SwapSide b) {
     final (a2, b2) = swapPeople(role, a, b, nameIds: _nameIds, order: _order(a.roster.type));
+    return _pairWrite(role, (a.roster, a2), (b.roster, b2));
+  }
+
+  /// Trades whoever is on [role] on [a] and [b] (canSwapDuty), as
+  /// [swap]. Made in 排好幾週 ([via] `plan`, #90), nobody is told until
+  /// 通知同工.
+  ChurchWrite swapDuty(String role, Roster a, Roster b, {String via = 'app'}) {
+    final (a2, b2) = withDutySwapped(role, a, b);
+    return _pairWrite(role, (a, a2), (b, b2), via: via);
+  }
+
+  /// Writes two days that differ only in [role] together; undo puts both
+  /// back together, refused once either has changed since.
+  ChurchWrite _pairWrite(String role, (Roster, Roster) a, (Roster, Roster) b, {String via = 'app'}) {
+    final (aBefore, a2) = a;
+    final (bBefore, b2) = b;
     int indexOf(Roster r) => r.duties.indexWhere((d) => d.role == role);
     Duty? dutyOf(Roster r) => indexOf(r) < 0 ? null : r.duties[indexOf(r)];
-    final prevA = dutyOf(a.roster), prevB = dutyOf(b.roster);
-    final idxA = indexOf(a.roster), idxB = indexOf(b.roster);
+    final prevA = dutyOf(aBefore), prevB = dutyOf(bBefore);
+    final idxA = indexOf(aBefore), idxB = indexOf(bBefore);
     return _writes.rosters(
       RosterChange(
-        before: {a.roster.id: _persisted(a.roster), b.roster.id: _persisted(b.roster)},
+        before: {aBefore.id: _persisted(aBefore), bBefore.id: _persisted(bBefore)},
         after: {a2.id: a2, b2.id: b2},
+        via: via,
       ),
       undo: () {
-        final nowA = _now(a.roster), nowB = _now(b.roster);
+        final nowA = _now(aBefore), nowB = _now(bBefore);
         if (dutyOf(nowA) != dutyOf(a2) || dutyOf(nowB) != dutyOf(b2)) {
           throw const CloudException(CloudErrorCode.conflict);
         }
         return RosterChange(
           before: {nowA.id: _persisted(nowA), nowB.id: _persisted(nowB)},
           after: {
-            nowA.id: _untouchedDraft(a.roster, a2) ? null : _withDutyRestored(nowA, role, prevA, idxA),
-            nowB.id: _untouchedDraft(b.roster, b2) ? null : _withDutyRestored(nowB, role, prevB, idxB),
+            nowA.id: _untouchedDraft(aBefore, a2) ? null : _withDutyRestored(nowA, role, prevA, idxA),
+            nowB.id: _untouchedDraft(bBefore, b2) ? null : _withDutyRestored(nowB, role, prevB, idxB),
           },
+          via: via,
         );
       },
     );

@@ -370,6 +370,9 @@ class L10nZh extends L10n {
   String get pickerAddAnother => '再加一位';
 
   @override
+  String get pickerSwapDay => '和別週交換';
+
+  @override
   String pickerUseName(String name) {
     return '用「$name」';
   }
@@ -3378,6 +3381,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get pickerAddAnother => '再加一位';
+
+  @override
+  String get pickerSwapDay => '和别的周交换';
 
   @override
   String pickerUseName(String name) {

@@ -118,6 +118,7 @@
   },
   "pickerOthers": "Other team members",
   "pickerAddAnother": "Add another person",
+  "pickerSwapDay": "Swap with another week",
   "pickerUseName": "Use “{name}”",
   "pickerNoOneServes": "No one serves as {duty} yet",
   "pickerLearns": "A team member of this service, once scheduled, is listed up here next time",
