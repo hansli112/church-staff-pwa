@@ -31,4 +31,14 @@ void main() {
     expect(clock.day(instant), 'Oct 18');
     expect(clock.dayWithYear(instant), 'Oct 18, 2026');
   });
+
+  test('every language the app speaks shows a time, Simplified Chinese too', () async {
+    for (final language in AppLanguage.values) {
+      expect(
+        ChurchClock(await _in(language), ChurchTimeZone.taipei).moment(instant),
+        contains('7:30'),
+        reason: '$language',
+      );
+    }
+  });
 }
