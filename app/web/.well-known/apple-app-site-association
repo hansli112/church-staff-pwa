@@ -1,0 +1,10 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["VFF5B33QVD.app.marthasit"],
+        "components": [{ "/": "/c/*" }]
+      }
+    ]
+  }
+}

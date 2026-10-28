@@ -311,10 +311,11 @@ curl -sS -X PATCH \
   - 上架用的是上傳金鑰（upload key）：`~/.martha/upload-keystore.jks`，密碼在 `app/android/key.properties`（不進 git）。release build 有這個檔就用它簽，沒有就用 debug 金鑰。金鑰和密碼要另外備份；遺失了要到 Play Console 申請重設上傳金鑰。
   - 上傳金鑰的 SHA 已列在 assetlinks 和兩個專案的 Firebase。從 Play 商店安裝的 App 是 Play App Signing 的金鑰簽的（在 Play Console 的「應用程式完整性」查），它的 SHA-1、SHA-256 也要加進這兩處。
   - 原生 Google 登入也看簽章：同一組 SHA-1、SHA-256 要加到 Firebase 的 Android app（`apps:android:sha:create`）。
-- **iOS**：要付費開發者帳號，才能開 Associated Domains。
-  - 在 `Runner.entitlements` 加上 `applinks:<網域>`。
-  - 網站提供 `/.well-known/apple-app-site-association`，`components` 只放 `{"/": "/c/*"}`。
-  - 這部分在 M7 處理。
+- **iOS**：`Runner.entitlements` 的 `com.apple.developer.associated-domains` 列 `applinks:<網域>`，和 Android 的 intent filter 同一組網域（`scripts/test/app-links.test.mjs` 會比對）。
+  - 網站從 `app/web/.well-known/apple-app-site-association` 提供 App ID（`VFF5B33QVD.app.marthasit`），`components` 只放 `{"/": "/c/*"}`。這個檔沒有副檔名，`firebase.json` 另外給它 `Content-Type: application/json`。
+  - App ID 開了 Associated Domains（2026-10-28 用 API 加的 `ASSOCIATED_DOMAINS`）。改 App ID 的功能後描述檔會失效，要用 API 刪掉重建同名的「Martha sit App Store」，放進 `~/Library/MobileDevice/Provisioning Profiles/`。
+  - iPhone 是安裝或更新 App 時，經 Apple 的 CDN 讀這個檔，所以網站要先部署，App 才拿得到。CDN 有快取，改了檔案不會馬上生效；查 CDN 上的版本：`curl https://app-site-association.cdn-apple.com/a/v1/marthasit.com`。
+  - 在同一個網域裡點連結（例如 Safari 已經開著教會頁）不會跳 App，從訊息、Email 等其他 App 點才會。LINE 這類用內建瀏覽器開連結的 App 不一定會跳。
 
 ## 照片辨識匯入（self-host → 代管）
 

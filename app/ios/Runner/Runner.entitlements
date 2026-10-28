@@ -4,6 +4,16 @@
 <dict>
 	<key>aps-environment</key>
 	<string>development</string>
+	<!-- Church URLs and invite links (/c/...) open the app when it is
+	     installed (Universal Links; the site serves
+	     /.well-known/apple-app-site-association). The same hosts as the
+	     Android App Links in AndroidManifest.xml. -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:marthasit.com</string>
+		<string>applinks:marthasit.web.app</string>
+		<string>applinks:marthasit-dev.web.app</string>
+	</array>
 	<key>com.apple.developer.applesignin</key>
 	<array>
 		<string>Default</string>
