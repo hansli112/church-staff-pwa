@@ -51,6 +51,11 @@ const _gapSearchMonths = 12;
 /// point past it (as ReorderableList).
 const _autoScrollSpeed = 50.0;
 
+/// The narrowest a duty's column gets, and how much of the next one shows
+/// when they do not all fit.
+const _minCellWidth = 104.0;
+const _peek = 0.4;
+
 /// How long the cells a drop traded stay lit.
 const _flashFor = Duration(milliseconds: 700);
 
@@ -61,6 +66,13 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
   Day? _from;
   int _months = _monthsAtATime;
   bool _notifying = false;
+
+  /// Leaving by 完成 or 先不要: nothing more to ask.
+  bool _leaving = false;
+
+  /// The services the page switches between with people to tell: 完成
+  /// tells them all.
+  Set<String> _waiting = const {};
 
   // The duties' names scroll sideways with the cells under them.
   final _cells = ScrollController();
@@ -206,18 +218,56 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
     });
   }
 
-  Future<void> _notify() async {
+  /// 完成: tells whoever was put on or taken off here, then goes back. A
+  /// failure stays, with 重試.
+  Future<void> _finish() async {
+    if (!await _tell() || !mounted) return;
+    // Told: the news that would ask has not caught up yet.
+    setState(() => _leaving = true);
+    context.pop();
+  }
+
+  /// Tells the people waiting on each service this page arranges, one
+  /// notice each; false when it failed.
+  Future<bool> _tell() async {
     final l10n = L10n.of(context);
     setState(() => _notifying = true);
     try {
-      final r = await ref.read(rosterActionsProvider).notifyPlanned(_type);
-      if (!mounted) return;
-      showToast(context, r.later ? l10n.planNotifiedLater(r.people) : l10n.planNotified(r.people));
+      final actions = ref.read(rosterActionsProvider);
+      var people = 0;
+      var later = false;
+      for (final type in _waiting) {
+        final r = await actions.notifyPlanned(type);
+        people += r.people;
+        later |= r.later;
+      }
+      if (mounted && people > 0) {
+        showToast(context, later ? l10n.planNotifiedLater(people) : l10n.planNotified(people));
+      }
+      return true;
     } catch (e) {
-      if (mounted) showToast(context, errorText(l10n, e), onRetry: _notify);
+      if (mounted) showToast(context, errorText(l10n, e), onRetry: _finish);
+      return false;
     } finally {
       if (mounted) setState(() => _notifying = false);
     }
+  }
+
+  /// Leaving another way than 完成 while people wait: asks whether to tell
+  /// them now; 先不要 leaves them for the next 完成.
+  Future<void> _leave() async {
+    final l10n = L10n.of(context);
+    final tell = await askChoice(
+      context,
+      title: l10n.planNotifyAsk,
+      message: l10n.planNotifyAskBody,
+      yes: l10n.planNotifyNow,
+      no: l10n.planNotifyLater,
+    );
+    if (tell == null || !mounted) return;
+    if (tell) return _finish();
+    setState(() => _leaving = true);
+    context.pop();
   }
 
   @override
@@ -237,7 +287,12 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
     final arranges = ref.watch(arrangesProvider(_type));
     final ready = ref.watch(rosterEditingProvider(_type));
     final saved = ref.watch(savedRostersProvider).value;
-    final news = ref.watch(plannedNewsProvider(_type)).value ?? false;
+    // Every service the page switches between, watched so 完成 knows.
+    _waiting = {
+      for (final type in {_type, for (final s in mine) s.id})
+        if (ref.watch(plannedNewsProvider(type)).value ?? false) type,
+    };
+    final news = _waiting.isNotEmpty;
 
     Widget body;
     if (service == null || saved == null || !ready || !arranges.any) {
@@ -258,53 +313,59 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
       body = _table(context, months, duties, earlier: from.isAfter(thisMonth) ? thisMonth : null);
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.planWeeksTitle),
-        actions: savingActions([
-          MediaQuery.withClampedTextScaling(
-            maxScaleFactor: 1.5,
-            child: TextButton(
-              onPressed: news && !_notifying ? _notify : null,
-              child: Text(l10n.planNotify),
-            ),
-          ),
-        ]),
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (mine.length > 1)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(Space.m, 0, Space.m, Space.s),
-              child: SegmentedButton<String>(
-                showSelectedIcon: false,
-                segments: [for (final s in mine) ButtonSegment(value: s.id, label: Text(s.name, maxLines: 1))],
-                selected: {_type},
-                onSelectionChanged: (v) {
-                  Haptics.selection();
-                  setState(() {
-                    _type = v.first;
-                    _from = null;
-                    _months = _monthsAtATime;
-                  });
-                },
+    return PopScope(
+      canPop: !news || _leaving,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && !_notifying) _leave();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(l10n.planWeeksTitle),
+          actions: savingActions([
+            MediaQuery.withClampedTextScaling(
+              maxScaleFactor: 1.5,
+              child: TextButton(
+                onPressed: _notifying ? null : _finish,
+                child: Text(l10n.done),
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(Space.m, 0, Space.m, Space.s),
-            child: Text(l10n.planWeeksHint, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
-          ),
-          Expanded(
-            child: Listener(
-              onPointerDown: _onPointer,
-              onPointerMove: _onPointer,
-              onPointerUp: _onPointer,
-              onPointerCancel: _onPointer,
-              child: body,
+          ]),
+        ),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (mine.length > 1)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(Space.m, 0, Space.m, Space.s),
+                child: SegmentedButton<String>(
+                  showSelectedIcon: false,
+                  segments: [for (final s in mine) ButtonSegment(value: s.id, label: Text(s.name, maxLines: 1))],
+                  selected: {_type},
+                  onSelectionChanged: (v) {
+                    Haptics.selection();
+                    setState(() {
+                      _type = v.first;
+                      _from = null;
+                      _months = _monthsAtATime;
+                    });
+                  },
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Space.m, 0, Space.m, Space.s),
+              child: Text(l10n.planWeeksHint, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
             ),
-          ),
-        ],
+            Expanded(
+              child: Listener(
+                onPointerDown: _onPointer,
+                onPointerMove: _onPointer,
+                onPointerUp: _onPointer,
+                onPointerCancel: _onPointer,
+                child: body,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -334,7 +395,12 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
     final lift = _lift;
     return LayoutBuilder(
       builder: (context, box) {
-        final cellWidth = duties.isEmpty ? 0.0 : math.max(104.0, (box.maxWidth - dateWidth) / duties.length);
+        // All the duties when they fit; when not, the last one shown is
+        // cut short of half, so the table says it goes on sideways.
+        final room = box.maxWidth - dateWidth;
+        final fits = duties.isNotEmpty && room / duties.length >= _minCellWidth;
+        final whole = (room / _minCellWidth - _peek).floor().clamp(1, math.max(1, duties.length));
+        final cellWidth = duties.isEmpty ? 0.0 : (fits ? room / duties.length : room / (whole + _peek));
         final dates = <Widget>[];
         final cells = <Widget>[];
         final headers = <Widget>[];
@@ -397,7 +463,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
             y += rowHeight;
           }
         }
-        return Column(
+        final table = Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             DecoratedBox(
@@ -423,10 +489,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
                                   role,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: AppText.footnote.copyWith(
-                                    color: c.secondaryLabel,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                  style: AppText.subheadline.copyWith(color: c.secondaryLabel),
                                 ),
                               ),
                           ],
@@ -489,6 +552,40 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
             ),
           ],
         );
+        if (fits || duties.isEmpty) return table;
+        // The cut column fades out at the edge while there is more that way.
+        return Stack(
+          children: [
+            table,
+            PositionedDirectional(
+              top: 0,
+              bottom: 0,
+              end: 0,
+              width: Space.l,
+              child: IgnorePointer(
+                child: ListenableBuilder(
+                  listenable: _cells,
+                  builder: (context, _) => AnimatedOpacity(
+                    opacity:
+                        !_cells.hasClients || !_cells.position.hasContentDimensions || _cells.position.extentAfter > 1
+                        ? 1
+                        : 0,
+                    duration: const Duration(milliseconds: 150),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: AlignmentDirectional.centerStart,
+                          end: AlignmentDirectional.centerEnd,
+                          colors: [c.background.withValues(alpha: 0), c.background],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
       },
     );
   }
@@ -535,10 +632,7 @@ class _DateCell extends StatelessWidget {
               Text(
                 shortMonthDay(l10n).format(day.midnight),
                 maxLines: 1,
-                style: AppText.subheadline.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: day == today ? c.accent : c.label,
-                ),
+                style: AppText.subheadline.copyWith(color: day == today ? c.accent : c.label),
               ),
               if (roster.events.isEmpty)
                 Text(
@@ -610,7 +704,13 @@ class _DutyCell extends StatelessWidget {
     final c = AppColors.of(context);
     final still = MediaQuery.disableAnimationsOf(context);
     final duty = roster.duties.where((d) => d.role == role).firstOrNull;
-    final names = duty?.people.join(l10n.listSeparator) ?? '';
+    // A person a line, never broken inside a name; past two, how many more.
+    final people = duty?.people ?? const <String>[];
+    final names = switch (people.length) {
+      0 => '',
+      1 || 2 => people.join('\n'),
+      final n => '${people[0]}\n${people[1]} +${n - 2}',
+    };
     final text = duty == null ? '—' : (names.isEmpty ? l10n.nobodyYet : names);
     return Semantics(
       button: duty != null,

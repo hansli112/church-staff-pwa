@@ -2988,10 +2988,19 @@ class L10nKo extends L10n {
   String get planWeeksTitle => '한꺼번에 배정';
 
   @override
-  String get planWeeksHint => '여기서 바꾼 내용은 바로 알리지 않아요. 다 배정한 뒤 「멤버에게 알리기」를 누르면 한 사람에게 한 번씩 알림이 가요.';
+  String get planWeeksHint => '여기서 바꾼 내용은 바로 알리지 않아요. 다 배정한 뒤 「완료」를 누르면 한 사람에게 한 번씩 알림이 가요.';
 
   @override
-  String get planNotify => '멤버에게 알리기';
+  String get planNotifyAsk => '멤버에게 알릴까요?';
+
+  @override
+  String get planNotifyAskBody => '여기서 배정되거나 빠진 사람에게 한 번씩 알림이 가요.';
+
+  @override
+  String get planNotifyNow => '알리기';
+
+  @override
+  String get planNotifyLater => '나중에';
 
   @override
   String planNotified(int count) {

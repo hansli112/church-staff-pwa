@@ -18,6 +18,8 @@ Future<void> go(WidgetTester tester, String path) async {
   await settle(tester);
 }
 
+String path(WidgetTester tester) => GoRouter.of(tester.element(find.byType(Scaffold).last)).state.uri.path;
+
 /// The cell of [role] on October [date].
 Finder cell(String role, int date) => find.byWidgetPredicate(
   (w) => w is Semantics && w.properties.label == '$role, 10月$date日 週日',
@@ -36,7 +38,7 @@ Future<void> pick(WidgetTester tester, String role, int day, String name) async 
   await settle(tester);
 }
 
-/// 通知同工 answers [notice], or fails with [error].
+/// 完成 tells with [notice], or fails with [error].
 class NotifyingBackend extends MemoryBackend {
   NotifyingBackend() : super(clock: testClock);
 
@@ -61,7 +63,7 @@ class _NotifyingData extends MemoryChurchData {
   }
 }
 
-/// Who waits for 通知同工 on 主日崇拜's days.
+/// Who waits for 完成 to be told, on 主日崇拜's days.
 Set<String> waiting(MemoryBackend b) => {
   for (final MapEntry(:key, :value)
       in b.planned['grace']?.entries ?? const <MapEntry<String, ({String service, List<String> roles})>>[])
@@ -79,14 +81,12 @@ Future<void> drag(WidgetTester tester, Finder from, Finder to) async {
 }
 
 void main() {
-  testWidgets('a cell picks its people at once; nobody is told until 通知同工, once', (tester) async {
+  testWidgets('a cell picks its people at once; nobody is told until 完成, once, which goes back', (tester) async {
     final b = seededChurch();
     await pumpApp(tester, b);
     await go(tester, '/rosters/plan/sunday');
     expect(find.text('2026年10月'), findsOneWidget);
     expect(find.text('2026年11月'), findsOneWidget);
-    final notify = find.widgetWithText(TextButton, '通知同工');
-    expect(tester.widget<TextButton>(notify).onPressed, isNull, reason: 'nothing to tell yet');
 
     await tester.tap(cell('司琴', 11));
     await settle(tester);
@@ -96,11 +96,66 @@ void main() {
     expect(waiting(b), {'mei'});
     expect(find.descendant(of: cell('司琴', 11), matching: find.text('李美玉')), findsOneWidget);
 
-    await tester.tap(notify);
+    await tester.tap(find.text('完成'));
     await settle(tester);
     expect(find.text('已通知 1 位同工'), findsOneWidget);
     expect(waiting(b), isEmpty);
-    expect(tester.widget<TextButton>(notify).onPressed, isNull);
+    expect(path(tester), '/rosters');
+  });
+
+  testWidgets('完成 with nobody to tell just goes back', (tester) async {
+    await pumpApp(tester, seededChurch());
+    await go(tester, '/rosters/plan/sunday');
+    await tester.tap(find.text('完成'));
+    await settle(tester);
+    expect(path(tester), '/rosters');
+    expect(find.textContaining('已通知'), findsNothing);
+  });
+
+  testWidgets('leaving with people still to tell asks first', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    await pick(tester, '司琴', 11, '李美玉');
+    await tester.tap(find.byType(BackButton));
+    await settle(tester);
+    expect(find.text('要通知同工嗎？'), findsOneWidget);
+    await tester.tap(find.text('先不要'));
+    await settle(tester);
+    expect(path(tester), '/rosters');
+    expect(waiting(b), {'mei'}, reason: 'told whenever 完成 is next pressed');
+
+    await go(tester, '/rosters/plan/sunday');
+    await tester.tap(find.byType(BackButton));
+    await settle(tester);
+    await tester.tap(find.text('通知'));
+    await settle(tester);
+    expect(find.text('已通知 1 位同工'), findsOneWidget);
+    expect(waiting(b), isEmpty);
+    expect(path(tester), '/rosters');
+  });
+
+  testWidgets('more duties than fit: the next shows in part, so the table says it goes on', (tester) async {
+    final b = seededChurch();
+    b.setServices('grace', [
+      sundayService.copyWith(duties: ['司會', '司琴', '招待', '音控', '投影']),
+    ]);
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    final width = tester.view.physicalSize.width / tester.view.devicePixelRatio;
+    final cut = [
+      for (final role in ['司會', '司琴', '招待', '音控', '投影'])
+        if (tester.getRect(cell(role, 11)) case final r when r.left < width && r.right > width) role,
+    ];
+    expect(cut, hasLength(1));
+    final shown = tester.getRect(cell(cut.single, 11));
+    expect((width - shown.left) / shown.width, inInclusiveRange(0.25, 0.6));
+  });
+
+  testWidgets('two people on a duty, a line each: never broken inside a name', (tester) async {
+    await pumpApp(tester, seededChurch());
+    await go(tester, '/rosters/plan/sunday');
+    expect(find.descendant(of: cell('招待', 4), matching: find.text('陳志豪\n李美玉')), findsOneWidget);
   });
 
   testWidgets('a 事工’s 負責人 sees only the duties it leads', (tester) async {
@@ -154,18 +209,16 @@ void main() {
     expect(find.text('這個月已排 2 次 · 同一天：青年崇拜 司會'), findsOneWidget);
   });
 
-  testWidgets('復原 here also waits for 通知同工; the day’s own page tells at once', (tester) async {
+  testWidgets('復原 here also waits for 完成; the day’s own page tells at once', (tester) async {
     final b = seededChurch();
     await pumpApp(tester, b);
     await go(tester, '/rosters/plan/sunday');
-    final notify = find.widgetWithText(TextButton, '通知同工');
     await pick(tester, '司琴', 11, '李美玉');
-    expect(tester.widget<TextButton>(notify).onPressed, isNotNull);
+    expect(waiting(b), {'mei'});
     await tester.tap(find.text('復原'));
     await settle(tester);
     expect(peopleOn(b, 11, '司琴'), isEmpty);
     expect(waiting(b), isEmpty, reason: 'on and off again: nothing to tell');
-    expect(tester.widget<TextButton>(notify).onPressed, isNull);
 
     await pick(tester, '司琴', 11, '李美玉');
     b.planned.clear();
@@ -232,25 +285,27 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/plan/sunday');
     await pick(tester, '司琴', 11, '李美玉');
-    await tester.tap(find.text('通知同工'));
+    await tester.tap(find.text('完成'));
     await settle(tester);
     expect(find.text('早上 7 點會通知 2 位同工'), findsOneWidget);
   });
 
-  testWidgets('a failed 通知同工 says so, and 重試 sends it again', (tester) async {
+  testWidgets('a failed 完成 says so and stays; 重試 tells them and goes back', (tester) async {
     final backend = NotifyingBackend()..error = const CloudException(CloudErrorCode.unavailable);
     final b = seededChurch(into: backend);
     await pumpApp(tester, b);
     await go(tester, '/rosters/plan/sunday');
     await pick(tester, '司琴', 11, '李美玉');
-    await tester.tap(find.text('通知同工'));
+    await tester.tap(find.text('完成'));
     await settle(tester);
     expect(waiting(b), {'mei'}, reason: 'nobody told');
+    expect(path(tester), '/rosters/plan/sunday');
     backend.error = null;
     await tester.tap(find.text('重試'));
     await settle(tester);
     expect(find.text('已通知 1 位同工'), findsOneWidget);
     expect(waiting(b), isEmpty);
+    expect(path(tester), '/rosters');
   });
 
   testWidgets('fits with text at twice its size', (tester) async {
