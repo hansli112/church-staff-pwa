@@ -396,25 +396,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
     final line = BorderSide(color: c.separator, width: 0.5);
 
     _shown = [for (final m in months) ...m.days];
-    // As wide as the widest day shown, its weekday or its 特別活動 in full
-    // (English ones run long), within reason: the rest is the duties'.
-    final base = DefaultTextStyle.of(context).style;
-    double widthOf(String text, TextStyle style) => (TextPainter(
-      text: TextSpan(text: text, style: base.merge(style)),
-      textDirection: Directionality.of(context),
-      textScaler: scale,
-      maxLines: 1,
-    )..layout()).width;
-    var widest = widthOf('30', _DateCell.dayStyle);
-    for (final day in _shown) {
-      widest = math.max(
-        widest,
-        day.events.isEmpty
-            ? widthOf(DateFormat.E().format(day.day.midnight), _DateCell.weekdayStyle)
-            : _DateCell.dot + widthOf(_DateCell.eventLabel(day), _DateCell.eventStyle),
-      );
-    }
-    final dateWidth = (Space.m + widest + Space.s).clamp(64.0, 140.0);
+    final dateWidth = _DateCell.widthFor(context, _shown);
     final lift = _lift;
     return LayoutBuilder(
       builder: (context, box) {
@@ -633,6 +615,37 @@ class _DateCell extends StatelessWidget {
   static String eventLabel(Roster roster) =>
       roster.events.length == 1 ? roster.events.first.name : '${roster.events.first.name} +${roster.events.length - 1}';
 
+  /// As wide as the widest of [days], its weekday or its 特別活動 in full
+  /// (English ones run long), within reason: the rest is the duties'.
+  static double widthFor(BuildContext context, Iterable<Roster> days) {
+    final base = DefaultTextStyle.of(context).style;
+    final painter = TextPainter(
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    );
+    double widthOf(String text, TextStyle style) {
+      painter
+        ..text = TextSpan(text: text, style: base.merge(style))
+        ..layout();
+      return painter.width;
+    }
+
+    final labels = <(String, TextStyle, double)>{
+      ('30', dayStyle, 0),
+      for (final day in days)
+        day.events.isEmpty
+            ? (DateFormat.E().format(day.day.midnight), weekdayStyle, 0)
+            : (eventLabel(day), eventStyle, dot),
+    };
+    var widest = 0.0;
+    for (final (text, style, before) in labels) {
+      widest = math.max(widest, before + widthOf(text, style));
+    }
+    painter.dispose();
+    return (Space.m + widest + Space.s).clamp(64.0, 140.0);
+  }
+
   const _DateCell({
     required this.roster,
     required this.today,
@@ -759,14 +772,9 @@ class _DutyCell extends StatelessWidget {
     final c = AppColors.of(context);
     final still = MediaQuery.disableAnimationsOf(context);
     final duty = roster.duties.where((d) => d.role == role).firstOrNull;
-    // A person a line, never broken inside a name; past two, how many more.
     final people = duty?.people ?? const <String>[];
-    final names = switch (people.length) {
-      0 => '',
-      1 || 2 => people.join('\n'),
-      final n => '${people[0]}\n${people[1]} +${n - 2}',
-    };
-    final text = duty == null ? '—' : (names.isEmpty ? l10n.nobodyYet : names);
+    // Read out whole, though only two show.
+    final text = duty == null ? '—' : (people.isEmpty ? l10n.nobodyYet : people.join(l10n.listSeparator));
     return Semantics(
       button: duty != null,
       label: '$role, ${dayLabel(l10n, roster.day, today)}',
@@ -777,7 +785,7 @@ class _DutyCell extends StatelessWidget {
       },
       excludeSemantics: true,
       child: GestureDetector(
-        onLongPressStart: names.isEmpty ? null : (d) => onLift(context, d),
+        onLongPressStart: people.isEmpty ? null : (d) => onLift(context, d),
         child: AnimatedOpacity(
           opacity: faded ? 0.4 : 1,
           duration: still ? Duration.zero : const Duration(milliseconds: 150),
@@ -793,9 +801,11 @@ class _DutyCell extends StatelessWidget {
                 color: lit ? c.accentSoft : null,
                 border: Border(bottom: border),
               ),
-              child: duty != null && names.isEmpty
+              child: duty == null
+                  ? Text('—', style: AppText.subheadline.copyWith(color: c.tertiaryLabel))
+                  : people.isEmpty
                   ? _EmptySlot(wide: alone)
-                  : _CellText(text: text, color: duty == null ? c.tertiaryLabel : c.label),
+                  : _People(people),
             ),
           ),
         ),
@@ -817,7 +827,8 @@ class _EmptySlot extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
     return CustomPaint(
-      painter: _Dashes(c.separator),
+      // tertiaryLabel: 3:1 or better, as a control's edge needs.
+      painter: _Dashes(c.tertiaryLabel),
       child: SizedBox(
         height: Space.minTap(Theme.of(context).platform) - Space.s,
         width: wide ? double.infinity : Space.xxl + Space.s,
@@ -850,19 +861,32 @@ class _Dashes extends CustomPainter {
   bool shouldRepaint(_Dashes old) => old.color != color;
 }
 
-class _CellText extends StatelessWidget {
-  const _CellText({required this.text, required this.color});
+/// A person a line, each cut short rather than wrapped onto the next;
+/// past two, how many more after the second.
+class _People extends StatelessWidget {
+  const _People(this.people);
 
-  final String text;
-  final Color color;
+  final List<String> people;
 
   @override
-  Widget build(BuildContext context) => Text(
-    text,
-    maxLines: 2,
-    overflow: TextOverflow.ellipsis,
-    style: AppText.subheadline.copyWith(color: color),
-  );
+  Widget build(BuildContext context) {
+    final style = AppText.subheadline.copyWith(color: AppColors.of(context).label);
+    Text line(String name) => Text(name, maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis, style: style);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        line(people[0]),
+        if (people.length > 1)
+          Row(
+            children: [
+              Flexible(child: line(people[1])),
+              if (people.length > 2) Text(' +${people.length - 2}', style: style),
+            ],
+          ),
+      ],
+    );
+  }
 }
 
 /// A cell held (#90): [role] on [from], lifted from [grab] within its
@@ -899,11 +923,10 @@ class _LiftedCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = L10n.of(context);
     final c = AppColors.of(context);
     final overlay = Overlay.of(context).context.findRenderObject()! as RenderBox;
     final topLeft = overlay.globalToLocal(lift.at - lift.grab);
-    final names = lift.from.duties.firstWhere((d) => d.role == lift.role).people.join(l10n.listSeparator);
+    final people = lift.from.duties.firstWhere((d) => d.role == lift.role).people;
     return Positioned(
       left: topLeft.dx,
       top: topLeft.dy,
@@ -917,7 +940,7 @@ class _LiftedCell extends StatelessWidget {
             height: lift.size.height,
             padding: const EdgeInsets.symmetric(horizontal: Space.s, vertical: Space.xs),
             alignment: AlignmentDirectional.centerStart,
-            child: _CellText(text: names, color: c.label),
+            child: _People(people),
           ),
         ),
       ),

@@ -2994,7 +2994,7 @@ class L10nZh extends L10n {
   String get planNotifyAsk => '要通知同工嗎？';
 
   @override
-  String get planNotifyAskBody => '在這裡被排進或移出的人，每人會收到一則。';
+  String get planNotifyAskBody => '在這裡被排進或移出的人，每人會收到一則';
 
   @override
   String get planNotifyNow => '通知';
@@ -3039,7 +3039,7 @@ class L10nZh extends L10n {
   String get gettingStartedArrange => '安排服事表';
 
   @override
-  String get gettingStartedArrangeBody => '一次排好幾週，排好再通知同工';
+  String get gettingStartedArrangeBody => '幾週一起排，排完再一次通知同工';
 
   @override
   String gettingStartedAddStaff(String group) {
@@ -6050,7 +6050,7 @@ class L10nZhHans extends L10nZh {
   String get planNotifyAsk => '要通知同工吗？';
 
   @override
-  String get planNotifyAskBody => '在这里被排入或移出的人，每人会收到一条。';
+  String get planNotifyAskBody => '在这里被排入或移出的人，每人会收到一条';
 
   @override
   String get planNotifyNow => '通知';
@@ -6095,7 +6095,7 @@ class L10nZhHans extends L10nZh {
   String get gettingStartedArrange => '安排事奉表';
 
   @override
-  String get gettingStartedArrangeBody => '一次排好几周，排好再通知同工';
+  String get gettingStartedArrangeBody => '几周一起排，排完再一次通知同工';
 
   @override
   String gettingStartedAddStaff(String group) {

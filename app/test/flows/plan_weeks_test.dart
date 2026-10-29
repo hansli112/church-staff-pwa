@@ -170,10 +170,43 @@ void main() {
     }
   });
 
-  testWidgets('two people on a duty, a line each: never broken inside a name', (tester) async {
-    await pumpApp(tester, seededChurch());
+  testWidgets('two people on a duty, a line each: a long name is cut short, not wrapped onto the next', (tester) async {
+    final b = seededChurch();
+    final id = Roster.idFor('sunday', Day(2026, 10, 11));
+    final day = b.rosters['grace']![id]!;
+    b.rosters['grace']![id] = day.copyWith(
+      duties: [
+        for (final d in day.duties) d.role == '司琴' ? const Duty(role: '司琴', people: ['Christopher Lee', '李美玉']) : d,
+      ],
+    );
+    await pumpApp(tester, b);
     await go(tester, '/rosters/plan/sunday');
-    expect(find.descendant(of: cell('招待', 4), matching: find.text('陳志豪\n李美玉')), findsOneWidget);
+    Rect line(int date, String name) =>
+        tester.getRect(find.descendant(of: cell(date == 4 ? '招待' : '司琴', date), matching: find.text(name)));
+    expect(line(4, '李美玉').top, greaterThan(line(4, '陳志豪').top), reason: 'one under the other');
+    final cut = line(11, 'Christopher Lee');
+    expect(cut.height, lessThan(line(11, '李美玉').height * 1.5), reason: 'one line, however long');
+    expect(
+      line(11, '李美玉').bottom,
+      lessThanOrEqualTo(tester.getRect(cell('司琴', 11)).bottom),
+      reason: 'the second still shows',
+    );
+  });
+
+  testWidgets('three or more: the first two and how many more; a reader hears them all', (tester) async {
+    final b = seededChurch();
+    final id = Roster.idFor('sunday', Day(2026, 10, 4));
+    final day = b.rosters['grace']![id]!;
+    b.rosters['grace']![id] = day.copyWith(
+      duties: [
+        for (final d in day.duties) d.role == '招待' ? const Duty(role: '招待', people: ['陳志豪', '李美玉', '王牧師']) : d,
+      ],
+    );
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    expect(find.descendant(of: cell('招待', 4), matching: find.textContaining('+1')), findsOneWidget);
+    expect(find.descendant(of: cell('招待', 4), matching: find.textContaining('王牧師')), findsNothing);
+    expect(tester.widget<Semantics>(cell('招待', 4)).properties.value, '陳志豪、李美玉、王牧師');
   });
 
   testWidgets('nobody yet is a ＋ to fill, not 待定 down the table; a reader still hears 待定', (tester) async {

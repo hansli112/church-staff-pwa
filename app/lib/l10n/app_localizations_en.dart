@@ -3165,7 +3165,7 @@ class L10nEn extends L10n {
   String get planNotifyAsk => 'Notify the team?';
 
   @override
-  String get planNotifyAskBody => 'Everyone put on or taken off here gets one notification.';
+  String get planNotifyAskBody => 'Everyone put on or taken off here gets one notification';
 
   @override
   String get planNotifyNow => 'Notify';
@@ -3228,7 +3228,7 @@ class L10nEn extends L10n {
   String get gettingStartedArrange => 'Arrange the schedule';
 
   @override
-  String get gettingStartedArrangeBody => 'Plan several weeks, then notify your team';
+  String get gettingStartedArrangeBody => 'Arrange several weeks, then tell your team once';
 
   @override
   String gettingStartedAddStaff(String group) {

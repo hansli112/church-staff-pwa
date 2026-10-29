@@ -2999,7 +2999,7 @@ class L10nJa extends L10n {
   String get planNotifyAsk => 'メンバーに通知しますか？';
 
   @override
-  String get planNotifyAskBody => 'ここで担当に入った人、外れた人に一通ずつ届きます。';
+  String get planNotifyAskBody => 'ここで担当に入った人、外れた人に一通ずつ届きます';
 
   @override
   String get planNotifyNow => '通知する';
@@ -3044,7 +3044,7 @@ class L10nJa extends L10n {
   String get gettingStartedArrange => '奉仕表を組む';
 
   @override
-  String get gettingStartedArrangeBody => '数週間まとめて組んで、メンバーに通知しましょう';
+  String get gettingStartedArrangeBody => '数週間分をまとめて組み、最後に一度だけ通知しましょう';
 
   @override
   String gettingStartedAddStaff(String group) {

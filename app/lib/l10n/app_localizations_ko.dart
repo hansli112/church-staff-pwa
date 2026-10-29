@@ -2999,7 +2999,7 @@ class L10nKo extends L10n {
   String get planNotifyAsk => '멤버에게 알릴까요?';
 
   @override
-  String get planNotifyAskBody => '여기서 배정되거나 빠진 사람에게 한 번씩 알림이 가요.';
+  String get planNotifyAskBody => '여기서 배정되거나 빠진 사람에게 한 번씩 알림이 가요';
 
   @override
   String get planNotifyNow => '알리기';
@@ -3044,7 +3044,7 @@ class L10nKo extends L10n {
   String get gettingStartedArrange => '봉사표 배정하기';
 
   @override
-  String get gettingStartedArrangeBody => '몇 주를 한꺼번에 배정하고 멤버에게 알려 주세요';
+  String get gettingStartedArrangeBody => '몇 주를 한꺼번에 배정하고 마지막에 한 번만 알려요';
 
   @override
   String gettingStartedAddStaff(String group) {

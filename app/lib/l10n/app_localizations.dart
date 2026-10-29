@@ -5383,7 +5383,7 @@ abstract class L10n {
   /// No description provided for @planNotifyAskBody.
   ///
   /// In zh, this message translates to:
-  /// **'在這裡被排進或移出的人，每人會收到一則。'**
+  /// **'在這裡被排進或移出的人，每人會收到一則'**
   String get planNotifyAskBody;
 
   /// No description provided for @planNotifyNow.
@@ -5449,7 +5449,7 @@ abstract class L10n {
   /// Under gettingStartedArrange; one sentence
   ///
   /// In zh, this message translates to:
-  /// **'一次排好幾週，排好再通知同工'**
+  /// **'幾週一起排，排完再一次通知同工'**
   String get gettingStartedArrangeBody;
 
   /// 開始使用 step for a lead: opens the group page to add its 同工

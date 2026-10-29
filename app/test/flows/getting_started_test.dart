@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
-import 'package:martha/features/rosters/plan_weeks_screen.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
@@ -37,7 +36,7 @@ void main() {
     await back(tester);
 
     await tapText(tester, '排青年崇拜的服事');
-    expect(find.byType(PlanWeeksScreen), findsOneWidget);
+    expect(find.text('安排司會'), findsOneWidget, reason: '安排服事, for the one duty it has');
   });
 
   testWidgets('a step done is gone, and the list once every step is', (tester) async {
