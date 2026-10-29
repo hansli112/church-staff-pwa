@@ -2977,10 +2977,10 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get planWeeksAction => '一次排好幾週';
+  String get planWeeksAction => '安排服事';
 
   @override
-  String get planWeeksTitle => '排好幾週';
+  String get planWeeksTitle => '安排服事';
 
   @override
   String get planWeeksHint => '在這裡排的不會馬上通知，排好按「完成」，每人只收到一則';
@@ -6028,10 +6028,10 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get planWeeksAction => '一次排好几周';
+  String get planWeeksAction => '安排事奉';
 
   @override
-  String get planWeeksTitle => '排好几周';
+  String get planWeeksTitle => '安排事奉';
 
   @override
   String get planWeeksHint => '在这里排的不会马上通知，排好按“完成”，每人只收到一条';

@@ -108,7 +108,7 @@ class RosterActions {
     );
   }
 
-  /// Puts [people] on [role] of [roster]. Made in 排好幾週 ([via] `plan`,
+  /// Puts [people] on [role] of [roster]. Made in 安排服事 ([via] `plan`,
   /// #90), nobody is told until 通知同工.
   ChurchWrite setPeople(
     Roster roster,
@@ -283,7 +283,7 @@ class RosterActions {
   }
 
   /// Trades whoever is on [role] on [a] and [b] (canSwapDuty), as
-  /// [swap]. Made in 排好幾週 ([via] `plan`, #90), nobody is told until
+  /// [swap]. Made in 安排服事 ([via] `plan`, #90), nobody is told until
   /// 通知同工.
   ChurchWrite swapDuty(String role, Roster a, Roster b, {String via = 'app'}) {
     final (a2, b2) = withDutySwapped(role, a, b);
@@ -322,7 +322,7 @@ class RosterActions {
     );
   }
 
-  /// 通知同工 in 排好幾週 (#90): tells everyone whose days of [type]
+  /// 通知同工 in 安排服事 (#90): tells everyone whose days of [type]
   /// changed there since, one push each.
   Future<PlannedNotice> notifyPlanned(String type) => _data.notifyPlanned(type);
 

@@ -18,7 +18,7 @@ enum StartStep {
   /// Someone else in the group.
   addStaff,
 
-  /// 排好幾週 of the service, until a day of it has someone on a duty they arrange.
+  /// 安排服事 of the service, until a day of it has someone on a duty they arrange.
   planWeeks,
 
   /// When the 小組 meets, for 回報人數.

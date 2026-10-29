@@ -3147,10 +3147,10 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get planWeeksAction => 'Plan several weeks';
+  String get planWeeksAction => 'Arrange serving';
 
   @override
-  String get planWeeksTitle => 'Plan weeks';
+  String get planWeeksTitle => 'Arrange serving';
 
   @override
   String get planWeeksHint =>

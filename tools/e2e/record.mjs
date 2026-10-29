@@ -171,7 +171,7 @@ const CLIPS = {
       await s.wait(2500);
     },
   },
-  // 排好幾週: the weeks not arranged yet, a 司會 each, then 通知同工.
+  // 安排服事: the weeks not arranged yet, a 司會 each, then 完成, which tells them.
   plan: {
     route: '/rosters/plan/sunday',
     async play(s, { duties }) {
@@ -183,11 +183,11 @@ const CLIPS = {
         await s.tap(s.nodes('').nth(4 + week));
         await s.wait(900);
       }
-      await s.tap(s.node(s.t('planNotify')));
+      await s.tap(s.node(s.t('done')));
       await s.wait(2200);
     },
   },
-  // 排好幾週: a 司會 held and dropped on another week trades the two.
+  // 安排服事: a 司會 held and dropped on another week trades the two.
   swap: {
     route: '/rosters/plan/sunday',
     async play(s, { duties }) {

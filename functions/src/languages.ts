@@ -102,7 +102,7 @@ export interface Words {
   putOn(day: string, duties: string[]): string;
   takenOff(day: string, duties: string[]): string;
   /**
-   * 排好幾週's 通知同工 (rosterChange.ts): one push to a person for every
+   * 安排服事's 通知同工 (rosterChange.ts): one push to a person for every
    * day of [service] they were put on ([on]) or taken off ([off]), each
    * line dutyLine's of a short date.
    */

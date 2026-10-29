@@ -415,7 +415,7 @@ export const syncEventRosters = using(
 );
 
 // Every hour: the evening reminders, roster pushes held over quiet hours
-// (and 排好幾週's left for after them), and 回報人數 at 21:00 (#85).
+// (and 安排服事's left for after them), and 回報人數 at 21:00 (#85).
 export const sendReminders = onSchedule(
   { region: REGION, schedule: '0 * * * *', timeZone: 'Asia/Taipei' },
   async () => {

@@ -36,7 +36,7 @@ void main() {
     await back(tester);
 
     await tapText(tester, '排青年崇拜的服事');
-    expect(find.text('排好幾週'), findsOneWidget);
+    expect(find.text('安排服事'), findsOneWidget);
   });
 
   testWidgets('a step done is gone, and the list once every step is', (tester) async {

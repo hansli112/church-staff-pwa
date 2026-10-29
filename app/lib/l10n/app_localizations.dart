@@ -5353,13 +5353,13 @@ abstract class L10n {
   /// No description provided for @planWeeksAction.
   ///
   /// In zh, this message translates to:
-  /// **'一次排好幾週'**
+  /// **'安排服事'**
   String get planWeeksAction;
 
   /// No description provided for @planWeeksTitle.
   ///
   /// In zh, this message translates to:
-  /// **'排好幾週'**
+  /// **'安排服事'**
   String get planWeeksTitle;
 
   /// No description provided for @planWeeksHint.
@@ -5368,7 +5368,7 @@ abstract class L10n {
   /// **'在這裡排的不會馬上通知，排好按「完成」，每人只收到一則'**
   String get planWeeksHint;
 
-  /// Asked on leaving 排好幾週 without 完成 while people put on or taken off there are not told yet
+  /// Asked on leaving 安排服事 without 完成 while people put on or taken off there are not told yet
   ///
   /// In zh, this message translates to:
   /// **'要通知同工嗎？'**
@@ -5452,7 +5452,7 @@ abstract class L10n {
   /// **'加入{group}的同工'**
   String gettingStartedAddStaff(String group);
 
-  /// 開始使用 step for a lead: opens 排好幾週 of the service
+  /// 開始使用 step for a lead: opens 安排服事 of the service
   ///
   /// In zh, this message translates to:
   /// **'排{service}的服事'**

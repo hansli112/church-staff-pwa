@@ -267,7 +267,7 @@ describe('quiet hours', () => {
   });
 });
 
-describe('排好幾週 (#90)', () => {
+describe('安排服事 (#90)', () => {
   const plan = (day: string, duties: ReturnType<typeof duty>[], editedBy = 'pastor') =>
     write('C1', day, duties, { via: 'plan', editedBy });
   const notify = (uid = 'pastor', serviceId = 'sunday') =>

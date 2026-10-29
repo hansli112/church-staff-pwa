@@ -534,7 +534,7 @@ service cloud.firestore {
       allow read: if true;
     }
 
-    // 排好幾週 (#90): roster pushes waiting for 通知同工, one for each
+    // 安排服事 (#90): roster pushes waiting for 通知同工, one for each
     // person and day. Those who read the member list see whether any of
     // their church's wait (the button); only the backend writes them.
     match /plannedPushes/{id} {

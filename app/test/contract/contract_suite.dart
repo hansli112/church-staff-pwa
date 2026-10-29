@@ -777,7 +777,7 @@ void contractTests(Future<ContractWorld> Function() open) {
       );
     });
 
-    test('排好幾週 (#90): its changes wait for 通知同工, sent by someone who arranges the service', () async {
+    test('安排服事 (#90): its changes wait for 通知同工, sent by someone who arranges the service', () async {
       final g = await Grace.open(w);
       await w.signIn(Grace.editorEmail);
       // Ahead of any clock the backend runs on: a past day tells nobody.

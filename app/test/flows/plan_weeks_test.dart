@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart' show kLongPressTimeout;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
@@ -10,7 +11,7 @@ import 'package:martha/domain/models.dart';
 import '../support/harness.dart';
 import '../support/seed.dart';
 
-// 排好幾週 (#90). The tests start on Thursday 1 October 2026: 10/4 has
+// 安排服事 (#90). The tests start on Thursday 1 October 2026: 10/4 has
 // everyone, 10/11 nobody on 司琴 yet.
 
 Future<void> go(WidgetTester tester, String path) async {
@@ -156,6 +157,14 @@ void main() {
     await pumpApp(tester, seededChurch());
     await go(tester, '/rosters/plan/sunday');
     expect(find.descendant(of: cell('招待', 4), matching: find.text('陳志豪\n李美玉')), findsOneWidget);
+  });
+
+  testWidgets('nobody yet is a ＋ to fill, not 待定 down the table; a reader still hears 待定', (tester) async {
+    await pumpApp(tester, seededChurch());
+    await go(tester, '/rosters/plan/sunday');
+    expect(find.descendant(of: cell('司琴', 11), matching: find.byIcon(Symbols.add_rounded)), findsOneWidget);
+    expect(find.descendant(of: cell('司琴', 11), matching: find.text('待定')), findsNothing);
+    expect(tester.widget<Semantics>(cell('司琴', 11)).properties.value, '待定');
   });
 
   testWidgets('a 事工’s 負責人 sees only the duties it leads', (tester) async {

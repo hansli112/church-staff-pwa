@@ -6,8 +6,8 @@ import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
-import '../../core/dates.dart';
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../domain/day.dart';
@@ -22,7 +22,7 @@ import '../common/saving_indicator.dart';
 import 'format.dart';
 import 'roster_day_screen.dart';
 
-/// 排好幾週 (#90): one service's days a month at a time, a row a day and a
+/// 安排服事 (#90): one service's days a month at a time, a row a day and a
 /// column a duty I arrange. Tapping a cell picks its people as on the
 /// day's page, saved at once; tapping a date opens that day. A cell held
 /// lifts, and dropped on another day of its duty trades the two (moves
@@ -53,7 +53,7 @@ const _autoScrollSpeed = 50.0;
 
 /// The narrowest a duty's column gets, and how much of the next one shows
 /// when they do not all fit.
-const _minCellWidth = 104.0;
+const _minCellWidth = 100.0;
 const _peek = 0.4;
 
 /// How long the cells a drop traded stay lit.
@@ -318,8 +318,11 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop && !_notifying) _leave();
       },
+      // White, as a table is: the empty cells' dashes show on it.
       child: Scaffold(
+        backgroundColor: c.surface,
         appBar: AppBar(
+          backgroundColor: c.surface,
           title: Text(l10n.planWeeksTitle),
           actions: savingActions([
             MediaQuery.withClampedTextScaling(
@@ -388,10 +391,28 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
     final rowHeight = math.max(Space.minTap(platform) + Space.s, scale.scale(15) * 1.3 * 2 + Space.m);
     final headHeight = scale.scale(13) * 1.3 * 2 + Space.s * 2;
     final monthHeight = scale.scale(17) * 1.3 + Space.m + Space.s;
-    final dateWidth = (scale.scale(15) * 4 + Space.m).clamp(76.0, 132.0);
     final line = BorderSide(color: c.separator, width: 0.5);
 
     _shown = [for (final m in months) ...m.days];
+    // As wide as the widest day shown, its weekday or its 特別活動 in full
+    // (English ones run long), within reason: the rest is the duties'.
+    final base = DefaultTextStyle.of(context).style;
+    double widthOf(String text, TextStyle style) => (TextPainter(
+      text: TextSpan(text: text, style: base.merge(style)),
+      textDirection: Directionality.of(context),
+      textScaler: scale,
+      maxLines: 1,
+    )..layout()).width;
+    var widest = widthOf('30', _DateCell.dayStyle);
+    for (final day in _shown) {
+      widest = math.max(
+        widest,
+        day.events.isEmpty
+            ? widthOf(DateFormat.E().format(day.day.midnight), _DateCell.weekdayStyle)
+            : _DateCell.dot + widthOf(_DateCell.eventLabel(day), _DateCell.eventStyle),
+      );
+    }
+    final dateWidth = (Space.m + widest + Space.s).clamp(64.0, 140.0);
     final lift = _lift;
     return LayoutBuilder(
       builder: (context, box) {
@@ -413,7 +434,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
               right: 0,
               height: monthHeight,
               child: Container(
-                color: c.background,
+                color: c.surface,
                 alignment: AlignmentDirectional.bottomStart,
                 padding: const EdgeInsetsDirectional.fromSTEB(Space.m, 0, Space.m, Space.s),
                 child: Semantics(
@@ -489,7 +510,10 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
                                   role,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: AppText.subheadline.copyWith(color: c.secondaryLabel),
+                                  style: AppText.footnote.copyWith(
+                                    color: c.secondaryLabel,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                           ],
@@ -576,7 +600,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
                         gradient: LinearGradient(
                           begin: AlignmentDirectional.centerStart,
                           end: AlignmentDirectional.centerEnd,
-                          colors: [c.background.withValues(alpha: 0), c.background],
+                          colors: [c.surface.withValues(alpha: 0), c.surface],
                         ),
                       ),
                     ),
@@ -591,9 +615,20 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
   }
 }
 
-/// A day at the start of its row: the date, its weekday and its first
-/// 特別活動. Tapping it opens the day.
+/// A day at the start of its row, as a calendar has it under its month:
+/// the day's number, then its weekday or its first 特別活動. Tapping it
+/// opens the day.
 class _DateCell extends StatelessWidget {
+  static const dayStyle = AppText.title3;
+  static const weekdayStyle = AppText.caption;
+  static final eventStyle = AppText.caption.copyWith(fontWeight: FontWeight.w600);
+
+  /// The 特別活動's dot and the room after it.
+  static const dot = 9.0;
+
+  static String eventLabel(Roster roster) =>
+      roster.events.length == 1 ? roster.events.first.name : '${roster.events.first.name} +${roster.events.length - 1}';
+
   const _DateCell({
     required this.roster,
     required this.today,
@@ -613,6 +648,8 @@ class _DateCell extends StatelessWidget {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
     final day = roster.day;
+    final event = roster.events.firstOrNull;
+    final eventColor = event == null ? null : EventColors.of(context, event.color).fg;
     return Semantics(
       button: true,
       label: l10n.planOpenDay(dayLabel(l10n, day, today)),
@@ -621,34 +658,42 @@ class _DateCell extends StatelessWidget {
         onTap: onTap,
         child: Container(
           height: height,
-          padding: const EdgeInsetsDirectional.fromSTEB(Space.m, Space.xs, Space.xs, Space.xs),
-          decoration: BoxDecoration(
-            border: Border(bottom: border, right: border),
-          ),
+          margin: const EdgeInsetsDirectional.only(start: Space.m),
+          padding: const EdgeInsetsDirectional.only(end: Space.xs),
+          decoration: BoxDecoration(border: Border(bottom: border)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                shortMonthDay(l10n).format(day.midnight),
+                '${day.day}',
                 maxLines: 1,
-                style: AppText.subheadline.copyWith(color: day == today ? c.accent : c.label),
+                style: dayStyle.copyWith(color: day == today ? c.accent : c.label, height: 1.1),
               ),
-              if (roster.events.isEmpty)
+              if (event == null)
                 Text(
                   DateFormat.E().format(day.midnight),
                   maxLines: 1,
-                  style: AppText.footnote.copyWith(color: c.secondaryLabel),
+                  style: weekdayStyle.copyWith(color: c.secondaryLabel),
                 )
               else
-                Flexible(
-                  child: Tag.event(
-                    context,
-                    roster.events.length == 1
-                        ? roster.events.first.name
-                        : '${roster.events.first.name} +${roster.events.length - 1}',
-                    roster.events.first.color,
-                  ),
+                Row(
+                  children: [
+                    Container(
+                      width: dot - 3,
+                      height: dot - 3,
+                      margin: const EdgeInsetsDirectional.only(end: 3),
+                      decoration: BoxDecoration(color: eventColor, shape: BoxShape.circle),
+                    ),
+                    Flexible(
+                      child: Text(
+                        eventLabel(roster),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: eventStyle.copyWith(color: eventColor),
+                      ),
+                    ),
+                  ],
                 ),
             ],
           ),
@@ -659,8 +704,9 @@ class _DateCell extends StatelessWidget {
 }
 
 /// Who is on [role] that day. Tapping picks them; held, they lift to be
-/// dropped on another day. A day without the duty shows a dash and is
-/// changed on the day's own page.
+/// dropped on another day. Nobody yet shows a dashed ＋, a place to fill
+/// rather than a word repeated down the table. A day without the duty
+/// shows a dash and is changed on the day's own page.
 class _DutyCell extends StatelessWidget {
   const _DutyCell({
     super.key,
@@ -736,22 +782,58 @@ class _DutyCell extends StatelessWidget {
               alignment: AlignmentDirectional.centerStart,
               decoration: BoxDecoration(
                 color: lit ? c.accentSoft : null,
-                border: Border(bottom: border, right: border),
+                border: Border(bottom: border),
               ),
-              child: _CellText(
-                text: text,
-                color: duty == null
-                    ? c.tertiaryLabel
-                    : names.isEmpty
-                    ? c.secondaryLabel
-                    : c.label,
-              ),
+              child: duty != null && names.isEmpty
+                  ? const _EmptySlot()
+                  : _CellText(text: text, color: duty == null ? c.tertiaryLabel : c.label),
             ),
           ),
         ),
       ),
     );
   }
+}
+
+/// A duty nobody is on yet: a dashed box with a ＋, as an open place.
+class _EmptySlot extends StatelessWidget {
+  const _EmptySlot();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    return CustomPaint(
+      painter: _Dashes(c.separator),
+      child: SizedBox(
+        height: Space.minTap(Theme.of(context).platform) - Space.s,
+        width: double.infinity,
+        child: Icon(Symbols.add_rounded, size: 20, color: c.tertiaryLabel),
+      ),
+    );
+  }
+}
+
+class _Dashes extends CustomPainter {
+  const _Dashes(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    final box = RRect.fromRectAndRadius((Offset.zero & size).deflate(0.5), const Radius.circular(Radii.s));
+    for (final metric in (Path()..addRRect(box)).computeMetrics()) {
+      for (var at = 0.0; at < metric.length; at += 7) {
+        canvas.drawPath(metric.extractPath(at, math.min(at + 4, metric.length)), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_Dashes old) => old.color != color;
 }
 
 class _CellText extends StatelessWidget {

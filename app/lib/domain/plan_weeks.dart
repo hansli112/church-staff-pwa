@@ -2,7 +2,7 @@ import 'day.dart';
 import 'models.dart';
 import 'schedule.dart';
 
-/// 排好幾週 (#90): one service's days, a month at a time, as a table of
+/// 安排服事 (#90): one service's days, a month at a time, as a table of
 /// the duties I arrange.
 
 /// The columns: the duties of [service]'s template I arrange, then any

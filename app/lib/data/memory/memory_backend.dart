@@ -102,7 +102,7 @@ class MemoryBackend implements Backend {
   var _smallGroupIds = 0;
   final rosters = <String, Map<String, Roster>>{};
 
-  /// 排好幾週 (#90): per church, by `rosterId/uid`, someone put on or taken
+  /// 安排服事 (#90): per church, by `rosterId/uid`, someone put on or taken
   /// off a day there and not told yet: the service, and what they had on
   /// the day before (functions/src/rosterChange.ts, plannedPushes).
   final planned = <String, Map<String, ({String service, List<String> roles})>>{};
@@ -1206,7 +1206,7 @@ class MemoryChurchData implements ChurchData {
     });
   }
 
-  /// Keeps whom a change made in 排好幾週 puts on or takes off, but the
+  /// Keeps whom a change made in 安排服事 puts on or takes off, but the
   /// editor, for 通知同工. A change told at once, their own, or on and off
   /// again leaves nothing waiting once they have what they had before.
   void _plan(RosterChange change) {

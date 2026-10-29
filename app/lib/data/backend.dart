@@ -306,13 +306,13 @@ abstract interface class ChurchData {
   /// them. No staff order or service change goes with it.
   Future<void> compareAndSetLedDuties(RosterChange change);
 
-  /// Whether changes made in 排好幾週 (#90, [RosterChange.via] `plan`) to
+  /// Whether changes made in 安排服事 (#90, [RosterChange.via] `plan`) to
   /// days of [serviceType] still wait for 通知同工: nobody was told of
   /// them yet. For those who read the member list.
   Stream<bool> plannedNews(String serviceType);
 
   /// 通知同工 for [serviceType], by someone who arranges it: everyone put
-  /// on or taken off its days in 排好幾週 since hears it, one push each.
+  /// on or taken off its days in 安排服事 since hears it, one push each.
   /// In quiet hours ([PlannedNotice.later]) they wait until 7:00.
   Future<PlannedNotice> notifyPlanned(String serviceType);
 

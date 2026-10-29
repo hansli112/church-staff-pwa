@@ -10,7 +10,7 @@ Roster day(int month, int date, List<Duty> duties, {String type = 'sunday'}) =>
     Roster(type: type, day: Day(2026, month, date), duties: duties);
 
 void main() {
-  group('排好幾週 (#90)', () {
+  group('安排服事 (#90)', () {
     test('columns: the template’s duties I arrange, then others the days have', () {
       final days = [
         day(10, 4, const [Duty(role: '司琴'), Duty(role: '敬拜')]),

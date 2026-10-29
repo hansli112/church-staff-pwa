@@ -100,7 +100,7 @@ class PeoplePicker extends StatefulWidget {
   final bool canRemove;
 
   /// Offer 「和別週交換」 there: the dragless way to what dragging a cell
-  /// in 排好幾週 does (#90).
+  /// in 安排服事 does (#90).
   final bool canSwapDay;
 
   /// The duty takes one person (RosterActions.takesOnePerson).

@@ -24,7 +24,7 @@ import { loggable } from './redact.js';
  * again overnight is no news, nor are their own edits or an import. The
  * webhook is not held; it is the church's.
  *
- * 排好幾週 (#90): a change made there (`via: 'plan'`) is not told at once
+ * 安排服事 (#90): a change made there (`via: 'plan'`) is not told at once
  * either. It waits at `plannedPushes/{cid}_{rosterId}_{uid}` until someone
  * presses 通知同工 for the service ([notifyPlanned]), and then each person
  * hears in one push what changed for them on all its days.
@@ -378,7 +378,7 @@ export async function sendHeldPushes(deps: PushDeps & Pick<Deps, 'now'>) {
 }
 
 /**
- * A change made in 排好幾週: told to nobody yet. Each person put on or
+ * A change made in 安排服事: told to nobody yet. Each person put on or
  * taken off, but the editor, keeps what they had on the day before the
  * first such change, for 通知同工. A push held over quiet hours tells only
  * of what came before it.
@@ -473,7 +473,7 @@ async function sendPlanned(deps: PushDeps & Pick<Deps, 'now'>, church: DocumentS
 }
 
 /**
- * 通知同工 in 排好幾週 (#90), by anyone who arranges service
+ * 通知同工 in 安排服事 (#90), by anyone who arranges service
  * `data.serviceId`: everyone whose days of it changed there since the last
  * time hears, one push each. In quiet hours they wait until 7:00
  * ([sendPlannedPushes]). Returns how many people, and whether later.

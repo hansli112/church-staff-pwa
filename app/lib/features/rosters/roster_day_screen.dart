@@ -392,8 +392,8 @@ class _DutyRow extends ConsumerWidget {
 }
 
 /// Opens the picker for [duty] on [roster] and saves what was picked: the
-/// day page's, and 排好幾週's (#90), whose changes go [via] `plan`.
-/// [swapDays]: the days of 排好幾週 the duty can be traded with, from the
+/// day page's, and 安排服事's (#90), whose changes go [via] `plan`.
+/// [swapDays]: the days of 安排服事 the duty can be traded with, from the
 /// picker (#90).
 Future<void> pickPeople(
   BuildContext context,

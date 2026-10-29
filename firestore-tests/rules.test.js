@@ -781,7 +781,7 @@ describe('外部通知 (webhook)', () => {
     await assertFails(getDocs(collectionGroup(as(ADMIN_A), 'rosterChanges')));
   });
 
-  it('排好幾週等著通知的：讀名單的人（管理員、行政、負責人）查得到自己教會的，沒有人能寫', async () => {
+  it('安排服事等著通知的：讀名單的人（管理員、行政、負責人）查得到自己教會的，沒有人能寫', async () => {
     const path = `plannedPushes/${A}_r-sunday_${MEMBER_A}`;
     const entry = { cid: A, rosterId: 'r-sunday', uid: MEMBER_A, roles: [], serviceId: 'sunday', sendAt: null };
     await seed(path, entry);
