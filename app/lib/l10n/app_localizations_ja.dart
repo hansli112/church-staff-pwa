@@ -2988,6 +2988,11 @@ class L10nJa extends L10n {
   String get planWeeksTitle => '奉仕を割り当てる';
 
   @override
+  String planWeeksTitleOne(String duty) {
+    return '$dutyを割り当てる';
+  }
+
+  @override
   String get planWeeksHint => 'ここでの変更はすぐには通知されません。組み終わったら「完了」を押すと、一人に一通ずつ届きます。';
 
   @override

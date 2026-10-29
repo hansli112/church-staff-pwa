@@ -2988,6 +2988,11 @@ class L10nKo extends L10n {
   String get planWeeksTitle => '봉사 배정';
 
   @override
+  String planWeeksTitleOne(String duty) {
+    return '$duty 배정';
+  }
+
+  @override
   String get planWeeksHint => '여기서 바꾼 내용은 바로 알리지 않아요. 다 배정한 뒤 「완료」를 누르면 한 사람에게 한 번씩 알림이 가요.';
 
   @override

@@ -153,6 +153,22 @@ void main() {
     expect((width - shown.left) / shown.width, inInclusiveRange(0.25, 0.6));
   });
 
+  testWidgets('each duty’s name starts where the names and ＋ under it do, the cut column’s too', (tester) async {
+    await pumpApp(tester, seededChurch());
+    await go(tester, '/rosters/plan/sunday');
+    expect(find.text('安排服事'), findsOneWidget);
+    for (final role in ['司會', '司琴', '招待']) {
+      final name = tester.getRect(find.text(role)).left;
+      for (final day in [4, 11]) {
+        final inside = find.descendant(of: cell(role, day), matching: find.byType(Text));
+        final what = inside.evaluate().isEmpty
+            ? find.descendant(of: cell(role, day), matching: find.byType(CustomPaint))
+            : inside;
+        expect(tester.getRect(what.first).left, moreOrLessEquals(name, epsilon: 1), reason: '$role 10/$day');
+      }
+    }
+  });
+
   testWidgets('two people on a duty, a line each: never broken inside a name', (tester) async {
     await pumpApp(tester, seededChurch());
     await go(tester, '/rosters/plan/sunday');
@@ -181,6 +197,8 @@ void main() {
     expect(cell('司琴', 11), findsOneWidget);
     expect(cell('司會', 11), findsNothing);
     expect(cell('招待', 11), findsNothing);
+    expect(find.text('安排司琴'), findsOneWidget, reason: 'the one duty named in the title');
+    expect(find.text('司琴'), findsNothing, reason: 'no row of duty names over one column');
   });
 
   testWidgets('opens at the first month with a gap; the months before are a tap away', (tester) async {

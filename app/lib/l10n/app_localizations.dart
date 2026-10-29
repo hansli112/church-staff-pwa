@@ -5362,6 +5362,12 @@ abstract class L10n {
   /// **'安排服事'**
   String get planWeeksTitle;
 
+  /// 安排服事's title when the only duty it arranges is [duty]: the table then has no row of duty names
+  ///
+  /// In zh, this message translates to:
+  /// **'安排{duty}'**
+  String planWeeksTitleOne(String duty);
+
   /// No description provided for @planWeeksHint.
   ///
   /// In zh, this message translates to:

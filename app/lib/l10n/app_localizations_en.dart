@@ -3153,6 +3153,11 @@ class L10nEn extends L10n {
   String get planWeeksTitle => 'Arrange serving';
 
   @override
+  String planWeeksTitleOne(String duty) {
+    return 'Arrange $duty';
+  }
+
+  @override
   String get planWeeksHint =>
       'Changes here aren’t sent right away. Tap Done when you’re finished and each person gets one notification.';
 

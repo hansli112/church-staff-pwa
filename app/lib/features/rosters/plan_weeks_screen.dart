@@ -295,6 +295,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
     final news = _waiting.isNotEmpty;
 
     Widget body;
+    List<String> duties = const [];
     if (service == null || saved == null || !ready || !arranges.any) {
       body = const SizedBox.shrink();
     } else {
@@ -309,7 +310,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
         return firstGap(ahead, planDuties(service, ahead, arranges)) ?? thisMonth;
       }();
       final months = planMonths(service: service, saved: saved, today: today, month: from, months: _months);
-      final duties = planDuties(service, months.expand((m) => m.days), arranges);
+      duties = planDuties(service, months.expand((m) => m.days), arranges);
       body = _table(context, months, duties, earlier: from.isAfter(thisMonth) ? thisMonth : null);
     }
 
@@ -323,7 +324,8 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
         backgroundColor: c.surface,
         appBar: AppBar(
           backgroundColor: c.surface,
-          title: Text(l10n.planWeeksTitle),
+          // One duty: named here, in place of a column's name.
+          title: Text(duties.length == 1 ? l10n.planWeeksTitleOne(duties.single) : l10n.planWeeksTitle),
           actions: savingActions([
             MediaQuery.withClampedTextScaling(
               maxScaleFactor: 1.5,
@@ -487,43 +489,44 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
         final table = Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            DecoratedBox(
-              decoration: BoxDecoration(border: Border(bottom: line)),
-              child: SizedBox(
-                height: headHeight,
-                child: Row(
-                  children: [
-                    SizedBox(width: dateWidth),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        controller: _names,
-                        scrollDirection: Axis.horizontal,
-                        physics: const NeverScrollableScrollPhysics(),
-                        child: Row(
-                          children: [
-                            for (final role in duties)
-                              Container(
-                                width: cellWidth,
-                                padding: const EdgeInsets.symmetric(horizontal: Space.s),
-                                alignment: AlignmentDirectional.centerStart,
-                                child: Text(
-                                  role,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppText.footnote.copyWith(
-                                    color: c.secondaryLabel,
-                                    fontWeight: FontWeight.w600,
+            if (duties.length > 1)
+              DecoratedBox(
+                decoration: BoxDecoration(border: Border(bottom: line)),
+                child: SizedBox(
+                  height: headHeight,
+                  child: Row(
+                    children: [
+                      SizedBox(width: dateWidth),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          controller: _names,
+                          scrollDirection: Axis.horizontal,
+                          physics: const NeverScrollableScrollPhysics(),
+                          child: Row(
+                            children: [
+                              for (final role in duties)
+                                Container(
+                                  width: cellWidth,
+                                  padding: const EdgeInsets.symmetric(horizontal: Space.s),
+                                  alignment: AlignmentDirectional.centerStart,
+                                  child: Text(
+                                    role,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppText.footnote.copyWith(
+                                      color: c.secondaryLabel,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
-                              ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
             Expanded(
               child: SingleChildScrollView(
                 key: PageStorageKey('plan-$_type'),
@@ -795,7 +798,9 @@ class _DutyCell extends StatelessWidget {
   }
 }
 
-/// A duty nobody is on yet: a dashed box with a ＋, as an open place.
+/// A duty nobody is on yet: a dashed box with a ＋, as an open place. At
+/// the start of the cell, under the duty's name, as names are: a column
+/// cut at the screen's edge still shows both.
 class _EmptySlot extends StatelessWidget {
   const _EmptySlot();
 
@@ -806,7 +811,7 @@ class _EmptySlot extends StatelessWidget {
       painter: _Dashes(c.separator),
       child: SizedBox(
         height: Space.minTap(Theme.of(context).platform) - Space.s,
-        width: double.infinity,
+        width: Space.xxl + Space.s,
         child: Icon(Symbols.add_rounded, size: 20, color: c.tertiaryLabel),
       ),
     );

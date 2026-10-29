@@ -2983,6 +2983,11 @@ class L10nZh extends L10n {
   String get planWeeksTitle => '安排服事';
 
   @override
+  String planWeeksTitleOne(String duty) {
+    return '安排$duty';
+  }
+
+  @override
   String get planWeeksHint => '在這裡排的不會馬上通知，排好按「完成」，每人只收到一則';
 
   @override
@@ -6032,6 +6037,11 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get planWeeksTitle => '安排事奉';
+
+  @override
+  String planWeeksTitleOne(String duty) {
+    return '安排$duty';
+  }
 
   @override
   String get planWeeksHint => '在这里排的不会马上通知，排好按“完成”，每人只收到一条';

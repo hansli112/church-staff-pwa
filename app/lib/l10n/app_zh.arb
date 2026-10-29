@@ -2143,6 +2143,8 @@
   "@notifHoursAgo": {"placeholders": {"count": {"type": "int"}}},
   "planWeeksAction": "安排服事",
   "planWeeksTitle": "安排服事",
+  "planWeeksTitleOne": "安排{duty}",
+  "@planWeeksTitleOne": {"description": "安排服事's title when the only duty it arranges is [duty]: the table then has no row of duty names", "placeholders": {"duty": {"type": "String", "example": "司琴"}}},
   "planWeeksHint": "在這裡排的不會馬上通知，排好按「完成」，每人只收到一則",
   "planNotifyAsk": "要通知同工嗎？",
   "@planNotifyAsk": {"description": "Asked on leaving 安排服事 without 完成 while people put on or taken off there are not told yet"},

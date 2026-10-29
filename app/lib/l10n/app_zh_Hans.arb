@@ -901,6 +901,7 @@
   "notifHoursAgo": "{count} 小时前",
   "planWeeksAction": "安排事奉",
   "planWeeksTitle": "安排事奉",
+  "planWeeksTitleOne": "安排{duty}",
   "planWeeksHint": "在这里排的不会马上通知，排好按“完成”，每人只收到一条",
   "planNotifyAsk": "要通知同工吗？",
   "planNotifyAskBody": "在这里被排入或移出的人，每人会收到一条。",
