@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/core/languages.dart';
 import 'package:martha/data/memory/demo_data.dart';
 import 'package:martha/domain/day.dart';
+import 'package:martha/domain/models.dart';
 
 void main() {
   test("the demo's rosters start four weeks before the church's today, wherever the phone is", () {
@@ -37,6 +38,22 @@ void main() {
     expect(
       [for (final g in groups) b.members['demo']!.values.where((m) => m.smallGroups.contains(g.id)).length],
       [10, 3],
+    );
+  });
+
+  test("the website's church has the next two weeks arranged and nobody after, for 安排服事 to fill", () {
+    final b = demoBackend(showcase: true, clock: () => DateTime.utc(2026, 10, 10, 20));
+    final today = Day(2026, 10, 11);
+    bool anyone(Roster r) => r.duties.any((d) => d.people.isNotEmpty);
+    final ahead = b.rosters['demo']!.values.where((r) => !r.day.isBefore(today));
+    expect(ahead.where((r) => r.day.isBefore(today.addDays(14))).any(anyone), isTrue);
+    expect(ahead.where((r) => r.day.isAfter(today.addDays(14))).where(anyone), isEmpty);
+    expect(
+      demoBackend(
+        clock: () => DateTime.utc(2026, 10, 10, 20),
+      ).rosters['demo']!.values.where((r) => r.day.isAfter(today.addDays(14))).any(anyone),
+      isTrue,
+      reason: 'the app’s own demo stays arranged ahead',
     );
   });
 

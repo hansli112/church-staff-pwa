@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart' show kLongPressTimeout;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -278,6 +279,41 @@ void main() {
     await tester.tap(cell('司琴', 11));
     await settle(tester);
     expect(find.text('移除這項'), findsNothing);
+  });
+
+  testWidgets('a date is its day’s number over its weekday, or its 特別活動 by name, the whole of a long one', (
+    tester,
+  ) async {
+    final b = seededChurch();
+    for (final (day, events) in [
+      (18, const [EventTag(name: 'Communion', color: 1)]),
+      (25, const [EventTag(name: '聖餐', color: 0), EventTag(name: '洗禮', color: 3)]),
+    ]) {
+      b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, day))] = Roster(
+        type: 'sunday',
+        day: Day(2026, 10, day),
+        events: events,
+        duties: const [
+          Duty(role: '司會'),
+          Duty(role: '司琴'),
+          Duty(role: '招待'),
+        ],
+      );
+    }
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    String said(int day) => tester
+        .widgetList<Text>(find.descendant(of: date(day), matching: find.byType(Text)))
+        .map((t) => t.data)
+        .join('|');
+    expect(said(4), '4|聖餐');
+    expect(said(11), '11|週日');
+    expect(said(18), '18|Communion');
+    expect(said(25), '25|聖餐 +1', reason: 'the first, and how many more');
+    final long = tester.renderObject<RenderParagraph>(
+      find.descendant(of: date(18), matching: find.text('Communion')),
+    );
+    expect(long.didExceedMaxLines, isFalse, reason: 'the date column is as wide as it');
   });
 
   testWidgets('a date opens its day', (tester) async {
