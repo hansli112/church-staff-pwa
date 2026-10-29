@@ -27,6 +27,19 @@ void main() {
     expect(mine.length, greaterThanOrEqualTo(2));
   });
 
+  test("the website's church is settled in: nothing on 首頁 to deal with first, and 小組 reporting 人數", () {
+    final b = demoBackend(showcase: true, clock: () => DateTime.utc(2026, 10, 10, 20));
+    expect(b.churches.keys, ['demo'], reason: 'no other church waiting to be joined');
+    expect(b.churchLinks['demo'], isNull);
+    expect(b.churches['demo']!.attendanceSince, isNotNull);
+    final groups = b.smallGroups['demo']!.values;
+    expect(groups.map((g) => g.name), ['喜樂小組', '以馬內利小組']);
+    expect(
+      [for (final g in groups) b.members['demo']!.values.where((m) => m.smallGroups.contains(g.id)).length],
+      [10, 3],
+    );
+  });
+
   group('the demo church writes in the language the demo opens in', () {
     for (final language in AppLanguage.values) {
       test(language.tag, () {

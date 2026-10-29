@@ -68,6 +68,7 @@ Future<void> main() async {
         : Future<Backend>.value(
             demoBackend(
               newUser: const bool.fromEnvironment('DEMO_NEW_USER'),
+              showcase: const bool.fromEnvironment('DEMO_SHOWCASE'),
               language: AppLanguage.resolve(PlatformDispatcher.instance.locales),
             ),
           ),

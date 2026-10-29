@@ -12,11 +12,16 @@ import 'memory_backend.dart';
 ///
 /// Deterministic, so screenshots and measurements are comparable run to
 /// run. The emulator seed script (tools/seed) builds the same shape.
+///
+/// [showcase] is the church the website's videos show (tools/e2e/record.mjs):
+/// settled in, with nothing on 首頁 asking to be dealt with first, and its
+/// 小組 reporting 人數.
 MemoryBackend demoBackend({
   int memberCount = 150,
   DateTime Function()? clock,
   bool signIn = true,
   bool newUser = false,
+  bool showcase = false,
   AppLanguage language = AppLanguage.zhHant,
 }) {
   final w = _DemoWords.of(language);
@@ -25,19 +30,21 @@ MemoryBackend demoBackend({
   final start = b.churches[cid]!.timeZone.today(b.clock());
   // The features an admin sets up: a church link with a daily source, a
   // webhook, and two people moved from self-host who have not signed in.
-  b.churchLinks[cid] = ChurchLink(
-    title: w.linkTitle,
-    body: w.linkBody,
-    url: 'https://example.org/give',
-    source: 'https://example.org/today.json',
-  );
-  b.linkContents[cid] = LinkContent(
-    source: 'https://example.org/today.json',
-    title: w.verseTitle,
-    body: w.verse,
-    link: 'https://example.org/bible/ps23',
-    fetchedAt: b.clock().subtract(const Duration(hours: 5)),
-  );
+  if (!showcase) {
+    b.churchLinks[cid] = ChurchLink(
+      title: w.linkTitle,
+      body: w.linkBody,
+      url: 'https://example.org/give',
+      source: 'https://example.org/today.json',
+    );
+    b.linkContents[cid] = LinkContent(
+      source: 'https://example.org/today.json',
+      title: w.verseTitle,
+      body: w.verse,
+      link: 'https://example.org/bible/ps23',
+      fetchedAt: b.clock().subtract(const Duration(hours: 5)),
+    );
+  }
   b.webhooks[cid] = WebhookSettings(
     url: 'https://n8n.example.org/webhook/martha',
     calendar: true,
@@ -68,16 +75,42 @@ MemoryBackend demoBackend({
   );
   // Another church moved from self-host, with data waiting for the demo
   // account.
-  final other = b.addChurch(w.otherChurch, id: 'living');
-  b.pendingMembers[other] = {
-    'old-demo': PendingMember(id: 'old-demo', name: w.demoPerson, email: 'demo@example.com'),
-  };
+  if (!showcase) {
+    final other = b.addChurch(w.otherChurch, id: 'living');
+    b.pendingMembers[other] = {
+      'old-demo': PendingMember(id: 'old-demo', name: w.demoPerson, email: 'demo@example.com'),
+    };
+  }
   b.setServices(cid, services);
   final people = demoMembers(memberCount, language);
-  for (final m in people) {
-    b.addMember(cid, m);
+  for (final (i, m) in people.indexed) {
+    // The first 小組 has ten people, the second, just started, three.
+    final group = !showcase || i >= 13 ? null : (i < 10 ? 'sg1' : 'sg2');
+    b.addMember(cid, group == null ? m : m.copyWith(smallGroups: {group}));
   }
-  for (final r in demoRosters(people, start, services)) {
+  if (showcase) {
+    b.smallGroups[cid] = {
+      for (final (i, name) in w.smallGroups.indexed)
+        'sg${i + 1}': SmallGroupDetails(
+          id: 'sg${i + 1}',
+          name: name,
+          service: services.first.id,
+          weekday: i == 0 ? DateTime.friday : null,
+        ),
+    };
+    b.churches[cid] = b.churches[cid]!.copyWith(attendanceSince: () => start.addDays(-56));
+    // Reported every week but the last, which is left to fill in.
+    final sinceFriday = (start.weekday - DateTime.friday) % 7;
+    final lastFriday = start.addDays(-(sinceFriday == 0 ? 7 : sinceFriday));
+    b.attendance[cid] = {
+      'small:sg1': AttendanceRecord(
+        days: {for (var week = 1; week < 8; week++) lastFriday.addDays(-7 * week): AttendanceDay.count(7 + week % 3)},
+      ),
+    };
+  }
+  // The website's church has arranged the next two weeks, the rest is
+  // for its videos to arrange.
+  for (final r in demoRosters(people, start, services, showcase ? start.addDays(14) : null)) {
     b.rosters[cid]![r.id] = r;
   }
   for (final s in services) {
@@ -215,9 +248,9 @@ List<Member> demoMembers(int count, [AppLanguage language = AppLanguage.zhHant])
   return members;
 }
 
-/// A year of saved rosters for every service, starting four weeks before
-/// [today].
-List<Roster> demoRosters(List<Member> people, Day today, [List<Service> services = demoServices]) {
+/// A year of [services]' days from four weeks before [today], everyone
+/// taking turns; days after [plannedUntil] have nobody on them yet.
+List<Roster> demoRosters(List<Member> people, Day today, [List<Service> services = demoServices, Day? plannedUntil]) {
   final result = <Roster>[];
   for (final s in services) {
     var day = today.addDays(-28).nextOnOrAfter(s.weekday);
@@ -234,7 +267,7 @@ List<Roster> demoRosters(List<Member> people, Day today, [List<Service> services
                   for (final m in people)
                     if (m.serves(s.id, duty)) m,
                 ];
-                if (pool.isEmpty) return Duty(role: duty);
+                if (pool.isEmpty || (plannedUntil != null && day.isAfter(plannedUntil))) return Duty(role: duty);
                 // Turns start this week, each duty a week after the one
                 // before, so the first in each pool serves soon.
                 final turn = week - 4 - k;
@@ -274,6 +307,7 @@ class _DemoWords {
     required this.services,
     required this.duties,
     required this.events,
+    required this.smallGroups,
     required this.name,
   });
 
@@ -300,6 +334,10 @@ class _DemoWords {
   final List<String> services;
   final List<List<String>> duties;
   final List<String> events;
+
+  /// The [showcase] church's 小組: the first meets on Fridays, the second
+  /// has not said when yet.
+  final List<String> smallGroups;
 
   /// The [i]th member's name; no two the same.
   final String Function(int i) name;
@@ -333,6 +371,7 @@ final _zhHant = _DemoWords(
   services: [for (final s in demoServices) s.name],
   duties: [for (final s in demoServices) s.duties],
   events: [for (final e in demoServices.first.events) e.name],
+  smallGroups: ['喜樂小組', '以馬內利小組'],
   name: _chineseNames(
     '陳林黃張李王吳劉蔡楊許鄭謝郭洪曾邱廖賴徐周葉蘇莊呂江何蕭羅高潘簡朱鍾彭游詹胡施沈余趙盧梁顏柯孫魏翁戴范宋方',
     '志明美玲雅婷家豪俊傑淑芬怡君宗翰佳穎建宏欣怡冠宇思妤承恩惠如柏翰詩涵子軒心怡育誠文華',
@@ -359,6 +398,7 @@ final _zhHans = _DemoWords(
     ['带领', '司琴'],
   ],
   events: ['圣餐', '浸礼', '特会'],
+  smallGroups: ['喜乐小组', '以马内利小组'],
   name: _chineseNames(
     '陈林黄张李王吴刘蔡杨许郑谢郭洪曾邱廖赖徐周叶苏庄吕江何萧罗高潘简朱钟彭游詹胡施沈余赵卢梁颜柯孙魏翁戴范宋方',
     '志明美玲雅婷家豪俊杰淑芬怡君宗翰佳颖建宏欣怡冠宇思妤承恩惠如柏翰诗涵子轩心怡育诚文华',
@@ -399,6 +439,7 @@ final _en = _DemoWords(
   ],
   events: ['Communion', 'Baptism', 'Conference'],
   // Every first name with every surname once in 30 × 30.
+  smallGroups: ['Joy Group', 'Emmanuel Group'],
   name: (i) => '${_enFirst[i % _enFirst.length]} ${_enLast[(i ~/ _enFirst.length + i) % _enLast.length]}',
 );
 
@@ -434,6 +475,7 @@ final _ja = _DemoWords(
   ],
   events: ['聖餐式', '洗礼式', '特別集会'],
   // Every surname with every given name once in 30 × 30.
+  smallGroups: ['喜びの小グループ', 'インマヌエル小グループ'],
   name: (i) => '${_jaLast[i % _jaLast.length]} ${_jaFirst[(i ~/ _jaLast.length + i) % _jaFirst.length]}',
 );
 
@@ -465,5 +507,6 @@ final _ko = _DemoWords(
   ],
   events: ['성찬', '세례', '특별집회'],
   // No two the same for up to 160 people: 21 × 1–7 is never a multiple of 30.
+  smallGroups: ['기쁨 소그룹', '임마누엘 소그룹'],
   name: (i) => _koLast[i % _koLast.length] + _koFirst[(i ~/ _koLast.length + i) % _koFirst.length],
 );
