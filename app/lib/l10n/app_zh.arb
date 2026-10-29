@@ -2155,5 +2155,19 @@
   "pickerMonthCount": "這個月已排 {count} 次",
   "@pickerMonthCount": {"placeholders": {"count": {"type": "int"}}},
   "pickerSameDay": "同一天：{what}",
-  "@pickerSameDay": {"placeholders": {"what": {"type": "String"}}}
+  "@pickerSameDay": {"placeholders": {"what": {"type": "String"}}},
+  "gettingStartedAs": "開始使用 · {identity}",
+  "@gettingStartedAs": {"description": "Header of 開始使用 for one 身分 that is not admin, e.g. 開始使用 · 青年崇拜 負責人", "placeholders": {"identity": {"type": "String", "example": "青年崇拜 負責人"}}},
+  "gettingStartedArrange": "安排服事表",
+  "@gettingStartedArrange": {"description": "開始使用 step for an admin or 行政: opens the 服事表 tab"},
+  "gettingStartedArrangeBody": "一次排好幾週，排好再通知同工",
+  "@gettingStartedArrangeBody": {"description": "Under gettingStartedArrange; one sentence"},
+  "gettingStartedAddStaff": "加入{group}的同工",
+  "@gettingStartedAddStaff": {"description": "開始使用 step for a lead: opens the group page to add its 同工", "placeholders": {"group": {"type": "String", "example": "青年崇拜"}}},
+  "gettingStartedPlan": "排{service}的服事",
+  "@gettingStartedPlan": {"description": "開始使用 step for a lead: opens 排好幾週 of the service", "placeholders": {"service": {"type": "String", "example": "青年崇拜"}}},
+  "gettingStartedMeets": "設定{group}的聚會時間",
+  "@gettingStartedMeets": {"description": "開始使用 step for a 小組長 while 回報人數 is on: opens the 小組 to set when it meets", "placeholders": {"group": {"type": "String", "example": "喜樂小組"}}},
+  "gettingStartedHide": "不再顯示",
+  "@gettingStartedHide": {"description": "Last row of 開始使用: puts it away on this device"}
 }

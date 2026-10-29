@@ -908,5 +908,16 @@
   "planShowEarlier": "Show earlier months",
   "planOpenDay": "Open {day}",
   "pickerMonthCount": "{count, plural, =1{Already on 1 day this month} other{Already on {count} days this month}}",
-  "pickerSameDay": "Same day: {what}"
+  "pickerSameDay": "Same day: {what}",
+  "gettingStartedAs": "Get started · {identity}",
+  "@gettingStartedAs": {"placeholders": {"identity": {"type": "String"}}},
+  "gettingStartedArrange": "Arrange the schedule",
+  "gettingStartedArrangeBody": "Plan several weeks, then notify your team",
+  "gettingStartedAddStaff": "Add team members to {group}",
+  "@gettingStartedAddStaff": {"placeholders": {"group": {"type": "String"}}},
+  "gettingStartedPlan": "Schedule {service}",
+  "@gettingStartedPlan": {"placeholders": {"service": {"type": "String"}}},
+  "gettingStartedMeets": "Set when {group} meets",
+  "@gettingStartedMeets": {"placeholders": {"group": {"type": "String"}}},
+  "gettingStartedHide": "Don’t show again"
 }

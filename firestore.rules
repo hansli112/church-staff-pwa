@@ -359,7 +359,7 @@ service cloud.firestore {
             || (p is map
               && changed.hasOnly(['muted', 'reminderTiming'])
               && (!changed.hasAny(['muted']) || !('muted' in p)
-                  || (p.muted is list && p.muted.hasOnly(['reminder', 'rosterChange', 'memberLeft', 'attendance', 'joinRequest'])))
+                  || (p.muted is list && p.muted.hasOnly(['reminder', 'rosterChange', 'memberLeft', 'attendance', 'joinRequest', 'identity'])))
               && (!changed.hasAny(['reminderTiming']) || !('reminderTiming' in p)
                   || p.reminderTiming in ['weekly', 'dayBefore', 'both']));
         }

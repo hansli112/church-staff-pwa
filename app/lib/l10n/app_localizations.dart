@@ -5409,6 +5409,48 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'同一天：{what}'**
   String pickerSameDay(String what);
+
+  /// Header of 開始使用 for one 身分 that is not admin, e.g. 開始使用 · 青年崇拜 負責人
+  ///
+  /// In zh, this message translates to:
+  /// **'開始使用 · {identity}'**
+  String gettingStartedAs(String identity);
+
+  /// 開始使用 step for an admin or 行政: opens the 服事表 tab
+  ///
+  /// In zh, this message translates to:
+  /// **'安排服事表'**
+  String get gettingStartedArrange;
+
+  /// Under gettingStartedArrange; one sentence
+  ///
+  /// In zh, this message translates to:
+  /// **'一次排好幾週，排好再通知同工'**
+  String get gettingStartedArrangeBody;
+
+  /// 開始使用 step for a lead: opens the group page to add its 同工
+  ///
+  /// In zh, this message translates to:
+  /// **'加入{group}的同工'**
+  String gettingStartedAddStaff(String group);
+
+  /// 開始使用 step for a lead: opens 排好幾週 of the service
+  ///
+  /// In zh, this message translates to:
+  /// **'排{service}的服事'**
+  String gettingStartedPlan(String service);
+
+  /// 開始使用 step for a 小組長 while 回報人數 is on: opens the 小組 to set when it meets
+  ///
+  /// In zh, this message translates to:
+  /// **'設定{group}的聚會時間'**
+  String gettingStartedMeets(String group);
+
+  /// Last row of 開始使用: puts it away on this device
+  ///
+  /// In zh, this message translates to:
+  /// **'不再顯示'**
+  String get gettingStartedHide;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

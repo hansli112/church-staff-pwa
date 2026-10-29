@@ -908,5 +908,16 @@
   "planShowEarlier": "显示前面的月份",
   "planOpenDay": "打开 {day}",
   "pickerMonthCount": "这个月已排 {count} 次",
-  "pickerSameDay": "同一天：{what}"
+  "pickerSameDay": "同一天：{what}",
+  "gettingStartedAs": "开始使用 · {identity}",
+  "@gettingStartedAs": {"placeholders": {"identity": {"type": "String"}}},
+  "gettingStartedArrange": "安排事奉表",
+  "gettingStartedArrangeBody": "一次排好几周，排好再通知同工",
+  "gettingStartedAddStaff": "加入{group}的同工",
+  "@gettingStartedAddStaff": {"placeholders": {"group": {"type": "String"}}},
+  "gettingStartedPlan": "排{service}的事奉",
+  "@gettingStartedPlan": {"placeholders": {"service": {"type": "String"}}},
+  "gettingStartedMeets": "设置{group}的聚会时间",
+  "@gettingStartedMeets": {"placeholders": {"group": {"type": "String"}}},
+  "gettingStartedHide": "不再显示"
 }

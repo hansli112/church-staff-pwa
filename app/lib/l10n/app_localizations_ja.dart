@@ -3020,4 +3020,33 @@ class L10nJa extends L10n {
   String pickerSameDay(String what) {
     return '同じ日：$what';
   }
+
+  @override
+  String gettingStartedAs(String identity) {
+    return 'はじめに · $identity';
+  }
+
+  @override
+  String get gettingStartedArrange => '奉仕表を組む';
+
+  @override
+  String get gettingStartedArrangeBody => '数週間まとめて組んで、メンバーに通知しましょう';
+
+  @override
+  String gettingStartedAddStaff(String group) {
+    return '$groupにメンバーを加える';
+  }
+
+  @override
+  String gettingStartedPlan(String service) {
+    return '$serviceの奉仕を組む';
+  }
+
+  @override
+  String gettingStartedMeets(String group) {
+    return '$groupの集まる日を決める';
+  }
+
+  @override
+  String get gettingStartedHide => '今後表示しない';
 }

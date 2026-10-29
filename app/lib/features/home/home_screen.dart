@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/design/components.dart';
 import '../../core/perf.dart';
 import '../../core/design/tokens.dart';
+import '../../domain/getting_started.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/calendar.dart';
@@ -15,8 +18,10 @@ import '../church/church_logo.dart';
 import '../church/claims.dart';
 import '../calendar/event_sheet.dart';
 import '../me/attendance.dart';
+import '../me/groups_screen.dart';
 import '../me/turn_on_notifications.dart';
 import '../common/calendar_read_notice.dart';
+import '../common/labels.dart';
 import 'church_link_card.dart';
 import 'notification_list_screen.dart';
 import '../rosters/format.dart';
@@ -24,13 +29,61 @@ import '../rosters/day_block.dart';
 import '../rosters/event_roster_screen.dart';
 import '../rosters/rosters_screen.dart';
 
-/// Whether to show 開始使用: I am an admin and still the church's only
-/// member (just made it, nobody invited yet).
-final _gettingStartedProvider = Provider.autoDispose<bool>((ref) {
-  if (!(ref.watch(meProvider).value?.isAdmin ?? false)) return false;
+/// 開始使用 put away on this device (不再顯示), by 身分, per account and
+/// church: one given later shows its own.
+class _HiddenStarts extends Notifier<Set<String>> {
+  String get _key => 'getting_started_hidden_${ref.read(uidProvider)}_${ref.read(currentChurchIdProvider)}';
+
+  @override
+  Set<String> build() {
+    ref.watch(uidProvider);
+    ref.watch(currentChurchIdProvider);
+    return (ref.read(prefsProvider).getStringList(_key) ?? const []).toSet();
+  }
+
+  void hide(Identity i) {
+    state = {...state, _keyOf(i)};
+    ref.read(prefsProvider).setStringList(_key, state.toList());
+  }
+}
+
+String _keyOf(Identity i) => jsonEncode(i.toJson());
+
+final _hiddenStartsProvider = NotifierProvider<_HiddenStarts, Set<String>>(_HiddenStarts.new);
+
+/// What my 身分 still have to start (gettingStarted), less those put away;
+/// nothing until everything it is worked out from has loaded.
+final _gettingStartedProvider = Provider.autoDispose<List<GettingStarted>>((ref) {
+  final me = ref.watch(meProvider).value;
+  if (me == null || me.identities.isEmpty) return const [];
   final members = ref.watch(membersProvider).value;
   final pending = ref.watch(pendingMembersProvider).value;
-  return members != null && members.length <= 1 && pending != null && pending.isEmpty;
+  final services = ref.watch(servicesProvider).value;
+  final ministries = ref.watch(ministriesProvider).value;
+  final smallGroups = ref.watch(smallGroupsProvider).value;
+  final rosters = ref.watch(savedRostersProvider).value;
+  if (members == null ||
+      pending == null ||
+      services == null ||
+      ministries == null ||
+      smallGroups == null ||
+      rosters == null) {
+    return const [];
+  }
+  final hidden = ref.watch(_hiddenStartsProvider);
+  return [
+    for (final g in gettingStarted(
+      me: me,
+      members: members,
+      pending: pending.length,
+      services: services,
+      ministries: ministries,
+      smallGroups: smallGroups,
+      rosters: rosters,
+      attendanceOn: ref.watch(churchProvider.select((c) => c.value?.attendanceSince != null)),
+    ))
+      if (!hidden.contains(_keyOf(g.identity))) g,
+  ];
 });
 
 /// For admins: how many members are in no 牧區 yet, so their 服事表 tab
@@ -42,28 +95,84 @@ final _waitingForZoneProvider = Provider.autoDispose<int>((ref) {
   return members.where((m) => m.waitsForZone(enabled)).length;
 });
 
-/// What to do first in a new church, where the screens for it are three
-/// levels down under 設定. Shown while [_gettingStartedProvider] holds.
-class _GettingStarted extends StatelessWidget {
-  const _GettingStarted();
+/// 開始使用 for one 身分: what is left to do first, each step opening
+/// its page, which may be three levels down under 設定. A 管理員's is
+/// plain 開始使用; another names the 身分, with what it may do below.
+class _GettingStarted extends ConsumerWidget {
+  const _GettingStarted(this.start);
+
+  final GettingStarted start;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
-    return ListSection(
-      header: l10n.gettingStarted,
-      children: [
-        ListRow(
+    final services = ref.watch(servicesProvider).value;
+    final ministries = ref.watch(ministriesProvider).value;
+    final smallGroups = ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
+    final identity = start.identity;
+    final admin = identity is AdminIdentity || identity is PastorIdentity && identity.wholeChurch;
+    String name(ChurchGroup? group) => switch (group) {
+      ServiceGroup(:final id) => services?.byId(id)?.name ?? id,
+      MinistryGroup(:final id) => ministries?.byId(id)?.name ?? id,
+      SmallGroup(:final id) => smallGroupName(smallGroups, id),
+      null => '',
+    };
+    ListRow row(GettingStartedStep s) {
+      final group = s.group;
+      return switch (s.step) {
+        StartStep.services => ListRow(
+          title: l10n.gettingStartedServices,
+          subtitle: l10n.gettingStartedServicesBody,
+          leading: const Icon(Symbols.tune_rounded),
+          onTap: () => context.push('/me/services'),
+        ),
+        StartStep.invite => ListRow(
           title: l10n.inviteMembers,
           subtitle: l10n.gettingStartedInviteBody,
           leading: const Icon(Symbols.person_add_alt_rounded),
           onTap: () => context.push('/me/invites'),
         ),
+        StartStep.arrange => ListRow(
+          title: l10n.gettingStartedArrange,
+          subtitle: l10n.gettingStartedArrangeBody,
+          leading: const Icon(Symbols.edit_calendar_rounded),
+          onTap: () => context.go('/rosters'),
+        ),
+        StartStep.addStaff => ListRow(
+          title: l10n.gettingStartedAddStaff(name(group)),
+          leading: const Icon(Symbols.group_add_rounded),
+          onTap: () => context.push(groupPage(group!)),
+        ),
+        StartStep.planWeeks => ListRow(
+          title: l10n.gettingStartedPlan(name(group)),
+          subtitle: l10n.gettingStartedArrangeBody,
+          leading: const Icon(Symbols.edit_calendar_rounded),
+          onTap: () => context.push('/rosters/plan/${group!.id}'),
+        ),
+        StartStep.meets => ListRow(
+          title: l10n.gettingStartedMeets(name(group)),
+          leading: const Icon(Symbols.schedule_rounded),
+          onTap: () => context.push(groupPage(group!)),
+        ),
+      };
+    }
+
+    return ListSection(
+      header: admin
+          ? l10n.gettingStarted
+          : l10n.gettingStartedAs(
+              identityLabel(l10n, identity, services: services, ministries: ministries, smallGroups: smallGroups),
+            ),
+      footer: admin
+          ? null
+          : identityCan(l10n, identity, services: services, ministries: ministries, smallGroups: smallGroups),
+      children: [
+        for (final s in start.steps) row(s),
         ListRow(
-          title: l10n.gettingStartedServices,
-          subtitle: l10n.gettingStartedServicesBody,
-          leading: const Icon(Symbols.tune_rounded),
-          onTap: () => context.push('/me/services'),
+          title: l10n.gettingStartedHide,
+          leading: const Icon(Symbols.close_rounded),
+          chevron: false,
+          onTap: () => ref.read(_hiddenStartsProvider.notifier).hide(identity),
         ),
       ],
     );
@@ -73,8 +182,8 @@ class _GettingStarted extends StatelessWidget {
 /// 首頁: the days I serve next. That is what most people open the app for.
 /// Above them, 加入主畫面 on a phone's browser, 開啟通知 elsewhere until
 /// they are on, the church link when the admin has set one, 開始使用 for
-/// the admin of a church nobody else has joined yet, and for admins the
-/// members still in no 牧區.
+/// a 身分 with something still to start, and for admins the members still
+/// in no 牧區.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -134,7 +243,7 @@ class HomeScreen extends ConsumerWidget {
               link == null &&
               !sourceMissing &&
               claims.isEmpty &&
-              !gettingStarted &&
+              gettingStarted.isEmpty &&
               waiting == 0 &&
               !addToHome &&
               !notifications &&
@@ -155,7 +264,7 @@ class HomeScreen extends ConsumerWidget {
               if (notifications) const TurnOnNotificationsCard(),
               // 填寫人數 (#85): what a lead is asked, first among their own things.
               if (attendance) const AttendanceDueCard(),
-              if (gettingStarted) const _GettingStarted(),
+              for (final start in gettingStarted) _GettingStarted(start),
               if (waiting > 0)
                 ListSection(
                   children: [

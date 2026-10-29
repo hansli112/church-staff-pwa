@@ -9,10 +9,12 @@ import { deleteAccount } from '../src/account.js';
 import { calendarAuthUrl, type CalDeps } from '../src/calendar.js';
 import { previewInvite, redeemInvite } from '../src/invites.js';
 import { memoryGoogle } from '../src/memoryGoogle.js';
+import { withIdentities, type Identity } from '../src/identities.js';
 import { notifyMembers } from '../src/push.js';
 import { seal } from '../src/sealing.js';
 import {
   editorOf,
+  onIdentitiesGiven,
   onLogoUploaded,
   onMemberDeleted,
   onMemberLeft,
@@ -214,6 +216,54 @@ describe('triggers', () => {
     await db.doc('churches/C1/members/bob').update({ name: '' });
     await onMemberLeft({ db, messaging, appUrl }, 'C1', await db.doc('churches/C1/members/bob').get(), 'bob');
     assert.deepEqual(sent.at(-1)!.body, 'Someone left the church', 'in the language their app shows');
+  });
+
+  test('a 身分 someone else gives is pushed to its holder, named, and opens 首頁', async () => {
+    await seedChurch('C1', { alice: 'admin', bob: 'staff' });
+    await db.doc('churches/C1/settings/services').set({
+      services: [
+        { id: 'sunday', name: '主日崇拜', weekday: 7, enabled: true, duties: [] },
+        { id: 'youth', name: '青年崇拜', weekday: 6, enabled: true, duties: [] },
+      ],
+      ids: ['sunday', 'youth'],
+    });
+    await db.doc('churches/C1/settings/ministries').set({ ministries: [{ id: 'm1', name: '敬拜團', duties: [] }], ids: ['m1'] });
+    await db.doc('churches/C1/smallGroups/g1').set({ name: '喜樂小組', service: 'sunday' });
+    await db.doc('users/bob').set({ fcm: { phone: 'tok-bob' } });
+    const { messaging, sent } = fakePush();
+    const push = { db, messaging, appUrl };
+    const bob = () => db.doc('churches/C1/members/bob').get();
+    const give = async (identities: Identity[], by: string | undefined) => {
+      const before = await bob();
+      await db.doc('churches/C1/members/bob').update(withIdentities(before.data()!, identities));
+      return onIdentitiesGiven(push, 'C1', before, await bob(), by);
+    };
+
+    assert.equal(await give([{ kind: 'lead', service: 'sunday' }], 'alice'), 1);
+    assert.deepEqual(sent.map((p) => [p.tokens, p.title, p.body, p.link]), [[['tok-bob'], 'C1', '你現在是「主日崇拜」的負責人', '/c/C1?to=%2Fhome']]);
+    assert.equal(
+      (await db.collection('users/bob/notifications').get()).docs[0].get('kind'),
+      'identity',
+      'in their 通知列表 as its own kind',
+    );
+
+    // Several at once, in one push: a 小組長 is named by the backend (editSmallGroup).
+    await give(
+      [{ kind: 'lead', service: 'sunday' }, { kind: 'lead', ministry: 'm1' }, { kind: 'lead', smallGroup: 'g1' }],
+      undefined,
+    );
+    assert.equal(sent.at(-1)!.body, '你現在是「敬拜團」的負責人、「喜樂小組」的小組長', 'only what is new');
+
+    await db.doc('users/bob').update({ appLocale: 'en' });
+    await give([{ kind: 'pastor', services: ['sunday', 'youth'] }], 'alice');
+    assert.equal(sent.at(-1)!.body, 'You’re now pastor of 主日崇拜, 青年崇拜', 'in the language their app shows');
+
+    const pushes = sent.length;
+    assert.equal(await give([], 'alice'), 0, 'taken away: nothing to tell');
+    assert.equal(await give([{ kind: 'office' }], 'bob'), 0, 'not their own doing');
+    assert.equal(sent.length, pushes);
+    await db.doc('churches/C1').update({ status: 'suspended' });
+    assert.equal(await give([{ kind: 'admin' }], 'alice'), 0, 'not in a closed church');
   });
 
   test('dead tokens are removed, live ones kept', async () => {

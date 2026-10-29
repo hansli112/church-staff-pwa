@@ -3204,4 +3204,33 @@ class L10nEn extends L10n {
   String pickerSameDay(String what) {
     return 'Same day: $what';
   }
+
+  @override
+  String gettingStartedAs(String identity) {
+    return 'Get started · $identity';
+  }
+
+  @override
+  String get gettingStartedArrange => 'Arrange the schedule';
+
+  @override
+  String get gettingStartedArrangeBody => 'Plan several weeks, then notify your team';
+
+  @override
+  String gettingStartedAddStaff(String group) {
+    return 'Add team members to $group';
+  }
+
+  @override
+  String gettingStartedPlan(String service) {
+    return 'Schedule $service';
+  }
+
+  @override
+  String gettingStartedMeets(String group) {
+    return 'Set when $group meets';
+  }
+
+  @override
+  String get gettingStartedHide => 'Don’t show again';
 }

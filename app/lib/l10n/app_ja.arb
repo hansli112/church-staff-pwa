@@ -908,5 +908,16 @@
   "planShowEarlier": "前の月を表示",
   "planOpenDay": "{day}を開く",
   "pickerMonthCount": "今月すでに{count}回",
-  "pickerSameDay": "同じ日：{what}"
+  "pickerSameDay": "同じ日：{what}",
+  "gettingStartedAs": "はじめに · {identity}",
+  "@gettingStartedAs": {"placeholders": {"identity": {"type": "String"}}},
+  "gettingStartedArrange": "奉仕表を組む",
+  "gettingStartedArrangeBody": "数週間まとめて組んで、メンバーに通知しましょう",
+  "gettingStartedAddStaff": "{group}にメンバーを加える",
+  "@gettingStartedAddStaff": {"placeholders": {"group": {"type": "String"}}},
+  "gettingStartedPlan": "{service}の奉仕を組む",
+  "@gettingStartedPlan": {"placeholders": {"service": {"type": "String"}}},
+  "gettingStartedMeets": "{group}の集まる日を決める",
+  "@gettingStartedMeets": {"placeholders": {"group": {"type": "String"}}},
+  "gettingStartedHide": "今後表示しない"
 }

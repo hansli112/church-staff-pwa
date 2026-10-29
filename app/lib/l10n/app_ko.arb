@@ -908,5 +908,16 @@
   "planShowEarlier": "이전 달 보기",
   "planOpenDay": "{day} 열기",
   "pickerMonthCount": "이번 달 이미 {count}회",
-  "pickerSameDay": "같은 날: {what}"
+  "pickerSameDay": "같은 날: {what}",
+  "gettingStartedAs": "시작하기 · {identity}",
+  "@gettingStartedAs": {"placeholders": {"identity": {"type": "String"}}},
+  "gettingStartedArrange": "봉사표 배정하기",
+  "gettingStartedArrangeBody": "몇 주를 한꺼번에 배정하고 멤버에게 알려 주세요",
+  "gettingStartedAddStaff": "{group}에 멤버 추가",
+  "@gettingStartedAddStaff": {"placeholders": {"group": {"type": "String"}}},
+  "gettingStartedPlan": "{service} 봉사 배정하기",
+  "@gettingStartedPlan": {"placeholders": {"service": {"type": "String"}}},
+  "gettingStartedMeets": "{group} 모이는 날 정하기",
+  "@gettingStartedMeets": {"placeholders": {"group": {"type": "String"}}},
+  "gettingStartedHide": "다시 보지 않기"
 }

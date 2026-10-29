@@ -3020,4 +3020,33 @@ class L10nKo extends L10n {
   String pickerSameDay(String what) {
     return '같은 날: $what';
   }
+
+  @override
+  String gettingStartedAs(String identity) {
+    return '시작하기 · $identity';
+  }
+
+  @override
+  String get gettingStartedArrange => '봉사표 배정하기';
+
+  @override
+  String get gettingStartedArrangeBody => '몇 주를 한꺼번에 배정하고 멤버에게 알려 주세요';
+
+  @override
+  String gettingStartedAddStaff(String group) {
+    return '$group에 멤버 추가';
+  }
+
+  @override
+  String gettingStartedPlan(String service) {
+    return '$service 봉사 배정하기';
+  }
+
+  @override
+  String gettingStartedMeets(String group) {
+    return '$group 모이는 날 정하기';
+  }
+
+  @override
+  String get gettingStartedHide => '다시 보지 않기';
 }

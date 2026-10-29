@@ -3015,6 +3015,35 @@ class L10nZh extends L10n {
   String pickerSameDay(String what) {
     return '同一天：$what';
   }
+
+  @override
+  String gettingStartedAs(String identity) {
+    return '開始使用 · $identity';
+  }
+
+  @override
+  String get gettingStartedArrange => '安排服事表';
+
+  @override
+  String get gettingStartedArrangeBody => '一次排好幾週，排好再通知同工';
+
+  @override
+  String gettingStartedAddStaff(String group) {
+    return '加入$group的同工';
+  }
+
+  @override
+  String gettingStartedPlan(String service) {
+    return '排$service的服事';
+  }
+
+  @override
+  String gettingStartedMeets(String group) {
+    return '設定$group的聚會時間';
+  }
+
+  @override
+  String get gettingStartedHide => '不再顯示';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -6028,4 +6057,33 @@ class L10nZhHans extends L10nZh {
   String pickerSameDay(String what) {
     return '同一天：$what';
   }
+
+  @override
+  String gettingStartedAs(String identity) {
+    return '开始使用 · $identity';
+  }
+
+  @override
+  String get gettingStartedArrange => '安排事奉表';
+
+  @override
+  String get gettingStartedArrangeBody => '一次排好几周，排好再通知同工';
+
+  @override
+  String gettingStartedAddStaff(String group) {
+    return '加入$group的同工';
+  }
+
+  @override
+  String gettingStartedPlan(String service) {
+    return '排$service的事奉';
+  }
+
+  @override
+  String gettingStartedMeets(String group) {
+    return '设置$group的聚会时间';
+  }
+
+  @override
+  String get gettingStartedHide => '不再显示';
 }

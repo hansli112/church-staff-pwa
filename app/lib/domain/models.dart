@@ -144,7 +144,7 @@ class Zone {
 }
 
 /// Kinds of push notification a member can turn off per church.
-enum NotificationKind { reminder, rosterChange, memberLeft, attendance, joinRequest }
+enum NotificationKind { reminder, rosterChange, memberLeft, attendance, joinRequest, identity }
 
 /// When a member is reminded of their duties: Monday evening of the week's
 /// duties (Monday to Sunday), the evening before each, or both. Matches

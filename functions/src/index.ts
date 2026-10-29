@@ -10,6 +10,7 @@ import {
   onDocumentCreatedWithAuthContext,
   onDocumentDeleted,
   onDocumentDeletedWithAuthContext,
+  onDocumentUpdatedWithAuthContext,
   onDocumentWritten,
   onDocumentUpdated,
   onDocumentWrittenWithAuthContext,
@@ -349,6 +350,15 @@ export const onMemberDemoted = using(
       if (!event.data) return;
       await triggers.onMemberUpdated(make(), event.params.cid, event.data.before, event.data.after);
     }),
+);
+
+// No retry: it pushes.
+export const onIdentityGiven = onDocumentUpdatedWithAuthContext(
+  { region: REGION, document: 'churches/{cid}/members/{uid}' },
+  async (event) => {
+    if (!event.data) return;
+    await triggers.onIdentitiesGiven(pushDeps(), event.params.cid, event.data.before, event.data.after, triggers.editorOf(event));
+  },
 );
 
 export const onLogoUploaded = onObjectFinalized({ region: REGION, memory: '512MiB', retry: true }, async (event) => {

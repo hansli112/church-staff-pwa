@@ -111,6 +111,9 @@ export interface Words {
   /** A member left (triggers.ts); [name] is theirs, null when they had none. */
   memberLeft(name: string | null): string;
 
+  /** To someone given [given] (triggers.ts): what they are now, one or several. */
+  identityGiven(given: NamedIdentity[]): string;
+
   /** 申請加入 (joinRequests.ts): to admins, [name] asked to join (null when they have none), with what they wrote, if anything; to them, they were let in. */
   joinRequested(name: string | null, note: string): string;
   joinAllowed: string;
@@ -135,6 +138,18 @@ export interface Words {
   /** Written in a duty's people for "nobody yet", as the app shows it (nobodyYet). */
   placeholder: string;
 }
+
+/** A 身分 as a push names it, with its services', 事工's or 小組's names; a whole church's 牧者 has none. */
+export type NamedIdentity =
+  | { kind: 'admin' }
+  | { kind: 'office' }
+  | { kind: 'pastor'; of: string[] | null }
+  | { kind: 'lead'; of: string }
+  | { kind: 'smallGroupLead'; of: string };
+
+/** [i] by [say]'s word for each kind. */
+const naming = (say: { [K in NamedIdentity['kind']]: (i: Extract<NamedIdentity, { kind: K }>) => string }) => (i: NamedIdentity) =>
+  (say[i.kind] as (i: NamedIdentity) => string)(i);
 
 const sunday = (name: string, duties: string[], events: string[]): NewService => ({
   id: 'sunday',
@@ -162,6 +177,18 @@ const zhHant: Words = {
   takenOff: (day, duties) => `你被移出 ${day}：${duties.join('、')}`,
   planned: (service, on, off) => [`${service}的服事排好了`, ...on.map((l) => `排進 ${l}`), ...off.map((l) => `移出 ${l}`)].join('\n'),
   memberLeft: (name) => (name ? `「${name}」退出了教會` : '有人退出了教會'),
+  identityGiven: (given) =>
+    `你現在是${given
+      .map(
+        naming({
+          admin: () => '管理員',
+          office: () => '行政',
+          pastor: ({ of }) => (of ? `${of.map((n) => `「${n}」`).join('、')}的牧者` : '全教會的牧者'),
+          lead: ({ of }) => `「${of}」的負責人`,
+          smallGroupLead: ({ of }) => `「${of}」的小組長`,
+        }),
+      )
+      .join('、')}`,
   joinRequested: (name, note) => `${name ? `「${name}」申請加入教會` : '有人申請加入教會'}${note ? `：${note}` : ''}`,
   joinAllowed: '管理員允許你加入了，歡迎！',
   attendanceTitle: '填寫人數',
@@ -191,6 +218,18 @@ const zhHans: Words = {
   takenOff: (day, duties) => `你被移出 ${day}：${duties.join('、')}`,
   planned: (service, on, off) => [`${service}的事奉排好了`, ...on.map((l) => `排入 ${l}`), ...off.map((l) => `移出 ${l}`)].join('\n'),
   memberLeft: (name) => (name ? `“${name}”退出了教会` : '有人退出了教会'),
+  identityGiven: (given) =>
+    `你现在是${given
+      .map(
+        naming({
+          admin: () => '管理员',
+          office: () => '行政',
+          pastor: ({ of }) => (of ? `${of.map((n) => `“${n}”`).join('、')}的牧者` : '全教会的牧者'),
+          lead: ({ of }) => `“${of}”的负责人`,
+          smallGroupLead: ({ of }) => `“${of}”的小组长`,
+        }),
+      )
+      .join('、')}`,
   joinRequested: (name, note) => `${name ? `“${name}”申请加入教会` : '有人申请加入教会'}${note ? `：${note}` : ''}`,
   joinAllowed: '管理员允许你加入了，欢迎！',
   attendanceTitle: '填写人数',
@@ -220,6 +259,18 @@ const en: Words = {
   takenOff: (day, duties) => `You’re no longer on ${day}: ${duties.join(', ')}`,
   planned: (service, on, off) => [`${service}: your serving is arranged`, ...on.map((l) => `On ${l}`), ...off.map((l) => `Off ${l}`)].join('\n'),
   memberLeft: (name) => `${name ?? 'Someone'} left the church`,
+  identityGiven: (given) =>
+    `You’re now ${given
+      .map(
+        naming({
+          admin: () => 'an admin',
+          office: () => 'office staff',
+          pastor: ({ of }) => (of ? `pastor of ${of.join(', ')}` : 'pastor of the whole church'),
+          lead: ({ of }) => `lead of ${of}`,
+          smallGroupLead: ({ of }) => `small group leader of ${of}`,
+        }),
+      )
+      .join('; ')}`,
   joinRequested: (name, note) => `${name ?? 'Someone'} asked to join the church${note ? `: ${note}` : ''}`,
   joinAllowed: 'An admin let you in. Welcome!',
   attendanceTitle: 'Attendance',
@@ -250,6 +301,18 @@ const ja: Words = {
   takenOff: (day, duties) => `${day}の担当から外れました：${duties.join('、')}`,
   planned: (service, on, off) => [`${service}の奉仕が決まりました`, ...on.map((l) => `担当 ${l}`), ...off.map((l) => `解除 ${l}`)].join('\n'),
   memberLeft: (name) => `${name ?? 'メンバー'}が教会を退出しました`,
+  identityGiven: (given) =>
+    `${given
+      .map(
+        naming({
+          admin: () => '管理者',
+          office: () => '事務',
+          pastor: ({ of }) => (of ? `${of.map((n) => `「${n}」`).join('、')}の牧師` : '教会全体の牧師'),
+          lead: ({ of }) => `「${of}」のリーダー`,
+          smallGroupLead: ({ of }) => `「${of}」の小グループリーダー`,
+        }),
+      )
+      .join('、')}になりました`,
   joinRequested: (name, note) => `${name ?? 'どなたか'}が教会への参加を申請しました${note ? `：${note}` : ''}`,
   joinAllowed: '管理者が参加を承認しました。ようこそ！',
   attendanceTitle: '人数の記録',
@@ -278,6 +341,18 @@ const ko: Words = {
   takenOff: (day, duties) => `${day} 봉사에서 빠졌어요: ${duties.join(', ')}`,
   planned: (service, on, off) => [`${service} 봉사가 정해졌어요`, ...on.map((l) => `배정 ${l}`), ...off.map((l) => `제외 ${l}`)].join('\n'),
   memberLeft: (name) => (name ? `${name} 님이 교회를 나갔어요` : '멤버 한 명이 교회를 나갔어요'),
+  identityGiven: (given) =>
+    `이제 ${given
+      .map(
+        naming({
+          admin: () => '관리자',
+          office: () => '행정',
+          pastor: ({ of }) => (of ? `${of.join(', ')} 목회자` : '교회 전체 목회자'),
+          lead: ({ of }) => `${of} 리더`,
+          smallGroupLead: ({ of }) => `${of} 소그룹 리더`,
+        }),
+      )
+      .join(', ')} 역할을 맡았어요`,
   joinRequested: (name, note) =>
     `${name ? `${name} 님이 교회 가입을 신청했어요` : '누군가 교회 가입을 신청했어요'}${note ? `: ${note}` : ''}`,
   joinAllowed: '관리자가 가입을 승인했어요. 환영해요!',

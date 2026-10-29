@@ -174,4 +174,5 @@ const _icons = {
   NotificationKind.memberLeft: Symbols.person_remove_rounded,
   NotificationKind.attendance: Symbols.groups_rounded,
   NotificationKind.joinRequest: Symbols.person_add_rounded,
+  NotificationKind.identity: Symbols.badge_rounded,
 };

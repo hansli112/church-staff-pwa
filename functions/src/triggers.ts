@@ -4,6 +4,9 @@ import type { Storage } from 'firebase-admin/storage';
 import { CHURCH_ID, isChurchOpen } from './access.js';
 import { releaseCalendarIfConnector, type CalDeps } from './calendar.js';
 import { runEach, type Deps } from './common.js';
+import { identitiesOf, sameIdentity, type Identity } from './identities.js';
+import type { NamedIdentity } from './languages.js';
+import { ministriesOf } from './ministries.js';
 import { forgetNotificationsFrom } from './notificationList.js';
 import { ICON_FILES, iconStoragePath, makeIcons } from './icons.js';
 import { personName } from './limits.js';
@@ -84,6 +87,50 @@ export async function onMemberLeft(
     title: church.get('name') as string,
     body: w.memberLeft(name || null),
     link: '/me/members',
+  }));
+}
+
+/**
+ * A member given a 身分 by someone else (an admin, a 負責人 naming a
+ * 小組長, the backend) is told what they are now: one push, opening 首頁,
+ * where 開始使用 shows what to do first. Not what they gave themself, nor
+ * what was taken away. Returns how many devices it reached.
+ */
+export async function onIdentitiesGiven(
+  deps: PushDeps,
+  cid: string,
+  before: DocumentSnapshot,
+  after: DocumentSnapshot,
+  editor: string | undefined,
+) {
+  if (!after.exists || editor === after.id) return 0;
+  const had = identitiesOf(before.data() ?? {});
+  const given = identitiesOf(after.data()!).filter((i) => !had.some((h) => sameIdentity(h, i)));
+  if (given.length === 0) return 0;
+  const root = deps.db.doc(`churches/${cid}`);
+  const smallGroupIds = given.flatMap((i) => ('smallGroup' in i ? [i.smallGroup] : []));
+  const [church, services, ministries, ...smallGroups] = await deps.db.getAll(
+    root,
+    root.collection('settings').doc('services'),
+    root.collection('settings').doc('ministries'),
+    ...smallGroupIds.map((id) => root.collection('smallGroups').doc(id)),
+  );
+  if (!isChurchOpen(church)) return 0;
+  const serviceList = (services.get('services') as { id: string; name: string }[] | undefined) ?? [];
+  const service = (id: string) => serviceList.find((s) => s.id === id)?.name ?? id;
+  const ministry = (id: string) => ministriesOf(ministries).find((m) => m.id === id)?.name ?? id;
+  const smallGroup = (id: string) => (smallGroups.find((g) => g.id === id)?.get('name') as string | undefined) ?? id;
+  const named = (i: Identity): NamedIdentity => {
+    if (i.kind === 'admin' || i.kind === 'office') return i;
+    if (i.kind === 'pastor') return { kind: 'pastor', of: i.services?.map(service) ?? null };
+    if ('service' in i) return { kind: 'lead', of: service(i.service) };
+    if ('ministry' in i) return { kind: 'lead', of: ministry(i.ministry) };
+    return { kind: 'smallGroupLead', of: smallGroup(i.smallGroup) };
+  };
+  return notifyMembers(deps, cid, [after.id], 'identity', (w) => ({
+    title: church.get('name') as string,
+    body: w.identityGiven(given.map(named)),
+    link: '/home',
   }));
 }
 
