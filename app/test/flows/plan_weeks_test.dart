@@ -199,6 +199,8 @@ void main() {
     expect(cell('招待', 11), findsNothing);
     expect(find.text('安排司琴'), findsOneWidget, reason: 'the one duty named in the title');
     expect(find.text('司琴'), findsNothing, reason: 'no row of duty names over one column');
+    final slot = tester.getRect(find.descendant(of: cell('司琴', 11), matching: find.byType(CustomPaint)).first);
+    expect(slot.width, greaterThan(tester.getRect(cell('司琴', 11)).width * 0.8), reason: 'a row-wide place to fill');
   });
 
   testWidgets('opens at the first month with a gap; the months before are a tap away', (tester) async {

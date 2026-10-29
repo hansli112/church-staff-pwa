@@ -476,6 +476,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
                       lit: lift?.to?.id == day.id && lift?.role == role || _flash.contains(_cellId(day, role)),
                       onTap: (duty) => pickPeople(context, ref, day, duty, via: 'plan', swapDays: _shown),
                       onLift: (cell, d) => _liftStart(cell, day, role, d),
+                      alone: duties.length == 1,
                       onSwap: _shown.any((d) => canSwapDuty(role, day, d))
                           ? (duty) => pickDayToSwap(context, ref, day, duty, _shown, via: 'plan')
                           : null,
@@ -723,6 +724,7 @@ class _DutyCell extends StatelessWidget {
     required this.lit,
     required this.onTap,
     required this.onLift,
+    required this.alone,
     required this.onSwap,
   });
 
@@ -746,6 +748,10 @@ class _DutyCell extends StatelessWidget {
   /// 和別週交換, for screen readers in place of dragging; null when no
   /// other day can trade.
   final ValueChanged<Duty>? onSwap;
+
+  /// The only duty shown: a list of days, not a table, with no duty's
+  /// name above to line up under.
+  final bool alone;
 
   @override
   Widget build(BuildContext context) {
@@ -788,7 +794,7 @@ class _DutyCell extends StatelessWidget {
                 border: Border(bottom: border),
               ),
               child: duty != null && names.isEmpty
-                  ? const _EmptySlot()
+                  ? _EmptySlot(wide: alone)
                   : _CellText(text: text, color: duty == null ? c.tertiaryLabel : c.label),
             ),
           ),
@@ -800,9 +806,12 @@ class _DutyCell extends StatelessWidget {
 
 /// A duty nobody is on yet: a dashed box with a ＋, as an open place. At
 /// the start of the cell, under the duty's name, as names are: a column
-/// cut at the screen's edge still shows both.
+/// cut at the screen's edge still shows both. [wide]: across the row, the
+/// only duty shown, with no name above it.
 class _EmptySlot extends StatelessWidget {
-  const _EmptySlot();
+  const _EmptySlot({required this.wide});
+
+  final bool wide;
 
   @override
   Widget build(BuildContext context) {
@@ -811,7 +820,7 @@ class _EmptySlot extends StatelessWidget {
       painter: _Dashes(c.separator),
       child: SizedBox(
         height: Space.minTap(Theme.of(context).platform) - Space.s,
-        width: Space.xxl + Space.s,
+        width: wide ? double.infinity : Space.xxl + Space.s,
         child: Icon(Symbols.add_rounded, size: 20, color: c.tertiaryLabel),
       ),
     );
