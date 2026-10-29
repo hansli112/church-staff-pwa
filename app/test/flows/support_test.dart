@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:martha/app.dart';
+import 'package:martha/core/design/components.dart';
 import 'package:martha/core/languages.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
@@ -202,6 +203,21 @@ void main() {
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me');
     await settle(tester);
     expect(find.text('支持馬大別忙'), findsNothing);
+  });
+
+  testWidgets("支持 sits with the rest of 馬大別忙's own, last, with 關於 at the very bottom", (tester) async {
+    await pumpWithStore(tester, FakeStore(), FakeIcons());
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me');
+    await settle(tester);
+
+    Widget section(String row) => tester.widget(find.ancestor(of: find.text(row), matching: find.byType(ListSection)));
+    double top(String row) => tester.getTopLeft(find.text(row)).dy;
+    expect(section('LINE 社群'), same(section('支持馬大別忙')));
+    expect(section('關於馬大別忙'), same(section('支持馬大別忙')));
+    expect(section('語言'), isNot(same(section('支持馬大別忙'))), reason: 'a setting of mine, not the app');
+    expect(top('支持馬大別忙'), lessThan(top('LINE 社群')));
+    expect(top('LINE 社群'), lessThan(top('關於馬大別忙')));
+    expect(top('語言'), lessThan(top('支持馬大別忙')));
   });
 
   testWidgets('a tip thanks; the subscription unlocks icons and a badge only I see', (tester) async {

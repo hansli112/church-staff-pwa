@@ -170,6 +170,12 @@ class SettingsScreen extends ConsumerWidget {
                 value: AppLanguage.fromTag(ref.watch(profileProvider).value?.locale)?.label ?? l10n.languageSystem,
                 onTap: () => context.push('/me/language'),
               ),
+            ],
+          ),
+          // 馬大別忙's own, last as in most apps: supporting it, asking, and
+          // 關於 at the very bottom.
+          ListSection(
+            children: [
               if (store.available)
                 ListRow(
                   leading: const IconTile(Symbols.favorite_rounded, color: TileColors.support),
@@ -184,10 +190,6 @@ class SettingsScreen extends ConsumerWidget {
                   title: l10n.support,
                   onTap: () => openSitePage(context, ref, '/support'),
                 ),
-            ],
-          ),
-          ListSection(
-            children: [
               // Where to ask.
               ListRow(
                 leading: const IconTile(Symbols.forum_rounded, color: TileColors.line),
