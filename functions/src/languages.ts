@@ -259,15 +259,16 @@ const en: Words = {
   takenOff: (day, duties) => `You’re no longer on ${day}: ${duties.join(', ')}`,
   planned: (service, on, off) => [`${service}: your serving is arranged`, ...on.map((l) => `On ${l}`), ...off.map((l) => `Off ${l}`)].join('\n'),
   memberLeft: (name) => `${name ?? 'Someone'} left the church`,
+  // As the app labels each 身分 (identityLabel).
   identityGiven: (given) =>
-    `You’re now ${given
+    `${given.length > 1 ? 'New roles' : 'New role'}: ${given
       .map(
         naming({
-          admin: () => 'an admin',
-          office: () => 'office staff',
-          pastor: ({ of }) => (of ? `pastor of ${of.join(', ')}` : 'pastor of the whole church'),
-          lead: ({ of }) => `lead of ${of}`,
-          smallGroupLead: ({ of }) => `small group leader of ${of}`,
+          admin: () => 'Admin',
+          office: () => 'Office',
+          pastor: ({ of }) => `Pastor · ${of ? of.join(', ') : 'Whole church'}`,
+          lead: ({ of }) => `${of} lead`,
+          smallGroupLead: ({ of }) => `${of} small group leader`,
         }),
       )
       .join('; ')}`,
@@ -347,7 +348,7 @@ const ko: Words = {
         naming({
           admin: () => '관리자',
           office: () => '행정',
-          pastor: ({ of }) => (of ? `${of.join(', ')} 목회자` : '교회 전체 목회자'),
+          pastor: ({ of }) => (of ? `${of.join('·')} 목회자` : '교회 전체 목회자'),
           lead: ({ of }) => `${of} 리더`,
           smallGroupLead: ({ of }) => `${of} 소그룹 리더`,
         }),

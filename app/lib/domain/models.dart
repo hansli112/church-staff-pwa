@@ -193,8 +193,7 @@ class Member {
   /// 行政 (a member doc from before them, or one an older backend made an
   /// admin of; testdata/church_rules.json, memberIdentities).
   List<Identity> get identities => [
-    if (isAdmin && !_identities.any((i) => i is AdminIdentity || (i is PastorIdentity && i.wholeChurch)))
-      const AdminIdentity(),
+    if (isAdmin && !_identities.any((i) => i.makesAdmin)) const AdminIdentity(),
     if (!isAdmin && groups.isNotEmpty && !_identities.contains(const OfficeIdentity())) const OfficeIdentity(),
     ..._identities,
   ];
@@ -235,7 +234,7 @@ class Member {
   /// older apps read set to match: 管理員 and a whole church's 牧者 are
   /// role admin, 行政 the two permission groups.
   Member withIdentities(List<Identity> next) {
-    final admin = next.any((i) => i is AdminIdentity || (i is PastorIdentity && i.wholeChurch));
+    final admin = next.any((i) => i.makesAdmin);
     return Member(
       uid: uid,
       name: name,

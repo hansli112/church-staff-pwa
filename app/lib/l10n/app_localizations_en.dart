@@ -3223,7 +3223,7 @@ class L10nEn extends L10n {
 
   @override
   String gettingStartedPlan(String service) {
-    return 'Schedule $service';
+    return 'Arrange $service\'s schedule';
   }
 
   @override

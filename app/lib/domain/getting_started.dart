@@ -22,7 +22,11 @@ enum StartStep {
   planWeeks,
 
   /// When the 小組 meets, for 回報人數.
-  meets,
+  meets
+  ;
+
+  /// Whether a roster with someone on it is what makes it done.
+  bool get wantsArranging => this == services || this == arrange || this == planWeeks;
 }
 
 /// One step, about [group] when it is one group's: what it opens.
@@ -50,11 +54,12 @@ class GettingStarted {
 /// What [me] still has to start, a list for each 身分 with something left:
 /// for an admin only the admin's, which covers the rest. [members] is
 /// everyone, [pending] how many moved from self-host have not signed in
-/// yet, [rosters] the saved ones from today on.
+/// yet, [rosters] saved ones: from today on, and those of the past weeks
+/// when they are what makes a step done (a church between seasons).
 List<GettingStarted> gettingStarted({
   required Member me,
   required List<Member> members,
-  int pending = 0,
+  required int pending,
   required ServiceSettings services,
   required MinistrySettings ministries,
   required List<SmallGroupDetails> smallGroups,
@@ -102,9 +107,7 @@ List<GettingStarted> gettingStarted({
     },
   };
 
-  final held = me.isAdmin
-      ? me.identities.where((i) => i is AdminIdentity || (i is PastorIdentity && i.wholeChurch)).take(1)
-      : me.identities;
+  final held = me.isAdmin ? me.identities.where((i) => i.makesAdmin).take(1) : me.identities;
   return [
     for (final i in held)
       if (steps(i) case final left when left.isNotEmpty) GettingStarted(i, left),

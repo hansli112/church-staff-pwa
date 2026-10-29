@@ -35,6 +35,12 @@ sealed class Identity {
   }
 
   Map<String, Object?> toJson();
+
+  /// Whether it makes its holder an admin: 管理員, or a whole church's 牧者.
+  bool get makesAdmin => switch (this) {
+    AdminIdentity() || PastorIdentity(services: null) => true,
+    _ => false,
+  };
 }
 
 /// 管理員: everything.

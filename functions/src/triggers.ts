@@ -105,7 +105,14 @@ export async function onIdentitiesGiven(
 ) {
   if (!after.exists || editor === after.id) return 0;
   const had = identitiesOf(before.data() ?? {});
-  const given = identitiesOf(after.data()!).filter((i) => !had.some((h) => sameIdentity(h, i)));
+  // A 牧者 of more services is told only of those added; of fewer, nothing.
+  const pastorOf = new Set(had.flatMap((h) => (h.kind === 'pastor' ? (h.services ?? []) : [])));
+  const given = identitiesOf(after.data()!).flatMap((i): Identity[] => {
+    if (had.some((h) => sameIdentity(h, i))) return [];
+    if (i.kind !== 'pastor' || !i.services) return [i];
+    const more = i.services.filter((s) => !pastorOf.has(s));
+    return more.length > 0 ? [{ kind: 'pastor', services: more }] : [];
+  });
   if (given.length === 0) return 0;
   const root = deps.db.doc(`churches/${cid}`);
   const smallGroupIds = given.flatMap((i) => ('smallGroup' in i ? [i.smallGroup] : []));

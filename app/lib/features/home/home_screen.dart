@@ -52,7 +52,9 @@ String _keyOf(Identity i) => jsonEncode(i.toJson());
 final _hiddenStartsProvider = NotifierProvider<_HiddenStarts, Set<String>>(_HiddenStarts.new);
 
 /// What my 身分 still have to start (gettingStarted), less those put away;
-/// nothing until everything it is worked out from has loaded.
+/// nothing until everything it is worked out from has loaded. A step left
+/// for want of a roster with someone on it looks at the past weeks too
+/// (read only then), so a church between seasons is not new again.
 final _gettingStartedProvider = Provider.autoDispose<List<GettingStarted>>((ref) {
   final me = ref.watch(meProvider).value;
   if (me == null || me.identities.isEmpty) return const [];
@@ -62,26 +64,36 @@ final _gettingStartedProvider = Provider.autoDispose<List<GettingStarted>>((ref)
   final ministries = ref.watch(ministriesProvider).value;
   final smallGroups = ref.watch(smallGroupsProvider).value;
   final rosters = ref.watch(savedRostersProvider).value;
+  final church = ref.watch(churchProvider).value;
   if (members == null ||
       pending == null ||
       services == null ||
       ministries == null ||
       smallGroups == null ||
-      rosters == null) {
+      rosters == null ||
+      church == null) {
     return const [];
+  }
+  List<GettingStarted> left(Iterable<Roster> rosters) => gettingStarted(
+    me: me,
+    members: members,
+    pending: pending.length,
+    services: services,
+    ministries: ministries,
+    smallGroups: smallGroups,
+    rosters: rosters,
+    attendanceOn: church.attendanceSince != null,
+  );
+  var starts = left(rosters);
+  if (starts.any((g) => g.steps.any((s) => s.step.wantsArranging))) {
+    final past = ref.watch(recentRostersProvider);
+    // A failed read leaves the steps as today on has them.
+    if (past.isLoading) return const [];
+    starts = left([...rosters, ...?past.value]);
   }
   final hidden = ref.watch(_hiddenStartsProvider);
   return [
-    for (final g in gettingStarted(
-      me: me,
-      members: members,
-      pending: pending.length,
-      services: services,
-      ministries: ministries,
-      smallGroups: smallGroups,
-      rosters: rosters,
-      attendanceOn: ref.watch(churchProvider.select((c) => c.value?.attendanceSince != null)),
-    ))
+    for (final g in starts)
       if (!hidden.contains(_keyOf(g.identity))) g,
   ];
 });
@@ -110,7 +122,9 @@ class _GettingStarted extends ConsumerWidget {
     final ministries = ref.watch(ministriesProvider).value;
     final smallGroups = ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
     final identity = start.identity;
-    final admin = identity is AdminIdentity || identity is PastorIdentity && identity.wholeChurch;
+    final admin = identity.makesAdmin;
+    // Not churchGroupsProvider: watched here, it would rebuild during a
+    // church switch's build (onboarding_test).
     String name(ChurchGroup? group) => switch (group) {
       ServiceGroup(:final id) => services?.byId(id)?.name ?? id,
       MinistryGroup(:final id) => ministries?.byId(id)?.name ?? id,

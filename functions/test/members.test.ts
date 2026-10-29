@@ -255,10 +255,13 @@ describe('triggers', () => {
     assert.equal(sent.at(-1)!.body, '你現在是「敬拜團」的負責人、「喜樂小組」的小組長', 'only what is new');
 
     await db.doc('users/bob').update({ appLocale: 'en' });
+    await give([{ kind: 'pastor', services: ['sunday'] }], 'alice');
+    assert.equal(sent.at(-1)!.body, 'New role: Pastor · 主日崇拜', 'in the language their app shows');
     await give([{ kind: 'pastor', services: ['sunday', 'youth'] }], 'alice');
-    assert.equal(sent.at(-1)!.body, 'You’re now pastor of 主日崇拜, 青年崇拜', 'in the language their app shows');
+    assert.equal(sent.at(-1)!.body, 'New role: Pastor · 青年崇拜', 'only the service added');
 
     const pushes = sent.length;
+    assert.equal(await give([{ kind: 'pastor', services: ['youth'] }], 'alice'), 0, 'one taken off: nothing to tell');
     assert.equal(await give([], 'alice'), 0, 'taken away: nothing to tell');
     assert.equal(await give([{ kind: 'office' }], 'bob'), 0, 'not their own doing');
     assert.equal(sent.length, pushes);

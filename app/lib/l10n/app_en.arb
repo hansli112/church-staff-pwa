@@ -915,7 +915,7 @@
   "gettingStartedArrangeBody": "Plan several weeks, then notify your team",
   "gettingStartedAddStaff": "Add team members to {group}",
   "@gettingStartedAddStaff": {"placeholders": {"group": {"type": "String"}}},
-  "gettingStartedPlan": "Schedule {service}",
+  "gettingStartedPlan": "Arrange {service}'s schedule",
   "@gettingStartedPlan": {"placeholders": {"service": {"type": "String"}}},
   "gettingStartedMeets": "Set when {group} meets",
   "@gettingStartedMeets": {"placeholders": {"group": {"type": "String"}}},

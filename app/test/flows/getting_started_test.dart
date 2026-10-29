@@ -72,6 +72,20 @@ void main() {
     expect(find.text('開始使用 · 青年崇拜 負責人'), findsNothing);
   });
 
+  testWidgets('a church between seasons, with nothing arranged ahead yet, is not new again', (tester) async {
+    final b = youthChurch();
+    b.members['grace']!['john'] = johnOnSunday.copyWith(zones: const [Zone(serviceType: 'youth')]);
+    b.rosters['grace']![Roster.idFor('youth', Day(2026, 9, 26))] = Roster(
+      type: 'youth',
+      day: Day(2026, 9, 26),
+      duties: const [
+        Duty(role: '司會', people: ['John Chen'], uids: {'John Chen': 'john'}),
+      ],
+    );
+    await pumpApp(tester, b);
+    expect(find.text('開始使用 · 青年崇拜 負責人'), findsNothing);
+  });
+
   testWidgets('a church long in use shows its people nothing to start', (tester) async {
     await pumpApp(tester, seededChurch(as: editor));
     expect(findShown('開始使用'), findsNothing);

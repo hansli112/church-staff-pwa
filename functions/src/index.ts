@@ -352,8 +352,7 @@ export const onMemberDemoted = using(
     }),
 );
 
-// No retry: it pushes.
-export const onIdentityGiven = onDocumentUpdatedWithAuthContext(
+export const onIdentitiesGiven = onDocumentUpdatedWithAuthContext(
   { region: REGION, document: 'churches/{cid}/members/{uid}' },
   async (event) => {
     if (!event.data) return;
