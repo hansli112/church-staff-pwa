@@ -60,6 +60,8 @@ class RosterDayScreen extends ConsumerWidget {
     final editable = canEdit && ref.watch(rosterEditingProvider(serviceType));
     final title = dayLabel(l10n, day, today);
     final addable = addableDuties(roster, service.duties, led);
+    // From the menu or the day's tags, for who changes the whole day.
+    final editEvents = whole ? () => _editEvents(context, ref, roster, service) : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -72,12 +74,12 @@ class RosterDayScreen extends ConsumerWidget {
               icon: const Icon(Symbols.more_horiz_rounded),
               onSelected: (v) => switch (v) {
                 'duty' => _addDuty(context, ref, roster, addable, any: whole),
-                'events' => _editEvents(context, ref, roster, service),
+                'events' => editEvents?.call(),
                 _ => null,
               },
               itemBuilder: (_) => [
                 PopupMenuItem(value: 'duty', child: Text(l10n.addDuty)),
-                if (whole) PopupMenuItem(value: 'events', child: Text(l10n.events)),
+                if (editEvents != null) PopupMenuItem(value: 'events', child: Text(l10n.events)),
               ],
             ),
         ]),
@@ -96,7 +98,7 @@ class RosterDayScreen extends ConsumerWidget {
               roster: roster,
               title: title,
               arranges: led,
-              onEditEvents: whole ? () => _editEvents(context, ref, roster, service) : null,
+              onEditEvents: editEvents,
             ),
         ],
       ),
@@ -201,23 +203,29 @@ class EditableRoster extends ConsumerWidget {
         ),
         if (roster.events.isNotEmpty)
           Padding(
+            // Space.s less at the sides, given back inside: the tags line
+            // up with the title, the ink reaches a little past them.
             padding: const EdgeInsets.fromLTRB(Space.l - Space.s, Space.xs, Space.l - Space.s, 0),
             // The tags open what they say, as 特別活動 in the menu does.
-            child: InkWell(
-              onTap: ready ? onEditEvents : null,
-              borderRadius: BorderRadius.circular(Radii.s),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: Space.minTap(Theme.of(context).platform)),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: Space.s, vertical: Space.xs),
-                  child: Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: Wrap(
-                      spacing: Space.xs,
-                      runSpacing: Space.xs,
-                      children: [
-                        for (final e in roster.events) Tag.event(context, e.name, e.color),
-                      ],
+            child: Semantics(
+              button: onEditEvents != null,
+              hint: onEditEvents == null ? null : l10n.events,
+              child: InkWell(
+                onTap: ready ? onEditEvents : null,
+                borderRadius: BorderRadius.circular(Radii.s),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: Space.minTap(Theme.of(context).platform)),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: Space.s, vertical: Space.xs),
+                    child: Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Wrap(
+                        spacing: Space.xs,
+                        runSpacing: Space.xs,
+                        children: [
+                          for (final e in roster.events) Tag.event(context, e.name, e.color),
+                        ],
+                      ),
                     ),
                   ),
                 ),

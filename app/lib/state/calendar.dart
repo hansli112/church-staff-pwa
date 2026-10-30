@@ -191,6 +191,7 @@ class CalendarActions {
   /// server saved it: a new one with its id.
   Future<CalendarEvent> save(CalendarEvent event, {CalendarEvent? previous}) => withEditLock(_ref, () async {
     Future<CalendarEvent> send() => _ref.churchData.calendarSave(event, previous: previous);
+    // write answers null only for a deletion.
     return (await (_months()?.write(event, previous: previous, send: send, now: _months) ?? send()))!;
   });
 

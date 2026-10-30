@@ -393,10 +393,10 @@ class _EventEditorState extends State<_EventEditor> {
   /// Whether [_edited] can be saved.
   bool get _savable => _title.text.trim().isNotEmpty && _valid;
 
-  /// To the roster, with what was changed here unless it cannot be saved.
-  /// A new event goes only once it can be: its roster needs it saved.
-  void _openRoster() =>
-      Navigator.pop(context, _EditResult(event: _changed && _savable ? _edited : null, openRoster: true));
+  /// To the roster, saving what was changed here first: a new event's
+  /// roster needs its id. Offered only while it can be saved, so no edit
+  /// is dropped on the way.
+  void _openRoster() => Navigator.pop(context, _EditResult(event: _changed ? _edited : null, openRoster: true));
 
   @override
   Widget build(BuildContext context) {
@@ -468,12 +468,8 @@ class _EventEditorState extends State<_EventEditor> {
                           ),
                     ],
                   ),
-                // Above the times, in sight as the editor opens: at the
-                // bottom it went unfound.
-                EventRosterRow(
-                  event: _edited,
-                  onOpen: widget.event?.id != null || _savable ? _openRoster : null,
-                ),
+                // Above the times, in sight as the editor opens.
+                EventRosterRow(event: _edited, onOpen: _savable ? _openRoster : null),
                 ListSection(
                   children: [
                     SwitchRow(
