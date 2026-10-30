@@ -719,31 +719,43 @@ class _RefundSheetState extends State<_RefundSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.symmetric(horizontal: Space.m),
-          children: [
-            Text(l10n.onlineRefundAdd, style: AppText.title3),
-            const SizedBox(height: Space.m),
-            TextField(
-              key: const Key('refundOrderNo'),
-              controller: _orderNo,
-              autofocus: true,
-              autocorrect: false,
-              maxLength: 20,
-              decoration: InputDecoration(labelText: l10n.onlineRefundOrderNo),
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: Space.l),
-            PrimaryButton(
-              label: l10n.onlineRefundApply,
-              onPressed: _validOrderNo == null ? null : () => Navigator.pop(context, _validOrderNo),
-            ),
-            const SizedBox(height: Space.m),
-          ],
+    return UnsavedChanges(
+      changed: () => _orderNo.text.trim().isNotEmpty,
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SheetBar(
+                title: l10n.onlineRefundAdd,
+                actions: [
+                  SecondaryButton(
+                    label: l10n.onlineRefundApply,
+                    onPressed: _validOrderNo == null ? null : () => Navigator.pop(context, _validOrderNo),
+                  ),
+                ],
+              ),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(horizontal: Space.m),
+                  children: [
+                    TextField(
+                      key: const Key('refundOrderNo'),
+                      controller: _orderNo,
+                      autofocus: true,
+                      autocorrect: false,
+                      maxLength: 20,
+                      decoration: InputDecoration(labelText: l10n.onlineRefundOrderNo),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                    const SizedBox(height: Space.m),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -808,74 +820,97 @@ class _CostSheetState extends State<_CostSheet> {
     );
   }
 
+  /// Whether any field differs from what the sheet opened with.
+  bool get _changed {
+    final was = widget.initial;
+    return _name.text.trim() != (was?.name ?? '') ||
+        _amount.text.trim() != (was == null ? '' : '${was.amount}') ||
+        _currency != (was?.currency ?? Currency.twd) ||
+        _per != (was?.per ?? CostPeriod.month) ||
+        _names.entries.any((e) => e.value.text.trim() != (was?.names[e.key] ?? ''));
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.symmetric(horizontal: Space.m),
-          children: [
-            Text(l10n.costEdit, style: AppText.title3),
-            const SizedBox(height: Space.m),
-            TextField(
-              key: const Key('costName'),
-              controller: _name,
-              maxLength: TextLimits.costName,
-              decoration: InputDecoration(labelText: l10n.costName),
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: Space.s),
-            Text(l10n.costNamesOther, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
-            for (final MapEntry(key: l, value: controller) in _names.entries)
-              TextField(
-                key: Key('costName-${l.tag}'),
-                controller: controller,
-                maxLength: TextLimits.costName,
-                decoration: InputDecoration(labelText: l.label),
+    return UnsavedChanges(
+      changed: () => _changed,
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SheetBar(
+                title: l10n.costEdit,
+                actions: [
+                  SecondaryButton(
+                    label: l10n.save,
+                    onPressed: _item == null ? null : () => Navigator.pop<_CostEdit>(context, _SaveCost(_item!)),
+                  ),
+                ],
               ),
-            TextField(
-              key: const Key('costAmount'),
-              controller: _amount,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(labelText: l10n.costAmount),
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: Space.m),
-            SegmentedButton<Currency>(
-              showSelectedIcon: false,
-              segments: [
-                for (final c in Currency.values) ButtonSegment(value: c, label: Text(currencyLabel(l10n, c))),
-              ],
-              selected: {_currency},
-              onSelectionChanged: (v) => setState(() => _currency = v.first),
-            ),
-            const SizedBox(height: Space.s),
-            SegmentedButton<CostPeriod>(
-              showSelectedIcon: false,
-              segments: [
-                ButtonSegment(value: CostPeriod.month, label: Text(l10n.costPerMonth)),
-                ButtonSegment(value: CostPeriod.year, label: Text(l10n.costPerYear)),
-              ],
-              selected: {_per},
-              onSelectionChanged: (v) => setState(() => _per = v.first),
-            ),
-            const SizedBox(height: Space.l),
-            PrimaryButton(
-              label: l10n.save,
-              onPressed: _item == null ? null : () => Navigator.pop<_CostEdit>(context, _SaveCost(_item!)),
-            ),
-            if (widget.initial != null)
-              TextButton(
-                style: TextButton.styleFrom(foregroundColor: c.destructive),
-                onPressed: () => Navigator.pop<_CostEdit>(context, _DeleteCost()),
-                child: Text(l10n.delete),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(horizontal: Space.m),
+                  children: [
+                    TextField(
+                      key: const Key('costName'),
+                      controller: _name,
+                      maxLength: TextLimits.costName,
+                      decoration: InputDecoration(labelText: l10n.costName),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                    const SizedBox(height: Space.s),
+                    Text(l10n.costNamesOther, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
+                    for (final MapEntry(key: l, value: controller) in _names.entries)
+                      TextField(
+                        key: Key('costName-${l.tag}'),
+                        controller: controller,
+                        maxLength: TextLimits.costName,
+                        decoration: InputDecoration(labelText: l.label),
+                      ),
+                    TextField(
+                      key: const Key('costAmount'),
+                      controller: _amount,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: InputDecoration(labelText: l10n.costAmount),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                    const SizedBox(height: Space.m),
+                    SegmentedButton<Currency>(
+                      showSelectedIcon: false,
+                      segments: [
+                        for (final c in Currency.values) ButtonSegment(value: c, label: Text(currencyLabel(l10n, c))),
+                      ],
+                      selected: {_currency},
+                      onSelectionChanged: (v) => setState(() => _currency = v.first),
+                    ),
+                    const SizedBox(height: Space.s),
+                    SegmentedButton<CostPeriod>(
+                      showSelectedIcon: false,
+                      segments: [
+                        ButtonSegment(value: CostPeriod.month, label: Text(l10n.costPerMonth)),
+                        ButtonSegment(value: CostPeriod.year, label: Text(l10n.costPerYear)),
+                      ],
+                      selected: {_per},
+                      onSelectionChanged: (v) => setState(() => _per = v.first),
+                    ),
+                    const SizedBox(height: Space.l),
+                    if (widget.initial != null)
+                      TextButton(
+                        style: TextButton.styleFrom(foregroundColor: c.destructive),
+                        onPressed: () => Navigator.pop<_CostEdit>(context, _DeleteCost()),
+                        child: Text(l10n.delete),
+                      ),
+                    const SizedBox(height: Space.m),
+                  ],
+                ),
               ),
-            const SizedBox(height: Space.m),
-          ],
+            ],
+          ),
         ),
       ),
     );

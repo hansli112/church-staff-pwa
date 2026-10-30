@@ -634,12 +634,10 @@ Future<List<MinistryDuty>?> pickMinistryDuties(
   List<Service> services,
   List<MinistryDuty> initial,
 ) {
-  final picker = GlobalKey<_DutyPickerState>();
   return showAppSheet<List<MinistryDuty>>(
     context,
     expand: true,
-    unsaved: () => picker.currentState?.changed ?? false,
-    builder: (_) => _DutyPicker(key: picker, services: services, initial: initial),
+    builder: (_) => _DutyPicker(services: services, initial: initial),
   );
 }
 
@@ -672,7 +670,7 @@ String ministrySummary(L10n l10n, Ministry ministry, List<Service> services, Lis
 
 /// The duties a 事工 links, ticked per service.
 class _DutyPicker extends StatefulWidget {
-  const _DutyPicker({super.key, required this.services, required this.initial});
+  const _DutyPicker({required this.services, required this.initial});
 
   final List<Service> services;
   final List<MinistryDuty> initial;
@@ -684,36 +682,38 @@ class _DutyPicker extends StatefulWidget {
 class _DutyPickerState extends State<_DutyPicker> {
   late final _picked = [...widget.initial];
 
-  bool get changed => !setEquals(_picked.toSet(), widget.initial.toSet());
-
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.ministryDuties),
-        // Apple's sheet bar: 取消 leading, 完成 trailing.
-        leading: TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
-        leadingWidth: 88,
-        actions: [TextButton(onPressed: () => Navigator.pop(context, _picked), child: Text(l10n.done))],
-      ),
-      body: ListView(
+    return UnsavedChanges(
+      changed: () => !setEquals(_picked.toSet(), widget.initial.toSet()),
+      child: Column(
         children: [
-          for (final s in widget.services)
-            ListSection(
-              header: s.name,
+          SheetBar(
+            title: l10n.ministryDuties,
+            actions: [SecondaryButton(label: l10n.done, onPressed: () => Navigator.pop(context, _picked))],
+          ),
+          Expanded(
+            child: ListView(
               children: [
-                for (final d in s.duties)
-                  ListRow(
-                    title: d,
-                    selected: _picked.contains(MinistryDuty(s.id, d)),
-                    onTap: () => setState(() {
-                      final duty = MinistryDuty(s.id, d);
-                      if (!_picked.remove(duty)) _picked.add(duty);
-                    }),
+                for (final s in widget.services)
+                  ListSection(
+                    header: s.name,
+                    children: [
+                      for (final d in s.duties)
+                        ListRow(
+                          title: d,
+                          selected: _picked.contains(MinistryDuty(s.id, d)),
+                          onTap: () => setState(() {
+                            final duty = MinistryDuty(s.id, d);
+                            if (!_picked.remove(duty)) _picked.add(duty);
+                          }),
+                        ),
+                    ],
                   ),
               ],
             ),
+          ),
         ],
       ),
     );

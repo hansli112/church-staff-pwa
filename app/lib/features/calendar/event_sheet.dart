@@ -220,8 +220,8 @@ class _EventEditorState extends State<_EventEditor> {
   late bool _allDay = widget.event?.allDay ?? false;
   late String? _group = widget.initialGroup;
 
-  /// The picker open under 開始 or 結束, at most one, as in the iPhone's
-  /// Calendar: it opens in place, with the keyboard put away.
+  /// The picker open under 屬於, 開始 or 結束, at most one, as in the
+  /// iPhone's Calendar: it opens in place, with the keyboard put away.
   _Picker? _open;
 
   /// One key each: one shared would carry a picker's turned wheels over to
@@ -357,195 +357,198 @@ class _EventEditorState extends State<_EventEditor> {
     Navigator.pop(context, _EditResult(event: _edited));
   }
 
-  /// To the roster, with what was changed here unless it cannot be saved.
-  void _openRoster() {
-    final e = widget.event!;
+  /// The event as it was when the editor opened: for a new one, its
+  /// defaults.
+  late final CalendarEvent _opened;
+
+  @override
+  void initState() {
+    super.initState();
+    _opened = _edited;
+  }
+
+  /// Whether [_edited] differs from [_opened] in anything the editor sets.
+  bool get _changed {
     final edited = _edited;
-    final changed =
-        edited.title != e.title ||
+    final e = _opened;
+    return edited.title != e.title ||
         edited.start != e.start ||
         edited.end != e.end ||
         edited.allDay != e.allDay ||
         (edited.location ?? '') != (e.location ?? '') ||
         (edited.description ?? '') != (e.description ?? '') ||
         edited.group != e.group;
+  }
+
+  /// To the roster, with what was changed here unless it cannot be saved.
+  void _openRoster() {
+    final edited = _edited;
     final ok = edited.title.isNotEmpty && _valid;
-    Navigator.pop(context, _EditResult(event: changed && ok ? edited : null, openRoster: true));
+    Navigator.pop(context, _EditResult(event: _changed && ok ? edited : null, openRoster: true));
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(Space.m, 0, Space.s, 0),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(widget.event?.id == null ? l10n.calNewEvent : l10n.calEditEvent, style: AppText.title3),
-              ),
-              SecondaryButton(
-                label: l10n.save,
-                onPressed: _title.text.trim().isEmpty || !_valid ? null : _save,
-              ),
+    return UnsavedChanges(
+      changed: () => _changed,
+      child: Column(
+        children: [
+          SheetBar(
+            title: widget.event?.id == null ? l10n.calNewEvent : l10n.calEditEvent,
+            actions: [
+              SecondaryButton(label: l10n.save, onPressed: _title.text.trim().isEmpty || !_valid ? null : _save),
             ],
           ),
-        ),
-        Expanded(
-          child: ListView(
-            padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom + Space.l),
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: Space.m, vertical: Space.s),
-                child: TextField(
-                  controller: _title,
-                  autofocus: widget.event?.id == null,
-                  onTap: _closePicker,
-                  decoration: InputDecoration(hintText: l10n.calTitle),
-                  onChanged: (_) => setState(() {}),
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom + Space.l),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: Space.m, vertical: Space.s),
+                  child: TextField(
+                    controller: _title,
+                    autofocus: widget.event?.id == null,
+                    onTap: _closePicker,
+                    decoration: InputDecoration(hintText: l10n.calTitle),
+                    onChanged: (_) => setState(() {}),
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: Space.m),
-                child: TextField(
-                  controller: _location,
-                  onTap: _closePicker,
-                  decoration: InputDecoration(hintText: l10n.calLocation),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: Space.m),
+                  child: TextField(
+                    controller: _location,
+                    onTap: _closePicker,
+                    decoration: InputDecoration(hintText: l10n.calLocation),
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: Space.m, vertical: Space.s),
-                child: TextField(
-                  controller: _description,
-                  onTap: _closePicker,
-                  decoration: InputDecoration(hintText: l10n.calDescription),
-                  keyboardType: TextInputType.multiline,
-                  minLines: 2,
-                  maxLines: 6,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: Space.m, vertical: Space.s),
+                  child: TextField(
+                    controller: _description,
+                    onTap: _closePicker,
+                    decoration: InputDecoration(hintText: l10n.calDescription),
+                    keyboardType: TextInputType.multiline,
+                    minLines: 2,
+                    maxLines: 6,
+                  ),
                 ),
-              ),
-              if (widget.groups.length > 1)
-                ListSection(
-                  children: [
-                    ListRow(
-                      title: l10n.eventGroup,
-                      value: widget.groups.where((g) => g.key == _group).firstOrNull?.label,
-                      onTap: () async {
-                        final picked = await showAppSheet<EventGroupChoice>(
-                          context,
-                          builder: (context) => SafeArea(
-                            child: SingleChildScrollView(
-                              child: ListSection(
-                                header: l10n.eventGroup,
-                                children: [
-                                  for (final g in widget.groups)
-                                    ListRow(
-                                      title: g.label,
-                                      selected: g.key == _group,
-                                      onTap: () => Navigator.pop(context, g),
-                                    ),
-                                ],
-                              ),
-                            ),
+                // Its choices open under it, as 開始 and 結束's pickers do: a
+                // sheet over the sheet lost track of the event.
+                if (widget.groups.length > 1)
+                  ListSection(
+                    children: [
+                      ListRow(
+                        title: l10n.eventGroup,
+                        value: widget.groups.where((g) => g.key == _group).firstOrNull?.label,
+                        chevron: false,
+                        onTap: () => _toggle(_Picker.group),
+                      ),
+                      if (_open == _Picker.group)
+                        for (final (i, g) in widget.groups.indexed)
+                          ListRow(
+                            key: i == widget.groups.length - 1 ? _pickerKeys[_Picker.group] : null,
+                            title: g.label,
+                            selected: g.key == _group,
+                            onTap: () => setState(() {
+                              _group = g.key;
+                              _open = null;
+                            }),
                           ),
-                        );
-                        if (picked != null) setState(() => _group = picked.key);
-                      },
-                    ),
-                  ],
-                ),
-              ListSection(
-                children: [
-                  SwitchRow(
-                    title: l10n.calAllDay,
-                    value: _allDay,
-                    onChanged: (v) => setState(() {
-                      _allDay = v;
-                      if (v && (_open == _Picker.startTime || _open == _Picker.endTime)) _open = null;
-                    }),
+                    ],
                   ),
-                  _WhenRow(
-                    title: l10n.calStart,
-                    thisYear: widget.thisYear,
-                    day: _startDay,
-                    time: _allDay ? null : _startTime,
-                    dayOpen: _open == _Picker.startDay,
-                    timeOpen: _open == _Picker.startTime,
-                    onDay: () => _toggle(_Picker.startDay),
-                    onTime: () => _toggle(_Picker.startTime),
-                  ),
-                  if (_open == _Picker.startDay)
-                    _DayPicker(
-                      opened: _pickerKeys[_Picker.startDay]!,
-                      key: const ValueKey(_Picker.startDay),
-                      day: _startDay,
-                      first: DateTime.utc(_startDay.year - 1),
-                      onPicked: (d) {
-                        _moveStart(d, _startTime);
-                        setState(() => _open = null);
-                      },
-                    ),
-                  if (_open == _Picker.startTime)
-                    _TimeWheels(
-                      opened: _pickerKeys[_Picker.startTime]!,
-                      key: const ValueKey(_Picker.startTime),
-                      time: _startTime,
-                      onChanged: (t) => _moveStart(_startDay, t),
-                    ),
-                  _WhenRow(
-                    title: l10n.calEnd,
-                    thisYear: widget.thisYear,
-                    day: _endDay,
-                    time: _allDay ? null : _endTime,
-                    note: _allDay ? null : _length(l10n, _end.difference(_start)),
-                    dayOpen: _open == _Picker.endDay,
-                    timeOpen: _open == _Picker.endTime,
-                    onDay: () => _toggle(_Picker.endDay),
-                    onTime: () => _toggle(_Picker.endTime),
-                  ),
-                  if (_open == _Picker.endDay)
-                    _DayPicker(
-                      opened: _pickerKeys[_Picker.endDay]!,
-                      key: const ValueKey(_Picker.endDay),
-                      day: _endDay,
-                      first: _startDay,
-                      onPicked: (d) {
-                        _moveEndDay(d);
-                        setState(() => _open = null);
-                      },
-                    ),
-                  if (_open == _Picker.endTime)
-                    _TimeWheels(
-                      opened: _pickerKeys[_Picker.endTime]!,
-                      key: const ValueKey(_Picker.endTime),
-                      time: _endTime,
-                      onChanged: _setEndTime,
-                    ),
-                ],
-              ),
-              if (!_allDay) const ChurchClockNotice(),
-              if (widget.event case final e? when e.id != null) EventRosterRow(event: e, onOpen: _openRoster),
-              if (widget.event?.id != null)
                 ListSection(
                   children: [
-                    ListRow(
-                      title: l10n.calDuplicate,
-                      onTap: _title.text.trim().isEmpty || !_valid
-                          ? null
-                          : () => Navigator.pop(context, _EditResult(event: _edited.anew, duplicate: true)),
+                    SwitchRow(
+                      title: l10n.calAllDay,
+                      value: _allDay,
+                      onChanged: (v) => setState(() {
+                        _allDay = v;
+                        if (v && (_open == _Picker.startTime || _open == _Picker.endTime)) _open = null;
+                      }),
                     ),
-                    ListRow(
-                      title: l10n.calDelete,
-                      destructive: true,
-                      onTap: () => Navigator.pop(context, const _EditResult(delete: true)),
+                    _WhenRow(
+                      title: l10n.calStart,
+                      thisYear: widget.thisYear,
+                      day: _startDay,
+                      time: _allDay ? null : _startTime,
+                      dayOpen: _open == _Picker.startDay,
+                      timeOpen: _open == _Picker.startTime,
+                      onDay: () => _toggle(_Picker.startDay),
+                      onTime: () => _toggle(_Picker.startTime),
                     ),
+                    if (_open == _Picker.startDay)
+                      _DayPicker(
+                        opened: _pickerKeys[_Picker.startDay]!,
+                        key: const ValueKey(_Picker.startDay),
+                        day: _startDay,
+                        first: DateTime.utc(_startDay.year - 1),
+                        onPicked: (d) {
+                          _moveStart(d, _startTime);
+                          setState(() => _open = null);
+                        },
+                      ),
+                    if (_open == _Picker.startTime)
+                      _TimeWheels(
+                        opened: _pickerKeys[_Picker.startTime]!,
+                        key: const ValueKey(_Picker.startTime),
+                        time: _startTime,
+                        onChanged: (t) => _moveStart(_startDay, t),
+                      ),
+                    _WhenRow(
+                      title: l10n.calEnd,
+                      thisYear: widget.thisYear,
+                      day: _endDay,
+                      time: _allDay ? null : _endTime,
+                      note: _allDay ? null : _length(l10n, _end.difference(_start)),
+                      dayOpen: _open == _Picker.endDay,
+                      timeOpen: _open == _Picker.endTime,
+                      onDay: () => _toggle(_Picker.endDay),
+                      onTime: () => _toggle(_Picker.endTime),
+                    ),
+                    if (_open == _Picker.endDay)
+                      _DayPicker(
+                        opened: _pickerKeys[_Picker.endDay]!,
+                        key: const ValueKey(_Picker.endDay),
+                        day: _endDay,
+                        first: _startDay,
+                        onPicked: (d) {
+                          _moveEndDay(d);
+                          setState(() => _open = null);
+                        },
+                      ),
+                    if (_open == _Picker.endTime)
+                      _TimeWheels(
+                        opened: _pickerKeys[_Picker.endTime]!,
+                        key: const ValueKey(_Picker.endTime),
+                        time: _endTime,
+                        onChanged: _setEndTime,
+                      ),
                   ],
                 ),
-            ],
+                if (!_allDay) const ChurchClockNotice(),
+                if (widget.event case final e? when e.id != null) EventRosterRow(event: e, onOpen: _openRoster),
+                if (widget.event?.id != null)
+                  ListSection(
+                    children: [
+                      ListRow(
+                        title: l10n.calDuplicate,
+                        onTap: _title.text.trim().isEmpty || !_valid
+                            ? null
+                            : () => Navigator.pop(context, _EditResult(event: _edited.anew, duplicate: true)),
+                      ),
+                      ListRow(
+                        title: l10n.calDelete,
+                        destructive: true,
+                        onTap: () => Navigator.pop(context, const _EditResult(delete: true)),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -630,7 +633,7 @@ class _WhenRow extends StatelessWidget {
   }
 }
 
-enum _Picker { startDay, startTime, endDay, endTime }
+enum _Picker { group, startDay, startTime, endDay, endTime }
 
 /// How long an event is, on 結束.
 String _length(L10n l10n, Duration x) {

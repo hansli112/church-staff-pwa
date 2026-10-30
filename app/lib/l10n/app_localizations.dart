@@ -5362,29 +5362,17 @@ abstract class L10n {
   /// **'在這裡排的不會馬上通知，排好按「完成」，每人只收到一則'**
   String get planWeeksHint;
 
-  /// Asked on leaving 安排服事 without 完成 while people put on or taken off there are not told yet
+  /// Toast on the page behind 安排服事, left without 完成 while people put on or taken off there are not told yet; its action is planNotifyNow
   ///
   /// In zh, this message translates to:
-  /// **'要通知同工嗎？'**
-  String get planNotifyAsk;
-
-  /// No description provided for @planNotifyAskBody.
-  ///
-  /// In zh, this message translates to:
-  /// **'在這裡被排進或移出的人，每人會收到一則'**
-  String get planNotifyAskBody;
+  /// **'在這裡排進或移出的人還沒收到通知'**
+  String get planNotYetTold;
 
   /// No description provided for @planNotifyNow.
   ///
   /// In zh, this message translates to:
   /// **'通知'**
   String get planNotifyNow;
-
-  /// No description provided for @planNotifyLater.
-  ///
-  /// In zh, this message translates to:
-  /// **'先不要'**
-  String get planNotifyLater;
 
   /// No description provided for @planNotified.
   ///

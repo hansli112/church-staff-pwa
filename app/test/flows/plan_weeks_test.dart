@@ -1,4 +1,5 @@
 import 'package:flutter/gestures.dart' show kLongPressTimeout;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter_test/flutter_test.dart';
@@ -114,27 +115,41 @@ void main() {
     expect(find.textContaining('已通知'), findsNothing);
   });
 
-  testWidgets('leaving with people still to tell asks first', (tester) async {
+  testWidgets('leaving with people still to tell goes at once, and the page behind offers 通知', (tester) async {
     final b = seededChurch();
     await pumpApp(tester, b);
     await go(tester, '/rosters/plan/sunday');
     await pick(tester, '司琴', 11, '李美玉');
     await tester.tap(find.byType(BackButton));
     await settle(tester);
-    expect(find.text('要通知同工嗎？'), findsOneWidget);
-    await tester.tap(find.text('先不要'));
-    await settle(tester);
     expect(path(tester), '/rosters');
-    expect(waiting(b), {'mei'}, reason: 'told whenever 完成 is next pressed');
-
-    await go(tester, '/rosters/plan/sunday');
-    await tester.tap(find.byType(BackButton));
-    await settle(tester);
+    expect(find.text('在這裡排進或移出的人還沒收到通知'), findsOneWidget);
+    expect(waiting(b), {'mei'}, reason: 'told with 通知, or whenever 完成 is next pressed');
     await tester.tap(find.text('通知'));
     await settle(tester);
     expect(find.text('已通知 1 位同工'), findsOneWidget);
     expect(waiting(b), isEmpty);
-    expect(path(tester), '/rosters');
+
+    await go(tester, '/rosters/plan/sunday');
+    await tester.tap(find.byType(BackButton));
+    await settle(tester);
+    expect(find.textContaining('還沒收到通知'), findsNothing, reason: 'nobody left to tell');
+  });
+
+  testWidgets('on an iPhone a swipe from the edge leaves too, people to tell or not', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    try {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/plan/sunday');
+      await pick(tester, '司琴', 11, '李美玉');
+      await tester.dragFrom(const Offset(2, 300), const Offset(500, 0));
+      await settle(tester);
+      expect(path(tester), '/rosters');
+      expect(find.text('在這裡排進或移出的人還沒收到通知'), findsOneWidget);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 
   testWidgets('more duties than fit: the next shows in part, so the table says it goes on', (tester) async {

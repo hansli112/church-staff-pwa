@@ -11,7 +11,8 @@ import '../../state/connectivity.dart';
 enum AppTab { home, rosters, calendar, settings }
 
 /// The bottom tab bar around the four top-level tabs. Each tab keeps its
-/// own navigation stack.
+/// own navigation stack. Android's back, at the top of another tab, goes to
+/// 首頁 first, as apps with tabs there do; from 首頁 it leaves the app.
 class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.shell});
 
@@ -21,52 +22,58 @@ class AppShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
     final online = ref.watch(onlineProvider);
-    return Scaffold(
-      body: SafeArea(
-        top: !online,
-        bottom: false,
-        child: Column(
-          children: [
-            if (!online)
-              Semantics(
-                liveRegion: true,
-                child: Container(
-                  width: double.infinity,
-                  color: AppColors.of(context).fill,
-                  padding: const EdgeInsets.symmetric(horizontal: Space.m, vertical: Space.s),
-                  child: BalancedText(l10n.offlineReadOnlyBanner, textAlign: TextAlign.start, style: AppText.callout),
+    return PopScope(
+      canPop: shell.currentIndex == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) shell.goBranch(0);
+      },
+      child: Scaffold(
+        body: SafeArea(
+          top: !online,
+          bottom: false,
+          child: Column(
+            children: [
+              if (!online)
+                Semantics(
+                  liveRegion: true,
+                  child: Container(
+                    width: double.infinity,
+                    color: AppColors.of(context).fill,
+                    padding: const EdgeInsets.symmetric(horizontal: Space.m, vertical: Space.s),
+                    child: BalancedText(l10n.offlineReadOnlyBanner, textAlign: TextAlign.start, style: AppText.callout),
+                  ),
                 ),
-              ),
-            Expanded(child: shell),
+              Expanded(child: shell),
+            ],
+          ),
+        ),
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: shell.currentIndex,
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          onDestinationSelected: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
+          destinations: [
+            NavigationDestination(
+              icon: const Icon(Symbols.home_rounded),
+              selectedIcon: const Icon(Symbols.home_rounded, fill: 1),
+              label: l10n.tabHome,
+            ),
+            NavigationDestination(
+              icon: const Icon(Symbols.view_agenda_rounded),
+              selectedIcon: const Icon(Symbols.view_agenda_rounded, fill: 1),
+              label: l10n.tabRosters,
+            ),
+            NavigationDestination(
+              icon: const Icon(Symbols.calendar_month_rounded),
+              selectedIcon: const Icon(Symbols.calendar_month_rounded, fill: 1),
+              label: l10n.tabCalendar,
+            ),
+            NavigationDestination(
+              icon: const Icon(Symbols.settings_rounded),
+              selectedIcon: const Icon(Symbols.settings_rounded, fill: 1),
+              label: l10n.tabSettings,
+            ),
           ],
         ),
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: shell.currentIndex,
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        onDestinationSelected: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Symbols.home_rounded),
-            selectedIcon: const Icon(Symbols.home_rounded, fill: 1),
-            label: l10n.tabHome,
-          ),
-          NavigationDestination(
-            icon: const Icon(Symbols.view_agenda_rounded),
-            selectedIcon: const Icon(Symbols.view_agenda_rounded, fill: 1),
-            label: l10n.tabRosters,
-          ),
-          NavigationDestination(
-            icon: const Icon(Symbols.calendar_month_rounded),
-            selectedIcon: const Icon(Symbols.calendar_month_rounded, fill: 1),
-            label: l10n.tabCalendar,
-          ),
-          NavigationDestination(
-            icon: const Icon(Symbols.settings_rounded),
-            selectedIcon: const Icon(Symbols.settings_rounded, fill: 1),
-            label: l10n.tabSettings,
-          ),
-        ],
       ),
     );
   }

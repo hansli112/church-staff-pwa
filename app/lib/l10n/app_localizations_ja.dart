@@ -2990,16 +2990,10 @@ class L10nJa extends L10n {
   String get planWeeksHint => 'ここでの変更はすぐには通知されません。組み終わったら「完了」を押すと、一人に一通ずつ届きます。';
 
   @override
-  String get planNotifyAsk => 'メンバーに通知しますか？';
-
-  @override
-  String get planNotifyAskBody => 'ここで担当に入った人、外れた人に一通ずつ届きます';
+  String get planNotYetTold => 'ここで担当に入った人・外れた人にはまだ通知していません';
 
   @override
   String get planNotifyNow => '通知する';
-
-  @override
-  String get planNotifyLater => '今はしない';
 
   @override
   String planNotified(int count) {

@@ -419,13 +419,10 @@ Future<void> pickPeople(
         ].join(' · '),
   };
   var invite = false;
-  final picker = GlobalKey<PeoplePickerState>();
   final result = await showAppSheet<PickerResult>(
     context,
     expand: true,
-    unsaved: () => picker.currentState?.changed ?? false,
     builder: (_) => PeoplePicker(
-      key: picker,
       serviceType: roster.isEvent ? null : roster.type,
       duty: duty.role,
       initial: duty.people,

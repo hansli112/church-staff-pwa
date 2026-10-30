@@ -158,41 +158,56 @@ class _FillSheetState extends State<_FillSheet> {
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final count = _value;
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(Space.m, 0, Space.m, MediaQuery.viewInsetsOf(context).bottom + Space.l),
+    return UnsavedChanges(
+      changed: () =>
+          _count.text.trim() != (widget.was?.count?.toString() ?? '') || _note.text.trim() != (widget.was?.note ?? ''),
+      child: SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(l10n.attendanceFill, style: AppText.title3),
-            Text(widget.title, style: AppText.footnote.copyWith(color: AppColors.of(context).secondaryLabel)),
-            const SizedBox(height: Space.m),
-            TextField(
-              controller: _count,
-              autofocus: true,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
-              decoration: InputDecoration(labelText: l10n.attendanceCountField),
-              onChanged: (_) => setState(() {}),
+            SheetBar(
+              title: l10n.attendanceFill,
+              actions: [
+                SecondaryButton(
+                  label: l10n.save,
+                  onPressed: count == null
+                      ? null
+                      : () => Navigator.pop(context, AttendanceDay.count(count, note: _note.text.trim())),
+                ),
+              ],
             ),
-            const SizedBox(height: Space.s),
-            TextField(
-              controller: _note,
-              maxLength: TextLimits.attendanceNote,
-              decoration: InputDecoration(labelText: l10n.attendanceNote),
-            ),
-            const SizedBox(height: Space.s),
-            PrimaryButton(
-              label: l10n.save,
-              onPressed: count == null
-                  ? null
-                  : () => Navigator.pop(context, AttendanceDay.count(count, note: _note.text.trim())),
-            ),
-            const SizedBox(height: Space.s),
-            SecondaryButton(
-              label: l10n.attendanceNoMeeting,
-              onPressed: () => Navigator.pop(context, const AttendanceDay.none()),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(Space.m, 0, Space.m, MediaQuery.viewInsetsOf(context).bottom + Space.l),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(widget.title, style: AppText.footnote.copyWith(color: AppColors.of(context).secondaryLabel)),
+                    const SizedBox(height: Space.m),
+                    TextField(
+                      controller: _count,
+                      autofocus: true,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
+                      decoration: InputDecoration(labelText: l10n.attendanceCountField),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                    const SizedBox(height: Space.s),
+                    TextField(
+                      controller: _note,
+                      maxLength: TextLimits.attendanceNote,
+                      decoration: InputDecoration(labelText: l10n.attendanceNote),
+                    ),
+                    const SizedBox(height: Space.s),
+                    SecondaryButton(
+                      label: l10n.attendanceNoMeeting,
+                      onPressed: () => Navigator.pop(context, const AttendanceDay.none()),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -265,6 +280,15 @@ class _MeetsSheetState extends State<_MeetsSheet> {
     _ => null,
   };
 
+  /// [_next] as the sheet opened, to tell whether it was moved.
+  late final Day? _nextAtOpen;
+
+  @override
+  void initState() {
+    super.initState();
+    _nextAtOpen = _next;
+  }
+
   /// The first of [start], [every] weeks apart, that is today or later.
   Day _upcoming(Day start, int every) {
     var d = start;
@@ -292,66 +316,71 @@ class _MeetsSheetState extends State<_MeetsSheet> {
     final weekday = _weekday;
     final first = weekday == null ? null : widget.today.nextOnOrAfter(weekday);
     final next = first == null ? null : (_next != null && _next!.weekday == weekday ? _next! : first);
-    return SafeArea(
-      child: SingleChildScrollView(
+    final startsOn = weekday == null || next == null ? null : _startsOn(weekday, next);
+    return UnsavedChanges(
+      changed: () => _every != widget.group.every || weekday != widget.group.weekday || _next != _nextAtOpen,
+      child: SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: Space.m),
-              child: Row(
-                children: [
-                  Expanded(child: Text(l10n.smallGroupMeets, style: AppText.title3)),
-                  SecondaryButton(
-                    label: l10n.save,
-                    onPressed: () => Navigator.pop(
-                      context,
-                      widget.group.copyWith(
-                        weekday: () => weekday,
-                        every: _every,
-                        startsOn: () => weekday == null || next == null ? null : _startsOn(weekday, next),
-                      ),
-                    ),
+            SheetBar(
+              title: l10n.smallGroupMeets,
+              actions: [
+                SecondaryButton(
+                  label: l10n.save,
+                  onPressed: () => Navigator.pop(
+                    context,
+                    widget.group.copyWith(weekday: () => weekday, every: _every, startsOn: () => startsOn),
                   ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(Space.m),
-              child: SegmentedButton<int>(
-                segments: [
-                  ButtonSegment(value: 1, label: Text(l10n.meetsEveryWeek)),
-                  ButtonSegment(value: 2, label: Text(l10n.meetsEveryOtherWeek)),
-                ],
-                selected: {_every},
-                onSelectionChanged: (v) => setState(() => _every = v.first),
-              ),
-            ),
-            ListSection(
-              children: [
-                for (var w = 1; w <= 7; w++)
-                  ListRow(
-                    title: weekdayLabel(l10n, w),
-                    selected: weekday == w,
-                    onTap: () => setState(() {
-                      _weekday = w;
-                      _next = widget.today.nextOnOrAfter(w);
-                    }),
-                  ),
+                ),
               ],
             ),
-            if (_every == 2 && next != null)
-              ListSection(
-                children: [
-                  ListRow(
-                    title: l10n.nextMeeting,
-                    value: dayLabel(l10n, next, widget.today),
-                    // The week after, for one that meets the other week.
-                    onTap: () => setState(() => _next = next == first ? first!.addDays(7) : first),
-                  ),
-                ],
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(Space.m),
+                      child: SegmentedButton<int>(
+                        segments: [
+                          ButtonSegment(value: 1, label: Text(l10n.meetsEveryWeek)),
+                          ButtonSegment(value: 2, label: Text(l10n.meetsEveryOtherWeek)),
+                        ],
+                        selected: {_every},
+                        onSelectionChanged: (v) => setState(() => _every = v.first),
+                      ),
+                    ),
+                    ListSection(
+                      children: [
+                        for (var w = 1; w <= 7; w++)
+                          ListRow(
+                            title: weekdayLabel(l10n, w),
+                            selected: weekday == w,
+                            onTap: () => setState(() {
+                              _weekday = w;
+                              _next = widget.today.nextOnOrAfter(w);
+                            }),
+                          ),
+                      ],
+                    ),
+                    if (_every == 2 && next != null)
+                      ListSection(
+                        children: [
+                          ListRow(
+                            title: l10n.nextMeeting,
+                            value: dayLabel(l10n, next, widget.today),
+                            // The week after, for one that meets the other week.
+                            onTap: () => setState(() => _next = next == first ? first!.addDays(7) : first),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
               ),
+            ),
           ],
         ),
       ),

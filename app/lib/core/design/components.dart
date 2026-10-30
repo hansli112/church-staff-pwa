@@ -4,7 +4,14 @@ library;
 
 import 'dart:async';
 
-import 'package:flutter/cupertino.dart' show CupertinoDialogAction;
+import 'package:flutter/cupertino.dart'
+    show
+        CupertinoActionSheet,
+        CupertinoActionSheetAction,
+        CupertinoAlertDialog,
+        CupertinoDialogAction,
+        CupertinoTextField,
+        showCupertinoModalPopup;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -579,9 +586,10 @@ void showToast(
   String message, {
   FutureOr<void> Function()? onUndo,
   VoidCallback? onRetry,
+  ({String label, VoidCallback onPressed})? action,
   Duration duration = const Duration(seconds: 5),
 }) {
-  assert(onUndo == null || onRetry == null, 'a toast has at most one action');
+  assert([onUndo, onRetry, action].nonNulls.length <= 1, 'a toast has at most one action');
   final messenger = ScaffoldMessenger.of(context);
   final l10n = L10n.of(context);
   messenger.hideCurrentSnackBar();
@@ -590,7 +598,9 @@ void showToast(
       content: BalancedText(message, textAlign: TextAlign.start),
       duration: duration,
       persist: false,
-      action: onRetry != null
+      action: action != null
+          ? SnackBarAction(label: action.label, onPressed: action.onPressed)
+          : onRetry != null
           ? SnackBarAction(label: l10n.retry, onPressed: onRetry)
           : onUndo == null
           ? null
@@ -741,7 +751,9 @@ Future<bool?> askChoice(
 
 /// Asks for a line of text. Null when cancelled or empty; with
 /// [optional], empty is an answer and only cancelling is null. The action
-/// is [action], or 「儲存」.
+/// is [action], or 「儲存」. [helper] says something under the field about
+/// what is typed so far. Platform style, as the other dialogs: on iPhone,
+/// Apple's alert with a text field.
 Future<String?> promptText(
   BuildContext context, {
   required String title,
@@ -752,6 +764,7 @@ Future<String?> promptText(
   int maxLines = 1,
   String? action,
   bool optional = false,
+  String? Function(String text)? helper,
 }) async {
   final result = await showAdaptiveDialog<String>(
     context: context,
@@ -763,6 +776,7 @@ Future<String?> promptText(
       maxLength: maxLength,
       maxLines: maxLines,
       action: action,
+      helper: helper,
     ),
   );
   final t = result?.trim();
@@ -780,6 +794,7 @@ class _PromptDialog extends StatefulWidget {
     this.maxLength,
     required this.maxLines,
     this.action,
+    this.helper,
   });
 
   final String title;
@@ -789,13 +804,17 @@ class _PromptDialog extends StatefulWidget {
   final int? maxLength;
   final int maxLines;
   final String? action;
+  final String? Function(String text)? helper;
 
   @override
   State<_PromptDialog> createState() => _PromptDialogState();
 }
 
 class _PromptDialogState extends State<_PromptDialog> {
-  late final _controller = TextEditingController(text: widget.initial);
+  late final _controller = TextEditingController(text: widget.initial)
+    ..addListener(() {
+      if (widget.helper != null) setState(() {});
+    });
 
   @override
   void dispose() {
@@ -807,6 +826,46 @@ class _PromptDialogState extends State<_PromptDialog> {
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final oneLine = widget.maxLines == 1;
+    final helper = widget.helper?.call(_controller.text);
+    void submit(String v) => Navigator.pop(context, v);
+    if (Theme.of(context).platform == TargetPlatform.iOS) {
+      final c = AppColors.of(context);
+      return CupertinoAlertDialog(
+        title: Text(widget.title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (widget.label case final label?) Text(label),
+            const SizedBox(height: Space.s),
+            CupertinoTextField(
+              controller: _controller,
+              autofocus: true,
+              maxLength: widget.maxLength,
+              minLines: 1,
+              maxLines: widget.maxLines,
+              placeholder: widget.hint ?? widget.label,
+              textInputAction: oneLine ? TextInputAction.done : null,
+              onSubmitted: oneLine ? submit : null,
+            ),
+            if (helper != null)
+              Padding(
+                padding: const EdgeInsets.only(top: Space.xs),
+                child: BalancedText(helper, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
+              ),
+          ],
+        ),
+        actions: [
+          _dialogAction(context, true, l10n.cancel, () => Navigator.pop(context)),
+          _dialogAction(
+            context,
+            true,
+            widget.action ?? l10n.save,
+            () => submit(_controller.text),
+            defaultAction: true,
+          ),
+        ],
+      );
+    }
     return AlertDialog(
       title: Text(widget.title),
       content: TextField(
@@ -815,15 +874,17 @@ class _PromptDialogState extends State<_PromptDialog> {
         maxLength: widget.maxLength,
         minLines: 1,
         maxLines: widget.maxLines,
-        decoration: InputDecoration(labelText: widget.label, hintText: widget.hint),
-        onSubmitted: oneLine ? (v) => Navigator.pop(context, v) : null,
+        decoration: InputDecoration(
+          labelText: widget.label,
+          hintText: widget.hint,
+          helperText: helper,
+          helperMaxLines: 3,
+        ),
+        onSubmitted: oneLine ? submit : null,
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
-        TextButton(
-          onPressed: () => Navigator.pop(context, _controller.text),
-          child: Text(widget.action ?? l10n.save),
-        ),
+        TextButton(onPressed: () => submit(_controller.text), child: Text(widget.action ?? l10n.save)),
       ],
     );
   }
@@ -857,15 +918,10 @@ Widget _dialogAction(
 /// close. The keyboard goes first: left up, it covered the sheet, and came
 /// back over the page once the sheet closed.
 ///
-/// While [unsaved] says so, closing it without a result (swiped down,
-/// tapped outside, back, or its own 取消) asks first whether to discard
-/// the changes, as Apple's sheets do; its 完成 closes with one.
-Future<T?> showAppSheet<T>(
-  BuildContext context, {
-  required WidgetBuilder builder,
-  bool expand = false,
-  bool Function()? unsaved,
-}) {
+/// [expand] makes it as tall as a sheet gets; others are as tall as their
+/// content, up to that, so the page behind still shows above every sheet.
+/// A sheet with a form says so with [UnsavedChanges].
+Future<T?> showAppSheet<T>(BuildContext context, {required WidgetBuilder builder, bool expand = false}) {
   FocusManager.instance.primaryFocus?.unfocus();
   // Over the tab bar too, like a system sheet; the tab navigator alone
   // left the bar bright and tappable below the dimmed page.
@@ -874,9 +930,17 @@ Future<T?> showAppSheet<T>(
   // As showModalBottomSheet has it, with a route that can ask.
   return navigator.push(
     _AppSheetRoute<T>(
-      unsaved: unsaved,
-      builder: (context) =>
-          expand ? FractionallySizedBox(heightFactor: 0.92, child: builder(context)) : builder(context),
+      builder: (context) => LayoutBuilder(
+        builder: (context, box) {
+          final tallest = box.maxHeight * _sheetHeight;
+          return expand
+              ? SizedBox(height: tallest, child: builder(context))
+              : ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: tallest),
+                  child: builder(context),
+                );
+        },
+      ),
       capturedThemes: InheritedTheme.capture(from: context, to: navigator.context),
       isScrollControlled: true,
       barrierLabel: localizations.scrimLabel,
@@ -888,12 +952,33 @@ Future<T?> showAppSheet<T>(
   );
 }
 
+/// The most of the screen a sheet takes, as an iPhone's tallest sheet.
+const _sheetHeight = 0.92;
+
+/// In a sheet from [showAppSheet], says whether it has changes its 完成 (or
+/// 儲存) would keep. While [changed] says so, closing it any other way
+/// (swiped down, tapped outside, back, its 取消) asks first whether to
+/// discard them, as Apple's sheets do.
+class UnsavedChanges extends StatelessWidget {
+  const UnsavedChanges({super.key, required this.changed, required this.child});
+
+  /// Asked as the sheet is closing, so it need not rebuild as text is typed.
+  final bool Function() changed;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final route = ModalRoute.of(context);
+    if (route is _AppSheetRoute) route.changed = changed;
+    return child;
+  }
+}
+
 /// showAppSheet's route. Every way of closing a sheet without a result
 /// comes through [didPop], a swipe too (it pops past any PopScope), so it
 /// is where unsaved changes stop it.
 class _AppSheetRoute<T> extends ModalBottomSheetRoute<T> {
   _AppSheetRoute({
-    required this.unsaved,
     required super.builder,
     super.capturedThemes,
     required super.isScrollControlled,
@@ -904,12 +989,13 @@ class _AppSheetRoute<T> extends ModalBottomSheetRoute<T> {
     super.useSafeArea,
   });
 
-  final bool Function()? unsaved;
+  /// Set by the sheet's [UnsavedChanges].
+  bool Function()? changed;
   bool _discarding = false;
 
   @override
   bool didPop(T? result) {
-    if (result == null && !_discarding && !willHandlePopInternally && (unsaved?.call() ?? false)) {
+    if (result == null && !_discarding && !willHandlePopInternally && (changed?.call() ?? false)) {
       // Back up, if a swipe had it on its way down; asked once the
       // navigator is done popping.
       controller?.forward();
@@ -922,16 +1008,73 @@ class _AppSheetRoute<T> extends ModalBottomSheetRoute<T> {
   Future<void> _askToDiscard() async {
     final context = subtreeContext;
     if (context == null || !isActive) return;
-    final l10n = L10n.of(context);
-    final discard = await confirmDestructive(
+    if (!await confirmDiscard(context) || !isCurrent) return;
+    _discarding = true;
+    navigator?.pop();
+  }
+}
+
+/// Asks whether to discard a sheet's unsaved changes: on iPhone from below,
+/// as Apple's sheets ask (an action sheet), elsewhere as a dialog. True to
+/// discard them.
+Future<bool> confirmDiscard(BuildContext context) async {
+  final l10n = L10n.of(context);
+  if (Theme.of(context).platform != TargetPlatform.iOS) {
+    return confirmDestructive(
       context,
       title: l10n.discardChangesTitle,
       action: l10n.discardChanges,
       cancel: l10n.keepEditing,
     );
-    if (!discard || !isCurrent) return;
-    _discarding = true;
-    navigator?.pop();
+  }
+  final result = await showCupertinoModalPopup<bool>(
+    context: context,
+    builder: (context) => CupertinoActionSheet(
+      title: Text(l10n.discardChangesTitle),
+      actions: [
+        CupertinoActionSheetAction(
+          isDestructiveAction: true,
+          onPressed: () => Navigator.pop(context, true),
+          child: Text(l10n.discardChanges),
+        ),
+      ],
+      cancelButton: CupertinoActionSheetAction(
+        onPressed: () => Navigator.pop(context, false),
+        child: Text(l10n.keepEditing),
+      ),
+    ),
+  );
+  if (result == true) Haptics.heavy();
+  return result ?? false;
+}
+
+/// Apple's sheet bar: 取消 leading (without [cancel]: nothing), [title] in
+/// the middle, [actions] trailing, the last the one that keeps what was
+/// done (完成, 儲存). Every sheet with a form or a choice to confirm has one.
+class SheetBar extends StatelessWidget {
+  const SheetBar({super.key, required this.title, this.cancel = true, required this.actions});
+
+  final String title;
+  final bool cancel;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Space.s, 0, Space.s, Space.s),
+      // As tall as its buttons.
+      child: SizedBox(
+        height: 50,
+        child: NavigationToolbar(
+          leading: cancel
+              ? SecondaryButton(label: L10n.of(context).cancel, onPressed: () => Navigator.pop(context))
+              : null,
+          middle: Text(title, style: AppText.headline, maxLines: 1, overflow: TextOverflow.ellipsis),
+          trailing: Row(mainAxisSize: MainAxisSize.min, children: actions),
+          middleSpacing: Space.s,
+        ),
+      ),
+    );
   }
 }
 

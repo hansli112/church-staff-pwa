@@ -770,66 +770,81 @@ class _ImportEditorState extends State<_ImportEditor> {
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    return Padding(
-      padding: EdgeInsets.fromLTRB(Space.m, 0, Space.m, MediaQuery.viewInsetsOf(context).bottom),
-      child: SafeArea(
-        child: Form(
-          key: _form,
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              Text(widget.title, style: AppText.title3),
-              for (final (i, field) in widget.fields.indexed)
-                Padding(
-                  padding: const EdgeInsets.only(top: Space.m),
-                  child: TextFormField(
-                    controller: _controllers[i],
-                    maxLines: field.lines,
-                    decoration: InputDecoration(labelText: field.label),
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                    validator: (value) => field.validate != null
-                        ? field.validate!(value ?? '')
-                        : (value?.trim().isEmpty ?? true)
-                        ? l10n.importRequiredField(field.label)
-                        : null,
-                  ),
+    return UnsavedChanges(
+      changed: () =>
+          _color != widget.color ||
+          [for (final (i, f) in widget.fields.indexed) _controllers[i].text != f.initial].any((c) => c),
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        child: SafeArea(
+          child: Form(
+            key: _form,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SheetBar(
+                  title: widget.title,
+                  actions: [
+                    SecondaryButton(
+                      label: l10n.done,
+                      onPressed: () {
+                        if (_form.currentState!.validate()) {
+                          Navigator.pop(
+                            context,
+                            _ImportEdit([for (final controller in _controllers) controller.text], color: _color),
+                          );
+                        }
+                      },
+                    ),
+                  ],
                 ),
-              if (_color != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: Space.m),
-                  child: DropdownButtonFormField<int>(
-                    // The keyboard goes, not left over the colours.
-                    onTap: () => FocusScope.of(context).unfocus(),
-                    initialValue: _color,
-                    decoration: InputDecoration(labelText: l10n.importColor),
-                    items: [
-                      for (var i = 0; i < EventColors.count; i++)
-                        DropdownMenuItem(value: i, child: Text(_colorName(l10n, i))),
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.symmetric(horizontal: Space.m),
+                    children: [
+                      for (final (i, field) in widget.fields.indexed)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: Space.m),
+                          child: TextFormField(
+                            controller: _controllers[i],
+                            maxLines: field.lines,
+                            decoration: InputDecoration(labelText: field.label),
+                            autovalidateMode: AutovalidateMode.onUserInteraction,
+                            validator: (value) => field.validate != null
+                                ? field.validate!(value ?? '')
+                                : (value?.trim().isEmpty ?? true)
+                                ? l10n.importRequiredField(field.label)
+                                : null,
+                          ),
+                        ),
+                      if (_color != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: Space.m),
+                          child: DropdownButtonFormField<int>(
+                            // The keyboard goes, not left over the colours.
+                            onTap: () => FocusScope.of(context).unfocus(),
+                            initialValue: _color,
+                            decoration: InputDecoration(labelText: l10n.importColor),
+                            items: [
+                              for (var i = 0; i < EventColors.count; i++)
+                                DropdownMenuItem(value: i, child: Text(_colorName(l10n, i))),
+                            ],
+                            onChanged: (value) => setState(() => _color = value),
+                          ),
+                        ),
+                      if (widget.removable)
+                        SecondaryButton(
+                          label: l10n.remove,
+                          expand: true,
+                          destructive: true,
+                          onPressed: () => Navigator.pop(context, const _ImportEdit([], remove: true)),
+                        ),
                     ],
-                    onChanged: (value) => setState(() => _color = value),
                   ),
                 ),
-              const SizedBox(height: Space.m),
-              PrimaryButton(
-                label: l10n.done,
-                onPressed: () {
-                  if (_form.currentState!.validate()) {
-                    Navigator.pop(
-                      context,
-                      _ImportEdit([for (final controller in _controllers) controller.text], color: _color),
-                    );
-                  }
-                },
-              ),
-              SecondaryButton(label: l10n.cancel, expand: true, onPressed: () => Navigator.pop(context)),
-              if (widget.removable)
-                SecondaryButton(
-                  label: l10n.remove,
-                  expand: true,
-                  destructive: true,
-                  onPressed: () => Navigator.pop(context, const _ImportEdit([], remove: true)),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

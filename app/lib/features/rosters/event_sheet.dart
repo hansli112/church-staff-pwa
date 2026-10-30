@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -80,83 +81,89 @@ class _EventSheetState extends State<EventSheet> {
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(Space.m, 0, Space.s, 0),
-              child: Row(
-                children: [
-                  Expanded(child: Text(l10n.events, style: AppText.title3)),
+    return UnsavedChanges(
+      changed: () =>
+          !setEquals({for (final e in _selected) e.name}, {for (final e in widget.selected) e.name}) ||
+          _name.text.trim().isNotEmpty,
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SheetBar(
+                title: l10n.events,
+                actions: [
                   SecondaryButton(
                     label: l10n.done,
-                    onPressed: () => Navigator.pop(
-                      context,
-                      EventSheetResult(_selected, addToCommon: _addToCommon),
-                    ),
+                    onPressed: () => Navigator.pop(context, EventSheetResult(_selected, addToCommon: _addToCommon)),
                   ),
                 ],
               ),
-            ),
-            if (_all.isNotEmpty)
-              ListSection(
-                children: [
-                  for (final tag in _all)
-                    ListRow(
-                      title: tag.name,
-                      leading: Tag.event(context, ' ', tag.color),
-                      selected: _selected.any((e) => e.name == tag.name),
-                      onTap: () => _toggle(tag),
-                    ),
-                ],
-              ),
-            ListSection(
-              header: l10n.customEvent,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(Space.s),
-                  child: TextField(
-                    controller: _name,
-                    textInputAction: TextInputAction.done,
-                    decoration: InputDecoration(hintText: l10n.eventName),
-                    onSubmitted: (_) => _addCustom(),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: Space.s,
-                    vertical: Space.xs,
-                  ),
-                  child: Wrap(
-                    spacing: Space.s,
-                    children: [
-                      for (var i = 0; i < EventColors.count; i++)
-                        _ColorDot(
-                          index: i,
-                          label: _colorName(l10n, i),
-                          selected: _color == i,
-                          onTap: () => setState(() => _color = i),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    if (_all.isNotEmpty)
+                      ListSection(
+                        children: [
+                          for (final tag in _all)
+                            ListRow(
+                              title: tag.name,
+                              leading: Tag.event(context, ' ', tag.color),
+                              selected: _selected.any((e) => e.name == tag.name),
+                              onTap: () => _toggle(tag),
+                            ),
+                        ],
+                      ),
+                    ListSection(
+                      header: l10n.customEvent,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(Space.s),
+                          child: TextField(
+                            controller: _name,
+                            textInputAction: TextInputAction.done,
+                            decoration: InputDecoration(hintText: l10n.eventName),
+                            onSubmitted: (_) => _addCustom(),
+                          ),
                         ),
-                    ],
-                  ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: Space.s,
+                            vertical: Space.xs,
+                          ),
+                          child: Wrap(
+                            spacing: Space.s,
+                            children: [
+                              for (var i = 0; i < EventColors.count; i++)
+                                _ColorDot(
+                                  index: i,
+                                  label: _colorName(l10n, i),
+                                  selected: _color == i,
+                                  onTap: () => setState(() => _color = i),
+                                ),
+                            ],
+                          ),
+                        ),
+                        if (widget.canAddToCommon)
+                          SwitchRow(
+                            title: l10n.addToCommon,
+                            value: _keep,
+                            onChanged: (v) => setState(() => _keep = v),
+                          ),
+                        ListRow(
+                          title: l10n.add,
+                          leading: Icon(Symbols.add_rounded, color: c.accent),
+                          onTap: _addCustom,
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                if (widget.canAddToCommon)
-                  SwitchRow(
-                    title: l10n.addToCommon,
-                    value: _keep,
-                    onChanged: (v) => setState(() => _keep = v),
-                  ),
-                ListRow(
-                  title: l10n.add,
-                  leading: Icon(Symbols.add_rounded, color: c.accent),
-                  onTap: _addCustom,
-                ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );

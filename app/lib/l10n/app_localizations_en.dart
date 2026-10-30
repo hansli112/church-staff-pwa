@@ -3156,16 +3156,10 @@ class L10nEn extends L10n {
       'Changes here aren’t sent right away. Tap Done when you’re finished and each person gets one notification.';
 
   @override
-  String get planNotifyAsk => 'Notify the team?';
-
-  @override
-  String get planNotifyAskBody => 'Everyone put on or taken off here gets one notification';
+  String get planNotYetTold => 'People put on or taken off here haven\'t been notified';
 
   @override
   String get planNotifyNow => 'Notify';
-
-  @override
-  String get planNotifyLater => 'Not now';
 
   @override
   String planNotified(int count) {

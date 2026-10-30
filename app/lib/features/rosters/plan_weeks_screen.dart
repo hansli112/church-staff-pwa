@@ -67,7 +67,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
   int _months = _monthsAtATime;
   bool _notifying = false;
 
-  /// Leaving by 完成 or 先不要: nothing more to ask.
+  /// Leaving by 完成: nobody left to tell.
   bool _leaving = false;
 
   /// The services the page switches between with people to tell: 完成
@@ -221,54 +221,30 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
   /// 完成: tells whoever was put on or taken off here, then goes back. A
   /// failure stays, with 重試.
   Future<void> _finish() async {
-    if (!await _tell() || !mounted) return;
-    // Told: the news that would ask has not caught up yet.
-    setState(() => _leaving = true);
-    context.pop();
-  }
-
-  /// Tells the people waiting on each service this page arranges, one
-  /// notice each; false when it failed.
-  Future<bool> _tell() async {
-    final l10n = L10n.of(context);
     setState(() => _notifying = true);
-    try {
-      final actions = ref.read(rosterActionsProvider);
-      var people = 0;
-      var later = false;
-      for (final type in _waiting) {
-        final r = await actions.notifyPlanned(type);
-        people += r.people;
-        later |= r.later;
-      }
-      if (mounted && people > 0) {
-        showToast(context, later ? l10n.planNotifiedLater(people) : l10n.planNotified(people));
-      }
-      return true;
-    } catch (e) {
-      if (mounted) showToast(context, errorText(l10n, e), onRetry: _finish);
-      return false;
-    } finally {
-      if (mounted) setState(() => _notifying = false);
-    }
+    final told = await _tellPlanned(_toasts, ref.read(rosterActionsProvider), _waiting, onRetry: _finish);
+    if (!mounted) return;
+    setState(() {
+      _notifying = false;
+      // Told: the news that would ask has not caught up yet.
+      _leaving = told;
+    });
+    if (told) context.pop();
   }
 
-  /// Leaving another way than 完成 while people wait: asks whether to tell
-  /// them now; 先不要 leaves them for the next 完成.
-  Future<void> _leave() async {
-    final l10n = L10n.of(context);
-    final tell = await askChoice(
-      context,
-      title: l10n.planNotifyAsk,
-      message: l10n.planNotifyAskBody,
-      yes: l10n.planNotifyNow,
-      no: l10n.planNotifyLater,
-    );
-    if (tell == null || !mounted) return;
-    if (tell) return _finish();
-    setState(() => _leaving = true);
-    context.pop();
+  /// Left another way than 完成 while people wait (back, a swipe from the
+  /// edge): gone at once, as any page goes, with 通知 offered on the page
+  /// behind; left alone, they are told with the next 完成.
+  void _left() {
+    final toasts = _toasts;
+    final actions = ref.read(rosterActionsProvider);
+    final waiting = _waiting;
+    void tell() => _tellPlanned(toasts, actions, waiting, onRetry: tell);
+    showToast(toasts, L10n.of(toasts).planNotYetTold, action: (label: L10n.of(toasts).planNotifyNow, onPressed: tell));
   }
+
+  /// Where toasts go, still there once this page is gone.
+  BuildContext get _toasts => Navigator.of(context, rootNavigator: true).context;
 
   @override
   Widget build(BuildContext context) {
@@ -315,9 +291,8 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
     }
 
     return PopScope(
-      canPop: !news || _leaving,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && !_notifying) _leave();
+        if (didPop && news && !_leaving && !_notifying) _left();
       },
       // White, as a table is: the empty cells' dashes show on it.
       child: Scaffold(
@@ -951,4 +926,31 @@ class _LiftedCell extends StatelessWidget {
 Rect _globalRect(BuildContext context) {
   final box = context.findRenderObject()! as RenderBox;
   return box.localToGlobal(Offset.zero) & box.size;
+}
+
+/// Tells the people waiting on [types], one notice each, and says so in a
+/// toast from [toasts]; false when it failed, said with 重試 ([onRetry]).
+Future<bool> _tellPlanned(
+  BuildContext toasts,
+  RosterActions actions,
+  Set<String> types, {
+  required VoidCallback onRetry,
+}) async {
+  final l10n = L10n.of(toasts);
+  try {
+    var people = 0;
+    var later = false;
+    for (final type in types) {
+      final r = await actions.notifyPlanned(type);
+      people += r.people;
+      later |= r.later;
+    }
+    if (toasts.mounted && people > 0) {
+      showToast(toasts, later ? l10n.planNotifiedLater(people) : l10n.planNotified(people));
+    }
+    return true;
+  } catch (e) {
+    if (toasts.mounted) showToast(toasts, errorText(l10n, e), onRetry: onRetry);
+    return false;
+  }
 }
