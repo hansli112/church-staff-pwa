@@ -29,6 +29,36 @@ void main() {
     });
   });
 
+  group('pickChanges', () {
+    const duty = Duty(role: '招待', people: ['志豪', '外請講員'], uids: {'志豪': 'u1'});
+
+    test('the same people, in any order, change nothing', () {
+      expect(pickChanges(duty, ['外請講員', '志豪']), isFalse);
+    });
+
+    test('someone put on or taken off changes the day', () {
+      expect(pickChanges(duty, ['志豪', '外請講員', '美玉']), isTrue);
+      expect(pickChanges(duty, ['志豪']), isTrue);
+    });
+
+    test('a member now kept as a guest of the same name changes the day', () {
+      expect(pickChanges(duty, ['志豪', '外請講員'], guestNames: {'志豪'}), isTrue);
+      expect(pickChanges(duty, ['志豪', '外請講員'], guestNames: {'外請講員'}), isFalse);
+    });
+  });
+
+  group('addableDuties', () {
+    final r = day(4, {'招待': [], '司琴': []});
+
+    test('only duties not on the day yet', () {
+      expect(addableDuties(r, ['司琴', '音控', '主領'], const Arranges.all()), ['音控', '主領']);
+    });
+
+    test("a 事工's 負責人 only adds the duties it leads", () {
+      expect(addableDuties(r, ['音控', '主領'], const Arranges.only({'音控'})), ['音控']);
+    });
+  });
+
   group('withPeople', () {
     test('sorts by staff order and attaches uids for members only', () {
       final r = withPeople(

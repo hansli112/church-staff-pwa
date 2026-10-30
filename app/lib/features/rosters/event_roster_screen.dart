@@ -8,15 +8,16 @@ import '../../core/design/tokens.dart';
 import '../../domain/day.dart';
 import '../../domain/event_roster.dart';
 import '../../domain/models.dart';
+import '../../domain/roster_edit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/roster_actions.dart';
 import '../calendar/calendar_screen.dart';
 import '../common/errors.dart';
+import 'editable_roster.dart';
 import 'format.dart';
 import 'future_changes.dart';
 import 'roster_card.dart';
-import 'roster_day_screen.dart';
 import '../common/saving_indicator.dart';
 
 /// The days an event's roster is on, as its heading says them.

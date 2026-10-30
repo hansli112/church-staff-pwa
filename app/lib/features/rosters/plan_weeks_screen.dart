@@ -20,8 +20,8 @@ import '../../state/providers.dart';
 import '../../state/roster_actions.dart';
 import '../common/errors.dart';
 import '../common/saving_indicator.dart';
+import 'duty_picking.dart';
 import 'format.dart';
-import 'roster_day_screen.dart';
 
 /// 安排服事 (#90): one service's days a month at a time, a row a day and a
 /// column a duty I arrange. Tapping a cell picks its people as on the

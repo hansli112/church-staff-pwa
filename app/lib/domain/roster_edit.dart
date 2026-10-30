@@ -291,3 +291,20 @@ FutureRosterPlan planEventRename({
   }
   return FutureRosterPlan(before: before, after: after, conflicts: conflicts);
 }
+
+/// [candidates] not on [roster] yet; only those [arranges] lets them
+/// add (a 事工's 負責人, those it leads).
+List<String> addableDuties(Roster roster, Iterable<String> candidates, Arranges arranges) {
+  final present = {for (final d in roster.duties) d.role};
+  return [
+    for (final d in candidates)
+      if (!present.contains(d) && arranges.has(d)) d,
+  ];
+}
+
+/// Whether picking [people] for [duty] (with [guestNames] kept as names,
+/// not members) changes who is on it: someone put on or taken off, or a
+/// member now a guest of the same name. Order is the staff order's, not
+/// the pick's.
+bool pickChanges(Duty duty, List<String> people, {Set<String> guestNames = const {}}) =>
+    !setEquals(people.toSet(), duty.people.toSet()) || guestNames.any(duty.uids.containsKey);
