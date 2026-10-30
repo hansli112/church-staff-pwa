@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
@@ -31,7 +32,7 @@ import 'format.dart';
 /// without dragging. Nobody is told until 通知同工, which tells each
 /// person once, for all their days.
 /// Opens at the first month with a duty nobody is on yet; the months
-/// before it are a button away, later ones below.
+/// before it are a button away, later ones join on as it scrolls.
 class PlanWeeksScreen extends ConsumerStatefulWidget {
   const PlanWeeksScreen({super.key, required this.serviceType});
 
@@ -42,8 +43,11 @@ class PlanWeeksScreen extends ConsumerStatefulWidget {
   ConsumerState<PlanWeeksScreen> createState() => _PlanWeeksScreenState();
 }
 
-/// How many months the page shows at first, and adds each time.
+/// How many months the page shows at first, and adds as its end nears.
 const _monthsAtATime = 3;
+
+/// How far the months go on: through the same month next year.
+const _monthsAhead = 13;
 
 /// How far ahead the page looks for the first month with a gap.
 const _gapSearchMonths = 12;
@@ -75,9 +79,16 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
   /// tells them all.
   Set<String> _waiting = const {};
 
-  // The duties' names scroll sideways with the cells under them.
+  /// The table's sideways scroll, for the fade at its edge.
   final _cells = ScrollController();
-  final _names = ScrollController();
+
+  /// How many more months may join on.
+  int _room = 0;
+
+  /// What of the table stays put as the rest scrolls under it: the
+  /// dates' width and the duties' names' height.
+  double _datesWidth = 0;
+  double _namesHeight = 0;
 
   // A cell held: where it would land, found by the cells' places on
   // screen, again as the table scrolls under a still finger.
@@ -104,14 +115,6 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
   int? _down;
 
   @override
-  void initState() {
-    super.initState();
-    _cells.addListener(() {
-      if (_names.hasClients) _names.jumpTo(_cells.offset);
-    });
-  }
-
-  @override
   void dispose() {
     _scroller?.stopAutoScroll();
     _liftView
@@ -119,7 +122,6 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
       ..dispose();
     _flashTimer?.cancel();
     _cells.dispose();
-    _names.dispose();
     _looks.dispose();
     _fading.dispose();
     super.dispose();
@@ -135,6 +137,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
   void _liftStart(BuildContext cell, Roster day, String role, LongPressStartDetails d) {
     _liftEnd(drop: false);
     final box = cell.findRenderObject()! as RenderBox;
+    final table = _globalRect(Scrollable.of(cell, axis: Axis.vertical).context);
     final lift = _Lift(
       pointer: _down,
       from: day,
@@ -142,16 +145,15 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
       size: box.size,
       grab: d.localPosition,
       at: d.globalPosition,
-      bounds: _globalRect(Scrollable.of(cell, axis: Axis.vertical).context).intersect(
-        _globalRect(Scrollable.of(cell, axis: Axis.horizontal).context),
-      ),
+      bounds: Rect.fromLTRB(table.left + _datesWidth, table.top + _namesHeight, table.right, table.bottom),
     );
     Haptics.light();
     _scroller = EdgeDraggingAutoScroller(
       Scrollable.of(cell, axis: Axis.vertical),
       velocityScalar: _autoScrollSpeed,
       onScrollViewScrolled: () {
-        _retarget();
+        // The cells are where the scroll put them once laid out again.
+        WidgetsBinding.instance.addPostFrameCallback((_) => _retarget());
         _autoScroll();
       },
     );
@@ -198,7 +200,11 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     final scroller = _scroller;
     if (lift == null || scroller == null) return;
     final reach = math.min(lift.size.height * 2, scroller.scrollable.position.viewportDimension / 2);
-    scroller.startAutoScrollIfNecessary(Rect.fromCenter(center: lift.at, width: 1, height: reach));
+    // The table's top edge is under the duties' names, which stay put.
+    final at = lift.at;
+    scroller.startAutoScrollIfNecessary(
+      Rect.fromLTRB(at.dx, at.dy - reach / 2 - _namesHeight, at.dx + 1, at.dy + reach / 2),
+    );
   }
 
   /// The day the lifted cell would trade with if let go now: the one of
@@ -325,6 +331,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
         return firstGap(ahead, planDuties(service, ahead, arranges)) ?? thisMonth;
       }();
       final months = planMonths(service: service, saved: saved, today: today, month: from, months: _months);
+      _room = math.max(0, _monthsAhead - _monthsBetween(thisMonth, from) - _months);
       duties = planDuties(service, months.expand((m) => m.days), arranges);
       body = _table(context, months, duties, earlier: from.isAfter(thisMonth) ? thisMonth : null);
     }
@@ -391,6 +398,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
 
   /// The table: the duties' names stay at the top and the dates at the
   /// start, the rest scrolls both ways; each month starts under its name.
+  /// Only the cells on screen are built, however many months there are.
   Widget _table(
     BuildContext context,
     List<({Day month, List<Roster> days})> months,
@@ -402,16 +410,104 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     final scale = MediaQuery.textScalerOf(context);
     final platform = Theme.of(context).platform;
     final today = ref.watch(todayProvider);
-    // Fixed heights keep the dates and their cells on the same rows, in
-    // two scroll views: two lines of names, two of a duty's name.
+    // Two lines of names, two of a duty's name.
     final rowHeight = math.max(Space.minTap(platform) + Space.s, scale.scale(15) * 1.3 * 2 + Space.m);
-    final headHeight = scale.scale(13) * 1.3 * 2 + Space.s * 2;
     final monthHeight = scale.scale(17) * 1.3 + Space.m + Space.s;
     final line = BorderSide(color: c.separator, width: 0.5);
 
     _shown = [for (final m in months) ...m.days];
-    final dateWidth = _DateCell.widthFor(context, _shown);
-    return LayoutBuilder(
+    // A month's name (its first day) or a day, under the duties' names.
+    final rows = <Object>[
+      for (final m in months) ...[m.month, ...m.days],
+    ];
+    final named = duties.length > 1;
+    _namesHeight = named ? scale.scale(13) * 1.3 * 2 + Space.s * 2 : 0;
+    final dateWidth = _datesWidth = _DateCell.widthFor(context, _shown);
+
+    Widget cellAt(TableVicinity at) {
+      final role = at.column == 0 ? null : duties[at.column - 1];
+      if (named && at.row == 0) {
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            color: c.surface,
+            border: Border(bottom: line),
+          ),
+          child: role == null
+              ? const SizedBox.expand()
+              : Container(
+                  padding: const EdgeInsets.symmetric(horizontal: Space.s),
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    role,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.footnote.copyWith(color: c.secondaryLabel, fontWeight: FontWeight.w600),
+                  ),
+                ),
+        );
+      }
+      switch (rows[at.row - (named ? 1 : 0)]) {
+        case final Day month:
+          if (role != null) return const SizedBox.shrink();
+          // Across the row from the dates, over the duties' empty cells.
+          return ColoredBox(
+            color: c.surface,
+            child: OverflowBox(
+              minWidth: 0,
+              maxWidth: double.infinity,
+              minHeight: 0,
+              alignment: AlignmentDirectional.bottomStart,
+              child: Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(Space.m, 0, Space.m, Space.s),
+                child: Semantics(
+                  header: true,
+                  child: Text(DateFormat.yMMMM().format(month.midnight), style: AppText.headline),
+                ),
+              ),
+            ),
+          );
+        case final Roster day when role == null:
+          // Over the cells scrolled under it, with its own ink.
+          return Material(
+            color: c.surface,
+            child: _DateCell(
+              roster: day,
+              today: today,
+              border: line,
+              onTap: () => context.push('/rosters/${day.type}/${day.day.key}'),
+            ),
+          );
+        case final Roster day:
+          return _DutyCell(
+            key: _keyOf(day, role!),
+            roster: day,
+            role: role,
+            today: today,
+            border: line,
+            looks: _looks,
+            fade: _faded,
+            // While a cell is held, only the days it can go to stay.
+            faded: () {
+              final lift = _lift ?? _lastLift;
+              return lift != null && (lift.role != role || !canSwapDuty(role, lift.from, day));
+            },
+            lit: () {
+              final lift = _lift;
+              return lift?.to?.id == day.id && lift?.role == role || _flash.contains(_cellId(day, role));
+            },
+            onTap: (duty) => pickPeople(context, ref, day, duty, via: RosterVia.plan, swapDays: _shown),
+            onLift: (cell, d) => _liftStart(cell, day, role, d),
+            alone: duties.length == 1,
+            onSwap: _shown.any((d) => canSwapDuty(role, day, d))
+                ? (duty) => pickDayToSwap(context, ref, day, duty, _shown, via: RosterVia.plan)
+                : null,
+          );
+        default:
+          throw StateError('A row is a month or a day.');
+      }
+    }
+
+    final table = LayoutBuilder(
       builder: (context, box) {
         // All the duties when they fit; when not, the last one shown is
         // cut short of half, so the table says it goes on sideways.
@@ -419,175 +515,39 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
         final fits = duties.isNotEmpty && room / duties.length >= _minCellWidth;
         final whole = (room / _minCellWidth - _peek).floor().clamp(1, math.max(1, duties.length));
         final cellWidth = duties.isEmpty ? 0.0 : (fits ? room / duties.length : room / (whole + _peek));
-        final dates = <Widget>[];
-        final cells = <Widget>[];
-        final headers = <Widget>[];
-        var y = 0.0;
-        for (final m in months) {
-          headers.add(
-            Positioned(
-              top: y,
-              left: 0,
-              right: 0,
-              height: monthHeight,
-              child: Container(
-                color: c.surface,
-                alignment: AlignmentDirectional.bottomStart,
-                padding: const EdgeInsetsDirectional.fromSTEB(Space.m, 0, Space.m, Space.s),
-                child: Semantics(
-                  header: true,
-                  child: Text(DateFormat.yMMMM().format(m.month.midnight), style: AppText.headline),
-                ),
-              ),
+        final table = NotificationListener<Notification>(
+          onNotification: _nearEnd,
+          // Unclipped within, a month's name runs on past the dates; the
+          // dates and the duties' names cover what scrolls under them.
+          child: ClipRect(
+            child: TableView.builder(
+              key: PageStorageKey('plan-$_type'),
+              horizontalDetails: ScrollableDetails.horizontal(controller: _cells),
+              clipBehavior: Clip.none,
+              // Built as they scroll in, none ahead: opening builds only
+              // what shows (measured: half the time to open).
+              // scrollCacheExtent, which it points to, is not in 0.5.5 yet.
+              // ignore: deprecated_member_use
+              cacheExtent: 0,
+              pinnedRowCount: named ? 1 : 0,
+              pinnedColumnCount: 1,
+              rowCount: rows.length + (named ? 1 : 0),
+              columnCount: duties.length + 1,
+              rowBuilder: (i) {
+                final row = i - (named ? 1 : 0);
+                return TableSpan(
+                  extent: FixedTableSpanExtent(switch (row) {
+                    < 0 => _namesHeight,
+                    _ when rows[row] is Day => monthHeight,
+                    _ => rowHeight,
+                  }),
+                  padding: row == rows.length - 1 ? const TableSpanPadding(trailing: Space.xl) : null,
+                );
+              },
+              columnBuilder: (i) => TableSpan(extent: FixedTableSpanExtent(i == 0 ? dateWidth : cellWidth)),
+              cellBuilder: (context, at) => TableViewCell(child: cellAt(at)),
             ),
-          );
-          dates.add(SizedBox(height: monthHeight));
-          cells.add(SizedBox(height: monthHeight, width: cellWidth * duties.length));
-          y += monthHeight;
-          for (final day in m.days) {
-            dates.add(
-              _DateCell(
-                roster: day,
-                today: today,
-                height: rowHeight,
-                border: line,
-                onTap: () => context.push('/rosters/${day.type}/${day.day.key}'),
-              ),
-            );
-            cells.add(
-              Row(
-                children: [
-                  for (final role in duties)
-                    _DutyCell(
-                      key: _keyOf(day, role),
-                      roster: day,
-                      role: role,
-                      today: today,
-                      width: cellWidth,
-                      height: rowHeight,
-                      border: line,
-                      looks: _looks,
-                      fade: _faded,
-                      // While a cell is held, only the days it can go to stay.
-                      faded: () {
-                        final lift = _lift ?? _lastLift;
-                        return lift != null && (lift.role != role || !canSwapDuty(role, lift.from, day));
-                      },
-                      lit: () {
-                        final lift = _lift;
-                        return lift?.to?.id == day.id && lift?.role == role || _flash.contains(_cellId(day, role));
-                      },
-                      onTap: (duty) => pickPeople(context, ref, day, duty, via: RosterVia.plan, swapDays: _shown),
-                      onLift: (cell, d) => _liftStart(cell, day, role, d),
-                      alone: duties.length == 1,
-                      onSwap: _shown.any((d) => canSwapDuty(role, day, d))
-                          ? (duty) => pickDayToSwap(context, ref, day, duty, _shown, via: RosterVia.plan)
-                          : null,
-                    ),
-                ],
-              ),
-            );
-            y += rowHeight;
-          }
-        }
-        final table = Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (duties.length > 1)
-              DecoratedBox(
-                decoration: BoxDecoration(border: Border(bottom: line)),
-                child: SizedBox(
-                  height: headHeight,
-                  child: Row(
-                    children: [
-                      SizedBox(width: dateWidth),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          controller: _names,
-                          scrollDirection: Axis.horizontal,
-                          physics: const NeverScrollableScrollPhysics(),
-                          child: Row(
-                            children: [
-                              for (final role in duties)
-                                Container(
-                                  width: cellWidth,
-                                  padding: const EdgeInsets.symmetric(horizontal: Space.s),
-                                  alignment: AlignmentDirectional.centerStart,
-                                  child: Text(
-                                    role,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: AppText.footnote.copyWith(
-                                      color: c.secondaryLabel,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            Expanded(
-              child: SingleChildScrollView(
-                key: PageStorageKey('plan-$_type'),
-                padding: const EdgeInsets.only(bottom: Space.xl),
-                // Scrolled, the table is moved, not painted again: a scroll
-                // view paints its whole child each frame otherwise.
-                child: RepaintBoundary(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (earlier != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: Space.s),
-                          child: TextButton(
-                            onPressed: () => setState(() {
-                              _months += _from!.month - earlier.month + 12 * (_from!.year - earlier.year);
-                              _from = earlier;
-                            }),
-                            child: Text(l10n.planShowEarlier),
-                          ),
-                        ),
-                      Stack(
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SizedBox(
-                                width: dateWidth,
-                                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: dates),
-                              ),
-                              Expanded(
-                                child: SingleChildScrollView(
-                                  controller: _cells,
-                                  scrollDirection: Axis.horizontal,
-                                  child: RepaintBoundary(
-                                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: cells),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          ...headers,
-                        ],
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(Space.m),
-                        child: SecondaryButton(
-                          label: l10n.rosterShowMore,
-                          onPressed: () => setState(() => _months += _monthsAtATime),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
+          ),
         );
         if (fits || duties.isEmpty) return table;
         // The cut column fades out at the edge while there is more that way.
@@ -625,8 +585,49 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
         );
       },
     );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Over the table, where it stays while there are months before.
+        if (earlier != null)
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(Space.xs, 0, Space.m, Space.xs),
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: TextButton.icon(
+                onPressed: () => setState(() {
+                  _months += _monthsBetween(earlier, _from!);
+                  _from = earlier;
+                }),
+                icon: const Icon(Symbols.keyboard_arrow_up_rounded),
+                label: Text(l10n.planShowEarlier),
+              ),
+            ),
+          ),
+        Expanded(child: table),
+      ],
+    );
+  }
+
+  /// Near the table's end, the next months join on, through the same month
+  /// next year.
+  bool _nearEnd(Notification n) {
+    final metrics = switch (n) {
+      ScrollUpdateNotification(:final metrics) || ScrollMetricsNotification(:final metrics) => metrics,
+      _ => null,
+    };
+    if (metrics == null || metrics.axis != Axis.vertical || _room == 0) return false;
+    if (metrics.extentAfter < metrics.viewportDimension) {
+      final more = math.min(_monthsAtATime, _room);
+      _room -= more;
+      setState(() => _months += more);
+    }
+    return false;
   }
 }
+
+/// How many months [to] is after [from].
+int _monthsBetween(Day from, Day to) => (to.year - from.year) * 12 + to.month - from.month;
 
 /// A day at the start of its row, as a calendar has it under its month:
 /// the day's number, then its weekday or its first 特別活動. Tapping it
@@ -676,14 +677,12 @@ class _DateCell extends StatelessWidget {
   const _DateCell({
     required this.roster,
     required this.today,
-    required this.height,
     required this.border,
     required this.onTap,
   });
 
   final Roster roster;
   final Day today;
-  final double height;
   final BorderSide border;
   final VoidCallback onTap;
 
@@ -701,7 +700,6 @@ class _DateCell extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Container(
-          height: height,
           margin: const EdgeInsetsDirectional.only(start: Space.m),
           padding: const EdgeInsetsDirectional.only(end: Space.xs),
           decoration: BoxDecoration(border: Border(bottom: border)),
@@ -757,8 +755,6 @@ class _DutyCell extends StatelessWidget {
     required this.roster,
     required this.role,
     required this.today,
-    required this.width,
-    required this.height,
     required this.border,
     required this.looks,
     required this.fade,
@@ -773,8 +769,6 @@ class _DutyCell extends StatelessWidget {
   final Roster roster;
   final String role;
   final Day today;
-  final double width;
-  final double height;
   final BorderSide border;
 
   /// Tells when [faded] or [lit] may have changed.
@@ -829,8 +823,6 @@ class _DutyCell extends StatelessWidget {
             child: InkWell(
               onTap: duty == null ? null : () => onTap(duty),
               child: Container(
-                width: width,
-                height: height,
                 padding: const EdgeInsets.symmetric(horizontal: Space.s, vertical: Space.xs),
                 alignment: AlignmentDirectional.centerStart,
                 decoration: BoxDecoration(

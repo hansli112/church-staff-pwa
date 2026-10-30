@@ -23,6 +23,9 @@ Future<void> go(WidgetTester tester, String path) async {
 
 String path(WidgetTester tester) => GoRouter.of(tester.element(find.byType(Scaffold).last)).state.uri.path;
 
+/// The table's rows, scrolled up and down.
+final rows = find.byWidgetPredicate((w) => w is Scrollable && w.axisDirection == AxisDirection.down).last;
+
 /// The cell of [role] on October [date].
 Finder cell(String role, int date) => find.byWidgetPredicate(
   (w) => w is Semantics && w.properties.label == '$role, 10月$date日 週日',
@@ -162,7 +165,9 @@ void main() {
     final width = tester.view.physicalSize.width / tester.view.devicePixelRatio;
     final cut = [
       for (final role in ['司會', '司琴', '招待', '音控', '投影'])
-        if (tester.getRect(cell(role, 11)) case final r when r.left < width && r.right > width) role,
+        // Columns well past the edge are not there yet.
+        if (cell(role, 11).evaluate().isNotEmpty)
+          if (tester.getRect(cell(role, 11)) case final r when r.left < width && r.right > width) role,
     ];
     expect(cut, hasLength(1));
     final shown = tester.getRect(cell(cut.single, 11));
@@ -252,7 +257,9 @@ void main() {
     expect(slot.width, greaterThan(tester.getRect(cell('司琴', 11)).width * 0.8), reason: 'a row-wide place to fill');
   });
 
-  testWidgets('opens at the first month with a gap; the months before are a tap away', (tester) async {
+  testWidgets('opens at the first month with a gap; the months before are a tap away, over the table', (
+    tester,
+  ) async {
     final b = seededChurch();
     for (final date in [11, 18, 25]) {
       b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, date))] = savedDay(
@@ -264,10 +271,15 @@ void main() {
     await go(tester, '/rosters/plan/sunday');
     expect(find.text('2026年10月'), findsNothing);
     expect(find.text('2026年11月'), findsOneWidget);
+    expect(
+      tester.getRect(find.text('顯示前面的月份')).bottom,
+      lessThanOrEqualTo(tester.getRect(find.text('司會')).top),
+      reason: 'over the duties’ names, not scrolled away with the table',
+    );
     await tester.tap(find.text('顯示前面的月份'));
     await settle(tester);
     expect(find.text('2026年10月'), findsOneWidget);
-    expect(find.text('2027年1月'), findsOneWidget, reason: 'the months after stay');
+    expect(find.text('顯示前面的月份'), findsNothing);
   });
 
   testWidgets('the picker says how often someone serves that month, and what else that day', (tester) async {
@@ -373,15 +385,29 @@ void main() {
     expect(GoRouterState.of(tester.element(find.byType(Scaffold).last)).uri.path, '/rosters/sunday/2026-10-11');
   });
 
-  testWidgets('another service, from its first gap; more months below', (tester) async {
+  testWidgets('more months join on as the table nears its end, through the same month next year', (tester) async {
+    await pumpApp(tester, seededChurch());
+    await go(tester, '/rosters/plan/sunday');
+    expect(find.text('顯示更多'), findsNothing);
+    var last = '';
+    for (var i = 0; i < 40; i++) {
+      await tester.drag(rows, const Offset(0, -2000));
+      await settle(tester);
+      final titles = [
+        for (final e in find.textContaining(RegExp(r'^\d{4}年\d+月$')).evaluate()) (e.widget as Text).data!,
+      ];
+      if (titles.isNotEmpty && titles.last == last) break;
+      if (titles.isNotEmpty) last = titles.last;
+    }
+    expect(last, '2027年10月');
+  });
+
+  testWidgets('another service, from its first gap', (tester) async {
     final b = seededChurch();
     await pumpApp(tester, b);
     await go(tester, '/rosters/plan/sunday');
-    expect(find.text('2027年1月'), findsNothing);
-    await tester.scrollUntilVisible(find.text('顯示更多'), 300, scrollable: find.byType(Scrollable).last);
-    await tester.tap(find.text('顯示更多'));
+    await tester.drag(rows, const Offset(0, -2000));
     await settle(tester);
-    expect(find.text('2027年1月'), findsOneWidget);
 
     await tester.tap(find.text('青年崇拜'));
     await settle(tester);
@@ -390,7 +416,6 @@ void main() {
       findsOneWidget,
     );
     expect(cell('司琴', 11), findsNothing);
-    expect(find.text('2027年1月'), findsNothing, reason: 'three months again');
   });
 
   testWidgets('pressed at night: says when they will hear', (tester) async {
@@ -479,13 +504,6 @@ void main() {
     final b = seededChurch();
     await pumpApp(tester, b);
     await go(tester, '/rosters/plan/sunday');
-    // Six months: more than the screen holds.
-    final rows = find.byKey(const PageStorageKey('plan-sunday'));
-    await tester.scrollUntilVisible(find.text('顯示更多'), 300, scrollable: find.byType(Scrollable).last);
-    await tester.tap(find.text('顯示更多'));
-    await settle(tester);
-    await tester.drag(rows, const Offset(0, 5000));
-    await settle(tester);
     final table = tester.getRect(rows);
     final edge = Offset(tester.getCenter(cell('司琴', 4)).dx, table.bottom - 4);
     final gesture = await tester.startGesture(tester.getCenter(cell('司琴', 4)));

@@ -69,6 +69,7 @@ dependencies:
   package_info_plus: ^10.2.2
   shorebird_code_push: ^2.0.7
   material_symbols_icons: ^4.2960.0
+  two_dimensional_scrollables: ^0.5.5
 
 dev_dependencies:
   flutter_test:
