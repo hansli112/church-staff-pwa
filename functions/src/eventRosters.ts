@@ -26,6 +26,39 @@ import { dateKeyIn, type ChurchTimeZone } from './timeZones.js';
  * roster's.
  */
 
+/**
+ * A change of an event: in the app (`edited`, `deleted`, `restored`, made
+ * again by undoing its delete, under a new id), or as the sync finds it in
+ * Google.
+ */
+export type EventChange = 'edited' | 'deleted' | 'restored' | 'seenInGoogle' | 'goneFromGoogle';
+
+/**
+ * What an event's roster does when its event has [change], by whether it
+ * is there and cancelled (testdata/event_rosters.json, which the app runs
+ * too): a cancelled one follows no edit, and only it moves onto the event
+ * a delete undone makes again, or reopens when its event is back in Google.
+ */
+export function eventRosterFate(change: EventChange, roster: 'none' | 'on' | 'cancelled') {
+  if (roster === 'none') return 'nothing';
+  const on = roster === 'on';
+  switch (change) {
+    case 'edited':
+      return on ? 'follows' : 'nothing';
+    case 'deleted':
+      return 'cancelled';
+    case 'restored':
+      return on ? 'nothing' : 'movesOnto';
+    case 'seenInGoogle':
+      return on ? 'follows' : 'reopens';
+    case 'goneFromGoogle':
+      return on ? 'cancelled' : 'nothing';
+  }
+}
+
+/** [d] as [eventRosterFate] takes it. */
+const stateOf = (d: DocumentSnapshot | undefined) => (!isEvent(d) ? 'none' : isCancelled(d) ? 'cancelled' : 'on');
+
 /** Whether [d] is an event's roster (活動的服事表). */
 export const isEvent = (d: DocumentSnapshot | undefined) => d?.exists === true && d.get('kind') === 'event';
 
@@ -103,7 +136,7 @@ export async function followEdit(deps: Deps, churchId: string, timeZone: ChurchT
   const at = ref(deps, churchId, e.id);
   await deps.db.runTransaction(async (tx) => {
     const r = await tx.get(at);
-    if (!isEvent(r) || isCancelled(r)) return;
+    if (eventRosterFate('edited', stateOf(r)) !== 'follows') return;
     const next = updateFromEvent(e, timeZone);
     if (!same(r, next, e)) tx.update(at, { ...next, movedBy: by });
   });
@@ -113,7 +146,9 @@ export async function followEdit(deps: Deps, churchId: string, timeZone: ChurchT
 export async function cancelWithEvent(deps: Deps, churchId: string, eventId: string) {
   const at = ref(deps, churchId, eventId);
   await deps.db.runTransaction(async (tx) => {
-    if (isEvent(await tx.get(at))) tx.update(at, { cancelledAt: Timestamp.fromDate(deps.now()) });
+    if (eventRosterFate('deleted', stateOf(await tx.get(at))) === 'cancelled') {
+      tx.update(at, { cancelledAt: Timestamp.fromDate(deps.now()) });
+    }
   });
 }
 
@@ -124,7 +159,7 @@ export async function restoreOnto(deps: Deps, churchId: string, timeZone: Church
   const to = ref(deps, churchId, e.id);
   await deps.db.runTransaction(async (tx) => {
     const r = await tx.get(from);
-    if (!isCancelled(r)) return;
+    if (eventRosterFate('restored', stateOf(r)) !== 'movesOnto') return;
     const keep = (k: string) => (r.get(k) === undefined ? {} : { [k]: r.get(k) });
     tx.set(to, {
       kind: 'event',
@@ -151,7 +186,7 @@ export async function restoreOnto(deps: Deps, churchId: string, timeZone: Church
  */
 export async function followGoogle(r: DocumentSnapshot, e: CalendarEvent, calendarId: string, timeZone: ChurchTimeZone) {
   const next = { ...updateFromEvent(e, timeZone), ...stamps(e, calendarId) };
-  if (isCancelled(r)) {
+  if (eventRosterFate('seenInGoogle', stateOf(r)) === 'reopens') {
     await r.ref.update({ ...next, cancelledAt: FieldValue.delete(), via: 'restore' });
     return 'restored' as const;
   }

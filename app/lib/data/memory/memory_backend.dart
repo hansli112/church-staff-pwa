@@ -795,23 +795,13 @@ class MemoryChurchData implements ChurchData {
 
   /// Writing [r] over what is saved at its ID, as firestore.rules allow: a
   /// service's day by whoever arranges it, an event's roster by 行政, admins
-  /// and its group's 負責人 (the saved group; a new one's as given). One
-  /// never turns into the other, and a cancelled event's is the backend's.
+  /// and its group's 負責人 (the saved group; a new one's as given), and
+  /// only as [appMayWriteRoster] lets the app.
   void _requireRosterWrite(Roster r) {
     final saved = _b.rosters[churchId]![r.id];
-    if (saved != null && saved.isEvent != r.isEvent) throw const CloudException(CloudErrorCode.permissionDenied);
+    if (!appMayWriteRoster(saved, r)) throw const CloudException(CloudErrorCode.permissionDenied);
     if (!r.isEvent) return _requireRosterEditor(r.type);
     _requireEventRosterEditor((saved ?? r).forEvent!.group);
-    if (saved != null && saved.forEvent!.group != r.forEvent!.group) {
-      throw const CloudException(CloudErrorCode.permissionDenied);
-    }
-    // The title and days are the calendar's: the app sets them only when
-    // making the roster.
-    final was = saved?.forEvent;
-    if (was != null &&
-        (was.cancelled || was.title != r.forEvent!.title || saved!.day != r.day || was.lastDay != r.lastDay)) {
-      throw const CloudException(CloudErrorCode.permissionDenied);
-    }
   }
 
   @override
@@ -1915,7 +1905,8 @@ class MemoryChurchData implements ChurchData {
       // The roster and calendar change become visible together.
       final rosters = _b.rosters[churchId]!;
       final from = rosters[Roster.idForEvent(restoreRosterOf ?? saved.id!)];
-      if (from != null && (restoreRosterOf == null) != from.forEvent!.cancelled) {
+      final change = restoreRosterOf == null ? EventChange.edited : EventChange.restored;
+      if (from != null && eventRosterFate(change, from) != EventRosterFate.nothing) {
         final moved = eventRoster(
           saved,
           duties: from.duties,
@@ -1936,7 +1927,9 @@ class MemoryChurchData implements ChurchData {
       _b.calendarEvents[churchId]?.removeWhere((e) => e.id == event.id);
       final rosters = _b.rosters[churchId]!;
       final r = rosters[Roster.idForEvent(event.id!)];
-      if (r != null) rosters[r.id] = r.copyWith(forEvent: r.forEvent!.copyWith(cancelled: true));
+      if (eventRosterFate(EventChange.deleted, r) == EventRosterFate.cancelled) {
+        rosters[r!.id] = r.copyWith(forEvent: r.forEvent!.copyWith(cancelled: true));
+      }
     });
   }
 

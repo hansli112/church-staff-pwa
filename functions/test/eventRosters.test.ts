@@ -1,15 +1,18 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { beforeEach, describe, test } from 'node:test';
 
 import type { CalendarEvent } from '../src/calendar.js';
 import {
   cancelGone,
   cancelWithEvent,
+  eventRosterFate,
   followEdit,
   followGoogle,
   relinkTo,
   restoreOnto,
   takeTimeZone,
+  type EventChange,
 } from '../src/eventRosters.js';
 import { readRosterChange } from '../src/rosterChange.js';
 import type { ChurchTimeZone } from '../src/timeZones.js';
@@ -127,4 +130,15 @@ describe("an event's roster, changed with its event, and who is told", () => {
     assert.equal((await snap()).get('dateKey'), '2026-12-23');
     assert.equal(await takeTimeZone(await snap(), early, 'America/Los_Angeles'), false, 'already there');
   });
+});
+
+describe("what an event's roster does when its event changes (testdata/event_rosters.json, which the app runs too)", () => {
+  const rows = (JSON.parse(readFileSync(new URL('../../testdata/event_rosters.json', import.meta.url), 'utf8')) as {
+    fates: { why: string; change: EventChange; roster: 'none' | 'on' | 'cancelled'; fate: string }[];
+  }).fates;
+  for (const r of rows) {
+    test(r.why, () => {
+      assert.equal(eventRosterFate(r.change, r.roster), r.fate);
+    });
+  }
 });

@@ -9,6 +9,42 @@ import 'package:martha/domain/models.dart';
 import 'package:martha/domain/staff_order.dart';
 
 void main() {
+  final lives = jsonDecode(File('../testdata/event_rosters.json').readAsStringSync()) as Map<String, dynamic>;
+
+  group("what an event's roster does when its event changes in the app (testdata/event_rosters.json)", () {
+    final rows = (lives['fates'] as List).cast<Map<String, dynamic>>().where((r) => r['by'] == 'app');
+    Roster? roster(String state) => switch (state) {
+      'none' => null,
+      _ => Roster(
+        type: '',
+        day: Day(2030, 12, 24),
+        forEvent: RosterEvent(eventId: 'e1', title: '聖誕晚會', lastDay: Day(2030, 12, 24), cancelled: state == 'cancelled'),
+      ),
+    };
+    for (final r in rows) {
+      test(r['why'] as String, () {
+        expect(
+          eventRosterFate(EventChange.values.byName(r['change'] as String), roster(r['roster'] as String)).name,
+          r['fate'],
+        );
+      });
+    }
+  });
+
+  group('what the app may write over a roster (testdata/event_rosters.json, which firestore.rules runs too)', () {
+    Roster? doc(Object? d) => d == null
+        ? null
+        : rosterFromJson({
+            ...d as Map<String, dynamic>,
+            if (d['cancelledAt'] == true) 'cancelledAt': DateTime(2030),
+          });
+    for (final r in (lives['appWrites'] as List).cast<Map<String, dynamic>>()) {
+      test(r['why'] as String, () {
+        expect(appMayWriteRoster(doc(r['saved']), doc(r['next'])!), r['may']);
+      });
+    }
+  });
+
   group('the days, as calendarWrite works them out too (testdata/event_days.json)', () {
     final data = jsonDecode(File('../testdata/event_days.json').readAsStringSync()) as Map<String, dynamic>;
     for (final c in (data['cases'] as List).cast<Map<String, dynamic>>()) {

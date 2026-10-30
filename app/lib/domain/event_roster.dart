@@ -28,6 +28,62 @@ Roster eventRoster(CalendarEvent e, {List<Duty> duties = const [], String? calen
   );
 }
 
+/// A change of an event made in the app, as its roster takes it
+/// (testdata/event_rosters.json, as functions/src/eventRosters.ts).
+enum EventChange {
+  edited,
+  deleted,
+
+  /// Made again by undoing its delete, under a new id.
+  restored,
+}
+
+/// What an event's roster does when its event changes.
+enum EventRosterFate {
+  nothing,
+
+  /// Takes the event's title, days and group.
+  follows,
+
+  /// Kept for 復原, shown nowhere and reminded of nothing.
+  cancelled,
+
+  /// Onto the event made again, under its id.
+  movesOnto,
+}
+
+/// What [roster] (null: there is none) does when its event has [change]:
+/// a cancelled one follows no edit, and only it moves onto the event a
+/// delete undone makes again.
+EventRosterFate eventRosterFate(EventChange change, Roster? roster) {
+  final cancelled = roster?.forEvent?.cancelled;
+  return switch ((change, cancelled)) {
+    (_, null) => EventRosterFate.nothing,
+    (EventChange.edited, false) => EventRosterFate.follows,
+    (EventChange.deleted, _) => EventRosterFate.cancelled,
+    (EventChange.restored, true) => EventRosterFate.movesOnto,
+    _ => EventRosterFate.nothing,
+  };
+}
+
+/// Whether the app may write [next] over [saved] (null: none yet), as
+/// firestore.rules let it, whoever arranges it: an event's title, days and
+/// group are the calendar's, set only when its roster is made; only the
+/// backend cancels one; an event's roster never turns into a service's day
+/// or back (testdata/event_rosters.json).
+bool appMayWriteRoster(Roster? saved, Roster next) {
+  if (saved == null) return !(next.forEvent?.cancelled ?? false);
+  if (saved.isEvent != next.isEvent) return false;
+  final (was, now) = (saved.forEvent, next.forEvent);
+  if (was == null || now == null) return true;
+  return !was.cancelled &&
+      !now.cancelled &&
+      was.title == now.title &&
+      saved.day == next.day &&
+      was.lastDay == now.lastDay &&
+      was.group == now.group;
+}
+
 /// The duties to offer when arranging an event: every duty the services'
 /// templates have, each once, in the services' order.
 List<String> eventDutySuggestions(List<Service> services) => {

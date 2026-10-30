@@ -451,6 +451,24 @@ describe('rosterEditing (testdata/church_rules.json)', () => {
   });
 });
 
+// App 能怎麼寫活動的服事表：和 App 共用 testdata/event_rosters.json 的 appWrites。
+describe('appWrites (testdata/event_rosters.json)', () => {
+  const rows = JSON.parse(readFileSync(new URL('../testdata/event_rosters.json', import.meta.url), 'utf8')).appWrites;
+  rows.forEach((r, i) => {
+    it(r.why, async () => {
+      const id = `aw${i}`;
+      const at = (d) => ({
+        ...d,
+        ...(d.kind === 'event' ? { eventId: id } : {}),
+        ...(d.cancelledAt ? { cancelledAt: new Date() } : {}),
+      });
+      if (r.saved) await seed(`churches/${A}/rosters/ev_${id}`, at(r.saved));
+      const write = setDoc(doc(as(OFFICE_A), `churches/${A}/rosters/ev_${id}`), at(r.next));
+      await (r.may ? assertSucceeds(write) : assertFails(write));
+    });
+  });
+});
+
 // 誰能讀同工名單：和 App 共用 testdata/church_rules.json 的 memberListReading。
 describe('memberListReading (testdata/church_rules.json)', () => {
   const rows = JSON.parse(readFileSync(new URL('../testdata/church_rules.json', import.meta.url), 'utf8')).memberListReading;

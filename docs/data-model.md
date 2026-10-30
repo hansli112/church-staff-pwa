@@ -76,6 +76,8 @@ App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預�
 
 服事表異動也一樣（`app/lib/domain/roster_news.dart` ↔ `functions/src/rosterNews.ts`，兩邊都跑 `testdata/roster_changes.json`）：服事表上的 `via` 說這次從哪裡寫的、要告訴誰。App 只寫 `app`（照常通知）、`plan`（安排服事，等「完成」）、`import`（匯入，只送外部通知），`firestore.rules` 和 `editLedDuties` 只收這三種；`calendar`、`restore`、`relink`、`timeZone` 只有後端寫（`functions/src/eventRosters.ts`）。等「完成」的那筆（`plannedPushes`）怎麼跟著後來的異動變，也在這份表裡。
 
+活動的服事表一生的規則（`app/lib/domain/event_roster.dart` ↔ `functions/src/eventRosters.ts` ↔ `firestore.rules`）寫在 `testdata/event_rosters.json`：活動改了、刪了、復原、在 Google 還在或不見了時，服事表跟著、取消、搬到復原的活動上，或重新開啟（`fates`，App 做的那幾種 MemoryBackend 也照做）；App 能怎麼寫它（`appWrites`：名稱、日期、屬於都是行事曆的，只有建立時寫；只有後端能取消；和一般服事表不能互換），規則測試也跑同一份。
+
 ## 角色與群組
 
 權限都從身分來（#82）。一般同工什麼都沒有；要管事的人有一個或幾個身分，每個身分照下表給權限：
