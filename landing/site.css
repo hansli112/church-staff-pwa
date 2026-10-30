@@ -73,7 +73,7 @@ p { margin: 0 0 16px; }
 .top-nav { display: flex; align-items: center; gap: 4px 16px; }
 .top-nav a:not(.top-link) { display: inline-flex; align-items: center; min-height: 44px; color: var(--text2); text-decoration: none; font-size: 0.9375rem; white-space: nowrap; }
 .top-nav a:not(.top-link):hover, .top-nav a[aria-current] { color: var(--text); }
-/* 手機上一行放不下：頂部只留品牌和「開啟網頁版」，教學、支持在頁尾。 */
+/* 手機上一行放不下：頂部只留品牌和「開啟網頁版」，功能、教學、支持在頁尾。 */
 @media (max-width: 479px) {
   .top .wrap { gap: 12px; }
   .top-nav a:not(.top-link) { display: none; }
@@ -137,6 +137,7 @@ p { margin: 0 0 16px; }
 .feature .icon svg { width: 24px; height: 24px; }
 .feature h3 { font-size: 1.1875rem; font-weight: 700; margin-bottom: 8px; }
 .feature p { margin: 0; color: var(--text2); }
+.more-link { margin: 24px 0 0; font-weight: 600; }
 .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; counter-reset: step; }
 @media (min-width: 720px) { .steps { grid-template-columns: repeat(3, 1fr); } }
 .steps li { counter-increment: step; display: grid; grid-template-columns: 36px 1fr; gap: 12px; align-items: start; }
@@ -214,6 +215,30 @@ button.btn:disabled { opacity: 0.6; cursor: default; filter: none; }
 .prose img { max-width: 100%; height: auto; border-radius: 14px; }
 .prose code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.875em; padding: 1px 6px; border-radius: 6px; background: var(--fill); }
 .prose blockquote { margin: 0 0 16px; padding-left: 16px; border-left: 4px solid var(--line); color: var(--text2); }
+
+/* App 的短片（media:<clip>）：手機畫面，不畫手機外框 */
+.clip { margin: 24px auto; width: min(100%, 280px); }
+.clip video { display: block; width: 100%; height: auto; aspect-ratio: 393 / 852; border-radius: 28px; background: var(--app-bg); box-shadow: var(--shadow); }
+
+/* 功能頁：一個身分一區，每項功能一段說明配一段短片 */
+.features-intro { padding: 40px 0 8px; }
+.features-intro h1 { font-size: clamp(2rem, 6vw, 2.75rem); font-weight: 800; margin-bottom: 12px; }
+.features-intro .lead { font-size: 1.1875rem; color: var(--text2); max-width: 34em; }
+.role { padding: 48px 0; border-top: 1px solid var(--line); }
+.role > .wrap > h2 { font-size: clamp(1.625rem, 4vw, 2rem); font-weight: 800; margin-bottom: 8px; }
+.role > .wrap > .sub { color: var(--text2); margin-bottom: 24px; max-width: 34em; }
+.items { display: grid; gap: 40px; }
+@media (min-width: 720px) { .items { grid-template-columns: repeat(2, 1fr); gap: 48px 32px; } }
+@media (min-width: 1000px) { .items.three { grid-template-columns: repeat(3, 1fr); } }
+.item h3 { font-size: 1.1875rem; font-weight: 700; margin-bottom: 8px; }
+.item p { color: var(--text2); margin: 0; }
+.item .clip { margin: 20px auto 0; }
+.item .more { margin-top: 8px; }
+.also { margin: 32px 0 0; padding: 20px 24px; border-radius: 18px; background: var(--bg2); }
+.items .also { margin: 0; align-self: start; }
+.also h3 { font-size: 1.0625rem; font-weight: 700; margin-bottom: 8px; }
+.also ul { margin: 0; padding-left: 20px; color: var(--text2); }
+.also li { margin-bottom: 4px; }
 
 /* 頁尾 */
 .foot { padding: 32px 0 48px; border-top: 1px solid var(--line); color: var(--text2); font-size: 0.9375rem; }

@@ -83,6 +83,10 @@
         "destination": "/support.html"
       },
       {
+        "source": "/features",
+        "destination": "/features.html"
+      },
+      {
         "source": "/zh-Hans/privacy",
         "destination": "/zh-Hans/privacy.html"
       },
@@ -97,6 +101,10 @@
       {
         "source": "/zh-Hans/support",
         "destination": "/zh-Hans/support.html"
+      },
+      {
+        "source": "/zh-Hans/features",
+        "destination": "/zh-Hans/features.html"
       },
       {
         "source": "/en/privacy",
@@ -115,6 +123,10 @@
         "destination": "/en/support.html"
       },
       {
+        "source": "/en/features",
+        "destination": "/en/features.html"
+      },
+      {
         "source": "/ja/privacy",
         "destination": "/ja/privacy.html"
       },
@@ -131,6 +143,10 @@
         "destination": "/ja/support.html"
       },
       {
+        "source": "/ja/features",
+        "destination": "/ja/features.html"
+      },
+      {
         "source": "/ko/privacy",
         "destination": "/ko/privacy.html"
       },
@@ -145,6 +161,10 @@
       {
         "source": "/ko/support",
         "destination": "/ko/support.html"
+      },
+      {
+        "source": "/ko/features",
+        "destination": "/ko/features.html"
       },
       {
         "source": "/support/pay",
@@ -172,6 +192,15 @@
           {
             "key": "Cache-Control",
             "value": "no-cache"
+          }
+        ]
+      },
+      {
+        "regex": "^/media/.+\\.(?:mp4|jpg)$",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=86400"
           }
         ]
       },

@@ -21,13 +21,19 @@
 //   description: 一兩句摘要，列表和搜尋結果會顯示
 //   ---
 //
+// A clip of the app (tools/e2e/record.mjs, landing/media/<language>/) goes
+// in a page or a post as an image whose address is media:<clip>:
+//   ![排好幾週，再按完成](media:plan)
+// It plays, muted and over and over, while it is on screen; for a visitor
+// who asks for less motion it waits, with the player's buttons, to be played.
+//
 // Languages: Traditional Chinese is landing/ itself, at the site's root;
 // each other language is landing/<tag>/, the same files translated, at
 // /<tag>/ (functions/src/languages.ts's sitePath). Every page says where its
 // other languages are, and sends a visitor to the one their browser asks
 // for, as the app picks its language, until they pick one at the foot of
 // a page.
-import { copyFileSync, mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -52,6 +58,7 @@ export const LANGUAGES = {
     ogLocale: 'zh_TW',
     appName: '馬大別忙',
     nav: '網站',
+    features: '功能',
     blog: '教學',
     support: '支持',
     openApp: '開啟網頁版',
@@ -76,6 +83,7 @@ export const LANGUAGES = {
     ogLocale: 'zh_CN',
     appName: '马大别忙',
     nav: '网站',
+    features: '功能',
     blog: '教学',
     support: '支持',
     openApp: '打开网页版',
@@ -100,6 +108,7 @@ export const LANGUAGES = {
     ogLocale: 'en_US',
     appName: 'Martha, sit',
     nav: 'Site',
+    features: 'Features',
     blog: 'Guides',
     support: 'Support',
     openApp: 'Open web app',
@@ -127,6 +136,7 @@ export const LANGUAGES = {
     ogLocale: 'ja_JP',
     appName: 'マルタ、ひと休み',
     nav: 'サイト',
+    features: '機能',
     blog: '使い方',
     support: '応援',
     openApp: 'Web版を開く',
@@ -154,6 +164,7 @@ export const LANGUAGES = {
     ogLocale: 'ko_KR',
     appName: '마르다의 쉼표',
     nav: '사이트',
+    features: '기능',
     blog: '사용법',
     support: '후원',
     openApp: '웹 버전 열기',
@@ -236,6 +247,33 @@ function chooser(language, pages) {
 `;
 }
 
+/** Plays a page's clips while they are on screen; with less motion asked for, only when played. */
+const CLIPS = `<script>
+(function () {
+  var clips = document.querySelectorAll('video.clip');
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) {
+    for (var i = 0; i < clips.length; i++) clips[i].controls = true;
+    return;
+  }
+  var seen = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) e.target.play().catch(function () {});
+      else e.target.pause();
+    });
+  }, { threshold: 0.5 });
+  for (var j = 0; j < clips.length; j++) seen.observe(clips[j]);
+})();
+</script>
+`;
+
+/** [html]'s media:<clip> images as [language]'s clips (a post's on a paragraph of their own). */
+function clips(html, language) {
+  const video = (clip, alt) =>
+    `<figure class="clip"><video class="clip" src="/media/${language}/${clip}.mp4" poster="/media/${language}/${clip}.jpg" width="393" height="852" muted loop playsinline preload="none" aria-label="${alt}"></video></figure>`;
+  const out = html.replace(/(?:<p>)?<img src="media:([A-Za-z]+)" alt="([^"]*)">(?:<\/p>)?/g, (_, clip, alt) => video(clip, alt));
+  return out === html ? html : out.replace('</body>', `${CLIPS}</body>`);
+}
+
 /**
  * The iOS and Android apps open the privacy policy and the terms with
  * from=app (app/lib/features/me/me_screen.dart). The stores forbid them to
@@ -263,6 +301,7 @@ function header(language, page) {
   <div class="wrap">
     <a class="brand" href="${at('/')}"><img src="/icons/Icon-192.png" alt="" width="28" height="28">${w.appName}</a>
     <nav class="top-nav" aria-label="${w.nav}">
+      <a href="${at('/features')}"${page === '/features' ? ' aria-current="page"' : ''}>${w.features}</a>
       <a href="${at('/blog/')}"${page.startsWith('/blog/') ? ' aria-current="page"' : ''}>${w.blog}</a>
       <a href="${at('/support')}"${page === '/support' ? ' aria-current="page"' : ''}>${w.support}</a>
       <a class="top-link" href="/home">${w.openApp}</a>
@@ -290,6 +329,7 @@ function footer(language, page) {
   <div class="wrap">
     <nav aria-label="${w.foot}">
       <a href="${at('/')}"${current('/')}>${w.home}</a>
+      <a href="${at('/features')}"${current('/features')}>${w.features}</a>
       <a href="${at('/blog/')}"${current('/blog/')}>${w.posts}</a>
       <a href="${at('/support')}"${current('/support')}>${w.supportUs}</a>
       <a href="${at('/privacy')}">${w.privacy}</a>
@@ -349,7 +389,7 @@ if (${JSON.stringify(firebaseHosts)}.indexOf(location.hostname) >= 0) {
   function fill(html, language, page) {
     const pages = Object.fromEntries(TAGS.map((tag) => [tag, sitePath(tag, page)]));
     return withoutComments(
-      paymentParts(html)
+      clips(paymentParts(html), language)
         .replace('<head>\n', `<head>\n${toOrigin}${chooser(language, pages)}${FROM_APP}`)
         .replace('</head>', `${shared(language, page)}${alternates(page)}</head>`)
         .replace('<!-- site-header -->', header(language, page))
@@ -400,6 +440,7 @@ ${main}
   const listed = [];
   mkdirSync(out, { recursive: true });
   for (const file of ['site.css', OG_IMAGE]) copyFileSync(join(landing, file), join(out, file));
+  if (existsSync(join(landing, 'media'))) cpSync(join(landing, 'media'), join(out, 'media'), { recursive: true });
 
   for (const language of TAGS) {
     const w = LANGUAGES[language];
@@ -416,7 +457,7 @@ ${main}
     // are opened from the app and the stores, so they keep their own header
     // with no way to the support page (app stores forbid steering to
     // outside payment).
-    for (const [file, page] of [['index.html', '/'], ['support.html', '/support'], ['privacy.html', '/privacy'], ['terms.html', '/terms'], ['delete-account.html', '/delete-account']]) {
+    for (const [file, page] of [['index.html', '/'], ['features.html', '/features'], ['support.html', '/support'], ['privacy.html', '/privacy'], ['terms.html', '/terms'], ['delete-account.html', '/delete-account']]) {
       write(file, page, fill(readFileSync(join(from, file), 'utf8'), language, page));
     }
 

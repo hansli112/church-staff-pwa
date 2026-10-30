@@ -201,7 +201,9 @@ const CLIPS = {
     route: '/me/groups/small/sg2',
     async play(s) {
       await s.wait(1200);
-      for (const person of [2, 5]) {
+      for (const [i, person] of [2, 5].entries()) {
+        // Each one added pushes 關閉小組 further down, under the tab bar.
+        if (i > 0) await s.scroll(300);
         // 加入同工 is not in the web build's accessibility tree; it is the
         // row above 關閉小組's section.
         await s.tap(s.node(s.t('deleteSmallGroup')), { dy: -68 });
@@ -292,6 +294,13 @@ for (const language of languages) {
     await context.addInitScript(FINGER);
     const page = await context.newPage();
     page.on('pageerror', (e) => console.error(`${language}/${name} pageerror: ${e.message}`));
+    // Played once first, unrecorded: the font files for what it shows
+    // (Google Fonts, cached) are fetched then, so no character shows as a
+    // box while the recording waits for its file. The demo starts afresh
+    // on the reload.
+    await page.goto(`${base}${clip.route}`);
+    await page.waitForTimeout(4000);
+    await clip.play(session(page, words), { duties: DUTIES[language] }).catch(() => {});
     await page.goto(`${base}${clip.route}`);
     await page.waitForTimeout(4000);
     const frames = await screencast(page, path.join(tmp, `${language}-${name}`));

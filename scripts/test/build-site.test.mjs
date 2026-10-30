@@ -271,3 +271,50 @@ describe('a visitor goes to their language', () => {
     assert.equal(visit('/support', { languages: ['en-US'], userAgent: 'Mozilla/5.0 (compatible; Googlebot/2.1)' }).sent, null);
   });
 });
+
+describe("what the guides and the features page quote is what the app says, so a renamed button shows which page to change", () => {
+  /** The languages that quote what the app says (English puts it in bold, as it does headings), how, and the app's words (app/lib/l10n). */
+  const ARBS = {
+    'zh-Hant': ['app_zh.arb', /「([^」]+)」/g],
+    'zh-Hans': ['app_zh_Hans.arb', /「([^」]+)」/g],
+    ja: ['app_ja.arb', /「([^」]+)」/g],
+    ko: ['app_ko.arb', /‘([^’]+)’/g],
+  };
+  /**
+   * A string as a pattern: what it fills in ({name}, a plural) is anything.
+   * Null when it is mostly filled in ({services}的{duties}), which would
+   * take almost any words.
+   */
+  const pattern = (s) => {
+    let t = s;
+    while (/\{[^{}]*\}/.test(t)) t = t.replace(/\{[^{}]*\}/g, '\u0000');
+    if (t.includes('\u0000') && (t.match(/[\p{L}\p{N}]/gu) ?? []).length < 2) return null;
+    return new RegExp(`^${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replaceAll('\u0000', '.+')}$`);
+  };
+  for (const [tag, [arb, quoted]] of Object.entries(ARBS)) {
+    test(tag, () => {
+      const strings = Object.entries(JSON.parse(read(`app/lib/l10n/${arb}`)))
+        .filter(([key, value]) => !key.startsWith('@') && typeof value === 'string')
+        .map(([, value]) => value);
+      // Its strings, and what they quote: the phone's own buttons the app names (「加入主畫面」).
+      const said = [...strings.map(pattern), ...strings.flatMap((s) => [...s.matchAll(quoted)].map((m) => pattern(m[1])))].filter(Boolean);
+      const dir = tag === 'zh-Hant' ? 'landing' : `landing/${tag}`;
+      const files = ['features.html', ...readdirSync(join(root, dir, 'blog')).map((f) => `blog/${f}`)];
+      for (const file of files) {
+        for (const [quote, words] of read(`${dir}/${file}`).matchAll(quoted)) {
+          assert.ok(said.some((p) => p.test(words)), `${dir}/${file}: ${quote} is not in ${arb}`);
+        }
+      }
+    });
+  }
+});
+
+test("every clip a page shows is in landing/media, in the page's language", () => {
+  for (const path of listed) {
+    for (const [, src] of built(path).matchAll(/<video [^>]*src="([^"]+)"/g)) {
+      assert.ok(existsSync(join(out, src)), `${path}: ${src}`);
+      const tag = TAGS.find((t) => path.startsWith(`/${t}/`)) ?? 'zh-Hant';
+      assert.ok(src.startsWith(`/media/${tag}/`), `${path}: ${src}`);
+    }
+  }
+});
