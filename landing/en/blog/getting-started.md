@@ -31,7 +31,7 @@ Back in **Get started**, tap **Invite team members**.
 - **Joins these services:** Check which services new team members belong to, and they’ll see those services’ schedules. You can leave these unchecked and set them later in **Team members**.
 - **Valid for:** Links are **Valid for 7 days** unless you choose **Valid for 30 days**.
 
-Tap **Create invite link** to open the share menu, so you can send it straight to your team’s group chat. If your browser doesn’t have a share menu, the link is copied for you. Just paste it into the group chat.
+Tap **Create invite link** to open the share menu, so you can send it straight to your team’s LINE group. If your browser doesn’t have a share menu, the link is copied for you. Just paste it into the LINE group.
 
 ![Tap Create invite link, and the link is copied](media:invite)
 

@@ -4,7 +4,7 @@ date: 2026-10-31
 description: How small group leaders add members, set which day the group meets, and fill in how many came after each meeting.
 ---
 
-Churches like to know how many came to each small group meeting. Often that meant the leader texting the group chat and someone copying it into a spreadsheet. With Martha, sit, small group leaders fill it in right in the app, and if it’s not filled in by the evening of the meeting, they get a reminder.
+Churches like to know how many came to each small group meeting. Often that meant the leader sending it on LINE and someone copying it into a spreadsheet. With Martha, sit, small group leaders fill it in right in the app, and if it’s not filled in by the evening of the meeting, they get a reminder.
 
 ## An admin sets things up first
 

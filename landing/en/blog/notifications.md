@@ -22,7 +22,7 @@ A browser tab on a phone can’t get notifications, or gets closed too easily. S
 2. Open Martha, sit from the Home Screen icon. On iPhone, you’ll need to sign in again.
 3. Tap **Turn on notifications** on Home, and tap **Allow** when asked.
 
-If you opened the link inside a chat app such as LINE, you’re in that app’s built-in browser, which can’t add to the Home Screen. Follow the on-screen steps to copy the link, then open it in Safari or Chrome instead.
+If you opened the link inside LINE, you’re in LINE’s built-in browser, which can’t add to the Home Screen. Follow the on-screen steps to copy the link, then open it in Safari or Chrome instead.
 
 ## Web app on a computer
 
