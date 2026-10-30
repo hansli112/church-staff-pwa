@@ -1025,7 +1025,7 @@ class MemoryChurchData implements ChurchData {
     _requireAttendanceWriter(key);
     if (value != null &&
         !value.none &&
-        (value.count! < 0 || value.count! > 100000 || !withinTextLimit(value.note, TextLimits.attendanceNote))) {
+        (value.count! < 0 || value.count! > Limits.attendanceCount || !withinTextLimit(value.note, TextLimits.attendanceNote))) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
     await _b.write(() {
@@ -1041,7 +1041,7 @@ class MemoryChurchData implements ChurchData {
   @override
   Future<void> setAttendancePauses(String key, List<AttendancePause> pauses) async {
     _requireAttendanceWriter(key);
-    if (pauses.length > 50) throw const CloudException(CloudErrorCode.permissionDenied);
+    if (pauses.length > Limits.attendancePauses) throw const CloudException(CloudErrorCode.permissionDenied);
     await _b.write(() {
       final all = _b.attendance.putIfAbsent(churchId, () => {});
       all[key] = AttendanceRecord(pauses: pauses, days: (all[key] ?? const AttendanceRecord()).days);

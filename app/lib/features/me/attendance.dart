@@ -150,7 +150,7 @@ class _FillSheetState extends State<_FillSheet> {
   }
 
   int? get _value => switch (int.tryParse(_count.text.trim())) {
-    final n? when n >= 0 && n <= 100000 => n,
+    final n? when n >= 0 && n <= Limits.attendanceCount => n,
     _ => null,
   };
 

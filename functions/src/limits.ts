@@ -39,6 +39,10 @@ export const LIMITS = {
   photosPerMonth: 30,
   /** The most a photo read into a roster can be, in bytes (2 MB). */
   photoBytes: 2097152,
+  /** The most a meeting's 人數 can be (回報人數, #85). */
+  attendanceCount: 100000,
+  /** A group's pauses, kept once over (回報人數, #85). */
+  attendancePauses: 50,
 } as const;
 
 /**

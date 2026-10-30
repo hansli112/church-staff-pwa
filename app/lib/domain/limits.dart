@@ -62,6 +62,12 @@ abstract final class Limits {
 
   /// The most a photo read into a roster can be, in bytes (2 MB).
   static const photoBytes = 2097152;
+
+  /// The most a meeting's 人數 can be (回報人數, #85).
+  static const attendanceCount = 100000;
+
+  /// A group's pauses, kept once over (回報人數, #85).
+  static const attendancePauses = 50;
 }
 
 /// firestore.rules counts UTF-16 code units, not characters, so for a

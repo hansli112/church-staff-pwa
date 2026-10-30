@@ -39,7 +39,7 @@ const RULES_FIELDS: Record<string, { text?: keyof typeof TEXT_LIMITS; other?: ke
   // attendance/{key}/days/{day}.note (#85).
   "request.resource.data.get('note', '')": { text: 'attendanceNote' },
   // attendance/{key}.pauses: a group's pauses, kept once over (#85).
-  "request.resource.data.get('pauses', [])": { rulesOnly: 50 },
+  "request.resource.data.get('pauses', [])": { other: 'attendancePauses' },
   // Where an event roster's event is, copied from Google: abuse guards only.
   "roster.get('calendarId', '')": { rulesOnly: 1024 },
   "roster.get('recurringEventId', '')": { rulesOnly: 1024 },
@@ -76,6 +76,10 @@ describe('limits', () => {
 
   test('limits.dart has the other limits of limits.ts', () => {
     assert.deepEqual(dartClass('Limits'), { ...LIMITS });
+  });
+
+  test("firestore.rules caps a meeting's 人數 at the limit", () => {
+    assert.ok(rules.includes(`request.resource.data.count <= ${LIMITS.attendanceCount}`));
   });
 
   test('limits.dart has the same rules factor', () => {
