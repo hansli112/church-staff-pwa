@@ -289,7 +289,7 @@ Chrome 小幅改善；桌面 WebKit 差距小且教會資訊冷開反而較慢�
 
 **2026-10-30：安排服事只建看得到的格子**
 
-改成 `two_dimensional_scrollables` 的 `TableView`：日期欄和項目名稱列固定，其餘兩個方向都只建畫面上的格子（`cacheExtent: 0`，不預先建畫面外的）。月份標題放在日期欄那一格、不裁切，畫過右邊同列的空格；固定的日期欄和名稱列不透明，蓋住捲到底下的格子。「顯示前面的月份」移到表格上方；「顯示更多」拿掉，捲到離底不到一個畫面高時自動再接三個月，最遠到明年同一個月。
+改成 `two_dimensional_scrollables` 的 `TableView`：日期欄和項目名稱列固定，其餘兩個方向都只建畫面上的格子，外加一列（讓讀螢幕往下一格時還找得到）。月份標題放在日期欄那一格、不裁切，畫過右邊同列的空格；固定的日期欄和名稱列不透明，蓋住捲到底下的格子。「顯示前面的月份」移到表格上方，按了回到表格最上面；「顯示更多」拿掉，捲到離底不到一個畫面高時自動再接三個月（一次三個月，排好再看要不要再接），最遠到明年同一個月。
 
 一樣 4 倍 CPU 節流、393×852、示範資料，三次取中位數，改前是上一則的「改後」：
 
@@ -297,11 +297,11 @@ Chrome 小幅改善；桌面 WebKit 差距小且教會資訊冷開反而較慢�
 | --- | --- | --- |
 | 第一次打開，最長一格 | 531ms | 114ms |
 | 再開一次，最長一格 | 76–97ms | 44–52ms |
-| 再接幾個月（改前按「顯示更多」），最長一格 | 91–103ms | 57ms（一次接到底） |
+| 再接幾個月（改前按「顯示更多」），最長一格 | 91–103ms | 57ms |
 | 上下捲，最長一格 | 4ms | 10–12ms（9 個月時一格 18ms） |
 | 拿著格子拖曳，最長一格 | 4–5ms | 4–10ms |
 
-代價是捲動：以前全部先建好，捲動只是移動；現在捲進來的列才建，每格 build＋layout 多了，節流下仍大多在 16ms 內。`cacheExtent` 用預設（畫面外多建 250px）時，再開一次只到約 70–90ms，所以設 0。拿著格子讓表格自動捲時，新位置要等下一次排版才算得出來，所以「放下會落在哪格」改在 frame 結束後重算（`TableView` 的格子位置在 layout 時才更新，不像 `SingleChildScrollView` 是捲動當下就換）。
+代價是捲動：以前全部先建好，捲動只是移動；現在捲進來的列才建，每格 build＋layout 多了，節流下仍大多在 16ms 內。量的是畫面外不多建（`cacheExtent: 0`）的版本；用預設的畫面外多建 250px 時，再開一次約 70–90ms。上線版多建一列，給讀螢幕用，這版沒有另外量。拿著格子讓表格自動捲時，新位置要等下一次排版才算得出來，所以「放下會落在哪格」改在 frame 結束後重算（`TableView` 的格子位置在 layout 時才更新，不像 `SingleChildScrollView` 是捲動當下就換）。
 
 參考官方 guideline：[Flutter 效能](https://docs.flutter.dev/perf/best-practices)、[Web profiling](https://docs.flutter.dev/perf/web-performance)、[Firestore](https://firebase.google.com/docs/firestore/best-practices)、[Functions](https://firebase.google.com/docs/functions/tips)、[resource hints](https://web.dev/learn/performance/resource-hints)、[Safari Web Inspector](https://developer.apple.com/safari/tools/)。
 

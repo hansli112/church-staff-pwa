@@ -82,8 +82,16 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
   /// The table's sideways scroll, for the fade at its edge.
   final _cells = ScrollController();
 
+  /// The table's scroll down the days, back to the top when months are
+  /// shown before.
+  final _rows = ScrollController();
+
   /// How many more months may join on.
   int _room = 0;
+
+  /// Months have joined on since the last build: the table's end is
+  /// where it was till it is laid out again.
+  bool _joined = false;
 
   /// What of the table stays put as the rest scrolls under it: the
   /// dates' width and the duties' names' height.
@@ -122,6 +130,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
       ..dispose();
     _flashTimer?.cancel();
     _cells.dispose();
+    _rows.dispose();
     _looks.dispose();
     _fading.dispose();
     super.dispose();
@@ -332,6 +341,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
       }();
       final months = planMonths(service: service, saved: saved, today: today, month: from, months: _months);
       _room = math.max(0, _monthsAhead - _monthsBetween(thisMonth, from) - _months);
+      _joined = false;
       duties = planDuties(service, months.expand((m) => m.days), arranges);
       body = _table(context, months, duties, earlier: from.isAfter(thisMonth) ? thisMonth : null);
     }
@@ -421,6 +431,8 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
       for (final m in months) ...[m.month, ...m.days],
     ];
     final named = duties.length > 1;
+    // The duties' names' row, over the months.
+    final head = named ? 1 : 0;
     _namesHeight = named ? scale.scale(13) * 1.3 * 2 + Space.s * 2 : 0;
     final dateWidth = _datesWidth = _DateCell.widthFor(context, _shown);
 
@@ -446,7 +458,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
                 ),
         );
       }
-      switch (rows[at.row - (named ? 1 : 0)]) {
+      switch (rows[at.row - head]) {
         case final Day month:
           if (role != null) return const SizedBox.shrink();
           // Across the row from the dates, over the duties' empty cells.
@@ -522,19 +534,21 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
           child: ClipRect(
             child: TableView.builder(
               key: PageStorageKey('plan-$_type'),
+              verticalDetails: ScrollableDetails.vertical(controller: _rows),
               horizontalDetails: ScrollableDetails.horizontal(controller: _cells),
               clipBehavior: Clip.none,
-              // Built as they scroll in, none ahead: opening builds only
-              // what shows (measured: half the time to open).
+              // Built as they scroll in, a row ahead: opening builds little
+              // more than shows (the default 250 takes half again as long
+              // to open), and a screen reader still reaches the next row.
               // scrollCacheExtent, which it points to, is not in 0.5.5 yet.
               // ignore: deprecated_member_use
-              cacheExtent: 0,
-              pinnedRowCount: named ? 1 : 0,
+              cacheExtent: rowHeight,
+              pinnedRowCount: head,
               pinnedColumnCount: 1,
-              rowCount: rows.length + (named ? 1 : 0),
+              rowCount: rows.length + head,
               columnCount: duties.length + 1,
               rowBuilder: (i) {
-                final row = i - (named ? 1 : 0);
+                final row = i - head;
                 return TableSpan(
                   extent: FixedTableSpanExtent(switch (row) {
                     < 0 => _namesHeight,
@@ -595,10 +609,14 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
             child: Align(
               alignment: AlignmentDirectional.centerStart,
               child: TextButton.icon(
-                onPressed: () => setState(() {
-                  _months += _monthsBetween(earlier, _from!);
-                  _from = earlier;
-                }),
+                onPressed: () {
+                  setState(() {
+                    _months += _monthsBetween(earlier, _from!);
+                    _from = earlier;
+                  });
+                  // Where they now start, wherever the table was.
+                  if (_rows.hasClients) _rows.jumpTo(0);
+                },
                 icon: const Icon(Symbols.keyboard_arrow_up_rounded),
                 label: Text(l10n.planShowEarlier),
               ),
@@ -616,11 +634,10 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
       ScrollUpdateNotification(:final metrics) || ScrollMetricsNotification(:final metrics) => metrics,
       _ => null,
     };
-    if (metrics == null || metrics.axis != Axis.vertical || _room == 0) return false;
+    if (metrics == null || metrics.axis != Axis.vertical || _room == 0 || _joined) return false;
     if (metrics.extentAfter < metrics.viewportDimension) {
-      final more = math.min(_monthsAtATime, _room);
-      _room -= more;
-      setState(() => _months += more);
+      _joined = true;
+      setState(() => _months += math.min(_monthsAtATime, _room));
     }
     return false;
   }

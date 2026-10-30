@@ -276,9 +276,11 @@ void main() {
       lessThanOrEqualTo(tester.getRect(find.text('司會')).top),
       reason: 'over the duties’ names, not scrolled away with the table',
     );
+    await tester.drag(rows, const Offset(0, -1500));
+    await settle(tester);
     await tester.tap(find.text('顯示前面的月份'));
     await settle(tester);
-    expect(find.text('2026年10月'), findsOneWidget);
+    expect(find.text('2026年10月'), findsOneWidget, reason: 'shown where they start, however far down it was');
     expect(find.text('顯示前面的月份'), findsNothing);
   });
 
