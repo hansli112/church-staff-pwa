@@ -80,7 +80,7 @@ void main() {
     expect(find.text('新增活動'), findsOneWidget);
     expect(find.text('刪除活動'), findsNothing);
     expect(find.descendant(of: find.byType(BottomSheet).last, matching: find.text('服事表')), findsNothing);
-    expect(find.text('安排服事'), findsNothing);
+    expect(find.text('安排服事'), findsOneWidget, reason: 'a new event, whose roster is its own');
     expect(
       (await b.church('grace').calendarEvents('2026-10')).length,
       1,

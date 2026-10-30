@@ -1217,6 +1217,23 @@ class _SearchFieldState extends State<SearchField> {
   }
 }
 
+/// The red under a row being swiped away, saying 刪除 at its end: red alone
+/// does not tell what letting go does.
+class SwipeDeleteBackground extends StatelessWidget {
+  const SwipeDeleteBackground({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    return Container(
+      color: c.destructive,
+      alignment: AlignmentDirectional.centerEnd,
+      padding: const EdgeInsets.symmetric(horizontal: Space.l),
+      child: Text(L10n.of(context).delete, style: AppText.body.copyWith(color: c.onAccent)),
+    );
+  }
+}
+
 /// A small colored label: special events, "my service" badges.
 class Tag extends StatelessWidget {
   const Tag({

@@ -786,5 +786,27 @@ void main() {
       expect(find.text('復原'), findsNothing);
       expect(savedDay(b, 4).events, events);
     });
+
+    testWidgets('tapping the day\'s tags opens 特別活動, as the menu does', (tester) async {
+      final b = seededChurch();
+      final day = savedDay(b, 4);
+      b.rosters['grace']![day.id] = day.copyWith(events: const [EventTag(name: '聖餐', color: 0)]);
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-04');
+      await tapText(tester, '聖餐');
+      await tapText(tester, '聖餐');
+      await tapText(tester, '完成');
+      expect(savedDay(b, 4).events, isEmpty);
+    });
+
+    testWidgets('staff only see the tags', (tester) async {
+      final b = seededChurch(as: staffHao);
+      final day = savedDay(b, 4);
+      b.rosters['grace']![day.id] = day.copyWith(events: const [EventTag(name: '聖餐', color: 0)]);
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-04');
+      await tapText(tester, '聖餐');
+      expect(find.text('完成'), findsNothing);
+    });
   });
 }

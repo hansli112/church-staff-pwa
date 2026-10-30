@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/design/components.dart';
-import '../../core/design/tokens.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/church_writes.dart';
@@ -118,7 +117,6 @@ class ServiceEditorScreen extends ConsumerWidget {
         body: me.hasValue ? EmptyState(message: l10n.servicesAdminOnly) : null,
       );
     }
-    final c = AppColors.of(context);
     final settings = ref.watch(servicesProvider).value;
     final service = settings?.byId(serviceId);
     if (settings == null || service == null) return Scaffold(appBar: AppBar());
@@ -401,7 +399,7 @@ class ServiceEditorScreen extends ConsumerWidget {
             row: (d, handle) => Dismissible(
               key: ValueKey('duty/$d'),
               direction: DismissDirection.endToStart,
-              background: Container(color: c.destructive),
+              background: const SwipeDeleteBackground(),
               confirmDismiss: (_) async {
                 await removeDuty(d);
                 return false; // The successful server change removes the row.
@@ -444,7 +442,7 @@ class ServiceEditorScreen extends ConsumerWidget {
             row: (e, handle) => Dismissible(
               key: ValueKey('event/${e.name}'),
               direction: DismissDirection.endToStart,
-              background: Container(color: c.destructive),
+              background: const SwipeDeleteBackground(),
               confirmDismiss: (_) async {
                 await removeEvent(e);
                 return false;

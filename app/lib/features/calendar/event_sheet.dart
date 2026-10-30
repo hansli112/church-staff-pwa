@@ -69,13 +69,10 @@ Future<void> showEventDetail(BuildContext context, CalendarEvent e) {
                     const SizedBox(height: Space.xs),
                     Text(e.location!, style: AppText.body.copyWith(color: AppColors.of(context).secondaryLabel)),
                   ],
-                  if (e.description != null && e.description!.isNotEmpty) ...[
-                    const SizedBox(height: Space.m),
-                    Text(e.description!, style: AppText.callout),
-                  ],
                 ],
               ),
             ),
+            // Above the description, which may run long.
             EventRosterRow(
               event: e,
               onOpen: () {
@@ -83,6 +80,11 @@ Future<void> showEventDetail(BuildContext context, CalendarEvent e) {
                 openEventRoster(screen, e);
               },
             ),
+            if (e.description != null && e.description!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(Space.l, 0, Space.l, Space.l),
+                child: Text(e.description!, style: AppText.callout),
+              ),
           ],
         ),
       ),
@@ -145,11 +147,12 @@ Future<void> editEvent(
   if (result == null || !context.mounted) return;
   final calendar = ref.read(calendarActionsProvider);
   try {
-    if (result.openRoster && event != null) {
-      // Saved first: going to the roster keeps what was changed here.
+    if (result.openRoster) {
+      // Saved first: going to the roster keeps what was changed here, and
+      // a new event needs its id.
       final edited = result.event;
-      if (edited != null) await calendar.save(edited, previous: event);
-      if (context.mounted) openEventRoster(context, edited ?? event);
+      final opened = edited == null ? event : await calendar.save(edited, previous: previous);
+      if (opened != null && context.mounted) openEventRoster(context, opened);
     } else if (result.delete && event != null) {
       final undo = await calendar.delete(event);
       if (!context.mounted) return;
@@ -358,7 +361,7 @@ class _EventEditorState extends State<_EventEditor> {
   );
 
   void _save() {
-    if (_title.text.trim().isEmpty || !_valid) return;
+    if (!_savable) return;
     Navigator.pop(context, _EditResult(event: _edited));
   }
 
@@ -387,12 +390,13 @@ class _EventEditorState extends State<_EventEditor> {
         edited.group != e.group;
   }
 
+  /// Whether [_edited] can be saved.
+  bool get _savable => _title.text.trim().isNotEmpty && _valid;
+
   /// To the roster, with what was changed here unless it cannot be saved.
-  void _openRoster() {
-    final edited = _edited;
-    final ok = edited.title.isNotEmpty && _valid;
-    Navigator.pop(context, _EditResult(event: _changed && ok ? edited : null, openRoster: true));
-  }
+  /// A new event goes only once it can be: its roster needs it saved.
+  void _openRoster() =>
+      Navigator.pop(context, _EditResult(event: _changed && _savable ? _edited : null, openRoster: true));
 
   @override
   Widget build(BuildContext context) {
@@ -404,7 +408,7 @@ class _EventEditorState extends State<_EventEditor> {
           SheetBar(
             title: widget.event?.id == null ? l10n.calNewEvent : l10n.calEditEvent,
             actions: [
-              SecondaryButton(label: l10n.save, onPressed: _title.text.trim().isEmpty || !_valid ? null : _save),
+              SecondaryButton(label: l10n.save, onPressed: _savable ? _save : null),
             ],
           ),
           Expanded(
@@ -464,6 +468,12 @@ class _EventEditorState extends State<_EventEditor> {
                           ),
                     ],
                   ),
+                // Above the times, in sight as the editor opens: at the
+                // bottom it went unfound.
+                EventRosterRow(
+                  event: _edited,
+                  onOpen: widget.event?.id != null || _savable ? _openRoster : null,
+                ),
                 ListSection(
                   children: [
                     SwitchRow(
@@ -534,15 +544,14 @@ class _EventEditorState extends State<_EventEditor> {
                   ],
                 ),
                 if (!_allDay) const ChurchClockNotice(),
-                if (widget.event case final e? when e.id != null) EventRosterRow(event: e, onOpen: _openRoster),
                 if (widget.event?.id != null)
                   ListSection(
                     children: [
                       ListRow(
                         title: l10n.calDuplicate,
-                        onTap: _title.text.trim().isEmpty || !_valid
-                            ? null
-                            : () => Navigator.pop(context, _EditResult(event: _edited.anew, duplicate: true)),
+                        onTap: _savable
+                            ? () => Navigator.pop(context, _EditResult(event: _edited.anew, duplicate: true))
+                            : null,
                       ),
                       ListRow(
                         title: l10n.calDelete,

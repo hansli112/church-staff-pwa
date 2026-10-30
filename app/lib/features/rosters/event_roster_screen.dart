@@ -45,21 +45,21 @@ void openEventRoster(BuildContext context, CalendarEvent e) =>
     GoRouter.of(context).push('/rosters/event/${e.id}', extra: e);
 
 /// The 服事表 row on a calendar event: how many serve, for everyone; or
-/// 安排服事 for those who may arrange it while it has none. Nothing once
-/// the event is over: only rosters still to come are loaded. [onOpen]
-/// opens it, closing the sheet first.
+/// 安排服事 for those who may arrange it while it has none, a new event
+/// not yet saved too. Nothing once the event is over: only rosters still
+/// to come are loaded. [onOpen] opens it, closing the sheet first; null
+/// while it cannot.
 class EventRosterRow extends ConsumerWidget {
   const EventRosterRow({super.key, required this.event, required this.onOpen});
 
   final CalendarEvent event;
-  final VoidCallback onOpen;
+  final VoidCallback? onOpen;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
     final id = event.id;
-    if (id == null) return const SizedBox.shrink();
-    final roster = ref.watch(_eventRosterProvider(id));
+    final roster = id == null ? null : ref.watch(_eventRosterProvider(id));
     final people = {
       for (final d in roster?.duties ?? const <Duty>[]) ...d.people,
     };

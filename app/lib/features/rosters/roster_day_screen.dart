@@ -92,7 +92,12 @@ class RosterDayScreen extends ConsumerWidget {
               highlightUid: ref.watch(uidProvider),
             )
           else
-            EditableRoster(roster: roster, title: title, arranges: led),
+            EditableRoster(
+              roster: roster,
+              title: title,
+              arranges: led,
+              onEditEvents: whole ? () => _editEvents(context, ref, roster, service) : null,
+            ),
         ],
       ),
     );
@@ -167,6 +172,7 @@ class EditableRoster extends ConsumerWidget {
     required this.title,
     this.whenEmpty,
     this.arranges = const Arranges.all(),
+    this.onEditEvents,
   });
 
   final Roster roster;
@@ -179,10 +185,12 @@ class EditableRoster extends ConsumerWidget {
   /// Shown while it has no duties; by default a hint to add one.
   final Widget? whenEmpty;
 
+  /// Opens 特別活動 from the day's tags; null for who may not change them.
+  final VoidCallback? onEditEvents;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
-    final c = AppColors.of(context);
     final ready = _editingReady(ref, roster);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -193,13 +201,27 @@ class EditableRoster extends ConsumerWidget {
         ),
         if (roster.events.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.fromLTRB(Space.l, Space.s, Space.l, 0),
-            child: Wrap(
-              spacing: Space.xs,
-              runSpacing: Space.xs,
-              children: [
-                for (final e in roster.events) Tag.event(context, e.name, e.color),
-              ],
+            padding: const EdgeInsets.fromLTRB(Space.l - Space.s, Space.xs, Space.l - Space.s, 0),
+            // The tags open what they say, as 特別活動 in the menu does.
+            child: InkWell(
+              onTap: ready ? onEditEvents : null,
+              borderRadius: BorderRadius.circular(Radii.s),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: Space.minTap(Theme.of(context).platform)),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: Space.s, vertical: Space.xs),
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Wrap(
+                      spacing: Space.xs,
+                      runSpacing: Space.xs,
+                      children: [
+                        for (final e in roster.events) Tag.event(context, e.name, e.color),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ListSection(
@@ -208,15 +230,7 @@ class EditableRoster extends ConsumerWidget {
               Dismissible(
                 key: ValueKey('${roster.id}/${duty.role}'),
                 direction: ready && arranges.has(duty.role) ? DismissDirection.endToStart : DismissDirection.none,
-                background: Container(
-                  color: c.destructive,
-                  alignment: AlignmentDirectional.centerEnd,
-                  padding: const EdgeInsets.symmetric(horizontal: Space.l),
-                  child: Text(
-                    l10n.delete,
-                    style: AppText.body.copyWith(color: c.onAccent),
-                  ),
-                ),
+                background: const SwipeDeleteBackground(),
                 confirmDismiss: (_) async {
                   await runWithUndo(
                     context,

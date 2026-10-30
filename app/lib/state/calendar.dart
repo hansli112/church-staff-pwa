@@ -187,10 +187,11 @@ class CalendarActions {
 
   CalendarMonths? _months() => _ref.mounted ? _ref.read(_calendarMonthsProvider) : null;
 
-  /// Saves [event], new or changed from [previous].
-  Future<void> save(CalendarEvent event, {CalendarEvent? previous}) => withEditLock(_ref, () async {
+  /// Saves [event], new or changed from [previous], and returns it as the
+  /// server saved it: a new one with its id.
+  Future<CalendarEvent> save(CalendarEvent event, {CalendarEvent? previous}) => withEditLock(_ref, () async {
     Future<CalendarEvent> send() => _ref.churchData.calendarSave(event, previous: previous);
-    await (_months()?.write(event, previous: previous, send: send, now: _months) ?? send());
+    return (await (_months()?.write(event, previous: previous, send: send, now: _months) ?? send()))!;
   });
 
   /// Deletes [event], which cancels its roster. The returned undo creates it

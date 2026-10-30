@@ -210,4 +210,42 @@ void main() {
     expect(saved.forEvent!.calendarId, 'cal-grace');
     expect(saved.forEvent!.recurringEventId, 'pray');
   });
+
+  testWidgets('安排服事 sits above the times in the editor, in sight as it opens', (tester) async {
+    await pumpApp(tester, church());
+    await go(tester, '/calendar');
+    await tapText(tester, '聖誕晚會');
+    expect(find.text('編輯活動'), findsOneWidget);
+    expect(tester.getTopLeft(find.text('安排服事')).dy, lessThan(tester.getTopLeft(find.text('開始')).dy));
+  });
+
+  testWidgets('a new event is arranged from 新增活動 too: once named, it is saved and its roster opens', (tester) async {
+    final b = church();
+    await pumpApp(tester, b);
+    await go(tester, '/calendar');
+    await tester.tap(find.byTooltip('新增活動'));
+    await settle(tester);
+    await tapText(tester, '安排服事');
+    expect(find.text('新增活動'), findsOneWidget, reason: 'nothing to save without a name');
+
+    await tester.enterText(find.byType(TextField).first, '同工會');
+    await tester.pump();
+    await tapText(tester, '安排服事');
+    final saved = b.calendarEvents['grace']!.singleWhere((e) => e.title == '同工會');
+    expect(find.text('還沒有服事項目'), findsOneWidget);
+    await tester.tap(find.byTooltip('編輯'));
+    await settle(tester);
+    await tapText(tester, '新增服事項目');
+    await tapText(tester, '司琴');
+    expect(b.rosters['grace']![Roster.idForEvent(saved.id!)]!.forEvent!.title, '同工會');
+  });
+
+  testWidgets('in an event\'s details 安排服事 comes before a long description', (tester) async {
+    final b = church(as: office);
+    b.calendarEvents['grace'] = [party.copyWith(description: '流程\n' * 40)];
+    await pumpApp(tester, b);
+    await go(tester, '/home');
+    await tapText(tester, '聖誕晚會');
+    expect(tester.getTopLeft(find.text('安排服事')).dy, lessThan(tester.getTopLeft(find.textContaining('流程')).dy));
+  });
 }

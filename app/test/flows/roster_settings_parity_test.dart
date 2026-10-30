@@ -219,6 +219,25 @@ void main() {
     expect(find.text('只有管理員能改服事設定'), findsOneWidget);
   });
 
+  testWidgets('swiping a duty or a common event away says 刪除 on the red', (tester) async {
+    await pumpApp(tester, seededChurch());
+    await go(tester, '/me/services/sunday');
+    for (final row in ['司琴', '聖餐']) {
+      final swipe = await tester.startGesture(tester.getCenter(find.text(row).last));
+      await swipe.moveBy(const Offset(-40, 0));
+      await swipe.moveBy(const Offset(-80, 0));
+      await tester.pump();
+      final swiped = find.ancestor(of: find.text(row).last, matching: find.byType(Dismissible));
+      expect(
+        find.descendant(of: swiped, matching: find.text('刪除')),
+        findsOneWidget,
+        reason: row,
+      );
+      await swipe.cancel();
+      await settle(tester);
+    }
+  });
+
   testWidgets('a refused swipe removal leaves the configured option visible and reports failure', (tester) async {
     final b = seededChurch();
     await pumpApp(tester, b);
