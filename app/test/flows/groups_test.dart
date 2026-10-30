@@ -67,10 +67,13 @@ void main() {
     expect(findShown('指派之後，負責人可以排主日崇拜、活動的招待，也可以加入和移出關懷事工的同工'), findsOneWidget);
   });
 
-  testWidgets("a 事工's duties that differ by service are said place by place, the same ones together", (tester) async {
+  testWidgets("a 事工's duties that differ by service are said place by place, the same ones together; its 負責人 alike", (
+    tester,
+  ) async {
     final b = seededChurch(
       extra: [
         staffHao.withIdentities(const [MinistryLead('worship')]),
+        staffMei.withIdentities(const [MinistryLead('worship')]),
       ],
     );
     b.ministries['grace'] = const MinistrySettings(
@@ -86,7 +89,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/me/groups/ministry/worship');
     expect(
-      findShown('陳志豪可以排主日崇拜、活動的司琴、司會；青年崇拜的司會，也可以加入和移出敬拜團的同工'),
+      findShown('李美玉、陳志豪都可以排主日崇拜、活動的司琴、司會；青年崇拜的司會，也可以加入和移出敬拜團的同工'),
       findsOneWidget,
     );
   });

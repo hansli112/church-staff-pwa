@@ -664,7 +664,8 @@ void showDeferredUndo(
 }
 
 /// A confirmation for actions the user cannot undo themselves: leaving a
-/// church, deleting an account or a church. Returns true to go ahead.
+/// church, deleting an account or a church, discarding a sheet's unsaved
+/// changes. Returns true to go ahead.
 ///
 /// Platform style (Cupertino alert on iOS), with 「取消」 (or [cancel]) and a
 /// red action named for what happens.
@@ -908,7 +909,7 @@ class _AppSheetRoute<T> extends ModalBottomSheetRoute<T> {
 
   @override
   bool didPop(T? result) {
-    if (result == null && !_discarding && (unsaved?.call() ?? false)) {
+    if (result == null && !_discarding && !willHandlePopInternally && (unsaved?.call() ?? false)) {
       // Back up, if a swipe had it on its way down; asked once the
       // navigator is done popping.
       controller?.forward();

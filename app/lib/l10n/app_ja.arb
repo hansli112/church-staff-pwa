@@ -927,7 +927,7 @@
   "keepEditing": "編集を続ける",
   "ministriesFooter": "賛美チームや音響チームのリーダーが自分たちの担当を割り当てられるようにします（管理者だけで割り当てる教会では不要）",
   "ministryNeedsDuties": "担当を選ぶと、リーダーが集会や行事でそれを割り当てられます",
-  "ministryLeadsCan": "{leads}は{duties}を割り当て、{ministry}のメンバーを加えたり外したりできます",
+  "ministryLeadsCan": "{count, plural, =1{{leads}は{duties}を割り当て、{ministry}のメンバーを加えたり外したりできます} other{{leads}はそれぞれ{duties}を割り当て、{ministry}のメンバーを加えたり外したりできます}}",
   "ministryOnceLeads": "リーダーを指名すると、{duties}を割り当て、{ministry}のメンバーを加えたり外したりできます",
   "dutiesOfServices": "{services}の{duties}",
   "dutyGroupSeparator": "；",

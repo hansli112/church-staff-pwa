@@ -5497,8 +5497,8 @@ abstract class L10n {
   /// On a ministry's page: what its leads (names) can do. duties is a dutiesOfServices list
   ///
   /// In zh, this message translates to:
-  /// **'{leads}可以排{duties}，也可以加入和移出{ministry}的同工'**
-  String ministryLeadsCan(String leads, String duties, String ministry);
+  /// **'{count, plural, =1{{leads}可以排{duties}，也可以加入和移出{ministry}的同工} other{{leads}都可以排{duties}，也可以加入和移出{ministry}的同工}}'**
+  String ministryLeadsCan(int count, String leads, String duties, String ministry);
 
   /// On a ministry's page while it has no lead: what one will be able to do
   ///

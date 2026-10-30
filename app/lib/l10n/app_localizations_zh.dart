@@ -3069,8 +3069,14 @@ class L10nZh extends L10n {
   String get ministryNeedsDuties => '選好服事項目，負責人就能在聚會和活動排這些項目';
 
   @override
-  String ministryLeadsCan(String leads, String duties, String ministry) {
-    return '$leads可以排$duties，也可以加入和移出$ministry的同工';
+  String ministryLeadsCan(int count, String leads, String duties, String ministry) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$leads都可以排$duties，也可以加入和移出$ministry的同工',
+      one: '$leads可以排$duties，也可以加入和移出$ministry的同工',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -6163,8 +6169,14 @@ class L10nZhHans extends L10nZh {
   String get ministryNeedsDuties => '选好事奉项目，负责人就能在聚会和活动排这些项目';
 
   @override
-  String ministryLeadsCan(String leads, String duties, String ministry) {
-    return '$leads可以排$duties，也可以加入和移出$ministry的同工';
+  String ministryLeadsCan(int count, String leads, String duties, String ministry) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$leads都可以排$duties，也可以加入和移出$ministry的同工',
+      one: '$leads可以排$duties，也可以加入和移出$ministry的同工',
+    );
+    return '$_temp0';
   }
 
   @override

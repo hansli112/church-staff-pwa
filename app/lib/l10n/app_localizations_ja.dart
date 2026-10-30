@@ -3074,8 +3074,14 @@ class L10nJa extends L10n {
   String get ministryNeedsDuties => '担当を選ぶと、リーダーが集会や行事でそれを割り当てられます';
 
   @override
-  String ministryLeadsCan(String leads, String duties, String ministry) {
-    return '$leadsは$dutiesを割り当て、$ministryのメンバーを加えたり外したりできます';
+  String ministryLeadsCan(int count, String leads, String duties, String ministry) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$leadsはそれぞれ$dutiesを割り当て、$ministryのメンバーを加えたり外したりできます',
+      one: '$leadsは$dutiesを割り当て、$ministryのメンバーを加えたり外したりできます',
+    );
+    return '$_temp0';
   }
 
   @override

@@ -24,7 +24,7 @@ import 'roster_day_screen.dart';
 
 /// 安排服事 (#90): one service's days a month at a time, a row a day and a
 /// column a duty I arrange. Tapping a cell picks its people as on the
-/// day's page, saved at once; tapping a date opens that day. A cell held
+/// day's page, saved with its 完成; tapping a date opens that day. A cell held
 /// lifts, and dropped on another day of its duty trades the two (moves
 /// them, onto a day with nobody); the picker's 和別週交換 does the same
 /// without dragging. Nobody is told until 通知同工, which tells each

@@ -26,7 +26,8 @@ import '../common/saving_indicator.dart';
 /// One service on one day. Everyone can look; people who may arrange this
 /// service's rosters (admin, or roster-editors holding its zone) tap a duty
 /// to pick people, a name to swap or remove it, and use the menu for duties
-/// and special events. Every change saves at once and can be undone.
+/// and special events. Every change saves once made (the picker's with
+/// its 完成) and can be undone.
 class RosterDayScreen extends ConsumerWidget {
   const RosterDayScreen({
     super.key,

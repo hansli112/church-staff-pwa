@@ -927,7 +927,7 @@
   "keepEditing": "Keep editing",
   "ministriesFooter": "Lets the leads of a team such as worship or sound arrange its own roles; a church where only admins arrange can skip this",
   "ministryNeedsDuties": "Pick its roles, and its leads can arrange them in services and at events",
-  "ministryLeadsCan": "{leads} can arrange {duties}, and add or remove {ministry}’s team members",
+  "ministryLeadsCan": "{count, plural, =1{{leads} can arrange {duties}, and add or remove {ministry}’s team members} other{{leads} can each arrange {duties}, and add or remove {ministry}’s team members}}",
   "ministryOnceLeads": "Once assigned, its leads can arrange {duties}, and add or remove {ministry}’s team members",
   "dutiesOfServices": "{duties} in {services}",
   "dutyGroupSeparator": "; ",

@@ -3259,8 +3259,14 @@ class L10nEn extends L10n {
   String get ministryNeedsDuties => 'Pick its roles, and its leads can arrange them in services and at events';
 
   @override
-  String ministryLeadsCan(String leads, String duties, String ministry) {
-    return '$leads can arrange $duties, and add or remove $ministry’s team members';
+  String ministryLeadsCan(int count, String leads, String duties, String ministry) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$leads can each arrange $duties, and add or remove $ministry’s team members',
+      one: '$leads can arrange $duties, and add or remove $ministry’s team members',
+    );
+    return '$_temp0';
   }
 
   @override

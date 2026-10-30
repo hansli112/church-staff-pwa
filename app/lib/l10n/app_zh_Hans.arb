@@ -927,7 +927,7 @@
   "keepEditing": "继续编辑",
   "ministriesFooter": "让敬拜团、音控组的负责人自己排自己的事奉项目；只有管理员排班的教会不用设",
   "ministryNeedsDuties": "选好事奉项目，负责人就能在聚会和活动排这些项目",
-  "ministryLeadsCan": "{leads}可以排{duties}，也可以加入和移出{ministry}的同工",
+  "ministryLeadsCan": "{count, plural, =1{{leads}可以排{duties}，也可以加入和移出{ministry}的同工} other{{leads}都可以排{duties}，也可以加入和移出{ministry}的同工}}",
   "ministryOnceLeads": "指派之后，负责人可以排{duties}，也可以加入和移出{ministry}的同工",
   "dutiesOfServices": "{services}的{duties}",
   "dutyGroupSeparator": "；",

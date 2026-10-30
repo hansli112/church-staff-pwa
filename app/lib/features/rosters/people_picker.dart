@@ -125,6 +125,10 @@ class PeoplePickerState extends State<PeoplePicker> {
   late final Set<String> _guests = {...widget.initialGuests};
   late bool _tapReplaces = widget.onePerson && widget.initial.length < 2;
   late List<String> _serving;
+
+  /// The duty's list as it opened, to tell a new order from a dragged-back
+  /// one.
+  late final List<String> _servingAtOpen;
   late final List<Member> _others;
 
   /// Who serves the duty here, by name, for taking them off the list.
@@ -154,7 +158,7 @@ class PeoplePickerState extends State<PeoplePicker> {
       }
     }
     serving.sort();
-    _serving = widget.order.orderedCandidates(widget.duty, serving);
+    _serving = _servingAtOpen = widget.order.orderedCandidates(widget.duty, serving);
     others.sort((a, b) => a.name.compareTo(b.name));
     _others = others;
   }
@@ -177,7 +181,7 @@ class PeoplePickerState extends State<PeoplePicker> {
   bool get changed =>
       !setEquals(_selected.toSet(), widget.initial.toSet()) ||
       !setEquals(result.guestNames, widget.initialGuests) ||
-      _ranking != null ||
+      (_ranking != null && !listEquals(_ranking, _servingAtOpen)) ||
       _grant.isNotEmpty ||
       _takeOff.isNotEmpty;
 
@@ -273,6 +277,7 @@ class PeoplePickerState extends State<PeoplePicker> {
         // until 完成. In 編輯 its own 完成 goes back to picking.
         Padding(
           padding: const EdgeInsets.fromLTRB(Space.s, 0, Space.s, Space.s),
+          // As tall as its buttons.
           child: SizedBox(
             height: 50,
             child: NavigationToolbar(

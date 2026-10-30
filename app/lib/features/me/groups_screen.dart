@@ -76,9 +76,10 @@ class GroupsScreen extends ConsumerWidget {
     if (name == null || !context.mounted) return;
     final id = _newId(settings.ids);
     final services = ref.read(servicesProvider).value?.enabled ?? const <Service>[];
+    // Null once 取消; none to pick, nothing to stop at.
     final duties = services.any((s) => s.duties.isNotEmpty)
         ? await pickMinistryDuties(context, services, const [])
-        : null;
+        : const <MinistryDuty>[];
     if (!context.mounted) return;
     final before = settings.ministries;
     final ok = await runWithUndo(
@@ -666,7 +667,7 @@ String ministrySummary(L10n l10n, Ministry ministry, List<Service> services, Lis
   ].join(l10n.dutyGroupSeparator);
   return leads.isEmpty
       ? l10n.ministryOnceLeads(duties, ministry.name)
-      : l10n.ministryLeadsCan(leads.map((m) => m.name).join(l10n.listSeparator), duties, ministry.name);
+      : l10n.ministryLeadsCan(leads.length, leads.map((m) => m.name).join(l10n.listSeparator), duties, ministry.name);
 }
 
 /// The duties a 事工 links, ticked per service.

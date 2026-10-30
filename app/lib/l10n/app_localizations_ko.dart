@@ -3068,14 +3068,20 @@ class L10nKo extends L10n {
   String get keepEditing => '계속 편집';
 
   @override
-  String get ministriesFooter => '찬양팀, 음향팀 리더가 자기 팀 담당을 직접 배정하게 해요. 관리자만 배정하는 교회는 안 만들어도 돼요';
+  String get ministriesFooter => '찬양팀, 음향팀 리더가 자기 팀 담당을 직접 배정하게 해요. 관리자만 배정하는 교회는 안 만들어도 돼요.';
 
   @override
   String get ministryNeedsDuties => '담당을 고르면 리더가 예배와 행사에서 배정할 수 있어요';
 
   @override
-  String ministryLeadsCan(String leads, String duties, String ministry) {
-    return '$leads 리더는 $duties 담당을 배정하고 $ministry 멤버를 추가하거나 뺄 수 있어요';
+  String ministryLeadsCan(int count, String leads, String duties, String ministry) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$leads 리더 모두 $duties 담당을 배정하고 $ministry 멤버를 추가하거나 뺄 수 있어요',
+      one: '$leads 리더는 $duties 담당을 배정하고 $ministry 멤버를 추가하거나 뺄 수 있어요',
+    );
+    return '$_temp0';
   }
 
   @override
