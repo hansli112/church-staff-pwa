@@ -362,7 +362,7 @@ void contractTests(Future<ContractWorld> Function() open) {
         reason: 'outside the church',
       );
       await expectLater(g.church.uploadLogo(png), denied(), reason: 'Storage');
-      await expectLater(g.church.export.members(), denied(), reason: 'a one-off read');
+      await expectLater(g.church.readOnce.members(), denied(), reason: 'a one-off read');
       await expectLater(g.church.members().first, denied(), reason: 'a listener');
     });
 
@@ -578,13 +578,13 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect((await g.church.members().first).map((m) => m.uid), unorderedEquals([g.pastor, g.editor, g.mei]));
       await w.signIn(Grace.editorEmail);
       expect(await g.church.members().first, hasLength(3));
-      expect(await g.church.export.members(), hasLength(3));
-      expect(await g.church.export.pendingMembers(), isEmpty);
+      expect(await g.church.readOnce.members(), hasLength(3));
+      expect(await g.church.readOnce.pendingMembers(), isEmpty);
       await w.signIn(Grace.meiEmail);
       expect((await g.church.member(g.mei).first)!.role, Role.staff);
       await expectLater(g.church.members().first, denied());
       await expectLater(g.church.pendingMembers().first, denied());
-      await expectLater(g.church.export.members(), denied());
+      await expectLater(g.church.readOnce.members(), denied());
     });
 
     test('an admin edits members, but never demotes themself', () async {
@@ -948,7 +948,7 @@ void contractTests(Future<ContractWorld> Function() open) {
       final old = Roster(type: 'sunday', day: Day(2026, 9, 27));
       await g.church.putRosters([second, first, old]);
       expect(await g.church.rosters(from: Day(2026, 10, 1)).first, [first, second]);
-      expect(await g.church.export.rosters(), unorderedEquals([old, first, second]));
+      expect(await g.church.readOnce.rosters(), unorderedEquals([old, first, second]));
       expect(
         await g.church.pastRosters(from: Day(2026, 9, 27), before: Day(2026, 10, 11)),
         unorderedEquals([old, first]),
@@ -1019,7 +1019,7 @@ void contractTests(Future<ContractWorld> Function() open) {
         '司會': ['林同工', '王牧師'],
       });
       expect(await g.church.staffOrder('sunday').first, order);
-      expect(await g.church.export.staffOrders(), {'sunday': order});
+      expect(await g.church.readOnce.staffOrders(), {'sunday': order});
       await expectLater(
         g.church.putStaffOrder('youth', {
           '司會': ['林同工'],

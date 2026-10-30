@@ -25,7 +25,7 @@ void serviceCasContractTests(Future<ContractWorld> Function() open) {
     final order = await g.church.staffOrder('sunday').first;
     expect(order.rankingOf('主持'), ['林同工']);
     expect(order.rankingOf('司會'), isEmpty);
-    expect(await g.church.export.rosters(), [oldRoster]);
+    expect(await g.church.readOnce.rosters(), [oldRoster]);
     await expectLater(
       g.church.compareAndSetService(before: sunday, after: next),
       fails(CloudErrorCode.conflict),

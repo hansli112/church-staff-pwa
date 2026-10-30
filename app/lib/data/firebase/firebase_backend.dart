@@ -596,7 +596,7 @@ class FirestoreChurchData implements ChurchData {
   late final AttendanceData attendance = _FirestoreAttendance(this);
 
   @override
-  late final ExportData export = _FirestoreExport(this);
+  late final ReadOnceData readOnce = _FirestoreReadOnce(this);
 
   @override
   final String churchId;
@@ -1297,9 +1297,9 @@ class _FirestoreAttendance implements AttendanceData {
       _c._write(_c._church, (tx) => tx.update(_c._church, {'attendanceSince': since?.key ?? FieldValue.delete()}));
 }
 
-/// [ExportData] of a [FirestoreChurchData].
-class _FirestoreExport implements ExportData {
-  _FirestoreExport(this._c);
+/// [ReadOnceData] of a [FirestoreChurchData].
+class _FirestoreReadOnce implements ReadOnceData {
+  _FirestoreReadOnce(this._c);
 
   final FirestoreChurchData _c;
 

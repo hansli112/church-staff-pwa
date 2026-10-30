@@ -652,7 +652,7 @@ describe('活動的服事表 (rosters/ev_…)', () => {
     await assertFails(setDoc(doc(db, path('v2')), ev('v2', { via: 'relink' })));
     await assertSucceeds(setDoc(doc(db, path('v2')), ev('v2', { via: 'plan' })));
     await assertFails(updateDoc(doc(db, path('v2')), { via: 'restore' }));
-    await assertSucceeds(updateDoc(doc(db, path('v1')), { duties: [] }), 'one already there may stay');
+    await assertFails(updateDoc(doc(db, path('v1')), { duties: [] }), 'nor keep the backend\'s');
     await assertSucceeds(updateDoc(doc(db, path('v1')), { via: 'app' }));
     await assertFails(setDoc(doc(db, `churches/${A}/rosters/v3`), { type: 'sunday', via: 'timeZone' }));
     await assertSucceeds(setDoc(doc(db, `churches/${A}/rosters/v3`), { type: 'sunday', via: 'import' }));

@@ -775,7 +775,7 @@ class MemoryChurchData implements ChurchData {
   late final AttendanceData attendance = _MemoryAttendance(this);
 
   @override
-  late final ExportData export = _MemoryExport(this);
+  late final ReadOnceData readOnce = _MemoryReadOnce(this);
 
   @override
   final String churchId;
@@ -1644,7 +1644,10 @@ class MemoryChurchData implements ChurchData {
   );
 }
 
-/// [CalendarData] of a [MemoryChurchData].
+/// [CalendarData] of a [MemoryChurchData]. Google Calendar itself is
+/// scripted: [MemoryBackend.connectCalendar], the calendars [choices]
+/// offers and the events in [MemoryBackend.calendarEvents]. Public for
+/// tests that hold or fail its reads and writes.
 class MemoryCalendarData implements CalendarData {
   MemoryCalendarData(this._c);
 
@@ -1907,10 +1910,6 @@ class _MemoryWebhook implements WebhookData {
     _c._b.notify();
     return delivery;
   }
-
-  // Google Calendar itself is scripted: [MemoryBackend.connectCalendar], the
-  // calendars [CalendarData.choices] offers and the events in
-  // [MemoryBackend.calendarEvents].
 }
 
 /// [PhotoData] of a [MemoryChurchData].
@@ -2009,9 +2008,9 @@ class _MemoryAttendance implements AttendanceData {
   }
 }
 
-/// [ExportData] of a [MemoryChurchData].
-class _MemoryExport implements ExportData {
-  _MemoryExport(this._c);
+/// [ReadOnceData] of a [MemoryChurchData].
+class _MemoryReadOnce implements ReadOnceData {
+  _MemoryReadOnce(this._c);
 
   final MemoryChurchData _c;
 

@@ -398,12 +398,14 @@ async function planRosterChange(deps: PushDeps, c: RosterChange) {
       await settlePlanned(p, c, uid, false);
       continue;
     }
+    const roles = plannedAfter(null, c.previously.get(uid) ?? [], c.holders.get(uid) ?? [], false);
+    if (roles === null) continue;
     try {
       await deps.db.doc(`plannedPushes/${c.church.id}_${c.rosterId}_${uid}`).create({
         cid: c.church.id,
         rosterId: c.rosterId,
         uid,
-        roles: c.previously.get(uid) ?? [],
+        roles,
         dateKey: c.dateKey,
         serviceId: c.serviceId,
         serviceName: c.serviceName,
@@ -566,7 +568,8 @@ export async function onRosterWritten(
         case 'now':
           return pushRosterChange(deps, change);
         case 'nobody':
-          // readRosterChange read it as quiet already (eventRosters.ts).
+          // Only the backend writes these, and only on an event's roster,
+          // which readRosterChange read as quiet already (eventRosters.ts).
           return 0;
       }
     },

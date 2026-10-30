@@ -8,6 +8,7 @@ import { LIMITS } from './limits.js';
 import { seal, unseal } from './sealing.js';
 import { timeZoneOf } from './timeZones.js';
 import { loggable } from './redact.js';
+import type { Via } from './rosterNews.js';
 
 /**
  * 外部通知 (webhooks): a church's admin gives an https URL and a secret;
@@ -250,8 +251,8 @@ export interface QueuedRosterChange {
   duties: { duty: string; added: string[]; removed: string[] }[];
   actorUid: string | null;
   actorName: string | null;
-  /** `app`, or `import` for a whole import. */
-  via: string;
+  /** Where the roster write came from (rosterNews.ts). */
+  via: Via;
 }
 
 /**

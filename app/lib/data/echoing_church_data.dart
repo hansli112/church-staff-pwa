@@ -177,7 +177,7 @@ class EchoingChurchData implements ChurchData {
   AttendanceData get attendance => _inner.attendance;
 
   @override
-  ExportData get export => _inner.export;
+  ReadOnceData get readOnce => _inner.readOnce;
 
   @override
   Stream<List<Roster>> rosters({required Day from}) => _echoed(_inner.rosters(from: from), (server, arrived) {

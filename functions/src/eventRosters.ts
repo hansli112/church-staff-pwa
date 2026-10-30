@@ -57,7 +57,7 @@ export function eventRosterFate(change: EventChange, roster: 'none' | 'on' | 'ca
 }
 
 /** [d] as [eventRosterFate] takes it. */
-const stateOf = (d: DocumentSnapshot | undefined) => (!isEvent(d) ? 'none' : isCancelled(d) ? 'cancelled' : 'on');
+export const stateOf = (d: DocumentSnapshot | undefined) => (!isEvent(d) ? 'none' : isCancelled(d) ? 'cancelled' : 'on');
 
 /** Whether [d] is an event's roster (活動的服事表). */
 export const isEvent = (d: DocumentSnapshot | undefined) => d?.exists === true && d.get('kind') === 'event';

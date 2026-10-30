@@ -245,11 +245,10 @@ service cloud.firestore {
     }
 
     // Where a roster write came from (`via`, testdata/roster_changes.json):
-    // the app writes only its own. The backend's tell nobody, which an app
-    // write must not borrow; one already there may stay.
+    // the app writes only its own, every time. The backend's tell nobody,
+    // which an app write must not borrow, nor keep from the backend's last.
     function appVia() {
-      return request.resource.data.get('via', 'app') in ['app', 'plan', 'import']
-        || (resource != null && request.resource.data.get('via', 'app') == resource.data.get('via', 'app'));
+      return request.resource.data.get('via', 'app') in ['app', 'plan', 'import'];
     }
 
     function onlyTouches(allowed) {

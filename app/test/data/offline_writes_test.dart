@@ -42,11 +42,11 @@ void main() {
       church.compareAndSetRosters(RosterChange(before: {roster.id: null}, after: {roster.id: roster})),
       throwsA(isA<CloudException>().having((e) => e.reason, 'reason', CloudReason.offlineReadOnly)),
     );
-    expect(await church.export.rosters(), isEmpty);
+    expect(await church.readOnce.rosters(), isEmpty);
     backend.setOnline(true);
     await Future<void>.delayed(Duration.zero);
-    expect(await church.export.rosters(), isEmpty);
+    expect(await church.readOnce.rosters(), isEmpty);
     await church.compareAndSetRosters(RosterChange(before: {roster.id: null}, after: {roster.id: roster}));
-    expect(await church.export.rosters(), [roster]);
+    expect(await church.readOnce.rosters(), [roster]);
   });
 }

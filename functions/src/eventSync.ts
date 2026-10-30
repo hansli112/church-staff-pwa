@@ -3,7 +3,7 @@ import { Timestamp, type QueryDocumentSnapshot } from 'firebase-admin/firestore'
 import { isChurchOpen } from './access.js';
 import { calendarAccess, type CalDeps, type CalendarEvent } from './calendar.js';
 import { DAY_MS } from './common.js';
-import { cancelGone, eventRosterDays, eventRosterFate, followGoogle, isCancelled, isEvent, relinkTo, takeTimeZone } from './eventRosters.js';
+import { cancelGone, eventRosterDays, eventRosterFate, followGoogle, isCancelled, isEvent, relinkTo, stateOf, takeTimeZone } from './eventRosters.js';
 import { dateKeyIn, earliestDay, instantOf, instantOfTime, timeZoneOf, timeZonesAt, type ChurchTimeZone } from './timeZones.js';
 import { loggable } from './redact.js';
 
@@ -137,7 +137,7 @@ async function syncOne(
   if (madeOn && madeOn !== calendarId) return null;
   const e = await deps.google.get(token, calendarId, r.get('eventId') as string);
   if (e && !e.cancelled) return followGoogle(r, e, calendarId, timeZone);
-  if (eventRosterFate('goneFromGoogle', isCancelled(r) ? 'cancelled' : 'on') === 'nothing') return null;
+  if (eventRosterFate('goneFromGoogle', stateOf(r)) === 'nothing') return null;
   if (await relink(deps, token, calendarId, timeZone, r)) return 'relinked';
   // Only the calendar it was made on can say the event is gone, and only
   // while it can be read at all.

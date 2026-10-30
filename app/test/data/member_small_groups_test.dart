@@ -30,13 +30,13 @@ void main() {
     };
     final data = b.church('grace');
     await data.mergePending('old-mei', 'mei');
-    final member = (await data.export.members()).singleWhere((m) => m.uid == 'mei');
+    final member = (await data.readOnce.members()).singleWhere((m) => m.uid == 'mei');
     expect(member.zones, const [
       Zone(serviceType: 'sunday', duties: ['司琴', '招待'], smallGroups: ['喜樂小組', '恩典小組']),
       Zone(serviceType: 'youth', smallGroups: ['青年小組']),
     ]);
     expect(member.groups, isEmpty);
-    expect(await data.export.pendingMembers(), isEmpty);
+    expect(await data.readOnce.pendingMembers(), isEmpty);
   });
 
   test('claiming pending member data preserves small groups for new and existing membership', () async {

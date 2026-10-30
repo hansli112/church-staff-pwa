@@ -200,7 +200,7 @@ abstract interface class ChurchData {
   String get churchId;
 
   // The church's parts that stand on their own, each its own interface.
-  // What is here besides them, EchoingChurchData shows early.
+  // EchoingChurchData shows none of them early.
 
   CalendarData get calendar;
 
@@ -212,7 +212,7 @@ abstract interface class ChurchData {
 
   AttendanceData get attendance;
 
-  ExportData get export;
+  ReadOnceData get readOnce;
 
   Stream<Church?> church();
 
@@ -479,18 +479,19 @@ abstract interface class AttendanceData {
   Future<void> saveSince(Day? since);
 }
 
-/// 匯出資料: everything of the church at once, for an admin.
-abstract interface class ExportData {
-  /// Everyone in the church, read once from the server when online (export).
+/// Everything of a kind in the church, read once from the server when
+/// online: for 匯出資料, and wherever every day ever saved is needed.
+abstract interface class ReadOnceData {
+  /// Everyone in the church. Admins and roster editors.
   Future<List<Member>> members();
 
-  /// Pending members, read once (export). Admins.
+  /// Pending members. Admins and roster editors.
   Future<List<PendingMember>> pendingMembers();
 
-  /// Every saved roster, past ones too, read once (export).
+  /// Every saved roster, past ones too.
   Future<List<Roster>> rosters();
 
-  /// Every service's staff order, read once (export).
+  /// Every service's staff order.
   Future<Map<String, StaffOrder>> staffOrders();
 }
 

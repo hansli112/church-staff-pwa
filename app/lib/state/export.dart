@@ -36,10 +36,10 @@ Future<ChurchSnapshot> loadChurchSnapshot(WidgetRef ref) async {
   final church = await data.church().first;
   final (services, members, pending, staffOrders, rosters, calendar, link, webhook) = await (
     data.services().first,
-    data.export.members(),
-    data.export.pendingMembers(),
-    data.export.staffOrders(),
-    data.export.rosters(),
+    data.readOnce.members(),
+    data.readOnce.pendingMembers(),
+    data.readOnce.staffOrders(),
+    data.readOnce.rosters(),
     data.calendar.settings().first,
     data.churchLink.watch().first,
     data.webhook.watch().first,
