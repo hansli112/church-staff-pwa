@@ -133,10 +133,10 @@ final eventArrangesProvider = Provider.family<Arranges, String?>((ref, group) {
 });
 
 /// The church link at the top of the home page, or null.
-final churchLinkProvider = StreamProvider<ChurchLink?>((ref) => openChurch(ref).churchLink());
+final churchLinkProvider = StreamProvider<ChurchLink?>((ref) => openChurch(ref).churchLink.watch());
 
 /// What was last fetched from the church link's content source.
-final linkContentProvider = StreamProvider<LinkContent?>((ref) => openChurch(ref).linkContent());
+final linkContentProvider = StreamProvider<LinkContent?>((ref) => openChurch(ref).churchLink.content());
 
 /// What the home page shows for the church link, or null when there is
 /// none: the fetched content while fresh, then the fixed link.

@@ -14,7 +14,7 @@ import '../common/time_zones.dart';
 import 'calendar_screen.dart';
 
 final _calendarListProvider = FutureProvider.autoDispose<List<CalendarChoice>>(
-  (ref) => openChurch(ref).calendarList(),
+  (ref) => openChurch(ref).calendar.choices(),
 );
 
 /// Says so when the picked calendar keeps another time zone than the
@@ -47,7 +47,7 @@ class CalendarSettingsScreen extends ConsumerWidget {
   Future<void> _connect(BuildContext context, WidgetRef ref) async {
     final l10n = L10n.of(context);
     try {
-      final url = await ref.churchData.calendarAuthUrl();
+      final url = await ref.churchData.calendar.authUrl();
       await launchUrl(
         url,
         mode: kIsWeb ? LaunchMode.platformDefault : LaunchMode.inAppBrowserView,
@@ -125,7 +125,7 @@ class CalendarSettingsScreen extends ConsumerWidget {
                         ListRow(
                           title: cal.name,
                           selected: settings.calendarName == cal.name,
-                          onTap: () => church!.calendarSelect(cal.id, cal.name),
+                          onTap: () => church!.calendar.select(cal.id, cal.name),
                         ),
                     ],
                   ),
@@ -144,7 +144,7 @@ class CalendarSettingsScreen extends ConsumerWidget {
                       message: l10n.calDisconnectBody,
                       action: l10n.calDisconnect,
                     );
-                    if (ok) await church!.calendarDisconnect();
+                    if (ok) await church!.calendar.disconnect();
                   },
                 ),
               ],

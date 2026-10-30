@@ -23,9 +23,19 @@ class CountingCalendarData extends MemoryChurchData {
   final CountingCalendarBackend backend;
 
   @override
-  Future<List<CalendarEvent>> calendarEvents(String month) {
+  CalendarData get calendar => _calendar;
+  late final _calendar = _CountingCalendar(backend, this);
+}
+
+class _CountingCalendar extends MemoryCalendarData {
+  _CountingCalendar(this.backend, super.church);
+
+  final CountingCalendarBackend backend;
+
+  @override
+  Future<List<CalendarEvent>> events(String month) {
     backend.reads.add(month);
-    return super.calendarEvents(month);
+    return super.events(month);
   }
 }
 

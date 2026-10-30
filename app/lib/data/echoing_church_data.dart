@@ -160,6 +160,25 @@ class EchoingChurchData implements ChurchData {
     return true;
   }
 
+  // Shown as the backend has them: none of these echo.
+  @override
+  CalendarData get calendar => _inner.calendar;
+
+  @override
+  ChurchLinkData get churchLink => _inner.churchLink;
+
+  @override
+  WebhookData get webhook => _inner.webhook;
+
+  @override
+  PhotoData get photos => _inner.photos;
+
+  @override
+  AttendanceData get attendance => _inner.attendance;
+
+  @override
+  ExportData get export => _inner.export;
+
   @override
   Stream<List<Roster>> rosters({required Day from}) => _echoed(_inner.rosters(from: from), (server, arrived) {
     Map<String, Roster>? byId;
@@ -370,18 +389,6 @@ class EchoingChurchData implements ChurchData {
   Future<List<Roster>> eventRosters() => _inner.eventRosters();
 
   @override
-  Future<List<Member>> allMembers() => _inner.allMembers();
-
-  @override
-  Future<List<PendingMember>> allPendingMembers() => _inner.allPendingMembers();
-
-  @override
-  Future<List<Roster>> allRosters() => _inner.allRosters();
-
-  @override
-  Future<Map<String, StaffOrder>> allStaffOrders() => _inner.allStaffOrders();
-
-  @override
   Stream<List<Invite>> invites() => _inner.invites();
 
   @override
@@ -390,24 +397,6 @@ class EchoingChurchData implements ChurchData {
 
   @override
   Future<void> revokeInvite(String code) => _inner.revokeInvite(code);
-
-  @override
-  Stream<CalendarSettings> calendarSettings() => _inner.calendarSettings();
-
-  @override
-  Stream<ChurchLink?> churchLink() => _inner.churchLink();
-
-  @override
-  Future<LinkSourceResult> setChurchLink(ChurchLink? link) => _inner.setChurchLink(link);
-
-  @override
-  Future<LinkSourceResult> refreshChurchLink() => _inner.refreshChurchLink();
-
-  @override
-  Stream<LinkContent?> linkContent() => _inner.linkContent();
-
-  @override
-  Stream<WebhookSettings?> webhook() => _inner.webhook();
 
   @override
   Future<void> setHomeName(String? name) => _inner.setHomeName(name);
@@ -450,18 +439,6 @@ class EchoingChurchData implements ChurchData {
   Future<void> deleteSmallGroup(String id) => _inner.deleteSmallGroup(id);
 
   @override
-  Stream<AttendanceRecord> attendance(String key) => _inner.attendance(key);
-
-  @override
-  Future<void> setAttendance(String key, Day day, AttendanceDay? value) => _inner.setAttendance(key, day, value);
-
-  @override
-  Future<void> setAttendancePauses(String key, List<AttendancePause> pauses) => _inner.setAttendancePauses(key, pauses);
-
-  @override
-  Future<void> setAttendanceSince(Day? since) => _inner.setAttendanceSince(since);
-
-  @override
   Future<void> setTimeZone(ChurchTimeZone timeZone) => _inner.setTimeZone(timeZone);
 
   @override
@@ -475,49 +452,6 @@ class EchoingChurchData implements ChurchData {
 
   @override
   Future<void> mergePending(String pendingId, String uid) => _inner.mergePending(pendingId, uid);
-
-  @override
-  Future<String?> webhookSave({required String? url, bool calendar = false, bool roster = false, String? secret}) =>
-      _inner.webhookSave(url: url, calendar: calendar, roster: roster, secret: secret);
-
-  @override
-  Future<String?> webhookRotateSecret({String? secret}) => _inner.webhookRotateSecret(secret: secret);
-
-  @override
-  Future<WebhookDelivery> webhookTest() => _inner.webhookTest();
-
-  @override
-  Future<Uri> calendarAuthUrl() => _inner.calendarAuthUrl();
-
-  @override
-  Future<List<CalendarChoice>> calendarList() => _inner.calendarList();
-
-  @override
-  Future<void> calendarSelect(String calendarId, String calendarName) =>
-      _inner.calendarSelect(calendarId, calendarName);
-
-  @override
-  Future<void> calendarDisconnect() => _inner.calendarDisconnect();
-
-  @override
-  Future<List<CalendarEvent>> calendarEvents(String month) => _inner.calendarEvents(month);
-
-  @override
-  Future<CalendarEvent> calendarSave(CalendarEvent event, {CalendarEvent? previous, String? restoreRosterOf}) =>
-      _inner.calendarSave(event, previous: previous, restoreRosterOf: restoreRosterOf);
-
-  @override
-  Future<void> calendarDelete(CalendarEvent event) => _inner.calendarDelete(event);
-
-  @override
-  Future<PhotoQuota> photoQuota() => _inner.photoQuota();
-
-  @override
-  Future<List<dynamic>> recognizeRoster(String serviceType, List<PhotoInput> images) =>
-      _inner.recognizeRoster(serviceType, images);
-
-  @override
-  Future<String> photoPrompt(String serviceType) => _inner.photoPrompt(serviceType);
 }
 
 /// What one change makes of the documents it writes.

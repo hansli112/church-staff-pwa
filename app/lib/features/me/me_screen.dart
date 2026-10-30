@@ -116,7 +116,7 @@ class SettingsScreen extends ConsumerWidget {
                     value: church.attendanceSince != null,
                     onChanged: (on) async {
                       try {
-                        await ref.churchData.setAttendanceSince(on ? ref.read(todayProvider) : null);
+                        await ref.churchData.attendance.saveSince(on ? ref.read(todayProvider) : null);
                       } catch (e) {
                         if (context.mounted) showToast(context, saveErrorText(l10n, e));
                       }

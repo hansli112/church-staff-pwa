@@ -71,7 +71,7 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
     setState(() => _busy = true);
     final source = _source.text.trim();
     try {
-      final result = await ref.churchData.setChurchLink(
+      final result = await ref.churchData.churchLink.save(
         ChurchLink(
           title: _title.text.trim(),
           body: _body.text.trim(),
@@ -107,7 +107,7 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
       _sourceProblem = null;
     });
     try {
-      final result = await data.refreshChurchLink();
+      final result = await data.churchLink.refresh();
       if (!mounted || ref.read(churchDataProvider)?.churchId != data.churchId) return;
       if (!result.ok) setState(() => _sourceProblem = linkErrorText(l10n, result.error!, result.status));
     } catch (e) {
@@ -121,13 +121,13 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
     final l10n = L10n.of(context);
     final data = ref.churchData;
     try {
-      await data.setChurchLink(null);
+      await data.churchLink.save(null);
     } catch (_) {
       if (mounted) showToast(context, l10n.saveFailed);
       return;
     }
     if (!mounted) return;
-    showToast(context, l10n.churchLinkRemoved, onUndo: () => data.setChurchLink(link));
+    showToast(context, l10n.churchLinkRemoved, onUndo: () => data.churchLink.save(link));
     context.pop();
   }
 

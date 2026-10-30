@@ -161,7 +161,7 @@ class MemoryBackend implements Backend {
   /// One explicit source-fetch reply, used by the next set/retry operation.
   LinkSourceResult? nextLinkResult;
 
-  /// Sources fetched by [ChurchData.setChurchLink], in order.
+  /// Sources fetched by [ChurchLinkData.save], in order.
   final linkSourceFetches = <String>[];
 
   /// Scripted: while set, the link content stream delivers nothing until
@@ -760,6 +760,24 @@ class MemoryChurchData implements ChurchData {
   final MemoryBackend _b;
 
   @override
+  late final CalendarData calendar = MemoryCalendarData(this);
+
+  @override
+  late final ChurchLinkData churchLink = _MemoryChurchLink(this);
+
+  @override
+  late final WebhookData webhook = _MemoryWebhook(this);
+
+  @override
+  late final PhotoData photos = _MemoryPhotos(this);
+
+  @override
+  late final AttendanceData attendance = _MemoryAttendance(this);
+
+  @override
+  late final ExportData export = _MemoryExport(this);
+
+  @override
   final String churchId;
 
   String? get _uid => _b.auth.currentUser?.uid;
@@ -995,56 +1013,11 @@ class MemoryChurchData implements ChurchData {
     final g => g,
   };
 
-  @override
-  Stream<AttendanceRecord> attendance(String key) => _b.watch(() {
-    final group = _group(key);
-    if (group == null || !_b.requireMember(churchId).readsAttendance(group)) {
-      throw const CloudException(CloudErrorCode.permissionDenied);
-    }
-    return _b.attendance[churchId]?[key] ?? const AttendanceRecord();
-  });
-
   void _requireAttendanceWriter(String key) {
     final group = _group(key);
     if (group == null || !_b.requireMember(churchId).writesAttendance(group)) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
-  }
-
-  @override
-  Future<void> setAttendance(String key, Day day, AttendanceDay? value) async {
-    _requireAttendanceWriter(key);
-    if (value != null &&
-        !value.none &&
-        (value.count! < 0 ||
-            value.count! > Limits.attendanceCount ||
-            !withinTextLimit(value.note, TextLimits.attendanceNote))) {
-      throw const CloudException(CloudErrorCode.permissionDenied);
-    }
-    await _b.write(() {
-      final all = _b.attendance.putIfAbsent(churchId, () => {});
-      final was = all[key] ?? const AttendanceRecord();
-      all[key] = AttendanceRecord(
-        pauses: was.pauses,
-        days: {...was.days, day: ?value}..removeWhere((d, _) => d == day && value == null),
-      );
-    });
-  }
-
-  @override
-  Future<void> setAttendancePauses(String key, List<AttendancePause> pauses) async {
-    _requireAttendanceWriter(key);
-    if (pauses.length > Limits.attendancePauses) throw const CloudException(CloudErrorCode.permissionDenied);
-    await _b.write(() {
-      final all = _b.attendance.putIfAbsent(churchId, () => {});
-      all[key] = AttendanceRecord(pauses: pauses, days: (all[key] ?? const AttendanceRecord()).days);
-    });
-  }
-
-  @override
-  Future<void> setAttendanceSince(Day? since) async {
-    _requireAdmin();
-    await _b.write(() => _b.churches[churchId] = _b.churches[churchId]!.copyWith(attendanceSince: () => since));
   }
 
   @override
@@ -1071,24 +1044,6 @@ class MemoryChurchData implements ChurchData {
   });
 
   @override
-  Future<List<Member>> allMembers() async {
-    _requireRosterEditors();
-    return _b.members[churchId]!.values.toList();
-  }
-
-  @override
-  Future<List<PendingMember>> allPendingMembers() async {
-    _requireRosterEditors();
-    return (_b.pendingMembers[churchId] ?? const {}).values.toList();
-  }
-
-  @override
-  Future<List<Roster>> allRosters() async {
-    _requireMember();
-    return _b.rosters[churchId]!.values.toList();
-  }
-
-  @override
   Future<List<Roster>> pastRosters({required Day from, required Day before}) async {
     _requireMember();
     return [
@@ -1104,12 +1059,6 @@ class MemoryChurchData implements ChurchData {
       for (final r in _b.rosters[churchId]!.values)
         if (r.forEvent case final e? when !e.cancelled) r,
     ]..sort((a, b) => b.day.compareTo(a.day));
-  }
-
-  @override
-  Future<Map<String, StaffOrder>> allStaffOrders() async {
-    _requireMember();
-    return Map.of(_b.staffOrders[churchId]!);
   }
 
   @override
@@ -1519,74 +1468,6 @@ class MemoryChurchData implements ChurchData {
   }
 
   @override
-  Stream<CalendarSettings> calendarSettings() => _b.watch(() {
-    _requireMember();
-    return _b.calendars[churchId] ?? const CalendarSettings();
-  });
-
-  @override
-  Stream<ChurchLink?> churchLink() => _b.watch(() {
-    _requireMember();
-    return _b.churchLinks[churchId];
-  });
-
-  @override
-  Future<LinkSourceResult> setChurchLink(ChurchLink? link) async {
-    _requireAdmin();
-    if (link != null &&
-        (link.title.isEmpty ||
-            !withinTextLimit(link.title, TextLimits.linkTitle) ||
-            !withinTextLimit(link.body, TextLimits.linkBody) ||
-            link.url.length > Limits.url ||
-            !ChurchLink.validUrl(link.url))) {
-      throw const CloudException(CloudErrorCode.permissionDenied);
-    }
-    final saved = _b.churchLinks[churchId];
-    await _b.write(() {
-      if (link == null) {
-        _b.churchLinks.remove(churchId);
-        return;
-      }
-      // Like the merge in Firestore: the source is set by the function below.
-      _b.churchLinks[churchId] = ChurchLink(
-        title: link.title,
-        body: link.body,
-        url: link.url,
-        source: saved?.source,
-        fetchMinute: saved?.fetchMinute ?? ChurchLink.defaultFetchMinute,
-      );
-    });
-    if (link == null || !link.changesSourceOf(saved)) return const LinkSourceResult();
-    return _setLinkSource(link.source, link.fetchMinute);
-  }
-
-  @override
-  Future<LinkSourceResult> refreshChurchLink() async {
-    _functionAdmin();
-    final link = _b.churchLinks[churchId];
-    if (link == null) throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.noLink);
-    if (link.source == null) throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.noSource);
-    return _setLinkSource(link.source, link.fetchMinute, refresh: true);
-  }
-
-  @override
-  Stream<LinkContent?> linkContent() {
-    final content = _b.watch(() {
-      _requireMember();
-      return _b.linkContents[churchId];
-    });
-    final held = _b.linkContentHeld;
-    if (held == null) return content;
-    return Stream.fromFuture(held.future).asyncExpand((_) => content);
-  }
-
-  @override
-  Stream<WebhookSettings?> webhook() => _b.watch(() {
-    _requireAdmin();
-    return _b.webhooks[churchId];
-  });
-
-  @override
   Future<void> setHomeName(String? name) async {
     _requireAdmin();
     if (name != null && (name.isEmpty || !withinTextLimit(name, TextLimits.homeName))) {
@@ -1721,73 +1602,6 @@ class MemoryChurchData implements ChurchData {
     return result;
   }
 
-  @override
-  Future<String?> webhookSave({
-    required String? url,
-    bool calendar = false,
-    bool roster = false,
-    String? secret,
-  }) async {
-    _functionAdmin();
-    if (url == null) {
-      _b.webhooks.remove(churchId);
-      _b.webhookSecrets.remove(churchId);
-      _b.notify();
-      return null;
-    }
-    if (url.length > Limits.url || !ChurchLink.validUrl(url)) {
-      throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.notHttps);
-    }
-    _checkSecret(secret);
-    String? generated;
-    if (secret != null) {
-      _b.webhookSecrets[churchId] = secret;
-    } else if (!_b.webhookSecrets.containsKey(churchId)) {
-      generated = _b.newWebhookSecret();
-      _b.webhookSecrets[churchId] = generated;
-    }
-    _b.webhooks[churchId] = WebhookSettings(
-      url: url.trim(),
-      calendar: calendar,
-      roster: roster,
-      lastDelivery: _b.webhooks[churchId]?.lastDelivery,
-    );
-    _b.notify();
-    return generated;
-  }
-
-  @override
-  Future<String?> webhookRotateSecret({String? secret}) async {
-    _functionAdmin();
-    if (!_b.webhooks.containsKey(churchId)) throw const CloudException(CloudErrorCode.unknown);
-    _checkSecret(secret);
-    final next = secret ?? _b.newWebhookSecret();
-    _b.webhookSecrets[churchId] = next;
-    return secret == null ? next : null;
-  }
-
-  @override
-  Future<WebhookDelivery> webhookTest() async {
-    _functionAdmin();
-    final hook = _b.webhooks[churchId];
-    if (hook == null) throw const CloudException(CloudErrorCode.unknown);
-    _b.webhookSent.add((churchId, 'ping'));
-    final a = _b.webhookAnswer;
-    final delivery = WebhookDelivery(ok: a.ok, status: a.status, error: a.error, event: 'ping', at: _b.clock());
-    _b.webhooks[churchId] = WebhookSettings(
-      url: hook.url,
-      calendar: hook.calendar,
-      roster: hook.roster,
-      lastDelivery: delivery,
-    );
-    _b.notify();
-    return delivery;
-  }
-
-  // Google Calendar itself is scripted: [MemoryBackend.connectCalendar], the
-  // calendars [calendarList] offers and the events in
-  // [MemoryBackend.calendarEvents].
-
   /// As calendarWrite: an event of group [before] (null: none yet) becoming
   /// [after] (null: deleted), judged by the event as the calendar has it
   /// (Member.mayWriteEvent).
@@ -1820,64 +1634,86 @@ class MemoryChurchData implements ChurchData {
     throw const CloudException(CloudErrorCode.notFound);
   }
 
+  /// As the backend's photo calls (access.ts `arranges`): someone who
+  /// arranges any of a service the church has.
+  void _rosterEditorOf(String serviceType) => _b.functionAccess(
+    churchId,
+    allowed: (me) =>
+        _b.services[churchId]!.ids.contains(serviceType) &&
+        me.arranges((_b.ministries[churchId] ?? const MinistrySettings()).ministries, serviceType).any,
+  );
+}
+
+/// [CalendarData] of a [MemoryChurchData].
+class MemoryCalendarData implements CalendarData {
+  MemoryCalendarData(this._c);
+
+  final MemoryChurchData _c;
+
   @override
-  Future<Uri> calendarAuthUrl() async {
-    _functionAdmin();
+  Stream<CalendarSettings> settings() => _c._b.watch(() {
+    _c._requireMember();
+    return _c._b.calendars[_c.churchId] ?? const CalendarSettings();
+  });
+
+  @override
+  Future<Uri> authUrl() async {
+    _c._functionAdmin();
     return Uri.parse('https://accounts.google.com/o/oauth2/v2/auth?state=memory');
   }
 
   @override
-  Future<List<CalendarChoice>> calendarList() async {
-    _functionAdmin();
-    return _b.calendarChoices;
+  Future<List<CalendarChoice>> choices() async {
+    _c._functionAdmin();
+    return _c._b.calendarChoices;
   }
 
   @override
-  Future<void> calendarSelect(String calendarId, String calendarName) async {
-    _functionAdmin();
-    _b.calendars[churchId] = CalendarSettings(
+  Future<void> select(String calendarId, String calendarName) async {
+    _c._functionAdmin();
+    _c._b.calendars[_c.churchId] = CalendarSettings(
       connected: true,
       calendarName: calendarName,
       calendarId: calendarId,
-      revision: 'memory:${++_b._calendarRevision}',
+      revision: 'memory:${++_c._b._calendarRevision}',
     );
-    _b.notify();
+    _c._b.notify();
   }
 
   @override
-  Future<void> calendarDisconnect() async {
-    _functionAdmin();
-    _b.calendars.remove(churchId);
-    _b.calendarEvents.remove(churchId);
-    _b.notify();
+  Future<void> disconnect() async {
+    _c._functionAdmin();
+    _c._b.calendars.remove(_c.churchId);
+    _c._b.calendarEvents.remove(_c.churchId);
+    _c._b.notify();
   }
 
   @override
-  Future<List<CalendarEvent>> calendarEvents(String month) async {
-    _b.requireNetwork();
-    _b.functionAccess(churchId);
-    if (_b.calendars[churchId]?.needsReconnect ?? false) {
+  Future<List<CalendarEvent>> events(String month) async {
+    _c._b.requireNetwork();
+    _c._b.functionAccess(_c.churchId);
+    if (_c._b.calendars[_c.churchId]?.needsReconnect ?? false) {
       throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.reconnect);
     }
-    await _b.calendarEventsHeld?.future;
+    await _c._b.calendarEventsHeld?.future;
     // Like Google: every event that overlaps the month, including one that
     // began the month before.
     final first = Day.parse('$month-01');
     final last = first.lastOfMonth;
     return [
-      for (final e in _b.calendarEvents[churchId] ?? const <CalendarEvent>[])
+      for (final e in _c._b.calendarEvents[_c.churchId] ?? const <CalendarEvent>[])
         if (e.daysWithin(first, last) != null) e,
     ]..sort((a, b) => a.start.compareTo(b.start));
   }
 
   @override
-  Future<CalendarEvent> calendarSave(CalendarEvent event, {CalendarEvent? previous, String? restoreRosterOf}) async {
-    _requireEventWrite(() => _groupNow(event.id), event.group ?? '');
-    _requireRestore(restoreRosterOf);
-    await _b.calendarSaveHeld?.future;
+  Future<CalendarEvent> save(CalendarEvent event, {CalendarEvent? previous, String? restoreRosterOf}) async {
+    _c._requireEventWrite(() => _c._groupNow(event.id), event.group ?? '');
+    _c._requireRestore(restoreRosterOf);
+    await _c._b.calendarSaveHeld?.future;
     final saved = event.id == null
         ? CalendarEvent(
-            id: _b.newEventId(),
+            id: _c._b.newEventId(),
             title: event.title,
             start: event.start,
             end: event.end,
@@ -1887,10 +1723,10 @@ class MemoryChurchData implements ChurchData {
             group: event.group,
           )
         : event;
-    await _b.write(() {
-      _requireEventWrite(() => _groupNow(event.id), event.group ?? '');
-      _requireRestore(restoreRosterOf);
-      final list = _b.calendarEvents.putIfAbsent(churchId, () => []);
+    await _c._b.write(() {
+      _c._requireEventWrite(() => _c._groupNow(event.id), event.group ?? '');
+      _c._requireRestore(restoreRosterOf);
+      final list = _c._b.calendarEvents.putIfAbsent(_c.churchId, () => []);
       final was = list.where((e) => e.id == saved.id).firstOrNull?.group;
       list.removeWhere((e) => e.id == saved.id);
       list.add(saved);
@@ -1903,7 +1739,7 @@ class MemoryChurchData implements ChurchData {
         }
       }
       // The roster and calendar change become visible together.
-      final rosters = _b.rosters[churchId]!;
+      final rosters = _c._b.rosters[_c.churchId]!;
       final from = rosters[Roster.idForEvent(restoreRosterOf ?? saved.id!)];
       final change = restoreRosterOf == null ? EventChange.edited : EventChange.restored;
       if (from != null && eventRosterFate(change, from) != EventRosterFate.nothing) {
@@ -1920,60 +1756,288 @@ class MemoryChurchData implements ChurchData {
   }
 
   @override
-  Future<void> calendarDelete(CalendarEvent event) async {
-    _requireEventWrite(() => _groupNow(event.id), null);
-    await _b.write(() {
-      _requireEventWrite(() => _groupNow(event.id), null);
-      _b.calendarEvents[churchId]?.removeWhere((e) => e.id == event.id);
-      final rosters = _b.rosters[churchId]!;
+  Future<void> delete(CalendarEvent event) async {
+    _c._requireEventWrite(() => _c._groupNow(event.id), null);
+    await _c._b.write(() {
+      _c._requireEventWrite(() => _c._groupNow(event.id), null);
+      _c._b.calendarEvents[_c.churchId]?.removeWhere((e) => e.id == event.id);
+      final rosters = _c._b.rosters[_c.churchId]!;
       final r = rosters[Roster.idForEvent(event.id!)];
       if (eventRosterFate(EventChange.deleted, r) == EventRosterFate.cancelled) {
         rosters[r!.id] = r.copyWith(forEvent: r.forEvent!.copyWith(cancelled: true));
       }
     });
   }
+}
+
+/// [ChurchLinkData] of a [MemoryChurchData].
+class _MemoryChurchLink implements ChurchLinkData {
+  _MemoryChurchLink(this._c);
+
+  final MemoryChurchData _c;
 
   @override
-  Future<PhotoQuota> photoQuota() async {
-    _b.functionAccess(churchId);
+  Stream<ChurchLink?> watch() => _c._b.watch(() {
+    _c._requireMember();
+    return _c._b.churchLinks[_c.churchId];
+  });
+
+  @override
+  Future<LinkSourceResult> save(ChurchLink? link) async {
+    _c._requireAdmin();
+    if (link != null &&
+        (link.title.isEmpty ||
+            !withinTextLimit(link.title, TextLimits.linkTitle) ||
+            !withinTextLimit(link.body, TextLimits.linkBody) ||
+            link.url.length > Limits.url ||
+            !ChurchLink.validUrl(link.url))) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    final saved = _c._b.churchLinks[_c.churchId];
+    await _c._b.write(() {
+      if (link == null) {
+        _c._b.churchLinks.remove(_c.churchId);
+        return;
+      }
+      // Like the merge in Firestore: the source is set by the function below.
+      _c._b.churchLinks[_c.churchId] = ChurchLink(
+        title: link.title,
+        body: link.body,
+        url: link.url,
+        source: saved?.source,
+        fetchMinute: saved?.fetchMinute ?? ChurchLink.defaultFetchMinute,
+      );
+    });
+    if (link == null || !link.changesSourceOf(saved)) return const LinkSourceResult();
+    return _c._setLinkSource(link.source, link.fetchMinute);
+  }
+
+  @override
+  Future<LinkSourceResult> refresh() async {
+    _c._functionAdmin();
+    final link = _c._b.churchLinks[_c.churchId];
+    if (link == null) throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.noLink);
+    if (link.source == null) throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.noSource);
+    return _c._setLinkSource(link.source, link.fetchMinute, refresh: true);
+  }
+
+  @override
+  Stream<LinkContent?> content() {
+    final content = _c._b.watch(() {
+      _c._requireMember();
+      return _c._b.linkContents[_c.churchId];
+    });
+    final held = _c._b.linkContentHeld;
+    if (held == null) return content;
+    return Stream.fromFuture(held.future).asyncExpand((_) => content);
+  }
+}
+
+/// [WebhookData] of a [MemoryChurchData].
+class _MemoryWebhook implements WebhookData {
+  _MemoryWebhook(this._c);
+
+  final MemoryChurchData _c;
+
+  @override
+  Stream<WebhookSettings?> watch() => _c._b.watch(() {
+    _c._requireAdmin();
+    return _c._b.webhooks[_c.churchId];
+  });
+
+  @override
+  Future<String?> save({
+    required String? url,
+    bool calendar = false,
+    bool roster = false,
+    String? secret,
+  }) async {
+    _c._functionAdmin();
+    if (url == null) {
+      _c._b.webhooks.remove(_c.churchId);
+      _c._b.webhookSecrets.remove(_c.churchId);
+      _c._b.notify();
+      return null;
+    }
+    if (url.length > Limits.url || !ChurchLink.validUrl(url)) {
+      throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.notHttps);
+    }
+    _checkSecret(secret);
+    String? generated;
+    if (secret != null) {
+      _c._b.webhookSecrets[_c.churchId] = secret;
+    } else if (!_c._b.webhookSecrets.containsKey(_c.churchId)) {
+      generated = _c._b.newWebhookSecret();
+      _c._b.webhookSecrets[_c.churchId] = generated;
+    }
+    _c._b.webhooks[_c.churchId] = WebhookSettings(
+      url: url.trim(),
+      calendar: calendar,
+      roster: roster,
+      lastDelivery: _c._b.webhooks[_c.churchId]?.lastDelivery,
+    );
+    _c._b.notify();
+    return generated;
+  }
+
+  @override
+  Future<String?> rotateSecret({String? secret}) async {
+    _c._functionAdmin();
+    if (!_c._b.webhooks.containsKey(_c.churchId)) throw const CloudException(CloudErrorCode.unknown);
+    _checkSecret(secret);
+    final next = secret ?? _c._b.newWebhookSecret();
+    _c._b.webhookSecrets[_c.churchId] = next;
+    return secret == null ? next : null;
+  }
+
+  @override
+  Future<WebhookDelivery> test() async {
+    _c._functionAdmin();
+    final hook = _c._b.webhooks[_c.churchId];
+    if (hook == null) throw const CloudException(CloudErrorCode.unknown);
+    _c._b.webhookSent.add((_c.churchId, 'ping'));
+    final a = _c._b.webhookAnswer;
+    final delivery = WebhookDelivery(ok: a.ok, status: a.status, error: a.error, event: 'ping', at: _c._b.clock());
+    _c._b.webhooks[_c.churchId] = WebhookSettings(
+      url: hook.url,
+      calendar: hook.calendar,
+      roster: hook.roster,
+      lastDelivery: delivery,
+    );
+    _c._b.notify();
+    return delivery;
+  }
+
+  // Google Calendar itself is scripted: [MemoryBackend.connectCalendar], the
+  // calendars [CalendarData.choices] offers and the events in
+  // [MemoryBackend.calendarEvents].
+}
+
+/// [PhotoData] of a [MemoryChurchData].
+class _MemoryPhotos implements PhotoData {
+  _MemoryPhotos(this._c);
+
+  final MemoryChurchData _c;
+
+  @override
+  Future<PhotoQuota> quota() async {
+    _c._b.functionAccess(_c.churchId);
     return PhotoQuota(
-      remaining: max(0, _b.photoLimit - (_b.photosUsed[churchId] ?? 0)),
-      limit: _b.photoLimit,
-      platformOpen: _b.photoPlatformOpen,
+      remaining: max(0, _c._b.photoLimit - (_c._b.photosUsed[_c.churchId] ?? 0)),
+      limit: _c._b.photoLimit,
+      platformOpen: _c._b.photoPlatformOpen,
     );
   }
 
   @override
-  Future<List<dynamic>> recognizeRoster(String serviceType, List<PhotoInput> images) async {
-    _rosterEditorOf(serviceType);
+  Future<List<dynamic>> recognize(String serviceType, List<PhotoInput> images) async {
+    _c._rosterEditorOf(serviceType);
     if (images.any((i) => i.bytes.length > Limits.photoBytes)) {
       throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.tooLarge);
     }
-    if (!_b.photoPlatformOpen) throw const CloudException(CloudErrorCode.quotaExceeded, reason: CloudReason.platform);
-    final used = _b.photosUsed[churchId] ?? 0;
-    if (used >= _b.photoLimit) throw const CloudException(CloudErrorCode.quotaExceeded, reason: CloudReason.church);
-    _b.photosUsed[churchId] = used + 1;
-    await _b.recognizing;
-    return _b.recognized;
+    if (!_c._b.photoPlatformOpen) {
+      throw const CloudException(CloudErrorCode.quotaExceeded, reason: CloudReason.platform);
+    }
+    final used = _c._b.photosUsed[_c.churchId] ?? 0;
+    if (used >= _c._b.photoLimit) throw const CloudException(CloudErrorCode.quotaExceeded, reason: CloudReason.church);
+    _c._b.photosUsed[_c.churchId] = used + 1;
+    await _c._b.recognizing;
+    return _c._b.recognized;
   }
 
   /// A short stand-in for the backend's prompt, with what it is built from.
   @override
-  Future<String> photoPrompt(String serviceType) async {
-    _rosterEditorOf(serviceType);
-    final service = _b.services[churchId]!.byId(serviceType)!;
-    final names = [for (final m in _b.members[churchId]!.values) m.name];
+  Future<String> prompt(String serviceType) async {
+    _c._rosterEditorOf(serviceType);
+    final service = _c._b.services[_c.churchId]!.byId(serviceType)!;
+    final names = [for (final m in _c._b.members[_c.churchId]!.values) m.name];
     return '把「${service.name}」的服事表照片轉成 JSON。\n${service.duties.join('、')}\n${names.join('、')}';
   }
+}
 
-  /// As the backend's photo calls (access.ts `arranges`): someone who
-  /// arranges any of a service the church has.
-  void _rosterEditorOf(String serviceType) => _b.functionAccess(
-    churchId,
-    allowed: (me) =>
-        _b.services[churchId]!.ids.contains(serviceType) &&
-        me.arranges((_b.ministries[churchId] ?? const MinistrySettings()).ministries, serviceType).any,
-  );
+/// [AttendanceData] of a [MemoryChurchData].
+class _MemoryAttendance implements AttendanceData {
+  _MemoryAttendance(this._c);
+
+  final MemoryChurchData _c;
+
+  @override
+  Stream<AttendanceRecord> watch(String key) => _c._b.watch(() {
+    final group = _c._group(key);
+    if (group == null || !_c._b.requireMember(_c.churchId).readsAttendance(group)) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    return _c._b.attendance[_c.churchId]?[key] ?? const AttendanceRecord();
+  });
+
+  @override
+  Future<void> save(String key, Day day, AttendanceDay? value) async {
+    _c._requireAttendanceWriter(key);
+    if (value != null &&
+        !value.none &&
+        (value.count! < 0 ||
+            value.count! > Limits.attendanceCount ||
+            !withinTextLimit(value.note, TextLimits.attendanceNote))) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    await _c._b.write(() {
+      final all = _c._b.attendance.putIfAbsent(_c.churchId, () => {});
+      final was = all[key] ?? const AttendanceRecord();
+      all[key] = AttendanceRecord(
+        pauses: was.pauses,
+        days: {...was.days, day: ?value}..removeWhere((d, _) => d == day && value == null),
+      );
+    });
+  }
+
+  @override
+  Future<void> savePauses(String key, List<AttendancePause> pauses) async {
+    _c._requireAttendanceWriter(key);
+    if (pauses.length > Limits.attendancePauses) throw const CloudException(CloudErrorCode.permissionDenied);
+    await _c._b.write(() {
+      final all = _c._b.attendance.putIfAbsent(_c.churchId, () => {});
+      all[key] = AttendanceRecord(pauses: pauses, days: (all[key] ?? const AttendanceRecord()).days);
+    });
+  }
+
+  @override
+  Future<void> saveSince(Day? since) async {
+    _c._requireAdmin();
+    await _c._b.write(
+      () => _c._b.churches[_c.churchId] = _c._b.churches[_c.churchId]!.copyWith(attendanceSince: () => since),
+    );
+  }
+}
+
+/// [ExportData] of a [MemoryChurchData].
+class _MemoryExport implements ExportData {
+  _MemoryExport(this._c);
+
+  final MemoryChurchData _c;
+
+  @override
+  Future<List<Member>> members() async {
+    _c._requireRosterEditors();
+    return _c._b.members[_c.churchId]!.values.toList();
+  }
+
+  @override
+  Future<List<PendingMember>> pendingMembers() async {
+    _c._requireRosterEditors();
+    return (_c._b.pendingMembers[_c.churchId] ?? const {}).values.toList();
+  }
+
+  @override
+  Future<List<Roster>> rosters() async {
+    _c._requireMember();
+    return _c._b.rosters[_c.churchId]!.values.toList();
+  }
+
+  @override
+  Future<Map<String, StaffOrder>> staffOrders() async {
+    _c._requireMember();
+    return Map.of(_c._b.staffOrders[_c.churchId]!);
+  }
 }
 
 bool _sameList<T>(List<T> a, List<T> b) {

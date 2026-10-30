@@ -13,7 +13,7 @@ import '../church/links.dart';
 import '../common/errors.dart';
 import '../common/time_zones.dart';
 
-final webhookProvider = StreamProvider.autoDispose<WebhookSettings?>((ref) => openChurch(ref).webhook());
+final webhookProvider = StreamProvider.autoDispose<WebhookSettings?>((ref) => openChurch(ref).webhook.watch());
 
 /// 外部通知: admins point the church's webhook at an https URL (e.g. n8n),
 /// pick which changes it reports, send a test and see how the last notice
@@ -100,7 +100,7 @@ class _SetupState extends ConsumerState<_Setup> {
     setState(() => _busy = true);
     try {
       final secret = _secret.text.trim();
-      final generated = await ref.churchData.webhookSave(
+      final generated = await ref.churchData.webhook.save(
         url: _url.text.trim(),
         calendar: _calendar,
         roster: _roster,
@@ -198,7 +198,7 @@ class _ConfiguredState extends ConsumerState<_Configured> {
   Future<void> _save({String? url, bool? calendar, bool? roster}) async {
     final l10n = L10n.of(context);
     try {
-      await _church.webhookSave(
+      await _church.webhook.save(
         url: url ?? widget.hook.url,
         calendar: calendar ?? widget.hook.calendar,
         roster: roster ?? widget.hook.roster,
@@ -223,7 +223,7 @@ class _ConfiguredState extends ConsumerState<_Configured> {
     final l10n = L10n.of(context);
     setState(() => _testing = true);
     try {
-      final r = await _church.webhookTest();
+      final r = await _church.webhook.test();
       if (mounted) showToast(context, deliveryText(l10n, r));
     } catch (e) {
       if (mounted) showToast(context, errorText(l10n, e));
@@ -252,7 +252,7 @@ class _ConfiguredState extends ConsumerState<_Configured> {
       }
     }
     try {
-      final secret = await _church.webhookRotateSecret(secret: typed);
+      final secret = await _church.webhook.rotateSecret(secret: typed);
       if (!mounted) return;
       if (secret != null) {
         await _showSecret(context, secret);
@@ -274,7 +274,7 @@ class _ConfiguredState extends ConsumerState<_Configured> {
     );
     if (!ok || !mounted) return;
     try {
-      await _church.webhookSave(url: null);
+      await _church.webhook.save(url: null);
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) showToast(context, errorText(l10n, e));

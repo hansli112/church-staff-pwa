@@ -39,7 +39,7 @@ class MemoryWorld implements ContractWorld {
   }
 
   @override
-  Future<void> connectCalendar(String churchId) => backend.church(churchId).calendarSelect('cal-1', '教會行事曆');
+  Future<void> connectCalendar(String churchId) => backend.church(churchId).calendar.select('cal-1', '教會行事曆');
 
   @override
   Future<void> addNotification(String uid, NotificationItem n) async => backend.addNotification(uid, n);

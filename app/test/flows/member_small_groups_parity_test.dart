@@ -41,14 +41,14 @@ void main() {
     await go(tester, '/me/members/mei');
     expect(find.text('在青年小組'), findsNothing, reason: "青年崇拜's: not one of her 牧區");
     await tapText(tester, '在喜樂小組');
-    final member = (await b.church('grace').allMembers()).singleWhere((m) => m.uid == 'mei');
+    final member = (await b.church('grace').export.members()).singleWhere((m) => m.uid == 'mei');
     expect(member.smallGroups, {'joy'});
     expect(member.zones.single.duties, ['司琴', '招待']);
     expect(member.groups, isEmpty);
     expect(member.role, Role.staff);
 
     await tapText(tester, '在喜樂小組');
-    expect((await b.church('grace').allMembers()).singleWhere((m) => m.uid == 'mei').smallGroups, isEmpty);
+    expect((await b.church('grace').export.members()).singleWhere((m) => m.uid == 'mei').smallGroups, isEmpty);
   });
 
   testWidgets("leads see each member's 小組, and a pending member's old names, but cannot edit them", (tester) async {

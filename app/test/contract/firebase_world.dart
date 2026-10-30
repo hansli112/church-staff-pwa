@@ -92,7 +92,7 @@ class FirebaseWorld implements ContractWorld {
   @override
   Future<void> connectCalendar(String churchId) async {
     final church = backend.church(churchId);
-    final state = (await church.calendarAuthUrl()).queryParameters['state']!;
+    final state = (await church.calendar.authUrl()).queryParameters['state']!;
     // Where Google's consent screen sends the browser back. The emulator's
     // Google (functions/src/memoryGoogle.ts) grants any code but `used`;
     // the answer is a redirect to the app, so it is not read.
@@ -102,7 +102,7 @@ class FirebaseWorld implements ContractWorld {
           web.RequestInit(mode: 'no-cors'),
         )
         .toDart;
-    await church.calendarSelect('cal-1', '教會行事曆');
+    await church.calendar.select('cal-1', '教會行事曆');
   }
 
   @override

@@ -76,7 +76,7 @@ void main() {
     b.auth.signInAs('admin@example.com', uid: 'admin');
     b.addMember('grace', const Member(uid: 'admin', name: '王牧師', role: Role.admin));
     await b.church('grace').mergePending('another-mei', 'mei');
-    final merged = (await b.church('grace').allMembers()).singleWhere((m) => m.uid == 'mei');
+    final merged = (await b.church('grace').export.members()).singleWhere((m) => m.uid == 'mei');
     expect(merged.mutedNotifications, {
       NotificationKind.memberLeft,
       NotificationKind.reminder,
@@ -157,7 +157,7 @@ void main() {
     expect(admin!.mutedNotifications, {NotificationKind.reminder, NotificationKind.memberLeft});
     expect(admin.role, Role.admin, reason: 'the chosen identity keeps the uploader’s admin access');
     expect(admin.zones.single.smallGroups, ['恩典小組']);
-    final pending = await data.allPendingMembers();
+    final pending = await data.export.pendingMembers();
     final mei = pending.singleWhere((p) => p.id == 'old-mei');
     expect(mei.mutedNotifications, {NotificationKind.reminder, NotificationKind.rosterChange});
     expect(mei.zones.single, const Zone(serviceType: 'sunday', duties: ['司琴'], smallGroups: ['喜樂小組']));

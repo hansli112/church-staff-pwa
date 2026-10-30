@@ -56,7 +56,7 @@ class _ChurchLinkSourceStatusState extends ConsumerState<ChurchLinkSourceStatus>
     final data = ref.churchData;
     setState(() => _busy = true);
     try {
-      final result = await data.refreshChurchLink();
+      final result = await data.churchLink.refresh();
       // Another church's answer must not speak here.
       if (!mounted || ref.read(churchDataProvider)?.churchId != data.churchId) return;
       if (!result.ok) showToast(context, l10n.linkSourceFailed(linkErrorText(l10n, result.error!, result.status)));

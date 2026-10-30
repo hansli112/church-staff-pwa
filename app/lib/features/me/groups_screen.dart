@@ -109,7 +109,7 @@ class GroupsScreen extends ConsumerWidget {
 
 /// Every roster saved, read once when a group's page opens: who served
 /// what, for 排過…的服事.
-final _allRostersProvider = FutureProvider.autoDispose<List<Roster>>((ref) => ref.churchData.allRosters());
+final _allRostersProvider = FutureProvider.autoDispose<List<Roster>>((ref) => ref.churchData.export.rosters());
 
 /// Someone who served [group]'s duties without being one of its 同工: each
 /// duty and how many times.

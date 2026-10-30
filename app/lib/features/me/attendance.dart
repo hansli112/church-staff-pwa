@@ -95,7 +95,7 @@ class AttendanceSection extends ConsumerWidget {
 
   Future<void> _setPauses(BuildContext context, WidgetRef ref, List<AttendancePause> pauses) async {
     try {
-      await ref.churchData.setAttendancePauses(group.group.key, pauses);
+      await ref.churchData.attendance.savePauses(group.group.key, pauses);
     } catch (e) {
       if (context.mounted) showToast(context, saveErrorText(L10n.of(context), e));
     }
@@ -121,7 +121,7 @@ Future<void> fillAttendance(
   );
   if (value == null || !context.mounted) return;
   try {
-    await ref.churchData.setAttendance(group.group.key, day, value);
+    await ref.churchData.attendance.save(group.group.key, day, value);
     if (context.mounted) showToast(context, l10n.attendanceSaved);
   } catch (e) {
     if (context.mounted) showToast(context, saveErrorText(l10n, e));

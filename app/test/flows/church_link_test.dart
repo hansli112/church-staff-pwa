@@ -90,7 +90,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/me/church');
     expect(find.text('教會連結'), findsNothing);
-    await expectLater(b.church('grace').setChurchLink(link), throwsA(anything));
+    await expectLater(b.church('grace').churchLink.save(link), throwsA(anything));
   });
 
   group('daily content source', () {

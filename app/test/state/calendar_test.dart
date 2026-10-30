@@ -31,45 +31,57 @@ class CalendarBackend extends MemoryBackend {
   Object? deleteError;
 
   @override
-  ChurchData church(String churchId) => CalendarData(this, churchId);
+  ChurchData church(String churchId) => _HeldChurchData(this, churchId);
 }
 
-class CalendarData extends MemoryChurchData {
-  CalendarData(this.backend, String churchId) : super(backend, churchId);
+class _HeldChurchData extends MemoryChurchData {
+  _HeldChurchData(this.backend, String churchId) : super(backend, churchId);
 
   final CalendarBackend backend;
 
   @override
-  Future<List<CalendarEvent>> calendarEvents(String month) async {
-    backend.reads.add((churchId, month));
+  CalendarData get calendar => _calendar;
+  late final _calendar = _HeldCalendar(backend, this);
+}
+
+/// The church's calendar, its reads and writes held or failed as [backend] says.
+class _HeldCalendar extends MemoryCalendarData {
+  _HeldCalendar(this.backend, this.church) : super(church);
+
+  final CalendarBackend backend;
+  final MemoryChurchData church;
+
+  @override
+  Future<List<CalendarEvent>> events(String month) async {
+    backend.reads.add((church.churchId, month));
     final reply = backend.readReplyHeld;
     final error = backend.readError;
-    final events = await super.calendarEvents(month);
+    final events = await super.events(month);
     await reply?.future;
     if (error != null) throw error;
     return events;
   }
 
   @override
-  Future<CalendarEvent> calendarSave(CalendarEvent event, {CalendarEvent? previous, String? restoreRosterOf}) async {
+  Future<CalendarEvent> save(CalendarEvent event, {CalendarEvent? previous, String? restoreRosterOf}) async {
     final answer = backend.saveAnswer ?? event;
     final held = backend.saveHeld;
     final error = backend.saveError;
     final reply = backend.saveReplyHeld;
     await held?.future;
     if (error != null) throw error;
-    final saved = await super.calendarSave(answer, previous: previous, restoreRosterOf: restoreRosterOf);
+    final saved = await super.save(answer, previous: previous, restoreRosterOf: restoreRosterOf);
     await reply?.future;
     return saved;
   }
 
   @override
-  Future<void> calendarDelete(CalendarEvent event) async {
+  Future<void> delete(CalendarEvent event) async {
     final held = backend.deleteHeld;
     final error = backend.deleteError;
     await held?.future;
     if (error != null) throw error;
-    await super.calendarDelete(event);
+    await super.delete(event);
   }
 }
 
@@ -569,7 +581,7 @@ void main() {
     container.listen(calendarEventsProvider('2026-10'), (_, _) {});
     await container.read(calendarEventsProvider('2026-10').future);
     final undo = await container.read(calendarActionsProvider).delete(event);
-    await b.church('grace').calendarSelect('other', '另一行事曆');
+    await b.church('grace').calendar.select('other', '另一行事曆');
     await pumpEventQueue();
     await expectLater(undo(), throwsA(isA<CloudException>()));
     expect(await container.read(calendarEventsProvider('2026-10').future), isEmpty);
@@ -645,7 +657,7 @@ void main() {
     b.calendarEvents['grace'] = [newer];
     final held = Completer<void>();
     b.calendarEventsHeld = held;
-    await b.church('grace').calendarSelect('new-calendar', '新行事曆');
+    await b.church('grace').calendar.select('new-calendar', '新行事曆');
     await pumpEventQueue();
     expect(container.read(calendarEventsProvider('2026-10')).value, anyOf(isNull, isEmpty));
     expect(b.reads.length, 3, reason: 'only the active month reloads at selection time');

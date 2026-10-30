@@ -22,7 +22,7 @@ import '../../state/session.dart';
 import '../common/errors.dart';
 import 'format.dart';
 
-final _quotaProvider = FutureProvider.autoDispose<PhotoQuota>((ref) => openChurch(ref).photoQuota());
+final _quotaProvider = FutureProvider.autoDispose<PhotoQuota>((ref) => openChurch(ref).photos.quota());
 
 /// Photos and the documented JSON format enter the same editable preview.
 /// What is being imported lives in [importSessionProvider]; this screen
@@ -334,7 +334,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   Future<void> _copyPrompt() async {
     final l10n = L10n.of(context);
     try {
-      final prompt = await ref.churchData.photoPrompt(widget.serviceType);
+      final prompt = await ref.churchData.photos.prompt(widget.serviceType);
       await Clipboard.setData(ClipboardData(text: prompt));
       if (mounted) showToast(context, l10n.importPromptCopied);
     } catch (e) {

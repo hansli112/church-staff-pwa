@@ -341,7 +341,7 @@ void contractTests(Future<ContractWorld> Function() open) {
     test('a direct read or write the rules refuse fails as a function refusing does', () async {
       final g = await Grace.open(w);
       await w.signIn(Grace.meiEmail);
-      await expectLater(g.church.webhookSave(url: 'https://hook.example/x'), denied(), reason: 'a function');
+      await expectLater(g.church.webhook.save(url: 'https://hook.example/x'), denied(), reason: 'a function');
       await expectLater(g.church.putRoster(sundayOn(4)), denied(), reason: 'a write');
       await expectLater(g.church.putRosters([sundayOn(4), sundayOn(11)]), denied(), reason: 'a batch');
       await expectLater(
@@ -362,7 +362,7 @@ void contractTests(Future<ContractWorld> Function() open) {
         reason: 'outside the church',
       );
       await expectLater(g.church.uploadLogo(png), denied(), reason: 'Storage');
-      await expectLater(g.church.allMembers(), denied(), reason: 'a one-off read');
+      await expectLater(g.church.export.members(), denied(), reason: 'a one-off read');
       await expectLater(g.church.members().first, denied(), reason: 'a listener');
     });
 
@@ -371,7 +371,7 @@ void contractTests(Future<ContractWorld> Function() open) {
       await w.signUp('outsider@example.com');
       await expectLater(g.church.putRoster(sundayOn(4)), denied());
       await expectLater(g.church.removeMember(g.mei), denied());
-      await expectLater(g.church.photoQuota(), denied());
+      await expectLater(g.church.photos.quota(), denied());
     });
   });
 
@@ -503,15 +503,15 @@ void contractTests(Future<ContractWorld> Function() open) {
       final g = await Grace.open(w);
       await g.church.deleteChurch();
       await expectLater(g.church.deleteChurch(), fails(CloudErrorCode.churchClosed));
-      await expectLater(g.church.webhookSave(url: 'https://hook.example/x'), fails(CloudErrorCode.churchClosed));
+      await expectLater(g.church.webhook.save(url: 'https://hook.example/x'), fails(CloudErrorCode.churchClosed));
       await w.signIn(Grace.meiEmail);
       await expectLater(g.church.restoreChurch(), denied());
-      await expectLater(g.church.photoQuota(), fails(CloudErrorCode.churchClosed));
+      await expectLater(g.church.photos.quota(), fails(CloudErrorCode.churchClosed));
       await w.signUp('outsider@example.com');
-      await expectLater(g.church.photoQuota(), denied());
+      await expectLater(g.church.photos.quota(), denied());
       await w.signIn(Grace.pastorEmail);
       await g.church.restoreChurch();
-      expect((await g.church.photoQuota()).limit, 30);
+      expect((await g.church.photos.quota()).limit, 30);
     });
   });
 
@@ -528,7 +528,7 @@ void contractTests(Future<ContractWorld> Function() open) {
 
     test('its admin can change nothing, and the functions say why', () async {
       final g = await Grace.open(w);
-      await g.church.setChurchLink(const ChurchLink(title: '官網', url: 'https://grace.example'));
+      await g.church.churchLink.save(const ChurchLink(title: '官網', url: 'https://grace.example'));
       await w.addPending(g.cid, const PendingMember(id: 'old-1', name: '舊同工'));
       await g.suspend();
       await expectLater(g.church.createInvite(validFor: const Duration(days: 7)), denied());
@@ -538,12 +538,12 @@ void contractTests(Future<ContractWorld> Function() open) {
       await expectLater(g.church.restoreChurch(), closed);
       await expectLater(g.church.mergePending('old-1', g.mei), closed);
       await expectLater(
-        g.church.setChurchLink(const ChurchLink(title: '官網', url: 'https://grace.example', source: unreachable)),
+        g.church.churchLink.save(const ChurchLink(title: '官網', url: 'https://grace.example', source: unreachable)),
         denied(),
       );
-      await expectLater(g.church.webhookSave(url: 'https://hook.example/x'), closed);
-      await expectLater(g.church.calendarAuthUrl(), closed);
-      await expectLater(g.church.photoQuota(), closed);
+      await expectLater(g.church.webhook.save(url: 'https://hook.example/x'), closed);
+      await expectLater(g.church.calendar.authUrl(), closed);
+      await expectLater(g.church.photos.quota(), closed);
       expect((await g.church.church().first)!.status, ChurchStatus.suspended);
     });
 
@@ -552,14 +552,14 @@ void contractTests(Future<ContractWorld> Function() open) {
       await g.suspend(as: Grace.editorEmail);
       final closed = fails(CloudErrorCode.churchClosed);
       const photo = [PhotoInput(mimeType: 'image/png', bytes: png)];
-      await expectLater(g.church.recognizeRoster('sunday', photo), closed);
-      await expectLater(g.church.calendarEvents('2026-10'), closed);
+      await expectLater(g.church.photos.recognize('sunday', photo), closed);
+      await expectLater(g.church.calendar.events('2026-10'), closed);
       await w.signIn(Grace.meiEmail);
-      await expectLater(g.church.photoQuota(), closed);
-      await expectLater(g.church.webhookSave(url: 'https://hook.example/x'), closed);
+      await expectLater(g.church.photos.quota(), closed);
+      await expectLater(g.church.webhook.save(url: 'https://hook.example/x'), closed);
       await w.signUp('outsider@example.com');
-      await expectLater(g.church.photoQuota(), denied());
-      await expectLater(g.church.calendarEvents('2026-10'), denied());
+      await expectLater(g.church.photos.quota(), denied());
+      await expectLater(g.church.calendar.events('2026-10'), denied());
     });
 
     test('its invites stop working', () async {
@@ -578,13 +578,13 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect((await g.church.members().first).map((m) => m.uid), unorderedEquals([g.pastor, g.editor, g.mei]));
       await w.signIn(Grace.editorEmail);
       expect(await g.church.members().first, hasLength(3));
-      expect(await g.church.allMembers(), hasLength(3));
-      expect(await g.church.allPendingMembers(), isEmpty);
+      expect(await g.church.export.members(), hasLength(3));
+      expect(await g.church.export.pendingMembers(), isEmpty);
       await w.signIn(Grace.meiEmail);
       expect((await g.church.member(g.mei).first)!.role, Role.staff);
       await expectLater(g.church.members().first, denied());
       await expectLater(g.church.pendingMembers().first, denied());
-      await expectLater(g.church.allMembers(), denied());
+      await expectLater(g.church.export.members(), denied());
     });
 
     test('an admin edits members, but never demotes themself', () async {
@@ -892,32 +892,32 @@ void contractTests(Future<ContractWorld> Function() open) {
 
     test("leads fill in their group's 人數; 行政 reads a service's; a 同工 neither", () async {
       final g = await Grace.open(w);
-      await g.church.setAttendanceSince(Day(2026, 10, 1));
+      await g.church.attendance.saveSince(Day(2026, 10, 1));
       expect((await g.church.church().first)!.attendanceSince, Day(2026, 10, 1));
       await w.signIn(Grace.editorEmail);
-      await g.church.setAttendance('service:sunday', Day(2026, 10, 4), const AttendanceDay.count(120, note: '聖餐'));
-      await g.church.setAttendancePauses('service:sunday', [
+      await g.church.attendance.save('service:sunday', Day(2026, 10, 4), const AttendanceDay.count(120, note: '聖餐'));
+      await g.church.attendance.savePauses('service:sunday', [
         AttendancePause(from: Day(2026, 10, 5), until: Day(2026, 11, 1)),
       ]);
-      final record = await g.church
-          .attendance('service:sunday')
+      final record = await g.church.attendance
+          .watch('service:sunday')
           .firstWhere((r) => r.days.isNotEmpty && r.pauses.isNotEmpty);
       expect(record.days, {Day(2026, 10, 4): const AttendanceDay.count(120, note: '聖餐')});
       expect(record.pauses, [AttendancePause(from: Day(2026, 10, 5), until: Day(2026, 11, 1))]);
       await expectLater(
-        g.church.setAttendance('service:youth', Day(2026, 10, 3), const AttendanceDay.none()),
+        g.church.attendance.save('service:youth', Day(2026, 10, 3), const AttendanceDay.none()),
         denied(),
       );
       await w.signIn(Grace.meiEmail);
       await expectLater(
-        g.church.setAttendance('service:sunday', Day(2026, 10, 11), const AttendanceDay.none()),
+        g.church.attendance.save('service:sunday', Day(2026, 10, 11), const AttendanceDay.none()),
         denied(),
       );
-      await expectLater(g.church.attendance('service:sunday').first, denied());
+      await expectLater(g.church.attendance.watch('service:sunday').first, denied());
       await w.signIn(Grace.pastorEmail);
       await g.church.putMember((await g.church.member(g.mei).first)!.withIdentities(const [OfficeIdentity()]));
       await w.signIn(Grace.meiEmail);
-      expect((await g.church.attendance('service:sunday').first).days.keys, [Day(2026, 10, 4)]);
+      expect((await g.church.attendance.watch('service:sunday').first).days.keys, [Day(2026, 10, 4)]);
     });
 
     test('a 小組長 adds a plain 同工 to their 小組', () async {
@@ -948,7 +948,7 @@ void contractTests(Future<ContractWorld> Function() open) {
       final old = Roster(type: 'sunday', day: Day(2026, 9, 27));
       await g.church.putRosters([second, first, old]);
       expect(await g.church.rosters(from: Day(2026, 10, 1)).first, [first, second]);
-      expect(await g.church.allRosters(), unorderedEquals([old, first, second]));
+      expect(await g.church.export.rosters(), unorderedEquals([old, first, second]));
       expect(
         await g.church.pastRosters(from: Day(2026, 9, 27), before: Day(2026, 10, 11)),
         unorderedEquals([old, first]),
@@ -1019,7 +1019,7 @@ void contractTests(Future<ContractWorld> Function() open) {
         '司會': ['林同工', '王牧師'],
       });
       expect(await g.church.staffOrder('sunday').first, order);
-      expect(await g.church.allStaffOrders(), {'sunday': order});
+      expect(await g.church.export.staffOrders(), {'sunday': order});
       await expectLater(
         g.church.putStaffOrder('youth', {
           '司會': ['林同工'],
@@ -1167,55 +1167,55 @@ void contractTests(Future<ContractWorld> Function() open) {
         ChurchLink(title: '官網', body: 'b' * 481, url: 'https://grace.example'),
         const ChurchLink(title: '官網', url: 'http://grace.example'),
       ]) {
-        await expectLater(g.church.setChurchLink(bad), denied(), reason: '${bad.title} ${bad.url}');
+        await expectLater(g.church.churchLink.save(bad), denied(), reason: '${bad.title} ${bad.url}');
       }
       final link = ChurchLink(title: '👍🏽' * 30, body: '👍🏽' * 120, url: 'https://grace.example/give');
-      await g.church.setChurchLink(link);
+      await g.church.churchLink.save(link);
       await w.signIn(Grace.meiEmail);
-      expect(await g.church.churchLink().first, link);
-      await expectLater(g.church.setChurchLink(null), denied());
+      expect(await g.church.churchLink.watch().first, link);
+      await expectLater(g.church.churchLink.save(null), denied());
       await w.signIn(Grace.pastorEmail);
-      await g.church.setChurchLink(null);
-      expect(await g.church.churchLink().first, isNull);
+      await g.church.churchLink.save(null);
+      expect(await g.church.churchLink.watch().first, isNull);
     });
 
     test('its content source: admins, https; a failed fetch is kept and said; it comes back with the link', () async {
       final g = await Grace.open(w);
       await expectLater(
-        g.church.setChurchLink(
+        g.church.churchLink.save(
           const ChurchLink(title: '官網', url: 'https://grace.example', source: 'http://feed.example'),
         ),
         fails(CloudErrorCode.unknown, reason: CloudReason.notHttps),
       );
 
       const sourced = ChurchLink(title: '官網', url: 'https://grace.example', source: unreachable, fetchMinute: 300);
-      final result = await g.church.setChurchLink(sourced);
+      final result = await g.church.churchLink.save(sourced);
       expect(result.error, LinkFetchError.network);
-      final link = (await g.church.churchLink().first)!;
+      final link = (await g.church.churchLink.watch().first)!;
       expect((link.source, link.fetchMinute), (unreachable, 300));
-      final content = (await g.church.linkContent().first)!;
+      final content = (await g.church.churchLink.content().first)!;
       expect((content.source, content.error), (unreachable, LinkFetchError.network));
       expect(content.fetchedAt, isNull);
 
       // The same source again is not fetched again.
-      final renamed = await g.church.setChurchLink(
+      final renamed = await g.church.churchLink.save(
         const ChurchLink(title: '教會官網', url: 'https://grace.example', source: unreachable, fetchMinute: 300),
       );
       expect(renamed.ok, isTrue);
-      expect((await g.church.churchLink().first)!.title, '教會官網');
+      expect((await g.church.churchLink.watch().first)!.title, '教會官網');
 
       // Removed, then put back as it was (undo): the source comes back too.
-      await g.church.setChurchLink(null);
-      await g.church.setChurchLink(sourced);
-      final back = (await g.church.churchLink().first)!;
+      await g.church.churchLink.save(null);
+      await g.church.churchLink.save(sourced);
+      final back = (await g.church.churchLink.watch().first)!;
       expect((back.title, back.source, back.fetchMinute), ('官網', unreachable, 300));
 
-      await g.church.setChurchLink(const ChurchLink(title: '官網', url: 'https://grace.example'));
-      expect((await g.church.churchLink().first)!.source, isNull);
-      expect(await g.church.linkContent().first, isNull);
+      await g.church.churchLink.save(const ChurchLink(title: '官網', url: 'https://grace.example'));
+      expect((await g.church.churchLink.watch().first)!.source, isNull);
+      expect(await g.church.churchLink.content().first, isNull);
 
       await w.signIn(Grace.meiEmail);
-      await expectLater(g.church.setChurchLink(sourced), denied());
+      await expectLater(g.church.churchLink.save(sourced), denied());
     });
   });
 
@@ -1224,39 +1224,39 @@ void contractTests(Future<ContractWorld> Function() open) {
       final g = await Grace.open(w);
       const url = 'https://127.0.0.1:9/hook';
       await expectLater(
-        g.church.webhookSave(url: 'http://hook.example'),
+        g.church.webhook.save(url: 'http://hook.example'),
         fails(CloudErrorCode.unknown, reason: CloudReason.notHttps),
       );
       await expectLater(
-        g.church.webhookSave(url: url, secret: 'short'),
+        g.church.webhook.save(url: url, secret: 'short'),
         fails(CloudErrorCode.unknown, reason: CloudReason.secret),
       );
-      await expectLater(g.church.webhookRotateSecret(), fails(CloudErrorCode.unknown), reason: 'nothing set up');
+      await expectLater(g.church.webhook.rotateSecret(), fails(CloudErrorCode.unknown), reason: 'nothing set up');
 
-      final secret = await g.church.webhookSave(url: url, calendar: true);
+      final secret = await g.church.webhook.save(url: url, calendar: true);
       expect(secret, startsWith('whsec_'));
-      expect(await g.church.webhook().first, const WebhookSettings(url: url, calendar: true));
-      expect(await g.church.webhookSave(url: url, roster: true), isNull, reason: 'the secret stays');
-      expect(await g.church.webhook().first, const WebhookSettings(url: url, roster: true));
+      expect(await g.church.webhook.watch().first, const WebhookSettings(url: url, calendar: true));
+      expect(await g.church.webhook.save(url: url, roster: true), isNull, reason: 'the secret stays');
+      expect(await g.church.webhook.watch().first, const WebhookSettings(url: url, roster: true));
 
-      final next = await g.church.webhookRotateSecret();
+      final next = await g.church.webhook.rotateSecret();
       expect(next, allOf(startsWith('whsec_'), isNot(secret)));
-      expect(await g.church.webhookRotateSecret(secret: 'our-shared-secret-2026'), isNull);
+      expect(await g.church.webhook.rotateSecret(secret: 'our-shared-secret-2026'), isNull);
 
-      final delivery = await g.church.webhookTest();
-      final last = (await g.church.webhook().first)!.lastDelivery!;
+      final delivery = await g.church.webhook.test();
+      final last = (await g.church.webhook.watch().first)!.lastDelivery!;
       expect((last.ok, last.event), (delivery.ok, 'ping'));
 
-      expect(await g.church.webhookSave(url: null), isNull);
-      expect(await g.church.webhook().first, isNull);
+      expect(await g.church.webhook.save(url: null), isNull);
+      expect(await g.church.webhook.watch().first, isNull);
     });
 
     test('is the admins\' alone', () async {
       final g = await Grace.open(w);
       await w.signIn(Grace.meiEmail);
-      await expectLater(g.church.webhook().first, denied());
-      await expectLater(g.church.webhookSave(url: 'https://hook.example/x'), denied());
-      await expectLater(g.church.webhookTest(), denied());
+      await expectLater(g.church.webhook.watch().first, denied());
+      await expectLater(g.church.webhook.save(url: 'https://hook.example/x'), denied());
+      await expectLater(g.church.webhook.test(), denied());
     });
   });
 
@@ -1380,32 +1380,32 @@ void contractTests(Future<ContractWorld> Function() open) {
   group('calendar', () {
     test('admins connect it, calendar editors write, members read', () async {
       final g = await Grace.open(w);
-      expect((await g.church.calendarAuthUrl()).host, 'accounts.google.com');
+      expect((await g.church.calendar.authUrl()).host, 'accounts.google.com');
       await w.signIn(Grace.meiEmail);
-      expect((await g.church.calendarSettings().first).connected, isFalse);
-      await expectLater(g.church.calendarAuthUrl(), denied());
-      await expectLater(g.church.calendarList(), denied());
-      await expectLater(g.church.calendarDisconnect(), denied());
+      expect((await g.church.calendar.settings().first).connected, isFalse);
+      await expectLater(g.church.calendar.authUrl(), denied());
+      await expectLater(g.church.calendar.choices(), denied());
+      await expectLater(g.church.calendar.disconnect(), denied());
       final event = CalendarEvent(title: '同工會', start: DateTime(2026, 10, 4, 14), end: DateTime(2026, 10, 4, 15));
-      await expectLater(g.church.calendarSave(event), denied());
+      await expectLater(g.church.calendar.save(event), denied());
       await expectLater(
-        g.church.calendarSave(event, previous: event.copyWith(end: DateTime(2026, 10, 5))),
+        g.church.calendar.save(event, previous: event.copyWith(end: DateTime(2026, 10, 5))),
         denied(),
       );
-      await expectLater(g.church.calendarDelete(event), denied());
+      await expectLater(g.church.calendar.delete(event), denied());
       await w.signUp('outsider@example.com');
-      await expectLater(g.church.calendarEvents('2026-10'), denied());
+      await expectLater(g.church.calendar.events('2026-10'), denied());
     });
 
     test("a group's 負責人 writes its events and arranges their rosters, not the church's (#84)", () async {
       final g = await Grace.open(w);
       await w.connectCalendar(g.cid);
-      final church = await g.church.calendarSave(
+      final church = await g.church.calendar.save(
         CalendarEvent(title: '同工會', start: DateTime.utc(2026, 12, 20, 19), end: DateTime.utc(2026, 12, 20, 21)),
       );
       await w.signIn(Grace.editorEmail);
       // 林同工 leads 主日崇拜.
-      final ours = await g.church.calendarSave(
+      final ours = await g.church.calendar.save(
         CalendarEvent(
           title: '主日同工聚集',
           start: DateTime.utc(2026, 12, 22, 19),
@@ -1414,7 +1414,7 @@ void contractTests(Future<ContractWorld> Function() open) {
         ),
       );
       expect(ours.group, 'service:sunday');
-      await g.church.calendarSave(ours.copyWith(title: '主日同工聚集（改）'), previous: ours);
+      await g.church.calendar.save(ours.copyWith(title: '主日同工聚集（改）'), previous: ours);
       await g.church.putRoster(
         eventRoster(
           ours,
@@ -1422,23 +1422,23 @@ void contractTests(Future<ContractWorld> Function() open) {
           calendarId: 'cal-1',
         ),
       );
-      await expectLater(g.church.calendarSave(church.copyWith(title: '改')), denied());
-      await expectLater(g.church.calendarSave(church.copyWith(group: () => 'service:sunday')), denied());
-      await expectLater(g.church.calendarDelete(church), denied());
+      await expectLater(g.church.calendar.save(church.copyWith(title: '改')), denied());
+      await expectLater(g.church.calendar.save(church.copyWith(group: () => 'service:sunday')), denied());
+      await expectLater(g.church.calendar.delete(church), denied());
       await expectLater(
-        g.church.calendarSave(
+        g.church.calendar.save(
           CalendarEvent(title: '全教會', start: DateTime.utc(2026, 12, 23, 19), end: DateTime.utc(2026, 12, 23, 21)),
         ),
         denied(),
       );
       await expectLater(g.church.putRoster(eventRoster(church, calendarId: 'cal-1')), denied());
-      await g.church.calendarDelete(ours);
+      await g.church.calendar.delete(ours);
     });
 
     test("a 負責人 undoing a delete takes back no roster of the church's (#84)", () async {
       final g = await Grace.open(w);
       await w.connectCalendar(g.cid);
-      final church = await g.church.calendarSave(
+      final church = await g.church.calendar.save(
         CalendarEvent(title: '同工會', start: DateTime.utc(2026, 12, 20, 19), end: DateTime.utc(2026, 12, 20, 21)),
       );
       await g.church.putRoster(
@@ -1448,10 +1448,10 @@ void contractTests(Future<ContractWorld> Function() open) {
           calendarId: 'cal-1',
         ),
       );
-      await g.church.calendarDelete(church);
+      await g.church.calendar.delete(church);
       await w.signIn(Grace.editorEmail);
       await expectLater(
-        g.church.calendarSave(
+        g.church.calendar.save(
           CalendarEvent(title: '同工會', start: church.start, end: church.end, group: 'service:sunday'),
           restoreRosterOf: church.id,
         ),
@@ -1466,22 +1466,22 @@ void contractTests(Future<ContractWorld> Function() open) {
         Duty(role: '主持', people: const ['李美玉'], uids: {'李美玉': g.mei}),
       ];
       Roster rosterOf(CalendarEvent e) => eventRoster(e, duties: duties, calendarId: 'cal-1').copyWith(saved: true);
-      final party = await g.church.calendarSave(
+      final party = await g.church.calendar.save(
         CalendarEvent(title: '聖誕晚會', start: DateTime.utc(2026, 12, 24, 19), end: DateTime.utc(2026, 12, 24, 21)),
       );
       await g.church.putRoster(rosterOf(party));
 
-      final moved = await g.church.calendarSave(
+      final moved = await g.church.calendar.save(
         party.copyWith(title: '聖誕感恩晚會', start: DateTime.utc(2026, 12, 23, 19), end: DateTime.utc(2026, 12, 23, 21)),
         previous: party,
       );
       expect(await g.church.eventRosters(), [rosterOf(moved)]);
       expect((await g.church.eventRosters()).single.day, Day(2026, 12, 23));
 
-      await g.church.calendarDelete(moved);
+      await g.church.calendar.delete(moved);
       expect(await g.church.eventRosters(), isEmpty, reason: 'cancelled with its event');
 
-      final again = await g.church.calendarSave(
+      final again = await g.church.calendar.save(
         CalendarEvent(title: moved.title, start: moved.start, end: moved.end),
         restoreRosterOf: moved.id,
       );
@@ -1494,13 +1494,13 @@ void contractTests(Future<ContractWorld> Function() open) {
       await g.church.setTimeZone(ChurchTimeZone.losAngeles);
       await w.connectCalendar(g.cid);
       // Late evening in Los Angeles: already the next day in UTC and Taipei.
-      final watch = await g.church.calendarSave(
+      final watch = await g.church.calendar.save(
         CalendarEvent(title: '守歲', start: DateTime.utc(2026, 12, 31, 22), end: DateTime.utc(2026, 12, 31, 23, 30)),
       );
       expect((watch.start, watch.end), (DateTime.utc(2026, 12, 31, 22), DateTime.utc(2026, 12, 31, 23, 30)));
       await g.church.putRoster(eventRoster(watch, calendarId: 'cal-1').copyWith(saved: true));
 
-      final earlier = await g.church.calendarSave(
+      final earlier = await g.church.calendar.save(
         watch.copyWith(start: DateTime.utc(2026, 12, 30, 22), end: DateTime.utc(2026, 12, 30, 23, 30)),
         previous: watch,
       );
@@ -1514,17 +1514,17 @@ void contractTests(Future<ContractWorld> Function() open) {
     test('members see the quota; a new church has all 30 photos', () async {
       final g = await Grace.open(w);
       await w.signIn(Grace.meiEmail);
-      final quota = await g.church.photoQuota();
+      final quota = await g.church.photos.quota();
       expect((quota.remaining, quota.limit, quota.platformOpen), (30, 30, true));
       await w.signUp('outsider@example.com');
-      await expectLater(g.church.photoQuota(), denied());
+      await expectLater(g.church.photos.quota(), denied());
     });
 
     test('a photo over 2 MB is refused as too large', () async {
       final g = await Grace.open(w);
       final big = [PhotoInput(mimeType: 'image/png', bytes: List.filled(2 * 1024 * 1024 + 3, 0))];
       await expectLater(
-        g.church.recognizeRoster('sunday', big),
+        g.church.photos.recognize('sunday', big),
         fails(CloudErrorCode.unknown, reason: CloudReason.tooLarge),
       );
     });
@@ -1532,13 +1532,13 @@ void contractTests(Future<ContractWorld> Function() open) {
     test('only editors of a service the church has recognize photos for it', () async {
       final g = await Grace.open(w);
       const photo = [PhotoInput(mimeType: 'image/png', bytes: png)];
-      await expectLater(g.church.recognizeRoster('retreat', photo), denied());
+      await expectLater(g.church.photos.recognize('retreat', photo), denied());
       await w.signIn(Grace.editorEmail);
-      await expectLater(g.church.recognizeRoster('youth', photo), denied());
+      await expectLater(g.church.photos.recognize('youth', photo), denied());
       await w.signIn(Grace.meiEmail);
-      await expectLater(g.church.recognizeRoster('sunday', photo), denied());
+      await expectLater(g.church.photos.recognize('sunday', photo), denied());
       await w.signUp('outsider@example.com');
-      await expectLater(g.church.recognizeRoster('sunday', photo), denied());
+      await expectLater(g.church.photos.recognize('sunday', photo), denied());
     });
   });
 

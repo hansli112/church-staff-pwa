@@ -11,7 +11,7 @@ const attendanceWeeks = 12;
 
 /// Group [key]'s pauses and 人數 filled in.
 final attendanceProvider = StreamProvider.autoDispose.family<AttendanceRecord, String>(
-  (ref, key) => openChurch(ref).attendance(key),
+  (ref, key) => openChurch(ref).attendance.watch(key),
 );
 
 /// Rosters from [attendanceWeeks] back on: which days a service met.

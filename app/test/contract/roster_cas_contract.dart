@@ -30,7 +30,7 @@ void rosterCasContractTests(Future<ContractWorld> Function() open) {
       ),
       fails(CloudErrorCode.conflict),
     );
-    expect(await g.church.allRosters(), isEmpty);
+    expect(await g.church.export.rosters(), isEmpty);
     await g.church.putServices([sunday, youth]);
     await w.signIn(Grace.editorEmail);
     await expectLater(
@@ -70,7 +70,7 @@ void rosterCasContractTests(Future<ContractWorld> Function() open) {
       ),
       fails(CloudErrorCode.conflict),
     );
-    expect(await g.church.allRosters(), isEmpty);
+    expect(await g.church.export.rosters(), isEmpty);
     expect((await g.church.staffOrder('sunday').first).rankingOf('司琴'), ['乙', '甲']);
   });
 
@@ -93,8 +93,8 @@ void rosterCasContractTests(Future<ContractWorld> Function() open) {
     final after = <String, Roster?>{first.id: null, second.id: second};
 
     await g.church.compareAndSetRosters(RosterChange(before: before, after: after));
-    expect(await g.church.allRosters(), [second]);
+    expect(await g.church.export.rosters(), [second]);
     await g.church.compareAndSetRosters(RosterChange(before: after, after: before));
-    expect(await g.church.allRosters(), [first]);
+    expect(await g.church.export.rosters(), [first]);
   });
 }

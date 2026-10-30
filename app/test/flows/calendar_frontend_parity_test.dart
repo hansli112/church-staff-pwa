@@ -34,19 +34,19 @@ void main() {
     await tester.pump();
     await tapText(tester, '儲存');
     final data = b.church('grace');
-    final id = (await data.calendarEvents('2026-10')).single.id;
-    expect((await data.calendarEvents('2026-10')).single.description, '請帶服事表\n一起預備');
+    final id = (await data.calendar.events('2026-10')).single.id;
+    expect((await data.calendar.events('2026-10')).single.description, '請帶服事表\n一起預備');
 
     await tapText(tester, '同工會');
     await tester.enterText(field('活動說明'), '  改到二樓  ');
     await tapText(tester, '儲存');
-    expect((await data.calendarEvents('2026-10')).single.id, id);
-    expect((await data.calendarEvents('2026-10')).single.description, '改到二樓');
+    expect((await data.calendar.events('2026-10')).single.id, id);
+    expect((await data.calendar.events('2026-10')).single.description, '改到二樓');
 
     await tapText(tester, '同工會');
     await tester.enterText(field('活動說明'), '');
     await tapText(tester, '儲存');
-    expect((await data.calendarEvents('2026-10')).single.description, '');
+    expect((await data.calendar.events('2026-10')).single.description, '');
   });
 
   testWidgets('duplicating opens a new draft and saves a separate event without recurrence or roster', (tester) async {
@@ -82,14 +82,14 @@ void main() {
     expect(find.descendant(of: find.byType(BottomSheet).last, matching: find.text('服事表')), findsNothing);
     expect(find.text('安排服事'), findsOneWidget, reason: 'a new event, whose roster is its own');
     expect(
-      (await b.church('grace').calendarEvents('2026-10')).length,
+      (await b.church('grace').calendar.events('2026-10')).length,
       1,
       reason: 'the copy is only a draft until saved',
     );
     await tester.enterText(field('活動名稱'), '青年退修會');
     await tapText(tester, '儲存');
 
-    final events = await b.church('grace').calendarEvents('2026-10');
+    final events = await b.church('grace').calendar.events('2026-10');
     final copied = events.singleWhere((e) => e.title == '青年退修會');
     expect(copied.id, isNotNull);
     expect(copied.id, isNot(original.id));
@@ -122,7 +122,7 @@ void main() {
     await tapText(tester, '同工會');
     await tester.enterText(field('活動說明'), '帶聖經');
     await tapText(tester, '安排服事');
-    final saved = (await b.church('grace').calendarEvents('2026-10')).single;
+    final saved = (await b.church('grace').calendar.events('2026-10')).single;
     expect(saved.description, '帶聖經');
     expect((saved.recurringEventId, saved.originalStart), ('series', '2026-10-10T19:00:00+08:00'));
     expect(find.byType(TextField), findsNothing, reason: 'the event editor has closed for the roster');
@@ -143,7 +143,7 @@ void main() {
     await tester.enterText(field('活動名稱'), '不要儲存這份');
     Navigator.of(tester.element(field('活動名稱'))).pop();
     await settle(tester);
-    final events = await b.church('grace').calendarEvents('2026-10');
+    final events = await b.church('grace').calendar.events('2026-10');
     expect(events.length, 1);
     expect((events.single.id, events.single.title), ('meeting', '同工會'));
   });

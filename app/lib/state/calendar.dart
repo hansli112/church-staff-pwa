@@ -15,7 +15,7 @@ export 'calendar_months.dart' show CalendarReadStatus;
 
 final calendarSettingsProvider = StreamProvider<CalendarSettings>((ref) {
   if (!ref.watch(churchOpenProvider)) return Stream.value(const CalendarSettings());
-  return openChurch(ref).calendarSettings();
+  return openChurch(ref).calendar.settings();
 });
 
 typedef _CalendarScope = ({ChurchData data, String uid, String? calendarId, String? revision});
@@ -98,7 +98,7 @@ final _calendarMonthsProvider = Provider<CalendarMonths?>((ref) {
   if (scope == null) return null;
   final months = CalendarMonths(
     key: (uid: scope.uid, churchId: scope.data.churchId, calendarId: scope.calendarId, revision: scope.revision),
-    read: scope.data.calendarEvents,
+    read: scope.data.calendar.events,
     cache: cache,
     cacheScope: _cacheScope(scope),
     clock: ref.watch(clockProvider),
@@ -190,7 +190,7 @@ class CalendarActions {
   /// Saves [event], new or changed from [previous], and returns it as the
   /// server saved it: a new one with its id.
   Future<CalendarEvent> save(CalendarEvent event, {CalendarEvent? previous}) => withEditLock(_ref, () async {
-    Future<CalendarEvent> send() => _ref.churchData.calendarSave(event, previous: previous);
+    Future<CalendarEvent> send() => _ref.churchData.calendar.save(event, previous: previous);
     // write answers null only for a deletion.
     return (await (_months()?.write(event, previous: previous, send: send, now: _months) ?? send()))!;
   });
@@ -201,7 +201,7 @@ class CalendarActions {
     final data = _ref.churchData;
     final months = _months();
     Future<CalendarEvent?> send() async {
-      await data.calendarDelete(event);
+      await data.calendar.delete(event);
       return null;
     }
 
@@ -212,7 +212,7 @@ class CalendarActions {
       if (months == null || !identical(_months(), months)) throw const CloudException(CloudErrorCode.unavailable);
       await months.write(
         event.anew,
-        send: () => data.calendarSave(event.anew, restoreRosterOf: event.id),
+        send: () => data.calendar.save(event.anew, restoreRosterOf: event.id),
         now: _months,
       );
     });

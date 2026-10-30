@@ -111,7 +111,7 @@ class ImportSession extends Notifier<ImportDraft> {
     final draft = _draft;
     state = state.copyWith(busy: true, clearError: true);
     try {
-      final rows = await ref.churchData.recognizeRoster(serviceType, images);
+      final rows = await ref.churchData.photos.recognize(serviceType, images);
       if (_isCurrent(draft)) load(rows);
     } catch (e) {
       if (_isCurrent(draft)) fail(e);

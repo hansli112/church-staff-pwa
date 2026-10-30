@@ -18,7 +18,12 @@ void main() {
       _ => Roster(
         type: '',
         day: Day(2030, 12, 24),
-        forEvent: RosterEvent(eventId: 'e1', title: '聖誕晚會', lastDay: Day(2030, 12, 24), cancelled: state == 'cancelled'),
+        forEvent: RosterEvent(
+          eventId: 'e1',
+          title: '聖誕晚會',
+          lastDay: Day(2030, 12, 24),
+          cancelled: state == 'cancelled',
+        ),
       ),
     };
     for (final r in rows) {

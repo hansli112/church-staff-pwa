@@ -199,6 +199,21 @@ abstract interface class MembershipRepository {
 abstract interface class ChurchData {
   String get churchId;
 
+  // The church's parts that stand on their own, each its own interface.
+  // What is here besides them, EchoingChurchData shows early.
+
+  CalendarData get calendar;
+
+  ChurchLinkData get churchLink;
+
+  WebhookData get webhook;
+
+  PhotoData get photos;
+
+  AttendanceData get attendance;
+
+  ExportData get export;
+
   Stream<Church?> church();
 
   /// The member doc of [uid]: role, groups, zones.
@@ -255,20 +270,6 @@ abstract interface class ChurchData {
   /// Closes 小組 [id], taking it off its 小組長 and 同工; its 人數 stay.
   Future<void> deleteSmallGroup(String id);
 
-  /// Group [key]'s 回報人數 (#85): its pauses and each meeting's 人數 filled
-  /// in. For those who see them (Member.readsAttendance).
-  Stream<AttendanceRecord> attendance(String key);
-
-  /// Fills in [day]'s 人數 of group [key] (Member.writesAttendance), or with
-  /// null clears it.
-  Future<void> setAttendance(String key, Day day, AttendanceDay? value);
-
-  /// Sets group [key]'s pauses (AttendanceRecord.pausedUntil, resumed).
-  Future<void> setAttendancePauses(String key, List<AttendancePause> pauses);
-
-  /// Turns 回報人數 on from [since] (admins), or with null off.
-  Future<void> setAttendanceSince(Day? since);
-
   /// Saved rosters from [from] on, of every service, oldest first, and
   /// events' rosters still on at [from] (a retreat begun the day before).
   Stream<List<Roster>> rosters({required Day from});
@@ -282,18 +283,6 @@ abstract interface class ChurchData {
   Future<List<Roster>> eventRosters();
 
   Stream<StaffOrder> staffOrder(String serviceType);
-
-  /// Everyone in the church, read once from the server when online (export).
-  Future<List<Member>> allMembers();
-
-  /// Pending members, read once (export). Admins.
-  Future<List<PendingMember>> allPendingMembers();
-
-  /// Every saved roster, past ones too, read once (export).
-  Future<List<Roster>> allRosters();
-
-  /// Every service's staff order, read once (export).
-  Future<Map<String, StaffOrder>> allStaffOrders();
 
   /// Writes [change] atomically, only if every document it names still
   /// matches [RosterChange.before]; otherwise [CloudErrorCode.conflict]
@@ -370,27 +359,6 @@ abstract interface class ChurchData {
   Future<Invite> createInvite({required Duration validFor, List<String> zoneTypes = const []});
   Future<void> revokeInvite(String code);
 
-  Stream<CalendarSettings> calendarSettings();
-
-  /// The church link, or null when the admin has not set one.
-  Stream<ChurchLink?> churchLink();
-
-  /// Sets the whole church link, its content source and fetch time
-  /// included (admins only); null removes it. A new source is fetched at
-  /// once and the result returned; a bad source URL is
-  /// [CloudErrorCode.unknown] with [CloudReason.notHttps].
-  Future<LinkSourceResult> setChurchLink(ChurchLink? link);
-
-  /// Admin-only retry of the currently configured source. Does not rewrite
-  /// the static link or resurrect content from an earlier source/date.
-  Future<LinkSourceResult> refreshChurchLink();
-
-  /// What the backend last fetched from the church link's content source.
-  Stream<LinkContent?> linkContent();
-
-  /// The church's webhook, or null when it has none. Admins only.
-  Stream<WebhookSettings?> webhook();
-
   /// Sets the home-screen name (admins only); null goes back to the church
   /// name.
   Future<void> setHomeName(String? name);
@@ -412,11 +380,62 @@ abstract interface class ChurchData {
 
   /// Merges a pending member into a member (admins).
   Future<void> mergePending(String pendingId, String uid);
+}
+
+/// The church's Google Calendar (行事曆), proxied by the backend: admins
+/// connect it, calendar editors write, members read.
+abstract interface class CalendarData {
+  Stream<CalendarSettings> settings();
+
+  Future<Uri> authUrl();
+
+  Future<List<CalendarChoice>> choices();
+
+  Future<void> select(String calendarId, String calendarName);
+
+  Future<void> disconnect();
+
+  /// Events of [month] (`YYYY-MM`).
+  Future<List<CalendarEvent>> events(String month);
+
+  /// [previous] is the event before editing, so a move to another month
+  /// refreshes both months. The event's roster follows a change of title or
+  /// days. [restoreRosterOf] undoes deleting that event: its cancelled
+  /// roster moves to [event], made again.
+  Future<CalendarEvent> save(CalendarEvent event, {CalendarEvent? previous, String? restoreRosterOf});
+
+  /// Deletes [event] and cancels its roster, kept a while for undo.
+  Future<void> delete(CalendarEvent event);
+}
+
+/// The 教會連結 at the top of 首頁, and what its content source gives today.
+abstract interface class ChurchLinkData {
+  /// The church link, or null when the admin has not set one.
+  Stream<ChurchLink?> watch();
+
+  /// Sets the whole church link, its content source and fetch time
+  /// included (admins only); null removes it. A new source is fetched at
+  /// once and the result returned; a bad source URL is
+  /// [CloudErrorCode.unknown] with [CloudReason.notHttps].
+  Future<LinkSourceResult> save(ChurchLink? link);
+
+  /// Admin-only retry of the currently configured source. Does not rewrite
+  /// the static link or resurrect content from an earlier source/date.
+  Future<LinkSourceResult> refresh();
+
+  /// What the backend last fetched from the church link's content source.
+  Stream<LinkContent?> content();
+}
+
+/// The church's 外部通知 (webhook).
+abstract interface class WebhookData {
+  /// The church's webhook, or null when it has none. Admins only.
+  Stream<WebhookSettings?> watch();
 
   /// Sets the webhook URL and which events it gets (admins); a null [url]
   /// turns it off. The first time, [secret] is used or one is made and
   /// returned: the only time it is shown.
-  Future<String?> webhookSave({
+  Future<String?> save({
     required String? url,
     bool calendar = false,
     bool roster = false,
@@ -424,40 +443,55 @@ abstract interface class ChurchData {
   });
 
   /// Replaces the secret with [secret], or a new one that is returned.
-  Future<String?> webhookRotateSecret({String? secret});
+  Future<String?> rotateSecret({String? secret});
 
   /// Sends a test notice now.
-  Future<WebhookDelivery> webhookTest();
+  Future<WebhookDelivery> test();
+}
 
-  // Google Calendar, proxied by the backend. Admins connect it, calendar
-  // editors write, members read.
-  Future<Uri> calendarAuthUrl();
-
-  Future<List<CalendarChoice>> calendarList();
-  Future<void> calendarSelect(String calendarId, String calendarName);
-  Future<void> calendarDisconnect();
-
-  /// Events of [month] (`YYYY-MM`).
-  Future<List<CalendarEvent>> calendarEvents(String month);
-
-  /// [previous] is the event before editing, so a move to another month
-  /// refreshes both months. The event's roster follows a change of title or
-  /// days. [restoreRosterOf] undoes deleting that event: its cancelled
-  /// roster moves to [event], made again.
-  Future<CalendarEvent> calendarSave(CalendarEvent event, {CalendarEvent? previous, String? restoreRosterOf});
-
-  /// Deletes [event] and cancels its roster, kept a while for undo.
-  Future<void> calendarDelete(CalendarEvent event);
-
+/// Reading rosters from photos (匯入).
+abstract interface class PhotoData {
   /// Photos the church may still recognize this month.
-  Future<PhotoQuota> photoQuota();
+  Future<PhotoQuota> quota();
 
   /// Recognizes photos of a paper roster into import rows (JSON objects).
-  Future<List<dynamic>> recognizeRoster(String serviceType, List<PhotoInput> images);
+  Future<List<dynamic>> recognize(String serviceType, List<PhotoInput> images);
 
-  /// The prompt [recognizeRoster] gives the AI, for an editor to use with
+  /// The prompt [recognize] gives the AI, for an editor to use with
   /// an AI of their own. Counts no photo.
-  Future<String> photoPrompt(String serviceType);
+  Future<String> prompt(String serviceType);
+}
+
+/// 回報人數 (#85): each meeting's 人數, by group key (`service:<id>`, `small:<id>`).
+abstract interface class AttendanceData {
+  /// Group [key]'s 回報人數 (#85): its pauses and each meeting's 人數 filled
+  /// in. For those who see them (Member.readsAttendance).
+  Stream<AttendanceRecord> watch(String key);
+
+  /// Fills in [day]'s 人數 of group [key] (Member.writesAttendance), or with
+  /// null clears it.
+  Future<void> save(String key, Day day, AttendanceDay? value);
+
+  /// Sets group [key]'s pauses (AttendanceRecord.pausedUntil, resumed).
+  Future<void> savePauses(String key, List<AttendancePause> pauses);
+
+  /// Turns 回報人數 on from [since] (admins), or with null off.
+  Future<void> saveSince(Day? since);
+}
+
+/// 匯出資料: everything of the church at once, for an admin.
+abstract interface class ExportData {
+  /// Everyone in the church, read once from the server when online (export).
+  Future<List<Member>> members();
+
+  /// Pending members, read once (export). Admins.
+  Future<List<PendingMember>> pendingMembers();
+
+  /// Every saved roster, past ones too, read once (export).
+  Future<List<Roster>> rosters();
+
+  /// Every service's staff order, read once (export).
+  Future<Map<String, StaffOrder>> staffOrders();
 }
 
 /// A calendar the admin may pick, with its own time zone (an IANA id, when
