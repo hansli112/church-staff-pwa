@@ -843,7 +843,7 @@ class _PromptDialogState extends State<_PromptDialog> {
               maxLength: widget.maxLength,
               minLines: 1,
               maxLines: widget.maxLines,
-              placeholder: widget.hint ?? widget.label,
+              placeholder: widget.hint,
               textInputAction: oneLine ? TextInputAction.done : null,
               onSubmitted: oneLine ? submit : null,
             ),
@@ -969,6 +969,7 @@ class UnsavedChanges extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final route = ModalRoute.of(context);
+    assert(route is _AppSheetRoute, 'UnsavedChanges is for a sheet opened with showAppSheet');
     if (route is _AppSheetRoute) route.changed = changed;
     return child;
   }
@@ -1008,7 +1009,7 @@ class _AppSheetRoute<T> extends ModalBottomSheetRoute<T> {
   Future<void> _askToDiscard() async {
     final context = subtreeContext;
     if (context == null || !isActive) return;
-    if (!await confirmDiscard(context) || !isCurrent) return;
+    if (!await _confirmDiscard(context) || !isCurrent) return;
     _discarding = true;
     navigator?.pop();
   }
@@ -1017,7 +1018,7 @@ class _AppSheetRoute<T> extends ModalBottomSheetRoute<T> {
 /// Asks whether to discard a sheet's unsaved changes: on iPhone from below,
 /// as Apple's sheets ask (an action sheet), elsewhere as a dialog. True to
 /// discard them.
-Future<bool> confirmDiscard(BuildContext context) async {
+Future<bool> _confirmDiscard(BuildContext context) async {
   final l10n = L10n.of(context);
   if (Theme.of(context).platform != TargetPlatform.iOS) {
     return confirmDestructive(

@@ -23,63 +23,68 @@ Future<void> showEventDetail(BuildContext context, CalendarEvent e) {
   final time = DateFormat.Hm();
   return showAppSheet<void>(
     context,
+    // Scrolls: a long description is longer than the tallest sheet.
     builder: (context) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(Space.l, 0, Space.l, Space.l),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(e.title, style: AppText.title3),
-                const SizedBox(height: Space.s),
-                Text(
-                  switch (e) {
-                    _ when e.allDay && e.lastDay == e.day => '${fmt.format(e.start)} ${l10n.calAllDay}',
-                    _ when e.allDay => '${fmt.format(e.start)} – ${fmt.format(e.lastDay.midnight)}',
-                    _ when e.lastDay == e.day => '${fmt.format(e.start)} ${time.format(e.start)}–${time.format(e.end)}',
-                    _ => '${fmt.format(e.start)} ${time.format(e.start)} – ${fmt.format(e.end)} ${time.format(e.end)}',
-                  },
-                  style: AppText.body,
-                ),
-                if (!e.allDay) const ChurchClockNotice(padding: EdgeInsets.only(top: Space.xs)),
-                // A group's event says whose it is (#84); one of a group
-                // since deleted, nothing.
-                if (e.group != null)
-                  Consumer(
-                    builder: (context, ref, _) => switch (eventGroupName(ref, e.group!)) {
-                      final name? => Padding(
-                        padding: const EdgeInsets.only(top: Space.xs),
-                        child: Text(
-                          l10n.eventOfGroup(name),
-                          style: AppText.body.copyWith(color: AppColors.of(context).secondaryLabel),
-                        ),
-                      ),
-                      null => const SizedBox.shrink(),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Space.l, 0, Space.l, Space.l),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(e.title, style: AppText.title3),
+                  const SizedBox(height: Space.s),
+                  Text(
+                    switch (e) {
+                      _ when e.allDay && e.lastDay == e.day => '${fmt.format(e.start)} ${l10n.calAllDay}',
+                      _ when e.allDay => '${fmt.format(e.start)} – ${fmt.format(e.lastDay.midnight)}',
+                      _ when e.lastDay == e.day =>
+                        '${fmt.format(e.start)} ${time.format(e.start)}–${time.format(e.end)}',
+                      _ =>
+                        '${fmt.format(e.start)} ${time.format(e.start)} – ${fmt.format(e.end)} ${time.format(e.end)}',
                     },
+                    style: AppText.body,
                   ),
-                if (e.location != null && e.location!.isNotEmpty) ...[
-                  const SizedBox(height: Space.xs),
-                  Text(e.location!, style: AppText.body.copyWith(color: AppColors.of(context).secondaryLabel)),
+                  if (!e.allDay) const ChurchClockNotice(padding: EdgeInsets.only(top: Space.xs)),
+                  // A group's event says whose it is (#84); one of a group
+                  // since deleted, nothing.
+                  if (e.group != null)
+                    Consumer(
+                      builder: (context, ref, _) => switch (eventGroupName(ref, e.group!)) {
+                        final name? => Padding(
+                          padding: const EdgeInsets.only(top: Space.xs),
+                          child: Text(
+                            l10n.eventOfGroup(name),
+                            style: AppText.body.copyWith(color: AppColors.of(context).secondaryLabel),
+                          ),
+                        ),
+                        null => const SizedBox.shrink(),
+                      },
+                    ),
+                  if (e.location != null && e.location!.isNotEmpty) ...[
+                    const SizedBox(height: Space.xs),
+                    Text(e.location!, style: AppText.body.copyWith(color: AppColors.of(context).secondaryLabel)),
+                  ],
+                  if (e.description != null && e.description!.isNotEmpty) ...[
+                    const SizedBox(height: Space.m),
+                    Text(e.description!, style: AppText.callout),
+                  ],
                 ],
-                if (e.description != null && e.description!.isNotEmpty) ...[
-                  const SizedBox(height: Space.m),
-                  Text(e.description!, style: AppText.callout),
-                ],
-              ],
+              ),
             ),
-          ),
-          EventRosterRow(
-            event: e,
-            onOpen: () {
-              Navigator.pop(context);
-              openEventRoster(screen, e);
-            },
-          ),
-        ],
+            EventRosterRow(
+              event: e,
+              onOpen: () {
+                Navigator.pop(context);
+                openEventRoster(screen, e);
+              },
+            ),
+          ],
+        ),
       ),
     ),
   );
@@ -368,7 +373,9 @@ class _EventEditorState extends State<_EventEditor> {
   }
 
   /// Whether [_edited] differs from [_opened] in anything the editor sets.
+  /// A copy (複製) counts from the start: it is lost unless saved.
   bool get _changed {
+    if (widget.event case final e? when e.id == null) return true;
     final edited = _edited;
     final e = _opened;
     return edited.title != e.title ||

@@ -222,11 +222,18 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
   /// failure stays, with 重試.
   Future<void> _finish() async {
     setState(() => _notifying = true);
-    final told = await _tellPlanned(_toasts, ref.read(rosterActionsProvider), _waiting, onRetry: _finish);
+    final toasts = _toasts;
+    final actions = ref.read(rosterActionsProvider);
+    final waiting = _waiting;
+    // 重試 once the page is gone (left while telling) tells from wherever
+    // it is.
+    void retry() => mounted ? _finish() : _tellPlanned(toasts, actions, waiting, onRetry: retry);
+    final told = await _tellPlanned(toasts, actions, waiting, onRetry: retry);
     if (!mounted) return;
     setState(() {
       _notifying = false;
-      // Told: the news that would ask has not caught up yet.
+      // Told: no toast offering 通知 on the way out, though the news has
+      // not caught up yet.
       _leaving = told;
     });
     if (told) context.pop();

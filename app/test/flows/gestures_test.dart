@@ -136,6 +136,25 @@ void main() {
     await tapText(tester, '聖餐');
     await back(tester);
     expect(find.text('放棄變更？'), findsOneWidget);
+    await tapText(tester, '放棄變更');
+
+    Future<void> addDuty() async {
+      await tester.tap(find.byTooltip('編輯'));
+      await settle(tester);
+      await tapText(tester, '新增服事項目');
+    }
+
+    await addDuty();
+    await back(tester);
+    expect(find.text('放棄變更？'), findsNothing, reason: 'nothing typed');
+    await addDuty();
+    await tester.enterText(find.byType(TextField), '燈光');
+    await tester.pump();
+    await back(tester);
+    expect(find.text('放棄變更？'), findsOneWidget);
+    await tapText(tester, '繼續編輯');
+    await tapText(tester, '新增');
+    expect(b.rosters['grace']!.values.any((r) => r.duties.any((d) => d.role == '燈光')), isTrue);
   });
 
   testWidgets("屬於 opens its choices in the event's own sheet, not a sheet over it", (tester) async {

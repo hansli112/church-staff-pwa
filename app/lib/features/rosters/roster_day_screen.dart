@@ -673,41 +673,58 @@ class _AddDutySheetState extends State<AddDutySheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            if (widget.suggestions.isNotEmpty)
-              ListSection(
-                header: l10n.addDuty,
-                children: [
-                  for (final s in widget.suggestions)
-                    ListRow(
-                      title: s,
-                      leading: const Icon(Symbols.add_rounded),
-                      onTap: () => Navigator.pop(context, s),
+    final typed = _name.text.trim();
+    return UnsavedChanges(
+      changed: () => _name.text.trim().isNotEmpty,
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // A suggestion is added with a tap; a typed name with 新增.
+              SheetBar(
+                title: l10n.addDuty,
+                actions: [
+                  if (widget.typed)
+                    SecondaryButton(
+                      label: l10n.add,
+                      onPressed: typed.isEmpty ? null : () => Navigator.pop(context, typed),
                     ),
                 ],
               ),
-            if (widget.typed)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  Space.m,
-                  Space.s,
-                  Space.m,
-                  Space.m,
-                ),
-                child: TextField(
-                  controller: _name,
-                  autofocus: widget.suggestions.isEmpty,
-                  textInputAction: TextInputAction.done,
-                  decoration: InputDecoration(hintText: l10n.dutyName),
-                  onSubmitted: (v) => Navigator.pop(context, v),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    if (widget.suggestions.isNotEmpty)
+                      ListSection(
+                        children: [
+                          for (final s in widget.suggestions)
+                            ListRow(
+                              title: s,
+                              leading: const Icon(Symbols.add_rounded),
+                              onTap: () => Navigator.pop(context, s),
+                            ),
+                        ],
+                      ),
+                    if (widget.typed)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(Space.m, Space.s, Space.m, Space.m),
+                        child: TextField(
+                          controller: _name,
+                          autofocus: widget.suggestions.isEmpty,
+                          textInputAction: TextInputAction.done,
+                          decoration: InputDecoration(hintText: l10n.dutyName),
+                          onChanged: (_) => setState(() {}),
+                          onSubmitted: (v) => Navigator.pop(context, v),
+                        ),
+                      ),
+                  ],
                 ),
               ),
-          ],
+            ],
+          ),
         ),
       ),
     );
