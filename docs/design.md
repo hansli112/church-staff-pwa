@@ -268,6 +268,27 @@ Chrome 小幅改善；桌面 WebKit 差距小且教會資訊冷開反而較慢�
 - JS 版 `main.dart.js`（prod config）：未壓縮 4.56 MB → 3.96 MB，gzip 1,266 KB → 1,148 KB（−118 KB，約 9%）。
 - 日期選擇器原本拿到 `zh` 的日期格式（周日），現在和 App 自己的日期一樣用 `zh_TW`（週日）。`Intl.defaultLocale` 跟著目前的語言：App 自己的 `DateFormat` 都不指定語言，跟著畫面的語言走。
 
+**2026-10-30：安排服事拿著格子拖曳時不再卡**
+
+- 拿起、移動、放下時只重建受影響的格子，整個表不重建。原本每換一個落點，整頁都重算月份、量日期欄寬、重建每一格。
+- 灰掉的格子共用一個動畫，不再一格一個；只有亮起的格子才建自己的動畫。
+- 上下、左右捲動時，表只移動、不重畫：捲動內容各包一層 `RepaintBoundary`。
+- 空格的虛線框只在第一次畫時算一次，之後重用。
+
+量測：demo profile build（wasm），Mac 上的 headless Chromium 開 GPU（Metal），393×852、CPU 降速 4×；從服事表點進安排服事，改前、改後交錯各 3 輪取中位數。不是實機成績。
+
+| 情境 | 改前 | 改後 |
+| --- | --- | --- |
+| 拿著格子拖到底再拖回（3 個月），超過 16ms 的 frame | 8 | 0 |
+| 同上，最長一格 | 25–34ms | 4ms |
+| 拖曳（9 個月），超過 16ms 的 frame | 12 | 0 |
+| 同上，最長一格 | 57ms | 5ms |
+| 同上，build＋layout 合計 | 1235ms | 141ms |
+
+沒變的：
+- 打開安排服事時第一格最長，再開一次約 90ms，第一次開約 600ms（含 wasm 暖機）。按「顯示更多」約 90–110ms。原因是每一格（3 個月約 13 列 × 8 項）都一次建好、排版好，捲到才看得到的也一樣。量過：只留文字的格子能把再開一次降到約 60ms；剩下的成本大多是點按回饋（InkWell，也管鍵盤和滑鼠移過），拿掉就少了這些。
+- 要再快，要改成只建看得到的格子（兩個方向都 lazy，例如 `two_dimensional_scrollables` 的 `TableView`）。月份標題、「顯示前面的月份」、「顯示更多」目前橫跨整列，TableView 的固定欄不能和其他欄合併，這幾個的位置要先決定。
+
 參考官方 guideline：[Flutter 效能](https://docs.flutter.dev/perf/best-practices)、[Web profiling](https://docs.flutter.dev/perf/web-performance)、[Firestore](https://firebase.google.com/docs/firestore/best-practices)、[Functions](https://firebase.google.com/docs/functions/tips)、[resource hints](https://web.dev/learn/performance/resource-hints)、[Safari Web Inspector](https://developer.apple.com/safari/tools/)。
 
 下一步（需要實機）：

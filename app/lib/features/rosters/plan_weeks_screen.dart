@@ -60,7 +60,7 @@ const _peek = 0.4;
 /// How long the cells a drop traded stay lit.
 const _flashFor = Duration(milliseconds: 700);
 
-class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
+class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTickerProviderStateMixin {
   late String _type = widget.serviceType;
 
   /// The first month shown (its first day); null until the days are in.
@@ -88,6 +88,19 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
   List<Roster> _shown = const [];
   Set<String> _flash = const {};
   Timer? _flashTimer;
+
+  /// The cells' look while one is held or just traded: only they build
+  /// again as it changes, not the table.
+  final _looks = _Looks();
+
+  /// The cells a held one cannot go to fade together, on one animation;
+  /// the last held one's stay on it as they come back.
+  late final _fading = AnimationController(vsync: this, duration: const Duration(milliseconds: 150));
+  late final _faded = Tween<double>(begin: 1, end: 0.4).animate(_fading);
+  _Lift? _lastLift;
+
+  /// Reduce Motion, as the last build had it.
+  bool _still = false;
   int? _down;
 
   @override
@@ -107,6 +120,8 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
     _flashTimer?.cancel();
     _cells.dispose();
     _names.dispose();
+    _looks.dispose();
+    _fading.dispose();
     super.dispose();
   }
 
@@ -143,7 +158,17 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
     final view = OverlayEntry(builder: (_) => _LiftedCell(lift: lift));
     _liftView = view;
     Overlay.of(context, rootOverlay: true).insert(view);
-    setState(() => _lift = lift);
+    _lift = _lastLift = lift;
+    _looks.changed();
+    _fade(in_: true);
+  }
+
+  void _fade({required bool in_}) {
+    if (_still) {
+      _fading.value = in_ ? 1 : 0;
+    } else {
+      in_ ? _fading.forward() : _fading.reverse();
+    }
   }
 
   // The finger that holds a cell is followed here, not by the cell's own
@@ -192,7 +217,8 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
     }
     if (to?.id == lift.to?.id) return;
     if (to != null) Haptics.selection();
-    setState(() => lift.to = to);
+    lift.to = to;
+    _looks.changed();
   }
 
   /// Lets go of the held cell: dropped where it would trade, the two days
@@ -206,16 +232,20 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
       ?..remove()
       ..dispose();
     _liftView = null;
-    setState(() => _lift = null);
+    _lift = null;
+    _looks.changed();
+    _fade(in_: false);
     if (!drop || lift.to == null) return;
     // As they are now: either may have changed while it was held.
     final (from, to) = (_current(lift.from), _current(lift.to!));
     if (!canSwapDuty(lift.role, from, to)) return;
     if (!await swapDutyDays(context, ref, lift.role, from, to, via: RosterVia.plan) || !mounted) return;
     _flashTimer?.cancel();
-    setState(() => _flash = {_cellId(from, lift.role), _cellId(to, lift.role)});
+    _flash = {_cellId(from, lift.role), _cellId(to, lift.role)};
+    _looks.changed();
     _flashTimer = Timer(_flashFor, () {
-      if (mounted) setState(() => _flash = const {});
+      _flash = const {};
+      _looks.changed();
     });
   }
 
@@ -258,6 +288,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
+    _still = MediaQuery.disableAnimationsOf(context);
     final today = ref.watch(todayProvider);
     final thisMonth = Day(today.year, today.month, 1);
     final settings = ref.watch(servicesProvider).value;
@@ -380,7 +411,6 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
 
     _shown = [for (final m in months) ...m.days];
     final dateWidth = _DateCell.widthFor(context, _shown);
-    final lift = _lift;
     return LayoutBuilder(
       builder: (context, box) {
         // All the duties when they fit; when not, the last one shown is
@@ -436,9 +466,17 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
                       width: cellWidth,
                       height: rowHeight,
                       border: line,
+                      looks: _looks,
+                      fade: _faded,
                       // While a cell is held, only the days it can go to stay.
-                      faded: lift != null && (lift.role != role || !canSwapDuty(role, lift.from, day)),
-                      lit: lift?.to?.id == day.id && lift?.role == role || _flash.contains(_cellId(day, role)),
+                      faded: () {
+                        final lift = _lift ?? _lastLift;
+                        return lift != null && (lift.role != role || !canSwapDuty(role, lift.from, day));
+                      },
+                      lit: () {
+                        final lift = _lift;
+                        return lift?.to?.id == day.id && lift?.role == role || _flash.contains(_cellId(day, role));
+                      },
                       onTap: (duty) => pickPeople(context, ref, day, duty, via: RosterVia.plan, swapDays: _shown),
                       onLift: (cell, d) => _liftStart(cell, day, role, d),
                       alone: duties.length == 1,
@@ -497,49 +535,55 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
               child: SingleChildScrollView(
                 key: PageStorageKey('plan-$_type'),
                 padding: const EdgeInsets.only(bottom: Space.xl),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (earlier != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: Space.s),
-                        child: TextButton(
-                          onPressed: () => setState(() {
-                            _months += _from!.month - earlier.month + 12 * (_from!.year - earlier.year);
-                            _from = earlier;
-                          }),
-                          child: Text(l10n.planShowEarlier),
+                // Scrolled, the table is moved, not painted again: a scroll
+                // view paints its whole child each frame otherwise.
+                child: RepaintBoundary(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (earlier != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: Space.s),
+                          child: TextButton(
+                            onPressed: () => setState(() {
+                              _months += _from!.month - earlier.month + 12 * (_from!.year - earlier.year);
+                              _from = earlier;
+                            }),
+                            child: Text(l10n.planShowEarlier),
+                          ),
                         ),
-                      ),
-                    Stack(
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SizedBox(
-                              width: dateWidth,
-                              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: dates),
-                            ),
-                            Expanded(
-                              child: SingleChildScrollView(
-                                controller: _cells,
-                                scrollDirection: Axis.horizontal,
-                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: cells),
+                      Stack(
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(
+                                width: dateWidth,
+                                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: dates),
                               ),
-                            ),
-                          ],
-                        ),
-                        ...headers,
-                      ],
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(Space.m),
-                      child: SecondaryButton(
-                        label: l10n.rosterShowMore,
-                        onPressed: () => setState(() => _months += _monthsAtATime),
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  controller: _cells,
+                                  scrollDirection: Axis.horizontal,
+                                  child: RepaintBoundary(
+                                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: cells),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          ...headers,
+                        ],
                       ),
-                    ),
-                  ],
+                      Padding(
+                        padding: const EdgeInsets.all(Space.m),
+                        child: SecondaryButton(
+                          label: l10n.rosterShowMore,
+                          onPressed: () => setState(() => _months += _monthsAtATime),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -716,6 +760,8 @@ class _DutyCell extends StatelessWidget {
     required this.width,
     required this.height,
     required this.border,
+    required this.looks,
+    required this.fade,
     required this.faded,
     required this.lit,
     required this.onTap,
@@ -731,11 +777,17 @@ class _DutyCell extends StatelessWidget {
   final double height;
   final BorderSide border;
 
-  /// Somewhere a held cell cannot go.
-  final bool faded;
+  /// Tells when [faded] or [lit] may have changed.
+  final Listenable looks;
+
+  /// How faded cells show, the same for them all.
+  final Animation<double> fade;
+
+  /// Somewhere a held cell cannot go, or the last one held could not.
+  final bool Function() faded;
 
   /// Where a held cell would go, or just traded.
-  final bool lit;
+  final bool Function() lit;
   final ValueChanged<Duty> onTap;
 
   /// Held: the screen follows the finger from here.
@@ -753,7 +805,6 @@ class _DutyCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
-    final still = MediaQuery.disableAnimationsOf(context);
     final duty = roster.duties.where((d) => d.role == role).firstOrNull;
     final people = duty?.people ?? const <String>[];
     // Read out whole, though only two show.
@@ -769,28 +820,32 @@ class _DutyCell extends StatelessWidget {
       excludeSemantics: true,
       child: GestureDetector(
         onLongPressStart: people.isEmpty ? null : (d) => onLift(context, d),
-        child: AnimatedOpacity(
-          opacity: faded ? 0.4 : 1,
-          duration: still ? Duration.zero : const Duration(milliseconds: 150),
-          child: InkWell(
-            onTap: duty == null ? null : () => onTap(duty),
-            child: AnimatedContainer(
-              duration: still ? Duration.zero : const Duration(milliseconds: 200),
-              width: width,
-              height: height,
-              padding: const EdgeInsets.symmetric(horizontal: Space.s, vertical: Space.xs),
-              alignment: AlignmentDirectional.centerStart,
-              decoration: BoxDecoration(
-                color: lit ? c.accentSoft : null,
-                border: Border(bottom: border),
+        child: _CellLook(
+          looks: looks,
+          faded: faded,
+          lit: lit,
+          builder: (context, faded, lit, content) => FadeTransition(
+            opacity: faded ? fade : kAlwaysCompleteAnimation,
+            child: InkWell(
+              onTap: duty == null ? null : () => onTap(duty),
+              child: Container(
+                width: width,
+                height: height,
+                padding: const EdgeInsets.symmetric(horizontal: Space.s, vertical: Space.xs),
+                alignment: AlignmentDirectional.centerStart,
+                decoration: BoxDecoration(
+                  color: lit == 0 ? null : Color.lerp(c.accentSoft.withValues(alpha: 0), c.accentSoft, lit),
+                  border: Border(bottom: border),
+                ),
+                child: content,
               ),
-              child: duty == null
-                  ? Text('—', style: AppText.subheadline.copyWith(color: c.tertiaryLabel))
-                  : people.isEmpty
-                  ? _EmptySlot(wide: alone)
-                  : _People(people),
             ),
           ),
+          child: duty == null
+              ? Text('—', style: AppText.subheadline.copyWith(color: c.tertiaryLabel))
+              : people.isEmpty
+              ? _EmptySlot(wide: alone)
+              : _People(people),
         ),
       ),
     );
@@ -826,18 +881,28 @@ class _Dashes extends CustomPainter {
 
   final Color color;
 
+  // Every empty cell is the same size: its dashes are measured out once.
+  static final _paths = <Size, Path>{};
+
+  static Path _dashed(Size size) {
+    final box = RRect.fromRectAndRadius((Offset.zero & size).deflate(0.5), const Radius.circular(Radii.s));
+    final dashes = Path();
+    for (final metric in (Path()..addRRect(box)).computeMetrics()) {
+      for (var at = 0.0; at < metric.length; at += 7) {
+        dashes.addPath(metric.extractPath(at, math.min(at + 4, metric.length)), Offset.zero);
+      }
+    }
+    return dashes;
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
-    final box = RRect.fromRectAndRadius((Offset.zero & size).deflate(0.5), const Radius.circular(Radii.s));
-    for (final metric in (Path()..addRRect(box)).computeMetrics()) {
-      for (var at = 0.0; at < metric.length; at += 7) {
-        canvas.drawPath(metric.extractPath(at, math.min(at + 4, metric.length)), paint);
-      }
-    }
+    if (_paths.length > 8 && !_paths.containsKey(size)) _paths.clear();
+    canvas.drawPath(_paths.putIfAbsent(size, () => _dashed(size)), paint);
   }
 
   @override
@@ -869,6 +934,97 @@ class _People extends StatelessWidget {
           ),
       ],
     );
+  }
+}
+
+/// Tells the cells their look may have changed.
+class _Looks extends ChangeNotifier {
+  void changed() => notifyListeners();
+}
+
+/// A cell's look, built again only when [faded] or [lit] turn as [looks]
+/// changes: held cells retarget on every move, and only two cells light.
+/// Lit, it brightens over a moment, [builder]'s `lit` going from 0 to 1;
+/// only a cell that lights makes an animation for it.
+class _CellLook extends StatefulWidget {
+  const _CellLook({
+    required this.looks,
+    required this.faded,
+    required this.lit,
+    required this.builder,
+    required this.child,
+  });
+
+  final Listenable looks;
+  final bool Function() faded;
+  final bool Function() lit;
+  final Widget Function(BuildContext context, bool faded, double lit, Widget child) builder;
+  final Widget child;
+
+  @override
+  State<_CellLook> createState() => _CellLookState();
+}
+
+class _CellLookState extends State<_CellLook> with SingleTickerProviderStateMixin {
+  late bool _faded = widget.faded();
+  late bool _lit = widget.lit();
+  AnimationController? _lighting;
+  bool _still = false;
+
+  void _light(bool lit) {
+    final lighting = _lighting ??= AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+      value: _lit ? 1 : 0,
+    )..addListener(() => setState(() {}));
+    if (_still) {
+      lighting.value = lit ? 1 : 0;
+    } else {
+      lit ? lighting.forward() : lighting.reverse();
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    widget.looks.addListener(_changed);
+  }
+
+  @override
+  void didUpdateWidget(_CellLook old) {
+    super.didUpdateWidget(old);
+    if (old.looks != widget.looks) {
+      old.looks.removeListener(_changed);
+      widget.looks.addListener(_changed);
+    }
+    _faded = widget.faded();
+    final lit = widget.lit();
+    if (lit != _lit) _light(lit);
+    _lit = lit;
+  }
+
+  @override
+  void dispose() {
+    widget.looks.removeListener(_changed);
+    _lighting?.dispose();
+    super.dispose();
+  }
+
+  void _changed() {
+    final (faded, lit) = (widget.faded(), widget.lit());
+    if (faded != _faded || lit != _lit) {
+      if (lit != _lit) _light(lit);
+      setState(() {
+        _faded = faded;
+        _lit = lit;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _still = MediaQuery.disableAnimationsOf(context);
+    return widget.builder(context, _faded, _lighting?.value ?? (_lit ? 1 : 0), widget.child);
   }
 }
 
