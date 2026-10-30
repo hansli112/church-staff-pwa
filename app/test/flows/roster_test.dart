@@ -135,6 +135,54 @@ void main() {
       expect(find.text('已更新招待'), findsOneWidget);
     });
 
+    testWidgets('the picker saves with 完成 only: 取消 leaves the day as it was', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-11');
+      await tapText(tester, '招待');
+      await tapText(tester, '陳志豪');
+      await tapText(tester, '取消');
+      expect(find.text('放棄變更？'), findsOneWidget);
+      await tapText(tester, '放棄變更');
+      expect(find.text('排過招待的人'), findsNothing, reason: 'the picker has closed');
+      expect(peopleOn(b, 11, '招待'), ['李美玉']);
+      expect(find.text('已更新招待'), findsNothing);
+    });
+
+    testWidgets('a changed picker asks before it closes any other way; an unchanged one just closes', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-11');
+      await tapText(tester, '招待');
+      await tapText(tester, '陳志豪');
+
+      Future<void> keepEditing() async {
+        expect(find.text('放棄變更？'), findsOneWidget);
+        await tapText(tester, '繼續編輯');
+        expect(find.text('排過招待的人').hitTestable(), findsOneWidget, reason: 'still open, all the way up');
+        expect(peopleOn(b, 11, '招待'), ['李美玉'], reason: 'nothing saved yet');
+      }
+
+      await tester.binding.handlePopRoute();
+      await settle(tester);
+      await keepEditing();
+      await tester.tapAt(const Offset(20, 20));
+      await settle(tester);
+      await keepEditing();
+      await tester.fling(find.text('招待').last, const Offset(0, 600), 3000);
+      await settle(tester);
+      await keepEditing();
+
+      await tapText(tester, '完成');
+      expect(peopleOn(b, 11, '招待'), ['陳志豪', '李美玉']);
+
+      await tapText(tester, '招待');
+      await tester.binding.handlePopRoute();
+      await settle(tester);
+      expect(find.text('放棄變更？'), findsNothing);
+      expect(find.text('排過招待的人'), findsNothing, reason: 'closed at once');
+    });
+
     testWidgets('a duty only ever one person has: picking someone puts them there instead, at once', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);

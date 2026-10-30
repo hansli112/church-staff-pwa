@@ -1372,18 +1372,6 @@ abstract class L10n {
   /// **'沒有'**
   String get ministryDutiesNone;
 
-  /// Under a ministry's roles; one sentence
-  ///
-  /// In zh, this message translates to:
-  /// **'負責人可以在任何聚會和活動排這些服事項目'**
-  String get ministryDutiesFooter;
-
-  /// Under the ministries header when there are none; one sentence
-  ///
-  /// In zh, this message translates to:
-  /// **'還沒有事工，例如敬拜團、音控組'**
-  String get noMinistries;
-
   /// Destructive row on a ministry's page
   ///
   /// In zh, this message translates to:
@@ -5475,6 +5463,78 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'不再顯示'**
   String get gettingStartedHide;
+
+  /// Asked when a sheet with unsaved changes is closed without 完成
+  ///
+  /// In zh, this message translates to:
+  /// **'放棄變更？'**
+  String get discardChangesTitle;
+
+  /// Destructive answer: close the sheet without saving
+  ///
+  /// In zh, this message translates to:
+  /// **'放棄變更'**
+  String get discardChanges;
+
+  /// Answer: stay in the sheet
+  ///
+  /// In zh, this message translates to:
+  /// **'繼續編輯'**
+  String get keepEditing;
+
+  /// Under the ministries on 聚會與事工: what a ministry is for, and that it is optional; one sentence
+  ///
+  /// In zh, this message translates to:
+  /// **'讓敬拜團、音控組的負責人自己排自己的服事項目；只有管理員排班的教會不用設'**
+  String get ministriesFooter;
+
+  /// On a ministry's page while it links no roles: what linking them does
+  ///
+  /// In zh, this message translates to:
+  /// **'選好服事項目，負責人就能在聚會和活動排這些項目'**
+  String get ministryNeedsDuties;
+
+  /// On a ministry's page: what its leads (names) can do. duties is a dutiesOfServices list
+  ///
+  /// In zh, this message translates to:
+  /// **'{leads}可以排{duties}，也可以加入和移出{ministry}的同工'**
+  String ministryLeadsCan(String leads, String duties, String ministry);
+
+  /// On a ministry's page while it has no lead: what one will be able to do
+  ///
+  /// In zh, this message translates to:
+  /// **'指派之後，負責人可以排{duties}，也可以加入和移出{ministry}的同工'**
+  String ministryOnceLeads(String duties, String ministry);
+
+  /// Roles in some services, e.g. 主日崇拜、活動的司琴、司會; groups are joined by dutyGroupSeparator
+  ///
+  /// In zh, this message translates to:
+  /// **'{services}的{duties}'**
+  String dutiesOfServices(String services, String duties);
+
+  /// Between dutiesOfServices groups
+  ///
+  /// In zh, this message translates to:
+  /// **'；'**
+  String get dutyGroupSeparator;
+
+  /// Where a ministry's roles are also arranged, listed with services: calendar events
+  ///
+  /// In zh, this message translates to:
+  /// **'活動'**
+  String get ministryEvents;
+
+  /// Under a ministry's team members: what being one does
+  ///
+  /// In zh, this message translates to:
+  /// **'{ministry}的同工在行事曆選「跟我有關的」時，看得到{ministry}的活動'**
+  String ministryStaffFooter(String ministry);
+
+  /// Button on a group page that already has a lead
+  ///
+  /// In zh, this message translates to:
+  /// **'再加一位負責人'**
+  String get addAnotherLead;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

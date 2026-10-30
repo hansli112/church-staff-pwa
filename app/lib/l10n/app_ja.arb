@@ -236,8 +236,6 @@
   "ministryName": "ミニストリー名",
   "ministryDuties": "担当",
   "ministryDutiesNone": "なし",
-  "ministryDutiesFooter": "リーダーはどの集会や行事でもこれらの担当を割り当てられる",
-  "noMinistries": "まだミニストリーはありません（例：賛美チーム、音響チーム）",
   "deleteMinistry": "ミニストリーを削除",
   "ministryDeleted": "「{name}」を削除しました",
   "leads": "リーダー",
@@ -923,5 +921,17 @@
   "@gettingStartedPlan": {"placeholders": {"service": {"type": "String"}}},
   "gettingStartedMeets": "{group}の集まる日を決める",
   "@gettingStartedMeets": {"placeholders": {"group": {"type": "String"}}},
-  "gettingStartedHide": "今後表示しない"
+  "gettingStartedHide": "今後表示しない",
+  "discardChangesTitle": "変更を破棄しますか？",
+  "discardChanges": "変更を破棄",
+  "keepEditing": "編集を続ける",
+  "ministriesFooter": "賛美チームや音響チームのリーダーが自分たちの担当を割り当てられるようにします（管理者だけで割り当てる教会では不要）",
+  "ministryNeedsDuties": "担当を選ぶと、リーダーが集会や行事でそれを割り当てられます",
+  "ministryLeadsCan": "{leads}は{duties}を割り当て、{ministry}のメンバーを加えたり外したりできます",
+  "ministryOnceLeads": "リーダーを指名すると、{duties}を割り当て、{ministry}のメンバーを加えたり外したりできます",
+  "dutiesOfServices": "{services}の{duties}",
+  "dutyGroupSeparator": "；",
+  "ministryEvents": "行事",
+  "ministryStaffFooter": "{ministry}のメンバーは、カレンダーで「自分に関係あるもの」を選ぶと{ministry}の行事が見えます",
+  "addAnotherLead": "リーダーをもう一人指名"
 }

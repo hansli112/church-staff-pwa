@@ -666,13 +666,14 @@ void showDeferredUndo(
 /// A confirmation for actions the user cannot undo themselves: leaving a
 /// church, deleting an account or a church. Returns true to go ahead.
 ///
-/// Platform style (Cupertino alert on iOS), with 「取消」 and a red action
-/// named for what happens.
+/// Platform style (Cupertino alert on iOS), with 「取消」 (or [cancel]) and a
+/// red action named for what happens.
 Future<bool> confirmDestructive(
   BuildContext context, {
   required String title,
   String? message,
   required String action,
+  String? cancel,
 }) async {
   final l10n = L10n.of(context);
   final result = await showAdaptiveDialog<bool>(
@@ -687,7 +688,7 @@ Future<bool> confirmDestructive(
           _dialogAction(
             context,
             ios,
-            l10n.cancel,
+            cancel ?? l10n.cancel,
             () => Navigator.pop(context, false),
           ),
           _dialogAction(
@@ -854,22 +855,83 @@ Widget _dialogAction(
 /// Opens a bottom sheet with a grab handle that the user can drag down to
 /// close. The keyboard goes first: left up, it covered the sheet, and came
 /// back over the page once the sheet closed.
+///
+/// While [unsaved] says so, closing it without a result (swiped down,
+/// tapped outside, back, or its own 取消) asks first whether to discard
+/// the changes, as Apple's sheets do; its 完成 closes with one.
 Future<T?> showAppSheet<T>(
   BuildContext context, {
   required WidgetBuilder builder,
   bool expand = false,
+  bool Function()? unsaved,
 }) {
   FocusManager.instance.primaryFocus?.unfocus();
-  return showModalBottomSheet<T>(
-    context: context,
-    // Over the tab bar too, like a system sheet; the tab navigator alone
-    // left the bar bright and tappable below the dimmed page.
-    useRootNavigator: true,
-    isScrollControlled: true,
-    useSafeArea: true,
-    showDragHandle: true,
-    builder: (context) => expand ? FractionallySizedBox(heightFactor: 0.92, child: builder(context)) : builder(context),
+  // Over the tab bar too, like a system sheet; the tab navigator alone
+  // left the bar bright and tappable below the dimmed page.
+  final navigator = Navigator.of(context, rootNavigator: true);
+  final localizations = MaterialLocalizations.of(context);
+  // As showModalBottomSheet has it, with a route that can ask.
+  return navigator.push(
+    _AppSheetRoute<T>(
+      unsaved: unsaved,
+      builder: (context) =>
+          expand ? FractionallySizedBox(heightFactor: 0.92, child: builder(context)) : builder(context),
+      capturedThemes: InheritedTheme.capture(from: context, to: navigator.context),
+      isScrollControlled: true,
+      barrierLabel: localizations.scrimLabel,
+      barrierOnTapHint: localizations.scrimOnTapHint(localizations.bottomSheetLabel),
+      modalBarrierColor: Theme.of(context).bottomSheetTheme.modalBarrierColor,
+      showDragHandle: true,
+      useSafeArea: true,
+    ),
   );
+}
+
+/// showAppSheet's route. Every way of closing a sheet without a result
+/// comes through [didPop], a swipe too (it pops past any PopScope), so it
+/// is where unsaved changes stop it.
+class _AppSheetRoute<T> extends ModalBottomSheetRoute<T> {
+  _AppSheetRoute({
+    required this.unsaved,
+    required super.builder,
+    super.capturedThemes,
+    required super.isScrollControlled,
+    super.barrierLabel,
+    super.barrierOnTapHint,
+    super.modalBarrierColor,
+    super.showDragHandle,
+    super.useSafeArea,
+  });
+
+  final bool Function()? unsaved;
+  bool _discarding = false;
+
+  @override
+  bool didPop(T? result) {
+    if (result == null && !_discarding && (unsaved?.call() ?? false)) {
+      // Back up, if a swipe had it on its way down; asked once the
+      // navigator is done popping.
+      controller?.forward();
+      scheduleMicrotask(_askToDiscard);
+      return false;
+    }
+    return super.didPop(result);
+  }
+
+  Future<void> _askToDiscard() async {
+    final context = subtreeContext;
+    if (context == null || !isActive) return;
+    final l10n = L10n.of(context);
+    final discard = await confirmDestructive(
+      context,
+      title: l10n.discardChangesTitle,
+      action: l10n.discardChanges,
+      cancel: l10n.keepEditing,
+    );
+    if (!discard || !isCurrent) return;
+    _discarding = true;
+    navigator?.pop();
+  }
 }
 
 /// Asks for a day between [first] and [last]: a month in a sheet, where one

@@ -417,12 +417,14 @@ Future<void> pickPeople(
           for (final o in a.sameDay) l10n.pickerSameDay('${o.name} ${o.duties.join(l10n.listSeparator)}'),
         ].join(' · '),
   };
-  PickerResult? latest;
   var invite = false;
-  final returned = await showAppSheet<PickerResult>(
+  final picker = GlobalKey<PeoplePickerState>();
+  final result = await showAppSheet<PickerResult>(
     context,
     expand: true,
+    unsaved: () => picker.currentState?.changed ?? false,
     builder: (_) => PeoplePicker(
+      key: picker,
       serviceType: roster.isEvent ? null : roster.type,
       duty: duty.role,
       initial: duty.people,
@@ -443,12 +445,10 @@ Future<void> pickPeople(
       canRemove: true,
       canSwapDay: swapDays.any((d) => canSwapDuty(duty.role, roster, d)),
       onePerson: ref.read(rosterActionsProvider).takesOnePerson(roster, duty.role),
-      onChanged: (r) => latest = r,
       onInvite: (me?.isAdmin ?? false) ? () => invite = true : null,
       notes: notes,
     ),
   );
-  final result = returned ?? latest;
   if (result != null && context.mounted) {
     if (result.swapDay) {
       await pickDayToSwap(context, ref, roster, duty, swapDays, via: via);

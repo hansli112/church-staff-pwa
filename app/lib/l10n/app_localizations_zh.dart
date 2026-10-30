@@ -713,12 +713,6 @@ class L10nZh extends L10n {
   String get ministryDutiesNone => '沒有';
 
   @override
-  String get ministryDutiesFooter => '負責人可以在任何聚會和活動排這些服事項目';
-
-  @override
-  String get noMinistries => '還沒有事工，例如敬拜團、音控組';
-
-  @override
   String get deleteMinistry => '刪除事工';
 
   @override
@@ -3058,6 +3052,50 @@ class L10nZh extends L10n {
 
   @override
   String get gettingStartedHide => '不再顯示';
+
+  @override
+  String get discardChangesTitle => '放棄變更？';
+
+  @override
+  String get discardChanges => '放棄變更';
+
+  @override
+  String get keepEditing => '繼續編輯';
+
+  @override
+  String get ministriesFooter => '讓敬拜團、音控組的負責人自己排自己的服事項目；只有管理員排班的教會不用設';
+
+  @override
+  String get ministryNeedsDuties => '選好服事項目，負責人就能在聚會和活動排這些項目';
+
+  @override
+  String ministryLeadsCan(String leads, String duties, String ministry) {
+    return '$leads可以排$duties，也可以加入和移出$ministry的同工';
+  }
+
+  @override
+  String ministryOnceLeads(String duties, String ministry) {
+    return '指派之後，負責人可以排$duties，也可以加入和移出$ministry的同工';
+  }
+
+  @override
+  String dutiesOfServices(String services, String duties) {
+    return '$services的$duties';
+  }
+
+  @override
+  String get dutyGroupSeparator => '；';
+
+  @override
+  String get ministryEvents => '活動';
+
+  @override
+  String ministryStaffFooter(String ministry) {
+    return '$ministry的同工在行事曆選「跟我有關的」時，看得到$ministry的活動';
+  }
+
+  @override
+  String get addAnotherLead => '再加一位負責人';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -3767,12 +3805,6 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get ministryDutiesNone => '没有';
-
-  @override
-  String get ministryDutiesFooter => '负责人可以在任何聚会和活动排这些事奉项目';
-
-  @override
-  String get noMinistries => '还没有事工，例如敬拜团、音控组';
 
   @override
   String get deleteMinistry => '删除事工';
@@ -6114,4 +6146,48 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get gettingStartedHide => '不再显示';
+
+  @override
+  String get discardChangesTitle => '放弃更改？';
+
+  @override
+  String get discardChanges => '放弃更改';
+
+  @override
+  String get keepEditing => '继续编辑';
+
+  @override
+  String get ministriesFooter => '让敬拜团、音控组的负责人自己排自己的事奉项目；只有管理员排班的教会不用设';
+
+  @override
+  String get ministryNeedsDuties => '选好事奉项目，负责人就能在聚会和活动排这些项目';
+
+  @override
+  String ministryLeadsCan(String leads, String duties, String ministry) {
+    return '$leads可以排$duties，也可以加入和移出$ministry的同工';
+  }
+
+  @override
+  String ministryOnceLeads(String duties, String ministry) {
+    return '指派之后，负责人可以排$duties，也可以加入和移出$ministry的同工';
+  }
+
+  @override
+  String dutiesOfServices(String services, String duties) {
+    return '$services的$duties';
+  }
+
+  @override
+  String get dutyGroupSeparator => '；';
+
+  @override
+  String get ministryEvents => '活动';
+
+  @override
+  String ministryStaffFooter(String ministry) {
+    return '$ministry的同工在行事历选“跟我有关的”时，看得到$ministry的活动';
+  }
+
+  @override
+  String get addAnotherLead => '再加一位负责人';
 }

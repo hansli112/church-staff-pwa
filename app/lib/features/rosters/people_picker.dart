@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/foundation.dart' show listEquals, setEquals;
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -61,6 +61,8 @@ const searchAutofocusThreshold = 30;
 /// again. A typed name nobody has can be used as is, for a visiting
 /// speaker. For a duty that takes one person, picking someone puts them
 /// there in place of whoever was, and closes; 「再加一位」 picks several.
+/// Nothing is kept until then or 完成: 取消, or closing it any other way
+/// after a change, asks to discard it (showAppSheet's unsaved).
 class PeoplePicker extends StatefulWidget {
   const PeoplePicker({
     super.key,
@@ -76,7 +78,6 @@ class PeoplePicker extends StatefulWidget {
     this.onePerson = false,
     this.initialGuests = const {},
     this.guestSuggestions = const [],
-    this.onChanged,
     this.onInvite,
     this.notes = const {},
   });
@@ -105,10 +106,6 @@ class PeoplePicker extends StatefulWidget {
 
   /// The duty takes one person (RosterActions.takesOnePerson).
   final bool onePerson;
-
-  /// Called with the latest result after every change, so closing the
-  /// sheet any way (drag down, tap outside) keeps what was picked.
-  final ValueChanged<PickerResult>? onChanged;
 
   /// For those who may invite people (admins): while nobody serves the
   /// duty, a 「邀請同工」 button closes the picker, keeping what was picked,
@@ -175,6 +172,15 @@ class PeoplePickerState extends State<PeoplePicker> {
     guestNames: _guests.intersection(_selected.toSet()),
   );
 
+  /// Whether closing without 完成 would lose something: who is picked,
+  /// or the duty's list or its order.
+  bool get changed =>
+      !setEquals(_selected.toSet(), widget.initial.toSet()) ||
+      !setEquals(result.guestNames, widget.initialGuests) ||
+      _ranking != null ||
+      _grant.isNotEmpty ||
+      _takeOff.isNotEmpty;
+
   void _toggle(String name, {bool guest = false}) {
     Haptics.selection();
     setState(() {
@@ -187,7 +193,6 @@ class PeoplePickerState extends State<PeoplePicker> {
         if (guest) _guests.add(name);
       }
     });
-    widget.onChanged?.call(result);
   }
 
   /// A name tapped in the list: for a duty of one, [name] in place of
@@ -212,7 +217,6 @@ class PeoplePickerState extends State<PeoplePicker> {
       _putOnList(m);
       if (!_selected.contains(m.name)) return _choose(m.name);
       Haptics.selection();
-      widget.onChanged?.call(result);
       return;
     }
     if (_selected.contains(m.name)) return _choose(m.name);
@@ -251,7 +255,6 @@ class PeoplePickerState extends State<PeoplePicker> {
   void _takeOffList(String name) {
     Haptics.selection();
     setState(() => _unlist(name));
-    widget.onChanged?.call(result);
   }
 
   void _useTyped() {
@@ -266,30 +269,42 @@ class PeoplePickerState extends State<PeoplePicker> {
     final c = AppColors.of(context);
     return Column(
       children: [
+        // Apple's sheet bar: 取消 leading, 完成 trailing; nothing is saved
+        // until 完成. In 編輯 its own 完成 goes back to picking.
         Padding(
-          padding: const EdgeInsets.fromLTRB(Space.m, 0, Space.s, Space.s),
-          child: Row(
-            children: [
-              Expanded(child: Text(widget.duty, style: AppText.title3)),
-              // Admins edit the list (order, and who is on it); roster
-              // editors only reorder it.
-              // 完成 stays once 編輯 empties the list.
-              if (_reordering ||
-                  (widget.canEditDutyList ? _serving.isNotEmpty : widget.canReorder && _serving.length > 1))
-                SecondaryButton(
-                  label: _reordering
-                      ? l10n.done
-                      : widget.canEditDutyList
-                      ? l10n.edit
-                      : l10n.reorder,
-                  onPressed: () => setState(() => _reordering = !_reordering),
-                ),
-              if (!_reordering)
-                SecondaryButton(
-                  label: l10n.done,
-                  onPressed: () => Navigator.pop(context, result),
-                ),
-            ],
+          padding: const EdgeInsets.fromLTRB(Space.s, 0, Space.s, Space.s),
+          child: SizedBox(
+            height: 50,
+            child: NavigationToolbar(
+              leading: _reordering
+                  ? null
+                  : SecondaryButton(label: l10n.cancel, onPressed: () => Navigator.pop(context)),
+              middle: Text(widget.duty, style: AppText.headline, maxLines: 1, overflow: TextOverflow.ellipsis),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Admins edit the list (order, and who is on it); roster
+                  // editors only reorder it.
+                  // 完成 stays once 編輯 empties the list.
+                  if (_reordering ||
+                      (widget.canEditDutyList ? _serving.isNotEmpty : widget.canReorder && _serving.length > 1))
+                    SecondaryButton(
+                      label: _reordering
+                          ? l10n.done
+                          : widget.canEditDutyList
+                          ? l10n.edit
+                          : l10n.reorder,
+                      onPressed: () => setState(() => _reordering = !_reordering),
+                    ),
+                  if (!_reordering)
+                    SecondaryButton(
+                      label: l10n.done,
+                      onPressed: () => Navigator.pop(context, result),
+                    ),
+                ],
+              ),
+              middleSpacing: Space.s,
+            ),
           ),
         ),
         if (_reordering)
@@ -513,7 +528,6 @@ class PeoplePickerState extends State<PeoplePicker> {
                 _ranking = next;
                 _serving = next;
               });
-              widget.onChanged?.call(result);
             },
             itemBuilder: (_, i) => Material(
               key: ValueKey(list[i]),

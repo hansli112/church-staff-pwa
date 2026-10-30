@@ -236,8 +236,6 @@
   "ministryName": "Ministry name",
   "ministryDuties": "Roles",
   "ministryDutiesNone": "None",
-  "ministryDutiesFooter": "Its leads arrange these roles in any service and at any event",
-  "noMinistries": "No ministries yet, such as a worship team or a sound team",
   "deleteMinistry": "Delete ministry",
   "ministryDeleted": "Deleted “{name}”",
   "leads": "Leads",
@@ -923,5 +921,17 @@
   "@gettingStartedPlan": {"placeholders": {"service": {"type": "String"}}},
   "gettingStartedMeets": "Set when {group} meets",
   "@gettingStartedMeets": {"placeholders": {"group": {"type": "String"}}},
-  "gettingStartedHide": "Don’t show again"
+  "gettingStartedHide": "Don’t show again",
+  "discardChangesTitle": "Discard changes?",
+  "discardChanges": "Discard changes",
+  "keepEditing": "Keep editing",
+  "ministriesFooter": "Lets the leads of a team such as worship or sound arrange its own roles; a church where only admins arrange can skip this",
+  "ministryNeedsDuties": "Pick its roles, and its leads can arrange them in services and at events",
+  "ministryLeadsCan": "{leads} can arrange {duties}, and add or remove {ministry}’s team members",
+  "ministryOnceLeads": "Once assigned, its leads can arrange {duties}, and add or remove {ministry}’s team members",
+  "dutiesOfServices": "{duties} in {services}",
+  "dutyGroupSeparator": "; ",
+  "ministryEvents": "events",
+  "ministryStaffFooter": "{ministry}’s team members see its events in the calendar under “Related to me”",
+  "addAnotherLead": "Add another lead"
 }

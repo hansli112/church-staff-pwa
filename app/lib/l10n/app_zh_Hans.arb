@@ -236,8 +236,6 @@
   "ministryName": "事工名称",
   "ministryDuties": "事奉项目",
   "ministryDutiesNone": "没有",
-  "ministryDutiesFooter": "负责人可以在任何聚会和活动排这些事奉项目",
-  "noMinistries": "还没有事工，例如敬拜团、音控组",
   "deleteMinistry": "删除事工",
   "ministryDeleted": "已删除“{name}”",
   "leads": "负责人",
@@ -923,5 +921,17 @@
   "@gettingStartedPlan": {"placeholders": {"service": {"type": "String"}}},
   "gettingStartedMeets": "设置{group}的聚会时间",
   "@gettingStartedMeets": {"placeholders": {"group": {"type": "String"}}},
-  "gettingStartedHide": "不再显示"
+  "gettingStartedHide": "不再显示",
+  "discardChangesTitle": "放弃更改？",
+  "discardChanges": "放弃更改",
+  "keepEditing": "继续编辑",
+  "ministriesFooter": "让敬拜团、音控组的负责人自己排自己的事奉项目；只有管理员排班的教会不用设",
+  "ministryNeedsDuties": "选好事奉项目，负责人就能在聚会和活动排这些项目",
+  "ministryLeadsCan": "{leads}可以排{duties}，也可以加入和移出{ministry}的同工",
+  "ministryOnceLeads": "指派之后，负责人可以排{duties}，也可以加入和移出{ministry}的同工",
+  "dutiesOfServices": "{services}的{duties}",
+  "dutyGroupSeparator": "；",
+  "ministryEvents": "活动",
+  "ministryStaffFooter": "{ministry}的同工在行事历选“跟我有关的”时，看得到{ministry}的活动",
+  "addAnotherLead": "再加一位负责人"
 }

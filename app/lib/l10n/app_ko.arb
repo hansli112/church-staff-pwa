@@ -236,8 +236,6 @@
   "ministryName": "사역팀 이름",
   "ministryDuties": "담당",
   "ministryDutiesNone": "없음",
-  "ministryDutiesFooter": "리더는 어느 예배나 일정에서든 이 담당을 배정할 수 있어요",
-  "noMinistries": "아직 사역팀이 없어요. 예: 찬양팀, 음향팀",
   "deleteMinistry": "사역팀 삭제",
   "ministryDeleted": "‘{name}’ 삭제함",
   "leads": "리더",
@@ -923,5 +921,17 @@
   "@gettingStartedPlan": {"placeholders": {"service": {"type": "String"}}},
   "gettingStartedMeets": "{group} 모이는 날 정하기",
   "@gettingStartedMeets": {"placeholders": {"group": {"type": "String"}}},
-  "gettingStartedHide": "다시 보지 않기"
+  "gettingStartedHide": "다시 보지 않기",
+  "discardChangesTitle": "변경 사항을 버릴까요?",
+  "discardChanges": "변경 사항 버리기",
+  "keepEditing": "계속 편집",
+  "ministriesFooter": "찬양팀, 음향팀 리더가 자기 팀 담당을 직접 배정하게 해요. 관리자만 배정하는 교회는 안 만들어도 돼요",
+  "ministryNeedsDuties": "담당을 고르면 리더가 예배와 행사에서 배정할 수 있어요",
+  "ministryLeadsCan": "{leads} 리더는 {duties} 담당을 배정하고 {ministry} 멤버를 추가하거나 뺄 수 있어요",
+  "ministryOnceLeads": "리더를 지정하면 {duties} 담당을 배정하고 {ministry} 멤버를 추가하거나 뺄 수 있어요",
+  "dutiesOfServices": "{services}의 {duties}",
+  "dutyGroupSeparator": "; ",
+  "ministryEvents": "행사",
+  "ministryStaffFooter": "{ministry} 멤버는 캘린더에서 ‘나와 관련된 행사’를 고르면 {ministry} 행사를 볼 수 있어요",
+  "addAnotherLead": "리더 한 명 더 지정"
 }

@@ -730,12 +730,6 @@ class L10nEn extends L10n {
   String get ministryDutiesNone => 'None';
 
   @override
-  String get ministryDutiesFooter => 'Its leads arrange these roles in any service and at any event';
-
-  @override
-  String get noMinistries => 'No ministries yet, such as a worship team or a sound team';
-
-  @override
   String get deleteMinistry => 'Delete ministry';
 
   @override
@@ -3247,4 +3241,49 @@ class L10nEn extends L10n {
 
   @override
   String get gettingStartedHide => 'Don’t show again';
+
+  @override
+  String get discardChangesTitle => 'Discard changes?';
+
+  @override
+  String get discardChanges => 'Discard changes';
+
+  @override
+  String get keepEditing => 'Keep editing';
+
+  @override
+  String get ministriesFooter =>
+      'Lets the leads of a team such as worship or sound arrange its own roles; a church where only admins arrange can skip this';
+
+  @override
+  String get ministryNeedsDuties => 'Pick its roles, and its leads can arrange them in services and at events';
+
+  @override
+  String ministryLeadsCan(String leads, String duties, String ministry) {
+    return '$leads can arrange $duties, and add or remove $ministry’s team members';
+  }
+
+  @override
+  String ministryOnceLeads(String duties, String ministry) {
+    return 'Once assigned, its leads can arrange $duties, and add or remove $ministry’s team members';
+  }
+
+  @override
+  String dutiesOfServices(String services, String duties) {
+    return '$duties in $services';
+  }
+
+  @override
+  String get dutyGroupSeparator => '; ';
+
+  @override
+  String get ministryEvents => 'events';
+
+  @override
+  String ministryStaffFooter(String ministry) {
+    return '$ministry’s team members see its events in the calendar under “Related to me”';
+  }
+
+  @override
+  String get addAnotherLead => 'Add another lead';
 }

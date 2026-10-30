@@ -45,7 +45,7 @@ class GroupsScreen extends ConsumerWidget {
           ),
           ListSection(
             header: l10n.ministries,
-            footer: (ministries?.ministries.isEmpty ?? true) ? l10n.noMinistries : null,
+            footer: l10n.ministriesFooter,
             children: [
               for (final m in ministries?.ministries ?? const <Ministry>[])
                 ListRow(title: m.name, onTap: () => context.push('/me/groups/ministry/${m.id}')),
@@ -62,6 +62,9 @@ class GroupsScreen extends ConsumerWidget {
     );
   }
 
+  /// 新增事工, and on to setting it up: named, its duties picked (saved
+  /// with it), its 負責人 assigned, then its page. 取消 at any step leaves
+  /// the rest for its page.
   Future<void> _add(BuildContext context, WidgetRef ref, MinistrySettings settings) async {
     final l10n = L10n.of(context);
     final name = await promptText(
@@ -72,13 +75,26 @@ class GroupsScreen extends ConsumerWidget {
     );
     if (name == null || !context.mounted) return;
     final id = _newId(settings.ids);
+    final services = ref.read(servicesProvider).value?.enabled ?? const <Service>[];
+    final duties = services.any((s) => s.duties.isNotEmpty)
+        ? await pickMinistryDuties(context, services, const [])
+        : null;
+    if (!context.mounted) return;
     final before = settings.ministries;
     final ok = await runWithUndo(
       context,
       l10n.saved,
-      () => ref.read(churchWritesProvider).ministries(before, [...before, Ministry(id: id, name: name)]),
+      () => ref.read(churchWritesProvider).ministries(before, [
+        ...before,
+        Ministry(id: id, name: name, duties: duties ?? const []),
+      ]),
     );
-    if (ok && context.mounted) unawaited(context.push('/me/groups/ministry/$id'));
+    if (!ok || !context.mounted) return;
+    if (duties != null) {
+      final members = ref.read(membersProvider).value ?? const <Member>[];
+      await assignLead(context, ref, MinistryGroup(id), name, members);
+    }
+    if (context.mounted) unawaited(context.push('/me/groups/ministry/$id'));
   }
 
   static String _newId(List<String> taken) {
@@ -202,7 +218,7 @@ class GroupScreen extends ConsumerWidget {
         children: [
           if (admin && ministry != null)
             ListSection(
-              footer: l10n.ministryDutiesFooter,
+              footer: ministrySummary(l10n, ministry, services?.enabled ?? const [], leaders),
               children: [
                 ListRow(title: l10n.ministryName, value: ministry.name, onTap: () => _rename(context, ref, ministry)),
                 ListRow(
@@ -248,12 +264,20 @@ class GroupScreen extends ConsumerWidget {
               footer: leaders.isEmpty ? l10n.noLeads : null,
               children: [
                 for (final m in leaders) ListRow(title: m.name, chevron: false),
+                // One is enough; more share it, all alike.
                 if (admin)
                   ListRow(
-                    title: l10n.assignLead,
+                    title: leaders.isEmpty ? l10n.assignLead : l10n.addAnotherLead,
                     leading: const Icon(Symbols.add_rounded),
                     chevron: false,
-                    onTap: () => _assignLead(context, ref, members.where((m) => !isLead(m)).toList(), name),
+                    onTap: () => assignLead(
+                      context,
+                      ref,
+                      group,
+                      name,
+                      members.where((m) => !isLead(m)).toList(),
+                      another: leaders.isNotEmpty,
+                    ),
                   ),
               ],
             ),
@@ -280,7 +304,11 @@ class GroupScreen extends ConsumerWidget {
           if (attendance != null) AttendanceSection(group: attendance),
           ListSection(
             header: l10n.groupStaff,
-            footer: staff.isEmpty ? l10n.noGroupStaff : null,
+            footer: group is MinistryGroup
+                ? l10n.ministryStaffFooter(name)
+                : staff.isEmpty
+                ? l10n.noGroupStaff
+                : null,
             children: [
               for (final m in staff)
                 ListRow(
@@ -513,34 +541,6 @@ class GroupScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _assignLead(BuildContext context, WidgetRef ref, List<Member> others, String name) async {
-    final l10n = L10n.of(context);
-    others.sort((a, b) => a.name.compareTo(b.name));
-    final picked = await showAppSheet<Member>(
-      context,
-      expand: others.length > 8,
-      builder: (context) => SafeArea(
-        child: SingleChildScrollView(
-          child: ListSection(
-            header: l10n.assignLead,
-            children: [for (final m in others) ListRow(title: m.name, onTap: () => Navigator.pop(context, m))],
-          ),
-        ),
-      ),
-    );
-    if (picked == null || !context.mounted) return;
-    final identity = switch (group) {
-      ServiceGroup(:final id) => ServiceLead(id) as Identity,
-      MinistryGroup(:final id) => MinistryLead(id),
-      SmallGroup(:final id) => SmallGroupLead(id),
-    };
-    await runWithUndo(
-      context,
-      l10n.identityAdded(l10n.identityLeadOf(name)),
-      () => ref.read(churchWritesProvider).member(picked, picked.withIdentities([...picked.identities, identity])),
-    );
-  }
-
   Future<void> _rename(BuildContext context, WidgetRef ref, Ministry ministry) async {
     final l10n = L10n.of(context);
     final name = await promptText(
@@ -556,11 +556,7 @@ class GroupScreen extends ConsumerWidget {
 
   Future<void> _linkDuties(BuildContext context, WidgetRef ref, Ministry ministry) async {
     final services = ref.read(servicesProvider).value?.enabled ?? const <Service>[];
-    final picked = await showAppSheet<List<MinistryDuty>>(
-      context,
-      expand: true,
-      builder: (_) => _DutyPicker(services: services, initial: ministry.duties),
-    );
+    final picked = await pickMinistryDuties(context, services, ministry.duties);
     if (picked == null || !context.mounted) return;
     await _replace(context, ref, ministry, ministry.copyWith(duties: picked), L10n.of(context).saved);
   }
@@ -592,9 +588,90 @@ class GroupScreen extends ConsumerWidget {
   }
 }
 
+/// 指派負責人 of [group], named [name]: one of [others], picked from a
+/// list, made its 負責人 beside any it has ([another]).
+Future<void> assignLead(
+  BuildContext context,
+  WidgetRef ref,
+  ChurchGroup group,
+  String name,
+  List<Member> others, {
+  bool another = false,
+}) async {
+  final l10n = L10n.of(context);
+  final title = another ? l10n.addAnotherLead : l10n.assignLead;
+  final sorted = [...others]..sort((a, b) => a.name.compareTo(b.name));
+  final picked = await showAppSheet<Member>(
+    context,
+    expand: sorted.length > 8,
+    builder: (context) => SafeArea(
+      child: SingleChildScrollView(
+        child: ListSection(
+          header: title,
+          children: [for (final m in sorted) ListRow(title: m.name, onTap: () => Navigator.pop(context, m))],
+        ),
+      ),
+    ),
+  );
+  if (picked == null || !context.mounted) return;
+  final identity = switch (group) {
+    ServiceGroup(:final id) => ServiceLead(id) as Identity,
+    MinistryGroup(:final id) => MinistryLead(id),
+    SmallGroup(:final id) => SmallGroupLead(id),
+  };
+  await runWithUndo(
+    context,
+    l10n.identityAdded(l10n.identityLeadOf(name)),
+    () => ref.read(churchWritesProvider).member(picked, picked.withIdentities([...picked.identities, identity])),
+  );
+}
+
+/// The duties a 事工 links, ticked per service of [services] from
+/// [initial]; null if 取消.
+Future<List<MinistryDuty>?> pickMinistryDuties(
+  BuildContext context,
+  List<Service> services,
+  List<MinistryDuty> initial,
+) {
+  final picker = GlobalKey<_DutyPickerState>();
+  return showAppSheet<List<MinistryDuty>>(
+    context,
+    expand: true,
+    unsaved: () => picker.currentState?.changed ?? false,
+    builder: (_) => _DutyPicker(key: picker, services: services, initial: initial),
+  );
+}
+
+/// What a 事工's 負責人 ([leads]) can do, told with its own settings, or
+/// what it still needs: its duties place by place, its [services]' and
+/// events', places with the same duties said together.
+String ministrySummary(L10n l10n, Ministry ministry, List<Service> services, List<Member> leads) {
+  if (ministry.duties.isEmpty) return l10n.ministryNeedsDuties;
+  final places = [
+    for (final s in services)
+      if (ministry.dutiesIn(s.id) case final d when d.isNotEmpty) (place: s.name, duties: d),
+    (place: l10n.ministryEvents, duties: ministry.dutiesIn(null)),
+  ];
+  final groups = <({List<String> places, Set<String> duties})>[];
+  for (final p in places) {
+    final same = groups.where((g) => setEquals(g.duties, p.duties)).firstOrNull;
+    if (same != null) {
+      same.places.add(p.place);
+    } else {
+      groups.add((places: [p.place], duties: p.duties));
+    }
+  }
+  final duties = [
+    for (final g in groups) l10n.dutiesOfServices(g.places.join(l10n.listSeparator), g.duties.join(l10n.listSeparator)),
+  ].join(l10n.dutyGroupSeparator);
+  return leads.isEmpty
+      ? l10n.ministryOnceLeads(duties, ministry.name)
+      : l10n.ministryLeadsCan(leads.map((m) => m.name).join(l10n.listSeparator), duties, ministry.name);
+}
+
 /// The duties a 事工 links, ticked per service.
 class _DutyPicker extends StatefulWidget {
-  const _DutyPicker({required this.services, required this.initial});
+  const _DutyPicker({super.key, required this.services, required this.initial});
 
   final List<Service> services;
   final List<MinistryDuty> initial;
@@ -606,13 +683,17 @@ class _DutyPicker extends StatefulWidget {
 class _DutyPickerState extends State<_DutyPicker> {
   late final _picked = [...widget.initial];
 
+  bool get changed => !setEquals(_picked.toSet(), widget.initial.toSet());
+
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.ministryDuties),
-        automaticallyImplyLeading: false,
+        // Apple's sheet bar: 取消 leading, 完成 trailing.
+        leading: TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
+        leadingWidth: 88,
         actions: [TextButton(onPressed: () => Navigator.pop(context, _picked), child: Text(l10n.done))],
       ),
       body: ListView(

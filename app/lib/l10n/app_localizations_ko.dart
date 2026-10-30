@@ -714,12 +714,6 @@ class L10nKo extends L10n {
   String get ministryDutiesNone => '없음';
 
   @override
-  String get ministryDutiesFooter => '리더는 어느 예배나 일정에서든 이 담당을 배정할 수 있어요';
-
-  @override
-  String get noMinistries => '아직 사역팀이 없어요. 예: 찬양팀, 음향팀';
-
-  @override
   String get deleteMinistry => '사역팀 삭제';
 
   @override
@@ -3063,4 +3057,48 @@ class L10nKo extends L10n {
 
   @override
   String get gettingStartedHide => '다시 보지 않기';
+
+  @override
+  String get discardChangesTitle => '변경 사항을 버릴까요?';
+
+  @override
+  String get discardChanges => '변경 사항 버리기';
+
+  @override
+  String get keepEditing => '계속 편집';
+
+  @override
+  String get ministriesFooter => '찬양팀, 음향팀 리더가 자기 팀 담당을 직접 배정하게 해요. 관리자만 배정하는 교회는 안 만들어도 돼요';
+
+  @override
+  String get ministryNeedsDuties => '담당을 고르면 리더가 예배와 행사에서 배정할 수 있어요';
+
+  @override
+  String ministryLeadsCan(String leads, String duties, String ministry) {
+    return '$leads 리더는 $duties 담당을 배정하고 $ministry 멤버를 추가하거나 뺄 수 있어요';
+  }
+
+  @override
+  String ministryOnceLeads(String duties, String ministry) {
+    return '리더를 지정하면 $duties 담당을 배정하고 $ministry 멤버를 추가하거나 뺄 수 있어요';
+  }
+
+  @override
+  String dutiesOfServices(String services, String duties) {
+    return '$services의 $duties';
+  }
+
+  @override
+  String get dutyGroupSeparator => '; ';
+
+  @override
+  String get ministryEvents => '행사';
+
+  @override
+  String ministryStaffFooter(String ministry) {
+    return '$ministry 멤버는 캘린더에서 ‘나와 관련된 행사’를 고르면 $ministry 행사를 볼 수 있어요';
+  }
+
+  @override
+  String get addAnotherLead => '리더 한 명 더 지정';
 }
