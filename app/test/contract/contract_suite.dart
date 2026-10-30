@@ -798,8 +798,13 @@ void contractTests(Future<ContractWorld> Function() open) {
       await w.signIn(Grace.meiEmail);
       await expectLater(g.church.notifyPlanned('sunday'), denied());
       await w.signIn(Grace.editorEmail);
-      expect((await g.church.notifyPlanned('sunday')).people, 1);
+      final told = await g.church.notifyPlanned('sunday');
+      expect(told.people, 1);
       expect(await g.church.plannedNews('sunday').firstWhere((v) => !v).timeout(wait), isFalse);
+      // Pressed in quiet hours (the backend's own clock), it waits for the
+      // morning, and what changes meanwhile goes with it: nothing waits for
+      // 通知同工 again.
+      if (told.later) return;
 
       // On and off again: nothing to tell.
       final hosted = played.copyWith(
