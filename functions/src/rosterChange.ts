@@ -10,6 +10,7 @@ import { duties, dutiesByUid, names, rosterDay, serviceNames, type RosterDay } f
 import { queue } from './webhook.js';
 import { dateKeyIn, earliestDay, instantOf, nextDay, timeZoneOf, wallClock } from './timeZones.js';
 import { loggable } from './redact.js';
+import { plannedAfter, tellsOf, viaOf, type Via } from './rosterNews.js';
 
 /**
  * 服事表異動: one write of a roster day, read once into a [RosterChange],
@@ -85,9 +86,9 @@ export interface RosterChange extends DutyDiff {
   holders: Map<string, string[]>;
   /** uid → their duties on it before this change. */
   previously: Map<string, string[]>;
-  /** `app`, or `import` when the day came in with a whole import (or was
-   * put back by undoing one). For a deleted day, how it was last written. */
-  via: string;
+  /** Where the write came from (rosterNews.ts). For a deleted day, how it
+   * was last written. */
+  via: Via;
   /** Who made the change (a member); null for the backend itself. */
   editor: { uid: string; name: string | null } | null;
 }
@@ -135,7 +136,7 @@ export async function readRosterChange(
     previously: dutiesByUid(before?.exists ? before.get('duties') : []),
     // A deleted day keeps the way it was last written: taking back an
     // import removes days no push announced, so none announces their going.
-    via: (doc?.get('via') as string | undefined) ?? 'app',
+    via: viaOf(doc?.get('via')),
     editor: editedBy ? { uid: editedBy, name: (editor?.get('name') as string | undefined) || null } : null,
   };
 }
@@ -235,27 +236,25 @@ async function absorb(h: DocumentSnapshot, c: RosterChange, uid: string) {
 }
 
 /**
- * As [absorb], for a push waiting for 通知同工: gone once [uid] has on the
- * day what they had before, so the button greys with nothing to tell.
+ * Keeps planned push [p] as what still waits once [c] reaches [uid]: [told]
+ * when it does some other way (rosterNews.ts plannedAfter). Gone once they
+ * have on the day what they had before, so the button greys with nothing
+ * to tell.
  */
-async function absorbPlanned(p: DocumentSnapshot, c: RosterChange, uid: string) {
-  const roles = (p.get('roles') as string[] | undefined) ?? [];
-  const off = c.removed.get(uid) ?? [];
-  const on = c.added.get(uid) ?? [];
-  const before = [...roles.filter((r) => !off.includes(r)), ...on.filter((r) => !roles.includes(r))];
-  await settlePlanned(p, before, c.holders.get(uid) ?? []);
-}
-
-/** Keeps planned push [p] as having been [roles] before, or deletes it when that is what they have [now]. */
-async function settlePlanned(p: DocumentSnapshot, roles: string[], now: string[]) {
-  if (roles.length === now.length && roles.every((r) => now.includes(r))) return p.ref.delete();
-  return p.ref.update({ roles });
+async function settlePlanned(p: DocumentSnapshot, c: RosterChange, uid: string, told: boolean) {
+  const roles = plannedAfter(
+    (p.get('roles') as string[] | undefined) ?? [],
+    c.previously.get(uid) ?? [],
+    c.holders.get(uid) ?? [],
+    told,
+  );
+  return roles === null ? p.ref.delete() : p.ref.update({ roles });
 }
 
 /** An import (or its undo) announces nothing: held and planned pushes take it as given. */
 async function absorbImport(deps: PushDeps, c: RosterChange) {
   for (const [uid, h] of await waitingFor(deps, 'heldPushes', c)) await absorb(h, c, uid);
-  for (const [uid, p] of await waitingFor(deps, 'plannedPushes', c)) await absorbPlanned(p, c, uid);
+  for (const [uid, p] of await waitingFor(deps, 'plannedPushes', c)) await settlePlanned(p, c, uid, true);
   return 0;
 }
 
@@ -279,7 +278,7 @@ export async function pushRosterChange(deps: PushDeps & Pick<Deps, 'now'>, c: Ro
 
   // Told now, or the editor's own: what 通知同工 tells later leaves it out.
   for (const [uid, p] of await waitingFor(deps, 'plannedPushes', c)) {
-    if (news.has(uid) || uid === c.editor?.uid) await absorbPlanned(p, c, uid);
+    if (news.has(uid) || uid === c.editor?.uid) await settlePlanned(p, c, uid, true);
   }
   const held = await waitingFor(deps, 'heldPushes', c);
   if (c.editor) {
@@ -390,13 +389,13 @@ async function planRosterChange(deps: PushDeps, c: RosterChange) {
   if (c.editor) {
     uids.delete(c.editor.uid);
     const own = planned.get(c.editor.uid);
-    if (own) await absorbPlanned(own, c, c.editor.uid);
+    if (own) await settlePlanned(own, c, c.editor.uid, true);
   }
   for (const uid of uids) {
     // Already waiting: on and off again leaves nothing to tell.
     const p = planned.get(uid);
     if (p) {
-      await settlePlanned(p, (p.get('roles') as string[] | undefined) ?? [], c.holders.get(uid) ?? []);
+      await settlePlanned(p, c, uid, false);
       continue;
     }
     try {
@@ -558,12 +557,19 @@ export async function onRosterWritten(
   const change = await readRosterChange(deps, cid, before, after, editedBy);
   if (!change) return null;
   return runEach(`roster change ${cid}/${change.event ? `ev_${change.event.id}` : `${change.dateKey}_${change.serviceId}`}`, {
-    push: async () =>
-      change.via === 'import'
-        ? absorbImport(deps, change)
-        : change.via === 'plan'
-          ? planRosterChange(deps, change)
-          : pushRosterChange(deps, change),
+    push: async () => {
+      switch (tellsOf(change.via)) {
+        case 'webhook':
+          return absorbImport(deps, change);
+        case 'planned':
+          return planRosterChange(deps, change);
+        case 'now':
+          return pushRosterChange(deps, change);
+        case 'nobody':
+          // readRosterChange read it as quiet already (eventRosters.ts).
+          return 0;
+      }
+    },
     webhook: () => queueRosterChange(deps, change, eventId),
   });
 }

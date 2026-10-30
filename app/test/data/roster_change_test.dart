@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
+import 'package:martha/domain/roster_news.dart';
 import 'package:martha/domain/staff_order.dart';
 
 Roster sundayOn(int day) => Roster(type: 'sunday', day: Day(2026, 10, day));
@@ -50,14 +51,14 @@ void main() {
     final change = RosterChange(
       before: {a.id: null},
       after: {a.id: a},
-      via: 'import',
+      via: RosterVia.import,
       staffOrder: (serviceType: 'sunday', before: StaffOrder(), after: ranked),
       serviceChange: (before: sunday, after: tagged),
     );
     final back = change.reversed;
     expect(back.before, {a.id: a});
     expect(back.after, {a.id: null});
-    expect(back.via, 'import');
+    expect(back.via, RosterVia.import);
     expect((back.staffOrder!.before, back.staffOrder!.after), (ranked, StaffOrder()));
     expect((back.serviceChange!.before, back.serviceChange!.after), (tagged, sunday));
   });

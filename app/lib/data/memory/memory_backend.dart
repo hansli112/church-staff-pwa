@@ -9,6 +9,7 @@ import '../../domain/day.dart';
 import '../../domain/event_roster.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
+import '../../domain/roster_news.dart';
 import '../../domain/staff_order.dart';
 import '../../domain/text.dart';
 import '../backend.dart';
@@ -1025,7 +1026,9 @@ class MemoryChurchData implements ChurchData {
     _requireAttendanceWriter(key);
     if (value != null &&
         !value.none &&
-        (value.count! < 0 || value.count! > Limits.attendanceCount || !withinTextLimit(value.note, TextLimits.attendanceNote))) {
+        (value.count! < 0 ||
+            value.count! > Limits.attendanceCount ||
+            !withinTextLimit(value.note, TextLimits.attendanceNote))) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
     await _b.write(() {
@@ -1225,23 +1228,16 @@ class MemoryChurchData implements ChurchData {
         if (setEquals(before.toSet(), after.toSet())) continue;
         final key = '$id/$uid';
         final entry = waiting[key];
-        final told = change.via != 'plan' || uid == _uid;
-        if (entry == null) {
-          if (!told) waiting[key] = (service: day.type, roles: before);
-          continue;
-        }
-        final roles = told
-            ? [
-                for (final r in entry.roles)
-                  if (after.contains(r) || !before.contains(r)) r,
-                for (final r in after)
-                  if (!before.contains(r) && !entry.roles.contains(r)) r,
-              ]
-            : entry.roles;
-        if (setEquals(roles.toSet(), after.toSet())) {
+        final roles = plannedAfter(
+          entry?.roles,
+          before: before,
+          after: after,
+          told: !change.via.waitsForNotice || uid == _uid,
+        );
+        if (roles == null) {
           waiting.remove(key);
         } else {
-          waiting[key] = (service: entry.service, roles: roles);
+          waiting[key] = (service: entry?.service ?? day.type, roles: roles);
         }
       }
     }

@@ -19,6 +19,7 @@ import 'package:martha/data/backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/event_roster.dart';
 import 'package:martha/domain/models.dart';
+import 'package:martha/domain/roster_news.dart';
 import 'package:martha/domain/staff_order.dart';
 
 import 'world.dart';
@@ -787,7 +788,9 @@ void contractTests(Future<ContractWorld> Function() open) {
           Duty(role: '司琴', people: const ['李美玉'], uids: {'李美玉': g.mei}),
         ],
       );
-      await g.church.compareAndSetRosters(RosterChange(before: {day.id: null}, after: {day.id: played}, via: 'plan'));
+      await g.church.compareAndSetRosters(
+        RosterChange(before: {day.id: null}, after: {day.id: played}, via: RosterVia.plan),
+      );
       const wait = Duration(seconds: 30);
       expect(await g.church.plannedNews('sunday').firstWhere((v) => v).timeout(wait), isTrue);
       expect(await g.church.plannedNews('youth').first, isFalse, reason: 'each service its own');
@@ -805,9 +808,13 @@ void contractTests(Future<ContractWorld> Function() open) {
           Duty(role: '招待', people: const ['李美玉'], uids: {'李美玉': g.mei}),
         ],
       );
-      await g.church.compareAndSetRosters(RosterChange(before: {day.id: played}, after: {day.id: hosted}, via: 'plan'));
+      await g.church.compareAndSetRosters(
+        RosterChange(before: {day.id: played}, after: {day.id: hosted}, via: RosterVia.plan),
+      );
       expect(await g.church.plannedNews('sunday').firstWhere((v) => v).timeout(wait), isTrue);
-      await g.church.compareAndSetRosters(RosterChange(before: {day.id: hosted}, after: {day.id: played}, via: 'plan'));
+      await g.church.compareAndSetRosters(
+        RosterChange(before: {day.id: hosted}, after: {day.id: played}, via: RosterVia.plan),
+      );
       expect(await g.church.plannedNews('sunday').firstWhere((v) => !v).timeout(wait), isFalse);
     });
 

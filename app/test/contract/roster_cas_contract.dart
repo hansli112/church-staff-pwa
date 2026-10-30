@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/domain/models.dart';
+import 'package:martha/domain/roster_news.dart';
 import 'package:martha/domain/staff_order.dart';
 
 import 'contract_suite.dart';
@@ -57,7 +58,7 @@ void rosterCasContractTests(Future<ContractWorld> Function() open) {
         RosterChange(
           before: {roster.id: null},
           after: {roster.id: roster},
-          via: 'import',
+          via: RosterVia.import,
           staffOrder: (
             serviceType: 'sunday',
             before: StaffOrder(),

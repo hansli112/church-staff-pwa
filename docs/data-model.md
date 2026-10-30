@@ -74,6 +74,8 @@
 
 App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預設聚會、服事項目改名（只能原地改名，其他服事項目不變）、服事表上誰是誰（名字連到 uid 且還在名單上才算，一個服事項目只算一次）、搬家時舊同工資料的轉換，兩邊的測試都跑 `testdata/church_rules.json`。
 
+服事表異動也一樣（`app/lib/domain/roster_news.dart` ↔ `functions/src/rosterNews.ts`，兩邊都跑 `testdata/roster_changes.json`）：服事表上的 `via` 說這次從哪裡寫的、要告訴誰。App 只寫 `app`（照常通知）、`plan`（安排服事，等「完成」）、`import`（匯入，只送外部通知），`firestore.rules` 和 `editLedDuties` 只收這三種；`calendar`、`restore`、`relink`、`timeZone` 只有後端寫（`functions/src/eventRosters.ts`）。等「完成」的那筆（`plannedPushes`）怎麼跟著後來的異動變，也在這份表裡。
+
 ## 角色與群組
 
 權限都從身分來（#82）。一般同工什麼都沒有；要管事的人有一個或幾個身分，每個身分照下表給權限：

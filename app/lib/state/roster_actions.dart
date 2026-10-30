@@ -6,6 +6,7 @@ import '../domain/event_roster.dart';
 import '../domain/models.dart';
 import '../domain/roster_edit.dart';
 import '../domain/roster_import.dart';
+import '../domain/roster_news.dart';
 import '../domain/schedule.dart';
 import '../domain/serving_around.dart';
 import '../domain/staff_order.dart';
@@ -90,7 +91,7 @@ class RosterActions {
   /// Writes [next] over [before], which differ only in [role]; undo
   /// restores that duty while preserving unrelated edits. [via] as
   /// [RosterChange.via].
-  ChurchWrite _dutyWrite(Roster before, Roster next, String role, {String via = 'app'}) {
+  ChurchWrite _dutyWrite(Roster before, Roster next, String role, {RosterVia via = RosterVia.app}) {
     final index = before.duties.indexWhere((d) => d.role == role);
     final previous = index < 0 ? null : before.duties[index];
     final written = next.duties.where((d) => d.role == role).firstOrNull;
@@ -116,7 +117,7 @@ class RosterActions {
     List<String> people, {
     Set<String> guestNames = const {},
     List<String>? ranking,
-    String via = 'app',
+    RosterVia via = RosterVia.app,
   }) {
     final order = orderOf(roster);
     final afterOrder = ranking == null ? order : order.withRanking(role, ranking);
@@ -216,7 +217,7 @@ class RosterActions {
     );
   }
 
-  ChurchWrite removeDuty(Roster roster, String role, {String via = 'app'}) =>
+  ChurchWrite removeDuty(Roster roster, String role, {RosterVia via = RosterVia.app}) =>
       _dutyWrite(roster, withoutDuty(roster, role), role, via: via);
 
   ChurchWrite addDuty(Roster roster, String role) => setPeople(roster, role, const []);
@@ -285,14 +286,14 @@ class RosterActions {
   /// Trades whoever is on [role] on [a] and [b] (canSwapDuty), as
   /// [swap]. Made in 安排服事 ([via] `plan`, #90), nobody is told until
   /// 通知同工.
-  ChurchWrite swapDuty(String role, Roster a, Roster b, {String via = 'app'}) {
+  ChurchWrite swapDuty(String role, Roster a, Roster b, {RosterVia via = RosterVia.app}) {
     final (a2, b2) = withDutySwapped(role, a, b);
     return _pairWrite(role, (a, a2), (b, b2), via: via);
   }
 
   /// Writes two days that differ only in [role] together; undo puts both
   /// back together, refused once either has changed since.
-  ChurchWrite _pairWrite(String role, (Roster, Roster) a, (Roster, Roster) b, {String via = 'app'}) {
+  ChurchWrite _pairWrite(String role, (Roster, Roster) a, (Roster, Roster) b, {RosterVia via = RosterVia.app}) {
     final (aBefore, a2) = a;
     final (bBefore, b2) = b;
     int indexOf(Roster r) => r.duties.indexWhere((d) => d.role == role);
@@ -390,7 +391,7 @@ class RosterActions {
     final change = RosterChange(
       before: before,
       after: after,
-      via: 'import',
+      via: RosterVia.import,
       staffOrder: changedOrder ? (serviceType: type, before: order, after: plan.order) : null,
     );
     return _writes.rosters(

@@ -869,7 +869,7 @@ class FirestoreChurchData implements ChurchData {
     final RosterChange(:before, :after, :via, :staffOrder, :serviceChange) = change;
     final next = {
       for (final entry in after.entries)
-        entry.key: entry.value == null ? null : {..._rosterDoc(entry.value!), 'via': via},
+        entry.key: entry.value == null ? null : {..._rosterDoc(entry.value!), 'via': via.name},
     };
     await _transaction((tx) async {
       Json? serviceDoc;
@@ -922,7 +922,7 @@ class FirestoreChurchData implements ChurchData {
     await _call('editLedDuties', {
       'before': {for (final e in change.before.entries) e.key: e.value == null ? null : rosterToJson(e.value!)},
       'after': {for (final e in change.after.entries) e.key: e.value == null ? null : rosterToJson(e.value!)},
-      'via': change.via,
+      'via': change.via.name,
     });
   }
 

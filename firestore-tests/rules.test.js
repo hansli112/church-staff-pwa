@@ -628,6 +628,18 @@ describe('活動的服事表 (rosters/ev_…)', () => {
     await assertFails(setDoc(doc(db, path('w1')), ev('w1')), 'nor drop them');
   });
 
+  it('App 只能寫自己的 via，不能借後端那種不通知人的（testdata/roster_changes.json）', async () => {
+    await seed(path('v1'), ev('v1', { via: 'restore' }));
+    const db = as(OFFICE_A);
+    await assertFails(setDoc(doc(db, path('v2')), ev('v2', { via: 'relink' })));
+    await assertSucceeds(setDoc(doc(db, path('v2')), ev('v2', { via: 'plan' })));
+    await assertFails(updateDoc(doc(db, path('v2')), { via: 'restore' }));
+    await assertSucceeds(updateDoc(doc(db, path('v1')), { duties: [] }), 'one already there may stay');
+    await assertSucceeds(updateDoc(doc(db, path('v1')), { via: 'app' }));
+    await assertFails(setDoc(doc(db, `churches/${A}/rosters/v3`), { type: 'sunday', via: 'timeZone' }));
+    await assertSucceeds(setDoc(doc(db, `churches/${A}/rosters/v3`), { type: 'sunday', via: 'import' }));
+  });
+
   it('B 的管理員寫不了 A 的活動服事表', async () => {
     await seed(path('b1'), ev('b1'));
     await assertFails(setDoc(doc(as(ADMIN_B), path('b2')), ev('b2')));

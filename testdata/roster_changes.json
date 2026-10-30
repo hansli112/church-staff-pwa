@@ -1,0 +1,24 @@
+{
+  "_comment": "服事表異動, as the app (app/lib/domain/roster_news.dart) and the trigger (functions/src/rosterNews.ts) both read it. `via`: where a roster write came from, who may write it, and whom it tells: `now` pushes to everyone put on or taken off and goes to the webhook; `planned` (安排服事, #90) goes to the webhook and keeps the pushes for 通知同工; `webhook` (an import, or its undo) only goes to the webhook; `nobody` (an event's roster the backend moved without news) tells no one. firestore.rules and editLedDuties take only what `by: app` lists. `planned`: what waits for 通知同工 for one person on one day after a change, given what was waiting (the duties they had before the first change kept, or null for nothing), their duties before and after this change, and whether this change is told some other way (made outside 安排服事, or their own). Duties compare as sets. Add a row here before changing either side.",
+  "via": [
+    { "via": "app", "by": "app", "tells": "now" },
+    { "via": "plan", "by": "app", "tells": "planned" },
+    { "via": "import", "by": "app", "tells": "webhook" },
+    { "via": "calendar", "by": "backend", "tells": "now" },
+    { "via": "restore", "by": "backend", "tells": "nobody" },
+    { "via": "relink", "by": "backend", "tells": "nobody" },
+    { "via": "timeZone", "by": "backend", "tells": "nobody" }
+  ],
+  "planned": [
+    { "name": "put on in 安排服事 with nothing waiting: waits with what they had", "waiting": null, "before": [], "after": ["司琴"], "told": false, "next": [] },
+    { "name": "taken off in 安排服事 with nothing waiting: waits with what they had", "waiting": null, "before": ["司琴", "音控"], "after": ["音控"], "told": false, "next": ["司琴", "音控"] },
+    { "name": "told some other way with nothing waiting: nothing waits", "waiting": null, "before": [], "after": ["司琴"], "told": true, "next": null },
+    { "name": "put on and taken off again in 安排服事: nothing left to tell", "waiting": [], "before": ["司琴"], "after": [], "told": false, "next": null },
+    { "name": "changed again in 安排服事: still what they had before the first", "waiting": [], "before": ["司琴"], "after": ["音控"], "told": false, "next": [] },
+    { "name": "taken off in 安排服事, then put back there: nothing left to tell", "waiting": ["司琴"], "before": [], "after": ["司琴"], "told": false, "next": null },
+    { "name": "put on in 安排服事, then taken off and told: nothing left to tell", "waiting": [], "before": ["司琴"], "after": [], "told": true, "next": null },
+    { "name": "put on in 安排服事, then told of another: the first still waits", "waiting": [], "before": ["司琴"], "after": ["司琴", "音控"], "told": true, "next": ["音控"] },
+    { "name": "taken off in 安排服事, then an import puts on another: the taking off still waits", "waiting": ["司琴"], "before": [], "after": ["音控"], "told": true, "next": ["司琴", "音控"] },
+    { "name": "nothing of theirs changed: what waits stays", "waiting": ["司琴"], "before": ["音控"], "after": ["音控"], "told": true, "next": ["司琴"] }
+  ]
+}

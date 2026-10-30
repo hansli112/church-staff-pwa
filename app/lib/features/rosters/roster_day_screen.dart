@@ -11,6 +11,7 @@ import '../../core/design/tokens.dart';
 import '../../domain/day.dart';
 import '../../domain/models.dart';
 import '../../domain/roster_edit.dart';
+import '../../domain/roster_news.dart';
 import '../../domain/schedule.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
@@ -423,7 +424,7 @@ Future<void> pickPeople(
   WidgetRef ref,
   Roster roster,
   Duty duty, {
-  String via = 'app',
+  RosterVia via = RosterVia.app,
   List<Roster> swapDays = const [],
 }) async {
   final members = ref.read(membersProvider).requireValue;
@@ -487,7 +488,7 @@ Future<void> pickDayToSwap(
   Roster roster,
   Duty duty,
   List<Roster> days, {
-  required String via,
+  required RosterVia via,
 }) async {
   final l10n = L10n.of(context);
   String? onIt(Roster d) {
@@ -520,7 +521,7 @@ Future<bool> swapDutyDays(
   String role,
   Roster from,
   Roster to, {
-  required String via,
+  required RosterVia via,
 }) {
   final l10n = L10n.of(context);
   String names(Roster r) => r.duties.firstWhere((d) => d.role == role).people.join(l10n.listSeparator);
@@ -542,7 +543,7 @@ Future<void> _savePicked(
   Roster roster,
   Duty duty,
   PickerResult result,
-  String via,
+  RosterVia via,
 ) async {
   final l10n = L10n.of(context);
   final actions = ref.read(rosterActionsProvider);

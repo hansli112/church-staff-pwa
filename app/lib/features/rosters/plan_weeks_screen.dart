@@ -14,6 +14,7 @@ import '../../domain/day.dart';
 import '../../domain/models.dart';
 import '../../domain/plan_weeks.dart';
 import '../../domain/roster_edit.dart';
+import '../../domain/roster_news.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/roster_actions.dart';
@@ -210,7 +211,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
     // As they are now: either may have changed while it was held.
     final (from, to) = (_current(lift.from), _current(lift.to!));
     if (!canSwapDuty(lift.role, from, to)) return;
-    if (!await swapDutyDays(context, ref, lift.role, from, to, via: 'plan') || !mounted) return;
+    if (!await swapDutyDays(context, ref, lift.role, from, to, via: RosterVia.plan) || !mounted) return;
     _flashTimer?.cancel();
     setState(() => _flash = {_cellId(from, lift.role), _cellId(to, lift.role)});
     _flashTimer = Timer(_flashFor, () {
@@ -438,11 +439,11 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> {
                       // While a cell is held, only the days it can go to stay.
                       faded: lift != null && (lift.role != role || !canSwapDuty(role, lift.from, day)),
                       lit: lift?.to?.id == day.id && lift?.role == role || _flash.contains(_cellId(day, role)),
-                      onTap: (duty) => pickPeople(context, ref, day, duty, via: 'plan', swapDays: _shown),
+                      onTap: (duty) => pickPeople(context, ref, day, duty, via: RosterVia.plan, swapDays: _shown),
                       onLift: (cell, d) => _liftStart(cell, day, role, d),
                       alone: duties.length == 1,
                       onSwap: _shown.any((d) => canSwapDuty(role, day, d))
-                          ? (duty) => pickDayToSwap(context, ref, day, duty, _shown, via: 'plan')
+                          ? (duty) => pickDayToSwap(context, ref, day, duty, _shown, via: RosterVia.plan)
                           : null,
                     ),
                 ],

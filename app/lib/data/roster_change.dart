@@ -1,4 +1,5 @@
 import '../domain/models.dart';
+import '../domain/roster_news.dart';
 import '../domain/staff_order.dart';
 import 'backend.dart';
 
@@ -13,7 +14,7 @@ final class RosterChange {
   RosterChange({
     required Map<String, Roster?> before,
     required Map<String, Roster?> after,
-    this.via = 'app',
+    this.via = RosterVia.app,
     this.staffOrder,
     this.serviceChange,
   }) : before = Map.unmodifiable(before),
@@ -40,9 +41,8 @@ final class RosterChange {
   final Map<String, Roster?> before;
   final Map<String, Roster?> after;
 
-  /// Where the change came from; `import` tells the backend not to send a
-  /// push for every day.
-  final String via;
+  /// Where the change came from, which decides whom the backend tells.
+  final RosterVia via;
 
   final ({String serviceType, StaffOrder before, StaffOrder after})? staffOrder;
 

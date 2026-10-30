@@ -244,6 +244,14 @@ service cloud.firestore {
         && roster.get('originalStart', '') is string && roster.get('originalStart', '').size() <= 64;
     }
 
+    // Where a roster write came from (`via`, testdata/roster_changes.json):
+    // the app writes only its own. The backend's tell nobody, which an app
+    // write must not borrow; one already there may stay.
+    function appVia() {
+      return request.resource.data.get('via', 'app') in ['app', 'plan', 'import']
+        || (resource != null && request.resource.data.get('via', 'app') == resource.data.get('via', 'app'));
+    }
+
     function onlyTouches(allowed) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowed);
     }
@@ -393,10 +401,10 @@ service cloud.firestore {
         // zone. An admin may repair an unknown type to a configured one;
         // nobody can write a new unknown type. Never an event's roster.
         allow create: if !isEventRoster(request.resource.data) && !rosterId.matches('ev_.*')
-          && hasValidDateKey()
+          && hasValidDateKey() && appVia()
           && canEditRosterType(cid, request.resource.data.get('type', ''));
         allow update: if !isEventRoster(request.resource.data) && !isEventRoster(resource.data)
-          && hasValidDateKey()
+          && hasValidDateKey() && appVia()
           && canEditRosterType(cid, request.resource.data.get('type', ''))
           && (isAdmin(cid) || canEditRosterType(cid, resource.data.get('type', '')));
         allow delete: if !isEventRoster(resource.data)
@@ -411,8 +419,8 @@ service cloud.firestore {
         // a service's day never takes an ev_ ID. Its title and days are the
         // calendar's: the app sets them when making it, then only
         // calendarWrite changes them.
-        allow create: if validEventRoster(rosterId) && arrangesEvent(cid, request.resource.data);
-        allow update: if validEventRoster(rosterId) && isEventRoster(resource.data)
+        allow create: if validEventRoster(rosterId) && appVia() && arrangesEvent(cid, request.resource.data);
+        allow update: if validEventRoster(rosterId) && appVia() && isEventRoster(resource.data)
           && !('cancelledAt' in resource.data)
           // movedBy: who moved it, which calendarWrite records for the
           // trigger; an app write drops it.

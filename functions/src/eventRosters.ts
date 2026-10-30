@@ -3,6 +3,7 @@ import { FieldValue, Timestamp, type DocumentSnapshot } from 'firebase-admin/fir
 import type { CalendarEvent } from './calendar.js';
 import { DAY_MS, type Deps } from './common.js';
 import { cutText, TEXT_LIMITS } from './limits.js';
+import { tellsOf, viaOf } from './rosterNews.js';
 import { dateKeyIn, type ChurchTimeZone } from './timeZones.js';
 
 /**
@@ -25,8 +26,6 @@ import { dateKeyIn, type ChurchTimeZone } from './timeZones.js';
  * roster's.
  */
 
-const QUIET = new Set(['restore', 'relink', 'timeZone']);
-
 /** Whether [d] is an event's roster (活動的服事表). */
 export const isEvent = (d: DocumentSnapshot | undefined) => d?.exists === true && d.get('kind') === 'event';
 
@@ -37,7 +36,7 @@ export const isCancelled = (d: DocumentSnapshot | undefined) => isEvent(d) && d!
 export function isQuiet(before: DocumentSnapshot | undefined, after: DocumentSnapshot | undefined) {
   const doc = after?.exists ? after : before;
   if (!isEvent(doc)) return false;
-  return isCancelled(before) || isCancelled(after) || QUIET.has(doc!.get('via') as string);
+  return isCancelled(before) || isCancelled(after) || tellsOf(viaOf(doc!.get('via'))) === 'nobody';
 }
 
 /** Who moved [after] in the app, when the backend wrote the move. */

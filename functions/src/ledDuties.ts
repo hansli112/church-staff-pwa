@@ -4,6 +4,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { accessIn, churchAccess } from './access.js';
 import { fail, record, type Caller, type Deps } from './common.js';
 import { ledDuties, ministriesOf } from './ministries.js';
+import { APP_VIAS, type Via } from './rosterNews.js';
 
 /**
  * A 事工's 負責人 (#82) arranging the duties it leads: 敬拜團's leader puts
@@ -122,7 +123,7 @@ export async function editLedDuties(deps: Deps, caller: Caller | null, data: unk
   if (ids.length === 0 || ids.length > 500 || !isDeepStrictEqual(Object.keys(before).sort(), [...ids].sort())
       || ids.some((id) => !/^[A-Za-z0-9_-]{1,200}$/.test(id))) fail('invalid-argument', 'unknown');
   const via = input.via;
-  if (typeof via !== 'string' || via.length > 32) fail('invalid-argument', 'unknown');
+  if (!APP_VIAS.includes(via as Via)) fail('invalid-argument', 'unknown');
 
   await deps.db.runTransaction(async (tx) => {
     const refs = ids.map((id) => deps.db.doc(`churches/${cid}/rosters/${id}`));
