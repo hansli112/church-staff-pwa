@@ -122,7 +122,21 @@ describe('reminders', () => {
     });
     const { sent, messaging } = fakePush();
     await sendReminders({ db, messaging, now, appUrl });
-    assert.deepEqual(sent.map((s) => s.body), ['秋季退修會 司琴']);
+    assert.deepEqual(sent.map((s) => [s.body, s.link]), [['秋季退修會 司琴', '/c/C1?to=%2Frosters%2Fevent%2Fx1']]);
+  });
+
+  test('one roster opens it; two, even on one day, open 首頁', async () => {
+    await dayBeforeChurch();
+    await db.doc('churches/C1/rosters/2026-10-04_sunday').set({ type: 'sunday', dateKey: '2026-10-04', duties: duties(['美玉'], ['志豪']) });
+    await db.doc('churches/C1/rosters/ev_x1').set({
+      kind: 'event', eventId: 'x1', title: '午餐會', dateKey: '2026-10-04', endDateKey: '2026-10-04', duties: duties(['美玉'], []),
+    });
+    const { sent, messaging } = fakePush();
+    await sendReminders({ db, messaging, now, appUrl });
+    assert.deepEqual(sent.map((s) => [s.tokens, s.link]).sort(), [
+      [['tok-hao'], '/c/C1?to=%2Frosters%2Fsunday%2F2026-10-04'],
+      [['tok-mei', 'tok-mei-2'], '/c/C1?to=%2Fhome'],
+    ]);
   });
 
   test('suspended churches send no reminders', async () => {
@@ -200,6 +214,8 @@ describe('weekly reminders', () => {
     const hao = sent.find((s) => s.tokens.includes('tok-hao'))!;
     assert.equal(hao.body, '10/13（週二）禱告會 招待\n10/18（週日）主日崇拜 招待');
     assert.equal(sent.length, 2);
+    // More than one roster: 首頁 lists them.
+    assert.deepEqual(sent.map((s) => s.link), ['/c/C1?to=%2Fhome', '/c/C1?to=%2Fhome']);
   });
 
   test('in the language each one’s app shows', async () => {
@@ -274,7 +290,8 @@ describe('weekly reminders', () => {
     });
     const { sent, messaging } = fakePush();
     await sendReminders({ db, messaging, now: monday, appUrl });
-    assert.deepEqual(sent.map((s) => s.body), ['10/17（週六）秋季退修會 司琴']);
+    // A week with one roster opens it, as the evening before does.
+    assert.deepEqual(sent.map((s) => [s.body, s.link]), [['10/17（週六）秋季退修會 司琴', '/c/C1?to=%2Frosters%2Fevent%2Fx1']]);
   });
 
   test('those who turned reminders off get no weekly list', async () => {

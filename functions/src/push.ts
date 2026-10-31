@@ -77,12 +77,14 @@ export async function notifyMembers(
     return texts.get(language)!;
   };
 
-  // In the lists first, so the app icon's number counts this one.
+  // In the lists first, so the app icon's number counts this one. One id
+  // in every list, so the push can name it: tapped, it counts as read.
+  const id = notificationsOf(db, users[0].id).doc().id;
   for (let i = 0; i < users.length; i += 500) {
     const batch = db.batch();
     for (const u of users.slice(i, i + 500)) {
       const { title, body, link } = textIn(languageOf(u.get('appLocale')));
-      batch.create(notificationsOf(db, u.id).doc(), {
+      batch.create(notificationsOf(db, u.id).doc(id), {
         cid,
         kind,
         title,
@@ -115,27 +117,30 @@ export async function notifyMembers(
   );
   let sent = 0;
   for (const { language, badge, targets } of groups.values()) {
-    sent += await send(deps, cid, kind, textIn(language), badge, targets);
+    sent += await send(deps, cid, kind, id, textIn(language), badge, targets);
   }
   return sent;
 }
 
 /**
- * Sends [message] to [targets], 500 at a time, with [badge] on the app
- * icon, dropping the tokens FCM says are dead.
+ * Sends [message], notification [id] in the 通知列表, to [targets], 500 at
+ * a time, with [badge] on the app icon, dropping the tokens FCM says are
+ * dead.
  */
 async function send(
   deps: PushDeps,
   cid: string,
   kind: NotificationKind,
+  id: string,
   message: Required<PushMessage>,
   badge: number,
   targets: Target[],
 ) {
   const { db } = deps;
   // Through the church URL, which switches to this church first: someone in
-  // two churches lands on the right one.
-  const link = `/c/${cid}?to=${encodeURIComponent(message.link)}`;
+  // two churches lands on the right one. Naming the notification, which the
+  // app then counts as read (deep_link.dart).
+  const link = `/c/${cid}?to=${encodeURIComponent(message.link)}&notification=${id}`;
   let sent = 0;
   for (let i = 0; i < targets.length; i += 500) {
     const batch = targets.slice(i, i + 500);

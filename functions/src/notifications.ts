@@ -4,7 +4,7 @@ import type { DocumentSnapshot } from 'firebase-admin/firestore';
 import { isChurchOpen } from './access.js';
 import { DAY_MS } from './common.js';
 import { notifyMembers, type PushDeps } from './push.js';
-import { rosterDay, serviceNames } from './rosters.js';
+import { rosterDay, rosterLink, serviceNames } from './rosters.js';
 import { dateKeyIn, timeZoneOf, timeZonesAt } from './timeZones.js';
 
 /** The hour of the evening reminders, on each church's clock. */
@@ -23,19 +23,25 @@ function reminderTiming(member: DocumentSnapshot): ReminderTiming {
   return t === 'dayBefore' || t === 'both' ? t : 'weekly';
 }
 
-/** Someone's duties on one day: which, of what service or event. */
+/** Someone's duties on one roster: which, of what service or event. */
 interface DutyLine {
   dateKey: string;
   name: string;
   roles: string[];
+  /** The roster's page. */
+  link: string;
 }
+
+/** Where a reminder of [lines] opens: the roster if it is about one, else 首頁, which lists them. */
+const reminderLink = (lines: DutyLine[]) => (lines.length === 1 ? lines[0].link : '/home');
 
 /**
  * Evening reminders, run every hour on the hour: for the churches whose
  * clock says [REMINDER_HOUR], to everyone with a uid on a duty of an
  * active one, as each chose: on Monday one message listing their duties
  * from that Monday to Sunday, and every evening one listing tomorrow's
- * (except Monday for those getting both, whose weekly list has tomorrow).
+ * (except Monday for those getting both, whose weekly list has tomorrow);
+ * one about a single roster opens it.
  * An event's roster counts on the day it starts, by its title; not once
  * its event is cancelled.
  */
@@ -69,7 +75,7 @@ export async function sendReminders(deps: PushDeps & { now: () => Date }) {
     for (const day of docs.map(rosterDay)) {
       if (!day || day.cancelled) continue;
       for (const [uid, roles] of day.holders) {
-        perUid.set(uid, [...(perUid.get(uid) ?? []), { dateKey: day.dateKey, name: day.name(services), roles }]);
+        perUid.set(uid, [...(perUid.get(uid) ?? []), { dateKey: day.dateKey, name: day.name(services), roles, link: rosterLink(day) }]);
       }
     }
     if (perUid.size === 0) continue;
@@ -86,7 +92,7 @@ export async function sendReminders(deps: PushDeps & { now: () => Date }) {
         sent += await notifyMembers(deps, cid, [member.id], 'reminder', (w) => ({
           title: w.weekReminder(name),
           body: week.map((i) => w.datedDutyLine(w.dateWithWeekday(i.dateKey), w.dutyLine(i.name, i.roles))).join(w.lineSeparator),
-          link: '/home',
+          link: reminderLink(week),
         }));
       }
       const next = items.filter((i) => i.dateKey === tomorrow);
@@ -94,7 +100,7 @@ export async function sendReminders(deps: PushDeps & { now: () => Date }) {
         sent += await notifyMembers(deps, cid, [member.id], 'reminder', (w) => ({
           title: w.tomorrowReminder(name),
           body: next.map((i) => w.dutyLine(i.name, i.roles)).join(w.lineSeparator),
-          link: '/home',
+          link: reminderLink(next),
         }));
       }
     }

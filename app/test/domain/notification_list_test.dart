@@ -30,4 +30,17 @@ void main() {
     expect([for (final n in list.items) list.isUnread(n)], [true, false]);
     expect(list.unread, 1);
   });
+
+  test('tapping one sees up to it when nothing older is unread; seen is a time, so it would take those too', () {
+    final never = NotificationList('C1', all, null);
+    expect(never.seenOnTapping('a'), DateTime.utc(2026).add(const Duration(minutes: 10)));
+    // 'a' is older and unread: tapping 'c' leaves both.
+    expect(never.seenOnTapping('c'), isNull);
+    final aSeen = never.seenAt(never.seenOnTapping('a'));
+    expect(aSeen.seenOnTapping('c'), DateTime.utc(2026).add(const Duration(minutes: 20)));
+    // Already read, another church's, or not in the list yet: nothing.
+    expect(aSeen.seenOnTapping('a'), isNull);
+    expect(never.seenOnTapping('b'), isNull);
+    expect(never.seenOnTapping('x'), isNull);
+  });
 }

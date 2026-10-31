@@ -6,7 +6,7 @@ import { fail, record, runEach, type Caller, type Deps } from './common.js';
 import { isQuiet, movedBy } from './eventRosters.js';
 import type { Words } from './languages.js';
 import { notifyMembers, type PushDeps } from './push.js';
-import { duties, dutiesByUid, names, rosterDay, serviceNames, type RosterDay } from './rosters.js';
+import { duties, dutiesByUid, names, rosterDay, rosterLink, serviceNames, type RosterDay } from './rosters.js';
 import { queue } from './webhook.js';
 import { dateKeyIn, earliestDay, instantOf, nextDay, timeZoneOf, wallClock } from './timeZones.js';
 import { loggable } from './redact.js';
@@ -177,7 +177,7 @@ function pushDay(church: DocumentSnapshot, day: Pick<RosterDay, 'dateKey' | 'ser
   return {
     cid: church.id,
     title: church.get('name') as string,
-    link: day.event ? `/rosters/event/${day.event.id}` : `/rosters/${day.serviceId}/${day.dateKey}`,
+    link: rosterLink(day),
     dateKey: day.dateKey,
     name,
     event: day.event,

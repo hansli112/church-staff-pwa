@@ -24,9 +24,10 @@ LinkTarget go(AppStage stage, String location) => resolveLink(
   Uri.parse(location),
 );
 
-const LinkTarget stay = (location: null, church: null);
+const LinkTarget stay = (location: null, church: null, notification: null);
 
-LinkTarget to(String location, {String? church}) => (location: location, church: church);
+LinkTarget to(String location, {String? church, String? notification}) =>
+    (location: location, church: church, notification: notification);
 
 String e(String location) => Uri.encodeComponent(location);
 
@@ -150,6 +151,13 @@ void main() {
     (closed, '/c/hope', to('/home', church: 'hope')),
     // Memberships known, the church itself still loading.
     (loading, '/c/hope?to=%2Fme', to('/me', church: 'hope')),
+  ]);
+
+  table('a tapped notification names itself, to be counted read; only in a church of mine', [
+    (ready, '/c/hope?to=%2Fme&notification=n1', to('/me', church: 'hope', notification: 'n1')),
+    (signedOut, '/c/hope?to=%2Fme&notification=n1', to('/login?from=${e('/c/hope?to=%2Fme&notification=n1')}')),
+    (ready, '/login?from=${e('/c/hope?to=%2Fme&notification=n1')}', to('/me', church: 'hope', notification: 'n1')),
+    (ready, '/c/other?to=%2Fme&notification=n1', stay),
   ]);
 
   table('a church URL of another church shows it, at every stage with an account', [

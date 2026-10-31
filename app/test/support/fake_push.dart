@@ -70,8 +70,11 @@ class FakePush implements PushService {
   @override
   Future<void> signedOut() async {}
 
+  /// The links of notifications the user taps.
+  final taps = StreamController<String>.broadcast();
+
   @override
-  Stream<String> get openedLinks => const Stream.empty();
+  Stream<String> get openedLinks => taps.stream;
 
   @override
   Stream<PushNotice> get foreground => notices.stream;

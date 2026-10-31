@@ -62,6 +62,11 @@ export interface RosterDay {
   name(services: ServiceNames): string;
 }
 
+/** The app's page of [day]'s roster. */
+export function rosterLink(day: Pick<RosterDay, 'dateKey' | 'serviceId' | 'event'>) {
+  return day.event ? `/rosters/event/${day.event.id}` : `/rosters/${day.serviceId}/${day.dateKey}`;
+}
+
 /** [d] as a roster day; null when it is none (gone, or without its day or service). */
 export function rosterDay(d: DocumentSnapshot | undefined): RosterDay | null {
   if (!d?.exists) return null;

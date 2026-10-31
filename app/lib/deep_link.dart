@@ -2,12 +2,13 @@ import 'domain/models.dart';
 import 'state/providers.dart';
 
 /// Where a link takes someone: the [location] to go to (null stays where
-/// the link points), and the [church] to switch to first.
-typedef LinkTarget = ({String? location, String? church});
+/// the link points), the [church] to switch to first, and the
+/// [notification] of its 通知列表 that was tapped to get there.
+typedef LinkTarget = ({String? location, String? church, String? notification});
 
-const LinkTarget _stay = (location: null, church: null);
+const LinkTarget _stay = (location: null, church: null, notification: null);
 
-LinkTarget _go(String location) => (location: location, church: null);
+LinkTarget _go(String location) => (location: location, church: null, notification: null);
 
 /// Where someone opening [uri] goes, given the app [stage] and the churches
 /// they are in. Every way into a page comes through here: a typed or shared
@@ -18,11 +19,16 @@ LinkTarget _go(String location) => (location: location, church: null);
 /// Pure: the router applies it, and switches church when asked.
 LinkTarget resolveLink(AppStage stage, List<Membership> memberships, Uri uri) {
   // A church URL of one of my churches opens that church, at `?to=` if
-  // given (a notification's page). Someone else sees the church's page.
-  // So does an invite to a church I am already in: nothing to join.
+  // given (a notification's page, with the notification). Someone else sees
+  // the church's page. So does an invite to a church I am already in:
+  // nothing to join.
   final cid = churchUrlId(uri) ?? inviteChurchId(uri);
   if (cid != null && memberships.any((m) => m.churchId == cid)) {
-    return (location: appLocation(uri.queryParameters['to']) ?? '/home', church: cid);
+    return (
+      location: appLocation(uri.queryParameters['to']) ?? '/home',
+      church: cid,
+      notification: uri.queryParameters['notification'],
+    );
   }
 
   final path = uri.path;

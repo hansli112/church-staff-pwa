@@ -1382,6 +1382,17 @@ class NotificationList {
   /// is unread, so nothing is written.
   DateTime? get seenOnOpening => unread == 0 ? null : items.first.at;
 
+  /// How far tapping notification [id] has it seen: up to that one, when it
+  /// is unread and nothing older is. Seen is a time, so marking it with an
+  /// older one unread would take that too. Null: nothing is written.
+  DateTime? seenOnTapping(String id) {
+    final n = items.where((i) => i.id == id).firstOrNull;
+    if (n == null || !isUnread(n)) return null;
+    final at = n.at.millisecondsSinceEpoch;
+    final olderUnread = items.any((i) => i.id != id && isUnread(i) && i.at.millisecondsSinceEpoch <= at);
+    return olderUnread ? null : n.at;
+  }
+
   /// The same list, as seen up to [at].
   NotificationList seenAt(DateTime? at) => NotificationList(churchId, items, at);
 }

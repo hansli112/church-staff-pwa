@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/models.dart';
@@ -42,3 +44,24 @@ final unreadTotalProvider = Provider<int?>((ref) {
   if (all == null || profile == null) return null;
   return unreadNotifications(all, profile.notificationsSeen);
 });
+
+/// Notification [id] of church [churchId] was tapped: read, as if seen in
+/// its 通知列表, when nothing older there is unread
+/// ([NotificationList.seenOnTapping]). Never fails.
+Future<void> markTappedSeen(Ref ref, String churchId, String id) async {
+  final uid = ref.read(uidProvider);
+  if (uid == null) return;
+  final profiles = ref.read(backendProvider).profiles;
+  try {
+    // Launched by the tap, the list may come from the cache first, without it.
+    final all = await profiles
+        .notifications(uid)
+        .firstWhere((list) => list.any((n) => n.id == id))
+        .timeout(const Duration(seconds: 30));
+    final seen = (await profiles.watch(uid).first)?.notificationsSeen[churchId];
+    final upTo = NotificationList(churchId, all, seen).seenOnTapping(id);
+    if (upTo != null) await profiles.markNotificationsSeen(uid, churchId, upTo);
+  } catch (_) {
+    // Not there in time, or no connection: it stays unread, no more.
+  }
+}

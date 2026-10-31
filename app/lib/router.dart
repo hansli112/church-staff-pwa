@@ -41,6 +41,7 @@ import 'features/rosters/rosters_screen.dart';
 import 'data/backend.dart' show WarmUp;
 import 'features/common/warm_up.dart';
 import 'features/shell/shell.dart';
+import 'state/notifications.dart';
 import 'state/providers.dart';
 import 'state/app_update.dart';
 
@@ -92,6 +93,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         // After this redirect: changing the church now would rebuild the
         // app stage twice in one frame.
         scheduleMicrotask(() => ref.read(selectedChurchProvider.notifier).select(church));
+        final notification = target.notification;
+        if (notification != null) unawaited(markTappedSeen(ref, church, notification));
       }
       return target.location;
     },

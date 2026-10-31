@@ -59,6 +59,18 @@ describe('通知列表 (#89)', () => {
     ]);
   });
 
+  test('the push names its entry in each one’s list, so tapping it can count it read', async () => {
+    await seedChurch('C1', { alice: 'admin', bob: 'admin' });
+    await db.doc('users/alice').set({ fcm: { phone: 'tok-a' } });
+    await db.doc('users/bob').set({ fcm: { phone: 'tok-b' }, appLocale: 'en' });
+    const { messaging, sent } = fakePush();
+    await notifyMembers({ db, messaging, appUrl }, 'C1', ['alice', 'bob'], 'reminder', () => ({ title: 't', body: 'b' }));
+    const ids = async (uid: string) => (await db.collection(`users/${uid}/notifications`).get()).docs.map((d) => d.id);
+    const [id] = await ids('alice');
+    assert.deepEqual(await ids('bob'), [id]);
+    assert.deepEqual(sent.map((s) => s.notification), [id, id]);
+  });
+
   test('a kind someone muted is kept all the same, only not pushed', async () => {
     await seedChurch('C1', { alice: 'admin' });
     await db.doc('churches/C1/members/alice').update({ 'notificationPrefs.muted': ['reminder'] });

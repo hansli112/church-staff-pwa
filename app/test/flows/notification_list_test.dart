@@ -114,6 +114,26 @@ void main() {
     expect(find.byTooltip('通知'), findsOneWidget, reason: '首頁, its bell');
   });
 
+  testWidgets('a tapped push opens its page and counts as read, unless an older one is still unread', (tester) async {
+    final push = FakePush(state: PushPermission.granted);
+    final b = _withNotifications();
+    await pumpApp(tester, b, overrides: [pushServiceProvider.overrideWithValue(push)]);
+    // 你被排進, older, is unread: reading the reminder would read it too.
+    push.taps.add('/c/grace?to=%2Fhome&notification=week');
+    await settle(tester);
+    expect(push.badge, 3);
+
+    push.taps.add('/c/grace?to=%2Frosters%2Fsunday%2F2026-10-04&notification=put-on');
+    await settle(tester);
+    expect(find.byType(RosterDayScreen), findsOneWidget);
+    expect(push.badge, 2);
+
+    push.taps.add('/c/grace?to=%2Fhome&notification=week');
+    await settle(tester);
+    expect(find.byTooltip('通知'), findsOneWidget, reason: '首頁, no dot: none of 恩典堂 unread');
+    expect(push.badge, 1, reason: "希望堂's is left");
+  });
+
   testWidgets('a new one while the list is open is read too', (tester) async {
     final push = FakePush(state: PushPermission.granted);
     final b = _withNotifications();

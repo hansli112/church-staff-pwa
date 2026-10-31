@@ -1,5 +1,7 @@
 // Shared setup for handler tests. Run under `firebase emulators:exec`, which
 // sets FIRESTORE_EMULATOR_HOST and FIREBASE_AUTH_EMULATOR_HOST.
+import assert from 'node:assert/strict';
+
 import { getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { DocumentReference, Firestore, getFirestore, Timestamp, type DocumentSnapshot, type Transaction } from 'firebase-admin/firestore';
@@ -26,10 +28,12 @@ export interface SentPush {
   tokens: string[];
   title: string;
   body: string;
-  /** The app's link (data.link). */
+  /** The app's link (data.link), without the notification it names. */
   link: string;
-  /** The web push's, which FCM wants absolute. */
+  /** The web push's, which FCM wants absolute; likewise. */
   webLink: string;
+  /** The id of the notification in the 通知列表 both links name. */
+  notification: string | null;
   /** The number on the app icon (aps.badge). */
   badge: number | undefined;
 }
@@ -47,12 +51,17 @@ export function fakePush(dead: string[] = [], errors: Record<string, string> = {
     sendEachForMulticast: async (m) => {
       if (down) throw new Error('fcm unreachable');
       const tokens = (m as { tokens: string[] }).tokens;
+      const link = m.data?.link ?? '';
+      const webLink = m.webpush?.fcmOptions?.link ?? '';
+      const notification = /[?&]notification=([^&]*)/.exec(link)?.[1] ?? null;
+      assert.equal(/[?&]notification=([^&]*)/.exec(webLink)?.[1] ?? null, notification, 'both links name the same notification');
       sent.push({
         tokens,
         title: m.notification?.title ?? '',
         body: m.notification?.body ?? '',
-        link: m.data?.link ?? '',
-        webLink: m.webpush?.fcmOptions?.link ?? '',
+        link: withoutNotification(link),
+        webLink: withoutNotification(webLink),
+        notification,
         badge: m.apns?.payload?.aps?.badge,
       });
       const responses = tokens.map((t) =>
@@ -68,6 +77,8 @@ export function fakePush(dead: string[] = [], errors: Record<string, string> = {
   };
   return { messaging, sent, goDown: () => void (down = true) };
 }
+
+const withoutNotification = (link: string) => link.replace(/&notification=[^&]*/, '');
 
 /** Tests make no real requests: anything not faked fails like a dead network. */
 const offline: Fetch = async (url) => {
