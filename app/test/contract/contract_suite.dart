@@ -313,6 +313,15 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect(unreadNotifications(list, seen), 1, reason: "C2's is still unread");
       await profiles.save(UserProfile(uid: uid, name: '王小明', email: 'a@example.com'));
       expect((await profiles.watch(uid).first)!.notificationsSeen, seen, reason: 'saving the profile keeps it');
+      // A tapped one, from a list seen in the cache: never back from what is seen.
+      await profiles.markNotificationsSeen(uid, 'C1', t, onlyForward: true);
+      expect((await profiles.watch(uid).first)!.notificationsSeen, seen, reason: 'n1 is older than n2, seen');
+      await profiles.markNotificationsSeen(uid, 'C2', t, onlyForward: true);
+      expect(
+        (await profiles.watch(uid).first)!.notificationsSeen['C2']?.millisecondsSinceEpoch,
+        t.millisecondsSinceEpoch,
+        reason: 'never seen there: forward',
+      );
 
       await w.signUp('b@example.com');
       await expectLater(profiles.notifications(uid).first, denied());

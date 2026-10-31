@@ -716,10 +716,12 @@ class _Profiles implements ProfileRepository {
   }, equals: listEquals);
 
   @override
-  Future<void> markNotificationsSeen(String uid, String churchId, DateTime upTo) async {
+  Future<void> markNotificationsSeen(String uid, String churchId, DateTime upTo, {bool onlyForward = false}) async {
+    if (onlyForward) _b.requireNetwork();
     final p = _b.users[uid];
     if (_b.auth.currentUser?.uid != uid || p == null) throw const CloudException(CloudErrorCode.permissionDenied);
     final at = DateTime.fromMillisecondsSinceEpoch(upTo.millisecondsSinceEpoch, isUtc: true);
+    if (onlyForward && !(p.notificationsSeen[churchId]?.isBefore(at) ?? true)) return;
     await _b.write(() => _b.users[uid] = p.copyWith(notificationsSeen: {...p.notificationsSeen, churchId: at}));
   }
 }

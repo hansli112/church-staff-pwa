@@ -53,8 +53,8 @@ export function fakePush(dead: string[] = [], errors: Record<string, string> = {
       const tokens = (m as { tokens: string[] }).tokens;
       const link = m.data?.link ?? '';
       const webLink = m.webpush?.fcmOptions?.link ?? '';
-      const notification = /[?&]notification=([^&]*)/.exec(link)?.[1] ?? null;
-      assert.equal(/[?&]notification=([^&]*)/.exec(webLink)?.[1] ?? null, notification, 'both links name the same notification');
+      const notification = notificationOf(link);
+      assert.equal(notificationOf(webLink), notification, 'both links name the same notification');
       sent.push({
         tokens,
         title: m.notification?.title ?? '',
@@ -78,7 +78,9 @@ export function fakePush(dead: string[] = [], errors: Record<string, string> = {
   return { messaging, sent, goDown: () => void (down = true) };
 }
 
-const withoutNotification = (link: string) => link.replace(/&notification=[^&]*/, '');
+const NOTIFICATION = /&notification=([^&]*)/;
+const notificationOf = (link: string) => NOTIFICATION.exec(link)?.[1] ?? null;
+const withoutNotification = (link: string) => link.replace(NOTIFICATION, '');
 
 /** Tests make no real requests: anything not faked fails like a dead network. */
 const offline: Fetch = async (url) => {

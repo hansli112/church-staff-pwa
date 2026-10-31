@@ -178,7 +178,10 @@ abstract interface class ProfileRepository {
   /// Records on users/{uid} that its owner has seen church [churchId]'s
   /// notifications up to [upTo], the newest shown: they are read, there and
   /// on the app icon ([UserProfile.notificationsSeen]).
-  Future<void> markNotificationsSeen(String uid, String churchId, DateTime upTo);
+  ///
+  /// [onlyForward]: not when they are seen further already, maybe on another
+  /// device since; online only.
+  Future<void> markNotificationsSeen(String uid, String churchId, DateTime upTo, {bool onlyForward = false});
 }
 
 abstract interface class MembershipRepository {

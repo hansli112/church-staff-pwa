@@ -45,6 +45,10 @@ final unreadTotalProvider = Provider<int?>((ref) {
   return unreadNotifications(all, profile.notificationsSeen);
 });
 
+/// How long a tapped notification is waited for in the list: launched by
+/// the tap, the list may come from the cache first, without it.
+const tappedNotificationWait = Duration(seconds: 30);
+
 /// Notification [id] of church [churchId] was tapped: read, as if seen in
 /// its 通知列表, when nothing older there is unread
 /// ([NotificationList.seenOnTapping]). Never fails.
@@ -53,15 +57,34 @@ Future<void> markTappedSeen(Ref ref, String churchId, String id) async {
   if (uid == null) return;
   final profiles = ref.read(backendProvider).profiles;
   try {
-    // Launched by the tap, the list may come from the cache first, without it.
-    final all = await profiles
-        .notifications(uid)
-        .firstWhere((list) => list.any((n) => n.id == id))
-        .timeout(const Duration(seconds: 30));
+    final all = await _firstWith(profiles.notifications(uid), id);
     final seen = (await profiles.watch(uid).first)?.notificationsSeen[churchId];
     final upTo = NotificationList(churchId, all, seen).seenOnTapping(id);
-    if (upTo != null) await profiles.markNotificationsSeen(uid, churchId, upTo);
+    // The profile may be from the cache too: never back from what another
+    // device, or the list, has seen since.
+    if (upTo != null) await profiles.markNotificationsSeen(uid, churchId, upTo, onlyForward: true);
   } catch (_) {
     // Not there in time, or no connection: it stays unread, no more.
   }
+}
+
+/// The first of [lists] that has notification [id], or a TimeoutException
+/// after [tappedNotificationWait]; either way it stops listening.
+Future<List<NotificationItem>> _firstWith(Stream<List<NotificationItem>> lists, String id) {
+  final found = Completer<List<NotificationItem>>();
+  late final StreamSubscription<List<NotificationItem>> sub;
+  void end(void Function() result) {
+    if (found.isCompleted) return;
+    unawaited(sub.cancel());
+    result();
+  }
+
+  final wait = Timer(tappedNotificationWait, () => end(() => found.completeError(TimeoutException(null))));
+  sub = lists.listen(
+    (list) {
+      if (list.any((n) => n.id == id)) end(() => found.complete(list));
+    },
+    onError: (Object e, StackTrace st) => end(() => found.completeError(e, st)),
+  );
+  return found.future.whenComplete(wait.cancel);
 }

@@ -487,11 +487,18 @@ class _Profiles implements ProfileRepository {
   // To the millisecond, as unreadNotifications compares: the web's
   // DateTime has no finer, and the newest seen must not stay unread.
   @override
-  Future<void> markNotificationsSeen(String uid, String churchId, DateTime upTo) => _guard(
-    () => _db.doc('users/$uid').update({
+  Future<void> markNotificationsSeen(String uid, String churchId, DateTime upTo, {bool onlyForward = false}) {
+    final ref = _db.doc('users/$uid');
+    final change = {
       FieldPath(['notificationsSeenAt', churchId]): Timestamp.fromMillisecondsSinceEpoch(upTo.millisecondsSinceEpoch),
-    }),
-  );
+    };
+    if (!onlyForward) return _guard(() => ref.update(change));
+    return _onlineTransaction(_db, _auth, _connectivity, (tx) async {
+      final seen = (await tx.get(ref)).data()?['notificationsSeenAt'];
+      final now = readTime(seen is Map ? seen[churchId] : null);
+      if (now == null || now.millisecondsSinceEpoch < upTo.millisecondsSinceEpoch) tx.update(ref, change);
+    });
+  }
 
   @override
   Future<void> ensure(UserProfile profile) async {
