@@ -4,6 +4,24 @@ import '../../domain/models.dart';
 import '../../domain/staff_order.dart';
 import 'memory_backend.dart';
 
+/// What the church typed: names, services, duties, its calendar.
+Set<String> churchText(MemoryBackend b) => {
+  for (final c in b.churches.values) c.name,
+  for (final members in b.members.values)
+    for (final m in members.values) m.name,
+  for (final s in b.services.values)
+    for (final service in s.services) ...[
+      service.name,
+      ...service.duties,
+      for (final e in service.events) e.name,
+    ],
+  for (final events in b.calendarEvents.values)
+    for (final e in events) e.title,
+  for (final rosters in b.rosters.values)
+    for (final r in rosters.values)
+      for (final d in r.duties) ...[d.role, ...d.people],
+};
+
 /// Sample church used by the offline demo and the performance baseline:
 /// [memberCount] members, three services, a year of rosters. What the
 /// church typed itself (its name, services, people) is in [language], as

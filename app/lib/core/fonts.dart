@@ -232,7 +232,8 @@ Set<String>? _initialKeys(Uri location, [int depth = 0]) {
   if (const {'', '/', '/home'}.contains(location.path)) return _startupKeys;
   if (location.path == '/me/church') return {..._startupKeys, ..._churchInfoKeys};
   final parts = location.pathSegments;
-  if (parts.length == 3 && parts.first == 'rosters' && parts[1] != 'import') {
+  // A day's or an event's roster; not 安排服事 or 匯入, under the same path.
+  if (parts.length == 3 && parts.first == 'rosters' && !const {'import', 'plan'}.contains(parts[1])) {
     return {..._startupKeys, ..._rosterKeys};
   }
   return null;
@@ -293,7 +294,7 @@ Future<void> warmUpFonts({
   bool startupOnly = false,
   Uri? initialLocation,
   Future<void>? afterFirstFrame,
-  void Function(String text) layOut = _layOut,
+  void Function(String text) layOut = askForFonts,
 }) {
   final done = Completer<void>();
   final namesFirst = initialLocation?.path == '/me/language';
@@ -345,10 +346,12 @@ Future<void> warmUpFonts({
   return done.future;
 }
 
-// CanvasKit asks for the missing fonts as the text is added; the wasm
-// renderer (Chrome, on computers and Android) only once it is laid out.
-// Any width: all of it is laid out, only the lines break elsewhere.
-void _layOut(String text) {
+/// Has the engine fetch the fonts [text] needs, as drawing it would.
+///
+/// CanvasKit asks for the missing fonts as the text is added; the wasm
+/// renderer (Chrome, on computers and Android) only once it is laid out.
+/// Any width: all of it is laid out, only the lines break elsewhere.
+void askForFonts(String text) {
   final paragraph = (ui.ParagraphBuilder(ui.ParagraphStyle())..addText(text)).build();
   if (kIsWasm) paragraph.layout(const ui.ParagraphConstraints(width: 1000));
   paragraph.dispose();

@@ -20,6 +20,7 @@ import 'core/design/tokens.dart';
 import 'data/backend.dart';
 import 'data/firebase/firebase_backend.dart';
 import 'data/memory/demo_data.dart';
+import 'data/memory/memory_backend.dart';
 import 'env.dart';
 import 'core/fonts.dart';
 import 'core/languages.dart';
@@ -76,6 +77,12 @@ Future<void> main() async {
     loadAppFont(),
     PhraseModel.load(),
   ).wait;
+
+  // The website's videos (tools/e2e/record.mjs): the showcase church's
+  // names too, so none shows as boxes before its font arrives.
+  if (const bool.fromEnvironment('DEMO_SHOWCASE') && kIsWeb) {
+    unawaited(firstPageDrawn.future.then((_) => askForFonts(churchText(backend as MemoryBackend).join())));
+  }
 
   // End-to-end tests drive the web build through the accessibility tree.
   if (const bool.fromEnvironment('E2E')) SemanticsBinding.instance.ensureSemantics();

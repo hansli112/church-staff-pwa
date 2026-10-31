@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/core/fonts.dart';
 import 'package:martha/core/languages.dart';
+import 'package:martha/data/memory/demo_data.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
@@ -52,24 +53,6 @@ final _fetched = RegExp(
   unicode: true,
 );
 
-/// What the church typed: names, services, duties, its calendar.
-Set<String> _churchText(MemoryBackend b) => {
-  for (final c in b.churches.values) c.name,
-  for (final members in b.members.values)
-    for (final m in members.values) m.name,
-  for (final s in b.services.values)
-    for (final service in s.services) ...[
-      service.name,
-      ...service.duties,
-      for (final e in service.events) e.name,
-    ],
-  for (final events in b.calendarEvents.values)
-    for (final e in events) e.title,
-  for (final rosters in b.rosters.values)
-    for (final r in rosters.values)
-      for (final d in r.duties) ...[d.role, ...d.people],
-};
-
 /// Characters drawn on the page at [location] in [language], other than the
 /// church's own text, that [warmUpFonts] does not lay out for it.
 Future<Set<String>> _unwarmed(WidgetTester tester, MemoryBackend b, String location, AppLanguage language) async {
@@ -77,7 +60,7 @@ Future<Set<String>> _unwarmed(WidgetTester tester, MemoryBackend b, String locat
   GoRouter.of(tester.element(find.byType(Scaffold).first)).go(location);
   await settle(tester);
   final drawn = [for (final t in tester.widgetList<RichText>(find.byType(RichText))) t.text.toPlainText()].join();
-  final known = '${await _warmed(tester, location, language)}${_churchText(b).join()}';
+  final known = '${await _warmed(tester, location, language)}${churchText(b).join()}';
   return {
     for (final m in _fetched.allMatches(drawn))
       if (!known.contains(m[0]!)) m[0]!,
@@ -109,6 +92,10 @@ void _pages(AppLanguage language) {
 
   testWidgets("a service's roster", (tester) async {
     expect(await _unwarmed(tester, seededChurch(), '/rosters/sunday/2026-10-11', language), isEmpty);
+  });
+
+  testWidgets('安排服事, opened by its address', (tester) async {
+    expect(await _unwarmed(tester, seededChurch(), '/rosters/plan/sunday', language), isEmpty);
   });
 
   testWidgets("an event's roster", (tester) async {
