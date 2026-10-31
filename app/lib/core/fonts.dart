@@ -346,7 +346,8 @@ Future<void> warmUpFonts({
 }
 
 // CanvasKit asks for the missing fonts as the text is added; the wasm
-// renderer (Chrome, Android) only once it is laid out.
+// renderer (Chrome, on computers and Android) only once it is laid out.
+// Any width: all of it is laid out, only the lines break elsewhere.
 void _layOut(String text) {
   final paragraph = (ui.ParagraphBuilder(ui.ParagraphStyle())..addText(text)).build();
   if (kIsWasm) paragraph.layout(const ui.ParagraphConstraints(width: 1000));

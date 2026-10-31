@@ -14,7 +14,14 @@ import path from 'node:path';
 import { chromium, webkit } from 'playwright';
 
 const webdir = process.argv[2];
-const words = JSON.parse(fs.readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname), '../../app/lib/l10n/app_zh.arb'), 'utf8'));
+const strings = JSON.parse(fs.readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname), '../../app/lib/l10n/app_zh.arb'), 'utf8'));
+/** The app's string [key], in Traditional Chinese. */
+const t = (key) => {
+  if (typeof strings[key] !== 'string') throw new Error(`no string ${key}`);
+  return strings[key];
+};
+const create = t('inviteCreate');
+const copied = t('inviteCopied');
 
 const types = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.html': 'text/html', '.json': 'application/json', '.wasm': 'application/wasm', '.css': 'text/css', '.png': 'image/png', '.otf': 'font/otf', '.ttf': 'font/ttf' };
 const server = http.createServer((req, res) => {
@@ -28,13 +35,13 @@ const base = `http://localhost:${server.address().port}`;
 
 const ENGINES = [
   // Software WebGL: without it Chromium falls back from the wasm build to JS.
-  { name: 'chromium (wasm)', type: chromium, args: ['--enable-unsafe-swiftshader', '--use-angle=swiftshader'], wasm: true },
-  { name: 'webkit (js)', type: webkit, args: [], wasm: false },
+  { name: 'chromium (wasm)', browserType: chromium, args: ['--enable-unsafe-swiftshader', '--use-angle=swiftshader'], wasm: true },
+  { name: 'webkit (js)', browserType: webkit, args: [], wasm: false },
 ];
 
 let failed = false;
 for (const engine of ENGINES) {
-  const browser = await engine.type.launch({ args: engine.args });
+  const browser = await engine.browserType.launch({ args: engine.args });
   const context = await browser.newContext({ viewport: { width: 393, height: 852 }, locale: 'zh-TW' });
   // 建立邀請連結 shares the link, or copies it where there is no share
   // sheet; neither leaves the page here.
@@ -62,12 +69,12 @@ for (const engine of ENGINES) {
   };
   try {
     await page.goto(`${base}/me/invites`);
-    await page.getByRole('button', { name: words.inviteCreate, exact: true }).waitFor({ timeout: 30000 });
+    await page.getByRole('button', { name: create, exact: true }).waitFor({ timeout: 30000 });
     await settle();
     const before = fonts.length;
     // Through its accessibility node: a tap where WebKit draws it is lost.
-    await page.getByRole('button', { name: words.inviteCreate, exact: true }).dispatchEvent('click');
-    await page.getByText(words.inviteCopied).first().waitFor({ timeout: 10000 });
+    await page.getByRole('button', { name: create, exact: true }).dispatchEvent('click');
+    await page.getByText(copied).first().waitFor({ timeout: 10000 });
     await settle();
     if (engine.wasm && !ranWasm) fail('ran the JS build, not the wasm one');
     else if (before === 0) fail('asked for no font files at all');
