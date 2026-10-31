@@ -294,18 +294,26 @@ for (const language of languages) {
     await context.addInitScript(FINGER);
     const page = await context.newPage();
     page.on('pageerror', (e) => console.error(`${language}/${name} pageerror: ${e.message}`));
-    // Played once first, unrecorded: the font files for what it shows
-    // (Google Fonts, cached) are fetched then, so no character shows as a
-    // box while the recording waits for its file. The demo starts afresh
-    // on the reload.
+    // A font file asked for while recording: a character showed as a box
+    // until it came.
+    let recording = false;
+    const lateFonts = [];
+    page.on('request', (r) => {
+      if (recording && r.url().includes('fonts.gstatic.com')) lateFonts.push(r.url());
+    });
+    // Played once first, unrecorded, so the font files (Google Fonts) are
+    // in the browser's cache for the reload, which the app warms up from
+    // before the recording starts. The demo starts afresh on the reload.
     await page.goto(`${base}${clip.route}`);
     await page.waitForTimeout(4000);
     await clip.play(session(page, words), { duties: DUTIES[language] }).catch(() => {});
     await page.goto(`${base}${clip.route}`);
     await page.waitForTimeout(4000);
     const frames = await screencast(page, path.join(tmp, `${language}-${name}`));
+    recording = true;
     try {
       await clip.play(session(page, words), { duties: DUTIES[language] });
+      if (lateFonts.length) throw new Error(`fonts fetched while recording: ${lateFonts.join(', ')}`);
     } catch (e) {
       failed = true;
       console.error(`${language}/${name}: ${e.message}`);
