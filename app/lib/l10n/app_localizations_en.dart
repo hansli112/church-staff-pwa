@@ -3314,6 +3314,29 @@ class L10nEn extends L10n {
   }
 
   @override
+  String get gettingStartedAddStaffAny => 'Add team members to a service';
+
+  @override
+  String get gettingStartedSmallGroups => 'Create small groups';
+
+  @override
+  String get gettingStartedSmallGroupsBody => 'Optional · leaders add their own members and report attendance';
+
+  @override
+  String get gettingStartedInviteWaiting => 'Invite sent, waiting for your team to join';
+
+  @override
+  String get gettingStartedAfterJoin => 'Once your team has joined';
+
+  @override
+  String get gettingStartedDone => 'Done';
+
+  @override
+  String gettingStartedNext(String step) {
+    return 'Next: $step';
+  }
+
+  @override
   String get gettingStartedHide => 'Don’t show again';
 
   @override

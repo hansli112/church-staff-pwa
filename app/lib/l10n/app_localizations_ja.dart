@@ -3122,6 +3122,29 @@ class L10nJa extends L10n {
   }
 
   @override
+  String get gettingStartedAddStaffAny => '集会にメンバーを加える';
+
+  @override
+  String get gettingStartedSmallGroups => '小グループを作る';
+
+  @override
+  String get gettingStartedSmallGroupsBody => '任意 · リーダーが自分のメンバーを加え、人数を報告します';
+
+  @override
+  String get gettingStartedInviteWaiting => '招待済み、メンバーの参加待ち';
+
+  @override
+  String get gettingStartedAfterJoin => 'メンバーが参加してからできます';
+
+  @override
+  String get gettingStartedDone => '完了';
+
+  @override
+  String gettingStartedNext(String step) {
+    return '次へ：$step';
+  }
+
+  @override
   String get gettingStartedHide => '今後表示しない';
 
   @override

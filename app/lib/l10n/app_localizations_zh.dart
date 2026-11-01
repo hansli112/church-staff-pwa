@@ -3117,6 +3117,29 @@ class L10nZh extends L10n {
   }
 
   @override
+  String get gettingStartedAddStaffAny => '把同工加入聚會';
+
+  @override
+  String get gettingStartedSmallGroups => '建立小組';
+
+  @override
+  String get gettingStartedSmallGroupsBody => '選用 · 小組長加入自己的同工、回報人數';
+
+  @override
+  String get gettingStartedInviteWaiting => '已發出邀請，等同工加入';
+
+  @override
+  String get gettingStartedAfterJoin => '同工加入後就能做';
+
+  @override
+  String get gettingStartedDone => '已完成';
+
+  @override
+  String gettingStartedNext(String step) {
+    return '下一步：$step';
+  }
+
+  @override
   String get gettingStartedHide => '不再顯示';
 
   @override
@@ -6468,6 +6491,29 @@ class L10nZhHans extends L10nZh {
   @override
   String gettingStartedMeets(String group) {
     return '设置$group的聚会时间';
+  }
+
+  @override
+  String get gettingStartedAddStaffAny => '把同工加入聚会';
+
+  @override
+  String get gettingStartedSmallGroups => '创建小组';
+
+  @override
+  String get gettingStartedSmallGroupsBody => '可选 · 小组长加入自己的同工、回报人数';
+
+  @override
+  String get gettingStartedInviteWaiting => '已发出邀请，等同工加入';
+
+  @override
+  String get gettingStartedAfterJoin => '同工加入后就能做';
+
+  @override
+  String get gettingStartedDone => '已完成';
+
+  @override
+  String gettingStartedNext(String step) {
+    return '下一步：$step';
   }
 
   @override

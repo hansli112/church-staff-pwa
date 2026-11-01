@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import 'deep_link.dart';
 import 'deferred_pages.dart';
+import 'domain/getting_started.dart';
 import 'domain/models.dart';
 import 'env.dart';
 import 'features/auth/login_screen.dart';
@@ -16,6 +17,7 @@ import 'features/church/closed_screen.dart';
 import 'features/church/join_screen.dart';
 import 'features/church/welcome_screen.dart';
 import 'features/dev/component_gallery.dart';
+import 'features/home/getting_started.dart';
 import 'features/home/home_screen.dart';
 import 'features/home/notification_list_screen.dart';
 import 'features/me/about_screen.dart';
@@ -68,7 +70,11 @@ final routerProvider = Provider<GoRouter>((ref) {
     bool fade = false,
   }) {
     Widget guarded(GoRouterState s) {
-      final child = build(s);
+      var child = build(s);
+      // Opened from 開始使用: the step after it, once it is done.
+      if (StartStep.values.asNameMap()[s.uri.queryParameters['start']] case final step?) {
+        child = StartNext(step: step, page: s.uri.path, child: child);
+      }
       return isUpdateEditorRoute(s.matchedLocation) ? UpdateEditGuard(child: child) : child;
     }
 

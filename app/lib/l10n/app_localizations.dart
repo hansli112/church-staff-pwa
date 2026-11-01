@@ -5566,6 +5566,48 @@ abstract class L10n {
   /// **'設定{group}的聚會時間'**
   String gettingStartedMeets(String group);
 
+  /// 開始使用 step for an admin while no service is open: opens 聚會與事工
+  ///
+  /// In zh, this message translates to:
+  /// **'把同工加入聚會'**
+  String get gettingStartedAddStaffAny;
+
+  /// 開始使用 step for an admin, optional: opens the service page with its 小組
+  ///
+  /// In zh, this message translates to:
+  /// **'建立小組'**
+  String get gettingStartedSmallGroups;
+
+  /// Under gettingStartedSmallGroups; says it may be skipped
+  ///
+  /// In zh, this message translates to:
+  /// **'選用 · 小組長加入自己的同工、回報人數'**
+  String get gettingStartedSmallGroupsBody;
+
+  /// Under 邀請同工 once an invite works and nobody has joined yet
+  ///
+  /// In zh, this message translates to:
+  /// **'已發出邀請，等同工加入'**
+  String get gettingStartedInviteWaiting;
+
+  /// Under a 開始使用 step that needs someone else to have joined first
+  ///
+  /// In zh, this message translates to:
+  /// **'同工加入後就能做'**
+  String get gettingStartedAfterJoin;
+
+  /// Screen-reader label of the check on a 開始使用 step done
+  ///
+  /// In zh, this message translates to:
+  /// **'已完成'**
+  String get gettingStartedDone;
+
+  /// Button at the bottom of a page opened from 開始使用, once its step is done: opens the next step
+  ///
+  /// In zh, this message translates to:
+  /// **'下一步：{step}'**
+  String gettingStartedNext(String step);
+
   /// Last row of 開始使用: puts it away on this device
   ///
   /// In zh, this message translates to:

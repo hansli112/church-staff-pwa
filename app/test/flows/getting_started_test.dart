@@ -14,6 +14,17 @@ final youthLead = staffHao.withIdentities(const [ServiceLead('youth')]);
 
 MemoryBackend youthChurch() => seededChurch(extra: [youthLead], as: youthLead);
 
+// 活水堂, just made: its admin alone, its services as they came.
+MemoryBackend newChurch() {
+  final b = MemoryBackend(clock: testClock);
+  final cid = b.addChurch('活水堂', id: 'living');
+  b.setServices(cid, const [sundayService]);
+  b.addMember(cid, pastor);
+  b.auth.signInAs('pastor@example.com', uid: pastor.uid, name: pastor.name);
+  b.users[pastor.uid] = const UserProfile(uid: 'pastor', name: '王牧師', email: 'pastor@example.com');
+  return b;
+}
+
 Future<void> tapText(WidgetTester tester, String text) async {
   await tester.tap(findShown(text).last);
   await settle(tester);
@@ -40,14 +51,15 @@ void main() {
     expect(find.text('安排司會'), findsOneWidget, reason: '安排服事, for the one duty it has');
   });
 
-  testWidgets('a step done is gone, and the list once every step is', (tester) async {
+  testWidgets('a step done is checked, and the list gone once every step is', (tester) async {
     final b = youthChurch();
     await pumpApp(tester, b);
 
     b.members['grace']!['john'] = johnOnSunday.copyWith(zones: const [Zone(serviceType: 'youth')]);
     b.notify();
     await settle(tester);
-    expect(find.text('加入青年崇拜的同工'), findsNothing);
+    expect(find.text('加入青年崇拜的同工'), findsOneWidget, reason: 'still listed, in its place');
+    expect(find.bySemanticsLabel(RegExp('已完成')), findsOneWidget);
     expect(find.text('排青年崇拜的服事'), findsOneWidget);
 
     b.rosters['grace']![Roster.idFor('youth', Day(2026, 10, 3))] = Roster(
@@ -93,16 +105,51 @@ void main() {
   });
 
   testWidgets("a new church's admin is shown where to start, all under 開始使用", (tester) async {
-    final b = MemoryBackend(clock: testClock);
-    final cid = b.addChurch('活水堂', id: 'living');
-    b.setServices(cid, const [sundayService]);
-    b.addMember(cid, pastor);
-    b.auth.signInAs('pastor@example.com', uid: pastor.uid, name: pastor.name);
-    b.users[pastor.uid] = const UserProfile(uid: 'pastor', name: '王牧師', email: 'pastor@example.com');
-    await pumpApp(tester, b);
+    await pumpApp(tester, newChurch());
 
     expect(find.text('開始使用'), findsOneWidget);
     await tapText(tester, '安排服事表');
+    expect(find.text('還沒有安排任何人'), findsOneWidget);
+  });
+
+  testWidgets("a new church's admin goes step by step: a step's page offers the next once it is done", (tester) async {
+    final b = newChurch();
+    await pumpApp(tester, b);
+    expect(find.text('同工加入後就能做'), findsOneWidget, reason: 'nobody to put in a service yet');
+    await tester.tap(find.text('加入主日崇拜的同工'));
+    await settle(tester);
+    expect(find.text('開始使用'), findsOneWidget, reason: 'not open before anyone joins');
+
+    await tapText(tester, '設定聚會');
+    expect(find.text('聚會與事工'), findsWidgets);
+    await tapText(tester, '下一步：邀請同工');
+    expect(find.text('建立邀請連結'), findsOneWidget);
+    expect(findShown('下一步：安排服事表'), findsNothing, reason: 'nobody invited yet');
+
+    await b.church('living').createInvite(validFor: const Duration(days: 7));
+    b.notify();
+    await settle(tester);
+    expect(find.text('下一步：安排服事表'), findsOneWidget, reason: 'waiting on them; 小組 is optional');
+    await back(tester);
+    expect(find.text('開始使用'), findsOneWidget, reason: 'the services page gave way to the invites');
+    expect(find.text('已發出邀請，等同工加入'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('已完成')), findsOneWidget, reason: 'the services, looked at');
+
+    b.addMember('living', const Member(uid: 'john', name: 'John Chen'));
+    b.notify();
+    await settle(tester);
+    expect(find.text('1 位同工還沒加入任何聚會'), findsNothing, reason: 'the step says it');
+    await tapText(tester, '加入主日崇拜的同工');
+    expect(find.text('主日崇拜的同工'), findsOneWidget);
+    expect(findShown('下一步：安排服事表'), findsNothing);
+    b.members['living']!['john'] = const Member(
+      uid: 'john',
+      name: 'John Chen',
+      zones: [Zone(serviceType: 'sunday')],
+    );
+    b.notify();
+    await settle(tester);
+    await tapText(tester, '下一步：安排服事表');
     expect(find.text('還沒有安排任何人'), findsOneWidget);
   });
 }

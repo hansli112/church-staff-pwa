@@ -3122,6 +3122,29 @@ class L10nKo extends L10n {
   }
 
   @override
+  String get gettingStartedAddStaffAny => '예배에 멤버 추가';
+
+  @override
+  String get gettingStartedSmallGroups => '소그룹 만들기';
+
+  @override
+  String get gettingStartedSmallGroupsBody => '선택 · 리더가 직접 멤버를 추가하고 인원을 보고해요';
+
+  @override
+  String get gettingStartedInviteWaiting => '초대를 보냈어요. 멤버가 들어오기를 기다리는 중';
+
+  @override
+  String get gettingStartedAfterJoin => '멤버가 들어온 뒤에 할 수 있어요';
+
+  @override
+  String get gettingStartedDone => '완료';
+
+  @override
+  String gettingStartedNext(String step) {
+    return '다음: $step';
+  }
+
+  @override
   String get gettingStartedHide => '다시 보지 않기';
 
   @override
