@@ -70,7 +70,7 @@ void main() {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/me/members/john');
-      await tester.tap(find.text('屬於這個牧區').last);
+      await tester.tap(find.text('青年崇拜的同工'));
       await settle(tester);
       expect(b.members['grace']!['john']!.zoneTypes, ['youth']);
     });
@@ -79,10 +79,10 @@ void main() {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/me/members/mei');
-      await tester.tap(find.text('屬於這個牧區').first);
+      await tester.tap(find.text('主日崇拜的同工'));
       await settle(tester);
       expect(b.members['grace']!['mei']!.zones, isEmpty);
-      expect(find.text('不再屬於主日崇拜牧區'), findsOneWidget);
+      expect(find.text('不再是主日崇拜的同工'), findsOneWidget);
       await tapText(tester, '復原');
       expect(b.members['grace']!['mei']!.zones, const [
         Zone(serviceType: 'sunday', duties: ['司琴', '招待']),
@@ -92,13 +92,13 @@ void main() {
     testWidgets('members in no 牧區 are marked, and admins are told on the home page', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
-      await tapText(tester, '1 位同工還沒設定牧區');
-      expect(find.textContaining('還沒設定牧區'), findsOneWidget, reason: 'John Chen, in the member list');
+      await tapText(tester, '1 位同工還沒加入任何聚會');
+      expect(find.textContaining('還沒加入任何聚會'), findsOneWidget, reason: 'John Chen, in the member list');
       await tapText(tester, 'John Chen');
-      await tester.tap(find.text('屬於這個牧區').first);
+      await tester.tap(find.text('主日崇拜的同工'));
       await settle(tester);
       await go(tester, '/home');
-      expect(find.textContaining('還沒設定牧區'), findsNothing, reason: 'everyone is in a 牧區 now');
+      expect(find.textContaining('還沒加入任何聚會'), findsNothing, reason: 'everyone is in a 牧區 now');
     });
 
     testWidgets('removing uses undo, and commits after the window', (tester) async {
@@ -365,7 +365,7 @@ void main() {
     testWidgets('disabling a service hides it from the roster tab but keeps its rosters', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
-      await go(tester, '/me/services/youth');
+      await go(tester, '/me/groups/service/youth');
       await tapText(tester, '啟用');
       expect(b.services['grace']!.byId('youth')!.enabled, isFalse);
       expect(b.services['grace']!.ids, containsAll(['sunday', 'youth']));
@@ -376,9 +376,9 @@ void main() {
     testWidgets('renaming a duty moves members\' zones and the staff order with it', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
-      await go(tester, '/me/services/sunday');
+      await go(tester, '/me/groups/service/sunday');
       await tapText(tester, '招待');
-      await tapText(tester, '改名');
+      await tapText(tester, '服事項目名稱');
       await tester.enterText(find.byType(TextField).last, '接待');
       await tapText(tester, '儲存');
       expect(b.services['grace']!.byId('sunday')!.duties, ['司會', '司琴', '接待']);
@@ -387,12 +387,12 @@ void main() {
       expect(savedDay(b, 4).duties.map((d) => d.role), contains('招待'), reason: 'arranged days keep their wording');
     });
 
-    testWidgets('a duty can be removed from its menu, not only by swiping', (tester) async {
+    testWidgets('a duty can be deleted from its page, not only by swiping', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
-      await go(tester, '/me/services/sunday');
+      await go(tester, '/me/groups/service/sunday');
       await tapText(tester, '司琴');
-      await tapText(tester, '移除');
+      await tapText(tester, '刪除');
       expect(b.services['grace']!.byId('sunday')!.duties, ['司會', '招待']);
       await tapText(tester, '復原');
       expect(b.services['grace']!.byId('sunday')!.duties, ['司會', '司琴', '招待']);
@@ -401,7 +401,7 @@ void main() {
     testWidgets('changing the template does not touch arranged rosters', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
-      await go(tester, '/me/services/sunday');
+      await go(tester, '/me/groups/service/sunday');
       await tester.drag(find.text('司琴').first, const Offset(-500, 0));
       await settle(tester);
       expect(b.services['grace']!.byId('sunday')!.duties, ['司會', '招待']);

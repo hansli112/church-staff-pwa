@@ -10,9 +10,9 @@ import '../common/errors.dart';
 import '../common/saving_indicator.dart';
 import 'identity_section.dart';
 
-/// An admin editing one member: their 身分 and 事工 (#82), and per service
-/// whether they belong to its 牧區 and the duties they serve there. Every
-/// change saves at once.
+/// An admin editing one member: their 身分 (#82), and per service whether
+/// they are one of its 同工, in which of its 小組, and the duties they
+/// serve there (#94). Every change saves at once.
 ///
 /// An admin cannot demote or remove themself (the rules forbid it too), so
 /// those controls do not appear on their own page.
@@ -33,7 +33,7 @@ class MemberEditorScreen extends ConsumerWidget {
     }
   }
 
-  /// Takes [member] out of [service]'s 牧區, which clears its duties too,
+  /// Takes [member] out of [service]'s 同工, which clears its duties too,
   /// and offers 「復原」, refused once someone has changed the member since.
   Future<void> _leaveZone(BuildContext context, WidgetRef ref, Member member, Service service) async {
     final index = member.zones.indexWhere((z) => z.serviceType == service.id);
@@ -116,7 +116,6 @@ class MemberEditorScreen extends ConsumerWidget {
       body: ListView(
         children: [
           IdentitySection(member: member, self: self),
-          MinistriesSection(member: member),
           for (final s in shown)
             _ZoneSection(
               member: member,
@@ -190,7 +189,7 @@ class _ZoneSection extends StatelessWidget {
       header: service.name,
       children: [
         SwitchRow(
-          title: L10n.of(context).zoneSwitch,
+          title: L10n.of(context).zoneSwitch(service.name),
           value: zone != null,
           onChanged: (on) => on ? onSave(withZone(Zone(serviceType: service.id))) : onLeave(),
         ),

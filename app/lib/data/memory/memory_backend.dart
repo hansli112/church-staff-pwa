@@ -1589,7 +1589,6 @@ class MemoryChurchData implements ChurchData {
         groups: after.groups,
         zones: after.zones,
         identities: after.identities,
-        ministries: after.ministries,
         smallGroups: after.smallGroups,
       );
     });
@@ -1618,7 +1617,8 @@ class MemoryChurchData implements ChurchData {
       };
       final known = switch (group) {
         ServiceGroup() => service != null,
-        MinistryGroup(:final id) => (_b.ministries[churchId] ?? const MinistrySettings()).byId(id) != null,
+        // A 事工 has no 同工 of its own (#94).
+        MinistryGroup() => throw const CloudException(CloudErrorCode.unknown),
         SmallGroup() => small != null,
       };
       if (!known) throw const CloudException(CloudErrorCode.permissionDenied);
@@ -1639,18 +1639,31 @@ class MemoryChurchData implements ChurchData {
 
   @override
   Future<void> grantDuty(String uid, String serviceType, String duty) =>
-      _changeZones(uid, (m) => m.withDuty(serviceType, duty));
+      _setDuty(uid, serviceType, duty, (m) => m.withDuty(serviceType, duty), granting: true);
 
   @override
   Future<void> revokeDuty(String uid, String serviceType, String duty) =>
-      _changeZones(uid, (m) => m.withoutDuty(serviceType, duty));
+      _setDuty(uid, serviceType, duty, (m) => m.withoutDuty(serviceType, duty), granting: false);
 
-  /// Admins: [change] applied to member [uid] as they are when written.
-  Future<void> _changeZones(String uid, Member Function(Member) change) async {
-    _requireAdmin();
+  /// As functions/src/groupMembers.ts setDuty: [change] applied to member
+  /// [uid] as they are when written, by whoever edits [duty]'s list.
+  Future<void> _setDuty(
+    String uid,
+    String serviceType,
+    String duty,
+    Member Function(Member) change, {
+    required bool granting,
+  }) async {
     await _b.write(() {
+      final me = _b.requireMember(churchId);
+      final service = _b.services[churchId]!.byId(serviceType);
+      final ministries = (_b.ministries[churchId] ?? const MinistrySettings()).ministries;
+      if (service == null || !me.editsDutyList(ministries, serviceType, duty)) {
+        throw const CloudException(CloudErrorCode.permissionDenied);
+      }
       final now = _b.members[churchId]![uid];
       if (now == null) throw const CloudException(CloudErrorCode.notFound);
+      if (granting && !service.duties.contains(duty)) throw const CloudException(CloudErrorCode.unknown);
       _b.members[churchId]![uid] = change(now);
     });
   }

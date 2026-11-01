@@ -157,14 +157,7 @@ void main() {
       test(r['why'] as String, () {
         final caller = r['caller'] as Map<String, dynamic>;
         final service = r['service'] as String;
-        final ministries = [
-          for (final m in r['ministries'] as List)
-            Ministry(
-              id: m['id'] as String,
-              name: m['id'] as String,
-              duties: [for (final d in m['duties'] as List) MinistryDuty(d['service'] as String, d['duty'] as String)],
-            ),
-        ];
+        final ministries = _ministries(r['ministries']);
         final members = [
           for (final m in r['members'] as List)
             Member(
@@ -217,14 +210,24 @@ void main() {
         final g = r['group'] as Map<String, dynamic>;
         final ChurchGroup group = g['smallGroup'] is String
             ? SmallGroup(g['smallGroup'] as String, service: g['service'] as String?)
-            : g['service'] is String
-            ? ServiceGroup(g['service'] as String)
-            : MinistryGroup(g['ministry'] as String);
+            : ServiceGroup(g['service'] as String);
         expect(
           member(
             'caller',
             r['caller'] as Map<String, dynamic>,
           ).mayMove(member('target', r['target'] as Map<String, dynamic>), group),
+          r['may'],
+        );
+      });
+    }
+  });
+
+  group('dutyListEditing', () {
+    for (final r in _rows('dutyListEditing')) {
+      test(r['why'] as String, () {
+        final caller = _member('caller', r['caller'] as Map<String, dynamic>);
+        expect(
+          caller.editsDutyList(_ministries(r['ministries']), r['service'] as String, r['duty'] as String),
           r['may'],
         );
       });
@@ -341,3 +344,13 @@ void main() {
     }
   });
 }
+
+/// The church's 事工 in a row, each named by its ID.
+List<Ministry> _ministries(Object? rows) => [
+  for (final m in rows as List)
+    Ministry(
+      id: m['id'] as String,
+      name: m['id'] as String,
+      duties: [for (final d in m['duties'] as List) MinistryDuty(d['service'] as String, d['duty'] as String)],
+    ),
+];

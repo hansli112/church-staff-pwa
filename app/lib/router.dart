@@ -31,7 +31,7 @@ import 'features/me/notifications_screen.dart';
 import 'features/me/unavailable_screen.dart';
 import 'features/rosters/swap_asking.dart';
 import 'features/me/profile_screen.dart';
-import 'features/me/services_screen.dart';
+import 'features/me/service_settings.dart';
 import 'features/me/sign_in_methods_screen.dart';
 import 'features/me/support_screen.dart';
 import 'features/me/time_zone_screen.dart';
@@ -227,7 +227,25 @@ final routerProvider = Provider<GoRouter>((ref) {
                     'groups',
                     (_) => const GroupsScreen(),
                     routes: [
-                      page('service/:id', (s) => GroupScreen(group: ServiceGroup(s.pathParameters['id']!))),
+                      page(
+                        'service/:id',
+                        (s) => WarmUpOnOpen(
+                          WarmUp.serviceEdit,
+                          child: GroupScreen(group: ServiceGroup(s.pathParameters['id']!)),
+                        ),
+                      ),
+                      // Not under the service's page, which a 事工's 負責人
+                      // opening it from a link may not see.
+                      page(
+                        'duty',
+                        (s) => WarmUpOnOpen(
+                          WarmUp.dutyList,
+                          child: DutyScreen(
+                            serviceId: s.uri.queryParameters['service'] ?? '',
+                            duty: s.uri.queryParameters['name'] ?? '',
+                          ),
+                        ),
+                      ),
                       page('ministry/:id', (s) => GroupScreen(group: MinistryGroup(s.pathParameters['id']!))),
                       page('small/:id', (s) => GroupScreen(group: SmallGroup(s.pathParameters['id']!))),
                     ],
@@ -239,19 +257,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                       page(
                         ':uid',
                         (s) => MemberEditorScreen(uid: s.pathParameters['uid']!),
-                      ),
-                    ],
-                  ),
-                  page(
-                    'services',
-                    (_) => const ServicesScreen(),
-                    routes: [
-                      page(
-                        ':id',
-                        (s) => WarmUpOnOpen(
-                          WarmUp.serviceEdit,
-                          child: ServiceEditorScreen(serviceId: s.pathParameters['id']!),
-                        ),
                       ),
                     ],
                   ),

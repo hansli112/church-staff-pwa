@@ -82,7 +82,7 @@ void main() {
 
       await pumpApp(tester, seededChurch(as: john));
       await tapText(tester, '服事表');
-      expect(find.text('你還沒有屬於任何牧區，請找管理員設定'), findsOneWidget);
+      expect(find.text('你還沒加入任何聚會，請找管理員設定'), findsOneWidget);
     });
 
     testWidgets('a change rebuilds only the card it touched', (tester) async {
@@ -400,8 +400,16 @@ void main() {
       expect(mei < john, isTrue);
     });
 
-    testWidgets('a roster editor reorders but cannot take anyone off the list', (tester) async {
+    testWidgets("its 負責人 edits the duty's list while arranging too (#94); 行政 only reorders", (tester) async {
       await pumpApp(tester, seededChurch(as: editor));
+      await go(tester, '/rosters/sunday/2026-10-11');
+      await tapText(tester, '招待');
+      await tapText(tester, '編輯');
+      expect(find.byTooltip('從名單移除李美玉'), findsOneWidget);
+    });
+
+    testWidgets('行政 arranges every roster but leaves the lists to who leads them', (tester) async {
+      await pumpApp(tester, seededChurch(as: office, extra: [office]));
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '招待');
       await tapText(tester, '調整順序');

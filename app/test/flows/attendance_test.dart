@@ -35,6 +35,14 @@ Future<void> tapText(WidgetTester tester, String text) async {
   await settle(tester);
 }
 
+/// Scrolls the page until [finder] shows, and on past the tab bar that
+/// covers the bottom: a service's page is long (#94).
+Future<void> scrollToShow(WidgetTester tester, Finder finder) async {
+  await tester.scrollUntilVisible(finder, 200, scrollable: find.byType(Scrollable).last);
+  await tester.drag(find.byType(Scrollable).last, const Offset(0, -200));
+  await settle(tester);
+}
+
 Future<void> go(WidgetTester tester, String path) async {
   GoRouter.of(tester.element(find.byType(Scaffold).first)).go(path);
   await settle(tester);
@@ -238,7 +246,7 @@ void main() {
     final b = withAttendance(seededChurch(as: office, extra: [office], clock: eveningOf(Day(2026, 10, 4))));
     await pumpApp(tester, b);
     await go(tester, '/me/groups/service/sunday');
-    await tester.scrollUntilVisible(find.text('未填'), 200, scrollable: find.byType(Scrollable).last);
+    await scrollToShow(tester, find.text('未填'));
     await tapText(tester, '未填');
     await tester.enterText(find.widgetWithText(TextField, '人數'), '120');
     await tester.pump();
@@ -357,7 +365,7 @@ void main() {
       final b = church(as: pastor);
       await pumpApp(tester, b);
       await go(tester, '/me/groups/service/youth');
-      await tester.scrollUntilVisible(find.text('每週都填人數'), 200, scrollable: find.byType(Scrollable).last);
+      await scrollToShow(tester, find.text('每週都填人數'));
       expect(find.text('未填'), findsNothing);
       await tapText(tester, '每週都填人數');
       expect(b.attendance['grace']!['service:youth']!.everyWeek, isTrue);

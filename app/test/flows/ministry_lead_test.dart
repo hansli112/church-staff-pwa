@@ -78,7 +78,7 @@ void main() {
     b.members['grace']!['mei'] = b.members['grace']!['mei']!.copyWith(zones: const []);
     await pumpApp(tester, b);
     await tapText(tester, '服事表');
-    expect(find.text('你還沒有屬於任何牧區，請找管理員設定'), findsNothing);
+    expect(find.text('你還沒加入任何聚會，請找管理員設定'), findsNothing);
   });
 
   testWidgets('imports only the duties it leads, merged into the day', (tester) async {

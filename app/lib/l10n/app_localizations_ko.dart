@@ -300,7 +300,7 @@ class L10nKo extends L10n {
   String get gettingStartedInviteBody => '초대 링크를 만들어 멤버에게 보내 주세요';
 
   @override
-  String get gettingStartedServices => '봉사 설정';
+  String get gettingStartedServices => '예배 설정';
 
   @override
   String get gettingStartedServicesBody => '요일과 배정할 담당 정하기';
@@ -517,12 +517,6 @@ class L10nKo extends L10n {
   String get members => '멤버';
 
   @override
-  String get serviceSettings => '봉사 설정';
-
-  @override
-  String get serviceSettingsSub => '예배, 담당, 특별 순서';
-
-  @override
   String get invites => '초대';
 
   @override
@@ -699,6 +693,9 @@ class L10nKo extends L10n {
   String get groupsTitle => '예배와 사역팀';
 
   @override
+  String get groupsSub => '담당, 리더, 멤버';
+
+  @override
   String get ministries => '사역팀';
 
   @override
@@ -709,6 +706,15 @@ class L10nKo extends L10n {
 
   @override
   String get ministryDuties => '담당';
+
+  @override
+  String get dutyOthers => '그 밖의 사람';
+
+  @override
+  String get dutyMinistry => '사역팀';
+
+  @override
+  String get ministryPickDuties => '담당 선택';
 
   @override
   String get ministryDutiesNone => '없음';
@@ -812,7 +818,7 @@ class L10nKo extends L10n {
   String get zones => '소속 예배와 담당';
 
   @override
-  String get zonesFooter => '봉사표 편집 권한이 있어도 소속 예배의 봉사표만 편집할 수 있어요';
+  String get zonesFooter => '멤버라고 권한이 생기지는 않아요. 봉사표를 짤 수 있는지는 역할에 따라 달라요.';
 
   @override
   String get removeMember => '멤버 내보내기';
@@ -1109,7 +1115,9 @@ class L10nKo extends L10n {
   String get pushView => '보기';
 
   @override
-  String get zoneSwitch => '이 예배에 소속';
+  String zoneSwitch(String service) {
+    return '$service 멤버';
+  }
 
   @override
   String zoneLeft(String service) {
@@ -2403,9 +2411,6 @@ class L10nKo extends L10n {
   String get appUpdateCheckFirst => '먼저 업데이트를 확인해 주세요';
 
   @override
-  String get servicesAdminOnly => '봉사 설정은 관리자만 바꿀 수 있어요';
-
-  @override
   String get importExampleRole => '반주';
 
   @override
@@ -3114,19 +3119,19 @@ class L10nKo extends L10n {
   String get ministryNeedsDuties => '담당을 고르면 리더가 예배와 행사에서 배정할 수 있어요';
 
   @override
-  String ministryLeadsCan(int count, String leads, String duties, String ministry) {
+  String ministryLeadsCan(int count, String leads, String duties) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$leads 리더 모두 $duties 담당을 배정하고 $ministry 멤버를 추가하거나 뺄 수 있어요',
-      one: '$leads 리더는 $duties 담당을 배정하고 $ministry 멤버를 추가하거나 뺄 수 있어요',
+      other: '$leads 리더 모두 $duties 담당을 배정하고 명단을 바꿀 수 있어요',
+      one: '$leads 리더는 $duties 담당을 배정하고 명단을 바꿀 수 있어요',
     );
     return '$_temp0';
   }
 
   @override
-  String ministryOnceLeads(String duties, String ministry) {
-    return '리더를 지정하면 $duties 담당을 배정하고 $ministry 멤버를 추가하거나 뺄 수 있어요';
+  String ministryOnceLeads(String duties) {
+    return '리더를 지정하면 $duties 담당을 배정하고 명단을 바꿀 수 있어요';
   }
 
   @override
@@ -3139,11 +3144,6 @@ class L10nKo extends L10n {
 
   @override
   String get ministryEvents => '행사';
-
-  @override
-  String ministryStaffFooter(String ministry) {
-    return '$ministry 멤버는 캘린더에서 ‘나와 관련된 행사’를 고르면 $ministry 행사를 볼 수 있어요';
-  }
 
   @override
   String get addAnotherLead => '리더 한 명 더 지정';

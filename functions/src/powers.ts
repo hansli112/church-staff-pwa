@@ -9,6 +9,7 @@
 
 import { strings } from './common.js';
 import { identitiesOf } from './identities.js';
+import { ledDuties, type Ministry } from './ministries.js';
 
 /** The member fields what they may do is worked out from. */
 export interface MemberFields {
@@ -130,6 +131,16 @@ export function powersOf(m: MemberFields) {
      * admin's.
      */
     mayMove: (target: MemberFields, group: ChurchGroup) => admin || (manages(group) && powersOf(target).plain),
+
+    /**
+     * Whether they may put anyone on the list of [duty] in service
+     * [service], or take them off it (dutyListEditing, #94): admins any; a
+     * service's 負責人 and 牧者 its duties; a 事工's 負責人 the duties
+     * [linked] 事工 they lead link there. Being on a list gives nothing, so
+     * whoever is put on it may hold a 身分.
+     */
+    editsDutyList: (linked: Ministry[], service: string, duty: string) =>
+      admin || services.includes(service) || ledDuties(linked, ministries, service).has(duty),
 
     /**
      * Whether they see every group's 人數 and put them together (人數總覽,

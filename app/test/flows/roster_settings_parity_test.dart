@@ -88,7 +88,7 @@ void main() {
     final b = seededChurch();
     final arranged = savedDay(b, 4);
     await pumpApp(tester, b);
-    await go(tester, '/me/services/sunday');
+    await go(tester, '/me/groups/service/sunday');
     await tester.scrollUntilVisible(find.text('聖餐'), 300);
     await tapText(tester, '聖餐');
     await tapText(tester, '顏色');
@@ -103,7 +103,7 @@ void main() {
   testWidgets('services are put in order by dragging', (tester) async {
     final b = seededChurch();
     await pumpApp(tester, b);
-    await go(tester, '/me/services');
+    await go(tester, '/me/groups');
     expect(find.byTooltip('下移'), findsNothing);
     await dragRow(tester, '主日崇拜', 1);
 
@@ -128,7 +128,7 @@ void main() {
     ]);
     final arranged = savedDay(b, 4);
     await pumpApp(tester, b);
-    await go(tester, '/me/services/sunday');
+    await go(tester, '/me/groups/service/sunday');
     await dragRow(tester, '司會', 2);
     expect(b.services['grace']!.byId('sunday')!.duties, ['司琴', '招待', '司會']);
 
@@ -146,9 +146,9 @@ void main() {
     b.rosters['grace']![historic.id] = historic;
     final arranged = savedDay(b, 4);
     await pumpApp(tester, b);
-    await go(tester, '/me/services/sunday');
+    await go(tester, '/me/groups/service/sunday');
     await tapText(tester, '司琴');
-    await tapText(tester, '改名');
+    await tapText(tester, '服事項目名稱');
     await tester.enterText(find.byType(TextField), '鋼琴');
     await tapText(tester, '儲存');
 
@@ -171,15 +171,15 @@ void main() {
   testWidgets('cancelled future synchronization can be previewed again from the renamed option', (tester) async {
     final b = seededChurch();
     await pumpApp(tester, b);
-    await go(tester, '/me/services/sunday');
+    await go(tester, '/me/groups/service/sunday');
     await tapText(tester, '司琴');
-    await tapText(tester, '改名');
+    await tapText(tester, '服事項目名稱');
     await tester.enterText(find.byType(TextField), '鋼琴');
     await tapText(tester, '儲存');
     await tapText(tester, '取消');
     expect(savedDay(b, 4).duties[1].role, '司琴');
 
-    await tapText(tester, '鋼琴');
+    expect(find.text('鋼琴'), findsWidgets, reason: 'its page, by its new name');
     await tapText(tester, '同步未來服事表');
     await tapText(tester, '司琴');
     expect(find.text('同步「司琴」為「鋼琴」'), findsOneWidget);
@@ -191,7 +191,7 @@ void main() {
     final b = seededChurch();
     final arranged = savedDay(b, 4);
     await pumpApp(tester, b);
-    await go(tester, '/me/services/sunday');
+    await go(tester, '/me/groups/service/sunday');
     await tester.scrollUntilVisible(find.text('聖餐'), 300);
     await tapText(tester, '聖餐');
     await tapText(tester, '改名');
@@ -208,21 +208,23 @@ void main() {
     expect(savedDay(b, 4), arranged);
   });
 
-  testWidgets('ordinary roster editors cannot open settings editing through a direct route', (tester) async {
+  testWidgets("a service's 負責人 reads its settings, and changes none of them (#94)", (tester) async {
     await pumpApp(tester, seededChurch(as: editor));
-    await go(tester, '/me/services/sunday');
-    expect(find.text('聚會名稱'), findsNothing);
+    await go(tester, '/me/groups/service/sunday');
+    expect(find.text('聚會名稱'), findsOneWidget);
+    expect(find.text('啟用'), findsNothing);
     expect(find.text('新增服事項目'), findsNothing);
-    expect(find.text('只有管理員能改服事設定'), findsOneWidget);
-    await go(tester, '/me/services');
-    expect(find.text('新增聚會'), findsNothing);
-    expect(find.text('只有管理員能改服事設定'), findsOneWidget);
+    expect(find.text('新增特別活動'), findsNothing);
+    expect(find.byIcon(Symbols.drag_handle_rounded), findsNothing);
+    await tapText(tester, '聚會名稱');
+    expect(find.byType(TextField), findsNothing);
   });
 
   testWidgets('swiping a duty or a common event away says 刪除 on the red', (tester) async {
     await pumpApp(tester, seededChurch());
-    await go(tester, '/me/services/sunday');
+    await go(tester, '/me/groups/service/sunday');
     for (final row in ['司琴', '聖餐']) {
+      await tester.scrollUntilVisible(find.text(row), 300);
       final swipe = await tester.startGesture(tester.getCenter(find.text(row).last));
       await swipe.moveBy(const Offset(-40, 0));
       await swipe.moveBy(const Offset(-80, 0));
@@ -241,7 +243,7 @@ void main() {
   testWidgets('a refused swipe removal leaves the configured option visible and reports failure', (tester) async {
     final b = seededChurch();
     await pumpApp(tester, b);
-    await go(tester, '/me/services/sunday');
+    await go(tester, '/me/groups/service/sunday');
     b.failNextWrite = const CloudException(CloudErrorCode.unavailable, reason: CloudReason.offlineReadOnly);
     await tester.drag(find.text('司琴'), const Offset(-500, 0));
     await settle(tester);
@@ -257,9 +259,9 @@ void main() {
     final b = seededChurch();
     final arranged = savedDay(b, 4);
     await pumpApp(tester, b);
-    await go(tester, '/me/services/sunday');
+    await go(tester, '/me/groups/service/sunday');
     await tapText(tester, '司琴');
-    await tapText(tester, '移除');
+    await tapText(tester, '刪除');
     expect(b.services['grace']!.byId('sunday')!.duties, isNot(contains('司琴')));
     expect(savedDay(b, 4), arranged);
     expect(b.members['grace']!['mei']!.serves('sunday', '司琴'), isTrue);
@@ -278,9 +280,9 @@ void main() {
   testWidgets('a rejected settings undo is reported rather than silently ignored', (tester) async {
     final b = seededChurch();
     await pumpApp(tester, b);
-    await go(tester, '/me/services/sunday');
+    await go(tester, '/me/groups/service/sunday');
     await tapText(tester, '司琴');
-    await tapText(tester, '移除');
+    await tapText(tester, '刪除');
     b.failNextWrite = const CloudException(CloudErrorCode.unavailable);
     await tapText(tester, '復原');
 

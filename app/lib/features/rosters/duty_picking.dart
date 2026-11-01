@@ -74,9 +74,21 @@ Future<void> pickPeople(
           .guestSuggestions(roster.isEvent ? null : roster.type, duty.role),
       members: members,
       order: order,
-      // An event is in no 牧區 to add the duty to, and has no staff
-      // order of its own to drag.
-      canEditDutyList: !roster.isEvent && (me?.editsServiceSettings ?? false),
+      // An event is in no service to add the duty to, and has no staff
+      // order of its own to drag; a duty only this day has, no list.
+      // Putting someone on the list moves the staff order too, so only
+      // whoever arranges all of the day; a 事工's 負責人 does it on the
+      // duty's page (#94).
+      canEditDutyList:
+          !roster.isEvent &&
+          (ref.read(servicesProvider).value?.byId(roster.type)?.duties.contains(duty.role) ?? false) &&
+          ref.read(arrangesProvider(roster.type)).all &&
+          (me?.editsDutyList(
+                ref.read(ministriesProvider).value?.ministries ?? const [],
+                roster.type,
+                duty.role,
+              ) ??
+              false),
       // The staff order is the whole service's: not a 事工 leader's.
       canReorder: !roster.isEvent && ref.read(arrangesProvider(roster.type)).all,
       canRemove: true,

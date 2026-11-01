@@ -97,9 +97,16 @@ final shownCalendarFilterProvider = Provider<String>((ref) {
 });
 
 /// Whether [filter] shows [e] for [me]. 跟我有關的: the church's events, my
-/// groups' (the services I am in or lead, my 事工), and those whose roster
-/// has me ([servedAt], event ids).
-bool calendarShows(String filter, CalendarEvent e, Member? me, Set<String> servedAt) => switch (filter) {
+/// groups' (the services I am in or lead, the 事工 of [ministries] whose
+/// duties' lists I am on or that I lead, #94), and those whose roster has
+/// me ([servedAt], event ids).
+bool calendarShows(
+  String filter,
+  CalendarEvent e,
+  Member? me,
+  Set<String> servedAt, {
+  List<Ministry> ministries = const [],
+}) => switch (filter) {
   'all' => true,
   'church' => e.group == null,
   'mine' =>
@@ -107,7 +114,7 @@ bool calendarShows(String filter, CalendarEvent e, Member? me, Set<String> serve
         servedAt.contains(e.id) ||
         (me != null &&
             switch (ChurchGroup.parse(e.group!)) {
-              final g? => me.isIn(g) || me.leadsGroup(g),
+              final g? => me.isIn(g, ministries: ministries) || me.leadsGroup(g),
               null => false,
             }),
   final group => e.group == group,
@@ -321,9 +328,10 @@ class _AgendaState extends ConsumerState<_Agenda> {
     final servedAt = ref.watch(
       _servedAtProvider(filter == 'mine' && month.isBefore(DateTime(today.year, today.month))),
     );
+    final ministries = ref.watch(ministriesProvider).value?.ministries ?? const <Ministry>[];
     final loaded = [
       for (final e in events.value ?? const <CalendarEvent>[])
-        if (calendarShows(filter, e, me, servedAt)) e,
+        if (calendarShows(filter, e, me, servedAt, ministries: ministries)) e,
     ];
     void shift(int months) => ref.read(calendarMonthProvider.notifier).shift(months);
 

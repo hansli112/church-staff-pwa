@@ -302,7 +302,7 @@ class L10nEn extends L10n {
   String get gettingStartedInviteBody => 'Create an invite link and send it to your team';
 
   @override
-  String get gettingStartedServices => 'Service settings';
+  String get gettingStartedServices => 'Set up services';
 
   @override
   String get gettingStartedServicesBody => 'Which days, and which roles to schedule';
@@ -525,12 +525,6 @@ class L10nEn extends L10n {
   String get members => 'Team members';
 
   @override
-  String get serviceSettings => 'Service settings';
-
-  @override
-  String get serviceSettingsSub => 'Services, roles and occasions';
-
-  @override
   String get invites => 'Invites';
 
   @override
@@ -715,6 +709,9 @@ class L10nEn extends L10n {
   String get groupsTitle => 'Services & ministries';
 
   @override
+  String get groupsSub => 'Roles, leads and team members';
+
+  @override
   String get ministries => 'Ministries';
 
   @override
@@ -725,6 +722,15 @@ class L10nEn extends L10n {
 
   @override
   String get ministryDuties => 'Roles';
+
+  @override
+  String get dutyOthers => 'Everyone else';
+
+  @override
+  String get dutyMinistry => 'Ministry';
+
+  @override
+  String get ministryPickDuties => 'Choose roles';
 
   @override
   String get ministryDutiesNone => 'None';
@@ -828,7 +834,8 @@ class L10nEn extends L10n {
   String get zones => 'Services and roles';
 
   @override
-  String get zonesFooter => 'Team members who can edit schedules can only schedule the services they belong to';
+  String get zonesFooter =>
+      'Being a team member gives no permissions; who can arrange schedules depends on their church role';
 
   @override
   String get removeMember => 'Remove team member';
@@ -1135,7 +1142,9 @@ class L10nEn extends L10n {
   String get pushView => 'View';
 
   @override
-  String get zoneSwitch => 'Belongs to this service';
+  String zoneSwitch(String service) {
+    return 'Team member of $service';
+  }
 
   @override
   String zoneLeft(String service) {
@@ -2525,9 +2534,6 @@ class L10nEn extends L10n {
   String get appUpdateCheckFirst => 'Check for updates first';
 
   @override
-  String get servicesAdminOnly => 'Only admins can change service settings';
-
-  @override
   String get importExampleRole => 'Piano';
 
   @override
@@ -3300,19 +3306,19 @@ class L10nEn extends L10n {
   String get ministryNeedsDuties => 'Pick its roles, and its leads can arrange them in services and at events';
 
   @override
-  String ministryLeadsCan(int count, String leads, String duties, String ministry) {
+  String ministryLeadsCan(int count, String leads, String duties) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$leads can each arrange $duties, and add or remove $ministry’s team members',
-      one: '$leads can arrange $duties, and add or remove $ministry’s team members',
+      other: '$leads can each arrange $duties, and change who is on their lists',
+      one: '$leads can arrange $duties, and change who is on their lists',
     );
     return '$_temp0';
   }
 
   @override
-  String ministryOnceLeads(String duties, String ministry) {
-    return 'Once assigned, its leads can arrange $duties, and add or remove $ministry’s team members';
+  String ministryOnceLeads(String duties) {
+    return 'Once assigned, its leads can arrange $duties, and change who is on their lists';
   }
 
   @override
@@ -3325,11 +3331,6 @@ class L10nEn extends L10n {
 
   @override
   String get ministryEvents => 'events';
-
-  @override
-  String ministryStaffFooter(String ministry) {
-    return '$ministry’s team members see its events in the calendar under “Related to me”';
-  }
 
   @override
   String get addAnotherLead => 'Add another lead';

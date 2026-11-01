@@ -33,10 +33,9 @@ const _pages = [
   '/me/invites',
   '/me/members',
   '/me/members/mei',
-  '/me/services',
-  '/me/services/sunday',
   '/me/groups',
   '/me/groups/service/sunday',
+  '/me/groups/duty?service=sunday&name=%E5%8F%B8%E7%90%B4',
   '/me/groups/ministry/worship',
   '/account',
 ];

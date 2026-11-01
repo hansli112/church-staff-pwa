@@ -299,7 +299,7 @@ class L10nJa extends L10n {
   String get gettingStartedInviteBody => '招待リンクを作成して、メンバーに送りましょう';
 
   @override
-  String get gettingStartedServices => '奉仕の設定';
+  String get gettingStartedServices => '集会を設定';
 
   @override
   String get gettingStartedServicesBody => '曜日と、割り当てる担当';
@@ -516,12 +516,6 @@ class L10nJa extends L10n {
   String get members => 'メンバー';
 
   @override
-  String get serviceSettings => '奉仕の設定';
-
-  @override
-  String get serviceSettingsSub => '集会、担当、特別行事';
-
-  @override
   String get invites => '招待';
 
   @override
@@ -698,6 +692,9 @@ class L10nJa extends L10n {
   String get groupsTitle => '集会とミニストリー';
 
   @override
+  String get groupsSub => '担当、リーダー、メンバー';
+
+  @override
   String get ministries => 'ミニストリー';
 
   @override
@@ -708,6 +705,15 @@ class L10nJa extends L10n {
 
   @override
   String get ministryDuties => '担当';
+
+  @override
+  String get dutyOthers => 'ほかの人';
+
+  @override
+  String get dutyMinistry => 'ミニストリー';
+
+  @override
+  String get ministryPickDuties => '担当を選ぶ';
 
   @override
   String get ministryDutiesNone => 'なし';
@@ -811,7 +817,7 @@ class L10nJa extends L10n {
   String get zones => '所属集会と担当';
 
   @override
-  String get zonesFooter => '奉仕表を編集できる人は、自分の所属集会の奉仕表だけを編集できます';
+  String get zonesFooter => 'メンバーであっても権限は増えません。奉仕表を編集できるかは役割で決まります。';
 
   @override
   String get removeMember => 'メンバーを外す';
@@ -1108,7 +1114,9 @@ class L10nJa extends L10n {
   String get pushView => '表示';
 
   @override
-  String get zoneSwitch => 'この集会に所属';
+  String zoneSwitch(String service) {
+    return '$serviceのメンバー';
+  }
 
   @override
   String zoneLeft(String service) {
@@ -2402,9 +2410,6 @@ class L10nJa extends L10n {
   String get appUpdateCheckFirst => '先にアップデートを確認してください';
 
   @override
-  String get servicesAdminOnly => '奉仕の設定を変更できるのは管理者だけです';
-
-  @override
   String get importExampleRole => '奏楽';
 
   @override
@@ -3114,19 +3119,19 @@ class L10nJa extends L10n {
   String get ministryNeedsDuties => '担当を選ぶと、リーダーが集会や行事でそれを割り当てられます';
 
   @override
-  String ministryLeadsCan(int count, String leads, String duties, String ministry) {
+  String ministryLeadsCan(int count, String leads, String duties) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$leadsはそれぞれ$dutiesを割り当て、$ministryのメンバーを加えたり外したりできます',
-      one: '$leadsは$dutiesを割り当て、$ministryのメンバーを加えたり外したりできます',
+      other: '$leadsはそれぞれ$dutiesを割り当て、その担当の名簿を変えられます',
+      one: '$leadsは$dutiesを割り当て、その担当の名簿を変えられます',
     );
     return '$_temp0';
   }
 
   @override
-  String ministryOnceLeads(String duties, String ministry) {
-    return 'リーダーを指名すると、$dutiesを割り当て、$ministryのメンバーを加えたり外したりできます';
+  String ministryOnceLeads(String duties) {
+    return 'リーダーを指名すると、$dutiesを割り当て、その担当の名簿を変えられます';
   }
 
   @override
@@ -3139,11 +3144,6 @@ class L10nJa extends L10n {
 
   @override
   String get ministryEvents => '行事';
-
-  @override
-  String ministryStaffFooter(String ministry) {
-    return '$ministryのメンバーは、カレンダーで「自分に関係あるもの」を選ぶと$ministryの行事が見えます';
-  }
 
   @override
   String get addAnotherLead => 'リーダーをもう一人指名';

@@ -29,7 +29,8 @@ void main() {
     final b = seededChurch();
     await pumpApp(tester, b);
     for (final (path, what) in [
-      ('/me/services/sunday', WarmUp.serviceEdit),
+      ('/me/groups/service/sunday', WarmUp.serviceEdit),
+      ('/me/groups/duty?service=sunday&name=%E5%8F%B8%E7%90%B4', WarmUp.dutyList),
       ('/me/timezone', WarmUp.timeZone),
       ('/rosters/import/sunday', WarmUp.photoImport),
     ]) {

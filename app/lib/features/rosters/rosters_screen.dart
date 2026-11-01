@@ -23,8 +23,9 @@ final selectedServiceProvider = NotifierProvider<SelectedService, String?>(
 );
 
 /// The 服事表 tab: upcoming days of one service at a time, with a switch
-/// between services when it shows more than one. A member sees the 牧區
-/// they belong to; admins and roster editors see every service.
+/// between services when it shows more than one. A member sees the
+/// services they are a 同工 of; admins and roster editors see every
+/// service.
 ///
 /// Self-host collapsed every day into an expansion tile and had a separate
 /// edit mode. Here every day shows its people at once; tapping a day opens
@@ -78,7 +79,7 @@ class RostersScreen extends ConsumerWidget {
               icon: Symbols.view_agenda_rounded,
               message: l10n.noServicesConfigured,
               actionLabel: (me?.isAdmin ?? false) ? l10n.setUpServices : null,
-              onAction: () => context.push('/me/services'),
+              onAction: () => context.push('/me/groups'),
             );
           }
           // Which services are mine waits for my member doc.

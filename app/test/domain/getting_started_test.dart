@@ -154,9 +154,16 @@ void main() {
     );
   });
 
-  test("a 事工's 負責人 adds its 同工 and plans a service where it leads a duty", () {
+  test("a 事工's 負責人 puts someone on its duties' lists and plans a service where it leads a duty", () {
     final lead = staff.withIdentities(const [MinistryLead('worship')]);
-    const player = Member(uid: 'p', name: '彈琴的', ministries: {'worship'});
+    // On 司琴's list: one of 敬拜團's (#94).
+    const player = Member(
+      uid: 'p',
+      name: '彈琴的',
+      zones: [
+        Zone(serviceType: 'youth', duties: ['司琴']),
+      ],
+    );
     expect(of(lead).single.steps, [
       (step: StartStep.addStaff, group: const MinistryGroup('worship')),
       (step: StartStep.planWeeks, group: const ServiceGroup('youth')),

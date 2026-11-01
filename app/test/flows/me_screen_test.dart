@@ -14,13 +14,13 @@ Future<void> go(WidgetTester tester, String location) async {
 String path(WidgetTester tester) => GoRouter.of(tester.element(find.byType(Scaffold).last)).state.uri.path;
 
 void main() {
-  testWidgets('an admin manages the church from the top of 我的: members, invites, services settings, one tap each', (
+  testWidgets('an admin manages the church from the top of 我的: members, invites, 聚會與事工, one tap each', (
     tester,
   ) async {
     await pumpApp(tester, seededChurch());
     await go(tester, '/me');
     expect(find.text('管理教會').hitTestable(), findsOneWidget);
-    for (final (row, to) in [('同工', '/me/members'), ('邀請', '/me/invites'), ('服事設定', '/me/services')]) {
+    for (final (row, to) in [('同工', '/me/members'), ('邀請', '/me/invites'), ('聚會與事工', '/me/groups')]) {
       expect(find.text(row).hitTestable(), findsOneWidget, reason: '$row without scrolling');
       await tester.tap(find.text(row));
       await settle(tester);
@@ -34,7 +34,7 @@ void main() {
     await go(tester, '/me/church');
     expect(find.text('同工'), findsNothing);
     expect(find.text('邀請'), findsNothing);
-    expect(find.text('服事設定'), findsNothing);
+    expect(find.text('聚會與事工'), findsNothing);
     expect(find.text('外部通知'), findsOneWidget);
   });
 

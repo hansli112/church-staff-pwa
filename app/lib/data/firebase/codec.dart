@@ -69,7 +69,6 @@ Member memberFromJson(String uid, Json data) {
             ),
     ],
     identities: _identitiesOf(data),
-    ministries: _strings(data['ministries']).toSet(),
     smallGroups: _strings(data['smallGroups']).toSet(),
     mutedNotifications: {
       for (final name in prefs is Map ? _strings(prefs['muted']) : const <String>[])
@@ -125,7 +124,6 @@ Json memberToJson(Member m) => {
   'identities': [for (final i in m.identities) i.toJson()],
   'leadTypes': m.leadTypes,
   'leadMinistries': m.leadMinistries,
-  'ministries': m.ministries.toList(),
   'leadSmallGroups': m.leadSmallGroups,
   'smallGroups': m.smallGroups.toList(),
 };

@@ -66,7 +66,8 @@ List<GettingStarted> gettingStarted({
   required Iterable<Roster> rosters,
   required bool attendanceOn,
 }) {
-  bool someoneElseIn(ChurchGroup group) => members.any((m) => m.uid != me.uid && m.isIn(group));
+  bool someoneElseIn(ChurchGroup group) =>
+      members.any((m) => m.uid != me.uid && m.isIn(group, ministries: ministries.ministries));
   bool arranged(bool Function(Roster day, Duty duty) counts) =>
       rosters.any((r) => r.duties.any((d) => d.people.isNotEmpty && counts(r, d)));
   final anyArranged = arranged((_, _) => true);

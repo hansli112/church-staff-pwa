@@ -159,7 +159,8 @@ service cloud.firestore {
     // 身分 (#82): `identities` is what the 同工 page shows and edits; the
     // rules read its flattened projections, written alongside it like
     // zoneTypes: the services led (leadTypes, by a 負責人 or 牧者), the 事工
-    // led (leadMinistries), and the 事工 they are a 同工 of (ministries); the
+    // led (leadMinistries), and the 事工 they were a 同工 of (ministries; no
+    // longer written since a 事工's people are its duties' lists, #94); the
     // 小組 led (leadSmallGroups, by a 小組長) and those they are in
     // (smallGroups, #85).
     // 管理員 is still role 'admin' and 行政 the roster-editors and

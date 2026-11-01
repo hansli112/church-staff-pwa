@@ -379,9 +379,9 @@ abstract interface class ChurchData {
   Future<void> compareAndSetMember({required Member before, required Member after});
 
   /// 加為同工 ([member] true; for a service with the [duties] they serve and
-  /// their [smallGroups] there) or 移出 [group]: by an admin, or by its
-  /// 負責人 for a plain 同工 (Member.mayMove). Changes nothing else on
-  /// member [uid].
+  /// their [smallGroups] there) or 移出 [group], a service or a 小組 (a
+  /// 事工 has no 同工 of its own, #94): by an admin, or by its 負責人 for a
+  /// plain 同工 (Member.mayMove). Changes nothing else on member [uid].
   Future<void> setGroupMember(
     String uid,
     ChurchGroup group, {
@@ -390,11 +390,14 @@ abstract interface class ChurchData {
     List<String> smallGroups = const [],
   });
 
-  /// Gives member [uid] [duty] in [serviceType], applied to the member as
-  /// they are when written (admins): nothing else on them changes.
+  /// Puts member [uid] on the list of [duty] in [serviceType] (#94),
+  /// applied to the member as they are when written: one of its 同工 now
+  /// if they were not, and nothing else on them changes. Only a duty the
+  /// service has; by whoever edits its list (Member.editsDutyList).
   Future<void> grantDuty(String uid, String serviceType, String duty);
 
-  /// Takes [duty] in [serviceType] off member [uid], the same way (admins).
+  /// Takes member [uid] off the list of [duty] in [serviceType], the same
+  /// way; still one of its 同工. Any duty, one gone from the service too.
   Future<void> revokeDuty(String uid, String serviceType, String duty);
 
   /// Removes [uid] from the church: an admin removing someone, or a member
@@ -1025,4 +1028,16 @@ abstract interface class Backend {
 }
 
 /// What a page that just opened is likely to ask the backend for.
-enum WarmUp { calendarWrite, serviceEdit, joinChurch, askToJoin, createChurch, photoImport, timeZone, backOffice }
+enum WarmUp {
+  calendarWrite,
+  serviceEdit,
+
+  /// A duty's page (#94): who is on its list, a tap away.
+  dutyList,
+  joinChurch,
+  askToJoin,
+  createChurch,
+  photoImport,
+  timeZone,
+  backOffice,
+}

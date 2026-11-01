@@ -299,7 +299,7 @@ class L10nZh extends L10n {
   String get gettingStartedInviteBody => '建立邀請連結，傳給同工';
 
   @override
-  String get gettingStartedServices => '服事設定';
+  String get gettingStartedServices => '設定聚會';
 
   @override
   String get gettingStartedServicesBody => '星期幾、要安排哪些服事';
@@ -516,12 +516,6 @@ class L10nZh extends L10n {
   String get members => '同工';
 
   @override
-  String get serviceSettings => '服事設定';
-
-  @override
-  String get serviceSettingsSub => '聚會、服事項目、特別活動';
-
-  @override
   String get invites => '邀請';
 
   @override
@@ -698,6 +692,9 @@ class L10nZh extends L10n {
   String get groupsTitle => '聚會與事工';
 
   @override
+  String get groupsSub => '服事項目、負責人、同工';
+
+  @override
   String get ministries => '事工';
 
   @override
@@ -708,6 +705,15 @@ class L10nZh extends L10n {
 
   @override
   String get ministryDuties => '服事項目';
+
+  @override
+  String get dutyOthers => '其他人';
+
+  @override
+  String get dutyMinistry => '屬於哪個事工';
+
+  @override
+  String get ministryPickDuties => '選服事項目';
 
   @override
   String get ministryDutiesNone => '沒有';
@@ -808,10 +814,10 @@ class L10nZh extends L10n {
   String get addGroupStaff => '加入同工';
 
   @override
-  String get zones => '牧區與服事';
+  String get zones => '聚會與服事';
 
   @override
-  String get zonesFooter => '能安排服事表的人，只能排自己牧區的聚會';
+  String get zonesFooter => '是同工不會多出權限；能不能排服事表看身分';
 
   @override
   String get removeMember => '移除同工';
@@ -960,7 +966,7 @@ class L10nZh extends L10n {
   String get accountDeleted => '帳號已刪除';
 
   @override
-  String get serviceDisabled => '停用';
+  String get serviceDisabled => '已停用';
 
   @override
   String get adminSearchHint => '教會名稱或 ID';
@@ -1108,11 +1114,13 @@ class L10nZh extends L10n {
   String get pushView => '查看';
 
   @override
-  String get zoneSwitch => '屬於這個牧區';
+  String zoneSwitch(String service) {
+    return '$service的同工';
+  }
 
   @override
   String zoneLeft(String service) {
-    return '不再屬於$service牧區';
+    return '不再是$service的同工';
   }
 
   @override
@@ -1147,14 +1155,14 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get noZoneYet => '你還沒有屬於任何牧區，請找管理員設定';
+  String get noZoneYet => '你還沒加入任何聚會，請找管理員設定';
 
   @override
-  String get waitsForZone => '還沒設定牧區';
+  String get waitsForZone => '還沒加入任何聚會';
 
   @override
   String waitingForZone(int count) {
-    return '$count 位同工還沒設定牧區';
+    return '$count 位同工還沒加入任何聚會';
   }
 
   @override
@@ -1894,7 +1902,7 @@ class L10nZh extends L10n {
   String get moveWhoAmI => '這位是我（選填）';
 
   @override
-  String get moveWhoAmIFooter => '選了就接手那位的服事表、牧區和權限。其他同工用同一個 email 登入馬大別忙時，會被問要不要加入。';
+  String get moveWhoAmIFooter => '選了就接手那位的服事表、聚會和權限。其他同工用同一個 email 登入馬大別忙時，會被問要不要加入。';
 
   @override
   String get moveCreate => '建立教會並搬過來';
@@ -1944,7 +1952,7 @@ class L10nZh extends L10n {
   String get mergePending => '合併還沒登入的資料';
 
   @override
-  String get mergePendingFooter => '同工換了 email 加入時，合併舊名單上那筆資料，服事表、牧區和權限群組都會接上';
+  String get mergePendingFooter => '同工換了 email 加入時，合併舊名單上那筆資料，服事表、聚會和權限群組都會接上';
 
   @override
   String get mergePendingPick => '選一筆還沒登入的資料';
@@ -1956,7 +1964,7 @@ class L10nZh extends L10n {
 
   @override
   String mergePendingBody(String pending) {
-    return '服事表上的「$pending」會改成這位同工，牧區和權限群組也會加上去';
+    return '服事表上的「$pending」會改成這位同工，聚會和權限群組也會加上去';
   }
 
   @override
@@ -2396,9 +2404,6 @@ class L10nZh extends L10n {
 
   @override
   String get appUpdateCheckFirst => '請先檢查更新';
-
-  @override
-  String get servicesAdminOnly => '只有管理員能改服事設定';
 
   @override
   String get importExampleRole => '司琴';
@@ -3109,19 +3114,19 @@ class L10nZh extends L10n {
   String get ministryNeedsDuties => '選好服事項目，負責人就能在聚會和活動排這些項目';
 
   @override
-  String ministryLeadsCan(int count, String leads, String duties, String ministry) {
+  String ministryLeadsCan(int count, String leads, String duties) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$leads都可以排$duties，也可以加入和移出$ministry的同工',
-      one: '$leads可以排$duties，也可以加入和移出$ministry的同工',
+      other: '$leads都可以排$duties，也可以改這幾項的名單',
+      one: '$leads可以排$duties，也可以改這幾項的名單',
     );
     return '$_temp0';
   }
 
   @override
-  String ministryOnceLeads(String duties, String ministry) {
-    return '指派之後，負責人可以排$duties，也可以加入和移出$ministry的同工';
+  String ministryOnceLeads(String duties) {
+    return '指派之後，負責人可以排$duties，也可以改這幾項的名單';
   }
 
   @override
@@ -3134,11 +3139,6 @@ class L10nZh extends L10n {
 
   @override
   String get ministryEvents => '活動';
-
-  @override
-  String ministryStaffFooter(String ministry) {
-    return '$ministry的同工在行事曆選「跟我有關的」時，看得到$ministry的活動';
-  }
 
   @override
   String get addAnotherLead => '再加一位負責人';
@@ -3632,7 +3632,7 @@ class L10nZhHans extends L10nZh {
   String get gettingStartedInviteBody => '创建邀请链接，发给同工';
 
   @override
-  String get gettingStartedServices => '事奉设置';
+  String get gettingStartedServices => '设置聚会';
 
   @override
   String get gettingStartedServicesBody => '星期几、要安排哪些事奉';
@@ -3849,12 +3849,6 @@ class L10nZhHans extends L10nZh {
   String get members => '同工';
 
   @override
-  String get serviceSettings => '事奉设置';
-
-  @override
-  String get serviceSettingsSub => '聚会、事奉项目、特别活动';
-
-  @override
   String get invites => '邀请';
 
   @override
@@ -4031,6 +4025,9 @@ class L10nZhHans extends L10nZh {
   String get groupsTitle => '聚会与事工';
 
   @override
+  String get groupsSub => '事奉项目、负责人、同工';
+
+  @override
   String get ministries => '事工';
 
   @override
@@ -4041,6 +4038,15 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get ministryDuties => '事奉项目';
+
+  @override
+  String get dutyOthers => '其他人';
+
+  @override
+  String get dutyMinistry => '属于哪个事工';
+
+  @override
+  String get ministryPickDuties => '选事奉项目';
 
   @override
   String get ministryDutiesNone => '没有';
@@ -4144,7 +4150,7 @@ class L10nZhHans extends L10nZh {
   String get zones => '所属聚会与事奉';
 
   @override
-  String get zonesFooter => '能安排事奉表的同工，只能安排自己所属的聚会';
+  String get zonesFooter => '是同工不会多出权限；能不能排事奉表看身份';
 
   @override
   String get removeMember => '移除同工';
@@ -4293,7 +4299,7 @@ class L10nZhHans extends L10nZh {
   String get accountDeleted => '账号已删除';
 
   @override
-  String get serviceDisabled => '停用';
+  String get serviceDisabled => '已停用';
 
   @override
   String get adminSearchHint => '教会名称或 ID';
@@ -4441,7 +4447,9 @@ class L10nZhHans extends L10nZh {
   String get pushView => '查看';
 
   @override
-  String get zoneSwitch => '属于这个聚会';
+  String zoneSwitch(String service) {
+    return '$service的同工';
+  }
 
   @override
   String zoneLeft(String service) {
@@ -5731,9 +5739,6 @@ class L10nZhHans extends L10nZh {
   String get appUpdateCheckFirst => '请先检查更新';
 
   @override
-  String get servicesAdminOnly => '只有管理员能改事奉设置';
-
-  @override
   String get importExampleRole => '司琴';
 
   @override
@@ -6442,19 +6447,19 @@ class L10nZhHans extends L10nZh {
   String get ministryNeedsDuties => '选好事奉项目，负责人就能在聚会和活动排这些项目';
 
   @override
-  String ministryLeadsCan(int count, String leads, String duties, String ministry) {
+  String ministryLeadsCan(int count, String leads, String duties) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$leads都可以排$duties，也可以加入和移出$ministry的同工',
-      one: '$leads可以排$duties，也可以加入和移出$ministry的同工',
+      other: '$leads都可以排$duties，也可以改这几项的名单',
+      one: '$leads可以排$duties，也可以改这几项的名单',
     );
     return '$_temp0';
   }
 
   @override
-  String ministryOnceLeads(String duties, String ministry) {
-    return '指派之后，负责人可以排$duties，也可以加入和移出$ministry的同工';
+  String ministryOnceLeads(String duties) {
+    return '指派之后，负责人可以排$duties，也可以改这几项的名单';
   }
 
   @override
@@ -6467,11 +6472,6 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get ministryEvents => '活动';
-
-  @override
-  String ministryStaffFooter(String ministry) {
-    return '$ministry的同工在行事历选“跟我有关的”时，看得到$ministry的活动';
-  }
 
   @override
   String get addAnotherLead => '再加一位负责人';

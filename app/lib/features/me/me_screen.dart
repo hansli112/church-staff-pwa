@@ -97,14 +97,9 @@ class SettingsScreen extends ConsumerWidget {
                   onTap: () => context.push('/me/invites'),
                 ),
                 ListRow(
-                  leading: const IconTile(Symbols.tune_rounded, color: TileColors.manage),
-                  title: l10n.serviceSettings,
-                  subtitle: l10n.serviceSettingsSub,
-                  onTap: () => context.push('/me/services'),
-                ),
-                ListRow(
                   leading: const IconTile(Symbols.diversity_3_rounded, color: TileColors.manage),
                   title: l10n.groupsTitle,
+                  subtitle: l10n.groupsSub,
                   onTap: () => context.push('/me/groups'),
                 ),
                 // 回報人數 (#85): on from today, or off.

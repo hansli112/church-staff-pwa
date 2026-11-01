@@ -202,8 +202,8 @@ export const onPendingMemberDeleted = onDocumentDeleted(
 // Service settings: compared edits and atomic configured duty renames.
 export const editService = callable(serviceSettings.editService);
 
-// Groups (#82): a 事工's 負責人 arranging its duties, and a group's
-// 負責人 adding or taking out its 同工.
+// Groups (#82): a 事工's 負責人 arranging its duties, a group's 負責人
+// adding or taking out its 同工, and who is on a duty's list (#94).
 export const editLedDuties = callable(ledDuties.editLedDuties);
 export const notifyPlanned = callable(rosterChange.notifyPlanned, pushDeps);
 export const askUnavailable = callable(unavailable.askUnavailable, pushDeps);
@@ -217,6 +217,7 @@ export const answerSwap = callable(swaps.answerSwap, pushDeps);
 export const undoSwap = callable(swaps.undoSwap, pushDeps);
 export const withdrawSwap = callable(swaps.withdrawSwap);
 export const setGroupMember = callable(groupMembers.setGroupMember);
+export const setDuty = callable(groupMembers.setDuty);
 export const editSmallGroup = callable(smallGroups.editSmallGroup);
 
 // Invites, and requests to join without one (#88)

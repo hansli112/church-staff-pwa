@@ -22,9 +22,9 @@ void main() {
     b.notify();
     await pumpEventQueue();
 
-    await container.read(rosterActionsProvider).grantDuty(stale, 'sunday', '音控');
+    await container.read(rosterActionsProvider).grantDuty(stale, 'sunday', '司會');
     final now = b.members['grace']!['mei']!;
     expect(now.groups, {Group.rosterEditors}, reason: 'the newer change is kept');
-    expect(now.serves('sunday', '音控'), isTrue);
+    expect(now.serves('sunday', '司會'), isTrue);
   });
 }

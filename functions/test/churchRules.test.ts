@@ -96,8 +96,14 @@ describe('askedToFill', () => {
 
 describe('groupMembership', () => {
   const group = (g: Row): ChurchGroup =>
-    g.smallGroup ? { kind: 'small', id: g.smallGroup, service: g.service } : g.service ? { kind: 'service', id: g.service } : { kind: 'ministry', id: g.ministry };
+    g.smallGroup ? { kind: 'small', id: g.smallGroup, service: g.service } : { kind: 'service', id: g.service };
   for (const r of rows('groupMembership')) test(r.why, () => assert.equal(powersOf(r.caller).mayMove(r.target, group(r.group)), r.may));
+});
+
+describe('dutyListEditing', () => {
+  for (const r of rows('dutyListEditing')) {
+    test(r.why, () => assert.equal(powersOf(r.caller).editsDutyList(r.ministries, r.service, r.duty), r.may));
+  }
 });
 
 describe('eventWriting', () => {

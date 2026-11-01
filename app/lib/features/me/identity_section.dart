@@ -175,38 +175,3 @@ class IdentitySection extends ConsumerWidget {
         ),
       );
 }
-
-/// The 事工 a member is a 同工 of (#82), switched on and off by an admin.
-/// Nothing while the church has none.
-class MinistriesSection extends ConsumerWidget {
-  const MinistriesSection({super.key, required this.member});
-
-  final Member member;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = L10n.of(context);
-    final ministries = ref.watch(ministriesProvider).value?.ministries ?? const <Ministry>[];
-    if (ministries.isEmpty) return const SizedBox.shrink();
-    return ListSection(
-      header: l10n.ministries,
-      children: [
-        for (final m in ministries)
-          SwitchRow(
-            title: m.name,
-            value: member.ministries.contains(m.id),
-            onChanged: (on) async {
-              final write = ref
-                  .read(churchWritesProvider)
-                  .member(member, member.inGroupAs(MinistryGroup(m.id), member: on));
-              try {
-                await write.done;
-              } catch (e) {
-                if (context.mounted) showToast(context, saveErrorText(l10n, e));
-              }
-            },
-          ),
-      ],
-    );
-  }
-}

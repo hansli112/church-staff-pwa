@@ -68,7 +68,7 @@ void main() {
     await go(tester, '/me/members');
     expect(findShownContaining('喜樂小組'), findsOneWidget);
     await tapText(tester, '李美玉');
-    expect(findShown('屬於這個牧區'), findsNothing, reason: 'the read-only list does not open the member editor');
+    expect(findShown('主日崇拜的同工'), findsNothing, reason: 'the read-only list does not open the member editor');
     await tester.scrollUntilVisible(find.textContaining('主日崇拜：恩典小組'), 150, scrollable: find.byType(Scrollable).last);
     expect(find.textContaining('主日崇拜：恩典小組'), findsOneWidget);
   });

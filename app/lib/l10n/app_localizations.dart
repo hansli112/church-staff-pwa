@@ -643,7 +643,7 @@ abstract class L10n {
   /// No description provided for @gettingStartedServices.
   ///
   /// In zh, this message translates to:
-  /// **'服事設定'**
+  /// **'設定聚會'**
   String get gettingStartedServices;
 
   /// No description provided for @gettingStartedServicesBody.
@@ -1018,18 +1018,6 @@ abstract class L10n {
   /// **'同工'**
   String get members;
 
-  /// No description provided for @serviceSettings.
-  ///
-  /// In zh, this message translates to:
-  /// **'服事設定'**
-  String get serviceSettings;
-
-  /// Under 服事設定 in 管理教會: what the page holds
-  ///
-  /// In zh, this message translates to:
-  /// **'聚會、服事項目、特別活動'**
-  String get serviceSettingsSub;
-
   /// No description provided for @invites.
   ///
   /// In zh, this message translates to:
@@ -1342,6 +1330,12 @@ abstract class L10n {
   /// **'聚會與事工'**
   String get groupsTitle;
 
+  /// Under 聚會與事工 in settings: what is set there (#94)
+  ///
+  /// In zh, this message translates to:
+  /// **'服事項目、負責人、同工'**
+  String get groupsSub;
+
   /// Header: the church's ministries (事工)
   ///
   /// In zh, this message translates to:
@@ -1365,6 +1359,24 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'服事項目'**
   String get ministryDuties;
+
+  /// On a role's page, the people list: header over those not yet the service's team members (#94)
+  ///
+  /// In zh, this message translates to:
+  /// **'其他人'**
+  String get dutyOthers;
+
+  /// On a role's page: which ministry it belongs to, one or none (#94)
+  ///
+  /// In zh, this message translates to:
+  /// **'屬於哪個事工'**
+  String get dutyMinistry;
+
+  /// Last row of a ministry's roles, admins only: pick which roles it leads (#94)
+  ///
+  /// In zh, this message translates to:
+  /// **'選服事項目'**
+  String get ministryPickDuties;
 
   /// Value when a ministry links no roles
   ///
@@ -1525,13 +1537,13 @@ abstract class L10n {
   /// No description provided for @zones.
   ///
   /// In zh, this message translates to:
-  /// **'牧區與服事'**
+  /// **'聚會與服事'**
   String get zones;
 
   /// No description provided for @zonesFooter.
   ///
   /// In zh, this message translates to:
-  /// **'能安排服事表的人，只能排自己牧區的聚會'**
+  /// **'是同工不會多出權限；能不能排服事表看身分'**
   String get zonesFooter;
 
   /// No description provided for @removeMember.
@@ -1795,7 +1807,7 @@ abstract class L10n {
   /// No description provided for @serviceDisabled.
   ///
   /// In zh, this message translates to:
-  /// **'停用'**
+  /// **'已停用'**
   String get serviceDisabled;
 
   /// No description provided for @adminSearchHint.
@@ -2080,16 +2092,16 @@ abstract class L10n {
   /// **'查看'**
   String get pushView;
 
-  /// No description provided for @zoneSwitch.
+  /// On a member's page, per service: whether they are one of its team members (#94)
   ///
   /// In zh, this message translates to:
-  /// **'屬於這個牧區'**
-  String get zoneSwitch;
+  /// **'{service}的同工'**
+  String zoneSwitch(String service);
 
   /// No description provided for @zoneLeft.
   ///
   /// In zh, this message translates to:
-  /// **'不再屬於{service}牧區'**
+  /// **'不再是{service}的同工'**
   String zoneLeft(String service);
 
   /// No description provided for @eventRosterGone.
@@ -2149,19 +2161,19 @@ abstract class L10n {
   /// No description provided for @noZoneYet.
   ///
   /// In zh, this message translates to:
-  /// **'你還沒有屬於任何牧區，請找管理員設定'**
+  /// **'你還沒加入任何聚會，請找管理員設定'**
   String get noZoneYet;
 
   /// No description provided for @waitsForZone.
   ///
   /// In zh, this message translates to:
-  /// **'還沒設定牧區'**
+  /// **'還沒加入任何聚會'**
   String get waitsForZone;
 
   /// No description provided for @waitingForZone.
   ///
   /// In zh, this message translates to:
-  /// **'{count} 位同工還沒設定牧區'**
+  /// **'{count} 位同工還沒加入任何聚會'**
   String waitingForZone(int count);
 
   /// No description provided for @inviteZones.
@@ -3523,7 +3535,7 @@ abstract class L10n {
   /// No description provided for @moveWhoAmIFooter.
   ///
   /// In zh, this message translates to:
-  /// **'選了就接手那位的服事表、牧區和權限。其他同工用同一個 email 登入馬大別忙時，會被問要不要加入。'**
+  /// **'選了就接手那位的服事表、聚會和權限。其他同工用同一個 email 登入馬大別忙時，會被問要不要加入。'**
   String get moveWhoAmIFooter;
 
   /// No description provided for @moveCreate.
@@ -3607,7 +3619,7 @@ abstract class L10n {
   /// No description provided for @mergePendingFooter.
   ///
   /// In zh, this message translates to:
-  /// **'同工換了 email 加入時，合併舊名單上那筆資料，服事表、牧區和權限群組都會接上'**
+  /// **'同工換了 email 加入時，合併舊名單上那筆資料，服事表、聚會和權限群組都會接上'**
   String get mergePendingFooter;
 
   /// No description provided for @mergePendingPick.
@@ -3625,7 +3637,7 @@ abstract class L10n {
   /// No description provided for @mergePendingBody.
   ///
   /// In zh, this message translates to:
-  /// **'服事表上的「{pending}」會改成這位同工，牧區和權限群組也會加上去'**
+  /// **'服事表上的「{pending}」會改成這位同工，聚會和權限群組也會加上去'**
   String mergePendingBody(String pending);
 
   /// No description provided for @mergePendingAction.
@@ -4347,12 +4359,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'請先檢查更新'**
   String get appUpdateCheckFirst;
-
-  /// Empty state of service settings for someone who is not an admin
-  ///
-  /// In zh, this message translates to:
-  /// **'只有管理員能改服事設定'**
-  String get servicesAdminOnly;
 
   /// Example duty in the import JSON example; only the value is translated
   ///
@@ -5569,14 +5575,14 @@ abstract class L10n {
   /// On a ministry's page: what its leads (names) can do. duties is a dutiesOfServices list
   ///
   /// In zh, this message translates to:
-  /// **'{count, plural, =1{{leads}可以排{duties}，也可以加入和移出{ministry}的同工} other{{leads}都可以排{duties}，也可以加入和移出{ministry}的同工}}'**
-  String ministryLeadsCan(int count, String leads, String duties, String ministry);
+  /// **'{count, plural, =1{{leads}可以排{duties}，也可以改這幾項的名單} other{{leads}都可以排{duties}，也可以改這幾項的名單}}'**
+  String ministryLeadsCan(int count, String leads, String duties);
 
-  /// On a ministry's page while it has no lead: what one will be able to do
+  /// On a ministry's page while it has no lead: what one will be able to do (#94)
   ///
   /// In zh, this message translates to:
-  /// **'指派之後，負責人可以排{duties}，也可以加入和移出{ministry}的同工'**
-  String ministryOnceLeads(String duties, String ministry);
+  /// **'指派之後，負責人可以排{duties}，也可以改這幾項的名單'**
+  String ministryOnceLeads(String duties);
 
   /// Roles in some services, e.g. 主日崇拜、活動的司琴、司會; groups are joined by dutyGroupSeparator
   ///
@@ -5595,12 +5601,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'活動'**
   String get ministryEvents;
-
-  /// Under a ministry's team members: what being one does
-  ///
-  /// In zh, this message translates to:
-  /// **'{ministry}的同工在行事曆選「跟我有關的」時，看得到{ministry}的活動'**
-  String ministryStaffFooter(String ministry);
 
   /// Button on a group page that already has a lead
   ///

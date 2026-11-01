@@ -162,7 +162,6 @@ class Member {
     this.groups = const {},
     this.zones = const [],
     List<Identity> identities = const [],
-    this.ministries = const {},
     this.smallGroups = const {},
     this.mutedNotifications = const {},
     this.reminderTiming = ReminderTiming.weekly,
@@ -176,9 +175,6 @@ class Member {
   final Set<Group> groups;
   final List<Zone> zones;
   final List<Identity> _identities;
-
-  /// The 事工 this member is a 同工 of (#82).
-  final Set<String> ministries;
 
   /// The 小組 this member is one of (#85).
   final Set<String> smallGroups;
@@ -246,7 +242,6 @@ class Member {
       identities: [
         ...{...next},
       ],
-      ministries: ministries,
       smallGroups: smallGroups,
       mutedNotifications: mutedNotifications,
       reminderTiming: reminderTiming,
@@ -299,7 +294,6 @@ class Member {
       setEquals(groups, other.groups) &&
       listEquals(zones, other.zones) &&
       listEquals(identities, other.identities) &&
-      setEquals(ministries, other.ministries) &&
       setEquals(smallGroups, other.smallGroups);
 
   /// Whether this member may edit all of a [serviceType] roster: admins,
@@ -323,13 +317,17 @@ class Member {
       if (leadMinistries.contains(m.id)) ...m.dutiesIn(serviceType),
   };
 
-  /// Whether this member is a 同工 of [group]: in its 牧區, one of the
-  /// 事工's, or of the 小組.
-  bool isIn(ChurchGroup group) => switch (group) {
+  /// Whether this member is a 同工 of [group]: of the service, of the
+  /// 小組, or, as a 事工 has none of its own (#94), on the list of a duty
+  /// it links, of those in [ministries].
+  bool isIn(ChurchGroup group, {List<Ministry> ministries = const []}) => switch (group) {
     ServiceGroup(:final id) => zoneTypes.contains(id),
-    MinistryGroup(:final id) => ministries.contains(id),
+    MinistryGroup(:final id) => ministries.any((m) => m.id == id && onListsOf(m)),
     SmallGroup(:final id) => smallGroups.contains(id),
   };
+
+  /// Whether this member is on the list of any duty [ministry] links.
+  bool onListsOf(Ministry ministry) => ministry.duties.any((d) => serves(d.service, d.duty));
 
   /// Whether this member leads [group]: a service as its 負責人 or 牧者, a
   /// 事工, or a 小組 as its 小組長.
@@ -401,8 +399,17 @@ class Member {
   /// are the admin's to give.
   bool mayMove(Member target, ChurchGroup group) => isAdmin || (managesGroup(group) && target.identities.isEmpty);
 
+  /// Whether this member may put anyone on the list of [duty] in
+  /// [serviceType], or take them off it (testdata/church_rules.json,
+  /// dutyListEditing, #94): admins any; a service's 負責人 and 牧者 its
+  /// duties; a 事工's 負責人 those the 事工 in [ministries] they lead link
+  /// there. Being on a list gives nothing, so anyone may be put on it.
+  bool editsDutyList(List<Ministry> ministries, String serviceType, String duty) =>
+      isAdmin || leadTypes.contains(serviceType) || ledDuties(ministries, serviceType).contains(duty);
+
   /// This member added to [group] ([member] true; a service with [duties]
-  /// and [smallGroups]) or taken out, as setGroupMember writes it.
+  /// and [smallGroups]) or taken out, as setGroupMember writes it; a 事工
+  /// has no 同工 of its own (#94).
   Member inGroupAs(
     ChurchGroup group, {
     required bool member,
@@ -418,7 +425,7 @@ class Member {
               Zone(serviceType: id, duties: duties, smallGroups: smallGroups),
       ],
     ),
-    MinistryGroup(:final id) => copyWith(ministries: member ? {...ministries, id} : ({...ministries}..remove(id))),
+    MinistryGroup() => this,
     SmallGroup(:final id) => copyWith(smallGroups: member ? {...smallGroups, id} : ({...smallGroups}..remove(id))),
   };
 
@@ -522,7 +529,6 @@ class Member {
     Set<Group>? groups,
     List<Zone>? zones,
     List<Identity>? identities,
-    Set<String>? ministries,
     Set<String>? smallGroups,
     Set<NotificationKind>? mutedNotifications,
     ReminderTiming? reminderTiming,
@@ -534,7 +540,6 @@ class Member {
     groups: groups ?? this.groups,
     zones: zones ?? this.zones,
     identities: identities ?? _identities,
-    ministries: ministries ?? this.ministries,
     smallGroups: smallGroups ?? this.smallGroups,
     mutedNotifications: mutedNotifications ?? this.mutedNotifications,
     reminderTiming: reminderTiming ?? this.reminderTiming,

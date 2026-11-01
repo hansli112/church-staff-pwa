@@ -640,17 +640,18 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect(mei.mutedNotifications, {NotificationKind.reminder});
     });
 
-    test('granting a duty changes only that member’s zones, as they are now; staff cannot', () async {
+    test('granting a duty the service has changes only that member’s zones, as they are now; staff cannot', () async {
       final g = await Grace.open(w);
       await g.church.putMember(
         Member(uid: g.mei, name: '李美玉', role: Role.leader, groups: const {Group.calendarEditors}),
       );
-      await g.church.grantDuty(g.mei, 'sunday', '音控');
+      await g.church.grantDuty(g.mei, 'sunday', '招待');
       final mei = (await g.church.member(g.mei).first)!;
       expect(mei.role, Role.leader);
       expect(mei.groups, {Group.calendarEditors});
-      expect(mei.serves('sunday', '音控'), isTrue);
+      expect(mei.serves('sunday', '招待'), isTrue);
       expect(mei.zoneTypes, ['sunday']);
+      await expectLater(g.church.grantDuty(g.mei, 'sunday', '音控'), fails(CloudErrorCode.unknown));
       await w.signIn(Grace.meiEmail);
       await expectLater(g.church.grantDuty(g.mei, 'sunday', '司琴'), denied());
     });
@@ -836,11 +837,14 @@ void contractTests(Future<ContractWorld> Function() open) {
     test("a group's 負責人 adds and takes out plain 同工 of it; the rest is the admin's", () async {
       final g = await withWorship();
       await w.signIn(Grace.meiEmail);
-      // 林同工 leads 主日崇拜: a 身分, so not hers to move.
-      await expectLater(g.church.setGroupMember(g.editor, const MinistryGroup('worship'), member: true), denied());
+      // 林同工 leads 主日崇拜, a 身分; a list gives nothing, so 敬拜團's
+      // 負責人 puts him on the duty it leads (#94), and on no other.
+      await g.church.grantDuty(g.editor, 'sunday', '司琴');
+      expect((await g.church.member(g.editor).first)!.serves('sunday', '司琴'), isTrue);
+      await expectLater(g.church.grantDuty(g.editor, 'sunday', '招待'), denied());
+      await g.church.revokeDuty(g.editor, 'sunday', '司琴');
+      expect((await g.church.member(g.editor).first)!.serves('sunday', '司琴'), isFalse);
       await w.signIn(Grace.pastorEmail);
-      await g.church.setGroupMember(g.editor, const MinistryGroup('worship'), member: true);
-      expect((await g.church.member(g.editor).first)!.ministries, {'worship'});
       await g.church.putMember((await g.church.member(g.mei).first)!.withIdentities(const []));
       await w.signIn(Grace.editorEmail);
       await expectLater(g.church.setGroupMember(g.mei, const ServiceGroup('youth'), member: true), denied());

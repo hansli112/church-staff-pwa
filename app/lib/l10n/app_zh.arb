@@ -169,7 +169,7 @@
   "inviteMembers": "邀請同工",
   "@inviteMembers": { "description": "Opens the invites page: on the home page's getting started, the members page and the people picker while nobody serves a duty" },
   "gettingStartedInviteBody": "建立邀請連結，傳給同工",
-  "gettingStartedServices": "服事設定",
+  "gettingStartedServices": "設定聚會",
   "gettingStartedServicesBody": "星期幾、要安排哪些服事",
   "nobodyYet": "待定",
   "noServicesConfigured": "還沒有設定聚會",
@@ -351,9 +351,6 @@
   "lineCommunity": "LINE 社群",
   "lineCommunityNote": "問問題、回報問題、和其他教會交流",
   "members": "同工",
-  "serviceSettings": "服事設定",
-  "serviceSettingsSub": "聚會、服事項目、特別活動",
-  "@serviceSettingsSub": { "description": "Under 服事設定 in 管理教會: what the page holds" },
   "invites": "邀請",
   "notifications": "通知",
   "account": "帳號",
@@ -458,6 +455,8 @@
   "@pickMinistry": { "description": "Header: pick a ministry" },
   "groupsTitle": "聚會與事工",
   "@groupsTitle": { "description": "Page and row in 管理教會: the church's services and ministries" },
+  "groupsSub": "服事項目、負責人、同工",
+  "@groupsSub": {"description": "Under 聚會與事工 in settings: what is set there (#94)"},
   "ministries": "事工",
   "@ministries": { "description": "Header: the church's ministries (事工)" },
   "addMinistry": "新增事工",
@@ -466,6 +465,12 @@
   "@ministryName": { "description": "Field hint: a ministry's name, e.g. 敬拜團" },
   "ministryDuties": "服事項目",
   "@ministryDuties": { "description": "Row: the service roles a ministry leads" },
+  "dutyOthers": "其他人",
+  "@dutyOthers": {"description": "On a role's page, the people list: header over those not yet the service's team members (#94)"},
+  "dutyMinistry": "屬於哪個事工",
+  "@dutyMinistry": {"description": "On a role's page: which ministry it belongs to, one or none (#94)"},
+  "ministryPickDuties": "選服事項目",
+  "@ministryPickDuties": {"description": "Last row of a ministry's roles, admins only: pick which roles it leads (#94)"},
   "ministryDutiesNone": "沒有",
   "@ministryDutiesNone": { "description": "Value when a ministry links no roles" },
   "deleteMinistry": "刪除事工",
@@ -518,8 +523,8 @@
   "@removeFromGroupLabel": { "description": "What a screen reader reads for that button", "placeholders": { "name": { "type": "String", "example": "張志豪" }, "group": { "type": "String", "example": "敬拜團" } } },
   "addGroupStaff": "加入同工",
   "@addGroupStaff": { "description": "Row on a group's page: add any team member of the church to it" },
-  "zones": "牧區與服事",
-  "zonesFooter": "能安排服事表的人，只能排自己牧區的聚會",
+  "zones": "聚會與服事",
+  "zonesFooter": "是同工不會多出權限；能不能排服事表看身分",
   "removeMember": "移除同工",
   "memberRemoved": "已移除「{name}」",
   "@memberRemoved": {
@@ -613,7 +618,7 @@
   "goToMembers": "前往同工",
   "@goToMembers": { "description": "Button on the delete-account page for the only admin of a church: opens the members page to make someone else an admin" },
   "accountDeleted": "帳號已刪除",
-  "serviceDisabled": "停用",
+  "serviceDisabled": "已停用",
   "adminSearchHint": "教會名稱或 ID",
   "adminNoChurches": "找不到教會",
   "adminStats": "統計",
@@ -675,8 +680,9 @@
   "notifNotAllowed": "通知還沒開。跳出詢問時，請點「允許」。",
   "notifRegisterFailed": "通知還沒設定好，下次打開 App 會再試",
   "pushView": "查看",
-  "zoneSwitch": "屬於這個牧區",
-  "zoneLeft": "不再屬於{service}牧區",
+  "zoneSwitch": "{service}的同工",
+  "@zoneSwitch": {"description": "On a member's page, per service: whether they are one of its team members (#94)", "placeholders": {"service": {"type": "String"}}},
+  "zoneLeft": "不再是{service}的同工",
   "@zoneLeft": {
     "placeholders": {
       "service": {
@@ -707,9 +713,9 @@
       }
     }
   },
-  "noZoneYet": "你還沒有屬於任何牧區，請找管理員設定",
-  "waitsForZone": "還沒設定牧區",
-  "waitingForZone": "{count} 位同工還沒設定牧區",
+  "noZoneYet": "你還沒加入任何聚會，請找管理員設定",
+  "waitsForZone": "還沒加入任何聚會",
+  "waitingForZone": "{count} 位同工還沒加入任何聚會",
   "@waitingForZone": {
     "placeholders": {
       "count": {
@@ -1120,7 +1126,7 @@
   },
   "moveServices": "聚會",
   "moveWhoAmI": "這位是我（選填）",
-  "moveWhoAmIFooter": "選了就接手那位的服事表、牧區和權限。其他同工用同一個 email 登入馬大別忙時，會被問要不要加入。",
+  "moveWhoAmIFooter": "選了就接手那位的服事表、聚會和權限。其他同工用同一個 email 登入馬大別忙時，會被問要不要加入。",
   "moveCreate": "建立教會並搬過來",
   "moveDone": "已建立〈{church}〉",
   "@moveDone": {
@@ -1162,7 +1168,7 @@
   "pendingDeleteBody": "對方就不能用 email 認領了。服事表上的名字會保留。",
   "pendingDeleted": "已刪除",
   "mergePending": "合併還沒登入的資料",
-  "mergePendingFooter": "同工換了 email 加入時，合併舊名單上那筆資料，服事表、牧區和權限群組都會接上",
+  "mergePendingFooter": "同工換了 email 加入時，合併舊名單上那筆資料，服事表、聚會和權限群組都會接上",
   "mergePendingPick": "選一筆還沒登入的資料",
   "mergePendingTitle": "把「{pending}」合併到「{member}」？",
   "@mergePendingTitle": {
@@ -1175,7 +1181,7 @@
       }
     }
   },
-  "mergePendingBody": "服事表上的「{pending}」會改成這位同工，牧區和權限群組也會加上去",
+  "mergePendingBody": "服事表上的「{pending}」會改成這位同工，聚會和權限群組也會加上去",
   "@mergePendingBody": {
     "placeholders": {
       "pending": {
@@ -1794,8 +1800,6 @@
   "appUpdateScopeChanged": "帳號或教會換了，請重新檢查更新",
   "appUpdateBackToMe": "請再點一次「更新並重新開啟」",
   "appUpdateCheckFirst": "請先檢查更新",
-  "servicesAdminOnly": "只有管理員能改服事設定",
-  "@servicesAdminOnly": { "description": "Empty state of service settings for someone who is not an admin" },
   "importExampleRole": "司琴",
   "@importExampleRole": { "description": "Example duty in the import JSON example; only the value is translated" },
   "importExamplePerson": "李美玉",
@@ -2208,18 +2212,16 @@
   "@ministriesFooter": {"description": "Under the ministries on 聚會與事工: what a ministry is for, and that it is optional; one sentence"},
   "ministryNeedsDuties": "選好服事項目，負責人就能在聚會和活動排這些項目",
   "@ministryNeedsDuties": {"description": "On a ministry's page while it links no roles: what linking them does"},
-  "ministryLeadsCan": "{count, plural, =1{{leads}可以排{duties}，也可以加入和移出{ministry}的同工} other{{leads}都可以排{duties}，也可以加入和移出{ministry}的同工}}",
-  "@ministryLeadsCan": {"description": "On a ministry's page: what its leads (names) can do. duties is a dutiesOfServices list", "placeholders": {"count": {"type": "int"}, "leads": {"type": "String"}, "duties": {"type": "String"}, "ministry": {"type": "String"}}},
-  "ministryOnceLeads": "指派之後，負責人可以排{duties}，也可以加入和移出{ministry}的同工",
-  "@ministryOnceLeads": {"description": "On a ministry's page while it has no lead: what one will be able to do", "placeholders": {"duties": {"type": "String"}, "ministry": {"type": "String"}}},
+  "ministryLeadsCan": "{count, plural, =1{{leads}可以排{duties}，也可以改這幾項的名單} other{{leads}都可以排{duties}，也可以改這幾項的名單}}",
+  "@ministryLeadsCan": {"description": "On a ministry's page: what its leads (names) can do. duties is a dutiesOfServices list", "placeholders": {"count": {"type": "int"}, "leads": {"type": "String"}, "duties": {"type": "String"}}},
+  "ministryOnceLeads": "指派之後，負責人可以排{duties}，也可以改這幾項的名單",
+  "@ministryOnceLeads": {"description": "On a ministry's page while it has no lead: what one will be able to do (#94)", "placeholders": {"duties": {"type": "String"}}},
   "dutiesOfServices": "{services}的{duties}",
   "@dutiesOfServices": {"description": "Roles in some services, e.g. 主日崇拜、活動的司琴、司會; groups are joined by dutyGroupSeparator", "placeholders": {"services": {"type": "String"}, "duties": {"type": "String"}}},
   "dutyGroupSeparator": "；",
   "@dutyGroupSeparator": {"description": "Between dutiesOfServices groups"},
   "ministryEvents": "活動",
   "@ministryEvents": {"description": "Where a ministry's roles are also arranged, listed with services: calendar events"},
-  "ministryStaffFooter": "{ministry}的同工在行事曆選「跟我有關的」時，看得到{ministry}的活動",
-  "@ministryStaffFooter": {"description": "Under a ministry's team members: what being one does", "placeholders": {"ministry": {"type": "String"}}},
   "addAnotherLead": "再加一位負責人",
   "@addAnotherLead": {"description": "Button on a group page that already has a lead"},
   "unavailableTitle": "不能服事的日子",

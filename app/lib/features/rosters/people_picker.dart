@@ -84,7 +84,7 @@ class PeoplePicker extends StatefulWidget {
   });
 
   /// The service, or null for an event's roster: then whoever serves the
-  /// duty in any 牧區 is listed first.
+  /// duty in any service is listed first.
   final String? serviceType;
   final String duty;
   final List<String> initial;
@@ -286,8 +286,8 @@ class _PeoplePickerState extends State<PeoplePicker> {
             title: widget.duty,
             cancel: !_reordering,
             actions: [
-              // Admins edit the list (order, and who is on it); roster
-              // editors only reorder it.
+              // Whoever edits the list (Member.editsDutyList) changes its
+              // order and who is on it; other roster editors only reorder.
               // 完成 stays once 編輯 empties the list.
               if (_reordering ||
                   (widget.canEditDutyList ? _serving.isNotEmpty : widget.canReorder && _serving.length > 1))

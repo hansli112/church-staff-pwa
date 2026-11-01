@@ -98,8 +98,8 @@ final _gettingStartedProvider = Provider.autoDispose<List<GettingStarted>>((ref)
   ];
 });
 
-/// For admins: how many members are in no 牧區 yet, so their 服事表 tab
-/// is empty.
+/// For admins: how many members are a 同工 of no service yet, so their
+/// 服事表 tab is empty.
 final _waitingForZoneProvider = Provider.autoDispose<int>((ref) {
   if (!(ref.watch(meProvider).value?.isAdmin ?? false)) return 0;
   final members = ref.watch(membersProvider).value ?? const [];
@@ -138,7 +138,7 @@ class _GettingStarted extends ConsumerWidget {
           title: l10n.gettingStartedServices,
           subtitle: l10n.gettingStartedServicesBody,
           leading: const Icon(Symbols.tune_rounded),
-          onTap: () => context.push('/me/services'),
+          onTap: () => context.push('/me/groups'),
         ),
         StartStep.invite => ListRow(
           title: l10n.inviteMembers,
@@ -197,7 +197,7 @@ class _GettingStarted extends ConsumerWidget {
 /// Above them, 加入主畫面 on a phone's browser, 開啟通知 elsewhere until
 /// they are on, the church link when the admin has set one, 開始使用 for
 /// a 身分 with something still to start, and for admins the members still
-/// in no 牧區.
+/// a 同工 of no service.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
