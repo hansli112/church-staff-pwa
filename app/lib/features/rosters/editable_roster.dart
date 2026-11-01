@@ -12,7 +12,6 @@ import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../domain/models.dart';
 import '../../domain/roster_edit.dart';
-import '../../domain/swap.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/roster_actions.dart';
@@ -139,26 +138,29 @@ class _DutyRow extends ConsumerWidget {
     String person,
   ) async {
     final l10n = L10n.of(context);
-    // Mine: asked for like anyone's (#92), beside changing it outright.
+    // Mine: 請人代 as anyone asks (#92), beside 交換, which whoever
+    // arranges does outright.
     final me = ref.read(uidProvider);
     final mine = duty.uids[person] == me && asksForMyDuty(roster, duty.role, me, ref.read(todayProvider));
+    final open = mine ? myOpenAsk(ref, roster, duty.role) : null;
     final choice = await showAppSheet<String>(
       context,
       builder: (context) => SafeArea(
         child: ListSection(
           header: person,
           children: [
-            if (mine)
+            if (open != null)
               ListRow(
-                title: l10n.swapMenu,
-                subtitle: switch ((ref.read(myOpenSwapRequestsProvider).value ?? const <SwapRequest>[])
-                    .where((r) => r.rosterId == roster.id && r.duty == duty.role)
-                    .firstOrNull) {
-                  null => null,
-                  final r => r.kind == SwapKind.cover ? l10n.swapOutCover : l10n.swapOutSwap,
-                },
+                title: myOpenAskLabel(l10n, open),
+                chevron: false,
+                trailing: RowButton(label: l10n.swapWithdraw, onPressed: () => Navigator.pop(context, 'withdraw')),
+              )
+            else if (mine)
+              ListRow(
+                title: l10n.swapAskCover,
+                subtitle: l10n.swapAskCoverSub,
                 leading: const Icon(Symbols.front_hand_rounded),
-                onTap: () => Navigator.pop(context, 'mine'),
+                onTap: () => Navigator.pop(context, 'cover'),
               ),
             if (!roster.isEvent)
               ListRow(
@@ -210,8 +212,10 @@ class _DutyRow extends ConsumerWidget {
       );
     } else if (choice == 'swap') {
       await _swap(context, ref, person);
-    } else if (choice == 'mine') {
-      await showMyDutyMenu(context, ref, roster, duty.role);
+    } else if (choice == 'cover') {
+      await askForCover(context, ref, roster, duty.role);
+    } else if (choice == 'withdraw') {
+      await withdrawAsk(context, ref, open!);
     }
   }
 

@@ -10,7 +10,8 @@ import '../support/harness.dart';
 import '../support/seed.dart';
 
 // 找人代／交換 (#92). The tests start on Thursday 1 October 2026: 李美玉
-// plays on 10/4, 張雅雨 on 10/18; both are on 司琴's list.
+// plays on 10/4, 張雅雨 on 10/18; both are on 司琴's list. 林同工 (who
+// arranges) leads on 10/4, with 周主恩 on 司會's list too.
 
 const yu = Member(
   uid: 'yu',
@@ -20,8 +21,16 @@ const yu = Member(
   ],
 );
 
+const host = Member(
+  uid: 'host',
+  name: '周主恩',
+  zones: [
+    Zone(serviceType: 'sunday', duties: ['司會']),
+  ],
+);
+
 MemoryBackend church({Member as = staffMei}) {
-  final b = seededChurch(as: as, extra: const [yu]);
+  final b = seededChurch(as: as, extra: const [yu, host]);
   b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, 18))] = Roster(
     type: 'sunday',
     day: Day(2026, 10, 18),
@@ -173,13 +182,25 @@ void main() {
     expect(find.text('我來'), findsNothing);
   });
 
-  testWidgets('whoever arranges finds it on their own name, beside changing it outright', (tester) async {
+  testWidgets('whoever arranges: 請人代 right on their own name, beside 交換 outright', (tester) async {
     final b = church(as: editor);
     await pumpApp(tester, b);
     await go(tester, '/rosters/sunday/2026-10-04');
     await tester.tap(find.text('林同工'));
     await settle(tester);
-    expect(find.text('找人代／交換'), findsOneWidget);
     expect(find.text('交換'), findsOneWidget);
+    expect(find.text('和別週交換'), findsNothing, reason: 'they swap outright');
+    await tester.tap(find.text('請人代'));
+    await settle(tester);
+    expect(requests(b).single.kind, SwapKind.cover);
+    expect(requests(b).single.asked, ['host']);
+
+    await tester.tap(find.text('林同工'));
+    await settle(tester);
+    expect(find.text('已請人代，還沒有人接手'), findsOneWidget);
+    expect(find.text('請人代'), findsNothing);
+    await tester.tap(find.text('收回'));
+    await settle(tester);
+    expect(requests(b).single.status, SwapStatus.withdrawn);
   });
 }

@@ -22,15 +22,46 @@ import 'format.dart';
 bool asksForMyDuty(Roster roster, String duty, String? me, Day today) =>
     me != null && !roster.isEvent && !roster.day.isBefore(today) && isOnDuty(roster, duty, me);
 
+/// My request still open for [duty] on [roster], if any.
+SwapRequest? myOpenAsk(WidgetRef ref, Roster roster, String duty) =>
+    (ref.read(myOpenSwapRequestsProvider).value ?? const <SwapRequest>[])
+        .where((r) => r.rosterId == roster.id && r.duty == duty)
+        .firstOrNull;
+
+/// How my open request [r] stands: no one has it yet.
+String myOpenAskLabel(L10n l10n, SwapRequest r) =>
+    r.kind == SwapKind.cover ? l10n.swapPendingCover : l10n.swapPendingSwap(r.toName ?? '');
+
+/// 請人代 for my [duty] on [roster]: asks, and says how many were asked.
+Future<void> askForCover(BuildContext context, WidgetRef ref, Roster roster, String duty) => _asking(context, () async {
+  final asked = await ref.churchData.askCover(roster, duty);
+  Haptics.success();
+  if (context.mounted) showToast(context, L10n.of(context).swapAskedCover(asked));
+});
+
+/// 收回 my open request [r].
+Future<void> withdrawAsk(BuildContext context, WidgetRef ref, SwapRequest r) => _asking(context, () async {
+  await ref.churchData.withdrawSwap(r.id);
+  if (context.mounted) showToast(context, L10n.of(context).swapWithdrawn);
+});
+
+/// Runs [ask], saying why it failed.
+Future<void> _asking(BuildContext context, Future<void> Function() ask) async {
+  final l10n = L10n.of(context);
+  try {
+    await ask();
+  } catch (e) {
+    if (context.mounted) showToast(context, errorText(l10n, e));
+  }
+}
+
 /// 找人代／交換 for my [duty] on [roster]: 請人代 or 和別週交換, or, with a
 /// request of mine still open, how it stands and 收回.
 Future<void> showMyDutyMenu(BuildContext context, WidgetRef ref, Roster roster, String duty) async {
   final l10n = L10n.of(context);
   final today = ref.read(todayProvider);
   final service = ref.read(servicesProvider).value?.byId(roster.type)?.name ?? '';
-  final open = (ref.read(myOpenSwapRequestsProvider).value ?? const <SwapRequest>[])
-      .where((r) => r.rosterId == roster.id && r.duty == duty)
-      .firstOrNull;
+  final open = myOpenAsk(ref, roster, duty);
   final choice = await showAppSheet<String>(
     context,
     builder: (context) => SafeArea(
@@ -39,7 +70,7 @@ Future<void> showMyDutyMenu(BuildContext context, WidgetRef ref, Roster roster, 
         children: open != null
             ? [
                 ListRow(
-                  title: open.kind == SwapKind.cover ? l10n.swapPendingCover : l10n.swapPendingSwap(open.toName ?? ''),
+                  title: myOpenAskLabel(l10n, open),
                   chevron: false,
                   trailing: RowButton(label: l10n.swapWithdraw, onPressed: () => Navigator.pop(context, 'withdraw')),
                 ),
@@ -61,22 +92,14 @@ Future<void> showMyDutyMenu(BuildContext context, WidgetRef ref, Roster roster, 
       ),
     ),
   );
-  if (!context.mounted || choice == null) return;
-  final data = ref.churchData;
-  try {
-    switch (choice) {
-      case 'withdraw':
-        await data.withdrawSwap(open!.id);
-        if (context.mounted) showToast(context, l10n.swapWithdrawn);
-      case 'cover':
-        final asked = await data.askCover(roster, duty);
-        Haptics.success();
-        if (context.mounted) showToast(context, l10n.swapAskedCover(asked));
-      case 'swap':
-        await _askSwap(context, ref, roster, duty);
-    }
-  } catch (e) {
-    if (context.mounted) showToast(context, errorText(l10n, e));
+  if (!context.mounted) return;
+  switch (choice) {
+    case 'withdraw':
+      await withdrawAsk(context, ref, open!);
+    case 'cover':
+      await askForCover(context, ref, roster, duty);
+    case 'swap':
+      await _asking(context, () => _askSwap(context, ref, roster, duty));
   }
 }
 
