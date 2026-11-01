@@ -24,6 +24,7 @@ import { onObjectFinalized } from 'firebase-functions/v2/storage';
 
 import * as account from './account.js';
 import * as attendance from './attendance.js';
+import * as unavailable from './unavailable.js';
 import * as calendar from './calendar.js';
 import * as eventSync from './eventSync.js';
 import * as church from './church.js';
@@ -204,6 +205,7 @@ export const editService = callable(serviceSettings.editService);
 // 負責人 adding or taking out its 同工.
 export const editLedDuties = callable(ledDuties.editLedDuties);
 export const notifyPlanned = callable(rosterChange.notifyPlanned, pushDeps);
+export const askUnavailable = callable(unavailable.askUnavailable, pushDeps);
 export const setGroupMember = callable(groupMembers.setGroupMember);
 export const editSmallGroup = callable(smallGroups.editSmallGroup);
 

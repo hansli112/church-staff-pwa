@@ -27,6 +27,7 @@ import 'features/me/me_screen.dart';
 import 'features/me/member_editor_screen.dart';
 import 'features/me/members_screen.dart';
 import 'features/me/notifications_screen.dart';
+import 'features/me/unavailable_screen.dart';
 import 'features/me/profile_screen.dart';
 import 'features/me/services_screen.dart';
 import 'features/me/sign_in_methods_screen.dart';
@@ -211,6 +212,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                   page('webhook', (_) => const WebhookScreen()),
                   page('calendar', (s) => DeferredPage.calendarSettings(result: s.uri.queryParameters['result'])),
                   page('notifications', (_) => const NotificationsScreen()),
+                  page('unavailable', (_) => const UnavailableScreen()),
                   page('invites', (_) => const InvitesScreen()),
                   page(
                     'groups',

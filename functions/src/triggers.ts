@@ -23,8 +23,9 @@ export const editorOf = (auth: { authType: string; authId?: string }) =>
 /**
  * A member doc deleted: removed by an admin, left on their own, or their
  * account deleted. A calendar they connected goes with them, so do the
- * church's notifications in their 通知列表, and their leaving is told to
- * the admins; one failing never stops the others.
+ * church's notifications in their 通知列表 and their 不能服事的日子 (#91),
+ * and their leaving is told to the admins; one failing never stops the
+ * others.
  */
 export async function onMemberDeleted(
   deps: CalDeps & PushDeps,
@@ -36,6 +37,7 @@ export async function onMemberDeleted(
     calendar: () => releaseCalendarIfConnector(deps, cid, member.id),
     memberLeft: () => onMemberLeft(deps, cid, member, deletedBy),
     notifications: () => forgetNotificationsFrom(deps.db, member.id, cid),
+    unavailable: () => deps.db.doc(`churches/${cid}/unavailable/${member.id}`).delete().then(() => true),
   });
 }
 

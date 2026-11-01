@@ -80,6 +80,7 @@ class PeoplePicker extends StatefulWidget {
     this.guestSuggestions = const [],
     this.onInvite,
     this.notes = const {},
+    this.unavailable = const {},
   });
 
   /// The service, or null for an event's roster: then whoever serves the
@@ -115,6 +116,10 @@ class PeoplePicker extends StatefulWidget {
   /// A line under a member's name, by name: what they already serve
   /// around the day (#90).
   final Map<String, String> notes;
+
+  /// Who marked the day as one they cannot serve (#91), by name: listed
+  /// after the rest of their section, still to be picked.
+  final Set<String> unavailable;
 
   @override
   State<PeoplePicker> createState() => _PeoplePickerState();
@@ -349,18 +354,18 @@ class _PeoplePickerState extends State<PeoplePicker> {
   Widget _list(L10n l10n, AppColors c) {
     final q = nameKey(_query);
     final servingSet = _serving.toSet();
-    final serving = [
+    final serving = _awayLast([
       for (final n in _serving)
         if (_matches(n, q)) n,
-    ];
+    ], (n) => n);
     final searching = q.isNotEmpty;
     // Nobody serves this duty yet (a new church): offer everyone rather
     // than an empty list that only a search would fill.
     final others = searching || _serving.isEmpty
-        ? [
+        ? _awayLast([
             for (final m in _others)
               if (_matches(m.name, q) && !servingSet.contains(m.name)) m,
-          ]
+          ], (m) => m.name)
         : const <Member>[];
     final typed = _query.trim();
     // Guests are an explicit separate choice, even when a member shares a name.
@@ -479,6 +484,14 @@ class _PeoplePickerState extends State<PeoplePicker> {
       itemBuilder: (_, i) => rows[i](),
     );
   }
+
+  /// [list] in its order, those who cannot serve the day after the rest.
+  List<T> _awayLast<T>(List<T> list, String Function(T) name) => [
+    for (final x in list)
+      if (!widget.unavailable.contains(name(x))) x,
+    for (final x in list)
+      if (widget.unavailable.contains(name(x))) x,
+  ];
 
   Widget _row(String name, AppColors c, {String? note, required VoidCallback onTap}) {
     final on = _selected.contains(name);

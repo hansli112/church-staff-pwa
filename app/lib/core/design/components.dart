@@ -1015,6 +1015,37 @@ class _AppSheetRoute<T> extends ModalBottomSheetRoute<T> {
   }
 }
 
+/// Asks before something that cannot be taken back but destroys nothing,
+/// such as sending a push to many (請同工填, #91): on iPhone from below, as
+/// [_confirmDiscard] asks, elsewhere as a dialog. True to go ahead.
+Future<bool> confirmAction(
+  BuildContext context, {
+  required String title,
+  required String action,
+  required String cancel,
+}) async {
+  if (Theme.of(context).platform != TargetPlatform.iOS) {
+    return await askChoice(context, title: title, yes: action, no: cancel) ?? false;
+  }
+  final result = await showCupertinoModalPopup<bool>(
+    context: context,
+    builder: (context) => CupertinoActionSheet(
+      title: Text(title),
+      actions: [
+        CupertinoActionSheetAction(
+          onPressed: () => Navigator.pop(context, true),
+          child: Text(action),
+        ),
+      ],
+      cancelButton: CupertinoActionSheetAction(
+        onPressed: () => Navigator.pop(context, false),
+        child: Text(cancel),
+      ),
+    ),
+  );
+  return result ?? false;
+}
+
 /// Asks whether to discard a sheet's unsaved changes: on iPhone from below,
 /// as Apple's sheets ask (an action sheet), elsewhere as a dialog. True to
 /// discard them.

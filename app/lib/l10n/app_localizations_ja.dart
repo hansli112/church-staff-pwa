@@ -3101,4 +3101,74 @@ class L10nJa extends L10n {
 
   @override
   String get addAnotherLead => 'リーダーをもう一人指名';
+
+  @override
+  String get unavailableTitle => '奉仕できない日';
+
+  @override
+  String get unavailableHint => '日をタップすると終日奉仕できない日になり、もう一度タップで解除。長押しして数日なぞると期間で入力できます。奉仕を決める人だけが見られます。';
+
+  @override
+  String get unavailableAddRange => '期間を追加';
+
+  @override
+  String get unavailableFirstDay => '最初の日';
+
+  @override
+  String get unavailableLastDay => '最後の日';
+
+  @override
+  String get unavailableMarked => '入力した日';
+
+  @override
+  String get unavailableNote => '理由';
+
+  @override
+  String get unavailableNoteHint => '任意（例：旅行）';
+
+  @override
+  String get unavailableNoteFooter => 'タップすると理由を書けます。奉仕を決める人が選ぶときに見えます。';
+
+  @override
+  String get unavailableServing => 'この日はすでに奉仕が入っています';
+
+  @override
+  String get unavailableServingFooter => '担当者には、この日は奉仕できないと表示されます。';
+
+  @override
+  String get pickerUnavailable => 'この日は不可';
+
+  @override
+  String pickerUnavailableBecause(String note) {
+    return 'この日は不可：$note';
+  }
+
+  @override
+  String dutyUpdatedAway(String duty, String names) {
+    return '$dutyを更新しました・$namesはこの日は不可';
+  }
+
+  @override
+  String get planAskUnavailable => '奉仕できない日の入力を依頼';
+
+  @override
+  String planAskedLast(String date) {
+    return '前回の依頼 $date';
+  }
+
+  @override
+  String get planAskUntil => '何月までの分ですか？';
+
+  @override
+  String planAskConfirm(int count, String months) {
+    return '$count人に$monthsの奉仕できない日の入力を依頼しますか？';
+  }
+
+  @override
+  String planAskMonths(String from, String to) {
+    return '$from〜$to';
+  }
+
+  @override
+  String get planAskSend => '依頼する';
 }

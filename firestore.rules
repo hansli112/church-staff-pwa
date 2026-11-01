@@ -97,6 +97,15 @@ service cloud.firestore {
       return inGroup(cid, 'roster-editors') || isLead(cid);
     }
 
+    // Arranges a roster, and so sees who cannot serve when (不能服事的日子,
+    // #91; testdata/church_rules.json, unavailableReading): admins, 行政,
+    // and the 負責人 and 牧者 of a service or a 事工. They may pick anyone
+    // in the church, so they see everyone's.
+    function arrangesRosters(cid) {
+      return inGroup(cid, 'roster-editors')
+        || (isMember(cid) && (member(cid).get('leadTypes', []).size() > 0 || member(cid).get('leadMinistries', []).size() > 0));
+    }
+
     function hasValidGroups() {
       return !('groups' in request.resource.data)
         || request.resource.data.groups.hasOnly(['roster-editors', 'calendar-editors']);
@@ -458,6 +467,23 @@ service cloud.firestore {
                     && request.resource.data.get('note', '').size() <= 800));
           allow delete: if writesAttendance(cid, key);
         }
+      }
+
+      // 不能服事的日子 (#91): the stretches of days a member cannot serve
+      // (`spans`, each {from, to, note}), written by them alone; whoever
+      // arranges rosters reads them. 請同工填's last ask per service
+      // (unavailableAsks/{type}: at, by, from, to) is the backend's.
+      match /unavailable/{uid} {
+        allow read: if (isSelf(uid) && isMember(cid)) || arrangesRosters(cid);
+        allow create, update: if isSelf(uid) && isMember(cid)
+          && request.resource.data.keys().hasOnly(['spans', 'updatedAt'])
+          && request.resource.data.spans is list
+          && request.resource.data.spans.size() <= 100;
+        allow delete: if isSelf(uid) && isMember(cid);
+      }
+
+      match /unavailableAsks/{type} {
+        allow read: if arrangesRosters(cid);
       }
 
       match /staff_orders/{type} {

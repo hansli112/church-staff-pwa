@@ -143,6 +143,45 @@ void main() {
     }
   });
 
+  group('unavailableReading', () {
+    for (final r in _rows('unavailableReading')) {
+      test(
+        r['why'] as String,
+        () => expect(_member('u', r['member'] as Map<String, dynamic>).arrangesRosters, r['reads']),
+      );
+    }
+  });
+
+  group('askedToFill', () {
+    for (final r in _rows('askedToFill')) {
+      test(r['why'] as String, () {
+        final caller = r['caller'] as Map<String, dynamic>;
+        final service = r['service'] as String;
+        final ministries = [
+          for (final m in r['ministries'] as List)
+            Ministry(
+              id: m['id'] as String,
+              name: m['id'] as String,
+              duties: [for (final d in m['duties'] as List) MinistryDuty(d['service'] as String, d['duty'] as String)],
+            ),
+        ];
+        final members = [
+          for (final m in r['members'] as List)
+            Member(
+              uid: m['uid'] as String,
+              name: m['uid'] as String,
+              zones: [
+                for (final z in m['zones'] as List)
+                  Zone(serviceType: z['serviceType'] as String, duties: _strings(z['duties'])),
+              ],
+            ),
+        ];
+        final arranges = _member(caller['uid'] as String, caller).arranges(ministries, service);
+        expect([for (final m in askedToFill(members, service, arranges, caller['uid'] as String)) m.uid], r['asked']);
+      });
+    }
+  });
+
   group('ledDuties', () {
     Roster? day(Object? duties, Object? events) => duties == null
         ? null

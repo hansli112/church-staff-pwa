@@ -148,6 +148,11 @@ class SettingsScreen extends ConsumerWidget {
                 title: l10n.notifications,
                 onTap: () => context.push('/me/notifications'),
               ),
+              ListRow(
+                leading: const IconTile(Symbols.event_busy_rounded, color: TileColors.church),
+                title: l10n.unavailableTitle,
+                onTap: () => context.push('/me/unavailable'),
+              ),
               // Also with one church: joining or starting another starts here.
               ListRow(
                 leading: const IconTile(Symbols.swap_horiz_rounded, color: TileColors.church),

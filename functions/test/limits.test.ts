@@ -58,6 +58,8 @@ const RULES_FIELDS: Record<string, { text?: keyof typeof TEXT_LIMITS; other?: ke
   'request.resource.data.fcm': { rulesOnly: 50 },
   // users/{uid}.notificationsSeenAt: how far each church's 通知列表 is seen (#89).
   'request.resource.data.notificationsSeenAt': { rulesOnly: 100 },
+  // unavailable/{uid}.spans: a member's 不能服事的日子 (#91).
+  'request.resource.data.spans': { other: 'unavailableSpans' },
 };
 
 const rulesSizes = [...rules.matchAll(/((?:\.get\([^)]*\)|[\w.])+)\.size\(\) <= (\d+)/g)].map(([, field, n]) => ({

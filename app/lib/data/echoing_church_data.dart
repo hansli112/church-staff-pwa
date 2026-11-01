@@ -290,6 +290,22 @@ class EchoingChurchData implements ChurchData {
   Future<PlannedNotice> notifyPlanned(String serviceType) => _inner.notifyPlanned(serviceType);
 
   @override
+  Stream<UnavailableDays> unavailableDays(String uid) => _inner.unavailableDays(uid);
+
+  @override
+  Stream<Map<String, UnavailableDays>> everyonesUnavailableDays() => _inner.everyonesUnavailableDays();
+
+  @override
+  Future<void> saveUnavailableDays(String uid, UnavailableDays days) => _inner.saveUnavailableDays(uid, days);
+
+  @override
+  Stream<DateTime?> lastUnavailableAsk(String serviceType) => _inner.lastUnavailableAsk(serviceType);
+
+  @override
+  Future<int> askUnavailable(String serviceType, {required Day from, required Day to}) =>
+      _inner.askUnavailable(serviceType, from: from, to: to);
+
+  @override
   Future<void> compareAndSetMinistries({required List<Ministry> before, required List<Ministry> after}) => _send(
     _Echo(ministries: after),
     () => _inner.compareAndSetMinistries(before: before, after: after),

@@ -3286,4 +3286,81 @@ class L10nEn extends L10n {
 
   @override
   String get addAnotherLead => 'Add another lead';
+
+  @override
+  String get unavailableTitle => 'Days I can\'t serve';
+
+  @override
+  String get unavailableHint =>
+      'Tap a day to mark it, tap it again to clear it; press and drag across days to mark a stretch. Only those who arrange serving see them.';
+
+  @override
+  String get unavailableAddRange => 'Add a stretch of days';
+
+  @override
+  String get unavailableFirstDay => 'First day';
+
+  @override
+  String get unavailableLastDay => 'Last day';
+
+  @override
+  String get unavailableMarked => 'Marked';
+
+  @override
+  String get unavailableNote => 'Reason';
+
+  @override
+  String get unavailableNoteHint => 'Optional, e.g. traveling';
+
+  @override
+  String get unavailableNoteFooter => 'Tap one to add a reason; those who arrange serving see it when picking people.';
+
+  @override
+  String get unavailableServing => 'You\'re already serving on these days';
+
+  @override
+  String get unavailableServingFooter => 'Whoever arranges it will see you can\'t make it.';
+
+  @override
+  String get pickerUnavailable => 'Can\'t serve this day';
+
+  @override
+  String pickerUnavailableBecause(String note) {
+    return 'Can\'t serve this day: $note';
+  }
+
+  @override
+  String dutyUpdatedAway(String duty, String names) {
+    return 'Updated $duty · $names can\'t serve this day';
+  }
+
+  @override
+  String get planAskUnavailable => 'Ask for days they can\'t serve';
+
+  @override
+  String planAskedLast(String date) {
+    return 'Last asked $date';
+  }
+
+  @override
+  String get planAskUntil => 'Through which month?';
+
+  @override
+  String planAskConfirm(int count, String months) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Ask $count people for the days they can\'t serve in $months?',
+      one: 'Ask 1 person for the days they can\'t serve in $months?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String planAskMonths(String from, String to) {
+    return '$from–$to';
+  }
+
+  @override
+  String get planAskSend => 'Ask';
 }

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/backend.dart';
+import '../domain/day.dart';
 import '../domain/event_roster.dart';
 import '../domain/models.dart';
 import '../domain/roster_edit.dart';
@@ -326,6 +327,10 @@ class RosterActions {
   /// 通知同工 in 安排服事 (#90): tells everyone whose days of [type]
   /// changed there since, one push each.
   Future<PlannedNotice> notifyPlanned(String type) => _data.notifyPlanned(type);
+
+  /// 請同工填 (#91) for [type], the months of [from] to [to]: how many it told.
+  Future<int> askUnavailable(String type, {required Day from, required Day to}) =>
+      _data.askUnavailable(type, from: from, to: to);
 
   /// Gives [member] the duty, so the picker lists them first next time.
   Future<void> grantDuty(Member member, String type, String role) => _data.grantDuty(member.uid, type, role);

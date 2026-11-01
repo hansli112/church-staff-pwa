@@ -266,6 +266,87 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
 
   /// 完成: tells whoever was put on or taken off here, then goes back. A
   /// failure stays, with 重試.
+  /// The menu with 請同工填 (#91), and when it last asked for this
+  /// service; greyed with nobody on a list to ask.
+  Widget _askMenu(L10n l10n, AppColors c, Day today) {
+    final type = _type;
+    final asked = ref.watch(lastUnavailableAskProvider(type)).value;
+    final people = _askedToFill(type);
+    return PopupMenuButton<String>(
+      tooltip: l10n.planAskUnavailable,
+      icon: const Icon(Symbols.more_horiz_rounded),
+      onSelected: (_) => _askUnavailable(type, today),
+      itemBuilder: (_) => [
+        PopupMenuItem(
+          value: 'ask',
+          enabled: people.isNotEmpty,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(l10n.planAskUnavailable),
+              if (asked != null)
+                Text(
+                  l10n.planAskedLast(DateFormat.MMMd().format(asked)),
+                  style: AppText.footnote.copyWith(color: c.secondaryLabel),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Whom 請同工填 tells for [type] now.
+  List<Member> _askedToFill(String type) {
+    final me = ref.watch(meProvider).value;
+    if (me == null) return const [];
+    return askedToFill(ref.watch(membersProvider).value ?? const [], type, ref.watch(arrangesProvider(type)), me.uid);
+  }
+
+  /// 請同工填 (#91): through which month, from this one; then, asked first
+  /// as it cannot be taken back, one push each.
+  Future<void> _askUnavailable(String type, Day today) async {
+    final l10n = L10n.of(context);
+    final from = today.firstOfMonth;
+    final to = await showAppSheet<Day>(
+      context,
+      builder: (context) => SafeArea(
+        child: SingleChildScrollView(
+          child: ListSection(
+            header: l10n.planAskUntil,
+            children: [
+              for (var i = 0; i < 12; i++)
+                if (Day(from.year, from.month + i, 1) case final month)
+                  ListRow(
+                    title: DateFormat.yMMMM().format(month.midnight),
+                    onTap: () => Navigator.pop(context, month),
+                  ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (to == null || !mounted) return;
+    String name(Day month) => DateFormat.MMM().format(month.midnight);
+    final months = to == from ? name(from) : l10n.planAskMonths(name(from), name(to));
+    final count = _askedToFill(type).length;
+    final ok = await confirmAction(
+      context,
+      title: l10n.planAskConfirm(count, months),
+      action: l10n.planAskSend,
+      cancel: l10n.cancel,
+    );
+    if (!ok || !mounted) return;
+    final toasts = _toasts;
+    try {
+      final told = await ref.read(rosterActionsProvider).askUnavailable(type, from: from, to: to);
+      if (toasts.mounted) showToast(toasts, l10n.planNotified(told));
+    } catch (e) {
+      if (toasts.mounted) showToast(toasts, errorText(l10n, e));
+    }
+  }
+
   Future<void> _finish() async {
     setState(() => _notifying = true);
     final toasts = _toasts;
@@ -358,6 +439,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
           // One duty: named here, in place of a column's name.
           title: Text(duties.length == 1 ? l10n.planWeeksTitleOne(duties.single) : l10n.planWeeksTitle),
           actions: savingActions([
+            if (service != null && arranges.any) _askMenu(l10n, c, today),
             MediaQuery.withClampedTextScaling(
               maxScaleFactor: 1.5,
               child: TextButton(
@@ -409,6 +491,18 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
   /// The table: the duties' names stay at the top and the dates at the
   /// start, the rest scrolls both ways; each month starts under its name.
   /// Only the cells on screen are built, however many months there are.
+  /// Who is on [role] on [day] but marked it as a day they cannot serve
+  /// (#91), by name.
+  Set<String> _awayNames(Roster day, String role, Map<String, UnavailableDays> everyone) {
+    final duty = day.duties.where((d) => d.role == role).firstOrNull;
+    if (duty == null || everyone.isEmpty) return const {};
+    final away = awayOn(day, everyone);
+    return {
+      for (final name in duty.people)
+        if (away.containsKey(duty.uids[name])) name,
+    };
+  }
+
   Widget _table(
     BuildContext context,
     List<({Day month, List<Roster> days})> months,
@@ -425,6 +519,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     final monthHeight = scale.scale(17) * 1.3 + Space.m + Space.s;
     final line = BorderSide(color: c.separator, width: 0.5);
 
+    final away = ref.watch(unavailableDaysProvider).value ?? const <String, UnavailableDays>{};
     _shown = [for (final m in months) ...m.days];
     // A month's name (its first day) or a day, under the duties' names.
     final rows = <Object>[
@@ -507,6 +602,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
               final lift = _lift;
               return lift?.to?.id == day.id && lift?.role == role || _flash.contains(_cellId(day, role));
             },
+            away: _awayNames(day, role, away),
             onTap: (duty) => pickPeople(context, ref, day, duty, via: RosterVia.plan, swapDays: _shown),
             onLift: (cell, d) => _liftStart(cell, day, role, d),
             alone: duties.length == 1,
@@ -781,9 +877,14 @@ class _DutyCell extends StatelessWidget {
     required this.onLift,
     required this.alone,
     required this.onSwap,
+    this.away = const {},
   });
 
   final Roster roster;
+
+  /// Who is on it but marked the day as one they cannot serve (#91): their
+  /// names are greyed.
+  final Set<String> away;
   final String role;
   final Day today;
   final BorderSide border;
@@ -819,7 +920,13 @@ class _DutyCell extends StatelessWidget {
     final duty = roster.duties.where((d) => d.role == role).firstOrNull;
     final people = duty?.people ?? const <String>[];
     // Read out whole, though only two show.
-    final text = duty == null ? '—' : (people.isEmpty ? l10n.nobodyYet : people.join(l10n.listSeparator));
+    final text = duty == null
+        ? '—'
+        : (people.isEmpty
+              ? l10n.nobodyYet
+              : [
+                  for (final n in people) away.contains(n) ? '$n, ${l10n.pickerUnavailable}' : n,
+                ].join(l10n.listSeparator));
     return Semantics(
       button: duty != null,
       label: '$role, ${dayLabel(l10n, roster.day, today)}',
@@ -854,7 +961,7 @@ class _DutyCell extends StatelessWidget {
               ? Text('—', style: AppText.subheadline.copyWith(color: c.tertiaryLabel))
               : people.isEmpty
               ? _EmptySlot(wide: alone)
-              : _People(people),
+              : _People(people, away: away),
         ),
       ),
     );
@@ -921,14 +1028,25 @@ class _Dashes extends CustomPainter {
 /// A person a line, each cut short rather than wrapped onto the next;
 /// past two, how many more after the second.
 class _People extends StatelessWidget {
-  const _People(this.people);
+  const _People(this.people, {this.away = const {}});
 
   final List<String> people;
 
+  /// Those of [people] greyed: they marked the day as one they cannot
+  /// serve (#91).
+  final Set<String> away;
+
   @override
   Widget build(BuildContext context) {
-    final style = AppText.subheadline.copyWith(color: AppColors.of(context).label);
-    Text line(String name) => Text(name, maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis, style: style);
+    final c = AppColors.of(context);
+    final style = AppText.subheadline.copyWith(color: c.label);
+    Text line(String name) => Text(
+      name,
+      maxLines: 1,
+      softWrap: false,
+      overflow: TextOverflow.ellipsis,
+      style: away.contains(name) ? style.copyWith(color: c.secondaryLabel) : style,
+    );
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,

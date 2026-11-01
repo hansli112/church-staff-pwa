@@ -64,6 +64,7 @@ const ZH_WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 const EN_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const JA_WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+const EN_MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const EN_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /** A new church's services. Its name and duties are the church's own from then on. */
@@ -121,6 +122,8 @@ export interface Words {
   /** 回報人數 (attendance.ts): the title, and the body for [group]'s meeting on [day] (dateWithWeekday's). */
   attendanceTitle: string;
   attendanceBody(group: string, day: string): string;
+  /** 請同工填 (#91): the months `YYYY-MM` [from] to [to]. */
+  askUnavailable(from: string, to: string): string;
 
   /** The church page before the app starts (churchPage.ts). */
   appName: string;
@@ -163,6 +166,10 @@ const sunday = (name: string, duties: string[], events: string[]): NewService =>
   ],
 });
 
+/** The months `YYYY-MM` [from] to [to], each as [month] says it; one when they are the same. */
+const months = (from: string, to: string, month: (m: number) => string, joiner: string) =>
+  from === to ? month(Number(from.slice(5))) : `${month(Number(from.slice(5)))}${joiner}${month(Number(to.slice(5)))}`;
+
 const zhHant: Words = {
   shortDate: (k) => `${ymd(k)[1]}/${ymd(k)[2]}`,
   dateWithWeekday: (k) => `${zhHant.shortDate(k)}（週${ZH_WEEKDAYS[weekday(k)]}）`,
@@ -193,6 +200,7 @@ const zhHant: Words = {
   joinAllowed: '管理員允許你加入了，歡迎！',
   attendanceTitle: '填寫人數',
   attendanceBody: (group, day) => `「${group}」${day}的聚會有幾個人？`,
+  askUnavailable: (from, to) => `請填 ${months(from, to, (m) => `${m} 月`, '到 ')}不能服事的日子`,
   appName: '馬大別忙',
   supportItem: '支持馬大別忙的雲端費用',
   description:
@@ -234,6 +242,7 @@ const zhHans: Words = {
   joinAllowed: '管理员允许你加入了，欢迎！',
   attendanceTitle: '填写人数',
   attendanceBody: (group, day) => `“${group}”${day}的聚会有几个人？`,
+  askUnavailable: (from, to) => `请填 ${months(from, to, (m) => `${m} 月`, '到 ')}不能事奉的日子`,
   appName: '马大别忙',
   supportItem: '支持马大别忙的云端费用',
   description:
@@ -276,6 +285,7 @@ const en: Words = {
   joinAllowed: 'An admin let you in. Welcome!',
   attendanceTitle: 'Attendance',
   attendanceBody: (group, day) => `How many came to ${group} on ${day}?`,
+  askUnavailable: (from, to) => `Please mark the days you can't serve in ${months(from, to, (m) => EN_MONTH_NAMES[m - 1], '–')}`,
   appName: 'Martha, sit',
   supportItem: 'Support for the server costs of Martha, sit',
   description:
@@ -318,6 +328,7 @@ const ja: Words = {
   joinAllowed: '管理者が参加を承認しました。ようこそ！',
   attendanceTitle: '人数の記録',
   attendanceBody: (group, day) => `${day}の「${group}」には何人集まりましたか？`,
+  askUnavailable: (from, to) => `${months(from, to, (m) => `${m}月`, '〜')}で奉仕できない日を入力してください`,
   appName: 'マルタ、ひと休み',
   supportItem: 'Martha, sit サーバー費用の応援',
   description: '「マルタ、マルタ、あなたは多くのことに思い悩み、心を乱している。しかし、必要なことはただ一つだけである。マリアは良い方を選んだ。それを取り上げてはならない。」（ルカによる福音書 10:41–42）',
@@ -359,6 +370,7 @@ const ko: Words = {
   joinAllowed: '관리자가 가입을 승인했어요. 환영해요!',
   attendanceTitle: '인원 기록',
   attendanceBody: (group, day) => `${day} ${group}에 몇 명이 모였나요?`,
+  askUnavailable: (from, to) => `${months(from, to, (m) => `${m}월`, '~')} 중 봉사할 수 없는 날을 입력해 주세요`,
   appName: '마르다의 쉼표',
   supportItem: '마르다의 쉼표 서버 비용 후원',
   description: '마르다야 마르다야 네가 많은 일로 염려하고 근심하나 몇 가지만 하든지 혹은 한 가지만이라도 족하니라 마리아는 이 좋은 편을 택하였으니 빼앗기지 아니하리라 (누가복음 10:41–42)',

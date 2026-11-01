@@ -14,6 +14,7 @@ import { LANGUAGES, words } from '../src/languages.js';
 import { groupOf, powersOf, type ChurchGroup } from '../src/powers.js';
 import { dutiesByUid } from '../src/rosters.js';
 import { validDutyRename } from '../src/serviceSettings.js';
+import { askedToFill } from '../src/unavailable.js';
 import { caller, db, deps, seedChurch } from './support.js';
 
 /** The rows app/test/domain/church_rules_test.dart runs too: both sides must agree. */
@@ -87,6 +88,10 @@ describe('ledDuties', () => {
   for (const r of rows('ledDuties')) {
     test(r.why, () => assert.equal(ledChangeAllowed(new Set(r.roles), day(r.before, r.beforeEvents), day(r.after, r.afterEvents)), r.may));
   }
+});
+
+describe('askedToFill', () => {
+  for (const r of rows('askedToFill')) test(r.why, () => assert.deepEqual(askedToFill(r.caller, r.ministries, r.service, r.members), r.asked));
 });
 
 describe('groupMembership', () => {

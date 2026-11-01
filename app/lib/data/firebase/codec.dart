@@ -540,3 +540,22 @@ Json calendarEventToJson(CalendarEvent e) {
     'group': e.group ?? '',
   };
 }
+
+/// unavailable/{uid} (#91): `spans`, each {from, to, note}. Stretches it
+/// cannot read are left out.
+UnavailableDays unavailableDaysFromJson(Map<String, dynamic>? data) {
+  final spans = <UnavailableSpan>[];
+  for (final s in (data?['spans'] as List?) ?? const []) {
+    if (s is! Map) continue;
+    final (from, to) = (Day.tryParse(s['from'] as String?), Day.tryParse(s['to'] as String?));
+    if (from == null || to == null || to.isBefore(from)) continue;
+    spans.add(UnavailableSpan(from, to, note: s['note'] is String ? s['note'] as String : ''));
+  }
+  return UnavailableDays(spans..sort((a, b) => a.from.compareTo(b.from)));
+}
+
+Map<String, Object> unavailableDaysToJson(UnavailableDays days) => {
+  'spans': [
+    for (final s in days.spans) {'from': s.from.key, 'to': s.to.key, 'note': s.note},
+  ],
+};

@@ -3101,4 +3101,75 @@ class L10nKo extends L10n {
 
   @override
   String get addAnotherLead => '리더 한 명 더 지정';
+
+  @override
+  String get unavailableTitle => '봉사할 수 없는 날';
+
+  @override
+  String get unavailableHint =>
+      '날짜를 누르면 하루 종일 봉사할 수 없는 날로 표시되고, 다시 누르면 지워져요. 길게 눌러 여러 날을 끌면 기간으로 표시돼요. 봉사를 배정하는 사람만 볼 수 있어요.';
+
+  @override
+  String get unavailableAddRange => '기간 추가';
+
+  @override
+  String get unavailableFirstDay => '첫날';
+
+  @override
+  String get unavailableLastDay => '마지막 날';
+
+  @override
+  String get unavailableMarked => '표시한 날';
+
+  @override
+  String get unavailableNote => '이유';
+
+  @override
+  String get unavailableNoteHint => '선택 사항, 예: 여행';
+
+  @override
+  String get unavailableNoteFooter => '눌러서 이유를 적을 수 있어요. 봉사를 배정하는 사람이 사람을 고를 때 보여요.';
+
+  @override
+  String get unavailableServing => '이날은 이미 봉사가 있어요';
+
+  @override
+  String get unavailableServingFooter => '배정하는 사람에게 이날은 안 된다고 보여요.';
+
+  @override
+  String get pickerUnavailable => '이날은 안 돼요';
+
+  @override
+  String pickerUnavailableBecause(String note) {
+    return '이날은 안 돼요: $note';
+  }
+
+  @override
+  String dutyUpdatedAway(String duty, String names) {
+    return '$duty을(를) 바꿨어요 · $names은(는) 이날 안 돼요';
+  }
+
+  @override
+  String get planAskUnavailable => '봉사할 수 없는 날 입력 요청';
+
+  @override
+  String planAskedLast(String date) {
+    return '마지막 요청 $date';
+  }
+
+  @override
+  String get planAskUntil => '몇 월까지인가요?';
+
+  @override
+  String planAskConfirm(int count, String months) {
+    return '$count명에게 $months 중 봉사할 수 없는 날을 입력해 달라고 할까요?';
+  }
+
+  @override
+  String planAskMonths(String from, String to) {
+    return '$from~$to';
+  }
+
+  @override
+  String get planAskSend => '요청하기';
 }

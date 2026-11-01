@@ -5523,6 +5523,126 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'再加一位負責人'**
   String get addAnotherLead;
+
+  /// Settings row and page (#91): the days a member marks as unable to serve
+  ///
+  /// In zh, this message translates to:
+  /// **'不能服事的日子'**
+  String get unavailableTitle;
+
+  /// Above the months on the page of days a member can't serve
+  ///
+  /// In zh, this message translates to:
+  /// **'點一天標記整天不能服事，再點一次取消；按住拖過幾天，標記一段期間。只有排服事的人看得到。'**
+  String get unavailableHint;
+
+  /// Row: marks several days by picking the first and last, without dragging
+  ///
+  /// In zh, this message translates to:
+  /// **'加一段期間'**
+  String get unavailableAddRange;
+
+  /// No description provided for @unavailableFirstDay.
+  ///
+  /// In zh, this message translates to:
+  /// **'從哪一天'**
+  String get unavailableFirstDay;
+
+  /// No description provided for @unavailableLastDay.
+  ///
+  /// In zh, this message translates to:
+  /// **'到哪一天'**
+  String get unavailableLastDay;
+
+  /// Header over the stretches a member has marked
+  ///
+  /// In zh, this message translates to:
+  /// **'已填的日子'**
+  String get unavailableMarked;
+
+  /// No description provided for @unavailableNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'原因'**
+  String get unavailableNote;
+
+  /// No description provided for @unavailableNoteHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'選填，例如出國'**
+  String get unavailableNoteHint;
+
+  /// No description provided for @unavailableNoteFooter.
+  ///
+  /// In zh, this message translates to:
+  /// **'點一段寫原因；排服事的人選人時看得到。'**
+  String get unavailableNoteFooter;
+
+  /// Header over the days a member marked but is already arranged to serve
+  ///
+  /// In zh, this message translates to:
+  /// **'這幾天你已經被排到'**
+  String get unavailableServing;
+
+  /// No description provided for @unavailableServingFooter.
+  ///
+  /// In zh, this message translates to:
+  /// **'負責人排的時候會看到你這天不行。'**
+  String get unavailableServingFooter;
+
+  /// Under a name in the picker, and read out on 安排服事: they marked the day as one they can't serve
+  ///
+  /// In zh, this message translates to:
+  /// **'這天不行'**
+  String get pickerUnavailable;
+
+  /// No description provided for @pickerUnavailableBecause.
+  ///
+  /// In zh, this message translates to:
+  /// **'這天不行：{note}'**
+  String pickerUnavailableBecause(String note);
+
+  /// Toast after picking someone who marked the day as one they can't serve
+  ///
+  /// In zh, this message translates to:
+  /// **'已更新{duty}・{names}這天不行'**
+  String dutyUpdatedAway(String duty, String names);
+
+  /// Menu on 安排服事 (#91): pushes the people on the lists to mark the days they can't serve
+  ///
+  /// In zh, this message translates to:
+  /// **'請同工填不能服事的日子'**
+  String get planAskUnavailable;
+
+  /// No description provided for @planAskedLast.
+  ///
+  /// In zh, this message translates to:
+  /// **'上次 {date} 請過'**
+  String planAskedLast(String date);
+
+  /// No description provided for @planAskUntil.
+  ///
+  /// In zh, this message translates to:
+  /// **'要填到哪個月？'**
+  String get planAskUntil;
+
+  /// No description provided for @planAskConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'要通知 {count} 位同工填 {months}不能服事的日子嗎？'**
+  String planAskConfirm(int count, String months);
+
+  /// Two months asked for, each as the month's short name
+  ///
+  /// In zh, this message translates to:
+  /// **'{from}到{to}'**
+  String planAskMonths(String from, String to);
+
+  /// No description provided for @planAskSend.
+  ///
+  /// In zh, this message translates to:
+  /// **'通知'**
+  String get planAskSend;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

@@ -36,6 +36,9 @@ abstract final class TextLimits {
 
   /// What someone asking to join tells the admin (申請加入, #88).
   static const joinNote = 100;
+
+  /// What a member says about days they cannot serve (不能服事的日子, #91).
+  static const unavailableNote = 30;
 }
 
 /// Limits whose unit is the same everywhere: URLs and secrets in UTF-16
@@ -68,6 +71,9 @@ abstract final class Limits {
 
   /// A group's pauses, kept once over (回報人數, #85).
   static const attendancePauses = 50;
+
+  /// A member's stretches of 不能服事的日子 (#91).
+  static const unavailableSpans = 100;
 }
 
 /// firestore.rules counts UTF-16 code units, not characters, so for a

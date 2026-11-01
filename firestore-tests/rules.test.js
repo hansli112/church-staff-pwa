@@ -485,6 +485,52 @@ describe('memberListReading (testdata/church_rules.json)', () => {
   });
 });
 
+// 不能服事的日子 (#91)：誰讀得到，和 App 共用 testdata/church_rules.json 的 unavailableReading。
+describe('unavailableReading (testdata/church_rules.json)', () => {
+  const rows = JSON.parse(readFileSync(new URL('../testdata/church_rules.json', import.meta.url), 'utf8')).unavailableReading;
+  rows.forEach((r, i) => {
+    it(r.why, async () => {
+      const uid = `away-reader-${i}`;
+      const m = r.member;
+      await seed(`churches/${A}/members/${uid}`, memberDoc(uid, m.role ?? 'staff', m.groups, undefined, {
+        types: m.leadTypes, ministries: m.leadMinistries, smallGroups: m.leadSmallGroups,
+      }));
+      await seed(`churches/${A}/unavailable/${MEMBER_A}`, { spans: [{ from: '2030-12-20', to: '2030-12-27', note: '' }] });
+      const read = getDocs(collection(as(uid), `churches/${A}/unavailable`));
+      await (r.reads ? assertSucceeds(read) : assertFails(read));
+      const ask = getDoc(doc(as(uid), `churches/${A}/unavailableAsks/sunday`));
+      await (r.reads ? assertSucceeds(ask) : assertFails(ask));
+    });
+  });
+});
+
+describe('不能服事的日子 (unavailable)', () => {
+  const mine = (uid, church = A) => doc(as(uid), `churches/${church}/unavailable/${uid}`);
+  const span = { from: '2030-12-20', to: '2030-12-27', note: '出國' };
+
+  it('只有本人寫，本人讀得到自己的', async () => {
+    await assertSucceeds(setDoc(mine(MEMBER_A), { spans: [span], updatedAt: serverTimestamp() }));
+    await assertSucceeds(getDoc(mine(MEMBER_A)));
+    await assertSucceeds(deleteDoc(mine(MEMBER_A)));
+    await assertFails(setDoc(doc(as(ADMIN_A), `churches/${A}/unavailable/${MEMBER_A}`), { spans: [span] }));
+    await assertFails(getDocs(collection(as(MEMBER_A), `churches/${A}/unavailable`)));
+  });
+
+  it('只有 spans，最多 100 段', async () => {
+    await assertFails(setDoc(mine(MEMBER_A), { spans: [span], uid: MEMBER_A }));
+    await assertFails(setDoc(mine(MEMBER_A), { spans: 'x' }));
+    await assertFails(setDoc(mine(MEMBER_A), { spans: Array(101).fill(span) }));
+    await assertSucceeds(setDoc(mine(MEMBER_A), { spans: Array(100).fill(span) }));
+  });
+
+  it('不是這間教會的、停用教會的都不行；請同工填只有後端寫', async () => {
+    await assertFails(setDoc(mine(ADMIN_B), { spans: [span] }));
+    await assertFails(setDoc(mine(MEMBER_S, SUSPENDED), { spans: [span] }));
+    await assertFails(getDocs(collection(as(ADMIN_B), `churches/${A}/unavailable`)));
+    await assertFails(setDoc(doc(as(ADMIN_A), `churches/${A}/unavailableAsks/sunday`), { by: ADMIN_A }));
+  });
+});
+
 // 回報人數 (#85)：和 App、functions 共用 testdata/church_rules.json 的 attendanceAccess。
 describe('attendanceAccess (testdata/church_rules.json)', () => {
   const rows = JSON.parse(readFileSync(new URL('../testdata/church_rules.json', import.meta.url), 'utf8')).attendanceAccess;

@@ -3096,6 +3096,76 @@ class L10nZh extends L10n {
 
   @override
   String get addAnotherLead => '再加一位負責人';
+
+  @override
+  String get unavailableTitle => '不能服事的日子';
+
+  @override
+  String get unavailableHint => '點一天標記整天不能服事，再點一次取消；按住拖過幾天，標記一段期間。只有排服事的人看得到。';
+
+  @override
+  String get unavailableAddRange => '加一段期間';
+
+  @override
+  String get unavailableFirstDay => '從哪一天';
+
+  @override
+  String get unavailableLastDay => '到哪一天';
+
+  @override
+  String get unavailableMarked => '已填的日子';
+
+  @override
+  String get unavailableNote => '原因';
+
+  @override
+  String get unavailableNoteHint => '選填，例如出國';
+
+  @override
+  String get unavailableNoteFooter => '點一段寫原因；排服事的人選人時看得到。';
+
+  @override
+  String get unavailableServing => '這幾天你已經被排到';
+
+  @override
+  String get unavailableServingFooter => '負責人排的時候會看到你這天不行。';
+
+  @override
+  String get pickerUnavailable => '這天不行';
+
+  @override
+  String pickerUnavailableBecause(String note) {
+    return '這天不行：$note';
+  }
+
+  @override
+  String dutyUpdatedAway(String duty, String names) {
+    return '已更新$duty・$names這天不行';
+  }
+
+  @override
+  String get planAskUnavailable => '請同工填不能服事的日子';
+
+  @override
+  String planAskedLast(String date) {
+    return '上次 $date 請過';
+  }
+
+  @override
+  String get planAskUntil => '要填到哪個月？';
+
+  @override
+  String planAskConfirm(int count, String months) {
+    return '要通知 $count 位同工填 $months不能服事的日子嗎？';
+  }
+
+  @override
+  String planAskMonths(String from, String to) {
+    return '$from到$to';
+  }
+
+  @override
+  String get planAskSend => '通知';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -6190,4 +6260,74 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get addAnotherLead => '再加一位负责人';
+
+  @override
+  String get unavailableTitle => '不能事奉的日子';
+
+  @override
+  String get unavailableHint => '点一天标记整天不能事奉，再点一次取消；按住拖过几天，标记一段时间。只有排事奉的人看得到。';
+
+  @override
+  String get unavailableAddRange => '添加一段时间';
+
+  @override
+  String get unavailableFirstDay => '从哪一天';
+
+  @override
+  String get unavailableLastDay => '到哪一天';
+
+  @override
+  String get unavailableMarked => '已填的日子';
+
+  @override
+  String get unavailableNote => '原因';
+
+  @override
+  String get unavailableNoteHint => '选填，例如出国';
+
+  @override
+  String get unavailableNoteFooter => '点一段写原因；排事奉的人选人时看得到。';
+
+  @override
+  String get unavailableServing => '这几天你已经被排到';
+
+  @override
+  String get unavailableServingFooter => '负责人排的时候会看到你这天不行。';
+
+  @override
+  String get pickerUnavailable => '这天不行';
+
+  @override
+  String pickerUnavailableBecause(String note) {
+    return '这天不行：$note';
+  }
+
+  @override
+  String dutyUpdatedAway(String duty, String names) {
+    return '已更新$duty・$names这天不行';
+  }
+
+  @override
+  String get planAskUnavailable => '请同工填不能事奉的日子';
+
+  @override
+  String planAskedLast(String date) {
+    return '上次 $date 请过';
+  }
+
+  @override
+  String get planAskUntil => '要填到哪个月？';
+
+  @override
+  String planAskConfirm(int count, String months) {
+    return '要通知 $count 位同工填 $months不能事奉的日子吗？';
+  }
+
+  @override
+  String planAskMonths(String from, String to) {
+    return '$from到$to';
+  }
+
+  @override
+  String get planAskSend => '通知';
 }

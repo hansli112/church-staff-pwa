@@ -23,6 +23,8 @@ export const TEXT_LIMITS = {
   attendanceNote: 200,
   /** What someone asking to join tells the admin (申請加入, #88). */
   joinNote: 100,
+  /** What a member says about days they cannot serve (不能服事的日子, #91). */
+  unavailableNote: 30,
 } as const;
 
 /** URLs and secrets in UTF-16 code units, services as a count. */
@@ -43,6 +45,8 @@ export const LIMITS = {
   attendanceCount: 100000,
   /** A group's pauses, kept once over (回報人數, #85). */
   attendancePauses: 50,
+  /** A member's stretches of 不能服事的日子 (#91). */
+  unavailableSpans: 100,
 } as const;
 
 /**

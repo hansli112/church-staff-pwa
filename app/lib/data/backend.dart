@@ -308,6 +308,27 @@ abstract interface class ChurchData {
   /// In quiet hours ([PlannedNotice.later]) they wait until 7:00.
   Future<PlannedNotice> notifyPlanned(String serviceType);
 
+  /// [uid]'s 不能服事的日子 (#91): their own, or anyone's for whoever
+  /// arranges rosters (Member.arrangesRosters).
+  Stream<UnavailableDays> unavailableDays(String uid);
+
+  /// Everyone's 不能服事的日子 who has any, by uid: for whoever arranges
+  /// rosters.
+  Stream<Map<String, UnavailableDays>> everyonesUnavailableDays();
+
+  /// Keeps [days] as the caller's own, [uid]: no one else writes them. At
+  /// most [Limits.unavailableSpans] stretches, each note at most
+  /// [TextLimits.unavailableNote] characters.
+  Future<void> saveUnavailableDays(String uid, UnavailableDays days);
+
+  /// When 請同工填 last asked for [serviceType], if ever: for whoever
+  /// arranges rosters.
+  Stream<DateTime?> lastUnavailableAsk(String serviceType);
+
+  /// 請同工填 (#91), by whoever arranges [serviceType]: one push each to
+  /// [askedToFill], for the months of [from] to [to]. How many it told.
+  Future<int> askUnavailable(String serviceType, {required Day from, required Day to});
+
   /// Replaces the whole list of services (adding one, reordering), only
   /// if it is still [before]; otherwise [CloudErrorCode.conflict]. Never
   /// none; IDs once used stay valid.

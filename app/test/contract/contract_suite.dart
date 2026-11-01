@@ -1056,6 +1056,43 @@ void contractTests(Future<ContractWorld> Function() open) {
     });
   });
 
+  group('不能服事的日子 (#91)', () {
+    test("a member keeps her own; whoever arranges sees everyone's, and asks those on the lists", () async {
+      final g = await Grace.open(w);
+      await g.church.putMember(
+        Member(
+          uid: g.mei,
+          name: '李美玉',
+          zones: const [
+            Zone(serviceType: 'sunday', duties: ['司琴']),
+          ],
+        ),
+      );
+      final trip = const UnavailableDays().add(Day(2030, 12, 20), Day(2030, 12, 27), note: '出國');
+      const wait = Duration(seconds: 30);
+      await w.signIn(Grace.meiEmail);
+      await g.church.saveUnavailableDays(g.mei, trip);
+      expect(await g.church.unavailableDays(g.mei).firstWhere((d) => !d.isEmpty).timeout(wait), trip);
+      await expectLater(g.church.saveUnavailableDays(g.editor, trip), denied(), reason: 'only her own');
+      await expectLater(g.church.everyonesUnavailableDays().first, denied(), reason: 'she arranges nothing');
+      await expectLater(g.church.unavailableDays(g.editor).first, denied());
+      await expectLater(g.church.askUnavailable('sunday', from: Day(2030, 12, 1), to: Day(2031, 1, 1)), denied());
+
+      await w.signIn(Grace.editorEmail);
+      expect((await g.church.everyonesUnavailableDays().firstWhere((m) => m.isNotEmpty).timeout(wait))[g.mei], trip);
+      expect(await g.church.unavailableDays(g.mei).first, trip);
+      await expectLater(g.church.saveUnavailableDays(g.mei, const UnavailableDays()), denied());
+      expect(await g.church.lastUnavailableAsk('sunday').first, isNull);
+      await expectLater(
+        g.church.askUnavailable('youth', from: Day(2030, 12, 1), to: Day(2031, 1, 1)),
+        denied(),
+        reason: 'not a service he arranges',
+      );
+      expect(await g.church.askUnavailable('sunday', from: Day(2030, 12, 1), to: Day(2031, 1, 1)), 1);
+      expect(await g.church.lastUnavailableAsk('sunday').firstWhere((at) => at != null).timeout(wait), isNotNull);
+    });
+  });
+
   group('申請加入 (#88)', () {
     test('someone asks to join; only admins read and answer; let in, they are staff', () async {
       final g = await Grace.open(w);

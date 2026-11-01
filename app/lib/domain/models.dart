@@ -15,6 +15,7 @@ export 'church_time.dart' show ChurchTimeZone;
 export 'attendance.dart';
 export 'church_groups.dart';
 export 'identities.dart';
+export 'unavailable.dart';
 
 enum ChurchStatus { active, suspended, deleted }
 
@@ -308,6 +309,11 @@ class Member {
 
   /// Whether this member may edit all of an event's roster: admins and 行政.
   bool get canEditEventRosters => inGroup(Group.rosterEditors);
+
+  /// Whether this member arranges any roster, and so sees who cannot serve
+  /// when (不能服事的日子, #91; firestore.rules arrangesRosters): admins,
+  /// 行政, and the 負責人 and 牧者 of a service or a 事工.
+  bool get arrangesRosters => inGroup(Group.rosterEditors) || leadTypes.isNotEmpty || leadMinistries.isNotEmpty;
 
   /// The duties this member arranges on a day of [serviceType] (null: an
   /// event's) without editing all of it, as a 負責人 of the 事工 in

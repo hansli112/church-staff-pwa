@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:flutter/foundation.dart' show listEquals, setEquals;
+import 'package:flutter/foundation.dart' show listEquals, mapEquals, setEquals;
 
 import '../../core/languages.dart';
 import '../../domain/day.dart';
@@ -107,6 +107,13 @@ class MemoryBackend implements Backend {
   /// off a day there and not told yet: the service, and what they had on
   /// the day before (functions/src/rosterChange.ts, plannedPushes).
   final planned = <String, Map<String, ({String service, List<String> roles})>>{};
+
+  /// 不能服事的日子 (#91) per church, by uid.
+  final unavailable = <String, Map<String, UnavailableDays>>{};
+
+  /// 請同工填 (#91) per church, by service: when last asked, the months
+  /// asked for, and whom it told.
+  final unavailableAsks = <String, Map<String, ({DateTime at, Day from, Day to, List<String> told})>>{};
   final staffOrders = <String, Map<String, StaffOrder>>{};
   final invites = <String, Invite>{};
   final users = <String, UserProfile>{};
@@ -1210,6 +1217,65 @@ class MemoryChurchData implements ChurchData {
     return (people: people, later: false);
   }
 
+  /// Who sees everyone's 不能服事的日子 (firestore.rules arrangesRosters).
+  void _requireArrangesRosters() {
+    if (!_b.requireMember(churchId).arrangesRosters) throw const CloudException(CloudErrorCode.permissionDenied);
+  }
+
+  @override
+  Stream<UnavailableDays> unavailableDays(String uid) => _b.watch(() {
+    if (uid != _uid) _requireArrangesRosters();
+    _requireMember();
+    return _b.unavailable[churchId]?[uid] ?? const UnavailableDays();
+  });
+
+  @override
+  Stream<Map<String, UnavailableDays>> everyonesUnavailableDays() => _b.watch(() {
+    _requireArrangesRosters();
+    return {...?_b.unavailable[churchId]};
+  }, equals: mapEquals);
+
+  @override
+  Future<void> saveUnavailableDays(String uid, UnavailableDays days) async {
+    await _b.write(() {
+      if (uid != _uid) throw const CloudException(CloudErrorCode.permissionDenied);
+      _requireMember();
+      if (days.spans.length > Limits.unavailableSpans ||
+          days.spans.any((s) => !withinTextLimit(s.note, TextLimits.unavailableNote))) {
+        throw const CloudException(CloudErrorCode.permissionDenied);
+      }
+      (_b.unavailable[churchId] ??= {})[uid] = days;
+    });
+  }
+
+  @override
+  Stream<DateTime?> lastUnavailableAsk(String serviceType) => _b.watch(() {
+    _requireArrangesRosters();
+    return _b.unavailableAsks[churchId]?[serviceType]?.at;
+  });
+
+  @override
+  Future<int> askUnavailable(String serviceType, {required Day from, required Day to}) async {
+    var told = 0;
+    await _b.write(() {
+      final me = _b.requireMember(churchId);
+      final ministries = (_b.ministries[churchId] ?? const MinistrySettings()).ministries;
+      final arranges = me.arranges(ministries, serviceType);
+      if (!_b.services[churchId]!.ids.contains(serviceType) || !arranges.any || to.isBefore(from)) {
+        throw const CloudException(CloudErrorCode.permissionDenied);
+      }
+      final asked = askedToFill(_b.members[churchId]!.values, serviceType, arranges, me.uid);
+      (_b.unavailableAsks[churchId] ??= {})[serviceType] = (
+        at: _b.clock(),
+        from: from,
+        to: to,
+        told: [for (final m in asked) m.uid],
+      );
+      told = asked.length;
+    });
+    return told;
+  }
+
   @override
   Future<void> compareAndSetServiceList({required List<Service> before, required List<Service> after}) async {
     _requireAdmin();
@@ -1400,8 +1466,10 @@ class MemoryChurchData implements ChurchData {
     if (!allowed) throw const CloudException(CloudErrorCode.permissionDenied);
     await _b.write(() {
       _b.members[churchId]!.remove(uid);
-      // As onMemberDeleted: the church's notifications go with them.
+      // As onMemberDeleted: the church's notifications go with them, and
+      // their 不能服事的日子.
       _b.notifications[uid]?.removeWhere((n) => n.churchId == churchId);
+      _b.unavailable[churchId]?.remove(uid);
     });
   }
 

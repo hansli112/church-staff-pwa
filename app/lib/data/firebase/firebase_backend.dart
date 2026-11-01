@@ -910,6 +910,36 @@ class FirestoreChurchData implements ChurchData {
   }
 
   @override
+  Stream<UnavailableDays> unavailableDays(String uid) =>
+      _col('unavailable').doc(uid).live().map((s) => unavailableDaysFromJson(s.data())).translated();
+
+  @override
+  Stream<Map<String, UnavailableDays>> everyonesUnavailableDays() => _col(
+    'unavailable',
+  ).live().map((snap) => {for (final d in snap.docs) d.id: unavailableDaysFromJson(d.data())}).translated();
+
+  @override
+  Future<void> saveUnavailableDays(String uid, UnavailableDays days) {
+    final ref = _col('unavailable').doc(uid);
+    return _write(
+      ref,
+      (tx) => tx.set(ref, {...unavailableDaysToJson(days), 'updatedAt': FieldValue.serverTimestamp()}),
+    );
+  }
+
+  @override
+  Stream<DateTime?> lastUnavailableAsk(String serviceType) => _col(
+    'unavailableAsks',
+  ).doc(serviceType).live().map((s) => (s.data()?['at'] as Timestamp?)?.toDate()).translated();
+
+  @override
+  Future<int> askUnavailable(String serviceType, {required Day from, required Day to}) async {
+    String month(Day d) => d.key.substring(0, 7);
+    final d = await _call('askUnavailable', {'serviceId': serviceType, 'from': month(from), 'to': month(to)});
+    return (d['people'] as num?)?.toInt() ?? 0;
+  }
+
+  @override
   Future<void> compareAndSetServiceList({required List<Service> before, required List<Service> after}) {
     final ref = _col('settings').doc('services');
     // Merge ids inside the transaction: the rules reject shrinking ids.
