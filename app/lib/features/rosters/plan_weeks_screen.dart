@@ -70,7 +70,6 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
   /// The first month shown (its first day); null until the days are in.
   Day? _from;
   int _months = _monthsAtATime;
-  bool _notifying = false;
 
   /// Leaving by 完成: nobody left to tell.
   bool _leaving = false;
@@ -264,17 +263,21 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     });
   }
 
-  /// The menu with 請同工填 (#91), and when it last asked for this
-  /// service; greyed with nobody on a list to ask. It asks from [from], the
-  /// first month being arranged.
-  Widget _askMenu(L10n l10n, AppColors c, Day from) {
+  /// The menu: 請同工填 (#91), and when it last asked for this service,
+  /// greyed with nobody on a list to ask, from [from], the first month
+  /// being arranged; and 照片匯入, for a roster already on paper.
+  Widget _menu(L10n l10n, AppColors c, Day from) {
     final type = _type;
     final asked = ref.watch(lastUnavailableAskProvider(type)).value;
     final people = _askedToFill(type);
     return PopupMenuButton<String>(
-      tooltip: l10n.planAskUnavailable,
+      tooltip: MaterialLocalizations.of(context).moreButtonTooltip,
       icon: const Icon(Symbols.more_horiz_rounded),
-      onSelected: (_) => _askUnavailable(type, from),
+      onSelected: (v) => switch (v) {
+        'ask' => _askUnavailable(type, from),
+        'photo' => context.push('/rosters/import/$type'),
+        _ => null,
+      },
       itemBuilder: (_) => [
         PopupMenuItem(
           value: 'ask',
@@ -292,6 +295,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
             ],
           ),
         ),
+        PopupMenuItem(value: 'photo', child: Text(l10n.photoImportAction)),
       ],
     );
   }
@@ -348,25 +352,20 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
   /// How many months 請同工填 offers to ask through.
   static const _askMonths = 12;
 
-  /// 完成: tells whoever was put on or taken off here, then goes back. A
-  /// failure stays, with 重試.
-  Future<void> _finish() async {
-    setState(() => _notifying = true);
+  /// 完成: goes back at once, telling whoever was put on or taken off
+  /// here behind it; a failure says so where it went, with 重試.
+  void _finish() {
+    // A second tap while the page goes would go back from the one behind.
+    if (_leaving) return;
     final toasts = _toasts;
     final actions = ref.read(rosterActionsProvider);
     final waiting = _waiting;
-    // 重試 once the page is gone (left while telling) tells from wherever
-    // it is.
-    void retry() => mounted ? _finish() : _tellPlanned(toasts, actions, waiting, onRetry: retry);
-    final told = await _tellPlanned(toasts, actions, waiting, onRetry: retry);
-    if (!mounted) return;
-    setState(() {
-      _notifying = false;
-      // Told: no toast offering 通知 on the way out, though the news has
-      // not caught up yet.
-      _leaving = told;
-    });
-    if (told) context.pop();
+    void tell() => _tellPlanned(toasts, actions, waiting, onRetry: tell);
+    // Being told: no toast offering 通知 on the way out, though the news
+    // has not caught up yet.
+    _leaving = true;
+    tell();
+    context.pop();
   }
 
   /// Left another way than 完成 while people wait (back, a swipe from the
@@ -432,7 +431,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
 
     return PopScope(
       onPopInvokedWithResult: (didPop, _) {
-        if (didPop && news && !_leaving && !_notifying) _left();
+        if (didPop && news && !_leaving) _left();
       },
       // White, as a table is: the empty cells' dashes show on it.
       child: Scaffold(
@@ -442,11 +441,11 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
           // One duty: named here, in place of a column's name.
           title: Text(duties.length == 1 ? l10n.planWeeksTitleOne(duties.single) : l10n.planWeeksTitle),
           actions: savingActions([
-            if (service != null && arranges.any) _askMenu(l10n, c, _from ?? thisMonth),
+            if (service != null && arranges.any) _menu(l10n, c, _from ?? thisMonth),
             MediaQuery.withClampedTextScaling(
               maxScaleFactor: 1.5,
               child: TextButton(
-                onPressed: _notifying ? null : _finish,
+                onPressed: _finish,
                 child: Text(l10n.done),
               ),
             ),
@@ -1223,8 +1222,8 @@ Rect _globalRect(BuildContext context) {
 }
 
 /// Tells the people waiting on [types], one notice each, and says so in a
-/// toast from [toasts]; false when it failed, said with 重試 ([onRetry]).
-Future<bool> _tellPlanned(
+/// toast from [toasts]; a failure is said with 重試 ([onRetry]).
+Future<void> _tellPlanned(
   BuildContext toasts,
   RosterActions actions,
   Set<String> types, {
@@ -1242,9 +1241,7 @@ Future<bool> _tellPlanned(
     if (toasts.mounted && people > 0) {
       showToast(toasts, later ? l10n.planNotifiedLater(people) : l10n.planNotified(people));
     }
-    return true;
   } catch (e) {
     if (toasts.mounted) showToast(toasts, errorText(l10n, e), onRetry: onRetry);
-    return false;
   }
 }

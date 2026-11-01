@@ -11,6 +11,7 @@ import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
+import '../../domain/text.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/attendance.dart';
 import '../../state/church_writes.dart';
@@ -24,6 +25,13 @@ import 'service_settings.dart';
 /// The page of [group]: `/me/groups/service/<id>`, `ministry/<id>` or
 /// `small/<id>`.
 String groupPage(ChurchGroup group) => '/me/groups/${group.key.replaceFirst(':', '/')}';
+
+/// Where [group]'s 同工 are added: for a service, the page of its 同工;
+/// otherwise the group's own page.
+String groupStaffPage(ChurchGroup group) => switch (group) {
+  ServiceGroup() => '${groupPage(group)}/staff',
+  _ => groupPage(group),
+};
 
 /// 聚會與事工 (#82, #94), for admins: every service, put in order and
 /// added here, and every 事工 with who leads it and what; each opens its
@@ -159,6 +167,210 @@ List<Candidate> groupCandidates(ChurchGroup group, List<Roster> rosters, List<Me
   });
 }
 
+/// [group]'s 同工 by name, who [me] may add to it by name, and for a
+/// service who served it without being one, those [me] may add.
+({List<Member> staff, List<Member> addable, List<Candidate> candidates}) groupPeople(
+  WidgetRef ref,
+  Member me,
+  List<Member> members,
+  ChurchGroup group,
+) {
+  int byName(Member a, Member b) => a.name.compareTo(b.name);
+  return (
+    staff: [...members.where((m) => m.isIn(group))]..sort(byName),
+    addable: [
+      for (final m in members)
+        if (!m.isIn(group) && me.mayMove(m, group)) m,
+    ]..sort(byName),
+    candidates: group is ServiceGroup
+        ? [
+            for (final c in groupCandidates(group, ref.watch(_allRostersProvider).value ?? const [], members, null))
+              if (me.mayMove(c.member, group)) c,
+          ]
+        : const <Candidate>[],
+  );
+}
+
+/// A service's 同工, which may be a hundred: searched, 加入同工 at the
+/// top, then who served it without being one, then each 同工 to 移出.
+class GroupStaffScreen extends ConsumerStatefulWidget {
+  const GroupStaffScreen({super.key, required this.group});
+
+  final ServiceGroup group;
+
+  @override
+  ConsumerState<GroupStaffScreen> createState() => _GroupStaffScreenState();
+}
+
+class _GroupStaffScreenState extends ConsumerState<GroupStaffScreen> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final name = ref.watch(churchGroupsProvider)?.byKey(widget.group.key)?.name;
+    final me = ref.watch(meProvider).value;
+    // 行政 reads them, as on the service's page.
+    if (name == null || me == null || !(me.managesGroup(widget.group) || me.readsAttendance(widget.group))) {
+      return Scaffold(appBar: AppBar());
+    }
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.groupStaffTitle(name))),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Space.m, 0, Space.m, Space.s),
+            child: SearchField(hint: l10n.searchMembers, onChanged: (q) => setState(() => _query = q)),
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.only(bottom: Space.xl),
+              children: [GroupStaffSections(group: widget.group, name: name, query: _query, addFirst: true)],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// [group]'s 同工, each to 移出 for who may move them, and 加入同工 ([addFirst]:
+/// above them, in its own section); then, for a service, who served it
+/// without being one, each to 加為同工. Only names matching [query].
+class GroupStaffSections extends ConsumerWidget {
+  const GroupStaffSections({
+    super.key,
+    required this.group,
+    required this.name,
+    this.query = '',
+    this.addFirst = false,
+  });
+
+  final ChurchGroup group;
+
+  /// The group's name.
+  final String name;
+  final String query;
+  final bool addFirst;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = L10n.of(context);
+    final me = ref.watch(meProvider).value;
+    final members = ref.watch(membersProvider).value;
+    if (me == null || members == null) return const SizedBox.shrink();
+    final (:staff, :addable, :candidates) = groupPeople(ref, me, members, group);
+    final add = addable.isEmpty
+        ? null
+        : ListRow(
+            title: l10n.addGroupStaff,
+            leading: const Icon(Symbols.add_rounded),
+            chevron: false,
+            onTap: () => _add(context, ref, addable),
+          );
+    final shownStaff = [
+      for (final m in staff)
+        if (matchesSearch(m.name, query)) m,
+    ];
+    final shownCandidates = [
+      for (final c in candidates)
+        if (matchesSearch(c.member.name, query)) c,
+    ];
+    return Column(
+      children: [
+        if (addFirst && add != null) ListSection(children: [add]),
+        if (shownCandidates.isNotEmpty && addFirst) _candidates(context, ref, shownCandidates),
+        ListSection(
+          header: l10n.groupStaff,
+          footer: staff.isEmpty
+              ? l10n.noGroupStaff
+              : shownStaff.isEmpty
+              ? l10n.noMembersFound
+              : null,
+          children: [
+            for (final m in shownStaff)
+              ListRow(
+                title: m.name,
+                subtitle: switch (group) {
+                  ServiceGroup(:final id) => switch (m.zones.where((z) => z.serviceType == id).firstOrNull?.duties) {
+                    final duties? when duties.isNotEmpty => duties.join(l10n.listSeparator),
+                    _ => null,
+                  },
+                  MinistryGroup() || SmallGroup() => null,
+                },
+                chevron: false,
+                // Taken out at once, with 復原; only who this lead may move.
+                trailing: me.mayMove(m, group)
+                    ? RowButton(
+                        label: l10n.moveOutShort,
+                        semanticsLabel: l10n.removeFromGroupLabel(m.name, name),
+                        onPressed: () => runWithUndo(
+                          context,
+                          l10n.removedFromGroup(m.name, name),
+                          () => ref.read(churchWritesProvider).groupMember(m, group, member: false),
+                        ),
+                      )
+                    : null,
+              ),
+            if (!addFirst && add != null) add,
+          ],
+        ),
+        if (shownCandidates.isNotEmpty && !addFirst) _candidates(context, ref, shownCandidates),
+      ],
+    );
+  }
+
+  Widget _candidates(BuildContext context, WidgetRef ref, List<Candidate> candidates) {
+    final l10n = L10n.of(context);
+    return ListSection(
+      header: l10n.groupCandidates(name),
+      children: [
+        for (final cand in candidates)
+          ListRow(
+            title: cand.member.name,
+            subtitle: [
+              for (final e in cand.served.entries) l10n.groupCandidateServed(e.key, e.value),
+            ].join(l10n.listSeparator),
+            trailing: RowButton(
+              label: l10n.addAsStaff,
+              semanticsLabel: l10n.addAsStaffLabel(cand.member.name, name),
+              onPressed: () => runWithUndo(
+                context,
+                l10n.addedToGroup(cand.member.name, name),
+                () => ref
+                    .read(churchWritesProvider)
+                    .groupMember(cand.member, group, member: true, duties: cand.served.keys.toList()),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// 加入同工: anyone in the church this lead may add, picked from a list.
+  Future<void> _add(BuildContext context, WidgetRef ref, List<Member> addable) async {
+    final l10n = L10n.of(context);
+    final picked = await showAppSheet<Member>(
+      context,
+      expand: addable.length > 8,
+      builder: (context) => SafeArea(
+        child: SingleChildScrollView(
+          child: ListSection(
+            header: l10n.addGroupStaff,
+            children: [for (final m in addable) ListRow(title: m.name, onTap: () => Navigator.pop(context, m))],
+          ),
+        ),
+      ),
+    );
+    if (picked == null || !context.mounted) return;
+    await runWithUndo(
+      context,
+      l10n.addedToGroup(picked.name, name),
+      () => ref.read(churchWritesProvider).groupMember(picked, group, member: true),
+    );
+  }
+}
+
 /// One group's page (#82, #94). A service's: its settings (name, weekday,
 /// 服事項目 with who is on each list, 常用特別活動; an admin's to change),
 /// its 負責人, its 小組 (#85), its 人數, its 同工 and those who served it
@@ -208,17 +420,7 @@ class GroupScreen extends ConsumerWidget {
     final editsSmall = small != null && me.mayEditSmallGroup(small.service, small.service);
     bool isLead(Member m) => m.leadsGroup(group);
     final leaders = [...members.where(isLead)]..sort((a, b) => a.name.compareTo(b.name));
-    final addable = [
-      for (final m in members)
-        if (!m.isIn(group) && me.mayMove(m, group)) m,
-    ]..sort((a, b) => a.name.compareTo(b.name));
-    final staff = [...members.where((m) => m.isIn(group))]..sort((a, b) => a.name.compareTo(b.name));
-    final candidates = group is ServiceGroup
-        ? [
-            for (final c in groupCandidates(group, ref.watch(_allRostersProvider).value ?? const [], members, null))
-              if (me.mayMove(c.member, group)) c,
-          ]
-        : const <Candidate>[];
+    final (:staff, addable: _, :candidates) = groupPeople(ref, me, members, group);
     final serviceSmallGroups = switch (group) {
       ServiceGroup(:final id) => [...smallGroups.where((g) => g.service == id)],
       _ => const <SmallGroupDetails>[],
@@ -329,76 +531,29 @@ class GroupScreen extends ConsumerWidget {
               ),
             ),
           if (attendance != null) box(AttendanceSection(group: attendance)),
-          // A 事工's people are those on its duties' lists (#94).
-          if (ministry == null)
+          // A service's 同工 may be a hundred: counted here, listed on
+          // their own page, with who served it without being one.
+          if (group is ServiceGroup)
             box(
               ListSection(
-                header: l10n.groupStaff,
-                footer: staff.isEmpty ? l10n.noGroupStaff : null,
                 children: [
-                  for (final m in staff)
+                  ListRow(
+                    title: l10n.groupStaff,
+                    value: l10n.groupStaffCount(staff.length),
+                    onTap: () => context.push(groupStaffPage(group)),
+                  ),
+                  if (candidates.isNotEmpty)
                     ListRow(
-                      title: m.name,
-                      subtitle: switch (group) {
-                        ServiceGroup(:final id) => switch (m.zones
-                            .where((z) => z.serviceType == id)
-                            .firstOrNull
-                            ?.duties) {
-                          final duties? when duties.isNotEmpty => duties.join(l10n.listSeparator),
-                          _ => null,
-                        },
-                        MinistryGroup() || SmallGroup() => null,
-                      },
-                      chevron: false,
-                      // Taken out at once, with 復原; only who this lead may move.
-                      trailing: me.mayMove(m, group)
-                          ? RowButton(
-                              label: l10n.moveOutShort,
-                              semanticsLabel: l10n.removeFromGroupLabel(m.name, name),
-                              onPressed: () => runWithUndo(
-                                context,
-                                l10n.removedFromGroup(m.name, name),
-                                () => ref.read(churchWritesProvider).groupMember(m, group, member: false),
-                              ),
-                            )
-                          : null,
-                    ),
-                  if (addable.isNotEmpty)
-                    ListRow(
-                      title: l10n.addGroupStaff,
-                      leading: const Icon(Symbols.add_rounded),
-                      chevron: false,
-                      onTap: () => _add(context, ref, addable, name),
+                      title: l10n.groupCandidates(name),
+                      value: l10n.groupStaffCount(candidates.length),
+                      onTap: () => context.push(groupStaffPage(group)),
                     ),
                 ],
               ),
-            ),
-          if (candidates.isNotEmpty)
-            box(
-              ListSection(
-                header: l10n.groupCandidates(name),
-                children: [
-                  for (final cand in candidates)
-                    ListRow(
-                      title: cand.member.name,
-                      subtitle: [
-                        for (final e in cand.served.entries) l10n.groupCandidateServed(e.key, e.value),
-                      ].join(l10n.listSeparator),
-                      trailing: RowButton(
-                        label: l10n.addAsStaff,
-                        semanticsLabel: l10n.addAsStaffLabel(cand.member.name, name),
-                        onPressed: () => runWithUndo(
-                          context,
-                          l10n.addedToGroup(cand.member.name, name),
-                          () => ref
-                              .read(churchWritesProvider)
-                              .groupMember(cand.member, group, member: true, duties: cand.served.keys.toList()),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
+            )
+          // A 小組's, here; a 事工's are those on its duties' lists (#94).
+          else if (ministry == null)
+            box(GroupStaffSections(group: group, name: name)),
           if (admin && ministry != null)
             box(
               ListSection(
@@ -570,29 +725,6 @@ class GroupScreen extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) showToast(context, saveErrorText(l10n, e));
     }
-  }
-
-  /// 加入同工: anyone in the church this lead may add, picked from a list.
-  Future<void> _add(BuildContext context, WidgetRef ref, List<Member> addable, String name) async {
-    final l10n = L10n.of(context);
-    final picked = await showAppSheet<Member>(
-      context,
-      expand: addable.length > 8,
-      builder: (context) => SafeArea(
-        child: SingleChildScrollView(
-          child: ListSection(
-            header: l10n.addGroupStaff,
-            children: [for (final m in addable) ListRow(title: m.name, onTap: () => Navigator.pop(context, m))],
-          ),
-        ),
-      ),
-    );
-    if (picked == null || !context.mounted) return;
-    await runWithUndo(
-      context,
-      l10n.addedToGroup(picked.name, name),
-      () => ref.read(churchWritesProvider).groupMember(picked, group, member: true),
-    );
   }
 
   Future<void> _rename(BuildContext context, WidgetRef ref, Ministry ministry) async {

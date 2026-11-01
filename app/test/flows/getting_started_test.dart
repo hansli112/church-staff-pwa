@@ -32,7 +32,8 @@ void main() {
     expect(find.text('排青年崇拜的服事表、加入和移出它的同工'), findsOneWidget);
 
     await tapText(tester, '加入青年崇拜的同工');
-    expect(find.text('加入同工'), findsOneWidget, reason: "the service's page, where 同工 are added");
+    expect(find.text('青年崇拜的同工'), findsOneWidget, reason: 'its 同工, where they are added');
+    expect(find.text('加入同工'), findsOneWidget);
     await back(tester);
 
     await tapText(tester, '排青年崇拜的服事');

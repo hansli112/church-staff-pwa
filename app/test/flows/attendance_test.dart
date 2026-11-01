@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/core/design/components.dart';
+import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
@@ -396,6 +397,7 @@ void main() {
       await tester.enterText(find.widgetWithText(TextField, '人數'), '30');
       await tester.pump();
       expect(find.text('和其他小組一起'), findsOneWidget);
+      expect(b.warmedUp, contains(WarmUp.attendanceTogether), reason: 'filled in together through the backend');
       await tapText(tester, '平安小組');
       await tapText(tester, '儲存');
       final days = b.attendance['grace']!;

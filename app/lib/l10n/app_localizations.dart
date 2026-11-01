@@ -1420,6 +1420,18 @@ abstract class L10n {
   /// **'同工'**
   String get groupStaff;
 
+  /// Title of a service's page of its team members
+  ///
+  /// In zh, this message translates to:
+  /// **'{group}的同工'**
+  String groupStaffTitle(String group);
+
+  /// How many team members a service has, or how many served it without being one, beside the row opening them
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 人'**
+  String groupStaffCount(int count);
+
   /// When a group has no team members
   ///
   /// In zh, this message translates to:

@@ -9,6 +9,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
+import '../../data/backend.dart' show WarmUp;
 import '../../domain/day.dart';
 import '../../domain/models.dart';
 import '../../domain/swap.dart';
@@ -62,6 +63,8 @@ Future<void> showMyDutyMenu(BuildContext context, WidgetRef ref, Roster roster, 
   final today = ref.read(todayProvider);
   final service = ref.read(servicesProvider).value?.byId(roster.type)?.name ?? '';
   final open = myOpenAsk(ref, roster, duty);
+  // Asking waits on the backend; it starts while I choose.
+  if (open == null) ref.read(backendProvider).warmUp(WarmUp.swapAsk);
   final choice = await showAppSheet<String>(
     context,
     builder: (context) => SafeArea(

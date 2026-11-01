@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/core/design/components.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 
 import 'package:martha/data/memory/memory_backend.dart';
@@ -793,22 +794,28 @@ void main() {
     expect(findShown('套用到服事表'), findsWidgets);
   });
 
-  testWidgets('staff do not see photo import', (tester) async {
+  testWidgets('staff do not see 安排服事 or photo import', (tester) async {
     await pumpApp(tester, seededChurch(as: staffMei));
     await go(tester, '/rosters');
+    expect(find.text('安排服事'), findsNothing);
     expect(find.text('照片匯入'), findsNothing);
   });
 
-  testWidgets('photo import says what it does, in words, and opens from there', (tester) async {
+  testWidgets('安排服事 says itself in words on 服事表; photo import is a tap into its menu', (tester) async {
     await pumpApp(tester, seededChurch());
     await go(tester, '/rosters');
-    final inBar = find.descendant(of: find.byType(AppBar), matching: find.text('照片匯入'));
-    expect(inBar, findsOneWidget);
+    final inBar = find.descendant(of: find.byType(AppBar), matching: find.text('安排服事'));
+    expect(inBar, findsOneWidget, reason: 'what an arranger opens every month, not an icon');
+    expect(find.text('照片匯入'), findsNothing, reason: 'once, when starting out');
     await tester.tap(inBar);
+    await settle(tester);
+    await tester.tap(find.byIcon(Symbols.more_horiz_rounded));
+    await settle(tester);
+    await tester.tap(find.text('照片匯入'));
     await settle(tester);
     expect(
       GoRouter.of(tester.element(find.byType(Scaffold).last)).state.matchedLocation,
-      startsWith('/rosters/import/'),
+      startsWith('/rosters/import/sunday'),
     );
   });
 }

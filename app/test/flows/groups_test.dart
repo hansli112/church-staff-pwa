@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/core/design/components.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
@@ -249,9 +251,71 @@ void main() {
     b.members['grace']!['editor'] = editor.withIdentities(const [ServiceLead('youth')]);
     await pumpApp(tester, b);
     await go(tester, '/me/groups/service/youth');
+    // Said on the service's page; added on its 同工's.
+    expect(findShown('排過青年崇拜的服事，還不是同工'), findsOneWidget);
+    await tapText(tester, '1 人');
     await tapText(tester, '加為同工');
     final added = b.members['grace']!['john']!;
     expect(added.zoneTypes, ['youth']);
     expect(added.serves('youth', '司會'), isTrue);
+  });
+
+  testWidgets("a service's page counts its 同工; their own page has 加入同工 first, and a search", (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/me/groups/service/sunday');
+    await tester.scrollUntilVisible(find.text('3 人'), 200, scrollable: find.byType(Scrollable).last);
+    expect(find.text('加入同工'), findsNothing, reason: 'not under a list that may run to a hundred');
+    await tapText(tester, '3 人');
+    expect(find.text('主日崇拜的同工'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('加入同工')).dy,
+      lessThan(tester.getTopLeft(find.text('李美玉')).dy),
+      reason: 'in sight as it opens',
+    );
+    await tester.enterText(find.byType(TextField), '美玉');
+    await settle(tester);
+    expect(find.text('陳志豪'), findsNothing);
+    await tapText(tester, '移出');
+    expect(b.members['grace']!['mei']!.zoneTypes, isEmpty);
+  });
+
+  testWidgets("a duty's list on its service's page: the first three, and how many more", (tester) async {
+    final b = seededChurch(
+      extra: [
+        for (final (uid, name) in [('w1', '王一'), ('w2', '王二'), ('w3', '王三')])
+          Member(
+            uid: uid,
+            name: name,
+            zones: const [
+              Zone(serviceType: 'sunday', duties: ['招待']),
+            ],
+          ),
+      ],
+    );
+    await pumpApp(tester, b);
+    await go(tester, '/me/groups/service/sunday');
+    expect(find.text('陳志豪、李美玉、王一 +2'), findsOneWidget);
+  });
+
+  testWidgets('in 聚會與事工 a service shows it opens its page, as well as that it can be moved', (tester) async {
+    await pumpApp(tester, seededChurch());
+    await go(tester, '/me/groups');
+    final row = find.ancestor(of: find.text('主日崇拜'), matching: find.byType(ListRow)).first;
+    expect(find.descendant(of: row, matching: find.byIcon(Symbols.chevron_right_rounded)), findsOneWidget);
+    expect(find.descendant(of: row, matching: find.byIcon(Symbols.drag_handle_rounded)), findsOneWidget);
+  });
+
+  testWidgets("行政 reads a service's 同工 on their page, and moves nobody; a search with no one says so", (tester) async {
+    await pumpApp(tester, seededChurch(as: office, extra: [office]));
+    await go(tester, '/me/groups/service/sunday');
+    await tester.scrollUntilVisible(find.text('3 人'), 200, scrollable: find.byType(Scrollable).last);
+    await tapText(tester, '3 人');
+    expect(find.text('李美玉'), findsOneWidget);
+    expect(find.text('移出'), findsNothing);
+    expect(find.text('加入同工'), findsNothing);
+    await tester.enterText(find.byType(TextField), '沒有這個人');
+    await settle(tester);
+    expect(find.text('找不到這位同工'), findsOneWidget);
   });
 }

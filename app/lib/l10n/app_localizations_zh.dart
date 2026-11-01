@@ -739,6 +739,16 @@ class L10nZh extends L10n {
   String get groupStaff => '同工';
 
   @override
+  String groupStaffTitle(String group) {
+    return '$group的同工';
+  }
+
+  @override
+  String groupStaffCount(int count) {
+    return '$count 人';
+  }
+
+  @override
   String get noGroupStaff => '還沒有同工';
 
   @override
@@ -4081,6 +4091,16 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get groupStaff => '同工';
+
+  @override
+  String groupStaffTitle(String group) {
+    return '$group的同工';
+  }
+
+  @override
+  String groupStaffCount(int count) {
+    return '$count 人';
+  }
 
   @override
   String get noGroupStaff => '还没有同工';

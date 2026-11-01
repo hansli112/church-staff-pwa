@@ -740,6 +740,16 @@ class L10nKo extends L10n {
   String get groupStaff => '멤버';
 
   @override
+  String groupStaffTitle(String group) {
+    return '$group 멤버';
+  }
+
+  @override
+  String groupStaffCount(int count) {
+    return '$count명';
+  }
+
+  @override
   String get noGroupStaff => '아직 멤버가 없어요';
 
   @override

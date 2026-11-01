@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
@@ -64,6 +65,7 @@ void main() {
     await go(tester, '/rosters/sunday/2026-10-04');
     await myRow(tester, '司琴');
     expect(find.text('請人代'), findsOneWidget);
+    expect(b.warmedUp, contains(WarmUp.swapAsk), reason: 'asking waits on it');
     await tester.tap(find.text('請人代'));
     await settle(tester);
     expect(find.text('已請 1 位同工代，有人接手會通知你'), findsOneWidget);

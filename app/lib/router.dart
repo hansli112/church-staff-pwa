@@ -178,17 +178,30 @@ final routerProvider = Provider<GoRouter>((ref) {
                     ),
                   ),
                   // These before :type/:day, which would take them for a service.
-                  page('plan/:type', (s) => PlanWeeksScreen(serviceType: s.pathParameters['type']!)),
-                  page('request/:id', (s) => SwapRequestScreen(id: s.pathParameters['id']!)),
+                  page(
+                    'plan/:type',
+                    (s) => WarmUpOnOpen(
+                      WarmUp.planWeeks,
+                      child: _ledDutiesWarm(PlanWeeksScreen(serviceType: s.pathParameters['type']!)),
+                    ),
+                  ),
+                  page(
+                    'request/:id',
+                    (s) => WarmUpOnOpen(WarmUp.swapAnswer, child: SwapRequestScreen(id: s.pathParameters['id']!)),
+                  ),
                   page(
                     'event/:id',
-                    (s) => EventRosterScreen(eventId: s.pathParameters['id']!, event: s.extra as CalendarEvent?),
+                    (s) => _ledDutiesWarm(
+                      EventRosterScreen(eventId: s.pathParameters['id']!, event: s.extra as CalendarEvent?),
+                    ),
                   ),
                   page(
                     ':type/:day',
-                    (s) => RosterDayScreen(
-                      serviceType: s.pathParameters['type']!,
-                      dayKey: s.pathParameters['day']!,
+                    (s) => _ledDutiesWarm(
+                      RosterDayScreen(
+                        serviceType: s.pathParameters['type']!,
+                        dayKey: s.pathParameters['day']!,
+                      ),
                     ),
                   ),
                 ],
@@ -221,7 +234,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                   page('calendar', (s) => DeferredPage.calendarSettings(result: s.uri.queryParameters['result'])),
                   page('notifications', (_) => const NotificationsScreen()),
                   page('unavailable', (_) => const UnavailableScreen()),
-                  page('attendance', (_) => const AttendanceOverviewScreen()),
+                  page(
+                    'attendance',
+                    (_) => const WarmUpOnOpen(WarmUp.attendanceRemind, child: AttendanceOverviewScreen()),
+                  ),
                   page('invites', (_) => const InvitesScreen()),
                   page(
                     'groups',
@@ -233,6 +249,15 @@ final routerProvider = Provider<GoRouter>((ref) {
                           WarmUp.serviceEdit,
                           child: GroupScreen(group: ServiceGroup(s.pathParameters['id']!)),
                         ),
+                        routes: [
+                          page(
+                            'staff',
+                            (s) => WarmUpOnOpen(
+                              WarmUp.groupStaff,
+                              child: GroupStaffScreen(group: ServiceGroup(s.pathParameters['id']!)),
+                            ),
+                          ),
+                        ],
                       ),
                       // Not under the service's page, which a 事工's 負責人
                       // opening it from a link may not see.
@@ -258,7 +283,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                   ),
                   page(
                     'members',
-                    (_) => const MembersScreen(),
+                    (_) => WarmUpOnOpen(
+                      WarmUp.joinAnswer,
+                      when: joinRequestsProvider.select((r) => r.value?.isNotEmpty ?? false),
+                      child: const MembersScreen(),
+                    ),
                     routes: [
                       page(
                         ':uid',
@@ -310,4 +339,13 @@ Page<void> fadeInPage(GoRouterState state, Widget child) => CustomTransitionPage
       child: covered,
     );
   },
+);
+
+/// [page], where a 事工's 負責人 arranges, warming up the backend's check
+/// of their changes (#82); not for an admin, whose are written outright.
+/// Whichever service or event the page goes on to.
+Widget _ledDutiesWarm(Widget page) => WarmUpOnOpen(
+  WarmUp.ledDuties,
+  when: meProvider.select((m) => m.value != null && !m.value!.isAdmin && m.value!.leadMinistries.isNotEmpty),
+  child: page,
 );

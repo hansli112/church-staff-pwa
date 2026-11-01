@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
+import '../../data/backend.dart' show WarmUp;
 import '../../domain/models.dart';
 import '../../domain/roster_edit.dart';
 import '../../l10n/app_localizations.dart';
@@ -143,6 +144,8 @@ class _DutyRow extends ConsumerWidget {
     final me = ref.read(uidProvider);
     final mine = duty.uids[person] == me && asksForMyDuty(roster, duty.role, me, ref.read(todayProvider));
     final open = mine ? myOpenAsk(ref, roster, duty.role) : null;
+    // 請人代 waits on the backend; it starts while I choose.
+    if (mine && open == null) ref.read(backendProvider).warmUp(WarmUp.swapAsk);
     final choice = await showAppSheet<String>(
       context,
       builder: (context) => SafeArea(

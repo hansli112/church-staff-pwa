@@ -244,6 +244,8 @@
   "noLeads": "还没有负责人",
   "assignLead": "指派负责人",
   "groupStaff": "同工",
+  "groupStaffTitle": "{group}的同工",
+  "groupStaffCount": "{count} 人",
   "noGroupStaff": "还没有同工",
   "groupCandidates": "排过{group}的事奉，还不是同工",
   "groupCandidateServed": "{duty} {count} 次",

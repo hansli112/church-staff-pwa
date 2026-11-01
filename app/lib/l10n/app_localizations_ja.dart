@@ -739,6 +739,16 @@ class L10nJa extends L10n {
   String get groupStaff => 'メンバー';
 
   @override
+  String groupStaffTitle(String group) {
+    return '$groupのメンバー';
+  }
+
+  @override
+  String groupStaffCount(int count) {
+    return '$count人';
+  }
+
+  @override
   String get noGroupStaff => 'メンバーはまだいません';
 
   @override

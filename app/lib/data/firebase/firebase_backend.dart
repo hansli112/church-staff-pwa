@@ -104,8 +104,17 @@ class FirebaseBackend implements Backend {
   void warmUp(WarmUp what) => _calls.warm(switch (what) {
     WarmUp.calendarWrite => const ['calendarWrite'],
     WarmUp.serviceEdit => const ['editService', 'editSmallGroup'],
-    WarmUp.smallGroupEdit => const ['editSmallGroup'],
+    // Its 同工 are on its page too.
+    WarmUp.smallGroupEdit => const ['editSmallGroup', 'setGroupMember'],
     WarmUp.dutyList => const ['setDuty'],
+    WarmUp.planWeeks => const ['notifyPlanned'],
+    WarmUp.ledDuties => const ['editLedDuties'],
+    WarmUp.swapAsk => const ['askCover', 'askSwap'],
+    WarmUp.swapAnswer => const ['answerSwap'],
+    WarmUp.groupStaff => const ['setGroupMember'],
+    WarmUp.joinAnswer => const ['answerJoinRequest'],
+    WarmUp.attendanceRemind => const ['remindAttendance'],
+    WarmUp.attendanceTogether => const ['fillAttendanceTogether'],
     WarmUp.joinChurch => const ['previewInvite', 'redeemInvite'],
     WarmUp.askToJoin => const ['requestToJoin'],
     WarmUp.createChurch => const ['createChurch'],

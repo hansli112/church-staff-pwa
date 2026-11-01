@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/gestures.dart' show kLongPressTimeout;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -51,6 +53,9 @@ class NotifyingBackend extends MemoryBackend {
   PlannedNotice notice = (people: 1, later: false);
   Object? error;
 
+  /// Holds 完成's telling until completed.
+  Completer<void>? held;
+
   @override
   ChurchData church(String churchId) => _NotifyingData(this, churchId);
 }
@@ -62,6 +67,7 @@ class _NotifyingData extends MemoryChurchData {
 
   @override
   Future<PlannedNotice> notifyPlanned(String serviceType) async {
+    await backend.held?.future;
     final error = backend.error;
     if (error != null) throw error;
     await super.notifyPlanned(serviceType);
@@ -430,7 +436,24 @@ void main() {
     expect(find.text('早上 7 點會通知 2 位同工'), findsOneWidget);
   });
 
-  testWidgets('a failed 完成 says so and stays; 重試 tells them and goes back', (tester) async {
+  testWidgets('完成 goes back at once, telling them behind it; told, it says so', (tester) async {
+    final backend = NotifyingBackend()..held = Completer();
+    final b = seededChurch(into: backend);
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    await pick(tester, '司琴', 11, '李美玉');
+    await tester.tap(find.text('完成'));
+    await settle(tester);
+    expect(path(tester), '/rosters', reason: 'not waiting for the backend to start');
+    expect(find.textContaining('還沒收到通知'), findsNothing, reason: 'they are being told');
+    expect(waiting(b), {'mei'});
+    backend.held!.complete();
+    await settle(tester);
+    expect(find.text('已通知 1 位同工'), findsOneWidget);
+    expect(waiting(b), isEmpty);
+  });
+
+  testWidgets('a failed 完成 says so on the page behind; 重試 tells them', (tester) async {
     final backend = NotifyingBackend()..error = const CloudException(CloudErrorCode.unavailable);
     final b = seededChurch(into: backend);
     await pumpApp(tester, b);
@@ -439,13 +462,12 @@ void main() {
     await tester.tap(find.text('完成'));
     await settle(tester);
     expect(waiting(b), {'mei'}, reason: 'nobody told');
-    expect(path(tester), '/rosters/plan/sunday');
+    expect(path(tester), '/rosters');
     backend.error = null;
     await tester.tap(find.text('重試'));
     await settle(tester);
     expect(find.text('已通知 1 位同工'), findsOneWidget);
     expect(waiting(b), isEmpty);
-    expect(path(tester), '/rosters');
   });
 
   testWidgets('fits with text at twice its size', (tester) async {

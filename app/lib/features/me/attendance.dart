@@ -6,6 +6,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
+import '../../data/backend.dart' show WarmUp;
 import '../../domain/day.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
@@ -186,6 +187,10 @@ Future<void> fillAttendance(
     ],
     _ => const <({String key, String name})>[],
   };
+  // Filled in together through the backend; it starts while they type.
+  if (others.isNotEmpty || (was?.together.isNotEmpty ?? false)) {
+    ref.read(backendProvider).warmUp(WarmUp.attendanceTogether);
+  }
   final value = await showAppSheet<AttendanceDay>(
     context,
     builder: (_) => _FillSheet(

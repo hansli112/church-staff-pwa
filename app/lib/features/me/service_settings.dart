@@ -62,6 +62,8 @@ class ServiceListSection extends ConsumerWidget {
             ? weekdayLabel(l10n, s.weekday)
             : '${weekdayLabel(l10n, s.weekday)}${l10n.dotSeparator}${l10n.serviceDisabled}',
         trailing: handle,
+        // Opens its page, which the handle alone does not say.
+        chevron: true,
         onTap: () => context.push('/me/groups/service/${s.id}'),
       ),
       after: [ListRow(title: l10n.serviceAdd, leading: const Icon(Symbols.add_rounded), onTap: add)],
@@ -94,13 +96,16 @@ List<Member> dutyPeople(List<Member> members, String serviceType, String duty, S
   ];
 }
 
-/// The names on [duty]'s list in [serviceType], for under its row; null
-/// while nobody is on it.
+/// Who is on [duty]'s list in [serviceType], for under its row: the first
+/// three, then +how many more; the whole list is a tap away. Null while
+/// nobody is on it.
 String? dutyPeopleLabel(WidgetRef ref, L10n l10n, String serviceType, String duty) {
   final members = ref.watch(membersProvider).value ?? const <Member>[];
   final order = ref.watch(staffOrderProvider(serviceType)).value ?? StaffOrder();
   final people = dutyPeople(members, serviceType, duty, order);
-  return people.isEmpty ? null : people.map((m) => m.name).join(l10n.listSeparator);
+  if (people.isEmpty) return null;
+  final names = people.take(3).map((m) => m.name).join(l10n.listSeparator);
+  return people.length > 3 ? '$names +${people.length - 3}' : names;
 }
 
 /// The duties and 特別活動 still on [service]'s rosters after [today] that
@@ -407,6 +412,7 @@ Widget serviceDutiesSliver(BuildContext context, WidgetRef ref, Service service,
     title: d,
     subtitle: dutyPeopleLabel(ref, l10n, service.id, d),
     trailing: handle,
+    chevron: true,
     onTap: () => context.push(dutyPage(service.id, d)),
   );
   if (!admin) {

@@ -1037,6 +1037,31 @@ enum WarmUp {
 
   /// A duty's page (#94): who is on its list, a tap away.
   dutyList,
+
+  /// 安排服事 (#90): 完成 tells who was put on or taken off.
+  planWeeks,
+
+  /// Where a 事工's 負責人 arranges (#82): the backend checks each change
+  /// is only to the duties it leads.
+  ledDuties,
+
+  /// 找人代／交換 (#92), as its menu opens.
+  swapAsk,
+
+  /// A request I was asked (#92): 我來／接受 or 不方便.
+  swapAnswer,
+
+  /// A service's 同工 (#94): 加入同工, 加為同工, 移出.
+  groupStaff,
+
+  /// 同工 with a request to join waiting (#88): 允許.
+  joinAnswer,
+
+  /// 回報人數 (#93): 提醒.
+  attendanceRemind,
+
+  /// 填寫人數 for a 小組 that may have met with others (聯合小組, #93).
+  attendanceTogether,
   joinChurch,
   askToJoin,
   createChurch,

@@ -756,6 +756,22 @@ class L10nEn extends L10n {
   String get groupStaff => 'Team members';
 
   @override
+  String groupStaffTitle(String group) {
+    return '$group team';
+  }
+
+  @override
+  String groupStaffCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '1 person',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get noGroupStaff => 'No team members yet';
 
   @override

@@ -244,6 +244,8 @@
   "noLeads": "No lead yet",
   "assignLead": "Assign a lead",
   "groupStaff": "Team members",
+  "groupStaffTitle": "{group} team",
+  "groupStaffCount": "{count, plural, =1{1 person} other{{count} people}}",
   "noGroupStaff": "No team members yet",
   "groupCandidates": "Served with {group}, not on the team yet",
   "groupCandidateServed": "{duty} ×{count}",

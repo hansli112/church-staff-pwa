@@ -48,21 +48,16 @@ class RostersScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(l10n.tabRosters),
         actions: [
-          if (canImport)
-            IconButton(
-              icon: const Icon(Symbols.calendar_view_month_rounded),
-              tooltip: l10n.planWeeksAction,
-              onPressed: () => context.push('/rosters/plan/${shown.id}'),
-            ),
-          // In words: no icon says "read a roster from a photo" at a glance.
+          // In words: what an arranger opens every month. Photo import,
+          // used when starting out, is in its menu and on an empty service.
           // Grows with the text only so far, like the bar's own buttons, so
           // the title beside it keeps its room.
           if (canImport)
             MediaQuery.withClampedTextScaling(
               maxScaleFactor: 1.5,
               child: TextButton(
-                onPressed: () => context.push('/rosters/import/${shown.id}'),
-                child: Text(l10n.photoImportAction),
+                onPressed: () => context.push('/rosters/plan/${shown.id}'),
+                child: Text(l10n.planWeeksAction),
               ),
             ),
         ],

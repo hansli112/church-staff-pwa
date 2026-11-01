@@ -244,6 +244,8 @@
   "noLeads": "リーダーはまだいません",
   "assignLead": "リーダーを指名",
   "groupStaff": "メンバー",
+  "groupStaffTitle": "{group}のメンバー",
+  "groupStaffCount": "{count}人",
   "noGroupStaff": "メンバーはまだいません",
   "groupCandidates": "{group}で奉仕したが、まだメンバーではない人",
   "groupCandidateServed": "{duty} {count}回",

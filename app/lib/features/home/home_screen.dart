@@ -155,7 +155,7 @@ class _GettingStarted extends ConsumerWidget {
         StartStep.addStaff => ListRow(
           title: l10n.gettingStartedAddStaff(name(group)),
           leading: const Icon(Symbols.group_add_rounded),
-          onTap: () => context.push(groupPage(group!)),
+          onTap: () => context.push(groupStaffPage(group!)),
         ),
         StartStep.planWeeks => ListRow(
           title: l10n.gettingStartedPlan(name(group)),

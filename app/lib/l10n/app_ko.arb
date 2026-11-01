@@ -244,6 +244,8 @@
   "noLeads": "아직 리더가 없어요",
   "assignLead": "리더 지정",
   "groupStaff": "멤버",
+  "groupStaffTitle": "{group} 멤버",
+  "groupStaffCount": "{count}명",
   "noGroupStaff": "아직 멤버가 없어요",
   "groupCandidates": "{group}에서 봉사했지만 아직 멤버가 아닌 사람",
   "groupCandidateServed": "{duty} {count}회",
