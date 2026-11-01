@@ -296,7 +296,7 @@ class EchoingChurchData implements ChurchData {
   Stream<Map<String, UnavailableDays>> everyonesUnavailableDays() => _inner.everyonesUnavailableDays();
 
   @override
-  Future<void> saveUnavailableDays(String uid, UnavailableDays days) => _inner.saveUnavailableDays(uid, days);
+  Future<void> saveMyUnavailableDays(UnavailableDays days) => _inner.saveMyUnavailableDays(days);
 
   @override
   Stream<DateTime?> lastUnavailableAsk(String serviceType) => _inner.lastUnavailableAsk(serviceType);

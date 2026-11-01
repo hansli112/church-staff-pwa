@@ -316,10 +316,10 @@ abstract interface class ChurchData {
   /// rosters.
   Stream<Map<String, UnavailableDays>> everyonesUnavailableDays();
 
-  /// Keeps [days] as the caller's own, [uid]: no one else writes them. At
-  /// most [Limits.unavailableSpans] stretches, each note at most
+  /// Keeps [days] as the caller's own: no one else writes them. At most
+  /// [Limits.unavailableSpans] stretches, each note at most
   /// [TextLimits.unavailableNote] characters.
-  Future<void> saveUnavailableDays(String uid, UnavailableDays days);
+  Future<void> saveMyUnavailableDays(UnavailableDays days);
 
   /// When 請同工填 last asked for [serviceType], if ever: for whoever
   /// arranges rosters.

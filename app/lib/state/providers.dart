@@ -230,6 +230,11 @@ final plannedNewsProvider = StreamProvider.autoDispose.family<bool, String>((ref
   return openChurch(ref).plannedNews(serviceType);
 });
 
+/// Whether I arrange any roster, and so see everyone's 不能服事的日子 (#91).
+final _arrangesRostersProvider = Provider<bool>(
+  (ref) => ref.watch(meProvider.select((m) => m.value?.arrangesRosters ?? false)),
+);
+
 /// My 不能服事的日子 (#91) in the current church.
 final myUnavailableDaysProvider = StreamProvider<UnavailableDays>((ref) {
   final uid = ref.watch(uidProvider);
@@ -240,15 +245,13 @@ final myUnavailableDaysProvider = StreamProvider<UnavailableDays>((ref) {
 /// Everyone's 不能服事的日子 (#91), by uid. Only for those who arrange
 /// rosters (Member.arrangesRosters); nobody's for others.
 final unavailableDaysProvider = StreamProvider<Map<String, UnavailableDays>>((ref) {
-  final canRead = ref.watch(meProvider.select((m) => m.value?.arrangesRosters ?? false));
-  if (!canRead) return Stream.value(const {});
+  if (!ref.watch(_arrangesRostersProvider)) return Stream.value(const {});
   return openChurch(ref).everyonesUnavailableDays();
 });
 
 /// When 請同工填 last asked for [serviceType] (#91).
 final lastUnavailableAskProvider = StreamProvider.autoDispose.family<DateTime?, String>((ref, serviceType) {
-  final canRead = ref.watch(meProvider.select((m) => m.value?.arrangesRosters ?? false));
-  if (!canRead) return Stream.value(null);
+  if (!ref.watch(_arrangesRostersProvider)) return Stream.value(null);
   return openChurch(ref).lastUnavailableAsk(serviceType);
 });
 

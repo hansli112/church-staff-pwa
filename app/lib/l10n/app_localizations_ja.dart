@@ -3106,7 +3106,7 @@ class L10nJa extends L10n {
   String get unavailableTitle => '奉仕できない日';
 
   @override
-  String get unavailableHint => '日をタップすると終日奉仕できない日になり、もう一度タップで解除。長押しして数日なぞると期間で入力できます。奉仕を決める人だけが見られます。';
+  String get unavailableHint => '日をタップすると終日奉仕できない日になり、もう一度タップで解除。長押しして数日なぞると期間で入力できます。奉仕を割り当てる人だけが見られます。';
 
   @override
   String get unavailableAddRange => '期間を追加';
@@ -3127,13 +3127,13 @@ class L10nJa extends L10n {
   String get unavailableNoteHint => '任意（例：旅行）';
 
   @override
-  String get unavailableNoteFooter => 'タップすると理由を書けます。奉仕を決める人が選ぶときに見えます。';
+  String get unavailableNoteFooter => 'タップすると理由を書けます。奉仕を割り当てる人が選ぶときに見えます';
 
   @override
   String get unavailableServing => 'この日はすでに奉仕が入っています';
 
   @override
-  String get unavailableServingFooter => '担当者には、この日は奉仕できないと表示されます。';
+  String get unavailableServingFooter => 'リーダーには、この日は奉仕できないと表示されます';
 
   @override
   String get pickerUnavailable => 'この日は不可';
@@ -3144,7 +3144,7 @@ class L10nJa extends L10n {
   }
 
   @override
-  String dutyUpdatedAway(String duty, String names) {
+  String dutyUpdatedUnavailable(String duty, String names) {
     return '$dutyを更新しました・$namesはこの日は不可';
   }
 
@@ -3161,7 +3161,7 @@ class L10nJa extends L10n {
 
   @override
   String planAskConfirm(int count, String months) {
-    return '$count人に$monthsの奉仕できない日の入力を依頼しますか？';
+    return '$count人のメンバーに$monthsの奉仕できない日の入力を依頼しますか？';
   }
 
   @override

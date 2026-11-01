@@ -508,24 +508,18 @@ describe('不能服事的日子 (unavailable)', () => {
   const mine = (uid, church = A) => doc(as(uid), `churches/${church}/unavailable/${uid}`);
   const span = { from: '2030-12-20', to: '2030-12-27', note: '出國' };
 
-  it('只有本人寫，本人讀得到自己的', async () => {
-    await assertSucceeds(setDoc(mine(MEMBER_A), { spans: [span], updatedAt: serverTimestamp() }));
+  it('本人讀得到自己的；寫入只經過後端（saveUnavailableDays）', async () => {
+    await seed(`churches/${A}/unavailable/${MEMBER_A}`, { spans: [span] });
     await assertSucceeds(getDoc(mine(MEMBER_A)));
-    await assertSucceeds(deleteDoc(mine(MEMBER_A)));
-    await assertFails(setDoc(doc(as(ADMIN_A), `churches/${A}/unavailable/${MEMBER_A}`), { spans: [span] }));
     await assertFails(getDocs(collection(as(MEMBER_A), `churches/${A}/unavailable`)));
+    await assertFails(setDoc(mine(MEMBER_A), { spans: [span] }));
+    await assertFails(deleteDoc(mine(MEMBER_A)));
+    await assertFails(setDoc(doc(as(ADMIN_A), `churches/${A}/unavailable/${MEMBER_A}`), { spans: [span] }));
   });
 
-  it('只有 spans，最多 100 段', async () => {
-    await assertFails(setDoc(mine(MEMBER_A), { spans: [span], uid: MEMBER_A }));
-    await assertFails(setDoc(mine(MEMBER_A), { spans: 'x' }));
-    await assertFails(setDoc(mine(MEMBER_A), { spans: Array(101).fill(span) }));
-    await assertSucceeds(setDoc(mine(MEMBER_A), { spans: Array(100).fill(span) }));
-  });
-
-  it('不是這間教會的、停用教會的都不行；請同工填只有後端寫', async () => {
-    await assertFails(setDoc(mine(ADMIN_B), { spans: [span] }));
-    await assertFails(setDoc(mine(MEMBER_S, SUSPENDED), { spans: [span] }));
+  it('不是這間教會的、停用教會的都讀不到；請同工填只有後端寫', async () => {
+    await seed(`churches/${SUSPENDED}/unavailable/${MEMBER_S}`, { spans: [span] });
+    await assertFails(getDoc(mine(MEMBER_S, SUSPENDED)));
     await assertFails(getDocs(collection(as(ADMIN_B), `churches/${A}/unavailable`)));
     await assertFails(setDoc(doc(as(ADMIN_A), `churches/${A}/unavailableAsks/sunday`), { by: ADMIN_A }));
   });

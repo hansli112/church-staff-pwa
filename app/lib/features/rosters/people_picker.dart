@@ -354,7 +354,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
   Widget _list(L10n l10n, AppColors c) {
     final q = nameKey(_query);
     final servingSet = _serving.toSet();
-    final serving = _awayLast([
+    final serving = _unavailableLast([
       for (final n in _serving)
         if (_matches(n, q)) n,
     ], (n) => n);
@@ -362,7 +362,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
     // Nobody serves this duty yet (a new church): offer everyone rather
     // than an empty list that only a search would fill.
     final others = searching || _serving.isEmpty
-        ? _awayLast([
+        ? _unavailableLast([
             for (final m in _others)
               if (_matches(m.name, q) && !servingSet.contains(m.name)) m,
           ], (m) => m.name)
@@ -486,7 +486,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
   }
 
   /// [list] in its order, those who cannot serve the day after the rest.
-  List<T> _awayLast<T>(List<T> list, String Function(T) name) => [
+  List<T> _unavailableLast<T>(List<T> list, String Function(T) name) => [
     for (final x in list)
       if (!widget.unavailable.contains(name(x))) x,
     for (final x in list)

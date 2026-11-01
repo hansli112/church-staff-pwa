@@ -3122,13 +3122,13 @@ class L10nZh extends L10n {
   String get unavailableNoteHint => '選填，例如出國';
 
   @override
-  String get unavailableNoteFooter => '點一段寫原因；排服事的人選人時看得到。';
+  String get unavailableNoteFooter => '點一段寫原因；排服事的人選人時看得到';
 
   @override
   String get unavailableServing => '這幾天你已經被排到';
 
   @override
-  String get unavailableServingFooter => '負責人排的時候會看到你這天不行。';
+  String get unavailableServingFooter => '負責人排的時候會看到你這天不行';
 
   @override
   String get pickerUnavailable => '這天不行';
@@ -3139,7 +3139,7 @@ class L10nZh extends L10n {
   }
 
   @override
-  String dutyUpdatedAway(String duty, String names) {
+  String dutyUpdatedUnavailable(String duty, String names) {
     return '已更新$duty・$names這天不行';
   }
 
@@ -6286,13 +6286,13 @@ class L10nZhHans extends L10nZh {
   String get unavailableNoteHint => '选填，例如出国';
 
   @override
-  String get unavailableNoteFooter => '点一段写原因；排事奉的人选人时看得到。';
+  String get unavailableNoteFooter => '点一段写原因；排事奉的人选人时看得到';
 
   @override
   String get unavailableServing => '这几天你已经被排到';
 
   @override
-  String get unavailableServingFooter => '负责人排的时候会看到你这天不行。';
+  String get unavailableServingFooter => '负责人排的时候会看到你这天不行';
 
   @override
   String get pickerUnavailable => '这天不行';
@@ -6303,7 +6303,7 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String dutyUpdatedAway(String duty, String names) {
+  String dutyUpdatedUnavailable(String duty, String names) {
     return '已更新$duty・$names这天不行';
   }
 

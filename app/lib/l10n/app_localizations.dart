@@ -5575,7 +5575,7 @@ abstract class L10n {
   /// No description provided for @unavailableNoteFooter.
   ///
   /// In zh, this message translates to:
-  /// **'點一段寫原因；排服事的人選人時看得到。'**
+  /// **'點一段寫原因；排服事的人選人時看得到'**
   String get unavailableNoteFooter;
 
   /// Header over the days a member marked but is already arranged to serve
@@ -5587,7 +5587,7 @@ abstract class L10n {
   /// No description provided for @unavailableServingFooter.
   ///
   /// In zh, this message translates to:
-  /// **'負責人排的時候會看到你這天不行。'**
+  /// **'負責人排的時候會看到你這天不行'**
   String get unavailableServingFooter;
 
   /// Under a name in the picker, and read out on 安排服事: they marked the day as one they can't serve
@@ -5606,7 +5606,7 @@ abstract class L10n {
   ///
   /// In zh, this message translates to:
   /// **'已更新{duty}・{names}這天不行'**
-  String dutyUpdatedAway(String duty, String names);
+  String dutyUpdatedUnavailable(String duty, String names);
 
   /// Menu on 安排服事 (#91): pushes the people on the lists to mark the days they can't serve
   ///

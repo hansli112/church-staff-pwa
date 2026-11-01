@@ -3313,13 +3313,13 @@ class L10nEn extends L10n {
   String get unavailableNoteHint => 'Optional, e.g. traveling';
 
   @override
-  String get unavailableNoteFooter => 'Tap one to add a reason; those who arrange serving see it when picking people.';
+  String get unavailableNoteFooter => 'Tap one to add a reason; those who arrange serving see it when picking people';
 
   @override
   String get unavailableServing => 'You\'re already serving on these days';
 
   @override
-  String get unavailableServingFooter => 'Whoever arranges it will see you can\'t make it.';
+  String get unavailableServingFooter => 'Whoever arranges it will see you can\'t make it';
 
   @override
   String get pickerUnavailable => 'Can\'t serve this day';
@@ -3330,7 +3330,7 @@ class L10nEn extends L10n {
   }
 
   @override
-  String dutyUpdatedAway(String duty, String names) {
+  String dutyUpdatedUnavailable(String duty, String names) {
     return 'Updated $duty · $names can\'t serve this day';
   }
 
@@ -3350,8 +3350,8 @@ class L10nEn extends L10n {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Ask $count people for the days they can\'t serve in $months?',
-      one: 'Ask 1 person for the days they can\'t serve in $months?',
+      other: 'Ask $count team members for the days they can\'t serve in $months?',
+      one: 'Ask 1 team member for the days they can\'t serve in $months?',
     );
     return '$_temp0';
   }

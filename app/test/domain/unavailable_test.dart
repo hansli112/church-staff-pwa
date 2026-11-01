@@ -43,7 +43,7 @@ void main() {
 
   test('from today on, stretches already over are gone; one under way stays', () {
     final days = const UnavailableDays().add(_nov(3), _nov(5)).add(_nov(9), _nov(12)).add(_nov(20), _nov(20));
-    expect(days.from(_nov(10)).spans, [UnavailableSpan(_nov(9), _nov(12)), UnavailableSpan(_nov(20), _nov(20))]);
+    expect(days.since(_nov(10)).spans, [UnavailableSpan(_nov(9), _nov(12)), UnavailableSpan(_nov(20), _nov(20))]);
   });
 
   test("who cannot serve on a roster's days, an event's over several", () {
@@ -51,15 +51,15 @@ void main() {
       'mei': const UnavailableDays().add(_nov(20), _nov(25), note: '出國'),
       'hao': const UnavailableDays().add(_nov(15), _nov(15)),
     };
-    expect(awayOn(Roster(type: 'sunday', day: _nov(22)), everyone), {
+    expect(unavailableOn(Roster(type: 'sunday', day: _nov(22)), everyone), {
       'mei': UnavailableSpan(_nov(20), _nov(25), note: '出國'),
     });
-    expect(awayOn(Roster(type: 'sunday', day: _nov(29)), everyone), isEmpty);
+    expect(unavailableOn(Roster(type: 'sunday', day: _nov(29)), everyone), isEmpty);
     final retreat = Roster(
       type: '',
       day: _nov(14),
       forEvent: RosterEvent(eventId: 'e1', title: '退修會', lastDay: _nov(16)),
     );
-    expect(awayOn(retreat, everyone).keys, ['hao']);
+    expect(unavailableOn(retreat, everyone).keys, ['hao']);
   });
 }

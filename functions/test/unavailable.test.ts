@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
 
 import { onMemberDeleted } from '../src/triggers.js';
-import { askUnavailable } from '../src/unavailable.js';
+import { askUnavailable, saveUnavailableDays } from '../src/unavailable.js';
 import { memoryGoogle } from '../src/memoryGoogle.js';
 import { caller, clearFirestore, db, deps, fakePush, rejectsWith, seedChurch, setNow } from './support.js';
 
@@ -57,6 +57,31 @@ describe('請同工填 (askUnavailable)', () => {
     await rejectsWith(ask('lead', { from: '2027-02' }), 'unknown');
     await rejectsWith(ask('lead', { to: '2027-13' }), 'unknown');
     await rejectsWith(ask('lead', { extra: 1 }), 'unknown');
+  });
+});
+
+describe('saveUnavailableDays', () => {
+  const save = (spans: unknown, uid = 'mei') => saveUnavailableDays(deps, caller(uid), { churchId: 'C1', spans });
+
+  test("a member's own, in order, each reason trimmed", async () => {
+    await church();
+    await save([{ from: '2026-12-20', to: '2026-12-27', note: ' 出國 ' }, { from: '2026-11-15', to: '2026-11-15', note: '' }]);
+    assert.deepEqual((await db.doc('churches/C1/unavailable/mei').get()).get('spans'), [
+      { from: '2026-11-15', to: '2026-11-15', note: '' },
+      { from: '2026-12-20', to: '2026-12-27', note: '出國' },
+    ]);
+  });
+
+  test('refuses what the page never sends: a stretch backwards, a long reason, too many, a stranger', async () => {
+    await church();
+    const day = { from: '2026-11-15', to: '2026-11-15', note: '' };
+    await rejectsWith(save([{ ...day, to: '2026-11-14' }]), 'unknown');
+    await rejectsWith(save([{ ...day, from: '2026-11-31x' }]), 'unknown');
+    await rejectsWith(save([{ ...day, note: '一'.repeat(31) }]), 'unknown');
+    await rejectsWith(save([{ ...day, extra: 1 }]), 'unknown');
+    await rejectsWith(save(Array(101).fill(day)), 'unknown');
+    await save([{ ...day, note: '一'.repeat(30) }]);
+    await rejectsWith(save([day], 'stranger'), 'permissionDenied');
   });
 });
 

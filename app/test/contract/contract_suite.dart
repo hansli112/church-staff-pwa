@@ -1071,9 +1071,13 @@ void contractTests(Future<ContractWorld> Function() open) {
       final trip = const UnavailableDays().add(Day(2030, 12, 20), Day(2030, 12, 27), note: '出國');
       const wait = Duration(seconds: 30);
       await w.signIn(Grace.meiEmail);
-      await g.church.saveUnavailableDays(g.mei, trip);
+      await g.church.saveMyUnavailableDays(trip);
       expect(await g.church.unavailableDays(g.mei).firstWhere((d) => !d.isEmpty).timeout(wait), trip);
-      await expectLater(g.church.saveUnavailableDays(g.editor, trip), denied(), reason: 'only her own');
+      await expectLater(
+        g.church.saveMyUnavailableDays(const UnavailableDays().add(Day(2030, 12, 1), Day(2030, 12, 1), note: '一' * 31)),
+        throwsA(isA<CloudException>()),
+        reason: 'a reason of at most 30 characters',
+      );
       await expectLater(g.church.everyonesUnavailableDays().first, denied(), reason: 'she arranges nothing');
       await expectLater(g.church.unavailableDays(g.editor).first, denied());
       await expectLater(g.church.askUnavailable('sunday', from: Day(2030, 12, 1), to: Day(2031, 1, 1)), denied());
@@ -1081,7 +1085,8 @@ void contractTests(Future<ContractWorld> Function() open) {
       await w.signIn(Grace.editorEmail);
       expect((await g.church.everyonesUnavailableDays().firstWhere((m) => m.isNotEmpty).timeout(wait))[g.mei], trip);
       expect(await g.church.unavailableDays(g.mei).first, trip);
-      await expectLater(g.church.saveUnavailableDays(g.mei, const UnavailableDays()), denied());
+      await g.church.saveMyUnavailableDays(const UnavailableDays());
+      expect(await g.church.unavailableDays(g.mei).first, trip, reason: 'his own, not hers');
       expect(await g.church.lastUnavailableAsk('sunday').first, isNull);
       await expectLater(
         g.church.askUnavailable('youth', from: Day(2030, 12, 1), to: Day(2031, 1, 1)),

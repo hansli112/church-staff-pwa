@@ -206,6 +206,7 @@ export const editService = callable(serviceSettings.editService);
 export const editLedDuties = callable(ledDuties.editLedDuties);
 export const notifyPlanned = callable(rosterChange.notifyPlanned, pushDeps);
 export const askUnavailable = callable(unavailable.askUnavailable, pushDeps);
+export const saveUnavailableDays = callable(unavailable.saveUnavailableDays);
 export const setGroupMember = callable(groupMembers.setGroupMember);
 export const editSmallGroup = callable(smallGroups.editSmallGroup);
 

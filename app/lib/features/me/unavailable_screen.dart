@@ -45,12 +45,10 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
   /// it was when it is refused.
   Future<bool> _save(UnavailableDays next) async {
     final l10n = L10n.of(context);
-    final uid = ref.read(uidProvider);
-    if (uid == null) return false;
-    final kept = next.from(ref.read(todayProvider));
+    final kept = next.since(ref.read(todayProvider));
     setState(() => _shown = kept);
     try {
-      await ref.churchData.saveUnavailableDays(uid, kept);
+      await ref.churchData.saveMyUnavailableDays(kept);
       return true;
     } catch (e) {
       if (mounted) showToast(context, errorText(l10n, e));
@@ -132,7 +130,7 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
     final l10n = L10n.of(context);
     final today = ref.watch(todayProvider);
     final saved = ref.watch(myUnavailableDaysProvider);
-    final days = (_shown ?? saved.value ?? const UnavailableDays()).from(today);
+    final days = (_shown ?? saved.value ?? const UnavailableDays()).since(today);
     final serving = [
       for (final s in ref.watch(myServicesProvider).value ?? const <MyService>[])
         if (days.during(s.roster.day, s.roster.lastDay) != null && !s.roster.lastDay.isBefore(today)) s,

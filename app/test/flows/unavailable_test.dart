@@ -118,6 +118,16 @@ void main() {
     expect(find.text('已更新司琴・李美玉這天不行'), findsOneWidget);
   });
 
+  testWidgets("a day's own picker says so too, opened first thing", (tester) async {
+    final b = seededChurch(as: editor);
+    b.unavailable['grace'] = {'mei': const UnavailableDays().add(_oct(11), _oct(11))};
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/sunday/2026-10-11');
+    await tester.tap(find.text('司琴'));
+    await settle(tester);
+    expect(find.textContaining('這天不行'), findsOneWidget);
+  });
+
   testWidgets('請同工填 asks those on the lists, through the month picked, once confirmed', (tester) async {
     final b = seededChurch(as: editor);
     await pumpApp(tester, b);

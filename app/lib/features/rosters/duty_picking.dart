@@ -39,11 +39,11 @@ Future<void> pickPeople(
   final router = GoRouter.of(context);
   final l10n = L10n.of(context);
   final around = ref.read(rosterActionsProvider).servingAroundOf(roster);
-  final away = awayOn(roster, ref.read(unavailableDaysProvider).value ?? const {});
+  final unavailable = unavailableOn(roster, ref.read(unavailableDaysProvider).value ?? const {});
   final notes = <String, String>{
     for (final m in members)
       if ([
-            if (away[m.uid] case final span?)
+            if (unavailable[m.uid] case final span?)
               span.note.isEmpty ? l10n.pickerUnavailable : l10n.pickerUnavailableBecause(span.note),
             if (around[m.uid] case final a?) ...[
               if (a.inMonth > 0) l10n.pickerMonthCount(a.inMonth),
@@ -53,9 +53,9 @@ Future<void> pickPeople(
           case final lines when lines.isNotEmpty)
         m.name: lines.join(' · '),
   };
-  final awayNames = {
+  final unavailableNames = {
     for (final m in members)
-      if (away.containsKey(m.uid)) m.name,
+      if (unavailable.containsKey(m.uid)) m.name,
   };
   var invite = false;
   final result = await showAppSheet<PickerResult>(
@@ -84,14 +84,14 @@ Future<void> pickPeople(
       onePerson: ref.read(rosterActionsProvider).takesOnePerson(roster, duty.role),
       onInvite: (me?.isAdmin ?? false) ? () => invite = true : null,
       notes: notes,
-      unavailable: awayNames,
+      unavailable: unavailableNames,
     ),
   );
   if (result != null && context.mounted) {
     if (result.swapDay) {
       await pickDayToSwap(context, ref, roster, duty, swapDays, via: via);
     } else {
-      await _savePicked(context, ref, roster, duty, result, via, away: awayNames);
+      await _savePicked(context, ref, roster, duty, result, via, unavailable: unavailableNames);
     }
   }
   if (invite) unawaited(router.push('/me/invites'));
@@ -161,7 +161,7 @@ Future<void> _savePicked(
   Duty duty,
   PickerResult result,
   RosterVia via, {
-  Set<String> away = const {},
+  Set<String> unavailable = const {},
 }) async {
   final l10n = L10n.of(context);
   final actions = ref.read(rosterActionsProvider);
@@ -188,17 +188,17 @@ Future<void> _savePicked(
   if (!context.mounted || (!changed && result.ranking == null)) return;
   // Picked though they marked the day as one they cannot serve: said, so
   // it is not missed (#91).
-  final awayPicked = [
+  final unavailablePicked = [
     for (final name in result.people)
-      if (away.contains(name) && !duty.people.contains(name)) name,
+      if (unavailable.contains(name) && !duty.people.contains(name)) name,
   ];
   await runWithUndo(
     context,
     !changed
         ? l10n.orderSaved
-        : awayPicked.isEmpty
+        : unavailablePicked.isEmpty
         ? l10n.dutyUpdated(duty.role)
-        : l10n.dutyUpdatedAway(duty.role, awayPicked.join(l10n.listSeparator)),
+        : l10n.dutyUpdatedUnavailable(duty.role, unavailablePicked.join(l10n.listSeparator)),
     () => actions.setPeople(
       roster,
       duty.role,

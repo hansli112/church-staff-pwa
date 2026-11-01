@@ -264,18 +264,17 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     });
   }
 
-  /// 完成: tells whoever was put on or taken off here, then goes back. A
-  /// failure stays, with 重試.
   /// The menu with 請同工填 (#91), and when it last asked for this
-  /// service; greyed with nobody on a list to ask.
-  Widget _askMenu(L10n l10n, AppColors c, Day today) {
+  /// service; greyed with nobody on a list to ask. It asks from [from], the
+  /// first month being arranged.
+  Widget _askMenu(L10n l10n, AppColors c, Day from) {
     final type = _type;
     final asked = ref.watch(lastUnavailableAskProvider(type)).value;
     final people = _askedToFill(type);
     return PopupMenuButton<String>(
       tooltip: l10n.planAskUnavailable,
       icon: const Icon(Symbols.more_horiz_rounded),
-      onSelected: (_) => _askUnavailable(type, today),
+      onSelected: (_) => _askUnavailable(type, from),
       itemBuilder: (_) => [
         PopupMenuItem(
           value: 'ask',
@@ -304,11 +303,10 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     return askedToFill(ref.watch(membersProvider).value ?? const [], type, ref.watch(arrangesProvider(type)), me.uid);
   }
 
-  /// 請同工填 (#91): through which month, from this one; then, asked first
-  /// as it cannot be taken back, one push each.
-  Future<void> _askUnavailable(String type, Day today) async {
+  /// 請同工填 (#91): through which month, from [from]; then, asked first as
+  /// it cannot be taken back, one push each.
+  Future<void> _askUnavailable(String type, Day from) async {
     final l10n = L10n.of(context);
-    final from = today.firstOfMonth;
     final to = await showAppSheet<Day>(
       context,
       builder: (context) => SafeArea(
@@ -316,7 +314,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
           child: ListSection(
             header: l10n.planAskUntil,
             children: [
-              for (var i = 0; i < 12; i++)
+              for (var i = 0; i < _askMonths; i++)
                 if (Day(from.year, from.month + i, 1) case final month)
                   ListRow(
                     title: DateFormat.yMMMM().format(month.midnight),
@@ -347,6 +345,11 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     }
   }
 
+  /// How many months 請同工填 offers to ask through.
+  static const _askMonths = 12;
+
+  /// 完成: tells whoever was put on or taken off here, then goes back. A
+  /// failure stays, with 重試.
   Future<void> _finish() async {
     setState(() => _notifying = true);
     final toasts = _toasts;
@@ -439,7 +442,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
           // One duty: named here, in place of a column's name.
           title: Text(duties.length == 1 ? l10n.planWeeksTitleOne(duties.single) : l10n.planWeeksTitle),
           actions: savingActions([
-            if (service != null && arranges.any) _askMenu(l10n, c, today),
+            if (service != null && arranges.any) _askMenu(l10n, c, _from ?? thisMonth),
             MediaQuery.withClampedTextScaling(
               maxScaleFactor: 1.5,
               child: TextButton(
@@ -488,21 +491,21 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     );
   }
 
-  /// The table: the duties' names stay at the top and the dates at the
-  /// start, the rest scrolls both ways; each month starts under its name.
-  /// Only the cells on screen are built, however many months there are.
   /// Who is on [role] on [day] but marked it as a day they cannot serve
   /// (#91), by name.
-  Set<String> _awayNames(Roster day, String role, Map<String, UnavailableDays> everyone) {
+  Set<String> _unavailableNames(Roster day, String role, Map<String, UnavailableDays> everyone) {
     final duty = day.duties.where((d) => d.role == role).firstOrNull;
     if (duty == null || everyone.isEmpty) return const {};
-    final away = awayOn(day, everyone);
+    final unavailable = unavailableOn(day, everyone);
     return {
       for (final name in duty.people)
-        if (away.containsKey(duty.uids[name])) name,
+        if (unavailable.containsKey(duty.uids[name])) name,
     };
   }
 
+  /// The table: the duties' names stay at the top and the dates at the
+  /// start, the rest scrolls both ways; each month starts under its name.
+  /// Only the cells on screen are built, however many months there are.
   Widget _table(
     BuildContext context,
     List<({Day month, List<Roster> days})> months,
@@ -519,7 +522,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     final monthHeight = scale.scale(17) * 1.3 + Space.m + Space.s;
     final line = BorderSide(color: c.separator, width: 0.5);
 
-    final away = ref.watch(unavailableDaysProvider).value ?? const <String, UnavailableDays>{};
+    final everyone = ref.watch(unavailableDaysProvider).value ?? const <String, UnavailableDays>{};
     _shown = [for (final m in months) ...m.days];
     // A month's name (its first day) or a day, under the duties' names.
     final rows = <Object>[
@@ -602,7 +605,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
               final lift = _lift;
               return lift?.to?.id == day.id && lift?.role == role || _flash.contains(_cellId(day, role));
             },
-            away: _awayNames(day, role, away),
+            unavailable: _unavailableNames(day, role, everyone),
             onTap: (duty) => pickPeople(context, ref, day, duty, via: RosterVia.plan, swapDays: _shown),
             onLift: (cell, d) => _liftStart(cell, day, role, d),
             alone: duties.length == 1,
@@ -877,14 +880,14 @@ class _DutyCell extends StatelessWidget {
     required this.onLift,
     required this.alone,
     required this.onSwap,
-    this.away = const {},
+    this.unavailable = const {},
   });
 
   final Roster roster;
 
   /// Who is on it but marked the day as one they cannot serve (#91): their
   /// names are greyed.
-  final Set<String> away;
+  final Set<String> unavailable;
   final String role;
   final Day today;
   final BorderSide border;
@@ -925,7 +928,7 @@ class _DutyCell extends StatelessWidget {
         : (people.isEmpty
               ? l10n.nobodyYet
               : [
-                  for (final n in people) away.contains(n) ? '$n, ${l10n.pickerUnavailable}' : n,
+                  for (final n in people) unavailable.contains(n) ? '$n, ${l10n.pickerUnavailable}' : n,
                 ].join(l10n.listSeparator));
     return Semantics(
       button: duty != null,
@@ -961,7 +964,7 @@ class _DutyCell extends StatelessWidget {
               ? Text('—', style: AppText.subheadline.copyWith(color: c.tertiaryLabel))
               : people.isEmpty
               ? _EmptySlot(wide: alone)
-              : _People(people, away: away),
+              : _People(people, unavailable: unavailable),
         ),
       ),
     );
@@ -1028,13 +1031,13 @@ class _Dashes extends CustomPainter {
 /// A person a line, each cut short rather than wrapped onto the next;
 /// past two, how many more after the second.
 class _People extends StatelessWidget {
-  const _People(this.people, {this.away = const {}});
+  const _People(this.people, {this.unavailable = const {}});
 
   final List<String> people;
 
   /// Those of [people] greyed: they marked the day as one they cannot
   /// serve (#91).
-  final Set<String> away;
+  final Set<String> unavailable;
 
   @override
   Widget build(BuildContext context) {
@@ -1045,7 +1048,7 @@ class _People extends StatelessWidget {
       maxLines: 1,
       softWrap: false,
       overflow: TextOverflow.ellipsis,
-      style: away.contains(name) ? style.copyWith(color: c.secondaryLabel) : style,
+      style: unavailable.contains(name) ? style.copyWith(color: c.secondaryLabel) : style,
     );
     return Column(
       mainAxisSize: MainAxisSize.min,

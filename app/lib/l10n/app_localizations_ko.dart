@@ -3128,13 +3128,13 @@ class L10nKo extends L10n {
   String get unavailableNoteHint => '선택 사항, 예: 여행';
 
   @override
-  String get unavailableNoteFooter => '눌러서 이유를 적을 수 있어요. 봉사를 배정하는 사람이 사람을 고를 때 보여요.';
+  String get unavailableNoteFooter => '눌러서 이유를 적을 수 있어요. 봉사를 배정하는 사람이 사람을 고를 때 보여요';
 
   @override
   String get unavailableServing => '이날은 이미 봉사가 있어요';
 
   @override
-  String get unavailableServingFooter => '배정하는 사람에게 이날은 안 된다고 보여요.';
+  String get unavailableServingFooter => '배정하는 리더에게 이날은 안 된다고 보여요';
 
   @override
   String get pickerUnavailable => '이날은 안 돼요';
@@ -3145,7 +3145,7 @@ class L10nKo extends L10n {
   }
 
   @override
-  String dutyUpdatedAway(String duty, String names) {
+  String dutyUpdatedUnavailable(String duty, String names) {
     return '$duty을(를) 바꿨어요 · $names은(는) 이날 안 돼요';
   }
 
@@ -3162,7 +3162,7 @@ class L10nKo extends L10n {
 
   @override
   String planAskConfirm(int count, String months) {
-    return '$count명에게 $months 중 봉사할 수 없는 날을 입력해 달라고 할까요?';
+    return '멤버 $count명에게 $months 중 봉사할 수 없는 날을 입력해 달라고 할까요?';
   }
 
   @override

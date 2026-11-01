@@ -1027,23 +1027,7 @@ Future<bool> confirmAction(
   if (Theme.of(context).platform != TargetPlatform.iOS) {
     return await askChoice(context, title: title, yes: action, no: cancel) ?? false;
   }
-  final result = await showCupertinoModalPopup<bool>(
-    context: context,
-    builder: (context) => CupertinoActionSheet(
-      title: Text(title),
-      actions: [
-        CupertinoActionSheetAction(
-          onPressed: () => Navigator.pop(context, true),
-          child: Text(action),
-        ),
-      ],
-      cancelButton: CupertinoActionSheetAction(
-        onPressed: () => Navigator.pop(context, false),
-        child: Text(cancel),
-      ),
-    ),
-  );
-  return result ?? false;
+  return _askFromBelow(context, title: title, action: action, cancel: cancel);
 }
 
 /// Asks whether to discard a sheet's unsaved changes: on iPhone from below,
@@ -1059,24 +1043,42 @@ Future<bool> _confirmDiscard(BuildContext context) async {
       cancel: l10n.keepEditing,
     );
   }
+  final discard = await _askFromBelow(
+    context,
+    title: l10n.discardChangesTitle,
+    action: l10n.discardChanges,
+    cancel: l10n.keepEditing,
+    destructive: true,
+  );
+  if (discard) Haptics.heavy();
+  return discard;
+}
+
+/// iOS's action sheet with one [action] and [cancel]: true for [action].
+Future<bool> _askFromBelow(
+  BuildContext context, {
+  required String title,
+  required String action,
+  required String cancel,
+  bool destructive = false,
+}) async {
   final result = await showCupertinoModalPopup<bool>(
     context: context,
     builder: (context) => CupertinoActionSheet(
-      title: Text(l10n.discardChangesTitle),
+      title: Text(title),
       actions: [
         CupertinoActionSheetAction(
-          isDestructiveAction: true,
+          isDestructiveAction: destructive,
           onPressed: () => Navigator.pop(context, true),
-          child: Text(l10n.discardChanges),
+          child: Text(action),
         ),
       ],
       cancelButton: CupertinoActionSheetAction(
         onPressed: () => Navigator.pop(context, false),
-        child: Text(l10n.keepEditing),
+        child: Text(cancel),
       ),
     ),
   );
-  if (result == true) Haptics.heavy();
   return result ?? false;
 }
 

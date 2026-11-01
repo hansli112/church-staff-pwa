@@ -53,6 +53,8 @@ class EditableRoster extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
     final ready = _editingReady(ref, roster);
+    // Read as the picker opens: who cannot serve the day (#91).
+    ref.watch(unavailableDaysProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

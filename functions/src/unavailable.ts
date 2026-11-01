@@ -2,6 +2,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 
 import { churchAccess } from './access.js';
 import { fail, record, type Caller, type Deps } from './common.js';
+import { LIMITS, TEXT_LIMITS, withinTextLimit } from './limits.js';
 import { ledDuties, ministriesOf, type Ministry } from './ministries.js';
 import { powersOf, type MemberFields } from './powers.js';
 import { notifyMembers, type PushDeps } from './push.js';
@@ -69,4 +70,33 @@ export async function askUnavailable(deps: Deps & PushDeps, caller: Caller | nul
     to,
   });
   return { people: asked.length };
+}
+
+const DAY = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+
+/**
+ * Keeps `data.spans` as the caller's 不能服事的日子 (#91): at most
+ * LIMITS.unavailableSpans stretches, each `{from, to, note}` with `from`
+ * no later than `to` and a note of at most TEXT_LIMITS.unavailableNote
+ * characters. Through here, not the rules, which cannot look inside a list:
+ * everyone who arranges reads them all.
+ */
+export async function saveUnavailableDays(deps: Deps, caller: Caller | null, data: unknown) {
+  const input = record(data);
+  const spans = input.spans;
+  if (!Array.isArray(spans) || spans.length > LIMITS.unavailableSpans
+      || Object.keys(input).some((k) => !['churchId', 'spans'].includes(k))) fail('invalid-argument', 'unknown');
+  const kept = spans.map((s) => {
+    const { from, to, note = '' } = record(s);
+    if (typeof from !== 'string' || !DAY.test(from) || typeof to !== 'string' || !DAY.test(to) || to < from
+        || typeof note !== 'string' || !withinTextLimit(note, TEXT_LIMITS.unavailableNote)
+        || Object.keys(record(s)).some((k) => !['from', 'to', 'note'].includes(k))) fail('invalid-argument', 'unknown');
+    return { from, to, note: note.trim() };
+  });
+  const { cid, caller: c } = await churchAccess(deps, caller, data, 'member');
+  await deps.db.doc(`churches/${cid}/unavailable/${c.uid}`).set({
+    spans: kept.sort((a, b) => a.from.localeCompare(b.from)),
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+  return {};
 }

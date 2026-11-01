@@ -919,13 +919,7 @@ class FirestoreChurchData implements ChurchData {
   ).live().map((snap) => {for (final d in snap.docs) d.id: unavailableDaysFromJson(d.data())}).translated();
 
   @override
-  Future<void> saveUnavailableDays(String uid, UnavailableDays days) {
-    final ref = _col('unavailable').doc(uid);
-    return _write(
-      ref,
-      (tx) => tx.set(ref, {...unavailableDaysToJson(days), 'updatedAt': FieldValue.serverTimestamp()}),
-    );
-  }
+  Future<void> saveMyUnavailableDays(UnavailableDays days) => _call('saveUnavailableDays', unavailableDaysToJson(days));
 
   @override
   Stream<DateTime?> lastUnavailableAsk(String serviceType) => _col(

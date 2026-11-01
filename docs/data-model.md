@@ -15,7 +15,7 @@
 | `churches/{cid}/smallGroups/{id}` | 小組（#85）：`name`、`service`（屬於哪個聚會）、`weekday`（1 是週一…7 是週日）、`every`（1 每週、2 隔週）、`startsOn`（從這天起聚會，要是 `weekday` 那天；隔週照它算哪幾週）。後三個只有回報人數用到，可以沒有。只有後端寫（`editSmallGroup`），同工都讀得到 |
 | `churches/{cid}/settings/smallGroups` | 只有後端寫：`ids`，用過的小組 ID，只增不減 |
 | `churches/{cid}/attendance/{群組}` | 回報人數（#85），`{群組}` 是 `service:<id>` 或 `small:<id>`：`pauses`（暫停，每段 `{from, until}`：從 `from` 到 `until` 前一天不算；結束了也留著，那幾週才不會變成「未填」，最多 50 段）。底下 `days/{dateKey}` 是那次聚會的人數：`count`（0–100000）加選填的 `note`（最多 200 字），或 `none: true`（這次沒聚會）；`by` 是填的人 |
-| `churches/{cid}/unavailable/{uid}` | 不能服事的日子（#91）：`spans`（每段 `{from, to, note}`，`YYYY-MM-DD`，兩頭都算；`note` 選填，最多 30 字；最多 100 段）、`updatedAt`。只有本人寫；本人和排服事表的人（admin、行政、聚會負責人和牧者、事工負責人，`testdata/church_rules.json` 的 `unavailableReading`）讀得到。一律整天、全部聚會。過了的那段在本人下次存的時候拿掉；退出或被移出教會時刪掉（`onMemberDeleted`） |
+| `churches/{cid}/unavailable/{uid}` | 不能服事的日子（#91）：`spans`（每段 `{from, to, note}`，`YYYY-MM-DD`，兩頭都算；`note` 選填，最多 30 字；最多 100 段）、`updatedAt`。只有本人寫，經 `saveUnavailableDays`（規則看不到清單裡面，由後端檢查每一段和原因的長度）；本人和排服事表的人（admin、行政、聚會負責人和牧者、事工負責人，`testdata/church_rules.json` 的 `unavailableReading`）讀得到。一律整天、全部聚會。過了的那段在本人下次存的時候拿掉；退出或被移出教會時刪掉（`onMemberDeleted`） |
 | `churches/{cid}/unavailableAsks/{聚會別}` | 請同工填（#91）上次請的：`at`、`by`、`from`、`to`（月份，`YYYY-MM`）。只有後端寫（`askUnavailable`），排服事表的人讀得到，選單上寫「上次 10/28 請過」 |
 | `churches/{cid}/pendingMembers/{舊 uid}` | 從舊版搬來、還沒登入的同工：`name`、`email`、`emailHash`、`role`、`groups`、`zones`、`zoneTypes`、`notificationPrefs`、`rosterIds`（搬家時記下有他名字的服事表）。後端建立，管理員可以刪；認領或合併時偏好與小組併入同工，只有 `rosterIds` 那幾天改連到新帳號 |
 | `churches/{cid}/joinRequests/{uid}` | 申請加入（#88）：`uid`、`name`、`email`（申請時帳號的）、`note`（選填，最多 100 字）、`createdAt`、`rejectedAt`（管理員拒絕的時間）。只有後端寫（`requestToJoin`、`withdrawJoinRequest`、`answerJoinRequest`），只有 admin 讀得到；申請的人從 `churchPreview` 知道自己的申請怎麼了。`createdAt` 滿 30 天就算沒有，每天清掉 |
@@ -126,7 +126,7 @@ App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預�
 | 寫活動的服事表 | admin、行政，和活動所屬群組的負責人（服事表的 `group`，由後端照活動寫；App 建立時帶活動的，之後改不了）；事工負責人經 `editLedDuties` 只排他的服事項目（照名稱比對）。一般服事表和活動的服事表不能互相改過去；取消了的不能再改，只能刪 |
 | 讀、寫回報人數（`attendance`，#85） | 照 `testdata/church_rules.json` 的 `attendanceAccess`：admin 全部；聚會的負責人和牧者那個聚會和底下的小組；小組長自己的小組。行政另外讀得到聚會的（不含小組）。可以補填、改、清掉；暫停也是同一批人設 |
 | 讀不能服事的日子（`unavailable`、`unavailableAsks`，#91） | 本人讀自己的；排服事表的人（admin、行政、`leadTypes` 或 `leadMinistries` 不是空的）讀全部：他們選人時可以選全教會的人，所以看得到每個人的。小組長不算 |
-| 寫不能服事的日子 | 只有本人，只能有 `spans`、`updatedAt` |
+| 寫不能服事的日子 | 只有本人，經後端（`saveUnavailableDays`）；規則不讓 App 直接寫 |
 | 讀小組 | 同工；寫只有 Cloud Functions（`editSmallGroup`） |
 | 寫設定 | admin；`services` 的 `ids` 只增不減，不能刪；`calendar`、`linkContent`、`webhook`、`smallGroups` 只有 Cloud Functions 能寫。服事項目改名要連同工的牧區與同工排序一起改，經 `editService`（比對改名前的那一個聚會，其他聚會照現在的保留；超過 500 筆寫入整筆拒絕） |
 | 讀寫 `users/{uid}` | 本人（限上列欄位，`fcm` 最多 50 支裝置）；刪除由 Cloud Functions 處理 |

@@ -1236,15 +1236,14 @@ class MemoryChurchData implements ChurchData {
   }, equals: mapEquals);
 
   @override
-  Future<void> saveUnavailableDays(String uid, UnavailableDays days) async {
+  Future<void> saveMyUnavailableDays(UnavailableDays days) async {
     await _b.write(() {
-      if (uid != _uid) throw const CloudException(CloudErrorCode.permissionDenied);
-      _requireMember();
+      final me = _b.requireMember(churchId);
       if (days.spans.length > Limits.unavailableSpans ||
           days.spans.any((s) => !withinTextLimit(s.note, TextLimits.unavailableNote))) {
-        throw const CloudException(CloudErrorCode.permissionDenied);
+        throw const CloudException(CloudErrorCode.unknown);
       }
-      (_b.unavailable[churchId] ??= {})[uid] = days;
+      (_b.unavailable[churchId] ??= {})[me.uid] = days;
     });
   }
 

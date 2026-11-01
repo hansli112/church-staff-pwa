@@ -97,7 +97,7 @@ class UnavailableDays {
   ]);
 
   /// What still matters on [today]: stretches over before it are gone.
-  UnavailableDays from(Day today) => UnavailableDays([
+  UnavailableDays since(Day today) => UnavailableDays([
     for (final s in spans)
       if (!s.to.isBefore(today)) s,
   ]);
@@ -126,6 +126,6 @@ List<Member> askedToFill(Iterable<Member> members, String serviceType, Arranges 
 
 /// Who of [everyone] cannot serve on [roster]'s days, by uid, with the
 /// stretch that says so.
-Map<String, UnavailableSpan> awayOn(Roster roster, Map<String, UnavailableDays> everyone) => {
+Map<String, UnavailableSpan> unavailableOn(Roster roster, Map<String, UnavailableDays> everyone) => {
   for (final MapEntry(key: uid, value: days) in everyone.entries) uid: ?days.during(roster.day, roster.lastDay),
 };
