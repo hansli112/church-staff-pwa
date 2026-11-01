@@ -132,15 +132,20 @@ export function powersOf(m: MemberFields) {
     mayMove: (target: MemberFields, group: ChurchGroup) => admin || (manages(group) && powersOf(target).plain),
 
     /**
-     * Whether they fill in the 人數 of [group] (attendanceAccess): admins
-     * any; a service's 負責人 and 牧者 its own and its 小組'; a 小組長 their
-     * 小組's.
+     * Whether they see every group's 人數 and put them together (人數總覽,
+     * #93): admins and 行政.
      */
-    writesAttendance: (group: ChurchGroup) => admin || (group.kind !== 'ministry' && manages(group)),
+    overseesAttendance: inGroup('roster-editors'),
 
-    /** Whether they see the 人數 of [group]: who fills them in, and 行政 a service's. */
-    readsAttendance: (group: ChurchGroup) =>
-      self.writesAttendance(group) || (group.kind === 'service' && groups.includes('roster-editors')),
+    /**
+     * Whether they fill in the 人數 of [group] (attendanceAccess): admins
+     * and 行政 any; a service's 負責人 and 牧者 its own and its 小組'; a
+     * 小組長 their 小組's.
+     */
+    writesAttendance: (group: ChurchGroup) => group.kind !== 'ministry' && (inGroup('roster-editors') || manages(group)),
+
+    /** Whether they see the 人數 of [group]: who fills them in. */
+    readsAttendance: (group: ChurchGroup) => self.writesAttendance(group),
 
     /**
      * Whether they are reminded of the 人數 of [group] (attendanceReminded):

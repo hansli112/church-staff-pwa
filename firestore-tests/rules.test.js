@@ -593,6 +593,19 @@ describe('回報人數 (attendance) 與小組 (smallGroups)', () => {
     await assertFails(getDoc(pause(MEMBER_A)));
   });
 
+  it('每週都填人數（#93）：一個是非值，和暫停同一批人設', async () => {
+    const group = (uid) => doc(as(uid), `churches/${A}/attendance/service:sunday`);
+    await assertSucceeds(setDoc(group(EDITOR_A), { pauses: [], everyWeek: true }));
+    await assertSucceeds(setDoc(group(OFFICE_A), { pauses: [], everyWeek: false }));
+    await assertFails(setDoc(group(EDITOR_A), { pauses: [], everyWeek: 'yes' }));
+    await assertFails(setDoc(group(MEMBER_A), { pauses: [], everyWeek: true }));
+  });
+
+  it('聯合小組（#93）：和別組一起只有後端寫', async () => {
+    await assertFails(setDoc(day(EDITOR_A, 'service:sunday', '2030-10-27'), { with: 'small:g1', by: EDITOR_A }));
+    await assertFails(setDoc(day(EDITOR_A, 'service:sunday', '2030-10-27'), { count: 3, together: ['small:g1'], by: EDITOR_A }));
+  });
+
   it('小組誰都讀得到，只有後端寫；小組的編號清單也是', async () => {
     await seed(`churches/${A}/smallGroups/g1`, { name: '喜樂小組', service: 'sunday' });
     await assertSucceeds(getDoc(doc(as(MEMBER_A), `churches/${A}/smallGroups/g1`)));

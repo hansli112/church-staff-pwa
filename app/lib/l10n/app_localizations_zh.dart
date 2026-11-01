@@ -2851,10 +2851,53 @@ class L10nZh extends L10n {
   String get attendanceSaved => '已填寫';
 
   @override
+  String get attendanceOverview => '人數總覽';
+
+  @override
+  String attendanceOverviewMissing(int count) {
+    return '還有 $count 個未填';
+  }
+
+  @override
+  String get attendanceOverviewDone => '都填好了';
+
+  @override
+  String get attendanceOverviewFooter => '每個聚會和小組最近一次聚會；今天的有人填了才列，暫停中的不列';
+
+  @override
+  String get attendanceRemind => '提醒';
+
+  @override
+  String get attendanceRemindSent => '已提醒';
+
+  @override
+  String get attendanceRemindNobody => '沒有可以提醒的負責人，請直接聯絡';
+
+  @override
+  String get attendanceEveryWeek => '每週都填人數';
+
+  @override
+  String get attendanceEveryWeekSub => '沒排服事表的那天也要填';
+
+  @override
+  String get attendanceTogether => '和其他小組一起';
+
+  @override
+  String attendanceWith(String name) {
+    return '和$name一起';
+  }
+
+  @override
+  String get errRemindedToday => '今天已經提醒過了';
+
+  @override
+  String get errTogetherFilled => '選的小組那天已經填了人數';
+
+  @override
   String get notifAttendance => '回報人數提醒';
 
   @override
-  String get notifAttendanceSub => '聚會當天 21:00 還沒人填時';
+  String get notifAttendanceSub => '聚會當天和隔天 21:00 還沒人填時';
 
   @override
   String get churchEntryCanAsk => '你還不是這間教會的同工，申請後管理員允許就會加入';
@@ -6141,10 +6184,53 @@ class L10nZhHans extends L10nZh {
   String get attendanceSaved => '已填写';
 
   @override
+  String get attendanceOverview => '人数总览';
+
+  @override
+  String attendanceOverviewMissing(int count) {
+    return '还有 $count 个未填';
+  }
+
+  @override
+  String get attendanceOverviewDone => '都填好了';
+
+  @override
+  String get attendanceOverviewFooter => '每个聚会和小组最近一次聚会；今天的有人填了才列，暂停中的不列';
+
+  @override
+  String get attendanceRemind => '提醒';
+
+  @override
+  String get attendanceRemindSent => '已提醒';
+
+  @override
+  String get attendanceRemindNobody => '没有可以提醒的负责人，请直接联络';
+
+  @override
+  String get attendanceEveryWeek => '每周都填人数';
+
+  @override
+  String get attendanceEveryWeekSub => '没排服事表的那天也要填';
+
+  @override
+  String get attendanceTogether => '和其他小组一起';
+
+  @override
+  String attendanceWith(String name) {
+    return '和$name一起';
+  }
+
+  @override
+  String get errRemindedToday => '今天已经提醒过了';
+
+  @override
+  String get errTogetherFilled => '选的小组那天已经填了人数';
+
+  @override
   String get notifAttendance => '回报人数提醒';
 
   @override
-  String get notifAttendanceSub => '聚会当天 21:00 还没人填时';
+  String get notifAttendanceSub => '聚会当天和隔天 21:00 还没人填时';
 
   @override
   String get churchEntryCanAsk => '你还不是这间教会的同工，申请后管理员允许就会加入';

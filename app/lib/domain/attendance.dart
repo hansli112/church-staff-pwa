@@ -59,31 +59,47 @@ bool attendanceDue(
   return (start.daysUntil(day) ~/ 7) % (meets.every == 2 ? 2 : 1) == 0;
 }
 
-/// One meeting's 人數: [count] who came, with a [note]; or [none], 這次沒聚會.
+/// One meeting's 人數: [count] who came, with a [note]; or [none], 這次沒聚會;
+/// or, a 小組 that met with another (聯合小組, #93), [withGroup], the key of
+/// the one whose 人數 they are. The one filled in names the others it met
+/// with, [together].
 @immutable
 class AttendanceDay {
-  const AttendanceDay.count(int this.count, {this.note = ''}) : none = false;
-  const AttendanceDay.none() : count = null, note = '', none = true;
+  const AttendanceDay.count(int this.count, {this.note = '', this.together = const []})
+    : none = false,
+      withGroup = null;
+  const AttendanceDay.none({this.together = const []}) : count = null, note = '', none = true, withGroup = null;
+  const AttendanceDay.joined(String this.withGroup) : count = null, note = '', none = false, together = const [];
 
   final int? count;
   final String note;
   final bool none;
+  final List<String> together;
+  final String? withGroup;
 
   @override
   bool operator ==(Object other) =>
-      other is AttendanceDay && other.count == count && other.note == note && other.none == none;
+      other is AttendanceDay &&
+      other.count == count &&
+      other.note == note &&
+      other.none == none &&
+      other.withGroup == withGroup &&
+      listEquals(other.together, together);
 
   @override
-  int get hashCode => Object.hash(count, note, none);
+  int get hashCode => Object.hash(count, note, none, withGroup, Object.hashAll(together));
 }
 
-/// A group's 回報人數: its pauses, and the 人數 of each meeting filled in.
+/// A group's 回報人數: its pauses, the 人數 of each meeting filled in, and,
+/// a service, whether it fills them in every week, roster or not
+/// (每週都填人數, #93).
 @immutable
 class AttendanceRecord {
-  const AttendanceRecord({this.pauses = const [], this.days = const {}});
+  const AttendanceRecord({this.pauses = const [], this.days = const {}, this.everyWeek = false});
 
   final List<AttendancePause> pauses;
   final Map<Day, AttendanceDay> days;
+  final bool everyWeek;
 
   /// The pause [day] is in, if any.
   AttendancePause? pauseOn(Day day) => pauses.where((p) => p.covers(day)).firstOrNull;
@@ -103,10 +119,14 @@ class AttendanceRecord {
 
   @override
   bool operator ==(Object other) =>
-      other is AttendanceRecord && listEquals(other.pauses, pauses) && mapEquals(other.days, days);
+      other is AttendanceRecord &&
+      listEquals(other.pauses, pauses) &&
+      mapEquals(other.days, days) &&
+      other.everyWeek == everyWeek;
 
   @override
   int get hashCode => Object.hash(
+    everyWeek,
     Object.hashAll(pauses),
     Object.hashAllUnordered(days.entries.map((e) => Object.hash(e.key, e.value))),
   );

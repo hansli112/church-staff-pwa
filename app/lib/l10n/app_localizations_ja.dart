@@ -2856,10 +2856,53 @@ class L10nJa extends L10n {
   String get attendanceSaved => '記録しました';
 
   @override
+  String get attendanceOverview => '人数の一覧';
+
+  @override
+  String attendanceOverviewMissing(int count) {
+    return '未記入が$count件あります';
+  }
+
+  @override
+  String get attendanceOverviewDone => 'すべて記録済み';
+
+  @override
+  String get attendanceOverviewFooter => '各集まりと小グループの直近の集まり。今日の分は記録されてから表示、休止中は表示しません';
+
+  @override
+  String get attendanceRemind => '知らせる';
+
+  @override
+  String get attendanceRemindSent => '知らせました';
+
+  @override
+  String get attendanceRemindNobody => '知らせるリーダーがいません。直接連絡してください';
+
+  @override
+  String get attendanceEveryWeek => '毎週記録する';
+
+  @override
+  String get attendanceEveryWeekSub => '当番表がない日も記録します';
+
+  @override
+  String get attendanceTogether => '一緒に集まった小グループ';
+
+  @override
+  String attendanceWith(String name) {
+    return '$nameと一緒';
+  }
+
+  @override
+  String get errRemindedToday => '今日はすでに知らせました';
+
+  @override
+  String get errTogetherFilled => '選んだ小グループはその日の人数が記録済みです';
+
+  @override
   String get notifAttendance => '人数の記録のお知らせ';
 
   @override
-  String get notifAttendanceSub => '集まりの日の21時に、まだ誰も記録していないとき';
+  String get notifAttendanceSub => '集まりの日と翌日の21時に、まだ誰も記録していないとき';
 
   @override
   String get churchEntryCanAsk => 'まだこの教会のメンバーではありません。参加を申請すると、管理者が承認したときに参加できます。';

@@ -49,6 +49,8 @@ String errorText(L10n l10n, Object error) {
         CloudReason.swapClosed => l10n.errSwapClosed,
         CloudReason.nobodyToAsk => l10n.errNobodyToAsk,
         CloudReason.googleOnly => l10n.calGoogleOnly,
+        CloudReason.remindedToday => l10n.errRemindedToday,
+        CloudReason.togetherFilled => l10n.errTogetherFilled,
         _ => l10n.errUnknown,
       },
     };

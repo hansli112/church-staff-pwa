@@ -5134,6 +5134,84 @@ abstract class L10n {
   /// **'已填寫'**
   String get attendanceSaved;
 
+  /// Row in 設定 for admins and 行政, and its page (#93): every group's latest 人數 in one list
+  ///
+  /// In zh, this message translates to:
+  /// **'人數總覽'**
+  String get attendanceOverview;
+
+  /// Header of 人數總覽: how many groups have not filled in their latest meeting
+  ///
+  /// In zh, this message translates to:
+  /// **'還有 {count} 個未填'**
+  String attendanceOverviewMissing(int count);
+
+  /// Header of 人數總覽 when every group has filled in
+  ///
+  /// In zh, this message translates to:
+  /// **'都填好了'**
+  String get attendanceOverviewDone;
+
+  /// Footer of 人數總覽: what each row is
+  ///
+  /// In zh, this message translates to:
+  /// **'每個聚會和小組最近一次聚會；今天的有人填了才列，暫停中的不列'**
+  String get attendanceOverviewFooter;
+
+  /// Button beside a 未填 row of 人數總覽: pushes its 負責人 or 小組長
+  ///
+  /// In zh, this message translates to:
+  /// **'提醒'**
+  String get attendanceRemind;
+
+  /// Toast after 提醒
+  ///
+  /// In zh, this message translates to:
+  /// **'已提醒'**
+  String get attendanceRemindSent;
+
+  /// Toast after 提醒 when the group has no 負責人 or 小組長 to remind
+  ///
+  /// In zh, this message translates to:
+  /// **'沒有可以提醒的負責人，請直接聯絡'**
+  String get attendanceRemindNobody;
+
+  /// Switch in a service's 人數 section (#93): it meets every week, roster or not
+  ///
+  /// In zh, this message translates to:
+  /// **'每週都填人數'**
+  String get attendanceEveryWeek;
+
+  /// Under 每週都填人數
+  ///
+  /// In zh, this message translates to:
+  /// **'沒排服事表的那天也要填'**
+  String get attendanceEveryWeekSub;
+
+  /// Section in the fill-in sheet of a 小組 (#93): the others it met with this time
+  ///
+  /// In zh, this message translates to:
+  /// **'和其他小組一起'**
+  String get attendanceTogether;
+
+  /// A 小組's meeting held with another one, whose 人數 they are; or, on that one, the others
+  ///
+  /// In zh, this message translates to:
+  /// **'和{name}一起'**
+  String attendanceWith(String name);
+
+  /// 提醒 on 人數總覽 again the same day
+  ///
+  /// In zh, this message translates to:
+  /// **'今天已經提醒過了'**
+  String get errRemindedToday;
+
+  /// A 小組 picked in 和其他小組一起 already has that day's 人數
+  ///
+  /// In zh, this message translates to:
+  /// **'選的小組那天已經填了人數'**
+  String get errTogetherFilled;
+
   /// Notification switch (#85)
   ///
   /// In zh, this message translates to:
@@ -5143,7 +5221,7 @@ abstract class L10n {
   /// Under the 回報人數提醒 switch
   ///
   /// In zh, this message translates to:
-  /// **'聚會當天 21:00 還沒人填時'**
+  /// **'聚會當天和隔天 21:00 還沒人填時'**
   String get notifAttendanceSub;
 
   /// Church URL page for a non-member when the church takes requests to join (#88)

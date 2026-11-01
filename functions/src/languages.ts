@@ -122,6 +122,8 @@ export interface Words {
   /** 回報人數 (attendance.ts): the title, and the body for [group]'s meeting on [day] (dateWithWeekday's). */
   attendanceTitle: string;
   attendanceBody(group: string, day: string): string;
+  /** 回報人數: asked again, the next day or by 提醒 (#93). */
+  attendanceAgainBody(group: string, day: string): string;
   /** 請同工填 (#91): the months `YYYY-MM` [from] to [to]. */
   askUnavailable(from: string, to: string): string;
   /**
@@ -216,6 +218,7 @@ const zhHant: Words = {
   joinAllowed: '管理員允許你加入了，歡迎！',
   attendanceTitle: '填寫人數',
   attendanceBody: (group, day) => `「${group}」${day}的聚會有幾個人？`,
+  attendanceAgainBody: (group, day) => `「${group}」${day}的聚會人數還沒填`,
   askUnavailable: (from, to) => `請填 ${months(from, to, (m) => `${m} 月`, '到 ')}不能服事的日子`,
   coverAsked: (name, day, line) => `「${name}」想請你代 ${day}${line}`,
   swapAsked: (name, theirDay, yourDay, line) => `「${name}」想用 ${theirDay}和你交換 ${yourDay}${line}`,
@@ -268,6 +271,7 @@ const zhHans: Words = {
   joinAllowed: '管理员允许你加入了，欢迎！',
   attendanceTitle: '填写人数',
   attendanceBody: (group, day) => `“${group}”${day}的聚会有几个人？`,
+  attendanceAgainBody: (group, day) => `“${group}”${day}的聚会人数还没填`,
   askUnavailable: (from, to) => `请填 ${months(from, to, (m) => `${m} 月`, '到 ')}不能事奉的日子`,
   coverAsked: (name, day, line) => `“${name}”想请你代 ${day}${line}`,
   swapAsked: (name, theirDay, yourDay, line) => `“${name}”想用 ${theirDay}和你交换 ${yourDay}${line}`,
@@ -321,6 +325,7 @@ const en: Words = {
   joinAllowed: 'An admin let you in. Welcome!',
   attendanceTitle: 'Attendance',
   attendanceBody: (group, day) => `How many came to ${group} on ${day}?`,
+  attendanceAgainBody: (group, day) => `${group} on ${day} has no attendance yet`,
   askUnavailable: (from, to) => `Please mark the days you can't serve in ${months(from, to, (m) => EN_MONTH_NAMES[m - 1], '–')}`,
   coverAsked: (name, day, line) => `${name} asks you to cover ${line} on ${day}`,
   swapAsked: (name, theirDay, yourDay, line) => `${name} asks to swap ${line}: their ${theirDay} for your ${yourDay}`,
@@ -374,6 +379,7 @@ const ja: Words = {
   joinAllowed: '管理者が参加を承認しました。ようこそ！',
   attendanceTitle: '人数の記録',
   attendanceBody: (group, day) => `${day}の「${group}」には何人集まりましたか？`,
+  attendanceAgainBody: (group, day) => `${day}の「${group}」の人数がまだ記録されていません`,
   askUnavailable: (from, to) => `${months(from, to, (m) => `${m}月`, '〜')}で奉仕できない日を入力してください`,
   coverAsked: (name, day, line) => `${name}さんから${day}の${line}の代わりを頼まれています`,
   swapAsked: (name, theirDay, yourDay, line) => `${name}さんが${line}の交換を希望しています：${name}さんの${theirDay}とあなたの${yourDay}`,
@@ -426,6 +432,7 @@ const ko: Words = {
   joinAllowed: '관리자가 가입을 승인했어요. 환영해요!',
   attendanceTitle: '인원 기록',
   attendanceBody: (group, day) => `${day} ${group}에 몇 명이 모였나요?`,
+  attendanceAgainBody: (group, day) => `${day} ${group}의 인원이 아직 기록되지 않았어요`,
   askUnavailable: (from, to) => `${months(from, to, (m) => `${m}월`, '~')} 중 봉사할 수 없는 날을 입력해 주세요`,
   coverAsked: (name, day, line) => `${name} 님이 ${day} ${line} 대신 봉사를 부탁했어요`,
   swapAsked: (name, theirDay, yourDay, line) => `${name} 님이 ${line} 교환을 원해요: ${name} 님의 ${theirDay} ↔ 내 ${yourDay}`,

@@ -363,15 +363,17 @@ class Member {
   bool schedulesSmallGroup(SmallGroup group) =>
       leadsGroup(group) || (group.service != null && mayEditSmallGroup(group.service, group.service));
 
-  /// Whether this member fills in the 人數 of [group]
-  /// (testdata/church_rules.json, attendanceAccess): admins any; a
-  /// service's 負責人 and 牧者 its own and its 小組'; a 小組長 their 小組's.
-  bool writesAttendance(ChurchGroup group) => isAdmin || (group is! MinistryGroup && managesGroup(group));
+  /// Whether this member sees every group's 人數 and puts them together
+  /// (人數總覽, #93): admins and 行政.
+  bool get overseesAttendance => inGroup(Group.rosterEditors);
 
-  /// Whether this member sees the 人數 of [group]: who fills them in, and
-  /// 行政 a service's.
-  bool readsAttendance(ChurchGroup group) =>
-      writesAttendance(group) || (group is ServiceGroup && inGroup(Group.rosterEditors));
+  /// Whether this member fills in the 人數 of [group]
+  /// (testdata/church_rules.json, attendanceAccess): admins and 行政 any; a
+  /// service's 負責人 and 牧者 its own and its 小組'; a 小組長 their 小組's.
+  bool writesAttendance(ChurchGroup group) => group is! MinistryGroup && (overseesAttendance || managesGroup(group));
+
+  /// Whether this member sees the 人數 of [group]: who fills them in.
+  bool readsAttendance(ChurchGroup group) => writesAttendance(group);
 
   /// The group keys whose 人數 this member is reminded of, at 21:00 and on
   /// 首頁 (testdata/church_rules.json, attendanceReminded): a service's as

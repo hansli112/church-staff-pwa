@@ -47,24 +47,25 @@ final attendanceGroupsProvider = Provider.autoDispose<List<AttendanceGroup>>((re
 });
 
 /// The meetings of [group] from [attendanceWeeks] back to today that ask
-/// for their 人數, newest first: none with 回報人數 off. [filled] (days with
-/// 人數) are listed too, though the group no longer meets on them.
+/// for their 人數, newest first: none with 回報人數 off. Days [record] has
+/// 人數 for are listed too, though the group no longer meets on them. A
+/// service filled in every week ([AttendanceRecord.everyWeek], #93) meets
+/// on its weekday, roster or not.
 List<Day> attendanceDays(
   AttendanceGroup group, {
   required Day? since,
-  List<AttendancePause> pauses = const [],
-  Iterable<Day> filled = const [],
+  AttendanceRecord record = const AttendanceRecord(),
   required Day today,
 }) {
   if (since == null) return const [];
   final from = today.addDays(-7 * attendanceWeeks);
-  final kept = {
-    for (final d in filled)
-      if (!d.isBefore(from) && !d.isAfter(today)) d,
+  Meets meetsOn(Day d) => switch (group.meetsOn(d)) {
+    Meets(:final weekday, roster: _?) when record.everyWeek => Meets(weekday: weekday),
+    final meets => meets,
   };
   return [
     for (var d = today; !d.isBefore(from); d = d.addDays(-1))
-      if (kept.contains(d) || attendanceDue(group.meetsOn(d), since: since, pauses: pauses, day: d)) d,
+      if (record.days.containsKey(d) || attendanceDue(meetsOn(d), since: since, pauses: record.pauses, day: d)) d,
   ];
 }
 
@@ -86,8 +87,53 @@ final attendanceDueProvider = Provider.autoDispose<List<AttendanceDue>>((ref) {
     for (final g in ref.watch(attendanceGroupsProvider))
       if (mine.contains(g.group.key))
         if (ref.watch(attendanceProvider(g.group.key)).value case final record?)
-          if (attendanceDays(g, since: since, pauses: record.pauses, today: today).firstOrNull case final day?
-              when !record.days.containsKey(day))
+          // The latest it met, not a day filled in it no longer meets on.
+          if (attendanceDays(
+                g,
+                since: since,
+                record: AttendanceRecord(pauses: record.pauses, everyWeek: record.everyWeek),
+                today: today,
+              ).firstOrNull
+              case final day? when !record.days.containsKey(day))
             (group: g, day: day),
   ];
+});
+
+/// A row of 人數總覽 (#93): a group's latest meeting, and what it has (null: 未填).
+typedef AttendanceLatest = ({AttendanceGroup group, Day day, AttendanceDay? value});
+
+/// 人數總覽 (#93), for admins and 行政 (Member.overseesAttendance): each
+/// group's latest meeting, today's once filled in, oldest first, a day's
+/// services before its 小組; none for a group paused today, nor for one
+/// that has not met yet. Null until every group's 人數 are read.
+final attendanceOverviewProvider = Provider.autoDispose<List<AttendanceLatest>?>((ref) {
+  final since = ref.watch(churchProvider.select((c) => c.value?.attendanceSince));
+  final me = ref.watch(meProvider).value;
+  if (since == null || me == null || !me.overseesAttendance) return const [];
+  final today = ref.watch(todayProvider);
+  final rows = <AttendanceLatest>[];
+  var read = true;
+  for (final g in ref.watch(attendanceGroupsProvider)) {
+    final record = ref.watch(attendanceProvider(g.group.key)).value;
+    if (record == null) {
+      read = false;
+      continue;
+    }
+    if (record.pauseOn(today) != null) continue;
+    final days = attendanceDays(g, since: since, record: record, today: today);
+    if (days.where((d) => d != today || record.days.containsKey(d)).firstOrNull case final day?) {
+      rows.add((group: g, day: day, value: record.days[day]));
+    }
+  }
+  if (!read) return null;
+  int kind(AttendanceLatest r) => r.group.group is ServiceGroup ? 0 : 1;
+  return rows..sort(
+    (a, b) => switch (a.day.compareTo(b.day)) {
+      0 => switch (kind(a) - kind(b)) {
+        0 => a.group.name.compareTo(b.group.name),
+        final k => k,
+      },
+      final c => c,
+    },
+  );
 });

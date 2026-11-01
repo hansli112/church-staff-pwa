@@ -20,6 +20,7 @@ import 'features/home/home_screen.dart';
 import 'features/home/notification_list_screen.dart';
 import 'features/me/about_screen.dart';
 import 'features/me/account_screen.dart';
+import 'features/me/attendance_overview.dart';
 import 'features/me/church_link_screen.dart';
 import 'features/me/groups_screen.dart';
 import 'features/me/invites_screen.dart';
@@ -153,7 +154,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               page(
                 '/home',
-                (_) => const HomeScreen(),
+                // A 回報人數 reminder opens its meeting's 填寫人數 (#93).
+                (s) => FillFromLink(
+                  fill: s.uri.queryParameters['fill'],
+                  day: s.uri.queryParameters['day'],
+                  child: const HomeScreen(),
+                ),
                 routes: [page('notifications', (_) => const NotificationListScreen())],
               ),
             ],
@@ -215,6 +221,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                   page('calendar', (s) => DeferredPage.calendarSettings(result: s.uri.queryParameters['result'])),
                   page('notifications', (_) => const NotificationsScreen()),
                   page('unavailable', (_) => const UnavailableScreen()),
+                  page('attendance', (_) => const AttendanceOverviewScreen()),
                   page('invites', (_) => const InvitesScreen()),
                   page(
                     'groups',

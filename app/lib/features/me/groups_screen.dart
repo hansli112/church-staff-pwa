@@ -180,8 +180,8 @@ class GroupScreen extends ConsumerWidget {
       SmallGroup(:final id) => smallGroups.byId(id),
       _ => null,
     };
-    // 行政 sees a service's 人數 here too, and changes nothing.
-    final sees = me != null && (me.managesGroup(group) || (group is ServiceGroup && me.readsAttendance(group)));
+    // 行政 sees its 人數 here too, from 人數總覽 (#93), and changes nothing else.
+    final sees = me != null && (me.managesGroup(group) || me.readsAttendance(group));
     if (me == null || name == null || members == null || !sees) {
       return Scaffold(appBar: AppBar());
     }
@@ -254,7 +254,9 @@ class GroupScreen extends ConsumerWidget {
                   ListRow(
                     title: l10n.smallGroupMeets,
                     value: smallGroupMeetsLabel(l10n, small),
-                    onTap: () => _meets(context, ref, small),
+                    // Not 行政, who sees it from 人數總覽 (#93).
+                    chevron: me.schedulesSmallGroup(small.group),
+                    onTap: me.schedulesSmallGroup(small.group) ? () => _meets(context, ref, small) : null,
                   ),
               ],
             ),

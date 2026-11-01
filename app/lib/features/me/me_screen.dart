@@ -122,23 +122,14 @@ class SettingsScreen extends ConsumerWidget {
                       }
                     },
                   ),
+                if (church?.attendanceSince != null) const _AttendanceOverviewRow(),
               ],
             ),
           // A lead's groups, one tap away (#82); admins have them all above.
           if (me != null && !me.isAdmin && me.leads) _LedGroups(me: me),
-          // 行政 sees every service's 人數 (#85).
-          if (me != null && !me.isAdmin && me.inGroup(Group.rosterEditors) && church?.attendanceSince != null)
-            ListSection(
-              header: l10n.attendanceHeader,
-              children: [
-                for (final s in ref.watch(servicesProvider).value?.enabled ?? const <Service>[])
-                  ListRow(
-                    leading: const IconTile(Symbols.groups_rounded, color: TileColors.manage),
-                    title: s.name,
-                    onTap: () => context.push('/me/groups/service/${s.id}'),
-                  ),
-              ],
-            ),
+          // 行政 puts every group's 人數 together (#93).
+          if (me != null && !me.isAdmin && me.overseesAttendance && church?.attendanceSince != null)
+            const ListSection(children: [_AttendanceOverviewRow()]),
           ListSection(
             children: [
               // Most used first: everyone's notifications; the church's
@@ -264,4 +255,16 @@ class _LedGroups extends ConsumerWidget {
       ],
     );
   }
+}
+
+/// 人數總覽 (#93), for admins and 行政.
+class _AttendanceOverviewRow extends StatelessWidget {
+  const _AttendanceOverviewRow();
+
+  @override
+  Widget build(BuildContext context) => ListRow(
+    leading: const IconTile(Symbols.table_rows_rounded, color: TileColors.manage),
+    title: L10n.of(context).attendanceOverview,
+    onTap: () => context.push('/me/attendance'),
+  );
 }

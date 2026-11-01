@@ -72,6 +72,9 @@ abstract final class Limits {
   /// A group's pauses, kept once over (回報人數, #85).
   static const attendancePauses = 50;
 
+  /// The other 小組 one met with (聯合小組, #93).
+  static const attendanceTogether = 20;
+
   /// A member's stretches of 不能服事的日子 (#91).
   static const unavailableSpans = 100;
 }

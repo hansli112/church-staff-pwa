@@ -2856,10 +2856,53 @@ class L10nKo extends L10n {
   String get attendanceSaved => '기록함';
 
   @override
+  String get attendanceOverview => '인원 한눈에 보기';
+
+  @override
+  String attendanceOverviewMissing(int count) {
+    return '아직 $count개가 미입력이에요';
+  }
+
+  @override
+  String get attendanceOverviewDone => '모두 기록했어요';
+
+  @override
+  String get attendanceOverviewFooter => '모임과 소그룹마다 가장 최근 모임이에요. 오늘 모임은 기록된 뒤에, 쉬는 중인 곳은 보이지 않아요';
+
+  @override
+  String get attendanceRemind => '알리기';
+
+  @override
+  String get attendanceRemindSent => '알렸어요';
+
+  @override
+  String get attendanceRemindNobody => '알릴 리더가 없어요. 직접 연락해 주세요';
+
+  @override
+  String get attendanceEveryWeek => '매주 기록';
+
+  @override
+  String get attendanceEveryWeekSub => '봉사표가 없는 날도 기록해요';
+
+  @override
+  String get attendanceTogether => '함께 모인 소그룹';
+
+  @override
+  String attendanceWith(String name) {
+    return '$name와 함께';
+  }
+
+  @override
+  String get errRemindedToday => '오늘 이미 알렸어요';
+
+  @override
+  String get errTogetherFilled => '선택한 소그룹은 그날 인원이 이미 기록됐어요';
+
+  @override
   String get notifAttendance => '인원 기록 알림';
 
   @override
-  String get notifAttendanceSub => '모임 당일 오후 9시까지 아무도 기록하지 않았을 때';
+  String get notifAttendanceSub => '모임 당일과 다음 날 오후 9시까지 아무도 기록하지 않았을 때';
 
   @override
   String get churchEntryCanAsk => '아직 이 교회의 멤버가 아니에요. 가입을 신청하면 관리자가 승인한 뒤 가입돼요.';

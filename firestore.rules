@@ -207,24 +207,19 @@ service cloud.firestore {
 
     // 回報人數 (#85) of group [key], `service:<id>` or `small:<id>`
     // (testdata/church_rules.json, attendanceAccess, as
-    // functions/src/attendance.ts): admins any; a service's 負責人 and 牧者
-    // its own and its 小組'; a 小組長 their 小組's. 行政 also sees a
-    // service's.
+    // functions/src/powers.ts): admins and 行政 any (人數總覽, #93); a
+    // service's 負責人 and 牧者 its own and its 小組'; a 小組長 their 小組's.
+    // Who fills them in sees them.
     function writesAttendance(cid, key) {
       let kind = key.split(':')[0];
       let id = key.split(':')[1];
       let leads = member(cid).get('leadTypes', []);
       let small = /databases/$(database)/documents/churches/$(cid)/smallGroups/$(id);
       return isMember(cid) && key.matches('(service|small):[A-Za-z0-9_-]{1,64}')
-        && (isAdmin(cid)
+        && (inGroup(cid, 'roster-editors')
           || (kind == 'service' && id in leads)
           || (kind == 'small' && (id in member(cid).get('leadSmallGroups', [])
               || (exists(small) && get(small).data.get('service', '') in leads))));
-    }
-
-    function readsAttendance(cid, key) {
-      return writesAttendance(cid, key)
-        || (isMember(cid) && key.matches('service:[A-Za-z0-9_-]{1,64}') && inGroup(cid, 'roster-editors'));
     }
 
     function isEventRoster(data) {
@@ -444,18 +439,23 @@ service cloud.firestore {
       }
 
       // 回報人數 (#85) of group {key}: its pauses on the group's doc
-      // (`pauses`, each {from, until}, kept once over), and each meeting's
-      // 人數 under days/{dateKey}: a count (0–100000) with an optional note,
-      // or none (這次沒聚會). A lead may fill one in later (補填) or change it.
+      // (`pauses`, each {from, until}, kept once over), whether a service
+      // fills in every week, roster or not (`everyWeek`, #93), and each
+      // meeting's 人數 under days/{dateKey}: a count (0–100000) with an
+      // optional note, or none (這次沒聚會). A lead may fill one in later
+      // (補填) or change it. A 小組 met with others (聯合小組, #93) says so,
+      // `together` on the one filled in and `with` on the others: those
+      // are fillAttendanceTogether's, which checks the others.
       match /attendance/{key} {
-        allow read: if readsAttendance(cid, key);
+        allow read: if writesAttendance(cid, key);
         allow create, update: if writesAttendance(cid, key)
-          && request.resource.data.keys().hasOnly(['pauses', 'updatedAt'])
+          && request.resource.data.keys().hasOnly(['pauses', 'everyWeek', 'updatedAt'])
           && request.resource.data.get('pauses', []) is list
-          && request.resource.data.get('pauses', []).size() <= 50;
+          && request.resource.data.get('pauses', []).size() <= 50
+          && request.resource.data.get('everyWeek', false) is bool;
 
         match /days/{day} {
-          allow read: if readsAttendance(cid, key);
+          allow read: if writesAttendance(cid, key);
           allow create, update: if writesAttendance(cid, key) && day.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
             && request.resource.data.keys().hasOnly(['count', 'note', 'none', 'by', 'updatedAt'])
             && request.resource.data.get('by', '') == request.auth.uid

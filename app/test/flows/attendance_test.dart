@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/core/design/components.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
@@ -233,17 +234,145 @@ void main() {
     expect(find.text('8 人'), findsOneWidget);
   });
 
-  testWidgets("行政 sees every service's 人數 from 設定, and fills in none", (tester) async {
+  testWidgets("行政 fills in a service's 人數 from its page", (tester) async {
     final b = withAttendance(seededChurch(as: office, extra: [office], clock: eveningOf(Day(2026, 10, 4))));
-    b.attendance['grace'] = {
-      'service:sunday': AttendanceRecord(days: {Day(2026, 10, 4): const AttendanceDay.count(120)}),
-    };
     await pumpApp(tester, b);
-    await go(tester, '/me');
-    await tester.scrollUntilVisible(find.text('主日崇拜'), 200, scrollable: find.byType(Scrollable).last);
-    await tapText(tester, '主日崇拜');
-    await tester.scrollUntilVisible(find.text('120 人'), 200, scrollable: find.byType(Scrollable).last);
-    await tapText(tester, '120 人');
-    expect(find.text('這次沒聚會'), findsNothing, reason: 'nothing to fill in');
+    await go(tester, '/me/groups/service/sunday');
+    await tester.scrollUntilVisible(find.text('未填'), 200, scrollable: find.byType(Scrollable).last);
+    await tapText(tester, '未填');
+    await tester.enterText(find.widgetWithText(TextField, '人數'), '120');
+    await tester.pump();
+    await tapText(tester, '儲存');
+    expect(b.attendance['grace']!['service:sunday']!.days[Day(2026, 10, 4)], const AttendanceDay.count(120));
+  });
+
+  group('人數總覽 (#93)', () {
+    /// 平安小組 of 主日崇拜, on Fridays too, led by 李美玉.
+    const peace = SmallGroupDetails(id: 'peace', name: '平安小組', service: 'sunday', weekday: DateTime.friday);
+
+    /// Sunday 10/11 at 21:30: 主日崇拜 met 10/4 (120 人) and today (未填); 喜樂小組
+    /// met Friday 10/9 (未填); 平安小組 is on a break; 青年崇拜 never has a roster.
+    MemoryBackend church({Member as = office}) {
+      final b = withJoy(withAttendance(seededChurch(as: as, extra: [office], clock: eveningOf(Day(2026, 10, 11)))));
+      b.smallGroups['grace']!['peace'] = peace;
+      b.attendance['grace'] = {
+        'service:sunday': AttendanceRecord(days: {Day(2026, 10, 4): const AttendanceDay.count(120)}),
+        'small:peace': AttendanceRecord(
+          pauses: [AttendancePause(from: Day(2026, 10, 1), until: Day(2026, 11, 1))],
+        ),
+      };
+      return b;
+    }
+
+    Finder inRow(String title, String text) => find.descendant(
+      of: find.ancestor(of: find.text(title), matching: find.byType(ListRow)),
+      matching: find.text(text),
+    );
+
+    testWidgets("行政 sees each group's latest meeting, oldest first, and how many are 未填", (tester) async {
+      final b = church();
+      b.attendance['grace']!['service:youth'] = const AttendanceRecord(everyWeek: true);
+      await pumpApp(tester, b);
+      await go(tester, '/me');
+      await tester.scrollUntilVisible(find.text('人數總覽'), 200, scrollable: find.byType(Scrollable).last);
+      await tapText(tester, '人數總覽');
+      expect(find.text('還有 2 個未填'), findsOneWidget);
+      expect(inRow('主日崇拜', '120 人'), findsOneWidget, reason: "today's, 未填 yet, waits; 10/4's shows");
+      expect(inRow('喜樂小組', '未填'), findsOneWidget);
+      expect(inRow('青年崇拜', '未填'), findsOneWidget, reason: '每週都填人數, no roster');
+      expect(find.text('平安小組'), findsNothing, reason: 'on a break');
+      double y(String t) => tester.getTopLeft(find.text(t)).dy;
+      expect([y('主日崇拜'), y('喜樂小組'), y('青年崇拜')], orderedEquals([y('主日崇拜'), y('喜樂小組'), y('青年崇拜')]..sort()));
+    });
+
+    testWidgets('提醒 asks the 小組長, once a day', (tester) async {
+      final b = church();
+      await pumpApp(tester, b);
+      await go(tester, '/me/attendance');
+      await tester.tap(inRow('喜樂小組', '提醒'));
+      await settle(tester);
+      expect(find.text('已提醒'), findsOneWidget);
+      expect(b.attendanceReminders['grace']!['small:joy']!.told, ['hao']);
+      await tester.pump(const Duration(seconds: 5));
+      await tester.tap(inRow('喜樂小組', '提醒'));
+      await settle(tester);
+      expect(find.text('今天已經提醒過了'), findsOneWidget);
+    });
+
+    testWidgets('a row opens its page, where 行政 fills it in; then all are filled in', (tester) async {
+      final b = church();
+      await pumpApp(tester, b);
+      await go(tester, '/me/attendance');
+      await tapText(tester, '喜樂小組');
+      await tester.scrollUntilVisible(find.text('未填').first, 200, scrollable: find.byType(Scrollable).last);
+      await tester.tap(find.text('未填').first);
+      await settle(tester);
+      await tester.enterText(find.widgetWithText(TextField, '人數'), '9');
+      await tester.pump();
+      await tapText(tester, '儲存');
+      expect(b.attendance['grace']!['small:joy']!.days[Day(2026, 10, 9)], const AttendanceDay.count(9));
+      await go(tester, '/me/attendance');
+      expect(find.text('都填好了'), findsOneWidget);
+    });
+
+    testWidgets('聯合小組: its 小組長 fills in once, for 平安小組 too, and the page says so', (tester) async {
+      final b = church(as: staffHao);
+      b.attendance['grace']!.remove('small:peace');
+      await pumpApp(tester, b);
+      await go(tester, '/me/groups/small/joy');
+      await tester.scrollUntilVisible(find.text('未填').first, 200, scrollable: find.byType(Scrollable).last);
+      await tester.tap(find.text('未填').first);
+      await settle(tester);
+      await tester.enterText(find.widgetWithText(TextField, '人數'), '30');
+      await tester.pump();
+      expect(find.text('和其他小組一起'), findsOneWidget);
+      await tapText(tester, '平安小組');
+      await tapText(tester, '儲存');
+      final days = b.attendance['grace']!;
+      expect(days['small:joy']!.days[Day(2026, 10, 9)], const AttendanceDay.count(30, together: ['small:peace']));
+      expect(days['small:peace']!.days[Day(2026, 10, 9)], const AttendanceDay.joined('small:joy'));
+      expect(find.text('和平安小組一起'), findsOneWidget);
+
+      await go(tester, '/home');
+      expect(find.text('填寫人數'), findsNothing);
+    });
+
+    testWidgets('聯合小組 never over a 小組 already filled in', (tester) async {
+      final b = church(as: staffHao);
+      b.attendance['grace']!['small:peace'] = AttendanceRecord(days: {Day(2026, 10, 9): const AttendanceDay.count(12)});
+      await pumpApp(tester, b);
+      await go(tester, '/me/groups/small/joy');
+      await tester.scrollUntilVisible(find.text('未填').first, 200, scrollable: find.byType(Scrollable).last);
+      await tester.tap(find.text('未填').first);
+      await settle(tester);
+      await tester.enterText(find.widgetWithText(TextField, '人數'), '30');
+      await tester.pump();
+      await tapText(tester, '平安小組');
+      await tapText(tester, '儲存');
+      expect(find.text('選的小組那天已經填了人數'), findsOneWidget);
+      expect(b.attendance['grace']!['small:peace']!.days[Day(2026, 10, 9)], const AttendanceDay.count(12));
+    });
+
+    testWidgets('每週都填人數: a service with no roster asks for its 人數 every week', (tester) async {
+      final b = church(as: pastor);
+      await pumpApp(tester, b);
+      await go(tester, '/me/groups/service/youth');
+      await tester.scrollUntilVisible(find.text('每週都填人數'), 200, scrollable: find.byType(Scrollable).last);
+      expect(find.text('未填'), findsNothing);
+      await tapText(tester, '每週都填人數');
+      expect(b.attendance['grace']!['service:youth']!.everyWeek, isTrue);
+      await tester.scrollUntilVisible(find.text('未填').first, 200, scrollable: find.byType(Scrollable).last);
+      expect(find.text('未填'), findsWidgets);
+    });
+
+    testWidgets("a reminder's link opens that meeting's 填寫人數", (tester) async {
+      final b = church(as: staffHao);
+      await pumpApp(tester, b);
+      await go(tester, '/home?fill=small:joy&day=2026-10-09');
+      await tester.enterText(find.widgetWithText(TextField, '人數'), '11');
+      await tester.pump();
+      await tapText(tester, '儲存');
+      expect(b.attendance['grace']!['small:joy']!.days[Day(2026, 10, 9)], const AttendanceDay.count(11));
+    });
   });
 }

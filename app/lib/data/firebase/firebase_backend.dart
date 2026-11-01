@@ -1333,7 +1333,11 @@ class _FirestoreAttendance implements AttendanceData {
 
   @override
   Stream<AttendanceRecord> watch(String key) => _latestOfBoth(
-    _c._col('attendance').doc(key).live().map((s) => attendancePausesFromJson(s.data())),
+    _c
+        ._col('attendance')
+        .doc(key)
+        .live()
+        .map((s) => (pauses: attendancePausesFromJson(s.data()), everyWeek: s.data()?['everyWeek'] == true)),
     _c
         ._col('attendance')
         .doc(key)
@@ -1345,7 +1349,7 @@ class _FirestoreAttendance implements AttendanceData {
               if ((Day.tryParse(d.id), attendanceDayFromJson(d.data())) case (final day?, final value?)) day: value,
           },
         ),
-    (pauses, days) => AttendanceRecord(pauses: pauses, days: days),
+    (group, days) => AttendanceRecord(pauses: group.pauses, everyWeek: group.everyWeek, days: days),
   ).translated();
 
   @override
@@ -1356,9 +1360,29 @@ class _FirestoreAttendance implements AttendanceData {
   }
 
   @override
+  Future<void> saveTogether(String key, Day day, AttendanceDay value) => _c._call('fillAttendanceTogether', {
+    'key': key,
+    'day': day.key,
+    if (value.none) 'none': true else ...{'count': value.count, 'note': value.note},
+    'together': value.together,
+  });
+
+  @override
   Future<void> savePauses(String key, List<AttendancePause> pauses) {
     final ref = _c._col('attendance').doc(key);
-    return _c._write(ref, (tx) => tx.set(ref, attendancePausesToJson(pauses)));
+    return _c._write(ref, (tx) => tx.set(ref, attendancePausesToJson(pauses), SetOptions(merge: true)));
+  }
+
+  @override
+  Future<void> saveEveryWeek(String key, bool everyWeek) {
+    final ref = _c._col('attendance').doc(key);
+    return _c._write(ref, (tx) => tx.set(ref, {'everyWeek': everyWeek}, SetOptions(merge: true)));
+  }
+
+  @override
+  Future<int> remind(String key, Day day) async {
+    final d = await _c._call('remindAttendance', {'key': key, 'day': day.key});
+    return (d['people'] as num?)?.toInt() ?? 0;
   }
 
   @override

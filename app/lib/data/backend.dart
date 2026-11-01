@@ -526,8 +526,25 @@ abstract interface class AttendanceData {
   /// null clears it.
   Future<void> save(String key, Day day, AttendanceDay? value);
 
+  /// Fills in [day]'s 人數 of 小組 [key], met with the 小組 [value]
+  /// names (AttendanceDay.together, 聯合小組, #93): each in the same
+  /// service, meeting that day, and with nothing filled in
+  /// (CloudReason.togetherFilled otherwise); those it no longer names are
+  /// cleared. Through the backend, which writes the others' too.
+  Future<void> saveTogether(String key, Day day, AttendanceDay value);
+
   /// Sets group [key]'s pauses (AttendanceRecord.pausedUntil, resumed).
   Future<void> savePauses(String key, List<AttendancePause> pauses);
+
+  /// Sets whether service [key] fills in its 人數 every week, roster or
+  /// not (每週都填人數, #93).
+  Future<void> saveEveryWeek(String key, bool everyWeek);
+
+  /// 提醒 on 人數總覽 (#93), by admins and 行政: asks whoever is reminded of
+  /// group [key]'s 人數 (Member.remindedAttendance) for [day]'s, still
+  /// without them; once a day each group (CloudReason.remindedToday).
+  /// Returns how many people.
+  Future<int> remind(String key, Day day);
 
   /// Turns 回報人數 on from [since] (admins), or with null off.
   Future<void> saveSince(Day? since);
@@ -633,6 +650,12 @@ enum CloudReason {
   /// One of Google's own events (CalendarEvent.googleOnly), changed only
   /// in Google Calendar.
   googleOnly,
+
+  /// 提醒 on 人數總覽 (#93): that group was already reminded today.
+  remindedToday,
+
+  /// 聯合小組 (#93): a 小組 picked already has that day's 人數.
+  togetherFilled,
 }
 
 class CloudException implements Exception {

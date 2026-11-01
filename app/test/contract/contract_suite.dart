@@ -935,6 +935,32 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect((await g.church.attendance.watch('service:sunday').first).days.keys, [Day(2026, 10, 4)]);
     });
 
+    test('每週都填人數 stays beside the pauses; 小組 that met together are kept so (#93)', () async {
+      final g = await Grace.open(w);
+      await g.church.attendance.saveSince(Day(2026, 10, 1));
+      final pauses = [AttendancePause(from: Day(2026, 10, 5), until: Day(2026, 11, 1))];
+      await g.church.attendance.savePauses('service:youth', pauses);
+      await g.church.attendance.saveEveryWeek('service:youth', true);
+      await g.church.attendance.savePauses('service:youth', pauses);
+      final youth = await g.church.attendance.watch('service:youth').firstWhere((r) => r.everyWeek);
+      expect(youth.pauses, pauses);
+
+      const friday = SmallGroupDetails(id: '', name: '喜樂小組', service: 'sunday', weekday: DateTime.friday);
+      final joy = await g.church.saveSmallGroup(friday);
+      final peace = await g.church.saveSmallGroup(friday.copyWith(name: '平安小組'));
+      final day = Day(2026, 10, 9);
+      await g.church.attendance.saveTogether('small:$joy', day, AttendanceDay.count(30, together: ['small:$peace']));
+      expect(
+        (await g.church.attendance.watch('small:$peace').firstWhere((r) => r.days.isNotEmpty)).days[day],
+        AttendanceDay.joined('small:$joy'),
+      );
+      await g.church.attendance.save('small:$peace', day, const AttendanceDay.count(12));
+      await expectLater(
+        g.church.attendance.saveTogether('small:$joy', day, AttendanceDay.count(30, together: ['small:$peace'])),
+        throwsA(isA<CloudException>().having((e) => e.reason, 'reason', CloudReason.togetherFilled)),
+      );
+    });
+
     test('a 小組長 adds a plain 同工 to their 小組', () async {
       final g = await Grace.open(w);
       final id = await g.church.saveSmallGroup(

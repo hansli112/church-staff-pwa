@@ -208,6 +208,9 @@ export const editLedDuties = callable(ledDuties.editLedDuties);
 export const notifyPlanned = callable(rosterChange.notifyPlanned, pushDeps);
 export const askUnavailable = callable(unavailable.askUnavailable, pushDeps);
 export const saveUnavailableDays = callable(unavailable.saveUnavailableDays);
+// 回報人數 (#93): 提醒 on 人數總覽, and 小組 that met together.
+export const remindAttendance = callable(attendance.remindAttendance, pushDeps);
+export const fillAttendanceTogether = callable(attendance.fillAttendanceTogether);
 export const askCover = callable(swaps.askCover, pushDeps);
 export const askSwap = callable(swaps.askSwap, pushDeps);
 export const answerSwap = callable(swaps.answerSwap, pushDeps);

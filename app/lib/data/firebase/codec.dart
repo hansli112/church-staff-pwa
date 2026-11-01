@@ -168,12 +168,19 @@ Json attendancePausesToJson(List<AttendancePause> pauses) => {
   ],
 };
 
-AttendanceDay? attendanceDayFromJson(Json data) => data['none'] == true
-    ? const AttendanceDay.none()
-    : switch (data['count']) {
-        final int n => AttendanceDay.count(n, note: data['note'] as String? ?? ''),
-        _ => null,
-      };
+AttendanceDay? attendanceDayFromJson(Json data) {
+  final together = [
+    if (data['together'] is List)
+      for (final k in data['together'] as List<dynamic>)
+        if (k is String) k,
+  ];
+  return switch (data) {
+    {'with': final String host} => AttendanceDay.joined(host),
+    {'none': true} => AttendanceDay.none(together: together),
+    {'count': final int n} => AttendanceDay.count(n, note: data['note'] as String? ?? '', together: together),
+    _ => null,
+  };
+}
 
 Json attendanceDayToJson(AttendanceDay d, String by) =>
     d.none ? {'none': true, 'by': by} : {'count': d.count, if (d.note.isNotEmpty) 'note': d.note, 'by': by};

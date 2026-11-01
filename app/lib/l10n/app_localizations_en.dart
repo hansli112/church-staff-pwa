@@ -3001,10 +3001,54 @@ class L10nEn extends L10n {
   String get attendanceSaved => 'Saved';
 
   @override
+  String get attendanceOverview => 'Attendance overview';
+
+  @override
+  String attendanceOverviewMissing(int count) {
+    return '$count not filled in yet';
+  }
+
+  @override
+  String get attendanceOverviewDone => 'All filled in';
+
+  @override
+  String get attendanceOverviewFooter =>
+      'Each service’s and small group’s latest meeting; today’s once filled in, none while on a break';
+
+  @override
+  String get attendanceRemind => 'Remind';
+
+  @override
+  String get attendanceRemindSent => 'Reminded';
+
+  @override
+  String get attendanceRemindNobody => 'No lead to remind; contact them directly';
+
+  @override
+  String get attendanceEveryWeek => 'Fill in every week';
+
+  @override
+  String get attendanceEveryWeekSub => 'Even on days with no roster';
+
+  @override
+  String get attendanceTogether => 'Met together with';
+
+  @override
+  String attendanceWith(String name) {
+    return 'With $name';
+  }
+
+  @override
+  String get errRemindedToday => 'Already reminded today';
+
+  @override
+  String get errTogetherFilled => 'A group you picked already has that day’s attendance';
+
+  @override
   String get notifAttendance => 'Attendance reminders';
 
   @override
-  String get notifAttendanceSub => 'At 9 PM on a meeting day, when nobody has filled it in';
+  String get notifAttendanceSub => 'At 9 PM on a meeting day and the day after, when nobody has filled it in';
 
   @override
   String get churchEntryCanAsk =>

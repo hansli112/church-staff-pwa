@@ -2,7 +2,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
 
-import { sendAttendanceReminders } from '../src/attendance.js';
+import { fillAttendanceTogether, remindAttendance, sendAttendanceReminders } from '../src/attendance.js';
 import { setGroupMember } from '../src/groupMembers.js';
 import { editSmallGroup } from '../src/smallGroups.js';
 import { caller, clearFirestore, db, deps, fakePush, rejectsWith, seedChurch } from './support.js';
@@ -213,5 +213,113 @@ describe('回報人數 reminders (#85)', () => {
     await db.doc('churches/C1/members/sundayLead').update({ 'notificationPrefs.muted': ['attendance'] });
     await sendAttendanceReminders({ db, messaging, now: sundayEvening, appUrl });
     assert.equal(sent.length, 0, 'muted');
+  });
+});
+
+describe('人數總覽: asked again, 提醒, 每週都填人數 (#93)', () => {
+  const at = (iso: string) => () => new Date(iso);
+
+  test('the next evening, once more, saying it is still not filled in; then never', async () => {
+    await church();
+    await roster('2026-10-18');
+    const { sent, messaging } = fakePush();
+    await sendAttendanceReminders({ db, messaging, now: sundayEvening, appUrl });
+    assert.equal(await sendAttendanceReminders({ db, messaging, now: at('2026-10-19T21:00:00+08:00'), appUrl }), 1);
+    assert.equal(await sendAttendanceReminders({ db, messaging, now: at('2026-10-20T21:00:00+08:00'), appUrl }), 0);
+    assert.deepEqual(sent.map((s) => [s.tokens, s.body]), [
+      [['tok-sundayLead'], '「主日崇拜」10/18（週日）的聚會有幾個人？'],
+      [['tok-sundayLead'], '「主日崇拜」10/18（週日）的聚會人數還沒填'],
+    ]);
+  });
+
+  test('a reminder opens that meeting\'s 填寫人數', async () => {
+    await church();
+    await roster('2026-10-18');
+    const { sent, messaging } = fakePush();
+    await sendAttendanceReminders({ db, messaging, now: sundayEvening, appUrl });
+    assert.equal(decodeURIComponent(sent[0].link), '/c/C1?to=/home?fill=service:sunday&day=2026-10-18');
+  });
+
+  test('a service filled in every week is asked without a roster that day', async () => {
+    await church();
+    await db.doc('churches/C1/attendance/service:sunday').set({ pauses: [], everyWeek: true });
+    const { sent, messaging } = fakePush();
+    await sendAttendanceReminders({ db, messaging, now: sundayEvening, appUrl });
+    assert.deepEqual(sent.map((s) => s.tokens), [['tok-sundayLead']]);
+  });
+
+  /** mei, 行政. */
+  const office = () =>
+    db.doc('churches/C1/members/mei').update({ groups: ['roster-editors', 'calendar-editors'], identities: [{ kind: 'office' }] });
+
+  test('行政 reminds the 負責人 of a meeting still 未填, once a day', async () => {
+    await church();
+    await office();
+    await roster('2026-10-18');
+    const { sent, messaging } = fakePush();
+    const remind = (iso: string) =>
+      remindAttendance({ ...deps, now: at(iso), messaging, appUrl }, caller('mei'), { churchId: 'C1', key: 'service:sunday', day: '2026-10-18' });
+    assert.deepEqual(await remind('2026-10-20T09:00:00+08:00'), { people: 1 });
+    assert.deepEqual(sent.map((s) => [s.tokens, s.body]), [[['tok-sundayLead'], '「主日崇拜」10/18（週日）的聚會人數還沒填']]);
+    const again = await rejectsWith(remind('2026-10-20T18:00:00+08:00'), 'unknown');
+    assert.equal((again as { details: { detail: string } }).details.detail, 'remindedToday');
+    assert.deepEqual(await remind('2026-10-21T09:00:00+08:00'), { people: 1 });
+  });
+
+  test('not once filled in, nor a day it did not meet, nor by a 負責人', async () => {
+    await church();
+    await office();
+    await roster('2026-10-18');
+    const { messaging } = fakePush();
+    const remind = (who: string, day = '2026-10-18') =>
+      remindAttendance({ ...deps, now: at('2026-10-20T09:00:00+08:00'), messaging, appUrl }, caller(who), { churchId: 'C1', key: 'service:sunday', day });
+    await rejectsWith(remind('sundayLead'), 'permissionDenied');
+    await rejectsWith(remind('mei', '2026-10-11'), 'conflict');
+    await db.doc('churches/C1/attendance/service:sunday/days/2026-10-18').set({ count: 120 });
+    await rejectsWith(remind('mei'), 'conflict');
+  });
+
+  test('聯合小組: one fills in, and those it met with are kept as met with it, asked nothing', async () => {
+    await church();
+    const id = await joy();
+    const { id: peace } = await editSmallGroup(deps, caller('sundayLead'), {
+      churchId: 'C1', op: 'save', group: { name: '平安小組', service: 'sunday', weekday: 5, every: 1 }, leads: ['mei'],
+    });
+    await fillAttendanceTogether(deps, caller('joyLead'), {
+      churchId: 'C1', key: `small:${id}`, day: '2026-10-16', count: 30, note: '一起烤肉', together: [`small:${peace}`],
+    });
+    const day = (k: string) => db.doc(`churches/C1/attendance/${k}/days/2026-10-16`).get();
+    const host = (await day(`small:${id}`)).data()!;
+    assert.deepEqual([host.count, host.note, host.together, host.by], [30, '一起烤肉', [`small:${peace}`], 'joyLead']);
+    assert.equal((await day(`small:${peace}`)).get('with'), `small:${id}`);
+    const { sent, messaging } = fakePush();
+    await sendAttendanceReminders({ db, messaging, now: () => new Date('2026-10-16T21:00:00+08:00'), appUrl });
+    assert.equal(sent.length, 0);
+
+    // Left out again: cleared.
+    await fillAttendanceTogether(deps, caller('joyLead'), { churchId: 'C1', key: `small:${id}`, day: '2026-10-16', count: 18, together: [] });
+    assert.equal((await day(`small:${peace}`)).exists, false);
+    assert.equal((await day(`small:${id}`)).get('together'), undefined);
+  });
+
+  test('聯合小組: never over one filled in, one of another service or not meeting that day, nor by another', async () => {
+    await church();
+    const id = await joy();
+    const make = async (name: string, service: string, weekday: number, lead: string) =>
+      (await editSmallGroup(deps, caller('pastor'), {
+        churchId: 'C1', op: 'save', group: { name, service, weekday, every: 1 }, leads: [lead],
+      })).id;
+    const peace = await make('平安小組', 'sunday', 5, 'mei');
+    const youth = await make('青年小組', 'youth', 5, 'youthLead');
+    const monday = await make('週一小組', 'sunday', 1, 'pastor');
+    const fill = (who: string, together: string[]) =>
+      fillAttendanceTogether(deps, caller(who), { churchId: 'C1', key: `small:${id}`, day: '2026-10-16', count: 30, together });
+    await rejectsWith(fill('joyLead', [`small:${youth}`]), 'unknown');
+    await rejectsWith(fill('joyLead', [`small:${monday}`]), 'unknown');
+    await rejectsWith(fill('mei', [`small:${peace}`]), 'permissionDenied');
+    await db.doc(`churches/C1/attendance/small:${peace}/days/2026-10-16`).set({ count: 12, by: 'mei' });
+    const filled = await rejectsWith(fill('joyLead', [`small:${peace}`]), 'unknown');
+    assert.equal((filled as { details: { detail: string } }).details.detail, 'togetherFilled');
+    assert.equal((await db.doc(`churches/C1/attendance/small:${peace}/days/2026-10-16`).get()).get('count'), 12);
   });
 });
