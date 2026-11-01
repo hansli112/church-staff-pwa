@@ -103,7 +103,8 @@ class FirebaseBackend implements Backend {
   @override
   void warmUp(WarmUp what) => _calls.warm(switch (what) {
     WarmUp.calendarWrite => const ['calendarWrite'],
-    WarmUp.serviceEdit => const ['editService'],
+    WarmUp.serviceEdit => const ['editService', 'editSmallGroup'],
+    WarmUp.smallGroupEdit => const ['editSmallGroup'],
     WarmUp.dutyList => const ['setDuty'],
     WarmUp.joinChurch => const ['previewInvite', 'redeemInvite'],
     WarmUp.askToJoin => const ['requestToJoin'],

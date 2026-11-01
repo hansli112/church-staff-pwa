@@ -2853,6 +2853,17 @@ class L10nZh extends L10n {
   String get attendanceNoDays => '還沒有要填的聚會';
 
   @override
+  String attendanceNext(String day) {
+    return '下次聚會 $day';
+  }
+
+  @override
+  String get attendanceNoMeets => '還沒設聚會時間';
+
+  @override
+  String get attendanceOtherDay => '補填其他日子';
+
+  @override
   String get attendanceSaved => '已填寫';
 
   @override
@@ -6184,6 +6195,17 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get attendanceNoDays => '还没有要填的聚会';
+
+  @override
+  String attendanceNext(String day) {
+    return '下次聚会 $day';
+  }
+
+  @override
+  String get attendanceNoMeets => '还没设聚会时间';
+
+  @override
+  String get attendanceOtherDay => '补填其他日子';
 
   @override
   String get attendanceSaved => '已填写';

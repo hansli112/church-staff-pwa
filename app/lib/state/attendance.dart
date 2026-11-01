@@ -59,15 +59,42 @@ List<Day> attendanceDays(
 }) {
   if (since == null) return const [];
   final from = today.addDays(-7 * attendanceWeeks);
-  Meets meetsOn(Day d) => switch (group.meetsOn(d)) {
-    Meets(:final weekday, roster: _?) when record.everyWeek => Meets(weekday: weekday),
-    final meets => meets,
-  };
   return [
     for (var d = today; !d.isBefore(from); d = d.addDays(-1))
-      if (record.days.containsKey(d) || attendanceDue(meetsOn(d), since: since, pauses: record.pauses, day: d)) d,
+      if (record.days.containsKey(d) || _due(group, since: since, record: record, day: d)) d,
   ];
 }
+
+/// Whether [group] meets on [day] and asks for its 人數 then.
+bool _due(AttendanceGroup group, {required Day since, required AttendanceRecord record, required Day day}) =>
+    attendanceDue(
+      switch (group.meetsOn(day)) {
+        Meets(:final weekday, roster: _?) when record.everyWeek => Meets(weekday: weekday),
+        final meets => meets,
+      },
+      since: since,
+      pauses: record.pauses,
+      day: day,
+    );
+
+/// [group]'s next meeting that asks for its 人數, from [today] on, within
+/// [attendanceWeeks]; null if none is known (a 小組 with no 聚會時間, a
+/// service with no roster ahead).
+Day? nextAttendanceDay(
+  AttendanceGroup group, {
+  required Day? since,
+  AttendanceRecord record = const AttendanceRecord(),
+  required Day today,
+}) {
+  if (since == null) return null;
+  for (var d = today; d.isBefore(today.addDays(7 * attendanceWeeks)); d = d.addDays(1)) {
+    if (_due(group, since: since, record: record, day: d)) return d;
+  }
+  return null;
+}
+
+/// Whether [group] is a 小組 whose 聚會時間 is not set yet.
+bool meetsUnset(AttendanceGroup group, Day today) => group.group is SmallGroup && group.meetsOn(today).weekday == null;
 
 /// A meeting that waits for its 人數 on 首頁, for one who leads its group:
 /// the latest one, until the next comes (首頁顯示「填寫人數」到下一次聚會為止).
@@ -99,13 +126,17 @@ final attendanceDueProvider = Provider.autoDispose<List<AttendanceDue>>((ref) {
   ];
 });
 
-/// A row of 人數總覽 (#93): a group's latest meeting, and what it has (null: 未填).
-typedef AttendanceLatest = ({AttendanceGroup group, Day day, AttendanceDay? value});
+/// A row of 人數總覽 (#93): a group's latest meeting, and what it has
+/// (null: 未填); or, for one that has not met yet, no [day] and its [next]
+/// meeting (null for a 小組 with no 聚會時間).
+typedef AttendanceLatest = ({AttendanceGroup group, Day? day, AttendanceDay? value, Day? next});
 
 /// 人數總覽 (#93), for admins and 行政 (Member.overseesAttendance): each
 /// group's latest meeting, today's once filled in, oldest first, a day's
-/// services before its 小組; none for a group paused today, nor for one
-/// that has not met yet. Null until every group's 人數 are read.
+/// services before its 小組; then the groups that have not met yet, with
+/// their next meeting, or a 小組 with no 聚會時間, so a new one is found
+/// here too. None for a group paused today, nor for a service with no
+/// roster ahead. Null until every group's 人數 are read.
 final attendanceOverviewProvider = Provider.autoDispose<List<AttendanceLatest>?>((ref) {
   final since = ref.watch(churchProvider.select((c) => c.value?.attendanceSince));
   final me = ref.watch(meProvider).value;
@@ -122,13 +153,19 @@ final attendanceOverviewProvider = Provider.autoDispose<List<AttendanceLatest>?>
     if (record.pauseOn(today) != null) continue;
     final days = attendanceDays(g, since: since, record: record, today: today);
     if (days.where((d) => d != today || record.days.containsKey(d)).firstOrNull case final day?) {
-      rows.add((group: g, day: day, value: record.days[day]));
+      rows.add((group: g, day: day, value: record.days[day], next: null));
+    } else if (nextAttendanceDay(g, since: since, record: record, today: today) case final next?) {
+      rows.add((group: g, day: null, value: null, next: next));
+    } else if (meetsUnset(g, today)) {
+      rows.add((group: g, day: null, value: null, next: null));
     }
   }
   if (!read) return null;
   int kind(AttendanceLatest r) => r.group.group is ServiceGroup ? 0 : 1;
+  // Not met yet: last, by their next meeting, those with none at the end.
+  Day order(AttendanceLatest r) => r.day ?? r.next?.addDays(100000) ?? Day(9999, 1, 1);
   return rows..sort(
-    (a, b) => switch (a.day.compareTo(b.day)) {
+    (a, b) => switch (order(a).compareTo(order(b))) {
       0 => switch (kind(a) - kind(b)) {
         0 => a.group.name.compareTo(b.group.name),
         final k => k,

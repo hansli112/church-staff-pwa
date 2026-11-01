@@ -5134,6 +5134,24 @@ abstract class L10n {
   /// **'還沒有要填的聚會'**
   String get attendanceNoDays;
 
+  /// A group with nothing to fill in yet: when it next meets (#85)
+  ///
+  /// In zh, this message translates to:
+  /// **'下次聚會 {day}'**
+  String attendanceNext(String day);
+
+  /// A 小組 with nothing to fill in because its 聚會時間 is not set
+  ///
+  /// In zh, this message translates to:
+  /// **'還沒設聚會時間'**
+  String get attendanceNoMeets;
+
+  /// Row under a group's 人數: pick any past day to fill in its 人數
+  ///
+  /// In zh, this message translates to:
+  /// **'補填其他日子'**
+  String get attendanceOtherDay;
+
   /// Toast after filling in a meeting's 人數
   ///
   /// In zh, this message translates to:

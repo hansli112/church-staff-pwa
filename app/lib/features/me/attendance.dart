@@ -71,13 +71,29 @@ class AttendanceSection extends ConsumerWidget {
             leading: const Icon(Symbols.pause_circle_rounded),
             onTap: () => _pause(context, ref, record, today),
           ),
-        if (days.isEmpty) ListRow(title: l10n.attendanceNoDays, chevron: false),
+        // Why there is nothing to fill in, and when there will be.
+        if (days.isEmpty && !paused)
+          ListRow(
+            title: switch (nextAttendanceDay(group, since: since, record: record, today: today)) {
+              final next? => attendanceNotYet(l10n, next, today),
+              null when meetsUnset(group, today) => attendanceNotYet(l10n, null, today),
+              null => l10n.attendanceNoDays,
+            },
+            chevron: false,
+          ),
         for (final day in days)
           ListRow(
             title: dayLabel(l10n, day, today),
             value: attendanceValue(l10n, record.days[day], nameOf),
             subtitle: attendanceDetail(l10n, record.days[day], nameOf),
             onTap: writes ? () => fillAttendance(context, ref, group, day, record.days[day]) : null,
+          ),
+        // A day it met though not on its 聚會時間, or before 回報人數 was on.
+        if (writes)
+          ListRow(
+            title: l10n.attendanceOtherDay,
+            leading: const Icon(Symbols.edit_calendar_rounded),
+            onTap: () => _otherDay(context, ref, record, today),
           ),
       ],
     );
@@ -89,6 +105,20 @@ class AttendanceSection extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) showToast(context, saveErrorText(L10n.of(context), e));
     }
+  }
+
+  /// 補填其他日子: a day picked, back to a year ago, then 填寫人數 for it.
+  Future<void> _otherDay(BuildContext context, WidgetRef ref, AttendanceRecord record, Day today) async {
+    final picked = await pickDay(
+      context,
+      title: L10n.of(context).attendanceOtherDay,
+      initial: today.midnight,
+      first: today.addDays(-366).midnight,
+      last: today.midnight,
+    );
+    if (picked == null || !context.mounted) return;
+    final day = Day(picked.year, picked.month, picked.day);
+    await fillAttendance(context, ref, group, day, record.days[day]);
   }
 
   Future<void> _pause(BuildContext context, WidgetRef ref, AttendanceRecord record, Day today) async {
@@ -106,6 +136,11 @@ class AttendanceSection extends ConsumerWidget {
   Future<void> _setPauses(BuildContext context, WidgetRef ref, List<AttendancePause> pauses) =>
       _save(context, () => ref.churchData.attendance.savePauses(group.group.key, pauses));
 }
+
+/// For a group with no meeting to fill in yet: its [next] one, or that
+/// its 聚會時間 is not set (null [next]).
+String attendanceNotYet(L10n l10n, Day? next, Day today) =>
+    next == null ? l10n.attendanceNoMeets : l10n.attendanceNext(dayLabel(l10n, next, today));
 
 /// The name of the group a key names, for 和○○一起.
 String Function(String key) attendanceGroupName(WidgetRef ref) {

@@ -321,23 +321,11 @@ class GroupScreen extends ConsumerWidget {
           // Above the 同工, which may be many.
           if (serviceSmallGroups.isNotEmpty || opensSmall)
             box(
-              ListSection(
-                header: l10n.smallGroups,
-                children: [
-                  for (final g in serviceSmallGroups)
-                    ListRow(
-                      title: g.name,
-                      subtitle: attendanceOn ? smallGroupMeetsLabel(l10n, g) : null,
-                      onTap: () => context.push('/me/groups/small/${g.id}'),
-                    ),
-                  if (opensSmall)
-                    ListRow(
-                      title: l10n.addSmallGroup,
-                      leading: const Icon(Symbols.add_rounded),
-                      chevron: false,
-                      onTap: () => _addSmall(context, ref, group.id),
-                    ),
-                ],
+              _SmallGroupsSection(
+                service: group.id,
+                smallGroups: serviceSmallGroups,
+                opens: opensSmall,
+                attendanceOn: attendanceOn,
               ),
             ),
           if (attendance != null) box(AttendanceSection(group: attendance)),
@@ -476,24 +464,6 @@ class GroupScreen extends ConsumerWidget {
             )
           : null,
     );
-  }
-
-  /// 新增小組 in service [service]: named, then its page.
-  Future<void> _addSmall(BuildContext context, WidgetRef ref, String service) async {
-    final l10n = L10n.of(context);
-    final name = await promptText(
-      context,
-      title: l10n.addSmallGroup,
-      hint: l10n.smallGroupName,
-      maxLength: TextLimits.profileName,
-    );
-    if (name == null || !context.mounted) return;
-    try {
-      final id = await ref.churchData.saveSmallGroup(SmallGroupDetails(id: '', name: name, service: service));
-      if (context.mounted) unawaited(context.push('/me/groups/small/$id'));
-    } catch (e) {
-      if (context.mounted) showToast(context, saveErrorText(l10n, e));
-    }
   }
 
   /// Changes [small] to [next], refused once someone else changed it.
@@ -662,6 +632,84 @@ class GroupScreen extends ConsumerWidget {
         for (final m in before) m.id == was.id ? next : m,
       ]),
     );
+  }
+}
+
+/// A service's 小組, each opening its page, and 新增小組 for whoever
+/// [opens] them: one being made shows at once, saving, then its page opens.
+class _SmallGroupsSection extends ConsumerStatefulWidget {
+  const _SmallGroupsSection({
+    required this.service,
+    required this.smallGroups,
+    required this.opens,
+    required this.attendanceOn,
+  });
+
+  final String service;
+  final List<SmallGroupDetails> smallGroups;
+  final bool opens;
+  final bool attendanceOn;
+
+  @override
+  ConsumerState<_SmallGroupsSection> createState() => _SmallGroupsSectionState();
+}
+
+class _SmallGroupsSectionState extends ConsumerState<_SmallGroupsSection> {
+  /// The names of the 小組 being made, until saved.
+  final _adding = <String>[];
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    return ListSection(
+      header: l10n.smallGroups,
+      children: [
+        for (final g in widget.smallGroups)
+          ListRow(
+            title: g.name,
+            subtitle: widget.attendanceOn ? smallGroupMeetsLabel(l10n, g) : null,
+            onTap: () => context.push('/me/groups/small/${g.id}'),
+          ),
+        for (final name in _adding)
+          if (!widget.smallGroups.any((g) => g.name == name))
+            ListRow(
+              title: name,
+              chevron: false,
+              trailing: Semantics(
+                label: l10n.saving,
+                child: const SizedBox.square(dimension: 18, child: CircularProgressIndicator.adaptive(strokeWidth: 2)),
+              ),
+            ),
+        if (widget.opens)
+          ListRow(
+            title: l10n.addSmallGroup,
+            leading: const Icon(Symbols.add_rounded),
+            chevron: false,
+            onTap: _add,
+          ),
+      ],
+    );
+  }
+
+  /// 新增小組: named, shown while saved, then its page.
+  Future<void> _add() async {
+    final l10n = L10n.of(context);
+    final name = await promptText(
+      context,
+      title: l10n.addSmallGroup,
+      hint: l10n.smallGroupName,
+      maxLength: TextLimits.profileName,
+    );
+    if (name == null || !mounted) return;
+    setState(() => _adding.add(name));
+    try {
+      final id = await ref.churchData.saveSmallGroup(SmallGroupDetails(id: '', name: name, service: widget.service));
+      if (mounted) unawaited(context.push('/me/groups/small/$id'));
+    } catch (e) {
+      if (mounted) showToast(context, saveErrorText(l10n, e));
+    } finally {
+      if (mounted) setState(() => _adding.remove(name));
+    }
   }
 }
 

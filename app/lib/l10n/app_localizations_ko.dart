@@ -2858,6 +2858,17 @@ class L10nKo extends L10n {
   String get attendanceNoDays => '기록할 모임이 아직 없어요';
 
   @override
+  String attendanceNext(String day) {
+    return '다음 모임 $day';
+  }
+
+  @override
+  String get attendanceNoMeets => '모임 시간이 아직 없어요';
+
+  @override
+  String get attendanceOtherDay => '다른 날 입력';
+
+  @override
   String get attendanceSaved => '기록함';
 
   @override

@@ -1032,6 +1032,9 @@ enum WarmUp {
   calendarWrite,
   serviceEdit,
 
+  /// A 小組's page: renaming it, when it meets, its 小組長.
+  smallGroupEdit,
+
   /// A duty's page (#94): who is on its list, a tap away.
   dutyList,
   joinChurch,

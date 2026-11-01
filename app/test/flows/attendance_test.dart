@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -34,6 +36,12 @@ Future<void> tapText(WidgetTester tester, String text) async {
   await tester.tap(find.text(text).last);
   await settle(tester);
 }
+
+/// [text] in the row titled [title].
+Finder inRow(String title, String text) => find.descendant(
+  of: find.ancestor(of: find.text(title), matching: find.byType(ListRow)),
+  matching: find.text(text),
+);
 
 /// Scrolls the page until [finder] shows, and on past the tab bar that
 /// covers the bottom: a service's page is long (#94).
@@ -90,7 +98,55 @@ void main() {
     await tester.tap(find.byType(Switch));
     await settle(tester);
     expect(b.churches['grace']!.attendanceSince, testToday);
-    expect(find.text('還沒有要填的聚會'), findsOneWidget, reason: 'the list, once on: from today, none yet');
+    expect(find.textContaining('下次聚會'), findsWidgets, reason: 'the list, once on: from today, when each meets next');
+  });
+
+  testWidgets('a new 小組 says its 聚會時間 is not set, on its page and on 回報人數', (
+    tester,
+  ) async {
+    final b = withJoy(
+      withAttendance(seededChurch(clock: eveningOf(Day(2026, 10, 4)))),
+      group: const SmallGroupDetails(id: 'joy', name: '喜樂小組', service: 'sunday'),
+    );
+    await pumpApp(tester, b);
+    await go(tester, '/me/attendance');
+    expect(inRow('喜樂小組', '還沒設聚會時間'), findsOneWidget, reason: 'a new 小組 is found here too');
+    expect(inRow('喜樂小組', '提醒'), findsNothing);
+    await tapText(tester, '喜樂小組');
+    await scrollToShow(tester, find.text('補填其他日子'));
+    expect(find.text('還沒設聚會時間'), findsWidgets);
+  });
+
+  testWidgets('a 小組 that has not met since 回報人數 came on says when it next meets, there too', (tester) async {
+    final b = withJoy(seededChurch(clock: eveningOf(Day(2026, 10, 4))));
+    b.churches['grace'] = b.churches['grace']!.copyWith(attendanceSince: () => Day(2026, 10, 4));
+    await pumpApp(tester, b);
+    await go(tester, '/me/attendance');
+    final next = find.textContaining(RegExp(r'^下次聚會 10月9日'));
+    expect(
+      find.descendant(
+        of: find.ancestor(of: find.text('喜樂小組'), matching: find.byType(ListRow)),
+        matching: next,
+      ),
+      findsOneWidget,
+    );
+    await go(tester, '/me/groups/small/joy');
+    await scrollToShow(tester, find.text('補填其他日子'));
+    expect(next, findsOneWidget);
+  });
+
+  testWidgets('補填其他日子: a day it met off its 聚會時間, picked, then filled in', (tester) async {
+    final b = withJoy(withAttendance(seededChurch(as: staffHao, clock: eveningOf(Day(2026, 10, 4)))));
+    await pumpApp(tester, b);
+    await go(tester, '/me/groups/small/joy');
+    await scrollToShow(tester, find.text('補填其他日子'));
+    await tapText(tester, '補填其他日子');
+    await tester.tap(find.descendant(of: find.byType(CalendarDatePicker), matching: find.text('3')));
+    await settle(tester);
+    await tester.enterText(find.widgetWithText(TextField, '人數'), '12');
+    await tester.pump();
+    await tapText(tester, '儲存');
+    expect(b.attendance['grace']!['small:joy']!.days[Day(2026, 10, 3)]?.count, 12);
   });
 
   testWidgets("a service's 負責人 opens a 小組 and names its 小組長", (tester) async {
@@ -100,7 +156,12 @@ void main() {
     await tester.scrollUntilVisible(find.text('新增小組'), 200, scrollable: find.byType(Scrollable).last);
     await tapText(tester, '新增小組');
     await tester.enterText(find.byType(TextField), '喜樂小組');
+    b.smallGroupSaveHeld = Completer();
     await tapText(tester, '儲存');
+    expect(find.text('喜樂小組'), findsOneWidget, reason: 'listed at once, though the server has not answered');
+    expect(find.byType(CircularProgressIndicator), findsWidgets, reason: 'saving');
+    b.smallGroupSaveHeld!.complete();
+    await settle(tester);
     final made = b.smallGroups['grace']!.values.single;
     expect((made.name, made.service), ('喜樂小組', 'sunday'));
     expect(find.text('喜樂小組'), findsWidgets, reason: 'its page opened');
@@ -276,11 +337,6 @@ void main() {
       };
       return b;
     }
-
-    Finder inRow(String title, String text) => find.descendant(
-      of: find.ancestor(of: find.text(title), matching: find.byType(ListRow)),
-      matching: find.text(text),
-    );
 
     testWidgets("行政 sees each group's latest meeting, oldest first, and how many are 未填", (tester) async {
       final b = church();

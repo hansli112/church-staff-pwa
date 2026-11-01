@@ -3004,6 +3004,17 @@ class L10nEn extends L10n {
   String get attendanceNoDays => 'No meetings to fill in yet';
 
   @override
+  String attendanceNext(String day) {
+    return 'Next meeting $day';
+  }
+
+  @override
+  String get attendanceNoMeets => 'No meeting time set yet';
+
+  @override
+  String get attendanceOtherDay => 'Fill in another day';
+
+  @override
   String get attendanceSaved => 'Saved';
 
   @override

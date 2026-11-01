@@ -247,7 +247,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                         ),
                       ),
                       page('ministry/:id', (s) => GroupScreen(group: MinistryGroup(s.pathParameters['id']!))),
-                      page('small/:id', (s) => GroupScreen(group: SmallGroup(s.pathParameters['id']!))),
+                      page(
+                        'small/:id',
+                        (s) => WarmUpOnOpen(
+                          WarmUp.smallGroupEdit,
+                          child: GroupScreen(group: SmallGroup(s.pathParameters['id']!)),
+                        ),
+                      ),
                     ],
                   ),
                   page(

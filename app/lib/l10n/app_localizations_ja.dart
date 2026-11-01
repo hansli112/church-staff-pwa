@@ -2858,6 +2858,17 @@ class L10nJa extends L10n {
   String get attendanceNoDays => '記録する集まりはまだありません';
 
   @override
+  String attendanceNext(String day) {
+    return '次の集まり $day';
+  }
+
+  @override
+  String get attendanceNoMeets => '集まりの日時がまだ未設定';
+
+  @override
+  String get attendanceOtherDay => 'ほかの日を記入';
+
+  @override
   String get attendanceSaved => '記録しました';
 
   @override

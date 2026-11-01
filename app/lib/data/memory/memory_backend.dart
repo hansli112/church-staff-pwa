@@ -202,6 +202,10 @@ class MemoryBackend implements Backend {
   /// as on a slow network.
   Completer<void>? invitePreviewHeld;
 
+  /// Scripted: while set, opening or changing a 小組 waits for this to
+  /// complete, as on a slow network or a cold start.
+  Completer<void>? smallGroupSaveHeld;
+
   /// Scripted: while set, the back office's stats and costs wait for this
   /// to complete, as on a slow network.
   Completer<void>? backOfficeReadsHeld;
@@ -947,6 +951,7 @@ class MemoryChurchData implements ChurchData {
     List<String>? leads,
     List<String>? leadsBefore,
   }) async {
+    await _b.smallGroupSaveHeld?.future;
     final me = _b.functionAccess(churchId)!;
     final groups = _b.smallGroups.putIfAbsent(churchId, () => {});
     final was = group.id.isEmpty ? null : groups[group.id];

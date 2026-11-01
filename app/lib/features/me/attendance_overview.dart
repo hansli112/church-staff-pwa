@@ -27,7 +27,7 @@ class AttendanceOverviewScreen extends ConsumerWidget {
     final rows = ref.watch(attendanceOverviewProvider);
     final today = ref.watch(todayProvider);
     final nameOf = attendanceGroupName(ref);
-    final missing = rows?.where((r) => r.value == null).length ?? 0;
+    final missing = rows?.where((r) => r.day != null && r.value == null).length ?? 0;
     final church = ref.watch(churchProvider).value;
     final on = church?.attendanceSince != null;
     final admin = ref.watch(meProvider).value?.isAdmin ?? false;
@@ -57,7 +57,7 @@ class AttendanceOverviewScreen extends ConsumerWidget {
                   ),
                 if (on && rows != null)
                   ListSection(
-                    header: rows.isEmpty
+                    header: rows.every((r) => r.day == null)
                         ? null
                         : missing > 0
                         ? l10n.attendanceOverviewMissing(missing)
@@ -68,12 +68,15 @@ class AttendanceOverviewScreen extends ConsumerWidget {
                       for (final r in rows)
                         ListRow(
                           title: r.group.name,
-                          subtitle: [
-                            dayLabel(l10n, r.day, today),
-                            ?attendanceDetail(l10n, r.value, nameOf),
-                          ].join(l10n.dotSeparator),
-                          value: attendanceValue(l10n, r.value, nameOf),
-                          trailing: r.value == null
+                          subtitle: switch (r.day) {
+                            final day? => [
+                              dayLabel(l10n, day, today),
+                              ?attendanceDetail(l10n, r.value, nameOf),
+                            ].join(l10n.dotSeparator),
+                            null => attendanceNotYet(l10n, r.next, today),
+                          },
+                          value: r.day == null ? null : attendanceValue(l10n, r.value, nameOf),
+                          trailing: r.day != null && r.value == null
                               ? RowButton(label: l10n.attendanceRemind, onPressed: () => _remind(context, ref, r))
                               : null,
                           onTap: () => context.push(
@@ -93,7 +96,7 @@ class AttendanceOverviewScreen extends ConsumerWidget {
   Future<void> _remind(BuildContext context, WidgetRef ref, AttendanceLatest r) async {
     final l10n = L10n.of(context);
     try {
-      final people = await ref.churchData.attendance.remind(r.group.group.key, r.day);
+      final people = await ref.churchData.attendance.remind(r.group.group.key, r.day!);
       if (context.mounted) showToast(context, people > 0 ? l10n.attendanceRemindSent : l10n.attendanceRemindNobody);
     } catch (e) {
       if (context.mounted) showToast(context, saveErrorText(l10n, e));

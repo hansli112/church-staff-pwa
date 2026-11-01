@@ -27,9 +27,11 @@ void main() {
 
   testWidgets('the pages that end in a slow call warm it up as they open', (tester) async {
     final b = seededChurch();
+    b.smallGroups['grace'] = {'joy': const SmallGroupDetails(id: 'joy', name: '喜樂小組', service: 'sunday')};
     await pumpApp(tester, b);
     for (final (path, what) in [
       ('/me/groups/service/sunday', WarmUp.serviceEdit),
+      ('/me/groups/small/joy', WarmUp.smallGroupEdit),
       ('/me/groups/duty?service=sunday&name=%E5%8F%B8%E7%90%B4', WarmUp.dutyList),
       ('/me/timezone', WarmUp.timeZone),
       ('/rosters/import/sunday', WarmUp.photoImport),
