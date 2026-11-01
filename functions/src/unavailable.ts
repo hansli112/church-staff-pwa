@@ -58,7 +58,7 @@ export async function askUnavailable(deps: Deps & PushDeps, caller: Caller | nul
     serviceId,
     members.docs.map((m) => ({ ...(m.data() as Listed), uid: m.id })),
   );
-  await notifyMembers(deps, cid, asked, 'rosterChange', (w) => ({
+  await notifyMembers(deps, cid, asked, 'swap', (w) => ({
     title: church.get('name') as string,
     body: w.askUnavailable(from, to),
     link: '/me/unavailable',

@@ -3171,4 +3171,121 @@ class L10nJa extends L10n {
 
   @override
   String get planAskSend => '依頼する';
+
+  @override
+  String get notifSwap => '代わり・交換';
+
+  @override
+  String get notifSwapSub => '代わりや交換を頼まれたとき、自分の依頼に返事があったとき、奉仕できない日の入力を頼まれたとき';
+
+  @override
+  String get swapMenu => '代わり・交換を頼む';
+
+  @override
+  String get swapAskCover => '代わりを頼む';
+
+  @override
+  String get swapAskCoverSub => 'その日に空いているリストのメンバーに送られ、最初に「引き受ける」を押した人が担当します';
+
+  @override
+  String get swapAskSwap => '別の週と交換';
+
+  @override
+  String get swapAskSwapSub => '日とその日の人を選び、相手が受けたら交換します';
+
+  @override
+  String swapAskedCover(int count) {
+    return '$count人のメンバーに頼みました。引き受けた人がいたら通知します';
+  }
+
+  @override
+  String swapAskedSwap(String name) {
+    return '$nameさんに頼みました。受けてもらえたら交換します';
+  }
+
+  @override
+  String swapPickTitle(String duty) {
+    return '$dutyを誰と交換しますか？';
+  }
+
+  @override
+  String get swapNoDays => 'この先、この担当に入っている人はいません';
+
+  @override
+  String get swapPendingCover => '代わりを頼んでいます。まだ引き受けた人はいません';
+
+  @override
+  String swapPendingSwap(String name) {
+    return '$nameさんに交換を頼んでいます。まだ返事はありません';
+  }
+
+  @override
+  String get swapWithdraw => '取り下げる';
+
+  @override
+  String get swapWithdrawn => '取り下げました';
+
+  @override
+  String get swapRequestTitle => '代わり・交換';
+
+  @override
+  String swapCoverAsks(String name) {
+    return '$nameさんから代わりを頼まれています';
+  }
+
+  @override
+  String swapSwapAsks(String name) {
+    return '$nameさんが交換を希望しています';
+  }
+
+  @override
+  String get swapYouGet => 'あなたの担当';
+
+  @override
+  String swapTheyGet(String name) {
+    return '$nameさんの担当';
+  }
+
+  @override
+  String get swapTake => '引き受ける';
+
+  @override
+  String get swapAccept => '受ける';
+
+  @override
+  String get swapDecline => '都合が悪い';
+
+  @override
+  String get swapTook => '引き受けました';
+
+  @override
+  String get swapTraded => '交換しました';
+
+  @override
+  String get swapDeclined => '都合が悪いと返事しました';
+
+  @override
+  String swapStatusTaken(String name) {
+    return '$nameさんが引き受けました';
+  }
+
+  @override
+  String get swapStatusMine => 'あなたが引き受けました';
+
+  @override
+  String swapStatusWithdrawn(String name) {
+    return '$nameさんがこの依頼を取り下げました';
+  }
+
+  @override
+  String get swapStatusVoided => 'この依頼は無効になりました。奉仕表が変わったか、日付が過ぎました';
+
+  @override
+  String get swapStatusDeclined => '都合が悪いと返事しました';
+
+  @override
+  String get errSwapClosed => 'この依頼はもう終わっています';
+
+  @override
+  String get errNobodyToAsk => 'その日に空いているリストのメンバーがいません。リーダーに相談してください';
 }

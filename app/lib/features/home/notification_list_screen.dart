@@ -175,4 +175,5 @@ const _icons = {
   NotificationKind.attendance: Symbols.groups_rounded,
   NotificationKind.joinRequest: Symbols.person_add_rounded,
   NotificationKind.identity: Symbols.badge_rounded,
+  NotificationKind.swap: Symbols.swap_horiz_rounded,
 };

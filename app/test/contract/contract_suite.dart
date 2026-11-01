@@ -21,6 +21,7 @@ import 'package:martha/domain/event_roster.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/domain/roster_news.dart';
 import 'package:martha/domain/staff_order.dart';
+import 'package:martha/domain/swap.dart';
 
 import 'world.dart';
 
@@ -1095,6 +1096,104 @@ void contractTests(Future<ContractWorld> Function() open) {
       );
       expect(await g.church.askUnavailable('sunday', from: Day(2030, 12, 1), to: Day(2031, 1, 1)), 1);
       expect(await g.church.lastUnavailableAsk('sunday').firstWhere((at) => at != null).timeout(wait), isNotNull);
+    });
+  });
+
+  group('找人代／交換 (#92)', () {
+    /// 李美玉 plays on 1/6, 林同工 on 1/13; both are on 司琴's list.
+    Future<(Grace, Roster, Roster)> pianists() async {
+      final g = await Grace.open(w);
+      await g.church.putMember(
+        Member(
+          uid: g.mei,
+          name: '李美玉',
+          zones: const [
+            Zone(serviceType: 'sunday', duties: ['司琴']),
+          ],
+        ),
+      );
+      await g.church.putMember(
+        Member(
+          uid: g.editor,
+          name: '林同工',
+          identities: const [ServiceLead('sunday')],
+          zones: const [
+            Zone(serviceType: 'sunday', duties: ['司會', '司琴']),
+          ],
+        ),
+      );
+      final mine = Roster(
+        type: 'sunday',
+        day: Day(2030, 1, 6),
+        duties: [
+          Duty(role: '司琴', people: const ['李美玉'], uids: {'李美玉': g.mei}),
+        ],
+      );
+      final his = Roster(
+        type: 'sunday',
+        day: Day(2030, 1, 13),
+        duties: [
+          Duty(role: '司琴', people: const ['林同工'], uids: {'林同工': g.editor}),
+        ],
+      );
+      await g.church.putRosters([mine, his]);
+      return (g, mine, his);
+    }
+
+    const wait = Duration(seconds: 30);
+    Future<List<String>> playing(Grace g, Roster r, int n) async {
+      final saved = await g.church
+          .rosters(from: r.day)
+          .map((all) => all.firstWhere((x) => x.id == r.id))
+          .firstWhere(
+            (x) => x.duties.single.people.length == n,
+          );
+      return saved.duties.single.people;
+    }
+
+    test('one asked takes a cover, and can give it back; who asked takes theirs back', () async {
+      final (g, mine, _) = await pianists();
+      await w.signIn(Grace.meiEmail);
+      expect(await g.church.askCover(mine, '司琴'), 1);
+      await expectLater(g.church.askCover(mine, '司琴'), throwsA(isA<CloudException>()), reason: 'one at a time');
+      final id = (await g.church.myOpenSwapRequests().firstWhere((l) => l.isNotEmpty).timeout(wait)).single.id;
+
+      await w.signIn(Grace.pastorEmail);
+      await expectLater(g.church.swapRequest(id).first, denied(), reason: 'not asked');
+
+      await w.signIn(Grace.editorEmail);
+      expect((await g.church.swapRequest(id).first)!.kind, SwapKind.cover);
+      await g.church.answerSwap(id, yes: true);
+      expect(await playing(g, mine, 1).timeout(wait), ['林同工']);
+      await g.church.undoSwap(id);
+      expect((await g.church.swapRequest(id).firstWhere((r) => r!.isOpen).timeout(wait))!.taker, isNull);
+      expect(
+        (await g.church.rosters(from: mine.day).first).firstWhere((x) => x.id == mine.id).duties.single.people,
+        ['李美玉'],
+      );
+
+      await w.signIn(Grace.meiEmail);
+      await g.church.withdrawSwap(id);
+      await w.signIn(Grace.editorEmail);
+      await expectLater(
+        g.church.answerSwap(id, yes: true),
+        fails(CloudErrorCode.unknown, reason: CloudReason.swapClosed),
+      );
+    });
+
+    test('the one asked to swap accepts, and the two days trade', () async {
+      final (g, mine, his) = await pianists();
+      await w.signIn(Grace.meiEmail);
+      await g.church.askSwap(mine, '司琴', his, g.editor);
+      final id = (await g.church.myOpenSwapRequests().firstWhere((l) => l.isNotEmpty).timeout(wait)).single.id;
+      await w.signIn(Grace.editorEmail);
+      await g.church.answerSwap(id, yes: true);
+      final days = await g.church
+          .rosters(from: mine.day)
+          .firstWhere(
+            (all) => all.firstWhere((x) => x.id == mine.id).duties.single.people.contains('林同工'),
+          );
+      expect(days.firstWhere((x) => x.id == his.id).duties.single.people, ['李美玉']);
     });
   });
 

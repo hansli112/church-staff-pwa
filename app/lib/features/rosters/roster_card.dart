@@ -70,6 +70,7 @@ class RosterDayView extends StatelessWidget {
     this.leading,
     this.highlightUid,
     this.onTap,
+    this.onMine,
   });
 
   final Roster roster;
@@ -80,7 +81,31 @@ class RosterDayView extends StatelessWidget {
   final String? highlightUid;
   final VoidCallback? onTap;
 
+  /// A duty [highlightUid] is on, tapped: 找人代／交換 (#92). None leaves
+  /// the rows as they are.
+  final ValueChanged<Duty>? onMine;
+
   bool _isMe(Duty duty, String name) => highlightUid != null && duty.uids[name] == highlightUid;
+
+  /// [row] of [duty], a button to [onMine] when I am on it.
+  Widget _mine(BuildContext context, Duty duty, Widget row) {
+    final tap = onMine;
+    if (tap == null || !duty.people.any((n) => _isMe(duty, n))) return row;
+    return Semantics(
+      button: true,
+      hint: L10n.of(context).swapMenu,
+      child: InkWell(
+        onTap: () => tap(duty),
+        borderRadius: BorderRadius.circular(Radii.s),
+        child: Row(
+          children: [
+            Expanded(child: row),
+            Icon(Symbols.more_horiz_rounded, color: AppColors.of(context).tertiaryLabel, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -130,47 +155,51 @@ class RosterDayView extends StatelessWidget {
                 ),
                 const SizedBox(height: Space.s),
                 for (final duty in roster.duties)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 3),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          width: 96,
-                          child: Text(
-                            duty.role,
-                            style: AppText.subheadline.copyWith(
-                              color: c.secondaryLabel,
+                  _mine(
+                    context,
+                    duty,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 3),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: 96,
+                            child: Text(
+                              duty.role,
+                              style: AppText.subheadline.copyWith(
+                                color: c.secondaryLabel,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: Space.s),
-                        Expanded(
-                          child: duty.people.isEmpty
-                              ? Text(
-                                  l10n.nobodyYet,
-                                  style: AppText.body.copyWith(
-                                    color: c.secondaryLabel,
-                                  ),
-                                )
-                              : Text.rich(
-                                  TextSpan(
-                                    children: [
-                                      for (final (i, name) in duty.people.indexed) ...[
-                                        if (i > 0) TextSpan(text: l10n.listSeparator),
-                                        TextSpan(
-                                          text: name,
-                                          style: _isMe(duty, name)
-                                              ? const TextStyle(fontWeight: FontWeight.w700)
-                                              : null,
-                                        ),
+                          const SizedBox(width: Space.s),
+                          Expanded(
+                            child: duty.people.isEmpty
+                                ? Text(
+                                    l10n.nobodyYet,
+                                    style: AppText.body.copyWith(
+                                      color: c.secondaryLabel,
+                                    ),
+                                  )
+                                : Text.rich(
+                                    TextSpan(
+                                      children: [
+                                        for (final (i, name) in duty.people.indexed) ...[
+                                          if (i > 0) TextSpan(text: l10n.listSeparator),
+                                          TextSpan(
+                                            text: name,
+                                            style: _isMe(duty, name)
+                                                ? const TextStyle(fontWeight: FontWeight.w700)
+                                                : null,
+                                          ),
+                                        ],
                                       ],
-                                    ],
+                                    ),
+                                    style: AppText.body,
                                   ),
-                                  style: AppText.body,
-                                ),
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
               ],

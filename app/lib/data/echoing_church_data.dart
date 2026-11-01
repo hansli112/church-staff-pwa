@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../domain/day.dart';
 import '../domain/models.dart';
 import '../domain/staff_order.dart';
+import '../domain/swap.dart';
 import 'backend.dart';
 
 /// [ChurchData] that shows a change to rosters, members, services, staff
@@ -297,6 +298,28 @@ class EchoingChurchData implements ChurchData {
 
   @override
   Future<void> saveMyUnavailableDays(UnavailableDays days) => _inner.saveMyUnavailableDays(days);
+
+  @override
+  Stream<List<SwapRequest>> myOpenSwapRequests() => _inner.myOpenSwapRequests();
+
+  @override
+  Stream<SwapRequest?> swapRequest(String id) => _inner.swapRequest(id);
+
+  @override
+  Future<int> askCover(Roster roster, String duty) => _inner.askCover(roster, duty);
+
+  @override
+  Future<void> askSwap(Roster roster, String duty, Roster other, String uid) =>
+      _inner.askSwap(roster, duty, other, uid);
+
+  @override
+  Future<void> answerSwap(String id, {required bool yes}) => _inner.answerSwap(id, yes: yes);
+
+  @override
+  Future<void> undoSwap(String id) => _inner.undoSwap(id);
+
+  @override
+  Future<void> withdrawSwap(String id) => _inner.withdrawSwap(id);
 
   @override
   Stream<DateTime?> lastUnavailableAsk(String serviceType) => _inner.lastUnavailableAsk(serviceType);

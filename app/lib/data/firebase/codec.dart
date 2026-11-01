@@ -8,6 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../domain/day.dart';
 import '../../domain/models.dart';
+import '../../domain/swap.dart';
 
 typedef Json = Map<String, dynamic>;
 
@@ -559,3 +560,37 @@ Map<String, Object> unavailableDaysToJson(UnavailableDays days) => {
     for (final s in days.spans) {'from': s.from.key, 'to': s.to.key, 'note': s.note},
   ],
 };
+
+/// swapRequests/{id} (#92); null when it cannot be read as one.
+SwapRequest? swapRequestFromJson(String id, Map<String, dynamic> data) {
+  final kind = SwapKind.values.asNameMap()[data['kind']];
+  final day = Day.tryParse(data['dateKey'] as String?);
+  if (kind == null ||
+      day == null ||
+      data['serviceId'] is! String ||
+      data['duty'] is! String ||
+      data['from'] is! String) {
+    return null;
+  }
+  List<String> strings(Object? v) => [
+    for (final x in (v as List?) ?? const [])
+      if (x is String) x,
+  ];
+  return SwapRequest(
+    id: id,
+    kind: kind,
+    serviceId: data['serviceId'] as String,
+    day: day,
+    duty: data['duty'] as String,
+    from: data['from'] as String,
+    fromName: data['fromName'] as String? ?? '',
+    asked: strings(data['asked']),
+    passed: strings(data['passed']),
+    to: data['to'] as String?,
+    toName: data['toName'] as String?,
+    toDay: Day.tryParse(data['toDateKey'] as String?),
+    status: SwapStatus.values.asNameMap()[data['status']] ?? SwapStatus.voided,
+    taker: data['taker'] as String?,
+    takerName: data['takerName'] as String?,
+  );
+}

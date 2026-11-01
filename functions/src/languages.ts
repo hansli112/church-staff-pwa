@@ -124,6 +124,20 @@ export interface Words {
   attendanceBody(group: string, day: string): string;
   /** 請同工填 (#91): the months `YYYY-MM` [from] to [to]. */
   askUnavailable(from: string, to: string): string;
+  /**
+   * 找人代／交換 (#92): [name] is who asked or answered, each day
+   * dateWithWeekday's, [line] dutyLine's of the service and the duty.
+   */
+  coverAsked(name: string, day: string, line: string): string;
+  swapAsked(name: string, theirDay: string, yourDay: string, line: string): string;
+  swapDeclined(name: string, day: string, line: string): string;
+  coverTaken(name: string, day: string, line: string): string;
+  swapTaken(name: string, yourDay: string, line: string): string;
+  takenBack(name: string, day: string, line: string): string;
+  /** To the leads: who took whose, and a cover nobody took three days before. */
+  covered(day: string, line: string, from: string, taker: string): string;
+  swapped(line: string, from: string, fromDay: string, to: string, toDay: string): string;
+  uncovered(day: string, line: string): string;
 
   /** The church page before the app starts (churchPage.ts). */
   appName: string;
@@ -201,6 +215,15 @@ const zhHant: Words = {
   attendanceTitle: '填寫人數',
   attendanceBody: (group, day) => `「${group}」${day}的聚會有幾個人？`,
   askUnavailable: (from, to) => `請填 ${months(from, to, (m) => `${m} 月`, '到 ')}不能服事的日子`,
+  coverAsked: (name, day, line) => `${name} 想請你代 ${day}${line}`,
+  swapAsked: (name, theirDay, yourDay, line) => `${name} 想用 ${theirDay}和你交換 ${yourDay}${line}`,
+  swapDeclined: (name, day, line) => `${name} 不方便和你交換 ${day}${line}`,
+  coverTaken: (name, day, line) => `${name} 接手了你 ${day}${line}`,
+  swapTaken: (name, yourDay, line) => `${name} 和你交換了，你改成 ${yourDay}${line}`,
+  takenBack: (name, day, line) => `${name} 取消了接手 ${day}${line}，還在找人`,
+  covered: (day, line, from, taker) => `${day}${line}：${from} → ${taker}`,
+  swapped: (line, from, fromDay, to, toDay) => `${line}：${from} ${fromDay}和 ${to} ${toDay}交換了`,
+  uncovered: (day, line) => `${day}${line}還沒人代`,
   appName: '馬大別忙',
   supportItem: '支持馬大別忙的雲端費用',
   description:
@@ -243,6 +266,15 @@ const zhHans: Words = {
   attendanceTitle: '填写人数',
   attendanceBody: (group, day) => `“${group}”${day}的聚会有几个人？`,
   askUnavailable: (from, to) => `请填 ${months(from, to, (m) => `${m} 月`, '到 ')}不能事奉的日子`,
+  coverAsked: (name, day, line) => `${name} 想请你代 ${day}${line}`,
+  swapAsked: (name, theirDay, yourDay, line) => `${name} 想用 ${theirDay}和你交换 ${yourDay}${line}`,
+  swapDeclined: (name, day, line) => `${name} 不方便和你交换 ${day}${line}`,
+  coverTaken: (name, day, line) => `${name} 接手了你 ${day}${line}`,
+  swapTaken: (name, yourDay, line) => `${name} 和你交换了，你改成 ${yourDay}${line}`,
+  takenBack: (name, day, line) => `${name} 取消了接手 ${day}${line}，还在找人`,
+  covered: (day, line, from, taker) => `${day}${line}：${from} → ${taker}`,
+  swapped: (line, from, fromDay, to, toDay) => `${line}：${from} ${fromDay}和 ${to} ${toDay}交换了`,
+  uncovered: (day, line) => `${day}${line}还没人代`,
   appName: '马大别忙',
   supportItem: '支持马大别忙的云端费用',
   description:
@@ -286,6 +318,15 @@ const en: Words = {
   attendanceTitle: 'Attendance',
   attendanceBody: (group, day) => `How many came to ${group} on ${day}?`,
   askUnavailable: (from, to) => `Please mark the days you can't serve in ${months(from, to, (m) => EN_MONTH_NAMES[m - 1], '–')}`,
+  coverAsked: (name, day, line) => `${name} asks you to cover ${line} on ${day}`,
+  swapAsked: (name, theirDay, yourDay, line) => `${name} asks to swap ${line}: their ${theirDay} for your ${yourDay}`,
+  swapDeclined: (name, day, line) => `${name} can't swap ${line} on ${day}`,
+  coverTaken: (name, day, line) => `${name} is covering your ${line} on ${day}`,
+  swapTaken: (name, yourDay, line) => `${name} swapped with you: you now have ${line} on ${yourDay}`,
+  takenBack: (name, day, line) => `${name} can no longer cover ${line} on ${day}; still looking`,
+  covered: (day, line, from, taker) => `${line} on ${day}: ${from} → ${taker}`,
+  swapped: (line, from, fromDay, to, toDay) => `${line}: ${from} (${fromDay}) and ${to} (${toDay}) swapped`,
+  uncovered: (day, line) => `Nobody has covered ${line} on ${day} yet`,
   appName: 'Martha, sit',
   supportItem: 'Support for the server costs of Martha, sit',
   description:
@@ -329,6 +370,15 @@ const ja: Words = {
   attendanceTitle: '人数の記録',
   attendanceBody: (group, day) => `${day}の「${group}」には何人集まりましたか？`,
   askUnavailable: (from, to) => `${months(from, to, (m) => `${m}月`, '〜')}で奉仕できない日を入力してください`,
+  coverAsked: (name, day, line) => `${name}さんから${day}の${line}の代わりを頼まれています`,
+  swapAsked: (name, theirDay, yourDay, line) => `${name}さんが${line}の交換を希望しています：${name}さんの${theirDay}とあなたの${yourDay}`,
+  swapDeclined: (name, day, line) => `${name}さんは${day}の${line}の交換ができません`,
+  coverTaken: (name, day, line) => `${name}さんが${day}の${line}を代わってくれます`,
+  swapTaken: (name, yourDay, line) => `${name}さんと交換しました。あなたは${yourDay}の${line}になりました`,
+  takenBack: (name, day, line) => `${name}さんが${day}の${line}の代わりを取り消しました。引き続き探しています`,
+  covered: (day, line, from, taker) => `${day}の${line}：${from} → ${taker}`,
+  swapped: (line, from, fromDay, to, toDay) => `${line}：${from}（${fromDay}）と${to}（${toDay}）が交換しました`,
+  uncovered: (day, line) => `${day}の${line}はまだ代わりが見つかっていません`,
   appName: 'マルタ、ひと休み',
   supportItem: 'Martha, sit サーバー費用の応援',
   description: '「マルタ、マルタ、あなたは多くのことに思い悩み、心を乱している。しかし、必要なことはただ一つだけである。マリアは良い方を選んだ。それを取り上げてはならない。」（ルカによる福音書 10:41–42）',
@@ -371,6 +421,15 @@ const ko: Words = {
   attendanceTitle: '인원 기록',
   attendanceBody: (group, day) => `${day} ${group}에 몇 명이 모였나요?`,
   askUnavailable: (from, to) => `${months(from, to, (m) => `${m}월`, '~')} 중 봉사할 수 없는 날을 입력해 주세요`,
+  coverAsked: (name, day, line) => `${name} 님이 ${day} ${line} 대신 봉사를 부탁했어요`,
+  swapAsked: (name, theirDay, yourDay, line) => `${name} 님이 ${line} 교환을 원해요: ${name} 님의 ${theirDay} ↔ 내 ${yourDay}`,
+  swapDeclined: (name, day, line) => `${name} 님은 ${day} ${line} 교환이 어려워요`,
+  coverTaken: (name, day, line) => `${name} 님이 ${day} ${line}을(를) 대신해 줘요`,
+  swapTaken: (name, yourDay, line) => `${name} 님과 교환했어요. 이제 ${yourDay} ${line}이에요`,
+  takenBack: (name, day, line) => `${name} 님이 ${day} ${line} 대신 봉사를 취소했어요. 다시 찾는 중이에요`,
+  covered: (day, line, from, taker) => `${day} ${line}: ${from} → ${taker}`,
+  swapped: (line, from, fromDay, to, toDay) => `${line}: ${from}(${fromDay})와 ${to}(${toDay})가 교환했어요`,
+  uncovered: (day, line) => `${day} ${line}은(는) 아직 대신할 사람이 없어요`,
   appName: '마르다의 쉼표',
   supportItem: '마르다의 쉼표 서버 비용 후원',
   description: '마르다야 마르다야 네가 많은 일로 염려하고 근심하나 몇 가지만 하든지 혹은 한 가지만이라도 족하니라 마리아는 이 좋은 편을 택하였으니 빼앗기지 아니하리라 (누가복음 10:41–42)',

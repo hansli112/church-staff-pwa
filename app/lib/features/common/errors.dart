@@ -46,6 +46,8 @@ String errorText(L10n l10n, Object error) {
       CloudErrorCode.unknown => switch (error.reason) {
         CloudReason.requestsClosed => l10n.errRequestsClosed,
         CloudReason.requestGone => l10n.errRequestGone,
+        CloudReason.swapClosed => l10n.errSwapClosed,
+        CloudReason.nobodyToAsk => l10n.errNobodyToAsk,
         _ => l10n.errUnknown,
       },
     };

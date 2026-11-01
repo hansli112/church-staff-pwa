@@ -7,7 +7,8 @@
     { "via": "calendar", "by": "backend", "tells": "now" },
     { "via": "restore", "by": "backend", "tells": "nobody" },
     { "via": "relink", "by": "backend", "tells": "nobody" },
-    { "via": "timeZone", "by": "backend", "tells": "nobody" }
+    { "via": "timeZone", "by": "backend", "tells": "nobody" },
+    { "via": "swap", "by": "backend", "tells": "webhook" }
   ],
   "planned": [
     { "name": "put on in 安排服事 with nothing waiting: waits with what they had", "waiting": null, "before": [], "after": ["司琴"], "told": false, "next": [] },

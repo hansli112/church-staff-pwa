@@ -15,6 +15,7 @@ import '../../state/providers.dart';
 import '../common/errors.dart';
 import '../rosters/format.dart';
 import '../rosters/rosters_screen.dart' show selectedServiceProvider;
+import '../rosters/swap_asking.dart';
 
 /// How many months from this one the page lays out.
 const _months = 12;
@@ -136,6 +137,8 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
         if (days.during(s.roster.day, s.roster.lastDay) != null && !s.roster.lastDay.isBefore(today)) s,
     ];
     final services = ref.watch(servicesProvider).value;
+    // What 找人代 says of a day already asked about (#92).
+    ref.watch(myOpenSwapRequestsProvider);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.unavailableTitle)),
       body: saved.hasError && saved.value == null
@@ -173,20 +176,26 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
                     footer: l10n.unavailableServingFooter,
                     children: [
                       for (final s in serving)
-                        ListRow(
-                          title:
-                              '${s.roster.forEvent?.title ?? services?.byId(s.roster.type)?.name ?? ''} '
-                              '${s.duties.join(l10n.listSeparator)}',
-                          value: dayLabel(l10n, s.roster.day, today),
-                          onTap: () {
-                            if (s.roster.forEvent case final e?) {
-                              context.push('/rosters/event/${e.eventId}');
-                              return;
-                            }
-                            ref.read(selectedServiceProvider.notifier).select(s.roster.type);
-                            context.push('/rosters/${s.roster.type}/${s.roster.day.key}');
-                          },
-                        ),
+                        for (final duty in s.roster.isEvent ? [s.duties.join(l10n.listSeparator)] : s.duties)
+                          ListRow(
+                            title: '${s.roster.forEvent?.title ?? services?.byId(s.roster.type)?.name ?? ''} $duty',
+                            subtitle: dayLabel(l10n, s.roster.day, today),
+                            // 找人代 for it, as on the roster (#92); an event's roster is the leads'.
+                            trailing: s.roster.isEvent
+                                ? null
+                                : RowButton(
+                                    label: l10n.swapMenu,
+                                    onPressed: () => showMyDutyMenu(context, ref, s.roster, duty),
+                                  ),
+                            onTap: () {
+                              if (s.roster.forEvent case final e?) {
+                                context.push('/rosters/event/${e.eventId}');
+                                return;
+                              }
+                              ref.read(selectedServiceProvider.notifier).select(s.roster.type);
+                              context.push('/rosters/${s.roster.type}/${s.roster.day.key}');
+                            },
+                          ),
                     ],
                   ),
                 if (!days.isEmpty)

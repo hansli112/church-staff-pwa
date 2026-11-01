@@ -375,7 +375,7 @@ service cloud.firestore {
             || (p is map
               && changed.hasOnly(['muted', 'reminderTiming'])
               && (!changed.hasAny(['muted']) || !('muted' in p)
-                  || (p.muted is list && p.muted.hasOnly(['reminder', 'rosterChange', 'memberLeft', 'attendance', 'joinRequest', 'identity'])))
+                  || (p.muted is list && p.muted.hasOnly(['reminder', 'rosterChange', 'memberLeft', 'attendance', 'joinRequest', 'identity', 'swap'])))
               && (!changed.hasAny(['reminderTiming']) || !('reminderTiming' in p)
                   || p.reminderTiming in ['weekly', 'dayBefore', 'both']));
         }
@@ -477,6 +477,16 @@ service cloud.firestore {
       // backend's too.
       match /unavailable/{uid} {
         allow read: if (isSelf(uid) && isMember(cid)) || arrangesRosters(cid);
+      }
+
+      // 找人代／交換 (#92): who asked, everyone a 請人代 asked, and the one a
+      // 交換 asked read it; only the backend writes (askCover, askSwap,
+      // answerSwap, undoSwap, withdrawSwap).
+      match /swapRequests/{id} {
+        allow read: if isMember(cid)
+          && (resource.data.from == request.auth.uid
+            || request.auth.uid in resource.data.get('asked', [])
+            || resource.data.get('to', '') == request.auth.uid);
       }
 
       match /unavailableAsks/{type} {

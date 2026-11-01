@@ -19,6 +19,7 @@ import 'event_sheet.dart';
 import 'format.dart';
 import 'future_changes.dart';
 import 'roster_card.dart';
+import 'swap_asking.dart';
 import '../common/saving_indicator.dart';
 
 /// One service on one day. Everyone can look; people who may arrange this
@@ -57,6 +58,8 @@ class RosterDayScreen extends ConsumerWidget {
     // writes see the church as it is.
     final editable = canEdit && ref.watch(rosterEditingProvider(serviceType));
     final title = dayLabel(l10n, day, today);
+    // What 找人代／交換 says of my duties here (#92).
+    ref.watch(myOpenSwapRequestsProvider);
     final addable = addableDuties(roster, service.duties, led);
     // From the menu or the day's tags, for who changes the whole day.
     final editEvents = whole ? () => _editEvents(context, ref, roster, service) : null;
@@ -90,6 +93,11 @@ class RosterDayScreen extends ConsumerWidget {
               roster: roster,
               title: title,
               highlightUid: ref.watch(uidProvider),
+              onMine: (duty) {
+                if (asksForMyDuty(roster, duty.role, ref.read(uidProvider), today)) {
+                  showMyDutyMenu(context, ref, roster, duty.role);
+                }
+              },
             )
           else
             EditableRoster(

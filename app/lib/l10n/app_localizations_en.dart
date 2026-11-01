@@ -3363,4 +3363,129 @@ class L10nEn extends L10n {
 
   @override
   String get planAskSend => 'Ask';
+
+  @override
+  String get notifSwap => 'Covers and swaps';
+
+  @override
+  String get notifSwapSub =>
+      'When someone asks you to cover or swap, answers your request, or asks for the days you can\'t serve';
+
+  @override
+  String get swapMenu => 'Find a cover or swap';
+
+  @override
+  String get swapAskCover => 'Ask for a cover';
+
+  @override
+  String get swapAskCoverSub =>
+      'Goes to the team members on the list who are free that day; the first to say “I\'ll do it” takes it';
+
+  @override
+  String get swapAskSwap => 'Swap with another week';
+
+  @override
+  String get swapAskSwapSub => 'Pick a day and the person on it; you swap once they accept';
+
+  @override
+  String swapAskedCover(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Asked $count team members; you\'ll hear when someone takes it',
+      one: 'Asked 1 team member; you\'ll hear when someone takes it',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String swapAskedSwap(String name) {
+    return 'Asked $name; you swap once they accept';
+  }
+
+  @override
+  String swapPickTitle(String duty) {
+    return 'Swap $duty with whom?';
+  }
+
+  @override
+  String get swapNoDays => 'Nobody else is on this role later';
+
+  @override
+  String get swapPendingCover => 'Asked for a cover; nobody has taken it yet';
+
+  @override
+  String swapPendingSwap(String name) {
+    return 'Asked $name to swap; no answer yet';
+  }
+
+  @override
+  String get swapWithdraw => 'Take back';
+
+  @override
+  String get swapWithdrawn => 'Taken back';
+
+  @override
+  String get swapRequestTitle => 'Cover or swap';
+
+  @override
+  String swapCoverAsks(String name) {
+    return '$name asks you to cover';
+  }
+
+  @override
+  String swapSwapAsks(String name) {
+    return '$name asks to swap with you';
+  }
+
+  @override
+  String get swapYouGet => 'You take';
+
+  @override
+  String swapTheyGet(String name) {
+    return '$name takes';
+  }
+
+  @override
+  String get swapTake => 'I\'ll do it';
+
+  @override
+  String get swapAccept => 'Accept';
+
+  @override
+  String get swapDecline => 'Can\'t';
+
+  @override
+  String get swapTook => 'You\'re covering it';
+
+  @override
+  String get swapTraded => 'Swapped';
+
+  @override
+  String get swapDeclined => 'Replied that you can\'t';
+
+  @override
+  String swapStatusTaken(String name) {
+    return '$name has taken it';
+  }
+
+  @override
+  String get swapStatusMine => 'You took it';
+
+  @override
+  String swapStatusWithdrawn(String name) {
+    return '$name took this request back';
+  }
+
+  @override
+  String get swapStatusVoided => 'This request no longer stands: the schedule changed, or the day has passed';
+
+  @override
+  String get swapStatusDeclined => 'You said you can\'t';
+
+  @override
+  String get errSwapClosed => 'This request has closed';
+
+  @override
+  String get errNobodyToAsk => 'Nobody else on the list is free that day; ask your lead';
 }

@@ -10,6 +10,7 @@ import '../domain/day.dart';
 import '../domain/models.dart';
 import '../domain/schedule.dart';
 import '../domain/staff_order.dart';
+import '../domain/swap.dart';
 import 'current_church.dart';
 
 export 'current_church.dart';
@@ -254,6 +255,17 @@ final lastUnavailableAskProvider = StreamProvider.autoDispose.family<DateTime?, 
   if (!ref.watch(_arrangesRostersProvider)) return Stream.value(null);
   return openChurch(ref).lastUnavailableAsk(serviceType);
 });
+
+/// 找人代／交換 (#92) I asked for that are still open.
+final myOpenSwapRequestsProvider = StreamProvider<List<SwapRequest>>((ref) {
+  if (ref.watch(uidProvider) == null) return Stream.value(const []);
+  return openChurch(ref).myOpenSwapRequests();
+});
+
+/// Request [id] (#92), for who asked and whoever it asks.
+final swapRequestProvider = StreamProvider.autoDispose.family<SwapRequest?, String>(
+  (ref, id) => openChurch(ref).swapRequest(id),
+);
 
 /// The initial rolling draft horizon; saved future days are never hidden.
 const rosterWeeks = 13;

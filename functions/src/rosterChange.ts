@@ -1,3 +1,4 @@
+import { voidStaleSwaps } from './swaps.js';
 import type { DocumentSnapshot } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions/v2';
 
@@ -558,7 +559,7 @@ export async function onRosterWritten(
 ) {
   const change = await readRosterChange(deps, cid, before, after, editedBy);
   if (!change) return null;
-  return runEach(`roster change ${cid}/${change.event ? `ev_${change.event.id}` : `${change.dateKey}_${change.serviceId}`}`, {
+  const { push, webhook } = await runEach(`roster change ${cid}/${change.event ? `ev_${change.event.id}` : `${change.dateKey}_${change.serviceId}`}`, {
     push: async () => {
       switch (tellsOf(change.via)) {
         case 'webhook':
@@ -574,5 +575,8 @@ export async function onRosterWritten(
       }
     },
     webhook: () => queueRosterChange(deps, change, eventId),
+    // 找人代／交換 (#92) the roster no longer bears.
+    swaps: () => voidStaleSwaps(deps, cid, (after ?? before)!.id),
   });
+  return { push, webhook };
 }

@@ -14,6 +14,7 @@ import '../../core/languages.dart';
 import '../../domain/day.dart';
 import '../../domain/models.dart';
 import '../../domain/staff_order.dart';
+import '../../domain/swap.dart';
 import '../../env.dart';
 import '../admin_codec.dart';
 import '../backend.dart';
@@ -920,6 +921,43 @@ class FirestoreChurchData implements ChurchData {
 
   @override
   Future<void> saveMyUnavailableDays(UnavailableDays days) => _call('saveUnavailableDays', unavailableDaysToJson(days));
+
+  @override
+  Stream<List<SwapRequest>> myOpenSwapRequests() => _col('swapRequests')
+      .where('from', isEqualTo: _calls._auth.currentUser?.uid)
+      .where('status', isEqualTo: 'open')
+      .live()
+      .map((snap) => [for (final d in snap.docs) ?swapRequestFromJson(d.id, d.data())])
+      .translated();
+
+  @override
+  Stream<SwapRequest?> swapRequest(String id) => _col(
+    'swapRequests',
+  ).doc(id).live().map((s) => s.exists ? swapRequestFromJson(id, s.data()!) : null).translated();
+
+  @override
+  Future<int> askCover(Roster roster, String duty) async {
+    final d = await _call('askCover', {'serviceId': roster.type, 'dateKey': roster.day.key, 'duty': duty});
+    return (d['asked'] as num?)?.toInt() ?? 0;
+  }
+
+  @override
+  Future<void> askSwap(Roster roster, String duty, Roster other, String uid) => _call('askSwap', {
+    'serviceId': roster.type,
+    'dateKey': roster.day.key,
+    'duty': duty,
+    'with': uid,
+    'withDateKey': other.day.key,
+  });
+
+  @override
+  Future<void> answerSwap(String id, {required bool yes}) => _call('answerSwap', {'id': id, 'yes': yes});
+
+  @override
+  Future<void> undoSwap(String id) => _call('undoSwap', {'id': id});
+
+  @override
+  Future<void> withdrawSwap(String id) => _call('withdrawSwap', {'id': id});
 
   @override
   Stream<DateTime?> lastUnavailableAsk(String serviceType) => _col(

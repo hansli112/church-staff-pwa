@@ -8,7 +8,8 @@
 /**
  * Whom a write tells, by where it came from: `now` pushes and goes to the
  * webhook; `planned` (安排服事) goes to the webhook and waits for 通知同工
- * to push; `webhook` (an import, or its undo) only goes to the webhook;
+ * to push; `webhook` (an import, or its undo; a request to cover or swap
+ * taken, whose own pushes tell) only goes to the webhook;
  * `nobody` (an event's roster the backend moved without news, see
  * eventRosters.ts) tells no one.
  */
@@ -20,6 +21,8 @@ const VIAS = {
   restore: 'nobody',
   relink: 'nobody',
   timeZone: 'nobody',
+  // 找人代／交換 (#92): the two are told by its own pushes (swaps.ts).
+  swap: 'webhook',
 } as const;
 
 export type Via = keyof typeof VIAS;

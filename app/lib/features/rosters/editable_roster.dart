@@ -18,6 +18,7 @@ import '../../state/roster_actions.dart';
 import 'duty_picking.dart';
 import 'format.dart';
 import 'future_changes.dart';
+import 'swap_asking.dart';
 
 /// Whether what editing [roster] reads is loaded; watching it keeps it so.
 bool _editingReady(WidgetRef ref, Roster roster) =>
@@ -135,12 +136,21 @@ class _DutyRow extends ConsumerWidget {
     String person,
   ) async {
     final l10n = L10n.of(context);
+    // Mine: asked for like anyone's (#92), beside changing it outright.
+    final me = ref.read(uidProvider);
+    final mine = duty.uids[person] == me && asksForMyDuty(roster, duty.role, me, ref.read(todayProvider));
     final choice = await showAppSheet<String>(
       context,
       builder: (context) => SafeArea(
         child: ListSection(
           header: person,
           children: [
+            if (mine)
+              ListRow(
+                title: l10n.swapMenu,
+                leading: const Icon(Symbols.front_hand_rounded),
+                onTap: () => Navigator.pop(context, 'mine'),
+              ),
             if (!roster.isEvent)
               ListRow(
                 title: l10n.swap,
@@ -191,6 +201,8 @@ class _DutyRow extends ConsumerWidget {
       );
     } else if (choice == 'swap') {
       await _swap(context, ref, person);
+    } else if (choice == 'mine') {
+      await showMyDutyMenu(context, ref, roster, duty.role);
     }
   }
 

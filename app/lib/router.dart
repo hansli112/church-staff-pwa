@@ -28,6 +28,7 @@ import 'features/me/member_editor_screen.dart';
 import 'features/me/members_screen.dart';
 import 'features/me/notifications_screen.dart';
 import 'features/me/unavailable_screen.dart';
+import 'features/rosters/swap_asking.dart';
 import 'features/me/profile_screen.dart';
 import 'features/me/services_screen.dart';
 import 'features/me/sign_in_methods_screen.dart';
@@ -170,8 +171,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                       child: DeferredPage.rosterImport(serviceType: s.pathParameters['type']!),
                     ),
                   ),
-                  // These two before :type/:day, which would take them for a service.
+                  // These before :type/:day, which would take them for a service.
                   page('plan/:type', (s) => PlanWeeksScreen(serviceType: s.pathParameters['type']!)),
+                  page('request/:id', (s) => SwapRequestScreen(id: s.pathParameters['id']!)),
                   page(
                     'event/:id',
                     (s) => EventRosterScreen(eventId: s.pathParameters['id']!, event: s.extra as CalendarEvent?),

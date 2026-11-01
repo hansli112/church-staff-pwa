@@ -17,6 +17,7 @@
 | `churches/{cid}/attendance/{群組}` | 回報人數（#85），`{群組}` 是 `service:<id>` 或 `small:<id>`：`pauses`（暫停，每段 `{from, until}`：從 `from` 到 `until` 前一天不算；結束了也留著，那幾週才不會變成「未填」，最多 50 段）。底下 `days/{dateKey}` 是那次聚會的人數：`count`（0–100000）加選填的 `note`（最多 200 字），或 `none: true`（這次沒聚會）；`by` 是填的人 |
 | `churches/{cid}/unavailable/{uid}` | 不能服事的日子（#91）：`spans`（每段 `{from, to, note}`，`YYYY-MM-DD`，兩頭都算；`note` 選填，最多 30 字；最多 100 段）、`updatedAt`。只有本人寫，經 `saveUnavailableDays`（規則看不到清單裡面，由後端檢查每一段和原因的長度）；本人和排服事表的人（admin、行政、聚會負責人和牧者、事工負責人，`testdata/church_rules.json` 的 `unavailableReading`）讀得到。一律整天、全部聚會。過了的那段在本人下次存的時候拿掉；退出或被移出教會時刪掉（`onMemberDeleted`） |
 | `churches/{cid}/unavailableAsks/{聚會別}` | 請同工填（#91）上次請的：`at`、`by`、`from`、`to`（月份，`YYYY-MM`）。只有後端寫（`askUnavailable`），排服事表的人讀得到，選單上寫「上次 10/28 請過」 |
+| `churches/{cid}/swapRequests/{id}` | 找人代／交換（#92），只有後端寫（`askCover`、`askSwap`、`answerSwap`、`undoSwap`、`withdrawSwap`，`functions/src/swaps.ts`）：`kind`（`cover` 請人代／`swap` 交換）、`serviceId`、`dateKey`、`rosterId`、`duty`、`from`、`fromName`（問的人和他在服事表上的名字）；請人代另有 `asked`（問了誰：名單上那天有空的人，`testdata/swaps.json` 的 `coverAsked`）、`passed`（說不方便的）、`nudged`（三天前告訴負責人了）；交換另有 `to`、`toName`、`toDateKey`、`toRosterId`。`status`：`open`、`taken`（`taker`、`takerName`、`answeredAt`）、`declined`、`withdrawn`、`voided`（服事表改了、日子過了）；`sendAt`（夜裡問的，7:00 送；送了是 `null`）、`createdAt`。問的人、`asked` 裡的人、`to` 讀得到。接手時後端改服事表，寫 `via: 'swap'` |
 | `churches/{cid}/pendingMembers/{舊 uid}` | 從舊版搬來、還沒登入的同工：`name`、`email`、`emailHash`、`role`、`groups`、`zones`、`zoneTypes`、`notificationPrefs`、`rosterIds`（搬家時記下有他名字的服事表）。後端建立，管理員可以刪；認領或合併時偏好與小組併入同工，只有 `rosterIds` 那幾天改連到新帳號 |
 | `churches/{cid}/joinRequests/{uid}` | 申請加入（#88）：`uid`、`name`、`email`（申請時帳號的）、`note`（選填，最多 100 字）、`createdAt`、`rejectedAt`（管理員拒絕的時間）。只有後端寫（`requestToJoin`、`withdrawJoinRequest`、`answerJoinRequest`），只有 admin 讀得到；申請的人從 `churchPreview` 知道自己的申請怎麼了。`createdAt` 滿 30 天就算沒有，每天清掉 |
 | `churches/{cid}/joinRequestPushes/{uid}` | 只有後端讀寫：`uid`、`at`（上次為這個人的申請推播給管理員的時間）。同一個人一天內只推播一次，取消再申請也不會一直響；超過一天的每天清掉 |
@@ -76,7 +77,7 @@
 
 App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預設聚會、服事項目改名（只能原地改名，其他服事項目不變）、服事表上誰是誰（名字連到 uid 且還在名單上才算，一個服事項目只算一次）、搬家時舊同工資料的轉換，兩邊的測試都跑 `testdata/church_rules.json`。
 
-服事表異動也一樣（`app/lib/domain/roster_news.dart` ↔ `functions/src/rosterNews.ts`，兩邊都跑 `testdata/roster_changes.json`）：服事表上的 `via` 說這次從哪裡寫的、要告訴誰。App 只寫 `app`（照常通知）、`plan`（安排服事，等「完成」）、`import`（匯入，只送外部通知），`firestore.rules` 和 `editLedDuties` 只收這三種；`calendar`、`restore`、`relink`、`timeZone` 只有後端寫（`functions/src/eventRosters.ts`）。等「完成」的那筆（`plannedPushes`）怎麼跟著後來的異動變，也在這份表裡。
+服事表異動也一樣（`app/lib/domain/roster_news.dart` ↔ `functions/src/rosterNews.ts`，兩邊都跑 `testdata/roster_changes.json`）：服事表上的 `via` 說這次從哪裡寫的、要告訴誰。App 只寫 `app`（照常通知）、`plan`（安排服事，等「完成」）、`import`（匯入，只送外部通知），`firestore.rules` 和 `editLedDuties` 只收這三種；`calendar`、`restore`、`relink`、`timeZone`、`swap`（找人代／交換接手時，#92）只有後端寫（`functions/src/eventRosters.ts`）。等「完成」的那筆（`plannedPushes`）怎麼跟著後來的異動變，也在這份表裡。
 
 活動的服事表一生的規則（`app/lib/domain/event_roster.dart` ↔ `functions/src/eventRosters.ts` ↔ `firestore.rules`）寫在 `testdata/event_rosters.json`：活動改了、刪了、復原、在 Google 還在或不見了時，服事表跟著、取消、搬到復原的活動上，或重新開啟（`fates`，App 做的那幾種 MemoryBackend 也照做）；App 能怎麼寫它（`appWrites`：名稱、日期、屬於都是行事曆的，只有建立時寫；只有後端能取消；和一般服事表不能互換），規則測試也跑同一份。
 
@@ -119,7 +120,7 @@ App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預�
 | 讀 member | 本人、admin、行政、負責人（`leadTypes`、`leadMinistries` 或 `leadSmallGroups` 不是空的） |
 | 讀待認領同工 | admin、行政、負責人；只有 admin 能刪，其他寫入都是後端 |
 | 加入教會（建立 member） | 只有 Cloud Functions（邀請、管理員允許申請加入） |
-| 改 member | admin（不能改 `uid`、不能把自己降級）；本人只能改 `notificationPrefs`。改到 `notificationPrefs` 時，`muted` 只能是 `reminder`、`rosterChange`、`memberLeft`、`attendance`、`joinRequest`、`identity`，`reminderTiming` 只能是 `weekly`、`dayBefore`、`both`。只檢查這次改到的欄位，因為從 self-host 搬來的可能有舊的種類，App 也是一次寫一個欄位 |
+| 改 member | admin（不能改 `uid`、不能把自己降級）；本人只能改 `notificationPrefs`。改到 `notificationPrefs` 時，`muted` 只能是 `reminder`、`rosterChange`、`memberLeft`、`attendance`、`joinRequest`、`identity`、`swap`，`reminderTiming` 只能是 `weekly`、`dayBefore`、`both`。只檢查這次改到的欄位，因為從 self-host 搬來的可能有舊的種類，App 也是一次寫一個欄位 |
 | 刪 member | admin 刪別人；非 admin 可以自己退出。admin 要先被別的 admin 降級才能走 |
 | 讀服事表、排序、設定 | 同工 |
 | 寫服事表、排序 | admin、行政（任何已設定的聚會別）；聚會負責人和牧者（只限 `leadTypes` 裡的聚會別，移動時新舊聚會別都要有）。事工負責人不能直接寫，經 `editLedDuties` 只改他事工連到的服事項目：其他服事項目、特別活動不能動，不能刪整天；還沒存過的那天可以照範本建立，但要有他的服事項目、其他服事項目要沒有人（`testdata/church_rules.json` 的 `ledDuties`） |
@@ -127,6 +128,7 @@ App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預�
 | 讀、寫回報人數（`attendance`，#85） | 照 `testdata/church_rules.json` 的 `attendanceAccess`：admin 全部；聚會的負責人和牧者那個聚會和底下的小組；小組長自己的小組。行政另外讀得到聚會的（不含小組）。可以補填、改、清掉；暫停也是同一批人設 |
 | 讀不能服事的日子（`unavailable`、`unavailableAsks`，#91） | 本人讀自己的；排服事表的人（admin、行政、`leadTypes` 或 `leadMinistries` 不是空的）讀全部：他們選人時可以選全教會的人，所以看得到每個人的。小組長不算 |
 | 寫不能服事的日子 | 只有本人，經後端（`saveUnavailableDays`）；規則不讓 App 直接寫 |
+| 讀找人代／交換（`swapRequests`，#92） | 問的人、被問的人（請人代的 `asked`、交換的 `to`）；寫入都是後端 |
 | 讀小組 | 同工；寫只有 Cloud Functions（`editSmallGroup`） |
 | 寫設定 | admin；`services` 的 `ids` 只增不減，不能刪；`calendar`、`linkContent`、`webhook`、`smallGroups` 只有 Cloud Functions 能寫。服事項目改名要連同工的牧區與同工排序一起改，經 `editService`（比對改名前的那一個聚會，其他聚會照現在的保留；超過 500 筆寫入整筆拒絕） |
 | 讀寫 `users/{uid}` | 本人（限上列欄位，`fcm` 最多 50 支裝置）；刪除由 Cloud Functions 處理 |

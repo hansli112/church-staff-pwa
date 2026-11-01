@@ -17,6 +17,7 @@ import '../core/languages.dart';
 import '../domain/day.dart';
 import '../domain/models.dart';
 import '../domain/staff_order.dart';
+import '../domain/swap.dart';
 import 'roster_change.dart';
 
 export 'roster_change.dart';
@@ -321,6 +322,35 @@ abstract interface class ChurchData {
   /// [TextLimits.unavailableNote] characters.
   Future<void> saveMyUnavailableDays(UnavailableDays days);
 
+  /// 找人代／交換 (#92) I asked for that are still open.
+  Stream<List<SwapRequest>> myOpenSwapRequests();
+
+  /// Request [id], for who asked and whoever it asks; null when there is
+  /// none.
+  Stream<SwapRequest?> swapRequest(String id);
+
+  /// 請人代 for my [duty] on [roster], a service's day from today on:
+  /// everyone on the duty's list free that day ([coverAsked]). How many it
+  /// asked; with nobody, [CloudReason.nobodyToAsk]. One open request per
+  /// duty and day.
+  Future<int> askCover(Roster roster, String duty);
+
+  /// 和別週交換: my [duty] on [roster] for [uid]'s on [other], a day of the
+  /// same service from tomorrow on. Asks them alone.
+  Future<void> askSwap(Roster roster, String duty, Roster other, String uid);
+
+  /// 我來 or 接受 ([yes]), or 不方便, to request [id], by one it asks. A
+  /// request no longer open, or no longer holding, is refused with
+  /// [CloudReason.swapClosed].
+  Future<void> answerSwap(String id, {required bool yes});
+
+  /// 復原 of taking request [id], soon after and while the rosters are as
+  /// it left them; [CloudErrorCode.conflict] once they moved on.
+  Future<void> undoSwap(String id);
+
+  /// 收回: who asked takes request [id] back.
+  Future<void> withdrawSwap(String id);
+
   /// When 請同工填 last asked for [serviceType], if ever: for whoever
   /// arranges rosters.
   Stream<DateTime?> lastUnavailableAsk(String serviceType);
@@ -592,6 +622,13 @@ enum CloudReason {
 
   /// …or the one answered is no longer waiting.
   requestGone,
+
+  /// 請人代 found nobody on the list free that day (#92)…
+  nobodyToAsk,
+
+  /// …or the request answered is no longer open: taken, taken back, or
+  /// void now that the roster changed.
+  swapClosed,
 }
 
 class CloudException implements Exception {

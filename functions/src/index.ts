@@ -25,6 +25,7 @@ import { onObjectFinalized } from 'firebase-functions/v2/storage';
 import * as account from './account.js';
 import * as attendance from './attendance.js';
 import * as unavailable from './unavailable.js';
+import * as swaps from './swaps.js';
 import * as calendar from './calendar.js';
 import * as eventSync from './eventSync.js';
 import * as church from './church.js';
@@ -207,6 +208,11 @@ export const editLedDuties = callable(ledDuties.editLedDuties);
 export const notifyPlanned = callable(rosterChange.notifyPlanned, pushDeps);
 export const askUnavailable = callable(unavailable.askUnavailable, pushDeps);
 export const saveUnavailableDays = callable(unavailable.saveUnavailableDays);
+export const askCover = callable(swaps.askCover, pushDeps);
+export const askSwap = callable(swaps.askSwap, pushDeps);
+export const answerSwap = callable(swaps.answerSwap, pushDeps);
+export const undoSwap = callable(swaps.undoSwap, pushDeps);
+export const withdrawSwap = callable(swaps.withdrawSwap);
 export const setGroupMember = callable(groupMembers.setGroupMember);
 export const editSmallGroup = callable(smallGroups.editSmallGroup);
 
@@ -428,6 +434,7 @@ export const sendReminders = onSchedule(
       held: () => rosterChange.sendHeldPushes(d),
       planned: () => rosterChange.sendPlannedPushes(d),
       attendance: () => attendance.sendAttendanceReminders(d),
+      swaps: () => swaps.sendSwapPushes(d),
     });
   },
 );

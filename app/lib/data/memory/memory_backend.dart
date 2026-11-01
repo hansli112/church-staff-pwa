@@ -11,6 +11,7 @@ import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../domain/roster_news.dart';
 import '../../domain/staff_order.dart';
+import '../../domain/swap.dart';
 import '../../domain/text.dart';
 import '../backend.dart';
 import '../connectivity.dart';
@@ -114,6 +115,11 @@ class MemoryBackend implements Backend {
   /// 請同工填 (#91) per church, by service: when last asked, the months
   /// asked for, and whom it told.
   final unavailableAsks = <String, Map<String, ({DateTime at, Day from, Day to, List<String> told})>>{};
+
+  /// 找人代／交換 (#92) per church, by id, and when each was taken.
+  final swapRequests = <String, Map<String, SwapRequest>>{};
+  final swapTakenAt = <String, DateTime>{};
+  var _swapIds = 0;
   final staffOrders = <String, Map<String, StaffOrder>>{};
   final invites = <String, Invite>{};
   final users = <String, UserProfile>{};
@@ -1244,6 +1250,186 @@ class MemoryChurchData implements ChurchData {
         throw const CloudException(CloudErrorCode.unknown);
       }
       (_b.unavailable[churchId] ??= {})[me.uid] = days;
+    });
+  }
+
+  /// [r] as the backend keeps it: an open one the rosters no longer bear,
+  /// or whose day went by, is void (functions/src/swaps.ts voidStaleSwaps).
+  SwapRequest _current(SwapRequest r) {
+    if (!r.isOpen) return r;
+    final rosters = _b.rosters[churchId]!;
+    final today = _b.churches[churchId]!.timeZone.today(_b.clock());
+    final holds =
+        !r.day.isBefore(today) &&
+        swapStillHolds(r, rosters[r.rosterId], r.toRosterId == null ? null : rosters[r.toRosterId]);
+    return holds ? r : r.copyWith(status: SwapStatus.voided);
+  }
+
+  @override
+  Stream<List<SwapRequest>> myOpenSwapRequests() => _b.watch(() {
+    _requireMember();
+    return [
+      for (final r in _b.swapRequests[churchId]?.values ?? const <SwapRequest>[])
+        if (r.from == _uid && _current(r).isOpen) r,
+    ];
+  }, equals: listEquals);
+
+  @override
+  Stream<SwapRequest?> swapRequest(String id) => _b.watch(() {
+    _requireMember();
+    final r = _b.swapRequests[churchId]?[id];
+    if (r != null && r.from != _uid && !r.asks(_uid ?? '')) throw const CloudException(CloudErrorCode.permissionDenied);
+    return r == null ? null : _current(r);
+  });
+
+  /// As functions/src/swaps.ts asker: my duty on a service's day from
+  /// today on, with no request of mine open for it.
+  ({Member me, Roster saved}) _asking(Roster roster, String duty) {
+    final me = _b.requireMember(churchId);
+    final saved = _b.rosters[churchId]![roster.id];
+    final today = _b.churches[churchId]!.timeZone.today(_b.clock());
+    if (roster.isEvent || saved == null || saved.day.isBefore(today) || !isOnDuty(saved, duty, me.uid)) {
+      throw const CloudException(CloudErrorCode.unknown);
+    }
+    final open = _b.swapRequests[churchId]?.values ?? const <SwapRequest>[];
+    if (open.any((r) => r.isOpen && r.from == me.uid && r.rosterId == roster.id && r.duty == duty)) {
+      throw const CloudException(CloudErrorCode.unknown);
+    }
+    return (me: me, saved: saved);
+  }
+
+  String _nameOn(Roster roster, String duty, String uid) =>
+      roster.duties.firstWhere((d) => d.role == duty).uids.entries.firstWhere((e) => e.value == uid).key;
+
+  @override
+  Future<int> askCover(Roster roster, String duty) async {
+    var asked = 0;
+    await _b.write(() {
+      final (:me, :saved) = _asking(roster, duty);
+      final who = coverAsked(
+        _b.members[churchId]!.values,
+        saved,
+        duty,
+        me.uid,
+        unavailable: _b.unavailable[churchId] ?? const {},
+      );
+      if (who.isEmpty) throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.nobodyToAsk);
+      final id = 'swap${++_b._swapIds}';
+      (_b.swapRequests[churchId] ??= {})[id] = SwapRequest(
+        id: id,
+        kind: SwapKind.cover,
+        serviceId: saved.type,
+        day: saved.day,
+        duty: duty,
+        from: me.uid,
+        fromName: _nameOn(saved, duty, me.uid),
+        asked: who,
+      );
+      asked = who.length;
+    });
+    return asked;
+  }
+
+  @override
+  Future<void> askSwap(Roster roster, String duty, Roster other, String uid) async {
+    await _b.write(() {
+      final (:me, :saved) = _asking(roster, duty);
+      final theirs = _b.rosters[churchId]![other.id];
+      final today = _b.churches[churchId]!.timeZone.today(_b.clock());
+      if (theirs == null || theirs.type != saved.type || !theirs.day.isAfter(today) || theirs.id == saved.id) {
+        throw const CloudException(CloudErrorCode.unknown);
+      }
+      final id = 'swap${++_b._swapIds}';
+      final request = SwapRequest(
+        id: id,
+        kind: SwapKind.swap,
+        serviceId: saved.type,
+        day: saved.day,
+        duty: duty,
+        from: me.uid,
+        fromName: _nameOn(saved, duty, me.uid),
+        to: uid,
+        toName: isOnDuty(theirs, duty, uid) ? _nameOn(theirs, duty, uid) : null,
+        toDay: theirs.day,
+      );
+      if (!swapStillHolds(request, saved, theirs)) throw const CloudException(CloudErrorCode.unknown);
+      (_b.swapRequests[churchId] ??= {})[id] = request;
+    });
+  }
+
+  /// Request [id] of this church; [CloudReason.swapClosed] unless it is open.
+  SwapRequest _openRequest(String id) {
+    final r = _b.swapRequests[churchId]?[id];
+    if (r == null) throw const CloudException(CloudErrorCode.notFound);
+    if (!_current(r).isOpen) throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.swapClosed);
+    return r;
+  }
+
+  @override
+  Future<void> answerSwap(String id, {required bool yes}) async {
+    await _b.write(() {
+      final me = _b.requireMember(churchId);
+      final r = _b.swapRequests[churchId]?[id];
+      if (r == null) throw const CloudException(CloudErrorCode.notFound);
+      if (!r.asks(me.uid)) throw const CloudException(CloudErrorCode.permissionDenied);
+      _openRequest(id);
+      final requests = _b.swapRequests[churchId]!;
+      if (!yes) {
+        requests[id] = r.kind == SwapKind.cover
+            ? r.copyWith(passed: [...r.passed, me.uid])
+            : r.copyWith(status: SwapStatus.declined);
+        return;
+      }
+      final rosters = _b.rosters[churchId]!;
+      final roster = rosters[r.rosterId];
+      final other = r.toRosterId == null ? null : rosters[r.toRosterId];
+      final today = _b.churches[churchId]!.timeZone.today(_b.clock());
+      if (r.day.isBefore(today) || !swapStillHolds(r, roster, other)) {
+        requests[id] = r.copyWith(status: SwapStatus.voided);
+        throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.swapClosed);
+      }
+      final taker = r.kind == SwapKind.cover ? me.name : r.toName!;
+      rosters[r.rosterId] = replacedOnDuty(roster!, r.duty, r.from, me.uid, taker);
+      if (other != null) rosters[other.id] = replacedOnDuty(other, r.duty, me.uid, r.from, r.fromName);
+      requests[id] = r.copyWith(status: SwapStatus.taken, taker: me.uid, takerName: taker);
+      _b.swapTakenAt[id] = _b.clock();
+    });
+  }
+
+  @override
+  Future<void> undoSwap(String id) async {
+    await _b.write(() {
+      final me = _b.requireMember(churchId);
+      final r = _b.swapRequests[churchId]?[id];
+      if (r == null) throw const CloudException(CloudErrorCode.notFound);
+      if (r.taker != me.uid) throw const CloudException(CloudErrorCode.permissionDenied);
+      final takenAt = _b.swapTakenAt[id];
+      if (r.status != SwapStatus.taken ||
+          takenAt == null ||
+          _b.clock().difference(takenAt) > const Duration(minutes: 10)) {
+        throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.swapClosed);
+      }
+      final rosters = _b.rosters[churchId]!;
+      final roster = rosters[r.rosterId];
+      final other = r.toRosterId == null ? null : rosters[r.toRosterId];
+      final asLeft = r.kind == SwapKind.cover
+          ? isOnDuty(roster, r.duty, me.uid) && !isOnDuty(roster, r.duty, r.from)
+          : isOnDuty(roster, r.duty, me.uid) && isOnDuty(other, r.duty, r.from);
+      if (!asLeft) throw const CloudException(CloudErrorCode.conflict);
+      rosters[r.rosterId] = replacedOnDuty(roster!, r.duty, me.uid, r.from, r.fromName);
+      if (other != null) rosters[other.id] = replacedOnDuty(other, r.duty, r.from, me.uid, r.toName!);
+      _b.swapRequests[churchId]![id] = r.reopened;
+    });
+  }
+
+  @override
+  Future<void> withdrawSwap(String id) async {
+    await _b.write(() {
+      final me = _b.requireMember(churchId);
+      final r = _b.swapRequests[churchId]?[id];
+      if (r == null) throw const CloudException(CloudErrorCode.notFound);
+      if (r.from != me.uid) throw const CloudException(CloudErrorCode.permissionDenied);
+      _b.swapRequests[churchId]![id] = _openRequest(id).copyWith(status: SwapStatus.withdrawn);
     });
   }
 

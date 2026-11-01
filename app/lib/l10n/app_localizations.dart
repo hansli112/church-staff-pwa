@@ -5643,6 +5643,204 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'通知'**
   String get planAskSend;
+
+  /// Notification kind (#92): asked to cover or swap, or an answer to one's own request
+  ///
+  /// In zh, this message translates to:
+  /// **'找人代／交換'**
+  String get notifSwap;
+
+  /// No description provided for @notifSwapSub.
+  ///
+  /// In zh, this message translates to:
+  /// **'有人請你代或交換，你的請求有人回應，或請你填不能服事的日子時'**
+  String get notifSwapSub;
+
+  /// On one's own name on a roster (#92)
+  ///
+  /// In zh, this message translates to:
+  /// **'找人代／交換'**
+  String get swapMenu;
+
+  /// No description provided for @swapAskCover.
+  ///
+  /// In zh, this message translates to:
+  /// **'請人代'**
+  String get swapAskCover;
+
+  /// No description provided for @swapAskCoverSub.
+  ///
+  /// In zh, this message translates to:
+  /// **'送給名單上那天有空的同工，先按「我來」的人接手'**
+  String get swapAskCoverSub;
+
+  /// No description provided for @swapAskSwap.
+  ///
+  /// In zh, this message translates to:
+  /// **'和別週交換'**
+  String get swapAskSwap;
+
+  /// No description provided for @swapAskSwapSub.
+  ///
+  /// In zh, this message translates to:
+  /// **'挑一天和那天的人換，對方接受才換'**
+  String get swapAskSwapSub;
+
+  /// No description provided for @swapAskedCover.
+  ///
+  /// In zh, this message translates to:
+  /// **'已請 {count} 位同工代，有人接手會通知你'**
+  String swapAskedCover(int count);
+
+  /// No description provided for @swapAskedSwap.
+  ///
+  /// In zh, this message translates to:
+  /// **'已請{name}交換，對方接受才換'**
+  String swapAskedSwap(String name);
+
+  /// No description provided for @swapPickTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'和誰交換{duty}？'**
+  String swapPickTitle(String duty);
+
+  /// No description provided for @swapNoDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'之後沒有別人排這項服事'**
+  String get swapNoDays;
+
+  /// No description provided for @swapPendingCover.
+  ///
+  /// In zh, this message translates to:
+  /// **'已請人代，還沒有人接手'**
+  String get swapPendingCover;
+
+  /// No description provided for @swapPendingSwap.
+  ///
+  /// In zh, this message translates to:
+  /// **'已請{name}交換，還沒有回應'**
+  String swapPendingSwap(String name);
+
+  /// No description provided for @swapWithdraw.
+  ///
+  /// In zh, this message translates to:
+  /// **'收回'**
+  String get swapWithdraw;
+
+  /// No description provided for @swapWithdrawn.
+  ///
+  /// In zh, this message translates to:
+  /// **'已收回'**
+  String get swapWithdrawn;
+
+  /// No description provided for @swapRequestTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'找人代／交換'**
+  String get swapRequestTitle;
+
+  /// No description provided for @swapCoverAsks.
+  ///
+  /// In zh, this message translates to:
+  /// **'{name}想請你代'**
+  String swapCoverAsks(String name);
+
+  /// No description provided for @swapSwapAsks.
+  ///
+  /// In zh, this message translates to:
+  /// **'{name}想和你交換'**
+  String swapSwapAsks(String name);
+
+  /// No description provided for @swapYouGet.
+  ///
+  /// In zh, this message translates to:
+  /// **'你改成'**
+  String get swapYouGet;
+
+  /// No description provided for @swapTheyGet.
+  ///
+  /// In zh, this message translates to:
+  /// **'{name}改成'**
+  String swapTheyGet(String name);
+
+  /// No description provided for @swapTake.
+  ///
+  /// In zh, this message translates to:
+  /// **'我來'**
+  String get swapTake;
+
+  /// No description provided for @swapAccept.
+  ///
+  /// In zh, this message translates to:
+  /// **'接受'**
+  String get swapAccept;
+
+  /// No description provided for @swapDecline.
+  ///
+  /// In zh, this message translates to:
+  /// **'不方便'**
+  String get swapDecline;
+
+  /// No description provided for @swapTook.
+  ///
+  /// In zh, this message translates to:
+  /// **'已接手'**
+  String get swapTook;
+
+  /// No description provided for @swapTraded.
+  ///
+  /// In zh, this message translates to:
+  /// **'已交換'**
+  String get swapTraded;
+
+  /// No description provided for @swapDeclined.
+  ///
+  /// In zh, this message translates to:
+  /// **'已回覆不方便'**
+  String get swapDeclined;
+
+  /// No description provided for @swapStatusTaken.
+  ///
+  /// In zh, this message translates to:
+  /// **'{name}已經接手了'**
+  String swapStatusTaken(String name);
+
+  /// No description provided for @swapStatusMine.
+  ///
+  /// In zh, this message translates to:
+  /// **'你接手了'**
+  String get swapStatusMine;
+
+  /// No description provided for @swapStatusWithdrawn.
+  ///
+  /// In zh, this message translates to:
+  /// **'{name}收回了這個請求'**
+  String swapStatusWithdrawn(String name);
+
+  /// No description provided for @swapStatusVoided.
+  ///
+  /// In zh, this message translates to:
+  /// **'這個請求已經不算了：服事表改過，或日子已經過了'**
+  String get swapStatusVoided;
+
+  /// No description provided for @swapStatusDeclined.
+  ///
+  /// In zh, this message translates to:
+  /// **'你說了不方便'**
+  String get swapStatusDeclined;
+
+  /// No description provided for @errSwapClosed.
+  ///
+  /// In zh, this message translates to:
+  /// **'這個請求已經結束了'**
+  String get errSwapClosed;
+
+  /// No description provided for @errNobodyToAsk.
+  ///
+  /// In zh, this message translates to:
+  /// **'名單上那天沒有其他有空的同工，請找負責人'**
+  String get errNobodyToAsk;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

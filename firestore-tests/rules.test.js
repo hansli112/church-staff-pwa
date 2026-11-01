@@ -525,6 +525,24 @@ describe('不能服事的日子 (unavailable)', () => {
   });
 });
 
+describe('找人代／交換 (swapRequests)', () => {
+  it('問的人、被問的人讀得到，其他人讀不到；只有後端寫', async () => {
+    await seed(`churches/${A}/swapRequests/c1`, { kind: 'cover', from: MEMBER_A, asked: [EDITOR_A], status: 'open' });
+    await seed(`churches/${A}/swapRequests/s1`, { kind: 'swap', from: MEMBER_A, to: OFFICE_A, status: 'open' });
+    const read = (uid, id) => getDoc(doc(as(uid), `churches/${A}/swapRequests/${id}`));
+    await assertSucceeds(read(MEMBER_A, 'c1'));
+    await assertSucceeds(read(EDITOR_A, 'c1'));
+    await assertFails(read(OFFICE_A, 'c1'));
+    await assertFails(read(ADMIN_A, 'c1'));
+    await assertSucceeds(read(OFFICE_A, 's1'));
+    await assertFails(read(EDITOR_A, 's1'));
+    await assertSucceeds(getDocs(query(collection(as(MEMBER_A), `churches/${A}/swapRequests`), where('from', '==', MEMBER_A))));
+    await assertFails(getDocs(collection(as(MEMBER_A), `churches/${A}/swapRequests`)));
+    await assertFails(setDoc(doc(as(MEMBER_A), `churches/${A}/swapRequests/x`), { kind: 'cover', from: MEMBER_A, status: 'open' }));
+    await assertFails(updateDoc(doc(as(EDITOR_A), `churches/${A}/swapRequests/c1`), { status: 'taken' }));
+  });
+});
+
 // 回報人數 (#85)：和 App、functions 共用 testdata/church_rules.json 的 attendanceAccess。
 describe('attendanceAccess (testdata/church_rules.json)', () => {
   const rows = JSON.parse(readFileSync(new URL('../testdata/church_rules.json', import.meta.url), 'utf8')).attendanceAccess;

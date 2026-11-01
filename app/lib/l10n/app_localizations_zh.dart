@@ -3166,6 +3166,123 @@ class L10nZh extends L10n {
 
   @override
   String get planAskSend => '通知';
+
+  @override
+  String get notifSwap => '找人代／交換';
+
+  @override
+  String get notifSwapSub => '有人請你代或交換，你的請求有人回應，或請你填不能服事的日子時';
+
+  @override
+  String get swapMenu => '找人代／交換';
+
+  @override
+  String get swapAskCover => '請人代';
+
+  @override
+  String get swapAskCoverSub => '送給名單上那天有空的同工，先按「我來」的人接手';
+
+  @override
+  String get swapAskSwap => '和別週交換';
+
+  @override
+  String get swapAskSwapSub => '挑一天和那天的人換，對方接受才換';
+
+  @override
+  String swapAskedCover(int count) {
+    return '已請 $count 位同工代，有人接手會通知你';
+  }
+
+  @override
+  String swapAskedSwap(String name) {
+    return '已請$name交換，對方接受才換';
+  }
+
+  @override
+  String swapPickTitle(String duty) {
+    return '和誰交換$duty？';
+  }
+
+  @override
+  String get swapNoDays => '之後沒有別人排這項服事';
+
+  @override
+  String get swapPendingCover => '已請人代，還沒有人接手';
+
+  @override
+  String swapPendingSwap(String name) {
+    return '已請$name交換，還沒有回應';
+  }
+
+  @override
+  String get swapWithdraw => '收回';
+
+  @override
+  String get swapWithdrawn => '已收回';
+
+  @override
+  String get swapRequestTitle => '找人代／交換';
+
+  @override
+  String swapCoverAsks(String name) {
+    return '$name想請你代';
+  }
+
+  @override
+  String swapSwapAsks(String name) {
+    return '$name想和你交換';
+  }
+
+  @override
+  String get swapYouGet => '你改成';
+
+  @override
+  String swapTheyGet(String name) {
+    return '$name改成';
+  }
+
+  @override
+  String get swapTake => '我來';
+
+  @override
+  String get swapAccept => '接受';
+
+  @override
+  String get swapDecline => '不方便';
+
+  @override
+  String get swapTook => '已接手';
+
+  @override
+  String get swapTraded => '已交換';
+
+  @override
+  String get swapDeclined => '已回覆不方便';
+
+  @override
+  String swapStatusTaken(String name) {
+    return '$name已經接手了';
+  }
+
+  @override
+  String get swapStatusMine => '你接手了';
+
+  @override
+  String swapStatusWithdrawn(String name) {
+    return '$name收回了這個請求';
+  }
+
+  @override
+  String get swapStatusVoided => '這個請求已經不算了：服事表改過，或日子已經過了';
+
+  @override
+  String get swapStatusDeclined => '你說了不方便';
+
+  @override
+  String get errSwapClosed => '這個請求已經結束了';
+
+  @override
+  String get errNobodyToAsk => '名單上那天沒有其他有空的同工，請找負責人';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -6330,4 +6447,121 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get planAskSend => '通知';
+
+  @override
+  String get notifSwap => '找人代／交换';
+
+  @override
+  String get notifSwapSub => '有人请你代或交换，你的请求有人回应，或请你填不能事奉的日子时';
+
+  @override
+  String get swapMenu => '找人代／交换';
+
+  @override
+  String get swapAskCover => '请人代';
+
+  @override
+  String get swapAskCoverSub => '送给名单上那天有空的同工，先按“我来”的人接手';
+
+  @override
+  String get swapAskSwap => '和别周交换';
+
+  @override
+  String get swapAskSwapSub => '挑一天和那天的人换，对方接受才换';
+
+  @override
+  String swapAskedCover(int count) {
+    return '已请 $count 位同工代，有人接手会通知你';
+  }
+
+  @override
+  String swapAskedSwap(String name) {
+    return '已请$name交换，对方接受才换';
+  }
+
+  @override
+  String swapPickTitle(String duty) {
+    return '和谁交换$duty？';
+  }
+
+  @override
+  String get swapNoDays => '之后没有别人排这项事奉';
+
+  @override
+  String get swapPendingCover => '已请人代，还没有人接手';
+
+  @override
+  String swapPendingSwap(String name) {
+    return '已请$name交换，还没有回应';
+  }
+
+  @override
+  String get swapWithdraw => '收回';
+
+  @override
+  String get swapWithdrawn => '已收回';
+
+  @override
+  String get swapRequestTitle => '找人代／交换';
+
+  @override
+  String swapCoverAsks(String name) {
+    return '$name想请你代';
+  }
+
+  @override
+  String swapSwapAsks(String name) {
+    return '$name想和你交换';
+  }
+
+  @override
+  String get swapYouGet => '你改成';
+
+  @override
+  String swapTheyGet(String name) {
+    return '$name改成';
+  }
+
+  @override
+  String get swapTake => '我来';
+
+  @override
+  String get swapAccept => '接受';
+
+  @override
+  String get swapDecline => '不方便';
+
+  @override
+  String get swapTook => '已接手';
+
+  @override
+  String get swapTraded => '已交换';
+
+  @override
+  String get swapDeclined => '已回复不方便';
+
+  @override
+  String swapStatusTaken(String name) {
+    return '$name已经接手了';
+  }
+
+  @override
+  String get swapStatusMine => '你接手了';
+
+  @override
+  String swapStatusWithdrawn(String name) {
+    return '$name收回了这个请求';
+  }
+
+  @override
+  String get swapStatusVoided => '这个请求已经不算了：事奉表改过，或日子已经过了';
+
+  @override
+  String get swapStatusDeclined => '你说了不方便';
+
+  @override
+  String get errSwapClosed => '这个请求已经结束了';
+
+  @override
+  String get errNobodyToAsk => '名单上那天没有其他有空的同工，请找负责人';
 }
