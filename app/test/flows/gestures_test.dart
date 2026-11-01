@@ -233,7 +233,6 @@ void main() {
       expect(find.byType(CupertinoAlertDialog), findsOneWidget);
       await tester.enterText(find.byType(CupertinoTextField), '敬拜團');
       await tapText(tester, '儲存');
-      await tapText(tester, '取消');
       expect(b.ministries['grace']!.ministries.single.name, '敬拜團');
     });
   });

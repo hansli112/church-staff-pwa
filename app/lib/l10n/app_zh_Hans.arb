@@ -864,7 +864,7 @@
   "attendancePauseFooter": "暂停聚会期间不提醒，也不会留下“未填”",
   "attendanceNoDays": "还没有要填的聚会",
   "attendanceSaved": "已填写",
-  "attendanceOverview": "人数总览",
+  "attendanceOff": "未开启",
   "attendanceOverviewMissing": "还有 {count} 个未填",
   "attendanceOverviewDone": "都填好了",
   "attendanceOverviewFooter": "每个聚会和小组最近一次聚会；今天的有人填了才列，暂停中的不列",

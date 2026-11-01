@@ -5038,7 +5038,7 @@ abstract class L10n {
   /// **'在{group}'**
   String inSmallGroup(String group);
 
-  /// Switch in 管理教會 (#85) turning 回報人數 on for the church
+  /// Row in 設定 for admins and 行政, its page, and the switch on it turning 回報人數 on for the church (#85, #93)
   ///
   /// In zh, this message translates to:
   /// **'回報人數'**
@@ -5140,11 +5140,11 @@ abstract class L10n {
   /// **'已填寫'**
   String get attendanceSaved;
 
-  /// Row in 設定 for admins and 行政, and its page (#93): every group's latest 人數 in one list
+  /// Value of the 回報人數 row in 設定 while it is off
   ///
   /// In zh, this message translates to:
-  /// **'人數總覽'**
-  String get attendanceOverview;
+  /// **'未開啟'**
+  String get attendanceOff;
 
   /// Header of 人數總覽: how many groups have not filled in their latest meeting
   ///

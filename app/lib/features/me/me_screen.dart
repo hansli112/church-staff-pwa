@@ -15,7 +15,6 @@ import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/session.dart';
 import '../church/church_switcher.dart';
-import '../common/errors.dart';
 import 'groups_screen.dart';
 
 /// The LINE OpenChat (馬大別忙 Martha, sit): help, and churches meeting each other.
@@ -102,29 +101,16 @@ class SettingsScreen extends ConsumerWidget {
                   subtitle: l10n.groupsSub,
                   onTap: () => context.push('/me/groups'),
                 ),
-                // 回報人數 (#85): on from today, or off.
-                if (church != null)
-                  SwitchRow(
-                    leading: const IconTile(Symbols.groups_rounded, color: TileColors.manage),
-                    title: l10n.attendance,
-                    subtitle: l10n.attendanceSub,
-                    value: church.attendanceSince != null,
-                    onChanged: (on) async {
-                      try {
-                        await ref.churchData.attendance.saveSince(on ? ref.read(todayProvider) : null);
-                      } catch (e) {
-                        if (context.mounted) showToast(context, saveErrorText(l10n, e));
-                      }
-                    },
-                  ),
-                if (church?.attendanceSince != null) const _AttendanceOverviewRow(),
+                // 回報人數 (#85): turned on or off on its page, which then
+                // lists every group's 人數 (#93).
+                if (church != null) _AttendanceRow(on: church.attendanceSince != null),
               ],
             ),
           // A lead's groups, one tap away (#82); admins have them all above.
           if (me != null && !me.isAdmin && me.leads) _LedGroups(me: me),
           // 行政 puts every group's 人數 together (#93).
           if (me != null && !me.isAdmin && me.overseesAttendance && church?.attendanceSince != null)
-            const ListSection(children: [_AttendanceOverviewRow()]),
+            const ListSection(children: [_AttendanceRow(on: true)]),
           ListSection(
             children: [
               // Most used first: everyone's notifications; the church's
@@ -252,14 +238,20 @@ class _LedGroups extends ConsumerWidget {
   }
 }
 
-/// 人數總覽 (#93), for admins and 行政.
-class _AttendanceOverviewRow extends StatelessWidget {
-  const _AttendanceOverviewRow();
+/// 回報人數, for admins and 行政: [on] or 未開啟, opening its page.
+class _AttendanceRow extends StatelessWidget {
+  const _AttendanceRow({required this.on});
+
+  final bool on;
 
   @override
-  Widget build(BuildContext context) => ListRow(
-    leading: const IconTile(Symbols.table_rows_rounded, color: TileColors.manage),
-    title: L10n.of(context).attendanceOverview,
-    onTap: () => context.push('/me/attendance'),
-  );
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    return ListRow(
+      leading: const IconTile(Symbols.groups_rounded, color: TileColors.manage),
+      title: l10n.attendance,
+      value: on ? null : l10n.attendanceOff,
+      onTap: () => context.push('/me/attendance'),
+    );
+  }
 }

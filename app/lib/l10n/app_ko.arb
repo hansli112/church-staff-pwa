@@ -864,7 +864,7 @@
   "attendancePauseFooter": "쉬는 동안에는 알리지 않고 ‘미입력’도 남지 않아요",
   "attendanceNoDays": "기록할 모임이 아직 없어요",
   "attendanceSaved": "기록함",
-  "attendanceOverview": "인원 한눈에 보기",
+  "attendanceOff": "꺼짐",
   "attendanceOverviewMissing": "아직 {count}개가 미입력이에요",
   "attendanceOverviewDone": "모두 기록했어요",
   "attendanceOverviewFooter": "모임과 소그룹마다 가장 최근 모임이에요. 오늘 모임은 기록된 뒤에, 쉬는 중인 곳은 보이지 않아요",

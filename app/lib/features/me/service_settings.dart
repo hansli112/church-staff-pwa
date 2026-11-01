@@ -172,12 +172,12 @@ class ServiceEdits {
     if (day != null) await save(service.copyWith(weekday: day));
   }
 
-  /// 新增服事項目: named, last on the list.
-  Future<void> addDuty() async {
+  /// 新增服事項目: named, last on the list; its name once on it, or null.
+  Future<String?> addDuty() async {
     final name = await promptText(context, title: _l10n.addDuty, hint: _l10n.dutyName);
-    if (name != null && !service.duties.contains(name)) {
-      await save(service.copyWith(duties: [...service.duties, name]));
-    }
+    if (name == null) return null;
+    if (service.duties.contains(name)) return name;
+    return await save(service.copyWith(duties: [...service.duties, name])) ? name : null;
   }
 
   /// Duty [d] taken off the service; arranged days and the lists keep it.

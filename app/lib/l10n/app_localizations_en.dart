@@ -3007,7 +3007,7 @@ class L10nEn extends L10n {
   String get attendanceSaved => 'Saved';
 
   @override
-  String get attendanceOverview => 'Attendance overview';
+  String get attendanceOff => 'Off';
 
   @override
   String attendanceOverviewMissing(int count) {

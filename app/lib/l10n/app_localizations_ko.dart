@@ -2861,7 +2861,7 @@ class L10nKo extends L10n {
   String get attendanceSaved => '기록함';
 
   @override
-  String get attendanceOverview => '인원 한눈에 보기';
+  String get attendanceOff => '꺼짐';
 
   @override
   String attendanceOverviewMissing(int count) {

@@ -13,10 +13,11 @@ import '../common/errors.dart';
 import '../rosters/format.dart';
 import 'attendance.dart';
 
-/// 人數總覽 (#93), for admins and 行政: each group's latest meeting in one
-/// list, oldest first, to copy into the week's bulletin by eye; how many
-/// are still 未填 above, and 提醒 beside each. A row opens its group's
-/// page, where its 人數 are filled in.
+/// 回報人數, for admins and 行政. An admin turns it on here (#85), from
+/// today, or off. Once on, each group's latest meeting in one list (#93),
+/// oldest first, to copy into the week's bulletin by eye; how many are
+/// still 未填 above, and 提醒 beside each. A row opens its group's page,
+/// where its 人數 are filled in.
 class AttendanceOverviewScreen extends ConsumerWidget {
   const AttendanceOverviewScreen({super.key});
 
@@ -27,42 +28,63 @@ class AttendanceOverviewScreen extends ConsumerWidget {
     final today = ref.watch(todayProvider);
     final nameOf = attendanceGroupName(ref);
     final missing = rows?.where((r) => r.value == null).length ?? 0;
+    final church = ref.watch(churchProvider).value;
+    final on = church?.attendanceSince != null;
+    final admin = ref.watch(meProvider).value?.isAdmin ?? false;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.attendanceOverview)),
-      body: rows == null
+      appBar: AppBar(title: Text(l10n.attendance)),
+      body: church == null
           ? const SizedBox.shrink()
           : ListView(
               padding: const EdgeInsets.only(bottom: Space.xl),
               children: [
-                ListSection(
-                  header: rows.isEmpty
-                      ? null
-                      : missing > 0
-                      ? l10n.attendanceOverviewMissing(missing)
-                      : l10n.attendanceOverviewDone,
-                  footer: l10n.attendanceOverviewFooter,
-                  children: [
-                    if (rows.isEmpty) ListRow(title: l10n.attendanceNoDays, chevron: false),
-                    for (final r in rows)
-                      ListRow(
-                        title: r.group.name,
-                        subtitle: [
-                          dayLabel(l10n, r.day, today),
-                          ?attendanceDetail(l10n, r.value, nameOf),
-                        ].join(l10n.dotSeparator),
-                        value: attendanceValue(l10n, r.value, nameOf),
-                        trailing: r.value == null
-                            ? RowButton(label: l10n.attendanceRemind, onPressed: () => _remind(context, ref, r))
-                            : null,
-                        onTap: () => context.push(
-                          '/me/groups/${switch (r.group.group) {
-                            SmallGroup() => 'small',
-                            _ => 'service',
-                          }}/${r.group.group.id}',
-                        ),
+                if (admin)
+                  ListSection(
+                    footer: l10n.attendanceSub,
+                    children: [
+                      SwitchRow(
+                        title: l10n.attendance,
+                        value: on,
+                        onChanged: (on) async {
+                          try {
+                            await ref.churchData.attendance.saveSince(on ? ref.read(todayProvider) : null);
+                          } catch (e) {
+                            if (context.mounted) showToast(context, saveErrorText(l10n, e));
+                          }
+                        },
                       ),
-                  ],
-                ),
+                    ],
+                  ),
+                if (on && rows != null)
+                  ListSection(
+                    header: rows.isEmpty
+                        ? null
+                        : missing > 0
+                        ? l10n.attendanceOverviewMissing(missing)
+                        : l10n.attendanceOverviewDone,
+                    footer: l10n.attendanceOverviewFooter,
+                    children: [
+                      if (rows.isEmpty) ListRow(title: l10n.attendanceNoDays, chevron: false),
+                      for (final r in rows)
+                        ListRow(
+                          title: r.group.name,
+                          subtitle: [
+                            dayLabel(l10n, r.day, today),
+                            ?attendanceDetail(l10n, r.value, nameOf),
+                          ].join(l10n.dotSeparator),
+                          value: attendanceValue(l10n, r.value, nameOf),
+                          trailing: r.value == null
+                              ? RowButton(label: l10n.attendanceRemind, onPressed: () => _remind(context, ref, r))
+                              : null,
+                          onTap: () => context.push(
+                            '/me/groups/${switch (r.group.group) {
+                              SmallGroup() => 'small',
+                              _ => 'service',
+                            }}/${r.group.group.id}',
+                          ),
+                        ),
+                    ],
+                  ),
               ],
             ),
     );

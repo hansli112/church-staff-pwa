@@ -68,9 +68,8 @@ class GroupsScreen extends ConsumerWidget {
     );
   }
 
-  /// 新增事工, and on to setting it up: named, its duties picked (saved
-  /// with it), its 負責人 assigned, then its page. 取消 at any step leaves
-  /// the rest for its page.
+  /// 新增事工: named, its 負責人 assigned, then its page, where its duties
+  /// are picked. 取消 leaves the 負責人 for its page too.
   Future<void> _add(BuildContext context, WidgetRef ref, MinistrySettings settings) async {
     final l10n = L10n.of(context);
     final name = await promptText(
@@ -81,26 +80,18 @@ class GroupsScreen extends ConsumerWidget {
     );
     if (name == null || !context.mounted) return;
     final id = _newId(settings.ids);
-    final services = ref.read(servicesProvider).value?.enabled ?? const <Service>[];
-    // Null once 取消; none to pick, nothing to stop at.
-    final duties = services.any((s) => s.duties.isNotEmpty)
-        ? await pickMinistryDuties(context, services, const [])
-        : const <MinistryDuty>[];
-    if (!context.mounted) return;
     final before = settings.ministries;
     final ok = await runWithUndo(
       context,
       l10n.saved,
       () => ref.read(churchWritesProvider).ministries(before, [
         ...before,
-        Ministry(id: id, name: name, duties: duties ?? const []),
+        Ministry(id: id, name: name),
       ]),
     );
     if (!ok || !context.mounted) return;
-    if (duties != null) {
-      final members = ref.read(membersProvider).value ?? const <Member>[];
-      await assignLead(context, ref, MinistryGroup(id), name, members);
-    }
+    final members = ref.read(membersProvider).value ?? const <Member>[];
+    await assignLead(context, ref, MinistryGroup(id), name, members);
     if (context.mounted) unawaited(context.push('/me/groups/ministry/$id'));
   }
 
@@ -716,7 +707,7 @@ class _MinistryDuties extends ConsumerWidget {
   }
 
   Future<void> _pick(BuildContext context, WidgetRef ref) async {
-    final picked = await pickMinistryDuties(context, services.where((s) => s.enabled).toList(), ministry.duties);
+    final picked = await pickMinistryDuties(context, ministry.duties);
     final before = ref.read(ministriesProvider).value?.ministries;
     if (picked == null || before == null || !context.mounted) return;
     await runWithUndo(
@@ -767,17 +758,13 @@ Future<void> assignLead(
   );
 }
 
-/// The duties a 事工 links, ticked per service of [services] from
-/// [initial]; null if 取消.
-Future<List<MinistryDuty>?> pickMinistryDuties(
-  BuildContext context,
-  List<Service> services,
-  List<MinistryDuty> initial,
-) {
+/// The duties a 事工 links, ticked per service from [initial]; null if
+/// 取消.
+Future<List<MinistryDuty>?> pickMinistryDuties(BuildContext context, List<MinistryDuty> initial) {
   return showAppSheet<List<MinistryDuty>>(
     context,
     expand: true,
-    builder: (_) => _DutyPicker(services: services, initial: initial),
+    builder: (_) => _DutyPicker(initial: initial),
   );
 }
 
@@ -808,23 +795,28 @@ String ministrySummary(L10n l10n, Ministry ministry, List<Service> services, Lis
       : l10n.ministryLeadsCan(leads.length, leads.map((m) => m.name).join(l10n.listSeparator), duties);
 }
 
-/// The duties a 事工 links, ticked per service.
-class _DutyPicker extends StatefulWidget {
-  const _DutyPicker({required this.services, required this.initial});
+/// The duties a 事工 links, ticked per service; one not there yet is
+/// added to its service and ticked.
+class _DutyPicker extends ConsumerStatefulWidget {
+  const _DutyPicker({required this.initial});
 
-  final List<Service> services;
   final List<MinistryDuty> initial;
 
   @override
-  State<_DutyPicker> createState() => _DutyPickerState();
+  ConsumerState<_DutyPicker> createState() => _DutyPickerState();
 }
 
-class _DutyPickerState extends State<_DutyPicker> {
+class _DutyPickerState extends ConsumerState<_DutyPicker> {
   late final _picked = [...widget.initial];
+
+  void _toggle(MinistryDuty duty) => setState(() {
+    if (!_picked.remove(duty)) _picked.add(duty);
+  });
 
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
+    final services = ref.watch(servicesProvider).value?.enabled ?? const <Service>[];
     return UnsavedChanges(
       changed: () => !setEquals(_picked.toSet(), widget.initial.toSet()),
       child: Column(
@@ -836,7 +828,7 @@ class _DutyPickerState extends State<_DutyPicker> {
           Expanded(
             child: ListView(
               children: [
-                for (final s in widget.services)
+                for (final s in services)
                   ListSection(
                     header: s.name,
                     children: [
@@ -844,11 +836,19 @@ class _DutyPickerState extends State<_DutyPicker> {
                         ListRow(
                           title: d,
                           selected: _picked.contains(MinistryDuty(s.id, d)),
-                          onTap: () => setState(() {
-                            final duty = MinistryDuty(s.id, d);
-                            if (!_picked.remove(duty)) _picked.add(duty);
-                          }),
+                          onTap: () => _toggle(MinistryDuty(s.id, d)),
                         ),
+                      ListRow(
+                        title: l10n.addDuty,
+                        leading: const Icon(Symbols.add_rounded),
+                        chevron: false,
+                        onTap: () async {
+                          final name = await ServiceEdits(context, ref, s).addDuty();
+                          if (name != null && mounted && !_picked.contains(MinistryDuty(s.id, name))) {
+                            _toggle(MinistryDuty(s.id, name));
+                          }
+                        },
+                      ),
                     ],
                   ),
               ],

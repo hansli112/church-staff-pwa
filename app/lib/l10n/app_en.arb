@@ -864,7 +864,7 @@
   "attendancePauseFooter": "No reminders during a break, and nothing is left “Not filled in”",
   "attendanceNoDays": "No meetings to fill in yet",
   "attendanceSaved": "Saved",
-  "attendanceOverview": "Attendance overview",
+  "attendanceOff": "Off",
   "attendanceOverviewMissing": "{count} not filled in yet",
   "attendanceOverviewDone": "All filled in",
   "attendanceOverviewFooter": "Each service’s and small group’s latest meeting; today’s once filled in, none while on a break",

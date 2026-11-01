@@ -2861,7 +2861,7 @@ class L10nJa extends L10n {
   String get attendanceSaved => '記録しました';
 
   @override
-  String get attendanceOverview => '人数の一覧';
+  String get attendanceOff => 'オフ';
 
   @override
   String attendanceOverviewMissing(int count) {

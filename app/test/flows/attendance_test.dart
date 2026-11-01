@@ -79,13 +79,18 @@ void main() {
     expect(find.text('人數'), findsNothing);
   });
 
-  testWidgets('an admin turns 回報人數 on in 設定, from today', (tester) async {
+  testWidgets('an admin turns 回報人數 on on its page from 設定, from today, and its list shows there', (tester) async {
     final b = seededChurch();
     await pumpApp(tester, b);
     await go(tester, '/me');
     await tester.scrollUntilVisible(find.text('回報人數'), 200, scrollable: find.byType(Scrollable).last);
+    expect(find.text('未開啟'), findsOneWidget);
     await tapText(tester, '回報人數');
+    expect(find.text('還沒有要填的聚會'), findsNothing, reason: 'nothing to list while off');
+    await tester.tap(find.byType(Switch));
+    await settle(tester);
     expect(b.churches['grace']!.attendanceSince, testToday);
+    expect(find.text('還沒有要填的聚會'), findsOneWidget, reason: 'the list, once on: from today, none yet');
   });
 
   testWidgets("a service's 負責人 opens a 小組 and names its 小組長", (tester) async {
@@ -282,8 +287,9 @@ void main() {
       b.attendance['grace']!['service:youth'] = const AttendanceRecord(everyWeek: true);
       await pumpApp(tester, b);
       await go(tester, '/me');
-      await tester.scrollUntilVisible(find.text('人數總覽'), 200, scrollable: find.byType(Scrollable).last);
-      await tapText(tester, '人數總覽');
+      await tester.scrollUntilVisible(find.text('回報人數'), 200, scrollable: find.byType(Scrollable).last);
+      await tapText(tester, '回報人數');
+      expect(find.byType(Switch), findsNothing, reason: "turning it on or off is an admin's");
       expect(find.text('還有 2 個未填'), findsOneWidget);
       expect(inRow('主日崇拜', '120 人'), findsOneWidget, reason: "today's, 未填 yet, waits; 10/4's shows");
       expect(inRow('喜樂小組', '未填'), findsOneWidget);

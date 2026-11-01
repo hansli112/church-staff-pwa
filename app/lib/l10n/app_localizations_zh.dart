@@ -2856,7 +2856,7 @@ class L10nZh extends L10n {
   String get attendanceSaved => '已填寫';
 
   @override
-  String get attendanceOverview => '人數總覽';
+  String get attendanceOff => '未開啟';
 
   @override
   String attendanceOverviewMissing(int count) {
@@ -6189,7 +6189,7 @@ class L10nZhHans extends L10nZh {
   String get attendanceSaved => '已填写';
 
   @override
-  String get attendanceOverview => '人数总览';
+  String get attendanceOff => '未开启';
 
   @override
   String attendanceOverviewMissing(int count) {

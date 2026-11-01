@@ -864,7 +864,7 @@
   "attendancePauseFooter": "お休みの間はお知らせせず、「未記入」も残りません",
   "attendanceNoDays": "記録する集まりはまだありません",
   "attendanceSaved": "記録しました",
-  "attendanceOverview": "人数の一覧",
+  "attendanceOff": "オフ",
   "attendanceOverviewMissing": "未記入が{count}件あります",
   "attendanceOverviewDone": "すべて記録済み",
   "attendanceOverviewFooter": "各集まりと小グループの直近の集まり。今日の分は記録されてから表示、休止中は表示しません",
