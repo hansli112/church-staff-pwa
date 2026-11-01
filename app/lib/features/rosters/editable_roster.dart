@@ -12,6 +12,7 @@ import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../domain/models.dart';
 import '../../domain/roster_edit.dart';
+import '../../domain/swap.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/roster_actions.dart';
@@ -54,8 +55,10 @@ class EditableRoster extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
     final ready = _editingReady(ref, roster);
-    // Read as the picker opens: who cannot serve the day (#91).
+    // Read as the picker opens: who cannot serve the day (#91); and as my
+    // name's menu opens, what I asked for (#92).
     ref.watch(unavailableDaysProvider);
+    ref.watch(myOpenSwapRequestsProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -148,6 +151,12 @@ class _DutyRow extends ConsumerWidget {
             if (mine)
               ListRow(
                 title: l10n.swapMenu,
+                subtitle: switch ((ref.read(myOpenSwapRequestsProvider).value ?? const <SwapRequest>[])
+                    .where((r) => r.rosterId == roster.id && r.duty == duty.role)
+                    .firstOrNull) {
+                  null => null,
+                  final r => r.kind == SwapKind.cover ? l10n.swapOutCover : l10n.swapOutSwap,
+                },
                 leading: const Icon(Symbols.front_hand_rounded),
                 onTap: () => Navigator.pop(context, 'mine'),
               ),

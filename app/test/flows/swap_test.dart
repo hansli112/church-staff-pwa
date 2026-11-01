@@ -62,6 +62,7 @@ void main() {
     expect((r.kind, r.from, r.duty), (SwapKind.cover, 'mei', '司琴'));
     expect(r.asked, ['yu']);
 
+    expect(find.text('已請人代'), findsOneWidget, reason: 'said on the row');
     await myRow(tester, '司琴');
     expect(find.text('已請人代，還沒有人接手'), findsOneWidget);
     await tester.tap(find.text('收回'));
@@ -92,7 +93,7 @@ void main() {
     expect(find.text('和誰交換司琴？'), findsOneWidget);
     await tester.tap(find.text('張雅雨'));
     await settle(tester);
-    expect(find.text('已請張雅雨交換，對方接受才換'), findsOneWidget);
+    expect(find.text('已請「張雅雨」交換，對方接受才換'), findsOneWidget);
     final r = requests(b).single;
     expect((r.kind, r.to, r.toDay), (SwapKind.swap, 'yu', Day(2026, 10, 18)));
   });
@@ -113,7 +114,7 @@ void main() {
     };
     await pumpApp(tester, b);
     await go(tester, '/rosters/request/r1');
-    expect(find.text('李美玉想請你代'), findsOneWidget);
+    expect(find.text('「李美玉」想請你代'), findsOneWidget);
     await tester.tap(find.text('我來'));
     await settle(tester);
     expect(peopleOn(b, 4, '司琴'), ['張雅雨']);
@@ -143,8 +144,8 @@ void main() {
     };
     await pumpApp(tester, b);
     await go(tester, '/rosters/request/r1');
-    expect(find.text('李美玉想和你交換'), findsOneWidget);
-    expect(find.text('李美玉改成'), findsOneWidget);
+    expect(find.text('「李美玉」想和你交換'), findsOneWidget);
+    expect(find.text('「李美玉」改成'), findsOneWidget);
     await tester.tap(find.text('不方便'));
     await settle(tester);
     expect(requests(b).single.status, SwapStatus.declined);

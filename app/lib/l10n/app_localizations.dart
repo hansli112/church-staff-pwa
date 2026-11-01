@@ -5695,7 +5695,7 @@ abstract class L10n {
   /// No description provided for @swapAskedSwap.
   ///
   /// In zh, this message translates to:
-  /// **'已請{name}交換，對方接受才換'**
+  /// **'已請「{name}」交換，對方接受才換'**
   String swapAskedSwap(String name);
 
   /// No description provided for @swapPickTitle.
@@ -5719,7 +5719,7 @@ abstract class L10n {
   /// No description provided for @swapPendingSwap.
   ///
   /// In zh, this message translates to:
-  /// **'已請{name}交換，還沒有回應'**
+  /// **'已請「{name}」交換，還沒有回應'**
   String swapPendingSwap(String name);
 
   /// No description provided for @swapWithdraw.
@@ -5743,13 +5743,13 @@ abstract class L10n {
   /// No description provided for @swapCoverAsks.
   ///
   /// In zh, this message translates to:
-  /// **'{name}想請你代'**
+  /// **'「{name}」想請你代'**
   String swapCoverAsks(String name);
 
   /// No description provided for @swapSwapAsks.
   ///
   /// In zh, this message translates to:
-  /// **'{name}想和你交換'**
+  /// **'「{name}」想和你交換'**
   String swapSwapAsks(String name);
 
   /// No description provided for @swapYouGet.
@@ -5761,7 +5761,7 @@ abstract class L10n {
   /// No description provided for @swapTheyGet.
   ///
   /// In zh, this message translates to:
-  /// **'{name}改成'**
+  /// **'「{name}」改成'**
   String swapTheyGet(String name);
 
   /// No description provided for @swapTake.
@@ -5803,7 +5803,7 @@ abstract class L10n {
   /// No description provided for @swapStatusTaken.
   ///
   /// In zh, this message translates to:
-  /// **'{name}已經接手了'**
+  /// **'「{name}」已經接手了'**
   String swapStatusTaken(String name);
 
   /// No description provided for @swapStatusMine.
@@ -5815,7 +5815,7 @@ abstract class L10n {
   /// No description provided for @swapStatusWithdrawn.
   ///
   /// In zh, this message translates to:
-  /// **'{name}收回了這個請求'**
+  /// **'「{name}」收回了這個請求'**
   String swapStatusWithdrawn(String name);
 
   /// No description provided for @swapStatusVoided.
@@ -5841,6 +5841,18 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'名單上那天沒有其他有空的同工，請找負責人'**
   String get errNobodyToAsk;
+
+  /// At the end of my duty's row on a roster: a request of mine is out (#92)
+  ///
+  /// In zh, this message translates to:
+  /// **'已請人代'**
+  String get swapOutCover;
+
+  /// No description provided for @swapOutSwap.
+  ///
+  /// In zh, this message translates to:
+  /// **'已請交換'**
+  String get swapOutSwap;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

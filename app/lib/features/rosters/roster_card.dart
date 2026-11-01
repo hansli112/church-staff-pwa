@@ -70,7 +70,8 @@ class RosterDayView extends StatelessWidget {
     this.leading,
     this.highlightUid,
     this.onTap,
-    this.onMine,
+    this.onMyDuty,
+    this.asked = const {},
   });
 
   final Roster roster;
@@ -83,14 +84,21 @@ class RosterDayView extends StatelessWidget {
 
   /// A duty [highlightUid] is on, tapped: 找人代／交換 (#92). None leaves
   /// the rows as they are.
-  final ValueChanged<Duty>? onMine;
+  final ValueChanged<Duty>? onMyDuty;
+
+  /// My duties here with a request of mine out (#92), by name: what it is,
+  /// said at the end of the row.
+  final Map<String, String> asked;
 
   bool _isMe(Duty duty, String name) => highlightUid != null && duty.uids[name] == highlightUid;
 
-  /// [row] of [duty], a button to [onMine] when I am on it.
-  Widget _mine(BuildContext context, Duty duty, Widget row) {
-    final tap = onMine;
+  /// [row] of [duty], a button to [onMyDuty] when I am on it, ending with
+  /// the request I have out for it, if any.
+  Widget _myDuty(BuildContext context, Duty duty, Widget row) {
+    final tap = onMyDuty;
     if (tap == null || !duty.people.any((n) => _isMe(duty, n))) return row;
+    final c = AppColors.of(context);
+    final out = asked[duty.role];
     return Semantics(
       button: true,
       hint: L10n.of(context).swapMenu,
@@ -100,7 +108,10 @@ class RosterDayView extends StatelessWidget {
         child: Row(
           children: [
             Expanded(child: row),
-            Icon(Symbols.more_horiz_rounded, color: AppColors.of(context).tertiaryLabel, size: 20),
+            if (out != null)
+              Text(out, style: AppText.footnote.copyWith(color: c.accent))
+            else
+              Icon(Symbols.more_horiz_rounded, color: c.tertiaryLabel, size: 20),
           ],
         ),
       ),
@@ -155,7 +166,7 @@ class RosterDayView extends StatelessWidget {
                 ),
                 const SizedBox(height: Space.s),
                 for (final duty in roster.duties)
-                  _mine(
+                  _myDuty(
                     context,
                     duty,
                     Padding(

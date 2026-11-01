@@ -5,20 +5,21 @@
  * goes to one person on another day, who says 接受 or 不方便. Until then
  * who asked stays on the roster. Taken, the rosters change here (`via:
  * 'swap'`: the webhook hears, the two are told by these pushes), and the
- * service's leads hear who has it now. app/lib/domain/swap.dart keeps the
+ * service's leads hear who has it now (at 7:00, when it is night at the
+ * church). app/lib/domain/swap.dart keeps the
  * same rules; both run testdata/swaps.json.
  */
 import { FieldValue, Timestamp, type DocumentSnapshot, type Transaction } from 'firebase-admin/firestore';
 
 import { churchAccess } from './access.js';
 import { DAY_MS, fail, record, strings, type Caller, type Deps } from './common.js';
+import type { Words } from './languages.js';
 import { ledDuties, ministriesOf, type Ministry } from './ministries.js';
 import { powersOf } from './powers.js';
 import { notifyMembers, type PushDeps } from './push.js';
 import { quietUntil } from './rosterChange.js';
 import { duties as dutiesOf, names, serviceNames } from './rosters.js';
 import { dateKeyIn, earliestDay, timeZoneOf, timeZonesAt } from './timeZones.js';
-import type { Words } from './languages.js';
 
 export type SwapKind = 'cover' | 'swap';
 export type SwapStatus = 'open' | 'taken' | 'declined' | 'withdrawn' | 'voided';
@@ -41,6 +42,16 @@ export function onDuty(list: unknown, duty: string, uid: string) {
   return !!d && Object.entries(d.uids ?? {}).some(([name, u]) => u === uid && names(d.people).includes(name));
 }
 
+/** [uid]'s name on [duty] in [list], or null when they are not on it. */
+export function nameOn(list: unknown, duty: string, uid: string) {
+  const d = dutiesOf(list).find((x) => x.role === duty);
+  return Object.entries(d?.uids ?? {}).find(([n, u]) => u === uid && names(d!.people).includes(n))?.[0] ?? null;
+}
+
+/** Whether [name] is already written on [duty] in [list], bound or not. */
+const nameOnDuty = (list: unknown, duty: string, name: string) =>
+  names(dutiesOf(list).find((x) => x.role === duty)?.people).includes(name);
+
 /** [list] with [uid] named [name] on [duty] where [replaced] was. */
 export function replacedOnDuty(list: unknown, duty: string, replaced: string, uid: string, name: string) {
   return dutiesOf(list).map((d) => {
@@ -60,19 +71,22 @@ interface Listed {
 /** Spans of 不能服事的日子 (#91), as unavailable/{uid} keeps them. */
 type Spans = { from: string; to: string }[];
 
+/** Whether [spans] say [dateKey] cannot be served. */
+const away = (spans: Spans | undefined, dateKey: string) => (spans ?? []).some((s) => s.from <= dateKey && dateKey <= s.to);
+
 /**
  * Whom 請人代 asks for [from]'s [duty] on [dateKey] of [serviceId]
  * (testdata/swaps.json, coverAsked): everyone else on the duty's list who is
  * free that day, not on the duty already and not away, in [members]' order.
  */
-export function coverAsked(members: Listed[], serviceId: string, dateKey: string, list: unknown, duty: string, from: string, away: Record<string, Spans> = {}) {
+export function coverAsked(members: Listed[], serviceId: string, dateKey: string, list: unknown, duty: string, from: string, unavailable: Record<string, Spans> = {}) {
   return members
     .filter(
       (m) =>
         m.uid !== from &&
         (m.zones ?? []).some((z) => z.serviceType === serviceId && strings(z.duties).includes(duty)) &&
         !onDuty(list, duty, m.uid) &&
-        !(away[m.uid] ?? []).some((s) => s.from <= dateKey && dateKey <= s.to),
+        !away(unavailable[m.uid], dateKey),
     )
     .map((m) => m.uid);
 }
@@ -102,10 +116,9 @@ export function leadsOf(members: DocumentSnapshot[], ministries: Ministry[], ser
   return who.map((m) => m.id);
 }
 
-const rosterRef = (deps: Pick<Deps, 'db'>, cid: string, serviceId: string, dateKey: string) =>
-  deps.db.doc(`churches/${cid}/rosters/${dateKey}_${serviceId}`);
-
 const requests = (deps: Pick<Deps, 'db'>, cid: string) => deps.db.collection(`churches/${cid}/swapRequests`);
+
+const rosterOf = (deps: Pick<Deps, 'db'>, cid: string, rosterId: string) => deps.db.doc(`churches/${cid}/rosters/${rosterId}`);
 
 /** The input every ask names: the service, the day, the duty. */
 function dayOf(input: Record<string, unknown>) {
@@ -115,15 +128,45 @@ function dayOf(input: Record<string, unknown>) {
   return { serviceId, dateKey, duty };
 }
 
-/** A line of the request for a push: the service's name and the duty. */
-async function lineOf(deps: Pick<Deps, 'db'>, cid: string, serviceId: string) {
-  return (await serviceNames(deps, cid))(serviceId);
+/** A request as it reads in a push: its service and duty ([Words.dutyLine]), and its days. */
+async function readable(deps: Pick<Deps, 'db'>, cid: string, r: FirebaseFirestore.DocumentData) {
+  const service = (await serviceNames(deps, cid))(r.serviceId);
+  return (w: Words) => ({
+    line: w.dutyLine(service, [r.duty]),
+    day: w.dateWithWeekday(r.dateKey),
+    toDay: r.toDateKey ? w.dateWithWeekday(r.toDateKey) : '',
+  });
 }
 
-/** Fails unless no request of [uid]'s for this duty on this day is still open. */
-async function noOpenRequest(deps: Pick<Deps, 'db'>, cid: string, uid: string, rosterId: string, duty: string) {
-  const open = await requests(deps, cid).where('from', '==', uid).where('status', '==', 'open').get();
-  if (open.docs.some((d) => d.get('rosterId') === rosterId && d.get('duty') === duty)) fail('already-exists', 'unknown');
+/** The leads of [serviceId]'s [duty] in church [cid] now ([leadsOf]). */
+async function leadsFor(deps: Pick<Deps, 'db'>, cid: string, serviceId: string, duty: string) {
+  const [members, ministries] = await Promise.all([
+    deps.db.collection(`churches/${cid}/members`).get(),
+    deps.db.doc(`churches/${cid}/settings/ministries`).get(),
+  ]);
+  return leadsOf(members.docs, ministriesOf(ministries), serviceId, duty);
+}
+
+/**
+ * In [tx], [roster]'s [duty] with [b] where [a] was, and for 交換 [other]'s
+ * with [a] where [b] was.
+ */
+function trade(
+  tx: Transaction,
+  duty: string,
+  roster: DocumentSnapshot,
+  other: DocumentSnapshot | null,
+  a: { uid: string; name: string },
+  b: { uid: string; name: string },
+) {
+  const write = (d: DocumentSnapshot, from: typeof a, to: typeof a) =>
+    tx.update(d.ref, {
+      duties: replacedOnDuty(d.get('duties'), duty, from.uid, to.uid, to.name),
+      via: 'swap',
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  write(roster, a, b);
+  if (other) write(other, b, a);
 }
 
 /** Pushes a new request now, or at 7:00 when it is night at the church. */
@@ -136,38 +179,65 @@ async function sendOrHold(deps: Deps & PushDeps, church: DocumentSnapshot, ref: 
   return sendRequest(deps, church, await ref.get());
 }
 
-/** The push asking for [request]: to everyone asked still on the list, or the one person. */
+/**
+ * The push asking for [request]: to everyone 請人代 asked who has not said
+ * 不方便, or 交換's one person.
+ */
 async function sendRequest(deps: PushDeps, church: DocumentSnapshot, request: DocumentSnapshot) {
   const r = request.data()!;
-  const cid = church.id;
-  const line = await lineOf(deps, cid, r.serviceId);
+  const say = await readable(deps, church.id, r);
   const link = `/rosters/request/${request.id}`;
+  const title = church.get('name') as string;
   if (r.kind === 'cover') {
-    return notifyMembers(deps, cid, strings(r.asked), 'swap', (w) => ({
-      title: church.get('name') as string,
-      body: w.coverAsked(r.fromName, w.dateWithWeekday(r.dateKey), w.dutyLine(line, [r.duty])),
+    const passed = strings(r.passed);
+    return notifyMembers(deps, church.id, strings(r.asked).filter((u) => !passed.includes(u)), 'swap', (w) => ({
+      title,
+      body: w.coverAsked(r.fromName, say(w).day, say(w).line),
       link,
     }));
   }
-  return notifyMembers(deps, cid, [r.to], 'swap', (w) => ({
-    title: church.get('name') as string,
-    body: w.swapAsked(r.fromName, w.dateWithWeekday(r.dateKey), w.dateWithWeekday(r.toDateKey), w.dutyLine(line, [r.duty])),
+  return notifyMembers(deps, church.id, [r.to], 'swap', (w) => ({
+    title,
+    body: w.swapAsked(r.fromName, say(w).day, say(w).toDay, say(w).line),
     link,
   }));
 }
 
-/** Who asks, their roster that day, and whether the day is still to come. */
+/**
+ * Who asks, and their roster that day, still to come with them on it; and
+ * [create] keeping the request, refused while one of theirs for the same
+ * duty that day is open.
+ */
 async function asker(deps: Deps, caller: Caller | null, data: unknown) {
   const input = record(data);
   const day = dayOf(input);
   const a = await churchAccess(deps, caller, data, 'member');
   const today = dateKeyIn(timeZoneOf(a.church), deps.now());
   if (day.dateKey < today) fail('failed-precondition', 'unknown');
-  const roster = await rosterRef(deps, a.cid, day.serviceId, day.dateKey).get();
-  if (!onDuty(roster.get('duties'), day.duty, a.caller.uid)) fail('failed-precondition', 'unknown');
-  await noOpenRequest(deps, a.cid, a.caller.uid, roster.id, day.duty);
-  const name = Object.entries(dutiesOf(roster.get('duties')).find((d) => d.role === day.duty)!.uids ?? {}).find(([, u]) => u === a.caller.uid)![0];
-  return { ...a, ...day, input, roster, name, today };
+  const roster = await rosterOf(deps, a.cid, `${day.dateKey}_${day.serviceId}`).get();
+  const name = nameOn(roster.get('duties'), day.duty, a.caller.uid);
+  if (name === null) fail('failed-precondition', 'unknown');
+  const create = async (fields: Record<string, unknown>) => {
+    const ref = requests(deps, a.cid).doc();
+    await deps.db.runTransaction(async (tx) => {
+      const open = await tx.get(requests(deps, a.cid).where('from', '==', a.caller.uid).where('status', '==', 'open'));
+      if (open.docs.some((d) => d.get('rosterId') === roster.id && d.get('duty') === day.duty)) fail('already-exists', 'unknown');
+      tx.set(ref, {
+        serviceId: day.serviceId,
+        dateKey: day.dateKey,
+        rosterId: roster.id,
+        duty: day.duty,
+        from: a.caller.uid,
+        fromName: name,
+        status: 'open',
+        sendAt: null,
+        createdAt: FieldValue.serverTimestamp(),
+        ...fields,
+      });
+    });
+    return ref;
+  };
+  return { ...a, ...day, input, roster, today, create };
 }
 
 /**
@@ -179,7 +249,7 @@ async function asker(deps: Deps, caller: Caller | null, data: unknown) {
 export async function askCover(deps: Deps & PushDeps, caller: Caller | null, data: unknown) {
   const a = await asker(deps, caller, data);
   if (Object.keys(a.input).some((k) => !['churchId', 'serviceId', 'dateKey', 'duty'].includes(k))) fail('invalid-argument', 'unknown');
-  const [members, away] = await Promise.all([
+  const [members, unavailable] = await Promise.all([
     deps.db.collection(`churches/${a.cid}/members`).get(),
     deps.db.collection(`churches/${a.cid}/unavailable`).get(),
   ]);
@@ -190,25 +260,10 @@ export async function askCover(deps: Deps & PushDeps, caller: Caller | null, dat
     a.roster.get('duties'),
     a.duty,
     a.caller.uid,
-    Object.fromEntries(away.docs.map((d) => [d.id, (d.get('spans') as Spans | undefined) ?? []])),
+    Object.fromEntries(unavailable.docs.map((d) => [d.id, d.get('spans') as Spans | undefined ?? []])),
   );
   if (asked.length === 0) fail('failed-precondition', 'unknown', 'nobodyToAsk');
-  const ref = requests(deps, a.cid).doc();
-  await ref.set({
-    kind: 'cover',
-    serviceId: a.serviceId,
-    dateKey: a.dateKey,
-    rosterId: a.roster.id,
-    duty: a.duty,
-    from: a.caller.uid,
-    fromName: a.name,
-    asked,
-    passed: [],
-    status: 'open',
-    sendAt: null,
-    nudged: false,
-    createdAt: FieldValue.serverTimestamp(),
-  });
+  const ref = await a.create({ kind: 'cover', asked, passed: [], nudged: false });
   await sendOrHold(deps, a.church, ref);
   return { id: ref.id, asked: asked.length };
 }
@@ -226,25 +281,14 @@ export async function askSwap(deps: Deps & PushDeps, caller: Caller | null, data
       || Object.keys(a.input).some((k) => !['churchId', 'serviceId', 'dateKey', 'duty', 'with', 'withDateKey'].includes(k))) {
     fail('invalid-argument', 'unknown');
   }
-  const other = await rosterRef(deps, a.cid, a.serviceId, withDateKey).get();
+  const other = await rosterOf(deps, a.cid, `${withDateKey}_${a.serviceId}`).get();
   if (!stillHolds('swap', a.duty, a.caller.uid, to, a.roster.get('duties'), other.get('duties'))) fail('failed-precondition', 'unknown');
-  const toName = Object.entries(dutiesOf(other.get('duties')).find((d) => d.role === a.duty)!.uids ?? {}).find(([, u]) => u === to)![0];
-  const ref = requests(deps, a.cid).doc();
-  await ref.set({
+  const ref = await a.create({
     kind: 'swap',
-    serviceId: a.serviceId,
-    dateKey: a.dateKey,
-    rosterId: a.roster.id,
-    duty: a.duty,
-    from: a.caller.uid,
-    fromName: a.name,
     to,
-    toName,
+    toName: nameOn(other.get('duties'), a.duty, to),
     toDateKey: withDateKey,
     toRosterId: other.id,
-    status: 'open',
-    sendAt: null,
-    createdAt: FieldValue.serverTimestamp(),
   });
   await sendOrHold(deps, a.church, ref);
   return { id: ref.id };
@@ -258,50 +302,34 @@ async function requestIn(tx: Transaction, deps: Deps, cid: string, data: Record<
   return r;
 }
 
-/** Tells who asked and the leads what became of [request], [taker] having taken or given it back. */
-async function tellTaken(deps: PushDeps, church: DocumentSnapshot, r: FirebaseFirestore.DocumentData, taker: string, takerName: string, back: boolean) {
-  const cid = church.id;
-  const title = church.get('name') as string;
-  const line = await lineOf(deps, cid, r.serviceId);
-  const [members, ministries] = await Promise.all([
-    deps.db.collection(`churches/${cid}/members`).get(),
-    deps.db.doc(`churches/${cid}/settings/ministries`).get(),
-  ]);
-  const leads = leadsOf(members.docs, ministriesOf(ministries), r.serviceId, r.duty).filter((u) => u !== r.from && u !== taker);
-  const say = (w: Words) => w.dutyLine(line, [r.duty]);
-  await notifyMembers(deps, cid, [r.from], 'swap', (w) => ({
-    title,
-    body: back
-      ? w.takenBack(takerName, w.dateWithWeekday(r.dateKey), say(w))
-      : r.kind === 'cover'
-        ? w.coverTaken(takerName, w.dateWithWeekday(r.dateKey), say(w))
-        : w.swapTaken(takerName, w.dateWithWeekday(r.toDateKey), say(w)),
-    link: `/rosters/${r.serviceId}/${r.kind === 'swap' ? r.toDateKey : r.dateKey}`,
-  }));
-  await notifyMembers(deps, cid, leads, 'swap', (w) => ({
-    title,
-    body: back
-      ? w.takenBack(takerName, w.dateWithWeekday(r.dateKey), say(w))
-      : r.kind === 'cover'
-        ? w.covered(w.dateWithWeekday(r.dateKey), say(w), r.fromName, takerName)
-        : w.swapped(say(w), r.fromName, w.dateWithWeekday(r.dateKey), takerName, w.dateWithWeekday(r.toDateKey)),
+/** Tells the leads [request] was taken, its own [ref] remembering they were told. */
+async function tellLeads(deps: PushDeps, church: DocumentSnapshot, ref: FirebaseFirestore.DocumentReference, r: FirebaseFirestore.DocumentData) {
+  await ref.update({ leadsAt: null, leadsTold: true });
+  const say = await readable(deps, church.id, r);
+  const leads = (await leadsFor(deps, church.id, r.serviceId, r.duty)).filter((u) => u !== r.from && u !== r.taker);
+  return notifyMembers(deps, church.id, leads, 'swap', (w) => ({
+    title: church.get('name') as string,
+    body: r.kind === 'cover'
+      ? w.covered(say(w).day, say(w).line, r.fromName, r.takerName)
+      : w.swapped(say(w).line, r.fromName, say(w).day, r.takerName, say(w).toDay),
     link: `/rosters/${r.serviceId}/${r.dateKey}`,
   }));
 }
 
 /**
  * Answers request `data.id`: `data.yes` takes it (我來, 接受), changing the
- * rosters, and tells who asked and the leads; otherwise 不方便, which for
- * 交換 tells who asked and closes it, and for 請人代 only leaves it to the
- * others. Fails when it is no longer open or no longer holds (the roster
- * changed: it is void), or the caller was not asked.
+ * rosters, and tells who asked, and the leads (at 7:00 when it is night);
+ * otherwise 不方便, which for 交換 tells who asked and closes it, and for
+ * 請人代 only leaves it to the others. Fails when it is no longer open or no
+ * longer holds (the roster changed: it is void), when the caller was not
+ * asked, or for 請人代 is no longer on the duty's list, marked the day as one
+ * they cannot serve, or is on it already.
  */
 export async function answerSwap(deps: Deps & PushDeps, caller: Caller | null, data: unknown) {
   const input = record(data);
   if (typeof input.yes !== 'boolean' || Object.keys(input).some((k) => !['churchId', 'id', 'yes'].includes(k))) fail('invalid-argument', 'unknown');
   const a = await churchAccess(deps, caller, data, 'member');
   const me = a.caller.uid;
-  const myName = (a.member.get('name') as string | undefined) ?? '';
   const today = dateKeyIn(timeZoneOf(a.church), deps.now());
   const done = await deps.db.runTransaction(async (tx) => {
     const r = await requestIn(tx, deps, a.cid, input);
@@ -311,41 +339,56 @@ export async function answerSwap(deps: Deps & PushDeps, caller: Caller | null, d
     if (req.status !== 'open') fail('failed-precondition', 'unknown', 'swapClosed');
     if (!input.yes) {
       tx.update(r.ref, req.kind === 'cover' ? { passed: FieldValue.arrayUnion(me) } : { status: 'declined', answeredAt: Timestamp.fromDate(deps.now()) });
-      return { req, took: false };
+      return { req, took: false, leadsNow: false, ref: r.ref };
     }
-    const roster = await tx.get(deps.db.doc(`churches/${a.cid}/rosters/${req.rosterId}`));
-    const other = req.kind === 'swap' ? await tx.get(deps.db.doc(`churches/${a.cid}/rosters/${req.toRosterId}`)) : null;
+    const roster = await tx.get(rosterOf(deps, a.cid, req.rosterId));
+    const other = req.kind === 'swap' ? await tx.get(rosterOf(deps, a.cid, req.toRosterId)) : null;
+    const [member, unavailable] = req.kind === 'cover'
+      ? await Promise.all([tx.get(a.member.ref), tx.get(deps.db.doc(`churches/${a.cid}/unavailable/${me}`))])
+      : [null, null];
     const late = req.dateKey < today || (req.kind === 'swap' && req.toDateKey < today);
     if (late || !stillHolds(req.kind, req.duty, req.from, req.kind === 'swap' ? req.to : null, roster.get('duties'), other?.get('duties'))) {
       tx.update(r.ref, { status: 'voided' });
       return null;
     }
-    if (req.kind === 'cover' && onDuty(roster.get('duties'), req.duty, me)) fail('failed-precondition', 'unknown');
-    const taker = req.kind === 'cover' ? myName : req.toName;
-    tx.update(roster.ref, {
-      duties: replacedOnDuty(roster.get('duties'), req.duty, req.from, me, taker),
-      via: 'swap',
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-    if (other) {
-      tx.update(other.ref, {
-        duties: replacedOnDuty(other.get('duties'), req.duty, me, req.from, req.fromName),
-        via: 'swap',
-        updatedAt: FieldValue.serverTimestamp(),
-      });
+    const takerName = req.kind === 'cover' ? ((member!.get('name') as string | undefined) ?? '') : req.toName;
+    if (req.kind === 'cover') {
+      const listed = ((member!.get('zones') as Listed['zones']) ?? []).some((z) => z.serviceType === req.serviceId && strings(z.duties).includes(req.duty));
+      if (!listed || away(unavailable!.get('spans') as Spans | undefined, req.dateKey) || !takerName
+          || onDuty(roster.get('duties'), req.duty, me) || nameOnDuty(roster.get('duties'), req.duty, takerName)) {
+        fail('failed-precondition', 'unknown');
+      }
     }
-    tx.update(r.ref, { status: 'taken', taker: me, takerName: taker, answeredAt: Timestamp.fromDate(deps.now()) });
-    return { req, took: true, takerName: taker };
+    trade(tx, req.duty, roster, other, { uid: req.from, name: req.fromName }, { uid: me, name: takerName });
+    const until = quietUntil(timeZoneOf(a.church), deps.now());
+    tx.update(r.ref, {
+      status: 'taken',
+      taker: me,
+      takerName,
+      answeredAt: Timestamp.fromDate(deps.now()),
+      leadsAt: until ? Timestamp.fromDate(until) : null,
+      leadsTold: false,
+    });
+    return { req: { ...req, taker: me, takerName } as FirebaseFirestore.DocumentData, took: true, leadsNow: !until, ref: r.ref };
   });
   if (!done) fail('failed-precondition', 'unknown', 'swapClosed');
+  const req = done.req;
+  const say = await readable(deps, a.cid, req);
+  const title = a.church.get('name') as string;
   if (done.took) {
-    await tellTaken(deps, a.church, done.req, me, done.takerName!, false);
-  } else if (done.req.kind === 'swap') {
-    const line = await lineOf(deps, a.cid, done.req.serviceId);
-    await notifyMembers(deps, a.cid, [done.req.from], 'swap', (w) => ({
-      title: a.church.get('name') as string,
-      body: w.swapDeclined(done.req.toName, w.dateWithWeekday(done.req.dateKey), w.dutyLine(line, [done.req.duty])),
-      link: `/rosters/${done.req.serviceId}/${done.req.dateKey}`,
+    await notifyMembers(deps, a.cid, [req.from], 'swap', (w) => ({
+      title,
+      body: req.kind === 'cover'
+        ? w.coverTaken(req.takerName, say(w).day, say(w).line)
+        : w.swapTaken(req.takerName, say(w).toDay, say(w).line),
+      link: `/rosters/${req.serviceId}/${req.kind === 'swap' ? req.toDateKey : req.dateKey}`,
+    }));
+    if (done.leadsNow) await tellLeads(deps, a.church, done.ref!, req);
+  } else if (req.kind === 'swap') {
+    await notifyMembers(deps, a.cid, [req.from], 'swap', (w) => ({
+      title,
+      body: w.swapDeclined(req.toName, say(w).day, say(w).line),
+      link: `/rosters/${req.serviceId}/${req.dateKey}`,
     }));
   }
   return {};
@@ -353,44 +396,47 @@ export async function answerSwap(deps: Deps & PushDeps, caller: Caller | null, d
 
 /**
  * 復原 of taking request `data.id`, by whoever took it, within [UNDO_MS]
- * and while the rosters are still as it left them: they go back, the
- * request is open again, and who asked and the leads hear so.
+ * and while the rosters are still as it left them: they go back. 請人代 is
+ * open again and asks the others once more; 交換 ends as if they had said
+ * 不方便. Who asked hears so, and the leads when they had heard it was
+ * taken.
  */
 export async function undoSwap(deps: Deps & PushDeps, caller: Caller | null, data: unknown) {
   const input = record(data);
   if (Object.keys(input).some((k) => !['churchId', 'id'].includes(k))) fail('invalid-argument', 'unknown');
   const a = await churchAccess(deps, caller, data, 'member');
   const me = a.caller.uid;
-  const req = await deps.db.runTransaction(async (tx) => {
+  const { req, ref } = await deps.db.runTransaction(async (tx) => {
     const r = await requestIn(tx, deps, a.cid, input);
     const req = r.data()!;
     if (req.taker !== me) fail('permission-denied', 'permissionDenied');
     const at = (req.answeredAt as Timestamp | undefined)?.toMillis() ?? 0;
     if (req.status !== 'taken' || deps.now().getTime() - at > UNDO_MS) fail('failed-precondition', 'unknown', 'swapClosed');
-    const roster = await tx.get(deps.db.doc(`churches/${a.cid}/rosters/${req.rosterId}`));
-    const other = req.kind === 'swap' ? await tx.get(deps.db.doc(`churches/${a.cid}/rosters/${req.toRosterId}`)) : null;
+    const roster = await tx.get(rosterOf(deps, a.cid, req.rosterId));
+    const other = req.kind === 'swap' ? await tx.get(rosterOf(deps, a.cid, req.toRosterId)) : null;
     // As taking left them: the taker where who asked was, and for 交換 who
     // asked on the other day.
     const asLeft = req.kind === 'cover'
       ? onDuty(roster.get('duties'), req.duty, me) && !onDuty(roster.get('duties'), req.duty, req.from)
       : stillHolds('swap', req.duty, me, req.from, roster.get('duties'), other?.get('duties'));
     if (!asLeft) fail('failed-precondition', 'conflict');
-    tx.update(roster.ref, {
-      duties: replacedOnDuty(roster.get('duties'), req.duty, me, req.from, req.fromName),
-      via: 'swap',
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-    if (other) {
-      tx.update(other.ref, {
-        duties: replacedOnDuty(other.get('duties'), req.duty, req.from, me, req.toName),
-        via: 'swap',
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-    }
-    tx.update(r.ref, { status: 'open', taker: FieldValue.delete(), takerName: FieldValue.delete(), answeredAt: FieldValue.delete() });
-    return req;
+    trade(tx, req.duty, roster, other, { uid: me, name: req.takerName }, { uid: req.from, name: req.fromName });
+    const gone = { taker: FieldValue.delete(), takerName: FieldValue.delete(), leadsAt: FieldValue.delete(), leadsTold: FieldValue.delete() };
+    tx.update(r.ref, req.kind === 'cover'
+      ? { ...gone, status: 'open', answeredAt: FieldValue.delete(), passed: FieldValue.arrayUnion(me) }
+      : { ...gone, status: 'declined', answeredAt: Timestamp.fromDate(deps.now()) });
+    return { req, ref: r.ref };
   });
-  await tellTaken(deps, a.church, req, me, req.takerName, true);
+  const say = await readable(deps, a.cid, req);
+  const title = a.church.get('name') as string;
+  const back = (w: Words) =>
+    req.kind === 'cover' ? w.takenBack(req.takerName, say(w).day, say(w).line) : w.swapUndone(req.takerName, say(w).day, say(w).line);
+  await notifyMembers(deps, a.cid, [req.from], 'swap', (w) => ({ title, body: back(w), link: `/rosters/${req.serviceId}/${req.dateKey}` }));
+  if (req.leadsTold) {
+    const leads = (await leadsFor(deps, a.cid, req.serviceId, req.duty)).filter((u) => u !== req.from && u !== me);
+    await notifyMembers(deps, a.cid, leads, 'swap', (w) => ({ title, body: back(w), link: `/rosters/${req.serviceId}/${req.dateKey}` }));
+  }
+  if (req.kind === 'cover') await sendRequest(deps, a.church, await ref.get());
   return {};
 }
 
@@ -410,8 +456,9 @@ export async function withdrawSwap(deps: Deps, caller: Caller | null, data: unkn
 
 /**
  * A roster of church [cid] written: its open requests that no longer hold
- * (who asked is off it, or the one asked off theirs) are void. Returns how
- * many.
+ * (who asked is off it, or the one asked off theirs) are void, each read
+ * again with the rosters in a transaction, so one taken meanwhile stays
+ * taken. Returns how many.
  */
 export async function voidStaleSwaps(deps: Pick<Deps, 'db'>, cid: string, rosterId: string) {
   const col = requests(deps, cid);
@@ -420,24 +467,27 @@ export async function voidStaleSwaps(deps: Pick<Deps, 'db'>, cid: string, roster
     col.where('toRosterId', '==', rosterId).where('status', '==', 'open').get(),
   ]);
   let voided = 0;
-  for (const r of [...mine.docs, ...theirs.docs]) {
-    const req = r.data();
-    const [roster, other] = await Promise.all([
-      deps.db.doc(`churches/${cid}/rosters/${req.rosterId}`).get(),
-      req.toRosterId ? deps.db.doc(`churches/${cid}/rosters/${req.toRosterId}`).get() : Promise.resolve(null),
-    ]);
-    if (stillHolds(req.kind, req.duty, req.from, req.to ?? null, roster.get('duties'), other?.get('duties'))) continue;
-    await r.ref.update({ status: 'voided' });
-    voided++;
+  for (const found of [...mine.docs, ...theirs.docs]) {
+    voided += await deps.db.runTransaction(async (tx) => {
+      const r = await tx.get(found.ref);
+      const req = r.data();
+      if (req?.status !== 'open') return 0;
+      const roster = await tx.get(rosterOf(deps, cid, req.rosterId));
+      const other = req.toRosterId ? await tx.get(rosterOf(deps, cid, req.toRosterId)) : null;
+      if (stillHolds(req.kind, req.duty, req.from, req.to ?? null, roster.get('duties'), other?.get('duties'))) return 0;
+      tx.update(r.ref, { status: 'voided' });
+      return 1;
+    });
   }
   return voided;
 }
 
 /**
- * Every hour: requests asked in the night go out once morning comes; open
- * ones whose day has gone by everywhere are void; and at [NUDGE_HOUR] on a
- * church's clock, a 請人代 nobody took [NUDGE_DAYS] days before its day is
- * told to the leads, once.
+ * Every hour: requests asked in the night go out once morning comes, and
+ * so do the leads' news of one taken in the night; open ones whose day has
+ * gone by everywhere are void; and at [NUDGE_HOUR] on a church's clock, a
+ * 請人代 nobody took [NUDGE_DAYS] days before its day is told to the leads,
+ * once.
  */
 export async function sendSwapPushes(deps: PushDeps & Pick<Deps, 'now'>) {
   const now = deps.now();
@@ -453,32 +503,33 @@ export async function sendSwapPushes(deps: PushDeps & Pick<Deps, 'now'>) {
     await r.ref.update({ sendAt: null });
     if (r.get('status') === 'open') told += await sendRequest(deps, await churchOf(r), r);
   }
+  const leads = await deps.db.collectionGroup('swapRequests').where('leadsAt', '<=', Timestamp.fromDate(now)).get();
+  for (const r of leads.docs) {
+    if (r.get('status') === 'taken') told += await tellLeads(deps, await churchOf(r), r.ref, r.data());
+    else await r.ref.update({ leadsAt: null });
+  }
   const past = await deps.db.collectionGroup('swapRequests').where('status', '==', 'open').where('dateKey', '<', earliestDay(now)).get();
   for (const r of past.docs) await r.ref.update({ status: 'voided' });
 
   const zones = timeZonesAt([NUDGE_HOUR], now);
   if (zones.size === 0) return told;
-  const days = new Set([...zones].map((z) => dateKeyIn(z, new Date(now.getTime() + NUDGE_DAYS * DAY_MS))));
-  for (const day of days) {
+  const inThreeDays = (z: string) => dateKeyIn(z, new Date(now.getTime() + NUDGE_DAYS * DAY_MS));
+  for (const day of new Set([...zones].map(inThreeDays))) {
     const open = await deps.db.collectionGroup('swapRequests').where('status', '==', 'open').where('dateKey', '==', day).get();
     for (const r of open.docs) {
       const req = r.data();
       if (req.kind !== 'cover' || req.nudged) continue;
       const church = await churchOf(r);
-      if (!zones.has(timeZoneOf(church)) || dateKeyIn(timeZoneOf(church), new Date(now.getTime() + NUDGE_DAYS * DAY_MS)) !== day) continue;
+      const zone = timeZoneOf(church);
+      if (!zones.has(zone) || inThreeDays(zone) !== day) continue;
       await r.ref.update({ nudged: true });
-      const [members, ministries] = await Promise.all([
-        deps.db.collection(`churches/${church.id}/members`).get(),
-        deps.db.doc(`churches/${church.id}/settings/ministries`).get(),
-      ]);
-      const line = await lineOf(deps, church.id, req.serviceId);
-      told += await notifyMembers(deps, church.id, leadsOf(members.docs, ministriesOf(ministries), req.serviceId, req.duty).filter((u) => u !== req.from), 'swap', (w) => ({
+      const say = await readable(deps, church.id, req);
+      told += await notifyMembers(deps, church.id, (await leadsFor(deps, church.id, req.serviceId, req.duty)).filter((u) => u !== req.from), 'swap', (w) => ({
         title: church.get('name') as string,
-        body: w.uncovered(w.dateWithWeekday(req.dateKey), w.dutyLine(line, [req.duty])),
+        body: w.uncovered(say(w).day, say(w).line),
         link: `/rosters/${req.serviceId}/${req.dateKey}`,
       }));
     }
   }
   return told;
 }
-

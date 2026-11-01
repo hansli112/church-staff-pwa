@@ -3179,7 +3179,7 @@ class L10nJa extends L10n {
   String get notifSwapSub => '代わりや交換を頼まれたとき、自分の依頼に返事があったとき、奉仕できない日の入力を頼まれたとき';
 
   @override
-  String get swapMenu => '代わり・交換を頼む';
+  String get swapMenu => '代わり・交換';
 
   @override
   String get swapAskCover => '代わりを頼む';
@@ -3195,12 +3195,12 @@ class L10nJa extends L10n {
 
   @override
   String swapAskedCover(int count) {
-    return '$count人のメンバーに頼みました。引き受けた人がいたら通知します';
+    return '$count人のメンバーに頼みました。引き受けた人がいたら通知します。';
   }
 
   @override
   String swapAskedSwap(String name) {
-    return '$nameさんに頼みました。受けてもらえたら交換します';
+    return '$nameさんに頼みました。受けてもらえたら交換します。';
   }
 
   @override
@@ -3212,11 +3212,11 @@ class L10nJa extends L10n {
   String get swapNoDays => 'この先、この担当に入っている人はいません';
 
   @override
-  String get swapPendingCover => '代わりを頼んでいます。まだ引き受けた人はいません';
+  String get swapPendingCover => '代わりを頼んでいます。まだ引き受けた人はいません。';
 
   @override
   String swapPendingSwap(String name) {
-    return '$nameさんに交換を頼んでいます。まだ返事はありません';
+    return '$nameさんに交換を頼んでいます。まだ返事はありません。';
   }
 
   @override
@@ -3278,7 +3278,7 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get swapStatusVoided => 'この依頼は無効になりました。奉仕表が変わったか、日付が過ぎました';
+  String get swapStatusVoided => 'この依頼は無効になりました。奉仕表が変わったか、日付が過ぎました。';
 
   @override
   String get swapStatusDeclined => '都合が悪いと返事しました';
@@ -3287,5 +3287,11 @@ class L10nJa extends L10n {
   String get errSwapClosed => 'この依頼はもう終わっています';
 
   @override
-  String get errNobodyToAsk => 'その日に空いているリストのメンバーがいません。リーダーに相談してください';
+  String get errNobodyToAsk => 'その日に空いているリストのメンバーがいません。リーダーに相談してください。';
+
+  @override
+  String get swapOutCover => '代わりを依頼中';
+
+  @override
+  String get swapOutSwap => '交換を依頼中';
 }

@@ -190,7 +190,7 @@ class _SwapRequestScreenState extends ConsumerState<SwapRequestScreen> {
       body = request.isLoading ? const SizedBox.shrink() : EmptyState(message: l10n.errSwapClosed);
     } else {
       final cover = r.kind == SwapKind.cover;
-      final answering = r.isOpen && me != null && r.asks(me) && !r.passed.contains(me);
+      final answering = r.isOpen && me != null && r.canAnswer(me) && !r.passed.contains(me);
       final status = switch (r.status) {
         SwapStatus.open when me != null && r.passed.contains(me) => l10n.swapStatusDeclined,
         SwapStatus.open => null,

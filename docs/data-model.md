@@ -77,7 +77,7 @@
 
 App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預設聚會、服事項目改名（只能原地改名，其他服事項目不變）、服事表上誰是誰（名字連到 uid 且還在名單上才算，一個服事項目只算一次）、搬家時舊同工資料的轉換，兩邊的測試都跑 `testdata/church_rules.json`。
 
-服事表異動也一樣（`app/lib/domain/roster_news.dart` ↔ `functions/src/rosterNews.ts`，兩邊都跑 `testdata/roster_changes.json`）：服事表上的 `via` 說這次從哪裡寫的、要告訴誰。App 只寫 `app`（照常通知）、`plan`（安排服事，等「完成」）、`import`（匯入，只送外部通知），`firestore.rules` 和 `editLedDuties` 只收這三種；`calendar`、`restore`、`relink`、`timeZone`、`swap`（找人代／交換接手時，#92）只有後端寫（`functions/src/eventRosters.ts`）。等「完成」的那筆（`plannedPushes`）怎麼跟著後來的異動變，也在這份表裡。
+服事表異動也一樣（`app/lib/domain/roster_news.dart` ↔ `functions/src/rosterNews.ts`，兩邊都跑 `testdata/roster_changes.json`）：服事表上的 `via` 說這次從哪裡寫的、要告訴誰。App 只寫 `app`（照常通知）、`plan`（安排服事，等「完成」）、`import`（匯入，只送外部通知），`firestore.rules` 和 `editLedDuties` 只收這三種；`calendar`、`restore`、`relink`、`timeZone` 只有後端寫（`functions/src/eventRosters.ts`），`swap` 也是（找人代／交換接手時，`functions/src/swaps.ts`，#92）。等「完成」的那筆（`plannedPushes`）怎麼跟著後來的異動變，也在這份表裡。
 
 活動的服事表一生的規則（`app/lib/domain/event_roster.dart` ↔ `functions/src/eventRosters.ts` ↔ `firestore.rules`）寫在 `testdata/event_rosters.json`：活動改了、刪了、復原、在 Google 還在或不見了時，服事表跟著、取消、搬到復原的活動上，或重新開啟（`fates`，App 做的那幾種 MemoryBackend 也照做）；App 能怎麼寫它（`appWrites`：名稱、日期、屬於都是行事曆的，只有建立時寫；只有後端能取消；和一般服事表不能互換），規則測試也跑同一份。
 

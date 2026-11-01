@@ -3488,4 +3488,10 @@ class L10nEn extends L10n {
 
   @override
   String get errNobodyToAsk => 'Nobody else on the list is free that day; ask your lead';
+
+  @override
+  String get swapOutCover => 'Cover asked';
+
+  @override
+  String get swapOutSwap => 'Swap asked';
 }

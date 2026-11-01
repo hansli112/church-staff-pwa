@@ -3180,7 +3180,7 @@ class L10nKo extends L10n {
   String get notifSwapSub => '대신 봉사나 교환을 부탁받거나, 내 요청에 답이 오거나, 봉사할 수 없는 날을 입력해 달라는 요청이 왔을 때';
 
   @override
-  String get swapMenu => '대신 봉사·교환 요청';
+  String get swapMenu => '대신 봉사·교환';
 
   @override
   String get swapAskCover => '대신 봉사 부탁';
@@ -3196,12 +3196,12 @@ class L10nKo extends L10n {
 
   @override
   String swapAskedCover(int count) {
-    return '멤버 $count명에게 부탁했어요. 누군가 맡으면 알려 드릴게요';
+    return '멤버 $count명에게 부탁했어요. 누군가 맡으면 알려 드릴게요.';
   }
 
   @override
   String swapAskedSwap(String name) {
-    return '$name 님에게 요청했어요. 수락하면 교환돼요';
+    return '$name 님에게 요청했어요. 수락하면 교환돼요.';
   }
 
   @override
@@ -3213,11 +3213,11 @@ class L10nKo extends L10n {
   String get swapNoDays => '앞으로 이 담당에 배정된 다른 사람이 없어요';
 
   @override
-  String get swapPendingCover => '대신 봉사를 부탁했어요. 아직 맡은 사람이 없어요';
+  String get swapPendingCover => '대신 봉사를 부탁했어요. 아직 맡은 사람이 없어요.';
 
   @override
   String swapPendingSwap(String name) {
-    return '$name 님에게 교환을 요청했어요. 아직 답이 없어요';
+    return '$name 님에게 교환을 요청했어요. 아직 답이 없어요.';
   }
 
   @override
@@ -3279,7 +3279,7 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get swapStatusVoided => '이 요청은 더 이상 유효하지 않아요. 봉사표가 바뀌었거나 날짜가 지났어요';
+  String get swapStatusVoided => '이 요청은 더 이상 유효하지 않아요. 봉사표가 바뀌었거나 날짜가 지났어요.';
 
   @override
   String get swapStatusDeclined => '어렵다고 답했어요';
@@ -3288,5 +3288,11 @@ class L10nKo extends L10n {
   String get errSwapClosed => '이 요청은 이미 끝났어요';
 
   @override
-  String get errNobodyToAsk => '그날 시간이 되는 명단의 다른 멤버가 없어요. 리더에게 문의하세요';
+  String get errNobodyToAsk => '그날 시간이 되는 명단의 다른 멤버가 없어요. 리더에게 문의하세요.';
+
+  @override
+  String get swapOutCover => '대신 봉사 요청 중';
+
+  @override
+  String get swapOutSwap => '교환 요청 중';
 }

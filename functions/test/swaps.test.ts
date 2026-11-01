@@ -77,8 +77,8 @@ describe('請人代 (askCover)', () => {
     const { id, asked } = await cover();
     assert.equal(asked, 2);
     assert.deepEqual(said(), [
-      ['tok-hao', '王小明 想請你代 11/15（週日）主日崇拜 司琴', `/c/C1?to=%2Frosters%2Frequest%2F${id}`],
-      ['tok-mei', '王小明 想請你代 11/15（週日）主日崇拜 司琴', `/c/C1?to=%2Frosters%2Frequest%2F${id}`],
+      ['tok-hao', '「王小明」想請你代 11/15（週日）主日崇拜 司琴', `/c/C1?to=%2Frosters%2Frequest%2F${id}`],
+      ['tok-mei', '「王小明」想請你代 11/15（週日）主日崇拜 司琴', `/c/C1?to=%2Frosters%2Frequest%2F${id}`],
     ]);
     pushed.length = 0;
 
@@ -87,8 +87,8 @@ describe('請人代 (askCover)', () => {
     assert.equal((await db.doc('churches/C1/rosters/2026-11-15_sunday').get()).get('via'), 'swap');
     assert.deepEqual([(await request(id)).status, (await request(id)).taker], ['taken', 'mei']);
     assert.deepEqual(said(), [
-      ['tok-lead', '11/15（週日）主日崇拜 司琴：王小明 → 李美玉', '/c/C1?to=%2Frosters%2Fsunday%2F2026-11-15'],
-      ['tok-wang', '李美玉 接手了你 11/15（週日）主日崇拜 司琴', '/c/C1?to=%2Frosters%2Fsunday%2F2026-11-15'],
+      ['tok-lead', '11/15（週日）主日崇拜 司琴：「王小明」→「李美玉」', '/c/C1?to=%2Frosters%2Fsunday%2F2026-11-15'],
+      ['tok-wang', '「李美玉」接手了你 11/15（週日）主日崇拜 司琴', '/c/C1?to=%2Frosters%2Fsunday%2F2026-11-15'],
     ]);
     await rejectsWith(answer(id, 'hao', true), 'unknown');
   });
@@ -145,6 +145,28 @@ describe('請人代 (askCover)', () => {
     assert.equal(pushed.length, 1);
   });
 
+  test('taken in the night: who asked hears at once, the lead at 7:00', async () => {
+    await church();
+    const { id } = await cover();
+    setNow(new Date('2026-11-02T23:00:00+08:00'));
+    pushed.length = 0;
+    await answer(id, 'mei', true);
+    assert.deepEqual(said().map(([t]) => t), ['tok-wang']);
+    setNow(new Date('2026-11-03T07:00:00+08:00'));
+    await sendSwapPushes(d());
+    assert.deepEqual(said().map(([t]) => t), ['tok-lead', 'tok-wang']);
+  });
+
+  test('only someone still on the list and free that day takes it', async () => {
+    await church();
+    const { id } = await cover();
+    await db.doc('churches/C1/unavailable/mei').set({ spans: [{ from: '2026-11-15', to: '2026-11-15', note: '' }] });
+    await rejectsWith(answer(id, 'mei', true), 'unknown');
+    await db.doc('churches/C1/members/hao').update({ zones: [] });
+    await rejectsWith(answer(id, 'hao', true), 'unknown');
+    assert.equal((await request(id)).status, 'open');
+  });
+
   test('with no lead of the service, 行政 and the admins hear', async () => {
     await church();
     await db.doc('churches/C1/members/lead').update({ leadTypes: [] });
@@ -162,12 +184,14 @@ describe('請人代 (askCover)', () => {
     await undoSwap(d(), caller('mei'), { churchId: 'C1', id });
     assert.deepEqual(await pianists('2026-11-15'), duty('司琴', ['王小明']));
     assert.equal((await request(id)).status, 'open');
-    assert.ok(said().some(([t, body]) => t === 'tok-wang' && body === '李美玉 取消了接手 11/15（週日）主日崇拜 司琴，還在找人'));
+    assert.ok(said().some(([t, body]) => t === 'tok-wang' && body === '「李美玉」取消了接手 11/15（週日）主日崇拜 司琴，還在找人'));
+    assert.ok(said().some(([t, body]) => t === 'tok-lead' && body.includes('取消了接手')), 'the lead had heard it was taken');
+    assert.deepEqual(said().filter(([, body]) => body.includes('想請你代')).map(([t]) => t), ['tok-hao'], 'asked again, but not who gave it back');
 
-    await answer(id, 'mei', true);
-    await rejectsWith(undoSwap(d(), caller('hao'), { churchId: 'C1', id }), 'permissionDenied');
+    await answer(id, 'hao', true);
+    await rejectsWith(undoSwap(d(), caller('mei'), { churchId: 'C1', id }), 'permissionDenied');
     setNow(new Date('2026-11-02T10:11:00+08:00'));
-    await assert.rejects(undoSwap(d(), caller('mei'), { churchId: 'C1', id }), (e: { details?: { detail?: string } }) => e.details?.detail === 'swapClosed', 'ten minutes on');
+    await assert.rejects(undoSwap(d(), caller('hao'), { churchId: 'C1', id }), (e: { details?: { detail?: string } }) => e.details?.detail === 'swapClosed', 'ten minutes on');
   });
 
   test('收回 by who asked; then nobody can answer', async () => {
@@ -200,24 +224,28 @@ describe('和別週交換 (askSwap)', () => {
   test('asks the one person; 接受 trades the two days, and who asked and the lead hear', async () => {
     await church();
     const { id } = await swap();
-    assert.deepEqual(said(), [['tok-hao', '王小明 想用 11/15（週日）和你交換 11/22（週日）主日崇拜 司琴', `/c/C1?to=%2Frosters%2Frequest%2F${id}`]]);
+    assert.deepEqual(said(), [['tok-hao', '「王小明」想用 11/15（週日）和你交換 11/22（週日）主日崇拜 司琴', `/c/C1?to=%2Frosters%2Frequest%2F${id}`]]);
     pushed.length = 0;
     await rejectsWith(answer(id, 'mei', true), 'permissionDenied');
     await answer(id, 'hao', true);
     assert.deepEqual(await pianists('2026-11-15'), duty('司琴', ['陳志豪']));
     assert.deepEqual(await pianists('2026-11-22'), duty('司琴', ['王小明']));
     assert.deepEqual(said(), [
-      ['tok-lead', '主日崇拜 司琴：王小明 11/15（週日）和 陳志豪 11/22（週日）交換了', '/c/C1?to=%2Frosters%2Fsunday%2F2026-11-15'],
-      ['tok-wang', '陳志豪 和你交換了，你改成 11/22（週日）主日崇拜 司琴', '/c/C1?to=%2Frosters%2Fsunday%2F2026-11-22'],
+      ['tok-lead', '主日崇拜 司琴：「王小明」11/15（週日）和「陳志豪」11/22（週日）交換了', '/c/C1?to=%2Frosters%2Fsunday%2F2026-11-15'],
+      ['tok-wang', '「陳志豪」和你交換了，你改成 11/22（週日）主日崇拜 司琴', '/c/C1?to=%2Frosters%2Fsunday%2F2026-11-22'],
     ]);
+    pushed.length = 0;
     await undoSwap(d(), caller('hao'), { churchId: 'C1', id });
     assert.deepEqual(await pianists('2026-11-15'), duty('司琴', ['王小明']));
     assert.deepEqual(await pianists('2026-11-22'), duty('司琴', ['陳志豪']));
+    assert.equal((await request(id)).status, 'declined', 'as if they had said 不方便');
+    assert.ok(said().some(([t, body]) => t === 'tok-wang' && body === '「陳志豪」取消了交換，11/15（週日）主日崇拜 司琴還是你'));
 
     // Not once a roster has moved on since.
-    await answer(id, 'hao', true);
+    const again = (await swap()).id;
+    await answer(again, 'hao', true);
     await day('2026-11-22', [duty('司琴', ['李美玉'])]);
-    await rejectsWith(undoSwap(d(), caller('hao'), { churchId: 'C1', id }), 'conflict');
+    await rejectsWith(undoSwap(d(), caller('hao'), { churchId: 'C1', id: again }), 'conflict');
   });
 
   test('不方便 tells who asked and closes it', async () => {
@@ -226,7 +254,7 @@ describe('和別週交換 (askSwap)', () => {
     pushed.length = 0;
     await answer(id, 'hao', false);
     assert.equal((await request(id)).status, 'declined');
-    assert.deepEqual(said(), [['tok-wang', '陳志豪 不方便和你交換 11/15（週日）主日崇拜 司琴', '/c/C1?to=%2Frosters%2Fsunday%2F2026-11-15']]);
+    assert.deepEqual(said(), [['tok-wang', '「陳志豪」不方便和你交換 11/15（週日）主日崇拜 司琴', '/c/C1?to=%2Frosters%2Fsunday%2F2026-11-15']]);
   });
 
   test('only with someone on the duty on another day from tomorrow; void once they are not', async () => {

@@ -70,7 +70,7 @@ class SwapRequest {
   String? get toRosterId => toDay == null ? null : Roster.idFor(serviceId, toDay!);
 
   /// Whether [uid] may answer it while it is open.
-  bool asks(String uid) => kind == SwapKind.cover ? asked.contains(uid) : to == uid;
+  bool canAnswer(String uid) => kind == SwapKind.cover ? asked.contains(uid) : to == uid;
 
   SwapRequest copyWith({SwapStatus? status, String? taker, String? takerName, List<String>? passed}) => SwapRequest(
     id: id,
@@ -129,6 +129,10 @@ class SwapRequest {
   int get hashCode => Object.hash(id, kind, day, duty, from, status, taker, Object.hashAll(asked), to, toDay);
 }
 
+/// How long after taking a request 復原 still gives it back
+/// (functions/src/swaps.ts UNDO_MS).
+const swapUndoWindow = Duration(minutes: 10);
+
 /// Whether [uid] is on [duty] of [roster], by name and uid (Roster.dutiesOf).
 bool isOnDuty(Roster? roster, String duty, String uid) => roster?.dutiesOf(uid: uid).contains(duty) ?? false;
 
@@ -160,6 +164,21 @@ bool swapStillHolds(SwapRequest request, Roster? roster, Roster? other) {
   return isOnDuty(other, request.duty, to) &&
       !isOnDuty(roster, request.duty, to) &&
       !isOnDuty(other, request.duty, request.from);
+}
+
+/// Whether [request]'s rosters are still as taking it left them, so 復原
+/// can give it back: its taker where who asked was, and for 交換 who asked
+/// on the taker's day (functions/src/swaps.ts undoSwap).
+bool swapAsTaken(SwapRequest request, Roster? roster, Roster? other) {
+  final taker = request.taker;
+  if (taker == null) return false;
+  if (request.kind == SwapKind.cover) {
+    return isOnDuty(roster, request.duty, taker) && !isOnDuty(roster, request.duty, request.from);
+  }
+  return isOnDuty(roster, request.duty, taker) &&
+      isOnDuty(other, request.duty, request.from) &&
+      !isOnDuty(roster, request.duty, request.from) &&
+      !isOnDuty(other, request.duty, taker);
 }
 
 /// [roster] with [uid] (named [name] there) on [duty] in place of

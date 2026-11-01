@@ -3195,7 +3195,7 @@ class L10nZh extends L10n {
 
   @override
   String swapAskedSwap(String name) {
-    return '已請$name交換，對方接受才換';
+    return '已請「$name」交換，對方接受才換';
   }
 
   @override
@@ -3211,7 +3211,7 @@ class L10nZh extends L10n {
 
   @override
   String swapPendingSwap(String name) {
-    return '已請$name交換，還沒有回應';
+    return '已請「$name」交換，還沒有回應';
   }
 
   @override
@@ -3225,12 +3225,12 @@ class L10nZh extends L10n {
 
   @override
   String swapCoverAsks(String name) {
-    return '$name想請你代';
+    return '「$name」想請你代';
   }
 
   @override
   String swapSwapAsks(String name) {
-    return '$name想和你交換';
+    return '「$name」想和你交換';
   }
 
   @override
@@ -3238,7 +3238,7 @@ class L10nZh extends L10n {
 
   @override
   String swapTheyGet(String name) {
-    return '$name改成';
+    return '「$name」改成';
   }
 
   @override
@@ -3261,7 +3261,7 @@ class L10nZh extends L10n {
 
   @override
   String swapStatusTaken(String name) {
-    return '$name已經接手了';
+    return '「$name」已經接手了';
   }
 
   @override
@@ -3269,7 +3269,7 @@ class L10nZh extends L10n {
 
   @override
   String swapStatusWithdrawn(String name) {
-    return '$name收回了這個請求';
+    return '「$name」收回了這個請求';
   }
 
   @override
@@ -3283,6 +3283,12 @@ class L10nZh extends L10n {
 
   @override
   String get errNobodyToAsk => '名單上那天沒有其他有空的同工，請找負責人';
+
+  @override
+  String get swapOutCover => '已請人代';
+
+  @override
+  String get swapOutSwap => '已請交換';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -6476,7 +6482,7 @@ class L10nZhHans extends L10nZh {
 
   @override
   String swapAskedSwap(String name) {
-    return '已请$name交换，对方接受才换';
+    return '已请“$name”交换，对方接受才换';
   }
 
   @override
@@ -6492,7 +6498,7 @@ class L10nZhHans extends L10nZh {
 
   @override
   String swapPendingSwap(String name) {
-    return '已请$name交换，还没有回应';
+    return '已请“$name”交换，还没有回应';
   }
 
   @override
@@ -6506,12 +6512,12 @@ class L10nZhHans extends L10nZh {
 
   @override
   String swapCoverAsks(String name) {
-    return '$name想请你代';
+    return '“$name”想请你代';
   }
 
   @override
   String swapSwapAsks(String name) {
-    return '$name想和你交换';
+    return '“$name”想和你交换';
   }
 
   @override
@@ -6519,7 +6525,7 @@ class L10nZhHans extends L10nZh {
 
   @override
   String swapTheyGet(String name) {
-    return '$name改成';
+    return '“$name”改成';
   }
 
   @override
@@ -6542,7 +6548,7 @@ class L10nZhHans extends L10nZh {
 
   @override
   String swapStatusTaken(String name) {
-    return '$name已经接手了';
+    return '“$name”已经接手了';
   }
 
   @override
@@ -6550,7 +6556,7 @@ class L10nZhHans extends L10nZh {
 
   @override
   String swapStatusWithdrawn(String name) {
-    return '$name收回了这个请求';
+    return '“$name”收回了这个请求';
   }
 
   @override
@@ -6564,4 +6570,10 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get errNobodyToAsk => '名单上那天没有其他有空的同工，请找负责人';
+
+  @override
+  String get swapOutCover => '已请人代';
+
+  @override
+  String get swapOutSwap => '已请交换';
 }

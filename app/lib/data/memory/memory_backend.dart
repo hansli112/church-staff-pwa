@@ -1278,7 +1278,9 @@ class MemoryChurchData implements ChurchData {
   Stream<SwapRequest?> swapRequest(String id) => _b.watch(() {
     _requireMember();
     final r = _b.swapRequests[churchId]?[id];
-    if (r != null && r.from != _uid && !r.asks(_uid ?? '')) throw const CloudException(CloudErrorCode.permissionDenied);
+    if (r != null && r.from != _uid && !r.canAnswer(_uid ?? '')) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
     return r == null ? null : _current(r);
   });
 
@@ -1371,7 +1373,7 @@ class MemoryChurchData implements ChurchData {
       final me = _b.requireMember(churchId);
       final r = _b.swapRequests[churchId]?[id];
       if (r == null) throw const CloudException(CloudErrorCode.notFound);
-      if (!r.asks(me.uid)) throw const CloudException(CloudErrorCode.permissionDenied);
+      if (!r.canAnswer(me.uid)) throw const CloudException(CloudErrorCode.permissionDenied);
       _openRequest(id);
       final requests = _b.swapRequests[churchId]!;
       if (!yes) {
@@ -1385,10 +1387,19 @@ class MemoryChurchData implements ChurchData {
       final other = r.toRosterId == null ? null : rosters[r.toRosterId];
       final today = _b.churches[churchId]!.timeZone.today(_b.clock());
       if (r.day.isBefore(today) || !swapStillHolds(r, roster, other)) {
-        requests[id] = r.copyWith(status: SwapStatus.voided);
         throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.swapClosed);
       }
       final taker = r.kind == SwapKind.cover ? me.name : r.toName!;
+      // As functions/src/swaps.ts answerSwap: still on the list, free that
+      // day, not on it already, and no one else of that name there.
+      if (r.kind == SwapKind.cover &&
+          (!me.serves(r.serviceId, r.duty) ||
+              _b.unavailable[churchId]?[me.uid]?.on(r.day) != null ||
+              taker.isEmpty ||
+              isOnDuty(roster, r.duty, me.uid) ||
+              roster!.duties.firstWhere((d) => d.role == r.duty).people.contains(taker))) {
+        throw const CloudException(CloudErrorCode.unknown);
+      }
       rosters[r.rosterId] = replacedOnDuty(roster!, r.duty, r.from, me.uid, taker);
       if (other != null) rosters[other.id] = replacedOnDuty(other, r.duty, me.uid, r.from, r.fromName);
       requests[id] = r.copyWith(status: SwapStatus.taken, taker: me.uid, takerName: taker);
@@ -1404,21 +1415,20 @@ class MemoryChurchData implements ChurchData {
       if (r == null) throw const CloudException(CloudErrorCode.notFound);
       if (r.taker != me.uid) throw const CloudException(CloudErrorCode.permissionDenied);
       final takenAt = _b.swapTakenAt[id];
-      if (r.status != SwapStatus.taken ||
-          takenAt == null ||
-          _b.clock().difference(takenAt) > const Duration(minutes: 10)) {
+      if (r.status != SwapStatus.taken || takenAt == null || _b.clock().difference(takenAt) > swapUndoWindow) {
         throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.swapClosed);
       }
       final rosters = _b.rosters[churchId]!;
       final roster = rosters[r.rosterId];
       final other = r.toRosterId == null ? null : rosters[r.toRosterId];
-      final asLeft = r.kind == SwapKind.cover
-          ? isOnDuty(roster, r.duty, me.uid) && !isOnDuty(roster, r.duty, r.from)
-          : isOnDuty(roster, r.duty, me.uid) && isOnDuty(other, r.duty, r.from);
-      if (!asLeft) throw const CloudException(CloudErrorCode.conflict);
+      if (!swapAsTaken(r, roster, other)) throw const CloudException(CloudErrorCode.conflict);
       rosters[r.rosterId] = replacedOnDuty(roster!, r.duty, me.uid, r.from, r.fromName);
       if (other != null) rosters[other.id] = replacedOnDuty(other, r.duty, r.from, me.uid, r.toName!);
-      _b.swapRequests[churchId]![id] = r.reopened;
+      // 請人代 opens again, without who gave it back; 交換 ends as if they
+      // had said 不方便.
+      _b.swapRequests[churchId]![id] = r.kind == SwapKind.cover
+          ? r.reopened.copyWith(passed: [...r.passed, me.uid])
+          : r.reopened.copyWith(status: SwapStatus.declined);
     });
   }
 
