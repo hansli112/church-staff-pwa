@@ -1298,6 +1298,9 @@ class L10nJa extends L10n {
   String get calAllDay => '終日';
 
   @override
+  String get calGoogleOnly => 'この行事は Google カレンダーで変更してください';
+
+  @override
   String get calNewEvent => '行事を追加';
 
   @override

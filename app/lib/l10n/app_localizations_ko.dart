@@ -1299,6 +1299,9 @@ class L10nKo extends L10n {
   String get calAllDay => '종일';
 
   @override
+  String get calGoogleOnly => '이 행사는 Google 캘린더에서 바꿔 주세요';
+
+  @override
   String get calNewEvent => '새 행사';
 
   @override

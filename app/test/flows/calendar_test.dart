@@ -117,6 +117,25 @@ void main() {
     expect(b.calendarEvents['grace']!.map((e) => e.title), containsAll(['同工會', '禱告會']));
   });
 
+  testWidgets('a birthday only reads, and says to change it in Google Calendar', (tester) async {
+    final b = seededChurch(as: calendarEditor, extra: const [calendarEditor]);
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    final birthday = CalendarEvent(
+      id: 'b1',
+      title: '王小明生日',
+      start: DateTime(2026, 10, 10),
+      end: DateTime(2026, 10, 11),
+      allDay: true,
+      googleOnly: true,
+    );
+    b.calendarEvents['grace'] = [birthday];
+    await pumpApp(tester, b);
+    await go(tester, '/calendar');
+    await tapText(tester, '王小明生日');
+    expect(find.text('這個活動要到 Google 日曆修改'), findsOneWidget);
+    expect(find.text('刪除活動'), findsNothing, reason: 'no editor');
+  });
+
   testWidgets("an event's roster follows a rename, is cancelled with a delete, and comes back with undo", (
     tester,
   ) async {

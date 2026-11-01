@@ -519,6 +519,7 @@ CalendarEvent? calendarEventFromJson(Object? raw) {
         final String g when g.isNotEmpty => g,
         _ => null,
       },
+      googleOnly: raw['googleOnly'] == true,
     );
   } on FormatException {
     return null;

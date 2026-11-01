@@ -13,6 +13,7 @@ import {
   calendarWrite,
   checkEventRosterGroup,
   GoogleAuthRevoked,
+  GoogleOnlyEvent,
   googleApi,
   monthOf,
   monthsOf,
@@ -644,6 +645,41 @@ describe('writing', () => {
     assert.deepEqual(calls.removed, ['e1']);
     await calendarEvents(d, caller('staff'), { churchId: 'C1', month: '2026-10' });
     assert.equal(calls.events, 2);
+  });
+
+  test('a birthday (or an event Gmail made) is changed only in Google: the app is told so', async () => {
+    await church();
+    const { google } = memoryGoogle([
+      { id: 'b1', title: '王小明生日', start: '2026-10-10', end: '2026-10-11', allDay: true, recurringEventId: 'b', googleOnly: true },
+    ]);
+    await connect(google);
+    const d = { ...deps, google, config };
+    const listed = await calendarEvents(d, caller('staff'), { churchId: 'C1', month: '2026-10' });
+    assert.equal(listed.events[0].googleOnly, true);
+    const googleOnly = (e: { details?: { detail?: string } }) => e.details?.detail === 'googleOnly';
+    const event = { id: 'b1', title: '小明生日', start: '2026-10-10', end: '2026-10-11', allDay: true };
+    await assert.rejects(calendarWrite(d, caller('pastor'), { churchId: 'C1', op: 'upsert', event }), googleOnly);
+    await assert.rejects(calendarWrite(d, caller('pastor'), { churchId: 'C1', op: 'delete', eventId: 'b1', event }), googleOnly);
+  });
+
+  test("Google's own: read from its event type, and its refusal to change one", async () => {
+    const google = googleApi({ now: deps.now, fetch: async (url, init) => {
+      if (url === 'https://oauth2.googleapis.com/token') return Response.json({ access_token: 'access', expires_in: 3600 });
+      if (init?.method === 'PATCH') {
+        return Response.json(
+          { error: { code: 400, errors: [{ reason: 'eventTypeRestriction', message: "'birthday' event type must have an annual recurrence." }] } },
+          { status: 400 },
+        );
+      }
+      return Response.json({ items: [
+        { id: 'b1', summary: '生日', eventType: 'birthday', start: { date: '2026-10-10' }, end: { date: '2026-10-11' } },
+        { id: 'e1', summary: '同工會', eventType: 'default', start: { date: '2026-10-10' }, end: { date: '2026-10-11' } },
+      ] });
+    } });
+    const [birthday, meeting] = await google.events('access', 'cal-1', new Date('2026-10-01'), new Date('2026-11-01'));
+    assert.equal(birthday.googleOnly, true);
+    assert.equal(meeting.googleOnly, undefined);
+    await assert.rejects(google.upsert('access', 'cal-1', { ...birthday, title: '小明生日' }), GoogleOnlyEvent);
   });
 
   test('disconnecting revokes and forgets the token', async () => {

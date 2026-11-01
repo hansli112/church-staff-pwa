@@ -411,6 +411,7 @@
   "calNoEvents": "No events this month",
   "calNoEventsThatDay": "No events this day",
   "calAllDay": "All day",
+  "calGoogleOnly": "Change this event in Google Calendar",
   "calNewEvent": "New event",
   "calEditEvent": "Edit event",
   "calTitle": "Event name",

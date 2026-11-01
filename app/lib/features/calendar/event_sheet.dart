@@ -16,7 +16,7 @@ import '../rosters/event_roster_screen.dart';
 
 /// Read-only details, for people who cannot edit the calendar, with the
 /// event's roster.
-Future<void> showEventDetail(BuildContext context, CalendarEvent e) {
+Future<void> showEventDetail(BuildContext context, CalendarEvent e, {bool editInGoogle = false}) {
   final l10n = L10n.of(context);
   final screen = context;
   final fmt = DateFormat.MMMEd();
@@ -68,6 +68,15 @@ Future<void> showEventDetail(BuildContext context, CalendarEvent e) {
                   if (e.location != null && e.location!.isNotEmpty) ...[
                     const SizedBox(height: Space.xs),
                     Text(e.location!, style: AppText.body.copyWith(color: AppColors.of(context).secondaryLabel)),
+                  ],
+                  // One the viewer would edit, but Google keeps its own
+                  // rules for (a birthday): where to change it instead.
+                  if (editInGoogle) ...[
+                    const SizedBox(height: Space.s),
+                    Text(
+                      l10n.calGoogleOnly,
+                      style: AppText.footnote.copyWith(color: AppColors.of(context).secondaryLabel),
+                    ),
                   ],
                 ],
               ),

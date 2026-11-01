@@ -1882,6 +1882,14 @@ class MemoryChurchData implements ChurchData {
     }
   }
 
+  /// As Google: one of its own events (CalendarEvent.googleOnly) is
+  /// neither changed nor deleted here.
+  void _requireChangeable(String? id) {
+    if ((_b.calendarEvents[churchId] ?? const <CalendarEvent>[]).any((e) => e.id == id && e.googleOnly)) {
+      throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.googleOnly);
+    }
+  }
+
   /// Undoing a delete takes the cancelled roster of [restoreRosterOf]
   /// along: for a 負責人, only one of an event they could have deleted.
   void _requireRestore(String? restoreRosterOf) {
@@ -1994,6 +2002,7 @@ class MemoryCalendarData implements CalendarData {
     await _c._b.write(() {
       _c._requireEventWrite(() => _c._groupNow(event.id), event.group ?? '');
       _c._requireRestore(restoreRosterOf);
+      _c._requireChangeable(event.id);
       final list = _c._b.calendarEvents.putIfAbsent(_c.churchId, () => []);
       final was = list.where((e) => e.id == saved.id).firstOrNull?.group;
       list.removeWhere((e) => e.id == saved.id);
@@ -2028,6 +2037,7 @@ class MemoryCalendarData implements CalendarData {
     _c._requireEventWrite(() => _c._groupNow(event.id), null);
     await _c._b.write(() {
       _c._requireEventWrite(() => _c._groupNow(event.id), null);
+      _c._requireChangeable(event.id);
       _c._b.calendarEvents[_c.churchId]?.removeWhere((e) => e.id == event.id);
       final rosters = _c._b.rosters[_c.churchId]!;
       final r = rosters[Roster.idForEvent(event.id!)];

@@ -411,6 +411,7 @@
   "calNoEvents": "这个月没有活动",
   "calNoEventsThatDay": "这天没有活动",
   "calAllDay": "全天",
+  "calGoogleOnly": "这个活动要到 Google 日历修改",
   "calNewEvent": "添加活动",
   "calEditEvent": "编辑活动",
   "calTitle": "活动名称",

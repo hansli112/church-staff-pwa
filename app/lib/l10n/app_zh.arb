@@ -799,6 +799,8 @@
   "calNoEventsThatDay": "這天沒有活動",
   "@calNoEventsThatDay": { "description": "Under a day picked on the month grid, when no event covers it" },
   "calAllDay": "整天",
+  "calGoogleOnly": "這個活動要到 Google 日曆修改",
+  "@calGoogleOnly": { "description": "A birthday or other event Google keeps its own rules for: the app cannot change it" },
   "calNewEvent": "新增活動",
   "calEditEvent": "編輯活動",
   "calTitle": "活動名稱",

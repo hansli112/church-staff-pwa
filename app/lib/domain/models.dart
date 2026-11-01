@@ -974,6 +974,7 @@ class CalendarEvent {
     this.recurringEventId,
     this.originalStart,
     this.group,
+    this.googleOnly = false,
   }) : start = churchCivilTime(start),
        end = churchCivilTime(end);
 
@@ -988,6 +989,10 @@ class CalendarEvent {
   /// there, as Google gives it. Read only.
   final String? recurringEventId;
   final String? originalStart;
+
+  /// One of Google's own (a birthday, an event Gmail made), with rules of
+  /// its own: changed only in Google Calendar. Read only.
+  final bool googleOnly;
 
   /// The church's wall time (its time zone's), held in a UTC [DateTime] whatever the
   /// phone's zone; the constructor takes the fields as given. All-day
@@ -1061,6 +1066,7 @@ class CalendarEvent {
     recurringEventId: recurringEventId,
     originalStart: originalStart,
     group: group == null ? this.group : group(),
+    googleOnly: googleOnly,
   );
 }
 

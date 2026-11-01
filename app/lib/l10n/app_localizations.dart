@@ -2422,6 +2422,12 @@ abstract class L10n {
   /// **'整天'**
   String get calAllDay;
 
+  /// A birthday or other event Google keeps its own rules for: the app cannot change it
+  ///
+  /// In zh, this message translates to:
+  /// **'這個活動要到 Google 日曆修改'**
+  String get calGoogleOnly;
+
   /// No description provided for @calNewEvent.
   ///
   /// In zh, this message translates to:

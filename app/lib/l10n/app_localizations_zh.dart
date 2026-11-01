@@ -1297,6 +1297,9 @@ class L10nZh extends L10n {
   String get calAllDay => '整天';
 
   @override
+  String get calGoogleOnly => '這個活動要到 Google 日曆修改';
+
+  @override
   String get calNewEvent => '新增活動';
 
   @override
@@ -4582,6 +4585,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get calAllDay => '全天';
+
+  @override
+  String get calGoogleOnly => '这个活动要到 Google 日历修改';
 
   @override
   String get calNewEvent => '添加活动';

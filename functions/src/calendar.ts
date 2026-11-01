@@ -64,6 +64,9 @@ export interface GoogleApi {
 
 export class GoogleAuthRevoked extends Error {}
 
+/** Google refused to change one of its own events (googleOnly). */
+export class GoogleOnlyEvent extends Error {}
+
 /** False when Google says what [scope] (space-separated) grants and it is not all of SCOPES. */
 const grantsAll = (scope: unknown) => typeof scope !== 'string' || SCOPES.every((s) => scope.split(' ').includes(s));
 
@@ -86,6 +89,11 @@ export interface CalendarEvent {
   originalStart?: string;
   /** Whose it is (powers.ts isEventGroup): '' or missing the church's, else a group's. */
   group?: string;
+  /**
+   * One of Google's own (a birthday, an event Gmail made), with rules of
+   * its own: changed only in Google Calendar. Read only.
+   */
+  googleOnly?: true;
 }
 
 /** Changes go out to the church's webhook, hence WebhookDeps. */
@@ -449,6 +457,12 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
   const may = (before: string | null, after: string | null) => {
     if (!me.powers.mayWriteEvent(before, after)) fail('permission-denied', 'permissionDenied');
   };
+  // One of Google's own (googleOnly) is changed in Google Calendar only.
+  const inGoogle = <T>(write: Promise<T>) =>
+    write.catch((e: unknown): never => {
+      if (e instanceof GoogleOnlyEvent) fail('failed-precondition', 'unknown', 'googleOnly');
+      throw e;
+    });
   // Whose an event is now, as Google has it: an edit or a delete is
   // judged by that, not by what the app says it was.
   const groupNow = async (id: string) => {
@@ -464,7 +478,7 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
       : (await groupNow(input.eventId)).found;
     if (!editor) may(found?.group ?? '', null);
     const before = found && inZone(found, timeZone);
-    await deps.google.remove(token, calendarId, input.eventId);
+    await inGoogle(deps.google.remove(token, calendarId, input.eventId));
     await rosterStep(`cancel ${churchId}/ev_${input.eventId}`, () => cancelWithEvent(deps, churchId, input.eventId as string));
     spans.push(span(input.event), span(before));
     notice = { action: 'deleted', event: before ?? { ...input.event, id: input.eventId } };
@@ -487,7 +501,7 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
       if (r.exists) may((r.get('group') as string | undefined) ?? '', null);
     }
     // As Google gives it back; the app and the webhook get it on the church's clock.
-    const saved = await deps.google.upsert(token, calendarId, {
+    const saved = await inGoogle(deps.google.upsert(token, calendarId, {
       id: typeof e.id === 'string' ? e.id : undefined,
       title: e.title.trim().slice(0, 200),
       start: fromApp(e.start, allDay, timeZone),
@@ -496,7 +510,7 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
       location: typeof e.location === 'string' ? e.location.slice(0, 300) : undefined,
       description: typeof e.description === 'string' ? e.description.slice(0, 4000) : undefined,
       ...(group !== undefined ? { group } : {}),
-    });
+    }));
     // A day of a recurring event given to another group: the series goes
     // with it (重複活動照系列存), so its other days are that group's too.
     const series = saved.recurringEventId;
@@ -603,7 +617,11 @@ export function googleApi(options: Partial<Pick<Deps, 'fetch' | 'now'>> = {}): G
     if (res.status === 401 && token) {
       for (const [key, cached] of tokens) if (cached.token === token) tokens.delete(key);
     }
-    if (!res.ok) throw new Error(`google ${res.status}: ${(await res.text()).slice(0, 300)}`);
+    if (!res.ok) {
+      const text = await res.text();
+      if (res.status === 400 && text.includes('eventTypeRestriction')) throw new GoogleOnlyEvent(text.slice(0, 300));
+      throw new Error(`google ${res.status}: ${text.slice(0, 300)}`);
+    }
     return res.status === 204 ? {} : res.json();
   };
   const toGoogle = (e: CalendarEvent) => ({
@@ -630,6 +648,7 @@ export function googleApi(options: Partial<Pick<Deps, 'fetch' | 'now'>> = {}): G
     recurringEventId?: string;
     originalStartTime?: { date?: string; dateTime?: string };
     extendedProperties?: { private?: { marthaGroup?: string } };
+    eventType?: string;
   }): CalendarEvent => ({
     id: g.id,
     title: g.summary ?? '',
@@ -645,6 +664,7 @@ export function googleApi(options: Partial<Pick<Deps, 'fetch' | 'now'>> = {}): G
     ...(isEventGroup(g.extendedProperties?.private?.marthaGroup) && g.extendedProperties.private.marthaGroup
       ? { group: g.extendedProperties.private.marthaGroup }
       : {}),
+    ...(g.eventType && g.eventType !== 'default' ? { googleOnly: true as const } : {}),
   });
   return {
     async exchangeCode(code, config) {

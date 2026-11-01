@@ -1,4 +1,4 @@
-import { GoogleAuthRevoked, SCOPES, type CalendarEvent, type GoogleApi } from './calendar.js';
+import { GoogleAuthRevoked, GoogleOnlyEvent, SCOPES, type CalendarEvent, type GoogleApi } from './calendar.js';
 
 /**
  * Google Calendar in memory, at the same seam as googleApi: one account's
@@ -10,7 +10,8 @@ import { GoogleAuthRevoked, SCOPES, type CalendarEvent, type GoogleApi } from '.
  *   other is granted, with refresh token `refresh-<code>`, until revoked.
  *   Code `partial`: the admin ticked off reading events.
  * - A new event gets ID `new-1`, `new-2`… A deleted one stays, cancelled,
- *   as in Google's trash: a get still finds it.
+ *   as in Google's trash: a get still finds it. One `googleOnly` (a
+ *   birthday) is neither changed nor deleted.
  * - goDown(): Google out of reach. revokeAll(): every grant revoked.
  *   unshare(): the calendar no longer shared with whoever connected it,
  *   so its events can be neither listed nor found.
@@ -29,6 +30,9 @@ export function memoryGoogle(events: CalendarEvent[] = []) {
   const alone = new Set<string>();
   const reach = () => {
     if (down) throw new Error('google unreachable');
+  };
+  const changeable = (id: string | undefined) => {
+    if (events.some((e) => e.id === id && e.googleOnly)) throw new GoogleOnlyEvent(id);
   };
   const at = (t: string) => Date.parse(t);
   const google: GoogleApi = {
@@ -56,6 +60,7 @@ export function memoryGoogle(events: CalendarEvent[] = []) {
     },
     async upsert(_token, _calendarId, e) {
       reach();
+      changeable(e.id);
       const id = e.id ?? `new-${++made}`;
       if (e.id) alone.add(id);
       const i = events.findIndex((x) => x.id === id);
@@ -71,6 +76,7 @@ export function memoryGoogle(events: CalendarEvent[] = []) {
     },
     async remove(_token, _calendarId, id) {
       reach();
+      changeable(id);
       calls.removed.push(id);
       const e = events.find((x) => x.id === id);
       if (e) e.cancelled = true;

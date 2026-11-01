@@ -1369,6 +1369,9 @@ class L10nEn extends L10n {
   String get calAllDay => 'All day';
 
   @override
+  String get calGoogleOnly => 'Change this event in Google Calendar';
+
+  @override
   String get calNewEvent => 'New event';
 
   @override

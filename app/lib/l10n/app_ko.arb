@@ -411,6 +411,7 @@
   "calNoEvents": "이번 달에는 행사가 없어요",
   "calNoEventsThatDay": "이날은 행사가 없어요",
   "calAllDay": "종일",
+  "calGoogleOnly": "이 행사는 Google 캘린더에서 바꿔 주세요",
   "calNewEvent": "새 행사",
   "calEditEvent": "행사 편집",
   "calTitle": "행사 이름",

@@ -166,5 +166,6 @@ Map<String, Object?> _saved(CalendarEvent event) {
     if (!event.allDay) ...{'start': '${json['start']}+00:00', 'end': '${json['end']}+00:00'},
     'recurringEventId': ?event.recurringEventId,
     'originalStart': ?event.originalStart,
+    if (event.googleOnly) 'googleOnly': true,
   };
 }

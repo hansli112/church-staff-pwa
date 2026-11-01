@@ -629,6 +629,10 @@ enum CloudReason {
   /// …or the request answered is no longer open: taken, taken back, or
   /// void now that the roster changed.
   swapClosed,
+
+  /// One of Google's own events (CalendarEvent.googleOnly), changed only
+  /// in Google Calendar.
+  googleOnly,
 }
 
 class CloudException implements Exception {

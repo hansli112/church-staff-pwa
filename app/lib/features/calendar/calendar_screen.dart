@@ -369,9 +369,15 @@ class _AgendaState extends ConsumerState<_Agenda> {
       chevron: true,
       onTap: e.id == null
           ? null
-          : () => canEdit && (me?.editsEvent(e) ?? false)
-                ? editEvent(context, ref, e, month: month)
-                : showEventDetail(context, e),
+          : () {
+              final edits = canEdit && (me?.editsEvent(e) ?? false);
+              // Google's own (a birthday) only reads: it is changed there.
+              if (edits && !e.googleOnly) {
+                editEvent(context, ref, e, month: month);
+              } else {
+                showEventDetail(context, e, editInGoogle: edits);
+              }
+            },
     );
 
     final List<Widget> agenda;
