@@ -164,7 +164,7 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
                   footer: l10n.unavailableHint,
                   children: [
                     ListRow(
-                      leading: const Icon(Symbols.calendar_month_rounded),
+                      leading: const Icon(Symbols.date_range_rounded),
                       title: l10n.unavailableAddRange,
                       onTap: () => _addRange(today),
                     ),

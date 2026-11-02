@@ -169,7 +169,7 @@ class SettingsScreen extends ConsumerWidget {
                   onTap: () => openSitePage(context, ref, '/support'),
                 ),
               ListRow(
-                leading: const IconTile(Symbols.list_alt_rounded, color: TileColors.neutral),
+                leading: const IconTile(Symbols.menu_book_rounded, color: TileColors.neutral),
                 title: l10n.guides,
                 onTap: () => openGuide(context, ref),
               ),

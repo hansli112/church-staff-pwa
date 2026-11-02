@@ -80,13 +80,13 @@ Future<void> showMyDutyMenu(BuildContext context, WidgetRef ref, Roster roster, 
               ]
             : [
                 ListRow(
-                  leading: const Icon(Symbols.person_add_alt_rounded),
+                  leading: const Icon(Symbols.front_hand_rounded),
                   title: l10n.swapAskCover,
                   subtitle: l10n.swapAskCoverSub,
                   onTap: () => Navigator.pop(context, 'cover'),
                 ),
                 ListRow(
-                  leading: const Icon(Symbols.swap_horiz_rounded),
+                  leading: const Icon(Symbols.swap_vert_rounded),
                   title: l10n.swapAskSwap,
                   subtitle: l10n.swapAskSwapSub,
                   onTap: () => Navigator.pop(context, 'swap'),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/languages.dart';
@@ -34,14 +35,16 @@ enum Guide {
 void openGuide(BuildContext context, WidgetRef ref, [Guide? guide]) =>
     openSitePage(context, ref, guide == null ? '/blog/' : '/blog/${guide.slug}/');
 
-/// 怎麼用？ in the app bar of a page with a guide of its own. In words: an
-/// icon a patch adds would not be in the store release's font.
+/// 怎麼用？ in the app bar of a page with a guide of its own.
 class GuideButton extends ConsumerWidget {
   const GuideButton(this.guide, {super.key});
 
   final Guide guide;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) =>
-      TextButton(onPressed: () => openGuide(context, ref, guide), child: Text(L10n.of(context).howToUse));
+  Widget build(BuildContext context, WidgetRef ref) => IconButton(
+    tooltip: L10n.of(context).howToUse,
+    icon: const Icon(Symbols.help_rounded),
+    onPressed: () => openGuide(context, ref, guide),
+  );
 }

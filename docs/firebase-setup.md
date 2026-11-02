@@ -108,7 +108,7 @@ API 金鑰放在 `~/.appstoreconnect/private_keys/AuthKey_<金鑰 ID>.p8`，alto
 
 改文字時 `shorebird patch` 會說資源有改動而停下來：`lib/l10n/*.arb` 也列在 pubspec 的 assets，但只有網頁版預載字型時讀（`lib/core/fonts.dart`），手機 App 的文字來自產生的 Dart 程式碼。所以**只有 ARB 改動**時，可以加 `--allow-asset-diffs`；改到其他資源就一定要重新上架。
 
-**圖示也是字型**：release 建置只留程式碼用到的圖示（icon tree shaking），修補新用的圖示不在商店版的字型裡，手機上會變成問號，而 `--allow-asset-diffs` 會把這個警告一起略過（Patch 3–25 就有 8 個圖示這樣）。`app/test/app/release_icons_test.dart` 比對 `app/tool/release_icons.txt`（商店版用到的圖示），用了別的就失敗；修補只能從清單裡挑。每次 `shorebird release` 後用那次的 commit 重產清單（`git grep` 出 `lib` 裡所有 `Symbols.`／`Icons.`）。不關 tree shaking：三個 Material Symbols 字型全帶要多約 34 MB。
+**圖示也是字型**：release 建置只留程式碼用到的圖示（icon tree shaking），修補新用的圖示不在商店版的字型裡，手機上顯示成問號，`--allow-asset-diffs` 也會把這個警告一起略過。照樣可以用新圖示（使用者決定，2026-11-02）：下一個商店版就正常。不關 tree shaking：三個 Material Symbols 字型全帶要多約 34 MB。
 
 **推修補**：先推到 staging，只有用 `shorebird preview` 裝的手機收得到。preview 裝的版本簽章跟商店版不同，Google 登入會失敗（`invalid-cert-hash`），只能看不用登入的畫面；要測登入後的畫面，改用 Shorebird Console 的百分比推送先給少數人。確認沒問題再改成 stable。App 打開時在背景下載修補，**下一次打開才生效**，所以大家要再開一次 App 才換到修補版：
 

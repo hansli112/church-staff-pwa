@@ -459,7 +459,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
       rows.add(
         () => ListRow(
           title: l10n.pickerSwapDay,
-          leading: const Icon(Symbols.swap_horiz_rounded),
+          leading: const Icon(Symbols.swap_vert_rounded),
           onTap: () => Navigator.pop(context, PickerResult(people: widget.initial, swapDay: true)),
         ),
       );
