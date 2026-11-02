@@ -10,6 +10,7 @@ import '../../state/push.dart';
 import '../church/add_to_home.dart';
 import 'turn_on_notifications.dart';
 import '../common/errors.dart';
+import '../common/site_pages.dart';
 import '../common/saving_indicator.dart';
 
 /// Which notifications I get from this church, and when I am reminded of my
@@ -98,7 +99,7 @@ class NotificationsScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.notifications), actions: const [SavingIndicator()]),
+      appBar: AppBar(title: Text(l10n.notifications), actions: savingActions(const [GuideButton(Guide.notifications)])),
       body: ListView(
         children: [
           if (needsHomeScreen)

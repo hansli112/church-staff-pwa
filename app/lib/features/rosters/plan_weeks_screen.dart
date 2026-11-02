@@ -20,6 +20,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/roster_actions.dart';
 import '../common/errors.dart';
+import '../common/site_pages.dart';
 import '../common/saving_indicator.dart';
 import 'duty_picking.dart';
 import 'format.dart';
@@ -276,6 +277,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
       onSelected: (v) => switch (v) {
         'ask' => _askUnavailable(type, from),
         'photo' => context.push('/rosters/import/$type'),
+        'guide' => openGuide(context, ref, Guide.planWeeks),
         _ => null,
       },
       itemBuilder: (_) => [
@@ -296,6 +298,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
           ),
         ),
         PopupMenuItem(value: 'photo', child: Text(l10n.photoImportAction)),
+        PopupMenuItem(value: 'guide', child: Text(l10n.howToUse)),
       ],
     );
   }

@@ -275,11 +275,12 @@ function clips(html, language) {
 }
 
 /**
- * The iOS and Android apps open the privacy policy and the terms with
- * from=app (app/lib/features/me/me_screen.dart). The stores forbid them to
- * lead to paying elsewhere, so for the rest of the tab the page hides the
- * web app, which has the support page (every link to /home), and what says
- * how to pay on the website (data-from-app="hide"); site.css hides them.
+ * The iOS and Android apps open the privacy policy, the terms and the
+ * guides with from=app (app/lib/features/common/site_pages.dart). The stores
+ * forbid them to lead to paying elsewhere, so for the rest of the tab the
+ * page hides the web app, which has the support page (every link to /home),
+ * and every way to the support page or what says how to pay on the website
+ * (data-from-app="hide"); site.css hides them.
  */
 const FROM_APP = `<script id="from-app">
 (function () {
@@ -303,7 +304,7 @@ function header(language, page) {
     <nav class="top-nav" aria-label="${w.nav}">
       <a href="${at('/features')}"${page === '/features' ? ' aria-current="page"' : ''}>${w.features}</a>
       <a href="${at('/blog/')}"${page.startsWith('/blog/') ? ' aria-current="page"' : ''}>${w.blog}</a>
-      <a href="${at('/support')}"${page === '/support' ? ' aria-current="page"' : ''}>${w.support}</a>
+      <a href="${at('/support')}"${page === '/support' ? ' aria-current="page"' : ''} data-from-app="hide">${w.support}</a>
       <a class="top-link" href="/home">${w.openApp}</a>
     </nav>
   </div>
@@ -331,7 +332,7 @@ function footer(language, page) {
       <a href="${at('/')}"${current('/')}>${w.home}</a>
       <a href="${at('/features')}"${current('/features')}>${w.features}</a>
       <a href="${at('/blog/')}"${current('/blog/')}>${w.posts}</a>
-      <a href="${at('/support')}"${current('/support')}>${w.supportUs}</a>
+      <a href="${at('/support')}"${current('/support')} data-from-app="hide">${w.supportUs}</a>
       <a href="${at('/privacy')}">${w.privacy}</a>
       <a href="${at('/terms')}">${w.terms}</a>
       <a href="https://github.com/hansli112/church-staff-pwa/issues">${w.issues}</a>

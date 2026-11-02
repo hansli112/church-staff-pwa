@@ -948,6 +948,8 @@
   "gettingStartedNext": "次へ：{step}",
   "@gettingStartedNext": {"placeholders": {"step": {"type": "String"}}},
   "gettingStartedHide": "今後表示しない",
+  "guides": "使い方ガイド",
+  "howToUse": "使い方",
   "discardChangesTitle": "変更を破棄しますか？",
   "discardChanges": "変更を破棄",
   "keepEditing": "編集を続ける",

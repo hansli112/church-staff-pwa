@@ -208,6 +208,19 @@ describe('opened from the iOS and Android apps (from=app), a page hides its ways
     }
   });
 
+  test('the guides lead there too, through every page: no way to the support page, and the web app only beside its sentence', () => {
+    for (const path of listed) {
+      if (/^(?:\/[a-zA-Z-]+)?\/support$/.test(path)) continue;
+      for (const [line] of built(path).matchAll(/^.*href="(?:\/[a-zA-Z-]+)?\/support".*$/gm)) {
+        assert.match(line, /data-from-app="hide"[^<]*(?:<a [^>]*)?href="(?:\/[a-zA-Z-]+)?\/support"|href="(?:\/[a-zA-Z-]+)?\/support"[^>]*data-from-app="hide"/, `${path}: ${line.trim()}`);
+      }
+      if (!path.includes('/blog/')) continue;
+      for (const [line] of built(path).matchAll(/^<(?:li|p)\b.*href="\/home".*$/gm)) {
+        assert.match(line, /<span data-from-app="hide">[^<]*(?:<[^a/][^>]*>[^<]*<\/[^>]+>[^<]*)*<a href="\/home">/, `${path}: ${line.trim()}`);
+      }
+    }
+  });
+
   test("the terms' line on store refunds says it is for in-app payments only once the website takes payments", () => {
     const off = mkdtempSync(join(tmpdir(), 'martha-site-off-'));
     try {
@@ -316,5 +329,14 @@ test("every clip a page shows is in landing/media, in the page's language", () =
       const tag = TAGS.find((t) => path.startsWith(`/${t}/`)) ?? 'zh-Hant';
       assert.ok(src.startsWith(`/media/${tag}/`), `${path}: ${src}`);
     }
+  }
+});
+
+test("every guide the app opens (Guide, app/lib/features/common/site_pages.dart) is a post, in every language", () => {
+  const guides = read('app/lib/features/common/site_pages.dart').match(/enum Guide \{([^;]*);/)[1];
+  const slugs = [...guides.matchAll(/\w+\('([a-z-]+)'\)/g)].map((m) => m[1]);
+  assert.ok(slugs.length > 0);
+  for (const slug of slugs) {
+    for (const tag of TAGS) assert.ok(listed.includes(sitePath(tag, `/blog/${slug}/`)), `${tag}: /blog/${slug}/`);
   }
 });

@@ -3340,6 +3340,12 @@ class L10nEn extends L10n {
   String get gettingStartedHide => 'Don’t show again';
 
   @override
+  String get guides => 'Guides';
+
+  @override
+  String get howToUse => 'How to use';
+
+  @override
   String get discardChangesTitle => 'Discard changes?';
 
   @override

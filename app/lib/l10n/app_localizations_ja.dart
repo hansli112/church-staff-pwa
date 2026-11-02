@@ -3148,6 +3148,12 @@ class L10nJa extends L10n {
   String get gettingStartedHide => '今後表示しない';
 
   @override
+  String get guides => '使い方ガイド';
+
+  @override
+  String get howToUse => '使い方';
+
+  @override
   String get discardChangesTitle => '変更を破棄しますか？';
 
   @override

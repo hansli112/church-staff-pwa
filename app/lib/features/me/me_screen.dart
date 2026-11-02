@@ -15,6 +15,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/session.dart';
 import '../church/church_switcher.dart';
+import '../common/site_pages.dart';
 import 'groups_screen.dart';
 
 /// The LINE OpenChat (馬大別忙 Martha, sit): help, and churches meeting each other.
@@ -149,8 +150,8 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ],
           ),
-          // 馬大別忙's own, last as in most apps: supporting it, asking, and
-          // 關於 at the very bottom.
+          // 馬大別忙's own, last as in most apps: supporting it, its guides,
+          // asking, and 關於 at the very bottom.
           ListSection(
             children: [
               if (store.available)
@@ -167,6 +168,11 @@ class SettingsScreen extends ConsumerWidget {
                   title: l10n.support,
                   onTap: () => openSitePage(context, ref, '/support'),
                 ),
+              ListRow(
+                leading: const IconTile(Symbols.menu_book_rounded, color: TileColors.neutral),
+                title: l10n.guides,
+                onTap: () => openGuide(context, ref),
+              ),
               // Where to ask.
               ListRow(
                 leading: const IconTile(Symbols.forum_rounded, color: TileColors.line),
@@ -204,16 +210,6 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 }
-
-/// A page of the website: the privacy policy and the terms, which the stores
-/// require the app to link to, and on the web the support page. The stores
-/// forbid the iOS and Android apps to lead to paying elsewhere, so they
-/// open it with `fromApp` (AppLanguage.sitePage).
-void openSitePage(BuildContext context, WidgetRef ref, String page) => launchUrl(
-  Uri.parse(
-    '${Env.current.webOrigin}${AppLanguage.shownIn(context).sitePage(page, fromApp: !ref.read(isWebProvider))}',
-  ),
-);
 
 /// 我負責的: the services and 事工 [me] leads, each opening its page.
 class _LedGroups extends ConsumerWidget {

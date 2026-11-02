@@ -6,7 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/app_build.dart';
 import '../../state/app_update.dart';
 import '../../state/providers.dart';
-import 'me_screen.dart' show openSitePage;
+import '../common/site_pages.dart';
 
 /// 關於馬大別忙: the version running and updating it, and the privacy
 /// policy and the terms the stores require the app to link to.

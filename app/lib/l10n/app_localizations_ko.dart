@@ -3148,6 +3148,12 @@ class L10nKo extends L10n {
   String get gettingStartedHide => '다시 보지 않기';
 
   @override
+  String get guides => '사용법 안내';
+
+  @override
+  String get howToUse => '사용법';
+
+  @override
   String get discardChangesTitle => '변경 사항을 버릴까요?';
 
   @override

@@ -15,7 +15,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/app_build.dart';
 import '../../state/support.dart';
 import '../common/labels.dart';
-import 'me_screen.dart' show openSitePage;
+import '../common/site_pages.dart';
 
 final _productsProvider = FutureProvider.autoDispose<List<SupportItem>>(
   (ref) => ref.watch(supportStoreProvider).products(),

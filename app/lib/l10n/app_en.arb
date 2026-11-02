@@ -948,6 +948,8 @@
   "gettingStartedNext": "Next: {step}",
   "@gettingStartedNext": {"placeholders": {"step": {"type": "String"}}},
   "gettingStartedHide": "Don’t show again",
+  "guides": "Guides",
+  "howToUse": "How to use",
   "discardChangesTitle": "Discard changes?",
   "discardChanges": "Discard changes",
   "keepEditing": "Keep editing",

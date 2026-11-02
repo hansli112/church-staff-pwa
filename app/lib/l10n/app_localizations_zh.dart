@@ -3143,6 +3143,12 @@ class L10nZh extends L10n {
   String get gettingStartedHide => '不再顯示';
 
   @override
+  String get guides => '使用教學';
+
+  @override
+  String get howToUse => '怎麼用？';
+
+  @override
   String get discardChangesTitle => '放棄變更？';
 
   @override
@@ -6518,6 +6524,12 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get gettingStartedHide => '不再显示';
+
+  @override
+  String get guides => '使用教学';
+
+  @override
+  String get howToUse => '怎么用？';
 
   @override
   String get discardChangesTitle => '放弃更改？';

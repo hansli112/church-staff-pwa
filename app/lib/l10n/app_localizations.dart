@@ -5614,6 +5614,18 @@ abstract class L10n {
   /// **'不再顯示'**
   String get gettingStartedHide;
 
+  /// Row in 我的: opens the website's guides (marthasit.com/blog/), for whoever forgot how something works
+  ///
+  /// In zh, this message translates to:
+  /// **'使用教學'**
+  String get guides;
+
+  /// Help button or menu item on a page that has its own guide on the website (安排服事, a 小組, 通知)
+  ///
+  /// In zh, this message translates to:
+  /// **'怎麼用？'**
+  String get howToUse;
+
   /// Asked when a sheet with unsaved changes is closed without 完成
   ///
   /// In zh, this message translates to:

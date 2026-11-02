@@ -8,7 +8,7 @@ This guide is for admins using Martha, sit for the first time, from signing in t
 
 ## 1. Sign in
 
-Open the [web app](/home) and choose **Sign in with Google**.
+Choose **Sign in with Google**<span data-from-app="hide"> in the [web app](/home)</span>.
 
 No Google account? Choose **Sign in with email**, then tap **Create account**. If you sign up with email, open the verification email in your inbox first, then come back and tap **I’ve verified**. After that, you can create a church.
 
@@ -18,11 +18,11 @@ After you sign in, you’ll see **Join your church**. Choose **Create a church**
 
 Whoever creates the church becomes its admin. Your new church comes with a Sunday Service and common roles already set up. Use them as they are, or change them later.
 
-## 3. Service settings
+## 3. Set up services
 
-At the top of Home, **Get started** lists what to do next. Start with **Service settings** and check which days you have services each week and which roles need people, such as Host, Piano, and Sound.
+At the top of Home, **Get started** lists what to do next, in order, and checks off what is done. Start with **Set up services** and check which days you have services each week and which roles need people, such as Host, Piano, and Sound. When you're done, tap **Next: Invite team members** at the bottom of the page to go on.
 
-To change these later, go to **Settings** → **Service settings**.
+To change these later, go to **Settings** → **Services & ministries**.
 
 ## 4. Invite team members
 

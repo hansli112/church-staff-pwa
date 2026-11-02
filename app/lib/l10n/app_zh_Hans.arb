@@ -948,6 +948,8 @@
   "gettingStartedNext": "下一步：{step}",
   "@gettingStartedNext": {"placeholders": {"step": {"type": "String"}}},
   "gettingStartedHide": "不再显示",
+  "guides": "使用教学",
+  "howToUse": "怎么用？",
   "discardChangesTitle": "放弃更改？",
   "discardChanges": "放弃更改",
   "keepEditing": "继续编辑",

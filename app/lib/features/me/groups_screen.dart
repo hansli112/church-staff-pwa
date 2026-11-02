@@ -17,6 +17,7 @@ import '../../state/attendance.dart';
 import '../../state/church_writes.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
+import '../common/site_pages.dart';
 import '../common/saving_indicator.dart';
 import '../rosters/future_changes.dart';
 import 'attendance.dart';
@@ -433,8 +434,13 @@ class GroupScreen extends ConsumerWidget {
         ? ref.watch(attendanceGroupsProvider).where((g) => g.group == group).firstOrNull
         : null;
     Widget box(Widget child) => SliverToBoxAdapter(child: child);
+    // What a 小組長 does here is the one most often asked.
+    final guide = group is SmallGroup ? const [GuideButton(Guide.smallGroups)] : const <Widget>[];
     return Scaffold(
-      appBar: AppBar(title: Text(name), actions: admin ? const [SavingIndicator()] : null),
+      appBar: AppBar(
+        title: Text(name),
+        actions: admin ? savingActions(guide) : guide,
+      ),
       body: CustomScrollView(
         slivers: [
           if (service != null) box(serviceBasicsSection(context, ref, service, admin: me.editsServiceSettings)),
