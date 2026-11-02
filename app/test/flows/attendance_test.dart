@@ -114,7 +114,7 @@ void main() {
     expect(inRow('喜樂小組', '還沒設聚會時間'), findsOneWidget, reason: 'a new 小組 is found here too');
     expect(inRow('喜樂小組', '提醒'), findsNothing);
     await tapText(tester, '喜樂小組');
-    await scrollToShow(tester, find.text('補填其他日子'));
+    await scrollToShow(tester, find.text('另外一天有聚會'));
     expect(find.text('還沒設聚會時間'), findsWidgets);
   });
 
@@ -132,16 +132,16 @@ void main() {
       findsOneWidget,
     );
     await go(tester, '/me/groups/small/joy');
-    await scrollToShow(tester, find.text('補填其他日子'));
+    await scrollToShow(tester, find.text('另外一天有聚會'));
     expect(next, findsOneWidget);
   });
 
-  testWidgets('補填其他日子: a day it met off its 聚會時間, picked, then filled in', (tester) async {
+  testWidgets('另外一天有聚會: a day it met off its 聚會時間, picked, then filled in', (tester) async {
     final b = withJoy(withAttendance(seededChurch(as: staffHao, clock: eveningOf(Day(2026, 10, 4)))));
     await pumpApp(tester, b);
     await go(tester, '/me/groups/small/joy');
-    await scrollToShow(tester, find.text('補填其他日子'));
-    await tapText(tester, '補填其他日子');
+    await scrollToShow(tester, find.text('另外一天有聚會'));
+    await tapText(tester, '另外一天有聚會');
     await tester.tap(find.descendant(of: find.byType(CalendarDatePicker), matching: find.text('3')));
     await settle(tester);
     await tester.enterText(find.widgetWithText(TextField, '人數'), '12');
@@ -242,7 +242,7 @@ void main() {
     expect(find.text('隔週五'), findsOneWidget);
   });
 
-  testWidgets('paused, nothing is asked for and nothing left 未填', (tester) async {
+  testWidgets("an older app's pause still asks for nothing and leaves nothing 未填", (tester) async {
     final b = withJoy(withAttendance(seededChurch(as: staffHao, clock: eveningOf(Day(2026, 10, 9)))));
     b.attendance['grace'] = {
       'small:joy': AttendanceRecord(
@@ -253,42 +253,55 @@ void main() {
     await go(tester, '/home');
     expect(find.text('填寫人數'), findsNothing);
     await go(tester, '/me/groups/small/joy');
-    await tester.scrollUntilVisible(find.textContaining('暫停'), 200, scrollable: find.byType(Scrollable).last);
+    await scrollToShow(tester, find.text('另外一天有聚會'));
     expect(find.text('未填'), findsNothing);
-    await tapText(tester, '恢復');
-    expect(b.attendance['grace']!['small:joy']!.pauses, [
-      AttendancePause(from: Day(2026, 10, 1), until: Day(2026, 10, 9)),
-    ]);
-    expect(find.text('未填'), findsOneWidget, reason: 'today, 10/9, asked for again; 10/2 stays paused');
+    expect(find.textContaining(RegExp(r'^下次聚會 11月6日')), findsOneWidget, reason: 'the first Friday after it');
   });
 
-  testWidgets('its 小組長 pauses it until a day picked with one tap, in a sheet', (tester) async {
+  testWidgets('its 小組長 marks the coming meetings it will not meet, 這次沒聚會 ahead, and takes one back', (
+    tester,
+  ) async {
     final b = withJoy(withAttendance(seededChurch(as: staffHao, clock: eveningOf(Day(2026, 10, 9)))));
     await pumpApp(tester, b);
     await go(tester, '/me/groups/small/joy');
-    await tester.scrollUntilVisible(find.text('暫停聚會一段時間'), 200, scrollable: find.byType(Scrollable).last);
-    await tapText(tester, '暫停聚會一段時間');
-    expect(find.byType(Dialog), findsNothing, reason: 'not the dialog that wants 確定 after the day');
-    expect(find.text('哪一天恢復聚會？'), findsOneWidget);
-    await tester.tap(find.descendant(of: find.byType(CalendarDatePicker), matching: find.text('23')));
+    await scrollToShow(tester, find.text('另外一天有聚會'));
+    expect(find.text('暫停聚會一段時間'), findsNothing, reason: 'each meeting instead, one by one');
+    await tester.tap(find.textContaining(RegExp(r'^下次聚會 10月16日')));
     await settle(tester);
-    expect(find.byType(CalendarDatePicker), findsNothing);
-    expect(b.attendance['grace']!['small:joy']!.pauses.last.until, Day(2026, 10, 23));
+    expect(find.text('哪幾次不聚會？'), findsOneWidget);
+    await tester.tap(find.textContaining('10月16日').last);
+    await tester.tap(find.textContaining('10月23日').last);
+    await settle(tester);
+    await tapText(tester, '完成');
+    final days = b.attendance['grace']!['small:joy']!.days;
+    expect(days[Day(2026, 10, 16)], const AttendanceDay.none());
+    expect(days[Day(2026, 10, 23)], const AttendanceDay.none());
+    expect(find.textContaining(RegExp(r'^下次聚會 10月30日')), findsOneWidget, reason: 'the next it meets');
+    expect(find.text('接下來有 2 次不聚會'), findsOneWidget);
+
+    await tester.tap(find.textContaining(RegExp(r'^下次聚會 10月30日')));
+    await settle(tester);
+    await tester.tap(find.textContaining('10月23日').last);
+    await settle(tester);
+    await tapText(tester, '完成');
+    expect(b.attendance['grace']!['small:joy']!.days.keys, [Day(2026, 10, 16)]);
   });
 
   testWidgets('picking a year turns the month to it; only a day picks', (tester) async {
     final b = withJoy(withAttendance(seededChurch(as: staffHao, clock: eveningOf(Day(2026, 10, 9)))));
     await pumpApp(tester, b);
     await go(tester, '/me/groups/small/joy');
-    await tester.scrollUntilVisible(find.text('暫停聚會一段時間'), 200, scrollable: find.byType(Scrollable).last);
-    await tapText(tester, '暫停聚會一段時間');
+    await scrollToShow(tester, find.text('另外一天有聚會'));
+    await tapText(tester, '另外一天有聚會');
     await tapText(tester, '2026年10月');
-    await tapText(tester, '2027年');
+    await tapText(tester, '2025年');
     expect(find.byType(CalendarDatePicker), findsOneWidget, reason: 'still open');
-    expect(b.attendance['grace']?['small:joy']?.pauses ?? const [], isEmpty);
-    await tester.tap(find.descendant(of: find.byType(CalendarDatePicker), matching: find.text('5')));
+    await tester.tap(find.descendant(of: find.byType(CalendarDatePicker), matching: find.text('20')));
     await settle(tester);
-    expect(b.attendance['grace']!['small:joy']!.pauses.last.until, Day(2027, 10, 5));
+    await tester.enterText(find.widgetWithText(TextField, '人數'), '7');
+    await tester.pump();
+    await tapText(tester, '儲存');
+    expect(b.attendance['grace']!['small:joy']!.days[Day(2025, 10, 20)], const AttendanceDay.count(7));
   });
 
   testWidgets('a meeting filled in stays listed when the 小組 moves to another day', (tester) async {

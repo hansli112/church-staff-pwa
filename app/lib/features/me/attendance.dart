@@ -17,10 +17,12 @@ import '../common/errors.dart';
 import '../common/labels.dart';
 import '../rosters/format.dart';
 
-/// 人數 (回報人數, #85) on a group's page: its meetings from
-/// [attendanceWeeks] back, newest first, each with what was filled in or
-/// 未填 (never 0), and whether it is paused. Who fills them in taps one to fill it in
-/// or change it (補填). Nothing with 回報人數 off, or for who may not see it.
+/// 人數 (回報人數, #85) on a group's page: when it next meets, its meetings
+/// from [attendanceWeeks] back, newest first, each with what was filled in
+/// or 未填 (never 0). Who fills them in taps one to fill it in or change it
+/// (補填), and the next to mark the coming ones it will not meet
+/// (這次沒聚會 ahead, for a break). Nothing with 回報人數 off, or for who
+/// may not see it.
 class AttendanceSection extends ConsumerWidget {
   const AttendanceSection({super.key, required this.group});
 
@@ -39,12 +41,12 @@ class AttendanceSection extends ConsumerWidget {
     if (record == null) return const SizedBox.shrink();
     final today = ref.watch(todayProvider);
     final days = attendanceDays(group, since: since, record: record, today: today);
-    final pause = record.pauseOn(today);
-    final paused = pause != null;
+    final upcoming = upcomingAttendanceDays(group, since: since, record: record, today: today);
+    final skipped = upcoming.where((d) => record.days[d]?.none ?? false).length;
+    final next = upcoming.where((d) => !(record.days[d]?.none ?? false)).firstOrNull;
     final nameOf = attendanceGroupName(ref);
     return ListSection(
       header: l10n.attendanceHeader,
-      footer: writes && !paused ? l10n.attendancePauseFooter : null,
       children: [
         // 每週都填人數 (#93): a service with no roster, like 兒童主日學.
         if (writes && group.group is ServiceGroup)
@@ -54,33 +56,18 @@ class AttendanceSection extends ConsumerWidget {
             value: record.everyWeek,
             onChanged: (on) => _save(context, () => ref.churchData.attendance.saveEveryWeek(group.group.key, on)),
           ),
-        if (paused)
+        // When it next meets, or why it does not; who fills it in marks
+        // the coming ones off from here.
+        if (writes && upcoming.isNotEmpty || days.isEmpty)
           ListRow(
-            title: l10n.attendancePausedUntil(dayLabel(l10n, pause.until, today)),
-            leading: const Icon(Symbols.pause_circle_rounded),
-            chevron: false,
-            trailing: writes
-                ? RowButton(
-                    label: l10n.attendanceResume,
-                    onPressed: () => _setPauses(context, ref, record.resumed(today)),
-                  )
-                : null,
-          )
-        else if (writes)
-          ListRow(
-            title: l10n.attendancePause,
-            leading: const Icon(Symbols.pause_circle_rounded),
-            onTap: () => _pause(context, ref, record, today),
-          ),
-        // Why there is nothing to fill in, and when there will be.
-        if (days.isEmpty && !paused)
-          ListRow(
-            title: switch (nextAttendanceDay(group, since: since, record: record, today: today)) {
+            title: switch (next) {
               final next? => attendanceNotYet(l10n, next, today),
               null when meetsUnset(group, today) => attendanceNotYet(l10n, null, today),
               null => l10n.attendanceNoDays,
             },
-            chevron: false,
+            subtitle: skipped > 0 ? l10n.attendanceSkipping(skipped) : null,
+            chevron: writes && upcoming.isNotEmpty,
+            onTap: writes && upcoming.isNotEmpty ? () => _skip(context, ref, record, upcoming) : null,
           ),
         for (final day in days)
           ListRow(
@@ -108,7 +95,7 @@ class AttendanceSection extends ConsumerWidget {
     }
   }
 
-  /// 補填其他日子: a day picked, back to a year ago, then 填寫人數 for it.
+  /// 另外一天有聚會: a day picked, back to a year ago, then 填寫人數 for it.
   Future<void> _otherDay(BuildContext context, WidgetRef ref, AttendanceRecord record, Day today) async {
     final picked = await pickDay(
       context,
@@ -122,20 +109,77 @@ class AttendanceSection extends ConsumerWidget {
     await fillAttendance(context, ref, group, day, record.days[day]);
   }
 
-  Future<void> _pause(BuildContext context, WidgetRef ref, AttendanceRecord record, Day today) async {
-    final picked = await pickDay(
+  /// The coming meetings it will not meet, marked 這次沒聚會 ahead; those
+  /// unmarked are cleared.
+  Future<void> _skip(BuildContext context, WidgetRef ref, AttendanceRecord record, List<Day> upcoming) async {
+    final was = {
+      for (final d in upcoming)
+        if (record.days[d]?.none ?? false) d,
+    };
+    final off = await showAppSheet<Set<Day>>(
       context,
-      title: L10n.of(context).attendancePauseUntil,
-      initial: today.addDays(7).midnight,
-      first: today.addDays(1).midnight,
-      last: today.addDays(366).midnight,
+      builder: (_) => _SkipSheet(days: upcoming, off: was),
     );
-    if (picked == null || !context.mounted) return;
-    await _setPauses(context, ref, record.pausedUntil(today, Day(picked.year, picked.month, picked.day)));
+    if (off == null || !context.mounted) return;
+    final attendance = ref.churchData.attendance;
+    await _save(context, () async {
+      for (final d in upcoming) {
+        if (off.contains(d) && !was.contains(d)) await attendance.save(group.group.key, d, const AttendanceDay.none());
+        if (!off.contains(d) && was.contains(d)) await attendance.save(group.group.key, d, null);
+      }
+    });
   }
+}
 
-  Future<void> _setPauses(BuildContext context, WidgetRef ref, List<AttendancePause> pauses) =>
-      _save(context, () => ref.churchData.attendance.savePauses(group.group.key, pauses));
+/// 哪幾次不聚會？: the coming meetings, those it will not meet checked.
+class _SkipSheet extends ConsumerStatefulWidget {
+  const _SkipSheet({required this.days, required this.off});
+
+  final List<Day> days;
+  final Set<Day> off;
+
+  @override
+  ConsumerState<_SkipSheet> createState() => _SkipSheetState();
+}
+
+class _SkipSheetState extends ConsumerState<_SkipSheet> {
+  late final _off = {...widget.off};
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final today = ref.watch(todayProvider);
+    return UnsavedChanges(
+      changed: () => !setEquals(_off, widget.off),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SheetBar(
+              title: l10n.attendanceSkip,
+              actions: [SecondaryButton(label: l10n.done, onPressed: () => Navigator.pop(context, _off))],
+            ),
+            Flexible(
+              child: SingleChildScrollView(
+                child: ListSection(
+                  footer: l10n.attendanceSkipFooter,
+                  children: [
+                    for (final d in widget.days)
+                      ListRow(
+                        title: dayLabel(l10n, d, today),
+                        selected: _off.contains(d),
+                        onTap: () => setState(() => _off.contains(d) ? _off.remove(d) : _off.add(d)),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// For a group with no meeting to fill in yet: its [next] one, or that

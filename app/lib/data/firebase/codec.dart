@@ -197,6 +197,7 @@ MinistrySettings ministrySettingsFromJson(Json? data) => MinistrySettings(
                   if (d is Map && d['service'] is String && d['duty'] is String)
                     MinistryDuty(d['service'] as String, d['duty'] as String),
             ],
+            addedIn: m['addedIn'] is String ? m['addedIn'] as String : null,
           ),
   ],
   ids: _strings(data?['ids']),
@@ -211,6 +212,7 @@ Json ministrySettingsToJson(MinistrySettings s) => {
         'duties': [
           for (final d in m.duties) {'service': d.service, 'duty': d.duty},
         ],
+        if (m.addedIn != null) 'addedIn': m.addedIn,
       },
   ],
   'ids': s.ids,

@@ -651,7 +651,11 @@ class _DutyScreenState extends ConsumerState<DutyScreen> {
                 onTap: () => Navigator.pop(context, ''),
               ),
               for (final m in before)
-                ListRow(title: m.name, selected: m.id == current?.id, onTap: () => Navigator.pop(context, m.id)),
+                ListRow(
+                  title: ref.read(ministriesProvider).value!.nameOf(m.id, ref.read(servicesProvider).value),
+                  selected: m.id == current?.id,
+                  onTap: () => Navigator.pop(context, m.id),
+                ),
             ],
           ),
         ),

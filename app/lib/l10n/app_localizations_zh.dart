@@ -2843,21 +2843,15 @@ class L10nZh extends L10n {
   String get attendanceNoMeeting => '這次沒聚會';
 
   @override
-  String get attendancePause => '暫停聚會一段時間';
+  String get attendanceSkip => '哪幾次不聚會？';
 
   @override
-  String attendancePausedUntil(String day) {
-    return '暫停聚會中，$day恢復';
+  String attendanceSkipping(int count) {
+    return '接下來有 $count 次不聚會';
   }
 
   @override
-  String get attendancePauseUntil => '哪一天恢復聚會？';
-
-  @override
-  String get attendanceResume => '恢復';
-
-  @override
-  String get attendancePauseFooter => '暫停聚會的期間不提醒，也不會留下「未填」';
+  String get attendanceSkipFooter => '勾起來的那次不提醒，也不會留下「未填」';
 
   @override
   String get attendanceNoDays => '還沒有要填的聚會';
@@ -2871,7 +2865,7 @@ class L10nZh extends L10n {
   String get attendanceNoMeets => '還沒設聚會時間';
 
   @override
-  String get attendanceOtherDay => '補填其他日子';
+  String get attendanceOtherDay => '另外一天有聚會';
 
   @override
   String get attendanceSaved => '已填寫';
@@ -2888,7 +2882,7 @@ class L10nZh extends L10n {
   String get attendanceOverviewDone => '都填好了';
 
   @override
-  String get attendanceOverviewFooter => '每個聚會和小組最近一次聚會；今天的有人填了才列，暫停中的不列';
+  String get attendanceOverviewFooter => '每個聚會和小組最近一次聚會；今天的有人填了才列';
 
   @override
   String get attendanceRemind => '提醒';
@@ -3159,6 +3153,12 @@ class L10nZh extends L10n {
 
   @override
   String get ministriesFooter => '讓敬拜團、音控組的負責人自己排自己的服事項目；只有管理員排班的教會不用設';
+
+  @override
+  String get ministriesChurchWide => '全教會的事工';
+
+  @override
+  String get ministriesChurchWideFooter => '服事項目在好幾個聚會，或不排服事、只當行事曆活動的歸屬（例如多媒體）。只屬於一個聚會的（例如青年崇拜的敬拜團）在那個聚會頁';
 
   @override
   String get ministryNeedsDuties => '選好服事項目，負責人就能在聚會和活動排這些項目';
@@ -6226,21 +6226,15 @@ class L10nZhHans extends L10nZh {
   String get attendanceNoMeeting => '这次没聚会';
 
   @override
-  String get attendancePause => '暂停聚会一段时间';
+  String get attendanceSkip => '哪几次不聚会？';
 
   @override
-  String attendancePausedUntil(String day) {
-    return '暂停聚会中，$day恢复';
+  String attendanceSkipping(int count) {
+    return '接下来有 $count 次不聚会';
   }
 
   @override
-  String get attendancePauseUntil => '哪一天恢复聚会？';
-
-  @override
-  String get attendanceResume => '恢复';
-
-  @override
-  String get attendancePauseFooter => '暂停聚会期间不提醒，也不会留下“未填”';
+  String get attendanceSkipFooter => '勾选的那次不提醒，也不会留下“未填”';
 
   @override
   String get attendanceNoDays => '还没有要填的聚会';
@@ -6254,7 +6248,7 @@ class L10nZhHans extends L10nZh {
   String get attendanceNoMeets => '还没设聚会时间';
 
   @override
-  String get attendanceOtherDay => '补填其他日子';
+  String get attendanceOtherDay => '另外一天有聚会';
 
   @override
   String get attendanceSaved => '已填写';
@@ -6271,7 +6265,7 @@ class L10nZhHans extends L10nZh {
   String get attendanceOverviewDone => '都填好了';
 
   @override
-  String get attendanceOverviewFooter => '每个聚会和小组最近一次聚会；今天的有人填了才列，暂停中的不列';
+  String get attendanceOverviewFooter => '每个聚会和小组最近一次聚会；今天的有人填了才列';
 
   @override
   String get attendanceRemind => '提醒';
@@ -6542,6 +6536,12 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get ministriesFooter => '让敬拜团、音控组的负责人自己排自己的事奉项目；只有管理员排班的教会不用设';
+
+  @override
+  String get ministriesChurchWide => '全教会的事工';
+
+  @override
+  String get ministriesChurchWideFooter => '事奉项目在好几个聚会，或不排事奉、只当行事历活动的归属（例如多媒体）。只属于一个聚会的（例如青年崇拜的敬拜团）在那个聚会页';
 
   @override
   String get ministryNeedsDuties => '选好事奉项目，负责人就能在聚会和活动排这些项目';

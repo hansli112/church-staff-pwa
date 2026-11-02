@@ -78,8 +78,8 @@ bool _due(AttendanceGroup group, {required Day since, required AttendanceRecord 
     );
 
 /// [group]'s next meeting that asks for its 人數, from [today] on, within
-/// [attendanceWeeks]; null if none is known (a 小組 with no 聚會時間, a
-/// service with no roster ahead).
+/// [attendanceWeeks], not one marked 這次沒聚會 ahead; null if none is known
+/// (a 小組 with no 聚會時間, a service with no roster ahead).
 Day? nextAttendanceDay(
   AttendanceGroup group, {
   required Day? since,
@@ -88,10 +88,25 @@ Day? nextAttendanceDay(
 }) {
   if (since == null) return null;
   for (var d = today; d.isBefore(today.addDays(7 * attendanceWeeks)); d = d.addDays(1)) {
-    if (_due(group, since: since, record: record, day: d)) return d;
+    if (_due(group, since: since, record: record, day: d) && !(record.days[d]?.none ?? false)) return d;
   }
   return null;
 }
+
+/// [group]'s meetings after [today], within [attendanceWeeks], oldest
+/// first: those its leads may mark 這次沒聚會 ahead (a break, 過年),
+/// which then are not reminded of nor left 未填. Replaces the pauses of
+/// before, which older apps may still set.
+List<Day> upcomingAttendanceDays(
+  AttendanceGroup group, {
+  required Day? since,
+  AttendanceRecord record = const AttendanceRecord(),
+  required Day today,
+}) => [
+  if (since != null)
+    for (var d = today.addDays(1); d.isBefore(today.addDays(7 * attendanceWeeks + 1)); d = d.addDays(1))
+      if (_due(group, since: since, record: record, day: d)) d,
+];
 
 /// Whether [group] is a 小組 whose 聚會時間 is not set yet.
 bool meetsUnset(AttendanceGroup group, Day today) => group.group is SmallGroup && group.meetsOn(today).weekday == null;

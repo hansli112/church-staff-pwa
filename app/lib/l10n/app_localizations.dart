@@ -5110,35 +5110,23 @@ abstract class L10n {
   /// **'這次沒聚會'**
   String get attendanceNoMeeting;
 
-  /// Row: the group takes a break (summer, New Year): no reminders until the day it meets again, picked next
+  /// Title of the sheet where the coming meetings a group will not meet (a break, 過年) are checked: each marked 這次沒聚會 ahead
   ///
   /// In zh, this message translates to:
-  /// **'暫停聚會一段時間'**
-  String get attendancePause;
+  /// **'哪幾次不聚會？'**
+  String get attendanceSkip;
 
-  /// Row while paused; day is the day reminders come back
+  /// Under 下次聚會: how many coming meetings are marked 這次沒聚會 ahead
   ///
   /// In zh, this message translates to:
-  /// **'暫停聚會中，{day}恢復'**
-  String attendancePausedUntil(String day);
+  /// **'接下來有 {count} 次不聚會'**
+  String attendanceSkipping(int count);
 
-  /// Date picker title when pausing: the day it meets again
+  /// Footer under the coming meetings to check off
   ///
   /// In zh, this message translates to:
-  /// **'哪一天恢復聚會？'**
-  String get attendancePauseUntil;
-
-  /// Button ending a pause now
-  ///
-  /// In zh, this message translates to:
-  /// **'恢復'**
-  String get attendanceResume;
-
-  /// Footer under the 人數 section
-  ///
-  /// In zh, this message translates to:
-  /// **'暫停聚會的期間不提醒，也不會留下「未填」'**
-  String get attendancePauseFooter;
+  /// **'勾起來的那次不提醒，也不會留下「未填」'**
+  String get attendanceSkipFooter;
 
   /// The 人數 section with no meetings yet
   ///
@@ -5161,7 +5149,7 @@ abstract class L10n {
   /// Row under a group's 人數: pick any past day to fill in its 人數
   ///
   /// In zh, this message translates to:
-  /// **'補填其他日子'**
+  /// **'另外一天有聚會'**
   String get attendanceOtherDay;
 
   /// Toast after filling in a meeting's 人數
@@ -5191,7 +5179,7 @@ abstract class L10n {
   /// Footer of 人數總覽: what each row is
   ///
   /// In zh, this message translates to:
-  /// **'每個聚會和小組最近一次聚會；今天的有人填了才列，暫停中的不列'**
+  /// **'每個聚會和小組最近一次聚會；今天的有人填了才列'**
   String get attendanceOverviewFooter;
 
   /// Button beside a 未填 row of 人數總覽: pushes its 負責人 or 小組長
@@ -5644,11 +5632,23 @@ abstract class L10n {
   /// **'繼續編輯'**
   String get keepEditing;
 
-  /// Under the ministries on 聚會與事工: what a ministry is for, and that it is optional; one sentence
+  /// Under a service's 事工, while it has none: what a ministry is for, and that it is optional; one sentence
   ///
   /// In zh, this message translates to:
   /// **'讓敬拜團、音控組的負責人自己排自己的服事項目；只有管理員排班的教會不用設'**
   String get ministriesFooter;
+
+  /// Header on 聚會與事工 over the 事工 of no one service: in several, or none
+  ///
+  /// In zh, this message translates to:
+  /// **'全教會的事工'**
+  String get ministriesChurchWide;
+
+  /// Footer under them: which 事工 are here, and where a service's own are
+  ///
+  /// In zh, this message translates to:
+  /// **'服事項目在好幾個聚會，或不排服事、只當行事曆活動的歸屬（例如多媒體）。只屬於一個聚會的（例如青年崇拜的敬拜團）在那個聚會頁'**
+  String get ministriesChurchWideFooter;
 
   /// On a ministry's page while it links no roles: what linking them does
   ///

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import 'attendance.dart';
 import 'day.dart';
+import 'models.dart' show ServiceSettings;
 
 /// A 身分 (#82): what someone is in a church, which is also what they may
 /// do there. A member may hold several; most hold none and are a 同工.
@@ -156,15 +157,29 @@ class MinistryDuty {
 }
 
 /// A 事工 (#82), e.g. 敬拜團: its 負責人 arrange the [duties] it links;
-/// one that links none (關懷事工) only has its 同工 and, later, events.
+/// one that links none (多媒體) is only what calendar events belong to.
+/// Most belong to one service, each with its own 敬拜團 ([service]); some
+/// serve several, or none, the church's (跨聚會的事工).
 @immutable
 class Ministry {
-  const Ministry({required this.id, required this.name, this.duties = const []});
+  const Ministry({required this.id, required this.name, this.duties = const [], this.addedIn});
 
   /// Stable; never reused (settings/ministries `ids`).
   final String id;
   final String name;
   final List<MinistryDuty> duties;
+
+  /// The service it was added on, before it links any duty there.
+  final String? addedIn;
+
+  /// The service it belongs to: the one every duty it links is in, or,
+  /// linking none, the one it was added on; null for one in several
+  /// services, or in none.
+  String? get service => switch ({for (final d in duties) d.service}) {
+    final s when s.isEmpty => addedIn,
+    final s when s.length == 1 => s.single,
+    _ => null,
+  };
 
   /// The duties it leads on a day of [serviceType], or, for an event's
   /// roster (in no service, [serviceType] null), every duty by name.
@@ -174,14 +189,18 @@ class Ministry {
   };
 
   Ministry copyWith({String? name, List<MinistryDuty>? duties}) =>
-      Ministry(id: id, name: name ?? this.name, duties: duties ?? this.duties);
+      Ministry(id: id, name: name ?? this.name, duties: duties ?? this.duties, addedIn: addedIn);
 
   @override
   bool operator ==(Object other) =>
-      other is Ministry && other.id == id && other.name == name && listEquals(other.duties, duties);
+      other is Ministry &&
+      other.id == id &&
+      other.name == name &&
+      listEquals(other.duties, duties) &&
+      other.addedIn == addedIn;
 
   @override
-  int get hashCode => Object.hash(id, name, Object.hashAll(duties));
+  int get hashCode => Object.hash(id, name, Object.hashAll(duties), addedIn);
 }
 
 /// What someone arranges of a roster (#82): all of it, or only some of
@@ -227,6 +246,17 @@ class MinistrySettings {
       if (m.id == id) return m;
     }
     return null;
+  }
+
+  /// The name of 事工 [id] wherever those of every service show together:
+  /// with its service's, 「青年崇拜 · 敬拜團」, when another has the same
+  /// name (each service its own 敬拜團); [id] for one gone.
+  String nameOf(String id, ServiceSettings? services) {
+    final m = byId(id);
+    if (m == null) return id;
+    final service = m.service;
+    if (service == null || !ministries.any((o) => o.id != id && o.name == m.name)) return m.name;
+    return '${services?.byId(service)?.name ?? service} · ${m.name}';
   }
 
   MinistrySettings withMinistries(List<Ministry> next) => MinistrySettings(

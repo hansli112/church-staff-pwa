@@ -24,7 +24,8 @@ class Meets {
 
 /// One of a group's pauses (暫停到某一天): no meeting is asked for from
 /// [from] until, not including, [until]. Kept once over, so the weeks it
-/// covered never turn 未填.
+/// covered never turn 未填. Only older apps set them: a lead now marks
+/// each meeting ahead 這次沒聚會 (upcomingAttendanceDays).
 @immutable
 class AttendancePause {
   const AttendancePause({required this.from, required this.until});
@@ -103,19 +104,6 @@ class AttendanceRecord {
 
   /// The pause [day] is in, if any.
   AttendancePause? pauseOn(Day day) => pauses.where((p) => p.covers(day)).firstOrNull;
-
-  /// [pauses] with a new one from [today] until [until].
-  List<AttendancePause> pausedUntil(Day today, Day until) => [
-    for (final p in pauses)
-      if (p.until.isBefore(today) || p.until == today) p,
-    AttendancePause(from: today, until: until),
-  ];
-
-  /// [pauses] with the one [today] is in ended today: the days before it stay paused.
-  List<AttendancePause> resumed(Day today) => [
-    for (final p in pauses)
-      if (!p.covers(today)) p else if (p.from.isBefore(today)) AttendancePause(from: p.from, until: today),
-  ];
 
   @override
   bool operator ==(Object other) =>

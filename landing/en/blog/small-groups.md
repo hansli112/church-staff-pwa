@@ -38,6 +38,6 @@ On or after the meeting day, tap the meeting marked **Not filled in**, enter how
 
 - **Didn’t meet that time:** Tap **We didn't meet**, so it doesn’t stay **Not filled in**.
 - **Still not filled in by 9 p.m. on the meeting day:** The small group leader gets a reminder. To stop these, go to **Settings** → **Notifications** and turn off **Attendance reminders**.
-- **Taking time off:** Tap **Take a break** and pick the day you’ll be back. There are no reminders during the break, and nothing is left **Not filled in**.
+- **Taking time off:** Tap the **Next meeting** row, check the meetings that are off, and tap **Done**. There are no reminders for those, and nothing is left **Not filled in**.
 
 Admins and office staff can see the attendance you fill in, and it’s kept even after the small group is closed.

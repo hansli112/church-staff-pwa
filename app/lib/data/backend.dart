@@ -536,7 +536,8 @@ abstract interface class AttendanceData {
   /// cleared. Through the backend, which writes the others' too.
   Future<void> saveTogether(String key, Day day, AttendanceDay value);
 
-  /// Sets group [key]'s pauses (AttendanceRecord.pausedUntil, resumed).
+  /// Sets group [key]'s pauses: older apps made them, this one only reads
+  /// them (upcomingAttendanceDays took their place).
   Future<void> savePauses(String key, List<AttendancePause> pauses);
 
   /// Sets whether service [key] fills in its 人數 every week, roster or

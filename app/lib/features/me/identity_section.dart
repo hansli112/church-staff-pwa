@@ -152,7 +152,8 @@ class IdentitySection extends ConsumerWidget {
       default:
         final id = await _choose<String>(context, l10n.pickMinistry, [
           for (final m in ministries)
-            if (!leadsMinistry.contains(m.id)) (m.id, m.name, null),
+            if (!leadsMinistry.contains(m.id))
+              (m.id, m.name, m.service == null ? null : ref.read(servicesProvider).value?.byId(m.service!)?.name),
         ]);
         return id == null ? null : MinistryLead(id);
     }

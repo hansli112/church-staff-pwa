@@ -133,6 +133,9 @@ void main() {
     expect(b.services['grace']!.byId('sunday')!.duties, ['司琴', '招待', '司會']);
 
     await tester.scrollUntilVisible(find.text('浸禮'), 300);
+    // Clear of the tab bar, past the 事工 above.
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, -200));
+    await settle(tester);
     await dragRow(tester, '浸禮', -1);
     expect(b.services['grace']!.byId('sunday')!.events.map((e) => e.name), ['浸禮', '聖餐']);
     expect(savedDay(b, 4), arranged);

@@ -49,4 +49,50 @@ void main() {
     );
     expect([for (final g in _groups.ledBy(me)) g.name], ['晨禱', '敬拜團', '喜樂小組']);
   });
+
+  test('a 事工 belongs to the one service its duties are in, or it was added on; else to none', () {
+    expect(const Ministry(id: 'a', name: 'a', duties: [MinistryDuty('sunday', '司琴')]).service, 'sunday');
+    expect(
+      const Ministry(id: 'a', name: 'a', addedIn: 'youth').service,
+      'youth',
+      reason: 'no duties yet',
+    );
+    expect(
+      const Ministry(id: 'a', name: 'a', addedIn: 'youth', duties: [MinistryDuty('sunday', '司琴')]).service,
+      'sunday',
+      reason: 'its duties say',
+    );
+    expect(
+      const Ministry(id: 'a', name: 'a', duties: [MinistryDuty('sunday', '司琴'), MinistryDuty('youth', '司琴')]).service,
+      isNull,
+    );
+    expect(
+      const Ministry(id: 'a', name: 'a').service,
+      isNull,
+      reason: '多媒體, only for events',
+    );
+  });
+
+  test("each service's own 敬拜團 is named with its service where they show together", () {
+    final groups = ChurchGroups(
+      services: const ServiceSettings(
+        services: [
+          Service(id: 'sunday', name: '主日崇拜', weekday: 7),
+          Service(id: 'youth', name: '青年崇拜', weekday: 6),
+        ],
+      ),
+      ministries: const MinistrySettings(
+        ministries: [
+          Ministry(id: 'a', name: '敬拜團', duties: [MinistryDuty('sunday', '司琴')]),
+          Ministry(id: 'b', name: '敬拜團', addedIn: 'youth'),
+          Ministry(id: 'c', name: '音控組', duties: [MinistryDuty('sunday', '音控')]),
+        ],
+      ),
+      smallGroups: const [],
+    );
+    expect(
+      [for (final g in groups.all) g.name],
+      ['主日崇拜', '青年崇拜', '主日崇拜 · 敬拜團', '青年崇拜 · 敬拜團', '音控組'],
+    );
+  });
 }

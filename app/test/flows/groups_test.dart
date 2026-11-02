@@ -27,11 +27,18 @@ const worship = MinistrySettings(
 );
 
 void main() {
-  testWidgets('an admin makes a 事工, names its 負責人, then links its duties on its page (#82)', (tester) async {
+  testWidgets("an admin makes a 事工 on its service's page, names its 負責人, then links its duties on its page (#82)", (
+    tester,
+  ) async {
     final b = seededChurch();
     await pumpApp(tester, b);
     await go(tester, '/me');
     await tapText(tester, '聚會與事工');
+    await tapText(tester, '主日崇拜');
+    await tester.scrollUntilVisible(find.text('新增事工'), 200, scrollable: find.byType(Scrollable).last);
+    // Clear of the tab bar.
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, -200));
+    await settle(tester);
     expect(
       findShown('讓敬拜團、音控組的負責人自己排自己的服事項目；只有管理員排班的教會不用設'),
       findsOneWidget,
@@ -46,6 +53,7 @@ void main() {
     final ministry = b.ministries['grace']!.ministries.single;
     expect(ministry.name, '敬拜團');
     expect(ministry.duties, isEmpty);
+    expect(ministry.service, 'sunday', reason: 'made on its page');
     expect(b.members['grace']!['hao']!.leadMinistries, [ministry.id]);
 
     expect(find.text('敬拜團'), findsWidgets, reason: 'its page opened');
@@ -55,12 +63,39 @@ void main() {
     expect(b.ministries['grace']!.ministries.single.duties, const [MinistryDuty('sunday', '司琴')]);
     expect(findShown('陳志豪可以排主日崇拜、活動的司琴，也可以改這幾項的名單'), findsOneWidget);
     expect(find.text('再加一位負責人'), findsOneWidget, reason: 'one is enough, more are possible');
-    expect(find.text('李美玉'), findsOneWidget, reason: "司琴's list, under it");
+    expect(find.text('李美玉'), findsNothing, reason: "司琴's list is on its service's page, not again here");
     expect(find.text('同工'), findsNothing, reason: 'a 事工 has no 同工 of its own (#94)');
     expect(find.text('加入同工'), findsNothing);
 
+    await go(tester, '/me/groups/service/sunday');
+    await tester.scrollUntilVisible(find.text('陳志豪 · 司琴'), 200, scrollable: find.byType(Scrollable).last);
+    expect(find.text('陳志豪 · 司琴'), findsOneWidget, reason: 'who leads it and what, on its service\'s page');
     await go(tester, '/me/groups');
-    expect(find.text('陳志豪 · 司琴'), findsOneWidget, reason: 'who leads it and what, in the list');
+    expect(find.text('敬拜團'), findsNothing, reason: "not church-wide: 主日崇拜's own");
+  });
+
+  testWidgets('a 事工 of several services, or of none, is listed church-wide; each service its own 敬拜團, named with it', (
+    tester,
+  ) async {
+    final b = seededChurch();
+    b.ministries['grace'] = const MinistrySettings(
+      ministries: [
+        Ministry(id: 'worship', name: '敬拜團', duties: [MinistryDuty('sunday', '司琴')]),
+        Ministry(id: 'youthWorship', name: '敬拜團', duties: [MinistryDuty('youth', '司會')]),
+        Ministry(id: 'sound', name: '音控組', duties: [MinistryDuty('sunday', '招待'), MinistryDuty('youth', '司會')]),
+        Ministry(id: 'media', name: '多媒體'),
+      ],
+      ids: ['worship', 'youthWorship', 'sound', 'media'],
+    );
+    await pumpApp(tester, b);
+    await go(tester, '/me/groups');
+    await tester.scrollUntilVisible(find.text('多媒體'), 200, scrollable: find.byType(Scrollable).last);
+    expect(find.text('音控組'), findsOneWidget);
+    expect(find.text('多媒體'), findsOneWidget, reason: 'no duties: only what calendar events belong to');
+    expect(find.text('敬拜團'), findsNothing, reason: 'each on its own service\'s page');
+
+    await go(tester, '/me/groups/ministry/youthWorship');
+    expect(find.text('青年崇拜 · 敬拜團'), findsOneWidget, reason: 'beside 主日崇拜\'s, named with its service');
   });
 
   testWidgets('a 事工 made with its 負責人 left for later says what is missing', (tester) async {
@@ -105,7 +140,9 @@ void main() {
   testWidgets("a 事工's duties that differ by service are said place by place, the same ones together; its 負責人 alike", (
     tester,
   ) async {
+    // Its 負責人, who has each duty's list here.
     final b = seededChurch(
+      as: staffHao,
       extra: [
         staffHao.withIdentities(const [MinistryLead('worship')]),
         staffMei.withIdentities(const [MinistryLead('worship')]),

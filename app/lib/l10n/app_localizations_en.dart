@@ -3000,21 +3000,21 @@ class L10nEn extends L10n {
   String get attendanceNoMeeting => 'We didn\'t meet';
 
   @override
-  String get attendancePause => 'Take a break';
+  String get attendanceSkip => 'Which ones are off?';
 
   @override
-  String attendancePausedUntil(String day) {
-    return 'On a break, back $day';
+  String attendanceSkipping(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count coming meetings off',
+      one: '1 coming meeting off',
+    );
+    return '$_temp0';
   }
 
   @override
-  String get attendancePauseUntil => 'Back on which day?';
-
-  @override
-  String get attendanceResume => 'Resume';
-
-  @override
-  String get attendancePauseFooter => 'No reminders during a break, and nothing is left “Not filled in”';
+  String get attendanceSkipFooter => 'No reminders for those checked, and nothing is left “Not filled in”';
 
   @override
   String get attendanceNoDays => 'No meetings to fill in yet';
@@ -3028,7 +3028,7 @@ class L10nEn extends L10n {
   String get attendanceNoMeets => 'No meeting time set yet';
 
   @override
-  String get attendanceOtherDay => 'Fill in another day';
+  String get attendanceOtherDay => 'Met on another day';
 
   @override
   String get attendanceSaved => 'Saved';
@@ -3045,8 +3045,7 @@ class L10nEn extends L10n {
   String get attendanceOverviewDone => 'All filled in';
 
   @override
-  String get attendanceOverviewFooter =>
-      'Each service’s and small group’s latest meeting; today’s once filled in, none while on a break';
+  String get attendanceOverviewFooter => 'Each service’s and small group’s latest meeting; today’s once filled in';
 
   @override
   String get attendanceRemind => 'Remind';
@@ -3357,6 +3356,13 @@ class L10nEn extends L10n {
   @override
   String get ministriesFooter =>
       'Lets the leads of a team such as worship or sound arrange its own roles; a church where only admins arrange can skip this';
+
+  @override
+  String get ministriesChurchWide => 'Church-wide ministries';
+
+  @override
+  String get ministriesChurchWideFooter =>
+      'Ministries with roles in several services, or none, only for calendar events (such as media). One of a single service, such as its worship team, is on that service’s page';
 
   @override
   String get ministryNeedsDuties => 'Pick its roles, and its leads can arrange them in services and at events';

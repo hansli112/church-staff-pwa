@@ -746,6 +746,13 @@ void contractTests(Future<ContractWorld> Function() open) {
       await expectLater(g.church.compareAndSetMinistries(before: const [], after: const [worship]), denied());
     });
 
+    test('a 事工 added on a service keeps where, before it leads any duty there', () async {
+      final g = await Grace.open(w);
+      const youth = Ministry(id: 'youthWorship', name: '敬拜團', addedIn: 'youth');
+      await g.church.compareAndSetMinistries(before: const [], after: const [youth]);
+      expect((await g.church.ministries().first).ministries, const [youth]);
+    });
+
     test("a 事工's 負責人 arranges only the duties it leads", () async {
       final g = await withWorship();
       final day = sundayOn(

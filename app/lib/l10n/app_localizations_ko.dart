@@ -2848,21 +2848,15 @@ class L10nKo extends L10n {
   String get attendanceNoMeeting => '이번엔 모이지 않았어요';
 
   @override
-  String get attendancePause => '잠시 쉬기';
+  String get attendanceSkip => '모이지 않는 날';
 
   @override
-  String attendancePausedUntil(String day) {
-    return '쉬는 중 · $day부터 다시 모여요';
+  String attendanceSkipping(int count) {
+    return '앞으로 $count번 모이지 않아요';
   }
 
   @override
-  String get attendancePauseUntil => '언제부터 다시 모이나요?';
-
-  @override
-  String get attendanceResume => '다시 모이기';
-
-  @override
-  String get attendancePauseFooter => '쉬는 동안에는 알리지 않고 ‘미입력’도 남지 않아요';
+  String get attendanceSkipFooter => '체크한 날은 알리지 않고 ‘미입력’도 남지 않아요';
 
   @override
   String get attendanceNoDays => '기록할 모임이 아직 없어요';
@@ -2876,7 +2870,7 @@ class L10nKo extends L10n {
   String get attendanceNoMeets => '모임 시간이 아직 없어요';
 
   @override
-  String get attendanceOtherDay => '다른 날 입력';
+  String get attendanceOtherDay => '다른 날에 모였어요';
 
   @override
   String get attendanceSaved => '기록함';
@@ -2893,7 +2887,7 @@ class L10nKo extends L10n {
   String get attendanceOverviewDone => '모두 기록했어요';
 
   @override
-  String get attendanceOverviewFooter => '모임과 소그룹마다 가장 최근 모임이에요. 오늘 모임은 기록된 뒤에, 쉬는 중인 곳은 보이지 않아요';
+  String get attendanceOverviewFooter => '모임과 소그룹마다 가장 최근 모임이에요. 오늘 모임은 기록된 뒤에 보여요';
 
   @override
   String get attendanceRemind => '알리기';
@@ -3164,6 +3158,13 @@ class L10nKo extends L10n {
 
   @override
   String get ministriesFooter => '찬양팀, 음향팀 리더가 자기 팀 담당을 직접 배정하게 해요. 관리자만 배정하는 교회는 안 만들어도 돼요.';
+
+  @override
+  String get ministriesChurchWide => '교회 전체 사역팀';
+
+  @override
+  String get ministriesChurchWideFooter =>
+      '여러 예배에 담당이 있거나, 담당 없이 일정의 소속으로만 쓰는 사역팀이에요(미디어 등). 한 예배에만 있는 사역팀(그 예배의 찬양팀 등)은 그 예배 페이지에 있어요';
 
   @override
   String get ministryNeedsDuties => '담당을 고르면 리더가 예배와 행사에서 배정할 수 있어요';

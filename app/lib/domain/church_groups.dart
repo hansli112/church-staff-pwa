@@ -4,7 +4,8 @@ import 'models.dart';
 typedef NamedGroup = ({ChurchGroup group, String name});
 
 /// The church's groups (#82–#85), each with its name: its services, 事工
-/// and 小組, a 小組 resolved with the service it is in. What lists, names
+/// (with its service's when two share one, MinistrySettings.nameOf) and
+/// 小組, a 小組 resolved with the service it is in. What lists, names
 /// or looks up a group asks this, so a 小組 never reaches a rule without
 /// its service.
 class ChurchGroups {
@@ -24,7 +25,7 @@ class ChurchGroups {
   /// the 小組.
   List<NamedGroup> get all => [
     for (final s in _services.enabled) (group: ServiceGroup(s.id), name: s.name),
-    for (final m in _ministries.ministries) (group: MinistryGroup(m.id), name: m.name),
+    for (final m in _ministries.ministries) (group: MinistryGroup(m.id), name: _ministries.nameOf(m.id, _services)),
     for (final g in _smallGroups) (group: g.group, name: g.name),
   ];
 
@@ -36,7 +37,7 @@ class ChurchGroups {
       null => null,
     },
     MinistryGroup(:final id) => switch (_ministries.byId(id)) {
-      final m? => (group: MinistryGroup(id), name: m.name),
+      final m? => (group: MinistryGroup(id), name: _ministries.nameOf(m.id, _services)),
       null => null,
     },
     SmallGroup(:final id) => switch (_smallGroups.byId(id)) {
@@ -52,7 +53,7 @@ class ChurchGroups {
     for (final id in me.leadTypes)
       if (_services.byId(id) case final s?) (group: ServiceGroup(id), name: s.name),
     for (final id in me.leadMinistries)
-      if (_ministries.byId(id) case final m?) (group: MinistryGroup(id), name: m.name),
+      if (_ministries.byId(id) != null) (group: MinistryGroup(id), name: _ministries.nameOf(id, _services)),
     for (final g in _smallGroups)
       if (me.leadSmallGroups.contains(g.id)) (group: g.group, name: g.name),
   ];

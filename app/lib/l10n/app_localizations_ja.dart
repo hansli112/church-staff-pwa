@@ -2848,21 +2848,15 @@ class L10nJa extends L10n {
   String get attendanceNoMeeting => '今回は集まりなし';
 
   @override
-  String get attendancePause => 'しばらくお休みする';
+  String get attendanceSkip => '集まらない回';
 
   @override
-  String attendancePausedUntil(String day) {
-    return 'お休み中・$dayから再開';
+  String attendanceSkipping(int count) {
+    return 'この先 $count 回は集まりなし';
   }
 
   @override
-  String get attendancePauseUntil => 'いつから再開しますか？';
-
-  @override
-  String get attendanceResume => '再開';
-
-  @override
-  String get attendancePauseFooter => 'お休みの間はお知らせせず、「未記入」も残りません';
+  String get attendanceSkipFooter => 'チェックした回はお知らせせず、「未記入」も残りません';
 
   @override
   String get attendanceNoDays => '記録する集まりはまだありません';
@@ -2876,7 +2870,7 @@ class L10nJa extends L10n {
   String get attendanceNoMeets => '集まりの日時がまだ未設定';
 
   @override
-  String get attendanceOtherDay => 'ほかの日を記入';
+  String get attendanceOtherDay => '別の日に集まった';
 
   @override
   String get attendanceSaved => '記録しました';
@@ -2893,7 +2887,7 @@ class L10nJa extends L10n {
   String get attendanceOverviewDone => 'すべて記録済み';
 
   @override
-  String get attendanceOverviewFooter => '各集まりと小グループの直近の集まり。今日の分は記録されてから表示、休止中は表示しません';
+  String get attendanceOverviewFooter => '各集まりと小グループの直近の集まり。今日の分は記録されてから表示';
 
   @override
   String get attendanceRemind => '知らせる';
@@ -3164,6 +3158,13 @@ class L10nJa extends L10n {
 
   @override
   String get ministriesFooter => '賛美チームや音響チームのリーダーが自分たちの担当を割り当てられるようにします（管理者だけで割り当てる教会では不要）';
+
+  @override
+  String get ministriesChurchWide => '教会全体のミニストリー';
+
+  @override
+  String get ministriesChurchWideFooter =>
+      '担当が複数の集会にあるもの、または担当がなく行事の所属にだけ使うもの（メディアなど）。一つの集会だけのもの（その集会の賛美チームなど）はその集会のページにあります';
 
   @override
   String get ministryNeedsDuties => '担当を選ぶと、リーダーが集会や行事でそれを割り当てられます';
