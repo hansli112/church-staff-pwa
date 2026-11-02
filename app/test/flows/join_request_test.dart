@@ -49,13 +49,22 @@ void main() {
     expect(findShown('輸入邀請碼'), findsOneWidget);
     expect(b.warmedUp, contains(WarmUp.askToJoin));
 
+    // The admin knows them by the name they put, the account's to begin with.
+    final name = find.widgetWithText(TextField, '你的名字');
+    expect(tester.widget<TextField>(name).controller!.text, '新朋友');
+    await tester.enterText(name, ' ');
+    await tester.pump();
+    expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, '申請加入')).onPressed, isNull);
+    await tester.enterText(name, '王小明');
+    await tester.pump();
     await tapText(tester, '申請加入');
     expect(find.text('申請加入〈希望堂〉'), findsOneWidget);
-    await tester.enterText(find.byType(TextField), '  我是敬拜團的小明 ');
+    await tester.enterText(find.byType(TextField).last, '  我是敬拜團的小明 ');
     await tapText(tester, '申請加入');
     final sent = b.joinRequests['hope']!['new']!;
     expect(sent.note, '我是敬拜團的小明');
-    expect(sent.name, '新朋友');
+    expect(sent.name, '王小明');
+    expect(b.users['new']!.name, '王小明');
     expect(findShown('已送出申請，管理員允許後就會加入'), findsOneWidget);
     expect(findShown('申請加入'), findsNothing);
 

@@ -34,6 +34,7 @@
   "email": "Email",
   "password": "Password",
   "yourName": "Your name",
+  "yourNameFooter": "What everyone sees on rosters and lists: the name your church knows you by",
   "signIn": "Sign in",
   "register": "Sign up",
   "createAccount": "Create account",

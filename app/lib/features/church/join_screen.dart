@@ -10,6 +10,7 @@ import '../../state/providers.dart';
 import '../common/errors.dart';
 import 'add_to_home.dart';
 import 'church_logo.dart';
+import 'your_name.dart';
 
 final _invitePreviewProvider = FutureProvider.autoDispose.family<Invite, String>(
   (ref, code) => ref.watch(backendProvider).cloud.previewInvite(code),
@@ -30,14 +31,16 @@ class JoinScreen extends ConsumerStatefulWidget {
 class _JoinScreenState extends ConsumerState<JoinScreen> {
   bool _busy = false;
   String? _error;
+  String? _typedName;
 
-  Future<void> _join(Invite invite) async {
+  Future<void> _join(Invite invite, String name) async {
     final l10n = L10n.of(context);
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
+      await saveJoiningName(ref, name);
       final cid = await ref.read(backendProvider).cloud.redeemInvite(widget.code);
       ref.read(selectedChurchProvider.notifier).select(cid);
       Haptics.success();
@@ -59,6 +62,7 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
       _invitePreviewProvider(widget.code.toUpperCase()),
     );
     final memberships = ref.watch(membershipsProvider).value ?? const [];
+    final name = joiningName(ref, _typedName);
     return Scaffold(
       appBar: AppBar(),
       body: SafeArea(
@@ -103,6 +107,14 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
                       ),
                     ],
                     const SizedBox(height: Space.xl),
+                    if (!already) ...[
+                      YourNameField(
+                        typed: _typedName,
+                        onChanged: (v) => setState(() => _typedName = v),
+                        onSubmitted: name.isEmpty || _busy ? null : () => _join(invite, name),
+                      ),
+                      const SizedBox(height: Space.l),
+                    ],
                     if (already)
                       PrimaryButton(
                         label: l10n.tabHome,
@@ -115,7 +127,7 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
                       PrimaryButton(
                         label: l10n.join,
                         busy: _busy,
-                        onPressed: () => _join(invite),
+                        onPressed: name.isEmpty ? null : () => _join(invite, name),
                       ),
                     if (_error != null) ...[
                       const SizedBox(height: Space.m),

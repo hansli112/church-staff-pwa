@@ -14,7 +14,7 @@ No Google account? Choose **Sign in with email**, then tap **Create account**. I
 
 ## 2. Create your church
 
-After you sign in, you’ll see **Join your church**. Choose **Create a church**, enter your church’s name, and tap **Create**.
+After you sign in, you’ll see **Join your church**. Choose **Create a church**, enter your church’s name, check that **Your name** below is what your team calls you, and tap **Create**.
 
 Whoever creates the church becomes its admin. Your new church comes with a Sunday Service and common roles already set up. Use them as they are, or change them later.
 
@@ -39,7 +39,7 @@ Invites you’ve created are listed below. Tap an invite code to **Share** it ag
 
 ## 5. Your team joins
 
-Team members open the invite link, sign in, and tap **Join**. That’s it, they’re in your church.
+Team members open the invite link, sign in, check **Your name** (the name everyone sees on rosters, so they can change it to what the church calls them), and tap **Join**. That’s it, they’re in your church.
 
 If the link won’t open, they can sign in, choose **Enter invite code** on the **Join your church** screen, and type the invite code or paste the whole link.
 

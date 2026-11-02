@@ -13,6 +13,7 @@ import '../common/errors.dart';
 import 'add_to_home.dart';
 import 'church_logo.dart';
 import 'welcome_screen.dart';
+import 'your_name.dart';
 
 /// Where a church URL (/c/ID) lands for someone who is not a member of
 /// that church: which church it is and how to join, by asking to (申請加入,
@@ -47,6 +48,7 @@ class _NotMember extends ConsumerStatefulWidget {
 
 class _NotMemberState extends ConsumerState<_NotMember> {
   bool _busy = false;
+  String? _typedName;
 
   late final AppLifecycleListener _lifecycle;
 
@@ -64,8 +66,8 @@ class _NotMemberState extends ConsumerState<_NotMember> {
     super.dispose();
   }
 
-  /// Asks to join, with what they want the admin to know.
-  Future<void> _ask(ChurchPreview church) async {
+  /// Asks to join as [name], with what they want the admin to know.
+  Future<void> _ask(ChurchPreview church, String name) async {
     final l10n = L10n.of(context);
     final note = await promptText(
       context,
@@ -79,7 +81,11 @@ class _NotMemberState extends ConsumerState<_NotMember> {
     );
     if (note == null || !mounted) return;
     await _run(
-      () => ref.read(backendProvider).cloud.requestToJoin(widget.churchId, note: note),
+      () async {
+        // Not for a request refused as unverified: nothing would come of it.
+        if (ref.read(authUserProvider).value?.verified ?? false) await saveJoiningName(ref, name);
+        await ref.read(backendProvider).cloud.requestToJoin(widget.churchId, note: note);
+      },
       done: l10n.joinRequestSent,
     );
   }
@@ -111,6 +117,7 @@ class _NotMemberState extends ConsumerState<_NotMember> {
     final c = AppColors.of(context);
     final churchId = widget.churchId;
     final preview = ref.watch(churchPreviewProvider(churchId));
+    final name = joiningName(ref, _typedName);
     // Let in while this page is open: on into the church, as after an
     // invite. Someone in no church gets there by the router already.
     ref.listen(membershipsProvider, (_, next) {
@@ -163,10 +170,12 @@ class _NotMemberState extends ConsumerState<_NotMember> {
                     BalancedText(message, style: AppText.body.copyWith(color: c.secondaryLabel)),
                     const SizedBox(height: Space.xl),
                     if (canAsk) ...[
+                      YourNameField(typed: _typedName, onChanged: (v) => setState(() => _typedName = v)),
+                      const SizedBox(height: Space.l),
                       PrimaryButton(
                         label: church.joinRequest == JoinRequestState.rejected ? l10n.askAgain : l10n.askToJoin,
                         busy: _busy,
-                        onPressed: () => _ask(church),
+                        onPressed: name.isEmpty ? null : () => _ask(church, name),
                       ),
                       const SizedBox(height: Space.s),
                       next(primary: false),

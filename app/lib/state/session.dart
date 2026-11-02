@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/telemetry.dart';
+import '../data/backend.dart' show AuthUser;
 import '../domain/limits.dart';
 import '../domain/models.dart';
 import 'providers.dart';
@@ -13,6 +14,17 @@ import 'support.dart';
 
 /// Overridden in main() for builds that report to Firebase.
 final telemetryProvider = Provider<Telemetry>((ref) => const NoTelemetry());
+
+/// users/{uid} as signing in first makes it: named as the sign-in names
+/// [user], else by the email's part before the @.
+UserProfile firstProfile(AuthUser user) => UserProfile(
+  uid: user.uid,
+  name: cutText(
+    user.displayName?.trim().isNotEmpty == true ? user.displayName! : user.email.split('@').first,
+    TextLimits.profileName,
+  ),
+  email: user.email,
+);
 
 /// Side effects of who is signed in and which church is open. Watched once
 /// by the app root.
@@ -28,23 +40,11 @@ final sessionEffectsProvider = Provider<void>((ref) {
     if (user.usesPassword && (user.displayName?.trim().isEmpty ?? true)) return;
     final uid = user.uid;
     ensured = uid;
-    ref
-        .read(backendProvider)
-        .profiles
-        .ensure(
-          UserProfile(
-            uid: user.uid,
-            name: cutText(
-              user.displayName?.trim().isNotEmpty == true ? user.displayName! : user.email.split('@').first,
-              TextLimits.profileName,
-            ),
-            email: user.email,
-          ),
-        )
-        // Failed (offline at first sign-in): try again on the next change.
-        .catchError((Object _) {
-          if (ensured == uid) ensured = null;
-        });
+    ref.read(backendProvider).profiles.ensure(firstProfile(user))
+    // Failed (offline at first sign-in): try again on the next change.
+    .catchError((Object _) {
+      if (ensured == uid) ensured = null;
+    });
   }, fireImmediately: true);
 
   ref.listen(uidProvider, (_, uid) {

@@ -35,13 +35,20 @@ void main() {
     );
 
     await tapText(tester, '建立新教會');
-    await tester.enterText(find.byType(TextField), '恩典堂');
+    await tester.enterText(find.widgetWithText(TextField, '教會名稱'), '恩典堂');
+    final name = find.widgetWithText(TextField, '你的名字');
+    expect(tester.widget<TextField>(name).controller!.text, 'alice');
+    await tester.enterText(name, '');
+    await tester.pump();
+    expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, '建立')).onPressed, isNull);
+    await tester.enterText(name, '林愛麗');
     await tester.pump();
     await tapText(tester, '建立');
 
     expect(b.churches.values.single.name, '恩典堂');
     final uid = b.auth.currentUser!.uid;
     expect(b.members.values.single[uid]!.role, Role.admin);
+    expect(b.members.values.single[uid]!.name, '林愛麗');
     expect(find.byType(NavigationBar), findsOneWidget);
 
     // The home page points the new admin at inviting people.
@@ -79,7 +86,7 @@ void main() {
     b.auth.verify('ming@example.com');
     await tapText(tester, '我已經驗證');
     expect(find.text('驗證你的 email'), findsNothing);
-    await tester.enterText(find.byType(TextField), '活水堂');
+    await tester.enterText(find.byType(TextField).first, '活水堂');
     await tester.pump();
     await tapText(tester, '建立');
     expect(b.churches.values.single.name, '活水堂');
@@ -155,7 +162,7 @@ void main() {
     await pumpApp(tester, b);
     await tapText(tester, '使用 Google 登入');
     await tapText(tester, '建立新教會');
-    await tester.enterText(find.byType(TextField), '台北靈糧堂');
+    await tester.enterText(find.byType(TextField).first, '台北靈糧堂');
     await tester.pump();
     await tapText(tester, '建立');
     expect(findShownContaining('已經有教會叫這個名字'), findsOneWidget);
@@ -186,10 +193,20 @@ void main() {
 
     await tapText(tester, '使用 Google 登入');
     expect(find.text('加入〈恩典堂〉'), findsOneWidget);
+    // The name Google gave, to be put as the church calls them.
+    final name = find.widgetWithText(TextField, '你的名字');
+    expect(tester.widget<TextField>(name).controller!.text, 'new');
+    await tester.enterText(name, '');
+    await tester.pump();
+    expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, '加入')).onPressed, isNull);
+    await tester.enterText(name, '陳新');
+    await tester.pump();
     await tapText(tester, '加入');
 
     final uid = b.auth.currentUser!.uid;
     expect(b.members[cid]![uid]!.role, Role.staff);
+    expect(b.members[cid]![uid]!.name, '陳新');
+    expect(b.users[uid]!.name, '陳新', reason: 'the account’s name, as 帳號 → 名字 sets it');
     expect(find.byType(NavigationBar), findsOneWidget);
   });
 
@@ -260,7 +277,7 @@ void main() {
     await tapText(tester, '設定');
     await tapText(tester, '切換教會');
     await tapText(tester, '建立新教會');
-    await tester.enterText(find.byType(TextField), '希望堂');
+    await tester.enterText(find.byType(TextField).first, '希望堂');
     await tester.pump();
     await tapText(tester, '建立');
 

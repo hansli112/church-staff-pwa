@@ -29,7 +29,7 @@ void main() {
     await pumpApp(tester, b, phoneTimeZone: ChurchTimeZone.losAngeles);
     await tapText(tester, '使用 Google 登入');
     await tapText(tester, '建立新教會');
-    await tester.enterText(find.byType(TextField), '洛杉磯恩典堂');
+    await tester.enterText(find.byType(TextField).first, '洛杉磯恩典堂');
     await tester.pump();
     await tapText(tester, '建立');
     expect(b.churches.values.single.timeZone, ChurchTimeZone.losAngeles);

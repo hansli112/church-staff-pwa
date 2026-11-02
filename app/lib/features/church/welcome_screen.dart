@@ -16,6 +16,7 @@ import '../common/time_zones.dart';
 import 'add_to_home.dart';
 import 'claims.dart';
 import 'links.dart';
+import 'your_name.dart';
 
 /// For someone signed in who belongs to no church yet. Most people arrive
 /// through an invite link and never see this; the rest either have a code
@@ -250,20 +251,22 @@ class CreateChurchScreen extends ConsumerStatefulWidget {
 }
 
 class _CreateChurchScreenState extends ConsumerState<CreateChurchScreen> {
-  final _name = TextEditingController();
+  final _churchName = TextEditingController();
+  String? _typedName;
   bool _busy = false;
   String? _error;
   bool _duplicate = false;
 
   @override
   void dispose() {
-    _name.dispose();
+    _churchName.dispose();
     super.dispose();
   }
 
-  Future<void> _create() async {
-    final name = _name.text.trim();
-    if (name.isEmpty) return;
+  /// Starts the church, its first admin named [myName].
+  Future<void> _create(String myName) async {
+    final name = _churchName.text.trim();
+    if (name.isEmpty || myName.isEmpty) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -272,6 +275,7 @@ class _CreateChurchScreenState extends ConsumerState<CreateChurchScreen> {
     try {
       final language = AppLanguage.shownIn(context);
       final timeZone = await ref.read(deviceTimeZoneProvider)();
+      await saveJoiningName(ref, myName);
       final cid = await ref.read(backendProvider).cloud.createChurch(name, timeZone: timeZone, language: language);
       ref.read(selectedChurchProvider.notifier).select(cid);
       Haptics.success();
@@ -294,6 +298,8 @@ class _CreateChurchScreenState extends ConsumerState<CreateChurchScreen> {
     final verified = ref.watch(
       authUserProvider.select((u) => u.value?.verified ?? false),
     );
+    final myName = joiningName(ref, _typedName);
+    final ready = verified && _churchName.text.trim().isNotEmpty && myName.isNotEmpty;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.createChurch)),
       body: ListView(
@@ -301,17 +307,23 @@ class _CreateChurchScreenState extends ConsumerState<CreateChurchScreen> {
         children: [
           const VerifyEmailBanner(),
           TextField(
-            controller: _name,
+            controller: _churchName,
             autofocus: verified,
             enabled: verified,
             maxLength: TextLimits.churchName,
-            textInputAction: TextInputAction.done,
+            textInputAction: TextInputAction.next,
             decoration: InputDecoration(
               labelText: l10n.churchName,
               counterText: '',
             ),
             onChanged: (_) => setState(() {}),
-            onSubmitted: (_) => _create(),
+          ),
+          const SizedBox(height: Space.m),
+          YourNameField(
+            typed: _typedName,
+            enabled: verified,
+            onChanged: (v) => setState(() => _typedName = v),
+            onSubmitted: ready ? () => _create(myName) : null,
           ),
           if (_error != null) ...[
             const SizedBox(height: Space.s),
@@ -333,7 +345,7 @@ class _CreateChurchScreenState extends ConsumerState<CreateChurchScreen> {
           PrimaryButton(
             label: l10n.create,
             busy: _busy,
-            onPressed: verified && _name.text.trim().isNotEmpty ? _create : null,
+            onPressed: ready ? () => _create(myName) : null,
           ),
           const SizedBox(height: Space.xl),
           SecondaryButton(

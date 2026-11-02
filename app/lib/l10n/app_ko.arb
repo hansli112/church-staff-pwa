@@ -34,6 +34,7 @@
   "email": "이메일",
   "password": "비밀번호",
   "yourName": "이름",
+  "yourNameFooter": "봉사표와 명단에서 모두가 보는 이름이에요. 교회에서 불리는 이름으로 적어 주세요.",
   "signIn": "로그인",
   "register": "회원가입",
   "createAccount": "새 계정 만들기",

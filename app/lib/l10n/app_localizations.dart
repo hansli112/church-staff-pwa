@@ -304,6 +304,12 @@ abstract class L10n {
   /// **'你的名字'**
   String get yourName;
 
+  /// No description provided for @yourNameFooter.
+  ///
+  /// In zh, this message translates to:
+  /// **'服事表和名單上大家看到的名字，用教會裡大家怎麼叫你'**
+  String get yourNameFooter;
+
   /// No description provided for @signIn.
   ///
   /// In zh, this message translates to:

@@ -84,7 +84,7 @@ void main() {
     final b = MemoryBackend(clock: testClock)..auth.signInAs('new@gmail.com');
     await pumpApp(tester, b, overrides: [pushServiceProvider.overrideWithValue(FakePush())]);
     await tapText(tester, '建立新教會');
-    await tester.enterText(find.byType(TextField), '恩典堂');
+    await tester.enterText(find.byType(TextField).first, '恩典堂');
     await tester.pump();
     await tapText(tester, '建立');
 

@@ -108,7 +108,7 @@ Future<MemoryBackend> startChurch(WidgetTester tester, String userAgent, {List<O
   await pumpApp(tester, b, overrides: [userAgentProvider.overrideWithValue(userAgent), ...overrides]);
   await tapText(tester, '使用 Google 登入');
   await tapText(tester, '建立新教會');
-  await tester.enterText(find.byType(TextField), '恩典堂');
+  await tester.enterText(find.byType(TextField).first, '恩典堂');
   await tester.pump();
   await tapText(tester, '建立');
   return b;

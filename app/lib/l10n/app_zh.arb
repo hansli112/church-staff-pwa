@@ -51,6 +51,7 @@
   "email": "Email",
   "password": "密碼",
   "yourName": "你的名字",
+  "yourNameFooter": "服事表和名單上大家看到的名字，用教會裡大家怎麼叫你",
   "signIn": "登入",
   "register": "註冊",
   "createAccount": "註冊新帳號",

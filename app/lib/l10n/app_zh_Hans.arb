@@ -34,6 +34,7 @@
   "email": "邮箱",
   "password": "密码",
   "yourName": "你的名字",
+  "yourNameFooter": "服事表和名单上大家看到的名字，用教会里大家怎么叫你",
   "signIn": "登录",
   "register": "注册",
   "createAccount": "注册新账号",

@@ -34,6 +34,7 @@
   "email": "メールアドレス",
   "password": "パスワード",
   "yourName": "お名前",
+  "yourNameFooter": "当番表や名簿でみんなに表示される名前です。教会で呼ばれている名前にしてください。",
   "signIn": "ログイン",
   "register": "新規登録",
   "createAccount": "アカウントを作成",

@@ -115,6 +115,9 @@ class L10nZh extends L10n {
   String get yourName => '你的名字';
 
   @override
+  String get yourNameFooter => '服事表和名單上大家看到的名字，用教會裡大家怎麼叫你';
+
+  @override
   String get signIn => '登入';
 
   @override
@@ -3496,6 +3499,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get yourName => '你的名字';
+
+  @override
+  String get yourNameFooter => '服事表和名单上大家看到的名字，用教会里大家怎么叫你';
 
   @override
   String get signIn => '登录';

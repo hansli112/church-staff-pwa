@@ -92,7 +92,7 @@ void main() {
     await tapText(tester, 'Create a church');
     b.auth.verify('amy@example.com');
     await tapText(tester, 'I’ve verified');
-    await tester.enterText(find.byType(TextField), 'Grace Church');
+    await tester.enterText(find.byType(TextField).first, 'Grace Church');
     await tester.pump();
     await tapText(tester, 'Create');
     final services = b.services[b.churches.values.single.id]!.services;
