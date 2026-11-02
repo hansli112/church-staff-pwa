@@ -162,7 +162,7 @@ class _DutyRow extends ConsumerWidget {
               ListRow(
                 title: l10n.swapAskCover,
                 subtitle: l10n.swapAskCoverSub,
-                leading: const Icon(Symbols.front_hand_rounded),
+                leading: const Icon(Symbols.person_add_alt_rounded),
                 onTap: () => Navigator.pop(context, 'cover'),
               ),
             if (!roster.isEvent)

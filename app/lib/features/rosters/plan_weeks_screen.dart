@@ -718,7 +718,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
                   // Where they now start, wherever the table was.
                   if (_rows.hasClients) _rows.jumpTo(0);
                 },
-                icon: const Icon(Symbols.keyboard_arrow_up_rounded),
+                icon: const RotatedBox(quarterTurns: 1, child: Icon(Symbols.chevron_left_rounded)),
                 label: Text(l10n.planShowEarlier),
               ),
             ),

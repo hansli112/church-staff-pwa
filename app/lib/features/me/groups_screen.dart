@@ -884,7 +884,7 @@ class _MinistryDuties extends ConsumerWidget {
         if (admin)
           ListRow(
             title: l10n.ministryPickDuties,
-            leading: const Icon(Symbols.checklist_rounded),
+            leading: const Icon(Symbols.edit_rounded),
             chevron: false,
             onTap: () => _pick(context, ref),
           ),

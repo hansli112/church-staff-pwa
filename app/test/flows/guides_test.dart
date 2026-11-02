@@ -47,9 +47,9 @@ void main() {
     final launches = captureLaunches();
     await pumpApp(tester, withJoy(seededChurch()));
     await go(tester, '/me/groups/service/sunday');
-    expect(find.byTooltip('怎麼用？'), findsNothing);
+    expect(find.text('怎麼用？'), findsNothing);
     await go(tester, '/me/groups/small/joy');
-    await tester.tap(find.byTooltip('怎麼用？'));
+    await tester.tap(find.text('怎麼用？'));
     await settle(tester);
     expect(launches.opened.single, contains('/blog/small-groups/?'));
   });
@@ -58,7 +58,7 @@ void main() {
     final launches = captureLaunches();
     await pumpApp(tester, seededChurch(as: staffMei));
     await go(tester, '/me/notifications');
-    await tester.tap(find.byTooltip('怎麼用？'));
+    await tester.tap(find.text('怎麼用？'));
     await settle(tester);
     expect(launches.opened.single, contains('/blog/notifications/?'));
   });
