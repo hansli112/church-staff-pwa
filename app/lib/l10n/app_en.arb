@@ -608,6 +608,7 @@
   "claimBody": "Your church now uses this app. Your schedules and services are already here.",
   "claimByNameTitle": "Are you “{name}” on the schedules?",
   "claimByNameBody": "If so, what’s scheduled for “{name}”, and their services, become yours",
+  "claimServe": "{service} · {duty}",
   "claimByNameYes": "That’s me",
   "claimByNameNo": "Not me",
   "claimByNameDone": "“{name}”’s schedules are yours now",

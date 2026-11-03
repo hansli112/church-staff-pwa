@@ -1956,6 +1956,11 @@ class L10nKo extends L10n {
   }
 
   @override
+  String claimServe(String service, String duty) {
+    return '$service · $duty';
+  }
+
+  @override
   String get claimByNameYes => '네, 저예요';
 
   @override

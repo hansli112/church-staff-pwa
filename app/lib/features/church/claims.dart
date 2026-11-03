@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/dates.dart';
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../domain/models.dart';
@@ -104,7 +105,11 @@ class _PendingClaimsCardState extends ConsumerState<PendingClaimsCard> {
                       textAlign: TextAlign.start,
                       style: AppText.headline,
                     ),
-                    const SizedBox(height: Space.xs),
+                    if (claim.serves.isNotEmpty) ...[
+                      const SizedBox(height: Space.s),
+                      _Serves(claim.serves),
+                    ],
+                    const SizedBox(height: Space.s),
                     BalancedText(
                       claim.byName ? l10n.claimByNameBody(claim.name) : l10n.claimBody,
                       textAlign: TextAlign.start,
@@ -136,6 +141,37 @@ class _PendingClaimsCardState extends ConsumerState<PendingClaimsCard> {
                 ),
               ),
             ),
+          ),
+      ],
+    );
+  }
+}
+
+/// A few of their duties to know them by: 「11/8　主日崇拜・招待」, the days
+/// in a column of their own; or with no days, 「主日崇拜・招待」.
+class _Serves extends StatelessWidget {
+  const _Serves(this.serves);
+
+  final List<ClaimServe> serves;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final format = shortMonthDay(l10n);
+    final dated = serves.first.day != null;
+    Widget cell(String text, {double end = 0}) => Padding(
+      padding: EdgeInsetsDirectional.only(end: end, bottom: Space.xs),
+      child: Text(text, style: AppText.subheadline),
+    );
+    return Table(
+      columnWidths: dated ? const {0: IntrinsicColumnWidth()} : null,
+      children: [
+        for (final s in serves)
+          TableRow(
+            children: [
+              if (dated) cell(s.day == null ? '' : format.format(s.day!.midnight), end: Space.m),
+              cell(l10n.claimServe(s.service, s.duty)),
+            ],
           ),
       ],
     );

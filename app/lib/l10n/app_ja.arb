@@ -608,6 +608,7 @@
   "claimBody": "教会がこのアプリに移りました。これまでの奉仕と所属集会はもうここにあります。",
   "claimByNameTitle": "奉仕表の「{name}」はあなたですか？",
   "claimByNameBody": "そうであれば、「{name}」の奉仕と所属集会があなたに引き継がれます",
+  "claimServe": "{service}・{duty}",
   "claimByNameYes": "私です",
   "claimByNameNo": "違います",
   "claimByNameDone": "「{name}」の奉仕を引き継ぎました",

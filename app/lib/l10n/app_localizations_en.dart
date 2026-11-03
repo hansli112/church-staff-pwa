@@ -2074,6 +2074,11 @@ class L10nEn extends L10n {
   }
 
   @override
+  String claimServe(String service, String duty) {
+    return '$service · $duty';
+  }
+
+  @override
   String get claimByNameYes => 'That’s me';
 
   @override

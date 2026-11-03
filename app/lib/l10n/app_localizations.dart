@@ -3604,6 +3604,12 @@ abstract class L10n {
   /// **'是的話，「{name}」的服事和所屬聚會都會接過來'**
   String claimByNameBody(String name);
 
+  /// No description provided for @claimServe.
+  ///
+  /// In zh, this message translates to:
+  /// **'{service}・{duty}'**
+  String claimServe(String service, String duty);
+
   /// No description provided for @claimByNameYes.
   ///
   /// In zh, this message translates to:

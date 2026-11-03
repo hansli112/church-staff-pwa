@@ -1940,6 +1940,15 @@ class FirebaseCloudApi implements CloudApi {
             pendingId: c['pendingId'] as String,
             name: c['name'] as String? ?? '',
             byName: c['byName'] == true,
+            serves: [
+              for (final s in c['serves'] as List<dynamic>? ?? const [])
+                if (s is Map)
+                  ClaimServe(
+                    day: Day.tryParse(s['dateKey'] as String?),
+                    service: s['service'] as String? ?? '',
+                    duty: s['duty'] as String? ?? '',
+                  ),
+            ],
           ),
     ];
   }

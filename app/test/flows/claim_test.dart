@@ -117,6 +117,8 @@ void main() {
       final b = joinedByInvite();
       await pumpApp(tester, b);
       expect(findShown('服事表上的「黃鎮台」是你嗎？'), findsOneWidget);
+      expect(findShown('10/18'), findsOneWidget, reason: 'a day of theirs to know them by');
+      expect(findShown('主日崇拜・招待'), findsOneWidget);
       expect(findShown('是的話，「黃鎮台」的服事和所屬聚會都會接過來'), findsOneWidget);
       await tapText(tester, '是我');
 
@@ -125,6 +127,13 @@ void main() {
       expect(b.pendingMembers['grace'], isEmpty);
       expect(b.members['grace']!['huang']!.serves('sunday', '招待'), isTrue);
       expect(b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, 18))]!.duties.single.uids, {'黃鎮台': 'huang'});
+    });
+
+    testWidgets('with no days on the rosters, what they serve is said instead', (tester) async {
+      final b = joinedByInvite();
+      b.pendingRosterIds['grace']!['old-huang'] = [];
+      await pumpApp(tester, b);
+      expect(findShown('主日崇拜・招待'), findsOneWidget);
     });
 
     testWidgets('no keeps it for the admin, and does not ask again on this device', (tester) async {

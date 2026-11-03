@@ -2685,7 +2685,13 @@ class MemoryCloud implements CloudApi {
         if (_b.churches[cid]?.isActive ?? false)
           for (final p in pending.values)
             if (emails.contains(p.email.trim().toLowerCase()) && !(_b.claiming[cid]?.contains(p.id) ?? false))
-              PendingClaim(churchId: cid, churchName: _b.churches[cid]!.name, pendingId: p.id, name: p.name),
+              PendingClaim(
+                churchId: cid,
+                churchName: _b.churches[cid]!.name,
+                pendingId: p.id,
+                name: p.name,
+                serves: _servesOf(cid, p),
+              ),
       for (final MapEntry(key: cid, value: pending) in _b.pendingMembers.entries)
         if ((_b.churches[cid]?.isActive ?? false) && user != null)
           if (_b.members[cid]?[user.uid] case final me?)
@@ -2696,8 +2702,31 @@ class MemoryCloud implements CloudApi {
                 pendingId: p.id,
                 name: p.name,
                 byName: true,
+                serves: _servesOf(cid, p),
               ),
     ];
+  }
+
+  /// A few of [p]'s duties, as functions/src/claim.ts finds them.
+  List<ClaimServe> _servesOf(String cid, PendingMember p) {
+    final names = {for (final s in _b.services[cid]?.services ?? const <Service>[]) s.id: s.name};
+    final today = _b.churches[cid]!.timeZone.today(_b.clock());
+    final days = [
+      for (final key in _b.pendingRosterIds[cid]?[p.id] ?? const <String>[])
+        if (_b.rosters[cid]?[key] case final r? when r.forEvent == null)
+          if (r.duties.where((d) => d.uids.values.contains(p.id)).firstOrNull case final d?)
+            ClaimServe(day: r.day, service: names[r.type] ?? '', duty: d.role),
+    ]..sort((a, b) => a.day!.compareTo(b.day!));
+    final ahead = [
+      for (final s in days)
+        if (!s.day!.isBefore(today)) s,
+    ];
+    final shown = ahead.isNotEmpty ? ahead : days.reversed.toList();
+    if (shown.isNotEmpty) return shown.take(3).toList();
+    return [
+      for (final z in p.zones)
+        for (final duty in z.duties) ClaimServe(service: names[z.serviceType] ?? '', duty: duty),
+    ].take(3).toList();
   }
 
   /// The one pending member with no email named [name], if just one.

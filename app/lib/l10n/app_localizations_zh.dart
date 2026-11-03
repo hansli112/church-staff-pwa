@@ -1952,6 +1952,11 @@ class L10nZh extends L10n {
   }
 
   @override
+  String claimServe(String service, String duty) {
+    return '$service・$duty';
+  }
+
+  @override
   String get claimByNameYes => '是我';
 
   @override
@@ -5374,6 +5379,11 @@ class L10nZhHans extends L10nZh {
   @override
   String claimByNameBody(String name) {
     return '是的话，“$name”的事奉和所属聚会都会接过来';
+  }
+
+  @override
+  String claimServe(String service, String duty) {
+    return '$service・$duty';
   }
 
   @override

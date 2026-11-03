@@ -48,7 +48,18 @@ beforeEach(async () => {
 describe('claiming', () => {
   test('a verified email finds its pending member; an unverified one finds nothing', async () => {
     const cid = await moved();
-    assert.deepEqual(await pendingClaims(cd, mei()), { claims: [{ churchId: cid, churchName: '恩典堂', pendingId: 'old-mei', name: '李美玉' }] });
+    assert.deepEqual(await pendingClaims(cd, mei()), {
+      claims: [{
+        churchId: cid,
+        churchName: '恩典堂',
+        pendingId: 'old-mei',
+        name: '李美玉',
+        serves: [
+          { dateKey: '2026-10-04', service: '主日崇拜', duty: '司琴' },
+          { dateKey: '2026-10-11', service: '主日崇拜', duty: '司琴' },
+        ],
+      }],
+    });
     assert.deepEqual(await pendingClaims(cd, mei({ emailVerified: false })), { claims: [] });
     assert.deepEqual(await pendingClaims(cd, caller('x', { email: 'nobody@example.com' })), { claims: [] });
   });
@@ -160,7 +171,7 @@ describe('claiming by name, a pending member with no email', () => {
     const cid = await noEmail();
     const huang = caller('huang');
     assert.deepEqual((await pendingClaims(cd, huang)).claims, [
-      { churchId: cid, churchName: '恩典堂', pendingId: 'old-huang', name: '黃鎮台', byName: true },
+      { churchId: cid, churchName: '恩典堂', pendingId: 'old-huang', name: '黃鎮台', byName: true, serves: [{ dateKey: '2026-10-11', service: '主日崇拜', duty: '招待' }] },
     ]);
     await claimPending(cd, huang, { churchId: cid, pendingId: 'old-huang' });
     const m = await db.doc(`churches/${cid}/members/huang`).get();
@@ -191,6 +202,24 @@ describe('claiming by name, a pending member with no email', () => {
     await rejectsWith(claimPending(cd, caller('mei-2'), { churchId: cid, pendingId: 'old-mei' }), 'permissionDenied');
   });
 
+  test('asked with a few of their days to know them by: the next ones, or the last; or what they serve', async () => {
+    const cid = await noEmail();
+    const days = ['2026-09-20', '2026-09-27', '2026-10-11', '2026-10-18', '2026-10-25', '2026-11-01'];
+    for (const day of days) {
+      await db.doc(`churches/${cid}/rosters/${day}_sunday`).set({ type: 'sunday', duties: [{ role: '招待', people: ['黃鎮台'], uids: { 黃鎮台: 'old-huang' } }] });
+    }
+    // Someone else took 10/18 since.
+    await db.doc(`churches/${cid}/rosters/2026-10-18_sunday`).update({ duties: [{ role: '招待', people: ['王小明'], uids: { 王小明: 'wang' } }] });
+    const pending = db.doc(`churches/${cid}/pendingMembers/old-huang`);
+    await pending.update({ rosterIds: days.map((day) => `${day}_sunday`) });
+    const serves = async () => (await pendingClaims(cd, caller('huang'))).claims[0].serves.map((s) => s.dateKey ?? `${s.service}・${s.duty}`);
+    assert.deepEqual(await serves(), ['2026-10-11', '2026-10-25', '2026-11-01']);
+    await pending.update({ rosterIds: ['2026-09-20_sunday', '2026-09-27_sunday'] });
+    assert.deepEqual(await serves(), ['2026-09-27', '2026-09-20']);
+    await pending.update({ rosterIds: [] });
+    assert.deepEqual(await serves(), ['主日崇拜・招待']);
+  });
+
   test('two with no email under the name: nobody is asked, the admin merges', async () => {
     const cid = await noEmail();
     await db.doc(`churches/${cid}/pendingMembers/old-huang-2`).set({ name: '黃鎮台', email: null, emailHash: null, role: 'staff', zones: [], rosterIds: [] });
@@ -210,7 +239,7 @@ describe('claiming with a linked Google or Apple account', () => {
   test('the linked email finds its pending member, and claims it', async () => {
     const cid = await moved();
     const c = await linked();
-    assert.deepEqual((await pendingClaims(cd, c)).claims, [{ churchId: cid, churchName: '恩典堂', pendingId: 'old-mei', name: '李美玉' }]);
+    assert.deepEqual((await pendingClaims(cd, c)).claims.map((x) => [x.churchId, x.pendingId]), [[cid, 'old-mei']]);
     await claimPending(cd, c, { churchId: cid, pendingId: 'old-mei' });
     const m = await db.doc(`churches/${cid}/members/yahoo-mei`).get();
     assert.equal(m.get('role'), 'leader');

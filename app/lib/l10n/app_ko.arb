@@ -608,6 +608,7 @@
   "claimBody": "교회가 이 앱으로 옮겨 왔어요. 그동안의 봉사와 소속 예배가 이미 여기 있어요.",
   "claimByNameTitle": "봉사표의 ‘{name}’ 님이 맞나요?",
   "claimByNameBody": "맞다면 ‘{name}’ 님에게 배정된 봉사와 소속 예배를 이어받아요",
+  "claimServe": "{service} · {duty}",
   "claimByNameYes": "네, 저예요",
   "claimByNameNo": "아니에요",
   "claimByNameDone": "‘{name}’ 님의 봉사를 이어받았어요",

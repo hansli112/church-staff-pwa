@@ -608,6 +608,7 @@
   "claimBody": "教会换到马大别忙了，你之前排的事奉和所属聚会都已经在这里",
   "claimByNameTitle": "事奉表上的“{name}”是你吗？",
   "claimByNameBody": "是的话，“{name}”的事奉和所属聚会都会接过来",
+  "claimServe": "{service}・{duty}",
   "claimByNameYes": "是我",
   "claimByNameNo": "不是",
   "claimByNameDone": "已接上“{name}”的事奉",

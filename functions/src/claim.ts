@@ -2,6 +2,7 @@ import { churchAccess, churchClosed, isChurchOpen } from './access.js';
 import { fail, id, requireCaller, serverTime, type Caller, type Deps } from './common.js';
 import { identitiesOf, withIdentities, type Identity } from './identities.js';
 import { personName } from './limits.js';
+import { dateKeyIn, timeZoneOf } from './timeZones.js';
 import { callerKeys, dropPending, waitingFor, waitsFor, type ClaimDeps } from './pendingMembers.js';
 import { claimedSmallGroups, smallGroupsByName } from './smallGroups.js';
 
@@ -38,7 +39,7 @@ export async function pendingClaims(deps: ClaimDeps, caller: Caller | null) {
     if (!isChurchOpen(church) || !pending.exists || !waitsFor(pending, keys)) continue;
     // Said yes already: the pending member goes once the rosters point at them.
     if (member.get('claimedFrom') === pid) continue;
-    claims.push({ churchId: cid, churchName: church.get('name') as string, pendingId: pid, name: pending.get('name') as string });
+    claims.push({ churchId: cid, churchName: church.get('name') as string, pendingId: pid, name: pending.get('name') as string, serves: await servesOf(deps, church, pending) });
   }
   // By name: a pending member with no email to claim it with, in a church the
   // caller is in under that very name, and the only one so named (else the
@@ -53,9 +54,51 @@ export async function pendingClaims(deps: ClaimDeps, caller: Caller | null) {
     ]);
     const unclaimed = named.docs.filter((p) => !p.get('emailHash'));
     if (!isChurchOpen(church) || unclaimed.length !== 1 || m.get('claimedFrom') === unclaimed[0].id) continue;
-    claims.push({ churchId: cid, churchName: church.get('name') as string, pendingId: unclaimed[0].id, name, byName: true });
+    claims.push({ churchId: cid, churchName: church.get('name') as string, pendingId: unclaimed[0].id, name, byName: true, serves: await servesOf(deps, church, unclaimed[0]) });
   }
   return { claims };
+}
+
+/** One line of what a pending member serves: a day on a roster, or (no day) a duty they are down for. */
+type Serve = { dateKey?: string; service: string; duty: string };
+
+/**
+ * A few of [pending]'s duties, for whoever is asked to know them by: their
+ * next three days on the rosters, or with none ahead the last three; with no
+ * days at all, the duties of the services they are in.
+ */
+async function servesOf(deps: Deps, church: FirebaseFirestore.DocumentSnapshot, pending: FirebaseFirestore.DocumentSnapshot): Promise<Serve[]> {
+  const cid = church.id;
+  const pid = pending.id;
+  const settings = await deps.db.doc(`churches/${cid}/settings/services`).get();
+  const services = new Map(
+    ((settings.get('services') as { id?: unknown; name?: unknown }[] | undefined) ?? [])
+      .filter((s) => typeof s?.id === 'string')
+      .map((s) => [s.id as string, typeof s.name === 'string' ? s.name : '']),
+  );
+  const today = dateKeyIn(timeZoneOf(church), deps.now());
+  // A moved roster's ID starts with its day; the ones with none aren't from the move.
+  const days = ((pending.get('rosterIds') as unknown[] | undefined) ?? [])
+    .filter((id): id is string => typeof id === 'string' && /^\d{4}-\d{2}-\d{2}_/.test(id))
+    .sort();
+  const ahead = days.filter((id) => id.slice(0, 10) >= today);
+  const order = ahead.length ? ahead : days.reverse();
+  const serves: Serve[] = [];
+  // A day may have been changed since: read a few more than shown.
+  for (let i = 0; i < order.length && i < 12 && serves.length < 3; i += 6) {
+    for (const r of await deps.db.getAll(...order.slice(i, i + 6).map((id) => deps.db.doc(`churches/${cid}/rosters/${id}`)))) {
+      const duty = ((r.get('duties') as { role?: unknown; uids?: Record<string, unknown> }[] | undefined) ?? [])
+        .find((d) => Object.values(d?.uids ?? {}).includes(pid));
+      if (!r.exists || r.get('cancelledAt') !== undefined || typeof duty?.role !== 'string' || serves.length >= 3) continue;
+      serves.push({ dateKey: r.id.slice(0, 10), service: services.get(r.get('type') as string) ?? '', duty: duty.role });
+    }
+  }
+  if (serves.length) return serves;
+  return ((pending.get('zones') as { serviceType?: unknown; duties?: unknown }[] | undefined) ?? [])
+    .flatMap((z) => (Array.isArray(z?.duties) ? z.duties : [])
+      .filter((d): d is string => typeof d === 'string')
+      .map((duty) => ({ service: services.get(z.serviceType as string) ?? '', duty })))
+    .slice(0, 3);
 }
 
 /** Whether [member] may take [pending] by name: it has no email, and their names are the same. */

@@ -1514,6 +1514,7 @@ class PendingClaim {
     required this.pendingId,
     required this.name,
     this.byName = false,
+    this.serves = const [],
   });
 
   final String churchId;
@@ -1523,10 +1524,24 @@ class PendingClaim {
   /// Their name on that church's list.
   final String name;
 
+  /// A few of their duties, to know them by.
+  final List<ClaimServe> serves;
+
   /// No email to claim it with: asked of someone in the church under the
   /// same name, 「服事表上的「黃鎮台」是你嗎？」 (functions/src/claim.ts).
   final bool byName;
 
   /// Remembered on the device when declined.
   String get key => '$churchId/$pendingId';
+}
+
+/// One of a pending member's duties: a day on a roster (their next three,
+/// or with none ahead the last three), or with no days at all, a duty of a
+/// service they are in (functions/src/claim.ts).
+class ClaimServe {
+  const ClaimServe({this.day, required this.service, required this.duty});
+
+  final Day? day;
+  final String service;
+  final String duty;
 }

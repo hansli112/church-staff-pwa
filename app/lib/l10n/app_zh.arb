@@ -1175,6 +1175,17 @@
       }
     }
   },
+  "claimServe": "{service}・{duty}",
+  "@claimServe": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      },
+      "duty": {
+        "type": "String"
+      }
+    }
+  },
   "claimByNameYes": "是我",
   "claimByNameNo": "不是",
   "claimByNameDone": "已接上「{name}」的服事",

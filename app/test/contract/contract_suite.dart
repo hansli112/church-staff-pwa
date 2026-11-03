@@ -1552,6 +1552,7 @@ void contractTests(Future<ContractWorld> Function() open) {
       await g.cloud.redeemInvite(invite.code);
       final claims = await cloud().pendingClaims();
       expect(claims.map((c) => (c.churchId, c.pendingId, c.name, c.byName)), [(g.cid, 'old-huang', '黃鎮台', true)]);
+      expect(claims.single.serves.map((s) => (s.day, s.service, s.duty)), [(his.day, '主日崇拜', '招待')]);
       await w.signIn(Grace.meiEmail);
       expect(await cloud().pendingClaims(), isEmpty, reason: 'another name');
       await expectLater(cloud().claimPending(g.cid, 'old-huang'), denied());
