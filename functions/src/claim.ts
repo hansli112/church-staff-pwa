@@ -27,11 +27,14 @@ export async function pendingClaims(deps: ClaimDeps, caller: Caller | null) {
   const claims = [];
   // Each pending member is under one email, so under one key at most.
   for (const [cid, pid] of (await Promise.all(keys.map((k) => waitingFor(deps, k)))).flat()) {
-    const [church, pending] = await Promise.all([
+    const [church, pending, member] = await Promise.all([
       deps.db.doc(`churches/${cid}`).get(),
       deps.db.doc(`churches/${cid}/pendingMembers/${pid}`).get(),
+      deps.db.doc(`churches/${cid}/members/${c.uid}`).get(),
     ]);
     if (!isChurchOpen(church) || !pending.exists || !waitsFor(pending, keys)) continue;
+    // Said yes already: the pending member goes once the rosters point at them.
+    if (member.get('claimedFrom') === pid) continue;
     claims.push({ churchId: cid, churchName: church.get('name') as string, pendingId: pid, name: pending.get('name') as string });
   }
   return { claims };
@@ -140,7 +143,7 @@ export async function claimPending(deps: ClaimDeps, caller: Caller | null, data:
     if (!waitsFor(pending, keys)) fail('permission-denied', 'permissionDenied');
     if (member.exists) {
       // Read current preferences in the transaction: concurrent edits are kept.
-      tx.update(member.ref, mergedMember(member, pending, byName));
+      tx.update(member.ref, { ...mergedMember(member, pending, byName), claimedFrom: pid });
     } else {
       const role = pending.get('role') ?? 'member';
       const small = claimedSmallGroups(pending.get('zones'), role, byName);

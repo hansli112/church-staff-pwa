@@ -88,6 +88,22 @@ describe('claiming', () => {
     assert.equal((await db.doc(`churches/${cid}/pendingMembers/old-mei`).get()).exists, false);
   });
 
+  test('a claim made, its rosters still being pointed at them, is not asked again', async () => {
+    const cid = await moved();
+    // Where claimPending is between making the member and dropping the
+    // pending one; their app, seeing the new church, asks again meanwhile.
+    await db.doc(`churches/${cid}/members/new-mei`).set({ uid: 'new-mei', name: '李美玉', role: 'leader', claimedFrom: 'old-mei' });
+    assert.deepEqual((await pendingClaims(cd, mei())).claims, []);
+  });
+
+  test('someone who joined by invite first is asked, and after saying yes is not asked again', async () => {
+    const cid = await moved();
+    await db.doc(`churches/${cid}/members/new-mei`).set({ uid: 'new-mei', name: '美玉', email: 'mei@example.com', role: 'staff', groups: [], zones: [], zoneTypes: [] });
+    assert.equal((await pendingClaims(cd, mei())).claims.length, 1);
+    await claimPending(cd, mei(), { churchId: cid, pendingId: 'old-mei' });
+    assert.equal((await db.doc(`churches/${cid}/members/new-mei`).get()).get('claimedFrom'), 'old-mei');
+  });
+
   test('claiming twice is fine', async () => {
     const cid = await moved();
     await claimPending(cd, mei(), { churchId: cid, pendingId: 'old-mei' });
