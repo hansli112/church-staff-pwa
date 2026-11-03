@@ -49,7 +49,7 @@ void main() {
     final b = await start(tester, preview);
     await tapText(tester, '選擇搬家檔');
     expect(find.text('3 位'), findsOneWidget);
-    expect(find.text('2 天'), findsOneWidget);
+    expect(find.text('2 份'), findsOneWidget);
     expect(find.text('主日崇拜、青年崇拜'), findsOneWidget);
     expect(
       tester.widget<ListRow>(find.widgetWithText(ListRow, '王牧師')).selected,
@@ -138,6 +138,6 @@ void main() {
   testWidgets('over 2,000 members is refused with the reason', (tester) async {
     await start(tester, const CloudException(CloudErrorCode.moveTooLarge));
     await tapText(tester, '選擇搬家檔');
-    expect(findShown('同工超過 2,000 位或服事表超過 20,000 天，沒辦法自動搬。請到 GitHub 的 church-staff-pwa 開 issue。'), findsOneWidget);
+    expect(findShown('同工超過 2,000 位或服事表超過 20,000 份，沒辦法自動搬。請到 GitHub 的 church-staff-pwa 開 issue。'), findsOneWidget);
   });
 }

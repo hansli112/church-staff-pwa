@@ -386,8 +386,11 @@ class L10nEn extends L10n {
 
   @override
   String pickerUseName(String name) {
-    return 'Use “$name”';
+    return 'Add “$name”';
   }
+
+  @override
+  String get pickerUseNameDetail => 'Name without an account';
 
   @override
   String pickerNoOneServes(String duty) {
@@ -1977,7 +1980,7 @@ class L10nEn extends L10n {
 
   @override
   String get errMoveTooLarge =>
-      'More than 2,000 team members or 20,000 schedule days can’t be moved automatically. Open an issue for church-staff-pwa on GitHub.';
+      'More than 2,000 team members or 20,000 schedules can’t be moved automatically. Open an issue for church-staff-pwa on GitHub.';
 
   @override
   String get moveFromSelfHost => 'Move from old version';
@@ -2017,8 +2020,8 @@ class L10nEn extends L10n {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count days',
-      one: '1 day',
+      other: '$count schedules',
+      one: '1 schedule',
     );
     return '$_temp0';
   }

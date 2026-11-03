@@ -781,8 +781,14 @@ abstract class L10n {
   /// No description provided for @pickerUseName.
   ///
   /// In zh, this message translates to:
-  /// **'用「{name}」'**
+  /// **'新增「{name}」'**
   String pickerUseName(String name);
+
+  /// No description provided for @pickerUseNameDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'無帳號的名字'**
+  String get pickerUseNameDetail;
 
   /// No description provided for @pickerNoOneServes.
   ///
@@ -3481,7 +3487,7 @@ abstract class L10n {
   /// No description provided for @errMoveTooLarge.
   ///
   /// In zh, this message translates to:
-  /// **'同工超過 2,000 位或服事表超過 20,000 天，沒辦法自動搬。請到 GitHub 的 church-staff-pwa 開 issue。'**
+  /// **'同工超過 2,000 位或服事表超過 20,000 份，沒辦法自動搬。請到 GitHub 的 church-staff-pwa 開 issue。'**
   String get errMoveTooLarge;
 
   /// No description provided for @moveFromSelfHost.
@@ -3535,7 +3541,7 @@ abstract class L10n {
   /// No description provided for @moveRostersCount.
   ///
   /// In zh, this message translates to:
-  /// **'{count} 天'**
+  /// **'{count} 份'**
   String moveRostersCount(int count);
 
   /// No description provided for @moveServices.

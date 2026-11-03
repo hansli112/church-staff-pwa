@@ -301,7 +301,7 @@ void main() {
     await tapText(tester, '招待');
     await tester.enterText(find.byType(TextField), '新外請');
     await settle(tester);
-    await tapText(tester, '用「新外請」');
+    await tapText(tester, '新增「新外請」');
     await tapText(tester, '編輯');
     final handle = find.byIcon(Symbols.drag_handle_rounded).first;
     // Well past the next row, however tall rows are.

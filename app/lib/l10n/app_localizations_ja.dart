@@ -377,8 +377,11 @@ class L10nJa extends L10n {
 
   @override
   String pickerUseName(String name) {
-    return '「$name」を使う';
+    return '「$name」を追加';
   }
+
+  @override
+  String get pickerUseNameDetail => 'アカウントのない名前';
 
   @override
   String pickerNoOneServes(String duty) {
@@ -1878,7 +1881,7 @@ class L10nJa extends L10n {
 
   @override
   String get errMoveTooLarge =>
-      'メンバーが2,000人、または奉仕表が20,000日を超えるため、自動で移行できません。GitHub の church-staff-pwa で issue を作成してください。';
+      'メンバーが2,000人、または奉仕表が20,000件を超えるため、自動で移行できません。GitHub の church-staff-pwa で issue を作成してください。';
 
   @override
   String get moveFromSelfHost => '旧バージョンから移行';
@@ -1909,7 +1912,7 @@ class L10nJa extends L10n {
 
   @override
   String moveRostersCount(int count) {
-    return '$count日分';
+    return '$count件';
   }
 
   @override

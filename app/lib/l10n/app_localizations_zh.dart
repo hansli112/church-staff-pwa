@@ -377,8 +377,11 @@ class L10nZh extends L10n {
 
   @override
   String pickerUseName(String name) {
-    return '用「$name」';
+    return '新增「$name」';
   }
+
+  @override
+  String get pickerUseNameDetail => '無帳號的名字';
 
   @override
   String pickerNoOneServes(String duty) {
@@ -1875,7 +1878,7 @@ class L10nZh extends L10n {
   String get errMoveInvalid => '這不是搬家檔，請確認選對了檔案';
 
   @override
-  String get errMoveTooLarge => '同工超過 2,000 位或服事表超過 20,000 天，沒辦法自動搬。請到 GitHub 的 church-staff-pwa 開 issue。';
+  String get errMoveTooLarge => '同工超過 2,000 位或服事表超過 20,000 份，沒辦法自動搬。請到 GitHub 的 church-staff-pwa 開 issue。';
 
   @override
   String get moveFromSelfHost => '從舊版搬過來';
@@ -1905,7 +1908,7 @@ class L10nZh extends L10n {
 
   @override
   String moveRostersCount(int count) {
-    return '$count 天';
+    return '$count 份';
   }
 
   @override
@@ -3763,8 +3766,11 @@ class L10nZhHans extends L10nZh {
 
   @override
   String pickerUseName(String name) {
-    return '用“$name”';
+    return '新增“$name”';
   }
+
+  @override
+  String get pickerUseNameDetail => '无账号的名字';
 
   @override
   String pickerNoOneServes(String duty) {
@@ -5261,7 +5267,7 @@ class L10nZhHans extends L10nZh {
   String get errMoveInvalid => '这不是迁移文件，请确认选对了文件';
 
   @override
-  String get errMoveTooLarge => '同工超过 2,000 位或事奉表超过 20,000 天，无法自动迁移。请到 GitHub 的 church-staff-pwa 提交 issue。';
+  String get errMoveTooLarge => '同工超过 2,000 位或事奉表超过 20,000 份，无法自动迁移。请到 GitHub 的 church-staff-pwa 提交 issue。';
 
   @override
   String get moveFromSelfHost => '从旧版迁移过来';
@@ -5291,7 +5297,7 @@ class L10nZhHans extends L10nZh {
 
   @override
   String moveRostersCount(int count) {
-    return '$count 天';
+    return '$count 份';
   }
 
   @override

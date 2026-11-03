@@ -423,8 +423,8 @@ void main() {
       await tapText(tester, '司琴');
       await tester.enterText(find.byType(TextField), '外請講員');
       await settle(tester);
-      expect(find.text('用「外請講員」'), findsOneWidget);
-      await tapText(tester, '用「外請講員」');
+      expect(find.text('新增「外請講員」'), findsOneWidget);
+      await tapText(tester, '新增「外請講員」');
       expect(peopleOn(b, 11, '司琴'), ['外請講員']);
       expect(savedDay(b, 11).duties[1].uids, isEmpty);
     });

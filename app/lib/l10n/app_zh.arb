@@ -224,7 +224,7 @@
   "pickerOthers": "其他同工",
   "pickerAddAnother": "再加一位",
   "pickerSwapDay": "和別週交換",
-  "pickerUseName": "用「{name}」",
+  "pickerUseName": "新增「{name}」",
   "@pickerUseName": {
     "placeholders": {
       "name": {
@@ -232,6 +232,7 @@
       }
     }
   },
+  "pickerUseNameDetail": "無帳號的名字",
   "pickerNoOneServes": "還沒有人負責{duty}",
   "@pickerNoOneServes": {
     "placeholders": {
@@ -1105,7 +1106,7 @@
   "exportCsvPeople": "同工",
   "@exportCsvPeople": { "description": "Column of the exported schedule: the people on the role." },
   "errMoveInvalid": "這不是搬家檔，請確認選對了檔案",
-  "errMoveTooLarge": "同工超過 2,000 位或服事表超過 20,000 天，沒辦法自動搬。請到 GitHub 的 church-staff-pwa 開 issue。",
+  "errMoveTooLarge": "同工超過 2,000 位或服事表超過 20,000 份，沒辦法自動搬。請到 GitHub 的 church-staff-pwa 開 issue。",
   "moveFromSelfHost": "從舊版搬過來",
   "moveIntro": "在舊版（church-staff-pwa）的 Cloud Shell 執行搬家指令，把得到的搬家檔上傳。確認預覽後才會建立教會。",
   "movePickFile": "選擇搬家檔",
@@ -1121,7 +1122,7 @@
     }
   },
   "moveRosters": "服事表",
-  "moveRostersCount": "{count} 天",
+  "moveRostersCount": "{count} 份",
   "@moveRostersCount": {
     "placeholders": {
       "count": {

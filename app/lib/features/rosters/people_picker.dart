@@ -437,6 +437,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
       rows.add(
         () => ListRow(
           title: l10n.pickerUseName(typed),
+          subtitle: l10n.pickerUseNameDetail,
           leading: const Icon(Symbols.add_rounded),
           onTap: _useTyped,
         ),

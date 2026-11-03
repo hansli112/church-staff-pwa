@@ -378,8 +378,11 @@ class L10nKo extends L10n {
 
   @override
   String pickerUseName(String name) {
-    return '‘$name’ 사용';
+    return '‘$name’ 추가';
   }
+
+  @override
+  String get pickerUseNameDetail => '계정 없는 이름';
 
   @override
   String pickerNoOneServes(String duty) {
@@ -1878,7 +1881,7 @@ class L10nKo extends L10n {
   String get errMoveInvalid => '이전용 파일이 아니에요. 올바른 파일을 선택했는지 확인해 주세요.';
 
   @override
-  String get errMoveTooLarge => '멤버가 2,000명 또는 봉사표가 20,000일을 넘으면 자동으로 옮길 수 없어요. GitHub의 church-staff-pwa에 이슈를 남겨 주세요.';
+  String get errMoveTooLarge => '멤버가 2,000명 또는 봉사표가 20,000개를 넘으면 자동으로 옮길 수 없어요. GitHub의 church-staff-pwa에 이슈를 남겨 주세요.';
 
   @override
   String get moveFromSelfHost => '구버전에서 옮겨 오기';
@@ -1909,7 +1912,7 @@ class L10nKo extends L10n {
 
   @override
   String moveRostersCount(int count) {
-    return '$count일';
+    return '$count개';
   }
 
   @override
