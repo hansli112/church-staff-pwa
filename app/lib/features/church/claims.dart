@@ -31,10 +31,11 @@ final declinedClaimsProvider = NotifierProvider<DeclinedClaims, Set<String>>(Dec
 /// the email is verified, or a Google or Apple account linked, never joined
 /// without a yes.
 final pendingClaimsProvider = FutureProvider<List<PendingClaim>>((ref) async {
-  final emails = ref.watch(authUserProvider.select((u) => u.value?.claimEmails.join(' ') ?? ''));
+  ref.watch(authUserProvider.select((u) => u.value?.claimEmails.join(' ') ?? ''));
   final uid = ref.watch(uidProvider);
-  if (uid == null || emails.isEmpty) return const [];
-  // A church joined in the meantime may have been one of them.
+  if (uid == null) return const [];
+  // A church joined in the meantime may have been one of them; joined by
+  // invite, one may be theirs by name.
   ref.watch(membershipsProvider.select((m) => m.value?.length));
   final declined = ref.watch(declinedClaimsProvider);
   final all = await ref.watch(backendProvider).cloud.pendingClaims();
@@ -44,8 +45,9 @@ final pendingClaimsProvider = FutureProvider<List<PendingClaim>>((ref) async {
   ];
 });
 
-/// 「〈恩典堂〉的同工資料已經搬過來了，要加入嗎？」, one per claim, inline at
-/// the top of the welcome and home pages (never a dialog on launch).
+/// 「加入〈恩典堂〉？」, one per claim, inline at the top of the welcome and
+/// home pages (never a dialog on launch); by name, on home only,
+/// 「服事表上的「黃鎮台」是你嗎？」.
 class PendingClaimsCard extends ConsumerStatefulWidget {
   const PendingClaimsCard({super.key});
 
@@ -70,7 +72,7 @@ class _PendingClaimsCardState extends ConsumerState<PendingClaimsCard> {
       container.invalidate(pendingClaimsProvider);
       Haptics.success();
       if (!root.mounted) return;
-      showToast(root, l10n.joined(claim.churchName));
+      showToast(root, claim.byName ? l10n.claimByNameDone(claim.name) : l10n.joined(claim.churchName));
       GoRouter.of(root).go('/home');
     } catch (e) {
       if (root.mounted) showToast(root, errorText(l10n, e));
@@ -97,13 +99,23 @@ class _PendingClaimsCardState extends ConsumerState<PendingClaimsCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    BalancedText(l10n.claimPrompt(claim.churchName), textAlign: TextAlign.start, style: AppText.body),
+                    BalancedText(
+                      claim.byName ? l10n.claimByNameTitle(claim.name) : l10n.claimTitle(claim.churchName),
+                      textAlign: TextAlign.start,
+                      style: AppText.headline,
+                    ),
+                    const SizedBox(height: Space.xs),
+                    BalancedText(
+                      claim.byName ? l10n.claimByNameBody(claim.name) : l10n.claimBody,
+                      textAlign: TextAlign.start,
+                      style: AppText.subheadline.copyWith(color: AppColors.of(context).secondaryLabel),
+                    ),
                     const SizedBox(height: Space.m),
                     Row(
                       children: [
                         Expanded(
                           child: SecondaryButton(
-                            label: l10n.claimDecline,
+                            label: claim.byName ? l10n.claimByNameNo : l10n.claimDecline,
                             expand: true,
                             onPressed: _busy != null
                                 ? null
@@ -113,7 +125,7 @@ class _PendingClaimsCardState extends ConsumerState<PendingClaimsCard> {
                         const SizedBox(width: Space.s),
                         Expanded(
                           child: PrimaryButton(
-                            label: l10n.claimJoin,
+                            label: claim.byName ? l10n.claimByNameYes : l10n.claimJoin,
                             busy: _busy == claim.key,
                             onPressed: _busy != null ? null : () => _join(claim),
                           ),

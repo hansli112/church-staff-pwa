@@ -1529,6 +1529,40 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect(await g.church.pendingMembers().first, isEmpty);
     });
 
+    test('one with no email is asked of someone who joined under its name, who takes it', () async {
+      final g = await Grace.open(w);
+      const huang = PendingMember(
+        id: 'old-huang',
+        name: '黃鎮台',
+        zones: [
+          Zone(serviceType: 'sunday', duties: ['招待']),
+        ],
+      );
+      final his = sundayOn(
+        11,
+        duties: const [
+          Duty(role: '招待', people: ['黃鎮台'], uids: {'黃鎮台': 'old-huang'}),
+        ],
+      );
+      await g.church.putRoster(his);
+      await w.addPending(g.cid, huang, rosterIds: [his.id]);
+      final invite = await g.church.createInvite(validFor: const Duration(days: 7));
+      final uid = await w.signUp('huang@example.com', name: '黃鎮台');
+      expect(await cloud().pendingClaims(), isEmpty, reason: 'not in the church yet');
+      await g.cloud.redeemInvite(invite.code);
+      final claims = await cloud().pendingClaims();
+      expect(claims.map((c) => (c.churchId, c.pendingId, c.name, c.byName)), [(g.cid, 'old-huang', '黃鎮台', true)]);
+      await w.signIn(Grace.meiEmail);
+      expect(await cloud().pendingClaims(), isEmpty, reason: 'another name');
+      await expectLater(cloud().claimPending(g.cid, 'old-huang'), denied());
+
+      await w.signIn('huang@example.com');
+      expect(await cloud().claimPending(g.cid, 'old-huang'), g.cid);
+      expect((await g.church.member(uid).first)!.zones, huang.zones);
+      expect((await g.church.rosters(from: Day(2026, 10, 1)).first).single.duties.single.uids, {'黃鎮台': uid});
+      expect(await cloud().pendingClaims(), isEmpty);
+    });
+
     test('an admin merges one into a member, who keeps their role and gains the rest', () async {
       final g = await moved();
       await g.church.putMember(

@@ -169,11 +169,11 @@ class L10nKo extends L10n {
   String get emailRequired => '이메일을 입력해 주세요';
 
   @override
-  String get verifyEmailTitle => '이메일 인증';
+  String get verifyEmailTitle => '메일의 인증 링크를 눌러 주세요';
 
   @override
   String verifyEmailBody(String email) {
-    return '$email 주소로 인증 메일을 보냈어요. 메일의 링크를 누른 뒤 여기로 돌아와 주세요.';
+    return '$email 주소로 인증 메일을 보냈어요. 메일의 링크를 누르면 이 화면이 자동으로 넘어가요.';
   }
 
   @override
@@ -184,12 +184,6 @@ class L10nKo extends L10n {
 
   @override
   String get verifyResent => '다시 보냈어요';
-
-  @override
-  String get verifyDone => '인증했어요';
-
-  @override
-  String get verifyStill => '아직 인증되지 않았어요. 메일의 링크를 눌러 주세요.';
 
   @override
   String get welcomeTitle => '교회에 가입하기';
@@ -1944,8 +1938,32 @@ class L10nKo extends L10n {
   }
 
   @override
-  String claimPrompt(String church) {
-    return '$church의 멤버 정보가 이곳으로 옮겨졌어요. 가입할까요?';
+  String claimTitle(String church) {
+    return '$church에 가입할까요?';
+  }
+
+  @override
+  String get claimBody => '교회가 이 앱으로 옮겨 왔어요. 그동안의 봉사와 소속 예배가 이미 여기 있어요.';
+
+  @override
+  String claimByNameTitle(String name) {
+    return '봉사표의 ‘$name’ 님이 맞나요?';
+  }
+
+  @override
+  String claimByNameBody(String name) {
+    return '맞다면 ‘$name’ 님에게 배정된 봉사와 소속 예배를 이어받아요';
+  }
+
+  @override
+  String get claimByNameYes => '네, 저예요';
+
+  @override
+  String get claimByNameNo => '아니에요';
+
+  @override
+  String claimByNameDone(String name) {
+    return '‘$name’ 님의 봉사를 이어받았어요';
   }
 
   @override

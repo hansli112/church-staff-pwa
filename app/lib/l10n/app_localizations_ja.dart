@@ -168,11 +168,11 @@ class L10nJa extends L10n {
   String get emailRequired => 'メールアドレスを入力してください';
 
   @override
-  String get verifyEmailTitle => 'メールアドレスの確認';
+  String get verifyEmailTitle => 'メールのリンクをタップしてください';
 
   @override
   String verifyEmailBody(String email) {
-    return '確認メールを $email に送信しました。メール内のリンクをタップしてから、ここに戻ってください。';
+    return '確認メールを $email に送信しました。メール内のリンクをタップすると、この画面は自動で先に進みます。';
   }
 
   @override
@@ -183,12 +183,6 @@ class L10nJa extends L10n {
 
   @override
   String get verifyResent => '再送しました';
-
-  @override
-  String get verifyDone => '確認しました';
-
-  @override
-  String get verifyStill => 'まだ確認できていません。メール内のリンクをタップしてください。';
 
   @override
   String get welcomeTitle => '教会に参加する';
@@ -1944,8 +1938,32 @@ class L10nJa extends L10n {
   }
 
   @override
-  String claimPrompt(String church) {
-    return '「$church」のメンバー情報が移行されています。参加しますか？';
+  String claimTitle(String church) {
+    return '$churchに参加しますか？';
+  }
+
+  @override
+  String get claimBody => '教会がこのアプリに移りました。これまでの奉仕と所属集会はもうここにあります。';
+
+  @override
+  String claimByNameTitle(String name) {
+    return '奉仕表の「$name」はあなたですか？';
+  }
+
+  @override
+  String claimByNameBody(String name) {
+    return 'そうであれば、「$name」の奉仕と所属集会があなたに引き継がれます';
+  }
+
+  @override
+  String get claimByNameYes => '私です';
+
+  @override
+  String get claimByNameNo => '違います';
+
+  @override
+  String claimByNameDone(String name) {
+    return '「$name」の奉仕を引き継ぎました';
   }
 
   @override

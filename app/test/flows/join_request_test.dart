@@ -302,12 +302,13 @@ void main() {
     await b.auth.linkGoogle();
     await pumpApp(tester, b);
     await go(tester, '/c/hope');
-    expect(findShown('驗證你的 email'), findsOneWidget, reason: 'the banner, as on the welcome page');
+    expect(findShown('到信箱點驗證連結'), findsOneWidget, reason: 'the banner, as on the welcome page');
     final ask = tester.widget<FilledButton>(find.widgetWithText(FilledButton, '申請加入'));
     expect(ask.onPressed, isNull, reason: 'told before typing a note, not after');
 
     b.auth.verify('new@example.com');
-    await tapText(tester, '我已經驗證');
+    await tester.pump(const Duration(seconds: 5));
+    await settle(tester);
     await tapText(tester, '申請加入');
     await tapText(tester, '申請加入');
     expect(b.joinRequests['hope'], isNotNull);

@@ -75,8 +75,8 @@
   "errUnknown": "沒有成功，請再試一次",
   "nameRequired": "請輸入名字",
   "emailRequired": "請輸入 email",
-  "verifyEmailTitle": "驗證你的 email",
-  "verifyEmailBody": "驗證信已寄到 {email}，點信裡的連結後回到這裡",
+  "verifyEmailTitle": "到信箱點驗證連結",
+  "verifyEmailBody": "驗證信已寄到 {email}。點信裡的連結後，回到這裡就會自動繼續。",
   "@verifyEmailBody": {
     "placeholders": {
       "email": {
@@ -87,8 +87,6 @@
   "verifyEmailNoMail": "沒收到？看看垃圾郵件，或重寄一次。",
   "verifyResend": "重寄驗證信",
   "verifyResent": "已重寄",
-  "verifyDone": "我已經驗證",
-  "verifyStill": "還沒驗證成功，請點信裡的連結",
   "welcomeTitle": "加入你的教會",
   "welcomeBody": "請教會的管理員給你邀請連結",
   "enterInviteCode": "輸入邀請碼",
@@ -1152,10 +1150,37 @@
       }
     }
   },
-  "claimPrompt": "〈{church}〉的同工資料\n已經搬過來了，要加入嗎？",
-  "@claimPrompt": {
+  "claimTitle": "加入〈{church}〉？",
+  "@claimTitle": {
     "placeholders": {
       "church": {
+        "type": "String"
+      }
+    }
+  },
+  "claimBody": "教會換到馬大別忙了，你之前排的服事和所屬聚會都已經在這裡",
+  "claimByNameTitle": "服事表上的「{name}」是你嗎？",
+  "@claimByNameTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "claimByNameBody": "是的話，「{name}」的服事和所屬聚會都會接過來",
+  "@claimByNameBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "claimByNameYes": "是我",
+  "claimByNameNo": "不是",
+  "claimByNameDone": "已接上「{name}」的服事",
+  "@claimByNameDone": {
+    "placeholders": {
+      "name": {
         "type": "String"
       }
     }

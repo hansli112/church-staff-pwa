@@ -431,10 +431,12 @@ class FirebaseAuthGateway implements AuthGateway {
   Future<void> reload() async {
     final user = _auth.currentUser;
     if (user == null) return;
+    final wasVerified = user.emailVerified;
     await user.reload();
     // emailVerified changes on the token; refresh it so the Cloud
-    // Functions see the verified email too.
-    await _auth.currentUser?.getIdToken(true);
+    // Functions see the verified email too. Only then: the verify page asks
+    // every few seconds.
+    if (_auth.currentUser?.emailVerified != wasVerified) await _auth.currentUser?.getIdToken(true);
     _reloaded.add(_map(_auth.currentUser));
   }
 
@@ -1937,6 +1939,7 @@ class FirebaseCloudApi implements CloudApi {
             churchName: c['churchName'] as String? ?? '',
             pendingId: c['pendingId'] as String,
             name: c['name'] as String? ?? '',
+            byName: c['byName'] == true,
           ),
     ];
   }

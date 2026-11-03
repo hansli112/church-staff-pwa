@@ -67,7 +67,7 @@ void main() {
 
     await tapText(tester, '透過 Apple 登入');
     expect(find.text('加入你的教會'), findsOneWidget);
-    expect(find.text('驗證你的 email'), findsNothing, reason: 'Apple accounts count as verified');
+    expect(find.text('到信箱點驗證連結'), findsNothing, reason: 'Apple accounts count as verified');
     final user = b.users.values.single;
     expect(user.email, 'x7f9d2@privaterelay.appleid.com');
     expect(user.name, '王小明');

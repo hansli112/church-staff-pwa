@@ -168,11 +168,11 @@ class L10nZh extends L10n {
   String get emailRequired => '請輸入 email';
 
   @override
-  String get verifyEmailTitle => '驗證你的 email';
+  String get verifyEmailTitle => '到信箱點驗證連結';
 
   @override
   String verifyEmailBody(String email) {
-    return '驗證信已寄到 $email，點信裡的連結後回到這裡';
+    return '驗證信已寄到 $email。點信裡的連結後，回到這裡就會自動繼續。';
   }
 
   @override
@@ -183,12 +183,6 @@ class L10nZh extends L10n {
 
   @override
   String get verifyResent => '已重寄';
-
-  @override
-  String get verifyDone => '我已經驗證';
-
-  @override
-  String get verifyStill => '還沒驗證成功，請點信裡的連結';
 
   @override
   String get welcomeTitle => '加入你的教會';
@@ -1940,8 +1934,32 @@ class L10nZh extends L10n {
   }
 
   @override
-  String claimPrompt(String church) {
-    return '〈$church〉的同工資料\n已經搬過來了，要加入嗎？';
+  String claimTitle(String church) {
+    return '加入〈$church〉？';
+  }
+
+  @override
+  String get claimBody => '教會換到馬大別忙了，你之前排的服事和所屬聚會都已經在這裡';
+
+  @override
+  String claimByNameTitle(String name) {
+    return '服事表上的「$name」是你嗎？';
+  }
+
+  @override
+  String claimByNameBody(String name) {
+    return '是的話，「$name」的服事和所屬聚會都會接過來';
+  }
+
+  @override
+  String get claimByNameYes => '是我';
+
+  @override
+  String get claimByNameNo => '不是';
+
+  @override
+  String claimByNameDone(String name) {
+    return '已接上「$name」的服事';
   }
 
   @override
@@ -3575,11 +3593,11 @@ class L10nZhHans extends L10nZh {
   String get emailRequired => '请输入邮箱';
 
   @override
-  String get verifyEmailTitle => '验证你的邮箱';
+  String get verifyEmailTitle => '到邮箱点击验证链接';
 
   @override
   String verifyEmailBody(String email) {
-    return '验证邮件已发送到 $email，点击邮件里的链接后回到这里';
+    return '验证邮件已发送到 $email。点击邮件里的链接后，回到这里就会自动继续。';
   }
 
   @override
@@ -3590,12 +3608,6 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get verifyResent => '已重新发送';
-
-  @override
-  String get verifyDone => '我已经验证';
-
-  @override
-  String get verifyStill => '还没验证成功，请点击邮件里的链接';
 
   @override
   String get welcomeTitle => '加入你的教会';
@@ -5347,8 +5359,32 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String claimPrompt(String church) {
-    return '“$church”的同工信息\n已经迁移过来了，要加入吗？';
+  String claimTitle(String church) {
+    return '加入〈$church〉？';
+  }
+
+  @override
+  String get claimBody => '教会换到马大别忙了，你之前排的事奉和所属聚会都已经在这里';
+
+  @override
+  String claimByNameTitle(String name) {
+    return '事奉表上的“$name”是你吗？';
+  }
+
+  @override
+  String claimByNameBody(String name) {
+    return '是的话，“$name”的事奉和所属聚会都会接过来';
+  }
+
+  @override
+  String get claimByNameYes => '是我';
+
+  @override
+  String get claimByNameNo => '不是';
+
+  @override
+  String claimByNameDone(String name) {
+    return '已接上“$name”的事奉';
   }
 
   @override

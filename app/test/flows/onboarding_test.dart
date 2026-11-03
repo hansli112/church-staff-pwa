@@ -77,19 +77,21 @@ void main() {
     await tester.enterText(fields.at(2), 'secret123');
     await tapText(tester, '註冊');
 
-    expect(findShown('驗證你的 email'), findsOneWidget);
-    expect(findShown('驗證信已寄到 ming@example.com，點信裡的連結後回到這裡'), findsOneWidget);
+    expect(findShown('到信箱點驗證連結'), findsOneWidget);
+    expect(findShown('驗證信已寄到 ming@example.com。點信裡的連結後，回到這裡就會自動繼續。'), findsOneWidget);
     expect(findShown('沒收到？看看垃圾郵件，或重寄一次。'), findsOneWidget);
     for (final later in ['建立新教會', '輸入邀請碼', '加入你的教會']) {
       expect(find.text(later), findsNothing, reason: '$later waits for the email');
     }
-    await tapText(tester, '我已經驗證');
-    expect(findShown('還沒驗證成功，請點信裡的連結'), findsOneWidget);
-    expect(findShown('驗證你的 email'), findsOneWidget);
+    expect(find.byType(FilledButton), findsNothing, reason: 'nothing to tap: it goes on by itself');
+    await tester.pump(const Duration(seconds: 10));
+    expect(findShown('到信箱點驗證連結'), findsOneWidget, reason: 'still waiting for the link');
 
+    // The link clicked in the mail app: in a few seconds, on without a tap.
     b.auth.verify('ming@example.com');
-    await tapText(tester, '我已經驗證');
-    expect(find.text('驗證你的 email'), findsNothing);
+    await tester.pump(const Duration(seconds: 5));
+    await settle(tester);
+    expect(find.text('到信箱點驗證連結'), findsNothing);
     await tapText(tester, '建立新教會');
     await tester.enterText(find.byType(TextField).first, '活水堂');
     await tester.pump();
@@ -119,11 +121,12 @@ void main() {
     await pumpApp(tester, b);
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/c/$cid/join/WELCOME26');
     await settle(tester);
-    expect(findShown('驗證你的 email'), findsOneWidget);
+    expect(findShown('到信箱點驗證連結'), findsOneWidget);
     expect(find.text('加入〈恩典堂〉'), findsNothing);
 
     b.auth.verify('ming@example.com');
-    await tapText(tester, '我已經驗證');
+    await tester.pump(const Duration(seconds: 5));
+    await settle(tester);
     expect(findShown('加入〈恩典堂〉'), findsOneWidget);
   });
 

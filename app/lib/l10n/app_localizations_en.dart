@@ -170,11 +170,11 @@ class L10nEn extends L10n {
   String get emailRequired => 'Enter your email';
 
   @override
-  String get verifyEmailTitle => 'Verify your email';
+  String get verifyEmailTitle => 'Tap the link in your email';
 
   @override
   String verifyEmailBody(String email) {
-    return 'A verification email was sent to $email. Tap the link in it, then come back here.';
+    return 'We sent a verification email to $email. Tap the link in it, and this page goes on by itself.';
   }
 
   @override
@@ -185,12 +185,6 @@ class L10nEn extends L10n {
 
   @override
   String get verifyResent => 'Sent again';
-
-  @override
-  String get verifyDone => 'I’ve verified';
-
-  @override
-  String get verifyStill => 'Not verified yet. Tap the link in the email.';
 
   @override
   String get welcomeTitle => 'Join your church';
@@ -2062,8 +2056,32 @@ class L10nEn extends L10n {
   }
 
   @override
-  String claimPrompt(String church) {
-    return 'Team member info for “$church” has been moved here. Join?';
+  String claimTitle(String church) {
+    return 'Join $church?';
+  }
+
+  @override
+  String get claimBody => 'Your church now uses this app. Your schedules and services are already here.';
+
+  @override
+  String claimByNameTitle(String name) {
+    return 'Are you “$name” on the schedules?';
+  }
+
+  @override
+  String claimByNameBody(String name) {
+    return 'If so, what’s scheduled for “$name”, and their services, become yours';
+  }
+
+  @override
+  String get claimByNameYes => 'That’s me';
+
+  @override
+  String get claimByNameNo => 'Not me';
+
+  @override
+  String claimByNameDone(String name) {
+    return '“$name”’s schedules are yours now';
   }
 
   @override

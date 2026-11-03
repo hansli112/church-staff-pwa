@@ -54,7 +54,8 @@ void main() {
   testWidgets('signing in with the same email offers to join; joining brings back the rosters', (tester) async {
     final b = movedChurch();
     await pumpApp(tester, b);
-    expect(findShown('〈恩典堂〉的同工資料已經搬過來了，要加入嗎？'), findsOneWidget);
+    expect(findShown('加入〈恩典堂〉？'), findsOneWidget);
+    expect(findShown('教會換到馬大別忙了，你之前排的服事和所屬聚會都已經在這裡'), findsOneWidget);
     await tapText(tester, '加入');
 
     final m = b.members['grace']!['new-mei']!;
@@ -81,18 +82,72 @@ void main() {
     await tapText(tester, '加入');
 
     expect(find.byType(NavigationBar), findsOneWidget, reason: 'in the church already');
-    expect(findShown('〈恩典堂〉的同工資料已經搬過來了，要加入嗎？'), findsNothing);
+    expect(findShown('加入〈恩典堂〉？'), findsNothing);
     repoint.complete();
     await settle(tester);
     expect(findShown('已加入〈恩典堂〉'), findsOneWidget);
-    expect(findShown('〈恩典堂〉的同工資料已經搬過來了，要加入嗎？'), findsNothing);
+    expect(findShown('加入〈恩典堂〉？'), findsNothing);
+  });
+
+  group('by name, a pending member with no email', () {
+    const huangPending = PendingMember(
+      id: 'old-huang',
+      name: '黃鎮台',
+      zones: [
+        Zone(serviceType: 'sunday', duties: ['招待']),
+      ],
+    );
+
+    /// Joined by invite as 黃鎮台, the name of a pending member with no email.
+    MemoryBackend joinedByInvite() {
+      const huang = Member(uid: 'huang', name: '黃鎮台');
+      final b = seededChurch(as: huang, extra: const [huang]);
+      b.addPending('grace', huangPending, rosterIds: [Roster.idFor('sunday', Day(2026, 10, 18))]);
+      b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, 18))] = Roster(
+        type: 'sunday',
+        day: Day(2026, 10, 18),
+        duties: const [
+          Duty(role: '招待', people: ['黃鎮台'], uids: {'黃鎮台': 'old-huang'}),
+        ],
+      );
+      return b;
+    }
+
+    testWidgets('home asks if it is them; yes brings their days, no admin needed', (tester) async {
+      final b = joinedByInvite();
+      await pumpApp(tester, b);
+      expect(findShown('服事表上的「黃鎮台」是你嗎？'), findsOneWidget);
+      expect(findShown('是的話，「黃鎮台」的服事和所屬聚會都會接過來'), findsOneWidget);
+      await tapText(tester, '是我');
+
+      expect(findShown('已接上「黃鎮台」的服事'), findsOneWidget);
+      expect(find.textContaining('是你嗎？'), findsNothing);
+      expect(b.pendingMembers['grace'], isEmpty);
+      expect(b.members['grace']!['huang']!.serves('sunday', '招待'), isTrue);
+      expect(b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, 18))]!.duties.single.uids, {'黃鎮台': 'huang'});
+    });
+
+    testWidgets('no keeps it for the admin, and does not ask again on this device', (tester) async {
+      final b = joinedByInvite();
+      await pumpApp(tester, b);
+      await tapText(tester, '不是');
+      expect(find.textContaining('是你嗎？'), findsNothing);
+      expect(b.pendingMembers['grace']!.containsKey('old-huang'), isTrue);
+    });
+
+    testWidgets('someone else in the church is not asked', (tester) async {
+      final b = joinedByInvite();
+      b.auth.signInAs('mei@example.com', uid: 'mei', name: '李美玉');
+      await pumpApp(tester, b);
+      expect(find.textContaining('是你嗎？'), findsNothing);
+    });
   });
 
   testWidgets('declining joins nothing and does not ask again on this device', (tester) async {
     final b = movedChurch();
     await pumpApp(tester, b);
     await tapText(tester, '不加入');
-    expect(findShown('〈恩典堂〉的同工資料已經搬過來了，要加入嗎？'), findsNothing);
+    expect(findShown('加入〈恩典堂〉？'), findsNothing);
     expect(b.members['grace']!.containsKey('new-mei'), isFalse);
     expect(b.pendingMembers['grace']!.containsKey('old-mei'), isTrue, reason: 'kept for the admin');
     expect(find.text('加入你的教會'), findsOneWidget);
@@ -102,8 +157,8 @@ void main() {
     final b = movedChurch(signIn: false);
     await b.auth.registerWithEmail('美玉', 'mei@example.com', 'secret123', AppLanguage.zhHant);
     await pumpApp(tester, b);
-    expect(find.text('驗證你的 email'), findsOneWidget);
-    expect(find.textContaining('已經搬過來了'), findsNothing);
+    expect(find.text('到信箱點驗證連結'), findsOneWidget);
+    expect(find.textContaining('加入〈恩典堂〉？'), findsNothing);
   });
 
   testWidgets('the sign-in page tells old password users to register again', (tester) async {

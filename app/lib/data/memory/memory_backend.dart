@@ -2678,21 +2678,42 @@ class MemoryCloud implements CloudApi {
 
   @override
   Future<List<PendingClaim>> pendingClaims() async {
-    final emails = _b.auth.currentUser?.claimEmails ?? const [];
+    final user = _b.auth.currentUser;
+    final emails = user?.claimEmails ?? const [];
     return [
       for (final MapEntry(key: cid, value: pending) in _b.pendingMembers.entries)
         if (_b.churches[cid]?.isActive ?? false)
           for (final p in pending.values)
             if (emails.contains(p.email.trim().toLowerCase()) && !(_b.claiming[cid]?.contains(p.id) ?? false))
               PendingClaim(churchId: cid, churchName: _b.churches[cid]!.name, pendingId: p.id, name: p.name),
+      for (final MapEntry(key: cid, value: pending) in _b.pendingMembers.entries)
+        if ((_b.churches[cid]?.isActive ?? false) && user != null)
+          if (_b.members[cid]?[user.uid] case final me?)
+            if (_unclaimedNamed(pending.values, me.name) case final p?)
+              PendingClaim(
+                churchId: cid,
+                churchName: _b.churches[cid]!.name,
+                pendingId: p.id,
+                name: p.name,
+                byName: true,
+              ),
     ];
   }
+
+  /// The one pending member with no email named [name], if just one.
+  PendingMember? _unclaimedNamed(Iterable<PendingMember> pending, String name) => switch ([
+    for (final p in pending)
+      if (p.email.isEmpty && name.trim().isNotEmpty && p.name.trim() == name.trim()) p,
+  ]) {
+    [final only] => only,
+    _ => null,
+  };
 
   @override
   Future<String> claimPending(String churchId, String pendingId) async {
     final user = _b.auth.currentUser;
-    final emails = user?.claimEmails ?? const [];
-    if (user == null || emails.isEmpty) throw const CloudException(CloudErrorCode.unverifiedEmail);
+    if (user == null) throw const CloudException(CloudErrorCode.permissionDenied);
+    final emails = user.claimEmails;
     final existing = _b.functionAccess(churchId, anyone: true);
     final p = _b.pendingMembers[churchId]?[pendingId];
     if (p == null) {
@@ -2700,8 +2721,10 @@ class MemoryCloud implements CloudApi {
       if (existing != null) return churchId;
       throw const CloudException(CloudErrorCode.notFound);
     }
-    if (!emails.contains(p.email.trim().toLowerCase())) {
-      throw const CloudException(CloudErrorCode.permissionDenied);
+    final byName =
+        existing != null && p.email.isEmpty && p.name.trim().isNotEmpty && p.name.trim() == existing.name.trim();
+    if (!byName && !emails.contains(p.email.trim().toLowerCase())) {
+      throw CloudException(emails.isEmpty ? CloudErrorCode.unverifiedEmail : CloudErrorCode.permissionDenied);
     }
     _b.members[churchId]![user.uid] = existing != null
         ? _absorb(existing, p)

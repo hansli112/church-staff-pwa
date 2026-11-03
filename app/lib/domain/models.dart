@@ -1508,7 +1508,13 @@ class MovePreview {
 /// verified email.
 @immutable
 class PendingClaim {
-  const PendingClaim({required this.churchId, required this.churchName, required this.pendingId, required this.name});
+  const PendingClaim({
+    required this.churchId,
+    required this.churchName,
+    required this.pendingId,
+    required this.name,
+    this.byName = false,
+  });
 
   final String churchId;
   final String churchName;
@@ -1516,6 +1522,10 @@ class PendingClaim {
 
   /// Their name on that church's list.
   final String name;
+
+  /// No email to claim it with: asked of someone in the church under the
+  /// same name, 「服事表上的「黃鎮台」是你嗎？」 (functions/src/claim.ts).
+  final bool byName;
 
   /// Remembered on the device when declined.
   String get key => '$churchId/$pendingId';

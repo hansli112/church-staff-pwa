@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -203,8 +205,6 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> with _Ver
                 const SizedBox(height: Space.xs),
                 BalancedText(l10n.verifyEmailNoMail, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
                 const SizedBox(height: Space.xl),
-                PrimaryButton(label: l10n.verifyDone, busy: busy, onPressed: busy ? null : check),
-                const SizedBox(height: Space.s),
                 SecondaryButton(label: l10n.verifyResend, expand: true, onPressed: resend),
                 const SizedBox(height: Space.xl),
                 SecondaryButton(label: l10n.signOut, expand: true, onPressed: () => signOut(ref)),
@@ -255,15 +255,9 @@ class _VerifyEmailBannerState extends ConsumerState<VerifyEmailBanner> with _Ver
           const SizedBox(height: Space.xs),
           BalancedText(l10n.verifyEmailBody(user.email), textAlign: TextAlign.start, style: AppText.subheadline),
           const SizedBox(height: Space.s),
-          Wrap(
-            alignment: WrapAlignment.end,
-            children: [
-              SecondaryButton(label: l10n.verifyResend, onPressed: resend),
-              SecondaryButton(
-                label: l10n.verifyDone,
-                onPressed: busy ? null : check,
-              ),
-            ],
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: SecondaryButton(label: l10n.verifyResend, onPressed: resend),
           ),
         ],
       ),
@@ -271,49 +265,45 @@ class _VerifyEmailBannerState extends ConsumerState<VerifyEmailBanner> with _Ver
   }
 }
 
-/// 我已經驗證 and 重寄驗證信, and looking again on coming back from the
-/// email's link.
+/// Looking for the email to be verified, so nobody has to say so: every
+/// few seconds while the app is on screen, and on coming back to it (from
+/// the email's link, say). And 重寄驗證信.
 mixin _Verifying<T extends ConsumerStatefulWidget> on ConsumerState<T> {
-  bool busy = false;
+  static const _every = Duration(seconds: 4);
 
+  Timer? _poll;
   late final AppLifecycleListener _lifecycle;
 
   @override
   void initState() {
     super.initState();
-    // Coming back from the email's link, or opening the app after clicking
-    // it elsewhere: look again without being asked.
-    _lifecycle = AppLifecycleListener(onResume: _recheck);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _recheck();
-    });
+    _lifecycle = AppLifecycleListener(onShow: _watch, onHide: _rest);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _watch());
   }
 
   @override
   void dispose() {
+    _rest();
     _lifecycle.dispose();
     super.dispose();
   }
 
-  void _recheck() {
-    final user = ref.read(authUserProvider).value;
-    if (user != null && !user.verified) ref.read(backendProvider).auth.reload().ignore();
+  void _watch() {
+    if (!mounted) return;
+    _recheck();
+    _poll ??= Timer.periodic(_every, (_) => _recheck());
   }
 
-  Future<void> check() async {
-    final l10n = L10n.of(context);
-    setState(() => busy = true);
-    try {
-      await ref.read(backendProvider).auth.reload();
-      final user = ref.read(backendProvider).auth.currentUser;
-      if (mounted && !(user?.verified ?? false)) {
-        showToast(context, l10n.verifyStill);
-      }
-    } catch (e) {
-      if (mounted) showToast(context, errorText(l10n, e));
-    } finally {
-      if (mounted) setState(() => busy = false);
-    }
+  void _rest() {
+    _poll?.cancel();
+    _poll = null;
+  }
+
+  void _recheck() {
+    final user = ref.read(authUserProvider).value;
+    if (user == null || user.verified) return _rest();
+    // Offline, say: the next look will do.
+    ref.read(backendProvider).auth.reload().catchError((_) {});
   }
 
   Future<void> resend() async {

@@ -102,13 +102,13 @@ void main() {
     final b = movedChurch(signIn: false);
     final uid = await registered(b, 'mei.old@yahoo.com');
     await pumpApp(tester, b);
-    expect(find.textContaining('已經搬過來了'), findsNothing);
+    expect(find.textContaining('加入〈恩典堂〉？'), findsNothing);
 
     await go(tester, '/account/sign-in');
     b.auth.googleAccount = 'mei@example.com';
     await tapText(tester, '連結 Google 帳號');
     await go(tester, '/welcome');
-    expect(findShown('〈恩典堂〉的同工資料已經搬過來了，要加入嗎？'), findsOneWidget);
+    expect(findShown('加入〈恩典堂〉？'), findsOneWidget);
     await tapText(tester, '加入');
 
     final m = b.members['grace']![uid]!;
@@ -180,7 +180,7 @@ void main() {
       b.auth.appleAccount = 'mei@example.com';
       await tapText(tester, '連結 Apple 帳號');
       await go(tester, '/welcome');
-      expect(findShown('〈恩典堂〉的同工資料已經搬過來了，要加入嗎？'), findsOneWidget);
+      expect(findShown('加入〈恩典堂〉？'), findsOneWidget);
       await tapText(tester, '加入');
       expect(b.members['grace']![uid]!.leadTypes, ['sunday']);
     });

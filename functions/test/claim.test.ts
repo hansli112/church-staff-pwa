@@ -138,6 +138,66 @@ describe('claiming', () => {
   });
 });
 
+describe('claiming by name, a pending member with no email', () => {
+  /** 黃鎮台, no email on the list, and his day; [joined] has joined by invite under [name]. */
+  async function noEmail(joined = 'huang', name = '黃鎮台') {
+    const cid = await moved();
+    await db.doc(`churches/${cid}/pendingMembers/old-huang`).set({
+      name: '黃鎮台',
+      email: null,
+      emailHash: null,
+      role: 'staff',
+      zones: [{ serviceType: 'sunday', duties: ['招待'], smallGroups: [] }],
+      zoneTypes: ['sunday'],
+      rosterIds: ['2026-10-11_sunday'],
+    });
+    await db.doc(`churches/${cid}/rosters/2026-10-11_sunday`).update({ duties: [{ role: '招待', people: ['黃鎮台'], uids: { 黃鎮台: 'old-huang' } }] });
+    await db.doc(`churches/${cid}/members/${joined}`).set({ uid: joined, name, email: `${joined}@example.com`, role: 'staff', groups: [], zones: [], zoneTypes: [] });
+    return cid;
+  }
+
+  test('someone in the church under the same name is asked, and saying yes takes it', async () => {
+    const cid = await noEmail();
+    const huang = caller('huang');
+    assert.deepEqual((await pendingClaims(cd, huang)).claims, [
+      { churchId: cid, churchName: '恩典堂', pendingId: 'old-huang', name: '黃鎮台', byName: true },
+    ]);
+    await claimPending(cd, huang, { churchId: cid, pendingId: 'old-huang' });
+    const m = await db.doc(`churches/${cid}/members/huang`).get();
+    assert.equal(m.get('role'), 'staff', 'the role is not taken over, as an admin merging');
+    assert.deepEqual(m.get('zones'), [{ serviceType: 'sunday', duties: ['招待'], smallGroups: [] }]);
+    assert.deepEqual(await uidsOn(cid, '2026-10-11'), [{ 黃鎮台: 'huang' }]);
+    assert.equal((await db.doc(`churches/${cid}/pendingMembers/old-huang`).get()).exists, false);
+    assert.deepEqual((await pendingClaims(cd, huang)).claims, []);
+  });
+
+  test('even with no verified email: the church let them in', async () => {
+    await noEmail();
+    assert.equal((await pendingClaims(cd, caller('huang', { emailVerified: false }))).claims.length, 1);
+  });
+
+  test('another name, or someone not in the church, is not asked and cannot take it', async () => {
+    const cid = await noEmail('wang', '王小明');
+    assert.deepEqual((await pendingClaims(cd, caller('wang'))).claims, []);
+    await rejectsWith(claimPending(cd, caller('wang'), { churchId: cid, pendingId: 'old-huang' }), 'permissionDenied');
+    assert.deepEqual((await pendingClaims(cd, caller('stranger', { name: '黃鎮台' }))).claims, []);
+    await rejectsWith(claimPending(cd, caller('stranger', { name: '黃鎮台' }), { churchId: cid, pendingId: 'old-huang' }), 'permissionDenied');
+  });
+
+  test('a pending member with an email waits for that email, not the name', async () => {
+    const cid = await noEmail();
+    await db.doc(`churches/${cid}/members/mei-2`).set({ uid: 'mei-2', name: '李美玉', role: 'staff', groups: [], zones: [], zoneTypes: [] });
+    assert.deepEqual((await pendingClaims(cd, caller('mei-2'))).claims, []);
+    await rejectsWith(claimPending(cd, caller('mei-2'), { churchId: cid, pendingId: 'old-mei' }), 'permissionDenied');
+  });
+
+  test('two with no email under the name: nobody is asked, the admin merges', async () => {
+    const cid = await noEmail();
+    await db.doc(`churches/${cid}/pendingMembers/old-huang-2`).set({ name: '黃鎮台', email: null, emailHash: null, role: 'staff', zones: [], rosterIds: [] });
+    assert.deepEqual((await pendingClaims(cd, caller('huang'))).claims, []);
+  });
+});
+
 describe('claiming with a linked Google or Apple account', () => {
   /** Signed up with an old yahoo address, never verified, then linked [provider] under mei's email. */
   async function linked(providerId = 'google.com', email = 'mei@example.com') {

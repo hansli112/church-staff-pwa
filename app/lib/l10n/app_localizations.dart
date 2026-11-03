@@ -409,13 +409,13 @@ abstract class L10n {
   /// No description provided for @verifyEmailTitle.
   ///
   /// In zh, this message translates to:
-  /// **'驗證你的 email'**
+  /// **'到信箱點驗證連結'**
   String get verifyEmailTitle;
 
   /// No description provided for @verifyEmailBody.
   ///
   /// In zh, this message translates to:
-  /// **'驗證信已寄到 {email}，點信裡的連結後回到這裡'**
+  /// **'驗證信已寄到 {email}。點信裡的連結後，回到這裡就會自動繼續。'**
   String verifyEmailBody(String email);
 
   /// No description provided for @verifyEmailNoMail.
@@ -435,18 +435,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'已重寄'**
   String get verifyResent;
-
-  /// No description provided for @verifyDone.
-  ///
-  /// In zh, this message translates to:
-  /// **'我已經驗證'**
-  String get verifyDone;
-
-  /// No description provided for @verifyStill.
-  ///
-  /// In zh, this message translates to:
-  /// **'還沒驗證成功，請點信裡的連結'**
-  String get verifyStill;
 
   /// No description provided for @welcomeTitle.
   ///
@@ -3592,11 +3580,47 @@ abstract class L10n {
   /// **'{count} 位還沒登入'**
   String pendingCount(int count);
 
-  /// No description provided for @claimPrompt.
+  /// No description provided for @claimTitle.
   ///
   /// In zh, this message translates to:
-  /// **'〈{church}〉的同工資料\n已經搬過來了，要加入嗎？'**
-  String claimPrompt(String church);
+  /// **'加入〈{church}〉？'**
+  String claimTitle(String church);
+
+  /// No description provided for @claimBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'教會換到馬大別忙了，你之前排的服事和所屬聚會都已經在這裡'**
+  String get claimBody;
+
+  /// No description provided for @claimByNameTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'服事表上的「{name}」是你嗎？'**
+  String claimByNameTitle(String name);
+
+  /// No description provided for @claimByNameBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'是的話，「{name}」的服事和所屬聚會都會接過來'**
+  String claimByNameBody(String name);
+
+  /// No description provided for @claimByNameYes.
+  ///
+  /// In zh, this message translates to:
+  /// **'是我'**
+  String get claimByNameYes;
+
+  /// No description provided for @claimByNameNo.
+  ///
+  /// In zh, this message translates to:
+  /// **'不是'**
+  String get claimByNameNo;
+
+  /// No description provided for @claimByNameDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'已接上「{name}」的服事'**
+  String claimByNameDone(String name);
 
   /// No description provided for @claimJoin.
   ///

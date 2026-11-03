@@ -15,6 +15,9 @@ import { claimedSmallGroups, smallGroupsByName } from './smallGroups.js';
  * - Merge: an admin joins a pending member to someone who already joined
  *   under another email (e.g. switched to Google).
  *
+ * - By name: a pending member with no email, by someone already in its
+ *   church under the same name (joined by invite), who says it is them.
+ *
  * Either way the member gets the pending member's role (claim only),
  * groups and zones, and the 小組 their zones name (#85; a self-host 小組長
  * leading them); the rosters that pointed at the pending member point at
@@ -37,8 +40,27 @@ export async function pendingClaims(deps: ClaimDeps, caller: Caller | null) {
     if (member.get('claimedFrom') === pid) continue;
     claims.push({ churchId: cid, churchName: church.get('name') as string, pendingId: pid, name: pending.get('name') as string });
   }
+  // By name: a pending member with no email to claim it with, in a church the
+  // caller is in under that very name, and the only one so named (else the
+  // admin merges). The church let them in; the name says which one is theirs.
+  for (const m of (await deps.db.collectionGroup('members').where('uid', '==', c.uid).get()).docs) {
+    const cid = m.ref.parent.parent!.id;
+    const name = personName(m.get('name'));
+    if (!name) continue;
+    const [church, named] = await Promise.all([
+      deps.db.doc(`churches/${cid}`).get(),
+      deps.db.collection(`churches/${cid}/pendingMembers`).where('name', '==', name).get(),
+    ]);
+    const unclaimed = named.docs.filter((p) => !p.get('emailHash'));
+    if (!isChurchOpen(church) || unclaimed.length !== 1 || m.get('claimedFrom') === unclaimed[0].id) continue;
+    claims.push({ churchId: cid, churchName: church.get('name') as string, pendingId: unclaimed[0].id, name, byName: true });
+  }
   return { claims };
 }
+
+/** Whether [member] may take [pending] by name: it has no email, and their names are the same. */
+const takesByName = (member: FirebaseFirestore.DocumentSnapshot, pending: FirebaseFirestore.DocumentSnapshot) =>
+  member.exists && !pending.get('emailHash') && !!personName(member.get('name')) && personName(member.get('name')) === personName(pending.get('name'));
 
 /**
  * Points every roster that names [pid] at [uid] instead. Only the days the
@@ -119,12 +141,14 @@ function mergedMember(member: FirebaseFirestore.DocumentSnapshot, pending: Fireb
   };
 }
 
-/** Joins the caller to the church as the pending member with one of their emails. */
+/**
+ * Joins the caller to the church as the pending member with one of their
+ * emails, or, one with no email, merges it into them by name ([pendingClaims]).
+ */
 export async function claimPending(deps: ClaimDeps, caller: Caller | null, data: unknown) {
   const c = requireCaller(caller);
   const pid = id((data as { pendingId?: unknown })?.pendingId);
   const keys = await callerKeys(deps, c);
-  if (!keys.length) fail('failed-precondition', 'unverifiedEmail');
   // Not a member yet, most likely: anyone signed in, but the church open.
   const { cid } = await churchAccess(deps, c, data, 'anyone');
   const pending = await deps.db.runTransaction(async (tx) => {
@@ -140,7 +164,10 @@ export async function claimPending(deps: ClaimDeps, caller: Caller | null, data:
       if (member.exists) return null;
       fail('not-found', 'notFound');
     }
-    if (!waitsFor(pending, keys)) fail('permission-denied', 'permissionDenied');
+    if (!waitsFor(pending, keys) && !takesByName(member, pending)) {
+      if (!keys.length) fail('failed-precondition', 'unverifiedEmail');
+      fail('permission-denied', 'permissionDenied');
+    }
     if (member.exists) {
       // Read current preferences in the transaction: concurrent edits are kept.
       tx.update(member.ref, { ...mergedMember(member, pending, byName), claimedFrom: pid });

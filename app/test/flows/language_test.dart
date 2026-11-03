@@ -90,7 +90,8 @@ void main() {
     expect(b.auth.emailLanguages, [AppLanguage.en, AppLanguage.en]);
 
     b.auth.verify('amy@example.com');
-    await tapText(tester, 'I’ve verified');
+    await tester.pump(const Duration(seconds: 5));
+    await settle(tester);
     await tapText(tester, 'Create a church');
     await tester.enterText(find.byType(TextField).first, 'Grace Church');
     await tester.pump();
