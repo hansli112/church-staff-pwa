@@ -178,6 +178,9 @@ class L10nEn extends L10n {
   }
 
   @override
+  String get verifyEmailNoMail => 'Didn’t get it? Check your spam folder, or resend it.';
+
+  @override
   String get verifyResend => 'Resend email';
 
   @override
@@ -2092,19 +2095,19 @@ class L10nEn extends L10n {
 
   @override
   String get mergePendingFooter =>
-      'When a team member joins with a different email, merge their pending record from the old list. Their schedules, services, and permission groups carry over.';
+      'When a team member has no email, or joins with a different one, merge their pending record. Their schedules, services, and permission groups carry over.';
 
   @override
   String get mergePendingPick => 'Choose a pending record';
 
   @override
-  String mergePendingTitle(String pending, String member) {
-    return 'Merge “$pending” into “$member”?';
+  String mergePendingTitle(String pending) {
+    return 'Merge the pending “$pending”?';
   }
 
   @override
-  String mergePendingBody(String pending) {
-    return '“$pending” on schedules will become this team member, and their services and permission groups will be added';
+  String mergePendingBody(String pending, String member) {
+    return 'The pending “$pending” is merged into “$member”, who has joined. Their schedules, services, and permission groups carry over.';
   }
 
   @override
@@ -2112,6 +2115,16 @@ class L10nEn extends L10n {
 
   @override
   String get merged => 'Merged';
+
+  @override
+  String mergeSuggestion(String name) {
+    return '“$name” also has a pending record';
+  }
+
+  @override
+  String mergeSuggestionLabel(String name) {
+    return 'Merge $name';
+  }
 
   @override
   String get fundingTitle => 'This month’s support';
@@ -3111,6 +3124,11 @@ class L10nEn extends L10n {
 
   @override
   String get joinRequestPending => 'Request sent. You’ll join once an admin accepts it.';
+
+  @override
+  String welcomeAskedToJoin(String church) {
+    return 'Asked to join $church. Waiting for an admin.';
+  }
 
   @override
   String get withdrawJoinRequest => 'Cancel request';

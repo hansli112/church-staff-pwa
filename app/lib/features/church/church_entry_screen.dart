@@ -15,6 +15,32 @@ import 'church_logo.dart';
 import 'welcome_screen.dart';
 import 'your_name.dart';
 
+/// Churches asked to join from this device, per account, so the welcome
+/// page can say so once the church URL is closed. Only remembered: how each
+/// stands is the church's to say (AskedToJoinRows, welcome_screen.dart).
+class AskedToJoin extends Notifier<Set<String>> {
+  String get _key => 'asked_to_join_${ref.read(uidProvider)}';
+
+  @override
+  Set<String> build() {
+    ref.watch(uidProvider);
+    return (ref.read(prefsProvider).getStringList(_key) ?? const []).toSet();
+  }
+
+  void add(String churchId) => _save({...state, churchId});
+
+  void remove(String churchId) {
+    if (state.contains(churchId)) _save({...state}..remove(churchId));
+  }
+
+  void _save(Set<String> next) {
+    state = next;
+    ref.read(prefsProvider).setStringList(_key, next.toList());
+  }
+}
+
+final askedToJoinProvider = NotifierProvider<AskedToJoin, Set<String>>(AskedToJoin.new);
+
 /// Where a church URL (/c/ID) lands for someone who is not a member of
 /// that church: which church it is and how to join, by asking to (申請加入,
 /// #88) or with an invite code. Members never see it; the router opens
@@ -82,16 +108,19 @@ class _NotMemberState extends ConsumerState<_NotMember> {
     if (note == null || !mounted) return;
     await _run(
       () async {
-        // Not for a request refused as unverified: nothing would come of it.
-        if (ref.read(authUserProvider).value?.verified ?? false) await saveJoiningName(ref, name);
+        await saveJoiningName(ref, name);
         await ref.read(backendProvider).cloud.requestToJoin(widget.churchId, note: note);
+        ref.read(askedToJoinProvider.notifier).add(widget.churchId);
       },
       done: l10n.joinRequestSent,
     );
   }
 
   Future<void> _withdraw() => _run(
-    () => ref.read(backendProvider).cloud.withdrawJoinRequest(widget.churchId),
+    () async {
+      await ref.read(backendProvider).cloud.withdrawJoinRequest(widget.churchId);
+      ref.read(askedToJoinProvider.notifier).remove(widget.churchId);
+    },
     done: L10n.of(context).joinRequestWithdrawn,
   );
 
@@ -118,6 +147,8 @@ class _NotMemberState extends ConsumerState<_NotMember> {
     final churchId = widget.churchId;
     final preview = ref.watch(churchPreviewProvider(churchId));
     final name = joiningName(ref, _typedName);
+    // Asking waits for the email to be verified, said before a note is typed.
+    final verified = ref.watch(authUserProvider.select((u) => u.value?.verified ?? false));
     // Let in while this page is open: on into the church, as after an
     // invite. Someone in no church gets there by the router already.
     ref.listen(membershipsProvider, (_, next) {
@@ -147,6 +178,11 @@ class _NotMemberState extends ConsumerState<_NotMember> {
             onAction: () => context.go('/home'),
           ),
           data: (church) {
+            // Asked before this device remembered it (or on another one):
+            // the welcome page says so from now on.
+            if (church.joinRequest == JoinRequestState.pending && !ref.read(askedToJoinProvider).contains(churchId)) {
+              WidgetsBinding.instance.addPostFrameCallback((_) => ref.read(askedToJoinProvider.notifier).add(churchId));
+            }
             final canAsk = church.takesJoinRequests && church.joinRequest != JoinRequestState.pending;
             final message = switch (church.joinRequest) {
               // Waiting on a church that stopped taking requests: nobody
@@ -170,12 +206,16 @@ class _NotMemberState extends ConsumerState<_NotMember> {
                     BalancedText(message, style: AppText.body.copyWith(color: c.secondaryLabel)),
                     const SizedBox(height: Space.xl),
                     if (canAsk) ...[
-                      YourNameField(typed: _typedName, onChanged: (v) => setState(() => _typedName = v)),
+                      YourNameField(
+                        typed: _typedName,
+                        enabled: verified,
+                        onChanged: (v) => setState(() => _typedName = v),
+                      ),
                       const SizedBox(height: Space.l),
                       PrimaryButton(
                         label: church.joinRequest == JoinRequestState.rejected ? l10n.askAgain : l10n.askToJoin,
                         busy: _busy,
-                        onPressed: name.isEmpty ? null : () => _ask(church, name),
+                        onPressed: name.isEmpty || !verified ? null : () => _ask(church, name),
                       ),
                       const SizedBox(height: Space.s),
                       next(primary: false),

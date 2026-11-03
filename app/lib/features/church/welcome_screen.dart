@@ -8,12 +8,15 @@ import '../../core/design/tokens.dart';
 import '../../core/languages.dart';
 import '../../data/backend.dart';
 import '../../domain/limits.dart';
+import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/session.dart';
 import '../common/errors.dart';
 import '../common/time_zones.dart';
 import 'add_to_home.dart';
+import 'church_entry_screen.dart';
+import 'church_logo.dart';
 import 'claims.dart';
 import 'links.dart';
 import 'your_name.dart';
@@ -40,6 +43,8 @@ class WelcomeScreen extends ConsumerWidget {
     }
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
+    // 加入 on moved data is the way in then; a code, the other one.
+    final claiming = (ref.watch(pendingClaimsProvider).value ?? const []).isNotEmpty;
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -51,6 +56,8 @@ class WelcomeScreen extends ConsumerWidget {
               children: [
                 const VerifyEmailBanner(),
                 const PendingClaimsCard(),
+                if (claiming) const SizedBox(height: Space.l),
+                const AskedToJoinRows(),
                 BalancedText(
                   l10n.welcomeTitle,
                   style: AppText.title,
@@ -58,10 +65,17 @@ class WelcomeScreen extends ConsumerWidget {
                 const SizedBox(height: Space.s),
                 BalancedText(l10n.welcomeBody, style: AppText.body.copyWith(color: c.secondaryLabel)),
                 const SizedBox(height: Space.xl),
-                PrimaryButton(
-                  label: l10n.enterInviteCode,
-                  onPressed: () => context.push('/welcome/join'),
-                ),
+                if (claiming)
+                  SecondaryButton(
+                    label: l10n.enterInviteCode,
+                    expand: true,
+                    onPressed: () => context.push('/welcome/join'),
+                  )
+                else
+                  PrimaryButton(
+                    label: l10n.enterInviteCode,
+                    onPressed: () => context.push('/welcome/join'),
+                  ),
                 const SizedBox(height: Space.s),
                 SecondaryButton(
                   label: l10n.createChurch,
@@ -90,25 +104,30 @@ class WelcomeScreen extends ConsumerWidget {
   }
 }
 
-/// Asks email sign-ups to click the link in the verification email. Shows
-/// nothing for Google and Apple accounts, or once verified.
-class VerifyEmailBanner extends ConsumerStatefulWidget {
-  const VerifyEmailBanner({super.key});
+/// 「已申請加入〈希望堂〉，等管理員允許」 on the welcome page, one row a
+/// church still waited on, opening its church URL (to take it back, say).
+/// One turned down or taken back meanwhile is forgotten; back in the app,
+/// each is asked again.
+class AskedToJoinRows extends ConsumerStatefulWidget {
+  const AskedToJoinRows({super.key});
 
   @override
-  ConsumerState<VerifyEmailBanner> createState() => _VerifyEmailBannerState();
+  ConsumerState<AskedToJoinRows> createState() => _AskedToJoinRowsState();
 }
 
-class _VerifyEmailBannerState extends ConsumerState<VerifyEmailBanner> {
-  bool _busy = false;
-
+class _AskedToJoinRowsState extends ConsumerState<AskedToJoinRows> {
   late final AppLifecycleListener _lifecycle;
 
   @override
   void initState() {
     super.initState();
-    // Coming back from the email's link: look again without being asked.
-    _lifecycle = AppLifecycleListener(onResume: _recheck);
+    _lifecycle = AppLifecycleListener(
+      onResume: () {
+        for (final churchId in ref.read(askedToJoinProvider)) {
+          ref.invalidate(churchPreviewProvider(churchId));
+        }
+      },
+    );
   }
 
   @override
@@ -117,35 +136,105 @@ class _VerifyEmailBannerState extends ConsumerState<VerifyEmailBanner> {
     super.dispose();
   }
 
-  void _recheck() {
-    final user = ref.read(authUserProvider).value;
-    if (user != null && !user.verified) ref.read(backendProvider).auth.reload().ignore();
-  }
-
-  Future<void> _check() async {
+  @override
+  Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    setState(() => _busy = true);
-    try {
-      await ref.read(backendProvider).auth.reload();
-      final user = ref.read(backendProvider).auth.currentUser;
-      if (mounted && !(user?.verified ?? false)) {
-        showToast(context, l10n.verifyStill);
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
+    final c = AppColors.of(context);
+    final waiting = <ChurchPreview>[];
+    for (final churchId in ref.watch(askedToJoinProvider)) {
+      ref.listen(churchPreviewProvider(churchId), (_, next) {
+        if (next.hasValue && next.value!.joinRequest != JoinRequestState.pending) {
+          ref.read(askedToJoinProvider.notifier).remove(churchId);
+        }
+      });
+      // Not known while offline: kept, shown again once it is.
+      final church = ref.watch(churchPreviewProvider(churchId)).value;
+      if (church?.joinRequest == JoinRequestState.pending) waiting.add(church!);
     }
+    if (waiting.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Space.xl),
+      child: Material(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(Radii.m),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            for (final church in waiting)
+              ListRow(
+                title: l10n.welcomeAskedToJoin(church.name),
+                onTap: () => context.push('/c/${church.id}'),
+              ),
+          ],
+        ),
+      ),
+    );
   }
+}
 
-  Future<void> _resend() async {
+/// Where an email sign-up waits until its email is verified (AppStage
+/// .unverified): nothing else opens before then, so whoever has the account
+/// is known to read that email.
+class VerifyEmailScreen extends ConsumerStatefulWidget {
+  const VerifyEmailScreen({super.key});
+
+  @override
+  ConsumerState<VerifyEmailScreen> createState() => _VerifyEmailScreenState();
+}
+
+class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> with _Verifying {
+  @override
+  Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    try {
-      await ref.read(backendProvider).auth.sendEmailVerification(AppLanguage.shownIn(context));
-      if (mounted) showToast(context, l10n.verifyResent);
-    } catch (e) {
-      if (mounted) showToast(context, errorText(l10n, e));
-    }
+    final c = AppColors.of(context);
+    final email = ref.watch(authUserProvider.select((u) => u.value?.email ?? ''));
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.all(Space.l),
+              children: [
+                BalancedText(l10n.verifyEmailTitle, style: AppText.title),
+                const SizedBox(height: Space.s),
+                BalancedText(l10n.verifyEmailBody(email), style: AppText.body.copyWith(color: c.secondaryLabel)),
+                const SizedBox(height: Space.xs),
+                BalancedText(l10n.verifyEmailNoMail, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
+                const SizedBox(height: Space.xl),
+                PrimaryButton(label: l10n.verifyDone, busy: busy, onPressed: busy ? null : check),
+                const SizedBox(height: Space.s),
+                SecondaryButton(label: l10n.verifyResend, expand: true, onPressed: resend),
+                const SizedBox(height: Space.xl),
+                SecondaryButton(label: l10n.signOut, expand: true, onPressed: () => signOut(ref)),
+                SecondaryButton(
+                  label: l10n.deleteAccount,
+                  expand: true,
+                  destructive: true,
+                  onPressed: () => context.push('/account'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
+}
 
+/// Asks to click the link in the verification email, where a password
+/// account a Google or Apple account vouches for (so not stopped at
+/// [VerifyEmailScreen]) must still verify its own email: starting a church,
+/// asking to join one. Shows nothing for anyone else, or once verified.
+class VerifyEmailBanner extends ConsumerStatefulWidget {
+  const VerifyEmailBanner({super.key});
+
+  @override
+  ConsumerState<VerifyEmailBanner> createState() => _VerifyEmailBannerState();
+}
+
+class _VerifyEmailBannerState extends ConsumerState<VerifyEmailBanner> with _Verifying {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authUserProvider).value;
@@ -169,16 +258,72 @@ class _VerifyEmailBannerState extends ConsumerState<VerifyEmailBanner> {
           Wrap(
             alignment: WrapAlignment.end,
             children: [
-              SecondaryButton(label: l10n.verifyResend, onPressed: _resend),
+              SecondaryButton(label: l10n.verifyResend, onPressed: resend),
               SecondaryButton(
                 label: l10n.verifyDone,
-                onPressed: _busy ? null : _check,
+                onPressed: busy ? null : check,
               ),
             ],
           ),
         ],
       ),
     );
+  }
+}
+
+/// 我已經驗證 and 重寄驗證信, and looking again on coming back from the
+/// email's link.
+mixin _Verifying<T extends ConsumerStatefulWidget> on ConsumerState<T> {
+  bool busy = false;
+
+  late final AppLifecycleListener _lifecycle;
+
+  @override
+  void initState() {
+    super.initState();
+    // Coming back from the email's link, or opening the app after clicking
+    // it elsewhere: look again without being asked.
+    _lifecycle = AppLifecycleListener(onResume: _recheck);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _recheck();
+    });
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
+
+  void _recheck() {
+    final user = ref.read(authUserProvider).value;
+    if (user != null && !user.verified) ref.read(backendProvider).auth.reload().ignore();
+  }
+
+  Future<void> check() async {
+    final l10n = L10n.of(context);
+    setState(() => busy = true);
+    try {
+      await ref.read(backendProvider).auth.reload();
+      final user = ref.read(backendProvider).auth.currentUser;
+      if (mounted && !(user?.verified ?? false)) {
+        showToast(context, l10n.verifyStill);
+      }
+    } catch (e) {
+      if (mounted) showToast(context, errorText(l10n, e));
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> resend() async {
+    final l10n = L10n.of(context);
+    try {
+      await ref.read(backendProvider).auth.sendEmailVerification(AppLanguage.shownIn(context));
+      if (mounted) showToast(context, l10n.verifyResent);
+    } catch (e) {
+      if (mounted) showToast(context, errorText(l10n, e));
+    }
   }
 }
 

@@ -66,6 +66,11 @@ class AuthUser {
   /// must click the link in the verification email.
   bool get verified => emailVerified || !usesPassword;
 
+  /// A password account with nothing to vouch for whoever made it: the app
+  /// asks for the email to be verified before anything else. A Google or
+  /// Apple account linked under another email vouches enough to go on.
+  bool get mustVerify => !verified && !signIns.any((s) => s.vouches);
+
   /// The emails member data moved from self-host can be claimed with: its
   /// own once verified, and those of the Google and Apple accounts linked
   /// to it (functions/src/pendingMembers.ts, callerKeys).

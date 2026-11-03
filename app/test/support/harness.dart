@@ -67,6 +67,7 @@ Future<void> pumpApp(
   List<Locale> deviceLocales = const [Locale('zh', 'TW')],
   Duration phoneOffset = const Duration(hours: 8),
   ChurchTimeZone phoneTimeZone = ChurchTimeZone.taipei,
+  Map<String, Object> savedPrefs = const {},
 }) async {
   // VM deferred snapshots use real async work, not the widget test's fake
   // clock. Download delays/failures are injected at loadPageLibraryProvider;
@@ -88,7 +89,7 @@ Future<void> pumpApp(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        ...await testOverrides(backend, phoneOffset: phoneOffset, phoneTimeZone: phoneTimeZone),
+        ...await testOverrides(backend, phoneOffset: phoneOffset, phoneTimeZone: phoneTimeZone, savedPrefs: savedPrefs),
         ...overrides,
       ],
       retry: (_, _) => null,

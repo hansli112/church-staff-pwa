@@ -5,6 +5,7 @@ import 'package:martha/state/providers.dart';
 
 const loading = AppStage.loading;
 const signedOut = AppStage.signedOut;
+const unverified = AppStage.unverified;
 const noChurch = AppStage.noChurch;
 const closed = AppStage.churchClosed;
 const ready = AppStage.ready;
@@ -20,7 +21,7 @@ final mine = [
 
 LinkTarget go(AppStage stage, String location) => resolveLink(
   stage,
-  stage == signedOut || stage == noChurch ? const [] : mine,
+  stage == signedOut || stage == unverified || stage == noChurch ? const [] : mine,
   Uri.parse(location),
 );
 
@@ -77,6 +78,28 @@ void main() {
     (signedOut, '/login', stay),
     (signedOut, '/loading', to('/login')),
   ]);
+
+  table('an email not verified yet verifies first, keeping the page asked for', [
+    (unverified, '/login?from=${e(invite)}', to('/verify?from=${e(invite)}')),
+    (unverified, invite, to('/verify?from=${e(invite)}')),
+    (unverified, '/home', to('/verify?from=%2Fhome')),
+    (unverified, '/welcome', to('/verify?from=%2Fwelcome')),
+    (unverified, '/c/other', to('/verify?from=%2Fc%2Fother')),
+    (unverified, '/loading', to('/verify')),
+    (unverified, '/verify', stay),
+    (unverified, '/verify?from=${e(invite)}', stay),
+    // Deleting the account instead.
+    (unverified, '/account', stay),
+    // Verified: on to the page asked for, where the stage allows it.
+    (noChurch, '/verify?from=${e(invite)}', to(invite)),
+    (noChurch, '/verify', to('/welcome')),
+    (ready, '/verify', to('/home')),
+    (closed, '/verify', to('/closed')),
+  ]);
+
+  test('an invite opened before signing up lands on it once the email is verified', () {
+    expect(journey([loading, signedOut, loading, unverified, loading, noChurch], invite), (at: invite, church: null));
+  });
 
   table('an invite link opened from LINE keeps its flag through sign-in', [
     (signedOut, '$invite?openExternalBrowser=1', to('/login?from=${e('$invite?openExternalBrowser=1')}')),
@@ -185,6 +208,8 @@ void main() {
       for (final b in bad) ...[
         (signedOut, '/loading?from=${e(b)}', to('/login')),
         (loading, '/login?from=${e(b)}', to('/loading')),
+        (unverified, '/login?from=${e(b)}', to('/verify')),
+        (noChurch, '/verify?from=${e(b)}', to('/welcome')),
         (noChurch, '/login?from=${e(b)}', to('/welcome')),
         (closed, '/login?from=${e(b)}', to('/closed')),
         (ready, '/login?from=${e(b)}', to('/home')),

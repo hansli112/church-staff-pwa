@@ -176,6 +176,9 @@ class L10nZh extends L10n {
   }
 
   @override
+  String get verifyEmailNoMail => '沒收到？看看垃圾郵件，或重寄一次。';
+
+  @override
   String get verifyResend => '重寄驗證信';
 
   @override
@@ -1968,19 +1971,19 @@ class L10nZh extends L10n {
   String get mergePending => '合併還沒登入的資料';
 
   @override
-  String get mergePendingFooter => '同工換了 email 加入時，合併舊名單上那筆資料，服事表、聚會和權限群組都會接上';
+  String get mergePendingFooter => '同工沒有 email、或用另一個 email 加入時，合併他還沒登入的資料，服事表、聚會和權限群組都會接上';
 
   @override
   String get mergePendingPick => '選一筆還沒登入的資料';
 
   @override
-  String mergePendingTitle(String pending, String member) {
-    return '把「$pending」合併到「$member」？';
+  String mergePendingTitle(String pending) {
+    return '合併還沒登入的「$pending」？';
   }
 
   @override
-  String mergePendingBody(String pending) {
-    return '服事表上的「$pending」會改成這位同工，聚會和權限群組也會加上去';
+  String mergePendingBody(String pending, String member) {
+    return '還沒登入的「$pending」會合併到已加入的「$member」，服事表、聚會和權限群組都會接上';
   }
 
   @override
@@ -1988,6 +1991,16 @@ class L10nZh extends L10n {
 
   @override
   String get merged => '已合併';
+
+  @override
+  String mergeSuggestion(String name) {
+    return '還沒登入的資料裡也有「$name」';
+  }
+
+  @override
+  String mergeSuggestionLabel(String name) {
+    return '合併$name';
+  }
 
   @override
   String get fundingTitle => '這個月的支持';
@@ -2949,6 +2962,11 @@ class L10nZh extends L10n {
   String get joinRequestPending => '已送出申請，管理員允許後就會加入';
 
   @override
+  String welcomeAskedToJoin(String church) {
+    return '已申請加入〈$church〉，等管理員允許';
+  }
+
+  @override
   String get withdrawJoinRequest => '取消申請';
 
   @override
@@ -3563,6 +3581,9 @@ class L10nZhHans extends L10nZh {
   String verifyEmailBody(String email) {
     return '验证邮件已发送到 $email，点击邮件里的链接后回到这里';
   }
+
+  @override
+  String get verifyEmailNoMail => '没收到？看看垃圾邮件，或重新发送一次。';
 
   @override
   String get verifyResend => '重新发送验证邮件';
@@ -5357,19 +5378,19 @@ class L10nZhHans extends L10nZh {
   String get mergePending => '合并未登录的记录';
 
   @override
-  String get mergePendingFooter => '同工换了邮箱加入时，合并旧名单上的那条记录，事奉表、所属聚会和权限组都会接上';
+  String get mergePendingFooter => '同工没有邮箱、或用另一个邮箱加入时，合并他未登录的记录，事奉表、所属聚会和权限组都会接上';
 
   @override
   String get mergePendingPick => '选一条未登录的记录';
 
   @override
-  String mergePendingTitle(String pending, String member) {
-    return '把“$pending”合并到“$member”？';
+  String mergePendingTitle(String pending) {
+    return '合并未登录的“$pending”？';
   }
 
   @override
-  String mergePendingBody(String pending) {
-    return '事奉表上的“$pending”会改成这位同工，所属聚会和权限组也会加上去';
+  String mergePendingBody(String pending, String member) {
+    return '未登录的“$pending”会合并到已加入的“$member”，事奉表、所属聚会和权限组都会接上';
   }
 
   @override
@@ -5377,6 +5398,16 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get merged => '已合并';
+
+  @override
+  String mergeSuggestion(String name) {
+    return '未登录的记录里也有“$name”';
+  }
+
+  @override
+  String mergeSuggestionLabel(String name) {
+    return '合并$name';
+  }
 
   @override
   String get fundingTitle => '这个月的支持';
@@ -6336,6 +6367,11 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get joinRequestPending => '已送出申请，管理员允许后就会加入';
+
+  @override
+  String welcomeAskedToJoin(String church) {
+    return '已申请加入〈$church〉，等管理员允许';
+  }
 
   @override
   String get withdrawJoinRequest => '取消申请';

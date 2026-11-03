@@ -214,6 +214,15 @@ class MemoryBackend implements Backend {
   /// this completes, as on a slow network.
   Completer<void>? membershipsHeld;
 
+  /// Scripted: while set, a claim makes the member, then waits for this
+  /// before pointing the rosters at them and dropping the pending member,
+  /// as the backend does over a slow network.
+  Completer<void>? claimRepointHeld;
+
+  /// Pending members said yes to, by church, the rosters still being
+  /// pointed at whoever claimed them (the backend's claimedFrom).
+  final claiming = <String, Set<String>>{};
+
   /// Scripted: photos used this month per church, the limit, whether the
   /// platform's budget is left, and what recognition returns.
   final photosUsed = <String, int>{};
@@ -2674,7 +2683,7 @@ class MemoryCloud implements CloudApi {
       for (final MapEntry(key: cid, value: pending) in _b.pendingMembers.entries)
         if (_b.churches[cid]?.isActive ?? false)
           for (final p in pending.values)
-            if (emails.contains(p.email.trim().toLowerCase()))
+            if (emails.contains(p.email.trim().toLowerCase()) && !(_b.claiming[cid]?.contains(p.id) ?? false))
               PendingClaim(churchId: cid, churchName: _b.churches[cid]!.name, pendingId: p.id, name: p.name),
     ];
   }
@@ -2708,6 +2717,12 @@ class MemoryCloud implements CloudApi {
             ),
             p,
           );
+    if (_b.claimRepointHeld case final held?) {
+      (_b.claiming[churchId] ??= {}).add(pendingId);
+      _b.notify();
+      await held.future;
+      _b.claiming[churchId]!.remove(pendingId);
+    }
     _settlePending(_b, churchId, pendingId, user.uid);
     _b.notify();
     return churchId;

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -67,6 +69,25 @@ void main() {
     expect(find.text('我接下來的服事'), findsOneWidget, reason: 'their roster day is theirs again');
   });
 
+  testWidgets('joining is said once in, and not asked again while the rosters are still being pointed at them', (
+    tester,
+  ) async {
+    final b = movedChurch();
+    final repoint = b.claimRepointHeld = Completer<void>();
+    await pumpApp(tester, b);
+    // With 加入 to say yes to, entering a code is the other way in, not the first.
+    expect(find.widgetWithText(FilledButton, '輸入邀請碼'), findsNothing);
+    expect(findShown('輸入邀請碼'), findsOneWidget);
+    await tapText(tester, '加入');
+
+    expect(find.byType(NavigationBar), findsOneWidget, reason: 'in the church already');
+    expect(findShown('〈恩典堂〉的同工資料已經搬過來了，要加入嗎？'), findsNothing);
+    repoint.complete();
+    await settle(tester);
+    expect(findShown('已加入〈恩典堂〉'), findsOneWidget);
+    expect(findShown('〈恩典堂〉的同工資料已經搬過來了，要加入嗎？'), findsNothing);
+  });
+
   testWidgets('declining joins nothing and does not ask again on this device', (tester) async {
     final b = movedChurch();
     await pumpApp(tester, b);
@@ -120,7 +141,8 @@ void main() {
     await tester.scrollUntilVisible(find.text('合併還沒登入的資料'), 200, scrollable: find.byType(Scrollable).last);
     await tapText(tester, '合併還沒登入的資料');
     await tapText(tester, '李美玉');
-    expect(find.text('把「李美玉」合併到「美玉」？'), findsOneWidget);
+    expect(find.text('合併還沒登入的「李美玉」？'), findsOneWidget);
+    expect(findShown('還沒登入的「李美玉」會合併到已加入的「美玉」，服事表、聚會和權限群組都會接上'), findsOneWidget);
     await tapText(tester, '合併');
 
     final m = b.members['grace']!['mei-google']!;
@@ -131,6 +153,71 @@ void main() {
     expect(b.pendingMembers['grace'], isEmpty);
     expect(find.text('已合併'), findsOneWidget);
     expect(find.text('合併還沒登入的資料'), findsNothing, reason: 'nothing left to merge');
+  });
+
+  testWidgets('someone without an email who joined by invite is offered to merge on 同工, by the same name', (
+    tester,
+  ) async {
+    const huangPending = PendingMember(
+      id: 'old-huang',
+      name: '黃鎮台',
+      zones: [
+        Zone(serviceType: 'sunday', duties: ['招待']),
+      ],
+    );
+    final b = seededChurch(
+      extra: const [Member(uid: 'huang', name: '黃鎮台')],
+    );
+    b.addPending('grace', huangPending, rosterIds: [Roster.idFor('sunday', Day(2026, 10, 18))]);
+    b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, 18))] = Roster(
+      type: 'sunday',
+      day: Day(2026, 10, 18),
+      duties: const [
+        Duty(role: '招待', people: ['黃鎮台'], uids: {'黃鎮台': 'old-huang'}),
+      ],
+    );
+    await pumpApp(tester, b);
+    await go(tester, '/me/members');
+    expect(findShownContaining('還沒登入的資料裡也有「黃鎮台」'), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('合併黃鎮台'));
+    await settle(tester);
+    expect(find.text('合併還沒登入的「黃鎮台」？'), findsOneWidget);
+    expect(findShown('還沒登入的「黃鎮台」會合併到已加入的「黃鎮台」，服事表、聚會和權限群組都會接上'), findsOneWidget);
+    await tapText(tester, '合併');
+
+    expect(b.pendingMembers['grace'], isEmpty);
+    expect(b.members['grace']!['huang']!.serves('sunday', '招待'), isTrue);
+    expect(b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, 18))]!.duties.single.uids, {'黃鎮台': 'huang'});
+    expect(find.textContaining('還沒登入的資料裡也有'), findsNothing);
+  });
+
+  testWidgets('only admins are offered a merge on 同工', (tester) async {
+    final b = seededChurch(
+      as: editor,
+      extra: const [Member(uid: 'huang', name: '黃鎮台')],
+    );
+    b.pendingMembers['grace'] = {'old-huang': const PendingMember(id: 'old-huang', name: '黃鎮台')};
+    await pumpApp(tester, b);
+    await go(tester, '/me/members');
+    expect(find.textContaining('還沒登入的資料裡也有'), findsNothing);
+  });
+
+  testWidgets('picking pending data to merge lists the same name first', (tester) async {
+    final b = seededChurch(
+      extra: const [Member(uid: 'huang', name: '黃鎮台')],
+    );
+    b.pendingMembers['grace'] = {
+      'old-a': const PendingMember(id: 'old-a', name: '王大明', email: 'a@example.com'),
+      'old-huang': const PendingMember(id: 'old-huang', name: '黃鎮台'),
+    };
+    await pumpApp(tester, b);
+    await go(tester, '/me/members/huang');
+    await tester.scrollUntilVisible(find.text('合併還沒登入的資料'), 200, scrollable: find.byType(Scrollable).last);
+    expect(findShown('同工沒有 email、或用另一個 email 加入時，合併他還沒登入的資料，服事表、聚會和權限群組都會接上'), findsOneWidget);
+    await tapText(tester, '合併還沒登入的資料');
+    final huang = tester.getTopLeft(findShown('黃鎮台').last).dy;
+    final other = tester.getTopLeft(findShown('王大明')).dy;
+    expect(huang, lessThan(other));
   });
 
   testWidgets('without pending data there is nothing to merge; non-admins cannot merge', (tester) async {

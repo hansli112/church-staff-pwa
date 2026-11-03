@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/core/languages.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/models.dart';
@@ -62,7 +63,7 @@ void main() {
     expect(find.text('開始使用'), findsNothing);
   });
 
-  testWidgets('email sign-up must verify before creating a church', (
+  testWidgets('an email sign-up verifies before anything else, then goes on to create a church', (
     tester,
   ) async {
     final b = MemoryBackend(clock: testClock);
@@ -76,20 +77,54 @@ void main() {
     await tester.enterText(fields.at(2), 'secret123');
     await tapText(tester, '註冊');
 
-    expect(find.text('驗證你的 email'), findsOneWidget);
-    await tapText(tester, '建立新教會');
-    final create = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, '建立'),
-    );
-    expect(create.onPressed, isNull, reason: 'disabled until verified');
+    expect(findShown('驗證你的 email'), findsOneWidget);
+    expect(findShown('驗證信已寄到 ming@example.com，點信裡的連結後回到這裡'), findsOneWidget);
+    expect(findShown('沒收到？看看垃圾郵件，或重寄一次。'), findsOneWidget);
+    for (final later in ['建立新教會', '輸入邀請碼', '加入你的教會']) {
+      expect(find.text(later), findsNothing, reason: '$later waits for the email');
+    }
+    await tapText(tester, '我已經驗證');
+    expect(findShown('還沒驗證成功，請點信裡的連結'), findsOneWidget);
+    expect(findShown('驗證你的 email'), findsOneWidget);
 
     b.auth.verify('ming@example.com');
     await tapText(tester, '我已經驗證');
     expect(find.text('驗證你的 email'), findsNothing);
+    await tapText(tester, '建立新教會');
     await tester.enterText(find.byType(TextField).first, '活水堂');
     await tester.pump();
     await tapText(tester, '建立');
     expect(b.churches.values.single.name, '活水堂');
+  });
+
+  testWidgets('an email not verified yet can sign out and use another', (tester) async {
+    final b = MemoryBackend(clock: testClock);
+    await b.auth.registerWithEmail('小明', 'ming@example.com', 'secret123', AppLanguage.zhHant);
+    await pumpApp(tester, b);
+    await tapText(tester, '登出');
+    expect(findShown('用 email 登入'), findsOneWidget);
+  });
+
+  testWidgets('an invite opened before signing up with email opens once the email is verified', (tester) async {
+    final b = MemoryBackend(clock: testClock);
+    final cid = b.addChurch('恩典堂');
+    b.addMember(cid, const Member(uid: 'admin', name: '牧師', role: Role.admin));
+    b.invites['WELCOME26'] = Invite(
+      code: 'WELCOME26',
+      churchId: cid,
+      churchName: '恩典堂',
+      expiresAt: testNow.add(const Duration(days: 7)),
+    );
+    await b.auth.registerWithEmail('小明', 'ming@example.com', 'secret123', AppLanguage.zhHant);
+    await pumpApp(tester, b);
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/c/$cid/join/WELCOME26');
+    await settle(tester);
+    expect(findShown('驗證你的 email'), findsOneWidget);
+    expect(find.text('加入〈恩典堂〉'), findsNothing);
+
+    b.auth.verify('ming@example.com');
+    await tapText(tester, '我已經驗證');
+    expect(findShown('加入〈恩典堂〉'), findsOneWidget);
   });
 
   testWidgets('登入 tapped with the keyboard up closes it, and a wrong password says so above where it was', (

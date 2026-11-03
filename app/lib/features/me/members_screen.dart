@@ -12,6 +12,7 @@ import '../../state/providers.dart';
 import '../common/errors.dart';
 import '../common/time_zones.dart';
 import '../common/labels.dart';
+import 'member_editor_screen.dart';
 
 /// Members, and requests to join turned down, hidden while it can still be
 /// undone.
@@ -94,6 +95,18 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                 final ra = rank(a).compareTo(rank(b));
                 return ra != 0 ? ra : a.name.compareTo(b.name);
               });
+          // Someone who joined under a name still on the pending list (no
+          // email to claim it with, say): offered to the admin to merge.
+          final pendingByName = <String, List<PendingMember>>{};
+          if (isAdmin) {
+            for (final p in ref.watch(pendingMembersProvider).value ?? const <PendingMember>[]) {
+              if (p.name.isNotEmpty) (pendingByName[nameKey(p.name)] ??= []).add(p);
+            }
+          }
+          PendingMember? sameNamePending(Member m) => switch (pendingByName[nameKey(m.name)]) {
+            [final only] => only,
+            _ => null,
+          };
           // 申請加入 (#88), on top: someone is waiting. Not anyone in already.
           final joined = {for (final m in all) m.uid};
           final requests = [
@@ -163,6 +176,18 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                           }
                           if (i < list.length) {
                             final m = list[i];
+                            final samePending = m.uid == uid ? null : sameNamePending(m);
+                            final details = [
+                              identitiesLine(
+                                l10n,
+                                m,
+                                services: services,
+                                ministries: ministries,
+                                smallGroups: smallGroups,
+                              ).ifEmpty(null),
+                              if (m.waitsForZone(enabled)) l10n.waitsForZone,
+                              memberSmallGroups(m),
+                            ].nonNulls.join(l10n.dotSeparator).ifEmpty(null);
                             return _grouped(
                               c,
                               first: i == 0,
@@ -170,16 +195,16 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                               child: ListRow(
                                 title: m.uid == uid ? l10n.nameIsYou(m.name) : m.name,
                                 subtitle: [
-                                  identitiesLine(
-                                    l10n,
-                                    m,
-                                    services: services,
-                                    ministries: ministries,
-                                    smallGroups: smallGroups,
-                                  ).ifEmpty(null),
-                                  if (m.waitsForZone(enabled)) l10n.waitsForZone,
-                                  memberSmallGroups(m),
-                                ].nonNulls.join(l10n.dotSeparator).ifEmpty(null),
+                                  details,
+                                  if (samePending != null) l10n.mergeSuggestion(samePending.name),
+                                ].nonNulls.join('\n').ifEmpty(null),
+                                trailing: samePending == null
+                                    ? null
+                                    : RowButton(
+                                        label: l10n.mergePendingAction,
+                                        semanticsLabel: l10n.mergeSuggestionLabel(m.name),
+                                        onPressed: () => mergePendingInto(context, ref, samePending, m),
+                                      ),
                                 onTap: isAdmin ? () => _open(m) : null,
                               ),
                             );

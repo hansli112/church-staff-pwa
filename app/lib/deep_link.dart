@@ -35,10 +35,14 @@ LinkTarget resolveLink(AppStage stage, List<Membership> memberships, Uri uri) {
   bool at(String prefix) => path == prefix || path.startsWith('$prefix/');
   final from = appLocation(uri.queryParameters['from']);
 
+  /// A page that only waits for the next stage (loading, signing in,
+  /// verifying the email), never somewhere to come back to.
+  bool waiting() => at('/loading') || at('/login') || at('/verify');
+
   /// Away from the page asked for (an invite link, a deep link), which goes
   /// along in `from` so they land there once signed in.
   LinkTarget away(String target) {
-    final keep = from ?? (at('/loading') || at('/login') ? null : appLocation(uri.toString()));
+    final keep = from ?? (waiting() ? null : appLocation(uri.toString()));
     return _go(keep == null ? target : '$target?from=${Uri.encodeComponent(keep)}');
   }
 
@@ -54,6 +58,9 @@ LinkTarget resolveLink(AppStage stage, List<Membership> memberships, Uri uri) {
       return at('/loading') ? _stay : away('/loading');
     case AppStage.signedOut:
       return at('/login') ? _stay : away('/login');
+    case AppStage.unverified:
+      if (at('/verify') || at('/account')) return _stay;
+      return away('/verify');
     case AppStage.noChurch:
       // 加入主畫面 and 開啟通知 come right after joining, maybe before the
       // church has come in.
@@ -65,19 +72,19 @@ LinkTarget resolveLink(AppStage stage, List<Membership> memberships, Uri uri) {
           at('/turn-on-notifications')) {
         return _stay;
       }
-      if (at('/loading') || at('/login')) return resume('/welcome');
+      if (waiting()) return resume('/welcome');
       return _go('/welcome');
     case AppStage.churchClosed:
       if (at('/closed') || at('/c') || at('/account') || at('/welcome') || at('/dev')) {
         return _stay;
       }
-      if (at('/loading') || at('/login')) return resume('/closed');
+      if (waiting()) return resume('/closed');
       return _go('/closed');
     case AppStage.ready:
       // Joining or starting another church, from 切換教會: only the
       // welcome page itself is for someone in no church.
       if (at('/welcome') && path != '/welcome') return _stay;
-      if (at('/loading') || at('/login') || at('/welcome') || at('/closed')) {
+      if (waiting() || at('/welcome') || at('/closed')) {
         return resume('/home');
       }
       return _stay;

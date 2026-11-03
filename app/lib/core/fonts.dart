@@ -82,12 +82,15 @@ const _startupKeys = {
   'movedPasswordNote',
   'verifyEmailTitle',
   'verifyEmailBody',
+  'verifyEmailNoMail',
+  'deleteAccount',
   'verifyResend',
   'verifyResent',
   'verifyDone',
   'verifyStill',
   'welcomeTitle',
   'welcomeBody',
+  'welcomeAskedToJoin',
   'enterInviteCode',
   'createChurch',
   'signOut',
@@ -225,7 +228,7 @@ Set<String>? _initialKeys(Uri location, [int depth = 0]) {
     final destination = to == null ? null : Uri.tryParse(to);
     return destination == null ? _startupKeys : _initialKeys(destination, depth + 1);
   }
-  if (const {'/login', '/loading'}.contains(location.path)) {
+  if (const {'/login', '/loading', '/verify'}.contains(location.path)) {
     final from = appLocation(location.queryParameters['from']);
     final destination = from == null ? null : Uri.tryParse(from);
     return destination == null ? _startupKeys : _initialKeys(destination, depth + 1);

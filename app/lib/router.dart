@@ -110,6 +110,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       page('/loading', (_) => const LoadingScreen(), fade: true),
       page('/login', (s) => LoginScreen(from: s.uri.queryParameters['from']), fade: true),
+      page('/verify', (_) => const VerifyEmailScreen(), fade: true),
       page(
         '/welcome',
         (_) => const WelcomeScreen(),

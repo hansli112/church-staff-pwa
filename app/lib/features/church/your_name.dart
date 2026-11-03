@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/design/balanced_text.dart';
+import '../../core/design/tokens.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
@@ -56,8 +58,12 @@ class _YourNameFieldState extends ConsumerState<YourNameField> {
       autofillHints: const [AutofillHints.name],
       decoration: InputDecoration(
         labelText: l10n.yourName,
-        helperText: l10n.yourNameFooter,
-        helperMaxLines: 3,
+        // Broken where a reader would: 「…用教會裡大家怎麼叫你」, not 「…怎麼／叫你」.
+        helper: BalancedText(
+          l10n.yourNameFooter,
+          textAlign: TextAlign.start,
+          style: AppText.footnote.copyWith(color: AppColors.of(context).secondaryLabel),
+        ),
         counterText: '',
       ),
       onChanged: widget.onChanged,

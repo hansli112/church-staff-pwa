@@ -58,17 +58,22 @@ class _PendingClaimsCardState extends ConsumerState<PendingClaimsCard> {
 
   Future<void> _join(PendingClaim claim) async {
     final l10n = L10n.of(context);
+    // The member is made before the rosters point at them: the app goes into
+    // the church meanwhile, this card gone with the welcome page. What
+    // follows is said from above it.
+    final container = ProviderScope.containerOf(context, listen: false);
+    final root = Navigator.of(context, rootNavigator: true).context;
     setState(() => _busy = claim.key);
     try {
-      final cid = await ref.read(backendProvider).cloud.claimPending(claim.churchId, claim.pendingId);
-      ref.read(selectedChurchProvider.notifier).select(cid);
-      ref.invalidate(pendingClaimsProvider);
+      final cid = await container.read(backendProvider).cloud.claimPending(claim.churchId, claim.pendingId);
+      container.read(selectedChurchProvider.notifier).select(cid);
+      container.invalidate(pendingClaimsProvider);
       Haptics.success();
-      if (!mounted) return;
-      showToast(context, l10n.joined(claim.churchName));
-      context.go('/home');
+      if (!root.mounted) return;
+      showToast(root, l10n.joined(claim.churchName));
+      GoRouter.of(root).go('/home');
     } catch (e) {
-      if (mounted) showToast(context, errorText(l10n, e));
+      if (root.mounted) showToast(root, errorText(l10n, e));
     } finally {
       if (mounted) setState(() => _busy = null);
     }

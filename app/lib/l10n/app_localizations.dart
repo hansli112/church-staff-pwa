@@ -418,6 +418,12 @@ abstract class L10n {
   /// **'驗證信已寄到 {email}，點信裡的連結後回到這裡'**
   String verifyEmailBody(String email);
 
+  /// No description provided for @verifyEmailNoMail.
+  ///
+  /// In zh, this message translates to:
+  /// **'沒收到？看看垃圾郵件，或重寄一次。'**
+  String get verifyEmailNoMail;
+
   /// No description provided for @verifyResend.
   ///
   /// In zh, this message translates to:
@@ -3643,7 +3649,7 @@ abstract class L10n {
   /// No description provided for @mergePendingFooter.
   ///
   /// In zh, this message translates to:
-  /// **'同工換了 email 加入時，合併舊名單上那筆資料，服事表、聚會和權限群組都會接上'**
+  /// **'同工沒有 email、或用另一個 email 加入時，合併他還沒登入的資料，服事表、聚會和權限群組都會接上'**
   String get mergePendingFooter;
 
   /// No description provided for @mergePendingPick.
@@ -3655,14 +3661,14 @@ abstract class L10n {
   /// No description provided for @mergePendingTitle.
   ///
   /// In zh, this message translates to:
-  /// **'把「{pending}」合併到「{member}」？'**
-  String mergePendingTitle(String pending, String member);
+  /// **'合併還沒登入的「{pending}」？'**
+  String mergePendingTitle(String pending);
 
   /// No description provided for @mergePendingBody.
   ///
   /// In zh, this message translates to:
-  /// **'服事表上的「{pending}」會改成這位同工，聚會和權限群組也會加上去'**
-  String mergePendingBody(String pending);
+  /// **'還沒登入的「{pending}」會合併到已加入的「{member}」，服事表、聚會和權限群組都會接上'**
+  String mergePendingBody(String pending, String member);
 
   /// No description provided for @mergePendingAction.
   ///
@@ -3675,6 +3681,18 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'已合併'**
   String get merged;
+
+  /// No description provided for @mergeSuggestion.
+  ///
+  /// In zh, this message translates to:
+  /// **'還沒登入的資料裡也有「{name}」'**
+  String mergeSuggestion(String name);
+
+  /// No description provided for @mergeSuggestionLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'合併{name}'**
+  String mergeSuggestionLabel(String name);
 
   /// No description provided for @fundingTitle.
   ///
@@ -5301,6 +5319,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'已送出申請，管理員允許後就會加入'**
   String get joinRequestPending;
+
+  /// No description provided for @welcomeAskedToJoin.
+  ///
+  /// In zh, this message translates to:
+  /// **'已申請加入〈{church}〉，等管理員允許'**
+  String welcomeAskedToJoin(String church);
 
   /// No description provided for @withdrawJoinRequest.
   ///

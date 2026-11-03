@@ -89,9 +89,9 @@ void main() {
     await tapText(tester, 'Resend email');
     expect(b.auth.emailLanguages, [AppLanguage.en, AppLanguage.en]);
 
-    await tapText(tester, 'Create a church');
     b.auth.verify('amy@example.com');
     await tapText(tester, 'I’ve verified');
+    await tapText(tester, 'Create a church');
     await tester.enterText(find.byType(TextField).first, 'Grace Church');
     await tester.pump();
     await tapText(tester, 'Create');

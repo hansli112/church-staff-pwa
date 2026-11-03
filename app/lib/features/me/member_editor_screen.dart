@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/design/components.dart';
 import '../../domain/models.dart';
+import '../../domain/text.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/church_writes.dart';
 import '../../state/providers.dart';
@@ -51,9 +52,15 @@ class MemberEditorScreen extends ConsumerWidget {
     if (context.mounted) showToast(context, l10n.zoneLeft(service.name), onUndo: write.undo);
   }
 
-  /// Picks a pending member and, once confirmed, merges it into [member].
+  /// Picks a pending member, the same name first, and merges it into
+  /// [member] once confirmed.
   Future<void> _mergePending(BuildContext context, WidgetRef ref, Member member, List<PendingMember> pending) async {
     final l10n = L10n.of(context);
+    final same = nameKey(member.name);
+    final ordered = [
+      ...pending.where((p) => nameKey(p.name) == same),
+      ...pending.where((p) => nameKey(p.name) != same),
+    ];
     final picked = await showAppSheet<PendingMember>(
       context,
       builder: (context) => SafeArea(
@@ -61,7 +68,7 @@ class MemberEditorScreen extends ConsumerWidget {
           child: ListSection(
             header: l10n.mergePendingPick,
             children: [
-              for (final p in pending)
+              for (final p in ordered)
                 ListRow(
                   title: p.name.isEmpty ? p.email : p.name,
                   subtitle: p.name.isEmpty || p.email.isEmpty ? null : p.email,
@@ -73,22 +80,7 @@ class MemberEditorScreen extends ConsumerWidget {
       ),
     );
     if (picked == null || !context.mounted) return;
-    final name = picked.name.isEmpty ? picked.email : picked.name;
-    final ok = await askChoice(
-      context,
-      title: l10n.mergePendingTitle(name, member.name),
-      message: l10n.mergePendingBody(name),
-      yes: l10n.mergePendingAction,
-      no: l10n.cancel,
-    );
-    if (ok != true || !context.mounted) return;
-    try {
-      await ref.churchData.mergePending(picked.id, member.uid);
-      Haptics.success();
-      if (context.mounted) showToast(context, l10n.merged);
-    } catch (e) {
-      if (context.mounted) showToast(context, errorText(l10n, e));
-    }
+    await mergePendingInto(context, ref, picked, member);
   }
 
   @override
@@ -224,5 +216,27 @@ class _ZoneSection extends StatelessWidget {
         ],
       ],
     );
+  }
+}
+
+/// Merges [pending] into [member] once the admin says so: 「合併還沒登入的
+/// 「黃鎮台」？」, which reads the same when both have one name.
+Future<void> mergePendingInto(BuildContext context, WidgetRef ref, PendingMember pending, Member member) async {
+  final l10n = L10n.of(context);
+  final name = pending.name.isEmpty ? pending.email : pending.name;
+  final ok = await askChoice(
+    context,
+    title: l10n.mergePendingTitle(name),
+    message: l10n.mergePendingBody(name, member.name),
+    yes: l10n.mergePendingAction,
+    no: l10n.cancel,
+  );
+  if (ok != true || !context.mounted) return;
+  try {
+    await ref.churchData.mergePending(pending.id, member.uid);
+    Haptics.success();
+    if (context.mounted) showToast(context, l10n.merged);
+  } catch (e) {
+    if (context.mounted) showToast(context, errorText(l10n, e));
   }
 }

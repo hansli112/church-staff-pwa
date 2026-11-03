@@ -32,6 +32,13 @@ void main() {
     return b;
   }
 
+  /// The app closed and opened again on this phone.
+  Future<void> reopen(WidgetTester tester, MemoryBackend b) async {
+    final saved = await phonePrefs();
+    await tester.pumpWidget(const SizedBox());
+    await pumpApp(tester, b, savedPrefs: saved);
+  }
+
   JoinRequest request({String uid = 'new', String name = '新朋友', String note = '', DateTime? rejectedAt}) => JoinRequest(
     uid: uid,
     name: name,
@@ -71,6 +78,55 @@ void main() {
     await tapText(tester, '取消申請');
     expect(b.joinRequests['hope']!.containsKey('new'), isFalse);
     expect(findShown('申請加入'), findsOneWidget);
+  });
+
+  testWidgets('a request sent shows on the welcome page, after the app is opened again, until taken back', (
+    tester,
+  ) async {
+    final b = newcomer();
+    await pumpApp(tester, b);
+    await go(tester, '/c/hope');
+    await tapText(tester, '申請加入');
+    await tapText(tester, '申請加入');
+
+    // Opened again later: on the welcome page, not the church URL.
+    await reopen(tester, b);
+    expect(findShown('加入你的教會'), findsOneWidget);
+    expect(findShown('已申請加入〈希望堂〉，等管理員允許'), findsOneWidget);
+    await tapText(tester, '已申請加入〈希望堂〉，等管理員允許');
+    expect(findShown('已送出申請，管理員允許後就會加入'), findsOneWidget);
+    await tapText(tester, '取消申請');
+
+    await go(tester, '/welcome');
+    expect(findShown('加入你的教會'), findsOneWidget);
+    expect(find.textContaining('已申請加入'), findsNothing);
+  });
+
+  testWidgets('a request sent elsewhere is shown on the welcome page once its church URL is opened here', (
+    tester,
+  ) async {
+    final b = newcomer();
+    b.joinRequests['hope'] = {'new': request()};
+    await pumpApp(tester, b);
+    expect(find.textContaining('已申請加入'), findsNothing, reason: 'not known on this device yet');
+    await go(tester, '/c/hope');
+    expect(findShown('已送出申請，管理員允許後就會加入'), findsOneWidget);
+
+    await reopen(tester, b);
+    expect(findShown('已申請加入〈希望堂〉，等管理員允許'), findsOneWidget);
+  });
+
+  testWidgets('a request turned down meanwhile is not shown as waiting', (tester) async {
+    final b = newcomer();
+    await pumpApp(tester, b);
+    await go(tester, '/c/hope');
+    await tapText(tester, '申請加入');
+    await tapText(tester, '申請加入');
+    b.joinRequests['hope'] = {'new': request(rejectedAt: testNow)};
+
+    await reopen(tester, b);
+    expect(findShown('加入你的教會'), findsOneWidget);
+    expect(find.textContaining('已申請加入'), findsNothing);
   });
 
   testWidgets('let in while waiting on the church URL, they are taken into the church', (tester) async {
@@ -237,19 +293,24 @@ void main() {
     expect(findShown('申請加入'), findsOneWidget);
   });
 
-  testWidgets('an email not yet verified is asked to verify first, and nothing is sent', (tester) async {
+  testWidgets('an email not yet verified, its Google linked, cannot ask until it verifies', (tester) async {
     final b = MemoryBackend(clock: testClock);
     b.addChurch('希望堂', id: 'hope');
     b.addMember('hope', pastor);
     await b.auth.registerWithEmail('新朋友', 'new@example.com', 'secret123', AppLanguage.zhHant);
+    b.auth.googleAccount = 'new@gmail.com';
+    await b.auth.linkGoogle();
     await pumpApp(tester, b);
     await go(tester, '/c/hope');
     expect(findShown('驗證你的 email'), findsOneWidget, reason: 'the banner, as on the welcome page');
+    final ask = tester.widget<FilledButton>(find.widgetWithText(FilledButton, '申請加入'));
+    expect(ask.onPressed, isNull, reason: 'told before typing a note, not after');
 
+    b.auth.verify('new@example.com');
+    await tapText(tester, '我已經驗證');
     await tapText(tester, '申請加入');
     await tapText(tester, '申請加入');
-    expect(find.text('驗證 email 後才能申請加入'), findsOneWidget);
-    expect(b.joinRequests['hope'], isNull);
+    expect(b.joinRequests['hope'], isNotNull);
   });
 
   testWidgets('turned down by a church that since stopped taking requests: no asking again', (tester) async {

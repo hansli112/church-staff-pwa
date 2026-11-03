@@ -329,12 +329,23 @@ final myServicesProvider = Provider<AsyncValue<List<MyService>>>((ref) {
 });
 
 /// Where the app is, which decides the screen the router shows.
-enum AppStage { loading, signedOut, noChurch, churchClosed, ready }
+enum AppStage {
+  loading,
+  signedOut,
+
+  /// Signed up with email and password, the email not verified yet: only
+  /// verifying it, signing out or deleting the account (AuthUser.mustVerify).
+  unverified,
+  noChurch,
+  churchClosed,
+  ready,
+}
 
 final appStageProvider = Provider<AppStage>((ref) {
   final user = ref.watch(authUserProvider);
   if (user.isLoading && !user.hasValue) return AppStage.loading;
   if (user.value == null) return AppStage.signedOut;
+  if (user.value!.mustVerify) return AppStage.unverified;
   final memberships = ref.watch(membershipsProvider);
   if (!memberships.hasValue) {
     return memberships.hasError ? AppStage.noChurch : AppStage.loading;

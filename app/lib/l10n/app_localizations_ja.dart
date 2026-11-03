@@ -176,6 +176,9 @@ class L10nJa extends L10n {
   }
 
   @override
+  String get verifyEmailNoMail => '届かない場合は迷惑メールフォルダを確認するか、再送してください';
+
+  @override
   String get verifyResend => '確認メールを再送';
 
   @override
@@ -1972,19 +1975,19 @@ class L10nJa extends L10n {
   String get mergePending => '未ログインのデータを統合';
 
   @override
-  String get mergePendingFooter => 'メンバーが別のメールアドレスで参加したとき、旧名簿のデータを統合します。奉仕表・所属集会・権限グループが引き継がれます。';
+  String get mergePendingFooter => 'メンバーにメールアドレスがない、または別のメールアドレスで参加したとき、未ログインのデータを統合します。奉仕表・所属集会・権限グループが引き継がれます。';
 
   @override
   String get mergePendingPick => '未ログインのデータを選択';
 
   @override
-  String mergePendingTitle(String pending, String member) {
-    return '「$pending」を「$member」に統合しますか？';
+  String mergePendingTitle(String pending) {
+    return '未ログインの「$pending」を統合しますか？';
   }
 
   @override
-  String mergePendingBody(String pending) {
-    return '奉仕表上の「$pending」がこのメンバーに置き換わり、所属集会と権限グループも追加されます';
+  String mergePendingBody(String pending, String member) {
+    return '未ログインの「$pending」が参加済みの「$member」に統合され、奉仕表・所属集会・権限グループが引き継がれます';
   }
 
   @override
@@ -1992,6 +1995,16 @@ class L10nJa extends L10n {
 
   @override
   String get merged => '統合しました';
+
+  @override
+  String mergeSuggestion(String name) {
+    return '未ログインのデータにも「$name」があります';
+  }
+
+  @override
+  String mergeSuggestionLabel(String name) {
+    return '$nameを統合';
+  }
 
   @override
   String get fundingTitle => '今月の応援';
@@ -2952,6 +2965,11 @@ class L10nJa extends L10n {
 
   @override
   String get joinRequestPending => '申請を送信しました。管理者が承認すると参加できます。';
+
+  @override
+  String welcomeAskedToJoin(String church) {
+    return '$churchに参加を申請しました。管理者の承認待ちです。';
+  }
 
   @override
   String get withdrawJoinRequest => '申請を取り消す';

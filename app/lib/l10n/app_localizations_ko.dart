@@ -177,6 +177,9 @@ class L10nKo extends L10n {
   }
 
   @override
+  String get verifyEmailNoMail => '메일이 안 왔나요? 스팸함을 확인하거나 다시 보내 주세요.';
+
+  @override
   String get verifyResend => '인증 메일 재전송';
 
   @override
@@ -1972,19 +1975,19 @@ class L10nKo extends L10n {
   String get mergePending => '로그인 전 정보 합치기';
 
   @override
-  String get mergePendingFooter => '멤버가 다른 이메일로 가입했다면 이전 명단의 정보를 합쳐 주세요. 봉사표, 소속 예배, 권한 그룹이 그대로 이어져요.';
+  String get mergePendingFooter => '멤버에게 이메일이 없거나 다른 이메일로 가입했다면 로그인 전 정보를 합쳐 주세요. 봉사표, 소속 예배, 권한 그룹이 그대로 이어져요.';
 
   @override
   String get mergePendingPick => '로그인 전 정보 선택';
 
   @override
-  String mergePendingTitle(String pending, String member) {
-    return '‘$pending’ 정보를 ‘$member’ 님에게 합칠까요?';
+  String mergePendingTitle(String pending) {
+    return '로그인 전 ‘$pending’ 정보를 합칠까요?';
   }
 
   @override
-  String mergePendingBody(String pending) {
-    return '봉사표의 ‘$pending’ 이름이 이 멤버로 바뀌고, 소속 예배와 권한 그룹도 추가돼요';
+  String mergePendingBody(String pending, String member) {
+    return '로그인 전 ‘$pending’ 정보가 가입한 ‘$member’ 님에게 합쳐지고, 봉사표, 소속 예배, 권한 그룹이 그대로 이어져요';
   }
 
   @override
@@ -1992,6 +1995,16 @@ class L10nKo extends L10n {
 
   @override
   String get merged => '합쳤어요';
+
+  @override
+  String mergeSuggestion(String name) {
+    return '로그인 전 정보에도 ‘$name’ 님이 있어요';
+  }
+
+  @override
+  String mergeSuggestionLabel(String name) {
+    return '$name 합치기';
+  }
 
   @override
   String get fundingTitle => '이번 달 후원';
@@ -2952,6 +2965,11 @@ class L10nKo extends L10n {
 
   @override
   String get joinRequestPending => '신청을 보냈어요. 관리자가 승인하면 가입돼요.';
+
+  @override
+  String welcomeAskedToJoin(String church) {
+    return '$church에 가입을 신청했어요. 관리자 승인을 기다리는 중이에요.';
+  }
 
   @override
   String get withdrawJoinRequest => '신청 취소';
