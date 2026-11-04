@@ -70,6 +70,7 @@ export const LANGUAGES = {
     terms: '服務條款',
     issues: '問題回報',
     contact: '聯絡我們',
+    social: '社群',
     operator: '本服務由個人營運。',
     languages: '語言',
     blogTitle: '教學文章｜馬大別忙',
@@ -95,6 +96,7 @@ export const LANGUAGES = {
     terms: '服务条款',
     issues: '问题反馈',
     contact: '联系我们',
+    social: '社交媒体',
     operator: '本服务由个人运营。',
     languages: '语言',
     blogTitle: '教学文章｜马大别忙',
@@ -120,6 +122,7 @@ export const LANGUAGES = {
     terms: 'Terms of Service',
     issues: 'Report a problem',
     contact: 'Contact us',
+    social: 'Social media',
     operator: 'Run by one person.',
     languages: 'Language',
     blogTitle: 'Guides | Martha, sit',
@@ -148,6 +151,7 @@ export const LANGUAGES = {
     terms: '利用規約',
     issues: '不具合の報告',
     contact: 'お問い合わせ',
+    social: 'SNS',
     operator: '個人で運営しています。',
     languages: '言語',
     blogTitle: '使い方ガイド｜マルタ、ひと休み',
@@ -176,6 +180,7 @@ export const LANGUAGES = {
     terms: '서비스 이용약관',
     issues: '문제 신고',
     contact: '문의하기',
+    social: '소셜 미디어',
     operator: '개인이 운영하는 서비스예요.',
     languages: '언어',
     blogTitle: '사용 가이드 | 마르다의 쉼표',
@@ -322,6 +327,14 @@ function languageLinks(language, page) {
     </nav>`;
 }
 
+/** 馬大別忙's own accounts, linked at the foot of every page. */
+export const SOCIAL = [
+  ['Instagram', 'https://www.instagram.com/marthasitapp/'],
+  ['Threads', 'https://www.threads.com/@marthasitapp'],
+  ['Facebook', 'https://www.facebook.com/marthasitapp'],
+  ['YouTube', 'https://www.youtube.com/@marthasitapp'],
+];
+
 function footer(language, page) {
   const w = LANGUAGES[language];
   const at = (p) => sitePath(language, p);
@@ -337,6 +350,9 @@ function footer(language, page) {
       <a href="${at('/terms')}">${w.terms}</a>
       <a href="https://github.com/hansli112/church-staff-pwa/issues">${w.issues}</a>
       <a href="mailto:support@marthasit.com">${w.contact}</a>
+    </nav>
+    <nav class="social" aria-label="${w.social}">
+      ${SOCIAL.map(([name, url]) => `<a href="${url}" rel="me">${name}</a>`).join('\n      ')}
     </nav>
     ${languageLinks(language, page)}
     <p>${w.operator}</p>

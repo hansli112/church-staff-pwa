@@ -10,7 +10,7 @@ This guide is for admins using Martha, sit for the first time, from signing in t
 
 Choose **Sign in with Google**<span data-from-app="hide"> in the [web app](/home)</span>.
 
-No Google account? Choose **Sign in with email**, then tap **Create account**. If you sign up with email, open the verification email in your inbox first, then come back and tap **I’ve verified**. After that, you can create a church.
+No Google account? Choose **Sign in with email**, then tap **Create account**. If you sign up with email, open the verification email in your inbox first and tap its link. The app moves on by itself, and then you can create a church.
 
 ## 2. Create your church
 

@@ -73,6 +73,24 @@ describe('every page in every language', () => {
       }
     });
   }
+
+  test("the shared foot links to 馬大別忙's Instagram, Threads, Facebook and YouTube", () => {
+    for (const page of pages) {
+      for (const tag of TAGS) {
+        const html = built(sitePath(tag, page));
+        // The legal pages have a foot of their own.
+        if (!html.includes(`<a href="mailto:support@marthasit.com">${LANGUAGES[tag].contact}</a>`)) continue;
+        for (const url of [
+          'https://www.instagram.com/marthasitapp/',
+          'https://www.threads.com/@marthasitapp',
+          'https://www.facebook.com/marthasitapp',
+          'https://www.youtube.com/@marthasitapp',
+        ]) {
+          assert.ok(html.includes(`<a href="${url}" rel="me">`), `${tag} ${page}: ${url}`);
+        }
+      }
+    }
+  });
 });
 
 describe("every page's head", () => {
