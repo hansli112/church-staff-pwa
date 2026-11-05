@@ -9,7 +9,7 @@ import { runInNewContext } from 'node:vm';
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..');
 const origin = 'https://demo-martha.invalid';
 const sha = (body) => createHash('sha256').update(body).digest('hex');
-function release(letter, { wasm = false } = {}) {
+function release(letter, { wasm = false, kit = false } = {}) {
   const id = letter.repeat(20);
   const entry = (ext) => [`/main.dart.${sha(`${ext} ${id}`).slice(0, 10)}.${ext}`, `${ext} ${id}`, true, true];
   const source = [
@@ -19,6 +19,8 @@ function release(letter, { wasm = false } = {}) {
     // browser's own entries are cached as it uses them, like the engine.
     ...(wasm ? [entry('js'), entry('wasm'), entry('mjs')] : [[`/main.dart.${sha(`entry ${id}`).slice(0, 10)}.js`, `entry ${id}`, false]]),
     [`/main.dart.js_1.part.${sha(`optional ${id}`).slice(0, 10)}.js`, `optional ${id}`, true],
+    // The engines a browser picks from, and their debug symbols.
+    ...(kit ? ['canvaskit.wasm', 'skwasm.wasm', 'skwasm.js.symbols'].map((name) => [`/releases/${id}/canvaskit/${name}`, `${name} ${id}`, true, true]) : []),
   ];
   const manifest = { schema: 1, project: 'demo-martha', id, identity: id + '0'.repeat(44), shell: source[0][0], bootstrap: source[1][0], files: source.map(([url, body, optional, engine]) => ({ url, sha256: sha(body), size: Buffer.byteLength(body), optional, ...(engine ? { engine: true } : {}) })) };
   const manifestBytes = JSON.stringify(manifest);
@@ -38,20 +40,21 @@ function worker(a, { clientUrl = origin + '/me' } = {}) {
     return { async match(request) { return store.get(key(request))?.clone(); }, async put(request, response) { store.set(key(request), response.clone()); }, async keys() { return [...store.keys()].map((url) => new Request(url)); } };
   }, async keys() { return [...stores.keys()]; } };
   let offline = false;
+  const waits = [];
   const self = { location: new URL(origin + '/martha_app_sw.js'), clients: { async claim() {}, async get(id) { return { id, url: clientUrl }; } }, async skipWaiting() {}, addEventListener(name, fn) { listeners[name] = fn; } };
   runInNewContext(readFileSync(join(root, 'app/web/martha_app_sw.js'), 'utf8'), { self, caches, crypto: webcrypto, URL, Response, Request, Headers, TextEncoder, console, fetch: async (request) => {
     const url = key(request); requests.push(url);
     if (offline) throw new TypeError('offline');
     const body = responses.get(url); return new Response(body ?? 'not found', { status: body == null ? 404 : 200 });
   } });
-  return { requests, responses, stores, setOffline() { offline = true; }, async message(type, data = {}) {
+  return { requests, responses, stores, setOffline() { offline = true; }, async settle() { await Promise.all(waits); }, async message(type, data = {}) {
     return new Promise((resolve, reject) => {
       let task;
       listeners.message({ data: { type, ...data }, source: { id: 'tab', url: origin + '/me' }, ports: [{ postMessage: resolve }], waitUntil(value) { task = value; Promise.resolve(task).catch(reject); } });
     });
   }, async request(url, navigate = false) {
     let response;
-    listeners.fetch({ request: { method: 'GET', url: /^https?:/.test(url) ? url : origin + url, credentials: navigate ? 'include' : 'same-origin', mode: navigate ? 'navigate' : 'cors' }, respondWith(value) { response = value; }, waitUntil() {} });
+    listeners.fetch({ request: { method: 'GET', url: /^https?:/.test(url) ? url : origin + url, credentials: navigate ? 'include' : 'same-origin', mode: navigate ? 'navigate' : 'cors' }, respondWith(value) { response = value; }, waitUntil(value) { waits.push(value); } });
     return response ? await response : null;
   } };
 }
@@ -165,3 +168,36 @@ test('an update applies from 我的 even when the tab first opened elsewhere', a
   assert.equal(await (await w.request('/home', true)).text(), `<html>${b.id}</html>`);
 });
 
+
+test('a newer release is staged quietly and is what the app opens next, never under a running page', async () => {
+  const a = release('a');
+  const b = release('b');
+  const w = worker(a);
+  await w.message('INIT', { boot: a.pointer, used: [] });
+  for (const [url, response] of b.responses) w.responses.set(url, response);
+  w.responses.set(origin + '/release.json', JSON.stringify(b.pointer));
+  assert.equal(await (await w.request('/home', true)).text(), `<html>${a.id}</html>`, 'the open that finds it still opens what was there');
+  await w.settle();
+  assert.ok(w.requests.includes(origin + b.manifest.shell));
+  assert.equal(await (await w.request('/rosters', true)).text(), `<html>${b.id}</html>`);
+  w.setOffline();
+  assert.equal(await (await w.request('/home', true)).text(), `<html>${b.id}</html>`);
+});
+
+test('an update downloads the engine this browser runs, not every engine and its debug symbols', async () => {
+  const a = release('a', { wasm: true, kit: true });
+  const b = release('b', { wasm: true, kit: true });
+  const w = worker(a);
+  const ran = (r, pattern) => r.manifest.files.find((f) => pattern.test(f.url)).url;
+  const [wasm, module, skwasm] = [/\.wasm$/, /\.mjs$/, /skwasm\.wasm$/].map((pattern) => ran(a, pattern));
+  await w.message('INIT', { boot: a.pointer, used: [origin + wasm, origin + module, origin + skwasm] });
+  for (const [url, response] of b.responses) w.responses.set(url, response);
+  w.responses.set(origin + '/release.json', JSON.stringify(b.pointer));
+  assert.equal((await w.message('CHECK', { project: 'demo-martha', runningId: a.id })).available, true);
+  for (const pattern of [/^\/main\.dart\.[0-9a-f]{10}\.wasm$/, /\.mjs$/, /skwasm\.wasm$/, /\.part\./]) assert.ok(w.requests.includes(origin + ran(b, pattern)), String(pattern));
+  for (const pattern of [/^\/main\.dart\.[0-9a-f]{10}\.js$/, /canvaskit\.wasm$/, /\.symbols$/]) assert.ok(!w.requests.includes(origin + ran(b, pattern)), String(pattern));
+  assert.equal((await w.message('APPLY', { release: b.pointer, safe: true, path: '/me' })).ok, true);
+  w.setOffline();
+  assert.equal(await (await w.request('/home', true)).text(), `<html>${b.id}</html>`);
+  assert.equal(await (await w.request(ran(b, /skwasm\.wasm$/))).text(), `skwasm.wasm ${b.id}`);
+});

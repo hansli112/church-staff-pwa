@@ -43,6 +43,8 @@ async function capturePublic(url, p, response) {
   return downloaded;
 }
 let active;
+// An update staged in the background, switched to when the app next opens.
+let pending;
 let loaded;
 let operation = Promise.resolve();
 const digest = async (bytes) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -103,29 +105,63 @@ async function loadState() {
       releases.set(`${p.project}:${p.id}`, { pointer: p, manifest: manifest(await verified.json(), p) });
     }
     if (state.active && releases.has(`${state.active.project}:${state.active.id}`)) active = state.active;
+    if (state.pending && releases.has(`${state.pending.project}:${state.pending.id}`)) pending = state.pending;
   })();
   return loaded;
 }
 async function saveState() {
   const meta = await caches.open(META);
-  await meta.put(STATE_URL, new Response(JSON.stringify({ schema: 1, active, releases: [...releases.values()].map((r) => r.pointer) }), { headers: { 'Content-Type': 'application/json' } }));
+  await meta.put(STATE_URL, new Response(JSON.stringify({ schema: 1, active, pending, releases: [...releases.values()].map((r) => r.pointer) }), { headers: { 'Content-Type': 'application/json' } }));
 }
-async function prepare(raw, complete, used = []) {
+const stagedUrl = (p) => absolute(`/__martha_app_cache/staged/${p.project}/${p.id}`);
+const mainKind = (url) => /^\/main\.dart\.[0-9a-f]{10}\.(js|wasm|mjs)$/.exec(url)?.[1];
+/**
+ * The engine files of [m] this browser will run: those like the ones it ran
+ * of [from] (the same canvaskit files, main entries of the same kinds). All of
+ * them when that says nothing, or when [m] is the first to have a wasm build.
+ * Never the debug symbols: an update fetched every engine, 46 MB, before.
+ */
+async function enginesFor(m, from) {
+  const all = m.files.filter((f) => f.engine && !f.url.endsWith('.symbols'));
+  if (!from) return all;
+  const cache = await caches.open(cacheName(from.pointer));
+  const kits = new Set();
+  const kinds = new Set();
+  for (const f of from.manifest.files) {
+    if (!f.engine || !await cache.match(absolute(f.url))) continue;
+    const kit = /^\/releases\/[0-9a-f]{20}\/(canvaskit\/.+)$/.exec(f.url)?.[1];
+    if (kit) kits.add(kit);
+    if (mainKind(f.url)) kinds.add(mainKind(f.url));
+  }
+  const picked = all.filter((f) => kits.has(f.url.slice(`/releases/${m.id}/`.length)) || kinds.has(mainKind(f.url)));
+  const firstWasm = !from.manifest.files.some((f) => mainKind(f.url) === 'wasm') && all.some((f) => mainKind(f.url) === 'wasm');
+  return picked.some((f) => mainKind(f.url)) && !firstWasm ? picked : all;
+}
+/**
+ * Downloads and verifies a release. To boot it: its required files and the
+ * engine files the page [used]. To update to it ([from] is the release being
+ * replaced): everything but the engine files this browser will not run, and
+ * the list of what was staged, which apply checks.
+ */
+async function prepare(raw, { used = [], from, stage = false } = {}) {
   await loadState();
   const p = pointer(raw);
   const response = await checked(await fetch(absolute(p.manifest), { cache: 'no-store', credentials: 'omit' }), { sha256: p.manifestSha256 });
   const m = manifest(await response.clone().json(), p);
   const cache = await caches.open(cacheName(p));
   const usedPaths = new Set(used.filter((url) => typeof url === 'string').map((url) => new URL(url, origin)).filter((url) => url.origin === origin).map((url) => url.pathname));
+  const engines = stage ? new Set((await enginesFor(m, from)).map((f) => f.url)) : usedPaths;
+  const staged = [];
   for (const file of m.files) {
-    if (!complete && file.optional && !(file.engine && usedPaths.has(file.url))) continue;
+    if (file.optional && (file.engine ? !engines.has(file.url) : !stage)) continue;
+    staged.push(file.url);
     const cached = await cache.match(absolute(file.url));
     if (cached) { await checked(cached, file); continue; }
     const asset = await checked(await fetch(absolute(file.url), { cache: 'no-store', credentials: 'omit' }), file);
     await cache.put(absolute(file.url), asset);
   }
   await cache.put(absolute(p.manifest), response);
-  if (complete) await cache.put(absolute(`/__martha_app_cache/complete/${p.project}/${p.id}`), new Response('complete'));
+  if (stage) await cache.put(stagedUrl(p), new Response(JSON.stringify(staged)));
   releases.set(`${p.project}:${p.id}`, { pointer: p, manifest: m });
   await saveState();
   return p;
@@ -135,19 +171,42 @@ async function apply(p) {
   const release = releases.get(`${p.project}:${p.id}`);
   if (!release || release.pointer.manifestSha256 !== p.manifestSha256) fail('Release was not verified');
   const cache = await caches.open(cacheName(p));
-  if (!await cache.match(absolute(`/__martha_app_cache/complete/${p.project}/${p.id}`))) fail('Release is incomplete');
+  const staged = await cache.match(stagedUrl(p));
+  if (!staged) fail('Release is incomplete');
   // Quota eviction or a partial stage cannot switch the active offline shell.
-  for (const file of release.manifest.files) await checked(await cache.match(absolute(file.url)), file);
+  const urls = new Set(await staged.json());
+  for (const file of release.manifest.files) if (urls.has(file.url)) await checked(await cache.match(absolute(file.url)), file);
   active = p;
+  if (pending?.project === p.project && pending.id === p.id) pending = undefined;
   await saveState();
 }
+const latest = async () => pointer(await (await fetch(absolute('/release.json'), { cache: 'no-store', credentials: 'omit' })).json());
+/** Stages [p] over the active release, for the next time the app opens. */
+async function stage(p) {
+  await prepare(p, { stage: true, from: active && releases.get(`${active.project}:${active.id}`) });
+  if (!active || active.project !== p.project || active.id !== p.id) pending = p;
+  await saveState();
+}
+/** Looks for a newer release and stages it; quietly, offline or not. */
+async function update() {
+  await loadState();
+  if (!active) return;
+  const p = await latest();
+  if (p.project !== active.project || p.id === active.id || p.id === pending?.id) return;
+  await stage(p);
+}
+const queue = (work) => {
+  const task = operation.then(work);
+  operation = task.catch(() => {});
+  return task;
+};
 
 self.addEventListener('install', (event) => event.waitUntil(self.skipWaiting()));
 self.addEventListener('activate', (event) => event.waitUntil(loadState().then(() => self.clients.claim())));
 self.addEventListener('message', (event) => {
   if (!event.ports?.[0] || !event.source?.id) return;
   const port = event.ports[0];
-  const task = operation.then(async () => {
+  const task = queue(async () => {
     const source = await self.clients.get(event.source.id);
     if (!source || new URL(source.url).origin !== origin) fail('Invalid app client');
     const data = event.data;
@@ -156,7 +215,7 @@ self.addEventListener('message', (event) => {
       if (!boot || !/^[0-9a-f]{20}$/.test(boot.id) || boot.metadata !== `/releases/${boot.id}/release.json`) fail('Invalid boot release');
       const p = pointer(await (await fetch(absolute(boot.metadata), { cache: 'no-store', credentials: 'omit' })).json(), boot);
       const used = Array.isArray(data.used) ? data.used : [];
-      await prepare(p, false, used);
+      await prepare(p, { used });
       for (const url of used) {
         if (typeof url === 'string' && publicAsset(new URL(url, origin))) await capturePublic(url, p);
       }
@@ -166,10 +225,10 @@ self.addEventListener('message', (event) => {
     }
     if (data?.type === 'CHECK') {
       await loadState();
-      const p = pointer(await (await fetch(absolute('/release.json'), { cache: 'no-store', credentials: 'omit' })).json());
+      const p = await latest();
       if (p.project !== data.project) fail('Release project changed');
       if (p.id === data.runningId) return { ok: true, available: false, id: p.id };
-      await prepare(p, true);
+      await stage(p);
       return { ok: true, available: true, release: p };
     }
     if (data?.type === 'APPLY') {
@@ -183,7 +242,6 @@ self.addEventListener('message', (event) => {
     }
     fail('Unknown app-shell operation');
   });
-  operation = task.catch(() => {});
   event.waitUntil(task.then((result) => port.postMessage(result), (error) => port.postMessage({ ok: false, error: error.message })));
 });
 
@@ -215,8 +273,14 @@ self.addEventListener('fetch', (event) => {
   const navigation = request.mode === 'navigate' && appRoute(url.pathname);
   const staticAsset = !url.search && !url.hash && [...releases.values()].some((release) => release.manifest.files.some((file) => file.url === url.pathname));
   if (!navigation && !staticAsset) return;
+  // What the app opens next is the release staged by then: a page never
+  // changes under someone, and nobody has to go to 關於 to get a new version.
+  if (navigation) event.waitUntil(queue(update).catch(() => {}));
   event.respondWith((async () => {
     await loadState();
+    if (navigation && pending) {
+      try { await apply(pending); } catch { pending = undefined; await saveState(); }
+    }
     if (navigation && active) {
       const release = releases.get(`${active.project}:${active.id}`);
       const cache = await caches.open(cacheName(active));
