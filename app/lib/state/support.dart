@@ -37,8 +37,9 @@ class SupportItem {
 enum PurchaseOutcome { thanks, pending, cancelled, failed }
 
 /// A finished purchase. [paidAt]: when a subscription was last paid, as far
-/// as the store says; null for anything else.
-typedef PurchaseResult = ({String productId, PurchaseOutcome outcome, DateTime? paidAt});
+/// as the store says; null for anything else. [restored]: an earlier
+/// purchase the store reports again, not a new payment.
+typedef PurchaseResult = ({String productId, PurchaseOutcome outcome, DateTime? paidAt, bool restored});
 
 abstract interface class SupportStore {
   /// Whether this platform sells anything (false on the web).
@@ -167,7 +168,12 @@ class StoreKitPlayStore implements SupportStore {
         PurchaseStatus.canceled => PurchaseOutcome.cancelled,
         PurchaseStatus.error => PurchaseOutcome.failed,
       };
-      _results.add((productId: p.productID, outcome: outcome, paidAt: _paidAt(p)));
+      _results.add((
+        productId: p.productID,
+        outcome: outcome,
+        paidAt: _paidAt(p),
+        restored: p.status == PurchaseStatus.restored,
+      ));
       if (p.pendingCompletePurchase) await _iap.completePurchase(p);
     }
   }

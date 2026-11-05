@@ -13,6 +13,7 @@ import '../../core/design/tokens.dart';
 import '../../data/backend.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/app_build.dart';
+import '../../state/session.dart';
 import '../../state/support.dart';
 import '../common/labels.dart';
 import '../common/site_pages.dart';
@@ -35,16 +36,29 @@ class SupportScreen extends ConsumerStatefulWidget {
 class _SupportScreenState extends ConsumerState<SupportScreen> {
   StreamSubscription<PurchaseResult>? _sub;
 
+  /// What was just tapped to buy, until the store says how it went, and
+  /// whether it makes me a supporter (no plan paid before). Only that is
+  /// new support, thanked on a sheet; a restore or a renewal gets the
+  /// passing note.
+  ({SupportItem item, bool joins})? _buying;
+
   @override
   void initState() {
     super.initState();
     _sub = ref.read(supportStoreProvider).results.listen((r) {
       if (!mounted) return;
       final l10n = L10n.of(context);
+      final buying = _buying;
+      final bought = buying != null && r.productId == buying.item.id && !r.restored;
+      if (bought && r.outcome != PurchaseOutcome.pending) _buying = null;
       switch (r.outcome) {
         case PurchaseOutcome.thanks:
           Haptics.success();
-          showToast(context, l10n.supportThanks);
+          if (bought) {
+            _thank(joins: buying.joins);
+          } else {
+            showToast(context, l10n.supportThanks);
+          }
         case PurchaseOutcome.pending:
           showToast(context, l10n.supportPending);
         case PurchaseOutcome.failed:
@@ -53,6 +67,24 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
           break;
       }
     });
+  }
+
+  void _buy(SupportItem item) {
+    _buying = (item: item, joins: item.subscription && ref.read(supporterPlanProvider) == null);
+    final telemetry = ref.read(telemetryProvider);
+    // The store refused before showing anything: nothing was paid.
+    unawaited(
+      ref.read(supportStoreProvider).buy(item).catchError((Object e, StackTrace s) {
+        telemetry.recordError(e, s);
+        _buying = null;
+        if (mounted) showToast(context, L10n.of(context).supportFailed);
+      }),
+    );
+  }
+
+  Future<void> _thank({required bool joins}) async {
+    final toIcons = await showAppSheet<bool>(context, builder: (_) => _Thanks(joins: joins));
+    if (toIcons == true && mounted) unawaited(context.push('/me/support/icon'));
   }
 
   @override
@@ -123,7 +155,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                   if (tips.isNotEmpty)
                     ListSection(
                       header: l10n.supportTips,
-                      children: [_Amounts(tips, label: (t) => t.price, onPick: store.buy)],
+                      children: [_Amounts(tips, label: (t) => t.price, onPick: _buy)],
                     ),
                   // App Store 3.1.2: that it renews, how to cancel, and
                   // the terms and privacy policy, beside the subscription.
@@ -135,7 +167,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                           : l10n.supportMonthlyTermsAndIcons(store.name),
                       children: [
                         // The other plan switches to it.
-                        _Amounts(monthly, label: (m) => l10n.supportPerMonth(m.price), paid: plan, onPick: store.buy),
+                        _Amounts(monthly, label: (m) => l10n.supportPerMonth(m.price), paid: plan, onPick: _buy),
                         if (plan != null)
                           ListRow(
                             title: l10n.manageSubscription,
@@ -182,6 +214,62 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
           SecondaryButton(label: l10n.supportRestore, expand: true, onPressed: store.restore),
           const SizedBox(height: Space.xl),
         ],
+      ),
+    );
+  }
+}
+
+/// The thanks for support just paid: what it is for and, for someone a
+/// monthly plan has just made a supporter, the way to the icons it gives.
+/// Pops true to go to them.
+class _Thanks extends StatelessWidget {
+  const _Thanks({required this.joins});
+
+  final bool joins;
+
+  static const _heartSize = 56.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final c = AppColors.of(context);
+    final still = MediaQuery.disableAnimationsOf(context);
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(Space.l, 0, Space.l, Space.l),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // The heart of 支持馬大別忙's row, growing in once.
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: still ? 1 : 0.6, end: 1),
+              duration: still ? Duration.zero : const Duration(milliseconds: 400),
+              curve: Curves.easeOutBack,
+              builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
+              child: const Icon(Symbols.favorite_rounded, fill: 1, size: _heartSize, color: TileColors.support),
+            ),
+            const SizedBox(height: Space.m),
+            Text(
+              l10n.supportThanks,
+              textAlign: TextAlign.center,
+              style: AppText.title2.copyWith(color: c.label),
+            ),
+            const SizedBox(height: Space.s),
+            BalancedText(
+              joins ? l10n.supportThanksMonthly : l10n.supportThanksTip,
+              style: AppText.body.copyWith(color: c.secondaryLabel),
+            ),
+            const SizedBox(height: Space.l),
+            SizedBox(
+              width: double.infinity,
+              child: PrimaryButton(
+                label: joins ? l10n.changeAppIcon : l10n.done,
+                onPressed: () => Navigator.pop(context, joins),
+              ),
+            ),
+            if (joins) SecondaryButton(label: l10n.done, expand: true, onPressed: () => Navigator.pop(context)),
+          ],
+        ),
       ),
     );
   }

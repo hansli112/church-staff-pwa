@@ -1422,6 +1422,15 @@ class L10nJa extends L10n {
   String get supportThanks => '応援ありがとうございます';
 
   @override
+  String get supportThanksTip => 'いただいた応援は「マルタ、ひと休み」のサーバー費用にあてます';
+
+  @override
+  String get supportThanksMonthly => 'いただいた応援は「マルタ、ひと休み」のサーバー費用にあてます。アプリのアイコンを変えられるようになりました。';
+
+  @override
+  String get changeAppIcon => 'アプリのアイコンを変える';
+
+  @override
   String get supportPending => '支払いを処理中';
 
   @override

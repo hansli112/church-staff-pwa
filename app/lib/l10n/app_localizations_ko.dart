@@ -1423,6 +1423,15 @@ class L10nKo extends L10n {
   String get supportThanks => '후원해 주셔서 감사합니다';
 
   @override
+  String get supportThanksTip => '보내 주신 후원은 마르다의 쉼표 서버 비용에 쓰여요';
+
+  @override
+  String get supportThanksMonthly => '보내 주신 후원은 마르다의 쉼표 서버 비용에 쓰여요. 이제 앱 아이콘을 바꿀 수 있어요.';
+
+  @override
+  String get changeAppIcon => '앱 아이콘 바꾸기';
+
+  @override
   String get supportPending => '결제 처리 중';
 
   @override

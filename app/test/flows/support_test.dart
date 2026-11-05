@@ -36,11 +36,17 @@ class FakeStore implements SupportStore {
   final bool unreachable;
   final _results = StreamController<PurchaseResult>.broadcast(sync: true);
   final bought = <String>[];
+
+  /// The plans this store account has paid for, here or elsewhere.
+  final owned = <String>{};
+
+  /// Buying throws before the store shows anything, as it may.
+  bool refuses = false;
   int refreshes = 0;
 
   /// The store reporting [plan] paid again, as a renewal does.
   void renew(DateTime at, {String plan = 'supporter_monthly'}) =>
-      _results.add((productId: plan, outcome: PurchaseOutcome.thanks, paidAt: at));
+      _results.add((productId: plan, outcome: PurchaseOutcome.thanks, paidAt: at, restored: false));
 
   @override
   bool get available => true;
@@ -50,12 +56,19 @@ class FakeStore implements SupportStore {
 
   @override
   Future<void> buy(SupportItem item) async {
+    if (refuses) throw StateError('refused');
     bought.add(item.id);
-    _results.add((productId: item.id, outcome: PurchaseOutcome.thanks, paidAt: now?.call()));
+    if (item.subscription) owned.add(item.id);
+    _results.add((productId: item.id, outcome: PurchaseOutcome.thanks, paidAt: now?.call(), restored: false));
   }
 
+  /// Restoring reports each plan owned paid again.
   @override
-  Future<void> restore() async {}
+  Future<void> restore() async {
+    for (final id in owned) {
+      _results.add((productId: id, outcome: PurchaseOutcome.thanks, paidAt: now?.call(), restored: true));
+    }
+  }
 
   @override
   Future<void> refresh() async => refreshes++;
@@ -101,6 +114,12 @@ const plan150 = 'NT\$150／月';
 /// The mark on the plan I pay for.
 Finder paidMark(String plan) =>
     find.descendant(of: find.widgetWithText(FilledButton, plan), matching: find.byIcon(Symbols.check_rounded));
+
+/// Closes the thanks that a purchase puts up.
+Future<void> closeThanks(WidgetTester tester) async {
+  await tester.tap(find.descendant(of: find.byType(BottomSheet), matching: find.text('完成')));
+  await settle(tester);
+}
 
 /// Picks app icon [name] on its page, behind 支持馬大別忙.
 Future<void> pickIcon(WidgetTester tester, String name) async {
@@ -237,9 +256,11 @@ void main() {
     await tester.tap(find.text('NT\$90'));
     await settle(tester);
     expect(find.text('謝謝你的支持'), findsOneWidget);
+    await closeThanks(tester);
 
     await tester.tap(find.text(plan60));
     await settle(tester);
+    await closeThanks(tester);
     expect(findShownContaining('每月支持者可以換 App 圖示'), findsNothing);
     await tester.scrollUntilVisible(find.text('App 圖示'), 200, scrollable: find.byType(Scrollable).last);
     expect(find.text('預設'), findsOneWidget, reason: 'the icon in use');
@@ -253,6 +274,95 @@ void main() {
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me');
     await settle(tester);
     expect(find.text('支持者'), findsOneWidget);
+  });
+
+  testWidgets('a tip is thanked on a sheet that says where it goes; 完成 closes it', (tester) async {
+    await pumpWithStore(tester, FakeStore(), FakeIcons());
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
+    await settle(tester);
+    await showMiddle(tester, find.text('NT\$90'));
+    await tester.tap(find.text('NT\$90'));
+    await settle(tester);
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.text('謝謝你的支持'), findsOneWidget);
+    expect(find.text('你的支持會用來分擔馬大別忙的雲端費用'), findsOneWidget);
+    expect(find.text('換 App 圖示'), findsNothing, reason: 'a tip gives no icons');
+    await closeThanks(tester);
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(find.text('謝謝你的支持'), findsNothing);
+  });
+
+  testWidgets('a new monthly plan is thanked too, with the way to the icons it gives', (tester) async {
+    await pumpWithStore(tester, FakeStore(), FakeIcons());
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
+    await settle(tester);
+    await tester.tap(find.text(plan60));
+    await settle(tester);
+    expect(find.text('謝謝你的支持'), findsOneWidget);
+    expect(findShown('你的支持會用來分擔馬大別忙的雲端費用。現在可以換 App 圖示了。'), findsOneWidget);
+    await tester.tap(find.text('換 App 圖示'));
+    await settle(tester);
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(find.text('紫'), findsOneWidget, reason: 'on the icon page');
+  });
+
+  testWidgets('a restore or a renewal, which is no new support, thanks only in passing', (tester) async {
+    final store = FakeStore();
+    await pumpWithStore(tester, store, FakeIcons());
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
+    await settle(tester);
+    await tester.tap(find.text(plan60));
+    await settle(tester);
+    await closeThanks(tester);
+
+    await tester.scrollUntilVisible(find.text('恢復購買'), 200, scrollable: find.byType(Scrollable).last);
+    await tester.tap(find.text('恢復購買'));
+    await tester.pump();
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(find.text('謝謝你的支持'), findsOneWidget, reason: 'the passing note');
+    await settle(tester);
+
+    store.renew(testNow);
+    await tester.pump();
+    expect(find.byType(BottomSheet), findsNothing);
+    await settle(tester);
+  });
+
+  testWidgets('a plan bought elsewhere, restored after a tap that went nowhere, thanks only in passing', (
+    tester,
+  ) async {
+    final store = FakeStore()..refuses = true;
+    await pumpWithStore(tester, store, FakeIcons());
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
+    await settle(tester);
+    await tester.tap(find.text(plan60));
+    await tester.pump();
+    expect(find.text('沒有完成付款，沒有扣款'), findsOneWidget);
+    await settle(tester);
+    await tester.pump(const Duration(seconds: 6));
+    await settle(tester);
+    store.owned.add('supporter_monthly');
+    await tester.scrollUntilVisible(find.text('恢復購買'), 200, scrollable: find.byType(Scrollable).last);
+    await showMiddle(tester, find.text('恢復購買'));
+    await tester.tap(find.text('恢復購買'));
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(find.text('謝謝你的支持'), findsOneWidget);
+    await settle(tester);
+  });
+
+  testWidgets('switching plans is thanked, without news of the icons a supporter already has', (tester) async {
+    await pumpWithStore(tester, FakeStore(), FakeIcons());
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
+    await settle(tester);
+    await tester.tap(find.text(plan60));
+    await settle(tester);
+    await closeThanks(tester);
+    await tester.tap(find.text(plan150));
+    await settle(tester);
+    expect(find.text('謝謝你的支持'), findsOneWidget);
+    expect(find.text('你的支持會用來分擔馬大別忙的雲端費用'), findsOneWidget);
+    expect(find.text('換 App 圖示'), findsNothing);
   });
 
   testWidgets('the subscription says it renews and where to cancel, beside the terms and privacy policy', (
@@ -271,6 +381,7 @@ void main() {
 
     await tester.tap(find.text(plan60));
     await settle(tester);
+    await closeThanks(tester);
     await tester.tap(find.text('管理訂閱'));
     await settle(tester);
     expect(launcher.opened.last, 'https://play.google.com/store/account/subscriptions?sku=supporter_monthly');
@@ -286,6 +397,7 @@ void main() {
 
     await tester.tap(find.text(plan60));
     await settle(tester);
+    await closeThanks(tester);
     expect(paidMark(plan60), findsOneWidget);
     expect(paidMark(plan150), findsNothing);
     await tester.tap(find.text(plan60));
@@ -294,6 +406,7 @@ void main() {
 
     await tester.tap(find.text(plan150));
     await settle(tester);
+    await closeThanks(tester);
     expect(store.bought, ['supporter_monthly', 'supporter_monthly_plus']);
     expect(paidMark(plan150), findsOneWidget);
     expect(paidMark(plan60), findsNothing);
@@ -378,6 +491,7 @@ void main() {
       await settle(tester);
       await tester.tap(find.text(plan60));
       await settle(tester);
+      await closeThanks(tester);
       await pickIcon(tester, '紫');
       expect(icons.icon, 'Purple');
     }

@@ -1507,6 +1507,15 @@ class L10nEn extends L10n {
   String get supportThanks => 'Thank you for your support';
 
   @override
+  String get supportThanksTip => 'Your support helps cover the server costs';
+
+  @override
+  String get supportThanksMonthly => 'Your support helps cover the server costs. You can now change the app icon.';
+
+  @override
+  String get changeAppIcon => 'Change app icon';
+
+  @override
   String get supportPending => 'Processing payment';
 
   @override
