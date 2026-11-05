@@ -2307,7 +2307,7 @@ class L10nZh extends L10n {
 
   @override
   String importAddConfiguredDuty(String role) {
-    return '加入服事設定：$role';
+    return '新增服事項目：$role';
   }
 
   @override
@@ -2473,7 +2473,7 @@ class L10nZh extends L10n {
   String get pickerGuestNames => '無帳號的名字';
 
   @override
-  String get serviceSettingsSaved => '服事設定已儲存';
+  String get serviceSettingsSaved => '已更新聚會';
 
   @override
   String get serviceSyncOriginalEvent => '原本的特別活動';
@@ -5737,7 +5737,7 @@ class L10nZhHans extends L10nZh {
 
   @override
   String importAddConfiguredDuty(String role) {
-    return '加入事奉设置：$role';
+    return '添加事奉项目：$role';
   }
 
   @override
@@ -5903,7 +5903,7 @@ class L10nZhHans extends L10nZh {
   String get pickerGuestNames => '无账号的名字';
 
   @override
-  String get serviceSettingsSaved => '事奉设置已保存';
+  String get serviceSettingsSaved => '已更新聚会';
 
   @override
   String get serviceSyncOriginalEvent => '原本的特别活动';

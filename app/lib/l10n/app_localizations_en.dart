@@ -2441,7 +2441,7 @@ class L10nEn extends L10n {
 
   @override
   String importAddConfiguredDuty(String role) {
-    return 'Add to service settings: $role';
+    return 'Add role: $role';
   }
 
   @override
@@ -2607,7 +2607,7 @@ class L10nEn extends L10n {
   String get pickerGuestNames => 'Names without an account';
 
   @override
-  String get serviceSettingsSaved => 'Service settings saved';
+  String get serviceSettingsSaved => 'Service updated';
 
   @override
   String get serviceSyncOriginalEvent => 'Original occasion';

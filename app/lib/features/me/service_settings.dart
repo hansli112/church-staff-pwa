@@ -139,7 +139,7 @@ class ServiceEdits {
 
   L10n get _l10n => L10n.of(context);
 
-  /// [service] changed to [next], saying [message] (服事設定已儲存);
+  /// [service] changed to [next], saying [message] (已更新聚會);
   /// [dutyRename] moves the 同工's lists and staff order with a duty.
   Future<bool> save(Service next, {String? message, ({String from, String to})? dutyRename}) => runWithUndo(
     context,

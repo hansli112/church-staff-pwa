@@ -4192,10 +4192,10 @@ abstract class L10n {
   /// **'這次安排不會變更同工或教會設定'**
   String get importNoSettingsChange;
 
-  /// Admin adds an imported duty to the service template
+  /// Admin adds an imported duty to the service's 服事項目
   ///
   /// In zh, this message translates to:
-  /// **'加入服事設定：{role}'**
+  /// **'新增服事項目：{role}'**
   String importAddConfiguredDuty(String role);
 
   /// Imported one-day duty is not in the service template
@@ -4465,7 +4465,7 @@ abstract class L10n {
   /// No description provided for @serviceSettingsSaved.
   ///
   /// In zh, this message translates to:
-  /// **'服事設定已儲存'**
+  /// **'已更新聚會'**
   String get serviceSettingsSaved;
 
   /// No description provided for @serviceSyncOriginalEvent.

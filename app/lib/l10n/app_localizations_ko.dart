@@ -2312,7 +2312,7 @@ class L10nKo extends L10n {
 
   @override
   String importAddConfiguredDuty(String role) {
-    return '봉사 설정에 추가: $role';
+    return '담당 추가: $role';
   }
 
   @override
@@ -2478,7 +2478,7 @@ class L10nKo extends L10n {
   String get pickerGuestNames => '계정 없는 이름';
 
   @override
-  String get serviceSettingsSaved => '봉사 설정을 저장했어요';
+  String get serviceSettingsSaved => '예배를 변경했어요';
 
   @override
   String get serviceSyncOriginalEvent => '원래 특별 순서';

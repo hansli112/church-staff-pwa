@@ -1648,9 +1648,9 @@
   "@importNoSettingsChange": {
     "description": "Ordinary editor import does not grant qualifications or change settings"
   },
-  "importAddConfiguredDuty": "加入服事設定：{role}",
+  "importAddConfiguredDuty": "新增服事項目：{role}",
   "@importAddConfiguredDuty": {
-    "description": "Admin adds an imported duty to the service template",
+    "description": "Admin adds an imported duty to the service's 服事項目",
     "placeholders": {
       "role": {
         "type": "String",
@@ -1867,7 +1867,7 @@
   "@importExampleEvent": { "description": "Example occasion (特別活動) in the import JSON example" },
   "rosterShowMore": "顯示更多",
   "pickerGuestNames": "無帳號的名字",
-  "serviceSettingsSaved": "服事設定已儲存",
+  "serviceSettingsSaved": "已更新聚會",
   "serviceSyncOriginalEvent": "原本的特別活動",
   "serviceSyncOriginalDuty": "原本的服事項目",
   "serviceFutureSyncTitle": "同步「{from}」為「{to}」",

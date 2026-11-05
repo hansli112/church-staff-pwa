@@ -2311,7 +2311,7 @@ class L10nJa extends L10n {
 
   @override
   String importAddConfiguredDuty(String role) {
-    return '奉仕の設定に追加：$role';
+    return '担当を追加：$role';
   }
 
   @override
@@ -2477,7 +2477,7 @@ class L10nJa extends L10n {
   String get pickerGuestNames => 'アカウントのない名前';
 
   @override
-  String get serviceSettingsSaved => '奉仕の設定を保存しました';
+  String get serviceSettingsSaved => '集会を更新しました';
 
   @override
   String get serviceSyncOriginalEvent => '元の特別行事';

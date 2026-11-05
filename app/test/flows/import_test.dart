@@ -531,8 +531,8 @@ void main() {
     );
     await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
     await tapText(tester, '預覽');
-    await tester.scrollUntilVisible(find.text('加入服事設定：鼓'), 200);
-    await tapText(tester, '加入服事設定：鼓');
+    await tester.scrollUntilVisible(find.text('新增服事項目：鼓'), 200);
+    await tapText(tester, '新增服事項目：鼓');
     await tester.scrollUntilVisible(find.text('加入常用特別活動：浸禮'), 200);
     await tapText(tester, '加入常用特別活動：浸禮');
     expect(b.services['grace']!.byId('sunday')!.duties, contains('鼓'));
@@ -629,7 +629,7 @@ void main() {
     );
     await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
     await tapText(tester, '預覽');
-    expect(find.text('加入服事設定：鼓'), findsNothing);
+    expect(find.text('新增服事項目：鼓'), findsNothing);
     expect(find.text('加入常用特別活動：浸禮'), findsNothing);
     await tapText(tester, '套用到服事表');
     expect(peopleOn(b, 18, '鼓'), ['陳志豪']);
