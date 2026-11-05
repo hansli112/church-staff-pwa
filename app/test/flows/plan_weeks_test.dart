@@ -11,9 +11,11 @@ import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
+import 'package:martha/state/session.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
+import '../support/telemetry.dart';
 
 // 安排服事 (#90). The tests start on Thursday 1 October 2026: 10/4 has
 // everyone, 10/11 nobody on 司琴 yet.
@@ -95,7 +97,8 @@ Future<void> drag(WidgetTester tester, Finder from, Finder to) async {
 void main() {
   testWidgets('a cell picks its people at once; nobody is told until 完成, once, which goes back', (tester) async {
     final b = seededChurch();
-    await pumpApp(tester, b);
+    final telemetry = RecordingTelemetry();
+    await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
     await go(tester, '/rosters/plan/sunday');
     expect(find.text('2026年10月'), findsOneWidget);
     expect(find.text('2026年11月'), findsOneWidget);
@@ -106,11 +109,17 @@ void main() {
     await settle(tester);
     expect(peopleOn(b, 11, '司琴'), ['李美玉']);
     expect(waiting(b), {'mei'});
+    expect(telemetry.named('roster_edit'), [
+      {'via': 'plan'},
+    ]);
     expect(find.descendant(of: cell('司琴', 11), matching: find.text('李美玉')), findsOneWidget);
 
     await tester.tap(find.text('完成'));
     await settle(tester);
     expect(find.text('已通知 1 位同工'), findsOneWidget);
+    expect(telemetry.named('roster_notify'), [
+      {'people': 1},
+    ], reason: 'once, at 完成');
     expect(waiting(b), isEmpty);
     expect(path(tester), '/rosters');
   });

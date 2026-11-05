@@ -60,6 +60,7 @@ void main() {
     expect(telemetry.named('church_create'), [
       {'method': 'new'},
     ]);
+    expect(telemetry.role, 'admin');
     expect(telemetry.screens, containsAllInOrder(['/login', '/welcome', '/welcome/create', '/home']));
 
     // The home page points the new admin at inviting people.

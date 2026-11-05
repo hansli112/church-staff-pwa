@@ -285,7 +285,9 @@ void main() {
     expect(peopleOn(b, 18, '招待'), ['陳志明']);
     expect(savedDay(b, 18).duties.firstWhere((d) => d.role == '司琴').uids, {'李美玉': 'mei'});
     expect(savedDay(b, 18).duties.firstWhere((d) => d.role == '招待').uids, isEmpty);
-    expect(telemetry.named('roster_import'), [null]);
+    expect(telemetry.named('roster_import'), [
+      {'method': 'text'},
+    ]);
     expect(telemetry.named('roster_edit'), isEmpty, reason: 'counted as an import, not an edit');
   });
 

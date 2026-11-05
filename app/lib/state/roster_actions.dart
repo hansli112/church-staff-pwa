@@ -13,6 +13,7 @@ import '../domain/serving_around.dart';
 import '../domain/staff_order.dart';
 import 'church_writes.dart';
 import 'providers.dart';
+import 'session.dart';
 
 /// A bulk preview is scoped to the church and account that opened it.
 class RosterPreview {
@@ -326,11 +327,19 @@ class RosterActions {
 
   /// 通知同工 in 安排服事 (#90): tells everyone whose days of [type]
   /// changed there since, one push each.
-  Future<PlannedNotice> notifyPlanned(String type) => _data.notifyPlanned(type);
+  Future<PlannedNotice> notifyPlanned(String type) async {
+    final notice = await _data.notifyPlanned(type);
+    // The rosters going out to the staff (GA4).
+    if (notice.people > 0) _ref.read(telemetryProvider).logEvent('roster_notify', {'people': notice.people});
+    return notice;
+  }
 
   /// 請同工填 (#91) for [type], the months of [from] to [to]: how many it told.
-  Future<int> askUnavailable(String type, {required Day from, required Day to}) =>
-      _data.askUnavailable(type, from: from, to: to);
+  Future<int> askUnavailable(String type, {required Day from, required Day to}) async {
+    final told = await _data.askUnavailable(type, from: from, to: to);
+    _ref.read(telemetryProvider).logEvent('unavailable_ask', {'people': told});
+    return told;
+  }
 
   /// Gives [member] the duty, so the picker lists them first next time.
   Future<void> grantDuty(Member member, String type, String role) => _data.grantDuty(member.uid, type, role);

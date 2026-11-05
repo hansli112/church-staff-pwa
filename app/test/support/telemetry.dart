@@ -18,4 +18,10 @@ class RecordingTelemetry extends NoTelemetry {
 
   @override
   void logScreen(String name) => screens.add(name);
+
+  /// The GA4 user property `role`, as last set.
+  String? role;
+
+  @override
+  void setRole(String? role) => this.role = role;
 }

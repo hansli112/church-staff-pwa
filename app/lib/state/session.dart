@@ -74,6 +74,12 @@ final sessionEffectsProvider = Provider<void>((ref) {
   ref.onDispose(lifecycle.dispose);
 
   ref.listen(currentChurchIdProvider, (_, cid) => ref.read(telemetryProvider).setChurch(cid), fireImmediately: true);
+  // My role in it (GA4 `role`): admins and staff use the app differently.
+  ref.listen(
+    meProvider.select((m) => m.value?.role),
+    (_, role) => ref.read(telemetryProvider).setRole(role?.name),
+    fireImmediately: true,
+  );
 
   // The home-screen icon, as nextAppIcon has it: a lapsed subscription's
   // goes, and a church's own comes on, at the same go, so one never waits

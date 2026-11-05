@@ -6,9 +6,11 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
+import 'package:martha/state/session.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
+import '../support/telemetry.dart';
 
 // 不能服事的日子 (#91). The tests start on Thursday 1 October 2026: 李美玉
 // ushers on 10/4 and 10/11.
@@ -46,7 +48,8 @@ Finder cell(String role, int date) => find.byWidgetPredicate(
 void main() {
   testWidgets('a tap marks a day, again clears it; one already served on is said', (tester) async {
     final b = seededChurch(as: staffMei);
-    await pumpApp(tester, b);
+    final telemetry = RecordingTelemetry();
+    await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
     await go(tester, '/me');
     await tester.tap(find.text('不能服事的日子'));
     await settle(tester);
@@ -62,6 +65,7 @@ void main() {
     await settle(tester);
     expect(meisDays(b)!.isEmpty, isTrue);
     expect(find.text('這幾天你已經被排到'), findsNothing);
+    expect(telemetry.named('unavailable_set'), [null, null], reason: 'each change kept');
   });
 
   testWidgets('held and dragged, a stretch; it takes a reason, and is removed with 復原', (tester) async {
@@ -130,7 +134,8 @@ void main() {
 
   testWidgets('請同工填 asks those on the lists, through the month picked, once confirmed', (tester) async {
     final b = seededChurch(as: editor);
-    await pumpApp(tester, b);
+    final telemetry = RecordingTelemetry();
+    await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
     await go(tester, '/rosters/plan/sunday');
 
     await tester.tap(find.byIcon(Symbols.more_horiz_rounded));
@@ -156,6 +161,9 @@ void main() {
     final asked = b.unavailableAsks['grace']!['sunday']!;
     expect((asked.from, asked.to), (_oct(1), Day(2026, 12, 1)));
     expect(asked.told..sort(), ['hao', 'mei']);
+    expect(telemetry.named('unavailable_ask'), [
+      {'people': 2},
+    ], reason: 'once confirmed, not the time 取消 was tapped');
 
     await tester.tap(find.byIcon(Symbols.more_horiz_rounded));
     await settle(tester);

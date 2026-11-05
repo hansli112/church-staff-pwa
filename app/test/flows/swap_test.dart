@@ -6,9 +6,11 @@ import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/domain/swap.dart';
+import 'package:martha/state/session.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
+import '../support/telemetry.dart';
 
 // 找人代／交換 (#92). The tests start on Thursday 1 October 2026: 李美玉
 // plays on 10/4, 張雅雨 on 10/18; both are on 司琴's list. 林同工 (who
@@ -61,7 +63,8 @@ Future<void> myRow(WidgetTester tester, String duty) async {
 void main() {
   testWidgets('my own duty: 請人代 asks those free on the list, and 收回 takes it back', (tester) async {
     final b = church();
-    await pumpApp(tester, b);
+    final telemetry = RecordingTelemetry();
+    await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
     await go(tester, '/rosters/sunday/2026-10-04');
     await myRow(tester, '司琴');
     expect(find.text('請人代'), findsOneWidget);
@@ -72,6 +75,9 @@ void main() {
     final r = requests(b).single;
     expect((r.kind, r.from, r.duty), (SwapKind.cover, 'mei', '司琴'));
     expect(r.asked, ['yu']);
+    expect(telemetry.named('swap_ask'), [
+      {'kind': 'cover'},
+    ]);
 
     expect(find.text('已請人代'), findsOneWidget, reason: 'said on the row');
     await myRow(tester, '司琴');
@@ -96,7 +102,8 @@ void main() {
 
   testWidgets('和別週交換 lists who is on it on later days, and asks the one picked', (tester) async {
     final b = church();
-    await pumpApp(tester, b);
+    final telemetry = RecordingTelemetry();
+    await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
     await go(tester, '/rosters/sunday/2026-10-04');
     await myRow(tester, '司琴');
     await tester.tap(find.text('和別週交換'));
@@ -107,6 +114,9 @@ void main() {
     expect(find.text('已請「張雅雨」交換，對方接受才換'), findsOneWidget);
     final r = requests(b).single;
     expect((r.kind, r.to, r.toDay), (SwapKind.swap, 'yu', Day(2026, 10, 18)));
+    expect(telemetry.named('swap_ask'), [
+      {'kind': 'swap'},
+    ]);
   });
 
   testWidgets('asked to cover: 我來 takes it, goes to the day, and 復原 gives it back', (tester) async {
@@ -123,12 +133,16 @@ void main() {
         asked: const ['yu'],
       ),
     };
-    await pumpApp(tester, b);
+    final telemetry = RecordingTelemetry();
+    await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
     await go(tester, '/rosters/request/r1');
     expect(find.text('「李美玉」想請你代'), findsOneWidget);
     await tester.tap(find.text('我來'));
     await settle(tester);
     expect(peopleOn(b, 4, '司琴'), ['張雅雨']);
+    expect(telemetry.named('swap_answer'), [
+      {'kind': 'cover', 'result': 'yes'},
+    ]);
     expect(path(tester), '/rosters/sunday/2026-10-04');
     expect(find.text('已接手'), findsOneWidget);
     await tester.tap(find.text('復原'));
@@ -153,7 +167,8 @@ void main() {
         toDay: Day(2026, 10, 18),
       ),
     };
-    await pumpApp(tester, b);
+    final telemetry = RecordingTelemetry();
+    await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
     await go(tester, '/rosters/request/r1');
     expect(find.text('「李美玉」想和你交換'), findsOneWidget);
     expect(find.text('「李美玉」改成'), findsOneWidget);
@@ -162,6 +177,9 @@ void main() {
     expect(requests(b).single.status, SwapStatus.declined);
     expect(find.text('你說了不方便'), findsOneWidget);
     expect(find.text('接受'), findsNothing);
+    expect(telemetry.named('swap_answer'), [
+      {'kind': 'swap', 'result': 'no'},
+    ]);
   });
 
   testWidgets('a request the roster no longer bears is void', (tester) async {

@@ -64,13 +64,10 @@ class ChurchWrites {
   ChurchWrite rosters(RosterChange change, {RosterChange Function()? undo}) => _reversible(
     (data) async {
       await _sendRosters(data, change);
-      // Counted once written (GA4): an import whole, any other edit by
-      // where it was made.
-      final telemetry = _ref.read(telemetryProvider);
-      if (change.via == RosterVia.import) {
-        telemetry.logEvent('roster_import');
-      } else {
-        telemetry.logEvent('roster_edit', {'via': change.via.name});
+      // Counted once written (GA4), by where it was made; an import is
+      // counted by its session, which knows where its rows came from.
+      if (change.via != RosterVia.import) {
+        _ref.read(telemetryProvider).logEvent('roster_edit', {'via': change.via.name});
       }
     },
     (data) => _sendRosters(data, undo == null ? change.reversed : undo()),

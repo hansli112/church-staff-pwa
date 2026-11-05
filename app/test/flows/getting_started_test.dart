@@ -4,9 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
+import 'package:martha/state/session.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
+import '../support/telemetry.dart';
 
 // 開始使用 for a 身分: 青年崇拜 has nobody in it and nothing arranged yet,
 // and 陳志豪 was just made its 負責人.
@@ -53,7 +55,9 @@ void main() {
 
   testWidgets('a step done is checked, and the list gone once every step is', (tester) async {
     final b = youthChurch();
-    await pumpApp(tester, b);
+    final telemetry = RecordingTelemetry();
+    await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
+    expect(telemetry.named('tutorial_step'), isEmpty, reason: 'nothing done yet');
 
     b.members['grace']!['john'] = johnOnSunday.copyWith(zones: const [Zone(serviceType: 'youth')]);
     b.notify();
@@ -61,6 +65,9 @@ void main() {
     expect(find.text('加入青年崇拜的同工'), findsOneWidget, reason: 'still listed, in its place');
     expect(find.bySemanticsLabel(RegExp('已完成')), findsOneWidget);
     expect(find.text('排青年崇拜的服事'), findsOneWidget);
+    expect(telemetry.named('tutorial_step'), [
+      {'step': 'addStaff'},
+    ]);
 
     b.rosters['grace']![Roster.idFor('youth', Day(2026, 10, 3))] = Roster(
       type: 'youth',
@@ -72,10 +79,16 @@ void main() {
     b.notify();
     await settle(tester);
     expect(find.text('開始使用 · 青年崇拜 負責人'), findsNothing);
+    expect(telemetry.named('tutorial_step'), [
+      {'step': 'addStaff'},
+      {'step': 'planWeeks'},
+    ]);
+    expect(telemetry.named('tutorial_complete'), [null]);
   });
 
   testWidgets('不再顯示 puts it away on this device', (tester) async {
-    await pumpApp(tester, youthChurch());
+    final telemetry = RecordingTelemetry();
+    await pumpApp(tester, youthChurch(), overrides: [telemetryProvider.overrideWithValue(telemetry)]);
 
     await tapText(tester, '不再顯示');
     expect(find.text('開始使用 · 青年崇拜 負責人'), findsNothing);
@@ -83,6 +96,7 @@ void main() {
     await tapText(tester, '服事表');
     await tapText(tester, '首頁');
     expect(find.text('開始使用 · 青年崇拜 負責人'), findsNothing);
+    expect(telemetry.events.where((e) => e.$1.startsWith('tutorial_')), isEmpty, reason: 'put away, not done');
   });
 
   testWidgets('a church between seasons, with nothing arranged ahead yet, is not new again', (tester) async {
@@ -95,8 +109,10 @@ void main() {
         Duty(role: '司會', people: ['John Chen'], uids: {'John Chen': 'john'}),
       ],
     );
-    await pumpApp(tester, b);
+    final telemetry = RecordingTelemetry();
+    await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
     expect(find.text('開始使用 · 青年崇拜 負責人'), findsNothing);
+    expect(telemetry.events.where((e) => e.$1.startsWith('tutorial_')), isEmpty, reason: 'done before, not now');
   });
 
   testWidgets('a church long in use shows its people nothing to start', (tester) async {

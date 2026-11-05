@@ -9,6 +9,7 @@ import '../domain/roster_import.dart';
 import 'church_writes.dart';
 import 'providers.dart';
 import 'roster_actions.dart';
+import 'session.dart';
 
 /// What is being imported into one service before it is applied: the rows,
 /// from photos or pasted JSON, as edited; who each name is; merge or
@@ -23,6 +24,7 @@ class ImportDraft {
     this.busy = false,
     this.error,
     this.scopeChanged = false,
+    this.fromPhotos = false,
   });
 
   /// The rows in the documented JSON format, each a decoded JSON value.
@@ -47,6 +49,9 @@ class ImportDraft {
   /// until rows are loaded or something else goes wrong.
   final bool scopeChanged;
 
+  /// The rows were read from photos, not pasted.
+  final bool fromPhotos;
+
   /// Every name on the rows, trimmed.
   Set<String> get names => {
     for (final row in rows)
@@ -65,6 +70,7 @@ class ImportDraft {
     bool? busy,
     Object? error,
     bool clearError = false,
+    bool? fromPhotos,
   }) => ImportDraft(
     rows: rows ?? this.rows,
     loaded: loaded ?? this.loaded,
@@ -73,6 +79,7 @@ class ImportDraft {
     busy: busy ?? this.busy,
     error: clearError ? null : error ?? this.error,
     scopeChanged: scopeChanged && !clearError && error == null,
+    fromPhotos: fromPhotos ?? this.fromPhotos,
   );
 }
 
@@ -112,7 +119,7 @@ class ImportSession extends Notifier<ImportDraft> {
     state = state.copyWith(busy: true, clearError: true);
     try {
       final rows = await ref.churchData.photos.recognize(serviceType, images);
-      if (_isCurrent(draft)) load(rows);
+      if (_isCurrent(draft)) load(rows, fromPhotos: true);
     } catch (e) {
       if (_isCurrent(draft)) fail(e);
     } finally {
@@ -149,14 +156,16 @@ class ImportSession extends Notifier<ImportDraft> {
     ];
   }
 
-  /// Loads [rows] as new: who each name is is asked again.
-  void load(List<dynamic> rows) => state = state.copyWith(
+  /// Loads [rows] as new: who each name is is asked again. [fromPhotos]:
+  /// read from photos rather than pasted.
+  void load(List<dynamic> rows, {bool fromPhotos = false}) => state = state.copyWith(
     // Never share the recognizer's response or a caller's list.
     rows: _scoped(rows),
     loaded: true,
     people: const {},
     clearError: true,
     mode: arranges.all ? null : ImportMode.merge,
+    fromPhotos: fromPhotos,
   );
 
   /// Loads pasted [text], which must be a JSON array.
@@ -252,9 +261,19 @@ class ImportSession extends Notifier<ImportDraft> {
 
   /// Applies [shown], the preview the person saw. If the rosters changed
   /// since, [CloudErrorCode.conflict]: the new difference must be seen first.
-  ChurchWrite apply(ImportPlan shown) => ref
-      .read(rosterActionsProvider)
-      .applyImport(serviceType, state.rows, people: state.people, mode: state.mode, preview: shown);
+  ChurchWrite apply(ImportPlan shown) {
+    final write = ref
+        .read(rosterActionsProvider)
+        .applyImport(serviceType, state.rows, people: state.people, mode: state.mode, preview: shown);
+    final telemetry = ref.read(telemetryProvider);
+    final method = state.fromPhotos ? 'photo' : 'text';
+    // Counted once written (GA4), by where the rows came from: photos go
+    // through Gemini, which costs.
+    return (
+      done: write.done.then((_) => telemetry.logEvent('roster_import', {'method': method})),
+      undo: write.undo,
+    );
+  }
 }
 
 final importSessionProvider = NotifierProvider.autoDispose.family<ImportSession, ImportDraft, String>(

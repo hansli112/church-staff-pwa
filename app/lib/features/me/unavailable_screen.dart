@@ -16,6 +16,7 @@ import '../common/errors.dart';
 import '../rosters/format.dart';
 import '../rosters/rosters_screen.dart' show selectedServiceProvider;
 import '../rosters/swap_asking.dart';
+import '../../state/session.dart';
 
 /// How many months from this one the page lays out.
 const _months = 12;
@@ -48,8 +49,10 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
     final l10n = L10n.of(context);
     final kept = next.since(ref.read(todayProvider));
     setState(() => _shown = kept);
+    final telemetry = ref.read(telemetryProvider);
     try {
       await ref.churchData.saveMyUnavailableDays(kept);
+      telemetry.logEvent('unavailable_set');
       return true;
     } catch (e) {
       if (mounted) showToast(context, errorText(l10n, e));

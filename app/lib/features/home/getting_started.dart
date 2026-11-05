@@ -11,6 +11,7 @@ import '../../domain/getting_started.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
+import '../../state/session.dart';
 import '../common/labels.dart';
 import '../me/groups_screen.dart';
 
@@ -69,28 +70,29 @@ final _invitesProvider = StreamProvider<List<Invite>>(
       : Stream.value(const []),
 );
 
-/// What my 身分 still have to start (gettingStarted), less those put away;
-/// nothing until everything it is worked out from has loaded. While
-/// anything is left it looks at the past weeks' rosters too (read only
-/// then), so a church between seasons is not new again.
-final gettingStartedProvider = Provider.autoDispose<List<GettingStarted>>((ref) {
+/// What my 身分 still have to start (gettingStarted), those put away too;
+/// null until everything it is worked out from has
+/// loaded. While anything is left it looks at the past weeks' rosters too
+/// (read only then), so a church between seasons is not new again.
+List<GettingStarted>? _starts(Ref ref) {
   final me = ref.watch(meProvider).value;
-  if (me == null || me.identities.isEmpty) return const [];
+  if (me == null) return null;
+  if (me.identities.isEmpty) return const [];
   final members = ref.watch(membersProvider).value;
   final pending = ref.watch(pendingMembersProvider).value;
   final services = ref.watch(servicesProvider).value;
   final ministries = ref.watch(ministriesProvider).value;
   final smallGroups = ref.watch(smallGroupsProvider).value;
   final rosters = ref.watch(savedRostersProvider).value;
-  final church = ref.watch(churchProvider).value;
+  final settings = ref.watch(churchProvider).value;
   if (members == null ||
       pending == null ||
       services == null ||
       ministries == null ||
       smallGroups == null ||
       rosters == null ||
-      church == null) {
-    return const [];
+      settings == null) {
+    return null;
   }
   final invites = ref.watch(_invitesProvider).value;
   final now = ref.read(clockProvider)();
@@ -104,7 +106,7 @@ final gettingStartedProvider = Provider.autoDispose<List<GettingStarted>>((ref) 
     ministries: ministries,
     smallGroups: smallGroups,
     rosters: rosters,
-    attendanceOn: church.attendanceSince != null,
+    attendanceOn: settings.attendanceSince != null,
     invited: invited,
     servicesSeen: servicesSeen,
   );
@@ -112,14 +114,55 @@ final gettingStartedProvider = Provider.autoDispose<List<GettingStarted>>((ref) 
   if (starts.isNotEmpty) {
     final past = ref.watch(recentRostersProvider);
     // A failed read leaves the steps as today on has them.
-    if (past.isLoading) return const [];
+    if (past.isLoading) return null;
     starts = left([...rosters, ...?past.value]);
   }
+  return starts;
+}
+
+/// What my 身分 still have to start, less those put away; nothing until
+/// it has all loaded. Worked out here, not from [_startsProvider]: a
+/// provider between them would be refreshed while home is being rebuilt.
+final gettingStartedProvider = Provider.autoDispose<List<GettingStarted>>((ref) {
+  final starts = _starts(ref);
+  if (starts == null) return const [];
   final hidden = ref.watch(_hiddenStartsProvider);
   return [
     for (final g in starts)
       if (!hidden.contains(_keyOf(g.identity))) g,
   ];
+});
+
+final _startsProvider = Provider.autoDispose<List<GettingStarted>?>(_starts);
+
+/// Counts each 開始使用 step as it gets done, put away or not, and the
+/// whole once nothing is left (GA4 `tutorial_step`, `tutorial_complete`):
+/// only what changes while the church is open here, never what was done
+/// before. Home watches it.
+final countStartsProvider = Provider.autoDispose<void>((ref) {
+  var church = ref.read(currentChurchIdProvider);
+  ref.listen(_startsProvider, (before, now) {
+    final was = church;
+    church = ref.read(currentChurchIdProvider);
+    if (before == null || now == null || church != was) return;
+    final after = {for (final g in now) _keyOf(g.identity): g};
+    final had = {for (final g in before) _keyOf(g.identity)};
+    // A 身分 just given brings steps of its own and may take others' away:
+    // nothing was done.
+    if (after.keys.any((k) => !had.contains(k))) return;
+    final telemetry = ref.read(telemetryProvider);
+    for (final g in before) {
+      // Gone: everything of it is done.
+      final left = after[_keyOf(g.identity)];
+      for (final s in g.steps) {
+        if (s.state == StartState.done) continue;
+        final done =
+            left == null || left.steps.any((t) => t.step == s.step && t.group == s.group && t.state == StartState.done);
+        if (done) telemetry.logEvent('tutorial_step', {'step': s.step.name});
+      }
+    }
+    if (before.isNotEmpty && now.isEmpty) telemetry.logEvent('tutorial_complete');
+  });
 });
 
 /// The page [s] opens, which may be three levels down under 設定; null for

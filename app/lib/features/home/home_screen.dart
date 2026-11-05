@@ -90,6 +90,7 @@ class HomeScreen extends ConsumerWidget {
           perfMark('home-visible');
           final claims = ref.watch(pendingClaimsProvider).value ?? const [];
           final gettingStarted = ref.watch(gettingStartedProvider);
+          ref.watch(countStartsProvider);
           // 開始使用 putting 同工 in a service says the same.
           final waiting =
               gettingStarted.any(

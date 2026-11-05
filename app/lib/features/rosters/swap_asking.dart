@@ -17,6 +17,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
 import 'format.dart';
+import '../../state/session.dart';
 
 /// Whether I may ask for a cover or a swap of my [duty] on [roster]: a
 /// service's day, today or later, with me on it.
@@ -35,7 +36,9 @@ String myOpenAskLabel(L10n l10n, SwapRequest r) =>
 
 /// 請人代 for my [duty] on [roster]: asks, and says how many were asked.
 Future<void> askForCover(BuildContext context, WidgetRef ref, Roster roster, String duty) => _asking(context, () async {
+  final telemetry = ref.read(telemetryProvider);
   final asked = await ref.churchData.askCover(roster, duty);
+  telemetry.logEvent('swap_ask', {'kind': 'cover'});
   Haptics.success();
   if (context.mounted) showToast(context, L10n.of(context).swapAskedCover(asked));
 });
@@ -149,6 +152,7 @@ Future<void> _askSwap(BuildContext context, WidgetRef ref, Roster roster, String
   );
   if (picked == null || !context.mounted) return;
   await ref.churchData.askSwap(roster, duty, picked.day, picked.uid);
+  ref.read(telemetryProvider).logEvent('swap_ask', {'kind': 'swap'});
   Haptics.success();
   if (context.mounted) showToast(context, l10n.swapAskedSwap(picked.name));
 }
@@ -170,11 +174,13 @@ class _SwapRequestScreenState extends ConsumerState<SwapRequestScreen> {
   Future<void> _answer(SwapRequest r, {required bool yes}) async {
     final l10n = L10n.of(context);
     final data = ref.churchData;
+    final telemetry = ref.read(telemetryProvider);
     final router = GoRouter.of(context);
     final toasts = Navigator.of(context, rootNavigator: true).context;
     setState(() => _busy = true);
     try {
       await data.answerSwap(r.id, yes: yes);
+      telemetry.logEvent('swap_answer', {'kind': r.kind.name, 'result': yes ? 'yes' : 'no'});
       if (!mounted) return;
       if (!yes) {
         showToast(context, l10n.swapDeclined);

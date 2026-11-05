@@ -17,6 +17,9 @@ abstract interface class Telemetry {
   void setChurch(String? churchId);
   void setUser(String? uid);
 
+  /// Sets the GA4 user property `role`: mine in the church open now.
+  void setRole(String? role);
+
   /// Tags native crash reports with the Shorebird patch running (0: none),
   /// which the build number Crashlytics records does not show.
   void setPatch(int? patch);
@@ -41,6 +44,9 @@ class NoTelemetry implements Telemetry {
 
   @override
   void setUser(String? uid) {}
+
+  @override
+  void setRole(String? role) {}
 
   @override
   void setPatch(int? patch) {}
@@ -97,6 +103,11 @@ class FirebaseTelemetry implements Telemetry {
   void setUser(String? uid) {
     _analytics?.setUserId(id: uid);
     if (!kIsWeb) FirebaseCrashlytics.instance.setUserIdentifier(uid ?? '');
+  }
+
+  @override
+  void setRole(String? role) {
+    _analytics?.setUserProperty(name: 'role', value: role);
   }
 
   @override
