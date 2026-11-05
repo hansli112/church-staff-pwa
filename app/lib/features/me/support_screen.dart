@@ -39,7 +39,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
   /// What was just tapped to buy, until the store says how it went. Only
   /// that is new support, thanked on a sheet; a restore or a renewal gets
   /// the passing note.
-  String? _buying;
+  SupportItem? _buying;
 
   @override
   void initState() {
@@ -47,12 +47,19 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
     _sub = ref.read(supportStoreProvider).results.listen((r) {
       if (!mounted) return;
       final l10n = L10n.of(context);
-      final bought = r.productId == _buying && !r.restored;
+      final item = _buying;
+      final bought = r.productId == item?.id && !r.restored;
       if (bought && r.outcome != PurchaseOutcome.pending) _buying = null;
       switch (r.outcome) {
         case PurchaseOutcome.thanks:
           Haptics.success();
           if (bought) {
+            ref.read(telemetryProvider).logEvent('support_paid', {
+              'item_id': item!.id,
+              'kind': item.subscription ? 'monthly' : 'tip',
+              'value': item.amount,
+              'currency': item.currency,
+            });
             showAppSheet<void>(context, builder: (_) => const _Thanks());
           } else {
             showToast(context, l10n.supportThanks);
@@ -68,7 +75,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
   }
 
   void _buy(SupportItem item) {
-    _buying = item.id;
+    _buying = item;
     final telemetry = ref.read(telemetryProvider);
     // The store refused before showing anything: nothing was paid.
     unawaited(

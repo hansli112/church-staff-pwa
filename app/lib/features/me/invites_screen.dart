@@ -9,6 +9,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../church/links.dart';
 import '../common/time_zones.dart';
+import '../../state/session.dart';
 
 final _invitesProvider = StreamProvider.autoDispose<List<Invite>>(
   (ref) => openChurch(ref).invites(),
@@ -75,6 +76,7 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
   Future<void> _share(Invite invite) async {
     final l10n = L10n.of(context);
     final text = l10n.inviteMessage(invite.churchName, inviteLink(invite.churchId, invite.code));
+    ref.read(telemetryProvider).logEvent('share', {'content_type': 'invite', 'method': 'share'});
     await shareText(context, text, copied: l10n.inviteCopied);
   }
 
@@ -111,6 +113,7 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
       case 'share':
         await _share(invite);
       case 'copy':
+        ref.read(telemetryProvider).logEvent('share', {'content_type': 'invite', 'method': 'copy'});
         await copyText(context, inviteLink(invite.churchId, invite.code), copied: l10n.inviteCopied);
       case 'revoke':
         await ref.churchData.revokeInvite(invite.code);

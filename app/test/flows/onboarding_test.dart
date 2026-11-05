@@ -8,10 +8,12 @@ import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/features/church/church_logo.dart';
+import 'package:martha/state/session.dart';
 import 'package:martha/state/web_page.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
+import '../support/telemetry.dart';
 
 Future<void> tapText(WidgetTester tester, String text) async {
   await tester.tap(findShown(text).last);
@@ -23,7 +25,8 @@ void main() {
     tester,
   ) async {
     final b = MemoryBackend(clock: testClock)..auth.googleAccount = 'alice@gmail.com';
-    await pumpApp(tester, b);
+    final telemetry = RecordingTelemetry();
+    await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
 
     expect(find.text('使用 Google 登入'), findsOneWidget);
     await tapText(tester, '使用 Google 登入');
@@ -51,6 +54,13 @@ void main() {
     expect(b.members.values.single[uid]!.role, Role.admin);
     expect(b.members.values.single[uid]!.name, '林愛麗');
     expect(find.byType(NavigationBar), findsOneWidget);
+    expect(telemetry.named('login'), [
+      {'method': 'google'},
+    ]);
+    expect(telemetry.named('church_create'), [
+      {'method': 'new'},
+    ]);
+    expect(telemetry.screens, containsAllInOrder(['/login', '/welcome', '/welcome/create', '/home']));
 
     // The home page points the new admin at inviting people.
     expect(find.text('開始使用'), findsOneWidget);
@@ -67,7 +77,8 @@ void main() {
     tester,
   ) async {
     final b = MemoryBackend(clock: testClock);
-    await pumpApp(tester, b);
+    final telemetry = RecordingTelemetry();
+    await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
 
     await tapText(tester, '用 email 登入');
     await tapText(tester, '註冊新帳號');
@@ -77,6 +88,10 @@ void main() {
     await tester.enterText(fields.at(2), 'secret123');
     await tapText(tester, '註冊');
 
+    expect(telemetry.named('sign_up'), [
+      {'method': 'email'},
+    ]);
+    expect(telemetry.named('login'), isEmpty);
     expect(findShown('到信箱點驗證連結'), findsOneWidget);
     expect(findShown('驗證信已寄到 ming@example.com。點信裡的連結後，回到這裡就會自動繼續。'), findsOneWidget);
     expect(findShown('沒收到？看看垃圾郵件，或重寄一次。'), findsOneWidget);
@@ -221,7 +236,8 @@ void main() {
       expiresAt: testNow.add(const Duration(days: 7)),
     );
     b.auth.googleAccount = 'new@gmail.com';
-    await pumpApp(tester, b);
+    final telemetry = RecordingTelemetry();
+    await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
 
     final router = GoRouter.of(tester.element(find.byType(Scaffold).first));
     router.go('/c/$cid/join/WELCOME26');
@@ -246,6 +262,12 @@ void main() {
     expect(b.members[cid]![uid]!.name, '陳新');
     expect(b.users[uid]!.name, '陳新', reason: 'the account’s name, as 帳號 → 名字 sets it');
     expect(find.byType(NavigationBar), findsOneWidget);
+    expect(telemetry.named('join_group'), [
+      {'method': 'invite'},
+    ]);
+    // Pages by their pattern: never the church's ID or the invite code.
+    expect(telemetry.screens, contains('/c/:churchId/join/:code'));
+    expect(telemetry.screens.where((s) => s.contains(cid) || s.contains('WELCOME26')), isEmpty);
   });
 
   testWidgets('an invite to a church I am already in opens that church, with nothing to join', (tester) async {

@@ -412,6 +412,7 @@ class _CreateChurchScreenState extends ConsumerState<CreateChurchScreen> {
       final timeZone = await ref.read(deviceTimeZoneProvider)();
       await saveJoiningName(ref, myName);
       final cid = await ref.read(backendProvider).cloud.createChurch(name, timeZone: timeZone, language: language);
+      ref.read(telemetryProvider).logEvent('church_create', {'method': 'new'});
       ref.read(selectedChurchProvider.notifier).select(cid);
       Haptics.success();
       if (mounted) goAfterJoining(context, ref, cid);

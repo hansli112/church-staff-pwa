@@ -11,6 +11,7 @@ import '../common/errors.dart';
 import 'add_to_home.dart';
 import 'church_logo.dart';
 import 'your_name.dart';
+import '../../state/session.dart';
 
 final _invitePreviewProvider = FutureProvider.autoDispose.family<Invite, String>(
   (ref, code) => ref.watch(backendProvider).cloud.previewInvite(code),
@@ -42,6 +43,7 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
     try {
       await saveJoiningName(ref, name);
       final cid = await ref.read(backendProvider).cloud.redeemInvite(widget.code);
+      ref.read(telemetryProvider).logEvent('join_group', {'method': 'invite'});
       ref.read(selectedChurchProvider.notifier).select(cid);
       Haptics.success();
       if (!mounted) return;

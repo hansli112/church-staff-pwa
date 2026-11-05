@@ -9,6 +9,7 @@ import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
+import '../../state/session.dart';
 
 /// Claims declined on this device, per account.
 class DeclinedClaims extends Notifier<Set<String>> {
@@ -69,6 +70,7 @@ class _PendingClaimsCardState extends ConsumerState<PendingClaimsCard> {
     setState(() => _busy = claim.key);
     try {
       final cid = await container.read(backendProvider).cloud.claimPending(claim.churchId, claim.pendingId);
+      container.read(telemetryProvider).logEvent('join_group', {'method': 'claim'});
       container.read(selectedChurchProvider.notifier).select(cid);
       container.invalidate(pendingClaimsProvider);
       Haptics.success();

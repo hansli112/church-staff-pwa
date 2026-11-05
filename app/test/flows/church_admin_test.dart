@@ -5,9 +5,11 @@ import 'package:go_router/go_router.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/models.dart';
+import 'package:martha/state/session.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
+import '../support/telemetry.dart';
 
 Future<void> tapText(WidgetTester tester, String text) async {
   await tester.tap(findShown(text).last);
@@ -263,10 +265,14 @@ void main() {
   group('invites and settings', () {
     testWidgets('create a 7-day invite and revoke it', (tester) async {
       final b = seededChurch();
-      await pumpApp(tester, b);
+      final telemetry = RecordingTelemetry();
+      await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
       await go(tester, '/me/invites');
       await tapText(tester, '建立邀請連結');
       expect(b.invites.length, 1);
+      expect(telemetry.named('share'), [
+        {'content_type': 'invite', 'method': 'share'},
+      ]);
       final code = b.invites.keys.single;
       await go(tester, '/me');
       await go(tester, '/me/invites');

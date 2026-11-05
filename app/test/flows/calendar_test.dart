@@ -11,11 +11,13 @@ import 'package:martha/domain/day.dart';
 import 'package:martha/domain/event_roster.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/features/calendar/month_grid.dart';
+import 'package:martha/state/session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
+import '../support/telemetry.dart';
 
 Future<void> go(WidgetTester tester, String location) async {
   GoRouter.of(tester.element(find.byType(Scaffold).first)).go(location);
@@ -84,10 +86,12 @@ void main() {
     b.calendarEvents['grace'] = [
       CalendarEvent(id: 'e1', title: '同工會', start: DateTime(2026, 10, 10, 19, 30), end: DateTime(2026, 10, 10, 21)),
     ];
-    await pumpApp(tester, b);
+    final telemetry = RecordingTelemetry();
+    await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
     await go(tester, '/me/calendar');
     await tapText(tester, '教會行事曆');
     expect(b.calendars['grace']!.calendarName, '教會行事曆');
+    expect(telemetry.named('calendar_connect'), [null]);
     await go(tester, '/calendar');
     expect(inAgenda('同工會'), findsOneWidget);
     expect(find.text('19:30'), findsOneWidget);

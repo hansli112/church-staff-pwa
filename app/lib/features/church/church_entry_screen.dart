@@ -14,6 +14,7 @@ import 'add_to_home.dart';
 import 'church_logo.dart';
 import 'welcome_screen.dart';
 import 'your_name.dart';
+import '../../state/session.dart';
 
 /// Churches asked to join from this device, per account, so the welcome
 /// page can say so once the church URL is closed. Only remembered: how each
@@ -110,6 +111,7 @@ class _NotMemberState extends ConsumerState<_NotMember> {
       () async {
         await saveJoiningName(ref, name);
         await ref.read(backendProvider).cloud.requestToJoin(widget.churchId, note: note);
+        ref.read(telemetryProvider).logEvent('join_request');
         ref.read(askedToJoinProvider.notifier).add(widget.churchId);
       },
       done: l10n.joinRequestSent,

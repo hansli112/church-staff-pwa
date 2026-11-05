@@ -37,6 +37,7 @@ Future<PushPermission?> enableNotifications(BuildContext context, {bool nudge = 
   final container = ProviderScope.containerOf(context, listen: false);
   try {
     final result = await container.read(pushServiceProvider).enable();
+    container.read(telemetryProvider).logEvent('notification_permission', {'result': result.name});
     // Dismissed, or tucked into the address bar by the browser.
     if (nudge && result == PushPermission.notAsked && context.mounted) showToast(context, l10n.notifNotAllowed);
     return result;

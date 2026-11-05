@@ -11,6 +11,7 @@ import '../../env.dart';
 import '../../domain/limits.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
+import '../../state/session.dart';
 import '../../state/web_page.dart';
 import '../church/links.dart';
 import '../common/errors.dart';
@@ -58,14 +59,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   AuthGateway get _auth => ref.read(backendProvider).auth;
 
-  Future<void> _run(Future<void> Function() action, {bool apple = false}) async {
+  /// [event]: what to count (GA4 `login`, `sign_up`) once [action] has
+  /// signed someone in, by [method]; not when they backed out of it.
+  Future<void> _run(Future<void> Function() action, {bool apple = false, String? event, String? method}) async {
     setState(() {
       _busy = true;
       _appleRunning = apple;
       _error = null;
     });
+    // Read now: signed in, the page may go before [action] returns.
+    final auth = _auth;
+    final telemetry = ref.read(telemetryProvider);
     try {
       await action();
+      if (event != null && auth.currentUser != null) telemetry.logEvent(event, {'method': method!});
     } catch (e) {
       if (!mounted) return;
       final text = errorText(L10n.of(context), e);
@@ -79,10 +86,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     // As the keyboard's 送出 does: what comes of it is not under the keyboard.
     FocusScope.of(context).unfocus();
     if (!_form.currentState!.validate()) return;
+    final register = _mode == _Mode.register;
     _run(
-      () => _mode == _Mode.register
+      () => register
           ? _auth.registerWithEmail(_name.text, _email.text, _password.text, AppLanguage.shownIn(context))
           : _auth.signInWithEmail(_email.text, _password.text),
+      event: register ? 'sign_up' : 'login',
+      method: 'email',
     );
   }
 
@@ -179,7 +189,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       mark: (size) => Image.asset('assets/icons/google_g.png', width: size, height: size, excludeFromSemantics: true),
       foreground: const Color(0xFF1F1F1F), // Google's text colour
       busy: _busy && !_appleRunning,
-      onPressed: _busy ? null : () => _run(_auth.signInWithGoogle),
+      onPressed: _busy ? null : () => _run(_auth.signInWithGoogle, event: 'login', method: 'google'),
     );
     if (!_auth.offersApple) return [google];
     final apple = _SignInButton(
@@ -188,7 +198,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       mark: (size) => Icon(Icons.apple, size: size),
       foreground: Colors.black, // Apple allows only black or white
       busy: _busy && _appleRunning,
-      onPressed: _busy ? null : () => _run(_auth.signInWithApple, apple: true),
+      onPressed: _busy ? null : () => _run(_auth.signInWithApple, apple: true, event: 'login', method: 'apple'),
     );
     final applePlatform =
         !kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS);

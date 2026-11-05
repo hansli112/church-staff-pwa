@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/backend.dart';
 import '../domain/models.dart';
+import '../domain/roster_news.dart';
 import 'providers.dart';
+import 'session.dart';
 
 /// A write that has been issued, and how to take it back.
 ///
@@ -60,7 +62,17 @@ class ChurchWrites {
   /// Writes [change]. Undo writes [undo]'s change, built when undoing, or
   /// [change] reversed; it throws to refuse.
   ChurchWrite rosters(RosterChange change, {RosterChange Function()? undo}) => _reversible(
-    (data) => _sendRosters(data, change),
+    (data) async {
+      await _sendRosters(data, change);
+      // Counted once written (GA4): an import whole, any other edit by
+      // where it was made.
+      final telemetry = _ref.read(telemetryProvider);
+      if (change.via == RosterVia.import) {
+        telemetry.logEvent('roster_import');
+      } else {
+        telemetry.logEvent('roster_edit', {'via': change.via.name});
+      }
+    },
     (data) => _sendRosters(data, undo == null ? change.reversed : undo()),
   );
 

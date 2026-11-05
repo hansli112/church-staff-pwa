@@ -13,17 +13,20 @@ import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/state/app_build.dart';
 import 'package:martha/state/providers.dart';
 import 'package:martha/state/support.dart';
+import 'package:martha/state/session.dart';
+import 'package:martha/core/telemetry.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
+import '../support/telemetry.dart';
 
 class FakeStore implements SupportStore {
   FakeStore({this.now, this.items = _items, this.unreachable = false});
 
   static const _items = [
-    SupportItem(id: 'tip_small', price: 'NT\$90', subscription: false),
-    SupportItem(id: 'supporter_monthly', price: 'NT\$60', subscription: true),
-    SupportItem(id: 'supporter_monthly_plus', price: 'NT\$150', subscription: true),
+    SupportItem(id: 'tip_small', price: 'NT\$90', amount: 90, currency: 'TWD', subscription: false),
+    SupportItem(id: 'supporter_monthly', price: 'NT\$60', amount: 60, currency: 'TWD', subscription: true),
+    SupportItem(id: 'supporter_monthly_plus', price: 'NT\$150', amount: 150, currency: 'TWD', subscription: true),
   ];
 
   /// When a purchase is paid; the test's clock.
@@ -145,6 +148,7 @@ Future<void> pumpWithStore(
   bool storePagesPublic = true,
   Map<String, Object> savedPrefs = const {},
   List<Locale> deviceLocales = const [Locale('zh', 'TW')],
+  Telemetry telemetry = const NoTelemetry(),
 }) async {
   tester.view.physicalSize = const Size(393 * 3, 852 * 3);
   tester.view.devicePixelRatio = 3;
@@ -158,6 +162,7 @@ Future<void> pumpWithStore(
         supportStoreProvider.overrideWithValue(store),
         appIconSwitcherProvider.overrideWithValue(icons),
         storePagesPublicProvider.overrideWithValue(storePagesPublic),
+        telemetryProvider.overrideWithValue(telemetry),
       ],
       retry: (_, _) => null,
       child: const MarthaApp(),
@@ -277,7 +282,8 @@ void main() {
   });
 
   testWidgets('a tip is thanked on a sheet that says where it goes; 完成 closes it', (tester) async {
-    await pumpWithStore(tester, FakeStore(), FakeIcons());
+    final telemetry = RecordingTelemetry();
+    await pumpWithStore(tester, FakeStore(), FakeIcons(), telemetry: telemetry);
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
     await settle(tester);
     await showMiddle(tester, find.text('NT\$90'));
@@ -289,6 +295,9 @@ void main() {
     await closeThanks(tester);
     expect(find.byType(BottomSheet), findsNothing);
     expect(find.text('謝謝你的支持'), findsNothing);
+    expect(telemetry.named('support_paid'), [
+      {'item_id': 'tip_small', 'kind': 'tip', 'value': 90.0, 'currency': 'TWD'},
+    ]);
   });
 
   testWidgets('a monthly plan is thanked the same way', (tester) async {
@@ -305,7 +314,8 @@ void main() {
 
   testWidgets('a restore or a renewal, which is no new support, thanks only in passing', (tester) async {
     final store = FakeStore();
-    await pumpWithStore(tester, store, FakeIcons());
+    final telemetry = RecordingTelemetry();
+    await pumpWithStore(tester, store, FakeIcons(), telemetry: telemetry);
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
     await settle(tester);
     await tester.tap(find.text(plan60));
@@ -323,6 +333,9 @@ void main() {
     await tester.pump();
     expect(find.byType(BottomSheet), findsNothing);
     await settle(tester);
+    expect(telemetry.named('support_paid'), [
+      {'item_id': 'supporter_monthly', 'kind': 'monthly', 'value': 60.0, 'currency': 'TWD'},
+    ], reason: 'only the plan bought here, not its restore or renewal');
   });
 
   testWidgets('a plan bought elsewhere, restored after a tap that went nowhere, thanks only in passing', (

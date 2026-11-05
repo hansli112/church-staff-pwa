@@ -8,8 +8,11 @@ import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/core/design/components.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/features/church/move_screen.dart';
+import 'package:martha/core/telemetry.dart';
+import 'package:martha/state/session.dart';
 
 import '../support/harness.dart';
+import '../support/telemetry.dart';
 
 Future<void> tapText(WidgetTester tester, String text) async {
   await tester.tap(findShown(text).last);
@@ -34,10 +37,22 @@ const preview = MovePreview(
 );
 
 /// Signed in, no church yet, with a file picked that reads as [answer].
-Future<MemoryBackend> start(WidgetTester tester, Object answer, {String email = 'pastor@grace.org'}) async {
+Future<MemoryBackend> start(
+  WidgetTester tester,
+  Object answer, {
+  String email = 'pastor@grace.org',
+  Telemetry telemetry = const NoTelemetry(),
+}) async {
   final b = MemoryBackend(clock: testClock)..moveAnswer = answer;
   b.auth.signInAs(email, uid: 'me', name: '新帳號');
-  await pumpApp(tester, b, overrides: [moveFilePickerProvider.overrideWithValue(() async => utf8.encode('{}'))]);
+  await pumpApp(
+    tester,
+    b,
+    overrides: [
+      moveFilePickerProvider.overrideWithValue(() async => utf8.encode('{}')),
+      telemetryProvider.overrideWithValue(telemetry),
+    ],
+  );
   await tapText(tester, '建立新教會');
   await tester.ensureVisible(find.text('從舊版搬過來'));
   await tapText(tester, '從舊版搬過來');
@@ -46,7 +61,8 @@ Future<MemoryBackend> start(WidgetTester tester, Object answer, {String email = 
 
 void main() {
   testWidgets('upload, preview, pick who I am, and the church is made', (tester) async {
-    final b = await start(tester, preview);
+    final telemetry = RecordingTelemetry();
+    final b = await start(tester, preview, telemetry: telemetry);
     await tapText(tester, '選擇搬家檔');
     expect(find.text('3 位'), findsOneWidget);
     expect(find.text('2 份'), findsOneWidget);
@@ -69,6 +85,9 @@ void main() {
     expect(b.pendingMembers[cid]!.keys, unorderedEquals(['old-mei', 'old-hao']));
     expect(b.moveFiles, isEmpty);
     expect(find.byType(NavigationBar), findsOneWidget);
+    expect(telemetry.named('church_create'), [
+      {'method': 'move'},
+    ]);
 
     await go(tester, '/me/members');
     expect(find.text('2 位還沒登入'), findsOneWidget);

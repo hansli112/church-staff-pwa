@@ -8,9 +8,11 @@ import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
+import 'package:martha/state/session.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
+import '../support/telemetry.dart';
 
 // 回報人數 and 小組 (#85). 主日崇拜 meets on Sundays; 10/4 has a roster.
 
@@ -60,7 +62,8 @@ Future<void> go(WidgetTester tester, String path) async {
 void main() {
   testWidgets("a service's 負責人 fills in Sunday's 人數 from 首頁, and its page keeps it", (tester) async {
     final b = withAttendance(seededChurch(as: editor, clock: eveningOf(Day(2026, 10, 4))));
-    await pumpApp(tester, b);
+    final telemetry = RecordingTelemetry();
+    await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
     await go(tester, '/home');
     expect(find.text('填寫人數'), findsOneWidget);
     // The card, above 我接下來的服事, which has 主日崇拜 too.
@@ -70,6 +73,7 @@ void main() {
     await tester.pump();
     await tapText(tester, '儲存');
     expect(b.attendance['grace']!['service:sunday']!.days[Day(2026, 10, 4)], const AttendanceDay.count(120));
+    expect(telemetry.named('attendance_report'), [null]);
     expect(find.text('填寫人數'), findsNothing, reason: 'filled in');
 
     await go(tester, '/me/groups/service/sunday');

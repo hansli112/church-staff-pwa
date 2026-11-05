@@ -14,10 +14,12 @@ import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/state/app_update.dart';
 import 'package:martha/state/providers.dart';
+import 'package:martha/state/session.dart';
 
 import '../state/app_update_test.dart' show Updates;
 import '../support/harness.dart';
 import '../support/seed.dart';
+import '../support/telemetry.dart';
 
 Future<void> go(WidgetTester tester, String location) async {
   GoRouter.of(tester.element(find.byType(Scaffold).first)).go(location);
@@ -240,7 +242,8 @@ void main() {
 
   testWidgets('pasted JSON needs candidate confirmation or explicit guest before applying', (tester) async {
     final b = agreedChurch();
-    await pumpApp(tester, b);
+    final telemetry = RecordingTelemetry();
+    await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
     await openPasteJson(tester);
@@ -282,6 +285,8 @@ void main() {
     expect(peopleOn(b, 18, '招待'), ['陳志明']);
     expect(savedDay(b, 18).duties.firstWhere((d) => d.role == '司琴').uids, {'李美玉': 'mei'});
     expect(savedDay(b, 18).duties.firstWhere((d) => d.role == '招待').uids, isEmpty);
+    expect(telemetry.named('roster_import'), [null]);
+    expect(telemetry.named('roster_edit'), isEmpty, reason: 'counted as an import, not an edit');
   });
 
   testWidgets('large text import preview keeps dates readable without horizontal overflow', (tester) async {

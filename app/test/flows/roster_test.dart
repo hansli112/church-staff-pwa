@@ -7,9 +7,11 @@ import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/features/rosters/roster_card.dart';
+import 'package:martha/state/session.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
+import '../support/telemetry.dart';
 
 Future<void> tapText(WidgetTester tester, String text) async {
   await tester.tap(find.text(text).last);
@@ -185,7 +187,8 @@ void main() {
 
     testWidgets('a duty only ever one person has: picking someone puts them there instead, at once', (tester) async {
       final b = seededChurch();
-      await pumpApp(tester, b);
+      final telemetry = RecordingTelemetry();
+      await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司會');
       await tapText(tester, '林同工');
@@ -194,6 +197,9 @@ void main() {
       expect(find.text('已更新司會'), findsOneWidget);
       await tapText(tester, '復原');
       expect(peopleOn(b, 11, '司會'), ['王牧師']);
+      expect(telemetry.named('roster_edit'), [
+        {'via': 'app'},
+      ], reason: 'the undo is not another edit');
     });
 
     testWidgets('a duty only ever one person has takes a second with 再加一位', (tester) async {

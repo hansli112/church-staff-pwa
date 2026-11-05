@@ -48,6 +48,7 @@ import 'features/common/warm_up.dart';
 import 'features/shell/shell.dart';
 import 'state/notifications.dart';
 import 'state/providers.dart';
+import 'state/session.dart';
 import 'state/app_update.dart';
 
 /// Re-runs the router's redirect whenever the app stage changes.
@@ -86,7 +87,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     );
   }
 
-  return GoRouter(
+  final router = GoRouter(
     initialLocation: Env.current.startRoute,
     refreshListenable: refresh,
     redirect: (context, state) {
@@ -310,7 +311,28 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+
+  // Each page once as it comes up, for which pages are used (GA4).
+  var shown = '';
+  void track() {
+    final screen = screenName(router.routerDelegate.currentConfiguration);
+    if (screen.isEmpty || screen == shown) return;
+    shown = screen;
+    ref.read(telemetryProvider).logScreen(screen);
+  }
+
+  router.routerDelegate.addListener(track);
+  ref.onDispose(() => router.routerDelegate.removeListener(track));
+  return router;
 });
+
+/// The page shown, by its route's pattern (`/c/:churchId/join/:code`), never
+/// the IDs or invite codes in its address; a page pushed over another by its
+/// own.
+String screenName(RouteMatchList matches) => switch (matches.lastOrNull) {
+  ImperativeRouteMatch(matches: final pushed) => screenName(pushed),
+  _ => matches.fullPath,
+};
 
 /// Shown for the moment before the first auth state arrives. Just the
 /// background: no full-screen spinner.

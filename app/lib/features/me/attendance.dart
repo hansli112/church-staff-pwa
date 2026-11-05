@@ -16,6 +16,7 @@ import '../../state/providers.dart';
 import '../common/errors.dart';
 import '../common/labels.dart';
 import '../rosters/format.dart';
+import '../../state/session.dart';
 
 /// 人數 (回報人數, #85) on a group's page: when it next meets, its meetings
 /// from [attendanceWeeks] back, newest first, each with what was filled in
@@ -245,12 +246,14 @@ Future<void> fillAttendance(
   );
   if (value == null || !context.mounted) return;
   final attendance = ref.churchData.attendance;
+  final telemetry = ref.read(telemetryProvider);
   try {
     if (value.together.isNotEmpty || (was?.together.isNotEmpty ?? false)) {
       await attendance.saveTogether(group.group.key, day, value);
     } else {
       await attendance.save(group.group.key, day, value);
     }
+    telemetry.logEvent('attendance_report');
     if (context.mounted) showToast(context, l10n.attendanceSaved);
   } catch (e) {
     if (context.mounted) showToast(context, saveErrorText(l10n, e));

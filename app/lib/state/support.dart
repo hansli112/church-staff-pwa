@@ -27,10 +27,22 @@ abstract final class SupportProducts {
 }
 
 class SupportItem {
-  const SupportItem({required this.id, required this.price, required this.subscription});
+  const SupportItem({
+    required this.id,
+    required this.price,
+    required this.amount,
+    required this.currency,
+    required this.subscription,
+  });
 
   final String id;
+
+  /// As the store shows it, e.g. NT$90.
   final String price;
+
+  /// [price] as a number in [currency] (ISO 4217), for counting it.
+  final double amount;
+  final String currency;
   final bool subscription;
 }
 
@@ -120,7 +132,13 @@ class StoreKitPlayStore implements SupportStore {
       ..addEntries(response.productDetails.map((p) => MapEntry(p.id, p)));
     final items = [
       for (final p in response.productDetails)
-        SupportItem(id: p.id, price: p.price, subscription: SupportProducts.plans.contains(p.id)),
+        SupportItem(
+          id: p.id,
+          price: p.price,
+          amount: p.rawPrice,
+          currency: p.currencyCode,
+          subscription: SupportProducts.plans.contains(p.id),
+        ),
     ]..sort((a, b) => (_details[a.id]!.rawPrice).compareTo(_details[b.id]!.rawPrice));
     return items;
   }

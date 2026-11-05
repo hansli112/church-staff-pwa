@@ -7,9 +7,11 @@ import 'package:martha/core/languages.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
+import 'package:martha/state/session.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
+import '../support/telemetry.dart';
 
 Future<void> tapText(WidgetTester tester, String text) async {
   await tester.tap(findShown(text).last);
@@ -53,7 +55,8 @@ MemoryBackend movedChurch({bool signIn = true}) {
 void main() {
   testWidgets('signing in with the same email offers to join; joining brings back the rosters', (tester) async {
     final b = movedChurch();
-    await pumpApp(tester, b);
+    final telemetry = RecordingTelemetry();
+    await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
     expect(findShown('加入〈恩典堂〉？'), findsOneWidget);
     expect(findShown('教會換到馬大別忙了，你之前排的服事和所屬聚會都已經在這裡'), findsOneWidget);
     await tapText(tester, '加入');
@@ -68,6 +71,9 @@ void main() {
     expect(b.pendingMembers['grace'], isEmpty);
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('我接下來的服事'), findsOneWidget, reason: 'their roster day is theirs again');
+    expect(telemetry.named('join_group'), [
+      {'method': 'claim'},
+    ]);
   });
 
   testWidgets('joining is said once in, and not asked again while the rosters are still being pointed at them', (

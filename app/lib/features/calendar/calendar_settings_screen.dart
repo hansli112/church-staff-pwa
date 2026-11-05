@@ -12,6 +12,7 @@ import '../../state/providers.dart';
 import '../common/errors.dart';
 import '../common/time_zones.dart';
 import 'calendar_screen.dart';
+import '../../state/session.dart';
 
 final _calendarListProvider = FutureProvider.autoDispose<List<CalendarChoice>>(
   (ref) => openChurch(ref).calendar.choices(),
@@ -125,7 +126,12 @@ class CalendarSettingsScreen extends ConsumerWidget {
                         ListRow(
                           title: cal.name,
                           selected: settings.calendarName == cal.name,
-                          onTap: () => church!.calendar.select(cal.id, cal.name),
+                          onTap: () async {
+                            final first = settings.calendarId == null;
+                            final telemetry = ref.read(telemetryProvider);
+                            await church!.calendar.select(cal.id, cal.name);
+                            if (first) telemetry.logEvent('calendar_connect');
+                          },
                         ),
                     ],
                   ),

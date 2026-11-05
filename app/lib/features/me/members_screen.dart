@@ -13,6 +13,7 @@ import '../common/errors.dart';
 import '../common/time_zones.dart';
 import '../common/labels.dart';
 import 'member_editor_screen.dart';
+import '../../state/session.dart';
 
 /// Members, and requests to join turned down, hidden while it can still be
 /// undone.
@@ -304,6 +305,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
     setState(() => _answering.add(r.uid));
     try {
       await ref.churchData.answerJoinRequest(r.uid, allow: true);
+      ref.read(telemetryProvider).logEvent('join_request_answer', {'result': 'allow'});
       Haptics.success();
       if (mounted) showToast(context, l10n.joinAllowedToast(name));
     } catch (e) {
@@ -319,12 +321,14 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
     final l10n = L10n.of(context);
     final hidden = ref.read(pendingRemovalsProvider.notifier);
     final data = ref.churchData;
+    final telemetry = ref.read(telemetryProvider);
     hidden.add(r.uid);
     showDeferredUndo(
       context,
       l10n.joinDeclinedToast(name),
       commit: () async {
         await data.answerJoinRequest(r.uid, allow: false);
+        telemetry.logEvent('join_request_answer', {'result': 'decline'});
         hidden.remove(r.uid);
       },
       onUndo: () => hidden.remove(r.uid),

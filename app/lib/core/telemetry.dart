@@ -22,6 +22,9 @@ abstract interface class Telemetry {
   void setPatch(int? patch);
   void logEvent(String name, [Map<String, Object>? parameters]);
 
+  /// A page coming up, by its route's pattern.
+  void logScreen(String name);
+
   /// Crashes the native app, to check that Crashlytics receives crashes.
   /// Development builds only.
   void testCrash();
@@ -44,6 +47,9 @@ class NoTelemetry implements Telemetry {
 
   @override
   void logEvent(String name, [Map<String, Object>? parameters]) {}
+
+  @override
+  void logScreen(String name) {}
 
   @override
   void testCrash() {}
@@ -101,6 +107,11 @@ class FirebaseTelemetry implements Telemetry {
   @override
   void logEvent(String name, [Map<String, Object>? parameters]) {
     _analytics?.logEvent(name: name, parameters: parameters);
+  }
+
+  @override
+  void logScreen(String name) {
+    _analytics?.logScreenView(screenName: name, screenClass: name);
   }
 
   @override

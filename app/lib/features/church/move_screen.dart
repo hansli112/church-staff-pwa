@@ -14,6 +14,7 @@ import '../../state/providers.dart';
 import '../common/errors.dart';
 import '../common/time_zones.dart';
 import 'welcome_screen.dart' show VerifyEmailBanner;
+import '../../state/session.dart';
 
 /// More people than this and 這位是我 can be searched: a few fit on the screen.
 const moveSearchFrom = 10;
@@ -95,6 +96,7 @@ class _MoveScreenState extends ConsumerState<MoveScreen> {
           .read(backendProvider)
           .cloud
           .moveCommit(_path!, churchName: name, me: _me, timeZone: timeZone, language: language);
+      ref.read(telemetryProvider).logEvent('church_create', {'method': 'move'});
       ref.read(selectedChurchProvider.notifier).select(cid);
       Haptics.success();
       if (!mounted) return;

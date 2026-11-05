@@ -12,6 +12,7 @@ import 'package:martha/state/session.dart';
 import '../support/fake_push.dart';
 import '../support/harness.dart';
 import '../support/seed.dart';
+import '../support/telemetry.dart';
 
 class _Errors extends NoTelemetry {
   final errors = <Object>[];
@@ -67,7 +68,12 @@ Future<void> resume(WidgetTester tester) async {
 void main() {
   testWidgets('joining asks for notifications, and the phone asks only once 開啟通知 is tapped', (tester) async {
     final push = FakePush(answer: PushPermission.granted);
-    await pumpApp(tester, invited(), overrides: [pushServiceProvider.overrideWithValue(push)]);
+    final telemetry = RecordingTelemetry();
+    await pumpApp(
+      tester,
+      invited(),
+      overrides: [pushServiceProvider.overrideWithValue(push), telemetryProvider.overrideWithValue(telemetry)],
+    );
     await join(tester, 'grace', 'GRACE2026');
 
     expect(find.text('被排到服事時通知你'), findsOneWidget);
@@ -76,6 +82,9 @@ void main() {
 
     await tapText(tester, '開啟通知');
     expect(push.asked, 1);
+    expect(telemetry.named('notification_permission'), [
+      {'result': 'granted'},
+    ]);
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('開啟通知'), findsNothing, reason: 'on, so the home page does not offer it');
   });

@@ -337,6 +337,9 @@ Chrome 小幅改善；桌面 WebKit 差距小且教會資訊冷開反而較慢�
 ## 數據與監控
 
 - 行為分析：Firebase Analytics（GA4），三平台。user property 帶 `church_id`，看各教會活躍度、DAU/MAU、留存、功能使用。不追蹤跨 App，不需 ATT。
+  - 每個頁面出現時記 `screen_view`，名稱是路由的樣板（`/rosters/:type/:day`、`/c/:churchId/join/:code`），不帶教會 ID、邀請碼這些網址裡的值。
+  - 事件只帶種類，不帶名字、email、服事表內容：`login`、`sign_up`（`method`：google、apple、email）；`church_create`（`method`：new、move）；`share`（邀請，`method`：share、copy）；`join_group`（`method`：invite、claim）；`join_request`；`join_request_answer`（`result`：allow、decline，拒絕要等復原時間過了才算）；`roster_edit`（`via`：app、plan，復原不算）；`roster_import`；`attendance_report`；`calendar_connect`（第一次選日曆）；`notification_permission`（`result`）；`support_paid`（只算在支持頁剛付的，不算恢復購買、續訂；`item_id`、`kind`、`value`、`currency`）；`church_export`。
+  - `support_paid` 不用 GA4 的 `purchase`：手機版商店購買 GA4 可能自己記 `in_app_purchase`，兩個都記營收會重複。網站上的線上支持在綠界付，App 看不到，看後台的經費頁。
 - 平台統計：每日排程 Cloud Function 寫 `stats/{date}`：
   - `count()` 聚合：使用者、教會（依 status）、members、rosters。
   - Cloud Monitoring API：前一日 Firestore reads/writes/deletes、儲存量、Functions 呼叫次數。

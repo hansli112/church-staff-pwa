@@ -5,12 +5,12 @@ import 'package:archive/archive.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:martha/core/telemetry.dart';
 import 'package:martha/state/export.dart';
 import 'package:martha/state/session.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
+import '../support/telemetry.dart';
 
 Future<void> tapText(WidgetTester tester, String text) async {
   await tester.tap(find.text(text).last);
@@ -36,17 +36,10 @@ class _Saver implements FileSaver {
   }
 }
 
-class _Events extends NoTelemetry {
-  final events = <(String, Map<String, Object>?)>[];
-
-  @override
-  void logEvent(String name, [Map<String, Object>? parameters]) => events.add((name, parameters));
-}
-
 void main() {
   testWidgets('an admin exports the church into a zip', (tester) async {
     final saver = _Saver();
-    final telemetry = _Events();
+    final telemetry = RecordingTelemetry();
     await pumpApp(
       tester,
       seededChurch(),
@@ -65,7 +58,7 @@ void main() {
     expect((json['members'] as List).length, 5);
     expect((json['rosters'] as List).length, 2);
     expect(utf8.decode(zip.findFile('服事表.csv')!.content), contains('2026-10-04,主日崇拜,招待,陳志豪、李美玉'));
-    expect(telemetry.events.where((e) => e.$1 == 'church_export'), [('church_export', null)]);
+    expect(telemetry.named('church_export'), [null]);
     expect(find.text('已匯出'), findsOneWidget);
   });
 
@@ -91,7 +84,7 @@ void main() {
   });
 
   testWidgets('closing the share sheet without saving is not an export', (tester) async {
-    final telemetry = _Events();
+    final telemetry = RecordingTelemetry();
     await pumpApp(
       tester,
       seededChurch(),

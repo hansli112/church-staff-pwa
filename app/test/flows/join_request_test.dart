@@ -5,9 +5,11 @@ import 'package:martha/core/languages.dart';
 import 'package:martha/data/backend.dart' show WarmUp;
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/models.dart';
+import 'package:martha/state/session.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
+import '../support/telemetry.dart';
 
 /// 申請加入 (#88): someone with a church URL but no invite asks to join,
 /// and an admin lets them in or not.
@@ -50,7 +52,8 @@ void main() {
 
   testWidgets('from the church URL, someone asks to join with a note, and can take it back', (tester) async {
     final b = newcomer();
-    await pumpApp(tester, b);
+    final telemetry = RecordingTelemetry();
+    await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
     await go(tester, '/c/hope');
     expect(findShown('你還不是這間教會的同工，申請後管理員允許就會加入'), findsOneWidget);
     expect(findShown('輸入邀請碼'), findsOneWidget);
@@ -70,6 +73,7 @@ void main() {
     await tapText(tester, '申請加入');
     final sent = b.joinRequests['hope']!['new']!;
     expect(sent.note, '我是敬拜團的小明');
+    expect(telemetry.named('join_request'), [null]);
     expect(sent.name, '王小明');
     expect(b.users['new']!.name, '王小明');
     expect(findShown('已送出申請，管理員允許後就會加入'), findsOneWidget);
@@ -186,7 +190,8 @@ void main() {
       'new': request(note: '我是敬拜團的小明'),
       'other': request(uid: 'other', name: '陌生人'),
     };
-    await pumpApp(tester, b);
+    final telemetry = RecordingTelemetry();
+    await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
     await go(tester, '/me/members');
     expect(findShown('2 位申請加入'), findsOneWidget);
     expect(findShownContaining('我是敬拜團的小明new@example.com10'), findsOneWidget);
@@ -212,6 +217,10 @@ void main() {
     expect(b.members['grace']!['other'], isNull);
     expect(b.joinRequests['grace']!['other']!.rejectedAt, testNow);
     expect(findShown('申請加入'), findsNothing, reason: 'nobody waiting');
+    expect(telemetry.named('join_request_answer'), [
+      {'result': 'allow'},
+      {'result': 'decline'},
+    ], reason: 'the turn-down undone is not counted');
   });
 
   testWidgets('requests a month old are gone', (tester) async {
