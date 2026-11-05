@@ -286,24 +286,21 @@ void main() {
     expect(find.byType(BottomSheet), findsOneWidget);
     expect(find.text('謝謝你的支持'), findsOneWidget);
     expect(find.text('你的支持會用來分擔馬大別忙的雲端費用'), findsOneWidget);
-    expect(find.text('換 App 圖示'), findsNothing, reason: 'a tip gives no icons');
     await closeThanks(tester);
     expect(find.byType(BottomSheet), findsNothing);
     expect(find.text('謝謝你的支持'), findsNothing);
   });
 
-  testWidgets('a new monthly plan is thanked too, with the way to the icons it gives', (tester) async {
+  testWidgets('a monthly plan is thanked the same way', (tester) async {
     await pumpWithStore(tester, FakeStore(), FakeIcons());
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
     await settle(tester);
     await tester.tap(find.text(plan60));
     await settle(tester);
     expect(find.text('謝謝你的支持'), findsOneWidget);
-    expect(findShown('你的支持會用來分擔馬大別忙的雲端費用。現在可以換 App 圖示了。'), findsOneWidget);
-    await tester.tap(find.text('換 App 圖示'));
-    await settle(tester);
+    expect(find.text('你的支持會用來分擔馬大別忙的雲端費用'), findsOneWidget);
+    await closeThanks(tester);
     expect(find.byType(BottomSheet), findsNothing);
-    expect(find.text('紫'), findsOneWidget, reason: 'on the icon page');
   });
 
   testWidgets('a restore or a renewal, which is no new support, thanks only in passing', (tester) async {
@@ -349,20 +346,6 @@ void main() {
     expect(find.byType(BottomSheet), findsNothing);
     expect(find.text('謝謝你的支持'), findsOneWidget);
     await settle(tester);
-  });
-
-  testWidgets('switching plans is thanked, without news of the icons a supporter already has', (tester) async {
-    await pumpWithStore(tester, FakeStore(), FakeIcons());
-    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
-    await settle(tester);
-    await tester.tap(find.text(plan60));
-    await settle(tester);
-    await closeThanks(tester);
-    await tester.tap(find.text(plan150));
-    await settle(tester);
-    expect(find.text('謝謝你的支持'), findsOneWidget);
-    expect(find.text('你的支持會用來分擔馬大別忙的雲端費用'), findsOneWidget);
-    expect(find.text('換 App 圖示'), findsNothing);
   });
 
   testWidgets('the subscription says it renews and where to cancel, beside the terms and privacy policy', (

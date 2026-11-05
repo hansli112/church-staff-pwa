@@ -36,11 +36,10 @@ class SupportScreen extends ConsumerStatefulWidget {
 class _SupportScreenState extends ConsumerState<SupportScreen> {
   StreamSubscription<PurchaseResult>? _sub;
 
-  /// What was just tapped to buy, until the store says how it went, and
-  /// whether it makes me a supporter (no plan paid before). Only that is
-  /// new support, thanked on a sheet; a restore or a renewal gets the
-  /// passing note.
-  ({SupportItem item, bool joins})? _buying;
+  /// What was just tapped to buy, until the store says how it went. Only
+  /// that is new support, thanked on a sheet; a restore or a renewal gets
+  /// the passing note.
+  String? _buying;
 
   @override
   void initState() {
@@ -48,14 +47,13 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
     _sub = ref.read(supportStoreProvider).results.listen((r) {
       if (!mounted) return;
       final l10n = L10n.of(context);
-      final buying = _buying;
-      final bought = buying != null && r.productId == buying.item.id && !r.restored;
+      final bought = r.productId == _buying && !r.restored;
       if (bought && r.outcome != PurchaseOutcome.pending) _buying = null;
       switch (r.outcome) {
         case PurchaseOutcome.thanks:
           Haptics.success();
           if (bought) {
-            _thank(joins: buying.joins);
+            showAppSheet<void>(context, builder: (_) => const _Thanks());
           } else {
             showToast(context, l10n.supportThanks);
           }
@@ -70,7 +68,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
   }
 
   void _buy(SupportItem item) {
-    _buying = (item: item, joins: item.subscription && ref.read(supporterPlanProvider) == null);
+    _buying = item.id;
     final telemetry = ref.read(telemetryProvider);
     // The store refused before showing anything: nothing was paid.
     unawaited(
@@ -80,11 +78,6 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
         if (mounted) showToast(context, L10n.of(context).supportFailed);
       }),
     );
-  }
-
-  Future<void> _thank({required bool joins}) async {
-    final toIcons = await showAppSheet<bool>(context, builder: (_) => _Thanks(joins: joins));
-    if (toIcons == true && mounted) unawaited(context.push('/me/support/icon'));
   }
 
   @override
@@ -219,13 +212,9 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
   }
 }
 
-/// The thanks for support just paid: what it is for and, for someone a
-/// monthly plan has just made a supporter, the way to the icons it gives.
-/// Pops true to go to them.
+/// The thanks for support just paid, and what it is for.
 class _Thanks extends StatelessWidget {
-  const _Thanks({required this.joins});
-
-  final bool joins;
+  const _Thanks();
 
   static const _heartSize = 56.0;
 
@@ -256,18 +245,14 @@ class _Thanks extends StatelessWidget {
             ),
             const SizedBox(height: Space.s),
             BalancedText(
-              joins ? l10n.supportThanksMonthly : l10n.supportThanksTip,
+              l10n.supportThanksBody,
               style: AppText.body.copyWith(color: c.secondaryLabel),
             ),
             const SizedBox(height: Space.l),
             SizedBox(
               width: double.infinity,
-              child: PrimaryButton(
-                label: joins ? l10n.changeAppIcon : l10n.done,
-                onPressed: () => Navigator.pop(context, joins),
-              ),
+              child: PrimaryButton(label: l10n.done, onPressed: () => Navigator.pop(context)),
             ),
-            if (joins) SecondaryButton(label: l10n.done, expand: true, onPressed: () => Navigator.pop(context)),
           ],
         ),
       ),

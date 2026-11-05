@@ -1420,13 +1420,7 @@ class L10nZh extends L10n {
   String get supportThanks => '謝謝你的支持';
 
   @override
-  String get supportThanksTip => '你的支持會用來分擔馬大別忙的雲端費用';
-
-  @override
-  String get supportThanksMonthly => '你的支持會用來分擔馬大別忙的雲端費用。現在可以換 App 圖示了。';
-
-  @override
-  String get changeAppIcon => '換 App 圖示';
+  String get supportThanksBody => '你的支持會用來分擔馬大別忙的雲端費用';
 
   @override
   String get supportPending => '付款處理中';
@@ -4859,13 +4853,7 @@ class L10nZhHans extends L10nZh {
   String get supportThanks => '谢谢你的支持';
 
   @override
-  String get supportThanksTip => '你的支持会用来分担马大别忙的云端费用';
-
-  @override
-  String get supportThanksMonthly => '你的支持会用来分担马大别忙的云端费用。现在可以更换 App 图标了。';
-
-  @override
-  String get changeAppIcon => '更换 App 图标';
+  String get supportThanksBody => '你的支持会用来分担马大别忙的云端费用';
 
   @override
   String get supportPending => '付款处理中';

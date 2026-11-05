@@ -2632,23 +2632,11 @@ abstract class L10n {
   /// **'謝謝你的支持'**
   String get supportThanks;
 
-  /// On the sheet that thanks someone for support just paid (a one-time support, or a switch between monthly plans), under supportThanks: what the money is for
+  /// On the sheet that thanks someone for support just paid, one-time or monthly, under supportThanks: what the money is for
   ///
   /// In zh, this message translates to:
   /// **'你的支持會用來分擔馬大別忙的雲端費用'**
-  String get supportThanksTip;
-
-  /// As supportThanksTip, for a monthly plan that has just made them a supporter, then the app icon it lets them pick; two sentences, so each ends in a period
-  ///
-  /// In zh, this message translates to:
-  /// **'你的支持會用來分擔馬大別忙的雲端費用。現在可以換 App 圖示了。'**
-  String get supportThanksMonthly;
-
-  /// Button on the thanks for a new monthly plan: opens the page to pick the app icon
-  ///
-  /// In zh, this message translates to:
-  /// **'換 App 圖示'**
-  String get changeAppIcon;
+  String get supportThanksBody;
 
   /// No description provided for @supportPending.
   ///
