@@ -50,11 +50,35 @@ class RosterDayScreen extends ConsumerWidget {
     if (day == null || service == null) {
       return Scaffold(appBar: AppBar(), body: const SizedBox.shrink());
     }
-    final roster = rosters.value?.where((r) => r.day == day).firstOrNull ?? draftRoster(service, day);
+    // A past day is only looked at, by everyone, so nobody is told of
+    // changes to a day gone; it is read from what was saved.
+    final past = day.isBefore(today);
+    // From the list it is there already; from a link it is read.
+    final listed = past
+        ? ref.watch(
+            earlierRostersProvider(serviceType).select((e) => e.rosters.where((r) => r.day == day).firstOrNull),
+          )
+        : null;
+    final saved = past && listed == null ? ref.watch(pastRosterProvider((serviceType, day))) : null;
+    if (saved != null && !saved.hasValue) {
+      return Scaffold(
+        appBar: AppBar(title: Text(service.name)),
+        body: saved.hasError
+            ? ErrorRetry(
+                message: l10n.loadFailed,
+                onRetry: () => ref.invalidate(pastRosterProvider((serviceType, day))),
+              )
+            : const SizedBox.shrink(),
+      );
+    }
+    // A past day nobody was arranged on has no duties, not today's template.
+    final roster = past
+        ? listed ?? saved!.value ?? Roster(type: serviceType, day: day)
+        : rosters.value?.where((r) => r.day == day).firstOrNull ?? draftRoster(service, day);
     // A 事工's 負責人 arranges only the duties it leads (#82).
     final led = ref.watch(arrangesProvider(serviceType));
     final whole = led.all;
-    final canEdit = led.any;
+    final canEdit = !past && led.any;
     // Keeps what editing reads loaded, so the picker opens at once and
     // writes see the church as it is.
     final editable = canEdit && ref.watch(rosterEditingProvider(serviceType));

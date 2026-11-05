@@ -1086,6 +1086,17 @@ class MemoryChurchData implements ChurchData {
   }
 
   @override
+  Future<Roster?> rosterBefore({required String serviceType, required Day before}) async {
+    _requireMember();
+    Roster? latest;
+    for (final r in _b.rosters[churchId]!.values) {
+      if (r.forEvent != null || r.type != serviceType || !r.day.isBefore(before)) continue;
+      if (latest == null || r.day.isAfter(latest.day)) latest = r;
+    }
+    return latest;
+  }
+
+  @override
   Future<List<Roster>> eventRosters() async {
     _requireMember();
     return [

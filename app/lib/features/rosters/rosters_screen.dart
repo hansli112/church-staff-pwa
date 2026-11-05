@@ -8,6 +8,8 @@ import '../../core/design/tokens.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
+import 'day_block.dart';
+import 'format.dart';
 import 'roster_card.dart';
 
 /// Remembers which service tab was open, per device.
@@ -154,14 +156,32 @@ class ServiceRosterList extends ConsumerWidget {
       ),
       data: (joined) {
         final list = joined.isEmpty ? const <String>[] : joined.split('|');
-        if (list.isEmpty) return EmptyState(icon: Symbols.view_agenda_rounded, message: l10n.noRostersAhead);
+        // Past days come before, one more each time they ask; a service
+        // paused for now has only those.
+        final earlier = ref.watch(earlierRostersProvider(service.id));
+        if (list.isEmpty && earlier.rosters.isEmpty) {
+          return Column(
+            children: [
+              _ShowEarlier(serviceType: service.id, earlier: earlier),
+              Expanded(
+                child: EmptyState(icon: Symbols.view_agenda_rounded, message: l10n.noRostersAhead),
+              ),
+            ],
+          );
+        }
         void open(String id) => context.push('/rosters/${service.id}/${id.split('_').first}');
-        final top = nobodyArranged ? 1 : 0;
+        final pastRows = 1 + earlier.rosters.length;
+        final top = pastRows + (nobodyArranged ? 1 : 0);
         return ListView.builder(
           key: PageStorageKey('rosters-${service.id}'),
           padding: const EdgeInsets.only(bottom: Space.l),
           itemCount: top + list.length + (service.enabled ? 1 : 0),
           itemBuilder: (context, index) {
+            if (index == 0) return _ShowEarlier(serviceType: service.id, earlier: earlier);
+            if (index < pastRows) {
+              final roster = earlier.rosters[index - 1];
+              return _PastCard(key: ValueKey(roster.id), roster: roster, onTap: () => open(roster.id));
+            }
             if (index < top) {
               return _StartArranging(
                 onStart: () => open(list.first),
@@ -188,6 +208,72 @@ class ServiceRosterList extends ConsumerWidget {
           },
         );
       },
+    );
+  }
+}
+
+/// Over the days ahead: the saved day before the ones shown. Once there
+/// are none, says so, as tall as the button so nothing below moves.
+class _ShowEarlier extends ConsumerWidget {
+  const _ShowEarlier({required this.serviceType, required this.earlier});
+
+  final String serviceType;
+  final EarlierDays earlier;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = L10n.of(context);
+    final c = AppColors.of(context);
+    return Padding(
+      padding: const EdgeInsetsDirectional.fromSTEB(Space.xs, 0, Space.m, Space.xs),
+      child: Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: earlier.reachedStart
+            ? ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: kMinInteractiveDimension),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: Space.s),
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    widthFactor: 1,
+                    child: Text(l10n.rosterNoEarlier, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
+                  ),
+                ),
+              )
+            : TextButton.icon(
+                onPressed: earlier.loading
+                    ? null
+                    : () async {
+                        try {
+                          await ref.read(earlierRostersProvider(serviceType).notifier).showOneMore();
+                        } catch (_) {
+                          if (context.mounted) showToast(context, l10n.loadFailed);
+                        }
+                      },
+                icon: const Icon(Symbols.keyboard_arrow_up_rounded),
+                label: Text(l10n.rosterShowPrevious),
+              ),
+      ),
+    );
+  }
+}
+
+/// A day gone, as it was saved: its date greyed, opened only to look at.
+class _PastCard extends ConsumerWidget {
+  const _PastCard({super.key, required this.roster, required this.onTap});
+
+  final Roster roster;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final today = ref.watch(todayProvider);
+    return RosterDayView(
+      roster: roster,
+      leading: dayBlock(roster.day, today),
+      title: dayBesideBlock(L10n.of(context), roster.day, today),
+      highlightUid: ref.watch(uidProvider),
+      onTap: onTap,
     );
   }
 }

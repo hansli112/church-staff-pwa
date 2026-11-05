@@ -289,6 +289,56 @@ class RosterWeeks extends Notifier<int> {
 
 final rosterWeeksProvider = NotifierProvider.family<RosterWeeks, int, String>(RosterWeeks.new);
 
+/// The saved days before today the 服事表 tab shows for one service, oldest
+/// first; [reachedStart] once there are no more.
+typedef EarlierDays = ({List<Roster> rosters, bool loading, bool reachedStart});
+
+/// Goes back one saved day at a time, as asked: most want only last
+/// week's. Read once, not live, since a past day is only looked at.
+/// Starts over on another account, church or day.
+class EarlierRosters extends Notifier<EarlierDays> {
+  EarlierRosters(this.serviceType);
+
+  final String serviceType;
+
+  @override
+  EarlierDays build() {
+    ref.watch(uidProvider);
+    ref.watch(churchDataProvider);
+    ref.watch(todayProvider);
+    return (rosters: const [], loading: false, reachedStart: false);
+  }
+
+  Future<void> showOneMore() async {
+    final was = state;
+    if (was.loading || was.reachedStart) return;
+    final asking = (rosters: was.rosters, loading: true, reachedStart: false);
+    state = asking;
+    final before = was.rosters.isEmpty ? ref.read(todayProvider) : was.rosters.first.day;
+    try {
+      final r = await openChurch(ref).rosterBefore(serviceType: serviceType, before: before);
+      // Not when it started over meanwhile.
+      if (!ref.mounted || !identical(state, asking)) return;
+      state = (rosters: [?r, ...was.rosters], loading: false, reachedStart: r == null);
+    } catch (_) {
+      // What it was asked for is gone when it started over.
+      if (!ref.mounted || !identical(state, asking)) return;
+      state = was;
+      rethrow;
+    }
+  }
+}
+
+final earlierRostersProvider = NotifierProvider.family<EarlierRosters, EarlierDays, String>(EarlierRosters.new);
+
+/// A service's roster saved for a past day, or null when nobody was
+/// arranged that day: a past day opened from a link, not from the list.
+final pastRosterProvider = FutureProvider.autoDispose.family<Roster?, (String, Day)>((ref, key) async {
+  final (serviceType, day) = key;
+  final r = await openChurch(ref).rosterBefore(serviceType: serviceType, before: day.addDays(1));
+  return r?.day == day ? r : null;
+});
+
 /// The rosters of one service to show: saved days plus drafts for the
 /// other weeks. Computed here, not in build, and only when its inputs
 /// change.

@@ -751,6 +751,8 @@
   "importExamplePerson": "김서연",
   "importExampleEvent": "성찬",
   "rosterShowMore": "더 보기",
+  "rosterShowPrevious": "지난번 보기",
+  "rosterNoEarlier": "이전 봉사표가 없어요",
   "pickerGuestNames": "계정 없는 이름",
   "serviceSettingsSaved": "예배를 변경했어요",
   "serviceSyncOriginalEvent": "원래 특별 순서",

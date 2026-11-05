@@ -425,6 +425,10 @@ class EchoingChurchData implements ChurchData {
       _inner.pastRosters(from: from, before: before);
 
   @override
+  Future<Roster?> rosterBefore({required String serviceType, required Day before}) =>
+      _inner.rosterBefore(serviceType: serviceType, before: before);
+
+  @override
   Future<List<Roster>> eventRosters() => _inner.eventRosters();
 
   @override

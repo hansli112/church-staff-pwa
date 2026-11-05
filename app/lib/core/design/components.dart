@@ -1366,6 +1366,7 @@ class DateBlock extends StatelessWidget {
     required this.day,
     required this.today,
     required this.semanticLabel,
+    this.past = false,
   });
 
   static const double minWidth = 48;
@@ -1375,6 +1376,9 @@ class DateBlock extends StatelessWidget {
   final int day;
   final bool today;
   final String semanticLabel;
+
+  /// A day gone: its number greyed like the month.
+  final bool past;
 
   @override
   Widget build(BuildContext context) {
@@ -1405,7 +1409,7 @@ class DateBlock extends StatelessWidget {
               '$day',
               style: AppText.title3.copyWith(
                 fontWeight: FontWeight.w700,
-                color: today ? c.onAccent : c.label,
+                color: today ? c.onAccent : (past ? c.secondaryLabel : c.label),
                 height: 1.15,
               ),
             ),

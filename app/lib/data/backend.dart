@@ -287,6 +287,10 @@ abstract interface class ChurchData {
   /// every service and event, read once: how duties were arranged lately.
   Future<List<Roster>> pastRosters({required Day from, required Day before});
 
+  /// The latest saved roster of [serviceType] dated before [before], or
+  /// null when there is none: how a past day is read, only to look at.
+  Future<Roster?> rosterBefore({required String serviceType, required Day before});
+
   /// Every event's roster, past ones too, newest first, to copy duties
   /// from (沿用). Not one cancelled with its event.
   Future<List<Roster>> eventRosters();

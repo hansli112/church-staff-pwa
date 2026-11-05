@@ -2607,6 +2607,12 @@ class L10nEn extends L10n {
   String get rosterShowMore => 'Show more';
 
   @override
+  String get rosterShowPrevious => 'Show previous';
+
+  @override
+  String get rosterNoEarlier => 'No earlier schedules';
+
+  @override
   String get pickerGuestNames => 'Names without an account';
 
   @override

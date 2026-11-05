@@ -2473,6 +2473,12 @@ class L10nZh extends L10n {
   String get rosterShowMore => '顯示更多';
 
   @override
+  String get rosterShowPrevious => '顯示上一次';
+
+  @override
+  String get rosterNoEarlier => '沒有更早的服事表';
+
+  @override
   String get pickerGuestNames => '無帳號的名字';
 
   @override
@@ -5904,6 +5910,12 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get rosterShowMore => '显示更多';
+
+  @override
+  String get rosterShowPrevious => '显示上一次';
+
+  @override
+  String get rosterNoEarlier => '没有更早的事奉表';
 
   @override
   String get pickerGuestNames => '无账号的名字';

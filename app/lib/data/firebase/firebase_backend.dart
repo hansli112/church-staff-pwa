@@ -824,6 +824,26 @@ class FirestoreChurchData implements ChurchData {
     return [for (final d in snap.docs) ?rosterFromJson(d.data())];
   });
 
+  // Needs the composite index on type and dateKey (firestore.indexes.json).
+  @override
+  Future<Roster?> rosterBefore({required String serviceType, required Day before}) => _guard(() async {
+    // Past one that does not decode, rather than stop there.
+    var until = before.key;
+    while (true) {
+      final snap = await _col('rosters')
+          .where('type', isEqualTo: serviceType)
+          .where('dateKey', isLessThan: until)
+          .orderBy('dateKey', descending: true)
+          .limit(3)
+          .get();
+      for (final d in snap.docs) {
+        if (rosterFromJson(d.data()) case final r?) return r;
+      }
+      if (snap.docs.length < 3) return null;
+      until = snap.docs.last.data()['dateKey'] as String;
+    }
+  });
+
   @override
   Future<List<Roster>> eventRosters() => _guard(() async {
     final snap = await _col('rosters').where('kind', isEqualTo: 'event').get();

@@ -10,5 +10,6 @@ DateBlock dayBlock(Day day, Day today) => DateBlock(
   month: DateFormat.MMM().format(day.midnight),
   day: day.day,
   today: day == today,
+  past: day.isBefore(today),
   semanticLabel: (day.year == today.year ? DateFormat.MMMd() : DateFormat.yMMMd()).format(day.midnight),
 );

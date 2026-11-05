@@ -6,6 +6,7 @@ import 'package:martha/core/design/tokens.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
+import 'package:martha/features/rosters/editable_roster.dart';
 import 'package:martha/features/rosters/roster_card.dart';
 import 'package:martha/state/session.dart';
 
@@ -85,6 +86,65 @@ void main() {
       await pumpApp(tester, seededChurch(as: john));
       await tapText(tester, '服事表');
       expect(find.text('你還沒加入任何聚會，請找管理員設定'), findsOneWidget);
+    });
+
+    testWidgets('the roster tab goes back one saved day at a time; a past day is only looked at', (tester) async {
+      final b = seededChurch(as: pastor);
+      Roster past(String type, int month, int day, String who) => Roster(
+        type: type,
+        day: Day(2026, month, day),
+        duties: [
+          Duty(role: '司會', people: [who]),
+        ],
+      );
+      for (final r in [
+        past('sunday', 9, 27, '上週的司會'),
+        past('youth', 9, 26, '青年的司會'),
+        past('sunday', 9, 13, '更早的司會'),
+      ]) {
+        b.rosters['grace']![r.id] = r;
+      }
+      await pumpApp(tester, b);
+      await tapText(tester, '服事表');
+      expect(findDay('9月27日'), findsNothing, reason: 'from today on until asked');
+
+      await tapText(tester, '顯示上一次');
+      expect(findDay('9月27日'), findsOneWidget);
+      expect(find.text('上週的司會'), findsOneWidget);
+      expect(findDay('10月4日'), findsOneWidget, reason: 'the days ahead stay');
+
+      await tapText(tester, '顯示上一次');
+      expect(find.text('青年的司會'), findsNothing, reason: "another service's day is not this one's");
+      expect(findDay('9月13日'), findsOneWidget, reason: 'the week nobody was arranged is skipped');
+
+      await tapText(tester, '顯示上一次');
+      expect(find.text('沒有更早的服事表'), findsOneWidget);
+      expect(find.text('顯示上一次'), findsNothing);
+
+      await tester.tap(find.text('上週的司會'));
+      await settle(tester);
+      expect(find.text('上週的司會'), findsOneWidget);
+      expect(find.byType(EditableRoster), findsNothing, reason: 'even an admin only looks at a past day');
+      expect(find.byTooltip('編輯'), findsNothing);
+    });
+
+    testWidgets('a past day opened on its own shows what was saved', (tester) async {
+      final b = seededChurch(as: pastor);
+      final r = Roster(
+        type: 'sunday',
+        day: Day(2026, 9, 27),
+        duties: const [
+          Duty(role: '司會', people: ['上週的司會']),
+        ],
+      );
+      b.rosters['grace']![r.id] = r;
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-09-27');
+      expect(find.text('上週的司會'), findsOneWidget);
+      expect(find.byType(EditableRoster), findsNothing);
+
+      await go(tester, '/rosters/sunday/2026-09-20');
+      expect(find.text('待定'), findsNothing, reason: "a day nobody was arranged on is not today's template");
     });
 
     testWidgets('a change rebuilds only the card it touched', (tester) async {

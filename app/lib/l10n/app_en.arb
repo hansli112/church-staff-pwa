@@ -751,6 +751,8 @@
   "importExamplePerson": "Grace Lee",
   "importExampleEvent": "Communion",
   "rosterShowMore": "Show more",
+  "rosterShowPrevious": "Show previous",
+  "rosterNoEarlier": "No earlier schedules",
   "pickerGuestNames": "Names without an account",
   "serviceSettingsSaved": "Service updated",
   "serviceSyncOriginalEvent": "Original occasion",
