@@ -4,6 +4,12 @@
 
 原始程式碼採 [MIT License](LICENSE)，著作權人為 Hans Lee。這是可自行部署的開源專案，**不是代管服務；不承諾客服、維運、回應時間或第三方免費額度**。
 
+## 搬到馬大別忙（線上版）
+
+[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal)
+
+[馬大別忙](https://marthasit.com) 是同一套服事表的線上版，不用自己維護 Firebase、Cloudflare，還有手機 App。已經架好的網站，用上面的按鈕產生搬家檔（只讀資料，不改動現在的網站），再到馬大別忙「建立新教會 → 從舊版搬過來」上傳，同工、服事表和聚會設定都會搬過去。步驟見 **[搬家教學](docs/move-to-martha.md)**；指令是 `node scripts/export-move.mjs`。
+
 ## 不會寫程式？用安裝精靈
 
 [![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Finstall-cloud-shell.md&show=terminal)
