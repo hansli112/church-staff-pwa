@@ -258,7 +258,7 @@ class _ShowEarlier extends ConsumerWidget {
   }
 }
 
-/// A day gone, as it was saved: its date greyed, opened only to look at.
+/// A day gone, as it was saved: greyed, opened only to look at.
 class _PastCard extends ConsumerWidget {
   const _PastCard({super.key, required this.roster, required this.onTap});
 
@@ -274,6 +274,7 @@ class _PastCard extends ConsumerWidget {
       title: dayBesideBlock(L10n.of(context), roster.day, today),
       highlightUid: ref.watch(uidProvider),
       onTap: onTap,
+      past: true,
     );
   }
 }

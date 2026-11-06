@@ -72,10 +72,15 @@ class RosterDayView extends StatelessWidget {
     this.onTap,
     this.onMyDuty,
     this.asked = const {},
+    this.past = false,
   });
 
   final Roster roster;
   final String title;
+
+  /// A day gone: its words grey, like past events in a calendar, so it
+  /// reads apart from the days ahead.
+  final bool past;
 
   /// Before the title, e.g. the day as a [DateBlock].
   final Widget? leading;
@@ -142,7 +147,7 @@ class RosterDayView extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(title, style: AppText.headline),
+                          Text(title, style: AppText.headline.copyWith(color: past ? c.secondaryLabel : null)),
                           if (roster.events.isNotEmpty) ...[
                             const SizedBox(height: Space.xs),
                             Wrap(
@@ -206,7 +211,7 @@ class RosterDayView extends StatelessWidget {
                                         ],
                                       ],
                                     ),
-                                    style: AppText.body,
+                                    style: AppText.body.copyWith(color: past ? c.secondaryLabel : null),
                                   ),
                           ),
                         ],
