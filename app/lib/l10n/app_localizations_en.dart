@@ -116,7 +116,7 @@ class L10nEn extends L10n {
   String get yourName => 'Your name';
 
   @override
-  String get yourNameFooter => 'What everyone sees on rosters and lists: the name your church knows you by';
+  String get yourNameFooter => 'The name your church knows you by';
 
   @override
   String get signIn => 'Sign in';
@@ -287,7 +287,7 @@ class L10nEn extends L10n {
   String get myServicesTitle => 'When you’re serving';
 
   @override
-  String get noUpcomingServices => 'You’re not scheduled to serve. When you are, it’ll show up here.';
+  String get noUpcomingServices => 'You’re not scheduled to serve';
 
   @override
   String get viewRosters => 'View schedule';
@@ -395,9 +395,6 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get pickerLearns => 'A team member of this service, once scheduled, is listed up here next time';
-
-  @override
   String pickerNoResults(String query) {
     return 'No results for “$query”';
   }
@@ -412,7 +409,7 @@ class L10nEn extends L10n {
   String get reorderHint => 'Drag to reorder. Every week will use this order.';
 
   @override
-  String get editListHint => 'Drag to reorder. Removed people can still be found by searching.';
+  String get editListHint => 'Drag to reorder';
 
   @override
   String pickerTakeOff(String name) {
@@ -522,9 +519,6 @@ class L10nEn extends L10n {
   String get lineCommunity => 'LINE community';
 
   @override
-  String get lineCommunityNote => 'Ask questions, report problems, meet other churches';
-
-  @override
   String get members => 'Team members';
 
   @override
@@ -580,8 +574,7 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get adminCannotLeave =>
-      'Admins can’t leave right away. To leave, make another team member an admin, then ask them to remove your admin role.';
+  String get adminCannotLeave => 'To leave, hand admin over to someone else first';
 
   @override
   String get churchLogo => 'Church logo';
@@ -853,10 +846,6 @@ class L10nEn extends L10n {
   String get zones => 'Services and roles';
 
   @override
-  String get zonesFooter =>
-      'Being a team member gives no permissions; who can arrange schedules depends on their church role';
-
-  @override
   String get removeMember => 'Remove team member';
 
   @override
@@ -940,13 +929,21 @@ class L10nEn extends L10n {
   String get serviceEnabled => 'Active';
 
   @override
-  String get serviceDisabledFooter => 'Inactive services won’t get new schedules. Existing ones are kept.';
+  String get serviceDisabledFooter => 'Inactive services won’t get new schedules';
+
+  @override
+  String dutyPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '1 person',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get templateDuties => 'Roles';
-
-  @override
-  String get templateFooter => 'New schedules will include these roles. Schedules already made aren’t affected.';
 
   @override
   String get commonEvents => 'Common occasions';
@@ -1270,12 +1267,11 @@ class L10nEn extends L10n {
       other: 'This month’s $limit photos are used up',
       one: 'This month’s 1 photo is used up',
     );
-    return '$_temp0. More on the 1st of next month. Until then, you can fill in the schedule yourself.';
+    return '$_temp0. More on the 1st of next month.';
   }
 
   @override
-  String get photoPlatformOff =>
-      'Photo import is paused this month (the app-wide limit is used up) and resumes next month. Until then, you can fill in the schedule yourself.';
+  String get photoPlatformOff => 'Photo import is paused this month and resumes next month';
 
   @override
   String get photoTooLarge => 'Photo is too large. Crop it to just the table and try again.';
@@ -1284,8 +1280,7 @@ class L10nEn extends L10n {
   String get photoFailed => 'Couldn’t read this photo. Try a clearer one.';
 
   @override
-  String get photoUnavailable =>
-      'Photo import isn’t available right now. Try again later, or fill in the schedule yourself.';
+  String get photoUnavailable => 'Photo import isn’t available right now. Try again later.';
 
   @override
   String get importPreview => 'Preview';
@@ -1475,10 +1470,6 @@ class L10nEn extends L10n {
   String get supportVerseSource => '2 Corinthians 8:14–15 (NIV)';
 
   @override
-  String get supportBody =>
-      'Support is optional and covers only server costs. It isn’t a gift to a church, and every church gets the same features.';
-
-  @override
   String get supportTips => 'One-time support';
 
   @override
@@ -1559,8 +1550,7 @@ class L10nEn extends L10n {
   String get churchNotFound => 'Can’t find this church';
 
   @override
-  String get churchEntryNotMember =>
-      'You’re not a team member of this church yet. Ask an admin for an invite link to join.';
+  String get churchEntryNotMember => 'Ask an admin for an invite link';
 
   @override
   String get churchUrl => 'Church URL';
@@ -1617,14 +1607,10 @@ class L10nEn extends L10n {
   String get addToHomeChooseGuide => 'Choose a guide';
 
   @override
-  String get addToHomeChooseGuideNote => 'This only switches the guide. It won’t open another browser.';
-
-  @override
   String get addToHomeSafariLayoutTitle => 'Safari layout';
 
   @override
-  String get addToHomeSafariLayoutHint =>
-      'Pick based on the buttons in your toolbar. No need to change Safari settings.';
+  String get addToHomeSafariLayoutHint => 'Pick based on the buttons in your toolbar';
 
   @override
   String get addToHomeSafariMoreChoice => 'I see “⋯”';
@@ -1647,16 +1633,6 @@ class L10nEn extends L10n {
 
   @override
   String get addToHomeScreenshotNote => 'Tap the circled button in your browser';
-
-  @override
-  String get addToHomeSafariScreenshot => 'Safari · iOS 26.5 · Simulator, Traditional Chinese';
-
-  @override
-  String get addToHomeChromeAndroidScreenshot =>
-      'Chrome 113 · Android 14 · Simulator, Traditional Chinese (older menu)';
-
-  @override
-  String get addToHomeChromeIosScreenshot => 'Chrome 155 · iOS 27.2 · iPhone 13';
 
   @override
   String get addToHomeAddressBar => 'Address bar';
@@ -1729,7 +1705,7 @@ class L10nEn extends L10n {
   String get addToHomeEmbeddedHint => 'You’re viewing this page inside an app. Switch to your phone’s browser first.';
 
   @override
-  String get addToHomeUnknownHint => 'This browser’s menu may be different. Continue with the steps below.';
+  String get addToHomeUnknownHint => 'Try the steps below';
 
   @override
   String addToHomeCopiedForBrowser(String browser) {
@@ -1796,7 +1772,7 @@ class L10nEn extends L10n {
   String get churchLinkNeedsHttps => 'Enter a link that starts with https://';
 
   @override
-  String get churchLinkFooter => 'Shown at the top of every team member’s home page. Opens in the browser.';
+  String get churchLinkFooter => 'Shown at the top of every team member’s home page';
 
   @override
   String get churchLinkRemove => 'Remove church link';
@@ -1817,8 +1793,7 @@ class L10nEn extends L10n {
   String get linkFetchTime => 'Daily update time';
 
   @override
-  String get linkSourceFooter =>
-      'Fetched once a day at this time. The JSON needs date (today in the church’s time zone), title, body, and link (https).';
+  String get linkSourceFooter => 'The JSON needs date (YYYY-MM-DD), title, body, and link';
 
   @override
   String linkSourceUpdated(String time) {
@@ -1887,7 +1862,7 @@ class L10nEn extends L10n {
 
   @override
   String get webhookFooter =>
-      'When the calendar or a schedule changes, a notification is sent to this URL, for example to n8n to forward to a LINE group. Every notification is signed with the secret.';
+      'When the calendar or a schedule changes, a notification is sent to this URL, for example to n8n to forward to a LINE group';
 
   @override
   String get webhookTest => 'Send test';
@@ -1953,9 +1928,6 @@ class L10nEn extends L10n {
 
   @override
   String get exportData => 'Export data';
-
-  @override
-  String get exportFooter => 'Export all of the church’s data: a JSON file, plus a schedule you can open in Excel';
 
   @override
   String get exported => 'Exported';
@@ -2033,8 +2005,7 @@ class L10nEn extends L10n {
   String get moveWhoAmI => 'This is me (optional)';
 
   @override
-  String get moveWhoAmIFooter =>
-      'If you choose someone, you take over their schedules, services, and permissions. Other team members are asked whether to join when they sign in to Martha, sit with the same email.';
+  String get moveWhoAmIFooter => 'You take over this person’s schedules';
 
   @override
   String get moveCreate => 'Create church and move';
@@ -2064,7 +2035,7 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get claimBody => 'Your church now uses this app. Your schedules and services are already here.';
+  String get claimBody => 'Your church now uses this app. Your schedules are already here.';
 
   @override
   String claimByNameTitle(String name) {
@@ -2120,8 +2091,7 @@ class L10nEn extends L10n {
   String get mergePending => 'Merge a pending record';
 
   @override
-  String get mergePendingFooter =>
-      'When a team member has no email, or joins with a different one, merge their pending record. Their schedules, services, and permission groups carry over.';
+  String get mergePendingFooter => 'For a team member with no email, or a different one';
 
   @override
   String get mergePendingPick => 'Choose a pending record';
@@ -2133,7 +2103,7 @@ class L10nEn extends L10n {
 
   @override
   String mergePendingBody(String pending, String member) {
-    return 'The pending “$pending” is merged into “$member”, who has joined. Their schedules, services, and permission groups carry over.';
+    return 'The pending “$pending” is merged into “$member”';
   }
 
   @override
@@ -2736,7 +2706,7 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get linkSourceRetry => 'Fetch again';
+  String get linkSourceRetry => 'Update now';
 
   @override
   String get listSeparator => ', ';
@@ -2767,14 +2737,6 @@ class L10nEn extends L10n {
 
   @override
   String get timeZone => 'Time zone';
-
-  @override
-  String timeZoneWithOffset(String city, String offset) {
-    return '$city ($offset)';
-  }
-
-  @override
-  String get timeZoneFooter => 'Today’s date, serving reminders, and calendar times follow the church’s time zone';
 
   @override
   String timeZoneChangeTitle(String city) {
@@ -2880,7 +2842,7 @@ class L10nEn extends L10n {
 
   @override
   String get errCredentialInUse =>
-      'That account is already a Martha, sit account of its own, so it can’t be linked. To link it, sign in with it and delete that account first, then come back.';
+      'That account already has its own Martha, sit account. To link it, sign in with it and delete that account first.';
 
   @override
   String get onlineRefundHeader => 'Online support refunds';
@@ -3089,9 +3051,6 @@ class L10nEn extends L10n {
   String get attendanceOverviewDone => 'All filled in';
 
   @override
-  String get attendanceOverviewFooter => 'Each service’s and small group’s latest meeting; today’s once filled in';
-
-  @override
   String get attendanceRemind => 'Remind';
 
   @override
@@ -3222,8 +3181,7 @@ class L10nEn extends L10n {
   String get takesJoinRequests => 'Requests to join';
 
   @override
-  String get takesJoinRequestsFooter =>
-      'When on, anyone with the church URL can ask to join. They join once an admin accepts them in Team members.';
+  String get takesJoinRequestsFooter => 'Anyone with the church URL can ask, and joins once an admin accepts';
 
   @override
   String get notifJoinRequest => 'Requests to join';
@@ -3280,8 +3238,7 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get planWeeksHint =>
-      'Changes here aren’t sent right away. Tap Done when you’re finished and each person gets one notification.';
+  String get planWeeksHint => 'People are notified when you tap Done';
 
   @override
   String get planNotYetTold => 'People put on or taken off here haven\'t been notified';
@@ -3403,15 +3360,7 @@ class L10nEn extends L10n {
   String get keepEditing => 'Keep editing';
 
   @override
-  String get ministriesFooter =>
-      'Lets the leads of a team such as worship or sound arrange its own roles; a church where only admins arrange can skip this';
-
-  @override
   String get ministriesChurchWide => 'Church-wide ministries';
-
-  @override
-  String get ministriesChurchWideFooter =>
-      'Ministries with roles in several services, or none, only for calendar events (such as media). One of a single service, such as its worship team, is on that service’s page';
 
   @override
   String get ministryNeedsDuties => 'Pick its roles, and its leads can arrange them in services and at events';
@@ -3527,8 +3476,7 @@ class L10nEn extends L10n {
   String get notifSwap => 'Covers and swaps';
 
   @override
-  String get notifSwapSub =>
-      'When someone asks you to cover or swap, answers your request, or asks for the days you can\'t serve';
+  String get notifSwapSub => 'Covering, swapping, and days you can’t serve';
 
   @override
   String get swapMenu => 'Find a cover or swap';

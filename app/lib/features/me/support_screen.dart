@@ -119,12 +119,6 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                 ),
                 const SizedBox(height: Space.xs),
                 Text(l10n.supportVerseSource, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
-                const SizedBox(height: Space.m),
-                BalancedText(
-                  l10n.supportBody,
-                  textAlign: TextAlign.start,
-                  style: AppText.body.copyWith(color: c.secondaryLabel),
-                ),
               ],
             ),
           ),

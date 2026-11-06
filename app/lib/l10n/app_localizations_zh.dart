@@ -115,7 +115,7 @@ class L10nZh extends L10n {
   String get yourName => '你的名字';
 
   @override
-  String get yourNameFooter => '服事表和名單上大家看到的名字，用教會裡大家怎麼叫你';
+  String get yourNameFooter => '教會裡大家怎麼叫你';
 
   @override
   String get signIn => '登入';
@@ -284,7 +284,7 @@ class L10nZh extends L10n {
   String get myServicesTitle => '我接下來的服事';
 
   @override
-  String get noUpcomingServices => '接下來沒有你的服事，排到你時會出現在這裡';
+  String get noUpcomingServices => '接下來沒有你的服事';
 
   @override
   String get viewRosters => '看服事表';
@@ -386,9 +386,6 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get pickerLearns => '這個聚會的同工排過一次，下次就會列在上面';
-
-  @override
   String pickerNoResults(String query) {
     return '找不到「$query」';
   }
@@ -403,7 +400,7 @@ class L10nZh extends L10n {
   String get reorderHint => '拖曳調整先後，每一週都照這個順序';
 
   @override
-  String get editListHint => '拖曳調整先後，移除的人之後一樣搜得到';
+  String get editListHint => '拖曳調整先後';
 
   @override
   String pickerTakeOff(String name) {
@@ -513,9 +510,6 @@ class L10nZh extends L10n {
   String get lineCommunity => 'LINE 社群';
 
   @override
-  String get lineCommunityNote => '問問題、回報問題、和其他教會交流';
-
-  @override
   String get members => '同工';
 
   @override
@@ -571,7 +565,7 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get adminCannotLeave => '管理員不能直接退出。要退出，先把另一位同工設成管理員，再請對方取消你的管理員。';
+  String get adminCannotLeave => '要退出教會，先把管理員交給別人';
 
   @override
   String get churchLogo => '教會 logo';
@@ -830,9 +824,6 @@ class L10nZh extends L10n {
   String get zones => '聚會與服事';
 
   @override
-  String get zonesFooter => '是同工不會多出權限；能不能排服事表看身分';
-
-  @override
   String get removeMember => '移除同工';
 
   @override
@@ -910,13 +901,15 @@ class L10nZh extends L10n {
   String get serviceEnabled => '啟用';
 
   @override
-  String get serviceDisabledFooter => '停用的聚會不會再出現新的服事表，舊的保留';
+  String get serviceDisabledFooter => '停用的聚會不會再出現新的服事表';
+
+  @override
+  String dutyPeopleCount(int count) {
+    return '$count 人';
+  }
 
   @override
   String get templateDuties => '服事項目';
-
-  @override
-  String get templateFooter => '新的服事表會帶入這些項目。已經安排的服事表不受影響。';
 
   @override
   String get commonEvents => '常用特別活動';
@@ -1206,11 +1199,11 @@ class L10nZh extends L10n {
 
   @override
   String photoChurchLimit(int limit) {
-    return '這個月的 $limit 張用完了，下個月 1 日恢復。這段時間可以直接安排服事表。';
+    return '這個月的 $limit 張用完了，下個月 1 日恢復';
   }
 
   @override
-  String get photoPlatformOff => '照片辨識這個月暫停（全站的辨識額度用完了），下個月恢復。這段時間可以直接安排服事表。';
+  String get photoPlatformOff => '照片辨識這個月暫停，下個月恢復';
 
   @override
   String get photoTooLarge => '照片太大，請裁到只剩表格再試';
@@ -1219,7 +1212,7 @@ class L10nZh extends L10n {
   String get photoFailed => '辨識失敗，請換一張清楚一點的照片再試';
 
   @override
-  String get photoUnavailable => '照片辨識暫時無法使用，請稍後再試，或直接安排服事表';
+  String get photoUnavailable => '照片辨識暫時不能用，請稍後再試';
 
   @override
   String get importPreview => '預覽';
@@ -1389,9 +1382,6 @@ class L10nZh extends L10n {
   String get supportVerseSource => '哥林多後書 8:14–15（和合本）';
 
   @override
-  String get supportBody => '支持完全自願，只用來分擔雲端費用，不是給教會的奉獻；每間教會能用的功能都一樣';
-
-  @override
   String get supportTips => '一次性支持';
 
   @override
@@ -1472,7 +1462,7 @@ class L10nZh extends L10n {
   String get churchNotFound => '找不到這間教會';
 
   @override
-  String get churchEntryNotMember => '你還不是這間教會的同工。請向管理員要邀請連結來加入。';
+  String get churchEntryNotMember => '請向管理員要邀請連結';
 
   @override
   String get churchUrl => '教會網址';
@@ -1527,13 +1517,10 @@ class L10nZh extends L10n {
   String get addToHomeChooseGuide => '選擇要看的教學';
 
   @override
-  String get addToHomeChooseGuideNote => '只切換教學，不會替你開啟另一個瀏覽器';
-
-  @override
   String get addToHomeSafariLayoutTitle => 'Safari 畫面';
 
   @override
-  String get addToHomeSafariLayoutHint => '請依工具列上的按鈕選擇，不需要更改 Safari 設定';
+  String get addToHomeSafariLayoutHint => '照工具列上的按鈕選';
 
   @override
   String get addToHomeSafariMoreChoice => '我看到「⋯」';
@@ -1555,15 +1542,6 @@ class L10nZh extends L10n {
 
   @override
   String get addToHomeScreenshotNote => '請點瀏覽器上圈出的按鈕';
-
-  @override
-  String get addToHomeSafariScreenshot => 'Safari · iOS 26.5 · 繁中模擬器畫面';
-
-  @override
-  String get addToHomeChromeAndroidScreenshot => 'Chrome 113 · Android 14 · 繁中模擬器畫面（舊版選單）';
-
-  @override
-  String get addToHomeChromeIosScreenshot => 'Chrome 155 · iOS 27.2 · iPhone 13 真機畫面';
 
   @override
   String get addToHomeAddressBar => '網址列';
@@ -1632,7 +1610,7 @@ class L10nZh extends L10n {
   String get addToHomeEmbeddedHint => '你正在 App 裡看網頁，請先換到手機的瀏覽器';
 
   @override
-  String get addToHomeUnknownHint => '這個瀏覽器的選單可能不同，改用下方方式繼續';
+  String get addToHomeUnknownHint => '改用下面的方式';
 
   @override
   String addToHomeCopiedForBrowser(String browser) {
@@ -1698,7 +1676,7 @@ class L10nZh extends L10n {
   String get churchLinkNeedsHttps => '請輸入 https:// 開頭的連結';
 
   @override
-  String get churchLinkFooter => '顯示在每位同工首頁的最上方，點了用瀏覽器打開';
+  String get churchLinkFooter => '顯示在每位同工首頁的最上方';
 
   @override
   String get churchLinkRemove => '移除教會連結';
@@ -1719,7 +1697,7 @@ class L10nZh extends L10n {
   String get linkFetchTime => '每天更新時間';
 
   @override
-  String get linkSourceFooter => '每天這個時間抓一次。JSON 要有 date（教會的今天）、title、body、link（https）。';
+  String get linkSourceFooter => 'JSON 要有 date（YYYY-MM-DD）、title、body、link';
 
   @override
   String linkSourceUpdated(String time) {
@@ -1787,7 +1765,7 @@ class L10nZh extends L10n {
   String get webhookRosterHint => '幾分鐘內的異動合併成一則';
 
   @override
-  String get webhookFooter => '行事曆或服事表有異動時，送通知到這個網址，例如交給 n8n 轉發到 LINE 群組。通知都用密鑰簽章。';
+  String get webhookFooter => '行事曆或服事表有異動時，送通知到這個網址，例如交給 n8n 轉發到 LINE 群組';
 
   @override
   String get webhookTest => '傳送測試';
@@ -1854,9 +1832,6 @@ class L10nZh extends L10n {
   String get exportData => '匯出資料';
 
   @override
-  String get exportFooter => '匯出教會的全部資料：一份 JSON，加上一份可以用 Excel 打開的服事表';
-
-  @override
   String get exported => '已匯出';
 
   @override
@@ -1918,7 +1893,7 @@ class L10nZh extends L10n {
   String get moveWhoAmI => '這位是我（選填）';
 
   @override
-  String get moveWhoAmIFooter => '選了就接手那位的服事表、聚會和權限。其他同工用同一個 email 登入馬大別忙時，會被問要不要加入。';
+  String get moveWhoAmIFooter => '選了就接手那位的服事';
 
   @override
   String get moveCreate => '建立教會並搬過來';
@@ -1942,7 +1917,7 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get claimBody => '教會換到馬大別忙了，你之前排的服事和所屬聚會都已經在這裡';
+  String get claimBody => '教會搬到馬大別忙了，你之前的服事都在這裡';
 
   @override
   String claimByNameTitle(String name) {
@@ -1997,7 +1972,7 @@ class L10nZh extends L10n {
   String get mergePending => '合併還沒登入的資料';
 
   @override
-  String get mergePendingFooter => '同工沒有 email、或用另一個 email 加入時，合併他還沒登入的資料，服事表、聚會和權限群組都會接上';
+  String get mergePendingFooter => '同工沒有 email 或換了 email 時用';
 
   @override
   String get mergePendingPick => '選一筆還沒登入的資料';
@@ -2009,7 +1984,7 @@ class L10nZh extends L10n {
 
   @override
   String mergePendingBody(String pending, String member) {
-    return '還沒登入的「$pending」會合併到已加入的「$member」，服事表、聚會和權限群組都會接上';
+    return '還沒登入的「$pending」會合併到「$member」';
   }
 
   @override
@@ -2590,7 +2565,7 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get linkSourceRetry => '重新抓取';
+  String get linkSourceRetry => '立即更新';
 
   @override
   String get listSeparator => '、';
@@ -2621,14 +2596,6 @@ class L10nZh extends L10n {
 
   @override
   String get timeZone => '時區';
-
-  @override
-  String timeZoneWithOffset(String city, String offset) {
-    return '$city（$offset）';
-  }
-
-  @override
-  String get timeZoneFooter => '今天的日期、服事提醒和行事曆的時間都照教會的時區';
 
   @override
   String timeZoneChangeTitle(String city) {
@@ -2733,7 +2700,7 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get errCredentialInUse => '你選的帳號已經是另一個馬大別忙帳號，不能連結。要連結的話，請先用它登入並刪除那個帳號，再回來連結。';
+  String get errCredentialInUse => '這個帳號已經註冊過馬大別忙。要連結，請先用它登入並刪除帳號。';
 
   @override
   String get onlineRefundHeader => '線上支持退款';
@@ -2927,9 +2894,6 @@ class L10nZh extends L10n {
   String get attendanceOverviewDone => '都填好了';
 
   @override
-  String get attendanceOverviewFooter => '每個聚會和小組最近一次聚會；今天的有人填了才列';
-
-  @override
   String get attendanceRemind => '提醒';
 
   @override
@@ -3053,7 +3017,7 @@ class L10nZh extends L10n {
   String get takesJoinRequests => '開放申請加入';
 
   @override
-  String get takesJoinRequestsFooter => '開著時，拿到教會網址的人可以申請加入，管理員在「同工」允許後才會加入';
+  String get takesJoinRequestsFooter => '拿到教會網址的人可以申請，管理員允許後加入';
 
   @override
   String get notifJoinRequest => '申請加入';
@@ -3098,7 +3062,7 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get planWeeksHint => '在這裡排的不會馬上通知，排好按「完成」，每人只收到一則';
+  String get planWeeksHint => '按「完成」才會通知';
 
   @override
   String get planNotYetTold => '在這裡排進或移出的人還沒收到通知';
@@ -3202,13 +3166,7 @@ class L10nZh extends L10n {
   String get keepEditing => '繼續編輯';
 
   @override
-  String get ministriesFooter => '讓敬拜團、音控組的負責人自己排自己的服事項目；只有管理員排班的教會不用設';
-
-  @override
   String get ministriesChurchWide => '全教會的事工';
-
-  @override
-  String get ministriesChurchWideFooter => '服事項目在好幾個聚會，或不排服事、只當行事曆活動的歸屬（例如多媒體）。只屬於一個聚會的（例如青年崇拜的敬拜團）在那個聚會頁';
 
   @override
   String get ministryNeedsDuties => '選好服事項目，負責人就能在聚會和活動排這些項目';
@@ -3317,7 +3275,7 @@ class L10nZh extends L10n {
   String get notifSwap => '找人代／交換';
 
   @override
-  String get notifSwapSub => '有人請你代或交換，你的請求有人回應，或請你填不能服事的日子時';
+  String get notifSwapSub => '找人代、交換、填不能服事的日子';
 
   @override
   String get swapMenu => '找人代／交換';
@@ -3548,7 +3506,7 @@ class L10nZhHans extends L10nZh {
   String get yourName => '你的名字';
 
   @override
-  String get yourNameFooter => '服事表和名单上大家看到的名字，用教会里大家怎么叫你';
+  String get yourNameFooter => '教会里大家怎么叫你';
 
   @override
   String get signIn => '登录';
@@ -3717,7 +3675,7 @@ class L10nZhHans extends L10nZh {
   String get myServicesTitle => '我接下来的事奉';
 
   @override
-  String get noUpcomingServices => '接下来没有你的事奉，排到你时会出现在这里';
+  String get noUpcomingServices => '接下来没有你的事奉';
 
   @override
   String get viewRosters => '看事奉表';
@@ -3819,9 +3777,6 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get pickerLearns => '这个聚会的同工排过一次，下次就会列在上面';
-
-  @override
   String pickerNoResults(String query) {
     return '找不到“$query”';
   }
@@ -3836,7 +3791,7 @@ class L10nZhHans extends L10nZh {
   String get reorderHint => '拖动调整先后，每一周都按这个顺序';
 
   @override
-  String get editListHint => '拖动调整先后，移除的人之后一样搜得到';
+  String get editListHint => '拖动调整先后';
 
   @override
   String pickerTakeOff(String name) {
@@ -3946,9 +3901,6 @@ class L10nZhHans extends L10nZh {
   String get lineCommunity => 'LINE 社群';
 
   @override
-  String get lineCommunityNote => '提问、反馈问题、和其他教会交流';
-
-  @override
   String get members => '同工';
 
   @override
@@ -4004,7 +3956,7 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get adminCannotLeave => '管理员不能直接退出。要退出，先把另一位同工设为管理员，再请对方取消你的管理员。';
+  String get adminCannotLeave => '要退出教会，先把管理员交给别人';
 
   @override
   String get churchLogo => '教会 logo';
@@ -4263,9 +4215,6 @@ class L10nZhHans extends L10nZh {
   String get zones => '所属聚会与事奉';
 
   @override
-  String get zonesFooter => '是同工不会多出权限；能不能排事奉表看身份';
-
-  @override
   String get removeMember => '移除同工';
 
   @override
@@ -4343,13 +4292,15 @@ class L10nZhHans extends L10nZh {
   String get serviceEnabled => '启用';
 
   @override
-  String get serviceDisabledFooter => '停用的聚会不会再出现新的事奉表，旧的保留';
+  String get serviceDisabledFooter => '停用的聚会不会再出现新的事奉表';
+
+  @override
+  String dutyPeopleCount(int count) {
+    return '$count 人';
+  }
 
   @override
   String get templateDuties => '事奉项目';
-
-  @override
-  String get templateFooter => '新的事奉表会带入这些项目。已经安排的事奉表不受影响。';
 
   @override
   String get commonEvents => '常用特别活动';
@@ -4639,11 +4590,11 @@ class L10nZhHans extends L10nZh {
 
   @override
   String photoChurchLimit(int limit) {
-    return '这个月的 $limit 张已经用完，下个月 1 日恢复。这段时间可以直接安排事奉表。';
+    return '这个月的 $limit 张已经用完，下个月 1 日恢复';
   }
 
   @override
-  String get photoPlatformOff => '照片识别这个月暂停（全站的识别额度用完了），下个月恢复。这段时间可以直接安排事奉表。';
+  String get photoPlatformOff => '照片识别这个月暂停，下个月恢复';
 
   @override
   String get photoTooLarge => '照片太大，请裁剪到只剩表格再试';
@@ -4652,7 +4603,7 @@ class L10nZhHans extends L10nZh {
   String get photoFailed => '识别失败，请换一张清楚一点的照片再试';
 
   @override
-  String get photoUnavailable => '照片识别暂时无法使用，请稍后再试，或直接安排事奉表';
+  String get photoUnavailable => '照片识别暂时不能用，请稍后再试';
 
   @override
   String get importPreview => '预览';
@@ -4822,9 +4773,6 @@ class L10nZhHans extends L10nZh {
   String get supportVerseSource => '哥林多后书 8:14–15（和合本）';
 
   @override
-  String get supportBody => '支持完全自愿，只用来分担云端费用，不是给教会的奉献；每间教会能用的功能都一样';
-
-  @override
   String get supportTips => '一次性支持';
 
   @override
@@ -4905,7 +4853,7 @@ class L10nZhHans extends L10nZh {
   String get churchNotFound => '找不到这间教会';
 
   @override
-  String get churchEntryNotMember => '你还不是这间教会的同工。请向管理员要邀请链接来加入。';
+  String get churchEntryNotMember => '请向管理员要邀请链接';
 
   @override
   String get churchUrl => '教会网址';
@@ -4960,13 +4908,10 @@ class L10nZhHans extends L10nZh {
   String get addToHomeChooseGuide => '选择要看的教程';
 
   @override
-  String get addToHomeChooseGuideNote => '只切换教程，不会替你打开另一个浏览器';
-
-  @override
   String get addToHomeSafariLayoutTitle => 'Safari 画面';
 
   @override
-  String get addToHomeSafariLayoutHint => '请按工具栏上的按钮选择，不需要更改 Safari 设置';
+  String get addToHomeSafariLayoutHint => '按工具栏上的按钮选';
 
   @override
   String get addToHomeSafariMoreChoice => '我看到“⋯”';
@@ -4988,15 +4933,6 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get addToHomeScreenshotNote => '请点浏览器上圈出的按钮';
-
-  @override
-  String get addToHomeSafariScreenshot => 'Safari · iOS 26.5 · 繁体中文模拟器画面';
-
-  @override
-  String get addToHomeChromeAndroidScreenshot => 'Chrome 113 · Android 14 · 繁体中文模拟器画面（旧版菜单）';
-
-  @override
-  String get addToHomeChromeIosScreenshot => 'Chrome 155 · iOS 27.2 · iPhone 13 真机画面';
 
   @override
   String get addToHomeAddressBar => '地址栏';
@@ -5065,7 +5001,7 @@ class L10nZhHans extends L10nZh {
   String get addToHomeEmbeddedHint => '你正在 App 里看网页，请先换到手机的浏览器';
 
   @override
-  String get addToHomeUnknownHint => '这个浏览器的菜单可能不同，改用下面的方式继续';
+  String get addToHomeUnknownHint => '改用下面的方式';
 
   @override
   String addToHomeCopiedForBrowser(String browser) {
@@ -5131,7 +5067,7 @@ class L10nZhHans extends L10nZh {
   String get churchLinkNeedsHttps => '请输入 https:// 开头的链接';
 
   @override
-  String get churchLinkFooter => '显示在每位同工首页的最上方，点击后用浏览器打开';
+  String get churchLinkFooter => '显示在每位同工首页的最上方';
 
   @override
   String get churchLinkRemove => '移除教会链接';
@@ -5152,7 +5088,7 @@ class L10nZhHans extends L10nZh {
   String get linkFetchTime => '每天更新时间';
 
   @override
-  String get linkSourceFooter => '每天这个时间获取一次。JSON 要有 date（教会的今天）、title、body、link（https）。';
+  String get linkSourceFooter => 'JSON 要有 date（YYYY-MM-DD）、title、body、link';
 
   @override
   String linkSourceUpdated(String time) {
@@ -5220,7 +5156,7 @@ class L10nZhHans extends L10nZh {
   String get webhookRosterHint => '几分钟内的变动合并成一条';
 
   @override
-  String get webhookFooter => '行事历或事奉表有变动时，发送通知到这个网址，例如交给 n8n 转发到 LINE 群组。通知都用密钥签名。';
+  String get webhookFooter => '行事历或事奉表有变动时，发送通知到这个网址，例如交给 n8n 转发到 LINE 群组';
 
   @override
   String get webhookTest => '发送测试';
@@ -5287,9 +5223,6 @@ class L10nZhHans extends L10nZh {
   String get exportData => '导出数据';
 
   @override
-  String get exportFooter => '导出教会的全部数据：一个 JSON 文件，加上一个可以用 Excel 打开的事奉表';
-
-  @override
   String get exported => '已导出';
 
   @override
@@ -5351,7 +5284,7 @@ class L10nZhHans extends L10nZh {
   String get moveWhoAmI => '这位是我（选填）';
 
   @override
-  String get moveWhoAmIFooter => '选了就接手那位的事奉表、所属聚会和权限。其他同工用同一个邮箱登录马大别忙时，会被询问要不要加入。';
+  String get moveWhoAmIFooter => '选了就接手那位的事奉';
 
   @override
   String get moveCreate => '创建教会并迁移过来';
@@ -5375,7 +5308,7 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get claimBody => '教会换到马大别忙了，你之前排的事奉和所属聚会都已经在这里';
+  String get claimBody => '教会搬到马大别忙了，你之前的事奉都在这里';
 
   @override
   String claimByNameTitle(String name) {
@@ -5430,7 +5363,7 @@ class L10nZhHans extends L10nZh {
   String get mergePending => '合并未登录的记录';
 
   @override
-  String get mergePendingFooter => '同工没有邮箱、或用另一个邮箱加入时，合并他未登录的记录，事奉表、所属聚会和权限组都会接上';
+  String get mergePendingFooter => '同工没有邮箱或换了邮箱时用';
 
   @override
   String get mergePendingPick => '选一条未登录的记录';
@@ -5442,7 +5375,7 @@ class L10nZhHans extends L10nZh {
 
   @override
   String mergePendingBody(String pending, String member) {
-    return '未登录的“$pending”会合并到已加入的“$member”，事奉表、所属聚会和权限组都会接上';
+    return '未登录的“$pending”会合并到“$member”';
   }
 
   @override
@@ -6023,7 +5956,7 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get linkSourceRetry => '重新获取';
+  String get linkSourceRetry => '立即更新';
 
   @override
   String get listSeparator => '、';
@@ -6054,14 +5987,6 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get timeZone => '时区';
-
-  @override
-  String timeZoneWithOffset(String city, String offset) {
-    return '$city（$offset）';
-  }
-
-  @override
-  String get timeZoneFooter => '今天的日期、事奉提醒和行事历的时间都按教会的时区';
 
   @override
   String timeZoneChangeTitle(String city) {
@@ -6166,7 +6091,7 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get errCredentialInUse => '你选的账号已经是另一个马大别忙账号，不能关联。要关联的话，请先用它登录并删除那个账号，再回来关联。';
+  String get errCredentialInUse => '这个账号已经注册过马大别忙。要关联，请先用它登录并删除账号。';
 
   @override
   String get onlineRefundHeader => '在线支持退款';
@@ -6360,9 +6285,6 @@ class L10nZhHans extends L10nZh {
   String get attendanceOverviewDone => '都填好了';
 
   @override
-  String get attendanceOverviewFooter => '每个聚会和小组最近一次聚会；今天的有人填了才列';
-
-  @override
   String get attendanceRemind => '提醒';
 
   @override
@@ -6486,7 +6408,7 @@ class L10nZhHans extends L10nZh {
   String get takesJoinRequests => '开放申请加入';
 
   @override
-  String get takesJoinRequestsFooter => '开着时，拿到教会网址的人可以申请加入，管理员在“同工”允许后才会加入';
+  String get takesJoinRequestsFooter => '拿到教会网址的人可以申请，管理员允许后加入';
 
   @override
   String get notifJoinRequest => '申请加入';
@@ -6531,7 +6453,7 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get planWeeksHint => '在这里排的不会马上通知，排好按“完成”，每人只收到一条';
+  String get planWeeksHint => '按“完成”才会通知';
 
   @override
   String get planNotYetTold => '在这里排入或移出的人还没收到通知';
@@ -6635,13 +6557,7 @@ class L10nZhHans extends L10nZh {
   String get keepEditing => '继续编辑';
 
   @override
-  String get ministriesFooter => '让敬拜团、音控组的负责人自己排自己的事奉项目；只有管理员排班的教会不用设';
-
-  @override
   String get ministriesChurchWide => '全教会的事工';
-
-  @override
-  String get ministriesChurchWideFooter => '事奉项目在好几个聚会，或不排事奉、只当行事历活动的归属（例如多媒体）。只属于一个聚会的（例如青年崇拜的敬拜团）在那个聚会页';
 
   @override
   String get ministryNeedsDuties => '选好事奉项目，负责人就能在聚会和活动排这些项目';
@@ -6750,7 +6666,7 @@ class L10nZhHans extends L10nZh {
   String get notifSwap => '找人代／交换';
 
   @override
-  String get notifSwapSub => '有人请你代或交换，你的请求有人回应，或请你填不能事奉的日子时';
+  String get notifSwapSub => '找人代、交换、填不能事奉的日子';
 
   @override
   String get swapMenu => '找人代／交换';

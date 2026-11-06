@@ -188,9 +188,9 @@ void main() {
     testWidgets('an admin has no leave entry and is told to hand over', (tester) async {
       await pumpApp(tester, seededChurch());
       await go(tester, '/me/church');
-      await tester.scrollUntilVisible(findShown('管理員不能直接退出。要退出，先把另一位同工設成管理員，再請對方取消你的管理員。'), 300);
+      await tester.scrollUntilVisible(findShown('要退出教會，先把管理員交給別人'), 300);
       expect(findShown('退出教會'), findsNothing);
-      expect(findShown('管理員不能直接退出。要退出，先把另一位同工設成管理員，再請對方取消你的管理員。'), findsOneWidget);
+      expect(findShown('要退出教會，先把管理員交給別人'), findsOneWidget);
     });
 
     testWidgets('a removed member loses the church at once', (tester) async {

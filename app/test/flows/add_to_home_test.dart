@@ -320,14 +320,13 @@ void main() {
     }
   }
 
-  testWidgets('the browser picker switches the guide without opening a different browser', (tester) async {
+  testWidgets('the browser picker switches the guide', (tester) async {
     final loads = Loads();
     await seeded(tester, '$iphone CriOS/140.0', overrides: [loads.override]);
     routerOf(tester).go('/add-to-home');
     await settle(tester);
     await tapText(tester, '畫面不一樣？');
     expect(find.text('Samsung Internet'), findsNothing);
-    expect(find.text('只切換教學，不會替你開啟另一個瀏覽器'), findsOneWidget);
     await tapText(tester, 'Safari');
     expect(find.text(iosSteps.first), findsOneWidget);
     expect(find.text('點網址列旁的分享圖示'), findsNothing);
@@ -469,7 +468,6 @@ void main() {
       ]),
     );
     expect(findShownContaining('只看到一排圖示時，先點「檢視較多」；舊版要往下滑'), findsOneWidget);
-    expect(findShown('Safari · iOS 26.5 · 繁中模擬器畫面'), findsNWidgets(2));
     expect(tester.takeException(), isNull);
   });
 
@@ -490,7 +488,7 @@ void main() {
       [false, false],
       reason: 'the page cannot detect Safari layout; neither choice is guessed',
     );
-    expect(findShown('請依工具列上的按鈕選擇，不需要更改 Safari 設定'), findsOneWidget);
+    expect(findShown('照工具列上的按鈕選'), findsOneWidget);
     await tapText(tester, '我看到分享圖示');
 
     expect(routerOf(tester).routeInformationProvider.value.uri.path, '/add-to-home');
@@ -568,7 +566,7 @@ void main() {
     });
   }
 
-  testWidgets('Chrome does not show Safari screenshots or claim the old Android capture is current', (tester) async {
+  testWidgets('Chrome shows its own screenshots, not Safari’s', (tester) async {
     await seeded(tester, '$iphone CriOS/140.0');
     routerOf(tester).go('/add-to-home');
     await settle(tester);
@@ -578,7 +576,6 @@ void main() {
       containsAll(['assets/add_to_home/chrome_ios_share.png', 'assets/add_to_home/chrome_ios_add.png']),
     );
     expect(iosImages.map((image) => image.assetName), everyElement(isNot(contains('safari'))));
-    expect(findShown('Chrome 155 · iOS 27.2 · iPhone 13 真機畫面'), findsNWidgets(2));
     expect(findShownContaining('看不到時，先把分享面板展開，再往下滑'), findsOneWidget);
     expect(findShown('按鈕示意，請點瀏覽器上的按鈕'), findsNothing);
     expect(findShown('點網址列旁的分享圖示'), findsOneWidget);
@@ -586,7 +583,6 @@ void main() {
     await seeded(tester, android);
     routerOf(tester).go('/add-to-home');
     await settle(tester);
-    expect(findShown('Chrome 113 · Android 14 · 繁中模擬器畫面（舊版選單）'), findsNWidgets(2));
     final screenshots = tester
         .widgetList<Image>(find.byType(Image))
         .map((image) => image.image)

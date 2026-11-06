@@ -51,7 +51,7 @@
   "email": "Email",
   "password": "密碼",
   "yourName": "你的名字",
-  "yourNameFooter": "服事表和名單上大家看到的名字，用教會裡大家怎麼叫你",
+  "yourNameFooter": "教會裡大家怎麼叫你",
   "signIn": "登入",
   "register": "註冊",
   "createAccount": "註冊新帳號",
@@ -162,7 +162,7 @@
   "churchRestored": "教會已還原",
   "switchChurch": "切換教會",
   "myServicesTitle": "我接下來的服事",
-  "noUpcomingServices": "接下來沒有你的服事，排到你時會出現在這裡",
+  "noUpcomingServices": "接下來沒有你的服事",
   "viewRosters": "看服事表",
   "gettingStarted": "開始使用",
   "@gettingStarted": { "description": "Home page section for an admin who is still the church's only member" },
@@ -240,10 +240,6 @@
       }
     }
   },
-  "pickerLearns": "這個聚會的同工排過一次，下次就會列在上面",
-  "@pickerLearns": {
-    "description": "For admins, while nobody is on a duty's list: picking someone puts them on it"
-  },
   "pickerNoResults": "找不到「{query}」",
   "@pickerNoResults": {
     "placeholders": {
@@ -255,7 +251,7 @@
   "pickerSearchHint": "搜尋同工",
   "reorder": "調整順序",
   "reorderHint": "拖曳調整先後，每一週都照這個順序",
-  "editListHint": "拖曳調整先後，移除的人之後一樣搜得到",
+  "editListHint": "拖曳調整先後",
   "@editListHint": {
     "description": "Admins editing a duty's list in the picker: reorder, or take people off"
   },
@@ -350,7 +346,6 @@
   "churchInfo": "教會資訊",
   "manageChurch": "管理教會",
   "lineCommunity": "LINE 社群",
-  "lineCommunityNote": "問問題、回報問題、和其他教會交流",
   "members": "同工",
   "invites": "邀請",
   "notifications": "通知",
@@ -383,7 +378,7 @@
       }
     }
   },
-  "adminCannotLeave": "管理員不能直接退出。要退出，先把另一位同工設成管理員，再請對方取消你的管理員。",
+  "adminCannotLeave": "要退出教會，先把管理員交給別人",
   "churchLogo": "教會 logo",
   "uploadLogo": "上傳 logo",
   "changeLogo": "更換 logo",
@@ -529,7 +524,6 @@
   "addGroupStaff": "加入同工",
   "@addGroupStaff": { "description": "Row on a group's page: add any team member of the church to it" },
   "zones": "聚會與服事",
-  "zonesFooter": "是同工不會多出權限；能不能排服事表看身分",
   "removeMember": "移除同工",
   "memberRemoved": "已移除「{name}」",
   "@memberRemoved": {
@@ -584,9 +578,10 @@
   "serviceName": "聚會名稱",
   "weekday": "星期",
   "serviceEnabled": "啟用",
-  "serviceDisabledFooter": "停用的聚會不會再出現新的服事表，舊的保留",
+  "serviceDisabledFooter": "停用的聚會不會再出現新的服事表",
+  "dutyPeopleCount": "{count} 人",
+  "@dutyPeopleCount": {"description": "Beside a duty: how many are on its list", "placeholders": {"count": {"type": "int", "example": "25"}}},
   "templateDuties": "服事項目",
-  "templateFooter": "新的服事表會帶入這些項目。已經安排的服事表不受影響。",
   "commonEvents": "常用特別活動",
   "rename": "改名",
   "remove": "移除",
@@ -744,7 +739,7 @@
   "photoPick": "選照片",
   "photoPasteJson": "貼上 JSON",
   "photoRecognizing": "辨識中，大約需要一分鐘",
-  "photoChurchLimit": "這個月的 {limit} 張用完了，下個月 1 日恢復。這段時間可以直接安排服事表。",
+  "photoChurchLimit": "這個月的 {limit} 張用完了，下個月 1 日恢復",
   "@photoChurchLimit": {
     "placeholders": {
       "limit": {
@@ -752,10 +747,10 @@
       }
     }
   },
-  "photoPlatformOff": "照片辨識這個月暫停（全站的辨識額度用完了），下個月恢復。這段時間可以直接安排服事表。",
+  "photoPlatformOff": "照片辨識這個月暫停，下個月恢復",
   "photoTooLarge": "照片太大，請裁到只剩表格再試",
   "photoFailed": "辨識失敗，請換一張清楚一點的照片再試",
-  "photoUnavailable": "照片辨識暫時無法使用，請稍後再試，或直接安排服事表",
+  "photoUnavailable": "照片辨識暫時不能用，請稍後再試",
   "importPreview": "預覽",
   "importApply": "套用到服事表",
   "importConfirmNamesFirst": "先確認 {count} 個人名",
@@ -863,7 +858,6 @@
   "support": "支持馬大別忙",
   "supportVerse": "乃要均平，就是要你們的富餘，現在可以補他們的不足，使他們的富餘，將來也可以補你們的不足，這就均平了。如經上所記：多收的也沒有餘；少收的也沒有缺。",
   "supportVerseSource": "哥林多後書 8:14–15（和合本）",
-  "supportBody": "支持完全自願，只用來分擔雲端費用，不是給教會的奉獻；每間教會能用的功能都一樣",
   "supportTips": "一次性支持",
   "supportMonthly": "每月支持",
   "supportPerMonth": "{price}／月",
@@ -907,7 +901,7 @@
   },
   "goHome": "回首頁",
   "churchNotFound": "找不到這間教會",
-  "churchEntryNotMember": "你還不是這間教會的同工。請向管理員要邀請連結來加入。",
+  "churchEntryNotMember": "請向管理員要邀請連結",
   "churchUrl": "教會網址",
   "churchUrlCopied": "已複製教會網址",
   "churchUrlCopy": "複製教會網址",
@@ -930,9 +924,8 @@
   },
   "addToHomeChooseBrowser": "畫面不一樣？",
   "addToHomeChooseGuide": "選擇要看的教學",
-  "addToHomeChooseGuideNote": "只切換教學，不會替你開啟另一個瀏覽器",
   "addToHomeSafariLayoutTitle": "Safari 畫面",
-  "addToHomeSafariLayoutHint": "請依工具列上的按鈕選擇，不需要更改 Safari 設定",
+  "addToHomeSafariLayoutHint": "照工具列上的按鈕選",
   "addToHomeSafariMoreChoice": "我看到「⋯」",
   "addToHomeSafariShareChoice": "我看到分享圖示",
   "addToHomeSafariMoreShare": "點「⋯」，再選「分享」",
@@ -940,9 +933,6 @@
   "addToHomeInApp": "App 內建瀏覽器",
   "addToHomeOtherBrowser": "其他瀏覽器",
   "addToHomeScreenshotNote": "請點瀏覽器上圈出的按鈕",
-  "addToHomeSafariScreenshot": "Safari · iOS 26.5 · 繁中模擬器畫面",
-  "addToHomeChromeAndroidScreenshot": "Chrome 113 · Android 14 · 繁中模擬器畫面（舊版選單）",
-  "addToHomeChromeIosScreenshot": "Chrome 155 · iOS 27.2 · iPhone 13 真機畫面",
   "addToHomeAddressBar": "網址列",
   "addToHomeChromeShare": "點網址列旁的分享圖示",
   "addToHomeChromeShareHint": "不是「⋯」選單，也不是「分享 Chrome」",
@@ -972,7 +962,7 @@
     "placeholders": { "browser": { "type": "String" } }
   },
   "addToHomeEmbeddedHint": "你正在 App 裡看網頁，請先換到手機的瀏覽器",
-  "addToHomeUnknownHint": "這個瀏覽器的選單可能不同，改用下方方式繼續",
+  "addToHomeUnknownHint": "改用下面的方式",
   "addToHomeCopiedForBrowser": "已複製，請開啟 {browser}，貼到網址列",
   "@addToHomeCopiedForBrowser": {
     "placeholders": { "browser": { "type": "String" } }
@@ -1001,14 +991,14 @@
   "churchLinkUrl": "連結",
   "churchLinkNeedsTitle": "請輸入標題",
   "churchLinkNeedsHttps": "請輸入 https:// 開頭的連結",
-  "churchLinkFooter": "顯示在每位同工首頁的最上方，點了用瀏覽器打開",
+  "churchLinkFooter": "顯示在每位同工首頁的最上方",
   "churchLinkRemove": "移除教會連結",
   "churchLinkRemoved": "已移除教會連結",
   "churchLinkOpens": "用瀏覽器打開",
   "linkSource": "每日內容來源（選填）",
   "linkSourceUrl": "JSON 網址",
   "linkFetchTime": "每天更新時間",
-  "linkSourceFooter": "每天這個時間抓一次。JSON 要有 date（教會的今天）、title、body、link（https）。",
+  "linkSourceFooter": "JSON 要有 date（YYYY-MM-DD）、title、body、link",
   "linkSourceUpdated": "上次更新：{time}",
   "@linkSourceUpdated": {
     "placeholders": {
@@ -1056,7 +1046,7 @@
   "webhookCalendarHint": "新增、修改、刪除活動",
   "webhookRoster": "服事表異動",
   "webhookRosterHint": "幾分鐘內的異動合併成一則",
-  "webhookFooter": "行事曆或服事表有異動時，送通知到這個網址，例如交給 n8n 轉發到 LINE 群組。通知都用密鑰簽章。",
+  "webhookFooter": "行事曆或服事表有異動時，送通知到這個網址，例如交給 n8n 轉發到 LINE 群組",
   "webhookTest": "傳送測試",
   "webhookLast": "上次送出：{time} · {result}",
   "@webhookLast": {
@@ -1094,7 +1084,6 @@
   "webhookOffMessage": "網址和密鑰都會刪掉，之後要重新設定",
   "webhookOffAction": "關閉",
   "exportData": "匯出資料",
-  "exportFooter": "匯出教會的全部資料：一份 JSON，加上一份可以用 Excel 打開的服事表",
   "exported": "已匯出",
   "exportCsvFile": "服事表.csv",
   "@exportCsvFile": { "description": "The exported schedule's file name, in the zip; Excel opens it." },
@@ -1133,7 +1122,7 @@
   },
   "moveServices": "聚會",
   "moveWhoAmI": "這位是我（選填）",
-  "moveWhoAmIFooter": "選了就接手那位的服事表、聚會和權限。其他同工用同一個 email 登入馬大別忙時，會被問要不要加入。",
+  "moveWhoAmIFooter": "選了就接手那位的服事",
   "moveCreate": "建立教會並搬過來",
   "moveDone": "已建立〈{church}〉",
   "@moveDone": {
@@ -1160,7 +1149,7 @@
       }
     }
   },
-  "claimBody": "教會換到馬大別忙了，你之前排的服事和所屬聚會都已經在這裡",
+  "claimBody": "教會搬到馬大別忙了，你之前的服事都在這裡",
   "claimByNameTitle": "服事表上的「{name}」是你嗎？",
   "@claimByNameTitle": {
     "placeholders": {
@@ -1213,7 +1202,7 @@
   "pendingDeleteBody": "對方就不能用 email 認領了。服事表上的名字會保留。",
   "pendingDeleted": "已刪除",
   "mergePending": "合併還沒登入的資料",
-  "mergePendingFooter": "同工沒有 email、或用另一個 email 加入時，合併他還沒登入的資料，服事表、聚會和權限群組都會接上",
+  "mergePendingFooter": "同工沒有 email 或換了 email 時用",
   "mergePendingPick": "選一筆還沒登入的資料",
   "mergePendingTitle": "合併還沒登入的「{pending}」？",
   "@mergePendingTitle": {
@@ -1223,7 +1212,7 @@
       }
     }
   },
-  "mergePendingBody": "還沒登入的「{pending}」會合併到已加入的「{member}」，服事表、聚會和權限群組都會接上",
+  "mergePendingBody": "還沒登入的「{pending}」會合併到「{member}」",
   "@mergePendingBody": {
     "placeholders": {
       "pending": {
@@ -1982,7 +1971,7 @@
       }
     }
   },
-  "linkSourceRetry": "重新抓取",
+  "linkSourceRetry": "立即更新",
   "listSeparator": "、",
   "@listSeparator": { "description": "Between items in a list of names or roles." },
   "labelValue": "{label}：{value}",
@@ -2008,12 +1997,6 @@
   "@churchStatus": { "description": "A church's status (active, suspended, deleted) in the platform console." },
   "timeZone": "時區",
   "@timeZone": { "description": "The church's time zone, in church settings." },
-  "timeZoneWithOffset": "{city}（{offset}）",
-  "@timeZoneWithOffset": {
-    "description": "A time zone by its city, with how far it is from UTC now.",
-    "placeholders": { "city": { "type": "String", "example": "洛杉磯" }, "offset": { "type": "String", "example": "UTC−7" } }
-  },
-  "timeZoneFooter": "今天的日期、服事提醒和行事曆的時間都照教會的時區",
   "timeZoneChangeTitle": "改成{city}時間？",
   "@timeZoneChangeTitle": { "placeholders": { "city": { "type": "String", "example": "洛杉磯" } } },
   "timeZoneChangeBody": "活動時間會照新時區顯示，服事表的日期不變",
@@ -2059,7 +2042,7 @@
   "@unlinkTitle": {"description": "Confirming unlinking a sign-in method. method is Google, Apple, or the email-and-password one", "placeholders": {"method": {"type": "String", "example": "Google"}}},
   "unlinkBody": "之後就不能用 {email} 登入這個帳號",
   "@unlinkBody": {"placeholders": {"email": {"type": "String", "example": "mei@gmail.com"}}},
-  "errCredentialInUse": "你選的帳號已經是另一個馬大別忙帳號，不能連結。要連結的話，請先用它登入並刪除那個帳號，再回來連結。",
+  "errCredentialInUse": "這個帳號已經註冊過馬大別忙。要連結，請先用它登入並刪除帳號。",
   "@errCredentialInUse": {"description": "Linking a Google or Apple account that already has an account of its own"},
   "onlineRefundHeader": "線上支持退款",
   "onlineRefundFooter": "在綠界後台退款後，填這筆的特店訂單編號，就會從雲端費用進度扣回",
@@ -2164,8 +2147,6 @@
   "@attendanceOverviewMissing": {"description": "Header of 人數總覽: how many groups have not filled in their latest meeting", "placeholders": {"count": {"type": "int", "example": "2"}}},
   "attendanceOverviewDone": "都填好了",
   "@attendanceOverviewDone": {"description": "Header of 人數總覽 when every group has filled in"},
-  "attendanceOverviewFooter": "每個聚會和小組最近一次聚會；今天的有人填了才列",
-  "@attendanceOverviewFooter": {"description": "Footer of 人數總覽: what each row is"},
   "attendanceRemind": "提醒",
   "@attendanceRemind": {"description": "Button beside a 未填 row of 人數總覽: pushes its 負責人 or 小組長"},
   "attendanceRemindSent": "已提醒",
@@ -2227,7 +2208,7 @@
   "errRequestsClosed": "這間教會沒有開放申請加入，請向管理員要邀請連結",
   "errRequestGone": "這個申請已經取消或過期了",
   "takesJoinRequests": "開放申請加入",
-  "takesJoinRequestsFooter": "開著時，拿到教會網址的人可以申請加入，管理員在「同工」允許後才會加入",
+  "takesJoinRequestsFooter": "拿到教會網址的人可以申請，管理員允許後加入",
   "notifJoinRequest": "申請加入",
   "@notifJoinRequest": {"description": "Notification switch (#88)"},
   "notifJoinRequestSub": "有人申請加入教會時（只通知管理員）",
@@ -2246,7 +2227,7 @@
   "planWeeksTitle": "安排服事",
   "planWeeksTitleOne": "安排{duty}",
   "@planWeeksTitleOne": {"description": "安排服事's title when the only duty it arranges is [duty]: the table then has no row of duty names", "placeholders": {"duty": {"type": "String", "example": "司琴"}}},
-  "planWeeksHint": "在這裡排的不會馬上通知，排好按「完成」，每人只收到一則",
+  "planWeeksHint": "按「完成」才會通知",
   "planNotYetTold": "在這裡排進或移出的人還沒收到通知",
   "@planNotYetTold": {"description": "Toast on the page behind 安排服事, left without 完成 while people put on or taken off there are not told yet; its action is planNotifyNow"},
   "planNotifyNow": "通知",
@@ -2299,12 +2280,8 @@
   "@discardChanges": { "description": "Destructive answer: close the sheet without saving" },
   "keepEditing": "繼續編輯",
   "@keepEditing": { "description": "Answer: stay in the sheet" },
-  "ministriesFooter": "讓敬拜團、音控組的負責人自己排自己的服事項目；只有管理員排班的教會不用設",
-  "@ministriesFooter": {"description": "Under a service's 事工, while it has none: what a ministry is for, and that it is optional; one sentence"},
   "ministriesChurchWide": "全教會的事工",
   "@ministriesChurchWide": {"description": "Header on 聚會與事工 over the 事工 of no one service: in several, or none"},
-  "ministriesChurchWideFooter": "服事項目在好幾個聚會，或不排服事、只當行事曆活動的歸屬（例如多媒體）。只屬於一個聚會的（例如青年崇拜的敬拜團）在那個聚會頁",
-  "@ministriesChurchWideFooter": {"description": "Footer under them: which 事工 are here, and where a service's own are"},
   "ministryNeedsDuties": "選好服事項目，負責人就能在聚會和活動排這些項目",
   "@ministryNeedsDuties": {"description": "On a ministry's page while it links no roles: what linking them does"},
   "ministryLeadsCan": "{count, plural, =1{{leads}可以排{duties}，也可以改這幾項的名單} other{{leads}都可以排{duties}，也可以改這幾項的名單}}",
@@ -2353,7 +2330,7 @@
   "planAskSend": "通知",
   "notifSwap": "找人代／交換",
   "@notifSwap": {"description": "Notification kind (#92): asked to cover or swap, or an answer to one's own request"},
-  "notifSwapSub": "有人請你代或交換，你的請求有人回應，或請你填不能服事的日子時",
+  "notifSwapSub": "找人代、交換、填不能服事的日子",
   "swapMenu": "找人代／交換",
   "@swapMenu": {"description": "On one's own name on a roster (#92)"},
   "swapAskCover": "請人代",

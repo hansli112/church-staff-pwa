@@ -96,16 +96,15 @@ List<Member> dutyPeople(List<Member> members, String serviceType, String duty, S
   ];
 }
 
-/// Who is on [duty]'s list in [serviceType], for under its row: the first
-/// three, then +how many more; the whole list is a tap away. Null while
-/// nobody is on it.
+/// How many are on [duty]'s list in [serviceType], beside its row; who they
+/// are is a tap away (Apple HIG 〈Lists and tables〉: titles in the list, the
+/// content in a detail view). Null while nobody is on it.
 String? dutyPeopleLabel(WidgetRef ref, L10n l10n, String serviceType, String duty) {
   final members = ref.watch(membersProvider).value ?? const <Member>[];
   final order = ref.watch(staffOrderProvider(serviceType)).value ?? StaffOrder();
   final people = dutyPeople(members, serviceType, duty, order);
   if (people.isEmpty) return null;
-  final names = people.take(3).map((m) => m.name).join(l10n.listSeparator);
-  return people.length > 3 ? '$names +${people.length - 3}' : names;
+  return l10n.dutyPeopleCount(people.length);
 }
 
 /// The duties and 特別活動 still on [service]'s rosters after [today] that
@@ -410,7 +409,7 @@ Widget serviceDutiesSliver(BuildContext context, WidgetRef ref, Service service,
   final l10n = L10n.of(context);
   ListRow row(String d, Widget? handle) => ListRow(
     title: d,
-    subtitle: dutyPeopleLabel(ref, l10n, service.id, d),
+    value: dutyPeopleLabel(ref, l10n, service.id, d),
     trailing: handle,
     chevron: true,
     onTap: () => context.push(dutyPage(service.id, d)),
@@ -426,7 +425,6 @@ Widget serviceDutiesSliver(BuildContext context, WidgetRef ref, Service service,
   final edits = ServiceEdits(context, ref, service);
   return ReorderableSection<String>(
     header: l10n.templateDuties,
-    footer: l10n.templateFooter,
     items: service.duties,
     keyOf: (d) => 'duty/$d',
     onReorder: (next) => edits.save(service.copyWith(duties: next)),

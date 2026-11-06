@@ -31,7 +31,7 @@ void main() {
     expect(find.textContaining('來源還沒有今天的內容'), findsNothing);
   });
 
-  testWidgets('管理員在設定頁重新抓取已儲存的來源，不覆寫尚未儲存的欄位', (tester) async {
+  testWidgets('管理員在設定頁立即更新已儲存的來源，不覆寫尚未儲存的欄位', (tester) async {
     final b = seededChurch()
       ..churchLinks['grace'] = link
       ..linkContents['grace'] = failed;
@@ -46,7 +46,7 @@ void main() {
       body: '',
       link: 'https://feed.example/1001',
     );
-    await tester.tap(find.text('重新抓取'));
+    await tester.tap(find.text('立即更新'));
     await settle(tester);
     expect(find.textContaining('上次更新'), findsOneWidget);
     expect(b.churchLinks['grace'], link, reason: 'retry fetches; it saves nothing typed here');

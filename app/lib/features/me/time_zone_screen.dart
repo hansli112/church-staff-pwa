@@ -45,18 +45,15 @@ class _TimeZoneScreenState extends ConsumerState<TimeZoneScreen> {
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final current = ref.watch(churchTimeZoneProvider);
-    final now = ref.watch(clockProvider)();
     return Scaffold(
       appBar: AppBar(title: Text(l10n.timeZone)),
       body: ListView(
         children: [
           ListSection(
-            footer: l10n.timeZoneFooter,
             children: [
               for (final timeZone in ChurchTimeZone.values)
                 ListRow(
                   title: timeZoneCity(l10n, timeZone),
-                  value: utcOffset(timeZone.offsetAt(now)),
                   selected: timeZone == current,
                   onTap: _saving ? null : () => _pick(current, timeZone),
                 ),

@@ -307,7 +307,7 @@ abstract class L10n {
   /// No description provided for @yourNameFooter.
   ///
   /// In zh, this message translates to:
-  /// **'服事表和名單上大家看到的名字，用教會裡大家怎麼叫你'**
+  /// **'教會裡大家怎麼叫你'**
   String get yourNameFooter;
 
   /// No description provided for @signIn.
@@ -613,7 +613,7 @@ abstract class L10n {
   /// No description provided for @noUpcomingServices.
   ///
   /// In zh, this message translates to:
-  /// **'接下來沒有你的服事，排到你時會出現在這裡'**
+  /// **'接下來沒有你的服事'**
   String get noUpcomingServices;
 
   /// No description provided for @viewRosters.
@@ -790,12 +790,6 @@ abstract class L10n {
   /// **'還沒有人負責{duty}'**
   String pickerNoOneServes(String duty);
 
-  /// For admins, while nobody is on a duty's list: picking someone puts them on it
-  ///
-  /// In zh, this message translates to:
-  /// **'這個聚會的同工排過一次，下次就會列在上面'**
-  String get pickerLearns;
-
   /// No description provided for @pickerNoResults.
   ///
   /// In zh, this message translates to:
@@ -823,7 +817,7 @@ abstract class L10n {
   /// Admins editing a duty's list in the picker: reorder, or take people off
   ///
   /// In zh, this message translates to:
-  /// **'拖曳調整先後，移除的人之後一樣搜得到'**
+  /// **'拖曳調整先後'**
   String get editListHint;
 
   /// Tooltip of the minus button beside a person in the picker's 編輯
@@ -1012,12 +1006,6 @@ abstract class L10n {
   /// **'LINE 社群'**
   String get lineCommunity;
 
-  /// No description provided for @lineCommunityNote.
-  ///
-  /// In zh, this message translates to:
-  /// **'問問題、回報問題、和其他教會交流'**
-  String get lineCommunityNote;
-
   /// No description provided for @members.
   ///
   /// In zh, this message translates to:
@@ -1123,7 +1111,7 @@ abstract class L10n {
   /// No description provided for @adminCannotLeave.
   ///
   /// In zh, this message translates to:
-  /// **'管理員不能直接退出。要退出，先把另一位同工設成管理員，再請對方取消你的管理員。'**
+  /// **'要退出教會，先把管理員交給別人'**
   String get adminCannotLeave;
 
   /// No description provided for @churchLogo.
@@ -1558,12 +1546,6 @@ abstract class L10n {
   /// **'聚會與服事'**
   String get zones;
 
-  /// No description provided for @zonesFooter.
-  ///
-  /// In zh, this message translates to:
-  /// **'是同工不會多出權限；能不能排服事表看身分'**
-  String get zonesFooter;
-
   /// No description provided for @removeMember.
   ///
   /// In zh, this message translates to:
@@ -1705,20 +1687,20 @@ abstract class L10n {
   /// No description provided for @serviceDisabledFooter.
   ///
   /// In zh, this message translates to:
-  /// **'停用的聚會不會再出現新的服事表，舊的保留'**
+  /// **'停用的聚會不會再出現新的服事表'**
   String get serviceDisabledFooter;
+
+  /// Beside a duty: how many are on its list
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 人'**
+  String dutyPeopleCount(int count);
 
   /// No description provided for @templateDuties.
   ///
   /// In zh, this message translates to:
   /// **'服事項目'**
   String get templateDuties;
-
-  /// No description provided for @templateFooter.
-  ///
-  /// In zh, this message translates to:
-  /// **'新的服事表會帶入這些項目。已經安排的服事表不受影響。'**
-  String get templateFooter;
 
   /// No description provided for @commonEvents.
   ///
@@ -2245,13 +2227,13 @@ abstract class L10n {
   /// No description provided for @photoChurchLimit.
   ///
   /// In zh, this message translates to:
-  /// **'這個月的 {limit} 張用完了，下個月 1 日恢復。這段時間可以直接安排服事表。'**
+  /// **'這個月的 {limit} 張用完了，下個月 1 日恢復'**
   String photoChurchLimit(int limit);
 
   /// No description provided for @photoPlatformOff.
   ///
   /// In zh, this message translates to:
-  /// **'照片辨識這個月暫停（全站的辨識額度用完了），下個月恢復。這段時間可以直接安排服事表。'**
+  /// **'照片辨識這個月暫停，下個月恢復'**
   String get photoPlatformOff;
 
   /// No description provided for @photoTooLarge.
@@ -2269,7 +2251,7 @@ abstract class L10n {
   /// No description provided for @photoUnavailable.
   ///
   /// In zh, this message translates to:
-  /// **'照片辨識暫時無法使用，請稍後再試，或直接安排服事表'**
+  /// **'照片辨識暫時不能用，請稍後再試'**
   String get photoUnavailable;
 
   /// No description provided for @importPreview.
@@ -2578,12 +2560,6 @@ abstract class L10n {
   /// **'哥林多後書 8:14–15（和合本）'**
   String get supportVerseSource;
 
-  /// No description provided for @supportBody.
-  ///
-  /// In zh, this message translates to:
-  /// **'支持完全自願，只用來分擔雲端費用，不是給教會的奉獻；每間教會能用的功能都一樣'**
-  String get supportBody;
-
   /// No description provided for @supportTips.
   ///
   /// In zh, this message translates to:
@@ -2731,7 +2707,7 @@ abstract class L10n {
   /// No description provided for @churchEntryNotMember.
   ///
   /// In zh, this message translates to:
-  /// **'你還不是這間教會的同工。請向管理員要邀請連結來加入。'**
+  /// **'請向管理員要邀請連結'**
   String get churchEntryNotMember;
 
   /// No description provided for @churchUrl.
@@ -2830,12 +2806,6 @@ abstract class L10n {
   /// **'選擇要看的教學'**
   String get addToHomeChooseGuide;
 
-  /// No description provided for @addToHomeChooseGuideNote.
-  ///
-  /// In zh, this message translates to:
-  /// **'只切換教學，不會替你開啟另一個瀏覽器'**
-  String get addToHomeChooseGuideNote;
-
   /// No description provided for @addToHomeSafariLayoutTitle.
   ///
   /// In zh, this message translates to:
@@ -2845,7 +2815,7 @@ abstract class L10n {
   /// No description provided for @addToHomeSafariLayoutHint.
   ///
   /// In zh, this message translates to:
-  /// **'請依工具列上的按鈕選擇，不需要更改 Safari 設定'**
+  /// **'照工具列上的按鈕選'**
   String get addToHomeSafariLayoutHint;
 
   /// No description provided for @addToHomeSafariMoreChoice.
@@ -2889,24 +2859,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'請點瀏覽器上圈出的按鈕'**
   String get addToHomeScreenshotNote;
-
-  /// No description provided for @addToHomeSafariScreenshot.
-  ///
-  /// In zh, this message translates to:
-  /// **'Safari · iOS 26.5 · 繁中模擬器畫面'**
-  String get addToHomeSafariScreenshot;
-
-  /// No description provided for @addToHomeChromeAndroidScreenshot.
-  ///
-  /// In zh, this message translates to:
-  /// **'Chrome 113 · Android 14 · 繁中模擬器畫面（舊版選單）'**
-  String get addToHomeChromeAndroidScreenshot;
-
-  /// No description provided for @addToHomeChromeIosScreenshot.
-  ///
-  /// In zh, this message translates to:
-  /// **'Chrome 155 · iOS 27.2 · iPhone 13 真機畫面'**
-  String get addToHomeChromeIosScreenshot;
 
   /// No description provided for @addToHomeAddressBar.
   ///
@@ -3031,7 +2983,7 @@ abstract class L10n {
   /// No description provided for @addToHomeUnknownHint.
   ///
   /// In zh, this message translates to:
-  /// **'這個瀏覽器的選單可能不同，改用下方方式繼續'**
+  /// **'改用下面的方式'**
   String get addToHomeUnknownHint;
 
   /// No description provided for @addToHomeCopiedForBrowser.
@@ -3151,7 +3103,7 @@ abstract class L10n {
   /// No description provided for @churchLinkFooter.
   ///
   /// In zh, this message translates to:
-  /// **'顯示在每位同工首頁的最上方，點了用瀏覽器打開'**
+  /// **'顯示在每位同工首頁的最上方'**
   String get churchLinkFooter;
 
   /// No description provided for @churchLinkRemove.
@@ -3193,7 +3145,7 @@ abstract class L10n {
   /// No description provided for @linkSourceFooter.
   ///
   /// In zh, this message translates to:
-  /// **'每天這個時間抓一次。JSON 要有 date（教會的今天）、title、body、link（https）。'**
+  /// **'JSON 要有 date（YYYY-MM-DD）、title、body、link'**
   String get linkSourceFooter;
 
   /// No description provided for @linkSourceUpdated.
@@ -3313,7 +3265,7 @@ abstract class L10n {
   /// No description provided for @webhookFooter.
   ///
   /// In zh, this message translates to:
-  /// **'行事曆或服事表有異動時，送通知到這個網址，例如交給 n8n 轉發到 LINE 群組。通知都用密鑰簽章。'**
+  /// **'行事曆或服事表有異動時，送通知到這個網址，例如交給 n8n 轉發到 LINE 群組'**
   String get webhookFooter;
 
   /// No description provided for @webhookTest.
@@ -3436,12 +3388,6 @@ abstract class L10n {
   /// **'匯出資料'**
   String get exportData;
 
-  /// No description provided for @exportFooter.
-  ///
-  /// In zh, this message translates to:
-  /// **'匯出教會的全部資料：一份 JSON，加上一份可以用 Excel 打開的服事表'**
-  String get exportFooter;
-
   /// No description provided for @exported.
   ///
   /// In zh, this message translates to:
@@ -3559,7 +3505,7 @@ abstract class L10n {
   /// No description provided for @moveWhoAmIFooter.
   ///
   /// In zh, this message translates to:
-  /// **'選了就接手那位的服事表、聚會和權限。其他同工用同一個 email 登入馬大別忙時，會被問要不要加入。'**
+  /// **'選了就接手那位的服事'**
   String get moveWhoAmIFooter;
 
   /// No description provided for @moveCreate.
@@ -3595,7 +3541,7 @@ abstract class L10n {
   /// No description provided for @claimBody.
   ///
   /// In zh, this message translates to:
-  /// **'教會換到馬大別忙了，你之前排的服事和所屬聚會都已經在這裡'**
+  /// **'教會搬到馬大別忙了，你之前的服事都在這裡'**
   String get claimBody;
 
   /// No description provided for @claimByNameTitle.
@@ -3685,7 +3631,7 @@ abstract class L10n {
   /// No description provided for @mergePendingFooter.
   ///
   /// In zh, this message translates to:
-  /// **'同工沒有 email、或用另一個 email 加入時，合併他還沒登入的資料，服事表、聚會和權限群組都會接上'**
+  /// **'同工沒有 email 或換了 email 時用'**
   String get mergePendingFooter;
 
   /// No description provided for @mergePendingPick.
@@ -3703,7 +3649,7 @@ abstract class L10n {
   /// No description provided for @mergePendingBody.
   ///
   /// In zh, this message translates to:
-  /// **'還沒登入的「{pending}」會合併到已加入的「{member}」，服事表、聚會和權限群組都會接上'**
+  /// **'還沒登入的「{pending}」會合併到「{member}」'**
   String mergePendingBody(String pending, String member);
 
   /// No description provided for @mergePendingAction.
@@ -4663,7 +4609,7 @@ abstract class L10n {
   /// No description provided for @linkSourceRetry.
   ///
   /// In zh, this message translates to:
-  /// **'重新抓取'**
+  /// **'立即更新'**
   String get linkSourceRetry;
 
   /// Between items in a list of names or roles.
@@ -4713,18 +4659,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'時區'**
   String get timeZone;
-
-  /// A time zone by its city, with how far it is from UTC now.
-  ///
-  /// In zh, this message translates to:
-  /// **'{city}（{offset}）'**
-  String timeZoneWithOffset(String city, String offset);
-
-  /// No description provided for @timeZoneFooter.
-  ///
-  /// In zh, this message translates to:
-  /// **'今天的日期、服事提醒和行事曆的時間都照教會的時區'**
-  String get timeZoneFooter;
 
   /// No description provided for @timeZoneChangeTitle.
   ///
@@ -4909,7 +4843,7 @@ abstract class L10n {
   /// Linking a Google or Apple account that already has an account of its own
   ///
   /// In zh, this message translates to:
-  /// **'你選的帳號已經是另一個馬大別忙帳號，不能連結。要連結的話，請先用它登入並刪除那個帳號，再回來連結。'**
+  /// **'這個帳號已經註冊過馬大別忙。要連結，請先用它登入並刪除帳號。'**
   String get errCredentialInUse;
 
   /// No description provided for @onlineRefundHeader.
@@ -5242,12 +5176,6 @@ abstract class L10n {
   /// **'都填好了'**
   String get attendanceOverviewDone;
 
-  /// Footer of 人數總覽: what each row is
-  ///
-  /// In zh, this message translates to:
-  /// **'每個聚會和小組最近一次聚會；今天的有人填了才列'**
-  String get attendanceOverviewFooter;
-
   /// Button beside a 未填 row of 人數總覽: pushes its 負責人 or 小組長
   ///
   /// In zh, this message translates to:
@@ -5461,7 +5389,7 @@ abstract class L10n {
   /// No description provided for @takesJoinRequestsFooter.
   ///
   /// In zh, this message translates to:
-  /// **'開著時，拿到教會網址的人可以申請加入，管理員在「同工」允許後才會加入'**
+  /// **'拿到教會網址的人可以申請，管理員允許後加入'**
   String get takesJoinRequestsFooter;
 
   /// Notification switch (#88)
@@ -5539,7 +5467,7 @@ abstract class L10n {
   /// No description provided for @planWeeksHint.
   ///
   /// In zh, this message translates to:
-  /// **'在這裡排的不會馬上通知，排好按「完成」，每人只收到一則'**
+  /// **'按「完成」才會通知'**
   String get planWeeksHint;
 
   /// Toast on the page behind 安排服事, left without 完成 while people put on or taken off there are not told yet; its action is planNotifyNow
@@ -5704,23 +5632,11 @@ abstract class L10n {
   /// **'繼續編輯'**
   String get keepEditing;
 
-  /// Under a service's 事工, while it has none: what a ministry is for, and that it is optional; one sentence
-  ///
-  /// In zh, this message translates to:
-  /// **'讓敬拜團、音控組的負責人自己排自己的服事項目；只有管理員排班的教會不用設'**
-  String get ministriesFooter;
-
   /// Header on 聚會與事工 over the 事工 of no one service: in several, or none
   ///
   /// In zh, this message translates to:
   /// **'全教會的事工'**
   String get ministriesChurchWide;
-
-  /// Footer under them: which 事工 are here, and where a service's own are
-  ///
-  /// In zh, this message translates to:
-  /// **'服事項目在好幾個聚會，或不排服事、只當行事曆活動的歸屬（例如多媒體）。只屬於一個聚會的（例如青年崇拜的敬拜團）在那個聚會頁'**
-  String get ministriesChurchWideFooter;
 
   /// On a ministry's page while it links no roles: what linking them does
   ///
@@ -5893,7 +5809,7 @@ abstract class L10n {
   /// No description provided for @notifSwapSub.
   ///
   /// In zh, this message translates to:
-  /// **'有人請你代或交換，你的請求有人回應，或請你填不能服事的日子時'**
+  /// **'找人代、交換、填不能服事的日子'**
   String get notifSwapSub;
 
   /// On one's own name on a roster (#92)

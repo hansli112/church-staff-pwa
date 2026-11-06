@@ -58,7 +58,7 @@ void main() {
     final telemetry = RecordingTelemetry();
     await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
     expect(findShown('加入〈恩典堂〉？'), findsOneWidget);
-    expect(findShown('教會換到馬大別忙了，你之前排的服事和所屬聚會都已經在這裡'), findsOneWidget);
+    expect(findShown('教會搬到馬大別忙了，你之前的服事都在這裡'), findsOneWidget);
     await tapText(tester, '加入');
 
     final m = b.members['grace']!['new-mei']!;
@@ -212,7 +212,7 @@ void main() {
     await tapText(tester, '合併還沒登入的資料');
     await tapText(tester, '李美玉');
     expect(find.text('合併還沒登入的「李美玉」？'), findsOneWidget);
-    expect(findShown('還沒登入的「李美玉」會合併到已加入的「美玉」，服事表、聚會和權限群組都會接上'), findsOneWidget);
+    expect(findShown('還沒登入的「李美玉」會合併到「美玉」'), findsOneWidget);
     await tapText(tester, '合併');
 
     final m = b.members['grace']!['mei-google']!;
@@ -252,7 +252,7 @@ void main() {
     await tester.tap(find.bySemanticsLabel('合併黃鎮台'));
     await settle(tester);
     expect(find.text('合併還沒登入的「黃鎮台」？'), findsOneWidget);
-    expect(findShown('還沒登入的「黃鎮台」會合併到已加入的「黃鎮台」，服事表、聚會和權限群組都會接上'), findsOneWidget);
+    expect(findShown('還沒登入的「黃鎮台」會合併到「黃鎮台」'), findsOneWidget);
     await tapText(tester, '合併');
 
     expect(b.pendingMembers['grace'], isEmpty);
@@ -283,7 +283,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/me/members/huang');
     await tester.scrollUntilVisible(find.text('合併還沒登入的資料'), 200, scrollable: find.byType(Scrollable).last);
-    expect(findShown('同工沒有 email、或用另一個 email 加入時，合併他還沒登入的資料，服事表、聚會和權限群組都會接上'), findsOneWidget);
+    expect(findShown('同工沒有 email 或換了 email 時用'), findsOneWidget);
     await tapText(tester, '合併還沒登入的資料');
     final huang = tester.getTopLeft(findShown('黃鎮台').last).dy;
     final other = tester.getTopLeft(findShown('王大明')).dy;

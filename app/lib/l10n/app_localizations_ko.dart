@@ -116,7 +116,7 @@ class L10nKo extends L10n {
   String get yourName => '이름';
 
   @override
-  String get yourNameFooter => '봉사표와 명단에서 모두가 보는 이름이에요. 교회에서 불리는 이름으로 적어 주세요.';
+  String get yourNameFooter => '교회에서 불리는 이름';
 
   @override
   String get signIn => '로그인';
@@ -285,7 +285,7 @@ class L10nKo extends L10n {
   String get myServicesTitle => '다가오는 내 봉사';
 
   @override
-  String get noUpcomingServices => '예정된 봉사가 없어요. 봉사가 배정되면 여기에 표시돼요.';
+  String get noUpcomingServices => '예정된 봉사가 없어요';
 
   @override
   String get viewRosters => '봉사표 보기';
@@ -387,9 +387,6 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get pickerLearns => '이 예배의 멤버는 한 번 배정하면 다음부터 위쪽에 표시돼요';
-
-  @override
   String pickerNoResults(String query) {
     return '‘$query’ 검색 결과가 없어요';
   }
@@ -404,7 +401,7 @@ class L10nKo extends L10n {
   String get reorderHint => '드래그해서 순서를 바꿔 주세요. 매주 이 순서대로 표시돼요.';
 
   @override
-  String get editListHint => '드래그해서 순서를 바꿔요. 뺀 사람도 검색하면 찾을 수 있어요.';
+  String get editListHint => '드래그해서 순서를 바꿔요';
 
   @override
   String pickerTakeOff(String name) {
@@ -514,9 +511,6 @@ class L10nKo extends L10n {
   String get lineCommunity => 'LINE 오픈채팅';
 
   @override
-  String get lineCommunityNote => '질문하고, 문제를 알리고, 다른 교회와 이야기해요';
-
-  @override
   String get members => '멤버';
 
   @override
@@ -572,7 +566,7 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get adminCannotLeave => '관리자는 바로 나갈 수 없어요. 다른 멤버를 관리자로 지정한 뒤, 그 멤버에게 내 관리자 권한을 해제해 달라고 요청해 주세요.';
+  String get adminCannotLeave => '나가려면 먼저 관리자를 다른 멤버에게 넘겨 주세요';
 
   @override
   String get churchLogo => '교회 로고';
@@ -831,9 +825,6 @@ class L10nKo extends L10n {
   String get zones => '소속 예배와 담당';
 
   @override
-  String get zonesFooter => '멤버라고 권한이 생기지는 않아요. 봉사표를 짤 수 있는지는 역할에 따라 달라요.';
-
-  @override
   String get removeMember => '멤버 내보내기';
 
   @override
@@ -911,13 +902,15 @@ class L10nKo extends L10n {
   String get serviceEnabled => '진행 중';
 
   @override
-  String get serviceDisabledFooter => '중지된 예배에는 새 봉사표가 생기지 않아요. 기존 봉사표는 남아 있어요.';
+  String get serviceDisabledFooter => '중지된 예배에는 새 봉사표가 생기지 않아요';
+
+  @override
+  String dutyPeopleCount(int count) {
+    return '$count명';
+  }
 
   @override
   String get templateDuties => '담당';
-
-  @override
-  String get templateFooter => '새 봉사표에 이 담당들이 들어가요. 이미 만든 봉사표는 바뀌지 않아요.';
 
   @override
   String get commonEvents => '자주 쓰는 특별 순서';
@@ -1207,11 +1200,11 @@ class L10nKo extends L10n {
 
   @override
   String photoChurchLimit(int limit) {
-    return '이번 달 $limit장을 모두 사용했어요. 다음 달 1일에 다시 쓸 수 있어요. 그동안에는 봉사표를 직접 입력해 주세요.';
+    return '이번 달 $limit장을 모두 사용했어요. 다음 달 1일에 다시 쓸 수 있어요.';
   }
 
   @override
-  String get photoPlatformOff => '이번 달은 사진 인식이 중단됐어요(전체 인식 한도 소진). 다음 달에 다시 쓸 수 있어요. 그동안에는 봉사표를 직접 입력해 주세요.';
+  String get photoPlatformOff => '이번 달은 사진 인식이 중단됐어요. 다음 달에 다시 쓸 수 있어요.';
 
   @override
   String get photoTooLarge => '사진이 너무 커요. 표 부분만 잘라서 다시 시도해 주세요.';
@@ -1220,7 +1213,7 @@ class L10nKo extends L10n {
   String get photoFailed => '인식하지 못했어요. 더 선명한 사진으로 다시 시도해 주세요.';
 
   @override
-  String get photoUnavailable => '지금은 사진 인식을 쓸 수 없어요. 잠시 후 다시 시도하거나 봉사표를 직접 입력해 주세요.';
+  String get photoUnavailable => '지금은 사진 인식을 쓸 수 없어요. 잠시 후 다시 시도해 주세요.';
 
   @override
   String get importPreview => '미리보기';
@@ -1392,9 +1385,6 @@ class L10nKo extends L10n {
   String get supportVerseSource => '고린도후서 8:14–15 (개역개정)';
 
   @override
-  String get supportBody => '후원은 자유이고 서버 비용에만 쓰여요. 교회에 드리는 헌금이 아니며, 어느 교회든 쓸 수 있는 기능은 똑같아요.';
-
-  @override
   String get supportTips => '일시 후원';
 
   @override
@@ -1475,7 +1465,7 @@ class L10nKo extends L10n {
   String get churchNotFound => '교회를 찾을 수 없어요';
 
   @override
-  String get churchEntryNotMember => '아직 이 교회의 멤버가 아니에요. 관리자에게 초대 링크를 받아 가입해 주세요.';
+  String get churchEntryNotMember => '관리자에게 초대 링크를 받아 주세요';
 
   @override
   String get churchUrl => '교회 주소';
@@ -1530,13 +1520,10 @@ class L10nKo extends L10n {
   String get addToHomeChooseGuide => '안내 선택';
 
   @override
-  String get addToHomeChooseGuideNote => '안내만 바뀌고 다른 브라우저가 열리지는 않아요';
-
-  @override
   String get addToHomeSafariLayoutTitle => 'Safari 화면';
 
   @override
-  String get addToHomeSafariLayoutHint => '도구 막대의 버튼을 보고 골라 주세요. Safari 설정은 바꾸지 않아도 돼요.';
+  String get addToHomeSafariLayoutHint => '도구 막대의 버튼을 보고 골라 주세요';
 
   @override
   String get addToHomeSafariMoreChoice => '‘⋯’이 보여요';
@@ -1558,15 +1545,6 @@ class L10nKo extends L10n {
 
   @override
   String get addToHomeScreenshotNote => '브라우저에서 동그라미 친 버튼을 눌러 주세요';
-
-  @override
-  String get addToHomeSafariScreenshot => 'Safari · iOS 26.5 · 시뮬레이터(중국어 번체 화면)';
-
-  @override
-  String get addToHomeChromeAndroidScreenshot => 'Chrome 113 · Android 14 · 시뮬레이터(중국어 번체 화면, 이전 메뉴)';
-
-  @override
-  String get addToHomeChromeIosScreenshot => 'Chrome 155 · iOS 27.2 · iPhone 13 실기기 화면';
 
   @override
   String get addToHomeAddressBar => '주소창';
@@ -1635,7 +1613,7 @@ class L10nKo extends L10n {
   String get addToHomeEmbeddedHint => '지금 앱 안에서 웹페이지를 보고 있어요. 먼저 휴대폰 브라우저로 옮겨 주세요.';
 
   @override
-  String get addToHomeUnknownHint => '이 브라우저는 메뉴가 다를 수 있어요. 아래 방법으로 계속해 주세요.';
+  String get addToHomeUnknownHint => '아래 방법으로 해 보세요';
 
   @override
   String addToHomeCopiedForBrowser(String browser) {
@@ -1701,7 +1679,7 @@ class L10nKo extends L10n {
   String get churchLinkNeedsHttps => 'https://로 시작하는 링크를 입력해 주세요';
 
   @override
-  String get churchLinkFooter => '모든 멤버의 홈 맨 위에 표시되고, 누르면 브라우저에서 열려요';
+  String get churchLinkFooter => '모든 멤버의 홈 맨 위에 표시돼요';
 
   @override
   String get churchLinkRemove => '교회 링크 빼기';
@@ -1722,7 +1700,7 @@ class L10nKo extends L10n {
   String get linkFetchTime => '매일 업데이트 시간';
 
   @override
-  String get linkSourceFooter => '매일 이 시간에 한 번 가져와요. JSON에는 date(교회 기준 오늘), title, body, link(https)가 있어야 해요.';
+  String get linkSourceFooter => 'JSON에는 date(YYYY-MM-DD), title, body, link가 있어야 해요';
 
   @override
   String linkSourceUpdated(String time) {
@@ -1790,7 +1768,7 @@ class L10nKo extends L10n {
   String get webhookRosterHint => '몇 분 안의 변경은 하나로 묶어 보내요';
 
   @override
-  String get webhookFooter => '캘린더나 봉사표가 바뀌면 이 주소로 알림을 보내요. 예를 들어 n8n을 거쳐 LINE 그룹으로 전달할 수 있어요. 알림은 비밀 키로 서명돼요.';
+  String get webhookFooter => '캘린더나 봉사표가 바뀌면 이 주소로 알림을 보내요. 예를 들어 n8n을 거쳐 LINE 그룹으로 전달할 수 있어요.';
 
   @override
   String get webhookTest => '테스트 보내기';
@@ -1857,9 +1835,6 @@ class L10nKo extends L10n {
   String get exportData => '데이터 내보내기';
 
   @override
-  String get exportFooter => '교회의 모든 데이터를 내보내요. JSON 파일 하나와 Excel에서 열 수 있는 봉사표가 함께 들어 있어요.';
-
-  @override
   String get exported => '내보냈어요';
 
   @override
@@ -1922,7 +1897,7 @@ class L10nKo extends L10n {
   String get moveWhoAmI => '이 사람이 나예요(선택)';
 
   @override
-  String get moveWhoAmIFooter => '선택하면 그 사람의 봉사표, 소속 예배, 권한을 이어받아요. 다른 멤버는 같은 이메일로 마르다의 쉼표에 로그인할 때 가입할지 묻는 안내를 받아요.';
+  String get moveWhoAmIFooter => '선택하면 그 사람의 봉사를 이어받아요';
 
   @override
   String get moveCreate => '교회 만들고 옮겨 오기';
@@ -1946,7 +1921,7 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get claimBody => '교회가 이 앱으로 옮겨 왔어요. 그동안의 봉사와 소속 예배가 이미 여기 있어요.';
+  String get claimBody => '교회가 이 앱으로 옮겨 왔어요. 그동안의 봉사가 이미 여기 있어요.';
 
   @override
   String claimByNameTitle(String name) {
@@ -2001,7 +1976,7 @@ class L10nKo extends L10n {
   String get mergePending => '로그인 전 정보 합치기';
 
   @override
-  String get mergePendingFooter => '멤버에게 이메일이 없거나 다른 이메일로 가입했다면 로그인 전 정보를 합쳐 주세요. 봉사표, 소속 예배, 권한 그룹이 그대로 이어져요.';
+  String get mergePendingFooter => '이메일이 없거나 다른 이메일로 가입한 멤버에게 써요';
 
   @override
   String get mergePendingPick => '로그인 전 정보 선택';
@@ -2013,7 +1988,7 @@ class L10nKo extends L10n {
 
   @override
   String mergePendingBody(String pending, String member) {
-    return '로그인 전 ‘$pending’ 정보가 가입한 ‘$member’ 님에게 합쳐지고, 봉사표, 소속 예배, 권한 그룹이 그대로 이어져요';
+    return '로그인 전 ‘$pending’ 정보가 ‘$member’ 님에게 합쳐져요';
   }
 
   @override
@@ -2595,7 +2570,7 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get linkSourceRetry => '다시 가져오기';
+  String get linkSourceRetry => '지금 업데이트';
 
   @override
   String get listSeparator => ', ';
@@ -2626,14 +2601,6 @@ class L10nKo extends L10n {
 
   @override
   String get timeZone => '시간대';
-
-  @override
-  String timeZoneWithOffset(String city, String offset) {
-    return '$city($offset)';
-  }
-
-  @override
-  String get timeZoneFooter => '오늘 날짜, 봉사 알림, 캘린더 시간은 모두 교회 시간대를 따라요';
 
   @override
   String timeZoneChangeTitle(String city) {
@@ -2738,7 +2705,7 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get errCredentialInUse => '그 계정은 이미 별도의 마르다의 쉼표 계정이라 연결할 수 없어요. 연결하려면 먼저 그 계정으로 로그인해 계정을 삭제한 뒤 다시 연결해 주세요.';
+  String get errCredentialInUse => '그 계정은 이미 마르다의 쉼표에 가입돼 있어요. 연결하려면 먼저 그 계정으로 로그인해 삭제해 주세요.';
 
   @override
   String get onlineRefundHeader => '온라인 후원 환불';
@@ -2932,9 +2899,6 @@ class L10nKo extends L10n {
   String get attendanceOverviewDone => '모두 기록했어요';
 
   @override
-  String get attendanceOverviewFooter => '모임과 소그룹마다 가장 최근 모임이에요. 오늘 모임은 기록된 뒤에 보여요';
-
-  @override
   String get attendanceRemind => '알리기';
 
   @override
@@ -3058,7 +3022,7 @@ class L10nKo extends L10n {
   String get takesJoinRequests => '가입 신청 받기';
 
   @override
-  String get takesJoinRequestsFooter => '켜 두면 교회 주소를 아는 사람이 가입을 신청할 수 있어요. 관리자가 \'멤버\'에서 승인하면 가입돼요.';
+  String get takesJoinRequestsFooter => '교회 주소를 아는 사람이 신청할 수 있고, 관리자가 승인하면 가입돼요';
 
   @override
   String get notifJoinRequest => '가입 신청';
@@ -3103,7 +3067,7 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get planWeeksHint => '여기서 바꾼 내용은 바로 알리지 않아요. 다 배정한 뒤 「완료」를 누르면 한 사람에게 한 번씩 알림이 가요.';
+  String get planWeeksHint => '「완료」를 누르면 알림이 가요';
 
   @override
   String get planNotYetTold => '여기서 배정되거나 빠진 사람에게 아직 알리지 않았어요';
@@ -3207,14 +3171,7 @@ class L10nKo extends L10n {
   String get keepEditing => '계속 편집';
 
   @override
-  String get ministriesFooter => '찬양팀, 음향팀 리더가 자기 팀 담당을 직접 배정하게 해요. 관리자만 배정하는 교회는 안 만들어도 돼요.';
-
-  @override
   String get ministriesChurchWide => '교회 전체 사역팀';
-
-  @override
-  String get ministriesChurchWideFooter =>
-      '여러 예배에 담당이 있거나, 담당 없이 일정의 소속으로만 쓰는 사역팀이에요(미디어 등). 한 예배에만 있는 사역팀(그 예배의 찬양팀 등)은 그 예배 페이지에 있어요';
 
   @override
   String get ministryNeedsDuties => '담당을 고르면 리더가 예배와 행사에서 배정할 수 있어요';
@@ -3324,7 +3281,7 @@ class L10nKo extends L10n {
   String get notifSwap => '대신 봉사·교환';
 
   @override
-  String get notifSwapSub => '대신 봉사나 교환을 부탁받거나, 내 요청에 답이 오거나, 봉사할 수 없는 날을 입력해 달라는 요청이 왔을 때';
+  String get notifSwapSub => '대신 봉사, 교환, 봉사할 수 없는 날 입력';
 
   @override
   String get swapMenu => '대신 봉사·교환';

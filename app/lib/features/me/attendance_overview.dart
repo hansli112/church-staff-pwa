@@ -62,7 +62,6 @@ class AttendanceOverviewScreen extends ConsumerWidget {
                         : missing > 0
                         ? l10n.attendanceOverviewMissing(missing)
                         : l10n.attendanceOverviewDone,
-                    footer: l10n.attendanceOverviewFooter,
                     children: [
                       if (rows.isEmpty) ListRow(title: l10n.attendanceNoDays, chevron: false),
                       for (final r in rows)

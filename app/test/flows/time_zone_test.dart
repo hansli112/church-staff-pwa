@@ -43,10 +43,10 @@ void main() {
     expect(container.read(todayProvider), Day(2026, 10, 1));
 
     await go(tester, '/me/church');
-    expect(find.text('台北（UTC+8）'), findsOneWidget);
+    expect(find.text('台北'), findsOneWidget);
     await tapText(tester, '時區');
-    // 1 October: summer time in Los Angeles and Vancouver.
-    expect(find.text('UTC−7'), findsNWidgets(2));
+    await tester.ensureVisible(findShown('洛杉磯').last);
+    await settle(tester);
     await tapText(tester, '洛杉磯');
     expect(find.text('改成洛杉磯時間？'), findsOneWidget);
     await tapText(tester, '取消');
@@ -61,7 +61,7 @@ void main() {
   testWidgets('everyone sees it; only admins change it', (tester) async {
     await pumpApp(tester, seededChurch(as: staffMei));
     await go(tester, '/me/church');
-    expect(find.text('台北（UTC+8）'), findsOneWidget);
+    expect(find.text('台北'), findsOneWidget);
     await tapText(tester, '時區');
     expect(find.text('洛杉磯'), findsNothing);
   });

@@ -50,7 +50,6 @@ void main() {
     await pumpApp(tester, seededChurch(as: staffMei));
     await go(tester, '/me');
     await tester.scrollUntilVisible(find.text('LINE 社群'), 200, scrollable: find.byType(Scrollable).first);
-    expect(find.text('問問題、回報問題、和其他教會交流'), findsOneWidget);
     await tester.tap(find.text('LINE 社群'));
     await settle(tester);
     expect(launches.opened.single, startsWith('https://line.me/ti/g2/'));

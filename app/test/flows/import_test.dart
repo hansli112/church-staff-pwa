@@ -762,7 +762,6 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     expect(findShownContaining('這個月的 30 張用完了'), findsOneWidget);
-    expect(findShownContaining('直接安排服事表'), findsOneWidget);
     final take = tester.widget<FilledButton>(find.byType(FilledButton).first);
     expect(take.onPressed, isNull);
   });

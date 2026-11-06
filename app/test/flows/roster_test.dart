@@ -63,7 +63,7 @@ void main() {
 
     testWidgets('home with nothing ahead says one sentence', (tester) async {
       await pumpApp(tester, seededChurch(as: john));
-      expect(findShown('接下來沒有你的服事，排到你時會出現在這裡'), findsOneWidget);
+      expect(findShown('接下來沒有你的服事'), findsOneWidget);
     });
 
     testWidgets('roster tab shows saved days and template drafts', (tester) async {
@@ -361,7 +361,7 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/rosters/youth/2026-10-10');
       await tapText(tester, '司會');
-      expect(findShown('這個聚會的同工排過一次，下次就會列在上面'), findsOneWidget);
+      expect(findShown('還沒有人負責司會'), findsOneWidget);
       expect(find.text('其他同工'), findsOneWidget);
       await tapText(tester, 'John Chen');
       final youth = b.rosters['grace']![Roster.idFor('youth', Day(2026, 10, 10))]!;
@@ -573,7 +573,7 @@ void main() {
       await pumpApp(tester, seededChurch());
       await go(tester, '/rosters/youth/2026-10-10');
       await tapText(tester, '司會');
-      expect(findShown('這個聚會的同工排過一次，下次就會列在上面'), findsOneWidget);
+      expect(findShown('還沒有人負責司會'), findsOneWidget);
       await tapText(tester, '邀請同工');
       expect(find.text('建立邀請連結'), findsOneWidget, reason: 'the invites page');
     });

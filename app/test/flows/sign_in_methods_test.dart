@@ -64,7 +64,7 @@ void main() {
 
     b.auth.googleAccount = 'mei@gmail.com';
     await tapText(tester, '連結 Google 帳號');
-    expect(findShownContaining('你選的帳號已經是另一個馬大別忙帳號'), findsOneWidget);
+    expect(findShownContaining('這個帳號已經註冊過馬大別忙'), findsOneWidget);
     expect(b.auth.currentUser!.signIns.map((s) => s.method), [SignInMethod.password]);
   });
 
@@ -153,7 +153,7 @@ void main() {
       await go(tester, '/account/sign-in');
 
       await tapText(tester, '連結 Apple 帳號');
-      expect(findShownContaining('你選的帳號已經是另一個馬大別忙帳號'), findsOneWidget);
+      expect(findShownContaining('這個帳號已經註冊過馬大別忙'), findsOneWidget);
       expect(b.auth.currentUser!.signIns.map((s) => s.method), [SignInMethod.password]);
     });
 

@@ -55,7 +55,6 @@ class GroupsScreen extends ConsumerWidget {
           SliverToBoxAdapter(
             child: ListSection(
               header: l10n.ministriesChurchWide,
-              footer: l10n.ministriesChurchWideFooter,
               children: [
                 for (final m in ministries?.ministries ?? const <Ministry>[])
                   if (m.service == null || services?.byId(m.service!) == null)
@@ -798,7 +797,6 @@ class _ServiceMinistries extends ConsumerWidget {
     if (own.isEmpty && !admin) return const SizedBox.shrink();
     return ListSection(
       header: l10n.ministries,
-      footer: own.isEmpty ? l10n.ministriesFooter : null,
       children: [
         for (final m in own)
           ListRow(
@@ -930,7 +928,7 @@ class _MinistryDuties extends ConsumerWidget {
           for (final d in duties)
             ListRow(
               title: places > 1 ? '${d.service.name}${l10n.dotSeparator}${d.duty}' : d.duty,
-              subtitle: dutyPeopleLabel(ref, l10n, d.service.id, d.duty),
+              value: dutyPeopleLabel(ref, l10n, d.service.id, d.duty),
               onTap: () => context.push(dutyPage(d.service.id, d.duty)),
             ),
         if (admin)

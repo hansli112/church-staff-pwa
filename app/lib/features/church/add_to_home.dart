@@ -114,7 +114,6 @@ class _AddToHomeScreenState extends ConsumerState<AddToHomeScreen> {
               ),
             ListSection(
               header: l10n.addToHomeChooseGuide,
-              footer: l10n.addToHomeChooseGuideNote,
               children: [
                 for (final browser in homeBrowsersFor(platform))
                   ListRow(
@@ -307,7 +306,7 @@ _GuideStep _safariShareStep(L10n l10n, _SafariLayout layout) {
     n: 1,
     title: title,
     detail: detail,
-    illustration: _GuideScreenshots(images: images, caption: l10n.addToHomeSafariScreenshot),
+    illustration: _GuideScreenshots(images: images),
   );
 }
 
@@ -333,12 +332,11 @@ _GuideStep _safariShareStep(L10n l10n, _SafariLayout layout) {
         n: 2,
         title: l10n.addToHomeSelectAdd,
         detail: '${l10n.addToHomeShareMore}\n${l10n.addToHomeIosConfirm}',
-        illustration: _GuideScreenshots(
-          images: const [
+        illustration: const _GuideScreenshots(
+          images: [
             (path: 'assets/add_to_home/safari_share_more.png', aspectRatio: 900 / 385),
             (path: 'assets/add_to_home/safari_add.png', aspectRatio: 900 / 413),
           ],
-          caption: l10n.addToHomeSafariScreenshot,
         ),
       ),
       true,
@@ -358,18 +356,16 @@ _GuideStep _safariShareStep(L10n l10n, _SafariLayout layout) {
         n: 1,
         title: l10n.addToHomeChromeShare,
         detail: l10n.addToHomeChromeShareHint,
-        illustration: _GuideScreenshots(
-          images: const [(path: 'assets/add_to_home/chrome_ios_share.png', aspectRatio: 900 / 115)],
-          caption: l10n.addToHomeChromeIosScreenshot,
+        illustration: const _GuideScreenshots(
+          images: [(path: 'assets/add_to_home/chrome_ios_share.png', aspectRatio: 900 / 115)],
         ),
       ),
       _GuideStep(
         n: 2,
         title: l10n.addToHomeSelectAdd,
         detail: '${l10n.addToHomeChromeScroll}\n${l10n.addToHomeIosConfirm}',
-        illustration: _GuideScreenshots(
-          images: const [(path: 'assets/add_to_home/chrome_ios_add.png', aspectRatio: 900 / 263)],
-          caption: l10n.addToHomeChromeIosScreenshot,
+        illustration: const _GuideScreenshots(
+          images: [(path: 'assets/add_to_home/chrome_ios_add.png', aspectRatio: 900 / 263)],
         ),
       ),
       true,
@@ -383,18 +379,16 @@ _GuideStep _safariShareStep(L10n l10n, _SafariLayout layout) {
       _GuideStep(
         n: 1,
         title: l10n.addToHomeMenu('Chrome'),
-        illustration: _GuideScreenshots(
-          images: const [(path: 'assets/add_to_home/chrome_android_more.png', aspectRatio: 900 / 133)],
-          caption: l10n.addToHomeChromeAndroidScreenshot,
+        illustration: const _GuideScreenshots(
+          images: [(path: 'assets/add_to_home/chrome_android_more.png', aspectRatio: 900 / 133)],
         ),
       ),
       _GuideStep(
         n: 2,
         title: l10n.addToHomeChromeInstall,
         detail: l10n.addToHomeChromeInstallHint,
-        illustration: _GuideScreenshots(
-          images: const [(path: 'assets/add_to_home/chrome_android_add.png', aspectRatio: 700 / 400)],
-          caption: l10n.addToHomeChromeAndroidScreenshot,
+        illustration: const _GuideScreenshots(
+          images: [(path: 'assets/add_to_home/chrome_android_add.png', aspectRatio: 700 / 400)],
         ),
       ),
       false,
@@ -478,13 +472,11 @@ class _GuideStep extends StatelessWidget {
   }
 }
 
-/// Cropped browser captures, with only the target annotation added. Each
-/// caption names the browser and version so other layouts are not implied.
+/// Cropped browser captures, with only the target annotation added.
 class _GuideScreenshots extends StatelessWidget {
-  const _GuideScreenshots({required this.images, required this.caption});
+  const _GuideScreenshots({required this.images});
 
   final List<({String path, double aspectRatio})> images;
-  final String caption;
 
   @override
   Widget build(BuildContext context) {
@@ -504,12 +496,6 @@ class _GuideScreenshots extends StatelessWidget {
         ],
         BalancedText(
           L10n.of(context).addToHomeScreenshotNote,
-          textAlign: TextAlign.start,
-          style: AppText.caption.copyWith(color: c.secondaryLabel),
-        ),
-        const SizedBox(height: Space.xs),
-        BalancedText(
-          caption,
           textAlign: TextAlign.start,
           style: AppText.caption.copyWith(color: c.secondaryLabel),
         ),

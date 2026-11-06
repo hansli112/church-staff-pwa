@@ -116,15 +116,6 @@ class MemberEditorScreen extends ConsumerWidget {
               onSave: (m) => _save(context, ref, member, m),
               onLeave: () => _leaveZone(context, ref, member, s),
             ),
-          if (shown.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: BalancedText(
-                l10n.zonesFooter,
-                textAlign: TextAlign.start,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ),
           if (pending.isNotEmpty)
             ListSection(
               footer: l10n.mergePendingFooter,

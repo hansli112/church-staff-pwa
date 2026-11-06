@@ -223,7 +223,7 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
               // Everyone's times are the church's: everyone may see whose.
               ListRow(
                 title: l10n.timeZone,
-                value: timeZoneLabel(l10n, church.timeZone, ref.watch(clockProvider)()),
+                value: timeZoneCity(l10n, church.timeZone),
                 onTap: admin ? () => context.push('/me/timezone') : null,
               ),
               // Only on a phone's browser: anywhere else it is on the home
@@ -296,7 +296,6 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
             ),
           if (admin)
             ListSection(
-              footer: l10n.exportFooter,
               children: [
                 ListRow(
                   title: l10n.exportData,

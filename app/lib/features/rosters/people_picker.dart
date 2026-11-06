@@ -405,7 +405,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
           child: Column(
             children: [
               BalancedText(
-                widget.canEditDutyList ? l10n.pickerLearns : l10n.pickerNoOneServes(widget.duty),
+                l10n.pickerNoOneServes(widget.duty),
                 style: AppText.body.copyWith(color: c.secondaryLabel),
               ),
               if (widget.onInvite case final invite?)

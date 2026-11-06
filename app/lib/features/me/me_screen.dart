@@ -177,7 +177,6 @@ class SettingsScreen extends ConsumerWidget {
               ListRow(
                 leading: const IconTile(Symbols.forum_rounded, color: TileColors.line),
                 title: l10n.lineCommunity,
-                subtitle: l10n.lineCommunityNote,
                 onTap: () => launchUrl(lineCommunity, mode: LaunchMode.externalApplication),
               ),
               ListRow(

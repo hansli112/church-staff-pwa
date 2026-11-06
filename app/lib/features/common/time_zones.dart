@@ -29,19 +29,6 @@ String timeZoneCity(L10n l10n, ChurchTimeZone timeZone) => switch (timeZone) {
   ChurchTimeZone.vancouver => l10n.cityVancouver,
 };
 
-/// `UTC+8`, `UTC−7` (a minus sign, not a hyphen), `UTC+5:30`; `UTC` itself.
-String utcOffset(Duration offset) {
-  if (offset == Duration.zero) return 'UTC';
-  final minutes = offset.inMinutes.abs();
-  final mm = minutes % 60 == 0 ? '' : ':${(minutes % 60).toString().padLeft(2, '0')}';
-  return 'UTC${offset.isNegative ? '−' : '+'}${minutes ~/ 60}$mm';
-}
-
-/// `洛杉磯（UTC−7）`: [timeZone]'s city and how far it is from UTC at [now],
-/// which summer time changes.
-String timeZoneLabel(L10n l10n, ChurchTimeZone timeZone, DateTime now) =>
-    l10n.timeZoneWithOffset(timeZoneCity(l10n, timeZone), utcOffset(timeZone.offsetAt(now)));
-
 /// Instants as the church's clock reads them, in the language shown: every
 /// time on screen is the church's, wherever the phone is.
 class ChurchClock {

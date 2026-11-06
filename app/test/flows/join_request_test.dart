@@ -180,7 +180,7 @@ void main() {
     b.churches['hope'] = b.churches['hope']!.copyWith(takesJoinRequests: false);
     await pumpApp(tester, b);
     await go(tester, '/c/hope');
-    expect(findShown('你還不是這間教會的同工。請向管理員要邀請連結來加入。'), findsOneWidget);
+    expect(findShown('請向管理員要邀請連結'), findsOneWidget);
     expect(findShown('申請加入'), findsNothing);
   });
 
@@ -271,7 +271,7 @@ void main() {
     b.churches['hope'] = b.churches['hope']!.copyWith(takesJoinRequests: false);
     await pumpApp(tester, b);
     await go(tester, '/c/hope');
-    expect(findShown('你還不是這間教會的同工。請向管理員要邀請連結來加入。'), findsOneWidget);
+    expect(findShown('請向管理員要邀請連結'), findsOneWidget);
     expect(findShown('輸入邀請碼'), findsOneWidget);
     await tapText(tester, '取消申請');
     expect(b.joinRequests['hope']!.containsKey('new'), isFalse);

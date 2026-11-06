@@ -39,11 +39,6 @@ void main() {
     // Clear of the tab bar.
     await tester.drag(find.byType(Scrollable).last, const Offset(0, -200));
     await settle(tester);
-    expect(
-      findShown('讓敬拜團、音控組的負責人自己排自己的服事項目；只有管理員排班的教會不用設'),
-      findsOneWidget,
-      reason: 'what a 事工 is for, before there is one',
-    );
     await tapText(tester, '新增事工');
     await tester.enterText(find.byType(TextField), '敬拜團');
     await tapText(tester, '儲存');
@@ -244,7 +239,7 @@ void main() {
     );
     await pumpApp(tester, b);
     await go(tester, '/me/groups/service/sunday');
-    expect(find.text('陳志豪、李美玉'), findsOneWidget, reason: "招待's list, in its staff order");
+    expect(find.text('2 人'), findsOneWidget, reason: "how many are on 招待's list");
     await tapText(tester, '司琴');
     expect(find.text('屬於哪個事工'), findsOneWidget);
     await tapText(tester, '屬於哪個事工');
@@ -332,7 +327,7 @@ void main() {
     );
     await pumpApp(tester, b);
     await go(tester, '/me/groups/service/sunday');
-    expect(find.text('陳志豪、李美玉、王一 +2'), findsOneWidget);
+    expect(find.text('5 人'), findsOneWidget);
   });
 
   testWidgets('in 聚會與事工 a service shows it opens its page, as well as that it can be moved', (tester) async {
