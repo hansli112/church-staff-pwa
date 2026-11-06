@@ -125,6 +125,16 @@ MemoryBackend demoBackend({
         days: {for (var week = 1; week < 8; week++) lastFriday.addDays(-7 * week): AttendanceDay.count(7 + week % 3)},
       ),
     };
+    // Its Google Calendar, with this month's events on days every month has.
+    final [calendar, meeting, retreat, meal, practice] = w.calendar;
+    DateTime at(int day, int hour, [int minute = 0]) => DateTime(start.year, start.month, day, hour, minute);
+    b.connectCalendar(cid, calendarName: calendar);
+    b.calendarEvents[cid] = [
+      CalendarEvent(id: 'meeting', title: meeting, start: at(10, 19, 30), end: at(10, 21)),
+      CalendarEvent(id: 'retreat', title: retreat, start: at(14, 9), end: at(16, 16)),
+      CalendarEvent(id: 'meal', title: meal, start: at(22, 12), end: at(22, 14)),
+      CalendarEvent(id: 'practice', title: practice, start: at(28, 15), end: at(28, 17)),
+    ];
   }
   // The website's church has arranged the next two weeks, the rest is
   // for its videos to arrange.
@@ -326,6 +336,7 @@ class _DemoWords {
     required this.duties,
     required this.events,
     required this.smallGroups,
+    required this.calendar,
     required this.name,
   });
 
@@ -356,6 +367,10 @@ class _DemoWords {
   /// The [showcase] church's 小組: the first meets on Fridays, the second
   /// has not said when yet.
   final List<String> smallGroups;
+
+  /// The [showcase] church's Google Calendar: its name, then this month's
+  /// events (a meeting, a retreat, a meal, a practice).
+  final List<String> calendar;
 
   /// The [i]th member's name; no two the same.
   final String Function(int i) name;
@@ -390,6 +405,7 @@ final _zhHant = _DemoWords(
   duties: [for (final s in demoServices) s.duties],
   events: [for (final e in demoServices.first.events) e.name],
   smallGroups: ['喜樂小組', '以馬內利小組'],
+  calendar: ['教會行事曆', '同工會', '青年退修會', '感恩節愛宴', '聖誕詩歌練唱'],
   name: _chineseNames(
     '陳林黃張李王吳劉蔡楊許鄭謝郭洪曾邱廖賴徐周葉蘇莊呂江何蕭羅高潘簡朱鍾彭游詹胡施沈余趙盧梁顏柯孫魏翁戴范宋方',
     '志明美玲雅婷家豪俊傑淑芬怡君宗翰佳穎建宏欣怡冠宇思妤承恩惠如柏翰詩涵子軒心怡育誠文華',
@@ -417,6 +433,7 @@ final _zhHans = _DemoWords(
   ],
   events: ['圣餐', '浸礼', '特会'],
   smallGroups: ['喜乐小组', '以马内利小组'],
+  calendar: ['教会行事历', '同工会', '青年退修会', '感恩节爱宴', '圣诞诗歌练唱'],
   name: _chineseNames(
     '陈林黄张李王吴刘蔡杨许郑谢郭洪曾邱廖赖徐周叶苏庄吕江何萧罗高潘简朱钟彭游詹胡施沈余赵卢梁颜柯孙魏翁戴范宋方',
     '志明美玲雅婷家豪俊杰淑芬怡君宗翰佳颖建宏欣怡冠宇思妤承恩惠如柏翰诗涵子轩心怡育诚文华',
@@ -458,6 +475,7 @@ final _en = _DemoWords(
   events: ['Communion', 'Baptism', 'Conference'],
   // Every first name with every surname once in 30 × 30.
   smallGroups: ['Joy Group', 'Emmanuel Group'],
+  calendar: ['Church Calendar', 'Team Meeting', 'Youth Retreat', 'Thanksgiving Potluck', 'Christmas Choir Practice'],
   name: (i) => '${_enFirst[i % _enFirst.length]} ${_enLast[(i ~/ _enFirst.length + i) % _enLast.length]}',
 );
 
@@ -494,6 +512,7 @@ final _ja = _DemoWords(
   events: ['聖餐式', '洗礼式', '特別集会'],
   // Every surname with every given name once in 30 × 30.
   smallGroups: ['喜びの小グループ', 'インマヌエル小グループ'],
+  calendar: ['教会カレンダー', '奉仕者会', '青年リトリート', '収穫感謝の愛餐会', 'クリスマス聖歌隊練習'],
   name: (i) => '${_jaLast[i % _jaLast.length]} ${_jaFirst[(i ~/ _jaLast.length + i) % _jaFirst.length]}',
 );
 
@@ -526,5 +545,6 @@ final _ko = _DemoWords(
   events: ['성찬', '세례', '특별집회'],
   // No two the same for up to 160 people: 21 × 1–7 is never a multiple of 30.
   smallGroups: ['기쁨 소그룹', '임마누엘 소그룹'],
+  calendar: ['교회 일정', '봉사자 모임', '청년 수련회', '추수감사 애찬', '성탄 찬양 연습'],
   name: (i) => _koLast[i % _koLast.length] + _koFirst[(i ~/ _koLast.length + i) % _koFirst.length],
 );

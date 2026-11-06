@@ -101,8 +101,7 @@ function session(page, words, stillPath) {
       await wait(120);
       await finger(x, y, false);
     },
-    /** Drags [from] onto [to]; with [still], the still is taken over [to], before letting go. */
-    async drag(from, to, { hold = 600, steps = 24, still: shoot = false } = {}) {
+    async drag(from, to, { hold = 600, steps = 24 } = {}) {
       const [x0, y0] = await center(from);
       const [x1, y1] = await center(to);
       await page.mouse.move(x0, y0);
@@ -117,7 +116,6 @@ function session(page, words, stillPath) {
         await wait(25);
       }
       await wait(200);
-      if (shoot) await still();
       await page.mouse.up();
       await finger(x1, y1, false);
     },
@@ -203,7 +201,7 @@ const CLIPS = {
     route: '/rosters/plan/sunday',
     async play(s, { duties }) {
       await s.wait(1200);
-      await s.drag(s.nodes(`${duties[0]}, `).nth(0), s.nodes(`${duties[0]}, `).nth(1), { still: true });
+      await s.drag(s.nodes(`${duties[0]}, `).nth(0), s.nodes(`${duties[0]}, `).nth(1));
       await s.wait(2200);
     },
   },
@@ -264,6 +262,14 @@ const CLIPS = {
       await s.still();
     },
   },
+  // 行事曆: the church's Google Calendar, its events and services in one month.
+  calendar: {
+    route: '/calendar',
+    async play(s) {
+      await s.wait(2500);
+      await s.still();
+    },
+  },
   // 通知: what to be told, from 設定.
   notifications: {
     route: '/me',
@@ -273,7 +279,6 @@ const CLIPS = {
       await s.wait(1300);
       await s.tap(s.node(s.t('notifReminderBoth')));
       await s.wait(1800);
-      await s.still();
     },
   },
 };
