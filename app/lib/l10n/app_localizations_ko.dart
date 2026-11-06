@@ -2713,13 +2713,7 @@ class L10nKo extends L10n {
   String get signInMethodPassword => '이메일과 비밀번호';
 
   @override
-  String get signInMethodsFooter => '어떤 방법으로 로그인해도 같은 계정이에요. 교회, 봉사표, 권한도 그대로예요.';
-
-  @override
   String get linkGoogle => 'Google 계정 연결';
-
-  @override
-  String get linkFooter => '연결하는 계정의 이메일은 이 계정과 달라도 돼요';
 
   @override
   String get linkedGoogle => 'Google 계정을 연결했어요';

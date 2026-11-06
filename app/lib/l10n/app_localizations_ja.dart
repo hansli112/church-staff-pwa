@@ -2712,13 +2712,7 @@ class L10nJa extends L10n {
   String get signInMethodPassword => 'メールアドレスとパスワード';
 
   @override
-  String get signInMethodsFooter => 'どの方法でログインしても同じアカウントです。教会、奉仕表、権限も変わりません。';
-
-  @override
   String get linkGoogle => 'Google アカウントを連携';
-
-  @override
-  String get linkFooter => '連携するアカウントのメールアドレスは、このアカウントと違っていてもかまいません';
 
   @override
   String get linkedGoogle => 'Google アカウントを連携しました';

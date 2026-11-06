@@ -4864,23 +4864,11 @@ abstract class L10n {
   /// **'Email 與密碼'**
   String get signInMethodPassword;
 
-  /// No description provided for @signInMethodsFooter.
-  ///
-  /// In zh, this message translates to:
-  /// **'用哪一種方式登入都是同一個帳號，教會、服事表和權限都一樣'**
-  String get signInMethodsFooter;
-
   /// No description provided for @linkGoogle.
   ///
   /// In zh, this message translates to:
   /// **'連結 Google 帳號'**
   String get linkGoogle;
-
-  /// No description provided for @linkFooter.
-  ///
-  /// In zh, this message translates to:
-  /// **'連結的帳號，email 可以和這個帳號不同'**
-  String get linkFooter;
 
   /// No description provided for @linkedGoogle.
   ///

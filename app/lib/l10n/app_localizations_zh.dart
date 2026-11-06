@@ -2708,13 +2708,7 @@ class L10nZh extends L10n {
   String get signInMethodPassword => 'Email 與密碼';
 
   @override
-  String get signInMethodsFooter => '用哪一種方式登入都是同一個帳號，教會、服事表和權限都一樣';
-
-  @override
   String get linkGoogle => '連結 Google 帳號';
-
-  @override
-  String get linkFooter => '連結的帳號，email 可以和這個帳號不同';
 
   @override
   String get linkedGoogle => '已連結 Google 帳號';
@@ -6147,13 +6141,7 @@ class L10nZhHans extends L10nZh {
   String get signInMethodPassword => '邮箱与密码';
 
   @override
-  String get signInMethodsFooter => '用哪一种方式登录都是同一个账号，教会、事奉表和权限都一样';
-
-  @override
   String get linkGoogle => '关联 Google 账号';
-
-  @override
-  String get linkFooter => '关联的账号，邮箱可以和这个账号不同';
 
   @override
   String get linkedGoogle => '已关联 Google 账号';

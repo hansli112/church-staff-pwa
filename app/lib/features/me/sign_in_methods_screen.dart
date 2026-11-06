@@ -99,7 +99,6 @@ class _SignInMethodsScreenState extends ConsumerState<SignInMethodsScreen> {
       body: ListView(
         children: [
           ListSection(
-            footer: l10n.signInMethodsFooter,
             children: [
               for (final s in signIns)
                 ListRow(
@@ -119,7 +118,6 @@ class _SignInMethodsScreenState extends ConsumerState<SignInMethodsScreen> {
           ),
           if (toLink.isNotEmpty)
             ListSection(
-              footer: l10n.linkFooter,
               children: [
                 for (final (:method, :title, :link, :done) in toLink)
                   ListRow(

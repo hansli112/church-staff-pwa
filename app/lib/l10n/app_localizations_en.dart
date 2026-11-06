@@ -2854,14 +2854,7 @@ class L10nEn extends L10n {
   String get signInMethodPassword => 'Email and password';
 
   @override
-  String get signInMethodsFooter =>
-      'Whichever way you sign in, it’s the same account, with the same churches, schedules, and permissions';
-
-  @override
   String get linkGoogle => 'Link a Google Account';
-
-  @override
-  String get linkFooter => 'A linked account’s email can differ from this account’s';
 
   @override
   String get linkedGoogle => 'Google account linked';
