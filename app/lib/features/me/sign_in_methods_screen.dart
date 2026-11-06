@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
@@ -54,6 +55,20 @@ class _SignInMethodsScreenState extends ConsumerState<SignInMethodsScreen> {
     SignInMethod.apple => 'Apple',
   };
 
+  /// What each way in looks like, the marks the login page signs in with.
+  Widget _mark(SignInMethod method) => switch (method) {
+    SignInMethod.password => const Icon(Symbols.mail_rounded),
+    // Google's G stays on white, as on its button, and as wide as an icon.
+    SignInMethod.google => Container(
+      width: 22,
+      height: 22,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+      child: Image.asset('assets/icons/google_g.png', width: 14, height: 14, excludeFromSemantics: true),
+    ),
+    SignInMethod.apple => const Icon(Icons.apple),
+  };
+
   Future<void> _unlink(SignIn s) async {
     final l10n = L10n.of(context);
     final ok = await confirmDestructive(
@@ -88,6 +103,7 @@ class _SignInMethodsScreenState extends ConsumerState<SignInMethodsScreen> {
             children: [
               for (final s in signIns)
                 ListRow(
+                  leading: _mark(s.method),
                   title: _name(l10n, s.method),
                   subtitle: s.email.isEmpty ? null : s.email,
                   // Never the last way in.
@@ -107,7 +123,10 @@ class _SignInMethodsScreenState extends ConsumerState<SignInMethodsScreen> {
               children: [
                 for (final (:method, :title, :link, :done) in toLink)
                   ListRow(
+                    leading: _mark(method),
                     title: title,
+                    // It opens Google's or Apple's sheet, not a page here.
+                    chevron: false,
                     // Linking goes on after Google's or Apple's sheet closes.
                     trailing: _linking == method
                         ? const SizedBox.square(
