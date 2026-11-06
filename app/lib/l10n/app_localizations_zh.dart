@@ -2669,6 +2669,27 @@ class L10nZh extends L10n {
   String get cityLosAngeles => '洛杉磯';
 
   @override
+  String get cityBrisbane => '布里斯本';
+
+  @override
+  String get cityBangkok => '曼谷';
+
+  @override
+  String get cityJakarta => '雅加達';
+
+  @override
+  String get cityBerlin => '柏林';
+
+  @override
+  String get cityParis => '巴黎';
+
+  @override
+  String get cityPhoenix => '鳳凰城';
+
+  @override
+  String get cityHonolulu => '檀香山';
+
+  @override
   String get signInMethods => '登入方式';
 
   @override
@@ -6058,6 +6079,27 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get cityLosAngeles => '洛杉矶';
+
+  @override
+  String get cityBrisbane => '布里斯班';
+
+  @override
+  String get cityBangkok => '曼谷';
+
+  @override
+  String get cityJakarta => '雅加达';
+
+  @override
+  String get cityBerlin => '柏林';
+
+  @override
+  String get cityParis => '巴黎';
+
+  @override
+  String get cityPhoenix => '凤凰城';
+
+  @override
+  String get cityHonolulu => '檀香山';
 
   @override
   String get signInMethods => '登录方式';

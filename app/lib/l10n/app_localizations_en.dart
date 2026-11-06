@@ -2810,6 +2810,27 @@ class L10nEn extends L10n {
   String get cityLosAngeles => 'Los Angeles';
 
   @override
+  String get cityBrisbane => 'Brisbane';
+
+  @override
+  String get cityBangkok => 'Bangkok';
+
+  @override
+  String get cityJakarta => 'Jakarta';
+
+  @override
+  String get cityBerlin => 'Berlin';
+
+  @override
+  String get cityParis => 'Paris';
+
+  @override
+  String get cityPhoenix => 'Phoenix';
+
+  @override
+  String get cityHonolulu => 'Honolulu';
+
+  @override
   String get signInMethods => 'Sign-In Methods';
 
   @override

@@ -88,12 +88,12 @@ void main() {
     final b = seededChurch();
     b.connectCalendar('grace', calendarName: '教會行事曆', calendarId: 'cal-1');
     b.calendarChoices = const [
-      (id: 'cal-1', name: '教會行事曆', timeZone: 'America/Phoenix'),
+      (id: 'cal-1', name: '教會行事曆', timeZone: 'America/Edmonton'),
       (id: 'cal-2', name: '青年行事曆', timeZone: 'Asia/Hong_Kong'),
     ];
     await pumpApp(tester, b);
     await go(tester, '/me/calendar');
-    expect(findShownContaining('這本日曆的時區是America/Phoenix'), findsOneWidget);
+    expect(findShownContaining('這本日曆的時區是America/Edmonton'), findsOneWidget);
 
     b.connectCalendar('grace', calendarName: '青年行事曆', calendarId: 'cal-2');
     await settle(tester);

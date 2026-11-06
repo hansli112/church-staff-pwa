@@ -14,12 +14,17 @@ String timeZoneCity(L10n l10n, ChurchTimeZone timeZone) => switch (timeZone) {
   ChurchTimeZone.auckland => l10n.cityAuckland,
   ChurchTimeZone.sydney => l10n.citySydney,
   ChurchTimeZone.melbourne => l10n.cityMelbourne,
+  ChurchTimeZone.brisbane => l10n.cityBrisbane,
   ChurchTimeZone.tokyo => l10n.cityTokyo,
   ChurchTimeZone.seoul => l10n.citySeoul,
   ChurchTimeZone.taipei => l10n.cityTaipei,
   ChurchTimeZone.hongKong => l10n.cityHongKong,
   ChurchTimeZone.singapore => l10n.citySingapore,
   ChurchTimeZone.kualaLumpur => l10n.cityKualaLumpur,
+  ChurchTimeZone.bangkok => l10n.cityBangkok,
+  ChurchTimeZone.jakarta => l10n.cityJakarta,
+  ChurchTimeZone.berlin => l10n.cityBerlin,
+  ChurchTimeZone.paris => l10n.cityParis,
   ChurchTimeZone.london => l10n.cityLondon,
   ChurchTimeZone.newYork => l10n.cityNewYork,
   ChurchTimeZone.toronto => l10n.cityToronto,
@@ -27,6 +32,8 @@ String timeZoneCity(L10n l10n, ChurchTimeZone timeZone) => switch (timeZone) {
   ChurchTimeZone.denver => l10n.cityDenver,
   ChurchTimeZone.losAngeles => l10n.cityLosAngeles,
   ChurchTimeZone.vancouver => l10n.cityVancouver,
+  ChurchTimeZone.phoenix => l10n.cityPhoenix,
+  ChurchTimeZone.honolulu => l10n.cityHonolulu,
 };
 
 /// Instants as the church's clock reads them, in the language shown: every

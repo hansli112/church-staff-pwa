@@ -2013,7 +2013,7 @@
   "calendarTimeZoneDiffers": "這本日曆的時區是{zone}，跟教會的時區（{city}）不同。行事曆的時間照教會的時區顯示。",
   "@calendarTimeZoneDiffers": {
     "description": "Under the calendar list, when the picked Google calendar's time zone is not the church's.",
-    "placeholders": { "zone": { "type": "String", "example": "America/Phoenix" }, "city": { "type": "String", "example": "洛杉磯" } }
+    "placeholders": { "zone": { "type": "String", "example": "America/Edmonton" }, "city": { "type": "String", "example": "洛杉磯" } }
   },
   "cityAuckland": "奧克蘭",
   "citySydney": "雪梨",
@@ -2031,6 +2031,13 @@
   "cityDenver": "丹佛",
   "cityVancouver": "溫哥華",
   "cityLosAngeles": "洛杉磯",
+  "cityBrisbane": "布里斯本",
+  "cityBangkok": "曼谷",
+  "cityJakarta": "雅加達",
+  "cityBerlin": "柏林",
+  "cityParis": "巴黎",
+  "cityPhoenix": "鳳凰城",
+  "cityHonolulu": "檀香山",
   "signInMethods": "登入方式",
   "signInMethodPassword": "Email 與密碼",
   "linkGoogle": "連結 Google 帳號",

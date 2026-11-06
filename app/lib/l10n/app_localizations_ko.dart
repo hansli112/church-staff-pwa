@@ -2674,6 +2674,27 @@ class L10nKo extends L10n {
   String get cityLosAngeles => '로스앤젤레스';
 
   @override
+  String get cityBrisbane => '브리즈번';
+
+  @override
+  String get cityBangkok => '방콕';
+
+  @override
+  String get cityJakarta => '자카르타';
+
+  @override
+  String get cityBerlin => '베를린';
+
+  @override
+  String get cityParis => '파리';
+
+  @override
+  String get cityPhoenix => '피닉스';
+
+  @override
+  String get cityHonolulu => '호놀룰루';
+
+  @override
   String get signInMethods => '로그인 방법';
 
   @override

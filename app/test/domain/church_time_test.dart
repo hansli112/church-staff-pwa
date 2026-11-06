@@ -55,17 +55,22 @@ void main() {
     test('one of the list is itself', () {
       expect(ChurchTimeZone.forDevice('America/Denver', -h * 6, summer), ChurchTimeZone.denver);
       expect(ChurchTimeZone.forDevice('Asia/Kuala_Lumpur', h * 8, summer), ChurchTimeZone.kualaLumpur);
+      expect(ChurchTimeZone.forDevice('Australia/Brisbane', h * 10, winter), ChurchTimeZone.brisbane);
+      expect(ChurchTimeZone.forDevice('America/Phoenix', -h * 7, winter), ChurchTimeZone.phoenix);
     });
     test('another is the first on the same clock, in its part of the world first', () {
       expect(ChurchTimeZone.forDevice('Asia/Shanghai', h * 8, summer), ChurchTimeZone.taipei);
       expect(ChurchTimeZone.forDevice('Australia/Perth', h * 8, summer), ChurchTimeZone.taipei);
-      expect(ChurchTimeZone.forDevice('America/Phoenix', -h * 7, summer), ChurchTimeZone.losAngeles);
-      expect(ChurchTimeZone.forDevice('America/Phoenix', -h * 7, winter), ChurchTimeZone.denver);
+      expect(ChurchTimeZone.forDevice('America/Tijuana', -h * 7, summer), ChurchTimeZone.losAngeles);
+      expect(ChurchTimeZone.forDevice('America/Hermosillo', -h * 7, winter), ChurchTimeZone.denver);
+      expect(ChurchTimeZone.forDevice('Asia/Ho_Chi_Minh', h * 7, summer), ChurchTimeZone.bangkok);
+      expect(ChurchTimeZone.forDevice('Europe/Amsterdam', h * 2, summer), ChurchTimeZone.berlin);
+      expect(ChurchTimeZone.forDevice('Europe/Lisbon', h, summer), ChurchTimeZone.london);
       expect(ChurchTimeZone.forDevice('Europe/Dublin', Duration.zero, winter), ChurchTimeZone.london);
     });
     test('else the first it is standard time for; else Taipei', () {
-      // Brisbane keeps +10 while Sydney is on summer time.
-      expect(ChurchTimeZone.forDevice('Australia/Brisbane', h * 10, winter), ChurchTimeZone.sydney);
+      // Fiji keeps +12 while Auckland is on summer time.
+      expect(ChurchTimeZone.forDevice('Pacific/Fiji', h * 12, winter), ChurchTimeZone.auckland);
       expect(ChurchTimeZone.forDevice('Asia/Kolkata', h * 5.5, summer), ChurchTimeZone.taipei);
       expect(ChurchTimeZone.forDevice(null, h * 8, summer), ChurchTimeZone.taipei);
       expect(ChurchTimeZone.forDevice(null, -h * 5, winter), ChurchTimeZone.newYork);

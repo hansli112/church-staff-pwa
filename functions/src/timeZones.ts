@@ -4,7 +4,8 @@ import type { DocumentSnapshot } from 'firebase-admin/firestore';
  * A church's time zone (#73): one of these, by IANA id, east to west.
  * Cities whose clocks always agree, like New York and Toronto, list the US
  * one first: a phone in a zone not on the list gets the first city on its
- * clock (ChurchTimeZone.forDevice in the app).
+ * clock (ChurchTimeZone.forDevice in the app). Phoenix, without summer
+ * time, comes after Los Angeles and Vancouver for the same reason.
  * Today, the evening reminders, the church link's fetch and the calendar's
  * months all go by it. ChurchTimeZone in app/lib/domain/church_time.dart is the
  * same list; testdata/time_zones.json holds both sides to it and to the
@@ -14,12 +15,17 @@ export const CHURCH_TIME_ZONES = [
   'Pacific/Auckland',
   'Australia/Sydney',
   'Australia/Melbourne',
+  'Australia/Brisbane',
   'Asia/Tokyo',
   'Asia/Seoul',
   'Asia/Taipei',
   'Asia/Hong_Kong',
   'Asia/Singapore',
   'Asia/Kuala_Lumpur',
+  'Asia/Bangkok',
+  'Asia/Jakarta',
+  'Europe/Berlin',
+  'Europe/Paris',
   'Europe/London',
   'America/New_York',
   'America/Toronto',
@@ -27,6 +33,8 @@ export const CHURCH_TIME_ZONES = [
   'America/Denver',
   'America/Los_Angeles',
   'America/Vancouver',
+  'America/Phoenix',
+  'Pacific/Honolulu',
 ] as const;
 
 export type ChurchTimeZone = (typeof CHURCH_TIME_ZONES)[number];

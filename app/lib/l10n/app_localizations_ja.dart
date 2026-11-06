@@ -2673,6 +2673,27 @@ class L10nJa extends L10n {
   String get cityLosAngeles => 'ロサンゼルス';
 
   @override
+  String get cityBrisbane => 'ブリスベン';
+
+  @override
+  String get cityBangkok => 'バンコク';
+
+  @override
+  String get cityJakarta => 'ジャカルタ';
+
+  @override
+  String get cityBerlin => 'ベルリン';
+
+  @override
+  String get cityParis => 'パリ';
+
+  @override
+  String get cityPhoenix => 'フェニックス';
+
+  @override
+  String get cityHonolulu => 'ホノルル';
+
+  @override
   String get signInMethods => 'ログイン方法';
 
   @override
