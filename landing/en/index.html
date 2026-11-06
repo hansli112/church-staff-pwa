@@ -25,117 +25,65 @@ if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) lo
 
 <!-- site-header -->
 
-<main>
-  <section class="hero">
+<main class="home">
+  <section class="intro">
     <div class="wrap">
-      <div>
-        <p class="eyebrow">The serving app made for churches</p>
-        <h1>Plan the schedule together.<br>Check it anytime.</h1>
-        <p class="lead">Open the app and see when you serve and what you’re doing. Admins and team members plan the schedule together, with no more spreadsheets going back and forth.</p>
-        <div class="cta">
-          <a class="btn btn-primary" href="/home">Open web app</a>
-        </div>
-        <!-- TODO(M7): 上架後在這裡放 Apple、Google 官方商店徽章（App Store 在前、用黑色版本），連到商店頁 -->
-        <p class="note">Free to use. The iPhone and Android apps are coming soon. The web app is ready now.</p>
-      </div>
-
-      <div class="shot" role="img" aria-label="The app’s Schedule screen">
-        <div class="screen" aria-hidden="true">
-          <div class="title">Schedule</div>
-          <div class="list">
-            <div class="card">
-              <h4>Sun, Oct 11<span class="tag">Communion</span></h4>
-              <dl>
-                <dt>Host</dt><dd class="me">Emily Carter</dd>
-                <dt>Worship</dt><dd class="set">Josh Bennett</dd>
-                <dt>Piano</dt><dd class="set">Grace Kim</dd>
-                <dt>Sound</dt><dd class="set">David Chen</dd>
-                <dt>Usher</dt><dd class="set">Maria Lopez</dd>
-              </dl>
-            </div>
-            <div class="card">
-              <h4>Sun, Oct 18</h4>
-              <dl>
-                <dt>Host</dt><dd class="set">Sam Turner</dd>
-                <dt>Worship</dt><dd class="me">Emily Carter</dd>
-                <dt>Piano</dt><dd class="set">Grace Kim</dd>
-                <dt>Sound</dt><dd>TBD</dd>
-                <dt>Usher</dt><dd>TBD</dd>
-              </dl>
-            </div>
-            <div class="card">
-              <h4>Sun, Oct 25</h4>
-              <dl>
-                <dt>Host</dt><dd>TBD</dd>
-                <dt>Worship</dt><dd>TBD</dd>
-                <dt>Piano</dt><dd>TBD</dd>
-                <dt>Sound</dt><dd>TBD</dd>
-                <dt>Usher</dt><dd>TBD</dd>
-              </dl>
-            </div>
-          </div>
-          <div class="tabs">
-            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg>Home</span>
-            <span class="on"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="7" rx="2"/><rect x="4" y="13" width="16" height="7" rx="2"/></svg>Schedule</span>
-            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>Calendar</span>
-            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section" aria-labelledby="what">
-    <div class="wrap">
-      <h2 id="what">Just what your team needs</h2>
-      <p class="sub">Made for the people who serve. The rest of the congregation doesn’t need to install anything.</p>
-      <div class="grid3">
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M9 15.5l2 2 4-4"/></svg></div>
-          <h3>See when you serve</h3>
-          <p>Home lists your upcoming serving, and you get a notification when you’re put on the schedule.</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.3-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.8c1.6.8 2.6 2.6 3 5.2"/></svg></div>
-          <h3>Plan the schedule together</h3>
-          <p>Admins and the team members in charge can all edit it. When you pick someone, the list follows your team’s order. You can also import a paper schedule from a photo.</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="14" height="11" rx="2"/><path d="M6 19h6"/><rect x="15" y="9" width="7" height="12" rx="2"/></svg></div>
-          <h3>One schedule, everywhere</h3>
-          <p>Works on iPhone, Android, and the web. Make a change anywhere, and it syncs everywhere.</p>
-        </div>
-      </div>
-      <p class="more-link"><a href="/en/features">See all features</a></p>
-    </div>
-  </section>
-
-  <section class="section alt" aria-labelledby="start">
-    <div class="wrap">
-      <h2 id="start">Get started in three steps</h2>
-      <p class="sub">Try the web app first. No install needed.</p>
-      <ol class="steps">
-        <li><div><strong>Create your church</strong><span>An admin signs in, creates the church, and sets up the roles.</span></div></li>
-        <li><div><strong>Send the invite link</strong><span>Share the invite link in your team’s group chat.</span></div></li>
-        <li><div><strong>Your team joins</strong><span>They open the link, sign in, and they’re in.</span></div></li>
-      </ol>
+      <img class="app-icon" src="/icons/Icon-512.png" alt="" width="120" height="120">
+      <h1>Martha, sit</h1>
+      <p class="lead"><span>A serving schedule for your church team.</span> <span>Open it and see when you serve.</span> <span>Plan the schedule together.</span></p>
       <div class="cta">
         <a class="btn btn-primary" href="/home">Open web app</a>
       </div>
+      <!-- TODO(M7): 上架後在這裡放 Apple、Google 官方商店徽章（App Store 在前、用黑色版本），連到商店頁 -->
+      <p class="note">Free. The iPhone and Android apps are coming soon.</p>
+      <div class="phones">
+        <img src="/media/en/service.jpg" alt="The Sunday Service schedule for Oct 25: who hosts, leads worship, and plays piano" width="660" height="1434">
+        <img src="/media/en/schedule.jpg" alt="The Schedule tab, with a card for each week listing who serves" width="660" height="1434">
+      </div>
     </div>
   </section>
 
-  <section class="section" aria-labelledby="free">
-    <div class="wrap free">
-      <div>
-        <h2 id="free">Free to use</h2>
-        <p>No fees, and no paid features.</p>
-        <p class="sub" data-from-app="hide">We all share the server costs. If you’d like to help, see <a href="/en/support">Support Martha, sit</a>. Once the iPhone and Android apps are out, you can also give one-time or monthly support in the app. Every feature is the same either way.</p>
+  <section class="moment">
+    <div class="wrap">
+      <div class="words">
+        <h2>See when you serve</h2>
+        <p>Home lists your upcoming serving. You get a notification when you’re scheduled, and a reminder every Monday evening.</p>
       </div>
+      <img class="shot" src="/media/en/home-still.jpg" alt="Home lists my next three times serving" width="786" height="1704" loading="lazy">
+    </div>
+  </section>
+
+  <section class="moment">
+    <div class="wrap">
+      <div class="words">
+        <h2>Arrange several weeks at once</h2>
+        <p><strong>Arrange serving</strong> puts several weeks in one table. No one gets notified while you work. Tap <strong>Done</strong> when you’re finished, and each person gets just one notification.</p>
+      </div>
+      <img class="shot" src="/media/en/plan-still.jpg" alt="The Arrange serving table, a row for each week, with Host filled in for a few weeks" width="786" height="1704" loading="lazy">
+    </div>
+  </section>
+
+  <section class="moment">
+    <div class="wrap">
+      <div class="words">
+        <h2>Send one link, and your team joins</h2>
+        <p>Send the invite link to your team’s LINE group. They open it, sign in, and they’re in. The rest of the congregation doesn’t need to install anything.</p>
+        <p class="more"><a href="/en/features">See all features</a></p>
+      </div>
+      <img class="shot" src="/media/en/invite-still.jpg" alt="The Invites page with a new invite link" width="786" height="1704" loading="lazy">
+    </div>
+  </section>
+
+  <section class="closing">
+    <div class="wrap">
       <blockquote class="verse">
         <p>“Martha, Martha,” the Lord answered, “you are worried and upset about many things, but few things are needed—or indeed only one. Mary has chosen what is better, and it will not be taken away from her.”</p>
         <cite>Luke 10:41–42 (NIV)</cite>
       </blockquote>
+      <div class="cta">
+        <a class="btn btn-primary" href="/home">Open web app</a>
+      </div>
+      <p class="note">Free, with no paid features. <span data-from-app="hide">To help with the server costs, see <a href="/en/support">Support Martha, sit</a>.</span></p>
     </div>
   </section>
 </main>

@@ -1,11 +1,14 @@
 // Records the website's videos (landing/media/<language>/<clip>.mp4 and a
 // .jpg of its first frame): short clips of the showcase demo, a church
 // settled in, at iPhone size, each a few taps with a dot where the finger
-// goes.
+// goes. A clip that calls still() also leaves <clip>-still.jpg, a
+// screenshot of that moment, for the pages that show a picture instead.
 //
 //   cd app && flutter build web --wasm --dart-define=MARTHA_ENV=demo \
 //     --dart-define=DEMO_SHOWCASE=true --dart-define=E2E=true -o build/web-showcase
-//   cd tools/e2e && node record.mjs ../../app/build/web-showcase ../../landing/media [--only=plan,swap] [--lang=en]
+//   cd tools/e2e && node record.mjs ../../app/build/web-showcase ../../landing/media [--only=plan,swap] [--lang=en] [--stills]
+//
+// With --stills, only the stills are taken; the videos stay as they are.
 //
 // Each clip finds what it taps by what the app says, in the language it
 // records (the app's ARB files), and the demo church's own words by their
@@ -50,8 +53,8 @@ const FINGER = () => {
   });
 };
 
-/** One language's session: taps, waits and the app's words. */
-function session(page, words) {
+/** One language's session: taps, waits and the app's words; still() is saved to [stillPath]. */
+function session(page, words, stillPath) {
   const t = (key) => {
     const s = words[key];
     if (typeof s !== 'string') throw new Error(`no string ${key}`);
@@ -75,9 +78,13 @@ function session(page, words) {
   const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const named = (name, role) =>
     page.getByRole(role, { name: name.startsWith('^') ? new RegExp(`^${escape(name.slice(1))}`) : name, exact: true });
+  const still = async () => {
+    if (stillPath) await page.screenshot({ path: stillPath, type: 'jpeg', quality: 85 });
+  };
   return {
     t,
     wait,
+    still,
     /** Flutter's accessibility node named [name] (a prefix with `^`). */
     node: (name, role = 'button') => named(name, role).first(),
     nodes: (prefix, role = 'button') => named(`^${prefix}`, role),
@@ -94,7 +101,8 @@ function session(page, words) {
       await wait(120);
       await finger(x, y, false);
     },
-    async drag(from, to, { hold = 600, steps = 24 } = {}) {
+    /** Drags [from] onto [to]; with [still], the still is taken over [to], before letting go. */
+    async drag(from, to, { hold = 600, steps = 24, still: shoot = false } = {}) {
       const [x0, y0] = await center(from);
       const [x1, y1] = await center(to);
       await page.mouse.move(x0, y0);
@@ -109,6 +117,7 @@ function session(page, words) {
         await wait(25);
       }
       await wait(200);
+      if (shoot) await still();
       await page.mouse.up();
       await finger(x1, y1, false);
     },
@@ -166,6 +175,7 @@ const CLIPS = {
     route: '/home',
     async play(s) {
       await s.wait(1500);
+      await s.still();
       // The first button is the bell; then the days, nearest first.
       await s.tap(s.nodes('').nth(1));
       await s.wait(2500);
@@ -183,6 +193,7 @@ const CLIPS = {
         await s.tap(s.nodes('').nth(4 + week));
         await s.wait(900);
       }
+      await s.still();
       await s.tap(s.node(s.t('done')));
       await s.wait(2200);
     },
@@ -192,7 +203,7 @@ const CLIPS = {
     route: '/rosters/plan/sunday',
     async play(s, { duties }) {
       await s.wait(1200);
-      await s.drag(s.nodes(`${duties[0]}, `).nth(0), s.nodes(`${duties[0]}, `).nth(1));
+      await s.drag(s.nodes(`${duties[0]}, `).nth(0), s.nodes(`${duties[0]}, `).nth(1), { still: true });
       await s.wait(2200);
     },
   },
@@ -240,6 +251,7 @@ const CLIPS = {
       await s.wait(500);
       await s.tap(s.node(s.t('save')));
       await s.wait(1800);
+      await s.still();
     },
   },
   // 管理員: an invite link for the 同工 group chat.
@@ -249,6 +261,7 @@ const CLIPS = {
       await s.wait(1200);
       await s.tap(s.node(s.t('inviteCreate')));
       await s.wait(2500);
+      await s.still();
     },
   },
   // 通知: what to be told, from 設定.
@@ -260,11 +273,13 @@ const CLIPS = {
       await s.wait(1300);
       await s.tap(s.node(s.t('notifReminderBoth')));
       await s.wait(1800);
+      await s.still();
     },
   },
 };
 
 const only = flag('only');
+const stillsOnly = flags.includes('--stills');
 const languages = flag('lang') ?? Object.keys(LANGUAGES);
 // Headless Chromium sends its screencast at CSS pixels unless the scale is forced too.
 const browser = await chromium.launch({ args: ['--enable-unsafe-swiftshader', '--use-angle=swiftshader', '--force-device-scale-factor=2'] });
@@ -309,20 +324,24 @@ for (const language of languages) {
     await clip.play(session(page, words), { duties: DUTIES[language] }).catch(() => {});
     await page.goto(`${base}${clip.route}`);
     await page.waitForTimeout(4000);
-    const frames = await screencast(page, path.join(tmp, `${language}-${name}`));
+    const dir = path.join(outdir, language);
+    fs.mkdirSync(dir, { recursive: true });
+    const frames = stillsOnly ? null : await screencast(page, path.join(tmp, `${language}-${name}`));
     recording = true;
     try {
-      await clip.play(session(page, words), { duties: DUTIES[language] });
+      await clip.play(session(page, words, path.join(dir, `${name}-still.jpg`)), { duties: DUTIES[language] });
       if (lateFonts.length) throw new Error(`fonts fetched while recording: ${lateFonts.join(', ')}`);
     } catch (e) {
       failed = true;
       console.error(`${language}/${name}: ${e.message}`);
       await page.screenshot({ path: path.join(tmp, `${language}-${name}-failed.png`) });
     }
+    if (!frames) {
+      await context.close();
+      continue;
+    }
     const list = await frames.stop();
     await context.close();
-    const dir = path.join(outdir, language);
-    fs.mkdirSync(dir, { recursive: true });
     const mp4 = path.join(dir, `${name}.mp4`);
     // H.264 for every browser; small enough to play on a phone at once.
     execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list, '-an', '-vf', 'fps=30,scale=trunc(iw/2)*2:trunc(ih/2)*2', '-c:v', 'libx264', '-preset', 'slow', '-crf', '26', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', mp4]);

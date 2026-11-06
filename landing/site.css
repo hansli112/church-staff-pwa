@@ -18,6 +18,10 @@
   --warn-bg: #FFF6DB;
   --warn-text: #5A4100;
   --shadow: 0 1px 2px rgb(0 0 0 / 6%), 0 12px 32px rgb(0 0 0 / 10%);
+  /* 圖示的米色和黃光：首頁的開頭和結尾 */
+  --paper: #F6EFE3;
+  --glow: #F7E2A6;
+  --ink: #1D1A16;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -38,6 +42,9 @@
     --warn-bg: #33270A;
     --warn-text: #FFE2A0;
     --shadow: 0 0 0 1px #38383A, 0 12px 32px rgb(0 0 0 / 60%);
+    --paper: #1F1B16;
+    --glow: #3A2F17;
+    --ink: #F6EFE3;
   }
 }
 
@@ -55,6 +62,8 @@ body {
 }
 /* 日文標題照詞組換行（支援的瀏覽器），不把「奉仕表」拆成兩行。 */
 :lang(ja) :is(h1, h2, h3) { word-break: auto-phrase; }
+/* 韓文照空格換行，不把一個詞拆成兩行。 */
+:lang(ko) { word-break: keep-all; }
 a { color: var(--accent); text-underline-offset: 3px; }
 a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
 h1, h2, h3 { line-height: 1.25; margin: 0; }
@@ -73,10 +82,15 @@ p { margin: 0 0 16px; }
 .top-nav { display: flex; align-items: center; gap: 4px 16px; }
 .top-nav a:not(.top-link) { display: inline-flex; align-items: center; min-height: 44px; color: var(--text2); text-decoration: none; font-size: 0.9375rem; white-space: nowrap; }
 .top-nav a:not(.top-link):hover, .top-nav a[aria-current] { color: var(--text); }
-/* 手機上一行放不下：頂部只留品牌和「開啟網頁版」，功能、教學、支持在頁尾。 */
+/* 手機上放不下四個：留功能、教學和「開啟網頁版」，支持在頁尾。 */
 @media (max-width: 479px) {
   .top .wrap { gap: 12px; }
-  .top-nav a:not(.top-link) { display: none; }
+  .top-nav { gap: 4px 14px; }
+  .top-nav a[href$="/support"] { display: none; }
+}
+/* 英文、日文的名字長，窄的手機上只留圖示（一樣連回首頁） */
+@media (max-width: 429px) {
+  :is(:lang(en), :lang(ja)) .brand span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
 
 /* 按鈕 */
@@ -88,76 +102,79 @@ p { margin: 0 0 16px; }
 .btn-primary { background: var(--accent); color: var(--on-accent); }
 .btn-primary:hover { filter: brightness(1.08); }
 
-/* 首頁：主視覺 */
-.hero { background: radial-gradient(120% 80% at 80% 0%, var(--bg2), transparent 70%); }
-.hero .wrap { display: grid; gap: 48px; padding-top: 40px; padding-bottom: 56px; align-items: center; }
-@media (min-width: 860px) { .hero .wrap { grid-template-columns: 1fr auto; gap: 64px; padding-top: 72px; padding-bottom: 88px; } }
-.eyebrow { margin-bottom: 12px; color: var(--accent); font-size: 1.0625rem; font-weight: 700; }
-.hero h1 { font-size: clamp(2.25rem, 7vw, 3.5rem); font-weight: 800; letter-spacing: -0.01em; margin-bottom: 16px; }
-.hero .lead, .page .lead { font-size: 1.1875rem; color: var(--text2); margin-bottom: 32px; }
-.hero .lead { max-width: 30em; }
+/* 首頁、功能頁共用 */
 .cta { display: flex; flex-wrap: wrap; gap: 12px; }
 .cta .btn-primary { flex: 1 1 100%; }
 @media (min-width: 480px) { .cta .btn-primary { flex: none; } }
 .note { margin: 16px 0 0; font-size: 0.9375rem; color: var(--text2); }
-.steps + .cta { margin-top: 32px; }
-
-/* 首頁：App 畫面示意（純 HTML/CSS）。不畫手機外框：Apple 不准自己畫 iPhone 的樣子 */
-.shot { justify-self: center; width: 264px; height: 500px; border-radius: 28px; box-shadow: var(--shadow); }
-.screen {
-  position: relative; height: 100%; overflow: hidden; border-radius: 28px;
-  background: var(--app-bg); color: var(--text); font-size: 11px; line-height: 1.4;
-  display: flex; flex-direction: column;
-}
-.screen .title { text-align: center; font-weight: 700; font-size: 13px; padding: 16px 0 12px; }
-.screen .list { flex: 1; padding: 0 8px; display: grid; gap: 8px; align-content: start; }
-.card { background: var(--surface); border-radius: 12px; padding: 8px 12px; }
-.card h4 { margin: 0 0 4px; font-size: 12px; font-weight: 700; }
-.card dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 2px 8px; }
-.card dt { color: var(--text2); }
-.card dd { margin: 0; color: var(--text2); }
-.card dd.me { color: var(--accent); font-weight: 600; }
-.card dd.set { color: var(--text); }
-.tag { display: inline-block; margin-left: 4px; padding: 0 4px; border-radius: 4px; font-size: 11px; font-weight: 600; background: var(--tag-bg); color: var(--tag-text); }
-.tabs { display: grid; grid-template-columns: repeat(4, 1fr); padding: 8px 4px 12px; background: var(--surface); border-top: 1px solid var(--line); }
-.tabs span { display: grid; justify-items: center; gap: 4px; font-size: 11px; color: var(--text2); }
-.tabs span.on { color: var(--accent); }
-.tabs svg { width: 18px; height: 18px; }
-
-/* 首頁：區塊 */
-.section { padding: 64px 0; }
-.section.alt { background: var(--bg2); }
-.section h2 { font-size: clamp(1.625rem, 4vw, 2rem); font-weight: 800; margin-bottom: 12px; }
-.section .sub { color: var(--text2); margin-bottom: 32px; max-width: 34em; }
-.grid3 { display: grid; gap: 16px; }
-@media (min-width: 720px) { .grid3 { grid-template-columns: repeat(3, 1fr); } }
-.feature { background: var(--surface); border-radius: 18px; padding: 24px; }
-.section:not(.alt) .feature { background: var(--bg2); }
-.feature .icon { display: grid; place-items: center; width: 44px; height: 44px; margin-bottom: 16px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); }
-.feature .icon svg { width: 24px; height: 24px; }
-.feature h3 { font-size: 1.1875rem; font-weight: 700; margin-bottom: 8px; }
-.feature p { margin: 0; color: var(--text2); }
-.more-link { margin: 24px 0 0; font-weight: 600; }
-.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; counter-reset: step; }
-@media (min-width: 720px) { .steps { grid-template-columns: repeat(3, 1fr); } }
-.steps li { counter-increment: step; display: grid; grid-template-columns: 36px 1fr; gap: 12px; align-items: start; }
-.steps li::before {
-  content: counter(step); display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
-  background: var(--accent); color: var(--on-accent); font-weight: 700;
-}
-.steps strong { display: block; margin-top: 4px; }
-.steps span { color: var(--text2); }
-.free { display: grid; gap: 24px; align-items: center; }
-@media (min-width: 720px) { .free { grid-template-columns: 1fr 1fr; gap: 48px; } }
-.free p:last-child { margin-bottom: 0; }
 .verse { margin: 0; padding: 0 0 0 24px; border-left: 4px solid var(--line); font-size: 1.125rem; }
 .verse p { margin-bottom: 8px; }
 .verse cite { font-style: normal; font-size: 0.9375rem; color: var(--text2); }
+
+/* 首頁：圖示、名字、一句話，下面是 App 的真實畫面；再來一段一件事，配一張截圖 */
+.home :is(h1, h2, .lead) { text-wrap: balance; }
+.home h2 { font-size: clamp(1.625rem, 4.5vw, 2.25rem); font-weight: 700; line-height: 1.3; margin-bottom: 12px; }
+.intro { background: linear-gradient(to bottom, var(--paper), var(--bg)); text-align: center; overflow: hidden; }
+.intro .wrap { padding-top: 48px; }
+@media (min-width: 720px) { .intro .wrap { padding-top: 72px; } }
+.app-icon { display: block; width: 104px; height: 104px; margin: 0 auto 20px; border-radius: 23px; box-shadow: 0 1px 2px rgb(0 0 0 / 8%), 0 8px 24px rgb(80 60 20 / 18%); }
+.intro h1 { font-size: clamp(2.5rem, 9vw, 4rem); font-weight: 700; letter-spacing: 0.02em; color: var(--ink); margin-bottom: 12px; }
+.intro .lead { max-width: 24em; margin: 0 auto 28px; font-size: clamp(1.1875rem, 3.2vw, 1.375rem); color: var(--text2); }
+/* 一個詞組一個 span，換行只在詞組之間 */
+.intro .lead span { display: inline-block; }
+.intro .cta { justify-content: center; }
+.intro .cta .btn-primary { flex: none; min-width: 200px; }
+.intro .note { margin-top: 12px; }
+.phones { position: relative; display: flex; justify-content: center; gap: 24px; margin: 48px auto 0; height: clamp(300px, 70vw, 560px); }
+.phones img {
+  width: auto; height: 100%; aspect-ratio: 660 / 1434; border-radius: clamp(20px, 4vw, 40px);
+  box-shadow: var(--shadow); background: var(--app-bg); object-fit: cover; object-position: top;
+}
+.phones img:first-child { margin-top: 48px; }
+/* 第二張在手機上只露出一點：下半部切在區塊底下 */
+.intro .wrap { padding-bottom: 0; }
+.phones { margin-bottom: -1px; }
+@media (max-width: 479px) {
+  .phones { height: 440px; }
+  .phones img:first-child { display: none; }
+}
+
+.moment { padding: 56px 0; }
+.moment .wrap { display: grid; gap: 24px; align-items: center; }
+.moment .words { max-width: 26em; }
+.moment .words p { color: var(--text2); font-size: 1.1875rem; margin-bottom: 0; }
+.moment .words .more { margin-top: 16px; font-size: 1.0625rem; font-weight: 600; }
+.moment .shot {
+  display: block; margin: 0 auto; width: min(100%, 300px); height: auto;
+  border-radius: 32px; box-shadow: var(--shadow); background: var(--app-bg);
+}
+.moment .who { margin-bottom: 8px; font-size: 1rem; font-weight: 600; color: var(--accent); }
+@media (min-width: 720px) {
+  .moment { padding: 72px 0; }
+  .moment .wrap { grid-template-columns: 1fr 1fr; gap: 64px; }
+  .moment .words { justify-self: end; }
+  .moment:nth-of-type(odd) .words { order: 2; justify-self: start; }
+}
+.moment + .moment { border-top: 1px solid var(--fill); }
+
+/* 功能頁：標題，一件事一段，最後是不配圖的「還有」 */
+.page-title .wrap { padding-top: 48px; padding-bottom: 8px; }
+.page-title h1 { font-size: clamp(2.25rem, 7vw, 3rem); font-weight: 700; margin: 0; }
+.also-list { padding: 56px 0 24px; border-top: 1px solid var(--fill); }
+.also-list ul { max-width: 34em; margin: 0; padding-left: 20px; color: var(--text2); font-size: 1.0625rem; }
+.also-list li { margin-bottom: 8px; }
+
+.closing { padding: 88px 0 72px; background: linear-gradient(to bottom, var(--bg), var(--paper)); text-align: center; }
+.closing .verse { max-width: 24em; margin: 0 auto 40px; padding: 0; border: 0; font-size: clamp(1.25rem, 3.6vw, 1.625rem); line-height: 1.7; color: var(--ink); }
+.closing .verse p { margin-bottom: 12px; }
+.closing .cta { justify-content: center; }
+.closing .cta .btn-primary { flex: none; min-width: 200px; }
 
 /* 一般頁面：支持、教學文章 */
 .page .wrap { padding-top: 40px; padding-bottom: 64px; }
 .narrow { max-width: 720px; }
 .page h1 { font-size: clamp(1.875rem, 5vw, 2.5rem); font-weight: 800; margin-bottom: 12px; }
+.page .lead { font-size: 1.1875rem; color: var(--text2); margin-bottom: 32px; }
 .page .verse { margin: 24px 0; }
 .panel { background: var(--bg2); border-radius: 18px; padding: 24px; margin-bottom: 16px; }
 .panel h2 { font-size: 1.1875rem; font-weight: 700; margin-bottom: 12px; }
@@ -220,34 +237,43 @@ button.btn:disabled { opacity: 0.6; cursor: default; filter: none; }
 .clip { margin: 24px auto; width: min(100%, 280px); }
 .clip video { display: block; width: 100%; height: auto; aspect-ratio: 393 / 852; border-radius: 28px; background: var(--app-bg); box-shadow: var(--shadow); }
 
-/* 功能頁：一個身分一區，每項功能一段說明配一段短片 */
-.features-intro { padding: 40px 0 8px; }
-.features-intro h1 { font-size: clamp(2rem, 6vw, 2.75rem); font-weight: 800; margin-bottom: 12px; }
-.features-intro .lead { font-size: 1.1875rem; color: var(--text2); max-width: 34em; }
-.role { padding: 48px 0; border-top: 1px solid var(--line); }
-.role > .wrap > h2 { font-size: clamp(1.625rem, 4vw, 2rem); font-weight: 800; margin-bottom: 8px; }
-.role > .wrap > .sub { color: var(--text2); margin-bottom: 24px; max-width: 34em; }
-.items { display: grid; gap: 40px; }
-@media (min-width: 720px) { .items { grid-template-columns: repeat(2, 1fr); gap: 48px 32px; } }
-@media (min-width: 1000px) { .items.three { grid-template-columns: repeat(3, 1fr); } }
-.item h3 { font-size: 1.1875rem; font-weight: 700; margin-bottom: 8px; }
-.item p { color: var(--text2); margin: 0; }
-.item .clip { margin: 20px auto 0; }
-.item .more { margin-top: 8px; }
-.also { margin: 32px 0 0; padding: 20px 24px; border-radius: 18px; background: var(--bg2); }
-.items .also { margin: 0; align-self: start; }
-.also h3 { font-size: 1.0625rem; font-weight: 700; margin-bottom: 8px; }
-.also ul { margin: 0; padding-left: 20px; color: var(--text2); }
-.also li { margin-bottom: 4px; }
 
-/* 頁尾 */
-.foot { padding: 32px 0 48px; border-top: 1px solid var(--line); color: var(--text2); font-size: 0.9375rem; }
-.foot .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; align-items: center; }
-.foot nav { display: flex; flex-wrap: wrap; column-gap: 24px; }
-.foot nav a { display: inline-flex; align-items: center; min-height: 44px; color: var(--text2); text-decoration: none; }
-.foot nav a:hover { color: var(--text); }
-.foot .langs a[aria-current] { color: var(--text); font-weight: 600; }
+/* 頁尾：三欄短短的連結，各有欄名；最下面是語言選單、社群圖示 */
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.foot { padding: 40px 0 40px; border-top: 1px solid var(--line); color: var(--text2); font-size: 0.9375rem; }
+.foot-links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px 16px; }
+@media (min-width: 720px) { .foot-links { grid-template-columns: repeat(3, minmax(0, 200px)); gap: 24px 48px; } }
+.foot-links h2 { margin: 0 0 4px; font-size: 0.9375rem; font-weight: 600; color: var(--text); }
+.foot-links a { display: flex; align-items: center; min-height: 40px; line-height: 1.35; color: var(--text2); text-decoration: none; }
+.foot a:hover { color: var(--text); }
+.foot-end { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--fill); }
 .foot p { margin: 0; }
+.foot-end p { flex-basis: 100%; }
+@media (min-width: 720px) { .foot-end p { flex-basis: auto; margin-left: auto; } }
+.social { display: flex; gap: 4px; }
+.social a { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; color: var(--text2); }
+.social a:hover { background: var(--fill); }
+.social svg { width: 20px; height: 20px; }
+/* 語言：收在目前的語言底下，點開往上列出 */
+.langs { position: relative; }
+.langs summary {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 12px 0 10px;
+  border: 1px solid var(--line); border-radius: 999px; color: var(--text); cursor: pointer; list-style: none; white-space: nowrap;
+}
+.langs summary::-webkit-details-marker { display: none; }
+.langs summary svg { width: 18px; height: 18px; color: var(--text2); }
+.langs summary::after { content: ""; width: 6px; height: 6px; margin: 0 2px 3px 4px; border-right: 1.5px solid var(--text2); border-bottom: 1.5px solid var(--text2); transform: rotate(45deg); }
+.langs nav {
+  position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 5; display: grid; min-width: 160px; padding: 6px;
+  border-radius: 14px; background: var(--surface); box-shadow: var(--shadow);
+}
+.langs nav a { display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; color: var(--text); text-decoration: none; }
+.langs nav a:hover { background: var(--fill); }
+.langs nav a[aria-current] { font-weight: 600; color: var(--accent); }
+/* 法律文件自己的頁尾：一行連結、語言、營運者 */
+.foot .wrap:not(:has(.foot-links)) { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 24px; }
+.foot .wrap:not(:has(.foot-links)) > nav { display: flex; flex-wrap: wrap; column-gap: 24px; }
+.foot .wrap:not(:has(.foot-links)) > nav a { display: inline-flex; align-items: center; min-height: 44px; color: var(--text2); text-decoration: none; }
 
 /* 法律文件 */
 .doc .wrap { display: grid; gap: 32px; padding-top: 32px; padding-bottom: 64px; }

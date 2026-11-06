@@ -25,117 +25,65 @@ if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) lo
 
 <!-- site-header -->
 
-<main>
-  <section class="hero">
+<main class="home">
+  <section class="intro">
     <div class="wrap">
-      <div>
-        <p class="eyebrow">專為教會打造的服事 App</p>
-        <h1>服事表，<br>一起排，隨時看</h1>
-        <p class="lead">打開就知道自己哪天服事、負責什麼。管理員和同工一起把服事表排完，不用再傳 Excel。</p>
-        <div class="cta">
-          <a class="btn btn-primary" href="/home">開啟網頁版</a>
-        </div>
-        <!-- TODO(M7): 上架後在這裡放 Apple、Google 官方商店徽章（App Store 在前、用黑色版本），連到商店頁 -->
-        <p class="note">免費使用。iPhone、Android App 即將上架，網頁版現在就能用。</p>
-      </div>
-
-      <div class="shot" role="img" aria-label="App 的服事表畫面">
-        <div class="screen" aria-hidden="true">
-          <div class="title">服事表</div>
-          <div class="list">
-            <div class="card">
-              <h4>10月11日 週日<span class="tag">聖餐</span></h4>
-              <dl>
-                <dt>司會</dt><dd class="me">王以琳</dd>
-                <dt>敬拜</dt><dd class="set">陳約書亞</dd>
-                <dt>司琴</dt><dd class="set">林恩典</dd>
-                <dt>音控</dt><dd class="set">張大衛</dd>
-                <dt>招待</dt><dd class="set">黃馬利亞</dd>
-              </dl>
-            </div>
-            <div class="card">
-              <h4>10月18日 週日</h4>
-              <dl>
-                <dt>司會</dt><dd class="set">李撒母耳</dd>
-                <dt>敬拜</dt><dd class="me">王以琳</dd>
-                <dt>司琴</dt><dd class="set">林恩典</dd>
-                <dt>音控</dt><dd>待定</dd>
-                <dt>招待</dt><dd>待定</dd>
-              </dl>
-            </div>
-            <div class="card">
-              <h4>10月25日 週日</h4>
-              <dl>
-                <dt>司會</dt><dd>待定</dd>
-                <dt>敬拜</dt><dd>待定</dd>
-                <dt>司琴</dt><dd>待定</dd>
-                <dt>音控</dt><dd>待定</dd>
-                <dt>招待</dt><dd>待定</dd>
-              </dl>
-            </div>
-          </div>
-          <div class="tabs">
-            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg>首頁</span>
-            <span class="on"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="7" rx="2"/><rect x="4" y="13" width="16" height="7" rx="2"/></svg>服事表</span>
-            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>行事曆</span>
-            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>設定</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section" aria-labelledby="what">
-    <div class="wrap">
-      <h2 id="what">同工需要的，剛好就這些</h2>
-      <p class="sub">只給教會同工用，會友不需要安裝。</p>
-      <div class="grid3">
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M9 15.5l2 2 4-4"/></svg></div>
-          <h3>看自己哪天服事</h3>
-          <p>首頁列出你接下來的服事，排到你時會收到通知。</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.3-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.8c1.6.8 2.6 2.6 3 5.2"/></svg></div>
-          <h3>一起安排服事表</h3>
-          <p>管理員和負責的同工都能排，選人時照同工排序排好，也能拍照匯入紙本。</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="14" height="11" rx="2"/><path d="M6 19h6"/><rect x="15" y="9" width="7" height="12" rx="2"/></svg></div>
-          <h3>三個平台同一份資料</h3>
-          <p>iPhone、Android、網頁都能用，在哪裡改都會同步。</p>
-        </div>
-      </div>
-      <p class="more-link"><a href="/features">看所有功能</a></p>
-    </div>
-  </section>
-
-  <section class="section alt" aria-labelledby="start">
-    <div class="wrap">
-      <h2 id="start">三步開始</h2>
-      <p class="sub">不用安裝也能先用網頁版試試看。</p>
-      <ol class="steps">
-        <li><div><strong>建立教會</strong><span>管理員登入後建立教會，設定服事項目。</span></div></li>
-        <li><div><strong>傳邀請連結</strong><span>把邀請連結傳到同工群組。</span></div></li>
-        <li><div><strong>同工加入</strong><span>打開連結、登入，就加入了。</span></div></li>
-      </ol>
+      <img class="app-icon" src="/icons/Icon-512.png" alt="" width="120" height="120">
+      <h1>馬大別忙</h1>
+      <p class="lead"><span>教會同工的服事表。</span><span>打開就知道自己哪天服事，</span><span>服事表大家一起排。</span></p>
       <div class="cta">
         <a class="btn btn-primary" href="/home">開啟網頁版</a>
       </div>
+      <!-- TODO(M7): 上架後在這裡放 Apple、Google 官方商店徽章（App Store 在前、用黑色版本），連到商店頁 -->
+      <p class="note">免費。iPhone、Android App 即將上架。</p>
+      <div class="phones">
+        <img src="/media/zh-Hant/service.jpg" alt="主日崇拜 10 月 25 日的服事表：司會、敬拜主領、司琴各是誰" width="660" height="1434">
+        <img src="/media/zh-Hant/schedule.jpg" alt="服事表分頁，一週一張卡片列出每項服事的人" width="660" height="1434">
+      </div>
     </div>
   </section>
 
-  <section class="section" aria-labelledby="free">
-    <div class="wrap free">
-      <div>
-        <h2 id="free">免費使用</h2>
-        <p>不收費，也沒有付費功能。</p>
-        <p class="sub" data-from-app="hide">雲端費用由大家一起分擔。想幫忙的話，可以到<a href="/support">支持馬大別忙</a>看看；iPhone、Android App 上架後，也可以在 App 裡一次性支持或每月支持。支持與否，功能完全一樣。</p>
+  <section class="moment">
+    <div class="wrap">
+      <div class="words">
+        <h2>打開就知道哪天服事</h2>
+        <p>首頁列出你接下來的服事。被排進服事時會收到通知，每週一晚上再提醒一次。</p>
       </div>
+      <img class="shot" src="/media/zh-Hant/home-still.jpg" alt="首頁列出我接下來的三次服事" width="786" height="1704" loading="lazy">
+    </div>
+  </section>
+
+  <section class="moment">
+    <div class="wrap">
+      <div class="words">
+        <h2>好幾週一起排</h2>
+        <p>「安排服事」把好幾週排成一張表。排的時候不會一直通知，排好按「完成」，每個人只收到一則。</p>
+      </div>
+      <img class="shot" src="/media/zh-Hant/plan-still.jpg" alt="安排服事的表格，一列一週，已經排了幾週的司會" width="786" height="1704" loading="lazy">
+    </div>
+  </section>
+
+  <section class="moment">
+    <div class="wrap">
+      <div class="words">
+        <h2>傳一個連結，同工就加入</h2>
+        <p>把邀請連結傳到 LINE 群組，同工點開、登入就加入了。會友不用裝。</p>
+        <p class="more"><a href="/features">看所有功能</a></p>
+      </div>
+      <img class="shot" src="/media/zh-Hant/invite-still.jpg" alt="邀請頁建立了一個邀請連結" width="786" height="1704" loading="lazy">
+    </div>
+  </section>
+
+  <section class="closing">
+    <div class="wrap">
       <blockquote class="verse">
         <p>馬大！馬大！你為許多的事思慮煩擾，但是不可少的只有一件；馬利亞已經選擇那上好的福分，是不能奪去的。</p>
         <cite>路加福音 10:41–42（和合本）</cite>
       </blockquote>
+      <div class="cta">
+        <a class="btn btn-primary" href="/home">開啟網頁版</a>
+      </div>
+      <p class="note">免費，沒有付費功能。<span data-from-app="hide">想幫忙分擔雲端費用，可以到<a href="/support">支持馬大別忙</a>。</span></p>
     </div>
   </section>
 </main>

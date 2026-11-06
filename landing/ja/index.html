@@ -25,117 +25,65 @@ if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) lo
 
 <!-- site-header -->
 
-<main>
-  <section class="hero">
+<main class="home">
+  <section class="intro">
     <div class="wrap">
-      <div>
-        <p class="eyebrow">教会のための奉仕アプリ</p>
-        <h1>みんなで作る奉仕表。<br>いつでも、すぐ見られる。</h1>
-        <p class="lead">開けばすぐ、自分がいつ、何の奉仕をするのかがわかります。管理者とメンバーが一緒に奉仕表を作れるので、Excel を送り合う必要はもうありません。</p>
-        <div class="cta">
-          <a class="btn btn-primary" href="/home">Web版を開く</a>
-        </div>
-        <!-- TODO(M7): 上架後在這裡放 Apple、Google 官方商店徽章（App Store 在前、用黑色版本），連到商店頁 -->
-        <p class="note">無料で使えます。iPhone・Android アプリはまもなく公開予定です。Web版は今すぐ使えます。</p>
-      </div>
-
-      <div class="shot" role="img" aria-label="アプリの奉仕表の画面">
-        <div class="screen" aria-hidden="true">
-          <div class="title">奉仕表</div>
-          <div class="list">
-            <div class="card">
-              <h4>10月11日(日)<span class="tag">聖餐式</span></h4>
-              <dl>
-                <dt>司会</dt><dd class="me">佐藤恵</dd>
-                <dt>賛美<br>リード</dt><dd class="set">高橋誠</dd>
-                <dt>奏楽</dt><dd class="set">鈴木望</dd>
-                <dt>音響</dt><dd class="set">田中大輔</dd>
-                <dt>受付</dt><dd class="set">伊藤真理</dd>
-              </dl>
-            </div>
-            <div class="card">
-              <h4>10月18日(日)</h4>
-              <dl>
-                <dt>司会</dt><dd class="set">山本聡</dd>
-                <dt>賛美<br>リード</dt><dd class="me">佐藤恵</dd>
-                <dt>奏楽</dt><dd class="set">鈴木望</dd>
-                <dt>音響</dt><dd>未定</dd>
-                <dt>受付</dt><dd>未定</dd>
-              </dl>
-            </div>
-            <div class="card">
-              <h4>10月25日(日)</h4>
-              <dl>
-                <dt>司会</dt><dd>未定</dd>
-                <dt>賛美<br>リード</dt><dd>未定</dd>
-                <dt>奏楽</dt><dd>未定</dd>
-                <dt>音響</dt><dd>未定</dd>
-                <dt>受付</dt><dd>未定</dd>
-              </dl>
-            </div>
-          </div>
-          <div class="tabs">
-            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg>ホーム</span>
-            <span class="on"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="7" rx="2"/><rect x="4" y="13" width="16" height="7" rx="2"/></svg>奉仕表</span>
-            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>カレンダー</span>
-            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>設定</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section" aria-labelledby="what">
-    <div class="wrap">
-      <h2 id="what">メンバーに必要なものだけ</h2>
-      <p class="sub">奉仕するメンバー専用です。礼拝に来るだけの方はインストール不要です。</p>
-      <div class="grid3">
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M9 15.5l2 2 4-4"/></svg></div>
-          <h3>自分の奉仕日がすぐわかる</h3>
-          <p>ホームにこれからの奉仕が並びます。自分の名前が奉仕表に入ると、通知が届きます。</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.3-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.8c1.6.8 2.6 2.6 3 5.2"/></svg></div>
-          <h3>奉仕表をみんなで作る</h3>
-          <p>管理者も担当のメンバーも編集できます。人を選ぶときは担当ごとに決めた順番で並び、紙の奉仕表を写真から読み込むこともできます。</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="14" height="11" rx="2"/><path d="M6 19h6"/><rect x="15" y="9" width="7" height="12" rx="2"/></svg></div>
-          <h3>3つの環境で同じデータ</h3>
-          <p>iPhone、Android、Web で使えます。どこで変更しても同期されます。</p>
-        </div>
-      </div>
-      <p class="more-link"><a href="/ja/features">すべての機能を見る</a></p>
-    </div>
-  </section>
-
-  <section class="section alt" aria-labelledby="start">
-    <div class="wrap">
-      <h2 id="start">3ステップで始める</h2>
-      <p class="sub">インストールしなくても、まず Web版で試せます。</p>
-      <ol class="steps">
-        <li><div><strong>教会を作成</strong><span>管理者がログインして教会を作成し、担当を設定します。</span></div></li>
-        <li><div><strong>招待リンクを送る</strong><span>招待リンクをメンバーのグループに送ります。</span></div></li>
-        <li><div><strong>メンバーが参加</strong><span>リンクを開いてログインすれば、参加完了です。</span></div></li>
-      </ol>
+      <img class="app-icon" src="/icons/Icon-512.png" alt="" width="120" height="120">
+      <h1>マルタ、ひと休み</h1>
+      <p class="lead"><span>教会メンバーのための奉仕表。</span><span>開けば自分の奉仕日がわかり、</span><span>奉仕表はみんなで組めます。</span></p>
       <div class="cta">
         <a class="btn btn-primary" href="/home">Web版を開く</a>
       </div>
+      <!-- TODO(M7): 上架後在這裡放 Apple、Google 官方商店徽章（App Store 在前、用黑色版本），連到商店頁 -->
+      <p class="note">無料。iPhone・Android アプリはまもなく公開します。</p>
+      <div class="phones">
+        <img src="/media/ja/service.jpg" alt="主日礼拝 10月25日の奉仕表：司会、賛美リード、奏楽の担当者" width="660" height="1434">
+        <img src="/media/ja/schedule.jpg" alt="奉仕表タブ。1週ごとのカードに、奉仕ごとの担当者が並ぶ" width="660" height="1434">
+      </div>
     </div>
   </section>
 
-  <section class="section" aria-labelledby="free">
-    <div class="wrap free">
-      <div>
-        <h2 id="free">無料で使えます</h2>
-        <p>料金はかかりません。有料の機能もありません。</p>
-        <p class="sub" data-from-app="hide">サーバー費用はみんなで分かち合っています。応援してくださる方は<a href="/ja/support">「マルタ、ひと休み」を応援</a>のページをご覧ください。iPhone・Android アプリの公開後は、アプリ内の「1回の応援」「毎月の応援」からも応援できます。応援してもしなくても、使える機能はまったく同じです。</p>
+  <section class="moment">
+    <div class="wrap">
+      <div class="words">
+        <h2>開けば、いつ奉仕するかがわかる</h2>
+        <p>ホームに、これからのあなたの奉仕が並びます。奉仕に入ると通知が届き、毎週月曜の夜にもう一度お知らせします。</p>
       </div>
+      <img class="shot" src="/media/ja/home-still.jpg" alt="ホームにこれからの奉仕が3つ並ぶ" width="786" height="1704" loading="lazy">
+    </div>
+  </section>
+
+  <section class="moment">
+    <div class="wrap">
+      <div class="words">
+        <h2>数週間まとめて組む</h2>
+        <p>「奉仕を割り当てる」では、数週間分を一つの表で組めます。組んでいる間は通知が次々と届くことはなく、組み終わって「完了」を押すと、一人に一通ずつ届きます。</p>
+      </div>
+      <img class="shot" src="/media/ja/plan-still.jpg" alt="奉仕を割り当てる表。1行が1週で、数週分の司会が入っている" width="786" height="1704" loading="lazy">
+    </div>
+  </section>
+
+  <section class="moment">
+    <div class="wrap">
+      <div class="words">
+        <h2>リンクを一つ送れば、メンバーが参加</h2>
+        <p>招待リンクを LINE グループに送れば、メンバーは開いてログインするだけで参加できます。教会員の方はインストール不要です。</p>
+        <p class="more"><a href="/ja/features">すべての機能を見る</a></p>
+      </div>
+      <img class="shot" src="/media/ja/invite-still.jpg" alt="招待の画面で招待リンクを作成した" width="786" height="1704" loading="lazy">
+    </div>
+  </section>
+
+  <section class="closing">
+    <div class="wrap">
       <blockquote class="verse">
         <p>「マルタ、マルタ、あなたは多くのことに思い悩み、心を乱している。しかし、必要なことはただ一つだけである。マリアは良い方を選んだ。それを取り上げてはならない。」</p>
         <cite>ルカによる福音書 10:41–42（新共同訳）</cite>
       </blockquote>
+      <div class="cta">
+        <a class="btn btn-primary" href="/home">Web版を開く</a>
+      </div>
+      <p class="note">無料で、有料の機能はありません。<span data-from-app="hide">サーバー費用を一緒に支えてくださる方は<a href="/ja/support">「マルタ、ひと休み」を応援</a>へ。</span></p>
     </div>
   </section>
 </main>

@@ -340,9 +340,9 @@ describe("what the guides and the features page quote is what the app says, so a
   }
 });
 
-test("every clip a page shows is in landing/media, in the page's language", () => {
+test("every clip and picture of the app a page shows is in landing/media, in the page's language", () => {
   for (const path of listed) {
-    for (const [, src] of built(path).matchAll(/<video [^>]*src="([^"]+)"/g)) {
+    for (const [, src] of built(path).matchAll(/<(?:video|img) [^>]*src="(\/media\/[^"]+)"/g)) {
       assert.ok(existsSync(join(out, src)), `${path}: ${src}`);
       const tag = TAGS.find((t) => path.startsWith(`/${t}/`)) ?? 'zh-Hant';
       assert.ok(src.startsWith(`/media/${tag}/`), `${path}: ${src}`);

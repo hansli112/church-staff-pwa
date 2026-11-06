@@ -25,117 +25,65 @@ if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) lo
 
 <!-- site-header -->
 
-<main>
-  <section class="hero">
+<main class="home">
+  <section class="intro">
     <div class="wrap">
-      <div>
-        <p class="eyebrow">专为教会打造的事奉 App</p>
-        <h1>事奉表，<br>一起排，随时看</h1>
-        <p class="lead">打开就知道自己哪天事奉、负责什么。管理员和同工一起把事奉表排好，不用再传 Excel。</p>
-        <div class="cta">
-          <a class="btn btn-primary" href="/home">打开网页版</a>
-        </div>
-        <!-- TODO(M7): 上架後在這裡放 Apple、Google 官方商店徽章（App Store 在前、用黑色版本），連到商店頁 -->
-        <p class="note">免费使用。iPhone、Android App 即将上架，网页版现在就能用。</p>
-      </div>
-
-      <div class="shot" role="img" aria-label="App 的事奉表画面">
-        <div class="screen" aria-hidden="true">
-          <div class="title">事奉表</div>
-          <div class="list">
-            <div class="card">
-              <h4>10月11日 周日<span class="tag">圣餐</span></h4>
-              <dl>
-                <dt>领会</dt><dd class="me">林慧玲</dd>
-                <dt>敬拜主领</dt><dd class="set">陈志明</dd>
-                <dt>司琴</dt><dd class="set">黄美琪</dd>
-                <dt>音控</dt><dd class="set">张伟杰</dd>
-                <dt>招待</dt><dd class="set">李淑芬</dd>
-              </dl>
-            </div>
-            <div class="card">
-              <h4>10月18日 周日</h4>
-              <dl>
-                <dt>领会</dt><dd class="set">吴俊辉</dd>
-                <dt>敬拜主领</dt><dd class="me">林慧玲</dd>
-                <dt>司琴</dt><dd class="set">黄美琪</dd>
-                <dt>音控</dt><dd>待定</dd>
-                <dt>招待</dt><dd>待定</dd>
-              </dl>
-            </div>
-            <div class="card">
-              <h4>10月25日 周日</h4>
-              <dl>
-                <dt>领会</dt><dd>待定</dd>
-                <dt>敬拜主领</dt><dd>待定</dd>
-                <dt>司琴</dt><dd>待定</dd>
-                <dt>音控</dt><dd>待定</dd>
-                <dt>招待</dt><dd>待定</dd>
-              </dl>
-            </div>
-          </div>
-          <div class="tabs">
-            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg>首页</span>
-            <span class="on"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="7" rx="2"/><rect x="4" y="13" width="16" height="7" rx="2"/></svg>事奉表</span>
-            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>行事历</span>
-            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>设置</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section" aria-labelledby="what">
-    <div class="wrap">
-      <h2 id="what">同工需要的，刚好就这些</h2>
-      <p class="sub">只给教会同工用，会友不需要安装。</p>
-      <div class="grid3">
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M9 15.5l2 2 4-4"/></svg></div>
-          <h3>看自己哪天事奉</h3>
-          <p>首页列出你接下来的事奉，排到你时会收到通知。</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.3-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.8c1.6.8 2.6 2.6 3 5.2"/></svg></div>
-          <h3>一起安排事奉表</h3>
-          <p>管理员和负责的同工都能排，选人时按同工的顺序排好，也能拍照导入纸质事奉表。</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="14" height="11" rx="2"/><path d="M6 19h6"/><rect x="15" y="9" width="7" height="12" rx="2"/></svg></div>
-          <h3>三个平台，同一份数据</h3>
-          <p>iPhone、Android、网页都能用，在哪里改都会同步。</p>
-        </div>
-      </div>
-      <p class="more-link"><a href="/zh-Hans/features">看所有功能</a></p>
-    </div>
-  </section>
-
-  <section class="section alt" aria-labelledby="start">
-    <div class="wrap">
-      <h2 id="start">三步开始</h2>
-      <p class="sub">不用安装，也能先用网页版试试看。</p>
-      <ol class="steps">
-        <li><div><strong>创建教会</strong><span>管理员登录后创建教会，设置事奉项目。</span></div></li>
-        <li><div><strong>发邀请链接</strong><span>把邀请链接发到同工群组。</span></div></li>
-        <li><div><strong>同工加入</strong><span>打开链接、登录，就加入了。</span></div></li>
-      </ol>
+      <img class="app-icon" src="/icons/Icon-512.png" alt="" width="120" height="120">
+      <h1>马大别忙</h1>
+      <p class="lead"><span>教会同工的事奉表。</span><span>打开就知道自己哪天事奉，</span><span>事奉表大家一起排。</span></p>
       <div class="cta">
         <a class="btn btn-primary" href="/home">打开网页版</a>
       </div>
+      <!-- TODO(M7): 上架後在這裡放 Apple、Google 官方商店徽章（App Store 在前、用黑色版本），連到商店頁 -->
+      <p class="note">免费。iPhone、Android App 即将上架。</p>
+      <div class="phones">
+        <img src="/media/zh-Hans/service.jpg" alt="主日崇拜 10 月 25 日的事奉表：领会、敬拜主领、司琴各是谁" width="660" height="1434">
+        <img src="/media/zh-Hans/schedule.jpg" alt="事奉表页面，一周一张卡片列出每项事奉的人" width="660" height="1434">
+      </div>
     </div>
   </section>
 
-  <section class="section" aria-labelledby="free">
-    <div class="wrap free">
-      <div>
-        <h2 id="free">免费使用</h2>
-        <p>不收费，也没有付费功能。</p>
-        <p class="sub" data-from-app="hide">云端费用由大家一起分担。想帮忙的话，可以到<a href="/zh-Hans/support">支持马大别忙</a>看看；iPhone、Android App 上架后，也可以在 App 里一次性支持或每月支持。支持与否，功能完全一样。</p>
+  <section class="moment">
+    <div class="wrap">
+      <div class="words">
+        <h2>打开就知道哪天事奉</h2>
+        <p>首页列出你接下来的事奉。被排进事奉时会收到通知，每周一晚上再提醒一次。</p>
       </div>
+      <img class="shot" src="/media/zh-Hans/home-still.jpg" alt="首页列出我接下来的三次事奉" width="786" height="1704" loading="lazy">
+    </div>
+  </section>
+
+  <section class="moment">
+    <div class="wrap">
+      <div class="words">
+        <h2>好几周一起排</h2>
+        <p>「安排事奉」把好几周排在一张表上。排的过程中不会一直发通知，排好后按「完成」，每个人只收到一条。</p>
+      </div>
+      <img class="shot" src="/media/zh-Hans/plan-still.jpg" alt="安排事奉的表格，一行一周，已经排了几周的领会" width="786" height="1704" loading="lazy">
+    </div>
+  </section>
+
+  <section class="moment">
+    <div class="wrap">
+      <div class="words">
+        <h2>发一个链接，同工就加入</h2>
+        <p>把邀请链接发到 LINE 群组，同工点开、登录就加入了。会友不用装。</p>
+        <p class="more"><a href="/zh-Hans/features">看所有功能</a></p>
+      </div>
+      <img class="shot" src="/media/zh-Hans/invite-still.jpg" alt="邀请页面创建了一个邀请链接" width="786" height="1704" loading="lazy">
+    </div>
+  </section>
+
+  <section class="closing">
+    <div class="wrap">
       <blockquote class="verse">
         <p>马大！马大！你为许多的事思虑烦扰，但是不可少的只有一件；马利亚已经选择那上好的福分，是不能夺去的。</p>
         <cite>路加福音 10:41–42（和合本）</cite>
       </blockquote>
+      <div class="cta">
+        <a class="btn btn-primary" href="/home">打开网页版</a>
+      </div>
+      <p class="note">免费，没有付费功能。<span data-from-app="hide">想帮忙分担云端费用，可以到<a href="/zh-Hans/support">支持马大别忙</a>。</span></p>
     </div>
   </section>
 </main>
