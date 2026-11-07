@@ -633,8 +633,13 @@ class _DutyScreenState extends ConsumerState<DutyScreen> {
   /// from before, it is one once picked.
   Future<void> _pickMinistry(String serviceId, String duty, Ministry? current) async {
     final l10n = L10n.of(context);
-    final before = ref.read(ministriesProvider).value?.ministries;
-    if (before == null) return;
+    final all = ref.read(ministriesProvider).value;
+    if (all == null) return;
+    final before = all.ministries;
+    // Named now: the sheet builds again on every layout, by when this page
+    // can be gone, its ref with it.
+    final services = ref.read(servicesProvider).value;
+    final names = {for (final m in before) m.id: all.nameOf(m.id, services)};
     // A 事工's ID, or '' for none.
     final picked = await showAppSheet<String>(
       context,
@@ -650,7 +655,7 @@ class _DutyScreenState extends ConsumerState<DutyScreen> {
               ),
               for (final m in before)
                 ListRow(
-                  title: ref.read(ministriesProvider).value!.nameOf(m.id, ref.read(servicesProvider).value),
+                  title: names[m.id]!,
                   selected: m.id == current?.id,
                   onTap: () => Navigator.pop(context, m.id),
                 ),

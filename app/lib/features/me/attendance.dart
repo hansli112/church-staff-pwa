@@ -236,10 +236,11 @@ Future<void> fillAttendance(
   if (others.isNotEmpty || (was?.together.isNotEmpty ?? false)) {
     ref.read(backendProvider).warmUp(WarmUp.attendanceTogether);
   }
+  final title = [group.name, dayLabel(l10n, day, ref.read(todayProvider))].join(l10n.dotSeparator);
   final value = await showAppSheet<AttendanceDay>(
     context,
     builder: (_) => _FillSheet(
-      title: [group.name, dayLabel(l10n, day, ref.read(todayProvider))].join(l10n.dotSeparator),
+      title: title,
       was: was,
       others: others,
     ),

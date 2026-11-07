@@ -57,6 +57,21 @@ Future<void> pickPeople(
     for (final m in members)
       if (unavailable.containsKey(m.uid)) m.name,
   };
+  // Read now, not in the sheet's builder: it builds again on every layout
+  // (the keyboard, a turn), and this page can be gone by then (a back, a
+  // link), its ref with it.
+  final actions = ref.read(rosterActionsProvider);
+  final guestSuggestions = actions.guestSuggestions(roster.isEvent ? null : roster.type, duty.role);
+  final arrangesAll = !roster.isEvent && ref.read(arrangesProvider(roster.type)).all;
+  // An event is in no service to add the duty to, and has no staff order
+  // of its own to drag; a duty only this day has, no list. Putting someone
+  // on the list moves the staff order too, so only whoever arranges all of
+  // the day; a 事工's 負責人 does it on the duty's page (#94).
+  final canEditDutyList =
+      arrangesAll &&
+      (ref.read(servicesProvider).value?.byId(roster.type)?.duties.contains(duty.role) ?? false) &&
+      (me?.editsDutyList(ref.read(ministriesProvider).value?.ministries ?? const [], roster.type, duty.role) ?? false);
+  final onePerson = actions.takesOnePerson(roster, duty.role);
   var invite = false;
   final result = await showAppSheet<PickerResult>(
     context,
@@ -69,31 +84,15 @@ Future<void> pickPeople(
         for (final name in duty.people)
           if (!duty.uids.containsKey(name)) name,
       },
-      guestSuggestions: ref
-          .read(rosterActionsProvider)
-          .guestSuggestions(roster.isEvent ? null : roster.type, duty.role),
+      guestSuggestions: guestSuggestions,
       members: members,
       order: order,
-      // An event is in no service to add the duty to, and has no staff
-      // order of its own to drag; a duty only this day has, no list.
-      // Putting someone on the list moves the staff order too, so only
-      // whoever arranges all of the day; a 事工's 負責人 does it on the
-      // duty's page (#94).
-      canEditDutyList:
-          !roster.isEvent &&
-          (ref.read(servicesProvider).value?.byId(roster.type)?.duties.contains(duty.role) ?? false) &&
-          ref.read(arrangesProvider(roster.type)).all &&
-          (me?.editsDutyList(
-                ref.read(ministriesProvider).value?.ministries ?? const [],
-                roster.type,
-                duty.role,
-              ) ??
-              false),
+      canEditDutyList: canEditDutyList,
       // The staff order is the whole service's: not a 事工 leader's.
-      canReorder: !roster.isEvent && ref.read(arrangesProvider(roster.type)).all,
+      canReorder: arrangesAll,
       canRemove: true,
       canSwapDay: swapDays.any((d) => canSwapDuty(duty.role, roster, d)),
-      onePerson: ref.read(rosterActionsProvider).takesOnePerson(roster, duty.role),
+      onePerson: onePerson,
       onInvite: (me?.isAdmin ?? false) ? () => invite = true : null,
       notes: notes,
       unavailable: unavailableNames,
@@ -129,14 +128,11 @@ Future<void> pickDayToSwap(
     for (final d in days)
       if (canSwapDuty(duty.role, roster, d)) SwapSide(d, onIt(d)),
   ];
+  final today = ref.read(todayProvider);
   final target = await showAppSheet<SwapSide>(
     context,
     expand: targets.length > 6,
-    builder: (context) => SwapSheet(
-      title: l10n.swapWith(duty.role),
-      targets: targets,
-      today: ref.read(todayProvider),
-    ),
+    builder: (context) => SwapSheet(title: l10n.swapWith(duty.role), targets: targets, today: today),
   );
   if (target == null || !context.mounted) return;
   await swapDutyDays(context, ref, duty.role, roster, target.roster, via: via);

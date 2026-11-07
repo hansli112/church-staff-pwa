@@ -13,6 +13,9 @@ import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/state/session.dart';
 
+import 'package:martha/features/rosters/people_picker.dart';
+import 'package:martha/features/rosters/plan_weeks_screen.dart';
+
 import '../support/harness.dart';
 import '../support/seed.dart';
 import '../support/telemetry.dart';
@@ -122,6 +125,27 @@ void main() {
     ], reason: 'once, at 完成');
     expect(waiting(b), isEmpty);
     expect(path(tester), '/rosters');
+  });
+
+  testWidgets('a picker left open after 安排服事 is gone still lays out (prod error 2026-11-07)', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    await tester.tap(cell('司琴', 11));
+    await settle(tester);
+    expect(find.text('李美玉'), findsWidgets);
+
+    // The page that opened the sheet goes (a back, a link), the sheet stays.
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/rosters');
+    await settle(tester);
+    expect(find.byType(PlanWeeksScreen, skipOffstage: false), findsNothing);
+    expect(find.byType(PeoplePicker), findsOneWidget);
+    // The sheet lays out again: the window turns, or the keyboard comes up.
+    tester.view.physicalSize = tester.view.physicalSize.flipped;
+    addTearDown(tester.view.resetPhysicalSize);
+    await settle(tester);
+    expect(tester.takeException(), isNull);
+    expect(find.text('李美玉'), findsWidgets);
   });
 
   testWidgets('完成 with nobody to tell just goes back', (tester) async {
