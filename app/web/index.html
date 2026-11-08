@@ -180,6 +180,11 @@
       setTimeout(function () { var s = document.getElementById('splash'); if (s) s.remove(); }, 20000);
     });
   </script>
+  <script>
+    // Errors the app reports (logClientError) carry this many frames, not
+    // the browser's 10: a hit test's failure showed none of what was hit.
+    Error.stackTraceLimit = 40;
+  </script>
   <script src="martha_app.js"></script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
